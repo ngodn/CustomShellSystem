@@ -1,4 +1,4 @@
-[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-nexus-header-1300x372-transparent.png[/img][/center]
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-nexus-header-v2.png[/img][/center]
 
 [size=4][b]Watch CSS in action[/b][/size]
 
