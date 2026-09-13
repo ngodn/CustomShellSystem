@@ -17,6 +17,11 @@ The complete original artwork is scaled proportionally and centered, with
 
 [Generation prompt and provenance](header-prompt.md).
 
+## Seductress outfit header
+
+[Seductress header files and BBCode](seductress-v1.0.0/README.md) include the original
+generated artwork and a complete fit on a transparent 1300 x 372 canvas.
+
 ## Credits
 
 - CSS by `_eins0fx`.

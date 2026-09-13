@@ -1,0 +1,40 @@
+{
+  "source": "Generated with built-in image tool; see header-prompt.md",
+  "fit": {
+    "canvas": [
+      1300,
+      372
+    ],
+    "artwork": [
+      944,
+      372
+    ],
+    "position": [
+      178,
+      0
+    ],
+    "resampling": "LANCZOS",
+    "cropped": false,
+    "empty_space": "transparent"
+  },
+  "files": [
+    {
+      "file": "seductress-header.png",
+      "dimensions": [
+        1997,
+        787
+      ],
+      "bytes": 2260901,
+      "sha256": "e8d1962855b153a8f1037ecbe6e4c6b543b3ca01460892928c7955903d4ec383"
+    },
+    {
+      "file": "seductress-header-1300x372-transparent.png",
+      "dimensions": [
+        1300,
+        372
+      ],
+      "bytes": 655094,
+      "sha256": "bb63a9738c9031e77edc5aa4d3a366d6fa72dfe277c926e86529dd0b5b3858ff"
+    }
+  ]
+}
