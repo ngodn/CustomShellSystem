@@ -9,6 +9,8 @@ CMakeLists.txt text eol=lf
 *.md text eol=lf
 *.json text eol=lf
 *.patch text eol=lf
+# Unified diffs retain whitespace from upstream context lines.
+*.patch -whitespace
 *.png binary
 # Keep vendored upstream files byte-for-byte, including license whitespace.
 native/vendor/** -whitespace

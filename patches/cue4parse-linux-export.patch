@@ -1,0 +1,28 @@
+diff --git i/CUE4Parse-Conversion/ExportSession.cs w/CUE4Parse-Conversion/ExportSession.cs
+index f7ef0b7..8864da1 100644
+--- i/CUE4Parse-Conversion/ExportSession.cs
++++ w/CUE4Parse-Conversion/ExportSession.cs
+@@ -163,7 +163,7 @@ internal string ResolveOutputPath(string savePath, string ext, string? nameSuffi
+         var fullPath = Path.Combine(BaseDirectory.FullName, savePath) + nameSuffix + '.' + ext.ToLower();
+         var dir = Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException($"Cannot determine directory for path: {fullPath}");
+         Directory.CreateDirectory(dir);
+-        return fullPath.Replace('/', '\\');
++        return OperatingSystem.IsWindows() ? fullPath.Replace('/', '\\') : fullPath;
+     }
+ 
+     public event PropertyChangedEventHandler? PropertyChanged;
+diff --git i/Directory.Packages.props w/Directory.Packages.props
+index 4dedf32..751e37e 100644
+--- i/Directory.Packages.props
++++ w/Directory.Packages.props
+@@ -1,8 +1,10 @@
+ <Project>
+   <PropertyGroup>
+     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
++    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+   </PropertyGroup>
+   <ItemGroup>
++    <PackageVersion Include="Microsoft.Bcl.Memory" Version="9.0.14" />
+     <PackageVersion Include="AssetRipper.TextureDecoder" Version="2.6.2" />
+     <PackageVersion Include="Blake3" Version="3.0.2" />
+     <PackageVersion Include="BouncyCastle.Cryptography" Version="2.6.2" />

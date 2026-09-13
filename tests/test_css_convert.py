@@ -1,0 +1,122 @@
+import sys
+import tempfile
+import unittest
+import json
+from pathlib import Path
+
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
+import css_convert as css
+
+
+class NamingTests(unittest.TestCase):
+    def test_default(self):
+        self.assertEqual(css.output_name('HIT2 DE Scyther','XTGMods'),'CSS_HIT2_DE_Scyther_XTGMods_P')
+
+    def test_templates(self):
+        for pattern in ('CSS_$NAME_$AUTHORorMODDER','CSS_${NAME}_${AUTHOR}','CSS_${NAME}_${MODDER}'):
+            self.assertEqual(css.output_name('A B','Modder',pattern),'CSS_A_B_Modder_P')
+        self.assertEqual(css.output_name('A','B','${AUTHOR}_${NAME}_P'),'B_A_P')
+        self.assertEqual(css.output_name('A','B','${AUTHOR}_${NAME}'),'B_A_P')
+
+    def test_unsafe_or_unknown_names(self):
+        for pattern in ('../$NAME','$NOPE','$NAME.pak','CON','C:/$NAME',''):
+            with self.subTest(pattern=pattern),self.assertRaises(ValueError): css.output_name('A','B',pattern)
+        with self.assertRaises(ValueError): css.output_name('A',' ')
+
+
+class DiscoveryTests(unittest.TestCase):
+    def test_any_companion_and_directory(self):
+        with tempfile.TemporaryDirectory() as root:
+            directory=Path(root)/'nested/packs'; directory.mkdir(parents=True)
+            paths=[directory/('Some Mod_P'+suffix) for suffix in ('.pak','.utoc','.ucas')]
+            for path in paths: path.touch()
+            for source in (*paths,Path(root)):
+                self.assertEqual(css.discover([source]),[paths[1]])
+            self.assertEqual(css.discover(paths),[paths[1]])
+
+    def test_missing_companion(self):
+        with tempfile.TemporaryDirectory() as root:
+            file=Path(root)/'mod.utoc'; file.touch()
+            with self.assertRaisesRegex(ValueError,'Missing companion'): css.discover([file])
+
+    def test_standalone_pak(self):
+        with tempfile.TemporaryDirectory() as root:
+            file=Path(root)/'legacy.pak'; file.touch()
+            self.assertEqual(css.discover([file]),[file])
+
+    def test_empty_directory(self):
+        with tempfile.TemporaryDirectory() as root:
+            with self.assertRaisesRegex(ValueError,'No pack'): css.discover([Path(root)])
+
+
+class RelocationTests(unittest.TestCase):
+    old='/Game/Sparta/Characters/Shells/KnightLady/Art/Mesh/Body'
+
+    def test_isolation_and_length(self):
+        a=css.relocation('author.one',[self.old]); b=css.relocation('author.two',[self.old])
+        self.assertNotEqual(a,b)
+        self.assertEqual(len(a[self.old]),len(self.old))
+        self.assertTrue(a[self.old].startswith('/Game/CSS/'))
+        self.assertEqual(a,css.relocation('author.one',[self.old]))
+
+    def test_object_and_unicode_references(self):
+        mapping=css.relocation('author.one',[self.old])
+        data=(self.old+'.Body:Subobject\0').encode()+(self.old+'\0').encode('utf-16-le')
+        changed,count=css.replace_references(data,mapping)
+        self.assertEqual(count,2)
+        self.assertEqual(len(changed),len(data))
+        restored,_=css.replace_references(changed,{v:k for k,v in mapping.items()})
+        self.assertEqual(restored,data)
+
+    def test_unrelated_assets_are_preserved(self):
+        data=(self.old+'_Unrelated\0/Game/Engine/Unchanged\0').encode()
+        self.assertEqual(css.replace_references(data,css.relocation('a.b',[self.old])),(data,0))
+
+    def test_short_paths_rejected(self):
+        with self.assertRaises(ValueError): css.relocation('a.b',['/Game/Mesh'])
+
+    def test_live_hit2_export_classes_and_roundtrip(self):
+        root=Path(__file__).resolve().parents[1]/'work/hit2-inspect/legacy'
+        if not root.exists(): self.skipTest('Local HIT2 fixture is not distributed')
+        files=list(root.rglob('*.uasset'))
+        self.assertEqual(len(files),13)
+        info=[css.asset_info(p.read_bytes()) for p in files]
+        mapping=css.relocation('xtgmods.hit2_de_scyther',[i['package'] for i in info])
+        meshes=[e for i in info for e in i['exports'] if e['class']=='SkeletalMesh' and e['asset']]
+        self.assertEqual([e['name'] for e in meshes],['SK_Shell_KnightLady_V04'])
+        for file,before in zip(files,info):
+            changed,_=css.replace_references(file.read_bytes(),mapping)
+            after=css.asset_info(changed)
+            self.assertEqual(before['exports'],after['exports'])
+            self.assertEqual(after['package'],mapping[before['package']])
+
+
+class VariantTests(unittest.TestCase):
+    package='/Game/Sparta/Characters/Shells/Example/Art/Mesh/Body'
+    def fixtures(self):
+        return [{'package':self.package+suffix,'exports':[{'name':'Body'+suffix,'class':'SkeletalMesh','asset':True,'outer':0}]}
+                for suffix in ('','_Corrupted')]
+
+    def test_grouped_variants_keep_ids_and_export_names(self):
+        values=css.select_variants(self.fixtures(),None,['regular='+self.package,'corrupted='+self.package+'_Corrupted.Body_Corrupted'],'Example')
+        self.assertEqual([v['id'] for v in values],['regular','corrupted'])
+        self.assertEqual(values[1]['mesh'],self.package+'_Corrupted.Body_Corrupted')
+
+    def test_ambiguous_and_duplicate_variants_rejected(self):
+        for mesh,definitions in [(None,[]),(self.package,['a='+self.package]),(None,['a='+self.package]*2),(None,['a=/Game/Missing'])]:
+            with self.subTest(mesh=mesh,definitions=definitions),self.assertRaises(ValueError):
+                css.select_variants(self.fixtures(),mesh,definitions,'Example')
+
+    def test_material_recipe_must_resolve_included_materials(self):
+        info=[{'package':self.package,'exports':[{'name':'MI_Body','class':'MaterialInstanceConstant','outer':0}]}]
+        mapping=css.relocation('test.example',[self.package])
+        with tempfile.TemporaryDirectory() as root:
+            path=Path(root)/'materials.json'
+            path.write_text(json.dumps({'0':self.package+'.MI_Body'}))
+            self.assertEqual(css.material_recipe(path,info,mapping),{'0':mapping[self.package]+'.MI_Body'})
+            for bad in [{'128':self.package+'.MI_Body'},{'01':self.package+'.MI_Body'},{'0':'/Game/Absent.Material'},[]]:
+                path.write_text(json.dumps(bad))
+                with self.subTest(bad=bad),self.assertRaises(ValueError):css.material_recipe(path,info,mapping)
+
+
+if __name__=='__main__': unittest.main()
