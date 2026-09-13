@@ -402,6 +402,9 @@ def convert(args: argparse.Namespace) -> Path:
                  'description':args.description or '', 'category':'Shell','shells':shells,'compatibility':'same_skeleton',
                  'thumbnail':'thumbnail.png','variants':variants}]}}
     metadata=work/'metadata'/PACKAGE_ROOT/pack_id; metadata.mkdir(parents=True)
+    if getattr(args,'colors',None):
+        from css_colors import embed
+        embed(args.colors.resolve(strict=True),manifest,metadata)
     (metadata/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     (metadata/'conversion.json').write_text(json.dumps(report,indent=2)+'\n')
     shutil.copyfile(thumbnail,metadata/'thumbnail.png')
@@ -440,6 +443,7 @@ def main() -> None:
     parser.add_argument('--mesh',help='Original body package or full object path when automatic selection is ambiguous')
     parser.add_argument('--variant',action='append',help='ID=original mesh path; repeat to group regular/corrupted or other variants')
     parser.add_argument('--materials',type=Path,help='JSON mapping material slot numbers to original material paths, applied to all variants')
+    parser.add_argument('--colors',type=Path,help='Author color recipe with adjacent dye PNG resources; embedded in the package')
     parser.add_argument('--shell',action='append',help='Source shell tag; may be repeated')
     parser.add_argument('--game',type=Path,default=DEFAULT_GAME)
     parser.add_argument('--retoc',type=Path,default=DEFAULT_RETOC)

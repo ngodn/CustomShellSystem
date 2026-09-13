@@ -31,6 +31,22 @@ class PackageTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'Close Mortal Shell'):package.install([self.fixture],Path(root),False,package.DEFAULT_REPAK)
             self.assertEqual(list(Path(root).iterdir()),[])
 
+    def test_developer_recipe_retirement_preserves_shared_masks(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary);game=root/'game'
+            mod=game/'Binaries/Win64/ue4ss/Mods/CustomShellSystem'
+            (mod/'dlls').mkdir(parents=True);(mod/'dlls/main.dll').touch()
+            catalog=mod/'catalog';catalog.mkdir()
+            colors=dict(schema=1,controls=[dict(id='part',name='Part',default=[1,1,1,1])],surfaces=[dict(id='body',parameter='Base',slots=[0],layers={'part':'dye-shared.png'})])
+            (catalog/'replaced.colors.json').write_text(json.dumps(dict(id='beaute.knightlady',colors=colors)))
+            (catalog/'retained.colors.json').write_text(json.dumps(dict(id='other',colors=colors)))
+            (catalog/'dye-shared.png').write_bytes(b'authoring mask')
+            with patch.object(package,'ROOT',root),patch.object(package,'processes',return_value=[]):
+                package.install([self.fixture],game,False,package.DEFAULT_REPAK)
+            self.assertFalse((catalog/'replaced.colors.json').exists())
+            self.assertTrue((catalog/'retained.colors.json').is_file())
+            self.assertEqual((catalog/'dye-shared.png').read_bytes(),b'authoring mask')
+
     def test_failed_copy_removes_partial_output(self):
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary);game=root/'game'

@@ -41,6 +41,8 @@ def verify(directory: Path, repak: Path = DEFAULT_REPAK) -> dict:
         outfits=manifest['catalog']['outfits']
         if len(outfits)!=1 or any(outfits[0][key]!=manifest[key] for key in ('id','name','author')):
             raise ValueError('Catalog identity mismatch')
+        from css_colors import verify_resources
+        verify_resources(manifest,source.parent)
         return manifest
 
 
@@ -74,13 +76,23 @@ def install(directories: list[Path], game: Path, migrate: bool, repak: Path, rep
             retired_directories.append(directory)
     if any(t.exists() and t not in retired_directories for t in targets):
         raise FileExistsError('A target directory belongs to another package or contains unrecognized files')
+    from css_colors import validate
+    retired_masks=set(); retained_masks=set()
+    for file in (mod/'catalog').glob('*.colors.json'):
+        recipe=json.loads(file.read_text())
+        masks={file.parent/name for name in validate(recipe['colors'])}
+        if recipe.get('id') in ids:
+            retiring.append(file); retired_masks.update(masks)
+        else:
+            retained_masks.update(masks)
+    retiring.extend(sorted(retired_masks-retained_masks))
     if migrate:
         retiring.extend(paks/('CSS_Beaute_P'+s) for s in ('.pak','.utoc','.ucas'))
         retiring.append(mod/'catalog/beaute.css.json')
         retiring.append(ROOT/'catalog/beaute.css.json')
         for name in ('BeauteGenessa_P','BeauteKnightLady_P'):
             retiring.extend(paks/(name+s) for s in ('.pak','.utoc','.ucas'))
-    retiring=[p for p in retiring if p.exists()]
+    retiring=list(dict.fromkeys(p for p in retiring if p.exists()))
     backup=ROOT/'backups'/f'packages-{time.time_ns()}'
     backup.mkdir(parents=True)
     records=[]
