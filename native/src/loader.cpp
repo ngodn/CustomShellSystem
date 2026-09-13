@@ -1,4 +1,5 @@
 #include "api.hpp"
+#include "css_version.hpp"
 #include "data.hpp"
 #include <windows.h>
 #include <chrono>
@@ -65,9 +66,9 @@ public:
         log_path = root_ / "CSS.log";
         host_ = {css_abi, root_string_.c_str(), log_line};
         ModName = STR("CSS - Custom Shell System");
-        ModVersion = STR("0.1.0-dev");
+        ModVersion = CSS_VERSION_WIDE;
         ModDescription = STR("Native shell appearance system with reloadable C++ core");
-        ModAuthors = STR("eins0fx");
+        ModAuthors = STR("_eins0fx");
         register_tab(STR("Custom Shell System"), [](RC::CppUserModBase* mod) {
             auto* self = static_cast<Loader*>(mod);
             std::lock_guard lock(self->gate_);
