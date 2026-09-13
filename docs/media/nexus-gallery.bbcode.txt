@@ -1,3 +1,5 @@
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-nexus-header-1300x372-transparent.png[/img][/center]
+
 [size=4][b]Watch CSS in action[/b][/size]
 
 [url=https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/seductress-inventory-polearm.png[/img][/url]
