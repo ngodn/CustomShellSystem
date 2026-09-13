@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <vector>
 #include <Unreal/UObjectGlobals.hpp>
+#include <Unreal/UObjectArray.hpp>
 #include <Unreal/UFunction.hpp>
 #include <Unreal/FProperty.hpp>
 #include <Unreal/FString.hpp>
@@ -105,6 +106,20 @@ public:
     }
     void run() { object_->ProcessEvent(function_, bytes_.data()); }
 };
+WeakObject::WeakObject(UObject* object) { *this=object; }
+WeakObject& WeakObject::operator=(UObject* object) {
+    if(object) {
+        auto* item=FUObjectArray::IndexToObject(object->GetInternalIndex());
+        if(!item || item->GetUObject()!=object) throw std::runtime_error("Object is absent from the live object array");
+        if(!item->GetSerialNumber()) {
+            Call serial(find(L"/Script/Engine.Default__KismetSystemLibrary"),L"Conv_ObjectToSoftObjectReference",2);
+            serial.set(L"Object",object); serial.run();
+            if(!item->GetSerialNumber()) throw std::runtime_error("Engine did not initialize the object serial");
+        }
+    }
+    RC::Unreal::FWeakObjectPtr::operator=(object);
+    return *this;
+}
 static UObject* load(const std::string& path) {
     auto name = wide(path);
     if (auto* object = UObjectGlobals::StaticFindObject<UObject*>(nullptr, nullptr, name.c_str())) return object;
@@ -216,15 +231,15 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     auto* before = mesh_asset(component);
     if (!before) return false;
     if (component_.Get() && component_.Get() != component && !restore()) return false;
-    FWeakObjectPtr live_component(component), live_pawn(pawn), previous_mesh(before);
+    WeakObject live_component(component), live_pawn(pawn), previous_mesh(before);
     auto* target = load(mesh_path);
-    FWeakObjectPtr live_target(target);
-    std::map<int,FWeakObjectPtr> loaded_materials;
+    WeakObject live_target(target);
+    std::map<int,WeakObject> loaded_materials;
     for(const auto& [slot,path]:materials) {
         auto* value=load(path);
         if(!value->IsA(static_cast<UClass*>(find(L"/Script/Engine.MaterialInterface"))))
             throw std::runtime_error("Override asset is not a material");
-        loaded_materials.emplace(slot,FWeakObjectPtr(value));
+        loaded_materials.emplace(slot,WeakObject(value));
     }
     if(live_target.Get()!=target || std::any_of(loaded_materials.begin(),loaded_materials.end(),[](const auto& pair){return !pair.second.Get();}))
         throw std::runtime_error("Appearance assets changed during loading; request cancelled");
@@ -501,10 +516,10 @@ void Wardrobe::open(void* engine,const Catalog& catalog,const State& state,Appea
             invoke(label,L"SetJustification",L"InJustification",uint8_t{1});
             return label;
         };
-        auto bind=[&](UObject* widget,Json action) { hits_.push_back({FWeakObjectPtr(widget),std::move(action),false}); };
+        auto bind=[&](UObject* widget,Json action) { hits_.push_back({WeakObject(widget),std::move(action),false}); };
         auto row=[&](double y,double h,Json wear,Json favorite=Json{},Json prev=Json{},Json next=Json{},Json save=Json{}) {
             auto* marker=ui.box(x+24,y+8,2,h-16,Color{0,0,0,0});
-            rows_.push_back({std::move(wear),std::move(favorite),std::move(prev),std::move(next),std::move(save),FWeakObjectPtr(marker)});
+            rows_.push_back({std::move(wear),std::move(favorite),std::move(prev),std::move(next),std::move(save),WeakObject(marker)});
         };
         const char* categories[]={"All appearances","Favorites","Saved looks","Colors"};
         centered(categories[category_],top+191,27);
@@ -576,7 +591,7 @@ void Wardrobe::open(void* engine,const Catalog& catalog,const State& state,Appea
                     ui.place(slider,x+143,y,293,33);
                     auto* label=ui.label(slider_text(value[channel],control.scalar),x+451,y+4,59,30,17,ivory);
                     Json action={{"action","color"},{"control",control.id},{"channel",channel},{"refresh",false}};
-                    sliders_.push_back({FWeakObjectPtr(slider),FWeakObjectPtr(label),action,value[channel],control.scalar});
+                    sliders_.push_back({WeakObject(slider),WeakObject(label),action,value[channel],control.scalar});
                     action["refresh"]=true; action["delta"]=-1; auto left=action; action["delta"]=1;
                     row(y,37,Json{{"action","reset_color"},{"control",control.id}}, {},left,action);
                 }
@@ -686,7 +701,7 @@ UObject* view_target(UObject* pc) {
     auto* manager=read<UObject*>(pc,L"PlayerCameraManager");
     if(manager && manager->GetPropertyByNameInChain(L"ActiveCameraActor")) {
         auto* active=read<UObject*>(manager,L"ActiveCameraActor");
-        if(active && FWeakObjectPtr(active).Get()) return active;
+        if(active && WeakObject(active).Get()) return active;
     }
     Call c(pc,L"GetViewTarget",1); c.run(); return c.get<UObject*>();
 }
@@ -840,7 +855,7 @@ void Wardrobe::preview_open() {
     auto* source=read<UObject*>(pawn,L"Mesh");
     auto* mesh=mesh_asset(source);
     if(!mesh) throw std::runtime_error("No appearance for animated preview");
-    FWeakObjectPtr source_before(source),mesh_before(mesh);
+    WeakObject source_before(source),mesh_before(mesh);
     const std::string idle="A_Shared_Idle_L";
     preview_animation_="/Game/Sparta/Characters/Shells/_Shared/Animation/Locomotion/Idles/"+idle+"."+idle;
     auto* animation=load(preview_animation_);
@@ -896,7 +911,7 @@ void Wardrobe::preview_open() {
     if(actors.Num()>64) throw std::runtime_error("Unexpected number of player attachments");
     auto hide=[&](UObject* target) {
         if(!target || target==actor) return;
-        hidden_.push_back({FWeakObjectPtr(target),boolean_field(target,L"bHidden")->GetPropertyValueInContainer(target)});
+        hidden_.push_back({WeakObject(target),boolean_field(target,L"bHidden")->GetPropertyValueInContainer(target)});
         invoke(target,L"SetActorHiddenInGame",L"bNewHidden",true);
     };
     hide(pawn);
@@ -1180,7 +1195,7 @@ void Appearance::customize(const Outfit& outfit,const Customization& custom) {
                 for(int slot:surface.slots) {
                     Call set(mid_for(slot),L"SetTextureParameterValue",2); set.set(L"ParameterName",parameter); set.set(L"Value",target); set.run();
                 }
-                std::vector<std::pair<FWeakObjectPtr,ColorValue>> layers;
+                std::vector<std::pair<WeakObject,ColorValue>> layers;
                 for(const auto& [id,file]:surface.layers) if(values.contains(id)) {
                     auto& texture=color_textures_[file];
                     if(!texture.Get()) {

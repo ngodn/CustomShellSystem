@@ -8,13 +8,21 @@
 #include <Unreal/FWeakObjectPtr.hpp>
 
 namespace css {
+// UE4SS's serial-allocation fallback uses a legacy soft-reference layout.
+// Initialize new serials through a reflected frame before constructing a weak handle.
+class WeakObject : public RC::Unreal::FWeakObjectPtr {
+public:
+    WeakObject() = default;
+    WeakObject(RC::Unreal::UObject* object);
+    WeakObject& operator=(RC::Unreal::UObject* object);
+};
 class Appearance {
-    RC::Unreal::FWeakObjectPtr component_, applied_;
+    WeakObject component_, applied_;
     std::string original_;
     std::vector<std::string> original_materials_;
     std::map<int,std::string> applied_materials_;
-    std::map<int,RC::Unreal::FWeakObjectPtr> color_mids_;
-    std::map<std::string,RC::Unreal::FWeakObjectPtr> color_targets_, color_textures_;
+    std::map<int,WeakObject> color_mids_;
+    std::map<std::string,WeakObject> color_targets_, color_textures_;
     std::map<std::string,ColorValue> last_colors_;
     std::string color_outfit_;
     void reset_colors();
@@ -30,21 +38,21 @@ public:
 // All widgets and input ownership stay on the game thread. No widget delegates
 // point into the reloadable DLL, so closing the view permits core unloading.
 class Wardrobe {
-    struct Hit { RC::Unreal::FWeakObjectPtr widget; Json action; bool down = false; };
-    struct Row { Json wear, favorite, previous, next, save; RC::Unreal::FWeakObjectPtr marker; };
-    RC::Unreal::FWeakObjectPtr root_, controller_, pawn_, status_;
+    struct Hit { WeakObject widget; Json action; bool down = false; };
+    struct Row { Json wear, favorite, previous, next, save; WeakObject marker; };
+    WeakObject root_, controller_, pawn_, status_;
     std::vector<Hit> hits_;
     std::vector<Row> rows_;
-    struct Slider { RC::Unreal::FWeakObjectPtr widget, label; Json action; float previous=0; bool scalar=false; };
+    struct Slider { WeakObject widget, label; Json action; float previous=0; bool scalar=false; };
     std::vector<Slider> sliders_;
-    RC::Unreal::FWeakObjectPtr color_title_, color_swatch_;
+    WeakObject color_title_, color_swatch_;
     std::string color_title_text_;
     int color_part_ = 0;
     bool owns_input_ = false, old_cursor_ = false;
-    RC::Unreal::FWeakObjectPtr camera_, view_before_;
+    WeakObject camera_, view_before_;
     bool owns_pause_ = false, full_tick_before_ = false, full_tick_changed_ = false;
-    struct HiddenActor { RC::Unreal::FWeakObjectPtr actor; bool before; };
-    RC::Unreal::FWeakObjectPtr preview_, preview_mesh_;
+    struct HiddenActor { WeakObject actor; bool before; };
+    WeakObject preview_, preview_mesh_;
     std::vector<HiddenActor> hidden_;
     double preview_time_ = 0, preview_length_ = 0, preview_sample_at_ = 0;
     std::array<double,3> preview_first_head_{};
@@ -70,7 +78,7 @@ class Wardrobe {
     void preview_update(double delta);
     void focus(int index);
     int category_ = 0, page_ = 0;
-    std::map<std::string, RC::Unreal::FWeakObjectPtr> textures_;
+    std::map<std::string, WeakObject> textures_;
 public:
     bool opened() const { return root_.Get() != nullptr; }
     void open(void* engine, const Catalog&, const State&, Appearance&, const std::string& message, const fs::path& assets);
