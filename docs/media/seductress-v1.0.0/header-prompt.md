@@ -25,3 +25,15 @@ Edit this Seductress banner with one precise correction: the TWO TALL GOLD HORNS
 
 Preserve ALL left-side text exactly and unchanged: "CUSTOM SHELL SYSTEM", "SEDUCTRESS", "by _eins0fx". Preserve the moth crest, ornamentation, entire four-edge gold border, background aesthetic and wide banner composition. Do not crop the overall image or change the text. Only reduce and reposition the right character so the complete headwear fits elegantly inside the frame. No extra characters or text.
 
+## Reproduce the transparent export
+
+```python
+from PIL import Image, ImageOps
+
+source = Image.open("seductress-header.png").convert("RGBA")
+fitted = ImageOps.contain(source, (1300, 372), method=Image.Resampling.LANCZOS)
+canvas = Image.new("RGBA", (1300, 372), (0, 0, 0, 0))
+canvas.alpha_composite(fitted, ((1300 - fitted.width) // 2,
+                                (372 - fitted.height) // 2))
+canvas.save("seductress-header-1300x372-transparent.png", optimize=True)
+```
