@@ -14,11 +14,12 @@ Selecting an appearance preserves your current gameplay shell and abilities. The
 
 ## See it in action
 
-[![CSS wardrobe with BeauteGenessa and the appearance browser](docs/media/v0.1.1/wardrobe-genessa.png)](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4)
+[![Seductress with a polearm in the game inventory preview](docs/media/v0.1.1/seductress-inventory-polearm.png)](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4)
 
 **[Watch the 63-second wardrobe demo (MP4)](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4)**.
-Click the image or link to open the recording. BeauteGenessa by dantemk2 shown
-above; outfit packages are separate downloads.
+Click the image or link to open the recording. The Seductress development
+outfit is shown in the game inventory above; outfit packages are separate
+downloads.
 
 ![CSS preset palettes and per-part color sliders with Seductress](docs/media/v0.1.1/colors-crimson.png)
 
@@ -28,6 +29,22 @@ from gameplay; this remains a known issue in 0.1.1.
 
 <details>
 <summary>More screenshots</summary>
+
+![Seductress in gameplay with an axe resting on her shoulder](docs/media/v0.1.1/seductress-gameplay-front.png)
+
+Front view of Seductress during gameplay.
+
+![Seductress in the inventory with Axatana selected](docs/media/v0.1.1/seductress-inventory-axatana.png)
+
+The same development outfit in the inventory with Axatana selected.
+
+![Close side view of Seductress in gameplay](docs/media/v0.1.1/seductress-gameplay-side.png)
+
+A closer look at the Seductress development outfit in the game world.
+
+![BeauteGenessa in the CSS wardrobe](docs/media/v0.1.1/wardrobe-genessa.png)
+
+The appearance browser with BeauteGenessa by dantemk2.
 
 ![Seductress selected in the CSS appearance browser](docs/media/v0.1.1/wardrobe-seductress.png)
 

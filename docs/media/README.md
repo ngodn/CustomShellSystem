@@ -1,7 +1,8 @@
 # CSS gallery media
 
-The `v0.1.1/` folder holds the five gameplay screenshots and a web copy of the
-63-second wardrobe recording captured on 14 September 2026. These files are
+The `v0.1.1/` folder holds nine screenshots from gameplay, the wardrobe and
+the inventory, plus a web copy of the 63-second wardrobe recording captured
+on 14 September 2026. These files are
 tracked so the README and external mod pages can link to them. They are not
 part of the runtime ZIP.
 
@@ -28,6 +29,10 @@ All PNGs preserve the original 2560 x 1440 screenshots without retouching.
 
 | File | Contents |
 | --- | --- |
+| [seductress-inventory-polearm.png](v0.1.1/seductress-inventory-polearm.png) | Lead image and video poster, inventory preview with polearm |
+| [seductress-inventory-axatana.png](v0.1.1/seductress-inventory-axatana.png) | Inventory preview with Axatana selected; screenshot notification visible |
+| [seductress-gameplay-front.png](v0.1.1/seductress-gameplay-front.png) | Front view with axe during gameplay |
+| [seductress-gameplay-side.png](v0.1.1/seductress-gameplay-side.png) | Close side view during gameplay |
 | [wardrobe-genessa.png](v0.1.1/wardrobe-genessa.png) | BeauteGenessa and the appearance browser |
 | [colors-crimson.png](v0.1.1/colors-crimson.png) | Seductress, Crimson palette and RGB controls |
 | [wardrobe-seductress.png](v0.1.1/wardrobe-seductress.png) | Seductress in the appearance browser |

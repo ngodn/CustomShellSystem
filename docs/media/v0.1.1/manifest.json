@@ -56,6 +56,30 @@
       "file": "wardrobe-seductress.png",
       "bytes": 4796239,
       "sha256": "d829b05d09d422beba625037e42de59688cb7cfad12ebac879ece1d6719e9d09"
+    },
+    {
+      "file": "seductress-gameplay-front.png",
+      "source": "screenshot-2026-09-14_04-52-05.png",
+      "bytes": 2907636,
+      "sha256": "f3e24f1737ad6e12fcb4df44f4e4219358edde43e001dd5a03ea61bfc77e61f4"
+    },
+    {
+      "file": "seductress-gameplay-side.png",
+      "source": "screenshot-2026-09-14_04-52-45.png",
+      "bytes": 3102649,
+      "sha256": "eb84c1c52f23e009e6df29f21728781fd5fdf6c15b86f73bce9352e1aa89fdc0"
+    },
+    {
+      "file": "seductress-inventory-polearm.png",
+      "source": "screenshot-2026-09-14_04-54-38.png",
+      "bytes": 2197765,
+      "sha256": "16f9e267c4ab25d900f3ad51b7431f821f4254d3854795211a1105af6137a041"
+    },
+    {
+      "file": "seductress-inventory-axatana.png",
+      "source": "screenshot-2026-09-14_04-54-46.png",
+      "bytes": 2269001,
+      "sha256": "aeda7134ff6142098d406682d6340c34c5aad7322089c5104cf3e426c9965d18"
     }
   ]
 }

@@ -1,10 +1,10 @@
 [size=4][b]Watch CSS in action[/b][/size]
 
-[url=https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/wardrobe-genessa.png[/img][/url]
+[url=https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/seductress-inventory-polearm.png[/img][/url]
 
 [url=https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4]Watch the 63-second wardrobe demo (MP4)[/url]. Click the image or link to open the recording.
 
-Outfit packages shown here are separate from the CSS download. Seductress is a development example.
+Outfit packages shown here are separate from the CSS download. Seductress is a development example; the lead image shows the game inventory preview.
 
 [size=4][b]Palettes and custom colors[/b][/size]
 
@@ -13,6 +13,10 @@ Outfit packages shown here are separate from the CSS download. Seductress is a d
 Choose a palette or adjust individual parts with RGB sliders on compatible packages.
 
 [size=4][b]Appearance browser[/b][/size]
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/wardrobe-genessa.png[/img]
+
+BeauteGenessa by dantemk2 in the wardrobe.
 
 [img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/wardrobe-seductress.png[/img]
 
@@ -24,7 +28,21 @@ Switch appearances while keeping your current gameplay shell and abilities.
 
 Editable parts and available palettes depend on the outfit package.
 
+[size=4][b]Inventory preview[/b][/size]
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/seductress-inventory-axatana.png[/img]
+
+Seductress in the game inventory with Axatana selected.
+
 [size=4][b]Back in the world[/b][/size]
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/seductress-gameplay-front.png[/img]
+
+Front view of Seductress with an axe during gameplay.
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/seductress-gameplay-side.png[/img]
+
+A closer side view of the Seductress development outfit during gameplay.
 
 [img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/seductress-gameplay.png[/img]
 
