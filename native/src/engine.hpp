@@ -61,12 +61,15 @@ class Wardrobe {
     WeakObject camera_, view_before_;
     bool owns_pause_ = false, full_tick_before_ = false, full_tick_changed_ = false;
     struct HiddenActor { WeakObject actor; bool before; };
-    WeakObject preview_, preview_mesh_;
+    WeakObject preview_, preview_mesh_, source_hidden_mesh_, light_rig_;
+    bool source_mesh_hidden_before_ = false, light_tick_before_ = false;
     std::vector<HiddenActor> hidden_;
     double preview_time_ = 0, preview_length_ = 0, preview_sample_at_ = 0;
     std::array<double,3> preview_first_head_{};
     bool preview_sampled_ = false, preview_moving_ = false;
     std::string preview_animation_;
+    double preview_floor_anchor_ = 0, preview_floor_offset_ = 0;
+    bool preview_aligned_ = false;
     uint64_t last_input_tick_ = 0;
     double yaw_ = 0, pitch_ = 3, distance_ = 500, height_ = 0, pan_ = 0;
     std::array<double,3> last_center_{};

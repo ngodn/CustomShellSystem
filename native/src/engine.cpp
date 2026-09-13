@@ -928,6 +928,45 @@ unsigned char* preview_cloth_tick(UObject* component) {
     if(!tick) throw std::runtime_error("Preview cloth tick was not identified");
     return tick;
 }
+std::vector<float> primitive_data(UObject* component,const wchar_t* name) {
+    auto* p=component->GetPropertyByNameInChain(name);
+    auto* data=find(L"/Script/Engine.CustomPrimitiveData")->GetPropertyByNameInChain(L"Data");
+    if(!p || !data || !data->IsA<FArrayProperty>() || data->GetOffset_Internal()+data->GetElementSize()>p->GetElementSize())
+        throw std::runtime_error("Custom primitive data layout mismatch");
+    auto* a=static_cast<FArrayProperty*>(data);
+    if(a->GetInner()->GetElementSize()!=sizeof(float)) throw std::runtime_error("Custom primitive data is not float");
+    FScriptArrayHelper values(a,reinterpret_cast<std::byte*>(component)+p->GetOffset_Internal()+data->GetOffset_Internal());
+    if(values.Num()<0 || values.Num()>128) throw std::runtime_error("Custom primitive data count mismatch");
+    std::vector<float> result(values.Num());
+    for(int i=0;i<values.Num();++i) std::memcpy(&result[i],values.GetRawPtr(i),sizeof(float));
+    return result;
+}
+double lowest_ball(UObject* component) {
+    double lowest=std::numeric_limits<double>::infinity();
+    for(auto name:{L"ball_l",L"ball_r"}) {
+        Call exists(component,L"DoesSocketExist",2); exists.set(L"InSocketName",FName(name)); exists.run();
+        if(!exists.get<bool>()) throw std::runtime_error("Preview foot landmark is missing");
+        Call socket(component,L"GetSocketLocation",2); socket.set(L"InSocketName",FName(name)); socket.run();
+        lowest=std::min(lowest,socket.get<std::array<double,3>>()[2]);
+    }
+    return lowest;
+}
+void sync_preview_visuals(UObject* source,UObject* preview) {
+    const auto channels=read<uint8_t>(source,L"LightingChannels");
+    Call lighting(preview,L"SetLightingChannels",3);
+    lighting.set(L"bChannel0",bool(channels&1)); lighting.set(L"bChannel1",bool(channels&2));
+    lighting.set(L"bChannel2",bool(channels&4)); lighting.run();
+    auto values=primitive_data(source,L"CustomPrimitiveDataInternal");
+    const auto previous=primitive_data(preview,L"CustomPrimitiveDataInternal");
+    // Clear stale entries when an appearance uses fewer values. Missing entries
+    // are zero in the renderer; the engine setter owns render-state updates.
+    values.resize(std::max(values.size(),previous.size()),0.0f);
+    for(size_t i=0;i<values.size();++i) {
+        if(i<previous.size() && previous[i]==values[i]) continue;
+        Call set(preview,L"SetCustomPrimitiveDataFloat",2);
+        set.set(L"DataIndex",static_cast<int32_t>(i)); set.set(L"Value",values[i]); set.run();
+    }
+}
 void enable_preview_cloth(UObject* component) {
     auto* tick=preview_cloth_tick(component);
     auto* flag=boolean_field(find(L"/Script/Engine.TickFunction"),L"bTickEvenWhenPaused");
@@ -978,6 +1017,7 @@ void Wardrobe::preview_open() {
         UObject* material{}; std::memcpy(&material,materials.GetRawPtr(i),sizeof(material));
         Call set(component,L"SetMaterial",2); set.set(L"ElementIndex",i); set.set(L"Material",material); set.run();
     }
+    sync_preview_visuals(source,component);
     invoke(component,L"SetCollisionEnabled",L"NewType",uint8_t{0});
     invoke(component,L"SetTickableWhenPaused",L"bTickableWhenPaused",true);
     invoke(component,L"SetComponentTickEnabled",L"bEnabled",true);
@@ -986,6 +1026,7 @@ void Wardrobe::preview_open() {
     invoke(component,L"SetPlayRate",L"Rate",0.0f);
     enable_preview_cloth(component);
     preview_time_=0; preview_sample_at_=0; preview_sampled_=false; preview_moving_=false;
+    preview_floor_anchor_=lowest_ball(source); preview_floor_offset_=0; preview_aligned_=false;
     preview_update(0);
     Call attachments(pawn,L"GetAttachedActors",3);
     attachments.set(L"bResetArray",true); attachments.set(L"bRecursivelyIncludeAttachedActors",true); attachments.run();
@@ -995,12 +1036,28 @@ void Wardrobe::preview_open() {
     if(array->GetInner()->GetElementSize()!=sizeof(UObject*)) throw std::runtime_error("Attached actor layout mismatch");
     FScriptArrayHelper actors(array,attachments.data(p));
     if(actors.Num()>64) throw std::runtime_error("Unexpected number of player attachments");
+    if(auto* child=read<UObject*>(pawn,L"BP_PlayerLightRigComponent")) {
+        if(auto* rig=read<UObject*>(child,L"ChildActor")) {
+            auto* tick=rig->GetPropertyByNameInChain(L"PrimaryActorTick");
+            auto* flag=boolean_field(find(L"/Script/Engine.TickFunction"),L"bTickEvenWhenPaused");
+            if(!tick || flag->GetOffset_Internal()+flag->GetElementSize()>tick->GetElementSize())
+                throw std::runtime_error("Player lighting tick layout mismatch");
+            auto* data=reinterpret_cast<std::byte*>(rig)+tick->GetOffset_Internal();
+            light_tick_before_=flag->GetPropertyValueInContainer(data); light_rig_=rig;
+            flag->SetPropertyValueInContainer(data,true);
+        }
+    }
     auto hide=[&](UObject* target) {
-        if(!target || target==actor) return;
+        if(!target || target==actor || target==light_rig_.Get()) return;
         hidden_.push_back({WeakObject(target),boolean_field(target,L"bHidden")->GetPropertyValueInContainer(target)});
         invoke(target,L"SetActorHiddenInGame",L"bNewHidden",true);
     };
-    hide(pawn);
+    // Hiding the whole pawn also disables its player light rig. Hide only the
+    // rendered mesh, retaining the environment-driven camera and rim lights.
+    source_mesh_hidden_before_=boolean_field(source,L"bHiddenInGame")->GetPropertyValueInContainer(source);
+    source_hidden_mesh_=source;
+    Call hidden(source,L"SetHiddenInGame",2); hidden.set(L"NewHidden",true);
+    hidden.set(L"bPropagateToChildren",false); hidden.run();
     for(int i=0;i<actors.Num();++i) { UObject* child{}; std::memcpy(&child,actors.GetRawPtr(i),sizeof(child)); hide(child); }
 }
 void Wardrobe::preview_update(double delta) {
@@ -1013,6 +1070,22 @@ void Wardrobe::preview_update(double delta) {
     preview_sample_at_+=delta;
     if(!preview_moving_ && preview_sample_at_>=.25) {
         preview_sample_at_=0;
+        // The standalone idle has no gameplay foot IK. Align its lowest toe
+        // landmark once after evaluation, without moving the player or camera.
+        if(!preview_aligned_) {
+            auto offset=preview_floor_anchor_-lowest_ball(component);
+            if(std::isfinite(offset) && std::abs(offset)<=15.0) {
+                auto* actor=preview_.Get();
+                Call location(actor,L"K2_GetActorLocation",1); location.run();
+                auto position=location.get<std::array<double,3>>(); position[2]+=offset;
+                Call move(actor,L"K2_SetActorLocation",5);
+                move.set(L"NewLocation",position); move.set(L"bSweep",false); move.set(L"bTeleport",true); move.run();
+                if(!move.get<bool>()) throw std::runtime_error("Preview floor alignment failed");
+                invoke(component,L"ForceClothNextUpdateTeleport");
+                preview_floor_offset_=offset;
+            }
+            preview_aligned_=true;
+        }
         Call socket(component,L"GetSocketLocation",2); socket.set(L"InSocketName",FName(L"head")); socket.run();
         auto head=socket.get<std::array<double,3>>();
         if(preview_sampled_) {
@@ -1023,6 +1096,17 @@ void Wardrobe::preview_update(double delta) {
     }
 }
 void Wardrobe::preview_close() {
+    if(auto* source=source_hidden_mesh_.Get()) {
+        Call hidden(source,L"SetHiddenInGame",2); hidden.set(L"NewHidden",source_mesh_hidden_before_);
+        hidden.set(L"bPropagateToChildren",false); hidden.run();
+    }
+    source_hidden_mesh_.Reset();
+    if(auto* rig=light_rig_.Get()) {
+        auto* tick=rig->GetPropertyByNameInChain(L"PrimaryActorTick");
+        auto* flag=boolean_field(find(L"/Script/Engine.TickFunction"),L"bTickEvenWhenPaused");
+        flag->SetPropertyValueInContainer(reinterpret_cast<std::byte*>(rig)+tick->GetOffset_Internal(),light_tick_before_);
+    }
+    light_rig_.Reset();
     for(auto& saved:hidden_) if(auto* actor=saved.actor.Get()) invoke(actor,L"SetActorHiddenInGame",L"bNewHidden",saved.before);
     hidden_.clear();
     if(auto* actor=preview_.Get()) invoke(actor,L"K2_DestroyActor");
@@ -1172,6 +1256,72 @@ Json Wardrobe::diagnostics() const {
 Json Wardrobe::inspect(UObject* player) const {
     Json result=diagnostics();
     result["framing"]={yaw_,pitch_,distance_,height_,pan_};
+    result["preview_floor_offset_cm"]=preview_floor_offset_;
+    result["preview_floor_aligned"]=preview_aligned_;
+    auto visual=[](UObject* component) {
+        Json value=material_snapshot(component,mesh_asset(component));
+        Call location(component,L"K2_GetComponentLocation",1); location.run();
+        value["location"]=location.get<std::array<double,3>>();
+        value["lighting_channels"]=read<uint8_t>(component,L"LightingChannels");
+        for(auto name:{L"CustomPrimitiveData",L"CustomPrimitiveDataInternal"}) {
+            value[narrow(name)]=primitive_data(component,name);
+        }
+        for(auto name:{L"root",L"pelvis",L"foot_l",L"foot_r",L"ball_l",L"ball_r"}) {
+            Call socket(component,L"GetSocketLocation",2); socket.set(L"InSocketName",FName(name)); socket.run();
+            value["sockets"][narrow(name)]=socket.get<std::array<double,3>>();
+        }
+        return value;
+    };
+    if(auto* component=preview_mesh_.Get()) result["preview_visual"]=visual(component);
+    if(auto* display=menu_character(player)) {
+        result["menu_character"]=narrow(display->GetPathName());
+        result["menu_shell"]=narrow(read<FName>(display,L"CharacterId").ToString());
+        auto* mesh=read<UObject*>(display,L"Mesh");
+        result["menu_mesh"]=narrow(mesh_asset(mesh)->GetPathName());
+        result["menu_visual"]=visual(mesh);
+    }
+    if(player) {
+        result["gameplay_visual"]=visual(read<UObject*>(player,L"Mesh"));
+        auto* capsule=read<UObject*>(player,L"CapsuleComponent");
+        Call location(capsule,L"K2_GetComponentLocation",1); location.run();
+        Call height(capsule,L"GetScaledCapsuleHalfHeight",1); height.run();
+        result["capsule_bottom"]=location.get<std::array<double,3>>()[2]-height.get<float>();
+    }
+    if(auto* rig=light_rig_.Get()) {
+        result["player_light_rig"]=narrow(rig->GetPathName());
+        result["player_light_rig_hidden"]=boolean_field(rig,L"bHidden")->GetPropertyValueInContainer(rig);
+        result["player_light_rig_enabled"]=read<bool>(rig,L"IsEnabled");
+        result["light_rig_camera_rotation"]=read<std::array<double,3>>(rig,L"PlayerCameraRotation");
+        for(auto name:{L"Cam_Light",L"Rim_Left_Light",L"Rim_Right_Light"}) {
+            auto* light=read<UObject*>(rig,name); if(!light) continue;
+            Call location(light,L"K2_GetComponentLocation",1); location.run();
+            Call rotation(light,L"K2_GetComponentRotation",1); rotation.run();
+            Call visible(light,L"IsVisible",1); visible.run();
+            result["lights"][narrow(name)]={{"location",location.get<std::array<double,3>>()},
+                {"rotation",rotation.get<std::array<double,3>>()},{"visible",visible.get<bool>()},
+                {"intensity",read<float>(light,L"Intensity")},{"channels",read<uint8_t>(light,L"LightingChannels")}};
+        }
+    }
+    auto camera_info=[](UObject* actor) {
+        Json result; if(!actor) return result;
+        result["actor"]=narrow(actor->GetPathName());
+        if(!actor->GetPropertyByNameInChain(L"CameraComponent")) return result;
+        auto* component=read<UObject*>(actor,L"CameraComponent"); if(!component) return result;
+        result["blend_weight"]=read<float>(component,L"PostProcessBlendWeight");
+        auto* property=component->GetPropertyByNameInChain(L"PostProcessSettings");
+        auto* settings=reinterpret_cast<std::byte*>(component)+property->GetOffset_Internal();
+        auto* type=find(L"/Script/Engine.PostProcessSettings");
+        for(auto name:{L"AutoExposureBias",L"AutoExposureMinBrightness",L"AutoExposureMaxBrightness",L"BloomIntensity",L"VignetteIntensity"}) {
+            auto* field=type->GetPropertyByNameInChain(name);
+            if(!field || field->GetElementSize()!=sizeof(float) || field->GetOffset_Internal()+sizeof(float)>static_cast<size_t>(property->GetElementSize())) continue;
+            float value{}; std::memcpy(&value,settings+field->GetOffset_Internal(),sizeof(value)); result[narrow(name)]=value;
+            auto flag=std::wstring(L"bOverride_")+name;
+            result[narrow(flag)]=boolean_field(type,flag.c_str())->GetPropertyValueInContainer(settings);
+        }
+        return result;
+    };
+    result["gameplay_camera"]=camera_info(view_before_.Get());
+    result["preview_camera"]=camera_info(camera_.Get());
     if(auto* actor=camera_.Get()) result["camera"]=narrow(actor->GetPathName());
     if(auto* actor=preview_.Get()) result["preview"]=narrow(actor->GetPathName());
     if(auto* component=preview_mesh_.Get()) {
@@ -1351,6 +1501,7 @@ void Wardrobe::sync_materials() {
     if(!preview || !pawn) return;
     auto* source=read<UObject*>(pawn,L"Mesh");
     if(mesh_asset(preview)!=mesh_asset(source)) return;
+    sync_preview_visuals(source,preview);
     auto values=overrides(source);
     int count=std::max(values.Num(),overrides(preview).Num());
     for(int i=0;i<count;++i) {
