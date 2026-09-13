@@ -1,0 +1,61 @@
+{
+  "video": {
+    "file": "css-wardrobe-demo.mp4",
+    "source": "screenrecording-2026-09-14_04-13-28.mp4",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "width": 2560,
+          "height": 1440,
+          "r_frame_rate": "60/1",
+          "nb_frames": "3791"
+        },
+        {
+          "codec_name": "aac",
+          "r_frame_rate": "0/0",
+          "nb_frames": "5932"
+        }
+      ],
+      "format": {
+        "duration": "63.300000",
+        "size": "78305108"
+      }
+    },
+    "source_container_frame_count": "3797",
+    "source_decoded_frames": 3791,
+    "output_decoded_frames": 3791,
+    "audio_stream_hash": "SHA256=3b42b55838f46a74d3ec13f42cc5cf64cf96a297dd8af8e795b02564735220f2",
+    "sha256": "870827c470555852443a1d1a5e2e0a748e80792934cb99e975b92a3663047d36",
+    "faststart": true
+  },
+  "screenshots": [
+    {
+      "file": "colors-crimson.png",
+      "bytes": 5420906,
+      "sha256": "a0918cec3aa1a371a7b6d4ac11aed93ad801ba535a21c1d81939e80902a14654"
+    },
+    {
+      "file": "colors-verdigris.png",
+      "bytes": 4908147,
+      "sha256": "c2af91b8f3ff8f627826b6610a6ee9b3244faf269b561ae4ed5332c885f1dbb1"
+    },
+    {
+      "file": "seductress-gameplay.png",
+      "bytes": 2815022,
+      "sha256": "019db9be8c31c49058aca08ac65647c15b57308a576e0d689792514bbb7d1f18"
+    },
+    {
+      "file": "wardrobe-genessa.png",
+      "bytes": 4883176,
+      "sha256": "5f3157c5f832aa04ce8ea031637dd8cc7e601c3a917c4614ac572716496487da"
+    },
+    {
+      "file": "wardrobe-seductress.png",
+      "bytes": 4796239,
+      "sha256": "d829b05d09d422beba625037e42de59688cb7cfad12ebac879ece1d6719e9d09"
+    }
+  ]
+}

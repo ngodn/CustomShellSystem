@@ -1,0 +1,31 @@
+[size=4][b]Watch CSS in action[/b][/size]
+
+[url=https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/wardrobe-genessa.png[/img][/url]
+
+[url=https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4]Watch the 63-second wardrobe demo (MP4)[/url]. Click the image or link to open the recording.
+
+Outfit packages shown here are separate from the CSS download. Seductress is a development example.
+
+[size=4][b]Palettes and custom colors[/b][/size]
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/colors-crimson.png[/img]
+
+Choose a palette or adjust individual parts with RGB sliders on compatible packages.
+
+[size=4][b]Appearance browser[/b][/size]
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/wardrobe-seductress.png[/img]
+
+Switch appearances while keeping your current gameplay shell and abilities.
+
+[size=4][b]Per-part controls[/b][/size]
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/colors-verdigris.png[/img]
+
+Editable parts and available palettes depend on the outfit package.
+
+[size=4][b]Back in the world[/b][/size]
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/seductress-gameplay.png[/img]
+
+Seductress development outfit during gameplay. Wardrobe lighting can differ from gameplay in CSS 0.1.1.

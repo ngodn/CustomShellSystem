@@ -3,9 +3,48 @@
 Current runtime version: **0.1.1**. See [runtime releases](docs/releases.md) for the
 clean ZIP, installation layout and first-run verification.
 
-A native C++23 wardrobe for Mortal Shell II, inspired by Custom Nanosuit System. The first playable milestone includes BeauteGenessa (regular and corrupted), BeauteKnightLady (Proxima) and HIT2 DE Scyther, with per-part colors, reference-inspired palettes, favorites, three saved-look slots, an animated character preview and controller navigation.
+A native C++23 wardrobe for Mortal Shell II, inspired by [Custom Nanosuit System](https://www.nexusmods.com/stellarblade/mods/1496?tab=description). Browse compatible outfits with variants, per-part colors, favorites, three saved-look slots, an animated character preview and controller navigation.
+
+**[Download CSS v0.1.1](https://github.com/ngodn/CustomShellSystem/releases/tag/v0.1.1)**.
+Requires [UE4SS for MS2](https://www.nexusmods.com/mortalshell2/mods/45?tab=files)
+and separate CSS outfit packages. The runtime ZIP does not include the outfits
+shown below. Seductress is a development example.
 
 Selecting an appearance preserves your current gameplay shell and abilities. The installed outfits use the game's human skeleton, which CSS checks before every mesh replacement. Weapons, seals and shells do **not** need to be unlocked for these cosmetic selections. CSS does not edit the game save or unlock progression.
+
+## See it in action
+
+[![CSS wardrobe with BeauteGenessa and the appearance browser](docs/media/v0.1.1/wardrobe-genessa.png)](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4)
+
+**[Watch the 63-second wardrobe demo (MP4)](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4)**.
+Click the image or link to open the recording. BeauteGenessa by dantemk2 shown
+above; outfit packages are separate downloads.
+
+![CSS preset palettes and per-part color sliders with Seductress](docs/media/v0.1.1/colors-crimson.png)
+
+Preset palettes and custom colors on the Seductress development outfit.
+Editable parts depend on the installed package. Wardrobe lighting can differ
+from gameplay; this remains a known issue in 0.1.1.
+
+<details>
+<summary>More screenshots</summary>
+
+![Seductress selected in the CSS appearance browser](docs/media/v0.1.1/wardrobe-seductress.png)
+
+Switch appearances while keeping your gameplay shell.
+
+![Seductress with the Verdigris palette controls](docs/media/v0.1.1/colors-verdigris.png)
+
+Adjust a selected part or reset its colors.
+
+![Seductress in gameplay with the wardrobe closed](docs/media/v0.1.1/seductress-gameplay.png)
+
+The Seductress development outfit in the game world.
+
+</details>
+
+See [media credits and Nexus BBCode](docs/media/README.md) for the original
+mod links and reusable image/video links.
 
 ## Controls
 
