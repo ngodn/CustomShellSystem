@@ -119,6 +119,26 @@
         0.0
       ],
       "prompt": "../header-prompt.md",
+      "selected": false
+    },
+    {
+      "file": "css-nexus-header-1300x372-transparent.png",
+      "width": 1300,
+      "height": 372,
+      "bytes": 694165,
+      "sha256": "9df5429f25e79140c5252120d261c9f6a6657309cdf51125f9a31993394e7f2d",
+      "generated": true,
+      "method": "Complete v2 artwork scaled proportionally and centered on a transparent RGBA canvas",
+      "source": "css-nexus-header-v2.png",
+      "artwork_size": [
+        1008,
+        372
+      ],
+      "position": [
+        146,
+        0
+      ],
+      "prompt": "../header-prompt.md",
       "selected": true
     }
   ]

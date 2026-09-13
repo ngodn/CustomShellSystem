@@ -8,11 +8,12 @@ part of the runtime ZIP.
 
 ## Nexus page header
 
-[css-nexus-header-1300x372.png](v0.1.1/css-nexus-header-1300x372.png) is generated promotional
+[css-nexus-header-1300x372-transparent.png](v0.1.1/css-nexus-header-1300x372-transparent.png) is generated promotional
 artwork combining the CSS identity with Seductress and Marrow Keep references.
 It includes the title and `by _eins0fx` credit. Upload it in Nexus's **Header**
 field. The upload file is exactly **1300 x 372 pixels**, below 8 MB.
-The title, author credit and face remain visible without stretching.
+The complete original artwork is scaled proportionally and centered, with
+146 pixels of transparency on each side. Nothing is cropped.
 
 [Generation prompt and provenance](header-prompt.md).
 
