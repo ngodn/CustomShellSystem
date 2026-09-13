@@ -41,6 +41,7 @@ struct State {
     static State parse(const Json&);
     Json json() const;
 };
+State load_state(const fs::path&, bool* recovered = nullptr);
 Json read_json(const fs::path&);
 void atomic_json(const fs::path&, const Json&, bool backup = true);
 bool valid_id(const std::string&);

@@ -35,18 +35,9 @@ struct Core {
         return Catalog::load(root/"catalog",(root/"../../../../../Content/Paks/~mods").lexically_normal(),root/"cache/packages");
     }
     explicit Core(const CssHost& h) : host(h), root(h.root), catalog(load_catalog()) {
-        auto file = root / "state/state.json";
-        if (fs::exists(file)) {
-            try { auto saved=read_json(file); state = State::parse(saved); dirty=state.json()!=saved; }
-            catch (const std::exception&) {
-                auto backup = file; backup += ".bak";
-                // Preserve corrupt bytes before a later successful save.
-                fs::copy_file(file, file.string() + ".corrupt-" + std::to_string(GetTickCount64()));
-                if (!fs::exists(backup)) throw;
-                state = State::parse(read_json(backup));
-                message = "Recovered CSS state from its backup.";
-            }
-        }
+        bool recovered=false;
+        state=load_state(root / "state/state.json", &recovered);
+        if(recovered) message="Recovered CSS state from its backup.";
         if (fs::exists(root / "request.json")) {
             try { last_request = read_json(root / "request.json").at("id").get<std::string>(); }
             catch (...) {} // Ignore stale malformed requests on a fresh core.

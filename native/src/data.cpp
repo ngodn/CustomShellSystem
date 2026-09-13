@@ -1,6 +1,7 @@
 #include "data.hpp"
 #include "packages.hpp"
 #include <algorithm>
+#include <chrono>
 #include <fstream>
 #include <stdexcept>
 #ifdef _WIN32
@@ -52,13 +53,40 @@ void atomic_json(const fs::path& path, const Json& data, bool backup) {
     fs::rename(temp, path);
 #endif
 }
+State load_state(const fs::path& file, bool* recovered) {
+    if(recovered) *recovered=false;
+    auto backup=fs::path(file.string()+".bak");
+    if(fs::exists(file)) {
+        try {
+            auto saved=read_json(file);
+            auto state=State::parse(saved);
+            if(state.json()!=saved) atomic_json(file,state.json());
+            return state;
+        } catch(const std::exception&) {
+            // Keep the damaged primary, and never overwrite the good backup
+            // with it during recovery. An invalid backup still fails visibly.
+            auto stamp=std::chrono::system_clock::now().time_since_epoch().count();
+            fs::copy_file(file,file.string()+".corrupt-"+std::to_string(stamp));
+            if(!fs::exists(backup)) throw;
+        }
+    }
+    State state;
+    if(fs::exists(backup)) {
+        state=State::parse(read_json(backup));
+        if(recovered) *recovered=true;
+    }
+    atomic_json(file,state.json(),false);
+    return state;
+}
 Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::path& cache) {
     Catalog result;
     std::set<std::string> ids;
     std::vector<fs::path> files;
-    if (!fs::is_directory(directory)) throw std::runtime_error("CSS catalog directory is missing");
-    for (const auto& file : fs::directory_iterator(directory))
-        if (file.is_regular_file() && file.path().filename().string().ends_with(".css.json")) files.push_back(file.path());
+    if (fs::exists(directory)) {
+        if (!fs::is_directory(directory)) throw std::runtime_error("CSS catalog path is not a directory");
+        for (const auto& file : fs::directory_iterator(directory))
+            if (file.is_regular_file() && file.path().filename().string().ends_with(".css.json")) files.push_back(file.path());
+    }
     std::sort(files.begin(), files.end());
     auto documents=package_catalogs(paks,cache);
     for(const auto& path:files) documents.push_back({read_json(path),path.parent_path()});
@@ -111,7 +139,7 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
     }
     std::set<std::string> local_colors;
     // Optional local recipes make material authoring testable without remounting containers.
-    for(const auto& file:fs::directory_iterator(directory)) if(file.is_regular_file() && file.path().filename().string().ends_with(".colors.json")) {
+    if(fs::is_directory(directory)) for(const auto& file:fs::directory_iterator(directory)) if(file.is_regular_file() && file.path().filename().string().ends_with(".colors.json")) {
         auto j=read_json(file.path()); auto id=j.at("id").get<std::string>();
         if(!local_colors.insert(id).second) throw std::runtime_error("Duplicate local color recipes");
         auto found=std::find_if(result.outfits.begin(),result.outfits.end(),[&](const auto& o){return o.id==id;});
