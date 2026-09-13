@@ -81,5 +81,17 @@
       "bytes": 2269001,
       "sha256": "aeda7134ff6142098d406682d6340c34c5aad7322089c5104cf3e426c9965d18"
     }
+  ],
+  "promotional_artwork": [
+    {
+      "file": "css-nexus-header-v1.png",
+      "width": 2066,
+      "height": 761,
+      "bytes": 2420675,
+      "sha256": "8f98dddd8ac3e9143e66e6619a593e00d557a9436967fcc4408c0be4c5ca33bc",
+      "generated": true,
+      "method": "Built-in image generation tool",
+      "prompt": "../header-prompt.md"
+    }
   ]
 }
