@@ -10,3 +10,5 @@ CMakeLists.txt text eol=lf
 *.json text eol=lf
 *.patch text eol=lf
 *.png binary
+# Keep vendored upstream files byte-for-byte, including license whitespace.
+native/vendor/** -whitespace
