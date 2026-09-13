@@ -25,6 +25,13 @@ class Appearance {
     std::map<std::string,WeakObject> color_targets_, color_textures_;
     std::map<std::string,ColorValue> last_colors_;
     std::string color_outfit_;
+    std::vector<WeakObject> expected_materials_;
+    WeakObject menu_component_, menu_applied_;
+    std::string menu_original_;
+    std::vector<std::string> menu_original_materials_;
+    void restore_menu();
+    void remember_materials();
+    bool materials_match() const;
     void reset_colors();
 public:
     std::string shell, pawn_name, current_mesh;
@@ -33,6 +40,8 @@ public:
     bool apply(void* engine, const std::string& mesh_path, const std::map<int,std::string>& materials = {});
     bool restore();
     bool active() const;
+    bool repair_materials_needed();
+    void sync_menu();
     void customize(const Outfit&, const Customization&);
 };
 // All widgets and input ownership stay on the game thread. No widget delegates

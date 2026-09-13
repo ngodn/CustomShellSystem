@@ -146,6 +146,11 @@ struct Core {
         auto action = wardrobe.poll(delta, focused);
         if (!action.is_null()) { request(action); next_poll = 0; }
         auto now = GetTickCount64();
+        if(state.enabled && !apply_pending && state.selections.contains(appearance.shell) && appearance.repair_materials_needed()) {
+            apply_pending=true;
+            host.log("Restoring cosmetic materials after gameplay material reset");
+        }
+        if(state.enabled && !apply_pending) appearance.sync_menu();
         if (now < next_poll && !wardrobe_pending && !wardrobe_refresh && !apply_pending) return;
         next_poll = now + 250;
         auto command_file = root / "request.json";
@@ -203,6 +208,7 @@ struct Core {
                             applied_id.clear(); appearance.restore(); throw;
                         }
                         wardrobe.sync_materials();
+                        appearance.sync_menu();
                         last_apply_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
                         state.selections[appearance.shell] = requested;
                         state.remembered_colors[requested.outfit]=requested.colors;

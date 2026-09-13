@@ -203,6 +203,17 @@ static Json material_snapshot(UObject* component,UObject* mesh) {
     }
     return result;
 }
+static UObject* menu_character(UObject* player) {
+    if(!player) return nullptr;
+    auto* pc=read<UObject*>(player,L"Controller");
+    if(!pc || !pc->GetPropertyByNameInChain(L"User Interface Handler Component")) return nullptr;
+    auto* handler=read<UObject*>(pc,L"User Interface Handler Component");
+    if(!handler) return nullptr;
+    auto* menu=read<UObject*>(handler,L"ActiveDisplayMenu");
+    if(!menu) return nullptr;
+    Call character(menu,L"GetDisplayMenuCharacter",1); character.run();
+    return character.get<UObject*>();
+}
 UObject* Appearance::player(void* engine) {
     shell.clear(); pawn_name.clear(); current_mesh.clear();
     if (!Version::IsAtLeast(5, 6) || !Version::IsBelow(5, 7)) throw std::runtime_error("CSS adapter requires UE5.6");
@@ -221,6 +232,78 @@ UObject* Appearance::player(void* engine) {
     auto* component = read<UObject*>(pawn, L"Mesh");
     if (component) if (auto* mesh = mesh_asset(component)) current_mesh = narrow(mesh->GetPathName());
     return pawn;
+}
+void Appearance::restore_menu() {
+    auto* component=menu_component_.Get();
+    if(component && mesh_asset(component)==menu_applied_.Get()) {
+        auto* original=load(menu_original_);
+        set_mesh(component,original);
+        restore_materials(component,menu_original_materials_);
+    }
+    menu_component_.Reset(); menu_applied_.Reset(); menu_original_.clear(); menu_original_materials_.clear();
+}
+void Appearance::sync_menu() {
+    auto* source=component_.Get();
+    if(!source || mesh_asset(source)!=applied_.Get()) { restore_menu(); return; }
+    Call owner(source,L"GetOwner",1); owner.run();
+    auto* player=owner.get<UObject*>();
+    auto* display=menu_character(player);
+    // Other shell-selection previews belong to the game until that shell is worn.
+    if(!display || display==player || read<FName>(display,L"CharacterId")!=read<FName>(player,L"CharacterId")) { restore_menu(); return; }
+    auto* target=read<UObject*>(display,L"Mesh");
+    auto* before=mesh_asset(target); auto* desired=applied_.Get();
+    if(!before || !desired || read<UObject*>(before,L"Skeleton")!=read<UObject*>(desired,L"Skeleton")) { restore_menu(); return; }
+    if(menu_component_.Get()!=target || before!=menu_applied_.Get()) {
+        restore_menu();
+        menu_original_=before==desired?original_:narrow(before->GetPathName());
+        menu_original_materials_=before==desired?original_materials_:material_paths(target);
+        menu_component_=target;
+    }
+    menu_applied_=desired;
+    if(before!=desired) set_mesh(target,desired);
+    auto values=overrides(source), previous=overrides(target);
+    for(int i=0;i<std::max(values.Num(),previous.Num());++i) {
+        UObject* value{}; UObject* current{};
+        if(i<values.Num()) std::memcpy(&value,values.GetRawPtr(i),sizeof(value));
+        if(i<previous.Num()) std::memcpy(&current,previous.GetRawPtr(i),sizeof(current));
+        if(current!=value) material(target,i,value);
+    }
+}
+void Appearance::remember_materials() {
+    expected_materials_.clear();
+    auto values=overrides(component_.Get());
+    for(int i=0;i<values.Num();++i) {
+        UObject* value{}; std::memcpy(&value,values.GetRawPtr(i),sizeof(value));
+        expected_materials_.emplace_back(value);
+    }
+}
+bool Appearance::materials_match() const {
+    auto* component=component_.Get();
+    if(!component || mesh_asset(component)!=applied_.Get()) return false;
+    auto values=overrides(component);
+    for(size_t i=0;i<std::max(static_cast<size_t>(values.Num()),expected_materials_.size());++i) {
+        UObject* actual{}; if(i<static_cast<size_t>(values.Num())) std::memcpy(&actual,values.GetRawPtr(static_cast<int>(i)),sizeof(actual));
+        auto* expected=i<expected_materials_.size()?expected_materials_[i].Get():nullptr;
+        if(actual!=expected) return false;
+    }
+    return true;
+}
+bool Appearance::repair_materials_needed() {
+    auto* component=component_.Get();
+    if(!component || mesh_asset(component)!=applied_.Get() || materials_match()) { return false; }
+    // A completed shell effect restores stock asset materials. Repair that
+    // specific transition at the end of this frame, leaving transient MIDs and
+    // unfamiliar effect materials under the game's control.
+    auto values=overrides(component);
+    for(int i=0;i<values.Num();++i) {
+        UObject* value{}; std::memcpy(&value,values.GetRawPtr(i),sizeof(value));
+        auto* expected=i<static_cast<int>(expected_materials_.size())?expected_materials_[i].Get():nullptr;
+        if(value && value!=expected) {
+            auto path=narrow(value->GetPathName());
+            if(std::find(original_materials_.begin(),original_materials_.end(),path)==original_materials_.end()) return false;
+        }
+    }
+    return true;
 }
 bool Appearance::active() const { return component_.Get() && applied_.Get(); }
 bool Appearance::apply(void* engine, const std::string& mesh_path, const std::map<int,std::string>& materials) {
@@ -249,7 +332,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     if (!target->IsA(type)) throw std::runtime_error("Selected asset is not a skeletal mesh");
     if (read<UObject*>(before, L"Skeleton") != read<UObject*>(target, L"Skeleton"))
         throw std::runtime_error("Different skeleton: appearance change refused");
-    if (before == target && applied_materials_==materials) return true;
+    if (before == target && applied_materials_==materials && materials_match()) return true;
     if (component_.Get() != component || before != applied_.Get()) {
         auto materials=material_paths(component);
         original_ = narrow(before->GetPathName());
@@ -261,7 +344,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     applied_ = target;
     try {
         reset_colors();
-        set_mesh(component, target);
+        if(before!=target) set_mesh(component, target);
         const int count=overrides(component).Num();
         for(int i=0;i<count;++i) material(component,i,nullptr);
         auto defaults=material_snapshot(component,target).at("defaults");
@@ -274,12 +357,14 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
         if(material_debug["effective"]!=defaults)
             throw std::runtime_error("Outfit material read-back failed");
         applied_materials_=materials;
+        remember_materials();
     }
     catch (...) { restore(); throw; }
     current_mesh = narrow(target->GetPathName());
     return true;
 }
 bool Appearance::restore() {
+    restore_menu();
     auto* component = component_.Get();
     auto* applied = applied_.Get();
     if (component && applied && mesh_asset(component) == applied) {
@@ -289,6 +374,7 @@ bool Appearance::restore() {
         material_debug=material_snapshot(component,original);
     }
     color_mids_.clear(); color_targets_.clear(); color_textures_.clear(); last_colors_.clear(); color_outfit_.clear();
+    expected_materials_.clear();
     component_.Reset(); applied_.Reset(); original_.clear(); original_materials_.clear(); applied_materials_.clear();
     return true;
 }
@@ -1153,7 +1239,7 @@ void Appearance::customize(const Outfit& outfit,const Customization& custom) {
     // Dropping a control restores its authored value, including layered parameters.
     // Rebuild from the original material rather than guessing a layer's default.
     if(std::any_of(last_colors_.begin(),last_colors_.end(),[&](const auto& p){return !values.contains(p.first);})) reset_colors();
-    if(values.empty()) { reset_colors(); material_debug=material_snapshot(component,applied_.Get()); material_debug["colors"]=Json::object(); material_debug["dye_targets"]=0; return; }
+    if(values.empty()) { reset_colors(); material_debug=material_snapshot(component,applied_.Get()); material_debug["colors"]=Json::object(); material_debug["dye_targets"]=0; remember_materials(); return; }
     if(values==last_colors_) return;
     auto mid_for=[&](int index) {
         Call count(component,L"GetNumMaterials",1); count.run();
@@ -1257,6 +1343,7 @@ void Appearance::customize(const Outfit& outfit,const Customization& custom) {
         material_debug=material_snapshot(component,applied_.Get());
         material_debug["colors"]=last_colors_;
         material_debug["dye_targets"]=color_targets_.size();
+        remember_materials();
     } catch(...) { reset_colors(); throw; }
 }
 void Wardrobe::sync_materials() {
