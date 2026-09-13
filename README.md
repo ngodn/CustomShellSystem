@@ -1,5 +1,8 @@
 # CSS: Custom Shell System
 
+Current runtime version: **0.1.1**. See [runtime releases](docs/releases.md) for the
+clean ZIP, installation layout and first-run verification.
+
 A native C++23 wardrobe for Mortal Shell II, inspired by Custom Nanosuit System. The first playable milestone includes BeauteGenessa (regular and corrupted), BeauteKnightLady (Proxima) and HIT2 DE Scyther, with per-part colors, reference-inspired palettes, favorites, three saved-look slots, an animated character preview and controller navigation.
 
 Selecting an appearance preserves your current gameplay shell and abilities. The installed outfits use the game's human skeleton, which CSS checks before every mesh replacement. Weapons, seals and shells do **not** need to be unlocked for these cosmetic selections. CSS does not edit the game save or unlock progression.
