@@ -1,0 +1,73 @@
+# Local dependencies, extracted assets, packages and development evidence.
+/build/
+/work/
+/backups/
+/local-packs/
+/reference/
+/dist/
+/output/
+/tmp/
+
+# Runtime state and developer catalogs are specific to an installation.
+/state/
+/runtime/
+/cache/
+/cores/
+/catalog/*.json
+
+# Python environments and caches.
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# C++, CMake and .NET build products.
+bin/
+obj/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+*.dll
+*.exe
+*.pdb
+*.obj
+*.o
+*.a
+*.lib
+*.so
+*.so.*
+
+# Cooked game content and diagnostics never belong in the source repository.
+*.pak
+*.utoc
+*.ucas
+*.uasset
+*.uexp
+*.ubulk
+*.uptnl
+*.usmap
+*.dmp
+*.log
+
+# Machine secrets and editor state. Keep shareable example configuration.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.swp
+*~
+.DS_Store
+Thumbs.db
