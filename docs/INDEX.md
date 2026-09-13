@@ -2,6 +2,8 @@
 
 ## Established findings
 
+- [Color customization](colors.md) documents per-part palettes/sliders, self-contained dye resources, exact Original reset, and the verified game-specific mipmap adapter.
+
 - CSS.Package v1 embeds metadata and author artwork in the pak. IoStore assets use isolated package namespaces. [Package guide](css-packages.md) documents the converter, verification and installation.
 - All three `_P` packages are installed and discovered in-game. HIT2 gameplay was confirmed by the user. The paused-preview cloth defect is fixed by enabling the separate cloth tick on the disposable visual copy. [Cloth findings](preview-cloth.md).
 

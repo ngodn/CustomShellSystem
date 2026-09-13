@@ -32,6 +32,8 @@ No license for redistributing third-party mod content is granted by this repo.
 - The converter accepts explicit `--retoc`, `--repak` and `--game` paths. Its
   current defaults point to this development machine. Package conversion audits
   record the actual retoc and repak binary hashes.
+- Color-mask authoring uses Python 3.14, Pillow 12.3 and NumPy 2.5. The
+  generator reads extracted original textures; derived masks stay under `work/`.
 - Portrait rendering uses Blender's `bpy` 4.5.13 under a separate Python 3.11
   environment. See [the package guide](css-packages.md) for the rendering pipeline.
 

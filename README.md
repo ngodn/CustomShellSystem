@@ -1,6 +1,6 @@
 # CSS: Custom Shell System
 
-A native C++23 wardrobe for Mortal Shell II, inspired by Custom Nanosuit System. The first playable milestone includes BeauteGenessa (regular and corrupted) and BeauteKnightLady (Proxima), with favorites, three saved-look slots, an animated character preview and controller navigation.
+A native C++23 wardrobe for Mortal Shell II, inspired by Custom Nanosuit System. The first playable milestone includes BeauteGenessa (regular and corrupted), BeauteKnightLady (Proxima) and HIT2 DE Scyther, with per-part colors, reference-inspired palettes, favorites, three saved-look slots, an animated character preview and controller navigation.
 
 Selecting an appearance preserves your current gameplay shell and abilities. The installed outfits use the game's human skeleton, which CSS checks before every mesh replacement. Weapons, seals and shells do **not** need to be unlocked for these cosmetic selections. CSS does not edit the game save or unlock progression.
 
@@ -14,9 +14,11 @@ Selecting an appearance preserves your current gameplay shell and abilities. The
 | Change variant | D-pad left / right | Variant arrows |
 | Wear selected appearance | A | Click the appearance |
 | Favorite | Y | Star |
-| Change category | LB / RB | All / Fav / Looks rail |
+| Change category | LB / RB | All / Fav / Looks / Color rail |
 | Save or replace a look | X in Looks | Save / Replace |
 | Open saved looks | X elsewhere | Looks rail |
+| Adjust colors | D-pad rows and left / right | RGB sliders and palette buttons |
+| Reset selected color part | A on a color channel | Reset part |
 | Orbit character | Right stick | Right mouse drag |
 | Zoom / horizontal framing | Left stick vertical / horizontal | W / S to zoom |
 | Raise / lower framing | RT / LT | E / Q |
@@ -25,6 +27,8 @@ Selecting an appearance preserves your current gameplay shell and abilities. The
 Right-stick vertical movement is inverted by default; horizontal movement is normal. Wardrobe changes keep the existing camera. They recenter a moved view, but leave already-default framing untouched.
 
 CSS pauses gameplay while open. A separate, collision-free visual copy plays a full-body idle using real elapsed time, with animation notifies suppressed. The real player's animation instance remains in place. Closing CSS removes the copy, restores visibility and input, and releases only the pause CSS acquired. This is a wardrobe idle preview, not an animation-library editor.
+
+See the [color guide](docs/colors.md) for Original restoration, custom skin/face/eye controls, saved colors and authoring color-enabled outfit packages.
 
 ## State and development
 
@@ -35,7 +39,7 @@ MortalShell2/Binaries/Win64/ue4ss/Mods/CustomShellSystem/
   state/state.json       CSS settings, selections, favorites and saved looks
   state/state.json.bak   Previous valid state
   catalog/              Optional developer catalogs (normal outfits embed theirs)
-  cache/packages/       Rebuildable package thumbnail cache
+  cache/packages/       Rebuildable package artwork and color-mask cache
   assets/               Original CSS interface artwork
   cores/                Versioned native core DLLs
   core.json             Requested core version

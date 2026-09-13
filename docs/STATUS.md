@@ -2,6 +2,14 @@
 
 The native C++23 wardrobe and three self-contained appearance packages are installed and working. HIT2 is credited to XTGMods. Both Beaute mods are credited to dantemk2, confirmed by the user. After testing HIT2 appearance, movement and attacks, the user replied: "yes seems perfect".
 
+## Color milestone
+
+The rebuilt DLL includes the credited wardrobe artwork, per-part RGB sliders, glow strength, Original restoration, Crimson/Midnight palettes, linked material parameters and saved colors. The three color-enabled packages are built under `dist/colors-final/`; installation is awaiting the requested game closure. Live tests used identical recipes from the temporary developer catalog.
+
+Validation: 54 native behavioral checks and 26 Python tests pass. The final three color packages pass full container verification and native metadata/mask cache repair and corruption tests. Twelve live appearance/palette combinations passed (regular Genessa, corrupted Genessa, Knight Lady, HIT2; Original, Crimson, Midnight). Checks also covered saved custom looks, steady default framing, cloth tick isolation and reload with active custom colors. [Color guide and limitations](colors.md), [live report](../work/color-lifecycle.json), [reload evidence](../work/colors-reload-verified.json), [package checks](../work/colors-final-package-build.log).
+
+Current core: `css_core-bcd707d21ddab9e5-1789304199265211966.dll`, acknowledged by Windows PID 372. The build completed without warnings. Color masks and render targets use 2048 pixels in these POC recipes; Original retains authored texture resolution. Initial texture loading and broader performance, damage/death/travel and third-party material interactions still need profiling or regression.
+
 ## Completed and verified
 
 | Capability | Evidence |
@@ -20,7 +28,7 @@ The native C++23 wardrobe and three self-contained appearance packages are insta
 | Preview protection | Animated collision-free copy while world time is frozen; separate cloth tick now advances during pause |
 | Cleanup and reload | Preview/camera/input/pause/visibility restoration verified, including reload while open |
 
-Current core: `css_core-902a45f5dbf27a59-1789299689483247205.dll`. [Reload acknowledgement](../work/packaged-ui-final-reload.log). Current game observed as Linux PID 638723, Windows PID 372. Mounted container changes required one restart; `_P` correction was completed before that launch.
+Earlier package milestone core: `css_core-902a45f5dbf27a59-1789299689483247205.dll`. [Reload acknowledgement](../work/packaged-ui-final-reload.log). Current game observed as Linux PID 638723, Windows PID 372. Mounted container changes required one restart; `_P` correction was completed before that launch.
 
 Validation: 34 native behavioral checks, 22 Python tests, native package reader/cache/corruption checks on all three final trios, full container hashes, cooked payload round trips, live four-appearance animation/cloth checks and user gameplay confirmation. Final native compilation had no warnings. This is not a claim of zero bugs or measured performance overhead.
 
@@ -34,4 +42,4 @@ Validation: 34 native behavioral checks, 22 Python tests, native package reader/
 
 ## Remaining broader work
 
-Full CNS parity is unfinished: independent cosmetic slots, material editing and an animation library. Death/travel/load boundaries, other gameplay shell saves, long combat sessions, more controller/display combinations and controlled performance profiling need broader regression. Different per-variant material recipes are not supported yet. Other procedural physics and third-party behavior require individual validation; the cloth fix does not prove universal compatibility.
+Full CNS parity is unfinished: independent cosmetic slots, general texture choices, shape keys, material toggles and an animation library. Death/travel/load boundaries, other gameplay shell saves, long combat sessions, more controller/display combinations and controlled performance profiling need broader regression. Different per-variant material recipes are not supported yet. Other procedural physics and third-party behavior require individual validation; the cloth fix does not prove universal compatibility.

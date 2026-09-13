@@ -56,7 +56,9 @@ MortalShell2/Content/CSS/Packages/<id>/conversion.json
 
 The manifest declares `format: CSS.Package`, `format_version: 1`, `game: MortalShell2`, `engine: 5.6`, stable `id`, `name`, `author`, `version`, `source_url` and `thumbnail_source`. It includes thumbnail dimensions/SHA-256, container filenames/byte sizes/SHA-256, and a schema-1 catalog with one outfit. Each variant declares `id`, `name`, `mesh` and optional `materials`. The outfit contains its description, compatibility tags and `thumbnail: thumbnail.png`. The conversion report records input hashes, relocations, export identities and checks. Structural conversion records `runtime_tested: false`.
 
-CSS scans packages on catalog load/rescan. It validates bounded pak index and entry hashes, manifest identity, the image hash, companion sizes and the small `.utoc` hash. The thumbnail is extracted to a rebuildable cache at `Mods/CustomShellSystem/cache/packages/<id>/<image-hash>/thumbnail.png`. The package remains self-contained if that cache is deleted. Large `.ucas` hashing stays outside the game thread:
+The optional [color recipe](colors.md) and its checksummed `dye-*.png` resources are also embedded in this directory.
+
+CSS scans packages on catalog load/rescan. It validates bounded pak index and entry hashes, manifest identity, the image hash, companion sizes and the small `.utoc` hash. The thumbnail is extracted to a rebuildable cache at `Mods/CustomShellSystem/cache/packages/<id>/<manifest-hash>/thumbnail.png`. The package remains self-contained if that cache is deleted. Large `.ucas` hashing stays outside the game thread:
 
 ```sh
 python3 tools/css_package.py verify dist/CSS_HIT2_DE_Scyther_XTGMods_P
