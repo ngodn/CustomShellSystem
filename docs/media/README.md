@@ -8,10 +8,10 @@ part of the runtime ZIP.
 
 ## Nexus page header
 
-[css-nexus-header-v1.png](v0.1.1/css-nexus-header-v1.png) is generated promotional
-artwork combining the CSS identity with Genessa and Seductress references.
+[css-nexus-header-v2.png](v0.1.1/css-nexus-header-v2.png) is generated promotional
+artwork combining the CSS identity with Seductress and Marrow Keep references.
 It includes the title and `by _eins0fx` credit. Upload it in Nexus's **Header**
-field. It is 2066 x 761, about 2.3 MiB; use the header crop to fit the recommended
+field. It is 2064 x 762, about 2.2 MiB; use the header crop to fit the recommended
 1300 x 372 display area, keeping the title and credit visible.
 
 [Generation prompt and provenance](header-prompt.md).

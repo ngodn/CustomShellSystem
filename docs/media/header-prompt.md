@@ -1,16 +1,47 @@
 # CSS Nexus header
 
 Generated with the built-in image generation tool on 2026-09-14.
-Selected artwork: [css-nexus-header-v1.png](v0.1.1/css-nexus-header-v1.png).
-The title, author credit and faces were visually checked. The file is a
-2066 x 761 PNG, below the Nexus header upload limit of 8 MB.
+Selected artwork: [css-nexus-header-v2.png](v0.1.1/css-nexus-header-v2.png).
+The title, author credit and face were visually checked. The file is a
+2064 x 762 PNG, below the Nexus header upload limit of 8 MB.
 Nexus recommends a 1300 x 372 display crop; this generated master is taller.
 Keep the central title and author credit inside the crop when uploading.
 
 This is generated promotional artwork based on gameplay captures, not an
 unaltered screenshot. The original in-game wardrobe texture is unchanged.
 
-## Final selected prompt
+## Version 2
+
+The user requested removal of the left BeauteGenessa portrait. The selected
+revision shows only the Seductress adaptation on the right, with the CSS title
+and moth crest on the left. Marrow Keep's beacon ribs, teal wisps, worn stone
+and braziers supply the environment references. This is an artistic composition,
+not an exact screenshot of the location. Outfit source credits remain in the
+[media README](README.md).
+
+Generated through two edits of version 1 using the built-in image tool:
+
+Use case: compositing.
+Edit this CSS promotional banner into a refined single-character layout. The user likes the RIGHT portrait and wants the LEFT portrait completely removed.
+
+Keep the right-side Seductress portrait faithful to this image: exact same pale face, glowing eyes, expression, horned crown/headwear, crimson and antique-gold costume, lighting and realistic rendered finish. Seductress is the ONLY person anywhere in the finished image. Do not include the left hooded Genessa, any second character, face, silhouette or body.
+
+Replace the whole left character area with tasteful moody dark ruins fading into obsidian textured mist. Rebalance the layout: the large gold title and moth-armored-shell crest occupy the left two-thirds, with the single preserved Seductress portrait occupying the right third. Place the title group around 38 percent of the canvas width, with breathing room around the lettering. Retain the thin antique-gold ornamental frame and restrained filigree, with no empty panel. Keep the cinematic warm rim light and subdued teal-black atmosphere. Avoid crowded details behind the typography.
+
+Exact text, once each: "CUSTOM", "SHELL SYSTEM", "by _eins0fx". Retain the underscore and lowercase author name. Elegant gold serif typography matching the existing artwork. No game name, version, slogans or UI elements.
+
+Make this a very wide shallow banner, intended for the Nexus header at 1300 x 372. Use that aspect ratio if possible. Keep all crucial typography and the face within a safe central horizontal band for that crop. Do not stretch the portrait, do not add extra women, and do not replace the right character with a new design.
+
+Use case: compositing.
+Edit image 1, the single-character CSS banner. Preserve EXACTLY the Seductress portrait on the right, the gold "CUSTOM" / "SHELL SYSTEM" / "by _eins0fx" lettering, armored moth crest, and elegant gold ornamental frame. Keep Seductress as the ONLY character in the banner. Keep the same composition with the branding in the left two-thirds.
+
+Change only the backdrop, especially on the LEFT: replace the generic tall medieval castle walls with Mortal Shell II Marrow Keep environmental motifs from images 2 and 3. Image 2 shows the game's black ribbed circular beacon platform, broken curved radial stone ribs, and spectral teal vertical wisps in dense mist. Image 3 shows the low pale worn stone platforms, shallow bowl braziers with amber flames, and twisted black branches. Integrate these recognizable environment shapes into an atmospheric promotional background. Put a partial black circular beacon platform and curved rib silhouettes fading into teal fog at far left, low worn stone and a small amber brazier at lower left. No second person, no figure standing on the beacon, no screenshots of HUD or desktop. In image 2 the red glowing humanoid/garment is a game bug, DO NOT copy it. No red floor beam, no map, menus, text or icons from reference screenshots.
+Keep the left scenery subtle and lower contrast than the gold typography. Fade into dark textured negative space immediately behind the crest and words. Right portrait must remain the same with the same costume and face, no redesign. Cinematic black, smoky teal and antique gold, with restrained amber firelight. Finished wide Nexus header, no new text.
+
+## Version 1 prompt (superseded)
+
+The earlier [two-character artwork](v0.1.1/css-nexus-header-v1.png) is retained
+for history. Use version 2 for the Nexus header.
 
 Use case: ads-marketing, reference-based compositing.
 Create a finished Nexus Mods page header for Custom Shell System, using the supplied images as visual references. This is a NEW wide promotional header, not a screenshot of a website or menu.

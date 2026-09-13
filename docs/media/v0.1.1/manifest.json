@@ -91,7 +91,19 @@
       "sha256": "8f98dddd8ac3e9143e66e6619a593e00d557a9436967fcc4408c0be4c5ca33bc",
       "generated": true,
       "method": "Built-in image generation tool",
-      "prompt": "../header-prompt.md"
+      "prompt": "../header-prompt.md",
+      "selected": false
+    },
+    {
+      "file": "css-nexus-header-v2.png",
+      "width": 2064,
+      "height": 762,
+      "bytes": 2255323,
+      "sha256": "cc00e0491bdf1a67e2e3aef9f1ae38ecdabab36e300d08cf5f56f003ff9994f7",
+      "generated": true,
+      "method": "Built-in image generation tool",
+      "prompt": "../header-prompt.md",
+      "selected": true
     }
   ]
 }
