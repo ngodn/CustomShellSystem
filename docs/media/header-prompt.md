@@ -1,11 +1,21 @@
 # CSS Nexus header
 
 Generated with the built-in image generation tool on 2026-09-14.
-Selected artwork: [css-nexus-header-v2.png](v0.1.1/css-nexus-header-v2.png).
-The title, author credit and face were visually checked. The file is a
-2064 x 762 PNG, below the Nexus header upload limit of 8 MB.
-Nexus recommends a 1300 x 372 display crop; this generated master is taller.
-Keep the central title and author credit inside the crop when uploading.
+Selected upload: [css-nexus-header-1300x372.png](v0.1.1/css-nexus-header-1300x372.png).
+The upload file is exactly **1300 x 372 pixels**, 744,299 bytes.
+The title, author credit and face were visually checked at the final size.
+
+## Exact-size export
+
+The user required a finished 1300 x 372 file. The generated 2064 x 762
+version 2 master is retained below for provenance, but is not the upload file.
+Python 3.14.7 and Pillow 12.3.0 produced the export with
+`ImageOps.fit(source, (1300, 372), method=Image.Resampling.LANCZOS, centering=(0.5, 0.0))`.
+This crops the lower scene and scales uniformly, preserving the upper frame,
+crest, title, credit and face. The output dimensions were checked after saving.
+No new image generation was needed for this size correction.
+
+[Pillow ImageOps.fit documentation](https://pillow.readthedocs.io/en/stable/reference/ImageOps.html#PIL.ImageOps.fit).
 
 This is generated promotional artwork based on gameplay captures, not an
 unaltered screenshot. The original in-game wardrobe texture is unchanged.
@@ -41,7 +51,7 @@ Keep the left scenery subtle and lower contrast than the gold typography. Fade i
 ## Version 1 prompt (superseded)
 
 The earlier [two-character artwork](v0.1.1/css-nexus-header-v1.png) is retained
-for history. Use version 2 for the Nexus header.
+for history. Use `css-nexus-header-1300x372.png` for the Nexus header.
 
 Use case: ads-marketing, reference-based compositing.
 Create a finished Nexus Mods page header for Custom Shell System, using the supplied images as visual references. This is a NEW wide promotional header, not a screenshot of a website or menu.

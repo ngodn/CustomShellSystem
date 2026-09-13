@@ -103,6 +103,22 @@
       "generated": true,
       "method": "Built-in image generation tool",
       "prompt": "../header-prompt.md",
+      "selected": false
+    },
+    {
+      "file": "css-nexus-header-1300x372.png",
+      "width": 1300,
+      "height": 372,
+      "bytes": 744299,
+      "sha256": "50981f784dc3679f01c08196e1b6e7b2ce196da6b40175f7755cba8084f98506",
+      "generated": true,
+      "method": "Built-in generated v2 artwork, cropped and resized with Pillow LANCZOS",
+      "source": "css-nexus-header-v2.png",
+      "centering": [
+        0.5,
+        0.0
+      ],
+      "prompt": "../header-prompt.md",
       "selected": true
     }
   ]
