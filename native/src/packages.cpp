@@ -81,15 +81,20 @@ std::map<std::string,Bytes> contents(const fs::path& path) {
         auto expected_hash=reader.take(20);
         auto flags=reader.value<uint8_t>(); reader.value<uint32_t>();
         if(name.starts_with(prefix)) {
-            if(flags!=0 || compressed!=uncompressed || compressed>4*1024*1024) throw std::runtime_error("Invalid CSS metadata entry");
+            if(flags!=0 || compressed!=uncompressed || compressed>32*1024*1024) throw std::runtime_error("Invalid CSS metadata entry");
             if(!entries.emplace(name,Entry{entry_offset,compressed,Bytes(expected_hash.begin(),expected_hash.end())}).second)
                 throw std::runtime_error("Duplicate CSS metadata entry");
         }
     }
     if(reader.cursor!=index.size()) throw std::runtime_error("Unexpected CSS pak index data");
     std::map<std::string,Bytes> result;
+    uint64_t total=0;
     for(auto& [name,entry]:entries) {
-        if(!name.ends_with("/manifest.json") && !name.ends_with("/thumbnail.png")) continue;
+        auto leaf=name.substr(name.rfind('/')+1);
+        if(!name.ends_with("/manifest.json") && !name.ends_with("/thumbnail.png") && !color_resource(leaf)) continue;
+        total+=entry.size;
+        if(total>260*1024*1024) throw std::runtime_error("CSS metadata resources exceed limit");
+        if(name.ends_with("/thumbnail.png") && entry.size>4*1024*1024) throw std::runtime_error("CSS thumbnail exceeds limit");
         if(name.ends_with("/manifest.json") && entry.size>256*1024) throw std::runtime_error("CSS manifest exceeds limit");
         auto header=read(file,entry.offset,53,offset); Reader local{header};
         if(local.value<uint64_t>()!=0 || local.value<uint64_t>()!=entry.size || local.value<uint64_t>()!=entry.size || local.value<uint32_t>()!=0)
@@ -153,7 +158,7 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
                 throw std::runtime_error("Invalid CSS thumbnail dimensions");
             auto sha=hex(hash(image,true));
             if(thumbnail.at("sha256")!=sha) throw std::runtime_error("CSS thumbnail checksum mismatch");
-            auto directory=cache/id/sha;
+            auto directory=cache/id/hex(hash(bytes,true));
             fs::create_directories(directory);
             auto target=directory/"thumbnail.png";
             bool valid=false;
@@ -168,6 +173,38 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
                 if(!output) throw std::runtime_error("Could not cache CSS thumbnail");
                 if(fs::exists(target)) fs::remove(target);
                 fs::rename(temp,target);
+            }
+            auto options=ColorOptions::parse(outfits[0].value("colors",Json::object()));
+            std::set<std::string> required;
+            for(const auto& surface:options.surfaces) for(const auto& [part,file]:surface.layers) required.insert(file);
+            auto resources=manifest.value("resources",Json::object());
+            if(!resources.is_object() || resources.size()!=required.size()) throw std::runtime_error("Dye resource manifest mismatch");
+            for(const auto& name:required) {
+                if(!resources.contains(name)) throw std::runtime_error("Missing dye resource description");
+                const auto& expected=resources.at(name);
+                auto found=entries.find(std::string(prefix)+id+"/"+name);
+                if(found==entries.end()) throw std::runtime_error("Missing packaged dye texture");
+                const auto& data=found->second;
+                if(data.size()<33 || !std::equal(signature.begin(),signature.end(),data.begin()) || std::memcmp(data.data()+12,"IHDR",4) || data[24]!=8 || (data[25]!=4 && data[25]!=6))
+                    throw std::runtime_error("Invalid dye texture PNG");
+                auto dim=[&](size_t p) { return (uint32_t(data[p])<<24)|(uint32_t(data[p+1])<<16)|(uint32_t(data[p+2])<<8)|data[p+3]; };
+                auto w=dim(16),h=dim(20); auto sum=hex(hash(data,true));
+                if(w!=h || (w!=1024 && w!=2048 && w!=4096) || expected.at("width")!=w || expected.at("height")!=h || expected.at("bytes")!=data.size() || expected.at("sha256")!=sum)
+                    throw std::runtime_error("Dye texture checksum or dimensions mismatch");
+                auto path=directory/name;
+                bool valid=false;
+                if(fs::is_regular_file(path) && fs::file_size(path)==data.size()) {
+                    std::ifstream input(path,std::ios::binary);
+                    valid=hex(hash(read(input,0,data.size(),data.size()),true))==sum;
+                }
+                if(!valid) {
+                    auto temp=path; temp+=".tmp";
+                    std::ofstream output(temp,std::ios::binary|std::ios::trunc);
+                    output.write(reinterpret_cast<const char*>(data.data()),static_cast<std::streamsize>(data.size())); output.close();
+                    if(!output) throw std::runtime_error("Cannot cache dye texture");
+                    if(fs::exists(path)) fs::remove(path);
+                    fs::rename(temp,path);
+                }
             }
             result.push_back({manifest.at("catalog"),directory});
         }

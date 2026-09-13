@@ -13,6 +13,11 @@ class Appearance {
     std::string original_;
     std::vector<std::string> original_materials_;
     std::map<int,std::string> applied_materials_;
+    std::map<int,RC::Unreal::FWeakObjectPtr> color_mids_;
+    std::map<std::string,RC::Unreal::FWeakObjectPtr> color_targets_, color_textures_;
+    std::map<std::string,ColorValue> last_colors_;
+    std::string color_outfit_;
+    void reset_colors();
 public:
     std::string shell, pawn_name, current_mesh;
     Json material_debug;
@@ -20,6 +25,7 @@ public:
     bool apply(void* engine, const std::string& mesh_path, const std::map<int,std::string>& materials = {});
     bool restore();
     bool active() const;
+    void customize(const Outfit&, const Customization&);
 };
 // All widgets and input ownership stay on the game thread. No widget delegates
 // point into the reloadable DLL, so closing the view permits core unloading.
@@ -29,6 +35,11 @@ class Wardrobe {
     RC::Unreal::FWeakObjectPtr root_, controller_, pawn_, status_;
     std::vector<Hit> hits_;
     std::vector<Row> rows_;
+    struct Slider { RC::Unreal::FWeakObjectPtr widget, label; Json action; float previous=0; bool scalar=false; };
+    std::vector<Slider> sliders_;
+    RC::Unreal::FWeakObjectPtr color_title_, color_swatch_;
+    std::string color_title_text_;
+    int color_part_ = 0;
     bool owns_input_ = false, old_cursor_ = false;
     RC::Unreal::FWeakObjectPtr camera_, view_before_;
     bool owns_pause_ = false, full_tick_before_ = false, full_tick_changed_ = false;
@@ -69,8 +80,10 @@ public:
     void rotate(double degrees, bool front = false);
     Json diagnostics() const;
     Json inspect(RC::Unreal::UObject* player) const;
+    void sync_materials();
     void configure(bool invert_x,bool invert_y) { invert_x_=invert_x; invert_y_=invert_y; }
-    void filter(int category) { category_ = category; page_ = 0; }
+    void filter(int category) { category_ = std::clamp(category,0,3); page_ = 0; }
+    void color_part(int delta) { color_part_ += std::clamp(delta,-1,1); }
     void page(int delta) { page_ = std::max(0, page_ + delta); }
 };
 }

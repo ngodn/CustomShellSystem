@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <nlohmann/json.hpp>
+#include "colors.hpp"
 
 namespace css {
 using Json = nlohmann::json;
@@ -19,6 +20,8 @@ struct Outfit {
     std::vector<Variant> variants;
     bool same_skeleton = false;
     fs::path thumbnail;
+    ColorOptions colors;
+    fs::path resources;
 };
 struct Catalog {
     std::vector<Outfit> outfits;
@@ -26,12 +29,13 @@ struct Catalog {
     const Variant* find(const std::string& outfit, const std::string& variant) const;
     bool compatible(const std::string& outfit, const std::string& shell) const;
 };
-struct Selection { std::string outfit, variant; };
+struct Selection { std::string outfit, variant; Customization colors; };
 struct State {
     bool enabled = false;
     bool auto_apply = true;
     bool invert_orbit_x = false, invert_orbit_y = true;
     std::map<std::string, Selection> selections;
+    std::map<std::string, Customization> remembered_colors;
     std::set<std::string> favorites;
     std::map<std::string, std::map<std::string, Selection>> presets;
     static State parse(const Json&);

@@ -67,7 +67,7 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
         if (j.at("schema") != 1 || !j.at("outfits").is_array()) throw std::runtime_error("Unsupported catalog schema");
         for (const auto& item : j.at("outfits")) {
             Outfit outfit{item.at("id"), item.at("name"), item.value("author", ""),
-                          item.value("description", ""), item.value("category", "Shell"), {}, {}, false, {}};
+                          item.value("description", ""), item.value("category", "Shell"), {}, {}, false, {}, {}, {}};
             if (!valid_id(outfit.id) || !ids.insert(outfit.id).second) throw std::runtime_error("Invalid or duplicate outfit id");
             if (outfit.name.empty() || outfit.name.size() > 256 || outfit.description.size() > 4096)
                 throw std::runtime_error("Invalid outfit text");
@@ -76,6 +76,8 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
             if (compatibility != "listed_shells" && compatibility != "same_skeleton")
                 throw std::runtime_error("Unsupported outfit compatibility policy");
             outfit.same_skeleton = compatibility == "same_skeleton";
+            outfit.colors=ColorOptions::parse(item.value("colors",Json::object()));
+            outfit.resources=document.artwork;
             auto thumbnail=item.value("thumbnail",std::string{});
             if(!thumbnail.empty()) {
                 if(thumbnail!="thumbnail.png") throw std::runtime_error("Unsupported catalog thumbnail path");
@@ -107,6 +109,15 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
             if (result.outfits.size() > 4096) throw std::runtime_error("Catalog exceeds 4096 outfits");
         }
     }
+    std::set<std::string> local_colors;
+    // Optional local recipes make material authoring testable without remounting containers.
+    for(const auto& file:fs::directory_iterator(directory)) if(file.is_regular_file() && file.path().filename().string().ends_with(".colors.json")) {
+        auto j=read_json(file.path()); auto id=j.at("id").get<std::string>();
+        if(!local_colors.insert(id).second) throw std::runtime_error("Duplicate local color recipes");
+        auto found=std::find_if(result.outfits.begin(),result.outfits.end(),[&](const auto& o){return o.id==id;});
+        if(found==result.outfits.end()) throw std::runtime_error("Local colors reference a missing outfit");
+        found->colors=ColorOptions::parse(j.at("colors")); found->resources=file.path().parent_path();
+    }
     return result;
 }
 const Variant* Catalog::find(const std::string& outfit, const std::string& variant) const {
@@ -124,7 +135,8 @@ static std::map<std::string, Selection> parse_selections(const Json& values) {
     if (!values.is_object() || values.size() > 256) throw std::runtime_error("Invalid selections");
     std::map<std::string, Selection> result;
     for (const auto& [key, value] : values.items()) {
-        Selection selection{value.at("outfit"), value.at("variant")};
+        Selection selection{value.at("outfit"), value.at("variant"), {}};
+        selection.colors=Customization::parse(value.value("colors",Json::object()));
         if (!valid_id(key) || !valid_id(selection.outfit) || !valid_id(selection.variant))
             throw std::runtime_error("Invalid saved selection");
         result.emplace(key, std::move(selection));
@@ -139,6 +151,13 @@ State State::parse(const Json& j) {
     result.invert_orbit_x = j.value("invert_orbit_x", false);
     result.invert_orbit_y = j.value("invert_orbit_y", true);
     result.selections = parse_selections(j.at("selections"));
+    if(j.contains("remembered_colors")) {
+        if(!j.at("remembered_colors").is_object() || j.at("remembered_colors").size()>4096) throw std::runtime_error("Invalid saved outfit colors");
+        for(const auto& [id,value]:j.at("remembered_colors").items()) {
+            if(!valid_id(id)) throw std::runtime_error("Invalid saved outfit color id");
+            result.remembered_colors[id]=Customization::parse(value);
+        }
+    }
     result.favorites = j.value("favorites", std::set<std::string>{});
     for (const auto& id : result.favorites) if (!valid_id(id)) throw std::runtime_error("Invalid favorite");
     if (j.contains("presets")) for (const auto& [key, values] : j.at("presets").items()) {
@@ -149,14 +168,16 @@ State State::parse(const Json& j) {
 }
 static Json selections_json(const std::map<std::string, Selection>& values) {
     Json result = Json::object();
-    for (const auto& [shell, selected] : values) result[shell] = {{"outfit", selected.outfit}, {"variant", selected.variant}};
+    for (const auto& [shell, selected] : values) result[shell] = {{"outfit", selected.outfit}, {"variant", selected.variant}, {"colors",selected.colors.json()}};
     return result;
 }
 Json State::json() const {
     Json presets_json = Json::object();
+    Json remembered = Json::object();
+    for(const auto& [id,colors]:remembered_colors) remembered[id]=colors.json();
     for (const auto& [name, values] : presets) presets_json[name] = selections_json(values);
     return {{"schema", 1}, {"enabled", enabled}, {"auto_apply", auto_apply},
             {"invert_orbit_x", invert_orbit_x}, {"invert_orbit_y", invert_orbit_y},
-            {"selections", selections_json(selections)}, {"favorites", favorites}, {"presets", presets_json}};
+            {"selections", selections_json(selections)}, {"favorites", favorites}, {"presets", presets_json}, {"remembered_colors",remembered}};
 }
 }

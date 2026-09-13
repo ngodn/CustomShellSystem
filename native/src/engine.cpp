@@ -4,6 +4,8 @@
 #include "wardrobe_input.hpp"
 #include <array>
 #include <cstring>
+#include <iomanip>
+#include <sstream>
 #include <stdexcept>
 #include <vector>
 #include <Unreal/UObjectGlobals.hpp>
@@ -15,6 +17,10 @@
 
 namespace css {
 using namespace RC::Unreal;
+static std::string slider_text(float value,bool scalar) {
+    if(!scalar) return std::to_string(int(std::lround(value*100)));
+    std::ostringstream text; text<<std::fixed<<std::setprecision(2)<<value; return text.str();
+}
 static std::wstring wide(const std::string& s) {
     if(s.empty()) return {};
     int size=MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,s.data(),static_cast<int>(s.size()),nullptr,0);
@@ -239,6 +245,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     // can still be rolled back. No gameplay or animation-class setters are used.
     applied_ = target;
     try {
+        reset_colors();
         set_mesh(component, target);
         const int count=overrides(component).Num();
         for(int i=0;i<count;++i) material(component,i,nullptr);
@@ -266,6 +273,7 @@ bool Appearance::restore() {
         restore_materials(component,original_materials_);
         material_debug=material_snapshot(component,original);
     }
+    color_mids_.clear(); color_targets_.clear(); color_textures_.clear(); last_colors_.clear(); color_outfit_.clear();
     component_.Reset(); applied_.Reset(); original_.clear(); original_materials_.clear(); applied_materials_.clear();
     return true;
 }
@@ -434,7 +442,7 @@ void Wardrobe::open(void* engine,const Catalog& catalog,const State& state,Appea
     if (!pc) throw std::runtime_error("No local controller is ready.");
     const bool refresh=opened() && camera_.Get() && pawn_.Get()==pawn && controller_.Get()==pc;
     if(refresh) {
-        invoke(root_.Get(),L"RemoveFromParent"); root_.Reset(); status_.Reset(); hits_.clear(); rows_.clear();
+        invoke(root_.Get(),L"RemoveFromParent"); root_.Reset(); status_.Reset(); hits_.clear(); rows_.clear(); sliders_.clear(); color_title_.Reset(); color_swatch_.Reset();
     } else close();
     auto* cursor=cursor_property(pc);
     if(!refresh) {
@@ -479,7 +487,7 @@ void Wardrobe::open(void* engine,const Catalog& catalog,const State& state,Appea
         const int visible=std::min(per_page,static_cast<int>(outfits.size())-page_*per_page);
         const double top=46;
         const double list_y=top+280;
-        const double list_height=category_==2?330:56+std::max(110*visible,90);
+        const double list_height=category_==3?410:category_==2?330:56+std::max(110*visible,90);
         const double footer=list_y+list_height+14;
         const double bottom=footer+120;
         auto* background=artwork("wardrobe-v1.png");
@@ -498,10 +506,10 @@ void Wardrobe::open(void* engine,const Catalog& catalog,const State& state,Appea
             auto* marker=ui.box(x+24,y+8,2,h-16,Color{0,0,0,0});
             rows_.push_back({std::move(wear),std::move(favorite),std::move(prev),std::move(next),std::move(save),FWeakObjectPtr(marker)});
         };
-        const char* categories[]={"All appearances","Favorites","Saved looks"};
+        const char* categories[]={"All appearances","Favorites","Saved looks","Colors"};
         centered(categories[category_],top+191,27);
         centered("LB / RB   Change section",top+235,18,muted);
-        for(int tab=0;tab<3;++tab) {
+        for(int tab=0;tab<4;++tab) {
             double y=top+188+tab*90;
             ui.box(x-89,y,76,80,Color{.014f,.016f,.016f,.93f});
             if(category_==tab) ui.box(x-14,y+10,1,60,gold);
@@ -509,8 +517,9 @@ void Wardrobe::open(void* engine,const Catalog& catalog,const State& state,Appea
             Color color=category_==tab?gold:ivory;
             if(tab==0) ui.sigil(x-70,y+7,38,color);
             else if(tab==1) ui.star(x-51,y+28,17,color);
-            else for(int i=0;i<3;++i) { ui.box(x-67,y+15+i*10,5,4,color); ui.box(x-57,y+15+i*10,23,2,color); }
-            auto* label=ui.label(tab==0?"ALL":tab==1?"FAV":"LOOKS",x-86,y+57,70,23,15,color);
+            else if(tab==2) for(int i=0;i<3;++i) { ui.box(x-67,y+15+i*10,5,4,color); ui.box(x-57,y+15+i*10,23,2,color); }
+            else { ui.box(x-69,y+15,14,25,Color{.32f,.08f,.10f,1}); ui.box(x-50,y+15,14,25,Color{.07f,.12f,.27f,1}); ui.box(x-31,y+15,10,25,gold); }
+            auto* label=ui.label(tab==0?"ALL":tab==1?"FAV":tab==2?"LOOKS":"COLOR",x-86,y+57,70,23,15,color);
             invoke(label,L"SetJustification",L"InJustification",uint8_t{1});
         }
         double preview=(x-89)/2-218;
@@ -521,7 +530,62 @@ void Wardrobe::open(void* engine,const Catalog& catalog,const State& state,Appea
         auto* hint=ui.label("RS orbit   /   LS zoom + frame",preview,1003,436,27,18,ivory);
         invoke(hint,L"SetJustification",L"InJustification",uint8_t{1});
         auto selection=state.selections.find(appearance.shell);
-        if(category_==2) {
+        if(category_==3) {
+            const Outfit* outfit=nullptr;
+            if(selection!=state.selections.end()) for(const auto& o:catalog.outfits) if(o.id==selection->second.outfit) outfit=&o;
+            if(!outfit || outfit->colors.controls.empty()) centered("Wear an appearance with color options.",list_y+50,22,muted);
+            else {
+                const auto& options=outfit->colors; const auto& custom=selection->second.colors;
+                auto values=color_values(options,custom);
+                size_t palette=0;
+                for(size_t i=0;i<options.palettes.size();++i) if(options.palettes[i].id==custom.palette) palette=i+1;
+                auto palette_action=[&](size_t i) { return Json{{"action","palette"},{"palette",i?options.palettes[i-1].id:"original"}}; };
+                size_t count=options.palettes.size()+1;
+                auto prev=palette_action((palette+count-1)%count),next=palette_action((palette+1)%count);
+                ui.label(outfit->name,x+46,list_y-12,450,30,17,muted);
+                bind(ui.button("<",x+40,list_y+25,40,42),prev);
+                std::string title=palette?options.palettes[palette-1].name:"Original colors";
+                if(!custom.values.empty()) title+=" *";
+                color_title_=centered(title,list_y+29,24,gold);
+                color_title_text_=title;
+                bind(ui.button(">",x+476,list_y+25,40,42),next);
+                row(list_y+22,48,{}, {},prev,next);
+                for(size_t i=0;i<count;++i) {
+                    double width=462.0/count;
+                    auto* button=ui.button(i?options.palettes[i-1].name.substr(0,options.palettes[i-1].name.find(' ')):"Original",x+45+i*width,list_y+75,width-6,33,palette==i,true,16);
+                    bind(button,palette_action(i));
+                }
+                color_part_=(color_part_%static_cast<int>(options.controls.size())+static_cast<int>(options.controls.size()))%static_cast<int>(options.controls.size());
+                const auto& control=options.controls[color_part_];
+                auto value=values.contains(control.id)?values.at(control.id):control.value;
+                Json previous={{"action","color_part"},{"delta",-1}},following={{"action","color_part"},{"delta",1}};
+                bind(ui.button("<",x+40,list_y+125,40,43),previous);
+                centered(control.name,list_y+131,25);
+                bind(ui.button(">",x+476,list_y+125,40,43),following);
+                row(list_y+125,43,{}, {},previous,following);
+                if(!control.scalar) color_swatch_=ui.box(x+479,list_y+174,24,8,Color{srgb_linear(value[0]),srgb_linear(value[1]),srgb_linear(value[2]),1});
+                const char* channels[]={"Red","Green","Blue"};
+                for(int channel=0;channel<(control.scalar?1:3);++channel) {
+                    double y=list_y+190+channel*49;
+                    ui.label(control.scalar?"Intensity":channels[channel],x+47,y+4,89,30,17,muted);
+                    auto* slider=construct(L"/Script/UMG.Slider",tree);
+                    invoke(slider,L"SetMinValue",L"InValue",control.minimum); invoke(slider,L"SetMaxValue",L"InValue",control.maximum);
+                    invoke(slider,L"SetStepSize",L"InValue",control.step); invoke(slider,L"SetValue",L"InValue",value[channel]);
+                    invoke(slider,L"SetSliderBarColor",L"InValue",Color{.07f,.065f,.055f,1});
+                    invoke(slider,L"SetSliderHandleColor",L"InValue",gold);
+                    ui.place(slider,x+143,y,293,33);
+                    auto* label=ui.label(slider_text(value[channel],control.scalar),x+451,y+4,59,30,17,ivory);
+                    Json action={{"action","color"},{"control",control.id},{"channel",channel},{"refresh",false}};
+                    sliders_.push_back({FWeakObjectPtr(slider),FWeakObjectPtr(label),action,value[channel],control.scalar});
+                    action["refresh"]=true; action["delta"]=-1; auto left=action; action["delta"]=1;
+                    row(y,37,Json{{"action","reset_color"},{"control",control.id}}, {},left,action);
+                }
+                Json reset={{"action","reset_color"},{"control",control.id}},original={{"action","palette"},{"palette","original"}};
+                bind(ui.button("Reset part",x+41,list_y+350,220,40,false,true,19),reset);
+                bind(ui.button("Reset all colors",x+274,list_y+350,240,40,false,true,19),original);
+                row(list_y+350,40,reset,{}, {},{},original);
+            }
+        } else if(category_==2) {
             for(int slot=0;slot<3;++slot) {
                 auto name="look."+std::to_string(slot+1);
                 bool exists=state.presets.contains(name);
@@ -581,7 +645,7 @@ void Wardrobe::open(void* engine,const Catalog& catalog,const State& state,Appea
         }
         ui.box(x+38,footer,476,1,Color{.32f,.24f,.13f,.7f});
         status_=centered(message_text,footer+12,19);
-        centered("A wear   /   Y favorite   /   D-pad browse",footer+43,18,muted);
+        centered(category_==3?"D-pad adjust   /   A reset selected part":"A wear   /   Y favorite   /   D-pad browse",footer+43,18,muted);
         bind(ui.button("B / Esc   Close",x+70,footer+72,412,35,false,true,23),{{"action","close"}});
         // Own the restoration obligation before the first input change.
         owns_input_=true; cursor->SetPropertyValueInContainer(pc,true);
@@ -601,6 +665,7 @@ void Wardrobe::open(void* engine,const Catalog& catalog,const State& state,Appea
                 preview_close(); preview_open();
                 preview_time_=std::fmod(phase,preview_length_); preview_update(0);
             }
+            sync_materials();
         }
         invoke(root,L"RemoveFromParent");
         invoke(root,L"AddToViewport",L"ZOrder",int32_t{9000});
@@ -864,7 +929,7 @@ void Wardrobe::preview_close() {
 }
 void Wardrobe::close() {
     if(auto* root=root_.Get()) invoke(root,L"RemoveFromParent");
-    root_.Reset(); status_.Reset(); hits_.clear(); rows_.clear();
+    root_.Reset(); status_.Reset(); hits_.clear(); rows_.clear(); sliders_.clear(); color_title_.Reset(); color_swatch_.Reset();
     // Restore gameplay input even if a camera cleanup operation fails.
     std::exception_ptr error;
     try { preview_close(); } catch(...) { error=std::current_exception(); }
@@ -907,8 +972,8 @@ Json Wardrobe::poll(float delta,bool focused) {
     if(!pawn || !pc || !camera_.Get() || read<UObject*>(pawn,L"Controller")!=pc || read<UObject*>(pc,L"Pawn")!=pawn) { close(); return {}; }
     if(!focused) { last_input_tick_=now; return {}; }
     if(pressed&XINPUT_GAMEPAD_B) return {{"action","close"}};
-    if(pressed&XINPUT_GAMEPAD_LEFT_SHOULDER) return {{"action","filter"},{"category",(category_+2)%3}};
-    if(pressed&XINPUT_GAMEPAD_RIGHT_SHOULDER) return {{"action","filter"},{"category",(category_+1)%3}};
+    if(pressed&XINPUT_GAMEPAD_LEFT_SHOULDER) return {{"action","filter"},{"category",(category_+3)%4}};
+    if(pressed&XINPUT_GAMEPAD_RIGHT_SHOULDER) return {{"action","filter"},{"category",(category_+1)%4}};
     const uint16_t directions=XINPUT_GAMEPAD_DPAD_UP|XINPUT_GAMEPAD_DPAD_DOWN|XINPUT_GAMEPAD_DPAD_LEFT|XINPUT_GAMEPAD_DPAD_RIGHT;
     uint16_t navigate=pressed&directions;
     if(navigate) repeat_at_=now+350;
@@ -951,6 +1016,19 @@ Json Wardrobe::poll(float delta,bool focused) {
     }
     mouse_x_=mouse.x; mouse_y_=mouse.y; right_mouse_=right;
     camera_update();
+    for(auto& slider:sliders_) if(auto* widget=slider.widget.Get()) {
+        Call current(widget,L"GetValue",1); current.run(); auto value=current.get<float>();
+        if(std::abs(value-slider.previous)>.00001f) {
+            slider.previous=value;
+            if(auto* label=slider.label.Get()) text_value(label,slider_text(value,slider.scalar));
+            if(auto* title=color_title_.Get();title && !color_title_text_.ends_with(" *")) { color_title_text_+=" *"; text_value(title,color_title_text_); }
+            if(auto* swatch=color_swatch_.Get();swatch && sliders_.size()==3) {
+                Color color{srgb_linear(sliders_[0].previous),srgb_linear(sliders_[1].previous),srgb_linear(sliders_[2].previous),1};
+                invoke(swatch,L"SetBrushColor",L"InBrushColor",color);
+            }
+            auto action=slider.action; action["value"]=value; return action;
+        }
+    }
     for(auto& hit:hits_) if(auto* widget=hit.widget.Get()) {
         Call pressed_call(widget,L"IsPressed",1); pressed_call.run();
         bool held=pressed_call.get<bool>();
@@ -1018,5 +1096,164 @@ Json Wardrobe::inspect(UObject* player) const {
         result["player"]=narrow(pawn->GetPathName());
     }
     return result;
+}
+}
+
+namespace css {
+namespace {
+void update_dye_mips(UObject* target) {
+    // The Canvas path does not regenerate lower mip levels. Resolve the same
+    // engine method called by the verified CreateRenderTarget2D native wrapper.
+    // Only engine code is queued on the render thread, never a CSS callback.
+    auto* module=reinterpret_cast<const unsigned char*>(GetModuleHandleW(nullptr));
+    constexpr uintptr_t wrapper=0x3f28b70, callsite=0x3f28e5a, update=0x44c85d0;
+    constexpr std::array<unsigned char,32> prologue{0x40,0x53,0x57,0x48,0x81,0xec,0xa8,0,0,0,0x48,0x8b,0x05,0x9f,0xd4,0xbd,0x06,0x48,0x33,0xc4,0x48,0x89,0x84,0x24,0x80,0,0,0,0x0f,0xb6,0xda,0x48};
+    constexpr std::array<unsigned char,10> caller{0xb2,0x01,0x48,0x8b,0xcb,0xe8,0x6c,0xf7,0x59,0};
+    auto* dos=reinterpret_cast<const IMAGE_DOS_HEADER*>(module);
+    if(dos->e_magic!=IMAGE_DOS_SIGNATURE || dos->e_lfanew<=0 || dos->e_lfanew>4096) throw std::runtime_error("Unknown game image for dye mipmaps");
+    auto* nt=reinterpret_cast<const IMAGE_NT_HEADERS64*>(module+dos->e_lfanew);
+    auto* function=find(L"/Script/Engine.Default__KismetRenderingLibrary")->GetFunctionByNameInChain(L"CreateRenderTarget2D");
+    if(nt->Signature!=IMAGE_NT_SIGNATURE || nt->OptionalHeader.SizeOfImage<update+prologue.size() || !function ||
+       reinterpret_cast<const unsigned char*>(function->GetFuncPtr())!=module+wrapper ||
+       std::memcmp(module+callsite,caller.data(),caller.size()) || std::memcmp(module+update,prologue.data(),prologue.size()))
+        throw std::runtime_error("Dye mipmaps require the verified Mortal Shell II build");
+    if(!target->IsA(static_cast<UClass*>(find(L"/Script/Engine.TextureRenderTarget2D")))) throw std::runtime_error("Invalid dye render target");
+    reinterpret_cast<void(*)(UObject*,bool)>(const_cast<unsigned char*>(module)+update)(target,false);
+}
+}
+void Appearance::reset_colors() {
+    if(auto* component=component_.Get()) for(const auto& [slot,weak]:color_mids_) {
+        if(auto* mid=weak.Get()) {
+            Call current(component,L"GetMaterial",2); current.set(L"ElementIndex",slot); current.run();
+            if(current.get<UObject*>()==mid) material(component,slot,applied_materials_.contains(slot)?read<UObject*>(mid,L"Parent"):nullptr);
+        }
+    }
+    color_mids_.clear(); color_targets_.clear(); color_textures_.clear(); last_colors_.clear(); color_outfit_.clear();
+}
+void Appearance::customize(const Outfit& outfit,const Customization& custom) {
+    auto values=color_values(outfit.colors,custom);
+    auto* component=component_.Get();
+    if(!component || !applied_.Get() || mesh_asset(component)!=applied_.Get()) throw std::runtime_error("Appearance changed before colors could apply");
+    if(color_outfit_!=outfit.id) reset_colors();
+    // Dropping a control restores its authored value, including layered parameters.
+    // Rebuild from the original material rather than guessing a layer's default.
+    if(std::any_of(last_colors_.begin(),last_colors_.end(),[&](const auto& p){return !values.contains(p.first);})) reset_colors();
+    if(values.empty()) { reset_colors(); material_debug=material_snapshot(component,applied_.Get()); material_debug["colors"]=Json::object(); material_debug["dye_targets"]=0; return; }
+    if(values==last_colors_) return;
+    auto mid_for=[&](int index) {
+        Call count(component,L"GetNumMaterials",1); count.run();
+        if(index<0 || index>=count.get<int>()) throw std::runtime_error("Color slot is absent on this appearance");
+        auto& weak=color_mids_[index];
+        if(auto* mid=weak.Get()) return mid;
+        Call current(component,L"GetMaterial",2); current.set(L"ElementIndex",index); current.run();
+        auto* parent=current.get<UObject*>();
+        if(!parent || parent->IsA(static_cast<UClass*>(find(L"/Script/Engine.MaterialInstanceDynamic"))))
+            throw std::runtime_error("Wait for the temporary material effect to finish before coloring");
+        Call make(component,L"CreateDynamicMaterialInstance",4); make.set(L"ElementIndex",index); make.set(L"SourceMaterial",parent); make.run();
+        auto* mid=make.get<UObject*>(); if(!mid) throw std::runtime_error("Could not create the color material");
+        weak=mid; return mid;
+    };
+    try {
+        auto* library=find(L"/Script/Engine.Default__KismetRenderingLibrary");
+        for(const auto& surface:outfit.colors.surfaces) {
+            bool active=false,changed=false;
+            for(const auto& [id,file]:surface.layers) {
+                active|=values.contains(id);
+                changed|=values.contains(id)!=last_colors_.contains(id) || (values.contains(id) && last_colors_.contains(id) && values.at(id)!=last_colors_.at(id));
+            }
+            if(!changed) continue;
+            auto parameter=FName(wide(surface.parameter).c_str(),FNAME_Add);
+            auto* first=mid_for(surface.slots.front());
+            Call base(read<UObject*>(first,L"Parent"),L"K2_GetTextureParameterValue",2); base.set(L"ParameterName",parameter); base.run();
+            auto* original=base.get<UObject*>();
+            if(!original) throw std::runtime_error("The selected material has no dyeable base texture");
+            UObject* target=original;
+            if(active) {
+                auto& weak=color_targets_[surface.id]; target=weak.Get();
+                if(!target) {
+                    Call create(library,L"CreateRenderTarget2D",8); create.set(L"WorldContextObject",component);
+                    create.set(L"Width",surface.resolution); create.set(L"Height",surface.resolution); create.set(L"Format",uint8_t{3});
+                    create.set(L"bAutoGenerateMipMaps",true); create.run(); target=create.get<UObject*>();
+                    if(!target) throw std::runtime_error("Could not create the dye texture"); weak=target;
+                }
+                // Keep the render target referenced by the component before importing layer textures.
+                for(int slot:surface.slots) {
+                    Call set(mid_for(slot),L"SetTextureParameterValue",2); set.set(L"ParameterName",parameter); set.set(L"Value",target); set.run();
+                }
+                std::vector<std::pair<FWeakObjectPtr,ColorValue>> layers;
+                for(const auto& [id,file]:surface.layers) if(values.contains(id)) {
+                    auto& texture=color_textures_[file];
+                    if(!texture.Get()) {
+                        auto path=outfit.resources/file;
+                        if(!fs::is_regular_file(path)) throw std::runtime_error("The outfit's color mask is missing");
+                        Call import(library,L"ImportFileAsTexture2D",3); import.set(L"WorldContextObject",component); import.set(L"Filename",FString(path.c_str())); import.run();
+                        auto* loaded=import.get<UObject*>(); if(!loaded) throw std::runtime_error("Could not load the outfit's color mask"); texture=loaded;
+                    }
+                    auto color=values.at(id); for(int i=0;i<3;++i) color[i]=srgb_linear(color[i]);
+                    layers.emplace_back(texture,color);
+                }
+                for(const auto& [texture,color]:layers) if(!texture.Get()) throw std::runtime_error("Color textures changed while loading");
+                Call begin(library,L"BeginDrawCanvasToRenderTarget",5); begin.set(L"WorldContextObject",component); begin.set(L"TextureRenderTarget",target); begin.run();
+                auto end=[&] { Call finish(library,L"EndDrawCanvasToRenderTarget",2); finish.set(L"WorldContextObject",component); finish.copy(L"Context",begin,L"Context"); finish.run(); };
+                try {
+                    auto* canvas=begin.get<UObject*>(L"Canvas");
+                    auto draw=[&](UObject* texture,const ColorValue& color,uint8_t blend) {
+                        Call call(canvas,L"K2_DrawTexture",9); call.set(L"RenderTexture",texture);
+                        call.set(L"ScreenSize",Vec2{double(surface.resolution),double(surface.resolution)}); call.set(L"CoordinateSize",Vec2{1,1});
+                        call.set(L"RenderColor",color); call.set(L"BlendMode",blend); call.run();
+                    };
+                    draw(original,{1,1,1,1},0);
+                    for(const auto& [texture,color]:layers) draw(texture.Get(),color,2);
+                } catch(...) { end(); throw; }
+                end();
+                update_dye_mips(target);
+            }
+            for(int slot:surface.slots) {
+                auto* mid=mid_for(slot);
+                Call set(mid,L"SetTextureParameterValue",2); set.set(L"ParameterName",parameter); set.set(L"Value",target); set.run();
+                Call readback(mid,L"K2_GetTextureParameterValue",2); readback.set(L"ParameterName",parameter); readback.run();
+                if(readback.get<UObject*>()!=target) throw std::runtime_error("Dye texture read-back failed");
+            }
+        }
+        for(const auto& control:outfit.colors.controls) {
+            bool active=values.contains(control.id),previous=last_colors_.contains(control.id);
+            if(!active) continue;
+            if(active && previous && values.at(control.id)==last_colors_.at(control.id)) continue;
+            for(const auto& binding:control.bindings) {
+                auto* mid=mid_for(binding.slot);
+                auto color=active?values.at(control.id):control.value;
+                auto parameter=FName(wide(binding.parameter).c_str(),FNAME_Add);
+                // Explicit layer associations use the engine's reflected FMaterialParameterInfo.
+                Call set(mid,control.scalar?L"SetScalarParameterValueByInfo":L"SetVectorParameterValueByInfo",2);
+                auto* p=set.param(L"ParameterInfo"); auto* info=find(L"/Script/Engine.MaterialParameterInfo");
+                member(set.data(p),p->GetElementSize(),info,L"Name",parameter);
+                member(set.data(p),p->GetElementSize(),info,L"Association",uint8_t(binding.association));
+                member(set.data(p),p->GetElementSize(),info,L"Index",binding.layer);
+                if(!control.scalar) for(int i=0;i<3;++i) color[i]=srgb_linear(color[i]);
+                if(control.scalar) set.set(L"Value",color[0]); else set.set(L"Value",color);
+                set.run();
+                Call readback(mid,control.scalar?L"K2_GetScalarParameterValueByInfo":L"K2_GetVectorParameterValueByInfo",2);
+                readback.copy(L"ParameterInfo",set,L"ParameterInfo"); readback.run();
+                if(control.scalar ? std::abs(readback.get<float>()-color[0])>.00001f : readback.get<ColorValue>()!=color)
+                    throw std::runtime_error("Color parameter read-back failed");
+            }
+        }
+        last_colors_=std::move(values); color_outfit_=outfit.id;
+        material_debug=material_snapshot(component,applied_.Get());
+        material_debug["colors"]=last_colors_;
+        material_debug["dye_targets"]=color_targets_.size();
+    } catch(...) { reset_colors(); throw; }
+}
+void Wardrobe::sync_materials() {
+    auto* preview=preview_mesh_.Get(); auto* pawn=pawn_.Get();
+    if(!preview || !pawn) return;
+    auto* source=read<UObject*>(pawn,L"Mesh");
+    if(mesh_asset(preview)!=mesh_asset(source)) return;
+    auto values=overrides(source);
+    int count=std::max(values.Num(),overrides(preview).Num());
+    for(int i=0;i<count;++i) {
+        UObject* value{}; if(i<values.Num()) std::memcpy(&value,values.GetRawPtr(i),sizeof(value));
+        material(preview,i,value);
+    }
 }
 }
