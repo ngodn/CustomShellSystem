@@ -53,3 +53,11 @@ Naming: user selected CSSX (Custom Shell System Extensions) on 15 September. No 
 Renamed unpublished CSSE interfaces to CSSX. Windows css_core.dll and cssx_core.dll compile. The optional Inventory tab and initial library/control renderer are implemented but not yet visually tested. Game was closed at inspection. Existing CSS loader ABI remains unchanged.
 
 Central storage now writes UTC JSONL logs with size rotation and per-extension output paths. Host tests cover escaping, rotation retention, Unicode filenames, traversal and Windows reserved output names.
+
+## Declarative UI and packaging checkpoint
+
+Pkl 0.32.1 installed through mise and the counter example evaluated successfully. Added canonical native validation plus a Python package builder with an explicit file list, Windows path checks, Unicode paths, x64 DLL header validation and reproducible ZIP output. The example ZIP is under dist/extensions and is not a release.
+
+Lua now compiles as C++ so allocation failures unwind host JSON temporaries. Added empty-array support, protected argument marshalling, memory exhaustion and caught-loop checks. Static menu reload validates before replacing the current model; invalid and temporarily missing files retain the working view. Extension IDs are lowercase namespaces to prevent Windows path collisions. Confirmation dialogs block clicks on underlying controls.
+
+Host tests cover Unicode settings/output, restart persistence, script isolation, static UI reload, archive contents and retaining an existing ZIP after a rejected build. Windows DLLs and validator compile. No new build has been deployed or visually validated yet.

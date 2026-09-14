@@ -2,6 +2,14 @@
 #include <algorithm>
 #include <cmath>
 namespace css::extensions {
+bool valid_namespace(const std::string& id) {
+    if(id.empty() || id.size()>96 || id.front()<'a' || id.front()>'z' || id.back()=='.') return false;
+    for(char c:id) if(!((c>='a' && c<='z') || (c>='0' && c<='9') || c=='.' || c=='_' || c=='-')) return false;
+    if(id.find("..")!=std::string::npos) return false;
+    const auto stem=id.substr(0,id.find('.'));
+    return stem!="con" && stem!="prn" && stem!="aux" && stem!="nul" &&
+        !(stem.size()==4 && (stem.starts_with("com") || stem.starts_with("lpt")) && stem[3]>='0' && stem[3]<='9');
+}
 static std::string text(const Json& j,const char* key,size_t limit,bool required=true) {
     auto v=j.value(key,std::string{});
     if((required && v.empty()) || v.size()>limit || v.find('\0')!=std::string::npos) throw std::runtime_error(std::string("Invalid extension ")+key);
@@ -12,7 +20,7 @@ static std::string text(const Json& j,const char* key,size_t limit,bool required
 fs::path contained_file(const fs::path& root,const std::string& relative) {
     if(relative.empty() || relative.size()>2048 || relative.find('\\')!=std::string::npos || relative.find(':')!=std::string::npos || relative.find('\0')!=std::string::npos)
         throw std::runtime_error("Extension file must be a relative UTF-8 path using forward slashes");
-    auto p=fs::u8path(relative);
+    auto p=utf8_path(relative);
     if(p.is_absolute() || p.has_root_name()) throw std::runtime_error("Absolute extension file path");
     for(const auto& part:p) if(part==".." || part==".") throw std::runtime_error("Extension file path traversal");
     const auto base=fs::canonical(root), target=fs::canonical(base/p);
@@ -24,7 +32,7 @@ fs::path contained_file(const fs::path& root,const std::string& relative) {
 Manifest Manifest::parse(const Json& j,const fs::path& dir) {
     if(!j.is_object() || j.value("schema",0)!=1 || j.value("api",0)!=1) throw std::runtime_error("Unsupported CSSX manifest/API version");
     Manifest m;
-    m.id=text(j,"id",96); if(!valid_id(m.id)) throw std::runtime_error("Invalid extension ID");
+    m.id=text(j,"id",96); if(!valid_namespace(m.id) || m.id=="cssx") throw std::runtime_error("Extension ID must be a unique lowercase storage namespace");
     m.title=text(j,"title",96); m.version=text(j,"version",32); m.author=text(j,"author",96);
     m.description=text(j,"description",2048,false); m.kind=text(j,"kind",16); m.layout=text(j,"layout",16);
     if(m.kind!="native" && m.kind!="lua") throw std::runtime_error("Extension kind must be native or lua");
@@ -33,6 +41,7 @@ Manifest Manifest::parse(const Json& j,const fs::path& dir) {
     auto suffix=m.entry.extension();
     if((m.kind=="native" && suffix!=".dll") || (m.kind=="lua" && suffix!=".lua")) throw std::runtime_error("Extension entry does not match its kind");
     if(j.contains("banner")) m.banner=contained_file(dir,text(j,"banner",2048));
+    if(j.contains("menu")) m.menu=contained_file(dir,text(j,"menu",2048));
     return m;
 }
 Json Manifest::json() const {
@@ -92,6 +101,21 @@ void validate_model(const Json& j) {
         }
     }
     if(j.dump().size()>1024*1024) throw std::runtime_error("Extension menu exceeds 1 MiB");
+}
+Json bind_menu(const Json& definition,const Json& model) {
+    if(!definition.is_object() || definition.value("schema",0)!=1) throw std::runtime_error("Unsupported CSSX UI schema");
+    if(!model.is_object()) throw std::runtime_error("CSSX menu bindings must be an object");
+    Json result=definition;
+    const auto values=model.value("values",Json::object()), choices=model.value("options",Json::object()), enabled=model.value("enabled",Json::object());
+    if(!values.is_object() || !choices.is_object() || !enabled.is_object()) throw std::runtime_error("CSSX value, option and enabled bindings must be objects");
+    for(auto& section:result.at("sections")) for(auto& control:section.at("controls")) {
+        const auto binding=control.value("binding",control.at("id").get<std::string>());
+        if(values.contains(binding)) control["value"]=values.at(binding);
+        if(choices.contains(binding)) control["options"]=choices.at(binding);
+        if(enabled.contains(binding)) control["enabled"]=enabled.at(binding);
+    }
+    result["status"]=model.value("status",std::string{});
+    validate_model(result);return result;
 }
 void LibraryPage::normalize() { page=std::min(page,pages()-1); selected=count?std::min(selected,count-1):0; }
 void LibraryPage::slide(int direction) {

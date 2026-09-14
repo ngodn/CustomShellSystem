@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "sections": [
+    {
+      "id": "main",
+      "title": "Example",
+      "controls": [
+        {
+          "id": "counter",
+          "label": "Counter",
+          "type": "number",
+          "description": "A persisted value demonstrating CSSX state and UI bindings.",
+          "enabled": true,
+          "value": 0,
+          "min": 0,
+          "max": 100,
+          "step": 1
+        },
+        {
+          "id": "export",
+          "label": "Export counter",
+          "type": "button",
+          "description": "Write a text file to this extension's managed output folder.",
+          "enabled": true
+        }
+      ]
+    }
+  ]
+}

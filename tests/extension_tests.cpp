@@ -14,6 +14,9 @@ int main() {
     Json manifest={{"schema",1},{"api",1},{"id","test.extension"},{"title","Test"},{"author","Author"},{"version","1.0.0"},{"kind","lua"},{"layout","tabs"},{"entry","main.lua"}};
     atomic_json(root/"valid/extension.json",manifest);
     check(discover(root).entries.size()==1);
+    for(const auto& id:{"CON","con.settings","nul","lpt1.logs","cssx","Case.Name","bad..id","trailing."}) {
+        auto invalid=manifest;invalid["id"]=id;rejects([&]{Manifest::parse(invalid,root/"valid");});
+    }
     rejects([&]{contained_file(root/"valid","../valid/main.lua");});
     rejects([&]{contained_file(root/"valid","C:/file.lua");});
     rejects([&]{contained_file(root/"valid","missing.lua");});
@@ -23,6 +26,12 @@ int main() {
     mixed=discover(root);check(mixed.entries.size()==1);check(mixed.errors.size()==2);
     Json model={{"sections",Json::array({{{"id","main"},{"title","Main"},{"controls",Json::array({{{"id","speed"},{"type","number"},{"label","Speed"},{"min",1},{"max",4},{"step",.1},{"value",2}}})}}})}};
     validate_model(model);++checks;
+    auto definition=model;definition["schema"]=1;
+    auto bound=bind_menu(definition,{{"values",{{"speed",3}}},{"enabled",{{"speed",false}}}});
+    check(bound["sections"][0]["controls"][0]["value"]==3);
+    check(bound["sections"][0]["controls"][0]["enabled"]==false);
+    rejects([&]{bind_menu(definition,{{"values",Json::array({3})}});});
+    rejects([&]{bind_menu(definition,{{"values",{{"speed",99}}}});});
     auto bad=model;bad["sections"][0]["controls"][0]["step"]=0;rejects([&]{validate_model(bad);});
     bad=model;bad["sections"][0]["controls"].push_back(bad["sections"][0]["controls"][0]);rejects([&]{validate_model(bad);});
     bad=model;bad["sections"][0]["controls"][0]["value"]=5;rejects([&]{validate_model(bad);});

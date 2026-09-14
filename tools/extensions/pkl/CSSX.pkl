@@ -1,0 +1,41 @@
+module CSSX
+
+schema: Int = 1
+sections: Listing<Section>
+
+class Option {
+  id: String
+  label: String
+}
+open class Control {
+  id: String
+  label: String
+  type: "button"|"toggle"|"number"|"choice"|"text"|"label"
+  description: String = ""
+  enabled: Boolean = true
+  value: (Boolean|Number|String)? = null
+}
+class Toggle extends Control {
+  type = "toggle"
+  value: Boolean = false
+}
+class Button extends Control {
+  type = "button"
+}
+class NumberControl extends Control {
+  type = "number"
+  min: Number
+  max: Number
+  step: Number
+  value: Number
+}
+class Choice extends Control {
+  type = "choice"
+  options: Listing<Option>
+  value: String
+}
+class Section {
+  id: String
+  title: String
+  controls: Listing<Control>
+}

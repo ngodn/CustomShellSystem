@@ -1,4 +1,5 @@
 #include "extension_storage.hpp"
+#include "extension_data.hpp"
 #include <chrono>
 #include <ctime>
 #include <fstream>
@@ -11,7 +12,7 @@
 namespace css::extensions {
 namespace {
 void identity(const std::string& id) {
-    if(id.size()>96 || !valid_id(id) || id=="." || id=="..") throw std::runtime_error("Invalid extension storage identity");
+    if(!valid_namespace(id)) throw std::runtime_error("Invalid extension storage identity");
 }
 std::string timestamp() {
     const auto now=std::chrono::system_clock::now();auto seconds=std::chrono::system_clock::to_time_t(now);
@@ -43,7 +44,7 @@ void Storage::log(const std::string& id,const std::string& level,const std::stri
     if(level!="debug" && level!="info" && level!="warning" && level!="error") throw std::runtime_error("Invalid log severity");
     if(message.size()>16384 || !fields.is_object() || fields.dump().size()>16384) throw std::runtime_error("Log entry exceeds bound");
     if(policy_.max_bytes<128 || policy_.backups<1 || policy_.backups>16) throw std::runtime_error("Invalid log rotation policy");
-    auto path=id=="cssx"?root_/"logs/cssx.jsonl":root_/"logs/extensions"/fs::u8path(id)/"current.jsonl";
+    auto path=id=="cssx"?root_/"logs/cssx.jsonl":root_/"logs/extensions"/utf8_path(id)/"current.jsonl";
     ensure_beneath(root_,path);
     const auto line=Json{{"time",timestamp()},{"level",level},{"extension",id},{"message",message},{"fields",fields}}.dump()+"\n";
     fs::create_directories(path.parent_path());
@@ -60,7 +61,7 @@ void Storage::log(const std::string& id,const std::string& level,const std::stri
 fs::path Storage::output(const std::string& id,const std::string& filename,const std::string& bytes) {
     identity(id);
     if(filename.empty() || filename.size()>512 || bytes.size()>8*1024*1024 || filename.find_first_of("\\:\0",0,3)!=std::string::npos) throw std::runtime_error("Invalid extension output file");
-    auto relative=fs::u8path(filename);
+    auto relative=utf8_path(filename);
     if(relative.is_absolute() || relative.has_root_name()) throw std::runtime_error("Output filename must be relative");
     for(const auto& part:relative) {
         auto name=path_utf8(part);
@@ -69,7 +70,7 @@ fs::path Storage::output(const std::string& id,const std::string& filename,const
         auto stem=name.substr(0,name.find('.'));for(auto& c:stem) c=static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
         if(stem=="CON" || stem=="PRN" || stem=="AUX" || stem=="NUL" || (stem.size()==4 && (stem.starts_with("COM") || stem.starts_with("LPT")) && stem[3]>='0' && stem[3]<='9')) throw std::runtime_error("Reserved Windows output filename");
     }
-    auto base=root_/"output/extensions"/fs::u8path(id),path=base/relative;
+    auto base=root_/"output/extensions"/utf8_path(id),path=base/relative;
     ensure_beneath(root_,base);ensure_beneath(base,path);
     fs::create_directories(path.parent_path());auto temp=path;temp+=".tmp";ensure_beneath(base,temp);
     { std::ofstream file(temp,std::ios::binary|std::ios::trunc);file.write(bytes.data(),static_cast<std::streamsize>(bytes.size()));file.flush();if(!file) throw std::runtime_error("Cannot write extension output"); }

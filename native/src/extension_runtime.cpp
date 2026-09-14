@@ -11,11 +11,9 @@
 #else
 #include <dlfcn.h>
 #endif
-extern "C" {
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
-}
 namespace css::extensions {
 namespace {
 void emit(CssxSink sink,void* output,const Json& value) { auto bytes=value.dump(); if(sink) sink(output,bytes.data(),bytes.size()); }
@@ -51,6 +49,7 @@ void close_module(Module module) {
 }
 Json from_lua(lua_State* l,int index,int depth=0) {
     if(depth>16) throw std::runtime_error("Lua result is too deeply nested");
+    if(!lua_checkstack(l,4)) throw std::runtime_error("Lua result exceeds available stack");
     index=lua_absindex(l,index);
     switch(lua_type(l,index)) {
     case LUA_TNIL: return nullptr;
@@ -59,11 +58,13 @@ Json from_lua(lua_State* l,int index,int depth=0) {
     case LUA_TSTRING: { size_t size=0;auto* p=lua_tolstring(l,index,&size);if(size>1024*1024) throw std::runtime_error("Lua string exceeds bound");return std::string(p,size); }
     case LUA_TTABLE: {
         auto length=lua_rawlen(l,index); if(length>4096) throw std::runtime_error("Lua array exceeds bound");
-        Json result=length?Json::array():Json::object(); size_t count=0;
+        bool array=length!=0;
+        if(lua_getmetatable(l,index)) {lua_getfield(l,-1,"cssx_array");array=array || lua_toboolean(l,-1);lua_pop(l,2);}
+        Json result=array?Json::array():Json::object(); size_t count=0;
         lua_pushnil(l);
         while(lua_next(l,index)) {
             if(++count>4096) throw std::runtime_error("Lua table exceeds bound");
-            if(length) {
+            if(array) {
                 if(!lua_isinteger(l,-2) || lua_tointeger(l,-2)<1 || static_cast<size_t>(lua_tointeger(l,-2))>length) throw std::runtime_error("Mixed Lua arrays are unsupported");
             } else {
                 if(lua_type(l,-2)!=LUA_TSTRING) throw std::runtime_error("Lua object keys must be strings");
@@ -71,13 +72,14 @@ Json from_lua(lua_State* l,int index,int depth=0) {
             }
             lua_pop(l,1);
         }
-        if(length) for(size_t i=1;i<=length;++i) { lua_rawgeti(l,index,static_cast<lua_Integer>(i)); result.push_back(from_lua(l,-1,depth+1)); lua_pop(l,1); }
+        if(array) for(size_t i=1;i<=length;++i) { lua_rawgeti(l,index,static_cast<lua_Integer>(i)); result.push_back(from_lua(l,-1,depth+1)); lua_pop(l,1); }
         return result;
     }
     default: throw std::runtime_error("Unsupported value in Lua result");
     }
 }
 void to_lua(lua_State* l,const Json& j) {
+    if(!lua_checkstack(l,4)) luaL_error(l,"CSSX Lua argument exceeds available stack");
     if(j.is_null()) lua_pushnil(l);
     else if(j.is_boolean()) lua_pushboolean(l,j.get<bool>());
     else if(j.is_number_integer()) lua_pushinteger(l,j.get<lua_Integer>());
@@ -105,6 +107,9 @@ struct Entry {
     bool suspended=false, stopped=false, dirty=true;
     unsigned requests=0;
     double elapsed=0;
+    double menu_check=0;
+    fs::file_time_type menu_time{};
+    Json definition;
     Json service(const Json&);
     void start();
     Json invoke_lua(const char*,const Json& argument=nullptr,bool optional=false);
@@ -166,7 +171,7 @@ int entry_service(void* context,const char* data,CssxSink sink,void* output) {
 Json Entry::service(const Json& j) {
     if(++requests>4096) throw std::runtime_error("Extension host request budget exceeded");
     auto op=j.at("op").get<std::string>();
-    auto state=runtime->root/"state/extensions"/fs::u8path(manifest.id+".json");
+    auto state=runtime->root/"state/extensions"/utf8_path(manifest.id+".json");
     if(op=="state.load") {
         if(!fs::exists(state)) { atomic_json(state,Json::object());return Json::object(); }
         try { if(fs::file_size(state)>1024*1024) throw std::runtime_error("Extension state exceeds bound");return read_json(state); }
@@ -193,20 +198,39 @@ void* lua_memory(void* context,void* ptr,size_t old,size_t size) {
 }
 void lua_budget(lua_State* l,lua_Debug*) {
     auto* entry=*static_cast<Entry**>(lua_getextraspace(l));
-    if(++entry->instructions>200) luaL_error(l,"CSSX Lua instruction budget exceeded");
+    if(++entry->instructions>200) {
+        // A script can catch an error with pcall. After exhaustion, check every
+        // instruction so its catch handler cannot restart an unbounded loop.
+        lua_sethook(l,lua_budget,LUA_MASKCOUNT,1);
+        luaL_error(l,"CSSX Lua instruction budget exceeded");
+    }
 }
 int lua_service(lua_State* l) {
     auto* entry=static_cast<Entry*>(lua_touserdata(l,lua_upvalueindex(1)));
-    // Report errors as nil, message so no Lua longjmp crosses a C++ destructor.
+    // Host errors return nil, message. Lua is compiled as C++ so allocation
+    // failures also unwind these temporary JSON values before protected recovery.
     try { auto request=from_lua(l,1);auto result=entry->service(request);to_lua(l,result);return 1; }
     catch(const std::exception& e) { lua_pushnil(l);lua_pushstring(l,e.what());return 2; }
 }
+int lua_array(lua_State* l) {
+    if(lua_isnoneornil(l,1)) lua_newtable(l);
+    else {luaL_checktype(l,1,LUA_TTABLE);lua_pushvalue(l,1);}
+    lua_newtable(l);lua_pushboolean(l,1);lua_setfield(l,-2,"cssx_array");lua_setmetatable(l,-2);return 1;
+}
+struct LuaInvocation { Entry* entry;const char* name;const Json* argument;bool optional; };
+int lua_invoke(lua_State* l) {
+    const auto* call=static_cast<LuaInvocation*>(lua_touserdata(l,1));
+    lua_rawgeti(l,LUA_REGISTRYINDEX,call->entry->table);lua_getfield(l,-1,call->name);lua_remove(l,-2);
+    if(lua_isnil(l,-1) && call->optional) return 1;
+    if(!lua_isfunction(l,-1)) return luaL_error(l,"Lua extension requires function %s",call->name);
+    to_lua(l,*call->argument);lua_call(l,1,1);return 1;
+}
 Json Entry::invoke_lua(const char* name,const Json& argument,bool optional) {
     const int top=lua_gettop(lua); instructions=0;requests=0;
-    lua_rawgeti(lua,LUA_REGISTRYINDEX,table);lua_getfield(lua,-1,name);lua_remove(lua,-2);
-    if(lua_isnil(lua,-1) && optional) { lua_settop(lua,top);return nullptr; }
-    if(!lua_isfunction(lua,-1)) { lua_settop(lua,top);throw std::runtime_error(std::string("Lua extension requires function ")+name); }
-    to_lua(lua,argument);lua_sethook(lua,lua_budget,LUA_MASKCOUNT,10000);
+    if(!lua_checkstack(lua,8)) throw std::runtime_error("Lua callback has no stack space");
+    LuaInvocation invocation{this,name,&argument,optional};
+    lua_pushcfunction(lua,lua_invoke);lua_pushlightuserdata(lua,&invocation);
+    lua_sethook(lua,lua_budget,LUA_MASKCOUNT,10000);
     int result=lua_pcall(lua,1,1,0);lua_sethook(lua,nullptr,0,0);
     if(result!=LUA_OK) { std::string error=lua_tostring(lua,-1)?lua_tostring(lua,-1):"Lua error";lua_settop(lua,top);throw std::runtime_error(error); }
     try { auto value=from_lua(lua,-1);lua_settop(lua,top);return value; }
@@ -229,7 +253,7 @@ void Entry::start() {
         *static_cast<Entry**>(lua_getextraspace(lua))=this;
         for(auto lib: {std::pair{"_G",luaopen_base},std::pair{"table",luaopen_table},std::pair{"string",luaopen_string},std::pair{"math",luaopen_math},std::pair{"utf8",luaopen_utf8}}) { luaL_requiref(lua,lib.first,lib.second,1);lua_pop(lua,1); }
         for(auto name:{"dofile","loadfile","load","collectgarbage"}) {lua_pushnil(lua);lua_setglobal(lua,name);}
-        lua_newtable(lua);lua_pushlightuserdata(lua,this);lua_pushcclosure(lua,lua_service,1);lua_setfield(lua,-2,"request");lua_setglobal(lua,"cssx");
+        lua_newtable(lua);lua_pushlightuserdata(lua,this);lua_pushcclosure(lua,lua_service,1);lua_setfield(lua,-2,"request");lua_pushcfunction(lua,lua_array);lua_setfield(lua,-2,"array");lua_setglobal(lua,"cssx");
         const auto chunk="@"+manifest.id+"/entry.lua";
         int result=luaL_loadbufferx(lua,source.data(),source.size(),chunk.c_str(),"t");
         if(result==LUA_OK) { lua_sethook(lua,lua_budget,LUA_MASKCOUNT,10000);result=lua_pcall(lua,0,1,0);lua_sethook(lua,nullptr,0,0); }
@@ -237,14 +261,17 @@ void Entry::start() {
         if(!lua_istable(lua,-1)) throw std::runtime_error("Lua entry must return an extension table");
         table=luaL_ref(lua,LUA_REGISTRYINDEX);invoke_lua("start",nullptr,true);
     }
+    if(!manifest.menu.empty()) {if(fs::file_size(manifest.menu)>1024*1024) throw std::runtime_error("Menu exceeds 1 MiB");definition=read_json(manifest.menu);menu_time=fs::last_write_time(manifest.menu);}
     refresh();
     runtime->storage.log(manifest.id,"info","Extension initialized",{{"version",manifest.version},{"kind",manifest.kind}});
 }
 void Entry::refresh() {
     requests=0;
-    if(lua) model=invoke_lua("model");
-    else { std::string bytes;if(!api->model(instance,collect,&bytes)) throw std::runtime_error("Extension model callback failed");model=Json::parse(bytes); }
-    validate_model(model);dirty=false;
+    Json next;
+    if(lua) next=invoke_lua("model");
+    else { std::string bytes;if(!api->model(instance,collect,&bytes)) throw std::runtime_error("Extension model callback failed");next=Json::parse(bytes); }
+    if(!definition.is_null()) next=bind_menu(definition,next);
+    validate_model(next);model=std::move(next);dirty=false;
 }
 void Entry::event(const Json& event) {
     requests=0;
@@ -256,6 +283,15 @@ void Entry::tick(double delta) {
     elapsed+=std::clamp(delta,0.,.25);
     if(elapsed<.1) return;
     const auto step=elapsed;elapsed=0;requests=0;
+    menu_check+=step;
+    if(!manifest.menu.empty() && menu_check>=1.) {
+        menu_check=0;std::error_code ec;const auto time=fs::last_write_time(manifest.menu,ec);
+        // Editors can briefly remove a file during atomic replacement.
+        if(!ec && time!=menu_time) {
+            try {if(fs::file_size(manifest.menu)>1024*1024) throw std::runtime_error("Menu exceeds 1 MiB");auto next=read_json(manifest.menu);auto before=definition;definition=next;try{refresh();}catch(...){definition=before;throw;}menu_time=time;++runtime->revision;}
+            catch(const std::exception& e) {runtime->storage.log(manifest.id,"warning",std::string("UI reload rejected: ")+e.what());menu_time=time;}
+        }
+    }
     if(lua) invoke_lua("tick",step,true);
     else if(api && instance && api->tick && !api->tick(instance,step)) throw std::runtime_error("Extension tick callback failed");
 }

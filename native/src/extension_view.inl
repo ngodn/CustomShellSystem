@@ -115,6 +115,7 @@ void InventoryUI::build_extensions() {
 }
 Json InventoryUI::dispatch_extension(const Json& action) {
     const auto name=action.value("action",std::string{});
+    if(!extension_confirm_.is_null() && name!="x_cancel" && name!="x_back" && name!="x_confirm") return {};
     if(name=="x_cancel") {extension_confirm_=nullptr;dirty_=true;return {};}
     if(name=="x_back") {if(!extension_confirm_.is_null()) extension_confirm_=nullptr;else {extension_id_.clear();extension_model_=nullptr;}dirty_=enter_transition_=true;return {};}
     if(name=="x_page") {extension_paging_.slide(action.at("direction").get<int>());dirty_=enter_transition_=true;return {};}
