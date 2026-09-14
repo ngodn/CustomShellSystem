@@ -385,6 +385,7 @@ bool Appearance::materials_match() const {
     for(size_t i=0;i<std::max(static_cast<size_t>(values.Num()),expected_materials_.size());++i) {
         UObject* actual{}; if(i<static_cast<size_t>(values.Num())) std::memcpy(&actual,values.GetRawPtr(static_cast<int>(i)),sizeof(actual));
         auto* expected=i<expected_materials_.size()?expected_materials_[i].Get():nullptr;
+        if(i<expected_materials_.size() && expected_materials_[i].ObjectSerialNumber && !expected) return false;
         if(actual!=expected) return false;
     }
     return true;
@@ -406,6 +407,30 @@ bool Appearance::repair_materials_needed() {
             if(!original_default_materials_.contains(path) && std::find(original_materials_.begin(),original_materials_.end(),path)==original_materials_.end()) return false;
         }
     }
+    return true;
+}
+bool Appearance::reuse_materials() {
+    // A completed effect can replace OverrideMaterials without changing the
+    // outfit. Reattach the existing MIDs and their dye targets instead of
+    // importing masks and rendering every color surface again on the game thread.
+    // Weak references never retain a previous world; collected resources take
+    // the normal rebuild path. Check every reference before changing any slot.
+    if(!repair_materials_needed()) return false;
+    for(const auto& weak:expected_materials_)
+        if(weak.ObjectSerialNumber && !weak.Get()) return false;
+    for(const auto& [slot,weak]:color_mids_) {
+        if(!weak.Get() || slot<0 || static_cast<size_t>(slot)>=expected_materials_.size() ||
+           weak.Get()!=expected_materials_[slot].Get()) return false;
+    }
+    for(const auto& [id,weak]:color_targets_) if(!weak.Get()) return false;
+    auto* component=component_.Get();
+    const auto count=std::max(static_cast<size_t>(overrides(component).Num()),expected_materials_.size());
+    for(size_t i=0;i<count;++i)
+        material(component,static_cast<int>(i),i<expected_materials_.size()?expected_materials_[i].Get():nullptr);
+    if(!materials_match()) throw std::runtime_error("Recovered color material read-back failed");
+    material_debug=material_snapshot(component,applied_.Get());
+    material_debug["colors"]=last_colors_;
+    material_debug["dye_targets"]=color_targets_.size();
     return true;
 }
 Json Appearance::transition_state(void* engine) {
@@ -517,6 +542,8 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     if (read<UObject*>(before, L"Skeleton") != read<UObject*>(target, L"Skeleton"))
         throw std::runtime_error("Different skeleton: appearance change refused");
     if (before == target && applied_materials_==materials && materials_match()) return true;
+    if (before == target && applied_materials_==materials && reuse_materials()) return true;
+    const bool returning_to_outfit=applied_.Get()==target && applied_materials_==materials && repair_mesh_needed();
     if (component_.Get() != component || before != applied_.Get()) {
         auto materials=material_paths(component);
         original_ = narrow(before->GetPathName());
@@ -534,8 +561,17 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     // can still be rolled back. No gameplay or animation-class setters are used.
     applied_ = target;
     try {
+        // The same pawn can briefly return to its stock mesh during travel.
+        // Once recovery is allowed, preserve valid dye resources here too.
+        if(returning_to_outfit) {
+            set_mesh(component,target);
+            if(materials_match() || reuse_materials()) {
+                current_mesh=narrow(target->GetPathName());
+                return true;
+            }
+        }
         reset_colors();
-        if(before!=target) set_mesh(component, target);
+        if(before!=target && !returning_to_outfit) set_mesh(component, target);
         const int count=overrides(component).Num();
         for(int i=0;i<count;++i) material(component,i,nullptr);
         auto defaults=material_snapshot(component,target).at("defaults");

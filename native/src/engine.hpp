@@ -152,6 +152,7 @@ class Appearance {
     void restore_menu();
     void remember_materials();
     bool materials_match() const;
+    bool reuse_materials();
     void reset_colors();
 public:
     std::string shell, pawn_name, current_mesh;
