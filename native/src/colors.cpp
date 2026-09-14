@@ -119,6 +119,15 @@ Customization Customization::parse(const Json& j) {
     return result;
 }
 Json Customization::json() const { return {{"palette",palette},{"values",values}}; }
+Customization compatible_colors(const ColorOptions& options,const Customization& source) {
+    Customization result;
+    if(std::any_of(options.palettes.begin(),options.palettes.end(),[&](const auto& p){return p.id==source.palette;})) result.palette=source.palette;
+    for(const auto& [id,value]:source.values) if(auto* control=options.find(id)) {
+        try { valid_value(*control,value); result.values[id]=value; }
+        catch(const std::exception&) { /* A changed part keeps its new authored default. */ }
+    }
+    return result;
+}
 std::map<std::string,ColorValue> color_values(const ColorOptions& options,const Customization& custom) {
     std::map<std::string,ColorValue> result;
     if(custom.palette!="original") {

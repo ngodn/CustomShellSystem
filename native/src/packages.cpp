@@ -177,6 +177,11 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
             auto options=ColorOptions::parse(outfits[0].value("colors",Json::object()));
             std::set<std::string> required;
             for(const auto& surface:options.surfaces) for(const auto& [part,file]:surface.layers) required.insert(file);
+            for(const auto& variant:outfits[0].at("variants")) if(variant.contains("colors")) {
+                auto variant_options=ColorOptions::parse(variant.at("colors"));
+                for(const auto& surface:variant_options.surfaces)
+                    for(const auto& [part,file]:surface.layers) required.insert(file);
+            }
             auto resources=manifest.value("resources",Json::object());
             if(!resources.is_object() || resources.size()!=required.size()) throw std::runtime_error("Dye resource manifest mismatch");
             for(const auto& name:required) {

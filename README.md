@@ -69,7 +69,7 @@ mod links and reusable image/video links.
 | --- | --- | --- |
 | Open / close CSS | View / Back + Y | N |
 | Close | B | Esc or Close |
-| Browse appearances | D-pad up / down | Click a row |
+| Browse appearances | D-pad up / down, list follows selection | Mouse wheel, scrollbar or click a row |
 | Change variant | D-pad left / right | Variant arrows |
 | Wear selected appearance | A | Click the appearance |
 | Favorite | Y | Star |

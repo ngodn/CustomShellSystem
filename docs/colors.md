@@ -86,3 +86,12 @@ Colors retain the existing shaders' lighting and effects, but this does not prov
 CNS's [advanced configuration guide](https://github.com/Dekita/SB-CustomNanosuitSystem-Docs/blob/main/guides/cns-json-advanced.md) documents scalar/vector controls, material associations, linked controls and texture choices. Its [changelog](https://github.com/Dekita/SB-CustomNanosuitSystem-Docs/blob/main/guides/cns-changelog.md) also records saved custom configurations and fixes around sliders and restored materials.
 
 CSS now adapts per-part RGB controls, bounded scalar controls, linked parameters, palette buttons, custom saved looks and original restoration. Its package format adds explicit texture masks for shaders whose tint parameters are compiled out. Generic texture-choice menus, shape keys, material toggles and independent accessory slots remain separate future work. No CNS Lua or cooked UI content is shipped in CSS.
+
+
+## Variant-specific recipes
+
+A variant may declare its own `colors` object. It replaces the outfit-level recipe for that variant; otherwise the outfit recipe remains the fallback. The package resource table is the union of the outfit-level recipe and all variant recipes. Identical filenames must have identical bytes. Native discovery verifies and caches that union, including resources used only by another variant.
+
+When selecting a different variant, CSS keeps compatible color choices and drops unavailable part IDs or palettes. Original restores that variant's authored materials. Switching variants also rebuilds its dynamic materials and dye targets, preventing a previous variant's atlas from being reused. These additions require the updated native core from the variant-port work; the published v0.1.1 core predates this support.
+
+[Porting variant bundles](porting-variants.md) documents the four new ports and their configured controls. Atlas masks are specific to each source texture. Unconfigured custom shader materials remain unchanged.

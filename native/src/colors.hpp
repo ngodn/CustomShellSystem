@@ -44,6 +44,7 @@ struct Customization {
     bool operator==(const Customization&) const = default;
 };
 std::map<std::string,ColorValue> color_values(const ColorOptions&, const Customization&);
+Customization compatible_colors(const ColorOptions&, const Customization&);
 bool color_resource(const std::string&);
 float srgb_linear(float);
 }

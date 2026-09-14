@@ -36,3 +36,5 @@
 | [prior investigation](../../investigation/2026-09-13/findings.md) | Attack-state recovery and live diagnostic evidence |
 
 - [Beacon return recovery](beacon-transition-recovery.md): same-player mesh resets, deferred restoration, menu ownership and live regression checks.
+
+- [Variant port workflow](porting-variants.md): stable incoming sources, isolated alternate containers, per-variant colors, import repairs and identical texture sharing.

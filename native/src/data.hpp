@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -13,6 +14,7 @@ namespace fs = std::filesystem;
 struct Variant {
     std::string id, name, mesh;
     std::map<int,std::string> materials;
+    std::optional<ColorOptions> colors;
 };
 struct Outfit {
     std::string id, name, author, description, category;
@@ -22,6 +24,10 @@ struct Outfit {
     fs::path thumbnail;
     ColorOptions colors;
     fs::path resources;
+    const ColorOptions& colors_for(const std::string& variant) const {
+        for(const auto& v:variants) if(v.id==variant && v.colors) return *v.colors;
+        return colors;
+    }
 };
 struct Catalog {
     std::vector<Outfit> outfits;

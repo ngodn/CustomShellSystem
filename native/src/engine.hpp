@@ -52,7 +52,7 @@ public:
     void test_effect(bool begin);
     void test_cursor(void* engine, bool visible);
 #endif
-    void customize(const Outfit&, const Customization&);
+    void customize(const Outfit&, const std::string& variant, const Customization&);
 };
 // All widgets and input ownership stay on the game thread. No widget delegates
 // point into the reloadable DLL, so closing the view permits core unloading.
@@ -98,7 +98,10 @@ class Wardrobe {
     void preview_open();
     void preview_close();
     void preview_update(double delta);
-    void focus(int index);
+    void focus(int index, bool reveal = true);
+    WeakObject list_scroll_;
+    float list_offset_ = 0;
+    bool reset_list_ = true;
     int category_ = 0, page_ = 0;
     std::map<std::string, WeakObject> textures_;
 public:
@@ -112,7 +115,7 @@ public:
     Json inspect(RC::Unreal::UObject* player) const;
     void sync_materials();
     void configure(bool invert_x,bool invert_y) { invert_x_=invert_x; invert_y_=invert_y; }
-    void filter(int category) { category_ = std::clamp(category,0,3); page_ = 0; }
+    void filter(int category) { category_ = std::clamp(category,0,3); page_ = 0; list_offset_ = 0; focus_ = 0; reset_list_ = true; }
     void color_part(int delta) { color_part_ += std::clamp(delta,-1,1); }
     void page(int delta) { page_ = std::max(0, page_ + delta); }
 };

@@ -115,7 +115,8 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
             for (const auto& shell : outfit.shells) if (!valid_id(shell)) throw std::runtime_error("Invalid shell tag");
             std::set<std::string> variants;
             for (const auto& v : item.at("variants")) {
-                Variant variant{v.at("id"), v.at("name"), v.at("mesh"), {}};
+                Variant variant{v.at("id"), v.at("name"), v.at("mesh"), {}, {}};
+                if(v.contains("colors")) variant.colors=ColorOptions::parse(v.at("colors"));
                 if (!valid_id(variant.id) || !variants.insert(variant.id).second || !valid_asset(variant.mesh))
                     throw std::runtime_error("Invalid variant id or asset path");
                 if(v.contains("materials")) {

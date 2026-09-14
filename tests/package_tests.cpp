@@ -25,9 +25,16 @@ int main(int argc,char** argv) {
         std::ofstream(cached,std::ios::binary|std::ios::trunc)<<"corrupt";
         package_catalogs(root/"paks",root/"cache");
         if(fs::file_size(cached)==7) throw std::runtime_error("Corrupt thumbnail cache was not repaired");
-        for(const auto& surface:catalog.outfits[0].colors.surfaces) for(const auto& [part,file]:surface.layers) {
+        std::set<std::string> masks;
+        for(const auto& variant:catalog.outfits[0].variants)
+            for(const auto& surface:catalog.outfits[0].colors_for(variant.id).surfaces)
+                for(const auto& [part,file]:surface.layers) masks.insert(file);
+        for(const auto& file:masks) {
             auto texture=packages[0].artwork/file;
             if(!fs::is_regular_file(texture)) throw std::runtime_error("Packaged color mask was not cached");
+        }
+        if(!masks.empty()) {
+            auto texture=packages[0].artwork/(*masks.rbegin());
             auto bytes=fs::file_size(texture);
             std::ofstream(texture,std::ios::binary|std::ios::trunc)<<"corrupt";
             package_catalogs(root/"paks",root/"cache");

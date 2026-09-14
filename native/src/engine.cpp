@@ -134,6 +134,20 @@ static UObject* load(const std::string& path) {
     if (!object) throw std::runtime_error("Asset could not load: " + path);
     return object;
 }
+// Blocking asset loads can run garbage collection between successive imports.
+// Keep only this operation's assets rooted until component references own them.
+class AssetLoadRoots {
+    std::vector<WeakObject> owned_;
+public:
+    void keep(UObject* object) {
+        if(object->IsRootSet()) return;
+        owned_.emplace_back(object);
+        object->SetRootSet();
+    }
+    ~AssetLoadRoots() noexcept {
+        for(auto& weak:owned_) if(auto* object=weak.Get()) object->ClearRootSet();
+    }
+};
 static UObject* mesh_asset(UObject* component) {
     Call call(component, L"GetSkeletalMeshAsset", 1); call.run(); return call.get<UObject*>();
 }
@@ -410,11 +424,12 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     if (!before) return false;
     if (component_.Get() && component_.Get() != component && !restore()) return false;
     WeakObject live_component(component), live_pawn(pawn), previous_mesh(before);
-    auto* target = load(mesh_path);
+    AssetLoadRoots loading_roots;
+    auto* target = load(mesh_path); loading_roots.keep(target);
     WeakObject live_target(target);
     std::map<int,WeakObject> loaded_materials;
     for(const auto& [slot,path]:materials) {
-        auto* value=load(path);
+        auto* value=load(path); loading_roots.keep(value);
         if(!value->IsA(static_cast<UClass*>(find(L"/Script/Engine.MaterialInterface"))))
             throw std::runtime_error("Override asset is not a material");
         loaded_materials.emplace(slot,WeakObject(value));
@@ -565,10 +580,11 @@ UObject* content(UObject* parent, UObject* child) {
 struct Layout {
     UObject* tree; UObject* canvas; double scale;
     UObject* serif;
+    double origin_x = 0, origin_y = 0;
     void place(UObject* widget, double x, double y, double width, double height) {
         Call add(canvas, L"AddChildToCanvas", 2); add.set(L"content", widget); add.run();
         auto* slot = add.get<UObject*>();
-        invoke(slot, L"SetPosition", L"InPosition", Vec2{x*scale, y*scale});
+        invoke(slot, L"SetPosition", L"InPosition", Vec2{(x-origin_x)*scale, (y-origin_y)*scale});
         invoke(slot, L"SetSize", L"InSize", Vec2{width*scale, height*scale});
     }
     UObject* box(double x, double y, double w, double h, Color color) {
@@ -667,6 +683,8 @@ void Wardrobe::open(void* engine,const Catalog& catalog,const State& state,Appea
     if (!pc) throw std::runtime_error("No local controller is ready.");
     const bool refresh=opened() && camera_.Get() && pawn_.Get()==pawn && controller_.Get()==pc;
     if(refresh) {
+        if(auto* scroll=list_scroll_.Get(); scroll && !reset_list_) { Call offset(scroll,L"GetScrollOffset",1); offset.run(); list_offset_=offset.get<float>(); }
+        list_scroll_.Reset();
         invoke(root_.Get(),L"RemoveFromParent"); root_.Reset(); status_.Reset(); hits_.clear(); rows_.clear(); sliders_.clear(); color_title_.Reset(); color_swatch_.Reset();
     } else close();
     auto* cursor=cursor_property(pc);
@@ -707,13 +725,10 @@ void Wardrobe::open(void* engine,const Catalog& catalog,const State& state,Appea
         std::vector<const Outfit*> outfits;
         for(const auto& outfit:catalog.outfits)
             if(category_!=1 || state.favorites.contains(outfit.id)) outfits.push_back(&outfit);
-        constexpr int per_page=5;
-        const int pages=std::max(1,(static_cast<int>(outfits.size())+per_page-1)/per_page);
-        page_=std::min(page_,pages-1);
-        const int visible=std::min(per_page,static_cast<int>(outfits.size())-page_*per_page);
+        const int visible=static_cast<int>(outfits.size());
         const double top=46;
         const double list_y=top+280;
-        const double list_height=category_==3?410:category_==2?330:56+std::max(110*visible,90);
+        const double list_height=category_==3?410:category_==2?330:56+std::max(110*std::min(visible,5),90);
         const double footer=list_y+list_height+14;
         const double bottom=footer+120;
         auto* background=artwork("wardrobe-v1.png");
@@ -759,9 +774,9 @@ void Wardrobe::open(void* engine,const Catalog& catalog,const State& state,Appea
         if(category_==3) {
             const Outfit* outfit=nullptr;
             if(selection!=state.selections.end()) for(const auto& o:catalog.outfits) if(o.id==selection->second.outfit) outfit=&o;
-            if(!outfit || outfit->colors.controls.empty()) centered("Wear an appearance with color options.",list_y+50,22,muted);
+            if(!outfit || outfit->colors_for(selection->second.variant).controls.empty()) centered("Wear an appearance with color options.",list_y+50,22,muted);
             else {
-                const auto& options=outfit->colors; const auto& custom=selection->second.colors;
+                const auto& options=outfit->colors_for(selection->second.variant); const auto& custom=selection->second.colors;
                 auto values=color_values(options,custom);
                 size_t palette=0;
                 for(size_t i=0;i<options.palettes.size();++i) if(options.palettes[i].id==custom.palette) palette=i+1;
@@ -826,11 +841,27 @@ void Wardrobe::open(void* engine,const Catalog& catalog,const State& state,Appea
                 row(y,101,wear,{}, {},{},save);
             }
         } else {
+            auto* scroll=construct(L"/Script/UMG.ScrollBox",tree); list_scroll_=scroll;
+            auto* drag=scroll->GetPropertyByNameInChain(L"bAllowRightClickDragScrolling");
+            if(!drag || !drag->IsA<FBoolProperty>()) throw std::runtime_error("Scroll input property mismatch");
+            static_cast<FBoolProperty*>(drag)->SetPropertyValueInContainer(scroll,false);
+            invoke(scroll,L"SetConsumeMouseWheel",L"NewConsumeMouseWheel",uint8_t{0}); // When scrolling is possible.
+            invoke(scroll,L"SetAnimateWheelScrolling",L"bShouldAnimateWheelScrolling",true);
+            invoke(scroll,L"SetAllowOverscroll",L"NewAllowOverscroll",false);
+            invoke(scroll,L"SetAlwaysShowScrollbar",L"NewAlwaysShowScrollbar",visible>5);
+            invoke(scroll,L"SetScrollbarThickness",L"NewScrollbarThickness",Vec2{6*ui.scale,6*ui.scale});
+            ui.place(scroll,x,list_y,552,list_height);
+            auto* size=construct(L"/Script/UMG.SizeBox",tree);
+            invoke(size,L"SetHeightOverride",L"InHeightOverride",static_cast<float>((56+std::max(110*visible,90))*ui.scale));
+            auto* list_canvas=construct(L"/Script/UMG.CanvasPanel",tree);
+            content(size,list_canvas);
+            Call add(scroll,L"AddChild",2); add.set(L"content",size); add.run();
+            ui.canvas=list_canvas; ui.origin_x=x; ui.origin_y=list_y;
             Json original={{"action","restore"}};
             bind(ui.button("Original appearance",x+34,list_y,484,48,selection==state.selections.end(),true,25),original);
             row(list_y,48,original);
             for(int n=0;n<visible;++n) {
-                const auto& outfit=*outfits[page_*per_page+n];
+                const auto& outfit=*outfits[n];
                 bool compatible=catalog.compatible(outfit.id,appearance.shell);
                 bool chosen=selection!=state.selections.end() && selection->second.outfit==outfit.id;
                 size_t variant=0;
@@ -864,10 +895,9 @@ void Wardrobe::open(void* engine,const Catalog& catalog,const State& state,Appea
                 row(y,102,compatible?wear:Json{},favorite,compatible&&outfit.variants.size()>1?previous:Json{},compatible&&outfit.variants.size()>1?next:Json{});
             }
             if(outfits.empty()) centered("Star an appearance to keep it here.",list_y+81,22,muted);
-            if(pages>1) {
-                bind(ui.button("<",x+34,top+235,42,32),{{"action","page"},{"delta",-1}});
-                bind(ui.button(">",x+476,top+235,42,32),{{"action","page"},{"delta",1}});
-            }
+            ui.canvas=canvas; ui.origin_x=0; ui.origin_y=0;
+            invoke(scroll,L"SetScrollOffset",L"NewScrollOffset",list_offset_);
+
         }
         ui.box(x+38,footer,476,1,Color{.32f,.24f,.13f,.7f});
         status_=centered(message_text,footer+12,19);
@@ -896,7 +926,7 @@ void Wardrobe::open(void* engine,const Catalog& catalog,const State& state,Appea
         invoke(root,L"RemoveFromParent");
         invoke(root,L"AddToViewport",L"ZOrder",int32_t{9000});
         invoke(root,L"SetVisibility",L"InVisibility",uint8_t{0});
-        focus(focus_);
+        focus(focus_,!refresh || reset_list_); reset_list_=false;
     } catch (...) { close(); throw; }
 }
 namespace {
@@ -1238,6 +1268,7 @@ void Wardrobe::preview_close() {
     preview_.Reset(); preview_mesh_.Reset(); preview_length_=0; preview_animation_.clear(); preview_moving_=false;
 }
 void Wardrobe::close() {
+    list_scroll_.Reset();
     std::exception_ptr error;
     try { if(auto* root=root_.Get()) invoke(root,L"RemoveFromParent"); } catch(...) { error=std::current_exception(); }
     root_.Reset(); status_.Reset(); hits_.clear(); rows_.clear(); sliders_.clear(); color_title_.Reset(); color_swatch_.Reset();
@@ -1256,11 +1287,16 @@ void Wardrobe::close() {
     pawn_.Reset(); controller_.Reset(); world_.Reset(); right_mouse_=false;
     if(error) std::rethrow_exception(error);
 }
-void Wardrobe::focus(int index) {
+void Wardrobe::focus(int index,bool reveal) {
     if(rows_.empty()) return;
     focus_=std::clamp(index,0,static_cast<int>(rows_.size())-1);
     for(size_t i=0;i<rows_.size();++i) if(auto* marker=rows_[i].marker.Get())
         invoke(marker,L"SetBrushColor",L"InBrushColor",static_cast<int>(i)==focus_?ivory:Color{0,0,0,0});
+    if(reveal) if(auto* scroll=list_scroll_.Get()) {
+        Call show(scroll,L"ScrollWidgetIntoView",4);
+        show.set(L"WidgetToFind",rows_[focus_].marker.Get()); show.set(L"AnimateScroll",false);
+        show.set(L"ScrollDestination",uint8_t{0}); show.set(L"Padding",16.0f); show.run();
+    }
 }
 Json Wardrobe::poll(float delta,bool focused) {
     XINPUT_STATE pad{};
@@ -1364,6 +1400,11 @@ void Wardrobe::rotate(double degrees,bool front) {
 }
 Json Wardrobe::diagnostics() const {
     Json result={{"controller_connected",pad_index_>=0},{"input_owned",owns_input_},{"camera_active",camera_.Get()!=nullptr}};
+    result["list_rows"]=rows_.size(); result["list_focus"]=focus_;
+    if(auto* scroll=list_scroll_.Get()) {
+        Call offset(scroll,L"GetScrollOffset",1); offset.run(); result["list_offset"]=offset.get<float>();
+        Call end(scroll,L"GetScrollOffsetOfEnd",1); end.run(); result["list_max_offset"]=end.get<float>();
+    }
     result["preview_active"]=preview_.Get()!=nullptr;
     result["preview_bones_moving"]=preview_moving_;
     if(preview_.Get()) result["preview_animation"]=preview_animation_;
@@ -1508,11 +1549,13 @@ void Appearance::reset_colors() {
     }
     color_mids_.clear(); color_targets_.clear(); color_textures_.clear(); last_colors_.clear(); color_outfit_.clear();
 }
-void Appearance::customize(const Outfit& outfit,const Customization& custom) {
-    auto values=color_values(outfit.colors,custom);
+void Appearance::customize(const Outfit& outfit,const std::string& variant,const Customization& custom) {
+    const auto& options=outfit.colors_for(variant);
+    auto values=color_values(options,custom);
     auto* component=component_.Get();
     if(!component || !applied_.Get() || mesh_asset(component)!=applied_.Get()) throw std::runtime_error("Appearance changed before colors could apply");
-    if(color_outfit_!=outfit.id) reset_colors();
+    const auto color_identity=outfit.id+":"+variant;
+    if(color_outfit_!=color_identity) reset_colors();
     // Dropping a control restores its authored value, including layered parameters.
     // Rebuild from the original material rather than guessing a layer's default.
     if(std::any_of(last_colors_.begin(),last_colors_.end(),[&](const auto& p){return !values.contains(p.first);})) reset_colors();
@@ -1533,7 +1576,7 @@ void Appearance::customize(const Outfit& outfit,const Customization& custom) {
     };
     try {
         auto* library=find(L"/Script/Engine.Default__KismetRenderingLibrary");
-        for(const auto& surface:outfit.colors.surfaces) {
+        for(const auto& surface:options.surfaces) {
             bool active=false,changed=false;
             for(const auto& [id,file]:surface.layers) {
                 active|=values.contains(id);
@@ -1593,7 +1636,7 @@ void Appearance::customize(const Outfit& outfit,const Customization& custom) {
                 if(readback.get<UObject*>()!=target) throw std::runtime_error("Dye texture read-back failed");
             }
         }
-        for(const auto& control:outfit.colors.controls) {
+        for(const auto& control:options.controls) {
             bool active=values.contains(control.id),previous=last_colors_.contains(control.id);
             if(!active) continue;
             if(active && previous && values.at(control.id)==last_colors_.at(control.id)) continue;
@@ -1616,7 +1659,7 @@ void Appearance::customize(const Outfit& outfit,const Customization& custom) {
                     throw std::runtime_error("Color parameter read-back failed");
             }
         }
-        last_colors_=std::move(values); color_outfit_=outfit.id;
+        last_colors_=std::move(values); color_outfit_=color_identity;
         material_debug=material_snapshot(component,applied_.Get());
         material_debug["colors"]=last_colors_;
         material_debug["dye_targets"]=color_targets_.size();

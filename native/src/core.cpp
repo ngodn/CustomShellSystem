@@ -112,15 +112,16 @@ struct Core {
             const Outfit* outfit=nullptr;
             for(const auto& o:catalog.outfits) if(o.id==selected->second.outfit) outfit=&o;
             if(!outfit) throw std::runtime_error("The selected outfit is missing");
+            const auto& options=outfit->colors_for(selected->second.variant);
             auto custom=selected->second.colors;
             if(action=="palette") { custom.palette=command.at("palette"); custom.values.clear(); }
             else {
                 auto id=command.at("control").get<std::string>();
-                auto* control=outfit->colors.find(id);
+                auto* control=options.find(id);
                 if(!control) throw std::runtime_error("Unknown color part");
                 if(action=="reset_color") custom.values.erase(id);
                 else {
-                    auto values=color_values(outfit->colors,custom);
+                    auto values=color_values(options,custom);
                     auto value=values.contains(id)?values.at(id):control->value;
                     int channel=command.value("channel",0);
                     if(channel<0 || channel>(control->scalar?0:2)) throw std::runtime_error("Invalid color channel");
@@ -129,7 +130,7 @@ struct Core {
                     custom.values[id]=value;
                 }
             }
-            color_values(outfit->colors,custom);
+            color_values(options,custom);
             pending_colors=std::move(custom); color_only=true; refresh_colors=command.value("refresh",true);
             apply_pending=true; save_after=GetTickCount64()+600;
         }
@@ -218,6 +219,8 @@ struct Core {
                 if (!selected_outfit.empty()) {
                     requested = {std::move(selected_outfit), std::move(selected_variant), {}};
                     if(state.remembered_colors.contains(requested.outfit)) requested.colors=state.remembered_colors.at(requested.outfit);
+                    for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit)
+                        requested.colors=compatible_colors(outfit.colors_for(requested.variant),requested.colors);
                     selected_outfit.clear(); selected_variant.clear();
                     if (!catalog.compatible(requested.outfit, appearance.shell))
                         throw std::runtime_error("This outfit does not support the current shell: " + appearance.shell);
@@ -232,7 +235,7 @@ struct Core {
                     auto start = std::chrono::steady_clock::now();
                     if (appearance.apply(engine, variant->mesh, variant->materials)) {
                         try {
-                            for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit) appearance.customize(outfit,requested.colors);
+                            for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit) appearance.customize(outfit,requested.variant,requested.colors);
                         } catch(...) {
                             applied_id.clear(); appearance.restore(); throw;
                         }
