@@ -19,11 +19,14 @@ Use `--colors /path/to/outfit.colors.json` with `tools/css_convert.py`. A recipe
 ```bash
 python3 tools/css_color_package.py dist/CSS_Example_Author_P \
   --recipe authoring/example.colors.json \
+  --package-version 1.1.0 \
   --output dist/colors
 python3 tools/css_package.py verify dist/colors/CSS_Example_Author_P
 ```
 
 The tool creates a package-named directory under the output root and refuses to overwrite it. Metadata, thumbnail, conversion audit and dye masks all live inside the `.pak`. The `.utoc` and `.ucas` remain byte-identical during this update. The package still consists of three matching `_P` files. Installation with `--replace` backs up the old trio and retires matching local development recipes and masks.
+
+`--package-version` is author-controlled; omitting it preserves the existing version. Packages with variant-specific colors are refused by default. Rebuild those through their project to preserve separate recipes. Use `--replace-variant-colors` only when intentionally replacing them all with one shared recipe.
 
 A minimal masked color recipe:
 

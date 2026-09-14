@@ -1,0 +1,54 @@
+# Outfit authoring research
+
+Checked 14 September 2026 against Epic's version-selected Unreal Engine 5.6 documentation and Blender's 4.5 manual. This note supports a modder guide. It does not certify a new Blender export preset, editor project, Windows cooker, or outfit in Mortal Shell II.
+
+CSS consumes compatible, already-cooked appearance assets. Making a new outfit still requires mesh, rig, material, physics and cooking work. CSS then adds wardrobe discovery, variants, material-slot overrides, thumbnails and optional color recipes. Its converter does not retarget a foreign skeleton, reconstruct source assets, compile shaders or cook a `.blend`/FBX file. The current supported inputs and exclusions are documented in [CSS outfit packages](css-packages.md).
+
+## Mesh and rig authoring
+
+Epic's UE 5.6 FBX pipeline uses FBX 2020.2 and warns about compatibility when exporting other versions. It supports skeletal meshes, material assignments, UV sets, morph targets and LODs. A mesh can contain several disconnected pieces skinned to one skeleton. Epic recommends controlling triangulation in the modeling application, and explicitly calls out material order when particular slots must represent body or head. FBX import can select an existing Skeleton asset. These facts support a workflow of modeling and skinning the outfit, checking geometry and material slots, exporting, then importing onto the intended skeleton. They do not establish a universal Blender export preset. [Epic: FBX Skeletal Mesh Pipeline, UE 5.6](https://dev.epicgames.com/documentation/en-us/unreal-engine/fbx-skeletal-mesh-pipeline-in-unreal-engine?application_version=5.6)
+
+Blender's 4.5 FBX documentation describes axis conversion and bone orientation differences, evaluated mesh export through Apply Modifiers, smoothing options, and armature options including Only Deform Bones and Add Leaf Bones. Several armature settings have incomplete documentation. A guide should record the exact Blender build and import/export preset only after a successful round trip of a known reference rig. It should not invent mandatory scale, axis or armature-name settings. The English page was available through search excerpts but direct fetching failed; the official German page includes the relevant English technical text. [Blender 4.5 FBX manual](https://docs.blender.org/manual/de/4.5/addons/import_export/scene_fbx.html)
+
+Skeleton sharing requires consistent bone names and hierarchy. Peripheral additional bones can be supported without disrupting the existing chain. Epic's Compatible Skeletons feature assumes nearly identical hierarchy/naming and similar proportions; radically different structures require a separate retargeting workflow. Authoring recommendation: preserve the target game's verified rig and reference pose, fit the outfit to it, and inspect weights during extreme poses. A familiar-looking humanoid rig or a matching root bone alone is insufficient evidence of compatibility. [Epic: Skeletons, UE 5.6](https://dev.epicgames.com/documentation/en-us/unreal-engine/skeletons-in-unreal-engine?application_version=5.6)
+
+For CSS, shell tags declare where an outfit is offered and the runtime also checks the actual skeleton. Tags are not a substitute for rigging. The documented converter scope excludes another game's skeletons. A model originating elsewhere first needs a separate port to the target game's rig and asset requirements. [CSS outfit packages](css-packages.md)
+
+## Materials and editable colors
+
+Material instances inherit their parent's shader. Only properties exposed as parameters can be overridden through instances. Scalar parameters carry one number; vector parameters carry four components; texture parameters permit texture substitution. Dynamic material instances support runtime edits. Static parameters, including static switches, are resolved during compilation and cannot be changed at runtime. For a new editable-color material, expose named tint/vector and strength/scalar parameters in shader branches that will actually be used, then create material instances for authored defaults. [Epic: Material Instances, UE 5.6](https://dev.epicgames.com/documentation/en-us/unreal-engine/instanced-materials-in-unreal-engine?application_version=5.6)
+
+CSS recipes bind those actual parameter names to actual material slots. Existing shaders can also use CSS's texture-mask path where a suitable texture parameter is available. Mask RGB stores grayscale surface detail; alpha selects the region. The masks must match that outfit's UV atlas. A parameter value reading back successfully does not prove the shader visibly uses it. Verify the material in the game before documenting a control. CSS colors do not infer body regions or add missing shader features. [Color customization](colors.md)
+
+Keep material construction distinct from the package metadata. A `.colors.json` describes controls, palettes and bindings; it does not turn arbitrary Blender node graphs into Unreal shaders. A material recipe chooses cooked material objects for mesh slots. Variant-specific colors replace the outfit-level recipe for that variant, with fallback when omitted. The existing color documentation states that this support requires the newer native core and is absent from published v0.1.1. [Color customization](colors.md), [CSS outfit packages](css-packages.md)
+
+## Physics and cloth
+
+A Physics Asset defines a skeletal mesh's rigid bodies and constraints for simulation and collision. Unreal can generate one on skeletal mesh import or create one afterward; generation is a starting point for authoring. [Epic: Physics Asset Editor, UE 5.6](https://dev.epicgames.com/documentation/en-us/unreal-engine/physics-asset-editor-in-unreal-engine?application_version=5.6)
+
+UE 5.6's Clothing Tool uses Chaos Cloth. Its documented workflow creates clothing data from a skeletal mesh LOD section, assigns the clothing asset to that section, selects a character Physics Asset for collision, and paints simulation properties such as Max Distance. These are separate from CSS's texture dye masks. Recommendation: treat cloth collision, weight painting, section assignments and changed topology as an explicit authoring task, then test movement and attacks in game. Successful mesh import or package conversion does not establish cloth behavior. This describes Epic's mesh-section clothing workflow, not proof that every Chaos Cloth implementation works with CSS. [Epic: Clothing Tool, UE 5.6](https://dev.epicgames.com/documentation/en-us/unreal-engine/clothing-tool-in-unreal-engine?application_version=5.6)
+
+## Cooking, containers and editor platform
+
+Cooking converts editable content into platform-specific runtime data. The cooker explicitly receives a target platform. Therefore an asset rendering in the Linux editor is not evidence that it has been cooked for the Windows game. This is an inference from Epic's distinction between source content and target-platform output, not a claim that cross-cooking is impossible. [Epic: Content Cooking, UE 5.6](https://dev.epicgames.com/documentation/en-us/unreal-engine/cooking-content-in-unreal-engine?application_version=5.6)
+
+Epic separates Build, Cook, Stage and Package. UAT uses `RunUAT.bat` on Windows and `RunUAT.sh` on Linux/macOS. Platform availability depends on installed support and SDKs. A useful authoring guide should record a working target configuration and the command generated by Project Launcher. These documents do not prove that this repository's Linux editor installation can cook Mortal Shell II-compatible Windows skeletal meshes and shaders. That needs a concrete cooker run and game test. [Epic: Build Operations, UE 5.6](https://dev.epicgames.com/documentation/en-us/unreal-engine/build-operations-cooking-packaging-deploying-and-running-projects-in-unreal-engine?application_version=5.6)
+
+Zen Loader stores package, bulk and shader data in `.utoc`/`.ucas` containers; `.pak` holds loose files. Staging computes dependencies and package identities, so an IoStore asset is more than a filename to rename. CSS's self-contained trio uses that division: metadata and thumbnail in `.pak`, relocated cooked content in the IoStore companions. Use the converter's supported relocation and verification workflow after producing compatible cooked assets. [Epic: Zen Loader, UE 5.6](https://dev.epicgames.com/documentation/en-us/unreal-engine/zen-loader-in-unreal-engine?application_version=5.6), [CSS outfit packages](css-packages.md)
+
+Epic documents cooked content in the editor as read-only, with reference/path restrictions, and limits that particular guide to Windows content. Importing cooked files does not restore an editable authoring project. This matters when a guide begins with extracted game or mod assets: identify the extraction/reconstruction tooling separately and verify what it preserves. [Epic: Working with Cooked Content in the Editor, UE 5.6](https://dev.epicgames.com/documentation/en-us/unreal-engine/working-with-cooked-content-in-the-unreal-engine?application_version=5.6)
+
+## Proof still needed before promising a complete creation pipeline
+
+The repository documents successful conversions and in-game checks for specific outfits. Those results support those packages, not arbitrary new authoring workflows. Structural conversion explicitly records `runtime_tested: false`. [CSS outfit packages](css-packages.md)
+
+The following are proposed acceptance checks, not completed tests:
+
+1. Record the exact game build, compatible UE editor build, skeleton/object paths, project settings and shader target for a minimal new outfit.
+2. Round-trip a reference skeleton through the chosen Blender/FBX workflow, checking bone names, parent indices, reference transforms, scale, normals, slot order and skin deformation.
+3. Cook a new skeletal mesh and material for the Windows game using the documented host/toolchain. Confirm imports resolve without unintentionally replacing shared base-game assets.
+4. Package and verify it, then check discovery, selection, original restoration, attacks, dodge, shell changes, death, travel, LOD transitions and cloth behavior in the game.
+5. Check every exposed color control visually, including reset and variant switching. Record the minimum CSS core version, rather than assuming a newer checkout matches the published release.
+6. Establish whether the outfit requires post-process animation, additional components, custom cloth systems or game-specific material behavior that the current CSS replacement path does not reproduce.
+
+Until that evidence exists, present new-outfit creation as a documented Unreal authoring workflow plus explicit Mortal Shell II integration work. Present conversion of a supported existing replacement as the narrower workflow already covered by the repository tools.

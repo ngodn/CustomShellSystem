@@ -11,8 +11,13 @@ from css_colors import embed
 from css_package import verify
 
 
-def build(package:Path,recipe:Path,output:Path,repak:Path=DEFAULT_REPAK):
+def build(package:Path,recipe:Path,output:Path,repak:Path=DEFAULT_REPAK,
+          package_version:str|None=None,replace_variant_colors:bool=False):
     manifest=verify(package,repak)
+    if package_version is not None and (not isinstance(package_version,str) or not package_version.strip() or len(package_version.encode())>64):
+        raise ValueError('Package version must be nonempty text, at most 64 UTF-8 bytes')
+    if any('colors' in v for v in manifest['catalog']['outfits'][0]['variants']) and not replace_variant_colors:
+        raise ValueError('Package has variant-specific colors. Rebuild from its project, or explicitly use --replace-variant-colors for one shared recipe.')
     output=output/package.name
     if output.exists():raise FileExistsError(output)
     output.parent.mkdir(parents=True,exist_ok=True)
@@ -25,7 +30,7 @@ def build(package:Path,recipe:Path,output:Path,repak:Path=DEFAULT_REPAK):
         manifest['resources']={}
         for variant in manifest['catalog']['outfits'][0]['variants']:variant.pop('colors',None)
         embed(recipe,manifest,metadata)
-        manifest['version']='1.1.0'
+        if package_version is not None:manifest['version']=package_version
         (metadata/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
         audit=metadata/'conversion.json'
         report=json.loads(audit.read_text())
@@ -46,4 +51,6 @@ if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('package',type=Path);p.add_argument('--recipe',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True);p.add_argument('--repak',type=Path,default=DEFAULT_REPAK)
-    a=p.parse_args();build(a.package,a.recipe,a.output,a.repak)
+    p.add_argument('--package-version',help='New outfit version; omitted preserves the existing version')
+    p.add_argument('--replace-variant-colors',action='store_true',help='Explicitly replace every variant recipe with this shared outfit recipe')
+    a=p.parse_args();build(a.package,a.recipe,a.output,a.repak,a.package_version,a.replace_variant_colors)

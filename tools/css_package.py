@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+import zipfile
 
 from css import GAME, ROOT, atomic, copy_verified, processes
 from css_convert import DEFAULT_REPAK, PACKAGE_ROOT, digest, png_info
@@ -44,6 +45,54 @@ def verify(directory: Path, repak: Path = DEFAULT_REPAK) -> dict:
         from css_colors import verify_resources
         verify_resources(manifest,source.parent)
         return manifest
+
+
+def release_zip(directory: Path, output: Path, repak: Path = DEFAULT_REPAK) -> Path:
+    """Snapshot and verify the trio before writing an install-ready ZIP."""
+    if output.suffix.lower() != '.zip':
+        raise ValueError('Release output must end in .zip')
+    if output.exists():
+        raise FileExistsError(output)
+    verify(directory, repak)
+    pak = next(directory.glob('*.pak'))
+    stem = pak.stem
+    from css_convert import output_name
+    # Reuse the converter's portable filename rules, without renaming containers.
+    if output_name('unused', 'unused', stem) != stem:
+        raise ValueError('Release containers must have a portable name ending in _P')
+    if any(p.is_symlink() for p in directory.iterdir()):
+        raise ValueError('Release package members must be regular files, not symlinks')
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='.css-release-', dir=output.parent) as temporary:
+        root = Path(temporary)
+        snapshot = root / stem
+        shutil.copytree(directory, snapshot)
+        verify(snapshot, repak)
+        staged = root / 'release.zip'
+        with zipfile.ZipFile(staged, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
+            for source in sorted(snapshot.iterdir()):
+                archive.write(source, f'{stem}/{source.name}')
+        # Read back the archive, including bulk data, before publishing anything.
+        with zipfile.ZipFile(staged) as archive:
+            expected = {f'{stem}/{p.name}' for p in snapshot.iterdir()}
+            if set(archive.namelist()) != expected or archive.testzip() is not None:
+                raise ValueError('Release ZIP did not round-trip')
+            extracted = root / 'readback'
+            archive.extractall(extracted)
+        verify(extracted / stem, repak)
+        for source in snapshot.iterdir():
+            if digest(source) != digest(extracted / stem / source.name):
+                raise ValueError('Release ZIP changed package bytes')
+        # Exclusive creation preserves an earlier release, even if created meanwhile.
+        with output.open('xb') as target:
+            try:
+                with staged.open('rb') as source:
+                    shutil.copyfileobj(source, target)
+            except BaseException:
+                target.close()
+                output.unlink()
+                raise
+    return output
 
 
 def install(directories: list[Path], game: Path, migrate: bool, repak: Path, replace: bool = False) -> None:
@@ -128,15 +177,23 @@ def install(directories: list[Path], game: Path, migrate: bool, repak: Path, rep
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=('verify','install'))
+    parser.add_argument('action',choices=('verify','install','zip'))
     parser.add_argument('packages',nargs='+',type=Path)
     parser.add_argument('--game',type=Path,default=GAME)
     parser.add_argument('--repak',type=Path,default=DEFAULT_REPAK)
     parser.add_argument('--migrate-beaute',action='store_true',help='Back up and retire the old merged Beaute prototype and its loose catalog')
     parser.add_argument('--replace',action='store_true',help='Back up and replace installed packages with the same stable IDs, including renamed packages')
+    parser.add_argument('--output',type=Path,help='ZIP filename; zip accepts exactly one package')
     args=parser.parse_args()
     try:
-        if args.action=='install':
+        if args.action=='zip':
+            if len(args.packages)!=1 or not args.output:
+                raise ValueError('zip requires one package and --output FILE.zip')
+            result=release_zip(args.packages[0],args.output,args.repak)
+            print(f'Verified release ZIP: {result}\nSHA-256: {digest(result)}')
+        elif args.output:
+            raise ValueError('--output is only used with zip')
+        elif args.action=='install':
             install(args.packages,args.game,args.migrate_beaute,args.repak,args.replace)
         else:
             for directory in args.packages:

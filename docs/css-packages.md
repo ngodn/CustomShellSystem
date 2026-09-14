@@ -1,5 +1,7 @@
 # CSS outfit packages
 
+New authors: start with the [modding guide](modding/README.md) and [project helper](modding/project-format.md). This page retains the lower-level converter and format details. `css_package.py zip` now creates a verified outfit release ZIP; see the guide for usage.
+
 `tools/css_convert.py` accepts a directory, a `.pak`, a `.utoc`, a `.ucas`, or multiple members of the same trio. It discovers companions and preserves the inputs. Python 3.14.7 is the tested converter runtime.
 
 The default filename is `CSS_${NAME}_${AUTHORorMODDER}_P`. An outfit contains exactly three files:

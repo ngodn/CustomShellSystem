@@ -71,3 +71,14 @@ compile_commands.json
 *~
 .DS_Store
 Thumbs.db
+
+# Offline Unreal authoring project: track source/configuration, never local assets.
+/tools/authoring/CSSAuthoring/Binaries/
+/tools/authoring/CSSAuthoring/Intermediate/
+/tools/authoring/CSSAuthoring/Saved/
+/tools/authoring/CSSAuthoring/DerivedDataCache/
+/tools/authoring/CSSAuthoring/Build/
+/tools/authoring/CSSAuthoring/Content/
+/tools/authoring/CSSAuthoring/.vs/
+/tools/authoring/CSSAuthoring/*.sln
+/tools/authoring/CSSAuthoring/*.code-workspace
