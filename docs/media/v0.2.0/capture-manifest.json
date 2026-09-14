@@ -1,0 +1,170 @@
+{
+  "capture_date": "2026-09-14",
+  "capture": "Fullscreen display, GPU Screen Recorder, H.264, 60 fps; Steam screenshots",
+  "files": [
+    {
+      "file": "color-eye-glow.jpg",
+      "bytes": 324245,
+      "sha256": "74a5ec3f9d7cd6b0b5f4cb02cd459885591569c99a2874313ff2967c6e775c63",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "file": "color-garment.jpg",
+      "bytes": 341556,
+      "sha256": "f5c7b0024d9042a9d02afc6c96c60eaf768d6795cd7ed7f2cccf108b4f33a731",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "file": "color-skin.jpg",
+      "bytes": 335969,
+      "sha256": "158fda1282cb41b5f1698d8f7629e605fc39ceec0987a94546b1fd4dcc254dbd",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "file": "inventory-css.jpg",
+      "bytes": 358370,
+      "sha256": "95b94c39ff1c83d413f26db8be528cd3068e47b08c55b52d195a155ec4e2a7a8",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "file": "seductress-ash-gold.jpg",
+      "bytes": 349723,
+      "sha256": "38331f6fbf725140607dfac96a202a384b316757d98989b2de37c9c7ed0954a6",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "file": "seductress-crimson-vow.jpg",
+      "bytes": 345270,
+      "sha256": "237a58628ee17556b80bb86521b39f4cbcbd582cbcf2512406429d879fd05b31",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "file": "seductress-midnight-silver.jpg",
+      "bytes": 338463,
+      "sha256": "9752b032c1aac1300716b4761613f9dce6230f86eb90e9557612b105c5eede8b",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "file": "seductress-original.jpg",
+      "bytes": 341824,
+      "sha256": "cf238d1189538cf6b662a8d8944114186894f5dbb5020e1068b0253059ca7662",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "file": "seductress-verdigris.jpg",
+      "bytes": 337898,
+      "sha256": "74c31c771010589a67d95055174dc0e980ba5fe2ab70d6aed3b3e91c942f1d51",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "file": "seductress-world-front.jpg",
+      "bytes": 981246,
+      "sha256": "92442f1a04d5019a732b595e7daf27b2dc6ea699e538e2a5ec8dbca3175f5084",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "file": "seductress-world-side.jpg",
+      "bytes": 948529,
+      "sha256": "7b817f81150388cf49036051f413a804882a46f03b8254d3331073c28360c4ca",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "file": "seductress-world-three-quarter.jpg",
+      "bytes": 920169,
+      "sha256": "4210005448dfab7e4271ed9833f8cc672657808110e8b6a703959207fecd96d0",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "file": "templates-create.jpg",
+      "bytes": 339559,
+      "sha256": "035b906152dc9c3e192fcf868236ae2b85b0ef462bee39cab56b10f61f19a41a",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "file": "templates.jpg",
+      "bytes": 356159,
+      "sha256": "921a4c3654296eb6e0c3e69c0801fcb3bb9c23fb571053d8fa6b50843d011113",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "file": "css-menu-demo-1080p60.mp4",
+      "sha256": "c3efa8625cd84318ca6529afc094cc67ed6b446da73c5b7ddfc3dd00f7e3c19b",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1920,
+            "height": 1080,
+            "r_frame_rate": "60/1",
+            "avg_frame_rate": "60/1",
+            "nb_frames": "10592"
+          },
+          {
+            "codec_name": "aac",
+            "r_frame_rate": "0/0",
+            "avg_frame_rate": "0/0",
+            "nb_frames": "8280"
+          }
+        ],
+        "format": {
+          "duration": "176.618667",
+          "size": "52198471"
+        }
+      },
+      "original": {
+        "file": "css-menu-demo.mp4",
+        "bytes": 166488693,
+        "sha256": "e7df7ce8169769dad743276369669376c243d0c4b47da6f29921838a0bb7665e"
+      }
+    },
+    {
+      "file": "seductress-showcase-1080p60.mp4",
+      "sha256": "1941eb440332db27e9c6de005a5a069158d4dc678c02bebd4005d10a88785b35",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1920,
+            "height": 1080,
+            "r_frame_rate": "60/1",
+            "avg_frame_rate": "60/1",
+            "nb_frames": "6000"
+          },
+          {
+            "codec_name": "aac",
+            "r_frame_rate": "0/0",
+            "avg_frame_rate": "0/0",
+            "nb_frames": "4693"
+          }
+        ],
+        "format": {
+          "duration": "100.096000",
+          "size": "96735425"
+        }
+      },
+      "original": {
+        "file": "seductress-showcase.mp4",
+        "bytes": 386674022,
+        "sha256": "e9cf0e9f1280ae39a1ea4a392d8743da58bab15d3720ac822f7dd40a16798b62"
+      }
+    }
+  ]
+}

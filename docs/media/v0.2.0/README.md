@@ -33,7 +33,9 @@ These screenshots show the native Inventory CSS page, replacing the old N menu.
 
 The videos capture the game fullscreen on its display. The originals are
 2560×1440 at 60 fps. The published copies use H.264/AAC at 1920×1080 and
-60 fps, scaled with Lanczos. Each Git-tracked video stays below 100 MiB.
+60 fps, scaled with Lanczos. The menu uses CRF 20; the world showcase uses
+a two-pass bitrate budget to stay below 100 MiB. Original quality is preserved
+in the local masters.
 Original recordings and rejected takes stay in the ignored
 `work/media-v0.2.0/` folder, outside the runtime ZIP.
 
