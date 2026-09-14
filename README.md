@@ -4,14 +4,18 @@ A native C++ wardrobe mod by **_eins0fx**. Change your shell's appearance withou
 
 I built CSS around a single wardrobe for compatible outfit packages, inspired by [Custom Nanosuit System](https://www.nexusmods.com/stellarblade/mods/1496?tab=description). Mouse, keyboard and controller controls are supported.
 
-**[Download CSS 0.1.2](https://github.com/ngodn/CustomShellSystem/releases/tag/v0.1.2)** · [Release notes](packaging/release-notes.md) · [Converter](tools/css_convert.py)
+**[Download CSS 0.2.0](https://github.com/ngodn/CustomShellSystem/releases/tag/v0.2.0)** · [Release notes](packaging/release-notes.md) · [Converter](tools/css_convert.py)
+
+![CSS inside the native Inventory menu](docs/media/v0.2.0/inventory-css.jpg)
+
+CSS lives in **Inventory → CSS**, with Shell, Color and Templates sections, the game's character preview and native menu controls. Version 0.2.0 replaces the standalone N wardrobe. Existing CSS outfit packages and saved choices remain supported.
 
 ## Install
 
 1. Close Mortal Shell II and install [UE4SS for MS2](https://www.nexusmods.com/mortalshell2/mods/45?tab=files). CSS targets `v3.0.1-1028-gd7e7826d`, included in the verified main-file bundle version 1.1.
 2. Extract `CustomShellSystem` from the runtime ZIP into `MortalShell2/Binaries/Win64/ue4ss/Mods/`.
 3. Install CSS outfit packages separately into `MortalShell2/Content/Paks/~mods/`, following each package's instructions.
-4. Launch the game, load a save and press **N** or **View/Back + Y**. Select an outfit to wear it.
+4. Launch the game, load a save and open **Inventory** (default **I**) and select **CSS**. Choose an outfit, then Wear.
 
 The runtime ZIP includes one loader DLL, one core DLL and the required interface artwork. It does not include UE4SS, outfit packages or personal state. Keep `CustomShellSystem/state/` when updating to retain your choices. Restart the game after adding or replacing outfit containers.
 
@@ -19,13 +23,15 @@ The runtime ZIP includes one loader DLL, one core DLL and the required interface
 
 - Scroll through installed outfits and their mesh variants.
 - Use preset palettes or adjust author-configured parts with RGB sliders.
-- Keep favorites and three saved looks.
+- Keep favorites and save named appearance templates.
 - Orbit, zoom and frame an animated preview while gameplay is paused.
 - Restore your original appearance or reset colors.
 
 CSS stores its settings separately from the game save. It does not unlock equipment or change your gameplay shell. Compatible cosmetic outfits do not require unlocking all shells, weapons or seals.
 
-## See it in action
+## Earlier wardrobe demo (0.1.x)
+
+The recording and gallery below show the previous standalone interface. Outfit packages are still compatible; the current menu is shown above.
 
 [![Seductress with a polearm in the game inventory preview](docs/media/v0.1.1/seductress-inventory-polearm.png)](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4)
 
@@ -36,8 +42,7 @@ downloads.
 ![CSS preset palettes and per-part color sliders with Seductress](docs/media/v0.1.1/colors-crimson.png)
 
 Preset palettes and custom colors on the Seductress outfit.
-Editable parts depend on the installed package. Wardrobe lighting can differ
-from gameplay; this remains a known issue in 0.1.2.
+Editable parts depend on the installed package. Version 0.2.0 uses the native Inventory character display instead of this older preview.
 
 <details>
 <summary>More screenshots</summary>
@@ -77,31 +82,30 @@ mod links and reusable image/video links.
 
 ## Controls
 
+Default game bindings are listed below. CSS follows the mapped menu keys and shows prompts beside each action.
+
 | Action | Controller | Keyboard / mouse |
 | --- | --- | --- |
-| Open / close CSS | View / Back + Y | N |
-| Close | B | Esc or Close |
-| Browse appearances | D-pad up / down, list follows selection | Mouse wheel, scrollbar or click a row |
-| Change variant | D-pad left / right | Variant arrows |
-| Wear selected appearance | A | Click the appearance |
-| Favorite | Y | Star |
-| Change category | LB / RB | All / Fav / Looks / Color rail |
-| Save or replace a look | X in Looks | Save / Replace |
-| Open saved looks | X elsewhere | Looks rail |
-| Adjust colors | D-pad rows and left / right | RGB sliders and palette buttons |
-| Reset selected color part | A on a color channel | Reset part |
-| Orbit character | Right stick | Right mouse drag |
-| Zoom / horizontal framing | Left stick vertical / horizontal | W / S to zoom |
-| Raise / lower framing | RT / LT | E / Q |
-| Reset view | Right-stick click | Reset view |
+| Open Inventory, then select CSS | Native Inventory binding, then LB / RB | I, then Q / E or click CSS |
+| Shell / Color / Templates | LT / RT | Z / X or click the section |
+| Browse the left list | D-pad up / down | W / S, scroll or click |
+| Change variant or selected color value | D-pad left / right | A / D or arrows / slider |
+| Wear, reset part or load template | A | Space or action button |
+| Favorite, reset all colors or delete template | Y | C or action button |
+| Next RGB channel or replace template | X | F or action button |
+| Rotate | Right stick left / right | Right mouse drag over the character |
+| Zoom | Right stick up / down | Mouse wheel over the character |
+| Move framing | Left stick | Left mouse drag over the character |
+| Reset view | Right-stick click | Home or Reset view |
+| Close | B | Esc |
 
-Right-stick vertical movement is inverted by default; horizontal movement is normal. Wardrobe changes keep the existing camera. They recenter a moved view, but leave already-default framing untouched.
-
-Gameplay pauses while CSS is open. The preview stays animated, and closing the wardrobe returns control to the game.
+Actions depend on the selected section. Camera controls affect the menu preview, not the gameplay character. The game's Inventory owns the pause and transitions.
 
 ## For modders
 
-The C++ source and Python converter are available in this repository. CSS is still under development. I'll publish a full modding guide once the framework and package format are stable; the working technical notes are available now.
+Start with the [CSS modding guide](docs/modding/README.md). It covers asset requirements, mesh variants, per-part colors, project recipes and verified release ZIPs. The guide documents the 0.2.0 source and CSS.Package v1. Tools are available in the GitHub source; the player runtime ZIP contains only the files needed in UE4SS Mods. The framework is still under development.
+
+For repeatable builds, use [css_project.py](tools/css_project.py) to create a project, check its inputs and build its outfit trio plus install ZIP. [Experimental Unreal authoring source](docs/modding/advanced-tools.md) is included separately, with its current limits. No native DLL build is needed to package an existing compatible outfit.
 
 The converter handles cooked Mortal Shell II appearance mods. It accepts a directory or `.pak` / `.utoc` / `.ucas` inputs and creates a package with author metadata and a thumbnail. It does not fit another game's meshes to the Mortal Shell II skeleton.
 
@@ -132,7 +136,9 @@ The runtime is C++23, built with clang-cl and the pinned UE4SS SDK. The core sup
 
 Regular mesh replacement mods do not automatically become CSS wardrobe entries. Base-game mesh or material replacers can affect CSS outfits that reference those assets. Editable parts depend on the outfit author.
 
-Wardrobe lighting can look different from gameplay and inventory. This remains open in 0.1.2. Cloth, secondary animation and clipping also depend on the outfit; long combat sessions, other shells and performance still need broader testing.
+CSS 0.2.0 uses the native Inventory preview and lighting. Existing CSS.Package v1 outfit ZIPs, including the Beaute, HIT2 and Seductress packages, do not need repacking. Replace the old CSS runtime ZIP when upgrading.
+
+Cloth, secondary animation and clipping depend on the outfit. Long combat sessions, other gameplay shells, display/controller combinations and performance still need broader testing.
 
 If you report a problem, include your CSS version, outfit, active gameplay shell and reproduction steps. A screenshot or short recording helps. [Implementation and test status](docs/STATUS.md) tracks the current checks and limits.
 

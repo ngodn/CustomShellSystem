@@ -1,4 +1,14 @@
-# CSS status, 2026-09-13
+# CSS status, 2026-09-14
+
+## Current development: native Inventory CSS
+
+The main checkout now contains the native Inventory → CSS interface. The standalone N menu and its separate preview/lighting/pause experiment have been removed from runtime. CSS uses the native character display, fonts, textures and input prompts. Shell, Color and Templates have a scrollable left list and contextual actions on the right.
+
+Right stick rotates and zooms; left stick moves framing. Mouse dragging and wheel controls are supported. Fresh-state startup, package path diagnostics, recoverable menu reattachment, mouse interaction and template operations have been checked locally. Irmassidarkstar's exact remote empty-catalog cause remains unconfirmed. See [implementation and verification](inventory-ui-development.md) for evidence and remaining checks.
+
+These changes form CSS 0.2.0. Version 0.1.2 and the dated milestones below describe earlier behavior.
+
+## Historical package milestone, 2026-09-13
 
 The native C++23 wardrobe and three self-contained appearance packages are installed and working. HIT2 is credited to XTGMods. Both Beaute mods are credited to dantemk2, confirmed by the user. After testing HIT2 appearance, movement and attacks, the user replied: "yes seems perfect".
 

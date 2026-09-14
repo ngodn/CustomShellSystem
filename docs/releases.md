@@ -12,12 +12,12 @@ Build from a clean checkout at that tag:
 
 ```sh
 python3 tools/css_release.py build --sdk /absolute/path/to/ue4ss-sdk-d7e7826d
-python3 tools/css_release.py verify dist/releases/MSII-CSS-v0.1.2.zip
+python3 tools/css_release.py verify dist/releases/MSII-CSS-v0.2.0.zip
 ```
 
 The script builds both Release DLLs from that checkout and uses an explicit
 seven-file payload allowlist plus generated release metadata. It never copies
-from the installed mod. The only interface image needed is wardrobe-v1.png;
+from the installed mod. The only runtime interface image needed is inventory-logo-v1.png;
 old outfit seals and developer catalogs are excluded. One loader and one core
 ship, with core.json pointing to that core. No state, backups, requests, cache,
 logs, diagnostics, game content, SDK, import libraries or debug symbols ship.
@@ -71,3 +71,17 @@ The unrelated lighting experiment remains outside the release tree. Outfit
 packages are separate downloads. Build from the clean `v0.1.2` checkout; the
 prepared GitHub title is `MSII - CSS v0.1.2`, with notes in
 `packaging/release-notes.md`. Creating a local tag and ZIP does not publish them.
+
+## 0.2.0 scope
+
+Inventory integration replaces the standalone N wardrobe. The release includes
+Shell, Color and Templates sections, native character display/camera controls,
+viewport-aware layout, menu transitions, and game-relative package discovery.
+The package format remains CSS.Package v1 and state remains compatible.
+
+Pre-release checks passed: 49 Python tests and five native suites. The existing
+BeauteGenessa, BeauteKnightLady, HIT2 and Seductress ZIPs were extracted without
+repacking and checked by the current native package reader, including cache
+reuse, thumbnail/color repair and corrupt-index rejection. The final runtime ZIP
+must additionally pass its hash/allowlist verifier and fresh-state checks before
+publication. Exact-artifact cold-start gameplay remains a separate check.

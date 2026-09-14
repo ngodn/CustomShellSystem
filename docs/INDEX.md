@@ -1,6 +1,10 @@
 # CSS research index
 
+For outfit authors, start with the [modding guide](modding/README.md). It links the authoring requirements, project utility, color recipes, package contract and release checks. The [source research](modding-research.md) separates official Unreal behavior from local verification.
+
 ## Established findings
+
+- [Native Inventory CSS](inventory-ui-development.md) is the current interface in development. Four-page navigation, native display retention, mouse controls and startup have been checked locally. It replaces the standalone N wardrobe. Older preview and camera findings below are historical.
 
 - [Color customization](colors.md) documents per-part palettes/sliders, self-contained dye resources, exact Original reset, and the verified game-specific mipmap adapter.
 
@@ -28,6 +32,8 @@
 | Artifact | Takeaway |
 | --- | --- |
 | [STATUS.md](STATUS.md) | Current implementation and verification status |
+| [Inventory integration feasibility](inventory-integration-feasibility.md) | Live tab indices, native display, layout and bounded prototype plan |
+| [Inventory integration primary sources](inventory-integration-primary-sources.md) | UMG reorder limits, focus/input ownership and pinned native API evidence |
 | [animated-preview.md](animated-preview.md) | Paused-world animation, camera refresh behavior, live cleanup evidence and rejected additive idle |
 | [README](../README.md) | User controls, independent state, installation and native reload workflow |
 | [native-css-research.md](native-css-research.md) | Primary sources and exact native API research |
