@@ -322,6 +322,13 @@
       "title": "Unlocks",
       "controls": [
         {
+          "id": "unlock_shells",
+          "type": "button",
+          "label": "Unlock all shells",
+          "description": "Unlocks the game's shell catalog, verifies saved ownership and refreshes shell pickups and summons in the current world.",
+          "confirm": "Unlock every catalogued gameplay shell and collect streamed shell pickups? The game can save this progression change."
+        },
+        {
           "id": "unlock_clothing",
           "type": "button",
           "label": "Unlock all clothing",

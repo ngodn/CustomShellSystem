@@ -12,6 +12,11 @@ struct Host {
     bool damageable=true,open=false,confirm_switch=true,fail_restore=false,fail_save=false;
     std::string shell="Genessa";
     bool check_soft=false;
+    bool shell_unlock_fixture=false,bad_unlock_signature=false,fail_unlock_save=false,ignore_unlock_save=false,change_unlock_player=false;
+    bool pickup_unlocked=false;
+    unsigned pickup_writes=0,save_unlocks=0,actor_count=1;
+    Json unlock_tags=Json::array({{{"TagName","CharacterId.Player.Shell.Genessa"}},{{"TagName","CharacterId.Player.Shell.Tiel"}},{{"TagName","CharacterId.Player.Shell.Tiel"}}});
+    Json unlocked_equipment=Json::array();
     bool stone_owned=false,stone_manager_registers=false,bad_stone_signature=false,fail_stone_cache=false;
     Json stone_component={{"Level",2},{"exp",85},{"Stacks",1},{"Durability",12}},stone_runtime=stone_component;
     int map_writes=0,fail_map_write=0;
@@ -48,6 +53,7 @@ struct Host {
         }
         if(op=="menu.close") {open=false;return true;}
         if(op=="menu.status") return {{"menu_open",open}};
+        if(op=="load" && shell_unlock_fixture) return object(j.at("path").get<std::string>().find("Shell_Locked")!=std::string::npos?60:61);
         if(op=="find" || op=="class_default") return object(3);
         if(op=="table.rows") return Json::array({"Trollweed","Moonshine"});
         if(op=="describe") {
@@ -59,12 +65,21 @@ struct Host {
             else if(fn=="UpdateSoftItemStatus") fields={{"SoftItem",bad_stone_signature?8:40},{"__WorldContext",8}};
             else if(fn=="CacheAllTarstones") fields={{"Completed",1}};
             else if(fn=="SetTarstoneLevel") fields={{"Tarstone",8},{"LevelData",bad_level_signature?8:16}};
+            else if(shell_unlock_fixture && (fn=="S_UnlockAllShells" || fn=="CheckForShellUnlock")) {if(bad_unlock_signature && fn=="CheckForShellUnlock") fields={{"NewRequiredArg",8}};}
+            else if(shell_unlock_fixture && fn=="GetShellsIDsTagContainer") fields={{"ReturnValue",32},{"__WorldContext",8}};
+            else if(shell_unlock_fixture && fn=="UnlockShell") fields={{"ShellId",8},{"Save",1},{"__WorldContext",8}};
+            else if(shell_unlock_fixture && fn=="AddUnlockedEquipment") fields={{"ID",8},{"Unlocked",1}};
+            else if(shell_unlock_fixture && fn=="GetAllActorsOfClass") fields={{"WorldContextObject",8},{"ActorClass",8},{"OutActors",16}};
             else if(!fn.starts_with("S_AddAllTarstones")) throw std::runtime_error("Unexpected describe: "+fn);
             Json args=Json::object();for(const auto& [name,size]:fields) args[name]={{"size",size},{"return",name=="ReturnValue"},{"out",false}};
             return args;
         }
         if(op=="get") {
             const auto p=j.at("property");
+            if(shell_unlock_fixture && p=="PlayerSaveGameObject") return object(62);
+            if(shell_unlock_fixture && p=="EquipmentUnlockState") return {{"$map",unlocked_equipment}};
+            if(shell_unlock_fixture && p=="ShellUnlocked") return pickup_unlocked;
+            if(shell_unlock_fixture && p=="ShellId") return {{"TagName","CharacterId.Player.Shell.Smert"}};
             if(p=="bCanBeDamaged") return damageable;
             if(p=="CharacterData") return object(4);
             if(p=="Movement") return movement;
@@ -110,12 +125,27 @@ struct Host {
             value=j.at("value");return value;
         }
         if(op=="set") {
+            if(shell_unlock_fixture && j.at("property")=="ShellUnlocked") {++pickup_writes;pickup_unlocked=j.at("value").get<bool>();return pickup_unlocked;}
             if(combat_fixture && cooldown.contains(j.at("property").get<std::string>())) {cooldown[j.at("property").get<std::string>()]=j.at("value");return j.at("value");}
             if(j.at("property")=="bCanBeDamaged") {if(fail_restore && j.at("value")==true) throw std::runtime_error("restore failed");damageable=j.at("value").get<bool>();return damageable;}
             if(j.at("property")=="Movement") {movement=j.at("value");return movement;}
         }
         if(op=="call") {
             calls.push_back(j);const auto function=j.at("function");
+            if(shell_unlock_fixture && function=="GetShellsIDsTagContainer") return {{"ReturnValue",{{"GameplayTags",unlock_tags}}}};
+            if(shell_unlock_fixture && function=="GetAllActorsOfClass") {
+                check_actor_world(j);Json actors=Json::array();
+                for(unsigned i=0;i<actor_count;++i) actors.push_back(object(j.at("args").at("ActorClass")==object(60)?63:64));
+                return {{"OutActors",actors}};
+            }
+            if(shell_unlock_fixture && function=="UnlockShell") return Json::object();
+            if(shell_unlock_fixture && function=="AddUnlockedEquipment") {
+                ++save_unlocks;if(fail_unlock_save) throw std::runtime_error("Save unlock failed");
+                if(!ignore_unlock_save) unlocked_equipment.push_back({{"key",j.at("args").at("ID")},{"value",true}});
+                if(change_unlock_player) pawn=object(99);
+                return Json::object();
+            }
+            if(shell_unlock_fixture && function=="CheckForShellUnlock") return Json::object();
             if(function=="GetGameplayTagCount") {
                 const bool selector=j.at("args")[0].at("TagName")=="State.Block.Ability.Attack.Selector";
                 return {{"ReturnValue",intro_lock?(selector && selector_count>=0?selector_count:tag_count):0}};
@@ -146,6 +176,7 @@ struct Host {
         throw std::runtime_error("Unexpected test request: "+j.dump());
     }
     unsigned count(const std::string& function)const {unsigned n=0;for(const auto& call:calls) if(call.at("function")==function) ++n;return n;}
+    void check_actor_world(const Json& j) {if(j.at("args").at("WorldContextObject")!=pawn) throw std::runtime_error("Actor lookup did not use the current player world");}
 };
 void check(bool value,const char* text){if(!value) throw std::runtime_error(text);}
 template<class F> void rejects(F fn){try{fn();}catch(const std::exception&){return;}throw std::runtime_error("Expected rejection");}
@@ -153,6 +184,40 @@ template<class F> void rejects(F fn){try{fn();}catch(const std::exception&){retu
 int main(int argc,char** argv) {
     if(argc!=2) return 2;
     const auto definition=css::read_json(css::extensions::utf8_path(argv[1]));
+    {
+        Host h;h.shell_unlock_fixture=true;h.actor_count=2;cheat::Menu m(&h.api);m.tick(.25);
+        rejects([&]{m.event({{"id","unlock_shells"}});});
+        check(h.count("S_UnlockAllShells")==0,"Shells unlocked without confirmation");
+        m.event({{"id","god"},{"value",true}});
+        check(m.model()["enabled"]["unlock_shells"]==false,"Shell unlock enabled with pending settings");
+        rejects([&]{m.event({{"id","unlock_shells"},{"confirmed",true}});});
+        check(h.count("S_UnlockAllShells")==0,"Shells unlocked with pending settings");
+        m.event({{"id","discard_changes"}});
+        m.event({{"id","unlock_shells"},{"confirmed",true}});
+        check(h.count("S_UnlockAllShells")==1 && h.count("S_UnlockShell")==0,"Shell unlock used guessed debug indices");
+        check(h.save_unlocks==3 && h.count("UnlockShell")==3,"Tags were duplicated or streamed pickup tag was omitted");
+        check(h.pickup_unlocked && h.pickup_writes==1 && h.count("CheckForShellUnlock")==1,"Streamed shell refresh missing or duplicated");
+        css::extensions::validate_model(css::extensions::bind_menu(definition,m.model()));
+    }
+    for(int failure=0;failure<4;++failure) {
+        Host h;h.shell_unlock_fixture=true;cheat::Menu m(&h.api);m.tick(.25);
+        if(failure==0) h.bad_unlock_signature=true;
+        if(failure==1) h.unlock_tags=Json::array();
+        if(failure==2) h.unlock_tags[0]={{"TagName","Weapon.Invalid"}};
+        if(failure==3) h.actor_count=129;
+        rejects([&]{m.event({{"id","unlock_shells"},{"confirmed",true}});});
+        check(h.count("S_UnlockAllShells")==0 && h.save_unlocks==0 && h.pickup_writes==0,"Failed shell preflight mutated progression");
+    }
+    for(int failure=0;failure<3;++failure) {
+        Host h;h.shell_unlock_fixture=true;cheat::Menu m(&h.api);m.tick(.25);
+        h.fail_unlock_save=failure==0;h.ignore_unlock_save=failure==1;h.change_unlock_player=failure==2;
+        rejects([&]{m.event({{"id","unlock_shells"},{"confirmed",true}});});
+        check(m.model()["error"].get<std::string>().find("Changes may already be saved")!=std::string::npos,"Partial shell unlock was not reported");
+        check(h.pickup_writes==0 && h.count("CheckForShellUnlock")==0,"Failed ownership check still collected a shell pickup");
+        const auto requests=h.count("S_UnlockAllShells");const auto writes=h.save_unlocks;
+        m.tick(2);m.tick(2);
+        check(h.count("S_UnlockAllShells")==requests && h.save_unlocks==writes,"Partial shell unlock retried automatically");
+    }
     Host host;cheat::Menu menu(&host.api);
     check(host.calls.empty(),"Startup mutated gameplay");
     check(menu.model()["values"]["god"]==false,"God was enabled at startup");

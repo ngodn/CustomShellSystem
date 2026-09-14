@@ -10,7 +10,7 @@ Working checklist for CSSX 0.3.0. The source reference is the supplied MortalShe
 | Harbinger level | Implemented, confirmed, UI level minus one | Separate test save |
 | Ten resource grants | Implemented, confirmed | Separate test save |
 | Fourteen controller unlock actions | Implemented, confirmed | Separate test save |
-| Thorough unlock-all-shells | Pending | Debug shell list, tags and streamed pickups |
+| Thorough unlock-all-shells | Implemented, confirmed, preflight and ownership read-back | Actual grants on a separate test save, streamed pickups and summons |
 | Shell switching | Implemented: close menu, send once, verify identity | Every shell, Dark Form and interrupted travel |
 | Completed-intro recovery | Shared CSS watcher, nine observations, tracks each owned effect | Further natural recurrence and travel checks |
 | Smert stance, Genessa clones, Lazlo shockwaves | Pending | Current-player ownership and cleanup |
@@ -33,6 +33,16 @@ A failed preference save rolls back changed session settings. If restoration fai
 CSS watches for the exact active Egg Stranding ability after both get-up and map completion. Cleanup requires its own matching weapon-block effect, no active montage and unstacked restriction counts over nine consecutive observations. Attack selection may already be unlocked while drawing the weapon remains blocked. CSS never sets progression flags or removes arbitrary tags. Each effect receives at most one cleanup attempt. A newly applied effect on the same ability gets a fresh observation period; changed players discard the candidate. The Cheat Menu also exposes an explicit diagnostic check using the same implementation.
 
 Low Resolve is a valid firing requirement, not a stuck-state diagnosis. Do not add a generic force-unlock action to bypass that or legitimate story locks.
+
+## Shell unlock contract
+
+Unlock all shells resolves the game's shell catalog, save interface and current-world pickups before writing. It validates each required function signature, deduplicates tags and actors, and checks the current pawn, controller and runtime save throughout the operation. Catalogs and actor batches are bounded. Saved equipment ownership must confirm every requested shell before streamed pickups are marked collected and summons refreshed.
+
+The controller's `S_UnlockAllShells` handles its debug list. The port also grants every catalogued shell tag and tags found on streamed shell pickups. It does not replay the original Lua script's hard-coded debug indices 0 through 14: the live `S_UnlockShell` parameter is an integer without enum metadata, so that range cannot establish compatibility with another game build. This difference needs checking against actual shell availability on the test save.
+
+Actor lookup uses the player's world through [GetAllActorsOfClass](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/UGameplayStatics/GetAllActorsOfClass). Unloaded pickups are not traversed. A partial failure reports the completed step count, warns that even the failed call may have saved changes, and is never retried automatically. Progression writes are not presented as reversible settings.
+
+Portable tests cover confirmations, pending settings, duplicate tags and actors, pickup-only shell tags, invalid catalogs, oversized batches, signature mismatches before mutation, failed save writes, ownership verification failures and changed players. Live read-only probes verified the ten-tag catalog, `EquipmentUnlockState` map and pickup/summon interfaces on build 25265616. There were no streamed shell pickups or summons in the inspected area. Local evidence: `work/cssx-native/unlock-shells-preflight.json`, `unlock-shells-actors-preflight.json`, `unlock-save-properties.json` and `unlock-equipment-state.json`. These probes do not verify fresh progression grants.
 
 ## Evidence
 

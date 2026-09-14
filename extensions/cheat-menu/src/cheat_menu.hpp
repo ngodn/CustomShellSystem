@@ -57,6 +57,7 @@ class Menu {
     void persist(const Json&);
     void shell_tick(double);
     void refresh_shells();
+    void unlock_shells(const Json& player);
     void override_value(const Json&,const std::string&,const Json&);
     void restore(const std::string&);
     void god(bool);

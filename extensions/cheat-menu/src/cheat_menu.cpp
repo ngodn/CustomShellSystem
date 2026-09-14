@@ -112,6 +112,7 @@ Json Menu::model() {
     for(const auto& action:unlocks) enabled[std::string("unlock_")+action.id]=live && !pending_;
     for(const auto* action:{"heal","resolve","revive","damage","set_harbinger","switch_shell","god","auto_heal","infinite_resolve","move_fast"}) enabled[action]=live && !pending_ && !has_changes() && !cleanup_required_;
     enabled["switch_shell"]=live && !pending_ && !has_changes() && !cleanup_required_ && values_["shell"]!="none";
+    enabled["unlock_shells"]=live && !pending_ && !has_changes() && !cleanup_required_;
     for(const auto* id:toggle_ids) enabled[id]=live && !pending_ && !cleanup_required_;
     enabled["refresh_pickups"]=live && !pending_;
     enabled["refresh_tarstones"]=live && !pending_;
@@ -230,6 +231,10 @@ void Menu::apply_event(const Json& event) {
     }
     auto player=require_player();auto pc=player["controller"];auto pawn=player["pawn"];
     if(has_changes()) throw std::runtime_error("Apply settings or Discard changes before running an action.");
+    if(id=="unlock_shells") {
+        if(!event.value("confirmed",false)) throw std::runtime_error("Confirm the shell unlock first.");
+        unlock_shells(player);return;
+    }
     if(id=="set_tarstone_level") {
         if(!event.value("confirmed",false)) throw std::runtime_error("Confirm the Tarstone level change first.");
         set_tarstone_levels(player);return;
