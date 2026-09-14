@@ -684,19 +684,38 @@ void update_dye_mips(UObject* target) {
     // engine method called by the verified CreateRenderTarget2D native wrapper.
     // Only engine code is queued on the render thread, never a CSS callback.
     auto* module=reinterpret_cast<const unsigned char*>(GetModuleHandleW(nullptr));
-    constexpr uintptr_t wrapper=0x3f28b70, callsite=0x3f28e5a, update=0x44c85d0;
-    constexpr std::array<unsigned char,32> prologue{0x40,0x53,0x57,0x48,0x81,0xec,0xa8,0,0,0,0x48,0x8b,0x05,0x9f,0xd4,0xbd,0x06,0x48,0x33,0xc4,0x48,0x89,0x84,0x24,0x80,0,0,0,0x0f,0xb6,0xda,0x48};
-    constexpr std::array<unsigned char,10> caller{0xb2,0x01,0x48,0x8b,0xcb,0xe8,0x6c,0xf7,0x59,0};
+    struct Adapter {
+        uintptr_t wrapper,callsite,update;
+        std::array<unsigned char,10> caller;
+        std::array<unsigned char,32> prologue;
+    };
+    // Both paths were traced from CreateRenderTarget2D through its direct
+    // call and checked against the render-resource enqueue implementation.
+    // Keep the old build supported. Never fall back to a nearby address.
+    constexpr Adapter adapters[]{
+        {0x3f28b70,0x3f28e5a,0x44c85d0,
+         {0xb2,0x01,0x48,0x8b,0xcb,0xe8,0x6c,0xf7,0x59,0},
+         {0x40,0x53,0x57,0x48,0x81,0xec,0xa8,0,0,0,0x48,0x8b,0x05,0x9f,0xd4,0xbd,0x06,0x48,0x33,0xc4,0x48,0x89,0x84,0x24,0x80,0,0,0,0x0f,0xb6,0xda,0x48}},
+        // Steam build 25265616, September 15 hotfix.
+        {0x3f28ba0,0x3f28e8a,0x44c8700,
+         {0xb2,0x01,0x48,0x8b,0xcb,0xe8,0x6c,0xf8,0x59,0},
+         {0x40,0x53,0x57,0x48,0x81,0xec,0xa8,0,0,0,0x48,0x8b,0x05,0xaf,0xb3,0xbd,0x06,0x48,0x33,0xc4,0x48,0x89,0x84,0x24,0x80,0,0,0,0x0f,0xb6,0xda,0x48}}
+    };
     auto* dos=reinterpret_cast<const IMAGE_DOS_HEADER*>(module);
     if(dos->e_magic!=IMAGE_DOS_SIGNATURE || dos->e_lfanew<=0 || dos->e_lfanew>4096) throw std::runtime_error("Unknown game image for dye mipmaps");
     auto* nt=reinterpret_cast<const IMAGE_NT_HEADERS64*>(module+dos->e_lfanew);
     auto* function=find(L"/Script/Engine.Default__KismetRenderingLibrary")->GetFunctionByNameInChain(L"CreateRenderTarget2D");
-    if(nt->Signature!=IMAGE_NT_SIGNATURE || nt->OptionalHeader.SizeOfImage<update+prologue.size() || !function ||
-       reinterpret_cast<const unsigned char*>(function->GetFuncPtr())!=module+wrapper ||
-       std::memcmp(module+callsite,caller.data(),caller.size()) || std::memcmp(module+update,prologue.data(),prologue.size()))
-        throw std::runtime_error("Dye mipmaps require the verified Mortal Shell II build");
+    const Adapter* match=nullptr;
+    if(nt->Signature==IMAGE_NT_SIGNATURE && function) for(const auto& adapter:adapters) {
+        if(nt->OptionalHeader.SizeOfImage<adapter.update+adapter.prologue.size() ||
+           nt->OptionalHeader.SizeOfImage<adapter.callsite+adapter.caller.size() ||
+           reinterpret_cast<const unsigned char*>(function->GetFuncPtr())!=module+adapter.wrapper) continue;
+        if(!std::memcmp(module+adapter.callsite,adapter.caller.data(),adapter.caller.size()) &&
+           !std::memcmp(module+adapter.update,adapter.prologue.data(),adapter.prologue.size())) {match=&adapter;break;}
+    }
+    if(!match) throw std::runtime_error("Dye mipmaps require a verified Mortal Shell II build");
     if(!target->IsA(static_cast<UClass*>(find(L"/Script/Engine.TextureRenderTarget2D")))) throw std::runtime_error("Invalid dye render target");
-    reinterpret_cast<void(*)(UObject*,bool)>(const_cast<unsigned char*>(module)+update)(target,false);
+    reinterpret_cast<void(*)(UObject*,bool)>(const_cast<unsigned char*>(module)+match->update)(target,false);
 }
 }
 void Appearance::reset_colors() {
