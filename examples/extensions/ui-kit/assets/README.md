@@ -1,0 +1,5 @@
+# UI Kit banner
+
+`banner-v1.png` is an original generated library-card graphic, created with the built-in image-generation tool on 15 September 2026. The image is 2172 by 724 pixels and has no baked-in title or version; CSSX draws those separately.
+
+Prompt: Create a premium dark fantasy game UI extension card banner for CSSX UI Kit, inspired by the restrained antique brass and charcoal interface of Mortal Shell II. Wide panoramic composition, 3:1 aspect ratio. Original graphic design with no characters, no nudity, no game screenshots, no readable text. A central small ornate tarnished-gold shell-like crest constructed from elegant thin engraved lines, surrounded by a precise radial halo. Subtle etched brass UI component motifs: three radio circles with one filled, a horizontal slider with a diamond thumb, a short segmented progress indicator, a small 3x3 grid. Deep near-black weathered stone, quiet bronze haze, restrained warm edge lighting. No neon, holograms, saturated colors or mockup frame. Key motifs within the central 75% width and 65% height. No text; the game renders the title and version separately.

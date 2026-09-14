@@ -37,6 +37,9 @@ struct Core {
         } catch(const std::exception& error) {auto data=Json{{"error",error.what()}}.dump();sink(output,data.data(),data.size());return 0;}
     }
     Json inventory_command;
+#ifdef CSS_INVENTORY_DEV
+    Json extension_command;
+#endif
     bool inventory_failed=false;
     bool content_path_checked=false;
     uint64_t inventory_retry_after=0;
@@ -109,6 +112,7 @@ struct Core {
         const auto action = command.at("action").get<std::string>();
 #ifdef CSS_INVENTORY_DEV
         if (action.starts_with("inventory_")) { inventory_command=command; return; }
+        if (action=="cssx_debug") {extension_command=command;return;}
 #endif
         if (action == "export_mappings") {
             RC::OutTheShade::generate_usmap(); report("Exported runtime mappings for asset tooling.");
@@ -353,6 +357,17 @@ struct Core {
             auto result=inventory.command(engine,pending); result["id"]=last_request;
             atomic_json(root/"runtime/inventory.json",result,false);
         }
+#ifdef CSS_INVENTORY_DEV
+        if(!extension_command.is_null()) {
+            auto pending=std::exchange(extension_command,Json{});Json result={{"id",pending.at("id")}};
+            try {
+                const auto& value=pending.at("request");
+                result["result"]=pending.value("host",false)?extension_bridge.request(engine,appearance,value):extensions.request(value);
+                result["ok"]=true;
+            } catch(const std::exception& error){result["ok"]=false;result["error"]=error.what();}
+            atomic_json(root/"runtime/cssx-debug.json",result,false);
+        }
+#endif
         publish();
     }
     void publish() {

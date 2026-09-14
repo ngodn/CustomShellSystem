@@ -28,14 +28,14 @@ bool inventory_key(UObject* pc,const std::string& key) {
     member(call.data(p),p->GetElementSize(),find(L"/Script/InputCore.Key"),L"KeyName",FName(wide(key).c_str()));
     call.run(); return call.get<bool>();
 }
-std::string inventory_text(UObject* widget) {
+std::string inventory_text(UObject* widget,int limit=256) {
     if(!widget) return {};
     Call text(widget,L"GetText",1); text.run();
     Call convert(find(L"/Script/Engine.Default__KismetTextLibrary"),L"Conv_TextToString",2);
     convert.copy(L"InText",text,L"ReturnValue"); convert.run();
     const auto& value=*static_cast<FString*>(convert.data(convert.param(L"ReturnValue")));
     const auto& chars=value.GetCharArray();
-    if(chars.Num()>256) throw std::runtime_error("Template name is too long");
+    if(chars.Num()>limit) throw std::runtime_error("Text is too long");
     return chars.Num()?narrow(std::wstring(chars.GetData())):std::string{};
 }
 }
@@ -560,13 +560,29 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         if(library.value("revision",uint64_t{})!=extension_revision_) {extension_revision_=library.value("revision",uint64_t{});dirty_=true;}
         extension_library_=std::move(library);
     }
-    if(dirty_) {if(extension_active_) build_extensions();else build(catalog,state,appearance);}
+    bool editing_extension=false;
+    if(extension_active_) {
+        if(auto* input=name_input_.Get()) {
+            Call focus(input,L"HasKeyboardFocus",1);focus.run();editing_extension=focus.get<bool>();
+            try {extension_text_draft_=inventory_text(input,4096);}
+            catch(const std::exception& e) {extension_error_=e.what();editing_extension=true;}
+        }
+        if(!sliders_.empty() && inventory_key(controller_.Get(),"LeftMouseButton")) editing_extension=true;
+    }
+    if(dirty_ && !editing_extension) {if(extension_active_) build_extensions();else build(catalog,state,appearance);}
     animate(GetTickCount64());
+    if(extension_active_) for(const auto& bar:extension_loading_) if(auto* widget=bar.Get()) {
+        const float pulse=.5f+.5f*float(std::sin(now*.004));
+        invoke(widget,L"SetRenderOpacity",L"InOpacity",.35f+.65f*pulse);
+    }
     if(!active_ || closing_) return {};
     if(!focused) { motion_.reset(); drag_pan_=drag_rotate_=false; return {}; }
     bool typing=false;
     if(auto* input=name_input_.Get()) { Call focus(input,L"HasKeyboardFocus",1); focus.run(); typing=focus.get<bool>(); }
-    if(!typing) camera_update(elapsed,state.invert_orbit_x);
+    bool character_controls=!extension_active_;
+    if(extension_active_ && !extension_id_.empty()) for(const auto& entry:extension_library_.at("extensions"))
+        if(entry.at("id")==extension_id_) character_controls=entry.at("layout")=="inventory";
+    if(!typing && character_controls) camera_update(elapsed,state.invert_orbit_x);
     else { motion_.reset(); drag_pan_=drag_rotate_=false; }
 #ifdef CSS_INVENTORY_DEV
     if(capture_duration_) {
@@ -578,6 +594,17 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         if(t>=1.) capture_duration_=0;
     }
 #endif
+    if(extension_active_ && !typing && now>=extension_wheel_after_) {
+        Call wheel(controller_.Get(),L"GetInputAnalogKeyState",2);auto* key=wheel.param(L"Key");
+        member(wheel.data(key),key->GetElementSize(),find(L"/Script/InputCore.Key"),L"KeyName",FName(L"MouseWheelAxis"));wheel.run();
+        const float scroll=wheel.get<float>();
+        bool over_details=false;
+        if(auto* description=extension_description_.Get()) {Call hover(description,L"IsHovered",1);hover.run();over_details=hover.get<bool>();}
+        if(std::abs(scroll)>.01f && !character_controls && !over_details) {
+            extension_wheel_after_=now+100;
+            return dispatch_extension(extension_id_.empty()?Json{{"action","x_page"},{"direction",scroll<0?1:-1}}:Json{{"action","x_scroll"},{"delta",scroll<0?1:-1}});
+        }
+    }
     if(!typing) for(auto& binding:bindings_) {
         bool down=false; for(const auto& key:binding.keys) if(inventory_key(controller_.Get(),key)) { down=true; break; }
         bool repeat=binding.action=="up" || binding.action=="down" || binding.action=="left" || binding.action=="right";
@@ -602,6 +629,14 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     for(auto& slider:sliders_) if(auto* widget=slider.widget.Get()) {
         Call value(widget,L"GetValue",1); value.run(); auto v=value.get<float>();
         if(std::abs(v-slider.previous)>.00001f) {
+            if(extension_active_ && slider.action.value("action",std::string{})=="x_value") {
+                auto c=extension_model_["sections"][extension_section_]["controls"][extension_row_];
+                c["value"]=extensions::snap_value(c,v);
+                text_value(slider.label.Get(),extensions::display_value(c));
+                if(inventory_key(controller_.Get(),"LeftMouseButton")) continue;
+                slider.previous=v;
+                return dispatch_extension({{"action","x_value"},{"value",c.at("value")}});
+            }
             slider.previous=v; text_value(slider.label.Get(),slider_text(v,slider.scalar));
             color_channel_=slider.action.at("channel").get<int>();
             // Preserve mouse capture while the slider is dragged. Update the
@@ -622,6 +657,10 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
 }
 Json InventoryUI::diagnostics() const {
     Json value={{"cssx_active",extension_active_},{"extension",extension_id_},{"extension_page",extension_paging_.page},{"attached",tab_.Get()!=nullptr},{"active",active_},{"section",section_},{"row",row_},{"rows",rows_.size()},{"camera",display_.Get()!=nullptr},{"layout_size",layout_size_},{"yaw",yaw_},{"pan",pan_},{"zoom",zoom_},{"frame",frame_},{"gamepad",gamepad_}};
+    #ifdef CSS_INVENTORY_DEV
+    if(extension_active_ && name_input_.Get()) value["text"]=inventory_text(name_input_.Get(),4096);
+#endif
+    value["menu_open"]=main_.Get() && inventory_bool(main_.Get(),L"bOpen");
     for(const auto& b:bindings_) value["bindings"][b.action]=b.keys;
     return value;
 }

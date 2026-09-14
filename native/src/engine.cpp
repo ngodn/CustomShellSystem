@@ -1,3 +1,4 @@
+#include "extension_controls.hpp"
 #include "engine.hpp"
 #include <windows.h>
 #include "startup.hpp"
@@ -831,4 +832,5 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
 
 #include "extension_engine.inl"
 
+#include "extension_kit.inl"
 #include "extension_view.inl"

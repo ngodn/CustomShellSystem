@@ -111,7 +111,7 @@ def build(source: Path, output: Path, validator: Path, template: str,
         folder = manifest["id"]
         filename = template.format(name=safe_label(manifest["title"]),
                                    author=safe_label(manifest["author"]),
-                                   version=safe_label(manifest["version"]), id=folder)
+                                   version=re.sub(r"[^A-Za-z0-9._-]+", "", manifest["version"]) or "0", id=folder)
         if package_path(filename).name != filename:
             raise ValueError("ZIP name must be a filename, without directories")
         if not filename.endswith(".zip"):

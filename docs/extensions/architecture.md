@@ -37,3 +37,7 @@ Start passively. Resolve the current player when needed. Restore reversible chan
 - https://pkl-lang.org/main/current/language-bindings.html
 - https://www.lua.org/manual/5.4/manual.html
 - https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw
+
+## Shared component kit
+
+The [CSSX UI Kit](ui-kit.md) is the public presentation layer. Extension menus, including the Cheat Menu, use the same components. The working [component gallery](../../examples/extensions/ui-kit) demonstrates radio groups, sliders, progress, loading, text, confirmation and disabled states without gameplay effects.

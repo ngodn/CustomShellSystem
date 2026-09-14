@@ -82,18 +82,24 @@ void validate_model(const Json& j) {
             auto cid=text(c,"id",96); text(c,"label",256); text(c,"description",4096,false);
             if(!valid_id(cid) || !controls.insert(cid).second) throw std::runtime_error("Invalid or duplicate control ID");
             auto kind=text(c,"type",16);
-            if(kind!="button" && kind!="toggle" && kind!="number" && kind!="choice" && kind!="text" && kind!="label") throw std::runtime_error("Unsupported extension control");
+            if(kind!="button" && kind!="toggle" && kind!="number" && kind!="choice" && kind!="text" && kind!="label" && kind!="radio" && kind!="slider" && kind!="progress" && kind!="loading") throw std::runtime_error("Unsupported extension control");
             if(c.contains("enabled") && !c["enabled"].is_boolean()) throw std::runtime_error("Invalid enabled value");
             if(c.contains("confirm")) text(c,"confirm",2048);
-            if(kind=="number") {
+            if(kind=="number" || kind=="slider") {
                 double low=c.at("min"),high=c.at("max"),step=c.at("step"),value=c.at("value");
                 if(!std::isfinite(low) || !std::isfinite(high) || !std::isfinite(step) || !std::isfinite(value) || low>high || step<=0 || value<low || value>high) throw std::runtime_error("Invalid numeric control range");
             }
+            if(kind=="progress") {
+                const double value=c.at("value");
+                if(!std::isfinite(value) || value<0 || value>1) throw std::runtime_error("Progress must be between zero and one");
+            }
+            if(kind=="loading" && !c.at("value").is_boolean()) throw std::runtime_error("Loading state must be boolean");
+            if(c.contains("busy") && !c.at("busy").is_boolean()) throw std::runtime_error("Invalid busy state");
             if(kind=="toggle" && !c.at("value").is_boolean()) throw std::runtime_error("Invalid toggle value");
             if(kind=="text") text(c,"value",256,false);
-            if(kind=="choice") {
+            if(kind=="choice" || kind=="radio") {
                 const auto& options=c.at("options");
-                if(!options.is_array() || options.empty() || options.size()>512) throw std::runtime_error("Invalid choice options");
+                if(!options.is_array() || options.empty() || options.size()>(kind=="radio"?8:512)) throw std::runtime_error("Invalid choice options");
                 std::set<std::string> values;
                 for(const auto& o:options) { auto v=text(o,"id",256); text(o,"label",256); if(!values.insert(v).second) throw std::runtime_error("Duplicate choice option"); }
                 if(!values.contains(text(c,"value",256))) throw std::runtime_error("Choice value is not an option");
@@ -106,13 +112,14 @@ Json bind_menu(const Json& definition,const Json& model) {
     if(!definition.is_object() || definition.value("schema",0)!=1) throw std::runtime_error("Unsupported CSSX UI schema");
     if(!model.is_object()) throw std::runtime_error("CSSX menu bindings must be an object");
     Json result=definition;
-    const auto values=model.value("values",Json::object()), choices=model.value("options",Json::object()), enabled=model.value("enabled",Json::object());
-    if(!values.is_object() || !choices.is_object() || !enabled.is_object()) throw std::runtime_error("CSSX value, option and enabled bindings must be objects");
+    const auto values=model.value("values",Json::object()), choices=model.value("options",Json::object()), enabled=model.value("enabled",Json::object()), busy=model.value("busy",Json::object());
+    if(!values.is_object() || !choices.is_object() || !enabled.is_object() || !busy.is_object()) throw std::runtime_error("CSSX value, option, enabled and busy bindings must be objects");
     for(auto& section:result.at("sections")) for(auto& control:section.at("controls")) {
         const auto binding=control.value("binding",control.at("id").get<std::string>());
         if(values.contains(binding)) control["value"]=values.at(binding);
         if(choices.contains(binding)) control["options"]=choices.at(binding);
         if(enabled.contains(binding)) control["enabled"]=enabled.at(binding);
+        if(busy.contains(binding)) control["busy"]=busy.at(binding);
     }
     result["status"]=model.value("status",std::string{});
     validate_model(result);return result;

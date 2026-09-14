@@ -1,4 +1,5 @@
 #include "extension_data.hpp"
+#include "extension_controls.hpp"
 #include "extension_storage.hpp"
 #include <fstream>
 #include <iostream>
@@ -35,6 +36,29 @@ int main() {
     auto bad=model;bad["sections"][0]["controls"][0]["step"]=0;rejects([&]{validate_model(bad);});
     bad=model;bad["sections"][0]["controls"].push_back(bad["sections"][0]["controls"][0]);rejects([&]{validate_model(bad);});
     bad=model;bad["sections"][0]["controls"][0]["value"]=5;rejects([&]{validate_model(bad);});
+    auto slider=definition;
+    auto& c=slider["sections"][0]["controls"][0];c["type"]="slider";c["step"]=.25;
+    validate_model(slider);
+    check(display_value(c)=="2");check(snap_value(c,2.13)==2.25);
+    check(adjusted_value(c,1)==2.25);check(adjusted_value(c,-1)==1.75);
+    c["value"]=4;check(adjusted_value(c,1)==4);
+    validate_event(slider,{{"id","speed"},{"value",3}});
+    rejects([&]{validate_event(slider,{{"id","speed"},{"value",99}});});
+    c["busy"]=true;rejects([&]{validate_event(slider,{{"id","speed"},{"value",3}});});c["busy"]=false;
+    c={{"id","radio"},{"type","radio"},{"label","Quality"},{"value","b"},{"options",Json::array({{{"id","a"},{"label","Quiet"}},{{"id","b"},{"label","Balanced"}}})}};
+    validate_model(slider);check(display_value(c)=="Balanced");check(adjusted_value(c,1)=="a");
+    rejects([&]{validate_event(slider,{{"id","radio"},{"value","missing"}});});
+    c={{"id","progress"},{"type","progress"},{"label","Progress"},{"value",.42}};
+    validate_model(slider);check(display_value(c)=="42%");
+    rejects([&]{validate_event(slider,{{"id","progress"},{"value",.9}});});
+    c["value"]=-.1;rejects([&]{validate_model(slider);});
+    c={{"id","loading"},{"type","loading"},{"label","Loading"},{"value",true}};
+    validate_model(slider);check(display_value(c)=="Loading...");
+    c={{"id","confirm"},{"type","button"},{"label","Apply"},{"confirm","Continue?"}};
+    rejects([&]{validate_event(slider,{{"id","confirm"}});});
+    validate_event(slider,{{"id","confirm"},{"confirmed",true}});
+    c["enabled"]=false;rejects([&]{validate_event(slider,{{"id","confirm"},{"confirmed",true}});});
+    rejects([&]{validate_event(slider,{{"id","missing"}});});
     for(size_t count=0;count<=128;++count) {
         LibraryPage page{count};
         for(int i=0;i<200;++i) {page.move(1,0);check(page.page<page.pages());check(count?page.selected<count:page.selected==0);}

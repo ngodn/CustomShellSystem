@@ -10,9 +10,10 @@ class Option {
 open class Control {
   id: String
   label: String
-  type: "button"|"toggle"|"number"|"choice"|"text"|"label"
+  type: "button"|"toggle"|"number"|"choice"|"text"|"label"|"radio"|"slider"|"progress"|"loading"
   description: String = ""
   enabled: Boolean = true
+  busy: Boolean = false
   value: (Boolean|Number|String)? = null
 }
 class Toggle extends Control {
@@ -22,14 +23,14 @@ class Toggle extends Control {
 class Button extends Control {
   type = "button"
 }
-class NumberControl extends Control {
+open class NumberControl extends Control {
   type = "number"
   min: Number
   max: Number
   step: Number
   value: Number
 }
-class Choice extends Control {
+open class Choice extends Control {
   type = "choice"
   options: Listing<Option>
   value: String
@@ -38,4 +39,23 @@ class Section {
   id: String
   title: String
   controls: Listing<Control>
+}
+
+class Slider extends NumberControl {
+  type = "slider"
+}
+class RadioGroup extends Choice {
+  type = "radio"
+}
+class ProgressBar extends Control {
+  type = "progress"
+  value: Number = 0
+}
+class Loading extends Control {
+  type = "loading"
+  value: Boolean = true
+}
+class TextInput extends Control {
+  type = "text"
+  value: String = ""
 }

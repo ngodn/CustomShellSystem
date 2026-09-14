@@ -40,12 +40,14 @@ class Loader final : public RC::CppUserModBase {
         if (!api || api->abi != css_abi || !api->create || !api->tick || !api->render || !api->stop || !api->destroy) {
             FreeLibrary(candidate); log_line("Core ABI rejected; current core retained"); return;
         }
-        if (api_ && !api_->stop(core_)) {
-            FreeLibrary(candidate);
-            log_line("Reload cancelled because old core could not restore its appearance"); return;
-        }
+        // Core construction is passive. Validate the new instance before stopping
+        // the working one, so a failed constructor cannot leave CSS stopped.
         auto* instance = api->create(&host_);
         if (!instance) { FreeLibrary(candidate); log_line("Core initialization failed; current core retained"); return; }
+        if (api_ && !api_->stop(core_)) {
+            if(api->stop(instance)) {api->destroy(instance);FreeLibrary(candidate);}
+            log_line("Reload cancelled because the current core could not restore its owned changes"); return;
+        }
         if (api_) api_->destroy(core_);
         if (module_) FreeLibrary(module_);
         module_ = candidate; api_ = api; core_ = instance; loaded_ = filename;

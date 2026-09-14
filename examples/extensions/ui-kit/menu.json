@@ -1,0 +1,133 @@
+{
+  "schema": 1,
+  "sections": [
+    {
+      "id": "inputs",
+      "title": "Inputs",
+      "controls": [
+        {
+          "id": "enabled",
+          "type": "toggle",
+          "label": "Toggle",
+          "value": false,
+          "description": "An on/off setting. Select it, then press Confirm or click its action."
+        },
+        {
+          "id": "quality",
+          "type": "radio",
+          "label": "Radio group",
+          "value": "balanced",
+          "options": [
+            {
+              "id": "quiet",
+              "label": "Quiet"
+            },
+            {
+              "id": "balanced",
+              "label": "Balanced"
+            },
+            {
+              "id": "strong",
+              "label": "Strong"
+            }
+          ],
+          "description": "Choose one option. Click an option, or use Left / Right while this setting is selected."
+        },
+        {
+          "id": "strength",
+          "type": "slider",
+          "label": "Slider",
+          "value": 50,
+          "min": 0,
+          "max": 100,
+          "step": 5,
+          "description": "Drag to adjust. The value is committed when you release the mouse. Left / Right changes one step."
+        },
+        {
+          "id": "count",
+          "type": "number",
+          "label": "Number stepper",
+          "value": 4,
+          "min": 1,
+          "max": 16,
+          "step": 1,
+          "description": "A bounded numeric value with consistent steps."
+        },
+        {
+          "id": "theme",
+          "type": "choice",
+          "label": "Option selector",
+          "value": "gold",
+          "options": [
+            {
+              "id": "gold",
+              "label": "Gold"
+            },
+            {
+              "id": "silver",
+              "label": "Silver"
+            },
+            {
+              "id": "bronze",
+              "label": "Bronze"
+            }
+          ],
+          "description": "Cycle through named options. Their labels are shown instead of internal IDs."
+        },
+        {
+          "id": "name",
+          "type": "text",
+          "label": "Text input",
+          "value": "My template",
+          "description": "Click the field and type, then select Save text. Text entry currently requires a keyboard."
+        }
+      ]
+    },
+    {
+      "id": "feedback",
+      "title": "Feedback",
+      "controls": [
+        {
+          "id": "run",
+          "type": "button",
+          "label": "Run example",
+          "description": "Runs a five-second example. This button enters a busy state while the progress and loading examples update."
+        },
+        {
+          "id": "progress",
+          "type": "progress",
+          "label": "Progress bar",
+          "value": 0,
+          "description": "Read-only progress between zero and one. The kit displays a percentage."
+        },
+        {
+          "id": "loading",
+          "type": "loading",
+          "label": "Loading state",
+          "value": false,
+          "description": "A pulsing indicator for work whose completion time is unknown."
+        },
+        {
+          "id": "confirm",
+          "type": "button",
+          "label": "Confirmation dialog",
+          "description": "Preview a confirmation dialog. This example changes no game data.",
+          "confirm": "Run this example action? No game data will change."
+        },
+        {
+          "id": "disabled",
+          "type": "button",
+          "label": "Disabled action",
+          "enabled": false,
+          "description": "Unavailable actions stay visible with an explanation. They cannot be activated."
+        },
+        {
+          "id": "info",
+          "type": "label",
+          "label": "Information panel",
+          "description": "Extensions provide content. CSSX provides fonts, panels, navigation, input prompts and transitions."
+        }
+      ]
+    }
+  ]
+}

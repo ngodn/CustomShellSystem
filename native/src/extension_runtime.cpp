@@ -1,3 +1,4 @@
+#include "extension_controls.hpp"
 #include "cssx/api.h"
 #include "extension_data.hpp"
 #include "extension_storage.hpp"
@@ -274,6 +275,8 @@ void Entry::refresh() {
     validate_model(next);model=std::move(next);dirty=false;
 }
 void Entry::event(const Json& event) {
+    if(dirty) refresh();
+    css::extensions::validate_event(model,event);
     requests=0;
     if(lua) invoke_lua("event",event);
     else { auto data=event.dump();if(!api->event(instance,data.c_str())) throw std::runtime_error("Extension event callback failed"); }

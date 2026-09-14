@@ -25,6 +25,7 @@ event=function(e) state.on=e.value; assert(cssx.request({op="state.save",value=s
         (folder/'extension.json').write_text(json.dumps(dict(schema=1,api=1,id=name,title=name,version='1.0.0',author='test',kind='lua',layout='tabs',entry='main.lua')))
     example=Path(__file__).resolve().parents[1]/'examples/extensions/lua-counter'
     shutil.copytree(example,root/'extensions/counter')
+    shutil.copytree(example.parent/'ui-kit',root/'extensions/ui-kit')
     for name,source in [
         ('memory', 'local x = string.rep("x", 70*1024*1024); return {}'),
         ('caught-loop', 'while true do pcall(function() while true do end end) end'),
@@ -40,7 +41,7 @@ event=function(e) state.on=e.value; assert(cssx.request({op="state.save",value=s
         def sink(out,data,size): result.append(c.string_at(data,size))
         ok=api.request(instance,json.dumps(value).encode(),sink,None)
         decoded=json.loads(b''.join(result));assert ok,decoded;return decoded
-    library=request({'op':'library'});assert len(library['extensions'])==6
+    library=request({'op':'library'});assert len(library['extensions'])==7
     assert next(e for e in library['extensions'] if e['id']=='caught-loop')['available'] is False
     assert next(e for e in library['extensions'] if e['id']=='broken')['available'] is False
     assert next(e for e in library['extensions'] if e['id']=='working')['available'] is True
@@ -52,6 +53,17 @@ event=function(e) state.on=e.value; assert(cssx.request({op="state.save",value=s
     assert counter()['sections'][0]['controls'][0]['value']==37
     request({'op':'event','id':'examples.counter','event':{'id':'export'}})
     assert (root/'output/extensions/examples.counter/counter.txt').read_text()=='37\n'
+    gallery=lambda:request({'op':'model','id':'cssx.ui-kit'})
+    request({'op':'event','id':'cssx.ui-kit','event':{'id':'quality','value':'strong'}})
+    assert gallery()['sections'][0]['controls'][1]['value']=='strong'
+    request({'op':'event','id':'cssx.ui-kit','event':{'id':'strength','value':75}})
+    request({'op':'event','id':'cssx.ui-kit','event':{'id':'name','value':'颜色 测试'}})
+    assert gallery()['sections'][0]['controls'][5]['value']=='颜色 测试'
+    request({'op':'event','id':'cssx.ui-kit','event':{'id':'run'}})
+    assert gallery()['sections'][1]['controls'][0]['busy'] is True
+    for _ in range(26): assert api.tick(instance,.2)==1
+    feedback=gallery()['sections'][1]['controls']
+    assert feedback[0]['busy'] is False and feedback[1]['value']==1 and feedback[2]['value'] is False
     menu=root/'extensions/counter/menu.json'
     original=menu.read_text();stamp=menu.stat().st_mtime_ns
     menu.write_text('{"schema":1,"sections":false}')

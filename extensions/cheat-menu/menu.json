@@ -1,0 +1,351 @@
+{
+  "schema": 1,
+  "sections": [
+    {
+      "id": "cheats",
+      "title": "Cheats",
+      "controls": [
+        {
+          "id": "god",
+          "type": "toggle",
+          "label": "God mode",
+          "description": "Prevents damage to the current player. Restores the original damage flag when disabled.",
+          "value": false
+        },
+        {
+          "id": "auto_heal",
+          "type": "toggle",
+          "label": "Auto Heal",
+          "description": "Refills missing health at your selected interval.",
+          "value": false
+        },
+        {
+          "id": "infinite_resolve",
+          "type": "toggle",
+          "label": "Infinite Resolve",
+          "description": "Refills missing Resolve once per second.",
+          "value": false
+        },
+        {
+          "id": "revive",
+          "type": "button",
+          "label": "Revive shell",
+          "description": "Ask the game to revive your shell."
+        },
+        {
+          "id": "heal_amount",
+          "type": "number",
+          "label": "Heal amount",
+          "value": 100,
+          "min": 1,
+          "max": 9999,
+          "step": 1,
+          "description": ""
+        },
+        {
+          "id": "heal",
+          "type": "button",
+          "label": "Heal",
+          "description": "Restore the selected amount of health."
+        },
+        {
+          "id": "resolve_amount",
+          "type": "number",
+          "label": "Resolve amount",
+          "value": 100,
+          "min": 1,
+          "max": 9999,
+          "step": 1,
+          "description": ""
+        },
+        {
+          "id": "resolve",
+          "type": "button",
+          "label": "Add Resolve",
+          "description": "Add the selected amount of Resolve."
+        },
+        {
+          "id": "damage_percent",
+          "type": "slider",
+          "label": "Health target (%)",
+          "value": 50,
+          "min": 1,
+          "max": 99,
+          "step": 1,
+          "description": ""
+        },
+        {
+          "id": "damage",
+          "type": "button",
+          "label": "Set health target",
+          "description": "Reduces health to the selected percentage. Keeps at least one point in the current pool."
+        }
+      ]
+    },
+    {
+      "id": "character",
+      "title": "Character",
+      "controls": [
+        {
+          "id": "heal_percent",
+          "type": "slider",
+          "label": "Auto Heal strength (%)",
+          "value": 100,
+          "min": 1,
+          "max": 100,
+          "step": 1,
+          "description": ""
+        },
+        {
+          "id": "heal_interval",
+          "type": "slider",
+          "label": "Auto Heal interval (seconds)",
+          "value": 1,
+          "min": 0.25,
+          "max": 5,
+          "step": 0.25,
+          "description": ""
+        },
+        {
+          "id": "move_fast",
+          "type": "toggle",
+          "label": "Movement multiplier",
+          "description": "Changes walking, jogging and sprinting speeds. Disable it before changing gameplay shells.",
+          "value": false
+        },
+        {
+          "id": "move_multiplier",
+          "type": "slider",
+          "label": "Movement speed",
+          "value": 2,
+          "min": 1,
+          "max": 5,
+          "step": 0.25,
+          "description": ""
+        },
+        {
+          "id": "harbinger_level",
+          "type": "number",
+          "label": "Harbinger level",
+          "value": 1,
+          "min": 1,
+          "max": 1000,
+          "step": 1,
+          "description": ""
+        },
+        {
+          "id": "set_harbinger",
+          "type": "button",
+          "label": "Set Harbinger level",
+          "description": "Uses the level shown in the game UI.",
+          "confirm": "This changes progression and can trigger achievements. The game may save the changes. Continue?"
+        }
+      ]
+    },
+    {
+      "id": "shells",
+      "title": "Shells",
+      "controls": [
+        {
+          "id": "shell",
+          "type": "choice",
+          "label": "Gameplay shell",
+          "value": "none",
+          "options": [
+            {
+              "id": "none",
+              "label": "Open this page in a loaded world"
+            }
+          ],
+          "description": "Changes the actual shell and its abilities. Use CSS for appearance-only changes."
+        },
+        {
+          "id": "switch_shell",
+          "type": "button",
+          "label": "Switch gameplay shell",
+          "description": "Closes Inventory, sends one shell request and checks the result. Active cheats must be disabled first."
+        }
+      ]
+    },
+    {
+      "id": "resources",
+      "title": "Resources",
+      "controls": [
+        {
+          "id": "grant_amount",
+          "type": "number",
+          "label": "Amount to add",
+          "value": 100,
+          "min": 1,
+          "max": 100000,
+          "step": 1,
+          "description": ""
+        },
+        {
+          "id": "grant_gold",
+          "type": "button",
+          "label": "Add Gold",
+          "description": "Adds the selected amount. The game can save inventory changes."
+        },
+        {
+          "id": "grant_gloom",
+          "type": "button",
+          "label": "Add Gloom",
+          "description": "Adds the selected amount. The game can save inventory changes."
+        },
+        {
+          "id": "grant_glimpses",
+          "type": "button",
+          "label": "Add Glimpses",
+          "description": "Adds the selected amount. The game can save inventory changes."
+        },
+        {
+          "id": "grant_shell_points",
+          "type": "button",
+          "label": "Add Shell Points",
+          "description": "Adds the selected amount. The game can save inventory changes."
+        },
+        {
+          "id": "grant_tarcores",
+          "type": "button",
+          "label": "Add Tarcores",
+          "description": "Adds the selected amount. The game can save inventory changes."
+        },
+        {
+          "id": "grant_ventrium",
+          "type": "button",
+          "label": "Add Ventrium",
+          "description": "Adds the selected amount. The game can save inventory changes."
+        },
+        {
+          "id": "grant_laterite",
+          "type": "button",
+          "label": "Add Laterite",
+          "description": "Adds the selected amount. The game can save inventory changes."
+        },
+        {
+          "id": "grant_dorsalite",
+          "type": "button",
+          "label": "Add Dorsalite",
+          "description": "Adds the selected amount. The game can save inventory changes."
+        },
+        {
+          "id": "grant_thoracium",
+          "type": "button",
+          "label": "Add Thoracium",
+          "description": "Adds the selected amount. The game can save inventory changes."
+        },
+        {
+          "id": "grant_ovums",
+          "type": "button",
+          "label": "Add Ovums",
+          "description": "Adds the selected amount. The game can save inventory changes."
+        }
+      ]
+    },
+    {
+      "id": "unlocks",
+      "title": "Unlocks",
+      "controls": [
+        {
+          "id": "unlock_clothing",
+          "type": "button",
+          "label": "Unlock all clothing",
+          "description": "Changes progression through the game's controller.",
+          "confirm": "This changes progression and can trigger achievements. The game may save the changes. Continue?"
+        },
+        {
+          "id": "unlock_gates",
+          "type": "button",
+          "label": "Unlock all gates",
+          "description": "Changes progression through the game's controller.",
+          "confirm": "This changes progression and can trigger achievements. The game may save the changes. Continue?"
+        },
+        {
+          "id": "unlock_landing",
+          "type": "button",
+          "label": "Unlock all landing areas",
+          "description": "Changes progression through the game's controller.",
+          "confirm": "This changes progression and can trigger achievements. The game may save the changes. Continue?"
+        },
+        {
+          "id": "unlock_masks",
+          "type": "button",
+          "label": "Unlock all masks",
+          "description": "Changes progression through the game's controller.",
+          "confirm": "This changes progression and can trigger achievements. The game may save the changes. Continue?"
+        },
+        {
+          "id": "unlock_seals",
+          "type": "button",
+          "label": "Unlock all seals",
+          "description": "Changes progression through the game's controller.",
+          "confirm": "This changes progression and can trigger achievements. The game may save the changes. Continue?"
+        },
+        {
+          "id": "unlock_sidearms",
+          "type": "button",
+          "label": "Unlock all sidearms",
+          "description": "Changes progression through the game's controller.",
+          "confirm": "This changes progression and can trigger achievements. The game may save the changes. Continue?"
+        },
+        {
+          "id": "unlock_weapons",
+          "type": "button",
+          "label": "Unlock all weapons",
+          "description": "Changes progression through the game's controller.",
+          "confirm": "This changes progression and can trigger achievements. The game may save the changes. Continue?"
+        },
+        {
+          "id": "unlock_shell_shades",
+          "type": "button",
+          "label": "Unlock shell shades",
+          "description": "Changes progression through the game's controller.",
+          "confirm": "This changes progression and can trigger achievements. The game may save the changes. Continue?"
+        },
+        {
+          "id": "unlock_red_harbinger",
+          "type": "button",
+          "label": "Unlock Red Harbinger",
+          "description": "Changes progression through the game's controller.",
+          "confirm": "This changes progression and can trigger achievements. The game may save the changes. Continue?"
+        },
+        {
+          "id": "unlock_cosmic_harbinger",
+          "type": "button",
+          "label": "Unlock Cosmic Harbinger",
+          "description": "Changes progression through the game's controller.",
+          "confirm": "This changes progression and can trigger achievements. The game may save the changes. Continue?"
+        },
+        {
+          "id": "unlock_dark_shades",
+          "type": "button",
+          "label": "Unlock Dark Form shades",
+          "description": "Changes progression through the game's controller.",
+          "confirm": "This changes progression and can trigger achievements. The game may save the changes. Continue?"
+        },
+        {
+          "id": "unlock_map",
+          "type": "button",
+          "label": "Unlock map",
+          "description": "Changes progression through the game's controller.",
+          "confirm": "This changes progression and can trigger achievements. The game may save the changes. Continue?"
+        },
+        {
+          "id": "unlock_fast_travel",
+          "type": "button",
+          "label": "Unlock fast travel",
+          "description": "Changes progression through the game's controller.",
+          "confirm": "This changes progression and can trigger achievements. The game may save the changes. Continue?"
+        },
+        {
+          "id": "unlock_reveal_map",
+          "type": "button",
+          "label": "Reveal all map icons",
+          "description": "Changes progression through the game's controller.",
+          "confirm": "This changes progression and can trigger achievements. The game may save the changes. Continue?"
+        }
+      ]
+    }
+  ]
+}

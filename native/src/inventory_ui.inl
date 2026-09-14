@@ -30,9 +30,9 @@ void inventory_navigate(UObject* tabs,int index) {
     Call nav(tabs,L"NavigateToCustomIndex",3); nav.set(L"Index",index); nav.run();
     if(!nav.get<bool>(L"Success")) throw std::runtime_error("Inventory tab navigation rejected the index");
 }
-std::vector<UObject*> inventory_children(UObject* panel) {
+std::vector<UObject*> inventory_children(UObject* panel,int limit=64) {
     Call count(panel,L"GetChildrenCount",1); count.run(); auto n=count.get<int32_t>();
-    if(n<0 || n>64) throw std::runtime_error("Inventory child count out of bounds");
+    if(n<0 || n>limit) throw std::runtime_error("Inventory child count out of bounds");
     std::vector<UObject*> result;
     for(int i=0;i<n;++i) { Call get(panel,L"GetChildAt",2); get.set(L"Index",i); get.run(); result.push_back(get.get<UObject*>()); }
     return result;
@@ -137,6 +137,8 @@ Json InventoryUI::command(void* engine,const Json& command) {
         invoke(inventory_object(tabs_.Get(),L"NavigationObject"),L"GetNavigableChildren");
         inventory_navigate(tabs_.Get(),0);
 #ifdef CSS_INVENTORY_DEV
+    } else if(action=="inventory_cssx") {
+        dispatch_extension(command.at("event"));
     } else if(action.starts_with("inventory_cinema_")) {
         cinema_command(pc,command);
     } else if(action=="inventory_capture_row") {
@@ -178,6 +180,10 @@ Json InventoryUI::command(void* engine,const Json& command) {
         if(point[0]<0 || point[1]<0 || point[0]>=client.right || point[1]>=client.bottom) throw std::runtime_error("Pointer test outside game viewport");
         POINT pixel{LONG(point[0]),LONG(point[1])}; ClientToScreen(window,&pixel);
         SetCursorPos(pixel.x,pixel.y);
+    } else if(action=="inventory_cssx_text") {
+        auto* input=name_input_.Get();
+        if(!extension_active_ || !input) throw std::runtime_error("CSSX text field is not open");
+        if(command.contains("text")) text_value(input,command.at("text").get<std::string>());
     } else if(action=="inventory_test_mouse") {
         auto window=GetForegroundWindow(); DWORD pid=0; GetWindowThreadProcessId(window,&pid);
         if(!active_ || pid!=GetCurrentProcessId()) throw std::runtime_error("Mouse test requires focused CSS");

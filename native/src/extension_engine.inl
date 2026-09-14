@@ -56,10 +56,28 @@ void ExtensionBridge::encode(FProperty* p,void* data,const Json& value,unsigned 
         auto* number=static_cast<FNumericProperty*>(p);
         if(!value.is_number()) throw std::runtime_error("CSSX numeric input required");
         if(number->IsFloatingPoint()) {auto v=value.get<double>();if(!std::isfinite(v)) throw std::runtime_error("CSSX numeric value is not finite");number->SetFloatingPointPropertyValue(data,v);}
-        else {auto v=value.get<int64_t>();const auto size=p->GetElementSize();if(size<8 && (v<-(int64_t{1}<<(size*8-1)) || v>=(int64_t{1}<<(size*8)))) throw std::runtime_error("CSSX integer exceeds field range");number->SetIntPropertyValue(data,static_cast<int64>(v));}
+        else {
+            if(!value.is_number_integer()) throw std::runtime_error("CSSX integer input required");
+            const auto size=p->GetElementSize();
+            if(size!=1 && size!=2 && size!=4 && size!=8) throw std::runtime_error("Unsupported integer width");
+            const bool is_unsigned=p->IsA<FByteProperty>() || p->IsA<FUInt16Property>() || p->IsA<FUInt32Property>() || p->IsA<FUInt64Property>();
+            if(is_unsigned) {
+                if(!value.is_number_unsigned() && value.get<int64_t>()<0) throw std::runtime_error("CSSX unsigned input is negative");
+                auto v=value.get<uint64_t>();if(size<8 && v>=(uint64_t{1}<<(size*8))) throw std::runtime_error("CSSX integer exceeds field range");
+                number->SetIntPropertyValue(data,static_cast<uint64>(v));
+            } else {
+                if(value.is_number_unsigned() && value.get<uint64_t>()>uint64_t(INT64_MAX)) throw std::runtime_error("CSSX integer exceeds field range");
+                auto v=value.get<int64_t>();if(size<8 && (v<-(int64_t{1}<<(size*8-1)) || v>=(int64_t{1}<<(size*8-1)))) throw std::runtime_error("CSSX integer exceeds field range");
+                number->SetIntPropertyValue(data,static_cast<int64>(v));
+            }
+        }
         return;
     }
-    if(p->IsA<FObjectProperty>()) {static_cast<FObjectProperty*>(p)->SetObjectPropertyValue(data,resolve(value));return;}
+    if(p->IsA<FObjectProperty>()) {
+        auto* property=static_cast<FObjectProperty*>(p);auto* object=resolve(value);
+        if(object && !object->IsA(property->GetPropertyClass().Get())) throw std::runtime_error("CSSX object class does not match the property");
+        property->SetObjectPropertyValue(data,object);return;
+    }
     if(p->IsA<FNameProperty>()) {auto text=wide(value.get<std::string>());FName name(text.c_str());p->CopyCompleteValue(data,&name);return;}
     if(p->IsA<FStrProperty>()) {auto text=wide(value.get<std::string>());FString s(text.c_str());p->CopyCompleteValue(data,&s);return;}
     if(p->IsA<FStructProperty>()) {
@@ -91,7 +109,16 @@ Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& re
         auto* data=reinterpret_cast<std::byte*>(object)+p->GetOffset_Internal();
         if(op=="set") {
             if(object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject|RF_ArchetypeObject))) throw std::runtime_error("CSSX refuses default-object writes");
-            encode(p,data,request.at("value"),0);
+            const auto size=p->GetSize();
+            if(size<=0 || size>65536 || p->GetMinAlignment()>16) throw std::runtime_error("CSSX property exceeds write buffer bounds");
+            struct Value {
+                FProperty* property;std::vector<std::max_align_t> storage;
+                Value(FProperty* p,int size):property(p),storage((size+sizeof(std::max_align_t)-1)/sizeof(std::max_align_t)) {p->InitializeValue(storage.data());}
+                ~Value(){property->DestroyValue(storage.data());}
+            } next(p,size);
+            p->CopyCompleteValue(next.storage.data(),data);
+            encode(p,next.storage.data(),request.at("value"),0);
+            p->CopyCompleteValue(data,next.storage.data());
         }
         return decode(p,data,0);
     }
@@ -99,12 +126,14 @@ Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& re
         const auto name=wide(request.at("function").get<std::string>());auto* fn=object->GetFunctionByNameInChain(name.c_str());
         if(!fn) throw std::runtime_error("CSSX function is missing: "+request.at("function").get<std::string>());
         Call call(object,name.c_str(),fn->GetNumParms());
-        auto args=request.value("args",Json::object());if(!args.is_object()) throw std::runtime_error("CSSX arguments must be named");
-        Json result=Json::object();std::set<std::string> used;
+        auto args=request.value("args",Json::object());if(!args.is_object() && !args.is_array()) throw std::runtime_error("CSSX arguments must be named or positional");
+        Json result=Json::object();std::set<std::string> used;size_t index=0;
         for(auto* p:fn->ForEachProperty()) if(p->HasAnyPropertyFlags(CPF_Parm)) {
             auto key=narrow(p->GetName());
             if(op=="describe") {result[key]={{"size",p->GetElementSize()},{"return",p->HasAnyPropertyFlags(CPF_ReturnParm)},{"out",p->HasAnyPropertyFlags(CPF_OutParm)}};continue;}
-            if(args.contains(key)) {encode(p,call.data(p),args[key],0);used.insert(key);}
+            if(p->HasAnyPropertyFlags(CPF_ReturnParm)) continue;
+            if(args.is_array() && index<args.size()) {encode(p,call.data(p),args[index++],0);used.insert(key);}
+            else if(args.is_object() && args.contains(key)) {encode(p,call.data(p),args[key],0);used.insert(key);}
             else if(!p->HasAnyPropertyFlags(CPF_ReturnParm|CPF_OutParm)) throw std::runtime_error("CSSX missing argument: "+key);
         }
         if(op=="describe") return result;
