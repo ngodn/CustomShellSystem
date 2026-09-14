@@ -4,7 +4,9 @@ Local media folder: `docs/media/seductress-v2.0.0/`. Use the completed files; do
 
 ## Header and cover
 
-- Header: `seductress-v2-header-1300x372.png`, exactly **1300 × 372**. The same image is used in the description.
+- Header upload: `seductress-v2-header-1300x372.png`, exactly **1300 × 372**, fitted proportionally with transparent side padding. Nothing is cropped or stretched.
+- Description banner: `seductress-v2-header.png`, the complete generated V2 artwork.
+- The banner follows V1 branding with a new V2 title and portrait composition. It is promotional artwork, not a gameplay capture.
 - Cover/gallery first image: `original-front.jpg`.
 
 ## Gallery order
@@ -54,4 +56,4 @@ Both are embedded in the full description with Nexus `[youtube]VIDEO_ID[/youtube
 
 ## Inline images
 
-The BBCode references the header, `original-front.jpg` and `world-original-front.jpg` through the public CSS repository. The other captures can be uploaded directly to the Nexus Images tab.
+The BBCode references the full banner, `topless-harness-front.jpg` and `world-original-front.jpg` through the public CSS repository. The other captures can be uploaded directly to the Nexus Images tab.

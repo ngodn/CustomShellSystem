@@ -1,4 +1,4 @@
-[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/seductress-v2.0.0/seductress-v2-header-1300x372.png[/img][/center]
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/seductress-v2.0.0/seductress-v2-header.png[/img][/center]
 
 I expanded my Seductress adaptation into nine selectable variants, with revised body proportions, four color palettes and per-part customization. Choose a variant in CSS, adjust its colors and save the combination as a template.
 
@@ -51,8 +51,8 @@ Seductress V2 world showcase, 1080p / 60 fps.
 
 [size=4][b]In-game screenshots[/b][/size]
 
-[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/seductress-v2.0.0/original-front.jpg[/img]
-Original in Inventory → CSS.
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/seductress-v2.0.0/topless-harness-front.jpg[/img]
+Topless Harness in Inventory → CSS.
 
 [img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/seductress-v2.0.0/world-original-front.jpg[/img]
 Original in the game world. More variants and palettes are shown in the Images tab. Weapons are separate from this download.
