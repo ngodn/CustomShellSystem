@@ -42,6 +42,15 @@ def motion(yaw=175, zoom=0, pan=0, frame=0, seconds=5):
     time.sleep(seconds + .3)
 
 def shot(name):
+    # Steam shows a notification for this API. Never trigger it during capture,
+    # even when another driver process owns the recorder.
+    for proc in Path('/proc').iterdir():
+        if not proc.name.isdigit(): continue
+        try: args = (proc / 'cmdline').read_bytes().split(b'\0')
+        except OSError: continue
+        executable = args[0].rsplit(b'/', 1)[-1] if args else b''
+        if executable == b'gpu-screen-recorder' or (executable == b'ffmpeg' and b'x11grab' in args):
+            raise RuntimeError('Steam screenshots are disabled while recording')
     MEDIA.mkdir(parents=True, exist_ok=True)
     before = set(SHOTS.glob('*.jpg'))
     command('inventory_shot')
