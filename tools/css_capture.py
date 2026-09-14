@@ -86,11 +86,12 @@ def recording(name):
     # Screen capture includes the final displayed frame. The game must remain
     # fullscreen on DP-1 for the whole take; verify the workspace before starting.
     clients = json.loads(subprocess.check_output(['hyprctl', 'clients', '-j']))
-    active = json.loads(subprocess.check_output(['hyprctl', 'activewindow', '-j']))
     game = next(c for c in clients if c.get('class') == 'steam_app_2584270'
                 and c.get('title', '').strip() == 'MortalShell2')
-    if active.get('address') != game['address'] or not game.get('fullscreen'):
-        raise RuntimeError('Focus the fullscreen game before recording')
+    monitors = json.loads(subprocess.check_output(['hyprctl', 'monitors', '-j']))
+    display = next(m for m in monitors if m['name'] == 'DP-1')
+    if display['activeWorkspace']['id'] != game['workspace']['id'] or not game.get('fullscreen'):
+        raise RuntimeError('Show the fullscreen game on DP-1 before recording')
     with (originals / (name + '.log')).open('w') as log:
         process = subprocess.Popen(['gpu-screen-recorder', '-w', 'DP-1',
             '-f', '60', '-fm', 'cfr', '-q', 'very_high', '-k', 'h264',
@@ -103,10 +104,11 @@ def recording(name):
                 try:
                     monitors = json.loads(subprocess.check_output(['hyprctl', 'monitors', '-j']))
                     display = next(m for m in monitors if m['name'] == 'DP-1')
-                    current = json.loads(subprocess.check_output(['hyprctl', 'activewindow', '-j']))
+                    current = json.loads(subprocess.check_output(['hyprctl', 'clients', '-j']))
+                    window = next(c for c in current if c['address'] == game['address'])
                     if (display['activeWorkspace']['id'] != game['workspace']['id']
-                            or current.get('address') != game['address']):
-                        raise RuntimeError('Game lost focus during recording; reject this take')
+                            or not window.get('fullscreen') or not window.get('visible')):
+                        raise RuntimeError('Game left the recorded display; reject this take')
                 except Exception as error:
                     interrupted.append(str(error))
                     if process.poll() is None: process.send_signal(signal.SIGINT)

@@ -17,7 +17,7 @@ The helper needs Hyprland, gpu-screen-recorder with H.264 encoding, and Steam's
 screenshot API. Published video copies are encoded separately with ffmpeg.
 It records the fullscreen game on DP-1 at 60 fps with desktop audio, without
 microphone input. Keep other audio applications quiet. The display guard rejects
-a take when focus leaves the game. It is not a privacy barrier against transient
+a take when the recorded display leaves the game. Other monitors can stay in use. It is not a privacy barrier against transient
 notifications or overlays; review each take before publication.
 
 ## Camera and actions
