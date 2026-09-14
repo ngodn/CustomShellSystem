@@ -45,7 +45,12 @@ Additional `world-*.jpg` files show the other variants and palettes outside Inve
 
 Both supplied encodes are below 100 MiB. No further frame-rate reduction or recompression is needed.
 
-Use the menu video for the wardrobe walkthrough and the world video for the outfit showcase. The V1 YouTube URLs are different videos and must not be reused here. V2 public video URLs have not yet been supplied, so the main description deliberately contains no video embed placeholders.
+Uploaded V2 videos, supplied by _eins0fx:
+
+- Menu demo: https://youtu.be/DOqqeunzc4Q
+- World showcase: https://youtu.be/o84M2Ek9TNA
+
+Both are embedded in the full description with Nexus `[youtube]VIDEO_ID[/youtube]` tags. Use these links in the Nexus Videos form as well. The V1 videos are separate uploads.
 
 ## Inline images
 

@@ -41,6 +41,14 @@ Keep all three files together with their original names. The thumbnail, variants
 
 Mouse and keyboard controls are shown in the CSS page. Body shape, skin wetness and physics strength are not adjustable sliders.
 
+[size=4][b]Videos[/b][/size]
+
+[youtube]DOqqeunzc4Q[/youtube]
+Seductress V2 menu demo, 1080p / 60 fps.
+
+[youtube]o84M2Ek9TNA[/youtube]
+Seductress V2 world showcase, 1080p / 60 fps.
+
 [size=4][b]In-game screenshots[/b][/size]
 
 [img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/seductress-v2.0.0/original-front.jpg[/img]

@@ -9,7 +9,7 @@ Use these files for a **new mod page**, version **2.0.0**, by **_eins0fx**. Its 
 5. [Header, screenshot order and videos](media.md).
 6. [Release comment BBCode](changelog.bbcode.txt).
 
-Paste the full description into Nexus's **View source** editor. It uses the completed header and two in-game images; it has no placeholder video IDs. Add video embeds after the V2 uploads have public URLs.
+Paste the full description into Nexus's **View source** editor. It includes the completed header, two in-game images and both uploaded V2 YouTube videos.
 
 The install ZIP is `dist/releases/CSS_Seductress_V2_eins0fx_P.zip` in the repository. The CSS runtime remains a separate requirement. Original Seductress does not need replacing or uninstalling.
 
