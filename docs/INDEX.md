@@ -34,3 +34,5 @@
 | [SDK-NOTES.md](../reference/ue4ss-sdk-d7e7826d/SDK-NOTES.md) | Exact local SDK, dependencies, hashes and build settings |
 | [conversion manifest](../local-packs/conversion-manifest.json) | Ten relocated assets, source hashes and unchanged payload hashes |
 | [prior investigation](../../investigation/2026-09-13/findings.md) | Attack-state recovery and live diagnostic evidence |
+
+- [Beacon return recovery](beacon-transition-recovery.md): same-player mesh resets, deferred restoration, menu ownership and live regression checks.

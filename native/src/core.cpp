@@ -1,6 +1,7 @@
 #include "api.hpp"
 #include "data.hpp"
 #include "engine.hpp"
+#include "recovery.hpp"
 #include <windows.h>
 #include <chrono>
 #include <optional>
@@ -23,13 +24,26 @@ struct Core {
     bool favorites_only = false;
     bool wardrobe_pending = false, wardrobe_close = false, wardrobe_refresh = false;
     bool n_down = false, escape_down = false;
-    bool inspect_pending = false;
+    bool inspect_pending = false, transition_inspect_pending = false;
     uint64_t next_poll = 0;
     char search[128]{}, preset_name[96]{};
     double last_apply_ms = 0;
     std::optional<Customization> pending_colors;
     bool color_only = false, refresh_colors = true;
-    uint64_t save_after = 0;
+    uint64_t save_after = 0, last_player_revision = 0, maintenance_after = 0;
+    Recovery recovery;
+#ifdef CSS_TRANSITION_TESTS
+    std::optional<bool> test_cursor_pending;
+#endif
+    std::string maintenance_error;
+    void sync_menu_safely() {
+        if(GetTickCount64()<maintenance_after) return;
+        try { appearance.sync_menu(); maintenance_error.clear(); }
+        catch(const std::exception& error) {
+            if(maintenance_error!=error.what()) { maintenance_error=error.what(); host.log(("Menu preview deferred: "+maintenance_error).c_str()); }
+            maintenance_after=GetTickCount64()+1000;
+        }
+    }
 
     Catalog load_catalog() const {
         return Catalog::load(root/"catalog",(root/"../../../../../Content/Paks/~mods").lexically_normal(),root/"cache/packages");
@@ -54,9 +68,15 @@ struct Core {
         if (action == "export_mappings") {
             RC::OutTheShade::generate_usmap(); report("Exported runtime mappings for asset tooling.");
         }
+        else if(action=="inspect_transition") transition_inspect_pending=true;
         else if (action == "inspect") {
             inspect_pending=true;
         }
+#ifdef CSS_TRANSITION_TESTS
+        else if(action=="test_cursor") { test_cursor_pending=command.at("visible").get<bool>(); }
+        else if(action=="test_effect") { appearance.test_effect(command.at("begin").get<bool>()); }
+        else if(action=="test_reset_mesh") { wardrobe.close(); appearance.test_reset_mesh(); }
+#endif
         else if (action == "open") wardrobe_pending = true;
         else if (action == "close") wardrobe_close = true;
         else if (action == "front") wardrobe.rotate(0,true);
@@ -137,11 +157,18 @@ struct Core {
         auto action = wardrobe.poll(delta, focused);
         if (!action.is_null()) { request(action); next_poll = 0; }
         auto now = GetTickCount64();
-        if(state.enabled && !apply_pending && state.selections.contains(appearance.shell) && appearance.repair_materials_needed()) {
-            apply_pending=true;
-            host.log("Restoring cosmetic materials after gameplay material reset");
+        if(state.enabled && !apply_pending && now>=maintenance_after) {
+            try {
+                if(state.selections.contains(appearance.shell) && appearance.repair_materials_needed()) {
+                    apply_pending=true;
+                    host.log("Restoring cosmetic materials after gameplay material reset");
+                }
+            } catch(const std::exception& error) {
+                maintenance_after=now+1000;
+                host.log(error.what());
+            }
         }
-        if(state.enabled && !apply_pending) appearance.sync_menu();
+        if(state.enabled && !apply_pending) sync_menu_safely();
         if (now < next_poll && !wardrobe_pending && !wardrobe_refresh && !apply_pending) return;
         next_poll = now + 250;
         auto command_file = root / "request.json";
@@ -153,6 +180,9 @@ struct Core {
                 request(command);
             }
         }
+#ifdef CSS_TRANSITION_TESTS
+        if(test_cursor_pending) { appearance.test_cursor(engine,*test_cursor_pending); test_cursor_pending.reset(); }
+#endif
         if (rescan_pending) {
             rescan_pending = false;
             auto updated = load_catalog();
@@ -161,7 +191,7 @@ struct Core {
             report("Catalog reloaded.");
         }
         if (restore_pending) {
-            appearance.restore(); restore_pending = false; applied_id.clear();
+            appearance.restore(); recovery.clear(); restore_pending = false; applied_id.clear();
             pending_colors.reset(); color_only=false; apply_pending=false; selected_outfit.clear(); selected_variant.clear();
             appearance.player(engine);
             if (forget_current && !appearance.shell.empty()) state.selections.erase(appearance.shell);
@@ -170,9 +200,17 @@ struct Core {
         }
         if (state.enabled || apply_pending) {
             appearance.player(engine);
-            if (appearance.shell != last_shell || appearance.pawn_name != last_pawn) {
-                last_shell = appearance.shell; last_pawn = appearance.pawn_name; applied_id.clear();
-                if (state.enabled && state.auto_apply && state.selections.contains(last_shell)) apply_pending = true;
+            const bool changed=appearance.shell!=last_shell || appearance.pawn_name!=last_pawn || appearance.player_revision!=last_player_revision;
+            if(changed) {
+                last_shell=appearance.shell; last_pawn=appearance.pawn_name; last_player_revision=appearance.player_revision;
+                applied_id.clear();
+            }
+            const bool stock_reset=appearance.repair_mesh_needed();
+            recovery.observe(state.enabled,state.auto_apply,state.selections.contains(appearance.shell),changed,stock_reset);
+            if(stock_reset || !appearance.active()) applied_id.clear();
+            if(!apply_pending && recovery.due(now) && appearance.ready_to_apply()) {
+                apply_pending=true;
+                host.log("Reconciling saved appearance after player/mesh transition");
             }
             if (apply_pending && !appearance.shell.empty()) {
                 apply_pending = false;
@@ -199,7 +237,8 @@ struct Core {
                             applied_id.clear(); appearance.restore(); throw;
                         }
                         wardrobe.sync_materials();
-                        appearance.sync_menu();
+                        sync_menu_safely();
+                        recovery.clear();
                         last_apply_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
                         state.selections[appearance.shell] = requested;
                         state.remembered_colors[requested.outfit]=requested.colors;
@@ -208,7 +247,7 @@ struct Core {
                         host.log(("Appearance verified: " + applied_id).c_str());
                         report(color_only?"Colors updated.":"Wearing " + variant->name + ".");
                         color_only=false;
-                    } else report("No playable character mesh is ready.");
+                    } else { recovery.failed(now); report("No playable character mesh is ready."); }
                 }
             }
         }
@@ -222,8 +261,13 @@ struct Core {
             wardrobe.message(message); last_wardrobe_message = message;
         }
         if (dirty && now>=save_after) save();
+        if(transition_inspect_pending) {
+            auto result=appearance.transition_state(engine); result["id"]=last_request;
+            result["wardrobe"]=wardrobe.diagnostics(); result["recovery_pending"]=recovery.pending();
+            atomic_json(root/"runtime/transition.json",result,false); transition_inspect_pending=false;
+        }
         if(inspect_pending) {
-            auto result=wardrobe.inspect(appearance.player(engine)); result["id"]=last_request;
+            auto result=wardrobe.inspect(appearance.player(engine)); result["id"]=last_request; result["transition"]=appearance.transition_state(engine);
             atomic_json(root / "runtime/inspection.json",result,false); inspect_pending=false;
         }
         publish();
@@ -233,6 +277,8 @@ struct Core {
                     {"shell", appearance.shell}, {"pawn", appearance.pawn_name}, {"mesh", appearance.current_mesh},
                     {"applied", applied_id}, {"message", message}, {"last_request", last_request},
                     {"apply_ms", last_apply_ms}, {"pid", GetCurrentProcessId()}};
+        status["recovery_pending"]=recovery.pending();
+        status["maintenance_error"]=maintenance_error;
         status["wardrobe_open"] = wardrobe.opened();
         status["wardrobe"] = wardrobe.diagnostics();
         status["material_debug"] = appearance.material_debug;
@@ -321,6 +367,7 @@ void tick(void* ptr, void* engine, float delta) noexcept {
     try { core.tick(engine, delta); }
     catch (const std::exception& error) {
         try { core.wardrobe.close(); } catch (...) {}
+        core.recovery.failed(GetTickCount64());
         core.apply_pending = false; core.pending_colors.reset(); core.color_only=false;
         core.selected_outfit.clear(); core.selected_variant.clear();
         core.report(error.what());

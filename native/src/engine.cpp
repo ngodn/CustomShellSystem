@@ -47,7 +47,7 @@ static FProperty* field(UObject* object, const wchar_t* name, size_t size) {
     if (!object) throw std::runtime_error("No live object");
     auto* property = object->GetPropertyByNameInChain(name);
     if (!property || property->GetElementSize() != static_cast<int32_t>(size) || property->GetArrayDim() != 1)
-        throw std::runtime_error("Reflected property layout does not match");
+        throw std::runtime_error("Reflected property layout does not match: "+narrow(name));
     return property;
 }
 template<typename T> static T read(UObject* object, const wchar_t* name) {
@@ -158,7 +158,7 @@ static std::vector<std::string> material_paths(UObject* component) {
         auto path=value?narrow(value->GetPathName()):std::string{};
         // Transient effects cannot be restored by asset path after collection.
         // Refuse before mutation instead of pinning an old world through a MID.
-        if(value && (!path.starts_with("/Game/") && !path.starts_with("/Engine/")))
+        if(value && (path.find(':')!=std::string::npos || path.starts_with("/Engine/Transient") || (!path.starts_with("/Game/") && !path.starts_with("/Engine/"))))
             throw std::runtime_error("A temporary material effect is active. Let it finish before changing appearance.");
         result.push_back(std::move(path));
     }
@@ -168,11 +168,20 @@ static void material(UObject* component,int index,UObject* value) {
     Call set(component,L"SetMaterial",2); set.set(L"ElementIndex",index); set.set(L"Material",value); set.run();
 }
 static void restore_materials(UObject* component,const std::vector<std::string>& paths) {
-    std::vector<UObject*> loaded;
-    for(const auto& path:paths) loaded.push_back(path.empty()?nullptr:load(path));
+    WeakObject live(component);
+    std::vector<WeakObject> loaded;
+    for(const auto& path:paths) loaded.emplace_back(path.empty()?nullptr:load(path));
+    component=live.Get();
+    if(!component) return; // Its world was released while assets loaded.
+    for(size_t i=0;i<paths.size();++i)
+        if(!paths[i].empty() && !loaded[i].Get()) throw std::runtime_error("Restoration material expired while loading");
     auto count=std::max(static_cast<int>(paths.size()),overrides(component).Num());
-    for(int i=0;i<count;++i) material(component,i,i<static_cast<int>(loaded.size())?loaded[i]:nullptr);
-    if(material_paths(component)!=paths) throw std::runtime_error("Original material read-back failed");
+    for(int i=0;i<count;++i) material(component,i,i<static_cast<int>(loaded.size())?loaded[i].Get():nullptr);
+    auto actual=material_paths(component), expected=paths;
+    // SetMaterial clears slots but does not shrink the engine's override array.
+    while(!actual.empty() && actual.back().empty()) actual.pop_back();
+    while(!expected.empty() && expected.back().empty()) expected.pop_back();
+    if(actual!=expected) throw std::runtime_error("Original material read-back failed");
 }
 static Json material_snapshot(UObject* component,UObject* mesh) {
     Json result={{"overrides",Json::array()},{"defaults",Json::array()},{"effective",Json::array()}};
@@ -224,37 +233,47 @@ UObject* Appearance::player(void* engine) {
     Call player_call(find(L"/Script/Engine.Default__GameplayStatics"), L"GetPlayerCharacter", 3);
     player_call.set(L"WorldContextObject", world); player_call.set(L"PlayerIndex", int32_t{0}); player_call.run();
     auto* pawn = player_call.get<UObject*>();
-    if (!pawn || !pawn->GetPropertyByNameInChain(L"CharacterId")) return nullptr;
+    if (!pawn || WeakObject(pawn).Get()!=pawn || !pawn->GetPropertyByNameInChain(L"CharacterId")) return nullptr;
     // FGameplayTag contains the reflected FName TagName (8 bytes in this build).
     shell = narrow(read<FName>(pawn, L"CharacterId").ToString());
     if (!shell.starts_with("CharacterId.Player.")) { shell.clear(); return nullptr; }
     pawn_name = narrow(pawn->GetFullName());
     auto* component = read<UObject*>(pawn, L"Mesh");
+    auto* controller=read<UObject*>(pawn,L"Controller");
+    if(observed_pawn_.Get()!=pawn || observed_component_.Get()!=component || observed_controller_.Get()!=controller) {
+        ++player_revision; observed_pawn_=pawn; observed_component_=component; observed_controller_=controller;
+    }
     if (component) if (auto* mesh = mesh_asset(component)) current_mesh = narrow(mesh->GetPathName());
     return pawn;
 }
 void Appearance::restore_menu() {
-    auto* component=menu_component_.Get();
-    if(component && mesh_asset(component)==menu_applied_.Get()) {
-        auto* original=load(menu_original_);
-        set_mesh(component,original);
-        restore_materials(component,menu_original_materials_);
+    auto component=menu_component_, applied=menu_applied_;
+    auto original=std::exchange(menu_original_,{});
+    auto materials=std::exchange(menu_original_materials_,{});
+    menu_component_.Reset(); menu_applied_.Reset();
+    if(auto* target=component.Get(); target && applied.Get() && mesh_asset(target)==applied.Get() && !original.empty()) {
+        auto* mesh=load(original);
+        target=component.Get();
+        if(!target || mesh_asset(target)!=applied.Get()) return;
+        set_mesh(target,mesh); restore_materials(target,materials);
     }
-    menu_component_.Reset(); menu_applied_.Reset(); menu_original_.clear(); menu_original_materials_.clear();
 }
 void Appearance::sync_menu() {
     auto* source=component_.Get();
-    if(!source || mesh_asset(source)!=applied_.Get()) { restore_menu(); return; }
+    if(!source || source!=observed_component_.Get() || mesh_asset(source)!=applied_.Get()) { restore_menu(); return; }
     Call owner(source,L"GetOwner",1); owner.run();
     auto* player=owner.get<UObject*>();
     auto* display=menu_character(player);
     // Other shell-selection previews belong to the game until that shell is worn.
     if(!display || display==player || read<FName>(display,L"CharacterId")!=read<FName>(player,L"CharacterId")) { restore_menu(); return; }
     auto* target=read<UObject*>(display,L"Mesh");
+    if(!target) { restore_menu(); return; }
     auto* before=mesh_asset(target); auto* desired=applied_.Get();
     if(!before || !desired || read<UObject*>(before,L"Skeleton")!=read<UObject*>(desired,L"Skeleton")) { restore_menu(); return; }
     if(menu_component_.Get()!=target || before!=menu_applied_.Get()) {
+        WeakObject live_target(target), live_before(before), live_desired(desired);
         restore_menu();
+        if(live_target.Get()!=target || live_before.Get()!=before || live_desired.Get()!=desired || mesh_asset(target)!=before) return;
         menu_original_=before==desired?original_:narrow(before->GetPathName());
         menu_original_materials_=before==desired?original_materials_:material_paths(target);
         menu_component_=target;
@@ -305,7 +324,83 @@ bool Appearance::repair_materials_needed() {
     }
     return true;
 }
-bool Appearance::active() const { return component_.Get() && applied_.Get(); }
+Json Appearance::transition_state(void* engine) {
+    auto* pawn=player(engine);
+    Json result={{"player_ready",pawn!=nullptr},{"mesh",current_mesh},{"shell",shell}};
+    if(!pawn) return result;
+    auto* pc=read<UObject*>(pawn,L"Controller");
+    result["controller_ready"]=pc && read<UObject*>(pc,L"Pawn")==pawn;
+    if(!pc) return result;
+    result["controller"]=narrow(pc->GetPathName());
+    for(auto name:{L"IsMoveInputIgnored",L"IsLookInputIgnored",L"IsInGameMenu"}) {
+        Call call(pc,name,1); call.run(); result[narrow(name)]=call.get<bool>();
+    }
+    auto* handler=read<UObject*>(pc,L"User Interface Handler Component");
+    if(handler) {
+        result["ui_pause_count"]=read<int32_t>(handler,L"PauseGameCounter");
+        for(auto name:{L"ActiveMenu",L"ActiveSubMenu",L"ActiveDisplayMenu",L"CurrentTransitionWidget"}) {
+            auto* value=read<UObject*>(handler,name);
+            result[narrow(name)]=value?Json(narrow(value->GetPathName())):Json(nullptr);
+        }
+    }
+    return result;
+}
+#ifdef CSS_TRANSITION_TESTS
+void Appearance::test_cursor(void* engine,bool visible) {
+    auto* pawn=player(engine); if(!pawn) throw std::runtime_error("No test player");
+    auto* pc=read<UObject*>(pawn,L"Controller");
+    auto* p=pc->GetPropertyByNameInChain(L"bShowMouseCursor");
+    if(!p || !p->IsA<FBoolProperty>()) throw std::runtime_error("Cursor test layout mismatch");
+    static_cast<FBoolProperty*>(p)->SetPropertyValueInContainer(pc,visible);
+}
+void Appearance::test_effect(bool begin) {
+    if(begin) test_reset_mesh();
+    auto* component=component_.Get();
+    if(!component || narrow(mesh_asset(component)->GetPathName())!=original_) throw std::runtime_error("Test effect requires original mesh");
+    if(begin) {
+        Call effect(component,L"CreateDynamicMaterialInstance",4);
+        effect.set(L"ElementIndex",int32_t{0}); effect.run();
+        if(!effect.get<UObject*>()) throw std::runtime_error("Test material creation failed");
+    } else restore_materials(component,original_materials_);
+}
+void Appearance::test_reset_mesh() {
+    auto* component=component_.Get();
+    if(!component || mesh_asset(component)!=applied_.Get()) throw std::runtime_error("Test requires an applied outfit");
+    auto* original=load(original_);
+    set_mesh(component,original);
+    restore_materials(component,original_materials_);
+}
+#endif
+bool Appearance::repair_mesh_needed() const {
+    auto* component=component_.Get();
+    if(!component || component!=observed_component_.Get()) return false;
+    auto* mesh=mesh_asset(component);
+    // Only reclaim the stock mesh captured for this component. An unfamiliar
+    // replacement can belong to another mod or an unfinished transformation.
+    return mesh && mesh!=applied_.Get() && narrow(mesh->GetPathName())==original_;
+}
+bool Appearance::ready_to_apply() const {
+    auto* pawn=observed_pawn_.Get(); auto* component=observed_component_.Get(); auto* pc=observed_controller_.Get();
+    if(!pawn || !component || !pc || read<UObject*>(pc,L"Pawn")!=pawn || !mesh_asset(component)) return false;
+    Call move(pc,L"IsMoveInputIgnored",1); move.run();
+    Call look(pc,L"IsLookInputIgnored",1); look.run();
+    if(move.get<bool>() || look.get<bool>()) return false;
+    auto* handler=read<UObject*>(pc,L"User Interface Handler Component");
+    if(!handler) return false;
+    auto* transition=read<UObject*>(handler,L"CurrentTransitionWidget");
+    if(transition) { Call shown(transition,L"IsInViewport",1); shown.run(); if(shown.get<bool>()) return false; }
+    Call animation(component,L"GetAnimInstance",1); animation.run();
+    if(auto* anim=animation.get<UObject*>()) {
+        Call montage(anim,L"GetCurrentActiveMontage",1); montage.run();
+        if(montage.get<UObject*>()) return false;
+    }
+    // Retained player/controller changes can keep our own color MIDs.
+    if(component==component_.Get() && mesh_asset(component)==applied_.Get()) return materials_match();
+    // World-owned dynamic effects have no stable asset path for rollback.
+    try { material_paths(component); } catch(const std::runtime_error&) { return false; }
+    return true;
+}
+bool Appearance::active() const { auto* c=component_.Get(); return c && c==observed_component_.Get() && applied_.Get() && mesh_asset(c)==applied_.Get(); }
 bool Appearance::apply(void* engine, const std::string& mesh_path, const std::map<int,std::string>& materials) {
     auto* pawn = player(engine);
     if (!pawn) return false;
@@ -369,9 +464,12 @@ bool Appearance::restore() {
     auto* applied = applied_.Get();
     if (component && applied && mesh_asset(component) == applied) {
         auto* original = load(original_);
-        set_mesh(component, original);
-        restore_materials(component,original_materials_);
-        material_debug=material_snapshot(component,original);
+        component=component_.Get();
+        if(component && mesh_asset(component)==applied_.Get()) {
+            set_mesh(component, original);
+            restore_materials(component,original_materials_);
+            if(component_.Get()==component) material_debug=material_snapshot(component,original);
+        }
     }
     color_mids_.clear(); color_targets_.clear(); color_textures_.clear(); last_colors_.clear(); color_outfit_.clear();
     expected_materials_.clear();
@@ -536,6 +634,32 @@ struct Layout {
     }
 };
 }
+static UObject* actor_world(UObject* actor) {
+    if(!actor) return nullptr;
+    Call level(actor,L"GetLevel",1); level.run();
+    auto* value=level.get<UObject*>(); return value?read<UObject*>(value,L"OwningWorld"):nullptr;
+}
+static bool game_owns_ui(UObject* pc) {
+    if(!pc) return true;
+    Call menu(pc,L"IsInGameMenu",1); menu.run();
+    if(menu.get<bool>()) return true;
+    auto* handler=read<UObject*>(pc,L"User Interface Handler Component");
+    if(!handler || read<int32_t>(handler,L"PauseGameCounter")>0) return true;
+    for(auto name:{L"CurrentTransitionWidget",L"ActiveReadText"}) {
+        if(auto* widget=read<UObject*>(handler,name)) {
+            Call shown(widget,L"IsInViewport",1); shown.run(); if(shown.get<bool>()) return true;
+        }
+    }
+    // Includes conversations and interaction menus outside the inventory.
+    Call none(handler,L"NoActiveMenu",1); none.run();
+    return !none.get<bool>();
+}
+static bool input_blocked(UObject* pc) {
+    for(auto name:{L"IsMoveInputIgnored",L"IsLookInputIgnored"}) {
+        Call ignored(pc,name,1); ignored.run(); if(ignored.get<bool>()) return true;
+    }
+    return false;
+}
 void Wardrobe::open(void* engine,const Catalog& catalog,const State& state,Appearance& appearance,const std::string& message_text,const fs::path& assets) {
     auto* pawn=appearance.player(engine);
     if (!pawn) throw std::runtime_error("Load a shell in the game world to open the wardrobe.");
@@ -548,9 +672,10 @@ void Wardrobe::open(void* engine,const Catalog& catalog,const State& state,Appea
     auto* cursor=cursor_property(pc);
     if(!refresh) {
         old_cursor_=cursor->GetPropertyValueInContainer(pc);
-        if (old_cursor_) throw std::runtime_error("Close the current game menu before opening the wardrobe.");
+        if (game_owns_ui(pc)) throw std::runtime_error("Close the current game menu or wait for the transition before opening CSS.");
+        if(input_blocked(pc)) throw std::runtime_error("Wait for the current interaction to finish before opening CSS.");
     }
-    controller_=pc; pawn_=pawn;
+    controller_=pc; pawn_=pawn; world_=actor_world(pawn);
     try {
         auto* serif=load("/Game/Sparta/UI/Fonts/CrimsonText-Regular_Font.CrimsonText-Regular_Font");
         auto* root=construct(L"/Script/UMG.UserWidget",pc); root_=root;
@@ -850,7 +975,7 @@ void Wardrobe::camera_update() {
 }
 void Wardrobe::camera_close() {
     auto* actor=camera_.Get(); auto* pc=controller_.Get();
-    if(actor && pc && view_target(pc)==actor) {
+    if(actor && pc && world_.Get() && actor_world(pc)==world_.Get() && view_target(pc)==actor) {
         auto* previous=view_before_.Get();
         if(!previous) previous=pawn_.Get();
         if(previous) set_view(pc,previous);
@@ -880,12 +1005,12 @@ void Wardrobe::protect() {
     auto* tick=full_tick(pc);
     full_tick_before_=tick->GetPropertyValueInContainer(pc);
     full_tick_changed_=true; tick->SetPropertyValueInContainer(pc,true);
-    if(!paused(pc)) { owns_pause_=true; pause_world(pc,true); }
+    if(!paused(pc)) { owns_pause_=true; pause_world(world_.Get(),true); }
 }
 void Wardrobe::unprotect() {
     auto* pc=controller_.Get();
-    if(pc && owns_pause_) pause_world(pc,false);
-    owns_pause_=false;
+    bool release=std::exchange(owns_pause_,false);
+    if(auto* world=world_.Get(); world && release && (!pc || actor_world(pc)!=world || !game_owns_ui(pc))) pause_world(world,false);
     if(pc && full_tick_changed_) full_tick(pc)->SetPropertyValueInContainer(pc,full_tick_before_);
     full_tick_changed_=false;
 }
@@ -1113,22 +1238,22 @@ void Wardrobe::preview_close() {
     preview_.Reset(); preview_mesh_.Reset(); preview_length_=0; preview_animation_.clear(); preview_moving_=false;
 }
 void Wardrobe::close() {
-    if(auto* root=root_.Get()) invoke(root,L"RemoveFromParent");
+    std::exception_ptr error;
+    try { if(auto* root=root_.Get()) invoke(root,L"RemoveFromParent"); } catch(...) { error=std::current_exception(); }
     root_.Reset(); status_.Reset(); hits_.clear(); rows_.clear(); sliders_.clear(); color_title_.Reset(); color_swatch_.Reset();
     // Restore gameplay input even if a camera cleanup operation fails.
-    std::exception_ptr error;
     try { preview_close(); } catch(...) { error=std::current_exception(); }
     try { camera_close(); } catch(...) { if(!error) error=std::current_exception(); }
     try { unprotect(); } catch(...) { if(!error) error=std::current_exception(); }
     if(owns_input_) {
-        if(auto* pc=controller_.Get()) {
+        try { if(auto* pc=controller_.Get(); pc && world_.Get() && actor_world(pc)==world_.Get() && read<UObject*>(pc,L"Pawn")==pawn_.Get() && !game_owns_ui(pc) && !input_blocked(pc)) {
             Call mode(find(L"/Script/UMG.Default__WidgetBlueprintLibrary"),L"SetInputMode_GameOnly",2);
             mode.set(L"PlayerController",pc); mode.set(L"bFlushInput",true); mode.run();
             cursor_property(pc)->SetPropertyValueInContainer(pc,old_cursor_);
-        }
+        } } catch(...) { if(!error) error=std::current_exception(); }
         owns_input_=false;
     }
-    pawn_.Reset(); controller_.Reset(); right_mouse_=false;
+    pawn_.Reset(); controller_.Reset(); world_.Reset(); right_mouse_=false;
     if(error) std::rethrow_exception(error);
 }
 void Wardrobe::focus(int index) {
@@ -1154,7 +1279,9 @@ Json Wardrobe::poll(float delta,bool focused) {
     if(chord && !was_chord) return {{"action",opened()?"close":"open"}};
     if(!opened()) { if(owns_input_) close(); return {}; }
     auto* pawn=pawn_.Get(); auto* pc=controller_.Get();
-    if(!pawn || !pc || !camera_.Get() || read<UObject*>(pawn,L"Controller")!=pc || read<UObject*>(pc,L"Pawn")!=pawn) { close(); return {}; }
+    if(!pawn || !pc || !camera_.Get() || !world_.Get() || actor_world(pawn)!=world_.Get() || actor_world(pc)!=world_.Get() || read<UObject*>(pawn,L"Controller")!=pc || read<UObject*>(pc,L"Pawn")!=pawn) { close(); return {}; }
+    Call visible(root_.Get(),L"IsInViewport",1); visible.run();
+    if(!visible.get<bool>() || view_target(pc)!=camera_.Get() || game_owns_ui(pc)) { close(); return {}; }
     if(!focused) { last_input_tick_=now; return {}; }
     if(pressed&XINPUT_GAMEPAD_B) return {{"action","close"}};
     if(pressed&XINPUT_GAMEPAD_LEFT_SHOULDER) return {{"action","filter"},{"category",(category_+3)%4}};

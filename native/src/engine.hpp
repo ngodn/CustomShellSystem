@@ -18,6 +18,7 @@ public:
 };
 class Appearance {
     WeakObject component_, applied_;
+    WeakObject observed_pawn_, observed_component_, observed_controller_;
     std::string original_;
     std::vector<std::string> original_materials_;
     std::map<int,std::string> applied_materials_;
@@ -35,13 +36,22 @@ class Appearance {
     void reset_colors();
 public:
     std::string shell, pawn_name, current_mesh;
+    uint64_t player_revision = 0;
     Json material_debug;
     RC::Unreal::UObject* player(void* engine);
     bool apply(void* engine, const std::string& mesh_path, const std::map<int,std::string>& materials = {});
     bool restore();
     bool active() const;
     bool repair_materials_needed();
+    bool repair_mesh_needed() const;
+    bool ready_to_apply() const;
     void sync_menu();
+    Json transition_state(void* engine);
+#ifdef CSS_TRANSITION_TESTS
+    void test_reset_mesh();
+    void test_effect(bool begin);
+    void test_cursor(void* engine, bool visible);
+#endif
     void customize(const Outfit&, const Customization&);
 };
 // All widgets and input ownership stay on the game thread. No widget delegates
@@ -49,7 +59,7 @@ public:
 class Wardrobe {
     struct Hit { WeakObject widget; Json action; bool down = false; };
     struct Row { Json wear, favorite, previous, next, save; WeakObject marker; };
-    WeakObject root_, controller_, pawn_, status_;
+    WeakObject root_, controller_, pawn_, status_, world_;
     std::vector<Hit> hits_;
     std::vector<Row> rows_;
     struct Slider { WeakObject widget, label; Json action; float previous=0; bool scalar=false; };
