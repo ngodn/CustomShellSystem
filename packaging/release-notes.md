@@ -18,3 +18,7 @@ The ZIP contains one loader DLL, one core DLL and the required wardrobe artwork.
 Requires UE4SS `v3.0.1-1028-gd7e7826d` with the GameShippingWin64 ABI. Install outfit packages separately under `MortalShell2/Content/Paks/~mods/`. Press **N** or **View/Back + Y** to open CSS after loading a save.
 
 The wardrobe preview can still differ from gameplay and inventory lighting. That issue remains open.
+
+The [Python converter](https://github.com/ngodn/CustomShellSystem/blob/main/tools/css_convert.py) is available in the source, with [package instructions](https://github.com/ngodn/CustomShellSystem/blob/main/docs/css-packages.md) and a [variant workflow](https://github.com/ngodn/CustomShellSystem/blob/main/docs/porting-variants.md). It converts compatible cooked Mortal Shell II outfit packs; some mods need material, dependency or color-mask adjustments and in-game testing.
+
+I'll publish a full CSS modding guide once the framework and package format are stable.

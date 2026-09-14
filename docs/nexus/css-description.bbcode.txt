@@ -1,0 +1,96 @@
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-nexus-header-v2.png[/img][/center]
+
+I built Custom Shell System to let you change your appearance without changing your shell's abilities. Pick an outfit, choose a variant, adjust its colors and save the looks you want to keep.
+
+[b]CSS is the wardrobe system. Install UE4SS and CSS outfit packages separately.[/b] The outfits in the screenshots are not included in this download.
+
+[size=4][b]What you can do[/b][/size]
+[list]
+[*]Browse your installed outfits in a scrolling list, with mouse and controller support.
+[*]Switch outfit variants, use preset palettes or adjust individual parts with RGB sliders.
+[*]Mark favorites and keep three saved looks.
+[*]Orbit, zoom and frame an animated character preview while gameplay is paused.
+[*]Restore your original appearance or reset an outfit's colors.
+[/list]
+
+Available variants and color controls depend on the outfit package. CSS saves your choices separately from the game save. You do not need to unlock all shells, weapons or seals.
+
+[size=4][b]Install[/b][/size]
+[list=1]
+[*]Close the game.
+[*]Install [url=https://www.nexusmods.com/mortalshell2/mods/45?tab=files]UE4SS for MS2 by Framecore[/url]. CSS uses UE4SS v3.0.1-1028-gd7e7826d, included in the verified main-file bundle version 1.1.
+[*]Extract the CustomShellSystem folder from the CSS ZIP into MortalShell2/Binaries/Win64/ue4ss/Mods/.
+[*]Install your chosen CSS outfit packages into MortalShell2/Content/Paks/~mods/, following each outfit's instructions.
+[*]Launch the game, load a save and press [b]N[/b] or [b]View/Back + Y[/b]. Select an outfit to wear it.
+[/list]
+
+Check that the loader is at [b]ue4ss/Mods/CustomShellSystem/dlls/main.dll[/b], without an extra nested folder. Keep each outfit's .pak, .utoc and .ucas files together, with their _P suffixes intact. Restart the game after adding or replacing outfit packages.
+
+[size=4][b]Controls[/b][/size]
+
+[b]Mouse and keyboard[/b]
+[list]
+[*]N: open or close. Esc: close.
+[*]Mouse wheel or scrollbar: browse. Click an outfit to wear it, its arrows to change variants, or its star to favorite it.
+[*]All / Fav / Looks / Color: change section.
+[*]Right mouse drag: orbit. W/S: zoom. E/Q: raise or lower the view. Reset view: return to the default framing.
+[/list]
+
+[b]Controller[/b]
+[list]
+[*]View/Back + Y: open or close. B: close.
+[*]D-pad up/down: select a row. Left/right: change variants or adjust a color control. The list scrolls with your selection.
+[*]A: wear the selected outfit, or reset the selected part when on a color channel. Y: favorite.
+[*]LB/RB: change section. X: open Looks, or save/replace a look in that section.
+[*]Right stick: orbit. Vertical is inverted by default. Click the stick to reset the view.
+[*]Left stick: zoom and horizontal framing. RT/LT: raise or lower the view.
+[/list]
+
+[size=4][b]Updating and compatibility[/b][/size]
+
+Close the game and replace the CSS runtime files. [b]Keep CustomShellSystem/state/[/b] to retain favorites, saved looks and colors. The ZIP contains no personal state and only one loader and one core DLL.
+
+Install outfits marked as CSS-compatible. Regular mesh replacements do not appear in the wardrobe automatically. Replacers that overwrite the game's base meshes or materials can affect CSS outfits that use those assets.
+
+[b]Wardrobe lighting is still an open issue.[/b] The preview can look washed out, darker or glossier than gameplay or inventory. Animation, cloth and clipping also depend on the outfit. If you find a problem, please include your CSS version, outfit, active gameplay shell and steps to reproduce it. A screenshot or recording helps me track it down.
+
+To remove CSS, close the game and delete CustomShellSystem from ue4ss/Mods/. Outfit packages are separate and can be removed from ~mods if no longer needed.
+
+[size=4][b]For modders: source and converter[/b][/size]
+
+I've made the [url=https://github.com/ngodn/CustomShellSystem]CSS source[/url] and [url=https://github.com/ngodn/CustomShellSystem/blob/main/tools/css_convert.py]Python converter[/url] available on GitHub. The converter accepts cooked Mortal Shell II .pak/.utoc/.ucas files and builds a CSS package with metadata, a thumbnail and optional color recipes.
+
+Clone the repository and use Python 3.14, retoc, repak and your local game files. From the repository folder:
+
+[code]python3 tools/css_convert.py "/path/to/original-mod" --name "My Outfit" --author "YourName" --id yourname.myoutfit --thumbnail "/path/to/thumbnail.png" --game "/path/to/MortalShell2" --retoc "/path/to/retoc" --repak "/path/to/repak" --output "./dist"[/code]
+
+Use a square PNG for the thumbnail; 512 x 512 is recommended. The default output name is [b]CSS_My_Outfit_YourName_P[/b]. Keep the same package ID when updating it.
+
+[b]Some mods need adjustments before they work correctly.[/b] These can include material-slot mappings, missing dependencies, skeleton compatibility and color masks. Alternate source packs can be combined with --variant-sources; author-defined colors use --colors or a recipe for each variant. The converter does not automatically create color regions or fit assets from another game to Mortal Shell II.
+
+The [url=https://github.com/ngodn/CustomShellSystem/blob/main/docs/css-packages.md]package instructions[/url], [url=https://github.com/ngodn/CustomShellSystem/blob/main/docs/porting-variants.md]variant workflow[/url] and [url=https://github.com/ngodn/CustomShellSystem/blob/main/docs/colors.md]color notes[/url] cover the current tools. Test the result in-game before sharing it, and keep the original authors credited.
+
+I'll publish a full CSS modding guide once the framework and package format are stable. For now, the source and working notes are available, but details may change as I improve CSS.
+
+[size=4][b]Screenshots and demo[/b][/size]
+
+[url=https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/seductress-inventory-polearm.png[/img][/url]
+[url=https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4]Watch the wardrobe demo, 1440p / 60 fps[/url]
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/colors-crimson.png[/img]
+Seductress with a preset palette and per-part color controls.
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/wardrobe-genessa.png[/img]
+BeauteGenessa by dantemk2. These screenshots show the earlier wardrobe layout; 0.1.2 adds a scrolling list.
+
+[size=4][b]Credits[/b][/size]
+[list]
+[*]_eins0fx: CSS development, interface and packaging.
+[*][url=https://www.nexusmods.com/stellarblade/mods/1496?tab=description]Custom Nanosuit System by DekitaRPG[/url]: inspiration for the wardrobe features and controls.
+[*]UE4SS contributors and Framecore: UE4SS and its Mortal Shell II package.
+[*]dantemk2: [url=https://www.nexusmods.com/mortalshell2/mods/161?tab=description]More Beautiful Genessa[/url] and [url=https://www.nexusmods.com/mortalshell2/mods/84?tab=files]BeauteKnightLady[/url], shown as separate outfit examples.
+[*]XTGMods: HIT2 DE Scyther, visible in the demo's outfit list.
+[*]Seductress source credits: Skirbie, dantemk2, Larian Studios and Volno's Lazy Tailor library. I adapted and packaged the outfit for CSS; it is a separate download.
+[/list]
+
+[url=https://github.com/ngodn/CustomShellSystem/releases/tag/v0.1.2]CSS 0.1.2 on GitHub[/url] | [url=https://github.com/ngodn/CustomShellSystem]Source and tools[/url]

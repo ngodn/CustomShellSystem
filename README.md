@@ -1,29 +1,41 @@
-# CSS: Custom Shell System
+# Custom Shell System (CSS) for Mortal Shell II
 
-Current runtime version: **0.1.2**. See [runtime releases](docs/releases.md) for the
-clean ZIP, installation layout and first-run verification.
+A native C++ wardrobe mod by **_eins0fx**. Change your shell's appearance without changing its abilities, with outfit variants, per-part colors, favorites, saved looks and an animated preview.
 
-A native C++23 wardrobe for Mortal Shell II, inspired by [Custom Nanosuit System](https://www.nexusmods.com/stellarblade/mods/1496?tab=description). Browse compatible outfits with variants, per-part colors, favorites, three saved-look slots, an animated character preview and controller navigation.
+I built CSS around a single wardrobe for compatible outfit packages, inspired by [Custom Nanosuit System](https://www.nexusmods.com/stellarblade/mods/1496?tab=description). Mouse, keyboard and controller controls are supported.
 
-**[Download CSS v0.1.2](https://github.com/ngodn/CustomShellSystem/releases/tag/v0.1.2)**.
-Requires [UE4SS for MS2](https://www.nexusmods.com/mortalshell2/mods/45?tab=files)
-and separate CSS outfit packages. The runtime ZIP does not include the outfits
-shown below. Seductress is a development example.
+**[Download CSS 0.1.2](https://github.com/ngodn/CustomShellSystem/releases/tag/v0.1.2)** · [Release notes](packaging/release-notes.md) · [Converter](tools/css_convert.py)
 
-Selecting an appearance preserves your current gameplay shell and abilities. The installed outfits use the game's human skeleton, which CSS checks before every mesh replacement. Weapons, seals and shells do **not** need to be unlocked for these cosmetic selections. CSS does not edit the game save or unlock progression.
+## Install
+
+1. Close Mortal Shell II and install [UE4SS for MS2](https://www.nexusmods.com/mortalshell2/mods/45?tab=files). CSS targets `v3.0.1-1028-gd7e7826d`, included in the verified main-file bundle version 1.1.
+2. Extract `CustomShellSystem` from the runtime ZIP into `MortalShell2/Binaries/Win64/ue4ss/Mods/`.
+3. Install CSS outfit packages separately into `MortalShell2/Content/Paks/~mods/`, following each package's instructions.
+4. Launch the game, load a save and press **N** or **View/Back + Y**. Select an outfit to wear it.
+
+The runtime ZIP includes one loader DLL, one core DLL and the required interface artwork. It does not include UE4SS, outfit packages or personal state. Keep `CustomShellSystem/state/` when updating to retain your choices. Restart the game after adding or replacing outfit containers.
+
+## Features
+
+- Scroll through installed outfits and their mesh variants.
+- Use preset palettes or adjust author-configured parts with RGB sliders.
+- Keep favorites and three saved looks.
+- Orbit, zoom and frame an animated preview while gameplay is paused.
+- Restore your original appearance or reset colors.
+
+CSS stores its settings separately from the game save. It does not unlock equipment or change your gameplay shell. Compatible cosmetic outfits do not require unlocking all shells, weapons or seals.
 
 ## See it in action
 
 [![Seductress with a polearm in the game inventory preview](docs/media/v0.1.1/seductress-inventory-polearm.png)](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4)
 
 **[Watch the 63-second wardrobe demo (MP4)](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4)**.
-Click the image or link to open the recording. The Seductress development
-outfit is shown in the game inventory above; outfit packages are separate
+Click the image or link to open the recording. The Seductress outfit is shown in the game inventory above; outfit packages are separate
 downloads.
 
 ![CSS preset palettes and per-part color sliders with Seductress](docs/media/v0.1.1/colors-crimson.png)
 
-Preset palettes and custom colors on the Seductress development outfit.
+Preset palettes and custom colors on the Seductress outfit.
 Editable parts depend on the installed package. Wardrobe lighting can differ
 from gameplay; this remains a known issue in 0.1.2.
 
@@ -36,11 +48,11 @@ Front view of Seductress during gameplay.
 
 ![Seductress in the inventory with Axatana selected](docs/media/v0.1.1/seductress-inventory-axatana.png)
 
-The same development outfit in the inventory with Axatana selected.
+The same outfit in the inventory with Axatana selected.
 
 ![Close side view of Seductress in gameplay](docs/media/v0.1.1/seductress-gameplay-side.png)
 
-A closer look at the Seductress development outfit in the game world.
+A closer look at the Seductress outfit in the game world.
 
 ![BeauteGenessa in the CSS wardrobe](docs/media/v0.1.1/wardrobe-genessa.png)
 
@@ -56,7 +68,7 @@ Adjust a selected part or reset its colors.
 
 ![Seductress in gameplay with the wardrobe closed](docs/media/v0.1.1/seductress-gameplay.png)
 
-The Seductress development outfit in the game world.
+The Seductress outfit in the game world.
 
 </details>
 
@@ -85,52 +97,52 @@ mod links and reusable image/video links.
 
 Right-stick vertical movement is inverted by default; horizontal movement is normal. Wardrobe changes keep the existing camera. They recenter a moved view, but leave already-default framing untouched.
 
-CSS pauses gameplay while open. A separate, collision-free visual copy plays a full-body idle using real elapsed time, with animation notifies suppressed. The real player's animation instance remains in place. Closing CSS removes the copy, restores visibility and input, and releases only the pause CSS acquired. This is a wardrobe idle preview, not an animation-library editor.
+Gameplay pauses while CSS is open. The preview stays animated, and closing the wardrobe returns control to the game.
 
-See the [color guide](docs/colors.md) for Original restoration, custom skin/face/eye controls, saved colors and authoring color-enabled outfit packages.
+## For modders
 
-## State and development
+The C++ source and Python converter are available in this repository. CSS is still under development. I'll publish a full modding guide once the framework and package format are stable; the working technical notes are available now.
 
-The installed mod lives in:
+The converter handles cooked Mortal Shell II appearance mods. It accepts a directory or `.pak` / `.utoc` / `.ucas` inputs and creates a package with author metadata and a thumbnail. It does not fit another game's meshes to the Mortal Shell II skeleton.
 
-```text
-MortalShell2/Binaries/Win64/ue4ss/Mods/CustomShellSystem/
-  state/state.json       CSS settings, selections, favorites and saved looks
-  state/state.json.bak   Previous valid state
-  catalog/              Optional developer catalogs (normal outfits embed theirs)
-  cache/packages/       Rebuildable package artwork and color-mask cache
-  assets/               Original CSS interface artwork
-  cores/                Versioned native core DLLs
-  core.json             Requested core version
-  runtime/              Live acknowledgements and diagnostics
+Use Python 3.14, retoc, repak and your local Mortal Shell II files. From the repository directory:
+
+```sh
+python3 tools/css_convert.py '/path/to/original-mod' \
+  --name 'My Outfit' --author 'YourName' --id yourname.myoutfit \
+  --thumbnail '/path/to/thumbnail.png' \
+  --game '/path/to/MortalShell2' \
+  --retoc '/path/to/retoc' --repak '/path/to/repak' \
+  --output './dist'
 ```
 
-State writes use temporary files, flushes, replacement and backup recovery. Settings include `invert_orbit_x`, `invert_orbit_y` and `auto_apply`. Edit settings with the game closed, or use the native development tab while running. Core reload reads saved settings again.
+Provide a square PNG, preferably 512 x 512. The default output is `CSS_My_Outfit_YourName_P/` containing one matching `.pak/.utoc/.ucas` trio. Keep the package ID stable across updates. Check [tool setup and dependency versions](docs/repository.md) before building the tools.
 
-From this project directory:
+Some source mods need material-slot mappings, missing-dependency repairs, skeleton checks or hand-authored color masks. Use `--variant-sources` for separate alternate packs and `--colors` for an outfit color recipe. Variant groups can each supply their own materials and colors. A successful conversion still needs in-game testing.
 
-```bash
-python3 tools/css.py build
-python3 tools/css.py reload
-python3 tools/css.py open
-python3 tools/css.py inspect
-python3 tools/css.py close
-```
+- [Package format and converter usage](docs/css-packages.md)
+- [Combining variants and handling source-specific adjustments](docs/porting-variants.md)
+- [Color recipes and masks](docs/colors.md)
+- [Native build requirements](docs/ue4ss-sdk.md)
+- [Build, install and live reload](docs/native-development.md)
 
-`reload` builds and stages only the reloadable core, refreshes PNGs and catalogs, and waits for the exact version acknowledgement from the running game. It closes an active wardrobe cleanly. Loader ABI or mounted IoStore asset changes still require a restart; native core development does not.
+The runtime is C++23, built with clang-cl and the pinned UE4SS SDK. The core supports live reload during development; installing a new loader or outfit containers requires a restart. [Runtime release packaging](docs/releases.md) documents clean builds and fresh-state checks.
 
-This build targets UE5.6 and the exact installed UE4SS `d7e7826d` GameShippingWin64 ABI. It uses clang-cl 22.1.8, the xwin Windows SDK, C++23 and the dynamic release CRT. The Python tools target Python 3.14. See [SDK notes](docs/ue4ss-sdk.md) before changing toolchain or UE4SS versions, and [repository conventions](docs/repository.md) for tracked files, dependency patches and local checks.
+## Compatibility and known issues
 
-Initial native runtime installation uses `python3 tools/css.py install` with the game closed and a completed build. Outfit installation is separate, using `tools/css_package.py`. The current machine has eight self-contained outfit packages installed. The old merged Beaute prototype and its loose catalog are backed up under `backups/packages-1789299191603415319`. See the package guide below for conversion and updates.
+Regular mesh replacement mods do not automatically become CSS wardrobe entries. Base-game mesh or material replacers can affect CSS outfits that reference those assets. Editable parts depend on the outfit author.
 
-## Verification and limits
+Wardrobe lighting can look different from gameplay and inventory. This remains open in 0.1.2. Cloth, secondary animation and clipping also depend on the outfit; long combat sessions, other shells and performance still need broader testing.
 
-The live checks passed for all three appearances, material restoration, animated preview bones during frozen game time, conditional camera recentering, close cleanup and core reload without restarting. The user confirmed the animation and camera now look right. Host validation includes 34 behavioral checks and 22 Python tests. Evidence and remaining checks are in [STATUS.md](docs/STATUS.md).
+If you report a problem, include your CSS version, outfit, active gameplay shell and reproduction steps. A screenshot or short recording helps. [Implementation and test status](docs/STATUS.md) tracks the current checks and limits.
 
-Death, travel, save reload, other gameplay shells, extended combat and performance profiling still need a broader regression pass. Transient material overrides are refused when their exact restoration cannot be guaranteed. Preview cloth now ticks during pause and passed the three-variant live lifecycle check. Other procedural physics and mod-specific animation behavior still need individual validation. Full CNS feature parity, independent cosmetic slots, material editing and an animation library remain unfinished.
+## Credits
 
-CSS code and interface artwork are original. CNS is the feature and interaction reference; its scripts, blueprints and artwork are not included. The converted Beaute assets are for this local installation. Both Beaute mods are credited to dantemk2, confirmed by the user. HIT2 DE Scyther is credited to XTGMods.
+- **_eins0fx**: CSS development, interface and packaging.
+- [Custom Nanosuit System by DekitaRPG](https://www.nexusmods.com/stellarblade/mods/1496?tab=description): feature and interaction inspiration.
+- UE4SS contributors and Framecore: UE4SS and its Mortal Shell II distribution.
+- **dantemk2**: the BeauteGenessa and BeauteKnightLady outfit examples.
+- **XTGMods**: HIT2 DE Scyther, shown in the demo.
+- **Skirbie, dantemk2, Larian Studios and Volno's Lazy Tailor library**: source credits for my separate Seductress adaptation.
 
-## Self-contained outfit packages
-
-Use `tools/css_convert.py` to convert `.pak` / `.utoc` / `.ucas` inputs with author metadata and an embedded thumbnail. Default naming is `CSS_${NAME}_${AUTHORorMODDER}_P`. HIT2 and both Beaute packages are built under `dist/`. See [the package guide](docs/css-packages.md) for author artwork, grouped variants, material recipes, verification and migration.
+CSS does not bundle CNS scripts, blueprints or artwork. Outfit assets are separate from the runtime ZIP. See [media credits](docs/media/README.md) and [Nexus descriptions](docs/nexus/README.md).

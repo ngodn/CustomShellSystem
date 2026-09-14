@@ -1,0 +1,21 @@
+[b]CSS 0.1.2 is available.[/b]
+
+I've added a scrolling outfit list and support for packages whose variants use different materials and color controls.
+
+[list]
+[*]Scroll with the mouse wheel or scrollbar. The D-pad keeps the selected row visible as you browse.
+[*]Outfit variants can have their own material mappings, palettes and editable parts.
+[*]CSS restores the selected appearance after beacon travel and player transitions, while allowing the game's effects and menus to finish.
+[*]Improved asset loading and color-resource cache recovery.
+[/list]
+
+Close the game before updating and [b]keep CustomShellSystem/state/[/b] to retain your favorites, looks and colors. Outfit packages remain separate. The wardrobe lighting difference is still an open issue.
+
+[url=https://github.com/ngodn/CustomShellSystem/releases/tag/v0.1.2]Download CSS 0.1.2[/url]
+
+[b]For modders:[/b] I've also made the [url=https://github.com/ngodn/CustomShellSystem/blob/main/tools/css_convert.py]Python converter[/url] available in the source. It takes cooked Mortal Shell II .pak/.utoc/.ucas inputs and creates CSS packages with author metadata and a thumbnail. You can define outfit variants and color recipes too. Some mods need material, dependency or color-mask adjustments; conversion still needs in-game testing.
+
+Start with the [url=https://github.com/ngodn/CustomShellSystem/blob/main/docs/css-packages.md]converter instructions[/url] and [url=https://github.com/ngodn/CustomShellSystem/blob/main/docs/porting-variants.md]variant workflow[/url]. I'll publish the full CSS modding guide once the framework and package format are stable.
+
+Thanks for testing and reporting problems.
+_eins0fx

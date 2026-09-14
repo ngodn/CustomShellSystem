@@ -1,0 +1,76 @@
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/seductress-v1.0.0/seductress-header.png[/img][/center]
+
+I adapted Skirbie's Baldur's Gate 3 Seductress outfit for Mortal Shell II and the CSS wardrobe, with a fitted body, flowing skirt, ornate metalwork and a Genessa-inspired headpiece. Choose the original colors, use one of four palettes or customize individual parts.
+
+[b]This download contains the Seductress outfit. Install Custom Shell System and UE4SS separately.[/b] Wearing it keeps your current shell's abilities.
+
+[size=4][b]Customization[/b][/size]
+[list]
+[*]Original colors, plus Crimson vow, Ash and gold, Midnight silver and Verdigris.
+[*]Separate color controls for Garment, Ornaments, Skin, Mask and Eyes.
+[*]Adjustable eye glow intensity.
+[*]An authored dewy skin finish.
+[*]Support for CSS favorites and saved looks.
+[/list]
+
+Select [b]Seductress[/b], then open [b]Colors[/b]. Choose Original or Reset all colors to restore the outfit's original materials. This package has one mesh variant. Body shape, skin wetness and physics strength are not adjustable sliders.
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/seductress-inventory-polearm.png[/img]
+
+[size=4][b]Requirements and installation[/b][/size]
+[list=1]
+[*]Close the game.
+[*]Install [url=https://www.nexusmods.com/mortalshell2/mods/45?tab=files]UE4SS for MS2 by Framecore[/url] and [url=https://github.com/ngodn/CustomShellSystem/releases/tag/v0.1.2]Custom Shell System[/url]. I recommend CSS 0.1.2 for its scrolling list and transition fixes.
+[*]Extract CSS_Seductress_eins0fx_P.zip and copy the included CSS_Seductress_eins0fx_P folder into Sparta/MortalShell2/Content/Paks/~mods/.
+[*]Launch the game, load a save and open CSS with [b]N[/b] or [b]View/Back + Y[/b]. Select Seductress.
+[/list]
+
+[code]Sparta/MortalShell2/Content/Paks/~mods/CSS_Seductress_eins0fx_P/
+    CSS_Seductress_eins0fx_P.pak
+    CSS_Seductress_eins0fx_P.utoc
+    CSS_Seductress_eins0fx_P.ucas[/code]
+
+Keep all three files together and preserve their _P suffixes. The thumbnail, metadata and color resources are inside the package. You do not need BG3, the original BG3 download or the BeauteGenessa replacement installed.
+
+[size=4][b]Compatibility and known issues[/b][/size]
+
+I fitted and tested Seductress with Genessa's human skeleton. CSS checks skeleton compatibility before applying an appearance; I have not tested every gameplay shell. Other CSS outfits can stay installed. Regular replacements that overwrite the game's original Genessa meshes or materials may affect this outfit.
+
+[list]
+[*]The feet can appear slightly above the ground in the 1.0.0 package. The prepared alignment revision is not included in this download.
+[*]CSS wardrobe lighting can differ from gameplay and inventory. This is still an open CSS issue.
+[*]Cloth and secondary motion use the existing game/mod animation setup. They are not a separate physics engine, and some animations may still clip.
+[/list]
+
+If something breaks, please include the Seductress version, CSS version, active gameplay shell and steps to reproduce it. A screenshot or short recording helps me find the cause.
+
+[size=4][b]Gallery[/b][/size]
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/seductress-gameplay-front.png[/img]
+Front view during gameplay.
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/seductress-gameplay-side.png[/img]
+Side view during gameplay.
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/colors-verdigris.png[/img]
+Custom colors in CSS. The header is promotional artwork; these screenshots show the in-game outfit. Weapons and the CSS interface are separate from this download.
+
+[size=4][b]Updating or removing[/b][/size]
+
+Close the game before replacing the package files, and keep only one installed copy of Seductress. Your colors and saved looks are stored by CSS.
+
+To remove it, select Original appearance in CSS, close the game and delete CSS_Seductress_eins0fx_P from ~mods. Keep CSS if you use other wardrobe outfits.
+
+[size=4][b]For modders[/b][/size]
+
+The [url=https://github.com/ngodn/CustomShellSystem]CSS source[/url] and [url=https://github.com/ngodn/CustomShellSystem/blob/main/tools/css_convert.py]converter[/url] are on GitHub. The converter packages compatible cooked Mortal Shell II mods; it does not perform the cross-game fitting used for Seductress. Materials, weights, dependencies and color masks may need individual work. See the [url=https://github.com/ngodn/CustomShellSystem/blob/main/docs/css-packages.md]current package instructions[/url]. I'll release a full CSS modding guide once the framework is stable.
+
+[size=4][b]Credits[/b][/size]
+[list]
+[*]Skirbie: original BG3 Seductress garment and fitted body.
+[*][url=https://www.nexusmods.com/mortalshell2/mods/161?tab=description]dantemk2, More Beautiful Genessa[/url]: head, rig and secondary animation reference.
+[*]Larian Studios: BG3 human female body type 1 reference.
+[*]Volno and the BG3 Lazy Tailor library: fitting and weight reference.
+[*]_eins0fx: Mortal Shell II adaptation, fitting, skin surface work, colors and CSS packaging.
+[*]UE4SS contributors and Framecore: the loader used by CSS.
+[/list]
