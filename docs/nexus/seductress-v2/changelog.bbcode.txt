@@ -1,0 +1,10 @@
+[b]CSS - Seductress Variants 2.0.0[/b]
+
+[list]
+[*]Nine selectable mesh variants in one CSS package.
+[*]Revised body proportions and garment fit.
+[*]Original colors, four palettes and five part-color controls, plus eye glow intensity.
+[*]A separate Seductress V2 wardrobe entry; the original Seductress can remain installed.
+[/list]
+
+Requires [b]CSS 0.2.0 or newer[/b] and UE4SS. With the game closed, extract the included folder into [b]Sparta/MortalShell2/Content/Paks/~mods/[/b]. Select [b]Seductress V2[/b] in Inventory → CSS. Includes nude variants.
