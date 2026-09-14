@@ -1,0 +1,47 @@
+[size=4][b]Reporting a CSS problem[/b][/size]
+
+Please include the details below so I can reproduce the problem.
+
+[list]
+[*][b]Versions:[/b] CSS version, UE4SS version and its download link, game version/store, and Windows or Linux/Proton.
+[*][b]What happened:[/b] steps to trigger it, what you expected, and whether it happens every time. Include the exact error message.
+[*][b]Outfit:[/b] CSS package name/version, selected variant and colors, and your current gameplay shell. Mention whether it happens in the game world, Inventory or the CSS tab.
+[*][b]Other mods:[/b] list your installed mods, including regular mesh replacements, cheat mods and other UE4SS mods.
+[*][b]Controls:[/b] keyboard/mouse or controller. For menu problems, include your resolution and display scaling.
+[/list]
+
+[b]Screenshots or video[/b]
+[list]
+[*]Show the full game window and the problem. For animation or transition bugs, a short recording of the steps helps.
+[*]If CSS will not open or outfits are missing, include folder screenshots with filenames and extensions visible from both locations below. Open the affected outfit's folder so I can see its .pak, .utoc and .ucas files.
+[/list]
+
+[code]MortalShell2/Binaries/Win64/ue4ss/Mods/
+MortalShell2/Content/Paks/~mods/[/code]
+
+[b]Logs[/b]
+Reproduce the problem, then copy these files before restarting the game:
+
+[code]MortalShell2/Binaries/Win64/ue4ss/
+    UE4SS.log
+    Mods/CustomShellSystem/
+        CSS.log
+        runtime/status.json
+        runtime/loader.json[/code]
+
+ZIP those files and share a download link with your report. If a file was not created, say which one. If your UE4SS installation uses a different folder, use that location instead. You do not need to upload the game files or outfit containers. You can redact your Windows username from paths.
+
+[b]Copy and fill in:[/b]
+[code]CSS version:
+UE4SS version and download link:
+Game version/store and OS:
+Outfit package/version, variant and colors:
+Gameplay shell:
+Other installed mods:
+Controls, resolution and scaling:
+Steps to reproduce:
+Expected result:
+Actual result / exact error:
+Every time or occasional:
+Screenshots/video:
+Logs link / missing log files:[/code]

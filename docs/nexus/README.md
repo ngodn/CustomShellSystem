@@ -5,6 +5,7 @@ Ready-to-paste BBCode for _eins0fx's mod pages:
 - [Custom Shell System description](css-description.bbcode.txt)
 - [CSS - Seductress description](seductress-description.bbcode.txt)
 - [CSS 0.2.0 changelog comment](css-v0.2.0-changelog.bbcode.txt)
+- [Problem reporting guide and reply template](reporting-problems.bbcode.txt)
 
 Paste the descriptions into Nexus's **View source** editor. Paste the changelog separately as a comment. The text uses first person for _eins0fx's work and plans, retains the source creators' credits, and distinguishes the CSS runtime from outfit downloads.
 
