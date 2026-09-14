@@ -63,6 +63,9 @@ void InventoryUI::detach() {
 #endif
     camera_stop();
     if(auto* tabs=tabs_.Get(); tabs && tab_.Get() && main_.Get() && active_) inventory_navigate(tabs,0);
+    if(auto* page=extension_page_.Get()) invoke(page,L"RemoveFromParent");
+    if(auto* tab=extension_tab_.Get()) invoke(tab,L"RemoveFromParent");
+    extension_tab_.Reset();extension_page_.Reset();extension_canvas_.Reset();extension_active_=false;
     if(auto* page=page_.Get()) invoke(page,L"RemoveFromParent");
     if(auto* tab=tab_.Get()) invoke(tab,L"RemoveFromParent");
     for(const auto& [widget,padding]:top_padding_) if(auto* child=widget.Get()) if(auto* slot=inventory_object(child,L"Slot")) invoke(slot,L"SetPadding",L"InPadding",padding);
@@ -95,35 +98,38 @@ Json InventoryUI::command(void* engine,const Json& command) {
         controller_=pc; main_=main; tabs_=tabs; switcher_=pages;
         for(auto* child:inventory_children(tabs)) if(auto* slot=inventory_object(child,L"Slot")) top_padding_.push_back({WeakObject(child),read<std::array<float,4>>(slot,L"Padding")});
         AssetLoadRoots roots;
-        auto* tab=inventory_create(pc,original->GetClassPrivate()); tab_=tab; roots.keep(tab);
-        for(auto name:{L"FontData",L"RootSize",L"RootScale",L"DefaultColor",L"SelectedColor",L"bUseHighlight",L"HighlightY"}) inventory_copy(tab,original,name);
-        Call convert(find(L"/Script/Engine.Default__KismetTextLibrary"),L"Conv_StringToText",2);
-        convert.set(L"InString",FString(L"CSS")); convert.run();
-        auto* p=tab->GetPropertyByNameInChain(L"Text");
-        if(!p || !p->SameType(convert.param(L"ReturnValue"))) throw std::runtime_error("Inventory title property mismatch");
-        p->CopyCompleteValue(reinterpret_cast<std::byte*>(tab)+p->GetOffset_Internal(),convert.data(convert.param(L"ReturnValue")));
-        invoke(tab,L"UpdateText"); invoke(tab,L"CommitSize"); invoke(tab,L"CommitScale");
-        auto* page=inventory_create(pc,static_cast<UClass*>(main->GetClassPrivate()->GetSuperStruct())); page_=page; roots.keep(page);
-        auto* tree=inventory_object(page,L"WidgetTree");
-        if(!tree) throw std::runtime_error("CSS page has no initialized widget tree");
-        auto* canvas=construct(L"/Script/UMG.CanvasPanel",tree); canvas_=canvas; object_property(tree,L"RootWidget",canvas);
-
-        Call add(pages,L"AddChild",2); add.set(L"content",page); add.run();
-        Call button(tabs,L"AddChildToHorizontalBox",2); button.set(L"content",tab); button.run();
+        auto create_page=[&](const wchar_t* label,WeakObject& tab_ref,WeakObject& page_ref,WeakObject& canvas_ref) {
+            auto* tab=inventory_create(pc,original->GetClassPrivate());tab_ref=tab;roots.keep(tab);
+            for(auto name:{L"FontData",L"RootSize",L"RootScale",L"DefaultColor",L"SelectedColor",L"bUseHighlight",L"HighlightY"}) inventory_copy(tab,original,name);
+            Call convert(find(L"/Script/Engine.Default__KismetTextLibrary"),L"Conv_StringToText",2);
+            convert.set(L"InString",FString(label));convert.run();
+            auto* p=tab->GetPropertyByNameInChain(L"Text");
+            if(!p || !p->SameType(convert.param(L"ReturnValue"))) throw std::runtime_error("Inventory title property mismatch");
+            p->CopyCompleteValue(reinterpret_cast<std::byte*>(tab)+p->GetOffset_Internal(),convert.data(convert.param(L"ReturnValue")));
+            invoke(tab,L"UpdateText");invoke(tab,L"CommitSize");invoke(tab,L"CommitScale");
+            auto* page=inventory_create(pc,static_cast<UClass*>(main->GetClassPrivate()->GetSuperStruct()));page_ref=page;roots.keep(page);
+            auto* tree=inventory_object(page,L"WidgetTree");if(!tree) throw std::runtime_error("Extension page has no widget tree");
+            auto* canvas=construct(L"/Script/UMG.CanvasPanel",tree);canvas_ref=canvas;object_property(tree,L"RootWidget",canvas);
+            Call add(pages,L"AddChild",2);add.set(L"content",page);add.run();
+            Call button(tabs,L"AddChildToHorizontalBox",2);button.set(L"content",tab);button.run();
+        };
+        create_page(L"CSS",tab_,page_,canvas_);
+        if(extensions_ && extensions_->ready()) create_page(L"CSSX",extension_tab_,extension_page_,extension_canvas_);
         invoke(inventory_object(tabs,L"NavigationObject"),L"GetNavigableChildren");
         dirty_=true; bind_inputs();
     } else if(action=="inventory_order") {
         inventory_navigate(tabs_.Get(),0);
         auto tabs=inventory_children(tabs_.Get()), pages=inventory_children(switcher_.Get());
-        if(tabs.size()!=4 || pages.size()!=4) throw std::runtime_error("Inventory ordering requires four pages");
+        if(tabs.size()!=(extension_tab_.Get()?5:4) || pages.size()!=tabs.size()) throw std::runtime_error("Inventory ordering requires five pages");
         auto move_second=[](auto& values,UObject* value) { auto it=std::find(values.begin(),values.end(),value); if(it==values.end()) throw std::runtime_error("CSS child is missing"); values.erase(it); values.insert(values.begin()+1,value); };
+        if(extension_tab_.Get()) {move_second(tabs,extension_tab_.Get());move_second(pages,extension_page_.Get());}
         move_second(tabs,tab_.Get()); move_second(pages,page_.Get());
         inventory_order(switcher_.Get(),pages); inventory_order(tabs_.Get(),tabs);
-        // Four titles share the original top bar. Retain native type and spacing.
+        // Five titles share the original top bar. Retain native type and spacing.
         for(auto* child:tabs) if(auto* slot=inventory_object(child,L"Slot")) {
             auto padding=top_padding_.empty()?std::array<float,4>{80,0,80,0}:top_padding_.front().second;
             for(const auto& [original,value]:top_padding_) if(original.Get()==child) padding=value;
-            padding[0]*=.75f; padding[2]*=.75f;
+            const float factor=extension_tab_.Get()?.6f:.75f; padding[0]*=factor; padding[2]*=factor;
             invoke(slot,L"SetPadding",L"InPadding",padding);
             invoke(slot,L"SetHorizontalAlignment",L"InHorizontalAlignment",uint8_t{2});
             invoke(slot,L"SetVerticalAlignment",L"InVerticalAlignment",uint8_t{2});

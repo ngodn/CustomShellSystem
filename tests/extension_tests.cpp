@@ -1,4 +1,5 @@
 #include "extension_data.hpp"
+#include "extension_storage.hpp"
 #include <fstream>
 #include <iostream>
 using namespace css;
@@ -7,7 +8,7 @@ int main() {
     unsigned checks=0;
     auto check=[&](bool ok){if(!ok) throw std::runtime_error("Extension check failed at "+std::to_string(checks));++checks;};
     auto rejects=[&](auto operation){bool threw=false;try{operation();}catch(const std::exception&){threw=true;}check(threw);};
-    auto root=fs::temp_directory_path()/"csse-tests-\u6d4b\u8bd5";
+    auto root=fs::temp_directory_path()/"cssx-tests-\u6d4b\u8bd5";
     fs::remove_all(root);fs::create_directories(root/"valid");
     std::ofstream(root/"valid/main.lua")<<"return {}";
     Json manifest={{"schema",1},{"api",1},{"id","test.extension"},{"title","Test"},{"author","Author"},{"version","1.0.0"},{"kind","lua"},{"layout","tabs"},{"entry","main.lua"}};
@@ -31,5 +32,14 @@ int main() {
         for(int i=0;i<200;++i) {page.move(-1,0);check(page.page<page.pages());check(count?page.selected<count:page.selected==0);}
         page.slide(500);check(page.page==page.pages()-1);page.slide(-500);check(page.page==0);
     }
+    Storage storage(root,{256,2});
+    for(int i=0;i<12;++i) storage.log("test.extension","info","Line with newline\ninside",{{"index",i}});
+    auto logs=root/"logs/extensions/test.extension";
+    check(fs::exists(logs/"current.jsonl"));check(fs::exists(logs/"current.jsonl.1"));check(fs::exists(logs/"current.jsonl.2"));check(!fs::exists(logs/"current.jsonl.3"));
+    for(const auto& f:fs::directory_iterator(logs)) { std::ifstream input(f.path());std::string line;while(std::getline(input,line)){auto j=Json::parse(line);check(j["extension"]=="test.extension");check(j["message"]=="Line with newline\ninside");}}
+    auto output=storage.output("test.extension","report/测试.txt","Unicode output");check(fs::exists(output));
+    rejects([&]{storage.output("test.extension","../escape.txt","bad");});
+    rejects([&]{storage.output("test.extension","NUL.txt","bad");});
+    rejects([&]{storage.log("../escape","info","bad");});
     fs::remove_all(root);std::cout<<checks<<" extension checks passed\n";
 }

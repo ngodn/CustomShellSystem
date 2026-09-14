@@ -19,6 +19,23 @@ struct Core {
     State state;
     Appearance appearance;
     InventoryUI inventory;
+    ExtensionBridge extension_bridge;
+    ExtensionClient extensions;
+    void* current_engine=nullptr;
+    bool extension_attempted=false;
+    static int extension_request(void* context,const char* bytes,CssxSink sink,void* output) {
+        auto& core=*static_cast<Core*>(context);
+        try {
+            const auto request=Json::parse(bytes);const auto op=request.at("op").get<std::string>();
+            Json result;
+            if(op=="log") {core.host.log(request.at("message").get<std::string>().c_str());}
+            else if(op=="menu.close") {core.inventory.close();result=true;}
+            else if(op=="menu.status") result=core.inventory.diagnostics();
+            else if(core.current_engine) result=core.extension_bridge.request(core.current_engine,core.appearance,request);
+            else throw std::runtime_error("Game thread is not initialized");
+            auto data=result.dump();sink(output,data.data(),data.size());return 1;
+        } catch(const std::exception& error) {auto data=Json{{"error",error.what()}}.dump();sink(output,data.data(),data.size());return 0;}
+    }
     Json inventory_command;
     bool inventory_failed=false;
     bool content_path_checked=false;
@@ -177,6 +194,13 @@ struct Core {
         } else if (action != "status") throw std::runtime_error("Unknown CSS command");
     }
     void tick(void* engine, float delta) {
+        current_engine=engine;
+        if(!extension_attempted) {
+            extension_attempted=true;
+            try {if(fs::exists(root/"cores/cssx_core.dll") || fs::exists(root/"cssx.json")) {extensions.start(root,{CSSX_ABI,sizeof(CssxHost),this,extension_request});inventory.extensions(&extensions);}}
+            catch(const std::exception& e) {host.log((std::string("CSSX startup: ")+e.what()).c_str());}
+        }
+        if(extensions.ready()) extensions.tick(delta);
         if(!content_path_checked) {
             content_path_checked=true;
             try {
@@ -392,6 +416,7 @@ void render(void* ptr) noexcept {
 bool stop(void* ptr) noexcept {
     auto& core = *static_cast<css::Core*>(ptr);
     try {
+        if(!core.extensions.stop()) {core.report("CSSX cleanup pending; reload deferred.");return false;}
         core.inventory.detach();
         core.appearance.restore(); if (core.dirty) core.save();
         core.last_pawn.clear(); core.apply_pending = core.state.enabled;

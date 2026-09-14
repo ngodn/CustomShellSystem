@@ -11,6 +11,7 @@
 # Runtime state and developer catalogs are specific to an installation.
 /state/
 /runtime/
+/logs/
 /cache/
 /cores/
 /catalog/*.json

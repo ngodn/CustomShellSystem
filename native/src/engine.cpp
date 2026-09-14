@@ -14,6 +14,7 @@
 #include <Unreal/FString.hpp>
 #include <Unreal/UnrealVersion.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
+#include <Unreal/CoreUObject/UObject/FStrProperty.hpp>
 
 namespace css {
 using namespace RC::Unreal;
@@ -507,6 +508,7 @@ bool Appearance::restore() {
 #include <algorithm>
 #include <cmath>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
+#include <Unreal/CoreUObject/UObject/FStrProperty.hpp>
 
 namespace css {
 namespace {
@@ -826,3 +828,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
 #include "inventory_ui.inl"
 
 #include "inventory_view.inl"
+
+#include "extension_engine.inl"
+
+#include "extension_view.inl"

@@ -404,6 +404,7 @@ void InventoryUI::animate(uint64_t now) {
 Json InventoryUI::dispatch(Json action,const State& state) {
     if(action.is_null()) return {};
     auto name=action.value("action","");
+    if(name.starts_with("x_")) return dispatch_extension(action);
     if(name=="ui_section") { const int next=std::clamp(action.at("section").get<int>(),0,2); if(next==section_) return {}; section_=next; enter_transition_=true; row_=0; scroll_offset_=0; if(auto* s=scroll_.Get()) invoke(s,L"SetScrollOffset",L"NewScrollOffset",0.f); dirty_=true; return {}; }
     if(name=="ui_row") { row_=std::clamp(action.at("row").get<int>(),0,std::max(0,int(rows_.size())-1)); dirty_=true; if(section_!=1 && action.value("apply",false) && !rows_.empty()) return dispatch(rows_[row_].accept,state); return {}; }
     if(name=="ui_channel") { color_channel_=(color_channel_+1)%3; dirty_=true; return {}; }
@@ -530,7 +531,10 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     auto* main=main_.Get(); auto* switcher=switcher_.Get();
     if(!main || !switcher || !page_.Get()) { detach(); return {}; }
     Call selected(switcher,L"GetActiveWidget",1); selected.run();
-    active_=inventory_bool(main,L"bOpen") && selected.get<UObject*>()==page_.Get();
+    const bool extension_before=extension_active_;
+    extension_active_=inventory_bool(main,L"bOpen") && selected.get<UObject*>()==extension_page_.Get();
+    active_=inventory_bool(main,L"bOpen") && (selected.get<UObject*>()==page_.Get() || extension_active_);
+    if(extension_before!=extension_active_) {dirty_=enter_transition_=true;hits_.clear();rows_.clear();sliders_.clear();scroll_.Reset();name_input_.Reset();}
     if(active_ && !was_active_) { appearance.player(engine); bind_inputs(); camera_start(); dirty_=enter_transition_=true; closing_=false; for(auto& b:bindings_) { b.down=true; b.repeat=now+400; } }
     if(!active_ && was_active_) { camera_stop(); closing_=false; transition_started_=0; }
     was_active_=active_;
@@ -550,7 +554,13 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         const bool gamepad=read<uint8_t>(prompt,L"InputType")==1;
         if(gamepad!=gamepad_) { gamepad_=gamepad; dirty_=true; }
     }
-    if(dirty_) build(catalog,state,appearance);
+    if(extension_active_ && extensions_ && now>=extension_check_) {
+        extension_check_=now+250;
+        auto library=extensions_->request({{"op","library"}});
+        if(library.value("revision",uint64_t{})!=extension_revision_) {extension_revision_=library.value("revision",uint64_t{});dirty_=true;}
+        extension_library_=std::move(library);
+    }
+    if(dirty_) {if(extension_active_) build_extensions();else build(catalog,state,appearance);}
     animate(GetTickCount64());
     if(!active_ || closing_) return {};
     if(!focused) { motion_.reset(); drag_pan_=drag_rotate_=false; return {}; }
@@ -575,6 +585,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         if(down && !binding.down) binding.repeat=now+360; else if(triggered) binding.repeat=now+110;
         binding.down=down;
         if(!triggered) continue;
+        if(extension_active_ && extension_input(binding.action)) return {};
         if(binding.action=="close") return dispatch({{"action","ui_close"}},state);
         if(binding.action=="reset_view") return dispatch({{"action","ui_reset_view"}},state);
         if(binding.action=="previous_section" || binding.action=="next_section") return dispatch({{"action","ui_section"},{"section",(section_+(binding.action=="next_section"?1:2))%3}},state);
@@ -610,7 +621,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     return {};
 }
 Json InventoryUI::diagnostics() const {
-    Json value={{"attached",tab_.Get()!=nullptr},{"active",active_},{"section",section_},{"row",row_},{"rows",rows_.size()},{"camera",display_.Get()!=nullptr},{"layout_size",layout_size_},{"yaw",yaw_},{"pan",pan_},{"zoom",zoom_},{"frame",frame_},{"gamepad",gamepad_}};
+    Json value={{"cssx_active",extension_active_},{"extension",extension_id_},{"extension_page",extension_paging_.page},{"attached",tab_.Get()!=nullptr},{"active",active_},{"section",section_},{"row",row_},{"rows",rows_.size()},{"camera",display_.Get()!=nullptr},{"layout_size",layout_size_},{"yaw",yaw_},{"pan",pan_},{"zoom",zoom_},{"frame",frame_},{"gamepad",gamepad_}};
     for(const auto& b:bindings_) value["bindings"][b.action]=b.keys;
     return value;
 }

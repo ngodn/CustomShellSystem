@@ -22,7 +22,7 @@ fs::path contained_file(const fs::path& root,const std::string& relative) {
     return target;
 }
 Manifest Manifest::parse(const Json& j,const fs::path& dir) {
-    if(!j.is_object() || j.value("schema",0)!=1 || j.value("api",0)!=1) throw std::runtime_error("Unsupported CSSE manifest/API version");
+    if(!j.is_object() || j.value("schema",0)!=1 || j.value("api",0)!=1) throw std::runtime_error("Unsupported CSSX manifest/API version");
     Manifest m;
     m.id=text(j,"id",96); if(!valid_id(m.id)) throw std::runtime_error("Invalid extension ID");
     m.title=text(j,"title",96); m.version=text(j,"version",32); m.author=text(j,"author",96);

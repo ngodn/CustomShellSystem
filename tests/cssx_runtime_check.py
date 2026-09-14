@@ -12,14 +12,14 @@ class API(c.Structure): _fields_=[('abi',c.c_uint32),('size',c.c_uint32),('creat
 def host_request(ctx,data,sink,out):
     response=b'{}';sink(out,c.cast(c.c_char_p(response),c.c_void_p),len(response));return 1
 lib=c.CDLL(str(Path(sys.argv[1]).resolve()))
-lib.csse_get_runtime.restype=c.POINTER(API)
-api=lib.csse_get_runtime().contents
+lib.cssx_get_runtime.restype=c.POINTER(API)
+api=lib.cssx_get_runtime().contents
 host=Host(1,c.sizeof(Host),None,host_request)
-with tempfile.TemporaryDirectory(prefix='csse-测试-') as temp:
+with tempfile.TemporaryDirectory(prefix='cssx-测试-') as temp:
     root=Path(temp)
-    for name,source in [('working','''local state=csse.request({op="state.load"})
+    for name,source in [('working','''local state=cssx.request({op="state.load"})
 return {model=function() return {sections={{id="main",title="Main",controls={{id="toggle",type="toggle",label="Toggle",value=state.on==true}}}}} end,
-event=function(e) state.on=e.value; assert(csse.request({op="state.save",value=state})); end}'''),('broken','while true do end')]:
+event=function(e) state.on=e.value; assert(cssx.request({op="state.save",value=state})); end}'''),('broken','while true do end')]:
         folder=root/'extensions'/name;folder.mkdir(parents=True)
         (folder/'main.lua').write_text(source)
         (folder/'extension.json').write_text(json.dumps(dict(schema=1,api=1,id=name,title=name,version='1.0.0',author='test',kind='lua',layout='tabs',entry='main.lua')))

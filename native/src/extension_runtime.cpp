@@ -1,5 +1,6 @@
-#include "csse/api.h"
+#include "cssx/api.h"
 #include "extension_data.hpp"
+#include "extension_storage.hpp"
 #include <fstream>
 #include <memory>
 #include <chrono>
@@ -17,7 +18,7 @@ extern "C" {
 }
 namespace css::extensions {
 namespace {
-void emit(CsseSink sink,void* output,const Json& value) { auto bytes=value.dump(); if(sink) sink(output,bytes.data(),bytes.size()); }
+void emit(CssxSink sink,void* output,const Json& value) { auto bytes=value.dump(); if(sink) sink(output,bytes.data(),bytes.size()); }
 void collect(void* output,const char* bytes,size_t size) {
     auto& value=*static_cast<std::string*>(output);
     if(size>1024*1024 || value.size()+size>1024*1024) return;
@@ -92,9 +93,9 @@ struct Runtime;
 struct Entry {
     Runtime* runtime=nullptr;
     Manifest manifest;
-    CsseHost host{};
+    CssxHost host{};
     Module module=nullptr;
-    const CsseExtension* api=nullptr;
+    const CssxExtension* api=nullptr;
     void* instance=nullptr;
     lua_State* lua=nullptr;
     size_t memory=0; int instructions=0;
@@ -115,15 +116,18 @@ struct Entry {
     void fail(const std::string& text);
 };
 struct Runtime {
-    CsseHost host;
+    CssxHost host;
     fs::path root;
+    Storage storage;
     std::vector<std::unique_ptr<Entry>> entries;
     Json errors=Json::array();
     bool stopped=false;
     uint64_t revision=1;
-    Runtime(const CsseHost& h,const fs::path& r):host(h),root(r) {
+    Runtime(const CssxHost& h,const fs::path& r):host(h),root(r),storage(r) {
         fs::create_directories(root/"extensions");
+        storage.log("cssx","info","Starting CSSX extension discovery");
         auto found=discover(root/"extensions"); errors=found.errors;
+        for(const auto& error:errors) storage.log("cssx","warning","Extension discovery rejected a directory",error);
         for(auto& manifest:found.entries) {
             auto entry=std::make_unique<Entry>(); entry->runtime=this; entry->manifest=std::move(manifest);
             try { entry->start(); } catch(const std::exception& e) { entry->fail(e.what()); }
@@ -134,7 +138,7 @@ struct Runtime {
         auto bytes=j.dump(); std::string response;
         const int ok=host.request(host.context,bytes.c_str(),collect,&response);
         auto value=response.empty()?Json::object():Json::parse(response);
-        if(!ok) throw std::runtime_error(value.value("error",std::string("CSSE host request failed")));
+        if(!ok) throw std::runtime_error(value.value("error",std::string("CSSX host request failed")));
         return value;
     }
     Json library() const {
@@ -150,12 +154,12 @@ struct Runtime {
         if(e.suspended) throw std::runtime_error(e.error);
         if(op=="model") { if(e.dirty) e.refresh(); return e.model; }
         if(op=="event") { e.event(j.at("event"));return {{"revision",revision}}; }
-        throw std::runtime_error("Unknown CSSE request");
+        throw std::runtime_error("Unknown CSSX request");
     }
     void tick(double seconds) { for(auto& e:entries) if(!e->suspended) try { e->tick(seconds); } catch(const std::exception& error) { e->fail(error.what()); } }
     bool stop() { bool ok=true;for(auto& e:entries) if(!e->stop()) ok=false;stopped=ok;return ok; }
 };
-int entry_service(void* context,const char* data,CsseSink sink,void* output) {
+int entry_service(void* context,const char* data,CssxSink sink,void* output) {
     try { if(!data || std::strlen(data)>1024*1024) throw std::runtime_error("Extension request exceeds bound");emit(sink,output,static_cast<Entry*>(context)->service(Json::parse(data)));return 1; }
     catch(const std::exception& e) { emit(sink,output,{{"error",e.what()}});return 0; }
 }
@@ -169,6 +173,8 @@ Json Entry::service(const Json& j) {
         catch(...) { auto backup=state;backup+=".bak";if(!fs::exists(backup)) throw;auto value=read_json(backup);atomic_json(state,value,false);return value; }
     }
     if(op=="state.save") { const auto& value=j.at("value");if(!value.is_object() || value.dump().size()>1024*1024) throw std::runtime_error("Invalid extension state");atomic_json(state,value);return {{"saved",true}}; }
+    if(op=="log") { runtime->storage.log(manifest.id,j.value("level",std::string("info")),j.at("message").get<std::string>(),j.value("fields",Json::object()));return nullptr; }
+    if(op=="output.write") return path_utf8(runtime->storage.output(manifest.id,j.at("file").get<std::string>(),j.at("text").get<std::string>()));
     if(op=="asset") return path_utf8(contained_file(manifest.directory,j.at("file").get<std::string>()));
     if(op=="invalidate") { dirty=true;++runtime->revision;return nullptr; }
     auto request=j;request["extension"]=manifest.id;
@@ -176,7 +182,7 @@ Json Entry::service(const Json& j) {
 }
 void Entry::fail(const std::string& text) {
     error=text;suspended=true;++runtime->revision;
-    try { runtime->service({{"op","log"},{"message",manifest.id+": "+text}}); } catch(...) {}
+    try { runtime->storage.log(manifest.id,"error",text); runtime->storage.log("cssx","error","Extension suspended",{{"id",manifest.id},{"error",text}}); } catch(...) {}
 }
 void* lua_memory(void* context,void* ptr,size_t old,size_t size) {
     auto& entry=*static_cast<Entry*>(context);
@@ -187,7 +193,7 @@ void* lua_memory(void* context,void* ptr,size_t old,size_t size) {
 }
 void lua_budget(lua_State* l,lua_Debug*) {
     auto* entry=*static_cast<Entry**>(lua_getextraspace(l));
-    if(++entry->instructions>200) luaL_error(l,"CSSE Lua instruction budget exceeded");
+    if(++entry->instructions>200) luaL_error(l,"CSSX Lua instruction budget exceeded");
 }
 int lua_service(lua_State* l) {
     auto* entry=static_cast<Entry*>(lua_touserdata(l,lua_upvalueindex(1)));
@@ -207,13 +213,13 @@ Json Entry::invoke_lua(const char* name,const Json& argument,bool optional) {
     catch(...) { lua_settop(lua,top);throw; }
 }
 void Entry::start() {
-    host={CSSE_ABI,sizeof(CsseHost),this,entry_service};
+    host={CSSX_ABI,sizeof(CssxHost),this,entry_service};
     if(manifest.kind=="native") {
         module=open_module(manifest.entry);
-        auto get=reinterpret_cast<CsseGetExtension>(symbol(module,"csse_get_extension"));
-        if(!get) throw std::runtime_error("Missing csse_get_extension export");
+        auto get=reinterpret_cast<CssxGetExtension>(symbol(module,"cssx_get_extension"));
+        if(!get) throw std::runtime_error("Missing cssx_get_extension export");
         api=get();
-        if(!api || api->abi!=CSSE_ABI || api->size<sizeof(CsseExtension) || !api->create || !api->model || !api->event || !api->stop || !api->destroy) throw std::runtime_error("Incompatible CSSE extension ABI");
+        if(!api || api->abi!=CSSX_ABI || api->size<sizeof(CssxExtension) || !api->create || !api->model || !api->event || !api->stop || !api->destroy) throw std::runtime_error("Incompatible CSSX extension ABI");
         instance=api->create(&host);if(!instance) throw std::runtime_error("Extension initialization failed");
     } else {
         if(fs::file_size(manifest.entry)>1024*1024) throw std::runtime_error("Lua entry exceeds 1 MiB");
@@ -223,7 +229,7 @@ void Entry::start() {
         *static_cast<Entry**>(lua_getextraspace(lua))=this;
         for(auto lib: {std::pair{"_G",luaopen_base},std::pair{"table",luaopen_table},std::pair{"string",luaopen_string},std::pair{"math",luaopen_math},std::pair{"utf8",luaopen_utf8}}) { luaL_requiref(lua,lib.first,lib.second,1);lua_pop(lua,1); }
         for(auto name:{"dofile","loadfile","load","collectgarbage"}) {lua_pushnil(lua);lua_setglobal(lua,name);}
-        lua_newtable(lua);lua_pushlightuserdata(lua,this);lua_pushcclosure(lua,lua_service,1);lua_setfield(lua,-2,"request");lua_setglobal(lua,"csse");
+        lua_newtable(lua);lua_pushlightuserdata(lua,this);lua_pushcclosure(lua,lua_service,1);lua_setfield(lua,-2,"request");lua_setglobal(lua,"cssx");
         const auto chunk="@"+manifest.id+"/entry.lua";
         int result=luaL_loadbufferx(lua,source.data(),source.size(),chunk.c_str(),"t");
         if(result==LUA_OK) { lua_sethook(lua,lua_budget,LUA_MASKCOUNT,10000);result=lua_pcall(lua,0,1,0);lua_sethook(lua,nullptr,0,0); }
@@ -232,6 +238,7 @@ void Entry::start() {
         table=luaL_ref(lua,LUA_REGISTRYINDEX);invoke_lua("start",nullptr,true);
     }
     refresh();
+    runtime->storage.log(manifest.id,"info","Extension initialized",{{"version",manifest.version},{"kind",manifest.kind}});
 }
 void Entry::refresh() {
     requests=0;
@@ -260,18 +267,18 @@ bool Entry::stop() {
         stopped=true;return true;
     } catch(const std::exception& e) { fail(e.what());return false; }
 }
-void* create(const CsseHost* h,const wchar_t* root) {
-    try { if(!h || h->abi!=CSSE_ABI || h->size<sizeof(CsseHost) || !h->request || !root) return nullptr;return new Runtime(*h,fs::path(root)); } catch(...) {return nullptr;}
+void* create(const CssxHost* h,const wchar_t* root) {
+    try { if(!h || h->abi!=CSSX_ABI || h->size<sizeof(CssxHost) || !h->request || !root) return nullptr;return new Runtime(*h,fs::path(root)); } catch(...) {return nullptr;}
 }
 int tick(void* p,double seconds) { try {static_cast<Runtime*>(p)->tick(seconds);return 1;} catch(...) {return 0;} }
-int request(void* p,const char* j,CsseSink sink,void* output) {
-    try {if(!j || std::strlen(j)>1024*1024) throw std::runtime_error("CSSE request exceeds bound");emit(sink,output,static_cast<Runtime*>(p)->request(Json::parse(j)));return 1;}
+int request(void* p,const char* j,CssxSink sink,void* output) {
+    try {if(!j || std::strlen(j)>1024*1024) throw std::runtime_error("CSSX request exceeds bound");emit(sink,output,static_cast<Runtime*>(p)->request(Json::parse(j)));return 1;}
     catch(const std::exception& e) {emit(sink,output,{{"error",e.what()}});return 0;}
 }
 int stop(void* p) {try{return static_cast<Runtime*>(p)->stop()?1:0;}catch(...){return 0;}}
 void destroy(void* p) {auto* runtime=static_cast<Runtime*>(p);if(runtime->stopped) delete runtime;}
 }
 }
-extern "C" CSSE_EXPORT const CsseRuntime* csse_get_runtime() {
-    static const CsseRuntime api{CSSE_ABI,sizeof(CsseRuntime),css::extensions::create,css::extensions::tick,css::extensions::request,css::extensions::stop,css::extensions::destroy};return &api;
+extern "C" CSSX_EXPORT const CssxRuntime* cssx_get_runtime() {
+    static const CssxRuntime api{CSSX_ABI,sizeof(CssxRuntime),css::extensions::create,css::extensions::tick,css::extensions::request,css::extensions::stop,css::extensions::destroy};return &api;
 }

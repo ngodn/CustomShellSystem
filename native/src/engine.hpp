@@ -6,6 +6,7 @@
 #include "data.hpp"
 #include "inventory_motion.hpp"
 #include "inventory_keys.hpp"
+#include "extension_client.hpp"
 #include <Unreal/UObject.hpp>
 #include <Unreal/FWeakObjectPtr.hpp>
 
@@ -20,6 +21,16 @@ public:
     WeakObject& operator=(RC::Unreal::UObject* object);
 };
 class Appearance;
+class ExtensionBridge {
+    std::map<uint64_t,WeakObject> objects_;
+    uint64_t next_=1;
+    RC::Unreal::UObject* resolve(const Json&);
+    Json handle(RC::Unreal::UObject*);
+    Json decode(RC::Unreal::FProperty*,void*,unsigned);
+    void encode(RC::Unreal::FProperty*,void*,const Json&,unsigned);
+public:
+    Json request(void* engine,Appearance&,const Json&);
+};
 class InventoryUI {
 #ifdef CSS_INVENTORY_DEV
     WeakObject cinema_camera_, cinema_player_, cinema_pc_, cinema_before_, cinema_hud_;
@@ -33,6 +44,17 @@ class InventoryUI {
     void cinema_command(RC::Unreal::UObject*,const Json&);
 #endif
     fs::path logo_path_;
+    ExtensionClient* extensions_=nullptr;
+    WeakObject extension_tab_, extension_page_, extension_canvas_;
+    bool extension_active_=false;
+    std::string extension_id_;
+    Json extension_model_, extension_library_, extension_confirm_;
+    extensions::LibraryPage extension_paging_;
+    int extension_section_=0, extension_row_=0;
+    uint64_t extension_revision_=0, extension_check_=0;
+    void build_extensions();
+    Json dispatch_extension(const Json&);
+    bool extension_input(const std::string&);
     WeakObject main_, tabs_, switcher_, tab_, page_, controller_;
     WeakObject canvas_, status_, scroll_, name_input_, display_, camera_component_, input_prompt_;
     struct Hit { WeakObject widget; Json action; bool down=false; };
@@ -78,6 +100,8 @@ public:
     Json diagnostics() const;
     void message(const std::string&);
     void refresh() { dirty_=true; }
+    void extensions(ExtensionClient* client) {extensions_=client;}
+    void close() {close_menu();}
     bool active() const { return active_; }
     void detach();
 };

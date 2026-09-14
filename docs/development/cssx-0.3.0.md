@@ -1,19 +1,19 @@
-# CSSE 0.3.0 implementation record
+# CSSX 0.3.0 implementation record
 
 Status: in development. No release or gameplay validation yet.
 
 ## Requested deliverables
 
-- Inventory / CSS / CSSE / Tarstones / Map navigation.
-- CSSE library: responsive 3 by 3 banner cards with title, version, sliding pagination, keyboard/mouse and controller navigation.
+- Inventory / CSS / CSSX / Tarstones / Map navigation.
+- CSSX library: responsive 3 by 3 banner cards with title, version, sliding pagination, keyboard/mouse and controller navigation.
 - Native C++ and Lua extension API with shared CSS-style and tabbed menu layouts.
-- Separate native CSSE Cheat Menu extension ported from MortalShell2Mod, preserving feature behavior and measured recovery safeguards.
-- CSS 0.3.0 runtime ZIP including CSSE core under cores; Cheat Menu ZIP for CustomShellSystem/extensions.
+- Separate native CSSX Cheat Menu extension ported from MortalShell2Mod, preserving feature behavior and measured recovery safeguards.
+- Three downloads: CSS 0.3.0 with optional CSSX detection; separate CSSX ZIP for installation inside CustomShellSystem (DLL under cores); separate CSSX Cheat Menu ZIP for CustomShellSystem/extensions. Each gets its own Nexus page. CSS works without CSSX.
 - Fresh-install, Unicode-path, malformed-extension, lifecycle and existing-outfit compatibility checks. Screenshots, no video.
 
 ## Architecture
 
-CSS keeps ownership of native Inventory integration and the character view. The CSSE core discovers extension manifests, owns their lifecycle and settings, and supplies declarative menu models. Each native extension has a versioned C ABI; UTF-8 JSON messages cross the boundary with caller-owned buffers/callbacks, without STL ownership crossing DLLs. Windows filesystem access uses native paths and LoadLibraryW. Lua uses an owned interpreter and the same host operations and menu model, not an automatic compatibility layer for arbitrary UE4SS scripts.
+CSS keeps ownership of native Inventory integration and the character view. The CSSX core discovers extension manifests, owns their lifecycle and settings, and supplies declarative menu models. Each native extension has a versioned C ABI; UTF-8 JSON messages cross the boundary with caller-owned buffers/callbacks, without STL ownership crossing DLLs. Windows filesystem access uses native paths and LoadLibraryW. Lua uses an owned interpreter and the same host operations and menu model, not an automatic compatibility layer for arbitrary UE4SS scripts.
 
 All engine requests run on the game thread. No extension callback may escape the host lifetime. Shutdown must restore reversible changes before unloading. An extension error is attributed to that extension. Native DLLs remain trusted code; this is not process isolation or crash containment.
 
@@ -44,4 +44,12 @@ Pkl currently lists Java, Kotlin, Swift and Go bindings, not C++/Lua. Its CLI ex
 
 Implemented manifest discovery, bounded menu validation, the C ABI, isolated Lua 5.4.9 interpreter lifecycle, per-extension state, native loading and 3 by 3 library navigation state. Host CTest checks pass. A real Lua interpreter test covers Unicode state paths, actions, persistence, runaway-script isolation and shutdown. Native game integration, Windows verification and the cheat port remain pending.
 
-User also requested host-owned rotated logs and export directories. Planned paths: logs/csse.jsonl, logs/extensions/<id>/current.jsonl and output/extensions/<id>/.
+User also requested host-owned rotated logs and export directories. Planned paths: logs/cssx.jsonl, logs/extensions/<id>/current.jsonl and output/extensions/<id>/.
+
+Naming: user selected CSSX (Custom Shell System Extensions) on 15 September. No CSSE ABI has shipped. The tab, core DLL and Lua API use CSSX. First extension: CSSX Cheat Menu.
+
+## Native integration checkpoint
+
+Renamed unpublished CSSE interfaces to CSSX. Windows css_core.dll and cssx_core.dll compile. The optional Inventory tab and initial library/control renderer are implemented but not yet visually tested. Game was closed at inspection. Existing CSS loader ABI remains unchanged.
+
+Central storage now writes UTC JSONL logs with size rotation and per-extension output paths. Host tests cover escaping, rotation retention, Unicode filenames, traversal and Windows reserved output names.
