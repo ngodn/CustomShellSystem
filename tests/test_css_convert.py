@@ -68,6 +68,18 @@ class RelocationTests(unittest.TestCase):
         restored,_=css.replace_references(changed,{v:k for k,v in mapping.items()})
         self.assertEqual(restored,data)
 
+    def test_numbered_package_names_and_case_preserving_inverse(self):
+        old=self.old+'_1001';mapping=css.relocation('test.numbered',[old,self.old+'_1002'])
+        references=css.reference_mapping(mapping)
+        self.assertEqual(references[self.old]+'_1001',mapping[old])
+        data=(old+'\0'+self.old.lower()+'\0').encode()
+        edits=[];changed,count=css.replace_references(data,references,edits)
+        self.assertEqual(count,2)
+        restored=bytearray(changed)
+        for offset,before in reversed(edits):restored[offset:offset+len(before)]=before
+        self.assertEqual(restored,data)
+        self.assertEqual(len(changed),len(data))
+
     def test_unrelated_assets_are_preserved(self):
         data=(self.old+'_Unrelated\0/Game/Engine/Unchanged\0').encode()
         self.assertEqual(css.replace_references(data,css.relocation('a.b',[self.old])),(data,0))
@@ -117,6 +129,46 @@ class VariantTests(unittest.TestCase):
             for bad in [{'128':self.package+'.MI_Body'},{'01':self.package+'.MI_Body'},{'0':'/Game/Absent.Material'},[]]:
                 path.write_text(json.dumps(bad))
                 with self.subTest(bad=bad),self.assertRaises(ValueError):css.material_recipe(path,info,mapping)
+
+    def test_overlapping_source_groups_are_kept_separate(self):
+        with tempfile.TemporaryDirectory() as root:
+            root=Path(root)
+            for name in ('heels','flat'):(root/name).mkdir()
+            path=root/'variants.json'
+            recipe=[{'id':n,'name':n.title(),'inputs':[n]} for n in ('heels','flat')]
+            path.write_text(json.dumps(recipe))
+            groups=css.variant_sources(path)
+            self.assertEqual([g['inputs'][0] for g in groups],[root/'heels',root/'flat'])
+            recipe[1]['id']='heels';path.write_text(json.dumps(recipe))
+            with self.assertRaisesRegex(ValueError,'unique'):css.variant_sources(path)
+
+
+class TextureSharingTests(unittest.TestCase):
+    def test_only_identical_root_textures_are_shared(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary)
+            paths=['/Game/CSS/aaaaaaaa/texture','/Game/CSS/bbbbbbbb/texture',
+                   '/Game/CSS/cccccccc/texture','/Game/CSS/dddddddd/meshref']
+            reports=[]
+            for index,path in enumerate(paths):
+                base=root/'MortalShell2/Content'/path.removeprefix('/Game/')
+                base.parent.mkdir(parents=True,exist_ok=True)
+                header=(paths[1]+'\0').encode() if index==3 else b'header'
+                files={}
+                for suffix,data in (('.uasset',header),('.ubulk',b'payload')):
+                    file=Path(str(base)+suffix);file.write_bytes(data)
+                    files[suffix]={'source_sha256':str(0 if index<2 else index)+suffix}
+                reports.append({'assets':[{'css':path,'files':files,'exports':[
+                    {'class':'SkeletalMesh' if index==3 else 'Texture2D','outer':0}]}]})
+            assets,shared=css.share_variant_textures(root,reports)
+            self.assertEqual(shared['aliases'],{paths[1]:paths[0]})
+            self.assertEqual(len(assets),3)
+            self.assertGreater(shared['legacy_bytes_saved'],0)
+            deleted=root/'MortalShell2/Content'/paths[1].removeprefix('/Game/')
+            self.assertFalse(Path(str(deleted)+'.uasset').exists())
+            mesh=root/'MortalShell2/Content'/paths[3].removeprefix('/Game/')
+            self.assertEqual(Path(str(mesh)+'.uasset').read_bytes(),(paths[0]+'\0').encode())
+            self.assertEqual(Path(str(mesh)+'.ubulk').read_bytes(),b'payload')
 
 
 if __name__=='__main__': unittest.main()

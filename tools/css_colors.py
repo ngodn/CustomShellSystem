@@ -89,21 +89,28 @@ def resource_info(path:Path) -> dict:
     if w!=h or w not in (1024,2048,4096) or data[24]!=8 or data[25] not in (4,6):raise ValueError('Dye layers require square 8-bit PNG with alpha, 1024 to 4096 pixels')
     return dict(bytes=len(data),width=w,height=h,sha256=digest(path))
 
-def embed(recipe:Path,manifest:dict,metadata:Path):
+def embed(recipe:Path,manifest:dict,metadata:Path,variant:dict|None=None):
     j=json.loads(recipe.read_text())
     if j['id']!=manifest['id']:raise ValueError('Color recipe belongs to another outfit')
     files=validate(j['colors'])
-    manifest['catalog']['outfits'][0]['colors']=j['colors'];manifest['resources']={}
-    total=0
+    (variant if variant is not None else manifest['catalog']['outfits'][0])['colors']=j['colors']
+    resources=manifest.setdefault('resources',{})
+    total=sum(info['bytes'] for info in resources.values())
     for file in sorted(files):
         source=recipe.parent/file
-        info=resource_info(source);total+=info['bytes']
+        info=resource_info(source)
+        if file in resources:
+            if resources[file]!=info:raise ValueError('Variant dye resource filename collision: '+file)
+            continue
+        total+=info['bytes']
         if total>256*1024*1024:raise ValueError('Dye resources exceed 256 MiB')
-        manifest['resources'][file]=info;shutil.copy2(source,metadata/file)
+        resources[file]=info;shutil.copy2(source,metadata/file)
 
 def verify_resources(manifest:dict,metadata:Path):
     colors=manifest['catalog']['outfits'][0].get('colors')
     files=validate(colors) if colors else set()
+    for variant in manifest['catalog']['outfits'][0].get('variants',[]):
+        if 'colors' in variant:files.update(validate(variant['colors']))
     resources=manifest.get('resources',{})
     if set(resources)!=files:raise ValueError('Dye resource manifest does not match recipe')
     total=0

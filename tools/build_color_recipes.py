@@ -25,13 +25,13 @@ def load(root,name,size):
     if len(files)!=1: raise ValueError(f'Expected exactly one {name} texture')
     return np.array(Image.open(files[0]).convert('RGBA').resize((size,size),Image.Resampling.LANCZOS),dtype=np.float32)/255
 
-def layer(path,rgb,mask,gain=1):
+def layer(path,rgb,mask,gain=1,*,optimize=True):
     # Desaturate in linear space, then encode sRGB for the engine's texture sampler.
     linear=np.where(rgb<=.04045,rgb/12.92,((rgb+.055)/1.055)**2.4)
     light=np.clip(np.max(linear,axis=2)*gain,0,1)
     gray=np.where(light<=.0031308,12.92*light,1.055*light**(1/2.4)-.055)
     out=np.concatenate((np.repeat(gray[...,None],3,axis=2),np.clip(mask,0,1)[...,None]),axis=2)
-    Image.fromarray(np.rint(out*255).astype(np.uint8)).save(path,optimize=True)
+    Image.fromarray(np.rint(out*255).astype(np.uint8)).save(path,optimize=optimize)
 
 def control(id,name,color='FFFFFF',**extra):
     return dict(id=id,name=name,default=rgba(color),**extra)

@@ -61,7 +61,8 @@ def main():
         shader.inputs['Roughness'].default_value=.52
         shader.inputs['Base Color'].default_value=(.08,.065,.05,1)
         if not matches: continue
-        data=json.loads(matches[0].read_text())
+        candidates=[json.loads(p.read_text()) for p in matches]
+        data=next((j for j in candidates if isinstance(j,dict) and 'Textures' in j),{})
         textures=data.get('Textures',{})
         if not textures and data.get('Parameters',{}).get('IsTranslucent'):
             # Runtime smoke cards have no baked color/mask to render offline.

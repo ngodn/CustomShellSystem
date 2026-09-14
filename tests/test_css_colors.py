@@ -35,6 +35,20 @@ class ColorTests(unittest.TestCase):
         for bad in variants:
             with self.subTest(colors=bad),self.assertRaises(ValueError):validate(bad)
 
+    def test_variant_resources_share_only_identical_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);metadata=root/'metadata';metadata.mkdir()
+            Image.new('RGBA',(1024,1024),(255,255,255,0)).save(root/'dye-cloth.png')
+            recipe=root/'colors.json';recipe.write_text(json.dumps(dict(id='test',colors=self.colors)))
+            variants=[{'id':'one'},{'id':'two'}]
+            manifest=dict(id='test',catalog=dict(outfits=[dict(id='test',variants=variants)]))
+            for variant in variants:embed(recipe,manifest,metadata,variant)
+            verify_resources(manifest,metadata)
+            self.assertEqual(len(manifest['resources']),1)
+            self.assertNotIn('colors',manifest['catalog']['outfits'][0])
+            Image.new('RGBA',(1024,1024),(0,0,0,255)).save(root/'dye-cloth.png')
+            with self.assertRaisesRegex(ValueError,'collision'):embed(recipe,manifest,metadata,variants[1])
+
     def test_reviewed_recipes(self):
         root=Path(__file__).resolve().parents[1]/'work/color-recipes'
         recipes=list(root.glob('*/*.colors.json'))

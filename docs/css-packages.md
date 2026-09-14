@@ -42,7 +42,7 @@ python3 tools/css_convert.py '/path/to/BeauteGenessa_P.utoc' \
 
 Shell tags are inferred from `Characters/Shells/NAME` paths. NPC-based appearances require `--shell`. The native runtime checks the actual skeleton before replacement. No weapon, seal or shell unlock is required for these cosmetic selections.
 
-Some replacements rely on material overrides on the original character. HIT2's default mesh materials resolve to `WorldGridMaterial`. Its [material recipe](../packages/recipes/hit2-materials.json) maps slots 0, 1 and 2 to body, face and hair material instances with the mod's corresponding textures. Supply `--materials RECIPE.json` to apply such overrides. The JSON maps slot numbers to original material object paths included in the input. The recipe applies to all variants; different per-variant recipes are not yet supported. CSS restores the original material overrides when removing an appearance.
+Some replacements rely on material overrides on the original character. HIT2's default mesh materials resolve to `WorldGridMaterial`. Its [material recipe](../packages/recipes/hit2-materials.json) maps slots 0, 1 and 2 to body, face and hair material instances with the mod's corresponding textures. Supply `--materials RECIPE.json` to apply such overrides. The JSON maps slot numbers to original material object paths included in the input. The single-source recipe applies to all variants. For different source containers and material recipes, use `--variant-sources` as described in [Porting variant bundles](porting-variants.md). CSS restores the original material overrides when removing an appearance.
 
 ## Embedded format v1
 
@@ -54,7 +54,7 @@ MortalShell2/Content/CSS/Packages/<id>/thumbnail.png
 MortalShell2/Content/CSS/Packages/<id>/conversion.json
 ```
 
-The manifest declares `format: CSS.Package`, `format_version: 1`, `game: MortalShell2`, `engine: 5.6`, stable `id`, `name`, `author`, `version`, `source_url` and `thumbnail_source`. It includes thumbnail dimensions/SHA-256, container filenames/byte sizes/SHA-256, and a schema-1 catalog with one outfit. Each variant declares `id`, `name`, `mesh` and optional `materials`. The outfit contains its description, compatibility tags and `thumbnail: thumbnail.png`. The conversion report records input hashes, relocations, export identities and checks. Structural conversion records `runtime_tested: false`.
+The manifest declares `format: CSS.Package`, `format_version: 1`, `game: MortalShell2`, `engine: 5.6`, stable `id`, `name`, `author`, `version`, `source_url` and `thumbnail_source`. It includes thumbnail dimensions/SHA-256, container filenames/byte sizes/SHA-256, and a schema-1 catalog with one outfit. Each variant declares `id`, `name`, `mesh` and optional `materials` and `colors`. The outfit contains its description, compatibility tags and `thumbnail: thumbnail.png`. The conversion report records input hashes, relocations, export identities and checks. Structural conversion records `runtime_tested: false`.
 
 The optional [color recipe](colors.md) and its checksummed `dye-*.png` resources are also embedded in this directory.
 
@@ -94,7 +94,7 @@ MeshExport arguments are `CONTAINERS MAPPINGS OBJECT_PATH OUTPUT [EXTRA_PACKAGE.
 
 ## Scope and verification
 
-This tool converts cooked UE5.6 appearance assets. Arbitrary gameplay mods, encrypted packs, another game's skeletons and conflicting alternate input packs are outside its scope. Short paths that cannot fit an isolated namespace, unsupported loose files, ambiguous body selection, overlapping IoStore assets and unresolved imports are refused.
+This tool converts cooked UE5.6 appearance assets. Arbitrary gameplay mods, encrypted packs, another game's skeletons and gameplay-altering input packs are outside its scope. Short paths that cannot fit an isolated namespace, unsupported loose files, ambiguous body selection, overlapping IoStore assets within one source group and unresolved imports without a reviewed repair recipe are refused.
 
 Relocation preserves encoded byte lengths and original export names. External references keep their base-game identity. Verification covers inverse relocation, export identities, retoc integrity, every cooked export/bulk payload after repacking, and all embedded metadata/image bytes. Native integration tests exercised all three output packages, cache reuse/repair and corrupt pak rejection. All three final `_P` packages loaded in-game. Their portraits appeared, all four appearances passed animation/cloth checks, and the user confirmed HIT2 movement and attacks. Broader testing remains listed in STATUS.md.
 

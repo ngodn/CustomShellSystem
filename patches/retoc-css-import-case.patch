@@ -1,0 +1,30 @@
+diff --git i/retoc/src/asset_conversion.rs w/retoc/src/asset_conversion.rs
+index 6d19b22..d59abe5 100644
+--- i/retoc/src/asset_conversion.rs
++++ w/retoc/src/asset_conversion.rs
+@@ -339,7 +339,7 @@ fn resolve_package_import_internal_new_common(package_cache: &FZenPackageContext
+     if !package_header.imported_package_names.is_empty() {
+         let expected_imported_package_name = &package_header.imported_package_names[package_import.imported_package_index as usize];
+         let actual_imported_package_name = resolved_import_package.package_name();
+-        if *expected_imported_package_name != actual_imported_package_name {
++        if !expected_imported_package_name.eq_ignore_ascii_case(&actual_imported_package_name) {
+             bail!("Imported package name mismatch: Expected to resolve imported package {}, but resolved {}", *expected_imported_package_name, actual_imported_package_name);
+         }
+     }
+diff --git i/retoc/src/logging.rs w/retoc/src/logging.rs
+index 440f467..6717a4a 100644
+--- i/retoc/src/logging.rs
++++ w/retoc/src/logging.rs
+@@ -110,7 +110,11 @@ impl Log {
+     pub fn log(&self, level: LogLevel, msg: &str) {
+         if self.is_level_enabled(level) {
+             if let Some(progress) = self.progress.lock().unwrap().as_ref() {
+-                progress.println(msg);
++                if progress.is_hidden() {
++                    self.backend.write_message(level, msg);
++                } else {
++                    progress.println(msg);
++                }
+             } else {
+                 self.backend.write_message(level, msg);
+             }

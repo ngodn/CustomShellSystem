@@ -22,6 +22,8 @@ def build(package:Path,recipe:Path,output:Path,repak:Path=DEFAULT_REPAK):
         subprocess.run([str(repak),'unpack',str(pak),'--output',str(root/'metadata')],check=True,stdout=subprocess.DEVNULL)
         metadata=root/'metadata'/PACKAGE_ROOT/manifest['id']
         for name in manifest.get('resources',{}): (metadata/name).unlink()
+        manifest['resources']={}
+        for variant in manifest['catalog']['outfits'][0]['variants']:variant.pop('colors',None)
         embed(recipe,manifest,metadata)
         manifest['version']='1.1.0'
         (metadata/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')

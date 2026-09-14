@@ -36,8 +36,13 @@ if (!string.IsNullOrEmpty(recipePath)) {
         skeletal.Materials[slot] = reference;
     }
 }
+if (Environment.GetEnvironmentVariable("CSS_AUDIT_ONLY") == "1") {
+    File.WriteAllText(Path.Combine(args[3], "effective-mesh.json"), JsonConvert.SerializeObject(mesh, Formatting.Indented));
+    Console.WriteLine("Resolved mesh and configured material overrides");
+    return;
+}
 var session = new ExportSession { MaxDegreeOfParallelism = 2 };
-session.Add(mesh);
+if (Environment.GetEnvironmentVariable("CSS_TEXTURES_ONLY") != "1") session.Add(mesh);
 foreach (var path in args.Skip(4)) {
     var exports = provider.LoadPackage(path).GetExports().ToArray();
     File.WriteAllText(Path.Combine(args[3], Path.GetFileName(path)+".json"),JsonConvert.SerializeObject(exports,Formatting.Indented));

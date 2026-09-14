@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import re
@@ -122,30 +123,70 @@ def asset_info(data: bytes) -> dict:
     package = entries[0][2]
     if not package.startswith('/Game/') or '..' in package.split('/'):
         raise ValueError(f'Only game content packages are supported: {package}')
-    if any('UnknownPackage' in n or 'UnknownExport' in n for _, _, n in entries):
-        raise ValueError(f'Unresolved imports in {package}; include the complete game containers')
+    outers={struct.unpack_from('<i',data,import_offset+i*32+16)[0] for i in range(import_count)}
+    for i in range(import_count):
+        name=fname(import_offset+i*32+20)
+        # Retoc represents unused null import slots as an unreferenced Package
+        # placeholder after duplicate imports collapse. An unresolved object or
+        # a placeholder used as an object's outer is still a conversion error.
+        if 'UnknownExport' in name or ('UnknownPackage' in name and
+            (-(i+1) in outers or fname(import_offset+i*32+8)!='Package')):
+            raise ValueError(f'Unresolved imports in {package}; include the complete game containers')
     return {'package': package, 'exports': exports}
+
+
+def repair_imports(legacy:Path,recipe:Path|None) -> list[dict]:
+    """Apply explicitly audited import-table substitutions, leaving payloads intact."""
+    if recipe is None:return []
+    records=json.loads(recipe.read_text())
+    if not isinstance(records,list) or len(records)>256:raise ValueError('Invalid import repair recipe')
+    headers={names(p.read_bytes())[0][2]:p for p in legacy.rglob('*.uasset')}
+    report=[]
+    for record in records:
+        path=headers[record['package']];data=path.read_bytes()
+        if digest(path)!=record['sha256'] or not record.get('reason'):
+            raise ValueError('Import repair does not match the audited source header')
+        entries=names(data);count,offset=struct.unpack_from('<ii',data,entries[0][1]+36)
+        if not 0<=count<=100000 or offset+count*32>len(data):raise ValueError('Invalid import table')
+        def fname(pos):
+            index,number=struct.unpack_from('<ii',data,pos)
+            return entries[index+1][2]+(f'_{number-1}' if number else '')
+        repairs=record['replacements'];out=bytearray(data)
+        for original,replacement in repairs.items():
+            a,b=int(original),replacement
+            if not 0<=a<count or type(b) is not int or not 0<=b<count:raise ValueError('Repair index outside import table')
+            old_name,new_name=fname(offset+a*32+20),fname(offset+b*32+20)
+            if old_name not in ('UnknownExport','/Engine/UnknownPackage') or 'Unknown' in new_name:
+                raise ValueError('Repairs may only replace unresolved imports with an existing resolved import')
+            out[offset+a*32:offset+(a+1)*32]=data[offset+b*32:offset+(b+1)*32]
+        asset_info(bytes(out))
+        path.write_bytes(out)
+        report.append({**record,'repaired_sha256':digest(path)})
+    return report
 
 
 def relocation(pack_id: str, packages: list[str]) -> dict[str, str]:
     prefix = '/Game/CSS/' + hashlib.sha256(pack_id.encode()).hexdigest()[:16] + '/'
     result = {}
     for old in packages:
-        budget = len(old.encode('ascii')) - len(prefix)
+        numbered=re.search(r'_(0|[1-9][0-9]*)$',old)
+        suffix=numbered[0] if numbered and int(numbered[1])<2147483647 else ''
+        base=old[:-len(suffix)] if suffix else old
+        budget = len(base.encode('ascii')) - len(prefix)
         if budget < 16:
             raise ValueError(f'Package path is too short for safe isolated relocation: {old}')
-        raw = hashlib.shake_256(old.lower().encode()).hexdigest(budget)
+        raw = hashlib.shake_256(base.lower().encode()).hexdigest(budget)
         # Bound path components for Windows while preserving every byte offset.
         chars = list(raw[:budget])
         for i in range(63, budget-1, 64):
             chars[i] = '/'
-        result[old] = prefix + ''.join(chars)
+        result[old] = prefix + ''.join(chars) + suffix
     if len({p.lower() for p in result.values()}) != len(result):
         raise ValueError('Relocated package collision')
     return result
 
 
-def replace_references(data: bytes, mapping: dict[str,str]) -> tuple[bytes,int]:
+def replace_references(data: bytes, mapping: dict[str,str], edits:list|None=None) -> tuple[bytes,int]:
     """Rewrite complete package-name references, with identical encoded lengths."""
     result = data
     count = 0
@@ -156,9 +197,23 @@ def replace_references(data: bytes, mapping: dict[str,str]) -> tuple[bytes,int]:
                 raise ValueError('Relocation cannot resize cooked data')
             # Package references may end here or continue as .Object:Subobject.
             boundary = b'(?=\x00|[.\x27\x22:])' if encoding == 'ascii' else b'(?=\x00\x00|[.\x27\x22:]\x00)'
-            result, changed = re.subn(re.escape(a)+boundary, lambda _: b, result)
+            def replace(match):
+                if edits is not None:edits.append((match.start(),match.group()))
+                return b
+            result, changed = re.subn(re.escape(a)+boundary, replace, result, flags=re.IGNORECASE)
             count += changed
     return result, count
+
+
+def reference_mapping(mapping:dict[str,str]) -> dict[str,str]:
+    result=dict(mapping)
+    for old,new in mapping.items():
+        numbered=re.search(r'_(0|[1-9][0-9]*)$',old)
+        if numbered and int(numbered[1])<2147483647:
+            root=old[:-len(numbered[0])];target=new[:-len(numbered[0])]
+            if root in result and result[root]!=target:raise ValueError('Numbered FName relocation conflict')
+            result[root]=target
+    return result
 
 
 def png_info(path: Path) -> dict:
@@ -246,7 +301,7 @@ class Converter:
             if path.suffix in ('.pak','.utoc','.ucas') and (path.name.startswith('pakchunk') or path.stem=='global'):
                 (destination/path.name).symlink_to(path)
 
-    def extract(self, packs: list[Path], game: Path) -> Path:
+    def extract(self, packs: list[Path], game: Path, includes: list[str]|None=None) -> Path:
         containers, legacy = self.work/'containers', self.work/'legacy'
         self.base_containers(game, containers)
         expected: set[str] = set()
@@ -259,7 +314,7 @@ class Converter:
                     if not match:
                         continue
                     kind, path = match.groups()
-                    if not path.startswith('../../../MortalShell2/Content/') or '..' in path[9:].split('/'):
+                    if not re.fullmatch(r'\.\./\.\./\.\./[A-Za-z0-9_-]+/Content/.+',path) or '..' in path[9:].split('/'):
                         raise ValueError(f'Unexpected source mount path: {path}')
                     if path.lower() in {p.lower() for p in expected}:
                         raise ValueError(f'Input packs overlap at {path}; convert alternative versions separately')
@@ -284,6 +339,10 @@ class Converter:
                             if target.exists():
                                 raise ValueError(f'Input packs overlap at {rel}')
                             shutil.copyfile(file,target)
+        for package in includes or []:
+            if not re.fullmatch(r'/Game/[A-Za-z0-9_/-]+',package) or '..' in package:
+                raise ValueError('Included dependency must be a game package path')
+            filters += ['-f','/Content/'+package.removeprefix('/Game/')+'.uasset']
         if filters:
             # Retoc enumerates duplicate base/mod package IDs. Serial conversion avoids concurrent writes.
             self.run(self.retoc,'to-legacy',containers,legacy,'--version','UE5_6','--no-parallel',*filters)
@@ -297,6 +356,7 @@ class Converter:
 
 
 def convert(args: argparse.Namespace) -> Path:
+    if getattr(args,'variant_sources',None):return convert_grouped(args)
     packs = discover(args.inputs)
     name = args.name or re.sub(r'_P$', '', packs[0].stem)
     stem = output_name(name,args.author,args.name_format)
@@ -315,7 +375,8 @@ def convert(args: argparse.Namespace) -> Path:
     converter = Converter(args.retoc,args.repak,work)
     game = args.game.resolve(strict=True)
     print(f'Inspecting {len(packs)} source pack(s): {name}',flush=True)
-    legacy = converter.extract(packs,game)
+    legacy = converter.extract(packs,game,getattr(args,'include',None))
+    repairs=repair_imports(legacy,getattr(args,'import_repairs',None))
     if any(legacy.rglob('*.umap')):
         raise ValueError('Map packages are not wearable appearances; remove them from the conversion input')
     assets = sorted(legacy.rglob('*.uasset'))
@@ -323,6 +384,7 @@ def convert(args: argparse.Namespace) -> Path:
         raise ValueError('Expected 1 to 4096 cooked appearance assets')
     information = {p:asset_info(p.read_bytes()) for p in assets}
     mapping = relocation(pack_id,[info['package'] for info in information.values()])
+    references=reference_mapping(mapping)
     if len(mapping) != len(assets):
         raise ValueError('Duplicate package names in source')
     variants=select_variants(list(information.values()),args.mesh,args.variant or [],name)
@@ -343,7 +405,7 @@ def convert(args: argparse.Namespace) -> Path:
         variant['mesh']=mapping[package]+'.'+object_name
         if overrides: variant['materials']=overrides
     renamed=work/'renamed'
-    report={'schema':1,'package_id':pack_id,'source_packs':[], 'assets':[], 'tools':{
+    report={'schema':1,'package_id':pack_id,'source_packs':[], 'assets':[], 'import_repairs':repairs,'tools':{
         'retoc_sha256':digest(converter.retoc),'repak_sha256':digest(converter.repak)}}
     for pack in packs:
         for suffix in ('.pak','.utoc','.ucas') if pack.suffix=='.utoc' else ('.pak',):
@@ -359,8 +421,10 @@ def convert(args: argparse.Namespace) -> Path:
             file=source.with_suffix(suffix)
             if not file.exists(): continue
             data=file.read_bytes()
-            after,changes=replace_references(data,mapping) if suffix in ('.uasset','.uexp') else (data,0)
-            restored,_=replace_references(after,{v:k for k,v in mapping.items()}) if changes else (after,0)
+            edits=[]
+            after,changes=replace_references(data,references,edits) if suffix in ('.uasset','.uexp') else (data,0)
+            restored=bytearray(after)
+            for offset,original in reversed(edits):restored[offset:offset+len(original)]=original
             if restored!=data: raise ValueError(f'Inverse relocation failed: {file}')
             target=Path(str(dest)+suffix); target.write_bytes(after)
             entry['files'][suffix]={'source_sha256':hashlib.sha256(data).hexdigest(),
@@ -428,9 +492,174 @@ def convert(args: argparse.Namespace) -> Path:
     return output
 
 
+def variant_sources(path:Path) -> list[dict]:
+    data=json.loads(path.read_text())
+    if not isinstance(data,list) or not 1<=len(data)<=256:raise ValueError('Expected 1 to 256 variant source groups')
+    seen=set()
+    for item in data:
+        id=item['id']
+        if not re.fullmatch(r'[a-z0-9][a-z0-9_-]{0,63}',id) or id in seen:
+            raise ValueError('Variant source IDs must be unique lowercase identifiers')
+        seen.add(id)
+        if not isinstance(item.get('name'),str) or not 1<=len(item['name'])<=128:raise ValueError('Variant needs a display name')
+        if not isinstance(item.get('inputs'),list) or not item['inputs']:raise ValueError('Variant needs source inputs')
+        item['inputs']=[(path.parent/p).resolve(strict=True) for p in item['inputs']]
+        for field in ('materials','colors','import_repairs'):
+            if item.get(field):item[field]=(path.parent/item[field]).resolve(strict=True)
+    return data
+
+
+def share_variant_textures(renamed:Path,reports:list[dict]) -> tuple[list[dict],dict]:
+    """Share only byte-identical, single-export textures across source groups."""
+    seen={};aliases={};assets=[copy.deepcopy(a) for r in reports for a in r['assets']]
+    for asset in assets:
+        exports=asset['exports']
+        if len(exports)!=1 or exports[0]['class']!='Texture2D' or exports[0]['outer']!=0:continue
+        key=tuple((suffix,meta['source_sha256']) for suffix,meta in sorted(asset['files'].items()))
+        if key in seen:
+            canonical=seen[key]
+            if len(asset['css'])==len(canonical):aliases[asset['css']]=canonical
+        else:seen[key]=asset['css']
+    unique=[];saved=0
+    for asset in assets:
+        path=renamed/'MortalShell2/Content'/asset['css'].removeprefix('/Game/')
+        if asset['css'] in aliases:
+            for suffix in asset['files']:
+                file=Path(str(path)+suffix);saved+=file.stat().st_size;file.unlink()
+            continue
+        for suffix,meta in asset['files'].items():
+            file=Path(str(path)+suffix)
+            if suffix in ('.uasset','.uexp') and aliases:
+                before=file.read_bytes();edits=[]
+                after,count=replace_references(before,aliases,edits)
+                restored=bytearray(after)
+                for offset,data in reversed(edits):restored[offset:offset+len(data)]=data
+                if restored!=before:raise ValueError('Shared texture reference inverse failed')
+                file.write_bytes(after)
+                meta['shared_references_changed']=count
+            meta['converted_sha256']=digest(file)
+        unique.append(asset)
+    return unique,{'aliases':aliases,'legacy_bytes_saved':saved}
+
+
+def convert_grouped(args:argparse.Namespace) -> Path:
+    """Combine verified, isolated source groups into one wardrobe entry and trio."""
+    from css_colors import verify_resources
+    from css_sources import unchanged
+    groups=variant_sources(args.variant_sources.resolve(strict=True))
+    if not args.name or not args.id:raise ValueError('Grouped conversion requires --name and a stable --id')
+    if args.mesh or args.variant or args.materials or args.colors:
+        raise ValueError('Define meshes, materials and colors within each variant source group')
+    stem=output_name(args.name,args.author,args.name_format)
+    output=args.output.resolve()/stem
+    if output.exists():raise FileExistsError(output)
+    work=args.work.resolve() if args.work else ROOT/'work'/f'convert-{stem}'
+    work.mkdir(parents=True,exist_ok=False)
+    converter=Converter(args.retoc,args.repak,work)
+    watched=[]
+    if getattr(args,'source_snapshot',None):
+        snapshot=json.loads(args.source_snapshot.read_text())
+        for source in snapshot['sources']:
+            if source['ready']:
+                directory=Path(source['directory'])
+                if any(directory.parent in p.parents for group in groups for p in group['inputs']):
+                    unchanged(directory,source['snapshot']);watched.append((directory,source['snapshot']))
+        if not watched:raise ValueError('No source snapshot covers these variant inputs')
+        if any(not any(directory.parent in p.parents for directory,_ in watched)
+               for group in groups for p in group['inputs']):
+            raise ValueError('An input variant has no stable source snapshot')
+    merged=work/'renamed';merged.mkdir()
+    metadata=work/'metadata'/PACKAGE_ROOT/args.id;metadata.mkdir(parents=True)
+    manifest=None;variants=[];reports=[];resources={}
+    for group in groups:
+        child=copy.copy(args)
+        child.variant_sources=None;child.source_snapshot=None
+        child.inputs=group['inputs'];child.id=args.id+'.'+group['id']
+        child.name=group['name'];child.work=work/group['id'];child.output=work/'children'/group['id']
+        child.mesh=group.get('mesh');child.variant=[]
+        child.materials=group.get('materials');child.colors=group.get('colors')
+        child.include=group.get('include',[]);child.import_repairs=group.get('import_repairs')
+        child.shell=group.get('shell',args.shell)
+        if child.colors:
+            # Source recipes belong to the public wardrobe entry. Child packages
+            # are only verification stages, with their own isolated asset IDs.
+            recipe=json.loads(child.colors.read_text())
+            if recipe['id']!=args.id:raise ValueError('Variant recipe belongs to another outfit')
+            recipe['id']=child.id
+            recipe_dir=work/(group['id']+'-colors');recipe_dir.mkdir()
+            for file in child.colors.parent.glob('dye-*.png'):(recipe_dir/file.name).symlink_to(file.resolve())
+            child.colors=recipe_dir/'colors.json';child.colors.write_text(json.dumps(recipe))
+        convert(child)
+        child_meta=child.work/'metadata'/PACKAGE_ROOT/child.id
+        current=json.loads((child_meta/'manifest.json').read_text())
+        report=json.loads((child_meta/'conversion.json').read_text());reports.append(report)
+        if manifest is None:manifest=copy.deepcopy(current)
+        outfit=current['catalog']['outfits'][0]
+        if len(outfit['variants'])!=1:raise ValueError('A source group must select one body mesh')
+        variant=outfit['variants'][0];variant['id']=group['id'];variant['name']=group['name']
+        if 'colors' in outfit:variant['colors']=outfit['colors']
+        variants.append(variant)
+        for name,info in current.get('resources',{}).items():
+            if name in resources and resources[name]!=info:raise ValueError('Variant color filename collision: '+name)
+            if name not in resources:shutil.copy2(child_meta/name,metadata/name)
+            resources[name]=info
+        for file in (child.work/'renamed').rglob('*'):
+            if not file.is_file():continue
+            target=merged/file.relative_to(child.work/'renamed')
+            if target.exists():
+                if digest(target)!=digest(file):raise ValueError('Variant asset or shader collision: '+str(target))
+                continue
+            target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(file,target)
+    combined_assets,shared=share_variant_textures(merged,reports)
+    print(f'Shared {len(shared["aliases"])} identical textures ({shared["legacy_bytes_saved"]//1048576} MiB)',flush=True)
+    stage=work/'package';stage.mkdir()
+    target=stage/(stem+'.utoc')
+    converter.run(converter.retoc,'to-zen',merged,target,'--version','UE5_6')
+    converter.run(converter.retoc,'verify',target)
+    checks=work/'check-containers';converter.base_containers(args.game.resolve(),checks)
+    for suffix in ('.utoc','.ucas'):(checks/(stem+suffix)).symlink_to(target.with_suffix(suffix))
+    converter.run(converter.retoc,'to-legacy',checks,work/'check','--version','UE5_6','--no-parallel','--no-shaders','-f','/CSS/')
+    for asset in combined_assets:
+        path=work/'check/MortalShell2/Content'/asset['css'].removeprefix('/Game/')
+        info=asset_info(Path(str(path)+'.uasset').read_bytes())
+        if info['package']!=asset['css'] or info['exports']!=asset['exports']:raise ValueError('Combined package export mismatch')
+        for suffix,info in asset['files'].items():
+            if suffix!='.uasset' and digest(Path(str(path)+suffix))!=info['converted_sha256']:
+                raise ValueError('Combined variant payload changed')
+    manifest.update(id=args.id,name=args.name,version=args.package_version,resources=resources)
+    outfit=manifest['catalog']['outfits'][0]
+    outfit.update(id=args.id,name=args.name,description=args.description or '',variants=variants)
+    outfit.pop('colors',None)
+    manifest['containers']={suffix:{'file':stem+suffix,'bytes':target.with_suffix(suffix).stat().st_size,
+                                  'sha256':digest(target.with_suffix(suffix))} for suffix in ('.utoc','.ucas')}
+    shutil.copy2(args.thumbnail,metadata/'thumbnail.png')
+    verify_resources(manifest,metadata)
+    (metadata/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+    if (metadata/'manifest.json').stat().st_size>256*1024:raise ValueError('Combined manifest exceeds native limit')
+    (metadata/'conversion.json').write_text(json.dumps({'schema':1,'runtime_tested':False,
+        'verification':'passed: all isolated and combined payload round trips','variants':reports,
+        'combined_assets':combined_assets,'shared_textures':shared},indent=2)+'\n')
+    target.with_suffix('.pak').unlink()
+    converter.run(converter.repak,'pack',work/'metadata',target.with_suffix('.pak'),'--version','V8B')
+    converter.run(converter.repak,'unpack',target.with_suffix('.pak'),'--output',work/'metadata-check')
+    for file in metadata.iterdir():
+        if digest(file)!=digest(work/'metadata-check'/PACKAGE_ROOT/args.id/file.name):raise ValueError('Combined metadata round trip failed')
+    for directory,snapshot in watched:unchanged(directory,snapshot)
+    output.parent.mkdir(parents=True,exist_ok=True)
+    staging=Path(tempfile.mkdtemp(prefix=f'.{stem}-',dir=output.parent))
+    try:
+        for file in stage.iterdir():shutil.copy2(file,staging/file.name)
+        if output.exists():raise FileExistsError(output)
+        staging.rename(output)
+    finally:
+        if staging.exists():shutil.rmtree(staging)
+    print(f'Verified {len(variants)} outfit variants: {output}',flush=True)
+    return output
+
+
 def main() -> None:
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('inputs',nargs='+',type=Path)
+    parser.add_argument('inputs',nargs='*',type=Path)
     parser.add_argument('--name',help='Display name; defaults to the first pack filename without _P')
     parser.add_argument('--author','--modder',dest='author',required=True)
     parser.add_argument('--name-format',default=DEFAULT_FORMAT,help='Filename template; quote $ tokens in the shell')
@@ -444,6 +673,10 @@ def main() -> None:
     parser.add_argument('--variant',action='append',help='ID=original mesh path; repeat to group regular/corrupted or other variants')
     parser.add_argument('--materials',type=Path,help='JSON mapping material slot numbers to original material paths, applied to all variants')
     parser.add_argument('--colors',type=Path,help='Author color recipe with adjacent dye PNG resources; embedded in the package')
+    parser.add_argument('--include',action='append',help='Game material or other dependency to include and relocate with source assets')
+    parser.add_argument('--import-repairs',type=Path,help='Audited source-hash-bound import table repair recipe')
+    parser.add_argument('--variant-sources',type=Path,help='JSON list of separately packaged outfit variants; keeps overlapping source assets isolated')
+    parser.add_argument('--source-snapshot',type=Path,help='Stable incoming-source snapshot from css_sources.py; checked again before publication')
     parser.add_argument('--shell',action='append',help='Source shell tag; may be repeated')
     parser.add_argument('--game',type=Path,default=DEFAULT_GAME)
     parser.add_argument('--retoc',type=Path,default=DEFAULT_RETOC)
