@@ -1,4 +1,5 @@
 #include "data.hpp"
+#include "startup.hpp"
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -20,6 +21,22 @@ int main(int argc,char** argv) {
         expect(read_json(file)==state.json(),"Default state file not generated");
         expect(!fs::exists(file.string()+".bak"),"Fresh install fabricated a previous save");
         expect(Catalog::load(root/"catalog").outfits.empty(),"No-package startup failed");
+        auto project=root/"game/MortalShell2";
+        fs::create_directories(project/"Content/Paks");
+        const auto executable=project/"Binaries/Win64/MortalShell2-Win64-Shipping.exe";
+        expect(wardrobe_packages(executable)==project/"Content/Paks/~mods","Game-relative package discovery failed without a Mods folder");
+        fs::create_directories(root/"custom-loader/Mods/CustomShellSystem");
+        expect(wardrobe_packages(executable)==project/"Content/Paks/~mods","Custom UE4SS directory changed game asset discovery");
+        for(const auto* platform:{"Win64","WinGDK","CustomPlatform"})
+            expect(wardrobe_packages(project/"Binaries"/platform/"Game.exe")==project/"Content/Paks/~mods","Executable lookup assumes a storefront platform folder");
+        auto relocated=root/"game/SeparateAssets/Content";
+        fs::create_directories(relocated/"Paks");
+        expect(wardrobe_packages(executable,fs::absolute(relocated))==fs::absolute(relocated)/"Paks/~mods","Engine content directory must take precedence over guessed layout");
+        expect(wardrobe_packages(executable,root/"missing")==project/"Content/Paks/~mods","Missing engine content path prevented executable fallback");
+        expect(wardrobe_packages(executable,"relative/Content")==project/"Content/Paks/~mods","Unresolved engine path used process working directory");
+        expect(wardrobe_startup_message(0).find("No CSS outfit packages")!=std::string::npos,"Empty catalog startup hides missing packages");
+        expect(wardrobe_startup_message(3).find("Choose an appearance")!=std::string::npos,"Fresh install suggests CSS must be enabled before selecting");
+        fs::remove_all(root/"game"); fs::remove_all(root/"custom-loader");
         // The same package discovery/cache path used by Core::load_catalog.
         if(argc==3) {
             auto catalog=Catalog::load(root/"catalog",argv[2],root/"cache/packages");

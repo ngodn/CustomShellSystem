@@ -7,7 +7,7 @@ Installation
 3. Extract the CustomShellSystem folder into:
    MortalShell2/Binaries/Win64/ue4ss/Mods/
 4. Install CSS outfit packages separately under MortalShell2/Content/Paks/~mods/.
-5. Launch the game, load a save, and press N to open CSS.
+5. Launch the game, enter the game world, open Inventory, and select CSS.
 
 This archive contains the wardrobe runtime only. It does not include UE4SS,
 outfit packages, personal settings, favorites, saved looks or game saves.
@@ -21,14 +21,19 @@ Verified UE4SS.dll SHA-256:
 Use the Microsoft Visual C++ x64 runtime required by the game/UE4SS.
 CSS uses this exact native ABI. Other UE4SS builds have not been verified.
 
-Controls
-N: open/close. Esc: close. Mouse: select outfits, variants and colors.
-Mouse wheel or scrollbar: scroll the appearance list. D-pad navigation keeps
-the selected row visible.
-Controller View/Back + Y: open/close. B: close. D-pad: browse/adjust.
-A: wear. Y: favorite. LB/RB: sections. X: saved looks.
-Right stick: orbit, vertical inverted. Left stick: zoom/frame.
-LT/RT: lower/raise framing. Right-stick click: reset view.
+Controls (default game bindings)
+Inventory / CSS / Tarstones / Map: LB/RB or Q/E.
+Shell / Color / Templates: LT/RT or Z/X. Section labels are clickable.
+Browse the left list: D-pad Up/Down or W/S. Mouse wheel scrolls the list.
+Variant or selected color channel on the right: D-pad Left/Right or A/D.
+Wear / reset selected part / load template: A or Space. Buttons are clickable.
+Favorite / reset all colors / delete template: Y or C, shown by each action.
+Next RGB channel / replace template: X or F, shown by each action.
+Right stick: left/right rotates; up/down zooms in/out.
+Left stick: moves character framing horizontally and vertically.
+Mouse over the character: right-drag rotates, wheel zooms, left-drag moves framing.
+Reset view: right-stick click, Home, or Reset view. Close: B or Esc.
+CSS follows the game's mapped menu keys. The old N menu is removed.
 
 Appearance changes retain your current gameplay shell and abilities.
 No weapon, seal or shell unlocks are required for supported cosmetic outfits.
@@ -43,11 +48,12 @@ A previous valid state is kept as state/state.json.bak after settings change.
 For updates, close the game and extract over the existing CustomShellSystem
 folder. Keep your state/ folder. The ZIP supplies no state files to overwrite it.
 Only one core DLL is supplied; old cores from development are not included.
+Existing CSS.Package v1 outfit ZIPs and saved choices remain compatible.
+The standalone N menu is replaced by Inventory > CSS.
 Reset CSS preferences only with the game closed by moving state/ to a backup.
 CSS does not modify the game's save files.
 
 Known limitations
-The wardrobe preview can look different from gameplay or inventory lighting.
-A lighting experiment is not included in this release. Extended combat, travel
-and outfit-specific physics still need broader testing. New outfit containers
+CSS uses the game's native Inventory preview and lighting. Extended combat,
+travel and outfit-specific physics still need broader testing. New outfit containers
 require restarting the game; core DLL development supports live reload.

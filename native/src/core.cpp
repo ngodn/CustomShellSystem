@@ -2,6 +2,7 @@
 #include "data.hpp"
 #include "engine.hpp"
 #include "recovery.hpp"
+#include "startup.hpp"
 #include <windows.h>
 #include <chrono>
 #include <optional>
@@ -13,17 +14,21 @@ namespace css {
 struct Core {
     CssHost host;
     fs::path root;
+    fs::path package_root;
     Catalog catalog;
     State state;
     Appearance appearance;
-    Wardrobe wardrobe;
-    std::string message = "CSS is off. Enable it when a save is loaded.";
+    InventoryUI inventory;
+    Json inventory_command;
+    bool inventory_failed=false;
+    bool content_path_checked=false;
+    uint64_t inventory_retry_after=0;
+    std::string message;
     std::string last_request, last_shell, last_pawn, applied_id, last_status;
-    std::string selected_outfit, selected_variant, last_wardrobe_message;
+    std::string selected_outfit, selected_variant;
     bool dirty = false, apply_pending = false, restore_pending = false, rescan_pending = false, forget_current = false;
     bool favorites_only = false;
-    bool wardrobe_pending = false, wardrobe_close = false, wardrobe_refresh = false;
-    bool n_down = false, escape_down = false;
+    bool ui_refresh = false;
     bool inspect_pending = false, transition_inspect_pending = false;
     uint64_t next_poll = 0;
     char search[128]{}, preset_name[96]{};
@@ -45,10 +50,23 @@ struct Core {
         }
     }
 
-    Catalog load_catalog() const {
-        return Catalog::load(root/"catalog",(root/"../../../../../Content/Paks/~mods").lexically_normal(),root/"cache/packages");
+    static fs::path package_directory() {
+        wchar_t executable[32768]{};
+        auto size=GetModuleFileNameW(nullptr,executable,32768);
+        if(!size || size>=32768) throw std::runtime_error("Cannot locate the game's outfit folder");
+        return wardrobe_packages(fs::path(executable));
     }
-    explicit Core(const CssHost& h) : host(h), root(h.root), catalog(load_catalog()) {
+    Catalog load_catalog() const {
+        auto path=package_root.generic_u8string();
+        host.log(("CSS outfit folder: "+std::string(path.begin(),path.end())).c_str());
+        try {
+            auto result=Catalog::load(root/"catalog",package_root,root/"cache/packages");
+            host.log(("CSS catalog: "+std::to_string(result.outfits.size())+" outfits; folder "+(fs::is_directory(package_root)?"present":"missing")).c_str());
+            return result;
+        } catch(const std::exception& e) { host.log((std::string("CSS catalog failed: ")+e.what()).c_str()); throw; }
+    }
+    explicit Core(const CssHost& h) : host(h), root(h.root), package_root(package_directory()), catalog(load_catalog()), message(wardrobe_startup_message(catalog.outfits.size())) {
+        inventory.assets(root);
         bool recovered=false;
         state=load_state(root / "state/state.json", &recovered);
         if(recovered) message="Recovered CSS state from its backup.";
@@ -56,7 +74,7 @@ struct Core {
             try { last_request = read_json(root / "request.json").at("id").get<std::string>(); }
             catch (...) {} // Ignore stale malformed requests on a fresh core.
         }
-        if (state.enabled) message = "Your saved appearance is ready. Press N for the wardrobe.";
+        if (state.enabled && !catalog.outfits.empty()) message = "Your saved appearance is ready. Open Inventory and choose CSS.";
     }
     void report(std::string text) {
         if (message == text) return;
@@ -65,6 +83,9 @@ struct Core {
     void save() { atomic_json(root / "state/state.json", state.json()); dirty = false; }
     void request(const Json& command) {
         const auto action = command.at("action").get<std::string>();
+#ifdef CSS_INVENTORY_DEV
+        if (action.starts_with("inventory_")) { inventory_command=command; return; }
+#endif
         if (action == "export_mappings") {
             RC::OutTheShade::generate_usmap(); report("Exported runtime mappings for asset tooling.");
         }
@@ -75,24 +96,17 @@ struct Core {
 #ifdef CSS_TRANSITION_TESTS
         else if(action=="test_cursor") { test_cursor_pending=command.at("visible").get<bool>(); }
         else if(action=="test_effect") { appearance.test_effect(command.at("begin").get<bool>()); }
-        else if(action=="test_reset_mesh") { wardrobe.close(); appearance.test_reset_mesh(); }
+        else if(action=="test_reset_mesh") { appearance.test_reset_mesh(); }
 #endif
-        else if (action == "open") wardrobe_pending = true;
-        else if (action == "close") wardrobe_close = true;
-        else if (action == "front") wardrobe.rotate(0,true);
-        else if (action == "rotate") wardrobe.rotate(command.at("degrees").get<double>());
-        else if (action == "filter") { wardrobe.filter(command.at("category").get<int>()); wardrobe_refresh = true; }
-        else if (action == "color_part") { wardrobe.color_part(command.at("delta").get<int>()); wardrobe_refresh = true; }
-        else if (action == "page") { wardrobe.page(command.at("delta").get<int>()); wardrobe_refresh = true; }
         else if (action == "favorite") {
             auto id = command.at("outfit").get<std::string>();
             if (state.favorites.contains(id)) state.favorites.erase(id); else state.favorites.insert(id);
-            dirty = true; wardrobe_refresh = true;
+            dirty = true; ui_refresh = true;
         }
         else if (action == "save_look") {
             auto name = command.at("name").get<std::string>();
             if (!valid_id(name) || (state.presets.size() >= 64 && !state.presets.contains(name))) throw std::runtime_error("Invalid look slot");
-            state.presets[name] = state.selections; dirty = true; wardrobe_refresh = true; report("Current appearance saved to " + name);
+            state.presets[name] = state.selections; dirty = true; ui_refresh = true; report("Current appearance saved to " + name);
         }
         else if (action == "load_look") {
             auto name = command.at("name").get<std::string>();
@@ -100,10 +114,23 @@ struct Core {
             auto selected = selections.find(appearance.shell);
             if (selected == selections.end()) { restore_pending = true; forget_current = true; }
             else { selected_outfit = selected->second.outfit; selected_variant = selected->second.variant; pending_colors=selected->second.colors; apply_pending = true; }
-            wardrobe_refresh = true;
+            ui_refresh = true;
         }
-        else if (action == "enable") { state.enabled = true; apply_pending = true; dirty = true; report("CSS enabled. Press N to open your wardrobe."); }
-        else if (action == "disable") { state.enabled = false; restore_pending = true; dirty = true; wardrobe_close = true; }
+        else if(action=="delete_look") {
+            state.presets.erase(command.at("name").get<std::string>());
+            dirty=true; ui_refresh=true; report("Template deleted.");
+        }
+        else if(action=="rename_look") {
+            auto before=command.at("name").get<std::string>(), after=command.at("new_name").get<std::string>();
+            if(!valid_id(after)) throw std::runtime_error("Use letters, numbers, periods, underscores or hyphens in the template name.");
+            if(before!=after) {
+                if(state.presets.contains(after)) throw std::runtime_error("A template with that name already exists.");
+                auto copy=state.presets.at(before); state.presets.emplace(after,std::move(copy)); state.presets.erase(before);
+                dirty=true; ui_refresh=true; report("Template renamed.");
+            }
+        }
+        else if (action == "enable") { state.enabled = true; apply_pending = true; dirty = true; report("CSS enabled. Open Inventory and choose CSS."); }
+        else if (action == "disable") { state.enabled = false; restore_pending = true; dirty = true; }
         else if (action == "restore") { restore_pending = true; forget_current = true; }
         else if (action == "rescan") { rescan_pending = true; }
         else if(action=="palette" || action=="color" || action=="reset_color") {
@@ -143,20 +170,45 @@ struct Core {
         } else if (action != "status") throw std::runtime_error("Unknown CSS command");
     }
     void tick(void* engine, float delta) {
-        wardrobe.configure(state.invert_orbit_x,state.invert_orbit_y);
+        if(!content_path_checked) {
+            content_path_checked=true;
+            try {
+                const auto content=engine_content_directory();
+                auto candidate=wardrobe_packages({},content);
+                std::error_code error;
+                if(!content.is_absolute() || !fs::is_directory(content/"Paks",error)) throw std::runtime_error("Engine content folder is not accessible; keeping executable lookup");
+                auto path=candidate.generic_u8string();
+                host.log(("CSS engine outfit folder: "+std::string(path.begin(),path.end())).c_str());
+                if(candidate!=package_root) {
+                    auto resolved=Catalog::load(root/"catalog",candidate,root/"cache/packages");
+                    package_root=std::move(candidate); catalog=std::move(resolved); ui_refresh=true;
+                    message=wardrobe_startup_message(catalog.outfits.size());
+                }
+            } catch(const std::exception& e) { host.log((std::string("CSS content lookup fallback: ")+e.what()).c_str()); }
+        }
         DWORD foreground_pid = 0;
         GetWindowThreadProcessId(GetForegroundWindow(), &foreground_pid);
         bool focused = foreground_pid == GetCurrentProcessId();
-        bool n = focused && (GetAsyncKeyState('N') & 0x8000) != 0;
-        bool escape = focused && (GetAsyncKeyState(VK_ESCAPE) & 0x8000) != 0;
-        if (n && !n_down && !(GetAsyncKeyState(VK_CONTROL) & 0x8000) && !(GetAsyncKeyState(VK_MENU) & 0x8000)) {
-            if (wardrobe.opened()) wardrobe_close = true; else wardrobe_pending = true;
+        if(inventory_failed && GetTickCount64()>=inventory_retry_after) {
+            try { inventory.detach(); inventory_failed=false; }
+            catch(...) { inventory_retry_after=GetTickCount64()+2000; }
         }
-        if (escape && !escape_down && wardrobe.opened()) wardrobe_close = true;
-        n_down = n; escape_down = escape;
-        if (wardrobe_close) { wardrobe.close(); wardrobe_close = false; wardrobe_pending = false; }
-        auto action = wardrobe.poll(delta, focused);
-        if (!action.is_null()) { request(action); next_poll = 0; }
+        if(!inventory_failed) {
+            Json inventory_action;
+            try {
+                inventory_action=inventory.poll(engine,catalog,state,appearance,delta,focused);
+                inventory.message(message);
+            } catch(const std::exception& error) {
+                inventory_failed=true;
+                inventory_retry_after=GetTickCount64()+2000;
+                try { inventory.detach(); } catch(...) {}
+                report(std::string("Inventory CSS unavailable: ")+error.what());
+            }
+            if(!inventory_action.is_null()) {
+                try { request(inventory_action); next_poll=0; }
+                catch(const std::exception& error) { report(error.what()); }
+            }
+        }
         auto now = GetTickCount64();
         if(state.enabled && !apply_pending && now>=maintenance_after) {
             try {
@@ -170,7 +222,7 @@ struct Core {
             }
         }
         if(state.enabled && !apply_pending) sync_menu_safely();
-        if (now < next_poll && !wardrobe_pending && !wardrobe_refresh && !apply_pending) return;
+        if (now < next_poll && !ui_refresh && !apply_pending) return;
         next_poll = now + 250;
         auto command_file = root / "request.json";
         if (fs::exists(command_file)) {
@@ -188,8 +240,8 @@ struct Core {
             rescan_pending = false;
             auto updated = load_catalog();
             catalog = std::move(updated);
-            wardrobe_refresh=true;
-            report("Catalog reloaded.");
+            ui_refresh=true;
+            report(catalog.outfits.empty()?wardrobe_startup_message(0):"Catalog reloaded.");
         }
         if (restore_pending) {
             appearance.restore(); recovery.clear(); restore_pending = false; applied_id.clear();
@@ -197,7 +249,7 @@ struct Core {
             appearance.player(engine);
             if (forget_current && !appearance.shell.empty()) state.selections.erase(appearance.shell);
             forget_current = false;
-            dirty = true; wardrobe_refresh = true; report("Original appearance restored.");
+            dirty = true; ui_refresh = true; report("Original appearance restored.");
         }
         if (state.enabled || apply_pending) {
             appearance.player(engine);
@@ -239,13 +291,12 @@ struct Core {
                         } catch(...) {
                             applied_id.clear(); appearance.restore(); throw;
                         }
-                        wardrobe.sync_materials();
                         sync_menu_safely();
                         recovery.clear();
                         last_apply_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
                         state.selections[appearance.shell] = requested;
                         state.remembered_colors[requested.outfit]=requested.colors;
-                        state.enabled = true; dirty = true; wardrobe_refresh = !color_only || refresh_colors;
+                        state.enabled = true; dirty = true; ui_refresh = !color_only || refresh_colors;
                         applied_id = requested.outfit + "/" + requested.variant;
                         host.log(("Appearance verified: " + applied_id).c_str());
                         report(color_only?"Colors updated.":"Wearing " + variant->name + ".");
@@ -254,24 +305,22 @@ struct Core {
                 }
             }
         }
-        if (wardrobe_close) { wardrobe.close(); wardrobe_close = false; }
-        if (wardrobe_pending || (wardrobe_refresh && wardrobe.opened())) {
-            wardrobe_pending = false; wardrobe_refresh = false;
-            wardrobe.open(engine, catalog, state, appearance, message, root / "assets");
-        }
-        wardrobe_refresh = false;
-        if (wardrobe.opened() && last_wardrobe_message != message) {
-            wardrobe.message(message); last_wardrobe_message = message;
-        }
+        if(ui_refresh) inventory.refresh();
+        ui_refresh = false;
         if (dirty && now>=save_after) save();
         if(transition_inspect_pending) {
             auto result=appearance.transition_state(engine); result["id"]=last_request;
-            result["wardrobe"]=wardrobe.diagnostics(); result["recovery_pending"]=recovery.pending();
+            result["inventory"]=inventory.diagnostics(); result["recovery_pending"]=recovery.pending();
             atomic_json(root/"runtime/transition.json",result,false); transition_inspect_pending=false;
         }
         if(inspect_pending) {
-            auto result=wardrobe.inspect(appearance.player(engine)); result["id"]=last_request; result["transition"]=appearance.transition_state(engine);
+            auto result=appearance.transition_state(engine); result["id"]=last_request; result["inventory"]=inventory.diagnostics();
             atomic_json(root / "runtime/inspection.json",result,false); inspect_pending=false;
+        }
+        if(!inventory_command.is_null()) {
+            auto pending=std::exchange(inventory_command,Json{});
+            auto result=inventory.command(engine,pending); result["id"]=last_request;
+            atomic_json(root/"runtime/inventory.json",result,false);
         }
         publish();
     }
@@ -282,8 +331,10 @@ struct Core {
                     {"apply_ms", last_apply_ms}, {"pid", GetCurrentProcessId()}};
         status["recovery_pending"]=recovery.pending();
         status["maintenance_error"]=maintenance_error;
-        status["wardrobe_open"] = wardrobe.opened();
-        status["wardrobe"] = wardrobe.diagnostics();
+        auto path=package_root.generic_u8string();
+        status["catalog"]={{"folder",std::string(path.begin(),path.end())},{"outfits",catalog.outfits.size()}};
+        status["inventory"] = inventory.diagnostics();
+        status["inventory_failed"] = inventory_failed;
         status["material_debug"] = appearance.material_debug;
         if(auto selected=state.selections.find(appearance.shell);selected!=state.selections.end()) status["colors"]=selected->second.colors.json();
         auto serialized = status.dump();
@@ -300,62 +351,11 @@ struct Core {
         RC::UE4SSProgram::get_current_imgui_allocator_functions(&alloc, &free, &user);
         ImGui::SetAllocatorFunctions(alloc, free, user);
         ImGui::TextUnformatted("CSS / Custom Shell System");
-        if (ImGui::Button("Open in-game wardrobe (N)")) wardrobe_pending = true;
+        ImGui::TextUnformatted("Open Inventory and select the CSS tab.");
         ImGui::TextWrapped("%s", message.c_str());
-        if (ImGui::Checkbox("Enable CSS", &state.enabled)) {
-            dirty = true;
-            if (state.enabled) { apply_pending = true; report("CSS enabled. Load a save and choose an outfit."); }
-            else restore_pending = true;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Restore original")) { restore_pending = true; forget_current = true; }
-        ImGui::SameLine();
-        if (ImGui::Button("Reload catalog")) rescan_pending = true;
-        if (ImGui::Checkbox("Restore my selection after loading or changing shells", &state.auto_apply)) dirty = true;
-        if (ImGui::Checkbox("Invert vertical wardrobe orbit", &state.invert_orbit_y)) dirty = true;
-        if (ImGui::Checkbox("Invert horizontal wardrobe orbit", &state.invert_orbit_x)) dirty = true;
-        ImGui::Separator();
-        ImGui::Text("Current shell: %s", appearance.shell.empty() ? "Enable CSS in a loaded save" : appearance.shell.c_str());
-        ImGui::InputText("Search", search, sizeof(search));
-        ImGui::SameLine(); ImGui::Checkbox("Favorites only", &favorites_only);
-        for (const auto& outfit : catalog.outfits) {
-            bool favorite = state.favorites.contains(outfit.id);
-            if (favorites_only && !favorite) continue;
-            if (*search && outfit.name.find(search) == std::string::npos && outfit.author.find(search) == std::string::npos) continue;
-            ImGui::PushID(outfit.id.c_str());
-            if (ImGui::CollapsingHeader(outfit.name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::TextWrapped("%s", outfit.description.c_str());
-                ImGui::Text("By %s / %s", outfit.author.c_str(), outfit.category.c_str());
-                if (ImGui::Checkbox("Favorite", &favorite)) {
-                    if (favorite) state.favorites.insert(outfit.id); else state.favorites.erase(outfit.id);
-                    dirty = true;
-                }
-                bool compatible = catalog.compatible(outfit.id, appearance.shell);
-                if (!compatible) ImGui::TextUnformatted("Switch to a supported shell in the game to wear this outfit.");
-                for (const auto& variant : outfit.variants) {
-                    ImGui::BeginDisabled(!compatible);
-                    if (ImGui::Button(variant.name.c_str())) {
-                        selected_outfit = outfit.id; selected_variant = variant.id; apply_pending = true;
-                    }
-                    ImGui::EndDisabled();
-                }
-            }
-            ImGui::PopID();
-        }
-        ImGui::Separator();
-        ImGui::InputText("Preset name", preset_name, sizeof(preset_name));
-        ImGui::SameLine();
-        if (ImGui::Button("Save preset")) {
-            if (valid_id(preset_name) && state.presets.size() < 64) { state.presets[preset_name] = state.selections; dirty = true; }
-            else report("Use a preset name containing letters, digits, periods, underscores or hyphens.");
-        }
-        for (const auto& [name, selections] : state.presets) {
-            ImGui::PushID(name.c_str());
-            if (ImGui::Button(("Load " + name).c_str())) { state.selections = selections; state.enabled = true; apply_pending = true; dirty = true; }
-            ImGui::PopID();
-        }
-        ImGui::Text("Last appearance change: %.2f ms", last_apply_ms);
-        ImGui::TextWrapped("Cosmetic selection does not unlock weapons, seals or shells. Your existing cheat menu can unlock gameplay equipment separately.");
+        ImGui::Text("Outfits: %zu",catalog.outfits.size());
+        ImGui::Text("Last appearance change: %.2f ms",last_apply_ms);
+
     }
 };
 }
@@ -369,7 +369,6 @@ void tick(void* ptr, void* engine, float delta) noexcept {
     auto& core = *static_cast<css::Core*>(ptr);
     try { core.tick(engine, delta); }
     catch (const std::exception& error) {
-        try { core.wardrobe.close(); } catch (...) {}
         core.recovery.failed(GetTickCount64());
         core.apply_pending = false; core.pending_colors.reset(); core.color_only=false;
         core.selected_outfit.clear(); core.selected_variant.clear();
@@ -384,7 +383,7 @@ void render(void* ptr) noexcept {
 bool stop(void* ptr) noexcept {
     auto& core = *static_cast<css::Core*>(ptr);
     try {
-        core.wardrobe.close();
+        core.inventory.detach();
         core.appearance.restore(); if (core.dirty) core.save();
         core.last_pawn.clear(); core.apply_pending = core.state.enabled;
         return true;

@@ -1,5 +1,4 @@
 #include "data.hpp"
-#include "wardrobe_input.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <functional>
@@ -28,13 +27,6 @@ int main() {
         state.invert_orbit_x=true; state.invert_orbit_y=false;
         auto settings=State::parse(state.json());
         expect(settings.invert_orbit_x && !settings.invert_orbit_y, "Orbit preferences did not persist");
-        auto centered=stick(100,-100,8689);
-        expect(centered.x==0 && centered.y==0, "Centered controller drift escaped the deadzone");
-        auto full=stick(32767,0,8689);
-        expect(std::abs(full.x-1)<1e-9 && full.y==0, "Full stick travel did not reach full speed");
-        auto diagonal=stick(-32768,32767,8689);
-        expect(diagonal.x<0 && diagonal.y>0 && std::abs(std::hypot(diagonal.x,diagonal.y)-1)<1e-9, "Diagonal stick exceeds camera speed limit");
-        expect(frame_delta(-1)==0 && frame_delta(1)==.05, "Camera delta bounds failed");
         state.enabled = true;
         state.selections["CharacterId.Player.Shell.Genessa"] = {"beaute.genessa", "regular"};
         state.favorites.insert("beaute.genessa");

@@ -26,7 +26,7 @@ class ReleaseTests(unittest.TestCase):
         self.files.update({'dlls/main.dll': bytes(dll), 'cores/css_core-0.1.1.dll': bytes(dll),
                            'README.txt': b'MSII - CSS v0.1.1',
                            'core.json': json.dumps({'abi': 1, 'file': 'css_core-0.1.1.dll'}).encode()})
-        self.files['release.json'] = json.dumps({'version': '0.1.1',
+        self.files['release.json'] = json.dumps({'version': '0.1.1', 'interface': 'inventory',
             'files': {p: digest(data) for p, data in self.files.items()}}).encode()
 
     def write(self):
@@ -47,8 +47,26 @@ class ReleaseTests(unittest.TestCase):
                     verify(self.archive)
                 del self.files[path]
 
-    def test_missing_runtime_artwork_rejected(self):
-        del self.files['assets/wardrobe-v1.png']
+    def test_missing_readme_rejected(self):
+        del self.files['README.txt']
+        self.write()
+        with self.assertRaisesRegex(ValueError, 'unexpected or missing'):
+            verify(self.archive)
+
+    def test_old_standalone_archive_still_verifies(self):
+        del self.files['assets/inventory-logo-v1.png']
+        self.files['assets/wardrobe-v1.png'] = b'old artwork'
+        manifest = json.loads(self.files['release.json'])
+        del manifest['files']['assets/inventory-logo-v1.png']
+        del manifest['interface']
+        manifest['files']['assets/wardrobe-v1.png'] = digest(self.files['assets/wardrobe-v1.png'])
+        self.files['release.json'] = json.dumps(manifest).encode()
+        self.write()
+        self.assertEqual(verify(self.archive)['version'], '0.1.1')
+
+    def test_inventory_archive_does_not_ship_old_artwork(self):
+        self.assertNotIn('assets/wardrobe-v1.png', payload_names('0.1.1'))
+        self.files['assets/wardrobe-v1.png'] = b'unused'
         self.write()
         with self.assertRaisesRegex(ValueError, 'unexpected or missing'):
             verify(self.archive)

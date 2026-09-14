@@ -4,10 +4,13 @@
 #include <array>
 #include <vector>
 #include "data.hpp"
+#include "inventory_motion.hpp"
+#include "inventory_keys.hpp"
 #include <Unreal/UObject.hpp>
 #include <Unreal/FWeakObjectPtr.hpp>
 
 namespace css {
+fs::path engine_content_directory();
 // UE4SS's serial-allocation fallback uses a legacy soft-reference layout.
 // Initialize new serials through a reflected frame before constructing a weak handle.
 class WeakObject : public RC::Unreal::FWeakObjectPtr {
@@ -15,6 +18,57 @@ public:
     WeakObject() = default;
     WeakObject(RC::Unreal::UObject* object);
     WeakObject& operator=(RC::Unreal::UObject* object);
+};
+class Appearance;
+class InventoryUI {
+    fs::path logo_path_;
+    WeakObject main_, tabs_, switcher_, tab_, page_, controller_;
+    WeakObject canvas_, status_, scroll_, name_input_, display_, camera_component_, input_prompt_;
+    struct Hit { WeakObject widget; Json action; bool down=false; };
+    struct Row { WeakObject marker, widget; Json accept, previous, next, secondary, tertiary; };
+    struct Slider { WeakObject widget, label, heading; Json action; float previous; bool scalar; };
+    struct Binding { std::string action; std::vector<std::string> keys; bool down=false; uint64_t repeat=0; WeakObject input_action; };
+    std::vector<Hit> hits_;
+    std::vector<Row> rows_;
+    std::vector<Slider> sliders_;
+    std::vector<Binding> bindings_;
+    std::map<std::string,WeakObject> textures_;
+    std::vector<std::pair<WeakObject,std::array<float,4>>> top_padding_;
+    std::array<double,2> layout_size_{};
+    uint64_t layout_check_=0;
+    int section_=0, row_=0, color_channel_=0;
+    std::string last_message_;
+    bool dirty_=true, active_=false, enabled_=true, was_active_=false;
+    uint64_t discover_after_=0, last_tick_=0;
+    uint64_t transition_started_=0;
+    bool enter_transition_=false, closing_=false;
+    struct TransitionWidget { WeakObject widget; std::array<double,2> offset; };
+    std::vector<TransitionWidget> transition_widgets_;
+    float scroll_offset_=0;
+    double yaw_before_=0, yaw_=0, zoom_=0, frame_=0, pan_=0;
+    InventoryMotion motion_;
+    bool gamepad_=true, mouse_left_=false, mouse_right_=false, drag_pan_=false, drag_rotate_=false;
+    std::array<double,2> mouse_before_{};
+    float lens_before_=0;
+    std::array<double,3> location_before_{}, camera_rotation_before_{}, camera_location_before_{}, camera_world_rotation_{}, camera_world_location_{};
+    void build(const Catalog&,const State&,Appearance&);
+    void bind_inputs();
+    void camera_start();
+    void camera_stop();
+    void camera_update(double delta,bool invert_x);
+    void camera_move(const std::array<double,4>& movement);
+    void animate(uint64_t now);
+    void close_menu();
+    Json dispatch(Json,const State&);
+public:
+    void assets(const fs::path& root) { logo_path_=root/"assets/inventory-logo-v1.png"; }
+    Json command(void* engine, const Json&);
+    Json poll(void* engine,const Catalog&,const State&,Appearance&,float delta,bool focused);
+    Json diagnostics() const;
+    void message(const std::string&);
+    void refresh() { dirty_=true; }
+    bool active() const { return active_; }
+    void detach();
 };
 class Appearance {
     WeakObject component_, applied_;
@@ -53,70 +107,5 @@ public:
     void test_cursor(void* engine, bool visible);
 #endif
     void customize(const Outfit&, const std::string& variant, const Customization&);
-};
-// All widgets and input ownership stay on the game thread. No widget delegates
-// point into the reloadable DLL, so closing the view permits core unloading.
-class Wardrobe {
-    struct Hit { WeakObject widget; Json action; bool down = false; };
-    struct Row { Json wear, favorite, previous, next, save; WeakObject marker; };
-    WeakObject root_, controller_, pawn_, status_, world_;
-    std::vector<Hit> hits_;
-    std::vector<Row> rows_;
-    struct Slider { WeakObject widget, label; Json action; float previous=0; bool scalar=false; };
-    std::vector<Slider> sliders_;
-    WeakObject color_title_, color_swatch_;
-    std::string color_title_text_;
-    int color_part_ = 0;
-    bool owns_input_ = false, old_cursor_ = false;
-    WeakObject camera_, view_before_;
-    bool owns_pause_ = false, full_tick_before_ = false, full_tick_changed_ = false;
-    struct HiddenActor { WeakObject actor; bool before; };
-    WeakObject preview_, preview_mesh_, source_hidden_mesh_, light_rig_;
-    bool source_mesh_hidden_before_ = false, light_tick_before_ = false;
-    std::vector<HiddenActor> hidden_;
-    double preview_time_ = 0, preview_length_ = 0, preview_sample_at_ = 0;
-    std::array<double,3> preview_first_head_{};
-    bool preview_sampled_ = false, preview_moving_ = false;
-    std::string preview_animation_;
-    double preview_floor_anchor_ = 0, preview_floor_offset_ = 0;
-    bool preview_aligned_ = false;
-    uint64_t last_input_tick_ = 0;
-    double yaw_ = 0, pitch_ = 3, distance_ = 500, height_ = 0, pan_ = 0;
-    std::array<double,3> last_center_{};
-    double frame_offset_ = .32, default_distance_ = 500;
-    bool camera_dirty_ = true, right_mouse_ = false;
-    bool invert_x_ = false, invert_y_ = true;
-    long mouse_x_ = 0, mouse_y_ = 0;
-    int focus_ = 0, pad_index_ = -1;
-    uint16_t pad_buttons_ = 0;
-    uint64_t next_pad_search_ = 0, repeat_at_ = 0;
-    void camera_open(double aspect, double screen_x);
-    void camera_close();
-    void camera_update();
-    void protect();
-    void unprotect();
-    void preview_open();
-    void preview_close();
-    void preview_update(double delta);
-    void focus(int index, bool reveal = true);
-    WeakObject list_scroll_;
-    float list_offset_ = 0;
-    bool reset_list_ = true;
-    int category_ = 0, page_ = 0;
-    std::map<std::string, WeakObject> textures_;
-public:
-    bool opened() const { return root_.Get() != nullptr; }
-    void open(void* engine, const Catalog&, const State&, Appearance&, const std::string& message, const fs::path& assets);
-    void close();
-    Json poll(float delta, bool focused);
-    void message(const std::string&);
-    void rotate(double degrees, bool front = false);
-    Json diagnostics() const;
-    Json inspect(RC::Unreal::UObject* player) const;
-    void sync_materials();
-    void configure(bool invert_x,bool invert_y) { invert_x_=invert_x; invert_y_=invert_y; }
-    void filter(int category) { category_ = std::clamp(category,0,3); page_ = 0; list_offset_ = 0; focus_ = 0; reset_list_ = true; }
-    void color_part(int delta) { color_part_ += std::clamp(delta,-1,1); }
-    void page(int delta) { page_ = std::max(0, page_ + delta); }
 };
 }

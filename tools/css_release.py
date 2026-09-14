@@ -24,9 +24,16 @@ def git(*args: str) -> str:
     return subprocess.check_output(['git', '-C', str(ROOT), *args], text=True).strip()
 
 
-def payload_names(version: str) -> set[str]:
-    return {'enabled.txt', 'core.json', 'dlls/main.dll', f'cores/css_core-{version}.dll',
-            'assets/wardrobe-v1.png', 'README.txt', 'THIRD_PARTY_NOTICES.txt'}
+def payload_names(version: str, interface: str = "inventory") -> set[str]:
+    files = {'enabled.txt', 'core.json', 'dlls/main.dll', f'cores/css_core-{version}.dll',
+             'README.txt', 'THIRD_PARTY_NOTICES.txt'}
+    if interface == 'standalone':
+        files.add('assets/wardrobe-v1.png')
+    elif interface == 'inventory':
+        files.add('assets/inventory-logo-v1.png')
+    else:
+        raise ValueError('Unknown runtime interface')
+    return files
 
 
 def verify(archive: Path) -> dict:
@@ -38,7 +45,7 @@ def verify(archive: Path) -> dict:
         version = manifest['version']
         if not re.fullmatch(r'\d+\.\d+\.\d+', version):
             raise ValueError('Invalid release version')
-        expected = payload_names(version)
+        expected = payload_names(version, manifest.get("interface", "standalone"))
         if set(names) != {PREFIX + p for p in expected | {'release.json'}}:
             raise ValueError('ZIP contains unexpected or missing files')
         if set(manifest['files']) != expected:
@@ -77,17 +84,18 @@ def build(args: argparse.Namespace) -> Path:
     build_dir = ROOT / 'build/release-windows'
     subprocess.run(['cmake', '-S', str(ROOT / 'native'), '-B', str(build_dir), '-G', 'Ninja',
                     '-DCMAKE_BUILD_TYPE=Release', '-DCMAKE_TOOLCHAIN_FILE=' + str(ROOT / 'native/toolchain-clang-cl.cmake'),
-                    '-DCSS_SDK=' + str(args.sdk.resolve(strict=True))], check=True)
+                    '-DCSS_SDK=' + str(args.sdk.resolve(strict=True)),
+                    '-DCSS_INVENTORY_DEV=OFF', '-DCSS_TRANSITION_TESTS=OFF'], check=True)
     subprocess.run(['cmake', '--build', str(build_dir), '--target', 'main', 'css_core', '-j', '4'], check=True)
     # Copy only build outputs and explicit tracked runtime assets. Never read a live installation.
     files = {'enabled.txt': b'',
+             'assets/inventory-logo-v1.png': (ROOT / 'assets/inventory-logo-v1.png').read_bytes(),
              'core.json': (json.dumps({'abi': 1, 'file': f'css_core-{version}.dll'}, indent=2) + '\n').encode(),
              'dlls/main.dll': (build_dir / 'main.dll').read_bytes(),
              f'cores/css_core-{version}.dll': (build_dir / 'css_core.dll').read_bytes(),
-             'assets/wardrobe-v1.png': (ROOT / 'assets/wardrobe-v1.png').read_bytes(),
              'README.txt': (ROOT / 'packaging/README.txt').read_text().replace('@VERSION@', version).encode(),
              'THIRD_PARTY_NOTICES.txt': (ROOT / 'packaging/THIRD_PARTY_NOTICES.txt').read_bytes()}
-    manifest = {'version': version, 'source_commit': revision, 'abi': 1,
+    manifest = {'version': version, 'source_commit': revision, 'abi': 1, 'interface': 'inventory',
                 'ue4ss_revision': 'd7e7826d415b0332b43439a64e6c87f64019be03',
                 'files': {p: digest(data) for p, data in sorted(files.items())}}
     files['release.json'] = (json.dumps(manifest, indent=2) + '\n').encode()

@@ -78,11 +78,10 @@ def install(game: Path) -> None:
     if mod.exists():
         shutil.copytree(mod, backup / 'CustomShellSystem')
     copy_verified(ROOT / 'build/windows/main.dll', mod / 'dlls/main.dll')
+    copy_verified(ROOT / 'assets/inventory-logo-v1.png', mod / 'assets/inventory-logo-v1.png')
     (mod / 'catalog').mkdir(parents=True, exist_ok=True)
     for source in (ROOT / 'catalog').glob('*.css.json'):
         copy_verified(source, mod / 'catalog' / source.name)
-    for source in (ROOT / 'assets').glob('*.png'):
-        copy_verified(source, mod / 'assets' / source.name)
     atomic(mod / 'loader-contract.json', {'abi': 1, 'dll_sha256': sha(mod / 'dlls/main.dll'),
            'sources': {name: sha(ROOT / name) for name in ('native/src/loader.cpp', 'native/src/api.hpp')}})
     name = stage_core(mod)
@@ -108,7 +107,7 @@ def wait_json(path: Path, predicate, timeout: float = 20) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--game', type=Path, default=GAME)
-    parser.add_argument('action', choices=['build', 'install', 'reload', 'status', 'inspect', 'enable', 'disable', 'restore', 'rescan', 'select', 'open', 'close', 'front', 'export_mappings'])
+    parser.add_argument('action', choices=['build', 'install', 'reload', 'status', 'inspect', 'enable', 'disable', 'restore', 'rescan', 'select', 'export_mappings'])
     parser.add_argument('--outfit')
     parser.add_argument('--variant')
     args = parser.parse_args()

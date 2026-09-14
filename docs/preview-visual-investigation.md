@@ -1,5 +1,7 @@
 # Seductress wardrobe rendering and floor alignment
 
+Historical investigation of the removed standalone N wardrobe. Current development uses the native Inventory display. The standalone lighting mismatch was never confirmed fixed. Its experimental code and inspection script are archived locally under `work/standalone-wardrobe-archive/1789366167474804586`; they are not part of the active runtime.
+
 2026-09-14. The user reports darker, glossier materials in the wardrobe and an
 apparent gap under the feet. The wardrobe lighting remains unresolved. The user deferred further lighting investigation on 2026-09-14.
 The live comparison is `python3 tools/check_preview_visual.py`, with the
@@ -113,3 +115,26 @@ SpotLight_Fill and RectLight_Left). Its character is staged separately from the
 player, almost 100 metres higher. Therefore material equality alone cannot
 reproduce its illumination in the world-based CSS preview. Measurements are in
 work/inventory-lighting.json. A CSS lighting fix is not yet confirmed.
+
+### Inventory-derived lighting trial
+
+A trial uses the four measured inventory lights around the CSS preview, rotating
+with orbit yaw and remaining independent of zoom and framing. Measurements are
+embedded in native/src/wardrobe_lighting.hpp. Environment channel 0 is retained;
+the stale player-rig channel 1 is replaced by wardrobe channel 2 on the preview
+only. Added lights have indirect lighting, global illumination, volumetric fog
+and translucent-lighting contributions disabled. They are destroyed on preview
+close or failed setup. Original player and inventory light settings are unchanged.
+
+The native build passes. Runtime spawn, orbit, cleanup and visible improvement
+are pending the user's return from inventory. The updated live comparison checks
+four active lights and channel/GI/fog settings; it cannot establish image quality.
+The prepared grounding package also remains uninstalled.
+
+Reference: Epic's [lighting channels documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/Components/ULightComponent/LightingChannels?application_version=5.5)
+limits channel isolation to dynamic direct lighting, so GI/fog contributions are
+explicitly disabled rather than assumed isolated. Epic's
+[camera overview](https://dev.epicgames.com/documentation/unreal-engine/cameras-in-unreal-engine)
+describes camera post-process overrides and view targets. The live effective
+inventory camera reports a blend weight of 1 and no enabled POV overrides;
+this does not exclude post-process volumes or manager blend-cache effects.
