@@ -181,14 +181,59 @@ static FScriptArrayHelper overrides(UObject* component) {
     if(values.Num()<0 || values.Num()>128) throw std::runtime_error("Invalid material override count");
     return values;
 }
+static bool dynamic_material(UObject* value) {
+    return value && value->IsA(static_cast<UClass*>(find(L"/Script/Engine.MaterialInstanceDynamic")));
+}
+static bool material_has_overrides(UObject* value) {
+    // Read the reflected arrays, including parameter kinds added by newer
+    // builds. Only unwrap instances with no parameter or profile overrides.
+    auto* type=static_cast<UClass*>(find(L"/Script/Engine.MaterialInstance"));unsigned arrays=0;
+    for(auto* p:type->ForEachProperty()) {
+        const auto name=narrow(p->GetName());
+        if(name.starts_with("bOverride") || name=="bHasStaticPermutationResource") {
+            if(!p->IsA<FBoolProperty>()) throw std::runtime_error("Unknown material override flag layout");
+            if(static_cast<FBoolProperty*>(p)->GetPropertyValueInContainer(value)) return true;
+        }
+        if(name=="BasePropertyOverrides" || name=="NaniteOverrideMaterial") {
+            if(!p->IsA<FStructProperty>()) throw std::runtime_error("Unknown material override structure");
+            // Nanite's enable flag defaults to true even with no material.
+            // Compare complete reflected values, including soft references.
+            auto* defaults=find(L"/Script/Engine.Default__MaterialInstanceDynamic");
+            if(!p->Identical_InContainer(value,defaults)) return true;
+        }
+        if(!name.ends_with("ParameterValues") && name!="UserSceneTextureOverrides") continue;
+        if(!p->IsA<FArrayProperty>() || p->GetArrayDim()!=1) throw std::runtime_error("Unknown material parameter layout");
+        auto* a=static_cast<FArrayProperty*>(p);FScriptArrayHelper values(a,reinterpret_cast<std::byte*>(value)+p->GetOffset_Internal());
+        if(values.Num()<0 || values.Num()>4096) throw std::runtime_error("Material parameter count exceeds bounds");
+        ++arrays;if(values.Num()) return true;
+    }
+    if(arrays<3) throw std::runtime_error("Material parameter metadata is unavailable");
+    return false;
+}
+static UObject* material_asset(UObject* value) {
+    std::set<UObject*> seen;
+    while(dynamic_material(value)) {
+        if(seen.size()>=16 || !seen.insert(value).second) throw std::runtime_error("Invalid dynamic material parent chain");
+        if(material_has_overrides(value)) throw std::runtime_error("A material effect still owns parameter overrides. Let it finish before changing appearance.");
+        value=read<UObject*>(value,L"Parent");
+        if(!value) throw std::runtime_error("Dynamic material has no asset parent");
+    }
+    return value;
+}
+static std::vector<WeakObject> material_objects(UObject* component) {
+    auto values=overrides(component);std::vector<WeakObject> result;
+    for(int i=0;i<values.Num();++i) {UObject* value{};std::memcpy(&value,values.GetRawPtr(i),sizeof(value));result.emplace_back(value);}
+    return result;
+}
 static std::vector<std::string> material_paths(UObject* component) {
     auto values=overrides(component);
     std::vector<std::string> result;
     for(int i=0;i<values.Num();++i) {
         UObject* value{}; std::memcpy(&value,values.GetRawPtr(i),sizeof(value));
-        auto path=value?narrow(value->GetPathName()):std::string{};
-        // Transient effects cannot be restored by asset path after collection.
-        // Refuse before mutation instead of pinning an old world through a MID.
+        auto* asset=material_asset(value);
+        auto path=asset?narrow(asset->GetPathName()):std::string{};
+        // Keep a stable fallback for collected MIDs. Live rollback uses weak
+        // references and never roots a material that belongs to an old world.
         if(value && (path.find(':')!=std::string::npos || path.starts_with("/Engine/Transient") || (!path.starts_with("/Game/") && !path.starts_with("/Engine/"))))
             throw std::runtime_error("A temporary material effect is active. Let it finish before changing appearance.");
         result.push_back(std::move(path));
@@ -198,21 +243,25 @@ static std::vector<std::string> material_paths(UObject* component) {
 static void material(UObject* component,int index,UObject* value) {
     Call set(component,L"SetMaterial",2); set.set(L"ElementIndex",index); set.set(L"Material",value); set.run();
 }
-static void restore_materials(UObject* component,const std::vector<std::string>& paths) {
+static void restore_materials(UObject* component,const std::vector<std::string>& paths,const std::vector<WeakObject>& previous={}) {
     WeakObject live(component);
     std::vector<WeakObject> loaded;
-    for(const auto& path:paths) loaded.emplace_back(path.empty()?nullptr:load(path));
+    AssetLoadRoots roots;
+    for(size_t i=0;i<paths.size();++i) {
+        auto* value=i<previous.size()?previous[i].Get():nullptr;
+        if(!value && !paths[i].empty()) {value=load(paths[i]);roots.keep(value);}
+        loaded.emplace_back(value);
+    }
     component=live.Get();
     if(!component) return; // Its world was released while assets loaded.
     for(size_t i=0;i<paths.size();++i)
         if(!paths[i].empty() && !loaded[i].Get()) throw std::runtime_error("Restoration material expired while loading");
     auto count=std::max(static_cast<int>(paths.size()),overrides(component).Num());
     for(int i=0;i<count;++i) material(component,i,i<static_cast<int>(loaded.size())?loaded[i].Get():nullptr);
-    auto actual=material_paths(component), expected=paths;
-    // SetMaterial clears slots but does not shrink the engine's override array.
-    while(!actual.empty() && actual.back().empty()) actual.pop_back();
-    while(!expected.empty() && expected.back().empty()) expected.pop_back();
-    if(actual!=expected) throw std::runtime_error("Original material read-back failed");
+    auto actual=material_objects(component);
+    for(size_t i=0;i<std::max(actual.size(),loaded.size());++i)
+        if((i<actual.size()?actual[i].Get():nullptr)!=(i<loaded.size()?loaded[i].Get():nullptr))
+            throw std::runtime_error("Original material read-back failed");
 }
 static Json material_snapshot(UObject* component,UObject* mesh) {
     Json result={{"overrides",Json::array()},{"defaults",Json::array()},{"effective",Json::array()}};
@@ -281,12 +330,13 @@ void Appearance::restore_menu() {
     auto component=menu_component_, applied=menu_applied_;
     auto original=std::exchange(menu_original_,{});
     auto materials=std::exchange(menu_original_materials_,{});
+    auto live_materials=std::exchange(menu_original_live_materials_,{});
     menu_component_.Reset(); menu_applied_.Reset();
     if(auto* target=component.Get(); target && applied.Get() && mesh_asset(target)==applied.Get() && !original.empty()) {
         auto* mesh=load(original);
         target=component.Get();
         if(!target || mesh_asset(target)!=applied.Get()) return;
-        set_mesh(target,mesh); restore_materials(target,materials);
+        set_mesh(target,mesh); restore_materials(target,materials,live_materials);
     }
 }
 void Appearance::sync_menu() {
@@ -307,6 +357,7 @@ void Appearance::sync_menu() {
         if(live_target.Get()!=target || live_before.Get()!=before || live_desired.Get()!=desired || mesh_asset(target)!=before) return;
         menu_original_=before==desired?original_:narrow(before->GetPathName());
         menu_original_materials_=before==desired?original_materials_:material_paths(target);
+        menu_original_live_materials_=before==desired?original_live_materials_:material_objects(target);
         menu_component_=target;
     }
     menu_applied_=desired;
@@ -342,15 +393,17 @@ bool Appearance::repair_materials_needed() {
     auto* component=component_.Get();
     if(!component || mesh_asset(component)!=applied_.Get() || materials_match()) { return false; }
     // A completed shell effect restores stock asset materials. Repair that
-    // specific transition at the end of this frame, leaving transient MIDs and
+    // specific transition at the end of this frame, leaving active MIDs and
     // unfamiliar effect materials under the game's control.
     auto values=overrides(component);
     for(int i=0;i<values.Num();++i) {
         UObject* value{}; std::memcpy(&value,values.GetRawPtr(i),sizeof(value));
         auto* expected=i<static_cast<int>(expected_materials_.size())?expected_materials_[i].Get():nullptr;
         if(value && value!=expected) {
-            auto path=narrow(value->GetPathName());
-            if(std::find(original_materials_.begin(),original_materials_.end(),path)==original_materials_.end()) return false;
+            UObject* asset{};
+            try {asset=material_asset(value);} catch(const std::runtime_error&) {return false;}
+            auto path=narrow(asset->GetPathName());
+            if(!original_default_materials_.contains(path) && std::find(original_materials_.begin(),original_materials_.end(),path)==original_materials_.end()) return false;
         }
     }
     return true;
@@ -384,14 +437,18 @@ void Appearance::test_cursor(void* engine,bool visible) {
     if(!p || !p->IsA<FBoolProperty>()) throw std::runtime_error("Cursor test layout mismatch");
     static_cast<FBoolProperty*>(p)->SetPropertyValueInContainer(pc,visible);
 }
-void Appearance::test_effect(bool begin) {
+void Appearance::test_effect(bool begin,bool parameters) {
     if(begin) test_reset_mesh();
     auto* component=component_.Get();
     if(!component || narrow(mesh_asset(component)->GetPathName())!=original_) throw std::runtime_error("Test effect requires original mesh");
     if(begin) {
         Call effect(component,L"CreateDynamicMaterialInstance",4);
         effect.set(L"ElementIndex",int32_t{0}); effect.run();
-        if(!effect.get<UObject*>()) throw std::runtime_error("Test material creation failed");
+        auto* mid=effect.get<UObject*>();
+        if(!mid) throw std::runtime_error("Test material creation failed");
+        if(parameters) {
+            Call set(mid,L"SetScalarParameterValue",2);set.set(L"ParameterName",FName(L"CSS_TransitionProbe",FNAME_Add));set.set(L"Value",.37f);set.run();
+        }
     } else restore_materials(component,original_materials_);
 }
 void Appearance::test_reset_mesh() {
@@ -464,6 +521,13 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
         auto materials=material_paths(component);
         original_ = narrow(before->GetPathName());
         original_materials_=std::move(materials);
+        original_live_materials_=material_objects(component);
+        original_default_materials_.clear();
+        const auto baseline=material_snapshot(component,before);
+        for(const auto& name:baseline.at("defaults")) {
+            const auto text=name.get<std::string>();const auto space=text.find(' ');
+            if(space!=std::string::npos) original_default_materials_.insert(text.substr(space+1));
+        }
         component_ = component;
     }
     // Record the intended asset before calling the engine so a failed read-back
@@ -499,13 +563,13 @@ bool Appearance::restore() {
         component=component_.Get();
         if(component && mesh_asset(component)==applied_.Get()) {
             set_mesh(component, original);
-            restore_materials(component,original_materials_);
+            restore_materials(component,original_materials_,original_live_materials_);
             if(component_.Get()==component) material_debug=material_snapshot(component,original);
         }
     }
     color_mids_.clear(); color_targets_.clear(); color_textures_.clear(); last_colors_.clear(); color_outfit_.clear();
     expected_materials_.clear();
-    component_.Reset(); applied_.Reset(); original_.clear(); original_materials_.clear(); applied_materials_.clear();
+    component_.Reset(); applied_.Reset(); original_.clear(); original_materials_.clear(); original_default_materials_.clear(); original_live_materials_.clear(); applied_materials_.clear();
     return true;
 }
 }

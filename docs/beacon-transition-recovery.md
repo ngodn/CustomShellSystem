@@ -90,9 +90,11 @@ cmake --build build/linux -j 4
 ctest --test-dir build/linux --output-on-failure
 ```
 
-`tests/live_transition_check.py` requires a safe, loaded game and a core built
-with `-DCSS_TRANSITION_TESTS=ON`. It stages the built core, temporarily changes
-cosmetics/cursor state, and restores them. Run it from the repository root.
+`tests/live_transition_check.py` requires a safe, loaded game and the current
+`build/cssx-native` core staged with `CSS_TRANSITION_TESTS=ON` and
+`CSS_INVENTORY_DEV=ON`. It verifies the installed DLL hash and never stages a
+core itself. It exercises stock resets, empty and active dynamic materials,
+then opens and closes native Inventory. Run it from the repository root.
 Developer reset commands are compiled out when that option is OFF, the default.
 Build and reload the normal core after using it. Do not run another request
 client concurrently.
@@ -129,3 +131,41 @@ SHA-256: `844e02d6366239e5b268cb25ec07ed88e89c5de963247f389f76966db406ed88`. Tes
 The first four-minute read-only recording remained in ordinary gameplay with
 Seductress selected and no game UI or input lock. It did not capture a cleanse
 return. The full beacon/story path still needs the user's requested re-test.
+
+
+## 0.3.0: empty material instances
+
+A separate recovery stall was reproduced on 15 September 2026. Resetting the
+player to its captured stock mesh and creating a dynamic material with no
+parameter overrides left CSS waiting indefinitely. The previous guard rejected
+every material owned by a world, even when it was only an empty wrapper around
+a stock material asset.
+
+The updated guard walks a bounded, cycle-checked parent chain. It accepts empty
+dynamic instances and records both a weak reference for exact restoration and
+a stable asset fallback if the instance is collected. It does not root old-world
+instances. Scalar, vector, texture, layer-related and other reflected parameter
+arrays, profile flags, and changed base/Nanite overrides still prevent recovery.
+Nanite's enable flag alone is not an override: in the measured build it defaults
+to true with a null material. The complete reflected structure is compared with
+the dynamic-material class default instead.
+
+Completed effects may also restore a stock mesh's default material into an
+override slot that was originally empty. Recovery now recognizes those captured
+stock defaults, while leaving unknown material assets alone.
+
+This addresses the reproduced empty-wrapper stall. It does not prove that every
+portal, launch pad, death or blood-effect report has the same cause. Active game
+material parameters are not copied onto outfit materials by this change.
+
+Epic distinguishes explicit parameter overrides from parent defaults in
+[CopyParameterOverrides](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/UMaterialInstanceDynamic/CopyParameterOverrides).
+The fields used by CSS are resolved against the running game's reflection
+metadata rather than fixed offsets.
+
+Live verification: three consecutive stock-reset, empty-MID and active-effect
+cycles passed. Each active effect remained in place until removed, then the same
+Seductress selection recovered. Native Inventory opened and closed afterward,
+input locks were clear, the gameplay animation instance was unchanged, and the
+CSS saved preferences were byte-for-byte unchanged. Evidence is recorded in
+`work/cssx-native/material-recovery-live.json`. Nine portable CTest groups pass.

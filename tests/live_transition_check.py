@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Run cosmetic regressions in a safe loaded game, using a developer test core.
+"""Reversible cosmetic checks in a safe loaded game with a developer core.
 
-Run from the repository root. Requires CSS_TRANSITION_TESTS=ON and no other
-request client. Builds nothing, changes no game save or gameplay ability.
+Stage build/cssx-native first, with CSS_TRANSITION_TESTS and CSS_INVENTORY_DEV
+ON. This driver never installs a DLL or changes gameplay abilities. Run alone.
 """
 import json
 from pathlib import Path
@@ -10,81 +10,105 @@ import sys
 import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
-from css import GAME, ROOT, atomic, processes, sha, stage_core, wait_json
+from css import ROOT, atomic, processes, sha, wait_json
+from cssx_dev import MOD, BUILD
+from cssx_cheat_check import request as host_request
+
+
+def request(action, **values):
+    rid = str(time.time_ns())
+    atomic(MOD / 'request.json', dict(action=action, id=rid, **values))
+    filename = 'inspection' if action == 'inspect' else 'inventory' if action.startswith('inventory_') else 'status'
+    return wait_json(MOD / f'runtime/{filename}.json',
+                     lambda j: j.get('last_request' if filename == 'status' else 'id') == rid)
+
+
+def status():
+    return json.loads((MOD / 'runtime/status.json').read_text())
+
+
+def compact(value):
+    return {k: value[k] for k in ('applied', 'mesh', 'shell', 'recovery_pending', 'message')}
 
 
 def main():
     if not processes():
         raise RuntimeError('Load the game in a safe location first.')
-    cache = (ROOT / 'build/windows/CMakeCache.txt').read_text()
-    if 'CSS_TRANSITION_TESTS:BOOL=ON' not in cache:
-        raise RuntimeError('Build the developer core with CSS_TRANSITION_TESTS=ON first.')
-    mod = GAME / 'Binaries/Win64/ue4ss/Mods/CustomShellSystem'
-    contract = json.loads((mod / 'loader-contract.json').read_text())
-    if contract['abi'] != 1 or sha(mod / 'dlls/main.dll') != contract['dll_sha256']:
-        raise RuntimeError('Installed loader ABI contract differs.')
-    if any(sha(ROOT / p) != value for p, value in contract['sources'].items()):
-        raise RuntimeError('Loader sources changed. Do not reload this test core.')
-
-    def request(action, **values):
-        rid = str(time.time_ns())
-        atomic(mod / 'request.json', dict(action=action, id=rid, **values))
-        inspection = action == 'inspect'
-        path = mod / ('runtime/inspection.json' if inspection else 'runtime/status.json')
-        return wait_json(path, lambda j: j.get('id' if inspection else 'last_request') == rid)
-
+    cache = (BUILD / 'CMakeCache.txt').read_text()
+    for option in ('CSS_TRANSITION_TESTS', 'CSS_INVENTORY_DEV'):
+        assert f'{option}:BOOL=ON' in cache, f'{option} must be ON'
+    loader = json.loads((MOD / 'runtime/loader.json').read_text())
+    assert sha(MOD / 'cores' / loader['core']) == sha(BUILD / 'css_core.dll'), 'Stage the current developer core first'
     before = request('inspect')
-    if before['paused'] or before['input_owned'] or before['player_hidden']:
-        raise RuntimeError('Close all menus and return to safe normal gameplay first.')
-    state = (mod / 'state/state.json').read_bytes()
-    name = stage_core(mod)
-    wait_json(mod / 'runtime/loader.json', lambda j: j.get('core') == name)
-    time.sleep(1)
-    before = request('inspect')
-    if before['transition']['IsInGameMenu']:
-        raise RuntimeError('A game menu opened before the test.')
-    effect_active = False
+    assert before['player_ready'] and before['controller_ready']
+    assert not any(before[k] for k in ('IsMoveInputIgnored', 'IsLookInputIgnored', 'IsInGameMenu'))
+    initial = status()
+    assert initial['enabled'] and initial['applied'] and not initial['recovery_pending'], 'An outfit must be applied'
+    saved = (MOD / 'state/state.json').read_bytes()
+    pawn = host_request({'op': 'player'}, True)['pawn']
+    component = host_request({'op': 'get', 'target': pawn, 'property': 'Mesh'}, True)
+    animation = host_request({'op': 'get', 'target': component, 'property': 'AnimScriptInstance'}, True)
+    evidence = {'before': before, 'initial': compact(initial), 'cycles': []}
+    active_effect = False
+    menu_open = False
+
+    def recovered():
+        result = wait_json(MOD / 'runtime/status.json', lambda j:
+                           j.get('applied') == initial['applied'] and j.get('mesh') == initial['mesh']
+                           and not j.get('recovery_pending'))
+        return compact(result)
+
     try:
-        request('test_reset_mesh')
-        time.sleep(2)
-        after = request('inspect')
-        assert before['transition']['mesh'] == after['transition']['mesh'], 'Stock reset did not recover'
-        assert before['gameplay_animation'] == after['gameplay_animation'], 'Animation instance changed'
-        request('test_effect', begin=True)
-        effect_active = True
+        for _ in range(3):
+            cycle = {}
+            evidence['cycles'].append(cycle)
+            request('test_reset_mesh')
+            time.sleep(.4)
+            cycle['stock_reset'] = recovered()
+            active_effect = True
+            request('test_effect', begin=True, parameters=False)
+            time.sleep(.4)
+            cycle['empty_mid'] = recovered()
+            active_effect = False
+            active_effect = True
+            request('test_effect', begin=True, parameters=True)
+            time.sleep(1.2)
+            cycle['active_effect'] = compact(status())
+            assert cycle['active_effect']['mesh'] != initial['mesh'], 'CSS replaced an active effect'
+            assert cycle['active_effect']['recovery_pending'], 'No recovery scheduled'
+            request('test_effect', begin=False)
+            active_effect = False
+            cycle['effect_finished'] = recovered()
+        try:
+            menu_open = True
+            request('inventory_test_key', key='I', down=True)
+        finally:
+            request('inventory_test_key', key='I', down=False)
         time.sleep(1)
-        effect = request('inspect')
-        assert effect['transition']['mesh'] != before['transition']['mesh'], 'Recovery overwrote effect'
-        request('test_effect', begin=False)
-        effect_active = False
-        time.sleep(2)
-        settled = request('inspect')
-        assert settled['transition']['mesh'] == before['transition']['mesh'], 'No retry after effect'
-        request('test_cursor', visible=True)
-        opened = request('open')
-        assert opened['wardrobe_open'], opened['message']
-        preview = request('inspect')
-        assert preview['paused'] and preview['input_owned'] and preview['preview_active']
-        request('close')
-        closed = request('inspect')
-        assert not closed['paused'] and not closed['input_owned'] and not closed['player_hidden']
-        assert before['gameplay_animation'] == closed['gameplay_animation']
-        output = ROOT / 'work/fixed-transition-live.json'
-        output.parent.mkdir(exist_ok=True)
-        output.write_text(json.dumps(dict(before=before, after_reset=after, during_effect=effect,
-                                         after_effect=settled, opened=preview, closed=closed), indent=2))
-        assert (mod / 'state/state.json').read_bytes() == state, 'Test changed saved preferences'
-        print(f'Live transition checks passed: {output}')
+        evidence['inventory_open'] = request('inspect')
+        assert evidence['inventory_open']['IsInGameMenu'], 'Native Inventory did not open'
+        host_request({'op': 'menu.close'}, True)
+        menu_open = False
+        time.sleep(.5)
+        evidence['after'] = request('inspect')
+        assert not evidence['after']['IsInGameMenu']
+        assert not evidence['after']['IsMoveInputIgnored'] and not evidence['after']['IsLookInputIgnored']
+        after_animation = host_request({'op': 'get', 'target': component, 'property': 'AnimScriptInstance'}, True)
+        assert animation == after_animation, 'Gameplay animation instance changed'
+        assert (MOD / 'state/state.json').read_bytes() == saved, 'Saved preferences changed'
+        print('Three stock/empty-MID/active-effect cycles and native Inventory cleanup passed')
     finally:
-        cleanup = [('close', {})]
-        if effect_active:
-            cleanup.append(('test_effect', {'begin': False}))
-        cleanup.extend([('enable', {}), ('test_cursor', {'visible': before['cursor_visible']})])
-        for action, values in cleanup:
-            try:
-                request(action, **values)
-            except Exception as error:
-                print(f'Cleanup {action} failed: {error}', file=sys.stderr)
+        try:
+            if active_effect and status()['mesh'] != initial['mesh']:
+                request('test_effect', begin=False)
+            if menu_open:
+                host_request({'op': 'menu.close'}, True)
+        finally:
+            evidence['final'] = compact(status())
+            output = ROOT / 'work/cssx-native/material-recovery-live.json'
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(json.dumps(evidence, indent=2) + '\n')
+            print(output)
 
 
 if __name__ == '__main__':

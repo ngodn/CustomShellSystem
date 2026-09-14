@@ -133,7 +133,7 @@ struct Core {
         }
 #ifdef CSS_TRANSITION_TESTS
         else if(action=="test_cursor") { test_cursor_pending=command.at("visible").get<bool>(); }
-        else if(action=="test_effect") { appearance.test_effect(command.at("begin").get<bool>()); }
+        else if(action=="test_effect") { appearance.test_effect(command.at("begin").get<bool>(),command.value("parameters",false)); }
         else if(action=="test_reset_mesh") { appearance.test_reset_mesh(); }
 #endif
         else if (action == "favorite") {

@@ -137,6 +137,8 @@ class Appearance {
     WeakObject observed_pawn_, observed_component_, observed_controller_;
     std::string original_;
     std::vector<std::string> original_materials_;
+    std::set<std::string> original_default_materials_;
+    std::vector<WeakObject> original_live_materials_;
     std::map<int,std::string> applied_materials_;
     std::map<int,WeakObject> color_mids_;
     std::map<std::string,WeakObject> color_targets_, color_textures_;
@@ -146,6 +148,7 @@ class Appearance {
     WeakObject menu_component_, menu_applied_;
     std::string menu_original_;
     std::vector<std::string> menu_original_materials_;
+    std::vector<WeakObject> menu_original_live_materials_;
     void restore_menu();
     void remember_materials();
     bool materials_match() const;
@@ -165,7 +168,7 @@ public:
     Json transition_state(void* engine);
 #ifdef CSS_TRANSITION_TESTS
     void test_reset_mesh();
-    void test_effect(bool begin);
+    void test_effect(bool begin,bool parameters=false);
     void test_cursor(void* engine, bool visible);
 #endif
     void customize(const Outfit&, const std::string& variant, const Customization&);
