@@ -246,6 +246,19 @@ Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& re
         }
         return decode(p,data,0);
     }
+    if(op=="properties") {
+        Json result=Json::array();std::set<std::string> seen;unsigned depth=0;
+        for(UStruct* type=object->GetClassPrivate();type;type=type->GetSuperStruct()) {
+            if(++depth>64) throw std::runtime_error("CSSX class hierarchy exceeds bound");
+            for(auto* p:type->ForEachProperty()) {
+                auto name=narrow(p->GetName());if(!seen.insert(name).second) continue;
+                if(result.size()>=2048) throw std::runtime_error("CSSX property metadata exceeds bound");
+                result.push_back({{"name",name},{"size",p->GetElementSize()},{"array_dim",p->GetArrayDim()}});
+            }
+            if(!request.value("inherited",false)) break;
+        }
+        return result;
+    }
     if(op=="call" || op=="describe") {
         const auto name=wide(request.at("function").get<std::string>());auto* fn=object->GetFunctionByNameInChain(name.c_str());
         if(!fn) throw std::runtime_error("CSSX function is missing: "+request.at("function").get<std::string>());
@@ -254,7 +267,20 @@ Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& re
         Json result=Json::object();std::set<std::string> used;size_t index=0;
         for(auto* p:fn->ForEachProperty()) if(p->HasAnyPropertyFlags(CPF_Parm)) {
             auto key=narrow(p->GetName());
-            if(op=="describe") {result[key]={{"size",p->GetElementSize()},{"return",p->HasAnyPropertyFlags(CPF_ReturnParm)},{"out",p->HasAnyPropertyFlags(CPF_OutParm)}};continue;}
+            if(op=="describe") {
+                result[key]={{"size",p->GetElementSize()},{"return",p->HasAnyPropertyFlags(CPF_ReturnParm)},{"out",p->HasAnyPropertyFlags(CPF_OutParm)}};
+                UEnum* enumeration=nullptr;
+                if(p->IsA<FByteProperty>()) enumeration=static_cast<FByteProperty*>(p)->GetEnum().Get();
+                else if(p->IsA<FEnumProperty>()) enumeration=static_cast<FEnumProperty*>(p)->GetEnum().Get();
+                if(enumeration) {
+                    const auto count=enumeration->NumEnums();
+                    if(count<0 || count>256) throw std::runtime_error("CSSX enum metadata exceeds bound");
+                    Json entries=Json::array();
+                    for(int i=0;i<count;++i) {auto entry=enumeration->GetEnumNameByIndex(i);entries.push_back({{"name",narrow(entry.Key.ToString())},{"value",entry.Value}});}
+                    result[key]["enum"]=std::move(entries);
+                }
+                continue;
+            }
             if(p->HasAnyPropertyFlags(CPF_ReturnParm)) continue;
             if(args.is_array() && index<args.size()) {encode(p,call.data(p),args[index++],0);used.insert(key);}
             else if(args.is_object() && args.contains(key)) {encode(p,call.data(p),args[key],0);used.insert(key);}
