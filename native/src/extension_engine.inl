@@ -62,7 +62,10 @@ void ExtensionBridge::encode(FProperty* p,void* data,const Json& value,unsigned 
         if(!object || !object->IsA<UDataTable>()) throw std::runtime_error("CSSX typed source is not a DataTable");
         auto* table=static_cast<UDataTable*>(object);auto* type=table->GetRowStruct().Get();
         if(!type) throw std::runtime_error("CSSX table row type is unavailable");
-        const auto row=wide(source.at("row").get<std::string>()),field=wide(source.at("field").get<std::string>());
+        const auto row_name=source.at("row").get<std::string>(),field_name=source.at("field").get<std::string>();
+        for(const auto* name:{&row_name,&field_name}) if(name->empty() || name->size()>256 || name->find('\0')!=std::string::npos)
+            throw std::runtime_error("CSSX table row or field name is invalid");
+        const auto row=wide(row_name),field=wide(field_name);
         auto* property=type->GetPropertyByNameInChain(field.c_str());
         if(!property || property->GetOffset_Internal()<0 || property->GetOffset_Internal()+property->GetSize()>type->GetPropertiesSize() || !p->SameType(property))
             throw std::runtime_error("CSSX table field type does not match the parameter");

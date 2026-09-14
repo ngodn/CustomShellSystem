@@ -10,7 +10,11 @@ DESTROY=c.CFUNCTYPE(None,c.c_void_p)
 class API(c.Structure): _fields_=[('abi',c.c_uint32),('size',c.c_uint32),('create',CREATE),('tick',TICK),('request',REQUEST),('stop',STOP),('destroy',DESTROY)]
 @REQUEST
 def host_request(ctx,data,sink,out):
-    response=b'{}';sink(out,c.cast(c.c_char_p(response),c.c_void_p),len(response));return 1
+    response=b'{}';sink(out,c.cast(c.c_char_p(response),c.c_void_p),len(response))
+    if json.loads(data).get('op')=='oversized':
+        trailing=b' '*(1024*1024)
+        sink(out,c.cast(c.c_char_p(trailing),c.c_void_p),len(trailing))
+    return 1
 lib=c.CDLL(str(Path(sys.argv[1]).resolve()))
 lib.cssx_get_runtime.restype=c.POINTER(API)
 api=lib.cssx_get_runtime().contents
@@ -30,6 +34,15 @@ event=function(e) state.on=e.value; assert(cssx.request({op="state.save",value=s
         ('memory', 'local x = string.rep("x", 70*1024*1024); return {}'),
         ('caught-loop', 'while true do pcall(function() while true do end end) end'),
         ('empty', 'return {model=function() return {sections=cssx.array()} end,event=function(e) end}'),
+        ('oversized', 'return {model=function() assert(cssx.request({op="oversized"})); return {sections=cssx.array()} end,event=function() end}'),
+        ('tick-failure', '''return {model=function() return {sections=cssx.array()} end,event=function() end,
+tick=function() error("tick failed") end,
+stop=function() assert(cssx.request({op="state.save",value={cleaned=true}})) end}'''),
+        ('cleanup-retry', '''local attempts=0
+return {model=function() return {sections=cssx.array()} end,event=function() end,
+tick=function() error("tick failed") end,
+stop=function() attempts=attempts+1; assert(cssx.request({op="state.save",value={attempts=attempts}}));
+if attempts==1 then error("cleanup needs retry") end end}'''),
     ]:
         folder=root/'extensions'/name;folder.mkdir()
         (folder/'main.lua').write_text(source)
@@ -41,7 +54,8 @@ event=function(e) state.on=e.value; assert(cssx.request({op="state.save",value=s
         def sink(out,data,size): result.append(c.string_at(data,size))
         ok=api.request(instance,json.dumps(value).encode(),sink,None)
         decoded=json.loads(b''.join(result));assert ok,decoded;return decoded
-    library=request({'op':'library'});assert len(library['extensions'])==7
+    library=request({'op':'library'});assert len(library['extensions'])==10
+    assert 'exceeds 1 MiB' in next(e for e in library['extensions'] if e['id']=='oversized')['error']
     assert next(e for e in library['extensions'] if e['id']=='caught-loop')['available'] is False
     assert next(e for e in library['extensions'] if e['id']=='broken')['available'] is False
     assert next(e for e in library['extensions'] if e['id']=='working')['available'] is True
@@ -62,6 +76,10 @@ event=function(e) state.on=e.value; assert(cssx.request({op="state.save",value=s
     request({'op':'event','id':'cssx.ui-kit','event':{'id':'run'}})
     assert gallery()['sections'][1]['controls'][0]['busy'] is True
     for _ in range(26): assert api.tick(instance,.2)==1
+    assert json.loads((root/'state/extensions/tick-failure.json').read_text())['cleaned'] is True
+    assert json.loads((root/'state/extensions/cleanup-retry.json').read_text())['attempts']==1
+    failed=next(e for e in request({'op':'library'})['extensions'] if e['id']=='cleanup-retry')
+    assert failed['available'] is False and 'cleanup incomplete' in failed['error']
     feedback=gallery()['sections'][1]['controls']
     assert feedback[0]['busy'] is False and feedback[1]['value']==1 and feedback[2]['value'] is False
     menu=root/'extensions/counter/menu.json'
@@ -85,9 +103,11 @@ event=function(e) state.on=e.value; assert(cssx.request({op="state.save",value=s
     assert json.loads((root/'state/extensions/working.json').read_text())['on'] is True
     assert api.tick(instance,.2)==1
     assert api.stop(instance)==1
+    assert json.loads((root/'state/extensions/cleanup-retry.json').read_text())['attempts']==2
     api.destroy(instance)
     instance=api.create(c.byref(host),str(root));assert instance
     assert counter()['sections'][0]['controls'][0]['value']==37
+    assert api.stop(instance)==0
     assert api.stop(instance)==1
     api.destroy(instance)
     print('Lua isolation, memory limit, empty arrays, Unicode storage, persistence, output and atomic menu reload passed')

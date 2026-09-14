@@ -18,10 +18,19 @@
 namespace css::extensions {
 namespace {
 void emit(CssxSink sink,void* output,const Json& value) { auto bytes=value.dump(); if(sink) sink(output,bytes.data(),bytes.size()); }
-void collect(void* output,const char* bytes,size_t size) {
-    auto& value=*static_cast<std::string*>(output);
-    if(size>1024*1024 || value.size()+size>1024*1024) return;
-    value.append(bytes,size);
+struct Response {
+    std::string bytes;
+    bool overflow=false;
+    Json parse() const {
+        if(overflow) throw std::runtime_error("CSSX response exceeds 1 MiB");
+        return bytes.empty()?Json::object():Json::parse(bytes);
+    }
+};
+void collect(void* output,const char* bytes,size_t size) noexcept {
+    auto& value=*static_cast<Response*>(output);
+    if(value.overflow) return;
+    if(size>1024*1024-value.bytes.size() || (!bytes && size)) {value.overflow=true;return;}
+    try {if(size) value.bytes.append(bytes,size);} catch(...) {value.overflow=true;}
 }
 using Module=void*;
 Module open_module(const fs::path& path) {
@@ -141,9 +150,9 @@ struct Runtime {
         }
     }
     Json service(const Json& j) {
-        auto bytes=j.dump(); std::string response;
+        auto bytes=j.dump(); Response response;
         const int ok=host.request(host.context,bytes.c_str(),collect,&response);
-        auto value=response.empty()?Json::object():Json::parse(response);
+        auto value=response.parse();
         if(!ok) throw std::runtime_error(value.value("error",std::string("CSSX host request failed")));
         return value;
     }
@@ -188,6 +197,9 @@ Json Entry::service(const Json& j) {
 }
 void Entry::fail(const std::string& text) {
     error=text;suspended=true;++runtime->revision;
+    // Stop owned effects as soon as a callback fails. A failed cleanup retains
+    // the module and is retried by Runtime::stop before any unload.
+    if(!stop()) error+="; cleanup incomplete, unload blocked";
     try { runtime->storage.log(manifest.id,"error",text); runtime->storage.log("cssx","error","Extension suspended",{{"id",manifest.id},{"error",text}}); } catch(...) {}
 }
 void* lua_memory(void* context,void* ptr,size_t old,size_t size) {
@@ -243,8 +255,9 @@ void Entry::start() {
         module=open_module(manifest.entry);
         auto get=reinterpret_cast<CssxGetExtension>(symbol(module,"cssx_get_extension"));
         if(!get) throw std::runtime_error("Missing cssx_get_extension export");
-        api=get();
-        if(!api || api->abi!=CSSX_ABI || api->size<sizeof(CssxExtension) || !api->create || !api->model || !api->event || !api->stop || !api->destroy) throw std::runtime_error("Incompatible CSSX extension ABI");
+        const auto* candidate=get();
+        if(!candidate || candidate->abi!=CSSX_ABI || candidate->size<sizeof(CssxExtension) || !candidate->create || !candidate->model || !candidate->event || !candidate->stop || !candidate->destroy) throw std::runtime_error("Incompatible CSSX extension ABI");
+        api=candidate;
         instance=api->create(&host);if(!instance) throw std::runtime_error("Extension initialization failed");
     } else {
         if(fs::file_size(manifest.entry)>1024*1024) throw std::runtime_error("Lua entry exceeds 1 MiB");
@@ -270,7 +283,7 @@ void Entry::refresh() {
     requests=0;
     Json next;
     if(lua) next=invoke_lua("model");
-    else { std::string bytes;if(!api->model(instance,collect,&bytes)) throw std::runtime_error("Extension model callback failed");next=Json::parse(bytes); }
+    else { Response response;if(!api->model(instance,collect,&response)) throw std::runtime_error("Extension model callback failed");next=response.parse(); }
     if(!definition.is_null()) next=bind_menu(definition,next);
     validate_model(next);model=std::move(next);dirty=false;
 }
@@ -310,7 +323,10 @@ bool Entry::stop() {
         if(lua && table!=LUA_NOREF) { auto result=invoke_lua("stop",nullptr,true);if(result.is_boolean() && !result.get<bool>()) return false; }
         if(api && instance && !api->stop(instance)) return false;
         stopped=true;return true;
-    } catch(const std::exception& e) { fail(e.what());return false; }
+    } catch(const std::exception& e) {
+        try {runtime->storage.log(manifest.id,"error",std::string("Extension cleanup failed: ")+e.what());} catch(...) {}
+        return false;
+    }
 }
 void* create(const CssxHost* h,const wchar_t* root) {
     try { if(!h || h->abi!=CSSX_ABI || h->size<sizeof(CssxHost) || !h->request || !root) return nullptr;return new Runtime(*h,fs::path(root)); } catch(...) {return nullptr;}

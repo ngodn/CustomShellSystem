@@ -75,3 +75,7 @@ The versioned ABI is [api.h](../../native/include/cssx/api.h). Export `cssx_get_
 Copy response data before the callback returns. Catch exceptions inside exported callbacks. Resolve current objects through host operations instead of retaining raw Unreal pointers. Keep gameplay changes passive until selected. Restore reversible changes in `stop`; returning zero prevents unloading if cleanup failed.
 
 Native extensions are trusted game-process code. The framework can report callback failures, but it cannot contain an access violation inside a third-party DLL.
+
+If startup or a tick fails, CSSX suspends the extension and calls `stop` immediately. Make cleanup repeatable: return zero (Lua: `false`) if it cannot finish, retain the information needed to restore your changes, and let CSSX retry during shutdown. Failed cleanup blocks unloading. A suspended extension never receives another tick. Do not rely on unloading the DLL to undo values already written into the game.
+
+Host responses have a 1 MiB limit, including all callback chunks. CSSX rejects overflow instead of accepting a truncated JSON prefix.
