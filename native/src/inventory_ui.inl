@@ -54,7 +54,13 @@ void inventory_order(UObject* panel,const std::vector<UObject*>& desired) {
     if(inventory_children(panel)!=desired) throw std::runtime_error("Inventory child ordering did not apply");
 }
 }
+#ifdef CSS_INVENTORY_DEV
+#include "inventory_capture.inl"
+#endif
 void InventoryUI::detach() {
+#ifdef CSS_INVENTORY_DEV
+    cinema_stop(); capture_duration_=0;
+#endif
     camera_stop();
     if(auto* tabs=tabs_.Get(); tabs && tab_.Get() && main_.Get() && active_) inventory_navigate(tabs,0);
     if(auto* page=page_.Get()) invoke(page,L"RemoveFromParent");
@@ -125,6 +131,21 @@ Json InventoryUI::command(void* engine,const Json& command) {
         invoke(inventory_object(tabs_.Get(),L"NavigationObject"),L"GetNavigableChildren");
         inventory_navigate(tabs_.Get(),0);
 #ifdef CSS_INVENTORY_DEV
+    } else if(action.starts_with("inventory_cinema_")) {
+        cinema_command(pc,command);
+    } else if(action=="inventory_capture_row") {
+        section_=std::clamp(command.value("section",0),0,2); row_=std::max(0,command.value("row",0));
+        scroll_offset_=std::max(0.f,command.value("offset",0.f));
+        if(auto* s=scroll_.Get()) invoke(s,L"SetScrollOffset",L"NewScrollOffset",scroll_offset_);
+        dirty_=true;
+    } else if(action=="inventory_capture_motion") {
+        if(!active_) throw std::runtime_error("Filming motion requires CSS");
+        capture_from_={yaw_,zoom_,pan_,frame_};
+        capture_to_=command.at("view").get<std::array<double,4>>();
+        for(auto x:capture_to_) if(!std::isfinite(x)) throw std::runtime_error("Invalid capture motion");
+        capture_start_=GetTickCount64();
+        capture_duration_=uint64_t(std::clamp(command.value("seconds",5.),.1,20.)*1000);
+
     } else if(action=="inventory_repair_padding") {
         // Repair this development session's old prototype, not a startup path.
         for(auto& [widget,padding]:top_padding_) padding={80,0,80,0};
@@ -178,6 +199,24 @@ Json InventoryUI::command(void* engine,const Json& command) {
 #ifdef CSS_INVENTORY_DEV
     auto result=inventory_probe(pc);
     result["css"]=diagnostics();
+    result["cinema"]={{"active",cinema_camera_.Get()!=nullptr},{"from",cinema_from_},{"to",cinema_to_}};
+    if(auto* camera=cinema_camera_.Get()) {
+        for(auto [label,object]:{std::pair{"camera",camera},std::pair{"player",cinema_player_.Get()}}) if(object) {
+            Call pos(object,L"K2_GetActorLocation",1); pos.run();
+            Call rot(object,L"K2_GetActorRotation",1); rot.run();
+            result["cinema"][label]={{"location",pos.get<std::array<double,3>>()},{"rotation",rot.get<std::array<double,3>>()}};
+        }
+        auto* manager=inventory_object(pc,L"PlayerCameraManager");
+        Call loc(manager,L"GetCameraLocation",1); loc.run();
+        Call rot(manager,L"GetCameraRotation",1); rot.run();
+        result["cinema"]["render_location"]=loc.get<std::array<double,3>>();
+        result["cinema"]["render_rotation"]=rot.get<std::array<double,3>>();
+        auto* component=inventory_object(camera,L"CameraComponent");
+        Call cloc(component,L"K2_GetComponentLocation",1); cloc.run();
+        Call crot(component,L"K2_GetComponentRotation",1); crot.run();
+        result["cinema"]["component_location"]=cloc.get<std::array<double,3>>();
+        result["cinema"]["component_rotation"]=crot.get<std::array<double,3>>();
+    }
     result["hit_points"]=Json::array();
     for(const auto& hit:hits_) if(auto* widget=hit.widget.Get()) {
         Call geometry(widget,L"GetCachedGeometry",1); geometry.run();

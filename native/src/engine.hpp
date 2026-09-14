@@ -21,6 +21,17 @@ public:
 };
 class Appearance;
 class InventoryUI {
+#ifdef CSS_INVENTORY_DEV
+    WeakObject cinema_camera_, cinema_player_, cinema_pc_, cinema_before_, cinema_hud_;
+    uint8_t cinema_hud_visibility_=0;
+    std::array<double,4> cinema_from_{}, cinema_to_{};
+    uint64_t cinema_start_=0, cinema_duration_=0, cinema_deadline_=0;
+    std::array<double,4> capture_from_{}, capture_to_{};
+    uint64_t capture_start_=0, capture_duration_=0;
+    void cinema_stop();
+    void cinema_update(bool focused);
+    void cinema_command(RC::Unreal::UObject*,const Json&);
+#endif
     fs::path logo_path_;
     WeakObject main_, tabs_, switcher_, tab_, page_, controller_;
     WeakObject canvas_, status_, scroll_, name_input_, display_, camera_component_, input_prompt_;

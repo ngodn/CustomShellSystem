@@ -500,6 +500,9 @@ void InventoryUI::camera_move(const std::array<double,4>& movement) {
     }
 }
 Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Appearance& appearance,float,bool focused) {
+#ifdef CSS_INVENTORY_DEV
+    cinema_update(focused);
+#endif
     if(!enabled_) return {};
     auto now=GetTickCount64();
     if(main_.Get() && now>=discover_after_) {
@@ -525,6 +528,9 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     if(!active_ && was_active_) { camera_stop(); closing_=false; transition_started_=0; }
     was_active_=active_;
     double elapsed=last_tick_?std::clamp((now-last_tick_)/1000.,0.,.05):0.; last_tick_=now;
+#ifdef CSS_INVENTORY_DEV
+    if(!active_ || !focused) capture_duration_=0;
+#endif
     if(!active_) return {};
     if(now>=layout_check_) {
         layout_check_=now+500;
@@ -545,6 +551,16 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     if(auto* input=name_input_.Get()) { Call focus(input,L"HasKeyboardFocus",1); focus.run(); typing=focus.get<bool>(); }
     if(!typing) camera_update(elapsed,state.invert_orbit_x);
     else { motion_.reset(); drag_pan_=drag_rotate_=false; }
+#ifdef CSS_INVENTORY_DEV
+    if(capture_duration_) {
+        double t=std::clamp(double(now-capture_start_)/capture_duration_,0.,1.);
+        const double smooth=t*t*(3-2*t);
+        auto target=capture_from_;
+        for(int i=0;i<4;++i) target[i]+=(capture_to_[i]-target[i])*smooth;
+        camera_move({target[0]-yaw_,target[1]-zoom_,target[2]-pan_,target[3]-frame_});
+        if(t>=1.) capture_duration_=0;
+    }
+#endif
     if(!typing) for(auto& binding:bindings_) {
         bool down=false; for(const auto& key:binding.keys) if(inventory_key(controller_.Get(),key)) { down=true; break; }
         bool repeat=binding.action=="up" || binding.action=="down" || binding.action=="left" || binding.action=="right";
