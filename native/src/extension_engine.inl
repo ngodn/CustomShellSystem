@@ -175,6 +175,12 @@ void ExtensionBridge::encode(FProperty* p,void* data,const Json& value,unsigned 
 }
 Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& request) {
     const auto op=request.at("op").get<std::string>();
+    if(op=="valid") {
+        const auto& target=request.at("target");if(target.is_null()) return false;
+        if(!target.is_object() || !target.contains("$object")) throw std::runtime_error("Expected CSSX object handle");
+        const auto found=objects_.find(target.at("$object").get<uint64_t>());
+        return found!=objects_.end() && found->second.Get()!=nullptr;
+    }
     if(op.starts_with("hooks.")) return hook_request(request);
     if(op=="player") {
         auto* pawn=appearance.player(engine);return {{"pawn",handle(pawn)},{"controller",handle(pawn?read<UObject*>(pawn,L"Controller"):nullptr)},{"shell",appearance.shell},{"revision",appearance.player_revision}};
@@ -201,6 +207,24 @@ Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& re
         auto text=wide(path);return handle(UObjectGlobals::StaticFindObject<UObject*>(nullptr,nullptr,text.c_str()));
     }
     auto* object=resolve(request.at("target"));if(!object) throw std::runtime_error("CSSX target is null");
+    if(op=="input.keys") {
+        const auto& keys=request.at("keys");
+        if(!keys.is_array() || keys.size()>64) throw std::runtime_error("CSSX input batch exceeds 64 keys");
+        std::vector<std::string> names;std::set<std::string> unique;
+        for(const auto& key:keys) {
+            const auto name=key.get<std::string>();
+            if(name.empty() || name.size()>64 || !std::all_of(name.begin(),name.end(),[](unsigned char c){return std::isalnum(c) || c=='_';}) || !unique.insert(name).second)
+                throw std::runtime_error("Invalid or duplicate CSSX input key");
+            names.push_back(name);
+        }
+        Json result=Json::object();
+        for(const auto& name:names) {
+            Call call(object,L"IsInputKeyDown",2);auto* p=call.param(L"Key");
+            member(call.data(p),p->GetElementSize(),find(L"/Script/InputCore.Key"),L"KeyName",FName(wide(name).c_str()));
+            call.run();result[name]=call.get<bool>();
+        }
+        return result;
+    }
     if(op=="table.rows") {
         if(!object->IsA<UDataTable>()) throw std::runtime_error("CSSX target is not a DataTable");
         auto* table=static_cast<UDataTable*>(object);const auto& rows=table->GetRowMap();

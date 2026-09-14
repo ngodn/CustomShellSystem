@@ -16,11 +16,14 @@ constexpr Action unlocks[]={{"clothing","S_UnlockAllClothing"},{"gates","S_Unloc
 std::string normalized(const std::string& text) {
     std::string result;for(unsigned char c:text) if(std::isalnum(c)) result+=char(std::tolower(c));return result;
 }
-bool shell_matches(const Json& tag,const std::string& target) {
-    const auto value=tag.is_object()?tag.value("TagName",std::string{}):tag.is_string()?tag.get<std::string>():std::string{};
-    const auto needle=normalized(target);return !needle.empty() && normalized(value).find(needle)!=std::string::npos;
-}
 uint64_t identity(const Json& handle) {return handle.is_object()?handle.value("$object",uint64_t{}):0;}
+}
+bool Menu::shell_matches(const Json& tag,const std::string& target) const {
+    const auto value=tag.is_object()?tag.value("TagName",std::string{}):tag.is_string()?tag.get<std::string>():std::string{};
+    const auto text=normalized(value),needle=normalized(target);
+    if(!needle.empty() && text.find(needle)!=std::string::npos) return true;
+    const auto token=shell_tokens_.find(target);
+    return token!=shell_tokens_.end() && !token->second.empty() && text.find(token->second)!=std::string::npos;
 }
 Menu::Menu(const CssxHost* host):host_(host),recovery_(host) {
     settings_=host_.request({{"op","state.load"}});
@@ -28,7 +31,7 @@ Menu::Menu(const CssxHost* host):host_(host),recovery_(host) {
     auto number=[&](const char* id,double fallback,double low,double high) {
         double value=fallback;if(settings_.contains(id) && settings_[id].is_number()) value=settings_[id].get<double>();
         if(!std::isfinite(value)) return fallback;
-        const double step=std::string(id)=="heal_interval" || std::string(id)=="move_multiplier"?.25:1.;
+        const double step=std::string(id)=="heal_interval" || std::string(id)=="move_multiplier"?.25:std::string(id)=="shockwave_interval"?.5:1.;
         return std::clamp(low+std::round((std::clamp(value,low,high)-low)/step)*step,low,high);
     };
     values_={{"god",false},{"auto_heal",false},{"infinite_resolve",false},{"move_fast",false},{"max_shell_points",false},
@@ -39,7 +42,16 @@ Menu::Menu(const CssxHost* host):host_(host),recovery_(host) {
         {"shell","none"},{"pickup","none"},{"tarstone","none"},{"tarstone_scope","selected"},
         {"tarstone_level",int(number("tarstone_level",1,1,3))},{"pickup_amount",int(number("pickup_amount",1,1,9999))}};
     for(const auto* id:combat_ids) values_[id]=false;
+    for(const auto* id:power_ids) values_[id]=false;
+    values_["shockwave_interval"]=number("shockwave_interval",3,.5,5);
+    values_["bindings"]=settings_.value("bindings",Json::object());
+    if(!values_["bindings"].is_object() || values_["bindings"].size()>64) values_["bindings"]=Json::object();
+    const auto keys=binding_keys();
+    for(auto it=values_["bindings"].begin();it!=values_["bindings"].end();) {
+        if(!it.value().is_string() || !keys.contains(it.value().get<std::string>())) it=values_["bindings"].erase(it);else ++it;
+    }
     applied_=values_;
+    binding_reset();
     status_="Cheats start off. Edit settings, then Apply settings.";
 }
 void Menu::report(const std::string& text) {
@@ -54,11 +66,13 @@ bool Menu::has_changes() const {return values_!=applied_;}
 void Menu::persist(const Json& values) {
     Json next=Json::object();
     for(auto it=values.begin();it!=values.end();++it) if(it.value().is_number()) next[it.key()]=it.value();
+    next["bindings"]=values.at("bindings");
     host_.request({{"op","state.save"},{"value",next}});settings_=std::move(next);
 }
 void Menu::apply_settings() {
     if(cleanup_required_) throw std::runtime_error("Turn off all cheats to finish cleanup before applying more settings.");
     if(!has_changes()) return;
+    binding_validate();
     const auto before=applied_;
     applied_=values_;
     try {
@@ -69,25 +83,27 @@ void Menu::apply_settings() {
         if(applied_["max_shell_points"]!=before["max_shell_points"]) shell_points(applied_["max_shell_points"].get<bool>());
         if(applied_["auto_heal"]==true || applied_["infinite_resolve"]==true) require_player();
         combat_sync();
+        power_sync();
         persist(applied_);
     } catch(const std::exception& e) {
         const std::string reason=e.what();applied_=before;
-        try {god(before["god"].get<bool>());movement(before["move_fast"].get<bool>());shell_points(before["max_shell_points"].get<bool>());combat_sync();}
+        try {god(before["god"].get<bool>());movement(before["move_fast"].get<bool>());shell_points(before["max_shell_points"].get<bool>());combat_sync();power_sync();}
         catch(const std::exception& cleanup) {
             cleanup_required_=true;
             throw std::runtime_error("Apply failed: "+reason+". Cleanup needs retry: "+cleanup.what());
         }
         throw std::runtime_error("Settings were not applied: "+reason);
     }
-    heal_time_=resolve_time_=0;report("Settings applied. Numeric preferences saved; cheats remain session-only.");
+    bindings_checked_=true;binding_reset();heal_time_=resolve_time_=power_time_=0;report("Settings applied. Preferences and shortcuts saved; cheats remain session-only.");
 }
 void Menu::disable_all() {
     // Stop periodic work first. Failed restores retain their ownership records.
     for(const auto* id:toggle_ids) applied_[id]=false;
     cleanup_required_=true;
-    combat_clear();god(false);movement(false);shell_points(false);
+    power_clear();combat_clear();god(false);movement(false);shell_points(false);
     for(const auto* id:toggle_ids) values_[id]=false;
     cleanup_required_=false;report("All cheats off. Other pending edits were kept.");
+    binding_reset();
 }
 void Menu::refresh_shells() {
     auto settings=host_.find("/Script/Sparta.Default__SpartaGameSettings");
@@ -99,7 +115,20 @@ void Menu::refresh_shells() {
         if(!text.empty() && key.find("loadfromsave")==std::string::npos) choices.push_back({{"id",text},{"label",text}});
     }
     if(choices.empty()) throw std::runtime_error("The game returned no selectable shells.");
+    std::map<std::string,std::string> tokens;
+    for(const auto& choice:choices) {
+        const auto name=choice.at("id").get<std::string>();
+        const auto definition=host_.call(settings,"GetShellItemDefinition",Json::array({name}));
+        const auto path=definition.is_object()?definition.value("name",std::string{}):std::string{};
+        const auto prefix=path.rfind(".ID_Shell_");
+        if(prefix!=std::string::npos) {
+            auto token=path.substr(prefix+10);if(token.ends_with("_C")) token.resize(token.size()-2);
+            tokens[name]=normalized(token);
+        }
+    }
+    shell_tokens_=std::move(tokens);
     if(choices!=shells_) {
+        bindings_checked_=false;
         shells_=std::move(choices);bool found=false;for(const auto& option:shells_) if(option["id"]==values_["shell"]) found=true;
         if(!found) values_["shell"]=shells_[0]["id"];
         applied_["shell"]=values_["shell"];
@@ -114,6 +143,11 @@ Json Menu::model() {
     enabled["switch_shell"]=live && !pending_ && !has_changes() && !cleanup_required_ && values_["shell"]!="none";
     enabled["unlock_shells"]=live && !pending_ && !has_changes() && !cleanup_required_;
     for(const auto* id:toggle_ids) enabled[id]=live && !pending_ && !cleanup_required_;
+    for(const auto* id:power_ids) {
+        const auto shell=current_.is_object()?current_.value("shell",std::string{}):std::string{};
+        const auto expected=std::string(id)=="smert_stance"?"Smert":std::string(id)=="genessa_clones"?"Genessa":"Lazlo";
+        enabled[id]=live && !pending_ && !cleanup_required_ && (values_[id]==true || shell_matches(shell,expected));
+    }
     enabled["refresh_pickups"]=live && !pending_;
     enabled["refresh_tarstones"]=live && !pending_;
     for(const auto* action:{"add_tarstone","set_tarstone_level","give_tarstones_melee","give_tarstones_sidearm","give_tarstones_support"})
@@ -124,7 +158,7 @@ Json Menu::model() {
     enabled["cancel_recovery"]=recovery_.running();
     enabled["apply_settings"]=has_changes() && !pending_ && !cleanup_required_;
     enabled["discard_changes"]=has_changes() && !pending_;
-    enabled["disable_all"]=!pending_ && (cleanup_required_ || !combat_hooks_.empty() || !points_saved_.empty() || applied_["max_shell_points"]==true || !saved_.empty() || applied_["auto_heal"]==true || applied_["infinite_resolve"]==true || applied_["god"]==true || applied_["move_fast"]==true);
+    enabled["disable_all"]=!pending_ && (cleanup_required_ || !powers_.empty() || !combat_hooks_.empty() || !points_saved_.empty() || applied_["max_shell_points"]==true || !saved_.empty() || applied_["auto_heal"]==true || applied_["infinite_resolve"]==true || applied_["god"]==true || applied_["move_fast"]==true);
     std::string summary=cleanup_required_?"Cleanup needs retry. Use Turn off all cheats.":has_changes()?"Pending edits. Apply settings or Discard changes.":"Settings are applied.";
     unsigned active=0;for(const auto* id:toggle_ids) if(applied_[id]==true) ++active;
     summary+=" Active cheats: "+std::to_string(active)+".";
@@ -136,7 +170,10 @@ Json Menu::model() {
     for(const auto& option:tarstones_) if(option["id"]==values_["tarstone"])
         confirmations["add_tarstone"]="Add "+option["label"].get<std::string>()+"? An owned Tarstone will keep its current level and experience.";
     confirmations["set_tarstone_level"]="Set "+values_["tarstone_scope"].get<std::string>()+" owned Tarstones to level "+std::to_string(values_["tarstone_level"].get<int>())+"? Experience, durability and stacks will be kept. The game can save this change.";
-    return {{"values",values_},{"options",{{"shell",shells_},{"pickup",pickups_},{"tarstone",tarstones_}}},{"enabled",enabled},{"status",summary+" "+status_},{"error",action_error_},{"confirmations",confirmations}};
+    if(binding_consent()) confirmations["apply_settings"]="Save these shortcuts? Assigned gameplay-shell and health-reduction shortcuts run when pressed in gameplay, without another confirmation. They do not bypass active-cheat or game-state checks.";
+    auto display_values=values_;display_values["binding_action"]=binding_action_;
+    display_values["binding_key"]=values_["bindings"].value(binding_action_,std::string("none"));
+    return {{"values",display_values},{"options",{{"shell",shells_},{"pickup",pickups_},{"tarstone",tarstones_},{"binding_action",binding_actions()},{"binding_key",binding_key_options()}}},{"enabled",enabled},{"status",summary+" "+status_},{"error",action_error_},{"confirmations",confirmations}};
 }
 void Menu::override_value(const Json& object,const std::string& property,const Json& value) {
     const auto key=std::to_string(identity(object))+":"+property;
@@ -190,6 +227,16 @@ void Menu::apply_event(const Json& event) {
     const auto id=event.at("id").get<std::string>();
     if(id=="cancel_recovery") {recovery_.cancel();report("Intro-lock check cancelled.");return;}
     if(pending_) throw std::runtime_error("Wait for the current shell switch to finish.");
+    if(id=="binding_action") {
+        for(const auto& option:binding_actions()) if(option.at("id")==event.at("value")) {binding_action_=event.at("value").get<std::string>();return;}
+        throw std::runtime_error("Unknown shortcut action.");
+    }
+    if(id=="binding_key") {
+        const auto key=event.at("value").get<std::string>();if(!binding_keys().contains(key)) throw std::runtime_error("Unsupported shortcut key.");
+        if(key=="none") values_["bindings"].erase(binding_action_);else values_["bindings"][binding_action_]=key;
+        return;
+    }
+    if(id=="clear_bindings") {values_["bindings"]=Json::object();return;}
     if(id=="refresh_pickups") {refresh_pickups();return;}
     if(id=="refresh_tarstones") {refresh_tarstones();return;}
     if(id=="tarstone") {
@@ -207,7 +254,7 @@ void Menu::apply_event(const Json& event) {
     if(id=="repair_intro") {if(!event.value("confirmed",false)) throw std::runtime_error("Confirm the intro-lock check first.");recovery_.start();report(recovery_.message());return;}
     if(id=="disable_all") {disable_all();return;}
     if(id=="discard_changes") {values_=applied_;report("Pending settings discarded.");return;}
-    if(id=="apply_settings") {apply_settings();return;}
+    if(id=="apply_settings") {if(binding_consent() && !event.value("confirmed",false)) throw std::runtime_error("Confirm the gameplay shortcuts before applying settings.");apply_settings();return;}
     if(cleanup_required_) throw std::runtime_error("Finish cleanup with Turn off all cheats first.");
     if(values_.contains(id) && values_[id].is_boolean()) {
         values_[id]=event.at("value").get<bool>();return;
@@ -217,12 +264,13 @@ void Menu::apply_event(const Json& event) {
         const auto value=event["value"].get<double>();
         const std::map<std::string,std::pair<double,double>> bounds={{"heal_amount",{1,9999}},{"resolve_amount",{1,9999}},
             {"heal_percent",{1,100}},{"heal_interval",{.25,5}},{"move_multiplier",{1,5}},
-            {"grant_amount",{1,100000}},{"pickup_amount",{1,9999}},{"tarstone_level",{1,3}},{"damage_percent",{1,99}},{"harbinger_level",{1,1000}}};
+            {"grant_amount",{1,100000}},{"pickup_amount",{1,9999}},{"tarstone_level",{1,3}},{"damage_percent",{1,99}},{"harbinger_level",{1,1000}},{"shockwave_interval",{.5,5}}};
         const auto range=bounds.at(id);
         if(!std::isfinite(value) || value<range.first || value>range.second) throw std::runtime_error("Value is outside the supported range.");
-        const bool whole=id!="heal_interval" && id!="move_multiplier";
+        const bool whole=id!="heal_interval" && id!="move_multiplier" && id!="shockwave_interval";
         if(whole && std::floor(value)!=value) throw std::runtime_error("Use a whole number for this setting.");
         if(!whole && std::abs(value*4-std::round(value*4))>1e-8) throw std::runtime_error("Use quarter-step values for this setting.");
+        if(id=="shockwave_interval" && std::abs(value*2-std::round(value*2))>1e-8) throw std::runtime_error("Use half-second values for the shockwave interval.");
         values_[id]=whole?Json(int(value)):Json(value);return;
     }
     if(id=="shell") {
@@ -314,10 +362,11 @@ void Menu::shell_tick(double delta) {
 }
 void Menu::tick(double seconds) {
     if(stopped_) return;
+    binding_tick(seconds);
     const auto recovery_message=recovery_.message();recovery_.tick(seconds);
     if(recovery_.message()!=recovery_message) report(recovery_.message());
     try {shell_tick(seconds);} catch(const std::exception& e){pending_.reset();report(std::string("Shell switch stopped: ")+e.what());}
-    refresh_+=seconds;heal_time_+=seconds;resolve_time_+=seconds;catalog_time_+=seconds;points_time_+=seconds;combat_time_+=seconds;
+    refresh_+=seconds;heal_time_+=seconds;resolve_time_+=seconds;catalog_time_+=seconds;points_time_+=seconds;combat_time_+=seconds;power_time_+=seconds;
     if(refresh_<.25) return;refresh_=0;
     auto player=host_.player();
     if(!player.is_object() || !identity(player.value("pawn",Json()))) {if(!current_.is_null()){current_=nullptr;host_.request({{"op","invalidate"}});}return;}
@@ -327,6 +376,7 @@ void Menu::tick(double seconds) {
         if(changed) {
             // Restore shared CharacterData before acquiring the next pawn's
             // baseline. Never compound a multiplier across a restart.
+            power_clear();for(const auto* id:power_ids) applied_[id]=values_[id]=false;
             combat_clear();restore("Movement");restore("bCanBeDamaged");
             if(new_controller) disable_all();
             current_=player;owner_controller_=identity(player["controller"]);catalog_ready_=false;catalog_time_=5;
@@ -338,6 +388,7 @@ void Menu::tick(double seconds) {
             catch(const std::exception& e) {report(std::string("Waiting for the shell catalog: ")+e.what());}
         }
         if(pending_ || cleanup_required_) return;
+        const auto power_delta=std::min(power_time_,.5);power_time_=0;power_tick(power_delta);
         if(changed || combat_time_>=1.) {combat_time_=0;combat_sync();}
         if(applied_["max_shell_points"]==true && (changed || points_time_>=1.)) {points_time_=0;shell_points(true);}
         if(applied_["god"]==true) god(true);
@@ -362,7 +413,7 @@ void Menu::tick(double seconds) {
 bool Menu::stop() {
     pending_.reset();recovery_.cancel();
     try {
-        combat_clear();shell_points(false);restore("bCanBeDamaged");restore("Movement");
+        power_clear();combat_clear();shell_points(false);restore("bCanBeDamaged");restore("Movement");
         if(applied_["move_fast"]==true) {auto player=host_.player();if(identity(player.value("pawn",Json()))) host_.call(player["pawn"],"InitialiseCharacterData");}
         stopped_=true;return true;
     } catch(const std::exception& e) {host_.log(std::string("Cleanup failed: ")+e.what(),"error");return false;}

@@ -204,7 +204,7 @@ Json InventoryUI::command(void* engine,const Json& command) {
         DWORD pid=0; GetWindowThreadProcessId(GetForegroundWindow(),&pid);
         if(pid!=GetCurrentProcessId()) throw std::runtime_error("Key test requires focused game");
         const auto key=command.at("key").get<std::string>();
-        const WORD code=key=="I"?'I':key=="Escape"?VK_ESCAPE:key=="Home"?VK_HOME:0;
+        const WORD code=key=="I"?'I':key=="Escape"?VK_ESCAPE:key=="Home"?VK_HOME:key=="F8"?VK_F8:0;
         if(!code) throw std::runtime_error("Unsupported menu test key");
         INPUT input{}; input.type=INPUT_KEYBOARD; input.ki.wVk=code;
         input.ki.dwFlags=command.value("down",false)?0:KEYEVENTF_KEYUP;

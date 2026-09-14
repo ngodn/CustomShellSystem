@@ -1,6 +1,7 @@
 #include "cheat_menu.hpp"
 #include "extension_data.hpp"
 #include <iostream>
+#include <source_location>
 
 using cheat::Json;
 namespace {
@@ -12,6 +13,11 @@ struct Host {
     bool damageable=true,open=false,confirm_switch=true,fail_restore=false,fail_save=false;
     std::string shell="Genessa";
     bool check_soft=false;
+    std::string power_fixture;
+    bool focused=true,paused=false,input_blocked=false,power_missing=false,power_foreign=false,fail_clone_remove=false,fail_second_clone=false,delayed_clones=false,stance_active=false;
+    int spawn_count=1,stance_handle=-1;
+    Json primary_clone,secondary_clone;
+    Json pressed_keys=Json::object();unsigned input_polls=0;
     bool shell_unlock_fixture=false,bad_unlock_signature=false,fail_unlock_save=false,ignore_unlock_save=false,change_unlock_player=false;
     bool pickup_unlocked=false;
     unsigned pickup_writes=0,save_unlocks=0,actor_count=1;
@@ -41,7 +47,10 @@ struct Host {
         if(op=="state.load") return state;
         if(op=="state.save") {if(fail_save) throw std::runtime_error("Disk write failed");state=j.at("value");return true;}
         if(op=="log" || op=="invalidate") return nullptr;
-        if(op=="player") return {{"pawn",pawn},{"controller",controller}};
+        if(op=="player") return {{"pawn",pawn},{"controller",controller},{"shell","CharacterId.Player.Shell."+shell}};
+        if(op=="input.focus") return focused;
+        if(op=="input.keys") {++input_polls;Json result=Json::object();for(const auto& key:j.at("keys")) result[key.get<std::string>()]=pressed_keys.value(key.get<std::string>(),false);return result;}
+        if(op=="valid") return true;
         if(op=="hooks.status") return {{"available",hook_available},{"rules",Json::array()}};
         if(op=="hooks.add") {
             ++hook_adds;if(fail_hook_add==hook_adds) throw std::runtime_error("Hook installation failed");
@@ -65,6 +74,10 @@ struct Host {
             else if(fn=="UpdateSoftItemStatus") fields={{"SoftItem",bad_stone_signature?8:40},{"__WorldContext",8}};
             else if(fn=="CacheAllTarstones") fields={{"Completed",1}};
             else if(fn=="SetTarstoneLevel") fields={{"Tarstone",8},{"LevelData",bad_level_signature?8:16}};
+            else if(!power_fixture.empty() && fn=="GetAvatarActorFromActorInfo") fields={{"ReturnValue",8}};
+            else if(!power_fixture.empty() && fn=="HasSecondaryClone") fields={{"ReturnValue",1}};
+            else if(!power_fixture.empty() && fn=="RemovePermanentFightStance") fields={{"Immediate",1}};
+            else if(!power_fixture.empty() && (fn=="SpawnPrimaryClone" || fn=="SpawnSecondaryClone" || fn=="RemovePrimaryClone" || fn=="RemoveSecondaryClone" || fn=="EnableFightStance" || fn=="TriggerLastShockwave")) {}
             else if(shell_unlock_fixture && (fn=="S_UnlockAllShells" || fn=="CheckForShellUnlock")) {if(bad_unlock_signature && fn=="CheckForShellUnlock") fields={{"NewRequiredArg",8}};}
             else if(shell_unlock_fixture && fn=="GetShellsIDsTagContainer") fields={{"ReturnValue",32},{"__WorldContext",8}};
             else if(shell_unlock_fixture && fn=="UnlockShell") fields={{"ShellId",8},{"Save",1},{"__WorldContext",8}};
@@ -87,6 +100,11 @@ struct Host {
             if(p=="Mesh") return object(8);
             if(p=="WeaponPutInHandBlock") return {{"Handle",effect_handle}};
             if(p=="ActivatableAbilities") {
+                if(!power_fixture.empty()) {
+                    Json ability=object(70);ability["class"]="BlueprintGeneratedClass /Game/Test."+power_fixture;
+                    auto instances=power_missing?Json::array():Json::array({ability});
+                    return {{"Items",Json::array({{{"Ability",object(999)},{"NonReplicatedInstances",instances},{"ReplicatedInstances",instances}}})}};
+                }
                 if(combat_fixture) {
                     Json ability=object(80);ability["class"]="BlueprintGeneratedClass /Game/Test.GA_Parry_Handler_C";
                     return {{"Items",Json::array({{{"Ability",object(999)},{"NonReplicatedInstances",Json::array({ability})},{"ReplicatedInstances",Json::array({ability})}}})}};
@@ -96,6 +114,10 @@ struct Host {
                 return {{"Items",Json::array({{{"Ability",ability},{"ActiveCount",1},{"NonReplicatedInstances",instances},{"ReplicatedInstances",Json::array()}}})}};
             }
             if(p=="HealthComponent") return object(5);
+            if(p=="SpawnCount") return spawn_count;
+            if(p=="CurrentPrimaryClone") return primary_clone;
+            if(p=="CurrentSecondaryClone") return secondary_clone;
+            if(p=="GE_FightStanceActive") return {{"Handle",stance_handle},{"bPassedFiltersAndWasExecuted",stance_active}};
             if(p=="ActiveSealItemHandle") return object(81);
             if(p=="ItemDef") return {{"$object",82},{"name","BlueprintGeneratedClass /Game/Seals."+seal}};
             if(combat_fixture && j.at("target").at("$object")==80 && cooldown.contains(p.get<std::string>())) return cooldown.at(p.get<std::string>());
@@ -125,6 +147,7 @@ struct Host {
             value=j.at("value");return value;
         }
         if(op=="set") {
+            if(j.at("property")=="SpawnCount") {spawn_count=j.at("value").get<int>();return spawn_count;}
             if(shell_unlock_fixture && j.at("property")=="ShellUnlocked") {++pickup_writes;pickup_unlocked=j.at("value").get<bool>();return pickup_unlocked;}
             if(combat_fixture && cooldown.contains(j.at("property").get<std::string>())) {cooldown[j.at("property").get<std::string>()]=j.at("value");return j.at("value");}
             if(j.at("property")=="bCanBeDamaged") {if(fail_restore && j.at("value")==true) throw std::runtime_error("restore failed");damageable=j.at("value").get<bool>();return damageable;}
@@ -132,6 +155,29 @@ struct Host {
         }
         if(op=="call") {
             calls.push_back(j);const auto function=j.at("function");
+            if(function=="GetShellItemDefinition") {
+                auto name=j.at("args")[0].get<std::string>();if(name=="Lazlo") name="Necrophage";
+                return {{"ReturnValue",{{"$object",99},{"name","BlueprintGeneratedClass /Game/Test.ID_Shell_"+name+"_C"}}}};
+            }
+            if(function=="GetAvatarActorFromActorInfo") return {{"ReturnValue",power_foreign?object(777):pawn}};
+            if(function=="IsInGameMenu") return {{"ReturnValue",open}};
+            if(function=="IsMoveInputIgnored" || function=="IsLookInputIgnored") return {{"ReturnValue",input_blocked}};
+            if(function=="IsGamePaused") return {{"ReturnValue",paused}};
+            if(function=="HasSecondaryClone") {
+                bool paired=false;for(const auto& [id,hook]:hooks) if(hook.at("function")=="HasSecondaryClone" && hook.at("value")==true) paired=true;
+                return {{"ReturnValue",paired}};
+            }
+            if(function=="SpawnPrimaryClone") {
+                bool paired=false;for(const auto& [id,hook]:hooks) if(hook.at("function")=="HasSecondaryClone" && hook.at("value")==true) paired=true;
+                if(!delayed_clones) {primary_clone=object(71);if(paired && !fail_second_clone) secondary_clone=object(72);}
+                return Json::object();
+            }
+            if(function=="SpawnSecondaryClone") {if(fail_second_clone) throw std::runtime_error("Second clone failed");if(!delayed_clones) secondary_clone=object(72);return Json::object();}
+            if(function=="RemovePrimaryClone") {if(fail_clone_remove) throw std::runtime_error("Clone cleanup failed");primary_clone=nullptr;return Json::object();}
+            if(function=="RemoveSecondaryClone") {secondary_clone=nullptr;return Json::object();}
+            if(function=="EnableFightStance") {stance_handle=88;stance_active=true;return Json::object();}
+            if(function=="RemovePermanentFightStance") {stance_active=false;return Json::object();}
+            if(function=="TriggerLastShockwave") return Json::object();
             if(shell_unlock_fixture && function=="GetShellsIDsTagContainer") return {{"ReturnValue",{{"GameplayTags",unlock_tags}}}};
             if(shell_unlock_fixture && function=="GetAllActorsOfClass") {
                 check_actor_world(j);Json actors=Json::array();
@@ -153,7 +199,7 @@ struct Host {
             if(function=="ClearLocalCooldown" || function=="ClearGlobalCooldown") return Json::object();
             if(function=="HasPlayedGetUp") return {{"ReturnValue",intro_done}};
             if(function=="IsMapUnlocked") return {{"ReturnValue",map_unlocked}};
-            if(function=="GetGameplayEffectFromActiveEffectHandle") {auto effect=object(10);effect["class"]="BlueprintGeneratedClass /Game/Test.GE_State_Block_Weapon_PutInHand_Primary_C";return {{"ReturnValue",effect}};}
+            if(function=="GetGameplayEffectFromActiveEffectHandle") {if(!power_fixture.empty()) return {{"ReturnValue",stance_active?object(73):Json()}};auto effect=object(10);effect["class"]="BlueprintGeneratedClass /Game/Test.GE_State_Block_Weapon_PutInHand_Primary_C";return {{"ReturnValue",effect}};}
             if(function=="GetAnimInstance") return {{"ReturnValue",object(11)}};
             if(function=="GetCurrentActiveMontage") return {{"ReturnValue",montage?object(12):Json()}};
             if(function=="ResetPlayerState") {if(!retain_lock) intro_lock=false;return Json::object();}
@@ -166,7 +212,7 @@ struct Host {
             if(function=="UpdateSoftItemStatus") return Json::object();
             if(function=="CacheAllTarstones") {if(fail_stone_cache) throw std::runtime_error("Cache unavailable");return {{"Completed",true}};}
             if(function=="SetTarstoneLevel") {if(fail_equipped_refresh) throw std::runtime_error("Equipped refresh unavailable");return Json::object();}
-            if(function=="GetShellNames") return {{"ReturnValue",Json::array({"Genessa","Proxima","ID_Shell_LoadFromSave"})}};
+            if(function=="GetShellNames") return {{"ReturnValue",power_fixture.empty()?Json::array({"Genessa","Proxima","ID_Shell_LoadFromSave"}):Json::array({"Genessa","Smert","Lazlo"})}};
             if(function=="GetCharacterID") return {{"ReturnValue",{{"TagName","Shell."+shell}}}};
             if(function=="GetShellHealth" || function=="GetHealth") return {{"ReturnValue",80.}};
             if(function=="GetMaxShellHealth" || function=="GetMaxHealth") return {{"ReturnValue",100.}};
@@ -179,11 +225,128 @@ struct Host {
     void check_actor_world(const Json& j) {if(j.at("args").at("WorldContextObject")!=pawn) throw std::runtime_error("Actor lookup did not use the current player world");}
 };
 void check(bool value,const char* text){if(!value) throw std::runtime_error(text);}
-template<class F> void rejects(F fn){try{fn();}catch(const std::exception&){return;}throw std::runtime_error("Expected rejection");}
+template<class F> void rejects(F fn,const std::source_location where=std::source_location::current()){try{fn();}catch(const std::exception&){return;}throw std::runtime_error("Expected rejection at line "+std::to_string(where.line()));}
 }
 int main(int argc,char** argv) {
     if(argc!=2) return 2;
     const auto definition=css::read_json(css::extensions::utf8_path(argv[1]));
+    {
+        Host h;cheat::Menu m(&h.api);m.tick(.25);m.tick(.25);check(h.input_polls==0,"Unbound shortcuts polled keys");
+        m.event({{"id","binding_key"},{"value","F5"}});h.pressed_keys["F5"]=true;m.tick(.25);
+        check(h.damageable && h.input_polls==0,"Shortcut draft fired");
+        m.event({{"id","apply_settings"}});m.tick(.25);check(h.damageable,"Held key fired immediately after applying");
+        h.pressed_keys["F5"]=false;m.tick(.025);h.pressed_keys["F5"]=true;m.tick(.025);
+        check(!h.damageable,"Short press between gameplay updates was missed");m.tick(.25);check(!h.damageable,"Held shortcut repeated");
+        h.open=true;h.pressed_keys["F5"]=false;m.tick(.025);h.pressed_keys["F5"]=true;m.tick(.025);h.open=false;m.tick(.025);
+        check(!h.damageable,"Menu key leaked into gameplay");
+        h.pressed_keys["F5"]=false;m.tick(.025);h.pressed_keys["F5"]=true;m.tick(.025);check(h.damageable,"Fresh key press did not toggle off");
+        check(h.state["bindings"]["god"]=="F5" && !h.state.contains("god"),"Shortcut preference or passive boot contract broken");
+        Host restart;restart.state=h.state;restart.pressed_keys["F5"]=true;cheat::Menu resumed(&restart.api);resumed.tick(.25);resumed.tick(.25);
+        check(restart.damageable,"Restored shortcut fired while held at startup");
+        restart.pressed_keys["F5"]=false;resumed.tick(.025);restart.focused=false;restart.pressed_keys["F5"]=true;resumed.tick(.025);restart.focused=true;resumed.tick(.025);
+        check(restart.damageable,"Focus regain fired held shortcut");
+        css::extensions::validate_model(css::extensions::bind_menu(definition,m.model()));
+    }
+    {
+        Host h;cheat::Menu m(&h.api);m.tick(.25);
+        m.event({{"id","binding_key"},{"value","F5"}});m.event({{"id","binding_action"},{"value","heal"}});m.event({{"id","binding_key"},{"value","F5"}});
+        rejects([&]{m.event({{"id","apply_settings"}});});check(h.state.empty(),"Conflicting shortcuts were saved");
+        m.event({{"id","binding_key"},{"value","LeftCtrl+F5"}});rejects([&]{m.event({{"id","apply_settings"}});});
+        m.event({{"id","binding_key"},{"value","R3+D-pad Up"}});m.event({{"id","apply_settings"}});m.tick(.025);
+        h.pressed_keys["Gamepad_RightThumbstick"]=true;m.tick(.025);check(h.count("S_Heal")==0,"Partial controller chord fired");
+        h.pressed_keys["Gamepad_DPad_Up"]=true;m.tick(.025);m.tick(.025);check(h.count("S_Heal")==1,"Controller chord did not fire once");
+        m.event({{"id","clear_bindings"}});m.event({{"id","discard_changes"}});check(m.model()["values"]["bindings"].size()==2,"Discard did not restore shortcut draft");
+        m.event({{"id","clear_bindings"}});m.event({{"id","apply_settings"}});const auto polls=h.input_polls;m.tick(.25);check(h.input_polls==polls && h.state["bindings"].empty(),"Cleared shortcuts still polled");
+    }
+    {
+        Host h;cheat::Menu m(&h.api);m.tick(.25);
+        m.event({{"id","binding_action"},{"value","switch:Proxima"}});m.event({{"id","binding_key"},{"value","F6"}});
+        rejects([&]{m.event({{"id","apply_settings"}});});check(h.state.empty(),"Gameplay shortcut saved without confirmation");
+        m.event({{"id","apply_settings"},{"confirmed",true}});m.tick(.025);h.pressed_keys["F6"]=true;m.tick(.1);m.tick(.5);
+        check(h.count("S_SwitchToShell")==1 && h.shell=="Proxima","Confirmed shell shortcut failed");
+    }
+    {
+        Host h;h.power_fixture="GA_AstralClones_Action_C";cheat::Menu m(&h.api);m.tick(.25);
+        m.event({{"id","genessa_clones"},{"value",true}});m.tick(1);
+        check(h.spawn_count==1 && h.count("SpawnPrimaryClone")==0,"Clone draft changed gameplay");
+        m.event({{"id","apply_settings"}});check(h.spawn_count==9999,"Clone spawn count not applied");
+        h.open=true;m.tick(1);check(h.count("SpawnPrimaryClone")==0,"Clones spawned in a menu");
+        h.open=false;h.focused=false;m.tick(1);check(h.count("SpawnPrimaryClone")==0,"Clones spawned without focus");
+        h.focused=true;m.tick(.25);check(h.count("SpawnPrimaryClone")==0,"Clone activation ignored settle delay");
+        m.tick(.25);check(h.count("SpawnPrimaryClone")==1 && h.count("SpawnSecondaryClone")==0 && h.hooks.size()==1,"Clone pair did not use the game-owned follow-up");
+        m.tick(3);check(h.count("SpawnPrimaryClone")==1,"Clone pair spawned repeatedly");
+        h.primary_clone=object(777);m.event({{"id","disable_all"}});
+        check(h.primary_clone==object(777) && h.secondary_clone.is_null() && h.spawn_count==1,"Clone cleanup removed a newer actor or lost original count");
+        check(h.count("RemovePrimaryClone")==0 && h.count("RemoveSecondaryClone")==1,"Clone cleanup ignored actor ownership");
+    }
+    for(int failure=0;failure<6;++failure) {
+        Host h;h.power_fixture="GA_AstralClones_Action_C";cheat::Menu m(&h.api);m.tick(.25);
+        if(failure==0) h.primary_clone=object(777);
+        if(failure==1) h.power_foreign=true;
+        if(failure==2) h.fail_save=true;
+        if(failure==3) h.shell="Tiel";
+        if(failure==4) h.hook_available=false;
+        if(failure==5) h.fail_hook_add=1;
+        m.event({{"id","genessa_clones"},{"value",true}});
+        rejects([&]{m.event({{"id","apply_settings"}});});
+        check(h.spawn_count==1 && h.count("SpawnPrimaryClone")==0 && h.hooks.empty(),"Rejected clone setup left a mutation");
+    }
+    {
+        Host h;h.power_fixture="GA_AstralClones_Action_C";cheat::Menu m(&h.api);m.tick(.25);
+        m.event({{"id","genessa_clones"},{"value",true}});m.event({{"id","apply_settings"}});
+        h.fail_second_clone=true;for(int i=0;i<14;++i) m.tick(.5);
+        check(h.count("SpawnPrimaryClone")==1 && h.count("SpawnSecondaryClone")==0,"Failed clone activation retried");
+        check(m.model()["values"]["genessa_clones"]==false && !m.stop(),"Unresolved failed spawn was forgotten on unload");
+        h.secondary_clone=object(72);m.event({{"id","disable_all"}});
+        check(h.primary_clone.is_null() && h.secondary_clone.is_null() && h.spawn_count==1 && h.hooks.empty(),"Late clone completion was not cleaned up");
+    }
+    {
+        Host h;h.power_fixture="GA_AstralClones_Action_C";h.delayed_clones=true;cheat::Menu m(&h.api);m.tick(.25);
+        m.event({{"id","genessa_clones"},{"value",true}});m.event({{"id","apply_settings"}});m.tick(.5);m.tick(.5);
+        check(h.count("SpawnPrimaryClone")==1 && h.count("SpawnSecondaryClone")==0,"Delayed pair bypassed the game-owned follow-up");
+        rejects([&]{m.event({{"id","disable_all"}});});check(!m.stop(),"Unload forgot a pending clone request");
+        h.primary_clone=object(71);h.secondary_clone=object(72);m.event({{"id","disable_all"}});
+        check(h.primary_clone.is_null() && h.secondary_clone.is_null() && h.spawn_count==1 && m.stop(),"Delayed clone pair cleanup failed");
+    }
+    {
+        Host h;h.power_fixture="GA_AstralClones_Action_C";cheat::Menu m(&h.api);m.tick(.25);
+        m.event({{"id","genessa_clones"},{"value",true}});m.event({{"id","apply_settings"}});m.tick(.5);
+        h.fail_clone_remove=true;check(!m.stop(),"Unload accepted failed clone cleanup");
+        h.fail_clone_remove=false;check(m.stop(),"Clone cleanup retry failed");
+        check(h.primary_clone.is_null() && h.secondary_clone.is_null() && h.spawn_count==1,"Unload left clone state");
+    }
+    {
+        Host h;h.power_fixture="GA_AstralClones_Action_C";cheat::Menu m(&h.api);m.tick(.25);
+        m.event({{"id","genessa_clones"},{"value",true}});m.event({{"id","apply_settings"}});
+        h.shell="Tiel";m.tick(.5);
+        check(h.count("SpawnPrimaryClone")==0 && h.spawn_count==1,"Same-pawn shell switch kept delayed clone activation");
+        check(m.model()["values"]["genessa_clones"]==false,"Lost shell power remained enabled");
+    }
+    {
+        Host h;h.power_fixture="GA_Smert_FightStanceHandler_C";h.shell="Smert";cheat::Menu m(&h.api);m.tick(.25);
+        h.stance_active=true;h.stance_handle=77;m.event({{"id","smert_stance"},{"value",true}});
+        rejects([&]{m.event({{"id","apply_settings"}});});
+        check(h.count("RemovePermanentFightStance")==0,"Pre-existing Smert stance was removed");
+        h.stance_active=false;m.event({{"id","apply_settings"}});m.tick(.5);
+        check(h.stance_active && h.count("EnableFightStance")==1,"Smert stance did not activate");
+        h.stance_handle=99;m.event({{"id","disable_all"}});
+        check(h.stance_active && h.count("RemovePermanentFightStance")==0,"Newer Smert effect was removed");
+        h.stance_active=false;m.event({{"id","smert_stance"},{"value",true}});m.event({{"id","apply_settings"}});m.tick(.5);
+        m.event({{"id","disable_all"}});check(!h.stance_active && h.count("RemovePermanentFightStance")==1,"Owned Smert effect was not removed");
+    }
+    {
+        Host h;h.power_fixture="GA_Lazlo_Detonation_C";h.shell="Necrophage.Default";cheat::Menu m(&h.api);m.tick(.25);
+        check(m.model()["enabled"]["lazlo_detonation"]==true,"Lazlo internal shell name was not recognized");
+        m.event({{"id","shockwave_interval"},{"value",.5}});m.event({{"id","lazlo_detonation"},{"value",true}});m.event({{"id","apply_settings"}});
+        h.paused=true;m.tick(5);check(h.count("TriggerLastShockwave")==0,"Shockwave fired while paused");
+        h.paused=false;h.input_blocked=true;m.tick(5);check(h.count("TriggerLastShockwave")==0,"Shockwave bypassed input restriction");
+        h.input_blocked=false;m.tick(.25);check(h.count("TriggerLastShockwave")==0,"Shockwave replayed missed shots after pause");
+        m.tick(.25);check(h.count("TriggerLastShockwave")==1,"Shockwave interval did not fire");
+        m.tick(10);check(h.count("TriggerLastShockwave")==2,"Long frame burst fired shockwaves");
+        h.power_missing=true;m.tick(.5);check(h.count("TriggerLastShockwave")==2 && m.model()["values"]["lazlo_detonation"]==false,"Lost Lazlo ability kept firing");
+        check(h.state["shockwave_interval"]==.5 && !h.state.contains("lazlo_detonation"),"Power enabled state persisted across launches");
+        css::extensions::validate_model(css::extensions::bind_menu(definition,m.model()));
+    }
     {
         Host h;h.shell_unlock_fixture=true;h.actor_count=2;cheat::Menu m(&h.api);m.tick(.25);
         rejects([&]{m.event({{"id","unlock_shells"}});});

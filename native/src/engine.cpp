@@ -3,6 +3,7 @@
 #include <windows.h>
 #include "startup.hpp"
 #include <array>
+#include <cctype>
 #include <cstring>
 #include <iomanip>
 #include <sstream>

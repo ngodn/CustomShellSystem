@@ -9,7 +9,7 @@
           "id": "apply_settings",
           "type": "button",
           "label": "Apply settings",
-          "description": "Apply all pending settings in this menu and save numeric preferences. Enabled cheats run only for this game session. This does not grant items, unlock progression or switch shells.",
+          "description": "Apply pending settings and save preferences and shortcuts. Enabled cheats run only for this session. This does not grant items, unlock progression or switch shells immediately.",
           "disabled_label": "Nothing to apply"
         },
         {
@@ -228,6 +228,37 @@
           "label": "Switch gameplay shell",
           "description": "Closes Inventory, sends one shell request and checks the result. Active cheats must be disabled first.",
           "confirm": "Change your gameplay shell and abilities? Inventory will close. CSS appearance-only changes use the CSS tab."
+        },
+        {
+          "id": "genessa_clones",
+          "type": "toggle",
+          "label": "Genessa persistent clones",
+          "value": false,
+          "description": "Creates two clones after Apply settings and leaving the menu. Existing game clones are preserved. Requires Genessa's gameplay abilities."
+        },
+        {
+          "id": "smert_stance",
+          "type": "toggle",
+          "label": "Smert fight stance",
+          "value": false,
+          "description": "Keeps Smert's weapons drawn through his stance ability. Apply settings, then leave the menu. An existing stance is not taken over."
+        },
+        {
+          "id": "lazlo_detonation",
+          "type": "toggle",
+          "label": "Lazlo repeating shockwave",
+          "value": false,
+          "description": "Requires Lazlo's Temperament upgrade. Repeats its detonation during gameplay, stopping in menus, while unfocused or while input is restricted. Apply settings to enable."
+        },
+        {
+          "id": "shockwave_interval",
+          "type": "number",
+          "label": "Shockwave interval (seconds)",
+          "value": 3,
+          "min": 0.5,
+          "max": 5,
+          "step": 0.5,
+          "description": "Apply settings to change the interval. Returning from a menu starts a full interval; missed shots are not replayed."
         }
       ]
     },
@@ -580,6 +611,44 @@
           "label": "Set Tarstone levels",
           "description": "Update both save-data copies and equipped Tarstones. Only existing entries are changed. Stale data stops the edit.",
           "confirm": "Change the selected owned Tarstones to this level? The game can save the change."
+        }
+      ]
+    },
+    {
+      "id": "shortcuts",
+      "title": "Shortcuts",
+      "controls": [
+        {
+          "id": "binding_action",
+          "type": "choice",
+          "label": "Action",
+          "value": "god",
+          "options": [
+            {
+              "id": "god",
+              "label": "God mode"
+            }
+          ],
+          "description": "Choose a cheat or gameplay shell. Use the option search to find an action. Inventory and CSSX still open through the game's normal Inventory controls."
+        },
+        {
+          "id": "binding_key",
+          "type": "choice",
+          "label": "Keyboard or controller shortcut",
+          "value": "none",
+          "options": [
+            {
+              "id": "none",
+              "label": "None"
+            }
+          ],
+          "description": "Choose a key or R3 plus D-pad combination, then Apply settings. None removes this binding. Shortcuts supplement game controls; choose combinations you do not already use."
+        },
+        {
+          "id": "clear_bindings",
+          "type": "button",
+          "label": "Clear all shortcuts",
+          "description": "Stage removal of every shortcut. Apply settings saves the removal; Discard changes keeps your current shortcuts."
         }
       ]
     },

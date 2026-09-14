@@ -35,6 +35,8 @@ add_library(cssx_cheat_logic STATIC ../extensions/cheat-menu/src/cheat_menu.cpp 
 target_link_libraries(cssx_cheat_logic PUBLIC css_player_recovery)
 target_include_directories(cssx_cheat_logic PUBLIC include vendor ../extensions/cheat-menu/src)
 target_sources(cssx_cheat_logic PRIVATE ../extensions/cheat-menu/src/combat_tools.cpp)
+target_sources(cssx_cheat_logic PRIVATE ../extensions/cheat-menu/src/shell_powers.cpp)
+target_sources(cssx_cheat_logic PRIVATE ../extensions/cheat-menu/src/key_bindings.cpp)
 set_target_properties(cssx_cheat_logic PROPERTIES POSITION_INDEPENDENT_CODE ON)
 add_library(cheat_menu SHARED ../extensions/cheat-menu/src/main.cpp)
 target_link_libraries(cheat_menu PRIVATE cssx_cheat_logic)

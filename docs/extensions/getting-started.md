@@ -93,6 +93,17 @@ To update an existing map entry, send `map.update` with `target`, `property`, `k
 This check applies to one map entry in one synchronous game-thread call. It is not a transaction across several objects or game functions. The Cheat Menu prepares its complete level edit first, restores earlier entries with another expected-value check if a later map write fails, and reports a partial update if a game-owned equipped-item refresh fails. It does not silently retry a mutation.
 
 Host responses have a 1 MiB limit, including all callback chunks. CSSX rejects overflow instead of accepting a truncated JSON prefix.
+
+### Gameplay input and object lifetime
+
+`input.focus` returns whether the foreground window belongs to the game process. `menu.status` includes `menu_open`; `menu.close` asks the game's existing menu handler to close it. Closing is also supported while Inventory or another native page is selected. A successful close request is not proof that a transition has finished, so read back the state before a gameplay action.
+
+`input.keys` takes the current player controller as `target` and an array of up to 64 distinct Unreal key names in `keys`. It returns an object mapping each name to a boolean. This reads the game's input state; it neither consumes buttons nor bypasses game controls. The Cheat Menu uses a release-then-press check and suppresses shortcuts while menus are open, the game is paused, input is blocked, settings are pending or the window lacks focus. Authors must implement equivalent gates for gameplay shortcuts.
+
+`valid` takes an object `target` and returns false when its managed weak handle has expired. It does not prove the object still belongs to the player. Check possession and, for gameplay abilities, their current avatar and membership in the player's ability list before acting. Never treat an expired handle as permission to find and edit every object of that class.
+
+Some game calls finish asynchronously. Keep ownership and cleanup records until the resulting actor or effect is known. A successful call alone does not establish that it created anything. The Cheat Menu's clone port illustrates this: the primary spawn schedules the secondary spawn internally, and the latter also checks a shell upgrade. Sending both functions separately is not a reliable success test.
+
 ## Managed player hooks (0.3.0 development)
 
 The updated CSS loader exports an optional hook service. Existing CSS core ABI 1 remains unchanged. `hooks.status` reports `available: false` with an older loader; extensions must explain that the complete CSS package needs updating rather than silently enabling an ineffective toggle.

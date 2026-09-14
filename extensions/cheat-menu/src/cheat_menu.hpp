@@ -17,7 +17,33 @@ struct PendingShell {
     double elapsed=0;
 };
 class Menu {
-    inline static constexpr const char* toggle_ids[]{"god","auto_heal","infinite_resolve","move_fast","max_shell_points","no_cooldown","perfect_parry","perfect_block","perfect_harden"};
+    inline static constexpr const char* toggle_ids[]{"god","auto_heal","infinite_resolve","move_fast","max_shell_points","no_cooldown","perfect_parry","perfect_block","perfect_harden","smert_stance","genessa_clones","lazlo_detonation"};
+    inline static constexpr const char* power_ids[]{"smert_stance","genessa_clones","lazlo_detonation"};
+    struct Power {
+        Json pawn,controller,ability,primary,secondary,effect;
+        bool attempted=false,started=false;
+        bool primary_pending=false,secondary_pending=false,stance_pending=false;
+        double elapsed=0;
+    };
+    std::map<std::string,Power> powers_;
+    double power_time_=0;
+    Json power_ability(const Json&,const char*);
+    bool gameplay_ready(const Json&);
+    void power_sync();
+    void power_clear(const std::string& feature={});
+    void power_tick(double);
+    Json binding_actions() const;
+    const Json& binding_keys() const;
+    Json binding_key_options() const;
+    void binding_validate() const;
+    bool binding_consent() const;
+    void binding_tick(double);
+    void binding_fire(const std::string&);
+    void binding_reset();
+    std::string binding_action_="god";
+    std::map<std::string,bool> binding_down_;
+    double binding_time_=0;
+    bool bindings_checked_=false;
     inline static constexpr const char* combat_ids[]{"no_cooldown","perfect_parry","perfect_block","perfect_harden"};
     inline static constexpr const char* cooldown_fields[]{"CooldownDuration","GlobalCooldownDuration","Cooldown","GlobalCooldown","StoneFormCooldown","PerfectStoneFormCooldown"};
     struct OwnedHook {uint64_t id;std::string feature;Json target;};
@@ -57,6 +83,8 @@ class Menu {
     void persist(const Json&);
     void shell_tick(double);
     void refresh_shells();
+    std::map<std::string,std::string> shell_tokens_;
+    bool shell_matches(const Json& tag,const std::string& target) const;
     void unlock_shells(const Json& player);
     void override_value(const Json&,const std::string&,const Json&);
     void restore(const std::string&);

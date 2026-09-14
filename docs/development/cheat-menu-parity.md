@@ -13,18 +13,18 @@ Working checklist for CSSX 0.3.0. The source reference is the supplied MortalShe
 | Thorough unlock-all-shells | Implemented, confirmed, preflight and ownership read-back | Actual grants on a separate test save, streamed pickups and summons |
 | Shell switching | Implemented: close menu, send once, verify identity | Every shell, Dark Form and interrupted travel |
 | Completed-intro recovery | Shared CSS watcher, nine observations, tracks each owned effect | Further natural recurrence and travel checks |
-| Smert stance, Genessa clones, Lazlo shockwaves | Pending | Current-player ownership and cleanup |
+| Smert stance, Genessa clones, Lazlo shockwaves | Implemented; clone and stance lifecycle verified live | Upgraded Lazlo positive check, travel and interrupted activation |
 | No cooldown | Implemented; owned-instance edits and resident hook service | In-game cooldown calls, reload and cleanup on both game builds |
 | Matching-seal parry, block and harden | Implemented; exact seal and player-instance guards | In-game result overrides, seal changes and combat behavior |
 | Max Shell Points 100 | Implemented with owned map values and exact restoration | Travel with the toggle active |
 | Pickup selection, add, remove and give all | Implemented; 77 entries and soft-class resolution verified live | Grant/remove read-back on a test save |
 | Tarstone selection and grants | Implemented, localized catalog and duplicate-ownership guard | Grant/read-back on a separate test save, native Inventory refresh |
 | Individual and bulk Tarstone levels | Implemented, selected/category/all-owned scope, preserves both maps and refreshes equipped instances | Actual level changes and equipped effects on a separate test save |
-| Saved hotkeys and controller binds | Pending | Focus, menu suppression and binding conflicts |
+| Saved hotkeys and controller binds | Implemented; native keyboard dispatch, persistence and menu suppression verified | Physical controller dispatch and final menu presentation |
 
 ## Settings contract
 
-Toggle and numeric edits are drafts. Apply settings updates the active session and saves numeric preferences. Discard changes restores the applied values. Cheats start off at launch. Pending settings block one-shot actions so an action cannot quietly use an older amount. Resource grants, progression, health reduction and gameplay-shell changes use confirmations. Apply settings itself does not perform those one-shot actions.
+Toggle, numeric and shortcut edits are drafts. Apply settings updates the active session and saves numeric preferences and shortcuts. Discard changes restores the applied values. Cheats start off at launch. Pending settings block one-shot actions so an action cannot quietly use an older amount. Resource grants, progression, health reduction and gameplay-shell changes use confirmations. Saving a health-reduction or shell-switch shortcut also requires confirmation. Apply settings itself does not perform those one-shot actions.
 
 A failed preference save rolls back changed session settings. If restoration fails, periodic cheats stop and the user is directed to Turn off all cheats to retry cleanup. The extension refuses unload when owned values cannot be restored. Values changed by another owner are preserved. Controller changes stop cheats rather than carrying them into another save.
 
@@ -48,7 +48,7 @@ Portable tests cover confirmations, pending settings, duplicate tags and actors,
 
 Portable tests cover draft isolation, discard, apply, save failure rollback, integer and step validation, confirmations, original-value restoration, pending shell identity, cleanup retry and the intro observer's positive and negative conditions. `tools/cssx_cheat_check.py` checks draft isolation, Apply, Discard and Turn off all cheats on the running player and restores the original damage flag.
 
-These checks do not establish full feature parity. Do not publish the Cheat Menu as a complete port while the pending rows remain.
+These checks do not establish full feature parity. Do not publish the Cheat Menu as a fully verified port while the remaining live checks are incomplete.
 
 Tarstone grant tests cover confirmation, checking all required interfaces before mutation, preserving owned stones, avoiding duplicate registration after the item manager's receive event, typed soft references and no automatic retry after a partial failure. These are portable tests, not proof that a real save grant and its UI refresh work.
 
@@ -63,3 +63,21 @@ Combat port: Windows DLLs compile and portable tests cover passive drafts, dupli
 The updated permanent loader was installed and tested after a restart. The three parry functions returned the intended overrides, then their exact original results after disabling. Cooldown registered 220 instance rules, both native Apply callbacks dispatched successfully, and sampled values restored exactly. Genessa's valid duration sentinel of -1 is preserved. Reloading with cooldown enabled removed all rules and restored sampled fields before unloading the old core. Evidence: work/cssx-native/parry-live-check.json, cooldown-live-check.json and combat-reload-check.json. These checks do not replace actual combat testing of all three seals or a fresh run on the older executable.
 
 On 15 September, the equipped scythe played scythe attack montages but remained stowed. The completed Egg Stranding ability still owned effect handle 321, weapon drawing was blocked, and attack selection was already unblocked. The old predicate rejected that combination. The regression test failed before the change. With the shared CSS watcher installed, the game cleanup cleared all six measured restrictions and the same scythe returned to the hand. CanPutInHand changed from false to true. Evidence: work/cssx-native/unarmed-{attack-samples,restrictions,intro-completion,can-draw-before,can-draw-after}.json. Portable tests cover fresh effects on the same ability, no repeated attempt on an unchanged effect and resuming observation after animation. No blanket lock removal was added. The reason the game leaves this ability active across these save loads is still unknown.
+
+## Shell powers and shortcuts
+
+Powers resolve the current player's ability instance and verify its avatar, gameplay-shell identity and continued membership in the player's ability list. Outfit appearance does not qualify a different shell for these powers. Activation waits for gameplay, positive health, game-window focus, no menu, no pause and no ignored movement/look input. Repeating shockwaves use gameplay time without replaying missed intervals after a pause.
+
+Genessa's cooked `SpawnPrimaryClone` schedules `SpawnSecondaryClone` on the next game tick. `HasSecondaryClone` requires `UpgradeStat.Shell.Genessa.Mirage.Level >= 2`. On the tested save it returned false, which explained the missing second clone. The port temporarily overrides that return only on the current owned ability, calls the primary spawn once, and waits for both actor references. It does not write shell upgrades. Cleanup preserves newer actors in those slots and restores the exact original SpawnCount. A pending creation remains owned and can block unload until the game resolves it; no blind retry is sent.
+
+Live checks on build 25265616 verified draft isolation, both clone actors, removal of both actors, SpawnCount restoration from 9999 to its original 1, and restoration of HasSecondaryClone to false. Reloading the active pair passed the same cleanup. Evidence: `work/cssx-native/clone-upgrade-gate-check.json`, `clones-pair-live-check.json`, `clones-reload-check.json`; cooked control flow is recorded under `clone-blueprint/`. The original Lua implementation called both spawn functions and counted accepted calls, which did not establish actor creation.
+
+Smert owns an active gameplay-effect handle, not a UObject pointer. Cleanup removes the stance only while that exact handle remains active and is still the ability's recorded handle. A newer game-owned stance is preserved. Failed cleanup remains retryable and prevents unload.
+
+Shortcuts share the existing native menu entry point. Open Inventory using the game's configured binding, then select CSSX. There is no second F6 menu overlay. Configurable action shortcuts offer F1 through F24 excluding Steam's F12 default, Ctrl combinations and R3 plus D-pad chords. Conflicting or overlapping assignments are rejected. Keys supplement the game's bindings rather than consuming them. The menu advises choosing unused combinations.
+
+Polling stops when no shortcuts are assigned. Assigned shortcuts sample at most 60 times per second, batch key reads, require a fresh release and press after focus/menu/settings changes, and dispatch at most one action per sample. Portable tests cover short presses, held-key suppression, controller chords, Apply/Discard, conflicts, saved preferences, confirmation for shell/health shortcuts and cleanup after delayed power creation. `input.keys` was verified live for keyboard and controller key names; that read-only check alone does not prove dispatched shortcuts work.
+
+Smert live activation created effect handle 1068; disabling removed that exact active effect even though the ability retained its old numeric handle. Lazlo on this save has no Temperament ability instance. The missing-upgrade Apply request was rejected without leaving an active cheat, and the gameplay shell returned to Genessa. The positive repeating-shockwave test still needs a save with Temperament. Evidence: `smert-stance-live-check.json`, `lazlo-missing-upgrade-check.json`, and the cooked `SoftSkill` reference under `lazlo-blueprint/`.
+
+The live shortcut check used native F8 key input: draft ignored, held key fired once, release/press toggled God off with exact damage-flag restoration, Inventory suppressed the shortcut, and the host closed native Inventory successfully. The saved binding was read back from the extension state, then cleared. No tested cheats or test shortcuts were left enabled. Evidence: `bindings-live-check.json`; repeatable local driver: `tools/cssx_binding_check.py`.

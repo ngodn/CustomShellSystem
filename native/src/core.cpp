@@ -34,6 +34,11 @@ struct Core {
             if(op=="log") {core.host.log(request.at("message").get<std::string>().c_str());}
             else if(op=="menu.close") {core.inventory.close();result=true;}
             else if(op=="menu.status") result=core.inventory.diagnostics();
+            else if(op=="input.focus") {
+                DWORD pid=0;const auto window=GetForegroundWindow();
+                if(window) GetWindowThreadProcessId(window,&pid);
+                result=window && pid==GetCurrentProcessId();
+            }
             else if(core.current_engine) result=core.extension_bridge.request(core.current_engine,core.appearance,request);
             else throw std::runtime_error("Game thread is not initialized");
             auto data=result.dump();sink(output,data.data(),data.size());return 1;
@@ -368,7 +373,7 @@ struct Core {
             auto pending=std::exchange(extension_command,Json{});Json result={{"id",pending.at("id")}};
             try {
                 const auto& value=pending.at("request");
-                result["result"]=pending.value("host",false)?extension_bridge.request(engine,appearance,value):extensions.request(value);
+                result["result"]=pending.value("host",false)?cssx::Client(&recovery_host).request(value):extensions.request(value);
                 result["ok"]=true;
             } catch(const std::exception& error){result["ok"]=false;result["error"]=error.what();}
             atomic_json(root/"runtime/cssx-debug.json",result,false);

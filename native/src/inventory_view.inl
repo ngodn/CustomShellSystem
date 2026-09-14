@@ -383,7 +383,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     last_message_.clear(); dirty_=false;
 }
 void InventoryUI::close_menu() {
-    if(!active_ || !inventory_bool(main_.Get(),L"bOpen")) return;
+    if(!main_.Get() || !inventory_bool(main_.Get(),L"bOpen")) return;
     camera_stop();
     auto* handler=inventory_object(controller_.Get(),L"User Interface Handler Component");
     // Inventory uses this path to close. Opening must go through native input.
