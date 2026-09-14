@@ -36,7 +36,8 @@ Menu::Menu(const CssxHost* host):host_(host),recovery_(host) {
         {"heal_percent",number("heal_percent",100,1,100)},{"heal_interval",number("heal_interval",1,.25,5)},
         {"move_multiplier",number("move_multiplier",2,1,5)},{"grant_amount",int(number("grant_amount",100,1,100000))},
         {"damage_percent",int(number("damage_percent",50,1,99))},{"harbinger_level",int(number("harbinger_level",1,1,1000))},
-        {"shell","none"},{"pickup","none"},{"tarstone","none"},{"pickup_amount",int(number("pickup_amount",1,1,9999))}};
+        {"shell","none"},{"pickup","none"},{"tarstone","none"},{"tarstone_scope","selected"},
+        {"tarstone_level",int(number("tarstone_level",1,1,3))},{"pickup_amount",int(number("pickup_amount",1,1,9999))}};
     applied_=values_;
     status_="Cheats start off. Edit settings, then Apply settings.";
 }
@@ -111,8 +112,9 @@ Json Menu::model() {
     for(const auto* id:{"god","auto_heal","infinite_resolve","move_fast"}) enabled[id]=live && !pending_ && !cleanup_required_;
     enabled["refresh_pickups"]=live && !pending_;
     enabled["refresh_tarstones"]=live && !pending_;
-    for(const auto* action:{"add_tarstone","give_tarstones_melee","give_tarstones_sidearm","give_tarstones_support"})
+    for(const auto* action:{"add_tarstone","set_tarstone_level","give_tarstones_melee","give_tarstones_sidearm","give_tarstones_support"})
         enabled[action]=live && !pending_ && !has_changes() && !cleanup_required_ && (std::string(action)!="add_tarstone" || values_["tarstone"]!="none");
+    if(values_["tarstone_scope"]=="selected" && values_["tarstone"]=="none") enabled["set_tarstone_level"]=false;
     for(const auto* action:{"add_pickup","remove_pickup","give_all_pickups"}) enabled[action]=live && !pending_ && !has_changes() && !cleanup_required_ && (std::string(action)=="give_all_pickups" || values_["pickup"]!="none");
     enabled["repair_intro"]=live && !pending_ && !recovery_.running();
     enabled["cancel_recovery"]=recovery_.running();
@@ -129,6 +131,7 @@ Json Menu::model() {
     for(const auto* id:{"add_pickup","remove_pickup"}) confirmations[id]=std::string(id==std::string("add_pickup")?"Add ":"Remove ")+std::to_string(values_["pickup_amount"].get<int>())+" x "+values_["pickup"].get<std::string>()+"? The game can save this change.";
     for(const auto& option:tarstones_) if(option["id"]==values_["tarstone"])
         confirmations["add_tarstone"]="Add "+option["label"].get<std::string>()+"? An owned Tarstone will keep its current level and experience.";
+    confirmations["set_tarstone_level"]="Set "+values_["tarstone_scope"].get<std::string>()+" owned Tarstones to level "+std::to_string(values_["tarstone_level"].get<int>())+"? Experience, durability and stacks will be kept. The game can save this change.";
     return {{"values",values_},{"options",{{"shell",shells_},{"pickup",pickups_},{"tarstone",tarstones_}}},{"enabled",enabled},{"status",summary+" "+status_},{"error",action_error_},{"confirmations",confirmations}};
 }
 void Menu::override_value(const Json& object,const std::string& property,const Json& value) {
@@ -189,6 +192,10 @@ void Menu::apply_event(const Json& event) {
         for(const auto& option:tarstones_) if(option["id"]==event.at("value")) {values_[id]=applied_[id]=event["value"];return;}
         throw std::runtime_error("Unknown Tarstone selection.");
     }
+    if(id=="tarstone_scope") {
+        for(const auto* scope:{"selected","Melee","Sidearm","Support","all"}) if(event.at("value")==scope) {values_[id]=applied_[id]=scope;return;}
+        throw std::runtime_error("Unknown Tarstone level scope.");
+    }
     if(id=="pickup") {
         for(const auto& option:pickups_) if(option["id"]==event.at("value")) {values_[id]=applied_[id]=event["value"];return;}
         throw std::runtime_error("Unknown pickup selection.");
@@ -206,7 +213,7 @@ void Menu::apply_event(const Json& event) {
         const auto value=event["value"].get<double>();
         const std::map<std::string,std::pair<double,double>> bounds={{"heal_amount",{1,9999}},{"resolve_amount",{1,9999}},
             {"heal_percent",{1,100}},{"heal_interval",{.25,5}},{"move_multiplier",{1,5}},
-            {"grant_amount",{1,100000}},{"pickup_amount",{1,9999}},{"damage_percent",{1,99}},{"harbinger_level",{1,1000}}};
+            {"grant_amount",{1,100000}},{"pickup_amount",{1,9999}},{"tarstone_level",{1,3}},{"damage_percent",{1,99}},{"harbinger_level",{1,1000}}};
         const auto range=bounds.at(id);
         if(!std::isfinite(value) || value<range.first || value>range.second) throw std::runtime_error("Value is outside the supported range.");
         const bool whole=id!="heal_interval" && id!="move_multiplier";
@@ -220,6 +227,10 @@ void Menu::apply_event(const Json& event) {
     }
     auto player=require_player();auto pc=player["controller"];auto pawn=player["pawn"];
     if(has_changes()) throw std::runtime_error("Apply settings or Discard changes before running an action.");
+    if(id=="set_tarstone_level") {
+        if(!event.value("confirmed",false)) throw std::runtime_error("Confirm the Tarstone level change first.");
+        set_tarstone_levels(player);return;
+    }
     if(id=="add_tarstone" || id=="give_tarstones_melee" || id=="give_tarstones_sidearm" || id=="give_tarstones_support") {
         if(!event.value("confirmed",false)) throw std::runtime_error("Confirm the Tarstone grant first.");
         tarstone_action(id,player);return;

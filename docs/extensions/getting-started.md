@@ -86,4 +86,8 @@ Use `describe` to check a required function before the first gameplay mutation. 
 
 Calls return all reflected outputs by default. An optional `outputs` array selects which outputs to decode, for example `"outputs":["Completed"]`. Use `"outputs":[]` when a function returns an opaque soft reference that your extension does not need. Output names are validated before the call. This does not skip input validation or change the function's behavior. Never retry a gameplay mutation merely because reading its result failed; the mutation may already have happened.
 
+To update an existing map entry, send `map.update` with `target`, `property`, `key`, `expected` and `value`. Supply `key` exactly as returned by `get`, including object-handle metadata. `expected` must match the complete current value. The host encodes and decodes the replacement in temporary storage before committing, rejects missing or ambiguous keys, and never inserts, removes or rewrites keys. Struct values can specify just the fields to change; other fields are copied from the current entry. Default objects and archetypes cannot be edited.
+
+This check applies to one map entry in one synchronous game-thread call. It is not a transaction across several objects or game functions. The Cheat Menu prepares its complete level edit first, restores earlier entries with another expected-value check if a later map write fails, and reports a partial update if a game-owned equipped-item refresh fails. It does not silently retry a mutation.
+
 Host responses have a 1 MiB limit, including all callback chunks. CSSX rejects overflow instead of accepting a truncated JSON prefix.

@@ -102,4 +102,85 @@ void Menu::tarstone_action(const std::string& id,const Json& player) {
     }
     report("Tarstone added and ownership verified. The game can save this change.");
 }
+void Menu::set_tarstone_levels(const Json& player) {
+    const auto pawn=player.at("pawn"),component=host_.get(pawn,"TarstoneComponent");
+    const auto runtime=host_.call(component,"GetRuntimeData");
+    const auto scope=values_.at("tarstone_scope").get<std::string>();
+    const int level=values_.at("tarstone_level").get<int>()-1;
+    Json selected;
+    if(scope=="selected") {
+        const auto id=values_.at("tarstone").get<std::string>();const auto slash=id.find('/');
+        if(slash==std::string::npos) throw std::runtime_error("Choose a Tarstone first.");
+        bool valid=false;for(const auto& option:tarstones_) if(option["id"]==id) valid=true;
+        if(!valid) throw std::runtime_error("Refresh the Tarstone catalog first.");
+        const auto table=host_.find(table_path(id.substr(0,slash)));
+        const auto utility=host_.find("/Game/Sparta/Core/Utility/BPFL_Utility.Default__BPFL_Utility_C");
+        selected=host_.call(utility,"ResolveSoftItemDefinition",Json::array({soft_field(table,id.substr(slash+1)),pawn}));
+        if(!selected.is_object() || !selected.contains("$object")) throw std::runtime_error("The selected Tarstone is unavailable.");
+    }
+    struct Edit {Json owner,key,before,after;};
+    std::vector<Edit> edits;
+    std::map<uint64_t,Json> payloads;
+    // Prefer component data for equipped instances while updating both save
+    // copies. Each entry retains its own non-level fields.
+    for(const auto& source:{runtime,component}) {
+        const auto data=host_.get(source,"TarstoneLevels");const auto& entries=data.at("$map");
+        if(!entries.is_array() || entries.size()>4096) throw std::runtime_error("Tarstone level map exceeds bounds.");
+        for(const auto& entry:entries) {
+            const auto& key=entry.at("key");const auto object=key.at("$object").get<uint64_t>();
+            if(scope=="selected" && object!=selected.at("$object").get<uint64_t>()) continue;
+            if(scope!="selected" && scope!="all" && key.value("name",std::string{}).find("/Tarstones/"+scope+"/")==std::string::npos) continue;
+            const auto before=entry.at("value");
+            if(!before.is_object() || before.size()!=4) throw std::runtime_error("Unsupported Tarstone level data.");
+            for(const auto* field:{"Level","exp","Stacks","Durability"}) if(!before.contains(field) || !before[field].is_number_integer()) throw std::runtime_error("Unsupported Tarstone level field.");
+            if(before["Level"].get<int>()<0 || before["Level"].get<int>()>2) throw std::runtime_error("Tarstone uses an unsupported level range.");
+            auto after=before;after["Level"]=level;payloads[object]=after;
+            if(after!=before) edits.push_back({source,key,before,after});
+        }
+    }
+    if(payloads.empty()) throw std::runtime_error("No owned Tarstones match this selection. Add a Tarstone before editing its level.");
+    if(payloads.size()>512 || edits.size()>1024) throw std::runtime_error("Tarstone edit exceeds the batch limit.");
+    if(edits.empty()) {report("Matching Tarstones are already at that level. No changes made.");return;}
+    std::vector<std::pair<Json,Json>> equipped;
+    std::set<uint64_t> instances;
+    for(const auto* name:{"EquippedTarstoneItemInstances","EquippedSupportTarstoneItemInstances"}) {
+        const auto data=host_.get(component,name);const auto& entries=data.at("$map");
+        if(!entries.is_array() || entries.size()>128) throw std::runtime_error("Equipped Tarstone map exceeds bounds.");
+        for(const auto& entry:entries) {
+            const auto key=entry.at("key").at("$object").get<uint64_t>();
+            if(!payloads.contains(key) || entry.at("value").is_null()) continue;
+            const auto instance=entry.at("value");
+            if(instances.insert(instance.at("$object").get<uint64_t>()).second) equipped.emplace_back(instance,payloads.at(key));
+        }
+    }
+    if(!equipped.empty()) require_signature(host_,component,"SetTarstoneLevel",{{"Tarstone",8},{"LevelData",16}});
+    auto update=[&](const Edit& edit,bool undo) {
+        return host_.request({{"op","map.update"},{"target",edit.owner},{"property","TarstoneLevels"},
+                              {"key",edit.key},{"expected",undo?edit.after:edit.before},{"value",undo?edit.before:edit.after}});
+    };
+    size_t completed=0;
+    try {for(const auto& edit:edits) {update(edit,false);++completed;}}
+    catch(const std::exception& error) {
+        const std::string original=error.what();bool restored=true;
+        while(completed) {try {update(edits[--completed],true);} catch(...) {restored=false;}}
+        throw std::runtime_error("Tarstone edit stopped: "+original+(restored?". Earlier writes were restored.":". Some values changed again and could not be restored; inspect Inventory."));
+    }
+    try {
+        for(const auto& [instance,payload]:equipped) host_.call(component,"SetTarstoneLevel",Json::array({instance,payload}));
+        for(const auto& source:{runtime,component}) {
+            const auto data=host_.get(source,"TarstoneLevels");
+            std::map<uint64_t,Json> actual;
+            for(const auto& entry:data.at("$map")) actual.emplace(entry.at("key").at("$object").get<uint64_t>(),entry.at("value"));
+            for(const auto& edit:edits) if(edit.owner==source) {
+                const auto key=edit.key.at("$object").get<uint64_t>();
+                if(!actual.contains(key) || actual.at(key)!=edit.after) throw std::runtime_error("Saved Tarstone data changed during equipped refresh.");
+            }
+        }
+    } catch(const std::exception& error) {
+        // An equipped-item call can have game-owned side effects. Do not issue
+        // it twice or pretend a save-data rollback undoes those effects.
+        throw std::runtime_error(std::string("Saved levels changed, but an equipped Tarstone refresh failed. Check Inventory before retrying. ")+error.what());
+    }
+    report(std::to_string(payloads.size())+" owned Tarstones set to level "+std::to_string(level+1)+". Experience, durability and stacks kept.");
+}
 }

@@ -37,6 +37,8 @@ The automated hotfix checks below passed. Evidence is retained locally under `wo
 
 These checks are not a claim that every game event, save, platform or unfinished Cheat Menu feature has been tested. The [native port checklist](cheat-menu-parity.md) remains the release gate for the Cheat Menu.
 
+The previous executable's adapter and exact byte checks remain in the code. That executable was not rerun during this hotfix pass. Backward support here means retaining the previously verified path, not claiming fresh testing of every older Steam, GOG or subscription build. New Cheat Menu actions check their required reflected interfaces before mutation; an unsupported action reports the mismatch without replacing old adapters or changing outfit/state schemas.
+
 ## Future updates
 
 Read Steam's installed build after staging finishes. Record the executable hash. Check the native adapter before invoking it, then check package discovery and reflected UI/gameplay interfaces. Re-run reversible in-game checks and restore the original CSS state afterwards. Keep old adapters and existing package/state formats unless there is a documented reason to migrate them.

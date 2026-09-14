@@ -492,6 +492,52 @@
           "label": "Give all support Tarstones",
           "description": "Run the game grant command for this category.",
           "confirm": "Give every support Tarstone? The game can save the changes. This cannot be undone here."
+        },
+        {
+          "id": "tarstone_scope",
+          "type": "choice",
+          "label": "Level scope",
+          "value": "selected",
+          "options": [
+            {
+              "id": "selected",
+              "label": "Selected Tarstone"
+            },
+            {
+              "id": "Melee",
+              "label": "Owned melee Tarstones"
+            },
+            {
+              "id": "Sidearm",
+              "label": "Owned sidearm Tarstones"
+            },
+            {
+              "id": "Support",
+              "label": "Owned support Tarstones"
+            },
+            {
+              "id": "all",
+              "label": "All owned Tarstones"
+            }
+          ],
+          "description": "Choose which owned Tarstones to edit. This does not grant missing stones."
+        },
+        {
+          "id": "tarstone_level",
+          "type": "number",
+          "label": "Target level",
+          "value": 1,
+          "min": 1,
+          "max": 3,
+          "step": 1,
+          "description": "Edit the target level, then use Settings > Apply settings. Existing experience, durability and stacks are preserved."
+        },
+        {
+          "id": "set_tarstone_level",
+          "type": "button",
+          "label": "Set Tarstone levels",
+          "description": "Update both save-data copies and equipped Tarstones. Only existing entries are changed. Stale data stops the edit.",
+          "confirm": "Change the selected owned Tarstones to this level? The game can save the change."
         }
       ]
     },

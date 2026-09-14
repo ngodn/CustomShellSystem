@@ -1,5 +1,35 @@
 // Included after engine.cpp's reflected frame and lifetime helpers.
 namespace css {
+namespace {
+struct ExtensionMapView {
+    FProperty* key;FProperty* value;FScriptMap* map;const FScriptMapLayout& layout;
+    int count,end;
+    ExtensionMapView(FMapProperty* p,void* data):key(p->GetKeyProp()),value(p->GetValueProp()),
+        map(static_cast<FScriptMap*>(data)),layout(p->GetMapLayout()) {
+        if(p->GetArrayDim()!=1 || p->GetElementSize()!=sizeof(FScriptMap) || !key || !value ||
+           key->GetSize()<=0 || value->GetSize()<=0 || layout.ValueOffset<key->GetSize() ||
+           layout.SetLayout.Size<=0 || layout.SetLayout.Size>65536 ||
+           layout.ValueOffset>layout.SetLayout.Size-value->GetSize())
+            throw std::runtime_error("CSSX map layout is unsupported");
+        count=map->Num();end=map->GetMaxIndex();
+        if(count<0 || end<count || end>4096) throw std::runtime_error("CSSX map exceeds bound");
+    }
+    std::byte* pair(int index) {return static_cast<std::byte*>(map->GetData(index,layout));}
+};
+struct ExtensionValue {
+    FProperty* property;std::vector<std::max_align_t> storage;
+    explicit ExtensionValue(FProperty* p):property(p) {
+        const auto size=p->GetSize(),alignment=p->GetMinAlignment();
+        if(size<=0 || size>65536 || alignment<=0 || alignment>int(alignof(std::max_align_t)) || (alignment&(alignment-1)))
+            throw std::runtime_error("CSSX property exceeds write buffer bounds");
+        storage.resize((size+sizeof(std::max_align_t)-1)/sizeof(std::max_align_t));
+        property->InitializeValue(storage.data());
+    }
+    ~ExtensionValue(){property->DestroyValue(storage.data());}
+    ExtensionValue(const ExtensionValue&)=delete;
+    void* data(){return storage.data();}
+};
+}
 Json ExtensionBridge::handle(UObject* object) {
     if(!object) return nullptr;
     for(auto it=objects_.begin();it!=objects_.end();) {
@@ -61,24 +91,14 @@ Json ExtensionBridge::decode(FProperty* p,void* data,unsigned depth) {
         Json result=Json::array();for(int i=0;i<array.Num();++i) result.push_back(decode(a->GetInner(),array.GetRawPtr(i),depth+1));return result;
     }
     if(p->IsA<FMapProperty>()) {
-        auto* property=static_cast<FMapProperty*>(p);
-        auto* key=property->GetKeyProp();auto* value=property->GetValueProp();
-        const auto& layout=property->GetMapLayout();
-        if(p->GetElementSize()!=sizeof(FScriptMap) || !key || !value ||
-           key->GetSize()<=0 || value->GetSize()<=0 || layout.ValueOffset<key->GetSize() ||
-           layout.SetLayout.Size<=0 || layout.SetLayout.Size>65536 ||
-           layout.ValueOffset>layout.SetLayout.Size-value->GetSize())
-            throw std::runtime_error("CSSX map layout is unsupported");
-        auto* map=static_cast<FScriptMap*>(data);
-        const auto count=map->Num(),end=map->GetMaxIndex();
-        if(count<0 || end<count || end>4096) throw std::runtime_error("CSSX map exceeds bound");
+        ExtensionMapView view(static_cast<FMapProperty*>(p),data);
         Json entries=Json::array();
-        for(int index=0;index<end;++index) if(map->IsValidIndex(index)) {
-            auto* pair=static_cast<std::byte*>(map->GetData(index,layout));
-            entries.push_back({{"key",decode(key,pair,depth+1)},
-                               {"value",decode(value,pair+layout.ValueOffset,depth+1)}});
+        for(int index=0;index<view.end;++index) if(view.map->IsValidIndex(index)) {
+            auto* pair=view.pair(index);
+            entries.push_back({{"key",decode(view.key,pair,depth+1)},
+                               {"value",decode(view.value,pair+view.layout.ValueOffset,depth+1)}});
         }
-        if(entries.size()!=size_t(count)) throw std::runtime_error("CSSX map count changed during read");
+        if(entries.size()!=size_t(view.count)) throw std::runtime_error("CSSX map count changed during read");
         return {{"$map",std::move(entries)}};
     }
     throw std::runtime_error("CSSX does not support this reflected property type");
@@ -187,22 +207,41 @@ Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& re
         Json names=Json::array();for(const auto& entry:rows) names.push_back(narrow(entry.Key.ToString()));
         std::sort(names.begin(),names.end());return names;
     }
-    if(op=="get" || op=="set") {
+    if(op=="get" || op=="set" || op=="map.update") {
         const auto name=wide(request.at("property").get<std::string>());
         auto* p=object->GetPropertyByNameInChain(name.c_str());if(!p || p->GetOffset_Internal()<0) throw std::runtime_error("CSSX property is missing");
         auto* data=reinterpret_cast<std::byte*>(object)+p->GetOffset_Internal();
+        if(op=="map.update") {
+            if(object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject|RF_ArchetypeObject))) throw std::runtime_error("CSSX refuses default-object writes");
+            if(!p->IsA<FMapProperty>()) throw std::runtime_error("CSSX property is not a map");
+            ExtensionMapView view(static_cast<FMapProperty*>(p),data);
+            std::byte* selected=nullptr;
+            // Keys must be supplied exactly as returned by get. Keys and map
+            // membership are never modified, so no rehash or insertion occurs.
+            for(int i=0;i<view.end;++i) if(view.map->IsValidIndex(i)) {
+                auto* pair=view.pair(i);
+                if(decode(view.key,pair,0)==request.at("key")) {
+                    if(selected) throw std::runtime_error("CSSX map key is ambiguous");
+                    selected=pair+view.layout.ValueOffset;
+                }
+            }
+            if(!selected) throw std::runtime_error("CSSX map key no longer exists");
+            if(decode(view.value,selected,0)!=request.at("expected")) throw std::runtime_error("CSSX map value changed; refresh before editing");
+            ExtensionValue next(view.value);view.value->CopyCompleteValue(next.data(),selected);
+            encode(view.value,next.data(),request.at("value"),0);
+            const auto result=decode(view.value,next.data(),0);
+            if(result.dump().size()>1024*1024) throw std::runtime_error("CSSX map result exceeds 1 MiB");
+            // Everything, including decoding the result, succeeds before the
+            // write. A rejected request cannot leave a partially edited value.
+            view.value->CopyCompleteValue(selected,next.data());return result;
+        }
         if(op=="set") {
             if(object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject|RF_ArchetypeObject))) throw std::runtime_error("CSSX refuses default-object writes");
-            const auto size=p->GetSize();
-            if(size<=0 || size>65536 || p->GetMinAlignment()>16) throw std::runtime_error("CSSX property exceeds write buffer bounds");
-            struct Value {
-                FProperty* property;std::vector<std::max_align_t> storage;
-                Value(FProperty* p,int size):property(p),storage((size+sizeof(std::max_align_t)-1)/sizeof(std::max_align_t)) {p->InitializeValue(storage.data());}
-                ~Value(){property->DestroyValue(storage.data());}
-            } next(p,size);
-            p->CopyCompleteValue(next.storage.data(),data);
-            encode(p,next.storage.data(),request.at("value"),0);
-            p->CopyCompleteValue(data,next.storage.data());
+            ExtensionValue next(p);p->CopyCompleteValue(next.data(),data);
+            encode(p,next.data(),request.at("value"),0);
+            const auto result=decode(p,next.data(),0);
+            if(result.dump().size()>1024*1024) throw std::runtime_error("CSSX property result exceeds 1 MiB");
+            p->CopyCompleteValue(data,next.data());return result;
         }
         return decode(p,data,0);
     }

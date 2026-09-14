@@ -13,6 +13,9 @@ struct Host {
     std::string shell="Genessa";
     bool check_soft=false;
     bool stone_owned=false,stone_manager_registers=false,bad_stone_signature=false,fail_stone_cache=false;
+    Json stone_component={{"Level",2},{"exp",85},{"Stacks",1},{"Durability",12}},stone_runtime=stone_component;
+    int map_writes=0,fail_map_write=0;
+    bool bad_level_signature=false,fail_equipped_refresh=false;
     bool intro_lock=false,intro_done=true,map_unlocked=true,montage=false,retain_lock=false;
     int intro_instances=1,tag_count=1;
     std::vector<Json> calls;
@@ -39,6 +42,7 @@ struct Host {
             else if(fn=="AddTarstoneToInventory") fields={{"Tarstone",8},{"Level",4},{"exp",4}};
             else if(fn=="UpdateSoftItemStatus") fields={{"SoftItem",bad_stone_signature?8:40},{"__WorldContext",8}};
             else if(fn=="CacheAllTarstones") fields={{"Completed",1}};
+            else if(fn=="SetTarstoneLevel") fields={{"Tarstone",8},{"LevelData",bad_level_signature?8:16}};
             else if(!fn.starts_with("S_AddAllTarstones")) throw std::runtime_error("Unexpected describe: "+fn);
             Json args=Json::object();for(const auto& [name,size]:fields) args[name]={{"size",size},{"return",name=="ReturnValue"},{"out",false}};
             return args;
@@ -61,7 +65,15 @@ struct Host {
             if(p=="Resolve") return {{"CurrentValue",0}};
             if(p=="MaxResolve") return {{"CurrentValue",100}};
             if(p=="TarstoneComponent") return object(20);
-            if(p=="TarstoneLevels") return {{"$map",stone_owned?Json::array({{{"key",object(90)},{"value",{{"Level",2},{"exp",85},{"Stacks",1},{"Durability",12}}}}}):Json::array()}};
+            if(p=="TarstoneLevels") return {{"$map",stone_owned?Json::array({{{"key",object(90)},{"value",j.at("target")==object(20)?stone_component:stone_runtime}}}):Json::array()}};
+            if(p=="EquippedTarstoneItemInstances") return {{"$map",Json::array()}};
+            if(p=="EquippedSupportTarstoneItemInstances") return {{"$map",Json::array({{{"key",object(90)},{"value",object(30)}}})}};
+        }
+        if(op=="map.update") {
+            ++map_writes;if(fail_map_write==map_writes) throw std::runtime_error("Concurrent level edit");
+            auto& value=j.at("target")==object(20)?stone_component:stone_runtime;
+            if(j.at("key")!=object(90) || j.at("expected")!=value) throw std::runtime_error("Stale map edit");
+            value=j.at("value");return value;
         }
         if(op=="set") {
             if(j.at("property")=="bCanBeDamaged") {if(fail_restore && j.at("value")==true) throw std::runtime_error("restore failed");damageable=j.at("value").get<bool>();return damageable;}
@@ -84,6 +96,7 @@ struct Host {
             if(function=="AddTarstoneToInventory") {stone_owned=true;return Json::object();}
             if(function=="UpdateSoftItemStatus") return Json::object();
             if(function=="CacheAllTarstones") {if(fail_stone_cache) throw std::runtime_error("Cache unavailable");return {{"Completed",true}};}
+            if(function=="SetTarstoneLevel") {if(fail_equipped_refresh) throw std::runtime_error("Equipped refresh unavailable");return Json::object();}
             if(function=="GetShellNames") return {{"ReturnValue",Json::array({"Genessa","Proxima","ID_Shell_LoadFromSave"})}};
             if(function=="GetCharacterID") return {{"ReturnValue",{{"TagName","Shell."+shell}}}};
             if(function=="GetShellHealth" || function=="GetHealth") return {{"ReturnValue",80.}};
@@ -190,6 +203,31 @@ int main(int argc,char** argv) {
     }
     check(stones.count("S_AddAllTarstonesMelee")==1 && stones.count("S_AddAllTarstonesSidearm")==1 && stones.count("S_AddAllTarstonesSupport")==1,"Category grant failed");
     check(stone_menu.stop(),"Tarstone menu failed shutdown");
+    Host levels;levels.stone_owned=true;cheat::Menu level_menu(&levels.api);level_menu.tick(.25);
+    level_menu.event({{"id","tarstone_scope"},{"value","all"}});
+    rejects([&]{level_menu.event({{"id","set_tarstone_level"}});});
+    level_menu.event({{"id","tarstone_level"},{"value",2}});
+    rejects([&]{level_menu.event({{"id","set_tarstone_level"},{"confirmed",true}});});
+    check(levels.map_writes==0,"Draft or unconfirmed level edit changed the save maps");
+    level_menu.event({{"id","apply_settings"}});levels.bad_level_signature=true;
+    rejects([&]{level_menu.event({{"id","set_tarstone_level"},{"confirmed",true}});});
+    check(levels.map_writes==0,"Incompatible equipped interface allowed a partial level edit");
+    levels.bad_level_signature=false;
+    level_menu.event({{"id","set_tarstone_level"},{"confirmed",true}});
+    auto expected=Json{{"Level",1},{"exp",85},{"Stacks",1},{"Durability",12}};
+    check(levels.stone_component==expected && levels.stone_runtime==expected,"Level editing lost other fields or skipped a map");
+    check(levels.count("SetTarstoneLevel")==1,"Equipped Tarstone was not refreshed");
+    for(const auto& call:levels.calls) if(call["function"]=="SetTarstoneLevel") check(call["args"][1]==expected,"Equipped payload lost saved data");
+    level_menu.event({{"id","tarstone_level"},{"value",1}});level_menu.event({{"id","apply_settings"}});
+    levels.map_writes=0;levels.fail_map_write=2;
+    rejects([&]{level_menu.event({{"id","set_tarstone_level"},{"confirmed",true}});});
+    check(levels.stone_component==expected && levels.stone_runtime==expected,"Failed level batch did not restore earlier writes");
+    levels.fail_map_write=0;levels.fail_equipped_refresh=true;
+    rejects([&]{level_menu.event({{"id","set_tarstone_level"},{"confirmed",true}});});
+    const auto refreshes=levels.count("SetTarstoneLevel");
+    for(int i=0;i<20;++i) level_menu.tick(.25);
+    check(levels.count("SetTarstoneLevel")==refreshes,"Equipped refresh automatically retried");
+    check(level_menu.stop(),"Level menu failed shutdown");
     Host restart;cheat::Menu restarting(&restart.api);restarting.tick(.25);
     restarting.event({{"id","move_fast"},{"value",true}});restarting.event({{"id","apply_settings"}});
     restart.pawn=object(71);restarting.tick(.25);
