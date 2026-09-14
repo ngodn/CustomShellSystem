@@ -16,6 +16,8 @@ struct Host {
     Json stone_component={{"Level",2},{"exp",85},{"Stacks",1},{"Durability",12}},stone_runtime=stone_component;
     int map_writes=0,fail_map_write=0;
     bool bad_level_signature=false,fail_equipped_refresh=false;
+    Json point_limits=Json::array({{{"key",{{"TagName","CharacterId.Player.Shell.Genessa"}}},{"value",44}},{{"key",{{"TagName","CharacterId.Player.Shell.Tiel"}}},{"value",40}},{{"key",{{"TagName","CharacterId.Player.Shell.Other"}}},{"value",150}}});
+    bool fail_point_restore=false;
     bool intro_lock=false,intro_done=true,map_unlocked=true,montage=false,retain_lock=false;
     int intro_instances=1,tag_count=1;
     std::vector<Json> calls;
@@ -64,12 +66,22 @@ struct Host {
             if(p=="HealthSet") return object(6);
             if(p=="Resolve") return {{"CurrentValue",0}};
             if(p=="MaxResolve") return {{"CurrentValue",100}};
+            if(p=="Progression Component") return object(44);
+            if(p=="StartingMaxShellPoints") return {{"$map",point_limits}};
             if(p=="TarstoneComponent") return object(20);
             if(p=="TarstoneLevels") return {{"$map",stone_owned?Json::array({{{"key",object(90)},{"value",j.at("target")==object(20)?stone_component:stone_runtime}}}):Json::array()}};
             if(p=="EquippedTarstoneItemInstances") return {{"$map",Json::array()}};
             if(p=="EquippedSupportTarstoneItemInstances") return {{"$map",Json::array({{{"key",object(90)},{"value",object(30)}}})}};
         }
         if(op=="map.update") {
+            if(j.at("property")=="StartingMaxShellPoints") {
+                if(fail_point_restore && j.at("value")!=100) throw std::runtime_error("Point restore failed");
+                for(auto& entry:point_limits) if(entry.at("key")==j.at("key")) {
+                    if(entry.at("value")!=j.at("expected")) throw std::runtime_error("Stale shell points");
+                    entry["value"]=j.at("value");return entry["value"];
+                }
+                throw std::runtime_error("Point key disappeared");
+            }
             ++map_writes;if(fail_map_write==map_writes) throw std::runtime_error("Concurrent level edit");
             auto& value=j.at("target")==object(20)?stone_component:stone_runtime;
             if(j.at("key")!=object(90) || j.at("expected")!=value) throw std::runtime_error("Stale map edit");
@@ -228,6 +240,24 @@ int main(int argc,char** argv) {
     for(int i=0;i<20;++i) level_menu.tick(.25);
     check(levels.count("SetTarstoneLevel")==refreshes,"Equipped refresh automatically retried");
     check(level_menu.stop(),"Level menu failed shutdown");
+    Host points;cheat::Menu point_menu(&points.api);point_menu.tick(.25);
+    const auto original_points=points.point_limits;
+    point_menu.event({{"id","max_shell_points"},{"value",true}});point_menu.tick(1);
+    check(points.point_limits==original_points,"Shell-point draft affected gameplay");
+    point_menu.event({{"id","apply_settings"}});
+    check(points.point_limits[0]["value"]==100 && points.point_limits[1]["value"]==100,"Shell-point limits did not apply");
+    check(points.point_limits[2]["value"]==150,"Higher limit from another owner was lowered");
+    points.point_limits[0]["value"]=75;point_menu.tick(1);
+    check(points.point_limits[0]["value"]==75,"Newer owner's shell-point limit was overwritten");
+    point_menu.event({{"id","disable_all"}});
+    check(points.point_limits[0]["value"]==75 && points.point_limits[1]["value"]==40,"Shell-point cleanup lost ownership");
+    points.point_limits=original_points;points.fail_save=true;
+    point_menu.event({{"id","max_shell_points"},{"value",true}});
+    rejects([&]{point_menu.event({{"id","apply_settings"}});});
+    check(points.point_limits==original_points,"Failed settings save left point limits enabled");
+    points.fail_save=false;point_menu.event({{"id","apply_settings"}});points.fail_point_restore=true;
+    check(!point_menu.stop(),"Failed point cleanup allowed unloading");
+    points.fail_point_restore=false;check(point_menu.stop() && points.point_limits==original_points,"Point cleanup retry lost original values");
     Host restart;cheat::Menu restarting(&restart.api);restarting.tick(.25);
     restarting.event({{"id","move_fast"},{"value",true}});restarting.event({{"id","apply_settings"}});
     restart.pawn=object(71);restarting.tick(.25);

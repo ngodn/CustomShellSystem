@@ -31,7 +31,7 @@ Menu::Menu(const CssxHost* host):host_(host),recovery_(host) {
         const double step=std::string(id)=="heal_interval" || std::string(id)=="move_multiplier"?.25:1.;
         return std::clamp(low+std::round((std::clamp(value,low,high)-low)/step)*step,low,high);
     };
-    values_={{"god",false},{"auto_heal",false},{"infinite_resolve",false},{"move_fast",false},
+    values_={{"god",false},{"auto_heal",false},{"infinite_resolve",false},{"move_fast",false},{"max_shell_points",false},
         {"heal_amount",number("heal_amount",100,1,9999)},{"resolve_amount",number("resolve_amount",100,1,9999)},
         {"heal_percent",number("heal_percent",100,1,100)},{"heal_interval",number("heal_interval",1,.25,5)},
         {"move_multiplier",number("move_multiplier",2,1,5)},{"grant_amount",int(number("grant_amount",100,1,100000))},
@@ -65,11 +65,12 @@ void Menu::apply_settings() {
         if(applied_["move_fast"]!=before["move_fast"] ||
            (applied_["move_fast"]==true && applied_["move_multiplier"]!=before["move_multiplier"]))
             movement(applied_["move_fast"].get<bool>());
+        if(applied_["max_shell_points"]!=before["max_shell_points"]) shell_points(applied_["max_shell_points"].get<bool>());
         if(applied_["auto_heal"]==true || applied_["infinite_resolve"]==true) require_player();
         persist(applied_);
     } catch(const std::exception& e) {
         const std::string reason=e.what();applied_=before;
-        try {god(before["god"].get<bool>());movement(before["move_fast"].get<bool>());}
+        try {god(before["god"].get<bool>());movement(before["move_fast"].get<bool>());shell_points(before["max_shell_points"].get<bool>());}
         catch(const std::exception& cleanup) {
             cleanup_required_=true;
             throw std::runtime_error("Apply failed: "+reason+". Cleanup needs retry: "+cleanup.what());
@@ -80,10 +81,10 @@ void Menu::apply_settings() {
 }
 void Menu::disable_all() {
     // Stop periodic work first. Failed restores retain their ownership records.
-    for(const auto* id:{"god","auto_heal","infinite_resolve","move_fast"}) applied_[id]=false;
+    for(const auto* id:toggle_ids) applied_[id]=false;
     cleanup_required_=true;
-    god(false);movement(false);
-    for(const auto* id:{"god","auto_heal","infinite_resolve","move_fast"}) values_[id]=false;
+    god(false);movement(false);shell_points(false);
+    for(const auto* id:toggle_ids) values_[id]=false;
     cleanup_required_=false;report("All cheats off. Other pending edits were kept.");
 }
 void Menu::refresh_shells() {
@@ -109,7 +110,7 @@ Json Menu::model() {
     for(const auto& action:unlocks) enabled[std::string("unlock_")+action.id]=live && !pending_;
     for(const auto* action:{"heal","resolve","revive","damage","set_harbinger","switch_shell","god","auto_heal","infinite_resolve","move_fast"}) enabled[action]=live && !pending_ && !has_changes() && !cleanup_required_;
     enabled["switch_shell"]=live && !pending_ && !has_changes() && !cleanup_required_ && values_["shell"]!="none";
-    for(const auto* id:{"god","auto_heal","infinite_resolve","move_fast"}) enabled[id]=live && !pending_ && !cleanup_required_;
+    for(const auto* id:toggle_ids) enabled[id]=live && !pending_ && !cleanup_required_;
     enabled["refresh_pickups"]=live && !pending_;
     enabled["refresh_tarstones"]=live && !pending_;
     for(const auto* action:{"add_tarstone","set_tarstone_level","give_tarstones_melee","give_tarstones_sidearm","give_tarstones_support"})
@@ -120,9 +121,9 @@ Json Menu::model() {
     enabled["cancel_recovery"]=recovery_.running();
     enabled["apply_settings"]=has_changes() && !pending_ && !cleanup_required_;
     enabled["discard_changes"]=has_changes() && !pending_;
-    enabled["disable_all"]=!pending_ && (cleanup_required_ || !saved_.empty() || applied_["auto_heal"]==true || applied_["infinite_resolve"]==true || applied_["god"]==true || applied_["move_fast"]==true);
+    enabled["disable_all"]=!pending_ && (cleanup_required_ || !points_saved_.empty() || applied_["max_shell_points"]==true || !saved_.empty() || applied_["auto_heal"]==true || applied_["infinite_resolve"]==true || applied_["god"]==true || applied_["move_fast"]==true);
     std::string summary=cleanup_required_?"Cleanup needs retry. Use Turn off all cheats.":has_changes()?"Pending edits. Apply settings or Discard changes.":"Settings are applied.";
-    unsigned active=0;for(const auto* id:{"god","auto_heal","infinite_resolve","move_fast"}) if(applied_[id]==true) ++active;
+    unsigned active=0;for(const auto* id:toggle_ids) if(applied_[id]==true) ++active;
     summary+=" Active cheats: "+std::to_string(active)+".";
     Json confirmations=Json::object();
     for(const auto& action:grants) confirmations[std::string("grant_")+action.id]="Add "+std::to_string(int(values_["grant_amount"].get<double>()))+" "+action.id+"? The game can save this change.";
@@ -276,7 +277,7 @@ void Menu::apply_event(const Json& event) {
     }
     if(id=="switch_shell") {
         if(!event.value("confirmed",false)) throw std::runtime_error("Confirm the gameplay shell change first.");
-        for(const auto* toggle:{"god","auto_heal","infinite_resolve","move_fast"}) if(applied_[toggle]==true) throw std::runtime_error("Turn off active cheats before switching gameplay shells.");
+        for(const auto* toggle:toggle_ids) if(applied_[toggle]==true) throw std::runtime_error("Turn off active cheats before switching gameplay shells.");
         const auto target=values_.at("shell").get<std::string>();if(target=="none") throw std::runtime_error("Choose a shell first.");
         if(shell_matches(host_.call(pawn,"GetCharacterID"),target)) {report("That gameplay shell is already active.");return;}
         pending_=PendingShell{target,pc};
@@ -309,7 +310,7 @@ void Menu::tick(double seconds) {
     const auto recovery_message=recovery_.message();recovery_.tick(seconds);
     if(recovery_.message()!=recovery_message) report(recovery_.message());
     try {shell_tick(seconds);} catch(const std::exception& e){pending_.reset();report(std::string("Shell switch stopped: ")+e.what());}
-    refresh_+=seconds;heal_time_+=seconds;resolve_time_+=seconds;catalog_time_+=seconds;
+    refresh_+=seconds;heal_time_+=seconds;resolve_time_+=seconds;catalog_time_+=seconds;points_time_+=seconds;
     if(refresh_<.25) return;refresh_=0;
     auto player=host_.player();
     if(!player.is_object() || !identity(player.value("pawn",Json()))) {if(!current_.is_null()){current_=nullptr;host_.request({{"op","invalidate"}});}return;}
@@ -330,6 +331,7 @@ void Menu::tick(double seconds) {
             catch(const std::exception& e) {report(std::string("Waiting for the shell catalog: ")+e.what());}
         }
         if(pending_ || cleanup_required_) return;
+        if(applied_["max_shell_points"]==true && (changed || points_time_>=1.)) {points_time_=0;shell_points(true);}
         if(applied_["god"]==true) god(true);
         if(applied_["move_fast"]==true && changed) movement(true);
         if(applied_["auto_heal"]==true && heal_time_>=applied_["heal_interval"].get<double>()) {
@@ -352,7 +354,7 @@ void Menu::tick(double seconds) {
 bool Menu::stop() {
     pending_.reset();recovery_.cancel();
     try {
-        restore("bCanBeDamaged");restore("Movement");
+        shell_points(false);restore("bCanBeDamaged");restore("Movement");
         if(applied_["move_fast"]==true) {auto player=host_.player();if(identity(player.value("pawn",Json()))) host_.call(player["pawn"],"InitialiseCharacterData");}
         stopped_=true;return true;
     } catch(const std::exception& e) {host_.log(std::string("Cleanup failed: ")+e.what(),"error");return false;}

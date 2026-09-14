@@ -17,6 +17,7 @@ struct PendingShell {
     double elapsed=0;
 };
 class Menu {
+    inline static constexpr const char* toggle_ids[]{"god","auto_heal","infinite_resolve","move_fast","max_shell_points"};
     cssx::Client host_;
     PrologueRecovery recovery_;
     Json settings_=Json::object();
@@ -35,7 +36,7 @@ class Menu {
     void tarstone_action(const std::string& id,const Json& player);
     void set_tarstone_levels(const Json& player);
     std::string status_,last_error_,action_error_;
-    double refresh_=0,heal_time_=0,resolve_time_=0,catalog_time_=0;
+    double refresh_=0,heal_time_=0,resolve_time_=0,catalog_time_=0,points_time_=0;
     bool catalog_ready_=false;
     uint64_t owner_controller_=0;
     std::optional<PendingShell> pending_;
@@ -50,6 +51,9 @@ class Menu {
     void restore(const std::string&);
     void god(bool);
     void movement(bool);
+    struct MapSaved {Json owner,key,before,expected;};
+    std::map<std::string,MapSaved> points_saved_;
+    void shell_points(bool);
     bool stopped_=false;
     void apply_event(const Json&);
 public:

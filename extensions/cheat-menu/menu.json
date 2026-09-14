@@ -107,6 +107,13 @@
           "label": "Set health target",
           "description": "Reduces health to the selected percentage. Keeps at least one point in the current pool.",
           "confirm": "Reduce health to the selected percentage? At least one health point will remain."
+        },
+        {
+          "id": "max_shell_points",
+          "type": "toggle",
+          "label": "100-point shell limits",
+          "value": false,
+          "description": "Raise each shell point limit to at least 100 for this session. This does not grant points. Apply settings to enable; disabling restores limits owned by this extension."
         }
       ]
     },
