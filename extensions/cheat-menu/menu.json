@@ -443,6 +443,59 @@
       ]
     },
     {
+      "id": "tarstones",
+      "title": "Tarstones",
+      "controls": [
+        {
+          "id": "refresh_tarstones",
+          "type": "button",
+          "label": "Refresh Tarstone list",
+          "description": "Read available Tarstones and their in-game names. No inventory changes."
+        },
+        {
+          "id": "tarstone",
+          "type": "choice",
+          "label": "Tarstone",
+          "value": "none",
+          "options": [
+            {
+              "id": "none",
+              "label": "Refresh the Tarstone list"
+            }
+          ],
+          "description": "Search the game catalog by name and category."
+        },
+        {
+          "id": "add_tarstone",
+          "type": "button",
+          "label": "Add selected Tarstone",
+          "description": "Add an unowned Tarstone. Owned stones keep their level and experience.",
+          "confirm": "Add this Tarstone? The game can save the change."
+        },
+        {
+          "id": "give_tarstones_melee",
+          "type": "button",
+          "label": "Give all melee Tarstones",
+          "description": "Run the game grant command for this category.",
+          "confirm": "Give every melee Tarstone? The game can save the changes. This cannot be undone here."
+        },
+        {
+          "id": "give_tarstones_sidearm",
+          "type": "button",
+          "label": "Give all sidearm Tarstones",
+          "description": "Run the game grant command for this category.",
+          "confirm": "Give every sidearm Tarstone? The game can save the changes. This cannot be undone here."
+        },
+        {
+          "id": "give_tarstones_support",
+          "type": "button",
+          "label": "Give all support Tarstones",
+          "description": "Run the game grant command for this category.",
+          "confirm": "Give every support Tarstone? The game can save the changes. This cannot be undone here."
+        }
+      ]
+    },
+    {
       "id": "recovery",
       "title": "Recovery",
       "controls": [

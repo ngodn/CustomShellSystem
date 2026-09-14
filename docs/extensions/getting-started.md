@@ -78,4 +78,12 @@ Native extensions are trusted game-process code. The framework can report callba
 
 If startup or a tick fails, CSSX suspends the extension and calls `stop` immediately. Make cleanup repeatable: return zero (Lua: `false`) if it cannot finish, retain the information needed to restore your changes, and let CSSX retry during shutdown. Failed cleanup blocks unloading. A suspended extension never receives another tick. Do not rely on unloading the DLL to undo values already written into the game.
 
+### Reflected data and game updates
+
+Use `describe` to check a required function before the first gameplay mutation. Missing or incompatible interfaces should disable the affected action with an explanation, rather than stop the whole extension or CSS. Do not replace a previously supported game adapter when adding another build. The [game compatibility record](../development/game-build-compatibility.md) tracks the native adapters separately from outfit and extension formats.
+
+`get` returns localized `FText` as a UTF-8 string using the game's text conversion. Map reads return `{"$map":[{"key":...,"value":...}]}` so object and struct keys retain their type. Maps use reflected key/value layouts, check sparse indices and reject storage larger than 4,096 slots. Whole-map replacement is not supported. See Epic's [map key](https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/FScriptMapHelper/GetKeyPtr) and [value](https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/FScriptMapHelper/GetValuePtr) interfaces for the engine's pair layout.
+
+Calls return all reflected outputs by default. An optional `outputs` array selects which outputs to decode, for example `"outputs":["Completed"]`. Use `"outputs":[]` when a function returns an opaque soft reference that your extension does not need. Output names are validated before the call. This does not skip input validation or change the function's behavior. Never retry a gameplay mutation merely because reading its result failed; the mutation may already have happened.
+
 Host responses have a 1 MiB limit, including all callback chunks. CSSX rejects overflow instead of accepting a truncated JSON prefix.

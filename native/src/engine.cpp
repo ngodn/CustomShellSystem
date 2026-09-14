@@ -13,6 +13,7 @@
 #include <Unreal/UFunction.hpp>
 #include <Unreal/FProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
+#include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/Engine/UDataTable.hpp>
 #include <Unreal/FString.hpp>
 #include <Unreal/UnrealVersion.hpp>

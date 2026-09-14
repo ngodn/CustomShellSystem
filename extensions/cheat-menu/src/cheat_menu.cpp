@@ -36,7 +36,7 @@ Menu::Menu(const CssxHost* host):host_(host),recovery_(host) {
         {"heal_percent",number("heal_percent",100,1,100)},{"heal_interval",number("heal_interval",1,.25,5)},
         {"move_multiplier",number("move_multiplier",2,1,5)},{"grant_amount",int(number("grant_amount",100,1,100000))},
         {"damage_percent",int(number("damage_percent",50,1,99))},{"harbinger_level",int(number("harbinger_level",1,1,1000))},
-        {"shell","none"},{"pickup","none"},{"pickup_amount",int(number("pickup_amount",1,1,9999))}};
+        {"shell","none"},{"pickup","none"},{"tarstone","none"},{"pickup_amount",int(number("pickup_amount",1,1,9999))}};
     applied_=values_;
     status_="Cheats start off. Edit settings, then Apply settings.";
 }
@@ -110,6 +110,9 @@ Json Menu::model() {
     enabled["switch_shell"]=live && !pending_ && !has_changes() && !cleanup_required_ && values_["shell"]!="none";
     for(const auto* id:{"god","auto_heal","infinite_resolve","move_fast"}) enabled[id]=live && !pending_ && !cleanup_required_;
     enabled["refresh_pickups"]=live && !pending_;
+    enabled["refresh_tarstones"]=live && !pending_;
+    for(const auto* action:{"add_tarstone","give_tarstones_melee","give_tarstones_sidearm","give_tarstones_support"})
+        enabled[action]=live && !pending_ && !has_changes() && !cleanup_required_ && (std::string(action)!="add_tarstone" || values_["tarstone"]!="none");
     for(const auto* action:{"add_pickup","remove_pickup","give_all_pickups"}) enabled[action]=live && !pending_ && !has_changes() && !cleanup_required_ && (std::string(action)=="give_all_pickups" || values_["pickup"]!="none");
     enabled["repair_intro"]=live && !pending_ && !recovery_.running();
     enabled["cancel_recovery"]=recovery_.running();
@@ -124,7 +127,9 @@ Json Menu::model() {
     confirmations["set_harbinger"]="Set Harbinger level to "+std::to_string(int(values_["harbinger_level"].get<double>()))+"? Progression and achievements can change.";
     confirmations["switch_shell"]="Switch gameplay shell to "+values_["shell"].get<std::string>()+"? Inventory will close and your shell abilities will change.";
     for(const auto* id:{"add_pickup","remove_pickup"}) confirmations[id]=std::string(id==std::string("add_pickup")?"Add ":"Remove ")+std::to_string(values_["pickup_amount"].get<int>())+" x "+values_["pickup"].get<std::string>()+"? The game can save this change.";
-    return {{"values",values_},{"options",{{"shell",shells_},{"pickup",pickups_}}},{"enabled",enabled},{"status",summary+" "+status_},{"error",action_error_},{"confirmations",confirmations}};
+    for(const auto& option:tarstones_) if(option["id"]==values_["tarstone"])
+        confirmations["add_tarstone"]="Add "+option["label"].get<std::string>()+"? An owned Tarstone will keep its current level and experience.";
+    return {{"values",values_},{"options",{{"shell",shells_},{"pickup",pickups_},{"tarstone",tarstones_}}},{"enabled",enabled},{"status",summary+" "+status_},{"error",action_error_},{"confirmations",confirmations}};
 }
 void Menu::override_value(const Json& object,const std::string& property,const Json& value) {
     const auto key=std::to_string(identity(object))+":"+property;
@@ -179,6 +184,11 @@ void Menu::apply_event(const Json& event) {
     if(id=="cancel_recovery") {recovery_.cancel();report("Intro-lock check cancelled.");return;}
     if(pending_) throw std::runtime_error("Wait for the current shell switch to finish.");
     if(id=="refresh_pickups") {refresh_pickups();return;}
+    if(id=="refresh_tarstones") {refresh_tarstones();return;}
+    if(id=="tarstone") {
+        for(const auto& option:tarstones_) if(option["id"]==event.at("value")) {values_[id]=applied_[id]=event["value"];return;}
+        throw std::runtime_error("Unknown Tarstone selection.");
+    }
     if(id=="pickup") {
         for(const auto& option:pickups_) if(option["id"]==event.at("value")) {values_[id]=applied_[id]=event["value"];return;}
         throw std::runtime_error("Unknown pickup selection.");
@@ -210,6 +220,10 @@ void Menu::apply_event(const Json& event) {
     }
     auto player=require_player();auto pc=player["controller"];auto pawn=player["pawn"];
     if(has_changes()) throw std::runtime_error("Apply settings or Discard changes before running an action.");
+    if(id=="add_tarstone" || id=="give_tarstones_melee" || id=="give_tarstones_sidearm" || id=="give_tarstones_support") {
+        if(!event.value("confirmed",false)) throw std::runtime_error("Confirm the Tarstone grant first.");
+        tarstone_action(id,player);return;
+    }
     if(id=="add_pickup" || id=="remove_pickup" || id=="give_all_pickups") {
         if(!event.value("confirmed",false)) throw std::runtime_error("Confirm the inventory change first.");
         if(id=="give_all_pickups") host_.call(pc,"S_AddAllItems");

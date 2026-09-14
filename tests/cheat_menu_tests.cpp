@@ -12,6 +12,7 @@ struct Host {
     bool damageable=true,open=false,confirm_switch=true,fail_restore=false,fail_save=false;
     std::string shell="Genessa";
     bool check_soft=false;
+    bool stone_owned=false,stone_manager_registers=false,bad_stone_signature=false,fail_stone_cache=false;
     bool intro_lock=false,intro_done=true,map_unlocked=true,montage=false,retain_lock=false;
     int intro_instances=1,tag_count=1;
     std::vector<Json> calls;
@@ -30,6 +31,18 @@ struct Host {
         if(op=="menu.status") return {{"menu_open",open}};
         if(op=="find" || op=="class_default") return object(3);
         if(op=="table.rows") return Json::array({"Trollweed","Moonshine"});
+        if(op=="describe") {
+            const auto fn=j.at("function").get<std::string>();
+            std::map<std::string,int> fields;
+            if(fn=="BuildTarstoneName") fields={{"SoftTarstone",40},{"IncludeLevel",1},{"__WorldContext",8},{"ReturnValue",16}};
+            else if(fn=="AddTarstoneToItemManager") fields={{"Tarstone",8},{"Silent",1},{"__WorldContext",8}};
+            else if(fn=="AddTarstoneToInventory") fields={{"Tarstone",8},{"Level",4},{"exp",4}};
+            else if(fn=="UpdateSoftItemStatus") fields={{"SoftItem",bad_stone_signature?8:40},{"__WorldContext",8}};
+            else if(fn=="CacheAllTarstones") fields={{"Completed",1}};
+            else if(!fn.starts_with("S_AddAllTarstones")) throw std::runtime_error("Unexpected describe: "+fn);
+            Json args=Json::object();for(const auto& [name,size]:fields) args[name]={{"size",size},{"return",name=="ReturnValue"},{"out",false}};
+            return args;
+        }
         if(op=="get") {
             const auto p=j.at("property");
             if(p=="bCanBeDamaged") return damageable;
@@ -47,6 +60,8 @@ struct Host {
             if(p=="HealthSet") return object(6);
             if(p=="Resolve") return {{"CurrentValue",0}};
             if(p=="MaxResolve") return {{"CurrentValue",100}};
+            if(p=="TarstoneComponent") return object(20);
+            if(p=="TarstoneLevels") return {{"$map",stone_owned?Json::array({{{"key",object(90)},{"value",{{"Level",2},{"exp",85},{"Stacks",1},{"Durability",12}}}}}):Json::array()}};
         }
         if(op=="set") {
             if(j.at("property")=="bCanBeDamaged") {if(fail_restore && j.at("value")==true) throw std::runtime_error("restore failed");damageable=j.at("value").get<bool>();return damageable;}
@@ -63,6 +78,12 @@ struct Host {
             if(function=="ResetPlayerState") {if(!retain_lock) intro_lock=false;return Json::object();}
             if(function=="ResolveSoftItemDefinition") {check_soft=j.at("args")[0].contains("$table_field");return {{"ReturnValue",object(90)}};}
             if(function=="RemoveItemStacksSilent") return Json::object();
+            if(function=="BuildTarstoneName") return {{"ReturnValue","Localized stone"}};
+            if(function=="GetRuntimeData") return {{"ReturnValue",object(21)}};
+            if(function=="AddTarstoneToItemManager") {if(stone_manager_registers) stone_owned=true;return Json::object();}
+            if(function=="AddTarstoneToInventory") {stone_owned=true;return Json::object();}
+            if(function=="UpdateSoftItemStatus") return Json::object();
+            if(function=="CacheAllTarstones") {if(fail_stone_cache) throw std::runtime_error("Cache unavailable");return {{"Completed",true}};}
             if(function=="GetShellNames") return {{"ReturnValue",Json::array({"Genessa","Proxima","ID_Shell_LoadFromSave"})}};
             if(function=="GetCharacterID") return {{"ReturnValue",{{"TagName","Shell."+shell}}}};
             if(function=="GetShellHealth" || function=="GetHealth") return {{"ReturnValue",80.}};
@@ -138,6 +159,37 @@ int main(int argc,char** argv) {
     item_menu.event({{"id","remove_pickup"},{"confirmed",true}});check(items.check_soft && items.count("RemoveItemStacksSilent")==1,"Pickup removal bypassed typed definition");
     rejects([&]{item_menu.event({{"id","give_all_pickups"}});});item_menu.event({{"id","give_all_pickups"},{"confirmed",true}});
     check(items.count("S_AddAllItems")==1,"Give-all confirmation failed");check(item_menu.stop(),"Item menu failed cleanup");
+    Host stones;cheat::Menu stone_menu(&stones.api);stone_menu.tick(.25);
+    stone_menu.event({{"id","refresh_tarstones"}});
+    check(stone_menu.model()["options"]["tarstone"].size()==6,"Tarstone categories did not merge");
+    check(stone_menu.model()["options"]["tarstone"][0]["label"]=="Melee: Localized stone","Tarstone names were not localized");
+    css::extensions::validate_model(css::extensions::bind_menu(definition,stone_menu.model()));
+    rejects([&]{stone_menu.event({{"id","add_tarstone"}});});
+    check(stones.count("AddTarstoneToItemManager")==0,"Unconfirmed Tarstone grant ran");
+    stones.bad_stone_signature=true;
+    rejects([&]{stone_menu.event({{"id","add_tarstone"},{"confirmed",true}});});
+    check(stones.count("AddTarstoneToItemManager")==0,"Incompatible save interface allowed partial grant");
+    stones.bad_stone_signature=false;stones.stone_owned=true;
+    stone_menu.event({{"id","add_tarstone"},{"confirmed",true}});
+    check(stones.count("AddTarstoneToInventory")==0 && stones.count("AddTarstoneToItemManager")==0,"Owned stone was granted again");
+    stones.stone_owned=false;
+    stone_menu.event({{"id","add_tarstone"},{"confirmed",true}});
+    check(stones.count("AddTarstoneToInventory")==1 && stones.count("UpdateSoftItemStatus")==1,"Single Tarstone grant incomplete");
+    for(const auto& call:stones.calls) if(call["function"]=="UpdateSoftItemStatus")
+        check(call["args"]["SoftItem"].contains("$table_field") && call["outputs"].empty(),"Tarstone soft output was reinterpreted");
+    stones.stone_owned=false;stones.stone_manager_registers=true;stones.fail_stone_cache=true;
+    rejects([&]{stone_menu.event({{"id","add_tarstone"},{"confirmed",true}});});
+    const auto grants_before=stones.count("AddTarstoneToItemManager");
+    for(int i=0;i<20;++i) stone_menu.tick(.25);
+    check(stones.count("AddTarstoneToItemManager")==grants_before,"Partial grant automatically retried");
+    check(stones.count("AddTarstoneToInventory")==1,"Manager-owned stone was overwritten");
+    for(const auto* category:{"melee","sidearm","support"}) {
+        const auto id=std::string("give_tarstones_")+category;
+        rejects([&]{stone_menu.event({{"id",id}});});
+        stone_menu.event({{"id",id},{"confirmed",true}});
+    }
+    check(stones.count("S_AddAllTarstonesMelee")==1 && stones.count("S_AddAllTarstonesSidearm")==1 && stones.count("S_AddAllTarstonesSupport")==1,"Category grant failed");
+    check(stone_menu.stop(),"Tarstone menu failed shutdown");
     Host restart;cheat::Menu restarting(&restart.api);restarting.tick(.25);
     restarting.event({{"id","move_fast"},{"value",true}});restarting.event({{"id","apply_settings"}});
     restart.pawn=object(71);restarting.tick(.25);

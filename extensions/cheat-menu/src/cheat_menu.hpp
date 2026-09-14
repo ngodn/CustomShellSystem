@@ -30,6 +30,9 @@ class Menu {
     Json pickup_table_,pickups_=Json::array({{{"id","none"},{"label","Refresh the pickup list"}}});
     void refresh_pickups();
     Json pickup_class(const Json& pawn);
+    Json tarstones_=Json::array({{{"id","none"},{"label","Refresh the Tarstone list"}}});
+    void refresh_tarstones();
+    void tarstone_action(const std::string& id,const Json& player);
     std::string status_,last_error_,action_error_;
     double refresh_=0,heal_time_=0,resolve_time_=0,catalog_time_=0;
     bool catalog_ready_=false;

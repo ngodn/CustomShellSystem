@@ -37,6 +37,14 @@ Json ExtensionBridge::decode(FProperty* p,void* data,unsigned depth) {
         if(chars.Num()<0 || chars.Num()>65536) throw std::runtime_error("CSSX FString exceeds bound");
         return chars.Num()?narrow(std::wstring(chars.GetData(),chars.Num()-1)):std::string{};
     }
+    if(p->IsA<FTextProperty>()) {
+        Call convert(find(L"/Script/Engine.Default__KismetTextLibrary"),L"Conv_TextToString",2);
+        auto* input=convert.param(L"InText");
+        if(!input->SameType(p) || input->GetElementSize()!=p->GetElementSize())
+            throw std::runtime_error("CSSX localized text layout is unsupported");
+        input->CopyCompleteValue(convert.data(input),data);convert.run();
+        auto* result=convert.param(L"ReturnValue");return decode(result,convert.data(result),depth+1);
+    }
     if(p->IsA<FStructProperty>()) {
         auto* type=static_cast<FStructProperty*>(p)->GetStruct().Get();Json result=Json::object();
         size_t count=0;
@@ -51,6 +59,27 @@ Json ExtensionBridge::decode(FProperty* p,void* data,unsigned depth) {
         auto* a=static_cast<FArrayProperty*>(p);FScriptArrayHelper array(a,data);
         if(array.Num()<0 || array.Num()>4096) throw std::runtime_error("CSSX array exceeds bound");
         Json result=Json::array();for(int i=0;i<array.Num();++i) result.push_back(decode(a->GetInner(),array.GetRawPtr(i),depth+1));return result;
+    }
+    if(p->IsA<FMapProperty>()) {
+        auto* property=static_cast<FMapProperty*>(p);
+        auto* key=property->GetKeyProp();auto* value=property->GetValueProp();
+        const auto& layout=property->GetMapLayout();
+        if(p->GetElementSize()!=sizeof(FScriptMap) || !key || !value ||
+           key->GetSize()<=0 || value->GetSize()<=0 || layout.ValueOffset<key->GetSize() ||
+           layout.SetLayout.Size<=0 || layout.SetLayout.Size>65536 ||
+           layout.ValueOffset>layout.SetLayout.Size-value->GetSize())
+            throw std::runtime_error("CSSX map layout is unsupported");
+        auto* map=static_cast<FScriptMap*>(data);
+        const auto count=map->Num(),end=map->GetMaxIndex();
+        if(count<0 || end<count || end>4096) throw std::runtime_error("CSSX map exceeds bound");
+        Json entries=Json::array();
+        for(int index=0;index<end;++index) if(map->IsValidIndex(index)) {
+            auto* pair=static_cast<std::byte*>(map->GetData(index,layout));
+            entries.push_back({{"key",decode(key,pair,depth+1)},
+                               {"value",decode(value,pair+layout.ValueOffset,depth+1)}});
+        }
+        if(entries.size()!=size_t(count)) throw std::runtime_error("CSSX map count changed during read");
+        return {{"$map",std::move(entries)}};
     }
     throw std::runtime_error("CSSX does not support this reflected property type");
 }
@@ -193,8 +222,24 @@ Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& re
         }
         if(op=="describe") return result;
         if(used.size()!=args.size()) throw std::runtime_error("CSSX unknown function argument");
+        // Some functions return opaque soft references as output parameters.
+        // Validate an explicit output selection before invoking the function,
+        // so unused output decoding cannot turn a successful mutation into an error.
+        const auto outputs=request.value("outputs",Json());
+        if(!outputs.is_null()) {
+            if(!outputs.is_array() || outputs.size()>64) throw std::runtime_error("Invalid CSSX output selection");
+            std::set<std::string> selected;
+            for(const auto& output:outputs) {
+                const auto name=output.get<std::string>();bool found=false;
+                for(auto* p:fn->ForEachProperty()) if(p->HasAnyPropertyFlags(CPF_Parm) && p->HasAnyPropertyFlags(CPF_ReturnParm|CPF_OutParm) && narrow(p->GetName())==name) found=true;
+                if(!found || !selected.insert(name).second) throw std::runtime_error("Unknown or duplicate CSSX output");
+            }
+        }
         call.run();
-        for(auto* p:fn->ForEachProperty()) if(p->HasAnyPropertyFlags(CPF_Parm) && p->HasAnyPropertyFlags(CPF_ReturnParm|CPF_OutParm)) result[narrow(p->GetName())]=decode(p,call.data(p),0);
+        for(auto* p:fn->ForEachProperty()) if(p->HasAnyPropertyFlags(CPF_Parm) && p->HasAnyPropertyFlags(CPF_ReturnParm|CPF_OutParm)) {
+            const auto name=narrow(p->GetName());
+            if(outputs.is_null() || std::find(outputs.begin(),outputs.end(),Json(name))!=outputs.end()) result[name]=decode(p,call.data(p),0);
+        }
         return result;
     }
     throw std::runtime_error("Unknown CSSX engine operation");

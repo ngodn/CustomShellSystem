@@ -18,7 +18,8 @@ Working checklist for CSSX 0.3.0. The source reference is the supplied MortalShe
 | Matching-seal parry, block and harden | Pending | Seal gating and safe hook lifecycle |
 | Max Shell Points 100 | Pending | Map values and exact restoration |
 | Pickup selection, add, remove and give all | Implemented; 77 entries and soft-class resolution verified live | Grant/remove read-back on a test save |
-| Tarstone selection, grants, individual and bulk levels | Pending | Soft classes, save data and inventory refresh |
+| Tarstone selection and grants | Implemented, localized catalog and duplicate-ownership guard | Grant/read-back on a separate test save, native Inventory refresh |
+| Individual and bulk Tarstone levels | Pending | Preserve experience, stacks and durability in both save maps and equipped instances |
 | Saved hotkeys and controller binds | Pending | Focus, menu suppression and binding conflicts |
 
 ## Settings contract
@@ -38,3 +39,7 @@ Low Resolve is a valid firing requirement, not a stuck-state diagnosis. Do not a
 Portable tests cover draft isolation, discard, apply, save failure rollback, integer and step validation, confirmations, original-value restoration, pending shell identity, cleanup retry and the intro observer's positive and negative conditions. `tools/cssx_cheat_check.py` checks draft isolation, Apply, Discard and Turn off all cheats on the running player and restores the original damage flag.
 
 These checks do not establish full feature parity. Do not publish the Cheat Menu as a complete port while the pending rows remain.
+
+Tarstone grant tests cover confirmation, checking all required interfaces before mutation, preserving owned stones, avoiding duplicate registration after the item manager's receive event, typed soft references and no automatic retry after a partial failure. These are portable tests, not proof that a real save grant and its UI refresh work.
+
+On Steam build 25265616, the live catalog returned 77 localized names. Refreshing it did not change either ownership map. Adding the already-owned Justiciar's Stone also left both maps byte-for-value unchanged, including level, experience, stacks and durability. Evidence: `work/cssx-native/tarstone-live-check.json` and `tarstone-maps.json` (local only).
