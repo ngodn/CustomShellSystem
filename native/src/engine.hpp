@@ -7,6 +7,7 @@
 #include "inventory_motion.hpp"
 #include "inventory_keys.hpp"
 #include "extension_client.hpp"
+#include "extension_search.hpp"
 #include <Unreal/UObject.hpp>
 #include <Unreal/FWeakObjectPtr.hpp>
 
@@ -55,7 +56,11 @@ class InventoryUI {
     WeakObject extension_description_;
     std::string extension_description_key_;
     float extension_description_offset_=0;
-    bool extension_details_=false;
+    bool extension_details_=false, extension_picker_=false;
+    extensions::OptionSearch extension_options_;
+    WeakObject extension_search_input_, extension_search_results_, extension_search_count_;
+    std::string extension_search_query_;
+    void build_extension_results();
     int extension_slide_=1;
     uint64_t extension_wheel_after_=0;
     uint64_t extension_revision_=0, extension_check_=0;

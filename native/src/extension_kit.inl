@@ -34,16 +34,30 @@ struct ExtensionKit : InventoryLayout {
         box(x,y,w,h,Color{.009f,.008f,.006f,.72f});divider(x+inset,y,w-2*inset);
     }
     UObject* row(const Json& c,double x,double y,double w,bool selected) {
-        const bool enabled=extensions::interactive(c);
-        auto* hit=button("",x,y,w,row_height-2,selected,true);
+        const bool enabled=c.value("enabled",true) && !c.value("busy",false);
+        auto* hit=button("",x,y,w,row_height-2,selected && enabled,true);
         if(selected) {
-            box(x,y,w,row_height-2,Color{.07f,.056f,.033f,.66f});
-            box(x,y+10,2,row_height-22,gold);
+            box(x,y,w,row_height-2,enabled?Color{.07f,.056f,.033f,.66f}:Color{.035f,.035f,.035f,.66f});
+            box(x,y+10,2,row_height-22,enabled?gold:secondary);
         }
-        text(c.at("label").get<std::string>(),x+inset,y+16,w*.64-inset,34,21,enabled?ink:secondary);
-        auto* value=text(extensions::display_value(c),x+w*.66,y+17,w*.34-inset,32,19,enabled?gold:secondary);
+        auto* label=text(c.at("label").get<std::string>(),x+inset,y+16,w*.64-inset,34,21,ink);
+        const auto state=c.value("busy",false)?"Working...":!c.value("enabled",true)?"Unavailable":extensions::display_value(c);
+        auto* value=text(state,x+w*.66,y+17,w*.34-inset,32,19,enabled?gold:secondary);
+        if(!enabled) {invoke(label,L"SetRenderOpacity",L"InOpacity",.55f);invoke(value,L"SetRenderOpacity",L"InOpacity",.7f);}
         invoke(value,L"SetJustification",L"InJustification",uint8_t{2});
         return hit;
+    }
+    struct Modal {double x,y,w,h;};
+    Modal modal(const std::string& title,double width,double height=760) {
+        const double w=std::min(880.,width-140.),x=(width-w)/2,y=(1080-height)/2;
+        box(0,0,width,1080,Color{0,0,0,.94f});
+        box(x-1,y-1,w+2,height+2,Color{.13f,.10f,.06f,1});
+        box(x,y,w,height,Color{.012f,.010f,.007f,1});
+        decoration("T_UI_Nav_TitleBG",x+1,y+1,w-2,102);
+        label(title,x+32,y+27,w-64,70,27,ink);
+        divider(x+32,y+112,w-64);
+        divider(x+32,y+height-82,w-64);
+        return {x,y,w,height};
     }
     UObject* description(const std::string& value,double x,double y,double w,double h) {
         auto* scroll=construct(L"/Script/UMG.ScrollBox",tree);

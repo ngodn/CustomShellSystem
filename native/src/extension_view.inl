@@ -23,7 +23,7 @@ void InventoryUI::build_extension_page() {
     auto* page=extension_page_.Get();auto* canvas=extension_canvas_.Get();auto* pc=controller_.Get();
     if(!page || !canvas || !pc) return;
     if(auto* description=extension_description_.Get()) {Call offset(description,L"GetScrollOffset",1);offset.run();extension_description_offset_=offset.get<float>();}
-    extension_description_.Reset();
+    extension_description_.Reset();extension_search_input_.Reset();extension_search_results_.Reset();
     invoke(canvas,L"ClearChildren");hits_.clear();rows_.clear();sliders_.clear();scroll_.Reset();name_input_.Reset();transition_widgets_.clear();extension_loading_.clear();
     auto* tree=inventory_object(page,L"WidgetTree");
     Call geometry(switcher_.Get(),L"GetCachedGeometry",1);geometry.run();
@@ -107,7 +107,9 @@ void InventoryUI::build_extension_page() {
         const bool inventory_layout=entry->at("layout")=="inventory";
         if(!inventory_layout) ui.box(0,0,width,1080,Color{.004f,.004f,.004f,1});
         const double left=inventory_layout?30:80,panel=inventory_layout?440:(width-220)*.57,right=inventory_layout?width-424:left+panel+60,info=width-right-70;
-        button("< Library",left,55,180,38,{{"action","x_back"}},false,true,18);
+        ui.decoration("T_UI_Nav_TitleBG",left,52,180,46);
+        button("",left,52,180,46,{{"action","x_library"}});
+        prompt("close","Library",left+14,61,160,5);
         ui.label(entry->at("title").get<std::string>(),left,108,width-left-80,56,30,light);
         ui.text("by "+entry->at("author").get<std::string>()+"  /  "+entry->at("version").get<std::string>(),left,162,width-left-80,32,18,muted);
         try {extension_model_=extensions_->request({{"op","model"},{"id",extension_id_}});}
@@ -156,10 +158,12 @@ void InventoryUI::build_extension_page() {
                 if(extension_description_key_!=detail_key) {extension_description_key_=detail_key;extension_description_offset_=0;extension_details_=false;}
                 extension_description_=ui.description(c.value("description",std::string{}),right,408,info,142);
                 invoke(extension_description_.Get(),L"SetScrollOffset",L"NewScrollOffset",extension_description_offset_);
-                if(extension_details_) ui.box(right-8,408,2,142,accent);
-                button("",right,551,info,30,{{"action","x_details"}});
-                prompt("secondary",extension_details_?"Up / Down scroll details":"Read details",right,552,info,4);
+                if(c.value("description",std::string{}).size()>220) {
+                    button("",right,549,info,36,{{"action","x_details"}});
+                    prompt("secondary","Expand description",right,552,info,4);
+                }
                 const auto value=extensions::display_value(c);
+                const auto control_start=inventory_children(canvas,256).size();
                 if(kind=="radio") {
                     const auto& options=c.at("options");
                     for(size_t i=0;i<options.size();++i) {
@@ -178,13 +182,18 @@ void InventoryUI::build_extension_page() {
                     ui.place(slider,right+8,615,info-16,36);
                     auto* label=ui.text(value,right,582,info,32,23,light);
                     sliders_.push_back({WeakObject(slider),WeakObject(label),{},{{"action","x_value"}},c.at("value").get<float>(),true});
-                    prompt("left","",right,668,28,15);prompt("right","Adjust",right+36,668,info-36,16);
+                    if(enabled) {prompt("left","",right,668,28,15);prompt("right","Adjust",right+36,668,info-36,16);}
                 } else if(kind=="number" || kind=="choice") {
                     button("<",right,600,48,48,{{"action","x_adjust"},{"delta",-1}},false,enabled);
                     button(">",right+info-48,600,48,48,{{"action","x_adjust"},{"delta",1}},false,enabled);
                     auto* value_text=ui.text(value,right+58,607,info-116,65,23,light);
                     invoke(value_text,L"SetJustification",L"InJustification",uint8_t{1});
-                    prompt("left","",right,694,28,15);prompt("right","Adjust",right+36,694,info-36,16);
+                    if(kind=="choice") {
+                        button("",right+58,600,info-116,66,{{"action","x_pick"}},false,enabled);
+                        if(enabled) prompt("accept","Browse options",right,748,info,3);
+                        button("",right,740,info,44,{{"action","x_pick"}},false,enabled);
+                    }
+                    if(enabled) {prompt("left","",right,694,28,15);prompt("right","Adjust",right+36,694,info-36,16);}
                 } else if(kind=="text") {
                     ui.box(right,590,info,48,Color{.04f,.033f,.025f,1});
                     const auto key=extension_id_+"/"+c.at("id").get<std::string>();
@@ -199,9 +208,15 @@ void InventoryUI::build_extension_page() {
                 } else if(kind!="label") {
                     const auto label=kind=="toggle"?(c.at("value").get<bool>()?"Disable":"Enable"):c.at("label").get<std::string>();
                     auto* action=button("",right,602,info,52,{{"action","x_activate"}},false,enabled);
-                    ui.box(right,602,info,52,Color{.035f,.03f,.018f,.9f});
-                    prompt("accept",label,right+14,614,info-28,3);
+                    ui.box(right,602,info,52,enabled?Color{.035f,.03f,.018f,.9f}:Color{.022f,.022f,.022f,.9f});
+                    if(enabled) prompt("accept",label,right+14,614,info-28,3);
+                    else ui.text(c.value("busy",false)?"Working...":"Unavailable",right+14,614,info-28,32,19,light);
                     if(!enabled) invoke(action,L"SetIsEnabled",L"bInIsEnabled",false);
+                }
+                if(!c.value("enabled",true) || c.value("busy",false)) {
+                    const auto children=inventory_children(canvas,256);
+                    for(size_t i=control_start;i<children.size();++i)
+                        invoke(children[i],L"SetRenderOpacity",L"InOpacity",.6f);
                 }
                 if(c.value("busy",false)) {
                     extension_loading_.emplace_back(ui.progress(right,890,info,0,true));
@@ -211,14 +226,42 @@ void InventoryUI::build_extension_page() {
         line(right,854,info);
         ui.text(extension_error_.empty()?extension_model_.value("status",std::string{}):extension_error_,right,866,info,45,17,muted);
         prompt("up","",left,968,28,13);prompt("down","Browse settings",left+36,968,220,14);
-        button("",left,1020,180,38,{{"action","x_back"}});
-        prompt("close","Library",left,1024,170,5);
+
+        if(extension_picker_) {
+            const auto& c=sections[extension_section_]["controls"][extension_row_];
+            const auto modal=ui.modal("Choose "+c.at("label").get<std::string>(),width,830);
+            ui.text("Search by name",modal.x+32,modal.y+128,modal.w-64,30,18,muted);
+            ui.box(modal.x+32,modal.y+166,modal.w-64,46,Color{.04f,.033f,.024f,1});
+            extension_search_input_=ui.text_input(extension_search_query_,modal.x+44,modal.y+170,modal.w-88,true);
+            auto* list=construct(L"/Script/UMG.CanvasPanel",tree);extension_search_results_=list;
+            ui.place(list,modal.x+32,modal.y+234,modal.w-64,432);
+            extension_search_count_=ui.text("",modal.x+32,modal.y+680,modal.w-64,30,18,muted);
+            button("",modal.x+24,modal.y+modal.h-64,180,44,{{"action","x_pick_cancel"}});
+            prompt("close","Back",modal.x+36,modal.y+modal.h-53,150,5);
+            button("",modal.x+modal.w-234,modal.y+modal.h-64,210,44,{{"action","x_pick_apply"}});
+            prompt("accept","Select",modal.x+modal.w-220,modal.y+modal.h-53,180,3);
+            build_extension_results();
+        }
+        if(extension_details_ && !sections.empty() && !sections[extension_section_]["controls"].empty()) {
+            const auto& c=sections[extension_section_]["controls"][extension_row_];
+            const auto modal=ui.modal(c.at("label").get<std::string>(),width);
+            extension_description_=ui.description(c.value("description",std::string{}),modal.x+32,modal.y+138,modal.w-64,modal.h-250);
+            invoke(extension_description_.Get(),L"SetScrollOffset",L"NewScrollOffset",extension_description_offset_);
+            button("",modal.x+24,modal.y+modal.h-62,180,42,{{"action","x_details"}});
+            prompt("close","Back",modal.x+36,modal.y+modal.h-53,150,5);
+            prompt("up","",modal.x+modal.w-246,modal.y+modal.h-53,28,13);
+            prompt("down","Scroll",modal.x+modal.w-210,modal.y+modal.h-53,180,14);
+        }
         if(!extension_confirm_.is_null()) {
-            ui.box(0,0,width,1080,Color{0,0,0,.88f});const auto text=extension_confirm_.value("message",std::string("Confirm this action?"));
-            ui.box(width/2-320,320,640,360,Color{.016f,.014f,.01f,1});ui.text("Confirm action",width/2-290,350,580,50,30,light);
-            ui.text(text,width/2-290,420,580,140,22,light);
-            button("Cancel",width/2-275,596,250,48,{{"action","x_cancel"}});
-            button("Confirm",width/2+25,596,250,48,{{"action","x_confirm"}},true);
+            const auto modal=ui.modal("Confirm action",width,400);
+            extension_description_=ui.description(extension_confirm_.value("message",std::string("Continue?")),modal.x+32,modal.y+138,modal.w-64,152);
+            const double w=(modal.w-80)/2,y=modal.y+modal.h-62;
+            button("",modal.x+24,y,w,44,{{"action","x_cancel"}});
+            ui.box(modal.x+24,y,w,44,Color{.024f,.021f,.016f,1});
+            prompt("close","Cancel",modal.x+40,y+8,w-24,5);
+            button("",modal.x+modal.w-w-24,y,w,44,{{"action","x_confirm"}},true);
+            ui.box(modal.x+modal.w-w-24,y,w,44,Color{.06f,.048f,.026f,1});
+            prompt("accept","Confirm",modal.x+modal.w-w-8,y+8,w-24,3);
         }
     }
     transition_widgets_.clear();
@@ -227,6 +270,27 @@ void InventoryUI::build_extension_page() {
     dirty_=false;
     if(enter_transition_) {transition_started_=GetTickCount64();enter_transition_=false;}
 }
+void InventoryUI::build_extension_results() {
+    auto* canvas=extension_search_results_.Get();if(!canvas) return;
+    invoke(canvas,L"ClearChildren");
+    std::erase_if(hits_,[](const auto& hit){return hit.action.value("action",std::string{})=="x_pick_row";});
+    auto* tree=inventory_object(extension_page_.Get(),L"WidgetTree");
+    auto* serif=load("/Game/Sparta/UI/Fonts/CrimsonText-Regular_Font.CrimsonText-Regular_Font");
+    auto* title=load("/Game/Sparta/UI/Fonts/Trajan_Pro_Regular_Font.Trajan_Pro_Regular_Font");
+    ExtensionKit ui{{{tree,canvas,layout_size_[1]/1080.,serif},title}};
+    const double width=std::min(880.,layout_size_[0]/layout_size_[1]*1080.-140.)-64;
+    const auto& search=extension_options_;const size_t first=search.selected/8*8;
+    for(size_t i=first;i<std::min(first+8,search.matches.size());++i) {
+        const auto& option=search.options[search.matches[i]];const double y=(i-first)*54.;
+        auto* button=ui.button("",0,y,width,50,i==search.selected);
+        if(i==search.selected) ui.box(0,y,width,50,Color{.055f,.045f,.027f,1});
+        ui.selection_mark(16,y+19,i==search.selected);
+        ui.text(option.at("label").get<std::string>(),44,y+10,width-60,32,21);
+        hits_.push_back({WeakObject(button),{{"action","x_pick_row"},{"row",i}},false});
+    }
+    if(search.matches.empty()) ui.text("No matching options",20,140,width-40,40,22);
+    if(auto* count=extension_search_count_.Get()) text_value(count,std::to_string(search.matches.size())+" matches / "+std::to_string(search.options.size())+" options");
+}
 Json InventoryUI::dispatch_extension(const Json& action) {
     try {return dispatch_extension_action(action);}
     catch(const std::exception& e) {extension_error_=e.what();dirty_=true;return {};}
@@ -234,8 +298,25 @@ Json InventoryUI::dispatch_extension(const Json& action) {
 Json InventoryUI::dispatch_extension_action(const Json& action) {
     const auto name=action.value("action",std::string{});
     extension_error_.clear();
+    if(extension_picker_) {
+        if(name=="x_pick_cancel" || name=="x_back") {extension_picker_=false;dirty_=true;return {};}
+        if(name=="x_pick_row") {extension_options_.selected=std::min(action.at("row").get<size_t>(),extension_options_.matches.empty()?size_t{}:extension_options_.matches.size()-1);build_extension_results();return {};}
+        if(name=="x_pick_move") {extension_options_.move(action.at("delta").get<int>());build_extension_results();return {};}
+        if(name=="x_pick_apply") {
+            const auto value=extension_options_.value();if(value.is_null()) return {};
+            const auto& c=extension_model_["sections"][extension_section_]["controls"][extension_row_];
+            Json event={{"id",c.at("id")},{"value",value}};
+            extension_picker_=false;
+            if(c.contains("confirm")) extension_confirm_={{"event",event},{"message",c.at("confirm")}};
+            else extensions_->request({{"op","event"},{"id",extension_id_},{"event",event}});
+            dirty_=true;return {};
+        }
+        return {};
+    }
+    if(extension_details_ && name!="x_details" && name!="x_back") return {};
     if(!extension_confirm_.is_null() && name!="x_cancel" && name!="x_back" && name!="x_confirm") return {};
-    if(name=="x_details") {extension_details_=!extension_details_;dirty_=true;return {};}
+    if(name=="x_library") {extension_id_.clear();extension_model_=nullptr;extension_details_=false;extension_slide_=-1;dirty_=enter_transition_=true;return {};}
+    if(name=="x_details") {extension_details_=!extension_details_;extension_description_offset_=0;dirty_=true;return {};}
     if(name=="x_cancel") {extension_confirm_=nullptr;dirty_=true;return {};}
     if(name=="x_back") {if(extension_details_) {extension_details_=false;dirty_=true;return {};}if(!extension_confirm_.is_null()) extension_confirm_=nullptr;else {extension_id_.clear();extension_model_=nullptr;extension_details_=false;}dirty_=enter_transition_=true;return {};}
     if(name=="x_page") {extension_slide_=action.at("direction").get<int>()<0?-1:1;extension_paging_.slide(extension_slide_);dirty_=enter_transition_=true;return {};}
@@ -255,6 +336,18 @@ Json InventoryUI::dispatch_extension_action(const Json& action) {
     const auto& controls=extension_model_["sections"][extension_section_]["controls"];
     if(extension_row_<0 || extension_row_>=int(controls.size())) return {};
     const auto& c=controls[extension_row_];if(!extensions::interactive(c)) return {};
+    if(c.at("type")=="choice" && (name=="x_pick" || name=="x_activate")) {
+        extension_options_.reset(c.at("options"),[](const std::string& text) {
+            const auto source=wide(text);
+            const int length=LCMapStringEx(LOCALE_NAME_INVARIANT,LCMAP_LOWERCASE,source.data(),int(source.size()),nullptr,0,nullptr,nullptr,0);
+            if(length<=0) return extensions::OptionSearch::ascii_fold(text);
+            std::wstring result(size_t(length),L'\0');
+            if(!LCMapStringEx(LOCALE_NAME_INVARIANT,LCMAP_LOWERCASE,source.data(),int(source.size()),result.data(),length,nullptr,nullptr,0)) return extensions::OptionSearch::ascii_fold(text);
+            return narrow(result);
+        });
+        for(size_t i=0;i<extension_options_.matches.size();++i) if(extension_options_.options[i].at("id")==c.at("value")) extension_options_.selected=i;
+        extension_search_query_.clear();extension_picker_=true;extension_details_=false;dirty_=true;return {};
+    }
     Json event={{"id",c.at("id")}};const auto type=c.at("type").get<std::string>();
     if(name=="x_confirm") {event=extension_confirm_.at("event");event["confirmed"]=true;extension_confirm_=nullptr;}
     else if(name=="x_value" || name=="x_text") {
@@ -275,17 +368,25 @@ Json InventoryUI::dispatch_extension_action(const Json& action) {
     dirty_=true;return {};
 }
 bool InventoryUI::extension_input(const std::string& key) {
-    if(key=="reset_view") return false;
+    if(extension_picker_) {
+        if(key=="close") dispatch_extension({{"action","x_pick_cancel"}});
+        else if(key=="up" || key=="down" || key=="previous_section" || key=="next_section")
+            dispatch_extension({{"action","x_pick_move"},{"delta",key=="up"?-1:key=="down"?1:key=="previous_section"?-8:8}});
+        else if(key=="accept") dispatch_extension({{"action","x_pick_apply"}});
+        return true;
+    }
+    if(key=="reset_view") return extension_details_ || !extension_confirm_.is_null();
     if(key=="close") {if(extension_id_.empty()) return false;dispatch_extension({{"action","x_back"}});return true;}
-    if(!extension_confirm_.is_null()) {if(key=="accept") dispatch_extension({{"action","x_confirm"}});return true;}
+    if(!extension_confirm_.is_null() && key!="up" && key!="down") {if(key=="accept") dispatch_extension({{"action","x_confirm"}});return true;}
     if(!extension_id_.empty() && key=="secondary") {dispatch_extension({{"action","x_details"}});return true;}
-    if(extension_details_ && (key=="up" || key=="down")) {
+    if((extension_details_ || !extension_confirm_.is_null()) && (key=="up" || key=="down")) {
         if(auto* description=extension_description_.Get()) {
             Call offset(description,L"GetScrollOffset",1);offset.run();
             invoke(description,L"SetScrollOffset",L"NewScrollOffset",std::max(0.f,offset.get<float>()+(key=="up"?-60.f:60.f)));
         }
         return true;
     }
+    if(extension_details_) return true;
     if(extension_id_.empty()) {
         if(key=="left" || key=="right" || key=="up" || key=="down") {extension_paging_.move(key=="left"?-1:key=="right"?1:0,key=="up"?-1:key=="down"?1:0);dirty_=true;}
         else if(key=="previous_section" || key=="next_section") dispatch_extension({{"action","x_page"},{"direction",key=="previous_section"?-1:1}});

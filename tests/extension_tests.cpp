@@ -1,5 +1,6 @@
 #include "extension_data.hpp"
 #include "extension_controls.hpp"
+#include "extension_search.hpp"
 #include "extension_storage.hpp"
 #include <fstream>
 #include <iostream>
@@ -59,6 +60,12 @@ int main() {
     validate_event(slider,{{"id","confirm"},{"confirmed",true}});
     c["enabled"]=false;rejects([&]{validate_event(slider,{{"id","confirm"},{"confirmed",true}});});
     rejects([&]{validate_event(slider,{{"id","missing"}});});
+    OptionSearch search;
+    search.reset(Json::array({{{"id","iron"},{"label","Iron Sword"}},{{"id","gold"},{"label","Gold Sword"}},{{"id","zh"},{"label","测试"}}}));
+    check(search.matches.size()==3);check(search.filter("sword IRON"));check(search.matches.size()==1);check(search.value()=="iron");
+    check(!search.filter("SWORD iron"));search.filter("测试");check(search.value()=="zh");
+    search.filter("not found");check(search.matches.empty());check(search.value().is_null());search.move(100);check(search.selected==0);
+    search.filter("");search.move(100);check(search.value()=="zh");search.move(-100);check(search.value()=="iron");
     for(size_t count=0;count<=128;++count) {
         LibraryPage page{count};
         for(int i=0;i<200;++i) {page.move(1,0);check(page.page<page.pages());check(count?page.selected<count:page.selected==0);}

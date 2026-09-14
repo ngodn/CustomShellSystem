@@ -87,3 +87,12 @@ The user's text-input report was reproduced by tools/cssx_ui_check.py: opening t
 Added single-line ellipsis for settings, values and buttons, clipped headings, a wrapped description ScrollBox and secondary-button detail scrolling. This cook exposes the WrapTextAt property but not its setter function, confirmed by a live describe/get probe. The kit sets the checked property before attaching the text widget. Rendering exceptions now show an extension error page instead of detaching all custom tabs.
 
 CSSX UI Kit is installed with its stable ID cssx.ui-kit. Preview archive: dist/extensions/CSSX-UI-Kit-v0.1.0-preview.zip. Its generated banner lives in examples/extensions/ui-kit/assets/banner-v1.png. No preview archive has been published. Searchable option pickers are the next requested UI capability.
+
+
+## Search, dialogs and unavailable controls
+
+The 256-option gallery picker passed live filtering, no-results, case-insensitive matching and explicit-commit checks through tools/cssx_search_check.py. Search caches option labels and updates only result rows, preserving the query field and caret. Details now open in a centered, scrollable dialog. Confirmation uses a smaller shared frame with Cancel and Confirm actions. The Library button uses the native Back prompt.
+
+Disabled and busy rows use muted text and a neutral focus marker. Players can select a disabled row to read its explanation, but no activation or adjustment prompt is shown. The shared detail controls use reduced opacity. A live disabled-action probe left the model unchanged; sending its event directly returned "Control is disabled or read-only". Existing portable tests also reject busy controls and confirmed events on disabled actions.
+
+Inspected work/cssx-native/disabled-action.jpg, confirmation-compact.jpg and details-modal.jpg. These are opaque UI screenshots without character promotional content. Text-input and search live regressions pass together. All nine portable CTest groups pass. The new Pkl component types evaluate successfully with Pkl 0.32.1. Controller input while typing has been implemented but still needs a focused-device interaction check. No 0.3.0 release has been published; the remaining native Cheat Menu feature port and broader viewport validation are still pending.

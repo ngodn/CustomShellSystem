@@ -80,6 +80,1039 @@
           "label": "Text input",
           "value": "My template",
           "description": "Click the field and type, then select Save text. Text entry currently requires a keyboard."
+        },
+        {
+          "id": "catalog",
+          "type": "choice",
+          "label": "Searchable catalog",
+          "value": "item-001",
+          "options": [
+            {
+              "id": "item-001",
+              "label": "Example option 001"
+            },
+            {
+              "id": "item-002",
+              "label": "Example option 002"
+            },
+            {
+              "id": "item-003",
+              "label": "Example option 003"
+            },
+            {
+              "id": "item-004",
+              "label": "Example option 004"
+            },
+            {
+              "id": "item-005",
+              "label": "Example option 005"
+            },
+            {
+              "id": "item-006",
+              "label": "Example option 006"
+            },
+            {
+              "id": "item-007",
+              "label": "Example option 007"
+            },
+            {
+              "id": "item-008",
+              "label": "Example option 008"
+            },
+            {
+              "id": "item-009",
+              "label": "Example option 009"
+            },
+            {
+              "id": "item-010",
+              "label": "Example option 010"
+            },
+            {
+              "id": "item-011",
+              "label": "Example option 011"
+            },
+            {
+              "id": "item-012",
+              "label": "Example option 012"
+            },
+            {
+              "id": "item-013",
+              "label": "Example option 013"
+            },
+            {
+              "id": "item-014",
+              "label": "Example option 014"
+            },
+            {
+              "id": "item-015",
+              "label": "Example option 015"
+            },
+            {
+              "id": "item-016",
+              "label": "Example option 016"
+            },
+            {
+              "id": "item-017",
+              "label": "Example option 017"
+            },
+            {
+              "id": "item-018",
+              "label": "Example option 018"
+            },
+            {
+              "id": "item-019",
+              "label": "Example option 019"
+            },
+            {
+              "id": "item-020",
+              "label": "Example option 020"
+            },
+            {
+              "id": "item-021",
+              "label": "Example option 021"
+            },
+            {
+              "id": "item-022",
+              "label": "Example option 022"
+            },
+            {
+              "id": "item-023",
+              "label": "Example option 023"
+            },
+            {
+              "id": "item-024",
+              "label": "Example option 024"
+            },
+            {
+              "id": "item-025",
+              "label": "Example option 025"
+            },
+            {
+              "id": "item-026",
+              "label": "Example option 026"
+            },
+            {
+              "id": "item-027",
+              "label": "Example option 027"
+            },
+            {
+              "id": "item-028",
+              "label": "Example option 028"
+            },
+            {
+              "id": "item-029",
+              "label": "Example option 029"
+            },
+            {
+              "id": "item-030",
+              "label": "Example option 030"
+            },
+            {
+              "id": "item-031",
+              "label": "Example option 031"
+            },
+            {
+              "id": "item-032",
+              "label": "Example option 032"
+            },
+            {
+              "id": "item-033",
+              "label": "Example option 033"
+            },
+            {
+              "id": "item-034",
+              "label": "Example option 034"
+            },
+            {
+              "id": "item-035",
+              "label": "Example option 035"
+            },
+            {
+              "id": "item-036",
+              "label": "Example option 036"
+            },
+            {
+              "id": "item-037",
+              "label": "Example option 037"
+            },
+            {
+              "id": "item-038",
+              "label": "Example option 038"
+            },
+            {
+              "id": "item-039",
+              "label": "Example option 039"
+            },
+            {
+              "id": "item-040",
+              "label": "Example option 040"
+            },
+            {
+              "id": "item-041",
+              "label": "Example option 041"
+            },
+            {
+              "id": "item-042",
+              "label": "Example option 042"
+            },
+            {
+              "id": "item-043",
+              "label": "Example option 043"
+            },
+            {
+              "id": "item-044",
+              "label": "Example option 044"
+            },
+            {
+              "id": "item-045",
+              "label": "Example option 045"
+            },
+            {
+              "id": "item-046",
+              "label": "Example option 046"
+            },
+            {
+              "id": "item-047",
+              "label": "Example option 047"
+            },
+            {
+              "id": "item-048",
+              "label": "Example option 048"
+            },
+            {
+              "id": "item-049",
+              "label": "Example option 049"
+            },
+            {
+              "id": "item-050",
+              "label": "Example option 050"
+            },
+            {
+              "id": "item-051",
+              "label": "Example option 051"
+            },
+            {
+              "id": "item-052",
+              "label": "Example option 052"
+            },
+            {
+              "id": "item-053",
+              "label": "Example option 053"
+            },
+            {
+              "id": "item-054",
+              "label": "Example option 054"
+            },
+            {
+              "id": "item-055",
+              "label": "Example option 055"
+            },
+            {
+              "id": "item-056",
+              "label": "Example option 056"
+            },
+            {
+              "id": "item-057",
+              "label": "Example option 057"
+            },
+            {
+              "id": "item-058",
+              "label": "Example option 058"
+            },
+            {
+              "id": "item-059",
+              "label": "Example option 059"
+            },
+            {
+              "id": "item-060",
+              "label": "Example option 060"
+            },
+            {
+              "id": "item-061",
+              "label": "Example option 061"
+            },
+            {
+              "id": "item-062",
+              "label": "Example option 062"
+            },
+            {
+              "id": "item-063",
+              "label": "Example option 063"
+            },
+            {
+              "id": "item-064",
+              "label": "Example option 064"
+            },
+            {
+              "id": "item-065",
+              "label": "Example option 065"
+            },
+            {
+              "id": "item-066",
+              "label": "Example option 066"
+            },
+            {
+              "id": "item-067",
+              "label": "Example option 067"
+            },
+            {
+              "id": "item-068",
+              "label": "Example option 068"
+            },
+            {
+              "id": "item-069",
+              "label": "Example option 069"
+            },
+            {
+              "id": "item-070",
+              "label": "Example option 070"
+            },
+            {
+              "id": "item-071",
+              "label": "Example option 071"
+            },
+            {
+              "id": "item-072",
+              "label": "Example option 072"
+            },
+            {
+              "id": "item-073",
+              "label": "Example option 073"
+            },
+            {
+              "id": "item-074",
+              "label": "Example option 074"
+            },
+            {
+              "id": "item-075",
+              "label": "Example option 075"
+            },
+            {
+              "id": "item-076",
+              "label": "Example option 076"
+            },
+            {
+              "id": "item-077",
+              "label": "Example option 077"
+            },
+            {
+              "id": "item-078",
+              "label": "Example option 078"
+            },
+            {
+              "id": "item-079",
+              "label": "Example option 079"
+            },
+            {
+              "id": "item-080",
+              "label": "Example option 080"
+            },
+            {
+              "id": "item-081",
+              "label": "Example option 081"
+            },
+            {
+              "id": "item-082",
+              "label": "Example option 082"
+            },
+            {
+              "id": "item-083",
+              "label": "Example option 083"
+            },
+            {
+              "id": "item-084",
+              "label": "Example option 084"
+            },
+            {
+              "id": "item-085",
+              "label": "Example option 085"
+            },
+            {
+              "id": "item-086",
+              "label": "Example option 086"
+            },
+            {
+              "id": "item-087",
+              "label": "Example option 087"
+            },
+            {
+              "id": "item-088",
+              "label": "Example option 088"
+            },
+            {
+              "id": "item-089",
+              "label": "Example option 089"
+            },
+            {
+              "id": "item-090",
+              "label": "Example option 090"
+            },
+            {
+              "id": "item-091",
+              "label": "Example option 091"
+            },
+            {
+              "id": "item-092",
+              "label": "Example option 092"
+            },
+            {
+              "id": "item-093",
+              "label": "Example option 093"
+            },
+            {
+              "id": "item-094",
+              "label": "Example option 094"
+            },
+            {
+              "id": "item-095",
+              "label": "Example option 095"
+            },
+            {
+              "id": "item-096",
+              "label": "Example option 096"
+            },
+            {
+              "id": "item-097",
+              "label": "Example option 097"
+            },
+            {
+              "id": "item-098",
+              "label": "Example option 098"
+            },
+            {
+              "id": "item-099",
+              "label": "Example option 099"
+            },
+            {
+              "id": "item-100",
+              "label": "Example option 100"
+            },
+            {
+              "id": "item-101",
+              "label": "Example option 101"
+            },
+            {
+              "id": "item-102",
+              "label": "Example option 102"
+            },
+            {
+              "id": "item-103",
+              "label": "Example option 103"
+            },
+            {
+              "id": "item-104",
+              "label": "Example option 104"
+            },
+            {
+              "id": "item-105",
+              "label": "Example option 105"
+            },
+            {
+              "id": "item-106",
+              "label": "Example option 106"
+            },
+            {
+              "id": "item-107",
+              "label": "Example option 107"
+            },
+            {
+              "id": "item-108",
+              "label": "Example option 108"
+            },
+            {
+              "id": "item-109",
+              "label": "Example option 109"
+            },
+            {
+              "id": "item-110",
+              "label": "Example option 110"
+            },
+            {
+              "id": "item-111",
+              "label": "Example option 111"
+            },
+            {
+              "id": "item-112",
+              "label": "Example option 112"
+            },
+            {
+              "id": "item-113",
+              "label": "Example option 113"
+            },
+            {
+              "id": "item-114",
+              "label": "Example option 114"
+            },
+            {
+              "id": "item-115",
+              "label": "Example option 115"
+            },
+            {
+              "id": "item-116",
+              "label": "Example option 116"
+            },
+            {
+              "id": "item-117",
+              "label": "Example option 117"
+            },
+            {
+              "id": "item-118",
+              "label": "Example option 118"
+            },
+            {
+              "id": "item-119",
+              "label": "Example option 119"
+            },
+            {
+              "id": "item-120",
+              "label": "Example option 120"
+            },
+            {
+              "id": "item-121",
+              "label": "Example option 121"
+            },
+            {
+              "id": "item-122",
+              "label": "Example option 122"
+            },
+            {
+              "id": "item-123",
+              "label": "Example option 123"
+            },
+            {
+              "id": "item-124",
+              "label": "Example option 124"
+            },
+            {
+              "id": "item-125",
+              "label": "Example option 125"
+            },
+            {
+              "id": "item-126",
+              "label": "Example option 126"
+            },
+            {
+              "id": "item-127",
+              "label": "Example option 127"
+            },
+            {
+              "id": "item-128",
+              "label": "Example option 128"
+            },
+            {
+              "id": "item-129",
+              "label": "Example option 129"
+            },
+            {
+              "id": "item-130",
+              "label": "Example option 130"
+            },
+            {
+              "id": "item-131",
+              "label": "Example option 131"
+            },
+            {
+              "id": "item-132",
+              "label": "Example option 132"
+            },
+            {
+              "id": "item-133",
+              "label": "Example option 133"
+            },
+            {
+              "id": "item-134",
+              "label": "Example option 134"
+            },
+            {
+              "id": "item-135",
+              "label": "Example option 135"
+            },
+            {
+              "id": "item-136",
+              "label": "Example option 136"
+            },
+            {
+              "id": "item-137",
+              "label": "Example option 137"
+            },
+            {
+              "id": "item-138",
+              "label": "Example option 138"
+            },
+            {
+              "id": "item-139",
+              "label": "Example option 139"
+            },
+            {
+              "id": "item-140",
+              "label": "Example option 140"
+            },
+            {
+              "id": "item-141",
+              "label": "Example option 141"
+            },
+            {
+              "id": "item-142",
+              "label": "Example option 142"
+            },
+            {
+              "id": "item-143",
+              "label": "Example option 143"
+            },
+            {
+              "id": "item-144",
+              "label": "Example option 144"
+            },
+            {
+              "id": "item-145",
+              "label": "Example option 145"
+            },
+            {
+              "id": "item-146",
+              "label": "Example option 146"
+            },
+            {
+              "id": "item-147",
+              "label": "Example option 147"
+            },
+            {
+              "id": "item-148",
+              "label": "Example option 148"
+            },
+            {
+              "id": "item-149",
+              "label": "Example option 149"
+            },
+            {
+              "id": "item-150",
+              "label": "Example option 150"
+            },
+            {
+              "id": "item-151",
+              "label": "Example option 151"
+            },
+            {
+              "id": "item-152",
+              "label": "Example option 152"
+            },
+            {
+              "id": "item-153",
+              "label": "Example option 153"
+            },
+            {
+              "id": "item-154",
+              "label": "Example option 154"
+            },
+            {
+              "id": "item-155",
+              "label": "Example option 155"
+            },
+            {
+              "id": "item-156",
+              "label": "Example option 156"
+            },
+            {
+              "id": "item-157",
+              "label": "Example option 157"
+            },
+            {
+              "id": "item-158",
+              "label": "Example option 158"
+            },
+            {
+              "id": "item-159",
+              "label": "Example option 159"
+            },
+            {
+              "id": "item-160",
+              "label": "Example option 160"
+            },
+            {
+              "id": "item-161",
+              "label": "Example option 161"
+            },
+            {
+              "id": "item-162",
+              "label": "Example option 162"
+            },
+            {
+              "id": "item-163",
+              "label": "Example option 163"
+            },
+            {
+              "id": "item-164",
+              "label": "Example option 164"
+            },
+            {
+              "id": "item-165",
+              "label": "Example option 165"
+            },
+            {
+              "id": "item-166",
+              "label": "Example option 166"
+            },
+            {
+              "id": "item-167",
+              "label": "Example option 167"
+            },
+            {
+              "id": "item-168",
+              "label": "Example option 168"
+            },
+            {
+              "id": "item-169",
+              "label": "Example option 169"
+            },
+            {
+              "id": "item-170",
+              "label": "Example option 170"
+            },
+            {
+              "id": "item-171",
+              "label": "Example option 171"
+            },
+            {
+              "id": "item-172",
+              "label": "Example option 172"
+            },
+            {
+              "id": "item-173",
+              "label": "Example option 173"
+            },
+            {
+              "id": "item-174",
+              "label": "Example option 174"
+            },
+            {
+              "id": "item-175",
+              "label": "Example option 175"
+            },
+            {
+              "id": "item-176",
+              "label": "Example option 176"
+            },
+            {
+              "id": "item-177",
+              "label": "Example option 177"
+            },
+            {
+              "id": "item-178",
+              "label": "Example option 178"
+            },
+            {
+              "id": "item-179",
+              "label": "Example option 179"
+            },
+            {
+              "id": "item-180",
+              "label": "Example option 180"
+            },
+            {
+              "id": "item-181",
+              "label": "Example option 181"
+            },
+            {
+              "id": "item-182",
+              "label": "Example option 182"
+            },
+            {
+              "id": "item-183",
+              "label": "Example option 183"
+            },
+            {
+              "id": "item-184",
+              "label": "Example option 184"
+            },
+            {
+              "id": "item-185",
+              "label": "Example option 185"
+            },
+            {
+              "id": "item-186",
+              "label": "Example option 186"
+            },
+            {
+              "id": "item-187",
+              "label": "Example option 187"
+            },
+            {
+              "id": "item-188",
+              "label": "Example option 188"
+            },
+            {
+              "id": "item-189",
+              "label": "Example option 189"
+            },
+            {
+              "id": "item-190",
+              "label": "Example option 190"
+            },
+            {
+              "id": "item-191",
+              "label": "Example option 191"
+            },
+            {
+              "id": "item-192",
+              "label": "Example option 192"
+            },
+            {
+              "id": "item-193",
+              "label": "Example option 193"
+            },
+            {
+              "id": "item-194",
+              "label": "Example option 194"
+            },
+            {
+              "id": "item-195",
+              "label": "Example option 195"
+            },
+            {
+              "id": "item-196",
+              "label": "Example option 196"
+            },
+            {
+              "id": "item-197",
+              "label": "Example option 197"
+            },
+            {
+              "id": "item-198",
+              "label": "Example option 198"
+            },
+            {
+              "id": "item-199",
+              "label": "Example option 199"
+            },
+            {
+              "id": "item-200",
+              "label": "Example option 200"
+            },
+            {
+              "id": "item-201",
+              "label": "Example option 201"
+            },
+            {
+              "id": "item-202",
+              "label": "Example option 202"
+            },
+            {
+              "id": "item-203",
+              "label": "Example option 203"
+            },
+            {
+              "id": "item-204",
+              "label": "Example option 204"
+            },
+            {
+              "id": "item-205",
+              "label": "Example option 205"
+            },
+            {
+              "id": "item-206",
+              "label": "Example option 206"
+            },
+            {
+              "id": "item-207",
+              "label": "Example option 207"
+            },
+            {
+              "id": "item-208",
+              "label": "Example option 208"
+            },
+            {
+              "id": "item-209",
+              "label": "Example option 209"
+            },
+            {
+              "id": "item-210",
+              "label": "Example option 210"
+            },
+            {
+              "id": "item-211",
+              "label": "Example option 211"
+            },
+            {
+              "id": "item-212",
+              "label": "Example option 212"
+            },
+            {
+              "id": "item-213",
+              "label": "Example option 213"
+            },
+            {
+              "id": "item-214",
+              "label": "Example option 214"
+            },
+            {
+              "id": "item-215",
+              "label": "Example option 215"
+            },
+            {
+              "id": "item-216",
+              "label": "Example option 216"
+            },
+            {
+              "id": "item-217",
+              "label": "Example option 217"
+            },
+            {
+              "id": "item-218",
+              "label": "Example option 218"
+            },
+            {
+              "id": "item-219",
+              "label": "Example option 219"
+            },
+            {
+              "id": "item-220",
+              "label": "Example option 220"
+            },
+            {
+              "id": "item-221",
+              "label": "Example option 221"
+            },
+            {
+              "id": "item-222",
+              "label": "Example option 222"
+            },
+            {
+              "id": "item-223",
+              "label": "Example option 223"
+            },
+            {
+              "id": "item-224",
+              "label": "Example option 224"
+            },
+            {
+              "id": "item-225",
+              "label": "Example option 225"
+            },
+            {
+              "id": "item-226",
+              "label": "Example option 226"
+            },
+            {
+              "id": "item-227",
+              "label": "Example option 227"
+            },
+            {
+              "id": "item-228",
+              "label": "Example option 228"
+            },
+            {
+              "id": "item-229",
+              "label": "Example option 229"
+            },
+            {
+              "id": "item-230",
+              "label": "Example option 230"
+            },
+            {
+              "id": "item-231",
+              "label": "Example option 231"
+            },
+            {
+              "id": "item-232",
+              "label": "Example option 232"
+            },
+            {
+              "id": "item-233",
+              "label": "Example option 233"
+            },
+            {
+              "id": "item-234",
+              "label": "Example option 234"
+            },
+            {
+              "id": "item-235",
+              "label": "Example option 235"
+            },
+            {
+              "id": "item-236",
+              "label": "Example option 236"
+            },
+            {
+              "id": "item-237",
+              "label": "Example option 237"
+            },
+            {
+              "id": "item-238",
+              "label": "Example option 238"
+            },
+            {
+              "id": "item-239",
+              "label": "Example option 239"
+            },
+            {
+              "id": "item-240",
+              "label": "Example option 240"
+            },
+            {
+              "id": "item-241",
+              "label": "Example option 241"
+            },
+            {
+              "id": "item-242",
+              "label": "Example option 242"
+            },
+            {
+              "id": "item-243",
+              "label": "Example option 243"
+            },
+            {
+              "id": "item-244",
+              "label": "Example option 244"
+            },
+            {
+              "id": "item-245",
+              "label": "Example option 245"
+            },
+            {
+              "id": "item-246",
+              "label": "Example option 246"
+            },
+            {
+              "id": "item-247",
+              "label": "Example option 247"
+            },
+            {
+              "id": "item-248",
+              "label": "Example option 248"
+            },
+            {
+              "id": "item-249",
+              "label": "Example option 249"
+            },
+            {
+              "id": "item-250",
+              "label": "Example option 250"
+            },
+            {
+              "id": "item-251",
+              "label": "Example option 251"
+            },
+            {
+              "id": "item-252",
+              "label": "Example option 252"
+            },
+            {
+              "id": "item-253",
+              "label": "Example option 253"
+            },
+            {
+              "id": "item-254",
+              "label": "Example option 254"
+            },
+            {
+              "id": "item-255",
+              "label": "Example option 255"
+            },
+            {
+              "id": "item-256",
+              "label": "Example option 256"
+            }
+          ],
+          "description": "Browse 256 options. Open the picker to filter by name. Searching changes only the results; Select commits your choice."
         }
       ]
     },
@@ -125,7 +1158,7 @@
           "id": "info",
           "type": "label",
           "label": "Information panel",
-          "description": "Extensions provide content. CSSX provides fonts, panels, navigation, input prompts and transitions."
+          "description": "This information panel demonstrates a long description. Open the expanded view to read it without covering the settings or their actions. Scroll with the mouse wheel or the navigation buttons. Back returns to the same setting. This information panel demonstrates a long description. Open the expanded view to read it without covering the settings or their actions. Scroll with the mouse wheel or the navigation buttons. Back returns to the same setting. This information panel demonstrates a long description. Open the expanded view to read it without covering the settings or their actions. Scroll with the mouse wheel or the navigation buttons. Back returns to the same setting. This information panel demonstrates a long description. Open the expanded view to read it without covering the settings or their actions. Scroll with the mouse wheel or the navigation buttons. Back returns to the same setting. This information panel demonstrates a long description. Open the expanded view to read it without covering the settings or their actions. Scroll with the mouse wheel or the navigation buttons. Back returns to the same setting. This information panel demonstrates a long description. Open the expanded view to read it without covering the settings or their actions. Scroll with the mouse wheel or the navigation buttons. Back returns to the same setting. This information panel demonstrates a long description. Open the expanded view to read it without covering the settings or their actions. Scroll with the mouse wheel or the navigation buttons. Back returns to the same setting. This information panel demonstrates a long description. Open the expanded view to read it without covering the settings or their actions. Scroll with the mouse wheel or the navigation buttons. Back returns to the same setting."
         }
       ]
     }

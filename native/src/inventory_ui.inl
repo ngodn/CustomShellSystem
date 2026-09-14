@@ -180,6 +180,10 @@ Json InventoryUI::command(void* engine,const Json& command) {
         if(point[0]<0 || point[1]<0 || point[0]>=client.right || point[1]>=client.bottom) throw std::runtime_error("Pointer test outside game viewport");
         POINT pixel{LONG(point[0]),LONG(point[1])}; ClientToScreen(window,&pixel);
         SetCursorPos(pixel.x,pixel.y);
+    } else if(action=="inventory_cssx_search") {
+        auto* input=extension_search_input_.Get();
+        if(!extension_picker_ || !input) throw std::runtime_error("CSSX option picker is not open");
+        text_value(input,command.at("text").get<std::string>());
     } else if(action=="inventory_cssx_text") {
         auto* input=name_input_.Get();
         if(!extension_active_ || !input) throw std::runtime_error("CSSX text field is not open");

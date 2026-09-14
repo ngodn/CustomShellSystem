@@ -19,9 +19,15 @@ Declare controls in `menu.json`, then supply their values and actions from C++ o
 | `loading` | Indeterminate work indicator | `value`: boolean, true while loading |
 | `label` | Read-only information | None |
 
-Each control also accepts `description`, `enabled` and `busy`. A busy control cannot be activated. A button can include `confirm` with the text for the shared confirmation dialog. Radio labels are shown to players; their IDs stay in extension code.
+Each control also accepts `description`, `enabled` and `busy`. Disabled and busy controls use muted text and reduced opacity. Their rows remain selectable so players can read the description, but their actions and adjustment prompts are unavailable. Use `description` to explain why a control is disabled. A busy control cannot be activated. A button can include `confirm` with the text for the shared confirmation dialog. Radio labels are shown to players; their IDs stay in extension code.
 
-The library supplies banner cards, a 3 by 3 grid, page navigation, empty states and unavailable-extension states. Menus share panels, headings, dividers, selected-row markers, section tabs, input prompts and entry transitions. Descriptions wrap inside a bounded scroll area. The secondary action enters detail scrolling; Up / Down then scrolls the description, and Back returns to settings. Single-line labels and values use ellipsis rather than overlapping adjacent controls. The host keeps the selected list item visible, supplies page buttons and a position indicator, and accepts mouse-wheel scrolling in the full-width layout.
+The library supplies banner cards, a 3 by 3 grid, page navigation, empty states and unavailable-extension states. Menus share panels, headings, dividers, selected-row markers, section tabs, input prompts and entry transitions. Descriptions wrap inside a bounded scroll area. The secondary action opens a centered description dialog. Up / Down scrolls its body, and Back returns to settings. Confirmation uses the same frame with separate Cancel and Confirm buttons. Dialogs block the controls beneath them. Single-line labels and values use ellipsis rather than overlapping adjacent controls. The host keeps the selected list item visible, supplies page buttons and a position indicator, and accepts mouse-wheel scrolling in the full-width layout.
+
+## Searchable options
+
+A `choice` supports up to 512 `{id, label}` options. Confirm or **Browse options** opens a searchable picker. Left / Right on the setting still cycles options directly. The picker shows eight results at a time; Up / Down moves through them, the section bindings move eight results, and the mouse wheel scrolls. Confirm applies the highlighted option. Back cancels without changing the value. Empty results cannot be applied.
+
+Search matches words against option labels and IDs without case sensitivity. CSSX caches normalized options when the picker opens and filters only when the query changes. Updating results preserves the text field and caret. Typing requires a keyboard; controller navigation and Back remain available while the search field has focus.
 
 ## A radio group
 
@@ -77,7 +83,7 @@ Settings use a left-aligned label and right-aligned value on the same row. The d
 
 ## Working example
 
-[The UI Kit gallery](../../examples/extensions/ui-kit) includes every control above, a confirmation dialog and a five-second progress example. It makes no engine calls and changes no gameplay state. Package it with:
+[The UI Kit gallery](../../examples/extensions/ui-kit) includes every control above, a 256-option search example, a long description dialog, a disabled action, a confirmation dialog and a five-second progress example. It makes no engine calls and changes no gameplay state. Package it with:
 
 ```sh
 python3 tools/cssx_package.py examples/extensions/ui-kit --output dist/extensions

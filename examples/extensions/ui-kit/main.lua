@@ -1,5 +1,6 @@
 local values = {enabled = false, quality = "balanced", strength = 50,
     count = 4, theme = "gold", name = "My template", progress = 0, loading = false}
+values.catalog = "item-001"
 local running, elapsed, refresh = false, 0, 0
 local status = "UI examples only. This extension does not change the game."
 local function request(value)

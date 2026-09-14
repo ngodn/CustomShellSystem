@@ -561,9 +561,20 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         extension_library_=std::move(library);
     }
     bool editing_extension=false;
+    if(extension_active_ && extension_picker_) if(auto* search=extension_search_input_.Get()) {
+        // Keep the search field and caret alive. Replace only result rows.
+        try {
+            const auto query=inventory_text(search,256);
+            if(query!=extension_search_query_) {
+                extension_search_query_=query;
+                if(extension_options_.filter(query)) build_extension_results();
+            }
+        } catch(const std::exception& error) {extension_error_=error.what();}
+        editing_extension=true;
+    }
     if(extension_active_) {
         if(auto* input=name_input_.Get()) {
-            Call focus(input,L"HasKeyboardFocus",1);focus.run();editing_extension=focus.get<bool>();
+            Call focus(input,L"HasKeyboardFocus",1);focus.run();editing_extension=editing_extension || focus.get<bool>();
             try {extension_text_draft_=inventory_text(input,4096);}
             catch(const std::exception& e) {extension_error_=e.what();editing_extension=true;}
         }
@@ -582,6 +593,8 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     bool character_controls=!extension_active_;
     if(extension_active_ && !extension_id_.empty()) for(const auto& entry:extension_library_.at("extensions"))
         if(entry.at("id")==extension_id_) character_controls=entry.at("layout")=="inventory";
+    if(extension_picker_ && extension_search_input_.Get()) {Call focus(extension_search_input_.Get(),L"HasKeyboardFocus",1);focus.run();typing=typing || focus.get<bool>();}
+    if(extension_details_ || extension_picker_ || !extension_confirm_.is_null()) character_controls=false;
     if(!typing && character_controls) camera_update(elapsed,state.invert_orbit_x);
     else { motion_.reset(); drag_pan_=drag_rotate_=false; }
 #ifdef CSS_INVENTORY_DEV
@@ -600,10 +613,26 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         const float scroll=wheel.get<float>();
         bool over_details=false;
         if(auto* description=extension_description_.Get()) {Call hover(description,L"IsHovered",1);hover.run();over_details=hover.get<bool>();}
-        if(std::abs(scroll)>.01f && !character_controls && !over_details) {
+        if(std::abs(scroll)>.01f && extension_picker_) {
+            extension_wheel_after_=now+100;return dispatch_extension({{"action","x_pick_move"},{"delta",scroll<0?1:-1}});
+        }
+        if(std::abs(scroll)>.01f && !character_controls && !over_details && !extension_details_) {
             extension_wheel_after_=now+100;
             return dispatch_extension(extension_id_.empty()?Json{{"action","x_page"},{"direction",scroll<0?1:-1}}:Json{{"action","x_scroll"},{"delta",scroll<0?1:-1}});
         }
+    }
+    if(typing) for(auto& binding:bindings_) {
+        bool down=false,allowed=false;
+        for(const auto& key:binding.keys) if(inventory_key(controller_.Get(),key)) {
+            down=true;if(extension_picker_ && (key.starts_with("Gamepad_") || key=="Escape")) allowed=true;
+        }
+        const bool repeat=binding.action=="up" || binding.action=="down";
+        const bool trigger=allowed && down && (!binding.down || (repeat && now>=binding.repeat));
+        if(down && !binding.down) binding.repeat=now+360;
+        else if(trigger) binding.repeat=now+110;
+        else if(!allowed) binding.repeat=now+360;
+        binding.down=down;
+        if(trigger) {extension_input(binding.action);return {};}
     }
     if(!typing) for(auto& binding:bindings_) {
         bool down=false; for(const auto& key:binding.keys) if(inventory_key(controller_.Get(),key)) { down=true; break; }
@@ -659,6 +688,8 @@ Json InventoryUI::diagnostics() const {
     Json value={{"cssx_active",extension_active_},{"extension",extension_id_},{"extension_page",extension_paging_.page},{"attached",tab_.Get()!=nullptr},{"active",active_},{"section",section_},{"row",row_},{"rows",rows_.size()},{"camera",display_.Get()!=nullptr},{"layout_size",layout_size_},{"yaw",yaw_},{"pan",pan_},{"zoom",zoom_},{"frame",frame_},{"gamepad",gamepad_}};
     #ifdef CSS_INVENTORY_DEV
     if(extension_active_ && name_input_.Get()) value["text"]=inventory_text(name_input_.Get(),4096);
+    value["picker"]=extension_picker_;
+    if(extension_picker_) {value["query"]=extension_search_query_;value["matches"]=extension_options_.matches.size();value["selected_option"]=extension_options_.value();}
 #endif
     value["menu_open"]=main_.Get() && inventory_bool(main_.Get(),L"bOpen");
     for(const auto& b:bindings_) value["bindings"][b.action]=b.keys;
