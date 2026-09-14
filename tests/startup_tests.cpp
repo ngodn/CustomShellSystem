@@ -24,16 +24,16 @@ int main(int argc,char** argv) {
         auto project=root/"game/MortalShell2";
         fs::create_directories(project/"Content/Paks");
         const auto executable=project/"Binaries/Win64/MortalShell2-Win64-Shipping.exe";
-        expect(wardrobe_packages(executable)==project/"Content/Paks/~mods","Game-relative package discovery failed without a Mods folder");
+        expect(wardrobe_packages(executable)==project/"Content/Paks","Game-relative package discovery failed without a Mods folder");
         fs::create_directories(root/"custom-loader/Mods/CustomShellSystem");
-        expect(wardrobe_packages(executable)==project/"Content/Paks/~mods","Custom UE4SS directory changed game asset discovery");
+        expect(wardrobe_packages(executable)==project/"Content/Paks","Custom UE4SS directory changed game asset discovery");
         for(const auto* platform:{"Win64","WinGDK","CustomPlatform"})
-            expect(wardrobe_packages(project/"Binaries"/platform/"Game.exe")==project/"Content/Paks/~mods","Executable lookup assumes a storefront platform folder");
+            expect(wardrobe_packages(project/"Binaries"/platform/"Game.exe")==project/"Content/Paks","Executable lookup assumes a storefront platform folder");
         auto relocated=root/"game/SeparateAssets/Content";
         fs::create_directories(relocated/"Paks");
-        expect(wardrobe_packages(executable,fs::absolute(relocated))==fs::absolute(relocated)/"Paks/~mods","Engine content directory must take precedence over guessed layout");
-        expect(wardrobe_packages(executable,root/"missing")==project/"Content/Paks/~mods","Missing engine content path prevented executable fallback");
-        expect(wardrobe_packages(executable,"relative/Content")==project/"Content/Paks/~mods","Unresolved engine path used process working directory");
+        expect(wardrobe_packages(executable,fs::absolute(relocated))==fs::absolute(relocated)/"Paks","Engine content directory must take precedence over guessed layout");
+        expect(wardrobe_packages(executable,root/"missing")==project/"Content/Paks","Missing engine content path prevented executable fallback");
+        expect(wardrobe_packages(executable,"relative/Content")==project/"Content/Paks","Unresolved engine path used process working directory");
         expect(wardrobe_startup_message(0).find("No CSS outfit packages")!=std::string::npos,"Empty catalog startup hides missing packages");
         expect(wardrobe_startup_message(3).find("Choose an appearance")!=std::string::npos,"Fresh install suggests CSS must be enabled before selecting");
         fs::remove_all(root/"game"); fs::remove_all(root/"custom-loader");
@@ -75,6 +75,14 @@ int main(int argc,char** argv) {
         expect(load_state(file,&recovered).json()==state.json() && recovered,"Missing-primary recovery lost backup");
         fs::remove(file); fs::remove(file.string()+".bak");
         expect(load_state(file).json()==State{}.json(),"Deleted state was not regenerated with clean defaults");
+        auto unicode_file=root/fs::path(u8"游戏/服装")/"state/state.json";
+        expect(path_utf8(unicode_file).find("/")!=std::string::npos,"Unicode path could not become a UI cache key");
+        auto unicode_state=load_state(unicode_file);
+        unicode_state.enabled=true;
+        atomic_json(unicode_file,unicode_state.json());
+        expect(load_state(unicode_file).json()==unicode_state.json(),"Unicode state path lost preferences");
+        { std::ofstream bad(unicode_file); bad<<"{broken"; }
+        expect(load_state(unicode_file,&recovered).json()==State{}.json() && recovered,"Unicode backup recovery failed");
         std::cout<<checks<<" startup checks passed\n";
         if(!extracted) fs::remove_all(root);
         return 0;

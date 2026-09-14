@@ -105,7 +105,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     };
     auto thumbnail=[&](const Outfit& outfit,double x,double y,double size) {
         if(outfit.thumbnail.empty() || !fs::exists(outfit.thumbnail)) return;
-        auto key=outfit.thumbnail.string(); auto& cached=textures_[key]; auto* texture=cached.Get();
+        auto key=path_utf8(outfit.thumbnail); auto& cached=textures_[key]; auto* texture=cached.Get();
         if(!texture) {
             Call import(find(L"/Script/Engine.Default__KismetRenderingLibrary"),L"ImportFileAsTexture2D",3);
             import.set(L"WorldContextObject",pc); import.set(L"Filename",FString(outfit.thumbnail.c_str())); import.run(); texture=import.get<UObject*>(); cached=texture;
@@ -113,7 +113,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         if(texture) { decoration("T_UI_Icon_Shell_BG_Black",x-3,y-3,size+6,size+6); ui.image(texture,x,y,size,size); }
     };
     if(!logo_path_.empty() && fs::exists(logo_path_)) {
-        auto& cached=textures_[logo_path_.string()]; auto* texture=cached.Get();
+        auto& cached=textures_[path_utf8(logo_path_)]; auto* texture=cached.Get();
         if(!texture) {
             Call import(find(L"/Script/Engine.Default__KismetRenderingLibrary"),L"ImportFileAsTexture2D",3);
             import.set(L"WorldContextObject",pc); import.set(L"Filename",FString(logo_path_.c_str())); import.run(); texture=import.get<UObject*>(); cached=texture;
@@ -263,7 +263,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             if(chosen) ui.label("Equipped",left+panel-99,328+(i+1)*85+44,82,24,14,gold);
         }
         scroll_end();
-        if(catalog.outfits.empty()) ui.label(wardrobe_startup_message(0),left+18,435,panel-36,100,18,muted);
+        if(catalog.outfits.empty()) ui.label(catalog.empty_message(),left+18,435,panel-36,130,18,muted);
         if(row_==0) {
             detail("Original appearance","Your current shell","Restore the appearance supplied by the game and any installed base replacements. Your shell's abilities stay the same.");
             action_button("accept","Restore original",520,rows_[0].accept,3);

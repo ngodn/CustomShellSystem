@@ -108,16 +108,44 @@ std::map<std::string,Bytes> contents(const fs::path& path) {
     return result;
 }
 }
-std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path& cache) {
+std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path& cache,Json* diagnostics) {
     std::vector<PackageCatalog> result;
-    if(paks.empty() || !fs::is_directory(paks)) return result;
-    std::vector<fs::path> paths;
-    for(const auto& file:fs::recursive_directory_iterator(paks)) {
-        if(file.is_regular_file() && file.path().extension()==".pak") paths.push_back(file.path());
-        if(paths.size()>1024) throw std::runtime_error("Too many installed pak files");
+    Json report={{"pak_files",0},{"files",Json::array()},{"errors",Json::array()}};
+    auto path_text=[](const fs::path& path) { auto text=path.generic_u8string(); return std::string(text.begin(),text.end()); };
+    auto directory_error=[&](const fs::path& path,const std::string& reason) {
+        report["errors"].push_back({{"path",path_text(path)},{"reason",reason}});
+    };
+    std::vector<fs::path> paths, directories;
+    if(!paks.empty()) directories.push_back(paks);
+    // Visit each directory independently so an inaccessible sibling cannot hide
+    // healthy packages. Do not follow directory symlinks or junction loops.
+    while(!directories.empty() && paths.size()<1024) {
+        auto directory=directories.back(); directories.pop_back();
+        std::error_code error;
+        fs::directory_iterator it(directory,error),end;
+        if(error) { directory_error(directory,error.message()); continue; }
+        for(;it!=end;it.increment(error)) {
+            if(error) { directory_error(directory,error.message()); break; }
+            auto path=it->path();
+            auto status=it->symlink_status(error);
+            if(error) { directory_error(path,error.message()); error.clear(); continue; }
+            if(fs::is_directory(status)) directories.push_back(path);
+            else if(it->is_regular_file(error)) {
+                auto extension=path_utf8(path.extension());
+                std::transform(extension.begin(),extension.end(),extension.begin(),[](unsigned char c) { return char(c>='A' && c<='Z'?c+('a'-'A'):c); });
+                if(extension==".pak") paths.push_back(path);
+            }
+            if(error) { directory_error(path,error.message()); error.clear(); }
+            if(paths.size()>=1024) { directory_error(paks,"Pak scan reached the 1024-file limit"); break; }
+        }
+        if(error) directory_error(directory,error.message());
     }
     std::sort(paths.begin(),paths.end());
+    report["pak_files"]=paths.size();
     for(const auto& path:paths) {
+        Json record={{"path",path_text(path)},{"status","ignored"},{"reason","No supported CSS.Package metadata"}};
+        const auto begin=result.size();
+        try {
         auto entries=contents(path);
         for(const auto& [name,bytes]:entries) if(name.ends_with("/manifest.json")) {
             auto manifest=Json::parse(bytes);
@@ -127,9 +155,9 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
             if(!valid_id(id) || name!=std::string(prefix)+id+"/manifest.json") throw std::runtime_error("CSS package identity mismatch");
             for(auto suffix:{".utoc",".ucas"}) {
                 auto companion=path; companion.replace_extension(suffix);
-                if(!fs::is_regular_file(companion)) throw std::runtime_error("CSS package companion is missing");
+                if(!fs::is_regular_file(companion)) throw std::runtime_error(std::string("CSS package companion is missing: ")+suffix);
                 const auto& expected=manifest.at("containers").at(suffix);
-                if(expected.at("file")!=companion.filename().string() || expected.at("bytes")!=fs::file_size(companion))
+                if(expected.at("file")!=path_utf8(companion.filename()) || expected.at("bytes")!=fs::file_size(companion))
                     throw std::runtime_error("CSS package companion does not match the manifest");
                 // Verify the small table here. Full bulk-data hashing belongs in
                 // the offline package verifier, never in a game-thread rescan.
@@ -211,9 +239,16 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
                     fs::rename(temp,path);
                 }
             }
-            result.push_back({manifest.at("catalog"),directory});
+            result.push_back({manifest.at("catalog"),directory,path});
         }
+        if(result.size()>begin) { record["status"]="validated"; record.erase("reason"); }
+        } catch(const std::exception& error) {
+            result.resize(begin);
+            record["status"]="rejected"; record["reason"]=error.what();
+        }
+        report["files"].push_back(std::move(record));
     }
+    if(diagnostics) *diagnostics=std::move(report);
     return result;
 }
 }

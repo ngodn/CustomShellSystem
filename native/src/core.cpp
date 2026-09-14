@@ -56,16 +56,23 @@ struct Core {
         if(!size || size>=32768) throw std::runtime_error("Cannot locate the game's outfit folder");
         return wardrobe_packages(fs::path(executable));
     }
-    Catalog load_catalog() const {
-        auto path=package_root.generic_u8string();
+    Catalog load_catalog(const fs::path& folder) const {
+        auto path=folder.generic_u8string();
         host.log(("CSS outfit folder: "+std::string(path.begin(),path.end())).c_str());
         try {
-            auto result=Catalog::load(root/"catalog",package_root,root/"cache/packages");
-            host.log(("CSS catalog: "+std::to_string(result.outfits.size())+" outfits; folder "+(fs::is_directory(package_root)?"present":"missing")).c_str());
+            auto result=Catalog::load(root/"catalog",folder,root/"cache/packages");
+            host.log(("CSS catalog: "+std::to_string(result.outfits.size())+" outfits; "+
+                std::to_string(result.diagnostics.value("pak_files",0))+" pak files scanned; "+
+                std::to_string(result.diagnostics.value("rejected",0))+" rejected").c_str());
+            for(const auto& file:result.diagnostics["files"])
+                host.log(("CSS package "+file.at("status").get<std::string>()+": "+file.at("path").get<std::string>()+
+                    (file.contains("reason")?" ("+file.at("reason").get<std::string>()+")":"")).c_str());
+            for(const auto& error:result.diagnostics["errors"])
+                host.log(("CSS package folder error: "+error.at("path").get<std::string>()+" ("+error.at("reason").get<std::string>()+")").c_str());
             return result;
         } catch(const std::exception& e) { host.log((std::string("CSS catalog failed: ")+e.what()).c_str()); throw; }
     }
-    explicit Core(const CssHost& h) : host(h), root(h.root), package_root(package_directory()), catalog(load_catalog()), message(wardrobe_startup_message(catalog.outfits.size())) {
+    explicit Core(const CssHost& h) : host(h), root(h.root), package_root(package_directory()), catalog(load_catalog(package_root)), message(wardrobe_startup_message(catalog.outfits.size())) {
         inventory.assets(root);
         bool recovered=false;
         state=load_state(root / "state/state.json", &recovered);
@@ -180,7 +187,7 @@ struct Core {
                 auto path=candidate.generic_u8string();
                 host.log(("CSS engine outfit folder: "+std::string(path.begin(),path.end())).c_str());
                 if(candidate!=package_root) {
-                    auto resolved=Catalog::load(root/"catalog",candidate,root/"cache/packages");
+                    auto resolved=load_catalog(candidate);
                     package_root=std::move(candidate); catalog=std::move(resolved); ui_refresh=true;
                     message=wardrobe_startup_message(catalog.outfits.size());
                 }
@@ -238,7 +245,7 @@ struct Core {
 #endif
         if (rescan_pending) {
             rescan_pending = false;
-            auto updated = load_catalog();
+            auto updated = load_catalog(package_root);
             catalog = std::move(updated);
             ui_refresh=true;
             report(catalog.outfits.empty()?wardrobe_startup_message(0):"Catalog reloaded.");
@@ -332,7 +339,9 @@ struct Core {
         status["recovery_pending"]=recovery.pending();
         status["maintenance_error"]=maintenance_error;
         auto path=package_root.generic_u8string();
-        status["catalog"]={{"folder",std::string(path.begin(),path.end())},{"outfits",catalog.outfits.size()}};
+        status["catalog"]=catalog.diagnostics;
+        status["catalog"]["folder"]=std::string(path.begin(),path.end());
+        status["catalog"]["outfits"]=catalog.outfits.size();
         status["inventory"] = inventory.diagnostics();
         status["inventory_failed"] = inventory_failed;
         status["material_debug"] = appearance.material_debug;

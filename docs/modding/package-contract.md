@@ -55,3 +55,7 @@ The offline verifier hashes the full `.ucas`. Runtime discovery checks the small
 CSS extracts thumbnails and dye resources into a rebuildable package cache. User selections, favorite IDs and templates belong to CSS's own state. Cache files, loose developer catalogs, personal state and DLLs never belong in an outfit trio or outfit ZIP.
 
 A new asset container requires restarting the game. Native core live reload does not hot-replace a mounted pak/IoStore set. See [verification and install details](../css-packages.md).
+
+## Discovery failures
+
+CSS 0.2.1 searches `Content/Paks` recursively, including `~mods`. Keep the recommended one-folder layout above. Invalid packages are rejected individually, with filenames and reasons in `CSS.log` and `runtime/status.json`; a bad neighbor no longer aborts the entire catalog. See [discovery and diagnostics](../package-discovery.md) for validation behavior and regression commands.

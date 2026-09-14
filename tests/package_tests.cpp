@@ -44,9 +44,9 @@ int main(int argc,char** argv) {
         for(const auto& file:fs::directory_iterator(root/"paks")) if(file.path().extension()==".pak") pak=file.path();
         std::fstream edit(pak,std::ios::in|std::ios::out|std::ios::binary);
         edit.seekp(-180,std::ios::end); edit.put('\xff'); edit.close();
-        bool rejected=false;
-        try { package_catalogs(root/"paks",root/"cache"); } catch(const std::exception&) { rejected=true; }
-        if(!rejected) throw std::runtime_error("Corrupt pak index was accepted");
+        Json diagnostics;
+        if(!package_catalogs(root/"paks",root/"cache",&diagnostics).empty() || diagnostics["files"][0]["status"]!="rejected")
+            throw std::runtime_error("Corrupt pak index was accepted or not reported");
         fs::remove_all(root);
         std::cout<<"Package catalog, thumbnail, cache reuse, repair and corruption checks passed\n";
     } catch(const std::exception& error) { fs::remove_all(root); std::cerr<<error.what()<<'\n'; return 1; }

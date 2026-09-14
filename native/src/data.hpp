@@ -11,6 +11,10 @@
 namespace css {
 using Json = nlohmann::json;
 namespace fs = std::filesystem;
+inline std::string path_utf8(const fs::path& path) {
+    const auto value=path.generic_u8string();
+    return {value.begin(),value.end()};
+}
 struct Variant {
     std::string id, name, mesh;
     std::map<int,std::string> materials;
@@ -31,7 +35,9 @@ struct Outfit {
 };
 struct Catalog {
     std::vector<Outfit> outfits;
+    Json diagnostics = Json::object();
     static Catalog load(const fs::path&,const fs::path& paks={},const fs::path& cache={});
+    std::string empty_message() const;
     const Variant* find(const std::string& outfit, const std::string& variant) const;
     bool compatible(const std::string& outfit, const std::string& shell) const;
 };

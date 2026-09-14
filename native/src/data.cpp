@@ -25,9 +25,9 @@ bool valid_asset(const std::string& s) {
     });
 }
 Json read_json(const fs::path& path) {
-    if (fs::file_size(path) > 1024 * 1024) throw std::runtime_error("JSON exceeds 1 MiB: " + path.string());
+    if (fs::file_size(path) > 1024 * 1024) throw std::runtime_error("JSON exceeds 1 MiB: " + path_utf8(path));
     std::ifstream in(path, std::ios::binary);
-    if (!in) throw std::runtime_error("Cannot read: " + path.string());
+    if (!in) throw std::runtime_error("Cannot read: " + path_utf8(path));
     return Json::parse(in);
 }
 void atomic_json(const fs::path& path, const Json& data, bool backup) {
@@ -41,7 +41,10 @@ void atomic_json(const fs::path& path, const Json& data, bool backup) {
         if (!out) throw std::runtime_error("Failed writing CSS state");
     }
     if (read_json(temp) != data) throw std::runtime_error("State read-back mismatch");
-    if (backup && fs::exists(path)) fs::copy_file(path, path.string() + ".bak", fs::copy_options::overwrite_existing);
+    if (backup && fs::exists(path)) {
+        auto previous=path; previous+=".bak";
+        fs::copy_file(path,previous,fs::copy_options::overwrite_existing);
+    }
 #ifdef _WIN32
     auto file = CreateFileW(temp.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
     if (file == INVALID_HANDLE_VALUE) throw std::runtime_error("Cannot flush CSS state");
@@ -55,7 +58,7 @@ void atomic_json(const fs::path& path, const Json& data, bool backup) {
 }
 State load_state(const fs::path& file, bool* recovered) {
     if(recovered) *recovered=false;
-    auto backup=fs::path(file.string()+".bak");
+    auto backup=file; backup+=".bak";
     if(fs::exists(file)) {
         try {
             auto saved=read_json(file);
@@ -66,7 +69,8 @@ State load_state(const fs::path& file, bool* recovered) {
             // Keep the damaged primary, and never overwrite the good backup
             // with it during recovery. An invalid backup still fails visibly.
             auto stamp=std::chrono::system_clock::now().time_since_epoch().count();
-            fs::copy_file(file,file.string()+".corrupt-"+std::to_string(stamp));
+            auto archived=file; archived+=".corrupt-"+std::to_string(stamp);
+            fs::copy_file(file,archived);
             if(!fs::exists(backup)) throw;
         }
     }
@@ -85,12 +89,22 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
     if (fs::exists(directory)) {
         if (!fs::is_directory(directory)) throw std::runtime_error("CSS catalog path is not a directory");
         for (const auto& file : fs::directory_iterator(directory))
-            if (file.is_regular_file() && file.path().filename().string().ends_with(".css.json")) files.push_back(file.path());
+            if (file.is_regular_file() && path_utf8(file.path().filename()).ends_with(".css.json")) files.push_back(file.path());
     }
     std::sort(files.begin(), files.end());
-    auto documents=package_catalogs(paks,cache);
-    for(const auto& path:files) documents.push_back({read_json(path),path.parent_path()});
+    auto documents=package_catalogs(paks,cache,&result.diagnostics);
+    for(const auto& path:files) documents.push_back({read_json(path),path.parent_path(),{}});
     for (const auto& document : documents) {
+        const auto previous_size=result.outfits.size();
+        const auto previous_ids=ids;
+        auto package_status=[&](const char* status,const std::string& reason={}) {
+            auto source=document.source.generic_u8string();
+            for(auto& file:result.diagnostics["files"]) if(file["path"]==std::string(source.begin(),source.end())) {
+                file["status"]=status;
+                if(!reason.empty()) file["reason"]=reason;
+            }
+        };
+        try {
         const auto& j = document.catalog;
         if (j.at("schema") != 1 || !j.at("outfits").is_array()) throw std::runtime_error("Unsupported catalog schema");
         for (const auto& item : j.at("outfits")) {
@@ -137,17 +151,39 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
             result.outfits.push_back(std::move(outfit));
             if (result.outfits.size() > 4096) throw std::runtime_error("Catalog exceeds 4096 outfits");
         }
+        if(!document.source.empty()) package_status("loaded");
+        } catch(const std::exception& error) {
+            // Loose authoring catalogs remain strict. Installed packages fail
+            // independently and retain a filename and reason in diagnostics.
+            if(document.source.empty()) throw;
+            result.outfits.resize(previous_size); ids=previous_ids;
+            package_status("rejected",error.what());
+        }
     }
     std::set<std::string> local_colors;
     // Optional local recipes make material authoring testable without remounting containers.
-    if(fs::is_directory(directory)) for(const auto& file:fs::directory_iterator(directory)) if(file.is_regular_file() && file.path().filename().string().ends_with(".colors.json")) {
+    if(fs::is_directory(directory)) for(const auto& file:fs::directory_iterator(directory)) if(file.is_regular_file() && path_utf8(file.path().filename()).ends_with(".colors.json")) {
         auto j=read_json(file.path()); auto id=j.at("id").get<std::string>();
         if(!local_colors.insert(id).second) throw std::runtime_error("Duplicate local color recipes");
         auto found=std::find_if(result.outfits.begin(),result.outfits.end(),[&](const auto& o){return o.id==id;});
         if(found==result.outfits.end()) throw std::runtime_error("Local colors reference a missing outfit");
         found->colors=ColorOptions::parse(j.at("colors")); found->resources=file.path().parent_path();
     }
+    for(const auto* status:{"loaded","rejected","ignored"}) {
+        size_t count=0;
+        for(const auto& file:result.diagnostics["files"]) if(file["status"]==status) ++count;
+        result.diagnostics[status]=count;
+    }
     return result;
+}
+std::string Catalog::empty_message() const {
+    if(diagnostics.value("rejected",size_t{})>0)
+        return "CSS could not load the outfit packages. See CSS.log for filenames and reasons.";
+    if(diagnostics.contains("errors") && !diagnostics["errors"].empty())
+        return "CSS could not read a package folder. See CSS.log for the path and reason.";
+    if(diagnostics.value("pak_files",size_t{})>0)
+        return "No CSS outfit metadata found. Install the CSS versions of outfit packages, then restart the game.";
+    return "No CSS outfit packages found. Install an outfit package, then restart the game.";
 }
 const Variant* Catalog::find(const std::string& outfit, const std::string& variant) const {
     for (const auto& o : outfits) if (o.id == outfit)
