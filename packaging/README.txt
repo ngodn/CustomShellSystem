@@ -23,6 +23,8 @@ CSS uses this exact native ABI. Other UE4SS builds have not been verified.
 
 Controls
 N: open/close. Esc: close. Mouse: select outfits, variants and colors.
+Mouse wheel or scrollbar: scroll the appearance list. D-pad navigation keeps
+the selected row visible.
 Controller View/Back + Y: open/close. B: close. D-pad: browse/adjust.
 A: wear. Y: favorite. LB/RB: sections. X: saved looks.
 Right stick: orbit, vertical inverted. Left stick: zoom/frame.

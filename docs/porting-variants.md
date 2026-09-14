@@ -102,3 +102,5 @@ The user confirmed mouse/scrollbar access to the later outfits and D-pad navigat
 During the first full appearance pass, Long Hair's initial request was cancelled by the stale-asset guard; retrying succeeded. Blocking imports may collect assets loaded earlier in the same operation. The runtime now temporarily roots the target mesh and override materials until the component owns their references, restoring only roots it added. Existing stale-player/skeleton checks remain in place. This is scoped loading protection, not a permanent asset cache.
 
 Final tested core: `css_core-ddeb827a207f25a4-1789356524511079680.dll`. The complete second pass finished without a cancelled load. Each package's embedded conversion report still describes its original offline validation; the separate live report records the later game checks.
+
+The user subsequently confirmed that all four new mods work correctly.

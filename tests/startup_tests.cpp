@@ -27,6 +27,10 @@ int main(int argc,char** argv) {
             for(const auto& outfit:catalog.outfits) {
                 expect(fs::is_regular_file(outfit.thumbnail),"Package thumbnail was not extracted");
                 expect(!outfit.variants.empty(),"Discovered outfit has no variants");
+                for(const auto& variant:outfit.variants)
+                    for(const auto& surface:outfit.colors_for(variant.id).surfaces)
+                        for(const auto& [part,texture]:surface.layers)
+                            expect(fs::is_regular_file(outfit.resources/texture),"Variant color resource was not extracted");
             }
             expect(Catalog::load(root/"catalog",argv[2],root/"cache/packages").outfits.size()==catalog.outfits.size(),"Cache reuse changed catalog");
             fs::remove_all(root/"cache");

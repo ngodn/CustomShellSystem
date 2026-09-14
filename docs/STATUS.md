@@ -48,3 +48,5 @@ Full CNS parity is unfinished: independent cosmetic slots, general texture choic
 ## Variant port update, 2026-09-14
 
 Four new local bundles contain fourteen outfit variants with per-variant material overrides and color recipes. Their final containers passed extraction, payload round-trip, resolved material/skeleton/physics checks and native cache repair tests. The updated core and four trios are installed. All fourteen variants passed live palette/custom-color/Original restoration, animated preview/cloth and clean-close checks. The user confirmed mouse and controller scrolling across the full catalog. The user reported that the outfits seem correct during the requested visual and gameplay check; long-session regression remains open. See [porting-variants.md](porting-variants.md) for source details, limits and artifact locations. Earlier current-core entries above are historical.
+
+The user confirmed all new mods are working. The tested variant, color and scrolling changes are the basis for the next runtime release.
