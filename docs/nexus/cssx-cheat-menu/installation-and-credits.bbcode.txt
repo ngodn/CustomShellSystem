@@ -1,0 +1,5 @@
+[b]Before installing[/b]
+Disable or remove the original UE4SS Cheat Menu (MortalShell2Mod), then restart Mortal Shell II. Do not run both cheat menus together. Removing the original mod while the game is running does not unload its hooks or active cheats.
+
+[b]Credits[/b]
+CSSX Cheat Menu is my C++ port of [url=https://www.nexusmods.com/mortalshell2/mods/20]UE4SS Cheat Menu by DevToolsMaster[/url], adapted for CSSX.
