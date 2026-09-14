@@ -216,8 +216,15 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         auto* button=ui.button("",left,y,panel-10,h-5,selected);
         bind(button,{{"action","ui_row"},{"row",index},{"apply",false}});
         const double inset=section_==0 && index>0?88:18;
-        ui.label(title,left+inset,y+9,panel-inset-20,32,18,selected?ivory:muted);
-        if(!subtitle.empty()) ui.label(subtitle,left+inset,y+41,panel-inset-20,24,15,muted);
+        auto single_line=[&](UObject* text) {
+            invoke(text,L"SetAutoWrapText",L"InAutoTextWrap",false);
+            invoke(text,L"SetClipping",L"InClipping",uint8_t{1});
+            invoke(text,L"SetTextOverflowPolicy",L"InOverflowPolicy",uint8_t{1});
+        };
+        single_line(ui.label(title,left+inset,y+9,panel-inset-38,32,18,selected?ivory:muted));
+        // Reserve a separate column for Equipped, including long variant names.
+        const double status_width=section_==0 && index>0?100:20;
+        if(!subtitle.empty()) single_line(ui.label(subtitle,left+inset,y+41,panel-inset-status_width,24,15,muted));
         if(selected) { decoration("T_UI_TopBarHighlightLine",left+8,y+1,panel-26,2); ui.box(left,y+8,1,h-20,gold); }
         rows_.push_back({WeakObject(marker),WeakObject(button),accept,previous,next,secondary,tertiary});
     };
@@ -234,11 +241,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         prompt(binding,label,right+12,y+7,330,icon);
     };
     auto detail=[&](const std::string& title,const std::string& subtitle,const std::string& body) {
-        auto* header=ui.label(title,right,205,360,45,22);
+        auto* header=ui.label(title,right,205,360,76,22);
         invoke(header,L"SetJustification",L"InJustification",uint8_t{1});
-        auto* sub=ui.label(subtitle,right,270,360,34,16,gold);
+        auto* sub=ui.label(subtitle,right,294,360,34,16,gold);
         invoke(sub,L"SetJustification",L"InJustification",uint8_t{1});
-        ui.label(body,right+16,327,328,174,16,muted);
+        ui.label(body,right+16,350,328,126,16,muted);
     };
     if(section_==0) {
         row_=std::clamp(row_,0,int(catalog.outfits.size()));
