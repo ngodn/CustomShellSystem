@@ -323,7 +323,10 @@ UObject* Appearance::player(void* engine) {
     if(observed_pawn_.Get()!=pawn || observed_component_.Get()!=component || observed_controller_.Get()!=controller) {
         ++player_revision; observed_pawn_=pawn; observed_component_=component; observed_controller_=controller;
     }
-    if (component) if (auto* mesh = mesh_asset(component)) current_mesh = narrow(mesh->GetPathName());
+    if (component) {
+        if(component==component_.Get()) detach_residual_colors();
+        if(auto* mesh = mesh_asset(component)) current_mesh = narrow(mesh->GetPathName());
+    }
     return pawn;
 }
 void Appearance::restore_menu() {
@@ -376,6 +379,21 @@ void Appearance::remember_materials() {
     for(int i=0;i<values.Num();++i) {
         UObject* value{}; std::memcpy(&value,values.GetRawPtr(i),sizeof(value));
         expected_materials_.emplace_back(value);
+    }
+}
+void Appearance::detach_residual_colors() {
+    if(color_mids_.empty()) return;
+    auto* component=component_.Get();
+    if(!component || !applied_.Get() || mesh_asset(component)==applied_.Get()) return;
+    // Changing gameplay shells can leave trailing OverrideMaterials entries
+    // from the previous, larger mesh. Remove only our exact MID objects, never
+    // game-created effects or another mod's replacement. Keep the weak cache so
+    // a temporary stock-mesh reset can still reuse live dye resources.
+    auto values=overrides(component);
+    for(const auto& [slot,weak]:color_mids_) {
+        if(slot<0 || slot>=values.Num()) continue;
+        UObject* actual{}; std::memcpy(&actual,values.GetRawPtr(slot),sizeof(actual));
+        if(auto* owned=weak.Get();owned && actual==owned) material(component,slot,nullptr);
     }
 }
 bool Appearance::materials_match() const {
@@ -592,6 +610,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
 }
 bool Appearance::restore() {
     restore_menu();
+    detach_residual_colors();
     auto* component = component_.Get();
     auto* applied = applied_.Get();
     if (component && applied && mesh_asset(component) == applied) {

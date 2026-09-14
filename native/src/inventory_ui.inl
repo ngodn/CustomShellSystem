@@ -205,7 +205,7 @@ Json InventoryUI::command(void* engine,const Json& command) {
         if(pid!=GetCurrentProcessId()) throw std::runtime_error("Key test requires focused game");
         const auto key=command.at("key").get<std::string>();
         const WORD code=key.size()==1 && std::string("IWASDEFR").find(key[0])!=std::string::npos?WORD(key[0]):
-            key=="Space"?VK_SPACE:key=="Shift"?VK_LSHIFT:key=="Escape"?VK_ESCAPE:key=="Home"?VK_HOME:key=="F8"?VK_F8:0;
+            key=="Space"?VK_SPACE:key=="Shift"?VK_LSHIFT:key=="Ctrl"?VK_LCONTROL:key=="Escape"?VK_ESCAPE:key=="Home"?VK_HOME:key=="F8"?VK_F8:0;
         if(!code) throw std::runtime_error("Unsupported menu test key");
         INPUT input{}; input.type=INPUT_KEYBOARD; input.ki.wVk=code;
         input.ki.dwFlags=command.value("down",false)?0:KEYEVENTF_KEYUP;
