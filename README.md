@@ -31,15 +31,15 @@ CSS stores its settings separately from the game save. It does not unlock equipm
 
 ## Screenshots and video
 
-[![Seductress's garment controls in CSS 0.2.0](docs/media/v0.2.0/color-garment.jpg)](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/css-menu-demo-1080p60.mp4)
+[![Seductress's garment controls in CSS 0.2.0](docs/media/v0.2.0/color-garment.jpg)](https://youtu.be/O1H3GaDDY2I)
 
-[Watch the CSS menu walkthrough, 1080p60](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/css-menu-demo-1080p60.mp4). Shows all eight installed outfits and nineteen mesh variants, then Seductress colors, templates and camera controls.
+[Watch the CSS menu walkthrough, 1080p60](https://youtu.be/O1H3GaDDY2I). Shows all eight installed outfits and nineteen mesh variants, then Seductress colors, templates and camera controls.
 
 ![Named appearance templates](docs/media/v0.2.0/templates.jpg)
 
-[![Seductress in the game world](docs/media/v0.2.0/seductress-world-front.jpg)](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/seductress-showcase-1080p60.mp4)
+[![Seductress in the game world](docs/media/v0.2.0/seductress-world-front.jpg)](https://youtu.be/p374pU4fFrU)
 
-[Watch the Seductress showcase, 1080p60](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/seductress-showcase-1080p60.mp4). Multiple angles and palettes, recorded directly in the game.
+[Watch the Seductress showcase, 1080p60](https://youtu.be/p374pU4fFrU). Multiple angles and palettes, recorded directly in the game.
 
 See the [full 0.2.0 gallery and capture notes](docs/media/v0.2.0/README.md) and [media credits](docs/media/README.md). Outfit packages are separate downloads.
 

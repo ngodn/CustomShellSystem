@@ -46,8 +46,8 @@ If something breaks, please include the Seductress version, CSS version, active 
 
 [size=4][b]In-game gallery[/b][/size]
 
-[url=https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/seductress-showcase-1080p60.mp4][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/seductress-world-front.jpg[/img][/url]
-[url=https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/seductress-showcase-1080p60.mp4]Watch the Seductress showcase, 1080p / 60 fps[/url]
+[youtube]p374pU4fFrU[/youtube]
+Seductress showcase, 1080p / 60 fps.
 
 [img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/seductress-crimson-vow.jpg[/img]
 Crimson vow.

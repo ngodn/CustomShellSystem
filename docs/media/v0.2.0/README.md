@@ -28,8 +28,8 @@ These screenshots show the native Inventory CSS page, replacing the old N menu.
 
 ## Videos
 
-- [CSS menu walkthrough, 1080p60](css-menu-demo-1080p60.mp4): Original restoration, all eight installed outfits and nineteen mesh variants, followed by Seductress colors, templates and camera controls.
-- [Seductress showcase, 1080p60](seductress-showcase-1080p60.mp4): character-centered camera movement and live palette changes in the game world.
+- [CSS menu walkthrough, 1080p60](https://youtu.be/O1H3GaDDY2I) ([MP4](css-menu-demo-1080p60.mp4)): Original restoration, all eight installed outfits and nineteen mesh variants, followed by Seductress colors, templates and camera controls.
+- [Seductress showcase, 1080p60](https://youtu.be/p374pU4fFrU) ([MP4](seductress-showcase-1080p60.mp4)): character-centered camera movement and live palette changes in the game world.
 
 The videos capture the game fullscreen on its display. The originals are
 2560×1440 at 60 fps. The published copies use H.264/AAC at 1920×1080 and

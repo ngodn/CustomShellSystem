@@ -83,13 +83,14 @@ The [url=https://github.com/ngodn/CustomShellSystem/blob/main/docs/modding/READM
 [img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/inventory-css.jpg[/img]
 Seductress in the new Shell page.
 
-[url=https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/css-menu-demo-1080p60.mp4][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/color-garment.jpg[/img][/url]
-[url=https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/css-menu-demo-1080p60.mp4]Watch all outfits and variants, then Seductress colors and templates, 1080p / 60 fps[/url]
+[youtube]O1H3GaDDY2I[/youtube]
+CSS menu walkthrough, 1080p / 60 fps.
 
 [img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/templates.jpg[/img]
 Save and load your own appearance templates.
 
-[url=https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/seductress-showcase-1080p60.mp4]Seductress cinematic showcase, 1080p / 60 fps[/url]
+[youtube]p374pU4fFrU[/youtube]
+Seductress showcase, 1080p / 60 fps.
 
 [size=4][b]Credits[/b][/size]
 [list]

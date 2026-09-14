@@ -10,6 +10,11 @@ Paste the descriptions into Nexus's **View source** editor. Paste the changelog 
 
 The original-size, uncropped headers are used inside the descriptions. The separate 1300 x 372 transparent canvas images remain available for the Nexus Header upload field. Gallery files use stable GitHub raw URLs.
 
-The recording uses a clickable poster and direct MP4 link. Official direct-MP4 embed syntax has not been established; do not replace it with an invented video tag. Check the rendered Nexus preview after pasting.
+The descriptions embed the uploaded YouTube videos with `[youtube]VIDEO_ID[/youtube]`. The GitHub README uses clickable posters linking to YouTube. Local 1080p60 MP4 copies remain in `docs/media/v0.2.0/`. Check the rendered Nexus preview after pasting.
+
+- CSS menu walkthrough: https://youtu.be/O1H3GaDDY2I
+- Seductress showcase: https://youtu.be/p374pU4fFrU
+
+BBCode syntax reference: [Nexus description formatting](https://forums.nexusmods.com/topic/134116-formating-in-descriptions/).
 
 Internal copies and form notes remain in the local `reference/internal-docs/` directory. Update those copies when changing these files.
