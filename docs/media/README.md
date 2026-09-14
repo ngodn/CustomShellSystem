@@ -1,5 +1,7 @@
 # CSS gallery media
 
+[CSS 0.2.0 gallery and 1080p60 videos](v0.2.0/README.md) show the current Inventory integration with Seductress. The older gallery below is retained for historical links.
+
 The `v0.1.1/` folder holds nine screenshots from gameplay, the wardrobe and
 the inventory, plus a web copy of the 63-second wardrobe recording captured
 on 14 September 2026. These files are

@@ -13,16 +13,16 @@ I adapted Skirbie's Baldur's Gate 3 Seductress outfit for Mortal Shell II and th
 [*]Support for CSS favorites and saved looks.
 [/list]
 
-Select [b]Seductress[/b], then open [b]Colors[/b]. Choose Original or Reset all colors to restore the outfit's original materials. This package has one mesh variant. Body shape, skin wetness and physics strength are not adjustable sliders.
+Select [b]Seductress[/b], then open the [b]Color[/b] tab. Choose Original or Reset all colors to restore the outfit's original materials. This package has one mesh variant. Body shape, skin wetness and physics strength are not adjustable sliders.
 
-[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/seductress-inventory-polearm.png[/img]
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/inventory-css.jpg[/img]
 
 [size=4][b]Requirements and installation[/b][/size]
 [list=1]
 [*]Close the game.
-[*]Install [url=https://www.nexusmods.com/mortalshell2/mods/45?tab=files]UE4SS for MS2 by Framecore[/url] and [url=https://github.com/ngodn/CustomShellSystem/releases/tag/v0.1.2]Custom Shell System[/url]. I recommend CSS 0.1.2 for its scrolling list and transition fixes.
+[*]Install [url=https://www.nexusmods.com/mortalshell2/mods/45?tab=files]UE4SS for MS2 by Framecore[/url] and [url=https://github.com/ngodn/CustomShellSystem/releases/tag/v0.2.0]Custom Shell System[/url]. CSS 0.2.0 adds the native Inventory menu and keeps this outfit package compatible.
 [*]Extract CSS_Seductress_eins0fx_P.zip and copy the included CSS_Seductress_eins0fx_P folder into Sparta/MortalShell2/Content/Paks/~mods/.
-[*]Launch the game, load a save and open CSS with [b]N[/b] or [b]View/Back + Y[/b]. Select Seductress.
+[*]Enter the game world, open [b]Inventory[/b] (default [b]I[/b]) and select [b]CSS[/b]. In Shell, select Seductress and choose Wear.
 [/list]
 
 [code]Sparta/MortalShell2/Content/Paks/~mods/CSS_Seductress_eins0fx_P/
@@ -38,22 +38,31 @@ I fitted and tested Seductress with Genessa's human skeleton. CSS checks skeleto
 
 [list]
 [*]The feet can appear slightly above the ground in the 1.0.0 package. The prepared alignment revision is not included in this download.
-[*]CSS wardrobe lighting can differ from gameplay and inventory. This is still an open CSS issue.
+[*]CSS 0.2.0 uses the game's Inventory preview and lighting. Older CSS screenshots show the retired standalone wardrobe.
 [*]Cloth and secondary motion use the existing game/mod animation setup. They are not a separate physics engine, and some animations may still clip.
 [/list]
 
 If something breaks, please include the Seductress version, CSS version, active gameplay shell and steps to reproduce it. A screenshot or short recording helps me find the cause.
 
-[size=4][b]Gallery[/b][/size]
+[size=4][b]In-game gallery[/b][/size]
 
-[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/seductress-gameplay-front.png[/img]
-Front view during gameplay.
+[url=https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/seductress-showcase-1080p60.mp4][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/seductress-world-front.jpg[/img][/url]
+[url=https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/seductress-showcase-1080p60.mp4]Watch the Seductress showcase, 1080p / 60 fps[/url]
 
-[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/seductress-gameplay-side.png[/img]
-Side view during gameplay.
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/seductress-crimson-vow.jpg[/img]
+Crimson vow.
 
-[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/colors-verdigris.png[/img]
-Custom colors in CSS. The header is promotional artwork; these screenshots show the in-game outfit. Weapons and the CSS interface are separate from this download.
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/seductress-ash-gold.jpg[/img]
+Ash and gold.
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/seductress-midnight-silver.jpg[/img]
+Midnight silver.
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/seductress-verdigris.jpg[/img]
+Verdigris.
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/seductress-world-side.jpg[/img]
+The outfit in the game world. The header is promotional artwork; these screenshots show the actual outfit. Weapons and CSS are separate from this download.
 
 [size=4][b]Updating or removing[/b][/size]
 
@@ -63,7 +72,7 @@ To remove it, select Original appearance in CSS, close the game and delete CSS_S
 
 [size=4][b]For modders[/b][/size]
 
-The [url=https://github.com/ngodn/CustomShellSystem]CSS source[/url] and [url=https://github.com/ngodn/CustomShellSystem/blob/main/tools/css_convert.py]converter[/url] are on GitHub. The converter packages compatible cooked Mortal Shell II mods; it does not perform the cross-game fitting used for Seductress. Materials, weights, dependencies and color masks may need individual work. See the [url=https://github.com/ngodn/CustomShellSystem/blob/main/docs/css-packages.md]current package instructions[/url]. I'll release a full CSS modding guide once the framework is stable.
+The [url=https://github.com/ngodn/CustomShellSystem]CSS source[/url] and [url=https://github.com/ngodn/CustomShellSystem/blob/main/tools/css_convert.py]converter[/url] are on GitHub. The converter packages compatible cooked Mortal Shell II mods; it does not perform the cross-game fitting used for Seductress. Materials, weights, dependencies and color masks may need individual work. See the [url=https://github.com/ngodn/CustomShellSystem/blob/main/docs/modding/README.md]CSS modding guide[/url] for the current asset requirements, packaging tools, variants and color recipes. I'll update it as the framework develops.
 
 [size=4][b]Credits[/b][/size]
 [list]

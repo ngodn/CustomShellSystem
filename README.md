@@ -29,56 +29,19 @@ The runtime ZIP includes one loader DLL, one core DLL and the required interface
 
 CSS stores its settings separately from the game save. It does not unlock equipment or change your gameplay shell. Compatible cosmetic outfits do not require unlocking all shells, weapons or seals.
 
-## Earlier wardrobe demo (0.1.x)
+## Screenshots and video
 
-The recording and gallery below show the previous standalone interface. Outfit packages are still compatible; the current menu is shown above.
+[![Seductress's garment controls in CSS 0.2.0](docs/media/v0.2.0/color-garment.jpg)](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/css-menu-demo-1080p60.mp4)
 
-[![Seductress with a polearm in the game inventory preview](docs/media/v0.1.1/seductress-inventory-polearm.png)](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4)
+[Watch the CSS menu walkthrough, 1080p60](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/css-menu-demo-1080p60.mp4). Shows all eight installed outfits and nineteen mesh variants, then Seductress colors, templates and camera controls.
 
-**[Watch the 63-second wardrobe demo (MP4)](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.1.1/css-wardrobe-demo.mp4)**.
-Click the image or link to open the recording. The Seductress outfit is shown in the game inventory above; outfit packages are separate
-downloads.
+![Named appearance templates](docs/media/v0.2.0/templates.jpg)
 
-![CSS preset palettes and per-part color sliders with Seductress](docs/media/v0.1.1/colors-crimson.png)
+[![Seductress in the game world](docs/media/v0.2.0/seductress-world-front.jpg)](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/seductress-showcase-1080p60.mp4)
 
-Preset palettes and custom colors on the Seductress outfit.
-Editable parts depend on the installed package. Version 0.2.0 uses the native Inventory character display instead of this older preview.
+[Watch the Seductress showcase, 1080p60](https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/seductress-showcase-1080p60.mp4). Multiple angles and palettes, recorded directly in the game.
 
-<details>
-<summary>More screenshots</summary>
-
-![Seductress in gameplay with an axe resting on her shoulder](docs/media/v0.1.1/seductress-gameplay-front.png)
-
-Front view of Seductress during gameplay.
-
-![Seductress in the inventory with Axatana selected](docs/media/v0.1.1/seductress-inventory-axatana.png)
-
-The same outfit in the inventory with Axatana selected.
-
-![Close side view of Seductress in gameplay](docs/media/v0.1.1/seductress-gameplay-side.png)
-
-A closer look at the Seductress outfit in the game world.
-
-![BeauteGenessa in the CSS wardrobe](docs/media/v0.1.1/wardrobe-genessa.png)
-
-The appearance browser with BeauteGenessa by dantemk2.
-
-![Seductress selected in the CSS appearance browser](docs/media/v0.1.1/wardrobe-seductress.png)
-
-Switch appearances while keeping your gameplay shell.
-
-![Seductress with the Verdigris palette controls](docs/media/v0.1.1/colors-verdigris.png)
-
-Adjust a selected part or reset its colors.
-
-![Seductress in gameplay with the wardrobe closed](docs/media/v0.1.1/seductress-gameplay.png)
-
-The Seductress outfit in the game world.
-
-</details>
-
-See [media credits and Nexus BBCode](docs/media/README.md) for the original
-mod links and reusable image/video links.
+See the [full 0.2.0 gallery and capture notes](docs/media/v0.2.0/README.md) and [media credits](docs/media/README.md). Outfit packages are separate downloads.
 
 ## Controls
 

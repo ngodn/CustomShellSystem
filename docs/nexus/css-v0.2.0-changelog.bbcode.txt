@@ -1,0 +1,19 @@
+[b]CSS 0.2.0 is out.[/b]
+
+CSS is now inside [b]Inventory > CSS[/b], with Shell, Color and Templates tabs. It uses the game's character preview, lighting, fonts and menu transitions. The old N menu is removed.
+
+[list]
+[*]Named templates: save, load, replace, rename and delete your looks.
+[*]Right stick: rotate and zoom. Left stick: move framing. Right-stick click or Home: reset view.
+[*]Mouse support: right-drag to rotate, scroll to zoom, left-drag to frame the character.
+[*]Clearer action prompts, scrolling outfit lists and fixes for startup guidance and package discovery with custom UE4SS locations.
+[*]Modding guide and project packaging utility are now in the GitHub source, alongside the converter.
+[/list]
+
+[b]Your existing CSS outfit ZIPs still work.[/b] Close the game, replace the CSS runtime files and keep [b]CustomShellSystem/state/[/b]. Leave your outfit packages in ~mods. The runtime download contains no outfits or personal saves.
+
+Open Inventory (default I), then select CSS. LB/RB or Q/E changes the main tab; LT/RT or Z/X changes Shell, Color and Templates.
+
+[url=https://github.com/ngodn/CustomShellSystem/releases/tag/v0.2.0]Download and release notes[/url] | [url=https://github.com/ngodn/CustomShellSystem/blob/main/docs/modding/README.md]Modding guide[/url]
+
+The converter handles compatible cooked Mortal Shell II outfits. Some mods still need material, dependency, skeleton or color-mask work and in-game testing. The guide documents the current framework; I'll keep refining it as CSS develops.
