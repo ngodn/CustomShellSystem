@@ -18,6 +18,11 @@ struct Host {
     bool bad_level_signature=false,fail_equipped_refresh=false;
     Json point_limits=Json::array({{{"key",{{"TagName","CharacterId.Player.Shell.Genessa"}}},{"value",44}},{{"key",{{"TagName","CharacterId.Player.Shell.Tiel"}}},{"value",40}},{{"key",{{"TagName","CharacterId.Player.Shell.Other"}}},{"value",150}}});
     bool fail_point_restore=false;
+    bool combat_fixture=false,hook_available=true,fail_hook_remove=false;
+    unsigned next_hook=1,hook_adds=0,fail_hook_add=0;
+    std::map<unsigned,Json> hooks;
+    Json cooldown={{"CooldownDuration",2.5},{"GlobalCooldownDuration",1.},{"Cooldown",1},{"GlobalCooldown",2}};
+    std::string seal="ID_Seal_Infinite_C";
     bool intro_lock=false,intro_done=true,map_unlocked=true,montage=false,retain_lock=false;
     int intro_instances=1,tag_count=1;
     std::vector<Json> calls;
@@ -32,6 +37,15 @@ struct Host {
         if(op=="state.save") {if(fail_save) throw std::runtime_error("Disk write failed");state=j.at("value");return true;}
         if(op=="log" || op=="invalidate") return nullptr;
         if(op=="player") return {{"pawn",pawn},{"controller",controller}};
+        if(op=="hooks.status") return {{"available",hook_available},{"rules",Json::array()}};
+        if(op=="hooks.add") {
+            ++hook_adds;if(fail_hook_add==hook_adds) throw std::runtime_error("Hook installation failed");
+            hooks[next_hook]=j;return next_hook++;
+        }
+        if(op=="hooks.remove") {
+            if(fail_hook_remove) throw std::runtime_error("Hook removal pending");
+            hooks.erase(j.at("id").get<unsigned>());return true;
+        }
         if(op=="menu.close") {open=false;return true;}
         if(op=="menu.status") return {{"menu_open",open}};
         if(op=="find" || op=="class_default") return object(3);
@@ -58,11 +72,19 @@ struct Host {
             if(p=="Mesh") return object(8);
             if(p=="WeaponPutInHandBlock") return {{"Handle",42}};
             if(p=="ActivatableAbilities") {
+                if(combat_fixture) {
+                    Json ability=object(80);ability["class"]="BlueprintGeneratedClass /Game/Test.GA_Parry_Handler_C";
+                    return {{"Items",Json::array({{{"Ability",object(999)},{"NonReplicatedInstances",Json::array({ability})},{"ReplicatedInstances",Json::array({ability})}}})}};
+                }
                 Json ability=object(9);ability["class"]="BlueprintGeneratedClass /Game/Test.GA_Player_Prologue_EggStrandingCustom_C";
                 Json instances=Json::array();for(int i=0;i<intro_instances;++i) instances.push_back(ability);
                 return {{"Items",Json::array({{{"Ability",ability},{"ActiveCount",1},{"NonReplicatedInstances",instances},{"ReplicatedInstances",Json::array()}}})}};
             }
             if(p=="HealthComponent") return object(5);
+            if(p=="ActiveSealItemHandle") return object(81);
+            if(p=="ItemDef") return {{"$object",82},{"name","BlueprintGeneratedClass /Game/Seals."+seal}};
+            if(combat_fixture && j.at("target").at("$object")==80 && cooldown.contains(p.get<std::string>())) return cooldown.at(p.get<std::string>());
+            if(combat_fixture && (p=="StoneFormCooldown" || p=="PerfectStoneFormCooldown")) throw std::runtime_error("CSSX property is missing");
             if(p=="HealthSet") return object(6);
             if(p=="Resolve") return {{"CurrentValue",0}};
             if(p=="MaxResolve") return {{"CurrentValue",100}};
@@ -88,12 +110,14 @@ struct Host {
             value=j.at("value");return value;
         }
         if(op=="set") {
+            if(combat_fixture && cooldown.contains(j.at("property").get<std::string>())) {cooldown[j.at("property").get<std::string>()]=j.at("value");return j.at("value");}
             if(j.at("property")=="bCanBeDamaged") {if(fail_restore && j.at("value")==true) throw std::runtime_error("restore failed");damageable=j.at("value").get<bool>();return damageable;}
             if(j.at("property")=="Movement") {movement=j.at("value");return movement;}
         }
         if(op=="call") {
             calls.push_back(j);const auto function=j.at("function");
             if(function=="GetGameplayTagCount") return {{"ReturnValue",intro_lock?tag_count:0}};
+            if(function=="ClearLocalCooldown" || function=="ClearGlobalCooldown") return Json::object();
             if(function=="HasPlayedGetUp") return {{"ReturnValue",intro_done}};
             if(function=="IsMapUnlocked") return {{"ReturnValue",map_unlocked}};
             if(function=="GetGameplayEffectFromActiveEffectHandle") {auto effect=object(10);effect["class"]="BlueprintGeneratedClass /Game/Test.GE_State_Block_Weapon_PutInHand_Primary_C";return {{"ReturnValue",effect}};}
@@ -267,6 +291,37 @@ int main(int argc,char** argv) {
     restart.pawn=nullptr;restarting.tick(.25);restart.pawn=object(72);restart.controller=object(73);restarting.tick(.25);
     check(restart.damageable && restarting.model()["values"]["god"]==false,"Cheats carried across controller/save transition");
     check(restarting.stop(),"Restart cleanup failed");
+    Host combat;combat.combat_fixture=true;cheat::Menu combat_menu(&combat.api);combat_menu.tick(.25);
+    const auto original_cooldown=combat.cooldown;
+    combat_menu.event({{"id","no_cooldown"},{"value",true}});
+    check(combat.hooks.empty() && combat.cooldown==original_cooldown,"Passive cooldown draft edited abilities");
+    combat_menu.event({{"id","apply_settings"}});
+    check(combat.hooks.size()==2 && combat.cooldown["CooldownDuration"]==0.,"Cooldown did not hook owned instances");
+    check(combat.count("ClearLocalCooldown")==1,"Duplicate replicated instance was processed twice");
+    for(const auto& [id,hook]:combat.hooks) check(hook.at("target").at("$object")==80 && hook.at("pawn")==combat.pawn,"Hook escaped player instance ownership");
+    combat_menu.tick(1.1);check(combat.hook_adds==2,"Unchanged ability list reinstalled hooks");
+    combat.cooldown["GlobalCooldownDuration"]=7.;
+    combat_menu.event({{"id","disable_all"}});
+    check(combat.hooks.empty() && combat.cooldown["CooldownDuration"]==2.5 && combat.cooldown["GlobalCooldownDuration"]==7.,"Cooldown cleanup overwrote another writer");
+    combat_menu.event({{"id","perfect_parry"},{"value",true}});combat_menu.event({{"id","apply_settings"}});
+    check(combat.hooks.size()==3,"Parry hook group incomplete");
+    combat.seal="ID_Seal_Stone_C";combat_menu.tick(1.1);
+    check(combat.hooks.empty() && combat_menu.model()["values"]["perfect_parry"]==false,"Seal change kept parry enabled");
+    check(combat_menu.stop(),"Combat cleanup failed");
+    for(int scenario=0;scenario<3;++scenario) {
+        Host broken;broken.combat_fixture=true;cheat::Menu candidate(&broken.api);candidate.tick(.25);
+        if(scenario==0) broken.hook_available=false;
+        if(scenario==1) broken.fail_hook_add=2;
+        if(scenario==2) broken.fail_save=true;
+        candidate.event({{"id","no_cooldown"},{"value",true}});rejects([&]{candidate.event({{"id","apply_settings"}});});
+        check(!candidate.model()["error"].get<std::string>().empty(),"Failed combat apply reported success");
+        check(broken.hooks.empty() && broken.cooldown==original_cooldown,"Failed combat apply left edits or hooks behind");
+        check(candidate.stop(),"Failed apply prevented cleanup");
+    }
+    Host retry_combat;retry_combat.combat_fixture=true;cheat::Menu retry_menu(&retry_combat.api);retry_menu.tick(.25);
+    retry_menu.event({{"id","no_cooldown"},{"value",true}});retry_menu.event({{"id","apply_settings"}});
+    retry_combat.fail_hook_remove=true;check(!retry_menu.stop(),"Busy hook allowed unloading");
+    retry_combat.fail_hook_remove=false;check(retry_menu.stop() && retry_combat.hooks.empty() && retry_combat.cooldown==original_cooldown,"Hook cleanup retry lost ownership");
     Host intro;cheat::PrologueRecovery recovery(&intro.api);
     recovery.start();recovery.tick(1);check(intro.count("ResetPlayerState")==0 && !recovery.running(),"Normal state triggered recovery");
     intro.intro_lock=true;recovery.start();for(int i=0;i<8;++i) recovery.tick(1);

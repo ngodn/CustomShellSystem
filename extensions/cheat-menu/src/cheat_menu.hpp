@@ -17,7 +17,17 @@ struct PendingShell {
     double elapsed=0;
 };
 class Menu {
-    inline static constexpr const char* toggle_ids[]{"god","auto_heal","infinite_resolve","move_fast","max_shell_points"};
+    inline static constexpr const char* toggle_ids[]{"god","auto_heal","infinite_resolve","move_fast","max_shell_points","no_cooldown","perfect_parry","perfect_block","perfect_harden"};
+    inline static constexpr const char* combat_ids[]{"no_cooldown","perfect_parry","perfect_block","perfect_harden"};
+    inline static constexpr const char* cooldown_fields[]{"CooldownDuration","GlobalCooldownDuration","Cooldown","GlobalCooldown","StoneFormCooldown","PerfectStoneFormCooldown"};
+    struct OwnedHook {uint64_t id;std::string feature;Json target;};
+    std::map<std::string,OwnedHook> combat_hooks_;
+    std::set<uint64_t> cooldown_seen_;
+    double combat_time_=0;
+    Json owned_abilities(const Json&);
+    void combat_sync();
+    void combat_clear(const std::string& feature={});
+    void combat_hook(const std::string&,const Json&,const Json&);
     cssx::Client host_;
     PrologueRecovery recovery_;
     Json settings_=Json::object();

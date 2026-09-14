@@ -115,6 +115,7 @@ struct Entry {
     std::string error;
     Json model=Json::object();
     bool suspended=false, stopped=false, dirty=true;
+    bool used_hooks=false;
     unsigned requests=0;
     double elapsed=0;
     double menu_check=0;
@@ -193,7 +194,9 @@ Json Entry::service(const Json& j) {
     if(op=="asset") return path_utf8(contained_file(manifest.directory,j.at("file").get<std::string>()));
     if(op=="invalidate") { dirty=true;++runtime->revision;return nullptr; }
     auto request=j;request["extension"]=manifest.id;
-    return runtime->service(request);
+    auto result=runtime->service(request);
+    if(op=="hooks.add") used_hooks=true;
+    return result;
 }
 void Entry::fail(const std::string& text) {
     error=text;suspended=true;++runtime->revision;
@@ -320,6 +323,9 @@ void Entry::tick(double delta) {
 bool Entry::stop() {
     if(stopped) return true;requests=0;
     try {
+        // Clear host-owned rules even if the extension's own stop callback
+        // fails. No gameplay hook should remain active on a suspended entry.
+        if(used_hooks) {runtime->service({{"op","hooks.clear"},{"extension",manifest.id}});used_hooks=false;}
         if(lua && table!=LUA_NOREF) { auto result=invoke_lua("stop",nullptr,true);if(result.is_boolean() && !result.get<bool>()) return false; }
         if(api && instance && !api->stop(instance)) return false;
         stopped=true;return true;

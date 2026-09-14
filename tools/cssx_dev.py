@@ -31,7 +31,7 @@ def stage():
         copy_verified(MOD/'loader-contract.json',backup/'loader-contract.json')
         copy_verified(BUILD/'main.dll',MOD/'dlls/main.dll')
         atomic(MOD/'loader-contract.json',{'abi':1,'dll_sha256':sha(MOD/'dlls/main.dll'),
-               'sources':{name:sha(ROOT/name) for name in ('native/src/loader.cpp','native/src/api.hpp')}})
+               'sources':{name:sha(ROOT/name) for name in ('native/src/loader.cpp','native/src/api.hpp','native/src/hook_api.hpp','native/src/hook_host.hpp','native/src/hook_host.cpp')}})
     if not (EVIDENCE/'original-core.json').exists():
         shutil.copy2(MOD/'core.json', EVIDENCE/'original-core.json')
     for name in ('css_core', 'cssx_core'):

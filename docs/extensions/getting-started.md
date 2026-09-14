@@ -91,3 +91,14 @@ To update an existing map entry, send `map.update` with `target`, `property`, `k
 This check applies to one map entry in one synchronous game-thread call. It is not a transaction across several objects or game functions. The Cheat Menu prepares its complete level edit first, restores earlier entries with another expected-value check if a later map write fails, and reports a partial update if a game-owned equipped-item refresh fails. It does not silently retry a mutation.
 
 Host responses have a 1 MiB limit, including all callback chunks. CSSX rejects overflow instead of accepting a truncated JSON prefix.
+## Managed player hooks (0.3.0 development)
+
+The updated CSS loader exports an optional hook service. Existing CSS core ABI 1 remains unchanged. `hooks.status` reports `available: false` with an older loader; extensions must explain that the complete CSS package needs updating rather than silently enabling an ineffective toggle.
+
+`hooks.add` takes a live `target`, `pawn`, `controller`, `function` and `mode`. Mode `bool` requires a reflected boolean return and a boolean `value`. Mode `after` takes an `after` function with one object parameter named `Owner`; the source function must also have an `Owner` parameter. The follow-up runs only when that parameter matches the guarded pawn. Optional `seal` matches an exact equipped item-definition class name.
+
+The operation returns a rule ID. Pass it to `hooks.remove` during cleanup; a failure must prevent unload and remain retryable. CSSX also clears an extension's rules when stopping or suspending it. Rules and status are scoped to the calling extension. The runtime supplies that scope, so authors do not set it themselves.
+
+Callbacks run on the game thread, require the pawn/controller pair to remain possessed, and only affect the registered target instance. No raw extension callback pointer is retained by UE4SS. A permanent-loader closure dispatches into the current CSS core, which owns the validated rules. This supports C++ and Lua extensions without registering their unloadable code directly with the engine.
+
+Limits: 128 hooked functions, 1,024 rules across extensions, no delegates or default-object targets. This is a restricted managed rule API, not a sandbox for arbitrary native code. In-game hook verification is pending; do not treat development checks as a compatibility guarantee.

@@ -11,6 +11,7 @@
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UFunction.hpp>
+#include <Unreal/FFrame.hpp>
 #include <Unreal/FProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FTextProperty.hpp>
@@ -852,6 +853,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
 
 #include "inventory_view.inl"
 
+#include "extension_hooks.inl"
 #include "extension_engine.inl"
 
 #include "extension_kit.inl"

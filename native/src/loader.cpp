@@ -1,4 +1,5 @@
 #include "api.hpp"
+#include "hook_host.hpp"
 #include "css_version.hpp"
 #include "data.hpp"
 #include <windows.h>
@@ -18,7 +19,9 @@ void log_line(const char* message) noexcept {
     } catch (...) {}
 }
 class Loader final : public RC::CppUserModBase {
-    std::recursive_mutex gate_;
+    std::shared_ptr<std::recursive_mutex> gate_=std::make_shared<std::recursive_mutex>();
+    std::shared_ptr<bool> alive_=std::make_shared<bool>(true);
+    CssHookService hook_service_{gate_};
     std::filesystem::path root_;
     std::wstring root_string_;
     CssHost host_{};
@@ -73,16 +76,18 @@ public:
         ModAuthors = STR("_eins0fx");
         register_tab(STR("Custom Shell System"), [](RC::CppUserModBase* mod) {
             auto* self = static_cast<Loader*>(mod);
-            std::lock_guard lock(self->gate_);
+            std::lock_guard lock(*self->gate_);
             if (self->api_ && !self->stopped_) self->api_->render(self->core_);
         });
         log_line("CSS loader created; engine untouched until Unreal initialization");
     }
     void on_unreal_init() override {
         hook_ = RC::Unreal::Hook::RegisterEngineTickPostCallback(
-            [this](auto&, RC::Unreal::UEngine* engine, float delta, bool) {
-                std::lock_guard lock(gate_);
+            [this,gate=gate_,alive=alive_](auto&, RC::Unreal::UEngine* engine, float delta, bool) {
+                std::lock_guard lock(*gate);
+                if(!*alive) return;
                 if (stopped_) return;
+                hook_service_.game_thread();
                 try {
                     if (!pending_.empty()) reload();
                     if (api_) api_->tick(core_, engine, delta);
@@ -94,7 +99,7 @@ public:
         auto now = GetTickCount64();
         if (now < next_poll_) return;
         next_poll_ = now + 250;
-        std::unique_lock lock(gate_, std::try_to_lock);
+        std::unique_lock lock(*gate_, std::try_to_lock);
         if (!lock || stopped_) return;
         try {
             auto filename = css::read_json(root_ / "core.json").at("file").get<std::string>();
@@ -109,9 +114,15 @@ public:
         }
     }
     ~Loader() override {
-        std::lock_guard lock(gate_);
+        std::unique_lock lock(*gate_);
+        *alive_=false;
         stopped_ = true;
+        hook_service_.quiesce();
+        // Unregister may wait for a captured callback that is waiting on gate.
+        // The shared liveness token makes that callback safe after this dies.
+        lock.unlock();
         if (hook_) RC::Unreal::Hook::UnregisterCallback(hook_);
+        lock.lock();
         // UE4SS shutdown is not guaranteed to be on the game thread. Never call
         // engine functions here. The OS releases modules on process exit.
         if (api_) api_->destroy(core_);

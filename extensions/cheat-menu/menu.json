@@ -114,6 +114,34 @@
           "label": "100-point shell limits",
           "value": false,
           "description": "Raise each shell point limit to at least 100 for this session. This does not grant points. Apply settings to enable; disabling restores limits owned by this extension."
+        },
+        {
+          "id": "no_cooldown",
+          "type": "toggle",
+          "label": "No ability cooldown",
+          "value": false,
+          "description": "Remove cooldowns from your current player abilities. Original cooldown settings return when disabled. Edit here, then use Settings > Apply settings."
+        },
+        {
+          "id": "perfect_parry",
+          "type": "toggle",
+          "label": "Perfect parry",
+          "value": false,
+          "description": "Requires the Infinite seal. Opens the perfect parry window while that seal remains equipped. Edit here, then use Settings > Apply settings."
+        },
+        {
+          "id": "perfect_block",
+          "type": "toggle",
+          "label": "Perfect block",
+          "value": false,
+          "description": "Requires the Tarnished seal. Enables perfect blocking while that seal remains equipped. Edit here, then use Settings > Apply settings."
+        },
+        {
+          "id": "perfect_harden",
+          "type": "toggle",
+          "label": "Perfect harden",
+          "value": false,
+          "description": "Requires the Vatra seal. Enables perfect hardening while that seal remains equipped. Edit here, then use Settings > Apply settings."
         }
       ]
     },

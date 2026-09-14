@@ -175,6 +175,7 @@ void ExtensionBridge::encode(FProperty* p,void* data,const Json& value,unsigned 
 }
 Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& request) {
     const auto op=request.at("op").get<std::string>();
+    if(op.starts_with("hooks.")) return hook_request(request);
     if(op=="player") {
         auto* pawn=appearance.player(engine);return {{"pawn",handle(pawn)},{"controller",handle(pawn?read<UObject*>(pawn,L"Controller"):nullptr)},{"shell",appearance.shell},{"revision",appearance.player_revision}};
     }

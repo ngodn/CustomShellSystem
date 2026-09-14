@@ -8,6 +8,8 @@
 #include "inventory_keys.hpp"
 #include "extension_client.hpp"
 #include "extension_search.hpp"
+#include "hook_api.hpp"
+#include <memory>
 #include <Unreal/UObject.hpp>
 #include <Unreal/FWeakObjectPtr.hpp>
 
@@ -23,6 +25,12 @@ public:
 };
 class Appearance;
 class ExtensionBridge {
+    struct HookGroup;
+    const CssHookHost* hook_host_=nullptr;
+    std::map<RC::Unreal::UFunction*,std::unique_ptr<HookGroup>> hooks_;
+    uint64_t next_hook_=1;
+    static void hook_callback(void*,void*,void*,void*) noexcept;
+    Json hook_request(const Json&);
     std::map<uint64_t,WeakObject> objects_;
     std::map<std::string,WeakObject> defaults_;
     uint64_t next_=1;
@@ -31,6 +39,10 @@ class ExtensionBridge {
     Json decode(RC::Unreal::FProperty*,void*,unsigned);
     void encode(RC::Unreal::FProperty*,void*,const Json&,unsigned);
 public:
+    ExtensionBridge();
+    ~ExtensionBridge();
+    void configure_hooks(void* loader_address) noexcept;
+    bool stop_hooks() noexcept;
     Json request(void* engine,Appearance&,const Json&);
 };
 class InventoryUI {

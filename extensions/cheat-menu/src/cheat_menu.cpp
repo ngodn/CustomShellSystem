@@ -38,6 +38,7 @@ Menu::Menu(const CssxHost* host):host_(host),recovery_(host) {
         {"damage_percent",int(number("damage_percent",50,1,99))},{"harbinger_level",int(number("harbinger_level",1,1,1000))},
         {"shell","none"},{"pickup","none"},{"tarstone","none"},{"tarstone_scope","selected"},
         {"tarstone_level",int(number("tarstone_level",1,1,3))},{"pickup_amount",int(number("pickup_amount",1,1,9999))}};
+    for(const auto* id:combat_ids) values_[id]=false;
     applied_=values_;
     status_="Cheats start off. Edit settings, then Apply settings.";
 }
@@ -67,10 +68,11 @@ void Menu::apply_settings() {
             movement(applied_["move_fast"].get<bool>());
         if(applied_["max_shell_points"]!=before["max_shell_points"]) shell_points(applied_["max_shell_points"].get<bool>());
         if(applied_["auto_heal"]==true || applied_["infinite_resolve"]==true) require_player();
+        combat_sync();
         persist(applied_);
     } catch(const std::exception& e) {
         const std::string reason=e.what();applied_=before;
-        try {god(before["god"].get<bool>());movement(before["move_fast"].get<bool>());shell_points(before["max_shell_points"].get<bool>());}
+        try {god(before["god"].get<bool>());movement(before["move_fast"].get<bool>());shell_points(before["max_shell_points"].get<bool>());combat_sync();}
         catch(const std::exception& cleanup) {
             cleanup_required_=true;
             throw std::runtime_error("Apply failed: "+reason+". Cleanup needs retry: "+cleanup.what());
@@ -83,7 +85,7 @@ void Menu::disable_all() {
     // Stop periodic work first. Failed restores retain their ownership records.
     for(const auto* id:toggle_ids) applied_[id]=false;
     cleanup_required_=true;
-    god(false);movement(false);shell_points(false);
+    combat_clear();god(false);movement(false);shell_points(false);
     for(const auto* id:toggle_ids) values_[id]=false;
     cleanup_required_=false;report("All cheats off. Other pending edits were kept.");
 }
@@ -121,7 +123,7 @@ Json Menu::model() {
     enabled["cancel_recovery"]=recovery_.running();
     enabled["apply_settings"]=has_changes() && !pending_ && !cleanup_required_;
     enabled["discard_changes"]=has_changes() && !pending_;
-    enabled["disable_all"]=!pending_ && (cleanup_required_ || !points_saved_.empty() || applied_["max_shell_points"]==true || !saved_.empty() || applied_["auto_heal"]==true || applied_["infinite_resolve"]==true || applied_["god"]==true || applied_["move_fast"]==true);
+    enabled["disable_all"]=!pending_ && (cleanup_required_ || !combat_hooks_.empty() || !points_saved_.empty() || applied_["max_shell_points"]==true || !saved_.empty() || applied_["auto_heal"]==true || applied_["infinite_resolve"]==true || applied_["god"]==true || applied_["move_fast"]==true);
     std::string summary=cleanup_required_?"Cleanup needs retry. Use Turn off all cheats.":has_changes()?"Pending edits. Apply settings or Discard changes.":"Settings are applied.";
     unsigned active=0;for(const auto* id:toggle_ids) if(applied_[id]==true) ++active;
     summary+=" Active cheats: "+std::to_string(active)+".";
@@ -310,7 +312,7 @@ void Menu::tick(double seconds) {
     const auto recovery_message=recovery_.message();recovery_.tick(seconds);
     if(recovery_.message()!=recovery_message) report(recovery_.message());
     try {shell_tick(seconds);} catch(const std::exception& e){pending_.reset();report(std::string("Shell switch stopped: ")+e.what());}
-    refresh_+=seconds;heal_time_+=seconds;resolve_time_+=seconds;catalog_time_+=seconds;points_time_+=seconds;
+    refresh_+=seconds;heal_time_+=seconds;resolve_time_+=seconds;catalog_time_+=seconds;points_time_+=seconds;combat_time_+=seconds;
     if(refresh_<.25) return;refresh_=0;
     auto player=host_.player();
     if(!player.is_object() || !identity(player.value("pawn",Json()))) {if(!current_.is_null()){current_=nullptr;host_.request({{"op","invalidate"}});}return;}
@@ -320,7 +322,7 @@ void Menu::tick(double seconds) {
         if(changed) {
             // Restore shared CharacterData before acquiring the next pawn's
             // baseline. Never compound a multiplier across a restart.
-            restore("Movement");restore("bCanBeDamaged");
+            combat_clear();restore("Movement");restore("bCanBeDamaged");
             if(new_controller) disable_all();
             current_=player;owner_controller_=identity(player["controller"]);catalog_ready_=false;catalog_time_=5;
             host_.request({{"op","invalidate"}});
@@ -331,6 +333,7 @@ void Menu::tick(double seconds) {
             catch(const std::exception& e) {report(std::string("Waiting for the shell catalog: ")+e.what());}
         }
         if(pending_ || cleanup_required_) return;
+        if(changed || combat_time_>=1.) {combat_time_=0;combat_sync();}
         if(applied_["max_shell_points"]==true && (changed || points_time_>=1.)) {points_time_=0;shell_points(true);}
         if(applied_["god"]==true) god(true);
         if(applied_["move_fast"]==true && changed) movement(true);
@@ -354,7 +357,7 @@ void Menu::tick(double seconds) {
 bool Menu::stop() {
     pending_.reset();recovery_.cancel();
     try {
-        shell_points(false);restore("bCanBeDamaged");restore("Movement");
+        combat_clear();shell_points(false);restore("bCanBeDamaged");restore("Movement");
         if(applied_["move_fast"]==true) {auto player=host_.player();if(identity(player.value("pawn",Json()))) host_.call(player["pawn"],"InitialiseCharacterData");}
         stopped_=true;return true;
     } catch(const std::exception& e) {host_.log(std::string("Cleanup failed: ")+e.what(),"error");return false;}

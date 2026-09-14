@@ -93,6 +93,7 @@ struct Core {
         } catch(const std::exception& e) { host.log((std::string("CSS catalog failed: ")+e.what()).c_str()); throw; }
     }
     explicit Core(const CssHost& h) : host(h), root(h.root), package_root(package_directory()), catalog(load_catalog(package_root)), message(wardrobe_startup_message(catalog.outfits.size())) {
+        extension_bridge.configure_hooks(reinterpret_cast<void*>(h.log));
         inventory.assets(root);
         bool recovered=false;
         state=load_state(root / "state/state.json", &recovered);
@@ -432,6 +433,7 @@ bool stop(void* ptr) noexcept {
     auto& core = *static_cast<css::Core*>(ptr);
     try {
         if(!core.extensions.stop()) {core.report("CSSX cleanup pending; reload deferred.");return false;}
+        if(!core.extension_bridge.stop_hooks()) {core.report("CSSX hook cleanup pending; reload deferred.");return false;}
         core.inventory.detach();
         core.appearance.restore(); if (core.dirty) core.save();
         core.last_pawn.clear(); core.apply_pending = core.state.enabled;

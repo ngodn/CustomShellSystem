@@ -83,7 +83,7 @@ def install(game: Path) -> None:
     for source in (ROOT / 'catalog').glob('*.css.json'):
         copy_verified(source, mod / 'catalog' / source.name)
     atomic(mod / 'loader-contract.json', {'abi': 1, 'dll_sha256': sha(mod / 'dlls/main.dll'),
-           'sources': {name: sha(ROOT / name) for name in ('native/src/loader.cpp', 'native/src/api.hpp')}})
+           'sources': {name: sha(ROOT / name) for name in ('native/src/loader.cpp', 'native/src/api.hpp', 'native/src/hook_api.hpp', 'native/src/hook_host.hpp', 'native/src/hook_host.cpp')}})
     name = stage_core(mod)
     (mod / 'enabled.txt').touch()
     print(f'Installed CSS loader and {name}')

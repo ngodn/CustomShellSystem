@@ -8,8 +8,12 @@ TICK=c.CFUNCTYPE(c.c_int,c.c_void_p,c.c_double)
 STOP=c.CFUNCTYPE(c.c_int,c.c_void_p)
 DESTROY=c.CFUNCTYPE(None,c.c_void_p)
 class API(c.Structure): _fields_=[('abi',c.c_uint32),('size',c.c_uint32),('create',CREATE),('tick',TICK),('request',REQUEST),('stop',STOP),('destroy',DESTROY)]
+hook_requests=[]
 @REQUEST
 def host_request(ctx,data,sink,out):
+    request=json.loads(data)
+    if request.get('op','').startswith('hooks.'):
+        hook_requests.append(request)
     response=b'{}';sink(out,c.cast(c.c_char_p(response),c.c_void_p),len(response))
     if json.loads(data).get('op')=='oversized':
         trailing=b' '*(1024*1024)
@@ -35,7 +39,8 @@ event=function(e) state.on=e.value; assert(cssx.request({op="state.save",value=s
         ('caught-loop', 'while true do pcall(function() while true do end end) end'),
         ('empty', 'return {model=function() return {sections=cssx.array()} end,event=function(e) end}'),
         ('oversized', 'return {model=function() assert(cssx.request({op="oversized"})); return {sections=cssx.array()} end,event=function() end}'),
-        ('tick-failure', '''return {model=function() return {sections=cssx.array()} end,event=function() end,
+        ('tick-failure', '''cssx.request({op="hooks.add",extension="spoofed"})
+return {model=function() return {sections=cssx.array()} end,event=function() end,
 tick=function() error("tick failed") end,
 stop=function() assert(cssx.request({op="state.save",value={cleaned=true}})) end}'''),
         ('cleanup-retry', '''local attempts=0
@@ -77,6 +82,8 @@ if attempts==1 then error("cleanup needs retry") end end}'''),
     assert gallery()['sections'][1]['controls'][0]['busy'] is True
     for _ in range(26): assert api.tick(instance,.2)==1
     assert json.loads((root/'state/extensions/tick-failure.json').read_text())['cleaned'] is True
+    assert [r['op'] for r in hook_requests]==['hooks.add','hooks.clear']
+    assert all(r['extension']=='tick-failure' for r in hook_requests)
     assert json.loads((root/'state/extensions/cleanup-retry.json').read_text())['attempts']==1
     failed=next(e for e in request({'op':'library'})['extensions'] if e['id']=='cleanup-retry')
     assert failed['available'] is False and 'cleanup incomplete' in failed['error']

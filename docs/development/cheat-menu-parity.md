@@ -14,8 +14,8 @@ Working checklist for CSSX 0.3.0. The source reference is the supplied MortalShe
 | Shell switching | Implemented: close menu, send once, verify identity | Every shell, Dark Form and interrupted travel |
 | Completed-intro recovery | C++ port with nine observations and exact predicate | Live positive reproduction when the lock occurs |
 | Smert stance, Genessa clones, Lazlo shockwaves | Pending | Current-player ownership and cleanup |
-| No cooldown | Pending | Owned-instance edits and safe hook lifecycle |
-| Matching-seal parry, block and harden | Pending | Seal gating and safe hook lifecycle |
+| No cooldown | Implemented; owned-instance edits and resident hook service | In-game cooldown calls, reload and cleanup on both game builds |
+| Matching-seal parry, block and harden | Implemented; exact seal and player-instance guards | In-game result overrides, seal changes and combat behavior |
 | Max Shell Points 100 | Implemented with owned map values and exact restoration | Travel with the toggle active |
 | Pickup selection, add, remove and give all | Implemented; 77 entries and soft-class resolution verified live | Grant/remove read-back on a test save |
 | Tarstone selection and grants | Implemented, localized catalog and duplicate-ownership guard | Grant/read-back on a separate test save, native Inventory refresh |
@@ -47,3 +47,5 @@ On Steam build 25265616, the live catalog returned 77 localized names. Refreshin
 Level-edit tests cover staged settings, confirmations, both map copies, preserving all non-level fields, equipped payloads, rollback after a rejected map write and no retry after an equipped refresh fails. The live map bridge accepts a no-op update and rejects a stale expected value, missing key, invalid numeric field and unknown struct field without changing either map. The level action also recognizes an already-matching level without rewriting data. These checks do not replace gameplay testing of a real level change.
 
 Shell-point limit checks passed on the updated game: eight limits rose to 100 after Apply and returned to their exact originals after Disable all. Portable tests also cover passive drafts, keeping higher or newer values, failed preference saves, and cleanup retry.
+
+Combat port: Windows DLLs compile and portable tests cover passive drafts, duplicate instance filtering, preserving other writers' cooldown values, failed hook installation and preference-save rollback, changed seals and failed-unregister retry. The live probe found 110 player-owned ability instances and checked Apply/Clear cooldown signatures plus the three parry boolean returns. The active seal is controller.ActiveSealItemHandle.ItemDef, where the handle is an item-instance object on build 25265616. Hook behavior has not yet been tested in-game; the permanent loader update requires one restart.
