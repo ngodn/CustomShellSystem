@@ -1,0 +1,20 @@
+[b]CSS 0.2.1[/b]
+
+[b]Changed[/b]
+[list]
+[*]CSS now searches all of Content/Paks, including ~mods and other subfolders.
+[*]Clearer empty-list messages and logs showing which packages were found, skipped or rejected.
+[/list]
+
+[b]Fixed[/b]
+[list]
+[*]A damaged, incomplete or duplicate package no longer blocks healthy outfits. Cache failures are reported per package.
+[*]Fixed Windows errors with non-English installation paths when saving settings or loading menu artwork.
+[*]Recognize both .pak and .PAK extensions.
+[/list]
+
+[b]Existing CSS outfits and ports remain compatible. No repacking needed.[/b]
+
+Close the game and replace the CSS runtime files in [b]MortalShell2/Binaries/Win64/ue4ss/Mods/[/b]. Keep [b]CustomShellSystem/state/[/b] and your installed outfit packages.
+
+If your outfit list is still empty, send me the updated [b]CSS.log[/b] and [b]runtime/status.json[/b] from [b]ue4ss/Mods/CustomShellSystem/[/b]. The new diagnostics will help me check the exact cause.

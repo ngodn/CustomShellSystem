@@ -5,6 +5,7 @@ Ready-to-paste BBCode for _eins0fx's mod pages:
 - [Custom Shell System description](css-description.bbcode.txt)
 - [CSS - Seductress description](seductress-description.bbcode.txt)
 - [CSS - Seductress Variants: new-page fields, BBCode and media](seductress-v2/README.md)
+- [CSS 0.2.1 changelog comment](css-v0.2.1-changelog.bbcode.txt)
 - [CSS 0.2.0 changelog comment](css-v0.2.0-changelog.bbcode.txt)
 - [Problem reporting guide and reply template](reporting-problems.bbcode.txt)
 
