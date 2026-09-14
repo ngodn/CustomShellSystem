@@ -1,5 +1,6 @@
 #pragma once
 #include <cssx/client.hpp>
+#include "prologue_recovery.hpp"
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -17,18 +18,28 @@ struct PendingShell {
 };
 class Menu {
     cssx::Client host_;
+    PrologueRecovery recovery_;
     Json settings_=Json::object();
-    Json values_=Json::object();
+    Json values_=Json::object(), applied_=Json::object();
+    bool cleanup_required_=false;
+    void apply_settings();
+    void disable_all();
+    bool has_changes() const;
     Json shells_=Json::array({{{"id","none"},{"label","Open this page in a loaded world"}}});
     Json current_;
-    std::string status_,last_error_;
-    double refresh_=0,heal_time_=0,resolve_time_=0;
+    Json pickup_table_,pickups_=Json::array({{{"id","none"},{"label","Refresh the pickup list"}}});
+    void refresh_pickups();
+    Json pickup_class(const Json& pawn);
+    std::string status_,last_error_,action_error_;
+    double refresh_=0,heal_time_=0,resolve_time_=0,catalog_time_=0;
+    bool catalog_ready_=false;
+    uint64_t owner_controller_=0;
     std::optional<PendingShell> pending_;
     struct Saved {Json object,before,expected;std::string property;};
     std::map<std::string,Saved> saved_;
     void report(const std::string& value);
     Json require_player();
-    void persist();
+    void persist(const Json&);
     void shell_tick(double);
     void refresh_shells();
     void override_value(const Json&,const std::string&,const Json&);

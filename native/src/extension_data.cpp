@@ -85,6 +85,7 @@ void validate_model(const Json& j) {
             if(kind!="button" && kind!="toggle" && kind!="number" && kind!="choice" && kind!="text" && kind!="label" && kind!="radio" && kind!="slider" && kind!="progress" && kind!="loading") throw std::runtime_error("Unsupported extension control");
             if(c.contains("enabled") && !c["enabled"].is_boolean()) throw std::runtime_error("Invalid enabled value");
             if(c.contains("confirm")) text(c,"confirm",2048);
+            if(c.contains("disabled_label")) text(c,"disabled_label",96);
             if(kind=="number" || kind=="slider") {
                 double low=c.at("min"),high=c.at("max"),step=c.at("step"),value=c.at("value");
                 if(!std::isfinite(low) || !std::isfinite(high) || !std::isfinite(step) || !std::isfinite(value) || low>high || step<=0 || value<low || value>high) throw std::runtime_error("Invalid numeric control range");
@@ -114,14 +115,18 @@ Json bind_menu(const Json& definition,const Json& model) {
     Json result=definition;
     const auto values=model.value("values",Json::object()), choices=model.value("options",Json::object()), enabled=model.value("enabled",Json::object()), busy=model.value("busy",Json::object());
     if(!values.is_object() || !choices.is_object() || !enabled.is_object() || !busy.is_object()) throw std::runtime_error("CSSX value, option, enabled and busy bindings must be objects");
+    const auto confirmations=model.value("confirmations",Json::object());
+    if(!confirmations.is_object()) throw std::runtime_error("CSSX confirmations must be an object");
     for(auto& section:result.at("sections")) for(auto& control:section.at("controls")) {
         const auto binding=control.value("binding",control.at("id").get<std::string>());
         if(values.contains(binding)) control["value"]=values.at(binding);
         if(choices.contains(binding)) control["options"]=choices.at(binding);
         if(enabled.contains(binding)) control["enabled"]=enabled.at(binding);
         if(busy.contains(binding)) control["busy"]=busy.at(binding);
+        if(confirmations.contains(binding)) control["confirm"]=confirmations.at(binding);
     }
     result["status"]=model.value("status",std::string{});
+    result["error"]=text(model,"error",2048,false);
     validate_model(result);return result;
 }
 void LibraryPage::normalize() { page=std::min(page,pages()-1); selected=count?std::min(selected,count-1):0; }

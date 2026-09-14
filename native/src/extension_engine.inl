@@ -19,6 +19,11 @@ UObject* ExtensionBridge::resolve(const Json& value) {
 }
 Json ExtensionBridge::decode(FProperty* p,void* data,unsigned depth) {
     if(depth>12 || p->GetArrayDim()!=1 || p->GetElementSize()<0) throw std::runtime_error("Unsupported CSSX property shape");
+    if(p->IsA<FEnumProperty>()) {
+        auto* underlying=static_cast<FEnumProperty*>(p)->GetUnderlyingProperty();
+        if(!underlying || underlying->GetElementSize()!=p->GetElementSize()) throw std::runtime_error("CSSX enum storage mismatch");
+        return decode(underlying,data,depth+1);
+    }
     if(p->IsA<FBoolProperty>()) return static_cast<FBoolProperty*>(p)->GetPropertyValue(data);
     if(p->IsA<FNumericProperty>()) {
         auto* number=static_cast<FNumericProperty*>(p);
@@ -51,6 +56,27 @@ Json ExtensionBridge::decode(FProperty* p,void* data,unsigned depth) {
 }
 void ExtensionBridge::encode(FProperty* p,void* data,const Json& value,unsigned depth) {
     if(depth>12 || p->GetArrayDim()!=1) throw std::runtime_error("Unsupported CSSX property shape");
+    if(value.is_object() && value.contains("$table_field")) {
+        const auto& source=value.at("$table_field");
+        auto* object=resolve(source.at("table"));
+        if(!object || !object->IsA<UDataTable>()) throw std::runtime_error("CSSX typed source is not a DataTable");
+        auto* table=static_cast<UDataTable*>(object);auto* type=table->GetRowStruct().Get();
+        if(!type) throw std::runtime_error("CSSX table row type is unavailable");
+        const auto row=wide(source.at("row").get<std::string>()),field=wide(source.at("field").get<std::string>());
+        auto* property=type->GetPropertyByNameInChain(field.c_str());
+        if(!property || property->GetOffset_Internal()<0 || property->GetOffset_Internal()+property->GetSize()>type->GetPropertiesSize() || !p->SameType(property))
+            throw std::runtime_error("CSSX table field type does not match the parameter");
+        const auto& rows=table->GetRowMap();if(rows.Num()<0 || rows.Num()>4096) throw std::runtime_error("CSSX table exceeds bound");
+        auto* found=rows.Find(FName(row.c_str()));if(!found || !*found) throw std::runtime_error("CSSX table row disappeared");
+        // Copy through the real reflected property, including UE5 soft classes.
+        // Never reinterpret a resolved UClass pointer as a TSoftClassPtr.
+        p->CopyCompleteValue(data,*found+property->GetOffset_Internal());return;
+    }
+    if(p->IsA<FEnumProperty>()) {
+        auto* underlying=static_cast<FEnumProperty*>(p)->GetUnderlyingProperty();
+        if(!underlying || underlying->GetElementSize()!=p->GetElementSize()) throw std::runtime_error("CSSX enum storage mismatch");
+        encode(underlying,data,value,depth+1);return;
+    }
     if(p->IsA<FBoolProperty>()) {static_cast<FBoolProperty*>(p)->SetPropertyValue(data,value.get<bool>());return;}
     if(p->IsA<FNumericProperty>()) {
         auto* number=static_cast<FNumericProperty*>(p);
@@ -76,7 +102,10 @@ void ExtensionBridge::encode(FProperty* p,void* data,const Json& value,unsigned 
     if(p->IsA<FObjectProperty>()) {
         auto* property=static_cast<FObjectProperty*>(p);auto* object=resolve(value);
         if(object && !object->IsA(property->GetPropertyClass().Get())) throw std::runtime_error("CSSX object class does not match the property");
-        property->SetObjectPropertyValue(data,object);return;
+        if(p->GetElementSize()!=sizeof(object)) throw std::runtime_error("CSSX object property size mismatch");
+        // The setter wrapper is unavailable in this UE4SS build. Use the same
+        // reflected copy path as Call::set for an ordinary object property.
+        p->CopyCompleteValue(data,&object);return;
     }
     if(p->IsA<FNameProperty>()) {auto text=wide(value.get<std::string>());FName name(text.c_str());p->CopyCompleteValue(data,&name);return;}
     if(p->IsA<FStrProperty>()) {auto text=wide(value.get<std::string>());FString s(text.c_str());p->CopyCompleteValue(data,&s);return;}
@@ -97,12 +126,35 @@ Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& re
     if(op=="player") {
         auto* pawn=appearance.player(engine);return {{"pawn",handle(pawn)},{"controller",handle(pawn?read<UObject*>(pawn,L"Controller"):nullptr)},{"shell",appearance.shell},{"revision",appearance.player_revision}};
     }
+    if(op=="class_default") {
+        const auto name=request.at("class").get<std::string>();
+        if(name.empty() || name.size()>96) throw std::runtime_error("Invalid CSSX default class name");
+        if(auto it=defaults_.find(name);it!=defaults_.end()) if(auto* object=it->second.Get()) return handle(object);
+        auto key=FName(wide(name).c_str());UObject* match=nullptr;bool duplicate=false;
+        UObjectGlobals::ForEachUObject([&](UObject* object,int32,int32) {
+            if(object && object->HasAnyFlags(RF_ClassDefaultObject) && object->GetClassPrivate()->GetFName()==key) {
+                if(match) {duplicate=true;return RC::LoopAction::Break;}
+                match=object;
+            }
+            return RC::LoopAction::Continue;
+        });
+        if(duplicate) throw std::runtime_error("Ambiguous CSSX default class name; use a full object path");
+        if(match) {if(defaults_.size()>=128) throw std::runtime_error("CSSX default-object cache limit reached");defaults_[name]=match;}
+        return handle(match);
+    }
     if(op=="find" || op=="load") {
         auto path=request.at("path").get<std::string>();if(path.size()>2048) throw std::runtime_error("CSSX object path exceeds bound");
         if(op=="load") return handle(load(path));
         auto text=wide(path);return handle(UObjectGlobals::StaticFindObject<UObject*>(nullptr,nullptr,text.c_str()));
     }
     auto* object=resolve(request.at("target"));if(!object) throw std::runtime_error("CSSX target is null");
+    if(op=="table.rows") {
+        if(!object->IsA<UDataTable>()) throw std::runtime_error("CSSX target is not a DataTable");
+        auto* table=static_cast<UDataTable*>(object);const auto& rows=table->GetRowMap();
+        if(rows.Num()<0 || rows.Num()>4096) throw std::runtime_error("CSSX table exceeds bound");
+        Json names=Json::array();for(const auto& entry:rows) names.push_back(narrow(entry.Key.ToString()));
+        std::sort(names.begin(),names.end());return names;
+    }
     if(op=="get" || op=="set") {
         const auto name=wide(request.at("property").get<std::string>());
         auto* p=object->GetPropertyByNameInChain(name.c_str());if(!p || p->GetOffset_Internal()<0) throw std::runtime_error("CSSX property is missing");

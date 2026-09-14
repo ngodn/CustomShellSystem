@@ -12,6 +12,8 @@
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UFunction.hpp>
 #include <Unreal/FProperty.hpp>
+#include <Unreal/Property/FEnumProperty.hpp>
+#include <Unreal/Engine/UDataTable.hpp>
 #include <Unreal/FString.hpp>
 #include <Unreal/UnrealVersion.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>

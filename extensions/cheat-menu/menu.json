@@ -2,6 +2,33 @@
   "schema": 1,
   "sections": [
     {
+      "id": "settings",
+      "title": "Settings",
+      "controls": [
+        {
+          "id": "apply_settings",
+          "type": "button",
+          "label": "Apply settings",
+          "description": "Apply all pending settings in this menu and save numeric preferences. Enabled cheats run only for this game session. This does not grant items, unlock progression or switch shells.",
+          "disabled_label": "Nothing to apply"
+        },
+        {
+          "id": "discard_changes",
+          "type": "button",
+          "label": "Discard changes",
+          "description": "Return every pending setting to its applied value. Active cheats are unchanged.",
+          "disabled_label": "No pending edits"
+        },
+        {
+          "id": "disable_all",
+          "type": "button",
+          "label": "Turn off all cheats",
+          "description": "Stop ongoing cheats and restore the values this extension owns. Newer changes made by the game or another mod are preserved.",
+          "disabled_label": "All cheats off"
+        }
+      ]
+    },
+    {
       "id": "cheats",
       "title": "Cheats",
       "controls": [
@@ -9,21 +36,21 @@
           "id": "god",
           "type": "toggle",
           "label": "God mode",
-          "description": "Prevents damage to the current player. Restores the original damage flag when disabled.",
+          "description": "Prevents damage to the current player. Restores the original damage flag when disabled. Edit here, then use Settings > Apply settings.",
           "value": false
         },
         {
           "id": "auto_heal",
           "type": "toggle",
           "label": "Auto Heal",
-          "description": "Refills missing health at your selected interval.",
+          "description": "Refills missing health at your selected interval. Edit here, then use Settings > Apply settings.",
           "value": false
         },
         {
           "id": "infinite_resolve",
           "type": "toggle",
           "label": "Infinite Resolve",
-          "description": "Refills missing Resolve once per second.",
+          "description": "Refills missing Resolve once per second. Edit here, then use Settings > Apply settings.",
           "value": false
         },
         {
@@ -40,7 +67,7 @@
           "min": 1,
           "max": 9999,
           "step": 1,
-          "description": ""
+          "description": "Edit here, then use Settings > Apply settings."
         },
         {
           "id": "heal",
@@ -56,7 +83,7 @@
           "min": 1,
           "max": 9999,
           "step": 1,
-          "description": ""
+          "description": "Edit here, then use Settings > Apply settings."
         },
         {
           "id": "resolve",
@@ -72,13 +99,14 @@
           "min": 1,
           "max": 99,
           "step": 1,
-          "description": ""
+          "description": "Edit here, then use Settings > Apply settings."
         },
         {
           "id": "damage",
           "type": "button",
           "label": "Set health target",
-          "description": "Reduces health to the selected percentage. Keeps at least one point in the current pool."
+          "description": "Reduces health to the selected percentage. Keeps at least one point in the current pool.",
+          "confirm": "Reduce health to the selected percentage? At least one health point will remain."
         }
       ]
     },
@@ -94,7 +122,7 @@
           "min": 1,
           "max": 100,
           "step": 1,
-          "description": ""
+          "description": "Edit here, then use Settings > Apply settings."
         },
         {
           "id": "heal_interval",
@@ -104,13 +132,13 @@
           "min": 0.25,
           "max": 5,
           "step": 0.25,
-          "description": ""
+          "description": "Edit here, then use Settings > Apply settings."
         },
         {
           "id": "move_fast",
           "type": "toggle",
           "label": "Movement multiplier",
-          "description": "Changes walking, jogging and sprinting speeds. Disable it before changing gameplay shells.",
+          "description": "Changes walking, jogging and sprinting speeds. Disable it before changing gameplay shells. Edit here, then use Settings > Apply settings.",
           "value": false
         },
         {
@@ -121,7 +149,7 @@
           "min": 1,
           "max": 5,
           "step": 0.25,
-          "description": ""
+          "description": "Edit here, then use Settings > Apply settings."
         },
         {
           "id": "harbinger_level",
@@ -131,7 +159,7 @@
           "min": 1,
           "max": 1000,
           "step": 1,
-          "description": ""
+          "description": "Edit here, then use Settings > Apply settings."
         },
         {
           "id": "set_harbinger",
@@ -163,7 +191,8 @@
           "id": "switch_shell",
           "type": "button",
           "label": "Switch gameplay shell",
-          "description": "Closes Inventory, sends one shell request and checks the result. Active cheats must be disabled first."
+          "description": "Closes Inventory, sends one shell request and checks the result. Active cheats must be disabled first.",
+          "confirm": "Change your gameplay shell and abilities? Inventory will close. CSS appearance-only changes use the CSS tab."
         }
       ]
     },
@@ -179,67 +208,77 @@
           "min": 1,
           "max": 100000,
           "step": 1,
-          "description": ""
+          "description": "Edit here, then use Settings > Apply settings."
         },
         {
           "id": "grant_gold",
           "type": "button",
           "label": "Add Gold",
-          "description": "Adds the selected amount. The game can save inventory changes."
+          "description": "Adds the selected amount. The game can save inventory changes.",
+          "confirm": "Add the selected resource amount? The game can save this inventory change."
         },
         {
           "id": "grant_gloom",
           "type": "button",
           "label": "Add Gloom",
-          "description": "Adds the selected amount. The game can save inventory changes."
+          "description": "Adds the selected amount. The game can save inventory changes.",
+          "confirm": "Add the selected resource amount? The game can save this inventory change."
         },
         {
           "id": "grant_glimpses",
           "type": "button",
           "label": "Add Glimpses",
-          "description": "Adds the selected amount. The game can save inventory changes."
+          "description": "Adds the selected amount. The game can save inventory changes.",
+          "confirm": "Add the selected resource amount? The game can save this inventory change."
         },
         {
           "id": "grant_shell_points",
           "type": "button",
           "label": "Add Shell Points",
-          "description": "Adds the selected amount. The game can save inventory changes."
+          "description": "Adds the selected amount. The game can save inventory changes.",
+          "confirm": "Add the selected resource amount? The game can save this inventory change."
         },
         {
           "id": "grant_tarcores",
           "type": "button",
           "label": "Add Tarcores",
-          "description": "Adds the selected amount. The game can save inventory changes."
+          "description": "Adds the selected amount. The game can save inventory changes.",
+          "confirm": "Add the selected resource amount? The game can save this inventory change."
         },
         {
           "id": "grant_ventrium",
           "type": "button",
           "label": "Add Ventrium",
-          "description": "Adds the selected amount. The game can save inventory changes."
+          "description": "Adds the selected amount. The game can save inventory changes.",
+          "confirm": "Add the selected resource amount? The game can save this inventory change."
         },
         {
           "id": "grant_laterite",
           "type": "button",
           "label": "Add Laterite",
-          "description": "Adds the selected amount. The game can save inventory changes."
+          "description": "Adds the selected amount. The game can save inventory changes.",
+          "confirm": "Add the selected resource amount? The game can save this inventory change."
         },
         {
           "id": "grant_dorsalite",
           "type": "button",
           "label": "Add Dorsalite",
-          "description": "Adds the selected amount. The game can save inventory changes."
+          "description": "Adds the selected amount. The game can save inventory changes.",
+          "confirm": "Add the selected resource amount? The game can save this inventory change."
         },
         {
           "id": "grant_thoracium",
           "type": "button",
           "label": "Add Thoracium",
-          "description": "Adds the selected amount. The game can save inventory changes."
+          "description": "Adds the selected amount. The game can save inventory changes.",
+          "confirm": "Add the selected resource amount? The game can save this inventory change."
         },
         {
           "id": "grant_ovums",
           "type": "button",
           "label": "Add Ovums",
-          "description": "Adds the selected amount. The game can save inventory changes."
+          "description": "Adds the selected amount. The game can save inventory changes.",
+          "confirm": "Add the selected resource amount? The game can save this inventory change."
         }
       ]
     },
@@ -344,6 +383,82 @@
           "label": "Reveal all map icons",
           "description": "Changes progression through the game's controller.",
           "confirm": "This changes progression and can trigger achievements. The game may save the changes. Continue?"
+        }
+      ]
+    },
+    {
+      "id": "pickups",
+      "title": "Items",
+      "controls": [
+        {
+          "id": "refresh_pickups",
+          "type": "button",
+          "label": "Refresh pickup list",
+          "description": "Read available pickups from the game catalog. No items are added or removed."
+        },
+        {
+          "id": "pickup",
+          "type": "choice",
+          "label": "Pickup",
+          "value": "none",
+          "options": [
+            {
+              "id": "none",
+              "label": "Refresh the pickup list"
+            }
+          ],
+          "description": "Search by item name. Select the item, set an amount and apply settings before adding or removing it."
+        },
+        {
+          "id": "pickup_amount",
+          "type": "number",
+          "label": "Pickup amount",
+          "value": 1,
+          "min": 1,
+          "max": 9999,
+          "step": 1,
+          "description": "The quantity to add or remove. Edit here, then use Settings > Apply settings."
+        },
+        {
+          "id": "add_pickup",
+          "type": "button",
+          "label": "Add selected pickup",
+          "description": "Add the selected quantity of this pickup.",
+          "confirm": "Add this pickup and quantity? The game can save the change."
+        },
+        {
+          "id": "remove_pickup",
+          "type": "button",
+          "label": "Remove selected pickup",
+          "description": "Remove the selected quantity through the game item system.",
+          "confirm": "Remove this pickup and quantity? This cannot be undone here."
+        },
+        {
+          "id": "give_all_pickups",
+          "type": "button",
+          "label": "Give all pickups",
+          "description": "Use the game command to add every pickup.",
+          "confirm": "Add every pickup? The game can save the changes. This cannot be undone here."
+        }
+      ]
+    },
+    {
+      "id": "recovery",
+      "title": "Recovery",
+      "controls": [
+        {
+          "id": "repair_intro",
+          "type": "button",
+          "label": "Check completed-intro lock",
+          "description": "Checks only the verified Egg Stranding lock after the intro is complete. All required tags, the active ability, its effect and a clear animation state must match for nine consecutive checks. Other story or combat locks are left alone. Results are logged by CSSX.",
+          "confirm": "Check for the known completed-intro lock and call the game cleanup only if every safety check passes? No progression flags or arbitrary tags will be changed."
+        },
+        {
+          "id": "cancel_recovery",
+          "type": "button",
+          "label": "Cancel check",
+          "description": "Cancel the pending observation. A cleanup that has already run cannot be undone.",
+          "disabled_label": "No active check"
         }
       ]
     }

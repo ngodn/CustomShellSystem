@@ -22,20 +22,23 @@ bool shell_matches(const Json& tag,const std::string& target) {
 }
 uint64_t identity(const Json& handle) {return handle.is_object()?handle.value("$object",uint64_t{}):0;}
 }
-Menu::Menu(const CssxHost* host):host_(host) {
+Menu::Menu(const CssxHost* host):host_(host),recovery_(host) {
     settings_=host_.request({{"op","state.load"}});
     if(!settings_.is_object()) settings_=Json::object();
     auto number=[&](const char* id,double fallback,double low,double high) {
         double value=fallback;if(settings_.contains(id) && settings_[id].is_number()) value=settings_[id].get<double>();
-        return std::isfinite(value)?std::clamp(value,low,high):fallback;
+        if(!std::isfinite(value)) return fallback;
+        const double step=std::string(id)=="heal_interval" || std::string(id)=="move_multiplier"?.25:1.;
+        return std::clamp(low+std::round((std::clamp(value,low,high)-low)/step)*step,low,high);
     };
     values_={{"god",false},{"auto_heal",false},{"infinite_resolve",false},{"move_fast",false},
         {"heal_amount",number("heal_amount",100,1,9999)},{"resolve_amount",number("resolve_amount",100,1,9999)},
         {"heal_percent",number("heal_percent",100,1,100)},{"heal_interval",number("heal_interval",1,.25,5)},
         {"move_multiplier",number("move_multiplier",2,1,5)},{"grant_amount",int(number("grant_amount",100,1,100000))},
         {"damage_percent",int(number("damage_percent",50,1,99))},{"harbinger_level",int(number("harbinger_level",1,1,1000))},
-        {"shell","none"}};
-    status_="Cheats start disabled. Select a feature to enable it.";
+        {"shell","none"},{"pickup","none"},{"pickup_amount",int(number("pickup_amount",1,1,9999))}};
+    applied_=values_;
+    status_="Cheats start off. Edit settings, then Apply settings.";
 }
 void Menu::report(const std::string& text) {
     if(status_==text) return;status_=text;host_.log(text);host_.request({{"op","invalidate"}});
@@ -45,9 +48,42 @@ Json Menu::require_player() {
     if(!identity(player.value("pawn",Json())) || !identity(player.value("controller",Json()))) throw std::runtime_error("Enter the game world before using this action.");
     return player;
 }
-void Menu::persist() {
-    for(auto it=values_.begin();it!=values_.end();++it) if(it.value().is_number()) settings_[it.key()]=it.value();
-    host_.request({{"op","state.save"},{"value",settings_}});
+bool Menu::has_changes() const {return values_!=applied_;}
+void Menu::persist(const Json& values) {
+    Json next=Json::object();
+    for(auto it=values.begin();it!=values.end();++it) if(it.value().is_number()) next[it.key()]=it.value();
+    host_.request({{"op","state.save"},{"value",next}});settings_=std::move(next);
+}
+void Menu::apply_settings() {
+    if(cleanup_required_) throw std::runtime_error("Turn off all cheats to finish cleanup before applying more settings.");
+    if(!has_changes()) return;
+    const auto before=applied_;
+    applied_=values_;
+    try {
+        if(applied_["god"]!=before["god"]) god(applied_["god"].get<bool>());
+        if(applied_["move_fast"]!=before["move_fast"] ||
+           (applied_["move_fast"]==true && applied_["move_multiplier"]!=before["move_multiplier"]))
+            movement(applied_["move_fast"].get<bool>());
+        if(applied_["auto_heal"]==true || applied_["infinite_resolve"]==true) require_player();
+        persist(applied_);
+    } catch(const std::exception& e) {
+        const std::string reason=e.what();applied_=before;
+        try {god(before["god"].get<bool>());movement(before["move_fast"].get<bool>());}
+        catch(const std::exception& cleanup) {
+            cleanup_required_=true;
+            throw std::runtime_error("Apply failed: "+reason+". Cleanup needs retry: "+cleanup.what());
+        }
+        throw std::runtime_error("Settings were not applied: "+reason);
+    }
+    heal_time_=resolve_time_=0;report("Settings applied. Numeric preferences saved; cheats remain session-only.");
+}
+void Menu::disable_all() {
+    // Stop periodic work first. Failed restores retain their ownership records.
+    for(const auto* id:{"god","auto_heal","infinite_resolve","move_fast"}) applied_[id]=false;
+    cleanup_required_=true;
+    god(false);movement(false);
+    for(const auto* id:{"god","auto_heal","infinite_resolve","move_fast"}) values_[id]=false;
+    cleanup_required_=false;report("All cheats off. Other pending edits were kept.");
 }
 void Menu::refresh_shells() {
     auto settings=host_.find("/Script/Sparta.Default__SpartaGameSettings");
@@ -62,6 +98,7 @@ void Menu::refresh_shells() {
     if(choices!=shells_) {
         shells_=std::move(choices);bool found=false;for(const auto& option:shells_) if(option["id"]==values_["shell"]) found=true;
         if(!found) values_["shell"]=shells_[0]["id"];
+        applied_["shell"]=values_["shell"];
         host_.request({{"op","invalidate"}});
     }
 }
@@ -69,9 +106,25 @@ Json Menu::model() {
     Json enabled=Json::object();const bool live=current_.is_object() && identity(current_.value("pawn",Json()));
     for(const auto& action:grants) enabled[std::string("grant_")+action.id]=live && !pending_;
     for(const auto& action:unlocks) enabled[std::string("unlock_")+action.id]=live && !pending_;
-    for(const auto* action:{"heal","resolve","revive","damage","set_harbinger","switch_shell","god","auto_heal","infinite_resolve","move_fast"}) enabled[action]=live && !pending_;
-    enabled["switch_shell"]=live && !pending_ && values_["shell"]!="none";
-    return {{"values",values_},{"options",{{"shell",shells_}}},{"enabled",enabled},{"status",status_}};
+    for(const auto* action:{"heal","resolve","revive","damage","set_harbinger","switch_shell","god","auto_heal","infinite_resolve","move_fast"}) enabled[action]=live && !pending_ && !has_changes() && !cleanup_required_;
+    enabled["switch_shell"]=live && !pending_ && !has_changes() && !cleanup_required_ && values_["shell"]!="none";
+    for(const auto* id:{"god","auto_heal","infinite_resolve","move_fast"}) enabled[id]=live && !pending_ && !cleanup_required_;
+    enabled["refresh_pickups"]=live && !pending_;
+    for(const auto* action:{"add_pickup","remove_pickup","give_all_pickups"}) enabled[action]=live && !pending_ && !has_changes() && !cleanup_required_ && (std::string(action)=="give_all_pickups" || values_["pickup"]!="none");
+    enabled["repair_intro"]=live && !pending_ && !recovery_.running();
+    enabled["cancel_recovery"]=recovery_.running();
+    enabled["apply_settings"]=has_changes() && !pending_ && !cleanup_required_;
+    enabled["discard_changes"]=has_changes() && !pending_;
+    enabled["disable_all"]=!pending_ && (cleanup_required_ || !saved_.empty() || applied_["auto_heal"]==true || applied_["infinite_resolve"]==true || applied_["god"]==true || applied_["move_fast"]==true);
+    std::string summary=cleanup_required_?"Cleanup needs retry. Use Turn off all cheats.":has_changes()?"Pending edits. Apply settings or Discard changes.":"Settings are applied.";
+    unsigned active=0;for(const auto* id:{"god","auto_heal","infinite_resolve","move_fast"}) if(applied_[id]==true) ++active;
+    summary+=" Active cheats: "+std::to_string(active)+".";
+    Json confirmations=Json::object();
+    for(const auto& action:grants) confirmations[std::string("grant_")+action.id]="Add "+std::to_string(int(values_["grant_amount"].get<double>()))+" "+action.id+"? The game can save this change.";
+    confirmations["set_harbinger"]="Set Harbinger level to "+std::to_string(int(values_["harbinger_level"].get<double>()))+"? Progression and achievements can change.";
+    confirmations["switch_shell"]="Switch gameplay shell to "+values_["shell"].get<std::string>()+"? Inventory will close and your shell abilities will change.";
+    for(const auto* id:{"add_pickup","remove_pickup"}) confirmations[id]=std::string(id==std::string("add_pickup")?"Add ":"Remove ")+std::to_string(values_["pickup_amount"].get<int>())+" x "+values_["pickup"].get<std::string>()+"? The game can save this change.";
+    return {{"values",values_},{"options",{{"shell",shells_},{"pickup",pickups_}}},{"enabled",enabled},{"status",summary+" "+status_},{"error",action_error_},{"confirmations",confirmations}};
 }
 void Menu::override_value(const Json& object,const std::string& property,const Json& value) {
     const auto key=std::to_string(identity(object))+":"+property;
@@ -93,52 +146,89 @@ void Menu::restore(const std::string& property) {
     }
 }
 void Menu::god(bool enabled) {
-    if(!enabled) {restore("bCanBeDamaged");values_["god"]=false;return;}
+    if(!enabled) {restore("bCanBeDamaged");applied_["god"]=false;return;}
     auto player=require_player();auto pawn=player["pawn"];
     // The original God command ultimately changes this same actor flag. Own and
     // restore the exact original flag, including existing story invulnerability.
-    override_value(pawn,"bCanBeDamaged",false);values_["god"]=true;
+    if(host_.get(pawn,"bCanBeDamaged")!=false) override_value(pawn,"bCanBeDamaged",false);applied_["god"]=true;
 }
 void Menu::movement(bool enabled) {
+    if(!enabled) {
+        bool had=false;for(const auto& entry:saved_) if(entry.second.property=="Movement") had=true;
+        restore("Movement");
+        if(had) {auto player=host_.player();if(identity(player.value("pawn",Json()))) host_.call(player["pawn"],"InitialiseCharacterData");}
+        applied_["move_fast"]=false;return;
+    }
     auto player=require_player();auto pawn=player["pawn"];
-    if(!enabled) {restore("Movement");host_.call(pawn,"InitialiseCharacterData");values_["move_fast"]=false;return;}
     auto data=host_.get(pawn,"CharacterData");
     auto movement=host_.get(data,"Movement");const auto key=std::to_string(identity(data))+":Movement";
     const auto original=saved_.contains(key)?saved_.at(key).before:movement;
     for(const auto* field:{"WalkSpeed","JogSpeed","SprintSpeed"}) {
         const double value=original.at(field).get<double>();
         if(!std::isfinite(value) || value<=0) throw std::runtime_error("Movement data is not ready.");
-        movement[field]=value*values_.at("move_multiplier").get<double>();
+        movement[field]=value*applied_.at("move_multiplier").get<double>();
     }
-    override_value(data,"Movement",movement);host_.call(pawn,"InitialiseCharacterData");values_["move_fast"]=true;
+    override_value(data,"Movement",movement);host_.call(pawn,"InitialiseCharacterData");applied_["move_fast"]=true;
 }
 void Menu::event(const Json& event) {
-    try {apply_event(event);} catch(const std::exception& error) {report(error.what());throw;}
+    action_error_.clear();
+    try {apply_event(event);} catch(const std::exception& error) {action_error_=error.what();report(error.what());throw;}
 }
 void Menu::apply_event(const Json& event) {
     const auto id=event.at("id").get<std::string>();
+    if(id=="cancel_recovery") {recovery_.cancel();report("Intro-lock check cancelled.");return;}
     if(pending_) throw std::runtime_error("Wait for the current shell switch to finish.");
+    if(id=="refresh_pickups") {refresh_pickups();return;}
+    if(id=="pickup") {
+        for(const auto& option:pickups_) if(option["id"]==event.at("value")) {values_[id]=applied_[id]=event["value"];return;}
+        throw std::runtime_error("Unknown pickup selection.");
+    }
+    if(id=="repair_intro") {if(!event.value("confirmed",false)) throw std::runtime_error("Confirm the intro-lock check first.");recovery_.start();report(recovery_.message());return;}
+    if(id=="disable_all") {disable_all();return;}
+    if(id=="discard_changes") {values_=applied_;report("Pending settings discarded.");return;}
+    if(id=="apply_settings") {apply_settings();return;}
+    if(cleanup_required_) throw std::runtime_error("Finish cleanup with Turn off all cheats first.");
+    if(values_.contains(id) && values_[id].is_boolean()) {
+        values_[id]=event.at("value").get<bool>();return;
+    }
     if(values_.contains(id) && values_[id].is_number()) {
         if(!event.contains("value") || !event["value"].is_number()) throw std::runtime_error("A number is required.");
         const auto value=event["value"].get<double>();
         const std::map<std::string,std::pair<double,double>> bounds={{"heal_amount",{1,9999}},{"resolve_amount",{1,9999}},
             {"heal_percent",{1,100}},{"heal_interval",{.25,5}},{"move_multiplier",{1,5}},
-            {"grant_amount",{1,100000}},{"damage_percent",{1,99}},{"harbinger_level",{1,1000}}};
+            {"grant_amount",{1,100000}},{"pickup_amount",{1,9999}},{"damage_percent",{1,99}},{"harbinger_level",{1,1000}}};
         const auto range=bounds.at(id);
         if(!std::isfinite(value) || value<range.first || value>range.second) throw std::runtime_error("Value is outside the supported range.");
-        values_[id]=value;if(id=="move_multiplier" && values_["move_fast"]==true) movement(true);persist();return;
+        const bool whole=id!="heal_interval" && id!="move_multiplier";
+        if(whole && std::floor(value)!=value) throw std::runtime_error("Use a whole number for this setting.");
+        if(!whole && std::abs(value*4-std::round(value*4))>1e-8) throw std::runtime_error("Use quarter-step values for this setting.");
+        values_[id]=whole?Json(int(value)):Json(value);return;
     }
     if(id=="shell") {
-        for(const auto& option:shells_) if(option["id"]==event.at("value")){values_[id]=event["value"];return;}
+        for(const auto& option:shells_) if(option["id"]==event.at("value")){values_[id]=event["value"];applied_[id]=values_[id];return;}
         throw std::runtime_error("Unknown shell selection.");
     }
     auto player=require_player();auto pc=player["controller"];auto pawn=player["pawn"];
-    if(id=="god") {god(event.at("value").get<bool>());report(values_[id]==true?"God enabled.":"God disabled.");return;}
-    if(id=="move_fast") {movement(event.at("value").get<bool>());report(values_[id]==true?"Movement multiplier enabled.":"Movement restored.");return;}
-    if(id=="auto_heal" || id=="infinite_resolve") {values_[id]=event.at("value").get<bool>();heal_time_=resolve_time_=0;report(id=="auto_heal"?"Auto Heal updated.":"Infinite Resolve updated.");return;}
+    if(has_changes()) throw std::runtime_error("Apply settings or Discard changes before running an action.");
+    if(id=="add_pickup" || id=="remove_pickup" || id=="give_all_pickups") {
+        if(!event.value("confirmed",false)) throw std::runtime_error("Confirm the inventory change first.");
+        if(id=="give_all_pickups") host_.call(pc,"S_AddAllItems");
+        else {
+            const auto count=values_["pickup_amount"].get<int>();const auto row=values_.at("pickup").get<std::string>();
+            if(row=="none") throw std::runtime_error("Choose a pickup first.");
+            if(id=="add_pickup") host_.call(pc,"S_AddItemQuantity",Json::array({row,count}));
+            else {
+                const auto item=pickup_class(pawn);
+                const auto library=host_.request({{"op","class_default"},{"class","BPFL_Player_C"}});
+                host_.call(library,"RemoveItemStacksSilent",Json::array({item,count,true,pawn}));
+            }
+        }
+        report("Inventory change requested. The game can save this change.");return;
+    }
     if(id=="heal" || id=="resolve") {host_.call(pc,id=="heal"?"S_Heal":"S_GainResolve",Json::array({values_[id+"_amount"]}));report(id=="heal"?"Health restored.":"Resolve added.");return;}
     if(id=="revive") {host_.call(pc,"S_ReviveShell");report("Shell revival requested.");return;}
     if(id=="damage") {
+        if(!event.value("confirmed",false)) throw std::runtime_error("Confirm the health reduction first.");
         auto health=host_.get(pawn,"HealthComponent");
         double current=host_.call(health,"GetShellHealth"),maximum=host_.call(health,"GetMaxShellHealth");
         if(current<=.5 || maximum<=0) {current=host_.call(health,"GetHealth");maximum=host_.call(health,"GetMaxHealth");}
@@ -152,6 +242,7 @@ void Menu::apply_event(const Json& event) {
         host_.call(pc,"S_SetDarkBroLevel",Json::array({int(values_["harbinger_level"].get<double>())-1}));report("Harbinger level change requested.");return;
     }
     for(const auto& action:grants) if(id==std::string("grant_")+action.id) {
+        if(!event.value("confirmed",false)) throw std::runtime_error("Confirm the resource grant first.");
         host_.call(pc,action.function,Json::array({int(values_["grant_amount"].get<double>())}));report("Resource added.");return;
     }
     for(const auto& action:unlocks) if(id==std::string("unlock_")+action.id) {
@@ -159,7 +250,8 @@ void Menu::apply_event(const Json& event) {
         host_.call(pc,action.function);report("Unlock requested. Changes can be saved by the game.");return;
     }
     if(id=="switch_shell") {
-        for(const auto* toggle:{"god","auto_heal","infinite_resolve","move_fast"}) if(values_[toggle]==true) throw std::runtime_error("Turn off active cheats before switching gameplay shells.");
+        if(!event.value("confirmed",false)) throw std::runtime_error("Confirm the gameplay shell change first.");
+        for(const auto* toggle:{"god","auto_heal","infinite_resolve","move_fast"}) if(applied_[toggle]==true) throw std::runtime_error("Turn off active cheats before switching gameplay shells.");
         const auto target=values_.at("shell").get<std::string>();if(target=="none") throw std::runtime_error("Choose a shell first.");
         if(shell_matches(host_.call(pawn,"GetCharacterID"),target)) {report("That gameplay shell is already active.");return;}
         pending_=PendingShell{target,pc};
@@ -189,25 +281,39 @@ void Menu::shell_tick(double delta) {
 }
 void Menu::tick(double seconds) {
     if(stopped_) return;
+    const auto recovery_message=recovery_.message();recovery_.tick(seconds);
+    if(recovery_.message()!=recovery_message) report(recovery_.message());
     try {shell_tick(seconds);} catch(const std::exception& e){pending_.reset();report(std::string("Shell switch stopped: ")+e.what());}
-    refresh_+=seconds;heal_time_+=seconds;resolve_time_+=seconds;
+    refresh_+=seconds;heal_time_+=seconds;resolve_time_+=seconds;catalog_time_+=seconds;
     if(refresh_<.25) return;refresh_=0;
     auto player=host_.player();
     if(!player.is_object() || !identity(player.value("pawn",Json()))) {if(!current_.is_null()){current_=nullptr;host_.request({{"op","invalidate"}});}return;}
-    const bool changed=!current_.is_object() || identity(current_.value("pawn",Json()))!=identity(player["pawn"]);
-    current_=player;
+    const bool changed=!current_.is_object() || identity(current_.value("pawn",Json()))!=identity(player["pawn"]) || owner_controller_!=identity(player["controller"]);
+    const bool new_controller=owner_controller_ && owner_controller_!=identity(player["controller"]);
     try {
-        if(changed) {refresh_shells();host_.request({{"op","invalidate"}});}
-        if(pending_) return;
-        if(values_["god"]==true) god(true);
-        if(values_["move_fast"]==true && changed) movement(true);
-        if(values_["auto_heal"]==true && heal_time_>=values_["heal_interval"].get<double>()) {
+        if(changed) {
+            // Restore shared CharacterData before acquiring the next pawn's
+            // baseline. Never compound a multiplier across a restart.
+            restore("Movement");restore("bCanBeDamaged");
+            if(new_controller) disable_all();
+            current_=player;owner_controller_=identity(player["controller"]);catalog_ready_=false;catalog_time_=5;
+            host_.request({{"op","invalidate"}});
+        } else current_=player;
+        if(!catalog_ready_ && catalog_time_>=5) {
+            catalog_time_=0;
+            try {refresh_shells();catalog_ready_=true;}
+            catch(const std::exception& e) {report(std::string("Waiting for the shell catalog: ")+e.what());}
+        }
+        if(pending_ || cleanup_required_) return;
+        if(applied_["god"]==true) god(true);
+        if(applied_["move_fast"]==true && changed) movement(true);
+        if(applied_["auto_heal"]==true && heal_time_>=applied_["heal_interval"].get<double>()) {
             heal_time_=0;auto health=host_.get(player["pawn"],"HealthComponent");
             double current=host_.call(health,"GetHealth"),maximum=host_.call(health,"GetMaxHealth");
             double shell=host_.call(health,"GetShellHealth"),shell_max=host_.call(health,"GetMaxShellHealth");
-            if(current<maximum-.5 || (shell_max>0 && shell<shell_max-.5)) host_.call(player["controller"],"S_Heal",Json::array({std::max(1.,std::max(maximum,shell_max)*values_["heal_percent"].get<double>()/100.)}));
+            if(current<maximum-.5 || (shell_max>0 && shell<shell_max-.5)) host_.call(player["controller"],"S_Heal",Json::array({std::max(1.,std::max(maximum,shell_max)*applied_["heal_percent"].get<double>()/100.)}));
         }
-        if(values_["infinite_resolve"]==true && resolve_time_>=1.) {
+        if(applied_["infinite_resolve"]==true && resolve_time_>=1.) {
             resolve_time_=0;auto health=host_.get(player["pawn"],"HealthComponent");auto attributes=host_.get(health,"HealthSet");
             auto resolve=host_.get(attributes,"Resolve"),maximum=host_.get(attributes,"MaxResolve");
             const double current=resolve.at("CurrentValue"),limit=maximum.at("CurrentValue");
@@ -219,10 +325,10 @@ void Menu::tick(double seconds) {
     }
 }
 bool Menu::stop() {
-    pending_.reset();
+    pending_.reset();recovery_.cancel();
     try {
         restore("bCanBeDamaged");restore("Movement");
-        if(values_["move_fast"]==true) {auto player=host_.player();if(identity(player.value("pawn",Json()))) host_.call(player["pawn"],"InitialiseCharacterData");}
+        if(applied_["move_fast"]==true) {auto player=host_.player();if(identity(player.value("pawn",Json()))) host_.call(player["pawn"],"InitialiseCharacterData");}
         stopped_=true;return true;
     } catch(const std::exception& e) {host_.log(std::string("Cleanup failed: ")+e.what(),"error");return false;}
 }

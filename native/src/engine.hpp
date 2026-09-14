@@ -24,6 +24,7 @@ public:
 class Appearance;
 class ExtensionBridge {
     std::map<uint64_t,WeakObject> objects_;
+    std::map<std::string,WeakObject> defaults_;
     uint64_t next_=1;
     RC::Unreal::UObject* resolve(const Json&);
     Json handle(RC::Unreal::UObject*);

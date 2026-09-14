@@ -41,7 +41,7 @@ struct ExtensionKit : InventoryLayout {
             box(x,y+10,2,row_height-22,enabled?gold:secondary);
         }
         auto* label=text(c.at("label").get<std::string>(),x+inset,y+16,w*.64-inset,34,21,ink);
-        const auto state=c.value("busy",false)?"Working...":!c.value("enabled",true)?"Unavailable":extensions::display_value(c);
+        const auto state=c.value("busy",false)?"Working...":!c.value("enabled",true)?c.value("disabled_label",std::string("Unavailable")):extensions::display_value(c);
         auto* value=text(state,x+w*.66,y+17,w*.34-inset,32,19,enabled?gold:secondary);
         if(!enabled) {invoke(label,L"SetRenderOpacity",L"InOpacity",.55f);invoke(value,L"SetRenderOpacity",L"InOpacity",.7f);}
         invoke(value,L"SetJustification",L"InJustification",uint8_t{2});

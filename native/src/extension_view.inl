@@ -130,7 +130,7 @@ void InventoryUI::build_extension_page() {
         }
         prompt("next_section","",left+panel-34,217,28,9);
         button("",left+panel-40,208,40,42,{{"action","x_section_delta"},{"delta",1}},false,count>1);
-        ui.panel(right-20,270,info+40,646);
+        ui.panel(right-20,270,info+40,680);
         if(!sections.empty()) {
             const auto& controls=sections[extension_section_].at("controls");
             extension_row_=std::clamp(extension_row_,0,std::max(0,int(controls.size())-1));
@@ -210,7 +210,7 @@ void InventoryUI::build_extension_page() {
                     auto* action=button("",right,602,info,52,{{"action","x_activate"}},false,enabled);
                     ui.box(right,602,info,52,enabled?Color{.035f,.03f,.018f,.9f}:Color{.022f,.022f,.022f,.9f});
                     if(enabled) prompt("accept",label,right+14,614,info-28,3);
-                    else ui.text(c.value("busy",false)?"Working...":"Unavailable",right+14,614,info-28,32,19,light);
+                    else ui.text(c.value("busy",false)?"Working...":c.value("disabled_label",std::string("Unavailable")),right+14,614,info-28,32,19,light);
                     if(!enabled) invoke(action,L"SetIsEnabled",L"bInIsEnabled",false);
                 }
                 if(!c.value("enabled",true) || c.value("busy",false)) {
@@ -219,12 +219,12 @@ void InventoryUI::build_extension_page() {
                         invoke(children[i],L"SetRenderOpacity",L"InOpacity",.6f);
                 }
                 if(c.value("busy",false)) {
-                    extension_loading_.emplace_back(ui.progress(right,890,info,0,true));
+                    extension_loading_.emplace_back(ui.progress(right,826,info,0,true));
                 }
             }
         }
         line(right,854,info);
-        ui.text(extension_error_.empty()?extension_model_.value("status",std::string{}):extension_error_,right,866,info,45,17,muted);
+        ui.text(extension_error_.empty()?extension_model_.value("status",std::string{}):extension_error_,right,866,info,72,17,muted);
         prompt("up","",left,968,28,13);prompt("down","Browse settings",left+36,968,220,14);
 
         if(extension_picker_) {

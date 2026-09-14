@@ -279,7 +279,13 @@ void Entry::event(const Json& event) {
     css::extensions::validate_event(model,event);
     requests=0;
     if(lua) invoke_lua("event",event);
-    else { auto data=event.dump();if(!api->event(instance,data.c_str())) throw std::runtime_error("Extension event callback failed"); }
+    else {
+        auto data=event.dump();
+        if(!api->event(instance,data.c_str())) {
+            dirty=true;++runtime->revision;refresh();
+            throw std::runtime_error(model.value("error",std::string{}).empty()?"Extension event callback failed":model["error"].get<std::string>());
+        }
+    }
     dirty=true;++runtime->revision;
 }
 void Entry::tick(double delta) {

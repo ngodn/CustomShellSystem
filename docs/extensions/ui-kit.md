@@ -19,7 +19,7 @@ Declare controls in `menu.json`, then supply their values and actions from C++ o
 | `loading` | Indeterminate work indicator | `value`: boolean, true while loading |
 | `label` | Read-only information | None |
 
-Each control also accepts `description`, `enabled` and `busy`. Disabled and busy controls use muted text and reduced opacity. Their rows remain selectable so players can read the description, but their actions and adjustment prompts are unavailable. Use `description` to explain why a control is disabled. A busy control cannot be activated. A button can include `confirm` with the text for the shared confirmation dialog. Radio labels are shown to players; their IDs stay in extension code.
+Each control also accepts `description`, `enabled` and `busy`. Disabled and busy controls use muted text and reduced opacity. Their rows remain selectable so players can read the description, but their actions and adjustment prompts are unavailable. Use `description` to explain why a control is disabled. Set `disabled_label` to a short state such as `Nothing to apply`; otherwise the kit shows `Unavailable`. A busy control cannot be activated. A button can include `confirm` with the text for the shared confirmation dialog. Radio labels are shown to players; their IDs stay in extension code.
 
 The library supplies banner cards, a 3 by 3 grid, page navigation, empty states and unavailable-extension states. Menus share panels, headings, dividers, selected-row markers, section tabs, input prompts and entry transitions. Descriptions wrap inside a bounded scroll area. The secondary action opens a centered description dialog. Up / Down scrolls its body, and Back returns to settings. Confirmation uses the same frame with separate Cancel and Confirm buttons. Dialogs block the controls beneath them. Single-line labels and values use ellipsis rather than overlapping adjacent controls. The host keeps the selected list item visible, supplies page buttons and a position indicator, and accepts mouse-wheel scrolling in the full-width layout.
 
@@ -58,12 +58,15 @@ model = function()
         values = {quality = selected_quality, progress = completed / total},
         enabled = {run = has_player},
         busy = {run = is_running},
+        confirmations = {remove = "Remove " .. quantity .. " items?"},
         status = status_message
     }
 end
 ```
 
 Call `cssx.request {op = "invalidate"}` when those values change outside an event. Do not invalidate every frame. Native code uses the same `invalidate` request through `CssxHost` or `cssx::Client`.
+
+Use `confirmations` to include the current target and amount in the confirmation dialog. A failed native event can expose a short `error` string in its model so the host can show the actual reason.
 
 Progress values represent actual work completed. Use `loading` when the total is unknown. Split long tasks across ticks so navigation remains responsive. The host does not invent progress or make blocking extension code asynchronous.
 
