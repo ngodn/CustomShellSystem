@@ -78,7 +78,7 @@ void Menu::combat_sync() {
                     if(std::string(error.what()).find("property is missing")!=std::string::npos) continue;
                     throw;
                 }
-                if(!value.is_number() || !std::isfinite(value.get<double>()) || value.get<double>()<0)
+                if(!value.is_number() || !std::isfinite(value.get<double>()))
                     throw std::runtime_error("Unsupported cooldown field; turn off combat cheats to restore prior edits.");
                 fields.emplace_back(field,value.is_number_integer()?Json(0):Json(0.));
             }

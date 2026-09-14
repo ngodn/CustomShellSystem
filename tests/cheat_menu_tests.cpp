@@ -21,7 +21,7 @@ struct Host {
     bool combat_fixture=false,hook_available=true,fail_hook_remove=false;
     unsigned next_hook=1,hook_adds=0,fail_hook_add=0;
     std::map<unsigned,Json> hooks;
-    Json cooldown={{"CooldownDuration",2.5},{"GlobalCooldownDuration",1.},{"Cooldown",1},{"GlobalCooldown",2}};
+    Json cooldown={{"CooldownDuration",-1.},{"GlobalCooldownDuration",1.},{"Cooldown",1},{"GlobalCooldown",2}};
     std::string seal="ID_Seal_Infinite_C";
     bool intro_lock=false,intro_done=true,map_unlocked=true,montage=false,retain_lock=false;
     int intro_instances=1,tag_count=1;
@@ -302,7 +302,7 @@ int main(int argc,char** argv) {
     combat_menu.tick(1.1);check(combat.hook_adds==2,"Unchanged ability list reinstalled hooks");
     combat.cooldown["GlobalCooldownDuration"]=7.;
     combat_menu.event({{"id","disable_all"}});
-    check(combat.hooks.empty() && combat.cooldown["CooldownDuration"]==2.5 && combat.cooldown["GlobalCooldownDuration"]==7.,"Cooldown cleanup overwrote another writer");
+    check(combat.hooks.empty() && combat.cooldown["CooldownDuration"]==-1. && combat.cooldown["GlobalCooldownDuration"]==7.,"Cooldown cleanup overwrote another writer");
     combat_menu.event({{"id","perfect_parry"},{"value",true}});combat_menu.event({{"id","apply_settings"}});
     check(combat.hooks.size()==3,"Parry hook group incomplete");
     combat.seal="ID_Seal_Stone_C";combat_menu.tick(1.1);
