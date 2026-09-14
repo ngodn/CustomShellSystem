@@ -1,13 +1,20 @@
-Native C++ wardrobe for Mortal Shell II. Change appearances while keeping your current shell and abilities.
+### Added
 
-- Outfit variants, favorites and saved looks.
-- Per-part colors and palettes for compatible CSS packages.
-- Animated preview with mouse and controller camera controls.
-- Fixed stock materials appearing on custom outfits in inventory.
-- Fresh installs create their own settings. No personal state or saves are bundled.
+- Scroll through the full appearance list with the mouse wheel or scrollbar. Controller navigation keeps the selected row visible.
+- Support different materials, color parts and palettes for each outfit variant in a CSS package.
 
-Extract `CustomShellSystem` into `MortalShell2/Binaries/Win64/ue4ss/Mods/` with the game closed. Load a save and press **N**, or **View/Back + Y** on a controller.
+### Fixed
 
-Requires the UE4SS `v3.0.1-1028-gd7e7826d` GameShippingWin64 ABI. UE4SS and outfit packages are separate downloads. The ZIP contains one loader DLL and one core DLL.
+- Restore the selected appearance after beacon travel and player transitions, while waiting for game-owned effects and menus to finish.
+- Keep loaded outfit assets alive while loading their material overrides.
+- Verify and regenerate packaged color resources used by every variant.
 
-The wardrobe lighting difference remains a known issue. The unverified lighting trial is not included in 0.1.1.
+### Upgrading
+
+Close Mortal Shell II and extract `CustomShellSystem` into `MortalShell2/Binaries/Win64/ue4ss/Mods/`, replacing the existing runtime files. Keep your `state/` folder to retain favorites, saved looks and colors.
+
+The ZIP contains one loader DLL, one core DLL and the required wardrobe artwork. No personal settings, saved state, development cores or outfit packages are included. Existing CSS outfit packages remain supported; packages with variant-specific colors require this update.
+
+Requires UE4SS `v3.0.1-1028-gd7e7826d` with the GameShippingWin64 ABI. Install outfit packages separately under `MortalShell2/Content/Paks/~mods/`. Press **N** or **View/Back + Y** to open CSS after loading a save.
+
+The wardrobe preview can still differ from gameplay and inventory lighting. That issue remains open.

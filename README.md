@@ -1,11 +1,11 @@
 # CSS: Custom Shell System
 
-Current runtime version: **0.1.1**. See [runtime releases](docs/releases.md) for the
+Current runtime version: **0.1.2**. See [runtime releases](docs/releases.md) for the
 clean ZIP, installation layout and first-run verification.
 
 A native C++23 wardrobe for Mortal Shell II, inspired by [Custom Nanosuit System](https://www.nexusmods.com/stellarblade/mods/1496?tab=description). Browse compatible outfits with variants, per-part colors, favorites, three saved-look slots, an animated character preview and controller navigation.
 
-**[Download CSS v0.1.1](https://github.com/ngodn/CustomShellSystem/releases/tag/v0.1.1)**.
+**[Download CSS v0.1.2](https://github.com/ngodn/CustomShellSystem/releases/tag/v0.1.2)**.
 Requires [UE4SS for MS2](https://www.nexusmods.com/mortalshell2/mods/45?tab=files)
 and separate CSS outfit packages. The runtime ZIP does not include the outfits
 shown below. Seductress is a development example.
@@ -25,7 +25,7 @@ downloads.
 
 Preset palettes and custom colors on the Seductress development outfit.
 Editable parts depend on the installed package. Wardrobe lighting can differ
-from gameplay; this remains a known issue in 0.1.1.
+from gameplay; this remains a known issue in 0.1.2.
 
 <details>
 <summary>More screenshots</summary>
@@ -121,7 +121,7 @@ python3 tools/css.py close
 
 This build targets UE5.6 and the exact installed UE4SS `d7e7826d` GameShippingWin64 ABI. It uses clang-cl 22.1.8, the xwin Windows SDK, C++23 and the dynamic release CRT. The Python tools target Python 3.14. See [SDK notes](docs/ue4ss-sdk.md) before changing toolchain or UE4SS versions, and [repository conventions](docs/repository.md) for tracked files, dependency patches and local checks.
 
-Initial native runtime installation uses `python3 tools/css.py install` with the game closed and a completed build. Outfit installation is separate, using `tools/css_package.py`. The current machine has the three self-contained outfit packages installed. The old merged Beaute prototype and its loose catalog are backed up under `backups/packages-1789299191603415319`. See the package guide below for conversion and updates.
+Initial native runtime installation uses `python3 tools/css.py install` with the game closed and a completed build. Outfit installation is separate, using `tools/css_package.py`. The current machine has eight self-contained outfit packages installed. The old merged Beaute prototype and its loose catalog are backed up under `backups/packages-1789299191603415319`. See the package guide below for conversion and updates.
 
 ## Verification and limits
 

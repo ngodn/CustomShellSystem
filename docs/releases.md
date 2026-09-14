@@ -12,7 +12,7 @@ Build from a clean checkout at that tag:
 
 ```sh
 python3 tools/css_release.py build --sdk /absolute/path/to/ue4ss-sdk-d7e7826d
-python3 tools/css_release.py verify dist/releases/MSII-CSS-v0.1.1.zip
+python3 tools/css_release.py verify dist/releases/MSII-CSS-v0.1.2.zip
 ```
 
 The script builds both Release DLLs from that checkout and uses an explicit
@@ -31,7 +31,7 @@ The ZIP checksum is written beside it. Existing release archives are not overwri
 atomic writer. It starts with no state or catalog folder, verifies default-file
 creation, settings persistence, backup recovery, and regeneration after deletion.
 With a pak fixture directory, it checks package discovery and thumbnail/cache
-creation, deletes the cache and confirms regeneration. It does not mutate the
+creation for every variant, deletes the cache and confirms regeneration. It does not mutate the
 installed mod or the game save.
 
 ```sh
@@ -55,6 +55,19 @@ The working-tree inventory-derived lighting experiment is excluded because its
 visual behavior has not been confirmed. The known wardrobe lighting difference
 remains in the user-facing notes. No authored or converted outfit is bundled.
 
-GitHub publishing was deferred by the user on 2026-09-14 after authentication
-failed. The prepared title is `MSII - CSS v0.1.1`; notes are in
-`packaging/release-notes.md`. A local ZIP and tag do not imply publication.
+Version 0.1.1 was published at [GitHub](https://github.com/ngodn/CustomShellSystem/releases/tag/v0.1.1).
+
+## 0.1.2 scope
+
+Includes the confirmed beacon/player transition recovery, scrollable full catalog,
+per-variant materials and color recipes, scoped asset lifetime protection during
+loading, and fresh-install checks for every variant's color resources. The user
+confirmed all four new port bundles work and mouse/controller scrolling reaches
+the full catalog. The fourteen-variant live pass covered palettes, custom RGB,
+Original restoration, preview animation/cloth, unchanged gameplay animation and
+clean close.
+
+The unrelated lighting experiment remains outside the release tree. Outfit
+packages are separate downloads. Build from the clean `v0.1.2` checkout; the
+prepared GitHub title is `MSII - CSS v0.1.2`, with notes in
+`packaging/release-notes.md`. Creating a local tag and ZIP does not publish them.
