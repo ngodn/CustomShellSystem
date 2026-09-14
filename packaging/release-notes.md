@@ -21,6 +21,7 @@
 - Replace the misleading "CSS is off" startup message with guidance for selecting an outfit or installing missing packages.
 - Find outfit packages from the game's content directory, independently of a custom UE4SS Mods folder.
 - Smooth character rotation across full turns and restore the native camera when leaving CSS.
+- Keep long outfit and variant names from overlapping the Equipped label.
 
 ### Upgrading
 
