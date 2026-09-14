@@ -12,7 +12,7 @@ Working checklist for CSSX 0.3.0. The source reference is the supplied MortalShe
 | Fourteen controller unlock actions | Implemented, confirmed | Separate test save |
 | Thorough unlock-all-shells | Pending | Debug shell list, tags and streamed pickups |
 | Shell switching | Implemented: close menu, send once, verify identity | Every shell, Dark Form and interrupted travel |
-| Completed-intro recovery | C++ port with nine observations and exact predicate | Live positive reproduction when the lock occurs |
+| Completed-intro recovery | Shared CSS watcher, nine observations, tracks each owned effect | Further natural recurrence and travel checks |
 | Smert stance, Genessa clones, Lazlo shockwaves | Pending | Current-player ownership and cleanup |
 | No cooldown | Implemented; owned-instance edits and resident hook service | In-game cooldown calls, reload and cleanup on both game builds |
 | Matching-seal parry, block and harden | Implemented; exact seal and player-instance guards | In-game result overrides, seal changes and combat behavior |
@@ -30,7 +30,7 @@ A failed preference save rolls back changed session settings. If restoration fai
 
 ## Recovery contract
 
-The intro observer is explicitly started from Recovery. It requires the exact active Egg Stranding ability, finished get-up and map checks, the matching weapon-block effect, no active montage and the measured tag counts. Nine observations must match. It never sets progression flags or removes arbitrary tags. The same ability receives at most one cleanup call. Changed players cancel the check.
+CSS watches for the exact active Egg Stranding ability after both get-up and map completion. Cleanup requires its own matching weapon-block effect, no active montage and unstacked restriction counts over nine consecutive observations. Attack selection may already be unlocked while drawing the weapon remains blocked. CSS never sets progression flags or removes arbitrary tags. Each effect receives at most one cleanup attempt. A newly applied effect on the same ability gets a fresh observation period; changed players discard the candidate. The Cheat Menu also exposes an explicit diagnostic check using the same implementation.
 
 Low Resolve is a valid firing requirement, not a stuck-state diagnosis. Do not add a generic force-unlock action to bypass that or legitimate story locks.
 
@@ -51,3 +51,5 @@ Shell-point limit checks passed on the updated game: eight limits rose to 100 af
 Combat port: Windows DLLs compile and portable tests cover passive drafts, duplicate instance filtering, preserving other writers' cooldown values, failed hook installation and preference-save rollback, changed seals and failed-unregister retry. The live probe found 110 player-owned ability instances and checked Apply/Clear cooldown signatures plus the three parry boolean returns. The active seal is controller.ActiveSealItemHandle.ItemDef, where the handle is an item-instance object on build 25265616.
 
 The updated permanent loader was installed and tested after a restart. The three parry functions returned the intended overrides, then their exact original results after disabling. Cooldown registered 220 instance rules, both native Apply callbacks dispatched successfully, and sampled values restored exactly. Genessa's valid duration sentinel of -1 is preserved. Reloading with cooldown enabled removed all rules and restored sampled fields before unloading the old core. Evidence: work/cssx-native/parry-live-check.json, cooldown-live-check.json and combat-reload-check.json. These checks do not replace actual combat testing of all three seals or a fresh run on the older executable.
+
+On 15 September, the equipped scythe played scythe attack montages but remained stowed. The completed Egg Stranding ability still owned effect handle 321, weapon drawing was blocked, and attack selection was already unblocked. The old predicate rejected that combination. The regression test failed before the change. With the shared CSS watcher installed, the game cleanup cleared all six measured restrictions and the same scythe returned to the hand. CanPutInHand changed from false to true. Evidence: work/cssx-native/unarmed-{attack-samples,restrictions,intro-completion,can-draw-before,can-draw-after}.json. Portable tests cover fresh effects on the same ability, no repeated attempt on an unchanged effect and resuming observation after animation. No blanket lock removal was added. The reason the game leaves this ability active across these save loads is still unknown.

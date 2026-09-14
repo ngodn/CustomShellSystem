@@ -24,7 +24,7 @@ struct Host {
     Json cooldown={{"CooldownDuration",-1.},{"GlobalCooldownDuration",1.},{"Cooldown",1},{"GlobalCooldown",2}};
     std::string seal="ID_Seal_Infinite_C";
     bool intro_lock=false,intro_done=true,map_unlocked=true,montage=false,retain_lock=false;
-    int intro_instances=1,tag_count=1;
+    int intro_instances=1,tag_count=1,selector_count=-1,effect_handle=42;
     std::vector<Json> calls;
     CssxHost api{CSSX_ABI,sizeof(CssxHost),this,request};
     static int request(void* context,const char* value,CssxSink sink,void* output) {
@@ -70,7 +70,7 @@ struct Host {
             if(p=="Movement") return movement;
             if(p=="AbilitySystemComponent") return object(7);
             if(p=="Mesh") return object(8);
-            if(p=="WeaponPutInHandBlock") return {{"Handle",42}};
+            if(p=="WeaponPutInHandBlock") return {{"Handle",effect_handle}};
             if(p=="ActivatableAbilities") {
                 if(combat_fixture) {
                     Json ability=object(80);ability["class"]="BlueprintGeneratedClass /Game/Test.GA_Parry_Handler_C";
@@ -116,7 +116,10 @@ struct Host {
         }
         if(op=="call") {
             calls.push_back(j);const auto function=j.at("function");
-            if(function=="GetGameplayTagCount") return {{"ReturnValue",intro_lock?tag_count:0}};
+            if(function=="GetGameplayTagCount") {
+                const bool selector=j.at("args")[0].at("TagName")=="State.Block.Ability.Attack.Selector";
+                return {{"ReturnValue",intro_lock?(selector && selector_count>=0?selector_count:tag_count):0}};
+            }
             if(function=="ClearLocalCooldown" || function=="ClearGlobalCooldown") return Json::object();
             if(function=="HasPlayedGetUp") return {{"ReturnValue",intro_done}};
             if(function=="IsMapUnlocked") return {{"ReturnValue",map_unlocked}};
@@ -329,13 +332,37 @@ int main(int argc,char** argv) {
     recovery.tick(1);check(intro.count("ResetPlayerState")==1 && !intro.intro_lock,"Verified intro lock was not cleared");
     intro.intro_lock=true;recovery.start();for(int i=0;i<10;++i) recovery.tick(1);
     check(intro.count("ResetPlayerState")==1,"Cleanup repeated on the same ability");
-    for(int scenario=0;scenario<5;++scenario) {
+    Host drawing;drawing.intro_lock=true;drawing.selector_count=0;
+    cheat::PrologueRecovery drawing_recovery(&drawing.api);drawing_recovery.start();
+    for(int i=0;i<8;++i) drawing_recovery.tick(1);
+    check(drawing.count("ResetPlayerState")==0,"Draw-only lock skipped its observation period");
+    drawing_recovery.tick(1);
+    check(drawing.count("ResetPlayerState")==1 && !drawing.intro_lock,"Completed intro kept weapon stowed when attack selection was already unlocked");
+    Host recurring;recurring.intro_lock=true;recurring.selector_count=0;
+    cheat::PrologueRecovery monitor(&recurring.api);monitor.watch();
+    for(int i=0;i<9;++i) monitor.tick(1);
+    check(recurring.count("ResetPlayerState")==1 && monitor.running(),"Automatic recovery stopped watching after cleanup");
+    recurring.intro_lock=true;
+    for(int i=0;i<12;++i) monitor.tick(1);
+    check(recurring.count("ResetPlayerState")==1,"Automatic recovery retried the same effect");
+    recurring.effect_handle=43;
+    for(int i=0;i<8;++i) monitor.tick(1);
+    check(recurring.count("ResetPlayerState")==1,"Recurring lock skipped its observation period");
+    monitor.tick(1);
+    check(recurring.count("ResetPlayerState")==2 && !recurring.intro_lock,"Automatic recovery missed a newly applied effect on the same ability");
+    recurring.intro_lock=true;recurring.effect_handle=44;recurring.montage=true;
+    for(int i=0;i<12;++i) monitor.tick(1);
+    check(recurring.count("ResetPlayerState")==2,"Automatic recovery interrupted animation");
+    recurring.montage=false;for(int i=0;i<9;++i) monitor.tick(1);
+    check(recurring.count("ResetPlayerState")==3,"Automatic recovery failed to resume after animation");
+    for(int scenario=0;scenario<6;++scenario) {
         Host unsafe;unsafe.intro_lock=true;
         if(scenario==0) unsafe.intro_done=false;
         if(scenario==1) unsafe.map_unlocked=false;
         if(scenario==2) unsafe.montage=true;
         if(scenario==3) unsafe.intro_instances=2;
         if(scenario==4) unsafe.tag_count=2;
+        if(scenario==5) unsafe.selector_count=2;
         cheat::PrologueRecovery guard(&unsafe.api);guard.start();for(int i=0;i<12;++i) guard.tick(1);
         check(unsafe.count("ResetPlayerState")==0,"Unverified lock triggered cleanup");
     }

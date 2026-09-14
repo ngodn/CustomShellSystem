@@ -2,6 +2,7 @@
 #include "data.hpp"
 #include "engine.hpp"
 #include "recovery.hpp"
+#include "player_recovery.hpp"
 #include "startup.hpp"
 #include <windows.h>
 #include <chrono>
@@ -21,6 +22,8 @@ struct Core {
     InventoryUI inventory;
     ExtensionBridge extension_bridge;
     ExtensionClient extensions;
+    CssxHost recovery_host{CSSX_ABI,sizeof(CssxHost),this,extension_request};
+    PlayerRecovery player_recovery{&recovery_host};
     void* current_engine=nullptr;
     bool extension_attempted=false;
     static int extension_request(void* context,const char* bytes,CssxSink sink,void* output) {
@@ -94,6 +97,7 @@ struct Core {
     }
     explicit Core(const CssHost& h) : host(h), root(h.root), package_root(package_directory()), catalog(load_catalog(package_root)), message(wardrobe_startup_message(catalog.outfits.size())) {
         extension_bridge.configure_hooks(reinterpret_cast<void*>(h.log));
+        player_recovery.watch();
         inventory.assets(root);
         bool recovered=false;
         state=load_state(root / "state/state.json", &recovered);
@@ -200,6 +204,7 @@ struct Core {
     }
     void tick(void* engine, float delta) {
         current_engine=engine;
+        player_recovery.tick(delta);
         if(!extension_attempted) {
             extension_attempted=true;
             try {if(fs::exists(root/"cores/cssx_core.dll") || fs::exists(root/"cssx.json")) {extensions.start(root,{CSSX_ABI,sizeof(CssxHost),this,extension_request});inventory.extensions(&extensions);}}
