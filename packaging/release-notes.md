@@ -9,7 +9,7 @@ Close the game and extract `MSII-CSS-v0.3.1.zip` into `MortalShell2/Binaries/Win
 
 **Existing CSS outfits and ports remain compatible. Their ZIPs do not need updating or repacking.**
 
-Matching 0.3.1 downloads are included for CSSX, CSSX UI Kit and CSSX Cheat Menu to keep their versions aligned. Their features are unchanged in this patch. CSSX remains optional and installs inside `CustomShellSystem/`; extensions install under `CustomShellSystem/extensions/`.
+**CSSX, CSSX UI Kit and CSSX Cheat Menu remain at 0.3.0.** Keep them installed; this patch does not change their extension interface or require an update.
 
 The separate Seductress V1/V2 blood-coverage issue has been traced to the skin texture mask. It is not fixed in this release, and neither outfit package has been changed. Deferred attachment, cloth/foot alignment and HIT2 aiming issues also remain.
 

@@ -88,7 +88,7 @@ publication. Exact-artifact cold-start gameplay remains a separate check.
 
 ## 0.3.0 packages
 
-All four versions match VERSION. Build the optional framework and extensions from
+For the initial 0.3.0 release, all four versions matched VERSION. Build its optional framework and extensions from
 that same clean annotated tag after building CSS:
 
 ```sh
@@ -115,10 +115,13 @@ the existing owned-MID and recovery path; standalone cloth-driver materials are
 left intact. See [the investigation](development/0.3.0-user-bugs.md).
 
 CSS.Package v1, state schema and extension ABI are unchanged. Existing outfit and
-port ZIPs do not need repacking. CSSX and its two supplied extensions carry the
-matching version; their functionality is unchanged. The Seductress blood-mask
+port ZIPs do not need repacking. CSSX and its two supplied extensions remain at
+0.3.0 and need no update. The Seductress blood-mask
 finding is documented but its asset correction is not part of this release.
 
-Build CSS and the three CSSX packages from clean annotated tag `v0.3.1`.
+Build only CSS from clean annotated tag `v0.3.1`. CSSX and extension releases
+are independent; do not bump them solely to match a CSS patch. The existing
+`cssx_release.py build` command is for the coordinated 0.3.0 build and is not
+part of this patch release.
 Exact-artifact startup, archive and checksum checks are recorded separately in
 [the verification record](development/0.3.1-release-verification.md).

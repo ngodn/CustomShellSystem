@@ -18,7 +18,7 @@ I rewrote the Cheat Menu in C++ for CSSX, based on [url=https://www.nexusmods.co
 [size=4][b]Install[/b][/size]
 [list=1]
 [*]Close the game and disable or remove the original MortalShell2Mod.
-[*]Install CSS 0.3.1 and CSSX 0.3.1.
+[*]Install CSS 0.3.0 or later and CSSX 0.3.0.
 [*]Extract eins0fx.cheat-menu into ue4ss/Mods/CustomShellSystem/extensions/.
 [*]Restart, enter the world and open Inventory > CSSX > CSSX Cheat Menu.
 [/list]

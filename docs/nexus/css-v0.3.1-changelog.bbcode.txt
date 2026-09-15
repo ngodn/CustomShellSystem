@@ -5,7 +5,7 @@
 [/list]
 [b]Update:[/b] Close the game and replace the CSS runtime files. Keep your state folder and installed outfits. [b]Existing CSS outfit and port ZIPs do not need updating or repacking.[/b]
 
-Matching 0.3.1 packages are available for CSSX, UI Kit and Cheat Menu. Their features are unchanged in this patch.
+CSSX, UI Kit and Cheat Menu remain at 0.3.0. No update is needed for them.
 
 The separate Seductress V1/V2 blood-coverage issue is still pending an outfit texture fix. It is not included in this update.
 

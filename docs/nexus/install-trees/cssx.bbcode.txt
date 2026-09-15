@@ -12,7 +12,7 @@ Install CSS first. Extract the CSSX ZIP [b]inside CustomShellSystem/[/b], mergin
 |-- core.json
 |-- cores/
 |   |-- css_core-0.3.1.dll
-|   `-- cssx_core-0.3.1.dll
+|   `-- cssx_core-0.3.0.dll
 |-- cssx-release.json
 |-- cssx.json
 |-- dlls/

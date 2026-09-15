@@ -14,7 +14,7 @@ I built CSSX so extension mods can share one place in Inventory. Open CSSX, choo
 
 [size=4][b]Install[/b][/size]
 [list=1]
-[*]Install CSS 0.3.1 and its required UE4SS build.
+[*]Install CSS 0.3.0 or later and its required UE4SS build.
 [*]Close the game. Extract this ZIP inside ue4ss/Mods/CustomShellSystem/.
 [*]Check that cssx.json sits beside core.json, and the CSSX DLL is inside cores/.
 [*]Install your chosen extension folders under CustomShellSystem/extensions/.
@@ -37,7 +37,7 @@ Install CSS first. Extract the CSSX ZIP [b]inside CustomShellSystem/[/b], mergin
 |-- core.json
 |-- cores/
 |   |-- css_core-0.3.1.dll
-|   `-- cssx_core-0.3.1.dll
+|   `-- cssx_core-0.3.0.dll
 |-- cssx-release.json
 |-- cssx.json
 |-- dlls/
