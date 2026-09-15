@@ -1,6 +1,6 @@
 # CSSX UI Kit
 
-Development contract for CSS 0.3.0. The kit belongs to CSSX. The Cheat Menu uses it like any other extension.
+CSSX 0.3.0 contract for CSS 0.3.0. The kit belongs to CSSX. The Cheat Menu uses it like any other extension.
 
 Declare controls in `menu.json`, then supply their values and actions from C++ or Lua. CSSX renders the menu with Mortal Shell II's fonts, navigation textures and input glyphs. Extension authors do not copy the Cheat Menu's rendering code or ship another UI library.
 

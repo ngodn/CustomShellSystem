@@ -1,3 +1,23 @@
+# CSS 0.3.0 release status
+
+CSSX is optional and packaged separately. Its UI Kit gallery and native Cheat
+Menu are separate extensions. The [SDK guide](extensions/README.md) and
+[Nexus copy](nexus/README.md) cover installation, authoring and reporting.
+Existing CSS.Package v1 outfit archives remain compatible.
+
+The current source passes 53 Python tests and nine native test groups. Live
+checks on Steam build 25265616 include the original library grid with its fitted
+logo, movement apply/restore, healing, resource grants, shell ownership and
+Tarstone map updates. See [Cheat Menu verification](development/cheat-menu-parity.md)
+for exact evidence and remaining cases. Fresh package checks do not substitute
+for a cold launch of the final release ZIP.
+
+Earlier game adapters remain in place, but the older executable was not available
+for a fresh run. Outfit attachment bones, Seductress V1 fit/fabric/footsteps,
+dodge shadow reports and HIT2 Trial Repeater aiming are not advertised as fixed.
+
+The earlier development record follows.
+
 # CSS status, 2026-09-14
 
 ## Current development: native Inventory CSS

@@ -17,3 +17,17 @@ Header prompt: preserve that logo on dark charcoal stone with restrained gold cy
 The user's requested canvas-fitting step uses ImageMagick: resize to fit 1300x372, center on a transparent canvas of exactly that size, retain the full master. See [ImageMagick's extent reference](https://imagemagick.org/command-line-options/#extent).
 
 Release screenshots must show the final 0.3.0 UI, no video. Do not substitute development captures showing earlier versions.
+
+## Screenshots
+
+Captured from the running Steam hotfix build with extension version 0.3.0 shown.
+The capture is the game's actual 1324x912 viewport, not an enlarged render.
+
+- `library.jpg`: original 3 by 3 layout, logo fitted into the header only.
+- `ui-kit-controls.jpg`, `ui-kit-feedback.jpg`, `ui-kit-search.jpg`,
+  `ui-kit-confirmation.jpg`: shared controls and dialogs.
+- `cheat-menu-settings.jpg`, `cheat-menu-cheats.jpg`,
+  `cheat-menu-resources.jpg`, `cheat-menu-tarstones.jpg`,
+  `cheat-menu-shortcuts.jpg`: native extension sections.
+
+All screenshots and header uploads are below Nexus's 8 MB per-image limit.
