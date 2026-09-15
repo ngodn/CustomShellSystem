@@ -9,7 +9,7 @@ Json object(uint64_t id){return {{"$object",id}};}
 struct Host {
     Json state=Json::object();
     Json pawn=object(1),controller=object(2);
-    Json movement={{"WalkSpeed",100.},{"JogSpeed",250.},{"SprintSpeed",400.}};
+    Json movement={{"WalkSpeed",100.},{"JogSpeed",250.},{"SprintSpeed",400.},{"RotationSpeed",580.},{"RotationOverrideTable",{{"$map",Json::array()}}}};
     bool damageable=true,open=false,confirm_switch=true,fail_restore=false,fail_save=false;
     std::string shell="Genessa";
     bool check_soft=false;
@@ -151,7 +151,11 @@ struct Host {
             if(shell_unlock_fixture && j.at("property")=="ShellUnlocked") {++pickup_writes;pickup_unlocked=j.at("value").get<bool>();return pickup_unlocked;}
             if(combat_fixture && cooldown.contains(j.at("property").get<std::string>())) {cooldown[j.at("property").get<std::string>()]=j.at("value");return j.at("value");}
             if(j.at("property")=="bCanBeDamaged") {if(fail_restore && j.at("value")==true) throw std::runtime_error("restore failed");damageable=j.at("value").get<bool>();return damageable;}
-            if(j.at("property")=="Movement") {movement=j.at("value");return movement;}
+            if(j.at("property")=="Movement") {
+                const auto& patch=j.at("value");
+                if(patch.contains("RotationOverrideTable")) throw std::runtime_error("CSSX cannot write this reflected property type");
+                movement.update(patch);return movement;
+            }
         }
         if(op=="call") {
             calls.push_back(j);const auto function=j.at("function");
@@ -405,7 +409,9 @@ int main(int argc,char** argv) {
     menu.event({{"id","god"},{"value",false}});menu.event({{"id","apply_settings"}});check(host.damageable,"God did not restore");
     menu.event({{"id","move_fast"},{"value",true}});menu.event({{"id","apply_settings"}});check(host.movement["WalkSpeed"]==200.,"Speed did not apply");
     menu.event({{"id","move_multiplier"},{"value",3}});check(host.movement["WalkSpeed"]==200.,"Editing speed applied the draft");menu.event({{"id","apply_settings"}});check(host.movement["WalkSpeed"]==300.,"Speed compounded instead of using the original");
+    host.movement["RotationSpeed"]=700.;host.movement["SprintSpeed"]=1700.;
     menu.event({{"id","move_fast"},{"value",false}});menu.event({{"id","apply_settings"}});check(host.movement["WalkSpeed"]==100.,"Speed did not restore");
+    check(host.movement["RotationSpeed"]==700. && host.movement["SprintSpeed"]==1700.,"Cleanup replaced newer movement values");
     menu.event({{"id","switch_shell"},{"confirmed",true}});
     rejects([&]{menu.event({{"id","switch_shell"},{"confirmed",true}});});
     menu.tick(.1);menu.tick(.3);

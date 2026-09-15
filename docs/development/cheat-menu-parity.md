@@ -7,10 +7,10 @@ Working checklist for CSSX 0.3.0. The source reference is the supplied MortalShe
 | God, Auto Heal, Infinite Resolve | Implemented | Combat and coexistence with other cheat mods |
 | Health, Resolve and revival actions | Implemented | Gameplay checks for each action |
 | Movement multiplier | Implemented, restores owned CharacterData | Death, shell restart and character-data replacement |
-| Harbinger level | Implemented, confirmed, UI level minus one | Separate test save |
-| Ten resource grants | Implemented, confirmed | Separate test save |
-| Fourteen controller unlock actions | Implemented, confirmed | Separate test save |
-| Thorough unlock-all-shells | Implemented, confirmed, preflight and ownership read-back | Actual grants on a separate test save, streamed pickups and summons |
+| Harbinger level | Implemented, confirmed, UI level minus one | Broader progression states |
+| Ten resource grants | Implemented, confirmed | Broader progression states |
+| Fourteen controller unlock actions | Implemented, confirmed | Broader progression states |
+| Thorough unlock-all-shells | Implemented, confirmed, preflight and ownership read-back | Streamed pickups and summons outside the inspected area |
 | Shell switching | Implemented: close menu, send once, verify identity | Every shell, Dark Form and interrupted travel |
 | Completed-intro recovery | Shared CSS watcher, nine observations, tracks each owned effect | Further natural recurrence and travel checks |
 | Smert stance, Genessa clones, Lazlo shockwaves | Implemented; clone and stance lifecycle verified live | Upgraded Lazlo positive check, travel and interrupted activation |
@@ -18,8 +18,8 @@ Working checklist for CSSX 0.3.0. The source reference is the supplied MortalShe
 | Matching-seal parry, block and harden | Implemented; exact seal and player-instance guards | In-game result overrides, seal changes and combat behavior |
 | Max Shell Points 100 | Implemented with owned map values and exact restoration | Travel with the toggle active |
 | Pickup selection, add, remove and give all | Implemented; 77 entries and soft-class resolution verified live | Grant/remove read-back on a test save |
-| Tarstone selection and grants | Implemented, localized catalog and duplicate-ownership guard | Grant/read-back on a separate test save, native Inventory refresh |
-| Individual and bulk Tarstone levels | Implemented, selected/category/all-owned scope, preserves both maps and refreshes equipped instances | Actual level changes and equipped effects on a separate test save |
+| Tarstone selection and grants | Implemented, localized catalog and duplicate-ownership guard | Equipped effects and Inventory refresh across travel |
+| Individual and bulk Tarstone levels | Implemented, selected/category/all-owned scope, preserves both maps and refreshes equipped instances | Equipped effects in combat after a real level change |
 | Saved hotkeys and controller binds | Implemented; native keyboard dispatch, persistence and menu suppression verified | Physical controller dispatch and final menu presentation |
 
 ## Settings contract
@@ -81,3 +81,37 @@ Polling stops when no shortcuts are assigned. Assigned shortcuts sample at most 
 Smert live activation created effect handle 1068; disabling removed that exact active effect even though the ability retained its old numeric handle. Lazlo on this save has no Temperament ability instance. The missing-upgrade Apply request was rejected without leaving an active cheat, and the gameplay shell returned to Genessa. The positive repeating-shockwave test still needs a save with Temperament. Evidence: `smert-stance-live-check.json`, `lazlo-missing-upgrade-check.json`, and the cooked `SoftSkill` reference under `lazlo-blueprint/`.
 
 The live shortcut check used native F8 key input: draft ignored, held key fired once, release/press toggled God off with exact damage-flag restoration, Inventory suppressed the shortcut, and the host closed native Inventory successfully. The saved binding was read back from the extension state, then cleared. No tested cheats or test shortcuts were left enabled. Evidence: `bindings-live-check.json`; repeatable local driver: `tools/cssx_binding_check.py`.
+
+## Release progression checks, 15 September
+
+_eins0fx authorized progression tests on the current save. On Steam build
+25265616, each of the nine inventory resource actions increased the aggregated
+stack count by its requested amount. The game may create another stack for an
+existing item, so comparing only one entry gives a false failure. Shell Points
+at 9999 were capped; after reducing the value by one for the test, the grant
+returned it to 9999. Harbinger level changed and restored to its original value.
+
+All fourteen controller unlock actions completed. The thorough shell-unlock
+operation verified ten owned shell tags. No streamed shell pickups or summons
+were present, so those branches remain unverified live. Previously owned items
+cannot establish whether every fresh progression unlock appears correctly.
+
+The selected Critical Flow Tarstone was added and ownership read back. Melee,
+sidearm and support grants completed, leaving 77 owned Tarstones. Setting all
+owned stones to displayed level 3 updated both stored maps to internal level 2;
+existing experience, durability and stacks were preserved. Numeric menu
+preferences were restored after testing. These authorized grants and levels
+remain on the save.
+
+Local evidence: `work/cssx-native/release-grants.json`,
+`release-progression-check.json` and `release-tarstones.json`.
+
+The movement release test initially failed because the extension sent the entire
+Movement structure back through the property writer, including a read-only map.
+The fix patches only WalkSpeed, JogSpeed and SprintSpeed. Cleanup checks and
+restores each owned scalar separately. A portable regression reproduces the
+rejected map write and checks preservation of newer speed and rotation values.
+Live speeds changed from 184/540/800 to 230/675/1000 at 1.25x, then returned
+exactly to baseline. One-shot healing and periodic Auto Heal restored damaged
+ShellHealth to its maximum. Resolve was already full, so that run does not prove
+refilling from a depleted value. Evidence: `release-health-movement.json`.

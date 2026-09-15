@@ -3,6 +3,11 @@
 
 namespace cheat {
 namespace {
+Json movement_speeds(const Json& value) {
+    Json result=Json::object();
+    for(const auto* field:{"WalkSpeed","JogSpeed","SprintSpeed"}) result[field]=value.at(field);
+    return result;
+}
 struct Action {const char* id;const char* function;};
 constexpr Action grants[]={{"gold","S_AddGold"},{"gloom","S_AddGloom"},{"glimpses","S_AddGlimpses"},
     {"shell_points","S_AddShellPoints"},{"tarcores","S_AddTarcores"},{"ventrium","S_AddVentrium"},
@@ -178,8 +183,13 @@ Json Menu::model() {
 void Menu::override_value(const Json& object,const std::string& property,const Json& value) {
     const auto key=std::to_string(identity(object))+":"+property;
     auto it=saved_.find(key);
-    if(it==saved_.end()) it=saved_.emplace(key,Saved{object,host_.get(object,property),Json(),property}).first;
-    it->second.expected=host_.set(object,property,value);
+    if(it==saved_.end()) {
+        auto before=host_.get(object,property);
+        if(property=="Movement") before=movement_speeds(before);
+        it=saved_.emplace(key,Saved{object,std::move(before),Json(),property}).first;
+    }
+    auto expected=host_.set(object,property,value);
+    it->second.expected=property=="Movement"?movement_speeds(expected):std::move(expected);
 }
 void Menu::restore(const std::string& property) {
     for(auto it=saved_.begin();it!=saved_.end();) {
@@ -189,7 +199,13 @@ void Menu::restore(const std::string& property) {
             if(std::string(e.what()).find("expired")!=std::string::npos) {it=saved_.erase(it);continue;}
             throw;
         }
-        if(current==saved.expected) host_.set(saved.object,saved.property,saved.before);
+        if(property=="Movement" && saved.expected.is_object()) {
+            Json patch=Json::object();
+            for(auto field=saved.before.begin();field!=saved.before.end();++field)
+                if(current.at(field.key())==saved.expected.at(field.key())) patch[field.key()]=field.value();
+            if(!patch.empty()) host_.set(saved.object,saved.property,patch);
+        }
+        else if(current==saved.expected) host_.set(saved.object,saved.property,saved.before);
         else host_.log("Another change replaced an owned value; leaving that newer value intact.","warning",{{"property",property}});
         it=saved_.erase(it);
     }
@@ -210,7 +226,9 @@ void Menu::movement(bool enabled) {
     }
     auto player=require_player();auto pawn=player["pawn"];
     auto data=host_.get(pawn,"CharacterData");
-    auto movement=host_.get(data,"Movement");const auto key=std::to_string(identity(data))+":Movement";
+    // Patch only these scalars. The surrounding structure contains maps and
+    // curve state that neither the multiplier nor its cleanup owns.
+    auto movement=movement_speeds(host_.get(data,"Movement"));const auto key=std::to_string(identity(data))+":Movement";
     const auto original=saved_.contains(key)?saved_.at(key).before:movement;
     for(const auto* field:{"WalkSpeed","JogSpeed","SprintSpeed"}) {
         const double value=original.at(field).get<double>();
