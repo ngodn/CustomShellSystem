@@ -49,8 +49,13 @@ def stage():
     filename=f'cheat_menu-{sha(source)[:16]}.dll'
     if not (target/filename).exists(): copy_verified(source,target/filename)
     manifest=json.loads((ROOT/'extensions/cheat-menu/extension.json').read_text())
+    if manifest.get('banner'):
+        banner=target/manifest['banner']
+        banner.parent.mkdir(parents=True,exist_ok=True)
+        copy_verified(ROOT/'extensions/cheat-menu'/manifest['banner'],banner)
     manifest['entry']=filename
     atomic(target/'extension.json',manifest)
+    copy_verified(ROOT/'assets/cssx-logo-v4.png',MOD/'assets/cssx-logo.png')
     atomic(MOD/'core.json',{'abi':1,'file':core})
     print('Staged',core)
     if processes():

@@ -9,5 +9,10 @@
   "kind": "native",
   "layout": "tabs",
   "entry": "cheat_menu.dll",
-  "menu": "menu.json"
+  "menu": "menu.json",
+  "banner": "assets/banner-v1.png",
+  "files": [
+    "README.txt",
+    "THIRD_PARTY_NOTICES.txt"
+  ]
 }

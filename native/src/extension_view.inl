@@ -69,8 +69,11 @@ void InventoryUI::build_extension_page() {
     const auto& entries=extension_library_.at("extensions");
     if(extension_id_.empty()) {
         ui.box(0,0,width,1080,Color{.004f,.004f,.004f,1});
-        ui.label("CSSX",88,65,width-176,72,42,light);
-        ui.text("Custom Shell System Extensions",90,133,width-180,40,21,muted);line(90,185,width-180);
+        if(!texture(path_utf8(extension_logo_path_),40,55,360,120)) {
+            ui.label("CSSX",88,65,width-176,72,42,light);
+            ui.text("Custom Shell System Extensions",90,133,width-180,40,21,muted);
+        }
+        line(90,185,width-180);
         extension_paging_.count=entries.size();extension_paging_.normalize();
         const double gap=22,card_w=(width-180-2*gap)/3,card_h=228,top=214;
         const size_t first=extension_paging_.page*9;

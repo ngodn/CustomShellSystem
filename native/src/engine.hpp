@@ -57,7 +57,7 @@ class InventoryUI {
     void cinema_update(bool focused);
     void cinema_command(RC::Unreal::UObject*,const Json&);
 #endif
-    fs::path logo_path_;
+    fs::path logo_path_, extension_logo_path_;
     ExtensionClient* extensions_=nullptr;
     WeakObject extension_tab_, extension_page_, extension_canvas_;
     bool extension_active_=false;
@@ -121,7 +121,10 @@ class InventoryUI {
     void close_menu();
     Json dispatch(Json,const State&);
 public:
-    void assets(const fs::path& root) { logo_path_=root/"assets/inventory-logo-v1.png"; }
+    void assets(const fs::path& root) {
+        logo_path_=root/"assets/inventory-logo-v1.png";
+        extension_logo_path_=root/"assets/cssx-logo.png";
+    }
     Json command(void* engine, const Json&);
     Json poll(void* engine,const Catalog&,const State&,Appearance&,float delta,bool focused);
     Json diagnostics() const;
