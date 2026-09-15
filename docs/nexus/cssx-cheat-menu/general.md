@@ -1,7 +1,7 @@
 # Nexus fields
 
 - Mod name: CSSX - Cheat Menu
-- Version: 0.3.0
+- Version: 0.3.1
 - Author: _eins0fx
 - Game: Mortal Shell II
 - Category: Gameplay

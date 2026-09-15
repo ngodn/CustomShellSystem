@@ -1,7 +1,7 @@
 # Nexus fields
 
 - Mod name: CSSX - UI Kit
-- Version: 0.3.0
+- Version: 0.3.1
 - Author: _eins0fx
 - Game: Mortal Shell II
 - Category: User Interface

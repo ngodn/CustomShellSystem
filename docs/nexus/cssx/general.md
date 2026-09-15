@@ -1,7 +1,7 @@
 # Nexus fields
 
 - Mod name: Custom Shell System Extensions (CSSX)
-- Version: 0.3.0
+- Version: 0.3.1
 - Author: _eins0fx
 - Game: Mortal Shell II
 - Category: User Interface

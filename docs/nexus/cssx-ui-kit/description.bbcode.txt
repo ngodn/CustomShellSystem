@@ -13,7 +13,7 @@ This is my interactive component gallery for CSSX. Try the controls in-game, the
 The progress task is a demonstration. Gallery selections reset when the extension restarts. The separate counter examples in the SDK guide show saved settings.
 
 [size=4][b]Install[/b][/size]
-Close the game. Install CSS 0.3.0 and CSSX 0.3.0, then extract the cssx.ui-kit folder into:
+Close the game. Install CSS 0.3.1 and CSSX 0.3.1, then extract the cssx.ui-kit folder into:
 [code]ue4ss/Mods/CustomShellSystem/extensions/[/code]
 Open Inventory > CSSX > CSSX UI Kit.
 

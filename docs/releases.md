@@ -12,7 +12,7 @@ Build from a clean checkout at that tag:
 
 ```sh
 python3 tools/css_release.py build --sdk /absolute/path/to/ue4ss-sdk-d7e7826d
-python3 tools/css_release.py verify dist/releases/MSII-CSS-v0.3.0.zip
+python3 tools/css_release.py verify dist/releases/MSII-CSS-v0.3.1.zip
 ```
 
 The script builds both Release DLLs from that checkout and uses an explicit
@@ -106,3 +106,19 @@ compiled out of CSS release builds. No user state, logs or caches ship.
 CSS.Package v1 is unchanged. Known outfit issues and untested encounter cases
 remain in the [parity notes](development/cheat-menu-parity.md) and are not treated
 as verified fixes. The latest live tests used Steam build 25265616.
+
+## 0.3.1 scope
+
+Fixes the white shredded-body displacement during dodges with CSS outfits while
+preserving the separate native translucent trail. Compatibility materials reuse
+the existing owned-MID and recovery path; standalone cloth-driver materials are
+left intact. See [the investigation](development/0.3.0-user-bugs.md).
+
+CSS.Package v1, state schema and extension ABI are unchanged. Existing outfit and
+port ZIPs do not need repacking. CSSX and its two supplied extensions carry the
+matching version; their functionality is unchanged. The Seductress blood-mask
+finding is documented but its asset correction is not part of this release.
+
+Build CSS and the three CSSX packages from clean annotated tag `v0.3.1`.
+Exact-artifact startup, archive and checksum checks are recorded separately in
+[the verification record](development/0.3.1-release-verification.md).

@@ -3,7 +3,7 @@
   "api": 1,
   "id": "cssx.ui-kit",
   "title": "CSSX UI Kit",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": "_eins0fx",
   "description": "Interactive technology preview of the CSSX UI Kit. Explore controls, panels and feedback states without changing gameplay.",
   "kind": "lua",
