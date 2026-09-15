@@ -29,6 +29,25 @@ CSS 0.3.0 can load CSSX as a separate download. CSSX adds an extension library b
 
 Check that the loader is at [b]ue4ss/Mods/CustomShellSystem/dlls/main.dll[/b], without an extra nested folder. Keep each outfit's .pak, .utoc and .ucas files together, with their _P suffixes intact. Restart the game after adding or replacing outfit packages.
 
+[b]Expected folders after extraction[/b]
+Extract the [b]CustomShellSystem[/b] folder into [b]MortalShell2/Binaries/Win64/ue4ss/Mods/[/b].
+
+[code]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/
+`-- CustomShellSystem/
+    |-- README.txt
+    |-- THIRD_PARTY_NOTICES.txt
+    |-- assets/
+    |   `-- inventory-logo-v1.png
+    |-- core.json
+    |-- cores/
+    |   `-- css_core-0.3.0.dll
+    |-- dlls/
+    |   `-- main.dll
+    |-- enabled.txt
+    `-- release.json[/code]
+
+Do not put another CustomShellSystem folder inside it. State, logs and caches are generated when needed and are not included in the ZIP.
+
 [size=4][b]Controls[/b][/size]
 
 CSS now sits between Inventory and Tarstones. [b]The old N menu is removed in 0.2.0.[/b] The page shows the controls for your current input device.

@@ -23,6 +23,23 @@ I rewrote the Cheat Menu in C++ for CSSX, based on [url=https://www.nexusmods.co
 [*]Restart, enter the world and open Inventory > CSSX > CSSX Cheat Menu.
 [/list]
 
+[b]Expected folders after extraction[/b]
+Install CSS and CSSX first. Extract the [b]eins0fx.cheat-menu[/b] folder into [b]CustomShellSystem/extensions/[/b]. The extension files should be here:
+
+[code]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/CustomShellSystem/extensions/
+`-- eins0fx.cheat-menu/
+    |-- CREDITS.txt
+    |-- LICENSE
+    |-- README.txt
+    |-- THIRD_PARTY_NOTICES.txt
+    |-- assets/
+    |   `-- banner-v1.png
+    |-- cheat_menu.dll
+    |-- extension.json
+    `-- menu.json[/code]
+
+Do not add another folder level around the extension. Its extension.json must be directly inside the folder shown.
+
 [size=4][b]Behavior and limits[/b][/size]
 Shell powers require the corresponding gameplay shell, regardless of your CSS appearance. Lazlo's shockwave requires Temperament. Parry, block and harden cheats follow their matching seal. A sidearm may require Resolve to fire. Legitimate story locks are not removed by a blanket unlock loop.
 

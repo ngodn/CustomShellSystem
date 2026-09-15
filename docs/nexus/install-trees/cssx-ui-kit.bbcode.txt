@@ -1,0 +1,13 @@
+[b]Expected folders after extraction[/b]
+Install CSS and CSSX first. Extract the [b]cssx.ui-kit[/b] folder into [b]CustomShellSystem/extensions/[/b]. The extension files should be here:
+
+[code]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/CustomShellSystem/extensions/
+`-- cssx.ui-kit/
+    |-- README.md
+    |-- assets/
+    |   `-- banner-v1.png
+    |-- extension.json
+    |-- main.lua
+    `-- menu.json[/code]
+
+Do not add another folder level around the extension. Its extension.json must be directly inside the folder shown.

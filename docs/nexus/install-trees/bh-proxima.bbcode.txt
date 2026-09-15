@@ -1,0 +1,10 @@
+[b]Expected folders after extraction[/b]
+Install CSS and UE4SS first. Extract the [b]CSS_BHProxima_Erase_P[/b] folder into [b]MortalShell2/Content/Paks/~mods/[/b].
+
+[code]Sparta/MortalShell2/Content/Paks/~mods/
+`-- CSS_BHProxima_Erase_P/
+    |-- CSS_BHProxima_Erase_P.pak
+    |-- CSS_BHProxima_Erase_P.ucas
+    `-- CSS_BHProxima_Erase_P.utoc[/code]
+
+Keep all three files together and preserve their _P filenames. Restart the game, then select the outfit in Inventory > CSS. Outfit packages go in ~mods, not UE4SS Mods or CSSX extensions.

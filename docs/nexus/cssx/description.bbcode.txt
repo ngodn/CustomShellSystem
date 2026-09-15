@@ -23,6 +23,30 @@ I built CSSX so extension mods can share one place in Inventory. Open CSSX, choo
 
 CSS works without CSSX. Ordinary UE4SS scripts and DLLs need a CSSX adapter; they do not become library entries just by moving their files.
 
+[b]Expected folders after extraction[/b]
+Install CSS first. Extract the CSSX ZIP [b]inside CustomShellSystem/[/b], merging its assets and cores folders. With both installed, the files should look like this:
+
+[code]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/CustomShellSystem/
+|-- CSSX-README.txt
+|-- CSSX-THIRD_PARTY_NOTICES.txt
+|-- README.txt
+|-- THIRD_PARTY_NOTICES.txt
+|-- assets/
+|   |-- cssx-logo.png
+|   `-- inventory-logo-v1.png
+|-- core.json
+|-- cores/
+|   |-- css_core-0.3.0.dll
+|   `-- cssx_core-0.3.0.dll
+|-- cssx-release.json
+|-- cssx.json
+|-- dlls/
+|   `-- main.dll
+|-- enabled.txt
+`-- release.json[/code]
+
+core.json and cssx.json belong beside each other. Do not create an extra CSSX folder. Install extensions separately under CustomShellSystem/extensions/.
+
 [size=4][b]Controls[/b][/size]
 LB/RB or Q/E changes the main Inventory tabs. LT/RT or Z/X changes extension sections. Use the D-pad or W/S to browse, left/right or A/D to adjust, A or Space to activate, and B or Esc to go back. The page shows prompts for the current action. Mouse selection, scrolling and sliders are supported. Typing needs a keyboard.
 

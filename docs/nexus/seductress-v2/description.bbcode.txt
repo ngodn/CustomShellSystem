@@ -23,13 +23,18 @@ This is a separate outfit package. It appears as [b]Seductress V2[/b] in the war
 [*]Enter the game world, open [b]Inventory → CSS[/b], select [b]Seductress V2[/b] and choose Wear.
 [/list]
 
-[code]Sparta/MortalShell2/Content/Paks/~mods/
-    CSS_Seductress_V2_eins0fx_P/
-        CSS_Seductress_V2_eins0fx_P.pak
-        CSS_Seductress_V2_eins0fx_P.utoc
-        CSS_Seductress_V2_eins0fx_P.ucas[/code]
+[b]Expected folders after extraction[/b]
+Install CSS and UE4SS first. Extract the [b]CSS_Seductress_V2_eins0fx_P[/b] folder into [b]MortalShell2/Content/Paks/~mods/[/b].
 
-Keep all three files together with their original names. The thumbnail, variants and color resources are included. BG3, the original Seductress package and BeauteGenessa are not required downloads.
+[code]Sparta/MortalShell2/Content/Paks/~mods/
+`-- CSS_Seductress_V2_eins0fx_P/
+    |-- CSS_Seductress_V2_eins0fx_P.pak
+    |-- CSS_Seductress_V2_eins0fx_P.ucas
+    `-- CSS_Seductress_V2_eins0fx_P.utoc[/code]
+
+Keep all three files together and preserve their _P filenames. Restart the game, then select the outfit in Inventory > CSS. Outfit packages go in ~mods, not UE4SS Mods or CSSX extensions.
+
+The thumbnail, variants and color resources are included. BG3, the original Seductress package and BeauteGenessa are not required downloads.
 
 [size=4][b]Using the wardrobe[/b][/size]
 

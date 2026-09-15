@@ -1,0 +1,23 @@
+[b]Expected folders after extraction[/b]
+Install CSS first. Extract the CSSX ZIP [b]inside CustomShellSystem/[/b], merging its assets and cores folders. With both installed, the files should look like this:
+
+[code]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/CustomShellSystem/
+|-- CSSX-README.txt
+|-- CSSX-THIRD_PARTY_NOTICES.txt
+|-- README.txt
+|-- THIRD_PARTY_NOTICES.txt
+|-- assets/
+|   |-- cssx-logo.png
+|   `-- inventory-logo-v1.png
+|-- core.json
+|-- cores/
+|   |-- css_core-0.3.0.dll
+|   `-- cssx_core-0.3.0.dll
+|-- cssx-release.json
+|-- cssx.json
+|-- dlls/
+|   `-- main.dll
+|-- enabled.txt
+`-- release.json[/code]
+
+core.json and cssx.json belong beside each other. Do not create an extra CSSX folder. Install extensions separately under CustomShellSystem/extensions/.

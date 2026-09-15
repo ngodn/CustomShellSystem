@@ -1,0 +1,18 @@
+[b]Expected folders after extraction[/b]
+Extract the [b]CustomShellSystem[/b] folder into [b]MortalShell2/Binaries/Win64/ue4ss/Mods/[/b].
+
+[code]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/
+`-- CustomShellSystem/
+    |-- README.txt
+    |-- THIRD_PARTY_NOTICES.txt
+    |-- assets/
+    |   `-- inventory-logo-v1.png
+    |-- core.json
+    |-- cores/
+    |   `-- css_core-0.3.0.dll
+    |-- dlls/
+    |   `-- main.dll
+    |-- enabled.txt
+    `-- release.json[/code]
+
+Do not put another CustomShellSystem folder inside it. State, logs and caches are generated when needed and are not included in the ZIP.

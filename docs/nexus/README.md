@@ -2,6 +2,7 @@
 
 Ready-to-paste BBCode for _eins0fx's mod pages:
 
+- [Expected installation trees for all 13 mods and packages](install-trees/README.md)
 - [Custom Shell System description](css-description.bbcode.txt)
 - [CSS - Seductress description](seductress-description.bbcode.txt)
 - [CSS - Seductress Variants: new-page fields, BBCode and media](seductress-v2/README.md)

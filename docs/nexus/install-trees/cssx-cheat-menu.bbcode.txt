@@ -1,6 +1,3 @@
-[b]Before installing[/b]
-Disable or remove the original UE4SS Cheat Menu (MortalShell2Mod), then restart Mortal Shell II. Do not run both cheat menus together. Removing the original mod while the game is running does not unload its hooks or active cheats.
-
 [b]Expected folders after extraction[/b]
 Install CSS and CSSX first. Extract the [b]eins0fx.cheat-menu[/b] folder into [b]CustomShellSystem/extensions/[/b]. The extension files should be here:
 
@@ -17,6 +14,3 @@ Install CSS and CSSX first. Extract the [b]eins0fx.cheat-menu[/b] folder into [b
     `-- menu.json[/code]
 
 Do not add another folder level around the extension. Its extension.json must be directly inside the folder shown.
-
-[b]Credits[/b]
-CSSX Cheat Menu is my C++ port of [url=https://www.nexusmods.com/mortalshell2/mods/20]UE4SS Cheat Menu by DevToolsMaster[/url], adapted for CSSX.
