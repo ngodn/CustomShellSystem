@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.25)
+project(CSSXCounter LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+get_filename_component(CSS_REPO "${CMAKE_CURRENT_SOURCE_DIR}/../../.." ABSOLUTE)
+add_library(counter SHARED main.cpp)
+target_include_directories(counter PRIVATE "${CSS_REPO}/native/include" "${CSS_REPO}/native/vendor")
+set_target_properties(counter PROPERTIES PREFIX "")

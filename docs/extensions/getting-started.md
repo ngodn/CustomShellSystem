@@ -1,6 +1,6 @@
 # Build a CSSX extension
 
-This is the development API for CSS 0.3.0. The runtime and packaging checks work locally; gameplay integration and the Cheat Menu port are still being tested. Do not treat this as a released compatibility contract yet.
+This documents API 1 for CSSX 0.3.0. Start with the [SDK index](README.md) for the C++, Lua, UI Kit and host-operation references. The [verification record](../development/cheat-menu-parity.md) distinguishes live checks from remaining gameplay coverage.
 
 CSSX owns the menu, input navigation, settings, logs and exported files. An extension supplies its manifest, controls and behavior. It does not need a separate UE4SS menu or its own filesystem code.
 
@@ -104,7 +104,7 @@ Host responses have a 1 MiB limit, including all callback chunks. CSSX rejects o
 
 Some game calls finish asynchronously. Keep ownership and cleanup records until the resulting actor or effect is known. A successful call alone does not establish that it created anything. The Cheat Menu's clone port illustrates this: the primary spawn schedules the secondary spawn internally, and the latter also checks a shell upgrade. Sending both functions separately is not a reliable success test.
 
-## Managed player hooks (0.3.0 development)
+## Managed player hooks
 
 The updated CSS loader exports an optional hook service. Existing CSS core ABI 1 remains unchanged. `hooks.status` reports `available: false` with an older loader; extensions must explain that the complete CSS package needs updating rather than silently enabling an ineffective toggle.
 
@@ -114,4 +114,4 @@ The operation returns a rule ID. Pass it to `hooks.remove` during cleanup; a fai
 
 Callbacks run on the game thread, require the pawn/controller pair to remain possessed, and only affect the registered target instance. No raw extension callback pointer is retained by UE4SS. A permanent-loader closure dispatches into the current CSS core, which owns the validated rules. This supports C++ and Lua extensions without registering their unloadable code directly with the engine.
 
-Limits: 128 hooked functions, 1,024 rules across extensions, no delegates or default-object targets. This is a restricted managed rule API, not a sandbox for arbitrary native code. In-game hook verification is pending; do not treat development checks as a compatibility guarantee.
+Limits: 128 hooked functions, 1,024 rules across extensions, no delegates or default-object targets. This is a restricted managed rule API, not a sandbox for arbitrary native code. Boolean overrides, cooldown dispatch and reload cleanup have been checked on Steam build 25265616. Broader combat behavior and a fresh run on older binaries remain separate coverage.

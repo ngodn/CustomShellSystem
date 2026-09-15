@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "sections": [{
+    "id": "counter",
+    "title": "Counter",
+    "controls": [{"id": "count", "type": "number", "label": "Saved count", "value": 0, "min": 0, "max": 100, "step": 1}]
+  }]
+}

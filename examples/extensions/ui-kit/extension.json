@@ -10,5 +10,8 @@
   "layout": "tabs",
   "entry": "main.lua",
   "menu": "menu.json",
-  "banner": "assets/banner-v1.png"
+  "banner": "assets/banner-v1.png",
+  "files": [
+    "README.md"
+  ]
 }

@@ -1,10 +1,10 @@
-# CSSX extension contract (in development)
+# CSSX extension contract
 
 CSSX supplies shared Inventory integration, menu controls, settings, logs and game-thread callbacks. It uses UE4SS for engine access. Existing UE4SS scripts need a CSSX adapter; this does not automatically import arbitrary mod menus.
 
-## Three downloads
+## Separate downloads
 
-CSS 0.3.0 adds optional CSSX detection. CSSX installs inside CustomShellSystem and supplies cores/cssx_core.dll. Extension folders install inside CustomShellSystem/extensions. CSS remains usable without CSSX.
+CSS 0.3.0 adds optional CSSX detection. CSSX installs inside CustomShellSystem and selects a versioned core DLL through cssx.json. Extension folders install inside CustomShellSystem/extensions. CSS remains usable without CSSX. CSSX UI Kit and CSSX Cheat Menu are separate extension downloads.
 
 ## UI authoring
 
