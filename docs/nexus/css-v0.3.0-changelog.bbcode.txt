@@ -1,0 +1,12 @@
+[b]CSS 0.3.0[/b]
+[list]
+[*]Added optional CSSX support, with a separate extension library inside Inventory.
+[*]CSSX, CSSX UI Kit and CSSX Cheat Menu are separate downloads. The wardrobe works without them.
+[*]Improved outfit recovery after gameplay mesh and material resets, including shell changes.
+[*]Removed repeated color-resource work during recovery that caused a hitch near launcher return animations.
+[*]Improved recovery from the completed-intro restriction that could leave equipped weapons stowed.
+[*]Added the CSSX SDK guide, C++ and Lua examples, shared UI Kit reference and extension packager to GitHub.
+[/list]
+[b]Updating:[/b] Close the game and replace the complete CSS runtime, including dlls/main.dll. Keep state/. Existing CSS outfit ZIPs remain compatible; no repacking is needed. Install CSSX separately if you want extension menus. Remove or disable the original MortalShell2Mod and restart before using CSSX Cheat Menu.
+
+Outfit attachment bones, some outfit-specific cloth/foot alignment issues and reported dodge-shadow or HIT2 projectile alignment issues remain under investigation. See the release notes for current limits.

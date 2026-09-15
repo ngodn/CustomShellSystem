@@ -1,0 +1,1 @@
+Change shell appearances without changing abilities. Browse outfits, choose variants, edit colors and save templates inside Inventory, with mouse and controller support and optional CSSX extensions.

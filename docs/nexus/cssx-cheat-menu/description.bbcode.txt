@@ -1,0 +1,43 @@
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.3.0/cheat-menu-header.png[/img][/center]
+
+I rewrote the Cheat Menu in C++ for CSSX, based on [url=https://www.nexusmods.com/mortalshell2/mods/20]DevToolsMaster's UE4SS Cheat Menu[/url]. It runs inside Inventory and uses the shared CSSX controls.
+
+[b]Disable or remove the original MortalShell2Mod, then restart the game before using this port. Removing its files during a session does not unload its Lua hooks or active cheats.[/b]
+
+[size=4][b]Features[/b][/size]
+[list]
+[*]God mode, Auto Heal, Infinite Resolve, healing, revival and movement settings.
+[*]Cooldown controls and seal-specific parry, block and harden options.
+[*]Gameplay-shell switching, Genessa clones, Smert stance and Lazlo shockwave controls.
+[*]Resources, equipment unlocks, pickup tools and searchable Tarstone tools.
+[*]Individual or grouped Tarstone levels, configurable hotkeys and controller shortcuts.
+[/list]
+
+[b]Edit settings, then use Apply settings. Discard changes cancels edits. Cheats start off when the game launches.[/b] One-shot actions are separate. Grants, unlocks and progression edits ask for confirmation and can be saved by the game; keep a game-save backup if you want to undo them. Saved preferences do not undo progression changes.
+
+[size=4][b]Install[/b][/size]
+[list=1]
+[*]Close the game and disable or remove the original MortalShell2Mod.
+[*]Install CSS 0.3.0 and CSSX 0.3.0.
+[*]Extract eins0fx.cheat-menu into ue4ss/Mods/CustomShellSystem/extensions/.
+[*]Restart, enter the world and open Inventory > CSSX > CSSX Cheat Menu.
+[/list]
+
+[size=4][b]Behavior and limits[/b][/size]
+Shell powers require the corresponding gameplay shell, regardless of your CSS appearance. Lazlo's shockwave requires Temperament. Parry, block and harden cheats follow their matching seal. A sidearm may require Resolve to fire. Legitimate story locks are not removed by a blanket unlock loop.
+
+Turn off all cheats restores changes still owned by the extension. Changes made by the game or another mod are preserved. Avoid running another cheat mod that edits the same values. Test coverage and remaining gameplay cases are listed in the [url=https://github.com/ngodn/CustomShellSystem/blob/main/docs/development/cheat-menu-parity.md]verification notes[/url]; this first release is not a promise of flawless behavior in every encounter.
+
+[size=4][b]Controls[/b][/size]
+LB/RB or Q/E changes the main Inventory tabs. LT/RT or Z/X changes extension sections. Use the D-pad or W/S to browse, left/right or A/D to adjust, A or Space to activate, and B or Esc to go back. The page shows prompts for the current action. Mouse selection, scrolling and sliders are supported. Typing needs a keyboard.
+
+[size=4][b]Updates and compatibility[/b][/size]
+Close the game before replacing files. Keep CustomShellSystem/state/ to retain settings. These downloads contain no personal state or game saves. Existing CSS outfit packages remain compatible and do not need repacking.
+
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.3.0/cheat-menu-settings.jpg[/img][/center]
+
+[size=4][b]Source and modding guide[/b][/size]
+The [url=https://github.com/ngodn/CustomShellSystem/tree/main/docs/extensions]CSSX SDK guide[/url] covers Lua, C++, the UI Kit, packaging, settings, logging and cleanup. JSON defines the menu; Pkl is an optional authoring tool. The runtime does not require Pkl. I included small counter examples and the UI Kit gallery source.
+
+[size=4][b]Credits[/b][/size]
+DevToolsMaster for the original Cheat Menu. The supplied MIT license retains Matthew arvidson's copyright. C++ port and CSSX integration by _eins0fx. Thanks to the UE4SS contributors.

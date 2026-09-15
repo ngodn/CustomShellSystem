@@ -1,0 +1,32 @@
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.3.0/ui-kit-header.png[/img][/center]
+
+This is my interactive component gallery for CSSX. Try the controls in-game, then use the included source as a starting point for your own extension. It does not change gameplay.
+
+[size=4][b]Included examples[/b][/size]
+[list]
+[*]Toggles, radio options, sliders, numeric steppers and editable text.
+[*]A searchable option picker, including an empty-results state.
+[*]Progress and loading indicators, disabled actions, details and confirmation dialogs.
+[*]Mouse, keyboard and controller navigation using the shared CSSX UI Kit.
+[/list]
+
+The progress task is a demonstration. Gallery selections reset when the extension restarts. The separate counter examples in the SDK guide show saved settings.
+
+[size=4][b]Install[/b][/size]
+Close the game. Install CSS 0.3.0 and CSSX 0.3.0, then extract the cssx.ui-kit folder into:
+[code]ue4ss/Mods/CustomShellSystem/extensions/[/code]
+Open Inventory > CSSX > CSSX UI Kit.
+
+[size=4][b]Controls[/b][/size]
+LB/RB or Q/E changes the main Inventory tabs. LT/RT or Z/X changes extension sections. Use the D-pad or W/S to browse, left/right or A/D to adjust, A or Space to activate, and B or Esc to go back. The page shows prompts for the current action. Mouse selection, scrolling and sliders are supported. Typing needs a keyboard.
+
+[size=4][b]Updates and compatibility[/b][/size]
+Close the game before replacing files. Keep CustomShellSystem/state/ to retain settings. These downloads contain no personal state or game saves. Existing CSS outfit packages remain compatible and do not need repacking.
+
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.3.0/ui-kit-controls.jpg[/img][/center]
+
+[size=4][b]Source and modding guide[/b][/size]
+The [url=https://github.com/ngodn/CustomShellSystem/tree/main/docs/extensions]CSSX SDK guide[/url] covers Lua, C++, the UI Kit, packaging, settings, logging and cleanup. JSON defines the menu; Pkl is an optional authoring tool. The runtime does not require Pkl. I included small counter examples and the UI Kit gallery source.
+
+[size=4][b]Credits[/b][/size]
+CSSX and the UI Kit by _eins0fx. Thanks to the UE4SS and Lua contributors. The interface uses Mortal Shell II's existing menu fonts, textures and input prompts.

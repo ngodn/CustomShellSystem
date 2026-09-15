@@ -1,0 +1,38 @@
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.3.0/cssx-header.png[/img][/center]
+
+I built CSSX so extension mods can share one place in Inventory. Open CSSX, choose a card and use the extension's menu without another overlay or set of navigation keys.
+
+[size=4][b]Features[/b][/size]
+[list]
+[*]A 3 by 3 extension library with banners, names, versions and paged navigation.
+[*]Shared controls styled around Mortal Shell II's Inventory, including searchable options and confirmation dialogs.
+[*]Native C++ and Lua extensions with separate settings, logs and output folders.
+[*]An Inventory-style layout with a character view, or a wider tabbed layout.
+[/list]
+
+[b]CSSX is the extension framework. CSSX UI Kit and CSSX Cheat Menu are separate downloads. CSS outfit packages are separate too.[/b]
+
+[size=4][b]Install[/b][/size]
+[list=1]
+[*]Install CSS 0.3.0 and its required UE4SS build.
+[*]Close the game. Extract this ZIP inside ue4ss/Mods/CustomShellSystem/.
+[*]Check that cssx.json sits beside core.json, and the CSSX DLL is inside cores/.
+[*]Install your chosen extension folders under CustomShellSystem/extensions/.
+[*]Enter the game world, open Inventory and select CSSX.
+[/list]
+
+CSS works without CSSX. Ordinary UE4SS scripts and DLLs need a CSSX adapter; they do not become library entries just by moving their files.
+
+[size=4][b]Controls[/b][/size]
+LB/RB or Q/E changes the main Inventory tabs. LT/RT or Z/X changes extension sections. Use the D-pad or W/S to browse, left/right or A/D to adjust, A or Space to activate, and B or Esc to go back. The page shows prompts for the current action. Mouse selection, scrolling and sliders are supported. Typing needs a keyboard.
+
+[size=4][b]Updates and compatibility[/b][/size]
+Close the game before replacing files. Keep CustomShellSystem/state/ to retain settings. These downloads contain no personal state or game saves. Existing CSS outfit packages remain compatible and do not need repacking.
+
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.3.0/library.jpg[/img][/center]
+
+[size=4][b]Source and modding guide[/b][/size]
+The [url=https://github.com/ngodn/CustomShellSystem/tree/main/docs/extensions]CSSX SDK guide[/url] covers Lua, C++, the UI Kit, packaging, settings, logging and cleanup. JSON defines the menu; Pkl is an optional authoring tool. The runtime does not require Pkl. I included small counter examples and the UI Kit gallery source.
+
+[size=4][b]Credits[/b][/size]
+CSSX and the UI Kit by _eins0fx. Thanks to the UE4SS and Lua contributors. The interface uses Mortal Shell II's existing menu fonts, textures and input prompts.

@@ -1,0 +1,1 @@
+Add C++ and Lua extension menus to Inventory, with a shared UI Kit, controller navigation, saved settings and per-extension logs. Requires Custom Shell System.

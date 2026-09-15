@@ -1,0 +1,10 @@
+[b]Reporting a problem[/b]
+Please include:
+[list]
+[*]CSS, CSSX and extension versions; your game build/store and UE4SS version.
+[*]What you clicked, what happened, and the steps that trigger it. Include your gameplay shell and any other mods running.
+[*]A screenshot or short recording of the problem, plus a screenshot of the installed folder structure.
+[*]CustomShellSystem/CSS.log, runtime/status.json, logs/cssx.jsonl and logs/extensions/cssx.ui-kit/current.jsonl. Include the numbered log backups if the error happened earlier.
+[*]ue4ss/UE4SS.log. If there was a crash, include the crash log.
+[/list]
+Attach the files or link a ZIP. Don't paste a whole log into a comment. For a loading problem, show the files inside CustomShellSystem/ and extensions/cssx.ui-kit/. Please say if the same issue happens with other extensions disabled after restarting the game.

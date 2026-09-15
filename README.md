@@ -4,7 +4,7 @@ A native C++ wardrobe mod by **_eins0fx**. Change your shell's appearance withou
 
 I built CSS around a single wardrobe for compatible outfit packages, inspired by [Custom Nanosuit System](https://www.nexusmods.com/stellarblade/mods/1496?tab=description). Mouse, keyboard and controller controls are supported.
 
-**[Download CSS 0.2.0](https://github.com/ngodn/CustomShellSystem/releases/tag/v0.2.0)** · [Release notes](packaging/release-notes.md) · [Converter](tools/css_convert.py)
+**[Download CSS 0.3.0](https://github.com/ngodn/CustomShellSystem/releases/tag/v0.3.0)** · [Release notes](packaging/release-notes.md) · [Converter](tools/css_convert.py)
 
 ![CSS inside the native Inventory menu](docs/media/v0.2.0/inventory-css.jpg)
 
@@ -64,9 +64,28 @@ Default game bindings are listed below. CSS follows the mapped menu keys and sho
 
 Actions depend on the selected section. Camera controls affect the menu preview, not the gameplay character. The game's Inventory owns the pause and transitions.
 
+## CSSX extensions
+
+CSSX adds a separate tab beside CSS for C++ and Lua extensions. Its 3 by 3 library
+opens menus built with shared controls, search, dialogs and keyboard/controller
+navigation. CSSX, the UI Kit gallery and Cheat Menu are separate downloads.
+
+1. Install CSS into `MortalShell2/Binaries/Win64/ue4ss/Mods/`.
+2. Extract CSSX **inside** `CustomShellSystem/`.
+3. Extract extension folders into `CustomShellSystem/extensions/`.
+
+[CSSX SDK guide](docs/extensions/README.md) covers C++, Lua, the UI Kit, packaging,
+logging and state. Existing outfit ZIPs remain compatible and do not need CSSX.
+Before using CSSX Cheat Menu, disable or remove the original MortalShell2Mod and
+restart the game. The C++ port is based on DevToolsMaster's original Cheat Menu.
+See [verification notes](docs/development/cheat-menu-parity.md) for test coverage
+and remaining gameplay cases.
+
+![CSSX extension library](docs/media/v0.3.0/library.jpg)
+
 ## For modders
 
-Start with the [CSS modding guide](docs/modding/README.md). It covers asset requirements, mesh variants, per-part colors, project recipes and verified release ZIPs. The guide documents the 0.2.0 source and CSS.Package v1. Tools are available in the GitHub source; the player runtime ZIP contains only the files needed in UE4SS Mods. The framework is still under development.
+Start with the [CSS modding guide](docs/modding/README.md). It covers asset requirements, mesh variants, per-part colors, project recipes and verified release ZIPs. The guide documents the current source and CSS.Package v1. Tools are available in the GitHub source; the player runtime ZIP contains only the files needed in UE4SS Mods. The framework is still under development.
 
 For repeatable builds, use [css_project.py](tools/css_project.py) to create a project, check its inputs and build its outfit trio plus install ZIP. [Experimental Unreal authoring source](docs/modding/advanced-tools.md) is included separately, with its current limits. No native DLL build is needed to package an existing compatible outfit.
 
@@ -99,7 +118,7 @@ The runtime is C++23, built with clang-cl and the pinned UE4SS SDK. The core sup
 
 Regular mesh replacement mods do not automatically become CSS wardrobe entries. Base-game mesh or material replacers can affect CSS outfits that reference those assets. Editable parts depend on the outfit author.
 
-CSS 0.2.0 uses the native Inventory preview and lighting. Existing CSS.Package v1 outfit ZIPs, including the Beaute, HIT2 and Seductress packages, do not need repacking. Replace the old CSS runtime ZIP when upgrading.
+CSS 0.3.0 uses the native Inventory preview and lighting. Existing CSS.Package v1 outfit ZIPs, including the Beaute, HIT2 and Seductress packages, do not need repacking. Replace the old CSS runtime ZIP when upgrading.
 
 Cloth, secondary animation and clipping depend on the outfit. Long combat sessions, other gameplay shells, display/controller combinations and performance still need broader testing.
 

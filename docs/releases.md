@@ -12,7 +12,7 @@ Build from a clean checkout at that tag:
 
 ```sh
 python3 tools/css_release.py build --sdk /absolute/path/to/ue4ss-sdk-d7e7826d
-python3 tools/css_release.py verify dist/releases/MSII-CSS-v0.2.0.zip
+python3 tools/css_release.py verify dist/releases/MSII-CSS-v0.3.0.zip
 ```
 
 The script builds both Release DLLs from that checkout and uses an explicit
@@ -85,3 +85,24 @@ repacking and checked by the current native package reader, including cache
 reuse, thumbnail/color repair and corrupt-index rejection. The final runtime ZIP
 must additionally pass its hash/allowlist verifier and fresh-state checks before
 publication. Exact-artifact cold-start gameplay remains a separate check.
+
+## 0.3.0 packages
+
+All four versions match VERSION. Build the optional framework and extensions from
+that same clean annotated tag after building CSS:
+
+```sh
+python3 tools/cssx_release.py build --sdk /absolute/path/to/ue4ss-sdk-d7e7826d
+python3 tools/cssx_release.py verify dist/releases/MSII-CSSX-v0.3.0.zip
+```
+
+CSSX installs inside CustomShellSystem; each extension installs under extensions/.
+The framework ZIP includes exactly one versioned core, selector, logo, README,
+notices and payload manifest. The extension packager includes only declared
+runtime files and notices. Neither packager copies from the live installation.
+The UI Kit is Lua; Cheat Menu is native C++. Development request interfaces are
+compiled out of CSS release builds. No user state, logs or caches ship.
+
+CSS.Package v1 is unchanged. Known outfit issues and untested encounter cases
+remain in the [parity notes](development/cheat-menu-parity.md) and are not treated
+as verified fixes. The latest live tests used Steam build 25265616.

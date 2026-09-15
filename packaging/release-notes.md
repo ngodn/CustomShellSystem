@@ -1,18 +1,27 @@
+### Added
+
+- Optional CSSX tab beside CSS, with a 3 by 3 extension library and shared menus for C++ and Lua extensions.
+- Separate CSSX UI Kit technology preview and native CSSX Cheat Menu downloads.
+- CSSX SDK guide, Lua and C++ starter examples, packaging utility, managed settings and rotating extension logs.
+
 ### Changed
 
-- Search all of `MortalShell2/Content/Paks`, including `~mods` and other subfolders, for CSS outfit packages.
-- Record each scanned pak and its result in `CSS.log` and `runtime/status.json`. The empty wardrobe now distinguishes missing CSS metadata from package or folder errors.
+- Reuse valid color materials when portals, launch points and gameplay shell changes refresh an appearance.
+- Keep existing CSS outfit ZIPs and saved wardrobe choices compatible. Outfits do not need repacking.
 
 ### Fixed
 
-- Keep healthy outfits available when another package is damaged, incomplete, duplicated or cannot write its cached resources.
-- Preserve non-ASCII installation paths when creating or recovering settings and loading menu artwork.
-- Recognize `.PAK` as well as `.pak` filenames.
+- Recover CSS appearance after the game replaces a selected mesh or empties its material overrides.
+- Remove owned color overrides left in extra material slots after changing gameplay shells.
+- Recover the observed completed-intro restriction that left an equipped weapon attacking while stowed, without clearing unrelated story locks.
+- Apply and restore Cheat Menu movement speeds without rewriting unrelated character data.
 
 ### Upgrading
 
-Close the game and extract `CustomShellSystem` into `MortalShell2/Binaries/Win64/ue4ss/Mods/`, replacing the runtime files. Keep `CustomShellSystem/state/` to retain your choices, colors, favorites and templates.
+Close the game. Extract CSS into `MortalShell2/Binaries/Win64/ue4ss/Mods/`, replacing its runtime files. Keep `CustomShellSystem/state/`.
 
-Existing CSS outfit ZIPs remain compatible and do not need repacking. Keep each outfit's `.pak`, `.utoc` and `.ucas` together, with their original filenames. Open **Inventory → CSS** after entering the game world.
+CSSX is optional. Extract its ZIP **inside** `CustomShellSystem/`. Extract each extension folder into `CustomShellSystem/extensions/`. Install both CSS and CSSX before using an extension. All four downloads use version 0.3.0.
 
-This patch addresses reproduced loading failures. If your outfit list is still empty, send the new `CSS.log` and `runtime/status.json` from `ue4ss/Mods/CustomShellSystem/`; they now include the searched path and individual package results.
+Before using CSSX Cheat Menu, disable or remove the original `MortalShell2Mod`, then restart the game. The port credits DevToolsMaster and retains the supplied MIT license. Cheats start off; apply settings explicitly. Progression grants can change the game save.
+
+Open Inventory and select CSS or CSSX. Outfit-specific cloth, missing attachment bones, dodge shadows and HIT2 aiming reports remain under investigation or deferred. Older game-build adapters are retained, but this release's fresh live checks used Steam build 25265616. See the repository verification notes for remaining gameplay cases.

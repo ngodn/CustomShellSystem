@@ -1,0 +1,1 @@
+Control health, Resolve, movement, shell powers, resources, unlocks and Tarstones from Inventory. A native C++ port with applied settings, confirmations and configurable shortcuts.

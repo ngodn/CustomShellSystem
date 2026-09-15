@@ -51,9 +51,16 @@ Only one core DLL is supplied; old cores from development are not included.
 Existing CSS.Package v1 outfit ZIPs and saved choices remain compatible.
 The standalone N menu is replaced by Inventory > CSS.
 Reset CSS preferences only with the game closed by moving state/ to a backup.
-CSS does not modify the game's save files.
+The CSS wardrobe does not modify the game's save files. Extensions may do so.
 
 Known limitations
 CSS uses the game's native Inventory preview and lighting. Extended combat,
 travel and outfit-specific physics still need broader testing. New outfit containers
 require restarting the game; core DLL development supports live reload.
+
+Optional CSSX extensions
+Install CSSX separately by extracting its files inside CustomShellSystem/.
+Install extension folders inside CustomShellSystem/extensions/.
+Open Inventory > CSSX. CSS works without CSSX or any extensions installed.
+CSSX Cheat Menu requires removing/disabling the old MortalShell2Mod and restarting.
+Progression grants in Cheat Menu can change the game save; wardrobe state is separate.

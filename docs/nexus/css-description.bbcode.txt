@@ -15,6 +15,9 @@ I built Custom Shell System to let you change your appearance without changing y
 
 Available variants and color controls depend on the outfit package. CSS saves your choices separately from the game save. You do not need to unlock all shells, weapons or seals.
 
+[size=4][b]Optional: CSSX extensions[/b][/size]
+CSS 0.3.0 can load CSSX as a separate download. CSSX adds an extension library beside CSS in Inventory. Install CSSX inside CustomShellSystem, then install its extension folders under extensions/. CSSX UI Kit and CSSX Cheat Menu are separate downloads. The wardrobe and existing outfit packages still work without them.
+
 [size=4][b]Install[/b][/size]
 [list=1]
 [*]Close the game.
@@ -56,7 +59,7 @@ Close the game and replace the CSS runtime files. [b]Keep CustomShellSystem/stat
 
 Install outfits marked as CSS-compatible. Regular mesh replacements do not appear in the wardrobe automatically. Replacers that overwrite the game's base meshes or materials can affect CSS outfits that use those assets.
 
-[b]Existing CSS outfit ZIPs still work with 0.2.0.[/b] Keep your Beaute, HIT2, Seductress and other CSS packages installed. Only replace the CSS runtime.
+[b]Existing CSS outfit ZIPs still work with 0.3.0.[/b] Keep your Beaute, HIT2, Seductress and other CSS packages installed. Only replace the CSS runtime.
 
 CSS now uses Inventory's character display and lighting. Animation, physics and clipping still depend on the outfit. If you find a problem, send your CSS and UE4SS versions, outfit, gameplay shell, other installed mods and steps to reproduce it. A screenshot or recording helps me track it down.
 
