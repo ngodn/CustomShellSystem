@@ -849,6 +849,44 @@ void Appearance::reset_colors() {
     }
     color_mids_.clear(); color_targets_.clear(); color_textures_.clear(); last_colors_.clear(); color_outfit_.clear();
 }
+void Appearance::prepare_deformation_materials() {
+    auto* component=component_.Get();
+    if(!component || mesh_asset(component)!=applied_.Get()) return;
+    // M_Uber interprets native dash data as DarkBro vertex stretching. Imported
+    // outfits do not share the stock mesh's displacement layout. Disable that
+    // branch on our instances, retaining the separate dash overlay and shell
+    // explosion parameter. Reuse the same owned MIDs for dyes and recovery.
+    const FName parameter(L"DarkBro WPO Stretch Scale",FNAME_Add);
+    Call count(component,L"GetNumMaterials",1);count.run();
+    const auto slots=count.get<int>();
+    if(slots<0 || slots>256) throw std::runtime_error("Appearance material count exceeds deformation limit");
+    auto* dynamic=static_cast<UClass*>(find(L"/Script/Engine.MaterialInstanceDynamic"));
+    auto* instance=static_cast<UClass*>(find(L"/Script/Engine.MaterialInstance"));
+    for(int slot=0;slot<slots;++slot) {
+        Call current(component,L"GetMaterial",2);current.set(L"ElementIndex",slot);current.run();
+        auto* parent=current.get<UObject*>();if(!parent) continue;
+        // Standalone materials such as Beaute's cloth driver have no instance
+        // parameter API. Leave those surfaces intact.
+        if(!parent->IsA(instance)) continue;
+        Call value(parent,L"K2_GetScalarParameterValue",2);value.set(L"ParameterName",parameter);value.run();
+        const auto scale=value.get<float>();
+        if(!std::isfinite(scale) || scale==0.f) continue;
+        auto owned=color_mids_.find(slot);
+        UObject* mid=owned==color_mids_.end()?nullptr:owned->second.Get();
+        if(parent!=mid) {
+            // A gameplay effect or another mod owns unfamiliar dynamic parents.
+            if(parent->IsA(dynamic)) continue;
+            Call make(component,L"CreateDynamicMaterialInstance",4);
+            make.set(L"ElementIndex",slot);make.set(L"SourceMaterial",parent);make.run();
+            mid=make.get<UObject*>();
+            if(!mid) throw std::runtime_error("Could not create the deformation compatibility material");
+            color_mids_[slot]=mid;
+        }
+        Call set(mid,L"SetScalarParameterValue",2);set.set(L"ParameterName",parameter);set.set(L"Value",0.f);set.run();
+        Call readback(mid,L"K2_GetScalarParameterValue",2);readback.set(L"ParameterName",parameter);readback.run();
+        if(readback.get<float>()!=0.f) throw std::runtime_error("Deformation parameter read-back failed");
+    }
+}
 void Appearance::customize(const Outfit& outfit,const std::string& variant,const Customization& custom) {
     const auto& options=outfit.colors_for(variant);
     auto values=color_values(options,custom);
@@ -859,7 +897,8 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
     // Dropping a control restores its authored value, including layered parameters.
     // Rebuild from the original material rather than guessing a layer's default.
     if(std::any_of(last_colors_.begin(),last_colors_.end(),[&](const auto& p){return !values.contains(p.first);})) reset_colors();
-    if(values.empty()) { reset_colors(); material_debug=material_snapshot(component,applied_.Get()); material_debug["colors"]=Json::object(); material_debug["dye_targets"]=0; remember_materials(); return; }
+    prepare_deformation_materials();
+    if(values.empty()) { color_outfit_=color_identity; material_debug=material_snapshot(component,applied_.Get()); material_debug["colors"]=Json::object(); material_debug["dye_targets"]=0; remember_materials(); return; }
     if(values==last_colors_) return;
     auto mid_for=[&](int index) {
         Call count(component,L"GetNumMaterials",1); count.run();
@@ -959,6 +998,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                     throw std::runtime_error("Color parameter read-back failed");
             }
         }
+        prepare_deformation_materials();
         last_colors_=std::move(values); color_outfit_=color_identity;
         material_debug=material_snapshot(component,applied_.Get());
         material_debug["colors"]=last_colors_;

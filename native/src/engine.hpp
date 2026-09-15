@@ -158,6 +158,7 @@ class Appearance {
     bool reuse_materials();
     void detach_residual_colors();
     void reset_colors();
+    void prepare_deformation_materials();
 public:
     std::string shell, pawn_name, current_mesh;
     uint64_t player_revision = 0;
