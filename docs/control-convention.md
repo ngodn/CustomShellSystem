@@ -202,7 +202,35 @@ nothing needs a mesh reload to undo.
 Packages written before this said `"type": "scalar"` and meant a strength, so that reads
 as `intensity`, not as the new generic `scalar`. Nothing published changes meaning.
 
-### Role vocabulary
+### Items and slots
+
+A variant may list `items` instead of a single `mesh`. Exactly one item takes the `body`
+slot and replaces the character mesh, which is what every package published before 1.0
+does, so those load unchanged as one-item packages. The rest are accessories: their own
+skeletal mesh components, attached to the body and posed by it.
+
+```json
+"items": [
+  {"id": "body", "name": "Body", "slot": "body", "mesh": "/Game/CSS/<id>/SK_Body"},
+  {"id": "collar", "name": "Bunny collar", "slot": "neck", "order": 20,
+   "mesh": "/Game/CSS/<id>/SK_Collar", "hides": {"sections": [3, 4]}}
+]
+```
+
+Sixteen slots: `body`, `head`, `hair`, `face`, `ears`, `neck`, `chest`, `back`, `hands`,
+`waist`, `legs`, `feet`, and `trinket1` to `trinket4` for pieces with no natural home. One
+item per slot: two items claiming the same one is refused rather than silently stacked.
+`order` layers them, low first.
+
+`hides.sections` names body material sections the item covers, so a boot can stop a foot
+poking through. It shares the bookkeeping a `toggle` uses, so taking the outfit off puts
+back exactly what CSS hid and nothing the game hid itself.
+
+**An accessory mesh needs a real skeleton.** It is posed by the body through a leader pose,
+so its bones have to be the body's bones. A mesh with a token skeleton will attach, report
+itself visible, sit at the right place and render nothing at all.
+
+## Role vocabulary
 
 Use an existing role wherever the part reasonably fits. Adding a role is fine when nothing
 fits, but say so in the package notes.
