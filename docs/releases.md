@@ -127,6 +127,7 @@ Exact-artifact startup, archive and checksum checks are recorded separately in
 [the verification record](development/0.3.1-release-verification.md).
 The 0.4.0 record, including the backward-compatibility survey of every installed
 package, is [here](development/0.4.0-release-verification.md).
+The 0.4.1 record is [here](development/0.4.1-release-verification.md).
 
 ## 0.4.1 scope
 
