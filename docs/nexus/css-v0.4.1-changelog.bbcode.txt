@@ -1,12 +1,12 @@
 [b]CSS 0.4.1[/b]
 
-A fix for three things in 0.4.0's new COLOR tab. If you have 0.4.0, take this one.
+Three fixes to the COLOR tab that 0.4.0 introduced. If you are on 0.4.0, take this one.
 
 [list]
-[*][b]The swatches were invisible.[/b] Selecting a part was supposed to open a strip of colours to pick from. The strip was there, and every chip in it was drawn with no colour at all, so the panel looked empty apart from the buttons. They show up now.
-[*][b]The colour grid overlapped the buttons under it[/b], so "Choose a colour" was printed on top of "Exact color".
-[*][b]Scrolling onto a colour part could make the CSS and CSSX tabs vanish from the inventory.[/b] The swatch grid pushed the page past a limit on how many things CSS expected to find on one tab, and the check that caught it was strict enough to take the whole wardrobe down with it. That limit is raised, the grid is lighter, and that check can no longer unload anything: at worst the panel now appears without its slide-in.
-[*]A part that the palette you picked does not actually set no longer claims that palette's name. Palettes dress the outfit and leave your body alone, so Skin, Mask and Eyes were reading "Midnight silver" while showing the author's own colour. They read "Original", which is what they are.
+[*][b]The colour swatches show up.[/b] Selecting a part opens a strip of colours to pick from; in 0.4.0 every chip in it was drawn with no colour, so the panel looked empty apart from the buttons.
+[*][b]The tabs stay put.[/b] In 0.4.0, scrolling onto a colour part could make CSS and CSSX disappear from the inventory. The swatch grid pushed the page past a limit on how much CSS expected to find on one tab, and the check that caught it was strict enough to take the whole wardrobe down. That limit is raised and that check can no longer unload anything: at worst a panel now arrives without its slide-in.
+[*][b]The colour grid no longer overlaps the buttons beneath it[/b], which had printed "Choose a colour" on top of "Exact color".
+[*]A part your palette does not set now reads [b]Original[/b] rather than the palette's name. Palettes dress the outfit and leave your body alone, so Skin, Mask and Eyes were claiming to be "Midnight silver" while showing the author's own colour.
 [/list]
 
 [b]Only CSS needs updating.[/b] Nothing else changes from 0.4.0. Existing outfit and port ZIPs still work, your colours and saved looks are untouched, and CSSX, UI Kit and Cheat Menu remain at 0.3.0.
