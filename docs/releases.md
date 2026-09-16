@@ -126,6 +126,54 @@ part of this patch release.
 Exact-artifact startup, archive and checksum checks are recorded separately in
 [the verification record](development/0.3.1-release-verification.md).
 
+## 0.4.0 scope
+
+A feature release, and the first one to change the COLOR tab since it was written.
+
+**Colour.** The tab is now a palette band, then one section per group: OUTFIT and
+BODY, each opening with a Tint row (hue, saturation, brightness) that moves everything
+under it. Controls carry a `group`, a `role` and `hue_locked`, so metal, gems, skin and
+the body's pigments take a group's brightness and saturation but keep their own hue.
+Picking a part opens a strip of swatches (the author's colour, that part in each
+palette, then hues and shades of it) with exact RGB behind a toggle. Choosing a palette
+now takes over only the parts that palette sets and the tint of their groups, so a
+custom skin survives changing the dress; `original` still clears everything.
+[color-convention.md](color-convention.md) is the written standard the three new
+manifest fields belong to, with `lint_convention()` in `tools/css_colors.py` for
+package builders to fail their own build on. All three fields are optional: CSS infers
+them from the control id, so every package published before this keeps working.
+
+**Animation.** Adds the ANIMATION tab with Walk animation (Normal or Feminine), driven
+natively from the game's own `BS_CultistSpearLady` blendspace plus a walk-speed
+pre-hook, with no pak and no dependency on argisht's GenessaWalk or ProximaWalk mods.
+Those mods are detected and named in the tab: on Normal CSS does not touch locomotion
+so they keep working, on Feminine CSS re-asserts the animation on every mismatch so
+they cannot take it back. The Jog and Sprint options from the 0.3.3 preview are gone.
+Neither borrowed run kept up with the ground properly, so both gaits stay on the game's
+own animation; a state or template written by the preview loads and comes back Normal.
+
+**Stowed items.** Outfit manifests can carry per-socket corrections. A stowed prop is
+welded to its socket and never tested against the body, so on a wider shape it starts
+buried and the stride swings the body through it. CSS measures the prop against the
+body's own physics asset every frame (`GetClosestPointOnCollision`) and holds it a
+declared clearance off, following the live pose. A fixed offset is the fallback for a
+mesh with no collision to measure. Nothing is touched while an animation borrows the
+prop, such as a parry reaching for the seal.
+
+**Also.** Fixes switching to a shell reverting its outfit to the first one installed (a
+reconcile could finish against a shell that had already changed underneath it). Fixes
+the random dark glossy body, where a dye render target was bound before its layers were
+drawn. Fixes a mouse drag on a Tint slider reading the colour sliders' `channel` key.
+Clipped sliding tab strip. Numbered-field lookup in the CSSX bridge.
+
+Templates gain the animation setting (`{"selections":..., "walk_animation":...}`, older
+files migrate). State schema stays 1 with additive keys, and saved looks gain `tints`.
+Outfit package format stays v1 with the optional `attachments` field and the optional
+`group`, `role` and `hue_locked` on a colour control.
+
+Build only CSS from clean annotated tag `v0.4.0`. CSSX, UI Kit and Cheat Menu
+remain at 0.3.0. The BBCode comment is [CSS 0.4.0](nexus/css-v0.4.0-changelog.bbcode.txt).
+
 ## 0.3.2 scope
 
 Corrects missing accessory socket-parent bones using a hidden stock-mesh pose

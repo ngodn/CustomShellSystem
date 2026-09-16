@@ -30,8 +30,30 @@ int main() {
         state.enabled = true;
         state.selections["CharacterId.Player.Shell.Genessa"] = {"beaute.genessa", "regular"};
         state.favorites.insert("beaute.genessa");
-        state.presets["my-outfit"] = state.selections;
+        state.presets["my-outfit"] = Preset{state.selections, "feminine"};
         expect(State::parse(state.json()).json() == state.json(), "State round trip failed");
+        state.walk_animation = "feminine";
+        {
+            const auto back = State::parse(state.json());
+            expect(back.walk_animation == "feminine", "Walk animation setting lost");
+            expect(back.presets.at("my-outfit").walk_animation == "feminine", "Template walk setting lost");
+        }
+        {   // The 0.3.3 preview offered jogging and sprinting. Both are gone: a state
+            // written by it still loads, and neither setting comes back.
+            auto preview = state.json();
+            preview["run_animation"] = "feminine";
+            preview["jog_animation"] = "feminine"; preview["sprint_animation"] = "feminine";
+            preview["presets"]["my-outfit"]["sprint_animation"] = "feminine";
+            const auto back = State::parse(preview);
+            expect(back.walk_animation == "feminine", "Preview state did not load");
+            expect(!back.json().contains("jog_animation") && !back.json().contains("sprint_animation"),
+                   "Jog and sprint settings were written back");
+        }
+        auto old_template = state.json(); old_template["presets"]["my-outfit"] = old_template["presets"]["my-outfit"]["selections"]; old_template.erase("walk_animation");
+        auto migrated = State::parse(old_template);
+        expect(migrated.walk_animation == "normal" && migrated.presets.at("my-outfit").walk_animation == "normal" && migrated.presets.at("my-outfit").selections.size() == 1, "Legacy template migration failed");
+        auto bad = state.json(); bad["walk_animation"] = "sideways";
+        rejects([&] { State::parse(bad); });
         auto invalid = state.json(); invalid["schema"] = 2;
         rejects([&] { State::parse(invalid); });
         invalid = state.json(); invalid["enabled"] = "true";
@@ -64,6 +86,43 @@ int main() {
             bad_materials["outfits"][0]["variants"][0]["materials"]={{bad,"/Game/CSS/Face.Face"}};
             atomic_json(catalog_file,bad_materials,false);
             rejects([&]{Catalog::load(catalog_dir);});
+        }
+        {   // 0.4: the correction that keeps a stowed seal out of the hips. CSS measures
+            // the seal against the body's live physics asset and holds it `clearance` off;
+            // `location` is only the fallback for a mesh with no collision to measure.
+            Json collision = {{"clearance", 3.0}, {"max_push", 8.0}, {"anchor", "pelvis"},
+                              {"direction", {0.29066, -0.82883, 0.47807}}};
+            auto seals = catalog;
+            seals["outfits"][0]["variants"][0]["attachments"] =
+                {{"Socket_Prop_Stowed_InfiniteSeal_Right", {{"location", {0.2746, 0.369, 2.9645}}, {"rotation", {0, 0, 0}}, {"collision", collision}}}};
+            atomic_json(catalog_file, seals, false);
+            const auto with_seals = Catalog::load(catalog_dir);
+            const auto& offset = with_seals.find("test", "a")->attachments.at("Socket_Prop_Stowed_InfiniteSeal_Right");
+            expect(offset.location[2] == 2.9645, "Attachment offset lost");
+            expect(offset.collision.active() && offset.collision.anchor == "pelvis", "Attachment collision lost");
+            expect(offset.collision.clearance == 3.0 && offset.collision.max_push == 8.0, "Collision limits lost");
+
+            auto reject_with = [&](auto mutate) {
+                auto bad = seals; mutate(bad["outfits"][0]["variants"][0]["attachments"]["Socket_Prop_Stowed_InfiniteSeal_Right"]["collision"]);
+                atomic_json(catalog_file, bad, false);
+                rejects([&] { Catalog::load(catalog_dir); });
+            };
+            reject_with([](Json& c) { c["direction"] = {1, 1, 0}; });    // not a unit vector
+            reject_with([](Json& c) { c["clearance"] = 500; });          // absurd hold-off
+            reject_with([](Json& c) { c["max_push"] = 0; });             // no room to correct
+            reject_with([](Json& c) { c["max_push"] = 500; });           // absurd correction
+
+            // A block written for an older CSS, or one with nothing to hold, is ignored
+            // rather than rejecting the package: the fixed offset still applies.
+            auto legacy = seals;
+            legacy["outfits"][0]["variants"][0]["attachments"]["Socket_Prop_Stowed_InfiniteSeal_Right"]["collision"] =
+                {{"anchor", "pelvis"}, {"max_push", 7.0}, {"direction", {0.29066, -0.82883, 0.47807}},
+                 {"probes", {{{"clearance", 2.4}, {"drivers", {{{"bone", "pelvis"}, {"weight", 1.0}, {"point", {0, 0, 0}}}}}}}}};
+            atomic_json(catalog_file, legacy, false);
+            const auto older = Catalog::load(catalog_dir);
+            const auto& ignored = older.find("test", "a")->attachments.at("Socket_Prop_Stowed_InfiniteSeal_Right");
+            expect(!ignored.collision.active(), "A collision block with no clearance should be ignored");
+            expect(ignored.location[2] == 2.9645, "The fixed offset should survive an ignored collision block");
         }
         atomic_json(catalog_file,catalog,false);
         expect(loaded.compatible("test", "CharacterId.Player.Shell.Genessa"), "Compatible shell rejected");

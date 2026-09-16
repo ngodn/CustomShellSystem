@@ -47,6 +47,24 @@ int main(int argc,char** argv) {
         Json diagnostics;
         if(!package_catalogs(root/"paks",root/"cache",&diagnostics).empty() || diagnostics["files"][0]["status"]!="rejected")
             throw std::runtime_error("Corrupt pak index was accepted or not reported");
+        // 0.4: every colour control resolves to a group, a role and a hue lock,
+        // declared by the package or read off the control id. A package written
+        // before the convention has to come out of this with sensible answers, so
+        // print them: this runs against every installed package, which is how the
+        // ports are audited against docs/color-convention.md.
+        static const std::set<std::string> ROLES{"garment","accent","leather","metal","gem","glow",
+            "skin","face","hair","eyes","eye-glow","body-hair","nipple","areola","labia","vestibule"};
+        std::set<std::string> reported;
+        for(const auto& variant:catalog.outfits[0].variants) {
+            const auto& options=catalog.outfits[0].colors_for(variant.id);
+            std::string line;
+            for(const auto& control:options.controls) {
+                if(!ROLES.contains(control.role)) throw std::runtime_error("Colour control resolved to an unknown role: "+control.role);
+                line+=(line.empty()?"":", ")+control.id+"="+color_group_name(control.group)+"/"+control.role+
+                      (control.hue_locked?"/locked":"");
+            }
+            if(!line.empty() && reported.insert(line).second) std::cout<<"  colors: "<<line<<'\n';
+        }
         fs::remove_all(root);
         std::cout<<"Package catalog, thumbnail, cache reuse, repair and corruption checks passed\n";
     } catch(const std::exception& error) { fs::remove_all(root); std::cerr<<error.what()<<'\n'; return 1; }

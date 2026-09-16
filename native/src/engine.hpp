@@ -1,7 +1,11 @@
+#include <optional>
 #pragma once
 #include <string>
 #include <algorithm>
 #include <array>
+#include <atomic>
+#include <fstream>
+#include <set>
 #include <vector>
 #include "data.hpp"
 #include "inventory_motion.hpp"
@@ -96,7 +100,8 @@ class InventoryUI {
     std::vector<std::pair<WeakObject,std::array<float,4>>> top_padding_;
     std::array<double,2> layout_size_{};
     uint64_t layout_check_=0;
-    int section_=0, row_=0, color_channel_=0;
+    int section_=0, row_=0, color_channel_=0, tint_field_index_=0;   // which tint slider Left/Right drives
+    bool exact_color_=false;      // COLOR: swatch strip, or Red/Green/Blue for the people who want it
     std::string last_message_;
     bool dirty_=true, active_=false, enabled_=true, was_active_=false;
     uint64_t discover_after_=0, last_tick_=0;
@@ -146,6 +151,72 @@ public:
     void update(RC::Unreal::UObject* component,const std::string& original);
     void release();
 };
+// 0.4: per-outfit socket corrections for stowed items (seals sink into wider hips).
+class AttachmentOffsets {
+    // `location`/`rotation` hold the transform the game last gave the child, so the
+    // correction is always measured from the game's own stow pose. `applied` is what
+    // CSS last wrote, so a re-stow can be told apart from CSS's own live push.
+    struct Tracked {
+        WeakObject child; std::wstring socket;
+        std::array<double,3> location{}, rotation{}, applied{};
+        bool owned=false;
+    };
+    struct BonePose { std::array<double,3> location{}; double basis[3][3]{}; };
+    std::vector<Tracked> tracked_;
+    std::map<std::string,AttachmentOffset> offsets_;
+    std::map<std::string,BonePose> poses_;
+    bool pose(RC::Unreal::UObject* component,const std::string& bone,BonePose& out);
+    bool push_for(RC::Unreal::UObject* component,RC::Unreal::UObject* child,const AttachmentOffset& offset,
+                  const double socket_basis[3][3],std::array<double,3>& out);
+    void apply(RC::Unreal::UObject* component,Tracked& item,const AttachmentOffset& offset,bool live);
+public:
+    void configure(const std::map<std::string,AttachmentOffset>& offsets);
+    void update(RC::Unreal::UObject* component);        // 4 Hz: find and track stowed children
+    void push(RC::Unreal::UObject* component);          // every frame: keep them out of the moving body
+    void release();
+    bool collides() const;
+#ifdef CSS_INVENTORY_DEV
+    // Rescale the correction on the live outfit, so a lift can be judged on screen
+    // without rebuilding a package and restarting the game. Never shipped.
+    Json tune(double lift,double clearance,double max_push);
+    Json diagnostics() const;
+    double last_distance_=0, last_push_=0;
+#endif
+};
+// 0.4: optional feminine walk (ANIMATION tab). Drives the game's own carrier
+// blendspace override on the player's animation instance, the way the GenessaWalk
+// and ProximaWalk mods do, for whichever shell is worn.
+class WalkOverride {
+    WeakObject pawn_, anim_, movement_, walk_ability_, walk_bs_, run_bs_, active_;
+    uint64_t next_ability_search_=0, last_heal_=0;
+    int idle_ticks_=0, off_ticks_=0, slide_ticks_=0;
+    uint64_t slide_until_=0;
+    bool engaged_=false, run_tweaked_=false;
+    uint8_t original_run_axis_=0;
+    std::optional<uint64_t> hook_;
+    std::atomic<bool> scale_walk_{false};
+    std::string reason_;
+    fs::path mods_; bool mods_checked_=false, mod_active_=false; uint64_t mods_check_=0;
+    bool genessa_active_=false, proxima_active_=false;
+    std::string mod_name_;
+    RC::Unreal::UObject* blendspace(WeakObject& slot,const wchar_t* path);
+    void push_on(RC::Unreal::UObject* target);
+    void push_off();
+    void hook_speed();
+    void unhook_speed();
+    void prepare_run(RC::Unreal::UObject* run);
+    void restore_run();
+public:
+    bool walk_mod_active(const fs::path& mods);
+    bool walk_mod_active() { return walk_mod_active(mods_); }
+    const std::string& walk_mod_name() const { return mod_name_; }
+    bool genessa_walk_active() const { return genessa_active_; }
+    bool proxima_walk_active() const { return proxima_active_; }
+    bool engaged() const { return engaged_; }
+    const std::string& reason() const { return reason_; }
+    void update(RC::Unreal::UObject* pawn,bool walk_feminine,bool jog_feminine,bool sprint_feminine);
+    void release();
+};
 class Appearance {
     WeakObject component_, applied_;
     WeakObject observed_pawn_, observed_component_, observed_controller_;
@@ -164,6 +235,7 @@ class Appearance {
     std::vector<std::string> menu_original_materials_;
     std::vector<WeakObject> menu_original_live_materials_;
     AttachmentFollower attachments_, menu_attachments_;
+    AttachmentOffsets offsets_;
     void restore_menu();
     void remember_materials();
     bool materials_match() const;
@@ -184,6 +256,14 @@ public:
     bool ready_to_apply() const;
     void sync_menu();
     void sync_attachments();
+    void sync_seals();   // every frame, unlike sync_attachments: a stride is faster than 4 Hz
+#ifdef CSS_INVENTORY_DEV
+    Json seal_diagnostics() const;
+    Json tune_seals(double lift,double clearance,double max_push) { return offsets_.tune(lift,clearance,max_push); }
+#endif
+    void set_attachment_offsets(const std::map<std::string,AttachmentOffset>& offsets) { offsets_.configure(offsets); }
+    WalkOverride walk;
+    void sync_walk(bool walk_feminine,bool jog_feminine,bool sprint_feminine) { walk.update(observed_pawn_.Get(),walk_feminine,jog_feminine,sprint_feminine); }
     Json transition_state(void* engine);
 #ifdef CSS_TRANSITION_TESTS
     void test_reset_mesh();

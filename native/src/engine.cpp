@@ -12,6 +12,7 @@
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/FFrame.hpp>
 #include <Unreal/FProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
@@ -293,6 +294,7 @@ static Json material_snapshot(UObject* component,UObject* mesh) {
     return result;
 }
 #include "attachment_follower.inl"
+#include "walk_override.inl"
 static UObject* menu_character(UObject* player) {
     if(!player) return nullptr;
     auto* pc=read<UObject*>(player,L"Controller");
@@ -621,6 +623,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     return true;
 }
 bool Appearance::restore() {
+    offsets_.release();
     attachments_.release();
     restore_menu();
     detach_residual_colors();
@@ -949,10 +952,11 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                     create.set(L"bAutoGenerateMipMaps",true); create.run(); target=create.get<UObject*>();
                     if(!target) throw std::runtime_error("Could not create the dye texture"); weak=target;
                 }
-                // Keep the render target referenced by the component before importing layer textures.
-                for(int slot:surface.slots) {
-                    Call set(mid_for(slot),L"SetTextureParameterValue",2); set.set(L"ParameterName",parameter); set.set(L"Value",target); set.run();
-                }
+                // 0.4: the render target used to be bound to the materials before the layer
+                // textures were imported and drawn. A failed import or draw then left a black
+                // dye texture on the body (the random dark, glossy skin). Keep it alive with a
+                // load root instead and bind it only after the composite is checked.
+                AssetLoadRoots target_root; target_root.keep(target);
                 std::vector<std::pair<WeakObject,ColorValue>> layers;
                 for(const auto& [id,file]:surface.layers) if(values.contains(id)) {
                     auto& texture=color_textures_[file];
@@ -980,6 +984,20 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 } catch(...) { end(); throw; }
                 end();
                 update_dye_mips(target);
+                // Read a few texels back: a composite that came out fully black is rejected
+                // and the authored texture stays bound, instead of a dark body.
+                bool any_light=false;
+                for(int sy=1;sy<=3 && !any_light;++sy) for(int sx=1;sx<=3 && !any_light;++sx) {
+                    Call pixel(library,L"ReadRenderTargetPixel",5); pixel.set(L"WorldContextObject",component); pixel.set(L"TextureRenderTarget",target);
+                    pixel.set(L"X",int32_t(surface.resolution*sx/4)); pixel.set(L"Y",int32_t(surface.resolution*sy/4)); pixel.run();
+                    const auto rgba=pixel.get<std::array<uint8_t,4>>();
+                    any_light=rgba[0]+rgba[1]+rgba[2]>0;
+                }
+                if(!any_light) {
+                    material_debug["dye_failed"]=surface.id;
+                    target=original;   // keep the authored texture; colors for this part are skipped this pass
+                    last_colors_.clear();   // retry the composite on the next customize
+                }
             }
             for(int slot:surface.slots) {
                 auto* mid=mid_for(slot);

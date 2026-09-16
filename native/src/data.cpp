@@ -1,3 +1,4 @@
+#include <cmath>
 #include "data.hpp"
 #include "packages.hpp"
 #include <algorithm>
@@ -129,7 +130,7 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
             for (const auto& shell : outfit.shells) if (!valid_id(shell)) throw std::runtime_error("Invalid shell tag");
             std::set<std::string> variants;
             for (const auto& v : item.at("variants")) {
-                Variant variant{v.at("id"), v.at("name"), v.at("mesh"), {}, {}};
+                Variant variant{v.at("id"), v.at("name"), v.at("mesh"), {}, {}, {}};
                 if(v.contains("colors")) variant.colors=ColorOptions::parse(v.at("colors"));
                 if (!valid_id(variant.id) || !variants.insert(variant.id).second || !valid_asset(variant.mesh))
                     throw std::runtime_error("Invalid variant id or asset path");
@@ -143,6 +144,54 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
                         auto slot=std::stoi(key); auto path=value.get<std::string>();
                         if(slot>=128 || !valid_asset(path)) throw std::runtime_error("Invalid material override");
                         variant.materials.emplace(slot,std::move(path));
+                    }
+                }
+                if(v.contains("attachments")) {
+                    const auto& attachments=v.at("attachments");
+                    if(!attachments.is_object() || attachments.size()>32) throw std::runtime_error("Invalid variant attachments");
+                    for(const auto& [socket,value]:attachments.items()) {
+                        if(socket.empty() || socket.size()>96 || !value.is_object()) throw std::runtime_error("Invalid attachment socket");
+                        AttachmentOffset offset;
+                        auto vec=[&](const char* key,std::array<double,3>& out,double limit) {
+                            if(!value.contains(key)) return;
+                            const auto& list=value.at(key);
+                            if(!list.is_array() || list.size()!=3) throw std::runtime_error("Invalid attachment offset");
+                            for(size_t i=0;i<3;++i) {
+                                if(!list[i].is_number()) throw std::runtime_error("Invalid attachment offset");
+                                out[i]=list[i].get<double>();
+                                if(!std::isfinite(out[i]) || std::abs(out[i])>limit) throw std::runtime_error("Attachment offset out of range");
+                            }
+                        };
+                        vec("location",offset.location,50.); vec("rotation",offset.rotation,180.);
+                        // The live correction is optional: without a clearance there is
+                        // nothing to hold, the fixed offset still applies, and a block
+                        // written for an older CSS is simply ignored rather than
+                        // rejecting the whole package.
+                        if(value.contains("collision") && value.at("collision").is_object() &&
+                           value.at("collision").value("clearance",0.)>0) {
+                            const auto& live=value.at("collision");
+                            auto& collision=offset.collision;
+                            collision.anchor=live.value("anchor",std::string{});
+                            if(collision.anchor.size()>96) throw std::runtime_error("Invalid collision anchor bone");
+                            collision.clearance=live.at("clearance").get<double>();
+                            if(!std::isfinite(collision.clearance) || collision.clearance>50.)
+                                throw std::runtime_error("Collision clearance out of range");
+                            collision.max_push=live.value("max_push",0.);
+                            if(!std::isfinite(collision.max_push) || collision.max_push<=0 || collision.max_push>50.)
+                                throw std::runtime_error("Collision push limit out of range");
+                            const auto& direction=live.value("direction",Json::array({0,0,0}));
+                            if(!direction.is_array() || direction.size()!=3) throw std::runtime_error("Invalid collision direction");
+                            double length=0;
+                            for(size_t i=0;i<3;++i) {
+                                if(!direction[i].is_number()) throw std::runtime_error("Invalid collision direction");
+                                collision.direction[i]=direction[i].get<double>();
+                                if(!std::isfinite(collision.direction[i])) throw std::runtime_error("Invalid collision direction");
+                                length+=collision.direction[i]*collision.direction[i];
+                            }
+                            if(!collision.anchor.empty() && std::abs(std::sqrt(length)-1.)>1e-3)
+                                throw std::runtime_error("Collision direction is not a unit vector");
+                        }
+                        variant.attachments.emplace(socket,offset);
                     }
                 }
                 outfit.variants.push_back(std::move(variant));
@@ -208,6 +257,21 @@ static std::map<std::string, Selection> parse_selections(const Json& values) {
     }
     return result;
 }
+bool valid_walk_animation(const std::string& value) { return value=="normal" || value=="feminine"; }
+static Preset parse_preset(const Json& j) {
+    Preset result;
+    // 0.4 templates are {"selections":{...},"walk_animation":...}; older ones are the bare selection map.
+    if(j.is_object() && j.contains("selections")) {
+        result.selections=parse_selections(j.at("selections"));
+        result.walk_animation=j.value("walk_animation","normal");
+        if(!valid_walk_animation(result.walk_animation))
+            throw std::runtime_error("Invalid template animation");
+        // Jog and sprint are pinned to normal: the 0.3.3 preview shipped a
+        // "run_animation" and then a jog/sprint pair, and neither had its stride
+        // matched. Whatever a template holds, it loads as normal.
+    } else result.selections=parse_selections(j);
+    return result;
+}
 State State::parse(const Json& j) {
     if (j.at("schema") != 1) throw std::runtime_error("Unsupported CSS state schema");
     State result;
@@ -215,6 +279,11 @@ State State::parse(const Json& j) {
     result.auto_apply = j.value("auto_apply", true);
     result.invert_orbit_x = j.value("invert_orbit_x", false);
     result.invert_orbit_y = j.value("invert_orbit_y", true);
+    result.walk_animation = j.value("walk_animation", "normal");
+    if(!valid_walk_animation(result.walk_animation))
+        throw std::runtime_error("Invalid walk animation setting");
+    // Jog and sprint stay normal, so a state written by the 0.3.3 preview comes
+    // back with the game's own run rather than the unmatched borrowed one.
     result.selections = parse_selections(j.at("selections"));
     if(j.contains("remembered_colors")) {
         if(!j.at("remembered_colors").is_object() || j.at("remembered_colors").size()>4096) throw std::runtime_error("Invalid saved outfit colors");
@@ -227,7 +296,7 @@ State State::parse(const Json& j) {
     for (const auto& id : result.favorites) if (!valid_id(id)) throw std::runtime_error("Invalid favorite");
     if (j.contains("presets")) for (const auto& [key, values] : j.at("presets").items()) {
         if (!valid_id(key) || result.presets.size() >= 64) throw std::runtime_error("Invalid preset");
-        result.presets.emplace(key, parse_selections(values));
+        result.presets.emplace(key, parse_preset(values));
     }
     return result;
 }
@@ -240,9 +309,9 @@ Json State::json() const {
     Json presets_json = Json::object();
     Json remembered = Json::object();
     for(const auto& [id,colors]:remembered_colors) remembered[id]=colors.json();
-    for (const auto& [name, values] : presets) presets_json[name] = selections_json(values);
+    for (const auto& [name, preset] : presets) presets_json[name] = {{"selections", selections_json(preset.selections)}, {"walk_animation", preset.walk_animation}};
     return {{"schema", 1}, {"enabled", enabled}, {"auto_apply", auto_apply},
-            {"invert_orbit_x", invert_orbit_x}, {"invert_orbit_y", invert_orbit_y},
+            {"invert_orbit_x", invert_orbit_x}, {"invert_orbit_y", invert_orbit_y}, {"walk_animation", walk_animation},
             {"selections", selections_json(selections)}, {"favorites", favorites}, {"presets", presets_json}, {"remembered_colors",remembered}};
 }
 }

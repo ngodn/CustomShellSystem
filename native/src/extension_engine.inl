@@ -1,6 +1,18 @@
 // Included after engine.cpp's reflected frame and lifetime helpers.
 namespace css {
 namespace {
+FProperty* extension_property(UStruct* type,const std::wstring& name) {
+    // UE4SS's GetPropertyByNameInChain compares only FName's base index.
+    // Blueprint fields such as SpringBone_1 and SpringBone_2 need the number too.
+    const FName wanted(name.c_str());
+    unsigned depth=0;
+    for(;type;type=type->GetSuperStruct()) {
+        if(++depth>64) throw std::runtime_error("CSSX class hierarchy exceeds bound");
+        for(auto* field:type->ForEachProperty())
+            if(field->GetFName()==wanted) return field;
+    }
+    return nullptr;
+}
 struct ExtensionMapView {
     FProperty* key;FProperty* value;FScriptMap* map;const FScriptMapLayout& layout;
     int count,end;
@@ -115,7 +127,7 @@ void ExtensionBridge::encode(FProperty* p,void* data,const Json& value,unsigned 
         for(const auto* name:{&row_name,&field_name}) if(name->empty() || name->size()>256 || name->find('\0')!=std::string::npos)
             throw std::runtime_error("CSSX table row or field name is invalid");
         const auto row=wide(row_name),field=wide(field_name);
-        auto* property=type->GetPropertyByNameInChain(field.c_str());
+        auto* property=extension_property(type,field);
         if(!property || property->GetOffset_Internal()<0 || property->GetOffset_Internal()+property->GetSize()>type->GetPropertiesSize() || !p->SameType(property))
             throw std::runtime_error("CSSX table field type does not match the parameter");
         const auto& rows=table->GetRowMap();if(rows.Num()<0 || rows.Num()>4096) throw std::runtime_error("CSSX table exceeds bound");
@@ -165,7 +177,7 @@ void ExtensionBridge::encode(FProperty* p,void* data,const Json& value,unsigned 
         if(!value.is_object()) throw std::runtime_error("CSSX struct requires an object");
         auto* type=static_cast<FStructProperty*>(p)->GetStruct().Get();
         for(auto it=value.begin();it!=value.end();++it) {
-            auto key=wide(it.key());auto* field=type->GetPropertyByNameInChain(key.c_str());
+            auto key=wide(it.key());auto* field=extension_property(type,key);
             if(!field || field->GetOffset_Internal()<0 || field->GetOffset_Internal()+field->GetSize()>p->GetElementSize()) throw std::runtime_error("CSSX struct member mismatch: "+it.key());
             encode(field,static_cast<std::byte*>(data)+field->GetOffset_Internal(),it.value(),depth+1);
         }
@@ -234,7 +246,8 @@ Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& re
     }
     if(op=="get" || op=="set" || op=="map.update") {
         const auto name=wide(request.at("property").get<std::string>());
-        auto* p=object->GetPropertyByNameInChain(name.c_str());if(!p || p->GetOffset_Internal()<0) throw std::runtime_error("CSSX property is missing");
+        auto* type=object->IsA<UStruct>()?static_cast<UStruct*>(object):object->GetClassPrivate();
+        auto* p=extension_property(type,name);if(!p || p->GetOffset_Internal()<0) throw std::runtime_error("CSSX property is missing");
         auto* data=reinterpret_cast<std::byte*>(object)+p->GetOffset_Internal();
         if(op=="map.update") {
             if(object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject|RF_ArchetypeObject))) throw std::runtime_error("CSSX refuses default-object writes");

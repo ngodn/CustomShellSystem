@@ -1,16 +1,50 @@
 # Color customization
 
-CSS keeps the author's Original appearance and adds Crimson regalia and Midnight regalia, based on the supplied reference images. Select an outfit, open Colors, choose a palette, then adjust individual parts. A star beside the palette name means you have custom changes. Reset part returns that part to the selected palette; Original or Reset all colors restores authored materials and textures exactly.
+CSS keeps the author's Original appearance and adds whatever palettes the package
+ships. Select an outfit, open COLOR, choose a palette, then adjust individual parts.
+
+The tab is a palette band, then one section per group. Parts that belong to the dress
+sit under OUTFIT and parts that belong to the body under BODY, each opening with a Tint
+row that shifts everything beneath it at once. Metal, gems, skin and the intimate
+pigments take the tint's brightness and saturation but keep their own hue, so dragging
+the Outfit hue from crimson to teal recolors the fabric and leaves gold as gold.
+Tinting needs a palette: Original applies no dye at all, so there is nothing to move,
+and the Tint rows are hidden there.
+
+Picking a part opens a strip of swatches: the author's own colour first, then that part
+in each palette, then hues and shades of it. Left and Right walk the strip from the list
+without opening anything. **Exact color** switches to Red, Green and Blue sliders for
+when you want a specific value, and **Back to swatches** returns.
+
+Choosing a palette takes over the parts that palette sets and the tint of their groups,
+and leaves the rest alone, so a custom skin survives changing the dress. Original is the
+exception: it means no dye at all, and clears everything. *Reset part* returns one part
+to the palette; *Reset all colors* returns to the bare palette.
+
+What a package should declare, and the shared vocabulary of roles that drives all of the
+above, is in [color-convention.md](color-convention.md). Packages published before that
+convention keep working: CSS infers each control's group and role from its id.
 
 | Outfit | Independent controls |
 | --- | --- |
+| Seductress V2, dressed | Garment, ornaments, skin, mask, eyes, eye glow |
+| Seductress V2, topless variants | the above plus nipples and areolae |
+| Seductress V2, nude variants | the above plus labia and inner |
+| Seductress V1 | Garment, ornaments, skin, mask, eyes, eye glow |
 | BeauteGenessa, both variants | Clothing, metal, skin, face, eyes, eye glow strength |
 | BeauteKnightLady | Armor, metal highlights, waist cloth |
 | HIT2 DE Scyther | Clothing, metal, ribbons, gems, skin, face, hair |
 
-RGB sliders use the familiar 0 to 100 display. Glow strength uses its actual scalar value. D-pad up/down chooses a row, left/right changes its value, and A on a color channel resets that part. Mouse dragging updates the selected part, its swatch and its value without rebuilding the panel. Analog camera controls remain available. Presets do not recolor skin, face, hair or eyes unless you explicitly change those controls.
+RGB sliders use the familiar 0 to 100 display. Glow strength uses its actual scalar
+value. D-pad up/down chooses a row, left/right changes its value, and A on a color
+channel resets that part. Mouse dragging updates the selected part, its swatch and its
+value without rebuilding the panel. Analog camera controls remain available. Presets do
+not recolor skin, face, hair or eyes unless you explicitly change those controls.
 
-Colors belong to CSS's own save. Each outfit remembers its colors across variant changes, and saved looks include the palette and custom values. Writes are coalesced during dragging and flushed when unloading the core. The game save, shell abilities and unlocks are untouched.
+Colors belong to CSS's own save. Each outfit remembers its colors across variant
+changes, and saved looks include the palette, custom values and group tints. Writes are
+coalesced during dragging and flushed when unloading the core. The game save, shell
+abilities and unlocks are untouched.
 
 ## Authoring a package
 

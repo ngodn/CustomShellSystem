@@ -107,8 +107,217 @@ void AttachmentFollower::update(UObject* component,const std::string& original) 
         owned_.push_back({weak});attach_relative(child,proxy,socket);
     }
 }
+// 0.4: per-outfit socket offsets. The game keeps re-attaching stowed items with its
+// own relative transform (draw/stow), so the correction is re-applied whenever the
+// child is back at a known base transform, and removed again on restore.
+static std::array<double,3> relative_location(UObject* child) { return read<std::array<double,3>>(child,L"RelativeLocation"); }
+static std::array<double,3> relative_rotation(UObject* child) { return read<std::array<double,3>>(child,L"RelativeRotation"); }
+static bool close_to(const std::array<double,3>& a,const std::array<double,3>& b,double tolerance) {
+    for(int i=0;i<3;++i) if(std::abs(a[i]-b[i])>tolerance) return false;
+    return true;
+}
+static void set_relative(UObject* child,const std::array<double,3>& location,const std::array<double,3>& rotation) {
+    Call call(child,L"K2_SetRelativeLocationAndRotation",5);
+    call.set(L"NewLocation",location); call.set(L"NewRotation",rotation);
+    call.set(L"bSweep",false); call.set(L"bTeleport",true); call.run();
+}
+// A stowed prop is welded to its socket, so nothing stops the body walking through it.
+// These two helpers expand an FRotator the way Unreal's own FRotationMatrix does; the
+// obvious Rz*Ry*Rx expansion mirrors pitch and roll and puts the prop at the wrong angle.
+static void unreal_basis(const std::array<double,3>& rotator,double rows[3][3]) {
+    constexpr double radians=3.14159265358979323846/180.;
+    const double p=rotator[0]*radians,y=rotator[1]*radians,r=rotator[2]*radians;
+    const double sp=std::sin(p),sy=std::sin(y),sr=std::sin(r);
+    const double cp=std::cos(p),cy=std::cos(y),cr=std::cos(r);
+    rows[0][0]=cp*cy;             rows[0][1]=cp*sy;             rows[0][2]=sp;
+    rows[1][0]=sr*sp*cy-cr*sy;    rows[1][1]=sr*sp*sy+cr*cy;    rows[1][2]=-sr*cp;
+    rows[2][0]=-(cr*sp*cy+sr*sy); rows[2][1]=cy*sr-cr*sp*sy;    rows[2][2]=cr*cp;
+}
+static std::array<double,3> to_world(const double rows[3][3],const std::array<double,3>& v) {
+    return {v[0]*rows[0][0]+v[1]*rows[1][0]+v[2]*rows[2][0],
+            v[0]*rows[0][1]+v[1]*rows[1][1]+v[2]*rows[2][1],
+            v[0]*rows[0][2]+v[1]*rows[1][2]+v[2]*rows[2][2]};
+}
+static std::array<double,3> to_local(const double rows[3][3],const std::array<double,3>& v) {
+    return {v[0]*rows[0][0]+v[1]*rows[0][1]+v[2]*rows[0][2],
+            v[0]*rows[1][0]+v[1]*rows[1][1]+v[2]*rows[1][2],
+            v[0]*rows[2][0]+v[1]*rows[2][1]+v[2]*rows[2][2]};
+}
+bool AttachmentOffsets::pose(UObject* component,const std::string& bone,BonePose& out) {
+    if(auto cached=poses_.find(bone);cached!=poses_.end()) { out=cached->second; return true; }
+    const FName name(wide(bone).c_str());
+    BonePose result;
+    Call location(component,L"GetSocketLocation",2); location.set(L"InSocketName",name); location.run();
+    result.location=location.get<std::array<double,3>>();
+    Call rotation(component,L"GetSocketRotation",2); rotation.set(L"InSocketName",name); rotation.run();
+    unreal_basis(rotation.get<std::array<double,3>>(),result.basis);
+    poses_.emplace(bone,result); out=result; return true;
+}
+// Hold the prop a set distance off the body, measured live.
+//
+// The body's own physics asset is the only description of its shape that follows the
+// pose, and the engine will measure against it: GetClosestPointOnCollision returns the
+// distance from a point to the nearest body, and the point it found. Nothing here is
+// measured offline, which matters: the skeleton's bind pose is nothing like any pose the
+// game actually plays, so a distance taken from it means nothing at runtime.
+//
+// The measurement is taken at the prop's own position, not at the socket, and the
+// correction is allowed to pull in as well as push out. That makes it a servo: whatever
+// transform the game stows the prop with, and whatever the fixed offset is, it settles at
+// `clearance` off the body and stays there through the whole stride.
+//
+// A zero distance means the prop is inside the body, where the engine has no direction to
+// offer. That is what the recorded direction is for; it rides a bone, so it still turns
+// with the hips.
+bool AttachmentOffsets::push_for(UObject* component,UObject* child,const AttachmentOffset& offset,
+                                 const double socket_basis[3][3],std::array<double,3>& out) {
+    const auto& collision=offset.collision;
+    if(!collision.active()) return false;
+    Call where(child,L"K2_GetComponentLocation",1); where.run();
+    const auto point=where.get<std::array<double,3>>();
+    Call closest(component,L"GetClosestPointOnCollision",4);
+    closest.set(L"Point",point); closest.set(L"BoneName",FName(L"None")); closest.run();
+    const double distance=closest.get<float>();
+#ifdef CSS_INVENTORY_DEV
+    last_distance_=distance;
+#endif
+    if(distance<0) return false;             // the mesh has no collision to measure against
+    std::array<double,3> direction{};
+    if(distance>1e-3) {
+        const auto body=closest.get<std::array<double,3>>(L"OutPointOnBody");
+        for(int i=0;i<3;++i) direction[i]=(point[i]-body[i])/distance;
+    } else {
+        if(collision.anchor.empty()) return false;
+        BonePose anchor; if(!pose(component,collision.anchor,anchor)) return false;
+        direction=to_world(anchor.basis,collision.direction);
+    }
+    const double push=std::clamp(collision.clearance-distance,-collision.max_push,collision.max_push);
+#ifdef CSS_INVENTORY_DEV
+    last_push_=push;
+#endif
+    out=to_local(socket_basis,{direction[0]*push,direction[1]*push,direction[2]*push});
+    return push!=0;
+}
+void AttachmentOffsets::apply(UObject* component,Tracked& item,const AttachmentOffset& offset,bool live) {
+    auto* child=item.child.Get(); if(!child) return;
+    auto current_location=relative_location(child),current_rotation=relative_rotation(child);
+    // Tell a re-stow apart from CSS's own correction: anything other than what CSS last
+    // wrote is a new base the game chose, and the correction restarts from there.
+    if(!item.owned || !close_to(current_location,item.applied,.01)) {
+        item.location=current_location; item.rotation=current_rotation;
+    }
+    std::array<double,3> extra{};
+    if(live && offset.collision.active()) {
+        const FName socket(item.socket.c_str());
+        Call socket_rotation(component,L"GetSocketRotation",2); socket_rotation.set(L"InSocketName",socket); socket_rotation.run();
+        double socket_basis[3][3];
+        unreal_basis(socket_rotation.get<std::array<double,3>>(),socket_basis);
+        // The prop is already sitting at last frame's correction, so the measurement
+        // includes it; carrying it forward is what makes this settle instead of oscillate.
+        if(push_for(component,child,offset,socket_basis,extra))
+            for(int i=0;i<3;++i) extra[i]+=current_location[i]-item.location[i]-offset.location[i];
+        else extra={};
+    }
+    std::array<double,3> target_location{},target_rotation{};
+    for(int i=0;i<3;++i) {
+        target_location[i]=item.location[i]+offset.location[i]+extra[i];
+        target_rotation[i]=item.rotation[i]+offset.rotation[i];
+    }
+    if(item.owned && close_to(current_location,target_location,.05) && close_to(current_rotation,target_rotation,.01)) return;
+    set_relative(child,target_location,target_rotation);
+    item.applied=target_location; item.owned=true;
+}
+void AttachmentOffsets::configure(const std::map<std::string,AttachmentOffset>& offsets) {
+    if(offsets_==offsets) return;
+    release(); offsets_=offsets;
+}
+bool AttachmentOffsets::collides() const {
+    for(const auto& [socket,offset]:offsets_) if(offset.collision.active()) return true;
+    return false;
+}
+void AttachmentOffsets::release() {
+    for(auto& item:tracked_) if(auto* child=item.child.Get();child && item.owned) {
+        try { if(attach_socket(child).ToString()==item.socket) set_relative(child,item.location,item.rotation); } catch(...) {}
+    }
+    tracked_.clear(); poses_.clear();
+}
+void AttachmentOffsets::update(UObject* component) {
+    if(!component) { release(); return; }
+    if(offsets_.empty() && tracked_.empty()) return;
+    // Every driver bone has to exist on the worn mesh before any of this can be trusted:
+    // a missing bone would make GetSocketLocation fall back to the component origin and
+    // the push would be nonsense.
+    auto children=attached_children(component);
+    std::erase_if(tracked_,[&](auto& item){
+        auto* child=item.child.Get();
+        return !child || std::none_of(children.begin(),children.end(),[&](const auto& w){return w.Get()==child;}) || attach_socket(child).ToString()!=item.socket;
+    });
+    poses_.clear();
+    for(const auto& weak:children) {
+        auto* child=weak.Get(); if(!child) continue;
+        if(!child->IsA(static_cast<UClass*>(find(L"/Script/Engine.SkeletalMeshComponent"))) &&
+           !child->IsA(static_cast<UClass*>(find(L"/Script/Engine.StaticMeshComponent")))) continue;
+        const auto socket=attach_socket(child).ToString();
+        const auto entry=offsets_.find(narrow(socket)); if(entry==offsets_.end()) continue;
+        auto tracked=std::find_if(tracked_.begin(),tracked_.end(),[&](const auto& item){return item.child.Get()==child;});
+        if(tracked==tracked_.end()) {
+            if(tracked_.size()>=64) throw std::runtime_error("Too many corrected attachments");
+            tracked_.push_back({weak,socket,relative_location(child),relative_rotation(child),{},false});
+            tracked=std::prev(tracked_.end());
+        }
+        apply(component,*tracked,entry->second,true);
+    }
+}
+#ifdef CSS_INVENTORY_DEV
+Json AttachmentOffsets::diagnostics() const {
+    Json sockets=Json::array();
+    for(const auto& [socket,offset]:offsets_)
+        sockets.push_back({{"socket",socket},{"clearance",offset.collision.clearance},{"active",offset.collision.active()}});
+    Json tracked=Json::array();
+    for(const auto& item:tracked_) tracked.push_back({{"socket",narrow(item.socket)},{"owned",item.owned},{"base",item.location}});
+    return {{"distance_to_body",last_distance_},{"push",last_push_},
+            {"configured",std::move(sockets)},{"tracked",std::move(tracked)}};
+}
+#endif
+void AttachmentOffsets::push(UObject* component) {
+    if(!component || tracked_.empty()) return;
+    poses_.clear();
+    for(auto& item:tracked_) {
+        auto* child=item.child.Get(); if(!child) continue;
+        const auto entry=offsets_.find(narrow(item.socket));
+        if(entry==offsets_.end() || !entry->second.collision.active()) continue;
+        // Some animations borrow a stowed item: a parry reaches for the seal and the game
+        // re-attaches it to a hand until the move ends. While it is somewhere else it is
+        // not ours to correct, and the discovery pass only reruns four times a second.
+        if(attach_socket(child).ToString()!=item.socket) { item.owned=false; continue; }
+        apply(component,item,entry->second,true);
+    }
+}
+void Appearance::sync_seals() {
+    offsets_.push(active()?component_.Get():nullptr);
+}
+#ifdef CSS_INVENTORY_DEV
+Json AttachmentOffsets::tune(double lift,double clearance,double max_push) {
+    auto length=[](const std::array<double,3>& v){ return std::sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]); };
+    Json result=Json::object();
+    for(auto& [socket,offset]:offsets_) {
+        const double current=length(offset.location);
+        if(lift>=0 && current>1e-6) for(auto& value:offset.location) value*=lift/current;
+        else if(lift==0) offset.location={};
+        if(clearance>=0) offset.collision.clearance=clearance;
+        if(max_push>=0) offset.collision.max_push=max_push;
+        result[socket]={{"lift",length(offset.location)},{"clearance",offset.collision.clearance},{"max_push",offset.collision.max_push}};
+    }
+    // Nothing else to do: apply() already rewrites whatever no longer matches the new
+    // offset. Clearing `owned` here would make it re-read the base from a transform CSS
+    // had itself moved, folding the old offset into the base a little more each time.
+    return result;
+}
+Json Appearance::seal_diagnostics() const { return offsets_.diagnostics(); }
+#endif
 void Appearance::sync_attachments() {
     attachments_.update(active()?component_.Get():nullptr,original_);
+    offsets_.update(active()?component_.Get():nullptr);
     auto* menu=menu_component_.Get();
     menu_attachments_.update(menu && mesh_asset(menu)==menu_applied_.Get()?menu:nullptr,menu_original_);
 }

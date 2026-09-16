@@ -7,6 +7,7 @@ For outfit authors, start with the [modding guide](modding/README.md). It links 
 - [Native Inventory CSS](inventory-ui-development.md) is the current interface in development. Four-page navigation, native display retention, mouse controls and startup have been checked locally. It replaces the standalone N wardrobe. Older preview and camera findings below are historical.
 
 - [Color customization](colors.md) documents per-part palettes/sliders, self-contained dye resources, exact Original reset, and the verified game-specific mipmap adapter.
+- [Color convention](color-convention.md) is the standard every package should follow: control groups and roles, hue locking, the palette rules, and how a custom color, a palette and a group tint combine.
 
 - CSS.Package v1 embeds metadata and author artwork in the pak. IoStore assets use isolated package namespaces. [Package guide](css-packages.md) documents the converter, verification and installation.
 - All three `_P` packages are installed and discovered in-game. HIT2 gameplay was confirmed by the user. The paused-preview cloth defect is fixed by enabling the separate cloth tick on the disposable visual copy. [Cloth findings](preview-cloth.md).
@@ -42,5 +43,8 @@ For outfit authors, start with the [modding guide](modding/README.md). It links 
 | [prior investigation](../../investigation/2026-09-13/findings.md) | Attack-state recovery and live diagnostic evidence |
 
 - [Beacon return recovery](beacon-transition-recovery.md): same-player mesh resets, deferred restoration, menu ownership and live regression checks.
+
+- [Mortal Shell II combat system](ms2-combat-system.md): weapons, seals, sidearms, shells and Tarstones with numbers read from the installed build's item definitions, weapon actors, attribute tables and Tarforge curves, cross-checked against patch notes and guides.
+- [Auto-combos](ms2-loadout-combos.md): follow-up chains that fire after parry, perfect guard, guard hit or harden, with the trigger tags, chainable input tags, Resolve and cooldown constraints, and recommended chains per weapon, seal, sidearm and shell.
 
 - [Variant port workflow](porting-variants.md): stable incoming sources, isolated alternate containers, per-variant colors, import repairs and identical texture sharing.

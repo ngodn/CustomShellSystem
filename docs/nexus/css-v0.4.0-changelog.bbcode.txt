@@ -1,0 +1,33 @@
+[b]CSS 0.4.0[/b]
+
+[b]COLOR, rebuilt[/b]
+The tab was a flat list of parts with a palette sitting in it as if it were one of them, and nothing told you which parts moved together. It is now a palette band of its own, then one section per group.
+[list]
+[*]Parts that belong to the dress sit under OUTFIT and parts that belong to you under BODY. Each section opens with a [b]Tint[/b] row that shifts everything beneath it at once, by hue, saturation and brightness.
+[*]Metal, gems, skin and the body's own pigments take the tint's brightness and saturation but keep their own hue. Drag the Outfit hue from crimson to teal and the fabric recolours while gold stays gold and skin stays skin.
+[*]Tinting needs a palette. Original applies no dye at all, so there is nothing to shift, and the Tint rows are hidden there.
+[*]Picking a part now opens a strip of swatches: the author's own colour first, then that part in each palette, then hues and shades of it. Left and Right walk the strip straight from the list. [b]Exact color[/b] is still one button away when you want Red, Green and Blue.
+[*]Every row carries a swatch of its current colour.
+[*]Choosing a palette takes over the parts that palette sets and the tint of their groups, and leaves the rest alone, so a custom skin now survives changing the dress. Original still clears everything, because it means no dye at all.
+[/list]
+
+[b]For modders[/b]
+There is now a written convention for what a CSS outfit should declare about its colours: a shared vocabulary of roles (garment, accent, metal, gem, glow, skin, face, hair, eyes, and the body's own), which group each belongs to, and which ones keep their hue. That is what drives the sections and the tint above. Packages published before it keep working untouched, because CSS infers all of it from the control id. See docs/color-convention.md.
+
+[b]Everything else[/b]
+[list]
+[*]New ANIMATION tab (between COLOR and TEMPLATES) with Walk animation, Normal or Feminine. Feminine uses the game's own Cultist Spear Lady walk and standing pose, for any shell. Nothing extra to install, no pak needed. It plays at the pace the cycle was made for, so the feet stay planted. Jogging, sprinting and combat are untouched, and templates keep your choice.
+[*]If you use GenessaWalk or ProximaWalk by argisht, leave Walk animation on Normal and the mod keeps working exactly as before. The tab tells you it is installed and which one is driving. Switch to Feminine and CSS takes over instead.
+[*]Stowed seals no longer sink into the body. The game welds a stowed item to its socket and never checks it against you, so on a wider shape it starts buried and then passes in and out with every stride. CSS can now lift it clear and keep it clear while you move, following the hip from the live pose. Outfits supply the measurements; Seductress v2.0.2 and v1.0.3 do. Nothing is touched during a parry, when the game borrows the seal into your hand.
+[*]Fixed switching to a shell always reverting its outfit to the first one installed.
+[*]The tab strip clips and slides like the game's inventory tabs.
+[*]Fixed the random dark, glossy body: the dye texture was bound before it was drawn; a failed draw left it black.
+[/list]
+The Jog and Sprint animation options from the preview build are gone. Neither borrowed run kept up with the ground properly, so both stay on the game's own animation and come back as Normal.
+
+[b]Only CSS needs updating.[/b] Existing outfit and port ZIPs still work. CSSX, UI Kit and Cheat Menu remain at 0.3.0.
+
+Close the game and extract the ZIP into [code]MortalShell2/Binaries/Win64/ue4ss/Mods/[/code]
+Replace the CSS runtime files. Keep your [b]CustomShellSystem/state/[/b] folder, CSSX, extensions and installed outfits. Saved templates migrate automatically.
+
+[url=https://github.com/ngodn/CustomShellSystem/releases/tag/v0.4.0]Download CSS 0.4.0[/url]
