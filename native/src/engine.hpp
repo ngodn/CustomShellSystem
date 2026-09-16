@@ -109,6 +109,10 @@ class InventoryUI {
     bool enter_transition_=false, closing_=false;
     struct TransitionWidget { WeakObject widget; std::array<double,2> offset; };
     std::vector<TransitionWidget> transition_widgets_;
+    // What the last build cost, reported through diagnostics(). page_widgets_ is the
+    // page canvas itself, nested_widgets_ is everything on the canvases inside it
+    // (list rows, tab labels), which is the half that grows with the catalog.
+    int page_widgets_=0, nested_widgets_=0;
     float scroll_offset_=0;
     double yaw_before_=0, yaw_=0, zoom_=0, frame_=0, pan_=0;
     InventoryMotion motion_;

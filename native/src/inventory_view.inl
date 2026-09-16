@@ -592,26 +592,26 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         invoke(hint,L"SetJustification",L"InJustification",uint8_t{1});
     }
     transition_widgets_.clear();
-    // The page canvas holds every widget on the tab, and the COLOR swatch grid alone
-    // is two dozen of them. 256 is what the extension page already allows; the guard
-    // is here to catch a runaway panel, not to cap a page at a screenful.
+    // The slide-in needs every widget on the page and where it sits. That used to mean
+    // asking the engine to enumerate the canvas, which is bounded, and one panel wide
+    // enough to pass the bound reported CSS unavailable and took the tab off the strip.
+    // The builder already knows what it placed and where, so read that instead. There
+    // is no engine call here any more and nothing left to trip.
     //
-    // This only drives the slide-in when the tab opens. It used to be able to take the
-    // whole tab down with it: one panel wide enough to trip the guard and CSS reported
-    // itself unavailable and vanished from the tab strip. An animation is not worth
-    // that, so a failure here costs the animation and nothing else.
-    try {
-        for(auto* child:inventory_children(canvas,256)) if(auto* slot=inventory_object(child,L"Slot")) {
-            Call position(slot,L"GetPosition",1); position.run(); auto p=position.get<Vec2>();
-            const double x=p.x/ui.scale;
-            transition_widgets_.push_back({WeakObject(child),{x<left+panel+25?-150.*ui.scale:x>=right-25?150.*ui.scale:0.,x>=left+panel+25 && x<right-25?30.*ui.scale:0.}});
-        }
-    } catch(const std::exception&) {
-        // Nothing to tell the player: the tab is built and usable, it just arrives
-        // without sliding. The view has no logger, and the cause shows up in the
-        // panel that actually failed.
-        transition_widgets_.clear();
+    // Rows and tab labels sit on their own canvases inside the page and move with their
+    // parent, so only the page's own children are collected.
+    for(const auto& p:ui.placed) {
+        if(p.canvas!=canvas) continue;
+        transition_widgets_.push_back({WeakObject(p.widget),
+            {p.x<left+panel+25?-150.*ui.scale:p.x>=right-25?150.*ui.scale:0.,
+             p.x>=left+panel+25 && p.x<right-25?30.*ui.scale:0.}});
     }
+    // Two separate budgets, and only one of them grows with the catalog. The page is
+    // fixed chrome plus whatever the right panel is showing; the list is rows, about
+    // six widgets each, on a canvas of its own inside the scroll box. Both are reported
+    // so the cost of a page is a number we watch rather than one we find out about.
+    page_widgets_=int(transition_widgets_.size());
+    nested_widgets_=int(ui.placed.size())-page_widgets_;
     if(enter_transition_) { transition_started_=GetTickCount64(); enter_transition_=false; }
     last_message_.clear(); dirty_=false;
 }
@@ -940,7 +940,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     return {};
 }
 Json InventoryUI::diagnostics() const {
-    Json value={{"cssx_active",extension_active_},{"extension",extension_id_},{"extension_page",extension_paging_.page},{"attached",tab_.Get()!=nullptr},{"active",active_},{"section",section_},{"row",row_},{"rows",rows_.size()},{"camera",display_.Get()!=nullptr},{"layout_size",layout_size_},{"yaw",yaw_},{"pan",pan_},{"zoom",zoom_},{"frame",frame_},{"gamepad",gamepad_}};
+    Json value={{"cssx_active",extension_active_},{"extension",extension_id_},{"extension_page",extension_paging_.page},{"attached",tab_.Get()!=nullptr},{"active",active_},{"section",section_},{"row",row_},{"rows",rows_.size()},{"camera",display_.Get()!=nullptr},{"page_widgets",page_widgets_},{"nested_widgets",nested_widgets_},{"layout_size",layout_size_},{"yaw",yaw_},{"pan",pan_},{"zoom",zoom_},{"frame",frame_},{"gamepad",gamepad_}};
     #ifdef CSS_INVENTORY_DEV
     if(extension_active_ && name_input_.Get()) value["text"]=inventory_text(name_input_.Get(),4096);
     value["picker"]=extension_picker_;

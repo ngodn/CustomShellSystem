@@ -730,11 +730,19 @@ struct Layout {
     UObject* tree; UObject* canvas; double scale;
     UObject* serif;
     double origin_x = 0, origin_y = 0;
+    // AddChildToCanvas is only ever called here, so this is the complete record of what
+    // a build put on screen, in the order it went on, with the position already in page
+    // units. Anything that needs to walk the finished page reads this instead of asking
+    // the engine to enumerate the canvas: that enumeration is bounded, and a panel wide
+    // enough to pass the bound used to take the whole tab down with it.
+    struct Placed { UObject* widget; UObject* canvas; double x, y; };
+    std::vector<Placed> placed{};
     void place(UObject* widget, double x, double y, double width, double height) {
         Call add(canvas, L"AddChildToCanvas", 2); add.set(L"content", widget); add.run();
         auto* slot = add.get<UObject*>();
         invoke(slot, L"SetPosition", L"InPosition", Vec2{(x-origin_x)*scale, (y-origin_y)*scale});
         invoke(slot, L"SetSize", L"InSize", Vec2{width*scale, height*scale});
+        placed.push_back({widget, canvas, x-origin_x, y-origin_y});
     }
     UObject* box(double x, double y, double w, double h, Color color) {
         auto* widget = construct(L"/Script/UMG.Border", tree);
