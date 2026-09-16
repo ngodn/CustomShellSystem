@@ -10,11 +10,20 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import re
 
 import bpy
 from mathutils import Matrix, Quaternion, Vector
 
 TO_UE = Matrix.Diagonal((100, -100, 100, 1))
+
+# A shape key name has to survive the whole chain: Blender, the mesh JSON, the importer,
+# the cooked UMorphTarget and finally a `morph` in a package recipe. CSSImportMesh refuses
+# anything the engine would rename, so the exporter refuses it here where the author can
+# still fix it by renaming the key.
+SHAPE_KEY_NAME = re.compile(r'[A-Za-z0-9_]{1,64}\Z')
+# Below this a "moved" vertex is export noise, not a shape. Unreal centimetres.
+SHAPE_KEY_EPSILON = 1e-4
 
 
 def read_bones(path):
@@ -96,6 +105,9 @@ def export(args):
     payload = dict(schema=1, mesh_package=args.mesh_package, skeleton_package=args.skeleton_package,
                    bones=bones, materials=[], points=[], uv_channels=uv_count, wedges=[], faces=[],
                    influences=[], normals=[], colors=[])
+    # Shape keys merge by name across objects: a body and a top that both carry "Hips"
+    # are one shape the player moves, not two.
+    shapes = {}
     report = dict(stage='uncooked authoring interchange, not game validated',
                   front_face_winding='clockwise (Unreal)',
                   reference_sha256=hashlib.sha256(args.refskel.read_bytes()).hexdigest(),
@@ -146,6 +158,28 @@ def export(args):
             max_influences = max(max_influences, len(weights))
             payload['influences'].extend([points[vertex_index], index, weight/total]
                                          for index, weight in sorted(weights.items()))
+        if mesh.shape_keys and not args.no_shape_keys:
+            basis = mesh.shape_keys.reference_key
+            linear = transform.to_3x3()
+            for key in mesh.shape_keys.key_blocks:
+                if key == basis:
+                    continue
+                if not SHAPE_KEY_NAME.fullmatch(key.name):
+                    raise ValueError(f'{obj.name}: shape key {key.name!r} must be letters, digits '
+                                     'and underscores; rename it in Blender')
+                moved = shapes.setdefault(key.name, [])
+                for vertex_index in used_vertices:
+                    # The delta is measured against the point this export actually wrote,
+                    # not against the Basis key, so the two can never disagree.
+                    delta = linear @ (key.data[vertex_index].co - mesh.vertices[vertex_index].co)
+                    if not all(math.isfinite(v) for v in delta):
+                        raise ValueError(f'{obj.name}: shape key {key.name} has a non-finite delta')
+                    if delta.length < SHAPE_KEY_EPSILON:
+                        continue
+                    if max(abs(v) for v in delta) > 100:
+                        raise ValueError(f'{obj.name}: shape key {key.name} moves a vertex more '
+                                         'than 100 cm; check the scene scale')
+                    moved.append([points[vertex_index], delta.x, delta.y, delta.z])
         color = mesh.color_attributes.active_color
         corner_map = {}
         face_start = len(payload['faces'])
@@ -185,6 +219,16 @@ def export(args):
                                    faces=len(payload['faces'])-face_start, max_influences=max_influences,
                                    unused_vertices=len(mesh.vertices)-len(used_vertices),
                                    uv_channels=len(mesh.uv_layers)))
+    # A key that exists but moves nothing is almost always a mistake in the scene, and it
+    # would cook into a morph target the player can drag for no effect.
+    empty = sorted(name for name, deltas in shapes.items() if not deltas)
+    if empty:
+        raise ValueError('Shape keys move no vertices: ' + ', '.join(empty))
+    if len(shapes) > 64:
+        raise ValueError(f'{len(shapes)} shape keys exceeds the importer limit of 64')
+    if shapes:
+        payload['morph_targets'] = [dict(name=name, deltas=shapes[name]) for name in sorted(shapes)]
+    report['shape_keys'] = {name: len(shapes[name]) for name in sorted(shapes)}
     report['counts'] = {key: len(payload[key]) for key in ('bones','materials','points','wedges','faces','influences')}
     if report['discarded_degenerate_faces'] > max(10, len(payload['faces']) // 100):
         raise ValueError('Too many degenerate triangles, inspect source mesh')
@@ -206,6 +250,8 @@ def main():
     parser.add_argument('--mesh-package', required=True)
     parser.add_argument('--skeleton-package', required=True)
     parser.add_argument('--include-hidden', action='store_true')
+    parser.add_argument('--no-shape-keys', action='store_true',
+                        help='Leave shape keys out, for a mesh whose keys are working state')
     export(parser.parse_args())
 
 if __name__ == '__main__':

@@ -103,6 +103,7 @@ menu, the saved look and the apply path all follow from that.
 | `toggle` | on or off | material sections | needs `sections`, takes no `min`/`max`/`step` |
 | `choice` | which option | a texture parameter | needs `options` and a binding, takes no `min`/`max`/`step` |
 | `spring` | two numbers | the mesh's own spring bones | needs `nodes` and both ranges, takes no `default`, `min`/`max`/`step` or bindings |
+| `shape` | one number | a morph target on the package's own mesh | needs `morph`, takes no bindings |
 
 A `toggle` lists the material sections it shows and hides, and needs no binding because
 it drives them directly:
@@ -126,6 +127,35 @@ range is the list and nothing else, and the default names one of them:
 Between two and sixteen options. Each `texture` is a full object path, with the object
 name after the dot, and has to be cooked into this package's own container. A choice
 writes into a texture parameter, so unlike a toggle it does need a binding.
+
+A `shape` drives a morph target, so a slider changes the geometry rather than a material:
+
+```json
+{"id": "hips", "name": "Hips", "kind": "shape", "group": "body", "role": "figure",
+ "morph": "Hips", "min": 0, "max": 1, "step": 0.05, "default": [0, 0, 0, 1]}
+```
+
+**Authored meshes only, and this will never change.** Every stock shell carries zero morph
+targets: Sester Genessa V6, Shell KnightLady V04 and Tiel all read back an empty
+`MorphTargets` array from the running game. A shape slider can only ever move a mesh CSS
+cooked itself, where the shape came in from a Blender shape key. There is no path to a body
+slider on an unmodded shell, and a package must not promise one.
+
+The chain is: a Blender shape key, exported by `tools/authoring/export_css_mesh.py` into the
+mesh JSON's `morph_targets`, imported by the `CSSImportMesh` commandlet, cooked, and named
+here in `morph`. The name has to survive all of that, so it is letters, digits and
+underscores only, at most 64 characters, and the exporter and the importer both refuse
+anything else rather than letting the engine silently rename it.
+
+`min`, `max`, `step` and `default` work exactly as they do for a scalar. A range that goes
+negative is fine if the author cooked the shape to read that way.
+
+**Check the morph exists before shipping.** At runtime a control CSS cannot apply takes the
+whole outfit off, which is the right call for a half-applied look and a miserable way to
+find a typo. `check_shapes(recipe, shape_names(mesh_json))` in `tools/css_controls.py`
+compares the recipe against the mesh JSON and needs no editor. `CSSInspectMesh` reads a
+saved asset back and reports every morph target with the number of vertices it moves and
+its largest delta, which is the check to run after an import.
 
 A `spring` tunes live secondary motion: how a bust, a belly or a hip moves when the
 character does. It is the only control with two numbers in it, and the only one that
@@ -299,7 +329,8 @@ controls in it, rather than every variant offering every control.
    them: CSS provides it, and it already restores the source mod exactly.
 4. Masks are disjoint where parts must stay independent, per [colors.md](colors.md).
 5. A `toggle` names real material sections, a `choice` names cooked textures inside this
-   package's own container, and a `spring` names bones the cooked skeleton actually has.
+   package's own container, a `spring` names bones the cooked skeleton actually has, and a
+   `shape` names a morph target the cooked mesh actually carries.
 6. A `spring`'s two defaults match what the animation blueprint ships, read with
    `spring_defaults()` rather than guessed.
 7. Verified in game: choose each palette, drag each group tint end to end, flip every

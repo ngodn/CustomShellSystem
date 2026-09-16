@@ -27,6 +27,7 @@ JSON fields:
 | `influences` | `[point_index,bone_index,weight]`, at most eight per point |
 | `normals` | Optional unit `[x,y,z]` per wedge in Unreal coordinates |
 | `colors` | Optional `[r,g,b,a]` per wedge, integer bytes 0..255 |
+| `morph_targets` | Optional array of `{name, deltas}`, at most 64 |
 
 Bone translations use Unreal centimeters. Rotations are local Unreal
 quaternions `[x,y,z,w]`; scales are local positive `[x,y,z]`. Bones occur in
@@ -52,9 +53,28 @@ the original audit remains private development evidence. Repeat the render and
 cooked readback checks for a new mesh rather than relying on that result.
 
 The importer accepts up to four UV channels (UE 5.6.1 `MAX_TEXCOORDS`), preserves supplied normals, rebuilds tangents with MikkTSpace,
-and defaults missing colors to white. Missing normals are recomputed. Morphs,
-LODs, cloth, collision/physics assets, and material graphs are separate authoring
-steps. This mesh schema does not imply that those features have been imported.
+and defaults missing colors to white. Missing normals are recomputed. LODs, cloth,
+collision/physics assets, and material graphs are separate authoring steps. This mesh
+schema does not imply that those features have been imported.
+
+`morph_targets` carries Blender shape keys. Each entry is `{"name": "Hips", "deltas":
+[[point_index, dx, dy, dz], ...]}`, where the deltas are in Unreal centimeters relative to
+that point's position in `points`, and only the points that actually moved appear. Names
+take letters, digits and underscores, at most 64 characters, and must be unique: the
+importer refuses anything the engine would have had to rename, because the runtime
+addresses a shape by that exact name. A delta beyond 100 cm is refused as a scene-scale
+mistake. The importer checks every declared morph survived the build and fails if the
+engine dropped one, so a silent drop cannot ship a mesh whose shape sliders do nothing.
+
+Read a saved mesh back with the `CSSInspectMesh` commandlet, which reports bones, material
+slots, LOD counts and every morph target with the number of vertices it moves, its largest
+delta and a sample:
+
+```sh
+UnrealEditor-Cmd CSSAuthoring.uproject -run=CSSInspectMesh \
+  -Mesh=/Game/CSSAuthoring/Example/SK_Example -Output=/absolute/path/readback.json \
+  -unattended -nosplash -NullRHI
+```
 
 Invocation after building the editor module (see the
 [advanced tools guide](../../../docs/modding/advanced-tools.md)):

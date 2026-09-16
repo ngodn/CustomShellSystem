@@ -273,6 +273,35 @@ int main() {
             violent["controls"][1]["frequency"]["max"]=8;
             violent["controls"][1]["damping_ratio"]["max"]=2;
             rejects([&]{ControlSet::parse(violent);});
+
+            // 1.0: a shape drives a morph target the package cooked into its own mesh. It
+            // is a single number like a scalar, and it writes no material.
+            auto shapes=Json::parse(R"({"schema":1,"controls":[
+              {"id":"cloth","name":"Garment","role":"garment","group":"outfit","default":[1,1,1,1]},
+              {"id":"hips","name":"Hips","kind":"shape","group":"body","role":"figure",
+               "morph":"Hips","min":0,"max":1,"step":0.05,"default":[0,0,0,1]}],
+              "surfaces":[{"id":"body","parameter":"BaseColorMap  non VT","slots":[0],"layers":{"cloth":"dye-cloth.png"}}],
+              "palettes":[{"id":"red","name":"Crimson","values":{"cloth":[0.6,0.1,0.2,1]}}]})");
+            auto shaped=ControlSet::parse(shapes);
+            const auto* hips=shaped.find("hips");
+            expect(hips->kind==ControlKind::Shape && hips->scalar,"A shape was not kept");
+            expect(hips->morph=="Hips","Shape morph target lost");
+            expect(hips->bindings.empty(),"A shape needs no material binding");
+            expect(std::string(control_kind_name(ControlKind::Shape))=="shape","Kind name missing");
+            auto nameless=shapes; nameless["controls"][1].erase("morph");
+            rejects([&]{ControlSet::parse(nameless);});
+            // The importer refuses any name the engine would rename, so the recipe does too.
+            for(const char* bad:{"","Hips and thighs","Hips-2"}) {
+                auto odd=shapes; odd["controls"][1]["morph"]=bad;
+                rejects([&]{ControlSet::parse(odd);});
+            }
+            auto stray_morph=shapes; stray_morph["controls"][0]["morph"]="Hips";
+            rejects([&]{ControlSet::parse(stray_morph);});
+            // A saved weight is checked against the author's range like any other slider.
+            Customization shape_custom; shape_custom.values["hips"]={0.5f,0,0,1};
+            expect(control_values(shaped,shape_custom).at("hips")[0]==.5f,"Shape weight lost");
+            shape_custom.values["hips"]={1.5f,0,0,1};
+            rejects([&]{control_values(shaped,shape_custom);});
         }
         std::cout<<checks<<" color behavior checks passed\n";
     } catch(const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }

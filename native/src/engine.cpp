@@ -887,6 +887,27 @@ struct SpringNode {
     double get(int32_t at) const { double v; std::memcpy(&v,data+at,sizeof v); return v; }
     void put(int32_t at,double v) const { std::memcpy(data+at,&v,sizeof v); }
 };
+// SetMorphTarget records a curve on the component whether or not the mesh has a shape by
+// that name, and GetMorphTarget reads that same curve straight back, so a read-back proves
+// only that the number was stored. Ask the mesh what it actually carries. A UMorphTarget's
+// object name is the morph name, which is what CSSImportMesh writes and what an author
+// puts in `morph`.
+bool mesh_has_morph(UObject* mesh, const std::string& name) {
+    if(!mesh) return false;
+    auto* p=mesh->GetPropertyByNameInChain(L"MorphTargets");
+    if(!p || !p->IsA<FArrayProperty>()) throw std::runtime_error("Mesh morph target layout mismatch");
+    auto* array=static_cast<FArrayProperty*>(p);
+    if(array->GetInner()->GetElementSize()!=sizeof(UObject*)) throw std::runtime_error("Mesh morph target array layout mismatch");
+    FScriptArrayHelper targets(array,reinterpret_cast<std::byte*>(mesh)+array->GetOffset_Internal());
+    if(targets.Num()<0 || targets.Num()>4096) throw std::runtime_error("Invalid morph target count");
+    const auto wanted=wide(name);
+    for(int i=0;i<targets.Num();++i) {
+        UObject* target=nullptr;
+        std::memcpy(&target,targets.GetRawPtr(i),sizeof target);
+        if(target && target->GetName()==wanted) return true;
+    }
+    return false;
+}
 UObject* post_process_instance(UObject* component) {
     if(!component) return nullptr;
     Call call(component,L"GetPostProcessInstance",1); call.run();
@@ -935,6 +956,15 @@ void Appearance::show_hidden_sections() {
     }
     hidden_sections_.clear();
 }
+void Appearance::clear_driven_morphs() {
+    auto* component=component_.Get();
+    if(component) for(const auto& morph:driven_morphs_) {
+        Call set(component,L"SetMorphTarget",3);
+        set.set(L"MorphTargetName",FName(wide(morph).c_str(),FNAME_Add));
+        set.set(L"Value",0.f); set.set(L"bRemoveZeroWeight",true); set.run();
+    }
+    driven_morphs_.clear();
+}
 void Appearance::restore_springs() {
     // Put back what the animation blueprint shipped, not what the package declared as its
     // default: those two are meant to agree, and when they do not the author's asset wins.
@@ -950,6 +980,7 @@ void Appearance::restore_springs() {
 void Appearance::reset_controls() {
     show_hidden_sections();
     restore_springs();
+    clear_driven_morphs();
     if(auto* component=component_.Get()) for(const auto& [slot,weak]:control_mids_) {
         if(auto* mid=weak.Get()) {
             Call current(component,L"GetMaterial",2); current.set(L"ElementIndex",slot); current.run();
@@ -1128,6 +1159,26 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                     // exactly what CSS took away and nothing the game hid itself.
                     if(show) hidden_sections_.erase(section); else hidden_sections_.insert(section);
                 }
+                continue;
+            }
+            // 1.0: a shape drives a morph target the package cooked into its own mesh.
+            // Stock shells carry none and never will, which is checked here rather than
+            // left to silently do nothing: every stock mesh reads back zero morph targets.
+            if(control.kind==ControlKind::Shape) {
+                if(!mesh_has_morph(applied_.Get(),control.morph))
+                    throw std::runtime_error("This outfit's mesh has no shape called "+control.morph);
+                const float weight=values.at(control.id)[0];
+                auto name=FName(wide(control.morph).c_str(),FNAME_Add);
+                Call set(component,L"SetMorphTarget",3);
+                set.set(L"MorphTargetName",name); set.set(L"Value",weight);
+                // Keep a zero weight on the component rather than dropping the curve, so
+                // taking the outfit off has something to put back to zero.
+                set.set(L"bRemoveZeroWeight",false); set.run();
+                Call readback(component,L"GetMorphTarget",2);
+                readback.set(L"MorphTargetName",name); readback.run();
+                if(std::abs(readback.get<float>()-weight)>.0001f)
+                    throw std::runtime_error("Shape weight read-back failed");
+                driven_morphs_.insert(control.morph);
                 continue;
             }
             // 1.0: a spring is the one control that touches no material at all. It writes

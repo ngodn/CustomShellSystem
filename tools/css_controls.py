@@ -43,9 +43,12 @@ ROLES={'garment':('outfit',False),'accent':('outfit',False),'leather':('outfit',
 
 # Every kind but a colour is edited as one number, so the menu draws a slider for it
 # and a saved look stores a single value.
-KINDS=('color','intensity','scalar','toggle','choice','spring')
+KINDS=('color','intensity','scalar','toggle','choice','spring','shape')
 
 BONE=re.compile(r'[A-Za-z0-9_]{1,64}\Z')
+# Same rule CSSImportMesh applies. It refuses any name the engine would have had to
+# rename at build time, so a name that passes here is one the runtime can address.
+MORPH=re.compile(r'[A-Za-z0-9_]{1,64}\Z')
 
 def spring_range(value,what,ceiling):
     """An author's {"min","max","default"} for one of a spring's two sliders."""
@@ -124,6 +127,12 @@ def validate(recipe:dict) -> set[str]:
             used.add(c['id'])
         elif any(k in c for k in ('nodes','frequency','damping_ratio')):
             raise ValueError('Only a spring control tunes skeleton nodes')
+        if kind_of(c)=='shape':
+            morph=c.get('morph')
+            if not isinstance(morph,str) or not MORPH.fullmatch(morph): raise ValueError('Invalid morph target name')
+            if c.get('bindings'): raise ValueError('A shape control writes no material parameter')
+            used.add(c['id'])
+        elif 'morph' in c: raise ValueError('Only a shape control drives a morph target')
         if kind_of(c)=='choice':
             options=c.get('options');bounded_array(options,16)
             if len(options)<2: raise ValueError('A choice control needs between two and sixteen options')
@@ -263,6 +272,23 @@ def verify_resources(manifest:dict,metadata:Path):
         if resource_info(metadata/name)!=info:raise ValueError('Dye resource checksum or dimensions differ')
         total+=info['bytes']
     if total>256*1024*1024:raise ValueError('Dye resources exceed 256 MiB')
+
+def shape_names(mesh_json:dict) -> set[str]:
+    """The morph targets an authored mesh actually carries, from its CSSImportMesh input."""
+    return {m['name'] for m in mesh_json.get('morph_targets',[])}
+
+def check_shapes(recipe:dict,available:set[str]):
+    """Every shape control must name a morph the mesh really has.
+
+    At runtime a control CSS cannot apply takes the whole outfit off, which is the right
+    call for a half-applied look but a miserable way to find a typo. This is the check
+    that stops it shipping, and it needs no editor: the mesh JSON that CSSImportMesh
+    consumes lists the shapes, and the recipe names them.
+    """
+    missing=sorted(c['morph'] for c in recipe.get('controls',[])
+                   if kind_of(c)=='shape' and c.get('morph') not in available)
+    if missing:
+        raise ValueError('Shape controls name morph targets the mesh does not have: '+', '.join(missing))
 
 def lint_convention(recipe:dict) -> list[str]:
     """Check a recipe against docs/control-convention.md. Authoring only.

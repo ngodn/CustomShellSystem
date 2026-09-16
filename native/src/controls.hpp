@@ -25,7 +25,8 @@ enum class ControlGroup { Outfit, Body };
 //   Toggle     material sections shown or hidden, 0 or 1
 //   Choice     one of a few textures the package ships, chosen by index
 //   Spring     live secondary motion: how fast a part moves and how fast it settles
-enum class ControlKind { Color, Intensity, Scalar, Toggle, Choice, Spring };
+//   Shape      a morph target the package cooked into its own mesh
+enum class ControlKind { Color, Intensity, Scalar, Toggle, Choice, Spring, Shape };
 const char* control_kind_name(ControlKind);
 // A Choice option: what the player sees, and the cooked texture it binds.
 struct ControlOption { std::string name, texture; };
@@ -45,6 +46,7 @@ struct Control {
     std::vector<int> sections;    // Toggle only: the material sections it shows or hides
     std::vector<ControlOption> options;   // Choice only: the textures it picks between
     std::vector<std::string> nodes;       // Spring only: the bones whose spring it tunes
+    std::string morph;                    // Shape only: the morph target on the package's own mesh
     ControlValue value{1,1,1,1};
     // Channel 0 uses these. Every control but Spring has only channel 0.
     float minimum = 0, maximum = 1, step = .01f;

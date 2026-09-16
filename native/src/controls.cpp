@@ -68,6 +68,13 @@ void parameter(const std::string& name) {
         throw std::runtime_error("Invalid material parameter name");
 }
 void slot(int n) { if(n<0 || n>=128) throw std::runtime_error("Material slot outside range"); }
+// A morph target name as CSSImportMesh cooked it. The importer refuses anything the
+// engine would have had to rename, so a name here is a name the runtime can address.
+void morph_name(const std::string& name) {
+    if(name.empty() || name.size()>64 ||
+       !std::all_of(name.begin(),name.end(),[](unsigned char c){return std::isalnum(c) || c=='_';}))
+        throw std::runtime_error("Invalid morph target name");
+}
 // A skeleton bone name as the cooked mesh spells it: brust001, thigh_twist_02_l.
 void bone(const std::string& name) {
     if(name.empty() || name.size()>64 ||
@@ -136,6 +143,7 @@ ControlSet ControlSet::parse(const Json& j) {
             else if(kind=="toggle") control.kind=ControlKind::Toggle;
             else if(kind=="choice") control.kind=ControlKind::Choice;
             else if(kind=="spring") control.kind=ControlKind::Spring;
+            else if(kind=="shape") control.kind=ControlKind::Shape;
             else throw std::runtime_error("Unsupported control kind");
         }
         control.scalar=control.kind!=ControlKind::Color;
@@ -208,6 +216,12 @@ ControlSet ControlSet::parse(const Json& j) {
             control.value={frequency.value,damping.value,0,control.value[3]};
         } else if(control.kind==ControlKind::Spring)
             throw std::runtime_error("A spring control needs its bones, frequency and damping ratio");
+        if(c.contains("morph")) {
+            if(control.kind!=ControlKind::Shape) throw std::runtime_error("Only a shape control drives a morph target");
+            control.morph=c.at("morph").get<std::string>();
+            morph_name(control.morph);
+        } else if(control.kind==ControlKind::Shape)
+            throw std::runtime_error("A shape control needs the morph target it drives");
         valid_value(control,control.value);
         if(c.contains("bindings") && !c.at("bindings").is_array()) throw std::runtime_error("Bindings require an array");
         for(const auto& b:c.value("bindings",Json::array())) {
@@ -247,7 +261,7 @@ ControlSet ControlSet::parse(const Json& j) {
     for(const auto& c:out.controls) {
         // A toggle drives sections directly, so it needs no parameter to write into.
         // A choice does need one, and its bindings are checked with everything else.
-        bool used=!c.bindings.empty() || !c.sections.empty() || !c.nodes.empty();
+        bool used=!c.bindings.empty() || !c.sections.empty() || !c.nodes.empty() || !c.morph.empty();
         for(const auto& s:out.surfaces) used|=s.layers.contains(c.id);
         if(!used) throw std::runtime_error("Control has nothing to drive");
     }
@@ -326,6 +340,7 @@ const char* control_kind_name(ControlKind kind) {
         case ControlKind::Toggle: return "toggle";
         case ControlKind::Choice: return "choice";
         case ControlKind::Spring: return "spring";
+        case ControlKind::Shape: return "shape";
     }
     return "color";
 }

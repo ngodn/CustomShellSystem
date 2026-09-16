@@ -614,11 +614,18 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
                     action_button("tertiary","Reset all",887,rows_[row_].tertiary,2);
                 } else {
-                detail(control.name,worn->name,control.scalar?"Adjust the intensity for this part.":"Adjust Red, Green and Blue. Select a channel, then adjust it with Left / Right or its slider.");
+                // A shape moves geometry rather than a material value, so it says so. Every
+                // other single-number control is a strength of some kind and keeps the old
+                // wording, which is what the packages already installed were written for.
+                const bool shape=control.kind==ControlKind::Shape;
+                detail(control.name,worn->name,
+                       shape?"Change the shape of this part. The author cooked it into their own mesh, so it travels with the outfit and your saved looks keep it."
+                       :control.scalar?"Adjust the intensity for this part."
+                       :"Adjust Red, Green and Blue. Select a channel, then adjust it with Left / Right or its slider.");
                 const char* channels[]={"Red","Green","Blue"};
                 for(int channel=0;channel<(control.scalar?1:3);++channel) {
                     double sy=controls_y+channel*80;
-                    auto* heading=ui.label(control.scalar?"Intensity":channels[channel],right,sy,230,28,19,control.scalar || channel==channel_?gold:ivory);
+                    auto* heading=ui.label(shape?"Amount":control.scalar?"Intensity":channels[channel],right,sy,230,28,19,control.scalar || channel==channel_?gold:ivory);
                     auto* slider=construct(L"/Script/UMG.Slider",tree);
                     invoke(slider,L"SetMinValue",L"InValue",control.minimum); invoke(slider,L"SetMaxValue",L"InValue",control.maximum);
                     invoke(slider,L"SetStepSize",L"InValue",control.step); invoke(slider,L"SetValue",L"InValue",value[channel]);
@@ -627,7 +634,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     auto* label=ui.label(slider_text(value[channel],control.scalar),right+305,sy+29,55,30,18);
                     sliders_.push_back({WeakObject(slider),WeakObject(label),WeakObject(heading),{{"action","control"},{"control",control.id},{"channel",channel},{"refresh",false}},value[channel],control.scalar,""});
                 }
-                direction_hint(true,control.scalar?"Adjust intensity":"Adjust selected channel",right,controls_y+246,360);
+                direction_hint(true,shape?"Adjust shape":control.scalar?"Adjust intensity":"Adjust selected channel",right,controls_y+246,360);
                 if(!control.scalar) action_button("secondary","Select next channel",795,rows_[row_].secondary,4);
                 action_button("accept","Reset part",841,rows_[row_].accept,3);
                 action_button("tertiary",control.scalar?"Reset all":"Back to swatches",887,

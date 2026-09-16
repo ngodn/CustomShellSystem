@@ -220,6 +220,46 @@ class ControlTests(unittest.TestCase):
         sticky=copy.deepcopy(look);sticky['palettes'][0]['values']['bust']=[2.0,1.4,0,1]
         with self.assertRaises(ValueError):validate(sticky)
 
+    def test_shape_controls(self):
+        """1.0: a shape drives a morph target the package cooked into its own mesh."""
+        from css_controls import kind_of
+        base=dict(schema=1,controls=[
+            dict(id='cloth',name='Garment',role='garment',group='outfit',default=[1,1,1,1]),
+            dict(id='hips',name='Hips',kind='shape',group='body',role='figure',
+                 morph='Hips',min=0,max=1,step=.05,default=[0,0,0,1])],
+            surfaces=[dict(id='body',parameter='BaseColorMap  non VT',slots=[0],layers={'cloth':'dye-cloth.png'})],
+            palettes=[dict(id='red',name='Crimson',values={'cloth':[.6,.1,.2,1]})])
+        validate(base)
+        self.assertEqual(kind_of(base['controls'][1]),'shape')
+
+        gone=copy.deepcopy(base);del gone['controls'][1]['morph']
+        with self.assertRaisesRegex(ValueError,'morph target name'):validate(gone)
+        # CSSImportMesh refuses any name the engine would have renamed, so this does too.
+        for bad in ('','Hips and thighs','Hips-2','x'*65):
+            odd=copy.deepcopy(base);odd['controls'][1]['morph']=bad
+            with self.assertRaisesRegex(ValueError,'morph target name'):validate(odd)
+        bound=copy.deepcopy(base)
+        bound['controls'][1]['bindings']=[dict(slot=0,parameter='Roughness')]
+        with self.assertRaisesRegex(ValueError,'no material parameter'):validate(bound)
+        # Nothing else drives a morph.
+        stray=copy.deepcopy(base);stray['controls'][0]['morph']='Hips'
+        with self.assertRaisesRegex(ValueError,'shape control drives'):validate(stray)
+        # The weight is an ordinary slider and keeps its author's range.
+        look=copy.deepcopy(base);look['palettes'][0]['values']['hips']=[.5,0,0,1]
+        validate(look)
+        past=copy.deepcopy(look);past['palettes'][0]['values']['hips']=[1.5,0,0,1]
+        with self.assertRaises(ValueError):validate(past)
+
+        # A shape naming a morph the mesh does not carry takes the outfit off at runtime,
+        # so it is caught against the mesh JSON at build time instead.
+        from css_controls import check_shapes,shape_names
+        mesh=dict(morph_targets=[dict(name='Hips',deltas=[[0,1,0,0]]),dict(name='Waist',deltas=[[0,0,1,0]])])
+        self.assertEqual(shape_names(mesh),{'Hips','Waist'})
+        check_shapes(base,shape_names(mesh))
+        typo=copy.deepcopy(base);typo['controls'][1]['morph']='Hip'
+        with self.assertRaisesRegex(ValueError,'does not have'):check_shapes(typo,shape_names(mesh))
+        with self.assertRaisesRegex(ValueError,'does not have'):check_shapes(base,set())
+
     def test_reviewed_recipes(self):
         root=Path(__file__).resolve().parents[1]/'work/color-recipes'
         recipes=list(root.glob('*/*.colors.json'))
