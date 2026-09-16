@@ -1,10 +1,18 @@
-# Color convention for CSS packages
+# Control convention for CSS packages
 
-Shipped in **CSS 0.4.0**. This is the standard every CSS outfit package should
-follow so that colors look and behave the same across every port, and so a player who has
-learned one wardrobe has learned all of them.
+The standard every CSS outfit package should follow, so that a wardrobe behaves the same
+across every port and a player who has learned one has learned all of them.
 
-[colors.md](colors.md) stays the reference for *how* the color system works: masks,
+Colour shipped in **CSS 0.4.0**. **1.0** widened it: a package declares **controls**, and
+colour is one kind of control alongside switches, texture choices, material scalars and
+live springs. The tab is called CUSTOMIZE, and the manifest block is `customize`.
+
+> Renamed in 1.0. The block used to be `colors` and this file used to be
+> `color-convention.md`. Nothing published breaks: the runtime and the authoring tools read
+> `colors` whenever `customize` is absent, and the old request actions `color` and
+> `reset_color` still work. Naming both in one place is refused rather than guessed at.
+
+[colors.md](colors.md) stays the reference for *how* the dye system works: masks,
 surfaces, bindings, render targets. This document is about *what a package should declare*
 and why. Read that one for the mechanism, this one before authoring or porting.
 
@@ -94,6 +102,7 @@ menu, the saved look and the apply path all follow from that.
 | `scalar` | one number | a named material scalar | anything else, like gloss or roughness |
 | `toggle` | on or off | material sections | needs `sections`, takes no `min`/`max`/`step` |
 | `choice` | which option | a texture parameter | needs `options` and a binding, takes no `min`/`max`/`step` |
+| `spring` | two numbers | the mesh's own spring bones | needs `nodes` and both ranges, takes no `default`, `min`/`max`/`step` or bindings |
 
 A `toggle` lists the material sections it shows and hides, and needs no binding because
 it drives them directly:
@@ -117,6 +126,41 @@ range is the list and nothing else, and the default names one of them:
 Between two and sixteen options. Each `texture` is a full object path, with the object
 name after the dot, and has to be cooked into this package's own container. A choice
 writes into a texture parameter, so unlike a toggle it does need a binding.
+
+A `spring` tunes live secondary motion: how a bust, a belly or a hip moves when the
+character does. It is the only control with two numbers in it, and the only one that
+writes no material at all.
+
+```json
+{"id": "bust", "name": "Bust", "kind": "spring", "group": "body", "role": "figure",
+ "nodes": ["brust001", "brust002"],
+ "frequency": {"min": 1.2, "max": 2.6, "default": 1.5915},
+ "damping_ratio": {"min": 0.4, "max": 0.95, "default": 0.65}}
+```
+
+`nodes` names the bones, not the blueprint properties. A blueprint names its spring nodes
+`AnimGraphNode_SpringBone`, `_1`, `_2` and so on in compile order, and recompiling can
+shuffle that; the bone a node drives does not move. Between one and thirty-two bones, each
+spelled as the cooked skeleton spells it.
+
+**Frequency and damping ratio, not stiffness and damping.** `FAnimNode_SpringBone`
+integrates `a = K*error - D*velocity` at a fixed 1/120 s with no mass term, so the system
+is `x'' + D x' + K x = 0`, `K = (2*pi*f)^2` and `D = 4*pi*zeta*f`. CSS does that conversion,
+so an author states what the part should do rather than which numbers happen to produce it,
+and the player gets a slider in hertz instead of a slider in engine units. The menu calls
+them Bounce and Settle.
+
+Both defaults have to be what the animation blueprint already ships, or the menu opens on a
+value the body is not at. `spring_defaults(stiffness, damping)` in `tools/css_colors.py`
+converts the blueprint's own numbers, so copy what it prints rather than guessing.
+
+Frequency tops out at 8 Hz and damping ratio at 2, and a range whose stiff-and-damped corner
+would cross the engine's own damping cutoff is refused: past that the engine scales damping
+down instead of using what it was given, and the slider would stop meaning what it says.
+
+A spring is live and reversible. CSS records what the blueprint held the first time it
+touches a node and puts that back when the control is dropped or the outfit is removed, so
+nothing needs a mesh reload to undo.
 
 Packages written before this said `"type": "scalar"` and meant a strength, so that reads
 as `intensity`, not as the new generic `scalar`. Nothing published changes meaning.
@@ -150,6 +194,8 @@ fits, but say so in the package notes.
 | `piece` | outfit | no | a part of the outfit a toggle shows or hides |
 | `pattern` | outfit | no | which of several textures a garment wears |
 | `skin-gloss` | body | no | the body's own sheen |
+| `figure` | body | no | a spring on a part of the figure: bust, hips, belly |
+| `motion` | body | no | a spring on something else that moves, like hair or a cloak |
 
 Hue-locking metal, gems and skin by default is deliberate: those three read as a material
 rather than as a color, and rotating their hue is what makes a recolor look broken.
@@ -166,7 +212,7 @@ that moved them. A player who wants them pinker or darker sets that control dire
 which is the common case anyway. Pubic hair takes `body-hair` and follows the hair, since
 it is normally the same color as the head.
 
-Declare these only on the variants that show them. CSS supports a per-variant `colors`
+Declare these only on the variants that show them. CSS supports a per-variant `customize`
 recipe ([colors.md](colors.md)), so a gowned variant should not list a control for a part
 nobody can see. The masks are small, so follow the disjoint-mask rule closely: an areola
 mask that bleeds into the breast will tint a patch of skin every time it is used.
@@ -239,17 +285,23 @@ A control for something the shell does not have is worse than no control: the pl
 drags a slider and nothing moves. Seductress V2 ships no `hair` control because the
 shell wears a hood and has no hair surface to dye. Declare what the mesh actually has.
 
-The same goes the other way for variants. CSS takes a `colors` recipe per variant, so a
+The same goes the other way for variants. CSS takes a `customize` recipe per variant, so a
 gowned variant should carry the plain recipe and a bare one the recipe with the intimate
 controls in it, rather than every variant offering every control.
 
 ## Checklist for a port
 
-1. Every recolorable part has a control with a player-facing `name`, a `group` and a
-   `role`.
-2. `hue_locked` is correct for each: metals, gems and skin locked; fabric and hair free.
+1. The block is called `customize`, and every adjustable part has a control with a
+   player-facing `name`, a `kind`, a `group` and a `role`.
+2. `hue_locked` is correct for each colour: metals, gems and skin locked; fabric and hair
+   free. It means nothing to the other kinds and they leave it out.
 3. Two or more palettes, each setting every outfit control. `original` is not one of
    them: CSS provides it, and it already restores the source mod exactly.
 4. Masks are disjoint where parts must stay independent, per [colors.md](colors.md).
-5. Verified in game: choose each palette, then drag each group tint end to end, and confirm
-   nothing turns an impossible color.
+5. A `toggle` names real material sections, a `choice` names cooked textures inside this
+   package's own container, and a `spring` names bones the cooked skeleton actually has.
+6. A `spring`'s two defaults match what the animation blueprint ships, read with
+   `spring_defaults()` rather than guessed.
+7. Verified in game: choose each palette, drag each group tint end to end, flip every
+   toggle, and move every slider to both ends. Nothing turns an impossible colour, nothing
+   disappears that should not, and nothing keeps moving after you stop.

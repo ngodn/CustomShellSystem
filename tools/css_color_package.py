@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import tempfile
 from css_convert import DEFAULT_REPAK, PACKAGE_ROOT, digest
-from css_colors import embed
+from css_controls import embed
 from css_package import verify
 
 
@@ -16,7 +16,7 @@ def build(package:Path,recipe:Path,output:Path,repak:Path=DEFAULT_REPAK,
     manifest=verify(package,repak)
     if package_version is not None and (not isinstance(package_version,str) or not package_version.strip() or len(package_version.encode())>64):
         raise ValueError('Package version must be nonempty text, at most 64 UTF-8 bytes')
-    if any('colors' in v for v in manifest['catalog']['outfits'][0]['variants']) and not replace_variant_colors:
+    if any('customize' in v or 'colors' in v for v in manifest['catalog']['outfits'][0]['variants']) and not replace_variant_colors:
         raise ValueError('Package has variant-specific colors. Rebuild from its project, or explicitly use --replace-variant-colors for one shared recipe.')
     output=output/package.name
     if output.exists():raise FileExistsError(output)
@@ -28,7 +28,8 @@ def build(package:Path,recipe:Path,output:Path,repak:Path=DEFAULT_REPAK,
         metadata=root/'metadata'/PACKAGE_ROOT/manifest['id']
         for name in manifest.get('resources',{}): (metadata/name).unlink()
         manifest['resources']={}
-        for variant in manifest['catalog']['outfits'][0]['variants']:variant.pop('colors',None)
+        for variant in manifest['catalog']['outfits'][0]['variants']:
+            variant.pop('customize',None);variant.pop('colors',None)
         embed(recipe,manifest,metadata)
         if package_version is not None:manifest['version']=package_version
         (metadata/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')

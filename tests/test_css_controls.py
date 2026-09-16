@@ -6,65 +6,73 @@ import tempfile
 import unittest
 from PIL import Image
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
-from css_colors import validate,embed,verify_resources,lint_convention
+from css_controls import validate,embed,verify_resources,lint_convention
 
-class ColorTests(unittest.TestCase):
+class ControlTests(unittest.TestCase):
     def setUp(self):
-        self.colors=dict(schema=1,controls=[dict(id='cloth',name='Clothing',default=[1,1,1,1])],surfaces=[dict(id='body',parameter='BaseColorMap  non VT',slots=[0],layers={'cloth':'dye-cloth.png'})],palettes=[dict(id='red',name='Crimson',values={'cloth':[.6,.1,.2,1]})])
+        self.recipe=dict(schema=1,controls=[dict(id='cloth',name='Clothing',default=[1,1,1,1])],surfaces=[dict(id='body',parameter='BaseColorMap  non VT',slots=[0],layers={'cloth':'dye-cloth.png'})],palettes=[dict(id='red',name='Crimson',values={'cloth':[.6,.1,.2,1]})])
 
     def test_mask_embedding_and_corruption(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);metadata=root/'metadata';metadata.mkdir()
             Image.new('RGBA',(1024,1024),(255,255,255,0)).save(root/'dye-cloth.png')
-            recipe=root/'outfit.colors.json';recipe.write_text(json.dumps(dict(id='test',colors=self.colors)))
+            path=root/'outfit.customize.json';path.write_text(json.dumps(dict(id='test',customize=self.recipe)))
             manifest=dict(id='test',catalog=dict(outfits=[dict(id='test')]))
-            embed(recipe,manifest,metadata);verify_resources(manifest,metadata)
-            self.assertEqual(manifest['catalog']['outfits'][0]['colors'],self.colors)
+            embed(path,manifest,metadata);verify_resources(manifest,metadata)
+            self.assertEqual(manifest['catalog']['outfits'][0]['customize'],self.recipe)
+            # 1.0 renamed the block. A recipe still written as "colors" embeds the same way.
+            legacy=root/'legacy.colors.json';legacy.write_text(json.dumps(dict(id='test',colors=self.recipe)))
+            old_manifest=dict(id='test',catalog=dict(outfits=[dict(id='test')]))
+            embed(legacy,old_manifest,metadata)
+            self.assertEqual(old_manifest['catalog']['outfits'][0]['customize'],self.recipe)
+            both=root/'both.customize.json'
+            both.write_text(json.dumps(dict(id='test',customize=self.recipe,colors=self.recipe)))
+            with self.assertRaisesRegex(ValueError,'once'):embed(both,dict(id='test',catalog=dict(outfits=[dict(id='test')])),metadata)
             image=metadata/'dye-cloth.png';data=bytearray(image.read_bytes());data[-1]^=1;image.write_bytes(data)
             with self.assertRaisesRegex(ValueError,'checksum'):verify_resources(manifest,metadata)
 
     def test_invalid_bindings_and_parts(self):
         variants=[]
-        bad=copy.deepcopy(self.colors);bad['surfaces'][0]['layers']['cloth']='../dye-cloth.png';variants.append(bad)
-        bad=copy.deepcopy(self.colors);bad['surfaces'][0]['slots']=[128];variants.append(bad)
-        bad=copy.deepcopy(self.colors);bad['controls'][0]['default'][3]=2;variants.append(bad)
-        bad=copy.deepcopy(self.colors);bad['palettes'][0]['values']['cloth'][3]=.5;variants.append(bad)
-        bad=copy.deepcopy(self.colors);bad['surfaces'][0]['layers']['unknown']='dye-other.png';variants.append(bad)
-        bad=copy.deepcopy(self.colors);bad['controls'][0]['default'][0]=float('nan');variants.append(bad)
-        bad=copy.deepcopy(self.colors);bad['surfaces'].append(dict(id='duplicate',parameter='BaseColorMap  non VT',slots=[0],layers={'cloth':'dye-cloth.png'}));variants.append(bad)
+        bad=copy.deepcopy(self.recipe);bad['surfaces'][0]['layers']['cloth']='../dye-cloth.png';variants.append(bad)
+        bad=copy.deepcopy(self.recipe);bad['surfaces'][0]['slots']=[128];variants.append(bad)
+        bad=copy.deepcopy(self.recipe);bad['controls'][0]['default'][3]=2;variants.append(bad)
+        bad=copy.deepcopy(self.recipe);bad['palettes'][0]['values']['cloth'][3]=.5;variants.append(bad)
+        bad=copy.deepcopy(self.recipe);bad['surfaces'][0]['layers']['unknown']='dye-other.png';variants.append(bad)
+        bad=copy.deepcopy(self.recipe);bad['controls'][0]['default'][0]=float('nan');variants.append(bad)
+        bad=copy.deepcopy(self.recipe);bad['surfaces'].append(dict(id='duplicate',parameter='BaseColorMap  non VT',slots=[0],layers={'cloth':'dye-cloth.png'}));variants.append(bad)
         for bad in variants:
-            with self.subTest(colors=bad),self.assertRaises(ValueError):validate(bad)
+            with self.subTest(recipe=bad),self.assertRaises(ValueError):validate(bad)
 
     def test_variant_resources_share_only_identical_files(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);metadata=root/'metadata';metadata.mkdir()
             Image.new('RGBA',(1024,1024),(255,255,255,0)).save(root/'dye-cloth.png')
-            recipe=root/'colors.json';recipe.write_text(json.dumps(dict(id='test',colors=self.colors)))
+            recipe=root/'customize.json';recipe.write_text(json.dumps(dict(id='test',customize=self.recipe)))
             variants=[{'id':'one'},{'id':'two'}]
             manifest=dict(id='test',catalog=dict(outfits=[dict(id='test',variants=variants)]))
             for variant in variants:embed(recipe,manifest,metadata,variant)
             verify_resources(manifest,metadata)
             self.assertEqual(len(manifest['resources']),1)
-            self.assertNotIn('colors',manifest['catalog']['outfits'][0])
+            self.assertNotIn('customize',manifest['catalog']['outfits'][0])
             Image.new('RGBA',(1024,1024),(0,0,0,255)).save(root/'dye-cloth.png')
             with self.assertRaisesRegex(ValueError,'collision'):embed(recipe,manifest,metadata,variants[1])
 
     def test_convention_fields_are_optional_but_checked(self):
-        control=self.colors['controls'][0]
+        control=self.recipe['controls'][0]
         for good in [dict(group='outfit'),dict(group='body'),dict(role='garment'),dict(hue_locked=True),
                      dict(kind='color'),dict(group='outfit',role='metal',hue_locked=True)]:
-            colors=copy.deepcopy(self.colors);colors['controls'][0].update(good)
+            colors=copy.deepcopy(self.recipe);colors['controls'][0].update(good)
             with self.subTest(control=good):validate(colors)
         for bad in [dict(group='ornaments'),dict(group=''),dict(role='a b'),dict(role='x'*33),
                     dict(hue_locked='yes'),dict(kind='scalar'),dict(kind='intensity',type='color')]:
-            colors=copy.deepcopy(self.colors);colors['controls'][0].update(bad)
+            colors=copy.deepcopy(self.recipe);colors['controls'][0].update(bad)
             with self.subTest(control=bad),self.assertRaises(ValueError):validate(colors)
-        self.assertEqual(control,self.colors['controls'][0])
+        self.assertEqual(control,self.recipe['controls'][0])
 
     def test_intensity_is_a_scalar_everywhere_type_would_be(self):
         # `kind: intensity` is the convention's spelling of `type: scalar`, so a
         # control declaring it must be refused as a dye layer and take one value.
-        colors=copy.deepcopy(self.colors)
+        colors=copy.deepcopy(self.recipe)
         colors['controls'][0].update(kind='intensity',max=5,default=[1.5,0,0,1])
         with self.assertRaises(ValueError):validate(colors)
         colors['surfaces']=[];colors['controls'][0]['bindings']=[dict(slot=0,parameter='Intensity')]
@@ -76,7 +84,7 @@ class ColorTests(unittest.TestCase):
     def test_lint_convention_reports_what_validate_allows(self):
         # validate() stays permissive so published packages keep loading; the lint
         # is what a package's own builder runs, and it has to catch all of this.
-        self.assertTrue(lint_convention(self.colors))       # no role, no group, one palette
+        self.assertTrue(lint_convention(self.recipe))       # no role, no group, one palette
         colors=dict(schema=1,controls=[
             dict(id='cloth',name='Garment',group='outfit',role='garment',default=[1,1,1,1]),
             dict(id='skin',name='Skin',group='body',role='skin',default=[1,1,1,1])],
@@ -98,7 +106,7 @@ class ColorTests(unittest.TestCase):
 
     def test_control_kinds(self):
         """1.0: colour is one kind among several, and every kind but colour is a number."""
-        from css_colors import kind_of
+        from css_controls import kind_of
         base=dict(schema=1,controls=[
             dict(id='cloth',name='Garment',role='garment',default=[1,1,1,1]),
             dict(id='gloss',name='Sheen',kind='scalar',role='gloss',default=[.4,0,0,1],min=0,max=1,
@@ -152,6 +160,65 @@ class ColorTests(unittest.TestCase):
         # Nothing else may carry options.
         stray_options=copy.deepcopy(choice);stray_options['controls'][1]['options']=[]
         with self.assertRaisesRegex(ValueError,'choice'):validate(stray_options)
+
+    def test_spring_controls(self):
+        """1.0: a spring tunes live secondary motion, in numbers a person can reason about."""
+        from css_controls import kind_of,spring_tuning
+        base=dict(schema=1,controls=[
+            dict(id='cloth',name='Garment',role='garment',group='outfit',default=[1,1,1,1]),
+            dict(id='bust',name='Bust',kind='spring',group='body',role='figure',
+                 nodes=['brust001','brust002'],
+                 frequency=dict(min=1.2,max=2.6,default=1.6),
+                 damping_ratio=dict(min=.4,max=.95,default=.65))],
+            surfaces=[dict(id='body',parameter='BaseColorMap  non VT',slots=[0],layers={'cloth':'dye-cloth.png'})],
+            palettes=[dict(id='red',name='Crimson',values={'cloth':[.6,.1,.2,1]})])
+        validate(base)
+        self.assertEqual(kind_of(base['controls'][1]),'spring')
+
+        # The conversion has to agree with spring_tuning() in native/src/colors.cpp, and
+        # with what the Seductress V2 blueprint actually ships: 1.5915 Hz at a damping
+        # ratio of 0.65 is stiffness 100 and damping 13.
+        stiffness,damping=spring_tuning(1.5915494309189535,.65)
+        self.assertAlmostEqual(stiffness,100,places=4)
+        self.assertAlmostEqual(damping,13,places=4)
+
+        # Bones, both ranges, and nothing that would say the same number twice.
+        for key in ('nodes','frequency','damping_ratio'):
+            gone=copy.deepcopy(base);del gone['controls'][1][key]
+            with self.assertRaises(Exception):validate(gone)
+        twice=copy.deepcopy(base);twice['controls'][1]['nodes']=['brust001','brust001']
+        with self.assertRaisesRegex(ValueError,'same bone twice'):validate(twice)
+        hyphen=copy.deepcopy(base);hyphen['controls'][1]['nodes']=['brust-001']
+        with self.assertRaisesRegex(ValueError,'bone name'):validate(hyphen)
+        spelled=copy.deepcopy(base);spelled['controls'][1]['default']=[1.6,.65,0,1]
+        with self.assertRaisesRegex(ValueError,'takes its default'):validate(spelled)
+        limits=copy.deepcopy(base);limits['controls'][1]['max']=4
+        with self.assertRaisesRegex(ValueError,'takes its limits'):validate(limits)
+        bound=copy.deepcopy(base)
+        bound['controls'][1]['bindings']=[dict(slot=0,parameter='Roughness')]
+        with self.assertRaisesRegex(ValueError,'no material parameter'):validate(bound)
+        # Nothing else tunes a skeleton.
+        stray=copy.deepcopy(base);stray['controls'][0]['nodes']=['belly']
+        with self.assertRaisesRegex(ValueError,'spring control tunes'):validate(stray)
+        # A range has to be a range, and the default has to sit inside it.
+        upside_down=copy.deepcopy(base);upside_down['controls'][1]['frequency']['min']=3
+        with self.assertRaisesRegex(ValueError,'frequency range'):validate(upside_down)
+        outside=copy.deepcopy(base);outside['controls'][1]['frequency']['default']=2.9
+        with self.assertRaisesRegex(ValueError,'frequency range'):validate(outside)
+        # Past the engine's damping cutoff the slider stops meaning what it says.
+        violent=copy.deepcopy(base)
+        violent['controls'][1]['frequency']['max']=8
+        violent['controls'][1]['damping_ratio']['max']=2
+        with self.assertRaisesRegex(ValueError,'integrate as written'):validate(violent)
+
+        # A palette may set a spring, and each channel is checked against its own range.
+        look=copy.deepcopy(base)
+        look['palettes'][0]['values']['bust']=[2.0,.5,0,1]
+        validate(look)
+        loud=copy.deepcopy(look);loud['palettes'][0]['values']['bust']=[4.0,.5,0,1]
+        with self.assertRaises(ValueError):validate(loud)
+        sticky=copy.deepcopy(look);sticky['palettes'][0]['values']['bust']=[2.0,1.4,0,1]
+        with self.assertRaises(ValueError):validate(sticky)
 
     def test_reviewed_recipes(self):
         root=Path(__file__).resolve().parents[1]/'work/color-recipes'

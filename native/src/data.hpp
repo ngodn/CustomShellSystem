@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 #include <nlohmann/json.hpp>
-#include "colors.hpp"
+#include "controls.hpp"
 
 namespace css {
 using Json = nlohmann::json;
@@ -35,7 +35,7 @@ struct AttachmentOffset { std::array<double,3> location{}, rotation{}; Attachmen
 struct Variant {
     std::string id, name, mesh;
     std::map<int,std::string> materials;
-    std::optional<ColorOptions> colors;
+    std::optional<ControlSet> controls;
     std::map<std::string,AttachmentOffset> attachments;   // 0.4: per-socket correction for stowed items
 };
 struct Outfit {
@@ -44,11 +44,11 @@ struct Outfit {
     std::vector<Variant> variants;
     bool same_skeleton = false;
     fs::path thumbnail;
-    ColorOptions colors;
+    ControlSet controls;
     fs::path resources;
-    const ColorOptions& colors_for(const std::string& variant) const {
-        for(const auto& v:variants) if(v.id==variant && v.colors) return *v.colors;
-        return colors;
+    const ControlSet& controls_for(const std::string& variant) const {
+        for(const auto& v:variants) if(v.id==variant && v.controls) return *v.controls;
+        return controls;
     }
 };
 struct Catalog {
@@ -59,7 +59,7 @@ struct Catalog {
     const Variant* find(const std::string& outfit, const std::string& variant) const;
     bool compatible(const std::string& outfit, const std::string& shell) const;
 };
-struct Selection { std::string outfit, variant; Customization colors; };
+struct Selection { std::string outfit, variant; Customization custom; };
 // 0.4: a template keeps the animation settings with the outfit selections.
 struct Preset { std::map<std::string, Selection> selections; std::string walk_animation = "normal"; };
 bool valid_walk_animation(const std::string&);
@@ -69,7 +69,7 @@ struct State {
     bool invert_orbit_x = false, invert_orbit_y = true;
     std::string walk_animation = "normal";   // "normal" or "feminine" (ANIMATION tab). Jog and sprint stay on the game's own animation in 0.4.
     std::map<std::string, Selection> selections;
-    std::map<std::string, Customization> remembered_colors;
+    std::map<std::string, Customization> remembered_custom;
     std::set<std::string> favorites;
     std::map<std::string, Preset> presets;
     static State parse(const Json&);

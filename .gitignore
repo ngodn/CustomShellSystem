@@ -15,6 +15,10 @@
 /cache/
 /cores/
 /catalog/*.json
+# The one exception: a dev fixture that exercises the 1.0 control kinds against an
+# installed mesh, so a toggle, a texture choice and a pair of spring sliders can be seen
+# in game without cooking a package. It ships with nothing.
+!/catalog/dev-control-kinds.css.json
 
 # Python environments and caches.
 __pycache__/

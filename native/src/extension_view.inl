@@ -184,7 +184,7 @@ void InventoryUI::build_extension_page() {
                     invoke(slider,L"SetIsEnabled",L"bInIsEnabled",enabled);
                     ui.place(slider,right+8,615,info-16,36);
                     auto* label=ui.text(value,right,582,info,32,23,light);
-                    sliders_.push_back({WeakObject(slider),WeakObject(label),{},{{"action","x_value"}},c.at("value").get<float>(),true});
+                    sliders_.push_back({WeakObject(slider),WeakObject(label),{},{{"action","x_value"}},c.at("value").get<float>(),true,""});
                     if(enabled) {prompt("left","",right,668,28,15);prompt("right","Adjust",right+36,668,info-36,16);}
                 } else if(kind=="number" || kind=="choice") {
                     button("<",right,600,48,48,{{"action","x_adjust"},{"delta",-1}},false,enabled);

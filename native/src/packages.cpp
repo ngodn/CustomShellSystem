@@ -91,7 +91,7 @@ std::map<std::string,Bytes> contents(const fs::path& path) {
     uint64_t total=0;
     for(auto& [name,entry]:entries) {
         auto leaf=name.substr(name.rfind('/')+1);
-        if(!name.ends_with("/manifest.json") && !name.ends_with("/thumbnail.png") && !color_resource(leaf)) continue;
+        if(!name.ends_with("/manifest.json") && !name.ends_with("/thumbnail.png") && !dye_resource(leaf)) continue;
         total+=entry.size;
         if(total>260*1024*1024) throw std::runtime_error("CSS metadata resources exceed limit");
         if(name.ends_with("/thumbnail.png") && entry.size>4*1024*1024) throw std::runtime_error("CSS thumbnail exceeds limit");
@@ -202,11 +202,12 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
                 if(fs::exists(target)) fs::remove(target);
                 fs::rename(temp,target);
             }
-            auto options=ColorOptions::parse(outfits[0].value("colors",Json::object()));
+            auto options=ControlSet::parse(outfits[0].contains("customize")?outfits[0].at("customize")
+                                                                            :outfits[0].value("colors",Json::object()));
             std::set<std::string> required;
             for(const auto& surface:options.surfaces) for(const auto& [part,file]:surface.layers) required.insert(file);
-            for(const auto& variant:outfits[0].at("variants")) if(variant.contains("colors")) {
-                auto variant_options=ColorOptions::parse(variant.at("colors"));
+            for(const auto& variant:outfits[0].at("variants")) if(variant.contains("customize") || variant.contains("colors")) {
+                auto variant_options=ControlSet::parse(variant.contains("customize")?variant.at("customize"):variant.at("colors"));
                 for(const auto& surface:variant_options.surfaces)
                     for(const auto& [part,file]:surface.layers) required.insert(file);
             }

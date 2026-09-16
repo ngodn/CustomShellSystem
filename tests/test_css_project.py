@@ -69,7 +69,7 @@ class ProjectTests(unittest.TestCase):
         self.assertIsNotNone(project.read_project(self.file).variant_sources)
         colors['id'] = 'wrong.outfit'
         color_file.write_text(json.dumps(colors))
-        with self.assertRaisesRegex(ValueError, 'Color recipe ID'):
+        with self.assertRaisesRegex(ValueError, 'Control recipe ID'):
             project.read_project(self.file)
         self.save(dict(data, inputs=['source']))
         with self.assertRaisesRegex(ValueError, 'owns inputs'):

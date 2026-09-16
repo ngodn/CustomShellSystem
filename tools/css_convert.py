@@ -467,7 +467,7 @@ def convert(args: argparse.Namespace) -> Path:
                  'thumbnail':'thumbnail.png','variants':variants}]}}
     metadata=work/'metadata'/PACKAGE_ROOT/pack_id; metadata.mkdir(parents=True)
     if getattr(args,'colors',None):
-        from css_colors import embed
+        from css_controls import embed
         embed(args.colors.resolve(strict=True),manifest,metadata)
     (metadata/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     (metadata/'conversion.json').write_text(json.dumps(report,indent=2)+'\n')
@@ -504,7 +504,7 @@ def variant_sources(path:Path) -> list[dict]:
         if not isinstance(item.get('name'),str) or not 1<=len(item['name'])<=128:raise ValueError('Variant needs a display name')
         if not isinstance(item.get('inputs'),list) or not item['inputs']:raise ValueError('Variant needs source inputs')
         item['inputs']=[(path.parent/p).resolve(strict=True) for p in item['inputs']]
-        for field in ('materials','colors','import_repairs'):
+        for field in ('materials','colors','customize','import_repairs'):
             if item.get(field):item[field]=(path.parent/item[field]).resolve(strict=True)
     return data
 
@@ -544,12 +544,12 @@ def share_variant_textures(renamed:Path,reports:list[dict]) -> tuple[list[dict],
 
 def convert_grouped(args:argparse.Namespace) -> Path:
     """Combine verified, isolated source groups into one wardrobe entry and trio."""
-    from css_colors import verify_resources
+    from css_controls import verify_resources
     from css_sources import unchanged
     groups=variant_sources(args.variant_sources.resolve(strict=True))
     if not args.name or not args.id:raise ValueError('Grouped conversion requires --name and a stable --id')
     if args.mesh or args.variant or args.materials or args.colors:
-        raise ValueError('Define meshes, materials and colors within each variant source group')
+        raise ValueError('Define meshes, materials and controls within each variant source group')
     stem=output_name(args.name,args.author,args.name_format)
     output=args.output.resolve()/stem
     if output.exists():raise FileExistsError(output)
@@ -577,7 +577,7 @@ def convert_grouped(args:argparse.Namespace) -> Path:
         child.inputs=group['inputs'];child.id=args.id+'.'+group['id']
         child.name=group['name'];child.work=work/group['id'];child.output=work/'children'/group['id']
         child.mesh=group.get('mesh');child.variant=[]
-        child.materials=group.get('materials');child.colors=group.get('colors')
+        child.materials=group.get('materials');child.colors=group.get('customize') or group.get('colors')
         child.include=group.get('include',[]);child.import_repairs=group.get('import_repairs')
         child.shell=group.get('shell',args.shell)
         if child.colors:
@@ -586,9 +586,9 @@ def convert_grouped(args:argparse.Namespace) -> Path:
             recipe=json.loads(child.colors.read_text())
             if recipe['id']!=args.id:raise ValueError('Variant recipe belongs to another outfit')
             recipe['id']=child.id
-            recipe_dir=work/(group['id']+'-colors');recipe_dir.mkdir()
+            recipe_dir=work/(group['id']+'-customize');recipe_dir.mkdir()
             for file in child.colors.parent.glob('dye-*.png'):(recipe_dir/file.name).symlink_to(file.resolve())
-            child.colors=recipe_dir/'colors.json';child.colors.write_text(json.dumps(recipe))
+            child.colors=recipe_dir/'customize.json';child.colors.write_text(json.dumps(recipe))
         convert(child)
         child_meta=child.work/'metadata'/PACKAGE_ROOT/child.id
         current=json.loads((child_meta/'manifest.json').read_text())
@@ -597,10 +597,10 @@ def convert_grouped(args:argparse.Namespace) -> Path:
         outfit=current['catalog']['outfits'][0]
         if len(outfit['variants'])!=1:raise ValueError('A source group must select one body mesh')
         variant=outfit['variants'][0];variant['id']=group['id'];variant['name']=group['name']
-        if 'colors' in outfit:variant['colors']=outfit['colors']
+        if 'customize' in outfit:variant['customize']=outfit['customize']
         variants.append(variant)
         for name,info in current.get('resources',{}).items():
-            if name in resources and resources[name]!=info:raise ValueError('Variant color filename collision: '+name)
+            if name in resources and resources[name]!=info:raise ValueError('Variant dye filename collision: '+name)
             if name not in resources:shutil.copy2(child_meta/name,metadata/name)
             resources[name]=info
         for file in (child.work/'renamed').rglob('*'):
@@ -629,7 +629,7 @@ def convert_grouped(args:argparse.Namespace) -> Path:
     manifest.update(id=args.id,name=args.name,version=args.package_version,resources=resources)
     outfit=manifest['catalog']['outfits'][0]
     outfit.update(id=args.id,name=args.name,description=args.description or '',variants=variants)
-    outfit.pop('colors',None)
+    outfit.pop('customize',None)
     manifest['containers']={suffix:{'file':stem+suffix,'bytes':target.with_suffix(suffix).stat().st_size,
                                   'sha256':digest(target.with_suffix(suffix))} for suffix in ('.utoc','.ucas')}
     shutil.copy2(args.thumbnail,metadata/'thumbnail.png')
@@ -672,7 +672,9 @@ def main() -> None:
     parser.add_argument('--mesh',help='Original body package or full object path when automatic selection is ambiguous')
     parser.add_argument('--variant',action='append',help='ID=original mesh path; repeat to group regular/corrupted or other variants')
     parser.add_argument('--materials',type=Path,help='JSON mapping material slot numbers to original material paths, applied to all variants')
-    parser.add_argument('--colors',type=Path,help='Author color recipe with adjacent dye PNG resources; embedded in the package')
+    # --colors is what every existing build script passes, so it stays as an alias.
+    parser.add_argument('--customize','--colors',dest='colors',type=Path,
+                        help='Author control recipe with adjacent dye PNG resources; embedded in the package')
     parser.add_argument('--include',action='append',help='Game material or other dependency to include and relocate with source assets')
     parser.add_argument('--import-repairs',type=Path,help='Audited source-hash-bound import table repair recipe')
     parser.add_argument('--variant-sources',type=Path,help='JSON list of separately packaged outfit variants; keeps overlapping source assets isolated')

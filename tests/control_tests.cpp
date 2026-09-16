@@ -1,4 +1,5 @@
 #include "data.hpp"
+#include <cmath>
 #include <iostream>
 #include <stdexcept>
 using namespace css;
@@ -12,44 +13,55 @@ int main() {
           {"id":"glow","name":"Eye glow","type":"scalar","default":[1.5,0,0,1],"max":5,"bindings":[{"slot":5,"parameter":"Intensity"},{"slot":10,"parameter":"Intensity"}]}],
           "surfaces":[{"id":"body","parameter":"BaseColorMap  non VT","slots":[0,1],"layers":{"cloth":"dye-cloth.png"}}],
           "palettes":[{"id":"red","name":"Crimson","values":{"cloth":[0.6,0.1,0.2,1]}}]})");
-        auto options=ColorOptions::parse(source);
-        Outfit outfit;outfit.colors=options;
+        auto options=ControlSet::parse(source);
+        Outfit outfit;outfit.controls=options;
         Variant variant;variant.id="different";
         auto variant_source=source;
         variant_source["surfaces"][0]["layers"]["cloth"]="dye-different.png";
-        variant.colors=ColorOptions::parse(variant_source);outfit.variants.push_back(variant);
-        expect(outfit.colors_for("default").surfaces[0].layers.at("cloth")=="dye-cloth.png","Legacy outfit colors changed");
-        expect(outfit.colors_for("different").surfaces[0].layers.at("cloth")=="dye-different.png","Variant dye texture was not selected");
-        expect(color_values(options,{}).empty(),"Original must leave authored materials untouched");
+        variant.controls=ControlSet::parse(variant_source);outfit.variants.push_back(variant);
+        expect(outfit.controls_for("default").surfaces[0].layers.at("cloth")=="dye-cloth.png","Legacy outfit colors changed");
+        expect(outfit.controls_for("different").surfaces[0].layers.at("cloth")=="dye-different.png","Variant dye texture was not selected");
+        expect(control_values(options,{}).empty(),"Original must leave authored materials untouched");
         Customization custom;custom.palette="red";
-        expect(color_values(options,custom).at("cloth")[0]==.6f,"Palette missing");
+        expect(control_values(options,custom).at("cloth")[0]==.6f,"Palette missing");
         custom.values["cloth"]={.1f,.2f,.3f,1}; custom.values["glow"]={3,0,0,1};
-        auto colors=color_values(options,custom);
+        auto colors=control_values(options,custom);
         expect(colors.at("cloth")[0]==.1f && colors.at("glow")[0]==3,"Independent custom overrides lost");
         custom.values.erase("cloth");
-        expect(color_values(options,custom).at("cloth")[0]==.6f,"Reset part did not return to palette");
+        expect(control_values(options,custom).at("cloth")[0]==.6f,"Reset part did not return to palette");
         expect(Customization::parse(custom.json())==custom,"Custom colors round trip failed");
         State state;state.selections["CharacterId.Player.Shell.Genessa"]={"test","default",custom};
-        state.remembered_colors["test"]=custom;state.presets["look.1"]=Preset{state.selections};
+        state.remembered_custom["test"]=custom;state.presets["look.1"]=Preset{state.selections};
         expect(State::parse(state.json()).json()==state.json(),"Saved look or remembered colors lost");
-        auto old=state.json();old.erase("remembered_colors");for(auto& s:old["selections"])s.erase("colors");
-        expect(State::parse(old).selections.begin()->second.colors.values.empty(),"Legacy selection must use original colors");
-        custom.values["glow"][0]=6;rejects([&]{color_values(options,custom);});custom.values.erase("glow");
-        custom.values["missing"]={1,1,1,1};rejects([&]{color_values(options,custom);});custom.values.clear();
+        auto bare=state.json();bare.erase("remembered_custom");for(auto& s:bare["selections"])s.erase("customize");
+        expect(State::parse(bare).selections.begin()->second.custom.values.empty(),"A selection with nothing customized must use the author's own");
+        // 1.0 renamed the block from "colors" to "customize". A state file written by 0.4
+        // still loads, with everything the player had chosen.
+        auto legacy=state.json();
+        legacy["remembered_colors"]=legacy["remembered_custom"];legacy.erase("remembered_custom");
+        for(auto& s:legacy["selections"]) { s["colors"]=s["customize"];s.erase("customize"); }
+        auto reopened=State::parse(legacy);
+        expect(reopened.selections.begin()->second.custom==custom,"A 0.4 selection lost what the player chose");
+        expect(reopened.remembered_custom.at("test")==custom,"A 0.4 remembered outfit lost what the player chose");
+        // Naming both is a mistake, not a merge.
+        auto muddled=state.json();muddled["selections"].begin().value()["colors"]=Json::object();
+        rejects([&]{State::parse(muddled);});
+        custom.values["glow"][0]=6;rejects([&]{control_values(options,custom);});custom.values.erase("glow");
+        custom.values["missing"]={1,1,1,1};rejects([&]{control_values(options,custom);});custom.values.clear();
         Customization previous;previous.palette="removed";previous.values["missing"]={1,1,1,1};previous.values["cloth"]={.2f,.3f,.4f,1};
-        auto carried=compatible_colors(options,previous);
+        auto carried=compatible_values(options,previous);
         expect(carried.palette=="original" && carried.values.size()==1 && carried.values.contains("cloth"),"Variant switch did not preserve compatible custom colors");
-        custom.palette="missing";rejects([&]{color_values(options,custom);});
-        auto bad=source;bad["palettes"][0]["values"]["cloth"][3]=.5;rejects([&]{ColorOptions::parse(bad);});
-        bad=source;bad["controls"][1]["bindings"][0]["slot"]=128;rejects([&]{ColorOptions::parse(bad);});
-        bad=source;bad["controls"][1]["bindings"][0]["association"]="layer";rejects([&]{ColorOptions::parse(bad);});
+        custom.palette="missing";rejects([&]{control_values(options,custom);});
+        auto bad=source;bad["palettes"][0]["values"]["cloth"][3]=.5;rejects([&]{ControlSet::parse(bad);});
+        bad=source;bad["controls"][1]["bindings"][0]["slot"]=128;rejects([&]{ControlSet::parse(bad);});
+        bad=source;bad["controls"][1]["bindings"][0]["association"]="layer";rejects([&]{ControlSet::parse(bad);});
         bad["controls"][1]["bindings"][0]["layer"]=2;
-        expect(ColorOptions::parse(bad).controls[1].bindings[0].association==0,"Layer association lost");
-        bad=source;bad["surfaces"][0]["layers"]["cloth"]="../dye-cloth.png";rejects([&]{ColorOptions::parse(bad);});
-        bad=source;bad["surfaces"].push_back(bad["surfaces"][0]);bad["surfaces"][1]["id"]="other";rejects([&]{ColorOptions::parse(bad);});
-        bad=source;bad["surfaces"]=Json::object();rejects([&]{ColorOptions::parse(bad);});
-        bad=source;bad["controls"][0]["step"]=0;rejects([&]{ColorOptions::parse(bad);});
-        bad=source;bad["controls"][0]["default"][3]=2;rejects([&]{ColorOptions::parse(bad);});
+        expect(ControlSet::parse(bad).controls[1].bindings[0].association==0,"Layer association lost");
+        bad=source;bad["surfaces"][0]["layers"]["cloth"]="../dye-cloth.png";rejects([&]{ControlSet::parse(bad);});
+        bad=source;bad["surfaces"].push_back(bad["surfaces"][0]);bad["surfaces"][1]["id"]="other";rejects([&]{ControlSet::parse(bad);});
+        bad=source;bad["surfaces"]=Json::object();rejects([&]{ControlSet::parse(bad);});
+        bad=source;bad["controls"][0]["step"]=0;rejects([&]{ControlSet::parse(bad);});
+        bad=source;bad["controls"][0]["default"][3]=2;rejects([&]{ControlSet::parse(bad);});
         expect(std::abs(srgb_linear(.5f)-.214041f)<.000001,"sRGB colors must be converted once");
 
         {   // 0.4 convention: group, role and hue locking, declared or read off the id.
@@ -64,14 +76,14 @@ int main() {
                "layers":{"cloth":"dye-cloth.png","metal":"dye-metal.png","skin":"dye-skin.png","wraps":"dye-wraps.png"}}],
               "palettes":[{"id":"teal","name":"Teal","values":{
                "cloth":[0.6,0.1,0.2,1],"metal":[0.7,0.55,0.2,1],"skin":[0.8,0.7,0.62,1],"wraps":[0.3,0.3,0.3,1]}}]})");
-            auto with_roles=ColorOptions::parse(convention);
+            auto with_roles=ControlSet::parse(convention);
             // Inferred from the id, because these declare neither group nor role.
             expect(with_roles.find("cloth")->role=="garment" && !with_roles.find("cloth")->hue_locked,
                    "Clothing should infer an unlocked garment");
             expect(with_roles.find("metal")->hue_locked && with_roles.find("skin")->hue_locked,
                    "Metal and skin should infer as hue locked");
-            expect(with_roles.find("skin")->group==ColorGroup::Body &&
-                   with_roles.find("cloth")->group==ColorGroup::Outfit, "Inferred groups are wrong");
+            expect(with_roles.find("skin")->group==ControlGroup::Body &&
+                   with_roles.find("cloth")->group==ControlGroup::Outfit, "Inferred groups are wrong");
             // "eye-glow" must win over both "eye" and "glow", and kind maps to a scalar.
             expect(with_roles.find("eye-glow")->role=="eye-glow" && with_roles.find("eye-glow")->scalar,
                    "eye-glow should be a body intensity, not a garment glow");
@@ -84,9 +96,9 @@ int main() {
               {"id":"pubic-hair","name":"Pubic hair","default":[1,1,1,1]}],
               "surfaces":[{"id":"body","parameter":"BaseColorMap  non VT","slots":[0],
                "layers":{"areola":"dye-areola.png","nipples":"dye-nipples.png","labia":"dye-labia.png","pubic-hair":"dye-pubic.png"}}]})");
-            auto nude=ColorOptions::parse(bare);
+            auto nude=ControlSet::parse(bare);
             for(const char* id:{"areola","nipples","labia"}) {
-                expect(nude.find(id)->group==ColorGroup::Body,"A bare body part belongs to the body group");
+                expect(nude.find(id)->group==ControlGroup::Body,"A bare body part belongs to the body group");
                 expect(nude.find(id)->hue_locked,"A body pigment must be hue locked with skin");
             }
             expect(nude.find("nipples")->role=="nipple","Nipples should infer the nipple role");
@@ -94,12 +106,12 @@ int main() {
                    "Pubic hair follows the hair and is not locked");
 
             // A declared group beats what the id would have suggested.
-            expect(with_roles.find("wraps")->group==ColorGroup::Body && with_roles.find("wraps")->role=="accent",
+            expect(with_roles.find("wraps")->group==ControlGroup::Body && with_roles.find("wraps")->role=="accent",
                    "A declared group and role must win over the id");
 
             Customization tinted; tinted.palette="teal";
             tinted.tints["outfit"]={120.f,1.f,1.f};
-            auto shifted=color_values(with_roles,tinted);
+            auto shifted=control_values(with_roles,tinted);
             // The garment rotates a full third of the wheel; the hue-locked ornaments do not.
             const auto& cloth=shifted.at("cloth");
             expect(cloth[1]>cloth[0] && cloth[1]>cloth[2],"A 120 degree tint should turn the red garment green");
@@ -109,16 +121,16 @@ int main() {
                    "An outfit tint must not touch the body");
             // Saturation and brightness reach a hue-locked part.
             Customization dimmed; dimmed.palette="teal"; dimmed.tints["outfit"]={0.f,1.f,.5f};
-            expect(std::abs(color_values(with_roles,dimmed).at("metal")[0]-.35f)<.001f,
+            expect(std::abs(control_values(with_roles,dimmed).at("metal")[0]-.35f)<.001f,
                    "A hue locked part should still take the group brightness");
             // The tint sits on top of an override, not instead of it.
             Customization both; both.palette="teal"; both.values["cloth"]={0.f,0.f,.5f,1};
             both.tints["outfit"]={0.f,1.f,.5f};
-            expect(std::abs(color_values(with_roles,both).at("cloth")[2]-.25f)<.001f,
+            expect(std::abs(control_values(with_roles,both).at("cloth")[2]-.25f)<.001f,
                    "The group tint must apply on top of a custom color");
             // Original dyes nothing, so a tint has nothing to move.
             Customization untouched; untouched.tints["outfit"]={120.f,1.f,1.f};
-            expect(color_values(with_roles,untouched).empty(),"A tint must not dye anything on Original");
+            expect(control_values(with_roles,untouched).empty(),"A tint must not dye anything on Original");
             expect(Customization::parse(both.json())==both,"Tints did not round trip");
             auto rejected=both.json(); rejected["tints"]["outfit"]["hue"]=400;
             rejects([&]{Customization::parse(rejected);});
@@ -129,7 +141,7 @@ int main() {
             // sets and the tint of their groups, and leaves the body alone.
             auto outfit_only=convention;                 // a palette for the dress alone
             outfit_only["palettes"][0]["values"]=Json{{"cloth",{.6,.1,.2,1}},{"metal",{.7,.55,.2,1}}};
-            auto dressy=ColorOptions::parse(outfit_only);
+            auto dressy=ControlSet::parse(outfit_only);
             Customization before; before.palette="original";
             before.values["cloth"]={1.f,0.f,0.f,1};      // the palette sets this one
             before.values["skin"]={.5f,.5f,.5f,1};       // the palette does not
@@ -161,7 +173,7 @@ int main() {
               {"id":"hood","name":"Hood","kind":"toggle","role":"piece","default":[1,0,0,1],"sections":[2,3]}],
               "surfaces":[{"id":"body","parameter":"BaseColorMap  non VT","slots":[0],"layers":{"cloth":"dye-cloth.png"}}],
               "palettes":[{"id":"red","name":"Crimson","values":{"cloth":[0.6,0.1,0.2,1]}}]})");
-            auto model=ColorOptions::parse(kinds);
+            auto model=ControlSet::parse(kinds);
             expect(model.find("cloth")->kind==ControlKind::Color,"A control with no kind is a colour");
             // type=scalar predates the split, and those packages meant a strength.
             expect(model.find("glow")->kind==ControlKind::Intensity,"type=scalar must stay an intensity");
@@ -175,11 +187,11 @@ int main() {
             expect(std::string(control_kind_name(ControlKind::Toggle))=="toggle","Kind name missing");
             // A toggle drives its sections directly and needs them; nothing else may claim them.
             auto drop=kinds; drop["controls"][3].erase("sections");
-            rejects([&]{ColorOptions::parse(drop);});
+            rejects([&]{ControlSet::parse(drop);});
             auto stray=kinds; stray["controls"][2]["sections"]=Json::array({1});
-            rejects([&]{ColorOptions::parse(stray);});
+            rejects([&]{ControlSet::parse(stray);});
             auto odd=kinds; odd["controls"][2]["kind"]="texture";
-            rejects([&]{ColorOptions::parse(odd);});
+            rejects([&]{ControlSet::parse(odd);});
 
             // A choice picks one of the textures the package ships, by index.
             auto pick=kinds;
@@ -188,20 +200,79 @@ int main() {
               "options":[{"name":"Plain","texture":"/Game/CSS/x/T_Plain.T_Plain"},
                          {"name":"Lace","texture":"/Game/CSS/x/T_Lace.T_Lace"}],
               "bindings":[{"slot":0,"parameter":"BaseColorMap  non VT"}]})"));
-            auto chosen=ColorOptions::parse(pick);
+            auto chosen=ControlSet::parse(pick);
             const auto* pattern=chosen.find("pattern");
             expect(pattern->kind==ControlKind::Choice && pattern->options.size()==2,"A choice kept its options");
             expect(pattern->options[1].name=="Lace","Choice option names lost");
             expect(pattern->minimum==0 && pattern->maximum==1 && pattern->step==1,
                    "A choice ranges over its options and nothing else");
             auto over=pick; over["controls"][4]["default"]=Json::array({2,0,0,1});
-            rejects([&]{ColorOptions::parse(over);});
+            rejects([&]{ControlSet::parse(over);});
             auto bare=pick; bare["controls"][4].erase("options");
-            rejects([&]{ColorOptions::parse(bare);});
+            rejects([&]{ControlSet::parse(bare);});
             auto bad_path=pick; bad_path["controls"][4]["options"][0]["texture"]="/Game/CSS/x/T_Plain";
-            rejects([&]{ColorOptions::parse(bad_path);});
+            rejects([&]{ControlSet::parse(bad_path);});
             auto stray_options=pick; stray_options["controls"][2]["options"]=Json::array();
-            rejects([&]{ColorOptions::parse(stray_options);});
+            rejects([&]{ControlSet::parse(stray_options);});
+        }
+        {
+            // 1.0: a spring tunes the mesh's own secondary motion. It is the only control
+            // with two numbers in it, and the only one that writes no material at all.
+            auto springs=Json::parse(R"({"schema":1,"controls":[
+              {"id":"cloth","name":"Garment","role":"garment","group":"outfit","default":[1,1,1,1]},
+              {"id":"bust","name":"Bust","kind":"spring","group":"body","role":"figure",
+               "nodes":["brust001","brust002"],
+               "frequency":{"min":1.2,"max":2.6,"default":1.6},
+               "damping_ratio":{"min":0.4,"max":0.95,"default":0.65}}],
+              "surfaces":[{"id":"body","parameter":"BaseColorMap  non VT","slots":[0],"layers":{"cloth":"dye-cloth.png"}}],
+              "palettes":[{"id":"red","name":"Crimson","values":{"cloth":[0.6,0.1,0.2,1]}}]})");
+            auto model=ControlSet::parse(springs);
+            const auto* bust=model.find("bust");
+            expect(bust->kind==ControlKind::Spring && bust->scalar,"A spring was not kept");
+            expect(bust->nodes.size()==2 && bust->nodes[0]=="brust001","Spring bones lost");
+            expect(bust->minimum==1.2f && bust->maximum==2.6f,"Spring frequency range lost");
+            expect(bust->damping_minimum==.4f && bust->damping_maximum==.95f,"Spring damping range lost");
+            expect(bust->value[0]==1.6f && bust->value[1]==.65f && bust->value[3]==1,
+                   "A spring takes its default from its two ranges");
+            expect(std::string(control_kind_name(ControlKind::Spring))=="spring","Kind name missing");
+            // The conversion is the whole point of the control: 1.5915 Hz is stiffness 100,
+            // and a damping ratio of 0.65 against it is damping 13, which is what the
+            // Seductress V2 blueprint actually ships.
+            const auto tuning=spring_tuning(1.5915494309189535f,.65f);
+            expect(std::abs(tuning.stiffness-100)<.01 && std::abs(tuning.damping-13)<.01,
+                   "Frequency and damping ratio did not convert to the engine's numbers");
+            // A saved value is checked against the range its own channel belongs to.
+            Customization custom; custom.values["bust"]={2.0f,.5f,0,1};
+            expect(control_values(model,custom).at("bust")[1]==.5f,"Spring override lost");
+            custom.values["bust"]={2.0f,1.4f,0,1};
+            rejects([&]{control_values(model,custom);});
+            custom.values["bust"]={4.0f,.5f,0,1};
+            rejects([&]{control_values(model,custom);});
+            // A body tint moves colours, not motion.
+            Customization tinted; tinted.palette="red"; tinted.tints["body"]={40,1,1};
+            tinted.values["bust"]={2.0f,.5f,0,1};
+            expect(control_values(model,tinted).at("bust")[0]==2.f,"A group tint must not touch a spring");
+            auto no_bones=springs; no_bones["controls"][1].erase("nodes");
+            rejects([&]{ControlSet::parse(no_bones);});
+            auto twice=springs; twice["controls"][1]["nodes"]=Json::array({"brust001","brust001"});
+            rejects([&]{ControlSet::parse(twice);});
+            auto hyphen=springs; hyphen["controls"][1]["nodes"]=Json::array({"brust-001"});
+            rejects([&]{ControlSet::parse(hyphen);});
+            auto both=springs; both["controls"][1]["default"]=Json::array({1.6,0.65,0,1});
+            rejects([&]{ControlSet::parse(both);});
+            auto limits=springs; limits["controls"][1]["max"]=4;
+            rejects([&]{ControlSet::parse(limits);});
+            auto stray_nodes=springs; stray_nodes["controls"][0]["nodes"]=Json::array({"belly"});
+            rejects([&]{ControlSet::parse(stray_nodes);});
+            auto upside_down=springs; upside_down["controls"][1]["frequency"]["min"]=3;
+            rejects([&]{ControlSet::parse(upside_down);});
+            auto outside=springs; outside["controls"][1]["frequency"]["default"]=2.9;
+            rejects([&]{ControlSet::parse(outside);});
+            // Past the engine's damping cutoff the slider would stop meaning what it says.
+            auto violent=springs;
+            violent["controls"][1]["frequency"]["max"]=8;
+            violent["controls"][1]["damping_ratio"]["max"]=2;
+            rejects([&]{ControlSet::parse(violent);});
         }
         std::cout<<checks<<" color behavior checks passed\n";
     } catch(const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }

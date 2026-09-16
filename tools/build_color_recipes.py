@@ -99,8 +99,8 @@ def build(out:Path,size:int):
                     {'clothing':'293B72','armor':'363755','metal':'BBCBD7','cloth':'221E3D','ribbons':'49365F','gems':'688CE0'})
             palette['values']={id:rgba(color) for id,color in colors.items() if id in names}
         id={'genessa':'beaute.genessa','knightlady':'beaute.knightlady','hit2':'xtgmods.hit2_de_scyther'}[key]
-        recipe=dict(id=id,colors=dict(schema=1,controls=controls,surfaces=surfaces,palettes=custom_palettes))
-        (directory/(key+'.colors.json')).write_text(json.dumps(recipe,indent=2)+'\n')
+        recipe=dict(id=id,customize=dict(schema=1,controls=controls,surfaces=surfaces,palettes=custom_palettes))
+        (directory/(key+'.customize.json')).write_text(json.dumps(recipe,indent=2)+'\n')
         print(directory,flush=True)
 
 if __name__=='__main__':

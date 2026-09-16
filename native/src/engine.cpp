@@ -327,7 +327,7 @@ UObject* Appearance::player(void* engine) {
         ++player_revision; observed_pawn_=pawn; observed_component_=component; observed_controller_=controller;
     }
     if (component) {
-        if(component==component_.Get()) detach_residual_colors();
+        if(component==component_.Get()) detach_residual_controls();
         if(auto* mesh = mesh_asset(component)) current_mesh = narrow(mesh->GetPathName());
     }
     return pawn;
@@ -385,8 +385,8 @@ void Appearance::remember_materials() {
         expected_materials_.emplace_back(value);
     }
 }
-void Appearance::detach_residual_colors() {
-    if(color_mids_.empty()) return;
+void Appearance::detach_residual_controls() {
+    if(control_mids_.empty()) return;
     auto* component=component_.Get();
     if(!component || !applied_.Get() || mesh_asset(component)==applied_.Get()) return;
     // Changing gameplay shells can leave trailing OverrideMaterials entries
@@ -394,7 +394,7 @@ void Appearance::detach_residual_colors() {
     // game-created effects or another mod's replacement. Keep the weak cache so
     // a temporary stock-mesh reset can still reuse live dye resources.
     auto values=overrides(component);
-    for(const auto& [slot,weak]:color_mids_) {
+    for(const auto& [slot,weak]:control_mids_) {
         if(slot<0 || slot>=values.Num()) continue;
         UObject* actual{}; std::memcpy(&actual,values.GetRawPtr(slot),sizeof(actual));
         if(auto* owned=weak.Get();owned && actual==owned) material(component,slot,nullptr);
@@ -434,25 +434,25 @@ bool Appearance::repair_materials_needed() {
 bool Appearance::reuse_materials() {
     // A completed effect can replace OverrideMaterials without changing the
     // outfit. Reattach the existing MIDs and their dye targets instead of
-    // importing masks and rendering every color surface again on the game thread.
+    // importing masks and rendering every dye surface again on the game thread.
     // Weak references never retain a previous world; collected resources take
     // the normal rebuild path. Check every reference before changing any slot.
     if(!repair_materials_needed()) return false;
     for(const auto& weak:expected_materials_)
         if(weak.ObjectSerialNumber && !weak.Get()) return false;
-    for(const auto& [slot,weak]:color_mids_) {
+    for(const auto& [slot,weak]:control_mids_) {
         if(!weak.Get() || slot<0 || static_cast<size_t>(slot)>=expected_materials_.size() ||
            weak.Get()!=expected_materials_[slot].Get()) return false;
     }
-    for(const auto& [id,weak]:color_targets_) if(!weak.Get()) return false;
+    for(const auto& [id,weak]:dye_targets_) if(!weak.Get()) return false;
     auto* component=component_.Get();
     const auto count=std::max(static_cast<size_t>(overrides(component).Num()),expected_materials_.size());
     for(size_t i=0;i<count;++i)
         material(component,static_cast<int>(i),i<expected_materials_.size()?expected_materials_[i].Get():nullptr);
-    if(!materials_match()) throw std::runtime_error("Recovered color material read-back failed");
+    if(!materials_match()) throw std::runtime_error("Recovered material read-back failed");
     material_debug=material_snapshot(component,applied_.Get());
-    material_debug["colors"]=last_colors_;
-    material_debug["dye_targets"]=color_targets_.size();
+    material_debug["controls"]=last_values_;
+    material_debug["dye_targets"]=dye_targets_.size();
     return true;
 }
 Json Appearance::transition_state(void* engine) {
@@ -538,7 +538,7 @@ bool Appearance::ready_to_apply() const {
         Call montage(anim,L"GetCurrentActiveMontage",1); montage.run();
         if(montage.get<UObject*>()) return false;
     }
-    // Retained player/controller changes can keep our own color MIDs.
+    // Retained player/controller changes can keep our own material instances.
     if(component==component_.Get() && mesh_asset(component)==applied_.Get()) return materials_match();
     // World-owned dynamic effects have no stable asset path for rollback.
     try { material_paths(component); } catch(const std::runtime_error&) { return false; }
@@ -602,7 +602,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
                 return true;
             }
         }
-        reset_colors();
+        reset_controls();
         if(before!=target && !returning_to_outfit) set_mesh(component, target);
         const int count=overrides(component).Num();
         for(int i=0;i<count;++i) material(component,i,nullptr);
@@ -626,7 +626,7 @@ bool Appearance::restore() {
     offsets_.release();
     attachments_.release();
     restore_menu();
-    detach_residual_colors();
+    detach_residual_controls();
     auto* component = component_.Get();
     auto* applied = applied_.Get();
     if (component && applied && mesh_asset(component) == applied) {
@@ -638,7 +638,7 @@ bool Appearance::restore() {
             if(component_.Get()==component) material_debug=material_snapshot(component,original);
         }
     }
-    color_mids_.clear(); color_targets_.clear(); color_textures_.clear(); last_colors_.clear(); color_outfit_.clear();
+    control_mids_.clear(); dye_targets_.clear(); dye_textures_.clear(); last_values_.clear(); control_outfit_.clear();
     expected_materials_.clear();
     component_.Reset(); applied_.Reset(); original_.clear(); original_materials_.clear(); original_default_materials_.clear(); original_live_materials_.clear(); applied_materials_.clear();
     return true;
@@ -876,6 +876,51 @@ void update_dye_mips(UObject* target) {
     reinterpret_cast<void(*)(UObject*,bool)>(const_cast<unsigned char*>(module)+match->update)(target,false);
 }
 }
+namespace {
+// 1.0: the springs that give a body its secondary motion sit on the mesh's post-process
+// anim instance, one FAnimNode_SpringBone struct property per node. The blueprint names
+// them in compile order (AnimGraphNode_SpringBone, _1, _2 and so on) and a recompile can
+// shuffle that, so CSS matches on the bone a node drives and never on the property name.
+struct SpringNode {
+    std::byte* data=nullptr;
+    int32_t stiffness=0, damping=0;
+    double get(int32_t at) const { double v; std::memcpy(&v,data+at,sizeof v); return v; }
+    void put(int32_t at,double v) const { std::memcpy(data+at,&v,sizeof v); }
+};
+UObject* post_process_instance(UObject* component) {
+    if(!component) return nullptr;
+    Call call(component,L"GetPostProcessInstance",1); call.run();
+    return call.get<UObject*>();
+}
+std::map<std::string,SpringNode> spring_nodes(UObject* anim) {
+    std::map<std::string,SpringNode> out;
+    if(!anim) return out;
+    auto* node_type=static_cast<UScriptStruct*>(find(L"/Script/AnimGraphRuntime.AnimNode_SpringBone"));
+    auto* stiffness=field(node_type,L"SpringStiffness",sizeof(double));
+    auto* damping=field(node_type,L"SpringDamping",sizeof(double));
+    auto* spring_bone=node_type->GetPropertyByNameInChain(L"SpringBone");
+    auto* bone_name=field(find(L"/Script/Engine.BoneReference"),L"BoneName",sizeof(FName));
+    if(!spring_bone || !spring_bone->IsA<FStructProperty>() || spring_bone->GetOffset_Internal()<0 ||
+       bone_name->GetOffset_Internal()<0 ||
+       spring_bone->GetOffset_Internal()+bone_name->GetOffset_Internal()+int32_t(sizeof(FName))>node_type->GetPropertiesSize())
+        throw std::runtime_error("Spring node layout does not match this build");
+    const int32_t name_at=spring_bone->GetOffset_Internal()+bone_name->GetOffset_Internal();
+    auto* type=anim->GetClassPrivate();
+    if(!type) throw std::runtime_error("Animation instance has no class");
+    for(auto* p:type->ForEachProperty()) {
+        if(!p->IsA<FStructProperty>() || p->GetArrayDim()!=1 || p->GetOffset_Internal()<0) continue;
+        if(static_cast<FStructProperty*>(p)->GetStruct().Get()!=node_type) continue;
+        if(p->GetElementSize()!=node_type->GetPropertiesSize()) throw std::runtime_error("Spring node size does not match this build");
+        auto* data=reinterpret_cast<std::byte*>(anim)+p->GetOffset_Internal();
+        FName bone; std::memcpy(&bone,data+name_at,sizeof bone);
+        auto name=narrow(bone.ToString());
+        if(name.empty() || name=="None") continue;
+        if(out.size()>=256) throw std::runtime_error("Spring node count exceeds bound");
+        out.emplace(std::move(name),SpringNode{data,stiffness->GetOffset_Internal(),damping->GetOffset_Internal()});
+    }
+    return out;
+}
+}
 int Appearance::lod_count() {
     auto* component=component_.Get(); if(!component) return 1;
     Call count(component,L"GetNumLODs",1); count.run();
@@ -890,15 +935,28 @@ void Appearance::show_hidden_sections() {
     }
     hidden_sections_.clear();
 }
-void Appearance::reset_colors() {
+void Appearance::restore_springs() {
+    // Put back what the animation blueprint shipped, not what the package declared as its
+    // default: those two are meant to agree, and when they do not the author's asset wins.
+    if(!spring_originals_.empty()) try {
+        auto nodes=spring_nodes(spring_instance_.Get());
+        for(const auto& [bone,original]:spring_originals_) if(auto found=nodes.find(bone); found!=nodes.end()) {
+            found->second.put(found->second.stiffness,original[0]);
+            found->second.put(found->second.damping,original[1]);
+        }
+    } catch(const std::exception&) { /* The instance went away with the mesh, which restores it anyway. */ }
+    spring_originals_.clear(); spring_instance_=nullptr;
+}
+void Appearance::reset_controls() {
     show_hidden_sections();
-    if(auto* component=component_.Get()) for(const auto& [slot,weak]:color_mids_) {
+    restore_springs();
+    if(auto* component=component_.Get()) for(const auto& [slot,weak]:control_mids_) {
         if(auto* mid=weak.Get()) {
             Call current(component,L"GetMaterial",2); current.set(L"ElementIndex",slot); current.run();
             if(current.get<UObject*>()==mid) material(component,slot,applied_materials_.contains(slot)?read<UObject*>(mid,L"Parent"):nullptr);
         }
     }
-    color_mids_.clear(); color_targets_.clear(); color_textures_.clear(); last_colors_.clear(); color_outfit_.clear();
+    control_mids_.clear(); dye_targets_.clear(); dye_textures_.clear(); last_values_.clear(); control_outfit_.clear();
 }
 void Appearance::prepare_deformation_materials() {
     auto* component=component_.Get();
@@ -922,8 +980,8 @@ void Appearance::prepare_deformation_materials() {
         Call value(parent,L"K2_GetScalarParameterValue",2);value.set(L"ParameterName",parameter);value.run();
         const auto scale=value.get<float>();
         if(!std::isfinite(scale) || scale==0.f) continue;
-        auto owned=color_mids_.find(slot);
-        UObject* mid=owned==color_mids_.end()?nullptr:owned->second.Get();
+        auto owned=control_mids_.find(slot);
+        UObject* mid=owned==control_mids_.end()?nullptr:owned->second.Get();
         if(parent!=mid) {
             // A gameplay effect or another mod owns unfamiliar dynamic parents.
             if(parent->IsA(dynamic)) continue;
@@ -931,7 +989,7 @@ void Appearance::prepare_deformation_materials() {
             make.set(L"ElementIndex",slot);make.set(L"SourceMaterial",parent);make.run();
             mid=make.get<UObject*>();
             if(!mid) throw std::runtime_error("Could not create the deformation compatibility material");
-            color_mids_[slot]=mid;
+            control_mids_[slot]=mid;
         }
         Call set(mid,L"SetScalarParameterValue",2);set.set(L"ParameterName",parameter);set.set(L"Value",0.f);set.run();
         Call readback(mid,L"K2_GetScalarParameterValue",2);readback.set(L"ParameterName",parameter);readback.run();
@@ -939,22 +997,29 @@ void Appearance::prepare_deformation_materials() {
     }
 }
 void Appearance::customize(const Outfit& outfit,const std::string& variant,const Customization& custom) {
-    const auto& options=outfit.colors_for(variant);
-    auto values=color_values(options,custom);
+    const auto& options=outfit.controls_for(variant);
+    auto values=control_values(options,custom);
     auto* component=component_.Get();
     if(!component || !applied_.Get() || mesh_asset(component)!=applied_.Get()) throw std::runtime_error("Appearance changed before colors could apply");
-    const auto color_identity=outfit.id+":"+variant;
-    if(color_outfit_!=color_identity) reset_colors();
+    const auto control_identity=outfit.id+":"+variant;
+    if(control_outfit_!=control_identity) reset_controls();
     // Dropping a control restores its authored value, including layered parameters.
     // Rebuild from the original material rather than guessing a layer's default.
-    if(std::any_of(last_colors_.begin(),last_colors_.end(),[&](const auto& p){return !values.contains(p.first);})) reset_colors();
+    if(std::any_of(last_values_.begin(),last_values_.end(),[&](const auto& p){return !values.contains(p.first);})) reset_controls();
     prepare_deformation_materials();
-    if(values.empty()) { color_outfit_=color_identity; material_debug=material_snapshot(component,applied_.Get()); material_debug["colors"]=Json::object(); material_debug["dye_targets"]=0; remember_materials(); return; }
-    if(values==last_colors_) return;
+    if(values.empty()) { control_outfit_=control_identity; material_debug=material_snapshot(component,applied_.Get()); material_debug["controls"]=Json::object(); material_debug["dye_targets"]=0; remember_materials(); return; }
+    // The post-process anim instance is built with the mesh, and a fresh one comes up with
+    // the blueprint's own numbers. Notice that rather than quietly losing the player's
+    // tuning the first time the shell reloads. Costs nothing until a spring is in use.
+    if(spring_instance_.Get() && post_process_instance(component)!=spring_instance_.Get()) {
+        spring_originals_.clear(); spring_instance_=nullptr;
+        for(const auto& control:options.controls) if(control.kind==ControlKind::Spring) last_values_.erase(control.id);
+    }
+    if(values==last_values_) return;
     auto mid_for=[&](int index) {
         Call count(component,L"GetNumMaterials",1); count.run();
         if(index<0 || index>=count.get<int>()) throw std::runtime_error("Color slot is absent on this appearance");
-        auto& weak=color_mids_[index];
+        auto& weak=control_mids_[index];
         if(auto* mid=weak.Get()) return mid;
         Call current(component,L"GetMaterial",2); current.set(L"ElementIndex",index); current.run();
         auto* parent=current.get<UObject*>();
@@ -970,7 +1035,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
             bool active=false,changed=false;
             for(const auto& [id,file]:surface.layers) {
                 active|=values.contains(id);
-                changed|=values.contains(id)!=last_colors_.contains(id) || (values.contains(id) && last_colors_.contains(id) && values.at(id)!=last_colors_.at(id));
+                changed|=values.contains(id)!=last_values_.contains(id) || (values.contains(id) && last_values_.contains(id) && values.at(id)!=last_values_.at(id));
             }
             if(!changed) continue;
             auto parameter=FName(wide(surface.parameter).c_str(),FNAME_Add);
@@ -980,7 +1045,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
             if(!original) throw std::runtime_error("The selected material has no dyeable base texture");
             UObject* target=original;
             if(active) {
-                auto& weak=color_targets_[surface.id]; target=weak.Get();
+                auto& weak=dye_targets_[surface.id]; target=weak.Get();
                 if(!target) {
                     Call create(library,L"CreateRenderTarget2D",8); create.set(L"WorldContextObject",component);
                     create.set(L"Width",surface.resolution); create.set(L"Height",surface.resolution); create.set(L"Format",uint8_t{3});
@@ -992,9 +1057,9 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 // dye texture on the body (the random dark, glossy skin). Keep it alive with a
                 // load root instead and bind it only after the composite is checked.
                 AssetLoadRoots target_root; target_root.keep(target);
-                std::vector<std::pair<WeakObject,ColorValue>> layers;
+                std::vector<std::pair<WeakObject,ControlValue>> layers;
                 for(const auto& [id,file]:surface.layers) if(values.contains(id)) {
-                    auto& texture=color_textures_[file];
+                    auto& texture=dye_textures_[file];
                     if(!texture.Get()) {
                         auto path=outfit.resources/file;
                         if(!fs::is_regular_file(path)) throw std::runtime_error("The outfit's color mask is missing");
@@ -1009,7 +1074,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 auto end=[&] { Call finish(library,L"EndDrawCanvasToRenderTarget",2); finish.set(L"WorldContextObject",component); finish.copy(L"Context",begin,L"Context"); finish.run(); };
                 try {
                     auto* canvas=begin.get<UObject*>(L"Canvas");
-                    auto draw=[&](UObject* texture,const ColorValue& color,uint8_t blend) {
+                    auto draw=[&](UObject* texture,const ControlValue& color,uint8_t blend) {
                         Call call(canvas,L"K2_DrawTexture",9); call.set(L"RenderTexture",texture);
                         call.set(L"ScreenSize",Vec2{double(surface.resolution),double(surface.resolution)}); call.set(L"CoordinateSize",Vec2{1,1});
                         call.set(L"RenderColor",color); call.set(L"BlendMode",blend); call.run();
@@ -1031,7 +1096,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 if(!any_light) {
                     material_debug["dye_failed"]=surface.id;
                     target=original;   // keep the authored texture; colors for this part are skipped this pass
-                    last_colors_.clear();   // retry the composite on the next customize
+                    last_values_.clear();   // retry the composite on the next customize
                 }
             }
             for(int slot:surface.slots) {
@@ -1042,9 +1107,9 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
             }
         }
         for(const auto& control:options.controls) {
-            bool active=values.contains(control.id),previous=last_colors_.contains(control.id);
+            bool active=values.contains(control.id),previous=last_values_.contains(control.id);
             if(!active) continue;
-            if(active && previous && values.at(control.id)==last_colors_.at(control.id)) continue;
+            if(active && previous && values.at(control.id)==last_values_.at(control.id)) continue;
             // 1.0: a toggle drives material sections rather than a parameter. Verified
             // live on this build: IsMaterialSectionShown keys on the material id alone,
             // so a mesh with one section per material reads back what was set.
@@ -1062,6 +1127,29 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                     // Remember only what is hidden, so removing the outfit puts back
                     // exactly what CSS took away and nothing the game hid itself.
                     if(show) hidden_sections_.erase(section); else hidden_sections_.insert(section);
+                }
+                continue;
+            }
+            // 1.0: a spring is the one control that touches no material at all. It writes
+            // the mesh's own spring nodes, converting what the slider says into what the
+            // engine integrates. Frequency and damping ratio are the numbers that mean
+            // something; stiffness and damping are the numbers that happen to work.
+            if(control.kind==ControlKind::Spring) {
+                auto* anim=post_process_instance(component);
+                if(!anim) throw std::runtime_error("This outfit's mesh has no animation blueprint to tune");
+                if(spring_instance_.Get()!=anim) { spring_originals_.clear(); spring_instance_=anim; }
+                auto nodes=spring_nodes(anim);
+                const auto tuning=spring_tuning(values.at(control.id)[0],values.at(control.id)[1]);
+                for(const auto& bone:control.nodes) {
+                    auto found=nodes.find(bone);
+                    if(found==nodes.end()) throw std::runtime_error("This outfit's skeleton has no spring on "+bone);
+                    const auto& node=found->second;
+                    // Remember the first value seen, so a second move of the slider does not
+                    // record CSS's own last write as the author's.
+                    spring_originals_.try_emplace(bone,std::array<double,2>{node.get(node.stiffness),node.get(node.damping)});
+                    node.put(node.stiffness,tuning.stiffness); node.put(node.damping,tuning.damping);
+                    if(node.get(node.stiffness)!=tuning.stiffness || node.get(node.damping)!=tuning.damping)
+                        throw std::runtime_error("Spring read-back failed");
                 }
                 continue;
             }
@@ -1103,17 +1191,17 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 set.run();
                 Call readback(mid,control.scalar?L"K2_GetScalarParameterValueByInfo":L"K2_GetVectorParameterValueByInfo",2);
                 readback.copy(L"ParameterInfo",set,L"ParameterInfo"); readback.run();
-                if(control.scalar ? std::abs(readback.get<float>()-color[0])>.00001f : readback.get<ColorValue>()!=color)
+                if(control.scalar ? std::abs(readback.get<float>()-color[0])>.00001f : readback.get<ControlValue>()!=color)
                     throw std::runtime_error("Color parameter read-back failed");
             }
         }
         prepare_deformation_materials();
-        last_colors_=std::move(values); color_outfit_=color_identity;
+        last_values_=std::move(values); control_outfit_=control_identity;
         material_debug=material_snapshot(component,applied_.Get());
-        material_debug["colors"]=last_colors_;
-        material_debug["dye_targets"]=color_targets_.size();
+        material_debug["controls"]=last_values_;
+        material_debug["dye_targets"]=dye_targets_.size();
         remember_materials();
-    } catch(...) { reset_colors(); throw; }
+    } catch(...) { reset_controls(); throw; }
 }
 
 }

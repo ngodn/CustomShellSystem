@@ -1,5 +1,6 @@
-#include "colors.hpp"
+#include "controls.hpp"
 #include "data.hpp"
+#include <cctype>
 #include <algorithm>
 #include <cmath>
 #include <set>
@@ -8,39 +9,39 @@
 namespace css {
 namespace {
 // 0.4: packages published before the colour convention carry no group or role, so they are
-// read off the control id. Compatibility only; docs/color-convention.md asks a package to
+// read off the control id. Compatibility only; docs/control-convention.md asks a package to
 // declare all three. Order matters: the first match wins, so "eye-glow" is tested before
 // "eyes" and before the bare "glow".
-struct RoleGuess { const char* needle; const char* role; ColorGroup group; bool hue_locked; };
+struct RoleGuess { const char* needle; const char* role; ControlGroup group; bool hue_locked; };
 constexpr RoleGuess ROLE_GUESSES[] = {
-    {"eye-glow", "eye-glow", ColorGroup::Body, false},
-    {"areola", "areola", ColorGroup::Body, true},
-    {"nipple", "nipple", ColorGroup::Body, true},
-    {"labia", "labia", ColorGroup::Body, true},
-    {"vestibule", "vestibule", ColorGroup::Body, true},
-    {"pubic", "body-hair", ColorGroup::Body, false},
-    {"body-hair", "body-hair", ColorGroup::Body, false},
-    {"eye-intensity", "eye-glow", ColorGroup::Body, false},
-    {"eye", "eyes", ColorGroup::Body, false},
-    {"skin", "skin", ColorGroup::Body, true},
-    {"face", "face", ColorGroup::Body, false},
-    {"mask", "face", ColorGroup::Body, false},
-    {"hair", "hair", ColorGroup::Body, false},
-    {"metal", "metal", ColorGroup::Outfit, true},
-    {"gem", "gem", ColorGroup::Outfit, true},
-    {"jewel", "gem", ColorGroup::Outfit, true},
-    {"crystal", "gem", ColorGroup::Outfit, true},
-    {"trim", "accent", ColorGroup::Outfit, false},
-    {"ribbon", "accent", ColorGroup::Outfit, false},
-    {"accent", "accent", ColorGroup::Outfit, false},
-    {"lining", "accent", ColorGroup::Outfit, false},
-    {"leather", "leather", ColorGroup::Outfit, false},
-    {"strap", "leather", ColorGroup::Outfit, false},
-    {"glow", "glow", ColorGroup::Outfit, false},
+    {"eye-glow", "eye-glow", ControlGroup::Body, false},
+    {"areola", "areola", ControlGroup::Body, true},
+    {"nipple", "nipple", ControlGroup::Body, true},
+    {"labia", "labia", ControlGroup::Body, true},
+    {"vestibule", "vestibule", ControlGroup::Body, true},
+    {"pubic", "body-hair", ControlGroup::Body, false},
+    {"body-hair", "body-hair", ControlGroup::Body, false},
+    {"eye-intensity", "eye-glow", ControlGroup::Body, false},
+    {"eye", "eyes", ControlGroup::Body, false},
+    {"skin", "skin", ControlGroup::Body, true},
+    {"face", "face", ControlGroup::Body, false},
+    {"mask", "face", ControlGroup::Body, false},
+    {"hair", "hair", ControlGroup::Body, false},
+    {"metal", "metal", ControlGroup::Outfit, true},
+    {"gem", "gem", ControlGroup::Outfit, true},
+    {"jewel", "gem", ControlGroup::Outfit, true},
+    {"crystal", "gem", ControlGroup::Outfit, true},
+    {"trim", "accent", ControlGroup::Outfit, false},
+    {"ribbon", "accent", ControlGroup::Outfit, false},
+    {"accent", "accent", ControlGroup::Outfit, false},
+    {"lining", "accent", ControlGroup::Outfit, false},
+    {"leather", "leather", ControlGroup::Outfit, false},
+    {"strap", "leather", ControlGroup::Outfit, false},
+    {"glow", "glow", ControlGroup::Outfit, false},
 };
 RoleGuess guess_role(const std::string& id) {
     for(const auto& guess:ROLE_GUESSES) if(id.find(guess.needle)!=std::string::npos) return guess;
-    return {"", "garment", ColorGroup::Outfit, false};
+    return {"", "garment", ControlGroup::Outfit, false};
 }
 // Defaults for a declared role, so a package only spells out hue_locked when it disagrees.
 bool role_hue_locked(const std::string& role) {
@@ -50,48 +51,75 @@ bool role_hue_locked(const std::string& role) {
     return role=="metal" || role=="gem" || role=="skin" ||
            role=="nipple" || role=="areola" || role=="labia" || role=="vestibule";
 }
-ColorGroup role_group(const std::string& role) {
+ControlGroup role_group(const std::string& role) {
     return (role=="skin" || role=="face" || role=="hair" || role=="eyes" || role=="eye-glow" ||
             role=="nipple" || role=="areola" || role=="labia" || role=="vestibule" || role=="body-hair")
-        ? ColorGroup::Body : ColorGroup::Outfit;
+        ? ControlGroup::Body : ControlGroup::Outfit;
 }
-ColorValue value(const Json& j) {
-    if(!j.is_array() || j.size()!=4) throw std::runtime_error("Color needs four components");
-    auto v=j.get<ColorValue>();
-    for(float x:v) if(!std::isfinite(x) || x<0 || x>32) throw std::runtime_error("Color component outside supported range");
-    if(v[3]>1) throw std::runtime_error("Color opacity outside supported range");
+ControlValue value(const Json& j) {
+    if(!j.is_array() || j.size()!=4) throw std::runtime_error("A value needs four components");
+    auto v=j.get<ControlValue>();
+    for(float x:v) if(!std::isfinite(x) || x<0 || x>32) throw std::runtime_error("Value component outside supported range");
+    if(v[3]>1) throw std::runtime_error("Opacity outside supported range");
     return v;
 }
 void parameter(const std::string& name) {
     if(name.empty() || name.size()>128 || !std::all_of(name.begin(),name.end(),[](unsigned char c){return c>=32 && c<=126;}))
         throw std::runtime_error("Invalid material parameter name");
 }
-void slot(int n) { if(n<0 || n>=128) throw std::runtime_error("Color material slot outside range"); }
-void valid_value(const ColorControl& c,const ColorValue& v) {
+void slot(int n) { if(n<0 || n>=128) throw std::runtime_error("Material slot outside range"); }
+// A skeleton bone name as the cooked mesh spells it: brust001, thigh_twist_02_l.
+void bone(const std::string& name) {
+    if(name.empty() || name.size()>64 ||
+       !std::all_of(name.begin(),name.end(),[](unsigned char c){return std::isalnum(c) || c=='_';}))
+        throw std::runtime_error("Invalid spring bone name");
+}
+// A slider range an author declares as {"min":..,"max":..,"default":..}. The default
+// comes back separately because it lands in the control's value rather than its limits.
+struct Range { float minimum=0, maximum=1, value=0; };
+Range range(const Json& j,const char* what,float ceiling) {
+    if(!j.is_object()) throw std::runtime_error(std::string("A ")+what+" range needs min, max and default");
+    Range out{j.at("min").get<float>(),j.at("max").get<float>(),j.at("default").get<float>()};
+    if(!std::isfinite(out.minimum) || !std::isfinite(out.maximum) || !std::isfinite(out.value) ||
+       out.minimum<=0 || out.maximum>ceiling || out.minimum>=out.maximum ||
+       out.value<out.minimum || out.value>out.maximum)
+        throw std::runtime_error(std::string("Invalid spring ")+what+" range");
+    return out;
+}
+void valid_value(const Control& c,const ControlValue& v) {
+    if(c.kind==ControlKind::Spring) {
+        // Two numbers, two ranges: channel 0 is frequency, channel 1 is damping ratio.
+        if(!std::isfinite(v[0]) || v[0]<c.minimum || v[0]>c.maximum)
+            throw std::runtime_error("Spring frequency outside control limits: "+c.id);
+        if(!std::isfinite(v[1]) || v[1]<c.damping_minimum || v[1]>c.damping_maximum)
+            throw std::runtime_error("Spring damping outside control limits: "+c.id);
+        if(v[3]!=c.value[3]) throw std::runtime_error("Opacity is fixed by its author");
+        return;
+    }
     for(size_t i=0;i<(c.scalar?1u:3u);++i)
-        if(!std::isfinite(v[i]) || v[i]<c.minimum || v[i]>c.maximum) throw std::runtime_error("Color value outside control limits: "+c.id);
-    if(v[3]!=c.value[3]) throw std::runtime_error("Color opacity is fixed by its author");
+        if(!std::isfinite(v[i]) || v[i]<c.minimum || v[i]>c.maximum) throw std::runtime_error("Value outside control limits: "+c.id);
+    if(v[3]!=c.value[3]) throw std::runtime_error("Opacity is fixed by its author");
 }
 }
-bool color_resource(const std::string& name) {
+bool dye_resource(const std::string& name) {
     return name.starts_with("dye-") && name.ends_with(".png") && valid_id(name) && name.find("..") == name.npos;
 }
 float srgb_linear(float v) { return v<=.04045f?v/12.92f:std::pow((v+.055f)/1.055f,2.4f); }
-const ColorControl* ColorOptions::find(const std::string& id) const {
+const Control* ControlSet::find(const std::string& id) const {
     for(const auto& control:controls) if(control.id==id) return &control;
     return nullptr;
 }
-ColorOptions ColorOptions::parse(const Json& j) {
-    ColorOptions out;
+ControlSet ControlSet::parse(const Json& j) {
+    ControlSet out;
     if(j.is_null() || j.empty()) return out;
-    if(!j.is_object() || j.at("schema")!=1) throw std::runtime_error("Unsupported color configuration");
+    if(!j.is_object() || j.at("schema")!=1) throw std::runtime_error("Unsupported customize configuration");
     for(const auto* name:{"controls","surfaces","palettes"})
-        if(j.contains(name) && !j.at(name).is_array()) throw std::runtime_error("Color definitions require arrays");
+        if(j.contains(name) && !j.at(name).is_array()) throw std::runtime_error("Control definitions require arrays");
     for(const auto& c:j.at("controls")) {
-        ColorControl control;
+        Control control;
         control.id=c.at("id"); control.name=c.at("name");
         if(!valid_id(control.id) || out.find(control.id) || control.name.empty() || control.name.size()>96 || out.controls.size()>=32)
-            throw std::runtime_error("Invalid color control identity");
+            throw std::runtime_error("Invalid control identity");
         // `type` is what packages before 0.4 wrote, `kind` is the convention's name and
         // wins when both are present. A `type` of "scalar" predates the split between a
         // strength and an ordinary material scalar, so it lands on Intensity, which is
@@ -99,7 +127,7 @@ ColorOptions ColorOptions::parse(const Json& j) {
         auto type=c.value("type",std::string("color"));
         if(type=="color") control.kind=ControlKind::Color;
         else if(type=="scalar" || type=="intensity") control.kind=ControlKind::Intensity;
-        else throw std::runtime_error("Unsupported color control type");
+        else throw std::runtime_error("Unsupported control type");
         if(c.contains("kind")) {
             auto kind=c.at("kind").get<std::string>();
             if(kind=="color") control.kind=ControlKind::Color;
@@ -107,18 +135,26 @@ ColorOptions ColorOptions::parse(const Json& j) {
             else if(kind=="scalar") control.kind=ControlKind::Scalar;
             else if(kind=="toggle") control.kind=ControlKind::Toggle;
             else if(kind=="choice") control.kind=ControlKind::Choice;
-            else throw std::runtime_error("Unsupported color control kind");
+            else if(kind=="spring") control.kind=ControlKind::Spring;
+            else throw std::runtime_error("Unsupported control kind");
         }
-        control.scalar=control.kind!=ControlKind::Color; control.value=value(c.at("default"));
+        control.scalar=control.kind!=ControlKind::Color;
+        // A spring says what it wants inside its two ranges, so it is the one kind that
+        // does not also write `default`: two places to state the same number is one too many.
+        if(control.kind==ControlKind::Spring) {
+            if(c.contains("default")) throw std::runtime_error("A spring control takes its default from its frequency and damping ratio");
+            for(const auto* key:{"min","max","step"})
+                if(c.contains(key)) throw std::runtime_error("A spring control takes its limits from its frequency and damping ratio");
+        } else control.value=value(c.at("default"));
         // Group, role and hue locking: declared if present, otherwise read off the id.
         const auto fallback=guess_role(control.id);
         control.role=c.value("role",std::string(fallback.role));
         if(control.role.empty() || control.role.size()>32 || !valid_id(control.role))
-            throw std::runtime_error("Invalid color control role");
+            throw std::runtime_error("Invalid control role");
         if(c.contains("group")) {
             auto group=c.at("group").get<std::string>();
-            if(group!="outfit" && group!="body") throw std::runtime_error("Unsupported color control group");
-            control.group=group=="body"?ColorGroup::Body:ColorGroup::Outfit;
+            if(group!="outfit" && group!="body") throw std::runtime_error("Unsupported control group");
+            control.group=group=="body"?ControlGroup::Body:ControlGroup::Outfit;
         } else control.group=c.contains("role")?role_group(control.role):fallback.group;
         control.hue_locked=c.value("hue_locked",
             c.contains("role")?role_hue_locked(control.role):fallback.hue_locked);
@@ -128,7 +164,7 @@ ColorOptions ColorOptions::parse(const Json& j) {
         if(control.kind==ControlKind::Toggle) { control.minimum=0; control.maximum=1; control.step=1; }
         else if(!std::isfinite(control.minimum) || !std::isfinite(control.maximum) || !std::isfinite(control.step) ||
            control.minimum<0 || control.maximum>32 || control.minimum>=control.maximum || control.step<=0 || control.step>control.maximum-control.minimum)
-            throw std::runtime_error("Invalid color slider range");
+            throw std::runtime_error("Invalid slider range");
         if(c.contains("sections")) {
             if(control.kind!=ControlKind::Toggle) throw std::runtime_error("Only a toggle control hides material sections");
             control.sections=c.at("sections").get<std::vector<int>>();
@@ -149,10 +185,33 @@ ColorOptions ColorOptions::parse(const Json& j) {
             // The value is which option, so the range is the list and nothing else.
             control.minimum=0; control.maximum=float(control.options.size()-1); control.step=1;
         } else if(control.kind==ControlKind::Choice) throw std::runtime_error("A choice control needs its texture options");
+        if(c.contains("nodes") || c.contains("frequency") || c.contains("damping_ratio")) {
+            if(control.kind!=ControlKind::Spring) throw std::runtime_error("Only a spring control tunes skeleton nodes");
+            control.nodes=c.at("nodes").get<std::vector<std::string>>();
+            if(control.nodes.empty() || control.nodes.size()>32) throw std::runtime_error("A spring control needs between one and thirty-two bones");
+            std::set<std::string> seen;
+            for(const auto& name:control.nodes) {
+                bone(name);
+                if(!seen.insert(name).second) throw std::runtime_error("A spring control names the same bone twice");
+            }
+            // 8 Hz is far past anything a body part does, and the slowest useful wobble is
+            // well above a tenth of a hertz, so a typo lands outside rather than shipping.
+            const auto frequency=range(c.at("frequency"),"frequency",8.f);
+            const auto damping=range(c.at("damping_ratio"),"damping ratio",2.f);
+            // The engine scales damping down above 1/FixedTimeStep instead of using what it
+            // was given, so a range whose corner crosses that line would stop meaning what
+            // the slider says. Refuse it here rather than silently disagreeing in game.
+            if(spring_tuning(frequency.maximum,damping.maximum).damping>100)
+                throw std::runtime_error("Spring range is too stiff and damped for the engine to integrate as written");
+            control.minimum=frequency.minimum; control.maximum=frequency.maximum; control.step=.05f;
+            control.damping_minimum=damping.minimum; control.damping_maximum=damping.maximum; control.damping_step=.01f;
+            control.value={frequency.value,damping.value,0,control.value[3]};
+        } else if(control.kind==ControlKind::Spring)
+            throw std::runtime_error("A spring control needs its bones, frequency and damping ratio");
         valid_value(control,control.value);
-        if(c.contains("bindings") && !c.at("bindings").is_array()) throw std::runtime_error("Color bindings require an array");
+        if(c.contains("bindings") && !c.at("bindings").is_array()) throw std::runtime_error("Bindings require an array");
         for(const auto& b:c.value("bindings",Json::array())) {
-            ColorBinding binding; binding.slot=b.at("slot"); binding.parameter=b.at("parameter");
+            ControlBinding binding; binding.slot=b.at("slot"); binding.parameter=b.at("parameter");
             slot(binding.slot); parameter(binding.parameter);
             auto association=b.value("association",std::string("global"));
             if(association!="global" && association!="layer" && association!="blend") throw std::runtime_error("Invalid parameter association");
@@ -167,7 +226,7 @@ ColorOptions ColorOptions::parse(const Json& j) {
     }
     std::set<std::string> ids, destinations;
     for(const auto& s:j.value("surfaces",Json::array())) {
-        ColorSurface surface; surface.id=s.at("id"); surface.parameter=s.at("parameter");
+        DyeSurface surface; surface.id=s.at("id"); surface.parameter=s.at("parameter");
         if(!valid_id(surface.id) || !ids.insert(surface.id).second || out.surfaces.size()>=16) throw std::runtime_error("Invalid dye surface");
         parameter(surface.parameter); surface.slots=s.at("slots").get<std::vector<int>>();
         surface.resolution=s.value("resolution",2048);
@@ -181,22 +240,22 @@ ColorOptions ColorOptions::parse(const Json& j) {
         if(surface.layers.empty() || surface.layers.size()>16) throw std::runtime_error("Invalid dye layers");
         for(const auto& [id,file]:surface.layers) {
             auto* c=out.find(id);
-            if(!c || c->scalar || !color_resource(file)) throw std::runtime_error("Invalid dye layer control or file");
+            if(!c || c->scalar || !dye_resource(file)) throw std::runtime_error("Invalid dye layer control or file");
         }
         out.surfaces.push_back(std::move(surface));
     }
     for(const auto& c:out.controls) {
         // A toggle drives sections directly, so it needs no parameter to write into.
         // A choice does need one, and its bindings are checked with everything else.
-        bool used=!c.bindings.empty() || !c.sections.empty();
+        bool used=!c.bindings.empty() || !c.sections.empty() || !c.nodes.empty();
         for(const auto& s:out.surfaces) used|=s.layers.contains(c.id);
-        if(!used) throw std::runtime_error("Color control has no material or texture binding");
+        if(!used) throw std::runtime_error("Control has nothing to drive");
     }
     ids.clear();
     for(const auto& p:j.value("palettes",Json::array())) {
-        ColorPalette palette; palette.id=p.at("id"); palette.name=p.at("name");
+        Palette palette; palette.id=p.at("id"); palette.name=p.at("name");
         if(!valid_id(palette.id) || palette.id=="original" || !ids.insert(palette.id).second || palette.name.empty() || palette.name.size()>96 || out.palettes.size()>=64)
-            throw std::runtime_error("Invalid color palette");
+            throw std::runtime_error("Invalid palette");
         if(!p.at("values").is_object()) throw std::runtime_error("Palette values require an object");
         for(const auto& [id,v]:p.at("values").items()) {
             auto* c=out.find(id); if(!c) throw std::runtime_error("Palette references an unknown control");
@@ -208,13 +267,13 @@ ColorOptions ColorOptions::parse(const Json& j) {
 }
 Customization Customization::parse(const Json& j) {
     Customization result;
-    if(!j.is_object()) throw std::runtime_error("Invalid saved colors");
+    if(!j.is_object()) throw std::runtime_error("Invalid saved settings");
     result.palette=j.value("palette",std::string("original"));
     if(!valid_id(result.palette)) throw std::runtime_error("Invalid saved palette");
     auto values=j.value("values",Json::object());
-    if(!values.is_object() || values.size()>32) throw std::runtime_error("Invalid saved color count");
+    if(!values.is_object() || values.size()>32) throw std::runtime_error("Invalid saved setting count");
     for(const auto& [id,v]:values.items()) {
-        if(!valid_id(id)) throw std::runtime_error("Invalid saved color control");
+        if(!valid_id(id)) throw std::runtime_error("Invalid saved control");
         result.values[id]=value(v);
     }
     auto tints=j.value("tints",Json::object());
@@ -244,7 +303,7 @@ Json Customization::json() const {
     }
     return out;
 }
-Customization compatible_colors(const ColorOptions& options,const Customization& source) {
+Customization compatible_values(const ControlSet& options,const Customization& source) {
     Customization result;
     if(std::any_of(options.palettes.begin(),options.palettes.end(),[&](const auto& p){return p.id==source.palette;})) result.palette=source.palette;
     for(const auto& [id,value]:source.values) if(auto* control=options.find(id)) {
@@ -255,7 +314,7 @@ Customization compatible_colors(const ColorOptions& options,const Customization&
     // in that group.
     for(const auto& [group,tint]:source.tints)
         if(std::any_of(options.controls.begin(),options.controls.end(),
-                       [&](const auto& c){return !c.scalar && color_group_name(c.group)==group;}))
+                       [&](const auto& c){return !c.scalar && control_group_name(c.group)==group;}))
             result.tints[group]=tint;
     return result;
 }
@@ -266,15 +325,20 @@ const char* control_kind_name(ControlKind kind) {
         case ControlKind::Scalar: return "scalar";
         case ControlKind::Toggle: return "toggle";
         case ControlKind::Choice: return "choice";
+        case ControlKind::Spring: return "spring";
     }
     return "color";
 }
-const char* color_group_name(ColorGroup group) { return group==ColorGroup::Body?"body":"outfit"; }
+SpringTuning spring_tuning(float frequency,float damping_ratio) {
+    const double w=2*3.14159265358979323846*double(frequency);
+    return {w*w,2*double(damping_ratio)*w};
+}
+const char* control_group_name(ControlGroup group) { return group==ControlGroup::Body?"body":"outfit"; }
 // A palette is a look, not a reset. It takes over the parts it sets and the tint of the
 // groups those parts are in, and leaves everything else alone, so a custom skin survives
 // changing the dress. `original` is the exception: it means no dye at all, and nothing
-// may survive it. See docs/color-convention.md, rule 1.
-Customization choose_palette(const ColorOptions& options,const Customization& current,const std::string& palette) {
+// may survive it. See docs/control-convention.md, rule 1.
+Customization choose_palette(const ControlSet& options,const Customization& current,const std::string& palette) {
     Customization result=current;
     result.palette=palette;
     if(palette=="original") { result.values.clear(); result.tints.clear(); return result; }
@@ -284,7 +348,7 @@ Customization choose_palette(const ColorOptions& options,const Customization& cu
     std::set<std::string> groups;
     for(const auto& [id,value]:found->values) if(auto* control=options.find(id)) {
         result.values.erase(id);
-        groups.insert(color_group_name(control->group));
+        groups.insert(control_group_name(control->group));
     }
     for(const auto& group:groups) result.tints.erase(group);
     return result;
@@ -292,7 +356,7 @@ Customization choose_palette(const ColorOptions& options,const Customization& cu
 // Hue rotation with saturation and brightness scaling, through HSV. A hue-locked control
 // keeps its own hue and takes only the other two, which is what stops a group tint turning
 // gold green and skin blue. Alpha is author-controlled and never touched.
-ColorValue apply_tint(const ColorTint& tint,const ColorValue& colour,bool hue_locked) {
+ControlValue apply_tint(const ColorTint& tint,const ControlValue& colour,bool hue_locked) {
     if(tint.neutral()) return colour;
     // Nothing to do, and worth short-circuiting: a round trip through HSV would otherwise
     // move the value by a rounding step for no reason.
@@ -326,8 +390,8 @@ ColorValue apply_tint(const ColorTint& tint,const ColorValue& colour,bool hue_lo
     const float base=brightness-chroma;
     return {out[0]+base,out[1]+base,out[2]+base,colour[3]};
 }
-std::map<std::string,ColorValue> color_values(const ColorOptions& options,const Customization& custom) {
-    std::map<std::string,ColorValue> result;
+std::map<std::string,ControlValue> control_values(const ControlSet& options,const Customization& custom) {
+    std::map<std::string,ControlValue> result;
     if(custom.palette!="original") {
         auto found=std::find_if(options.palettes.begin(),options.palettes.end(),[&](const auto& p){return p.id==custom.palette;});
         if(found==options.palettes.end()) throw std::runtime_error("Saved palette is not installed");
@@ -335,7 +399,7 @@ std::map<std::string,ColorValue> color_values(const ColorOptions& options,const 
     }
     for(const auto& [id,value]:custom.values) result[id]=value;
     for(const auto& [id,value]:result) {
-        auto* c=options.find(id); if(!c) throw std::runtime_error("Saved color part is not installed");
+        auto* c=options.find(id); if(!c) throw std::runtime_error("Saved part is not installed");
         valid_value(*c,value);
     }
     // The group tint sits on top of the palette and of any per-part override, so the whole
@@ -344,7 +408,7 @@ std::map<std::string,ColorValue> color_values(const ColorOptions& options,const 
     for(auto& [id,value]:result) {
         auto* c=options.find(id);
         if(c->scalar) continue;
-        const auto tint=custom.tints.find(color_group_name(c->group));
+        const auto tint=custom.tints.find(control_group_name(c->group));
         if(tint==custom.tints.end()) continue;
         value=apply_tint(tint->second,value,c->hue_locked);
         valid_value(*c,value);

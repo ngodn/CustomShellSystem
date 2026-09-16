@@ -90,7 +90,10 @@ class InventoryUI {
     WeakObject canvas_, status_, scroll_, name_input_, display_, camera_component_, input_prompt_;
     struct Hit { WeakObject widget; Json action; bool down=false; };
     struct Row { WeakObject marker, widget; Json accept, previous, next, secondary, tertiary; };
-    struct Slider { WeakObject widget, label, heading; Json action; float previous; bool scalar; };
+    // `unit` is what the readout says after the number: "" for a bare value, " Hz" for a
+    // frequency, "%" for a ratio shown as a percentage. It has to live here because the
+    // drag handler redraws the label and only ever sees the slider.
+    struct Slider { WeakObject widget, label, heading; Json action; float previous; bool scalar; std::string unit; };
     struct Binding { std::string action; std::vector<std::string> keys; bool down=false; uint64_t repeat=0; WeakObject input_action; };
     std::vector<Hit> hits_;
     std::vector<Row> rows_;
@@ -100,8 +103,8 @@ class InventoryUI {
     std::vector<std::pair<WeakObject,std::array<float,4>>> top_padding_;
     std::array<double,2> layout_size_{};
     uint64_t layout_check_=0;
-    int section_=0, row_=0, color_channel_=0, tint_field_index_=0;   // which tint slider Left/Right drives
-    bool exact_color_=false;      // COLOR: swatch strip, or Red/Green/Blue for the people who want it
+    int section_=0, row_=0, channel_=0, tint_field_index_=0;   // which tint slider Left/Right drives
+    bool exact_color_=false;      // CUSTOMIZE: swatch strip, or Red/Green/Blue for the people who want it
     std::string last_message_;
     bool dirty_=true, active_=false, enabled_=true, was_active_=false;
     uint64_t discover_after_=0, last_tick_=0;
@@ -230,12 +233,17 @@ class Appearance {
     std::vector<WeakObject> original_live_materials_;
     std::map<int,std::string> applied_materials_;
     std::set<int> hidden_sections_;   // material sections a toggle hid, so removal puts back only those
+    // Spring: what the animation blueprint's own nodes held before CSS touched them, keyed
+    // by bone, so dropping the control puts the author's motion back with no mesh reload.
+    std::map<std::string,std::array<double,2>> spring_originals_;
+    WeakObject spring_instance_;
     int lod_count();
     void show_hidden_sections();
-    std::map<int,WeakObject> color_mids_;
-    std::map<std::string,WeakObject> color_targets_, color_textures_;
-    std::map<std::string,ColorValue> last_colors_;
-    std::string color_outfit_;
+    void restore_springs();
+    std::map<int,WeakObject> control_mids_;
+    std::map<std::string,WeakObject> dye_targets_, dye_textures_;
+    std::map<std::string,ControlValue> last_values_;
+    std::string control_outfit_;
     std::vector<WeakObject> expected_materials_;
     WeakObject menu_component_, menu_applied_;
     std::string menu_original_;
@@ -247,8 +255,8 @@ class Appearance {
     void remember_materials();
     bool materials_match() const;
     bool reuse_materials();
-    void detach_residual_colors();
-    void reset_colors();
+    void detach_residual_controls();
+    void reset_controls();
     void prepare_deformation_materials();
 public:
     std::string shell, pawn_name, current_mesh;

@@ -11,7 +11,7 @@ import hashlib
 import numpy as np
 from PIL import Image
 from build_color_recipes import layer, smooth, control, rgba
-from css_colors import validate
+from css_controls import validate
 
 
 def build(mod:Path):
@@ -24,7 +24,7 @@ def build(mod:Path):
         source=mod/'work'/f'source-textures-{index:02}'
         if key=='BHProxima':source=mod/'work/source-textures-01'
         fallback=mod/'work/export-source-01'
-        out=mod/'authoring'/('colors-'+variant['id']);out.mkdir(exist_ok=True)
+        out=mod/'authoring'/('customize-'+variant['id']);out.mkdir(exist_ok=True)
         size=2048;surfaces=[];parts=set()
         def texture(name):
             found=list(source.rglob(name+'.png')) or list(fallback.rglob(name+'.png'))
@@ -80,8 +80,8 @@ def build(mod:Path):
             palettes.append(dict(id=id,name=name,values=values))
         colors=dict(schema=1,controls=controls,surfaces=surfaces,palettes=palettes)
         validate(colors)
-        recipe=out/'colors.json';recipe.write_text(json.dumps({'id':outfit,'colors':colors},indent=2)+'\n')
-        variant['colors']=str(recipe.relative_to(mod/'authoring'))
+        recipe=out/'customize.json';recipe.write_text(json.dumps({'id':outfit,'customize':colors},indent=2)+'\n')
+        variant['customize']=str(recipe.relative_to(mod/'authoring'))
         print(key,variant['id'],len(parts),'color controls',flush=True)
     (mod/'authoring/variants.json').write_text(json.dumps(variants,indent=2)+'\n')
 
