@@ -4,7 +4,7 @@ A native C++ wardrobe mod by **_eins0fx**. Change your shell's appearance withou
 
 I built CSS around a single wardrobe for compatible outfit packages, inspired by [Custom Nanosuit System](https://www.nexusmods.com/stellarblade/mods/1496?tab=description). Mouse, keyboard and controller controls are supported.
 
-**[Download CSS 0.3.1](https://github.com/ngodn/CustomShellSystem/releases/tag/v0.3.1)** · [Release notes](packaging/release-notes.md) · [Converter](tools/css_convert.py)
+**[Download CSS 0.3.2](https://github.com/ngodn/CustomShellSystem/releases/tag/v0.3.2)** · [Release notes](packaging/release-notes.md) · [Converter](tools/css_convert.py)
 
 ![CSS inside the native Inventory menu](docs/media/v0.2.0/inventory-css.jpg)
 
@@ -118,7 +118,7 @@ The runtime is C++23, built with clang-cl and the pinned UE4SS SDK. The core sup
 
 Regular mesh replacement mods do not automatically become CSS wardrobe entries. Base-game mesh or material replacers can affect CSS outfits that reference those assets. Editable parts depend on the outfit author.
 
-CSS 0.3.1 uses the native Inventory preview and lighting. Existing CSS.Package v1 outfit ZIPs, including the Beaute, HIT2 and Seductress packages, do not need repacking. Replace the old CSS runtime ZIP when upgrading.
+CSS 0.3.2 uses the native Inventory preview and lighting. Existing CSS.Package v1 outfit ZIPs, including the Beaute, HIT2 and Seductress packages, do not need repacking. Replace the old CSS runtime ZIP when upgrading.
 
 Cloth, secondary animation and clipping depend on the outfit. Long combat sessions, other gameplay shells, display/controller combinations and performance still need broader testing.
 

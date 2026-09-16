@@ -12,7 +12,7 @@ Build from a clean checkout at that tag:
 
 ```sh
 python3 tools/css_release.py build --sdk /absolute/path/to/ue4ss-sdk-d7e7826d
-python3 tools/css_release.py verify dist/releases/MSII-CSS-v0.3.1.zip
+python3 tools/css_release.py verify dist/releases/MSII-CSS-v0.3.2.zip
 ```
 
 The script builds both Release DLLs from that checkout and uses an explicit
@@ -125,3 +125,19 @@ are independent; do not bump them solely to match a CSS patch. The existing
 part of this patch release.
 Exact-artifact startup, archive and checksum checks are recorded separately in
 [the verification record](development/0.3.1-release-verification.md).
+
+## 0.3.2 scope
+
+Corrects missing accessory socket-parent bones using a hidden stock-mesh pose
+follower. Live Long Hair checks pass for Tiel's dagger and Eredrim's diapason,
+native draw/stow, six alternating shell swaps, Original restoration and core
+reload cleanup. Three material recovery cycles preserve active effects; native
+Inventory cleanup passes. See [the attachment investigation](development/jayluk3-longhair-attachments.md).
+
+Build only CSS from clean annotated tag `v0.3.2`. Outfit package format, state
+schema and extension ABI are unchanged. No outfit or port needs repacking, and
+CSSX, UI Kit and Cheat Menu remain at 0.3.0. The separate portal warning and
+shell-switch crash reports are not established fixes in this release.
+
+The BBCode comment is [CSS 0.3.2](nexus/css-v0.3.2-changelog.bbcode.txt).
+Artifact verification is recorded after building the tagged source.

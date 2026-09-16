@@ -1,0 +1,13 @@
+[b]CSS 0.3.2[/b]
+[list]
+[*]Fixed Tiel's dagger and Eredrim's diapason floating near the feet when an outfit is missing their attachment bones. Tested with Long Hair Proxima.
+[*]Checked drawing/stowing, repeated shell swaps, returning to Original and Inventory opening/closing.
+[/list]
+[b]Only CSS needs updating.[/b] Existing outfit and port ZIPs still work. CSSX, UI Kit and Cheat Menu remain at 0.3.0.
+
+Close the game and extract the ZIP into [code]MortalShell2/Binaries/Win64/ue4ss/Mods/[/code]
+Replace the CSS runtime files. Keep your [b]CustomShellSystem/state/[/b] folder, CSSX, extensions and installed outfits.
+
+The portal material-effect warning and reported shell-switch crashes are still under investigation. They are not marked fixed in this update.
+
+[url=https://github.com/ngodn/CustomShellSystem/releases/tag/v0.3.2]Download CSS 0.3.2[/url]

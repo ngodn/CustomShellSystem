@@ -9,7 +9,7 @@ Extract the [b]CustomShellSystem[/b] folder into [b]MortalShell2/Binaries/Win64/
     |   `-- inventory-logo-v1.png
     |-- core.json
     |-- cores/
-    |   `-- css_core-0.3.1.dll
+    |   `-- css_core-0.3.2.dll
     |-- dlls/
     |   `-- main.dll
     |-- enabled.txt
