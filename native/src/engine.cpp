@@ -735,19 +735,26 @@ struct Layout {
     // units. Anything that needs to walk the finished page reads this instead of asking
     // the engine to enumerate the canvas: that enumeration is bounded, and a panel wide
     // enough to pass the bound used to take the whole tab down with it.
-    struct Placed { UObject* widget; UObject* canvas; double x, y; };
+    struct Placed { UObject* widget; UObject* canvas; double x, y, w, h; };
     std::vector<Placed> placed{};
     std::vector<UObject*> on(UObject* target) const {
         std::vector<UObject*> result;
         for(const auto& p:placed) if(p.canvas==target) result.push_back(p.widget);
         return result;
     }
+    // How far down a canvas its contents actually reach. A scrolling list is sized from
+    // this, so a page describes its rows and never also has to total their heights.
+    double extent_of(UObject* target) const {
+        double bottom=0;
+        for(const auto& p:placed) if(p.canvas==target) bottom=std::max(bottom,p.y+p.h);
+        return bottom;
+    }
     void place(UObject* widget, double x, double y, double width, double height) {
         Call add(canvas, L"AddChildToCanvas", 2); add.set(L"content", widget); add.run();
         auto* slot = add.get<UObject*>();
         invoke(slot, L"SetPosition", L"InPosition", Vec2{(x-origin_x)*scale, (y-origin_y)*scale});
         invoke(slot, L"SetSize", L"InSize", Vec2{width*scale, height*scale});
-        placed.push_back({widget, canvas, x-origin_x, y-origin_y});
+        placed.push_back({widget, canvas, x-origin_x, y-origin_y, width, height});
     }
     UObject* box(double x, double y, double w, double h, Color color) {
         auto* widget = construct(L"/Script/UMG.Border", tree);

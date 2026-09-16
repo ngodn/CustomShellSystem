@@ -231,7 +231,12 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     auto selection=state.selections.find(appearance.shell);
     const Outfit* worn=nullptr;
     if(selection!=state.selections.end()) for(const auto& outfit:catalog.outfits) if(outfit.id==selection->second.outfit) worn=&outfit;
-    auto scroll_begin=[&](int count,double row_height,double y=328) {
+    // A list says where it starts and what goes in it. scroll_end measures how far the
+    // rows actually reached and sizes the box to that, so a page with rows of several
+    // heights does not also have to keep a running total of them.
+    UObject* list_box=nullptr; double list_top=0, list_y=0;
+    auto scroll_begin=[&](double y=328) {
+        list_top=list_y=y;
         auto* scroll=construct(L"/Script/UMG.ScrollBox",tree); scroll_=scroll;
         // Use the native inventory scrollbar brush without its stick listener.
         auto* character=inventory_object(main_.Get(),L"WBP_MGT_Character");
@@ -249,22 +254,30 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         }
         invoke(scroll,L"SetAllowOverscroll",L"NewAllowOverscroll",false);
         invoke(scroll,L"SetAnimateWheelScrolling",L"bShouldAnimateWheelScrolling",true);
-        invoke(scroll,L"SetAlwaysShowScrollbar",L"NewAlwaysShowScrollbar",count*row_height>600);
         invoke(scroll,L"SetScrollbarThickness",L"NewScrollbarThickness",Vec2{4*ui.scale,4*ui.scale});
         ui.place(scroll,left,y,panel,900-y);
-        auto* size=construct(L"/Script/UMG.SizeBox",tree);
-        invoke(size,L"SetHeightOverride",L"InHeightOverride",float(std::max(1,count)*row_height*ui.scale));
+        auto* size=construct(L"/Script/UMG.SizeBox",tree); list_box=size;
         auto* list=construct(L"/Script/UMG.CanvasPanel",tree); content(size,list);
         Call add(scroll,L"AddChild",2); add.set(L"content",size); add.run();
         ui.canvas=list; ui.origin_x=left; ui.origin_y=y;
         invoke(scroll,L"SetScrollOffset",L"NewScrollOffset",scroll_offset_);
     };
-    auto scroll_end=[&] { ui.canvas=canvas; ui.origin_x=0; ui.origin_y=0; };
+    auto scroll_end=[&] {
+        const double height=std::max(1.,ui.extent_of(ui.canvas));
+        invoke(list_box,L"SetHeightOverride",L"InHeightOverride",float(height*ui.scale));
+        if(auto* scroll=scroll_.Get()) invoke(scroll,L"SetAlwaysShowScrollbar",L"NewAlwaysShowScrollbar",height>900-list_top);
+        ui.canvas=canvas; ui.origin_x=0; ui.origin_y=0;
+    };
     // 0.4: a colour row carries a chip of the colour it paints. A list of colours that
     // never shows one is the single worst thing about the old tab.
     const Color* row_swatch=nullptr;
     double row_indent=0;
-    auto row=[&](int index,const std::string& title,const std::string& subtitle,double y,double h,Json accept,Json previous=Json{},Json next=Json{},Json secondary=Json{},Json tertiary=Json{}) {
+    // A section header groups the rows under it, the way COLOR separates OUTFIT from
+    // BODY. It is not selectable and takes no row index.
+    auto section=[&](const std::string& title) { ui.label(title,left+18,list_y,panel-36,22,14,gold); list_y+=26; };
+    auto gap=[&](double height) { list_y+=height; };
+    auto row=[&](int index,const std::string& title,const std::string& subtitle,double h,Json accept,Json previous=Json{},Json next=Json{},Json secondary=Json{},Json tertiary=Json{}) {
+        const double y=list_y; list_y+=h;
         bool selected=index==row_;
         auto* marker=ui.box(left,y,panel-10,h-5,selected?Color{.035f,.030f,.019f,.30f}:panel_color);
         auto* button=ui.button("",left,y,panel-10,h-5,selected);
@@ -288,6 +301,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         if(selected) { decoration("T_UI_TopBarHighlightLine",left+8,y+1,panel-26,2); ui.box(left,y+8,1,h-20,gold); }
         rows_.push_back({WeakObject(marker),WeakObject(button),accept,previous,next,secondary,tertiary});
         row_swatch=nullptr; row_indent=0;
+        return y;
     };
     auto direction_hint=[&](bool horizontal,const std::string& label,double x,double y,double width) {
         if(gamepad_) prompt("",label,x,y,width,horizontal?11:10);
@@ -310,18 +324,18 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     };
     if(section_==0) {
         row_=std::clamp(row_,0,int(catalog.outfits.size()));
-        scroll_begin(int(catalog.outfits.size())+1,85);
-        row(0,"Original appearance","Restore your current shell",328,85,{{"action","restore"}});
+        scroll_begin();
+        row(0,"Original appearance","Restore your current shell",85,{{"action","restore"}});
         for(size_t i=0;i<catalog.outfits.size();++i) {
             const auto& outfit=catalog.outfits[i]; size_t v=0;
             bool chosen=worn==&outfit;
             if(chosen) for(size_t j=0;j<outfit.variants.size();++j) if(outfit.variants[j].id==selection->second.variant) v=j;
             bool compatible=catalog.compatible(outfit.id,appearance.shell);
             auto wear=[&](size_t index) { return compatible?Json{{"action","select"},{"outfit",outfit.id},{"variant",outfit.variants[index].id}}:Json{}; };
-            row(int(i)+1,outfit.name,outfit.variants[v].name,328+(i+1)*85,85,wear(v),wear((v+outfit.variants.size()-1)%outfit.variants.size()),wear((v+1)%outfit.variants.size()),{},{{"action","favorite"},{"outfit",outfit.id}});
-            thumbnail(outfit,left+14,328+(i+1)*85+9,62);
-            if(state.favorites.contains(outfit.id)) ui.star(left+panel-29,328+(i+1)*85+24,7,gold);
-            if(chosen) ui.label("Equipped",left+panel-99,328+(i+1)*85+44,82,24,14,gold);
+            const double y=row(int(i)+1,outfit.name,outfit.variants[v].name,85,wear(v),wear((v+outfit.variants.size()-1)%outfit.variants.size()),wear((v+1)%outfit.variants.size()),{},{{"action","favorite"},{"outfit",outfit.id}});
+            thumbnail(outfit,left+14,y+9,62);
+            if(state.favorites.contains(outfit.id)) ui.star(left+panel-29,y+24,7,gold);
+            if(chosen) ui.label("Equipped",left+panel-99,y+44,82,24,14,gold);
         }
         scroll_end();
         if(catalog.outfits.empty()) ui.label(catalog.empty_message(),left+18,435,panel-36,130,18,muted);
@@ -382,30 +396,23 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 return found==custom.tints.end()?ColorTint{}:found->second;
             };
 
-            const double header=62, band=26, line=68;
-            double height=header;
-            for(size_t i=1;i<entries.size();++i) height+=(entries[i].control<0&&entries[i].tint?band:0)+line;
-            // Rows are different heights here, so the scroll box is sized by the total
-            // rather than by a count times a row height.
-            scroll_begin(1,height,328);
-            double y=328;
+            const double header=62, line=68;
+            scroll_begin(328);
             // Palette band, visually apart from the parts so it no longer reads as one.
             row_swatch=nullptr;
-            row(0,palette_name,palette?"Color palette":"The author's own colors",y,header,
+            row(0,palette_name,palette?"Color palette":"The author's own colors",header,
                 palette_action(0),palette_action((palette+options.palettes.size())%steps),palette_action((palette+1)%steps));
-            y+=header+10;
+            gap(10);
             for(size_t i=1;i<entries.size();++i) {
                 const auto& entry=entries[i];
                 if(entry.tint) {
-                    ui.label(entry.group==ColorGroup::Body?"BODY":"OUTFIT",left+18,y,panel-36,22,14,gold);
-                    y+=band;
+                    section(entry.group==ColorGroup::Body?"BODY":"OUTFIT");
                     const auto tint=tint_of(entry.group);
                     const std::string state=tint.neutral()?"Shift this whole group":
                         "hue "+std::to_string(int(tint.hue))+", sat "+std::to_string(int(tint.saturation*100))+"%, bright "+std::to_string(int(tint.brightness*100))+"%";
                     Json reset={{"action","reset_tint"},{"group",color_group_name(entry.group)}};
                     Json minus={{"action","tint"},{"group",color_group_name(entry.group)},{"field",tint_field_index_==0?"hue":tint_field_index_==1?"saturation":"brightness"},{"delta",-1}},plus=minus; plus["delta"]=1;
-                    row(int(i),"Tint",state,y,line,reset,minus,plus,{{"action","ui_tint_field"}});
-                    y+=line;
+                    row(int(i),"Tint",state,line,reset,minus,plus,{{"action","ui_tint_field"}});
                     continue;
                 }
                 const auto& c=options.controls[entry.control];
@@ -428,8 +435,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     minus=pick((here+strip.size()-1)%strip.size());
                     plus=pick((here+1)%strip.size());
                 }
-                row(int(i),c.name,source,y,line,{{"action","reset_color"},{"control",c.id}},minus,plus,{{"action","ui_channel"}},{{"action","palette"},{"palette","original"}});
-                y+=line;
+                row(int(i),c.name,source,line,{{"action","reset_color"},{"control",c.id}},minus,plus,{{"action","ui_channel"}},{{"action","palette"},{"palette","original"}});
             }
             scroll_end();
 
@@ -525,8 +531,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         row_=0;
         const Json toggle{{"action","walk_animation"},{"value",feminine?"normal":"feminine"}};
         const std::string sub=feminine?"Feminine":(has_walk_mod?"Normal, "+walk_mod_name:"Normal");
-        scroll_begin(1,77);
-        row(0,"Walk animation",sub,328,77,toggle,toggle,toggle);
+        scroll_begin();
+        row(0,"Walk animation",sub,77,toggle,toggle,toggle);
         scroll_end();
         std::string body=feminine?"Feminine borrows the Cultist Spear Lady's walk and standing pose for any shell, and walks at the pace her cycle was made for so the feet stay planted. CSS holds the animation itself, so another walk mod cannot take it back."
                                  :"Normal keeps the game's own walking, and leaves any installed walk mod free to drive it.";
@@ -547,9 +553,9 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     } else {
         std::vector<std::string> names; for(const auto& [name,_]:state.presets) names.push_back(name);
         row_=std::clamp(row_,0,int(names.size()));
-        scroll_begin(int(names.size())+1,77);
-        row(0,"New template","Save your current appearance",328,77,{{"action","ui_save_template"}});
-        for(size_t i=0;i<names.size();++i) row(int(i)+1,names[i],"Saved appearance and colors",328+(i+1)*77,77,{{"action","load_look"},{"name",names[i]}},{},{},{{"action","save_look"},{"name",names[i]}},{{"action","delete_look"},{"name",names[i]}});
+        scroll_begin();
+        row(0,"New template","Save your current appearance",77,{{"action","ui_save_template"}});
+        for(size_t i=0;i<names.size();++i) row(int(i)+1,names[i],"Saved appearance and colors",77,{{"action","load_look"},{"name",names[i]}},{},{},{{"action","save_look"},{"name",names[i]}},{{"action","delete_look"},{"name",names[i]}});
         scroll_end();
         auto selected=row_?names[row_-1]:std::string{};
         detail(row_?selected:"New template","Appearance and colors",row_?"Load this template, replace it with your current appearance, or give it a new name.":"Choose a name, then save. A controller can save with the suggested name.");
