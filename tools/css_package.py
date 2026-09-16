@@ -42,6 +42,11 @@ def verify(directory: Path, repak: Path = DEFAULT_REPAK) -> dict:
         outfits=manifest['catalog']['outfits']
         if len(outfits)!=1 or any(outfits[0][key]!=manifest[key] for key in ('id','name','author')):
             raise ValueError('Catalog identity mismatch')
+        # The runtime reads the catalog entry's own thumbnail, not the manifest's, and
+        # rejects a package without it. Verifying only the manifest let a package through
+        # here and get refused in game, which is the wrong order to find out.
+        if outfits[0].get('thumbnail')!='thumbnail.png':
+            raise ValueError('Catalog outfit must name thumbnail.png')
         from css_controls import verify_resources
         verify_resources(manifest,source.parent)
         return manifest
