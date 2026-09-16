@@ -229,6 +229,9 @@ class Appearance {
     std::set<std::string> original_default_materials_;
     std::vector<WeakObject> original_live_materials_;
     std::map<int,std::string> applied_materials_;
+    std::set<int> hidden_sections_;   // material sections a toggle hid, so removal puts back only those
+    int lod_count();
+    void show_hidden_sections();
     std::map<int,WeakObject> color_mids_;
     std::map<std::string,WeakObject> color_targets_, color_textures_;
     std::map<std::string,ColorValue> last_colors_;

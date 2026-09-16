@@ -23,8 +23,11 @@ enum class ColorGroup { Outfit, Body };
 //   Intensity  a named material scalar the author means as a strength, like eye glow
 //   Scalar     any other named material scalar, like gloss or roughness
 //   Toggle     material sections shown or hidden, 0 or 1
-enum class ControlKind { Color, Intensity, Scalar, Toggle };
+//   Choice     one of a few textures the package ships, chosen by index
+enum class ControlKind { Color, Intensity, Scalar, Toggle, Choice };
 const char* control_kind_name(ControlKind);
+// A Choice option: what the player sees, and the cooked texture it binds.
+struct ControlOption { std::string name, texture; };
 struct ColorControl {
     std::string id, name, role;
     ColorGroup group = ColorGroup::Outfit;
@@ -32,6 +35,7 @@ struct ColorControl {
     bool hue_locked = false;      // metal, gems and skin read as a material, not a colour
     bool scalar = false;          // edited as one number rather than a colour: every kind but Color
     std::vector<int> sections;    // Toggle only: the material sections it shows or hides
+    std::vector<ControlOption> options;   // Choice only: the textures it picks between
     ColorValue value{1,1,1,1};
     float minimum = 0, maximum = 1, step = .01f;
     std::vector<ColorBinding> bindings;

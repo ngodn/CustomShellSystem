@@ -55,7 +55,7 @@ int main(int argc,char** argv) {
         static const std::set<std::string> ROLES{"garment","accent","leather","metal","gem","glow",
             "skin","face","hair","eyes","eye-glow","body-hair","nipple","areola","labia","vestibule",
             // 1.0: roles for the kinds that are not colours.
-            "gloss","roughness","opacity","piece","skin-gloss"};
+            "gloss","roughness","opacity","piece","skin-gloss","pattern"};
         std::set<std::string> reported;
         for(const auto& variant:catalog.outfits[0].variants) {
             const auto& options=catalog.outfits[0].colors_for(variant.id);

@@ -129,6 +129,30 @@ class ColorTests(unittest.TestCase):
         both=copy.deepcopy(base);both['controls'][1]['type']='color'
         with self.assertRaisesRegex(ValueError,'contradicts'):validate(both)
 
+        # A choice picks one of the textures the package ships.
+        choice=copy.deepcopy(base)
+        choice['controls'].append(dict(id='pattern',name='Pattern',kind='choice',role='pattern',
+            default=[1,0,0,1],
+            options=[dict(name='Plain',texture='/Game/CSS/x/T_Plain.T_Plain'),
+                     dict(name='Lace',texture='/Game/CSS/x/T_Lace.T_Lace')],
+            bindings=[dict(slot=0,parameter='BaseColorMap  non VT')]))
+        validate(choice)
+        self.assertEqual(kind_of(choice['controls'][3]),'choice')
+        # The default has to name one of them.
+        over=copy.deepcopy(choice);over['controls'][3]['default']=[2,0,0,1]
+        with self.assertRaisesRegex(ValueError,'name one of its options'):validate(over)
+        # A path without its object name is not an asset.
+        short=copy.deepcopy(choice);short['controls'][3]['options'][0]['texture']='/Game/CSS/x/T_Plain'
+        with self.assertRaisesRegex(ValueError,'object name'):validate(short)
+        # One option is not a choice, and it needs somewhere to write the texture.
+        lonely=copy.deepcopy(choice);lonely['controls'][3]['options']=lonely['controls'][3]['options'][:1]
+        with self.assertRaisesRegex(ValueError,'two and sixteen'):validate(lonely)
+        unbound=copy.deepcopy(choice);del unbound['controls'][3]['bindings']
+        with self.assertRaisesRegex(ValueError,'texture parameter'):validate(unbound)
+        # Nothing else may carry options.
+        stray_options=copy.deepcopy(choice);stray_options['controls'][1]['options']=[]
+        with self.assertRaisesRegex(ValueError,'choice'):validate(stray_options)
+
     def test_reviewed_recipes(self):
         root=Path(__file__).resolve().parents[1]/'work/color-recipes'
         recipes=list(root.glob('*/*.colors.json'))

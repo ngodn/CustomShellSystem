@@ -106,6 +106,7 @@ ColorOptions ColorOptions::parse(const Json& j) {
             else if(kind=="intensity") control.kind=ControlKind::Intensity;
             else if(kind=="scalar") control.kind=ControlKind::Scalar;
             else if(kind=="toggle") control.kind=ControlKind::Toggle;
+            else if(kind=="choice") control.kind=ControlKind::Choice;
             else throw std::runtime_error("Unsupported color control kind");
         }
         control.scalar=control.kind!=ControlKind::Color; control.value=value(c.at("default"));
@@ -134,6 +135,20 @@ ColorOptions ColorOptions::parse(const Json& j) {
             if(control.sections.empty() || control.sections.size()>128) throw std::runtime_error("Invalid toggle sections");
             for(int index:control.sections) slot(index);
         } else if(control.kind==ControlKind::Toggle) throw std::runtime_error("A toggle control needs the sections it hides");
+        if(c.contains("options")) {
+            if(control.kind!=ControlKind::Choice) throw std::runtime_error("Only a choice control lists texture options");
+            if(!c.at("options").is_array()) throw std::runtime_error("Choice options require an array");
+            for(const auto& o:c.at("options")) {
+                ControlOption option{o.at("name"),o.at("texture")};
+                if(option.name.empty() || option.name.size()>96 || !valid_asset(option.texture))
+                    throw std::runtime_error("Invalid choice option");
+                control.options.push_back(std::move(option));
+            }
+            if(control.options.size()<2 || control.options.size()>16)
+                throw std::runtime_error("A choice control needs between two and sixteen options");
+            // The value is which option, so the range is the list and nothing else.
+            control.minimum=0; control.maximum=float(control.options.size()-1); control.step=1;
+        } else if(control.kind==ControlKind::Choice) throw std::runtime_error("A choice control needs its texture options");
         valid_value(control,control.value);
         if(c.contains("bindings") && !c.at("bindings").is_array()) throw std::runtime_error("Color bindings require an array");
         for(const auto& b:c.value("bindings",Json::array())) {
@@ -172,6 +187,7 @@ ColorOptions ColorOptions::parse(const Json& j) {
     }
     for(const auto& c:out.controls) {
         // A toggle drives sections directly, so it needs no parameter to write into.
+        // A choice does need one, and its bindings are checked with everything else.
         bool used=!c.bindings.empty() || !c.sections.empty();
         for(const auto& s:out.surfaces) used|=s.layers.contains(c.id);
         if(!used) throw std::runtime_error("Color control has no material or texture binding");
@@ -249,6 +265,7 @@ const char* control_kind_name(ControlKind kind) {
         case ControlKind::Intensity: return "intensity";
         case ControlKind::Scalar: return "scalar";
         case ControlKind::Toggle: return "toggle";
+        case ControlKind::Choice: return "choice";
     }
     return "color";
 }

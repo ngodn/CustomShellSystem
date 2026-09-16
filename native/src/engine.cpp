@@ -876,7 +876,22 @@ void update_dye_mips(UObject* target) {
     reinterpret_cast<void(*)(UObject*,bool)>(const_cast<unsigned char*>(module)+match->update)(target,false);
 }
 }
+int Appearance::lod_count() {
+    auto* component=component_.Get(); if(!component) return 1;
+    Call count(component,L"GetNumLODs",1); count.run();
+    return std::clamp(count.get<int32_t>(),1,16);
+}
+void Appearance::show_hidden_sections() {
+    auto* component=component_.Get();
+    if(component) for(int section:hidden_sections_) for(int lod=0;lod<lod_count();++lod) {
+        Call set(component,L"ShowMaterialSection",4);
+        set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t(section));
+        set.set(L"bShow",true); set.set(L"LODIndex",int32_t(lod)); set.run();
+    }
+    hidden_sections_.clear();
+}
 void Appearance::reset_colors() {
+    show_hidden_sections();
     if(auto* component=component_.Get()) for(const auto& [slot,weak]:color_mids_) {
         if(auto* mid=weak.Get()) {
             Call current(component,L"GetMaterial",2); current.set(L"ElementIndex",slot); current.run();
@@ -1030,6 +1045,49 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
             bool active=values.contains(control.id),previous=last_colors_.contains(control.id);
             if(!active) continue;
             if(active && previous && values.at(control.id)==last_colors_.at(control.id)) continue;
+            // 1.0: a toggle drives material sections rather than a parameter. Verified
+            // live on this build: IsMaterialSectionShown keys on the material id alone,
+            // so a mesh with one section per material reads back what was set.
+            if(control.kind==ControlKind::Toggle) {
+                const bool show=values.at(control.id)[0]>=.5f;
+                for(int section:control.sections) {
+                    for(int lod=0;lod<lod_count();++lod) {
+                        Call set(component,L"ShowMaterialSection",4);
+                        set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t(section));
+                        set.set(L"bShow",show); set.set(L"LODIndex",int32_t(lod)); set.run();
+                    }
+                    Call readback(component,L"IsMaterialSectionShown",3);
+                    readback.set(L"MaterialID",int32_t(section)); readback.set(L"LODIndex",int32_t(0)); readback.run();
+                    if(readback.get<bool>()!=show) throw std::runtime_error("Material section read-back failed");
+                    // Remember only what is hidden, so removing the outfit puts back
+                    // exactly what CSS took away and nothing the game hid itself.
+                    if(show) hidden_sections_.erase(section); else hidden_sections_.insert(section);
+                }
+                continue;
+            }
+            // 1.0: a choice picks one of the textures the package ships. Same shape as
+            // a scalar or vector binding, with SetTextureParameterValueByInfo, which this
+            // build reflects alongside the other two.
+            if(control.kind==ControlKind::Choice) {
+                const int index=std::clamp(int(std::lround(values.at(control.id)[0])),0,int(control.options.size())-1);
+                AssetLoadRoots roots;
+                auto* texture=load(control.options[index].texture); roots.keep(texture);
+                if(!texture) throw std::runtime_error("Choice texture is missing: "+control.options[index].texture);
+                for(const auto& binding:control.bindings) {
+                    auto* mid=mid_for(binding.slot);
+                    auto parameter=FName(wide(binding.parameter).c_str(),FNAME_Add);
+                    Call set(mid,L"SetTextureParameterValueByInfo",2);
+                    auto* p=set.param(L"ParameterInfo"); auto* info=find(L"/Script/Engine.MaterialParameterInfo");
+                    member(set.data(p),p->GetElementSize(),info,L"Name",parameter);
+                    member(set.data(p),p->GetElementSize(),info,L"Association",uint8_t(binding.association));
+                    member(set.data(p),p->GetElementSize(),info,L"Index",binding.layer);
+                    set.set(L"Value",texture); set.run();
+                    Call readback(mid,L"K2_GetTextureParameterValueByInfo",2);
+                    readback.copy(L"ParameterInfo",set,L"ParameterInfo"); readback.run();
+                    if(readback.get<UObject*>()!=texture) throw std::runtime_error("Choice texture read-back failed");
+                }
+                continue;
+            }
             for(const auto& binding:control.bindings) {
                 auto* mid=mid_for(binding.slot);
                 auto color=active?values.at(control.id):control.value;

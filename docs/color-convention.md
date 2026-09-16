@@ -93,6 +93,7 @@ menu, the saved look and the apply path all follow from that.
 | `intensity` | one number | a named material scalar | a strength, like eye glow |
 | `scalar` | one number | a named material scalar | anything else, like gloss or roughness |
 | `toggle` | on or off | material sections | needs `sections`, takes no `min`/`max`/`step` |
+| `choice` | which option | a texture parameter | needs `options` and a binding, takes no `min`/`max`/`step` |
 
 A `toggle` lists the material sections it shows and hides, and needs no binding because
 it drives them directly:
@@ -101,6 +102,21 @@ it drives them directly:
 {"id": "hood", "name": "Hood", "kind": "toggle", "role": "piece",
  "default": [1, 0, 0, 1], "sections": [2, 3]}
 ```
+
+A `choice` picks between textures the package ships. The value is which option, so the
+range is the list and nothing else, and the default names one of them:
+
+```json
+{"id": "pattern", "name": "Pattern", "kind": "choice", "role": "pattern",
+ "default": [1, 0, 0, 1],
+ "options": [{"name": "Plain", "texture": "/Game/CSS/<id>/T_Plain.T_Plain"},
+             {"name": "Lace",  "texture": "/Game/CSS/<id>/T_Lace.T_Lace"}],
+ "bindings": [{"slot": 0, "parameter": "BaseColorMap  non VT"}]}
+```
+
+Between two and sixteen options. Each `texture` is a full object path, with the object
+name after the dot, and has to be cooked into this package's own container. A choice
+writes into a texture parameter, so unlike a toggle it does need a binding.
 
 Packages written before this said `"type": "scalar"` and meant a strength, so that reads
 as `intensity`, not as the new generic `scalar`. Nothing published changes meaning.
@@ -132,6 +148,7 @@ fits, but say so in the package notes.
 | `roughness` | outfit | no | surface roughness, when it is its own control |
 | `opacity` | outfit | no | how sheer a garment is |
 | `piece` | outfit | no | a part of the outfit a toggle shows or hides |
+| `pattern` | outfit | no | which of several textures a garment wears |
 | `skin-gloss` | body | no | the body's own sheen |
 
 Hue-locking metal, gems and skin by default is deliberate: those three read as a material

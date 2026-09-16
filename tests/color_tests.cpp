@@ -180,6 +180,28 @@ int main() {
             rejects([&]{ColorOptions::parse(stray);});
             auto odd=kinds; odd["controls"][2]["kind"]="texture";
             rejects([&]{ColorOptions::parse(odd);});
+
+            // A choice picks one of the textures the package ships, by index.
+            auto pick=kinds;
+            pick["controls"].push_back(Json::parse(R"({"id":"pattern","name":"Pattern","kind":"choice",
+              "role":"pattern","default":[1,0,0,1],
+              "options":[{"name":"Plain","texture":"/Game/CSS/x/T_Plain.T_Plain"},
+                         {"name":"Lace","texture":"/Game/CSS/x/T_Lace.T_Lace"}],
+              "bindings":[{"slot":0,"parameter":"BaseColorMap  non VT"}]})"));
+            auto chosen=ColorOptions::parse(pick);
+            const auto* pattern=chosen.find("pattern");
+            expect(pattern->kind==ControlKind::Choice && pattern->options.size()==2,"A choice kept its options");
+            expect(pattern->options[1].name=="Lace","Choice option names lost");
+            expect(pattern->minimum==0 && pattern->maximum==1 && pattern->step==1,
+                   "A choice ranges over its options and nothing else");
+            auto over=pick; over["controls"][4]["default"]=Json::array({2,0,0,1});
+            rejects([&]{ColorOptions::parse(over);});
+            auto bare=pick; bare["controls"][4].erase("options");
+            rejects([&]{ColorOptions::parse(bare);});
+            auto bad_path=pick; bad_path["controls"][4]["options"][0]["texture"]="/Game/CSS/x/T_Plain";
+            rejects([&]{ColorOptions::parse(bad_path);});
+            auto stray_options=pick; stray_options["controls"][2]["options"]=Json::array();
+            rejects([&]{ColorOptions::parse(stray_options);});
         }
         std::cout<<checks<<" color behavior checks passed\n";
     } catch(const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }
