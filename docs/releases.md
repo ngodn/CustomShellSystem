@@ -140,4 +140,5 @@ CSSX, UI Kit and Cheat Menu remain at 0.3.0. The separate portal warning and
 shell-switch crash reports are not established fixes in this release.
 
 The BBCode comment is [CSS 0.3.2](nexus/css-v0.3.2-changelog.bbcode.txt).
-Artifact verification is recorded after building the tagged source.
+Artifact and exact-core verification are recorded in
+[the release checks](development/0.3.2-release-verification.md).
