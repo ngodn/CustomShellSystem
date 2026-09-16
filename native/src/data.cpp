@@ -14,6 +14,34 @@ namespace css {
 // switches, textures and live springs now, not only colour. Anything published under the
 // old name keeps loading, because the old key is read whenever the new one is absent.
 // Naming both is refused rather than guessed at.
+namespace {
+constexpr const char* ITEM_SLOT_NAMES[]={
+    "body","head","hair","face","ears","neck","chest","back","hands","waist","legs","feet",
+    "trinket1","trinket2","trinket3","trinket4"
+};
+}
+const char* item_slot_name(ItemSlot slot) {
+    const auto index=static_cast<size_t>(slot);
+    return index<std::size(ITEM_SLOT_NAMES)?ITEM_SLOT_NAMES[index]:"body";
+}
+bool item_slot_from_name(const std::string& name,ItemSlot& out) {
+    for(size_t i=0;i<std::size(ITEM_SLOT_NAMES);++i)
+        if(name==ITEM_SLOT_NAMES[i]) { out=static_cast<ItemSlot>(i); return true; }
+    return false;
+}
+static std::map<int,std::string> parse_materials(const Json& j) {
+    std::map<int,std::string> result;
+    if(!j.is_object() || j.size()>128) throw std::runtime_error("Invalid material overrides");
+    for(const auto& [key,value]:j.items()) {
+        if(key.empty() || key.size()>3 || (key.size()>1 && key[0]=='0') ||
+           !std::all_of(key.begin(),key.end(),[](char c){return c>='0' && c<='9';}))
+            throw std::runtime_error("Invalid material slot");
+        auto slot=std::stoi(key); auto path=value.get<std::string>();
+        if(slot>=128 || !valid_asset(path)) throw std::runtime_error("Invalid material override");
+        result.emplace(slot,std::move(path));
+    }
+    return result;
+}
 static Json customize_block(const Json& j) {
     if(j.contains("customize")) {
         if(j.contains("colors")) throw std::runtime_error("Name the controls once: customize, or the older colors, not both");
@@ -146,18 +174,7 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
                 if(has_customize(v)) variant.controls=ControlSet::parse(customize_block(v));
                 if (!valid_id(variant.id) || !variants.insert(variant.id).second || !valid_asset(variant.mesh))
                     throw std::runtime_error("Invalid variant id or asset path");
-                if(v.contains("materials")) {
-                    const auto& materials=v.at("materials");
-                    if(!materials.is_object() || materials.size()>128) throw std::runtime_error("Invalid variant materials");
-                    for(const auto& [key,value]:materials.items()) {
-                        if(key.empty() || key.size()>3 || (key.size()>1 && key[0]=='0') ||
-                           !std::all_of(key.begin(),key.end(),[](char c){return c>='0' && c<='9';}))
-                            throw std::runtime_error("Invalid material slot");
-                        auto slot=std::stoi(key); auto path=value.get<std::string>();
-                        if(slot>=128 || !valid_asset(path)) throw std::runtime_error("Invalid material override");
-                        variant.materials.emplace(slot,std::move(path));
-                    }
-                }
+                if(v.contains("materials")) variant.materials=parse_materials(v.at("materials"));
                 if(v.contains("attachments")) {
                     const auto& attachments=v.at("attachments");
                     if(!attachments.is_object() || attachments.size()>32) throw std::runtime_error("Invalid variant attachments");

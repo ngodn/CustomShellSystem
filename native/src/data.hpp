@@ -32,11 +32,34 @@ struct AttachmentCollision {
     bool operator==(const AttachmentCollision&) const = default;
 };
 struct AttachmentOffset { std::array<double,3> location{}, rotation{}; AttachmentCollision collision; bool operator==(const AttachmentOffset&) const = default; };   // socket space, cm and degrees
+// 1.0: a variant is a set of items rather than a single mesh. Exactly one sits in the
+// `body` slot and replaces the character mesh, which is what every package published so
+// far does, and the rest are accessories posed by the body. A manifest that names one
+// `mesh` reads as a single body item, so nothing published has to change.
+enum class ItemSlot {
+    Body, Head, Hair, Face, Ears, Neck, Chest, Back, Hands, Waist, Legs, Feet,
+    Trinket1, Trinket2, Trinket3, Trinket4
+};
+const char* item_slot_name(ItemSlot);
+bool item_slot_from_name(const std::string&, ItemSlot&);
+struct Item {
+    std::string id, name, mesh;
+    ItemSlot slot = ItemSlot::Body;
+    // Layering, low to high. Two items on the same part of the body need an order for
+    // the author to say which one sits on top; the cook decides the rest.
+    int order = 0;
+    std::map<int,std::string> materials;
+    // Body material sections this item covers, so a boot can stop a foot poking through.
+    std::vector<int> hides_sections;
+};
 struct Variant {
     std::string id, name, mesh;
     std::map<int,std::string> materials;
     std::optional<ControlSet> controls;
     std::map<std::string,AttachmentOffset> attachments;   // 0.4: per-socket correction for stowed items
+    // Always at least one, and items[0] is the body item whose mesh and materials are
+    // mirrored by `mesh` and `materials` above.
+    std::vector<Item> items;
 };
 struct Outfit {
     std::string id, name, author, description, category;

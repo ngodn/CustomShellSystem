@@ -150,6 +150,12 @@ anything else rather than letting the engine silently rename it.
 `min`, `max`, `step` and `default` work exactly as they do for a scalar. A range that goes
 negative is fine if the author cooked the shape to read that way.
 
+**A shape only works on a mesh that has been through packaging.** CSS refuses to wear a
+mesh whose `Skeleton` asset differs from the one already worn, and `CSSImportMesh` always
+creates an authoring stub skeleton. The packaging step is what re-points the mesh at the
+game's own skeleton. That is the real reason the stub must never ship: a mesh still bound
+to it cannot be worn at all, shapes or no shapes.
+
 **Check the morph exists before shipping.** At runtime a control CSS cannot apply takes the
 whole outfit off, which is the right call for a half-applied look and a miserable way to
 find a typo. `check_shapes(recipe, shape_names(mesh_json))` in `tools/css_controls.py`
