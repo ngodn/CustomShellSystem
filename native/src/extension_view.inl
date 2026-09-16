@@ -166,7 +166,7 @@ void InventoryUI::build_extension_page() {
                     prompt("secondary","Expand description",right,552,info,4);
                 }
                 const auto value=extensions::display_value(c);
-                const auto control_start=inventory_children(canvas,256).size();
+                const auto control_start=ui.on(canvas).size();
                 if(kind=="radio") {
                     const auto& options=c.at("options");
                     for(size_t i=0;i<options.size();++i) {
@@ -217,7 +217,7 @@ void InventoryUI::build_extension_page() {
                     if(!enabled) invoke(action,L"SetIsEnabled",L"bInIsEnabled",false);
                 }
                 if(!c.value("enabled",true) || c.value("busy",false)) {
-                    const auto children=inventory_children(canvas,256);
+                    const auto children=ui.on(canvas);
                     for(size_t i=control_start;i<children.size();++i)
                         invoke(children[i],L"SetRenderOpacity",L"InOpacity",.6f);
                 }
@@ -268,7 +268,9 @@ void InventoryUI::build_extension_page() {
         }
     }
     transition_widgets_.clear();
-    for(auto* child:inventory_children(canvas,256))
+    // From the builder's own record, not an engine walk of the canvas. See the same
+    // change on the CSS page: that walk is bounded and a wide panel used to trip it.
+    for(auto* child:ui.on(canvas))
         transition_widgets_.push_back({WeakObject(child),{extension_slide_*70.*ui.scale,0}});
     dirty_=false;
     if(enter_transition_) {transition_started_=GetTickCount64();enter_transition_=false;}

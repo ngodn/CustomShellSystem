@@ -737,6 +737,11 @@ struct Layout {
     // enough to pass the bound used to take the whole tab down with it.
     struct Placed { UObject* widget; UObject* canvas; double x, y; };
     std::vector<Placed> placed{};
+    std::vector<UObject*> on(UObject* target) const {
+        std::vector<UObject*> result;
+        for(const auto& p:placed) if(p.canvas==target) result.push_back(p.widget);
+        return result;
+    }
     void place(UObject* widget, double x, double y, double width, double height) {
         Call add(canvas, L"AddChildToCanvas", 2); add.set(L"content", widget); add.run();
         auto* slot = add.get<UObject*>();
