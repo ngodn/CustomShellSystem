@@ -98,7 +98,15 @@ struct Core {
     void sync_attachments_safely(uint64_t now) {
         if(now<attachments_after) return;
         attachments_after=now+250;
-        try {appearance.sync_attachments();attachment_error.clear();}
+        try {
+            appearance.sync_attachments();
+            if(!applied_id.empty()) {
+                const auto split=applied_id.find('/');
+                if(split!=std::string::npos) for(const auto& outfit:catalog.outfits)
+                    if(outfit.id==applied_id.substr(0,split)) appearance.sync_items(outfit,applied_id.substr(split+1));
+            }
+            attachment_error.clear();
+        }
         catch(const std::exception& error) {
             if(attachment_error!=error.what()) {
                 attachment_error=error.what();host.log(("Accessory recovery deferred: "+attachment_error).c_str());
@@ -518,7 +526,12 @@ struct Core {
                     appearance.set_attachment_offsets(variant->attachments);
                     if (appearance.apply(engine, variant->mesh, variant->materials)) {
                         try {
-                            for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit) appearance.customize(outfit,requested.variant,requested.custom);
+                            for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit) {
+                                // Items before controls: an accessory can hide body
+                                // sections, and a toggle may then show one of them again.
+                                appearance.sync_items(outfit,requested.variant);
+                                appearance.customize(outfit,requested.variant,requested.custom);
+                            }
                         } catch(...) {
                             applied_id.clear(); appearance.restore(); throw;
                         }
@@ -589,6 +602,7 @@ struct Core {
                     {"shell", appearance.shell}, {"pawn", appearance.pawn_name}, {"mesh", appearance.current_mesh},
                     {"applied", applied_id}, {"message", message}, {"last_request", last_request},
                     {"apply_ms", last_apply_ms}, {"pid", GetCurrentProcessId()}};
+        status["worn_items"]=appearance.worn_item_count();
         status["recovery_pending"]=recovery.pending();
         status["maintenance_error"]=maintenance_error;
         auto path=package_root.generic_u8string();

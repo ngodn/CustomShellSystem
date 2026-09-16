@@ -170,11 +170,60 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
             for (const auto& shell : outfit.shells) if (!valid_id(shell)) throw std::runtime_error("Invalid shell tag");
             std::set<std::string> variants;
             for (const auto& v : item.at("variants")) {
-                Variant variant{v.at("id"), v.at("name"), v.at("mesh"), {}, {}, {}, {}};
+                Variant variant{v.at("id"), v.at("name"), v.value("mesh",std::string{}), {}, {}, {}, {}};
                 if(has_customize(v)) variant.controls=ControlSet::parse(customize_block(v));
-                if (!valid_id(variant.id) || !variants.insert(variant.id).second || !valid_asset(variant.mesh))
+                if (!valid_id(variant.id) || !variants.insert(variant.id).second ||
+                    (!v.contains("items") && !valid_asset(variant.mesh)))
                     throw std::runtime_error("Invalid variant id or asset path");
                 if(v.contains("materials")) variant.materials=parse_materials(v.at("materials"));
+                // 1.0: a variant is a list of items. `mesh` and `materials` are the older
+                // spelling of a single body item and stay the common case, so a package
+                // published before this reads as a one-item package and nothing changes.
+                if(v.contains("items")) {
+                    if(v.contains("mesh") || v.contains("materials"))
+                        throw std::runtime_error("A variant names its body once: items, or mesh and materials, not both");
+                    const auto& list=v.at("items");
+                    if(!list.is_array() || list.empty() || list.size()>16) throw std::runtime_error("A variant needs between one and sixteen items");
+                    std::set<std::string> ids; std::set<int> slots; bool body=false;
+                    for(const auto& j:list) {
+                        Item entry;
+                        entry.id=j.at("id"); entry.name=j.at("name"); entry.mesh=j.at("mesh");
+                        if(!valid_id(entry.id) || !ids.insert(entry.id).second ||
+                           entry.name.empty() || entry.name.size()>96 || !valid_asset(entry.mesh))
+                            throw std::runtime_error("Invalid item id, name or mesh");
+                        const auto slot=j.value("slot",std::string("body"));
+                        if(!item_slot_from_name(slot,entry.slot)) throw std::runtime_error("Unsupported item slot: "+slot);
+                        // One item per slot. The four trinket slots exist so a package with
+                        // more jewellery than the body has places for it still has somewhere
+                        // to put it, rather than stacking two things on one socket by accident.
+                        if(!slots.insert(static_cast<int>(entry.slot)).second)
+                            throw std::runtime_error("Two items claim the same slot: "+slot);
+                        if(entry.slot==ItemSlot::Body) body=true;
+                        entry.order=j.value("order",0);
+                        if(entry.order<0 || entry.order>999) throw std::runtime_error("Item order outside range");
+                        if(j.contains("materials")) entry.materials=parse_materials(j.at("materials"));
+                        if(j.contains("hides")) {
+                            const auto& hides=j.at("hides");
+                            if(!hides.is_object()) throw std::runtime_error("Invalid item hides block");
+                            if(hides.contains("sections")) {
+                                entry.hides_sections=hides.at("sections").get<std::vector<int>>();
+                                if(entry.hides_sections.size()>128) throw std::runtime_error("Invalid hidden section count");
+                                for(int index:entry.hides_sections)
+                                    if(index<0 || index>=128) throw std::runtime_error("Hidden section outside range");
+                            }
+                        }
+                        variant.items.push_back(std::move(entry));
+                    }
+                    if(!body) throw std::runtime_error("A variant needs one item in the body slot");
+                    // Everything downstream still asks a variant for its mesh, so the body
+                    // item is mirrored there rather than teaching every caller about items.
+                    for(const auto& entry:variant.items) if(entry.slot==ItemSlot::Body) {
+                        variant.mesh=entry.mesh; variant.materials=entry.materials;
+                    }
+                } else {
+                    Item body{variant.id,variant.name,variant.mesh,ItemSlot::Body,0,variant.materials,{}};
+                    variant.items.push_back(std::move(body));
+                }
                 if(v.contains("attachments")) {
                     const auto& attachments=v.at("attachments");
                     if(!attachments.is_object() || attachments.size()>32) throw std::runtime_error("Invalid variant attachments");

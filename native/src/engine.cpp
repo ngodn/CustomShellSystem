@@ -334,6 +334,14 @@ UObject* Appearance::player(void* engine) {
 }
 void Appearance::restore_menu() {
     menu_attachments_.release();
+    menu_items_.release();
+    if(auto* preview=menu_component_.Get()) for(int section:menu_hidden_sections_)
+        for(int lod=0;lod<lod_count();++lod) {
+            Call set(preview,L"ShowMaterialSection",4);
+            set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t(section));
+            set.set(L"bShow",true); set.set(L"LODIndex",int32_t(lod)); set.run();
+        }
+    menu_hidden_sections_.clear();
     if(auto* preview=menu_component_.Get()) for(const auto& [morph,weight]:driven_morphs_) {
         Call set(preview,L"SetMorphTarget",3);
         set.set(L"MorphTargetName",FName(wide(morph).c_str(),FNAME_Add));
@@ -382,6 +390,26 @@ void Appearance::sync_menu() {
         if(current!=value) material(target,i,value);
     }
     push_morphs(target);
+    if(!current_items_.empty()) menu_items_.update(target,current_items_identity_,current_items_);
+    // A section an item covers, or a toggle switched off, has to be hidden on the preview
+    // too, or the wardrobe shows a part the body is not wearing.
+    for(int section:hidden_sections_) {
+        if(!menu_hidden_sections_.insert(section).second) continue;
+        for(int lod=0;lod<lod_count();++lod) {
+            Call set(target,L"ShowMaterialSection",4);
+            set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t(section));
+            set.set(L"bShow",false); set.set(L"LODIndex",int32_t(lod)); set.run();
+        }
+    }
+    for(auto it=menu_hidden_sections_.begin();it!=menu_hidden_sections_.end();) {
+        if(hidden_sections_.contains(*it)) { ++it; continue; }
+        for(int lod=0;lod<lod_count();++lod) {
+            Call set(target,L"ShowMaterialSection",4);
+            set.set(L"MaterialID",int32_t(*it)); set.set(L"SectionIndex",int32_t(*it));
+            set.set(L"bShow",true); set.set(L"LODIndex",int32_t(lod)); set.run();
+        }
+        it=menu_hidden_sections_.erase(it);
+    }
 }
 void Appearance::remember_materials() {
     expected_materials_.clear();
@@ -631,6 +659,8 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
 bool Appearance::restore() {
     offsets_.release();
     attachments_.release();
+    items_.release();
+    current_items_.clear(); current_items_identity_.clear();
     restore_menu();
     detach_residual_controls();
     auto* component = component_.Get();
@@ -947,6 +977,111 @@ std::map<std::string,SpringNode> spring_nodes(UObject* anim) {
     }
     return out;
 }
+}
+void WornItems::release() {
+    for(auto& worn:worn_) if(auto* component=worn.component.Get()) {
+        Call owner(component,L"GetOwner",1); owner.run();
+        Call destroy(component,L"K2_DestroyComponent",1); destroy.set(L"Object",owner.get<UObject*>()); destroy.run();
+    }
+    worn_.clear(); body_.Reset(); identity_.clear();
+}
+std::vector<std::string> WornItems::ids() const {
+    std::vector<std::string> result;
+    for(const auto& worn:worn_) result.push_back(worn.id);
+    return result;
+}
+std::set<int> WornItems::update(UObject* body,const std::string& identity,const std::vector<Item>& items) {
+    std::set<int> hidden;
+    // A component the game threw away with the pawn leaves a dead handle behind, so a
+    // rebuild is also how CSS recovers from one rather than clinging to it.
+    const bool stale=std::any_of(worn_.begin(),worn_.end(),[](const auto& worn){return !worn.component.Get();});
+    if(!body) { release(); return hidden; }
+    if(body_.Get()!=body || identity_!=identity || stale) {
+        release();
+        body_=body; identity_=identity;
+        // Low order first, so an author reads the list the way it stacks.
+        std::vector<const Item*> ordered;
+        for(const auto& entry:items) if(entry.slot!=ItemSlot::Body) ordered.push_back(&entry);
+        std::stable_sort(ordered.begin(),ordered.end(),[](const Item* a,const Item* b){return a->order<b->order;});
+        Call owner(body,L"GetOwner",1); owner.run(); auto* actor=owner.get<UObject*>();
+        if(!actor) throw std::runtime_error("The character has no actor to attach items to");
+        Call transform(find(L"/Script/Engine.Default__KismetMathLibrary"),L"MakeTransform",4);
+        transform.set(L"Location",std::array<double,3>{}); transform.set(L"Rotation",std::array<double,3>{});
+        transform.set(L"Scale",std::array<double,3>{1,1,1}); transform.run();
+        auto* result=transform.param(L"ReturnValue");
+        auto copy_transform=[&](Call& target) {
+            auto* input=target.param(L"RelativeTransform");
+            if(!input->SameType(result) || input->GetElementSize()!=result->GetElementSize())
+                throw std::runtime_error("Item transform layout mismatch");
+            input->CopyCompleteValue(target.data(input),transform.data(result));
+        };
+        try {
+            for(const Item* entry:ordered) {
+                AssetLoadRoots roots;
+                auto* mesh=load(entry->mesh); roots.keep(mesh);
+                if(!mesh->IsA(static_cast<UClass*>(find(L"/Script/Engine.SkeletalMesh"))))
+                    throw std::runtime_error("Item asset is not a skeletal mesh: "+entry->id);
+                if(body_.Get()!=body) throw std::runtime_error("The character changed while items were loading");
+                Call add(actor,L"AddComponentByClass",5);
+                add.set(L"Class",find(L"/Script/Engine.SkeletalMeshComponent"));
+                add.set(L"bManualAttachment",true); add.set(L"bDeferredFinish",true);
+                copy_transform(add); add.run();
+                auto* component=add.get<UObject*>();
+                if(!component) throw std::runtime_error("Could not create the item component: "+entry->id);
+                // Recorded before anything else can throw, so a failure still cleans up.
+                worn_.push_back({entry->id,WeakObject(component)});
+                Call asset(component,L"SetSkeletalMeshAsset",1); asset.set(L"NewMesh",mesh); asset.run();
+                // The body drives the pose, and this is set before the component is
+                // registered on purpose. Setting it afterwards with bForceUpdate
+                // reallocates the follower's transform data on a live component and
+                // crashed the game on the next page rebuild, 2026-09-17. The follower
+                // runs no animation graph of its own, which is what keeps a dozen cheap.
+                Call leader(component,L"SetLeaderPoseComponent",3);
+                leader.set(L"NewLeaderBoneComponent",body); leader.set(L"bForceUpdate",true);
+                leader.set(L"bInFollowerShouldTickPose",false); leader.run();
+                Call collision(component,L"SetCollisionEnabled",1); collision.set(L"NewType",uint8_t{0}); collision.run();
+                Call finish(actor,L"FinishAddComponent",3);
+                finish.set(L"Component",component); finish.set(L"bManualAttachment",true);
+                copy_transform(finish); finish.run();
+                Call tick(component,L"SetComponentTickEnabled",1); tick.set(L"bEnabled",false); tick.run();
+                Call attach(component,L"K2_AttachToComponent",7);
+                attach.set(L"Parent",body); attach.set(L"SocketName",FName(L"None"));
+                attach.set(L"LocationRule",uint8_t{0}); attach.set(L"RotationRule",uint8_t{0}); attach.set(L"ScaleRule",uint8_t{0});
+                attach.set(L"bWeldSimulatedBodies",false); attach.run();
+                if(!attach.get<bool>()) throw std::runtime_error("Item attachment did not complete: "+entry->id);
+                for(const auto& [slot,path]:entry->materials) {
+                    auto* value=load(path); roots.keep(value);
+                    if(!value->IsA(static_cast<UClass*>(find(L"/Script/Engine.MaterialInterface"))))
+                        throw std::runtime_error("Item material override is not a material: "+entry->id);
+                    material(component,slot,value);
+                }
+            }
+        } catch(...) { release(); throw; }
+    }
+    for(const auto& entry:items)
+        if(entry.slot!=ItemSlot::Body) hidden.insert(entry.hides_sections.begin(),entry.hides_sections.end());
+    return hidden;
+}
+void Appearance::sync_items(const Outfit& outfit,const std::string& variant) {
+    const Variant* worn=nullptr;
+    for(const auto& v:outfit.variants) if(v.id==variant) worn=&v;
+    if(!worn) { items_.release(); return; }
+    auto* component=component_.Get();
+    if(!component || !applied_.Get() || mesh_asset(component)!=applied_.Get()) { items_.release(); return; }
+    const auto identity=outfit.id+":"+variant+":"+worn->mesh;
+    const auto wanted=items_.update(component,identity,worn->items);
+    current_items_=worn->items; current_items_identity_=identity;
+    // An item that covers part of the body hides those sections, the same bookkeeping a
+    // toggle uses, so taking the outfit off puts back exactly what CSS took away.
+    for(int section:wanted) {
+        if(hidden_sections_.contains(section)) continue;
+        for(int lod=0;lod<lod_count();++lod) {
+            Call set(component,L"ShowMaterialSection",4);
+            set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t(section));
+            set.set(L"bShow",false); set.set(L"LODIndex",int32_t(lod)); set.run();
+        }
+        hidden_sections_.insert(section);
+    }
 }
 int Appearance::lod_count() {
     auto* component=component_.Get(); if(!component) return 1;

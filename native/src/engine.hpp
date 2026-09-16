@@ -190,6 +190,26 @@ public:
     double last_distance_=0, last_push_=0;
 #endif
 };
+// 1.0: the accessories a variant ships. Each is its own skeletal mesh component posed by
+// the body it hangs on, created when the outfit goes on and destroyed when it comes off.
+// The body item is not here: that one replaces the character mesh, which is what apply()
+// has always done, so a package published before items is a one-item package and never
+// reaches this at all.
+class WornItems {
+    struct Worn { std::string id; WeakObject component; };
+    WeakObject body_;
+    std::vector<Worn> worn_;
+    // outfit:variant:mesh. Anything that changes it rebuilds the set rather than trying
+    // to reconcile two lists of components, which is not worth the bookkeeping for at
+    // most fifteen accessories.
+    std::string identity_;
+public:
+    // Returns the body material sections the worn items ask to hide.
+    std::set<int> update(RC::Unreal::UObject* body,const std::string& identity,const std::vector<Item>& items);
+    void release();
+    int count() const { return int(worn_.size()); }
+    std::vector<std::string> ids() const;
+};
 // 0.4: optional feminine walk (ANIMATION tab). Drives the game's own carrier
 // blendspace override on the player's animation instance, the way the GenessaWalk
 // and ProximaWalk mods do, for whichever shell is worn.
@@ -257,6 +277,13 @@ class Appearance {
     std::vector<std::string> menu_original_materials_;
     std::vector<WeakObject> menu_original_live_materials_;
     AttachmentFollower attachments_, menu_attachments_;
+    // The wardrobe previews a second component, so everything CSS puts on the body has to
+    // be put on that one too: its accessories, its hidden sections and its shapes. Keeping
+    // a separate WornItems for the preview matches how attachments already work.
+    WornItems items_, menu_items_;
+    std::vector<Item> current_items_;
+    std::string current_items_identity_;
+    std::set<int> menu_hidden_sections_;
     AttachmentOffsets offsets_;
     void restore_menu();
     void remember_materials();
@@ -284,6 +311,10 @@ public:
     Json tune_seals(double lift,double clearance,double max_push) { return offsets_.tune(lift,clearance,max_push); }
 #endif
     void set_attachment_offsets(const std::map<std::string,AttachmentOffset>& offsets) { offsets_.configure(offsets); }
+    // Put the variant's accessories on the body and hide what they cover. Safe to call
+    // repeatedly: it rebuilds only when the outfit or variant changes.
+    void sync_items(const Outfit&,const std::string& variant);
+    int worn_item_count() const { return items_.count(); }
     WalkOverride walk;
     void sync_walk(bool walk_feminine,bool jog_feminine,bool sprint_feminine) { walk.update(observed_pawn_.Get(),walk_feminine,jog_feminine,sprint_feminine); }
     Json transition_state(void* engine);
