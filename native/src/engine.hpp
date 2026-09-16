@@ -252,7 +252,11 @@ class Appearance {
     std::set<std::string> original_default_materials_;
     std::vector<WeakObject> original_live_materials_;
     std::map<int,std::string> applied_materials_;
-    std::set<int> hidden_sections_;   // material sections a toggle hid, so removal puts back only those
+    // Two different things hide a body's material sections: a toggle the player flipped,
+    // and an item that covers that part of the body. They are tracked apart and reconciled
+    // together, because one owner clearing its own set must not put back what the other
+    // still wants hidden. `applied_hidden_` is what the component was last told.
+    std::set<int> toggle_hidden_, item_hidden_, applied_hidden_;
     // Spring: what the animation blueprint's own nodes held before CSS touched them, keyed
     // by bone, so dropping the control puts the author's motion back with no mesh reload.
     std::map<std::string,std::array<double,2>> spring_originals_;
@@ -284,6 +288,7 @@ class Appearance {
     std::vector<Item> current_items_;
     std::string current_items_identity_;
     std::set<int> menu_hidden_sections_;
+    void reconcile_sections();
     AttachmentOffsets offsets_;
     void restore_menu();
     void remember_materials();

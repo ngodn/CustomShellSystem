@@ -393,7 +393,7 @@ void Appearance::sync_menu() {
     if(!current_items_.empty()) menu_items_.update(target,current_items_identity_,current_items_);
     // A section an item covers, or a toggle switched off, has to be hidden on the preview
     // too, or the wardrobe shows a part the body is not wearing.
-    for(int section:hidden_sections_) {
+    for(int section:applied_hidden_) {
         if(!menu_hidden_sections_.insert(section).second) continue;
         for(int lod=0;lod<lod_count();++lod) {
             Call set(target,L"ShowMaterialSection",4);
@@ -402,7 +402,7 @@ void Appearance::sync_menu() {
         }
     }
     for(auto it=menu_hidden_sections_.begin();it!=menu_hidden_sections_.end();) {
-        if(hidden_sections_.contains(*it)) { ++it; continue; }
+        if(applied_hidden_.contains(*it)) { ++it; continue; }
         for(int lod=0;lod<lod_count();++lod) {
             Call set(target,L"ShowMaterialSection",4);
             set.set(L"MaterialID",int32_t(*it)); set.set(L"SectionIndex",int32_t(*it));
@@ -661,6 +661,8 @@ bool Appearance::restore() {
     attachments_.release();
     items_.release();
     current_items_.clear(); current_items_identity_.clear();
+    // The mesh is going back to the game's own, so nothing CSS hid on it may survive.
+    toggle_hidden_.clear(); item_hidden_.clear(); reconcile_sections();
     restore_menu();
     detach_residual_controls();
     auto* component = component_.Get();
@@ -1065,23 +1067,20 @@ std::set<int> WornItems::update(UObject* body,const std::string& identity,const 
 void Appearance::sync_items(const Outfit& outfit,const std::string& variant) {
     const Variant* worn=nullptr;
     for(const auto& v:outfit.variants) if(v.id==variant) worn=&v;
-    if(!worn) { items_.release(); return; }
+    // Dropping the items also drops what they were covering, or a body would keep a hole
+    // in it after the thing filling the hole went away.
+    auto drop=[&]{ items_.release(); if(!item_hidden_.empty()) { item_hidden_.clear(); reconcile_sections(); } };
+    if(!worn) { drop(); return; }
     auto* component=component_.Get();
-    if(!component || !applied_.Get() || mesh_asset(component)!=applied_.Get()) { items_.release(); return; }
+    if(!component || !applied_.Get() || mesh_asset(component)!=applied_.Get()) { drop(); return; }
     const auto identity=outfit.id+":"+variant+":"+worn->mesh;
     const auto wanted=items_.update(component,identity,worn->items);
     current_items_=worn->items; current_items_identity_=identity;
-    // An item that covers part of the body hides those sections, the same bookkeeping a
-    // toggle uses, so taking the outfit off puts back exactly what CSS took away.
-    for(int section:wanted) {
-        if(hidden_sections_.contains(section)) continue;
-        for(int lod=0;lod<lod_count();++lod) {
-            Call set(component,L"ShowMaterialSection",4);
-            set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t(section));
-            set.set(L"bShow",false); set.set(L"LODIndex",int32_t(lod)); set.run();
-        }
-        hidden_sections_.insert(section);
-    }
+    // An item that covers part of the body hides those sections. This is the whole set the
+    // worn items want, so dropping an item puts its section back without disturbing a
+    // toggle the player set.
+    item_hidden_=wanted;
+    reconcile_sections();
 }
 int Appearance::lod_count() {
     auto* component=component_.Get(); if(!component) return 1;
@@ -1089,13 +1088,10 @@ int Appearance::lod_count() {
     return std::clamp(count.get<int32_t>(),1,16);
 }
 void Appearance::show_hidden_sections() {
-    auto* component=component_.Get();
-    if(component) for(int section:hidden_sections_) for(int lod=0;lod<lod_count();++lod) {
-        Call set(component,L"ShowMaterialSection",4);
-        set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t(section));
-        set.set(L"bShow",true); set.set(L"LODIndex",int32_t(lod)); set.run();
-    }
-    hidden_sections_.clear();
+    // Only the toggles' own sections. An item still covering part of the body keeps its
+    // section hidden, which is what reconcile_sections works out.
+    toggle_hidden_.clear();
+    reconcile_sections();
 }
 // The wardrobe shows a second component, not the one being worn, so every shape has to
 // be written to both or the slider moves nothing you can see. Weights live in
@@ -1107,6 +1103,22 @@ void Appearance::push_morphs(UObject* component) {
         set.set(L"MorphTargetName",FName(wide(morph).c_str(),FNAME_Add));
         set.set(L"Value",weight); set.set(L"bRemoveZeroWeight",false); set.run();
     }
+}
+void Appearance::reconcile_sections() {
+    auto* component=component_.Get();
+    if(!component) { applied_hidden_.clear(); return; }
+    std::set<int> want=toggle_hidden_;
+    want.insert(item_hidden_.begin(),item_hidden_.end());
+    auto set_shown=[&](int section,bool shown) {
+        for(int lod=0;lod<lod_count();++lod) {
+            Call set(component,L"ShowMaterialSection",4);
+            set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t(section));
+            set.set(L"bShow",shown); set.set(L"LODIndex",int32_t(lod)); set.run();
+        }
+    };
+    for(int section:want) if(!applied_hidden_.contains(section)) set_shown(section,false);
+    for(int section:applied_hidden_) if(!want.contains(section)) set_shown(section,true);
+    applied_hidden_=std::move(want);
 }
 void Appearance::clear_driven_morphs() {
     for(auto* component:{component_.Get(),menu_component_.Get()})
@@ -1309,7 +1321,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                     if(readback.get<bool>()!=show) throw std::runtime_error("Material section read-back failed");
                     // Remember only what is hidden, so removing the outfit puts back
                     // exactly what CSS took away and nothing the game hid itself.
-                    if(show) hidden_sections_.erase(section); else hidden_sections_.insert(section);
+                    if(show) toggle_hidden_.erase(section); else toggle_hidden_.insert(section);
                 }
                 continue;
             }
