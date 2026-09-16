@@ -1,0 +1,17 @@
+[b]CSS 0.4.1[/b]
+
+A fix for three things in 0.4.0's new COLOR tab. If you have 0.4.0, take this one.
+
+[list]
+[*][b]The swatches were invisible.[/b] Selecting a part was supposed to open a strip of colours to pick from. The strip was there, and every chip in it was drawn with no colour at all, so the panel looked empty apart from the buttons. They show up now.
+[*][b]The colour grid overlapped the buttons under it[/b], so "Choose a colour" was printed on top of "Exact color".
+[*][b]Scrolling onto a colour part could make the CSS and CSSX tabs vanish from the inventory.[/b] The swatch grid pushed the page past a limit on how many things CSS expected to find on one tab, and the check that caught it was strict enough to take the whole wardrobe down with it. That limit is raised, the grid is lighter, and that check can no longer unload anything: at worst the panel now appears without its slide-in.
+[*]A part that the palette you picked does not actually set no longer claims that palette's name. Palettes dress the outfit and leave your body alone, so Skin, Mask and Eyes were reading "Midnight silver" while showing the author's own colour. They read "Original", which is what they are.
+[/list]
+
+[b]Only CSS needs updating.[/b] Nothing else changes from 0.4.0. Existing outfit and port ZIPs still work, your colours and saved looks are untouched, and CSSX, UI Kit and Cheat Menu remain at 0.3.0.
+
+Close the game and extract the ZIP into [code]MortalShell2/Binaries/Win64/ue4ss/Mods/[/code]
+Replace the CSS runtime files. Keep your [b]CustomShellSystem/state/[/b] folder, CSSX, extensions and installed outfits.
+
+[url=https://github.com/ngodn/CustomShellSystem/releases/tag/v0.4.1]Download CSS 0.4.1[/url]

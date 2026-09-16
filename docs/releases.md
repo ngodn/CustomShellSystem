@@ -128,6 +128,26 @@ Exact-artifact startup, archive and checksum checks are recorded separately in
 The 0.4.0 record, including the backward-compatibility survey of every installed
 package, is [here](development/0.4.0-release-verification.md).
 
+## 0.4.1 scope
+
+Fixes three defects in 0.4.0's COLOR tab and nothing else. No format, schema or
+ABI change; CSSX, UI Kit and Cheat Menu remain at 0.3.0.
+
+The swatch strip shipped invisible: a CSS button has no brush of its own, so the
+background colour set on each chip painted nothing. Chips are boxes now, with a
+transparent button on top to take the click. At 84px in four columns the grid
+also collided with the buttons beneath it, so they are 56px in six columns.
+
+The one that mattered: `inventory_children(canvas)` walks the page to build the
+slide-in and took the default limit of 64. The swatch grid pushed the page past
+it, the guard threw from inside the panel build, and CSS reported itself
+unavailable and left the tab strip, taking CSSX with it. The limit is 256, the
+same as the extension page, and that call is wrapped, because a transition
+animation must not be able to unload the wardrobe.
+
+Build only CSS from clean annotated tag `v0.4.1`. The BBCode comment is
+[CSS 0.4.1](nexus/css-v0.4.1-changelog.bbcode.txt).
+
 ## 0.4.0 scope
 
 A feature release, and the first one to change the COLOR tab since it was written.
