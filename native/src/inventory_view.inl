@@ -411,7 +411,10 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 const auto& c=options.controls[entry.control];
                 const auto chip=swatch_of(c);
                 row_swatch=&chip; row_indent=12;
-                const std::string source=custom.values.contains(c.id)?"Custom":palette?palette_name:"Original";
+                // Naming the palette on a part it does not set would be a lie: palettes
+                // dress the outfit and leave the body alone, and that part is undyed.
+                const bool from_palette=palette && options.palettes[palette-1].values.contains(c.id);
+                const std::string source=custom.values.contains(c.id)?"Custom":from_palette?palette_name:"Original";
                 Json minus={{"action","color"},{"control",c.id},{"channel",c.scalar?0:color_channel_},{"delta",-1}},plus=minus; plus["delta"]=1;
                 if(!c.scalar && !exact_color_) {
                     // Left and Right walk the strip instead of nudging one channel, which
@@ -469,14 +472,22 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     detail(control.name,worn->name,control.hue_locked
                         ? "Choose a shade. This part keeps its own hue on purpose: it reads as a material rather than a colour, and rotating it is what makes a recolor look wrong."
                         : "Choose a colour. The first is the author's, then this part in each palette, then hues and shades of it.");
+                    // A chip is drawn, not styled. flat_button clears every brush a CSS
+                    // button has, so setting a background colour on one paints nothing;
+                    // the colour is a box and a transparent button sits on it to take
+                    // the click, which is what the list rows do too.
+                    constexpr double chip=56, pitch=60, columns=6;
                     for(size_t i=0;i<strip.size();++i) {
-                        const double sx=right+double(i%4)*92, sy=510+double(i/4)*92;
-                        auto* chip=ui.button("",sx,sy,84,84,i==here,true,20);
-                        invoke(chip,L"SetBackgroundColor",L"InBackgroundColor",
-                               Color{srgb_linear(strip[i][0]),srgb_linear(strip[i][1]),srgb_linear(strip[i][2]),1});
-                        bind(chip,{{"action","color"},{"control",control.id},{"rgb",{strip[i][0],strip[i][1],strip[i][2]}}});
+                        const double sx=right+double(i%size_t(columns))*pitch, sy=510+double(i/size_t(columns))*pitch;
+                        // Only the chosen chip gets a surround, which keeps the widget
+                        // count on this page down as well as reading more clearly.
+                        if(i==here) ui.box(sx-3,sy-3,chip+6,chip+6,gold);
+                        ui.box(sx,sy,chip,chip,{srgb_linear(strip[i][0]),srgb_linear(strip[i][1]),srgb_linear(strip[i][2]),1});
+                        bind(ui.button("",sx,sy,chip,chip),
+                             {{"action","color"},{"control",control.id},{"rgb",{strip[i][0],strip[i][1],strip[i][2]}}});
                     }
-                    direction_hint(true,"Choose a colour",right,510+double((strip.size()+3)/4)*92+8,360);
+                    direction_hint(true,"Choose a colour",right,
+                                   510+double((strip.size()+size_t(columns)-1)/size_t(columns))*pitch+8,360);
                     action_button("secondary","Exact color",795,Json{{"action","ui_exact"}},4);
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
                     action_button("tertiary","Reset all colors",887,rows_[row_].tertiary,2);
@@ -581,10 +592,25 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         invoke(hint,L"SetJustification",L"InJustification",uint8_t{1});
     }
     transition_widgets_.clear();
-    for(auto* child:inventory_children(canvas)) if(auto* slot=inventory_object(child,L"Slot")) {
-        Call position(slot,L"GetPosition",1); position.run(); auto p=position.get<Vec2>();
-        const double x=p.x/ui.scale;
-        transition_widgets_.push_back({WeakObject(child),{x<left+panel+25?-150.*ui.scale:x>=right-25?150.*ui.scale:0.,x>=left+panel+25 && x<right-25?30.*ui.scale:0.}});
+    // The page canvas holds every widget on the tab, and the COLOR swatch grid alone
+    // is two dozen of them. 256 is what the extension page already allows; the guard
+    // is here to catch a runaway panel, not to cap a page at a screenful.
+    //
+    // This only drives the slide-in when the tab opens. It used to be able to take the
+    // whole tab down with it: one panel wide enough to trip the guard and CSS reported
+    // itself unavailable and vanished from the tab strip. An animation is not worth
+    // that, so a failure here costs the animation and nothing else.
+    try {
+        for(auto* child:inventory_children(canvas,256)) if(auto* slot=inventory_object(child,L"Slot")) {
+            Call position(slot,L"GetPosition",1); position.run(); auto p=position.get<Vec2>();
+            const double x=p.x/ui.scale;
+            transition_widgets_.push_back({WeakObject(child),{x<left+panel+25?-150.*ui.scale:x>=right-25?150.*ui.scale:0.,x>=left+panel+25 && x<right-25?30.*ui.scale:0.}});
+        }
+    } catch(const std::exception&) {
+        // Nothing to tell the player: the tab is built and usable, it just arrives
+        // without sliding. The view has no logger, and the cause shows up in the
+        // panel that actually failed.
+        transition_widgets_.clear();
     }
     if(enter_transition_) { transition_started_=GetTickCount64(); enter_transition_=false; }
     last_message_.clear(); dirty_=false;
