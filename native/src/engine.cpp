@@ -334,6 +334,11 @@ UObject* Appearance::player(void* engine) {
 }
 void Appearance::restore_menu() {
     menu_attachments_.release();
+    if(auto* preview=menu_component_.Get()) for(const auto& [morph,weight]:driven_morphs_) {
+        Call set(preview,L"SetMorphTarget",3);
+        set.set(L"MorphTargetName",FName(wide(morph).c_str(),FNAME_Add));
+        set.set(L"Value",0.f); set.set(L"bRemoveZeroWeight",true); set.run();
+    }
     auto component=menu_component_, applied=menu_applied_;
     auto original=std::exchange(menu_original_,{});
     auto materials=std::exchange(menu_original_materials_,{});
@@ -376,6 +381,7 @@ void Appearance::sync_menu() {
         if(i<previous.Num()) std::memcpy(&current,previous.GetRawPtr(i),sizeof(current));
         if(current!=value) material(target,i,value);
     }
+    push_morphs(target);
 }
 void Appearance::remember_materials() {
     expected_materials_.clear();
@@ -956,13 +962,24 @@ void Appearance::show_hidden_sections() {
     }
     hidden_sections_.clear();
 }
-void Appearance::clear_driven_morphs() {
-    auto* component=component_.Get();
-    if(component) for(const auto& morph:driven_morphs_) {
+// The wardrobe shows a second component, not the one being worn, so every shape has to
+// be written to both or the slider moves nothing you can see. Weights live in
+// driven_morphs_ precisely so this can replay them.
+void Appearance::push_morphs(UObject* component) {
+    if(!component) return;
+    for(const auto& [morph,weight]:driven_morphs_) {
         Call set(component,L"SetMorphTarget",3);
         set.set(L"MorphTargetName",FName(wide(morph).c_str(),FNAME_Add));
-        set.set(L"Value",0.f); set.set(L"bRemoveZeroWeight",true); set.run();
+        set.set(L"Value",weight); set.set(L"bRemoveZeroWeight",false); set.run();
     }
+}
+void Appearance::clear_driven_morphs() {
+    for(auto* component:{component_.Get(),menu_component_.Get()})
+        if(component) for(const auto& [morph,weight]:driven_morphs_) {
+            Call set(component,L"SetMorphTarget",3);
+            set.set(L"MorphTargetName",FName(wide(morph).c_str(),FNAME_Add));
+            set.set(L"Value",0.f); set.set(L"bRemoveZeroWeight",true); set.run();
+        }
     driven_morphs_.clear();
 }
 void Appearance::restore_springs() {
@@ -1178,7 +1195,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 readback.set(L"MorphTargetName",name); readback.run();
                 if(std::abs(readback.get<float>()-weight)>.0001f)
                     throw std::runtime_error("Shape weight read-back failed");
-                driven_morphs_.insert(control.morph);
+                driven_morphs_[control.morph]=weight;
                 continue;
             }
             // 1.0: a spring is the one control that touches no material at all. It writes

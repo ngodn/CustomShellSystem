@@ -237,14 +237,16 @@ class Appearance {
     // by bone, so dropping the control puts the author's motion back with no mesh reload.
     std::map<std::string,std::array<double,2>> spring_originals_;
     WeakObject spring_instance_;
-    // Shape: the morph targets CSS drove, so taking the outfit off puts back only those
-    // and leaves anything the game or another mod set alone. ClearMorphTargets is a
-    // bigger hammer than this deserves.
-    std::set<std::string> driven_morphs_;
+    // Shape: the morph targets CSS drove and their weights, so taking the outfit off puts
+    // back only those and leaves anything the game or another mod set alone.
+    // ClearMorphTargets is a bigger hammer than this deserves. The weights are kept
+    // because the wardrobe preview is a second component that needs the same ones.
+    std::map<std::string,float> driven_morphs_;
     int lod_count();
     void show_hidden_sections();
     void restore_springs();
     void clear_driven_morphs();
+    void push_morphs(RC::Unreal::UObject* component);
     std::map<int,WeakObject> control_mids_;
     std::map<std::string,WeakObject> dye_targets_, dye_textures_;
     std::map<std::string,ControlValue> last_values_;
