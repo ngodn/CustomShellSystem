@@ -135,6 +135,17 @@ public:
     bool active() const { return active_; }
     void detach();
 };
+class AttachmentFollower {
+    WeakObject component_, proxy_, mesh_;
+    std::string original_;
+    bool ready_=false;
+    std::set<std::wstring> unsupported_;
+    struct Attachment {WeakObject child;};
+    std::vector<Attachment> owned_;
+public:
+    void update(RC::Unreal::UObject* component,const std::string& original);
+    void release();
+};
 class Appearance {
     WeakObject component_, applied_;
     WeakObject observed_pawn_, observed_component_, observed_controller_;
@@ -152,6 +163,7 @@ class Appearance {
     std::string menu_original_;
     std::vector<std::string> menu_original_materials_;
     std::vector<WeakObject> menu_original_live_materials_;
+    AttachmentFollower attachments_, menu_attachments_;
     void restore_menu();
     void remember_materials();
     bool materials_match() const;
@@ -171,6 +183,7 @@ public:
     bool repair_mesh_needed() const;
     bool ready_to_apply() const;
     void sync_menu();
+    void sync_attachments();
     Json transition_state(void* engine);
 #ifdef CSS_TRANSITION_TESTS
     void test_reset_mesh();

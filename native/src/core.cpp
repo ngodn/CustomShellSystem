@@ -69,6 +69,19 @@ struct Core {
     std::optional<bool> test_cursor_pending;
 #endif
     std::string maintenance_error;
+    std::string attachment_error;
+    uint64_t attachments_after=0;
+    void sync_attachments_safely(uint64_t now) {
+        if(now<attachments_after) return;
+        attachments_after=now+250;
+        try {appearance.sync_attachments();attachment_error.clear();}
+        catch(const std::exception& error) {
+            if(attachment_error!=error.what()) {
+                attachment_error=error.what();host.log(("Accessory recovery deferred: "+attachment_error).c_str());
+            }
+            attachments_after=now+1000;
+        }
+    }
     void sync_menu_safely() {
         if(GetTickCount64()<maintenance_after) return;
         try { appearance.sync_menu(); maintenance_error.clear(); }
@@ -268,6 +281,7 @@ struct Core {
             }
         }
         if(state.enabled && !apply_pending) sync_menu_safely();
+        sync_attachments_safely(now);
         if (now < next_poll && !ui_refresh && !apply_pending) return;
         next_poll = now + 250;
         auto command_file = root / "request.json";
@@ -338,6 +352,7 @@ struct Core {
                             applied_id.clear(); appearance.restore(); throw;
                         }
                         sync_menu_safely();
+                        attachments_after=0;sync_attachments_safely(now);
                         recovery.clear();
                         last_apply_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
                         state.selections[appearance.shell] = requested;

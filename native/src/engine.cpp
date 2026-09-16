@@ -292,6 +292,7 @@ static Json material_snapshot(UObject* component,UObject* mesh) {
     }
     return result;
 }
+#include "attachment_follower.inl"
 static UObject* menu_character(UObject* player) {
     if(!player) return nullptr;
     auto* pc=read<UObject*>(player,L"Controller");
@@ -330,6 +331,7 @@ UObject* Appearance::player(void* engine) {
     return pawn;
 }
 void Appearance::restore_menu() {
+    menu_attachments_.release();
     auto component=menu_component_, applied=menu_applied_;
     auto original=std::exchange(menu_original_,{});
     auto materials=std::exchange(menu_original_materials_,{});
@@ -485,8 +487,17 @@ void Appearance::test_effect(bool begin,bool parameters) {
     auto* component=component_.Get();
     if(!component || narrow(mesh_asset(component)->GetPathName())!=original_) throw std::runtime_error("Test effect requires original mesh");
     if(begin) {
+        Call count(component,L"GetNumMaterials",1);count.run();
+        const auto slots=count.get<int32_t>();
+        if(slots<=0 || slots>128) throw std::runtime_error("Test mesh has invalid material slots");
+        int32_t slot=-1;UObject* source=nullptr;
+        for(int32_t i=0;i<slots;++i) {
+            Call current(component,L"GetMaterial",2);current.set(L"ElementIndex",i);current.run();
+            if((source=current.get<UObject*>())) {slot=i;break;}
+        }
+        if(slot<0) throw std::runtime_error("Test mesh has no material for an effect");
         Call effect(component,L"CreateDynamicMaterialInstance",4);
-        effect.set(L"ElementIndex",int32_t{0}); effect.run();
+        effect.set(L"ElementIndex",slot);effect.set(L"SourceMaterial",source);effect.run();
         auto* mid=effect.get<UObject*>();
         if(!mid) throw std::runtime_error("Test material creation failed");
         if(parameters) {
@@ -564,6 +575,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     const bool returning_to_outfit=applied_.Get()==target && applied_materials_==materials && repair_mesh_needed();
     if (component_.Get() != component || before != applied_.Get()) {
         auto materials=material_paths(component);
+        attachments_.release();
         original_ = narrow(before->GetPathName());
         original_materials_=std::move(materials);
         original_live_materials_=material_objects(component);
@@ -609,6 +621,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     return true;
 }
 bool Appearance::restore() {
+    attachments_.release();
     restore_menu();
     detach_residual_colors();
     auto* component = component_.Get();
