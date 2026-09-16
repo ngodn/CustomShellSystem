@@ -18,8 +18,10 @@ There is now a written convention for what a CSS outfit should declare about its
 [list]
 [*]New ANIMATION tab (between COLOR and TEMPLATES) with Walk animation, Normal or Feminine. Feminine uses the game's own Cultist Spear Lady walk and standing pose, for any shell. Nothing extra to install, no pak needed. It plays at the pace the cycle was made for, so the feet stay planted. Jogging, sprinting and combat are untouched, and templates keep your choice.
 [*]If you use GenessaWalk or ProximaWalk by argisht, leave Walk animation on Normal and the mod keeps working exactly as before. The tab tells you it is installed and which one is driving. Switch to Feminine and CSS takes over instead.
-[*]Stowed seals no longer sink into the body. The game welds a stowed item to its socket and never checks it against you, so on a wider shape it starts buried and then passes in and out with every stride. CSS can now lift it clear and keep it clear while you move, following the hip from the live pose. Outfits supply the measurements; Seductress v2.0.2 and v1.0.3 do. Nothing is touched during a parry, when the game borrows the seal into your hand.
-[*]Fixed switching to a shell always reverting its outfit to the first one installed.
+[*]Stowed seals no longer sink into the body. The game welds a stowed item to its socket and never checks it against you, so on a wider shape it starts buried and then passes in and out with every stride. CSS can now lift it clear and keep it clear while you move, following the hip from the live pose. Outfits supply the measurements; Seductress v2.0.2 and v1.0.4 do. Nothing is touched during a parry, when the game borrows the seal into your hand.
+[*]Fixed switching to a shell always reverting its outfit to the first one installed, and doing it again after a restart.
+[*]Fixed dragging a Tint slider with the mouse doing nothing.
+[*]Fixed a saved look that named a part your current variant no longer has failing the whole outfit, which left you in nothing rather than dressed.
 [*]The tab strip clips and slides like the game's inventory tabs.
 [*]Fixed the random dark, glossy body: the dye texture was bound before it was drawn; a failed draw left it black.
 [/list]
