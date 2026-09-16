@@ -149,6 +149,38 @@ int main() {
                    "Original must clear every override and tint");
             rejects([&]{choose_palette(dressy,before,"not-installed");});
         }
+        {
+            // 1.0: a control declares what it is. Colour is one kind, and everything
+            // else is a single number the menu draws as a slider or a switch.
+            auto kinds=Json::parse(R"({"schema":1,"controls":[
+              {"id":"cloth","name":"Garment","role":"garment","default":[1,1,1,1]},
+              {"id":"glow","name":"Eye glow","type":"scalar","default":[1.5,0,0,1],"max":5,
+               "bindings":[{"slot":5,"parameter":"Intensity"}]},
+              {"id":"gloss","name":"Sheen","kind":"scalar","role":"gloss","default":[0.4,0,0,1],
+               "bindings":[{"slot":0,"parameter":"Roughness"}]},
+              {"id":"hood","name":"Hood","kind":"toggle","role":"piece","default":[1,0,0,1],"sections":[2,3]}],
+              "surfaces":[{"id":"body","parameter":"BaseColorMap  non VT","slots":[0],"layers":{"cloth":"dye-cloth.png"}}],
+              "palettes":[{"id":"red","name":"Crimson","values":{"cloth":[0.6,0.1,0.2,1]}}]})");
+            auto model=ColorOptions::parse(kinds);
+            expect(model.find("cloth")->kind==ControlKind::Color,"A control with no kind is a colour");
+            // type=scalar predates the split, and those packages meant a strength.
+            expect(model.find("glow")->kind==ControlKind::Intensity,"type=scalar must stay an intensity");
+            expect(model.find("gloss")->kind==ControlKind::Scalar,"An ordinary material scalar was not kept");
+            expect(model.find("hood")->kind==ControlKind::Toggle,"A toggle was not kept");
+            expect(!model.find("cloth")->scalar && model.find("gloss")->scalar,
+                   "Every kind but a colour is edited as one number");
+            const auto* hood=model.find("hood");
+            expect(hood->sections.size()==2 && hood->minimum==0 && hood->maximum==1 && hood->step==1,
+                   "A toggle is on or off across the sections it names");
+            expect(std::string(control_kind_name(ControlKind::Toggle))=="toggle","Kind name missing");
+            // A toggle drives its sections directly and needs them; nothing else may claim them.
+            auto drop=kinds; drop["controls"][3].erase("sections");
+            rejects([&]{ColorOptions::parse(drop);});
+            auto stray=kinds; stray["controls"][2]["sections"]=Json::array({1});
+            rejects([&]{ColorOptions::parse(stray);});
+            auto odd=kinds; odd["controls"][2]["kind"]="texture";
+            rejects([&]{ColorOptions::parse(odd);});
+        }
         std::cout<<checks<<" color behavior checks passed\n";
     } catch(const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }
 }

@@ -92,16 +92,23 @@ ColorOptions ColorOptions::parse(const Json& j) {
         control.id=c.at("id"); control.name=c.at("name");
         if(!valid_id(control.id) || out.find(control.id) || control.name.empty() || control.name.size()>96 || out.controls.size()>=32)
             throw std::runtime_error("Invalid color control identity");
+        // `type` is what packages before 0.4 wrote, `kind` is the convention's name and
+        // wins when both are present. A `type` of "scalar" predates the split between a
+        // strength and an ordinary material scalar, so it lands on Intensity, which is
+        // what those packages meant.
         auto type=c.value("type",std::string("color"));
-        if(type=="color" || type=="scalar") {}
-        else if(type=="intensity") type="scalar";      // the convention's name for a scalar
+        if(type=="color") control.kind=ControlKind::Color;
+        else if(type=="scalar" || type=="intensity") control.kind=ControlKind::Intensity;
         else throw std::runtime_error("Unsupported color control type");
         if(c.contains("kind")) {
             auto kind=c.at("kind").get<std::string>();
-            if(kind!="color" && kind!="intensity") throw std::runtime_error("Unsupported color control kind");
-            type=kind=="intensity"?"scalar":"color";
+            if(kind=="color") control.kind=ControlKind::Color;
+            else if(kind=="intensity") control.kind=ControlKind::Intensity;
+            else if(kind=="scalar") control.kind=ControlKind::Scalar;
+            else if(kind=="toggle") control.kind=ControlKind::Toggle;
+            else throw std::runtime_error("Unsupported color control kind");
         }
-        control.scalar=type=="scalar"; control.value=value(c.at("default"));
+        control.scalar=control.kind!=ControlKind::Color; control.value=value(c.at("default"));
         // Group, role and hue locking: declared if present, otherwise read off the id.
         const auto fallback=guess_role(control.id);
         control.role=c.value("role",std::string(fallback.role));
@@ -115,9 +122,18 @@ ColorOptions ColorOptions::parse(const Json& j) {
         control.hue_locked=c.value("hue_locked",
             c.contains("role")?role_hue_locked(control.role):fallback.hue_locked);
         control.minimum=c.value("min",0.f); control.maximum=c.value("max",1.f); control.step=c.value("step",.01f);
-        if(!std::isfinite(control.minimum) || !std::isfinite(control.maximum) || !std::isfinite(control.step) ||
+        // A toggle is on or off. It has no range to declare, so it is given one rather
+        // than letting a package invent a half-hidden section.
+        if(control.kind==ControlKind::Toggle) { control.minimum=0; control.maximum=1; control.step=1; }
+        else if(!std::isfinite(control.minimum) || !std::isfinite(control.maximum) || !std::isfinite(control.step) ||
            control.minimum<0 || control.maximum>32 || control.minimum>=control.maximum || control.step<=0 || control.step>control.maximum-control.minimum)
             throw std::runtime_error("Invalid color slider range");
+        if(c.contains("sections")) {
+            if(control.kind!=ControlKind::Toggle) throw std::runtime_error("Only a toggle control hides material sections");
+            control.sections=c.at("sections").get<std::vector<int>>();
+            if(control.sections.empty() || control.sections.size()>128) throw std::runtime_error("Invalid toggle sections");
+            for(int index:control.sections) slot(index);
+        } else if(control.kind==ControlKind::Toggle) throw std::runtime_error("A toggle control needs the sections it hides");
         valid_value(control,control.value);
         if(c.contains("bindings") && !c.at("bindings").is_array()) throw std::runtime_error("Color bindings require an array");
         for(const auto& b:c.value("bindings",Json::array())) {
@@ -155,7 +171,8 @@ ColorOptions ColorOptions::parse(const Json& j) {
         out.surfaces.push_back(std::move(surface));
     }
     for(const auto& c:out.controls) {
-        bool used=!c.bindings.empty();
+        // A toggle drives sections directly, so it needs no parameter to write into.
+        bool used=!c.bindings.empty() || !c.sections.empty();
         for(const auto& s:out.surfaces) used|=s.layers.contains(c.id);
         if(!used) throw std::runtime_error("Color control has no material or texture binding");
     }
@@ -225,6 +242,15 @@ Customization compatible_colors(const ColorOptions& options,const Customization&
                        [&](const auto& c){return !c.scalar && color_group_name(c.group)==group;}))
             result.tints[group]=tint;
     return result;
+}
+const char* control_kind_name(ControlKind kind) {
+    switch(kind) {
+        case ControlKind::Color: return "color";
+        case ControlKind::Intensity: return "intensity";
+        case ControlKind::Scalar: return "scalar";
+        case ControlKind::Toggle: return "toggle";
+    }
+    return "color";
 }
 const char* color_group_name(ColorGroup group) { return group==ColorGroup::Body?"body":"outfit"; }
 // A palette is a look, not a reset. It takes over the parts it sets and the tint of the

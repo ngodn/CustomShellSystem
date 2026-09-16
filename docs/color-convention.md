@@ -79,8 +79,31 @@ and skin as skin. Without it a group hue shift produces green "gold" and blue sk
 | `name` | `"Garment"` | shown in the menu. Sentence case, a noun a player recognises |
 | `group` | `outfit` \| `body` | chooses the section and which tint row drives it |
 | `role` | see below | the shared vocabulary; drives defaults and palette portability |
-| `kind` | `color` \| `intensity` | an intensity is a single scalar, like eye glow |
+| `kind` | see below | what the control *is*; everything but `color` is a single number |
 | `hue_locked` | bool | defaults from `role`; set it explicitly when the default is wrong |
+
+### Control kinds
+
+Colour is one kind of control, not the only one. A control declares which it is, and the
+menu, the saved look and the apply path all follow from that.
+
+| `kind` | edited as | drives | notes |
+| --- | --- | --- | --- |
+| `color` | three channels | a dye layer | the default when `kind` is absent |
+| `intensity` | one number | a named material scalar | a strength, like eye glow |
+| `scalar` | one number | a named material scalar | anything else, like gloss or roughness |
+| `toggle` | on or off | material sections | needs `sections`, takes no `min`/`max`/`step` |
+
+A `toggle` lists the material sections it shows and hides, and needs no binding because
+it drives them directly:
+
+```json
+{"id": "hood", "name": "Hood", "kind": "toggle", "role": "piece",
+ "default": [1, 0, 0, 1], "sections": [2, 3]}
+```
+
+Packages written before this said `"type": "scalar"` and meant a strength, so that reads
+as `intensity`, not as the new generic `scalar`. Nothing published changes meaning.
 
 ### Role vocabulary
 
@@ -105,6 +128,11 @@ fits, but say so in the package notes.
 | `labia` | body | **yes** | the outer and inner lips |
 | `vestibule` | body | **yes** | the inner surface between the inner lips |
 | `body-hair` | body | no | pubic and body hair, separate from the head |
+| `gloss` | outfit | no | a sheen or roughness slider on the outfit |
+| `roughness` | outfit | no | surface roughness, when it is its own control |
+| `opacity` | outfit | no | how sheer a garment is |
+| `piece` | outfit | no | a part of the outfit a toggle shows or hides |
+| `skin-gloss` | body | no | the body's own sheen |
 
 Hue-locking metal, gems and skin by default is deliberate: those three read as a material
 rather than as a color, and rotating their hue is what makes a recolor look broken.

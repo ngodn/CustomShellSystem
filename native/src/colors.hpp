@@ -17,11 +17,21 @@ struct ColorBinding {
 // tint knows what it may rotate. See docs/color-convention.md. Both are optional and are
 // inferred from the id when a package predates the convention.
 enum class ColorGroup { Outfit, Body };
+// 1.0: colour is one kind of control, not the only one. A package declares what a
+// control *is*, and the menu, the saved look and the apply path all follow from that.
+// `Color` carries three channels and a dye layer; the rest carry one number.
+//   Intensity  a named material scalar the author means as a strength, like eye glow
+//   Scalar     any other named material scalar, like gloss or roughness
+//   Toggle     material sections shown or hidden, 0 or 1
+enum class ControlKind { Color, Intensity, Scalar, Toggle };
+const char* control_kind_name(ControlKind);
 struct ColorControl {
     std::string id, name, role;
     ColorGroup group = ColorGroup::Outfit;
+    ControlKind kind = ControlKind::Color;
     bool hue_locked = false;      // metal, gems and skin read as a material, not a colour
-    bool scalar = false;
+    bool scalar = false;          // edited as one number rather than a colour: every kind but Color
+    std::vector<int> sections;    // Toggle only: the material sections it shows or hides
     ColorValue value{1,1,1,1};
     float minimum = 0, maximum = 1, step = .01f;
     std::vector<ColorBinding> bindings;

@@ -96,6 +96,39 @@ class ColorTests(unittest.TestCase):
         unknown=copy.deepcopy(colors);unknown['controls'][0]['role']='frock'
         self.assertIn('shared vocabulary',' '.join(lint_convention(unknown)))
 
+    def test_control_kinds(self):
+        """1.0: colour is one kind among several, and every kind but colour is a number."""
+        from css_colors import kind_of
+        base=dict(schema=1,controls=[
+            dict(id='cloth',name='Garment',role='garment',default=[1,1,1,1]),
+            dict(id='gloss',name='Sheen',kind='scalar',role='gloss',default=[.4,0,0,1],min=0,max=1,
+                 bindings=[dict(slot=0,parameter='Roughness')]),
+            dict(id='hood',name='Hood',kind='toggle',role='piece',default=[1,0,0,1],sections=[2,3])],
+            surfaces=[dict(id='body',parameter='BaseColorMap  non VT',slots=[0],layers={'cloth':'dye-cloth.png'})],
+            palettes=[dict(id='red',name='Crimson',values={'cloth':[.6,.1,.2,1]})])
+        validate(base)
+        self.assertEqual([kind_of(c) for c in base['controls']],['color','scalar','toggle'])
+
+        # A package written before the split said type=scalar and meant a strength.
+        self.assertEqual(kind_of(dict(type='scalar')),'intensity')
+        self.assertEqual(kind_of({}),'color')
+
+        # A toggle drives sections directly, so it needs them and needs no binding.
+        missing=copy.deepcopy(base);del missing['controls'][2]['sections']
+        with self.assertRaises(Exception):validate(missing)
+        # Nothing else may claim them.
+        stray=copy.deepcopy(base);stray['controls'][1]['sections']=[1]
+        with self.assertRaisesRegex(ValueError,'toggle'):validate(stray)
+        # On or off, never half hidden.
+        half=copy.deepcopy(base);half['controls'][2]['default']=[.5,0,0,1]
+        with self.assertRaisesRegex(ValueError,'on or off'):validate(half)
+        # An unknown kind is refused rather than quietly treated as a colour.
+        odd=copy.deepcopy(base);odd['controls'][1]['kind']='texture'
+        with self.assertRaisesRegex(ValueError,'kind'):validate(odd)
+        # kind and type must agree when a recipe carries both.
+        both=copy.deepcopy(base);both['controls'][1]['type']='color'
+        with self.assertRaisesRegex(ValueError,'contradicts'):validate(both)
+
     def test_reviewed_recipes(self):
         root=Path(__file__).resolve().parents[1]/'work/color-recipes'
         recipes=list(root.glob('*/*.colors.json'))
