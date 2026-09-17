@@ -38,10 +38,18 @@ struct AttachmentOffset { std::array<double,3> location{}, rotation{}; Attachmen
 // `mesh` reads as a single body item, so nothing published has to change.
 enum class ItemSlot {
     Body, Head, Hair, Face, Ears, Neck, Chest, Back, Hands, Waist, Legs, Feet,
+    Jewelry, Genitalia, FabricOuter, FabricInner,
     Trinket1, Trinket2, Trinket3, Trinket4
 };
 const char* item_slot_name(ItemSlot);
 bool item_slot_from_name(const std::string&, ItemSlot&);
+// 1.0.0-beta: Templates for combinations, palettes, body archetypes, physics, etc.
+enum class TemplateKind { Combination, Palette, Archetype, Physics, Hair, Jewelry, Glow };
+struct Template {
+    std::string id, name;
+    TemplateKind kind = TemplateKind::Combination;
+    Json data = Json::object();
+};
 struct Item {
     std::string id, name, mesh;
     ItemSlot slot = ItemSlot::Body;
@@ -86,6 +94,8 @@ struct Selection { std::string outfit, variant; Customization custom; };
 // 0.4: a template keeps the animation settings with the outfit selections.
 struct Preset { std::map<std::string, Selection> selections; std::string walk_animation = "normal"; };
 bool valid_walk_animation(const std::string&);
+// 1.0.0-beta: Profile is the full character snapshot across all systems
+using Profile = Preset;
 struct State {
     bool enabled = false;
     bool auto_apply = true;

@@ -146,9 +146,15 @@ ControlSet ControlSet::parse(const Json& j) {
             else if(kind=="choice") control.kind=ControlKind::Choice;
             else if(kind=="spring") control.kind=ControlKind::Spring;
             else if(kind=="shape") control.kind=ControlKind::Shape;
+            else if(kind=="glow") control.kind=ControlKind::Glow;
+            else if(kind=="opacity") control.kind=ControlKind::Opacity;
             else throw std::runtime_error("Unsupported control kind");
         }
         control.scalar=control.kind!=ControlKind::Color;
+        if(control.kind==ControlKind::Glow) {
+            control.pulse_hz=c.value("pulse_hz",0.f);
+            control.combat_reactive=c.value("combat_reactive",false);
+        }
         // A spring says what it wants inside its two ranges, so it is the one kind that
         // does not also write `default`: two places to state the same number is one too many.
         if(control.kind==ControlKind::Spring) {
@@ -168,7 +174,9 @@ ControlSet ControlSet::parse(const Json& j) {
         } else control.group=c.contains("role")?role_group(control.role):fallback.group;
         control.hue_locked=c.value("hue_locked",
             c.contains("role")?role_hue_locked(control.role):fallback.hue_locked);
-        control.minimum=c.value("min",0.f); control.maximum=c.value("max",1.f); control.step=c.value("step",.01f);
+        control.minimum=c.value("min",0.f);
+        control.maximum=c.value("max",control.kind==ControlKind::Glow?32.f:1.f);
+        control.step=c.value("step",.01f);
         // A toggle is on or off. It has no range to declare, so it is given one rather
         // than letting a package invent a half-hidden section.
         if(control.kind==ControlKind::Toggle) { control.minimum=0; control.maximum=1; control.step=1; }
@@ -246,6 +254,21 @@ ControlSet ControlSet::parse(const Json& j) {
             morph_name(control.morph);
         } else if(control.kind==ControlKind::Shape)
             throw std::runtime_error("A shape control needs the morph target it drives");
+        if(c.contains("formulas")) {
+            if(control.kind!=ControlKind::Shape) throw std::runtime_error("Only a shape control carries morph formulas");
+            if(!c.at("formulas").is_array()) throw std::runtime_error("Morph formulas require an array");
+            for(const auto& f:c.at("formulas")) {
+                MorphFormula formula;
+                formula.target=f.at("target").get<std::string>();
+                formula.type=f.at("type").get<std::string>();
+                formula.multiplier=f.at("multiplier").get<double>();
+                bone(formula.target);
+                if(formula.type!="BoneCenterX" && formula.type!="BoneCenterY" && formula.type!="BoneCenterZ" &&
+                   formula.type!="OrientationX" && formula.type!="OrientationY" && formula.type!="OrientationZ")
+                    throw std::runtime_error("Invalid morph formula target type");
+                control.formulas.push_back(std::move(formula));
+            }
+        }
         valid_value(control,control.value);
         if(c.contains("bindings") && !c.at("bindings").is_array()) throw std::runtime_error("Bindings require an array");
         for(const auto& b:c.value("bindings",Json::array())) {
@@ -285,7 +308,7 @@ ControlSet ControlSet::parse(const Json& j) {
     for(const auto& c:out.controls) {
         // A toggle drives sections directly, so it needs no parameter to write into.
         // A choice does need one, and its bindings are checked with everything else.
-        bool used=!c.bindings.empty() || !c.sections.empty() || !c.nodes.empty() || !c.morph.empty();
+        bool used=!c.bindings.empty() || !c.sections.empty() || !c.nodes.empty() || !c.morph.empty() || c.kind==ControlKind::Glow;
         for(const auto& s:out.surfaces) used|=s.layers.contains(c.id);
         if(!used) throw std::runtime_error("Control has nothing to drive");
     }
@@ -365,6 +388,8 @@ const char* control_kind_name(ControlKind kind) {
         case ControlKind::Choice: return "choice";
         case ControlKind::Spring: return "spring";
         case ControlKind::Shape: return "shape";
+        case ControlKind::Glow: return "glow";
+        case ControlKind::Opacity: return "opacity";
     }
     return "color";
 }

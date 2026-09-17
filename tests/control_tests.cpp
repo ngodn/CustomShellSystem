@@ -333,6 +333,51 @@ int main() {
             shape_custom.values["hips"]={1.5f,0,0,1};
             rejects([&]{control_values(shaped,shape_custom);});
         }
+        {
+            // 1.0.0-beta Next-Gen: Glow, Opacity, and Shape with Morph Formulas
+            auto advanced=Json::parse(R"({"schema":1,"controls":[
+              {"id":"cloth","name":"Garment","role":"garment","group":"outfit","default":[1,1,1,1]},
+              {"id":"runes","name":"Rune Glow","kind":"glow","group":"body","role":"glow",
+               "pulse_hz":1.5,"combat_reactive":true,"default":[5.0,1.5,0,1],
+               "bindings":[{"slot":0,"parameter":"GlowIntensity"}]},
+              {"id":"sheer","name":"Gown Sheerness","kind":"opacity","group":"outfit","role":"accent",
+               "default":[0.4,0,0,1],"bindings":[{"slot":1,"parameter":"OpacityMultiplier"}]},
+              {"id":"butt","name":"Glute Shape","kind":"shape","group":"body","role":"figure",
+               "morph":"Glutes","min":0,"max":1,"default":[0,0,0,1],
+               "formulas":[
+                 {"target":"butt001","type":"BoneCenterY","multiplier":0.015},
+                 {"target":"pelvis","type":"OrientationX","multiplier":-0.002}
+               ]}],
+              "surfaces":[{"id":"body","parameter":"BaseColorMap  non VT","slots":[0],"layers":{"cloth":"dye-cloth.png"}}],
+              "palettes":[{"id":"red","name":"Crimson","values":{"cloth":[0.6,0.1,0.2,1]}}]})");
+            auto parsed=ControlSet::parse(advanced);
+            const auto* runes=parsed.find("runes");
+            expect(runes->kind==ControlKind::Glow && runes->scalar,"Glow control not parsed");
+            expect(std::string(control_kind_name(ControlKind::Glow))=="glow","Glow kind name wrong");
+            expect(runes->pulse_hz==1.5f && runes->combat_reactive,"Glow pulse_hz or combat_reactive lost");
+            expect(runes->value[0]==5.0f,"Glow intensity value lost");
+
+            const auto* sheer=parsed.find("sheer");
+            expect(sheer->kind==ControlKind::Opacity && sheer->scalar,"Opacity control not parsed");
+            expect(std::string(control_kind_name(ControlKind::Opacity))=="opacity","Opacity kind name wrong");
+            expect(sheer->minimum==0.f && sheer->maximum==1.f,"Opacity bounds wrong");
+
+            const auto* butt=parsed.find("butt");
+            expect(butt->kind==ControlKind::Shape && butt->formulas.size()==2,"Morph formulas lost");
+            expect(butt->formulas[0].target=="butt001" && butt->formulas[0].type=="BoneCenterY" && std::abs(butt->formulas[0].multiplier-0.015)<1e-6,"Formula 0 mismatch");
+            expect(butt->formulas[1].target=="pelvis" && butt->formulas[1].type=="OrientationX" && std::abs(butt->formulas[1].multiplier-(-0.002))<1e-6,"Formula 1 mismatch");
+
+            // Invalid formula tests
+            auto bad_formula=advanced;
+            bad_formula["controls"][3]["formulas"][0]["type"]="InvalidTargetType";
+            rejects([&]{ControlSet::parse(bad_formula);});
+            auto bad_target=advanced;
+            bad_target["controls"][3]["formulas"][0]["target"]="bad-bone-name";
+            rejects([&]{ControlSet::parse(bad_target);});
+            auto stray_formula=advanced;
+            stray_formula["controls"][0]["formulas"]=Json::array();
+            rejects([&]{ControlSet::parse(stray_formula);});
+        }
         std::cout<<checks<<" color behavior checks passed\n";
     } catch(const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }
 }

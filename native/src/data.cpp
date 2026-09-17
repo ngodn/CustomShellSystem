@@ -17,6 +17,7 @@ namespace css {
 namespace {
 constexpr const char* ITEM_SLOT_NAMES[]={
     "body","head","hair","face","ears","neck","chest","back","hands","waist","legs","feet",
+    "jewelry","genitalia","fabric_outer","fabric_inner",
     "trinket1","trinket2","trinket3","trinket4"
 };
 }
@@ -375,8 +376,9 @@ State State::parse(const Json& j) {
     }
     result.favorites = j.value("favorites", std::set<std::string>{});
     for (const auto& id : result.favorites) if (!valid_id(id)) throw std::runtime_error("Invalid favorite");
-    if (j.contains("presets")) for (const auto& [key, values] : j.at("presets").items()) {
-        if (!valid_id(key) || result.presets.size() >= 64) throw std::runtime_error("Invalid preset");
+    const auto presets_key = j.contains("profiles") ? "profiles" : "presets";
+    if (j.contains(presets_key)) for (const auto& [key, values] : j.at(presets_key).items()) {
+        if (!valid_id(key) || result.presets.size() >= 64) throw std::runtime_error("Invalid profile");
         result.presets.emplace(key, parse_preset(values));
     }
     return result;

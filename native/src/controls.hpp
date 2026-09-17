@@ -27,10 +27,18 @@ enum class ControlGroup { Outfit, Body };
 //   Choice     one of a few textures the package ships, chosen by index
 //   Spring     live secondary motion: how fast a part moves and how fast it settles
 //   Shape      a morph target the package cooked into its own mesh
-enum class ControlKind { Color, Intensity, Scalar, Toggle, Choice, Spring, Shape };
+//   Glow       universal emissive control (RGB, intensity, pulse, combat reactivity)
+//   Opacity    alpha transparency scalar (0..1)
+enum class ControlKind { Color, Intensity, Scalar, Toggle, Choice, Spring, Shape, Glow, Opacity };
 const char* control_kind_name(ControlKind);
 // A Choice option: what the player sees, and the cooked texture it binds.
 struct ControlOption { std::string name, texture; };
+// A morph formula: shifts joint center or orientation alongside a morph target
+struct MorphFormula {
+    std::string target;      // target bone
+    std::string type;        // BoneCenterX/Y/Z or OrientationX/Y/Z
+    double multiplier = 0.0;
+};
 // What a spring node wants, in the two numbers that mean something to a person, and
 // what the engine wants, which is neither of them. FAnimNode_SpringBone integrates
 // a = K*error - D*velocity at a fixed 1/120 s with no mass term, so the system is
@@ -48,6 +56,9 @@ struct Control {
     std::vector<ControlOption> options;   // Choice only: the textures it picks between
     std::vector<std::string> nodes;       // Spring only: the bones whose spring it tunes
     std::string morph;                    // Shape only: the morph target on the package's own mesh
+    std::vector<MorphFormula> formulas;   // Shape only: joint center/orientation shifts
+    float pulse_hz = 0.0f;                // Glow only: breathing frequency in Hz
+    bool combat_reactive = false;         // Glow only: reactivity to stamina/swings
     ControlValue value{1,1,1,1};
     // Channel 0 uses these. Every control but Spring has only channel 0.
     float minimum = 0, maximum = 1, step = .01f;
