@@ -148,6 +148,23 @@ int main() {
             atomic_json(catalog_file,empty,false); rejects([&]{Catalog::load(catalog_dir);});
             atomic_json(catalog_file,material_catalog,false);
         }
+        {   // 1.0.0-beta: Templates (combinations, palettes, archetypes, etc.)
+            auto templated = catalog;
+            templated["outfits"][0]["templates"] = {
+                {"combinations", {{{"id", "harness_style"}, {"name", "Harness Set"}}}},
+                {"palettes", {{{"id", "crimson_vow"}, {"name", "Crimson Vow"}}}},
+                {"archetypes", {{{"id", "seductress_petite"}, {"name", "Petite Seductress"}}}},
+                {"physics", {{{"id", "jiggle_soft"}, {"name", "Soft Tissue"}}}}
+            };
+            atomic_json(catalog_file, templated, false);
+            auto with_templates = Catalog::load(catalog_dir);
+            expect(with_templates.outfits[0].templates.size() == 4, "Templates parsing failed");
+            expect(with_templates.outfits[0].templates[0].kind == TemplateKind::Combination, "Combination template kind wrong");
+            expect(with_templates.outfits[0].templates[1].kind == TemplateKind::Palette, "Palette template kind wrong");
+            expect(with_templates.outfits[0].templates[2].kind == TemplateKind::Archetype, "Archetype template kind wrong");
+            expect(with_templates.outfits[0].templates[3].kind == TemplateKind::Physics, "Physics template kind wrong");
+            atomic_json(catalog_file, catalog, false);
+        }
         {   // 0.4: the correction that keeps a stowed seal out of the hips. CSS measures
             // the seal against the body's live physics asset and holds it `clearance` off;
             // `location` is only the fallback for a mesh with no collision to measure.

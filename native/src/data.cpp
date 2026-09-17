@@ -151,7 +151,7 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
         if (j.at("schema") != 1 || !j.at("outfits").is_array()) throw std::runtime_error("Unsupported catalog schema");
         for (const auto& item : j.at("outfits")) {
             Outfit outfit{item.at("id"), item.at("name"), item.value("author", ""),
-                          item.value("description", ""), item.value("category", "Shell"), {}, {}, false, {}, {}, {}};
+                          item.value("description", ""), item.value("category", "Shell"), {}, {}, false, {}, {}, {}, {}};
             if (!valid_id(outfit.id) || !ids.insert(outfit.id).second) throw std::runtime_error("Invalid or duplicate outfit id");
             if (outfit.name.empty() || outfit.name.size() > 256 || outfit.description.size() > 4096)
                 throw std::runtime_error("Invalid outfit text");
@@ -169,6 +169,34 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
             }
             if (outfit.shells.empty()) throw std::runtime_error("Outfit needs compatible shell tags");
             for (const auto& shell : outfit.shells) if (!valid_id(shell)) throw std::runtime_error("Invalid shell tag");
+            if(item.contains("templates")) {
+                const auto& t = item.at("templates");
+                if(!t.is_object()) throw std::runtime_error("Invalid outfit templates");
+                auto parse_grp = [&](const char* key, TemplateKind kind) {
+                    if(t.contains(key)) {
+                        const auto& list = t.at(key);
+                        if(!list.is_array() || list.size() > 64) throw std::runtime_error("Invalid template list");
+                        for(const auto& entry : list) {
+                            if(!entry.is_object()) throw std::runtime_error("Invalid template entry");
+                            Template tmpl;
+                            tmpl.id = entry.at("id").get<std::string>();
+                            tmpl.name = entry.at("name").get<std::string>();
+                            if(!valid_id(tmpl.id) || tmpl.name.empty() || tmpl.name.size() > 96)
+                                throw std::runtime_error("Invalid template id or name");
+                            tmpl.kind = kind;
+                            tmpl.data = entry;
+                            outfit.templates.push_back(std::move(tmpl));
+                        }
+                    }
+                };
+                parse_grp("combinations", TemplateKind::Combination);
+                parse_grp("palettes", TemplateKind::Palette);
+                parse_grp("archetypes", TemplateKind::Archetype);
+                parse_grp("physics", TemplateKind::Physics);
+                parse_grp("hair", TemplateKind::Hair);
+                parse_grp("jewelry", TemplateKind::Jewelry);
+                parse_grp("glow", TemplateKind::Glow);
+            }
             std::set<std::string> variants;
             for (const auto& v : item.at("variants")) {
                 Variant variant{v.at("id"), v.at("name"), v.value("mesh",std::string{}), {}, {}, {}, {}};

@@ -77,6 +77,7 @@ struct Outfit {
     fs::path thumbnail;
     ControlSet controls;
     fs::path resources;
+    std::vector<Template> templates;
     const ControlSet& controls_for(const std::string& variant) const {
         for(const auto& v:variants) if(v.id==variant && v.controls) return *v.controls;
         return controls;
@@ -105,6 +106,8 @@ struct State {
     std::map<std::string, Customization> remembered_custom;
     std::set<std::string> favorites;
     std::map<std::string, Preset> presets;
+    std::map<std::string, Profile>& profiles() { return presets; }
+    const std::map<std::string, Profile>& profiles() const { return presets; }
     static State parse(const Json&);
     Json json() const;
 };
