@@ -33,6 +33,7 @@ For outfit authors, start with the [modding guide](modding/README.md). It links 
 | Artifact | Takeaway |
 | --- | --- |
 | [STATUS.md](STATUS.md) | Current implementation and verification status |
+| [Next-Gen Architecture](next-gen-customization-architecture.md) | CSS 2.0 architecture: UI kit, templates vs profiles, Kawaii physics, and Stellar Blade jiggle |
 | [Inventory integration feasibility](inventory-integration-feasibility.md) | Live tab indices, native display, layout and bounded prototype plan |
 | [Inventory integration primary sources](inventory-integration-primary-sources.md) | UMG reorder limits, focus/input ownership and pinned native API evidence |
 | [animated-preview.md](animated-preview.md) | Paused-world animation, camera refresh behavior, live cleanup evidence and rejected additive idle |

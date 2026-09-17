@@ -324,14 +324,15 @@ struct Core {
                 }
                 if(tmpl->data.contains("values") && tmpl->data.at("values").is_object()) {
                     for(const auto& [k, v] : tmpl->data.at("values").items()) {
-                        if(options.find(k)) {
+                        auto* ctrl = options.find(k);
+                        if(ctrl) {
+                            auto cv = ctrl->value;
                             if(v.is_number()) {
-                                custom.values[k] = {v.get<float>(), 0, 0};
+                                cv[0] = v.get<float>();
                             } else if(v.is_array()) {
-                                ControlValue cv{};
                                 for(size_t i=0; i<std::min(v.size(), size_t(3)); ++i) cv[i] = v[i].get<float>();
-                                custom.values[k] = cv;
                             }
+                            custom.values[k] = cv;
                         }
                     }
                 }
