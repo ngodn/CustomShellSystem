@@ -192,7 +192,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         return widget;
     };
     auto bind=[&](UObject* widget,Json action) { hits_.push_back({WeakObject(widget),std::move(action),false}); };
-    const char* sections[]={"SHELL","CUSTOMIZE","ANIMATION","TEMPLATES"};
+    const char* sections[]={"SHELL","CUSTOMIZE","ANIMATION","PROFILE"};
     constexpr int section_count=4;
     // The labels live in a clipped strip between the LT/RT prompts, like the game's
     // inventory tabs: a fixed gap between words, the selected label always whole, and
@@ -215,7 +215,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         text_width+=section_widths[i];
         bind(button,{{"action","ui_section"},{"section",i}});
     }
-    // All four labels want to be on screen at once: a player who cannot see TEMPLATES does
+    // All four labels want to be on screen at once: a player who cannot see PROFILE does
     // not know it is there. The strip was already clipping it at 0.4.1's sizes, and
     // CUSTOMIZE is four letters longer than the COLOR it replaced, so rather than slide a
     // tab out of view the labels shrink until the set fits. A label's width scales with
@@ -424,6 +424,14 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
 
             auto swatch_of=[&](const Control& c) {
                 auto v=values.contains(c.id)?values.at(c.id):c.value;
+                if(c.kind==ControlKind::Glow) {
+                    const float t=std::clamp(v[0]/std::max(c.maximum,.001f),0.f,1.f);
+                    return Color{1.f*t+.15f,0.85f*t+.08f,0.3f*t+.03f,1};
+                }
+                if(c.kind==ControlKind::Opacity) {
+                    const float a=std::clamp(v[0],0.f,1.f);
+                    return Color{0.65f*a+.2f,0.65f*a+.2f,0.7f*a+.2f,1};
+                }
                 if(c.scalar) { const float t=std::clamp(v[0]/std::max(c.maximum,.001f),0.f,1.f); return Color{gold.r*t+.02f,gold.g*t+.02f,gold.b*t+.02f,1}; }
                 return Color{srgb_linear(v[0]),srgb_linear(v[1]),srgb_linear(v[2]),1};
             };
@@ -456,7 +464,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 const auto held=values.contains(c.id)?values.at(c.id):c.value;
                 // A switch and a list of textures have no colour to show, so they carry
                 // their state in the subtitle instead of a chip.
-                if(c.kind==ControlKind::Color || c.kind==ControlKind::Intensity || c.kind==ControlKind::Scalar) row_swatch=&chip;
+                if(c.kind==ControlKind::Color || c.kind==ControlKind::Intensity || c.kind==ControlKind::Scalar || c.kind==ControlKind::Glow || c.kind==ControlKind::Opacity) row_swatch=&chip;
                 row_indent=12;
                 // Naming the palette on a part it does not set would be a lie: palettes
                 // dress the outfit and leave the body alone, and that part is undyed.
@@ -474,6 +482,13 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 } else if(c.kind==ControlKind::Spring) {
                     source="Bounce "+slider_text(held[0],true)+" Hz, settle "+std::to_string(int(std::lround(held[1]*100)))+"%";
                     if(c.spring_clamp) source+=", travel "+slider_text(held[2],true)+" cm";
+                } else if(c.kind==ControlKind::Glow) {
+                    source="Glow "+slider_text(held[0],true)+" cd/m²";
+                    if(c.pulse_hz>0) source+=", pulse "+slider_text(c.pulse_hz,true)+" Hz";
+                } else if(c.kind==ControlKind::Opacity) {
+                    source="Opacity "+std::to_string(int(std::lround(held[0]*100)))+"%";
+                } else if(c.kind==ControlKind::Shape) {
+                    source="Weight "+slider_text(held[0],true);
                 }
                 const int channel=c.kind==ControlKind::Spring?channel_%(c.spring_clamp?3:2):c.scalar?0:channel_;
                 Json minus={{"action","control"},{"control",c.id},{"channel",channel},{"delta",-1}},plus=minus; plus["delta"]=1;
@@ -593,6 +608,48 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     action_button("secondary","Select next slider",795,Json{{"action","ui_channel"},{"count",fieldcount}},4);
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
                     action_button("tertiary","Reset all",887,rows_[row_].tertiary,2);
+                } else if(control.kind==ControlKind::Glow) {
+                    detail(control.name,worn->name,"Adjust emissive glow radiance. Turn up intensity for arcane luminescence; breathing pulse animates in combat.");
+                    const int fieldcount=control.pulse_hz>0?2:1;
+                    const int selected=channel_%fieldcount;
+                    const char* fields[]={"Intensity","Pulse Rate"};
+                    const float lows[]={control.minimum,0.f};
+                    const float highs[]={control.maximum,5.f};
+                    const float sizes[]={control.step,0.1f};
+                    for(int field=0;field<fieldcount;++field) {
+                        const double sy=controls_y+field*80;
+                        auto* heading=ui.label(fields[field],right,sy,230,28,19,field==selected?gold:ivory);
+                        auto* slider=construct(L"/Script/UMG.Slider",tree);
+                        invoke(slider,L"SetMinValue",L"InValue",lows[field]); invoke(slider,L"SetMaxValue",L"InValue",highs[field]);
+                        invoke(slider,L"SetStepSize",L"InValue",sizes[field]); invoke(slider,L"SetValue",L"InValue",value[field]);
+                        invoke(slider,L"SetSliderBarColor",L"InValue",Color{.10f,.09f,.07f,1}); invoke(slider,L"SetSliderHandleColor",L"InValue",gold);
+                        ui.place(slider,right,sy+29,262,30);
+                        const std::string readout=field==0?slider_text(value[0],true)+" cd/m²":slider_text(value[1],true)+" Hz";
+                        auto* label=ui.label(readout,right+270,sy+29,90,30,18);
+                        sliders_.push_back({WeakObject(slider),WeakObject(label),WeakObject(heading),
+                            {{"action","control"},{"control",control.id},{"channel",field},{"refresh",false}},
+                            value[field],true,field==0?" cd/m²":" Hz"});
+                    }
+                    direction_hint(true,"Adjust glow intensity",right,controls_y+fieldcount*80+6,360);
+                    if(fieldcount>1) action_button("secondary","Select next slider",795,Json{{"action","ui_channel"},{"count",fieldcount}},4);
+                    action_button("accept","Reset part",841,rows_[row_].accept,3);
+                    action_button("tertiary","Reset all",887,rows_[row_].tertiary,2);
+                } else if(control.kind==ControlKind::Opacity) {
+                    detail(control.name,worn->name,"Adjust fabric transparency and sheer alpha. 0% is invisible sheer; 100% is solid opaque.");
+                    const double sy=controls_y;
+                    auto* heading=ui.label("Opacity",right,sy,230,28,19,gold);
+                    auto* slider=construct(L"/Script/UMG.Slider",tree);
+                    invoke(slider,L"SetMinValue",L"InValue",control.minimum); invoke(slider,L"SetMaxValue",L"InValue",control.maximum);
+                    invoke(slider,L"SetStepSize",L"InValue",control.step); invoke(slider,L"SetValue",L"InValue",value[0]);
+                    invoke(slider,L"SetSliderBarColor",L"InValue",Color{.10f,.09f,.07f,1}); invoke(slider,L"SetSliderHandleColor",L"InValue",gold);
+                    ui.place(slider,right,sy+29,270,30);
+                    auto* label=ui.label(std::to_string(int(std::lround(value[0]*100)))+"%",right+280,sy+29,80,30,18);
+                    sliders_.push_back({WeakObject(slider),WeakObject(label),WeakObject(heading),
+                        {{"action","control"},{"control",control.id},{"channel",0},{"refresh",false}},
+                        value[0],false,"%"});
+                    direction_hint(true,"Adjust opacity",right,controls_y+86,360);
+                    action_button("accept","Reset part",841,rows_[row_].accept,3);
+                    action_button("tertiary","Reset all",887,rows_[row_].tertiary,2);
                 } else if(!control.scalar && !exact_color_) {
                     // The swatch strip: the author's colour, this part in every palette,
                     // then shades of it. Picking is the common case, so it is what the
@@ -677,22 +734,22 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         std::string note;
         if(has_walk_mod) note=feminine?("Installed: "+walk_mod_name+" by argisht. CSS is holding the walk instead; choose Normal to hand it back.")
                                       :("Installed: "+walk_mod_name+" by argisht. It drives walking while Walk animation is Normal.");
-        else if(feminine) note=appearance.walk.engaged()?("Active now: "+appearance.walk.reason()+". Templates keep this setting.")
-                                                        :"Armed. Move to see it. Templates keep this setting.";
+        else if(feminine) note=appearance.walk.engaged()?("Active now: "+appearance.walk.reason()+". Profiles keep this setting.")
+                                                        :"Armed. Move to see it. Profiles keep this setting.";
         else note="Everything normal. CSS is not touching locomotion.";
         ui.label(note,right,controls_y+250,360,60,14,muted);
     } else {
         std::vector<std::string> names; for(const auto& [name,_]:state.presets) names.push_back(name);
         row_=std::clamp(row_,0,int(names.size()));
         scroll_begin();
-        row(0,"New template","Save your current appearance",77,{{"action","ui_save_template"}});
-        for(size_t i=0;i<names.size();++i) row(int(i)+1,names[i],"Saved appearance and settings",77,{{"action","load_look"},{"name",names[i]}},{},{},{{"action","save_look"},{"name",names[i]}},{{"action","delete_look"},{"name",names[i]}});
+        row(0,"New profile","Save your current character profile",77,{{"action","ui_save_profile"}});
+        for(size_t i=0;i<names.size();++i) row(int(i)+1,names[i],"Saved character profile",77,{{"action","load_look"},{"name",names[i]}},{},{},{{"action","save_look"},{"name",names[i]}},{{"action","delete_look"},{"name",names[i]}});
         scroll_end();
         auto selected=row_?names[row_-1]:std::string{};
-        detail(row_?selected:"New template","Appearance and settings",row_?"Load this template, replace it with your current appearance, or give it a new name.":"Choose a name, then save. A controller can save with the suggested name.");
+        detail(row_?selected:"New profile","Character profile and settings",row_?"Load this profile, replace it with your current character, or give it a new name.":"Choose a name, then save. A controller can save with the suggested name.");
         auto* input=construct(L"/Script/UMG.EditableText",tree); name_input_=input;
         std::string suggested=selected;
-        if(suggested.empty()) { int n=1; do { suggested="look."+std::to_string(n++); } while(state.presets.contains(suggested)); }
+        if(suggested.empty()) { int n=1; do { suggested="profile."+std::to_string(n++); } while(state.presets.contains(suggested)); }
         text_value(input,suggested);
         Call current_font(input,L"GetFont",1); current_font.run();
         Call set_font(input,L"SetFont",1); set_font.copy(L"InFontInfo",current_font,L"ReturnValue");
@@ -702,18 +759,18 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         member(set_font.data(font),font->GetElementSize(),font_info,L"TypefaceFontName",FName(L"Regular")); set_font.run();
         ui.box(right,controls_y-8,360,48,Color{.04f,.035f,.025f,.7f}); ui.place(input,right+12,controls_y-3,336,40);
         ui.label("Letters, numbers, periods, underscores or hyphens",right,controls_y+54,360,55,16,muted);
-        if(!row_) action_button("accept","Save template",631,{{"action","ui_save_template"}},3);
+        if(!row_) action_button("accept","Save profile",631,{{"action","ui_save_profile"}},3);
         else {
-            action_button("accept","Load template",631,rows_[row_].accept,3);
-            action_button("secondary","Replace with current look",681,rows_[row_].secondary,4);
-            bind(ui.button("Rename",right,controls_y+231,360,43,false,true,20),{{"action","ui_rename_template"},{"name",selected}});
-            action_button("tertiary","Delete template",801,rows_[row_].tertiary,2);
+            action_button("accept","Load profile",631,rows_[row_].accept,3);
+            action_button("secondary","Replace with current character",681,rows_[row_].secondary,4);
+            bind(ui.button("Rename",right,controls_y+231,360,43,false,true,20),{{"action","ui_rename_profile"},{"name",selected}});
+            action_button("tertiary","Delete profile",801,rows_[row_].tertiary,2);
         }
     }
     decoration("T_UI_DescriptionHeader_Divider",left,931,panel,2);
     decoration("T_UI_DescriptionHeader_Divider",right,931,360,2);
     status_=ui.label("",right,953,360,60,16,muted);
-    direction_hint(false,section_==0?"Browse shells":section_==1?"Browse parts":section_==2?"Browse animation options":"Browse templates",left,947,panel);
+    direction_hint(false,section_==0?"Browse shells":section_==1?"Browse parts":section_==2?"Browse animation options":"Browse profiles",left,947,panel);
     bind(ui.button("",left,1025,140,38),{{"action","ui_close"}});
     prompt("close","Close",left,1030,140,5);
     bind(ui.button("",width/2-75,980,160,40),{{"action","ui_reset_view"}});
@@ -786,8 +843,8 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         if(active_ && !closing_) { closing_=true; transition_started_=GetTickCount64(); }
         return {};
     }
-    if(name=="ui_save_template") return {{"action","save_look"},{"name",inventory_text(name_input_.Get())}};
-    if(name=="ui_rename_template") return {{"action","rename_look"},{"name",action.at("name")},{"new_name",inventory_text(name_input_.Get())}};
+    if(name=="ui_save_template" || name=="ui_save_profile") return {{"action","save_look"},{"name",inventory_text(name_input_.Get())}};
+    if(name=="ui_rename_template" || name=="ui_rename_profile") return {{"action","rename_look"},{"name",action.at("name")},{"new_name",inventory_text(name_input_.Get())}};
     return action;
 }
 void InventoryUI::camera_start() {
@@ -1094,7 +1151,7 @@ Json InventoryUI::diagnostics() const {
 namespace css {
 void InventoryUI::message(const std::string& value) {
     if(value==last_message_) return;
-    const bool template_status=value.starts_with("Template ") && section_!=3;
+    const bool template_status=(value.starts_with("Template ") || value.starts_with("Profile ")) && section_!=3;
     const bool routine=template_status || value.starts_with("Wearing ") || value=="Settings updated." || value=="Original appearance restored." || value.starts_with("Your saved appearance") || value.starts_with("Choose an appearance") || value.starts_with("No CSS outfit packages found.");
     if(auto* widget=status_.Get()) { text_value(widget,routine?"":value); last_message_=value; }
 }

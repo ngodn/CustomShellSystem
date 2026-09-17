@@ -245,12 +245,12 @@ struct Core {
             if (state.favorites.contains(id)) state.favorites.erase(id); else state.favorites.insert(id);
             dirty = true; ui_refresh = true;
         }
-        else if (action == "save_look") {
+        else if (action == "save_look" || action == "save_profile") {
             auto name = command.at("name").get<std::string>();
-            if (!valid_id(name) || (state.presets.size() >= 64 && !state.presets.contains(name))) throw std::runtime_error("Invalid look slot");
-            state.presets[name] = Preset{state.selections, state.walk_animation}; dirty = true; ui_refresh = true; report("Current appearance saved to " + name);
+            if (!valid_id(name) || (state.presets.size() >= 64 && !state.presets.contains(name))) throw std::runtime_error("Invalid profile slot");
+            state.presets[name] = Preset{state.selections, state.walk_animation}; dirty = true; ui_refresh = true; report("Current character profile saved to " + name);
         }
-        else if (action == "load_look") {
+        else if (action == "load_look" || action == "load_profile") {
             auto name = command.at("name").get<std::string>();
             const auto& preset = state.presets.at(name);
             const auto& selections = preset.selections;
@@ -258,19 +258,19 @@ struct Core {
             if (selected == selections.end()) { restore_pending = true; forget_current = true; }
             else { selected_outfit = selected->second.outfit; selected_variant = selected->second.variant; pending_custom=selected->second.custom; apply_pending = true; }
             if(state.walk_animation!=preset.walk_animation) { state.walk_animation=preset.walk_animation; dirty=true; }
-            ui_refresh = true;
+            ui_refresh = true; report("Profile loaded: " + name);
         }
-        else if(action=="delete_look") {
+        else if(action=="delete_look" || action=="delete_profile") {
             state.presets.erase(command.at("name").get<std::string>());
-            dirty=true; ui_refresh=true; report("Template deleted.");
+            dirty=true; ui_refresh=true; report("Profile deleted.");
         }
-        else if(action=="rename_look") {
+        else if(action=="rename_look" || action=="rename_profile") {
             auto before=command.at("name").get<std::string>(), after=command.at("new_name").get<std::string>();
-            if(!valid_id(after)) throw std::runtime_error("Use letters, numbers, periods, underscores or hyphens in the template name.");
+            if(!valid_id(after)) throw std::runtime_error("Use letters, numbers, periods, underscores or hyphens in the profile name.");
             if(before!=after) {
-                if(state.presets.contains(after)) throw std::runtime_error("A template with that name already exists.");
+                if(state.presets.contains(after)) throw std::runtime_error("A profile with that name already exists.");
                 auto copy=state.presets.at(before); state.presets.emplace(after,std::move(copy)); state.presets.erase(before);
-                dirty=true; ui_refresh=true; report("Template renamed.");
+                dirty=true; ui_refresh=true; report("Profile renamed.");
             }
         }
         else if (action == "walk_animation") {
