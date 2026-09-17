@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <cstdint>
 #include <map>
 #include <string>
 #include <vector>
@@ -52,6 +53,16 @@ struct Control {
     float minimum = 0, maximum = 1, step = .01f;
     // Spring only: channel 1, the damping ratio. Channel 0 is frequency in Hz.
     float damping_minimum = 0, damping_maximum = 1, damping_step = .01f;
+    // Spring only, optional: channel 2 is a travel clamp (FAnimNode_SpringBone's
+    // MaxDisplacement, in cm). With a max_displacement range the spring limits how far
+    // the part moves, which is what lets Better Jiggle run a lively low damping without
+    // the bone flying off; without one a spring keeps its two channels and no clamp.
+    bool spring_clamp = false;
+    float displacement_minimum = 0, displacement_maximum = 0, displacement_step = .05f;
+    // Spring only, optional axis filters and reset threshold. -1 leaves the blueprint's
+    // own flag alone; 0 or 1 forces it. error_reset < 0 leaves the threshold alone.
+    std::array<std::int8_t,3> translate{{-1,-1,-1}}, rotate{{-1,-1,-1}};
+    double error_reset = -1;
     std::vector<ControlBinding> bindings;
 };
 // A hue rotation in degrees plus saturation and brightness multipliers, applied to a whole

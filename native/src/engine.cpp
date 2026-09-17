@@ -921,9 +921,13 @@ namespace {
 // shuffle that, so CSS matches on the bone a node drives and never on the property name.
 struct SpringNode {
     std::byte* data=nullptr;
-    int32_t stiffness=0, damping=0;
+    int32_t stiffness=0, damping=0, max_displacement=0, error_reset=0;
+    // Bitfield bools carry their mask in the property, so go through it, not memcpy.
+    FBoolProperty *limit=nullptr, *translate[3]={}, *rotate[3]={};
     double get(int32_t at) const { double v; std::memcpy(&v,data+at,sizeof v); return v; }
     void put(int32_t at,double v) const { std::memcpy(data+at,&v,sizeof v); }
+    bool flag(FBoolProperty* p) const { return p && p->GetPropertyValueInContainer(data); }
+    void set_flag(FBoolProperty* p,bool v) const { if(p) p->SetPropertyValueInContainer(data,v); }
 };
 // SetMorphTarget records a curve on the component whether or not the mesh has a shape by
 // that name, and GetMorphTarget reads that same curve straight back, so a read-back proves
@@ -957,6 +961,16 @@ std::map<std::string,SpringNode> spring_nodes(UObject* anim) {
     auto* node_type=static_cast<UScriptStruct*>(find(L"/Script/AnimGraphRuntime.AnimNode_SpringBone"));
     auto* stiffness=field(node_type,L"SpringStiffness",sizeof(double));
     auto* damping=field(node_type,L"SpringDamping",sizeof(double));
+    auto* max_disp=field(node_type,L"MaxDisplacement",sizeof(double));
+    auto* err=field(node_type,L"ErrorResetThresh",sizeof(double));
+    auto boolprop=[&](const wchar_t* name)->FBoolProperty*{
+        auto* p=node_type->GetPropertyByNameInChain(name);
+        if(!p || !p->IsA<FBoolProperty>() || p->GetOffset_Internal()<0) throw std::runtime_error("Spring flag layout does not match this build");
+        return static_cast<FBoolProperty*>(p);
+    };
+    auto* limit=boolprop(L"bLimitDisplacement");
+    FBoolProperty* trans[3]={boolprop(L"bTranslateX"),boolprop(L"bTranslateY"),boolprop(L"bTranslateZ")};
+    FBoolProperty* rot[3]={boolprop(L"bRotateX"),boolprop(L"bRotateY"),boolprop(L"bRotateZ")};
     auto* spring_bone=node_type->GetPropertyByNameInChain(L"SpringBone");
     auto* bone_name=field(find(L"/Script/Engine.BoneReference"),L"BoneName",sizeof(FName));
     if(!spring_bone || !spring_bone->IsA<FStructProperty>() || spring_bone->GetOffset_Internal()<0 ||
@@ -975,7 +989,9 @@ std::map<std::string,SpringNode> spring_nodes(UObject* anim) {
         auto name=narrow(bone.ToString());
         if(name.empty() || name=="None") continue;
         if(out.size()>=256) throw std::runtime_error("Spring node count exceeds bound");
-        out.emplace(std::move(name),SpringNode{data,stiffness->GetOffset_Internal(),damping->GetOffset_Internal()});
+        out.emplace(std::move(name),SpringNode{data,stiffness->GetOffset_Internal(),damping->GetOffset_Internal(),
+            max_disp->GetOffset_Internal(),err->GetOffset_Internal(),limit,
+            {trans[0],trans[1],trans[2]},{rot[0],rot[1],rot[2]}});
     }
     return out;
 }
@@ -1134,9 +1150,12 @@ void Appearance::restore_springs() {
     // default: those two are meant to agree, and when they do not the author's asset wins.
     if(!spring_originals_.empty()) try {
         auto nodes=spring_nodes(spring_instance_.Get());
-        for(const auto& [bone,original]:spring_originals_) if(auto found=nodes.find(bone); found!=nodes.end()) {
-            found->second.put(found->second.stiffness,original[0]);
-            found->second.put(found->second.damping,original[1]);
+        for(const auto& [bone,o]:spring_originals_) if(auto found=nodes.find(bone); found!=nodes.end()) {
+            const auto& n=found->second;
+            n.put(n.stiffness,o.stiffness); n.put(n.damping,o.damping);
+            n.put(n.max_displacement,o.max_displacement); n.put(n.error_reset,o.error_reset);
+            n.set_flag(n.limit,o.limit);
+            for(int i=0;i<3;++i) { n.set_flag(n.translate[i],o.translate[size_t(i)]); n.set_flag(n.rotate[i],o.rotate[size_t(i)]); }
         }
     } catch(const std::exception&) { /* The instance went away with the mesh, which restores it anyway. */ }
     spring_originals_.clear(); spring_instance_=nullptr;
@@ -1354,17 +1373,34 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 if(!anim) throw std::runtime_error("This outfit's mesh has no animation blueprint to tune");
                 if(spring_instance_.Get()!=anim) { spring_originals_.clear(); spring_instance_=anim; }
                 auto nodes=spring_nodes(anim);
-                const auto tuning=spring_tuning(values.at(control.id)[0],values.at(control.id)[1]);
+                const auto& v=values.at(control.id);
+                const auto tuning=spring_tuning(v[0],v[1]);
                 for(const auto& bone:control.nodes) {
                     auto found=nodes.find(bone);
                     if(found==nodes.end()) throw std::runtime_error("This outfit's skeleton has no spring on "+bone);
                     const auto& node=found->second;
-                    // Remember the first value seen, so a second move of the slider does not
-                    // record CSS's own last write as the author's.
-                    spring_originals_.try_emplace(bone,std::array<double,2>{node.get(node.stiffness),node.get(node.damping)});
+                    // Remember every field on first touch, so a second slider move does not
+                    // record CSS's own last write as the author's, and removal is exact.
+                    spring_originals_.try_emplace(bone,SpringOriginal{
+                        node.get(node.stiffness),node.get(node.damping),
+                        node.get(node.max_displacement),node.get(node.error_reset),node.flag(node.limit),
+                        {node.flag(node.translate[0]),node.flag(node.translate[1]),node.flag(node.translate[2])},
+                        {node.flag(node.rotate[0]),node.flag(node.rotate[1]),node.flag(node.rotate[2])}});
                     node.put(node.stiffness,tuning.stiffness); node.put(node.damping,tuning.damping);
                     if(node.get(node.stiffness)!=tuning.stiffness || node.get(node.damping)!=tuning.damping)
                         throw std::runtime_error("Spring read-back failed");
+                    // The travel clamp is what keeps a lively spring on the body. MaxDisplacement
+                    // does nothing without its flag, so set both together.
+                    if(control.spring_clamp) {
+                        node.put(node.max_displacement,double(v[2])); node.set_flag(node.limit,true);
+                        if(node.get(node.max_displacement)!=double(v[2]) || !node.flag(node.limit))
+                            throw std::runtime_error("Spring travel read-back failed");
+                    }
+                    for(int i=0;i<3;++i) {
+                        if(control.translate[size_t(i)]>=0) node.set_flag(node.translate[i],control.translate[size_t(i)]!=0);
+                        if(control.rotate[size_t(i)]>=0) node.set_flag(node.rotate[i],control.rotate[size_t(i)]!=0);
+                    }
+                    if(control.error_reset>=0) node.put(node.error_reset,control.error_reset);
                 }
                 continue;
             }

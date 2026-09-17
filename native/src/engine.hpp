@@ -257,9 +257,13 @@ class Appearance {
     // together, because one owner clearing its own set must not put back what the other
     // still wants hidden. `applied_hidden_` is what the component was last told.
     std::set<int> toggle_hidden_, item_hidden_, applied_hidden_;
-    // Spring: what the animation blueprint's own nodes held before CSS touched them, keyed
-    // by bone, so dropping the control puts the author's motion back with no mesh reload.
-    std::map<std::string,std::array<double,2>> spring_originals_;
+    // Spring: every field CSS may write on a node, remembered on first touch and keyed by
+    // bone, so dropping the control puts the author's own motion back with no mesh reload.
+    struct SpringOriginal {
+        double stiffness=0, damping=0, max_displacement=0, error_reset=0;
+        bool limit=false; std::array<bool,3> translate{}, rotate{};
+    };
+    std::map<std::string,SpringOriginal> spring_originals_;
     WeakObject spring_instance_;
     // Shape: the morph targets CSS drove and their weights, so taking the outfit off puts
     // back only those and leaves anything the game or another mod set alone.

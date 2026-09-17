@@ -274,6 +274,36 @@ int main() {
             violent["controls"][1]["damping_ratio"]["max"]=2;
             rejects([&]{ControlSet::parse(violent);});
 
+            // 1.0.0 physics engine: a spring with a travel clamp gains a third channel
+            // (MaxDisplacement, cm) and may force its axis filters. This is what turns
+            // MSII's own spring node into the Better Jiggle behaviour: a lively low damping
+            // held on the body by the clamp rather than allowed to fly off.
+            auto clamped=springs;
+            clamped["controls"][1]["max_displacement"]=Json{{"min",0.2},{"max",4.0},{"default",1.5}};
+            clamped["controls"][1]["translate"]=Json::array({true,false,true});
+            clamped["controls"][1]["rotate"]=Json::array({true,true,true});
+            clamped["controls"][1]["error_reset"]=255.0;
+            auto cmodel=ControlSet::parse(clamped);
+            const auto* cbust=cmodel.find("bust");
+            expect(cbust->spring_clamp,"A travel clamp was not kept");
+            expect(cbust->displacement_minimum==.2f && cbust->displacement_maximum==4.f,"Spring travel range lost");
+            expect(cbust->value[2]==1.5f,"Spring travel default lost");
+            expect(cbust->translate[0]==1 && cbust->translate[1]==0 && cbust->translate[2]==1,"Spring translate flags lost");
+            expect(cbust->rotate[0]==1 && cbust->rotate[1]==1 && cbust->rotate[2]==1,"Spring rotate flags lost");
+            expect(std::abs(cbust->error_reset-255.0)<1e-9,"Spring reset threshold lost");
+            // A plain spring leaves all of that untouched, so recipes from 2.0.3 still load.
+            expect(!bust->spring_clamp && bust->translate[0]==-1 && bust->rotate[2]==-1 && bust->error_reset<0,
+                   "A plain spring must not gain a clamp or force flags");
+            // The third channel is validated against the travel range.
+            Customization travel; travel.values["bust"]={1.6f,.65f,3.0f,1};
+            expect(control_values(cmodel,travel).at("bust")[2]==3.f,"Spring travel override lost");
+            travel.values["bust"]={1.6f,.65f,9.0f,1};
+            rejects([&]{control_values(cmodel,travel);});
+            auto bad_axis=clamped; bad_axis["controls"][1]["translate"]=Json::array({true,false});
+            rejects([&]{ControlSet::parse(bad_axis);});
+            auto bad_reset=clamped; bad_reset["controls"][1]["error_reset"]=0;
+            rejects([&]{ControlSet::parse(bad_reset);});
+
             // 1.0: a shape drives a morph target the package cooked into its own mesh. It
             // is a single number like a scalar, and it writes no material.
             auto shapes=Json::parse(R"({"schema":1,"controls":[

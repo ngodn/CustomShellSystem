@@ -157,6 +157,18 @@ def validate(recipe:dict) -> set[str]:
             # slider says. Refuse it here rather than silently disagreeing in game.
             if spring_tuning(frequency[1],damping[1])[1]>100:
                 raise ValueError('Spring range is too stiff and damped for the engine to integrate as written')
+            # Optional travel clamp (MaxDisplacement, cm) on channel 2, and optional axis
+            # filters and reset threshold. All are absent on a plain two-channel spring.
+            if 'max_displacement' in c: spring_range(c['max_displacement'],'travel',16)
+            for axis in ('translate','rotate'):
+                if axis in c:
+                    a=c[axis]
+                    if not isinstance(a,list) or len(a)!=3 or not all(isinstance(x,bool) for x in a):
+                        raise ValueError(f"A spring's {axis} needs three true or false values")
+            if 'error_reset' in c:
+                er=c['error_reset']
+                if isinstance(er,bool) or not isinstance(er,(int,float)) or not 0<er<=4096:
+                    raise ValueError("A spring's error_reset is out of range")
             continue
         vector(c['default'])
         if kind_of(c)=='toggle':
@@ -214,6 +226,8 @@ def validate(recipe:dict) -> set[str]:
                 # opacity is the one CSS gives every control that does not state one.
                 number(v[0],c['frequency']['min'],c['frequency']['max'])
                 number(v[1],c['damping_ratio']['min'],c['damping_ratio']['max'])
+                if 'max_displacement' in c:
+                    number(v[2],c['max_displacement']['min'],c['max_displacement']['max'])
                 if v[3]!=1:raise ValueError('Palette changes protected opacity')
                 continue
             for x in v[:1 if scalar(c) else 3]:number(x,c.get('min',0),c.get('max',1))

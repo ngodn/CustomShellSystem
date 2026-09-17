@@ -100,6 +100,8 @@ void valid_value(const Control& c,const ControlValue& v) {
             throw std::runtime_error("Spring frequency outside control limits: "+c.id);
         if(!std::isfinite(v[1]) || v[1]<c.damping_minimum || v[1]>c.damping_maximum)
             throw std::runtime_error("Spring damping outside control limits: "+c.id);
+        if(c.spring_clamp && (!std::isfinite(v[2]) || v[2]<c.displacement_minimum || v[2]>c.displacement_maximum))
+            throw std::runtime_error("Spring travel outside control limits: "+c.id);
         if(v[3]!=c.value[3]) throw std::runtime_error("Opacity is fixed by its author");
         return;
     }
@@ -213,7 +215,29 @@ ControlSet ControlSet::parse(const Json& j) {
                 throw std::runtime_error("Spring range is too stiff and damped for the engine to integrate as written");
             control.minimum=frequency.minimum; control.maximum=frequency.maximum; control.step=.05f;
             control.damping_minimum=damping.minimum; control.damping_maximum=damping.maximum; control.damping_step=.01f;
-            control.value={frequency.value,damping.value,0,control.value[3]};
+            // Optional travel clamp on channel 2. With it the spring limits how far the
+            // part moves (MaxDisplacement, cm) and turns on bLimitDisplacement in game,
+            // which is the whole reason a lively low-damped bounce does not fly off.
+            if(c.contains("max_displacement")) {
+                const auto travel=range(c.at("max_displacement"),"travel",16.f);
+                control.spring_clamp=true;
+                control.displacement_minimum=travel.minimum; control.displacement_maximum=travel.maximum; control.displacement_step=.05f;
+                control.value={frequency.value,damping.value,travel.value,control.value[3]};
+            } else control.value={frequency.value,damping.value,0,control.value[3]};
+            // Optional per-axis filters and reset threshold, written on wear and put back
+            // on removal. Absent leaves the blueprint's own node alone.
+            auto axis=[&](const char* key,std::array<std::int8_t,3>& out){
+                if(!c.contains(key)) return;
+                const auto& a=c.at(key);
+                if(!a.is_array() || a.size()!=3) throw std::runtime_error(std::string("A spring's ")+key+" needs three true or false values");
+                for(int i=0;i<3;++i) out[size_t(i)]=a[i].get<bool>()?1:0;
+            };
+            axis("translate",control.translate); axis("rotate",control.rotate);
+            if(c.contains("error_reset")) {
+                control.error_reset=c.at("error_reset").get<double>();
+                if(!std::isfinite(control.error_reset) || control.error_reset<=0 || control.error_reset>4096)
+                    throw std::runtime_error("A spring's error_reset is out of range");
+            }
         } else if(control.kind==ControlKind::Spring)
             throw std::runtime_error("A spring control needs its bones, frequency and damping ratio");
         if(c.contains("morph")) {

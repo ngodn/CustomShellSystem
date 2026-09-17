@@ -473,8 +473,9 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     source=c.options[here].name;
                 } else if(c.kind==ControlKind::Spring) {
                     source="Bounce "+slider_text(held[0],true)+" Hz, settle "+std::to_string(int(std::lround(held[1]*100)))+"%";
+                    if(c.spring_clamp) source+=", travel "+slider_text(held[2],true)+" cm";
                 }
-                const int channel=c.kind==ControlKind::Spring?channel_%2:c.scalar?0:channel_;
+                const int channel=c.kind==ControlKind::Spring?channel_%(c.spring_clamp?3:2):c.scalar?0:channel_;
                 Json minus={{"action","control"},{"control",c.id},{"channel",channel},{"delta",-1}},plus=minus; plus["delta"]=1;
                 if(!c.scalar && !exact_color_) {
                     // Left and Right walk the strip instead of nudging one channel, which
@@ -489,7 +490,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     plus=pick((here+1)%strip.size());
                 }
                 row(int(i),c.name,source,line,accept,minus,plus,
-                    {{"action","ui_channel"},{"count",c.kind==ControlKind::Spring?2:3}},
+                    {{"action","ui_channel"},{"count",c.kind==ControlKind::Spring?(c.spring_clamp?3:2):3}},
                     {{"action","palette"},{"palette","original"}});
             }
             scroll_end();
@@ -554,18 +555,23 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
                     action_button("tertiary","Reset all",887,rows_[row_].tertiary,2);
                 } else if(control.kind==ControlKind::Spring) {
-                    // Two sliders, the same shape as a group tint, because a spring is the
-                    // other control with more than one number in it. The numbers on screen
-                    // are frequency and damping ratio; the words are what they do.
-                    const int selected=channel_%2;
-                    detail(control.name,worn->name,
+                    // Two or three sliders, the same shape as a group tint. The numbers are
+                    // frequency, damping ratio, and (with a clamp) travel; the words say what
+                    // they do. Travel is how far the part may swing, which is what keeps a
+                    // lively bounce on the body instead of letting it fly off.
+                    const int fieldcount=control.spring_clamp?3:2;
+                    const int selected=channel_%fieldcount;
+                    detail(control.name,worn->name,control.spring_clamp?
+                           "Bounce is how quickly this part moves, Settle how quickly it stops, "
+                           "Travel how far it swings. More travel is a bigger jiggle; if it keeps "
+                           "moving after you stop, turn Settle up.":
                            "Bounce is how quickly this part moves. Settle is how quickly it stops. "
                            "If it keeps going after you do, turn settle up.");
-                    const char* fields[]={"Bounce","Settle"};
-                    const float lows[]={control.minimum,control.damping_minimum};
-                    const float highs[]={control.maximum,control.damping_maximum};
-                    const float sizes[]={control.step,control.damping_step};
-                    for(int field=0;field<2;++field) {
+                    const char* fields[]={"Bounce","Settle","Travel"};
+                    const float lows[]={control.minimum,control.damping_minimum,control.displacement_minimum};
+                    const float highs[]={control.maximum,control.damping_maximum,control.displacement_maximum};
+                    const float sizes[]={control.step,control.damping_step,control.displacement_step};
+                    for(int field=0;field<fieldcount;++field) {
                         const double sy=controls_y+field*80;
                         auto* heading=ui.label(fields[field],right,sy,230,28,19,field==selected?gold:ivory);
                         auto* slider=construct(L"/Script/UMG.Slider",tree);
@@ -575,14 +581,16 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                         ui.place(slider,right,sy+29,262,30);
                         // "1.60 Hz" needs more room than a bare number, so the readout is
                         // wider here than on the channel sliders and the bar gives it back.
-                        auto* label=ui.label(field?std::to_string(int(std::lround(value[1]*100)))+"%":slider_text(value[0],true)+" Hz",
-                                             right+270,sy+29,90,30,18);
+                        const std::string readout=field==1?std::to_string(int(std::lround(value[1]*100)))+"%"
+                                                 :field==2?slider_text(value[2],true)+" cm"
+                                                 :slider_text(value[0],true)+" Hz";
+                        auto* label=ui.label(readout,right+270,sy+29,90,30,18);
                         sliders_.push_back({WeakObject(slider),WeakObject(label),WeakObject(heading),
                             {{"action","control"},{"control",control.id},{"channel",field},{"refresh",false}},
-                            value[field],true,field?"%":" Hz"});
+                            value[field],true,field==1?"%":field==2?" cm":" Hz"});
                     }
-                    direction_hint(true,"Adjust selected slider",right,controls_y+166,360);
-                    action_button("secondary","Select next slider",795,Json{{"action","ui_channel"},{"count",2}},4);
+                    direction_hint(true,"Adjust selected slider",right,controls_y+fieldcount*80+6,360);
+                    action_button("secondary","Select next slider",795,Json{{"action","ui_channel"},{"count",fieldcount}},4);
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
                     action_button("tertiary","Reset all",887,rows_[row_].tertiary,2);
                 } else if(!control.scalar && !exact_color_) {
