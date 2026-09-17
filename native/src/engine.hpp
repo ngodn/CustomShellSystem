@@ -209,6 +209,8 @@ public:
     void release();
     int count() const { return int(worn_.size()); }
     std::vector<std::string> ids() const;
+    void sync_morph(const std::string& morph, float weight);
+    void sync_morphs(const std::map<std::string, float>& driven_morphs);
 };
 // 0.4: optional feminine walk (ANIMATION tab). Drives the game's own carrier
 // blendspace override on the player's animation instance, the way the GenessaWalk
@@ -294,6 +296,7 @@ class Appearance {
     std::set<int> menu_hidden_sections_;
     void reconcile_sections();
     AttachmentOffsets offsets_;
+    std::map<std::string, std::array<double, 3>> formula_offsets_;
     void restore_menu();
     void remember_materials();
     bool materials_match() const;

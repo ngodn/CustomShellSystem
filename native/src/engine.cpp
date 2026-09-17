@@ -1008,6 +1008,25 @@ std::vector<std::string> WornItems::ids() const {
     for(const auto& worn:worn_) result.push_back(worn.id);
     return result;
 }
+void WornItems::sync_morph(const std::string& morph, float weight) {
+    auto name=FName(wide(morph).c_str(),FNAME_Add);
+    for(auto& worn:worn_) {
+        if(auto* comp=worn.component.Get()) {
+            if(auto* mesh=mesh_asset(comp)) {
+                if(mesh_has_morph(mesh,morph)) {
+                    Call set(comp,L"SetMorphTarget",3);
+                    set.set(L"MorphTargetName",name);
+                    set.set(L"Value",weight);
+                    set.set(L"bRemoveZeroWeight",false);
+                    set.run();
+                }
+            }
+        }
+    }
+}
+void WornItems::sync_morphs(const std::map<std::string, float>& driven_morphs) {
+    for(const auto& [morph,weight]:driven_morphs) sync_morph(morph,weight);
+}
 std::set<int> WornItems::update(UObject* body,const std::string& identity,const std::vector<Item>& items) {
     std::set<int> hidden;
     // A component the game threw away with the pawn leaves a dead handle behind, so a
@@ -1097,6 +1116,7 @@ void Appearance::sync_items(const Outfit& outfit,const std::string& variant) {
     // toggle the player set.
     item_hidden_=wanted;
     reconcile_sections();
+    items_.sync_morphs(driven_morphs_);
 }
 int Appearance::lod_count() {
     auto* component=component_.Get(); if(!component) return 1;
@@ -1119,6 +1139,8 @@ void Appearance::push_morphs(UObject* component) {
         set.set(L"MorphTargetName",FName(wide(morph).c_str(),FNAME_Add));
         set.set(L"Value",weight); set.set(L"bRemoveZeroWeight",false); set.run();
     }
+    items_.sync_morphs(driven_morphs_);
+    menu_items_.sync_morphs(driven_morphs_);
 }
 void Appearance::reconcile_sections() {
     auto* component=component_.Get();
@@ -1144,6 +1166,9 @@ void Appearance::clear_driven_morphs() {
             set.set(L"Value",0.f); set.set(L"bRemoveZeroWeight",true); set.run();
         }
     driven_morphs_.clear();
+    items_.sync_morphs(driven_morphs_);
+    menu_items_.sync_morphs(driven_morphs_);
+    formula_offsets_.clear();
 }
 void Appearance::restore_springs() {
     // Put back what the animation blueprint shipped, not what the package declared as its
@@ -1362,6 +1387,15 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 if(std::abs(readback.get<float>()-weight)>.0001f)
                     throw std::runtime_error("Shape weight read-back failed");
                 driven_morphs_[control.morph]=weight;
+                items_.sync_morph(control.morph,weight);
+                menu_items_.sync_morph(control.morph,weight);
+                for(const auto& formula:control.formulas) {
+                    const double delta=double(weight*formula.multiplier);
+                    auto& off=formula_offsets_[formula.target];
+                    if(formula.type=="BoneCenterX") off[0]=delta;
+                    else if(formula.type=="BoneCenterY") off[1]=delta;
+                    else if(formula.type=="BoneCenterZ") off[2]=delta;
+                }
                 continue;
             }
             // 1.0: a spring is the one control that touches no material at all. It writes
@@ -1398,7 +1432,14 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                     }
                     for(int i=0;i<3;++i) {
                         if(control.translate[size_t(i)]>=0) node.set_flag(node.translate[i],control.translate[size_t(i)]!=0);
+                        else if(control.spring_clamp && bone.find("thigh")!=std::string::npos) {
+                            if(i==1) node.set_flag(node.translate[i],false);
+                            else node.set_flag(node.translate[i],true);
+                        }
                         if(control.rotate[size_t(i)]>=0) node.set_flag(node.rotate[i],control.rotate[size_t(i)]!=0);
+                        else if(control.spring_clamp && (bone.find("brust")!=std::string::npos || bone.find("butt")!=std::string::npos)) {
+                            node.set_flag(node.rotate[i],true);
+                        }
                     }
                     if(control.error_reset>=0) node.put(node.error_reset,control.error_reset);
                 }
