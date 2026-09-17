@@ -102,8 +102,10 @@ menu, the saved look and the apply path all follow from that.
 | `scalar` | one number | a named material scalar | anything else, like gloss or roughness |
 | `toggle` | on or off | material sections | needs `sections`, takes no `min`/`max`/`step` |
 | `choice` | which option | a texture parameter | needs `options` and a binding, takes no `min`/`max`/`step` |
-| `spring` | two numbers | the mesh's own spring bones | needs `nodes` and both ranges, takes no `default`, `min`/`max`/`step` or bindings |
-| `shape` | one number | a morph target on the package's own mesh | needs `morph`, takes no bindings |
+| `spring` | two/three numbers | the mesh's own spring bones | Bounce Hz, Settle %, optional Travel cm; Kawaii & 3-axis rotation |
+| `shape` | one number | a morph target on the package's own mesh | needs `morph`, optional joint `formulas` |
+| `glow` | radiance & pulse | emissive material parameters | intensity cd/m², pulse Hz, combat reactivity |
+| `opacity` | one number (0..1) | alpha / sheerness parameter | sheer fabrics, lace, stockings, chiffon |
 
 A `toggle` lists the material sections it shows and hides, and needs no binding because
 it drives them directly:
@@ -240,25 +242,34 @@ fits, but say so in the package notes.
 | `garment` | outfit | no | the main fabric or leather |
 | `accent` | outfit | no | trim, lining, ribbons, a secondary fabric |
 | `leather` | outfit | no | straps and belts, when they are their own part |
+| `fabric` | outfit | no | capes, cloaks, scarves, skirts, sashes, sheer lace |
+| `headwear` | outfit | no | hats, crowns, tiaras, hairpins, veils |
+| `jewelry` | outfit | **yes** | necklaces, chokers, earrings, rings, bracelets |
 | `metal` | outfit | **yes** | jewellery, buckles, plate, filigree |
 | `gem` | outfit | **yes** | stones and crystals |
 | `glow` | outfit | no | emissive runes and trim |
 | `skin` | body | **yes** | bare skin |
 | `face` | body | no | a mask, veil, face paint or makeup |
-| `hair` | body | no | hair |
+| `hair` | body | no | hair, ponytails, bangs, braids |
 | `eyes` | body | no | the iris |
 | `eye-glow` | body | no | the emissive part of the eyes; usually `kind: intensity` |
+| `breast` | body | no | breast & bust shape, volume, or jiggle motion |
+| `butt` | body | no | buttocks & glute projection, shape, or jiggle motion |
+| `thigh` | body | no | hips, upper thighs, inner thigh tissue |
+| `waist` | body | no | waist curve, belly volume |
 | `nipple` | body | **yes** | the nipple itself |
 | `areola` | body | **yes** | the pigmented ring around it |
 | `labia` | body | **yes** | the outer and inner lips |
 | `vestibule` | body | **yes** | the inner surface between the inner lips |
+| `clitoris` | body | **yes** | the clitoris and hood |
+| `orifice` | body | **yes** | vaginal opening/depth, anal opening/depth |
 | `body-hair` | body | no | pubic and body hair, separate from the head |
 | `gloss` | outfit | no | a sheen or roughness slider on the outfit |
 | `roughness` | outfit | no | surface roughness, when it is its own control |
 | `opacity` | outfit | no | how sheer a garment is |
 | `piece` | outfit | no | a part of the outfit a toggle shows or hides |
 | `pattern` | outfit | no | which of several textures a garment wears |
-| `skin-gloss` | body | no | the body's own sheen |
+| `skin-gloss` | body | no | the body's own sheen, sweat, or oil |
 | `figure` | body | no | a spring on a part of the figure: bust, hips, belly |
 | `motion` | body | no | a spring on something else that moves, like hair or a cloak |
 
@@ -371,3 +382,71 @@ controls in it, rather than every variant offering every control.
 7. Verified in game: choose each palette, drag each group tint end to end, flip every
    toggle, and move every slider to both ends. Nothing turns an impossible colour, nothing
    disappears that should not, and nothing keeps moving after you stop.
+
+## Templates vs Profiles (1.0.0-beta Next-Gen)
+
+CSS 2.0 cleanly distinguishes between subsystem **Templates** and character **Profiles**:
+
+### Templates (Subsystem Combinations & Presets)
+Templates live inside outfit packages (`outfits[].templates`) and are author-curated presets for specific systems:
+- **`combinations`**: Multi-toggle & part combinations (e.g. *"Topless Harness Set"*, *"Battle-Damaged Gown"*, *"Bikini Armor"*).
+- **`palettes`**: Material & dye color palettes (e.g. *"Crimson Vow"*, *"Void Obsidian"*).
+- **`archetypes`**: Body morph combinations (e.g. *"Voluptuous"*, *"Petite Seductress"*, *"Athletic Amazon"*).
+- **`physics`**: Jiggle & secondary dynamics presets (e.g. *"Firm Athletic"*, *"Sensual Bouncy"*, *"Ultra Soft"*).
+- **`hair`**: Hair style, ponytail sway, and Kawaii physics presets.
+- **`accessories`**: Accessory sets and trinket toggles.
+- **`fabrics`**: Sheerness and fabric opacity presets.
+- **`anatomy`**: Intimate morphs, breast shape, glute curvature, and orifice depth presets.
+- **`glow`**: Rune radiance, breathing pulse rate, and combat surge configs.
+
+In Tab 1 (`CUSTOMIZE`), Row 0 provides the **Template Selector**:
+- Shows current active template name and category subtitle.
+- Left / Right cycles through all available templates and palettes.
+- The right-side panel displays direct preset buttons and a **"Browse templates..."** button opening the Searchable Browse Modal.
+
+### Profiles (Global Character Snapshots)
+The 4th Tab is **`PROFILE`** (renamed from `TEMPLATES`):
+- Saves a global character snapshot spanning all tabs: worn outfit shell, variant, customized colors, tints, morph shapes, physics tuning, walk style, and toggles.
+- Save new profiles with suggested naming or custom names.
+- Load profiles with 1 click.
+- Overwrite and delete actions are protected by **Native Confirmation Dialog Modals**.
+
+## Secondary Physics & Stellar Blade Jiggle Solvers
+
+Inspired by *Stellar Blade* and *Better Jiggle Mod* (Nexus 1570):
+1. **Dynamic Frequency & Damping Integration**:
+   - Bounce frequency in Hz (stiffness $K = (2\pi f)^2$)
+   - Settle damping ratio (decay $D = 4\pi \zeta f$)
+2. **Travel Clamping (`max_displacement`)**:
+   - Restricts maximum displacement (cm) via `bLimitDisplacement` and `MaxDisplacement` to prevent body clipping during running, landing, and dodging.
+3. **3-Axis Rotational Swing (`bRotateX/Y/Z`)**:
+   - Breasts (`brust`, `breast`), glutes (`butt`, `glute`), and soft tissue swing with pitch, roll, and yaw rotation rather than rigid translation.
+4. **Planar & Lateral Constraints (`planar_constraint`)**:
+   - Restricts movement to 2D planes (`"x"`, `"y"`, `"z"`). Locking the lateral axis (`y`) on thighs and hips prevents unnatural inner-thigh collision clipping.
+5. **Kawaii Physics Extensions**:
+   - `world_damping` (0..1): dampens external character world translation impact.
+   - `limit_angle` (degrees): cone deflection clamp preventing unnatural mesh twisting.
+   - `collision_radius` (cm): virtual boundary sphere preventing penetration into adjacent anatomy.
+   - `gravity_scale`: downward gravitational pull factor.
+
+## Next-Gen UI Kit Specification
+
+- **Sliders**:
+  - HSL Tint Sliders (Hue -180..180°, Saturation 0..200%, Brightness 0..200%)
+  - Discrete RGB Channel Sliders (0..255 per channel in exact color mode)
+  - Opacity / Sheerness Slider (0..100%)
+  - Secondary Physics Sliders (Bounce Hz, Settle %, Travel cm)
+  - Morph Weight Sliders (0..100% or min..max)
+  - Glow Radiance & Pulse Sliders (Intensity cd/m², Pulse Hz)
+- **Color Swatches**:
+  - 24-chip deterministic swatch strip for fast 1-click color palette application.
+- **Searchable Browse Modal (`native_picker_`)**:
+  - Fullscreen/modal searchable list with live text query filtering, mouse-wheel scrolling, keyboard/gamepad navigation, and apply/cancel routing.
+  - Used for `ui_browse_shells` (all installed outfits & authors), `ui_browse_templates` (all combinations, palettes, archetypes, and physics presets), and `ui_browse_choice` (multi-texture choices).
+- **Confirmation Modals (`confirm_action_`)**:
+  - Darkened backdrop modal dialog for destructive actions:
+    - Reset all customizations confirmation
+    - Delete profile confirmation
+    - Overwrite profile confirmation
+  - Keyboard/gamepad focus trap (Accept / Cancel) with camera motion suspended.
+
