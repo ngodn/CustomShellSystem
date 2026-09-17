@@ -22,6 +22,11 @@ struct InventoryLayout : Layout {
         invoke(text_block,L"SetColorAndOpacity",L"InColorAndOpacity",SlateColor{enabled?(active?Color{.55f,.48f,.34f,1}:inventory_ink):inventory_dim});
         return widget;
     }
+    void selection_mark(double x,double y,bool selected) {
+        auto* frame=box(x,y,12,12,Color{.31f,.275f,.225f,1});invoke(frame,L"SetRenderTransformAngle",L"Angle",45.f);
+        auto* inner=box(x+2,y+2,8,8,Color{.01f,.008f,.006f,1});invoke(inner,L"SetRenderTransformAngle",L"Angle",45.f);
+        if(selected) {auto* dot=box(x+4,y+4,4,4,Color{.42f,.34f,.22f,1});invoke(dot,L"SetRenderTransformAngle",L"Angle",45.f);}
+    }
 };
 // 0.4: a short, deterministic strip of colours for one part, so a controller can pick
 // one without anybody having to think in RGB. What the author chose comes first, then
@@ -378,6 +383,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         if(row_==0) {
             detail("Original appearance","Your current shell","Restore the appearance supplied by the game and any installed base replacements. Your shell's abilities stay the same.");
             action_button("accept","Restore original",controls_y+20,rows_[0].accept,3);
+            action_button("secondary","Search catalog...",771,{{"action","ui_browse_shells"}},4);
         } else {
             const auto& outfit=catalog.outfits[row_-1];
             detail(outfit.name,"By "+outfit.author,outfit.description.empty()?"Choose an outfit variant. Appearance changes keep your current shell's abilities.":outfit.description);
@@ -394,28 +400,73 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             }
             action_button("accept","Wear",655,selected.accept,3,!selected.accept.is_null());
             action_button("tertiary",state.favorites.contains(outfit.id)?"Remove favorite":"Add favorite",713,selected.tertiary,2);
+            action_button("secondary","Search catalog...",771,{{"action","ui_browse_shells"}},4);
         }
     } else if(section_==1) {
         if(!worn || worn->controls_for(selection->second.variant).controls.empty()) detail("Customize","Nothing to adjust","Wear an outfit whose author left something adjustable, and it shows up here.");
         else {
             const auto& options=worn->controls_for(selection->second.variant); const auto& custom=selection->second.custom;
-            auto values=control_values(options,custom); size_t palette=0;
-            for(size_t i=0;i<options.palettes.size();++i) if(options.palettes[i].id==custom.palette) palette=i+1;
-            const std::string palette_name=palette?options.palettes[palette-1].name:"Original";
+            auto values=control_values(options,custom);
             auto palette_action=[&](size_t i) { return Json{{"action","palette"},{"palette",i?options.palettes[i-1].id:"original"}}; };
-            const auto steps=options.palettes.size()+1;
 
-            // 0.4: the tab is a palette, then one section per group, each opening with the
+            struct TemplateItem {
+                std::string id, name, subtitle, kind_name, description;
+                Json action;
+                bool is_palette;
+            };
+            std::vector<TemplateItem> tmpl_items;
+            tmpl_items.push_back({
+                "original", "Original", "The author's materials", "Original",
+                "Original restores the author's own materials exactly, and cannot be tinted.",
+                palette_action(0), true
+            });
+            for(size_t i=0;i<options.palettes.size();++i) {
+                const auto& p=options.palettes[i];
+                tmpl_items.push_back({
+                    p.id, p.name, "Color Palette", "Palette",
+                    "Author-curated color palette: "+p.name,
+                    palette_action(i+1), true
+                });
+            }
+            for(const auto& t:worn->templates) {
+                std::string kind_str="Combination";
+                if(t.kind==TemplateKind::Palette) kind_str="Palette";
+                else if(t.kind==TemplateKind::Archetype) kind_str="Archetype";
+                else if(t.kind==TemplateKind::Physics) kind_str="Physics";
+                else if(t.kind==TemplateKind::Hair) kind_str="Hair";
+                else if(t.kind==TemplateKind::Jewelry) kind_str="Jewelry";
+                else if(t.kind==TemplateKind::Glow) kind_str="Glow";
+                tmpl_items.push_back({
+                    t.id, t.name, kind_str+" Preset", kind_str,
+                    t.data.value("description",std::string("Author preset for outfit combination, body archetype, or physics.")),
+                    Json{{"action","template"},{"template",t.id}}, false
+                });
+            }
+            size_t active_tmpl=0;
+            for(size_t i=0;i<tmpl_items.size();++i) {
+                if(tmpl_items[i].is_palette && tmpl_items[i].id==custom.palette) {
+                    active_tmpl=i; break;
+                }
+            }
+            const auto& cur_tmpl=tmpl_items[active_tmpl];
+            const size_t total_templates=tmpl_items.size();
+            auto tmpl_step=[&](int dir) {
+                size_t next=(active_tmpl+total_templates+dir)%total_templates;
+                return tmpl_items[next].action;
+            };
+
+            const bool has_dyed_palette = custom.palette != "original";
+            // 0.4: the tab is a template/palette, then one section per group, each opening with the
             // tint that moves everything under it. See docs/control-convention.md.
             struct Entry { bool tint; ControlGroup group; int control; };
             std::vector<Entry> entries;
-            entries.push_back({false,ControlGroup::Outfit,-1});     // the palette itself
+            entries.push_back({false,ControlGroup::Outfit,-1});     // the template/palette itself
             for(auto group:{ControlGroup::Outfit,ControlGroup::Body}) {
                 std::vector<int> members;
                 for(size_t i=0;i<options.controls.size();++i) if(options.controls[i].group==group) members.push_back(int(i));
                 if(members.empty()) continue;
                 // Tinting needs a palette: Original is not dyed, so there is nothing to move.
-                const bool tintable=palette && std::any_of(members.begin(),members.end(),
+                const bool tintable=has_dyed_palette && std::any_of(members.begin(),members.end(),
                     [&](int i){return !options.controls[i].scalar;});
                 if(tintable) entries.push_back({true,group,-1});
                 for(int i:members) entries.push_back({false,group,i});
@@ -442,10 +493,9 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
 
             const double header=62, line=68;
             scroll_begin(328);
-            // Palette band, visually apart from the parts so it no longer reads as one.
             row_swatch=nullptr;
-            row(0,palette_name,palette?"Palette":"The author's own settings",header,
-                palette_action(0),palette_action((palette+options.palettes.size())%steps),palette_action((palette+1)%steps));
+            row(0,cur_tmpl.name,cur_tmpl.subtitle,header,
+                cur_tmpl.action,tmpl_step(-1),tmpl_step(1));
             gap(10);
             for(size_t i=1;i<entries.size();++i) {
                 const auto& entry=entries[i];
@@ -466,10 +516,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 // their state in the subtitle instead of a chip.
                 if(c.kind==ControlKind::Color || c.kind==ControlKind::Intensity || c.kind==ControlKind::Scalar || c.kind==ControlKind::Glow || c.kind==ControlKind::Opacity) row_swatch=&chip;
                 row_indent=12;
-                // Naming the palette on a part it does not set would be a lie: palettes
-                // dress the outfit and leave the body alone, and that part is undyed.
-                const bool from_palette=palette && options.palettes[palette-1].values.contains(c.id);
-                std::string source=custom.values.contains(c.id)?"Custom":from_palette?palette_name:"Original";
+                size_t pal_idx=0;
+                for(size_t p=0;p<options.palettes.size();++p) if(options.palettes[p].id==custom.palette) pal_idx=p+1;
+                const std::string pal_name=pal_idx?options.palettes[pal_idx-1].name:"Original";
+                const bool from_palette=pal_idx && options.palettes[pal_idx-1].values.contains(c.id);
+                std::string source=custom.values.contains(c.id)?"Custom":from_palette?pal_name:"Original";
                 Json accept={{"action","reset_control"},{"control",c.id}};
                 if(c.kind==ControlKind::Toggle) {
                     const bool on=held[0]>=.5f;
@@ -511,11 +562,19 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             scroll_end();
 
             const auto& entry=entries[row_];
+            const auto confirm_reset_all=Json{{"action","ui_confirm"},{"title","Reset All Customizations"},{"message","Reset all customization overrides for this outfit back to original defaults?"},{"target",rows_[row_].tertiary}};
             if(row_==0) {
-                detail("Palette",worn->name,"Use Left / Right to choose a palette. Original restores the author's own materials exactly, and cannot be tinted.");
-                for(size_t i=0;i<steps;++i) bind(ui.button(i?options.palettes[i-1].name:"Original",right,controls_y+i*46,360,42,palette==i,true,21),palette_action(i));
-                direction_hint(true,"Change palette",right,854,360);
-                action_button("accept","Restore the original",892,palette_action(0),3);
+                detail("Templates & Presets",worn->name,"Use Left / Right to cycle templates. Choose an author combination, material palette, body archetype, or physics preset.");
+                const size_t show_count=std::min(tmpl_items.size(),size_t(6));
+                for(size_t i=0;i<show_count;++i) {
+                    const auto& item=tmpl_items[i];
+                    bind(ui.button(item.name,right,controls_y+i*46,360,42,active_tmpl==i,true,20),item.action);
+                }
+                const double by=controls_y+show_count*46;
+                bind(ui.button("Browse templates...",right,by+6,360,40,false,true,18),
+                     {{"action","ui_browse_templates"}});
+                direction_hint(true,"Cycle template",right,by+52,360);
+                action_button("accept","Restore original",by+92,palette_action(0),3);
             } else if(entry.tint) {
                 const auto tint=tint_of(entry.group);
                 detail(entry.group==ControlGroup::Body?"Body tint":"Outfit tint",worn->name,
@@ -552,7 +611,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     // Same rhythm as the swatch page, so the reset is in one place on
                     // every part no matter what kind of control it is.
                     action_button("accept",on?"Hide":"Show",795,set_to(on?0:1),3);
-                    action_button("tertiary","Reset all",887,rows_[row_].tertiary,2);
+                    action_button("tertiary","Reset all",887,confirm_reset_all,2);
                 } else if(control.kind==ControlKind::Choice) {
                     const int here=std::clamp(int(std::lround(value[0])),0,int(control.options.size())-1);
                     detail(control.name,worn->name,"Choose which of the author's textures this part wears.");
@@ -566,9 +625,15 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                         const double bx=right+(paired && i>=rows?step:0), by=controls_y+double(paired?i%rows:i)*46;
                         bind(ui.button(control.options[i].name,bx,by,wide,42,int(i)==here,true,paired?18:21),set_to(double(i)));
                     }
-                    direction_hint(true,"Choose",right,controls_y+double(rows)*46+10,360);
+                    double cy=controls_y+double(rows)*46+10;
+                    if(count>4) {
+                        bind(ui.button("Search choices...",right,cy,360,38,false,true,18),
+                             {{"action","ui_browse_choice"},{"control",control.id}});
+                        cy+=44;
+                    }
+                    direction_hint(true,"Choose",right,cy,360);
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
-                    action_button("tertiary","Reset all",887,rows_[row_].tertiary,2);
+                    action_button("tertiary","Reset all",887,confirm_reset_all,2);
                 } else if(control.kind==ControlKind::Spring) {
                     // Two or three sliders, the same shape as a group tint. The numbers are
                     // frequency, damping ratio, and (with a clamp) travel; the words say what
@@ -607,7 +672,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     direction_hint(true,"Adjust selected slider",right,controls_y+fieldcount*80+6,360);
                     action_button("secondary","Select next slider",795,Json{{"action","ui_channel"},{"count",fieldcount}},4);
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
-                    action_button("tertiary","Reset all",887,rows_[row_].tertiary,2);
+                    action_button("tertiary","Reset all",887,confirm_reset_all,2);
                 } else if(control.kind==ControlKind::Glow) {
                     detail(control.name,worn->name,"Adjust emissive glow radiance. Turn up intensity for arcane luminescence; breathing pulse animates in combat.");
                     const int fieldcount=control.pulse_hz>0?2:1;
@@ -633,7 +698,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     direction_hint(true,"Adjust glow intensity",right,controls_y+fieldcount*80+6,360);
                     if(fieldcount>1) action_button("secondary","Select next slider",795,Json{{"action","ui_channel"},{"count",fieldcount}},4);
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
-                    action_button("tertiary","Reset all",887,rows_[row_].tertiary,2);
+                    action_button("tertiary","Reset all",887,confirm_reset_all,2);
                 } else if(control.kind==ControlKind::Opacity) {
                     detail(control.name,worn->name,"Adjust fabric transparency and sheer alpha. 0% is invisible sheer; 100% is solid opaque.");
                     const double sy=controls_y;
@@ -649,7 +714,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                         value[0],false,"%"});
                     direction_hint(true,"Adjust opacity",right,controls_y+86,360);
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
-                    action_button("tertiary","Reset all",887,rows_[row_].tertiary,2);
+                    action_button("tertiary","Reset all",887,confirm_reset_all,2);
                 } else if(!control.scalar && !exact_color_) {
                     // The swatch strip: the author's colour, this part in every palette,
                     // then shades of it. Picking is the common case, so it is what the
@@ -677,7 +742,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                                    controls_y+double((strip.size()+size_t(columns)-1)/size_t(columns))*pitch+8,360);
                     action_button("secondary","Exact colour",795,Json{{"action","ui_exact"}},4);
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
-                    action_button("tertiary","Reset all",887,rows_[row_].tertiary,2);
+                    action_button("tertiary","Reset all",887,confirm_reset_all,2);
                 } else {
                 // A shape moves geometry rather than a material value, so it says so. Every
                 // other single-number control is a strength of some kind and keeps the old
@@ -703,7 +768,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 if(!control.scalar) action_button("secondary","Select next channel",795,rows_[row_].secondary,4);
                 action_button("accept","Reset part",841,rows_[row_].accept,3);
                 action_button("tertiary",control.scalar?"Reset all":"Back to swatches",887,
-                              control.scalar?rows_[row_].tertiary:Json{{"action","ui_exact"}},2);
+                              control.scalar?confirm_reset_all:Json{{"action","ui_exact"}},2);
                 }
             }
         }
@@ -743,7 +808,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         row_=std::clamp(row_,0,int(names.size()));
         scroll_begin();
         row(0,"New profile","Save your current character profile",77,{{"action","ui_save_profile"}});
-        for(size_t i=0;i<names.size();++i) row(int(i)+1,names[i],"Saved character profile",77,{{"action","load_look"},{"name",names[i]}},{},{},{{"action","save_look"},{"name",names[i]}},{{"action","delete_look"},{"name",names[i]}});
+        for(size_t i=0;i<names.size();++i) {
+            Json rep_act{{"action","ui_confirm"},{"title","Overwrite Profile"},{"message","Overwrite profile '"+names[i]+"' with your current character snapshot?"},{"target",Json{{"action","save_look"},{"name",names[i]}}}};
+            Json del_act{{"action","ui_confirm"},{"title","Delete Profile"},{"message","Delete saved profile '"+names[i]+"'?\nThis action cannot be undone."},{"target",Json{{"action","delete_look"},{"name",names[i]}}}};
+            row(int(i)+1,names[i],"Saved character profile",77,{{"action","load_look"},{"name",names[i]}},{},{},rep_act,del_act);
+        }
         scroll_end();
         auto selected=row_?names[row_-1]:std::string{};
         detail(row_?selected:"New profile","Character profile and settings",row_?"Load this profile, replace it with your current character, or give it a new name.":"Choose a name, then save. A controller can save with the suggested name.");
@@ -762,9 +831,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         if(!row_) action_button("accept","Save profile",631,{{"action","ui_save_profile"}},3);
         else {
             action_button("accept","Load profile",631,rows_[row_].accept,3);
-            action_button("secondary","Replace with current character",681,rows_[row_].secondary,4);
+            auto confirm_replace = Json{{"action", "ui_confirm"}, {"title", "Overwrite Profile"}, {"message", "Overwrite profile '" + selected + "' with your current character snapshot?"}, {"target", rows_[row_].secondary}};
+            auto confirm_delete = Json{{"action", "ui_confirm"}, {"title", "Delete Profile"}, {"message", "Delete saved profile '" + selected + "'?\nThis action cannot be undone."}, {"target", rows_[row_].tertiary}};
+            action_button("secondary","Replace with current character",681,confirm_replace,4);
             bind(ui.button("Rename",right,controls_y+231,360,43,false,true,20),{{"action","ui_rename_profile"},{"name",selected}});
-            action_button("tertiary","Delete profile",801,rows_[row_].tertiary,2);
+            action_button("tertiary","Delete profile",801,confirm_delete,2);
         }
     }
     decoration("T_UI_DescriptionHeader_Divider",left,931,panel,2);
@@ -784,6 +855,61 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     } else {
         auto* hint=ui.label("Right-drag rotate  /  Wheel zoom  /  Left-drag move",width/2-255,1030,510,34,15);
         invoke(hint,L"SetJustification",L"InJustification",uint8_t{1});
+    }
+    auto modal_box = [&](const std::string& title, double w, double h) {
+        const double x = (width - w) / 2, y = (1080 - h) / 2;
+        ui.box(0, 0, width, 1080, Color{0, 0, 0, .92f});
+        ui.box(x - 1, y - 1, w + 2, h + 2, Color{.13f, .10f, .06f, 1});
+        ui.box(x, y, w, h, Color{.012f, .010f, .007f, 1});
+        decoration("T_UI_Nav_TitleBG", x + 1, y + 1, w - 2, 102);
+        auto* tlabel = ui.label(title, x + 32, y + 27, w - 64, 70, 26, ivory);
+        invoke(tlabel, L"SetJustification", L"InJustification", uint8_t{1});
+        decoration("T_UI_DescriptionHeader_Divider", x + 32, y + 112, w - 64, 2);
+        decoration("T_UI_DescriptionHeader_Divider", x + 32, y + h - 82, w - 64, 2);
+        return std::array<double, 4>{x, y, w, h};
+    };
+    auto make_text_input = [&](const std::string& value, double x, double y, double w, bool enabled) {
+        auto* input = construct(L"/Script/UMG.EditableText", tree);
+        text_value(input, value);
+        Call current(input, L"GetFont", 1); current.run();
+        Call set(input, L"SetFont", 1); set.copy(L"InFontInfo", current, L"ReturnValue");
+        auto* font = set.param(L"InFontInfo"); auto* info = find(L"/Script/SlateCore.SlateFontInfo");
+        member(set.data(font), font->GetElementSize(), info, L"FontObject", serif);
+        member(set.data(font), font->GetElementSize(), info, L"Size", 20 * float(ui.scale));
+        member(set.data(font), font->GetElementSize(), info, L"TypefaceFontName", FName(L"Regular")); set.run();
+        invoke(input, L"SetIsEnabled", L"bInIsEnabled", enabled); ui.place(input, x, y, w, 40);
+        return input;
+    };
+    if(!confirm_action_.is_null()) {
+        const auto m = modal_box(confirm_action_.value("title", std::string("Confirm Action")), std::min(640., width - 140.), 380);
+        const double mx = m[0], my = m[1], mw = m[2], mh = m[3];
+        std::string msg = confirm_action_.value("message", std::string("Are you sure you want to proceed?"));
+        auto* mlabel = ui.label(msg, mx + 32, my + 130, mw - 64, 130, 18, muted);
+        invoke(mlabel, L"SetJustification", L"InJustification", uint8_t{1});
+        invoke(mlabel, L"SetAutoWrapText", L"InAutoTextWrap", true);
+        const double btn_w = (mw - 80) / 2, btn_y = my + mh - 64;
+        bind(ui.button("", mx + 24, btn_y, btn_w, 44), {{"action", "ui_confirm_cancel"}});
+        ui.box(mx + 24, btn_y, btn_w, 44, Color{.024f, .021f, .016f, 1});
+        prompt("close", "Cancel", mx + 40, btn_y + 8, btn_w - 24, 5);
+        bind(ui.button("", mx + mw - btn_w - 24, btn_y, btn_w, 44, true), {{"action", "ui_confirm_proceed"}});
+        ui.box(mx + mw - btn_w - 24, btn_y, btn_w, 44, Color{.06f, .048f, .026f, 1});
+        prompt("accept", "Confirm", mx + mw - btn_w - 8, btn_y + 8, btn_w - 24, 3);
+    }
+    if(native_picker_) {
+        const auto m = modal_box(native_picker_title_.empty() ? "Browse" : native_picker_title_, std::min(880., width - 140.), 830);
+        const double mx = m[0], my = m[1], mw = m[2], mh = m[3];
+        ui.label("Search by name or keyword", mx + 32, my + 128, mw - 64, 30, 18, muted);
+        ui.box(mx + 32, my + 166, mw - 64, 46, Color{.04f, .033f, .024f, 1});
+        native_search_input_ = make_text_input(native_search_query_, mx + 44, my + 170, mw - 88, true);
+        auto* list = construct(L"/Script/UMG.CanvasPanel", tree);
+        native_search_results_ = list;
+        ui.place(list, mx + 32, my + 234, mw - 64, 432);
+        native_search_count_ = ui.label("", mx + 32, my + 680, mw - 64, 30, 18, muted);
+        bind(ui.button("", mx + 24, my + mh - 64, 180, 44), {{"action", "ui_pick_cancel"}});
+        prompt("close", "Back", mx + 36, my + mh - 53, 150, 5);
+        bind(ui.button("", mx + mw - 234, my + mh - 64, 210, 44, true), {{"action", "ui_pick_apply"}});
+        prompt("accept", "Select", mx + mw - 220, my + mh - 53, 180, 3);
+        build_native_picker_results();
     }
     transition_widgets_.clear();
     // The slide-in needs every widget on the page and where it sits. That used to mean
@@ -808,6 +934,30 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     nested_widgets_=int(ui.placed.size())-page_widgets_;
     if(enter_transition_) { transition_started_=GetTickCount64(); enter_transition_=false; }
     last_message_.clear(); dirty_=false;
+}
+void InventoryUI::build_native_picker_results() {
+    auto* canvas=native_search_results_.Get(); if(!canvas) return;
+    invoke(canvas,L"ClearChildren");
+    std::erase_if(hits_,[](const auto& hit){return hit.action.value("action",std::string{})=="ui_pick_row";});
+    auto* page=page_.Get(); if(!page) return;
+    auto* tree=inventory_object(page,L"WidgetTree");
+    auto* serif=load("/Game/Sparta/UI/Fonts/CrimsonText-Regular_Font.CrimsonText-Regular_Font");
+    auto* title=load("/Game/Sparta/UI/Fonts/Trajan_Pro_Regular_Font.Trajan_Pro_Regular_Font");
+    InventoryLayout ui{{tree,canvas,layout_size_[1]/1080.,serif},title};
+    const double width=std::min(880.,layout_size_[0]/layout_size_[1]*1080.-140.)-64;
+    const auto& search=native_options_;
+    const size_t first=search.selected/8*8;
+    for(size_t i=first;i<std::min(first+8,search.matches.size());++i) {
+        const auto& option=search.options[search.matches[i]];
+        const double y=(i-first)*54.;
+        auto* button=ui.button("",0,y,width,50,i==search.selected);
+        if(i==search.selected) ui.box(0,y,width,50,Color{.055f,.045f,.027f,1});
+        ui.selection_mark(16,y+19,i==search.selected);
+        ui.label(option.at("label").get<std::string>(),44,y+10,width-60,32,21,i==search.selected?Color{.42f,.34f,.22f,1}:inventory_ink);
+        hits_.push_back({WeakObject(button),{{"action","ui_pick_row"},{"row",i}},false});
+    }
+    if(search.matches.empty()) ui.label("No matching options",20,140,width-40,40,22,inventory_ink);
+    if(auto* count=native_search_count_.Get()) text_value(count,std::to_string(search.matches.size())+" matches / "+std::to_string(search.options.size())+" options");
 }
 void InventoryUI::close_menu() {
     if(!main_.Get() || !inventory_bool(main_.Get(),L"bOpen")) return;
@@ -841,6 +991,113 @@ Json InventoryUI::dispatch(Json action,const State& state) {
     if(name=="ui_reset_view") { camera_stop(); camera_start(); return {}; }
     if(name=="ui_close") {
         if(active_ && !closing_) { closing_=true; transition_started_=GetTickCount64(); }
+        return {};
+    }
+    if(name=="ui_confirm") {
+        confirm_action_={
+            {"action",action.at("target")},
+            {"title",action.value("title",std::string("Confirm Action"))},
+            {"message",action.value("message",std::string("Are you sure you want to proceed?"))}
+        };
+        dirty_=true; return {};
+    }
+    if(name=="ui_confirm_cancel") { confirm_action_=nullptr; dirty_=true; return {}; }
+    if(name=="ui_confirm_proceed") {
+        auto target=confirm_action_.value("action",Json{});
+        confirm_action_=nullptr; dirty_=true;
+        return dispatch(target,state);
+    }
+    if(name=="ui_browse_shells" && catalog_) {
+        Json opts=Json::array();
+        for(const auto& o:catalog_->outfits) {
+            opts.push_back({{"id",o.id},{"label",o.name+" ("+o.author+")"}});
+        }
+        native_options_.reset(opts);
+        native_picker_=true;
+        native_picker_title_="Browse Outfits & Shells";
+        native_picker_kind_="outfit";
+        native_picker_target_.clear();
+        native_search_query_.clear();
+        dirty_=true;
+        return {};
+    }
+    if(name=="ui_browse_templates" && catalog_ && appearance_) {
+        auto sel=state.selections.find(appearance_->shell);
+        const Outfit* worn_outfit=nullptr;
+        if(sel!=state.selections.end()) for(const auto& o:catalog_->outfits) if(o.id==sel->second.outfit) worn_outfit=&o;
+        if(!worn_outfit) return {};
+        const auto& opts_set=worn_outfit->controls_for(sel->second.variant);
+        Json opts=Json::array();
+        opts.push_back({{"id","palette:original"},{"label","[Original] Author Default Materials"}});
+        for(const auto& p:opts_set.palettes) {
+            opts.push_back({{"id","palette:"+p.id},{"label","[Palette] "+p.name}});
+        }
+        for(const auto& t:worn_outfit->templates) {
+            std::string tag=t.kind==TemplateKind::Combination?"Combination":
+                            t.kind==TemplateKind::Archetype?"Archetype":
+                            t.kind==TemplateKind::Physics?"Physics":
+                            t.kind==TemplateKind::Hair?"Hair":
+                            t.kind==TemplateKind::Jewelry?"Jewelry":
+                            t.kind==TemplateKind::Glow?"Glow":"Template";
+            opts.push_back({{"id","template:"+t.id},{"label","["+tag+"] "+t.name}});
+        }
+        native_options_.reset(opts);
+        native_picker_=true;
+        native_picker_title_="Browse Templates & Presets";
+        native_picker_kind_="template";
+        native_picker_target_.clear();
+        native_search_query_.clear();
+        dirty_=true;
+        return {};
+    }
+    if(name=="ui_browse_choice" && catalog_ && appearance_) {
+        auto sel=state.selections.find(appearance_->shell);
+        const Outfit* worn_outfit=nullptr;
+        if(sel!=state.selections.end()) for(const auto& o:catalog_->outfits) if(o.id==sel->second.outfit) worn_outfit=&o;
+        if(!worn_outfit) return {};
+        const auto& opts_set=worn_outfit->controls_for(sel->second.variant);
+        std::string cid=action.at("control").get<std::string>();
+        const Control* ctrl=opts_set.find(cid);
+        if(!ctrl || ctrl->kind!=ControlKind::Choice) return {};
+        Json opts=Json::array();
+        for(size_t i=0;i<ctrl->options.size();++i) {
+            opts.push_back({{"id",std::to_string(i)},{"label",ctrl->options[i].name}});
+        }
+        native_options_.reset(opts);
+        native_picker_=true;
+        native_picker_title_="Choose "+ctrl->name;
+        native_picker_kind_="choice";
+        native_picker_target_=cid;
+        native_search_query_.clear();
+        dirty_=true;
+        return {};
+    }
+    if(name=="ui_pick_row") {
+        native_options_.selected=std::min(action.at("row").get<size_t>(),native_options_.matches.empty()?size_t{}:native_options_.matches.size()-1);
+        build_native_picker_results();
+        return {};
+    }
+    if(name=="ui_pick_cancel") {
+        native_picker_=false; dirty_=true; return {};
+    }
+    if(name=="ui_pick_apply") {
+        const auto val=native_options_.value();
+        if(val.is_null()) return {};
+        native_picker_=false; dirty_=true;
+        if(native_picker_kind_=="outfit") {
+            const std::string outfit_id=val.get<std::string>();
+            std::string variant_id;
+            if(catalog_) for(const auto& o:catalog_->outfits) if(o.id==outfit_id && !o.variants.empty()) { variant_id=o.variants.front().id; break; }
+            return {{"action","select"},{"outfit",outfit_id},{"variant",variant_id}};
+        } else if(native_picker_kind_=="choice") {
+            int idx=val.is_number()?val.get<int>():std::stoi(val.get<std::string>());
+            return {{"action","control"},{"control",native_picker_target_},{"channel",0},{"value",double(idx)}};
+        } else if(native_picker_kind_=="template") {
+            std::string tid=val.get<std::string>();
+            if(tid.starts_with("palette:")) return {{"action","palette"},{"palette",tid.substr(8)}};
+            if(tid.starts_with("template:")) return {{"action","template"},{"template",tid.substr(9)}};
+            return {{"action","template"},{"template",tid}};
+        }
         return {};
     }
     if(name=="ui_save_template" || name=="ui_save_profile") return {{"action","save_look"},{"name",inventory_text(name_input_.Get())}};
@@ -942,6 +1199,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     cinema_update(focused);
 #endif
     if(!enabled_) return {};
+    catalog_=&catalog; appearance_=&appearance;
     auto now=GetTickCount64();
     if(main_.Get() && now>=discover_after_) {
         discover_after_=now+500;
@@ -990,7 +1248,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         if(library.value("revision",uint64_t{})!=extension_revision_) {extension_revision_=library.value("revision",uint64_t{});dirty_=true;}
         extension_library_=std::move(library);
     }
-    bool editing_extension=false;
+    bool editing_extension=false, editing_native=false;
     if(extension_active_ && extension_picker_) if(auto* search=extension_search_input_.Get()) {
         // Keep the search field and caret alive. Replace only result rows.
         try {
@@ -1002,6 +1260,16 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         } catch(const std::exception& error) {extension_error_=error.what();}
         editing_extension=true;
     }
+    if(native_picker_) if(auto* search=native_search_input_.Get()) {
+        try {
+            const auto query=inventory_text(search,256);
+            if(query!=native_search_query_) {
+                native_search_query_=query;
+                if(native_options_.filter(query)) build_native_picker_results();
+            }
+        } catch(...) {}
+        editing_native=true;
+    }
     if(extension_active_) {
         if(auto* input=name_input_.Get()) {
             Call focus(input,L"HasKeyboardFocus",1);focus.run();editing_extension=editing_extension || focus.get<bool>();
@@ -1010,7 +1278,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         }
         if(!sliders_.empty() && inventory_key(controller_.Get(),"LeftMouseButton")) editing_extension=true;
     }
-    if(dirty_ && !editing_extension) {if(extension_active_) build_extensions();else build(catalog,state,appearance);}
+    if(dirty_ && !editing_extension && !editing_native) {if(extension_active_) build_extensions();else build(catalog,state,appearance);}
     animate(GetTickCount64());
     if(extension_active_) for(const auto& bar:extension_loading_) if(auto* widget=bar.Get()) {
         const float pulse=.5f+.5f*float(std::sin(now*.004));
@@ -1020,11 +1288,12 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     if(!focused) { motion_.reset(); drag_pan_=drag_rotate_=false; return {}; }
     bool typing=false;
     if(auto* input=name_input_.Get()) { Call focus(input,L"HasKeyboardFocus",1); focus.run(); typing=focus.get<bool>(); }
+    if(native_picker_) if(auto* search=native_search_input_.Get()) { Call focus(search,L"HasKeyboardFocus",1); focus.run(); typing=typing || focus.get<bool>(); }
     bool character_controls=!extension_active_;
     if(extension_active_ && !extension_id_.empty()) for(const auto& entry:extension_library_.at("extensions"))
         if(entry.at("id")==extension_id_) character_controls=entry.at("layout")=="inventory";
     if(extension_picker_ && extension_search_input_.Get()) {Call focus(extension_search_input_.Get(),L"HasKeyboardFocus",1);focus.run();typing=typing || focus.get<bool>();}
-    if(extension_details_ || extension_picker_ || !extension_confirm_.is_null()) character_controls=false;
+    if(extension_details_ || extension_picker_ || !extension_confirm_.is_null() || native_picker_ || !confirm_action_.is_null()) character_controls=false;
     if(!typing && character_controls) camera_update(elapsed,state.invert_orbit_x);
     else { motion_.reset(); drag_pan_=drag_rotate_=false; }
 #ifdef CSS_INVENTORY_DEV
@@ -1051,10 +1320,20 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
             return dispatch_extension(extension_id_.empty()?Json{{"action","x_page"},{"direction",scroll<0?1:-1}}:Json{{"action","x_scroll"},{"delta",scroll<0?1:-1}});
         }
     }
+    if(!extension_active_ && native_picker_ && !typing && now>=native_wheel_after_) {
+        Call wheel(controller_.Get(),L"GetInputAnalogKeyState",2);auto* key=wheel.param(L"Key");
+        member(wheel.data(key),key->GetElementSize(),find(L"/Script/InputCore.Key"),L"KeyName",FName(L"MouseWheelAxis"));wheel.run();
+        const float scroll=wheel.get<float>();
+        if(std::abs(scroll)>.01f) {
+            native_wheel_after_=now+100;
+            native_options_.move(scroll<0?1:-1);
+            build_native_picker_results();
+        }
+    }
     if(typing) for(auto& binding:bindings_) {
         bool down=false,allowed=false;
         for(const auto& key:binding.keys) if(inventory_key(controller_.Get(),key)) {
-            down=true;if(extension_picker_ && (key.starts_with("Gamepad_") || key=="Escape")) allowed=true;
+            down=true;if((extension_picker_ || native_picker_) && (key.starts_with("Gamepad_") || key=="Escape")) allowed=true;
         }
         const bool repeat=binding.action=="up" || binding.action=="down";
         const bool trigger=allowed && down && (!binding.down || (repeat && now>=binding.repeat));
@@ -1062,7 +1341,15 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         else if(trigger) binding.repeat=now+110;
         else if(!allowed) binding.repeat=now+360;
         binding.down=down;
-        if(trigger) {extension_input(binding.action);return {};}
+        if(trigger) {
+            if(extension_active_) {extension_input(binding.action);return {};}
+            if(native_picker_) {
+                if(binding.action=="up") { native_options_.move(-1); build_native_picker_results(); return {}; }
+                if(binding.action=="down") { native_options_.move(1); build_native_picker_results(); return {}; }
+                if(binding.action=="accept") return dispatch({{"action","ui_pick_apply"}},state);
+                if(binding.action=="close") return dispatch({{"action","ui_pick_cancel"}},state);
+            }
+        }
     }
     if(!typing) for(auto& binding:bindings_) {
         bool down=false; for(const auto& key:binding.keys) if(inventory_key(controller_.Get(),key)) { down=true; break; }
@@ -1072,6 +1359,18 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         binding.down=down;
         if(!triggered) continue;
         if(extension_active_ && extension_input(binding.action)) return {};
+        if(!confirm_action_.is_null()) {
+            if(binding.action=="accept") return dispatch({{"action","ui_confirm_proceed"}},state);
+            if(binding.action=="close") return dispatch({{"action","ui_confirm_cancel"}},state);
+            continue;
+        }
+        if(native_picker_) {
+            if(binding.action=="up") { native_options_.move(-1); build_native_picker_results(); return {}; }
+            if(binding.action=="down") { native_options_.move(1); build_native_picker_results(); return {}; }
+            if(binding.action=="accept") return dispatch({{"action","ui_pick_apply"}},state);
+            if(binding.action=="close") return dispatch({{"action","ui_pick_cancel"}},state);
+            continue;
+        }
         if(binding.action=="close") return dispatch({{"action","ui_close"}},state);
         if(binding.action=="reset_view") return dispatch({{"action","ui_reset_view"}},state);
         if(binding.action=="previous_section" || binding.action=="next_section") return dispatch({{"action","ui_section"},{"section",(section_+(binding.action=="next_section"?1:3))%4}},state);
@@ -1142,9 +1441,12 @@ Json InventoryUI::diagnostics() const {
     if(extension_active_ && name_input_.Get()) value["text"]=inventory_text(name_input_.Get(),4096);
     value["picker"]=extension_picker_;
     if(extension_picker_) {value["query"]=extension_search_query_;value["matches"]=extension_options_.matches.size();value["selected_option"]=extension_options_.value();}
-#endif
+    value["confirm_dialog"]=!confirm_action_.is_null();
+    value["native_picker"]=native_picker_;
+    if(native_picker_) {value["native_query"]=native_search_query_;value["native_matches"]=native_options_.matches.size();value["native_selected"]=native_options_.value();}
     value["menu_open"]=main_.Get() && inventory_bool(main_.Get(),L"bOpen");
     for(const auto& b:bindings_) value["bindings"][b.action]=b.keys;
+    #endif
     return value;
 }
 }

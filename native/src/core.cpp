@@ -303,7 +303,8 @@ struct Core {
         // bindings written against 0.4 keep running.
         else if(action=="palette" || action=="control" || action=="reset_control" ||
                 action=="color" || action=="reset_color" ||
-                action=="tint" || action=="reset_tint") {
+                action=="tint" || action=="reset_tint" ||
+                action=="template") {
             const bool clearing=action=="reset_control" || action=="reset_color";
             auto selected=state.selections.find(appearance.shell);
             if(selected==state.selections.end()) throw std::runtime_error("Wear an appearance before changing it");
@@ -313,6 +314,41 @@ struct Core {
             const auto& options=outfit->controls_for(selected->second.variant);
             auto custom=selected->second.custom;
             if(action=="palette") custom=choose_palette(options,custom,command.at("palette").get<std::string>());
+            else if(action=="template") {
+                auto template_id=command.at("template").get<std::string>();
+                const Template* tmpl=nullptr;
+                for(const auto& t:outfit->templates) if(t.id==template_id) { tmpl=&t; break; }
+                if(!tmpl) throw std::runtime_error("Unknown template: "+template_id);
+                if(tmpl->data.contains("palette") && tmpl->data.at("palette").is_string()) {
+                    custom=choose_palette(options,custom,tmpl->data.at("palette").get<std::string>());
+                }
+                if(tmpl->data.contains("values") && tmpl->data.at("values").is_object()) {
+                    for(const auto& [k, v] : tmpl->data.at("values").items()) {
+                        if(options.find(k)) {
+                            if(v.is_number()) {
+                                custom.values[k] = {v.get<float>(), 0, 0};
+                            } else if(v.is_array()) {
+                                ControlValue cv{};
+                                for(size_t i=0; i<std::min(v.size(), size_t(3)); ++i) cv[i] = v[i].get<float>();
+                                custom.values[k] = cv;
+                            }
+                        }
+                    }
+                }
+                if(tmpl->data.contains("tints") && tmpl->data.at("tints").is_object()) {
+                    for(const auto& [grp, t] : tmpl->data.at("tints").items()) {
+                        if(t.is_object()) {
+                            ColorTint tint{};
+                            if(t.contains("hue")) tint.hue = t.at("hue").get<float>();
+                            if(t.contains("saturation")) tint.saturation = t.at("saturation").get<float>();
+                            if(t.contains("brightness")) tint.brightness = t.at("brightness").get<float>();
+                            if(!tint.neutral()) custom.tints[grp] = tint;
+                            else custom.tints.erase(grp);
+                        }
+                    }
+                }
+                report("Applied template: " + tmpl->name);
+            }
             else if(action=="tint" || action=="reset_tint") {
                 auto group=command.at("group").get<std::string>();
                 if(group!="outfit" && group!="body") throw std::runtime_error("Unknown tint group");

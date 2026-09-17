@@ -88,6 +88,16 @@ class InventoryUI {
     bool extension_input(const std::string&);
     WeakObject main_, tabs_, switcher_, tab_, page_, controller_;
     WeakObject canvas_, status_, scroll_, name_input_, display_, camera_component_, input_prompt_;
+    Json confirm_action_;
+    bool native_picker_=false;
+    std::string native_picker_title_, native_picker_kind_, native_picker_target_;
+    extensions::OptionSearch native_options_;
+    WeakObject native_search_input_, native_search_results_, native_search_count_;
+    std::string native_search_query_;
+    uint64_t native_wheel_after_=0;
+    const Catalog* catalog_=nullptr;
+    const Appearance* appearance_=nullptr;
+    void build_native_picker_results();
     struct Hit { WeakObject widget; Json action; bool down=false; };
     struct Row { WeakObject marker, widget; Json accept, previous, next, secondary, tertiary; };
     // `unit` is what the readout says after the number: "" for a bare value, " Hz" for a
