@@ -154,15 +154,21 @@ int main() {
                 {"combinations", {{{"id", "harness_style"}, {"name", "Harness Set"}}}},
                 {"palettes", {{{"id", "crimson_vow"}, {"name", "Crimson Vow"}}}},
                 {"archetypes", {{{"id", "seductress_petite"}, {"name", "Petite Seductress"}}}},
-                {"physics", {{{"id", "jiggle_soft"}, {"name", "Soft Tissue"}}}}
+                {"physics", {{{"id", "jiggle_soft"}, {"name", "Soft Tissue"}}}},
+                {"accessories", {{{"id", "choker_set"}, {"name", "Gothic Choker"}}}},
+                {"fabrics", {{{"id", "sheer_gown"}, {"name", "Sheer Silk"}}}},
+                {"anatomy", {{{"id", "sensual_curves"}, {"name", "Hourglass"}}}},
             };
             atomic_json(catalog_file, templated, false);
             auto with_templates = Catalog::load(catalog_dir);
-            expect(with_templates.outfits[0].templates.size() == 4, "Templates parsing failed");
+            expect(with_templates.outfits[0].templates.size() == 7, "Templates parsing failed");
             expect(with_templates.outfits[0].templates[0].kind == TemplateKind::Combination, "Combination template kind wrong");
             expect(with_templates.outfits[0].templates[1].kind == TemplateKind::Palette, "Palette template kind wrong");
             expect(with_templates.outfits[0].templates[2].kind == TemplateKind::Archetype, "Archetype template kind wrong");
             expect(with_templates.outfits[0].templates[3].kind == TemplateKind::Physics, "Physics template kind wrong");
+            expect(with_templates.outfits[0].templates[4].kind == TemplateKind::Accessory, "Accessory template kind wrong");
+            expect(with_templates.outfits[0].templates[5].kind == TemplateKind::Fabric, "Fabric template kind wrong");
+            expect(with_templates.outfits[0].templates[6].kind == TemplateKind::Anatomy, "Anatomy template kind wrong");
             atomic_json(catalog_file, catalog, false);
         }
         {   // 0.4: the correction that keeps a stowed seal out of the hips. CSS measures

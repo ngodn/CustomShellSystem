@@ -1432,12 +1432,15 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                     }
                     for(int i=0;i<3;++i) {
                         if(control.translate[size_t(i)]>=0) node.set_flag(node.translate[i],control.translate[size_t(i)]!=0);
-                        else if(control.spring_clamp && bone.find("thigh")!=std::string::npos) {
+                        else if(control.planar_constraint>0) {
+                            node.set_flag(node.translate[i],control.planar_constraint!=i+1);
+                        } else if(control.spring_clamp && (bone.find("thigh")!=std::string::npos || bone.find("hip")!=std::string::npos)) {
                             if(i==1) node.set_flag(node.translate[i],false);
                             else node.set_flag(node.translate[i],true);
                         }
                         if(control.rotate[size_t(i)]>=0) node.set_flag(node.rotate[i],control.rotate[size_t(i)]!=0);
-                        else if(control.spring_clamp && (bone.find("brust")!=std::string::npos || bone.find("butt")!=std::string::npos)) {
+                        else if(control.spring_clamp && (bone.find("brust")!=std::string::npos || bone.find("butt")!=std::string::npos ||
+                                                         bone.find("breast")!=std::string::npos || bone.find("glute")!=std::string::npos)) {
                             node.set_flag(node.rotate[i],true);
                         }
                     }

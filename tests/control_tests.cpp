@@ -378,6 +378,94 @@ int main() {
             stray_formula["controls"][0]["formulas"]=Json::array();
             rejects([&]{ControlSet::parse(stray_formula);});
         }
+        {
+            // 1.0.0-beta Next-Gen: Kawaii Physics & Extended Anatomical Systems
+            auto kawaii = Json::parse(R"({
+              "schema": 1,
+              "controls": [
+                {"id": "bust_jiggle", "name": "Bust Motion", "kind": "spring",
+                 "nodes": ["brust001", "brust002"],
+                 "frequency": {"min": 0.5, "max": 4.0, "default": 1.8},
+                 "damping_ratio": {"min": 0.1, "max": 1.0, "default": 0.45},
+                 "max_displacement": {"min": 1.0, "max": 12.0, "default": 6.5},
+                 "planar_constraint": "y",
+                 "world_damping": 0.25,
+                 "limit_angle": 35.0,
+                 "collision_radius": 7.5,
+                 "gravity_scale": 1.2
+                },
+                {"id": "ponytail_hair", "name": "Ponytail Sway", "kind": "spring",
+                 "nodes": ["hair_root"],
+                 "frequency": {"min": 1.0, "max": 5.0, "default": 2.5},
+                 "damping_ratio": {"min": 0.2, "max": 0.8, "default": 0.5},
+                 "world_damping": 0.4,
+                 "limit_angle": 60.0
+                },
+                {"id": "clitoral_hue", "name": "Clitoral Tone", "default": [1, 1, 1, 1]},
+                {"id": "orifice_depth", "name": "Vaginal Depth", "kind": "scalar", "default": [1.0, 0, 0, 1],
+                 "bindings": [{"slot": 0, "parameter": "OrificeDepth"}]},
+                {"id": "choker_necklace", "name": "Choker", "default": [1, 1, 1, 1]},
+                {"id": "cape_fabric", "name": "Velvet Cape", "default": [1, 1, 1, 1]}
+              ],
+              "surfaces": [
+                {"id": "body", "parameter": "BaseColorMap non VT", "slots": [0],
+                 "layers": {
+                   "clitoral_hue": "dye-clit.png",
+                   "choker_necklace": "dye-choker.png",
+                   "cape_fabric": "dye-cape.png"
+                 }}
+              ]
+            })");
+            auto parsed_k = ControlSet::parse(kawaii);
+            const auto* bust = parsed_k.find("bust_jiggle");
+            expect(bust != nullptr && bust->kind == ControlKind::Spring, "Bust spring control missing");
+            expect(bust->planar_constraint == 2, "Planar constraint Y lost");
+            expect(std::abs(bust->world_damping - 0.25f) < 1e-6, "World damping mismatch");
+            expect(std::abs(bust->limit_angle - 35.0f) < 1e-6, "Limit angle mismatch");
+            expect(std::abs(bust->collision_radius - 7.5f) < 1e-6, "Collision radius mismatch");
+            expect(std::abs(bust->gravity_scale - 1.2f) < 1e-6, "Gravity scale mismatch");
+            expect(bust->group == ControlGroup::Body, "Bust role group must be Body");
+
+            const auto* pony = parsed_k.find("ponytail_hair");
+            expect(pony != nullptr && pony->group == ControlGroup::Body, "Hair group must be Body");
+            expect(std::abs(pony->world_damping - 0.4f) < 1e-6, "Hair world damping mismatch");
+            expect(std::abs(pony->limit_angle - 60.0f) < 1e-6, "Hair limit angle mismatch");
+
+            const auto* clit = parsed_k.find("clitoral_hue");
+            expect(clit != nullptr && clit->group == ControlGroup::Body, "Clitoris group must be Body");
+            expect(clit->hue_locked, "Clitoris role must be hue locked with skin");
+
+            const auto* orifice = parsed_k.find("orifice_depth");
+            expect(orifice != nullptr && orifice->group == ControlGroup::Body, "Orifice group must be Body");
+
+            const auto* choker = parsed_k.find("choker_necklace");
+            expect(choker != nullptr && choker->group == ControlGroup::Outfit, "Choker group must be Outfit");
+            expect(choker->hue_locked, "Jewelry role must be hue locked");
+
+            const auto* cape = parsed_k.find("cape_fabric");
+            expect(cape != nullptr && cape->group == ControlGroup::Outfit && !cape->hue_locked, "Fabric cape must be unlocked Outfit");
+
+            // Rejection tests for invalid secondary physics parameters
+            auto bad_pc = kawaii;
+            bad_pc["controls"][0]["planar_constraint"] = "w";
+            rejects([&]{ ControlSet::parse(bad_pc); });
+
+            auto bad_wd = kawaii;
+            bad_wd["controls"][0]["world_damping"] = 1.5;
+            rejects([&]{ ControlSet::parse(bad_wd); });
+
+            auto bad_la = kawaii;
+            bad_la["controls"][0]["limit_angle"] = 200.0;
+            rejects([&]{ ControlSet::parse(bad_la); });
+
+            auto bad_cr = kawaii;
+            bad_cr["controls"][0]["collision_radius"] = 150.0;
+            rejects([&]{ ControlSet::parse(bad_cr); });
+
+            auto bad_gs = kawaii;
+            bad_gs["controls"][0]["gravity_scale"] = 10.0;
+            rejects([&]{ ControlSet::parse(bad_gs); });
+        }
         std::cout<<checks<<" color behavior checks passed\n";
     } catch(const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }
 }

@@ -74,6 +74,12 @@ struct Control {
     // own flag alone; 0 or 1 forces it. error_reset < 0 leaves the threshold alone.
     std::array<std::int8_t,3> translate{{-1,-1,-1}}, rotate{{-1,-1,-1}};
     double error_reset = -1;
+    // Kawaii Physics & secondary motion extensions:
+    float world_damping = 0.0f;       // 0..1 world motion damping
+    float limit_angle = 0.0f;          // cone limit angle in degrees (0 = unlimited)
+    float collision_radius = 0.0f;     // collision sphere radius in cm
+    float gravity_scale = 0.0f;        // gravity bias factor
+    int planar_constraint = 0;         // 0: none, 1: X, 2: Y, 3: Z
     std::vector<ControlBinding> bindings;
 };
 // A hue rotation in degrees plus saturation and brightness multipliers, applied to a whole

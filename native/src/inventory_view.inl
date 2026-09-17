@@ -436,6 +436,9 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 else if(t.kind==TemplateKind::Hair) kind_str="Hair";
                 else if(t.kind==TemplateKind::Jewelry) kind_str="Jewelry";
                 else if(t.kind==TemplateKind::Glow) kind_str="Glow";
+                else if(t.kind==TemplateKind::Accessory) kind_str="Accessory";
+                else if(t.kind==TemplateKind::Fabric) kind_str="Fabric";
+                else if(t.kind==TemplateKind::Anatomy) kind_str="Anatomy";
                 tmpl_items.push_back({
                     t.id, t.name, kind_str+" Preset", kind_str,
                     t.data.value("description",std::string("Author preset for outfit combination, body archetype, or physics.")),

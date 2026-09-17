@@ -196,6 +196,9 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
                 parse_grp("hair", TemplateKind::Hair);
                 parse_grp("jewelry", TemplateKind::Jewelry);
                 parse_grp("glow", TemplateKind::Glow);
+                parse_grp("accessories", TemplateKind::Accessory);
+                parse_grp("fabrics", TemplateKind::Fabric);
+                parse_grp("anatomy", TemplateKind::Anatomy);
             }
             std::set<std::string> variants;
             for (const auto& v : item.at("variants")) {

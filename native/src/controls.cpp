@@ -19,6 +19,21 @@ constexpr RoleGuess ROLE_GUESSES[] = {
     {"nipple", "nipple", ControlGroup::Body, true},
     {"labia", "labia", ControlGroup::Body, true},
     {"vestibule", "vestibule", ControlGroup::Body, true},
+    {"clitoris", "clitoris", ControlGroup::Body, true},
+    {"clit", "clitoris", ControlGroup::Body, true},
+    {"vulva", "labia", ControlGroup::Body, true},
+    {"vagina", "orifice", ControlGroup::Body, true},
+    {"orifice", "orifice", ControlGroup::Body, true},
+    {"anus", "orifice", ControlGroup::Body, true},
+    {"breast", "breast", ControlGroup::Body, false},
+    {"boob", "breast", ControlGroup::Body, false},
+    {"bust", "breast", ControlGroup::Body, false},
+    {"glute", "butt", ControlGroup::Body, false},
+    {"butt", "butt", ControlGroup::Body, false},
+    {"thigh", "thigh", ControlGroup::Body, false},
+    {"hip", "thigh", ControlGroup::Body, false},
+    {"waist", "waist", ControlGroup::Body, false},
+    {"belly", "waist", ControlGroup::Body, false},
     {"pubic", "body-hair", ControlGroup::Body, false},
     {"body-hair", "body-hair", ControlGroup::Body, false},
     {"eye-intensity", "eye-glow", ControlGroup::Body, false},
@@ -26,11 +41,27 @@ constexpr RoleGuess ROLE_GUESSES[] = {
     {"skin", "skin", ControlGroup::Body, true},
     {"face", "face", ControlGroup::Body, false},
     {"mask", "face", ControlGroup::Body, false},
+    {"ponytail", "hair", ControlGroup::Body, false},
+    {"bangs", "hair", ControlGroup::Body, false},
+    {"braid", "hair", ControlGroup::Body, false},
     {"hair", "hair", ControlGroup::Body, false},
     {"metal", "metal", ControlGroup::Outfit, true},
     {"gem", "gem", ControlGroup::Outfit, true},
     {"jewel", "gem", ControlGroup::Outfit, true},
     {"crystal", "gem", ControlGroup::Outfit, true},
+    {"necklace", "jewelry", ControlGroup::Outfit, true},
+    {"choker", "jewelry", ControlGroup::Outfit, true},
+    {"earring", "jewelry", ControlGroup::Outfit, true},
+    {"jewelry", "jewelry", ControlGroup::Outfit, true},
+    {"headwear", "headwear", ControlGroup::Outfit, false},
+    {"crown", "headwear", ControlGroup::Outfit, true},
+    {"hairpin", "headwear", ControlGroup::Outfit, true},
+    {"tiara", "headwear", ControlGroup::Outfit, true},
+    {"cape", "fabric", ControlGroup::Outfit, false},
+    {"cloak", "fabric", ControlGroup::Outfit, false},
+    {"scarf", "fabric", ControlGroup::Outfit, false},
+    {"skirt", "fabric", ControlGroup::Outfit, false},
+    {"sash", "fabric", ControlGroup::Outfit, false},
     {"trim", "accent", ControlGroup::Outfit, false},
     {"ribbon", "accent", ControlGroup::Outfit, false},
     {"accent", "accent", ControlGroup::Outfit, false},
@@ -38,6 +69,8 @@ constexpr RoleGuess ROLE_GUESSES[] = {
     {"leather", "leather", ControlGroup::Outfit, false},
     {"strap", "leather", ControlGroup::Outfit, false},
     {"glow", "glow", ControlGroup::Outfit, false},
+    {"sheer", "fabric", ControlGroup::Outfit, false},
+    {"lace", "fabric", ControlGroup::Outfit, false},
 };
 RoleGuess guess_role(const std::string& id) {
     for(const auto& guess:ROLE_GUESSES) if(id.find(guess.needle)!=std::string::npos) return guess;
@@ -49,11 +82,14 @@ bool role_hue_locked(const std::string& role) {
     // they sit with skin: a body hue shift must not leave them behind, and a player who
     // wants them pinker or darker sets that one control.
     return role=="metal" || role=="gem" || role=="skin" ||
-           role=="nipple" || role=="areola" || role=="labia" || role=="vestibule";
+           role=="nipple" || role=="areola" || role=="labia" || role=="vestibule" ||
+           role=="clitoris" || role=="orifice" || role=="jewelry";
 }
 ControlGroup role_group(const std::string& role) {
     return (role=="skin" || role=="face" || role=="hair" || role=="eyes" || role=="eye-glow" ||
-            role=="nipple" || role=="areola" || role=="labia" || role=="vestibule" || role=="body-hair")
+            role=="nipple" || role=="areola" || role=="labia" || role=="vestibule" || role=="clitoris" ||
+            role=="orifice" || role=="body-hair" || role=="breast" || role=="butt" || role=="thigh" ||
+            role=="waist" || role=="figure")
         ? ControlGroup::Body : ControlGroup::Outfit;
 }
 ControlValue value(const Json& j) {
@@ -245,6 +281,34 @@ ControlSet ControlSet::parse(const Json& j) {
                 control.error_reset=c.at("error_reset").get<double>();
                 if(!std::isfinite(control.error_reset) || control.error_reset<=0 || control.error_reset>4096)
                     throw std::runtime_error("A spring's error_reset is out of range");
+            }
+            if(c.contains("planar_constraint")) {
+                auto pc=c.at("planar_constraint").get<std::string>();
+                if(pc=="none") control.planar_constraint=0;
+                else if(pc=="x") control.planar_constraint=1;
+                else if(pc=="y") control.planar_constraint=2;
+                else if(pc=="z") control.planar_constraint=3;
+                else throw std::runtime_error("Invalid planar constraint axis");
+            }
+            if(c.contains("world_damping")) {
+                control.world_damping=c.at("world_damping").get<float>();
+                if(!std::isfinite(control.world_damping) || control.world_damping<0 || control.world_damping>1)
+                    throw std::runtime_error("Invalid world damping value");
+            }
+            if(c.contains("limit_angle")) {
+                control.limit_angle=c.at("limit_angle").get<float>();
+                if(!std::isfinite(control.limit_angle) || control.limit_angle<0 || control.limit_angle>180)
+                    throw std::runtime_error("Invalid limit angle");
+            }
+            if(c.contains("collision_radius")) {
+                control.collision_radius=c.at("collision_radius").get<float>();
+                if(!std::isfinite(control.collision_radius) || control.collision_radius<0 || control.collision_radius>100)
+                    throw std::runtime_error("Invalid collision radius");
+            }
+            if(c.contains("gravity_scale")) {
+                control.gravity_scale=c.at("gravity_scale").get<float>();
+                if(!std::isfinite(control.gravity_scale) || control.gravity_scale<-5 || control.gravity_scale>5)
+                    throw std::runtime_error("Invalid gravity scale");
             }
         } else if(control.kind==ControlKind::Spring)
             throw std::runtime_error("A spring control needs its bones, frequency and damping ratio");

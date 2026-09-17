@@ -44,7 +44,7 @@ enum class ItemSlot {
 const char* item_slot_name(ItemSlot);
 bool item_slot_from_name(const std::string&, ItemSlot&);
 // 1.0.0-beta: Templates for combinations, palettes, body archetypes, physics, etc.
-enum class TemplateKind { Combination, Palette, Archetype, Physics, Hair, Jewelry, Glow };
+enum class TemplateKind { Combination, Palette, Archetype, Physics, Hair, Jewelry, Glow, Accessory, Fabric, Anatomy };
 struct Template {
     std::string id, name;
     TemplateKind kind = TemplateKind::Combination;
