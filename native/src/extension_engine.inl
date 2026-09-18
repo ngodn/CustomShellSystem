@@ -52,6 +52,10 @@ Json ExtensionBridge::handle(UObject* object) {
     const auto id=next_++;objects_.emplace(id,WeakObject(object));
     return {{"$object",id},{"name",narrow(object->GetFullName())},{"class",narrow(object->GetClassPrivate()->GetFullName())}};
 }
+uint64_t ExtensionBridge::track(UObject* object) {
+    auto h=handle(object);
+    return h.is_object()?h.value("$object",uint64_t{0}):0;
+}
 UObject* ExtensionBridge::resolve(const Json& value) {
     if(value.is_null()) return nullptr;
     if(!value.is_object() || !value.contains("$object")) throw std::runtime_error("Expected CSSX object handle");

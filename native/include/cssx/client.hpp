@@ -19,6 +19,9 @@ public:
         if(!host || host->abi!=CSSX_ABI || host->size<sizeof(CssxHost) || !host->request) throw std::runtime_error("Incompatible CSSX host");
         host_=*host;
     }
+    const CssxHost& raw_host() const noexcept { return host_; }
+    void* context() const noexcept { return host_.context; }
+    const CssxHudApi* hud() const noexcept { return host_.hud; }
     Json request(const Json& value) const {
         auto bytes=value.dump();Response response;
         if(bytes.size()>1024*1024) throw std::runtime_error("CSSX request exceeds 1 MiB");

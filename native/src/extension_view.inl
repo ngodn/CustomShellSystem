@@ -58,11 +58,42 @@ void InventoryUI::build_extension_page() {
         input_prompt_=widget;
         return widget;
     };
-    auto texture=[&](const std::string& file,double x,double y,double w,double h){
+    auto texture=[&](const std::string& file,double x,double y,double w,double h,bool banner_mode=false){
         if(file.empty()) return false;auto path=fs::u8path(file);if(!fs::exists(path)) return false;
         auto& saved=textures_[file];auto* image=saved.Get();
         if(!image){Call import(find(L"/Script/Engine.Default__KismetRenderingLibrary"),L"ImportFileAsTexture2D",3);import.set(L"WorldContextObject",pc);import.set(L"Filename",FString(path.c_str()));import.run();image=import.get<UObject*>();saved=image;}
-        if(!image) return false;ui.image(image,x,y,w,h);return true;
+        if(!image) return false;
+        double draw_x=x,draw_y=y,draw_w=w,draw_h=h;
+        if(banner_mode) {
+            auto& sz=texture_sizes_[file];
+            if(sz.first<=0 || sz.second<=0) {
+                if(image->GetFunctionByNameInChain(L"Blueprint_GetSizeX")) {
+                    try {
+                        Call sx(image,L"Blueprint_GetSizeX",1);sx.run();sz.first=sx.get<int32_t>();
+                        Call sy(image,L"Blueprint_GetSizeY",1);sy.run();sz.second=sy.get<int32_t>();
+                    } catch(...) {}
+                }
+                if(sz.first<=0 || sz.second<=0) {
+                    std::ifstream f(path,std::ios::binary);
+                    if(f) {
+                        uint8_t buf[24]{};
+                        if(f.read(reinterpret_cast<char*>(buf),24) && buf[0]==0x89 && buf[1]=='P' && buf[2]=='N' && buf[3]=='G') {
+                            sz.first=(buf[16]<<24)|(buf[17]<<16)|(buf[18]<<8)|buf[19];
+                            sz.second=(buf[20]<<24)|(buf[21]<<16)|(buf[22]<<8)|buf[23];
+                        }
+                    }
+                }
+            }
+            if(sz.first>0 && sz.second>0) {
+                const double aspect=double(sz.first)/double(sz.second);
+                if(aspect<1.8) {
+                    draw_w=std::min(w,h*aspect);
+                    draw_h=h;
+                    draw_x=x+(w-draw_w)*0.5;
+                }
+            }
+        }
+        ui.image(image,draw_x,draw_y,draw_w,draw_h);return true;
     };
     if(!extensions_) {ui.text("CSSX is not installed",80,190,width-160,60,32,light);dirty_=false;return;}
     extension_library_=extensions_->request({{"op","library"}});
@@ -85,7 +116,7 @@ void InventoryUI::build_extension_page() {
             auto* hit=button("",x,y,card_w,card_h,{{"action","x_open"},{"id",entry.at("id")}},selected,true);
             ui.box(x+1,y+1,card_w-2,card_h-2,Color{.009f,.009f,.008f,.94f});
             const auto banner=entry.value("banner",std::string{});
-            if(!texture(banner,x+2,y+2,card_w-4,145)) {
+            if(!texture(banner,x+2,y+2,card_w-4,145,true)) {
                 ui.box(x+2,y+2,card_w-4,145,Color{.025f,.025f,.02f,1});ui.sigil(x+card_w/2-29,y+27,58,accent);
             }
             ui.text(entry.at("title").get<std::string>(),x+18,y+153,card_w-36,34,24,light);

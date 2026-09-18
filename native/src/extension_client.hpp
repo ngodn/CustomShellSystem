@@ -2,6 +2,7 @@
 #include "cssx/api.h"
 #include "extension_data.hpp"
 #include <windows.h>
+#include <cstddef>
 namespace css {
 class ExtensionClient {
     HMODULE module_=nullptr;
@@ -31,6 +32,11 @@ public:
         auto result=Json::parse(out);if(!ok) throw std::runtime_error(result.value("error",std::string("CSSX request failed")));return result;
     }
     void tick(double delta) {if(instance_ && !api_->tick(instance_,delta)) throw std::runtime_error("CSSX runtime tick failed");}
+    void render(const CssxFrame& frame) {
+        // ABI 2 dispatch. A pre-ABI-2 core has no render pointer; skip it there.
+        if(instance_ && api_->abi>=2 && api_->size>offsetof(CssxRuntime,render) && api_->render && !api_->render(instance_,&frame))
+            throw std::runtime_error("CSSX runtime render failed");
+    }
     bool stop() {if(!instance_) return true;if(!api_->stop(instance_)) return false;api_->destroy(instance_);instance_=nullptr;return true;}
     bool ready() const {return instance_!=nullptr;}
 };

@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
+#include <cstddef>
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -129,6 +130,7 @@ struct Entry {
     void refresh();
     void event(const Json&);
     void tick(double);
+    void render(const CssxFrame*);
     void fail(const std::string& text);
 };
 struct Runtime {
@@ -173,6 +175,7 @@ struct Runtime {
         throw std::runtime_error("Unknown CSSX request");
     }
     void tick(double seconds) { for(auto& e:entries) if(!e->suspended) try { e->tick(seconds); } catch(const std::exception& error) { e->fail(error.what()); } }
+    void render(const CssxFrame* frame) { for(auto& e:entries) if(!e->suspended) try { e->render(frame); } catch(const std::exception& error) { e->fail(error.what()); } }
     bool stop() { bool ok=true;for(auto& e:entries) if(!e->stop()) ok=false;stopped=ok;return ok; }
 };
 int entry_service(void* context,const char* data,CssxSink sink,void* output) {
@@ -253,14 +256,25 @@ Json Entry::invoke_lua(const char* name,const Json& argument,bool optional) {
     catch(...) { lua_settop(lua,top);throw; }
 }
 void Entry::start() {
-    host={CSSX_ABI,sizeof(CssxHost),this,entry_service};
+    // Default stamp for the Lua path (Lua uses the cssx global, not the C ABI).
+    host={1u,sizeof(CssxHost),this,entry_service,nullptr};
     if(manifest.kind=="native") {
         module=open_module(manifest.entry);
         auto get=reinterpret_cast<CssxGetExtension>(symbol(module,"cssx_get_extension"));
         if(!get) throw std::runtime_error("Missing cssx_get_extension export");
         const auto* candidate=get();
-        if(!candidate || candidate->abi!=CSSX_ABI || candidate->size<sizeof(CssxExtension) || !candidate->create || !candidate->model || !candidate->event || !candidate->stop || !candidate->destroy) throw std::runtime_error("Incompatible CSSX extension ABI");
+        // Accept ABI 1 or 2. ABI 1 predates the trailing render member, so its
+        // minimum size stops at that offset; ABI 2 must carry the whole struct.
+        const uint32_t min_size=(candidate && candidate->abi>=2)?uint32_t(sizeof(CssxExtension)):uint32_t(offsetof(CssxExtension,render));
+        if(!candidate || (candidate->abi!=1 && candidate->abi!=2) || candidate->size<min_size ||
+           !candidate->create || !candidate->model || !candidate->event || !candidate->stop || !candidate->destroy)
+            throw std::runtime_error("Incompatible CSSX extension ABI");
         api=candidate;
+        // Present each extension a host stamped with the abi it declared, so an
+        // ABI-1 extension whose client checks host->abi==1 still initializes.
+        // Only ABI-2 extensions receive the HUD table (threaded from the core).
+        const bool v2=candidate->abi>=2;
+        host={v2?2u:1u,sizeof(CssxHost),this,entry_service,v2?runtime->host.hud:nullptr};
         instance=api->create(&host);if(!instance) throw std::runtime_error("Extension initialization failed");
     } else {
         if(fs::file_size(manifest.entry)>1024*1024) throw std::runtime_error("Lua entry exceeds 1 MiB");
@@ -320,6 +334,12 @@ void Entry::tick(double delta) {
     if(lua) invoke_lua("tick",step,true);
     else if(api && instance && api->tick && !api->tick(instance,step)) throw std::runtime_error("Extension tick callback failed");
 }
+void Entry::render(const CssxFrame* frame) {
+    // ABI 2 only, and only if the extension supplied the optional callback. Lua
+    // extensions have no render path. Kept exception-safe like tick.
+    if(!api || !instance || api->abi<2 || api->size<=offsetof(CssxExtension,render) || !api->render) return;
+    if(!api->render(instance,frame)) throw std::runtime_error("Extension render callback failed");
+}
 bool Entry::stop() {
     if(stopped) return true;requests=0;
     try {
@@ -338,6 +358,7 @@ void* create(const CssxHost* h,const wchar_t* root) {
     try { if(!h || h->abi!=CSSX_ABI || h->size<sizeof(CssxHost) || !h->request || !root) return nullptr;return new Runtime(*h,fs::path(root)); } catch(...) {return nullptr;}
 }
 int tick(void* p,double seconds) { try {static_cast<Runtime*>(p)->tick(seconds);return 1;} catch(...) {return 0;} }
+int render(void* p,const CssxFrame* frame) { try {static_cast<Runtime*>(p)->render(frame);return 1;} catch(...) {return 0;} }
 int request(void* p,const char* j,CssxSink sink,void* output) {
     try {if(!j || std::strlen(j)>1024*1024) throw std::runtime_error("CSSX request exceeds bound");emit(sink,output,static_cast<Runtime*>(p)->request(Json::parse(j)));return 1;}
     catch(const std::exception& e) {emit(sink,output,{{"error",e.what()}});return 0;}
@@ -347,5 +368,5 @@ void destroy(void* p) {auto* runtime=static_cast<Runtime*>(p);if(runtime->stoppe
 }
 }
 extern "C" CSSX_EXPORT const CssxRuntime* cssx_get_runtime() {
-    static const CssxRuntime api{CSSX_ABI,sizeof(CssxRuntime),css::extensions::create,css::extensions::tick,css::extensions::request,css::extensions::stop,css::extensions::destroy};return &api;
+    static const CssxRuntime api{CSSX_ABI,sizeof(CssxRuntime),css::extensions::create,css::extensions::tick,css::extensions::request,css::extensions::stop,css::extensions::destroy,css::extensions::render};return &api;
 }
