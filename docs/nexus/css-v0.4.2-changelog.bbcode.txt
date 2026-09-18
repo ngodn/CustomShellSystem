@@ -1,19 +1,19 @@
 [b]CSS 0.4.2[/b]
 
-A major performance and quality-of-life update for Custom Shell System. Features critical frame-budget optimizations, automatic outfit carry-over when severing into Harbinger form, teleporter appearance fixes, and extension library presentation improvements.
+A major performance and quality-of-life update for Custom Shell System. Features critical frame-budget optimizations, automatic outfit carry-over when severing into Harbinger form, teleporter appearance fixes, and wardrobe usability improvements.
 
 [size=4][b]Performance & Unreal Engine Optimizations[/b][/size]
 [list]
-[*][b]In-Memory Unreal Asset Caching:[/b] Added an in-memory asset cache ([code]s_asset_cache[/code]) and cached Kismet library reference for all Unreal asset lookups. Eliminates redundant [code]MakeSoftObjectPath[/code], [code]Conv_SoftObjPathToSoftObjRef[/code], [code]LoadAsset_Blocking[/code], and [code]StaticFindObject[/code] engine calls during outfit application and texture operations.
+[*][b]In-Memory Unreal Asset Caching:[/b] Added in-memory asset caching and static engine library references for all Unreal asset lookups. Eliminates redundant asset resolution and blocking loader calls during outfit application and texture operations.
 [*][b]Cosmetic Maintenance Rate-Limiting (~7 Hz):[/b] Material-reset checks and menu-preview synchronization previously ran on every single frame tick at 60/120/144 FPS. They are now rate-limited to ~7 Hz (150 ms intervals). Gameplay material resets are still corrected imperceptibly within 150 ms while taking cosmetic checks completely off the per-frame rendering budget.
-[*][b]Exception-Free Material Hierarchy Resolution:[/b] Replaced recursive, exception-throwing dynamic material unwrapping in [code]repair_materials_needed[/code] with a fast, non-throwing iterative parent traversal ([code]material_base_asset[/code]), eliminating costly C++ exception-handling unwinds during cosmetic reconciliation.
+[*][b]Exception-Free Material Hierarchy Resolution:[/b] Replaced recursive, exception-throwing dynamic material inspection with a fast, non-throwing iterative traversal, eliminating costly C++ exception-handling unwinds during cosmetic reconciliation checks.
 [*][b]Status Publication Throttling:[/b] Status state publication is now event-driven and throttled to 500 ms intervals instead of evaluating and publishing state every frame tick, eliminating continuous filesystem overhead and disk thrashing.
 [*][b]Zero-Allocation UI Texture Dimensions:[/b] Image and banner dimensions are probed once and cached in memory, ensuring zero heap allocations and zero disk I/O on per-frame UI ticks.
 [/list]
 
 [size=4][b]Harbinger Outfit Carry-Over (Mid-Combat Severing)[/b][/size]
 [list]
-[*][b]Automatic Outfit Transfer on Death:[/b] When you die and sever into the bare Harbinger form ([code]Darkform[/code]), CSS now automatically carries over the custom outfit worn by your living shell. In the heat of combat you no longer have to pause, open the menu, and re-apply your look manually.
+[*][b]Automatic Outfit Transfer on Death:[/b] When you die and sever into the bare Harbinger form, CSS now automatically carries over the custom outfit worn by your living shell. In the heat of combat you no longer have to pause, open the menu, and re-apply your look manually.
 [*][b]Toggleable in Wardrobe:[/b] Added a new setting at the top of Tab 1: [b]Harbinger outfit[/b] ([i]Carry from shell / Keeps its own[/i]). If you prefer the Harbinger to retain its own distinct saved look, you can toggle it back with a single click.
 [/list]
 
@@ -24,7 +24,7 @@ A major performance and quality-of-life update for Custom Shell System. Features
 
 [size=4][b]Wardrobe Usability[/b][/size]
 [list]
-[*][b]Equipped Outfit Pinned to Top (Tab-Exit Stabilization):[/b] The outfit currently worn by your shell is automatically pinned near the top of the list (right after the Harbinger toggle and Original Appearance). The list ordering is now stabilized while actively browsing the SHELL tab—selecting an outfit or cycling through variants will never jump items out from under your cursor or disrupt selection. The newly equipped outfit pins smoothly to the top once you leave the view.
+[*][b]Equipped Outfit Pinned to Top (Tab-Exit Stabilization):[/b] The outfit currently worn by your shell is automatically pinned near the top of the list (right after the Harbinger toggle and Original Appearance). The list ordering is stabilized while actively browsing the SHELL tab—selecting an outfit or cycling through variants will never jump items out from under your cursor or disrupt selection. The newly equipped outfit pins smoothly to the top once you leave the view.
 [/list]
 
 [size=4][b]Extension Library Presentation & Banner Scaling[/b][/size]
@@ -36,7 +36,7 @@ A major performance and quality-of-life update for Custom Shell System. Features
 [/list]
 
 [b]Updating from 0.4.0 or 0.4.1:[/b]
-Close the game and extract the ZIP into [code]MortalShell2/Binaries/Win64/ue4ss/Mods/[/code]
+Close the game and extract the ZIP into your [b]MortalShell2/Binaries/Win64/ue4ss/Mods/[/b] folder.
 Replace the CSS runtime files. Keep your [b]CustomShellSystem/state/[/b] folder, existing outfit packages, CSSX, and installed extensions.
 
 [url=https://github.com/ngodn/CustomShellSystem/releases/tag/v0.4.2]Download CSS 0.4.2[/url]
