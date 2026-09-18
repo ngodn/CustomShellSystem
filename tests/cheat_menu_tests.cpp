@@ -15,6 +15,7 @@ struct Host {
     bool check_soft=false;
     std::string power_fixture;
     bool focused=true,paused=false,input_blocked=false,power_missing=false,power_foreign=false,fail_clone_remove=false,fail_second_clone=false,delayed_clones=false,stance_active=false;
+    double health=80.;bool dead=false;
     int spawn_count=1,stance_handle=-1;
     Json primary_clone,secondary_clone;
     Json pressed_keys=Json::object();unsigned input_polls=0;
@@ -218,7 +219,8 @@ struct Host {
             if(function=="SetTarstoneLevel") {if(fail_equipped_refresh) throw std::runtime_error("Equipped refresh unavailable");return Json::object();}
             if(function=="GetShellNames") return {{"ReturnValue",power_fixture.empty()?Json::array({"Genessa","Proxima","ID_Shell_LoadFromSave"}):Json::array({"Genessa","Smert","Lazlo"})}};
             if(function=="GetCharacterID") return {{"ReturnValue",{{"TagName","Shell."+shell}}}};
-            if(function=="GetShellHealth" || function=="GetHealth") return {{"ReturnValue",80.}};
+            if(function=="IsDeadOrDying" || function=="IsDead") return {{"ReturnValue",dead}};
+            if(function=="GetShellHealth" || function=="GetHealth") return {{"ReturnValue",health}};
             if(function=="GetMaxShellHealth" || function=="GetMaxHealth") return {{"ReturnValue",100.}};
             if(function=="S_SwitchToShell") {if(confirm_switch)shell=j.at("args")[0].get<std::string>();return Json::object();}
             if(function=="InitialiseCharacterData" || function.get<std::string>().starts_with("S_")) return Json::object();
@@ -426,6 +428,17 @@ int main(int argc,char** argv) {
     menu.event({{"id","auto_heal"},{"value",true}});menu.event({{"id","infinite_resolve"},{"value",true}});menu.event({{"id","apply_settings"}});
     for(int i=0;i<15;++i) menu.tick(.1);
     check(host.count("S_Heal")>0,"Auto Heal did not run");check(host.count("S_GainResolve")>0,"Infinite Resolve did not run");
+    const auto heals_before=host.count("S_Heal");
+    host.health=0.;
+    for(int i=0;i<15;++i) menu.tick(.1);
+    check(host.count("S_Heal")==heals_before,"Auto Heal ran while player had 0 health");
+    host.health=80.;host.dead=true;
+    for(int i=0;i<15;++i) menu.tick(.1);
+    check(host.count("S_Heal")==heals_before,"Auto Heal ran while player was dead");
+    host.dead=false;host.focused=false;
+    for(int i=0;i<15;++i) menu.tick(.1);
+    check(host.count("S_Heal")==heals_before,"Auto Heal ran while gameplay was not focused/ready");
+    host.focused=true;
     rejects([&]{menu.event({{"id","heal_amount"},{"value",0}});});
     menu.event({{"id","god"},{"value",true}});menu.event({{"id","apply_settings"}});host.fail_restore=true;
     check(!menu.stop(),"Failed cleanup allowed unloading");host.fail_restore=false;

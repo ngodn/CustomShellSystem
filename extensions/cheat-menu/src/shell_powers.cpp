@@ -43,18 +43,40 @@ Json Menu::power_ability(const Json& player,const char* name) {
     return result;
 }
 bool Menu::gameplay_ready(const Json& player) {
-    if(host_.request({{"op","input.focus"}})!=true) return false;
-    const auto menu=host_.request({{"op","menu.status"}});
-    if(!menu.contains("menu_open") || menu.at("menu_open")!=false) return false;
-    const auto pc=player.at("controller");
-    for(const auto* function:{"IsInGameMenu","IsMoveInputIgnored","IsLookInputIgnored"})
-        if(host_.call(pc,function)!=false) return false;
-    const auto statics=host_.request({{"op","class_default"},{"class","GameplayStatics"}});
-    if(host_.call(statics,"IsGamePaused",{{"WorldContextObject",player.at("pawn")}})!=false) return false;
-    const auto health=host_.get(player.at("pawn"),"HealthComponent");
-    const auto value=host_.call(health,"GetHealth");
-    if(!value.is_number() || !std::isfinite(value.get<double>()) || value.get<double>()<=0) return false;
-    return true;
+    try {
+        if(!player.is_object() || !player.contains("pawn") || !player.contains("controller")) return false;
+        if(!object_id(player.at("pawn")) || !object_id(player.at("controller"))) return false;
+        if(host_.request({{"op","input.focus"}})!=true) return false;
+        const auto menu=host_.request({{"op","menu.status"}});
+        if(!menu.contains("menu_open") || menu.at("menu_open")!=false) return false;
+        const auto pc=player.at("controller");
+        for(const auto* function:{"IsInGameMenu","IsMoveInputIgnored","IsLookInputIgnored"})
+            if(host_.call(pc,function)!=false) return false;
+        const auto statics=host_.request({{"op","class_default"},{"class","GameplayStatics"}});
+        if(host_.call(statics,"IsGamePaused",{{"WorldContextObject",player.at("pawn")}})!=false) return false;
+        const auto health=host_.get(player.at("pawn"),"HealthComponent");
+        if(!health.is_object() || !object_id(health)) return false;
+        try {
+            const auto dying=host_.call(health,"IsDeadOrDying");
+            if(dying.is_boolean() && dying.get<bool>()) return false;
+        } catch(...) {}
+        try {
+            const auto dead=host_.call(player.at("pawn"),"IsDead");
+            if(dead.is_boolean() && dead.get<bool>()) return false;
+        } catch(...) {}
+        const auto value=host_.call(health,"GetHealth");
+        if(!value.is_number() || !std::isfinite(value.get<double>()) || value.get<double>()<=0) return false;
+        try {
+            const auto shell_hp=host_.call(health,"GetShellHealth");
+            const auto shell_max=host_.call(health,"GetMaxShellHealth");
+            if(shell_max.is_number() && shell_max.get<double>()>0) {
+                if(shell_hp.is_number() && shell_hp.get<double>()<=0) return false;
+            }
+        } catch(...) {}
+        return true;
+    } catch(...) {
+        return false;
+    }
 }
 void Menu::power_sync() {
     for(const auto* feature:power_ids) {

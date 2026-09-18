@@ -74,6 +74,7 @@ class Menu {
     std::string status_,last_error_,action_error_;
     double refresh_=0,heal_time_=0,resolve_time_=0,catalog_time_=0,points_time_=0;
     bool catalog_ready_=false;
+    bool reapply_pending_=false;
     uint64_t owner_controller_=0;
     std::optional<PendingShell> pending_;
     struct Saved {Json object,before,expected;std::string property;};

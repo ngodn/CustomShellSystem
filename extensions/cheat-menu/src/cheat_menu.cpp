@@ -99,9 +99,10 @@ void Menu::apply_settings() {
         }
         throw std::runtime_error("Settings were not applied: "+reason);
     }
-    bindings_checked_=true;binding_reset();heal_time_=resolve_time_=power_time_=0;report("Settings applied. Preferences and shortcuts saved; cheats remain session-only.");
+    bindings_checked_=true;binding_reset();heal_time_=resolve_time_=power_time_=0;reapply_pending_=false;report("Settings applied. Preferences and shortcuts saved; cheats remain session-only.");
 }
 void Menu::disable_all() {
+    reapply_pending_=false;
     // Stop periodic work first. Failed restores retain their ownership records.
     for(const auto* id:toggle_ids) applied_[id]=false;
     cleanup_required_=true;
@@ -196,17 +197,30 @@ void Menu::restore(const std::string& property) {
         auto& saved=it->second;if(saved.property!=property){++it;continue;}
         Json current;
         try {current=host_.get(saved.object,saved.property);} catch(const std::exception& e) {
-            if(std::string(e.what()).find("expired")!=std::string::npos) {it=saved_.erase(it);continue;}
+            const std::string err=e.what();
+            if(err.find("expired")!=std::string::npos || err.find("null")!=std::string::npos ||
+               err.find("target")!=std::string::npos || err.find("invalid")!=std::string::npos) {
+                it=saved_.erase(it);continue;
+            }
             throw;
         }
-        if(property=="Movement" && saved.expected.is_object()) {
-            Json patch=Json::object();
-            for(auto field=saved.before.begin();field!=saved.before.end();++field)
-                if(current.at(field.key())==saved.expected.at(field.key())) patch[field.key()]=field.value();
-            if(!patch.empty()) host_.set(saved.object,saved.property,patch);
+        try {
+            if(property=="Movement" && saved.expected.is_object()) {
+                Json patch=Json::object();
+                for(auto field=saved.before.begin();field!=saved.before.end();++field)
+                    if(current.at(field.key())==saved.expected.at(field.key())) patch[field.key()]=field.value();
+                if(!patch.empty()) host_.set(saved.object,saved.property,patch);
+            }
+            else if(current==saved.expected) host_.set(saved.object,saved.property,saved.before);
+            else host_.log("Another change replaced an owned value; leaving that newer value intact.","warning",{{"property",property}});
+        } catch(const std::exception& e) {
+            const std::string err=e.what();
+            if(err.find("expired")!=std::string::npos || err.find("null")!=std::string::npos ||
+               err.find("target")!=std::string::npos || err.find("invalid")!=std::string::npos) {
+                it=saved_.erase(it);continue;
+            }
+            throw;
         }
-        else if(current==saved.expected) host_.set(saved.object,saved.property,saved.before);
-        else host_.log("Another change replaced an owned value; leaving that newer value intact.","warning",{{"property",property}});
         it=saved_.erase(it);
     }
 }
@@ -221,7 +235,12 @@ void Menu::movement(bool enabled) {
     if(!enabled) {
         bool had=false;for(const auto& entry:saved_) if(entry.second.property=="Movement") had=true;
         restore("Movement");
-        if(had) {auto player=host_.player();if(identity(player.value("pawn",Json()))) host_.call(player["pawn"],"InitialiseCharacterData");}
+        if(had) {
+            auto player=host_.player();
+            if(identity(player.value("pawn",Json())) && gameplay_ready(player)) {
+                try { host_.call(player["pawn"],"InitialiseCharacterData"); } catch(...) {}
+            }
+        }
         applied_["move_fast"]=false;return;
     }
     auto player=require_player();auto pawn=player["pawn"];
@@ -398,6 +417,7 @@ void Menu::tick(double seconds) {
             combat_clear();restore("Movement");restore("bCanBeDamaged");
             if(new_controller) disable_all();
             current_=player;owner_controller_=identity(player["controller"]);catalog_ready_=false;catalog_time_=5;
+            reapply_pending_=true;
             host_.request({{"op","invalidate"}});
         } else current_=player;
         if(!catalog_ready_ && catalog_time_>=5) {
@@ -406,33 +426,48 @@ void Menu::tick(double seconds) {
             catch(const std::exception& e) {report(std::string("Waiting for the shell catalog: ")+e.what());}
         }
         if(pending_ || cleanup_required_) return;
+        const bool live=gameplay_ready(player);
         const auto power_delta=std::min(power_time_,.5);power_time_=0;power_tick(power_delta);
-        if(changed || combat_time_>=1.) {combat_time_=0;combat_sync();}
-        if(applied_["max_shell_points"]==true && (changed || points_time_>=1.)) {points_time_=0;shell_points(true);}
-        if(applied_["god"]==true) god(true);
-        if(applied_["move_fast"]==true && changed) movement(true);
-        if(applied_["auto_heal"]==true && heal_time_>=applied_["heal_interval"].get<double>()) {
-            heal_time_=0;auto health=host_.get(player["pawn"],"HealthComponent");
-            double current=host_.call(health,"GetHealth"),maximum=host_.call(health,"GetMaxHealth");
-            double shell=host_.call(health,"GetShellHealth"),shell_max=host_.call(health,"GetMaxShellHealth");
-            if(current<maximum-.5 || (shell_max>0 && shell<shell_max-.5)) host_.call(player["controller"],"S_Heal",Json::array({std::max(1.,std::max(maximum,shell_max)*applied_["heal_percent"].get<double>()/100.)}));
+        if((reapply_pending_ || changed || combat_time_>=1.) && live) {combat_time_=0;combat_sync();}
+        if(applied_["max_shell_points"]==true && (reapply_pending_ || changed || points_time_>=1.) && live) {points_time_=0;shell_points(true);}
+        if(applied_["god"]==true && live) god(true);
+        if(applied_["move_fast"]==true && (changed || reapply_pending_) && live) movement(true);
+        if(live && applied_["auto_heal"]==true && heal_time_>=applied_["heal_interval"].get<double>()) {
+            heal_time_=0;
+            try {
+                auto health=host_.get(player["pawn"],"HealthComponent");
+                double current=host_.call(health,"GetHealth"),maximum=host_.call(health,"GetMaxHealth");
+                double shell=host_.call(health,"GetShellHealth"),shell_max=host_.call(health,"GetMaxShellHealth");
+                if(current>0 && maximum>0 && (current<maximum-.5 || (shell_max>0 && shell>0 && shell<shell_max-.5))) {
+                    host_.call(player["controller"],"S_Heal",Json::array({std::max(1.,std::max(maximum,shell_max)*applied_["heal_percent"].get<double>()/100.)}));
+                }
+            } catch(...) {}
         }
-        if(applied_["infinite_resolve"]==true && resolve_time_>=1.) {
-            resolve_time_=0;auto health=host_.get(player["pawn"],"HealthComponent");auto attributes=host_.get(health,"HealthSet");
-            auto resolve=host_.get(attributes,"Resolve"),maximum=host_.get(attributes,"MaxResolve");
-            const double current=resolve.at("CurrentValue"),limit=maximum.at("CurrentValue");
-            if(current<limit-.5) host_.call(player["controller"],"S_GainResolve",Json::array({limit-current}));
+        if(live && applied_["infinite_resolve"]==true && resolve_time_>=1.) {
+            resolve_time_=0;
+            try {
+                auto health=host_.get(player["pawn"],"HealthComponent");auto attributes=host_.get(health,"HealthSet");
+                auto resolve=host_.get(attributes,"Resolve"),maximum=host_.get(attributes,"MaxResolve");
+                const double current=resolve.at("CurrentValue"),limit=maximum.at("CurrentValue");
+                if(current<limit-.5 && limit>0) host_.call(player["controller"],"S_GainResolve",Json::array({limit-current}));
+            } catch(...) {}
         }
+        if(live) reapply_pending_=false;
         last_error_.clear();
     } catch(const std::exception& e) {
         if(last_error_!=e.what()) {last_error_=e.what();report("Waiting for game state: "+last_error_);}
     }
 }
 bool Menu::stop() {
-    pending_.reset();recovery_.cancel();
+    pending_.reset();recovery_.cancel();reapply_pending_=false;
     try {
         power_clear();combat_clear();shell_points(false);restore("bCanBeDamaged");restore("Movement");
-        if(applied_["move_fast"]==true) {auto player=host_.player();if(identity(player.value("pawn",Json()))) host_.call(player["pawn"],"InitialiseCharacterData");}
+        if(applied_["move_fast"]==true) {
+            auto player=host_.player();
+            if(identity(player.value("pawn",Json())) && gameplay_ready(player)) {
+                try { host_.call(player["pawn"],"InitialiseCharacterData"); } catch(...) {}
+            }
+        }
         stopped_=true;return true;
     } catch(const std::exception& e) {host_.log(std::string("Cleanup failed: ")+e.what(),"error");return false;}
 }

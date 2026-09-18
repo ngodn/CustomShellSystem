@@ -12,13 +12,23 @@ void Menu::shell_points(bool enabled) {
             const auto& saved=it->second;Json entries;
             try {entries=host_.get(saved.owner,property).at("$map");}
             catch(const std::exception& error) {
-                if(std::string(error.what()).find("expired")!=std::string::npos) {it=points_saved_.erase(it);continue;}
+                const std::string err=error.what();
+                if(err.find("expired")!=std::string::npos || err.find("null")!=std::string::npos || err.find("target")!=std::string::npos) {it=points_saved_.erase(it);continue;}
                 throw;
             }
             bool found=false;
             for(const auto& entry:entries) if(entry.at("key")==saved.key) {
                 found=true;
-                if(entry.at("value")==saved.expected) update(saved,saved.expected,saved.before);
+                if(entry.at("value")==saved.expected) {
+                    try { update(saved,saved.expected,saved.before); }
+                    catch(const std::exception& e) {
+                        const std::string err=e.what();
+                        if(err.find("expired")!=std::string::npos || err.find("null")!=std::string::npos || err.find("target")!=std::string::npos) {
+                            it=points_saved_.erase(it);continue;
+                        }
+                        throw;
+                    }
+                }
                 else host_.log("A newer shell-point limit was kept during cleanup.","warning",{{"key",saved.key}});
                 break;
             }

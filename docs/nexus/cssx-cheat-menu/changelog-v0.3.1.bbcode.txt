@@ -1,0 +1,9 @@
+[b]CSSX Cheat Menu 0.3.1[/b]
+
+[size=4][b]Fixes & Improvements[/b][/size]
+[list]
+[*]Fixed game crash on death and respawn when Auto Heal or periodic cheats are enabled.
+[*]Added safety guards to prevent healing and status updates while the player is dead, ragdolling, or loading.
+[*]Fixed potential level reload crashes by safely handling expired or cleaned-up combat hooks and values during transitions.
+[*]Improved cheat reapplication so active toggles wait for gameplay and controls to fully initialize before restoring character speed and modifiers.
+[/list]

@@ -36,7 +36,12 @@ void Menu::combat_hook(const std::string& feature,const Json& target,const Json&
 void Menu::combat_clear(const std::string& feature) {
     for(auto it=combat_hooks_.begin();it!=combat_hooks_.end();) {
         if(!feature.empty() && it->second.feature!=feature) {++it;continue;}
-        host_.request({{"op","hooks.remove"},{"id",it->second.id}});
+        try {
+            host_.request({{"op","hooks.remove"},{"id",it->second.id}});
+        } catch(const std::exception& error) {
+            const std::string err=error.what();
+            if(err.find("pending")!=std::string::npos || err.find("busy")!=std::string::npos || err.find("executing")!=std::string::npos) throw;
+        }
         it=combat_hooks_.erase(it);
     }
     if(feature.empty() || feature=="no_cooldown") {
@@ -63,7 +68,13 @@ void Menu::combat_sync() {
     for(auto it=combat_hooks_.begin();it!=combat_hooks_.end();) {
         if(live.contains(it->second.target.at("$object").get<uint64_t>())) {++it;continue;}
         if(it->second.feature=="no_cooldown") lost_cooldown=true;
-        host_.request({{"op","hooks.remove"},{"id",it->second.id}});it=combat_hooks_.erase(it);
+        try {
+            host_.request({{"op","hooks.remove"},{"id",it->second.id}});
+        } catch(const std::exception& error) {
+            const std::string err=error.what();
+            if(err.find("pending")!=std::string::npos || err.find("busy")!=std::string::npos || err.find("executing")!=std::string::npos) throw;
+        }
+        it=combat_hooks_.erase(it);
     }
     if(lost_cooldown) {for(const auto* field:cooldown_fields) restore(field);cooldown_seen_.clear();}
     if(applied_["no_cooldown"]==true) {
