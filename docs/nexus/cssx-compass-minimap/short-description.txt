@@ -1,0 +1,1 @@
+An Elden Ring style heading compass that dynamically fades while sprinting, plus a circular minimap with live world markers. Native HUD extension for CSSX.

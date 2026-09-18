@@ -1,0 +1,70 @@
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/extensions/compass-n-mmap/assets/banner-v1.png[/img][/center]
+
+A lightweight, native navigation overlay for Mortal Shell II. Features an Elden Ring styled heading compass that dynamically fades while jogging or sprinting, plus an interactive circular minimap with territory tracking and live world markers.
+
+Built in native C++ on the high-performance [b]CSSX ABI 2 retained HUD pipeline[/b] with zero heap allocation per frame, maintaining maximum game performance and crisp UI fidelity.
+
+[size=4][b]Features[/b][/size]
+[list]
+[*][b]Elden-style Heading Compass:[/b] Top-mounted horizontal navigation tape showing cardinal directions (N, E, S, W), degree ticks, and active marker indicators.
+[*][b]Dynamic Movement Fading:[/b] The compass gently shrinks and fades out when sprinting or jogging so combat and traversal remain cinematic and uncluttered, then smoothly returns when standing or walking.
+[*][b]World Markers with Live Distance:[/b]
+[list]
+[*]Lost Gloom recovery point with real-time distance readouts in meters so you never lose your progress.
+[*]Nearby dungeon entrances and POIs.
+[*]Custom map pings.
+[/list]
+[*][b]Circular Minimap:[/b] Real-time tactical radar with player position, heading pin, terrain outline, and orientation tracking.
+[*][b]In-Game CSSX Settings Menu:[/b] Accessible directly inside Inventory > CSSX > CSSX - Compass & Minimap:
+[list]
+[*]Compass toggle, size scale, opacity, and screen position.
+[*]Minimap toggle, zoom level, scale, and rotation modes.
+[*]Sprint fade sensitivity and speed thresholds.
+[*]Individual marker category toggles and distance unit formatting.
+[/list]
+[/list]
+
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/extensions/compass-n-mmap/assets/gameplay-preview.png[/img][/center]
+
+[size=4][b]Requirements[/b][/size]
+[list]
+[*]UE4SS (standard Mortal Shell II modding setup).
+[*][url=https://www.nexusmods.com/mortalshell2/mods/34]Custom Shell System (CSS)[/url] version [b]0.4.2[/b] or later.
+[*][url=https://www.nexusmods.com/mortalshell2/mods/36]Custom Shell System Extensions (CSSX)[/url] version [b]0.3.1[/b] or later.
+[/list]
+
+[size=4][b]Installation[/b][/size]
+[list=1]
+[*]Ensure CSS 0.4.2+ and CSSX 0.3.1+ are installed in your game.
+[*]Close the game.
+[*]Download and extract [b]CSSX-Compass-Minimap-v0.3.1.zip[/b] into your [code]CustomShellSystem/extensions/[/code] directory.
+[*]Verify that the folder [code]eins0fx.compass-minimap[/code] sits directly inside [code]CustomShellSystem/extensions/[/code].
+[*]Launch the game. The compass and minimap will activate automatically upon entering the game world.
+[/list]
+
+[b]Expected folder structure after extraction:[/b]
+[code]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/CustomShellSystem/extensions/
+`-- eins0fx.compass-minimap/
+    |-- assets/
+    |   |-- CompassCenter.png
+    |   |-- CompassFrame.png
+    |   |-- CompassTape.png
+    |   |-- DungeonMarker.png
+    |   |-- LostGloomMarker.png
+    |   |-- MapPingMarker.png
+    |   |-- banner-v1.png
+    |   `-- gameplay-preview.png
+    |-- compass_minimap.dll
+    |-- extension.json
+    `-- menu.json[/code]
+
+[size=4][b]Configuration[/b][/size]
+Press [b]Inventory[/b] (Tab or Menu button) > navigate to the [b]CSSX[/b] tab > select [b]CSSX - Compass & Minimap[/b].
+Adjust your compass scale, minimap zoom, fade delays, and marker preferences in real time. Changes save automatically.
+
+[size=4][b]Credits[/b][/size]
+[list]
+[*]Compass design and original implementation by [b]KalilaViolette[/b].
+[*]Minimap concept and territory mapping logic by [b]omuruwi[/b].
+[*]Native C++ architecture, CSSX ABI 2 retained HUD pipeline, and settings integration by [b]_eins0fx[/b].
+[/list]
