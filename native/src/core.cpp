@@ -22,7 +22,8 @@ struct Core {
     InventoryUI inventory;
     ExtensionBridge extension_bridge;
     ExtensionClient extensions;
-    CssxHost recovery_host{CSSX_ABI,sizeof(CssxHost),this,extension_request};
+    HudService hud_;
+    CssxHost recovery_host{CSSX_ABI,sizeof(CssxHost),this,extension_request,nullptr};
     PlayerRecovery player_recovery{&recovery_host};
     void* current_engine=nullptr;
     bool extension_attempted=false;
@@ -39,6 +40,10 @@ struct Core {
                 if(window) GetWindowThreadProcessId(window,&pid);
                 result=window && pid==GetCurrentProcessId();
             }
+            else if(op=="hud.minimap.build") { if(!core.current_engine) throw std::runtime_error("Game thread is not initialized"); result=minimap_build(core.current_engine,request.value("config",Json::object())); }
+            else if(op=="hud.minimap.update") { minimap_update(request.value("update",Json::object())); result=true; }
+            else if(op=="hud.minimap.destroy") { minimap_destroy(); result=true; }
+            else if(op=="hud.markers") { if(!core.current_engine) throw std::runtime_error("Game thread is not initialized"); result=markers_collect(core.current_engine,request.value("radius",500.0)); }
             else if(core.current_engine) result=core.extension_bridge.request(core.current_engine,core.appearance,request);
             else throw std::runtime_error("Game thread is not initialized");
             auto data=result.dump();sink(output,data.data(),data.size());return 1;
@@ -77,7 +82,10 @@ struct Core {
     uint64_t inventory_retry_after=0;
     std::string message;
     std::string last_request, last_shell, last_pawn, applied_id, last_status;
+    uint64_t last_publish_ms = 0;
+    bool status_dirty = true;
     std::string selected_outfit, selected_variant;
+    std::string last_living_shell;   // most recent CharacterId.Player.Shell.* worn, for Harbinger carry-over.
     bool dirty = false, apply_pending = false, restore_pending = false, rescan_pending = false, forget_current = false;
     bool favorites_only = false;
     bool ui_refresh = false;
@@ -87,7 +95,7 @@ struct Core {
     double last_apply_ms = 0;
     std::optional<Customization> pending_colors;
     bool color_only = false, refresh_colors = true;
-    uint64_t save_after = 0, last_player_revision = 0, maintenance_after = 0;
+    uint64_t save_after = 0, last_player_revision = 0, maintenance_after = 0, maintenance_next = 0;
     Recovery recovery;
 #ifdef CSS_TRANSITION_TESTS
     std::optional<bool> test_cursor_pending;
@@ -171,6 +179,9 @@ struct Core {
     }
     explicit Core(const CssHost& h) : host(h), root(h.root), package_root(package_directory()), catalog(load_catalog(package_root)), message(wardrobe_startup_message(catalog.outfits.size())) {
         extension_bridge.configure_hooks(reinterpret_cast<void*>(h.log));
+        hud_.set_logger([this](const std::string& m){ host.log(m.c_str()); });
+        hud_.set_object_minter([this](RC::Unreal::UObject* w){ return extension_bridge.track(w); });
+        minimap_set_logger([this](const std::string& m){ host.log(m.c_str()); });
         player_recovery.watch();
         inventory.assets(root);
         bool recovered=false;
@@ -185,8 +196,9 @@ struct Core {
     void report(std::string text) {
         if (message == text) return;
         message = std::move(text); host.log(message.c_str());
+        status_dirty = true;
     }
-    void save() { atomic_json(root / "state/state.json", state.json()); dirty = false; }
+    void save() { atomic_json(root / "state/state.json", state.json()); dirty = false; status_dirty = true; }
     void request(const Json& command) {
         const auto action = command.at("action").get<std::string>();
 #ifdef CSS_INVENTORY_DEV
@@ -280,6 +292,15 @@ struct Core {
                 else report("Normal walk restored.");
             }
         }
+        else if (action == "harbinger_mirror") {
+            const bool value = command.at("value").get<bool>();
+            if(state.harbinger_mirror!=value) { state.harbinger_mirror=value; dirty=true; }
+            // Re-reconcile now so the change is visible without waiting for the next sever.
+            if(!appearance.shell.empty()) { last_shell.clear(); apply_pending=true; }
+            ui_refresh = true;
+            report(value ? "Harbinger will wear your shell's outfit."
+                         : "Harbinger keeps its own saved outfit.");
+        }
         // 0.3.3 preview offered these two. They are answered so an old binding or a
         // stale UI does not error, but the setting no longer exists.
         else if (action == "jog_animation" || action == "sprint_animation") {
@@ -361,10 +382,16 @@ struct Core {
         player_recovery.tick(delta);
         if(!extension_attempted) {
             extension_attempted=true;
-            try {if(fs::exists(root/"cores/cssx_core.dll") || fs::exists(root/"cssx.json")) {extensions.start(root,{CSSX_ABI,sizeof(CssxHost),this,extension_request});inventory.extensions(&extensions);}}
+            try {if(fs::exists(root/"cores/cssx_core.dll") || fs::exists(root/"cssx.json")) {extensions.start(root,{CSSX_ABI,sizeof(CssxHost),this,extension_request,static_cast<const CssxHudApi*>(hud_.api())});inventory.extensions(&extensions);}}
             catch(const std::exception& e) {host.log((std::string("CSSX startup: ")+e.what()).c_str());}
         }
-        if(extensions.ready()) extensions.tick(delta);
+        if(extensions.ready()) {
+            extensions.tick(delta);
+            // ABI 2: drive per-frame HUD extensions. The core resolves the HUD and
+            // computes the frame inputs; each extension pushes cheap updates back.
+            CssxFrame frame; hud_.update(engine,frame); frame.seconds=delta;
+            extensions.render(frame);
+        }
         if(!content_path_checked) {
             content_path_checked=true;
             try {
@@ -408,18 +435,25 @@ struct Core {
 #ifdef CSS_INVENTORY_DEV
         sample_motion(now);
 #endif
-        if(state.enabled && !apply_pending && now>=maintenance_after) {
-            try {
-                if(state.selections.contains(appearance.shell) && appearance.repair_materials_needed()) {
-                    apply_pending=true;
-                    host.log("Restoring cosmetic materials after gameplay material reset");
+        // Cosmetic maintenance (material-reset repair + menu-preview sync) are recovery
+        // checks, not per-frame work. Rate-limit them to ~7 Hz: a stock/material reset
+        // still corrects within ~150 ms, imperceptibly, while staying off the frame
+        // budget. maintenance_after remains the longer error backoff.
+        if(now>=maintenance_next) {
+            maintenance_next=now+150;
+            if(state.enabled && !apply_pending && now>=maintenance_after) {
+                try {
+                    if(state.selections.contains(appearance.shell) && appearance.repair_materials_needed()) {
+                        apply_pending=true;
+                        host.log("Restoring cosmetic materials after gameplay material reset");
+                    }
+                } catch(const std::exception& error) {
+                    maintenance_after=now+1000;
+                    host.log(error.what());
                 }
-            } catch(const std::exception& error) {
-                maintenance_after=now+1000;
-                host.log(error.what());
             }
+            if(state.enabled && !apply_pending) sync_menu_safely();
         }
-        if(state.enabled && !apply_pending) sync_menu_safely();
         sync_attachments_safely(now);
         sync_seals_safely(now);
         sync_walk_safely(now);
@@ -454,20 +488,46 @@ struct Core {
         }
         if (state.enabled || apply_pending) {
             appearance.player(engine);
+            // Player tags come in two families, each per body: a worn shell
+            // (CharacterId.Player.Shell.<Name>) and the bare Harbinger it severs into
+            // on death (CharacterId.Player.Darkform.<Name>). Remember the living shell
+            // last worn; when "carry into Harbinger" is on, a Darkform reconciles against
+            // that shell's saved outfit instead of its own, so a mid-combat sever keeps
+            // you dressed without a menu trip. It only mirrors when the shell's outfit is
+            // actually compatible with the Harbinger's skeleton, else it falls back to
+            // whatever the Darkform itself has (or the game's own look).
+            static constexpr const char* SHELL_PREFIX = "CharacterId.Player.Shell";
+            static constexpr const char* DARKFORM_PREFIX = "CharacterId.Player.Darkform";
+            if(appearance.shell.starts_with(SHELL_PREFIX)) last_living_shell=appearance.shell;
+            auto outfit_key=[&](const std::string& tag)->std::string {
+                if(state.harbinger_mirror && tag.starts_with(DARKFORM_PREFIX)) {
+                    if(!last_living_shell.empty()) {
+                        auto it=state.selections.find(last_living_shell);
+                        if(it!=state.selections.end() && catalog.compatible(it->second.outfit,tag)) return last_living_shell;
+                    } else if(tag.size() > std::string_view(DARKFORM_PREFIX).size()) {
+                        std::string inferred = std::string(SHELL_PREFIX) + tag.substr(std::string_view(DARKFORM_PREFIX).size());
+                        auto it=state.selections.find(inferred);
+                        if(it!=state.selections.end() && catalog.compatible(it->second.outfit,tag)) return inferred;
+                    }
+                }
+                return tag;
+            };
             const bool changed=appearance.shell!=last_shell || appearance.pawn_name!=last_pawn || appearance.player_revision!=last_player_revision;
             if(changed) {
                 last_shell=appearance.shell; last_pawn=appearance.pawn_name; last_player_revision=appearance.player_revision;
                 applied_id.clear();
+                status_dirty = true;
             }
             const bool stock_reset=appearance.repair_mesh_needed();
-            recovery.observe(state.enabled,state.auto_apply,state.selections.contains(appearance.shell),changed,stock_reset);
+            const std::string reconcile_key=outfit_key(appearance.shell);
+            recovery.observe(state.enabled,state.auto_apply,state.selections.contains(reconcile_key),changed,stock_reset);
             if(stock_reset || !appearance.active()) applied_id.clear();
             if(!apply_pending && recovery.due(now) && appearance.ready_to_apply()) {
                 apply_pending=true;
                 host.log(("Reconciling saved appearance after player/mesh transition: shell "+
                           (appearance.shell.empty()?std::string("<none>"):appearance.shell)+
-                          ", saved "+(state.selections.contains(appearance.shell)
-                              ? state.selections.at(appearance.shell).outfit+"/"+state.selections.at(appearance.shell).variant
+                          ", saved "+(state.selections.contains(reconcile_key)
+                              ? state.selections.at(reconcile_key).outfit+"/"+state.selections.at(reconcile_key).variant
                               : std::string("<nothing for this shell>"))).c_str());
             }
             if (apply_pending && !appearance.shell.empty()) {
@@ -486,7 +546,7 @@ struct Core {
                     selected_outfit.clear(); selected_variant.clear();
                     if (!catalog.compatible(requested.outfit, shell))
                         throw std::runtime_error("This outfit does not support the current shell: " + shell);
-                } else if (auto selected = state.selections.find(shell); selected != state.selections.end()) {
+                } else if (auto selected = state.selections.find(outfit_key(shell)); selected != state.selections.end()) {
                     requested = selected->second;
                     // The same filter the wear path uses. A saved look can name a part the
                     // installed package no longer has, and 0.4 makes that likelier because
@@ -525,6 +585,9 @@ struct Core {
                             recovery.clear();
                             last_apply_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
                             state.selections[shell] = requested;
+                            if(state.harbinger_mirror && shell.starts_with(DARKFORM_PREFIX) && !last_living_shell.empty()) {
+                                state.selections[last_living_shell] = requested;
+                            }
                             state.remembered_colors[requested.outfit]=requested.colors;
                             state.enabled = true; dirty = true; ui_refresh = !color_only || refresh_colors;
                             applied_id = requested.outfit + "/" + requested.variant;
@@ -570,7 +633,11 @@ struct Core {
             atomic_json(root/"runtime/cssx-debug.json",result,false);
         }
 #endif
-        publish();
+        if(status_dirty || (now - last_publish_ms >= 500)) {
+            status_dirty = false;
+            last_publish_ms = now;
+            publish();
+        }
     }
     void publish() {
         Json status = {{"schema", 1}, {"enabled", state.enabled},
@@ -637,6 +704,8 @@ bool stop(void* ptr) noexcept {
     try {
         if(!core.extensions.stop()) {core.report("CSSX cleanup pending; reload deferred.");return false;}
         if(!core.extension_bridge.stop_hooks()) {core.report("CSSX hook cleanup pending; reload deferred.");return false;}
+        core.hud_.release();
+        css::minimap_destroy();
         core.inventory.detach();
         core.appearance.walk.release();
         core.appearance.restore(); if (core.dirty) core.save();

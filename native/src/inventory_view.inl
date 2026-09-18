@@ -264,12 +264,13 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     // never shows one is the single worst thing about the old tab.
     const Color* row_swatch=nullptr;
     double row_indent=0;
+    bool row_thumb=false;   // rows carrying an outfit thumbnail reserve the wider left column.
     auto row=[&](int index,const std::string& title,const std::string& subtitle,double y,double h,Json accept,Json previous=Json{},Json next=Json{},Json secondary=Json{},Json tertiary=Json{}) {
         bool selected=index==row_;
         auto* marker=ui.box(left,y,panel-10,h-5,selected?Color{.035f,.030f,.019f,.30f}:panel_color);
         auto* button=ui.button("",left,y,panel-10,h-5,selected);
         bind(button,{{"action","ui_row"},{"row",index},{"apply",false}});
-        double inset=section_==0 && index>0?88:18;
+        double inset=row_thumb?88:18;
         inset+=row_indent;
         if(row_swatch) {
             ui.box(left+inset-2,y+h/2-17,34,34,Color{.05f,.045f,.03f,1});
@@ -283,11 +284,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         };
         single_line(ui.label(title,left+inset,y+9,panel-inset-38,32,18,selected?ivory:muted));
         // Reserve a separate column for Equipped, including long variant names.
-        const double status_width=section_==0 && index>0?100:20;
+        const double status_width=row_thumb?100:20;
         if(!subtitle.empty()) single_line(ui.label(subtitle,left+inset,y+41,panel-inset-status_width,24,15,muted));
         if(selected) { decoration("T_UI_TopBarHighlightLine",left+8,y+1,panel-26,2); ui.box(left,y+8,1,h-20,gold); }
         rows_.push_back({WeakObject(marker),WeakObject(button),accept,previous,next,secondary,tertiary});
-        row_swatch=nullptr; row_indent=0;
+        row_swatch=nullptr; row_indent=0; row_thumb=false;
     };
     auto direction_hint=[&](bool horizontal,const std::string& label,double x,double y,double width) {
         if(gamepad_) prompt("",label,x,y,width,horizontal?11:10);
@@ -309,27 +310,52 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         ui.label(body,right+16,350,328,126,16,muted);
     };
     if(section_==0) {
-        row_=std::clamp(row_,0,int(catalog.outfits.size()));
-        scroll_begin(int(catalog.outfits.size())+1,85);
-        row(0,"Original appearance","Restore your current shell",328,85,{{"action","restore"}});
-        for(size_t i=0;i<catalog.outfits.size();++i) {
-            const auto& outfit=catalog.outfits[i]; size_t v=0;
+        // Pin the equipped outfit to the top only when entering the tab or returning to it,
+        // NEVER dynamically while the player is actively browsing/selecting inside the SHELL
+        // view (so selecting an outfit or cycling variants never jumps the list out from under the cursor).
+        const Outfit* pinned = nullptr;
+        if(!pinned_outfit_id_.empty()) {
+            for(const auto& o:catalog.outfits) if(o.id==pinned_outfit_id_) { pinned=&o; break; }
+        } else {
+            pinned = worn;
+        }
+        if(pinned && !catalog.compatible(pinned->id, appearance.shell)) pinned = nullptr;
+
+        std::vector<const Outfit*> ordered;
+        if(pinned) ordered.push_back(pinned);
+        for(const auto& o:catalog.outfits) if(&o!=pinned) ordered.push_back(&o);
+        const int total=int(ordered.size())+2;
+        row_=std::clamp(row_,0,total-1);
+        scroll_begin(total,85);
+        const Json harbinger{{"action","harbinger_mirror"},{"value",!state.harbinger_mirror}};
+        row(0,"Harbinger outfit",state.harbinger_mirror?"Carry from shell":"Keeps its own",328,85,harbinger,harbinger,harbinger);
+        row(1,"Original appearance","Restore your current shell",328+85,85,{{"action","restore"}});
+        for(size_t p=0;p<ordered.size();++p) {
+            const auto& outfit=*ordered[p]; size_t v=0;
             bool chosen=worn==&outfit;
             if(chosen) for(size_t j=0;j<outfit.variants.size();++j) if(outfit.variants[j].id==selection->second.variant) v=j;
             bool compatible=catalog.compatible(outfit.id,appearance.shell);
             auto wear=[&](size_t index) { return compatible?Json{{"action","select"},{"outfit",outfit.id},{"variant",outfit.variants[index].id}}:Json{}; };
-            row(int(i)+1,outfit.name,outfit.variants[v].name,328+(i+1)*85,85,wear(v),wear((v+outfit.variants.size()-1)%outfit.variants.size()),wear((v+1)%outfit.variants.size()),{},{{"action","favorite"},{"outfit",outfit.id}});
-            thumbnail(outfit,left+14,328+(i+1)*85+9,62);
-            if(state.favorites.contains(outfit.id)) ui.star(left+panel-29,328+(i+1)*85+24,7,gold);
-            if(chosen) ui.label("Equipped",left+panel-99,328+(i+1)*85+44,82,24,14,gold);
+            const int idx=int(p)+2; const double y=328+idx*85;
+            row_thumb=true;
+            row(idx,outfit.name,outfit.variants[v].name,y,85,wear(v),wear((v+outfit.variants.size()-1)%outfit.variants.size()),wear((v+1)%outfit.variants.size()),{},{{"action","favorite"},{"outfit",outfit.id}});
+            thumbnail(outfit,left+14,y+9,62);
+            if(state.favorites.contains(outfit.id)) ui.star(left+panel-29,y+24,7,gold);
+            if(chosen) ui.label("Equipped",left+panel-99,y+44,82,24,14,gold);
         }
         scroll_end();
         if(catalog.outfits.empty()) ui.label(catalog.empty_message(),left+18,435,panel-36,130,18,muted);
         if(row_==0) {
+            detail("Harbinger outfit",state.harbinger_mirror?"Carry from shell":"Keeps its own",
+                   state.harbinger_mirror
+                     ?"When you sever into the Harbinger, it wears your current shell's outfit, so dying mid-fight keeps your look. Cosmetic only."
+                     :"The Harbinger keeps its own saved outfit. Turn this on to carry your shell's outfit over automatically.");
+            action_button("accept",state.harbinger_mirror?"Give Harbinger its own":"Carry outfit into Harbinger",655,rows_[0].accept,3);
+        } else if(row_==1) {
             detail("Original appearance","Your current shell","Restore the appearance supplied by the game and any installed base replacements. Your shell's abilities stay the same.");
-            action_button("accept","Restore original",520,rows_[0].accept,3);
+            action_button("accept","Restore original",520,rows_[1].accept,3);
         } else {
-            const auto& outfit=catalog.outfits[row_-1];
+            const auto& outfit=*ordered[row_-2];
             detail(outfit.name,"By "+outfit.author,outfit.description.empty()?"Choose an outfit variant. Appearance changes keep your current shell's abilities.":outfit.description);
             auto& selected=rows_[row_];
             std::string variant=outfit.variants.front().name;
@@ -541,7 +567,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         if(has_walk_mod) note=feminine?("Installed: "+walk_mod_name+" by argisht. CSS is holding the walk instead; choose Normal to hand it back.")
                                       :("Installed: "+walk_mod_name+" by argisht. It drives walking while Walk animation is Normal.");
         else if(feminine) note=appearance.walk.engaged()?("Active now: "+appearance.walk.reason()+". Templates keep this setting.")
-                                                        :"Armed. Move to see it. Templates keep this setting.";
+                                                        :("Armed. Move to see it. Templates keep this setting.");
         else note="Everything normal. CSS is not touching locomotion.";
         ui.label(note,right,760,360,60,14,muted);
     } else {
@@ -773,6 +799,18 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     if(active_ && !was_active_) { appearance.player(engine); bind_inputs(); camera_start(); dirty_=enter_transition_=true; closing_=false; for(auto& b:bindings_) { b.down=true; b.repeat=now+400; } }
     if(!active_ && was_active_) { camera_stop(); closing_=false; transition_started_=0; }
     was_active_=active_;
+    const bool in_shell_view = active_ && !extension_active_ && (section_ == 0);
+    if(was_in_shell_view_ && !in_shell_view) {
+        // Just left the SHELL view (switched tabs, opened CSSX, or closed menu).
+        // Update pinned outfit to whatever is currently worn so it is pinned on next visit.
+        auto sel = state.selections.find(appearance.shell);
+        pinned_outfit_id_ = (sel != state.selections.end()) ? sel->second.outfit : "";
+    } else if(!was_in_shell_view_ && in_shell_view) {
+        // Just entered the SHELL view. Snapshot whatever outfit is currently worn.
+        auto sel = state.selections.find(appearance.shell);
+        pinned_outfit_id_ = (sel != state.selections.end()) ? sel->second.outfit : "";
+    }
+    was_in_shell_view_ = in_shell_view;
     double elapsed=last_tick_?std::clamp((now-last_tick_)/1000.,0.,.05):0.; last_tick_=now;
 #ifdef CSS_INVENTORY_DEV
     if(!active_ || !focused) capture_duration_=0;

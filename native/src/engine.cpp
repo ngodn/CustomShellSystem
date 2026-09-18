@@ -111,6 +111,18 @@ public:
         if (p->GetElementSize() != sizeof(T)) throw std::runtime_error("Return size mismatch");
         T value{}; std::memcpy(&value, data(p), sizeof(T)); return value;
     }
+    // Positional argument access, for functions whose parameter names we do not
+    // know (native setters the Lua reference calls positionally).
+    FProperty* arg(size_t index) {
+        size_t i = 0;
+        for (auto* p : properties_) if (!p->HasAnyPropertyFlags(CPF_ReturnParm)) { if (i == index) return p; ++i; }
+        throw std::runtime_error("Reflected argument index out of range");
+    }
+    template<typename T> void set_arg(size_t index, const T& value) {
+        auto* p = arg(index);
+        if (p->GetElementSize() != sizeof(T)) throw std::runtime_error("Argument size mismatch");
+        p->CopyCompleteValue(data(p), &value);
+    }
     void run() { object_->ProcessEvent(function_, bytes_.data()); }
 };
 fs::path engine_content_directory() {
@@ -138,18 +150,27 @@ WeakObject& WeakObject::operator=(UObject* object) {
     RC::Unreal::FWeakObjectPtr::operator=(object);
     return *this;
 }
+static std::unordered_map<std::string, WeakObject> s_asset_cache;
 static UObject* load(const std::string& path) {
+    if (auto it = s_asset_cache.find(path); it != s_asset_cache.end()) {
+        if (auto* cached = it->second.Get()) return cached;
+    }
     auto name = wide(path);
-    if (auto* object = UObjectGlobals::StaticFindObject<UObject*>(nullptr, nullptr, name.c_str())) return object;
-    auto* library = find(L"/Script/Engine.Default__KismetSystemLibrary");
-    Call make(library, L"MakeSoftObjectPath", 2);
+    if (auto* object = UObjectGlobals::StaticFindObject<UObject*>(nullptr, nullptr, name.c_str())) {
+        s_asset_cache[path] = object;
+        return object;
+    }
+    static UObject* s_kismet = nullptr;
+    if (!s_kismet) s_kismet = find(L"/Script/Engine.Default__KismetSystemLibrary");
+    Call make(s_kismet, L"MakeSoftObjectPath", 2);
     FString string(name.c_str()); make.set(L"PathString", string); make.run();
-    Call convert(library, L"Conv_SoftObjPathToSoftObjRef", 2);
+    Call convert(s_kismet, L"Conv_SoftObjPathToSoftObjRef", 2);
     convert.copy(L"SoftObjectPath", make, L"ReturnValue"); convert.run();
-    Call loading(library, L"LoadAsset_Blocking", 2);
+    Call loading(s_kismet, L"LoadAsset_Blocking", 2);
     loading.copy(L"Asset", convert, L"ReturnValue"); loading.run();
     auto* object = loading.get<UObject*>();
     if (!object) throw std::runtime_error("Asset could not load: " + path);
+    s_asset_cache[path] = object;
     return object;
 }
 // Blocking asset loads can run garbage collection between successive imports.
@@ -218,6 +239,15 @@ static UObject* material_asset(UObject* value) {
         if(material_has_overrides(value)) throw std::runtime_error("A material effect still owns parameter overrides. Let it finish before changing appearance.");
         value=read<UObject*>(value,L"Parent");
         if(!value) throw std::runtime_error("Dynamic material has no asset parent");
+    }
+    return value;
+}
+static UObject* material_base_asset(UObject* value) {
+    std::set<UObject*> seen;
+    while(dynamic_material(value)) {
+        if(seen.size()>=16 || !seen.insert(value).second) return nullptr;
+        value=read<UObject*>(value,L"Parent");
+        if(!value) return nullptr;
     }
     return value;
 }
@@ -423,8 +453,8 @@ bool Appearance::repair_materials_needed() {
         UObject* value{}; std::memcpy(&value,values.GetRawPtr(i),sizeof(value));
         auto* expected=i<static_cast<int>(expected_materials_.size())?expected_materials_[i].Get():nullptr;
         if(value && value!=expected) {
-            UObject* asset{};
-            try {asset=material_asset(value);} catch(const std::runtime_error&) {return false;}
+            auto* asset=material_base_asset(value);
+            if(!asset) return false;
             auto path=narrow(asset->GetPathName());
             if(!original_default_materials_.contains(path) && std::find(original_materials_.begin(),original_materials_.end(),path)==original_materials_.end()) return false;
         }
@@ -540,6 +570,9 @@ bool Appearance::ready_to_apply() const {
     }
     // Retained player/controller changes can keep our own color MIDs.
     if(component==component_.Get() && mesh_asset(component)==applied_.Get()) return materials_match();
+    // Reclaiming the stock mesh after a teleporter/jump-point return has already recorded
+    // the stable original baseline; do not block recovery on transient effect parameters.
+    if(repair_mesh_needed()) return true;
     // World-owned dynamic effects have no stable asset path for rollback.
     try { material_paths(component); } catch(const std::runtime_error&) { return false; }
     return true;
@@ -575,7 +608,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     if (before == target && applied_materials_==materials && materials_match()) return true;
     if (before == target && applied_materials_==materials && reuse_materials()) return true;
     const bool returning_to_outfit=applied_.Get()==target && applied_materials_==materials && repair_mesh_needed();
-    if (component_.Get() != component || before != applied_.Get()) {
+    if (!returning_to_outfit && (component_.Get() != component || before != applied_.Get())) {
         auto materials=material_paths(component);
         attachments_.release();
         original_ = narrow(before->GetPathName());
@@ -1043,6 +1076,12 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
 #include "inventory_ui.inl"
 
 #include "inventory_view.inl"
+
+#include "extension_hud.inl"
+
+#include "minimap_widget.inl"
+
+#include "markers.inl"
 
 #include "extension_hooks.inl"
 #include "extension_engine.inl"

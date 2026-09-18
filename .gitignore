@@ -3,7 +3,8 @@
 /work/
 /backups/
 /local-packs/
-/reference/
+reference/
+/ue4ss/
 /dist/
 /output/
 /tmp/
