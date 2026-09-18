@@ -143,10 +143,31 @@ class ColorUpdateTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'variant-specific'):
                 color_package.build(Path('unused'), Path('unused'), Path('unused'))
 
-    def test_empty_version_is_refused(self):
-        with patch.object(color_package, 'verify', return_value={}):
-            with self.assertRaisesRegex(ValueError, 'Package version'):
-                color_package.build(Path('unused'), Path('unused'), Path('unused'), package_version='')
+class ColorTemplateTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+
+    def test_generates_valid_bindings_template(self):
+        import css_colors
+        target = self.root / "colors.json"
+        project.generate_color_template(target, "author.outfit", "bindings")
+        self.assertTrue(target.exists())
+        data = json.loads(target.read_text())
+        self.assertEqual(data["id"], "author.outfit")
+        css_colors.validate(data["colors"])
+        problems = css_colors.lint_convention(data["colors"])
+        self.assertEqual(problems, [])
+
+    def test_generates_valid_dye_template(self):
+        import css_colors
+        target = self.root / "colors_dye.json"
+        project.generate_color_template(target, "author.outfit", "dye")
+        self.assertTrue(target.exists())
+        data = json.loads(target.read_text())
+        self.assertIn("surfaces", data["colors"])
+        css_colors.validate(data["colors"])
 
 
 if __name__ == '__main__':

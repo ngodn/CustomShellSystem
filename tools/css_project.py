@@ -154,6 +154,104 @@ def build(path: Path, game: Path, retoc: Path, repak: Path, output: Path | None 
     return result, archive
 
 
+def generate_color_template(path: Path, identity: str, mode: str = 'bindings') -> Path:
+    if not re.fullmatch(r'[a-z0-9][a-z0-9._-]{0,95}', identity) or '..' in identity:
+        raise ValueError('id must be a stable lowercase CSS identifier without ..')
+    if mode not in ('bindings', 'dye'):
+        raise ValueError("mode must be 'bindings' or 'dye'")
+
+    controls = [
+        {
+            "id": "clothing",
+            "name": "Clothing",
+            "role": "garment",
+            "group": "outfit",
+            "hue_locked": False,
+            "default": [0.22, 0.22, 0.25, 1.0],
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01,
+            "bindings": [{"slot": 0, "parameter": "ClothTint"}] if mode == 'bindings' else []
+        },
+        {
+            "id": "accent",
+            "name": "Accent trim",
+            "role": "accent",
+            "group": "outfit",
+            "hue_locked": False,
+            "default": [0.75, 0.20, 0.15, 1.0],
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01,
+            "bindings": [{"slot": 0, "parameter": "AccentTint"}] if mode == 'bindings' else []
+        },
+        {
+            "id": "metal",
+            "name": "Metal ornaments",
+            "role": "metal",
+            "group": "outfit",
+            "hue_locked": True,
+            "default": [0.85, 0.75, 0.50, 1.0],
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01,
+            "bindings": [{"slot": 0, "parameter": "MetalTint"}] if mode == 'bindings' else []
+        }
+    ]
+
+    palettes = [
+        {
+            "id": "crimson_vow",
+            "name": "Crimson Vow",
+            "values": {
+                "clothing": [0.15, 0.03, 0.05, 1.0],
+                "accent": [0.85, 0.12, 0.18, 1.0],
+                "metal": [0.90, 0.78, 0.45, 1.0]
+            }
+        },
+        {
+            "id": "void_obsidian",
+            "name": "Void Obsidian",
+            "values": {
+                "clothing": [0.04, 0.04, 0.05, 1.0],
+                "accent": [0.35, 0.35, 0.40, 1.0],
+                "metal": [0.65, 0.65, 0.70, 1.0]
+            }
+        }
+    ]
+
+    colors_data: dict = {
+        "schema": 1,
+        "controls": controls,
+        "palettes": palettes
+    }
+
+    if mode == 'dye':
+        safe_id = identity.replace('.', '-')
+        colors_data["surfaces"] = [
+            {
+                "id": "outfit-dye",
+                "parameter": "BaseColorMap  non VT",
+                "slots": [0],
+                "resolution": 2048,
+                "layers": {
+                    "clothing": f"dye-{safe_id}-clothing.png",
+                    "accent": f"dye-{safe_id}-accent.png",
+                    "metal": f"dye-{safe_id}-metal.png"
+                }
+            }
+        ]
+
+    data = {
+        "id": identity,
+        "colors": colors_data
+    }
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2) + '\n')
+    return path
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='action', required=True)
@@ -161,6 +259,10 @@ def main():
     init.add_argument('directory', type=Path)
     for name in ('id', 'name', 'author'):
         init.add_argument('--' + name, required=True)
+    color_tmpl = commands.add_parser('color-template', help='Generate starter color and palette recipe adhering to CSS conventions')
+    color_tmpl.add_argument('output', type=Path)
+    color_tmpl.add_argument('--id', required=True, help='Outfit ID (e.g. author.outfit)')
+    color_tmpl.add_argument('--mode', choices=['bindings', 'dye'], default='bindings', help='Color mode: bindings (shader parameters) or dye (texture masks)')
     check = commands.add_parser('check', help='Check recipe, sources and images, without cooking or converting')
     check.add_argument('project', type=Path)
     make = commands.add_parser('build', help='Convert, verify, then produce the outfit trio and install ZIP')
@@ -174,6 +276,9 @@ def main():
     try:
         if args.action == 'init':
             print(initialize(args.directory, args.id, args.name, args.author))
+        elif args.action == 'color-template':
+            result = generate_color_template(args.output, args.id, args.mode)
+            print(f'Color recipe template created: {result}')
         elif args.action == 'check':
             result = read_project(args.project)
             print(f'Project inputs checked: {result.name}. Cooked assets and gameplay are not validated by this check.')
