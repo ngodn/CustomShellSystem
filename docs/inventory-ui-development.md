@@ -109,3 +109,14 @@ The missing-state test used live core reload, not a cold launch on the reporter'
 - [Epic: Blueprint Paths Library](https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UBlueprintPathsLibrary) and [relative-path resolution](https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UBlueprintPathsLibrary/ConvertRelativePathToFull). The game supplies its own content directory; no store-specific install root is required.
 
 Cooked game assets and the live reflected signatures establish the actual shipped behavior. The public documentation describes the techniques, not Mortal Shell II's implementation.
+
+
+## Preview physics verification, 2026-09-20
+
+The V30 menu character retained `bDisablePostProcessBlueprint=true` and had no post-process instance after its mesh was replaced. Enabling that flag alone did not instantiate the graph. A controlled engine call retaining the existing override and requesting animation initialization created the missing preview instance. A second test then showed player chest stiffness changing from 115 to 88.82643960980423 while the menu remained at 115.
+
+`Appearance::sync_menu_physics` now enables the authored preview graph, initializes a missing instance once, and mirrors only SpringBone/AnimDynamics roots actively controlled by CSS. The preview captures its own original node values and disable flag. Removing overrides or releasing the preview restores those values. Slider changes preserve both the preview's main and post-process instances; the player is never reinitialized for this synchronization.
+
+Windows build and live V30 checks pass: 64 assertions cover all 30 spring nodes matching the player under tuning, exact original restoration and stable instance identity. Another 29 assertions cover saved profile load, disable/enable restoration, preview disable-flag restoration and recovery after a controlled return to the stock mesh. Existing profiles and the current selection are restored exactly. Evidence is in `work/nextgen-live-preview-{mismatch,fixed-verdict}.json` and `work/nextgen-live-lifecycle-verdict.json`.
+
+These are SpringBone and controlled stock-mesh recovery proofs. Actual travel/death and the experimental AnimDynamics adapter remain unverified. A null post-process instance must not be treated as proof that a visually animated preview has secondary physics.

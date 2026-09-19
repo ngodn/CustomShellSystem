@@ -373,6 +373,7 @@ UObject* Appearance::player(void* engine) {
     return pawn;
 }
 void Appearance::restore_menu() {
+    restore_menu_physics();
     menu_attachments_.release();
     menu_items_.release();
     if(auto* preview=menu_component_.Get()) for(int section:menu_hidden_sections_)
@@ -430,6 +431,7 @@ void Appearance::sync_menu() {
         if(current!=value) material(target,i,value);
     }
     push_morphs(target);
+    sync_menu_physics(target);
     if(!current_items_.empty()) menu_items_.update(target,current_items_identity_,current_items_);
     // A section an item covers, or a toggle switched off, has to be hidden on the preview
     // too, or the wardrobe shows a part the body is not wearing.
@@ -974,6 +976,22 @@ struct SpringNode {
     bool flag(FBoolProperty* p) const { return p && p->GetPropertyValueInContainer(data); }
     void set_flag(FBoolProperty* p,bool v) const { if(p) p->SetPropertyValueInContainer(data,v); }
 };
+template<class Snapshot> Snapshot capture_spring(const SpringNode& node) {
+    return {node.get(node.stiffness),node.get(node.damping),node.get(node.max_displacement),
+        node.get(node.error_reset),node.flag(node.limit),
+        {node.flag(node.translate[0]),node.flag(node.translate[1]),node.flag(node.translate[2])},
+        {node.flag(node.rotate[0]),node.flag(node.rotate[1]),node.flag(node.rotate[2])}};
+}
+template<class Snapshot> void apply_spring(const SpringNode& node,const Snapshot& value) {
+    node.put(node.stiffness,value.stiffness); node.put(node.damping,value.damping);
+    node.put(node.max_displacement,value.max_displacement); node.put(node.error_reset,value.error_reset);
+    node.set_flag(node.limit,value.limit);
+    for(size_t axis=0;axis<3;++axis) {
+        node.set_flag(node.translate[axis],value.translate[axis]);
+        node.set_flag(node.rotate[axis],value.rotate[axis]);
+    }
+    if(capture_spring<Snapshot>(node)!=value) throw std::runtime_error("Preview spring read-back failed");
+}
 // SetMorphTarget records a curve on the component whether or not the mesh has a shape by
 // that name, and GetMorphTarget reads that same curve straight back, so a read-back proves
 // only that the number was stored. Ask the mesh what it actually carries. A UMorphTarget's
@@ -1261,6 +1279,93 @@ void Appearance::restore_dynamics() {
         if(needs_reset) reset_dynamics(instance);
     }
     dynamics_originals_.clear(); dynamics_instance_=nullptr;
+}
+void Appearance::restore_menu_physics() {
+    if(auto* instance=menu_physics_instance_.Get()) {
+        if(!menu_spring_originals_.empty()) {
+            const auto nodes=spring_nodes(instance);
+            for(const auto& [bone,value]:menu_spring_originals_)
+                if(auto found=nodes.find(bone);found!=nodes.end()) apply_spring(found->second,value);
+        }
+        if(!menu_dynamics_originals_.empty()) {
+            const auto nodes=dynamics_nodes(instance);
+            bool needs_reset=false;
+            for(const auto& [root,value]:menu_dynamics_originals_) if(auto found=nodes.find(root);found!=nodes.end()) {
+                needs_reset|=dynamics_reset_required(found->second.capture(),value);
+                found->second.apply(value);
+            }
+            if(needs_reset) reset_dynamics(instance);
+        }
+    }
+    menu_spring_originals_.clear(); menu_dynamics_originals_.clear(); menu_physics_instance_.Reset();
+    if(auto* component=menu_component_.Get(); component && menu_post_process_disabled_) {
+        Call set(component,L"SetDisablePostProcessBlueprint",1);
+        set.set(L"bInDisablePostProcess",*menu_post_process_disabled_); set.run();
+    }
+    menu_post_process_disabled_.reset();
+}
+void Appearance::sync_menu_physics(UObject* component) {
+    auto* source=post_process_instance(component_.Get());
+    if(!source) { restore_menu_physics(); return; }
+    auto* instance=post_process_instance(component);
+    if(menu_physics_instance_.Get()!=instance) restore_menu_physics();
+    auto* asset=mesh_asset(component);
+    auto* authored=asset?read<UObject*>(asset,L"PostProcessAnimBlueprint"):nullptr;
+    if(!authored) return;
+    if(!menu_post_process_disabled_) {
+        Call get(component,L"GetDisablePostProcessBlueprint",1); get.run();
+        menu_post_process_disabled_=get.get<bool>();
+        Call set(component,L"SetDisablePostProcessBlueprint",1);
+        set.set(L"bInDisablePostProcess",false); set.run();
+    }
+    if(!instance) {
+        // The game's preview can retain its main instance when swapping meshes
+        // without creating the new mesh's post-process instance. Initialize only
+        // this preview once, retaining its existing class override.
+        Call init(component,L"SetOverridePostProcessAnimBP",2);
+        init.set(L"InPostProcessAnimBlueprint",read<UObject*>(component,L"OverridePostProcessAnimBP"));
+        init.set(L"ReinitAnimInstances",true); init.run();
+        instance=post_process_instance(component);
+        if(!instance) throw std::runtime_error("Preview post-process instance was not created");
+    }
+    menu_physics_instance_=instance;
+    if(!spring_originals_.empty() || !menu_spring_originals_.empty()) {
+        const auto from=spring_nodes(source), to=spring_nodes(instance);
+        for(auto it=menu_spring_originals_.begin();it!=menu_spring_originals_.end();) {
+            if(spring_instance_.Get()==source && spring_originals_.contains(it->first)) { ++it; continue; }
+            if(auto node=to.find(it->first);node!=to.end()) apply_spring(node->second,it->second);
+            it=menu_spring_originals_.erase(it);
+        }
+        if(spring_instance_.Get()==source) for(const auto& [bone,original]:spring_originals_) {
+            const auto a=from.find(bone), b=to.find(bone);
+            if(a==from.end() || b==to.end()) throw std::runtime_error("Preview spring is missing: "+bone);
+            menu_spring_originals_.try_emplace(bone,capture_spring<SpringOriginal>(b->second));
+            const auto value=capture_spring<SpringOriginal>(a->second);
+            if(capture_spring<SpringOriginal>(b->second)!=value) apply_spring(b->second,value);
+        }
+    }
+    if(!dynamics_originals_.empty() || !menu_dynamics_originals_.empty()) {
+        reset_dynamics(instance,false);
+        const auto from=dynamics_nodes(source), to=dynamics_nodes(instance);
+        bool needs_reset=false;
+        auto apply=[&](const DynamicsNode& node,const DynamicsSettings& value) {
+            const auto before=node.capture();
+            needs_reset|=dynamics_reset_required(before,value);
+            if(before!=value) node.apply(value);
+        };
+        for(auto it=menu_dynamics_originals_.begin();it!=menu_dynamics_originals_.end();) {
+            if(dynamics_instance_.Get()==source && dynamics_originals_.contains(it->first)) { ++it; continue; }
+            if(auto node=to.find(it->first);node!=to.end()) apply(node->second,it->second);
+            it=menu_dynamics_originals_.erase(it);
+        }
+        if(dynamics_instance_.Get()==source) for(const auto& [root,original]:dynamics_originals_) {
+            const auto a=from.find(root), b=to.find(root);
+            if(a==from.end() || b==to.end()) throw std::runtime_error("Preview dynamics chain is missing: "+root);
+            menu_dynamics_originals_.try_emplace(root,b->second.capture());
+            apply(b->second,a->second.capture());
+        }
+        if(needs_reset) reset_dynamics(instance);
+    }
 }
 void Appearance::reset_controls() {
     show_hidden_sections();
