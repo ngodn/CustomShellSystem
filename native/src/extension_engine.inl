@@ -198,6 +198,10 @@ Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& re
         return found!=objects_.end() && found->second.Get()!=nullptr;
     }
     if(op.starts_with("hooks.")) return hook_request(request);
+#ifdef CSS_INVENTORY_DEV
+    // Startup probes need a world context before a playable character exists.
+    if(op=="engine") return handle(static_cast<UObject*>(engine));
+#endif
     if(op=="player") {
         auto* pawn=appearance.player(engine);return {{"pawn",handle(pawn)},{"controller",handle(pawn?read<UObject*>(pawn,L"Controller"):nullptr)},{"shell",appearance.shell},{"revision",appearance.player_revision}};
     }
