@@ -9,6 +9,29 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
 from css_controls import validate,embed,verify_resources,lint_convention
 
 class ControlTests(unittest.TestCase):
+    def test_secondary_motion_metadata_matches_native_limits(self):
+        recipe=dict(schema=1,controls=[dict(id='motion',name='Motion',kind='spring',
+            nodes=['hair_root'],frequency=dict(min=.5,max=3,default=1.5),
+            damping_ratio=dict(min=.2,max=1,default=.5))])
+        validate(recipe)
+        for key,low,high in [('world_damping',0,1),('limit_angle',0,180),
+                             ('collision_radius',0,100),('gravity_scale',-5,5)]:
+            for number in (low,0,high):
+                good=copy.deepcopy(recipe);good['controls'][0][key]=number
+                validate(good)
+            for value in (low-1,high+1,True,None,'0',[],float('nan'),float('inf')):
+                bad=copy.deepcopy(recipe);bad['controls'][0][key]=value
+                with self.subTest(key=key,value=value),self.assertRaises(ValueError):validate(bad)
+            stray=dict(schema=1,controls=[dict(id='gloss',name='Gloss',kind='scalar',
+                default=[1,0,0,1],bindings=[dict(slot=0,parameter='Gloss')],**{key:0})])
+            with self.assertRaises(ValueError):validate(stray)
+        for axis in ('none','x','y','z'):
+            good=copy.deepcopy(recipe);good['controls'][0]['planar_constraint']=axis
+            validate(good)
+        for axis in ('w',None,True,1,[]):
+            bad=copy.deepcopy(recipe);bad['controls'][0]['planar_constraint']=axis
+            with self.subTest(axis=axis),self.assertRaises(ValueError):validate(bad)
+
     def test_glow_and_opacity_package_kinds_match_runtime(self):
         recipe=dict(schema=1,controls=[
             dict(id='glow',name='Glow',kind='glow',default=[5,0,0,1],

@@ -1477,19 +1477,14 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                         if(node.get(node.max_displacement)!=double(v[2]) || !node.flag(node.limit))
                             throw std::runtime_error("Spring travel read-back failed");
                     }
+                    const auto& original=spring_originals_.at(bone);
+                    const auto axes=spring_axes(control,{original.translate,original.rotate});
                     for(int i=0;i<3;++i) {
-                        if(control.translate[size_t(i)]>=0) node.set_flag(node.translate[i],control.translate[size_t(i)]!=0);
-                        else if(control.planar_constraint>0) {
-                            node.set_flag(node.translate[i],control.planar_constraint!=i+1);
-                        } else if(control.spring_clamp && (bone.find("thigh")!=std::string::npos || bone.find("hip")!=std::string::npos)) {
-                            if(i==1) node.set_flag(node.translate[i],false);
-                            else node.set_flag(node.translate[i],true);
-                        }
-                        if(control.rotate[size_t(i)]>=0) node.set_flag(node.rotate[i],control.rotate[size_t(i)]!=0);
-                        else if(control.spring_clamp && (bone.find("brust")!=std::string::npos || bone.find("butt")!=std::string::npos ||
-                                                         bone.find("breast")!=std::string::npos || bone.find("glute")!=std::string::npos)) {
-                            node.set_flag(node.rotate[i],true);
-                        }
+                        node.set_flag(node.translate[i],axes.translate[size_t(i)]);
+                        node.set_flag(node.rotate[i],axes.rotate[size_t(i)]);
+                        if(node.flag(node.translate[i])!=axes.translate[size_t(i)] ||
+                           node.flag(node.rotate[i])!=axes.rotate[size_t(i)])
+                            throw std::runtime_error("Spring axis read-back failed");
                     }
                     if(control.error_reset>=0) node.put(node.error_reset,control.error_reset);
                 }

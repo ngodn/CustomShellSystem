@@ -102,7 +102,7 @@ menu, the saved look and the apply path all follow from that.
 | `scalar` | one number | a named material scalar | anything else, like gloss or roughness |
 | `toggle` | on or off | material sections | needs `sections`, takes no `min`/`max`/`step` |
 | `choice` | which option | a texture parameter | needs `options` and a binding, takes no `min`/`max`/`step` |
-| `spring` | two/three numbers | the mesh's own spring bones | Bounce Hz, Settle %, optional Travel cm; Kawaii & 3-axis rotation |
+| `spring` | two/three numbers | the mesh's own spring bones | Bounce Hz, Settle %, optional Travel cm and explicit axis filters |
 | `shape` | one number | a morph target on the package's own mesh | needs `morph`, optional joint `formulas` |
 | `glow` | radiance & pulse | emissive material parameters | intensity cd/m², pulse Hz, combat reactivity |
 | `opacity` | one number (0..1) | alpha / sheerness parameter | sheer fabrics, lace, stockings, chiffon |
@@ -230,6 +230,26 @@ down instead of using what it was given, and the slider would stop meaning what 
 A spring is live and reversible. CSS records what the blueprint held the first time it
 touches a node and puts that back when the control is dropped or the outfit is removed, so
 nothing needs a mesh reload to undo.
+
+`translate` and `rotate` are optional three-boolean arrays. Omitted arrays retain the
+captured blueprint flags, including when a travel clamp is present. CSS does not infer
+axis settings from names such as `brust`, `butt`, `hip` or `thigh`. Explicit `rotate`
+flags can enable or disable the corresponding SpringBone rotation filters.
+
+`planar_constraint` accepts `none`, `x`, `y` or `z`. It locks translation on the named
+axis after explicit translation overrides, so `translate: [true,true,true]` cannot
+bypass `planar_constraint: "y"`. The other translation and rotation flags retain their
+authored or explicitly overridden values. These SpringBone translation filters act
+in **world space** in UE 5.6.1; they are not a character-relative anatomical collision
+plane. A travel clamp bounds displacement but does not guarantee garment clearance.
+
+`world_damping`, `limit_angle`, `collision_radius` and `gravity_scale` are reserved
+metadata from the earlier design. Their presence and finite numeric ranges are checked
+by the package and native parsers. Omission is retained separately from an explicit
+zero. The current SpringBone runtime adapter does **not** apply them. Do not describe
+these accepted fields as active collision, cone limits, gravity or Kawaii Physics.
+The separate AnimDynamics experiment and remaining native adapter are tracked in
+[the dynamics investigation](../../CSS-Mod-Authoring/docs/next-gen-dynamics-investigation.md).
 
 Packages written before this said `"type": "scalar"` and meant a strength, so that reads
 as `intensity`, not as the new generic `scalar`. Nothing published changes meaning.
@@ -448,16 +468,17 @@ Inspired by *Stellar Blade* and *Better Jiggle Mod* (Nexus 1570):
    - Bounce frequency in Hz (stiffness $K = (2\pi f)^2$)
    - Settle damping ratio (decay $D = 4\pi \zeta f$)
 2. **Travel Clamping (`max_displacement`)**:
-   - Restricts maximum displacement (cm) via `bLimitDisplacement` and `MaxDisplacement` to prevent body clipping during running, landing, and dodging.
+   - Restricts maximum displacement (cm) via `bLimitDisplacement` and `MaxDisplacement`. Collision clearance still requires evaluation against the actual outfit.
 3. **3-Axis Rotational Swing (`bRotateX/Y/Z`)**:
-   - Breasts (`brust`, `breast`), glutes (`butt`, `glute`), and soft tissue swing with pitch, roll, and yaw rotation rather than rigid translation.
+   - Explicit `rotate` flags control the node's rotation filters. Absent flags preserve the animation blueprint's values. The engine skips SpringBone evaluation when all translation axes are disabled, even if rotation flags are enabled.
 4. **Planar & Lateral Constraints (`planar_constraint`)**:
-   - Restricts movement to 2D planes (`"x"`, `"y"`, `"z"`). Locking the lateral axis (`y`) on thighs and hips prevents unnatural inner-thigh collision clipping.
-5. **Kawaii Physics Extensions**:
-   - `world_damping` (0..1): dampens external character world translation impact.
-   - `limit_angle` (degrees): cone deflection clamp preventing unnatural mesh twisting.
-   - `collision_radius` (cm): virtual boundary sphere preventing penetration into adjacent anatomy.
-   - `gravity_scale`: downward gravitational pull factor.
+   - Locks the named world-space translation axis after explicit translation settings. This does not implement body collision.
+5. **Reserved dynamics metadata, not applied by SpringBone**:
+   - `world_damping`: 0..1.
+   - `limit_angle`: 0..180 degrees.
+   - `collision_radius`: 0..100 cm.
+   - `gravity_scale`: -5..5.
+   - Zero and omission are distinct. Solver-specific mappings and active collision are still under development.
 
 ## Next-Gen UI Kit Specification
 

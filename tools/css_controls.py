@@ -129,6 +129,10 @@ def validate(recipe:dict) -> set[str]:
                 number(index,0,127)
             if len(set(covered))!=len(covered) or set(covered).intersection(c['sections']):
                 raise ValueError("A toggle's occluded sections must be distinct from its own sections")
+        for key in ('max_displacement','translate','rotate','error_reset','planar_constraint',
+                    'world_damping','limit_angle','collision_radius','gravity_scale'):
+            if key in c and kind_of(c)!='spring':
+                raise ValueError(f'Only a spring control accepts {key}')
         if kind_of(c)=='spring':
             nodes=c.get('nodes');bounded_array(nodes,32)
             if not nodes: raise ValueError('A spring control needs between one and thirty-two bones')
@@ -183,6 +187,11 @@ def validate(recipe:dict) -> set[str]:
                 er=c['error_reset']
                 if isinstance(er,bool) or not isinstance(er,(int,float)) or not 0<er<=4096:
                     raise ValueError("A spring's error_reset is out of range")
+            if 'planar_constraint' in c and c['planar_constraint'] not in ('none','x','y','z'):
+                raise ValueError('Invalid planar constraint axis')
+            for key,low,high in (('world_damping',0,1),('limit_angle',0,180),
+                                 ('collision_radius',0,100),('gravity_scale',-5,5)):
+                if key in c: number(c[key],low,high)
             continue
         vector(c['default'])
         if kind_of(c)=='toggle':

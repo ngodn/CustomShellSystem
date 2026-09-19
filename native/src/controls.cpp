@@ -159,6 +159,14 @@ bool dye_resource(const std::string& name) {
     return name.starts_with("dye-") && name.ends_with(".png") && valid_id(name) && name.find("..") == name.npos;
 }
 float srgb_linear(float v) { return v<=.04045f?v/12.92f:std::pow((v+.055f)/1.055f,2.4f); }
+SpringAxes spring_axes(const Control& control, SpringAxes authored) {
+    for(size_t axis=0;axis<3;++axis) {
+        if(control.translate[axis]>=0) authored.translate[axis]=control.translate[axis]!=0;
+        if(control.rotate[axis]>=0) authored.rotate[axis]=control.rotate[axis]!=0;
+        if(control.planar_constraint==int(axis)+1) authored.translate[axis]=false;
+    }
+    return authored;
+}
 const Control* ControlSet::find(const std::string& id) const {
     for(const auto& control:controls) if(control.id==id) return &control;
     return nullptr;
@@ -266,6 +274,10 @@ ControlSet ControlSet::parse(const Json& j) {
             // The value is which option, so the range is the list and nothing else.
             control.minimum=0; control.maximum=float(control.options.size()-1); control.step=1;
         } else if(control.kind==ControlKind::Choice) throw std::runtime_error("A choice control needs its texture options");
+        for(const auto* key:{"max_displacement","translate","rotate","error_reset","planar_constraint",
+                             "world_damping","limit_angle","collision_radius","gravity_scale"})
+            if(c.contains(key) && control.kind!=ControlKind::Spring)
+                throw std::runtime_error(std::string("Only a spring control accepts ")+key);
         if(c.contains("nodes") || c.contains("frequency") || c.contains("damping_ratio")) {
             if(control.kind!=ControlKind::Spring) throw std::runtime_error("Only a spring control tunes skeleton nodes");
             control.nodes=c.at("nodes").get<std::vector<std::string>>();
@@ -317,26 +329,18 @@ ControlSet ControlSet::parse(const Json& j) {
                 else if(pc=="z") control.planar_constraint=3;
                 else throw std::runtime_error("Invalid planar constraint axis");
             }
-            if(c.contains("world_damping")) {
-                control.world_damping=c.at("world_damping").get<float>();
-                if(!std::isfinite(control.world_damping) || control.world_damping<0 || control.world_damping>1)
-                    throw std::runtime_error("Invalid world damping value");
-            }
-            if(c.contains("limit_angle")) {
-                control.limit_angle=c.at("limit_angle").get<float>();
-                if(!std::isfinite(control.limit_angle) || control.limit_angle<0 || control.limit_angle>180)
-                    throw std::runtime_error("Invalid limit angle");
-            }
-            if(c.contains("collision_radius")) {
-                control.collision_radius=c.at("collision_radius").get<float>();
-                if(!std::isfinite(control.collision_radius) || control.collision_radius<0 || control.collision_radius>100)
-                    throw std::runtime_error("Invalid collision radius");
-            }
-            if(c.contains("gravity_scale")) {
-                control.gravity_scale=c.at("gravity_scale").get<float>();
-                if(!std::isfinite(control.gravity_scale) || control.gravity_scale<-5 || control.gravity_scale>5)
-                    throw std::runtime_error("Invalid gravity scale");
-            }
+            auto optional_number=[&](const char* key,float low,float high,std::optional<float>& target) {
+                if(!c.contains(key)) return;
+                if(!c.at(key).is_number()) throw std::runtime_error(std::string("Invalid numeric setting: ")+key);
+                const auto number=c.at(key).get<float>();
+                if(!std::isfinite(number) || number<low || number>high)
+                    throw std::runtime_error(std::string("Setting outside limits: ")+key);
+                target=number;
+            };
+            optional_number("world_damping",0,1,control.world_damping);
+            optional_number("limit_angle",0,180,control.limit_angle);
+            optional_number("collision_radius",0,100,control.collision_radius);
+            optional_number("gravity_scale",-5,5,control.gravity_scale);
         } else if(control.kind==ControlKind::Spring)
             throw std::runtime_error("A spring control needs its bones, frequency and damping ratio");
         if(c.contains("morph")) {

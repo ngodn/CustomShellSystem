@@ -376,6 +376,33 @@ int main() {
             auto bad_reset=clamped; bad_reset["controls"][1]["error_reset"]=0;
             rejects([&]{ControlSet::parse(bad_reset);});
 
+            // Adjusting frequency/travel must not change an author's axis choices.
+            const SpringAxes authored{{false,true,true},{false,true,false}};
+            expect(spring_axes(*bust,authored)==authored,"Plain tuning changed authored axes");
+            auto clamp_only=springs;
+            clamp_only["controls"][1]["max_displacement"]=clamped["controls"][1]["max_displacement"];
+            const auto clamp_model=ControlSet::parse(clamp_only);
+            expect(spring_axes(*clamp_model.find("bust"),authored)==authored,
+                   "A travel clamp must not infer axis changes from a bone name");
+            auto plane_only=clamp_only;
+            plane_only["controls"][1]["planar_constraint"]="y";
+            const auto plane_model=ControlSet::parse(plane_only);
+            const SpringAxes expected_plane{{false,false,true},{false,true,false}};
+            expect(spring_axes(*plane_model.find("bust"),authored)==expected_plane,
+                   "A planar lock must retain other disabled axes and authored rotation");
+            plane_only["controls"][1]["translate"]=Json::array({true,true,true});
+            const auto explicit_model=ControlSet::parse(plane_only);
+            const SpringAxes expected_explicit{{true,false,true},{false,true,false}};
+            expect(spring_axes(*explicit_model.find("bust"),authored)==expected_explicit,
+                   "Explicit translation must not bypass the planar lock");
+            plane_only["controls"][1]["planar_constraint"]="none";
+            plane_only["controls"][1].erase("translate");
+            const auto neutral_model=ControlSet::parse(plane_only);
+            expect(spring_axes(*neutral_model.find("bust"),authored)==authored,
+                   "Removing overrides must recover captured authored flags");
+            const SpringAxes forced{{true,false,true},{true,true,true}};
+            expect(spring_axes(*cbust,authored)==forced,"Explicit rotation overrides were lost");
+
             // 1.0: a shape drives a morph target the package cooked into its own mesh. It
             // is a single number like a scalar, and it writes no material.
             auto shapes=Json::parse(R"({"schema":1,"controls":[
@@ -457,7 +484,7 @@ int main() {
             rejects([&]{ControlSet::parse(stray_formula);});
         }
         {
-            // 1.0.0-beta Next-Gen: Kawaii Physics & Extended Anatomical Systems
+            // Reserved dynamics metadata is retained, not proof of runtime physics.
             auto kawaii = Json::parse(R"({
               "schema": 1,
               "controls": [
@@ -498,16 +525,41 @@ int main() {
             const auto* bust = parsed_k.find("bust_jiggle");
             expect(bust != nullptr && bust->kind == ControlKind::Spring, "Bust spring control missing");
             expect(bust->planar_constraint == 2, "Planar constraint Y lost");
-            expect(std::abs(bust->world_damping - 0.25f) < 1e-6, "World damping mismatch");
-            expect(std::abs(bust->limit_angle - 35.0f) < 1e-6, "Limit angle mismatch");
-            expect(std::abs(bust->collision_radius - 7.5f) < 1e-6, "Collision radius mismatch");
-            expect(std::abs(bust->gravity_scale - 1.2f) < 1e-6, "Gravity scale mismatch");
+            expect(bust->world_damping && std::abs(*bust->world_damping - 0.25f) < 1e-6, "World damping mismatch");
+            expect(bust->limit_angle && std::abs(*bust->limit_angle - 35.0f) < 1e-6, "Limit angle mismatch");
+            expect(bust->collision_radius && std::abs(*bust->collision_radius - 7.5f) < 1e-6, "Collision radius mismatch");
+            expect(bust->gravity_scale && std::abs(*bust->gravity_scale - 1.2f) < 1e-6, "Gravity scale mismatch");
             expect(bust->group == ControlGroup::Body, "Bust role group must be Body");
 
             const auto* pony = parsed_k.find("ponytail_hair");
             expect(pony != nullptr && pony->group == ControlGroup::Body, "Hair group must be Body");
-            expect(std::abs(pony->world_damping - 0.4f) < 1e-6, "Hair world damping mismatch");
-            expect(std::abs(pony->limit_angle - 60.0f) < 1e-6, "Hair limit angle mismatch");
+            expect(pony->world_damping && std::abs(*pony->world_damping - 0.4f) < 1e-6, "Hair world damping mismatch");
+            expect(pony->limit_angle && std::abs(*pony->limit_angle - 60.0f) < 1e-6, "Hair limit angle mismatch");
+            expect(!pony->collision_radius && !pony->gravity_scale,"Absent dynamics settings became zero overrides");
+            auto absent=kawaii;
+            for(const auto* key:{"world_damping","limit_angle","collision_radius","gravity_scale"})
+                absent["controls"][0].erase(key);
+            const auto absent_model=ControlSet::parse(absent);
+            const auto* absent_control=absent_model.find("bust_jiggle");
+            expect(!absent_control->world_damping && !absent_control->limit_angle &&
+                   !absent_control->collision_radius && !absent_control->gravity_scale,
+                   "Absence must preserve all authored dynamics values");
+            auto zeros=absent;
+            for(const auto* key:{"world_damping","limit_angle","collision_radius","gravity_scale"}) {
+                zeros["controls"][0][key]=0;
+                for(const auto& invalid:{Json(true),Json(nullptr),Json("0"),Json::array(),
+                                        Json(std::numeric_limits<double>::quiet_NaN())}) {
+                    auto bad=absent; bad["controls"][0][key]=invalid;
+                    rejects([&]{ControlSet::parse(bad);});
+                }
+                auto stray=absent; stray["controls"][2][key]=0;
+                rejects([&]{ControlSet::parse(stray);});
+            }
+            const auto zero_model=ControlSet::parse(zeros);
+            const auto* zero_control=zero_model.find("bust_jiggle");
+            expect(zero_control->world_damping==0.f && zero_control->limit_angle==0.f &&
+                   zero_control->collision_radius==0.f && zero_control->gravity_scale==0.f,
+                   "Explicit zero dynamics settings must remain present");
 
             const auto* clit = parsed_k.find("clitoral_hue");
             expect(clit != nullptr && clit->group == ControlGroup::Body, "Clitoris group must be Body");
