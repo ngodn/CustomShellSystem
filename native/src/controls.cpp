@@ -143,7 +143,16 @@ void valid_value(const Control& c,const ControlValue& v) {
     }
     for(size_t i=0;i<(c.scalar?1u:3u);++i)
         if(!std::isfinite(v[i]) || v[i]<c.minimum || v[i]>c.maximum) throw std::runtime_error("Value outside control limits: "+c.id);
+    if((c.kind==ControlKind::Toggle || c.kind==ControlKind::Choice) && std::floor(v[0])!=v[0])
+        throw std::runtime_error("A toggle or choice needs a whole-number value: "+c.id);
     if(v[3]!=c.value[3]) throw std::runtime_error("Opacity is fixed by its author");
+}
+void valid_tint(const std::string& group,const ColorTint& tint) {
+    if(group!="outfit" && group!="body") throw std::runtime_error("Invalid tint group");
+    if(!std::isfinite(tint.hue) || !std::isfinite(tint.saturation) || !std::isfinite(tint.brightness) ||
+       tint.hue<-180 || tint.hue>180 || tint.saturation<0 || tint.saturation>2 ||
+       tint.brightness<0 || tint.brightness>2)
+        throw std::runtime_error("Tint outside supported range");
 }
 }
 bool dye_resource(const std::string& name) {
@@ -412,10 +421,7 @@ Customization Customization::parse(const Json& j) {
         tint.hue=t.value("hue",0.f);
         tint.saturation=t.value("saturation",1.f);
         tint.brightness=t.value("brightness",1.f);
-        if(!std::isfinite(tint.hue) || !std::isfinite(tint.saturation) || !std::isfinite(tint.brightness) ||
-           tint.hue<-180 || tint.hue>180 || tint.saturation<0 || tint.saturation>2 ||
-           tint.brightness<0 || tint.brightness>2)
-            throw std::runtime_error("Saved tint outside supported range");
+        valid_tint(group,tint);
         if(!tint.neutral()) result.tints[group]=tint;
     }
     return result;
@@ -521,6 +527,7 @@ ControlValue apply_tint(const ColorTint& tint,const ControlValue& colour,bool hu
     return {out[0]+base,out[1]+base,out[2]+base,colour[3]};
 }
 std::map<std::string,ControlValue> control_values(const ControlSet& options,const Customization& custom) {
+    for(const auto& [group,tint]:custom.tints) valid_tint(group,tint);
     std::map<std::string,ControlValue> result;
     if(custom.palette!="original") {
         auto found=std::find_if(options.palettes.begin(),options.palettes.end(),[&](const auto& p){return p.id==custom.palette;});

@@ -1,6 +1,7 @@
 #include "data.hpp"
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 using namespace css;
 unsigned checks;
@@ -26,6 +27,11 @@ int main() {
         expect(control_values(options,custom).at("cloth")[0]==.6f,"Palette missing");
         custom.values["cloth"]={.1f,.2f,.3f,1}; custom.values["glow"]={3,0,0,1};
         auto colors=control_values(options,custom);
+        auto invalid_tint=custom;
+        invalid_tint.tints["outfit"].hue=std::numeric_limits<float>::quiet_NaN();
+        rejects([&]{control_values(options,invalid_tint);});
+        invalid_tint.tints.clear(); invalid_tint.tints["unknown"]={};
+        rejects([&]{control_values(options,invalid_tint);});
         expect(colors.at("cloth")[0]==.1f && colors.at("glow")[0]==3,"Independent custom overrides lost");
         custom.values.erase("cloth");
         expect(control_values(options,custom).at("cloth")[0]==.6f,"Reset part did not return to palette");
@@ -201,6 +207,11 @@ int main() {
                          {"name":"Lace","texture":"/Game/CSS/x/T_Lace.T_Lace"}],
               "bindings":[{"slot":0,"parameter":"BaseColorMap  non VT"}]})"));
             auto chosen=ControlSet::parse(pick);
+            for(const auto* id:{"hood","pattern"}) {
+                Customization fractional;
+                fractional.values[id]={.5f,0,0,1};
+                rejects([&]{control_values(chosen,fractional);});
+            }
             const auto* pattern=chosen.find("pattern");
             expect(pattern->kind==ControlKind::Choice && pattern->options.size()==2,"A choice kept its options");
             expect(pattern->options[1].name=="Lace","Choice option names lost");

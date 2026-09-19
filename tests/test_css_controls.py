@@ -16,6 +16,8 @@ class ControlTests(unittest.TestCase):
             dict(id='opacity',name='Opacity',kind='opacity',default=[.5,0,0,1],
                  bindings=[dict(slot=2,parameter='Opacity')])])
         validate(recipe)
+        recipe['palettes']=[dict(id='bright',name='Bright',values={'glow':[12,0,0,1]})]
+        validate(recipe)
         for control,field,value in [(0,'pulse_hz',float('nan')),(0,'pulse_hz',-1),
                                     (0,'combat_reactive','yes'),(1,'default',[2,0,0,1])]:
             bad=copy.deepcopy(recipe);bad['controls'][control][field]=value

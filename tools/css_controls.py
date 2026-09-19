@@ -234,7 +234,12 @@ def validate(recipe:dict) -> set[str]:
                     number(v[2],c['max_displacement']['min'],c['max_displacement']['max'])
                 if v[3]!=1:raise ValueError('Palette changes protected opacity')
                 continue
-            for x in v[:1 if scalar(c) else 3]:number(x,c.get('min',0),c.get('max',1))
+            maximum = len(c['options'])-1 if kind_of(c)=='choice' else c.get('max',32 if kind_of(c)=='glow' else 1)
+            if kind_of(c)=='toggle': maximum=1
+            minimum = 0 if kind_of(c) in ('choice','toggle') else c.get('min',0)
+            for x in v[:1 if scalar(c) else 3]:number(x,minimum,maximum)
+            if kind_of(c) in ('choice','toggle') and v[0]!=int(v[0]):
+                raise ValueError('A toggle or choice needs a whole-number palette value')
             if v[3]!=c['default'][3]:raise ValueError('Palette changes protected opacity')
     return files
 
