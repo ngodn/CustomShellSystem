@@ -2,6 +2,7 @@
 #include "engine.hpp"
 #include <windows.h>
 #include "startup.hpp"
+#include "skeleton_compatibility.hpp"
 #include <array>
 #include <cctype>
 #include <cstring>
@@ -194,14 +195,10 @@ static bool is_compatible_skeleton(UObject* before_mesh, UObject* target_mesh) {
     if (!before_mesh || !target_mesh) return false;
     auto* before_skel = read<UObject*>(before_mesh, L"Skeleton");
     auto* target_skel = read<UObject*>(target_mesh, L"Skeleton");
-    if (before_skel == target_skel) return true;
     if (!before_skel || !target_skel) return false;
-    std::string tp = narrow(target_skel->GetPathName());
-    if (tp.find("SKEL_CSS_Base") != std::string::npos ||
-        tp.find("SKEL_Human_Skeleton") != std::string::npos) {
-        return true;
-    }
-    return false;
+    if (before_skel == target_skel) return true;
+    return compatible_standard_skeletons(narrow(before_skel->GetPathName()),
+                                         narrow(target_skel->GetPathName()));
 }
 static void set_mesh(UObject* component, UObject* mesh) {
     Call call(component, L"SetSkeletalMeshAsset", 1); call.set(L"NewMesh", mesh); call.run();
