@@ -351,6 +351,12 @@ int main() {
               "surfaces":[{"id":"body","parameter":"BaseColorMap  non VT","slots":[0],"layers":{"cloth":"dye-cloth.png"}}],
               "palettes":[{"id":"red","name":"Crimson","values":{"cloth":[0.6,0.1,0.2,1]}}]})");
             auto parsed=ControlSet::parse(advanced);
+            auto no_glow_binding=advanced;
+            no_glow_binding["controls"][1]["bindings"]=Json::array();
+            rejects([&]{ControlSet::parse(no_glow_binding);});
+            auto invalid_pulse=advanced;
+            invalid_pulse["controls"][1]["pulse_hz"]=-1;
+            rejects([&]{ControlSet::parse(invalid_pulse);});
             const auto* runes=parsed.find("runes");
             expect(runes->kind==ControlKind::Glow && runes->scalar,"Glow control not parsed");
             expect(std::string(control_kind_name(ControlKind::Glow))=="glow","Glow kind name wrong");

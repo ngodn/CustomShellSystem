@@ -43,7 +43,7 @@ ROLES={'garment':('outfit',False),'accent':('outfit',False),'leather':('outfit',
 
 # Every kind but a colour is edited as one number, so the menu draws a slider for it
 # and a saved look stores a single value.
-KINDS=('color','intensity','scalar','toggle','choice','spring','shape')
+KINDS=('color','intensity','scalar','toggle','choice','spring','shape','glow','opacity')
 
 BONE=re.compile(r'[A-Za-z0-9_]{1,64}\Z')
 # Same rule CSSImportMesh applies. It refuses any name the engine would have had to
@@ -108,6 +108,10 @@ def validate(recipe:dict) -> set[str]:
         if c.get('type','color') not in ('color','scalar','intensity'): raise ValueError('Invalid color control type')
         if 'kind' in c and c['kind'] not in KINDS: raise ValueError('Invalid color control kind')
         if 'kind' in c and 'type' in c and scalar(c)!=(c['type'] in ('scalar','intensity')): raise ValueError('Color control kind contradicts its type')
+        if kind_of(c)=='glow':
+            number(c.get('pulse_hz',0),0,10)
+            if not isinstance(c.get('combat_reactive',False),bool):
+                raise ValueError('combat_reactive must be true or false')
         if kind_of(c)=='toggle':
             sections=c.get('sections');bounded_array(sections,128)
             for index in sections:
@@ -180,7 +184,7 @@ def validate(recipe:dict) -> set[str]:
             if c['default'][0]!=int(c['default'][0]) or not 0<=c['default'][0]<=maximum:
                 raise ValueError('A choice default must name one of its options')
         else:
-            minimum=c.get('min',0);maximum=c.get('max',1);step=c.get('step',.01)
+            minimum=c.get('min',0);maximum=c.get('max',32 if kind_of(c)=='glow' else 1);step=c.get('step',.01)
             number(minimum,0,32);number(maximum,0,32)
             if minimum>=maximum: raise ValueError('Invalid slider limits')
             number(step,0,maximum-minimum)

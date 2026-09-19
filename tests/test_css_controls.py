@@ -9,6 +9,21 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
 from css_controls import validate,embed,verify_resources,lint_convention
 
 class ControlTests(unittest.TestCase):
+    def test_glow_and_opacity_package_kinds_match_runtime(self):
+        recipe=dict(schema=1,controls=[
+            dict(id='glow',name='Glow',kind='glow',default=[5,0,0,1],
+                 bindings=[dict(slot=1,parameter='Emission')]),
+            dict(id='opacity',name='Opacity',kind='opacity',default=[.5,0,0,1],
+                 bindings=[dict(slot=2,parameter='Opacity')])])
+        validate(recipe)
+        for control,field,value in [(0,'pulse_hz',float('nan')),(0,'pulse_hz',-1),
+                                    (0,'combat_reactive','yes'),(1,'default',[2,0,0,1])]:
+            bad=copy.deepcopy(recipe);bad['controls'][control][field]=value
+            with self.subTest(field=field,value=value),self.assertRaises(ValueError):validate(bad)
+        for index in (0,1):
+            bad=copy.deepcopy(recipe);bad['controls'][index]['bindings']=[]
+            with self.assertRaises(ValueError):validate(bad)
+
     def setUp(self):
         self.recipe=dict(schema=1,controls=[dict(id='cloth',name='Clothing',default=[1,1,1,1])],surfaces=[dict(id='body',parameter='BaseColorMap  non VT',slots=[0],layers={'cloth':'dye-cloth.png'})],palettes=[dict(id='red',name='Crimson',values={'cloth':[.6,.1,.2,1]})])
 

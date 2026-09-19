@@ -190,6 +190,8 @@ ControlSet ControlSet::parse(const Json& j) {
         if(control.kind==ControlKind::Glow) {
             control.pulse_hz=c.value("pulse_hz",0.f);
             control.combat_reactive=c.value("combat_reactive",false);
+            if(!std::isfinite(control.pulse_hz) || control.pulse_hz<0 || control.pulse_hz>10)
+                throw std::runtime_error("Glow pulse frequency outside supported range");
         }
         // A spring says what it wants inside its two ranges, so it is the one kind that
         // does not also write `default`: two places to state the same number is one too many.
@@ -372,7 +374,7 @@ ControlSet ControlSet::parse(const Json& j) {
     for(const auto& c:out.controls) {
         // A toggle drives sections directly, so it needs no parameter to write into.
         // A choice does need one, and its bindings are checked with everything else.
-        bool used=!c.bindings.empty() || !c.sections.empty() || !c.nodes.empty() || !c.morph.empty() || c.kind==ControlKind::Glow;
+        bool used=!c.bindings.empty() || !c.sections.empty() || !c.nodes.empty() || !c.morph.empty();
         for(const auto& s:out.surfaces) used|=s.layers.contains(c.id);
         if(!used) throw std::runtime_error("Control has nothing to drive");
     }
