@@ -268,6 +268,26 @@ int main() {
             rejects([&]{ControlSet::parse(stray);});
         }
         {
+            // Heeled fabric requires both toggles, while skin lining requires
+            // only shoes. Exercise every combination and a return to Original.
+            const auto wardrobe=ControlSet::parse(Json::parse(R"({"schema":1,"controls":[
+              {"id":"stockings","name":"Stockings","kind":"toggle","default":[1,0,0,1],
+               "sections":[19,27,28]},
+              {"id":"shoes","name":"Shoes","kind":"toggle","default":[1,0,0,1],
+               "sections":[20,25,26,28],"occludes_sections":[23,24,27]}]})"));
+            Customization custom;
+            auto hidden=[&]{return hidden_control_sections(wardrobe,control_values(wardrobe,custom));};
+            expect(hidden()==std::set<int>({23,24,27}),"Original must show lining and heeled fabric");
+            custom.values["stockings"]={0,0,0,1};
+            expect(hidden()==std::set<int>({19,23,24,27,28}),"Shoes alone must retain skin lining");
+            custom.values["shoes"]={0,0,0,1};
+            expect(hidden()==std::set<int>({19,20,25,26,27,28}),"Bare feet must restore covered body sections");
+            custom.values["stockings"]={1,0,0,1};
+            expect(hidden()==std::set<int>({20,25,26,28}),"Stockings alone must show only flat fabric");
+            custom.values.clear();
+            expect(hidden()==std::set<int>({23,24,27}),"Original must restore all wardrobe dependencies");
+        }
+        {
             // 1.0: a spring tunes the mesh's own secondary motion. It is the only control
             // with two numbers in it, and the only one that writes no material at all.
             auto springs=Json::parse(R"({"schema":1,"controls":[

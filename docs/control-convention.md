@@ -115,6 +115,19 @@ it drives them directly:
  "default": [1, 0, 0, 1], "sections": [2, 3]}
 ```
 
+`sections` and `occludes_sections` contain global mesh material-slot indices, not
+render-section indices. UE can split one material into several render sections or
+remap section materials at a LOD. Native calls use `MaterialID=slot` and
+`SectionIndex=INDEX_NONE` for the player and menu components, including restoration.
+This bypasses the section map while preserving the intended material ID. The pinned
+UE 5.6.1 implementation is `SkinnedMeshComponent.cpp:3731`; a real component probe
+with map `[1, 0]` confirms that the old `(0, 0)` call hides material 1 while
+`(0, -1)` hides material 0. SeduXtress V30's four wardrobe states and reset also pass
+component read-back. This is editor evidence; fresh game verification is pending.
+
+The development control catalog lives at `tests/fixtures/dev-control-kinds.css.json`.
+It is a test fixture and is excluded from the installer's `catalog/*.css.json` glob.
+
 Optional `occludes_sections` lists body or underlayer sections covered while the toggle
 is on. For example, footwear section 20 covers body feet 21 and stocking feet 22:
 

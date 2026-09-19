@@ -378,7 +378,7 @@ void Appearance::restore_menu() {
     if(auto* preview=menu_component_.Get()) for(int section:menu_hidden_sections_)
         for(int lod=0;lod<lod_count();++lod) {
             Call set(preview,L"ShowMaterialSection",4);
-            set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t(section));
+            set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t{-1});
             set.set(L"bShow",true); set.set(L"LODIndex",int32_t(lod)); set.run();
         }
     menu_hidden_sections_.clear();
@@ -437,7 +437,7 @@ void Appearance::sync_menu() {
         if(!menu_hidden_sections_.insert(section).second) continue;
         for(int lod=0;lod<lod_count();++lod) {
             Call set(target,L"ShowMaterialSection",4);
-            set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t(section));
+            set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t{-1});
             set.set(L"bShow",false); set.set(L"LODIndex",int32_t(lod)); set.run();
         }
     }
@@ -445,7 +445,7 @@ void Appearance::sync_menu() {
         if(applied_hidden_.contains(*it)) { ++it; continue; }
         for(int lod=0;lod<lod_count();++lod) {
             Call set(target,L"ShowMaterialSection",4);
-            set.set(L"MaterialID",int32_t(*it)); set.set(L"SectionIndex",int32_t(*it));
+            set.set(L"MaterialID",int32_t(*it)); set.set(L"SectionIndex",int32_t{-1});
             set.set(L"bShow",true); set.set(L"LODIndex",int32_t(lod)); set.run();
         }
         it=menu_hidden_sections_.erase(it);
@@ -1196,9 +1196,11 @@ void Appearance::reconcile_sections() {
     for(int section:want) if(section<0 || section>=materials)
         throw std::runtime_error("Hidden material section is absent on this appearance");
     auto set_shown=[&](int section,bool shown) {
+        // Controls address global material slots. INDEX_NONE prevents UE from
+        // interpreting the slot as a section index and remapping it at another LOD.
         for(int lod=0;lod<lod_count();++lod) {
             Call set(component,L"ShowMaterialSection",4);
-            set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t(section));
+            set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t{-1});
             set.set(L"bShow",shown); set.set(L"LODIndex",int32_t(lod)); set.run();
             Call readback(component,L"IsMaterialSectionShown",3);
             readback.set(L"MaterialID",int32_t(section)); readback.set(L"LODIndex",int32_t(lod)); readback.run();
