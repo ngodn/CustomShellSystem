@@ -190,6 +190,19 @@ public:
 static UObject* mesh_asset(UObject* component) {
     Call call(component, L"GetSkeletalMeshAsset", 1); call.run(); return call.get<UObject*>();
 }
+static bool is_compatible_skeleton(UObject* before_mesh, UObject* target_mesh) {
+    if (!before_mesh || !target_mesh) return false;
+    auto* before_skel = read<UObject*>(before_mesh, L"Skeleton");
+    auto* target_skel = read<UObject*>(target_mesh, L"Skeleton");
+    if (before_skel == target_skel) return true;
+    if (!before_skel || !target_skel) return false;
+    std::string tp = narrow(target_skel->GetPathName());
+    if (tp.find("SKEL_CSS_Base") != std::string::npos ||
+        tp.find("SKEL_Human_Skeleton") != std::string::npos) {
+        return true;
+    }
+    return false;
+}
 static void set_mesh(UObject* component, UObject* mesh) {
     Call call(component, L"SetSkeletalMeshAsset", 1); call.set(L"NewMesh", mesh); call.run();
     if (mesh_asset(component) != mesh) throw std::runtime_error("Mesh read-back did not confirm replacement");
@@ -387,7 +400,7 @@ void Appearance::sync_menu() {
     auto* target=read<UObject*>(display,L"Mesh");
     if(!target) { restore_menu(); return; }
     auto* before=mesh_asset(target); auto* desired=applied_.Get();
-    if(!before || !desired || read<UObject*>(before,L"Skeleton")!=read<UObject*>(desired,L"Skeleton")) { restore_menu(); return; }
+    if(!before || !desired || !is_compatible_skeleton(before, desired)) { restore_menu(); return; }
     if(menu_component_.Get()!=target || before!=menu_applied_.Get()) {
         WeakObject live_target(target), live_before(before), live_desired(desired);
         restore_menu();
@@ -603,7 +616,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
         throw std::runtime_error("Player appearance changed during asset loading; request cancelled");
     auto* type = static_cast<UClass*>(find(L"/Script/Engine.SkeletalMesh"));
     if (!target->IsA(type)) throw std::runtime_error("Selected asset is not a skeletal mesh");
-    if (read<UObject*>(before, L"Skeleton") != read<UObject*>(target, L"Skeleton"))
+    if (!is_compatible_skeleton(before, target))
         throw std::runtime_error("Different skeleton: appearance change refused");
     if (before == target && applied_materials_==materials && materials_match()) return true;
     if (before == target && applied_materials_==materials && reuse_materials()) return true;
