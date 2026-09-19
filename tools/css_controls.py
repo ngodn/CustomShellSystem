@@ -16,9 +16,9 @@ def identifier(value):
 def number(value,low,high):
     if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value) or not low<=value<=high: raise ValueError('Color value outside supported range')
 
-def vector(value):
+def vector(value,low=0,high=32):
     if not isinstance(value,list) or len(value)!=4: raise ValueError('Color requires RGBA components')
-    for x in value: number(x,0,32)
+    for x in value: number(x,low,high)
     number(value[3],0,1)
 
 def parameter(value):
@@ -43,7 +43,7 @@ ROLES={'garment':('outfit',False),'accent':('outfit',False),'leather':('outfit',
 
 # Every kind but a colour is edited as one number, so the menu draws a slider for it
 # and a saved look stores a single value.
-KINDS=('color','intensity','scalar','toggle','choice','spring','shape','glow','opacity')
+KINDS=('color','intensity','scalar','toggle','choice','spring','shape','glow','opacity','dynamics')
 
 BONE=re.compile(r'[A-Za-z0-9_]{1,64}\Z')
 # Same rule CSSImportMesh applies. It refuses any name the engine would have had to
@@ -68,6 +68,18 @@ def spring_tuning(frequency,damping_ratio):
     """
     w=2*math.pi*frequency
     return w*w,2*damping_ratio*w
+
+def dynamics_ranges(control):
+    ranges=[]
+    for key,low,high in [('angular_spring',0,1000),('damping',.7,1),('gravity',-5,5)]:
+        value=control.get(key)
+        if not isinstance(value,dict) or set(value)!={'min','max','default'}:
+            raise ValueError('A dynamics range needs min, max and default')
+        for x in value.values(): number(x,low,high)
+        if not value['min']<value['max'] or not value['min']<=value['default']<=value['max']:
+            raise ValueError('Dynamics range outside solver limits')
+        ranges.append(value)
+    return ranges
 
 def spring_defaults(stiffness,damping):
     """The other direction: read an animation blueprint's numbers as a slider default.
@@ -100,7 +112,7 @@ def scalar(control) -> bool:
 def validate(recipe:dict) -> set[str]:
     if not isinstance(recipe,dict) or recipe.get('schema')!=1: raise ValueError('Unsupported customize schema')
     controls=recipe.get('controls');bounded_array(controls,32)
-    by_id={};used=set();files=set()
+    by_id={};used=set();files=set();dynamics_roots=set()
     for c in controls:
         identifier(c['id'])
         if c['id'] in by_id or not isinstance(c['name'],str) or not 1<=len(c['name'])<=96: raise ValueError('Invalid color control name')
@@ -133,7 +145,10 @@ def validate(recipe:dict) -> set[str]:
                     'world_damping','limit_angle','collision_radius','gravity_scale'):
             if key in c and kind_of(c)!='spring':
                 raise ValueError(f'Only a spring control accepts {key}')
-        if kind_of(c)=='spring':
+        for key in ('angular_spring','damping','gravity'):
+            if key in c and kind_of(c)!='dynamics':
+                raise ValueError('Only dynamics controls accept solver ranges')
+        if kind_of(c) in ('spring','dynamics'):
             nodes=c.get('nodes');bounded_array(nodes,32)
             if not nodes: raise ValueError('A spring control needs between one and thirty-two bones')
             if len(set(nodes))!=len(nodes): raise ValueError('A spring control names the same bone twice')
@@ -142,6 +157,11 @@ def validate(recipe:dict) -> set[str]:
             if 'default' in c: raise ValueError('A spring control takes its default from its frequency and damping ratio')
             if any(k in c for k in ('min','max','step')): raise ValueError('A spring control takes its limits from its frequency and damping ratio')
             if c.get('bindings'): raise ValueError('A spring control writes no material parameter')
+            if kind_of(c)=='dynamics':
+                if any(key in c for key in ('frequency','damping_ratio','bindings')):
+                    raise ValueError('Dynamics does not accept spring ranges or material bindings')
+                if dynamics_roots.intersection(nodes): raise ValueError('Dynamics chain roots must have one control owner')
+                dynamics_roots.update(nodes)
             used.add(c['id'])
         elif any(k in c for k in ('nodes','frequency','damping_ratio')):
             raise ValueError('Only a spring control tunes skeleton nodes')
@@ -165,6 +185,9 @@ def validate(recipe:dict) -> set[str]:
         if 'role' in c and len(c['role'])>32: raise ValueError('Color control role is too long')
         if 'group' in c and c['group'] not in ('outfit','body'): raise ValueError('Invalid color control group')
         if 'hue_locked' in c and not isinstance(c['hue_locked'],bool): raise ValueError('hue_locked must be true or false')
+        if kind_of(c)=='dynamics':
+            dynamics_ranges(c)
+            continue
         if kind_of(c)=='spring':
             # 8 Hz is far past anything a body part does and the slowest useful wobble is
             # well above a tenth of a hertz, so a typo lands outside rather than shipping.
@@ -243,7 +266,13 @@ def validate(recipe:dict) -> set[str]:
         if not isinstance(p['values'],dict):raise ValueError('Invalid palette values')
         for id,v in p['values'].items():
             if id not in by_id:raise ValueError('Unknown palette part')
-            vector(v);c=by_id[id]
+            c=by_id[id]
+            if kind_of(c)=='dynamics':
+                vector(v,-5,1000)
+                for index,r in enumerate(dynamics_ranges(c)):number(v[index],r['min'],r['max'])
+                if v[3]!=1:raise ValueError('Dynamics reserved channel must be one')
+                continue
+            vector(v)
             if kind_of(c)=='spring':
                 # Two channels, two ranges. A spring carries no `default`, so its protected
                 # opacity is the one CSS gives every control that does not state one.

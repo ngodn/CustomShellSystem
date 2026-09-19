@@ -22,7 +22,7 @@ struct ControlBinding {
 enum class ControlGroup { Outfit, Body };
 // 1.0: colour is one kind of control, not the only one. A package declares what a
 // control *is*, and the menu, the saved look and the apply path all follow from that.
-// `Color` carries three channels and a dye layer; the rest carry one number.
+// Color has three channels; motion controls have two or three solver channels.
 //   Intensity  a named material scalar the author means as a strength, like eye glow
 //   Scalar     any other named material scalar, like gloss or roughness
 //   Toggle     material sections shown or hidden, 0 or 1
@@ -31,7 +31,8 @@ enum class ControlGroup { Outfit, Body };
 //   Shape      a morph target the package cooked into its own mesh
 //   Glow       universal emissive control (RGB, intensity, pulse, combat reactivity)
 //   Opacity    alpha transparency scalar (0..1)
-enum class ControlKind { Color, Intensity, Scalar, Toggle, Choice, Spring, Shape, Glow, Opacity };
+//   Dynamics   direct AnimDynamics angular stiffness, damping and gravity
+enum class ControlKind { Color, Intensity, Scalar, Toggle, Choice, Spring, Shape, Glow, Opacity, Dynamics };
 const char* control_kind_name(ControlKind);
 // A Choice option: what the player sees, and the cooked texture it binds.
 struct ControlOption { std::string name, texture; };
@@ -48,22 +49,29 @@ struct MorphFormula {
 // means no author ever has to know it. See docs/control-convention.md.
 struct SpringTuning { double stiffness = 0, damping = 0; };
 SpringTuning spring_tuning(float frequency, float damping_ratio);
+struct SliderRange { float minimum=0, maximum=1, value=0, step=.01f; };
+struct DynamicsControl {
+    // Direct AnimDynamics values: angular spring constant, damping override,
+    // gravity multiplier. These are not SpringBone frequency/damping-ratio units.
+    std::array<SliderRange,3> channels;
+};
 struct Control {
     std::string id, name, role;
     ControlGroup group = ControlGroup::Outfit;
     ControlKind kind = ControlKind::Color;
     bool hue_locked = false;      // metal, gems and skin read as a material, not a colour
-    bool scalar = false;          // edited as one number rather than a colour: every kind but Color
+    bool scalar = false;          // numeric controls, excluded from color tinting
     std::vector<int> sections;    // Toggle only: the material sections it shows or hides
     std::vector<int> occludes_sections; // Toggle only: covered sections hidden while it is on
     std::vector<ControlOption> options;   // Choice only: the textures it picks between
-    std::vector<std::string> nodes;       // Spring only: the bones whose spring it tunes
+    std::vector<std::string> nodes;       // Spring bones or Dynamics chain root bones
+    std::optional<DynamicsControl> dynamics;
     std::string morph;                    // Shape only: the morph target on the package's own mesh
     std::vector<MorphFormula> formulas;   // Shape only: joint center/orientation shifts
     float pulse_hz = 0.0f;                // Glow only: breathing frequency in Hz
     bool combat_reactive = false;         // Glow only: reactivity to stamina/swings
     ControlValue value{1,1,1,1};
-    // Channel 0 uses these. Every control but Spring has only channel 0.
+    // Legacy channel 0 range. Dynamics keeps its three ranges in dynamics.
     float minimum = 0, maximum = 1, step = .01f;
     // Spring only: channel 1, the damping ratio. Channel 0 is frequency in Hz.
     float damping_minimum = 0, damping_maximum = 1, damping_step = .01f;
@@ -93,6 +101,14 @@ struct SpringAxes {
 // Explicit overrides start from the captured author settings. A planar lock then
 // disables its normal axis without enabling any other axis.
 SpringAxes spring_axes(const Control&, SpringAxes authored);
+int control_channel_count(const Control&);
+SliderRange control_channel(const Control&, int channel);
+struct DynamicsSettings {
+    float angular_spring=0, linear_damping=.7f, angular_damping=.7f, gravity=1;
+    bool spring_enabled=false, override_linear=false, override_angular=false, gravity_override=false;
+    bool operator==(const DynamicsSettings&) const = default;
+};
+DynamicsSettings dynamics_settings(const Control&, const ControlValue&);
 // A hue rotation in degrees plus saturation and brightness multipliers, applied to a whole
 // group on top of the palette and any per-part override.
 struct ColorTint {

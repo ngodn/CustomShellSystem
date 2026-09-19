@@ -9,6 +9,31 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
 from css_controls import validate,embed,verify_resources,lint_convention
 
 class ControlTests(unittest.TestCase):
+    def test_dynamics_solver_ranges_and_palettes(self):
+        recipe=dict(schema=1,controls=[dict(id='hair',name='Hair dynamics',kind='dynamics',
+            nodes=['CSS_Hair_Ponytail_01'],angular_spring=dict(min=0,max=1000,default=80),
+            damping=dict(min=.7,max=1,default=.8),gravity=dict(min=-5,max=5,default=.1))],
+            palettes=[dict(id='float',name='Floating',values={'hair':[120,.9,-.5,1]})])
+        self.assertEqual(validate(recipe),set())
+        for value in ([1000,1,-5,1],[0,.7,5,1]):
+            good=copy.deepcopy(recipe);good['palettes'][0]['values']['hair']=value
+            validate(good)
+        for value in ([1001,.8,0,1],[80,.69,0,1],[80,.8,-6,1],[80,.8,0,.5],[True,.8,0,1]):
+            bad=copy.deepcopy(recipe);bad['palettes'][0]['values']['hair']=value
+            with self.subTest(value=value),self.assertRaises(ValueError):validate(bad)
+        for key in ('frequency','damping_ratio','default','max_displacement','bindings'):
+            bad=copy.deepcopy(recipe);bad['controls'][0][key]=[]
+            with self.subTest(key=key),self.assertRaises(ValueError):validate(bad)
+        for key in ('angular_spring','damping','gravity'):
+            for value in (True,None,'0',float('inf')):
+                bad=copy.deepcopy(recipe);bad['controls'][0][key]['default']=value
+                with self.subTest(key=key,value=value),self.assertRaises(ValueError):validate(bad)
+            bad=copy.deepcopy(recipe);del bad['controls'][0][key]
+            with self.assertRaises(ValueError):validate(bad)
+        duplicate=copy.deepcopy(recipe);second=copy.deepcopy(recipe['controls'][0]);second['id']='other'
+        duplicate['controls'].append(second)
+        with self.assertRaises(ValueError):validate(duplicate)
+
     def test_secondary_motion_metadata_matches_native_limits(self):
         recipe=dict(schema=1,controls=[dict(id='motion',name='Motion',kind='spring',
             nodes=['hair_root'],frequency=dict(min=.5,max=3,default=1.5),

@@ -349,6 +349,8 @@ class Appearance {
     };
     std::map<std::string,SpringOriginal> spring_originals_;
     WeakObject spring_instance_;
+    std::map<std::string,DynamicsSettings> dynamics_originals_;
+    WeakObject dynamics_instance_;
     // Shape: the morph targets CSS drove and their weights, so taking the outfit off puts
     // back only those and leaves anything the game or another mod set alone.
     // ClearMorphTargets is a bigger hammer than this deserves. The weights are kept
@@ -357,6 +359,7 @@ class Appearance {
     int lod_count();
     void show_hidden_sections();
     void restore_springs();
+    void restore_dynamics();
     void clear_driven_morphs();
     void push_morphs(RC::Unreal::UObject* component);
     std::map<int,WeakObject> control_mids_;

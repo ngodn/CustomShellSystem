@@ -407,19 +407,10 @@ struct Core {
                         for(int i=0;i<3;++i)
                             value[i]=std::clamp(rgb[i].get<float>(),control->minimum,control->maximum);
                     } else {
-                    const bool spring=control->kind==ControlKind::Spring;
                     int channel=command.value("channel",0);
-                    const int spring_top=control->spring_clamp?2:1;
-                    if(channel<0 || channel>(spring?spring_top:control->scalar?0:2)) throw std::runtime_error("Invalid channel");
-                    // A spring's channels carry their own ranges: 1 is the damping ratio and
-                    // 2 (when it has a clamp) is the travel. Every other control has one range.
-                    const bool damping=spring && channel==1;
-                    const bool travel=spring && channel==2;
-                    const float least=travel?control->displacement_minimum:damping?control->damping_minimum:control->minimum;
-                    const float most=travel?control->displacement_maximum:damping?control->damping_maximum:control->maximum;
-                    const float nudge=travel?control->displacement_step:damping?control->damping_step:control->step;
+                    const auto slider=control_channel(*control,channel);
                     if(command.contains("value")) value[channel]=command.at("value").get<float>();
-                    else value[channel]=std::clamp(value[channel]+command.at("delta").get<float>()*nudge,least,most);
+                    else value[channel]=std::clamp(value[channel]+command.at("delta").get<float>()*slider.step,slider.minimum,slider.maximum);
                     }
                     custom.values[id]=value;
                 }

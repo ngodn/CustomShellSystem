@@ -103,6 +103,7 @@ menu, the saved look and the apply path all follow from that.
 | `toggle` | on or off | material sections | needs `sections`, takes no `min`/`max`/`step` |
 | `choice` | which option | a texture parameter | needs `options` and a binding, takes no `min`/`max`/`step` |
 | `spring` | two/three numbers | the mesh's own spring bones | Bounce Hz, Settle %, optional Travel cm and explicit axis filters |
+| `dynamics` | three numbers | post-process AnimDynamics chain roots | Stiffness, Damping, Gravity; experimental integration |
 | `shape` | one number | a morph target on the package's own mesh | needs `morph`, optional joint `formulas` |
 | `glow` | radiance & pulse | emissive material parameters | intensity cd/m², pulse Hz, combat reactivity |
 | `opacity` | one number (0..1) | alpha / sheerness parameter | sheer fabrics, lace, stockings, chiffon |
@@ -253,6 +254,65 @@ The separate AnimDynamics experiment and remaining native adapter are tracked in
 
 Packages written before this said `"type": "scalar"` and meant a strength, so that reads
 as `intensity`, not as the new generic `scalar`. Nothing published changes meaning.
+
+### AnimDynamics controls (experimental)
+
+The native branch now accepts `kind: "dynamics"` for UE's built-in AnimDynamics
+nodes. This path has offline parser, persistence and build checks. It is not yet
+accepted for distribution: the reset impulse described in the
+[dynamics investigation](../../CSS-Mod-Authoring/docs/next-gen-dynamics-investigation.md)
+still needs synchronization with actual animation evaluation and live verification.
+
+```json
+{
+  "id": "ponytail_dynamics",
+  "name": "Ponytail dynamics",
+  "kind": "dynamics",
+  "group": "body",
+  "role": "motion",
+  "nodes": ["CSS_Hair_Ponytail_01"],
+  "angular_spring": {"min": 0, "max": 200, "default": 80},
+  "damping": {"min": 0.7, "max": 1, "default": 0.8},
+  "gravity": {"min": -1, "max": 1, "default": 0.1}
+}
+```
+
+`nodes` names each solver's **root bone**, once, not every member of an articulated
+chain. Each root has one control owner. CSS resolves roots on the active post-process
+instance and rejects missing or ambiguous roots before applying a control. There are
+at most 32 roots per control and 32 discovered solver nodes per instance.
+
+The three saved channels contain direct solver values, in order:
+
+| Channel | Field and supported range | Applied engine settings |
+| --- | --- | --- |
+| 0 | `angular_spring`, 0..1000 | `AngularSpringConstant`; zero disables `bAngularSpring` |
+| 1 | `damping`, 0.7..1 | Both damping overrides, with both override flags enabled |
+| 2 | `gravity`, -5..5 | `GravityScale`, with gravity override disabled |
+| 3 | Reserved, always 1 | No engine write |
+
+Author ranges may be narrower; defaults must match the cooked graph. The menu uses
+steps of 1, 0.01 and 0.05, capped by each range's width. Damping here is a solver
+override, not a SpringBone damping ratio; the engine documents a 0.7 floor.
+[UE 5.6 AnimDynamics reference](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/AnimNode_AnimDynamics?application_version=5.6).
+
+This kind does not accept material bindings, SpringBone ranges or the reserved
+SpringBone extension fields. Authored constraints, collision shapes, simulation
+space, component acceleration and angular targets stay in the graph. Runtime
+collision tuning is still unfinished.
+
+Profiles and palettes can retain values above 32 and negative gravity. Unbound
+snapshots receive broad finite bounds first; installed control schemas then enforce
+the actual channel ranges. Existing color/scalar/spring bounds remain unchanged.
+An incompatible value is dropped during variant compatibility filtering.
+
+The adapter captures the four numeric settings and four associated flags on first
+touch, reads back writes, and restores the captured values on Original reset, removal
+or shutdown. It requests `ResetDynamics(ResetPhysics)` because damping and gravity
+are copied into solver bodies during initialization. The reset enum is discovered
+from the function's reflected parameter, and its signature is checked before any
+node mutation. A successful reflected write/reset request alone does not establish
+the solver's evaluated behavior.
 
 ### Items and slots
 

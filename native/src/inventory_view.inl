@@ -561,6 +561,9 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 } else if(c.kind==ControlKind::Spring) {
                     source="Bounce "+slider_text(held[0],true)+" Hz, settle "+std::to_string(int(std::lround(held[1]*100)))+"%";
                     if(c.spring_clamp) source+=", travel "+slider_text(held[2],true)+" cm";
+                } else if(c.kind==ControlKind::Dynamics) {
+                    source="Stiffness "+slider_text(held[0],true)+", damping "+slider_text(held[1],true)+
+                           ", gravity "+slider_text(held[2],true);
                 } else if(c.kind==ControlKind::Glow) {
                     source="Glow "+slider_text(held[0],true)+" cd/m²";
                     if(c.pulse_hz>0) source+=", pulse "+slider_text(c.pulse_hz,true)+" Hz";
@@ -569,7 +572,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 } else if(c.kind==ControlKind::Shape) {
                     source="Weight "+slider_text(held[0],true);
                 }
-                const int channel=c.kind==ControlKind::Spring?channel_%(c.spring_clamp?3:2):c.scalar?0:channel_;
+                const int channel=channel_%control_channel_count(c);
                 Json minus={{"action","control"},{"control",c.id},{"channel",channel},{"delta",-1}},plus=minus; plus["delta"]=1;
                 if(!c.scalar && !exact_color_) {
                     // Left and Right walk the strip instead of nudging one channel, which
@@ -584,7 +587,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     plus=pick((here+1)%strip.size());
                 }
                 row(int(i),c.name,source,line,accept,minus,plus,
-                    {{"action","ui_channel"},{"count",c.kind==ControlKind::Spring?(c.spring_clamp?3:2):3}},
+                    {{"action","ui_channel"},{"count",control_channel_count(c)}},
                     {{"action","palette"},{"palette","original"}});
             }
             scroll_end();
@@ -660,6 +663,32 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                         cy+=44;
                     }
                     direction_hint(true,"Choose",right,cy,360);
+                    action_button("accept","Reset part",841,rows_[row_].accept,3);
+                    action_button("tertiary","Reset all",887,confirm_reset_all,2);
+                } else if(control.kind==ControlKind::Dynamics) {
+                    detail(control.name,worn->name,
+                           "Stiffness controls how strongly this part returns toward its rest direction. "
+                           "Damping reduces motion. Gravity changes downward pull; negative values pull upward.");
+                    const char* fields[]={"Stiffness","Damping","Gravity"};
+                    for(int field=0;field<3;++field) {
+                        const auto range=control_channel(control,field);
+                        const double sy=controls_y+field*80;
+                        auto* heading=ui.label(fields[field],right,sy,230,28,19,field==channel_%3?gold:ivory);
+                        auto* slider=construct(L"/Script/UMG.Slider",tree);
+                        invoke(slider,L"SetMinValue",L"InValue",range.minimum);
+                        invoke(slider,L"SetMaxValue",L"InValue",range.maximum);
+                        invoke(slider,L"SetStepSize",L"InValue",range.step);
+                        invoke(slider,L"SetValue",L"InValue",value[field]);
+                        invoke(slider,L"SetSliderBarColor",L"InValue",Color{.10f,.09f,.07f,1});
+                        invoke(slider,L"SetSliderHandleColor",L"InValue",gold);
+                        ui.place(slider,right,sy+29,262,30);
+                        auto* label=ui.label(slider_text(value[field],true),right+270,sy+29,90,30,18);
+                        sliders_.push_back({WeakObject(slider),WeakObject(label),WeakObject(heading),
+                            {{"action","control"},{"control",control.id},{"channel",field},{"refresh",false}},
+                            value[field],true,""});
+                    }
+                    direction_hint(true,"Adjust selected slider",right,controls_y+246,360);
+                    action_button("secondary","Select next slider",795,Json{{"action","ui_channel"},{"count",3}},4);
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
                     action_button("tertiary","Reset all",887,confirm_reset_all,2);
                 } else if(control.kind==ControlKind::Spring) {

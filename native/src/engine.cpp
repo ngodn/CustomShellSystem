@@ -700,6 +700,8 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     return true;
 }
 bool Appearance::restore() {
+    restore_springs();
+    restore_dynamics();
     offsets_.release();
     attachments_.release();
     items_.release();
@@ -1038,6 +1040,7 @@ std::map<std::string,SpringNode> spring_nodes(UObject* anim) {
     }
     return out;
 }
+#include "engine_dynamics.inl"
 }
 void WornItems::release() {
     for(auto& worn:worn_) if(auto* component=worn.component.Get()) {
@@ -1245,9 +1248,22 @@ void Appearance::restore_springs() {
     } catch(const std::exception&) { /* The instance went away with the mesh, which restores it anyway. */ }
     spring_originals_.clear(); spring_instance_=nullptr;
 }
+void Appearance::restore_dynamics() {
+    if(auto* instance=dynamics_instance_.Get(); instance && !dynamics_originals_.empty()) {
+        const auto nodes=dynamics_nodes(instance);
+        for(const auto& [root,original]:dynamics_originals_) {
+            const auto node=nodes.find(root);
+            if(node==nodes.end()) throw std::runtime_error("Dynamics chain disappeared before restoration");
+            node->second.apply(original);
+        }
+        reset_dynamics(instance);
+    }
+    dynamics_originals_.clear(); dynamics_instance_=nullptr;
+}
 void Appearance::reset_controls() {
     show_hidden_sections();
     restore_springs();
+    restore_dynamics();
     clear_driven_morphs();
     if(auto* component=component_.Get()) for(const auto& [slot,weak]:control_mids_) {
         if(auto* mid=weak.Get()) {
@@ -1316,9 +1332,13 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
     // The post-process anim instance is built with the mesh, and a fresh one comes up with
     // the blueprint's own numbers. Notice that rather than quietly losing the player's
     // tuning the first time the shell reloads. Costs nothing until a spring is in use.
-    if(spring_instance_.Get() && post_process_instance(component)!=spring_instance_.Get()) {
+    if(!spring_originals_.empty() && (!spring_instance_.Get() || post_process_instance(component)!=spring_instance_.Get())) {
         spring_originals_.clear(); spring_instance_=nullptr;
         for(const auto& control:options.controls) if(control.kind==ControlKind::Spring) last_values_.erase(control.id);
+    }
+    if(!dynamics_originals_.empty() && (!dynamics_instance_.Get() || post_process_instance(component)!=dynamics_instance_.Get())) {
+        dynamics_originals_.clear(); dynamics_instance_=nullptr;
+        for(const auto& control:options.controls) if(control.kind==ControlKind::Dynamics) last_values_.erase(control.id);
     }
     if(values==last_values_) return;
     auto mid_for=[&](int index) {
@@ -1411,6 +1431,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 if(readback.get<UObject*>()!=target) throw std::runtime_error("Dye texture read-back failed");
             }
         }
+        bool dynamics_changed=false;
         for(const auto& control:options.controls) {
             bool active=values.contains(control.id),previous=last_values_.contains(control.id);
             if(!active) continue;
@@ -1445,10 +1466,28 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 }
                 continue;
             }
-            // 1.0: a spring is the one control that touches no material at all. It writes
-            // the mesh's own spring nodes, converting what the slider says into what the
-            // engine integrates. Frequency and damping ratio are the numbers that mean
-            // something; stiffness and damping are the numbers that happen to work.
+            // AnimDynamics uses direct solver values. Its damping and gravity
+            // require a reset to reach the internal simulation bodies.
+            if(control.kind==ControlKind::Dynamics) {
+                auto* anim=post_process_instance(component);
+                if(!anim) throw std::runtime_error("This outfit has no post-process animation instance");
+                reset_dynamics(anim,false);
+                if(dynamics_instance_.Get()!=anim) { dynamics_originals_.clear(); dynamics_instance_=anim; }
+                const auto nodes=dynamics_nodes(anim);
+                const auto tuning=dynamics_settings(control,values.at(control.id));
+                // Resolve every requested root before writing any of this control.
+                for(const auto& root:control.nodes)
+                    if(!nodes.contains(root)) throw std::runtime_error("This outfit has no AnimDynamics chain rooted at "+root);
+                for(const auto& root:control.nodes) {
+                    const auto& node=nodes.at(root);
+                    dynamics_originals_.try_emplace(root,node.capture());
+                    node.apply(tuning);
+                }
+                dynamics_changed=true;
+                continue;
+            }
+            // SpringBone has a different model: frequency and damping ratio
+            // convert to its second-order translational spring constants.
             if(control.kind==ControlKind::Spring) {
                 auto* anim=post_process_instance(component);
                 if(!anim) throw std::runtime_error("This outfit's mesh has no animation blueprint to tune");
@@ -1532,6 +1571,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                     throw std::runtime_error("Color parameter read-back failed");
             }
         }
+        if(dynamics_changed) reset_dynamics(dynamics_instance_.Get());
         prepare_deformation_materials();
         last_values_=std::move(values); control_outfit_=control_identity;
         material_debug=material_snapshot(component,applied_.Get());

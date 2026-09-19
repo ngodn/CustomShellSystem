@@ -92,11 +92,15 @@ ControlGroup role_group(const std::string& role) {
             role=="waist" || role=="figure")
         ? ControlGroup::Body : ControlGroup::Outfit;
 }
-ControlValue value(const Json& j) {
+ControlValue value(const Json& j,bool stored=false) {
     if(!j.is_array() || j.size()!=4) throw std::runtime_error("A value needs four components");
+    for(const auto& x:j) if(!x.is_number()) throw std::runtime_error("A value needs numeric components");
     auto v=j.get<ControlValue>();
-    for(float x:v) if(!std::isfinite(x) || x<0 || x>32) throw std::runtime_error("Value component outside supported range");
-    if(v[3]>1) throw std::runtime_error("Opacity outside supported range");
+    // A saved snapshot has no control schema yet. Bound it here, then enforce
+    // each installed control's actual domain before applying or retaining it.
+    for(float x:v) if(!std::isfinite(x) || x<(stored?-5:0) || x>(stored?1000:32))
+        throw std::runtime_error("Value component outside supported range");
+    if(v[3]<0 || v[3]>1) throw std::runtime_error("Opacity outside supported range");
     return v;
 }
 void parameter(const std::string& name) {
@@ -130,6 +134,18 @@ Range range(const Json& j,const char* what,float ceiling) {
     return out;
 }
 void valid_value(const Control& c,const ControlValue& v) {
+    if(c.kind==ControlKind::Dynamics) {
+        if(!c.dynamics) throw std::runtime_error("Missing dynamics control settings");
+        for(size_t channel=0;channel<3;++channel) {
+            const auto& range=c.dynamics->channels[channel];
+            if(!std::isfinite(v[channel]) || v[channel]<range.minimum || v[channel]>range.maximum)
+                throw std::runtime_error("Dynamics value outside control limits: "+c.id);
+        }
+        if(v[3]!=1) throw std::runtime_error("Dynamics reserved channel must be one");
+        return;
+    }
+    for(float x:v) if(!std::isfinite(x) || x<0 || x>32)
+        throw std::runtime_error("Value component outside supported range: "+c.id);
     if(c.kind==ControlKind::Spring) {
         // Two numbers, two ranges: channel 0 is frequency, channel 1 is damping ratio.
         if(!std::isfinite(v[0]) || v[0]<c.minimum || v[0]>c.maximum)
@@ -167,6 +183,28 @@ SpringAxes spring_axes(const Control& control, SpringAxes authored) {
     }
     return authored;
 }
+int control_channel_count(const Control& control) {
+    if(control.kind==ControlKind::Dynamics) return 3;
+    if(control.kind==ControlKind::Spring) return control.spring_clamp?3:2;
+    return control.scalar?1:3;
+}
+DynamicsSettings dynamics_settings(const Control& control,const ControlValue& value) {
+    if(control.kind!=ControlKind::Dynamics) throw std::runtime_error("Expected a dynamics control");
+    valid_value(control,value);
+    return {value[0],value[1],value[1],value[2],value[0]>0,true,true,false};
+}
+SliderRange control_channel(const Control& control,int channel) {
+    if(channel<0 || channel>=control_channel_count(control)) throw std::runtime_error("Invalid control channel");
+    if(control.kind==ControlKind::Dynamics) {
+        if(!control.dynamics) throw std::runtime_error("Missing dynamics control settings");
+        return control.dynamics->channels[size_t(channel)];
+    }
+    if(control.kind==ControlKind::Spring && channel==1)
+        return {control.damping_minimum,control.damping_maximum,control.value[1],control.damping_step};
+    if(control.kind==ControlKind::Spring && channel==2)
+        return {control.displacement_minimum,control.displacement_maximum,control.value[2],control.displacement_step};
+    return {control.minimum,control.maximum,control.value[size_t(channel)],control.step};
+}
 const Control* ControlSet::find(const std::string& id) const {
     for(const auto& control:controls) if(control.id==id) return &control;
     return nullptr;
@@ -198,6 +236,7 @@ ControlSet ControlSet::parse(const Json& j) {
             else if(kind=="toggle") control.kind=ControlKind::Toggle;
             else if(kind=="choice") control.kind=ControlKind::Choice;
             else if(kind=="spring") control.kind=ControlKind::Spring;
+            else if(kind=="dynamics") control.kind=ControlKind::Dynamics;
             else if(kind=="shape") control.kind=ControlKind::Shape;
             else if(kind=="glow") control.kind=ControlKind::Glow;
             else if(kind=="opacity") control.kind=ControlKind::Opacity;
@@ -210,12 +249,11 @@ ControlSet ControlSet::parse(const Json& j) {
             if(!std::isfinite(control.pulse_hz) || control.pulse_hz<0 || control.pulse_hz>10)
                 throw std::runtime_error("Glow pulse frequency outside supported range");
         }
-        // A spring says what it wants inside its two ranges, so it is the one kind that
-        // does not also write `default`: two places to state the same number is one too many.
-        if(control.kind==ControlKind::Spring) {
-            if(c.contains("default")) throw std::runtime_error("A spring control takes its default from its frequency and damping ratio");
+        // Motion controls declare their defaults and limits per channel.
+        if(control.kind==ControlKind::Spring || control.kind==ControlKind::Dynamics) {
+            if(c.contains("default")) throw std::runtime_error("A motion control takes its defaults from its channel ranges");
             for(const auto* key:{"min","max","step"})
-                if(c.contains(key)) throw std::runtime_error("A spring control takes its limits from its frequency and damping ratio");
+                if(c.contains(key)) throw std::runtime_error("A motion control takes its limits from its channel ranges");
         } else control.value=value(c.at("default"));
         // Group, role and hue locking: declared if present, otherwise read off the id.
         const auto fallback=guess_role(control.id);
@@ -278,7 +316,39 @@ ControlSet ControlSet::parse(const Json& j) {
                              "world_damping","limit_angle","collision_radius","gravity_scale"})
             if(c.contains(key) && control.kind!=ControlKind::Spring)
                 throw std::runtime_error(std::string("Only a spring control accepts ")+key);
-        if(c.contains("nodes") || c.contains("frequency") || c.contains("damping_ratio")) {
+        if(control.kind==ControlKind::Dynamics) {
+            for(const auto* key:{"frequency","damping_ratio","bindings"})
+                if(c.contains(key)) throw std::runtime_error(std::string("Dynamics does not accept ")+key);
+            control.nodes=c.at("nodes").get<std::vector<std::string>>();
+            if(control.nodes.empty() || control.nodes.size()>32) throw std::runtime_error("Dynamics needs one to thirty-two chain roots");
+            std::set<std::string> seen;
+            for(const auto& name:control.nodes) {
+                bone(name);
+                if(!seen.insert(name).second) throw std::runtime_error("Duplicate dynamics chain root");
+            }
+            DynamicsControl settings;
+            const char* names[]={"angular_spring","damping","gravity"};
+            const float low[]={0,.7f,-5},high[]={1000,1,5},steps[]={1,.01f,.05f};
+            for(size_t i=0;i<3;++i) {
+                const auto& r=c.at(names[i]);
+                if(!r.is_object() || r.size()!=3 || !r.contains("min") || !r.contains("max") || !r.contains("default"))
+                    throw std::runtime_error("A dynamics range needs min, max and default");
+                for(const auto* key:{"min","max","default"})
+                    if(!r.at(key).is_number()) throw std::runtime_error("A dynamics range must be numeric");
+                auto& target=settings.channels[i];
+                target={r.at("min").get<float>(),r.at("max").get<float>(),r.at("default").get<float>(),steps[i]};
+                if(!std::isfinite(target.minimum) || !std::isfinite(target.maximum) || !std::isfinite(target.value) ||
+                   target.minimum<low[i] || target.maximum>high[i] || target.minimum>=target.maximum ||
+                   target.value<target.minimum || target.value>target.maximum)
+                    throw std::runtime_error("Dynamics range outside solver limits");
+                target.step=std::min(target.step,target.maximum-target.minimum);
+                control.value[i]=target.value;
+            }
+            control.value[3]=1;
+            control.dynamics=settings;
+        } else if(c.contains("angular_spring") || c.contains("damping") || c.contains("gravity"))
+            throw std::runtime_error("Only dynamics controls accept solver ranges");
+        if(control.kind!=ControlKind::Dynamics && (c.contains("nodes") || c.contains("frequency") || c.contains("damping_ratio"))) {
             if(control.kind!=ControlKind::Spring) throw std::runtime_error("Only a spring control tunes skeleton nodes");
             control.nodes=c.at("nodes").get<std::vector<std::string>>();
             if(control.nodes.empty() || control.nodes.size()>32) throw std::runtime_error("A spring control needs between one and thirty-two bones");
@@ -400,7 +470,10 @@ ControlSet ControlSet::parse(const Json& j) {
         }
         out.surfaces.push_back(std::move(surface));
     }
+    std::set<std::string> dynamics_roots;
     for(const auto& c:out.controls) {
+        if(c.kind==ControlKind::Dynamics) for(const auto& root:c.nodes)
+            if(!dynamics_roots.insert(root).second) throw std::runtime_error("Dynamics chain roots must have one control owner");
         // A toggle drives sections directly, so it needs no parameter to write into.
         // A choice does need one, and its bindings are checked with everything else.
         bool used=!c.bindings.empty() || !c.sections.empty() || !c.nodes.empty() || !c.morph.empty();
@@ -415,7 +488,7 @@ ControlSet ControlSet::parse(const Json& j) {
         if(!p.at("values").is_object()) throw std::runtime_error("Palette values require an object");
         for(const auto& [id,v]:p.at("values").items()) {
             auto* c=out.find(id); if(!c) throw std::runtime_error("Palette references an unknown control");
-            auto color=value(v); valid_value(*c,color); palette.values[id]=color;
+            auto color=value(v,c->kind==ControlKind::Dynamics); valid_value(*c,color); palette.values[id]=color;
         }
         out.palettes.push_back(std::move(palette));
     }
@@ -430,7 +503,7 @@ Customization Customization::parse(const Json& j) {
     if(!values.is_object() || values.size()>32) throw std::runtime_error("Invalid saved setting count");
     for(const auto& [id,v]:values.items()) {
         if(!valid_id(id)) throw std::runtime_error("Invalid saved control");
-        result.values[id]=value(v);
+        result.values[id]=value(v,true);
     }
     auto tints=j.value("tints",Json::object());
     if(!tints.is_object() || tints.size()>4) throw std::runtime_error("Invalid saved tint count");
@@ -479,6 +552,7 @@ const char* control_kind_name(ControlKind kind) {
         case ControlKind::Toggle: return "toggle";
         case ControlKind::Choice: return "choice";
         case ControlKind::Spring: return "spring";
+        case ControlKind::Dynamics: return "dynamics";
         case ControlKind::Shape: return "shape";
         case ControlKind::Glow: return "glow";
         case ControlKind::Opacity: return "opacity";

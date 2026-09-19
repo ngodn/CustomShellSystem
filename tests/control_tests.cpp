@@ -596,6 +596,76 @@ int main() {
             bad_gs["controls"][0]["gravity_scale"] = 10.0;
             rejects([&]{ ControlSet::parse(bad_gs); });
         }
-        std::cout<<checks<<" color behavior checks passed\n";
+        {
+            auto recipe=Json::parse(R"({"schema":1,"controls":[
+              {"id":"hair","name":"Hair dynamics","kind":"dynamics","nodes":["CSS_Hair_Ponytail_01"],
+               "angular_spring":{"min":0,"max":1000,"default":80},
+               "damping":{"min":0.7,"max":1,"default":0.8},
+               "gravity":{"min":-5,"max":5,"default":0.1}}],
+              "palettes":[{"id":"float","name":"Floating","values":{"hair":[120,0.9,-0.5,1]}}]})");
+            const auto model=ControlSet::parse(recipe);
+            const auto* hair=model.find("hair");
+            expect(hair && hair->kind==ControlKind::Dynamics && hair->scalar,"Missing dynamics kind");
+            expect(std::string(control_kind_name(hair->kind))=="dynamics","Dynamics kind serialization lost");
+            expect(hair->value==ControlValue({80,.8f,.1f,1}),"Dynamics defaults changed units");
+            expect(control_channel_count(*hair)==3,"Dynamics needs three channels");
+            expect(control_channel(*hair,0).maximum==1000 && control_channel(*hair,2).minimum==-5,
+                   "Solver ranges must permit high stiffness and negative gravity");
+            rejects([&]{control_channel(*hair,-1);});
+            rejects([&]{control_channel(*hair,3);});
+            expect(control_values(model,{}).empty(),"Original must leave authored dynamics untouched");
+            const auto selected=choose_palette(model,{},"float");
+            const auto value=control_values(model,selected).at("hair");
+            expect(value==ControlValue({120,.9f,-.5f,1}),"Dynamics palette changed solver values");
+            Customization custom;custom.values["hair"]={1000,1,-5,1};
+            const auto roundtrip=Customization::parse(custom.json());
+            expect(roundtrip==custom && control_values(model,roundtrip).at("hair")==custom.values.at("hair"),
+                   "Snapshot lost high stiffness or negative gravity");
+            State saved;
+            saved.selections["Solomon"]={"test","default",custom};
+            saved.remembered_custom["test"]=custom;
+            saved.presets["floating"].selections=saved.selections;
+            const auto loaded=State::parse(saved.json());
+            expect(loaded.selections.at("Solomon").custom==custom &&
+                   loaded.remembered_custom.at("test")==custom &&
+                   loaded.presets.at("floating").selections.at("Solomon").custom==custom,
+                   "State/profile round-trip lost solver values");
+            const auto tuning=dynamics_settings(*hair,value);
+            expect(tuning==DynamicsSettings{120,.9f,.9f,-.5f,true,true,true,false},
+                   "Dynamics tuning must use direct constants and enable required override flags");
+            expect(!dynamics_settings(*hair,{0,.7f,0,1}).spring_enabled,"Zero stiffness must disable angular spring forcing");
+            const auto reset=choose_palette(model,custom,"original");
+            expect(control_values(model,reset).empty(),"Original must release solver overrides");
+            for(const auto& value:{ControlValue{1001,.8f,0,1},ControlValue{80,.69f,0,1},
+                                  ControlValue{80,.8f,-6,1},ControlValue{80,.8f,0,.5f}}) {
+                auto invalid=custom;invalid.values["hair"]=value;
+                rejects([&]{control_values(model,invalid);});
+            }
+            for(const auto* key:{"frequency","damping_ratio","default","max_displacement","bindings"}) {
+                auto invalid=recipe;invalid["controls"][0][key]=Json::array();
+                rejects([&]{ControlSet::parse(invalid);});
+            }
+            for(const auto* key:{"angular_spring","damping","gravity"}) {
+                for(const auto& invalid:{Json(true),Json(nullptr),Json("0"),Json(std::numeric_limits<double>::infinity())}) {
+                    auto bad=recipe;bad["controls"][0][key]["default"]=invalid;
+                    rejects([&]{ControlSet::parse(bad);});
+                }
+                auto missing=recipe;missing["controls"][0].erase(key);
+                rejects([&]{ControlSet::parse(missing);});
+            }
+            auto duplicate=recipe;auto second=duplicate["controls"][0];second["id"]="other";
+            duplicate["controls"].push_back(second);
+            rejects([&]{ControlSet::parse(duplicate);});
+            auto color=Json::parse(R"({"schema":1,"controls":[{"id":"hair","name":"Hair","kind":"scalar",
+                "default":[1,0,0,1],"bindings":[{"slot":0,"parameter":"Hair"}]}]})");
+            const auto color_model=ControlSet::parse(color);
+            rejects([&]{control_values(color_model,roundtrip);});
+            expect(compatible_values(color_model,roundtrip).values.empty(),"A changed control kind must not retain incompatible solver data");
+            for(const auto& invalid:{Json::array({true,.8,0,1}),Json::array({1001,.8,0,1}),Json::array({80,.8,-6,1})}) {
+                auto snapshot=custom.json();snapshot["values"]["hair"]=invalid;
+                rejects([&]{Customization::parse(snapshot);});
+            }
+        }
+        std::cout<<checks<<" control behavior checks passed\n";
     } catch(const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }
 }
