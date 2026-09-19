@@ -1251,12 +1251,14 @@ void Appearance::restore_springs() {
 void Appearance::restore_dynamics() {
     if(auto* instance=dynamics_instance_.Get(); instance && !dynamics_originals_.empty()) {
         const auto nodes=dynamics_nodes(instance);
+        bool needs_reset=false;
         for(const auto& [root,original]:dynamics_originals_) {
             const auto node=nodes.find(root);
             if(node==nodes.end()) throw std::runtime_error("Dynamics chain disappeared before restoration");
+            needs_reset|=dynamics_reset_required(node->second.capture(),original);
             node->second.apply(original);
         }
-        reset_dynamics(instance);
+        if(needs_reset) reset_dynamics(instance);
     }
     dynamics_originals_.clear(); dynamics_instance_=nullptr;
 }
@@ -1431,7 +1433,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 if(readback.get<UObject*>()!=target) throw std::runtime_error("Dye texture read-back failed");
             }
         }
-        bool dynamics_changed=false;
+        bool dynamics_needs_reset=false;
         for(const auto& control:options.controls) {
             bool active=values.contains(control.id),previous=last_values_.contains(control.id);
             if(!active) continue;
@@ -1466,8 +1468,8 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 }
                 continue;
             }
-            // AnimDynamics uses direct solver values. Its damping and gravity
-            // require a reset to reach the internal simulation bodies.
+            // AnimDynamics uses direct solver values. Damping changes require a
+            // reset; angular spring forcing and gravity scale update each frame.
             if(control.kind==ControlKind::Dynamics) {
                 auto* anim=post_process_instance(component);
                 if(!anim) throw std::runtime_error("This outfit has no post-process animation instance");
@@ -1480,10 +1482,11 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                     if(!nodes.contains(root)) throw std::runtime_error("This outfit has no AnimDynamics chain rooted at "+root);
                 for(const auto& root:control.nodes) {
                     const auto& node=nodes.at(root);
-                    dynamics_originals_.try_emplace(root,node.capture());
+                    const auto before=node.capture();
+                    dynamics_originals_.try_emplace(root,before);
+                    dynamics_needs_reset|=dynamics_reset_required(before,tuning);
                     node.apply(tuning);
                 }
-                dynamics_changed=true;
                 continue;
             }
             // SpringBone has a different model: frequency and damping ratio
@@ -1571,7 +1574,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                     throw std::runtime_error("Color parameter read-back failed");
             }
         }
-        if(dynamics_changed) reset_dynamics(dynamics_instance_.Get());
+        if(dynamics_needs_reset) reset_dynamics(dynamics_instance_.Get());
         prepare_deformation_materials();
         last_values_=std::move(values); control_outfit_=control_identity;
         material_debug=material_snapshot(component,applied_.Get());

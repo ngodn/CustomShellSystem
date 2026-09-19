@@ -193,6 +193,13 @@ DynamicsSettings dynamics_settings(const Control& control,const ControlValue& va
     valid_value(control,value);
     return {value[0],value[1],value[1],value[2],value[0]>0,true,true,false};
 }
+bool dynamics_reset_required(const DynamicsSettings& before,const DynamicsSettings& after) {
+    // AnimDynamics refreshes spring forcing and gravity scale each update, but
+    // copies damping and the gravity-override mode into bodies at initialization.
+    return before.linear_damping!=after.linear_damping || before.angular_damping!=after.angular_damping ||
+        before.override_linear!=after.override_linear || before.override_angular!=after.override_angular ||
+        before.gravity_override!=after.gravity_override;
+}
 SliderRange control_channel(const Control& control,int channel) {
     if(channel<0 || channel>=control_channel_count(control)) throw std::runtime_error("Invalid control channel");
     if(control.kind==ControlKind::Dynamics) {

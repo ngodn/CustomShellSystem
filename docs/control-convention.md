@@ -308,8 +308,10 @@ An incompatible value is dropped during variant compatibility filtering.
 
 The adapter captures the four numeric settings and four associated flags on first
 touch, reads back writes, and restores the captured values on Original reset, removal
-or shutdown. It requests `ResetDynamics(ResetPhysics)` because damping and gravity
-are copied into solver bodies during initialization. The reset enum is discovered
+or shutdown. It requests `ResetDynamics(ResetPhysics)` when damping values/override
+flags or the gravity-override mode change, because those are copied into solver
+bodies during initialization. Angular spring settings and gravity scale update
+during evaluation and do not require a reset. The reset enum is discovered
 from the function's reflected parameter, and its signature is checked before any
 node mutation. A successful reflected write/reset request alone does not establish
 the solver's evaluated behavior.

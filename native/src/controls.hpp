@@ -109,6 +109,7 @@ struct DynamicsSettings {
     bool operator==(const DynamicsSettings&) const = default;
 };
 DynamicsSettings dynamics_settings(const Control&, const ControlValue&);
+bool dynamics_reset_required(const DynamicsSettings& before, const DynamicsSettings& after);
 // A hue rotation in degrees plus saturation and brightness multipliers, applied to a whole
 // group on top of the palette and any per-part override.
 struct ColorTint {

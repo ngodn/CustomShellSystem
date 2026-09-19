@@ -634,6 +634,16 @@ int main() {
             expect(tuning==DynamicsSettings{120,.9f,.9f,-.5f,true,true,true,false},
                    "Dynamics tuning must use direct constants and enable required override flags");
             expect(!dynamics_settings(*hair,{0,.7f,0,1}).spring_enabled,"Zero stiffness must disable angular spring forcing");
+            auto changed=tuning; changed.angular_spring=0; changed.spring_enabled=false; changed.gravity=2;
+            expect(!dynamics_reset_required(tuning,changed),"Direct spring/gravity updates must not reset motion");
+            changed.linear_damping=.75f;
+            expect(dynamics_reset_required(tuning,changed),"Cached linear damping requires reset");
+            changed=tuning; changed.angular_damping=.75f;
+            expect(dynamics_reset_required(tuning,changed),"Cached angular damping requires reset");
+            changed=tuning; changed.override_linear=false;
+            expect(dynamics_reset_required(tuning,changed),"Restoring authored damping mode requires reset");
+            changed=tuning; changed.gravity_override=true;
+            expect(dynamics_reset_required(tuning,changed),"Gravity override mode requires reset");
             const auto reset=choose_palette(model,custom,"original");
             expect(control_values(model,reset).empty(),"Original must release solver overrides");
             for(const auto& value:{ControlValue{1001,.8f,0,1},ControlValue{80,.69f,0,1},
