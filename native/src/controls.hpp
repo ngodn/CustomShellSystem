@@ -2,6 +2,7 @@
 #include <array>
 #include <cstdint>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 #include <nlohmann/json.hpp>
@@ -53,6 +54,7 @@ struct Control {
     bool hue_locked = false;      // metal, gems and skin read as a material, not a colour
     bool scalar = false;          // edited as one number rather than a colour: every kind but Color
     std::vector<int> sections;    // Toggle only: the material sections it shows or hides
+    std::vector<int> occludes_sections; // Toggle only: covered sections hidden while it is on
     std::vector<ControlOption> options;   // Choice only: the textures it picks between
     std::vector<std::string> nodes;       // Spring only: the bones whose spring it tunes
     std::string morph;                    // Shape only: the morph target on the package's own mesh
@@ -117,6 +119,7 @@ struct Customization {
 const char* control_group_name(ControlGroup);
 ControlValue apply_tint(const ColorTint&, const ControlValue&, bool hue_locked);
 std::map<std::string,ControlValue> control_values(const ControlSet&, const Customization&);
+std::set<int> hidden_control_sections(const ControlSet&, const std::map<std::string,ControlValue>&);
 Customization compatible_values(const ControlSet&, const Customization&);
 Customization choose_palette(const ControlSet&, const Customization&, const std::string& palette);
 bool dye_resource(const std::string&);

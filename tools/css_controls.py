@@ -114,11 +114,21 @@ def validate(recipe:dict) -> set[str]:
                 raise ValueError('combat_reactive must be true or false')
         if kind_of(c)=='toggle':
             sections=c.get('sections');bounded_array(sections,128)
+            if not sections: raise ValueError('A toggle control needs the sections it hides')
             for index in sections:
                 if type(index) is not int: raise ValueError('Material section must be an integer')
                 number(index,0,127)
             used.add(c['id'])
         elif 'sections' in c: raise ValueError('Only a toggle control hides material sections')
+        if 'occludes_sections' in c:
+            if kind_of(c)!='toggle': raise ValueError('Only a toggle control occludes material sections')
+            covered=c['occludes_sections'];bounded_array(covered,128)
+            if not covered: raise ValueError('Occluded sections must not be empty')
+            for index in covered:
+                if type(index) is not int: raise ValueError('Occluded section must be an integer')
+                number(index,0,127)
+            if len(set(covered))!=len(covered) or set(covered).intersection(c['sections']):
+                raise ValueError("A toggle's occluded sections must be distinct from its own sections")
         if kind_of(c)=='spring':
             nodes=c.get('nodes');bounded_array(nodes,32)
             if not nodes: raise ValueError('A spring control needs between one and thirty-two bones')

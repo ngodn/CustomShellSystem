@@ -121,6 +121,22 @@ class ControlTests(unittest.TestCase):
         unknown=copy.deepcopy(colors);unknown['controls'][0]['role']='frock'
         self.assertIn('shared vocabulary',' '.join(lint_convention(unknown)))
 
+    def test_toggle_occlusion(self):
+        recipe=dict(schema=1,controls=[dict(id='boots',name='Boots',kind='toggle',
+            default=[1,0,0,1],sections=[20],occludes_sections=[21,22])])
+        validate(recipe)
+        for field in ('sections','occludes_sections'):
+            for invalid in ([],[-1],[128],[1.5],[True],[4294967296],'21'):
+                with self.subTest(field=field,value=invalid):
+                    bad=copy.deepcopy(recipe);bad['controls'][0][field]=invalid
+                    with self.assertRaises(ValueError):validate(bad)
+        for invalid in ([21,21],[20]):
+            bad=copy.deepcopy(recipe);bad['controls'][0]['occludes_sections']=invalid
+            with self.assertRaisesRegex(ValueError,'distinct'):validate(bad)
+        bad=copy.deepcopy(recipe);bad['controls'][0]['kind']='scalar'
+        del bad['controls'][0]['sections']
+        with self.assertRaisesRegex(ValueError,'toggle'):validate(bad)
+
     def test_control_kinds(self):
         """1.0: colour is one kind among several, and every kind but colour is a number."""
         from css_controls import kind_of

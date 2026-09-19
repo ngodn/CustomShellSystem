@@ -232,10 +232,26 @@ ControlSet ControlSet::parse(const Json& j) {
             throw std::runtime_error("Invalid slider range");
         if(c.contains("sections")) {
             if(control.kind!=ControlKind::Toggle) throw std::runtime_error("Only a toggle control hides material sections");
-            control.sections=c.at("sections").get<std::vector<int>>();
-            if(control.sections.empty() || control.sections.size()>128) throw std::runtime_error("Invalid toggle sections");
-            for(int index:control.sections) slot(index);
+            const auto& sections=c.at("sections");
+            if(!sections.is_array() || sections.empty() || sections.size()>128) throw std::runtime_error("Invalid toggle sections");
+            for(const auto& index:sections) {
+                if(!index.is_number_integer() || index<0 || index>127) throw std::runtime_error("Invalid toggle section index");
+                control.sections.push_back(index.get<int>());
+            }
         } else if(control.kind==ControlKind::Toggle) throw std::runtime_error("A toggle control needs the sections it hides");
+        if(c.contains("occludes_sections")) {
+            if(control.kind!=ControlKind::Toggle) throw std::runtime_error("Only a toggle control occludes material sections");
+            const auto& sections=c.at("occludes_sections");
+            if(!sections.is_array() || sections.empty() || sections.size()>128) throw std::runtime_error("Invalid occluded sections");
+            std::set<int> seen;
+            for(const auto& index:sections) {
+                if(!index.is_number_integer() || index<0 || index>127) throw std::runtime_error("Invalid occluded section index");
+                const int section=index.get<int>();
+                if(!seen.insert(section).second || std::find(control.sections.begin(),control.sections.end(),section)!=control.sections.end())
+                    throw std::runtime_error("A toggle's occluded sections must be distinct from its own sections");
+                control.occludes_sections.push_back(section);
+            }
+        }
         if(c.contains("options")) {
             if(control.kind!=ControlKind::Choice) throw std::runtime_error("Only a choice control lists texture options");
             if(!c.at("options").is_array()) throw std::runtime_error("Choice options require an array");
@@ -525,6 +541,17 @@ ControlValue apply_tint(const ColorTint& tint,const ControlValue& colour,bool hu
     }
     const float base=brightness-chroma;
     return {out[0]+base,out[1]+base,out[2]+base,colour[3]};
+}
+std::set<int> hidden_control_sections(const ControlSet& options,const std::map<std::string,ControlValue>& values) {
+    std::set<int> hidden;
+    for(const auto& control:options.controls) if(control.kind==ControlKind::Toggle) {
+        const auto found=values.find(control.id);
+        const auto& value=found==values.end()?control.value:found->second;
+        valid_value(control,value);
+        const auto& sections=value[0]>=.5f?control.occludes_sections:control.sections;
+        hidden.insert(sections.begin(),sections.end());
+    }
+    return hidden;
 }
 std::map<std::string,ControlValue> control_values(const ControlSet& options,const Customization& custom) {
     for(const auto& [group,tint]:custom.tints) valid_tint(group,tint);

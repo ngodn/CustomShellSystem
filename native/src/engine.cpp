@@ -1190,16 +1190,31 @@ void Appearance::reconcile_sections() {
     if(!component) { applied_hidden_.clear(); return; }
     std::set<int> want=toggle_hidden_;
     want.insert(item_hidden_.begin(),item_hidden_.end());
+    if(want==applied_hidden_) return;
+    Call count(component,L"GetNumMaterials",1); count.run();
+    const int materials=count.get<int>();
+    for(int section:want) if(section<0 || section>=materials)
+        throw std::runtime_error("Hidden material section is absent on this appearance");
     auto set_shown=[&](int section,bool shown) {
         for(int lod=0;lod<lod_count();++lod) {
             Call set(component,L"ShowMaterialSection",4);
             set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t(section));
             set.set(L"bShow",shown); set.set(L"LODIndex",int32_t(lod)); set.run();
+            Call readback(component,L"IsMaterialSectionShown",3);
+            readback.set(L"MaterialID",int32_t(section)); readback.set(L"LODIndex",int32_t(lod)); readback.run();
+            if(readback.get<bool>()!=shown) throw std::runtime_error("Material section read-back failed");
         }
     };
-    for(int section:want) if(!applied_hidden_.contains(section)) set_shown(section,false);
-    for(int section:applied_hidden_) if(!want.contains(section)) set_shown(section,true);
-    applied_hidden_=std::move(want);
+    for(int section:want) if(!applied_hidden_.contains(section)) {
+        // Track before writing so cleanup also restores a partially failed change.
+        applied_hidden_.insert(section);
+        set_shown(section,false);
+    }
+    const auto previous=applied_hidden_;
+    for(int section:previous) if(!want.contains(section)) {
+        set_shown(section,true);
+        applied_hidden_.erase(section);
+    }
 }
 void Appearance::clear_driven_morphs() {
     for(auto* component:{component_.Get(),menu_component_.Get()})
@@ -1289,6 +1304,12 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
     // Rebuild from the original material rather than guessing a layer's default.
     if(std::any_of(last_values_.begin(),last_values_.end(),[&](const auto& p){return !values.contains(p.first);})) reset_controls();
     prepare_deformation_materials();
+    // Original keeps authored materials, but garment visibility still needs its defaults.
+    // Reconcile all controls together so a switch cannot expose another garment's mask.
+    try {
+        toggle_hidden_=hidden_control_sections(options,values);
+        reconcile_sections();
+    } catch(...) { reset_controls(); throw; }
     if(values.empty()) { control_outfit_=control_identity; material_debug=material_snapshot(component,applied_.Get()); material_debug["controls"]=Json::object(); material_debug["dye_targets"]=0; remember_materials(); return; }
     // The post-process anim instance is built with the mesh, and a fresh one comes up with
     // the blueprint's own numbers. Notice that rather than quietly losing the player's
@@ -1392,26 +1413,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
             bool active=values.contains(control.id),previous=last_values_.contains(control.id);
             if(!active) continue;
             if(active && previous && values.at(control.id)==last_values_.at(control.id)) continue;
-            // 1.0: a toggle drives material sections rather than a parameter. Verified
-            // live on this build: IsMaterialSectionShown keys on the material id alone,
-            // so a mesh with one section per material reads back what was set.
-            if(control.kind==ControlKind::Toggle) {
-                const bool show=values.at(control.id)[0]>=.5f;
-                for(int section:control.sections) {
-                    for(int lod=0;lod<lod_count();++lod) {
-                        Call set(component,L"ShowMaterialSection",4);
-                        set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t(section));
-                        set.set(L"bShow",show); set.set(L"LODIndex",int32_t(lod)); set.run();
-                    }
-                    Call readback(component,L"IsMaterialSectionShown",3);
-                    readback.set(L"MaterialID",int32_t(section)); readback.set(L"LODIndex",int32_t(0)); readback.run();
-                    if(readback.get<bool>()!=show) throw std::runtime_error("Material section read-back failed");
-                    // Remember only what is hidden, so removing the outfit puts back
-                    // exactly what CSS took away and nothing the game hid itself.
-                    if(show) toggle_hidden_.erase(section); else toggle_hidden_.insert(section);
-                }
-                continue;
-            }
+            if(control.kind==ControlKind::Toggle) continue;
             // 1.0: a shape drives a morph target the package cooked into its own mesh.
             // Stock shells carry none and never will, which is checked here rather than
             // left to silently do nothing: every stock mesh reads back zero morph targets.

@@ -227,6 +227,47 @@ int main() {
             rejects([&]{ControlSet::parse(stray_options);});
         }
         {
+            auto wardrobe=Json::parse(R"({"schema":1,"controls":[
+              {"id":"boots","name":"Boots","kind":"toggle","default":[1,0,0,1],
+               "sections":[20],"occludes_sections":[21,22]},
+              {"id":"stockings","name":"Stockings","kind":"toggle","default":[1,0,0,1],
+               "sections":[19,22]}]})");
+            auto model=ControlSet::parse(wardrobe);
+            Customization custom;
+            auto hidden=[&]{return hidden_control_sections(model,control_values(model,custom));};
+            expect(hidden()==std::set<int>({21,22}),"Original must apply authored footwear masks");
+            custom.values["boots"]={0,0,0,1};
+            expect(hidden()==std::set<int>({20}),"Removing boots must restore body and stocking feet");
+            custom.values["stockings"]={0,0,0,1};
+            expect(hidden()==std::set<int>({19,20,22}),"Bare feet must remain visible when stockings are off");
+            custom.values["boots"]={1,0,0,1};
+            expect(hidden()==std::set<int>({19,21,22}),"Boots must cover bare feet with stockings off");
+            custom.values.clear();
+            expect(hidden()==std::set<int>({21,22}),"Clearing customization must restore authored masks");
+            auto shared=wardrobe;
+            shared["controls"].push_back(Json::parse(R"({"id":"wrap","name":"Wrap","kind":"toggle",
+              "default":[1,0,0,1],"sections":[23],"occludes_sections":[21]})"));
+            model=ControlSet::parse(shared);
+            custom.values["boots"]={0,0,0,1};
+            expect(hidden()==std::set<int>({20,21}),"A second garment must retain its body mask");
+            std::reverse(model.controls.begin(),model.controls.end());
+            expect(hidden()==std::set<int>({20,21}),"Garment order must not change visibility");
+            for(const auto* field:{"sections","occludes_sections"}) {
+                for(const auto& invalid:{Json::array(),Json::array({-1}),Json::array({128}),
+                        Json::array({1.5}),Json::array({true}),Json::array({4294967296ULL}),Json("21")}) {
+                    auto bad=wardrobe; bad["controls"][0][field]=invalid;
+                    rejects([&]{ControlSet::parse(bad);});
+                }
+            }
+            for(const auto& invalid:{Json::array({21,21}),Json::array({20})}) {
+                auto bad=wardrobe; bad["controls"][0]["occludes_sections"]=invalid;
+                rejects([&]{ControlSet::parse(bad);});
+            }
+            auto stray=wardrobe; stray["controls"][0]["kind"]="scalar";
+            stray["controls"][0].erase("sections");
+            rejects([&]{ControlSet::parse(stray);});
+        }
+        {
             // 1.0: a spring tunes the mesh's own secondary motion. It is the only control
             // with two numbers in it, and the only one that writes no material at all.
             auto springs=Json::parse(R"({"schema":1,"controls":[

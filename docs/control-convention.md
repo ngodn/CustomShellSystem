@@ -115,6 +115,23 @@ it drives them directly:
  "default": [1, 0, 0, 1], "sections": [2, 3]}
 ```
 
+Optional `occludes_sections` lists body or underlayer sections covered while the toggle
+is on. For example, footwear section 20 covers body feet 21 and stocking feet 22:
+
+```json
+{"id": "boots", "name": "Footwear", "kind": "toggle", "role": "piece",
+ "default": [1, 0, 0, 1], "sections": [20], "occludes_sections": [21, 22]}
+```
+
+Both arrays contain integer material indices from 0 to 127. An authored array cannot
+be empty. Covered indices must be unique and distinct from that toggle's own sections.
+Different controls may cover the same section. The runtime combines all hidden
+sections with item masks, so removing one garment restores a section only when no
+other active mask needs it hidden. A stocking toggle can therefore own section 22
+while footwear covers it. Defaults also apply to Original and after clearing saved
+overrides. This changes visibility only; it does not reshape or delete body geometry.
+Host tests cover these decisions; live acceptance of the new occlusion field is pending.
+
 A `choice` picks between textures the package ships. The value is which option, so the
 range is the list and nothing else, and the default names one of them:
 
