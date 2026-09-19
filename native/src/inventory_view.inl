@@ -1354,6 +1354,17 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         invoke(widget,L"SetRenderOpacity",L"InOpacity",.35f+.65f*pulse);
     }
     if(!active_ || closing_) return {};
+    // Scripted filming continues without desktop focus; input still requires it.
+#ifdef CSS_INVENTORY_DEV
+    if(capture_duration_) {
+        double t=std::clamp(double(now-capture_start_)/capture_duration_,0.,1.);
+        const double smooth=t*t*(3-2*t);
+        auto target=capture_from_;
+        for(int i=0;i<4;++i) target[i]+=(capture_to_[i]-target[i])*smooth;
+        camera_move({target[0]-yaw_,target[1]-zoom_,target[2]-pan_,target[3]-frame_});
+        if(t>=1.) capture_duration_=0;
+    }
+#endif
     if(!focused) { motion_.reset(); drag_pan_=drag_rotate_=false; return {}; }
     bool typing=false;
     if(auto* input=name_input_.Get()) { Call focus(input,L"HasKeyboardFocus",1); focus.run(); typing=focus.get<bool>(); }
@@ -1365,16 +1376,6 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     if(extension_details_ || extension_picker_ || !extension_confirm_.is_null() || native_picker_ || !confirm_action_.is_null()) character_controls=false;
     if(!typing && character_controls) camera_update(elapsed,state.invert_orbit_x);
     else { motion_.reset(); drag_pan_=drag_rotate_=false; }
-#ifdef CSS_INVENTORY_DEV
-    if(capture_duration_) {
-        double t=std::clamp(double(now-capture_start_)/capture_duration_,0.,1.);
-        const double smooth=t*t*(3-2*t);
-        auto target=capture_from_;
-        for(int i=0;i<4;++i) target[i]+=(capture_to_[i]-target[i])*smooth;
-        camera_move({target[0]-yaw_,target[1]-zoom_,target[2]-pan_,target[3]-frame_});
-        if(t>=1.) capture_duration_=0;
-    }
-#endif
     if(extension_active_ && !typing && now>=extension_wheel_after_) {
         Call wheel(controller_.Get(),L"GetInputAnalogKeyState",2);auto* key=wheel.param(L"Key");
         member(wheel.data(key),key->GetElementSize(),find(L"/Script/InputCore.Key"),L"KeyName",FName(L"MouseWheelAxis"));wheel.run();

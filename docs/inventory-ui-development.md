@@ -120,3 +120,10 @@ The V30 menu character retained `bDisablePostProcessBlueprint=true` and had no p
 Windows build and live V30 checks pass: 64 assertions cover all 30 spring nodes matching the player under tuning, exact original restoration and stable instance identity. Another 29 assertions cover saved profile load, disable/enable restoration, preview disable-flag restoration and recovery after a controlled return to the stock mesh. Existing profiles and the current selection are restored exactly. Evidence is in `work/nextgen-live-preview-{mismatch,fixed-verdict}.json` and `work/nextgen-live-lifecycle-verdict.json`.
 
 These are SpringBone and controlled stock-mesh recovery proofs. Actual travel/death and the experimental AnimDynamics adapter remain unverified. A null post-process instance must not be treated as proof that a visually animated preview has secondary physics.
+
+
+## Game-window motion clips
+
+`tools/css_window_clip.py --window-id 0x... --seconds 10 --output work/name.mp4` records the validated Mortal Shell Xwayland window directly, without desktop focus changes. It uses FFmpeg's explicit `window_id`, records no audio and never falls back to a monitor. `--orbit` records a bounded turn and return, then restores the original view. Scripted filming interpolation runs before the focus guard; actual user keyboard/mouse input remains behind that guard.
+
+The live 10-second idle and 18-second orbit clips contain 299 and 539 frames at 1920x1080. Frame samples show a stable silhouette and ponytail movement during the turn. Weapons obscure parts of the hair, and the feet are outside this framing, so these clips do not establish full collision or footwear acceptance. The clips, timing metadata and sampled contact sheets are `work/nextgen-live-{idle,orbit}.*`. Steam's screenshot API remains the still-capture path.
