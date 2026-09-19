@@ -1,0 +1,8 @@
+{
+  "version": "3.0.1-1111-g97b7e501",
+  "revision": "97b7e501",
+  "dll_sha256": "fb1839ee91f71f83d508d44a2763a15ac1bb0c5fb4e504ac0fcfca64376a054a",
+  "header_revision": "d7e7826d415b0332b43439a64e6c87f64019be03",
+  "header_unreal_revision": "b2e876da82b17254c04304746341c8fde0ddb37c",
+  "import_library": "reference/ue4ss-runtime-97b7e501/UE4SS.lib"
+}

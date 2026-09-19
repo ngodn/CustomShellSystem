@@ -1,5 +1,35 @@
 # CSS development SDK
 
+## Current runtime pin, 2026-09-19
+
+The game uses the user's supplied `UE4SS For MS2 - NO AOB 45 3 2026-09-17T13-49Z R0FFdhg1M`
+build, `3.0.1-1111-g97b7e501`. Its DLL and the installed DLL both have SHA-256
+`fb1839ee91f71f83d508d44a2763a15ac1bb0c5fb4e504ac0fcfca64376a054a`.
+`native/ue4ss-runtime.json` is the build/installer/release pin. The earlier
+`d7e7826d` runtime hash below is historical.
+
+The selected migration retains the `d7e7826d` headers and UEPseudo reference,
+while linking the current runtime through a separate import library. This is
+not a full source-SDK migration. `CSS_SDK` names those retained headers;
+`CSS_UE4SS_IMPORT_LIBRARY` names the new library. The runtime revision used by
+the mappings generator comes from the same JSON pin.
+
+`tools/prepare_ue4ss_import.py` checks the supplied DLL hash, enumerates its 4239
+exports, verifies every UE4SS import in each requested consumer and generates
+`reference/ue4ss-runtime-97b7e501/UE4SS.lib` with LLVM dlltool. The manifest records
+the exact consumer and library hashes. Before rebuilding, all 32 loader and
+137 core imports resolve by exact decorated name. This proves symbol
+availability, not general class-layout compatibility. Fresh rebuilt runtime
+verification is still required.
+
+The import library SHA-256 is
+`487fd9693eb1ea4c9dc57e344e232684b9badb5328f496a38295b16db7e71c9c`.
+No game UE4SS replacement is needed. An earlier session installed this supplied
+build and reported CSS 0.4.2 loading; that historical observation is separate
+from current Next-Gen acceptance.
+
+## Retained header SDK and earlier runtime evidence
+
 Acquired 2026-09-13 for the already installed UE4SS runtime. Development dependencies only.
 
 - UE4SS source: `d7e7826d415b0332b43439a64e6c87f64019be03`.

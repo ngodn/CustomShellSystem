@@ -12,7 +12,7 @@ CSS lives in **Inventory → CSS**, with Shell, Color and Templates sections, th
 
 ## Install
 
-1. Close Mortal Shell II and install [UE4SS for MS2](https://www.nexusmods.com/mortalshell2/mods/45?tab=files). CSS targets `v3.0.1-1028-gd7e7826d`, included in the verified main-file bundle version 1.1.
+1. Close Mortal Shell II and install [UE4SS for MS2](https://www.nexusmods.com/mortalshell2/mods/45?tab=files). This branch targets the supplied NO AOB build `v3.0.1-1111-g97b7e501`; see the exact runtime hash and retained-header details in [SDK notes](docs/ue4ss-sdk.md).
 2. Extract `CustomShellSystem` from the runtime ZIP into `MortalShell2/Binaries/Win64/ue4ss/Mods/`.
 3. Install CSS outfit packages separately into `MortalShell2/Content/Paks/~mods/`, following each package's instructions.
 4. Launch the game, load a save and open **Inventory** (default **I**) and select **CSS**. Choose an outfit, then Wear.

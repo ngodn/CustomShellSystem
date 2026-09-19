@@ -14,12 +14,13 @@ outfit packages, personal settings, favorites, saved looks or game saves.
 
 Requirements
 Mortal Shell II, UE 5.6.1.
-UE4SS experimental v3.0.1-1028-gd7e7826d, GameShippingWin64 ABI.
-https://github.com/UE4SS-RE/RE-UE4SS/releases/download/experimental/zDEV-UE4SS_v3.0.1-1028-gd7e7826d.zip
-Verified UE4SS.dll SHA-256:
-4cdd44e79df2a01fb00cf885791f933c1dd3a83324767c7a084c4da5a82f33bc
+UE4SS for MS2 NO AOB build v3.0.1-1111-g97b7e501, GameShippingWin64.
+https://www.nexusmods.com/mortalshell2/mods/45?tab=files
+Required UE4SS.dll SHA-256:
+fb1839ee91f71f83d508d44a2763a15ac1bb0c5fb4e504ac0fcfca64376a054a
 Use the Microsoft Visual C++ x64 runtime required by the game/UE4SS.
-CSS uses this exact native ABI. Other UE4SS builds have not been verified.
+CSS links this runtime with retained d7e7826d headers. See the source SDK notes
+for the exact build inputs and current live-verification status.
 
 Controls (default game bindings)
 Inventory / CSS / Tarstones / Map: LB/RB or Q/E.

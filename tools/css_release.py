@@ -13,6 +13,7 @@ import time
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+UE4SS_RUNTIME = json.loads((ROOT / 'native/ue4ss-runtime.json').read_text())
 PREFIX = 'CustomShellSystem/'
 
 
@@ -85,6 +86,7 @@ def build(args: argparse.Namespace) -> Path:
     subprocess.run(['cmake', '-S', str(ROOT / 'native'), '-B', str(build_dir), '-G', 'Ninja',
                     '-DCMAKE_BUILD_TYPE=Release', '-DCMAKE_TOOLCHAIN_FILE=' + str(ROOT / 'native/toolchain-clang-cl.cmake'),
                     '-DCSS_SDK=' + str(args.sdk.resolve(strict=True)),
+                    '-DCSS_UE4SS_IMPORT_LIBRARY=' + str(args.import_library.resolve(strict=True)),
                     '-DCSS_INVENTORY_DEV=OFF', '-DCSS_TRANSITION_TESTS=OFF'], check=True)
     subprocess.run(['cmake', '--build', str(build_dir), '--target', 'main', 'css_core', '-j', '4'], check=True)
     # Copy only build outputs and explicit tracked runtime assets. Never read a live installation.
@@ -96,7 +98,10 @@ def build(args: argparse.Namespace) -> Path:
              'README.txt': (ROOT / 'packaging/README.txt').read_text().replace('@VERSION@', version).encode(),
              'THIRD_PARTY_NOTICES.txt': (ROOT / 'packaging/THIRD_PARTY_NOTICES.txt').read_bytes()}
     manifest = {'version': version, 'source_commit': revision, 'abi': 1, 'interface': 'inventory',
-                'ue4ss_revision': 'd7e7826d415b0332b43439a64e6c87f64019be03',
+                'ue4ss_revision': UE4SS_RUNTIME['revision'],
+                'ue4ss_dll_sha256': UE4SS_RUNTIME['dll_sha256'],
+                'ue4ss_header_revision': UE4SS_RUNTIME['header_revision'],
+                'ue4ss_import_library_sha256': digest(args.import_library.read_bytes()),
                 'files': {p: digest(data) for p, data in sorted(files.items())}}
     files['release.json'] = (json.dumps(manifest, indent=2) + '\n').encode()
     output = args.output.resolve()
@@ -127,6 +132,7 @@ def main():
     sub = parser.add_subparsers(dest='action', required=True)
     release = sub.add_parser('build')
     release.add_argument('--sdk', type=Path, default=ROOT / 'reference/ue4ss-sdk-d7e7826d')
+    release.add_argument('--import-library', type=Path, default=ROOT / UE4SS_RUNTIME['import_library'])
     release.add_argument('--output', type=Path, default=ROOT / 'dist/releases')
     check = sub.add_parser('verify')
     check.add_argument('archive', type=Path)

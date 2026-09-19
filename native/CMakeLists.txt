@@ -5,7 +5,11 @@ configure_file(src/version.hpp.in generated/css_version.hpp @ONLY)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
-set(CSS_SDK "${CMAKE_CURRENT_SOURCE_DIR}/../reference/ue4ss-sdk-d7e7826d" CACHE PATH "Exact UE4SS SDK")
+set(CSS_SDK "${CMAKE_CURRENT_SOURCE_DIR}/../reference/ue4ss-sdk-d7e7826d" CACHE PATH "Retained d7e7826d header SDK; runtime imports are pinned separately")
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/ue4ss-runtime.json" CSS_UE4SS_RUNTIME_JSON)
+string(JSON CSS_UE4SS_RUNTIME_REVISION GET "${CSS_UE4SS_RUNTIME_JSON}" revision)
+string(JSON CSS_UE4SS_IMPORT_RELATIVE GET "${CSS_UE4SS_RUNTIME_JSON}" import_library)
+set(CSS_UE4SS_IMPORT_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/../${CSS_UE4SS_IMPORT_RELATIVE}" CACHE FILEPATH "Pinned runtime import library; headers remain at CSS_SDK")
 add_library(css_data STATIC src/data.cpp src/packages.cpp src/controls.cpp src/extension_data.cpp src/extension_storage.cpp)
 set_target_properties(css_data PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(css_data PUBLIC src vendor)
@@ -100,7 +104,7 @@ target_compile_definitions(css_sdk INTERFACE NOMINMAX WIN32_LEAN_AND_MEAN
   UNICODE _UNICODE UE_GAME UE_BUILD_SHIPPING=1 UBT_COMPILED_PLATFORM=Win64
   OVERRIDE_PLATFORM_HEADER_NAME=Windows PLATFORM_WINDOWS=1 PLATFORM_MICROSOFT=1
   PLATFORM_64BITS=1 WINVER=0x0A00 _WIN32_WINNT=0x0A00)
-target_link_libraries(css_sdk INTERFACE "${CSS_SDK}/sdk/lib/UE4SS.lib")
+target_link_libraries(css_sdk INTERFACE "${CSS_UE4SS_IMPORT_LIBRARY}")
 add_library(css_imgui STATIC
   "${CSS_SDK}/sdk/third-party/imgui/imgui.cpp"
   "${CSS_SDK}/sdk/third-party/imgui/imgui_draw.cpp"
@@ -119,7 +123,7 @@ endif()
 if(CSS_TRANSITION_TESTS)
   target_compile_definitions(css_core PRIVATE CSS_TRANSITION_TESTS)
 endif()
-target_compile_definitions(css_core PRIVATE UE4SS_LIB_BUILD_GITSHA="d7e7826d")
+target_compile_definitions(css_core PRIVATE UE4SS_LIB_BUILD_GITSHA="${CSS_UE4SS_RUNTIME_REVISION}")
 target_include_directories(css_core PRIVATE include)
 target_link_libraries(css_core PRIVATE css_sdk css_data css_imgui css_player_recovery user32)
 foreach(target main css_core css_data)

@@ -12,7 +12,8 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 GAME = Path('/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2')
-EXPECTED_UE4SS = '4cdd44e79df2a01fb00cf885791f933c1dd3a83324767c7a084c4da5a82f33bc'
+UE4SS_RUNTIME = json.loads((ROOT / 'native/ue4ss-runtime.json').read_text())
+EXPECTED_UE4SS = UE4SS_RUNTIME['dll_sha256']
 
 
 def sha(path: Path) -> str:

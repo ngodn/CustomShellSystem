@@ -14,7 +14,7 @@ For outfit authors, start with the [modding guide](modding/README.md). It links 
 - CSS.Package v1 embeds metadata and author artwork in the pak. IoStore assets use isolated package namespaces. [Package guide](css-packages.md) documents the converter, verification and installation.
 - All three `_P` packages are installed and discovered in-game. HIT2 gameplay was confirmed by the user. The paused-preview cloth defect is fixed by enabling the separate cloth tick on the disposable visual copy. [Cloth findings](preview-cloth.md).
 
-- This game uses UE5.6, UE4SS d7e7826d Game/Shipping/Win64. Exact SDK DLL hash matches the installation. Native consumer code is C++23, clang-cl/MSVC ABI, release dynamic CRT.
+- This game uses UE5.6 and the supplied UE4SS 97b7e501 Game/Shipping/Win64 runtime. The import library and installer are pinned to its exact DLL hash; retained headers remain d7e7826d. See [SDK notes](ue4ss-sdk.md) for the migration and verification limits. Native consumer code is C++23, clang-cl/MSVC ABI, release dynamic CRT.
 - The prior attack failure was a stranded completed-prologue interaction. CSS does not call shell switch, ability, save-game or unlock functions.
 - All three Beaute body meshes use the original human skeleton. Preserve that reference.
 - Core reload uses a permanent loader with serialized engine/UI callbacks. The core never registers a callback or starts a thread.
