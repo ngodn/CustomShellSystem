@@ -42,7 +42,12 @@ def verify(directory: Path, repak: Path = DEFAULT_REPAK) -> dict:
         outfits=manifest['catalog']['outfits']
         if len(outfits)!=1 or any(outfits[0][key]!=manifest[key] for key in ('id','name','author')):
             raise ValueError('Catalog identity mismatch')
-        from css_colors import verify_resources
+        # The runtime reads the catalog entry's own thumbnail, not the manifest's, and
+        # rejects a package without it. Verifying only the manifest let a package through
+        # here and get refused in game, which is the wrong order to find out.
+        if outfits[0].get('thumbnail')!='thumbnail.png':
+            raise ValueError('Catalog outfit must name thumbnail.png')
+        from css_controls import verify_resources
         verify_resources(manifest,source.parent)
         return manifest
 
@@ -125,11 +130,11 @@ def install(directories: list[Path], game: Path, migrate: bool, repak: Path, rep
             retired_directories.append(directory)
     if any(t.exists() and t not in retired_directories for t in targets):
         raise FileExistsError('A target directory belongs to another package or contains unrecognized files')
-    from css_colors import validate
+    from css_controls import block, validate
     retired_masks=set(); retained_masks=set()
-    for file in (mod/'catalog').glob('*.colors.json'):
+    for file in sorted([*(mod/'catalog').glob('*.customize.json'),*(mod/'catalog').glob('*.colors.json')]):
         recipe=json.loads(file.read_text())
-        masks={file.parent/name for name in validate(recipe['colors'])}
+        masks={file.parent/name for name in validate(block(recipe))}
         if recipe.get('id') in ids:
             retiring.append(file); retired_masks.update(masks)
         else:

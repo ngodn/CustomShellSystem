@@ -25,8 +25,10 @@ int main() {
         auto legacy=state.json(); legacy.erase("invert_orbit_x"); legacy.erase("invert_orbit_y");
         expect(!State::parse(legacy).invert_orbit_x && State::parse(legacy).invert_orbit_y, "Old saves lost vertical inversion default");
         state.invert_orbit_x=true; state.invert_orbit_y=false;
+        state.harbinger_mirror=false;
         auto settings=State::parse(state.json());
         expect(settings.invert_orbit_x && !settings.invert_orbit_y, "Orbit preferences did not persist");
+        expect(!settings.harbinger_mirror, "Harbinger preference lost during customization migration");
         state.enabled = true;
         state.selections["CharacterId.Player.Shell.Genessa"] = {"beaute.genessa", "regular"};
         state.favorites.insert("beaute.genessa");
@@ -86,6 +88,90 @@ int main() {
             bad_materials["outfits"][0]["variants"][0]["materials"]={{bad,"/Game/CSS/Face.Face"}};
             atomic_json(catalog_file,bad_materials,false);
             rejects([&]{Catalog::load(catalog_dir);});
+        }
+        {   // 1.0: a variant is a list of items. A package written before this says `mesh`
+            // and reads as one body item, which is what every published package does.
+            const auto* plain=with_materials.find("test","a");
+            expect(plain->items.size()==1 && plain->items[0].slot==ItemSlot::Body,
+                   "A variant with a mesh must read as one body item");
+            expect(plain->items[0].mesh==plain->mesh && plain->items[0].materials==plain->materials,
+                   "The implied body item must carry the variant's mesh and materials");
+            expect(std::string(item_slot_name(ItemSlot::Neck))=="neck","Slot name missing");
+            ItemSlot parsed{};
+            expect(item_slot_from_name("trinket4",parsed) && parsed==ItemSlot::Trinket4,"Slot lookup failed");
+            expect(!item_slot_from_name("elbow",parsed),"Unknown slot accepted");
+
+            // Built field by field: nested brace lists are ambiguous between an object
+            // and an array in nlohmann, and a materials map read as an array would make
+            // this test lie about what the parser accepts.
+            Json body_item=Json::object();
+            body_item["id"]="body"; body_item["name"]="Body"; body_item["slot"]="body";
+            body_item["mesh"]="/Game/CSS/Body.Body";
+            body_item["materials"]=Json::object(); body_item["materials"]["0"]="/Game/CSS/Skin.Skin";
+            Json collar=Json::object();
+            collar["id"]="collar"; collar["name"]="Collar"; collar["slot"]="neck"; collar["order"]=20;
+            collar["mesh"]="/Game/CSS/Collar.Collar";
+            collar["hides"]=Json::object(); collar["hides"]["sections"]=Json::array({3,4});
+            Json items=Json::array({body_item,collar});
+            auto layered=catalog;
+            layered["outfits"][0]["variants"][0].erase("mesh");
+            layered["outfits"][0]["variants"][0]["items"]=items;
+            atomic_json(catalog_file,layered,false);
+            // Hold the catalog: find() returns a pointer into it, and a temporary would
+            // be gone by the semicolon.
+            const auto loaded_items=Catalog::load(catalog_dir);
+            const auto* worn=loaded_items.find("test","a");
+            expect(worn->items.size()==2,"Both items lost");
+            expect(worn->mesh=="/Game/CSS/Body.Body" && worn->materials.at(0)=="/Game/CSS/Skin.Skin",
+                   "The body item must be mirrored onto the variant");
+            expect(worn->items[1].slot==ItemSlot::Neck && worn->items[1].order==20,"Accessory slot or order lost");
+            expect(worn->items[1].hides_sections==std::vector<int>{3,4},"Hidden sections lost");
+
+            // A variant says where its body is once, and has exactly one.
+            auto both=layered; both["outfits"][0]["variants"][0]["mesh"]="/Game/CSS/Mesh.Mesh";
+            atomic_json(catalog_file,both,false); rejects([&]{Catalog::load(catalog_dir);});
+            auto bodiless=layered; bodiless["outfits"][0]["variants"][0]["items"][0]["slot"]="chest";
+            atomic_json(catalog_file,bodiless,false); rejects([&]{Catalog::load(catalog_dir);});
+            auto twice=layered; twice["outfits"][0]["variants"][0]["items"][1]["slot"]="body";
+            atomic_json(catalog_file,twice,false); rejects([&]{Catalog::load(catalog_dir);});
+            auto same_slot=layered;
+            same_slot["outfits"][0]["variants"][0]["items"][1]["slot"]="body";
+            same_slot["outfits"][0]["variants"][0]["items"][0]["slot"]="body";
+            atomic_json(catalog_file,same_slot,false); rejects([&]{Catalog::load(catalog_dir);});
+            auto duplicate_id=layered; duplicate_id["outfits"][0]["variants"][0]["items"][1]["id"]="body";
+            atomic_json(catalog_file,duplicate_id,false); rejects([&]{Catalog::load(catalog_dir);});
+            auto unknown=layered; unknown["outfits"][0]["variants"][0]["items"][1]["slot"]="elbow";
+            atomic_json(catalog_file,unknown,false); rejects([&]{Catalog::load(catalog_dir);});
+            auto far=layered; far["outfits"][0]["variants"][0]["items"][1]["order"]=1000;
+            atomic_json(catalog_file,far,false); rejects([&]{Catalog::load(catalog_dir);});
+            auto bad_section=layered; bad_section["outfits"][0]["variants"][0]["items"][1]["hides"]["sections"]={128};
+            atomic_json(catalog_file,bad_section,false); rejects([&]{Catalog::load(catalog_dir);});
+            auto empty=layered; empty["outfits"][0]["variants"][0]["items"]=Json::array();
+            atomic_json(catalog_file,empty,false); rejects([&]{Catalog::load(catalog_dir);});
+            atomic_json(catalog_file,material_catalog,false);
+        }
+        {   // 1.0.0-beta: Templates (combinations, palettes, archetypes, etc.)
+            auto templated = catalog;
+            templated["outfits"][0]["templates"] = {
+                {"combinations", {{{"id", "harness_style"}, {"name", "Harness Set"}}}},
+                {"palettes", {{{"id", "crimson_vow"}, {"name", "Crimson Vow"}}}},
+                {"archetypes", {{{"id", "seductress_petite"}, {"name", "Petite Seductress"}}}},
+                {"physics", {{{"id", "jiggle_soft"}, {"name", "Soft Tissue"}}}},
+                {"accessories", {{{"id", "choker_set"}, {"name", "Gothic Choker"}}}},
+                {"fabrics", {{{"id", "sheer_gown"}, {"name", "Sheer Silk"}}}},
+                {"anatomy", {{{"id", "sensual_curves"}, {"name", "Hourglass"}}}},
+            };
+            atomic_json(catalog_file, templated, false);
+            auto with_templates = Catalog::load(catalog_dir);
+            expect(with_templates.outfits[0].templates.size() == 7, "Templates parsing failed");
+            expect(with_templates.outfits[0].templates[0].kind == TemplateKind::Combination, "Combination template kind wrong");
+            expect(with_templates.outfits[0].templates[1].kind == TemplateKind::Palette, "Palette template kind wrong");
+            expect(with_templates.outfits[0].templates[2].kind == TemplateKind::Archetype, "Archetype template kind wrong");
+            expect(with_templates.outfits[0].templates[3].kind == TemplateKind::Physics, "Physics template kind wrong");
+            expect(with_templates.outfits[0].templates[4].kind == TemplateKind::Accessory, "Accessory template kind wrong");
+            expect(with_templates.outfits[0].templates[5].kind == TemplateKind::Fabric, "Fabric template kind wrong");
+            expect(with_templates.outfits[0].templates[6].kind == TemplateKind::Anatomy, "Anatomy template kind wrong");
+            atomic_json(catalog_file, catalog, false);
         }
         {   // 0.4: the correction that keeps a stowed seal out of the hips. CSS measures
             // the seal against the body's live physics asset and holds it `clearance` off;

@@ -1,0 +1,211 @@
+{
+  "schema": 1,
+  "_note": "Development only, never packaged. Exercises the 1.0 control kinds against an installed mesh so the COLOR tab can be seen drawing a switch, a texture list and a pair of physics sliders without cooking a package for it.",
+  "outfits": [
+    {
+      "id": "dev.controlkinds",
+      "name": "Control kinds (dev)",
+      "author": "_eins0fx",
+      "description": "A development entry. Hood is a toggle over material sections, Pattern is a texture choice, Sheen is an ordinary material scalar, Bust and Hips are live springs.",
+      "shells": [
+        "CharacterId.Player.Darkform.CorruptedGenessa",
+        "CharacterId.Player.Shell.Genessa"
+      ],
+      "variants": [
+        {
+          "id": "harness-beaute",
+          "name": "Harness (Beaute)",
+          "mesh": "/Game/CSSAuthoring/SeductressV202/SK_SeductressV2_harness_beaute.SK_SeductressV2_harness_beaute",
+          "customize": {
+            "schema": 1,
+            "controls": [
+              {
+                "id": "hood",
+                "name": "Hood",
+                "kind": "toggle",
+                "role": "piece",
+                "default": [
+                  1,
+                  0,
+                  0,
+                  1
+                ],
+                "sections": [
+                  2
+                ],
+                "group": "outfit"
+              },
+              {
+                "id": "pattern",
+                "name": "Pattern",
+                "kind": "choice",
+                "role": "pattern",
+                "default": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "options": [
+                  {
+                    "name": "Obsidian body",
+                    "texture": "/Game/Sparta/Characters/NPCs/SesterGenessa/Art/Textures/T_Genessa_Obsidian_Body_01_BC.T_Genessa_Obsidian_Body_01_BC"
+                  },
+                  {
+                    "name": "Obsidian skirt",
+                    "texture": "/Game/Sparta/Characters/NPCs/SesterGenessa/Art/Textures/T_Genessa_Obsidian_Skirt_01_BC.T_Genessa_Obsidian_Skirt_01_BC"
+                  }
+                ],
+                "bindings": [
+                  {
+                    "slot": 0,
+                    "parameter": "BaseColorMap  non VT"
+                  }
+                ],
+                "group": "outfit"
+              },
+              {
+                "id": "sheen",
+                "name": "Sheen",
+                "kind": "scalar",
+                "role": "gloss",
+                "default": [
+                  0.5,
+                  0,
+                  0,
+                  1
+                ],
+                "min": 0,
+                "max": 1,
+                "step": 0.05,
+                "bindings": [
+                  {
+                    "slot": 0,
+                    "parameter": "Roughness"
+                  }
+                ],
+                "group": "outfit"
+              },
+              {
+                "id": "bust",
+                "name": "Bust",
+                "kind": "spring",
+                "role": "figure",
+                "group": "body",
+                "nodes": [
+                  "brust001",
+                  "brust002"
+                ],
+                "frequency": {
+                  "min": 0.9,
+                  "max": 2.6,
+                  "default": 1.5915
+                },
+                "damping_ratio": {
+                  "min": 0.35,
+                  "max": 1.0,
+                  "default": 0.65
+                }
+              },
+              {
+                "id": "hips",
+                "name": "Hips",
+                "kind": "spring",
+                "role": "figure",
+                "group": "body",
+                "nodes": [
+                  "butt001",
+                  "butt002"
+                ],
+                "frequency": {
+                  "min": 0.9,
+                  "max": 2.4,
+                  "default": 1.5099
+                },
+                "damping_ratio": {
+                  "min": 0.35,
+                  "max": 1.0,
+                  "default": 0.6852
+                }
+              }
+            ],
+            "palettes": [
+              {
+                "id": "a",
+                "name": "Set A",
+                "values": {
+                  "pattern": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ],
+                  "sheen": [
+                    0.2,
+                    0,
+                    0,
+                    1
+                  ],
+                  "hood": [
+                    1,
+                    0,
+                    0,
+                    1
+                  ],
+                  "bust": [
+                    1.2,
+                    0.45,
+                    0,
+                    1
+                  ],
+                  "hips": [
+                    1.2,
+                    0.45,
+                    0,
+                    1
+                  ]
+                }
+              },
+              {
+                "id": "b",
+                "name": "Set B",
+                "values": {
+                  "pattern": [
+                    1,
+                    0,
+                    0,
+                    1
+                  ],
+                  "sheen": [
+                    0.8,
+                    0,
+                    0,
+                    1
+                  ],
+                  "hood": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ],
+                  "bust": [
+                    2.4,
+                    0.9,
+                    0,
+                    1
+                  ],
+                  "hips": [
+                    2.2,
+                    0.9,
+                    0,
+                    1
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

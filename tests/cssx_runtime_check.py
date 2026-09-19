@@ -2,7 +2,7 @@ import ctypes as c,json,tempfile,sys,shutil,os
 from pathlib import Path
 SINK=c.CFUNCTYPE(None,c.c_void_p,c.c_void_p,c.c_size_t)
 REQUEST=c.CFUNCTYPE(c.c_int,c.c_void_p,c.c_char_p,SINK,c.c_void_p)
-class Host(c.Structure): _fields_=[('abi',c.c_uint32),('size',c.c_uint32),('context',c.c_void_p),('request',REQUEST)]
+class Host(c.Structure): _fields_=[('abi',c.c_uint32),('size',c.c_uint32),('context',c.c_void_p),('request',REQUEST),('hud',c.c_void_p)]
 CREATE=c.CFUNCTYPE(c.c_void_p,c.POINTER(Host),c.c_wchar_p)
 TICK=c.CFUNCTYPE(c.c_int,c.c_void_p,c.c_double)
 STOP=c.CFUNCTYPE(c.c_int,c.c_void_p)
@@ -22,9 +22,14 @@ def host_request(ctx,data,sink,out):
 lib=c.CDLL(str(Path(sys.argv[1]).resolve()))
 lib.cssx_get_runtime.restype=c.POINTER(API)
 api=lib.cssx_get_runtime().contents
-host=Host(1,c.sizeof(Host),None,host_request)
+assert api.abi==2, 'Update the harness when the runtime ABI changes'
+host=Host(2,c.sizeof(Host),None,host_request,None)
 with tempfile.TemporaryDirectory(prefix='cssx-测试-') as temp:
     root=Path(temp)
+    invalid_host=Host(1,c.sizeof(Host),None,host_request,None)
+    assert not api.create(c.byref(invalid_host),str(root)), 'Old host ABI accepted'
+    invalid_host=Host(2,Host.hud.offset,None,host_request,None)
+    assert not api.create(c.byref(invalid_host),str(root)), 'Truncated host accepted'
     for name,source in [('working','''local state=cssx.request({op="state.load"})
 return {model=function() return {sections={{id="main",title="Main",controls={{id="toggle",type="toggle",label="Toggle",value=state.on==true}}}}} end,
 event=function(e) state.on=e.value; assert(cssx.request({op="state.save",value=state})); end}'''),('broken','while true do end')]:

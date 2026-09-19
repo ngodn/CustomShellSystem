@@ -22,7 +22,7 @@ exception: it means no dye at all, and clears everything. *Reset part* returns o
 to the palette; *Reset all colors* returns to the bare palette.
 
 What a package should declare, and the shared vocabulary of roles that drives all of the
-above, is in [color-convention.md](color-convention.md). Packages published before that
+above, is in [control-convention.md](control-convention.md). Packages published before that
 convention keep working: CSS infers each control's group and role from its id.
 
 | Outfit | Independent controls |

@@ -7,7 +7,7 @@ For outfit authors, start with the [modding guide](modding/README.md). It links 
 - [Native Inventory CSS](inventory-ui-development.md) is the current interface in development. Four-page navigation, native display retention, mouse controls and startup have been checked locally. It replaces the standalone N wardrobe. Older preview and camera findings below are historical.
 
 - [Color customization](colors.md) documents per-part palettes/sliders, self-contained dye resources, exact Original reset, and the verified game-specific mipmap adapter.
-- [Color convention](color-convention.md) is the standard every package should follow: control groups and roles, hue locking, the palette rules, and how a custom color, a palette and a group tint combine.
+- [Color convention](control-convention.md) is the standard every package should follow: control groups and roles, hue locking, the palette rules, and how a custom color, a palette and a group tint combine.
 
 - CSS.Package v1 embeds metadata and author artwork in the pak. IoStore assets use isolated package namespaces. [Package guide](css-packages.md) documents the converter, verification and installation.
 - All three `_P` packages are installed and discovered in-game. HIT2 gameplay was confirmed by the user. The paused-preview cloth defect is fixed by enabling the separate cloth tick on the disposable visual copy. [Cloth findings](preview-cloth.md).
@@ -33,6 +33,7 @@ For outfit authors, start with the [modding guide](modding/README.md). It links 
 | Artifact | Takeaway |
 | --- | --- |
 | [STATUS.md](STATUS.md) | Current implementation and verification status |
+| [Next-Gen Architecture](next-gen-customization-architecture.md) | CSS 2.0 architecture: UI kit, templates vs profiles, Kawaii physics, and Stellar Blade jiggle |
 | [Inventory integration feasibility](inventory-integration-feasibility.md) | Live tab indices, native display, layout and bounded prototype plan |
 | [Inventory integration primary sources](inventory-integration-primary-sources.md) | UMG reorder limits, focus/input ownership and pinned native API evidence |
 | [animated-preview.md](animated-preview.md) | Paused-world animation, camera refresh behavior, live cleanup evidence and rejected additive idle |

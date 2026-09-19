@@ -197,7 +197,7 @@ void InventoryUI::build_extension_page() {
                     prompt("secondary","Expand description",right,552,info,4);
                 }
                 const auto value=extensions::display_value(c);
-                const auto control_start=inventory_children(canvas,256).size();
+                const auto control_start=ui.on(canvas).size();
                 if(kind=="radio") {
                     const auto& options=c.at("options");
                     for(size_t i=0;i<options.size();++i) {
@@ -215,7 +215,7 @@ void InventoryUI::build_extension_page() {
                     invoke(slider,L"SetIsEnabled",L"bInIsEnabled",enabled);
                     ui.place(slider,right+8,615,info-16,36);
                     auto* label=ui.text(value,right,582,info,32,23,light);
-                    sliders_.push_back({WeakObject(slider),WeakObject(label),{},{{"action","x_value"}},c.at("value").get<float>(),true});
+                    sliders_.push_back({WeakObject(slider),WeakObject(label),{},{{"action","x_value"}},c.at("value").get<float>(),true,""});
                     if(enabled) {prompt("left","",right,668,28,15);prompt("right","Adjust",right+36,668,info-36,16);}
                 } else if(kind=="number" || kind=="choice") {
                     button("<",right,600,48,48,{{"action","x_adjust"},{"delta",-1}},false,enabled);
@@ -248,7 +248,7 @@ void InventoryUI::build_extension_page() {
                     if(!enabled) invoke(action,L"SetIsEnabled",L"bInIsEnabled",false);
                 }
                 if(!c.value("enabled",true) || c.value("busy",false)) {
-                    const auto children=inventory_children(canvas,256);
+                    const auto children=ui.on(canvas);
                     for(size_t i=control_start;i<children.size();++i)
                         invoke(children[i],L"SetRenderOpacity",L"InOpacity",.6f);
                 }
@@ -299,7 +299,9 @@ void InventoryUI::build_extension_page() {
         }
     }
     transition_widgets_.clear();
-    for(auto* child:inventory_children(canvas,256))
+    // From the builder's own record, not an engine walk of the canvas. See the same
+    // change on the CSS page: that walk is bounded and a wide panel used to trip it.
+    for(auto* child:ui.on(canvas))
         transition_widgets_.push_back({WeakObject(child),{extension_slide_*70.*ui.scale,0}});
     dirty_=false;
     if(enter_transition_) {transition_started_=GetTickCount64();enter_transition_=false;}

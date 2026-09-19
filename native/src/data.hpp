@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 #include <nlohmann/json.hpp>
-#include "colors.hpp"
+#include "controls.hpp"
 
 namespace css {
 using Json = nlohmann::json;
@@ -32,11 +32,42 @@ struct AttachmentCollision {
     bool operator==(const AttachmentCollision&) const = default;
 };
 struct AttachmentOffset { std::array<double,3> location{}, rotation{}; AttachmentCollision collision; bool operator==(const AttachmentOffset&) const = default; };   // socket space, cm and degrees
+// 1.0: a variant is a set of items rather than a single mesh. Exactly one sits in the
+// `body` slot and replaces the character mesh, which is what every package published so
+// far does, and the rest are accessories posed by the body. A manifest that names one
+// `mesh` reads as a single body item, so nothing published has to change.
+enum class ItemSlot {
+    Body, Head, Hair, Face, Ears, Neck, Chest, Back, Hands, Waist, Legs, Feet,
+    Jewelry, Genitalia, FabricOuter, FabricInner,
+    Trinket1, Trinket2, Trinket3, Trinket4
+};
+const char* item_slot_name(ItemSlot);
+bool item_slot_from_name(const std::string&, ItemSlot&);
+// 1.0.0-beta: Templates for combinations, palettes, body archetypes, physics, etc.
+enum class TemplateKind { Combination, Palette, Archetype, Physics, Hair, Jewelry, Glow, Accessory, Fabric, Anatomy };
+struct Template {
+    std::string id, name;
+    TemplateKind kind = TemplateKind::Combination;
+    Json data = Json::object();
+};
+struct Item {
+    std::string id, name, mesh;
+    ItemSlot slot = ItemSlot::Body;
+    // Layering, low to high. Two items on the same part of the body need an order for
+    // the author to say which one sits on top; the cook decides the rest.
+    int order = 0;
+    std::map<int,std::string> materials;
+    // Body material sections this item covers, so a boot can stop a foot poking through.
+    std::vector<int> hides_sections;
+};
 struct Variant {
     std::string id, name, mesh;
     std::map<int,std::string> materials;
-    std::optional<ColorOptions> colors;
+    std::optional<ControlSet> controls;
     std::map<std::string,AttachmentOffset> attachments;   // 0.4: per-socket correction for stowed items
+    // Always at least one, and items[0] is the body item whose mesh and materials are
+    // mirrored by `mesh` and `materials` above.
+    std::vector<Item> items;
 };
 struct Outfit {
     std::string id, name, author, description, category;
@@ -44,11 +75,12 @@ struct Outfit {
     std::vector<Variant> variants;
     bool same_skeleton = false;
     fs::path thumbnail;
-    ColorOptions colors;
+    ControlSet controls;
     fs::path resources;
-    const ColorOptions& colors_for(const std::string& variant) const {
-        for(const auto& v:variants) if(v.id==variant && v.colors) return *v.colors;
-        return colors;
+    std::vector<Template> templates;
+    const ControlSet& controls_for(const std::string& variant) const {
+        for(const auto& v:variants) if(v.id==variant && v.controls) return *v.controls;
+        return controls;
     }
 };
 struct Catalog {
@@ -59,10 +91,12 @@ struct Catalog {
     const Variant* find(const std::string& outfit, const std::string& variant) const;
     bool compatible(const std::string& outfit, const std::string& shell) const;
 };
-struct Selection { std::string outfit, variant; Customization colors; };
+struct Selection { std::string outfit, variant; Customization custom; };
 // 0.4: a template keeps the animation settings with the outfit selections.
 struct Preset { std::map<std::string, Selection> selections; std::string walk_animation = "normal"; };
 bool valid_walk_animation(const std::string&);
+// 1.0.0-beta: Profile is the full character snapshot across all systems
+using Profile = Preset;
 struct State {
     bool enabled = false;
     bool auto_apply = true;
@@ -70,9 +104,11 @@ struct State {
     std::string walk_animation = "normal";   // "normal" or "feminine" (ANIMATION tab). Jog and sprint stay on the game's own animation in 0.4.
     bool harbinger_mirror = true;            // when severed into the Harbinger (Darkform), wear the living shell's current outfit instead of its own saved one.
     std::map<std::string, Selection> selections;
-    std::map<std::string, Customization> remembered_colors;
+    std::map<std::string, Customization> remembered_custom;
     std::set<std::string> favorites;
     std::map<std::string, Preset> presets;
+    std::map<std::string, Profile>& profiles() { return presets; }
+    const std::map<std::string, Profile>& profiles() const { return presets; }
     static State parse(const Json&);
     Json json() const;
 };

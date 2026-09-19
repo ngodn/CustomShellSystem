@@ -11,13 +11,13 @@ import subprocess
 import time
 
 import css_convert as converter
-from css_colors import resource_info, validate
+from css_controls import block, resource_info, validate
 from css_package import release_zip, verify
 
 FIELDS = {
     'format', 'format_version', 'id', 'name', 'author', 'version', 'description',
     'source_url', 'thumbnail', 'thumbnail_source', 'name_format', 'inputs',
-    'mesh', 'variants', 'shells', 'materials', 'colors', 'include',
+    'mesh', 'variants', 'shells', 'materials', 'customize', 'colors', 'include',
     'import_repairs', 'variant_sources',
 }
 
@@ -34,11 +34,14 @@ def strings(value, name):
     return value
 
 
-def color_recipe(path: Path, identity: str):
+def control_recipe(path: Path, identity: str):
     data = json.loads(path.read_text())
     if data.get('id') != identity:
-        raise ValueError(f'Color recipe ID must be {identity}: {path}')
-    for name in validate(data['colors']):
+        raise ValueError(f'Control recipe ID must be {identity}: {path}')
+    recipe = block(data)
+    if recipe is None:
+        raise ValueError(f'Recipe has no customize block: {path}')
+    for name in validate(recipe):
         resource_info(path.parent / name)
 
 
@@ -72,26 +75,27 @@ def read_project(path: Path) -> argparse.Namespace:
     shells = strings(data.get('shells', []), 'shells')
     if any(not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,95}', s) for s in shells):
         raise ValueError('Invalid shell tag')
-    materials, colors, repairs = file('materials'), file('colors'), file('import_repairs')
+    materials, repairs = file('materials'), file('import_repairs')
+    controls = file('customize') or file('colors')
     mesh = data.get('mesh')
     if mesh is not None:
         text(mesh, 'mesh', 1024)
     includes = strings(data.get('include', []), 'include')
     if grouped:
-        if inputs or mesh or variants or materials or colors or repairs or includes:
-            raise ValueError('variant_sources owns inputs, mesh, variants, materials, colors, include and import_repairs')
+        if inputs or mesh or variants or materials or controls or repairs or includes:
+            raise ValueError('variant_sources owns inputs, mesh, variants, materials, customize, include and import_repairs')
         for group in converter.variant_sources(grouped):
             converter.discover(group['inputs'])
-            if group.get('colors'):
-                color_recipe(group['colors'], identity)
+            if group.get('customize') or group.get('colors'):
+                control_recipe(group.get('customize') or group['colors'], identity)
     else:
         if not inputs:
             raise ValueError('Provide inputs or variant_sources')
         converter.discover(inputs)
         if mesh and variants:
             raise ValueError('Use mesh or variants, not both')
-        if colors:
-            color_recipe(colors, identity)
+        if controls:
+            control_recipe(controls, identity)
     description = data.get('description', '')
     if not isinstance(description, str) or len(description.encode()) > 4096:
         raise ValueError('description must be text, at most 4096 UTF-8 bytes')
@@ -104,7 +108,7 @@ def read_project(path: Path) -> argparse.Namespace:
         source_url=data.get('source_url'), thumbnail=thumbnail,
         thumbnail_source=data.get('thumbnail_source', 'author-provided'),
         name_format=pattern, mesh=mesh, variant=variants, shell=shells,
-        materials=materials, colors=colors, include=includes, import_repairs=repairs,
+        materials=materials, colors=controls, include=includes, import_repairs=repairs,
         variant_sources=grouped, source_snapshot=None,
     )
 

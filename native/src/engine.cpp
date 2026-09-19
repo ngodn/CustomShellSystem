@@ -370,13 +370,26 @@ UObject* Appearance::player(void* engine) {
         ++player_revision; observed_pawn_=pawn; observed_component_=component; observed_controller_=controller;
     }
     if (component) {
-        if(component==component_.Get()) detach_residual_colors();
+        if(component==component_.Get()) detach_residual_controls();
         if(auto* mesh = mesh_asset(component)) current_mesh = narrow(mesh->GetPathName());
     }
     return pawn;
 }
 void Appearance::restore_menu() {
     menu_attachments_.release();
+    menu_items_.release();
+    if(auto* preview=menu_component_.Get()) for(int section:menu_hidden_sections_)
+        for(int lod=0;lod<lod_count();++lod) {
+            Call set(preview,L"ShowMaterialSection",4);
+            set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t(section));
+            set.set(L"bShow",true); set.set(L"LODIndex",int32_t(lod)); set.run();
+        }
+    menu_hidden_sections_.clear();
+    if(auto* preview=menu_component_.Get()) for(const auto& [morph,weight]:driven_morphs_) {
+        Call set(preview,L"SetMorphTarget",3);
+        set.set(L"MorphTargetName",FName(wide(morph).c_str(),FNAME_Add));
+        set.set(L"Value",0.f); set.set(L"bRemoveZeroWeight",true); set.run();
+    }
     auto component=menu_component_, applied=menu_applied_;
     auto original=std::exchange(menu_original_,{});
     auto materials=std::exchange(menu_original_materials_,{});
@@ -419,6 +432,27 @@ void Appearance::sync_menu() {
         if(i<previous.Num()) std::memcpy(&current,previous.GetRawPtr(i),sizeof(current));
         if(current!=value) material(target,i,value);
     }
+    push_morphs(target);
+    if(!current_items_.empty()) menu_items_.update(target,current_items_identity_,current_items_);
+    // A section an item covers, or a toggle switched off, has to be hidden on the preview
+    // too, or the wardrobe shows a part the body is not wearing.
+    for(int section:applied_hidden_) {
+        if(!menu_hidden_sections_.insert(section).second) continue;
+        for(int lod=0;lod<lod_count();++lod) {
+            Call set(target,L"ShowMaterialSection",4);
+            set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t(section));
+            set.set(L"bShow",false); set.set(L"LODIndex",int32_t(lod)); set.run();
+        }
+    }
+    for(auto it=menu_hidden_sections_.begin();it!=menu_hidden_sections_.end();) {
+        if(applied_hidden_.contains(*it)) { ++it; continue; }
+        for(int lod=0;lod<lod_count();++lod) {
+            Call set(target,L"ShowMaterialSection",4);
+            set.set(L"MaterialID",int32_t(*it)); set.set(L"SectionIndex",int32_t(*it));
+            set.set(L"bShow",true); set.set(L"LODIndex",int32_t(lod)); set.run();
+        }
+        it=menu_hidden_sections_.erase(it);
+    }
 }
 void Appearance::remember_materials() {
     expected_materials_.clear();
@@ -428,8 +462,8 @@ void Appearance::remember_materials() {
         expected_materials_.emplace_back(value);
     }
 }
-void Appearance::detach_residual_colors() {
-    if(color_mids_.empty()) return;
+void Appearance::detach_residual_controls() {
+    if(control_mids_.empty()) return;
     auto* component=component_.Get();
     if(!component || !applied_.Get() || mesh_asset(component)==applied_.Get()) return;
     // Changing gameplay shells can leave trailing OverrideMaterials entries
@@ -437,7 +471,7 @@ void Appearance::detach_residual_colors() {
     // game-created effects or another mod's replacement. Keep the weak cache so
     // a temporary stock-mesh reset can still reuse live dye resources.
     auto values=overrides(component);
-    for(const auto& [slot,weak]:color_mids_) {
+    for(const auto& [slot,weak]:control_mids_) {
         if(slot<0 || slot>=values.Num()) continue;
         UObject* actual{}; std::memcpy(&actual,values.GetRawPtr(slot),sizeof(actual));
         if(auto* owned=weak.Get();owned && actual==owned) material(component,slot,nullptr);
@@ -477,25 +511,25 @@ bool Appearance::repair_materials_needed() {
 bool Appearance::reuse_materials() {
     // A completed effect can replace OverrideMaterials without changing the
     // outfit. Reattach the existing MIDs and their dye targets instead of
-    // importing masks and rendering every color surface again on the game thread.
+    // importing masks and rendering every dye surface again on the game thread.
     // Weak references never retain a previous world; collected resources take
     // the normal rebuild path. Check every reference before changing any slot.
     if(!repair_materials_needed()) return false;
     for(const auto& weak:expected_materials_)
         if(weak.ObjectSerialNumber && !weak.Get()) return false;
-    for(const auto& [slot,weak]:color_mids_) {
+    for(const auto& [slot,weak]:control_mids_) {
         if(!weak.Get() || slot<0 || static_cast<size_t>(slot)>=expected_materials_.size() ||
            weak.Get()!=expected_materials_[slot].Get()) return false;
     }
-    for(const auto& [id,weak]:color_targets_) if(!weak.Get()) return false;
+    for(const auto& [id,weak]:dye_targets_) if(!weak.Get()) return false;
     auto* component=component_.Get();
     const auto count=std::max(static_cast<size_t>(overrides(component).Num()),expected_materials_.size());
     for(size_t i=0;i<count;++i)
         material(component,static_cast<int>(i),i<expected_materials_.size()?expected_materials_[i].Get():nullptr);
-    if(!materials_match()) throw std::runtime_error("Recovered color material read-back failed");
+    if(!materials_match()) throw std::runtime_error("Recovered material read-back failed");
     material_debug=material_snapshot(component,applied_.Get());
-    material_debug["colors"]=last_colors_;
-    material_debug["dye_targets"]=color_targets_.size();
+    material_debug["controls"]=last_values_;
+    material_debug["dye_targets"]=dye_targets_.size();
     return true;
 }
 Json Appearance::transition_state(void* engine) {
@@ -581,7 +615,7 @@ bool Appearance::ready_to_apply() const {
         Call montage(anim,L"GetCurrentActiveMontage",1); montage.run();
         if(montage.get<UObject*>()) return false;
     }
-    // Retained player/controller changes can keep our own color MIDs.
+    // Retained player/controller changes can keep our own material instances.
     if(component==component_.Get() && mesh_asset(component)==applied_.Get()) return materials_match();
     // Reclaiming the stock mesh after a teleporter/jump-point return has already recorded
     // the stable original baseline; do not block recovery on transient effect parameters.
@@ -648,7 +682,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
                 return true;
             }
         }
-        reset_colors();
+        reset_controls();
         if(before!=target && !returning_to_outfit) set_mesh(component, target);
         const int count=overrides(component).Num();
         for(int i=0;i<count;++i) material(component,i,nullptr);
@@ -671,8 +705,12 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
 bool Appearance::restore() {
     offsets_.release();
     attachments_.release();
+    items_.release();
+    current_items_.clear(); current_items_identity_.clear();
+    // The mesh is going back to the game's own, so nothing CSS hid on it may survive.
+    toggle_hidden_.clear(); item_hidden_.clear(); reconcile_sections();
     restore_menu();
-    detach_residual_colors();
+    detach_residual_controls();
     auto* component = component_.Get();
     auto* applied = applied_.Get();
     if (component && applied && mesh_asset(component) == applied) {
@@ -684,7 +722,7 @@ bool Appearance::restore() {
             if(component_.Get()==component) material_debug=material_snapshot(component,original);
         }
     }
-    color_mids_.clear(); color_targets_.clear(); color_textures_.clear(); last_colors_.clear(); color_outfit_.clear();
+    control_mids_.clear(); dye_targets_.clear(); dye_textures_.clear(); last_values_.clear(); control_outfit_.clear();
     expected_materials_.clear();
     component_.Reset(); applied_.Reset(); original_.clear(); original_materials_.clear(); original_default_materials_.clear(); original_live_materials_.clear(); applied_materials_.clear();
     return true;
@@ -776,11 +814,31 @@ struct Layout {
     UObject* tree; UObject* canvas; double scale;
     UObject* serif;
     double origin_x = 0, origin_y = 0;
+    // AddChildToCanvas is only ever called here, so this is the complete record of what
+    // a build put on screen, in the order it went on, with the position already in page
+    // units. Anything that needs to walk the finished page reads this instead of asking
+    // the engine to enumerate the canvas: that enumeration is bounded, and a panel wide
+    // enough to pass the bound used to take the whole tab down with it.
+    struct Placed { UObject* widget; UObject* canvas; double x, y, w, h; };
+    std::vector<Placed> placed{};
+    std::vector<UObject*> on(UObject* target) const {
+        std::vector<UObject*> result;
+        for(const auto& p:placed) if(p.canvas==target) result.push_back(p.widget);
+        return result;
+    }
+    // How far down a canvas its contents actually reach. A scrolling list is sized from
+    // this, so a page describes its rows and never also has to total their heights.
+    double extent_of(UObject* target) const {
+        double bottom=0;
+        for(const auto& p:placed) if(p.canvas==target) bottom=std::max(bottom,p.y+p.h);
+        return bottom;
+    }
     void place(UObject* widget, double x, double y, double width, double height) {
         Call add(canvas, L"AddChildToCanvas", 2); add.set(L"content", widget); add.run();
         auto* slot = add.get<UObject*>();
         invoke(slot, L"SetPosition", L"InPosition", Vec2{(x-origin_x)*scale, (y-origin_y)*scale});
         invoke(slot, L"SetSize", L"InSize", Vec2{width*scale, height*scale});
+        placed.push_back({widget, canvas, x-origin_x, y-origin_y, width, height});
     }
     UObject* box(double x, double y, double w, double h, Color color) {
         auto* widget = construct(L"/Script/UMG.Border", tree);
@@ -902,14 +960,288 @@ void update_dye_mips(UObject* target) {
     reinterpret_cast<void(*)(UObject*,bool)>(const_cast<unsigned char*>(module)+match->update)(target,false);
 }
 }
-void Appearance::reset_colors() {
-    if(auto* component=component_.Get()) for(const auto& [slot,weak]:color_mids_) {
+namespace {
+// 1.0: the springs that give a body its secondary motion sit on the mesh's post-process
+// anim instance, one FAnimNode_SpringBone struct property per node. The blueprint names
+// them in compile order (AnimGraphNode_SpringBone, _1, _2 and so on) and a recompile can
+// shuffle that, so CSS matches on the bone a node drives and never on the property name.
+struct SpringNode {
+    std::byte* data=nullptr;
+    int32_t stiffness=0, damping=0, max_displacement=0, error_reset=0;
+    // Bitfield bools carry their mask in the property, so go through it, not memcpy.
+    FBoolProperty *limit=nullptr, *translate[3]={}, *rotate[3]={};
+    double get(int32_t at) const { double v; std::memcpy(&v,data+at,sizeof v); return v; }
+    void put(int32_t at,double v) const { std::memcpy(data+at,&v,sizeof v); }
+    bool flag(FBoolProperty* p) const { return p && p->GetPropertyValueInContainer(data); }
+    void set_flag(FBoolProperty* p,bool v) const { if(p) p->SetPropertyValueInContainer(data,v); }
+};
+// SetMorphTarget records a curve on the component whether or not the mesh has a shape by
+// that name, and GetMorphTarget reads that same curve straight back, so a read-back proves
+// only that the number was stored. Ask the mesh what it actually carries. A UMorphTarget's
+// object name is the morph name, which is what CSSImportMesh writes and what an author
+// puts in `morph`.
+bool mesh_has_morph(UObject* mesh, const std::string& name) {
+    if(!mesh) return false;
+    auto* p=mesh->GetPropertyByNameInChain(L"MorphTargets");
+    if(!p || !p->IsA<FArrayProperty>()) throw std::runtime_error("Mesh morph target layout mismatch");
+    auto* array=static_cast<FArrayProperty*>(p);
+    if(array->GetInner()->GetElementSize()!=sizeof(UObject*)) throw std::runtime_error("Mesh morph target array layout mismatch");
+    FScriptArrayHelper targets(array,reinterpret_cast<std::byte*>(mesh)+array->GetOffset_Internal());
+    if(targets.Num()<0 || targets.Num()>4096) throw std::runtime_error("Invalid morph target count");
+    const auto wanted=wide(name);
+    for(int i=0;i<targets.Num();++i) {
+        UObject* target=nullptr;
+        std::memcpy(&target,targets.GetRawPtr(i),sizeof target);
+        if(target && target->GetName()==wanted) return true;
+    }
+    return false;
+}
+UObject* post_process_instance(UObject* component) {
+    if(!component) return nullptr;
+    Call call(component,L"GetPostProcessInstance",1); call.run();
+    return call.get<UObject*>();
+}
+std::map<std::string,SpringNode> spring_nodes(UObject* anim) {
+    std::map<std::string,SpringNode> out;
+    if(!anim) return out;
+    auto* node_type=static_cast<UScriptStruct*>(find(L"/Script/AnimGraphRuntime.AnimNode_SpringBone"));
+    auto* stiffness=field(node_type,L"SpringStiffness",sizeof(double));
+    auto* damping=field(node_type,L"SpringDamping",sizeof(double));
+    auto* max_disp=field(node_type,L"MaxDisplacement",sizeof(double));
+    auto* err=field(node_type,L"ErrorResetThresh",sizeof(double));
+    auto boolprop=[&](const wchar_t* name)->FBoolProperty*{
+        auto* p=node_type->GetPropertyByNameInChain(name);
+        if(!p || !p->IsA<FBoolProperty>() || p->GetOffset_Internal()<0) throw std::runtime_error("Spring flag layout does not match this build");
+        return static_cast<FBoolProperty*>(p);
+    };
+    auto* limit=boolprop(L"bLimitDisplacement");
+    FBoolProperty* trans[3]={boolprop(L"bTranslateX"),boolprop(L"bTranslateY"),boolprop(L"bTranslateZ")};
+    FBoolProperty* rot[3]={boolprop(L"bRotateX"),boolprop(L"bRotateY"),boolprop(L"bRotateZ")};
+    auto* spring_bone=node_type->GetPropertyByNameInChain(L"SpringBone");
+    auto* bone_name=field(find(L"/Script/Engine.BoneReference"),L"BoneName",sizeof(FName));
+    if(!spring_bone || !spring_bone->IsA<FStructProperty>() || spring_bone->GetOffset_Internal()<0 ||
+       bone_name->GetOffset_Internal()<0 ||
+       spring_bone->GetOffset_Internal()+bone_name->GetOffset_Internal()+int32_t(sizeof(FName))>node_type->GetPropertiesSize())
+        throw std::runtime_error("Spring node layout does not match this build");
+    const int32_t name_at=spring_bone->GetOffset_Internal()+bone_name->GetOffset_Internal();
+    auto* type=anim->GetClassPrivate();
+    if(!type) throw std::runtime_error("Animation instance has no class");
+    for(auto* p:type->ForEachProperty()) {
+        if(!p->IsA<FStructProperty>() || p->GetArrayDim()!=1 || p->GetOffset_Internal()<0) continue;
+        if(static_cast<FStructProperty*>(p)->GetStruct().Get()!=node_type) continue;
+        if(p->GetElementSize()!=node_type->GetPropertiesSize()) throw std::runtime_error("Spring node size does not match this build");
+        auto* data=reinterpret_cast<std::byte*>(anim)+p->GetOffset_Internal();
+        FName bone; std::memcpy(&bone,data+name_at,sizeof bone);
+        auto name=narrow(bone.ToString());
+        if(name.empty() || name=="None") continue;
+        if(out.size()>=256) throw std::runtime_error("Spring node count exceeds bound");
+        out.emplace(std::move(name),SpringNode{data,stiffness->GetOffset_Internal(),damping->GetOffset_Internal(),
+            max_disp->GetOffset_Internal(),err->GetOffset_Internal(),limit,
+            {trans[0],trans[1],trans[2]},{rot[0],rot[1],rot[2]}});
+    }
+    return out;
+}
+}
+void WornItems::release() {
+    for(auto& worn:worn_) if(auto* component=worn.component.Get()) {
+        Call owner(component,L"GetOwner",1); owner.run();
+        Call destroy(component,L"K2_DestroyComponent",1); destroy.set(L"Object",owner.get<UObject*>()); destroy.run();
+    }
+    worn_.clear(); body_.Reset(); identity_.clear();
+}
+std::vector<std::string> WornItems::ids() const {
+    std::vector<std::string> result;
+    for(const auto& worn:worn_) result.push_back(worn.id);
+    return result;
+}
+void WornItems::sync_morph(const std::string& morph, float weight) {
+    auto name=FName(wide(morph).c_str(),FNAME_Add);
+    for(auto& worn:worn_) {
+        if(auto* comp=worn.component.Get()) {
+            if(auto* mesh=mesh_asset(comp)) {
+                if(mesh_has_morph(mesh,morph)) {
+                    Call set(comp,L"SetMorphTarget",3);
+                    set.set(L"MorphTargetName",name);
+                    set.set(L"Value",weight);
+                    set.set(L"bRemoveZeroWeight",false);
+                    set.run();
+                }
+            }
+        }
+    }
+}
+void WornItems::sync_morphs(const std::map<std::string, float>& driven_morphs) {
+    for(const auto& [morph,weight]:driven_morphs) sync_morph(morph,weight);
+}
+std::set<int> WornItems::update(UObject* body,const std::string& identity,const std::vector<Item>& items) {
+    std::set<int> hidden;
+    // A component the game threw away with the pawn leaves a dead handle behind, so a
+    // rebuild is also how CSS recovers from one rather than clinging to it.
+    const bool stale=std::any_of(worn_.begin(),worn_.end(),[](const auto& worn){return !worn.component.Get();});
+    if(!body) { release(); return hidden; }
+    if(body_.Get()!=body || identity_!=identity || stale) {
+        release();
+        body_=body; identity_=identity;
+        // Low order first, so an author reads the list the way it stacks.
+        std::vector<const Item*> ordered;
+        for(const auto& entry:items) if(entry.slot!=ItemSlot::Body) ordered.push_back(&entry);
+        std::stable_sort(ordered.begin(),ordered.end(),[](const Item* a,const Item* b){return a->order<b->order;});
+        Call owner(body,L"GetOwner",1); owner.run(); auto* actor=owner.get<UObject*>();
+        if(!actor) throw std::runtime_error("The character has no actor to attach items to");
+        Call transform(find(L"/Script/Engine.Default__KismetMathLibrary"),L"MakeTransform",4);
+        transform.set(L"Location",std::array<double,3>{}); transform.set(L"Rotation",std::array<double,3>{});
+        transform.set(L"Scale",std::array<double,3>{1,1,1}); transform.run();
+        auto* result=transform.param(L"ReturnValue");
+        auto copy_transform=[&](Call& target) {
+            auto* input=target.param(L"RelativeTransform");
+            if(!input->SameType(result) || input->GetElementSize()!=result->GetElementSize())
+                throw std::runtime_error("Item transform layout mismatch");
+            input->CopyCompleteValue(target.data(input),transform.data(result));
+        };
+        try {
+            for(const Item* entry:ordered) {
+                AssetLoadRoots roots;
+                auto* mesh=load(entry->mesh); roots.keep(mesh);
+                if(!mesh->IsA(static_cast<UClass*>(find(L"/Script/Engine.SkeletalMesh"))))
+                    throw std::runtime_error("Item asset is not a skeletal mesh: "+entry->id);
+                if(body_.Get()!=body) throw std::runtime_error("The character changed while items were loading");
+                Call add(actor,L"AddComponentByClass",5);
+                add.set(L"Class",find(L"/Script/Engine.SkeletalMeshComponent"));
+                add.set(L"bManualAttachment",true); add.set(L"bDeferredFinish",true);
+                copy_transform(add); add.run();
+                auto* component=add.get<UObject*>();
+                if(!component) throw std::runtime_error("Could not create the item component: "+entry->id);
+                // Recorded before anything else can throw, so a failure still cleans up.
+                worn_.push_back({entry->id,WeakObject(component)});
+                Call asset(component,L"SetSkeletalMeshAsset",1); asset.set(L"NewMesh",mesh); asset.run();
+                // The body drives the pose, and this is set before the component is
+                // registered on purpose. Setting it afterwards with bForceUpdate
+                // reallocates the follower's transform data on a live component and
+                // crashed the game on the next page rebuild, 2026-09-17. The follower
+                // runs no animation graph of its own, which is what keeps a dozen cheap.
+                Call leader(component,L"SetLeaderPoseComponent",3);
+                leader.set(L"NewLeaderBoneComponent",body); leader.set(L"bForceUpdate",true);
+                leader.set(L"bInFollowerShouldTickPose",false); leader.run();
+                Call collision(component,L"SetCollisionEnabled",1); collision.set(L"NewType",uint8_t{0}); collision.run();
+                Call finish(actor,L"FinishAddComponent",3);
+                finish.set(L"Component",component); finish.set(L"bManualAttachment",true);
+                copy_transform(finish); finish.run();
+                Call tick(component,L"SetComponentTickEnabled",1); tick.set(L"bEnabled",false); tick.run();
+                Call attach(component,L"K2_AttachToComponent",7);
+                attach.set(L"Parent",body); attach.set(L"SocketName",FName(L"None"));
+                attach.set(L"LocationRule",uint8_t{0}); attach.set(L"RotationRule",uint8_t{0}); attach.set(L"ScaleRule",uint8_t{0});
+                attach.set(L"bWeldSimulatedBodies",false); attach.run();
+                if(!attach.get<bool>()) throw std::runtime_error("Item attachment did not complete: "+entry->id);
+                for(const auto& [slot,path]:entry->materials) {
+                    auto* value=load(path); roots.keep(value);
+                    if(!value->IsA(static_cast<UClass*>(find(L"/Script/Engine.MaterialInterface"))))
+                        throw std::runtime_error("Item material override is not a material: "+entry->id);
+                    material(component,slot,value);
+                }
+            }
+        } catch(...) { release(); throw; }
+    }
+    for(const auto& entry:items)
+        if(entry.slot!=ItemSlot::Body) hidden.insert(entry.hides_sections.begin(),entry.hides_sections.end());
+    return hidden;
+}
+void Appearance::sync_items(const Outfit& outfit,const std::string& variant) {
+    const Variant* worn=nullptr;
+    for(const auto& v:outfit.variants) if(v.id==variant) worn=&v;
+    // Dropping the items also drops what they were covering, or a body would keep a hole
+    // in it after the thing filling the hole went away.
+    auto drop=[&]{ items_.release(); if(!item_hidden_.empty()) { item_hidden_.clear(); reconcile_sections(); } };
+    if(!worn) { drop(); return; }
+    auto* component=component_.Get();
+    if(!component || !applied_.Get() || mesh_asset(component)!=applied_.Get()) { drop(); return; }
+    const auto identity=outfit.id+":"+variant+":"+worn->mesh;
+    const auto wanted=items_.update(component,identity,worn->items);
+    current_items_=worn->items; current_items_identity_=identity;
+    // An item that covers part of the body hides those sections. This is the whole set the
+    // worn items want, so dropping an item puts its section back without disturbing a
+    // toggle the player set.
+    item_hidden_=wanted;
+    reconcile_sections();
+    items_.sync_morphs(driven_morphs_);
+}
+int Appearance::lod_count() {
+    auto* component=component_.Get(); if(!component) return 1;
+    Call count(component,L"GetNumLODs",1); count.run();
+    return std::clamp(count.get<int32_t>(),1,16);
+}
+void Appearance::show_hidden_sections() {
+    // Only the toggles' own sections. An item still covering part of the body keeps its
+    // section hidden, which is what reconcile_sections works out.
+    toggle_hidden_.clear();
+    reconcile_sections();
+}
+// The wardrobe shows a second component, not the one being worn, so every shape has to
+// be written to both or the slider moves nothing you can see. Weights live in
+// driven_morphs_ precisely so this can replay them.
+void Appearance::push_morphs(UObject* component) {
+    if(!component) return;
+    for(const auto& [morph,weight]:driven_morphs_) {
+        Call set(component,L"SetMorphTarget",3);
+        set.set(L"MorphTargetName",FName(wide(morph).c_str(),FNAME_Add));
+        set.set(L"Value",weight); set.set(L"bRemoveZeroWeight",false); set.run();
+    }
+    items_.sync_morphs(driven_morphs_);
+    menu_items_.sync_morphs(driven_morphs_);
+}
+void Appearance::reconcile_sections() {
+    auto* component=component_.Get();
+    if(!component) { applied_hidden_.clear(); return; }
+    std::set<int> want=toggle_hidden_;
+    want.insert(item_hidden_.begin(),item_hidden_.end());
+    auto set_shown=[&](int section,bool shown) {
+        for(int lod=0;lod<lod_count();++lod) {
+            Call set(component,L"ShowMaterialSection",4);
+            set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t(section));
+            set.set(L"bShow",shown); set.set(L"LODIndex",int32_t(lod)); set.run();
+        }
+    };
+    for(int section:want) if(!applied_hidden_.contains(section)) set_shown(section,false);
+    for(int section:applied_hidden_) if(!want.contains(section)) set_shown(section,true);
+    applied_hidden_=std::move(want);
+}
+void Appearance::clear_driven_morphs() {
+    for(auto* component:{component_.Get(),menu_component_.Get()})
+        if(component) for(const auto& [morph,weight]:driven_morphs_) {
+            Call set(component,L"SetMorphTarget",3);
+            set.set(L"MorphTargetName",FName(wide(morph).c_str(),FNAME_Add));
+            set.set(L"Value",0.f); set.set(L"bRemoveZeroWeight",true); set.run();
+        }
+    driven_morphs_.clear();
+    items_.sync_morphs(driven_morphs_);
+    menu_items_.sync_morphs(driven_morphs_);
+    formula_offsets_.clear();
+}
+void Appearance::restore_springs() {
+    // Put back what the animation blueprint shipped, not what the package declared as its
+    // default: those two are meant to agree, and when they do not the author's asset wins.
+    if(!spring_originals_.empty()) try {
+        auto nodes=spring_nodes(spring_instance_.Get());
+        for(const auto& [bone,o]:spring_originals_) if(auto found=nodes.find(bone); found!=nodes.end()) {
+            const auto& n=found->second;
+            n.put(n.stiffness,o.stiffness); n.put(n.damping,o.damping);
+            n.put(n.max_displacement,o.max_displacement); n.put(n.error_reset,o.error_reset);
+            n.set_flag(n.limit,o.limit);
+            for(int i=0;i<3;++i) { n.set_flag(n.translate[i],o.translate[size_t(i)]); n.set_flag(n.rotate[i],o.rotate[size_t(i)]); }
+        }
+    } catch(const std::exception&) { /* The instance went away with the mesh, which restores it anyway. */ }
+    spring_originals_.clear(); spring_instance_=nullptr;
+}
+void Appearance::reset_controls() {
+    show_hidden_sections();
+    restore_springs();
+    clear_driven_morphs();
+    if(auto* component=component_.Get()) for(const auto& [slot,weak]:control_mids_) {
         if(auto* mid=weak.Get()) {
             Call current(component,L"GetMaterial",2); current.set(L"ElementIndex",slot); current.run();
             if(current.get<UObject*>()==mid) material(component,slot,applied_materials_.contains(slot)?read<UObject*>(mid,L"Parent"):nullptr);
         }
     }
-    color_mids_.clear(); color_targets_.clear(); color_textures_.clear(); last_colors_.clear(); color_outfit_.clear();
+    control_mids_.clear(); dye_targets_.clear(); dye_textures_.clear(); last_values_.clear(); control_outfit_.clear();
 }
 void Appearance::prepare_deformation_materials() {
     auto* component=component_.Get();
@@ -933,8 +1265,8 @@ void Appearance::prepare_deformation_materials() {
         Call value(parent,L"K2_GetScalarParameterValue",2);value.set(L"ParameterName",parameter);value.run();
         const auto scale=value.get<float>();
         if(!std::isfinite(scale) || scale==0.f) continue;
-        auto owned=color_mids_.find(slot);
-        UObject* mid=owned==color_mids_.end()?nullptr:owned->second.Get();
+        auto owned=control_mids_.find(slot);
+        UObject* mid=owned==control_mids_.end()?nullptr:owned->second.Get();
         if(parent!=mid) {
             // A gameplay effect or another mod owns unfamiliar dynamic parents.
             if(parent->IsA(dynamic)) continue;
@@ -942,7 +1274,7 @@ void Appearance::prepare_deformation_materials() {
             make.set(L"ElementIndex",slot);make.set(L"SourceMaterial",parent);make.run();
             mid=make.get<UObject*>();
             if(!mid) throw std::runtime_error("Could not create the deformation compatibility material");
-            color_mids_[slot]=mid;
+            control_mids_[slot]=mid;
         }
         Call set(mid,L"SetScalarParameterValue",2);set.set(L"ParameterName",parameter);set.set(L"Value",0.f);set.run();
         Call readback(mid,L"K2_GetScalarParameterValue",2);readback.set(L"ParameterName",parameter);readback.run();
@@ -950,22 +1282,29 @@ void Appearance::prepare_deformation_materials() {
     }
 }
 void Appearance::customize(const Outfit& outfit,const std::string& variant,const Customization& custom) {
-    const auto& options=outfit.colors_for(variant);
-    auto values=color_values(options,custom);
+    const auto& options=outfit.controls_for(variant);
+    auto values=control_values(options,custom);
     auto* component=component_.Get();
     if(!component || !applied_.Get() || mesh_asset(component)!=applied_.Get()) throw std::runtime_error("Appearance changed before colors could apply");
-    const auto color_identity=outfit.id+":"+variant;
-    if(color_outfit_!=color_identity) reset_colors();
+    const auto control_identity=outfit.id+":"+variant;
+    if(control_outfit_!=control_identity) reset_controls();
     // Dropping a control restores its authored value, including layered parameters.
     // Rebuild from the original material rather than guessing a layer's default.
-    if(std::any_of(last_colors_.begin(),last_colors_.end(),[&](const auto& p){return !values.contains(p.first);})) reset_colors();
+    if(std::any_of(last_values_.begin(),last_values_.end(),[&](const auto& p){return !values.contains(p.first);})) reset_controls();
     prepare_deformation_materials();
-    if(values.empty()) { color_outfit_=color_identity; material_debug=material_snapshot(component,applied_.Get()); material_debug["colors"]=Json::object(); material_debug["dye_targets"]=0; remember_materials(); return; }
-    if(values==last_colors_) return;
+    if(values.empty()) { control_outfit_=control_identity; material_debug=material_snapshot(component,applied_.Get()); material_debug["controls"]=Json::object(); material_debug["dye_targets"]=0; remember_materials(); return; }
+    // The post-process anim instance is built with the mesh, and a fresh one comes up with
+    // the blueprint's own numbers. Notice that rather than quietly losing the player's
+    // tuning the first time the shell reloads. Costs nothing until a spring is in use.
+    if(spring_instance_.Get() && post_process_instance(component)!=spring_instance_.Get()) {
+        spring_originals_.clear(); spring_instance_=nullptr;
+        for(const auto& control:options.controls) if(control.kind==ControlKind::Spring) last_values_.erase(control.id);
+    }
+    if(values==last_values_) return;
     auto mid_for=[&](int index) {
         Call count(component,L"GetNumMaterials",1); count.run();
         if(index<0 || index>=count.get<int>()) throw std::runtime_error("Color slot is absent on this appearance");
-        auto& weak=color_mids_[index];
+        auto& weak=control_mids_[index];
         if(auto* mid=weak.Get()) return mid;
         Call current(component,L"GetMaterial",2); current.set(L"ElementIndex",index); current.run();
         auto* parent=current.get<UObject*>();
@@ -981,7 +1320,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
             bool active=false,changed=false;
             for(const auto& [id,file]:surface.layers) {
                 active|=values.contains(id);
-                changed|=values.contains(id)!=last_colors_.contains(id) || (values.contains(id) && last_colors_.contains(id) && values.at(id)!=last_colors_.at(id));
+                changed|=values.contains(id)!=last_values_.contains(id) || (values.contains(id) && last_values_.contains(id) && values.at(id)!=last_values_.at(id));
             }
             if(!changed) continue;
             auto parameter=FName(wide(surface.parameter).c_str(),FNAME_Add);
@@ -991,7 +1330,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
             if(!original) throw std::runtime_error("The selected material has no dyeable base texture");
             UObject* target=original;
             if(active) {
-                auto& weak=color_targets_[surface.id]; target=weak.Get();
+                auto& weak=dye_targets_[surface.id]; target=weak.Get();
                 if(!target) {
                     Call create(library,L"CreateRenderTarget2D",8); create.set(L"WorldContextObject",component);
                     create.set(L"Width",surface.resolution); create.set(L"Height",surface.resolution); create.set(L"Format",uint8_t{3});
@@ -1003,9 +1342,9 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 // dye texture on the body (the random dark, glossy skin). Keep it alive with a
                 // load root instead and bind it only after the composite is checked.
                 AssetLoadRoots target_root; target_root.keep(target);
-                std::vector<std::pair<WeakObject,ColorValue>> layers;
+                std::vector<std::pair<WeakObject,ControlValue>> layers;
                 for(const auto& [id,file]:surface.layers) if(values.contains(id)) {
-                    auto& texture=color_textures_[file];
+                    auto& texture=dye_textures_[file];
                     if(!texture.Get()) {
                         auto path=outfit.resources/file;
                         if(!fs::is_regular_file(path)) throw std::runtime_error("The outfit's color mask is missing");
@@ -1020,7 +1359,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 auto end=[&] { Call finish(library,L"EndDrawCanvasToRenderTarget",2); finish.set(L"WorldContextObject",component); finish.copy(L"Context",begin,L"Context"); finish.run(); };
                 try {
                     auto* canvas=begin.get<UObject*>(L"Canvas");
-                    auto draw=[&](UObject* texture,const ColorValue& color,uint8_t blend) {
+                    auto draw=[&](UObject* texture,const ControlValue& color,uint8_t blend) {
                         Call call(canvas,L"K2_DrawTexture",9); call.set(L"RenderTexture",texture);
                         call.set(L"ScreenSize",Vec2{double(surface.resolution),double(surface.resolution)}); call.set(L"CoordinateSize",Vec2{1,1});
                         call.set(L"RenderColor",color); call.set(L"BlendMode",blend); call.run();
@@ -1042,7 +1381,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 if(!any_light) {
                     material_debug["dye_failed"]=surface.id;
                     target=original;   // keep the authored texture; colors for this part are skipped this pass
-                    last_colors_.clear();   // retry the composite on the next customize
+                    last_values_.clear();   // retry the composite on the next customize
                 }
             }
             for(int slot:surface.slots) {
@@ -1053,9 +1392,131 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
             }
         }
         for(const auto& control:options.controls) {
-            bool active=values.contains(control.id),previous=last_colors_.contains(control.id);
+            bool active=values.contains(control.id),previous=last_values_.contains(control.id);
             if(!active) continue;
-            if(active && previous && values.at(control.id)==last_colors_.at(control.id)) continue;
+            if(active && previous && values.at(control.id)==last_values_.at(control.id)) continue;
+            // 1.0: a toggle drives material sections rather than a parameter. Verified
+            // live on this build: IsMaterialSectionShown keys on the material id alone,
+            // so a mesh with one section per material reads back what was set.
+            if(control.kind==ControlKind::Toggle) {
+                const bool show=values.at(control.id)[0]>=.5f;
+                for(int section:control.sections) {
+                    for(int lod=0;lod<lod_count();++lod) {
+                        Call set(component,L"ShowMaterialSection",4);
+                        set.set(L"MaterialID",int32_t(section)); set.set(L"SectionIndex",int32_t(section));
+                        set.set(L"bShow",show); set.set(L"LODIndex",int32_t(lod)); set.run();
+                    }
+                    Call readback(component,L"IsMaterialSectionShown",3);
+                    readback.set(L"MaterialID",int32_t(section)); readback.set(L"LODIndex",int32_t(0)); readback.run();
+                    if(readback.get<bool>()!=show) throw std::runtime_error("Material section read-back failed");
+                    // Remember only what is hidden, so removing the outfit puts back
+                    // exactly what CSS took away and nothing the game hid itself.
+                    if(show) toggle_hidden_.erase(section); else toggle_hidden_.insert(section);
+                }
+                continue;
+            }
+            // 1.0: a shape drives a morph target the package cooked into its own mesh.
+            // Stock shells carry none and never will, which is checked here rather than
+            // left to silently do nothing: every stock mesh reads back zero morph targets.
+            if(control.kind==ControlKind::Shape) {
+                if(!mesh_has_morph(applied_.Get(),control.morph))
+                    throw std::runtime_error("This outfit's mesh has no shape called "+control.morph);
+                const float weight=values.at(control.id)[0];
+                auto name=FName(wide(control.morph).c_str(),FNAME_Add);
+                Call set(component,L"SetMorphTarget",3);
+                set.set(L"MorphTargetName",name); set.set(L"Value",weight);
+                // Keep a zero weight on the component rather than dropping the curve, so
+                // taking the outfit off has something to put back to zero.
+                set.set(L"bRemoveZeroWeight",false); set.run();
+                Call readback(component,L"GetMorphTarget",2);
+                readback.set(L"MorphTargetName",name); readback.run();
+                if(std::abs(readback.get<float>()-weight)>.0001f)
+                    throw std::runtime_error("Shape weight read-back failed");
+                driven_morphs_[control.morph]=weight;
+                items_.sync_morph(control.morph,weight);
+                menu_items_.sync_morph(control.morph,weight);
+                for(const auto& formula:control.formulas) {
+                    const double delta=double(weight*formula.multiplier);
+                    auto& off=formula_offsets_[formula.target];
+                    if(formula.type=="BoneCenterX") off[0]=delta;
+                    else if(formula.type=="BoneCenterY") off[1]=delta;
+                    else if(formula.type=="BoneCenterZ") off[2]=delta;
+                }
+                continue;
+            }
+            // 1.0: a spring is the one control that touches no material at all. It writes
+            // the mesh's own spring nodes, converting what the slider says into what the
+            // engine integrates. Frequency and damping ratio are the numbers that mean
+            // something; stiffness and damping are the numbers that happen to work.
+            if(control.kind==ControlKind::Spring) {
+                auto* anim=post_process_instance(component);
+                if(!anim) throw std::runtime_error("This outfit's mesh has no animation blueprint to tune");
+                if(spring_instance_.Get()!=anim) { spring_originals_.clear(); spring_instance_=anim; }
+                auto nodes=spring_nodes(anim);
+                const auto& v=values.at(control.id);
+                const auto tuning=spring_tuning(v[0],v[1]);
+                for(const auto& bone:control.nodes) {
+                    auto found=nodes.find(bone);
+                    if(found==nodes.end()) throw std::runtime_error("This outfit's skeleton has no spring on "+bone);
+                    const auto& node=found->second;
+                    // Remember every field on first touch, so a second slider move does not
+                    // record CSS's own last write as the author's, and removal is exact.
+                    spring_originals_.try_emplace(bone,SpringOriginal{
+                        node.get(node.stiffness),node.get(node.damping),
+                        node.get(node.max_displacement),node.get(node.error_reset),node.flag(node.limit),
+                        {node.flag(node.translate[0]),node.flag(node.translate[1]),node.flag(node.translate[2])},
+                        {node.flag(node.rotate[0]),node.flag(node.rotate[1]),node.flag(node.rotate[2])}});
+                    node.put(node.stiffness,tuning.stiffness); node.put(node.damping,tuning.damping);
+                    if(node.get(node.stiffness)!=tuning.stiffness || node.get(node.damping)!=tuning.damping)
+                        throw std::runtime_error("Spring read-back failed");
+                    // The travel clamp is what keeps a lively spring on the body. MaxDisplacement
+                    // does nothing without its flag, so set both together.
+                    if(control.spring_clamp) {
+                        node.put(node.max_displacement,double(v[2])); node.set_flag(node.limit,true);
+                        if(node.get(node.max_displacement)!=double(v[2]) || !node.flag(node.limit))
+                            throw std::runtime_error("Spring travel read-back failed");
+                    }
+                    for(int i=0;i<3;++i) {
+                        if(control.translate[size_t(i)]>=0) node.set_flag(node.translate[i],control.translate[size_t(i)]!=0);
+                        else if(control.planar_constraint>0) {
+                            node.set_flag(node.translate[i],control.planar_constraint!=i+1);
+                        } else if(control.spring_clamp && (bone.find("thigh")!=std::string::npos || bone.find("hip")!=std::string::npos)) {
+                            if(i==1) node.set_flag(node.translate[i],false);
+                            else node.set_flag(node.translate[i],true);
+                        }
+                        if(control.rotate[size_t(i)]>=0) node.set_flag(node.rotate[i],control.rotate[size_t(i)]!=0);
+                        else if(control.spring_clamp && (bone.find("brust")!=std::string::npos || bone.find("butt")!=std::string::npos ||
+                                                         bone.find("breast")!=std::string::npos || bone.find("glute")!=std::string::npos)) {
+                            node.set_flag(node.rotate[i],true);
+                        }
+                    }
+                    if(control.error_reset>=0) node.put(node.error_reset,control.error_reset);
+                }
+                continue;
+            }
+            // 1.0: a choice picks one of the textures the package ships. Same shape as
+            // a scalar or vector binding, with SetTextureParameterValueByInfo, which this
+            // build reflects alongside the other two.
+            if(control.kind==ControlKind::Choice) {
+                const int index=std::clamp(int(std::lround(values.at(control.id)[0])),0,int(control.options.size())-1);
+                AssetLoadRoots roots;
+                auto* texture=load(control.options[index].texture); roots.keep(texture);
+                if(!texture) throw std::runtime_error("Choice texture is missing: "+control.options[index].texture);
+                for(const auto& binding:control.bindings) {
+                    auto* mid=mid_for(binding.slot);
+                    auto parameter=FName(wide(binding.parameter).c_str(),FNAME_Add);
+                    Call set(mid,L"SetTextureParameterValueByInfo",2);
+                    auto* p=set.param(L"ParameterInfo"); auto* info=find(L"/Script/Engine.MaterialParameterInfo");
+                    member(set.data(p),p->GetElementSize(),info,L"Name",parameter);
+                    member(set.data(p),p->GetElementSize(),info,L"Association",uint8_t(binding.association));
+                    member(set.data(p),p->GetElementSize(),info,L"Index",binding.layer);
+                    set.set(L"Value",texture); set.run();
+                    Call readback(mid,L"K2_GetTextureParameterValueByInfo",2);
+                    readback.copy(L"ParameterInfo",set,L"ParameterInfo"); readback.run();
+                    if(readback.get<UObject*>()!=texture) throw std::runtime_error("Choice texture read-back failed");
+                }
+                continue;
+            }
             for(const auto& binding:control.bindings) {
                 auto* mid=mid_for(binding.slot);
                 auto color=active?values.at(control.id):control.value;
@@ -1071,17 +1532,17 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 set.run();
                 Call readback(mid,control.scalar?L"K2_GetScalarParameterValueByInfo":L"K2_GetVectorParameterValueByInfo",2);
                 readback.copy(L"ParameterInfo",set,L"ParameterInfo"); readback.run();
-                if(control.scalar ? std::abs(readback.get<float>()-color[0])>.00001f : readback.get<ColorValue>()!=color)
+                if(control.scalar ? std::abs(readback.get<float>()-color[0])>.00001f : readback.get<ControlValue>()!=color)
                     throw std::runtime_error("Color parameter read-back failed");
             }
         }
         prepare_deformation_materials();
-        last_colors_=std::move(values); color_outfit_=color_identity;
+        last_values_=std::move(values); control_outfit_=control_identity;
         material_debug=material_snapshot(component,applied_.Get());
-        material_debug["colors"]=last_colors_;
-        material_debug["dye_targets"]=color_targets_.size();
+        material_debug["controls"]=last_values_;
+        material_debug["dye_targets"]=dye_targets_.size();
         remember_materials();
-    } catch(...) { reset_colors(); throw; }
+    } catch(...) { reset_controls(); throw; }
 }
 
 }

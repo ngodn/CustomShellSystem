@@ -93,8 +93,8 @@ struct Core {
     uint64_t next_poll = 0;
     char search[128]{}, preset_name[96]{};
     double last_apply_ms = 0;
-    std::optional<Customization> pending_colors;
-    bool color_only = false, refresh_colors = true;
+    std::optional<Customization> pending_custom;
+    bool custom_only = false, refresh_custom = true;
     uint64_t save_after = 0, last_player_revision = 0, maintenance_after = 0, maintenance_next = 0;
     Recovery recovery;
 #ifdef CSS_TRANSITION_TESTS
@@ -106,7 +106,15 @@ struct Core {
     void sync_attachments_safely(uint64_t now) {
         if(now<attachments_after) return;
         attachments_after=now+250;
-        try {appearance.sync_attachments();attachment_error.clear();}
+        try {
+            appearance.sync_attachments();
+            if(!applied_id.empty()) {
+                const auto split=applied_id.find('/');
+                if(split!=std::string::npos) for(const auto& outfit:catalog.outfits)
+                    if(outfit.id==applied_id.substr(0,split)) appearance.sync_items(outfit,applied_id.substr(split+1));
+            }
+            attachment_error.clear();
+        }
         catch(const std::exception& error) {
             if(attachment_error!=error.what()) {
                 attachment_error=error.what();host.log(("Accessory recovery deferred: "+attachment_error).c_str());
@@ -249,32 +257,32 @@ struct Core {
             if (state.favorites.contains(id)) state.favorites.erase(id); else state.favorites.insert(id);
             dirty = true; ui_refresh = true;
         }
-        else if (action == "save_look") {
+        else if (action == "save_look" || action == "save_profile") {
             auto name = command.at("name").get<std::string>();
-            if (!valid_id(name) || (state.presets.size() >= 64 && !state.presets.contains(name))) throw std::runtime_error("Invalid look slot");
-            state.presets[name] = Preset{state.selections, state.walk_animation}; dirty = true; ui_refresh = true; report("Current appearance saved to " + name);
+            if (!valid_id(name) || (state.presets.size() >= 64 && !state.presets.contains(name))) throw std::runtime_error("Invalid profile slot");
+            state.presets[name] = Preset{state.selections, state.walk_animation}; dirty = true; ui_refresh = true; report("Current character profile saved to " + name);
         }
-        else if (action == "load_look") {
+        else if (action == "load_look" || action == "load_profile") {
             auto name = command.at("name").get<std::string>();
             const auto& preset = state.presets.at(name);
             const auto& selections = preset.selections;
             auto selected = selections.find(appearance.shell);
             if (selected == selections.end()) { restore_pending = true; forget_current = true; }
-            else { selected_outfit = selected->second.outfit; selected_variant = selected->second.variant; pending_colors=selected->second.colors; apply_pending = true; }
+            else { selected_outfit = selected->second.outfit; selected_variant = selected->second.variant; pending_custom=selected->second.custom; apply_pending = true; }
             if(state.walk_animation!=preset.walk_animation) { state.walk_animation=preset.walk_animation; dirty=true; }
-            ui_refresh = true;
+            ui_refresh = true; report("Profile loaded: " + name);
         }
-        else if(action=="delete_look") {
+        else if(action=="delete_look" || action=="delete_profile") {
             state.presets.erase(command.at("name").get<std::string>());
-            dirty=true; ui_refresh=true; report("Template deleted.");
+            dirty=true; ui_refresh=true; report("Profile deleted.");
         }
-        else if(action=="rename_look") {
+        else if(action=="rename_look" || action=="rename_profile") {
             auto before=command.at("name").get<std::string>(), after=command.at("new_name").get<std::string>();
-            if(!valid_id(after)) throw std::runtime_error("Use letters, numbers, periods, underscores or hyphens in the template name.");
+            if(!valid_id(after)) throw std::runtime_error("Use letters, numbers, periods, underscores or hyphens in the profile name.");
             if(before!=after) {
-                if(state.presets.contains(after)) throw std::runtime_error("A template with that name already exists.");
+                if(state.presets.contains(after)) throw std::runtime_error("A profile with that name already exists.");
                 auto copy=state.presets.at(before); state.presets.emplace(after,std::move(copy)); state.presets.erase(before);
-                dirty=true; ui_refresh=true; report("Template renamed.");
+                dirty=true; ui_refresh=true; report("Profile renamed.");
             }
         }
         else if (action == "walk_animation") {
@@ -311,19 +319,61 @@ struct Core {
         else if (action == "disable") { state.enabled = false; restore_pending = true; dirty = true; }
         else if (action == "restore") { restore_pending = true; forget_current = true; }
         else if (action == "rescan") { rescan_pending = true; }
-        else if(action=="palette" || action=="color" || action=="reset_color" ||
-                action=="tint" || action=="reset_tint") {
+        // 1.0 renamed "color"/"reset_color" to "control"/"reset_control", since a control
+        // can now be a switch, a texture or a spring. The old names still work: scripts and
+        // bindings written against 0.4 keep running.
+        else if(action=="palette" || action=="control" || action=="reset_control" ||
+                action=="color" || action=="reset_color" ||
+                action=="tint" || action=="reset_tint" ||
+                action=="template") {
+            const bool clearing=action=="reset_control" || action=="reset_color";
             auto selected=state.selections.find(appearance.shell);
-            if(selected==state.selections.end()) throw std::runtime_error("Wear an appearance before changing its colors");
+            if(selected==state.selections.end()) throw std::runtime_error("Wear an appearance before changing it");
             const Outfit* outfit=nullptr;
             for(const auto& o:catalog.outfits) if(o.id==selected->second.outfit) outfit=&o;
             if(!outfit) throw std::runtime_error("The selected outfit is missing");
-            const auto& options=outfit->colors_for(selected->second.variant);
-            auto custom=selected->second.colors;
+            const auto& options=outfit->controls_for(selected->second.variant);
+            auto custom=selected->second.custom;
             if(action=="palette") custom=choose_palette(options,custom,command.at("palette").get<std::string>());
+            else if(action=="template") {
+                auto template_id=command.at("template").get<std::string>();
+                const Template* tmpl=nullptr;
+                for(const auto& t:outfit->templates) if(t.id==template_id) { tmpl=&t; break; }
+                if(!tmpl) throw std::runtime_error("Unknown template: "+template_id);
+                if(tmpl->data.contains("palette") && tmpl->data.at("palette").is_string()) {
+                    custom=choose_palette(options,custom,tmpl->data.at("palette").get<std::string>());
+                }
+                if(tmpl->data.contains("values") && tmpl->data.at("values").is_object()) {
+                    for(const auto& [k, v] : tmpl->data.at("values").items()) {
+                        auto* ctrl = options.find(k);
+                        if(ctrl) {
+                            auto cv = ctrl->value;
+                            if(v.is_number()) {
+                                cv[0] = v.get<float>();
+                            } else if(v.is_array()) {
+                                for(size_t i=0; i<std::min(v.size(), size_t(3)); ++i) cv[i] = v[i].get<float>();
+                            }
+                            custom.values[k] = cv;
+                        }
+                    }
+                }
+                if(tmpl->data.contains("tints") && tmpl->data.at("tints").is_object()) {
+                    for(const auto& [grp, t] : tmpl->data.at("tints").items()) {
+                        if(t.is_object()) {
+                            ColorTint tint{};
+                            if(t.contains("hue")) tint.hue = t.at("hue").get<float>();
+                            if(t.contains("saturation")) tint.saturation = t.at("saturation").get<float>();
+                            if(t.contains("brightness")) tint.brightness = t.at("brightness").get<float>();
+                            if(!tint.neutral()) custom.tints[grp] = tint;
+                            else custom.tints.erase(grp);
+                        }
+                    }
+                }
+                report("Applied template: " + tmpl->name);
+            }
             else if(action=="tint" || action=="reset_tint") {
                 auto group=command.at("group").get<std::string>();
-                if(group!="outfit" && group!="body") throw std::runtime_error("Unknown color group");
+                if(group!="outfit" && group!="body") throw std::runtime_error("Unknown tint group");
                 if(custom.palette=="original") throw std::runtime_error("Choose a palette before tinting; Original is not dyed.");
                 if(action=="reset_tint") custom.tints.erase(group);
                 else {
@@ -342,31 +392,40 @@ struct Core {
             else {
                 auto id=command.at("control").get<std::string>();
                 auto* control=options.find(id);
-                if(!control) throw std::runtime_error("Unknown color part");
-                if(action=="reset_color") custom.values.erase(id);
+                if(!control) throw std::runtime_error("Unknown part");
+                if(clearing) custom.values.erase(id);
                 else {
                     // Read the value before the group tint, or the tint would be folded
                     // into the override and then applied to it a second time.
                     auto untinted=custom; untinted.tints.clear();
-                    auto values=color_values(options,untinted);
+                    auto values=control_values(options,untinted);
                     auto value=values.contains(id)?values.at(id):control->value;
                     if(command.contains("rgb")) {
                         // A whole colour at once, which is what picking a swatch is.
                         const auto& rgb=command.at("rgb");
-                        if(control->scalar || !rgb.is_array() || rgb.size()!=3) throw std::runtime_error("Invalid color value");
+                        if(control->scalar || !rgb.is_array() || rgb.size()!=3) throw std::runtime_error("Invalid colour value");
                         for(int i=0;i<3;++i)
                             value[i]=std::clamp(rgb[i].get<float>(),control->minimum,control->maximum);
                     } else {
+                    const bool spring=control->kind==ControlKind::Spring;
                     int channel=command.value("channel",0);
-                    if(channel<0 || channel>(control->scalar?0:2)) throw std::runtime_error("Invalid color channel");
+                    const int spring_top=control->spring_clamp?2:1;
+                    if(channel<0 || channel>(spring?spring_top:control->scalar?0:2)) throw std::runtime_error("Invalid channel");
+                    // A spring's channels carry their own ranges: 1 is the damping ratio and
+                    // 2 (when it has a clamp) is the travel. Every other control has one range.
+                    const bool damping=spring && channel==1;
+                    const bool travel=spring && channel==2;
+                    const float least=travel?control->displacement_minimum:damping?control->damping_minimum:control->minimum;
+                    const float most=travel?control->displacement_maximum:damping?control->damping_maximum:control->maximum;
+                    const float nudge=travel?control->displacement_step:damping?control->damping_step:control->step;
                     if(command.contains("value")) value[channel]=command.at("value").get<float>();
-                    else value[channel]=std::clamp(value[channel]+command.at("delta").get<float>()*control->step,control->minimum,control->maximum);
+                    else value[channel]=std::clamp(value[channel]+command.at("delta").get<float>()*nudge,least,most);
                     }
                     custom.values[id]=value;
                 }
             }
-            color_values(options,custom);
-            pending_colors=std::move(custom); color_only=true; refresh_colors=command.value("refresh",true);
+            control_values(options,custom);
+            pending_custom=std::move(custom); custom_only=true; refresh_custom=command.value("refresh",true);
             apply_pending=true; save_after=GetTickCount64()+600;
         }
         else if (action == "select") {
@@ -374,7 +433,7 @@ struct Core {
             const auto variant = command.at("variant").get<std::string>();
             if (!catalog.find(outfit, variant)) throw std::runtime_error("Outfit or variant is not installed");
             selected_outfit = outfit; selected_variant = variant; apply_pending = true;
-            pending_colors.reset(); color_only=false;
+            pending_custom.reset(); custom_only=false;
         } else if (action != "status") throw std::runtime_error("Unknown CSS command");
     }
     void tick(void* engine, float delta) {
@@ -480,7 +539,7 @@ struct Core {
         }
         if (restore_pending) {
             appearance.restore(); recovery.clear(); restore_pending = false; applied_id.clear();
-            pending_colors.reset(); color_only=false; apply_pending=false; selected_outfit.clear(); selected_variant.clear();
+            pending_custom.reset(); custom_only=false; apply_pending=false; selected_outfit.clear(); selected_variant.clear();
             appearance.player(engine);
             if (forget_current && !appearance.shell.empty()) state.selections.erase(appearance.shell);
             forget_current = false;
@@ -540,9 +599,9 @@ struct Core {
                 Selection requested;
                 if (!selected_outfit.empty()) {
                     requested = {std::move(selected_outfit), std::move(selected_variant), {}};
-                    if(state.remembered_colors.contains(requested.outfit)) requested.colors=state.remembered_colors.at(requested.outfit);
+                    if(state.remembered_custom.contains(requested.outfit)) requested.custom=state.remembered_custom.at(requested.outfit);
                     for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit)
-                        requested.colors=compatible_colors(outfit.colors_for(requested.variant),requested.colors);
+                        requested.custom=compatible_values(outfit.controls_for(requested.variant),requested.custom);
                     selected_outfit.clear(); selected_variant.clear();
                     if (!catalog.compatible(requested.outfit, shell))
                         throw std::runtime_error("This outfit does not support the current shell: " + shell);
@@ -553,12 +612,12 @@ struct Core {
                     // a variant can carry its own recipe. Dropping the part it cannot place
                     // leaves you dressed; letting it through leaves you in nothing.
                     for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit)
-                        requested.colors=compatible_colors(outfit.colors_for(requested.variant),requested.colors);
+                        requested.custom=compatible_values(outfit.controls_for(requested.variant),requested.custom);
                 } else {
                     host.log(("No saved appearance for shell "+shell+"; leaving it alone").c_str());
                 }
                 if (!requested.outfit.empty()) {
-                    if(pending_colors) { requested.colors=*pending_colors; pending_colors.reset(); }
+                    if(pending_custom) { requested.custom=*pending_custom; pending_custom.reset(); }
                     auto* variant = catalog.find(requested.outfit, requested.variant);
                     if (!variant || !catalog.compatible(requested.outfit, shell))
                         throw std::runtime_error("Saved outfit is missing or incompatible");
@@ -566,7 +625,12 @@ struct Core {
                     appearance.set_attachment_offsets(variant->attachments);
                     if (appearance.apply(engine, variant->mesh, variant->materials)) {
                         try {
-                            for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit) appearance.customize(outfit,requested.variant,requested.colors);
+                            for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit) {
+                                // Items before controls: an accessory can hide body
+                                // sections, and a toggle may then show one of them again.
+                                appearance.sync_items(outfit,requested.variant);
+                                appearance.customize(outfit,requested.variant,requested.custom);
+                            }
                         } catch(...) {
                             applied_id.clear(); appearance.restore(); throw;
                         }
@@ -588,12 +652,12 @@ struct Core {
                             if(state.harbinger_mirror && shell.starts_with(DARKFORM_PREFIX) && !last_living_shell.empty()) {
                                 state.selections[last_living_shell] = requested;
                             }
-                            state.remembered_colors[requested.outfit]=requested.colors;
-                            state.enabled = true; dirty = true; ui_refresh = !color_only || refresh_colors;
+                            state.remembered_custom[requested.outfit]=requested.custom;
+                            state.enabled = true; dirty = true; ui_refresh = !custom_only || refresh_custom;
                             applied_id = requested.outfit + "/" + requested.variant;
                             host.log(("Appearance verified: " + applied_id).c_str());
-                            report(color_only?"Colors updated.":"Wearing " + variant->name + ".");
-                            color_only=false;
+                            report(custom_only?"Settings updated.":"Wearing " + variant->name + ".");
+                            custom_only=false;
                         }
                     } else { recovery.failed(now); report("No playable character mesh is ready."); }
                 }
@@ -644,6 +708,7 @@ struct Core {
                     {"shell", appearance.shell}, {"pawn", appearance.pawn_name}, {"mesh", appearance.current_mesh},
                     {"applied", applied_id}, {"message", message}, {"last_request", last_request},
                     {"apply_ms", last_apply_ms}, {"pid", GetCurrentProcessId()}};
+        status["worn_items"]=appearance.worn_item_count();
         status["recovery_pending"]=recovery.pending();
         status["maintenance_error"]=maintenance_error;
         auto path=package_root.generic_u8string();
@@ -655,7 +720,7 @@ struct Core {
         status["material_debug"] = appearance.material_debug;
         status["walk_mod_active"] = appearance.walk.walk_mod_active();
         status["walk_mod_name"] = appearance.walk.walk_mod_name();
-        if(auto selected=state.selections.find(appearance.shell);selected!=state.selections.end()) status["colors"]=selected->second.colors.json();
+        if(auto selected=state.selections.find(appearance.shell);selected!=state.selections.end()) status["customize"]=selected->second.custom.json();
         auto serialized = status.dump();
         if (serialized != last_status) {
             atomic_json(root / "runtime/status.json", status, false);
@@ -689,7 +754,7 @@ void tick(void* ptr, void* engine, float delta) noexcept {
     try { core.tick(engine, delta); }
     catch (const std::exception& error) {
         core.recovery.failed(GetTickCount64());
-        core.apply_pending = false; core.pending_colors.reset(); core.color_only=false;
+        core.apply_pending = false; core.pending_custom.reset(); core.custom_only=false;
         core.selected_outfit.clear(); core.selected_variant.clear();
         core.report(error.what());
         try { core.publish(); } catch (...) {}

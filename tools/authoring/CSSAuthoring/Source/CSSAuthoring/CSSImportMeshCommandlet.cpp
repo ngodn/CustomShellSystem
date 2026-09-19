@@ -261,6 +261,54 @@ int32 UCSSImportMeshCommandlet::Main(const FString& Params)
         if (FMath::Abs(Totals[I] - 1.0) > .001 || Counts[I] > 8)
             return Fail(FString::Printf(TEXT("Point %d needs normalized weights with at most eight influences"), I));
 
+    // Shape keys. GetMeshDescription below already turns these three parallel arrays into
+    // registered morph attributes, so the importer only has to fill them: the names, the
+    // base point indices that moved, and those points in their morphed positions. The
+    // engine subtracts the base position itself, and the set and the point array have to
+    // be built in the same order because it walks them together.
+    const TArray<TSharedPtr<FJsonValue>>* Morphs = nullptr;
+    if (Root->HasField(TEXT("morph_targets")) &&
+        (!Root->TryGetArrayField(TEXT("morph_targets"), Morphs) || Morphs->Num() > 64))
+        return Fail(TEXT("morph_targets must be an array of at most 64 shapes"));
+    TSet<FName> MorphNames;
+    for (int32 I = 0; Morphs && I < Morphs->Num(); ++I)
+    {
+        const TSharedPtr<FJsonObject>* Morph;
+        FString Name;
+        const TArray<TSharedPtr<FJsonValue>>* Deltas = nullptr;
+        if (!(*Morphs)[I]->TryGetObject(Morph) ||
+            !(*Morph)->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty() || Name.Len() > 64 ||
+            MorphNames.Contains(FName(*Name)) ||
+            !(*Morph)->TryGetArrayField(TEXT("deltas"), Deltas) || Deltas->IsEmpty() ||
+            Deltas->Num() > Points->Num())
+            return Fail(FString::Printf(TEXT("Invalid morph target name or delta count at %d"), I));
+        // A name the engine would have to rename is a name the runtime could not address,
+        // so it is rejected here rather than silently suffixed at build time.
+        for (TCHAR Character : Name)
+            if (!FChar::IsAlnum(Character) && Character != TEXT('_'))
+                return Fail(TEXT("Morph target names take letters, digits and underscores"));
+        MorphNames.Add(FName(*Name));
+        FSkeletalMeshImportData Shape;
+        TSet<uint32> Moved;
+        for (const auto& Delta : *Deltas)
+        {
+            if (!ReadNumbers(Delta, 4, Values) || !Index(Values[0], Points->Num()))
+                return Fail(FString::Printf(TEXT("Invalid morph delta in '%s'"), *Name));
+            const uint32 PointIndex = static_cast<uint32>(Values[0]);
+            if (Moved.Contains(PointIndex))
+                return Fail(FString::Printf(TEXT("Morph target '%s' moves point %u twice"), *Name, PointIndex));
+            // A shape that throws a vertex across the level is a broken export, not a style.
+            if (FMath::Abs(Values[1]) > 100 || FMath::Abs(Values[2]) > 100 || FMath::Abs(Values[3]) > 100)
+                return Fail(FString::Printf(TEXT("Morph delta in '%s' exceeds 100 cm"), *Name));
+            Moved.Add(PointIndex);
+            const FVector3f Base = Data.Points[PointIndex];
+            Shape.Points.Emplace(Base.X + Values[1], Base.Y + Values[2], Base.Z + Values[3]);
+        }
+        Data.MorphTargetNames.Add(Name);
+        Data.MorphTargets.Add(MoveTemp(Shape));
+        Data.MorphTargetModifiedPoints.Add(MoveTemp(Moved));
+    }
+
     UPackage* MeshPackage = CreatePackage(*PackageName);
     USkeletalMesh* Mesh = NewObject<USkeletalMesh>(MeshPackage,
         *FPackageName::GetLongPackageAssetName(PackageName), RF_Public | RF_Standalone);
@@ -305,13 +353,21 @@ int32 UCSSImportMeshCommandlet::Main(const FString& Params)
     if (BuiltLOD.NumVertices == 0 || BuiltLOD.Sections.IsEmpty() ||
         BuiltLOD.IndexBuffer.Num() != Data.Faces.Num() * 3)
         return Fail(TEXT("Built mesh has missing geometry or changed triangle count"));
+    // The engine drops a morph target it cannot use and only warns, so a silent drop would
+    // ship a mesh whose shape sliders do nothing. Check every one came through named.
+    if (Mesh->GetMorphTargets().Num() != Data.MorphTargetNames.Num())
+        return Fail(FString::Printf(TEXT("Built mesh kept %d of %d morph targets"),
+            Mesh->GetMorphTargets().Num(), Data.MorphTargetNames.Num()));
+    for (const FString& Name : Data.MorphTargetNames)
+        if (!Mesh->FindMorphTarget(FName(*Name)))
+            return Fail(FString::Printf(TEXT("Built mesh is missing morph target '%s'"), *Name));
     FAssetRegistryModule::AssetCreated(Skeleton);
     FAssetRegistryModule::AssetCreated(Mesh);
     Mesh->MarkPackageDirty();
     Skeleton->MarkPackageDirty();
     if (!SaveAsset(Skeleton) || !SaveAsset(Mesh))
         return Fail(TEXT("Could not save the imported assets"));
-    UE_LOG(LogCSSAuthoring, Display, TEXT("Imported %s: %d points, %d triangles, %d bones. Materials are placeholders; this is not a release package."),
-        *PackageName, Data.Points.Num(), Data.Faces.Num(), Mesh->GetRefSkeleton().GetNum());
+    UE_LOG(LogCSSAuthoring, Display, TEXT("Imported %s: %d points, %d triangles, %d bones, %d morph targets. Materials are placeholders; this is not a release package."),
+        *PackageName, Data.Points.Num(), Data.Faces.Num(), Mesh->GetRefSkeleton().GetNum(), Mesh->GetMorphTargets().Num());
     return 0;
 }

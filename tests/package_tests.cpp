@@ -27,7 +27,7 @@ int main(int argc,char** argv) {
         if(fs::file_size(cached)==7) throw std::runtime_error("Corrupt thumbnail cache was not repaired");
         std::set<std::string> masks;
         for(const auto& variant:catalog.outfits[0].variants)
-            for(const auto& surface:catalog.outfits[0].colors_for(variant.id).surfaces)
+            for(const auto& surface:catalog.outfits[0].controls_for(variant.id).surfaces)
                 for(const auto& [part,file]:surface.layers) masks.insert(file);
         for(const auto& file:masks) {
             auto texture=packages[0].artwork/file;
@@ -51,17 +51,21 @@ int main(int argc,char** argv) {
         // declared by the package or read off the control id. A package written
         // before the convention has to come out of this with sensible answers, so
         // print them: this runs against every installed package, which is how the
-        // ports are audited against docs/color-convention.md.
+        // ports are audited against docs/control-convention.md.
         static const std::set<std::string> ROLES{"garment","accent","leather","metal","gem","glow",
-            "skin","face","hair","eyes","eye-glow","body-hair","nipple","areola","labia","vestibule"};
+            "skin","face","hair","eyes","eye-glow","body-hair","nipple","areola","labia","vestibule",
+            // 1.0: roles for the kinds that are not colours.
+            "gloss","roughness","opacity","piece","skin-gloss","pattern","figure","motion"};
         std::set<std::string> reported;
         for(const auto& variant:catalog.outfits[0].variants) {
-            const auto& options=catalog.outfits[0].colors_for(variant.id);
+            const auto& options=catalog.outfits[0].controls_for(variant.id);
             std::string line;
             for(const auto& control:options.controls) {
                 if(!ROLES.contains(control.role)) throw std::runtime_error("Colour control resolved to an unknown role: "+control.role);
-                line+=(line.empty()?"":", ")+control.id+"="+color_group_name(control.group)+"/"+control.role+
-                      (control.hue_locked?"/locked":"");
+                // 1.0: the kind as well, so the audit shows what every published package
+                // resolves to once colour stopped being the only kind of control.
+                line+=(line.empty()?"":", ")+control.id+"="+control_kind_name(control.kind)+":"+
+                      control_group_name(control.group)+"/"+control.role+(control.hue_locked?"/locked":"");
             }
             if(!line.empty() && reported.insert(line).second) std::cout<<"  colors: "<<line<<'\n';
         }
