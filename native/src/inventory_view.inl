@@ -197,7 +197,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         return widget;
     };
     auto bind=[&](UObject* widget,Json action) { hits_.push_back({WeakObject(widget),std::move(action),false}); };
-    const char* sections[]={"SHELL","CUSTOMIZE","ANIMATION","PROFILE"};
+    const char* sections[]={"SHELL","CUSTOMIZE","LOCOMOTION","PROFILE"};
     constexpr int section_count=4;
     // The labels live in a clipped strip between the LT/RT prompts, like the game's
     // inventory tabs: a fixed gap between words, the selected label always whole, and
@@ -777,7 +777,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 // wording, which is what the packages already installed were written for.
                 const bool shape=control.kind==ControlKind::Shape;
                 detail(control.name,worn->name,
-                       shape?"Change the shape of this part. The author cooked it into their own mesh, so it travels with the outfit and your saved looks keep it."
+                       shape?"Adjust this part of your character. Reset part restores the outfit's original shape. Save a profile to keep your changes."
                        :control.scalar?"Adjust the intensity for this part."
                        :"Adjust Red, Green and Blue. Select a channel, then adjust it with Left / Right or its slider.");
                 const char* channels[]={"Red","Green","Blue"};
@@ -801,7 +801,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             }
         }
     } else if(section_==2) {
-        // 0.4 ANIMATION: per-player locomotion options that templates save with the outfit.
+        // Per-player locomotion options that profiles save with the outfit.
         // Only walking is offered. Walking and standing borrow the Cultist Spear Lady,
         // which is the game's own blendspace, so nothing extra is installed. Jog and
         // sprint are held at normal until their stride is properly matched; the runtime

@@ -230,7 +230,7 @@ public:
     void sync_morph(const std::string& morph, float weight);
     void sync_morphs(const std::map<std::string, float>& driven_morphs);
 };
-// 0.4: optional feminine walk (ANIMATION tab). Drives the game's own carrier
+// 0.4: optional feminine walk (LOCOMOTION tab). Drives the game's own carrier
 // blendspace override on the player's animation instance, the way the GenessaWalk
 // and ProximaWalk mods do, for whichever shell is worn.
 class WalkOverride {
