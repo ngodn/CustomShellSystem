@@ -1,5 +1,9 @@
 # CSS research index
 
+[Arm rest-pose alignment](development/arm-rest-alignment.md) preserves limb lengths and all 5,503 stored morphs, improves the tested arm/wrist pose, and leaves fingers unresolved. V44B2 restores attachment locals and exact canonical rotations; V43 remains installed.
+
+[Fitted pose rendering](development/fitted-pose-rendering.md) fixes the old renderer's all-zero authoring shapes. Its corrected neutral geometry matches all 133,066 verified export points exactly. Earlier basis renders are not fitted-contact evidence; bone-transform measurements remain valid.
+
 [Arm twist binding](development/arm-twist-binding.md) records the built but rejected V44A experiment: fitting pivots and restoring twist weights alone produces curved forearms and leaves the grip broken. Next test full arm/hand rest-pose alignment while preserving proportions and morphs. V43 stays installed.
 
 [Game-derived foundation comparison](development/game-foundation-comparison.md) records the completed v2 diagnostic, rejected game-mode and old-binding variants, editor coverage guard and verified lost arm-twist influences. [Non-CSS guide findings](development/non-css-guide-findings.md) records applicable user-supplied reference steps and their limits.

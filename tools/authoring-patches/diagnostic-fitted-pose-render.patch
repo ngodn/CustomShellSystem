@@ -1,0 +1,46 @@
+--- a/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/tools/render_live_weapon_reference.py
++++ b/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/tools/render_live_weapon_reference.py
+@@ -5,9 +5,11 @@
+ from mathutils import Matrix,Quaternion,Vector
+ MOD=Path(__file__).resolve().parents[1];ROOT=MOD.parents[2]
+ sys.path.insert(0,str(MOD/'tools'))
+-from export_seduxtress_eve import TO_UE,read_bones
++from export_seduxtress_eve import TO_UE,read_bones,EXPORT_SHAPES
+ p=argparse.ArgumentParser();p.add_argument('--source',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--reference',type=Path);p.add_argument('--glb',type=Path);p.add_argument('--weapon',type=Path,required=True)
+ p.add_argument('--blend',type=Path);p.add_argument('--expected-mesh');p.add_argument('--expected-bind',type=Path)
++p.add_argument('--framing',choices=('full','hands'),default='full')
++p.add_argument('--shape-policy',choices=('export-default','basis'),default='export-default')
+ a=p.parse_args(sys.argv[sys.argv.index('--')+1:]);out=a.output.resolve();assert out.is_relative_to(ROOT) and not out.exists();out.mkdir()
+ source_document=json.loads(a.source.read_text());snapshot=source_document['pose']['Snapshot'];assert snapshot['bIsValid']
+ if a.reference:
+@@ -59,10 +61,13 @@
+ rig.animation_data_clear()
+ for bone in rig.pose.bones:
+  assert not bone.constraints;bone.matrix_basis=Matrix.Identity(4)
++shape_values={}
+ for obj in objects:
+  if obj.data.shape_keys:
+   obj.data.shape_keys.animation_data_clear()
+-  for key in obj.data.shape_keys.key_blocks:key.value=0
++  for key in obj.data.shape_keys.key_blocks:
++   if a.shape_policy=='basis' or key.name in EXPORT_SHAPES:key.value=0
++  shape_values[obj.name]={key.name:key.value for key in obj.data.shape_keys.key_blocks if key.value and not key.mute}
+  for modifier in list(obj.modifiers):
+   if modifier.type!='ARMATURE':obj.modifiers.remove(modifier)
+   else:modifier.show_viewport=True;modifier.show_render=True
+@@ -107,7 +112,15 @@
+ scene.render.resolution_x=1200;scene.render.resolution_y=1000;scene.render.resolution_percentage=100
+ cam=bpy.data.cameras.new('Camera');cam.type='ORTHO';cam.ortho_scale=3.2;view=bpy.data.objects.new('Camera',cam);scene.collection.objects.link(view);scene.camera=view
+ center=Vector((0,0,1.0))
++if a.framing=='hands':
++ hand_positions=[TO_UE.inverted()@world[next(i for i,b in enumerate(bones) if b['name'].lower()=='hand_'+side)].translation for side in ('l','r')]
++ center=(hand_positions[0]+hand_positions[1])*.5
++ cam.ortho_scale=max(.7,(hand_positions[0]-hand_positions[1]).length+.4)
+ for name,direction in [('view-a',(4,-1,.35)),('view-b',(-4,1,.35))]:
+  view.location=center+Vector(direction);view.rotation_euler=(center-view.location).to_track_quat('-Z','Y').to_euler();scene.render.filepath=str(out/(name+'.png'));bpy.ops.render.render(write_still=True)
+ report=dict(source_scope=source_document.get('scope','Live atomic local-pose snapshot'),source=str(a.source),source_sha256=hashlib.sha256(a.source.read_bytes()).hexdigest(),asset=source_asset,bones=len(bones),disabled_section_faces_removed=removed_faces,weapon=str(a.weapon),max_position_error_cm=max(e['position_cm'] for e in errors),max_angle_error_rad=max(min(e['angle_rad'],abs(2*math.pi-e['angle_rad'])) for e in errors),finger_surface_distances_cm=contacts,bone_positions_cm={b['name']:list(w.translation) for b,w in zip(bones,world,strict=True)},scope='Mesh-local pose replay on its own mesh reference; input provenance is recorded in source_scope. Neutral morphs, solid materials, no simulated cloth. Weapon identity attachment verified separately. Nearest finger distances do not measure penetration or prove grip. Comparisons between captures are not time-synchronized. No asset saved.')
++report['framing']=a.framing
++report['shape_policy']=a.shape_policy
++report['shape_values']=shape_values
++report['scope']+=' Authoring fit shapes are preserved with export-default; basis explicitly clears all shapes and is not the exported body.'
+ (out/'report.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps({k:v for k,v in report.items() if k!='bone_positions_cm'}))
