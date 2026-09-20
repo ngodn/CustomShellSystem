@@ -1,0 +1,312 @@
+--- a/Source/CSSAuthoring/CSSControlRigLibrary.h
++++ b/Source/CSSAuthoring/CSSControlRigLibrary.h
+@@ -8,6 +8,19 @@
+ {
+     GENERATED_BODY()
+ public:
++    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
++    static class USkeletalMesh* CreateMorphMetadataCandidate(class USkeletalMesh* Mesh, const FString& PackagePath);
++
++    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
++    static class UAnimBlueprint* CreateHandPostProcessCandidate(class USkeletalMesh* Mesh,
++        class UAnimBlueprint* Baseline, class UControlRigBlueprint* HandRig,
++        const FString& PackagePath, const TArray<FName>& HandBones, const TArray<FName>& Curves);
++
++    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
++    static FString EvaluateHandPostProcessCandidate(class USkeletalMesh* Mesh,
++        class UAnimBlueprint* Blueprint, const FString& SnapshotJson,
++        const TArray<FName>& Curves, bool CompatibleInput);
++
+     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+     static class UAnimBlueprint* CreatePostProcessProbe(class USkeletalMesh* Mesh,
+         class UControlRigBlueprint* RigBlueprint, const FString& PackagePath);
+--- a/Source/CSSAuthoring/CSSControlRigLibrary.cpp
++++ b/Source/CSSAuthoring/CSSControlRigLibrary.cpp
+@@ -402,3 +402,4 @@
+ // Component evaluation is kept separate from the authored animation graph.
+ #include "CSSControlRigProbe.inl"
+ #include "CSSControlRigCombinedProbe.inl"
++#include "CSSControlRigHandProbe.inl"
+--- /dev/null
++++ b/Source/CSSAuthoring/CSSControlRigHandProbe.inl
+@@ -0,0 +1,244 @@
++// Editor-only integration probe. The authored graph uses shipped engine nodes.
++#include "Animation/PoseSnapshot.h"
++#include "Animation/AnimCurveMetadata.h"
++#include "Animation/MorphTarget.h"
++#include "JsonObjectConverter.h"
++
++USkeletalMesh* UCSSControlRigLibrary::CreateMorphMetadataCandidate(USkeletalMesh* Mesh,const FString& PackagePath)
++{
++    if (!IsRunningCommandlet() || !Mesh ||
++        !Mesh->GetPathName().StartsWith(TEXT("/Game/CSSAuthoring/DiagnosticReferences/")) ||
++        !PackagePath.StartsWith(TEXT("/Game/CSSAuthoring/DiagnosticReferences/")) ||
++        FPackageName::DoesPackageExist(PackagePath)) return nullptr;
++    auto* Candidate=Cast<USkeletalMesh>(StaticDuplicateObject(Mesh,CreatePackage(*PackagePath),
++        FName(*FPackageName::GetLongPackageAssetName(PackagePath))));
++    if (!Candidate) return nullptr;
++    auto* Metadata=Candidate->GetAssetUserData<UAnimCurveMetaData>();
++    if (!Metadata)
++    {
++        Metadata=NewObject<UAnimCurveMetaData>(Candidate,NAME_None,RF_Public);
++        Candidate->AddAssetUserData(Metadata);
++    }
++    for (const auto& Morph : Candidate->GetMorphTargets())
++    {
++        Metadata->AddCurveMetaData(Morph->GetFName(),false);
++        Metadata->SetCurveMetaDataMorphTarget(Morph->GetFName(),true);
++    }
++    FSavePackageArgs Save;Save.TopLevelFlags=RF_Public|RF_Standalone;Save.SaveFlags=SAVE_NoError;
++    return UPackage::SavePackage(Candidate->GetOutermost(),Candidate,
++        *FPackageName::LongPackageNameToFilename(PackagePath,FPackageName::GetAssetPackageExtension()),Save) ? Candidate : nullptr;
++}
++
++UAnimBlueprint* UCSSControlRigLibrary::CreateHandPostProcessCandidate(USkeletalMesh* Mesh,
++    UAnimBlueprint* Baseline, UControlRigBlueprint* HandRig, const FString& PackagePath,
++    const TArray<FName>& HandBones, const TArray<FName>& Curves)
++{
++    auto Fail=[](const TCHAR* Why)->UAnimBlueprint* {
++        UE_LOG(LogCSSControlRig,Error,TEXT("Hand integration: %s"),Why);return nullptr;
++    };
++    if (!IsRunningCommandlet() || !Mesh || !Mesh->GetSkeleton() || !Baseline || !Baseline->GeneratedClass ||
++        !HandRig || !HandRig->GeneratedClass || !HandRig->GeneratedClass->IsChildOf(UControlRig::StaticClass()) ||
++        !Mesh->GetPathName().StartsWith(TEXT("/Game/CSSAuthoring/DiagnosticReferences/")) ||
++        !HandRig->GetPathName().StartsWith(TEXT("/Game/CSSAuthoring/TransientProbes/")) ||
++        !PackagePath.StartsWith(TEXT("/Game/CSS/TransientProbes/ABP_CSS_ControlRigProbeHand")) ||
++        FPackageName::DoesPackageExist(PackagePath) || HandBones.Num()!=19 || Curves.Num()!=16)
++        return Fail(TEXT("Invalid isolated asset contract"));
++    TSet<FName> Seen;
++    for (FName Name : HandBones)
++    {
++        const FString Text=Name.ToString();
++        if (Seen.Contains(Name) || !Text.EndsWith(TEXT("_l")) ||
++            !(Text.StartsWith(TEXT("thumb_")) || Text.StartsWith(TEXT("index_")) ||
++              Text.StartsWith(TEXT("middle_")) || Text.StartsWith(TEXT("ring_")) || Text.StartsWith(TEXT("pinky_"))) ||
++            Mesh->GetRefSkeleton().FindBoneIndex(Name)==INDEX_NONE) return Fail(TEXT("Invalid hand output bone"));
++        Seen.Add(Name);
++    }
++    Seen.Reset();
++    for (FName Curve : Curves)
++    {
++        if (Seen.Contains(Curve) || !Mesh->FindMorphTarget(Curve)) return Fail(TEXT("Missing private hand morph"));
++        Seen.Add(Curve);
++    }
++    for (const TCHAR* Name : {TEXT("Enabled"),TEXT("InputIsV43Compatible")})
++        if (!FindFProperty<FBoolProperty>(HandRig->GeneratedClass.Get(),Name)) return Fail(TEXT("Missing hand input"));
++    auto* Blueprint=Cast<UAnimBlueprint>(StaticDuplicateObject(Baseline,CreatePackage(*PackagePath),
++        FName(*FPackageName::GetLongPackageAssetName(PackagePath))));
++    if (!Blueprint) return Fail(TEXT("Cannot duplicate accepted body/hair graph"));
++    Blueprint->TargetSkeleton=Mesh->GetSkeleton();
++    FEdGraphPinType BoolType;BoolType.PinCategory=UEdGraphSchema_K2::PC_Boolean;
++    for (const TCHAR* Name : {TEXT("CSSHandEnabled"),TEXT("CSSHandInputIsV43Compatible")})
++        if (!FBlueprintEditorUtils::AddMemberVariable(Blueprint,Name,BoolType,TEXT("false")))
++            return Fail(TEXT("Cannot add hand control"));
++    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
++    UEdGraph* Graph=nullptr;
++    for (auto Candidate : Blueprint->FunctionGraphs)
++        if (Candidate->GetFName()==TEXT("AnimGraph")) Graph=Candidate.Get();
++    if (!Graph) return Fail(TEXT("Missing copied AnimGraph"));
++    UAnimGraphNode_Root* Root=nullptr;int32 ExistingRigs=0;
++    for (auto Node : Graph->Nodes)
++    {
++        if (auto* Candidate=Cast<UAnimGraphNode_Root>(Node)) Root=Candidate;
++        if (Cast<UAnimGraphNode_ControlRig>(Node)) ++ExistingRigs;
++    }
++    if (!Root || ExistingRigs!=2 || Root->FindPinChecked(TEXT("Result"))->LinkedTo.Num()!=1)
++        return Fail(TEXT("Expected accepted two-rig pose path"));
++    auto* Previous=Root->FindPinChecked(TEXT("Result"))->LinkedTo[0];
++    auto* Node=NewGraphNode<UAnimGraphNode_ControlRig>(Graph);
++    Node->Node.SetControlRigClass(HandRig->GeneratedClass.Get());Node->AllocateDefaultPins();
++    for (const auto& Pair : {TPair<FName,bool>(TEXT("bResetInputPoseToInitial"),true),
++                            TPair<FName,bool>(TEXT("bTransferInputPose"),true),
++                            TPair<FName,bool>(TEXT("bTransferInputCurves"),true),
++                            TPair<FName,bool>(TEXT("bTransferPoseInGlobalSpace"),false)})
++    {
++        auto* Property=FindFProperty<FBoolProperty>(FAnimNode_ControlRigBase::StaticStruct(),Pair.Key);
++        if (!Property) return Fail(TEXT("Missing pose transfer flag"));
++        Property->SetPropertyValue_InContainer(&Node->Node,Pair.Value);
++    }
++    auto* CustomPins=FindFProperty<FArrayProperty>(Node->GetClass(),TEXT("CustomPinProperties"));
++    auto* Filter=FindFProperty<FArrayProperty>(FAnimNode_ControlRigBase::StaticStruct(),TEXT("OutputBonesToTransfer"));
++    if (!CustomPins || !Filter) return Fail(TEXT("Missing native transfer metadata"));
++    auto& Options=*CustomPins->ContainerPtrToValuePtr<TArray<FOptionalPinFromProperty>>(Node);
++    for (auto& Option : Options)
++        Option.bShowPin=Option.PropertyName==TEXT("Enabled") || Option.PropertyName==TEXT("InputIsV43Compatible");
++    Node->ReconstructNode();
++    for (const auto& Pair : {TPair<FName,FName>(TEXT("CSSHandEnabled"),TEXT("Enabled")),
++                            TPair<FName,FName>(TEXT("CSSHandInputIsV43Compatible"),TEXT("InputIsV43Compatible"))})
++    {
++        auto* Read=VariableRead(Graph,Pair.Key);
++        if (!Link(Graph,Read->FindPin(Pair.Key),Node->FindPin(Pair.Value))) return Fail(TEXT("Cannot link hand control"));
++    }
++    auto& Output=*Filter->ContainerPtrToValuePtr<TArray<FBoneReference>>(&Node->Node);
++    for (FName Name : HandBones) { FBoneReference Bone;Bone.BoneName=Name;Output.Add(Bone); }
++    Root->FindPinChecked(TEXT("Result"))->BreakAllPinLinks();
++    if (!Link(Graph,Previous,Node->FindPin(TEXT("Source"))) ||
++        !Link(Graph,Node->FindPin(TEXT("Pose")),Root->FindPin(TEXT("Result")))) return Fail(TEXT("Cannot append hand pose"));
++    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
++    FCompilerResultsLog Results;
++    FKismetEditorUtilities::CompileBlueprint(Blueprint,EBlueprintCompileOptions::None,&Results);
++    if (Results.NumErrors || Results.NumWarnings || !Blueprint->GeneratedClass || Blueprint->Status==BS_Error)
++        return Fail(TEXT("Candidate compilation failed"));
++    FSavePackageArgs Save;Save.TopLevelFlags=RF_Public|RF_Standalone;Save.SaveFlags=SAVE_NoError;
++    if (!UPackage::SavePackage(Blueprint->GetOutermost(),Blueprint,
++        *FPackageName::LongPackageNameToFilename(PackagePath,FPackageName::GetAssetPackageExtension()),Save))
++        return Fail(TEXT("Candidate save failed"));
++    return Blueprint;
++}
++
++FString UCSSControlRigLibrary::EvaluateHandPostProcessCandidate(USkeletalMesh* Mesh,
++    UAnimBlueprint* Blueprint,const FString& SnapshotJson,const TArray<FName>& Curves,bool CompatibleInput)
++{
++    auto Fail=[](const TCHAR* Why)->FString {
++        UE_LOG(LogCSSControlRig,Error,TEXT("Hand component: %s"),Why);return {};
++    };
++    if (!IsRunningCommandlet() || !Mesh || !Blueprint || !Blueprint->GeneratedClass ||
++        Blueprint->TargetSkeleton!=Mesh->GetSkeleton() ||
++        !Blueprint->GetPathName().StartsWith(TEXT("/Game/CSS/TransientProbes/ABP_CSS_ControlRigProbeHand")))
++        return Fail(TEXT("Invalid isolated component assets"));
++    FPoseSnapshot Snapshot;
++    if (!FJsonObjectConverter::JsonObjectStringToUStruct(SnapshotJson,&Snapshot) || !Snapshot.bIsValid ||
++        Snapshot.BoneNames.Num()!=Snapshot.LocalTransforms.Num()) return Fail(TEXT("Invalid source pose"));
++    const auto& Ref=Mesh->GetRefSkeleton();
++    if (Snapshot.BoneNames.Num()<Ref.GetRawBoneNum()) return Fail(TEXT("Incomplete source pose"));
++    FMemMark Mark(FMemStack::Get());
++    auto* Sequence=NewObject<UAnimSequence>(GetTransientPackage(),NAME_None,RF_Transient);
++    Sequence->SetSkeleton(Mesh->GetSkeleton());Sequence->SetRetargetSourceAsset(Mesh);Sequence->UpdateRetargetSourceAssetData();
++    auto& Controller=Sequence->GetController();Controller.InitializeModel();
++    Controller.OpenBracket(FText::FromString(TEXT("Hand integration source")),false);
++    Controller.SetFrameRate(FFrameRate(60,1),false);Controller.SetNumberOfFrames(FFrameNumber(1),false);
++    for (int32 Index=0;Index<Ref.GetRawBoneNum();++Index)
++    {
++        const FTransform& Input=Snapshot.LocalTransforms[Index];
++        if (Snapshot.BoneNames[Index]!=Ref.GetBoneName(Index) || Input.ContainsNaN() || !Input.GetRotation().IsNormalized())
++        { Controller.CloseBracket(false);return Fail(TEXT("Invalid source bone")); }
++        TArray<FVector3f> Positions,Scales;TArray<FQuat4f> Rotations;
++        Positions.Init(FVector3f(Ref.GetRefBonePose()[Index].GetTranslation()),2);
++        Scales.Init(FVector3f(Input.GetScale3D()),2);Rotations.Init(FQuat4f(Input.GetRotation()),2);
++        if (!Controller.AddBoneCurve(Ref.GetBoneName(Index),false) ||
++            !Controller.SetBoneTrackKeys(Ref.GetBoneName(Index),Positions,Rotations,Scales,false))
++        { Controller.CloseBracket(false);return Fail(TEXT("Cannot author source animation")); }
++    }
++    Controller.NotifyPopulated();Controller.CloseBracket(false);
++    Sequence->BeginCacheDerivedDataForCurrentPlatform();Sequence->WaitOnExistingCompression(true);
++    if (!Sequence->IsCompressedDataValid()) return Fail(TEXT("Source compression failed"));
++    FPreviewScene Scene(FPreviewScene::ConstructionValues().SetCreateDefaultLighting(false));
++    auto MakeComponent=[&]() {
++        auto* C=NewObject<USkeletalMeshComponent>();C->SetSkeletalMesh(Mesh);C->SetAnimationMode(EAnimationMode::AnimationSingleNode);
++        C->SetOverridePostProcessAnimBP(TSubclassOf<UAnimInstance>(Blueprint->GeneratedClass.Get()),true);
++        C->SetDisablePostProcessBlueprint(false);Scene.AddComponent(C,FTransform::Identity);C->InitAnim(true);
++        C->SetAnimation(Sequence);C->Stop();return C;
++    };
++    auto* Component=MakeComponent();auto* Upstream=MakeComponent();
++    auto* Filter=FindFProperty<FArrayProperty>(FAnimNode_ControlRigBase::StaticStruct(),TEXT("OutputBonesToTransfer"));
++    if (!Filter) return Fail(TEXT("Missing output filter"));
++    TArray<TSharedPtr<FJsonValue>> Samples;
++    for (int32 Frame=0;Frame<7;++Frame)
++    {
++        const bool Enabled=Frame==1 || Frame==2 || Frame==4 || Frame==6;
++        if (Frame==6) for (auto* C : {Component,Upstream})
++        { C->InitAnim(true);C->SetAnimation(Sequence);C->Stop(); }
++        for (auto* C : {Upstream,Component})
++        {
++            auto* Instance=C->GetPostProcessInstance();if (!Instance) return Fail(TEXT("Missing post-process instance"));
++            auto* Enable=FindFProperty<FBoolProperty>(Instance->GetClass(),TEXT("CSSHandEnabled"));
++            auto* Compatible=FindFProperty<FBoolProperty>(Instance->GetClass(),TEXT("CSSHandInputIsV43Compatible"));
++            if (!Enable || !Compatible) return Fail(TEXT("Missing hand controls"));
++            Enable->SetPropertyValue_InContainer(Instance,C==Component && Enabled);
++            Compatible->SetPropertyValue_InContainer(Instance,CompatibleInput);
++            for (const auto& Pair : {TPair<FName,float>(TEXT("CSSStiffness"),200.f),TPair<FName,float>(TEXT("CSSDamping"),24.f)})
++            {
++                auto* Property=FindFProperty<FFloatProperty>(Instance->GetClass(),Pair.Key);
++                if (!Property) return Fail(TEXT("Missing accepted hair settings"));
++                Property->SetPropertyValue_InContainer(Instance,Pair.Value);
++            }
++            C->SetPosition(0.f,false);C->TickAnimation(Frame==0 ? 0.f : 1.f/60,true);C->RefreshBoneTransforms();
++        }
++        auto* Instance=Component->GetPostProcessInstance();UControlRig* Hand=nullptr;int32 Nodes=0;
++        for (TFieldIterator<FStructProperty> It(Instance->GetClass());It;++It)
++        {
++            if (It->Struct!=FAnimNode_ControlRig::StaticStruct()) continue;
++            ++Nodes;auto* Node=It->ContainerPtrToValuePtr<FAnimNode_ControlRig>(Instance);
++            const auto& Bones=*Filter->ContainerPtrToValuePtr<TArray<FBoneReference>>(Node);
++            if (Bones.Num()==19) Hand=Node->GetControlRig();
++        }
++        if (Nodes!=3 || !Hand) return Fail(TEXT("Missing three native rig instances"));
++        auto Row=MakeShared<FJsonObject>();Row->SetNumberField(TEXT("frame"),Frame);Row->SetBoolField(TEXT("enabled"),Enabled);
++        Row->SetBoolField(TEXT("valid"),Hand->GetVariableAsString(TEXT("HandValid")).Equals(TEXT("True"),ESearchCase::IgnoreCase));
++        Row->SetStringField(TEXT("hand_inputs"),Hand->GetVariableAsString(TEXT("HandInputs")));
++        TArray<TSharedPtr<FJsonValue>> Input,Output,RigOutput;
++        const auto A=Upstream->GetBoneSpaceTransformsView(),B=Component->GetBoneSpaceTransformsView();
++        if (A.Num()!=Ref.GetNum() || B.Num()!=Ref.GetNum()) return Fail(TEXT("Incomplete evaluated pose"));
++        for (int32 Index=0;Index<Ref.GetRawBoneNum();++Index)
++        {
++            Input.Add(MakeShared<FJsonValueObject>(PoseJson(A[Index])));Output.Add(MakeShared<FJsonValueObject>(PoseJson(B[Index])));
++            RigOutput.Add(MakeShared<FJsonValueObject>(PoseJson(Hand->GetHierarchy()->GetLocalTransform(
++                FRigElementKey(Ref.GetBoneName(Index),ERigElementType::Bone)))));
++        }
++        Row->SetArrayField(TEXT("upstream"),Input);Row->SetArrayField(TEXT("output"),Output);Row->SetArrayField(TEXT("rig_output"),RigOutput);
++        auto Values=MakeShared<FJsonObject>();auto RigValues=MakeShared<FJsonObject>();auto MorphWeights=MakeShared<FJsonObject>();
++        for (FName Curve : Curves)
++        {
++            float Value=0;Component->GetCurveValue(Curve,0.f,Value);Values->SetNumberField(Curve.ToString(),Value);
++            RigValues->SetNumberField(Curve.ToString(),Hand->GetHierarchy()->GetCurveValue(FRigElementKey(Curve,ERigElementType::Curve)));
++            const int32* WeightIndex=Component->ActiveMorphTargets.Find(Mesh->FindMorphTarget(Curve));
++            if (WeightIndex && !Component->MorphTargetWeights.IsValidIndex(*WeightIndex)) return Fail(TEXT("Invalid active morph weight"));
++            MorphWeights->SetNumberField(Curve.ToString(),WeightIndex ? Component->MorphTargetWeights[*WeightIndex] : 0.f);
++        }
++        Row->SetObjectField(TEXT("curves"),Values);Row->SetObjectField(TEXT("rig_curves"),RigValues);
++        Row->SetObjectField(TEXT("morph_weights"),MorphWeights);Samples.Add(MakeShared<FJsonValueObject>(Row));
++    }
++    auto Report=MakeShared<FJsonObject>();Report->SetArrayField(TEXT("samples"),Samples);
++    auto MetadataReport=MakeShared<FJsonObject>();
++    const auto* Metadata=Mesh->GetAssetUserData<UAnimCurveMetaData>();
++    for (FName Curve : Curves)
++    {
++        auto Flags=MakeShared<FJsonObject>();
++        const auto* MeshFlags=Metadata ? Metadata->GetCurveMetaData(Curve) : nullptr;
++        const auto* SkeletonFlags=Mesh->GetSkeleton()->GetCurveMetaData(Curve);
++        Flags->SetBoolField(TEXT("mesh_morph"),MeshFlags && MeshFlags->Type.bMorphtarget);
++        Flags->SetBoolField(TEXT("skeleton_morph"),SkeletonFlags && SkeletonFlags->Type.bMorphtarget);
++        MetadataReport->SetObjectField(Curve.ToString(),Flags);
++    }
++    Report->SetObjectField(TEXT("curve_metadata"),MetadataReport);
++    Report->SetBoolField(TEXT("compressed_source"),true);Report->SetBoolField(TEXT("compatible_input"),CompatibleInput);
++    FString Result;return FJsonSerializer::Serialize(Report,TJsonWriterFactory<>::Create(&Result)) ? Result : FString();
++}
+--- a/Source/CSSAuthoring/CSSImportMeshCommandlet.cpp
++++ b/Source/CSSAuthoring/CSSImportMeshCommandlet.cpp
+@@ -1,6 +1,7 @@
+ #include "CSSImportMeshCommandlet.h"
+ 
+ #include "Animation/Skeleton.h"
++#include "Animation/AnimCurveMetadata.h"
+ #include "AssetCompilingManager.h"
+ #include "AssetRegistry/AssetRegistryModule.h"
+ #include "Dom/JsonObject.h"
+@@ -371,6 +372,25 @@
+     for (const FString& Name : Data.MorphTargetNames)
+         if (!Mesh->FindMorphTarget(FName(*Name)))
+             return Fail(FString::Printf(TEXT("Built mesh is missing morph target '%s'"), *Name));
++    // AnimInstanceProxy classifies morph curves through RequiredBones metadata.
++    // Mesh data alone lets SetMorphTarget work but leaves animation-driven
++    // correctives at zero. Keep these flags on the mesh, not a shared Skeleton.
++    if (!Data.MorphTargetNames.IsEmpty())
++    {
++        auto* Metadata=Mesh->GetAssetUserData<UAnimCurveMetaData>();
++        if (!Metadata)
++        {
++            Metadata=NewObject<UAnimCurveMetaData>(Mesh,NAME_None,RF_Public);
++            Mesh->AddAssetUserData(Metadata);
++        }
++        for (const FString& Name : Data.MorphTargetNames)
++        {
++            Metadata->AddCurveMetaData(FName(*Name),false);
++            Metadata->SetCurveMetaDataMorphTarget(FName(*Name),true);
++            const auto* Flags=Metadata->GetCurveMetaData(FName(*Name));
++            if (!Flags || !Flags->Type.bMorphtarget) return Fail(TEXT("Missing imported morph curve flag"));
++        }
++    }
+     FAssetRegistryModule::AssetCreated(Skeleton);
+     FAssetRegistryModule::AssetCreated(Mesh);
+     Mesh->MarkPackageDirty();

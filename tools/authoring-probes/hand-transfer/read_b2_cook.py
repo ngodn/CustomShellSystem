@@ -9,8 +9,9 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[4]
 WORK=ROOT/'CustomShellSystem/work/grip-grounding-v1'
 MOD=ROOT/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx'
-COOK=WORK/'arm-rest-b2-cook-v1'
-OUT=WORK/'arm-rest-b2-cooked-readback-v1'
+COOK=Path(os.environ.get('CSS_B2_COOK_DIR',str(WORK/'arm-rest-b2-cook-v1'))).resolve()
+OUT=Path(os.environ.get('CSS_B2_COOK_READBACK_DIR',str(WORK/'arm-rest-b2-cooked-readback-v1'))).resolve()
+assert COOK.parent==OUT.parent==WORK.resolve()
 load=lambda p:json.loads(p.read_text())
 digest=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
 assert load(COOK/'exit.json')['exit_code']==0
@@ -29,7 +30,7 @@ def run(label,args,env=None):
 stage=OUT/'stage'
 copied={}
 for package in manifest['packages']:
-    assert package.startswith('/Game/CSSAuthoring/')
+    assert package.startswith(('/Game/CSSAuthoring/','/Game/CSS/'))
     relative=package.removeprefix('/Game/')
     for suffix in ('.uasset','.uexp','.ubulk'):
         source=COOK/'cooked/CSSAuthoring/Content'/(relative+suffix)

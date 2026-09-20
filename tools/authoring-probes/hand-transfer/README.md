@@ -265,3 +265,22 @@ verifier with `--check-uv`, then `verify_b2_cook.py` in Blender for all 22
 morphs, float32 bind equivalence and cooked VM structure. These fixed evidence
 folders are single-use. See [B2 cooked hand assets](../../../docs/development/b2-cooked-hand-assets.md)
 for retained failure diagnoses, measurements and remaining runtime checks.
+
+
+## Hand stage in the body/hair post-process
+
+`probe_hand_postprocess.py` appends the saved hand rig to an isolated copy of
+the accepted two-rig blueprint and evaluates actual components. Set
+`CSS_HAND_POSTPROCESS_DIR` to a fresh grip evidence directory. The original
+probe detects missing morph-driver metadata; `CSS_HAND_METADATA=1` performs
+the controlled metadata-copy experiment with a retained negative control.
+`verify_imported_morph_metadata.py` checks the importer fix after a fresh
+process load. The editor changes are retained in
+`../../authoring-patches/hand-postprocess-integration.patch`.
+
+`read_b2_cook.py` also accepts `CSS_B2_COOK_DIR` and
+`CSS_B2_COOK_READBACK_DIR`, both direct children of the grip evidence folder,
+for explicit later cooks. `verify_hand_postprocess_cook.py` checks the cooked
+mesh flags, unchanged ActorX data, 7/29/19-bone filters and inherited control
+mappings. See [hand post-process integration](../../../docs/development/hand-postprocess-integration.md)
+for the reproduced failure, evidence and remaining production/live work.

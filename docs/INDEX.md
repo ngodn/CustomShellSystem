@@ -1,5 +1,7 @@
 # CSS research index
 
+- [Hand post-process integration](development/hand-postprocess-integration.md): actual component evaluation, missing morph-driver metadata diagnosis, importer fix and cooked integration.
+
 - [B2 cooked hand assets](development/b2-cooked-hand-assets.md): full import, independent geometry/morph/VM readback and remaining runtime integration.
 
 - [Combined native hand](development/combined-native-hand.md): complete stage composition from original inputs, measured curves/skin and remaining integration.
