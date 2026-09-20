@@ -1169,6 +1169,109 @@ Json InventoryUI::dispatch(Json action,const State& state) {
     if(name=="ui_rename_template" || name=="ui_rename_profile") return {{"action","rename_look"},{"name",action.at("name")},{"new_name",inventory_text(name_input_.Get())}};
     return action;
 }
+// Re-resolve reflected storage on each use. Only the live menu instance is
+// changed; no camera template or shared default is written.
+static float* inventory_camera_fov(UObject* state) {
+    auto* property=state?state->GetPropertyByNameInChain(L"CameraSettings"):nullptr;
+    if(!property || !property->IsA<FStructProperty>())
+        throw std::runtime_error("Menu camera settings unavailable");
+    auto* type=static_cast<FStructProperty*>(property)->GetStruct().Get();
+    auto* fov=type->GetPropertyByNameInChain(L"FOV");
+    auto* enabled=type->GetPropertyByNameInChain(L"bOverrideFOV");
+    auto* method=type->GetPropertyByNameInChain(L"ViewCalculationMethod");
+    auto bounded=[&](FProperty* field) {
+        return field && field->GetArrayDim()==1 && field->GetOffset_Internal()>=0 &&
+            field->GetSize()>0 && field->GetOffset_Internal()+field->GetSize()<=property->GetElementSize();
+    };
+    if(!bounded(fov) || !fov->IsA<FFloatProperty>() || !bounded(enabled) || !enabled->IsA<FBoolProperty>() ||
+       !bounded(method) || method->GetElementSize()!=1 || (!method->IsA<FByteProperty>() && !method->IsA<FEnumProperty>()))
+        throw std::runtime_error("Menu camera settings layout mismatch");
+    auto* data=reinterpret_cast<std::byte*>(state)+property->GetOffset_Internal();
+    if(!static_cast<FBoolProperty*>(enabled)->GetPropertyValueInContainer(data) ||
+       *reinterpret_cast<uint8_t*>(data+method->GetOffset_Internal())!=0)
+        throw std::runtime_error("Menu camera does not use the expected FOV override");
+    return reinterpret_cast<float*>(data+fov->GetOffset_Internal());
+}
+void InventoryUI::camera_bind_state() {
+    auto* manager=inventory_object(controller_.Get(),L"PlayerCameraManager");
+    auto* instance=inventory_object(manager,L"ActiveCameraInstance");
+    auto* state=inventory_object(instance,L"CameraState");
+    if(state==camera_state_.Get()) return;
+    camera_restore_state();
+    if(!state || !camera_actor_.Get() || state->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject|RF_ArchetypeObject)) ||
+       state->GetClassPrivate()->GetPathName()!=L"/Game/Sparta/Core/Camera/CameraStates/CameraState_Menu.CameraState_Menu_C") return;
+    auto* fov=inventory_camera_fov(state);
+    if(!std::isfinite(*fov) || *fov<=0 || *fov>=180) throw std::runtime_error("Invalid menu camera FOV");
+    Call target(state,L"GetCameraTargetActor",1); target.run();
+    Call lens(camera_component_.Get(),L"GetHorizontalFieldOfView",1); lens.run();
+    camera_target_before_=target.get<UObject*>(); camera_fov_before_=*fov;
+    camera_state_=state;
+    invoke(state,L"SetCameraTargetActor",L"Actor",camera_actor_.Get());
+    *fov=lens.get<float>();
+}
+void InventoryUI::camera_restore_state() {
+    if(auto* state=camera_state_.Get()) {
+        *inventory_camera_fov(state)=camera_fov_before_;
+        invoke(state,L"SetCameraTargetActor",L"Actor",camera_target_before_.Get());
+    }
+    camera_state_.Reset(); camera_target_before_.Reset();
+}
+void InventoryUI::backdrop_start() {
+    auto* camera=camera_component_.Get();
+    if(!camera) return;
+    auto vector=[](UObject* object,const wchar_t* function) {
+        Call call(object,function,1); call.run(); return call.get<BackdropVector>();
+    };
+    backdrop_forward_=vector(camera,L"GetForwardVector");
+    backdrop_right_=vector(camera,L"GetRightVector");
+    backdrop_up_=vector(camera,L"GetUpVector");
+    for(auto* name:{L"BG_Front",L"BG_Back"}) {
+        auto* component=inventory_object(display_.Get(),name);
+        auto* mesh=inventory_object(component,L"StaticMesh");
+        // This game's centered 100 cm XY plane is the measured layout contract.
+        if(!mesh || mesh->GetPathName()!=L"/Engine/BasicShapes/Plane.Plane") continue;
+        BackdropLayer layer;
+        layer.component=component;
+        layer.relative_location=read<BackdropVector>(component,L"RelativeLocation");
+        layer.relative_scale=read<BackdropVector>(component,L"RelativeScale3D");
+        layer.world_location=vector(component,L"K2_GetComponentLocation");
+        layer.axis_x=vector(component,L"GetForwardVector");
+        layer.axis_y=vector(component,L"GetRightVector");
+        auto scale=vector(component,L"K2_GetComponentScale");
+        layer.half_x=50*std::abs(scale[0]); layer.half_y=50*std::abs(scale[1]);
+        backdrop_layers_.push_back(layer);
+    }
+    backdrop_aspect_=0;
+    backdrop_update();
+}
+void InventoryUI::backdrop_update() {
+    auto* camera=camera_component_.Get();
+    if(!camera || backdrop_layers_.empty() || layout_size_[0]<=0 || layout_size_[1]<=0) return;
+    const double aspect=layout_size_[0]/layout_size_[1];
+    Call lens(camera,L"GetHorizontalFieldOfView",1); lens.run();
+    for(auto& layer:backdrop_layers_) if(auto* component=layer.component.Get()) {
+        const double factor=backdrop_coverage(camera_world_location_,backdrop_forward_,backdrop_right_,
+            backdrop_up_,lens.get<float>(),aspect,layer.world_location,layer.axis_x,layer.axis_y,layer.half_x,layer.half_y);
+        auto scale=layer.relative_scale;
+        scale[0]*=factor; scale[1]*=factor;
+        invoke(component,L"SetRelativeScale3D",L"NewScale3D",scale);
+        // The planes belong to the camera's parent component, not the moving
+        // child camera actor. Follow the same screen-plane translation as CSS.
+        auto location=layer.world_location;
+        for(int i=0;i<3;++i) location[i]-=backdrop_right_[i]*pan_+backdrop_up_[i]*frame_;
+        Call move(component,L"K2_SetWorldLocation",4); move.set(L"NewLocation",location);
+        move.set(L"bSweep",false); move.set(L"bTeleport",true); move.run();
+    }
+    backdrop_aspect_=aspect;
+}
+void InventoryUI::backdrop_stop() {
+    for(auto& layer:backdrop_layers_) if(auto* component=layer.component.Get()) {
+        invoke(component,L"SetRelativeScale3D",L"NewScale3D",layer.relative_scale);
+        Call move(component,L"K2_SetRelativeLocation",4); move.set(L"NewLocation",layer.relative_location);
+        move.set(L"bSweep",false); move.set(L"bTeleport",true); move.run();
+    }
+    backdrop_layers_.clear(); backdrop_aspect_=0;
+}
 void InventoryUI::camera_start() {
     auto* handler=inventory_object(controller_.Get(),L"User Interface Handler Component");
     auto* display=inventory_object(handler,L"ActiveDisplayMenu");
@@ -1178,15 +1281,43 @@ void InventoryUI::camera_start() {
     auto* camera=inventory_object(inventory_object(display,L"CameraActor_DisplayMenu"),L"ChildActor");
     auto* component=inventory_object(camera,L"CameraComponent");
     if(component && component->GetPropertyByNameInChain(L"CurrentFocalLength")) {
+        camera_actor_=camera;
+        Call actor_location(camera,L"K2_GetActorLocation",1); actor_location.run();
+        camera_actor_location_before_=actor_location.get<std::array<double,3>>();
         camera_component_=component; lens_before_=read<float>(component,L"CurrentFocalLength");
         camera_rotation_before_=read<std::array<double,3>>(component,L"RelativeRotation");
         camera_location_before_=read<std::array<double,3>>(component,L"RelativeLocation");
         Call rotation(component,L"K2_GetComponentRotation",1); rotation.run(); camera_world_rotation_=rotation.get<std::array<double,3>>();
         Call location(component,L"K2_GetComponentLocation",1); location.run(); camera_world_location_=location.get<std::array<double,3>>();
     }
+    // LevelTick skips UpdateCameraManager while paused unless this is enabled.
+    // Keep the original through CSS re-entry and other Inventory tabs; restoring
+    // it on a tab switch would freeze their camera transitions as well.
+    if(camera_component_.Get() && !camera_tick_controller_.Get()) {
+        auto* pc=controller_.Get();
+        auto* property=pc?pc->GetPropertyByNameInChain(L"bShouldPerformFullTickWhenPaused"):nullptr;
+        if(!property || !property->IsA<FBoolProperty>())
+            throw std::runtime_error("Inventory paused camera property unavailable");
+        auto* flag=static_cast<FBoolProperty*>(property);
+        camera_tick_before_=flag->GetPropertyValueInContainer(pc);
+        camera_tick_controller_=pc;
+        flag->SetPropertyValueInContainer(pc,true);
+    }
     zoom_=frame_=pan_=0; motion_.reset(); drag_pan_=drag_rotate_=false; mouse_left_=mouse_right_=false;
+    backdrop_start();
+}
+void InventoryUI::camera_tick_restore() {
+    if(auto* pc=camera_tick_controller_.Get()) {
+        auto* property=pc->GetPropertyByNameInChain(L"bShouldPerformFullTickWhenPaused");
+        if(!property || !property->IsA<FBoolProperty>())
+            throw std::runtime_error("Inventory paused camera restoration unavailable");
+        static_cast<FBoolProperty*>(property)->SetPropertyValueInContainer(pc,camera_tick_before_);
+    }
+    camera_tick_controller_.Reset();
 }
 void InventoryUI::camera_stop() {
+    backdrop_stop();
+    camera_restore_state();
     motion_.reset(); drag_pan_=drag_rotate_=false;
     if(auto* display=display_.Get()) { invoke(display,L"UpdateDisplayYaw",L"NewValue",yaw_before_); invoke(display,L"UpdateDisplayVector",L"NewValue",location_before_); }
     if(auto* camera=camera_component_.Get()) {
@@ -1194,7 +1325,11 @@ void InventoryUI::camera_stop() {
         Call rotate(camera,L"K2_SetRelativeRotation",4); rotate.set(L"NewRotation",camera_rotation_before_); rotate.set(L"bSweep",false); rotate.set(L"bTeleport",true); rotate.run();
         Call location(camera,L"K2_SetRelativeLocation",4); location.set(L"NewLocation",camera_location_before_); location.set(L"bSweep",false); location.set(L"bTeleport",true); location.run();
     }
-    display_.Reset(); camera_component_.Reset();
+    if(auto* actor=camera_actor_.Get()) {
+        Call location(actor,L"K2_SetActorLocation",5); location.set(L"NewLocation",camera_actor_location_before_);
+        location.set(L"bSweep",false); location.set(L"bTeleport",true); location.run();
+    }
+    display_.Reset(); camera_component_.Reset(); camera_actor_.Reset();
 }
 void InventoryUI::camera_update(double delta,bool invert_x) {
     auto* display=display_.Get(); auto* handler=inventory_object(controller_.Get(),L"User Interface Handler Component");
@@ -1245,7 +1380,13 @@ void InventoryUI::camera_move(const std::array<double,4>& movement) {
         invoke(display,L"UpdateYaw",L"DeltaTime",1.);
     }
     if(auto* camera=camera_component_.Get()) {
-        if(z) { zoom_=std::clamp(zoom_+z,-.45,1.); invoke(camera,L"SetCurrentFocalLength",L"InFocalLength",float(lens_before_*(1+zoom_))); }
+        if(z) {
+            zoom_=std::clamp(zoom_+z,-.45,1.); invoke(camera,L"SetCurrentFocalLength",L"InFocalLength",float(lens_before_*(1+zoom_)));
+            if(auto* state=camera_state_.Get()) {
+                Call lens(camera,L"GetHorizontalFieldOfView",1); lens.run();
+                *inventory_camera_fov(state)=lens.get<float>();
+            }
+        }
         if(h || v) {
             pan_=std::clamp(pan_+h,-90.,90.); frame_=std::clamp(frame_+v,-70.,70.);
             // Move the camera opposite the stick in its screen plane. The
@@ -1253,11 +1394,15 @@ void InventoryUI::camera_move(const std::array<double,4>& movement) {
             const double p=camera_world_rotation_[0]*pi/180., y=camera_world_rotation_[1]*pi/180.;
             std::array<double,3> right_axis{-std::sin(y),std::cos(y),0};
             std::array<double,3> up_axis{-std::sin(p)*std::cos(y),-std::sin(p)*std::sin(y),std::cos(p)};
-            auto position=camera_world_location_;
+            auto position=camera_actor_location_before_;
             for(int i=0;i<3;++i) position[i]-=right_axis[i]*pan_+up_axis[i]*frame_;
-            Call move(camera,L"K2_SetWorldLocation",4); move.set(L"NewLocation",position); move.set(L"bSweep",false); move.set(L"bTeleport",true); move.run();
+            if(auto* actor=camera_actor_.Get()) {
+                Call move(actor,L"K2_SetActorLocation",5); move.set(L"NewLocation",position); move.set(L"bSweep",false); move.set(L"bTeleport",true); move.run();
+            }
         }
     }
+    const double aspect=layout_size_[1]>0?layout_size_[0]/layout_size_[1]:0;
+    if(z || h || v || aspect!=backdrop_aspect_) backdrop_update();
 }
 Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Appearance& appearance,float,bool focused) {
 #ifdef CSS_INVENTORY_DEV
@@ -1283,6 +1428,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     }
     auto* main=main_.Get(); auto* switcher=switcher_.Get();
     if(!main || !switcher || !page_.Get()) { detach(); return {}; }
+    if(!inventory_bool(main,L"bOpen")) camera_tick_restore();
     Call selected(switcher,L"GetActiveWidget",1); selected.run();
     const bool extension_before=extension_active_;
     extension_active_=inventory_bool(main,L"bOpen") && selected.get<UObject*>()==extension_page_.Get();
@@ -1290,6 +1436,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     if(extension_before!=extension_active_) {dirty_=enter_transition_=true;hits_.clear();rows_.clear();sliders_.clear();scroll_.Reset();name_input_.Reset();}
     if(active_ && !was_active_) { appearance.player(engine); bind_inputs(); camera_start(); dirty_=enter_transition_=true; closing_=false; for(auto& b:bindings_) { b.down=true; b.repeat=now+400; } }
     if(!active_ && was_active_) { camera_stop(); closing_=false; transition_started_=0; }
+    if(active_) camera_bind_state();
     was_active_=active_;
     const bool in_shell_view = active_ && !extension_active_ && (section_ == 0);
     if(was_in_shell_view_ && !in_shell_view) {

@@ -11,6 +11,7 @@
 #include "data.hpp"
 #include "body_geometry.hpp"
 #include "inventory_motion.hpp"
+#include "inventory_backdrop.hpp"
 #include "inventory_keys.hpp"
 #include "extension_client.hpp"
 #include "cssx/hud.h"
@@ -94,6 +95,11 @@ class InventoryUI {
     bool extension_input(const std::string&);
     WeakObject main_, tabs_, switcher_, tab_, page_, controller_;
     WeakObject canvas_, status_, scroll_, name_input_, display_, camera_component_, input_prompt_;
+    WeakObject camera_tick_controller_;
+    WeakObject camera_actor_, camera_state_, camera_target_before_;
+    bool camera_tick_before_=false;
+    float camera_fov_before_=0;
+    std::array<double,3> camera_actor_location_before_{};
     Json confirm_action_;
     bool native_picker_=false;
     std::string native_picker_title_, native_picker_kind_, native_picker_target_;
@@ -141,13 +147,27 @@ class InventoryUI {
     bool gamepad_=true, mouse_left_=false, mouse_right_=false, drag_pan_=false, drag_rotate_=false;
     std::array<double,2> mouse_before_{};
     float lens_before_=0;
+    struct BackdropLayer {
+        WeakObject component;
+        BackdropVector relative_location{},relative_scale{},world_location{},axis_x{},axis_y{};
+        double half_x=0,half_y=0;
+    };
+    std::vector<BackdropLayer> backdrop_layers_;
+    BackdropVector backdrop_forward_{},backdrop_right_{},backdrop_up_{};
+    double backdrop_aspect_=0;
     std::array<double,3> location_before_{}, camera_rotation_before_{}, camera_location_before_{}, camera_world_rotation_{}, camera_world_location_{};
     void build(const Catalog&,const State&,Appearance&);
     void bind_inputs();
     void camera_start();
     void camera_stop();
+    void camera_tick_restore();
+    void camera_bind_state();
+    void camera_restore_state();
     void camera_update(double delta,bool invert_x);
     void camera_move(const std::array<double,4>& movement);
+    void backdrop_start();
+    void backdrop_update();
+    void backdrop_stop();
     void animate(uint64_t now);
     void close_menu();
     Json dispatch(Json,const State&);
@@ -353,8 +373,21 @@ class Appearance {
     WeakObject spring_instance_;
     std::map<std::string,DynamicsSettings> dynamics_originals_;
     WeakObject dynamics_instance_;
+    std::optional<RigSettings> rig_original_;
+    std::optional<RigSettings> rig_applied_;
+    WeakObject rig_instance_;
+    std::optional<BodyRigSettings> body_rig_original_, body_rig_applied_;
+    WeakObject body_rig_instance_;
+    WeakObject body_geometry_instance_;
+    std::optional<BodyGeometryModel> body_geometry_model_;
+    std::optional<BodyGeometry> body_geometry_original_, body_geometry_applied_;
+    std::optional<std::array<float,6>> body_geometry_morphs_;
     std::map<std::string,SpringOriginal> menu_spring_originals_;
     std::map<std::string,DynamicsSettings> menu_dynamics_originals_;
+    std::optional<RigSettings> menu_rig_original_;
+    std::optional<RigSettings> menu_rig_applied_;
+    std::optional<BodyRigSettings> menu_body_rig_original_, menu_body_rig_applied_;
+    std::optional<BodyGeometry> menu_body_geometry_original_, menu_body_geometry_applied_;
     WeakObject menu_physics_instance_;
     std::optional<bool> menu_post_process_disabled_;
     // Shape: the morph targets CSS drove and their weights, so taking the outfit off puts
@@ -366,6 +399,7 @@ class Appearance {
     void show_hidden_sections();
     void restore_springs();
     void restore_dynamics();
+    void restore_rig();
     void sync_menu_physics(RC::Unreal::UObject* component);
     void restore_menu_physics();
     void clear_driven_morphs();
@@ -373,21 +407,8 @@ class Appearance {
     std::map<int,WeakObject> control_mids_;
     std::map<std::string,WeakObject> dye_targets_, dye_textures_;
     std::map<std::string,ControlValue> last_values_;
-    std::optional<RigSettings> rig_original_;
-    std::optional<RigSettings> rig_applied_;
-    WeakObject rig_instance_;
-    std::optional<BodyRigSettings> body_rig_original_, body_rig_applied_;
-    WeakObject body_rig_instance_;
-    WeakObject body_geometry_instance_;
-    std::optional<BodyGeometryModel> body_geometry_model_;
-    std::optional<BodyGeometry> body_geometry_original_, body_geometry_applied_;
-    std::optional<std::array<float,6>> body_geometry_morphs_;
     std::string control_outfit_;
     std::vector<WeakObject> expected_materials_;
-    std::optional<RigSettings> menu_rig_original_;
-    std::optional<RigSettings> menu_rig_applied_;
-    std::optional<BodyRigSettings> menu_body_rig_original_, menu_body_rig_applied_;
-    std::optional<BodyGeometry> menu_body_geometry_original_, menu_body_geometry_applied_;
     WeakObject menu_component_, menu_applied_;
     std::string menu_original_;
     std::vector<std::string> menu_original_materials_;
@@ -399,7 +420,6 @@ class Appearance {
     WornItems items_, menu_items_;
     std::vector<Item> current_items_;
     std::string current_items_identity_;
-    void restore_rig();
     std::set<int> menu_hidden_sections_;
     void reconcile_sections();
     AttachmentOffsets offsets_;
@@ -410,6 +430,7 @@ class Appearance {
     bool reuse_materials();
     void detach_residual_controls();
     void reset_controls();
+    void sync_body_geometry(RC::Unreal::UObject* component);
     void prepare_deformation_materials();
 public:
     std::string shell, pawn_name, current_mesh;
@@ -430,7 +451,6 @@ public:
     Json tune_seals(double lift,double clearance,double max_push) { return offsets_.tune(lift,clearance,max_push); }
 #endif
     void set_attachment_offsets(const std::map<std::string,AttachmentOffset>& offsets) { offsets_.configure(offsets); }
-    void sync_body_geometry(RC::Unreal::UObject* component);
     // Put the variant's accessories on the body and hide what they cover. Safe to call
     // repeatedly: it rebuilds only when the outfit or variant changes.
     void sync_items(const Outfit&,const std::string& variant);
