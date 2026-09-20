@@ -120,9 +120,17 @@ six original morph records are identical. The 16 new names and baked values
 match the native driver exactly, and their deltas are nonempty and finite.
 The output hash matches the exporter audit.
 
-This does not claim an independent comparison of every new delta against its
-source shape, full Unreal import, cooking or GPU morph execution. The earlier
-V43 corrective cook is not proof that the reposed B2 cook is correct.
+An independent source-delta check now evaluates each B2 hand corrective at
+zero and one through Blender's dependency graph, with the other saved fit
+keys retained. It compares all 16 shapes at all 36,787 exported body points
+without calling the exporter's delta routine. Neutral point mapping is exact;
+maximum delta error is 0.000012014 cm against a 0.0002 cm gate. No coincident
+point needed disambiguation. Source and interchange hashes remain unchanged.
+`arm-rest-corrective-source-deltas-v1` contains the report and terminal exit 0;
+`verify_corrective_source_deltas.py` reproduces the check.
+
+Full Unreal import, cooking and GPU morph execution remain unverified. The
+earlier V43 corrective cook is not proof that the reposed B2 cook is correct.
 
 ## Remaining work
 

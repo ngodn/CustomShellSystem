@@ -183,7 +183,8 @@ folder. Reuse the saved workspace-only command manifests. Native execution is
 still isolated from the full animation pipeline; see
 [native finger clearance](../../../docs/development/native-finger-clearance.md)
 for performance, numerical failures, measured skin and remaining acceptance.
-# Native thumb-tip stage
+
+## Native thumb-tip stage
 
 `prepare_thumb_clearance_fixtures.py` prepares all 464 retained B2 poses after
 the measured native finger outputs. Set `CSS_NATIVE_CLEARANCE_FIXTURES` to a
@@ -205,3 +206,12 @@ for evidence, the exact 934-case finger regression after sharing graph code,
 and remaining combined/cooked/live acceptance. The diagnostic package version
 is V2 to preserve the previous saved finger probe; it is not a CSS skeleton
 version or a deployed SeduXtress release.
+
+## Independent corrective source check
+
+`verify_corrective_source_deltas.py` compares the complete B2 exported hand
+correctives against Blender-evaluated key-zero/key-one geometry. Set
+`CSS_CORRECTIVE_SOURCE_AUDIT` to a fresh direct child of the grip work folder.
+It independently maps neutral body points and checks all 16 deltas per point,
+including omitted deltas below the exporter threshold. It preserves source
+files and does not substitute for Unreal import/cook or GPU morph verification.
