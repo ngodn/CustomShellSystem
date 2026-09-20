@@ -1,5 +1,9 @@
 # Captured hand transfer and native correctives, 2026-09-21
 
+Follow-up: [native hand calibration](native-hand-calibration.md) now supplies
+the upstream mapping and a 22-morph B2 interchange. The clearance stage,
+production integration and live acceptance remain unfinished.
+
 V44B2 retains the passing skin checks for all 35 previously corrected captured
 hand poses. The original finger corrective-shape logic now also runs in a
 saved native Control Rig graph, with 53 passing execution checks. V43 remains

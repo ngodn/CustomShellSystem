@@ -41,3 +41,24 @@ undo V43's compatible-Skeleton conversion on the game-reference H2 inputs.
 
 See [native finger correctives](../../../docs/development/native-finger-correctives.md)
 for evidence, input conventions and the remaining integration work.
+
+## Native calibration and combined curves
+
+- `left-finger-calibration-v1.json` archives the existing 19-joint model. Its
+  original description refers to V43 captures; the native graph explicitly
+  distinguishes those inputs from game-reference inputs.
+- `prepare_native_fixtures.py` runs in Blender with
+  `CSS_NATIVE_HAND_FIXTURE_DIR` set to a fresh grip-evidence child directory.
+  Completed fixtures are in `hand-native-calibration-fixtures-v2`.
+- `native_nodes.py` authors calibration and corrective nodes. It snapshots
+  inputs, guards ambiguous twist, preserves metacarpal motion and passes
+  disabled/singular input through while clearing its private curves.
+- `build_calibration_rig.py` runs in the UE5.6.1 commandlet with
+  `CSS_NATIVE_CALIBRATION_AUDIT_DIR` set similarly. It requires the v2 fixtures,
+  refuses to overwrite the graph, and saves only after 91 checks pass.
+- `verify_corrective_export.py` runs with host Python and compares the B2
+  six-morph and 22-morph interchange files, including native baked-value agreement.
+
+See [native hand calibration](../../../docs/development/native-hand-calibration.md)
+for successful and rejected runs. The runtime clearance stage is not yet
+implemented. A fresh input pose is required on every evaluation.
