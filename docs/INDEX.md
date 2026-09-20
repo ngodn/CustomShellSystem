@@ -1,5 +1,7 @@
 # CSS research index
 
+[Game-reference evaluator and pose findings](development/game-reference-import.md) records the preserved 1199-bone source, raw/compressed controls, bounded importer changes and remaining heavy-weapon mismatch.
+
 [MoreBeauteGenessa reference](../../CSS-Mod-Authoring/docs/next-gen-morebeaute-reference.md) records the user-confirmed working heavy-weapon/sidearm comparison, verified installed assets and exact canonical reference match. MoreBeaute Martyr’s Blade/H2 baseline and a Steam still are captured; full-body replay is visually reviewed and matching V43 comparison remains pending.
 
 For outfit authors, start with the [modding guide](modding/README.md). It links the authoring requirements, project utility, color recipes, package contract and release checks. The [source research](modding-research.md) separates official Unreal behavior from local verification.

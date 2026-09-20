@@ -1,0 +1,59 @@
+--- a/CSS-eins0fx-collections/tools/CSSAuthoring/Source/CSSAuthoring/CSSImportMeshCommandlet.cpp
++++ b/CSS-eins0fx-collections/tools/CSSAuthoring/Source/CSSAuthoring/CSSImportMeshCommandlet.cpp
+@@ -98,6 +98,14 @@
+         FPackageName::DoesPackageExist(PackageName) ||
+         FPackageName::DoesPackageExist(SkeletonPackageName))
+         return Fail(TEXT("Choose distinct, unused mesh and skeleton package paths"));
++
++    // The shipped game Skeleton contains mirrored reference bones. Keep this
++    // opt-in limited to isolated reference assets; outfit imports stay unchanged.
++    const bool AllowMirroredReferenceScale = FParse::Param(*Params, TEXT("AllowMirroredReferenceScale"));
++    if (AllowMirroredReferenceScale &&
++        (!PackageName.StartsWith(TEXT("/Game/CSSAuthoring/DiagnosticReferences/")) ||
++         !SkeletonPackageName.StartsWith(TEXT("/Game/CSSAuthoring/DiagnosticReferences/"))))
++        return Fail(TEXT("Mirrored reference scale is limited to DiagnosticReferences assets"));
+ 
+     const TArray<TSharedPtr<FJsonValue>> *Bones, *Points, *Wedges, *Faces, *Influences, *Materials;
+     if (!Root->TryGetArrayField(TEXT("bones"), Bones) || Bones->IsEmpty() || Bones->Num() > 2048 ||
+@@ -150,7 +158,9 @@
+         if (FMath::Abs(Rotation.SizeSquared() - 1.0) > .001)
+             return Fail(TEXT("Bone quaternion is not normalized"));
+         if (!ReadNumbers((*Bone)->TryGetField(TEXT("scale")), 3, Values) ||
+-            Values[0] <= 0 || Values[1] <= 0 || Values[2] <= 0)
++            (AllowMirroredReferenceScale
++                ? FMath::Abs(Values[0]) <= UE_SMALL_NUMBER || FMath::Abs(Values[1]) <= UE_SMALL_NUMBER || FMath::Abs(Values[2]) <= UE_SMALL_NUMBER
++                : Values[0] <= 0 || Values[1] <= 0 || Values[2] <= 0))
+             return Fail(TEXT("Invalid bone scale"));
+         FTransform Transform(Rotation, Translation, FVector(Values[0], Values[1], Values[2]));
+         BoneTransforms.Add(Transform);
+--- a/CSS-eins0fx-collections/tools/CSSAuthoring/Source/CSSAuthoring/CSSRetargetLibrary.h
++++ b/CSS-eins0fx-collections/tools/CSSAuthoring/Source/CSSAuthoring/CSSRetargetLibrary.h
+@@ -10,6 +10,10 @@
+ {
+     GENERATED_BODY()
+ public:
++    /** Rebind an isolated diagnostic mesh without merging bones or saving assets. */
++    UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
++    static bool BindDiagnosticMeshSkeleton(class USkeletalMesh* Mesh, USkeleton* Skeleton);
++
+     /** Restore named virtual-bone metadata through engine APIs. Does not save assets. */
+     UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
+     static bool RestoreVirtualBones(USkeleton* Skeleton, const FString& DefinitionsJson);
+--- a/CSS-eins0fx-collections/tools/CSSAuthoring/Source/CSSAuthoring/CSSRetargetLibrary.cpp
++++ b/CSS-eins0fx-collections/tools/CSSAuthoring/Source/CSSAuthoring/CSSRetargetLibrary.cpp
+@@ -46,6 +46,15 @@
+     const auto Writer = TJsonWriterFactory<>::Create(&Text);
+     return FJsonSerializer::Serialize(Bones, Writer) ? Text : FString();
+ }
++}
++
++bool UCSSRetargetLibrary::BindDiagnosticMeshSkeleton(USkeletalMesh* Mesh, USkeleton* Skeleton)
++{
++    const FString Prefix = TEXT("/Game/CSSAuthoring/DiagnosticReferences/");
++    if (!Mesh || !Skeleton || !Mesh->GetPathName().StartsWith(Prefix) ||
++        !Skeleton->GetPathName().StartsWith(Prefix)) return false;
++    Mesh->SetSkeleton(Skeleton);
++    return Mesh->GetSkeleton() == Skeleton;
+ }
+ 
+ FString UCSSRetargetLibrary::InspectSkeleton(USkeleton* Skeleton)

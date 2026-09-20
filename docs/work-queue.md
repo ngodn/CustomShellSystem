@@ -1,5 +1,7 @@
 # Current work queue
 
+[Exact game-reference evaluation](development/game-reference-import.md) now reproduces MoreBeaute arm transforms with the actual 1199-bone game reference, then transfers the frozen H2 pose to V43. An isolated inverse-remap experiment reduces the left-finger gap from 20-25 cm to 9-11 cm but does not restore contact. Next verify a reference-orientation candidate and remaining reach/IK; no new game fix is deployed.
+
 Full-pose baseline now replayed and visually reviewed: [MoreBeaute reference](../../CSS-Mod-Authoring/docs/next-gen-morebeaute-reference.md#full-body-replay-checkpoint). The helper excludes disabled sections and Blender armature-display geometry, verifies mesh identity, and saves finger/weapon spacing. `full-pose-current-v1` was already MoreBeaute, not V43. Matching SeduXtress H2 capture is still requested; no game state or assets changed.
 
 User-confirmed working reference: [MoreBeauteGenessa comparison](../../CSS-Mod-Authoring/docs/next-gen-morebeaute-reference.md). Its installed Original mesh shares the game Skeleton directly, and its 258 reference bones exactly match the canonical CSS prefix. Its post-process only adds nine secondary-motion springs; the package has no replacement attack/locomotion clips. Compare the complete same-weapon live graph/attachments against V43 next. Preserve Eve proportions; reference differences alone do not identify the defect.
