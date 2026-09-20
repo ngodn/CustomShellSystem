@@ -1,5 +1,7 @@
 import ctypes as c,json,tempfile,sys,shutil,os
 from pathlib import Path
+if len(sys.argv)!=5:
+    raise SystemExit('Usage: cssx_runtime_check.py RUNTIME ABI1_FIXTURE ABI2_NO_RENDER_FIXTURE ABI2_RENDER_FIXTURE')
 SINK=c.CFUNCTYPE(None,c.c_void_p,c.c_void_p,c.c_size_t)
 REQUEST=c.CFUNCTYPE(c.c_int,c.c_void_p,c.c_char_p,SINK,c.c_void_p)
 class Host(c.Structure): _fields_=[('abi',c.c_uint32),('size',c.c_uint32),('context',c.c_void_p),('request',REQUEST),('hud',c.c_void_p)]
@@ -7,7 +9,8 @@ CREATE=c.CFUNCTYPE(c.c_void_p,c.POINTER(Host),c.c_wchar_p)
 TICK=c.CFUNCTYPE(c.c_int,c.c_void_p,c.c_double)
 STOP=c.CFUNCTYPE(c.c_int,c.c_void_p)
 DESTROY=c.CFUNCTYPE(None,c.c_void_p)
-class API(c.Structure): _fields_=[('abi',c.c_uint32),('size',c.c_uint32),('create',CREATE),('tick',TICK),('request',REQUEST),('stop',STOP),('destroy',DESTROY)]
+RENDER=c.CFUNCTYPE(c.c_int,c.c_void_p,c.c_void_p)
+class API(c.Structure): _fields_=[('abi',c.c_uint32),('size',c.c_uint32),('create',CREATE),('tick',TICK),('request',REQUEST),('stop',STOP),('destroy',DESTROY),('render',RENDER),('needs_frame',STOP)]
 hook_requests=[]
 @REQUEST
 def host_request(ctx,data,sink,out):
@@ -23,6 +26,7 @@ lib=c.CDLL(str(Path(sys.argv[1]).resolve()))
 lib.cssx_get_runtime.restype=c.POINTER(API)
 api=lib.cssx_get_runtime().contents
 assert api.abi==2, 'Update the harness when the runtime ABI changes'
+assert api.size>=c.sizeof(API), 'Runtime does not provide the frame-demand query'
 host=Host(2,c.sizeof(Host),None,host_request,None)
 with tempfile.TemporaryDirectory(prefix='cssx-测试-') as temp:
     root=Path(temp)
@@ -58,6 +62,7 @@ if attempts==1 then error("cleanup needs retry") end end}'''),
         (folder/'main.lua').write_text(source)
         (folder/'extension.json').write_text(json.dumps(dict(schema=1,api=1,id=name,title=name,version='1',author='test',kind='lua',layout='tabs',entry='main.lua')))
     instance=api.create(c.byref(host),str(root));assert instance
+    assert not api.needs_frame(instance), 'Lua-only extensions must not trigger HUD preparation'
     def request(value):
         result=[]
         @SINK
@@ -123,3 +128,28 @@ if attempts==1 then error("cleanup needs retry") end end}'''),
     assert api.stop(instance)==1
     api.destroy(instance)
     print('Lua isolation, memory limit, empty arrays, Unicode storage, persistence, output and atomic menu reload passed')
+
+for mode,fixture in enumerate([None,*sys.argv[2:]],0):
+    with tempfile.TemporaryDirectory(prefix='cssx-frame-demand-') as temp:
+        root=Path(temp)
+        if fixture:
+            folder=root/'extensions/fixture';folder.mkdir(parents=True)
+            shutil.copy2(fixture,folder/'fixture.dll')
+            (folder/'extension.json').write_text(json.dumps(dict(schema=1,api=1,id='fixture',title='Fixture',version='1',author='test',kind='native',layout='tabs',entry='fixture.dll')))
+        instance=api.create(c.byref(host),str(root));assert instance
+        try:
+            library=request({'op':'library'})
+            assert not library['errors']
+            assert all(e['available'] for e in library['extensions']),library
+            assert len(library['extensions'])==int(fixture is not None)
+            assert bool(api.needs_frame(instance))==(mode==3)
+            if mode==3:
+                frame=c.create_string_buffer(256)
+                assert api.render(instance,frame)==1 and api.needs_frame(instance)
+                assert api.render(instance,frame)==1 and not api.needs_frame(instance)
+                assert not request({'op':'library'})['extensions'][0]['available']
+        finally:
+            assert api.stop(instance)==1
+            assert not api.needs_frame(instance)
+            api.destroy(instance)
+print('Empty runtime, ABI 1, ABI 2 without render, active render, suspension and stop frame demand passed')

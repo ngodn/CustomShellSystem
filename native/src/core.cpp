@@ -10,6 +10,9 @@
 #include <imgui.h>
 #include <UE4SSProgram.hpp>
 #include <USMapGenerator/Generator.hpp>
+#ifdef CSS_INVENTORY_DEV
+#include "frame_profile.hpp"
+#endif
 
 namespace css {
 struct Core {
@@ -51,6 +54,17 @@ struct Core {
     }
     Json inventory_command;
 #ifdef CSS_INVENTORY_DEV
+    FrameProfile frame_profile;
+    void publish_frame_profile() {
+        Json rows=Json::array();
+        for(const auto& row:frame_profile.rows())
+            rows.push_back({{"engine_ms",row.engine_ms},{"interval_ms",row.interval_ms},
+                {"core_ms",row.core_ms},{"phase_ms",row.phase_ms},{"failed",row.failed}});
+        atomic_json(root/"runtime/frame-profile.json",{{"id",frame_profile.id()},
+            {"stop_reason",frame_profile.reason()},{"cssx_loaded",extensions.ready()},
+            {"phases",{"recovery","cssx_tick","hud_prepare","cssx_render","inventory"}},
+            {"rows",rows}},false);
+    }
     Json extension_command;
     Json probe_command;
     Json motion_probe;
@@ -210,6 +224,10 @@ struct Core {
     void request(const Json& command) {
         const auto action = command.at("action").get<std::string>();
 #ifdef CSS_INVENTORY_DEV
+        if(action=="frame_profile") {
+            frame_profile.arm(command.at("id").get<std::string>(),command.value("seconds",10.));
+            return;
+        }
         if(action=="motion_sample") {
             if(motion_probe_until) throw std::runtime_error("Motion sample already running");
             auto bones=command.at("bones").get<std::vector<std::string>>();
@@ -429,18 +447,35 @@ struct Core {
     }
     void tick(void* engine, float delta) {
         current_engine=engine;
+#ifdef CSS_INVENTORY_DEV
+        auto measured=[&](FrameProfile::Phase phase,auto&& call) { frame_profile.measure(phase,call); };
+        measured(FrameProfile::recovery,[&] { player_recovery.tick(delta); });
+#else
         player_recovery.tick(delta);
+#endif
         if(!extension_attempted) {
             extension_attempted=true;
             try {if(fs::exists(root/"cores/cssx_core.dll") || fs::exists(root/"cssx.json")) {extensions.start(root,{CSSX_ABI,sizeof(CssxHost),this,extension_request,static_cast<const CssxHudApi*>(hud_.api())});inventory.extensions(&extensions);}}
             catch(const std::exception& e) {host.log((std::string("CSSX startup: ")+e.what()).c_str());}
         }
         if(extensions.ready()) {
+#ifdef CSS_INVENTORY_DEV
+            measured(FrameProfile::cssx_tick,[&] { extensions.tick(delta); });
+            if(extensions.needs_frame()) {
+                CssxFrame frame;
+                measured(FrameProfile::hud_prepare,[&] { hud_.update(engine,frame); });
+                frame.seconds=delta;
+                measured(FrameProfile::cssx_render,[&] { extensions.render(frame); });
+            }
+#else
             extensions.tick(delta);
             // ABI 2: drive per-frame HUD extensions. The core resolves the HUD and
             // computes the frame inputs; each extension pushes cheap updates back.
-            CssxFrame frame; hud_.update(engine,frame); frame.seconds=delta;
-            extensions.render(frame);
+            if(extensions.needs_frame()) {
+                CssxFrame frame; hud_.update(engine,frame); frame.seconds=delta;
+                extensions.render(frame);
+            }
+#endif
         }
         if(!content_path_checked) {
             content_path_checked=true;
@@ -468,8 +503,15 @@ struct Core {
         if(!inventory_failed) {
             Json inventory_action;
             try {
+#ifdef CSS_INVENTORY_DEV
+                measured(FrameProfile::inventory,[&] {
+                    inventory_action=inventory.poll(engine,catalog,state,appearance,delta,focused);
+                    inventory.message(message);
+                });
+#else
                 inventory_action=inventory.poll(engine,catalog,state,appearance,delta,focused);
                 inventory.message(message);
+#endif
             } catch(const std::exception& error) {
                 inventory_failed=true;
                 inventory_retry_after=GetTickCount64()+2000;
@@ -742,14 +784,26 @@ void* create(const CssHost* host) noexcept {
 }
 void tick(void* ptr, void* engine, float delta) noexcept {
     auto& core = *static_cast<css::Core*>(ptr);
+#ifdef CSS_INVENTORY_DEV
+    if(core.frame_profile.active()) core.frame_profile.begin(delta);
+    bool failed=false;
+#endif
     try { core.tick(engine, delta); }
     catch (const std::exception& error) {
+#ifdef CSS_INVENTORY_DEV
+        failed=true;
+#endif
         core.recovery.failed(GetTickCount64());
         core.apply_pending = false; core.pending_custom.reset(); core.custom_only=false;
         core.selected_outfit.clear(); core.selected_variant.clear();
         core.report(error.what());
         try { core.publish(); } catch (...) {}
     }
+#ifdef CSS_INVENTORY_DEV
+    if(core.frame_profile.active() && core.frame_profile.end(failed))
+        try { core.publish_frame_profile(); }
+        catch(const std::exception& error) { core.host.log(error.what()); }
+#endif
 }
 void render(void* ptr) noexcept {
     auto& core = *static_cast<css::Core*>(ptr);

@@ -22,7 +22,7 @@ public:
         module_=LoadLibraryExW(file.c_str(),nullptr,LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR|LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
         if(!module_) throw std::runtime_error("CSSX core could not load (Windows error "+std::to_string(GetLastError())+")");
         auto get=reinterpret_cast<CssxGetRuntime>(GetProcAddress(module_,"cssx_get_runtime"));
-        if(!get || !(api_=get()) || api_->abi!=CSSX_ABI || api_->size<sizeof(CssxRuntime)) throw std::runtime_error("CSSX core ABI mismatch");
+        if(!get || !(api_=get()) || api_->abi!=CSSX_ABI || api_->size<offsetof(CssxRuntime,needs_frame)) throw std::runtime_error("CSSX core ABI mismatch");
         instance_=api_->create(&host_,root.c_str());if(!instance_) throw std::runtime_error("CSSX initialization failed");
     }
     Json request(const Json& value) {
@@ -32,6 +32,11 @@ public:
         auto result=Json::parse(out);if(!ok) throw std::runtime_error(result.value("error",std::string("CSSX request failed")));return result;
     }
     void tick(double delta) {if(instance_ && !api_->tick(instance_,delta)) throw std::runtime_error("CSSX runtime tick failed");}
+    bool needs_frame() const {
+        if(!instance_) return false;
+        if(api_->size<offsetof(CssxRuntime,needs_frame)+sizeof(api_->needs_frame) || !api_->needs_frame) return true;
+        return api_->needs_frame(instance_)!=0;
+    }
     void render(const CssxFrame& frame) {
         // ABI 2 dispatch. A pre-ABI-2 core has no render pointer; skip it there.
         if(instance_ && api_->abi>=2 && api_->size>offsetof(CssxRuntime,render) && api_->render && !api_->render(instance_,&frame))

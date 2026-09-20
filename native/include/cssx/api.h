@@ -64,6 +64,10 @@ typedef struct CssxRuntime {
     void (*destroy)(void*);
     /* ABI 2+. Dispatch one frame to every loaded ABI-2 extension's render(). */
     int (*render)(void*, const struct CssxFrame*);
+    /* Optional ABI-2 tail. A host checks size before reading this member.
+     * Return nonzero only when a live extension consumes frame inputs. Older
+     * runtimes without this query retain unconditional frame preparation. */
+    int (*needs_frame)(void*);
 } CssxRuntime;
 typedef const CssxRuntime* (*CssxGetRuntime)(void);
 #ifdef __cplusplus

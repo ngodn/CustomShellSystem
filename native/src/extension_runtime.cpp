@@ -131,6 +131,10 @@ struct Entry {
     void event(const Json&);
     void tick(double);
     void render(const CssxFrame*);
+    bool needs_frame() const {
+        return !suspended && !stopped && api && instance && api->abi>=2 &&
+            api->size>=offsetof(CssxExtension,render)+sizeof(api->render) && api->render;
+    }
     void fail(const std::string& text);
 };
 struct Runtime {
@@ -176,6 +180,9 @@ struct Runtime {
     }
     void tick(double seconds) { for(auto& e:entries) if(!e->suspended) try { e->tick(seconds); } catch(const std::exception& error) { e->fail(error.what()); } }
     void render(const CssxFrame* frame) { for(auto& e:entries) if(!e->suspended) try { e->render(frame); } catch(const std::exception& error) { e->fail(error.what()); } }
+    bool needs_frame() const {
+        return !stopped && std::any_of(entries.begin(),entries.end(),[](const auto& e) {return e->needs_frame();});
+    }
     bool stop() { bool ok=true;for(auto& e:entries) if(!e->stop()) ok=false;stopped=ok;return ok; }
 };
 int entry_service(void* context,const char* data,CssxSink sink,void* output) {
@@ -337,7 +344,7 @@ void Entry::tick(double delta) {
 void Entry::render(const CssxFrame* frame) {
     // ABI 2 only, and only if the extension supplied the optional callback. Lua
     // extensions have no render path. Kept exception-safe like tick.
-    if(!api || !instance || api->abi<2 || api->size<=offsetof(CssxExtension,render) || !api->render) return;
+    if(!needs_frame()) return;
     if(!api->render(instance,frame)) throw std::runtime_error("Extension render callback failed");
 }
 bool Entry::stop() {
@@ -359,6 +366,7 @@ void* create(const CssxHost* h,const wchar_t* root) {
 }
 int tick(void* p,double seconds) { try {static_cast<Runtime*>(p)->tick(seconds);return 1;} catch(...) {return 0;} }
 int render(void* p,const CssxFrame* frame) { try {static_cast<Runtime*>(p)->render(frame);return 1;} catch(...) {return 0;} }
+int needs_frame(void* p) { return static_cast<Runtime*>(p)->needs_frame()?1:0; }
 int request(void* p,const char* j,CssxSink sink,void* output) {
     try {if(!j || std::strlen(j)>1024*1024) throw std::runtime_error("CSSX request exceeds bound");emit(sink,output,static_cast<Runtime*>(p)->request(Json::parse(j)));return 1;}
     catch(const std::exception& e) {emit(sink,output,{{"error",e.what()}});return 0;}
@@ -368,5 +376,5 @@ void destroy(void* p) {auto* runtime=static_cast<Runtime*>(p);if(runtime->stoppe
 }
 }
 extern "C" CSSX_EXPORT const CssxRuntime* cssx_get_runtime() {
-    static const CssxRuntime api{CSSX_ABI,sizeof(CssxRuntime),css::extensions::create,css::extensions::tick,css::extensions::request,css::extensions::stop,css::extensions::destroy,css::extensions::render};return &api;
+    static const CssxRuntime api{CSSX_ABI,sizeof(CssxRuntime),css::extensions::create,css::extensions::tick,css::extensions::request,css::extensions::stop,css::extensions::destroy,css::extensions::render,css::extensions::needs_frame};return &api;
 }

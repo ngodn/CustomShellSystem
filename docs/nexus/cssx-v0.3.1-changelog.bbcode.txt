@@ -4,8 +4,8 @@ Major update for Custom Shell System Extensions (CSSX), introducing the ABI 2 re
 
 [size=4][b]Features & Architecture[/b][/size]
 [list]
-[*][b]CSSX ABI 2 Retained HUD Surface:[/b] Adds a hardware-accelerated retained HUD surface injected directly into the game player HUD. Native C++ extensions can instantiate and update canvas layers, textures, compass tapes, and radar widgets with zero frame-rate overhead.
-[*][b]Zero-Allocation Per-Frame Updates:[/b] The retained layer pipeline caches layer handles and skips redundant Slate property updates (translation, scale, angle, opacity, visibility) if values have not changed between frames. Zero heap allocations on the game thread tick path.
+[*][b]CSSX ABI 2 Retained HUD Surface:[/b] Adds a retained HUD surface to the game player HUD. Native C++ extensions can create and update canvas layers, textures, compass tapes, and radar widgets.
+[*][b]Cached Layer Updates:[/b] The retained layer pipeline caches layer handles and skips redundant Slate property updates (translation, scale, angle, opacity, visibility) when those values have not changed between frames.
 [*][b]Native Minimap & Marker Provider Hooks:[/b] Built-in integration for native minimap configuration and world-marker tracking (Lost Gloom recovery points, nearby dungeons, and player map pings with real-time distance calculations).
 [*][b]Extension Library Card Banner Scaling:[/b] 3:1 card banners and circular emblems now maintain proper geometric proportions without stretching on wide (16:9, 16:10) and ultrawide (21:9, 32:9) monitors.
 [*][b]Square Icon Protection:[/b] Extensions using square icons instead of panoramic banners are now centered cleanly as square badges without horizontal distortion across the 3x3 card grid.
