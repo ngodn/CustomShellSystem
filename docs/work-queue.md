@@ -1,6 +1,6 @@
 # Current work queue
 
-Latest hand checkpoint: [directional clearance](../../CSS-Mod-Authoring/docs/next-gen-hand-directional-clearance.md). The offline candidate passes 112 dense cross-region checks plus 333 synthetic quarter-frame and 30 sparse exact-pair checks. Blender independently clears frame 75, with reviewed open/fist renders. Actual graph overlays, preserved gestures, weapon contact, runtime cost and gameplay remain unverified. Next test the saved actual graph pose; do not repeat fixed-gain sweeps. V43 and game settings remain unchanged.
+Latest hand checkpoint: [actual graph calibration](../../CSS-Mod-Authoring/docs/next-gen-hand-graph-calibration.md). Captured idle passes with the thumb overlay preserved and independent Blender/render checks. The broader synthetic-overlay test passes 388/411, with unresolved thumb/index, thumb/palm and same-thumb failures. Additive coordinate recovery is now verified. Next measure actual overlay inputs for failing postures before further thumb correction. No deployment; V43 grip, body/hair and disabled CSSX remain unchanged.
 
 Commit CSS changes per coherent context. See the [2026-09-20 checkpoint](development/checkpoint-2026-09-20.md) for committed groups and validation.
 
