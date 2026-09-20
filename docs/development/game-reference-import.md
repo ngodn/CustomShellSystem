@@ -136,4 +136,4 @@ Additional evidence:
   The earlier v1 omitted `CSS_ANIMATION_POSES=1`, fell through to unsupported
   GLTF animation export and failed. Its output is not a passing animation export.
 - `active-h2-absolute-tracks-v1/`: all 102 mapped tracks at five sample times,
-  including eight virtual-bone tracks. See the separate exporter documentation.
+  including eight virtual-bone tracks. See [exporter documentation](absolute-animation-tracks.md).

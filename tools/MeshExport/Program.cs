@@ -20,6 +20,14 @@ provider.Mount();
 var mesh = provider.LoadPackageObject(args[2]);
 Directory.CreateDirectory(args[3]);
 File.WriteAllText(Path.Combine(args[3], "source-mesh.json"), JsonConvert.SerializeObject(mesh, Formatting.Indented));
+if (Environment.GetEnvironmentVariable("CSS_ABSOLUTE_TRACKS") == "1") {
+    if (Environment.GetEnvironmentVariable("CSS_ADDITIVE_POSE_DELTAS") == "1" ||
+        Environment.GetEnvironmentVariable("CSS_ANIMATION_POSES") == "1")
+        throw new ArgumentException("Choose one animation export mode");
+    if (mesh is not UAnimSequence absolute) throw new ArgumentException("Track export requires an AnimSequence");
+    RawAbsoluteTracks.Export(absolute, args[3]);
+    return;
+}
 if (Environment.GetEnvironmentVariable("CSS_ADDITIVE_POSE_DELTAS") == "1") {
     if (Environment.GetEnvironmentVariable("CSS_ANIMATION_POSES") == "1")
         throw new ArgumentException("Choose additive deltas or absolute pose sampling, not both");
