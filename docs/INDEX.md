@@ -1,5 +1,6 @@
 # CSS research index
 
+- [Native finger clearance](development/native-finger-clearance.md): bounded correction, rejected expensive port, precision and skin/transition checks.
 - [Native hand articulation](development/native-hand-articulation.md): original hinge adaptation, engine write threshold and measured-output skin replay.
 - [B2 hand clearance](development/b2-hand-clearance.md): corrected articulated-input replay and solver rounding diagnosis.
 [Native thumb web](development/native-thumb-web.md) passes 1,143 native execution checks and 569 actual-skin replays of measured outputs. Isolated editor timing is retained. Earlier finger/tip clearance is supplied by fixtures and still needs native integration; full B2, weapon and live acceptance remain open.

@@ -22,6 +22,9 @@ assert out.parent==WORK.resolve()
 out.mkdir(exist_ok=True)
 assert not (out/'report.json').exists()
 model=load(WORK/'hand-clearance-b2-fit-v1/model.json')
+finger_iterations=int(os.environ.get('CSS_FINGER_ITERATION_LIMIT',model['iteration_limit']))
+assert 1<=finger_iterations<=model['iteration_limit']
+finger_model=dict(model,iteration_limit=finger_iterations)
 web=load(HERE/'thumb-web-guard-v2.json')
 skin=SkinFixture()
 assert skin.source_hash==model['blend_sha256']
@@ -67,7 +70,7 @@ for i,case in enumerate(cases):
         doc=load(Path(native_fixtures[label]['source']))
         for name,rotation in native_rows[label]['output_rotations_xyzw'].items():
             doc['pose']['Snapshot']['LocalTransforms'][skin.index[name]]['Rotation']=dict(zip('XYZW',rotation))
-    fingers,finger_report=solve(doc,model,'fingers')
+    fingers,finger_report=solve(doc,finger_model,'fingers')
     thumb,thumb_report=solve(fingers,model,'thumb')
     result,web_report=apply(thumb,web,driver)
     before=doc['pose']['Snapshot']['LocalTransforms'];after=result['pose']['Snapshot']['LocalTransforms']
@@ -77,7 +80,7 @@ for i,case in enumerate(cases):
     extra=pair_set(contact)-neutral
     errors=[]
     if i%10==0:
-        full,_=solve(doc,model,'fingers',full_radials=True)
+        full,_=solve(doc,finger_model,'fingers',full_radials=True)
         full,_=solve(full,model,'thumb',full_radials=True)
         full,_=apply(full,web,driver)
         for n in changed:
@@ -96,6 +99,6 @@ groups={g:dict(total=sum(r['group']==g for r in rows),failures=sum(r['group']==g
 passed=not any(r['new_pairs'] or r['max_hull_rotation_error_degrees']>.001 or r['web']['correction_saturated'] for r in rows)
 (out/'report.json').write_text(json.dumps(dict(scope=__doc__,passed=passed,samples=rows,groups=groups,seconds=time.monotonic()-started,
     native_articulation_report_sha256=hashlib.sha256((native_dir/'report.json').read_bytes()).hexdigest() if native_path else None,
-    native_articulation_cases=len(native_rows)),indent=2)+'\n')
+    native_articulation_cases=len(native_rows),finger_iteration_limit=finger_iterations),indent=2)+'\n')
 print(json.dumps(dict(passed=passed,groups=groups,seconds=time.monotonic()-started)),flush=True)
 raise SystemExit(0 if passed else 2)

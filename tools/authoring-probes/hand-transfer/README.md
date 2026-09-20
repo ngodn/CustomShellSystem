@@ -149,3 +149,37 @@ See [B2 hand clearance](../../../docs/development/b2-hand-clearance.md).
 See [native hand articulation](../../../docs/development/native-hand-articulation.md).
 The complete graph still needs native directional stages and fresh-chain,
 weapon, motion and live verification.
+
+
+## Native finger clearance and cost
+
+The current candidate uses one correction step and 1-degree central-difference
+sampling. Do not reintegrate the rejected 12-step port because its skin passes.
+It was too expensive and failed the strict numerical comparison.
+
+- `prepare_clearance_fixtures.py`, `CSS_NATIVE_CLEARANCE_FIXTURES`, prepares
+  464 hashed inputs and expected rotations. The defaults are
+  `CSS_FINGER_ITERATION_LIMIT=1` and `CSS_CLEARANCE_GRADIENT_DEGREES=1`.
+- `native_clearance.py` builds bounded loops from shipped nodes. It caches
+  geometry, prunes pairs conservatively and bypasses unsupported hand scales.
+- `build_clearance_rig.py`, `CSS_NATIVE_CLEARANCE_DIR`, checks native execution,
+  disabled/re-enabled instances, antipodes, scaled-input bypass and preservation
+  before saving. `CSS_NATIVE_CLEARANCE_FIXTURES` selects an existing fixture
+  directory; its default is `hand-native-clearance-fixtures-one-v3`.
+- `verify_native_clearance_skin.py` takes `CSS_NATIVE_CLEARANCE_RESULT_DIR`
+  and writes a fresh `CSS_NATIVE_CLEARANCE_SKIN_DIR`. It inserts measured native
+  finger output before running the offline thumb stages and actual B2 skin.
+  It can investigate complete rejected reports without promoting them.
+- `verify_fresh_hand_transitions.py`, `CSS_FRESH_HAND_TRANSITION_DIR`, checks
+  423 interpolated inputs across the running clip and known thumb regressions.
+  It recomputes articulation and all clearance stages, with a default sampling
+  step of 1 degree. It does not interpolate already-cleared output poses.
+- `verify_b2_clearance.py` accepts `CSS_FINGER_ITERATION_LIMIT` for the retained
+  iteration-budget comparisons. Its default remains the original 12-step
+  offline baseline; it is not a production-runtime selector.
+
+The output variables require fresh direct children of the grip-evidence
+folder. Reuse the saved workspace-only command manifests. Native execution is
+still isolated from the full animation pipeline; see
+[native finger clearance](../../../docs/development/native-finger-clearance.md)
+for performance, numerical failures, measured skin and remaining acceptance.
