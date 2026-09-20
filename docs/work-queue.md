@@ -1,5 +1,7 @@
 # Current work queue
 
+Full-pose baseline now replayed and visually reviewed: [MoreBeaute reference](../../CSS-Mod-Authoring/docs/next-gen-morebeaute-reference.md#full-body-replay-checkpoint). The helper excludes disabled sections and Blender armature-display geometry, verifies mesh identity, and saves finger/weapon spacing. `full-pose-current-v1` was already MoreBeaute, not V43. Matching SeduXtress H2 capture is still requested; no game state or assets changed.
+
 User-confirmed working reference: [MoreBeauteGenessa comparison](../../CSS-Mod-Authoring/docs/next-gen-morebeaute-reference.md). Its installed Original mesh shares the game Skeleton directly, and its 258 reference bones exactly match the canonical CSS prefix. Its post-process only adds nine secondary-motion springs; the package has no replacement attack/locomotion clips. Compare the complete same-weapon live graph/attachments against V43 next. Preserve Eve proportions; reference differences alone do not identify the defect.
 
 Latest hand checkpoint: [live overlay and fingertip clearance](../../CSS-Mod-Authoring/docs/next-gen-hand-live-overlay.md). The game reduces the overlay during attacks. Thumb-tip correction clears all 35 captured poses offline with independent Blender/render checks; synthetic stress passes 405/411, leaving six thumb/palm or self-fold cases open. Next compare full heavy-weapon arm/body/attachment poses, including sidearm aim/fire. No correction deployed; preserve V43, body proportions, accepted dynamics and disabled CSSX.
