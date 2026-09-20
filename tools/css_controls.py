@@ -43,9 +43,13 @@ ROLES={'garment':('outfit',False),'accent':('outfit',False),'leather':('outfit',
 
 # Every kind but a colour is edited as one number, so the menu draws a slider for it
 # and a saved look stores a single value.
-KINDS=('color','intensity','scalar','toggle','choice','spring','shape','glow','opacity','dynamics')
+KINDS=('color','intensity','scalar','toggle','choice','spring','shape','glow','opacity','dynamics','rig')
 
 BONE=re.compile(r'[A-Za-z0-9_]{1,64}\Z')
+BODY_REGIONS=('brust001','brust002','butt001','butt002','thigh_twist_02_l','thigh_twist_02_r','belly')
+
+def body_rig(control):
+    return kind_of(control)=='rig' and control.get('solver','positional_hair')=='angular_body'
 # Same rule CSSImportMesh applies. It refuses any name the engine would have had to
 # rename at build time, so a name that passes here is one the runtime can address.
 MORPH=re.compile(r'[A-Za-z0-9_]{1,64}\Z')
@@ -81,6 +85,22 @@ def dynamics_ranges(control):
         ranges.append(value)
     return ranges
 
+def rig_ranges(control):
+    ranges=[]
+    if control.get('solver','positional_hair') not in ('positional_hair','angular_body'):
+        raise ValueError('Unknown rig solver')
+    fields=([('frequency',.5,6),('damping_ratio',.1,2),('motion_amount',0,1)] if body_rig(control)
+            else [('stiffness',1,1000),('damping',0,120),('gravity',-5,5)])
+    for key,low,high in fields:
+        value=control.get(key)
+        if not isinstance(value,dict) or set(value)!={'min','max','default'}:
+            raise ValueError('A rig range needs min, max and default')
+        for x in value.values(): number(x,low,high)
+        if not value['min']<value['max'] or not value['min']<=value['default']<=value['max']:
+            raise ValueError('Rig range outside solver limits')
+        ranges.append(value)
+    return ranges
+
 def spring_defaults(stiffness,damping):
     """The other direction: read an animation blueprint's numbers as a slider default.
 
@@ -112,7 +132,7 @@ def scalar(control) -> bool:
 def validate(recipe:dict) -> set[str]:
     if not isinstance(recipe,dict) or recipe.get('schema')!=1: raise ValueError('Unsupported customize schema')
     controls=recipe.get('controls');bounded_array(controls,32)
-    by_id={};used=set();files=set();dynamics_roots=set()
+    by_id={};used=set();files=set();dynamics_roots=set();rig_owner=False;body_owners=set()
     for c in controls:
         identifier(c['id'])
         if c['id'] in by_id or not isinstance(c['name'],str) or not 1<=len(c['name'])<=96: raise ValueError('Invalid color control name')
@@ -146,8 +166,28 @@ def validate(recipe:dict) -> set[str]:
             if key in c and kind_of(c)!='spring':
                 raise ValueError(f'Only a spring control accepts {key}')
         for key in ('angular_spring','damping','gravity'):
-            if key in c and kind_of(c)!='dynamics':
+            if key in c and (kind_of(c) not in ('dynamics','rig') or (key=='angular_spring' and kind_of(c)=='rig')):
                 raise ValueError('Only dynamics controls accept solver ranges')
+        if kind_of(c)=='rig':
+            if body_rig(c):
+                regions=c.get('regions');bounded_array(regions,7)
+                if not regions or any(r not in BODY_REGIONS for r in regions) or len(set(regions))!=len(regions):
+                    raise ValueError('Expected distinct canonical body regions')
+                if body_owners.intersection(regions): raise ValueError('Body regions must have one control owner')
+                body_owners.update(regions)
+                if any(k in c for k in ('stiffness','damping','gravity')):
+                    raise ValueError('Body rig uses frequency, damping ratio and motion amount')
+            else:
+                if rig_owner: raise ValueError('The post-process rig needs one control owner')
+                rig_owner=True
+                if any(k in c for k in ('frequency','damping_ratio','motion_amount','regions')):
+                    raise ValueError('Hair rig does not accept body settings')
+            if any(k in c for k in ('default','min','max','step','nodes','bindings','angular_spring')):
+                raise ValueError('Rig controls use their own ranges and no material bindings or node names')
+            if not isinstance(c.get('enabled',True),bool): raise ValueError('Rig enabled default must be boolean')
+            used.add(c['id'])
+        elif any(k in c for k in ('stiffness','enabled','solver','regions','motion_amount')):
+            raise ValueError('Only rig controls accept stiffness and enabled')
         if kind_of(c) in ('spring','dynamics'):
             nodes=c.get('nodes');bounded_array(nodes,32)
             if not nodes: raise ValueError('A spring control needs between one and thirty-two bones')
@@ -163,7 +203,7 @@ def validate(recipe:dict) -> set[str]:
                 if dynamics_roots.intersection(nodes): raise ValueError('Dynamics chain roots must have one control owner')
                 dynamics_roots.update(nodes)
             used.add(c['id'])
-        elif any(k in c for k in ('nodes','frequency','damping_ratio')):
+        elif not body_rig(c) and any(k in c for k in ('nodes','frequency','damping_ratio')):
             raise ValueError('Only a spring control tunes skeleton nodes')
         if kind_of(c)=='shape':
             morph=c.get('morph')
@@ -185,6 +225,9 @@ def validate(recipe:dict) -> set[str]:
         if 'role' in c and len(c['role'])>32: raise ValueError('Color control role is too long')
         if 'group' in c and c['group'] not in ('outfit','body'): raise ValueError('Invalid color control group')
         if 'hue_locked' in c and not isinstance(c['hue_locked'],bool): raise ValueError('hue_locked must be true or false')
+        if kind_of(c)=='rig':
+            rig_ranges(c)
+            continue
         if kind_of(c)=='dynamics':
             dynamics_ranges(c)
             continue
@@ -267,6 +310,11 @@ def validate(recipe:dict) -> set[str]:
         for id,v in p['values'].items():
             if id not in by_id:raise ValueError('Unknown palette part')
             c=by_id[id]
+            if kind_of(c)=='rig':
+                vector(v,-5,1000)
+                for index,r in enumerate(rig_ranges(c)): number(v[index],r['min'],r['max'])
+                if v[3] not in (0,1): raise ValueError('Rig enabled value must be zero or one')
+                continue
             if kind_of(c)=='dynamics':
                 vector(v,-5,1000)
                 for index,r in enumerate(dynamics_ranges(c)):number(v[index],r['min'],r['max'])
@@ -289,6 +337,9 @@ def validate(recipe:dict) -> set[str]:
             if kind_of(c) in ('choice','toggle') and v[0]!=int(v[0]):
                 raise ValueError('A toggle or choice needs a whole-number palette value')
             if v[3]!=c['default'][3]:raise ValueError('Palette changes protected opacity')
+    for c in controls:
+        if kind_of(c) in ('spring','dynamics') and body_owners.intersection(c.get('nodes',[])):
+            raise ValueError('Body region cannot also be driven by a spring or AnimDynamics control')
     return files
 
 def resource_info(path:Path) -> dict:

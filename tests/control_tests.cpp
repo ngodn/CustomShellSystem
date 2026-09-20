@@ -9,6 +9,79 @@ void expect(bool condition,const char* message) { ++checks; if(!condition) throw
 template<class F> void rejects(F action) { bool rejected=false; try { action(); } catch(const std::exception&) { rejected=true; } expect(rejected,"Invalid colors accepted"); }
 int main() {
     try {
+        {
+            auto recipe=Json::parse(R"({"schema":1,"controls":[{"id":"chest-motion","name":"Chest motion","kind":"rig",
+              "solver":"angular_body","regions":["brust001","brust002"],
+              "frequency":{"min":0.5,"max":6,"default":2},"damping_ratio":{"min":0.1,"max":2,"default":0.7},
+              "motion_amount":{"min":0,"max":1,"default":1}}]})");
+            auto model=ControlSet::parse(recipe);
+            expect(body_rig_control(model.controls[0]),"Body solver identity missing");
+            BodyRigSettings authored; authored.global_frequency=3;authored.global_damping=.8f;authored.global_motion=.6f;
+            authored.frequency.fill(5);authored.damping.fill(1.2f);authored.motion.fill(.9f);authored.enabled.fill(false);
+            expect(body_rig_settings(model.controls,{},authored)==authored,"Original body settings changed");
+            Customization selected;selected.values["chest-motion"]={4,1.1f,.2f,0};
+            auto values=control_values(model,selected);
+            auto result=body_rig_settings(model.controls,values,authored);
+            expect(result.use_regions && result.frequency[0]==4 && result.frequency[1]==4 && !result.enabled[0],"Paired body region mapping failed");
+            expect(result.frequency[2]==3 && result.damping[2]==.8f && result.motion[2]==.6f && result.enabled[2],"Global body fallback was not preserved");
+            authored.use_regions=true;
+            result=body_rig_settings(model.controls,values,authored);
+            expect(result.frequency[2]==5 && result.damping[2]==1.2f && !result.enabled[2],"Unselected authored regions changed");
+            expect(Customization::parse(selected.json()).values==selected.values,"Body profile values changed");
+            rejects([&]{rig_settings(model.controls[0],values.begin()->second);});
+            auto duplicate=recipe;duplicate["controls"].push_back(duplicate["controls"][0]);duplicate["controls"][1]["id"]="duplicate";
+            rejects([&]{ControlSet::parse(duplicate);});
+            duplicate["controls"][1]["regions"]={"belly"};
+            auto paired=ControlSet::parse(duplicate);
+            expect(paired.controls.size()==2,"Disjoint body owners rejected");
+            auto both=body_rig_settings(paired.controls,{{"chest-motion",{4,1.1f,.2f,0}},{"duplicate",{3,.8f,.4f,1}}},authored);
+            expect(both.frequency[0]==4 && both.frequency[6]==3 && both.enabled[6],"Independent region composition failed");
+            auto dropped=body_rig_settings(paired.controls,{{"duplicate",{3,.8f,.4f,1}}},authored);
+            expect(dropped.frequency[0]==authored.frequency[0] && dropped.enabled[0]==authored.enabled[0] && dropped.frequency[6]==3,
+                   "Removing one body override did not restore its authored region");
+            auto overlap=recipe;
+            overlap["controls"].push_back(Json::parse(R"({"id":"old-chest","name":"Old chest","kind":"spring","nodes":["brust001"],
+                "frequency":{"min":1,"max":3,"default":2},"damping_ratio":{"min":0.1,"max":1,"default":0.7}})"));
+            rejects([&]{ControlSet::parse(overlap);});
+            for(const auto& regions:{Json::array(),Json::array({"brust001","brust001"}),Json::array({"head"})}) {
+                auto bad=recipe;bad["controls"][0]["regions"]=regions;rejects([&]{ControlSet::parse(bad);});
+            }
+            for(const char* field:{"stiffness","damping","gravity","nodes"}) {
+                auto bad=recipe;bad["controls"][0][field]=1;rejects([&]{ControlSet::parse(bad);});
+            }
+            auto bad=recipe;bad["controls"][0]["solver"]="unknown";rejects([&]{ControlSet::parse(bad);});
+            for(auto value:{ControlValue{0,.7f,1,1},ControlValue{2,3,1,1},ControlValue{2,.7f,2,1},ControlValue{2,.7f,1,.5f}})
+                rejects([&]{body_rig_settings(model.controls,{{"chest-motion",value}},authored);});
+        }
+        {
+            auto recipe=Json::parse(R"({"schema":1,"controls":[{"id":"hair-motion","name":"Hair motion","kind":"rig",
+              "stiffness":{"min":100,"max":250,"default":150},"damping":{"min":12,"max":24,"default":18},
+              "gravity":{"min":-0.2,"max":0.2,"default":0},"enabled":true}]})");
+            const auto model=ControlSet::parse(recipe);
+            const auto& control=model.controls.at(0);
+            expect(control.kind==ControlKind::Rig && control.scalar && control_channel_count(control)==4,"Rig channels missing");
+            expect(control.value==ControlValue{150,18,0,1},"Rig defaults wrong");
+            expect(control_channel(control,3).step==1 && control_channel(control,1).maximum==24,"Rig slider ranges wrong");
+            expect(control_values(model,{}).empty(),"Original must keep authored rig values");
+            Customization selected; selected.values[control.id]={220,20,-.1f,0};
+            const auto applied=control_values(model,selected).at(control.id);
+            const auto setting=rig_settings(control,applied);
+            expect(setting.stiffness==220 && setting.damping==20 && !setting.enabled &&
+                   std::abs(setting.gravity[2]-98)<.00001,"Rig mapping wrong");
+            expect(Customization::parse(selected.json()).values==selected.values,"Rig profile round trip failed");
+            for(auto bad:{ControlValue{99,18,0,1},ControlValue{150,25,0,1},ControlValue{150,18,1,1},
+                         ControlValue{150,18,0,.5f},ControlValue{150,18,0,std::numeric_limits<float>::quiet_NaN()}})
+                rejects([&]{rig_settings(control,bad);});
+            for(const char* key:{"nodes","bindings","angular_spring","frequency","default"}) {
+                auto bad=recipe; bad["controls"][0][key]=Json::array(); rejects([&]{ControlSet::parse(bad);});
+            }
+            auto duplicate=recipe; duplicate["controls"].push_back(duplicate["controls"][0]);
+            duplicate["controls"][1]["id"]="other"; rejects([&]{ControlSet::parse(duplicate);});
+            auto palette=recipe; palette["palettes"]=Json::parse(R"([{"id":"off","name":"Off","values":{"hair-motion":[150,18,0,0]}}])");
+            auto with_palette=ControlSet::parse(palette);
+            Customization choice;choice.palette="off";
+            expect(control_values(with_palette,choice).at(control.id)[3]==0,"Rig off palette lost");
+        }
         auto source=Json::parse(R"({"schema":1,"controls":[
           {"id":"cloth","name":"Clothing","default":[1,1,1,1]},
           {"id":"glow","name":"Eye glow","type":"scalar","default":[1.5,0,0,1],"max":5,"bindings":[{"slot":5,"parameter":"Intensity"},{"slot":10,"parameter":"Intensity"}]}],

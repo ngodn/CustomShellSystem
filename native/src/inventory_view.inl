@@ -561,9 +561,10 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 } else if(c.kind==ControlKind::Spring) {
                     source="Bounce "+slider_text(held[0],true)+" Hz, settle "+std::to_string(int(std::lround(held[1]*100)))+"%";
                     if(c.spring_clamp) source+=", travel "+slider_text(held[2],true)+" cm";
-                } else if(c.kind==ControlKind::Dynamics) {
-                    source="Stiffness "+slider_text(held[0],true)+", damping "+slider_text(held[1],true)+
-                           ", gravity "+slider_text(held[2],true);
+                } else if(c.kind==ControlKind::Dynamics || c.kind==ControlKind::Rig) {
+                    source=body_rig_control(c) ? "Bounce "+slider_text(held[0],true)+" Hz, damping "+slider_text(held[1],true)+", motion "+slider_text(held[2],true)
+                        : "Stiffness "+slider_text(held[0],true)+", damping "+slider_text(held[1],true)+", gravity "+slider_text(held[2],true);
+                    if(c.kind==ControlKind::Rig && held[3]==0) source="Motion off";
                 } else if(c.kind==ControlKind::Glow) {
                     source="Glow "+slider_text(held[0],true)+" cd/m²";
                     if(c.pulse_hz>0) source+=", pulse "+slider_text(c.pulse_hz,true)+" Hz";
@@ -665,15 +666,19 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     direction_hint(true,"Choose",right,cy,360);
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
                     action_button("tertiary","Reset all",887,confirm_reset_all,2);
-                } else if(control.kind==ControlKind::Dynamics) {
+                } else if(control.kind==ControlKind::Dynamics || control.kind==ControlKind::Rig) {
+                    const bool rig=control.kind==ControlKind::Rig;
+                    const bool body=body_rig_control(control);
+                    const int fieldcount=control_channel_count(control);
                     detail(control.name,worn->name,
+                           body ? "Frequency sets the bounce speed. Damping controls how quickly it settles. Motion amount controls the response to movement." :
                            "Stiffness controls how strongly this part returns toward its rest direction. "
                            "Damping reduces motion. Gravity changes downward pull; negative values pull upward.");
-                    const char* fields[]={"Stiffness","Damping","Gravity"};
+                    const char* fields[]={body?"Frequency (Hz)":"Stiffness",body?"Damping ratio":"Damping",body?"Motion amount":"Gravity"};
                     for(int field=0;field<3;++field) {
                         const auto range=control_channel(control,field);
                         const double sy=controls_y+field*80;
-                        auto* heading=ui.label(fields[field],right,sy,230,28,19,field==channel_%3?gold:ivory);
+                        auto* heading=ui.label(fields[field],right,sy,230,28,19,field==channel_%fieldcount?gold:ivory);
                         auto* slider=construct(L"/Script/UMG.Slider",tree);
                         invoke(slider,L"SetMinValue",L"InValue",range.minimum);
                         invoke(slider,L"SetMaxValue",L"InValue",range.maximum);
@@ -687,8 +692,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                             {{"action","control"},{"control",control.id},{"channel",field},{"refresh",false}},
                             value[field],true,""});
                     }
-                    direction_hint(true,"Adjust selected slider",right,controls_y+246,360);
-                    action_button("secondary","Select next slider",795,Json{{"action","ui_channel"},{"count",3}},4);
+                    if(rig) bind(ui.button(value[3]==1?"Motion: On":"Motion: Off",right,controls_y+240,360,38,
+                        channel_%fieldcount==3,true,19),
+                        {{"action","control"},{"control",control.id},{"channel",3},{"value",value[3]==1?0:1}});
+                    direction_hint(true,"Adjust selected setting",right,controls_y+(rig?286:246),360);
+                    action_button("secondary","Select next setting",795,Json{{"action","ui_channel"},{"count",fieldcount}},4);
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
                     action_button("tertiary","Reset all",887,confirm_reset_all,2);
                 } else if(control.kind==ControlKind::Spring) {
@@ -1042,7 +1050,7 @@ Json InventoryUI::dispatch(Json action,const State& state) {
     if(name=="ui_section") { const int next=std::clamp(action.at("section").get<int>(),0,3); if(next==section_) return {}; section_=next; enter_transition_=true; row_=0; scroll_offset_=0; if(auto* s=scroll_.Get()) invoke(s,L"SetScrollOffset",L"NewScrollOffset",0.f); dirty_=true; return {}; }
     if(name=="ui_row") { row_=std::clamp(action.at("row").get<int>(),0,std::max(0,int(rows_.size())-1)); dirty_=true; if(section_!=1 && action.value("apply",false) && !rows_.empty()) return dispatch(rows_[row_].accept,state); return {}; }
     // The channel count comes from the page, because a spring has two and a colour three.
-    if(name=="ui_channel") { channel_=(channel_+1)%std::clamp(action.value("count",3),1,3); dirty_=true; return {}; }
+    if(name=="ui_channel") { channel_=(channel_+1)%std::clamp(action.value("count",3),1,4); dirty_=true; return {}; }
     if(name=="ui_tint_field") { tint_field_index_=(tint_field_index_+1)%3; dirty_=true; return {}; }
     if(name=="ui_exact") { exact_color_=!exact_color_; dirty_=true; return {}; }
     if(name=="ui_reset_view") { camera_stop(); camera_start(); return {}; }

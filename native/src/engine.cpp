@@ -7,6 +7,7 @@
 #include <cctype>
 #include <cstring>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <vector>
@@ -704,6 +705,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
 bool Appearance::restore() {
     restore_springs();
     restore_dynamics();
+    restore_rig();
     offsets_.release();
     attachments_.release();
     items_.release();
@@ -1280,8 +1282,23 @@ void Appearance::restore_dynamics() {
     }
     dynamics_originals_.clear(); dynamics_instance_=nullptr;
 }
+void Appearance::restore_rig() {
+    if(auto* instance=body_geometry_instance_.Get(); instance && body_geometry_original_)
+        body_geometry_inputs(instance).apply(*body_geometry_original_);
+    body_geometry_instance_.Reset(); body_geometry_model_.reset(); body_geometry_morphs_.reset();
+    body_geometry_original_.reset(); body_geometry_applied_.reset();
+    if(auto* instance=rig_instance_.Get(); instance && rig_original_)
+        rig_inputs(instance).apply(*rig_original_);
+    rig_original_.reset(); rig_applied_.reset(); rig_instance_.Reset();
+    if(auto* instance=body_rig_instance_.Get(); instance && body_rig_original_)
+        body_rig_inputs(instance).apply(*body_rig_original_);
+    body_rig_original_.reset(); body_rig_applied_.reset(); body_rig_instance_.Reset();
+}
 void Appearance::restore_menu_physics() {
     if(auto* instance=menu_physics_instance_.Get()) {
+        if(menu_body_geometry_original_) body_geometry_inputs(instance).apply(*menu_body_geometry_original_);
+        if(menu_rig_original_) rig_inputs(instance).apply(*menu_rig_original_);
+        if(menu_body_rig_original_) body_rig_inputs(instance).apply(*menu_body_rig_original_);
         if(!menu_spring_originals_.empty()) {
             const auto nodes=spring_nodes(instance);
             for(const auto& [bone,value]:menu_spring_originals_)
@@ -1297,7 +1314,10 @@ void Appearance::restore_menu_physics() {
             if(needs_reset) reset_dynamics(instance);
         }
     }
-    menu_spring_originals_.clear(); menu_dynamics_originals_.clear(); menu_physics_instance_.Reset();
+    menu_spring_originals_.clear(); menu_dynamics_originals_.clear();
+    menu_rig_original_.reset(); menu_rig_applied_.reset(); menu_physics_instance_.Reset();
+    menu_body_rig_original_.reset(); menu_body_rig_applied_.reset();
+    menu_body_geometry_original_.reset(); menu_body_geometry_applied_.reset();
     if(auto* component=menu_component_.Get(); component && menu_post_process_disabled_) {
         Call set(component,L"SetDisablePostProcessBlueprint",1);
         set.set(L"bInDisablePostProcess",*menu_post_process_disabled_); set.run();
@@ -1329,6 +1349,41 @@ void Appearance::sync_menu_physics(UObject* component) {
         if(!instance) throw std::runtime_error("Preview post-process instance was not created");
     }
     menu_physics_instance_=instance;
+    if(rig_original_ && rig_applied_ && rig_instance_.Get()==source) {
+        if(menu_rig_applied_!=rig_applied_) {
+            const auto to=rig_inputs(instance);
+            if(!menu_rig_original_) menu_rig_original_=to.capture();
+            to.apply(*rig_applied_);
+            menu_rig_applied_=rig_applied_;
+        }
+    } else if(menu_rig_original_) {
+        rig_inputs(instance).apply(*menu_rig_original_);
+        menu_rig_original_.reset(); menu_rig_applied_.reset();
+    }
+    if(body_rig_original_ && body_rig_applied_ && body_rig_instance_.Get()==source) {
+        if(menu_body_rig_applied_!=body_rig_applied_) {
+            const auto to=body_rig_inputs(instance);
+            if(!menu_body_rig_original_) menu_body_rig_original_=to.capture();
+            to.apply(*body_rig_applied_);
+            menu_body_rig_applied_=body_rig_applied_;
+        }
+    } else if(menu_body_rig_original_) {
+        body_rig_inputs(instance).apply(*menu_body_rig_original_);
+        menu_body_rig_original_.reset(); menu_body_rig_applied_.reset();
+    }
+    if(body_geometry_applied_ && body_geometry_instance_.Get()==source) {
+        if(menu_body_geometry_applied_!=body_geometry_applied_) {
+            if(instance->GetClassPrivate()!=source->GetClassPrivate())
+                throw std::runtime_error("Preview body geometry class differs from player");
+            const auto inputs=body_geometry_inputs(instance);
+            if(!menu_body_geometry_original_) menu_body_geometry_original_=inputs.capture();
+            inputs.apply(*body_geometry_applied_);
+            menu_body_geometry_applied_=body_geometry_applied_;
+        }
+    } else if(menu_body_geometry_original_) {
+        body_geometry_inputs(instance).apply(*menu_body_geometry_original_);
+        menu_body_geometry_original_.reset(); menu_body_geometry_applied_.reset();
+    }
     if(!spring_originals_.empty() || !menu_spring_originals_.empty()) {
         const auto from=spring_nodes(source), to=spring_nodes(instance);
         for(auto it=menu_spring_originals_.begin();it!=menu_spring_originals_.end();) {
@@ -1367,10 +1422,37 @@ void Appearance::sync_menu_physics(UObject* component) {
         if(needs_reset) reset_dynamics(instance);
     }
 }
+void Appearance::sync_body_geometry(UObject* component) {
+    auto* instance=post_process_instance(component);
+    if(!instance) return;
+    if(body_geometry_instance_.Get()!=instance) {
+        body_geometry_model_=body_geometry_model(instance);
+        body_geometry_original_.reset(); body_geometry_applied_.reset(); body_geometry_morphs_.reset();
+        body_geometry_instance_=instance;
+        if(body_geometry_model_) {
+            for(const auto& name:body_geometry_model_->morphs)
+                if(!mesh_has_morph(applied_.Get(),name)) throw std::runtime_error("Body geometry requires missing mesh morph: "+name);
+            body_geometry_original_=body_geometry_inputs(instance).capture();
+        }
+    }
+    if(!body_geometry_model_) return;
+    std::array<float,6> values{};
+    for(size_t i=0;i<values.size();++i) {
+        Call get(component,L"GetMorphTarget",2);
+        get.set(L"MorphTargetName",FName(wide(body_geometry_model_->morphs[i]).c_str(),FNAME_Add));get.run();
+        values[i]=get.get<float>();
+    }
+    if(body_geometry_morphs_==values) return;
+    const auto value=body_geometry_model_->evaluate(values);
+    body_geometry_inputs(instance).apply(value);
+    body_geometry_applied_=value; body_geometry_morphs_=values;
+}
+
 void Appearance::reset_controls() {
     show_hidden_sections();
     restore_springs();
     restore_dynamics();
+    restore_rig();
     clear_driven_morphs();
     if(auto* component=component_.Get()) for(const auto& [slot,weak]:control_mids_) {
         if(auto* mid=weak.Get()) {
@@ -1447,6 +1529,16 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
         dynamics_originals_.clear(); dynamics_instance_=nullptr;
         for(const auto& control:options.controls) if(control.kind==ControlKind::Dynamics) last_values_.erase(control.id);
     }
+    if(rig_original_ && (!rig_instance_.Get() || post_process_instance(component)!=rig_instance_.Get())) {
+        rig_original_.reset(); rig_applied_.reset(); rig_instance_.Reset();
+        for(const auto& control:options.controls) if(control.kind==ControlKind::Rig && !body_rig_control(control)) last_values_.erase(control.id);
+    }
+    if(body_rig_original_ && (!body_rig_instance_.Get() || post_process_instance(component)!=body_rig_instance_.Get())) {
+        body_rig_original_.reset(); body_rig_applied_.reset(); body_rig_instance_.Reset();
+        for(const auto& control:options.controls) if(body_rig_control(control)) last_values_.erase(control.id);
+    }
+    if((body_geometry_model_ || body_geometry_instance_.Get()) && body_geometry_instance_.Get()!=post_process_instance(component))
+        last_values_.clear();
     if(values==last_values_) return;
     auto mid_for=[&](int index) {
         Call count(component,L"GetNumMaterials",1); count.run();
@@ -1462,6 +1554,15 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
         weak=mid; return mid;
     };
     try {
+        if(std::any_of(options.controls.begin(),options.controls.end(),[&](const auto& c){return body_rig_control(c) && values.contains(c.id);})) {
+            auto* anim=post_process_instance(component);
+            const auto inputs=body_rig_inputs(anim);
+            if(body_rig_instance_.Get()!=anim) { body_rig_original_.reset(); body_rig_instance_=anim; }
+            if(!body_rig_original_) body_rig_original_=inputs.capture();
+            const auto tuning=body_rig_settings(options.controls,values,*body_rig_original_);
+            if(body_rig_applied_!=tuning) inputs.apply(tuning);
+            body_rig_applied_=tuning;
+        }
         auto* library=find(L"/Script/Engine.Default__KismetRenderingLibrary");
         for(const auto& surface:options.surfaces) {
             bool active=false,changed=false;
@@ -1573,6 +1674,17 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 }
                 continue;
             }
+            if(control.kind==ControlKind::Rig) {
+                if(body_rig_control(control)) continue;
+                auto* anim=post_process_instance(component);
+                const auto inputs=rig_inputs(anim);
+                const auto tuning=rig_settings(control,values.at(control.id));
+                if(rig_instance_.Get()!=anim) { rig_original_.reset(); rig_instance_=anim; }
+                if(!rig_original_) rig_original_=inputs.capture();
+                inputs.apply(tuning);
+                rig_applied_=tuning;
+                continue;
+            }
             // AnimDynamics uses direct solver values. Damping changes require a
             // reset; angular spring forcing and gravity scale update each frame.
             if(control.kind==ControlKind::Dynamics) {
@@ -1679,6 +1791,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                     throw std::runtime_error("Color parameter read-back failed");
             }
         }
+        sync_body_geometry(component);
         if(dynamics_needs_reset) reset_dynamics(dynamics_instance_.Get());
         prepare_deformation_materials();
         last_values_=std::move(values); control_outfit_=control_identity;

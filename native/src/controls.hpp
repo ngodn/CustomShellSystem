@@ -32,7 +32,7 @@ enum class ControlGroup { Outfit, Body };
 //   Glow       universal emissive control (RGB, intensity, pulse, combat reactivity)
 //   Opacity    alpha transparency scalar (0..1)
 //   Dynamics   direct AnimDynamics angular stiffness, damping and gravity
-enum class ControlKind { Color, Intensity, Scalar, Toggle, Choice, Spring, Shape, Glow, Opacity, Dynamics };
+enum class ControlKind { Color, Intensity, Scalar, Toggle, Choice, Spring, Shape, Glow, Opacity, Dynamics, Rig };
 const char* control_kind_name(ControlKind);
 // A Choice option: what the player sees, and the cooked texture it binds.
 struct ControlOption { std::string name, texture; };
@@ -55,6 +55,12 @@ struct DynamicsControl {
     // gravity multiplier. These are not SpringBone frequency/damping-ratio units.
     std::array<SliderRange,3> channels;
 };
+struct RigControl {
+    // CSS ControlRig positional stiffness, exponential damping, gravity scale.
+    std::array<SliderRange,3> channels;
+    bool body=false;
+    std::vector<uint8_t> regions;
+};
 struct Control {
     std::string id, name, role;
     ControlGroup group = ControlGroup::Outfit;
@@ -66,6 +72,7 @@ struct Control {
     std::vector<ControlOption> options;   // Choice only: the textures it picks between
     std::vector<std::string> nodes;       // Spring bones or Dynamics chain root bones
     std::optional<DynamicsControl> dynamics;
+    std::optional<RigControl> rig;
     std::string morph;                    // Shape only: the morph target on the package's own mesh
     std::vector<MorphFormula> formulas;   // Shape only: joint center/orientation shifts
     float pulse_hz = 0.0f;                // Glow only: breathing frequency in Hz
@@ -110,6 +117,25 @@ struct DynamicsSettings {
 };
 DynamicsSettings dynamics_settings(const Control&, const ControlValue&);
 bool dynamics_reset_required(const DynamicsSettings& before, const DynamicsSettings& after);
+struct RigSettings {
+    float stiffness=150, damping=18;
+    std::array<double,3> gravity{};
+    bool enabled=true;
+    bool operator==(const RigSettings&) const = default;
+};
+RigSettings rig_settings(const Control&, const ControlValue&);
+inline constexpr std::array<const char*,7> body_region_names={"brust001","brust002","butt001","butt002",
+    "thigh_twist_02_l","thigh_twist_02_r","belly"};
+struct BodyRigSettings {
+    std::array<float,7> frequency{}, damping{}, motion{};
+    std::array<bool,7> enabled{};
+    float global_frequency=2, global_damping=.7f, global_motion=1;
+    bool use_regions=false;
+    bool operator==(const BodyRigSettings&) const = default;
+};
+bool body_rig_control(const Control&);
+BodyRigSettings body_rig_settings(const std::vector<Control>&, const std::map<std::string,ControlValue>&,
+                                  const BodyRigSettings& authored);
 // A hue rotation in degrees plus saturation and brightness multipliers, applied to a whole
 // group on top of the palette and any per-part override.
 struct ColorTint {

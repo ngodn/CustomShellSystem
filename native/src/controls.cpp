@@ -134,6 +134,16 @@ Range range(const Json& j,const char* what,float ceiling) {
     return out;
 }
 void valid_value(const Control& c,const ControlValue& v) {
+    if(c.kind==ControlKind::Rig) {
+        if(!c.rig) throw std::runtime_error("Missing rig control settings");
+        for(size_t channel=0;channel<3;++channel) {
+            const auto& range=c.rig->channels[channel];
+            if(!std::isfinite(v[channel]) || v[channel]<range.minimum || v[channel]>range.maximum)
+                throw std::runtime_error("Rig value outside control limits: "+c.id);
+        }
+        if(v[3]!=0 && v[3]!=1) throw std::runtime_error("Rig enabled value must be zero or one");
+        return;
+    }
     if(c.kind==ControlKind::Dynamics) {
         if(!c.dynamics) throw std::runtime_error("Missing dynamics control settings");
         for(size_t channel=0;channel<3;++channel) {
@@ -184,6 +194,7 @@ SpringAxes spring_axes(const Control& control, SpringAxes authored) {
     return authored;
 }
 int control_channel_count(const Control& control) {
+    if(control.kind==ControlKind::Rig) return 4;
     if(control.kind==ControlKind::Dynamics) return 3;
     if(control.kind==ControlKind::Spring) return control.spring_clamp?3:2;
     return control.scalar?1:3;
@@ -192,6 +203,37 @@ DynamicsSettings dynamics_settings(const Control& control,const ControlValue& va
     if(control.kind!=ControlKind::Dynamics) throw std::runtime_error("Expected a dynamics control");
     valid_value(control,value);
     return {value[0],value[1],value[1],value[2],value[0]>0,true,true,false};
+}
+RigSettings rig_settings(const Control& control,const ControlValue& value) {
+    if(control.kind!=ControlKind::Rig || body_rig_control(control)) throw std::runtime_error("Expected a hair rig control");
+    valid_value(control,value);
+    return {value[0],value[1],{0,0,-980.*double(value[2])},value[3]==1};
+}
+bool body_rig_control(const Control& control) {
+    return control.kind==ControlKind::Rig && control.rig && control.rig->body;
+}
+BodyRigSettings body_rig_settings(const std::vector<Control>& controls,const std::map<std::string,ControlValue>& values,
+                                  const BodyRigSettings& authored) {
+    auto result=authored;
+    bool active=false;
+    for(const auto& control:controls) if(body_rig_control(control) && values.contains(control.id)) {
+        const auto& value=values.at(control.id);
+        valid_value(control,value);
+        if(!active && !authored.use_regions) {
+            result.frequency.fill(authored.global_frequency);
+            result.damping.fill(authored.global_damping);
+            result.motion.fill(authored.global_motion);
+            result.enabled.fill(true);
+        }
+        active=true;
+        for(auto region:control.rig->regions) {
+            if(region>=body_region_names.size()) throw std::runtime_error("Invalid body region index");
+            result.frequency[region]=value[0]; result.damping[region]=value[1];
+            result.motion[region]=value[2]; result.enabled[region]=value[3]==1;
+        }
+    }
+    if(active) result.use_regions=true;
+    return result;
 }
 bool dynamics_reset_required(const DynamicsSettings& before,const DynamicsSettings& after) {
     // AnimDynamics refreshes spring forcing and gravity scale each update, but
@@ -202,6 +244,11 @@ bool dynamics_reset_required(const DynamicsSettings& before,const DynamicsSettin
 }
 SliderRange control_channel(const Control& control,int channel) {
     if(channel<0 || channel>=control_channel_count(control)) throw std::runtime_error("Invalid control channel");
+    if(control.kind==ControlKind::Rig) {
+        if(!control.rig) throw std::runtime_error("Missing rig control settings");
+        if(channel==3) return {0,1,control.value[3],1};
+        return control.rig->channels[size_t(channel)];
+    }
     if(control.kind==ControlKind::Dynamics) {
         if(!control.dynamics) throw std::runtime_error("Missing dynamics control settings");
         return control.dynamics->channels[size_t(channel)];
@@ -244,6 +291,7 @@ ControlSet ControlSet::parse(const Json& j) {
             else if(kind=="choice") control.kind=ControlKind::Choice;
             else if(kind=="spring") control.kind=ControlKind::Spring;
             else if(kind=="dynamics") control.kind=ControlKind::Dynamics;
+            else if(kind=="rig") control.kind=ControlKind::Rig;
             else if(kind=="shape") control.kind=ControlKind::Shape;
             else if(kind=="glow") control.kind=ControlKind::Glow;
             else if(kind=="opacity") control.kind=ControlKind::Opacity;
@@ -257,7 +305,7 @@ ControlSet ControlSet::parse(const Json& j) {
                 throw std::runtime_error("Glow pulse frequency outside supported range");
         }
         // Motion controls declare their defaults and limits per channel.
-        if(control.kind==ControlKind::Spring || control.kind==ControlKind::Dynamics) {
+        if(control.kind==ControlKind::Spring || control.kind==ControlKind::Dynamics || control.kind==ControlKind::Rig) {
             if(c.contains("default")) throw std::runtime_error("A motion control takes its defaults from its channel ranges");
             for(const auto* key:{"min","max","step"})
                 if(c.contains(key)) throw std::runtime_error("A motion control takes its limits from its channel ranges");
@@ -323,6 +371,52 @@ ControlSet ControlSet::parse(const Json& j) {
                              "world_damping","limit_angle","collision_radius","gravity_scale"})
             if(c.contains(key) && control.kind!=ControlKind::Spring)
                 throw std::runtime_error(std::string("Only a spring control accepts ")+key);
+        if(control.kind==ControlKind::Rig) {
+            for(const auto* key:{"nodes","bindings","angular_spring"})
+                if(c.contains(key)) throw std::runtime_error(std::string("Rig does not accept ")+key);
+            RigControl settings;
+            const auto solver=c.value("solver",std::string("positional_hair"));
+            if(solver!="positional_hair" && solver!="angular_body") throw std::runtime_error("Unknown rig solver");
+            settings.body=solver=="angular_body";
+            if(settings.body) {
+                const auto names=c.at("regions").get<std::vector<std::string>>();
+                if(names.empty() || names.size()>7) throw std::runtime_error("Body rig needs one to seven regions");
+                for(const auto& name:names) {
+                    const auto found=std::find(body_region_names.begin(),body_region_names.end(),name);
+                    if(found==body_region_names.end()) throw std::runtime_error("Unknown body region");
+                    const auto index=uint8_t(found-body_region_names.begin());
+                    if(std::find(settings.regions.begin(),settings.regions.end(),index)!=settings.regions.end())
+                        throw std::runtime_error("Duplicate body region");
+                    settings.regions.push_back(index);
+                }
+                for(const auto* key:{"stiffness","damping","gravity"})
+                    if(c.contains(key)) throw std::runtime_error("Body rig uses frequency, damping ratio and motion amount");
+            } else for(const auto* key:{"frequency","damping_ratio","motion_amount","regions"})
+                if(c.contains(key)) throw std::runtime_error("Hair rig does not accept body settings");
+            const char* names[]={settings.body?"frequency":"stiffness",settings.body?"damping_ratio":"damping",settings.body?"motion_amount":"gravity"};
+            const float low[]={settings.body?.5f:1,settings.body?.1f:0,settings.body?0.f:-5},
+                        high[]={settings.body?6.f:1000,settings.body?2.f:120,settings.body?1.f:5},
+                        steps[]={settings.body?.1f:1,settings.body?.05f:1,.05f};
+            for(size_t i=0;i<3;++i) {
+                const auto& r=c.at(names[i]);
+                if(!r.is_object() || r.size()!=3 || !r.contains("min") || !r.contains("max") || !r.contains("default"))
+                    throw std::runtime_error("A rig range needs min, max and default");
+                for(const auto* key:{"min","max","default"})
+                    if(!r.at(key).is_number()) throw std::runtime_error("A rig range must be numeric");
+                auto& target=settings.channels[i];
+                target={r.at("min").get<float>(),r.at("max").get<float>(),r.at("default").get<float>(),steps[i]};
+                if(!std::isfinite(target.minimum) || !std::isfinite(target.maximum) || !std::isfinite(target.value) ||
+                   target.minimum<low[i] || target.maximum>high[i] || target.minimum>=target.maximum ||
+                   target.value<target.minimum || target.value>target.maximum)
+                    throw std::runtime_error("Rig range outside solver limits");
+                target.step=std::min(target.step,target.maximum-target.minimum);
+                control.value[i]=target.value;
+            }
+            if(c.contains("enabled") && !c.at("enabled").is_boolean()) throw std::runtime_error("Rig enabled default must be boolean");
+            control.value[3]=c.value("enabled",true)?1.f:0.f;
+            control.rig=settings;
+        } else if(c.contains("stiffness") || c.contains("enabled") || c.contains("solver") || c.contains("regions") || c.contains("motion_amount"))
+            throw std::runtime_error("Only rig controls accept stiffness and enabled");
         if(control.kind==ControlKind::Dynamics) {
             for(const auto* key:{"frequency","damping_ratio","bindings"})
                 if(c.contains(key)) throw std::runtime_error(std::string("Dynamics does not accept ")+key);
@@ -353,9 +447,9 @@ ControlSet ControlSet::parse(const Json& j) {
             }
             control.value[3]=1;
             control.dynamics=settings;
-        } else if(c.contains("angular_spring") || c.contains("damping") || c.contains("gravity"))
+        } else if(control.kind!=ControlKind::Rig && (c.contains("angular_spring") || c.contains("damping") || c.contains("gravity")))
             throw std::runtime_error("Only dynamics controls accept solver ranges");
-        if(control.kind!=ControlKind::Dynamics && (c.contains("nodes") || c.contains("frequency") || c.contains("damping_ratio"))) {
+        if(control.kind!=ControlKind::Dynamics && !body_rig_control(control) && (c.contains("nodes") || c.contains("frequency") || c.contains("damping_ratio"))) {
             if(control.kind!=ControlKind::Spring) throw std::runtime_error("Only a spring control tunes skeleton nodes");
             control.nodes=c.at("nodes").get<std::vector<std::string>>();
             if(control.nodes.empty() || control.nodes.size()>32) throw std::runtime_error("A spring control needs between one and thirty-two bones");
@@ -478,15 +572,28 @@ ControlSet ControlSet::parse(const Json& j) {
         out.surfaces.push_back(std::move(surface));
     }
     std::set<std::string> dynamics_roots;
+    bool rig_owner=false;
+    std::set<uint8_t> body_owners;
     for(const auto& c:out.controls) {
+        if(body_rig_control(c)) {
+            for(auto region:c.rig->regions) if(!body_owners.insert(region).second)
+                throw std::runtime_error("Body regions must have one control owner");
+        } else if(c.kind==ControlKind::Rig) {
+            if(rig_owner) throw std::runtime_error("The post-process rig needs one control owner");
+            rig_owner=true;
+        }
         if(c.kind==ControlKind::Dynamics) for(const auto& root:c.nodes)
             if(!dynamics_roots.insert(root).second) throw std::runtime_error("Dynamics chain roots must have one control owner");
         // A toggle drives sections directly, so it needs no parameter to write into.
         // A choice does need one, and its bindings are checked with everything else.
-        bool used=!c.bindings.empty() || !c.sections.empty() || !c.nodes.empty() || !c.morph.empty();
+        bool used=c.kind==ControlKind::Rig || !c.bindings.empty() || !c.sections.empty() || !c.nodes.empty() || !c.morph.empty();
         for(const auto& s:out.surfaces) used|=s.layers.contains(c.id);
         if(!used) throw std::runtime_error("Control has nothing to drive");
     }
+    for(const auto& c:out.controls) if(c.kind==ControlKind::Spring || c.kind==ControlKind::Dynamics)
+        for(auto region:body_owners)
+            if(std::find(c.nodes.begin(),c.nodes.end(),body_region_names[region])!=c.nodes.end())
+                throw std::runtime_error("Body region cannot also be driven by a spring or AnimDynamics control");
     ids.clear();
     for(const auto& p:j.value("palettes",Json::array())) {
         Palette palette; palette.id=p.at("id"); palette.name=p.at("name");
@@ -495,7 +602,7 @@ ControlSet ControlSet::parse(const Json& j) {
         if(!p.at("values").is_object()) throw std::runtime_error("Palette values require an object");
         for(const auto& [id,v]:p.at("values").items()) {
             auto* c=out.find(id); if(!c) throw std::runtime_error("Palette references an unknown control");
-            auto color=value(v,c->kind==ControlKind::Dynamics); valid_value(*c,color); palette.values[id]=color;
+            auto color=value(v,c->kind==ControlKind::Dynamics || c->kind==ControlKind::Rig); valid_value(*c,color); palette.values[id]=color;
         }
         out.palettes.push_back(std::move(palette));
     }
@@ -560,6 +667,7 @@ const char* control_kind_name(ControlKind kind) {
         case ControlKind::Choice: return "choice";
         case ControlKind::Spring: return "spring";
         case ControlKind::Dynamics: return "dynamics";
+        case ControlKind::Rig: return "rig";
         case ControlKind::Shape: return "shape";
         case ControlKind::Glow: return "glow";
         case ControlKind::Opacity: return "opacity";

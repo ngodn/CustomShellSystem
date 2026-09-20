@@ -227,6 +227,12 @@ Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& re
         auto text=wide(path);return handle(UObjectGlobals::StaticFindObject<UObject*>(nullptr,nullptr,text.c_str()));
     }
     auto* object=resolve(request.at("target"));if(!object) throw std::runtime_error("CSSX target is null");
+    if(op=="animation.reset_dynamics") {
+        if(!object->IsA(static_cast<UClass*>(find(L"/Script/Engine.AnimInstance"))))
+            throw std::runtime_error("Dynamics reset target must be an animation instance");
+        reset_dynamics(object);
+        return true;
+    }
     if(op=="input.keys") {
         const auto& keys=request.at("keys");
         if(!keys.is_array() || keys.size()>64) throw std::runtime_error("CSSX input batch exceeds 64 keys");

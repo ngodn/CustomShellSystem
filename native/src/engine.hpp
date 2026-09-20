@@ -9,6 +9,7 @@
 #include <set>
 #include <vector>
 #include "data.hpp"
+#include "body_geometry.hpp"
 #include "inventory_motion.hpp"
 #include "inventory_keys.hpp"
 #include "extension_client.hpp"
@@ -372,8 +373,21 @@ class Appearance {
     std::map<int,WeakObject> control_mids_;
     std::map<std::string,WeakObject> dye_targets_, dye_textures_;
     std::map<std::string,ControlValue> last_values_;
+    std::optional<RigSettings> rig_original_;
+    std::optional<RigSettings> rig_applied_;
+    WeakObject rig_instance_;
+    std::optional<BodyRigSettings> body_rig_original_, body_rig_applied_;
+    WeakObject body_rig_instance_;
+    WeakObject body_geometry_instance_;
+    std::optional<BodyGeometryModel> body_geometry_model_;
+    std::optional<BodyGeometry> body_geometry_original_, body_geometry_applied_;
+    std::optional<std::array<float,6>> body_geometry_morphs_;
     std::string control_outfit_;
     std::vector<WeakObject> expected_materials_;
+    std::optional<RigSettings> menu_rig_original_;
+    std::optional<RigSettings> menu_rig_applied_;
+    std::optional<BodyRigSettings> menu_body_rig_original_, menu_body_rig_applied_;
+    std::optional<BodyGeometry> menu_body_geometry_original_, menu_body_geometry_applied_;
     WeakObject menu_component_, menu_applied_;
     std::string menu_original_;
     std::vector<std::string> menu_original_materials_;
@@ -385,6 +399,7 @@ class Appearance {
     WornItems items_, menu_items_;
     std::vector<Item> current_items_;
     std::string current_items_identity_;
+    void restore_rig();
     std::set<int> menu_hidden_sections_;
     void reconcile_sections();
     AttachmentOffsets offsets_;
@@ -415,6 +430,7 @@ public:
     Json tune_seals(double lift,double clearance,double max_push) { return offsets_.tune(lift,clearance,max_push); }
 #endif
     void set_attachment_offsets(const std::map<std::string,AttachmentOffset>& offsets) { offsets_.configure(offsets); }
+    void sync_body_geometry(RC::Unreal::UObject* component);
     // Put the variant's accessories on the body and hide what they cover. Safe to call
     // repeatedly: it rebuilds only when the outfit or variant changes.
     void sync_items(const Outfit&,const std::string& variant);

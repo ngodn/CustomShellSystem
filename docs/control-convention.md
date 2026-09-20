@@ -562,3 +562,52 @@ Inspired by *Stellar Blade* and *Better Jiggle Mod* (Nexus 1570):
     - Delete profile confirmation
     - Overwrite profile confirmation
   - Keyboard/gamepad focus trap (Accept / Cancel) with camera motion suspended.
+
+
+## CSS ControlRig hair inputs (candidate, 2026-09-20)
+
+`kind: "rig"` addresses the outfit's post-process AnimBP inputs. It is separate from SpringBone frequency/ratio controls and AnimDynamics angular/damping controls. `solver` defaults to `"positional_hair"` for existing packages. One hair control may coexist with independent angular-body controls described below. Rig controls accept no node names or arbitrary property bindings.
+
+```json
+{
+  "id": "hair_motion", "name": "Hair motion", "kind": "rig", "group": "body", "role": "motion",
+  "stiffness": {"min": 100, "max": 250, "default": 150},
+  "damping": {"min": 12, "max": 24, "default": 18},
+  "gravity": {"min": 0, "max": 0.2, "default": 0},
+  "enabled": true
+}
+```
+
+Saved values use `[stiffness, damping, gravityScale, enabled]`; enabled must be numeric zero or one. Schema limits are stiffness 1..1000, damping 0..120 and gravity scale -5..5. Authors must choose and verify narrower ranges for their mesh. These schema bounds do not certify visual behavior at every combination. Stiffness and damping are the solver's direct positional-force and exponential-velocity-decay coefficients. Gravity scale maps to world acceleration `(0,0,-980*scale)` in cm/s². A zero default preserves the measured rig's authored rest-following response.
+
+The native adapter requires a real AnimInstance under `/Game/CSS/`, float `CSSStiffness` and `CSSDamping`, native double-precision FVector `CSSGravity`, bool `CSSEnabled`, and int32 `CSSResetEpoch`. It validates reflected names, scalar counts, exact property types and storage bounds before writing. It never touches a class default/archetype or scans objects each frame. Settings are captured once on the owning weak instance, restored when the control is removed, and reapplied after an instance replacement. Menu preview synchronization resolves and writes only when settings or the preview instance change.
+
+The AnimBP forwards the first four inputs to the saved ControlRig. Its native animation update advances `CSSUpdateSerial`; repeated evaluation with the same serial reuses output. `CSSResetEpoch` reseeds on the next enabled evaluation. Disable passes through, and re-enable seeds the current incoming pose. Calling engine `ResetDynamics` alone does not reseed this rig; use the CSS epoch bridge. Tuning changes preserve the running clock and take effect on the next evaluation.
+
+Validation: 283 portable control behavior checks, 54 Python package/control tests, and the Windows core build pass. The saved full-hair tuning AnimBP passes 216 component checks; its default output exactly matches the previous V10 wrapper at sampled positions. Native reflection writes, preview restoration, in-game UI, profile reapplication after travel/death and game performance still require live verification with the new candidate. CSSX is not required and remains disabled.
+
+## CSS ControlRig body inputs (candidate, 2026-09-20)
+
+`solver: "angular_body"` selects independent region tuning on the same post-process AnimBP. Each control owns one or more distinct regions. Two body controls cannot own the same region, and a legacy SpringBone or AnimDynamics control cannot also drive that region.
+
+```json
+{
+  "id": "chest_motion", "name": "Chest motion", "kind": "rig",
+  "solver": "angular_body", "group": "body", "role": "figure",
+  "regions": ["brust001", "brust002"],
+  "frequency": {"min": 0.5, "max": 6, "default": 2},
+  "damping_ratio": {"min": 0.1, "max": 2, "default": 0.7},
+  "motion_amount": {"min": 0, "max": 1, "default": 1},
+  "enabled": true
+}
+```
+
+Saved values are `[frequencyHz, dampingRatio, motionAmount, enabled]`, with numeric zero or one for enabled. Schema bounds are 0.5..6 Hz, 0.1..2 damping ratio and 0..1 motion amount. Slider steps are 0.1, 0.05 and 0.05, bounded by the declared range width. These bounds are validation limits, not acceptance of all combinations on every outfit. Body controls reject hair `stiffness`, `damping` and `gravity` fields. Hair controls reject body fields. Unknown solvers are rejected.
+
+Canonical region order is `brust001`, `brust002`, `butt001`, `butt002`, `thigh_twist_02_l`, `thigh_twist_02_r`, `belly`. The AnimBP must expose seven-entry float arrays `CSSBodyRegionFrequencies`, `CSSBodyRegionDampingRatios`, `CSSBodyRegionMotionAmounts`, a seven-entry bool array `CSSBodyRegionEnabled`, bool `CSSBodyUseRegionSettings`, float globals `CSSBodyFrequency`, `CSSBodyDampingRatio`, `CSSBodyMotionAmount`, and int32 `CSSBodyResetEpoch`.
+
+The native adapter validates the real CSS AnimInstance, reflected types, bounds, array storage and finite values before writing. It captures player and preview defaults separately. Active body controls are composed from the captured player defaults, preserving untargeted regions. If authored region mode is off, global values initialize all seven regions before overrides enable region mode. Removing controls restores captured inputs; replacing an instance invalidates captured state. Preview synchronization writes the owned arrays and switch, leaving its global defaults intact for later restoration.
+
+Changed body inputs advance only `CSSBodyResetEpoch`. Hair retains `CSSResetEpoch`. General dynamics reset advances both, while unchanged body input values perform no write or reset. No body solver or object scan is added to a per-frame native hook. The UI uses Frequency (Hz), Damping ratio, Motion amount and Motion on/off. Profiles use the existing four-channel saved-control representation.
+
+Current evidence: Windows core compilation, 307 portable control checks and 16 metadata tests pass. The actual combined editor component passes 23 fixtures and 37542 checks, including independent reset isolation. This does not verify the UE4SS reflection adapter in the game. Native UI interaction, preview/profile recovery, cooked execution and live performance remain required. See [the body-region checkpoint](../../CSS-Mod-Authoring/docs/next-gen-body-region-controls.md).

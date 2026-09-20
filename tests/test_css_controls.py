@@ -9,6 +9,48 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
 from css_controls import validate,embed,verify_resources,lint_convention
 
 class ControlTests(unittest.TestCase):
+    def test_independent_body_regions(self):
+        body=dict(id='chest-motion',name='Chest motion',kind='rig',solver='angular_body',regions=['brust001','brust002'],
+                  frequency=dict(min=.5,max=6,default=2),damping_ratio=dict(min=.1,max=2,default=.7),
+                  motion_amount=dict(min=0,max=1,default=1))
+        hair=dict(id='hair-motion',name='Hair motion',kind='rig',stiffness=dict(min=100,max=250,default=150),
+                  damping=dict(min=12,max=24,default=18),gravity=dict(min=-.2,max=.2,default=0))
+        recipe=dict(schema=1,controls=[body,hair],palettes=[dict(id='off',name='Off',values={'chest-motion':[3,.9,.5,0]})])
+        validate(recipe)
+        other=copy.deepcopy(body);other.update(id='belly-motion',regions=['belly'])
+        recipe['controls'].append(other);validate(recipe)
+        for key,value in [('regions',[]),('regions',['head']),('regions',['brust001','brust001']),
+                          ('solver','unknown'),('stiffness',{}),('gravity',{}),
+                          ('frequency',dict(min=0,max=6,default=2)),('enabled',1)]:
+            bad=copy.deepcopy(recipe);bad['controls'][0][key]=value
+            with self.subTest(key=key,value=value),self.assertRaises(ValueError):validate(bad)
+        bad=copy.deepcopy(recipe);bad['controls'][2]['regions']=['brust001']
+        with self.assertRaises(ValueError):validate(bad)
+        bad=copy.deepcopy(recipe);bad['palettes'][0]['values']['chest-motion']=[2,.7,1,.5]
+        with self.assertRaises(ValueError):validate(bad)
+        bad=copy.deepcopy(recipe);bad['controls'].append(dict(id='old-chest',name='Old chest',kind='spring',nodes=['brust001'],
+            frequency=dict(min=1,max=3,default=2),damping_ratio=dict(min=.1,max=1,default=.7)))
+        with self.assertRaises(ValueError):validate(bad)
+
+    def test_rig_inputs_and_palette_contract(self):
+        recipe=dict(schema=1,controls=[dict(id='hair-motion',name='Hair motion',kind='rig',
+            stiffness=dict(min=100,max=250,default=150),damping=dict(min=12,max=24,default=18),
+            gravity=dict(min=-.2,max=.2,default=0),enabled=True)])
+        validate(recipe)
+        recipe['palettes']=[dict(id='off',name='Off',values={'hair-motion':[150,18,0,0]})]
+        validate(recipe)
+        for field,value in [('enabled',1),('nodes',[]),('bindings',[]),('angular_spring',{}),
+                            ('default',[150,18,0,1]),('stiffness',dict(min=0,max=250,default=150)),
+                            ('damping',dict(min=12,max=121,default=18))]:
+            bad=copy.deepcopy(recipe);bad['controls'][0][field]=value
+            with self.subTest(field=field),self.assertRaises(ValueError):validate(bad)
+        for value in ([99,18,0,1],[150,25,0,1],[150,18,1,1],[150,18,0,.5],[150,18,0,True],
+                      [float('nan'),18,0,1]):
+            bad=copy.deepcopy(recipe);bad['palettes'][0]['values']['hair-motion']=value
+            with self.subTest(value=value),self.assertRaises(ValueError):validate(bad)
+        bad=copy.deepcopy(recipe);bad['controls'].append(dict(bad['controls'][0],id='duplicate'))
+        with self.assertRaises(ValueError):validate(bad)
+
     def test_dynamics_solver_ranges_and_palettes(self):
         recipe=dict(schema=1,controls=[dict(id='hair',name='Hair dynamics',kind='dynamics',
             nodes=['CSS_Hair_Ponytail_01'],angular_spring=dict(min=0,max=1000,default=80),
