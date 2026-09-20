@@ -1,5 +1,6 @@
 # CSS research index
 
+- [B2 hand clearance](development/b2-hand-clearance.md): corrected articulated-input replay and solver rounding diagnosis.
 [Native thumb web](development/native-thumb-web.md) passes 1,143 native execution checks and 569 actual-skin replays of measured outputs. Isolated editor timing is retained. Earlier finger/tip clearance is supplied by fixtures and still needs native integration; full B2, weapon and live acceptance remain open.
 
 [Thumb-web contact](development/thumb-web-contact.md) identifies the remaining B2 web crossings and adds an offline guard that passes 464 saved poses and 105 affected transition samples. V1's subframe failure and rejected axis changes are retained. V2 still needs native clearance integration, weapon/motion and cooked/live acceptance; V43 stays installed.

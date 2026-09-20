@@ -112,3 +112,20 @@ the fitting data, rejected variants, successful checks and remaining gates.
 These output variables also require fresh direct grip-evidence children.
 See [native thumb web](../../../docs/development/native-thumb-web.md). Native
 finger/tip clearance is still absent; its output is supplied by the fixtures.
+
+
+## B2 directional clearance
+
+- `fit_clearance_model.py`, `CSS_CLEARANCE_FIT_DIR`, fits the B2 neutral model
+  and compares full radial support with its reduced hull.
+- `directional_clearance.py` recomputes four-finger and thumb-tip clearance.
+  Its optional legacy transport exists only for differential diagnosis.
+- `verify_b2_clearance.py`, `CSS_B2_CLEARANCE_AUDIT_DIR`, uses saved articulated
+  synthetic/captured inputs and actual B2 skin. Set
+  `CSS_B2_CLEARANCE_SYNTHETIC=1` for all 464 cases. The successful run is v4.
+- `verify_clearance_port.py`, `CSS_CLEARANCE_PORT_AUDIT_DIR`, compares six
+  saved V43 outputs and isolates quaternion/matrix operation-order rounding.
+  Its strict optimized equivalence gate still exits 2; inspect the separate
+  rounding variants and actual-skin replay rather than treating this as green.
+
+See [B2 hand clearance](../../../docs/development/b2-hand-clearance.md).
