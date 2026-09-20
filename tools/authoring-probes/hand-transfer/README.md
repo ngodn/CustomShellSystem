@@ -183,3 +183,25 @@ folder. Reuse the saved workspace-only command manifests. Native execution is
 still isolated from the full animation pipeline; see
 [native finger clearance](../../../docs/development/native-finger-clearance.md)
 for performance, numerical failures, measured skin and remaining acceptance.
+# Native thumb-tip stage
+
+`prepare_thumb_clearance_fixtures.py` prepares all 464 retained B2 poses after
+the measured native finger outputs. Set `CSS_NATIVE_CLEARANCE_FIXTURES` to a
+fresh direct child of the grip work directory. It defaults to the accepted
+`hand-native-finger-clearance-one-v3` report; `CSS_NATIVE_FINGER_RESULT_DIR`
+can select another passed, terminal native report. The source hashes are
+checked and carried into the fixture manifest. Thumb defaults remain the
+fitted model's 12-iteration bound and 0.05-degree derivative interval.
+
+`build_clearance_rig.py` reads `stage` and model settings from that manifest.
+It builds either the four-finger or thumb-tip graph, checks computed math
+separately from engine hierarchy writes, and saves only after strict gates
+pass. `verify_native_clearance_skin.py` consumes the recorded native stage:
+after native thumb output it runs only the offline web/corrective stages,
+without solving the thumb a second time.
+
+See [native thumb-tip clearance](../../../docs/development/native-thumb-tip-clearance.md)
+for evidence, the exact 934-case finger regression after sharing graph code,
+and remaining combined/cooked/live acceptance. The diagnostic package version
+is V2 to preserve the previous saved finger probe; it is not a CSS skeleton
+version or a deployed SeduXtress release.

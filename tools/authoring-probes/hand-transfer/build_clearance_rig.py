@@ -1,4 +1,4 @@
-"""Build and measure isolated native four-finger directional clearance.
+"""Build and measure native finger or thumb-tip directional clearance.
 
 Calibrated/articulated inputs only. Thumb stages and full production integration
 remain separate. A strict numerical mismatch prevents saving the candidate.
@@ -25,7 +25,7 @@ HERE=Path(__file__).resolve().parent
 sys.path[:0]=[str(HERE),str(MOD/'tools')]
 from build_controlrig_chain_probe import Graph,Pin
 from probe_controlrig_chain import key,set_value,transform
-from native_clearance import append_finger_clearance
+from native_clearance import append_clearance
 
 load=lambda p:json.loads(p.read_text())
 model_path=WORK/'hand-clearance-b2-fit-v1/model.json'
@@ -34,14 +34,17 @@ fixture_dir=Path(os.environ.get('CSS_NATIVE_CLEARANCE_FIXTURES',str(WORK/'hand-n
 assert fixture_dir.parent==WORK.resolve()
 fixture_path=fixture_dir/'fixtures.json'
 fixtures=load(fixture_path)
+stage=fixtures.get('stage','fingers')
+assert stage in ('fingers','thumb')
 assert fixtures['model_sha256']==hashlib.sha256(model_path.read_bytes()).hexdigest()
-iterations=fixtures.get('finger_iteration_limit',model['iteration_limit'])
+iterations=fixtures.get('iteration_limit',fixtures.get('finger_iteration_limit',model['iteration_limit']))
 assert 1<=iterations<=model['iteration_limit']
 gradient_step=fixtures.get('gradient_step_degrees',model['gradient_step_degrees'])
 model=dict(model,iteration_limit=iterations,gradient_step_degrees=gradient_step)
 cases=fixtures['cases'];assert len(cases)==464
 epsilon_tag=str(gradient_step).replace('.', 'p')
-PACKAGE=f'/Game/CSSAuthoring/TransientProbes/CR_CSS_LeftFingerClearanceV1_I{iterations}_E{epsilon_tag}'
+part='Finger' if stage=='fingers' else 'ThumbTip'
+PACKAGE=f'/Game/CSSAuthoring/TransientProbes/CR_CSS_Left{part}ClearanceV2_I{iterations}_E{epsilon_tag}'
 assert not unreal.EditorAssetLibrary.does_asset_exist(PACKAGE)
 content=ROOT/'CSS-eins0fx-collections/tools/CSSAuthoring/Content/CSSAuthoring'
 protected=[content/'Shared/Skeletons/SKEL_CSS_Base.uasset',content/'CSS_SeduXtress_eins0fx_P/SK_SeduXtress_HandBindV43.uasset']
@@ -59,9 +62,9 @@ g=Graph(bp)
 g.member('Enabled','bool','False',True)
 begin=Pin(g.unit('RigUnit_BeginExecution')+'.ExecuteContext')
 active,bypass=g.branch(begin,g.get('Enabled'))
-active=append_finger_clearance(g,active,model)
+active=append_clearance(g,active,model,stage)
 changed=[]
-for fi,m in enumerate(model['models'][1:]):
+for fi,m in enumerate(model['models'][1:] if stage=='fingers' else model['models'][:1]):
     name=model['bones'][m['indices'][0]]['name'];changed.append(name)
     node=g.unit('RigUnit_SetTransform',Space='LocalSpace',bInitial=False,bPropagateToChildren=True)
     g.link(active,node+'.ExecuteContext')
@@ -100,7 +103,7 @@ def evaluate(case, enabled=True, antipodes=False, instance=rig, suffix='', inval
     raw=instance.get_variable_as_string('ClearanceOutput')
     tuples=re.findall(r'\(X=([^,]+),Y=([^,]+),Z=([^,]+),W=([^\)]+)\)',raw)
     if enabled:
-        assert len(tuples)==4,raw
+        assert len(tuples)==len(changed),raw
     computed={n:list(map(float,q)) for n,q in zip(changed,tuples)}
     math_errors={n:angle(computed[n],case['expected_xyzw'][n]) for n in changed} if enabled and valid else {}
     applied_errors={};rotations={}
@@ -136,9 +139,9 @@ results.append(evaluate(case,invalid_scale=True,suffix='-unsupported-scale'))
 max_math=max(r['max_math_error_degrees'] for r in results)
 max_applied=max(r['max_applied_error_degrees'] for r in results)
 times=[r['execute_us'] for r in results if r['enabled']]
-report=dict(scope=__doc__,package=PACKAGE,native_nodes=g.serial,cases=results,
+report=dict(scope=__doc__,stage=stage,package=PACKAGE,native_nodes=g.serial,cases=results,
             fixture_sha256=hashlib.sha256(fixture_path.read_bytes()).hexdigest(),fixture_path=str(fixture_path),
-            finger_iteration_limit=iterations,gradient_step_degrees=gradient_step,protected_hashes=hashes,
+            iteration_limit=iterations,gradient_step_degrees=gradient_step,protected_hashes=hashes,
             max_math_error_degrees=max_math,max_applied_error_degrees=max_applied,
             timing_scope='Editor execute with Python bridge across changing fixtures, not live FPS or a paired benchmark.',
             median_execute_us=statistics.median(times),p95_execute_us=sorted(times)[int(len(times)*.95)],
@@ -147,4 +150,4 @@ report=dict(scope=__doc__,package=PACKAGE,native_nodes=g.serial,cases=results,
 assert all(hashlib.sha256(Path(p).read_bytes()).hexdigest()==h for p,h in hashes.items())
 assert report['passed'],(max_math,max_applied)
 assert unreal.EditorAssetLibrary.save_loaded_asset(bp,only_if_is_dirty=False)
-unreal.log('CSS_NATIVE_FINGER_CLEARANCE_PASSED')
+unreal.log('CSS_NATIVE_CLEARANCE_PASSED '+stage)

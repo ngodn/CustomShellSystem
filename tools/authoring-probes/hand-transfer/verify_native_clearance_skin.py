@@ -1,4 +1,4 @@
-"""Replay measured native finger clearance, then offline thumb stages, on B2.
+"""Replay measured native clearance, then remaining offline stages, on B2.
 
 A complete but numerically rejected native report may be inspected here.
 A skin pass does not override that rejection or establish acceptable cost.
@@ -20,6 +20,8 @@ assert out.parent==native.parent==WORK.resolve()
 out.mkdir(exist_ok=True)
 assert not (out/'report.json').exists()
 report=load(native/'report.json')
+stage=report.get('stage','fingers')
+assert stage in ('fingers','thumb')
 assert len(report['cases']) in (933,934)
 assert load(native/'exit.json')['exit_code'] in (0,255)
 fixture_path=Path(report.get('fixture_path',str(WORK/'hand-native-clearance-fixtures-v1/fixtures.json'))).resolve()
@@ -39,7 +41,10 @@ for i,case in enumerate(fixtures):
     doc=load(path);row=measured[case['label']];assert row['valid']
     for name,rotation in row['output_rotations_xyzw'].items():
         doc['pose']['Snapshot']['LocalTransforms'][skin.index[name]]['Rotation']=dict(zip('XYZW',rotation))
-    thumb,tr=solve(doc,model,'thumb')
+    if stage=='fingers':
+        thumb,tr=solve(doc,model,'thumb')
+    else:
+        thumb,tr=doc,dict(stage='thumb',source='measured native output')
     result,wr=apply(thumb,web,driver)
     contact=skin.evaluate(result,batch_pose=True)
     extra=pair_set(contact)-neutral
@@ -50,7 +55,7 @@ for i,case in enumerate(fixtures):
     if extra or i%50==0:print(json.dumps(dict(progress=i+1,label=case['label'],new_pairs=len(extra))),flush=True)
 skin.assert_unchanged()
 passed=not any(r['new_pairs'] or r['web']['correction_saturated'] for r in rows)
-result=dict(scope=__doc__,passed=passed,samples=rows,failures=sum(bool(r['new_pairs']) for r in rows),
+result=dict(scope=__doc__,stage=stage,passed=passed,samples=rows,failures=sum(bool(r['new_pairs']) for r in rows),
             native_report_sha256=hashlib.sha256((native/'report.json').read_bytes()).hexdigest(),
             native_numerical_gate_passed=report['passed'],seconds=time.monotonic()-started)
 (out/'report.json').write_text(json.dumps(result,indent=2)+'\n')

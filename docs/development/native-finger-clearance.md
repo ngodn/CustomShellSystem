@@ -5,8 +5,9 @@ Control Rig made from shipped nodes. It uses one correction step with a
 1-degree central-difference sampling interval. All 934 native execution cases
 pass the original 0.001-degree numerical gate and preservation checks.
 
-This is a diagnostic stage, not a deployed V44 repair. Thumb-tip clearance,
-the complete combined graph, cooked assets, all weapons and live acceptance
+This is a diagnostic stage, not a deployed V44 repair. The separately verified
+[native thumb-tip stage](native-thumb-tip-clearance.md) now follows it. The
+complete combined graph, cooked assets, all weapons and live acceptance
 remain open. Original proportions, accepted body/hair settings, disabled CSSX
 and the full modular Next-Gen goal remain preserved. V43 stays installed.
 

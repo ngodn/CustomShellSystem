@@ -68,10 +68,24 @@ def closest(g, start, a, b, c, d):
     return start
 
 
-def geometry(g, start, models):
+def vector_offset(g, name):
+    vector = g.math('VectorMake', **{axis: g.at(name, i) for i, axis in enumerate('XYZ')})
+    length = g.length(vector)
+    axis = g.scale(vector, scalar(g, 'Div', 1, scalar(g, 'Max', length, 1e-12)))
+    rotation = g.math('QuaternionFromAxisAndAngle', Axis=axis, Angle=length)
+    return select(g, scalar(g, 'Greater', length, 1e-12), rotation,
+                  '(X=0,Y=0,Z=0,W=1)', 'Quaternion')
+
+
+def geometry(g, start, models, thumb=False, initialize=False):
     for fi, m in enumerate(models):
+        if thumb and fi > 0 and not initialize:
+            continue
         parent = g.at('ClearanceParents', fi)
-        offset = g.math('QuaternionFromAxisAndAngle', Axis=g.at('ClearanceAxes', fi), Angle=g.at('MeasureAngles', fi))
+        if thumb:
+            offset = vector_offset(g, 'MeasureAngles') if fi == 0 else '(X=0,Y=0,Z=0,W=1)'
+        else:
+            offset = g.math('QuaternionFromAxisAndAngle', Axis=g.at('ClearanceAxes', fi), Angle=g.at('MeasureAngles', fi))
         rotation = g.math('QuaternionMul', A=offset, B=g.at('ClearanceLocals', fi*3, 'Rotation'))
         local = g.math('TransformMake', Translation=g.at('ClearanceLocals', fi*3, 'Translation'),
                        Rotation=rotation, Scale=g.at('ClearanceLocals', fi*3, 'Scale3D'))
@@ -89,7 +103,7 @@ def geometry(g, start, models):
         start = g.put(start, 'SegmentEnds', fi*3+2, tip)
     # Every radial is posed once per candidate angle vector. Contact pairs
     # then reuse these values instead of rotating the same sample repeatedly.
-    i, body, done = loop(g, start, g.get('HullPointCount'))
+    i, body, done = loop(g, start, g.get('ThumbHullPointCount' if thumb and not initialize else 'HullPointCount'))
     segment = g.at('HullSegments', i)
     radial = g.math('VectorMul', A=g.at('HullPoints', i), B=g.at('SegmentTransforms', segment, 'Scale3D'))
     radial = g.math('QuaternionRotateVector', Transform=g.at('SegmentTransforms', segment, 'Rotation'), Vector=radial)
@@ -127,17 +141,28 @@ def pair_gap(g, start, pair, baseline):
 
 
 def append_finger_clearance(g, start, model):
-    """Four proximal splay angles, bounded iterations, no hierarchy writes yet."""
-    models = model['models'][1:]
-    assert len(models) == 4
+    return append_clearance(g, start, model, 'fingers')
+
+
+def append_thumb_clearance(g, start, model):
+    return append_clearance(g, start, model, 'thumb')
+
+
+def append_clearance(g, start, model, stage):
+    """Bounded directional solve, returning outputs without hierarchy writes."""
+    assert stage in ('fingers', 'thumb')
+    thumb = stage == 'thumb'
+    models = model['models'] if thumb else model['models'][1:]
+    count, dimensions = len(models), 3 if thumb else 4
+    assert count == (5 if thumb else 4)
     bones = model['bones']
-    pairs = [(f, f+1, s, t) for f in range(3) for s in range(3) for t in range(3)]
+    pairs = [(0, h, 2, t) for h in range(1, 5) for t in range(3)] if thumb else [(f, f+1, s, t) for f in range(3) for s in range(3) for t in range(3)]
     for name in ('ClearanceAngles', 'MeasureAngles', 'ClearanceGradient'):
-        array(g, name, 'float', [0]*4)
-    for name, count in (('ClearanceParents', 4), ('ClearanceLocals', 12), ('SegmentTransforms', 12)):
-        array(g, name, 'FTransform', ['()']*count)
-    for name, count in (('ClearanceAxes', 4), ('SegmentStarts', 12), ('SegmentEnds', 12)):
-        array(g, name, 'FVector', [[0, 0, 0]]*count)
+        array(g, name, 'float', [0]*dimensions)
+    for name, size in (('ClearanceParents', count), ('ClearanceLocals', count*3), ('SegmentTransforms', count*3)):
+        array(g, name, 'FTransform', ['()']*size)
+    for name, size in (('ClearanceAxes', count), ('SegmentStarts', count*3), ('SegmentEnds', count*3)):
+        array(g, name, 'FVector', [[0, 0, 0]]*size)
     points, starts, counts = [], [], []
     for m in models:
         for hull in m['hull_radials_local']:
@@ -146,6 +171,8 @@ def append_finger_clearance(g, start, model):
     array(g, 'PosedRadials', 'FVector', [[0, 0, 0]]*len(points))
     array(g, 'HullSegments', 'int32', [i for i,n in enumerate(counts) for _ in range(n)])
     g.member('HullPointCount', 'int32', str(len(points)))
+    if thumb:
+        g.member('ThumbHullPointCount', 'int32', str(sum(counts[:3])))
     array(g, 'HullStarts', 'int32', starts)
     array(g, 'HullCounts', 'int32', counts)
     array(g, 'HullRadiusBounds', 'float', [max(math.sqrt(sum(x*x for x in p)) for p in hull) for m in models for hull in m['hull_radials_local']])
@@ -181,28 +208,38 @@ def append_finger_clearance(g, start, model):
         start = require_unit_scale(start, g.at('ClearanceParents', fi, 'Scale3D'))
         axis = g.math('QuaternionRotateVector', Transform=g.math('QuaternionInverse', Value=Pin(parent+'.Transform.Rotation')), Vector=normal)
         start = g.put(start, 'ClearanceAxes', fi, axis)
-        start = g.put(start, 'ClearanceAngles', fi, 0)
+        if fi < dimensions:
+            start = g.put(start, 'ClearanceAngles', fi, 0)
+            if thumb:
+                start = g.put(start, 'MeasureAngles', fi, 0)
         for segment, bi in enumerate(m['indices']):
             node = g.unit('RigUnit_GetTransform', Space='LocalSpace', bInitial=False)
             g.value(node+'.Item.Type', 'Bone'); g.value(node+'.Item.Name', bones[bi]['name'])
             start = g.put(start, 'ClearanceLocals', fi*3+segment, Pin(node+'.Transform'))
             start = require_unit_scale(start, g.at('ClearanceLocals', fi*3+segment, 'Scale3D'))
+    if thumb:
+        start = geometry(g, start, models, thumb=True, initialize=True)
     iteration, body, completed = loop(g, start, model['iteration_limit'])
     active, _ = g.branch(body, g.math('BoolAnd', A=g.get('ClearanceRunning'), B=g.get('ClearanceValid')))
-    for fi in range(4):
+    for fi in range(dimensions):
         active = g.put(active, 'ClearanceGradient', fi, 0)
-    measure, body, measured = loop(g, active, 5)
+    measure, body, measured = loop(g, active, 7 if thumb else 5)
     active, _ = g.branch(body, g.get('ClearanceRunning'))
     baseline = g.math('IntEquals', A=measure, B=0)
-    second = g.math('IntGreaterEqual', A=measure, B=3)
-    finger = select(g, second, g.at('PairFingerB', g.get('WorstPair')), g.at('PairFingerA', g.get('WorstPair')), 'Int')
+    if thumb:
+        finger = g.math('IntDiv', A=g.math('IntMax', A=g.math('IntSub', A=measure, B=1), B=0), B=2)
+    else:
+        second = g.math('IntGreaterEqual', A=measure, B=3)
+        finger = select(g, second, g.at('PairFingerB', g.get('WorstPair')), g.at('PairFingerA', g.get('WorstPair')), 'Int')
     plus = g.math('BoolOr', A=g.math('IntEquals', A=measure, B=1), B=g.math('IntEquals', A=measure, B=3))
+    if thumb:
+        plus = g.math('BoolOr', A=plus, B=g.math('IntEquals', A=measure, B=5))
     epsilon = math.radians(model['gradient_step_degrees'])
-    for fi in range(4):
+    for fi in range(dimensions):
         perturb = g.math('BoolAnd', A=g.math('BoolNot', Value=baseline), B=g.math('IntEquals', A=finger, B=fi))
         offset = select(g, perturb, select(g, plus, epsilon, -epsilon), 0)
         active = g.put(active, 'MeasureAngles', fi, scalar(g, 'Add', g.at('ClearanceAngles', fi), offset))
-    active = geometry(g, active, models)
+    active = geometry(g, active, models, thumb=thumb)
     active = g.set(active, 'WorstGap', select(g, baseline, model['margin_cm']-.0001, g.get('WorstGap')))
     pair_index, body, evaluated = loop(g, active, select(g, baseline, len(pairs), 1, 'Int'))
     pair = select(g, baseline, pair_index, g.get('WorstPair'), 'Int')
@@ -218,26 +255,33 @@ def append_finger_clearance(g, start, model):
     g.put(negative, 'ClearanceGradient', finger, scalar(g, 'Div', scalar(g, 'Sub', g.get('PositiveGap'), g.get('MeasureGap')), 2*epsilon))
     active, _ = g.branch(measured, g.math('BoolAnd', A=g.get('ClearanceRunning'), B=g.get('ClearanceValid')))
     norm = 0
-    for fi in range(4):
+    for fi in range(dimensions):
         norm = scalar(g, 'Add', norm, scalar(g, 'Mul', g.at('ClearanceGradient', fi), g.at('ClearanceGradient', fi)))
     active = g.set(active, 'GradientNorm', norm)
     active = g.set(active, 'ClearanceRunning', scalar(g, 'GreaterEqual', g.get('GradientNorm'), 1e-8))
     active, _ = g.branch(active, g.get('ClearanceRunning'))
     multiplier = scalar(g, 'Div', scalar(g, 'Sub', model['margin_cm'], g.get('WorstGap')), scalar(g, 'Max', g.get('GradientNorm'), 1e-8))
     magnitude = 0
-    for fi in range(4):
+    for fi in range(dimensions):
         magnitude = scalar(g, 'Max', magnitude, g.math('FloatAbs', Value=scalar(g, 'Mul', multiplier, g.at('ClearanceGradient', fi))))
+    if thumb:
+        magnitude = scalar(g, 'Mul', g.math('FloatAbs', Value=multiplier), g.math('FloatSqrt', Value=g.get('GradientNorm')))
     factor = scalar(g, 'Mul', multiplier, scalar(g, 'Min', 1, scalar(g, 'Div', math.radians(model['iteration_step_degrees']), scalar(g, 'Max', magnitude, 1e-12))))
     active = g.set(active, 'StepFactor', factor)
     limit = math.radians(model['correction_limit_degrees'])
-    for fi in range(4):
+    for fi in range(dimensions):
         angle = scalar(g, 'Add', g.at('ClearanceAngles', fi), scalar(g, 'Mul', g.get('StepFactor'), g.at('ClearanceGradient', fi)))
-        active = g.put(active, 'ClearanceAngles', fi, g.math('FloatClamp', Value=angle, Minimum=-limit, Maximum=limit))
+        active = g.put(active, 'ClearanceAngles', fi, angle if thumb else g.math('FloatClamp', Value=angle, Minimum=-limit, Maximum=limit))
+    if thumb:
+        norm = g.length(g.math('VectorMake', **{axis: g.at('ClearanceAngles', i) for i, axis in enumerate('XYZ')}))
+        active = g.set(active, 'StepFactor', scalar(g, 'Min', 1, scalar(g, 'Div', limit, scalar(g, 'Max', norm, 1e-12))))
+        for fi in range(3):
+            active = g.put(active, 'ClearanceAngles', fi, scalar(g, 'Mul', g.at('ClearanceAngles', fi), g.get('StepFactor')))
     g.set(active, 'ClearanceIterations', g.math('IntAdd', A=g.get('ClearanceIterations'), B=1))
     # Export intended rotations independently of hierarchy write tolerances.
-    array(g, 'ClearanceOutput', 'FTransform', ['()']*4)
-    for fi in range(4):
-        offset = g.math('QuaternionFromAxisAndAngle', Axis=g.at('ClearanceAxes', fi), Angle=g.at('ClearanceAngles', fi))
+    array(g, 'ClearanceOutput', 'FTransform', ['()']*(1 if thumb else 4))
+    for fi in range(1 if thumb else 4):
+        offset = vector_offset(g, 'ClearanceAngles') if thumb else g.math('QuaternionFromAxisAndAngle', Axis=g.at('ClearanceAxes', fi), Angle=g.at('ClearanceAngles', fi))
         q = g.math('QuaternionUnit', Value=g.math('QuaternionMul', A=offset, B=g.at('ClearanceLocals', fi*3, 'Rotation')))
         q = select(g, g.get('ClearanceValid'), q, g.at('ClearanceLocals', fi*3, 'Rotation'), 'Quaternion')
         output = g.math('TransformMake', Translation=g.at('ClearanceLocals', fi*3, 'Translation'), Rotation=q, Scale=g.at('ClearanceLocals', fi*3, 'Scale3D'))

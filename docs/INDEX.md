@@ -1,5 +1,6 @@
 # CSS research index
 
+- [Native thumb-tip clearance](development/native-thumb-tip-clearance.md): measured native finger inputs, bounded thumb correction and exact finger regression.
 - [Native finger clearance](development/native-finger-clearance.md): bounded correction, rejected expensive port, precision and skin/transition checks.
 - [Native hand articulation](development/native-hand-articulation.md): original hinge adaptation, engine write threshold and measured-output skin replay.
 - [B2 hand clearance](development/b2-hand-clearance.md): corrected articulated-input replay and solver rounding diagnosis.
