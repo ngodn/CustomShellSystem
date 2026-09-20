@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "scope": "Experimental B2 thumb-web boundary. V2 raises the source-Z ceiling after a retained subframe web crossing. Not an anatomical limit or production-approved model.",
+  "bone": "thumb_01_l",
+  "source_euler_order": "YZX",
+  "units": "degrees",
+  "lower_z_x_coefficient": 0.5,
+  "lower_z_y_coefficient": -0.9,
+  "lower_z_intercept": -35.0,
+  "lower_z_ceiling": 12.0,
+  "maximum_correction": 24.0,
+  "unchanged_epsilon": 0.0001
+}

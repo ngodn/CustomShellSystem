@@ -1,5 +1,7 @@
 # CSS research index
 
+[Thumb-web contact](development/thumb-web-contact.md) identifies the remaining B2 web crossings and adds an offline guard that passes 464 saved poses and 105 affected transition samples. V1's subframe failure and rejected axis changes are retained. V2 still needs native clearance integration, weapon/motion and cooked/live acceptance; V43 stays installed.
+
 [Native hand calibration](development/native-hand-calibration.md) adds the 19-joint mapping before corrective curves and passes 91 native execution cases. A measured H2 output passes actual B2 skinning, and the 22-morph B2 export preserves existing mesh data. Native clearance, final import/cook, full-weapon and live acceptance remain open.
 
 [Native finger correctives](development/native-finger-correctives.md) records 35 passing captured-hand transfers on B2 and a saved native curve graph with 53 execution checks. The graph consumes calibrated locals and starts disabled. Pose calibration/clearance integration, whole-weapon coverage, cooking and live acceptance remain open.

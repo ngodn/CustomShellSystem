@@ -126,6 +126,11 @@ V43 corrective cook is not proof that the reposed B2 cook is correct.
 
 ## Remaining work
 
+Follow-up: the [B2 thumb-web guard](thumb-web-contact.md) passes 464 saved
+poses and 105 affected transition samples offline. The native graph described
+here is unchanged and does not yet include this guard or the earlier
+finger/tip-clearance stages.
+
 Fit the clearance constraints to B2, resolve the existing thumb/palm and
 same-thumb failures, and add that stage between calibration and corrective
 curves. Then verify full heavy-weapon and sidearm poses, preserved tolerated

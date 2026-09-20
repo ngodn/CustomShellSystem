@@ -62,3 +62,36 @@ for evidence, input conventions and the remaining integration work.
 See [native hand calibration](../../../docs/development/native-hand-calibration.md)
 for successful and rejected runs. The runtime clearance stage is not yet
 implemented. A fresh input pose is required on every evaluation.
+
+## Thumb web contacts on B2
+
+These diagnostics save no blend or production asset. All output environment
+variables below must name a fresh direct child of `work/grip-grounding-v1`.
+Run with the retained workspace-only Blender command manifests.
+
+- `skin_fixture.py` evaluates B2 through the actual Blender armature and
+  existing triangle-crossing audit, with source corrective curves.
+- `thumb_stress.py`, `CSS_THUMB_STRESS_AUDIT_DIR`, reproduces the six retained
+  stress inputs. Five still fail on B2, so exit 2 is the expected baseline.
+- `thumb_ablation.py`, `CSS_THUMB_ABLATION_AUDIT_DIR`, isolates twist, distal
+  extension and corrective effects. `CSS_THUMB_ABLATION_STAGE=base-axis`
+  selects the second axis-isolation experiment. Exit 0 means measurements
+  completed; inspect its contact results before drawing a repair conclusion.
+- `verify_batch_pose.py`, `CSS_BATCH_POSE_AUDIT_DIR`, compares sequential and
+  batched pose assignments on all body vertices and exact contact pairs.
+- `inspect_thumb_contacts.py`, `CSS_THUMB_CONTACT_AUDIT_DIR`, records actual
+  triangle weights and distances to the joints.
+- `thumb_base_sweep.py`, `CSS_THUMB_SWEEP_AUDIT_DIR`, measures source-Z contact
+  boundaries. Its saved per-pose results are diagnostic, not runtime overrides.
+- `thumb_web_guard.py` implements the empirical model. V1 passes saved poses
+  but fails a retained subframe; V2 changes only the ceiling. Neither is an
+  anatomical limit or a deployed driver.
+- `verify_thumb_web_guard.py`, `CSS_THUMB_WEB_AUDIT_DIR`, checks 464 paired
+  poses and preservation. Select `CSS_THUMB_WEB_MODEL=thumb-web-guard-v2.json`
+  explicitly; the default retains the reproducible V1 experiment.
+- `verify_thumb_web_transitions.py`, `CSS_THUMB_TRANSITION_AUDIT_DIR`, checks
+  105 interpolated poses in the running intervals affected by the guard.
+  The same model environment variable selects V2. V1 is expected to exit 2.
+
+See [thumb-web contact](../../../docs/development/thumb-web-contact.md) for
+the fitting data, rejected variants, successful checks and remaining gates.
