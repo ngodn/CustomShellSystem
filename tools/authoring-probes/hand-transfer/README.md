@@ -215,3 +215,28 @@ correctives against Blender-evaluated key-zero/key-one geometry. Set
 It independently maps neutral body points and checks all 16 deltas per point,
 including omitted deltas below the exporter threshold. It preserves source
 files and does not substitute for Unreal import/cook or GPU morph verification.
+
+## Complete native hand sequence
+
+`native_hand.py` composes all stages, isolates solver members and restores the
+incoming hand if a stage rejects its input. The graph requires fresh poses.
+
+- `prepare_combined_fixtures.py`, `CSS_COMBINED_HAND_FIXTURES`, reconstructs
+  411 original decoded/overlay inputs and includes the 43 retained calibration
+  fixtures. `verify_combined_inputs.py` uses the same output directory and
+  `calibration.py` to compare all inputs with earlier calibration evidence.
+- `build_combined_hand_rig.py` consumes that fixture directory and writes
+  `CSS_COMBINED_HAND_DIR`. It compares a complete graph with the separately
+  saved native stages, checks preservation and saves only after the gates pass.
+  Graph construction may take several minutes while RigVM validates links.
+  A live process or observation timeout is not a failed build.
+- `verify_combined_hand_skin.py` consumes a passed terminal native report via
+  `CSS_COMBINED_HAND_DIR` and writes `CSS_COMBINED_HAND_SKIN_DIR`. Its mesh
+  replay uses native rotations and curves directly, with no offline repairs.
+- `probe_combined_lifecycle.py`, `CSS_COMBINED_LIFECYCLE_DIR`, loads the saved
+  combined asset and checks stale private curves, warm disable, invalid-input
+  recovery and instance replacement without rebuilding the graph.
+
+Output directories must be fresh direct children of the grip evidence folder.
+See [combined native hand](../../../docs/development/combined-native-hand.md)
+for measured evidence and pending full animation, asset and game acceptance.
