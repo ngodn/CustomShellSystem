@@ -1,5 +1,7 @@
 # CSS research index
 
+[Arm twist binding](development/arm-twist-binding.md) records the built but rejected V44A experiment: fitting pivots and restoring twist weights alone produces curved forearms and leaves the grip broken. Next test full arm/hand rest-pose alignment while preserving proportions and morphs. V43 stays installed.
+
 [Game-derived foundation comparison](development/game-foundation-comparison.md) records the completed v2 diagnostic, rejected game-mode and old-binding variants, editor coverage guard and verified lost arm-twist influences. [Non-CSS guide findings](development/non-css-guide-findings.md) records applicable user-supplied reference steps and their limits.
 
 [Authored H2 hand graph](development/authored-hand-ik.md) records the matching V43 capture, corrected CopyBone/IK evaluation, rejected fixtures and remaining wrist/arm deformation. Its mechanical checks pass; visual acceptance does not.
@@ -42,6 +44,8 @@ Local changes are grouped in the [2026-09-20 commit checkpoint](development/chec
 - CameraStateFramework's `ActiveCameraActor` is the effective view target in this game. Preserve the existing camera across wardrobe refreshes. The final user preference is conditional default recentering and vertical-only right-stick inversion.
 
 ## Rejected approaches
+
+- V44A weights-and-pivots-only repair: engine mechanics pass, but reviewed skinning bends the forearms unnaturally and leaves fingers unchanged. Do not deploy or repeat it. See [arm twist binding](development/arm-twist-binding.md).
 
 - Converting Beaute packs with only global containers silently produces `/Engine/UnknownPackage` and `UnknownExport` imports. Container verification and identical export bytes do not catch it. Include all base containers during conversion and reject unresolved imports explicitly.
 - Loading new IoStore packs or a new permanent native loader requires an initial game launch. Core reload does not imply hot replacement of mounted asset containers.
