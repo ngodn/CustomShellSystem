@@ -284,3 +284,13 @@ for explicit later cooks. `verify_hand_postprocess_cook.py` checks the cooked
 mesh flags, unchanged ActorX data, 7/29/19-bone filters and inherited control
 mappings. See [hand post-process integration](../../../docs/development/hand-postprocess-integration.md)
 for the reproduced failure, evidence and remaining production/live work.
+
+
+`probe_hand_postprocess_motion.py` adds 336 moving component samples at three
+overlay weights, six animated public morphs, controlled head/pelvis/travel
+motion, hand toggles, physics reset and instance replacement. Use a fresh
+`CSS_HAND_POSTPROCESS_MOTION_DIR`. Its public-curve oracle is the actual
+upstream compressed evaluation; source compression differences are recorded
+separately. Apply the editor motion patch after the integration patch. This
+checks transfer and coexistence, not complete combat playback or morph-driven
+collision geometry.

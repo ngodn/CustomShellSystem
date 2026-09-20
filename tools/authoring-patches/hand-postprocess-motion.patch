@@ -1,0 +1,152 @@
+--- a/Source/CSSAuthoring/CSSControlRigHandProbe.inl
++++ b/Source/CSSAuthoring/CSSControlRigHandProbe.inl
+@@ -134,28 +134,76 @@
+         Blueprint->TargetSkeleton!=Mesh->GetSkeleton() ||
+         !Blueprint->GetPathName().StartsWith(TEXT("/Game/CSS/TransientProbes/ABP_CSS_ControlRigProbeHand")))
+         return Fail(TEXT("Invalid isolated component assets"));
+-    FPoseSnapshot Snapshot;
+-    if (!FJsonObjectConverter::JsonObjectStringToUStruct(SnapshotJson,&Snapshot) || !Snapshot.bIsValid ||
+-        Snapshot.BoneNames.Num()!=Snapshot.LocalTransforms.Num()) return Fail(TEXT("Invalid source pose"));
++    TSharedPtr<FJsonObject> InputDocument;
++    if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(SnapshotJson),InputDocument) || !InputDocument)
++        return Fail(TEXT("Invalid source document"));
++    const TArray<TSharedPtr<FJsonValue>>* InputFrames=nullptr;
++    const bool Moving=InputDocument->TryGetArrayField(TEXT("frames"),InputFrames);
++    TArray<FPoseSnapshot> Snapshots;
++    if (Moving)
++    {
++        if (InputFrames->Num()!=112) return Fail(TEXT("Motion fixture requires 112 frames"));
++        for (const auto& Value : *InputFrames)
++        {
++            const TSharedPtr<FJsonObject>* Object=nullptr;
++            FPoseSnapshot& Snapshot=Snapshots.AddDefaulted_GetRef();
++            if (!Value->TryGetObject(Object) || !FJsonObjectConverter::JsonObjectToUStruct(Object->ToSharedRef(),&Snapshot))
++                return Fail(TEXT("Invalid motion frame"));
++        }
++    }
++    else
++    {
++        FPoseSnapshot& Snapshot=Snapshots.AddDefaulted_GetRef();
++        if (!FJsonObjectConverter::JsonObjectToUStruct(InputDocument.ToSharedRef(),&Snapshot))
++            return Fail(TEXT("Invalid static frame"));
++        FPoseSnapshot Duplicate=Snapshot;
++        Snapshots.Add(MoveTemp(Duplicate));
++    }
+     const auto& Ref=Mesh->GetRefSkeleton();
+-    if (Snapshot.BoneNames.Num()<Ref.GetRawBoneNum()) return Fail(TEXT("Incomplete source pose"));
++    for (const auto& Snapshot : Snapshots)
++        if (!Snapshot.bIsValid || Snapshot.BoneNames.Num()!=Snapshot.LocalTransforms.Num() ||
++            Snapshot.BoneNames.Num()<Ref.GetRawBoneNum()) return Fail(TEXT("Incomplete source pose"));
++    const int32 Fps=Moving ? 30 : 60;
+     FMemMark Mark(FMemStack::Get());
+     auto* Sequence=NewObject<UAnimSequence>(GetTransientPackage(),NAME_None,RF_Transient);
+     Sequence->SetSkeleton(Mesh->GetSkeleton());Sequence->SetRetargetSourceAsset(Mesh);Sequence->UpdateRetargetSourceAssetData();
+     auto& Controller=Sequence->GetController();Controller.InitializeModel();
+     Controller.OpenBracket(FText::FromString(TEXT("Hand integration source")),false);
+-    Controller.SetFrameRate(FFrameRate(60,1),false);Controller.SetNumberOfFrames(FFrameNumber(1),false);
++    Controller.SetFrameRate(FFrameRate(Fps,1),false);Controller.SetNumberOfFrames(FFrameNumber(Snapshots.Num()-1),false);
+     for (int32 Index=0;Index<Ref.GetRawBoneNum();++Index)
+     {
+-        const FTransform& Input=Snapshot.LocalTransforms[Index];
+-        if (Snapshot.BoneNames[Index]!=Ref.GetBoneName(Index) || Input.ContainsNaN() || !Input.GetRotation().IsNormalized())
+-        { Controller.CloseBracket(false);return Fail(TEXT("Invalid source bone")); }
+         TArray<FVector3f> Positions,Scales;TArray<FQuat4f> Rotations;
+-        Positions.Init(FVector3f(Ref.GetRefBonePose()[Index].GetTranslation()),2);
+-        Scales.Init(FVector3f(Input.GetScale3D()),2);Rotations.Init(FQuat4f(Input.GetRotation()),2);
++        for (const auto& Snapshot : Snapshots)
++        {
++            const FTransform& Input=Snapshot.LocalTransforms[Index];
++            if (Snapshot.BoneNames[Index]!=Ref.GetBoneName(Index) || Input.ContainsNaN() || !Input.GetRotation().IsNormalized())
++            { Controller.CloseBracket(false);return Fail(TEXT("Invalid source bone")); }
++            Positions.Add(FVector3f(Ref.GetRefBonePose()[Index].GetTranslation()));
++            Scales.Add(FVector3f(Input.GetScale3D()));Rotations.Add(FQuat4f(Input.GetRotation()));
++        }
+         if (!Controller.AddBoneCurve(Ref.GetBoneName(Index),false) ||
+             !Controller.SetBoneTrackKeys(Ref.GetBoneName(Index),Positions,Rotations,Scales,false))
+         { Controller.CloseBracket(false);return Fail(TEXT("Cannot author source animation")); }
++    }
++    TArray<FName> PublicCurves;
++    auto PublicValue=[](int32 Frame,int32 Index) {
++        if (Frame==0 || Frame>=105) return 0.f;
++        return float((Frame*(Index+1))%21)/20.f;
++    };
++    if (Moving)
++    {
++        for (const auto& Morph : Mesh->GetMorphTargets())
++            if (!Curves.Contains(Morph->GetFName())) PublicCurves.Add(Morph->GetFName());
++        if (PublicCurves.Num()!=6) { Controller.CloseBracket(false);return Fail(TEXT("Expected six public morphs")); }
++        for (int32 Index=0;Index<PublicCurves.Num();++Index)
++        {
++            const FAnimationCurveIdentifier Id(PublicCurves[Index],ERawCurveTrackTypes::RCT_Float);
++            TArray<FRichCurveKey> Keys;
++            for (int32 Frame=0;Frame<Snapshots.Num();++Frame)
++                Keys.Emplace(float(Frame)/Fps,PublicValue(Frame,Index));
++            if (!Controller.AddCurve(Id,AACF_DefaultCurve,false) || !Controller.SetCurveKeys(Id,Keys,false))
++            { Controller.CloseBracket(false);return Fail(TEXT("Cannot author public morph curves")); }
++        }
+     }
+     Controller.NotifyPopulated();Controller.CloseBracket(false);
+     Sequence->BeginCacheDerivedDataForCurrentPlatform();Sequence->WaitOnExistingCompression(true);
+@@ -171,10 +219,10 @@
+     auto* Filter=FindFProperty<FArrayProperty>(FAnimNode_ControlRigBase::StaticStruct(),TEXT("OutputBonesToTransfer"));
+     if (!Filter) return Fail(TEXT("Missing output filter"));
+     TArray<TSharedPtr<FJsonValue>> Samples;
+-    for (int32 Frame=0;Frame<7;++Frame)
+-    {
+-        const bool Enabled=Frame==1 || Frame==2 || Frame==4 || Frame==6;
+-        if (Frame==6) for (auto* C : {Component,Upstream})
++    for (int32 Frame=0;Frame<(Moving ? Snapshots.Num() : 7);++Frame)
++    {
++        const bool Enabled=Moving ? Frame>0 && !(Frame>=35 && Frame<42) : Frame==1 || Frame==2 || Frame==4 || Frame==6;
++        if (Frame==(Moving ? 84 : 6)) for (auto* C : {Component,Upstream})
+         { C->InitAnim(true);C->SetAnimation(Sequence);C->Stop(); }
+         for (auto* C : {Upstream,Component})
+         {
+@@ -190,7 +238,16 @@
+                 if (!Property) return Fail(TEXT("Missing accepted hair settings"));
+                 Property->SetPropertyValue_InContainer(Instance,Pair.Value);
+             }
+-            C->SetPosition(0.f,false);C->TickAnimation(Frame==0 ? 0.f : 1.f/60,true);C->RefreshBoneTransforms();
++            if (Moving)
++            {
++                const double Time=double(Frame)/Fps;
++                C->SetWorldLocation(FVector(5*FMath::Sin(Time*UE_PI),2*FMath::Sin(Time*2*UE_PI),0));
++                if (Frame==56)
++                    for (const TCHAR* Name : {TEXT("CSSResetEpoch"),TEXT("CSSBodyResetEpoch")})
++                        if (auto* Epoch=FindFProperty<FIntProperty>(Instance->GetClass(),Name)) Epoch->SetPropertyValue_InContainer(Instance,1);
++            }
++            C->SetPosition(Moving ? float(Frame)/Fps : 0.f,false);
++            C->TickAnimation(Frame==0 ? 0.f : 1.f/Fps,true);C->RefreshBoneTransforms();
+         }
+         auto* Instance=Component->GetPostProcessInstance();UControlRig* Hand=nullptr;int32 Nodes=0;
+         for (TFieldIterator<FStructProperty> It(Instance->GetClass());It;++It)
+@@ -225,6 +282,22 @@
+         }
+         Row->SetObjectField(TEXT("curves"),Values);Row->SetObjectField(TEXT("rig_curves"),RigValues);
+         Row->SetObjectField(TEXT("morph_weights"),MorphWeights);Samples.Add(MakeShared<FJsonValueObject>(Row));
++        if (Moving)
++        {
++            auto Public=MakeShared<FJsonObject>();
++            for (int32 Index=0;Index<PublicCurves.Num();++Index)
++            {
++                const FName Name=PublicCurves[Index];float Input=0,Output=0;
++                Upstream->GetCurveValue(Name,0.f,Input);Component->GetCurveValue(Name,0.f,Output);
++                const int32* Weight=Component->ActiveMorphTargets.Find(Mesh->FindMorphTarget(Name));
++                if (Weight && !Component->MorphTargetWeights.IsValidIndex(*Weight)) return Fail(TEXT("Invalid public morph weight"));
++                auto Values=MakeShared<FJsonObject>();Values->SetNumberField(TEXT("expected"),PublicValue(Frame,Index));
++                Values->SetNumberField(TEXT("upstream"),Input);Values->SetNumberField(TEXT("output"),Output);
++                Values->SetNumberField(TEXT("morph_weight"),Weight ? Component->MorphTargetWeights[*Weight] : 0.f);
++                Public->SetObjectField(Name.ToString(),Values);
++            }
++            Row->SetObjectField(TEXT("public_curves"),Public);
++        }
+     }
+     auto Report=MakeShared<FJsonObject>();Report->SetArrayField(TEXT("samples"),Samples);
+     auto MetadataReport=MakeShared<FJsonObject>();
+@@ -240,5 +313,6 @@
+     }
+     Report->SetObjectField(TEXT("curve_metadata"),MetadataReport);
+     Report->SetBoolField(TEXT("compressed_source"),true);Report->SetBoolField(TEXT("compatible_input"),CompatibleInput);
++    Report->SetBoolField(TEXT("moving_fixture"),Moving);Report->SetNumberField(TEXT("fps"),Fps);
+     FString Result;return FJsonSerializer::Serialize(Report,TJsonWriterFactory<>::Create(&Result)) ? Result : FString();
+ }

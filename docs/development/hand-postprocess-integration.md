@@ -129,3 +129,55 @@ ready for installation. Its hand stage remains disabled by default.
 cooked VM execution or actual gameplay. Full moving-animation integration,
 public morph isolation, production material/physics/Skeleton binding, visible
 weapon checks and combined performance remain required.
+
+
+## Moving component and public morph isolation
+
+`hand-postprocess-motion-v2` evaluates 112 running-attack hand samples at each
+of three overlay weights, for 336 actual component updates. The compressed
+source adds controlled local head/pelvis rotations and component travel to
+excite both physics rigs. Each run disables the hand correction for frames
+0 and 35 through 41, requests both physics resets at frame 56, and recreates
+the instances at frame 84. These are controlled component fixtures, not a
+complete combat-animation replay.
+
+All 336 outputs match the direct native hand oracle supplied with the actual
+upstream component pose. Maximum rotation error is 0.000056324 degrees;
+translation and scale error are zero. Private curve and active morph-weight
+error is at most 8.05e-7. All 24 disabled samples clear private morph weights.
+The other bones, including body and hair outputs, match the corresponding
+hand-disabled component under the same motion and reset sequence.
+
+The six public body morph curves vary throughout playback and return to zero
+at frame 105. Every public output curve and active morph weight equals the
+upstream evaluated curve exactly, including clearing on the final seven
+frames. The first verifier incorrectly compared those values directly with
+uncompressed source keys. It failed at frame 1 on a 0.000880625 difference
+already present upstream. The retained source-to-compressed difference peaks
+at 0.000978470; the hand-stage transfer difference is zero. The verifier now
+records both separately and keeps the strict transfer gate. It does not
+claim lossless animation compression.
+
+Both dynamics rigs respond in this fixture. Body helpers deviate from the
+animated source by up to 6.265079 degrees locally; hair bones by up to
+51.175725 degrees. Results are identical across the three hand overlay runs.
+These measurements establish that dynamics remain active, not that their
+appearance, collision response under all six body morphs, or live cost is
+accepted. Hair input stays at the user's accepted 200/24; body settings are
+inherited from the accepted graph.
+
+The editor extension is in
+[hand-postprocess-motion.patch](../../tools/authoring-patches/hand-postprocess-motion.patch),
+applied after the integration patch. `probe_hand_postprocess_motion.py`
+accepts `CSS_HAND_POSTPROCESS_MOTION_DIR` as a fresh direct child of the grip
+work folder, preserves source/asset hashes and records all measured poses.
+The prior failed verifier remains in `hand-postprocess-motion-v1`. No new
+asset binding or game deployment occurs in this step.
+
+
+`hand-postprocess-motion-static-regression-v1` reopens the saved imported
+mesh and AnimBP after the editor extension. All seven previous static H2
+samples, including every recorded transform, curve and active morph weight,
+match the earlier fresh-import report exactly. The process exits zero and
+protected asset hashes remain unchanged. No static fixture behavior was
+replaced to obtain the moving result.
