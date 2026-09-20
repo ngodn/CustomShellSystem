@@ -1,5 +1,14 @@
 # Current work queue
 
+Latest checkpoint, 2026-09-21: [authored H2 hand graph](development/authored-hand-ik.md). Matching V43/Martyr's Blade/H2 capture is complete. The corrected evaluator preserves authored retarget data, animated virtual bones and both CopyBone anchors before left IK; 60 mechanical checks and six rejection checks pass. Candidate wrists, fingers and arm contours remain unacceptable. Earlier pending-capture entries below are historical. The user's game-based skeleton v2 suggestion is under [primary-source review](development/skeleton-foundation-research.md), with an isolated comparison next, not an accepted production migration. Preserve Eve proportions and V43; no new repair deployed.
+
+User annotations on the offline H2 candidate, 2026-09-20: review both arm/elbow
+contours, the strongly bent left wrist with fingers hanging around the handle,
+and the right wrist/grip. These are required pose/deformation acceptance checks,
+not an accepted candidate. Preserve original body proportions. Finish the active
+same-weapon reference comparison, then address remaining deformation with these
+front/rear views as evidence; a zero IK effector error is insufficient.
+
 [Exact game-reference evaluation](development/game-reference-import.md#engine-candidate-checkpoint) now verifies an isolated engine candidate with 182 matching reference rotations, preserving all 379 authored bones and Eve's mesh. It reproduces the 9-11 cm remaining left-finger gap; contact is not fixed. The original H2 animation has eight animated virtual-bone tracks omitted by the old diagnostic sampler. Next include those tracks and the authored retarget base in the game hand-IK comparison. MoreBeaute remains selected; matching live V43 H2 capture is still requested. No new game fix is deployed.
 
 Full-pose baseline now replayed and visually reviewed: [MoreBeaute reference](../../CSS-Mod-Authoring/docs/next-gen-morebeaute-reference.md#full-body-replay-checkpoint). The helper excludes disabled sections and Blender armature-display geometry, verifies mesh identity, and saves finger/weapon spacing. `full-pose-current-v1` was already MoreBeaute, not V43. Matching SeduXtress H2 capture is still requested; no game state or assets changed.

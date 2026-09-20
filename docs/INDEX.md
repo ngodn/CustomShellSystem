@@ -1,10 +1,14 @@
 # CSS research index
 
+[Authored H2 hand graph](development/authored-hand-ik.md) records the matching V43 capture, corrected CopyBone/IK evaluation, rejected fixtures and remaining wrist/arm deformation. Its mechanical checks pass; visual acceptance does not.
+
+[Skeleton foundation research](development/skeleton-foundation-research.md) separates the mesh bind reference from the shared game Skeleton and defines the requirements for a controlled v2 comparison.
+
 [Game-reference evaluator and pose findings](development/game-reference-import.md) records the preserved 1199-bone source, raw/compressed controls, bounded importer changes and remaining heavy-weapon mismatch.
 
 [Absolute animation tracks](development/absolute-animation-tracks.md) preserves the eight animated H2 virtual-bone tracks omitted by the older diagnostic sampler, with exact ordinary-track comparison and rejection checks.
 
-[MoreBeauteGenessa reference](../../CSS-Mod-Authoring/docs/next-gen-morebeaute-reference.md) records the user-confirmed working heavy-weapon/sidearm comparison, verified installed assets and exact canonical reference match. MoreBeaute Martyr’s Blade/H2 baseline and a Steam still are captured; full-body replay is visually reviewed and matching V43 comparison remains pending.
+[MoreBeauteGenessa reference](../../CSS-Mod-Authoring/docs/next-gen-morebeaute-reference.md) records the user-confirmed working heavy-weapon/sidearm comparison, verified installed assets and exact canonical mesh-reference match. Both MoreBeaute and V43 Martyr's Blade/H2 captures and full-body replays are complete. The latest authored hand-graph checkpoint above records the remaining defects.
 
 For outfit authors, start with the [modding guide](modding/README.md). It links the authoring requirements, project utility, color recipes, package contract and release checks. The [source research](modding-research.md) separates official Unreal behavior from local verification.
 
