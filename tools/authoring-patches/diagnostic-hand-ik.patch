@@ -1,0 +1,163 @@
+--- a/CSS-eins0fx-collections/tools/CSSAuthoring/Source/CSSAuthoring/CSSRetargetLibrary.h
++++ b/CSS-eins0fx-collections/tools/CSSAuthoring/Source/CSSAuthoring/CSSRetargetLibrary.h
+@@ -10,6 +10,17 @@
+ {
+     GENERATED_BODY()
+ public:
++    /** Isolated animation reference and hand-IK diagnostics. Never saves assets. */
++    UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
++    static bool SetDiagnosticRetargetSource(USkeleton* Skeleton, FName Name, const FString& TransformsJson);
++
++    UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
++    static int32 RefreshDiagnosticVirtualBones(class USkeletalMesh* Mesh);
++
++    UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
++    static FString ProbeDiagnosticHandIK(class USkeletalMesh* Mesh, const FString& SnapshotJson,
++        const FString& NodeJson, const FString& CopyNodesJson, float Alpha);
++
+     /** Rebind an isolated diagnostic mesh without merging bones or saving assets. */
+     UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
+     static bool BindDiagnosticMeshSkeleton(class USkeletalMesh* Mesh, USkeleton* Skeleton);
+--- /dev/null
++++ b/CSS-eins0fx-collections/tools/CSSAuthoring/Source/CSSAuthoring/CSSHandIKProbe.cpp
+@@ -0,0 +1,140 @@
++#include "CSSRetargetLibrary.h"
++#include "Animation/AnimInstanceProxy.h"
++#include "Animation/PoseSnapshot.h"
++#include "BoneControllers/AnimNode_TwoBoneIK.h"
++#include "BoneControllers/AnimNode_CopyBone.h"
++#include "Engine/SkeletalMesh.h"
++#include "JsonObjectConverter.h"
++#include "Serialization/JsonSerializer.h"
++#include "Serialization/JsonWriter.h"
++
++namespace
++{
++bool Diagnostic(const UObject* Object)
++{
++    return IsRunningCommandlet() && Object &&
++        Object->GetPathName().StartsWith(TEXT("/Game/CSSAuthoring/DiagnosticReferences/"));
++}
++
++bool ValidTransform(const FTransform& Transform)
++{
++    return !Transform.ContainsNaN() && Transform.GetRotation().IsNormalized() &&
++        Transform.GetScale3D().GetAbsMin() > UE_SMALL_NUMBER;
++}
++}
++
++bool UCSSRetargetLibrary::SetDiagnosticRetargetSource(USkeleton* Skeleton, FName Name, const FString& TransformsJson)
++{
++    if (!Diagnostic(Skeleton) || Name.IsNone()) return false;
++    TArray<TSharedPtr<FJsonValue>> Rows;
++    if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(TransformsJson), Rows) ||
++        Rows.Num() != Skeleton->GetReferenceSkeleton().GetNum()) return false;
++    FReferencePose Pose;
++    Pose.PoseName = Name;
++    for (const auto& Row : Rows)
++    {
++        const TSharedPtr<FJsonObject>* Object = nullptr;
++        FTransform Transform;
++        if (!Row->TryGetObject(Object) || !FJsonObjectConverter::JsonObjectToUStruct(
++            Object->ToSharedRef(), TBaseStructure<FTransform>::Get(), &Transform) ||
++            !ValidTransform(Transform)) return false;
++        Pose.ReferencePose.Add(Transform);
++    }
++    Skeleton->AnimRetargetSources.Add(Name, MoveTemp(Pose));
++    return Skeleton->GetRefLocalPoses(Name).Num() == Rows.Num();
++}
++
++int32 UCSSRetargetLibrary::RefreshDiagnosticVirtualBones(USkeletalMesh* Mesh)
++{
++    if (!Diagnostic(Mesh) || !Diagnostic(Mesh->GetSkeleton())) return INDEX_NONE;
++    Mesh->GetRefSkeleton().RebuildRefSkeleton(Mesh->GetSkeleton(), true);
++    return Mesh->GetRefSkeleton().GetNum() - Mesh->GetRefSkeleton().GetRawBoneNum();
++}
++
++FString UCSSRetargetLibrary::ProbeDiagnosticHandIK(USkeletalMesh* Mesh, const FString& SnapshotJson,
++    const FString& NodeJson, const FString& CopyNodesJson, float Alpha)
++{
++    if (!Diagnostic(Mesh) || !FMath::IsFinite(Alpha) || Alpha < 0.f || Alpha > 1.f) return {};
++    FPoseSnapshot Snapshot;
++    FAnimNode_TwoBoneIK Node;
++    if (!FJsonObjectConverter::JsonObjectStringToUStruct(SnapshotJson, &Snapshot) ||
++        !FJsonObjectConverter::JsonObjectStringToUStruct(NodeJson, &Node) || !Snapshot.bIsValid ||
++        Snapshot.BoneNames.Num() != Snapshot.LocalTransforms.Num() ||
++        Snapshot.BoneNames.Num() != Mesh->GetRefSkeleton().GetNum() ||
++        Node.EffectorTarget.bUseSocket || Node.JointTarget.bUseSocket ||
++        Node.EffectorLocationSpace != BCS_BoneSpace || Node.JointTargetLocationSpace != BCS_BoneSpace) return {};
++    TMap<FName, FTransform> Inputs;
++    for (int32 I = 0; I < Snapshot.BoneNames.Num(); ++I)
++    {
++        if (Inputs.Contains(Snapshot.BoneNames[I]) || !ValidTransform(Snapshot.LocalTransforms[I])) return {};
++        Inputs.Add(Snapshot.BoneNames[I], Snapshot.LocalTransforms[I]);
++    }
++    const auto& Reference = Mesh->GetRefSkeleton();
++    TArray<FBoneIndexType> Indices;
++    for (int32 I = 0; I < Reference.GetNum(); ++I)
++    {
++        if (!Inputs.Contains(Reference.GetBoneName(I))) return {};
++        Indices.Add(I);
++    }
++    FMemMark Mark(FMemStack::Get());
++    FAnimInstanceProxy Proxy;
++    auto& Bones = Proxy.GetRequiredBones();
++    Bones.InitializeTo(Indices, UE::Anim::FCurveFilterSettings(), *Mesh);
++    FComponentSpacePoseContext Context(&Proxy);
++    FCompactPose LocalPose;
++    LocalPose.SetBoneContainer(&Bones);
++    LocalPose.ResetToRefPose();
++    for (const auto Index : LocalPose.ForEachBoneIndex())
++        LocalPose[Index] = Inputs.FindChecked(Reference.GetBoneName(Bones.MakeMeshPoseIndex(Index).GetInt()));
++    Context.Pose.InitPose(MoveTemp(LocalPose));
++    TArray<TSharedPtr<FJsonValue>> Copies;
++    if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(CopyNodesJson), Copies) || Copies.Num() > 2) return {};
++    for (const auto& Row : Copies)
++    {
++        const TSharedPtr<FJsonObject>* Object = nullptr;
++        FAnimNode_CopyBone Copy;
++        if (!Row->TryGetObject(Object) || !FJsonObjectConverter::JsonObjectToUStruct(Object->ToSharedRef(), &Copy)) return {};
++        Copy.SourceBone.Initialize(Bones);
++        Copy.TargetBone.Initialize(Bones);
++        if (!Copy.IsValidToEvaluate(Mesh->GetSkeleton(), Bones)) return {};
++        TArray<FBoneTransform> Changes;
++        Copy.EvaluateSkeletalControl_AnyThread(Context, Changes);
++        if (Changes.Num() != 1) return {};
++        Context.Pose.LocalBlendCSBoneTransforms(Changes, 1.f);
++    }
++    Node.IKBone.Initialize(Bones);
++    if (!Node.IKBone.IsValidToEvaluate(Bones)) return {};
++    const auto Hand = Node.IKBone.GetCompactPoseIndex(Bones);
++    Node.CachedLowerLimbIndex = Bones.GetParentBoneIndex(Hand);
++    if (Node.CachedLowerLimbIndex == INDEX_NONE) return {};
++    Node.CachedUpperLimbIndex = Bones.GetParentBoneIndex(Node.CachedLowerLimbIndex);
++    Node.EffectorTarget.InitializeBoneReferences(Bones);
++    Node.JointTarget.InitializeBoneReferences(Bones);
++    if (!Node.IsValidToEvaluate(Mesh->GetSkeleton(), Bones) ||
++        !Node.EffectorTarget.BoneReference.IsValidToEvaluate(Bones) ||
++        !Node.JointTarget.BoneReference.IsValidToEvaluate(Bones)) return {};
++    const FVector Goal = FAnimNode_TwoBoneIK::GetTargetTransform(FTransform::Identity, Context.Pose,
++        Node.EffectorTarget, BCS_BoneSpace, Node.EffectorLocation).GetTranslation();
++    const double Before = FVector::Distance(Context.Pose.GetComponentSpaceTransform(Hand).GetTranslation(), Goal);
++    if (Alpha > 0.f)
++    {
++        TArray<FBoneTransform> Changes;
++        Node.EvaluateSkeletalControl_AnyThread(Context, Changes);
++        if (Changes.Num() != 3) return {};
++        Context.Pose.LocalBlendCSBoneTransforms(Changes, Alpha);
++    }
++    const double After = FVector::Distance(Context.Pose.GetComponentSpaceTransform(Hand).GetTranslation(), Goal);
++    for (int32 I = 0; I < Snapshot.BoneNames.Num(); ++I)
++    {
++        const auto Index = Bones.MakeCompactPoseIndex(FMeshPoseBoneIndex(Reference.FindBoneIndex(Snapshot.BoneNames[I])));
++        Snapshot.LocalTransforms[I] = Context.Pose.GetLocalSpaceTransform(Index);
++        if (!ValidTransform(Snapshot.LocalTransforms[I])) return {};
++    }
++    auto Report = MakeShared<FJsonObject>();
++    Report->SetObjectField(TEXT("Snapshot"), FJsonObjectConverter::UStructToJsonObject(Snapshot));
++    Report->SetNumberField(TEXT("effector_before_cm"), Before);
++    Report->SetNumberField(TEXT("effector_after_cm"), After);
++    Report->SetNumberField(TEXT("alpha"), Alpha);
++    FString Result;
++    return FJsonSerializer::Serialize(Report, TJsonWriterFactory<>::Create(&Result)) ? Result : FString();
++}
