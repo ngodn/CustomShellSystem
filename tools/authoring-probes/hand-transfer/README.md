@@ -252,3 +252,16 @@ After a terminal exit zero, `verify_combined_hand_skin.py` accepts that native
 report and replays all 759 measured rotations and curve sets on B2 skin.
 Output directories must be fresh direct children of the grip evidence folder.
 The added-step measurement is descriptive, not a gameplay acceptance gate.
+
+
+## Full B2 import and cooked readback
+
+`verify_b2_import.py` checks the saved isolated B2 mesh/Skeleton in a fresh
+UE editor process. It preserves exact translation/scale equality and bounds
+only the double rounding introduced by Skeleton quaternion normalization.
+`read_b2_cook.py` packs the explicit terminal-successful three-asset cook and
+independently decodes it, without deployment. Run the existing geometry
+verifier with `--check-uv`, then `verify_b2_cook.py` in Blender for all 22
+morphs, float32 bind equivalence and cooked VM structure. These fixed evidence
+folders are single-use. See [B2 cooked hand assets](../../../docs/development/b2-cooked-hand-assets.md)
+for retained failure diagnoses, measurements and remaining runtime checks.
