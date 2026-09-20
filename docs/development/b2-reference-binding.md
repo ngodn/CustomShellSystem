@@ -130,3 +130,30 @@ and movement matrix in-game with screenshots/recording and measured cost.
 Preserve original proportions, accepted body/hair motion, six public morphs,
 modularity, CSSX disabled and the full native/UI/profile/lifecycle/distribution
 Next-Gen scope. V43 remains the fallback until the replacement passes.
+
+## Cooked binding checkpoint
+
+`b2-reference-cook-v1` cooks the exact saved metadata/default candidate plus
+the unchanged complete hand rig and exits zero. Independent packing,
+verification and decoding in `b2-reference-cooked-readback-v1` all exit zero.
+`verify_b2_reference_cook.py` verifies the new mesh/Skeleton/AnimBP references,
+all 379 raw Skeleton reference records at numeric float32 precision, nine
+virtual definitions, compatible-game path and unchanged translation modes.
+The cooked hand stage is enabled, uses raw input convention, and retains
+hair defaults 200/24. Other inherited body/hair defaults and source-member
+mappings match V43. All 22 morph flags survive.
+
+Every decoded ActorX chunk except material names is byte-identical to the
+previous B2 cook: points, faces, normals, colors, weights, UVs, reference bones
+and all morph payloads. Assigned material names now replace placeholders;
+non-name material records are unchanged, and all 30 cooked material bindings
+match V43. The complete hand-rig JSON is unchanged. The Physics Asset remains
+null, so this package is still an isolated diagnostic, not the final repair.
+
+The first reference verifier compared float32 bytes and stopped on signed
+zero: the editor JSON writes `0`, while the cooked decoder retains `-0.0`
+on 25 components. Numeric float32 values match exactly. The verifier now uses
+exact numeric float32 equality, with no tolerance increase; the initial
+failure and component list are retained. No asset was recooked or changed
+to pass this check. Actual cooked execution, collision fitting and full live
+acceptance remain open.

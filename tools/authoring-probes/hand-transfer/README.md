@@ -308,3 +308,9 @@ are single-use. `verify_b2_reference_candidate.py` checks a fresh process and
 `../../authoring-patches/b2-reference-metadata.patch`, after integration/motion.
 See [binding evidence](../../../docs/development/b2-reference-binding.md) for
 failed runs, the null Physics Asset, weapon review and remaining release gates.
+
+`verify_b2_reference_cook.py` checks the later metadata/default cook. It compares
+all mesh chunks except changed material names exactly, verifies the Skeleton
+reference at numeric float32 precision (signed zeros compare equal), and checks
+nine virtual definitions, 200/24 defaults, enabled hand mode and material paths.
+This does not establish a working Physics Asset or cooked gameplay execution.
