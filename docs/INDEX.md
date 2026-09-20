@@ -2,7 +2,7 @@
 
 For outfit authors, start with the [modding guide](modding/README.md). It links the authoring requirements, project utility, color recipes, package contract and release checks. The [source research](modding-research.md) separates official Unreal behavior from local verification.
 
-The latest [actual graph hand calibration](../../CSS-Mod-Authoring/docs/next-gen-hand-graph-calibration.md) verifies additive coordinate recovery and clears the captured idle with its overlay preserved. Broader synthetic-overlay cases pass 388/411 and reject deployment; thumb contact and deformation remain unresolved. Prior directional and articulation records retain the earlier tests.
+The latest [live overlay and fingertip checkpoint](../../CSS-Mod-Authoring/docs/next-gen-hand-live-overlay.md) records variable attack overlay and 35/35 passing captured-pose replays. Broader stress remains 405/411. Full heavy-weapon poses are the next comparison; no hand correction is installed. `tools/observe_hand_animation.py` preserves read-only graph observations for repeatable checks.
 
 For the active SeduXtress grip/finger repair, read the [hand investigation and rejected approaches](../../CSS-Mod-Authoring/docs/next-gen-left-hand-source-contact.md) before another experiment. It records the accepted V43 grip, unresolved fingers, exact fixtures, failed transfers and remaining acceptance gates. This is the current hand record; older pending-experiment notes below are historical.
 
