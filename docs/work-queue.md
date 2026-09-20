@@ -1,6 +1,6 @@
 # Current work queue
 
-[Exact game-reference evaluation](development/game-reference-import.md) now reproduces MoreBeaute arm transforms with the actual 1199-bone game reference, then transfers the frozen H2 pose to V43. An isolated inverse-remap experiment reduces the left-finger gap from 20-25 cm to 9-11 cm but does not restore contact. Next verify a reference-orientation candidate and remaining reach/IK; no new game fix is deployed.
+[Exact game-reference evaluation](development/game-reference-import.md#engine-candidate-checkpoint) now verifies an isolated engine candidate with 182 matching reference rotations, preserving all 379 authored bones and Eve's mesh. It reproduces the 9-11 cm remaining left-finger gap; contact is not fixed. The original H2 animation has eight animated virtual-bone tracks omitted by the old diagnostic sampler. Next include those tracks and the authored retarget base in the game hand-IK comparison. MoreBeaute remains selected; matching live V43 H2 capture is still requested. No new game fix is deployed.
 
 Full-pose baseline now replayed and visually reviewed: [MoreBeaute reference](../../CSS-Mod-Authoring/docs/next-gen-morebeaute-reference.md#full-body-replay-checkpoint). The helper excludes disabled sections and Blender armature-display geometry, verifies mesh identity, and saves finger/weapon spacing. `full-pose-current-v1` was already MoreBeaute, not V43. Matching SeduXtress H2 capture is still requested; no game state or assets changed.
 
