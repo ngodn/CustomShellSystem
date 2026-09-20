@@ -19,8 +19,13 @@ report = load(native/'report.json')
 assert report['passed'] and load(native/'exit.json')['exit_code'] == 0
 fixture_path = Path(report['fixture_path'])
 assert digest(fixture_path) == report['fixture_sha256']
-fixtures = load(fixture_path)['cases']
-assert len(fixtures) == 454 and len(report['cases']) == 914
+manifest = load(fixture_path)
+fixtures = manifest['cases']
+if manifest.get('sampling') == 'original-input-running-transitions-v1':
+    assert len(fixtures) == len(report['cases']) == 759
+    assert sum(c['fraction']>0 for c in fixtures) == 423
+else:
+    assert len(fixtures) == 454 and len(report['cases']) == 914
 measured = {r['label']:r for r in report['cases'] if r['enabled'] and not r['antipodes']}
 skin = SkinFixture()
 neutral = pair_set(skin.evaluate(load(AUDIT/'left-corrected-controller-sweep-v1/control-0.json'),batch_pose=True))

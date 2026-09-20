@@ -240,3 +240,15 @@ incoming hand if a stage rejects its input. The graph requires fresh poses.
 Output directories must be fresh direct children of the grip evidence folder.
 See [combined native hand](../../../docs/development/combined-native-hand.md)
 for measured evidence and pending full animation, asset and game acceptance.
+
+
+## Sampled native motion
+
+`prepare_native_motion_fixtures.py` writes `CSS_NATIVE_HAND_MOTION_FIXTURES`
+from the original running-attack inputs, including retained regression
+intervals. `probe_native_hand_motion.py` consumes that directory and writes
+`CSS_NATIVE_HAND_MOTION_DIR`, using the saved complete rig without rebuilding.
+After a terminal exit zero, `verify_combined_hand_skin.py` accepts that native
+report and replays all 759 measured rotations and curve sets on B2 skin.
+Output directories must be fresh direct children of the grip evidence folder.
+The added-step measurement is descriptive, not a gameplay acceptance gate.

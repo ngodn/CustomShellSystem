@@ -93,10 +93,42 @@ fresh input and replacement instances all pass with zero rotation/curve
 comparison error. The process exits zero and the asset hash is unchanged.
 This tests Control Rig instance behavior, not the complete CSS UI lifecycle.
 
-Next verify sampled native transitions from original inputs. Use the saved
-graph instead of rebuilding it for each
-probe. Verify full B2 mesh import and cooked curves before binding the graph
-to production. Select the raw-game or V43-compatible input convention from
+Sampled native transitions now pass the checks below. Verify full B2 mesh
+import and cooked curves before binding the graph to production. Select the raw-game or V43-compatible input convention from
 actual evaluated pose evidence. Preserve original proportions, accepted hair
 200/24 and body motion, disabled CSSX, the canonical skeleton contract and
 the full modular Next-Gen architecture throughout weapon/gameplay validation.
+
+
+## Sampled motion from original inputs
+
+`hand-native-motion-fixtures-v1` contains 759 running-attack inputs: 112
+original frames at three overlay weights, plus 423 interior samples. Every
+interval has a midpoint; 15 retained thumb regression intervals have seven
+interior samples. Interpolation occurs before calibration, so the native
+pipeline receives original inputs rather than interpolated corrected outputs.
+The captured body/wrist remains fixed. This is not a complete game graph replay.
+
+`hand-native-motion-v1` loads the saved combined graph without rebuilding it.
+All 759 evaluations are valid and finite, preserve unrelated data, and leave
+the web correction below its 24-degree limit (maximum 23.330191 degrees).
+All 759 measured-output mesh checks in `hand-native-motion-skin-v1` retain
+exactly the four neutral triangle pairs, with no new crossings. Both processes
+exit zero. No offline correction or corrective-curve recalculation is used.
+
+Across 756 adjacent pairs, the largest added proximal rotation step is
+1.669191 degrees relative to the native pre-contact calibration/articulation
+output. It occurs from frame 87.5 to 88 at overlay zero, over 0.016667 seconds.
+This is a descriptive metric, not a continuity threshold or comparison with
+the older 1.233775-degree offline result, which interpolated different inputs.
+Editor execution measures 0.867 ms median and 1.703 ms p95, including the
+Python bridge. It does not establish live or combined physics performance.
+
+Both views of both worst-step poses were reviewed. Curled fingers remain
+individually visible, with the thumb alongside the index and no obvious
+crossing or large pose flip in these stills. `visual-review.json` records image
+hashes and scope. Continuous video, weapon contact and full-body gameplay
+acceptance remain open.
+
+Fixture SHA-256: `4b1cd54aca1ea41993c64b61b123d88b6be62aad59e043d4cc772ea7227dfdd9`.
+Native report SHA-256: `3efe36615d0ac8c9349d45fe814680968880565ca73aba3480dc25bfca51c9d8`.
