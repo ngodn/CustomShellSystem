@@ -87,3 +87,42 @@ def clear_correctives(g, start, models):
         g.link(start, node + '.ExecuteContext')
         start = Pin(node + '.ExecuteContext')
     return start
+
+
+def append_web_guard(g, start, model, driver):
+    """Guard already calibrated/cleared input, before evaluating correctives."""
+    assert model['bone'] == driver['bone']
+    assert model['source_euler_order'] == driver['euler_order']
+    g.member('WebInput', 'FTransform', '')
+    g.member('WebCorrectionDegrees', 'float', '0', True)
+    incoming = g.unit('RigUnit_GetTransform', Space='LocalSpace', bInitial=False)
+    g.value(incoming + '.Item.Type', 'Bone')
+    g.value(incoming + '.Item.Name', model['bone'])
+    start = g.set(start, 'WebInput', Pin(incoming + '.Transform'))
+    rotation = g.get('WebInput', 'Rotation')
+    source = g.math('QuaternionMul', A=quaternion(driver['left_wxyz']), B=rotation)
+    source = g.math('QuaternionUnit', Value=g.math('QuaternionMul', A=source, B=quaternion(driver['right_wxyz'])))
+    euler = g.unit('RigVMFunction_MathQuaternionToEuler', Value=source, RotationOrder=model['source_euler_order'])
+    x, y, z = [Pin(euler + '.Result.' + axis) for axis in 'XYZ']
+    lower = g.math('FloatAdd', A=g.math('FloatMul', A=x, B=model['lower_z_x_coefficient']),
+                   B=g.math('FloatMul', A=y, B=model['lower_z_y_coefficient']))
+    lower = g.math('FloatMin', A=g.math('FloatAdd', A=lower, B=model['lower_z_intercept']), B=model['lower_z_ceiling'])
+    correction = g.math('FloatClamp', Value=g.math('FloatSub', A=lower, B=z), Minimum=0, Maximum=model['maximum_correction'])
+    active = g.math('FloatGreater', A=correction, B=model['unchanged_epsilon'])
+    correction = g.math('FloatSelectBool', Condition=active, IfTrue=correction, IfFalse=0)
+    start = g.set(start, 'WebCorrectionDegrees', correction)
+    output = g.unit('RigVMFunction_MathQuaternionFromEuler', RotationOrder=model['source_euler_order'])
+    g.value(output + '.Euler.X', x)
+    g.value(output + '.Euler.Y', y)
+    g.value(output + '.Euler.Z', g.math('FloatAdd', A=z, B=g.get('WebCorrectionDegrees')))
+    mapped = g.math('QuaternionMul', A=quaternion(driver['left_wxyz'], True), B=Pin(output + '.Result'))
+    mapped = g.math('QuaternionUnit', Value=g.math('QuaternionMul', A=mapped, B=quaternion(driver['right_wxyz'], True)))
+    selected = g.math('QuaternionSelectBool', Condition=active, IfTrue=mapped, IfFalse=rotation)
+    node = g.unit('RigUnit_SetTransform', Space='LocalSpace', bInitial=False, bPropagateToChildren=True)
+    g.link(start, node + '.ExecuteContext')
+    g.value(node + '.Item.Type', 'Bone')
+    g.value(node + '.Item.Name', model['bone'])
+    g.value(node + '.Value.Translation', g.get('WebInput', 'Translation'))
+    g.value(node + '.Value.Scale3D', g.get('WebInput', 'Scale3D'))
+    g.value(node + '.Value.Rotation', selected)
+    return Pin(node + '.ExecuteContext')

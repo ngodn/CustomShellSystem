@@ -95,3 +95,20 @@ Run with the retained workspace-only Blender command manifests.
 
 See [thumb-web contact](../../../docs/development/thumb-web-contact.md) for
 the fitting data, rejected variants, successful checks and remaining gates.
+
+## Native web stage
+
+- `prepare_web_fixtures.py` runs in Blender with `CSS_NATIVE_WEB_FIXTURE_DIR`.
+  It retains all 569 pre-web inputs and expected curve/rotation values. Inputs
+  already contain calibration, hinge/proximal articulation and both clearance
+  stages. The isolated web graph does not implement those preceding stages.
+- `build_web_rig.py` runs in the UE5.6.1 commandlet with
+  `CSS_NATIVE_WEB_AUDIT_DIR`. It authors the isolated V3 graph, verifies 1,143
+  cases, measures paired editor execution cost, and saves only after checks
+  pass. It refuses to overwrite an existing graph.
+- `verify_native_web_skin.py` runs in Blender with `CSS_NATIVE_WEB_SKIN_DIR`.
+  It checks all 569 measured native outputs on actual B2 skin.
+
+These output variables also require fresh direct grip-evidence children.
+See [native thumb web](../../../docs/development/native-thumb-web.md). Native
+finger/tip clearance is still absent; its output is supplied by the fixtures.
