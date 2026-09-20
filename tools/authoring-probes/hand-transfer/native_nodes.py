@@ -126,3 +126,44 @@ def append_web_guard(g, start, model, driver):
     g.value(node + '.Value.Scale3D', g.get('WebInput', 'Scale3D'))
     g.value(node + '.Value.Rotation', selected)
     return Pin(node + '.ExecuteContext')
+
+
+def append_articulation(g, start, models, gain=.125):
+    """Snapshot calibrated locals; apply source hinges only if all are valid."""
+    TYPES['FQuat'] = '/Script/CoreUObject.Quat'
+    g.member('ArticulationInputs', 'TArray<FTransform>', '(' + ','.join('()' for _ in models) + ')')
+    g.member('ArticulationOutputs', 'TArray<FQuat>', '(' + ','.join('(X=0,Y=0,Z=0,W=1)' for _ in models) + ')')
+    g.member('ArticulationValid', 'bool', 'False', True)
+    start = g.set(start, 'ArticulationValid', True)
+    for i, m in enumerate(models):
+        node = g.unit('RigUnit_GetTransform', Space='LocalSpace', bInitial=False)
+        g.value(node + '.Item.Type', 'Bone')
+        g.value(node + '.Item.Name', m['bone'])
+        start = g.put(start, 'ArticulationInputs', i, Pin(node + '.Transform'))
+    for i, m in enumerate(models):
+        source = g.math('QuaternionMul', A=quaternion(m['left_wxyz']), B=g.at('ArticulationInputs', i, 'Rotation'))
+        source = g.math('QuaternionUnit', Value=g.math('QuaternionMul', A=source, B=quaternion(m['right_wxyz'])))
+        x = g.math('QuaternionDot', A=source, B=quaternion([0, 1, 0, 0]))
+        w = g.math('QuaternionDot', A=source, B=quaternion([1, 0, 0, 0]))
+        norm = g.math('FloatAdd', A=g.math('FloatMul', A=x, B=x), B=g.math('FloatMul', A=w, B=w))
+        valid = g.math('FloatGreater', A=norm, B=1e-8)
+        start = g.set(start, 'ArticulationValid', g.math('BoolAnd', A=g.get('ArticulationValid'), B=valid))
+        split = g.unit('RigVMFunction_MathQuaternionSwingTwist', Input=source, TwistAxis=[1, 0, 0])
+        desired = Pin(split + '.Twist')
+        if not m['hinge']:
+            swing = g.math('QuaternionSlerp', A=quaternion([1, 0, 0, 0]), B=Pin(split + '.Swing'), T=gain)
+            desired = g.math('QuaternionMul', A=swing, B=desired)
+        output = g.math('QuaternionMul', A=quaternion(m['left_wxyz'], True), B=desired)
+        output = g.math('QuaternionUnit', Value=g.math('QuaternionMul', A=output, B=quaternion(m['right_wxyz'], True)))
+        start = g.put(start, 'ArticulationOutputs', i, output)
+    active, bypass = g.branch(start, g.get('ArticulationValid'))
+    for i, m in enumerate(models):
+        node = g.unit('RigUnit_SetTransform', Space='LocalSpace', bInitial=False, bPropagateToChildren=True)
+        g.link(active, node + '.ExecuteContext')
+        g.value(node + '.Item.Type', 'Bone')
+        g.value(node + '.Item.Name', m['bone'])
+        g.value(node + '.Value.Translation', g.at('ArticulationInputs', i, 'Translation'))
+        g.value(node + '.Value.Scale3D', g.at('ArticulationInputs', i, 'Scale3D'))
+        g.value(node + '.Value.Rotation', g.at('ArticulationOutputs', i))
+        active = Pin(node + '.ExecuteContext')
+    return active, bypass

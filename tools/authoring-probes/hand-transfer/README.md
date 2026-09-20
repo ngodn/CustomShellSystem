@@ -129,3 +129,23 @@ finger/tip clearance is still absent; its output is supplied by the fixtures.
   rounding variants and actual-skin replay rather than treating this as green.
 
 See [B2 hand clearance](../../../docs/development/b2-hand-clearance.md).
+
+
+## Native articulation between calibration and clearance
+
+- `articulation.py` implements the original distal hinges and experimental
+  proximal swing gain, with whole-stage bypass for ambiguous X twist.
+- `prepare_articulation_fixtures.py`, `CSS_ARTICULATION_FIXTURE_DIR`, compares
+  446 saved full-matrix results and adds a singular-input control.
+- `build_articulation_rig.py`, `CSS_NATIVE_ARTICULATION_AUDIT_DIR`, verifies
+  899 native cases before saving the isolated, disabled-by-default graph.
+  The verifier distinguishes computed rotations from the hierarchy's
+  component-tolerance rule for skipping tiny writes.
+- `verify_b2_clearance.py` accepts `CSS_B2_NATIVE_ARTICULATION_DIR` pointing to
+  a completed native run. It reconstructs pre-articulation inputs with measured
+  native output, then checks offline clearance and actual skin. The successful
+  run is `hand-native-articulation-skin-v1`.
+
+See [native hand articulation](../../../docs/development/native-hand-articulation.md).
+The complete graph still needs native directional stages and fresh-chain,
+weapon, motion and live verification.
