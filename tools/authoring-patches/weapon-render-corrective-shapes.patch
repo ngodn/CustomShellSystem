@@ -1,0 +1,75 @@
+--- a/tools/render_live_weapon_reference.py
++++ b/tools/render_live_weapon_reference.py
+@@ -5,15 +5,23 @@
+ from mathutils import Matrix,Quaternion,Vector
+ MOD=Path(__file__).resolve().parents[1];ROOT=MOD.parents[2]
+ sys.path.insert(0,str(MOD/'tools'))
+-from export_seduxtress_eve import TO_UE,read_bones,EXPORT_SHAPES
++from export_seduxtress_eve import TO_UE,read_bones,EXPORT_SHAPES,LEFT_HAND_CORRECTIVES
+ p=argparse.ArgumentParser();p.add_argument('--source',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--reference',type=Path);p.add_argument('--glb',type=Path);p.add_argument('--weapon',type=Path,required=True)
+ p.add_argument('--blend',type=Path);p.add_argument('--expected-mesh');p.add_argument('--expected-bind',type=Path)
+ p.add_argument('--framing',choices=('full','hands'),default='full')
++p.add_argument('--shape-values',type=Path,help='Absolute source shape values, including all 16 hand correctives')
++p.add_argument('--raw-bones-only',action='store_true',help='Explicit 379-bone component output with independent mesh bind')
+ p.add_argument('--shape-policy',choices=('export-default','basis'),default='export-default')
+ a=p.parse_args(sys.argv[sys.argv.index('--')+1:]);out=a.output.resolve();assert out.is_relative_to(ROOT) and not out.exists();out.mkdir()
+ source_document=json.loads(a.source.read_text());snapshot=source_document['pose']['Snapshot'];assert snapshot['bIsValid']
++requested_shapes={}
++if a.shape_values:
++ assert a.shape_values.resolve().is_relative_to(ROOT) and not a.reference and a.shape_policy=='export-default'
++ requested_shapes=json.loads(a.shape_values.read_text())['values']
++ assert set(LEFT_HAND_CORRECTIVES)<=set(requested_shapes)<=set(LEFT_HAND_CORRECTIVES)|set(EXPORT_SHAPES)
++ assert all(isinstance(v,(float,int)) and math.isfinite(v) and 0<=v<=1 for v in requested_shapes.values())
+ if a.reference:
+- assert a.glb and not a.blend and not a.expected_mesh and not a.expected_bind
++ assert a.glb and not a.blend and not a.expected_mesh and not a.expected_bind and not a.raw_bones_only
+  bpy.ops.wm.read_factory_settings(use_empty=True);bpy.ops.import_scene.gltf(filepath=str(a.glb))
+  rigs=[o for o in bpy.context.scene.objects if o.type=='ARMATURE'];assert len(rigs)==1;rig=rigs[0]
+  objects=[o for o in bpy.context.scene.objects if o.type=='MESH' and any(m.type=='ARMATURE' for m in o.modifiers)];bones,bind=read_bones(a.reference)
+@@ -35,7 +43,9 @@
+ else:
+  assert bool(a.blend)==bool(a.expected_mesh)==bool(a.expected_bind), 'An alternate blend requires mesh identity and an independently read bind pose'
+  expected_mesh=a.expected_mesh or 'SK_SeduXtress_HandBindV43'
+- assert snapshot['SkeletalMeshName']==expected_mesh and len(snapshot['BoneNames'])==388
++ assert snapshot['SkeletalMeshName']==expected_mesh
++ assert not a.raw_bones_only or (a.blend and a.expected_bind)
++ assert len(snapshot['BoneNames'])==(379 if a.raw_bones_only else 388)
+  removed_faces=0
+  blend=(a.blend or MOD/'work/CSS_SeduXtress_HandBindV43.blend').resolve();assert blend.is_relative_to(ROOT)
+  bpy.ops.wm.open_mainfile(filepath=str(blend));source_asset=str(blend)
+@@ -61,16 +71,20 @@
+ rig.animation_data_clear()
+ for bone in rig.pose.bones:
+  assert not bone.constraints;bone.matrix_basis=Matrix.Identity(4)
+-shape_values={}
++shape_values={};applied_shapes=set()
+ for obj in objects:
+  if obj.data.shape_keys:
+   obj.data.shape_keys.animation_data_clear()
+   for key in obj.data.shape_keys.key_blocks:
+    if a.shape_policy=='basis' or key.name in EXPORT_SHAPES:key.value=0
++   if key.name in requested_shapes and (key.name in EXPORT_SHAPES or obj.name=='Eve Body'):
++    assert not key.mute,(obj.name,key.name,'requested shape is muted')
++    key.value=requested_shapes[key.name];applied_shapes.add(key.name)
+   shape_values[obj.name]={key.name:key.value for key in obj.data.shape_keys.key_blocks if key.value and not key.mute}
+  for modifier in list(obj.modifiers):
+   if modifier.type!='ARMATURE':obj.modifiers.remove(modifier)
+   else:modifier.show_viewport=True;modifier.show_render=True
++assert applied_shapes==set(requested_shapes),set(requested_shapes)-applied_shapes
+ bpy.context.view_layer.update();basis=TO_UE@rig.matrix_world;inverse=basis.inverted()
+ for b,rest,w in zip(bones,bind,world,strict=True):
+  rig.pose.bones[b['name']].matrix=inverse@w@rest.inverted()@basis@rig.data.bones[b['name']].matrix_local
+@@ -118,9 +132,12 @@
+  cam.ortho_scale=max(.7,(hand_positions[0]-hand_positions[1]).length+.4)
+ for name,direction in [('view-a',(4,-1,.35)),('view-b',(-4,1,.35))]:
+  view.location=center+Vector(direction);view.rotation_euler=(center-view.location).to_track_quat('-Z','Y').to_euler();scene.render.filepath=str(out/(name+'.png'));bpy.ops.render.render(write_still=True)
+-report=dict(source_scope=source_document.get('scope','Live atomic local-pose snapshot'),source=str(a.source),source_sha256=hashlib.sha256(a.source.read_bytes()).hexdigest(),asset=source_asset,bones=len(bones),disabled_section_faces_removed=removed_faces,weapon=str(a.weapon),max_position_error_cm=max(e['position_cm'] for e in errors),max_angle_error_rad=max(min(e['angle_rad'],abs(2*math.pi-e['angle_rad'])) for e in errors),finger_surface_distances_cm=contacts,bone_positions_cm={b['name']:list(w.translation) for b,w in zip(bones,world,strict=True)},scope='Mesh-local pose replay on its own mesh reference; input provenance is recorded in source_scope. Neutral morphs, solid materials, no simulated cloth. Weapon identity attachment verified separately. Nearest finger distances do not measure penetration or prove grip. Comparisons between captures are not time-synchronized. No asset saved.')
++report=dict(source_scope=source_document.get('scope','Live atomic local-pose snapshot'),source=str(a.source),source_sha256=hashlib.sha256(a.source.read_bytes()).hexdigest(),asset=source_asset,bones=len(bones),disabled_section_faces_removed=removed_faces,weapon=str(a.weapon),max_position_error_cm=max(e['position_cm'] for e in errors),max_angle_error_rad=max(min(e['angle_rad'],abs(2*math.pi-e['angle_rad'])) for e in errors),finger_surface_distances_cm=contacts,bone_positions_cm={b['name']:list(w.translation) for b,w in zip(bones,world,strict=True)},scope='Mesh-local pose replay on its own mesh reference; input provenance is recorded in source_scope. Explicit recorded morph values, solid materials, no simulated cloth. Weapon identity attachment verified separately. Nearest finger distances do not measure penetration or prove grip. Comparisons between captures are not time-synchronized. No asset saved.')
+ report['framing']=a.framing
+ report['shape_policy']=a.shape_policy
++report['shape_values_source']=str(a.shape_values) if a.shape_values else None
++report['shape_values_sha256']=hashlib.sha256(a.shape_values.read_bytes()).hexdigest() if a.shape_values else None
++report['raw_bones_only']=a.raw_bones_only
+ report['shape_values']=shape_values
+ report['scope']+=' Authoring fit shapes are preserved with export-default; basis explicitly clears all shapes and is not the exported body.'
+ (out/'report.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps({k:v for k,v in report.items() if k!='bone_positions_cm'}))

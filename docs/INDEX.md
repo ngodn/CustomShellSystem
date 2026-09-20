@@ -1,5 +1,7 @@
 # CSS research index
 
+- [V44B2 reference binding](development/b2-reference-binding.md): saved metadata/defaults, measured hand input convention, actual component and weapon checks, remaining collision/cook/live gates.
+
 - [Hand post-process integration](development/hand-postprocess-integration.md): actual component evaluation, missing morph-driver metadata diagnosis, importer fix and cooked integration.
 
 - [B2 cooked hand assets](development/b2-cooked-hand-assets.md): full import, independent geometry/morph/VM readback and remaining runtime integration.

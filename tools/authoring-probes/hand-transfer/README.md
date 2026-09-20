@@ -294,3 +294,17 @@ upstream compressed evaluation; source compression differences are recorded
 separately. Apply the editor motion patch after the integration patch. This
 checks transfer and coexistence, not complete combat playback or morph-driven
 collision geometry.
+
+
+## B2 reference binding
+
+`probe_b2_animation_binding.py` checks the full B2 mesh against the retained
+H2 retarget/IK evidence and raw hand convention. Set `CSS_B2_BINDING_DIR` to a
+fresh grip evidence child; optionally set `CSS_B2_REFERENCE_SKELETON` to an
+isolated saved reference candidate. `prepare_b2_reference_candidate.py` builds
+the metadata-preserving copy and accepted defaults. Its fixed package names
+are single-use. `verify_b2_reference_candidate.py` checks a fresh process and
+35 actual component evaluations. The editor helpers are already applied from
+`../../authoring-patches/b2-reference-metadata.patch`, after integration/motion.
+See [binding evidence](../../../docs/development/b2-reference-binding.md) for
+failed runs, the null Physics Asset, weapon review and remaining release gates.
