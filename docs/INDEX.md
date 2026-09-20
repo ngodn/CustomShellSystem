@@ -1,5 +1,7 @@
 # CSS research index
 
+[Game-derived foundation comparison](development/game-foundation-comparison.md) records the completed v2 diagnostic, rejected game-mode and old-binding variants, editor coverage guard and verified lost arm-twist influences. [Non-CSS guide findings](development/non-css-guide-findings.md) records applicable user-supplied reference steps and their limits.
+
 [Authored H2 hand graph](development/authored-hand-ik.md) records the matching V43 capture, corrected CopyBone/IK evaluation, rejected fixtures and remaining wrist/arm deformation. Its mechanical checks pass; visual acceptance does not.
 
 [Skeleton foundation research](development/skeleton-foundation-research.md) separates the mesh bind reference from the shared game Skeleton and defines the requirements for a controlled v2 comparison.

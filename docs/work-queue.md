@@ -1,5 +1,9 @@
 # Current work queue
 
+2026-09-21: the user reaffirmed the full Next-Gen scope, including modular physics/motion, reusable extensions, native runtime, UI and pipeline integration. The hand/arm repair is a current milestone, not a replacement objective. Preserve accepted body dynamics, hair 200/24, original proportions and disabled CSSX; its performance investigation and full lifecycle/performance acceptance remain open.
+
+Latest result: [game-derived foundation comparison](development/game-foundation-comparison.md). The full diagnostic reference plus CSS modes exactly reproduces the compact candidate at the tested H2 poses; copying game modes stretches hands/wrists and is rejected. Older V42 hand binding does not repair the pose. An editor-only source-coverage crash is corrected and guarded; explicit-source controls reproduce earlier results exactly. Next isolate lost arm-twist influences and arm/hand reference alignment. The [user-supplied non-CSS guide](development/non-css-guide-findings.md) is reviewed; apply its pose/binding checks while preserving CSS's morphs, proportions and modular dynamics. No new game revision is deployed.
+
 Latest checkpoint, 2026-09-21: [authored H2 hand graph](development/authored-hand-ik.md). Matching V43/Martyr's Blade/H2 capture is complete. The corrected evaluator preserves authored retarget data, animated virtual bones and both CopyBone anchors before left IK; 60 mechanical checks and six rejection checks pass. Candidate wrists, fingers and arm contours remain unacceptable. Earlier pending-capture entries below are historical. The user's game-based skeleton v2 suggestion is under [primary-source review](development/skeleton-foundation-research.md), with an isolated comparison next, not an accepted production migration. Preserve Eve proportions and V43; no new repair deployed.
 
 User annotations on the offline H2 candidate, 2026-09-20: review both arm/elbow
