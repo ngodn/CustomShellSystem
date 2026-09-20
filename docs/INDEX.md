@@ -2,6 +2,10 @@
 
 For outfit authors, start with the [modding guide](modding/README.md). It links the authoring requirements, project utility, color recipes, package contract and release checks. The [source research](modding-research.md) separates official Unreal behavior from local verification.
 
+For the active SeduXtress grip/finger repair, read the [hand investigation and rejected approaches](../../CSS-Mod-Authoring/docs/next-gen-left-hand-source-contact.md) before another experiment. It records the accepted V43 grip, unresolved fingers, exact fixtures, failed transfers and remaining acceptance gates. This is the current hand record; older pending-experiment notes below are historical.
+
+Local changes are grouped in the [2026-09-20 commit checkpoint](development/checkpoint-2026-09-20.md), with validation limits and unfinished work.
+
 ## Established findings
 
 - [Next-Gen takeover status](../../CSS-Mod-Authoring/docs/next-gen-status.md) is the current roadmap for `nextgen100`. The beta controls have been integrated with 0.4.2 recovery/HUD changes; SeduXtress materials and package authoring still require repair. [Evidence](../../CSS-Mod-Authoring/docs/next-gen-baseline-findings.md).
