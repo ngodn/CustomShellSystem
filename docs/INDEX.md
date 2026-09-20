@@ -1,5 +1,7 @@
 # CSS research index
 
+[MoreBeauteGenessa reference](../../CSS-Mod-Authoring/docs/next-gen-morebeaute-reference.md) records the user-confirmed working heavy-weapon/sidearm comparison, verified installed assets and exact canonical reference match. MoreBeaute Martyr’s Blade/H2 baseline and a Steam still are captured; matching V43 comparison remains pending.
+
 For outfit authors, start with the [modding guide](modding/README.md). It links the authoring requirements, project utility, color recipes, package contract and release checks. The [source research](modding-research.md) separates official Unreal behavior from local verification.
 
 The latest [live overlay and fingertip checkpoint](../../CSS-Mod-Authoring/docs/next-gen-hand-live-overlay.md) records variable attack overlay and 35/35 passing captured-pose replays. Broader stress remains 405/411. Full heavy-weapon poses are the next comparison; no hand correction is installed. `tools/observe_hand_animation.py` preserves read-only graph observations for repeatable checks.
