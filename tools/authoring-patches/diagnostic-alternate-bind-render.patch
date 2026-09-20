@@ -1,0 +1,37 @@
+--- a/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/tools/render_live_weapon_reference.py
++++ b/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/tools/render_live_weapon_reference.py
+@@ -7,10 +7,11 @@
+ sys.path.insert(0,str(MOD/'tools'))
+ from export_seduxtress_eve import TO_UE,read_bones
+ p=argparse.ArgumentParser();p.add_argument('--source',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--reference',type=Path);p.add_argument('--glb',type=Path);p.add_argument('--weapon',type=Path,required=True)
++p.add_argument('--blend',type=Path);p.add_argument('--expected-mesh');p.add_argument('--expected-bind',type=Path)
+ a=p.parse_args(sys.argv[sys.argv.index('--')+1:]);out=a.output.resolve();assert out.is_relative_to(ROOT) and not out.exists();out.mkdir()
+ source_document=json.loads(a.source.read_text());snapshot=source_document['pose']['Snapshot'];assert snapshot['bIsValid']
+ if a.reference:
+- assert a.glb
++ assert a.glb and not a.blend and not a.expected_mesh and not a.expected_bind
+  bpy.ops.wm.read_factory_settings(use_empty=True);bpy.ops.import_scene.gltf(filepath=str(a.glb))
+  rigs=[o for o in bpy.context.scene.objects if o.type=='ARMATURE'];assert len(rigs)==1;rig=rigs[0]
+  objects=[o for o in bpy.context.scene.objects if o.type=='MESH' and any(m.type=='ARMATURE' for m in o.modifiers)];bones,bind=read_bones(a.reference)
+@@ -30,10 +31,19 @@
+   start=end
+  removed_faces=len(remove);bmesh.ops.delete(bm,geom=remove,context='FACES');bm.to_mesh(obj.data);bm.free()
+ else:
+- assert snapshot['SkeletalMeshName']=='SK_SeduXtress_HandBindV43' and len(snapshot['BoneNames'])==388
++ assert bool(a.blend)==bool(a.expected_mesh)==bool(a.expected_bind), 'An alternate blend requires mesh identity and an independently read bind pose'
++ expected_mesh=a.expected_mesh or 'SK_SeduXtress_HandBindV43'
++ assert snapshot['SkeletalMeshName']==expected_mesh and len(snapshot['BoneNames'])==388
+  removed_faces=0
+- blend=MOD/'work/CSS_SeduXtress_HandBindV43.blend';bpy.ops.wm.open_mainfile(filepath=str(blend));source_asset=str(blend)
++ blend=(a.blend or MOD/'work/CSS_SeduXtress_HandBindV43.blend').resolve();assert blend.is_relative_to(ROOT)
++ bpy.ops.wm.open_mainfile(filepath=str(blend));source_asset=str(blend)
+  rig=bpy.data.objects['SKEL_CSS_Base'];bones,bind=read_bones(MOD/rig['CSS_bind_pose'])
++ if a.expected_bind:
++  expected=json.loads(a.expected_bind.read_text());assert len(expected)==len(bones)
++  for actual,entry in zip(bones,expected,strict=True):
++   assert actual['name'].lower()==entry['name'].lower() and actual['parent']==entry['parent']
++   assert math.dist(actual['translation'],entry['translation'])<.001 and math.dist(actual['scale'],entry['scale'])<.001
++   assert min(math.dist(actual['rotation'],entry['rotation']),math.dist(actual['rotation'],[-v for v in entry['rotation']]))<.001
+  objects=[bpy.data.objects[n] for n in ('Eve Body','Eve Black Pearl - Suit','Eve Black Pearl - Stockings','Eve Black Pearl - Footwear') if n in bpy.data.objects]
+  assert len(objects)>=3
+ lookup={n.lower():t for n,t in zip(snapshot['BoneNames'],snapshot['LocalTransforms'],strict=True)}

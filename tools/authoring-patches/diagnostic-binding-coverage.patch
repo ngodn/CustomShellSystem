@@ -1,0 +1,23 @@
+--- a/CSS-eins0fx-collections/tools/CSSAuthoring/Source/CSSAuthoring/CSSRetargetLibrary.cpp
++++ b/CSS-eins0fx-collections/tools/CSSAuthoring/Source/CSSAuthoring/CSSRetargetLibrary.cpp
+@@ -53,6 +53,20 @@
+     const FString Prefix = TEXT("/Game/CSSAuthoring/DiagnosticReferences/");
+     if (!Mesh || !Skeleton || !Mesh->GetPathName().StartsWith(Prefix) ||
+         !Skeleton->GetPathName().StartsWith(Prefix)) return false;
++    // Editor linkup can merge missing mesh bones into a Skeleton. Reject that
++    // here before asynchronous animation compression can observe shifted indices.
++    const auto& MeshReference = Mesh->GetRefSkeleton();
++    const auto& SkeletonReference = Skeleton->GetReferenceSkeleton();
++    for (int32 Index = 0; Index < MeshReference.GetRawBoneNum(); ++Index)
++    {
++        const int32 SkeletonIndex = SkeletonReference.FindBoneIndex(MeshReference.GetBoneName(Index));
++        if (SkeletonIndex == INDEX_NONE || SkeletonIndex >= SkeletonReference.GetRawBoneNum()) return false;
++        const int32 MeshParent = MeshReference.GetParentIndex(Index);
++        const int32 SkeletonParent = SkeletonReference.GetParentIndex(SkeletonIndex);
++        if ((MeshParent == INDEX_NONE) != (SkeletonParent == INDEX_NONE)) return false;
++        if (MeshParent != INDEX_NONE && MeshReference.GetBoneName(MeshParent) !=
++            SkeletonReference.GetBoneName(SkeletonParent)) return false;
++    }
+     Mesh->SetSkeleton(Skeleton);
+     return Mesh->GetSkeleton() == Skeleton;
+ }
