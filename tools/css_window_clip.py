@@ -21,6 +21,7 @@ def main():
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--seconds', type=int, default=10, choices=range(3,31))
     parser.add_argument('--orbit', action='store_true')
+    parser.add_argument('--world', action='store_true', help='Record gameplay with Inventory closed')
     args=parser.parse_args()
     output=args.output.resolve()
     if not output.is_relative_to(ROOT/'work') or output.exists():
@@ -29,7 +30,11 @@ def main():
     if 'WM_NAME(STRING) = "MortalShell2  "' not in identity or 'steam_app_2584270' not in identity:
         parser.error('Window is not the Mortal Shell game view')
     view=command('inventory_inspect')['css']
-    if not view['active']:
+    if args.world and args.orbit:
+        parser.error('Preview orbit cannot be used for a world recording')
+    if args.world and view['active']:
+        parser.error('Close CSS before recording the game world')
+    if not args.world and not view['active']:
         parser.error('Open the CSS page before recording')
     original=[view[k] for k in ('yaw','zoom','pan','frame')]
     ffmpeg=['ffmpeg','-nostdin','-hide_banner','-loglevel','warning','-f','x11grab',
@@ -63,7 +68,8 @@ def main():
     details=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries',
         'stream=width,height,nb_frames,duration,avg_frame_rate','-of','json',str(output)],text=True))
     details.update(window=identity,started_ns=started,ended_ns=time.time_ns(),timeline=timeline,
-                   scope='Game window only. Camera orbit is a controlled preview movement, not locomotion acceptance.')
+                   scope=('Game window only, in-world observation. No injected input.' if args.world else
+                          'Game window only. Camera orbit is a controlled preview movement, not locomotion acceptance.'))
     output.with_suffix('.json').write_text(json.dumps(details,indent=2)+'\n')
     print(output)
 

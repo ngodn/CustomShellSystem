@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Local media driver for a CSS_INVENTORY_DEV core. Python 3.14.
 
-Run only with the game focused and the character somewhere safe. Does not ship
-with the mod. Requests use the same acknowledgements as inventory_dev.py.
+Steam screenshots do not change desktop focus and can capture the title menu.
+Input/camera helpers require the focused game and a safe character location.
+Does not ship with the mod. Requests use the acknowledgements of inventory_dev.py.
 """
 from pathlib import Path
 import json

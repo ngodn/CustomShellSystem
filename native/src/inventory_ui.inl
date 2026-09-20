@@ -79,6 +79,21 @@ void InventoryUI::detach() {
     active_=false; was_active_=false; dirty_=true;
 }
 Json InventoryUI::command(void* engine,const Json& command) {
+    const auto action=command.at("action").get<std::string>();
+#ifdef CSS_INVENTORY_DEV
+    // Steam captures the game frame without needing Inventory or a player pawn.
+    // Return before the inventory diagnostic walk, which needs those objects.
+    if(action=="inventory_shot") {
+        auto module=GetModuleHandleW(L"steam_api64.dll");
+        if(!module) throw std::runtime_error("Steam screenshot module unavailable");
+        auto get=reinterpret_cast<void*(*)()>(GetProcAddress(module,"SteamAPI_SteamScreenshots_v003"));
+        auto trigger=reinterpret_cast<void(*)(void*)>(GetProcAddress(module,"SteamAPI_ISteamScreenshots_TriggerScreenshot"));
+        if(!get || !trigger) throw std::runtime_error("Steam screenshot API unavailable");
+        auto* screenshots=get(); if(!screenshots) throw std::runtime_error("Steam screenshots interface unavailable");
+        trigger(screenshots);
+        return {{"screenshot_requested",true},{"source","steam"}};
+    }
+#endif
     auto* viewport=read<UObject*>(static_cast<UObject*>(engine),L"GameViewport");
     auto* world=inventory_object(viewport,L"World");
     Call player(find(L"/Script/Engine.Default__GameplayStatics"),L"GetPlayerController",3);
@@ -88,7 +103,6 @@ Json InventoryUI::command(void* engine,const Json& command) {
     auto* game=inventory_object(handler,L"WBP_Menu_Game");
     auto* main=inventory_object(game,L"WBP_Menu_Main");
     if(!main) throw std::runtime_error("Open Inventory before testing its CSS page");
-    const auto action=command.at("action").get<std::string>();
     if(action=="inventory_attach" && !tab_.Get()) {
         auto* tabs=inventory_object(main,L"BP_HBC_Menu_Game");
         auto* pages=inventory_object(main,L"BP_WS_Menu_Game");
@@ -161,13 +175,6 @@ Json InventoryUI::command(void* engine,const Json& command) {
         for(auto* child:inventory_children(tabs_.Get())) if(auto* slot=inventory_object(child,L"Slot")) invoke(slot,L"SetPadding",L"InPadding",Margin{60,0,60,0});
     } else if(action=="inventory_section") {
         section_=std::clamp(command.value("section",0),0,3); row_=std::max(0,command.value("row",0)); dirty_=true;
-    } else if(action=="inventory_shot") {
-        auto module=GetModuleHandleW(L"steam_api64.dll");
-        auto get=reinterpret_cast<void*(*)()>(GetProcAddress(module,"SteamAPI_SteamScreenshots_v003"));
-        auto trigger=reinterpret_cast<void(*)(void*)>(GetProcAddress(module,"SteamAPI_ISteamScreenshots_TriggerScreenshot"));
-        if(!get || !trigger) throw std::runtime_error("Steam screenshot API unavailable");
-        auto* screenshots=get(); if(!screenshots) throw std::runtime_error("Steam screenshots interface unavailable");
-        trigger(screenshots);
     } else if(action=="inventory_select") {
         inventory_navigate(inventory_object(main,L"BP_HBC_Menu_Game"),command.at("index").get<int32_t>());
     } else if(action=="inventory_test_motion") {
