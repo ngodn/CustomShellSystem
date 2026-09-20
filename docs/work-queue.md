@@ -1,5 +1,7 @@
 # Current work queue
 
+Latest hand checkpoint: [articulation isolation](../../CSS-Mod-Authoring/docs/next-gen-hand-articulation.md). Continuous proximal swing gain passes 111/112 dense frames and 30/30 sparse samples; frame 75 still fails with 34 middle/ring crossings. Original hinge axes alone fail. Removing proximal swing entirely loses articulation, so it is diagnostic only. Target relative middle/ring clearance through frames 74-76 next. V43 and game settings remain unchanged.
+
 Commit CSS changes per coherent context. See the [2026-09-20 checkpoint](development/checkpoint-2026-09-20.md) for committed groups and validation.
 
 Current hand checkpoint: [investigation and rejected approaches](../../CSS-Mod-Authoring/docs/next-gen-left-hand-source-contact.md). V43 remains installed. Dense spread checks pass only 42/112 and reveal offset jumps on nearly static input, so the discrete search is rejected for runtime use. The sparse fine result remains 28/30. [Optional corrective export](../../CSS-Mod-Authoring/docs/next-gen-hand-corrective-export.md) now supplies the missing 16 private finger morphs; geometry, six original morphs and appearance controls match exactly. Its isolated cook now preserves all 22 morphs, base mesh data and original body morph records; it has no active driver and is not deployed. Next develop a continuous hand correction and integrate the verified shapes, then validate graph overlays, weapon contact, cost and gameplay. No game deployment or interruption occurred. Earlier checkpoints are historical.
