@@ -1,6 +1,6 @@
 # Current work queue
 
-Latest hand checkpoint: [articulation isolation](../../CSS-Mod-Authoring/docs/next-gen-hand-articulation.md). Continuous proximal swing gain passes 111/112 dense frames and 30/30 sparse samples; frame 75 still fails with 34 middle/ring crossings. Original hinge axes alone fail. Removing proximal swing entirely loses articulation, so it is diagnostic only. Target relative middle/ring clearance through frames 74-76 next. V43 and game settings remain unchanged.
+Latest hand checkpoint: [directional clearance](../../CSS-Mod-Authoring/docs/next-gen-hand-directional-clearance.md). The offline candidate passes 112 dense cross-region checks plus 333 synthetic quarter-frame and 30 sparse exact-pair checks. Blender independently clears frame 75, with reviewed open/fist renders. Actual graph overlays, preserved gestures, weapon contact, runtime cost and gameplay remain unverified. Next test the saved actual graph pose; do not repeat fixed-gain sweeps. V43 and game settings remain unchanged.
 
 Commit CSS changes per coherent context. See the [2026-09-20 checkpoint](development/checkpoint-2026-09-20.md) for committed groups and validation.
 

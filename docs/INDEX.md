@@ -2,7 +2,7 @@
 
 For outfit authors, start with the [modding guide](modding/README.md). It links the authoring requirements, project utility, color recipes, package contract and release checks. The [source research](modding-research.md) separates official Unreal behavior from local verification.
 
-The latest [hand articulation diagnosis](../../CSS-Mod-Authoring/docs/next-gen-hand-articulation.md) isolates proximal swing and retains the dense frame-75 rejection.
+The latest [directional hand clearance](../../CSS-Mod-Authoring/docs/next-gen-hand-directional-clearance.md) clears the 112-frame offline replay and 363 added synthetic/sparse poses, with independent skin and rendered checks. Actual graph and gameplay acceptance remain open. The prior articulation record retains the fixed-gain-only frame-75 rejection.
 
 For the active SeduXtress grip/finger repair, read the [hand investigation and rejected approaches](../../CSS-Mod-Authoring/docs/next-gen-left-hand-source-contact.md) before another experiment. It records the accepted V43 grip, unresolved fingers, exact fixtures, failed transfers and remaining acceptance gates. This is the current hand record; older pending-experiment notes below are historical.
 
