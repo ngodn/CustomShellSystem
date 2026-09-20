@@ -314,3 +314,13 @@ all mesh chunks except changed material names exactly, verifies the Skeleton
 reference at numeric float32 precision (signed zeros compare equal), and checks
 nine virtual definitions, 200/24 defaults, enabled hand mode and material paths.
 This does not establish a working Physics Asset or cooked gameplay execution.
+
+
+## Body collision reference
+
+`prepare_body_physics_reference.py` selects 22 game human body entries and 21
+constraints, remaps disabled collision pairs by the asset's ordered body list,
+and rejects unknown removed bones. Its fixed output is an unfitted diagnostic
+JSON template. It does not create a Physics Asset or change the game. See
+[collision evidence](../../../docs/development/body-collision-reference.md)
+for the live null references, retained failures and next fitting/query gates.

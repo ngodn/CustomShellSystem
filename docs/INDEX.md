@@ -1,5 +1,7 @@
 # CSS research index
 
+- [Body collision reference](development/body-collision-reference.md): live V43 Physics Asset absence, game reference and selected human collider template.
+
 - [V44B2 reference binding](development/b2-reference-binding.md): saved metadata/defaults, measured hand input convention, actual component and weapon checks, remaining collision/cook/live gates.
 
 - [Hand post-process integration](development/hand-postprocess-integration.md): actual component evaluation, missing morph-driver metadata diagnosis, importer fix and cooked integration.
