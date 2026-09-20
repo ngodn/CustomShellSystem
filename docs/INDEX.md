@@ -1,5 +1,7 @@
 # CSS research index
 
+[Native finger correctives](development/native-finger-correctives.md) records 35 passing captured-hand transfers on B2 and a saved native curve graph with 53 execution checks. The graph consumes calibrated locals and starts disabled. Pose calibration/clearance integration, whole-weapon coverage, cooking and live acceptance remain open.
+
 [Aligned finger calibration](development/aligned-hand-calibration.md) removes the new skin crossings in five H2 idle samples on V44B2. The same uncorrected inputs fail the gate; fitted front/rear review supports improved articulation. Attacks, weapon contact, runtime integration and live acceptance remain open. V43 stays installed.
 
 [Arm rest-pose alignment](development/arm-rest-alignment.md) preserves limb lengths and all 5,503 stored morphs, improves the tested arm/wrist pose, and leaves fingers unresolved. V44B2 restores attachment locals and exact canonical rotations; V43 remains installed.

@@ -1,5 +1,9 @@
 # Finger calibration on the aligned arms, 2026-09-21
 
+Follow-up: [captured transfer and native correctives](native-finger-correctives.md)
+extends the geometry checks to 35 captured corrected poses and implements a
+native curve-driver graph. Full pose/clearance runtime integration remains open.
+
 The existing source-Eve finger calibration removes the new left-hand skin
 crossings in all five tested H2 idle samples on the V44B2 geometry. Front and
 rear review of sample 95 shows separated, naturally hanging fingers instead

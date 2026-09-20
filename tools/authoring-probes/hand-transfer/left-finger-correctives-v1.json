@@ -1,0 +1,362 @@
+{
+  "schema": 1,
+  "scope": "Diagnostic local driver. Consumes calibrated target-local rotations; not raw game or neutral B2 rotations.",
+  "source_blend_sha256": "aaa66fe96f11d04f4df987ee2253d0b3e6f10a5ae58792e1a947f5b695ea4338",
+  "quaternion_order": "WXYZ",
+  "angle_units": "radians",
+  "output": "desired_source_value minus baked_value",
+  "parameters": [
+    {
+      "shape": "pJCMIndex1Dwn_90_L",
+      "bone": "index_01_l",
+      "index": 77,
+      "parent": "index_metacarpal_l",
+      "coefficient": 0.637,
+      "euler_order": "YZX",
+      "axis": "X",
+      "left_wxyz": [
+        0.5771502256393433,
+        0.5416620373725891,
+        -0.5063360333442688,
+        -0.3422335684299469
+      ],
+      "right_wxyz": [
+        0.5003352165222168,
+        -0.4936930537223816,
+        0.5031211376190186,
+        0.5027931332588196
+      ],
+      "baked_value": 0.0
+    },
+    {
+      "shape": "pJCMIndex2Dwn_105_L",
+      "bone": "index_02_l",
+      "index": 78,
+      "parent": "index_01_l",
+      "coefficient": 0.546,
+      "euler_order": "YZX",
+      "axis": "X",
+      "left_wxyz": [
+        0.5306984782218933,
+        0.4977957010269165,
+        -0.481192409992218,
+        -0.4888889491558075
+      ],
+      "right_wxyz": [
+        0.5532999634742737,
+        -0.4396001100540161,
+        0.4393782317638397,
+        0.554578959941864
+      ],
+      "baked_value": 0.0
+    },
+    {
+      "shape": "pJCMIndex3Dwn_90_L",
+      "bone": "index_03_l",
+      "index": 79,
+      "parent": "index_02_l",
+      "coefficient": 0.637,
+      "euler_order": "YZX",
+      "axis": "X",
+      "left_wxyz": [
+        0.560975968837738,
+        0.43700018525123596,
+        -0.4382459223270416,
+        -0.5497974157333374
+      ],
+      "right_wxyz": [
+        0.49149248003959656,
+        -0.4831404387950897,
+        0.38786545395851135,
+        0.6120221018791199
+      ],
+      "baked_value": 0.0
+    },
+    {
+      "shape": "pJCMMid1Dwn_95_L",
+      "bone": "middle_01_l",
+      "index": 73,
+      "parent": "middle_metacarpal_l",
+      "coefficient": 0.603,
+      "euler_order": "YZX",
+      "axis": "X",
+      "left_wxyz": [
+        0.4894103407859802,
+        0.5303865075111389,
+        -0.5812262892723083,
+        -0.37595731019973755
+      ],
+      "right_wxyz": [
+        0.49580198526382446,
+        -0.5013072490692139,
+        0.5062583684921265,
+        0.4965622127056122
+      ],
+      "baked_value": 0.0
+    },
+    {
+      "shape": "pJCMMid2Dwn_105_L",
+      "bone": "middle_02_l",
+      "index": 74,
+      "parent": "middle_01_l",
+      "coefficient": 0.546,
+      "euler_order": "YZX",
+      "axis": "X",
+      "left_wxyz": [
+        0.5204764008522034,
+        0.474058598279953,
+        -0.5310096740722656,
+        -0.47159460186958313
+      ],
+      "right_wxyz": [
+        0.4309273958206177,
+        -0.5606820583343506,
+        0.5606995224952698,
+        0.430759072303772
+      ],
+      "baked_value": 0.0
+    },
+    {
+      "shape": "pJCMMid3Dwn_90_L",
+      "bone": "middle_03_l",
+      "index": 75,
+      "parent": "middle_02_l",
+      "coefficient": 0.637,
+      "euler_order": "YZX",
+      "axis": "X",
+      "left_wxyz": [
+        0.4170750379562378,
+        0.5988632440567017,
+        -0.5070871114730835,
+        -0.4585564136505127
+      ],
+      "right_wxyz": [
+        0.36313462257385254,
+        -0.6569943428039551,
+        0.4418236017227173,
+        0.49120640754699707
+      ],
+      "baked_value": 3.7968138855148936e-08
+    },
+    {
+      "shape": "pJCMPinky1Dwn_95_L",
+      "bone": "pinky_01_l",
+      "index": 65,
+      "parent": "pinky_metacarpal_l",
+      "coefficient": 0.637,
+      "euler_order": "YZX",
+      "axis": "X",
+      "left_wxyz": [
+        0.4187219440937042,
+        0.4995523989200592,
+        -0.4635844826698303,
+        -0.6001740097999573
+      ],
+      "right_wxyz": [
+        0.4125067889690399,
+        -0.5770866870880127,
+        0.5748608708381653,
+        0.40785327553749084
+      ],
+      "baked_value": 0.0
+    },
+    {
+      "shape": "pJCMPinky2Dwn_105_L",
+      "bone": "pinky_02_l",
+      "index": 66,
+      "parent": "pinky_01_l",
+      "coefficient": 0.546,
+      "euler_order": "YZX",
+      "axis": "X",
+      "left_wxyz": [
+        0.4121013283729553,
+        0.5788743495941162,
+        -0.5722607374191284,
+        -0.40938329696655273
+      ],
+      "right_wxyz": [
+        0.41325342655181885,
+        -0.5751262903213501,
+        0.5734729766845703,
+        0.41180115938186646
+      ],
+      "baked_value": 0.0
+    },
+    {
+      "shape": "pJCMPinky3Dwn_90_L",
+      "bone": "pinky_03_l",
+      "index": 67,
+      "parent": "pinky_02_l",
+      "coefficient": 0.637,
+      "euler_order": "YZX",
+      "axis": "X",
+      "left_wxyz": [
+        0.4132232964038849,
+        0.5756756663322449,
+        -0.5726464986801147,
+        -0.4122135639190674
+      ],
+      "right_wxyz": [
+        0.36654314398765564,
+        -0.6404306292533875,
+        0.5002056360244751,
+        0.4530884921550751
+      ],
+      "baked_value": 5.695225269164439e-08
+    },
+    {
+      "shape": "pJCMRing1Dwn_95_L",
+      "bone": "ring_01_l",
+      "index": 69,
+      "parent": "ring_metacarpal_l",
+      "coefficient": 0.637,
+      "euler_order": "YZX",
+      "axis": "X",
+      "left_wxyz": [
+        0.42249518632888794,
+        0.5448542237281799,
+        -0.6180293560028076,
+        -0.3777187466621399
+      ],
+      "right_wxyz": [
+        0.4498502016067505,
+        -0.5470008850097656,
+        0.5477709770202637,
+        0.44538959860801697
+      ],
+      "baked_value": 0.0
+    },
+    {
+      "shape": "pJCMRing2Dwn_105_L",
+      "bone": "ring_02_l",
+      "index": 70,
+      "parent": "ring_01_l",
+      "coefficient": 0.546,
+      "euler_order": "YZX",
+      "axis": "X",
+      "left_wxyz": [
+        0.44545501470565796,
+        0.5432767271995544,
+        -0.5548397302627563,
+        -0.4456155002117157
+      ],
+      "right_wxyz": [
+        0.41087090969085693,
+        -0.5755358338356018,
+        0.5754442811012268,
+        0.4108618497848511
+      ],
+      "baked_value": 1.6272071690082157e-08
+    },
+    {
+      "shape": "pJCMRing3Dwn_90_L",
+      "bone": "ring_03_l",
+      "index": 71,
+      "parent": "ring_02_l",
+      "coefficient": 0.637,
+      "euler_order": "YZX",
+      "axis": "X",
+      "left_wxyz": [
+        0.4038466215133667,
+        0.5768466591835022,
+        -0.5755570530891418,
+        -0.41580045223236084
+      ],
+      "right_wxyz": [
+        0.3175894021987915,
+        -0.6816536784172058,
+        0.44607973098754883,
+        0.4852815866470337
+      ],
+      "baked_value": 0.0
+    },
+    {
+      "shape": "pJCMThumb1Bend_50_L",
+      "bone": "thumb_01_l",
+      "index": 80,
+      "parent": "hand_l",
+      "coefficient": 1.146,
+      "euler_order": "YZX",
+      "axis": "X",
+      "left_wxyz": [
+        0.00479374872520566,
+        0.43908920884132385,
+        -0.7457025647163391,
+        -0.5011041164398193
+      ],
+      "right_wxyz": [
+        0.5430948138237,
+        -0.4544467329978943,
+        0.4596506655216217,
+        0.5359548926353455
+      ],
+      "baked_value": 6.83069245610568e-08
+    },
+    {
+      "shape": "pJCMThumb1Up_20_L",
+      "bone": "thumb_01_l",
+      "index": 80,
+      "parent": "hand_l",
+      "coefficient": -2.865,
+      "euler_order": "YZX",
+      "axis": "Z",
+      "left_wxyz": [
+        0.00479374872520566,
+        0.43908920884132385,
+        -0.7457025647163391,
+        -0.5011041164398193
+      ],
+      "right_wxyz": [
+        0.5430948138237,
+        -0.4544467329978943,
+        0.4596506655216217,
+        0.5359548926353455
+      ],
+      "baked_value": 0.0
+    },
+    {
+      "shape": "pJCMThumb2Bend_65_L",
+      "bone": "thumb_02_l",
+      "index": 81,
+      "parent": "thumb_01_l",
+      "coefficient": 0.881,
+      "euler_order": "YZX",
+      "axis": "X",
+      "left_wxyz": [
+        0.6286219358444214,
+        0.3808874487876892,
+        -0.5364366769790649,
+        -0.41472285985946655
+      ],
+      "right_wxyz": [
+        0.5426091551780701,
+        -0.45340195298194885,
+        0.453502357006073,
+        0.5425289869308472
+      ],
+      "baked_value": 0.0
+    },
+    {
+      "shape": "pJCMThumb3Bend_90_L",
+      "bone": "thumb_03_l",
+      "index": 82,
+      "parent": "thumb_02_l",
+      "coefficient": 0.637,
+      "euler_order": "YZX",
+      "axis": "X",
+      "left_wxyz": [
+        0.4933716058731079,
+        0.5108287334442139,
+        -0.39364883303642273,
+        -0.5836772322654724
+      ],
+      "right_wxyz": [
+        0.5556739568710327,
+        -0.4373055398464203,
+        0.4373905062675476,
+        0.5555896759033203
+      ],
+      "baked_value": 0.0
+    }
+  ]
+}
