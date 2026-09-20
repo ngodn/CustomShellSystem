@@ -1,5 +1,9 @@
 # Arm rest-pose alignment, 2026-09-21
 
+Follow-up: [aligned finger calibration](aligned-hand-calibration.md) clears the
+new skin crossings in five H2 samples. Runtime, weapon-contact and broader
+animation acceptance remain open; this document records the uncorrected bind.
+
 V44B improves arm/wrist alignment in the bounded heavy-weapon comparison while
 preserving Eve's anatomical segment lengths. Left fingers remain unacceptable.
 The attachment-preserving V44B2 derivative is the next authoring candidate,

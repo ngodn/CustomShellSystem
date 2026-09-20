@@ -1,5 +1,7 @@
 # CSS research index
 
+[Aligned finger calibration](development/aligned-hand-calibration.md) removes the new skin crossings in five H2 idle samples on V44B2. The same uncorrected inputs fail the gate; fitted front/rear review supports improved articulation. Attacks, weapon contact, runtime integration and live acceptance remain open. V43 stays installed.
+
 [Arm rest-pose alignment](development/arm-rest-alignment.md) preserves limb lengths and all 5,503 stored morphs, improves the tested arm/wrist pose, and leaves fingers unresolved. V44B2 restores attachment locals and exact canonical rotations; V43 remains installed.
 
 [Fitted pose rendering](development/fitted-pose-rendering.md) fixes the old renderer's all-zero authoring shapes. Its corrected neutral geometry matches all 133,066 verified export points exactly. Earlier basis renders are not fitted-contact evidence; bone-transform measurements remain valid.
