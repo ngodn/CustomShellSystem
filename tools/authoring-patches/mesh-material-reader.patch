@@ -1,0 +1,43 @@
+--- a/Source/CSSAuthoring/CSSRetargetLibrary.h
++++ b/Source/CSSAuthoring/CSSRetargetLibrary.h
+@@ -55,6 +55,10 @@
+     UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
+     static FString InspectMeshBindPose(class USkeletalMesh* Mesh);
+ 
++    /** Read material slots and UV densities directly, including non-Python fields. */
++    UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
++    static FString InspectMeshMaterials(class USkeletalMesh* Mesh);
++
+     UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
+     static FString InspectSpringDefaults(class UAnimBlueprint* Blueprint);
+ 
+--- a/Source/CSSAuthoring/CSSRetargetLibrary.cpp
++++ b/Source/CSSAuthoring/CSSRetargetLibrary.cpp
+@@ -358,3 +358,27 @@
+ 
+ #include "CSSDynamicsProbe.inl"
+ #include "CSSDynamicsControlsProbe.inl"
++
++
++FString UCSSRetargetLibrary::InspectMeshMaterials(USkeletalMesh* Mesh)
++{
++    if (!IsRunningCommandlet() || !Mesh) return {};
++    TArray<TSharedPtr<FJsonValue>> Rows;
++    for (const FSkeletalMaterial& Slot : Mesh->GetMaterials())
++    {
++        auto Row = MakeShared<FJsonObject>();
++        Row->SetStringField(TEXT("name"), Slot.MaterialSlotName.ToString());
++        Row->SetStringField(TEXT("imported"), Slot.ImportedMaterialSlotName.ToString());
++        Row->SetStringField(TEXT("material"), GetPathNameSafe(Slot.MaterialInterface));
++        Row->SetStringField(TEXT("overlay"), GetPathNameSafe(Slot.OverlayMaterialInterface));
++        Row->SetBoolField(TEXT("initialized"), Slot.UVChannelData.bInitialized);
++        Row->SetBoolField(TEXT("override_densities"), Slot.UVChannelData.bOverrideDensities);
++        TArray<TSharedPtr<FJsonValue>> Densities;
++        for (float Density : Slot.UVChannelData.LocalUVDensities)
++            Densities.Add(MakeShared<FJsonValueNumber>(Density));
++        Row->SetArrayField(TEXT("uv_densities"), Densities);
++        Rows.Add(MakeShared<FJsonValueObject>(Row));
++    }
++    FString Result;
++    return FJsonSerializer::Serialize(Rows, TJsonWriterFactory<>::Create(&Result)) ? Result : FString();
++}

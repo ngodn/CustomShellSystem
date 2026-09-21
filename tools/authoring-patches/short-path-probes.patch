@@ -1,0 +1,26 @@
+--- a/Source/CSSAuthoring/CSSPhysicsProbeLibrary.cpp
++++ b/Source/CSSAuthoring/CSSPhysicsProbeLibrary.cpp
+@@ -23,7 +23,9 @@
+ bool Diagnostic(const UObject* Object)
+ {
+     return IsRunningCommandlet() && Object &&
+-        Object->GetPathName().StartsWith(TEXT("/Game/CSSAuthoring/DiagnosticReferences/"));
++        (Object->GetPathName().StartsWith(TEXT("/Game/CSSAuthoring/DiagnosticReferences/")) ||
++         Object->GetPathName() == TEXT("/Game/CSS/SeduXtress/SK_BlackPearl.SK_BlackPearl") ||
++         Object->GetPathName() == TEXT("/Game/CSS/SeduXtress/PA_Body.PA_Body"));
+ }
+ 
+ bool Import(const TSharedRef<FJsonObject>& Json, const UStruct* Type, void* Value)
+--- a/Source/CSSAuthoring/CSSControlRigHandProbe.inl
++++ b/Source/CSSAuthoring/CSSControlRigHandProbe.inl
+@@ -157,7 +157,9 @@
+     };
+     if (!IsRunningCommandlet() || !Mesh || !Blueprint || !Blueprint->GeneratedClass ||
+         Blueprint->TargetSkeleton!=Mesh->GetSkeleton() ||
+-        !Blueprint->GetPathName().StartsWith(TEXT("/Game/CSS/TransientProbes/ABP_CSS_ControlRigProbeHand")))
++        (!Blueprint->GetPathName().StartsWith(TEXT("/Game/CSS/TransientProbes/ABP_CSS_ControlRigProbeHand")) &&
++         !(Blueprint->GetPathName() == TEXT("/Game/CSS/SeduXtress/ABP_Secondary.ABP_Secondary") &&
++           Mesh->GetPathName() == TEXT("/Game/CSS/SeduXtress/SK_BlackPearl.SK_BlackPearl"))))
+         return Fail(TEXT("Invalid isolated component assets"));
+     TSharedPtr<FJsonObject> InputDocument;
+     if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(SnapshotJson),InputDocument) || !InputDocument)
