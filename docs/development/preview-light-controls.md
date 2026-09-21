@@ -2,7 +2,8 @@
 
 The native orbit and menu controls are installed in the short-path trial core.
 Live lighting/input/lifecycle acceptance remains open. The controller correction
-below is compiled but awaits the next normal restart.
+below is installed in `css_core-ui1.dll`; the user reports the controls work.
+The controlled live lifecycle measurements are still in progress.
 
 ## Actual game references
 
@@ -29,12 +30,14 @@ The exported `IsMenuOpen` function simply returns that `bOpen` flag.
 observations. The native menu-close bytecode calls `UpdateOpenState(false)` and
 invalidates character navigation and inventory before returning.
 
-CSS now reuses that mapped Inspect action only on its own character page. On
+CSS reuses the keyboard side of mapped Inspect on its own character page.
+The controller uses the Y/Select correction described below. On
 entry to lighting, it checks the native page is closed and those four listeners
 remain disabled. It queries current mapped keys for all actions in the menu
 mapping context and removes a lighting shortcut if another menu action or CSS
-view-reset binding also uses it. The default captured `I` and Select/View keys
-have no such conflicts. Remapping and other active contexts still need live
+view-reset binding also uses it. The original captured `I` and Select/View keys
+had no such conflicts. The revised controller pair is checked against the
+remaining native menu actions before assignment. Remapping and other active contexts still need live
 verification; the historical capture is not evidence about all configurations.
 
 ## Implemented backend
@@ -149,6 +152,28 @@ C++23 host tests cover Y/Select ownership, unchanged B/Escape and C/I bindings,
 and conflicting remapped navigation. The first host compile exposed a missing
 vector include; its subsequently executed old test binary is not evidence for
 this change. After correcting the include, `work/light-y1/host2-exit.json`,
-`tests-exit.json` and `build2-exit.json` all report zero. The Windows development
-core is compiled. Installation, the displayed glyphs and physical Y/B/Select
-behavior still require a normal restart and live review.
+`tests-exit.json` and `build2-exit.json` all report zero. The development and shipping
+Windows cores compile. `work/ui-live1/deployment.json` records the normal
+restart into `css_core-ui1.dll`, SHA-256
+`eeed7db4c1adf1533aae40a0134432af40d4b629e86e4012eb37686fce5fabe4`.
+The outfit trio and saved state were unchanged by deployment. The user reports
+Y/Select/B work, and `menu.json` confirms their actual CSS mappings.
+
+The first check found CSS closed before any test mutation. After reopening,
+`light2` verified actual camera lock, changed primary-light position, constant
+orbit radius, unchanged intensity and untouched secondary lights. Its three
+Steam stills were visually reviewed. Its exact reset comparison rejected only
+floating-point differences, at most 8.15e-12 cm, so the checker now bounds the
+restored transform at numerical precision while keeping untouched state exact.
+`light3` subsequently observed camera/parent rotation changes during sequential
+reads. The user confirmed they were testing the controls, so that run cannot
+establish a camera-lock defect. Both unsuccessful attempts remain retained.
+
+With controls left untouched, `light4/verification.json` passes both diagnostic
+orbit positions, exact camera location/rotation/FOV preservation, unchanged
+secondary lights, rigid orbit distance and restoration. Maximum restored
+relative-location error is 1.081e-12 cm; world position is exact. Both contrasting
+Steam stills were visually reviewed and show the changed illumination. Physical
+Y/Select/B use is separately supported by the user's confirmation and actual
+live bindings. Remapped-input UI, retoggle/view-reset preservation, focus loss,
+menu recreation and performance still need their broader lifecycle checks.

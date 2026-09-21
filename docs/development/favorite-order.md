@@ -15,5 +15,21 @@ silently changing which outfit the next action targets.
 
 `work/favorites1/host-exit.json`, `tests-exit.json` and `windows-exit.json` report
 successful builds and catalog tests, including equipped favorites, multiple
-stable groups, removed favorites, stale saved IDs and empty catalogs. Live
-row movement, selection retention and controller prompts await installation.
+stable groups, removed favorites, stale saved IDs and empty catalogs. The shipping build also passes. The change is installed in `css_core-ui1.dll`
+through the recorded normal restart (`work/ui-live1/deployment.json`). The user
+reports the controls work. Live row movement, selection retention and rendered
+ordering are still being checked.
+
+## Live verification
+
+`work/ui-live1/shell-order.jpg` was reviewed and shows equipped Black Pearl,
+then starred BeauteGenessa and Seductress v2.0.2, then non-favorites. The existing
+Harbinger/original controls remain above the outfit entries.
+
+`tools/check_favorite_focus.py` selected BeauteGenessa and temporarily removed
+its favorite flag. The live selected-row index moved from 3 to 6, with the row's
+actual favorite action still targeting `beaute.genessa`. Restoring the flag
+returned it to row 3 without changing that target. The complete saved state
+matched before/after. `favorites/verification.json` passes; both Steam stills
+were reviewed, including the unchanged right-hand details while the row moved.
+No outfit was equipped or customization changed during this check.
