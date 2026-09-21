@@ -2,6 +2,15 @@
 
 Newest first. Each entry says what is done, what evidence exists and what is next.
 
+2026-09-22 (later): Controlled MangoHud pair done: CSS alone 22.24 ms median
+/ 42.0 fps; with CSSX + Cheat Menu + UI Kit 22.53 ms / 44.4 fps. No
+measurable cost from loading CSSX. Per-op accounting then removed the real
+costs inside the Cheat Menu (readiness probe, catalog hitch, class-default
+scan, combat decode). Live cheat check 6/6, 3-cycle menu stress clean,
+migrated Lua UI Kit loads. Still open: physical hotkey/controller confirmation
+from the user, 30-cycle stress in an idle window, travel re-attach, cheats-on
+FPS row, release build from a real tag.
+
 2026-09-22: Menu moved into the Player Menu as a tab after CSS (user
 decision); library, sections, confirm, picker and settings verified by
 screenshot (`work/screens/05-13`). Hotkey path verified through the dev

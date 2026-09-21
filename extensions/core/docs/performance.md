@@ -101,11 +101,36 @@ Steam restarted with `MANGOHUD=1` and `MANGOHUD_CONFIGFILE=work/perf/mangohud.co
 so every launch gets the same overlay and per-frame log (`log_interval=0`,
 automatic 120 s window starting 120 s after launch). Player free-roaming
 near the same beacon. Raw CSVs: `work/perf/B-css-only-1.csv`, `D-cssx-1.csv`.
+The MangoHud control socket does not reach the game inside Steam's container
+(`mangohudctl` returns 0 but nothing happens), so each launch yields exactly
+one automatic window; further rows are one launch each.
 
 | Row | Configuration | Frames | Median ms | p95 ms | p99 ms | Mean fps |
 | --- | --- | --- | --- | --- | --- | --- |
 | B | CSS alpha alone, CSSX `enabled.txt` absent | 5042 (4202 after 20 s) | 22.24 (22.19) | 30.20 | 39.04 | 42.0 |
-| D | B + CSSX dev core + Cheat Menu, menu closed, cheats off | pending | | | | |
+| D | B + CSSX dev core + Cheat Menu + UI Kit (Lua), menu closed, cheats off | 5331 (4443 after 20 s) | 22.53 (22.77) | 27.82 | 38.11 | 44.4 (42.7) |
+
+**Reading of the pair.** Median +0.3 ms (about 1%, inside the 4 ms spread
+seen between repeats of one configuration), p95 and p99 slightly better with
+CSSX, mean fps equal or higher. With this instrument, loading CSSX, the
+Cheat Menu and the Lua UI Kit costs nothing measurable at this scene. The
+earlier 70–77 Hz CSSX-absent figure (Sept 20) was a different scene/camera;
+today's baseline without CSSX is 42 fps in the same play area.
+
+**Where CSSX's own time went, and what changed (per-op request accounting,
+`frame.stats.requests`):**
+
+| Source | Before | After | Change |
+| --- | --- | --- | --- |
+| Cheat Menu readiness probe (`gameplay_ready`, ~13 requests every 250 ms) | 0.8–1.7 ms per tick, always | only when a cheat, power or reapply needs it | lazy |
+| Shell catalog (`GetShellItemDefinition`, 10–13 ms per shell) | 10 calls in one tick on every pawn change (100+ ms hitch) | names at once; one token per tick, once per process, on-demand for matching | spread + cached |
+| `class_default` scan (whole object array, 1–36 ms) | every call (weak pointer reported the CDO dead) | once per name, validated by object-array slot | cache fixed |
+| Combat sync ability decode (`ActivatableAbilities`, 4.6 ms) with combat cheats on | every second | only when the list length changed or every 10 s; seal checks still every second | shallow `count` op |
+| Status file write | every second with read-back (5 ms p99 spikes) | every 5 s, no read-back | |
+
+Idle after the changes (cheats off, menu closed, 40 s): core tick 121 µs
+mean / 384 µs p99 per frame, extension ticks 12 µs mean, menu 2 µs. Loader
+ring in the same window: median 23.4 ms, p99 38.7 ms, 41.9 Hz.
 
 ### 2026-09-21 first live session (standalone CSSX dev core, CSS alpha present)
 
