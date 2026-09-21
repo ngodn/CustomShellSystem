@@ -49,6 +49,11 @@ typedef struct CssxLoaderHost {
     void (*log)(const char* utf8); /* appends to CSSX.log; any thread */
     const CssxHookHost* hooks;
     const CssxFrameRing* frames;
+    /* Keyboard hotkey presses observed by UE4SS's own input thread (raw key
+     * state, independent of Unreal's PlayerInput). Returns and clears the
+     * count since the last call. A core checks `size` before using it. */
+    void* hotkey_context;
+    uint32_t (*take_hotkey)(void* hotkey_context);
 } CssxLoaderHost;
 
 typedef struct CssxCoreApi {

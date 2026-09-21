@@ -147,6 +147,8 @@ void Core::tick(void* engine,float delta) {
         hotkey_accumulator_=0;
         bool pressed=false;
         try { const bool keyboard=hotkey_pressed(settings_.open_keyboard,0); const bool gamepad=hotkey_pressed(settings_.open_gamepad,1); pressed=keyboard || gamepad; } catch(...) {}
+        // Second keyboard path: UE4SS's raw key polling through the loader.
+        if(host_.size>=sizeof(CssxLoaderHost) && host_.take_hotkey && host_.take_hotkey(host_.hotkey_context)>0) { pressed=true; hotkey_down_[0]=true; }
         if(pressed) hotkey();
     }
     { Phase p(phase_menu_); menu_->tick(player_,delta); }

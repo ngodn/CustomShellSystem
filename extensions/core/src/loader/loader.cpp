@@ -11,8 +11,10 @@
 #include <fstream>
 #include <mutex>
 #include <string>
+#include <optional>
 #include <Mod/CppUserModBase.hpp>
 #include <Unreal/Hooks/Hooks.hpp>
+#include <Input/KeyDef.hpp>
 
 namespace {
 using cssx::Json;
@@ -44,6 +46,23 @@ class Loader final : public RC::CppUserModBase {
     RC::Unreal::Hook::GlobalCallbackId hook_{};
     std::string loaded_, observed_;
     std::atomic<bool> selector_dirty_{true};
+    std::atomic<uint32_t> hotkey_presses_{0};
+    static uint32_t take_hotkey(void* context) { return static_cast<Loader*>(context)->hotkey_presses_.exchange(0); }
+    // Map the first configured open key to a UE4SS key id. Only plain keys
+    // that never collide with gameplay are accepted here; anything else is
+    // left to the core's in-game polling.
+    static std::optional<RC::Input::Key> hotkey_from_settings(const std::filesystem::path& root) {
+        try {
+            auto keys = cssx::read_json(root / "settings.json").value("open_keyboard", Json::array());
+            if (!keys.is_array() || keys.size() != 1) return std::nullopt;
+            const auto name = keys[0].get<std::string>();
+            using K = RC::Input::Key;
+            static const std::pair<const char*, K> table[] = {{"F1",K::F1},{"F2",K::F2},{"F3",K::F3},{"F4",K::F4},{"F5",K::F5},{"F6",K::F6},{"F7",K::F7},{"F8",K::F8},{"F9",K::F9},{"F11",K::F11},
+                {"Insert",K::INS},{"Delete",K::DEL},{"Home",K::HOME},{"End",K::END},{"PageUp",K::PAGE_UP},{"PageDown",K::PAGE_DOWN}};
+            for (const auto& [text, key] : table) if (name == text) return key;
+        } catch (...) {}
+        return std::nullopt;
+    }
     HANDLE watch_ = INVALID_HANDLE_VALUE;
     bool stopped_ = false, stop_pending_ = false;
 
@@ -89,7 +108,11 @@ public:
         root_string_ = root_.wstring(); mods_string_ = mods_root_.wstring();
         g_log_path = root_ / "CSSX.log";
         LARGE_INTEGER frequency; QueryPerformanceFrequency(&frequency); ring_.frequency = frequency.QuadPart;
-        host_ = {CSSX_CORE_ABI, sizeof(CssxLoaderHost), root_string_.c_str(), mods_string_.c_str(), CSSX_VERSION, log_line, hooks_.api(), &ring_};
+        host_ = {CSSX_CORE_ABI, sizeof(CssxLoaderHost), root_string_.c_str(), mods_string_.c_str(), CSSX_VERSION, log_line, hooks_.api(), &ring_, this, take_hotkey};
+        if (auto key = hotkey_from_settings(root_)) {
+            register_keydown_event(*key, [this] { hotkey_presses_.fetch_add(1); });
+            log_line("Keyboard hotkey registered with UE4SS input");
+        }
         ModName = STR("CSSX");
         ModVersion = CSSX_VERSION_WIDE;
         ModDescription = STR("Custom Shell System Extensions: standalone extension platform for Mortal Shell II");
