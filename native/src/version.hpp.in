@@ -1,2 +1,2 @@
 #pragma once
-#define CSS_VERSION_WIDE L"@PROJECT_VERSION@"
+#define CSS_VERSION_WIDE L"@CSS_VERSION@"

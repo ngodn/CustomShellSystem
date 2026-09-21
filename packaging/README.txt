@@ -24,17 +24,16 @@ for the exact build inputs and current live-verification status.
 
 Controls (default game bindings)
 Inventory / CSS / Tarstones / Map: LB/RB or Q/E.
-Shell / Color / Templates: LT/RT or Z/X. Section labels are clickable.
-Browse the left list: D-pad Up/Down or W/S. Mouse wheel scrolls the list.
-Variant or selected color channel on the right: D-pad Left/Right or A/D.
-Wear / reset selected part / load template: A or Space. Buttons are clickable.
-Favorite / reset all colors / delete template: Y or C, shown by each action.
-Next RGB channel / replace template: X or F, shown by each action.
-Right stick: left/right rotates; up/down zooms in/out.
-Left stick: moves character framing horizontally and vertically.
-Mouse over the character: right-drag rotates, wheel zooms, left-drag moves framing.
-Reset view: right-stick click, Home, or Reset view. Close: B or Esc.
-CSS follows the game's mapped menu keys. The old N menu is removed.
+SHELL / CUSTOMIZE / LOCOMOTION / PROFILE: LT/RT or Z/X.
+Browse: D-pad Up/Down or W/S. Choose: D-pad Left/Right or A/D.
+A or Space confirms. X or F performs the displayed secondary action.
+Select/View or C performs the displayed contextual action, including favorites.
+Y or I toggles Lighting. View controls lock while you move the light.
+B or Esc goes back/closes. Follow each page's displayed hints.
+Right stick rotates/zooms. Left stick moves framing.
+Mouse: right-drag rotates, wheel zooms, left-drag moves framing.
+Right-stick click or Home resets the view/light.
+Equipped outfits appear before favorites, followed by the remaining outfits.
 
 Appearance changes retain your current gameplay shell and abilities.
 No weapon, seal or shell unlocks are required for supported cosmetic outfits.
@@ -54,14 +53,18 @@ The standalone N menu is replaced by Inventory > CSS.
 Reset CSS preferences only with the game closed by moving state/ to a backup.
 The CSS wardrobe does not modify the game's save files. Extensions may do so.
 
-Known limitations
-CSS uses the game's native Inventory preview and lighting. Extended combat,
-travel and outfit-specific physics still need broader testing. New outfit containers
-require restarting the game; core DLL development supports live reload.
+Alpha status and known limitations
+This is CSS 1.0.0-alpha.1, a technology preview, not the final 1.0.0 release.
+Eve Black Pearl is a separate sample package. Its movement options are opt-in.
+Release gate: Eve walk, jog and sprint must pass the movement-stability review.
+Do not publish this alpha while the reported sideways lean remains unresolved.
+Broad weapon, combat and travel testing remains incomplete.
+Feminine (CSS) idle uses the Cultist Spear Lady standing pose. Eve's custom idle,
+weapon hiding and beacon teleport playback are not included yet. Missing custom
+animation options fall back to the game; the five UI rows are not five finished
+Eve animations. The modder kit and authoring tutorial are still being prepared.
 
-Optional CSSX extensions
-Install CSSX separately by extracting its files inside CustomShellSystem/.
-Install extension folders inside CustomShellSystem/extensions/.
-Open Inventory > CSSX. CSS works without CSSX or any extensions installed.
-CSSX Cheat Menu requires removing/disabling the old MortalShell2Mod and restarting.
-Progression grants in Cheat Menu can change the game save; wardrobe state is separate.
+Use normal game restarts when updating DLLs or outfit containers. Animation
+DLL hot reload previously crashed the game and is not part of this alpha workflow.
+CSSX is not included. Keep it disabled for this preview while its reported
+performance regression remains under investigation.

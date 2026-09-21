@@ -38,6 +38,17 @@ class ReleaseTests(unittest.TestCase):
         self.write()
         self.assertEqual(verify(self.archive)['version'], '0.1.1')
 
+    def test_alpha_archive_uses_matching_versioned_core(self):
+        version = '1.0.0-alpha.1'
+        self.files['cores/css_core-' + version + '.dll'] = self.files.pop('cores/css_core-0.1.1.dll')
+        self.files['README.txt'] = ('MSII - CSS v' + version).encode()
+        self.files['core.json'] = json.dumps({'abi': 1, 'file': 'css_core-' + version + '.dll'}).encode()
+        del self.files['release.json']
+        self.files['release.json'] = json.dumps({'version': version, 'interface': 'inventory',
+            'files': {p: digest(data) for p, data in self.files.items()}}).encode()
+        self.write()
+        self.assertEqual(verify(self.archive)['version'], version)
+
     def test_personal_state_and_old_cores_cannot_ship(self):
         for path in ['state/state.json', 'request.json', 'CSS.log', 'cores/css_core-old.dll', 'cache/thumbnail.png']:
             with self.subTest(path=path):

@@ -1,12 +1,31 @@
+### Added
+
+- Per-outfit Walk, Jog and Sprint choices, saved independently in character profiles.
+- Eve (Stellar Blade), Black Pearl technology preview with modular outfit parts, color palettes, body controls and secondary motion. Install its separate sample download.
+- Official-shell appearance choices that retain the equipped shell's gameplay abilities.
+- Preview lighting controls with Y on controller or I on keyboard.
+
+### Changed
+
+- Use shared scrollable selectors and contextual footer controls.
+- Show equipped outfits first, then favorites. Select/View adds favorites; B remains Back.
+- Label the original animation choice Default.
+
 ### Fixed
 
-- The colour swatch strip was invisible. `flat_button()` clears every brush a CSS button has, so setting a background colour on one paints nothing; 0.4.0 put twelve transparent squares on the page. A chip is now a box with a transparent button on it to take the click, the way the list rows have always drawn theirs.
-- Twelve 84px chips in four columns ran the grid down to y=786, where the direction hint landed on top of the Exact color button. Chips are 56px in six columns, so twelve fit in two rows.
-- Scrolling onto a colour part could make the CSS and CSSX tabs disappear from the inventory. `inventory_children(canvas)` walks every widget on the page to build the slide-in and took the default limit of 64; the swatch grid pushed the page over it, and the guard threw from inside the panel build, so CSS reported itself unavailable. The limit is now 256, matching the extension page, and that call is wrapped so a failure costs the slide-in animation and nothing else.
-- A part the selected palette does not set no longer claims that palette's name. Palettes dress the outfit and leave the body alone, so Skin, Mask and Eyes read "Midnight silver" while showing the author's own colour. They read "Original" now.
+- Restore Feminine (CSS) standing idle when the character stops moving.
+- Place status messages below the contextual control hints.
+- Preserve the accepted Eve hand rig, heel supports, color boundaries and ground offset.
 
 ### Upgrading
 
-Close the game and extract `MSII-CSS-v0.4.1.zip` into `MortalShell2/Binaries/Win64/ue4ss/Mods/`, replacing the CSS runtime files. Keep `CustomShellSystem/state/`, CSSX, extensions and your installed outfit packages.
+Close the game. Extract the runtime's CustomShellSystem folder into
+MortalShell2/Binaries/Win64/ue4ss/Mods/. Install the sample separately under
+MortalShell2/Content/Paks/~mods/. Keep your existing state folder. Use the pinned
+UE4SS NO AOB build listed in README. Keep CSSX disabled for this alpha.
 
-**Only CSS needs updating, and nothing else changes from 0.4.0. Existing CSS outfit and port ZIPs keep working. CSSX, UI Kit and Cheat Menu remain at 0.3.0.**
+This is **v1.0.0-alpha.1**, not the final release. Release is held until
+Eve walk, jog and sprint pass the movement-stability review. Custom Eve idle,
+weapon hiding and beacon teleport
+playback are unfinished; broader combat/transition testing and the modder kit
+remain pending. These known issues are part of the technology preview.

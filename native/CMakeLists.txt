@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/../VERSION" CSS_VERSION LIMIT_COUNT 1)
-project(CustomShellSystem VERSION ${CSS_VERSION} LANGUAGES C CXX)
+string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" CSS_NUMERIC_VERSION "${CSS_VERSION}")
+project(CustomShellSystem VERSION ${CSS_NUMERIC_VERSION} LANGUAGES C CXX)
 configure_file(src/version.hpp.in generated/css_version.hpp @ONLY)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

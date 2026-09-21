@@ -8,13 +8,14 @@ from pathlib import Path
 import re
 import struct
 import subprocess
-import tempfile
 import time
 import zipfile
+from css_paths import new_directory
 
 ROOT = Path(__file__).resolve().parents[1]
 UE4SS_RUNTIME = json.loads((ROOT / 'native/ue4ss-runtime.json').read_text())
 PREFIX = 'CustomShellSystem/'
+VERSION_PATTERN = r'\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.[1-9]\d*)?'
 
 
 def digest(data: bytes) -> str:
@@ -44,7 +45,7 @@ def verify(archive: Path) -> dict:
             raise ValueError('Duplicate or damaged ZIP members')
         manifest = json.loads(z.read(PREFIX + 'release.json'))
         version = manifest['version']
-        if not re.fullmatch(r'\d+\.\d+\.\d+', version):
+        if not re.fullmatch(VERSION_PATTERN, version):
             raise ValueError('Invalid release version')
         expected = payload_names(version, manifest.get("interface", "standalone"))
         if set(names) != {PREFIX + p for p in expected | {'release.json'}}:
@@ -75,7 +76,7 @@ def verify(archive: Path) -> dict:
 
 def build(args: argparse.Namespace) -> Path:
     version = (ROOT / 'VERSION').read_text().strip()
-    if not re.fullmatch(r'\d+\.\d+\.\d+', version):
+    if not re.fullmatch(VERSION_PATTERN, version):
         raise ValueError('Invalid VERSION')
     revision = git('rev-parse', 'HEAD')
     if git('rev-parse', f'v{version}^{{commit}}') != revision:
@@ -110,8 +111,9 @@ def build(args: argparse.Namespace) -> Path:
     if archive.exists():
         raise FileExistsError(archive)
     timestamp = time.gmtime(max(315532800, int(git('show', '-s', '--format=%ct', 'HEAD'))))[:6]
-    with tempfile.TemporaryDirectory(prefix='css-release-', dir=output) as temporary:
-        candidate = Path(temporary) / archive.name
+    temporary = new_directory(output, 'stage')
+    try:
+        candidate = temporary / archive.name
         with zipfile.ZipFile(candidate, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as z:
             for path, data in sorted(files.items()):
                 info = zipfile.ZipInfo(PREFIX + path, timestamp)
@@ -120,6 +122,9 @@ def build(args: argparse.Namespace) -> Path:
                 z.writestr(info, data)
         verify(candidate)
         candidate.rename(archive)
+    finally:
+        if temporary.exists() and not any(temporary.iterdir()):
+            temporary.rmdir()
     checksum = digest(archive.read_bytes())
     archive.with_suffix('.zip.sha256').write_text(f'{checksum}  {archive.name}\n')
     print(archive)
