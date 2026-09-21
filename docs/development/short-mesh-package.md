@@ -1,6 +1,6 @@
 # Short-path mesh and combined package
 
-2026-09-21. The corrected heel candidate passes cooked geometry, skin, morph and complete package readback. The prepared trio is `CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/work/short1/trio`. At this checkpoint it is not installed and V44 remains unchanged.
+2026-09-21. The corrected heel candidate passes cooked geometry, skin, morph and complete package readback. The trio at `CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/work/short1/trio` is now installed and has reached the game world. V44 remains the accepted reference and rollback backup. The trial has passed live binding and limited collision geometry checks; walking, ground contact and full gameplay acceptance remain open.
 
 The runtime mesh is `/Game/CSS/SeduXtress/SK_BlackPearl2`, bound to the verified `/Game/CSS/Shared/SKEL_Base`, `PA_Body` and `ABP_Secondary`. The earlier `SK_BlackPearl` remains a retained diagnostic candidate. Neither old mesh is overwritten.
 
@@ -48,4 +48,26 @@ The old and migrated rigs produce matching complete component outputs across 336
 - Authoring `work/short1/report.json`: assembled candidate hashes and copied-file hashes.
 - `work/paths/final1/verified.json`: clean-container comparison, resolved dependencies, path budget and unchanged installed V44 trio.
 
-Next install the backed-up candidate with the local native compatibility change, then verify actual selection, footwear appearance, motion and grounding. The local core also contains the previously compiled preview lighting controls. Live lighting/input/lifecycle, broader weapons/combat, modularity and full Next-Gen acceptance remain open. Do not equate offline package success with live acceptance.
+The unchanged-installed-V44 assertion in `final1/verified.json` describes the pre-install checkpoint. The following deployment supersedes that installation state.
+
+## Live trial checkpoint
+
+`tools/deploy_short_trial.py` verified the closed game, accepted V44 hashes, candidate containers, pinned UE4SS and disabled CSSX before deployment. It backed up the outfit, selector, core and saved CSS state under `work/paths/live1/backup`, installed the trial and requested a normal Steam launch. Saved CSS state was unchanged by deployment. No DLL hot reload or gameplay input was used.
+
+Installed core: `css_core-short1.dll`, SHA-256 `e45573baa413516690e2d921f27a1cf1098185cc8b9f7077639f3922bdabf7fd`.
+
+Installed `CSS_SeduXtress_eins0fx_P` container hashes:
+
+| File | SHA-256 |
+| --- | --- |
+| `.pak` | `9cb7d0f95c63b95c3c976558664a6dc9b770afdcd933cd49990284320c53c247` |
+| `.utoc` | `a23f4fa4077de403c2f7be9e6cd431e8c245f2bf1df77febdf86f294b0cd4ad8` |
+| `.ucas` | `3ced2ee941d1906737741081631c1a7b0018f2cd0065b4be0fadd56127254ae3` |
+
+`tools/check_short_live_binding.py` reuses the V44 checked reflection signatures with the exact new mesh, Skeleton, physics and post-process paths. `live1/binding.json` reports `binding_verified` with no failures, the same pawn before/after, enabled hand correction, raw game hand inputs and hair stiffness 200 / damping 24 / gravity zero. Collision uses `PlayerMesh`, `QueryAndProbe`, no Physics Asset override, and permits damage. Three exterior geometry samples return asset/body results. Those queries do not prove damage filtering, overlap events or parry.
+
+The first startup check correctly reported that the character was not loaded yet. Its wrapper initially failed to propagate the checker's exit status; that wrapper was corrected before the successful world check. `deployment.json` retains `live_verified: false` as the installation-time record, while `binding.json` records the subsequent live result.
+
+The Steam still `live1/world.jpg` was visually reviewed: both rear heel supports are visible, with the outfit and hair rendering. The 15-second game-window recording `world.mp4` and three extracted frames show a front idle view with small arm/weapon changes. They do not establish walking or attack behavior, exact floor contact or comparative FPS. No movement/attack input was injected. User review of walking/turning remains pending.
+
+The installed core also contains the previously compiled preview lighting controls. Live lighting/input/lifecycle, broader weapons/combat, grounding, modularity and full Next-Gen acceptance remain open. For rollback, close the game and restore the backed-up outfit and core selector; preserve current saved state unless a separate state rollback is intended.
