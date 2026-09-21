@@ -27,7 +27,7 @@
 
 UAnimSequence* UCSSAnimationLibrary::RetargetClip(USkeletalMesh* SourceMesh,
     USkeletalMesh* TargetMesh, UAnimSequence* Source, UIKRetargeter* Retargeter,
-    const FString& OutputPackage)
+    const FString& OutputPackage, bool PreserveUnmappedAttachments)
 {
     auto Fail = [](const TCHAR* Message) -> UAnimSequence* {
         UE_LOG(LogTemp, Error, TEXT("CSS RetargetClip: %s"), Message);
@@ -56,7 +56,34 @@ UAnimSequence* UCSSAnimationLibrary::RetargetClip(USkeletalMesh* SourceMesh,
     Processor.Initialize(SourceMesh, TargetMesh, Retargeter, Profile);
     if (!Processor.IsInitialized()) return Fail(TEXT("Processor did not initialize"));
     const FRetargetSkeleton& SourceRig = Processor.GetSkeleton(ERetargetSourceOrTarget::Source);
-    const FRetargetSkeleton& TargetRig = Processor.GetSkeleton(ERetargetSourceOrTarget::Target);
+    const auto& TargetRig = Processor.GetTargetSkeleton();
+    TArray<int32> Attachments;
+    if (PreserveUnmappedAttachments)
+    {
+        // Mirror the processor's mask collection through exported APIs;
+        // FTargetSkeleton's direct mask accessors are not exported in 5.6.
+        TSet<int32> Retargeted;
+        for (const auto* Op : Processor.GetRetargetOpsByType(FIKRetargetOpBase::StaticStruct()))
+            if (Op->IsEnabled() && Op->IsInitialized()) Op->CollectRetargetedBones(Retargeted);
+        // UE 5.6's cached branch traversal assumes contiguous descendants.
+        // CSS keeps game bone indices and appends extensions, so its extra hair
+        // can miss parent propagation. Unmapped terminal branches must retain
+        // their retarget-pose locals, then follow the animated parent normally.
+        // Leave mapped bones, intermediate joints, root markers and virtual
+        // bones alone. This changes exported tracks, never the shared skeleton.
+        const int32 RawBones = TargetMesh->GetRefSkeleton().GetRawBoneNum();
+        for (int32 Bone = 1; Bone < RawBones; ++Bone)
+        {
+            if (Retargeted.Contains(Bone)) continue;
+            bool MappedAncestor = false, MappedDescendant = false;
+            for (int32 Parent = TargetRig.ParentIndices[Bone]; Parent != INDEX_NONE;
+                 Parent = TargetRig.ParentIndices[Parent])
+                MappedAncestor |= Parent != 0 && Retargeted.Contains(Parent);
+            for (int32 Child = Bone + 1; Child < RawBones && !MappedDescendant; ++Child)
+                MappedDescendant = Retargeted.Contains(Child) && TargetRig.IsParentOf(Bone, Child);
+            if (MappedAncestor && !MappedDescendant) Attachments.Add(Bone);
+        }
+    }
     const int32 Frames = Source->GetNumberOfSampledKeys();
     TArray<FRawAnimSequenceTrack> Tracks;
     Tracks.SetNum(TargetRig.BoneNames.Num());
@@ -92,6 +119,8 @@ UAnimSequence* UCSSAnimationLibrary::RetargetClip(USkeletalMesh* SourceMesh,
         TArray<FTransform> Local = Global;
         TargetRig.UpdateLocalTransformsBelowBone(0, Local, Global);
         if (Local.Num() != Tracks.Num()) return Fail(TEXT("Unexpected target bone count"));
+        for (const int32 Bone : Attachments)
+            Local[Bone] = TargetRig.RetargetPoses.GetLocalRetargetPose()[Bone];
         for (int32 Bone = 0; Bone < Local.Num(); ++Bone)
         {
             const FTransform& Transform = Local[Bone];

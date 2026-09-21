@@ -368,6 +368,69 @@ Next resolve the sampled hair behavior, construct direction/speed blends with
 appropriate phase/cadence, and complete custom idle, weapon restoration and
 beacon integration before controlled live acceptance.
 
+## D2 attachment propagation correction
+
+D1's hair-root error occurs before secondary physics. The compressed upstream
+forward sprint has about 27.91 degrees of unexpected local rotation at each
+head-attached hair root; right sprint reaches about 41.02 degrees. Raw samples
+already contain the error, so compression and the accepted spring settings
+are not its origin.
+
+The pinned UE 5.6.1 source identifies the mismatch. In
+`IKRig/Private/Retargeter/IKRetargetProcessor.cpp`, lines 321-398,
+`GetCachedEndOfBranchIndex` and `GetChildrenIndicesRecursive` stop when a
+contiguous hierarchy branch ends. `RetargetOps/FKChainsOp.cpp` lines 661-750
+uses that traversal to propagate mapped-parent motion to unmapped children.
+CSS preserves game indices and appends its extensions. The head is index 9,
+its cached branch ends at 13, and its ponytail starts at 258. Parent-link
+traversal finds 47 head descendants outside that cached block. The same
+audit finds 121 omitted pelvis descendants and 53 for spine_05. Exact source
+hash and lists are in `work/anim10/branch-audit.json`.
+
+`RetargetClip` now preserves retarget-pose local transforms for unmapped
+terminal attachment branches. It gathers mapped bones from initialized,
+enabled retarget operations and walks actual parent links. It skips mapped
+bones, intermediate joints with mapped descendants, branches attached only
+to the root, and virtual bones. This repairs the exported animation tracks;
+the production skeleton's order, binding and body proportions stay intact.
+An explicitly mapped accessory chain keeps its authored animation.
+
+Direct `FTargetSkeleton` mask accessors are not exported by this installed
+engine, as the first link attempt established. The helper uses exported
+processor access plus each operation's virtual `CollectRetargetedBones`,
+matching the engine's own mask construction. The corrected editor build
+passes (`build3-exit.json`). Do not patch the engine or reorder the shared
+skeleton to work around this authoring-only traversal limitation.
+
+`attachments_eve.py` uses independent parent-link and chain calculations to
+verify 23 private D2 candidates: all 19 D1 directions and the four V2 forward
+movement/idle clips. It covers 297 unmapped attachment bones; the 24 appended
+branch roots have meaningful rotation changes. With preservation disabled,
+the forward-sprint control reproduces the old raw result exactly. Corrected
+creation, fresh saved readback and repeat conversion all pass. Mapped raw
+tracks and every track outside the attachment set match the old result
+exactly. Corrected attachments match the independent reference within
+4.87e-7 quaternion distance and zero translation error. All protected mesh,
+skeleton, post-process and prior animation files retain their hashes.
+
+Compressed playback passes 1,643 component frames, keeping the accepted
+hair 200/24/0 and body/hand settings. Compression is regenerated, so do not
+claim byte-identical or numerically identical final body output: the 19
+directional comparisons outside hair/corrected roots differ by at most
+0.005123 cm and 0.16428 degrees, with at most 0.001654 hand-morph difference.
+Those measurements are in `body-comparison.json`; they do not replace a
+visual contact check.
+
+All 69 sampled fitted renders were inspected in `work/anim10`'s three review
+sheets. The ponytail now attaches behind the head in the formerly bad sprint
+samples. Some dynamic strand/body overlaps remain visible, including run and
+idle samples. This fixes attachment propagation, not every hair collision or
+whole-motion issue. Replay error is below 0.000835 cm. The candidates remain
+offline, with no core or game asset deployment. Next build directional blends,
+check phase/cadence and game weapon layering, then review actual moving-owner
+hair/contact behavior with the new motion. Do not retune the accepted physics
+merely to make stationary-owner sample images pass.
+
 ## Original author's pose and deformation references
 
 The user supplied `reference/body-type-variant-EVE/3HVzUb9.gif` and
