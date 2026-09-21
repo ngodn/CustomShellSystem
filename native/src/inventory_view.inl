@@ -399,13 +399,27 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     if(section_==0) {
         const auto ordered=catalog.display_order(worn?worn->id:"",state.favorites);
         const int row_before=row_;
-        for(size_t i=0;i<ordered.size();++i) if(ordered[i]->id==focused_outfit) row_=int(i)+2;
-        const int total=int(ordered.size())+2;
+        for(size_t i=0;i<ordered.size();++i) if(ordered[i]->id==focused_outfit) row_=int(i)+3;
+        const int total=int(ordered.size())+3;
         row_=std::clamp(row_,0,total-1);
         scroll_begin();
         const Json harbinger{{"action","harbinger_mirror"},{"value",!state.harbinger_mirror}};
         row(0,"Harbinger outfit",state.harbinger_mirror?"Carry from shell":"Keeps its own",85,harbinger,harbinger,harbinger);
         row(1,"Original appearance","Restore your current shell",85,{{"action","restore"}});
+        const Outfit* originals=nullptr;
+        for(const auto& outfit:catalog.outfits) if(outfit.id==original_shells_id) originals=&outfit;
+        size_t original_index=0;
+        const bool original_worn=originals && worn==originals;
+        if(original_worn) for(size_t i=0;i<originals->variants.size();++i)
+            if(originals->variants[i].id==selection->second.variant) original_index=i;
+        auto wear_original=[&](size_t i) {
+            return originals && catalog.compatible(originals->id,appearance.shell)
+                ?Json{{"action","select"},{"outfit",originals->id},{"variant",originals->variants[i].id}}:Json{};
+        };
+        const auto count=originals?originals->variants.size():0;
+        row(2,"Use Original Shell",original_worn?originals->variants[original_index].name:"Choose an official shell",85,
+            wear_original(original_index),count?wear_original((original_index+count-1)%count):Json{},
+            count?wear_original((original_index+1)%count):Json{});
         for(size_t p=0;p<ordered.size();++p) {
             const auto& outfit=*ordered[p]; size_t v=0;
             bool chosen=worn==&outfit;
@@ -413,7 +427,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             bool compatible=catalog.compatible(outfit.id,appearance.shell);
             auto wear=[&](size_t index) { return compatible?Json{{"action","select"},{"outfit",outfit.id},{"variant",outfit.variants[index].id}}:Json{}; };
             row_thumb=true;
-            const double y=row(int(p)+2,outfit.name,outfit.variants[v].name,85,wear(v),wear((v+outfit.variants.size()-1)%outfit.variants.size()),wear((v+1)%outfit.variants.size()),{},{{"action","favorite"},{"outfit",outfit.id}});
+            const double y=row(int(p)+3,outfit.name,outfit.variants[v].name,85,wear(v),wear((v+outfit.variants.size()-1)%outfit.variants.size()),wear((v+1)%outfit.variants.size()),{},{{"action","favorite"},{"outfit",outfit.id}});
             thumbnail(outfit,left+14,y+9,62);
             if(state.favorites.contains(outfit.id)) ui.star(left+panel-29,y+24,7,gold);
             if(chosen) ui.label("Equipped",left+panel-99,y+44,82,24,14,gold);
@@ -424,7 +438,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             reveal.set(L"WidgetToFind",rows_[row_].widget.Get());reveal.set(L"AnimateScroll",false);
             reveal.set(L"ScrollDestination",uint8_t{0});reveal.set(L"Padding",8.f);reveal.run();
         }
-        if(catalog.outfits.empty()) ui.label(catalog.empty_message(),left+18,435,panel-36,130,18,muted);
+        if(ordered.empty()) ui.label(catalog.empty_message(),left+18,605,panel-36,130,18,muted);
         if(row_==0) {
             detail("Harbinger outfit",state.harbinger_mirror?"Carry from shell":"Keeps its own",
                    state.harbinger_mirror
@@ -435,8 +449,21 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             detail("Original appearance","Your current shell","Restore the appearance supplied by the game and any installed base replacements. Your shell's abilities stay the same.");
             action_button("accept","Restore original",controls_y+20,rows_[1].accept,3);
             action_button("secondary","Search catalog...",771,{{"action","ui_browse_shells"}},4);
+        } else if(row_==2) {
+            detail("Use Original Shell",original_worn?originals->variants[original_index].name:"Appearance only",
+                "Wear an official shell's appearance. Your current shell keeps its abilities and progress.");
+            if(!originals) ui.label("Official shell appearances are unavailable in this session.",right+16,controls_y,328,110,18,muted);
+            else {
+                const double height=std::min(40.0,420.0/double(count));
+                for(size_t i=0;i<count;++i) {
+                    const auto action=wear_original(i);
+                    bind(ui.button(originals->variants[i].name,right,controls_y+i*height,360,height-2,
+                        original_worn && i==original_index,!action.is_null(),18),action);
+                }
+                direction_hint(true,"Choose a shell",right+50,controls_y+count*height+12,310);
+            }
         } else {
-            const auto& outfit=*ordered[row_-2];
+            const auto& outfit=*ordered[row_-3];
             detail(outfit.name,"By "+outfit.author,outfit.description.empty()?"Choose an outfit variant. Appearance changes keep your current shell's abilities.":outfit.description);
             auto& selected=rows_[row_];
             std::string variant=outfit.variants.front().name;
@@ -1131,6 +1158,7 @@ Json InventoryUI::dispatch(Json action,const State& state) {
     if(name=="ui_browse_shells" && catalog_) {
         Json opts=Json::array();
         for(const auto& o:catalog_->outfits) {
+            if(o.id==original_shells_id) continue;
             opts.push_back({{"id",o.id},{"label",o.name+" ("+o.author+")"}});
         }
         native_options_.reset(opts);

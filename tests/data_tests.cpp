@@ -49,6 +49,18 @@ int main() {
                 std::vector<std::string>{"ordinary.a","favorite.a","equipped","ordinary.b","favorite.b"},
                 "Unranked catalog order changed");
             expect(Catalog{}.display_order("",{}).empty(),"Empty catalog gained an outfit");
+            Outfit originals;originals.id=original_shells_id;originals.same_skeleton=true;
+            Variant official;official.id="tiel";official.name="Tiel";official.mesh="/Game/Stock/Tiel.Tiel";
+            originals.variants.push_back(official);list.outfits.push_back(originals);
+            expect(list.find(original_shells_id,"tiel")!=nullptr,"Official shell is not selectable");
+            expect(list.compatible(original_shells_id,"CharacterId.Player.Shell.Genessa"),"Official appearance cannot overlay another shell");
+            expect(!list.compatible(original_shells_id,"CharacterId.Enemy.Tiel"),"Official appearance accepted an enemy");
+            expect(ids(list.display_order(original_shells_id,{original_shells_id,"favorite.b"}))==
+                std::vector<std::string>{"favorite.b","ordinary.a","favorite.a","equipped","ordinary.b"},
+                "Official shell duplicated its dedicated row or changed favorite ordering");
+            State stock_state;stock_state.selections["CharacterId.Player.Shell.Genessa"]={original_shells_id,"tiel"};
+            stock_state.presets["stock-look"]={stock_state.selections,"normal"};
+            expect(State::parse(stock_state.json()).json()==stock_state.json(),"Official visual selection lost its gameplay-shell key or profile");
         }
         expect(valid_id("beaute.genessa"), "Valid id rejected");
         expect(!valid_id("../escape"), "Traversal accepted");
@@ -114,6 +126,12 @@ int main() {
         expect(loaded.find("test", "a") != nullptr, "Variant missing");
         expect(loaded.find("test", "missing") == nullptr, "Missing variant accepted");
         expect(loaded.find("test","a")->ground_offset_cm==0,"Legacy package acquired a ground offset");
+        {
+            auto spoof=catalog;spoof["outfits"][0]["id"]=original_shells_id;
+            atomic_json(catalog_file,spoof,false);
+            rejects([&]{Catalog::load(catalog_dir);});
+            atomic_json(catalog_file,catalog,false);
+        }
         {
             auto grounded=catalog;
             grounded["outfits"][0]["variants"][0]["ground_offset_cm"]=-3;

@@ -10,6 +10,7 @@
 #include "controls.hpp"
 
 namespace css {
+inline constexpr const char* original_shells_id = "css.original_shells";
 using Json = nlohmann::json;
 namespace fs = std::filesystem;
 inline std::string path_utf8(const fs::path& path) {

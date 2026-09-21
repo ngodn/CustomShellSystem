@@ -1,5 +1,10 @@
 # Current work queue
 
+2026-09-21: [Official-shell appearances](development/original-shell-appearances.md) now pass all ten live menu bindings, independent cooked-reference comparison, world/preview mesh equality, gameplay identity and animation-class preservation, Steam screenshot review and Eve state restoration. The public Eve name is installed and verified. Next implement the requested shared scrollable selector and verify menu re-entry. CSSX remains disabled; full Next-Gen release scope stays open.
+
+2026-09-21: User requested a reusable scrollable choice list for the official-shell selector and other CSS options. Keep readable row sizes, show the equipped choice, preserve scroll position and reveal controller-selected options. Finish the current ten-shell appearance check, then implement this UI correction.
+
+
 2026-09-21: The user reviewed the installed colors4 assets and colors2 core and
 answered “Looks better” for skin tone, chest boundaries and the groin patch.
 Keep this repair as the visually accepted color baseline. Live Ivory and black

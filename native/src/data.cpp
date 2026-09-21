@@ -152,7 +152,7 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
         for (const auto& item : j.at("outfits")) {
             Outfit outfit{item.at("id"), item.at("name"), item.value("author", ""),
                           item.value("description", ""), item.value("category", "Shell"), {}, {}, false, {}, {}, {}, {}};
-            if (!valid_id(outfit.id) || !ids.insert(outfit.id).second) throw std::runtime_error("Invalid or duplicate outfit id");
+            if (!valid_id(outfit.id) || outfit.id==original_shells_id || !ids.insert(outfit.id).second) throw std::runtime_error("Invalid, reserved or duplicate outfit id");
             if (outfit.name.empty() || outfit.name.size() > 256 || outfit.description.size() > 4096)
                 throw std::runtime_error("Invalid outfit text");
             outfit.shells = item.at("shells").get<std::vector<std::string>>();
@@ -356,6 +356,7 @@ std::vector<const Outfit*> Catalog::display_order(const std::string& equipped,co
     result.reserve(outfits.size());
     // Preserve catalog order within each group and include every outfit once.
     for(int rank=0;rank<3;++rank) for(const auto& outfit:outfits) {
+        if(outfit.id==original_shells_id) continue; // Its dedicated SHELL row stays below Original appearance.
         const int group=outfit.id==equipped?0:favorites.contains(outfit.id)?1:2;
         if(group==rank) result.push_back(&outfit);
     }

@@ -20,6 +20,7 @@ struct Core {
     fs::path root;
     fs::path package_root;
     Catalog catalog;
+    bool original_shells_attempted=false;
     State state;
     Appearance appearance;
     InventoryUI inventory;
@@ -489,6 +490,7 @@ struct Core {
                 if(candidate!=package_root) {
                     auto resolved=load_catalog(candidate);
                     package_root=std::move(candidate); catalog=std::move(resolved); ui_refresh=true;
+                    original_shells_attempted=false;
                     message=wardrobe_startup_message(catalog.outfits.size());
                 }
             } catch(const std::exception& e) { host.log((std::string("CSS content lookup fallback: ")+e.what()).c_str()); }
@@ -567,8 +569,24 @@ struct Core {
             rescan_pending = false;
             auto updated = load_catalog(package_root);
             catalog = std::move(updated);
+            original_shells_attempted=false;
             ui_refresh=true;
             report(catalog.outfits.empty()?wardrobe_startup_message(0):"Catalog reloaded.");
+        }
+        if(!original_shells_attempted && appearance.player(engine)) {
+            original_shells_attempted=true;
+            try {
+                auto originals=discover_original_shells();
+                catalog.diagnostics["original_shells"]=originals.variants.size();
+                auto& choices=catalog.diagnostics["original_shell_choices"];choices=Json::array();
+                for(const auto& variant:originals.variants)
+                    choices.push_back({{"id",variant.id},{"name",variant.name},{"mesh",variant.mesh}});
+                catalog.outfits.push_back(std::move(originals));
+                inventory.refresh();ui_refresh=true;
+            } catch(const std::exception& error) {
+                catalog.diagnostics["original_shells_error"]=error.what();
+                host.log((std::string("Official shell appearances unavailable: ")+error.what()).c_str());
+            }
         }
         if (restore_pending) {
             appearance.restore(); recovery.clear(); restore_pending = false; applied_id.clear();

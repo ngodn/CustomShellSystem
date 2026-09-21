@@ -26,6 +26,7 @@
 
 namespace css {
 fs::path engine_content_directory();
+Outfit discover_original_shells();
 // UE4SS's serial-allocation fallback uses a legacy soft-reference layout.
 // Initialize new serials through a reflected frame before constructing a weak handle.
 class WeakObject : public RC::Unreal::FWeakObjectPtr {

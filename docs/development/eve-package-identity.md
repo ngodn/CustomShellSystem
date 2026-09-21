@@ -35,24 +35,19 @@ verifies the source snapshot, member names, CRCs, extracted package and hashes.
 The version remains `1.0.0-candidate`. This is a prepared candidate, not a
 published release or a declaration that CSS v1.0.0 is ready.
 
-## Next deployment
+## Installed candidate
 
-Install during the next normal game restart. The game still uses the accepted
-package under its previous filename. Use the existing replacement installer
-so it retires the prior package by stable ID instead of installing both:
+The rename was installed with the official-shell feature using the normal
+restart and replacement installer. The old stable-ID package was retired,
+with verified workspace backups. `work/stock1/live/deployment.json` and
+`install.log` record the operation; the subsequent reference correction keeps
+the same package. Both installed cooked containers retain their accepted
+hashes.
 
-```sh
-python3 tools/css_package.py install \
-  work/eve1/CSS_EveStellarBlade_eins0fx_P --replace
-```
-
-Before installation, back up the actual current state and core selector. The
-installer preserves a verified backup of retired files inside the workspace.
-After installation, verify exactly one loaded package for the stable ID, the
-new SHELL label and Black Pearl variant, the same selected appearance and
-colors, favorite status and saved-profile resolution. Preserve the user's
-latest state, rather than copying an older test snapshot over it. Use a normal
-restart; DLL hot reload caused earlier animation crashes in this session.
+Steam screenshots confirm **Eve (Stellar Blade)**, **Black Pearl**, the equipped
+marker and favorite star. The ten-shell trial restores the original Eve
+selection and customization and verifies favorites and saved profiles remain
+unchanged. Evidence: `work/stock1/check/result.json` and `restored.jpg`.
 
 Remaining release scope includes the official-shell visual selector, expanded
 locomotion slots and animation assets, broader lifecycle/gameplay coverage,

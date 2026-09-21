@@ -189,6 +189,7 @@ public:
         for(auto& weak:owned_) if(auto* object=weak.Get()) object->ClearRootSet();
     }
 };
+#include "original_shells.inl"
 static UObject* mesh_asset(UObject* component) {
     Call call(component, L"GetSkeletalMeshAsset", 1); call.run(); return call.get<UObject*>();
 }
