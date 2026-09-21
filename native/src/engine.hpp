@@ -15,6 +15,7 @@
 #include "inventory_light.hpp"
 #include "inventory_keys.hpp"
 #include "inventory_light_keys.hpp"
+#include "ground_offset.hpp"
 #include "extension_client.hpp"
 #include "cssx/hud.h"
 #include "extension_search.hpp"
@@ -361,6 +362,9 @@ void minimap_set_logger(std::function<void(const std::string&)> fn);
 Json markers_collect(void* engine, double radius_m);
 class Appearance {
     WeakObject component_, applied_;
+    WeakObject ground_component_;
+    GroundOffset ground_offset_;
+    void restore_ground_offset();
     WeakObject observed_pawn_, observed_component_, observed_controller_;
     std::string original_;
     std::vector<std::string> original_materials_;
@@ -449,6 +453,7 @@ public:
     RC::Unreal::UObject* player(void* engine);
     bool apply(void* engine, const std::string& mesh_path, const std::map<int,std::string>& materials = {});
     bool restore();
+    void set_ground_offset(double offset);
     bool active() const;
     bool repair_materials_needed();
     bool repair_mesh_needed() const;

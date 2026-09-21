@@ -203,6 +203,12 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
             std::set<std::string> variants;
             for (const auto& v : item.at("variants")) {
                 Variant variant{v.at("id"), v.at("name"), v.value("mesh",std::string{}), {}, {}, {}, {}};
+                if(v.contains("ground_offset_cm")) {
+                    if(!v.at("ground_offset_cm").is_number()) throw std::runtime_error("Invalid ground offset");
+                    variant.ground_offset_cm=v.at("ground_offset_cm").get<double>();
+                    if(!std::isfinite(variant.ground_offset_cm) || std::abs(variant.ground_offset_cm)>10)
+                        throw std::runtime_error("Ground offset outside range");
+                }
                 if(has_customize(v)) variant.controls=ControlSet::parse(customize_block(v));
                 if (!valid_id(variant.id) || !variants.insert(variant.id).second ||
                     (!v.contains("items") && !valid_asset(variant.mesh)))

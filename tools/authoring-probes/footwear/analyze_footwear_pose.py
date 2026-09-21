@@ -43,6 +43,15 @@ for part in audit['parts']:
  start+=part['points']
 else:raise ValueError('Shoe part missing')
 ids=set(range(start,start+part['points']))
+shoe_ids=ids.copy()
+# The body retains the original bare feet beneath the optional footwear.
+# Restrict the comparison to vertices actually weighted to each foot/ball.
+body_part=audit['parts'][0];assert body_part['name']=='Eve Body'
+foot_bones={i for i,b in enumerate(bones) if b['name'].lower() in ('foot_l','foot_r','ball_l','ball_r')}
+assert len(foot_bones)==4
+bare_ids={v for v,b,w in source['influences'] if v<body_part['points'] and b in foot_bones and w>0}
+assert bare_ids and bare_ids.isdisjoint(shoe_ids)
+ids|=bare_ids
 points={i:Vector(source['points'][i]) for i in ids};result={i:Vector((0,0,0)) for i in ids}
 for morph in source['morph_targets']:
  for v,*delta in morph['deltas']:
@@ -62,11 +71,13 @@ for v in obj.data.vertices:
  new.append(q)
 rows={}
 for side,sign in [('l',1),('r',-1)]:
- source_ids=[i for i in ids if source['points'][i][0]*sign>0]
+ source_ids=[i for i in shoe_ids if source['points'][i][0]*sign>0]
  low=min(source_ids,key=lambda i:result[i].z)
+ bare_low=min((i for i in bare_ids if source['points'][i][0]*sign>0),key=lambda i:result[i].z)
  support_ids=[i for i,v in enumerate(obj.data.vertices) if v.co.x*sign>0]
  support_low=min(support_ids,key=lambda i:new[i].z)
  rows[side]=dict(shoe_low_vertex=low,shoe_low_world_cm=list(result[low]),
+                 barefoot_low_vertex=bare_low,barefoot_low_world_cm=list(result[bare_low]),
                  support_low_world_cm=list(new[support_low]),
                  support_vs_shoe_z_cm=new[support_low].z-result[low].z)
 report=dict(rows=rows,mesh_transform=live['mesh_transform_before'],player=live['player'],live_capture=str(live_path),

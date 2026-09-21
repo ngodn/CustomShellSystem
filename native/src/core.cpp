@@ -658,6 +658,7 @@ struct Core {
                     appearance.set_attachment_offsets(variant->attachments);
                     if (appearance.apply(engine, variant->mesh, variant->materials)) {
                         try {
+                            appearance.set_ground_offset(variant->ground_offset_cm);
                             for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit) {
                                 // Items before controls: an accessory can hide body
                                 // sections, and a toggle may then show one of them again.

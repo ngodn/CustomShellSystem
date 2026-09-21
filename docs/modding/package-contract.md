@@ -48,6 +48,14 @@ Each variant declares a stable `id`, `name`, relocated mesh object path, optiona
 
 ## Validation and generated data
 
+An optional catalog-variant `ground_offset_cm` sets a fixed world-mesh height
+correction. It accepts a finite number from -10 to 10 centimeters and defaults
+to zero. Negative values lower the mesh. CSS preserves the original component
+height and restores it when leaving the appearance. It does not resize the
+body, move the gameplay capsule or alter preview framing. This requires the
+Next-Gen grounding runtime; older CSS builds ignore the field. Include it in
+the source catalog before packaging, then verify visual contact in game.
+
 The converter records original/tool hashes, relocated paths, export identities and round-trip checks in `conversion.json`. `runtime_tested: false` means exactly that. In-game testing is recorded separately; an offline build does not mark itself gameplay-tested.
 
 The offline verifier hashes the full `.ucas`. Runtime discovery checks the smaller metadata, thumbnail, resources and `.utoc`, and checks the bulk companion's name and size. It deliberately avoids hashing large bulk files on the game thread.

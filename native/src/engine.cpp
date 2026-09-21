@@ -702,7 +702,39 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     current_mesh = narrow(target->GetPathName());
     return true;
 }
+void Appearance::restore_ground_offset() {
+    if(auto* component=ground_component_.Get()) {
+        auto location=read<std::array<double,3>>(component,L"RelativeLocation");
+        auto next=ground_offset_;
+        if(auto original=next.restore(location[2])) {
+            location[2]=*original;
+            Call move(component,L"K2_SetRelativeLocation",4);
+            move.set(L"NewLocation",location);move.set(L"bSweep",false);move.set(L"bTeleport",true);move.run();
+            if(read<std::array<double,3>>(component,L"RelativeLocation")!=location)
+                throw std::runtime_error("World mesh height restoration failed");
+        }
+        ground_offset_=next;
+    }
+    ground_component_.Reset();ground_offset_={};
+}
+void Appearance::set_ground_offset(double offset) {
+    if(!GroundOffset::valid(offset)) throw std::runtime_error("Invalid ground offset");
+    auto* component=component_.Get();
+    if(!component || mesh_asset(component)!=applied_.Get()) return;
+    if(ground_component_.Get()!=component || offset==0) restore_ground_offset();
+    if(offset==0) return;
+    auto location=read<std::array<double,3>>(component,L"RelativeLocation");
+    ground_component_=component;
+    const auto target=ground_offset_.set(location[2],offset);
+    if(target==location[2]) return;
+    location[2]=target;
+    Call move(component,L"K2_SetRelativeLocation",4);
+    move.set(L"NewLocation",location);move.set(L"bSweep",false);move.set(L"bTeleport",true);move.run();
+    if(read<std::array<double,3>>(component,L"RelativeLocation")!=location)
+        throw std::runtime_error("World mesh height read-back failed");
+}
 bool Appearance::restore() {
+    restore_ground_offset();
     restore_springs();
     restore_dynamics();
     restore_rig();

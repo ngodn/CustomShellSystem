@@ -1,7 +1,9 @@
 #include "data.hpp"
+#include "ground_offset.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <functional>
+#include <limits>
 
 using namespace css;
 static unsigned checks;
@@ -15,6 +17,20 @@ int main() {
     auto dir = fs::temp_directory_path() / "css-data-tests";
     fs::create_directories(dir);
     try {
+        {
+            GroundOffset height;
+            expect(height.set(-96,-3)==-99,"Ground correction has wrong sign");
+            expect(height.set(-99,-3)==-99,"Repeated application accumulated height");
+            expect(height.set(-99,-2)==-98,"Variant change used the already offset height");
+            expect(height.set(-96,-3)==-99,"Native baseline reset was not recovered");
+            expect(height.restore(-99)==-96,"Original world height was not restored");
+            expect(!height.restore(-96),"Restore was not idempotent");
+            expect(height.set(-90,-3)==-93,"New pawn retained old height");
+            rejects([&]{height.set(-92,-3);});
+            expect(!height.restore(-92),"Cleanup overwrote an external height change");
+            rejects([&]{height.set(-96,11);});
+            rejects([&]{height.set(-96,std::numeric_limits<double>::quiet_NaN());});
+        }
         {
             Catalog list;
             for(const auto* id:{"ordinary.a","favorite.a","equipped","ordinary.b","favorite.b"}) {
@@ -97,6 +113,18 @@ int main() {
         auto loaded = Catalog::load(catalog_dir);
         expect(loaded.find("test", "a") != nullptr, "Variant missing");
         expect(loaded.find("test", "missing") == nullptr, "Missing variant accepted");
+        expect(loaded.find("test","a")->ground_offset_cm==0,"Legacy package acquired a ground offset");
+        {
+            auto grounded=catalog;
+            grounded["outfits"][0]["variants"][0]["ground_offset_cm"]=-3;
+            atomic_json(catalog_file,grounded,false);
+            expect(Catalog::load(catalog_dir).find("test","a")->ground_offset_cm==-3,"Ground offset was lost");
+            for(const Json& value:Json::array({-11,11,"-3",nullptr,true})) {
+                grounded["outfits"][0]["variants"][0]["ground_offset_cm"]=value;
+                atomic_json(catalog_file,grounded,false);
+                rejects([&]{Catalog::load(catalog_dir);});
+            }
+        }
         auto material_catalog=catalog;
         material_catalog["outfits"][0]["variants"][0]["materials"]={{"0","/Game/CSS/Face.Face"},{"2","/Game/CSS/Hair.Hair"}};
         atomic_json(catalog_file,material_catalog,false);

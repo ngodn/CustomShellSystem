@@ -68,6 +68,7 @@ struct Variant {
     // Always at least one, and items[0] is the body item whose mesh and materials are
     // mirrored by `mesh` and `materials` above.
     std::vector<Item> items;
+    double ground_offset_cm=0;
 };
 struct Outfit {
     std::string id, name, author, description, category;

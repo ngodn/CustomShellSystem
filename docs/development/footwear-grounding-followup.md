@@ -1,5 +1,11 @@
 # Footwear and grounding after accepted V44
 
+2026-09-21: The user accepted the 3 cm downward world-mesh trial and asked us
+to stop fine-tuning contact. Slight visual floor overlap is acceptable; deeply
+buried shoes are not. Native integration and a metadata-only package are built
+and installed through a normal restart. World application and disable/re-enable
+restoration pass. Ground-contact amount tuning is closed.
+
 V44 hand tuning is closed by user acceptance. Preserve the
 [pinned baseline](v44-accepted-baseline.json), original body proportions,
 accepted body dynamics and hair 200/24/0 while investigating footwear.
@@ -154,3 +160,54 @@ new shoe-to-floor clearance is claimed from this attempt. The analyzer and
 tracer now accept explicit workspace inputs so a fresh stationary sample can
 be used without overwriting historical evidence. Lighting input correction
 and favorite sorting took priority following user feedback.
+
+## Accepted 3 cm correction
+
+`work/ground1/live.json`, `pose/pose.json` and `traces.json` capture one stable
+world pose with valid floor hits. Shoe clearances are 4.025 cm left and 3.271 cm
+right; support clearances are 3.121 and 3.212 cm. The underlying barefoot replay
+in `bare/pose.json` has its low vertices about 0.30 cm above the shoe lows, at
+different XY coordinates. It is not a separate barefoot floor trace.
+
+`check_ground_offset.py` temporarily changed only the world mesh's relative Z
+from -96 to -99 cm. The gameplay capsule, authored geometry and proportions
+were not edited. The recorded 20-second world clip includes movement and
+attacks; sampled frames and the before/lowered/restored Steam stills were
+reviewed. The stills have different poses and views, so they are not a controlled
+pixel comparison. `trial3/result.json` confirms the offset survived movement
+and that exact -96 cm restoration succeeded. User: "i think its fine la bro for
+now dont waste too much time on this". This closes visual amount tuning at -3 cm.
+
+Each catalog variant can now declare `ground_offset_cm`, a finite number from
+-10 to 10, defaulting to zero for existing packages. Negative values lower the
+world mesh. CSS captures the first component height, applies without cumulative
+drift and restores it when leaving the appearance. Cleanup preserves a height
+changed by another owner. Preview framing and the gameplay capsule are unchanged.
+This is an authored placement correction, not a per-frame floor solver.
+
+The portable tests cover default/range/type validation, repeated application,
+variant changes, native baseline reset, restoration, a new pawn baseline and
+external-height ownership. Host tests, Windows development and shipping builds
+all exit zero under `work/ground1/build`.
+
+`prepare_ground_package.py` produces authoring `work/ground1/trio`, adding only
+`ground_offset_cm: -3` to Black Pearl's manifest. The full manifest matches the
+previous package after removing that field, packed resources match their staged
+bytes, and `.ucas`/`.utoc` retain their original hashes. No mesh, texture,
+animation, Skeleton or physics asset was recooked. The companion metadata lives
+at authoring `work/ground1/metadata`; use it for subsequent release preparation.
+The public rename and palettes remain queued after current fixes.
+
+`deploy_ground_package.py` backs up the previous UI core, trio and saved state
+under `work/ground1/live`, performs normal QuitGame, installs `css_core-ground1.dll`
+and the new trio, verifies hashes/state preservation, and launches through Steam.
+It exits zero. `deployment.json` is installation evidence; it does not claim
+world application or appearance-switch lifecycle passed.
+
+Live follow-up: `work/ground1/live/world.json` resolves the installed Black Pearl
+mesh at relative Z -99 cm. The reviewed `installed.jpg` is a fresh Steam world
+capture. `check_ground_restore.py` then verifies native CSS disable restores
+the original game mesh at -96 cm, and enable restores Black Pearl at -99 cm.
+The complete saved state matches before and after. Evidence is
+`work/ground1/live/restore/verification.json`; the check exits zero. This covers
+the accepted amount and one disable/enable cycle, not every travel transition.
