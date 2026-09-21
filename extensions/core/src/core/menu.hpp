@@ -66,7 +66,6 @@ private:
     std::vector<SliderHit> sliders_;
     std::array<double,2> mouse_{};
     bool mouse_left_=false;
-    float wheel_accumulator_=0;
     BuildCost cost_;
     std::map<std::string,engine::WeakObject> textures_;
     // Implementation

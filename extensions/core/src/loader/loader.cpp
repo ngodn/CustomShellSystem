@@ -102,7 +102,7 @@ public:
         hook_ = RC::Unreal::Hook::RegisterEngineTickPostCallback(
             [this, gate = gate_, alive = alive_](auto&, RC::Unreal::UEngine* engine, float delta, bool) {
                 LARGE_INTEGER now; QueryPerformanceCounter(&now);
-                if (last_tick_qpc_) { intervals_[ring_.head] = now.QuadPart - last_tick_qpc_; ring_.head = (ring_.head + 1) % ring_capacity; ++ring_.total; }
+                if (last_tick_qpc_) { intervals_[ring_.head] = now.QuadPart - last_tick_qpc_; ring_.head = (ring_.head + 1) % ring_capacity; ring_.total = ring_.total + 1; }
                 last_tick_qpc_ = now.QuadPart;
                 std::lock_guard lock(*gate);
                 if (!*alive || stopped_) return;
