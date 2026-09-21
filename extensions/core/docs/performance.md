@@ -2,7 +2,12 @@
 
 Status line (update this first): **residual FPS loss is unresolved.** The one
 proven defect is fixed in the legacy host; the new framework is built to avoid
-it by construction and must show that with controlled pairs before release.
+it by construction. First live numbers (2026-09-21, below) show the new core's
+per-frame work is 0.27 ms mean and that switching every per-frame function off
+in-process does not change the frame rate, so whatever the user sees is not
+work inside CSSX's callbacks. The controlled restart pair (CSSX absent versus
+present, same beacon, MangoHud frame-time log) is the next step and the only
+thing that can attribute the remaining gap.
 
 ## Raw evidence index (all under `CustomShellSystem/work/`)
 
@@ -90,4 +95,31 @@ Results table lives below and is empty until the live window happens.
 
 ## Results
 
-(none yet)
+### 2026-09-21 first live session (standalone CSSX dev core, CSS alpha present)
+
+Same save, player standing at a beacon, no input, Player Menu closed, Cheat
+Menu loaded with every cheat off. Source: `frame.stats` (loader ring) through
+`tools/fps_probe.py`; raw files in `work/perf/D-*.json`.
+
+| Capture | Frames | Median ms | p95 ms | p99 ms | Hz | Hitches |
+| --- | --- | --- | --- | --- | --- | --- |
+| D-closed-1 (right after load) | 812 | 24.59 | 29.08 | 34.58 | 40.6 | 0 |
+| D-closed-2 | 926 | 21.24 | 26.68 | 31.18 | 46.3 | 0 |
+| D-idle-1 (core tick disabled) | 930 | 21.49 | 25.03 | 29.60 | 46.5 | 0 |
+| D-closed-3 | 959 | 20.35 | 24.97 | 30.85 | 47.9 | 1 |
+| D-idle-2 (core tick disabled) | 990 | 19.86 | 23.78 | 29.40 | 49.5 | 0 |
+
+Per-phase cost inside the core (869 frames): core tick mean 0.273 ms, p99
+5.3 ms, max 13.1 ms; extension ticks mean 0.037 ms, max 0.73 ms; HUD and menu
+0 (not active). The p99/max spikes were the once-per-second status write
+(now every 5 s without read-back). Hook service: 0 rules, no script hook.
+
+Reading: active versus idle differ by 0.6 ms with a 4.2 ms spread across
+repeats (`fps_probe.py compare D-closed D-idle` → inconclusive/within noise),
+and the scene itself warmed from 40.6 to 49.5 Hz over the five captures. So
+H5 is measured and small. H1 remains: 46–50 Hz here versus 70–77 Hz in the
+Sept 20 CSSX-absent run is not a controlled pair (different session, camera
+not pinned, no MangoHud). The CSS alpha production core does not answer the
+old `css_probe` counter, so rows A/B need an external logger: MangoHud
+(installed, 0.8.4) with `work/perf/mangohud.conf`, started and stopped from
+outside through `mangohudctl`, identical for every row.
