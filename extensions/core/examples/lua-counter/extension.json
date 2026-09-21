@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "api": 1,
+  "id": "examples.counter",
+  "title": "CSSX Lua Counter",
+  "author": "_eins0fx",
+  "version": "1.0.0",
+  "description": "Minimal example of settings, logging, output and declarative UI.",
+  "kind": "lua",
+  "layout": "tabs",
+  "entry": "main.lua",
+  "menu": "menu.json"
+}

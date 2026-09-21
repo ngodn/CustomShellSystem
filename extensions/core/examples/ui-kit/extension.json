@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "api": 1,
+  "id": "cssx.ui-kit",
+  "title": "CSSX UI Kit",
+  "version": "0.3.0",
+  "author": "_eins0fx",
+  "description": "Interactive technology preview of the CSSX UI Kit. Explore controls, panels and feedback states without changing gameplay.",
+  "kind": "lua",
+  "layout": "tabs",
+  "entry": "main.lua",
+  "menu": "menu.json",
+  "banner": "assets/banner-v1.png",
+  "files": [
+    "README.md"
+  ]
+}

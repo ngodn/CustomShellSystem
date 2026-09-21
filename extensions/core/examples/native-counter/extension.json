@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "api": 1,
+  "id": "examples.native-counter",
+  "title": "Native Counter",
+  "author": "_eins0fx",
+  "version": "0.3.0",
+  "description": "A minimal C++ extension with a saved value.",
+  "kind": "native",
+  "layout": "inventory",
+  "entry": "counter.dll",
+  "menu": "menu.json"
+}

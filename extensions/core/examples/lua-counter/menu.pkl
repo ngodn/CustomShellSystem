@@ -1,0 +1,24 @@
+amends "../../../tools/extensions/pkl/CSSX.pkl"
+
+sections = new Listing {
+  new Section {
+    id = "main"
+    title = "Example"
+    controls = new Listing {
+      new NumberControl {
+        id = "counter"
+        label = "Counter"
+        description = "A persisted value demonstrating CSSX state and UI bindings."
+        min = 0
+        max = 100
+        step = 1
+        value = 0
+      }
+      new Button {
+        id = "export"
+        label = "Export counter"
+        description = "Write a text file to this extension's managed output folder."
+      }
+    }
+  }
+}

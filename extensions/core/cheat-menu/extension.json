@@ -1,0 +1,19 @@
+{
+  "schema": 2,
+  "api": 3,
+  "id": "eins0fx.cheat-menu",
+  "title": "CSSX Cheat Menu",
+  "author": "_eins0fx",
+  "version": "1.0.0",
+  "description": "Player controls, gameplay shells, resources and progression tools.",
+  "kind": "native",
+  "entry": "cheat_menu.dll",
+  "menu": "menu.json",
+  "banner": "assets/banner-v1.png",
+  "files": [
+    "README.txt",
+    "THIRD_PARTY_NOTICES.txt",
+    "LICENSE",
+    "CREDITS.txt"
+  ]
+}
