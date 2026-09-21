@@ -1,7 +1,9 @@
 # Eve animation sources and gameplay boundaries
 
-2026-09-21. Source keys and the first offline walk/idle retarget candidates are
-prepared. No new animation is installed.
+2026-09-21. Four corrected offline candidates and compressed component previews
+are prepared. [Native animation metadata and profiles](animation-options.md)
+now support their separate slots; runtime/UI integration remains open.
+No new animation is installed.
 The accepted V44 rig, original proportions, hair 200/24, body dynamics and
 -3 cm grounding remain unchanged. CSSX remains disabled.
 

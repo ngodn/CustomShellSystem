@@ -948,25 +948,25 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const bool feminine=state.walk_animation=="feminine";
         row_=0;
         const Json toggle{{"action","walk_animation"},{"value",feminine?"normal":"feminine"}};
-        const std::string sub=feminine?"Feminine":(has_walk_mod?"Normal, "+walk_mod_name:"Normal");
+        const std::string sub=feminine?"Feminine":(has_walk_mod?"Default, "+walk_mod_name:"Default");
         scroll_begin();
         row(0,"Walk animation",sub,77,toggle,toggle,toggle);
         scroll_end();
         std::string body=feminine?"Feminine borrows the Cultist Spear Lady's walk and standing pose for any shell, and walks at the pace her cycle was made for so the feet stay planted. CSS holds the animation itself, so another walk mod cannot take it back."
-                                 :"Normal keeps the game's own walking, and leaves any installed walk mod free to drive it.";
+                                 :"Default keeps the game's own walking, and leaves any installed walk mod free to drive it.";
         if(has_walk_mod) body+=feminine?(" "+walk_mod_name+" by argisht is installed and is being overridden."):(" "+walk_mod_name+" by argisht is installed and is handling it.");
         body+=" Jogging and sprinting stay on the game's own animation.";
         detail("Walk animation",sub,body);
-        bind(ui.button("Normal",right,controls_y+50,360,42,!feminine,true,21),{{"action","walk_animation"},{"value","normal"}});
+        bind(ui.button("Default",right,controls_y+50,360,42,!feminine,true,21),{{"action","walk_animation"},{"value","normal"}});
         bind(ui.button("Feminine",right,controls_y+96,360,42,feminine,true,21),{{"action","walk_animation"},{"value","feminine"}});
         direction_hint(true,"Change walk animation");
-        action_button("accept",feminine?"Use normal":"Use feminine",controls_y+194,toggle,3);
+        action_button("accept",feminine?"Use Default":"Use Feminine",controls_y+194,toggle,3);
         std::string note;
-        if(has_walk_mod) note=feminine?("Installed: "+walk_mod_name+" by argisht. CSS is holding the walk instead; choose Normal to hand it back.")
-                                      :("Installed: "+walk_mod_name+" by argisht. It drives walking while Walk animation is Normal.");
+        if(has_walk_mod) note=feminine?("Installed: "+walk_mod_name+" by argisht. CSS is holding the walk instead; choose Default to hand it back.")
+                                      :("Installed: "+walk_mod_name+" by argisht. It drives walking while Walk animation is Default.");
         else if(feminine) note=appearance.walk.engaged()?("Active now: "+appearance.walk.reason()+". Profiles keep this setting.")
                                                         :"Armed. Move to see it. Profiles keep this setting.";
-        else note="Everything normal. CSS is not touching locomotion.";
+        else note="Default selected. CSS is not touching locomotion.";
         ui.label(note,right,controls_y+250,360,60,14,muted);
     } else {
         std::vector<std::string> names; for(const auto& [name,_]:state.presets) names.push_back(name);

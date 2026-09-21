@@ -1,5 +1,8 @@
 # CSS research index
 
+- [Animation options](development/animation-options.md): native mod-provided idle, walk, jog, sprint and beacon definitions, profile persistence, Default naming and remaining playback integration.
+- [Eve animation sources](development/eve-animation-sources.md): source extraction, facing correction, fitted component previews and original-author pose references.
+
 - [Body collision reference](development/body-collision-reference.md): live V43 Physics Asset absence, game reference and selected human collider template.
 
 - [V44B2 reference binding](development/b2-reference-binding.md): saved metadata/defaults, measured hand input convention, actual component and weapon checks, remaining collision/cook/live gates.

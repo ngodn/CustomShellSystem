@@ -279,7 +279,7 @@ struct Core {
         else if (action == "save_look" || action == "save_profile") {
             auto name = command.at("name").get<std::string>();
             if (!valid_id(name) || (state.presets.size() >= 64 && !state.presets.contains(name))) throw std::runtime_error("Invalid profile slot");
-            state.presets[name] = Preset{state.selections, state.walk_animation}; dirty = true; ui_refresh = true; report("Current character profile saved to " + name);
+            state.presets[name] = Preset{state.selections, state.walk_animation, state.animation_choices}; dirty = true; ui_refresh = true; report("Current character profile saved to " + name);
         }
         else if (action == "load_look" || action == "load_profile") {
             auto name = command.at("name").get<std::string>();
@@ -289,6 +289,7 @@ struct Core {
             if (selected == selections.end()) { restore_pending = true; forget_current = true; }
             else { selected_outfit = selected->second.outfit; selected_variant = selected->second.variant; pending_custom=selected->second.custom; apply_pending = true; }
             if(state.walk_animation!=preset.walk_animation) { state.walk_animation=preset.walk_animation; dirty=true; }
+            if(state.animation_choices!=preset.animation_choices) { state.animation_choices=preset.animation_choices; dirty=true; }
             ui_refresh = true; report("Profile loaded: " + name);
         }
         else if(action=="delete_look" || action=="delete_profile") {
@@ -315,8 +316,8 @@ struct Core {
                 if(has_mod) report("Feminine walk enabled. "+mod_name+" by argisht is installed; CSS holds the walk animation while this is on.");
                 else report("Feminine walk enabled.");
             } else {
-                if(has_mod) report("Normal walk restored. "+mod_name+" by argisht is active and handles walking again.");
-                else report("Normal walk restored.");
+                if(has_mod) report("Default walk restored. "+mod_name+" by argisht is active and handles walking again.");
+                else report("Default walk restored.");
             }
         }
         else if (action == "harbinger_mirror") {

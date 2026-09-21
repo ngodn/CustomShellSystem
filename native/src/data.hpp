@@ -8,6 +8,7 @@
 #include <vector>
 #include <nlohmann/json.hpp>
 #include "controls.hpp"
+#include "animations.hpp"
 
 namespace css {
 inline constexpr const char* original_shells_id = "css.original_shells";
@@ -70,6 +71,7 @@ struct Variant {
     // mirrored by `mesh` and `materials` above.
     std::vector<Item> items;
     double ground_offset_cm=0;
+    AnimationSet animations;
 };
 struct Outfit {
     std::string id, name, author, description, category;
@@ -80,6 +82,7 @@ struct Outfit {
     ControlSet controls;
     fs::path resources;
     std::vector<Template> templates;
+    AnimationSet animations;
     const ControlSet& controls_for(const std::string& variant) const {
         for(const auto& v:variants) if(v.id==variant && v.controls) return *v.controls;
         return controls;
@@ -93,10 +96,16 @@ struct Catalog {
     const Variant* find(const std::string& outfit, const std::string& variant) const;
     bool compatible(const std::string& outfit, const std::string& shell) const;
     std::vector<const Outfit*> display_order(const std::string& equipped,const std::set<std::string>& favorites) const;
+    const std::vector<AnimationOption>& animation_options(const std::string& outfit,
+        const std::string& variant,AnimationSlot) const;
 };
 struct Selection { std::string outfit, variant; Customization custom; };
 // 0.4: a template keeps the animation settings with the outfit selections.
-struct Preset { std::map<std::string, Selection> selections; std::string walk_animation = "normal"; };
+struct Preset {
+    std::map<std::string, Selection> selections;
+    std::string walk_animation = "normal";
+    AnimationChoices animation_choices;
+};
 bool valid_walk_animation(const std::string&);
 // 1.0.0-beta: Profile is the full character snapshot across all systems
 using Profile = Preset;
@@ -105,6 +114,7 @@ struct State {
     bool auto_apply = true;
     bool invert_orbit_x = false, invert_orbit_y = true;
     std::string walk_animation = "normal";   // "normal" or "feminine" (LOCOMOTION tab). Jog and sprint stay on the game's own animation in 0.4.
+    AnimationChoices animation_choices;
     bool harbinger_mirror = true;            // when severed into the Harbinger (Darkform), wear the living shell's current outfit instead of its own saved one.
     std::map<std::string, Selection> selections;
     std::map<std::string, Customization> remembered_custom;

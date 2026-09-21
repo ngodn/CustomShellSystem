@@ -151,7 +151,7 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
         if (j.at("schema") != 1 || !j.at("outfits").is_array()) throw std::runtime_error("Unsupported catalog schema");
         for (const auto& item : j.at("outfits")) {
             Outfit outfit{item.at("id"), item.at("name"), item.value("author", ""),
-                          item.value("description", ""), item.value("category", "Shell"), {}, {}, false, {}, {}, {}, {}};
+                          item.value("description", ""), item.value("category", "Shell"), {}, {}, false, {}, {}, {}, {}, {}};
             if (!valid_id(outfit.id) || outfit.id==original_shells_id || !ids.insert(outfit.id).second) throw std::runtime_error("Invalid, reserved or duplicate outfit id");
             if (outfit.name.empty() || outfit.name.size() > 256 || outfit.description.size() > 4096)
                 throw std::runtime_error("Invalid outfit text");
@@ -161,6 +161,7 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
                 throw std::runtime_error("Unsupported outfit compatibility policy");
             outfit.same_skeleton = compatibility == "same_skeleton";
             outfit.controls=ControlSet::parse(customize_block(item));
+            if(item.contains("animations")) outfit.animations=AnimationSet::parse(item.at("animations"));
             outfit.resources=document.artwork;
             auto thumbnail=item.value("thumbnail",std::string{});
             if(!thumbnail.empty()) {
@@ -202,7 +203,7 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
             }
             std::set<std::string> variants;
             for (const auto& v : item.at("variants")) {
-                Variant variant{v.at("id"), v.at("name"), v.value("mesh",std::string{}), {}, {}, {}, {}};
+                Variant variant{v.at("id"), v.at("name"), v.value("mesh",std::string{}), {}, {}, {}, {}, 0, {}};
                 if(v.contains("ground_offset_cm")) {
                     if(!v.at("ground_offset_cm").is_number()) throw std::runtime_error("Invalid ground offset");
                     variant.ground_offset_cm=v.at("ground_offset_cm").get<double>();
@@ -210,6 +211,7 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
                         throw std::runtime_error("Ground offset outside range");
                 }
                 if(has_customize(v)) variant.controls=ControlSet::parse(customize_block(v));
+                if(v.contains("animations")) variant.animations=AnimationSet::parse(v.at("animations"));
                 if (!valid_id(variant.id) || !variants.insert(variant.id).second ||
                     (!v.contains("items") && !valid_asset(variant.mesh)))
                     throw std::runtime_error("Invalid variant id or asset path");
@@ -367,6 +369,19 @@ const Variant* Catalog::find(const std::string& outfit, const std::string& varia
         for (const auto& v : o.variants) if (v.id == variant) return &v;
     return nullptr;
 }
+const std::vector<AnimationOption>& Catalog::animation_options(const std::string& outfit,
+    const std::string& variant,AnimationSlot slot) const {
+    static const std::vector<AnimationOption> empty;
+    for(const auto& o:outfits) if(o.id==outfit) {
+        for(const auto& v:o.variants) if(v.id==variant) {
+            if(const auto found=v.animations.slots.find(slot);found!=v.animations.slots.end()) return found->second;
+            if(const auto found=o.animations.slots.find(slot);found!=o.animations.slots.end()) return found->second;
+            return empty;
+        }
+        return empty;
+    }
+    return empty;
+}
 bool Catalog::compatible(const std::string& outfit, const std::string& shell) const {
     for (const auto& o : outfits) if (o.id == outfit)
         return (o.same_skeleton && (shell.starts_with("CharacterId.Player.Shell.") || shell.starts_with("CharacterId.Player.Darkform."))) ||
@@ -392,6 +407,7 @@ static Preset parse_preset(const Json& j) {
     if(j.is_object() && j.contains("selections")) {
         result.selections=parse_selections(j.at("selections"));
         result.walk_animation=j.value("walk_animation","normal");
+        result.animation_choices=AnimationChoices::parse(j.value("animation_choices",Json::object()));
         if(!valid_walk_animation(result.walk_animation))
             throw std::runtime_error("Invalid template animation");
         // Jog and sprint are pinned to normal: the 0.3.3 preview shipped a
@@ -408,6 +424,7 @@ State State::parse(const Json& j) {
     result.invert_orbit_x = j.value("invert_orbit_x", false);
     result.invert_orbit_y = j.value("invert_orbit_y", true);
     result.walk_animation = j.value("walk_animation", "normal");
+    result.animation_choices=AnimationChoices::parse(j.value("animation_choices",Json::object()));
     if(!valid_walk_animation(result.walk_animation))
         throw std::runtime_error("Invalid walk animation setting");
     result.harbinger_mirror = j.value("harbinger_mirror", true);
@@ -441,10 +458,11 @@ Json State::json() const {
     Json presets_json = Json::object();
     Json remembered = Json::object();
     for(const auto& [id,custom]:remembered_custom) remembered[id]=custom.json();
-    for (const auto& [name, preset] : presets) presets_json[name] = {{"selections", selections_json(preset.selections)}, {"walk_animation", preset.walk_animation}};
+    for (const auto& [name, preset] : presets) presets_json[name] = {{"selections", selections_json(preset.selections)}, {"walk_animation", preset.walk_animation}, {"animation_choices",preset.animation_choices.json()}};
     return {{"schema", 1}, {"enabled", enabled}, {"auto_apply", auto_apply},
             {"invert_orbit_x", invert_orbit_x}, {"invert_orbit_y", invert_orbit_y}, {"walk_animation", walk_animation},
             {"harbinger_mirror", harbinger_mirror},
+            {"animation_choices",animation_choices.json()},
             {"selections", selections_json(selections)}, {"favorites", favorites}, {"presets", presets_json}, {"remembered_custom",remembered}};
 }
 }
