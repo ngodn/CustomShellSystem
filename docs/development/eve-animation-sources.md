@@ -488,6 +488,30 @@ weapon overlays and gait transitions before cooking or deployment. Keep the
 accepted rig, proportions, hair 200/24/0, body settings and grounding intact.
 Custom idle/weapon restoration and paired beacon integration remain open.
 
+## Phase correction checkpoint P1, paused for delivery
+
+The user requested a usable delivery before exhausting the remaining weekly
+quota, so further animation iteration is paused at `work/anim12`.
+`prepare_phase.py` reconstructs both feet from all 379 raw bones, normalizes
+each height curve, and finds a whole-key cyclic shift against the corresponding
+forward gait. It proposes 12 shifts among 19 clips. Left jog shifts five of
+24 cycle keys. The fit score is diagnostic, not a motion acceptance gate.
+
+`CSSAnimationLibrary::ShiftLoop` now compiles in UE 5.6.1 (build exit 0).
+It duplicates the private clip with its fitted binding, shifts whole bone keys
+and closes the endpoint. It rejects event/curve/marker/root-motion clips and
+loops whose endpoints differ by more than 0.01 cm, 0.1 degree or 0.0001 scale.
+Zero offset preserves all original keys, including the endpoint. No production
+clip is overwritten. The shared blend probe accepts explicit short revision
+names so future M2 blends can mix unchanged D2 and shifted P1 clips.
+
+This is unfinished authoring code: no P1 sequence or M2 blend has been created,
+read back, compressed, rendered, cooked or installed. Resume by executing
+negative fixtures and zero-offset equivalence, then checking all shifted raw
+poses against their original source indices in a fresh process. Only afterward
+compare timed blends and visual transitions. M1 cadence remains provisional.
+Do not infer success from the completed helper build or the prepared phase fit.
+
 ## Original author's pose and deformation references
 
 The user supplied `reference/body-type-variant-EVE/3HVzUb9.gif` and

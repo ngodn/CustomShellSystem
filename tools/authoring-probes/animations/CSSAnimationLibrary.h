@@ -9,6 +9,11 @@ class UCSSAnimationLibrary : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 public:
+    /** Rotate a closed bone-only loop by whole keys, preserving its fitted binding. */
+    UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
+    static class UAnimSequence* ShiftLoop(class UAnimSequence* Source,
+        int32 StartFrame, const FString& OutputPackage);
+
     /** Retarget a curve-free, non-additive source clip into an isolated package. */
     UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
     static class UAnimSequence* RetargetClip(class USkeletalMesh* SourceMesh,

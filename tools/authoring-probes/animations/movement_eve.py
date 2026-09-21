@@ -3,6 +3,7 @@ import hashlib
 import json
 import math
 import os
+import re
 from pathlib import Path
 
 import unreal
@@ -30,7 +31,10 @@ mesh = unreal.load_asset('/Game/CSS/SeduXtress/SK_BlackPearl2')
 results = []
 for definition in spec['definitions']:
     samples = definition['samples']
-    animations = [unreal.load_asset('/Game/CSS/AnimLab/RT_D2_'+s['clip']) for s in samples]
+    assert all(re.fullmatch(r'[A-Za-z0-9]{1,8}', s.get('revision', 'D2')) and
+               re.fullmatch(r'[A-Za-z0-9]{1,16}', s['clip']) for s in samples)
+    paths = ['/Game/CSS/AnimLab/RT_'+s.get('revision', 'D2')+'_'+s['clip'] for s in samples]
+    animations = [unreal.load_asset(p) for p in paths]
     assert all(animations)
     points = [unreal.Vector(s['direction'], s['speed'], 0) for s in samples]
     rates = [s['rate'] for s in samples]
@@ -47,8 +51,8 @@ for definition in spec['definitions']:
     assert blend.get_editor_property('skeleton') == mesh.get_editor_property('skeleton')
     actual = blend.get_editor_property('sample_data')
     assert len(actual) == len(samples)
-    for a, wanted in zip(actual, samples):
-        assert a.get_editor_property('animation').get_name() == 'RT_D2_'+wanted['clip']
+    for a, wanted, path in zip(actual, samples, paths):
+        assert a.get_editor_property('animation').get_path_name().split('.')[0] == path
         assert math.isclose(a.get_editor_property('rate_scale'), wanted['rate'], rel_tol=1e-6)
         assert a.get_editor_property('sample_value') == unreal.Vector(wanted['direction'], wanted['speed'], 0)
     # Include every authored knot, interiors, clamped speed and wrapped seams.
@@ -60,7 +64,7 @@ for definition in spec['definitions']:
     assert len(report['queries']) == len(queries)
     for i, wanted in enumerate(samples):
         weights = report['queries'][i]['samples']
-        assert sum(w['weight'] for w in weights if w['animation'].split('.')[-1] == 'RT_D2_'+wanted['clip']) > .9999
+        assert sum(w['weight'] for w in weights if w['animation'].split('.')[0] == paths[i]) > .9999
     def weights_at(direction, speed):
         query = next(q for q in report['queries'] if q['direction'] == direction and q['speed'] == speed)
         result = {}

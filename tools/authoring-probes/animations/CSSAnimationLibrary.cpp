@@ -25,6 +25,58 @@
 #include "Serialization/JsonWriter.h"
 #include "UObject/UnrealType.h"
 
+UAnimSequence* UCSSAnimationLibrary::ShiftLoop(UAnimSequence* Source,
+    int32 StartFrame, const FString& OutputPackage)
+{
+    if (!IsRunningCommandlet() || !Source || !Source->GetSkeleton() ||
+        !Source->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/")) ||
+        Source->IsValidAdditive() || Source->RateScale != 1.f || Source->bEnableRootMotion ||
+        !Source->Notifies.IsEmpty() || !Source->AuthoredSyncMarkers.IsEmpty() ||
+        !OutputPackage.StartsWith(TEXT("/Game/CSS/AnimLab/RT_P1_")) || OutputPackage.Len() > 100 ||
+        !FPackageName::IsValidLongPackageName(OutputPackage) ||
+        FPackageName::DoesPackageExist(OutputPackage) || FindPackage(nullptr, *OutputPackage)) return nullptr;
+    const IAnimationDataModel* Model = Source->GetDataModel();
+    if (!Model || !Model->GetCurveData().FloatCurves.IsEmpty() ||
+        !Model->GetCurveData().TransformCurves.IsEmpty() || Model->GetNumberOfAttributes() != 0) return nullptr;
+    const int32 Keys = Model->GetNumberOfKeys();
+    if (Keys < 3 || Keys > 601 || StartFrame < 0 || StartFrame >= Keys - 1) return nullptr;
+    TArray<FName> Names; Model->GetBoneTrackNames(Names);
+    if (Names.IsEmpty() || Names.Num() > 1024) return nullptr;
+    TArray<TArray<FTransform>> Tracks;
+    for (const FName Name : Names)
+    {
+        auto& Track = Tracks.AddDefaulted_GetRef();
+        Model->GetBoneTrackTransforms(Name, Track);
+        if (Track.Num() != Keys) return nullptr;
+        for (const auto& T : Track)
+            if (T.ContainsNaN() || !T.GetRotation().IsNormalized()) return nullptr;
+        // Only close an already near-periodic loop; never hide a bad clip cut.
+        if (FVector::Distance(Track[0].GetTranslation(), Track.Last().GetTranslation()) > .01 ||
+            Track[0].GetRotation().AngularDistance(Track.Last().GetRotation()) > FMath::DegreesToRadians(.1) ||
+            !Track[0].GetScale3D().Equals(Track.Last().GetScale3D(), .0001)) return nullptr;
+    }
+    auto* Result = DuplicateObject<UAnimSequence>(Source, CreatePackage(*OutputPackage),
+        *FPackageName::GetLongPackageAssetName(OutputPackage));
+    if (!Result || Result->GetDataModel() == Model) return nullptr;
+    Result->SetFlags(RF_Public | RF_Standalone);
+    auto& Edit = Result->GetController();
+    Edit.OpenBracket(FText::FromString(TEXT("Align CSS loop start frames")), false);
+    ON_SCOPE_EXIT { Edit.CloseBracket(false); };
+    for (int32 Bone = 0; Bone < Names.Num(); ++Bone)
+    {
+        TArray<FVector3f> Positions, Scales; TArray<FQuat4f> Rotations;
+        for (int32 Frame = 0; Frame < Keys; ++Frame)
+        {
+            const int32 Index = StartFrame ? (Frame + StartFrame) % (Keys - 1) : Frame;
+            const auto& T = Tracks[Bone][Index];
+            Positions.Add(FVector3f(T.GetTranslation())); Rotations.Add(FQuat4f(T.GetRotation()));
+            Scales.Add(FVector3f(T.GetScale3D()));
+        }
+        if (!Edit.SetBoneTrackKeys(Names[Bone], Positions, Rotations, Scales, false)) return nullptr;
+    }
+    Result->MarkPackageDirty(); return Result;
+}
+
 UAnimSequence* UCSSAnimationLibrary::RetargetClip(USkeletalMesh* SourceMesh,
     USkeletalMesh* TargetMesh, UAnimSequence* Source, UIKRetargeter* Retargeter,
     const FString& OutputPackage, bool PreserveUnmappedAttachments)
