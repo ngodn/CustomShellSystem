@@ -10,6 +10,14 @@ rename, then the remaining release features and checks. This acceptance does
 not prove every swatch combination or make CSS v1.0.0 release-ready.
 Evidence: [authored colors](development/authored-color-swatches.md).
 
+2026-09-21: [Public Eve package rename](development/eve-package-identity.md)
+prepared and verified under `work/eve1`. Trio and ZIP use
+`CSS_EveStellarBlade_eins0fx_P`, SHELL name `Eve (Stellar Blade)`, variant
+`Black Pearl`. Preserve stable save IDs and all accepted cooked assets. Native
+package checks and ZIP readback pass. Install with `--replace` during the next
+normal deployment and verify live labels/state; the running game retains the
+accepted pre-rename package until then. Version remains `1.0.0-candidate`.
+
 2026-09-21: [Eve colors installed](development/authored-color-swatches.md#installed-color-checkpoint) in `css_core-colors1.dll` plus authoring `work/colors3/trio`, using a normal restart and verified backups/state preservation. Fresh world mesh/-99 cm checks pass. Steam still and game-window clip show the five-palette list with Jade selected; live material reads prove torso/genital slots retain original textures while the six tested outfit slots use color targets. Full palette, 12-chip, Default/cycling and region-boundary review remains. The user confirms they are testing colors; observe without changing their controls. Preserve their latest selection rather than restoring the older pre-restart look over it.
 
 2026-09-21: [Authored swatches and Eve palettes](development/authored-color-swatches.md) prepared offline. CSS supplies ordered swatch UI, reset behavior, data validation and saved-state handling; mod authors supply model-specific masks, material bindings and palette content. Eve candidate `work/colors3` has five outfit-only palettes and ten color controls with 12 choices each. New region masks preserve original coverage; native package/cache checks pass. Live installation, appearance and menu checks remain. Preserve accepted V44 rig, hair 200/24/0, -3 cm ground offset and disabled CSSX.
