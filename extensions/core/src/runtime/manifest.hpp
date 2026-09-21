@@ -20,11 +20,4 @@ fs::path contained_file(const fs::path& root,const std::string& relative);
 Discovery discover(const fs::path&);
 void validate_model(const Json&);
 Json bind_menu(const Json& definition,const Json& model);
-struct LibraryPage {
-    size_t count=0, page=0, selected=0;
-    size_t pages() const { return std::max(size_t{1},(count+8)/9); }
-    void normalize();
-    void move(int x,int y);
-    void slide(int direction);
-};
 }

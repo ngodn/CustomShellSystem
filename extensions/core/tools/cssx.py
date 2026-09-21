@@ -2,9 +2,10 @@
 """Build, stage and talk to standalone CSSX. Python 3.14, standard library.
 
   cssx.py build [--dev]                 cross-build main.dll, cssx_core.dll, cheat_menu.dll
-  cssx.py stage [--dev] [--cheat-menu]  install into ue4ss/Mods/CSSX (backs up what it replaces)
+  cssx.py stage [--dev] [--cheat-menu] [--core-only]  install into ue4ss/Mods/CSSX (backs up what it replaces)
   cssx.py status                        print runtime/status.json and runtime/loader.json
   cssx.py request '{"op":"status"}'     dev channel request (needs Mods/CSSX/dev/enabled.txt)
+                                        runtime ops name the extension with "extension", e.g. {"op":"model","extension":"eins0fx.cheat-menu"}
   cssx.py frame --seconds 10            frame statistics from the loader ring
   cssx.py quit                          ask the game to quit through Kismet QuitGame
   cssx.py disable | enable              toggle Mods/CSSX/enabled.txt (game closed)
@@ -84,7 +85,7 @@ def build(dev: bool) -> Path:
     return out
 
 
-def stage(game: Path, dev: bool, cheat_menu: bool) -> None:
+def stage(game: Path, dev: bool, cheat_menu: bool, core_only: bool = False) -> None:
     ue4ss = game / 'Binaries/Win64/ue4ss'
     if sha(ue4ss / 'UE4SS.dll') != PIN['dll_sha256']:
         raise RuntimeError('Installed UE4SS differs from the pinned runtime; refusing to stage')
@@ -95,9 +96,12 @@ def stage(game: Path, dev: bool, cheat_menu: bool) -> None:
     backup = ROOT / 'work/backups' / stamp
     loader_source = out / 'main.dll'
     loader_target = mod / 'dlls/main.dll'
+    if loader_target.exists() and sha(loader_target) != sha(loader_source) and core_only:
+        print('Loader differs from the build; kept the installed one (--core-only). Restage with the game closed to update it.')
+        loader_source = loader_target
     if loader_target.exists() and sha(loader_target) != sha(loader_source):
         if running:
-            raise RuntimeError('The loader changed and the game is running. Close the game to replace dlls/main.dll, or stage only the core.')
+            raise RuntimeError('The loader changed and the game is running. Close the game to replace dlls/main.dll, or pass --core-only.')
         backup.mkdir(parents=True, exist_ok=True)
         copy_verified(loader_target, backup / 'main.dll')
     if not loader_target.exists() or sha(loader_target) != sha(loader_source):
@@ -165,7 +169,7 @@ def request(game: Path, value: dict, timeout: float = 20) -> dict:
     if not (mod / 'dev/enabled.txt').exists():
         raise RuntimeError('The dev channel is off: create Mods/CSSX/dev/enabled.txt and restart the game')
     rid = str(time.time_ns())
-    atomic(mod / 'runtime/request.json', {'id': rid, **value})
+    atomic(mod / 'runtime/request.json', {**value, 'id': rid})   # 'extension' names the target; 'id' is the request id
     return wait_json(mod / 'runtime/response.json', lambda j: j.get('id') == rid, timeout)
 
 
@@ -176,13 +180,14 @@ def main() -> None:
     parser.add_argument('json', nargs='?')
     parser.add_argument('--dev', action='store_true')
     parser.add_argument('--cheat-menu', action='store_true')
+    parser.add_argument('--core-only', action='store_true', help='stage: keep the installed loader')
     parser.add_argument('--seconds', type=float, default=10)
     args = parser.parse_args()
     mod = mod_root(args.game)
     if args.action == 'build':
         print(build(args.dev))
     elif args.action == 'stage':
-        stage(args.game, args.dev, args.cheat_menu)
+        stage(args.game, args.dev, args.cheat_menu, args.core_only)
     elif args.action == 'status':
         for name in ('loader', 'status'):
             path = mod / 'runtime' / f'{name}.json'

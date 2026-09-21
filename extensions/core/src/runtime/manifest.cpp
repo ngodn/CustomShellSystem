@@ -148,18 +148,4 @@ Json bind_menu(const Json& definition,const Json& model) {
     result["error"]=text(model,"error",2048,false);
     validate_model(result);return result;
 }
-void LibraryPage::normalize() { page=std::min(page,pages()-1); selected=count?std::min(selected,count-1):0; }
-void LibraryPage::slide(int direction) {
-    normalize(); if(!count) return;
-    auto next=std::clamp(static_cast<int>(page)+direction,0,static_cast<int>(pages())-1);
-    const size_t slot=selected%9; page=static_cast<size_t>(next); selected=std::min(page*9+slot,count-1);
-}
-void LibraryPage::move(int x,int y) {
-    normalize(); if(!count) return;
-    const int slot=static_cast<int>(selected%9),col=slot%3,row=slot/3;
-    if(x && ((col==0 && x<0) || (col==2 && x>0))) { slide(x); return; }
-    int next=slot+x+3*y;
-    if(next<0 || next>=9) return;
-    selected=std::min(page*9+static_cast<size_t>(next),count-1);
-}
 }

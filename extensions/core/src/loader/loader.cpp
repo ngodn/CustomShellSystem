@@ -93,9 +93,11 @@ public:
         ModVersion = CSSX_VERSION_WIDE;
         ModDescription = STR("Custom Shell System Extensions: standalone extension platform for Mortal Shell II");
         ModAuthors = STR("_eins0fx");
-        // Directory change notification instead of polling core.json.
+        // Directory change notification instead of polling core.json. core.json
+        // lives in the mod root, so that is the watched directory (non-recursive:
+        // runtime/ and logs/ writes do not wake it).
         std::error_code ec; std::filesystem::create_directories(root_ / "core", ec);
-        watch_ = FindFirstChangeNotificationW((root_ / "core").c_str(), FALSE, FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_SIZE);
+        watch_ = FindFirstChangeNotificationW(root_.c_str(), FALSE, FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_SIZE);
         log_line(("CSSX loader " CSSX_VERSION " created at " + cssx::path_utf8(root_) + "; engine untouched until Unreal initialization").c_str());
     }
     void on_unreal_init() override {

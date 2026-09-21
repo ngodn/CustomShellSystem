@@ -19,7 +19,7 @@ constexpr Color ink{.62f,.56f,.45f,1}, bright{.86f,.80f,.68f,1}, muted{.36f,.32f
 constexpr Color danger{.72f,.28f,.22f,1}, warning{.78f,.58f,.22f,1}, good{.42f,.62f,.36f,1};
 constexpr Color backdrop{.012f,.010f,.008f,.96f}, panel{.030f,.026f,.020f,.92f}, row_selected{.09f,.072f,.040f,.85f}, line{.16f,.13f,.09f,1};
 constexpr double reference_h=1080;
-constexpr int library_visible=9, controls_visible=10;
+constexpr int library_visible=9, controls_visible=9;
 // Controller prompt glyph ids of the game's WBP_Prompt (E_ControllerButton).
 constexpr uint8_t glyph_accept=3, glyph_secondary=4, glyph_back=5, glyph_left_bumper=8, glyph_right_bumper=9, glyph_up=13, glyph_down=14, glyph_left=15, glyph_right=16;
 const std::array<std::pair<std::string_view,uint8_t>,22> keyboard_icons{{
@@ -80,57 +80,128 @@ void mark(Layout& ui,double x,double y,bool selected) {
     if(selected) { auto* dot=ui.box(x+4,y+4,4,4,gold); invoke(dot,L"SetRenderTransformAngle",L"Angle",45.f); }
 }
 }
+namespace {
+UObject* nav_children_refresh(UObject* tabs) { if(auto* nav=object_of(tabs,L"NavigationObject")) invoke(nav,L"GetNavigableChildren"); return tabs; }
+void reorder(UObject* panel,const std::vector<UObject*>& desired) {
+    // Re-add children in the desired order keeping each HorizontalBoxSlot's layout.
+    struct Slot { UObject* child; Margin padding; std::array<std::byte,8> size; uint8_t horizontal,vertical; };
+    std::vector<Slot> slots;
+    for(auto* child:desired) if(auto* slot=object_of(child,L"Slot"); slot && slot->GetClassPrivate()->GetName()==L"HorizontalBoxSlot")
+        slots.push_back({child,read<Margin>(slot,L"Padding"),read<std::array<std::byte,8>>(slot,L"Size"),read<uint8_t>(slot,L"HorizontalAlignment"),read<uint8_t>(slot,L"VerticalAlignment")});
+    std::vector<UObject*> rooted; for(auto* child:desired) if(!child->IsRootSet()) { child->SetRootSet(); rooted.push_back(child); }
+    try {
+        invoke(panel,L"ClearChildren");
+        for(auto* child:desired) { Call add(panel,L"AddChild",2); add.set(L"content",child); add.run(); }
+        for(const auto& saved:slots) if(auto* slot=object_of(saved.child,L"Slot")) {
+            invoke(slot,L"SetPadding",L"InPadding",saved.padding);
+            invoke(slot,L"SetSize",L"InSize",saved.size);
+            invoke(slot,L"SetHorizontalAlignment",L"InHorizontalAlignment",saved.horizontal);
+            invoke(slot,L"SetVerticalAlignment",L"InVerticalAlignment",saved.vertical);
+        }
+    } catch(...) { for(auto* child:rooted) child->ClearRootSet(); throw; }
+    for(auto* child:rooted) child->ClearRootSet();
+    if(children(panel)!=desired) throw std::runtime_error("Player Menu child ordering did not apply");
+}
+}
+void Menu::navigate(int index) {
+    auto* tabs=tabs_.Get(); if(!tabs) return;
+    Call nav(tabs,L"NavigateToCustomIndex",3); nav.set(L"Index",int32_t{index}); nav.run();
+    if(!nav.get<bool>(L"Success")) throw std::runtime_error("Player Menu tab navigation rejected the index");
+}
+bool Menu::attach(const PlayerContext& player) {
+    auto* handler=object_of(player.pc,L"User Interface Handler Component");
+    auto* game=object_of(handler,L"WBP_Menu_Game");
+    auto* main=object_of(game,L"WBP_Menu_Main");
+    if(!main || !bool_of(main,L"bOpen")) return false;
+    auto* tabs=object_of(main,L"BP_HBC_Menu_Game"); auto* pages=object_of(main,L"BP_WS_Menu_Game"); auto* original=object_of(main,L"WBP_NBM_Inventory");
+    if(!tabs || !pages || !original) throw std::runtime_error("Player Menu layout is unavailable");
+    const auto page_list=children(pages); const auto tab_list=children(tabs);
+    // CSS adds its own tab first (it needs exactly three pages when it attaches
+    // and orders four). Wait for it when CSS is installed; give up waiting
+    // after two seconds so a broken CSS never hides CSSX.
+    const auto now=GetTickCount64();
+    const size_t expected=css_present_?4:3;
+    if(page_list.size()!=expected || tab_list.size()!=expected) {
+        if(!attach_wait_since_) attach_wait_since_=now;
+        if(page_list.size()<3 || page_list.size()>4 || now-attach_wait_since_<2000) return false;
+    }
+    if(page_list.size()>4) throw std::runtime_error("Player Menu already has "+std::to_string(page_list.size())+" pages; another mod owns the extra tab");
+    attach_wait_since_=0;
+    auto* tab=create_widget(player.pc,original->GetClassPrivate());
+    for(auto name:{L"FontData",L"RootSize",L"RootScale",L"DefaultColor",L"SelectedColor",L"bUseHighlight",L"HighlightY"}) {
+        auto* p=tab->GetPropertyByNameInChain(name); auto* q=original->GetPropertyByNameInChain(name);
+        if(!p || !q || !p->SameType(q)) throw std::runtime_error("Player Menu tab style mismatch");
+        p->CopyCompleteValue(reinterpret_cast<std::byte*>(tab)+p->GetOffset_Internal(),reinterpret_cast<std::byte*>(original)+q->GetOffset_Internal());
+    }
+    Call convert(find(L"/Script/Engine.Default__KismetTextLibrary"),L"Conv_StringToText",2);
+    convert.set(L"InString",FString(L"CSSX")); convert.run();
+    auto* text=tab->GetPropertyByNameInChain(L"Text");
+    if(!text || !text->SameType(convert.param(L"ReturnValue"))) throw std::runtime_error("Player Menu tab title mismatch");
+    text->CopyCompleteValue(reinterpret_cast<std::byte*>(tab)+text->GetOffset_Internal(),convert.data(convert.param(L"ReturnValue")));
+    invoke(tab,L"UpdateText"); invoke(tab,L"CommitSize"); invoke(tab,L"CommitScale");
+    auto* page=create_widget(player.pc,static_cast<UClass*>(main->GetClassPrivate()->GetSuperStruct()));
+    auto* tree=object_of(page,L"WidgetTree"); if(!tree) throw std::runtime_error("CSSX page has no widget tree");
+    auto* canvas=construct(L"/Script/UMG.CanvasPanel",tree); object_property(tree,L"RootWidget",canvas);
+    { Call add(pages,L"AddChild",2); add.set(L"content",page); add.run(); }
+    { Call add(tabs,L"AddChildToHorizontalBox",2); add.set(L"content",tab); add.run(); }
+    pc_=player.pc; handler_=handler; main_=main; tabs_=tabs; switcher_=pages; page_=page; tab_=tab; tree_=tree; canvas_=canvas;
+    order_tabs();
+    if(deps_.log) deps_.log("CSSX tab attached to the Player Menu at index "+std::to_string(tab_index_));
+    return true;
+}
+void Menu::order_tabs() {
+    auto tabs=children(tabs_.Get()); auto pages=children(switcher_.Get());
+    if(tabs.size()!=pages.size() || tabs.size()<4 || tabs.size()>5) throw std::runtime_error("Player Menu tab count is unexpected");
+    // Inventory, [CSS], CSSX, Tarstones, Map. CSS puts itself at 1; we go after it.
+    const int index=int(tabs.size())==5?2:1;
+    auto move_to=[&](auto& values,UObject* value){ auto it=std::find(values.begin(),values.end(),value); if(it==values.end()) throw std::runtime_error("CSSX child is missing"); values.erase(it); values.insert(values.begin()+index,value); };
+    move_to(tabs,tab_.Get()); move_to(pages,page_.Get());
+    reorder(switcher_.Get(),pages); reorder(tabs_.Get(),tabs);
+    // Share the original top bar spacing across the extra title(s), as CSS does.
+    const float factor=tabs.size()==5?.6f:.75f;
+    std::array<float,4> reference{80,0,80,0};
+    for(auto* child:tabs) if(child!=tab_.Get()) if(auto* slot=object_of(child,L"Slot")) { reference=read<std::array<float,4>>(slot,L"Padding"); break; }
+    if(auto* slot=object_of(tab_.Get(),L"Slot")) {
+        auto padding=reference; padding[0]*=factor; padding[2]*=factor;
+        invoke(slot,L"SetPadding",L"InPadding",padding);
+        invoke(slot,L"SetHorizontalAlignment",L"InHorizontalAlignment",uint8_t{2});
+        invoke(slot,L"SetVerticalAlignment",L"InVerticalAlignment",uint8_t{2});
+    }
+    nav_children_refresh(tabs_.Get());
+    tab_index_=index;
+}
 bool Menu::open(const PlayerContext& player,std::string* reason) {
     auto fail=[&](const std::string& why){ if(reason) *reason=why; return false; };
-    if(open_) return true;
-    if(!player.pc || !player.world) return fail("No player controller yet");
+    if(!player.pc) return fail("No player controller yet");
     auto* handler=object_of(player.pc,L"User Interface Handler Component");
     if(!handler) return fail("The game's UI handler component is unavailable");
-    try {
-        auto* widget=create_widget(player.pc,static_cast<UClass*>(find(L"/Script/UMG.UserWidget")));
-        UObject* tree=object_of(widget,L"WidgetTree");
-        if(!tree) { tree=construct(L"/Script/UMG.WidgetTree",widget); object_property(widget,L"WidgetTree",tree); }
-        auto* canvas=construct(L"/Script/UMG.CanvasPanel",tree);
-        object_property(tree,L"RootWidget",canvas);
-        invoke(widget,L"AddToViewport",L"ZOrder",int32_t{10000});
-        pc_=player.pc; handler_=handler; widget_=widget; tree_=tree; canvas_=canvas;
-        // The game's own menu path: focus, input mapping, cursor, pause, HUD.
-        Call enable(handler,L"EnableUserInterfaceInput",6);
-        enable.set(L"InWidgetToFocus",widget); enable.set(L"InMouseLockMode",uint8_t{0});
-        enable.set(L"AddInputMapping",true); enable.set(L"ShowCursor",true);
-        enable.set(L"PauseGame",deps_.settings->pause_while_open); enable.set(L"HidePlayerHUD",deps_.settings->hide_hud_while_open); enable.run();
-        invoke(handler,L"UpdateActiveMenu",L"NewWidget",widget);
-        open_=true; dirty_=true; enter_=true; error_.clear(); confirm_=nullptr; details_=picker_=false;
-        bind_inputs();
-        const auto now=GetTickCount64();
-        for(auto& b:bindings_) { b.down=true; b.repeat=now+400; }
-        mouse_left_=true;
-        refresh_library(true);
-        return true;
-    } catch(const std::exception& e) {
-        restore_input(true);
-        return fail(std::string("Menu construction failed: ")+e.what());
-    }
-}
-void Menu::restore_input(bool handler_alive) {
-    auto* handler=handler_.Get();
-    if(handler && handler_alive) {
-        try { invoke(handler,L"ResetActiveMenu"); } catch(...) {}
-        try {
-            Call disable(handler,L"DisableUserInterfaceInput",4);
-            disable.set(L"RemoveInputMapping",true); disable.set(L"UnpauseGame",deps_.settings->pause_while_open);
-            disable.set(L"HideCursor",true); disable.set(L"ShowPlayerHUD",deps_.settings->hide_hud_while_open); disable.run();
-        } catch(const std::exception& e) { if(deps_.log) deps_.log(std::string("Input restore failed: ")+e.what()); }
-    }
-    if(auto* widget=widget_.Get()) { try { invoke(widget,L"RemoveFromParent"); } catch(...) {} }
-    widget_.Reset(); tree_.Reset(); canvas_.Reset(); handler_.Reset(); pc_.Reset(); prompt_.Reset();
-    hits_.clear(); sliders_.clear(); bindings_.clear(); textures_.clear();
-    search_input_.Reset(); search_results_.Reset(); search_count_.Reset(); description_.Reset(); name_input_.Reset();
+    if(active_) return true;
+    auto* main=object_of(object_of(handler,L"WBP_Menu_Game"),L"WBP_Menu_Main");
+    if(main && bool_of(main,L"bOpen")) { if(page_.Get()) { navigate(tab_index_); return true; } return fail("Player Menu is open but the CSSX tab is not attached yet"); }
+    // Open the Player Menu through the game's own handler, then select the
+    // CSSX tab once it is attached (see tick).
+    Call open_call(handler,L"HandleGameMenu",2); open_call.set(L"SubTabIndex",int32_t{0}); open_call.set(L"AllowClose",false); open_call.run();
+    open_requested_=true; open_requested_at_=GetTickCount64();
+    return true;
 }
 void Menu::close() {
-    if(!open_) return;
-    open_=false;
-    restore_input(handler_.Get()!=nullptr);
+    if(!main_.Get() || !bool_of(main_.Get(),L"bOpen")) return;
+    auto* handler=handler_.Get(); if(!handler) return;
+    Call close_call(handler,L"HandleGameMenu",2); close_call.set(L"SubTabIndex",int32_t{0}); close_call.set(L"AllowClose",true); close_call.run();
+    active_=was_active_=false;
+}
+void Menu::forget() {
+    page_.Reset(); tab_.Reset(); tree_.Reset(); canvas_.Reset(); main_.Reset(); tabs_.Reset(); switcher_.Reset(); handler_.Reset(); pc_.Reset(); prompt_.Reset();
+    hits_.clear(); sliders_.clear(); bindings_.clear(); textures_.clear();
+    search_input_.Reset(); search_results_.Reset(); search_count_.Reset(); description_.Reset(); name_input_.Reset();
+    active_=was_active_=false; tab_index_=-1; attach_wait_since_=0;
+}
+void Menu::detach() {
+    if(auto* tabs=tabs_.Get(); tabs && tab_.Get() && main_.Get() && active_) { try { navigate(0); } catch(...) {} }
+    if(auto* page=page_.Get()) { try { invoke(page,L"RemoveFromParent"); } catch(...) {} }
+    if(auto* tab=tab_.Get()) { try { invoke(tab,L"RemoveFromParent"); } catch(...) {} }
+    if(auto* tabs=tabs_.Get()) { try { nav_children_refresh(tabs); } catch(...) {} }
+    forget();
 }
 void Menu::bind_inputs() {
     bindings_.clear();
@@ -148,27 +219,42 @@ void Menu::bind_inputs() {
         {L"IA_Menu_Confirm_Primary_Press","accept"},{L"IA_Menu_Confirm_Secondary_Press","secondary"},{L"IA_Menu_Back","close"}};
     auto* a=static_cast<FArrayProperty*>(p); FScriptArrayHelper values(a,reinterpret_cast<std::byte*>(mapping)+p->GetOffset_Internal());
     if(values.Num()<0 || values.Num()>256) throw std::runtime_error("Input map exceeds bound");
-    auto* ap=field(find(L"/Script/EnhancedInput.EnhancedActionKeyMapping"),L"Action",8);
+    auto* mapping_struct=find(L"/Script/EnhancedInput.EnhancedActionKeyMapping");
+    auto* ap=field(mapping_struct,L"Action",8);
+    auto* key_field=mapping_struct->GetPropertyByNameInChain(L"Key");
     auto* kn=field(find(L"/Script/InputCore.Key"),L"KeyName",sizeof(FName));
-    std::set<UObject*> seen;
+    if(!key_field || key_field->GetOffset_Internal()<0 || kn->GetOffset_Internal()+int(sizeof(FName))>key_field->GetElementSize()) throw std::runtime_error("Input mapping key layout mismatch");
+    const int element=a->GetInner()->GetElementSize();
+    if(ap->GetOffset_Internal()+8>element || key_field->GetOffset_Internal()+key_field->GetElementSize()>element) throw std::runtime_error("Input mapping element layout mismatch");
+    auto usable=[](const std::string& name){ return !(name=="Gamepad_LeftX" || name=="Gamepad_LeftY" || name=="Gamepad_RightX" || name=="Gamepad_RightY"); };
+    std::map<UObject*,size_t> index;
+    // Pass 1: the keys the context itself declares (covers every action even
+    // before Enhanced Input has rebuilt the player's applied mappings).
     for(int i=0;i<values.Num();++i) {
         UObject* action{}; std::memcpy(&action,values.GetRawPtr(i)+ap->GetOffset_Internal(),8);
-        if(!action || !seen.insert(action).second) continue;
+        if(!action) continue;
         const auto found=actions.find(action->GetName());
         if(found==actions.end()) continue;
-        Binding binding; binding.input_action=action; binding.action=found->second;
-        Call query(input,L"QueryKeysMappedToAction",2); query.set(L"Action",action); query.run();
-        auto* out=query.param(L"ReturnValue");
-        if(!out->IsA<FArrayProperty>()) throw std::runtime_error("Mapped input keys are not an array");
-        auto* array=static_cast<FArrayProperty*>(out); FScriptArrayHelper keys(array,query.data(out));
-        if(keys.Num()<0 || keys.Num()>32 || kn->GetOffset_Internal()+8>array->GetInner()->GetElementSize()) throw std::runtime_error("Mapped input key layout mismatch");
-        for(int n=0;n<keys.Num();++n) {
-            FName key{}; std::memcpy(&key,keys.GetRawPtr(n)+kn->GetOffset_Internal(),sizeof(key));
-            auto name=narrow(key.ToString());
-            if(name=="Gamepad_LeftX" || name=="Gamepad_LeftY" || name=="Gamepad_RightX" || name=="Gamepad_RightY") continue;
-            binding.keys.push_back(name);
-        }
-        bindings_.push_back(std::move(binding));
+        auto it=index.find(action);
+        if(it==index.end()) { Binding binding; binding.input_action=action; binding.action=found->second; bindings_.push_back(std::move(binding)); it=index.emplace(action,bindings_.size()-1).first; }
+        FName key{}; std::memcpy(&key,values.GetRawPtr(i)+key_field->GetOffset_Internal()+kn->GetOffset_Internal(),sizeof(key));
+        auto name=narrow(key.ToString());
+        auto& keys=bindings_[it->second].keys;
+        if(usable(name) && !name.empty() && name!="None" && std::find(keys.begin(),keys.end(),name)==keys.end()) keys.push_back(name);
+    }
+    // Pass 2: the player's applied mappings (remaps). When the query answers,
+    // it replaces the declared keys for that action.
+    for(auto& binding:bindings_) {
+        try {
+            Call query(input,L"QueryKeysMappedToAction",2); query.set(L"Action",binding.input_action.Get()); query.run();
+            auto* out=query.param(L"ReturnValue");
+            if(!out->IsA<FArrayProperty>()) continue;
+            auto* array=static_cast<FArrayProperty*>(out); FScriptArrayHelper keys(array,query.data(out));
+            if(keys.Num()<=0 || keys.Num()>32 || kn->GetOffset_Internal()+8>array->GetInner()->GetElementSize()) continue;
+            std::vector<std::string> applied;
+            for(int n=0;n<keys.Num();++n) { FName key{}; std::memcpy(&key,keys.GetRawPtr(n)+kn->GetOffset_Internal(),sizeof(key)); auto name=narrow(key.ToString()); if(usable(name)) applied.push_back(name); }
+            if(!applied.empty()) binding.keys=std::move(applied);
+        } catch(...) {}
     }
     if(bindings_.empty()) throw std::runtime_error("No menu navigation actions were found in the input mapping");
 }
@@ -221,23 +307,49 @@ void Menu::poll_mouse(const PlayerContext& player) {
     }
 }
 void Menu::tick(const PlayerContext& player,double) {
-    if(!open_) return;
-    auto* handler=handler_.Get(); auto* widget=widget_.Get();
-    if(!handler || !widget || player.pc!=pc_.Get()) {
-        // World travel or pawn replacement destroyed our context: restore
-        // what still exists and forget the rest.
-        if(deps_.log) deps_.log("Menu closed because its player context went away");
-        open_=false; restore_input(handler!=nullptr); return;
-    }
-    // Another menu took over (the game's own menu key still reaches the UI
-    // handler): yield rather than fight for input.
-    if(object_of(handler,L"ActiveMenu")!=widget) { if(deps_.log) deps_.log("Menu closed because the game opened another menu"); close(); return; }
     const auto now=GetTickCount64();
+    // Attached to a menu instance that went away (travel, new controller): forget it.
+    if(page_.Get() && (player.pc!=pc_.Get() || !main_.Get() || !handler_.Get())) { if(deps_.log) deps_.log("CSSX tab dropped with its Player Menu instance"); forget(); }
+    if(!page_.Get()) {
+        if(now<discover_after_) return; discover_after_=now+250;
+        if(!player.pc) return;
+        try { if(!attach(player)) return; } catch(const std::exception& e) { if(deps_.log) deps_.log(std::string("CSSX tab attach failed: ")+e.what()); discover_after_=now+2000; return; }
+    }
+    auto* main=main_.Get(); auto* switcher=switcher_.Get(); if(!main || !switcher) { forget(); return; }
+    const bool menu_open=bool_of(main,L"bOpen");
+    if(open_requested_ && menu_open) { open_requested_=false; try { navigate(tab_index_); } catch(const std::exception& e) { if(deps_.log) deps_.log(std::string("Could not select the CSSX tab: ")+e.what()); } }
+    if(open_requested_ && now-open_requested_at_>3000) open_requested_=false;
+    if(!menu_open) { active_=false; if(was_active_) { was_active_=false; } return; }
+    Call selected(switcher,L"GetActiveWidget",1); selected.run();
+    active_=selected.get<UObject*>()==page_.Get();
+    if(active_ && !was_active_) {
+        bindings_ready_=false; bind_retry_=0;
+        try { bind_inputs(); } catch(const std::exception& e) { if(deps_.log) deps_.log(std::string("Menu input binding failed: ")+e.what()); }
+        for(auto& b:bindings_) { b.down=true; b.repeat=now+400; }
+        mouse_left_=true; dirty_=true; enter_=true; error_.clear(); confirm_=nullptr; details_=picker_=false;
+        refresh_library(true);
+    }
+    if(!active_ && was_active_) { hits_.clear(); sliders_.clear(); }
+    was_active_=active_;
+    if(!active_) return;
+    // Enhanced Input rebuilds its key mappings a tick after the game adds the
+    // menu context, so the first query can come back empty. Retry until keys
+    // appear, then redraw the hints with the real glyphs.
+    if(!bindings_ready_ && now>=bind_retry_) {
+        bind_retry_=now+200;
+        try {
+            bind_inputs();
+            bindings_ready_=std::any_of(bindings_.begin(),bindings_.end(),[](const Binding& b){ return !b.keys.empty(); });
+            for(auto& b:bindings_) { b.down=true; b.repeat=now+400; }
+            if(bindings_ready_) dirty_=true;
+        } catch(...) {}
+    }
     if(now>=layout_check_) {
         layout_check_=now+500;
-        Call vp(find(L"/Script/UMG.Default__WidgetLayoutLibrary"),L"GetViewportSize",2);
-        vp.set(L"WorldContextObject",player.world); vp.run(); const auto size=vp.get<Vec2>();
-        if(std::abs(size.x-viewport_[0])>.5 || std::abs(size.y-viewport_[1])>.5) { viewport_={size.x,size.y}; dirty_=true; }
+        Call geometry(switcher,L"GetCachedGeometry",1); geometry.run();
+        Call size(find(L"/Script/UMG.Default__SlateBlueprintLibrary"),L"GetLocalSize",2); size.copy(L"Geometry",geometry,L"ReturnValue"); size.run();
+        const auto extent=size.get<Vec2>();
+        if(std::abs(extent.x-viewport_[0])>.5 || std::abs(extent.y-viewport_[1])>.5) { viewport_={extent.x,extent.y}; dirty_=true; }
     }
     if(auto* prompt=prompt_.Get()) { try { const bool gamepad=read<uint8_t>(prompt,L"InputType")==1; if(gamepad!=gamepad_) { gamepad_=gamepad; dirty_=true; } } catch(...) {} }
     if(now>=library_check_) { library_check_=now+250; refresh_library(false); }
@@ -247,7 +359,7 @@ void Menu::tick(const PlayerContext& player,double) {
     }
     try { poll_input(player,now); poll_mouse(player); }
     catch(const std::exception& e) { error_=e.what(); dirty_=true; }
-    if(!open_) return;
+    if(!active_) return;
     if(dirty_) { try { build(); } catch(const std::exception& e) { if(deps_.log) deps_.log(std::string("Menu build failed: ")+e.what()); error_=e.what(); dirty_=false; } }
 }
 void Menu::refresh_library(bool force) {
@@ -290,12 +402,12 @@ void Menu::key(const std::string& action) {
         const int count=int(library_["extensions"].size())+1;   // + CSSX settings entry
         if(action=="up" || action=="down") { library_row_=std::clamp(library_row_+(action=="up"?-1:1),0,std::max(0,count-1)); dirty_=true; }
         else if(action=="accept") act({{"action","open"},{"row",library_row_}});
-        else if(action=="close") close();
+        else if(action=="close") close();   // like CSS: the page closes the Player Menu itself
         return;
     }
     if(screen_==Screen::Settings) {
         if(action=="close") act({{"action","library"}});
-        else if(action=="up" || action=="down") { settings_row_=std::clamp(settings_row_+(action=="up"?-1:1),0,4); dirty_=true; }
+        else if(action=="up" || action=="down") { settings_row_=std::clamp(settings_row_+(action=="up"?-1:1),0,2); dirty_=true; }
         else if(action=="left" || action=="right" || action=="accept") act({{"action","settings_adjust"},{"delta",action=="left"?-1:1}});
         return;
     }
@@ -341,14 +453,12 @@ void Menu::act(const Json& action) {
         extension_id_=entry.at("id").get<std::string>(); screen_=Screen::Extension; section_=row_=first_row_=0; confirm_=nullptr;
         refresh_model(); dirty_=true; enter_=true; return;
     }
-    if(name=="settings_row" && screen_==Screen::Settings) { settings_row_=std::clamp(action.value("row",0),0,4); dirty_=true; return; }
+    if(name=="settings_row" && screen_==Screen::Settings) { settings_row_=std::clamp(action.value("row",0),0,2); dirty_=true; return; }
     if(name=="settings_adjust" && screen_==Screen::Settings) {
         auto& s=*deps_.settings; const int delta=action.value("delta",1);
         switch(settings_row_) {
         case 0: s.ui_scale=std::clamp(std::round((s.ui_scale+delta*0.05)*100)/100,0.75,1.5); break;
-        case 1: s.pause_while_open=!s.pause_while_open; break;
-        case 2: s.hide_hud_while_open=!s.hide_hud_while_open; break;
-        case 3: s.show_extension_status=!s.show_extension_status; break;
+        case 1: s.show_extension_status=!s.show_extension_status; break;
         default: break;
         }
         try { if(deps_.save_settings) deps_.save_settings(); } catch(const std::exception& e) { error_=std::string("Settings not saved: ")+e.what(); }
@@ -415,9 +525,9 @@ UObject* Menu::prompt(Layout& ui,const std::string& action,const std::string& te
     }
     raw_value(widget,L"ControllerPrompt",icon);
     raw_value(widget,L"PromptSize",Vec2{80,80}); raw_value(widget,L"OverrideControllerSize",Vec2{80,80}); raw_value(widget,L"OverrideKBMSize",Vec2{80,80});
-    ui.place(widget,x,y,28,28); invoke(widget,L"UpdatePrompt"); invoke(widget,L"UpdatePromptSize");
+    ui.place(widget,x,y-4,64,36); invoke(widget,L"UpdatePrompt"); invoke(widget,L"UpdatePromptSize");
     invoke(widget,L"SetVisibility",L"InVisibility",uint8_t{3});
-    if(!text.empty()) ui.label(text,x+36,y+2,w-36,30,18,muted);
+    if(!text.empty()) ui.label(text,x+76,y+2,w-76,30,18,muted);
     prompt_=widget;
     return widget;
 }
@@ -428,10 +538,13 @@ void Menu::build_footer(Layout& ui,double width,const std::vector<std::pair<std:
     ui.box(60,y-14,width-120,1,line);
     struct Glyph { const char* action; uint8_t icon; };
     static const std::map<std::string,uint8_t> icons={{"accept",glyph_accept},{"secondary",glyph_secondary},{"close",glyph_back},{"previous_section",glyph_left_bumper},{"next_section",glyph_right_bumper},{"up",glyph_up},{"down",glyph_down},{"left",glyph_left},{"right",glyph_right}};
+    // Glyphs from the game's prompt widget are up to ~64 units wide (keyboard
+    // keys such as ESC or Enter), so labels start 76 units in and each item
+    // reserves room for its glyph plus text.
     double x=70;
-    for(const auto& [action,text]:left) { prompt(ui,action,text,x,y,260,icons.at(action)); x+=text.empty()?40:std::min(280.,60+text.size()*10.5); }
+    for(const auto& [action,text]:left) { prompt(ui,action,text,x,y,320,icons.at(action)); x+=text.empty()?72:std::min(340.,100+text.size()*10.5); }
     double rx=width-70;
-    for(auto it=right.rbegin();it!=right.rend();++it) { const double w=std::min(300.,60+it->second.size()*10.5); rx-=w; prompt(ui,it->first,it->second,rx,y,w,icons.at(it->first)); rx-=24; }
+    for(auto it=right.rbegin();it!=right.rend();++it) { const double w=std::min(360.,100+it->second.size()*10.5); rx-=w; prompt(ui,it->first,it->second,rx,y,w,icons.at(it->first)); rx-=28; }
     const auto status=error_.empty()?(model_.is_object()?model_.value("status",std::string{}):std::string{}):error_;
     if(!status.empty()) ui.label(status,70,y-58,width-140,36,18,error_.empty()?muted:danger);
 }
@@ -440,15 +553,15 @@ void Menu::build() {
     const auto started=monotonic_us();
     invoke(canvas,L"ClearChildren"); hits_.clear(); sliders_.clear(); search_input_.Reset(); search_results_.Reset(); search_count_.Reset(); description_.Reset(); name_input_.Reset();
     if(viewport_[0]<640 || viewport_[1]<360) {
-        Call vp(find(L"/Script/UMG.Default__WidgetLayoutLibrary"),L"GetViewportSize",2);
-        vp.set(L"WorldContextObject",object_of(pc_.Get(),L"Level")?pc_.Get():pc_.Get()); vp.run(); const auto size=vp.get<Vec2>(); viewport_={size.x,size.y};
+        Call geometry(switcher_.Get(),L"GetCachedGeometry",1); geometry.run();
+        Call size(find(L"/Script/UMG.Default__SlateBlueprintLibrary"),L"GetLocalSize",2); size.copy(L"Geometry",geometry,L"ReturnValue"); size.run();
+        const auto extent=size.get<Vec2>(); viewport_={extent.x,extent.y};
         if(viewport_[0]<640 || viewport_[1]<360) { dirty_=false; return; }
     }
-    // DPI: UMG applies the project's DPI curve; our reference is 1080 rows.
-    Call dpi(find(L"/Script/UMG.Default__WidgetLayoutLibrary"),L"GetViewportScale",2); dpi.set(L"WorldContextObject",pc_.Get()); dpi.run();
-    const double viewport_scale=std::max(0.1f,dpi.get<float>());
-    const double scale=(viewport_[1]/viewport_scale)/reference_h*deps_.settings->ui_scale;
-    const double width=(viewport_[0]/viewport_scale)/scale;
+    // The page canvas is the switcher area under the game's top bar, in
+    // slate units. Reference height 1080 maps onto it.
+    const double scale=viewport_[1]/reference_h*deps_.settings->ui_scale;
+    const double width=viewport_[0]/scale;
     auto* serif=load("/Game/Sparta/UI/Fonts/CrimsonText-Regular_Font.CrimsonText-Regular_Font");
     auto* title=load("/Game/Sparta/UI/Fonts/Trajan_Pro_Regular_Font.Trajan_Pro_Regular_Font");
     Layout ui{tree,canvas,scale,serif,title};
@@ -465,12 +578,12 @@ void Menu::build() {
 }
 void Menu::build_library(Layout& ui,double width) {
     const auto& entries=library_["extensions"];
-    ui.label("CSSX",80,44,600,64,40,bright,true);
-    ui.label("Custom Shell System Extensions  /  "+deps_.version,84,112,700,30,18,muted);
-    ui.box(80,152,width-160,1,line);
+    ui.label("Extensions",80,124,600,52,30,bright,true);
+    ui.label("CSSX "+deps_.version,84,174,700,28,16,muted);
+    ui.box(80,208,width-160,1,line);
     const int count=int(entries.size())+1;
     library_row_=std::clamp(library_row_,0,count-1);
-    const double list_x=80,list_w=std::min(1040.,width*0.55),row_h=74,top=180;
+    const double list_x=80,list_w=std::min(1040.,width*0.55),row_h=74,top=232;
     const int first=std::clamp(library_row_-library_visible+1,0,std::max(0,count-library_visible));
     for(int i=first;i<std::min(first+library_visible,count);++i) {
         const double y=top+(i-first)*row_h; const bool selected=i==library_row_;
@@ -497,7 +610,7 @@ void Menu::build_library(Layout& ui,double width) {
     }
     // Right panel: what the selected entry is, plus framework notices.
     const double px=list_x+list_w+60,pw=width-px-80;
-    ui.box(px,top,pw,760,panel); ui.box(px+24,top,pw-48,1,line);
+    ui.box(px,top,pw,700,panel); ui.box(px+24,top,pw-48,1,line);
     if(library_row_<int(entries.size())) {
         const auto& e=entries[library_row_];
         ui.label(e.value("title",std::string{}),px+24,top+22,pw-48,44,26,bright,true);
@@ -524,25 +637,24 @@ void Menu::build_library(Layout& ui,double width) {
     }
     Json notice=deps_.notice?deps_.notice():Json::object();
     const auto text=notice.value("notice",std::string{});
-    if(!text.empty()) { ui.box(px+24,top+640,pw-48,1,line); ui.label(text,px+24,top+652,pw-48,96,16,warning); }
-    else if(!library_["errors"].empty()) { ui.box(px+24,top+640,pw-48,1,line); ui.label(std::to_string(library_["errors"].size())+" extension folder(s) could not load. See logs/cssx.jsonl.",px+24,top+652,pw-48,60,16,warning); }
+    if(!text.empty()) { ui.box(px+24,top+580,pw-48,1,line); ui.label(text,px+24,top+592,pw-48,96,16,warning); }
+    else if(!library_["errors"].empty()) { ui.box(px+24,top+580,pw-48,1,line); ui.label(std::to_string(library_["errors"].size())+" extension folder(s) could not load. See logs/cssx.jsonl.",px+24,top+592,pw-48,60,16,warning); }
     if(entries.empty()) ui.label("No extensions installed. Add extension folders under Mods/CSSX/extensions.",list_x,top+library_visible*row_h+12,list_w,40,18,muted);
     build_footer(ui,width,{{"up",""},{"down","Browse"},{"close","Close"}},{{"accept","Open"}});
 }
 void Menu::build_settings(Layout& ui,double width) {
-    ui.label("CSSX settings",80,44,800,64,40,bright,true);
-    ui.label("Saved to Mods/CSSX/settings.json",84,112,700,30,18,muted);
-    ui.box(80,152,width-160,1,line);
+    ui.label("CSSX settings",80,124,800,52,30,bright,true);
+    ui.label("Saved to Mods/CSSX/settings.json",84,174,700,28,16,muted);
+    ui.box(80,208,width-160,1,line);
     const auto& s=*deps_.settings;
     struct Row { std::string label,value,hint; };
     char scale[16]; std::snprintf(scale,sizeof scale,"%.0f%%",s.ui_scale*100);
+    // The Player Menu owns pause, cursor and HUD, so only these remain.
     const std::vector<Row> rows={
-        {"Menu scale",scale,"Size of this menu relative to the 1080p layout. 75% to 150%."},
-        {"Pause the game while open",s.pause_while_open?"On":"Off","Uses the game's own pause counter through its UI handler."},
-        {"Hide the HUD while open",s.hide_hud_while_open?"On":"Off","Hides the player HUD like the game's menus do."},
+        {"Menu scale",scale,"Size of this page relative to the 1080p layout. 75% to 150%."},
         {"Show extension status in the library",s.show_extension_status?"On":"Off","Extensions can report a one-line status, for example active cheats."},
-        {"Open keys",[&]{ std::string t; for(const auto& k:s.open_keyboard) t+=(t.empty()?"":"+")+k; t+="  /  "; std::string g; for(const auto& k:s.open_gamepad) g+=(g.empty()?"":"+")+k; return t+g; }(),"Edit open_keyboard and open_gamepad in settings.json with the game closed. Unreal key names."}};
-    const double x=80,w=std::min(1000.,width*0.55),row_h=68,top=180;
+        {"Open keys",[&]{ std::string t; for(const auto& k:s.open_keyboard) t+=(t.empty()?"":"+")+k; t+="  /  "; std::string g; for(const auto& k:s.open_gamepad) g+=(g.empty()?"":"+")+k; return t+g; }(),"Shortcut that opens the Player Menu on the CSSX tab. Edit open_keyboard and open_gamepad in settings.json with the game closed (Unreal key names)."}};
+    const double x=80,w=std::min(1000.,width*0.55),row_h=68,top=232;
     for(size_t i=0;i<rows.size();++i) {
         const double y=top+i*row_h; const bool selected=int(i)==settings_row_;
         auto* hit=ui.button("",x,y,w,row_h-6,selected,true); hits_.push_back({WeakObject(hit),{{"action","settings_row"},{"row",int(i)}},false});
@@ -554,19 +666,19 @@ void Menu::build_settings(Layout& ui,double width) {
     ui.box(px,top,pw,420,panel);
     ui.label(rows[settings_row_].label,px+24,top+22,pw-48,44,24,bright,true);
     scroll_text(ui,rows[settings_row_].hint,px+24,top+80,pw-48,200,19,ink);
-    if(settings_row_<4) {
+    if(settings_row_<2) {
         auto* less=ui.button("<",px+24,top+300,56,48,false,true,22,ink); hits_.push_back({WeakObject(less),{{"action","settings_adjust"},{"delta",-1}},false});
         auto* more=ui.button(">",px+pw-80,top+300,56,48,false,true,22,ink); hits_.push_back({WeakObject(more),{{"action","settings_adjust"},{"delta",1}},false});
         ui.label(rows[settings_row_].value,px+90,top+306,pw-180,40,22,gold,false,1);
     }
-    build_footer(ui,width,{{"up",""},{"down","Browse"},{"close","Library"}},settings_row_<4?std::vector<std::pair<std::string,std::string>>{{"left",""},{"right","Adjust"}}:std::vector<std::pair<std::string,std::string>>{});
+    build_footer(ui,width,{{"up",""},{"down","Browse"},{"close","Library"}},settings_row_<2?std::vector<std::pair<std::string,std::string>>{{"left",""},{"right","Adjust"}}:std::vector<std::pair<std::string,std::string>>{});
 }
 void Menu::build_extension(Layout& ui,double width) {
     const Json* entry=nullptr; for(const auto& e:library_["extensions"]) if(e.value("id",std::string{})==extension_id_) entry=&e;
     if(!entry) { screen_=Screen::Library; extension_id_.clear(); build_library(ui,width); return; }
-    ui.label(entry->value("title",std::string{}),80,44,width-160,64,36,bright,true);
-    ui.label("by "+entry->value("author",std::string{})+"  /  "+entry->value("version",std::string{}),84,110,width-400,30,18,muted);
-    ui.box(80,152,width-160,1,line);
+    ui.label(entry->value("title",std::string{}),80,124,width-160,52,30,bright,true);
+    ui.label("by "+entry->value("author",std::string{})+"  /  "+entry->value("version",std::string{}),84,174,width-400,28,16,muted);
+    ui.box(80,208,width-160,1,line);
     if(!model_.is_object() || !model_.contains("sections")) {
         ui.label(error_.empty()?"This extension has no menu.":error_,80,220,width-160,200,22,danger);
         build_footer(ui,width,{{"close","Library"}},{}); return;
@@ -574,7 +686,7 @@ void Menu::build_extension(Layout& ui,double width) {
     const auto& sections=model_["sections"]; const int count=int(sections.size());
     section_=std::clamp(section_,0,std::max(0,count-1));
     // Left rail: sections.
-    const double rail_x=80,rail_w=280,top=176;
+    const double rail_x=80,rail_w=280,top=240;
     for(int i=0;i<count;++i) {
         const double y=top+i*56; const bool selected=i==section_;
         auto* hit=ui.button(sections[i].value("title",std::string{}),rail_x,y,rail_w,50,selected,true,20,selected?bright:ink);
@@ -615,7 +727,7 @@ void Menu::build_extension(Layout& ui,double width) {
     if(!rows) ui.label("This section has no controls.",list_x,list_top+20,list_w,40,18,muted);
     // Right: detail and editor for the selected control.
     const double px=list_x+list_w+40,pw=width-px-80;
-    ui.box(px,top,pw,740,panel); ui.box(px+24,top,pw-48,1,line);
+    ui.box(px,top,pw,690,panel); ui.box(px+24,top,pw-48,1,line);
     if(rows) {
         const auto& c=controls[row_]; const auto type=c.at("type").get<std::string>();
         const bool enabled=interactive(c);
@@ -680,7 +792,7 @@ void Menu::build_extension(Layout& ui,double width) {
             else ui.label(c.value("busy",false)?"Working...":c.value("disabled_label",std::string("Unavailable")),px+40,y+12,pw-80,30,19,muted);
             if(enabled) right={{"accept",label}};
         }
-        if(c.contains("confirm") && enabled) ui.label("Asks for confirmation",px+24,top+700,pw-48,26,15,muted);
+        if(c.contains("confirm") && enabled) ui.label("Asks for confirmation",px+24,top+650,pw-48,26,15,muted);
         build_footer(ui,width,{{"close","Library"},{"previous_section",""},{"next_section","Sections"},{"up",""},{"down","Browse"}},right);
     } else build_footer(ui,width,{{"close","Library"},{"previous_section",""},{"next_section","Sections"}},{});
 }
@@ -728,10 +840,9 @@ void Menu::build_results() {
     std::erase_if(hits_,[](const auto& hit){ return hit.action.value("action",std::string{})=="pick_row"; });
     auto* serif=load("/Game/Sparta/UI/Fonts/CrimsonText-Regular_Font.CrimsonText-Regular_Font");
     auto* title=load("/Game/Sparta/UI/Fonts/Trajan_Pro_Regular_Font.Trajan_Pro_Regular_Font");
-    Call dpi(find(L"/Script/UMG.Default__WidgetLayoutLibrary"),L"GetViewportScale",2); dpi.set(L"WorldContextObject",pc_.Get()); dpi.run();
-    const double scale=(viewport_[1]/std::max(0.1f,dpi.get<float>()))/reference_h*deps_.settings->ui_scale;
+    const double scale=viewport_[1]/reference_h*deps_.settings->ui_scale;
     Layout ui{tree_.Get(),canvas,scale,serif,title};
-    const double width=std::min(920.,(viewport_[0]/std::max(0.1f,dpi.get<float>()))/scale-160.)-64;
+    const double width=std::min(920.,viewport_[0]/scale-160.)-64;
     const size_t first=options_.selected/8*8;
     for(size_t i=first;i<std::min(first+8,options_.matches.size());++i) {
         const auto& option=options_.options[options_.matches[i]]; const double y=(i-first)*54.;
@@ -745,7 +856,8 @@ void Menu::build_results() {
     if(auto* count=search_count_.Get()) text_value(count,std::to_string(options_.matches.size())+" matches / "+std::to_string(options_.options.size())+" options");
 }
 Json Menu::diagnostics() const {
-    return {{"open",open_},{"screen",screen_==Screen::Library?"library":screen_==Screen::Extension?"extension":"settings"},{"extension",extension_id_},
+    Json bindings=Json::object(); for(const auto& b:bindings_) bindings[b.action]=b.keys;
+    return {{"bindings",bindings},{"open",active_},{"attached",page_.Get()!=nullptr},{"tab_index",tab_index_},{"screen",screen_==Screen::Library?"library":screen_==Screen::Extension?"extension":"settings"},{"extension",extension_id_},
             {"section",section_},{"row",row_},{"library_row",library_row_},{"picker",picker_},{"details",details_},{"confirm",!confirm_.is_null()},
             {"error",error_},{"hits",hits_.size()},{"widgets",cost_.widgets},{"builds",cost_.builds},{"last_build_us",cost_.last_build_us},{"viewport",viewport_},{"gamepad",gamepad_}};
 }

@@ -34,7 +34,7 @@ private:
     std::unique_ptr<DevChannel> dev_;
     engine::PlayerContext player_{};
     void* engine_=nullptr;
-    bool started_=false, stopped_=false;
+    bool started_=false, stopped_=false, idle_=false, quiet_=false, css_present_=false;
     uint64_t start_tick_=0, status_after_=0, legacy_check_after_=0;
     double hotkey_accumulator_=0, seconds_=0;
     std::vector<bool> hotkey_down_;

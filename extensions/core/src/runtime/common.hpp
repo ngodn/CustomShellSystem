@@ -23,7 +23,7 @@ bool valid_id(const std::string&);
 Json read_json(const fs::path&);
 // Write JSON through a temp file, read it back, keep an optional .bak of the
 // previous file, then replace atomically (MoveFileEx on Windows, rename elsewhere).
-void atomic_json(const fs::path&, const Json&, bool backup = true);
+void atomic_json(const fs::path&, const Json&, bool backup = true, bool verify = true);
 // UTC ISO-8601 timestamp with milliseconds.
 std::string utc_timestamp();
 // Monotonic microseconds.

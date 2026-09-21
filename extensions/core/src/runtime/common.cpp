@@ -22,7 +22,7 @@ Json read_json(const fs::path& path) {
     if (!in) throw std::runtime_error("Cannot read: " + path_utf8(path));
     return Json::parse(in);
 }
-void atomic_json(const fs::path& path, const Json& data, bool backup) {
+void atomic_json(const fs::path& path, const Json& data, bool backup, bool verify) {
     fs::create_directories(path.parent_path());
     auto temp = path; temp += ".tmp";
     const auto bytes = data.dump(2) + "\n";
@@ -32,7 +32,7 @@ void atomic_json(const fs::path& path, const Json& data, bool backup) {
         out.flush();
         if (!out) throw std::runtime_error("Cannot write " + path_utf8(path));
     }
-    if (read_json(temp) != data) throw std::runtime_error("Read-back mismatch writing " + path_utf8(path));
+    if (verify && read_json(temp) != data) throw std::runtime_error("Read-back mismatch writing " + path_utf8(path));
     if (backup && fs::exists(path)) {
         auto previous = path; previous += ".bak";
         fs::copy_file(path, previous, fs::copy_options::overwrite_existing);

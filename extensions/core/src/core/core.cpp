@@ -59,6 +59,7 @@ void Core::start_runtime() {
     services.request=[this](const Json& r){ return service(r); };
     services.log=[this](const std::string& level,const std::string& message,const Json& fields){ log(level,message,fields); };
     runtime_=std::make_unique<Runtime>(root_,std::move(services));
+    if(menu_) menu_->set_runtime(runtime_.get());
     log("info","Extensions started",{{"count",runtime_->count()}});
 }
 Json Core::service(const Json& request) {
@@ -96,12 +97,20 @@ void Core::tick(void* engine,float delta) {
     Phase whole(phase_tick_);
     engine_=engine; seconds_+=delta;
     const auto now=GetTickCount64();
+    // Developer isolation: with idle set, nothing but the dev channel runs, so
+    // a frame-rate comparison can separate the core's per-frame work from the
+    // mere presence of the loaded DLLs.
+    if(idle_) { if(dev_) dev_->poll(); return; }
     if(!started_) {
         started_=true; start_tick_=now;
         try { if(!Version::IsAtLeast(5,6) || !Version::IsBelow(5,7)) log("warning","CSSX targets UE 5.6; the detected engine version differs"); } catch(...) {}
         check_legacy();
         menu_=std::make_unique<Menu>(Menu::Deps{nullptr,&settings_,[this](const std::string& m){ log("warning",m); },
             [this]{ return status(); },[this]{ settings_.save(root_/"settings.json"); },CSSX_VERSION});
+        // CSS is optional. When it is installed and enabled it adds its own Player
+        // Menu tab first; CSSX waits briefly for that so CSS's page-count checks
+        // keep passing. Without CSS, CSSX attaches at once.
+        { std::error_code ec; const auto css=mods_root_/"CustomShellSystem"; css_present_=fs::exists(css/"enabled.txt",ec) && fs::exists(css/"dlls/main.dll",ec); menu_->set_css_present(css_present_); }
         if(extensions_allowed()) start_runtime();
         else log("warning","Legacy CSSX activation or runtime detected in CustomShellSystem; extensions are not loaded",{{"activation",legacy_.activation_present},{"mapped",legacy_.mapped}});
         legacy_check_after_=now+30000;
@@ -129,18 +138,14 @@ void Core::tick(void* engine,float delta) {
         bool pressed=false;
         try { const bool keyboard=hotkey_pressed(settings_.open_keyboard,0); const bool gamepad=hotkey_pressed(settings_.open_gamepad,1); pressed=keyboard || gamepad; } catch(...) {}
         if(pressed) {
+            // On the CSSX page: close the Player Menu. Elsewhere: open it on the
+            // CSSX tab (or switch to it when the Player Menu is already open).
             if(menu_->is_open()) menu_->close();
-            else if(game_menu_open()) log("info","CSSX hotkey ignored while a game menu is open");
-            else {
-                std::string reason;
-                Menu::Deps deps{runtime_.get(),&settings_,[this](const std::string& m){ log("warning",m); },[this]{ return status(); },[this]{ settings_.save(root_/"settings.json"); },CSSX_VERSION};
-                menu_=std::make_unique<Menu>(std::move(deps));
-                if(!menu_->open(player_,&reason)) log("warning","Menu could not open: "+reason);
-            }
+            else { std::string reason; menu_->set_runtime(runtime_.get()); if(!menu_->open(player_,&reason)) log("info","CSSX hotkey: "+reason); }
         }
     }
-    if(menu_->is_open()) { Phase p(phase_menu_); menu_->tick(player_,delta); }
-    if(now>=status_after_) { status_after_=now+1000; publish_status(); }
+    { Phase p(phase_menu_); menu_->tick(player_,delta); }
+    if(!quiet_ && now>=status_after_) { status_after_=now+5000; publish_status(); }
 }
 Json Core::frame_stats(double seconds) const {
     const auto* ring=host_.frames;
@@ -162,19 +167,40 @@ Json Core::frame_stats(double seconds) const {
 }
 Json Core::status() {
     Json s={{"version",CSSX_VERSION},{"pid",GetCurrentProcessId()},{"uptime_s",seconds_},{"player",player_.pawn!=nullptr},
-            {"menu_open",menu_ && menu_->is_open()},{"game_menu_open",game_menu_open()},{"dev_channel",dev_ && dev_->enabled()},
+            {"menu_open",menu_ && menu_->is_open()},{"menu_attached",menu_ && menu_->attached()},{"game_menu_open",game_menu_open()},{"css_present",css_present_},{"dev_channel",dev_ && dev_->enabled()},
             {"legacy",{{"activation_present",legacy_.activation_present},{"runtime_mapped",legacy_.mapped},{"shared_extension_ids",legacy_.shared_ids},{"checks",legacy_.checks}}},
             {"extensions_loaded",runtime_?runtime_->count():0},{"hud",hud_.diagnostics()}};
     if(!extensions_allowed()) s["notice"]="Legacy CSSX files are active inside CustomShellSystem. Close the game and run the CSSX migration; extensions stay unloaded until then.";
     return s;
 }
-void Core::publish_status() { try { atomic_json(root_/"runtime/status.json",status(),false); } catch(...) {} }
+void Core::publish_status() { try { atomic_json(root_/"runtime/status.json",status(),false,false); } catch(...) {} }
 Json Core::dev_request(const Json& request) {
     const auto op=request.value("op",std::string{});
     if(op=="status") return status();
     if(op=="frame.stats") return frame_stats(request.value("seconds",10.0));
-    if(op=="library" || op=="model" || op=="event") { if(!runtime_) throw std::runtime_error("Extensions are not loaded"); return runtime_->request(request); }
-    if(op=="menu.open") { std::string reason; if(!menu_->is_open() && !menu_->open(player_,&reason)) throw std::runtime_error(reason); return true; }
+    if(op=="library" || op=="model" || op=="event") {
+        if(!runtime_) throw std::runtime_error("Extensions are not loaded");
+        Json forwarded=request; if(request.contains("extension")) forwarded["id"]=request.at("extension");   // "id" is the request id on this channel
+        return runtime_->request(forwarded);
+    }
+#ifdef CSSX_DEV
+    if(op=="screenshot") {
+        // Steam captures the presented frame; no focus change, no input injection.
+        auto module=GetModuleHandleW(L"steam_api64.dll");
+        if(!module) throw std::runtime_error("Steam screenshot module unavailable");
+        auto get=reinterpret_cast<void*(*)()>(GetProcAddress(module,"SteamAPI_SteamScreenshots_v003"));
+        auto trigger=reinterpret_cast<void(*)(void*)>(GetProcAddress(module,"SteamAPI_ISteamScreenshots_TriggerScreenshot"));
+        if(!get || !trigger) throw std::runtime_error("Steam screenshot API unavailable");
+        auto* screenshots=get(); if(!screenshots) throw std::runtime_error("Steam screenshots interface unavailable");
+        trigger(screenshots);
+        return {{"screenshot_requested",true}};
+    }
+#endif
+    if(op=="idle") { idle_=request.value("value",true); if(idle_ && menu_) menu_->close(); return {{"idle",idle_}}; }
+    if(op=="quiet") { quiet_=request.value("value",true); return {{"quiet",quiet_}}; }
+    if(op=="menu.open") { std::string reason; menu_->set_runtime(runtime_.get()); if(!menu_->is_open() && !menu_->open(player_,&reason)) throw std::runtime_error(reason); return true; }
+    if(op=="menu.key") { menu_->drive_key(request.at("key").get<std::string>()); return true; }
+    if(op=="menu.act") { menu_->drive(request.at("action")); return true; }
     if(op=="menu.close") { menu_->close(); return true; }
     if(op=="menu.diagnostics") return menu_->diagnostics();
     if(op=="engine") { if(!request.contains("request")) throw std::runtime_error("engine needs a request"); return service(request.at("request")); }
@@ -183,7 +209,7 @@ Json Core::dev_request(const Json& request) {
 }
 bool Core::stop() {
     if(stopped_) return true;
-    if(menu_) menu_->close();
+    if(menu_) menu_->detach();
     if(runtime_ && !runtime_->stop()) { log("warning","Core stop deferred: an extension has not restored its changes"); return false; }
     if(!bridge_->stop_hooks()) { log("warning","Core stop deferred: hook cleanup pending"); return false; }
     hud_.release();

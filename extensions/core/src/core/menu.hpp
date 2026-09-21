@@ -23,22 +23,34 @@ public:
         std::string version;
     };
     explicit Menu(Deps deps):deps_(std::move(deps)) {}
-    ~Menu() { try { close(); } catch(...) {} }
-    bool is_open() const { return open_; }
-    // Open the menu for this player context. Returns false with a reason when
-    // the game's UI handler or viewport is unavailable.
+    ~Menu() { try { detach(); } catch(...) {} }
+    // Hosted in the game's Player Menu: CSSX is a tab after CSS (after
+    // Inventory when CSS is absent) and before Tarstones. is_open() means the
+    // CSSX page is the active tab of an open Player Menu.
+    bool is_open() const { return active_; }
+    bool attached() const { return page_.Get()!=nullptr; }
+    // Ask the game to open its Player Menu and select the CSSX tab. Returns
+    // false with a reason when the menu cannot be opened right now.
     bool open(const engine::PlayerContext& player,std::string* reason=nullptr);
-    void close();
-    // Per tick while open: lifecycle checks, input, rebuild when dirty.
+    void close();                      // leave the CSSX page: close the Player Menu like the game does
+    void detach();                     // remove the tab and page (menu instance changed or core stop)
+    // Per tick: attach when the Player Menu is open, track the active tab,
+    // poll input and rebuild while the CSSX page is showing.
     void tick(const engine::PlayerContext& player,double delta);
     void invalidate() { dirty_=true; }
+    void set_runtime(Runtime* runtime) { deps_.runtime=runtime; library_revision_=0; dirty_=true; }
+    void set_css_present(bool present) { css_present_=present; }
+    void drive_key(const std::string& action) { if(active_) key(action); }
+    void drive(const Json& action) { if(active_) act(action); }
     Json diagnostics() const;
     struct BuildCost { uint64_t builds=0, build_us=0, widgets=0, last_build_us=0; };
     const BuildCost& cost() const { return cost_; }
 private:
     Deps deps_;
-    bool open_=false, dirty_=true, enter_=false;
-    engine::WeakObject pc_, handler_, widget_, tree_, canvas_, prompt_;
+    bool active_=false, was_active_=false, dirty_=true, enter_=false, css_present_=false, open_requested_=false;
+    uint64_t attach_wait_since_=0, open_requested_at_=0, discover_after_=0;
+    engine::WeakObject pc_, handler_, main_, tabs_, switcher_, page_, tab_, tree_, canvas_, prompt_;
+    int tab_index_=-1;
     std::array<double,2> viewport_{};
     uint64_t layout_check_=0;
     // Navigation state
@@ -59,6 +71,7 @@ private:
     // Input
     struct Binding { std::string action; std::vector<std::string> keys; bool down=false; uint64_t repeat=0; engine::WeakObject input_action; };
     std::vector<Binding> bindings_;
+    bool bindings_ready_=false; uint64_t bind_retry_=0;
     bool gamepad_=false;
     struct Hit { engine::WeakObject widget; Json action; bool down=false; };
     std::vector<Hit> hits_;
@@ -86,7 +99,10 @@ private:
     void refresh_model();
     void send_event(const Json& event);
     const Json* current_control() const;
-    void restore_input(bool handler_alive);
+    bool attach(const engine::PlayerContext& player);
+    void order_tabs();
+    void navigate(int index);
+    void forget();
     bool texture(engine::Layout& ui,const std::string& file,double x,double y,double w,double h);
 };
 }
