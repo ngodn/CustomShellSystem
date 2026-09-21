@@ -358,7 +358,14 @@ void Menu::apply_event(const Json& event) {
         if(whole && std::floor(value)!=value) throw std::runtime_error("Use a whole number for this setting.");
         if(!whole && std::abs(value*4-std::round(value*4))>1e-8) throw std::runtime_error("Use quarter-step values for this setting.");
         if(id=="shockwave_interval" && std::abs(value*2-std::round(value*2))>1e-8) throw std::runtime_error("Use half-second values for the shockwave interval.");
-        values_[id]=whole?Json(int(value)):Json(value);return;
+        values_[id]=whole?Json(int(value)):Json(value);
+        // Parameters of one-shot actions (amounts, levels, counts, the health
+        // target) are not cheats: they take effect at once and never gate the
+        // action buttons behind Apply. Only values that feed a running cheat
+        // (multiplier, heal percent/interval, shockwave interval) stay pending.
+        static const std::set<std::string> immediate={"grant_amount","harbinger_level","pickup_amount","tarstone_level","damage_percent","heal_amount","resolve_amount"};
+        if(immediate.contains(id)) { applied_[id]=values_[id]; try { persist(applied_); } catch(...) {} }
+        return;
     }
     if(id=="shell") {
         for(const auto& option:shells_) if(option["id"]==event.at("value")){values_[id]=event["value"];applied_[id]=values_[id];return;}

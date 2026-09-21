@@ -457,8 +457,9 @@ int main(int argc,char** argv) {
     item_menu.event({{"id","refresh_pickups"}});check(item_menu.model()["options"]["pickup"].size()==2,"Pickup catalog not exposed");
     rejects([&]{item_menu.event({{"id","add_pickup"}});});check(items.count("S_AddItemQuantity")==0,"Unconfirmed pickup grant ran");
     item_menu.event({{"id","pickup_amount"},{"value",2}});
-    rejects([&]{item_menu.event({{"id","add_pickup"},{"confirmed",true}});});
-    item_menu.event({{"id","apply_settings"}});item_menu.event({{"id","add_pickup"},{"confirmed",true}});
+    // Action parameters apply at once: no Apply step between choosing an amount and using it.
+    check(!item_menu.model()["enabled"]["apply_settings"].get<bool>(),"Amount field created a pending edit");
+    item_menu.event({{"id","add_pickup"},{"confirmed",true}});
     check(items.count("S_AddItemQuantity")==1,"Confirmed pickup grant missing");
     item_menu.event({{"id","remove_pickup"},{"confirmed",true}});check(items.check_soft && items.count("RemoveItemStacksSilent")==1,"Pickup removal bypassed typed definition");
     rejects([&]{item_menu.event({{"id","give_all_pickups"}});});item_menu.event({{"id","give_all_pickups"},{"confirmed",true}});
@@ -498,9 +499,8 @@ int main(int argc,char** argv) {
     level_menu.event({{"id","tarstone_scope"},{"value","all"}});
     rejects([&]{level_menu.event({{"id","set_tarstone_level"}});});
     level_menu.event({{"id","tarstone_level"},{"value",2}});
-    rejects([&]{level_menu.event({{"id","set_tarstone_level"},{"confirmed",true}});});
-    check(levels.map_writes==0,"Draft or unconfirmed level edit changed the save maps");
-    level_menu.event({{"id","apply_settings"}});levels.bad_level_signature=true;
+    check(levels.map_writes==0 && !level_menu.model()["enabled"]["apply_settings"].get<bool>(),"Level field changed the save maps or created a pending edit");
+    levels.bad_level_signature=true;
     rejects([&]{level_menu.event({{"id","set_tarstone_level"},{"confirmed",true}});});
     check(levels.map_writes==0,"Incompatible equipped interface allowed a partial level edit");
     levels.bad_level_signature=false;
