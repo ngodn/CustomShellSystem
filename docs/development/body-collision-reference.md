@@ -270,3 +270,9 @@ complete weapon, motion, controls, UI/profile, lifecycle and performance scope.
 This checkpoint does not accept gameplay contact distances or imply the separate
 floating-foot/heel-support defects are fixed. V43 remains installed and CSSX
 disabled; original proportions and accepted body/hair settings stay preserved.
+
+## Moving-body follow-up
+
+[Animation and fall evidence](body-collision-motion.md) identifies hand-only
+coverage gaps in the reference-pose fit and records an isolated correction.
+Use that checkpoint for the current motion validation and remaining gates.

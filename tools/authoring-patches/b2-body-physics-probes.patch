@@ -11,7 +11,7 @@
              "AnimGraph", "AnimGraphRuntime", "BlueprintGraph", "KismetCompiler",
 --- /dev/null
 +++ b/Source/CSSAuthoring/CSSPhysicsProbeLibrary.h
-@@ -0,0 +1,24 @@
+@@ -0,0 +1,29 @@
 +#pragma once
 +
 +#include "Kismet/BlueprintFunctionLibrary.h"
@@ -35,13 +35,22 @@
 +    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
 +    static FString ProbeBodyQueries(class USkeletalMesh* Mesh, class UPhysicsAsset* Asset,
 +        const FString& QueriesJson);
++
++    /** Normal animation-to-physics updates, or a bounded simulated fall, in an isolated world. */
++    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
++    static FString ProbeBodyMotion(class USkeletalMesh* Mesh, class UPhysicsAsset* Asset,
++        class UAnimSequence* Sequence, bool Simulate, int32 Fps = 60, int32 Frames = 120);
 +};
 --- /dev/null
 +++ b/Source/CSSAuthoring/CSSPhysicsProbeLibrary.cpp
-@@ -0,0 +1,197 @@
+@@ -0,0 +1,337 @@
 +#include "CSSPhysicsProbeLibrary.h"
 +
 +#include "Components/SkeletalMeshComponent.h"
++#include "Components/BoxComponent.h"
++#include "Animation/AnimSequence.h"
++#include "Animation/MorphTarget.h"
++#include "Animation/AnimInstance.h"
 +#include "Engine/SkeletalMesh.h"
 +#include "Engine/World.h"
 +#include "GameFramework/Actor.h"
@@ -51,6 +60,7 @@
 +#include "PhysicsEngine/BodyInstance.h"
 +#include "PhysicsEngine/PhysicsConstraintTemplate.h"
 +#include "PhysicsEngine/SkeletalBodySetup.h"
++#include "Physics/Experimental/PhysScene_Chaos.h"
 +#include "Serialization/JsonSerializer.h"
 +#include "UObject/Package.h"
 +
@@ -233,6 +243,141 @@
 +    World->DestroyWorld(false);
 +    auto Report = MakeShared<FJsonObject>();
 +    Report->SetArrayField(TEXT("phases"), Phases);
++    Report->SetBoolField(TEXT("world_destroyed"), true);
++    return Text(Report);
++}
++
++FString UCSSPhysicsProbeLibrary::ProbeBodyMotion(USkeletalMesh* Mesh, UPhysicsAsset* Asset,
++    UAnimSequence* Sequence, bool Simulate, int32 Fps, int32 Frames)
++{
++    if (!Diagnostic(Mesh) || !Diagnostic(Asset) || !Sequence ||
++        Sequence->GetSkeleton() != Mesh->GetSkeleton() || !Sequence->IsCompressedDataValid() ||
++        Fps < 15 || Fps > 120 || Frames < 2 || Frames > 480) return {};
++    UWorld* World = UWorld::CreateWorld(EWorldType::Game, false, TEXT("CSSBodyMotionWorld"));
++    if (!World || !World->GetPhysicsScene()) return {};
++    AActor* Owner = World->SpawnActor<AActor>();
++    auto* Component = NewObject<USkeletalMeshComponent>(Owner);
++    Owner->SetRootComponent(Component);
++    Component->SetSkeletalMesh(Mesh);
++    Component->SetAnimationMode(EAnimationMode::AnimationSingleNode);
++    Component->SetDisablePostProcessBlueprint(Simulate);
++    Component->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
++    Component->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
++    Component->SetCollisionResponseToAllChannels(ECR_Block);
++    Component->SetWorldLocation(FVector(0, 0, Simulate ? 100 : 0));
++    Component->RegisterComponent();
++    Component->SetAnimation(Sequence);
++    Component->Stop();
++    Component->SetForceRefPose(Simulate);
++    Component->TickAnimation(0.f, true);
++    Component->RefreshBoneTransforms();
++    Component->SetPhysicsAsset(Asset, true);
++    AActor* FloorOwner = World->SpawnActor<AActor>();
++    auto* Floor = NewObject<UBoxComponent>(FloorOwner);
++    FloorOwner->SetRootComponent(Floor);
++    Floor->SetMobility(EComponentMobility::Static);
++    Floor->SetBoxExtent(FVector(500, 500, 10));
++    Floor->SetWorldLocation(FVector(0, 0, -10));
++    Floor->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
++    Floor->SetCollisionResponseToAllChannels(ECR_Block);
++    Floor->RegisterComponent();
++    if (Simulate) Component->SetSimulatePhysics(true);
++    auto VectorJson = [](const FVector& Value) {
++        return TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueNumber>(Value.X),
++            MakeShared<FJsonValueNumber>(Value.Y), MakeShared<FJsonValueNumber>(Value.Z)};
++    };
++    auto TransformJson = [&VectorJson](const FTransform& Value) {
++        auto Row = MakeShared<FJsonObject>();
++        Row->SetArrayField(TEXT("translation"), VectorJson(Value.GetTranslation()));
++        const FQuat Q = Value.GetRotation();
++        Row->SetArrayField(TEXT("rotation"), {MakeShared<FJsonValueNumber>(Q.X), MakeShared<FJsonValueNumber>(Q.Y),
++            MakeShared<FJsonValueNumber>(Q.Z), MakeShared<FJsonValueNumber>(Q.W)});
++        Row->SetArrayField(TEXT("scale"), VectorJson(Value.GetScale3D()));
++        return Row;
++    };
++    TArray<TSharedPtr<FJsonValue>> Samples;
++    const float Dt = 1.f / Fps;
++    const FVector Gravity = Simulate ? FVector(0, 0, -980) : FVector::ZeroVector;
++    for (int32 Frame = 0; Frame <= Frames; ++Frame)
++    {
++        const float Time = float(Frame) / Fps;
++        if (!Simulate)
++        {
++            Component->SetWorldLocationAndRotation(FVector(30*FMath::Sin(Time), 10*FMath::Sin(2*Time), 0),
++                FRotator(0, 20*FMath::Sin(Time), 0));
++            Component->SetPosition(FMath::Fmod(Time, Sequence->GetPlayLength()), false);
++            Component->TickAnimation(Frame == 0 ? 0.f : Dt, true);
++            Component->RefreshBoneTransforms();
++        }
++        if (Frame > 0)
++        {
++            World->GetPhysicsScene()->SetUpForFrame(&Gravity, Dt, 0.f, 1.f/30, 1.f/120, 4, true);
++            World->GetPhysicsScene()->StartFrame();
++            World->GetPhysicsScene()->WaitPhysScenes();
++            World->GetPhysicsScene()->EndFrame();
++        }
++        auto Sample = MakeShared<FJsonObject>();
++        Sample->SetNumberField(TEXT("frame"), Frame);
++        Sample->SetNumberField(TEXT("time"), Time);
++        TArray<TSharedPtr<FJsonValue>> Bodies;
++        double AnchorError = 0;
++        for (const auto& Setup : Asset->SkeletalBodySetups)
++        {
++            FBodyInstance* Body = Component->GetBodyInstance(Setup->BoneName);
++            if (!Body || !Body->IsValidBodyInstance()) return {};
++            const FTransform Actual = Body->GetUnrealWorldTransform();
++            const FTransform Bone = Component->GetBoneTransform(Component->GetBoneIndex(Setup->BoneName));
++            if (Actual.ContainsNaN() || Bone.ContainsNaN()) return {};
++            auto Row = TransformJson(Actual);
++            Row->SetStringField(TEXT("bone"), Setup->BoneName.ToString());
++            Row->SetNumberField(TEXT("position_error_cm"), FVector::Dist(Actual.GetTranslation(), Bone.GetTranslation()));
++            Row->SetNumberField(TEXT("rotation_error_degrees"), FMath::RadiansToDegrees(Actual.GetRotation().GetNormalized().AngularDistance(Bone.GetRotation().GetNormalized())));
++            Row->SetArrayField(TEXT("velocity"), VectorJson(Body->GetUnrealWorldVelocity()));
++            Row->SetBoolField(TEXT("simulating"), Body->IsInstanceSimulatingPhysics());
++            Row->SetObjectField(TEXT("animation_bone"), TransformJson(Bone));
++            Bodies.Add(MakeShared<FJsonValueObject>(Row));
++        }
++        for (const auto& Template : Asset->ConstraintSetup)
++        {
++            const FConstraintInstance& C = Template->DefaultInstance;
++            const FTransform A = Component->GetBodyInstance(C.ConstraintBone1)->GetUnrealWorldTransform();
++            const FTransform B = Component->GetBodyInstance(C.ConstraintBone2)->GetUnrealWorldTransform();
++            AnchorError = FMath::Max(AnchorError, FVector::Dist(A.TransformPosition(C.Pos1), B.TransformPosition(C.Pos2)));
++        }
++        Sample->SetNumberField(TEXT("maximum_anchor_error_cm"), AnchorError);
++        if (!Simulate && Frame % FMath::Max(1, Fps / 12) == 0)
++        {
++            TArray<TSharedPtr<FJsonValue>> Pose;
++            for (int32 Index = 0; Index < Mesh->GetRefSkeleton().GetRawBoneNum(); ++Index)
++            {
++                auto Row = TransformJson(Component->GetBoneTransform(Index));
++                Row->SetStringField(TEXT("bone"), Mesh->GetRefSkeleton().GetBoneName(Index).ToString());
++                Pose.Add(MakeShared<FJsonValueObject>(Row));
++            }
++            Sample->SetArrayField(TEXT("raw_pose"), Pose);
++            auto Morphs = MakeShared<FJsonObject>();
++            for (const auto& Morph : Mesh->GetMorphTargets())
++            {
++                const int32* Index = Component->ActiveMorphTargets.Find(Morph.Get());
++                if (Index && !Component->MorphTargetWeights.IsValidIndex(*Index)) return {};
++                Morphs->SetNumberField(Morph->GetName(), Index ? Component->MorphTargetWeights[*Index] : 0.f);
++            }
++            Sample->SetObjectField(TEXT("morph_weights"), Morphs);
++        }
++        Sample->SetArrayField(TEXT("bodies"), Bodies);
++        Samples.Add(MakeShared<FJsonValueObject>(Sample));
++    }
++    const bool HadPostProcess = Component->GetPostProcessInstance() != nullptr;
++    Component->SetSimulatePhysics(false);
++    Component->DestroyComponent();
++    Owner->Destroy();
++    Floor->DestroyComponent();
++    FloorOwner->Destroy();
++    World->DestroyWorld(false);
++    auto Report = MakeShared<FJsonObject>();
++    Report->SetBoolField(TEXT("simulate"), Simulate);
++    Report->SetBoolField(TEXT("post_process_instance"), HadPostProcess);
++    Report->SetArrayField(TEXT("samples"), Samples);
 +    Report->SetBoolField(TEXT("world_destroyed"), true);
 +    return Text(Report);
 +}
