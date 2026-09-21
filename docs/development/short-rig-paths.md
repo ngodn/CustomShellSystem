@@ -1,6 +1,6 @@
 # Short rig and mesh paths
 
-2026-09-21. The heel candidate's editor dependency closure now loads under short `/Game/CSS/` paths. Fresh editor comparisons pass. The guarded seven-asset cook exits zero. Independent cooked readback is the next gate, followed by packaging and live footwear checks. V44 remains installed and accepted.
+2026-09-21. The heel candidate's editor dependency closure now loads under short `/Game/CSS/` paths. Fresh editor comparisons, the seven-asset cook and independent rig readback pass. Cooked mesh geometry, combined packaging and live footwear checks remain. V44 remains installed and accepted.
 
 ## Copy and reference mapping
 
@@ -16,7 +16,7 @@ The complete map contains 134 entries, extending the [120 material and texture p
 | Post-process animation | `/Game/CSS/SeduXtress/ABP_Secondary` |
 | Hand, hair and body rigs | `/Game/CSS/SeduXtress/CR_Hand`, `CR_Hair`, `CR_Body` |
 
-Preview meshes and their older Skeletons live in explicit `Reference` folders. Those Skeletons are not new compatibility targets for the native runtime. The runtime allowlist still needs the exact new B2 path after cooked verification.
+Preview meshes and their older Skeletons live in explicit `Reference` folders. Those Skeletons are not new compatibility targets for the native runtime. After cooked verification, the local runtime allowlist includes the exact new B2 path, retaining the old paths for V44 and restoration. Host checks explicitly reject the reference Skeletons and lookalike paths. This change is not deployed.
 
 `CSSCopyAssetsCommandlet` uses UE 5.6.1's own `FAssetHeaderPatcher`. Its context includes all redirects but writes only the 44 requested new packages. Previously migrated textures must already exist and are reference-only. Source/destination overlap, duplicate destinations, existing copy targets, invalid names and excessive full paths are rejected. Dependency gathering is disabled so it cannot silently add writes.
 
@@ -53,3 +53,17 @@ Evidence lives in `work/paths/rig1`:
 Command manifests and logs are retained beside these reports. Editor scripts use `CSS_CLOSURE_WORK` to select the workspace evidence directory. The copy commandlet takes `-Input=<request.json>`. Do not rerun a successful copy into existing destinations. Keep assets read-only during verification and wait for the editor process's terminal exit, including its normal shutdown delay.
 
 The physical project folder remains `CSSAuthoring/Content`; it does not define the asset namespace. Newly authored package names use `/Game/CSS/`, and packaging maps the physical project folder to `MortalShell2/Content`. Continue enforcing the full Windows destination budget before cooking and staging.
+
+## Cooked rig readback
+
+The guarded cook emits exactly seven runtime packages and exits zero. Retoc produces and verifies `ShortRig_P.pak/.utoc/.ucas`. A fresh CUE4Parse process decodes those seven plus the six corresponding installed V44 rig packages. The installed V44 trio matches its pinned hashes before comparison.
+
+`tools/asset-paths/validate_rig_cook.py` compares the complete decoded Skeleton, Physics Asset, Animation Blueprint and three Control Rig documents. Only the declared package and generated-symbol renames are normalized, including the generated function-map key. No property or payload field in these documents is excluded. All six match. This validates decoded content, not byte identity of renamed packages.
+
+The new mesh's Skeleton, Physics Asset and post-process bindings match the intended short paths. Thirty materials and 22 morph references survive cooking. Every decoded CSS package reference resolves within the seven runtime assets and 30 migrated materials; editor-only preview dependencies do not enter these decoded runtime references. All 268 protected editor hashes remain unchanged.
+
+The initial decoder attempt exits 134 because a staging symlink omitted the installed package subdirectory. Correcting only that workspace link makes the second attempt exit zero. Preserve `decode.log` and `decode-exit.json` as the failed setup result, alongside `decode2-exit.json`, `assets.json` and `cooked-validation.json` as the successful readback.
+
+The new heel mesh has not yet passed cooked geometry/skin/morph payload comparison. The local compatibility change does not establish live execution. Complete those checks, metadata/recipe migration and combined container validation before installation.
+
+The focused host `css_skeleton_compatibility` test passes, including restoration to old audited paths and rejection of both new reference-only Skeletons. `cmake --build build/windows --target css_core -j 2` exits zero; its command, log and terminal result are retained as `native-build*` under `work/paths/rig1`. The resulting local core also contains earlier uninstalled preview-light work. Do not treat it as the installed V44 core or deploy it without the combined validation step.
