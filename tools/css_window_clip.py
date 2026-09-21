@@ -29,11 +29,12 @@ def main():
     identity=subprocess.check_output(['xprop','-id',hex(args.window_id),'WM_NAME','WM_CLASS'],text=True)
     if 'WM_NAME(STRING) = "MortalShell2  "' not in identity or 'steam_app_2584270' not in identity:
         parser.error('Window is not the Mortal Shell game view')
-    view=command('inventory_inspect')['css']
+    # Production status provides framing without enabling development probes.
+    view=command('status')['inventory']
     if args.world and args.orbit:
         parser.error('Preview orbit cannot be used for a world recording')
-    if args.world and view['active']:
-        parser.error('Close CSS before recording the game world')
+    if args.world and (view['active'] or view.get('menu_open',False)):
+        parser.error('Close Inventory before recording the game world')
     if not args.world and not view['active']:
         parser.error('Open the CSS page before recording')
     original=[view[k] for k in ('yaw','zoom','pan','frame')]

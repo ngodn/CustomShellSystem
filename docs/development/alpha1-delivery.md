@@ -31,11 +31,34 @@ tagged build, not treated as success.
 
 The Eve trio is exactly the installed and accepted S1 package. Gameplay review
 used movement2, which contains the same movement, idle and UI fixes. The exact
-production DLL has not had its final in-game boot check. Do that with a normal
-restart before public publication; do not use DLL hot reload. These artifacts
-are local downloads, not a published GitHub release.
+production DLL passed its normal-restart boot check, with installed files
+matching every release manifest hash. Saved state is identical before and
+after restart/menu entry. Runtime and loader agree on the new Windows PID.
+CSSX remains disabled. Publication details follow once the upload is verified.
 
 Custom Eve idle, weapon hiding and beacon playback remain unfinished, as do
 broad weapon/combat/transition coverage and the modder kit. Full CSS v1.0.0
 work remains active. Preserve accepted rig, proportions, physics and ground
 contact while continuing. See eve-movement-delivery.md for S1 evidence.
+
+
+## Exact production build in game
+
+The user reopened CSS after the normal restart. production-menu.mp4 and its
+reviewed frame show Eve (Stellar Blade), Black Pearl equipped. Saved choices
+remain walk/jog/sprint=eve, idle=css.feminine and beacon=original.
+
+The first 30-second capture includes a beacon travel cinematic, not a clean
+three-gait comparison. All 59 status samples are error-free. At the destination,
+Eve is restored on the new player pawn, recovery is clear and feminine idle
+resumes. The following 20-second destination recording contains gameplay and
+attacks; 39 samples show custom jog, custom sprint, idle and released override,
+without animation or maintenance errors. Sampled frames were inspected.
+Walk acceptance remains the preceding user-reviewed S1 recording; it was not
+observed again in these short production captures. Do not describe these as
+exhaustive combat or three-gait production validation.
+
+Evidence: work/alpha1/live/deployment.json, loader.json, menu-status.json,
+state-in-menu.json, production-menu.mp4, production-world.mp4,
+world-observation.json, after-world-status.json, destination.mp4 and
+destination-observation.json. Game PID remained live after recording.

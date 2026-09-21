@@ -107,7 +107,7 @@ def install(directories: list[Path], game: Path, migrate: bool, repak: Path, rep
     if migrate and not {'beaute.genessa','beaute.knightlady'}.issubset(ids):
         raise ValueError('Beaute migration requires both replacement packages together')
     if processes():
-        raise RuntimeError('Close Mortal Shell II before installing new mounted containers. Native core updates can use live reload.')
+        raise RuntimeError('Close Mortal Shell II before installing containers or updating the native core. Use a normal restart.')
     paks=game/'Content/Paks/~mods'
     mod=game/'Binaries/Win64/ue4ss/Mods/CustomShellSystem'
     if not (mod/'dlls/main.dll').is_file():

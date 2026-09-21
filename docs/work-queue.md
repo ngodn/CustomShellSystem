@@ -1,5 +1,7 @@
 # Current work queue
 
+2026-09-21: Exact alpha production archive installed and checked after normal restart. Loader/core PID and release hashes match; saved Eve appearance and animation choices survive unchanged. CSS menu is visually checked. Beacon travel returns to Eve with feminine idle; destination recording observes custom jog/sprint, idle and attacks without reported animation/maintenance errors. Finish public alpha delivery, then resume remaining v1.0.0 features. Follow up the Harbinger toggle help placement, which still sits inside the right panel rather than the shared footer in the release screenshot.
+
 2026-09-21: User accepted the S1 movement correction after testing: "yeah its good now". Lock the corrected Walk/Jog/Sprint for alpha; do not ship M3 or reopen accepted body/rig/physics tuning. All three custom gaits and feminine idle were observed in the passive gameplay recording with no animation errors. Production runtime build passed with developer probes disabled. Package CSS v1.0.0-alpha.1 and the separate Eve Black Pearl sample, retaining unfinished idle/beacon/modder-kit work.
 
 2026-09-21: User requires stable Eve Walk/Jog/Sprint in CSS v1.0.0-alpha.1. Do not ship the sideways-lean defect as a known issue. Alpha runtime and separate Eve technology-preview packages are the active delivery; movement stability is a hard release gate. Feminine idle grounded-check and status-footer fixes are installed; idle now engages live.
