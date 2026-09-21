@@ -57,6 +57,9 @@ void inventory_order(UObject* panel,const std::vector<UObject*>& desired) {
 #ifdef CSS_INVENTORY_DEV
 #include "inventory_capture.inl"
 #endif
+// Native light orbit is shared with the eventual menu controls. Only its
+// development command is exposed until controller Inspect routing is checked.
+#include "inventory_light.inl"
 void InventoryUI::detach() {
     camera_tick_restore();
 #ifdef CSS_INVENTORY_DEV
@@ -218,12 +221,18 @@ Json InventoryUI::command(void* engine,const Json& command) {
         INPUT input{}; input.type=INPUT_KEYBOARD; input.ki.wVk=code;
         input.ki.dwFlags=command.value("down",false)?0:KEYEVENTF_KEYUP;
         if(SendInput(1,&input,sizeof(input))!=1) throw std::runtime_error("Key test input rejected");
+    } else if(action=="inventory_light_start") { light_start();
+    } else if(action=="inventory_light_move") {
+        if(!light_edit_) throw std::runtime_error("Preview light mode is not active");
+        light_move(command.at("horizontal").get<double>(),command.at("vertical").get<double>());
+    } else if(action=="inventory_light_stop") { light_stop();
     } else if(action=="inventory_detach") { detach();
 #endif
     }
 #ifdef CSS_INVENTORY_DEV
     auto result=inventory_probe(pc);
     result["css"]=diagnostics();
+    result["light_control"]={{"active",light_edit_},{"yaw",light_orbit_.yaw},{"pitch",light_orbit_.pitch}};
     result["cinema"]={{"active",cinema_camera_.Get()!=nullptr},{"from",cinema_from_},{"to",cinema_to_}};
     if(auto* camera=cinema_camera_.Get()) {
         for(auto [label,object]:{std::pair{"camera",camera},std::pair{"player",cinema_player_.Get()}}) if(object) {

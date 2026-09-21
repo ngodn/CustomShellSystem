@@ -1316,6 +1316,7 @@ void InventoryUI::camera_tick_restore() {
     camera_tick_controller_.Reset();
 }
 void InventoryUI::camera_stop() {
+    light_stop();
     backdrop_stop();
     camera_restore_state();
     motion_.reset(); drag_pan_=drag_rotate_=false;
@@ -1336,7 +1337,9 @@ void InventoryUI::camera_update(double delta,bool invert_x) {
     if(!display || !handler) return;
     auto right=read<std::array<double,2>>(handler,L"InputAxis_Thumbstick_Right");
     auto left=read<std::array<double,2>>(handler,L"InputAxis_Thumbstick_Left");
-    camera_move(motion_.step(right,left,delta,invert_x));
+    const auto movement=motion_.step(right,left,delta,invert_x);
+    if(light_edit_) light_move(movement[0],movement[1]*80/.65);
+    else camera_move(movement);
     auto* pc=controller_.Get();
     const bool left_down=inventory_key(pc,"LeftMouseButton"),right_down=inventory_key(pc,"RightMouseButton");
     Call mouse(pc,L"GetMousePosition",3); mouse.run();
@@ -1355,8 +1358,11 @@ void InventoryUI::camera_update(double delta,bool invert_x) {
             if((drag_pan_ && mouse_left_) || (drag_rotate_ && mouse_right_)) {
                 auto dx=point[0]-mouse_before_[0],dy=point[1]-mouse_before_[1];
                 if(std::abs(dx)<150 && std::abs(dy)<150) {
-                    if(drag_rotate_) movement[0]=dx*.45*(invert_x?-1:1);
-                    if(drag_pan_) { movement[2]=dx*.24/(1+zoom_); movement[3]=-dy*.24/(1+zoom_); }
+                    if(light_edit_) light_move(dx*.45*(invert_x?-1:1),dy*.45);
+                    else {
+                        if(drag_rotate_) movement[0]=dx*.45*(invert_x?-1:1);
+                        if(drag_pan_) { movement[2]=dx*.24/(1+zoom_); movement[3]=-dy*.24/(1+zoom_); }
+                    }
                 }
             }
             if(center) {
@@ -1370,6 +1376,7 @@ void InventoryUI::camera_update(double delta,bool invert_x) {
     mouse_left_=left_down; mouse_right_=right_down;
 }
 void InventoryUI::camera_move(const std::array<double,4>& movement) {
+    if(light_edit_) return;
     auto* display=display_.Get(); if(!display) return;
     auto [x,z,h,v]=movement;
     if(x) {
@@ -1433,7 +1440,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     const bool extension_before=extension_active_;
     extension_active_=inventory_bool(main,L"bOpen") && selected.get<UObject*>()==extension_page_.Get();
     active_=inventory_bool(main,L"bOpen") && (selected.get<UObject*>()==page_.Get() || extension_active_);
-    if(extension_before!=extension_active_) {dirty_=enter_transition_=true;hits_.clear();rows_.clear();sliders_.clear();scroll_.Reset();name_input_.Reset();}
+    if(extension_before!=extension_active_) {light_stop();dirty_=enter_transition_=true;hits_.clear();rows_.clear();sliders_.clear();scroll_.Reset();name_input_.Reset();}
     if(active_ && !was_active_) { appearance.player(engine); bind_inputs(); camera_start(); dirty_=enter_transition_=true; closing_=false; for(auto& b:bindings_) { b.down=true; b.repeat=now+400; } }
     if(!active_ && was_active_) { camera_stop(); closing_=false; transition_started_=0; }
     if(active_) camera_bind_state();

@@ -12,6 +12,7 @@
 #include "body_geometry.hpp"
 #include "inventory_motion.hpp"
 #include "inventory_backdrop.hpp"
+#include "inventory_light.hpp"
 #include "inventory_keys.hpp"
 #include "extension_client.hpp"
 #include "cssx/hud.h"
@@ -144,6 +145,13 @@ class InventoryUI {
     float scroll_offset_=0;
     double yaw_before_=0, yaw_=0, zoom_=0, frame_=0, pan_=0;
     InventoryMotion motion_;
+    WeakObject light_component_;
+    InventoryLightOrbit light_orbit_;
+    LightVector light_location_before_{}, light_rotation_before_{};
+    bool light_edit_=false;
+    void light_start();
+    void light_move(double horizontal,double vertical);
+    void light_stop();
     bool gamepad_=true, mouse_left_=false, mouse_right_=false, drag_pan_=false, drag_rotate_=false;
     std::array<double,2> mouse_before_{};
     float lens_before_=0;
