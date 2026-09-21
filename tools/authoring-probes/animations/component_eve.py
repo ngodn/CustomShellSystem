@@ -23,7 +23,13 @@ revision = config.get('revision', '')
 assert re.fullmatch(r'[A-Za-z0-9]{0,8}', revision)
 tag = revision+'_' if revision else ''
 results = []
-for label, loops in [('Walk', 3), ('Jog', 3), ('Sprint', 3), ('Idle', 1)]:
+batch = json.loads((WORK/'batch.json').read_text()) if (WORK/'batch.json').exists() else [
+    ('Walk', ''), ('Jog', ''), ('Sprint', ''), ('Idle', '')]
+assert 1 <= len(batch) <= 64 and len({label for label, _ in batch}) == len(batch)
+for label, _ in batch:
+    assert re.fullmatch(r'[A-Za-z][A-Za-z0-9]{0,15}', label)
+    loops = 1 if label == 'Idle' else config.get('component_loops', 3)
+    assert isinstance(loops, int) and 1 <= loops <= 3
     output = WORK/(label.lower()+'-component.json')
     assert not output.exists()
     animation = unreal.load_asset('/Game/CSS/AnimLab/RT_'+tag+label)

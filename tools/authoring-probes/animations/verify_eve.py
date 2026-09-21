@@ -23,8 +23,9 @@ options.set_editor_property('evaluation_type', unreal.AnimDataEvalType.RAW)
 options.set_editor_property('optional_skeletal_mesh', mesh)
 results = []
 batch = json.loads((WORK/'batch.json').read_text()) if (WORK/'batch.json').exists() else [('Walk', ''), ('Idle', '')]
+assert 1 <= len(batch) <= 64 and len({label for label, _ in batch}) == len(batch)
 for label, _ in batch:
-    assert label in ('Walk', 'Idle', 'Jog', 'Sprint')
+    assert re.fullmatch(r'[A-Za-z][A-Za-z0-9]{0,15}', label)
     saved = unreal.load_asset('/Game/CSS/AnimLab/RT_'+tag+label)
     source = unreal.load_asset('/Game/CSS/AnimLab/AN_'+tag+label)
     repeated = unreal.CSSAnimationLibrary.retarget_clip(

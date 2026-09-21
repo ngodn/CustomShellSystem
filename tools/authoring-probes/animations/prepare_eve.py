@@ -15,10 +15,20 @@ def main():
     parser.add_argument('output', type=Path)
     sources = {'Walk': 'Proto_Walk', 'Idle': 'P_Eve_Peaceful_Idle01',
                'Jog': 'Proto_Run', 'Sprint': 'Proto_Sprint'}
-    parser.add_argument('--clips', nargs='+', choices=tuple(sources), default=['Walk', 'Idle'])
+    parser.add_argument('--clips', nargs='+')
+    parser.add_argument('--clip-map', type=Path, help='Short output labels mapped to decoded source directory names')
     parser.add_argument('--revision', default='')
     parser.add_argument('--source-yaw', type=int, choices=(0, 90), default=0)
     args = parser.parse_args()
+    if args.clip_map:
+        sources = json.loads(args.clip_map.read_text())
+    assert isinstance(sources, dict) and 1 <= len(sources) <= 64
+    assert all(re.fullmatch(r'[A-Za-z][A-Za-z0-9]{0,15}', label) and
+               isinstance(name, str) and re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,80}', name)
+               for label, name in sources.items())
+    args.clips = args.clips or (list(sources) if args.clip_map else ['Walk', 'Idle'])
+    assert 1 <= len(args.clips) <= 64 and len(set(args.clips)) == len(args.clips)
+    assert all(name in sources for name in args.clips)
     assert not args.output.exists()
     assert re.fullmatch(r'[A-Za-z0-9]{0,8}', args.revision)
     assert not args.source_yaw or args.revision

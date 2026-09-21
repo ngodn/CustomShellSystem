@@ -112,10 +112,10 @@ write('retarget-settings.json', {'ops': [str(controller.get_op_name(i)) for i in
 
 outputs = []
 batch = json.loads((WORK/'batch.json').read_text()) if (WORK/'batch.json').exists() else [('Walk', 'Proto_Walk'), ('Idle', 'P_Eve_Peaceful_Idle01')]
-assert batch and len({label for label, _ in batch}) == len(batch)
+assert 1 <= len(batch) <= 64 and len({label for label, _ in batch}) == len(batch)
 for label, filename in batch:
-    assert label in ('Walk', 'Idle', 'Jog', 'Sprint')
-    assert filename in ('Proto_Walk', 'P_Eve_Peaceful_Idle01', 'Proto_Run', 'Proto_Sprint')
+    assert re.fullmatch(r'[A-Za-z][A-Za-z0-9]{0,15}', label)
+    assert re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,80}', filename)
     data = json.loads((WORK/(filename+'.json')).read_text())
     factory = unreal.AnimSequenceFactory()
     factory.set_editor_property('target_skeleton', source.get_editor_property('skeleton'))

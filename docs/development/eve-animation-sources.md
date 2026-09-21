@@ -314,6 +314,60 @@ That is not crash evidence. No gameplay input or restart was attempted, and
 runtime animation ownership, weapon restoration and graph layering remain
 pending live verification.
 
+## Directional source batch D1
+
+`work/anim9` records 19 clips resolved from the actual animation references in
+the previously decoded lock-on BlendSpaces. Walk and run each supply forward,
+backward, left, right and four diagonals. Sprint supplies forward, left and
+right only. Its source BlendSpace repeats those clips across FrontBack; that
+does not establish a backward sprint animation.
+
+The short labels are `WF/WFR/WR/WBR/WB/WBL/WL/WFL`, the equivalent `J` labels,
+and `SF/SR/SL`. `J` identifies a prospective CSS jog slot, but these are
+Stellar Blade's `Proto_Lockon_Run_*` assets, not a claim about their correct
+playback speed in Mortal Shell. Walk has 37 keys over 1.2 seconds, run has
+25 over 0.8 seconds, and sprint has 17 over about 0.5333 seconds, all at 30 Hz.
+`source-index.json`, `source-verification.json` and `clip-map.json` retain the
+original paths, hashes, durations and mapping. All 19 extraction processes
+returned zero. Their 54-bone source bind matches corrected V2 exactly.
+
+The authoring scripts now accept a bounded short-label/source-name map rather
+than four hard-coded clip names. Duplicate selections are rejected before
+output creation. The old four-clip V2 preparation still produces the same
+eight JSON files. All new assets remain private under `/Game/CSS/AnimLab`,
+using short `D1` names; no source game files or production assets were changed.
+
+Fresh-process readback and repeat conversion match all 388 evaluated bones
+exactly in all 19 raw sequences. Compressed component execution covers 1,075
+frames with the actual hair, body and hand post-process. Its defaults and
+29/7/19-bone filters match the accepted V2 component baseline. Unaffected
+bones have zero position error and at most 6.6641e-8 radians rotation error.
+This batch evaluates one cycle per clip, not repeated-loop stability.
+
+Fitted-mesh replay produced three sampled poses for each clip. All 57 renders
+were inspected in `walk-review.jpg`, `jog-review.jpg` and `sprint-review.jpg`.
+The replay position error is below 0.000842 cm. The samples show coherent
+directional body poses, with the accepted wardrobe and heel supports present.
+They also show limitations that prevent deployment acceptance:
+
+- Lock-on walk uses raised combat-ready arms. Preserve the distinction from
+  relaxed forward movement and validate game weapon layering before use.
+- In sampled forward run and forward/right sprint poses, the ponytail falls
+  in front of or overlaps the torso/legs. Left sprint differs. Compare upstream
+  head/hair attachment transforms and initialization before changing anything;
+  do not retune the accepted production hair settings to hide this result.
+- These are stationary-owner, solid-material samples without weapons or a
+  floor-contact check. They do not prove whole-motion quality, cadence,
+  directional blending, combat contacts or gameplay transitions.
+
+Evidence includes `batch/readback-result.json`, `batch/component-result.json`,
+`validation.json`, `render-result.json` and each `render-*/report.json`.
+Import, retarget, fresh readback, component evaluation and all 19 render
+processes returned zero. No D1 animation or new core is cooked or installed.
+Next resolve the sampled hair behavior, construct direction/speed blends with
+appropriate phase/cadence, and complete custom idle, weapon restoration and
+beacon integration before controlled live acceptance.
+
 ## Original author's pose and deformation references
 
 The user supplied `reference/body-type-variant-EVE/3HVzUb9.gif` and
