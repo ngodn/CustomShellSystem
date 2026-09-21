@@ -37,6 +37,10 @@ def main():
               f"frames where CSSX > 1/4 of the frame: {h.get('frames_where_core_exceeds_quarter')}")
         for w in h.get('worst', [])[:8]:
             print(f"   frame {w['frame_ms']:7.1f} ms   CSSX {w['core_us']:6.0f} us   ({w['age_frames']} frames ago)")
+        if h.get('worst_by_core'):
+            print('   frames CSSX itself made expensive (core time >= 1 ms):')
+            for w in h['worst_by_core'][:6]:
+                print(f"   CSSX {w['core_us']:7.0f} us in a {w['frame_ms']:6.1f} ms frame   ({w['age_frames']} frames ago)")
         out.append(s)
         if i + 1 < args.samples:
             time.sleep(args.interval)

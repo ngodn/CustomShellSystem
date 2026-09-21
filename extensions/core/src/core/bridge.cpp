@@ -350,6 +350,12 @@ Json Bridge::request(const PlayerContext& player,const Json& request) {
             }
             if(!selected) throw std::runtime_error("Map key no longer exists");
             if(decode(view.value,selected,0)!=request.at("expected")) throw std::runtime_error("Map value changed; refresh before editing");
+            if(!view.value->HasAnyPropertyFlags(CPF_IsPlainOldData)) {   // in place, same reason as `set`
+                encode(view.value,selected,request.at("value"),0);
+                const auto result=decode(view.value,selected,0);
+                if(result.dump().size()>1024*1024) throw std::runtime_error("Map result exceeds 1 MiB");
+                return result;
+            }
             Value next(view.value);view.value->CopyCompleteValue(next.data(),selected);
             encode(view.value,next.data(),request.at("value"),0);
             const auto result=decode(view.value,next.data(),0);
@@ -358,11 +364,22 @@ Json Bridge::request(const PlayerContext& player,const Json& request) {
         }
         if(op=="set") {
             if(object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject|RF_ArchetypeObject))) throw std::runtime_error("Default-object writes are refused");
-            Value next(p);p->CopyCompleteValue(next.data(),data);
-            encode(p,next.data(),request.at("value"),0);
-            const auto result=decode(p,next.data(),0);
+            // Plain data: stage the write in a temporary so a rejected value
+            // leaves the property untouched. Anything else (structs holding
+            // maps, arrays, strings) is written in place: round-tripping such a
+            // value through a temporary copy freed the struct's own storage in
+            // game (Movement data, 2026-09-22) and the next read crashed.
+            if(p->HasAnyPropertyFlags(CPF_IsPlainOldData)) {
+                Value next(p);p->CopyCompleteValue(next.data(),data);
+                encode(p,next.data(),request.at("value"),0);
+                const auto result=decode(p,next.data(),0);
+                if(result.dump().size()>1024*1024) throw std::runtime_error("Property result exceeds 1 MiB");
+                p->CopyCompleteValue(data,next.data());return result;
+            }
+            encode(p,data,request.at("value"),0);
+            const auto result=decode(p,data,0);
             if(result.dump().size()>1024*1024) throw std::runtime_error("Property result exceeds 1 MiB");
-            p->CopyCompleteValue(data,next.data());return result;
+            return result;
         }
         return decode(p,data,0);
     }

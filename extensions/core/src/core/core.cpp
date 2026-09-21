@@ -193,7 +193,12 @@ Json Core::frame_stats(double seconds) const {
         }
         std::sort(worst.begin(),worst.end(),[](const Json& a,const Json& b){ return a["frame_ms"].get<double>()>b["frame_ms"].get<double>(); });
         if(worst.size()>12) worst.erase(worst.begin()+12,worst.end());
-        result["hitches"]={{"count",engine.hitches},{"core_share_max_us",core_at_hitches_max_us},{"frames_where_core_exceeds_quarter",core_hitches},{"worst",worst}};
+        // The same window sorted by the core's own time: which frames CSSX itself made expensive.
+        Json by_core=Json::array();
+        for(size_t i=0;i<core.size();++i) { const double us=double(core[i])*to_us; if(us<1000) continue; const size_t k=window.size()>=core.size()?i+(window.size()-core.size()):i; by_core.push_back({{"core_us",us},{"frame_ms",k<window.size()?double(window[k])*to_ms:0.0},{"age_frames",core.size()-1-i}}); }
+        std::sort(by_core.begin(),by_core.end(),[](const Json& a,const Json& b){ return a["core_us"].get<double>()>b["core_us"].get<double>(); });
+        if(by_core.size()>12) by_core.erase(by_core.begin()+12,by_core.end());
+        result["hitches"]={{"count",engine.hitches},{"core_share_max_us",core_at_hitches_max_us},{"frames_where_core_exceeds_quarter",core_hitches},{"worst",worst},{"worst_by_core",by_core}};
     }
     result["hooks"]=bridge_->hook_stats();
     Json ops=Json::array();
