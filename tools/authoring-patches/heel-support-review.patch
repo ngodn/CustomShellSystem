@@ -1,0 +1,18 @@
+--- a/tools/render_nextgen_review.py
++++ b/tools/render_nextgen_review.py
+@@ -44,12 +44,13 @@
+ scene = bpy.data.scenes.new('CSS fitting review')
+ bpy.context.window.scene = scene
+ targets = ('Eve Body', 'Eve Black Pearl - Suit', 'Eve Black Pearl - Stockings',
+-           'Eve Black Pearl - Footwear', 'Eve Extras - Heels', 'Eve Hair - Vacation', 'Eve Hair Ponytail Long',
++           'Eve Black Pearl - Footwear', 'Eve Black Pearl - Heel Supports', 'Eve Extras - Heels', 'Eve Hair - Vacation', 'Eve Hair Ponytail Long',
+            'Eve Hair - Planet Diving Tail', 'Eve Hair Sword',
+            PARTS['flat'], PARTS['heeled'], PARTS['lining'])
+ visibility = {PARTS['upper']: args.stockings, PARTS['flat']: args.stockings and not args.shoes,
+               PARTS['heeled']: args.stockings and args.shoes,
+-              PARTS['lining']: args.shoes, PARTS['shoes']: args.shoes}
++              PARTS['lining']: args.shoes, PARTS['shoes']: args.shoes,
++              'Eve Black Pearl - Heel Supports': args.shoes}
+ if args.wardrobe and any(name not in bpy.data.objects for name in PARTS.values()):
+     raise ValueError('Wardrobe review requires all independent foot regions')
+ if args.skin_diagnostic:

@@ -1,0 +1,24 @@
+--- a/tools/export_seduxtress_eve.py
++++ b/tools/export_seduxtress_eve.py
+@@ -390,6 +390,7 @@
+     parser.add_argument('--original-hair', action='store_true', help='Export the restored cap and hair accessory')
+     parser.add_argument('--modular-footwear', action='store_true')
+     parser.add_argument('--wardrobe-feet', action='store_true')
++    parser.add_argument('--heel-supports', action='store_true', help='Append isolated supports to the existing footwear section')
+     args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else [])
+     blend_path = Path("/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/work/CSS_SeduXtress_Eve_Bound.blend")
+     refskel_path = Path("/home/eins0fx/development/mods/msII/CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/authoring/reference/SKEL_CSS_Base.refskel.json")
+@@ -465,7 +466,12 @@
+         fixed_materials[fixed_materials.index('MI_EVE_HR_12_TypeA')] = 'MI_EVE_HR_01_TypeA'
+         fixed_materials.append('CH_W_Sword_02_Blade_Edge.001')
+         aliases['Eve Hair - Planet Diving Tail'] = {'MI_EVE_HR_01_TypeA.001': 'MI_EVE_HR_01_TypeA'}
+-    
++    if args.heel_supports:
++        if not args.wardrobe_feet:
++            parser.error('Heel supports require --wardrobe-feet')
++        target_objects.append('Eve Black Pearl - Heel Supports')
++        aliases['Eve Black Pearl - Heel Supports'] = {'MI_CH_P_EVE_35_WithoutVariants': 'MI_CH_P_EVE_35_Footwear'}
++
+     export_variant(
+         blend_path=blend_path,
+         refskel_path=args.reference or refskel_path,
