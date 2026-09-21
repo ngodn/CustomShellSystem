@@ -1,11 +1,14 @@
 # Current work queue
 
-Current color correction: user rejected gray skin, dark hard areola edges and a
-visible groin patch in the first swatch review. Hair is reported working. colors4 repairs the masks and is installed. A live check then exposed CSS
-rejecting valid sparse UV composites; the installed colors2 core fixes it. Live Ivory and black texel checks now
-pass, including material 5, with saved state restored after each trial.
-The user is reviewing visible shade and region boundaries before acceptance.
-Evidence and scope: [authored colors](development/authored-color-swatches.md).
+2026-09-21: The user reviewed the installed colors4 assets and colors2 core and
+answered “Looks better” for skin tone, chest boundaries and the groin patch.
+Keep this repair as the visually accepted color baseline. Live Ivory and black
+texel checks pass, including the formerly rejected sparse UV material, and
+both trials restored saved settings. Commit: `f949a57`. Do not reopen accepted
+rig, body proportions, hair or ground tuning. Continue the public Eve package
+rename, then the remaining release features and checks. This acceptance does
+not prove every swatch combination or make CSS v1.0.0 release-ready.
+Evidence: [authored colors](development/authored-color-swatches.md).
 
 2026-09-21: [Eve colors installed](development/authored-color-swatches.md#installed-color-checkpoint) in `css_core-colors1.dll` plus authoring `work/colors3/trio`, using a normal restart and verified backups/state preservation. Fresh world mesh/-99 cm checks pass. Steam still and game-window clip show the five-palette list with Jade selected; live material reads prove torso/genital slots retain original textures while the six tested outfit slots use color targets. Full palette, 12-chip, Default/cycling and region-boundary review remains. The user confirms they are testing colors; observe without changing their controls. Preserve their latest selection rather than restoring the older pre-restart look over it.
 

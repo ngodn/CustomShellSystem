@@ -220,3 +220,12 @@ Steam screenshots, reads actual material textures and restores Skin afterward.
 Use it while controls are idle. It aborts without starting the trial if CSS is
 closed. Add `--rgb 000000` for the valid-black case. Do not run another runtime
 request producer or screen recorder concurrently.
+
+## User acceptance
+
+The user answered “Looks better” after reviewing the installed repair's skin
+tone, chest boundaries and groin patch. Keep colors4 plus colors2 core as the
+accepted visual baseline. The implementation and regression tools are in
+`f949a57`. This closes the reported visual regression at the user's reviewed
+scope. It does not replace broader release coverage of every swatch combination,
+menu lifecycle or saved-look restoration across travel and game relaunch.
