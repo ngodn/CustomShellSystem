@@ -122,6 +122,9 @@ look. It is not gameplay or animation acceptance.
 
 ## First fitted-mesh candidates
 
+Historical checkpoint: the uncorrected `anim2`/`anim3` candidates are superseded
+by the facing-axis correction below. Do not deploy them.
+
 Evidence is under `work/anim2/`. `Proto_Walk` and `P_Eve_Peaceful_Idle01` now
 retarget through Unreal 5.6.1 onto `SK_BlackPearl2`, using its accepted mesh
 bind pose. The source rig contains 54 body/finger bones with their original
@@ -183,8 +186,10 @@ image is excluded from encoding. See `walk-review.mp4`, `idle-review.mp4` and
 
 Reviewed stills show a recognizable walking sway and the idle's relaxed turn
 with a hand resting near the opposite arm. This is preliminary visual review.
-The solid-material renderer does not reproduce body/foot opacity masks, so
-bare-foot surfaces appear through the shoes. Hair is rigid because secondary
+The initial renderer omitted the game's covered-foot section selection and
+the heeled stocking/lining parts, so bare feet appeared through the shoes.
+This was a preview assembly defect, not evidence of an opacity-mask defect.
+Hair is rigid because secondary
 motion is not evaluated. Neither artifact proves a defect in the installed mod.
 Do not accept heels, hair, finger contacts or game integration from these views.
 The protected production mesh and shared Skeleton remain byte-identical.
@@ -195,3 +200,93 @@ candidate set to jog/sprint, then validate compressed/cooked playback. Author
 the beacon pair and connect modder metadata, saved choices, contextual UI and
 runtime cancellation/weapon restoration. No game restart or runtime write was
 needed for this checkpoint. Full release acceptance remains open.
+
+## Facing correction and component playback
+
+Evidence: `work/anim4/`, with the rejected uncorrected jog/sprint controls in
+`work/anim3/`. The upright walk and idle hid a source-facing mismatch. Faster
+clips exposed it: the source's forward torso lean became sideways on CSS.
+The source right-minus-left hip axis is +Y; the fitted CSS axis is -X.
+Rotate the source coordinate basis +90 degrees around Z, in both its root
+reference transform and every animated root key. Leave every non-root local
+reference transform and the target mesh unchanged. Rotating only the animated
+keys or editing the target binding would not be the same correction.
+
+`prepare_eve.py --clips Walk Jog Sprint Idle --revision V2 --source-yaw 90`
+creates separately named private assets under `/Game/CSS/AnimLab`. The checked
+root-only conversion reproduces the rotated reference world matrices within
+3.56e-14. At jog frame 6, the retargeted head-minus-pelvis vector changes from
+approximately (26.80, -3.70, 40.72) cm to (4.07, 25.62, 40.56) cm. Sprint frame
+4 changes from (41.30, -2.41, 26.30) to (2.79, 40.00, 26.42). Reviewed raw
+renders now show forward running lean. Preserve the rejected controls so this
+axis error is not rediscovered through repeated pose adjustments.
+
+Fresh-process saved readback and repeated conversions match all 388 evaluated
+bones exactly across 37 walk, 21 jog, 17 sprint and 211 idle frames. Production
+mesh and Skeleton hashes remain unchanged. Editor build, conversion and
+readback all exit 0.
+
+`component_eve.py` invokes the C++ helper's `EvaluateClip` on an isolated
+skeletal component. It requires valid compressed animation data, disabled
+force-raw evaluation and matching virtual-bone GUIDs. A separate component
+without the post-process supplies the upstream control. The real
+`ABP_Secondary` evaluates hair, body and left-hand rigs, including active hand
+corrective morph weights. The probe runs three walk/jog/sprint cycles and one
+idle cycle at 60 fps, totaling 217/121/97/421 samples including endpoints.
+
+All three output filters are present: 29 hair, 7 body and 19 hand bones. Bones
+outside those filters have zero measured local translation change and less
+than 6.67e-8 radians rotation difference. Rig counters advance, hands report
+valid, hair uses the accepted 200/24/0 and body uses 2 Hz / 0.7 damping / 1
+motion / zero gravity. The helper does not save the mesh, Skeleton or AnimBP;
+their hashes are checked before and after. Compressed upstream versus raw
+local poses differ by at most 0.00381 cm and 0.161 degrees across the four
+clips (`compression-comparison.json`); this is not a skin-contact tolerance.
+
+The fitted-mesh renderer now hides the exact covered-foot body sections and
+shows heeled stocking feet and footwear lining. It replays the component's
+bone transforms and active hand morphs while preserving authored fit shapes.
+It also supports front, back and side views. Source blends are never saved.
+Component previews are in `work/anim4/component-{walk,jog,sprint,idle}`.
+All four Blender runs exit 0. Maximum bone replay error is below 0.000947 cm,
+with zero measured quaternion-angle error at Blender precision. The encoded
+`*-component.mp4` files run at 15 fps for 3.6/2/1.6/7 seconds, excluding the
+repeated final endpoint. Sampled stills show the corrected running lean and
+visible heel supports. The left hand remains visibly spread in these poses,
+and the long hair overlaps the lower-body silhouette in some running views;
+inspect those contacts from additional angles before visual acceptance. The
+clips have been generated, but only sampled stills were visually inspected
+at this checkpoint.
+
+Limits: the owner remains stationary, materials are diagnostic solids, and
+the probe does not evaluate game locomotion blends, weapon overlays, foot IK,
+collisions or gameplay. Compressed editor execution is not cooked/live
+acceptance. No animation is installed. Next inspect contacts and transitions,
+then cook and integrate optional animation metadata, saved choices, UI and
+runtime cancellation/weapon restoration. Beacon authoring remains open.
+
+## Original author's pose and deformation references
+
+The user supplied `reference/body-type-variant-EVE/3HVzUb9.gif` and
+`SmutBase • [Stellar Blade] Eve.pdf` in the Eve authoring directory. Inspection
+records and sampled GIF frames are in `work/anim3/author-ref/`.
+
+The 23.29-second GIF demonstrates body-physics controls and deformation during
+movement. It is useful for judging deformation, but does not establish a
+correct weapon pose or supply the requested locomotion clips. PDF pages 14-17
+describe corrective shape keys for extreme poses, tweak bones, a separate
+Asset Library pose collection and physics rebinding after geometry/outfit
+changes. Those are useful authoring references for shoulders, hips and the
+planned idle/kneel; they do not establish compatibility with the game rig.
+
+The local reference folder has no separate pose-library file. Read-only blend
+library inspection found `WalkInPlace` (frames 1-37, 1229 curves) and
+`EveWalkTweaks` (frames 36-216, 102 curves) in `eve_beta10.blend`. Their motion
+has not yet been played back or accepted. Queue comparison against the game
+clips after the current coordinate correction. Do not infer from their names
+that they are the same animation or directly compatible with CSS.
+
+Release provenance note: the supplied PDF lists CC BY-NC-ND 4.0 on page 3.
+Record the author's applicable permissions before distributing derived source
+assets or a starter kit. This inspection establishes the local document's
+contents, not a legal conclusion about the user's separate author agreement.

@@ -2,24 +2,33 @@
 import hashlib
 import json
 import math
+import os
+import re
 from pathlib import Path
 
 import unreal
 
 ROOT = Path(__file__).resolve().parents[4]
-WORK = ROOT/'CustomShellSystem/work/anim2'
+WORK = Path(os.environ.get('CSS_ANIM_WORK', str(ROOT/'CustomShellSystem/work/anim2'))).resolve()
+assert WORK.is_relative_to(ROOT/'CustomShellSystem/work')
 mesh = unreal.load_asset('/Game/CSS/SeduXtress/SK_BlackPearl2')
-source_mesh = unreal.load_asset('/Game/CSS/AnimLab/SK_EveSource')
-retarget = unreal.load_asset('/Game/CSS/AnimLab/RT_EveCSS')
+config = json.loads((WORK/'batch-config.json').read_text()) if (WORK/'batch-config.json').exists() else {}
+revision = config.get('revision', '')
+assert re.fullmatch(r'[A-Za-z0-9]{0,8}', revision)
+tag = revision+'_' if revision else ''
+source_mesh = unreal.load_asset('/Game/CSS/AnimLab/SK_'+tag+'EveSource')
+retarget = unreal.load_asset('/Game/CSS/AnimLab/RT_'+tag+'EveCSS')
 options = unreal.AnimPoseEvaluationOptions()
 options.set_editor_property('evaluation_type', unreal.AnimDataEvalType.RAW)
 options.set_editor_property('optional_skeletal_mesh', mesh)
 results = []
-for label in ('Walk', 'Idle'):
-    saved = unreal.load_asset('/Game/CSS/AnimLab/RT_'+label)
-    source = unreal.load_asset('/Game/CSS/AnimLab/AN_'+label)
+batch = json.loads((WORK/'batch.json').read_text()) if (WORK/'batch.json').exists() else [('Walk', ''), ('Idle', '')]
+for label, _ in batch:
+    assert label in ('Walk', 'Idle', 'Jog', 'Sprint')
+    saved = unreal.load_asset('/Game/CSS/AnimLab/RT_'+tag+label)
+    source = unreal.load_asset('/Game/CSS/AnimLab/AN_'+tag+label)
     repeated = unreal.CSSAnimationLibrary.retarget_clip(
-        source_mesh, mesh, source, retarget, '/Game/CSS/AnimLab/RT_Check'+label)
+        source_mesh, mesh, source, retarget, '/Game/CSS/AnimLab/RT_'+tag+'Check'+label)
     assert saved and repeated
     document = json.loads((WORK/(label.lower()+'-motion.json')).read_text())
     for kind, animation in [('saved', saved), ('repeated', repeated)]:

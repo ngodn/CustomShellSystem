@@ -2,18 +2,37 @@
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 
 import numpy as np
-from review_source_tracks import sample, vector
+from review_source_tracks import sample, vector, rotation
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('source', type=Path)
     parser.add_argument('output', type=Path)
+    sources = {'Walk': 'Proto_Walk', 'Idle': 'P_Eve_Peaceful_Idle01',
+               'Jog': 'Proto_Run', 'Sprint': 'Proto_Sprint'}
+    parser.add_argument('--clips', nargs='+', choices=tuple(sources), default=['Walk', 'Idle'])
+    parser.add_argument('--revision', default='')
+    parser.add_argument('--source-yaw', type=int, choices=(0, 90), default=0)
     args = parser.parse_args()
     assert not args.output.exists()
+    assert re.fullmatch(r'[A-Za-z0-9]{0,8}', args.revision)
+    assert not args.source_yaw or args.revision
+    prefix = args.revision+'_' if args.revision else ''
+    half = np.deg2rad(args.source_yaw)/2
+    yaw = np.array([0., 0., np.sin(half), np.cos(half)])
+    basis = rotation(yaw)
+
+    def orient_root(transform):
+        transform['translation'] = (basis @ transform['translation']).tolist()
+        q = np.array(transform['rotation'])
+        xyz = yaw[3]*q[:3] + q[3]*yaw[:3] + np.cross(yaw[:3], q[:3])
+        result = np.append(xyz, yaw[3]*q[3]-np.dot(yaw[:3], q[:3]))
+        transform['rotation'] = (result/np.linalg.norm(result)).tolist()
     names = {'Root', 'Bip001', 'Bip001-Pelvis', 'Bip001-Spine', 'Bip001-Spine1',
              'Bip001-Spine2', 'Bip001-Neck', 'Bip001-Head'}
     names.update(f'Bip001-{side}-{part}' for side in ('L', 'R')
@@ -22,7 +41,8 @@ def main():
                  for digit in range(5) for joint in ('', '1', '2'))
     assert len(names) == 54
     reference, clips, hashes = None, {}, {}
-    for label in ('Proto_Walk', 'P_Eve_Peaceful_Idle01'):
+    assert len(set(args.clips)) == len(args.clips)
+    for label in (sources[name] for name in args.clips):
         path = args.source/label/'source-tracks.json'
         data = json.loads(path.read_text())
         hashes[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
@@ -42,6 +62,8 @@ def main():
                               rotation=vector(ref['Rotation'], True).tolist(),
                               scale=vector(ref['Scale3D']).tolist()))
             assert np.allclose(bones[-1]['scale'], 1, atol=.0001)
+            if args.source_yaw and parent == -1:
+                orient_root(bones[-1])
             if not bone['animated']:
                 continue
             keys = []
@@ -52,6 +74,8 @@ def main():
                                  ('rotation', 'rotations', 'rotationTimes', 'Rotation'),
                                  ('scale', 'scales', 'scaleTimes', 'Scale3D')]})
                 assert np.allclose(keys[-1]['scale'], 1, atol=.0001)
+                if args.source_yaw and parent == -1:
+                    orient_root(keys[-1])
             tracks.append(dict(name=bone['name'], keys=keys))
         if reference is None:
             reference = bones
@@ -59,13 +83,17 @@ def main():
         clips[label] = dict(name=label, source=data['asset'], frames=data['frameCount'],
                             duration=data['duration'], fps=30, tracks=tracks)
     args.output.mkdir(parents=True)
-    mesh = dict(schema=1, mesh_package='/Game/CSS/AnimLab/SK_EveSource',
-                skeleton_package='/Game/CSS/AnimLab/SKEL_EveSource', bones=reference,
+    mesh = dict(schema=1, mesh_package='/Game/CSS/AnimLab/SK_'+prefix+'EveSource',
+                skeleton_package='/Game/CSS/AnimLab/SKEL_'+prefix+'EveSource', bones=reference,
                 points=[[0, 0, 0], [1, 0, 0], [0, 1, 0]],
                 wedges=[[0, 0, 0], [1, 1, 0], [2, 0, 1]], faces=[[0, 1, 2, 0]],
                 materials=['Diagnostic'], influences=[[0, 0, 1], [1, 0, 1], [2, 0, 1]])
     for name, value in [('source.mesh', mesh), *clips.items(), ('source-hashes', hashes)]:
         (args.output/(name+'.json')).write_text(json.dumps(value, indent=2)+'\n')
+    (args.output/'batch.json').write_text(json.dumps(
+        [[name, sources[name]] for name in args.clips], indent=2)+'\n')
+    (args.output/'batch-config.json').write_text(json.dumps(dict(revision=args.revision,
+        source_yaw_degrees=args.source_yaw, source_basis=basis.tolist()), indent=2)+'\n')
 
 
 if __name__ == '__main__':

@@ -1,13 +1,20 @@
 """UE 5.6.1: isolated Eve source animation import and IK retarget candidate."""
 import hashlib
 import json
+import os
+import re
 from pathlib import Path
 import unreal
 
 ROOT = Path(__file__).resolve().parents[4]
-WORK = ROOT/'CustomShellSystem/work/anim2'
+WORK = Path(os.environ.get('CSS_ANIM_WORK', str(ROOT/'CustomShellSystem/work/anim2'))).resolve()
+assert WORK.is_relative_to(ROOT/'CustomShellSystem/work')
 CONTENT = ROOT/'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 PACKAGE = '/Game/CSS/AnimLab'
+config = json.loads((WORK/'batch-config.json').read_text()) if (WORK/'batch-config.json').exists() else {}
+revision = config.get('revision', '')
+assert re.fullmatch(r'[A-Za-z0-9]{0,8}', revision)
+tag = revision+'_' if revision else ''
 tools = unreal.AssetToolsHelpers.get_asset_tools()
 checkpoint = json.loads((WORK/'resume.json').read_text()) if (WORK/'resume.json').exists() else {}
 assert all(hashlib.sha256(Path(p).read_bytes()).hexdigest() == h for p, h in checkpoint.items())
@@ -47,7 +54,7 @@ def snapshot(animation, mesh, frame):
 
 
 assert not (WORK/'retarget-result.json').exists()
-source = unreal.load_asset(PACKAGE+'/SK_EveSource')
+source = unreal.load_asset(PACKAGE+'/SK_'+tag+'EveSource')
 target = unreal.load_asset('/Game/CSS/SeduXtress/SK_BlackPearl2')
 assert source and target
 protected = [CONTENT/'CSS/SeduXtress/SK_BlackPearl2.uasset', CONTENT/'CSS/Shared/SKEL_Base.uasset']
@@ -74,8 +81,8 @@ for side, suffix in [('L', 'l'), ('R', 'r')]:
                        finger+'_01_'+suffix, finger+'_03_'+suffix))
 write('chains.json', chains)
 rigs = []
-for name, mesh, root, start, end in [('IK_EveSource', source, 'Bip001-Pelvis', 1, 2),
-                                      ('IK_EveCSS', target, 'pelvis', 3, 4)]:
+for name, mesh, root, start, end in [('IK_'+tag+'EveSource', source, 'Bip001-Pelvis', 1, 2),
+                                      ('IK_'+tag+'EveCSS', target, 'pelvis', 3, 4)]:
     rig, fresh = create(name, unreal.IKRigDefinition, unreal.IKRigDefinitionFactory())
     if not fresh:
         rigs.append(rig)
@@ -88,7 +95,7 @@ for name, mesh, root, start, end in [('IK_EveSource', source, 'Bip001-Pelvis', 1
     assert unreal.EditorAssetLibrary.save_loaded_asset(rig, False)
     rigs.append(rig)
 
-retarget, fresh = create('RT_EveCSS', unreal.IKRetargeter, unreal.IKRetargetFactory())
+retarget, fresh = create('RT_'+tag+'EveCSS', unreal.IKRetargeter, unreal.IKRetargetFactory())
 controller = unreal.IKRetargeterController.get_controller(retarget)
 mode = unreal.RetargetSourceOrTarget
 if fresh:
@@ -104,12 +111,16 @@ write('retarget-settings.json', {'ops': [str(controller.get_op_name(i)) for i in
                       for b in json.loads((WORK/'target-bind.json').read_text())}})
 
 outputs = []
-for label, filename in [('Walk', 'Proto_Walk'), ('Idle', 'P_Eve_Peaceful_Idle01')]:
+batch = json.loads((WORK/'batch.json').read_text()) if (WORK/'batch.json').exists() else [('Walk', 'Proto_Walk'), ('Idle', 'P_Eve_Peaceful_Idle01')]
+assert batch and len({label for label, _ in batch}) == len(batch)
+for label, filename in batch:
+    assert label in ('Walk', 'Idle', 'Jog', 'Sprint')
+    assert filename in ('Proto_Walk', 'P_Eve_Peaceful_Idle01', 'Proto_Run', 'Proto_Sprint')
     data = json.loads((WORK/(filename+'.json')).read_text())
     factory = unreal.AnimSequenceFactory()
     factory.set_editor_property('target_skeleton', source.get_editor_property('skeleton'))
     factory.set_editor_property('preview_skeletal_mesh', source)
-    animation, fresh = create('AN_'+label, unreal.AnimSequence, factory)
+    animation, fresh = create('AN_'+tag+label, unreal.AnimSequence, factory)
     if fresh:
         edit = animation.get_editor_property('controller')
         edit.open_bracket('Eve source keys at original sample times', False)
@@ -125,7 +136,7 @@ for label, filename in [('Walk', 'Proto_Walk'), ('Idle', 'P_Eve_Peaceful_Idle01'
         finally:
             edit.close_bracket(False)
         assert unreal.EditorAssetLibrary.save_loaded_asset(animation, False)
-    candidate = unreal.CSSAnimationLibrary.retarget_clip(source, target, animation, retarget, PACKAGE+'/RT_'+label)
+    candidate = unreal.CSSAnimationLibrary.retarget_clip(source, target, animation, retarget, PACKAGE+'/RT_'+tag+label)
     assert candidate
     assert candidate.get_editor_property('skeleton') == target.get_editor_property('skeleton')
     assert candidate.get_path_name().startswith(PACKAGE+'/')

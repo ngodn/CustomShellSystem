@@ -14,4 +14,9 @@ public:
     static class UAnimSequence* RetargetClip(class USkeletalMesh* SourceMesh,
         class USkeletalMesh* TargetMesh, class UAnimSequence* Source,
         class UIKRetargeter* Retargeter, const FString& OutputPackage);
+
+    /** Evaluate compressed animation with the installed authoring post-process, without saving. */
+    UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
+    static FString EvaluateClip(class USkeletalMesh* Mesh, class UAnimSequence* Animation,
+        class UAnimBlueprint* Blueprint, int32 Loops = 3);
 };

@@ -7,18 +7,21 @@ import sys
 from pathlib import Path
 
 import bpy
+import bmesh
 from mathutils import Matrix, Quaternion, Vector
 
 ROOT = Path(__file__).resolve().parents[4]
 MOD = ROOT/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx'
 sys.path.insert(0, str(MOD/'tools'))
-from export_seduxtress_eve import TO_UE, read_bones, EXPORT_SHAPES
+from export_seduxtress_eve import TO_UE, read_bones, EXPORT_SHAPES, LEFT_HAND_CORRECTIVES
+from wardrobe_regions import PARTS, COVERED
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--motion', type=Path, required=True)
 parser.add_argument('--bind', type=Path, required=True)
 parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--stride', type=int, default=2)
+parser.add_argument('--view', choices=('three-quarter', 'front', 'back', 'side'), default='three-quarter')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert args.stride > 0
 assert args.output.resolve().is_relative_to(ROOT) and not args.output.exists()
@@ -39,7 +42,8 @@ for actual, entry in zip(bones, expected, strict=True):
 
 parts = ['Eve Body', 'Eve Black Pearl - Suit', 'Eve Black Pearl - Stockings',
          'Eve Black Pearl - Footwear', 'Eve Black Pearl - Heel Supports',
-         'Eve Hair - Planet Diving Tail', 'Eve Hair Ponytail Long', 'Eve Hair Sword']
+         'Eve Hair - Planet Diving Tail', 'Eve Hair Ponytail Long', 'Eve Hair Sword',
+         PARTS['heeled'], PARTS['lining']]
 objects = [bpy.data.objects[name] for name in parts]
 scene = bpy.data.scenes.new('Eve animation review')
 bpy.context.window.scene = scene
@@ -64,8 +68,19 @@ for obj in objects:
             obj.modifiers.remove(modifier)
         else:
             modifier.show_viewport = modifier.show_render = True
-    obj.color = (.53, .57, .62, 1) if obj.name == 'Eve Body' else (.08, .13, .18, 1)
+    obj.color = (.53, .57, .62, 1) if obj.name in ('Eve Body', PARTS['lining']) else (.08, .13, .18, 1)
 bpy.context.view_layer.update()
+body = bpy.data.objects['Eve Body']
+covered = [i for i, material in enumerate(body.data.materials)
+           if material and material.name in COVERED.values()]
+assert len(covered) == len(COVERED)
+expected_removed = sum(p.material_index in covered for p in body.data.polygons)
+assert expected_removed > 0
+body.hide_render = True
+filtered = bpy.data.objects.new('Visible body sections', bpy.data.meshes.new('Visible body sections'))
+scene.collection.objects.link(filtered)
+filtered.matrix_world = body.matrix_world
+filtered.color = body.color
 basis = TO_UE @ rig.matrix_world
 inverse = basis.inverted()
 pose_bones = [rig.pose.bones[b['name']] for b in bones]
@@ -94,10 +109,22 @@ view = bpy.data.objects.new('Review camera', camera)
 scene.collection.objects.link(view)
 scene.camera = view
 center = Vector((0, 0, .95))
-view.location = center + Vector((4, -2.5, .5))
+direction = {'three-quarter': (4, -2.5, .5), 'front': (1, -5, .35),
+             'back': (-1, 5, .35), 'side': (5, 0, .35)}[args.view]
+view.location = center + Vector(direction)
 view.rotation_euler = (center-view.location).to_track_quat('-Z', 'Y').to_euler()
 
 for output_frame, frame in enumerate(range(0, len(motion['frames']), args.stride)):
+    morphs = motion['frames'][frame].get('morphs', {})
+    assert set(morphs) <= set(EXPORT_SHAPES) | set(LEFT_HAND_CORRECTIVES), set(morphs)
+    for obj in objects:
+        if not obj.data.shape_keys:
+            continue
+        for key in obj.data.shape_keys.key_blocks:
+            if key.name in EXPORT_SHAPES or (obj.name == 'Eve Body' and key.name in LEFT_HAND_CORRECTIVES):
+                value = morphs.get(key.name, 0)
+                assert not value or not key.mute, key.name
+                key.value = value
     snapshot = motion['frames'][frame]['pose']['Snapshot']
     assert snapshot['bIsValid'] and snapshot['SkeletalMeshName'] == 'SK_BlackPearl2'
     lookup = {n.lower(): t for n, t in zip(snapshot['BoneNames'], snapshot['LocalTransforms'], strict=True)}
@@ -123,13 +150,34 @@ for output_frame, frame in enumerate(range(0, len(motion['frames']), args.stride
         angle = actual.to_quaternion().rotation_difference(world[index].to_quaternion()).angle
         angle_error = max(angle_error, min(angle, abs(2*math.pi-angle)))
     assert position_error < .001 and angle_error < .001, (frame, position_error, angle_error)
-    errors.append(dict(frame=frame, position_cm=position_error, angle_rad=angle_error))
+    graph = bpy.context.evaluated_depsgraph_get()
+    evaluated = body.evaluated_get(graph)
+    mesh = bpy.data.meshes.new_from_object(evaluated, preserve_all_data_layers=True, depsgraph=graph)
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    remove = [face for face in bm.faces if face.material_index in covered]
+    assert len(remove) == expected_removed
+    bmesh.ops.delete(bm, geom=remove, context='FACES_ONLY')
+    bm.to_mesh(mesh)
+    bm.free()
+    previous = filtered.data
+    filtered.data = mesh
+    bpy.data.meshes.remove(previous)
+    shoes = bpy.data.objects['Eve Black Pearl - Footwear'].evaluated_get(graph)
+    heel = bpy.data.objects['Eve Black Pearl - Heel Supports'].evaluated_get(graph)
+    lowest = min((o.matrix_world @ v.co).z for o in (shoes, heel) for v in o.data.vertices)
+    errors.append(dict(frame=frame, position_cm=position_error, angle_rad=angle_error,
+                       footwear_lowest_cm=lowest*100))
     scene.render.filepath = str(args.output/f'{output_frame:03d}.png')
     bpy.ops.render.render(write_still=True)
 assert hashlib.sha256(blend.read_bytes()).hexdigest() == blend_hash
 (args.output/'report.json').write_text(json.dumps(dict(
     blend=str(blend), blend_sha256=blend_hash, motion=str(args.motion),
     motion_sha256=hashlib.sha256(args.motion.read_bytes()).hexdigest(),
-    fps=motion['fps']/args.stride, parts=parts, shapes=shapes, errors=errors,
-    scope='UE sampled pose on the accepted fitted mesh. Solid materials, no game IK, no secondary motion or gameplay validation.'
+    fps=motion['fps']/args.stride, parts=parts, shapes=shapes, errors=errors, view=args.view,
+    covered_body_faces_removed=expected_removed,
+    wardrobe='Heels and stockings shown; flat feet hidden; heeled stocking feet and footwear lining shown.',
+    scope=('UE compressed component pose including secondary motion and hand morphs, stationary owner. '
+           if motion.get('compressed_source') else 'UE raw animation pose, no secondary motion. ') +
+          'Accepted fitted mesh and wardrobe section selection, solid materials. No gameplay validation.'
 ), indent=2)+'\n')

@@ -10,6 +10,18 @@
 #include "Retargeter/IKRetargetProcessor.h"
 #include "Retargeter/RetargetOps/SpeedPlantingOp.h"
 #include "UObject/Package.h"
+#include "Animation/AnimBlueprint.h"
+#include "Animation/AnimBlueprintGeneratedClass.h"
+#include "Animation/MorphTarget.h"
+#include "AnimNode_ControlRig.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "ControlRig.h"
+#include "Dom/JsonObject.h"
+#include "HAL/IConsoleManager.h"
+#include "PreviewScene.h"
+#include "Serialization/JsonSerializer.h"
+#include "Serialization/JsonWriter.h"
+#include "UObject/UnrealType.h"
 
 UAnimSequence* UCSSAnimationLibrary::RetargetClip(USkeletalMesh* SourceMesh,
     USkeletalMesh* TargetMesh, UAnimSequence* Source, UIKRetargeter* Retargeter,
@@ -117,4 +129,175 @@ UAnimSequence* UCSSAnimationLibrary::RetargetClip(USkeletalMesh* SourceMesh,
     Edit.NotifyPopulated();
     Result->MarkPackageDirty();
     return Result;
+}
+
+FString UCSSAnimationLibrary::EvaluateClip(USkeletalMesh* Mesh, UAnimSequence* Animation,
+    UAnimBlueprint* Blueprint, int32 Loops)
+{
+    auto Fail = [](const TCHAR* Message) -> FString {
+        UE_LOG(LogTemp, Error, TEXT("CSS EvaluateClip: %s"), Message);
+        return {};
+    };
+    if (!IsRunningCommandlet() || !Mesh || !Animation || !Blueprint || !Blueprint->GeneratedClass ||
+        Mesh->GetPathName() != TEXT("/Game/CSS/SeduXtress/SK_BlackPearl2.SK_BlackPearl2") ||
+        Blueprint->GetPathName() != TEXT("/Game/CSS/SeduXtress/ABP_Secondary.ABP_Secondary") ||
+        !Animation->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/RT_")) ||
+        Blueprint->TargetSkeleton != Mesh->GetSkeleton() || Animation->GetSkeleton() != Mesh->GetSkeleton() ||
+        Loops < 1 || Loops > 3 || Animation->GetPlayLength() <= 0 || Animation->GetPlayLength()*Loops > 22)
+        return Fail(TEXT("Invalid isolated component input"));
+    FMemMark Memory(FMemStack::Get());
+    Animation->BeginCacheDerivedDataForCurrentPlatform();
+    Animation->WaitOnExistingCompression(true);
+    const auto* ForceRaw = IConsoleManager::Get().FindConsoleVariable(TEXT("a.ForceEvalRawData"));
+    if (!Animation->IsCompressedDataValid() || !ForceRaw || ForceRaw->GetInt() != 0 ||
+        Animation->GetSkeletonVirtualBoneGuid() != Mesh->GetSkeleton()->GetVirtualBoneGuid())
+        return Fail(TEXT("Compressed evaluation preconditions failed"));
+    FPreviewScene Scene(FPreviewScene::ConstructionValues().SetCreateDefaultLighting(false));
+    auto MakeComponent = [&](bool PostProcess) {
+        auto* C = NewObject<USkeletalMeshComponent>();
+        C->SetSkeletalMesh(Mesh);
+        C->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+        if (PostProcess) C->SetOverridePostProcessAnimBP(TSubclassOf<UAnimInstance>(Blueprint->GeneratedClass.Get()), true);
+        C->SetDisablePostProcessBlueprint(!PostProcess);
+        Scene.AddComponent(C, FTransform::Identity);
+        C->InitAnim(true);
+        C->SetAnimation(Animation);
+        C->Stop();
+        return C;
+    };
+    auto* Upstream = MakeComponent(false);
+    auto* Component = MakeComponent(true);
+    auto* Instance = Component->GetPostProcessInstance();
+    if (!Instance) return Fail(TEXT("Missing post-process instance"));
+    auto Defaults = MakeShared<FJsonObject>();
+    for (TFieldIterator<FProperty> It(Instance->GetClass()); It; ++It)
+    {
+        if (!It->GetName().StartsWith(TEXT("CSS"))) continue;
+        FString Value;
+        It->ExportText_InContainer(0, Value, Instance, Instance, Instance, PPF_None);
+        Defaults->SetStringField(It->GetName(), Value);
+    }
+    for (const auto& Pair : {TPair<FName,float>(TEXT("CSSStiffness"),200.f), TPair<FName,float>(TEXT("CSSDamping"),24.f)})
+    {
+        auto* P = FindFProperty<FFloatProperty>(Instance->GetClass(), Pair.Key);
+        if (!P) return Fail(TEXT("Missing accepted hair controls"));
+        P->SetPropertyValue_InContainer(Instance, Pair.Value);
+    }
+    const auto& Ref = Mesh->GetRefSkeleton();
+    auto* Filter = FindFProperty<FArrayProperty>(FAnimNode_ControlRigBase::StaticStruct(), TEXT("OutputBonesToTransfer"));
+    if (!Filter) return Fail(TEXT("Missing native rig output filter"));
+    TSet<int32> ChangedBones;
+    TArray<TSharedPtr<FJsonValue>> FilterReport;
+    for (TFieldIterator<FStructProperty> It(Instance->GetClass()); It; ++It)
+    {
+        if (It->Struct != FAnimNode_ControlRig::StaticStruct()) continue;
+        auto* Node = It->ContainerPtrToValuePtr<FAnimNode_ControlRig>(Instance);
+        const auto& Bones = *Filter->ContainerPtrToValuePtr<TArray<FBoneReference>>(Node);
+        auto Entry = MakeShared<FJsonObject>();
+        TArray<TSharedPtr<FJsonValue>> Names;
+        for (const auto& Bone : Bones)
+        {
+            const int32 Index = Ref.FindBoneIndex(Bone.BoneName);
+            if (Index == INDEX_NONE || ChangedBones.Contains(Index)) return Fail(TEXT("Invalid or overlapping output filter"));
+            ChangedBones.Add(Index);
+            Names.Add(MakeShared<FJsonValueString>(Bone.BoneName.ToString()));
+        }
+        Entry->SetArrayField(TEXT("bones"), Names);
+        FilterReport.Add(MakeShared<FJsonValueObject>(Entry));
+    }
+    if (FilterReport.Num() < 2 || FilterReport.Num() > 3 || ChangedBones.Num() < 36)
+        return Fail(TEXT("Unexpected secondary rig layout"));
+    auto VectorJson = [](FVector V) {
+        auto O = MakeShared<FJsonObject>();
+        O->SetNumberField(TEXT("X"), V.X); O->SetNumberField(TEXT("Y"), V.Y); O->SetNumberField(TEXT("Z"), V.Z);
+        return O;
+    };
+    auto PoseJson = [&](TArrayView<const FTransform> Pose) {
+        auto O = MakeShared<FJsonObject>();
+        TArray<TSharedPtr<FJsonValue>> Names, Transforms;
+        for (int32 Bone = 0; Bone < Ref.GetRawBoneNum(); ++Bone)
+        {
+            Names.Add(MakeShared<FJsonValueString>(Ref.GetBoneName(Bone).ToString()));
+            auto T = MakeShared<FJsonObject>();
+            T->SetObjectField(TEXT("Translation"), VectorJson(Pose[Bone].GetTranslation()));
+            T->SetObjectField(TEXT("Scale3D"), VectorJson(Pose[Bone].GetScale3D()));
+            const FQuat Q = Pose[Bone].GetRotation();
+            auto R = MakeShared<FJsonObject>();
+            R->SetNumberField(TEXT("X"),Q.X);R->SetNumberField(TEXT("Y"),Q.Y);R->SetNumberField(TEXT("Z"),Q.Z);R->SetNumberField(TEXT("W"),Q.W);
+            T->SetObjectField(TEXT("Rotation"), R);
+            Transforms.Add(MakeShared<FJsonValueObject>(T));
+        }
+        O->SetBoolField(TEXT("bIsValid"), true);
+        O->SetStringField(TEXT("SkeletalMeshName"), Mesh->GetName());
+        O->SetArrayField(TEXT("BoneNames"), Names);O->SetArrayField(TEXT("LocalTransforms"), Transforms);
+        return O;
+    };
+    constexpr int32 Fps = 60;
+    const double Duration = Animation->GetPlayLength();
+    const int32 Frames = FMath::RoundToInt(Duration*Loops*Fps);
+    TArray<TSharedPtr<FJsonValue>> Samples;
+    double UnaffectedPosition = 0, UnaffectedAngle = 0;
+    for (int32 Frame = 0; Frame <= Frames; ++Frame)
+    {
+        const double Time = double(Frame)/Fps;
+        const double ClipTime = Frame == Frames ? Duration : FMath::Fmod(Time, Duration);
+        for (auto* C : {Upstream, Component})
+        {
+            C->SetPosition(float(ClipTime), false);
+            C->TickAnimation(Frame ? 1.f/Fps : 0.f, true);
+            C->RefreshBoneTransforms();
+        }
+        const auto A = Upstream->GetBoneSpaceTransformsView(), B = Component->GetBoneSpaceTransformsView();
+        if (A.Num() != Ref.GetNum() || B.Num() != Ref.GetNum()) return Fail(TEXT("Incomplete component pose"));
+        for (int32 Bone = 0; Bone < Ref.GetRawBoneNum(); ++Bone)
+        {
+            if (A[Bone].ContainsNaN() || B[Bone].ContainsNaN() || !B[Bone].GetRotation().IsNormalized())
+                return Fail(TEXT("Invalid component transform"));
+            if (ChangedBones.Contains(Bone)) continue;
+            UnaffectedPosition = FMath::Max(UnaffectedPosition, FVector::Distance(A[Bone].GetTranslation(), B[Bone].GetTranslation()));
+            UnaffectedAngle = FMath::Max(UnaffectedAngle, A[Bone].GetRotation().AngularDistance(B[Bone].GetRotation()));
+            if (!A[Bone].GetScale3D().Equals(B[Bone].GetScale3D(), 0.0001)) return Fail(TEXT("Unexpected scale change"));
+        }
+        auto Sample = MakeShared<FJsonObject>();
+        auto Pose = MakeShared<FJsonObject>();
+        Pose->SetObjectField(TEXT("Snapshot"), PoseJson(B));
+        Sample->SetObjectField(TEXT("pose"), Pose);
+        Sample->SetObjectField(TEXT("upstream"), PoseJson(A));
+        Sample->SetNumberField(TEXT("time"), Time);Sample->SetNumberField(TEXT("clip_time"), ClipTime);
+        auto Morphs = MakeShared<FJsonObject>();
+        for (UMorphTarget* Morph : Mesh->GetMorphTargets())
+        {
+            const int32* Index = Component->ActiveMorphTargets.Find(Morph);
+            if (!Index) continue;
+            if (!Component->MorphTargetWeights.IsValidIndex(*Index)) return Fail(TEXT("Invalid morph weight index"));
+            const float Weight = Component->MorphTargetWeights[*Index];
+            if (!FMath::IsFinite(Weight)) return Fail(TEXT("Invalid morph weight"));
+            if (!FMath::IsNearlyZero(Weight)) Morphs->SetNumberField(Morph->GetName(), Weight);
+        }
+        Sample->SetObjectField(TEXT("morphs"), Morphs);
+        TArray<TSharedPtr<FJsonValue>> Rigs;
+        for (TFieldIterator<FStructProperty> It(Instance->GetClass()); It; ++It)
+        {
+            if (It->Struct != FAnimNode_ControlRig::StaticStruct()) continue;
+            auto* Rig = It->ContainerPtrToValuePtr<FAnimNode_ControlRig>(Instance)->GetControlRig();
+            if (!Rig) return Fail(TEXT("Missing live rig instance"));
+            auto Values = MakeShared<FJsonObject>();
+            for (const TCHAR* Name : {TEXT("Enabled"), TEXT("Stiffness"), TEXT("Damping"), TEXT("Gravity"),
+                TEXT("Frequency"), TEXT("DampingRatio"), TEXT("MotionAmount"), TEXT("UseRegionSettings"),
+                TEXT("SeenUpdate"), TEXT("TotalSteps"), TEXT("ResetCount"), TEXT("HandValid")})
+                if (Rig->GetClass()->FindPropertyByName(Name)) Values->SetStringField(Name, Rig->GetVariableAsString(Name));
+            Rigs.Add(MakeShared<FJsonValueObject>(Values));
+        }
+        Sample->SetArrayField(TEXT("rigs"), Rigs);
+        Samples.Add(MakeShared<FJsonValueObject>(Sample));
+    }
+    if (UnaffectedPosition > 0.001 || UnaffectedAngle > 0.001) return Fail(TEXT("Post-process changed unlisted bones"));
+    auto Report = MakeShared<FJsonObject>();
+    Report->SetArrayField(TEXT("frames"), Samples);Report->SetNumberField(TEXT("fps"), Fps);
+    Report->SetObjectField(TEXT("defaults"), Defaults);Report->SetArrayField(TEXT("filters"), FilterReport);
+    Report->SetBoolField(TEXT("compressed_source"), true);Report->SetNumberField(TEXT("loops"), Loops);
+    Report->SetNumberField(TEXT("unaffected_position_cm"), UnaffectedPosition);
+    Report->SetNumberField(TEXT("unaffected_angle_rad"), UnaffectedAngle);
+    FString Text;
+    return FJsonSerializer::Serialize(Report, TJsonWriterFactory<>::Create(&Text)) ? Text : FString();
 }
