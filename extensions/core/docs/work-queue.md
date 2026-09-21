@@ -2,6 +2,18 @@
 
 Newest first. Each entry says what is done, what evidence exists and what is next.
 
+2026-09-21 (later): Loader, core, bridge, HUD service, menu, extension runtime,
+settings, dev channel, tools and tests exist and build: Linux host tests pass
+(runtime, cheat menu, lifecycle with ABI 1/2/3 fixtures, tools), Windows
+cross-build produces main.dll, cssx_core.dll and cheat_menu.dll with zero
+warnings. Nothing is installed in the game yet. The pinned UE 5.6 source
+confirms a plain UserWidget creates its own WidgetTree on Initialize, and the
+game header dump matches every UI handler, prompt and UMG library signature
+the menu calls. Next: user authorises staging `Mods/CSSX` (dev build + Cheat
+Menu) and a restart; then the first live checks in this order: loader starts
+with CSS present, status.json, menu open/close with input restore, library and
+Cheat Menu pages by eye, frame.stats rows C and D, then the coexistence row G.
+
 2026-09-21: Evidence pass complete (legacy runtime, bridge, hooks, HUD, UI,
 Cheat Menu, tooling, UE4SS pinned source, game header dump). Decisions recorded
 in `decisions.md`; performance evidence indexed in `performance.md`; migration
