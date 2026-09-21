@@ -13,6 +13,8 @@
 #include "Animation/Skeleton.h"
 #include "Animation/AnimBlueprint.h"
 #include "Animation/AnimInstance.h"
+#include "Animation/AnimSequence.h"
+#include "Animation/BlendSpace.h"
 #include "ControlRigBlueprint.h"
 #include "ControlRig.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -146,6 +148,21 @@ int32 UCSSCookAssetsCommandlet::Main(const FString& Params)
         UObject* Asset = StaticLoadObject(UObject::StaticClass(), nullptr, *ObjectPath);
         bool Allowed = Asset && (Asset->IsA<UTexture2D>() || Asset->IsA<USkeletalMesh>() ||
             Asset->IsA<USkeleton>() || Asset->IsA<UPhysicsAsset>());
+        if (UAnimSequence* Sequence = Cast<UAnimSequence>(Asset))
+        {
+            Allowed = Sequence->GetSkeleton() && !Sequence->IsValidAdditive() &&
+                !Sequence->bEnableRootMotion && Sequence->Notifies.IsEmpty() &&
+                Sequence->GetPlayLength() > 0 && FMath::IsFinite(Sequence->RateScale) && Sequence->RateScale > 0;
+        }
+        if (UBlendSpace* Blend = Cast<UBlendSpace>(Asset))
+        {
+            Allowed = Blend->GetClass() == UBlendSpace::StaticClass() && Blend->GetSkeleton() &&
+                Blend->GetNumberOfBlendSamples() > 0 && Blend->GetNumberOfBlendSamples() <= 256;
+            for (const auto& Sample : Blend->GetBlendSamples())
+                Allowed &= Sample.Animation && Sample.Animation->GetSkeleton() == Blend->GetSkeleton() &&
+                    !Sample.Animation->IsValidAdditive() && !Sample.Animation->bEnableRootMotion &&
+                    Sample.Animation->Notifies.IsEmpty() && FMath::IsFinite(Sample.RateScale) && Sample.RateScale > 0;
+        }
         if (UMaterialInstanceConstant* Instance = Cast<UMaterialInstanceConstant>(Asset))
         {
             Allowed = Instance->Parent && !Instance->bHasStaticPermutationResource &&

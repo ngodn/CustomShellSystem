@@ -25,6 +25,12 @@
 #include "Serialization/JsonWriter.h"
 #include "UObject/UnrealType.h"
 
+static bool CSSBlendPath(const FString& Path)
+{
+    return Path.StartsWith(TEXT("/Game/CSS/AnimLab/BS_")) ||
+           Path.StartsWith(TEXT("/Game/CSS/Eve/Anim/BS_"));
+}
+
 UAnimSequence* UCSSAnimationLibrary::ShiftLoop(UAnimSequence* Source,
     int32 StartFrame, const FString& OutputPackage)
 {
@@ -220,7 +226,7 @@ UBlendSpace* UCSSAnimationLibrary::CreateIdleCarrier(USkeletalMesh* Mesh,
     if (!IsRunningCommandlet() || !Mesh || !Animation || Animation->GetSkeleton() != Mesh->GetSkeleton() ||
         Animation->IsValidAdditive() || Animation->RateScale != 1.f || Animation->GetPlayLength() <= 0 ||
         Animation->bEnableRootMotion || !Animation->Notifies.IsEmpty() ||
-        !OutputPackage.StartsWith(TEXT("/Game/CSS/AnimLab/BS_")) || OutputPackage.Len() > 100 ||
+        !CSSBlendPath(OutputPackage) || OutputPackage.Len() > 100 ||
         !FPackageName::IsValidLongPackageName(OutputPackage) ||
         FPackageName::DoesPackageExist(OutputPackage) || FindPackage(nullptr, *OutputPackage))
         return nullptr;
@@ -250,7 +256,7 @@ UBlendSpace* UCSSAnimationLibrary::CreateMovementBlend(USkeletalMesh* Mesh,
     if (!IsRunningCommandlet() || !Mesh || Animations.Num() < 4 || Animations.Num() > 128 ||
         Points.Num() != Animations.Num() || Rates.Num() != Animations.Num() ||
         !FMath::IsFinite(MaxSpeed) || MaxSpeed <= 0 || MaxSpeed > 2000 ||
-        !OutputPackage.StartsWith(TEXT("/Game/CSS/AnimLab/BS_")) || OutputPackage.Len() > 100 ||
+        !CSSBlendPath(OutputPackage) || OutputPackage.Len() > 100 ||
         !FPackageName::IsValidLongPackageName(OutputPackage) ||
         FPackageName::DoesPackageExist(OutputPackage) || FindPackage(nullptr, *OutputPackage)) return nullptr;
     for (int32 I = 0; I < Animations.Num(); ++I)
@@ -297,7 +303,7 @@ UBlendSpace* UCSSAnimationLibrary::CreateMovementBlend(USkeletalMesh* Mesh,
 FString UCSSAnimationLibrary::InspectMovementBlend(UBlendSpace* Blend, const TArray<FVector>& Inputs)
 {
     if (!IsRunningCommandlet() || !Blend || Blend->GetClass() != UBlendSpace::StaticClass() ||
-        !Blend->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/BS_")) || Inputs.IsEmpty() || Inputs.Num() > 2048)
+        !CSSBlendPath(Blend->GetPathName()) || Inputs.IsEmpty() || Inputs.Num() > 2048)
         return {};
     auto Report = MakeShared<FJsonObject>(); TArray<TSharedPtr<FJsonValue>> Queries;
     for (const auto& Input : Inputs)
@@ -347,7 +353,7 @@ FString UCSSAnimationLibrary::EvaluateClip(USkeletalMesh* Mesh, UAnimSequence* A
     if (Carrier)
     {
         if (Carrier->GetSkeleton() != Mesh->GetSkeleton() || Carrier->IsValidAdditive() ||
-            !Carrier->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/BS_")) ||
+            !CSSBlendPath(Carrier->GetPathName()) ||
             (!AdvanceBlendClock && Carrier->GetNumberOfBlendSamples() != 4) ||
             Carrier->GetNumberOfBlendSamples() < 1 || Carrier->GetNumberOfBlendSamples() > 128 || BlendInput.ContainsNaN())
             return Fail(TEXT("Invalid idle carrier"));
