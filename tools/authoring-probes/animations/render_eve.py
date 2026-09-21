@@ -21,6 +21,8 @@ parser.add_argument('--motion', type=Path, required=True)
 parser.add_argument('--bind', type=Path, required=True)
 parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--stride', type=int, default=2)
+parser.add_argument('--pose', choices=('final', 'upstream'), default='final',
+                    help='Compare the final pose with the recorded input before secondary motion.')
 parser.add_argument('--view', choices=('three-quarter', 'front', 'back', 'side'), default='three-quarter')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert args.stride > 0
@@ -115,7 +117,7 @@ view.location = center + Vector(direction)
 view.rotation_euler = (center-view.location).to_track_quat('-Z', 'Y').to_euler()
 
 for output_frame, frame in enumerate(range(0, len(motion['frames']), args.stride)):
-    morphs = motion['frames'][frame].get('morphs', {})
+    morphs = motion['frames'][frame].get('morphs', {}) if args.pose == 'final' else {}
     assert set(morphs) <= set(EXPORT_SHAPES) | set(LEFT_HAND_CORRECTIVES), set(morphs)
     for obj in objects:
         if not obj.data.shape_keys:
@@ -125,7 +127,8 @@ for output_frame, frame in enumerate(range(0, len(motion['frames']), args.stride
                 value = morphs.get(key.name, 0)
                 assert not value or not key.mute, key.name
                 key.value = value
-    snapshot = motion['frames'][frame]['pose']['Snapshot']
+    snapshot = (motion['frames'][frame]['pose']['Snapshot'] if args.pose == 'final'
+                else motion['frames'][frame]['upstream'])
     assert snapshot['bIsValid'] and snapshot['SkeletalMeshName'] == 'SK_BlackPearl2'
     lookup = {n.lower(): t for n, t in zip(snapshot['BoneNames'], snapshot['LocalTransforms'], strict=True)}
     assert len(lookup) == len(snapshot['BoneNames'])
@@ -175,9 +178,11 @@ assert hashlib.sha256(blend.read_bytes()).hexdigest() == blend_hash
     blend=str(blend), blend_sha256=blend_hash, motion=str(args.motion),
     motion_sha256=hashlib.sha256(args.motion.read_bytes()).hexdigest(),
     fps=motion['fps']/args.stride, parts=parts, shapes=shapes, errors=errors, view=args.view,
-    covered_body_faces_removed=expected_removed,
+    covered_body_faces_removed=expected_removed, pose=args.pose,
     wardrobe='Heels and stockings shown; flat feet hidden; heeled stocking feet and footwear lining shown.',
-    scope=('UE compressed component pose including secondary motion and hand morphs, stationary owner. '
+    scope=('UE compressed upstream pose before secondary motion and hand morphs, stationary owner. '
+           if args.pose == 'upstream' else
+           'UE compressed component pose including secondary motion and hand morphs, stationary owner. '
            if motion.get('compressed_source') else 'UE raw animation pose, no secondary motion. ') +
           'Accepted fitted mesh and wardrobe section selection, solid materials. No gameplay validation.'
 ), indent=2)+'\n')

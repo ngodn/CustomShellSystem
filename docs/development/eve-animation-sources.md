@@ -562,3 +562,67 @@ remain required. Do not reuse the old V2 carrier equivalence failure as a pass.
 Evidence: work/anim15/create-exit.json, create-result.json, protected.json,
 trajectory-report.json and regression-result.json. The authoring scripts are
 in tools/authoring-probes/animations. The published alpha remains installed.
+
+### I1 saved playback and visual review
+
+Fresh readback now passes with command exit 0. Both saved sequences retain all
+211 frames and 379 bones: maximum translation difference is zero and quaternion
+distance is 0.000000313. Center and corner carrier inputs each run 841 frames
+over two seven-second loops. Maximum normalized clock error is 0.00001193.
+These checks establish saved tracks and timed playback, not live integration.
+
+The fitted-mesh renderer produced 106 frames at 7.5 fps, a 14.13-second H.264
+preview, and 15 front-view stills. The original blend hash remains unchanged.
+Maximum replay position error is 0.000404 cm. The lowest footwear vertex ranges
+from -0.282 to 0.599 cm in this stationary preview; that is not a game-floor
+contact measurement. Evidence is in `work/anim15/`: `readback-result.json`,
+`readback-exit.json`, `render-idle/report.json`, `render-front/report.json`,
+`idle-preview.mp4` and `idle-sheet.jpg`.
+
+Reviewed three-quarter sequence samples and front frame 002 show the intended
+narrower stance and small hand/head gestures. The ponytail sweeps too far back
+during the downward head gesture, so I1 is not visually accepted. The upstream
+render at three seconds already contains that sweep. All 29 upstream hair
+local rotations remain at the bind pose within floating-point precision over
+841 frames. This isolates inherited head/neck motion as a contributor, rather
+than new authored hair keys. Secondary motion also contributes: the maximum
+upstream-to-final tip displacement is 61.092 cm at 3.5 seconds. Do not attribute
+the whole effect to either stage or retune the accepted 200/24 hair globally.
+Refine the idle gesture or its attachment behavior in a separate candidate.
+
+`render_eve.py --pose upstream` now renders the recorded upstream snapshot
+directly, omits downstream hand morphs and labels its report accordingly.
+The default remains the final pose. This avoids copying a modified recording
+and incorrectly calling it a final secondary-motion preview. The direct-input
+check exited zero; see `before-command.json`, `before-exit.json` and
+`render-before/report.json`. The earlier `render-upstream/` was an exploratory
+copy and has a misleading generic scope label; use `render-before/` instead.
+Bone measurements are in `hair-bind-check.json` and `secondary-comparison.json`.
+
+### Idle runtime integration findings
+
+The alpha metadata contract already accepts an idle sequence via `clip`,
+optional `by_weapon` sequence paths and a common `hide_weapons` option.
+Native playback currently implements custom movement BlendSpaces and built-in
+feminine idle only. An idle carrier is an offline test asset, not proof that
+the declared sequence contract works in the game. Preserve that contract when
+adding runtime playback; do not silently reinterpret sequence paths as blends.
+
+The decoded game graph in
+`work/grip-grounding-v1/player-hand-graph/decoded/ABP_Player.json` contains
+FullBody/UpperBody slots, layered bone blending, aiming, hand correction and
+late-update stages. Validate the full final pose and combat transitions, not
+only the base locomotion output. The exact ordering and bypass conditions still
+need tracing before choosing the integration route.
+
+Dynamic montage playback is a candidate, not an approved shortcut. The pinned
+UE 5.6.1 `AnimInstance.cpp` at lines 2276-2287 constructs a montage and calls
+`Montage_Play` with its default stop behavior. At lines 2386-2402 that stops
+existing montages in the same group. Epic's [animation slot documentation](https://dev.epicgames.com/documentation/unreal-engine/animation-slots-in-unreal-engine)
+also describes this interruption. Do not restart an idle montage on each poll,
+stop all montages on release, or compete with attacks/fast travel. Any montage
+route needs explicit ownership, eligibility and restoration evidence; a
+post-process sequence route needs equivalent combat bypass and pose evidence.
+No native runtime, game installation, accepted movement or release files changed
+during this checkpoint. Custom idle, weapon restoration and beacon work remain
+unfinished.
