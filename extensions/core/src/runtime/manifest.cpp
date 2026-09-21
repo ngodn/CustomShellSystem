@@ -136,6 +136,8 @@ Json bind_menu(const Json& definition,const Json& model) {
     if(!values.is_object() || !choices.is_object() || !enabled.is_object() || !busy.is_object()) throw std::runtime_error("CSSX value, option, enabled and busy bindings must be objects");
     const auto confirmations=model.value("confirmations",Json::object());
     if(!confirmations.is_object()) throw std::runtime_error("CSSX confirmations must be an object");
+    const auto disabled=model.value("disabled",Json::object());   // id -> why the control is disabled right now
+    if(!disabled.is_object()) throw std::runtime_error("CSSX disabled reasons must be an object");
     for(auto& section:result.at("sections")) for(auto& control:section.at("controls")) {
         const auto binding=control.value("binding",control.at("id").get<std::string>());
         if(values.contains(binding)) control["value"]=values.at(binding);
@@ -143,6 +145,7 @@ Json bind_menu(const Json& definition,const Json& model) {
         if(enabled.contains(binding)) control["enabled"]=enabled.at(binding);
         if(busy.contains(binding)) control["busy"]=busy.at(binding);
         if(confirmations.contains(binding)) control["confirm"]=confirmations.at(binding);
+        if(disabled.contains(binding) && disabled.at(binding).is_string() && control.value("enabled",true)==false) control["disabled_label"]=disabled.at(binding);
     }
     result["status"]=model.value("status",std::string{});
     result["error"]=text(model,"error",2048,false);

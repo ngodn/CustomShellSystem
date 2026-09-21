@@ -678,7 +678,7 @@ void Menu::build_library(Layout& ui,double width) {
     } else {
         ui.label("CSSX "+deps_.version,px+24,top+22,pw-48,44,26,bright,true);
         double y=top+80;
-        if(texture(ui,path_utf8(deps_.root/"assets/banner.png"),px+24,y,pw-48,(pw-48)*0.42)) y+=(pw-48)*0.42+16;
+        if(texture(ui,path_utf8(deps_.root/"assets/banner.png"),px+24,y,pw-48,(pw-48)*0.413)) y+=(pw-48)*0.413+16;   // artwork is 1648x681
         scroll_text(ui,"Custom Shell System Extensions: one menu for every extension. Open it with "+[&]{ std::string s; for(const auto& k:deps_.settings->open_keyboard) s+=(s.empty()?"":" + ")+k; return s; }()+" on the keyboard or "+[&]{ std::string s; for(const auto& k:deps_.settings->open_gamepad) s+=(s.empty()?"":" + ")+k; return s; }()+" on a controller, or switch to this tab in the Player Menu.",px+24,y,pw-48,150,19,ink);
         y+=166;
         ui.label(perf_line(),px+24,y,pw-48,26,15,muted); y+=28;

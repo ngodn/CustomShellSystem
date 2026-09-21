@@ -212,7 +212,22 @@ Json Menu::model() {
     if(binding_consent()) confirmations["apply_settings"]="Save these shortcuts? Assigned gameplay-shell and health-reduction shortcuts run when pressed in gameplay, without another confirmation. They do not bypass active-cheat or game-state checks.";
     auto display_values=values_;display_values["binding_action"]=binding_action_;
     display_values["binding_key"]=values_["bindings"].value(binding_action_,std::string("none"));
-    Json out={{"values",display_values},{"options",{{"shell",shells_},{"pickup",pickups_},{"tarstone",tarstones_},{"binding_action",binding_actions()},{"binding_key",binding_key_options()}}},{"enabled",enabled},{"status",summary+" "+status_},{"error",action_error_},{"confirmations",confirmations}};
+    // Why a control is off right now, shown in place of "Unavailable".
+    Json disabled=Json::object();
+    const std::string why=!live?"Enter the world first":pending_?"Wait for the shell switch":cleanup_required_?"Turn off all cheats first":has_changes()?"Apply or discard edits first":"";
+    for(auto it=enabled.begin();it!=enabled.end();++it) if(it.value()==false) {
+        std::string reason=why;
+        const std::string id=it.key();
+        if(reason.empty() && (id=="switch_shell" || id=="add_tarstone" || id=="add_pickup" || id=="remove_pickup" || id=="set_tarstone_level")) reason="Choose an item first";
+        if(reason.empty() && (id=="genessa_clones" || id=="smert_stance" || id=="lazlo_detonation")) reason="Needs the matching shell";
+        if(reason.empty() && id=="apply_settings") reason="No unapplied edits";
+        if(reason.empty() && id=="discard_changes") reason="Nothing to discard";
+        if(reason.empty() && id=="disable_all") reason="No cheat is on";
+        if(reason.empty() && id=="cancel_recovery") reason="No check running";
+        if(reason.empty() && id=="repair_intro") reason="Check already running";
+        if(!reason.empty()) disabled[id]=reason;
+    }
+    Json out={{"values",display_values},{"options",{{"shell",shells_},{"pickup",pickups_},{"tarstone",tarstones_},{"binding_action",binding_actions()},{"binding_key",binding_key_options()}}},{"enabled",enabled},{"disabled",disabled},{"status",summary+" "+status_},{"error",action_error_},{"confirmations",confirmations}};
     if(!notice.is_null()) out["notice"]=notice;
     return out;
 }

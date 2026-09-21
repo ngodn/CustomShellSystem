@@ -77,7 +77,8 @@ colours danger actions, prints the effect above the description and repeats
 it in the confirmation dialog.
 
 Model bindings for a static menu: `values`, `options`, `enabled`, `busy`,
-`confirmations`, `status`, `error`, and optional `notice` (`{"text","label",
+`confirmations`, `status`, `error`, optional `disabled` (id → one-line reason
+shown instead of "Unavailable" while that control is disabled), and optional `notice` (`{"text","label",
 "action"}`: one pending thing with the control id that resolves it; the menu
 draws it as a strip on every section).
 
