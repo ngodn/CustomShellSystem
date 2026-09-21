@@ -1025,7 +1025,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     }
     decoration("T_UI_DescriptionHeader_Divider",left,931,panel,2);
     decoration("T_UI_DescriptionHeader_Divider",right,931,360,2);
-    status_=ui.label("",right,953,360,60,16,muted);
+    // Contextual controls occupy the first footer row. Keep feedback below it.
+    status_=ui.label("",right,998,360,66,16,muted);
     direction_hint(false,section_==0?"Browse shells":section_==1?"Browse parts":section_==2?"Browse animation options":"Browse profiles");
     bind(ui.button("",left,1025,140,38),{{"action","ui_close"}});
     prompt("close","Close",left,1030,140,5);

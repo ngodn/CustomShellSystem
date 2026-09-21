@@ -160,9 +160,14 @@ struct Core {
     }
     std::string walk_error;
     uint64_t walk_after=0;
+    uint64_t walk_updates=0;
+    double walk_ms=0,walk_total_ms=0,walk_max_ms=0;
     void sync_walk_safely(uint64_t now) {
         if(now<walk_after) return;
-        walk_after=now+250;
+        // Gait changes and montage release need to follow input promptly.
+        // The existing game-thread tick drives this; no global event hook.
+        walk_after=now+33;
+        const auto started=std::chrono::steady_clock::now();
         try {
             appearance.walk.walk_mod_active(root.parent_path());
             std::array<std::string,3> movement;
@@ -186,6 +191,8 @@ struct Core {
             if(walk_error!=error.what()) {walk_error=error.what();report("Animation unavailable: "+walk_error);}
             walk_after=now+1000;
         }
+        walk_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count();
+        ++walk_updates;walk_total_ms+=walk_ms;walk_max_ms=std::max(walk_max_ms,walk_ms);
     }
     void sync_menu_safely() {
         if(GetTickCount64()<maintenance_after) return;
@@ -800,7 +807,9 @@ struct Core {
         status["material_debug"] = appearance.material_debug;
         status["walk_mod_active"] = appearance.walk.walk_mod_active();
         status["walk_mod_name"] = appearance.walk.walk_mod_name();
-        status["animation"]={{"engaged",appearance.walk.engaged()},{"gait",appearance.walk.reason()},{"error",walk_error}};
+        status["animation"]={{"engaged",appearance.walk.engaged()},{"gait",appearance.walk.reason()},{"error",walk_error},
+            {"updates",walk_updates},{"last_ms",walk_ms},{"mean_ms",walk_updates?walk_total_ms/walk_updates:0.},
+            {"max_ms",walk_max_ms}};
         if(auto selected=state.selections.find(appearance.shell);selected!=state.selections.end()) status["customize"]=selected->second.custom.json();
         auto serialized = status.dump();
         if (serialized != last_status) {

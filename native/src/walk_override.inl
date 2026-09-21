@@ -239,10 +239,13 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     if(!anim) {release();return;}
     movement_=read<UObject*>(pawn,L"CharacterMovement");
     auto* controller=read<UObject*>(pawn,L"Controller");
-    if(!controller || read<UObject*>(controller,L"Pawn")!=pawn || !movement_.Get() ||
-       !has_field(anim,L"IsMovingOnGround",sizeof(bool)) || !read<bool>(anim,L"IsMovingOnGround")) {
+    if(!controller || read<UObject*>(controller,L"Pawn")!=pawn || !movement_.Get()) {
         release();return;
     }
+    // The graph's similarly named flag is false while standing. Query the
+    // player's movement component so grounded idle can actually activate.
+    Call grounded(movement_.Get(),L"IsMovingOnGround",1);grounded.run();
+    if(!grounded.get<bool>()) {release();return;}
     for(const auto* name:{L"IsMoveInputIgnored",L"IsLookInputIgnored",L"IsInGameMenu"}) {
         Call blocked(controller,name,1);blocked.run();
         if(blocked.get<bool>()) {release();return;}
