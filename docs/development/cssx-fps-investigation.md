@@ -1,6 +1,14 @@
 # CSSX FPS regression investigation
 
-Started 2026-09-20 at the user's request. This takes priority over the current Next-Gen physics work.
+Started 2026-09-20. The historical checkpoints below retain their original scope.
+
+2026-09-21 update: the user still reports an FPS drop in the builds they tried
+("its still has fps drop but not worse"). Performance remains unresolved. The
+HUD demand fix is not full performance acceptance. A separate agent is being
+assigned standalone CSSX v1 through
+[the execution handoff](../cssx/standalone-v1-agent-prompt.md). CSSX remains
+disabled in the working CSS alpha; this feedback does not identify a newly
+loaded module or a controlled residual frame-time delta.
 
 Current checkpoint: the reproduced idle HUD preparation defect is fixed and installed, with both extensions restored. See the final validation section below. The older ABI-1 report and animation reload crash are not closed by this result.
 

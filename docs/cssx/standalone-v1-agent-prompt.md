@@ -104,8 +104,14 @@ Current facts to preserve:
    presentation timing. Read the original captures before quoting conclusions.
 4. A user reported about 22 FPS and 35% GPU usage, recovering after removal.
    Low GPU utilization is an observation, not proof of one specific bottleneck.
-5. CSSX is currently disabled in the user's working CSS alpha installation.
-   Preserve that baseline until a coordinated test deployment.
+5. Latest user feedback: "its still has fps drop but not worse, based on what
+   i tried". Residual FPS loss is still reported. Treat the performance issue
+   as unresolved, not closed by the HUD fix or by an apparently smaller drop.
+   Establish exact tested binaries and controlled comparisons before assigning
+   the remaining cost to a cause.
+6. CSSX is currently disabled in the user's working CSS alpha installation.
+   Preserve that baseline until a coordinated test deployment. The feedback
+   above does not establish that CSSX is loaded in the current game process.
 
 ## Rewrite decision
 
