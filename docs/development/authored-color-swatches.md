@@ -1,6 +1,7 @@
 # Authored swatches and Eve palette checkpoint
 
-2026-09-21. Offline candidate prepared; live appearance and menu checks remain.
+2026-09-21. Candidate installed after a normal restart. Jade material binding and
+the palette list pass an initial live check; full swatch and appearance checks remain.
 
 ## Ownership
 
@@ -70,7 +71,43 @@ the second verified its package but hit a mistaken assertion that the original
 also had outfit-level controls. Neither was installed. `colors3` edits only
 the actual variant and passes both verification paths.
 
-Next: install through a normal restart, visually inspect palettes and mask
-boundaries, exercise Default/cycling and saved appearance restoration. Do not
-call the candidate or v1.0.0 release ready until those checks pass. The animation
-expansion and official-shell appearance selector remain queued.
+## Installed color checkpoint
+
+`deploy_eve_colors.py` installed `css_core-colors1.dll` and the `colors3` trio
+after backing up the grounding core, outfit and actual saved state. The normal
+exit and Steam launch completed; Linux game PID was 3025501 at verification.
+Deployment preserved the complete saved-state directory. CSSX remains disabled.
+
+Core SHA-256:
+`5e37a895af587df8039a5f265388c24d4f7edd0379bc5450b8119c5501561aae`.
+Pak SHA-256:
+`9c5c3ad5a00bc2c4927e3db7514b48428b8c9db0f82f1821447ee404c65c02ca`.
+UCAS/UTOC hashes remain the accepted grounding package's hashes.
+
+Evidence in `work/colors1/live`:
+
+- `deployment.json`, `launch-exit.json`: installed hashes and preserved state.
+- `open.jsonl`: world uses `SK_BlackPearl2` at relative Z -99 cm.
+- `review.jpg` with equal `review-before.json` and `review-after.json`: Jade
+  selected; the menu lists all five palettes plus Original. Dark lace and green
+  accents are visible. This is not acceptance of all five rendered looks.
+- `materials.json` and its request log: with Jade selected, both inspected
+  protected material slots (2 and 5) retain their exact original Texture2D
+  bindings. Outfit slots 16, 17, 18, 19, 20 and 29 use color render targets.
+  Player identity and saved state remain unchanged throughout the read.
+- `menu-review.mp4`: 15 seconds of the actual game window, no injected input,
+  no camera orbit. Reviewed frames at 1 and 13 seconds show the Jade palette
+  page with ordinary idle motion. No swatch selection occurs in this clip.
+
+The palette and preview changed during menu preparation. The user confirms they
+are testing the colors, so continue passive observation without changing their
+controls. Controlled input checks must be coordinated afterward. The saved selection at the first read is
+Jade with no explicit overrides, whereas the pre-restart selection was Original
+with body-shape and outfit overrides. Do not overwrite the user's later choices
+with the pre-restart backup. Freshly snapshot their current selection before a
+future trial and restore only that trial's changes.
+
+Next: inspect the remaining palettes and mask boundaries, exercise the 12-chip
+pages, Default/cycling, and saved appearance restoration. Do not call the
+candidate or v1.0.0 release ready until those checks pass. The animation expansion
+and official-shell appearance selector remain queued.

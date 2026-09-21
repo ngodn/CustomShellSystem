@@ -69,7 +69,8 @@ def main():
         'stream=width,height,nb_frames,duration,avg_frame_rate','-of','json',str(output)],text=True))
     details.update(window=identity,started_ns=started,ended_ns=time.time_ns(),timeline=timeline,
                    scope=('Game window only, in-world observation. No injected input.' if args.world else
-                          'Game window only. Camera orbit is a controlled preview movement, not locomotion acceptance.'))
+                          'Game window only. Camera orbit is a controlled preview movement, not locomotion acceptance.' if args.orbit else
+                          'Game window only, CSS menu observation. No injected input.'))
     output.with_suffix('.json').write_text(json.dumps(details,indent=2)+'\n')
     print(output)
 
