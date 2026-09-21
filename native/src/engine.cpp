@@ -1639,6 +1639,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 auto end=[&] { Call finish(library,L"EndDrawCanvasToRenderTarget",2); finish.set(L"WorldContextObject",component); finish.copy(L"Context",begin,L"Context"); finish.run(); };
                 try {
                     auto* canvas=begin.get<UObject*>(L"Canvas");
+                    if(!canvas) throw std::runtime_error("Could not begin the dye composite");
                     auto draw=[&](UObject* texture,const ControlValue& color,uint8_t blend) {
                         Call call(canvas,L"K2_DrawTexture",9); call.set(L"RenderTexture",texture);
                         call.set(L"ScreenSize",Vec2{double(surface.resolution),double(surface.resolution)}); call.set(L"CoordinateSize",Vec2{1,1});
@@ -1649,20 +1650,21 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 } catch(...) { end(); throw; }
                 end();
                 update_dye_mips(target);
-                // Read a few texels back: a composite that came out fully black is rejected
-                // and the authored texture stays bound, instead of a dark body.
-                bool any_light=false;
-                for(int sy=1;sy<=3 && !any_light;++sy) for(int sx=1;sx<=3 && !any_light;++sx) {
-                    Call pixel(library,L"ReadRenderTargetPixel",5); pixel.set(L"WorldContextObject",component); pixel.set(L"TextureRenderTarget",target);
-                    pixel.set(L"X",int32_t(surface.resolution*sx/4)); pixel.set(L"Y",int32_t(surface.resolution*sy/4)); pixel.run();
-                    const auto rgba=pixel.get<std::array<uint8_t,4>>();
-                    any_light=rgba[0]+rgba[1]+rgba[2]>0;
-                }
-                if(!any_light) {
-                    material_debug["dye_failed"]=surface.id;
-                    target=original;   // keep the authored texture; colors for this part are skipped this pass
-                    last_values_.clear();   // retry the composite on the next customize
-                }
+                // Readback must succeed, but its RGB may legitimately be black.
+                // Fixed nonblack sample points missed sparse UV islands and silently
+                // disabled their controls. Unlike ReadRenderTargetPixel's red error
+                // sentinel, RawPixelArea returns an empty array when readback fails.
+                Call pixels(library,L"ReadRenderTargetRawPixelArea",8);
+                pixels.set(L"WorldContextObject",component); pixels.set(L"TextureRenderTarget",target);
+                pixels.set(L"MinX",int32_t{0}); pixels.set(L"MinY",int32_t{0});
+                pixels.set(L"MaxX",int32_t{1}); pixels.set(L"MaxY",int32_t{1});
+                pixels.set(L"bNormalize",false); pixels.run();
+                auto* output=pixels.param(L"ReturnValue");
+                if(!output->IsA<FArrayProperty>() ||
+                   static_cast<FArrayProperty*>(output)->GetInner()->GetElementSize()!=sizeof(ControlValue))
+                    throw std::runtime_error("Dye readback array layout mismatch");
+                FScriptArrayHelper samples(static_cast<FArrayProperty*>(output),pixels.data(output));
+                if(samples.Num()!=1) throw std::runtime_error("Could not read the completed dye texture");
             }
             for(int slot:surface.slots) {
                 auto* mid=mid_for(slot);

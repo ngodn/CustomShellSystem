@@ -1,5 +1,12 @@
 # Current work queue
 
+Current color correction: user rejected gray skin, dark hard areola edges and a
+visible groin patch in the first swatch review. Hair is reported working. colors4 repairs the masks and is installed. A live check then exposed CSS
+rejecting valid sparse UV composites; the installed colors2 core fixes it. Live Ivory and black texel checks now
+pass, including material 5, with saved state restored after each trial.
+The user is reviewing visible shade and region boundaries before acceptance.
+Evidence and scope: [authored colors](development/authored-color-swatches.md).
+
 2026-09-21: [Eve colors installed](development/authored-color-swatches.md#installed-color-checkpoint) in `css_core-colors1.dll` plus authoring `work/colors3/trio`, using a normal restart and verified backups/state preservation. Fresh world mesh/-99 cm checks pass. Steam still and game-window clip show the five-palette list with Jade selected; live material reads prove torso/genital slots retain original textures while the six tested outfit slots use color targets. Full palette, 12-chip, Default/cycling and region-boundary review remains. The user confirms they are testing colors; observe without changing their controls. Preserve their latest selection rather than restoring the older pre-restart look over it.
 
 2026-09-21: [Authored swatches and Eve palettes](development/authored-color-swatches.md) prepared offline. CSS supplies ordered swatch UI, reset behavior, data validation and saved-state handling; mod authors supply model-specific masks, material bindings and palette content. Eve candidate `work/colors3` has five outfit-only palettes and ten color controls with 12 choices each. New region masks preserve original coverage; native package/cache checks pass. Live installation, appearance and menu checks remain. Preserve accepted V44 rig, hair 200/24/0, -3 cm ground offset and disabled CSSX.

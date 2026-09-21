@@ -3,6 +3,21 @@
 2026-09-21. Candidate installed after a normal restart. Jade material binding and
 the palette list pass an initial live check; full swatch and appearance checks remain.
 
+## User-reported rendering defects
+
+The first live swatch review rejected skin and nipple/areola rendering. The
+selected Ivory swatch looked gray, areola boundaries were hard and dark, and a
+pale groin patch remained against tinted skin. Hair was reported working. The
+user reset the appearance to Original afterward; the failing selection was not
+retained, so exact anatomical swatch values are unknown.
+
+Package, schema and Jade binding checks below still pass, but they do not prove
+correct color rendering. Release acceptance is withheld while runtime pixel
+readback and mask-boundary checks reproduce and isolate these failures. The
+central material-5 island includes surrounding skin; excluding the entire
+island from the skin control is an authoring defect. Preserve the accepted rig,
+proportions, hair settings and ground offset while repairing color behavior.
+
 ## Ownership
 
 Mod authors define their model's dye masks, material slots, palette values and
@@ -111,3 +126,97 @@ Next: inspect the remaining palettes and mask boundaries, exercise the 12-chip
 pages, Default/cycling, and saved appearance restoration. Do not call the
 candidate or v1.0.0 release ready until those checks pass. The animation expansion
 and official-shell appearance selector remain queued.
+
+## Color repair, 2026-09-21
+
+The actual renderer was measured before changing assets. With Ivory
+`221,192,162` and body-mask gray `171`, the live render target returned
+`148,128,107`, exactly matching linear-light multiplication followed by sRGB
+encoding. Three body texels and one face texel matched within one byte. Steam
+screenshots reproduced the visibly darker skin. The complete saved state was
+identical before and after the temporary Skin override. These findings rule
+out a tint conversion error at the sampled full-resolution texture pixels;
+they do not establish every mip level or every material's final appearance.
+Evidence: `work/colors1/failure/pixels.json`, `default.jpg`, `ivory.jpg`.
+
+`check_eve_color_masks.py` failed on colors3 with three concrete signals:
+body-mask median 168 (the chip was multiplied by an already-dark texture), zero
+soft areola-edge texels, and no skin layer on material 5. This is the regression
+check for the rejected authoring, separate from the successful renderer check.
+
+`repair_eve_colors.py` prepares colors4. It normalizes the skin detail layers
+in linear light using a shared body reference of 180, preserving the scale
+across connected skin atlases. Values above the reference clamp at white;
+Default still restores the untouched original material texture. Pigmented
+regions use their own measured reference so the selected shade is not darkened
+again by the original pigment. The UV masks are explicitly authored against
+Eve's 1024px source textures: soft chest boundaries and a local central region
+within material 5, with surrounding skin assigned back to Skin. They are not
+a generic anatomical classifier. Soft boundaries intentionally blend; protected
+cores stay excluded from Skin.
+
+The regression passes with body median 238, 2,080 soft-edge texels and the
+required material-5 skin coverage. Alpha partitions cover the previous masks
+within one byte of rounding. All controls and palette values remain identical;
+only the extra material-5 skin layer changes the recipe. Hair textures and both
+cooked containers remain byte-for-byte identical. Python package verification
+and the native package/cache/corruption checks pass.
+
+The colors4 trio is installed after a normal restart, with the same
+`css_core-colors1.dll`. Package hash and saved-state preservation are recorded
+in `work/colors1/repair-live/deployment.json`. The restarted process maps the
+expected core. Final live appearance and independent-region acceptance remain
+pending. Do not label this repair visually accepted from the offline checks.
+
+### Sparse UV readback failure
+
+The first colors4 live check exposed a second failure in CSS itself. Body and
+face texels correctly brightened (for example, `210,183,154` at body `512,400`),
+but material 5 remained bound to its original texture. The live regression
+`check_eve_live_color.py` exits 1 for that missing render target and restores
+the complete saved selection. Evidence: `work/colors1/readback-red/pixels.json`.
+
+The former nine-point nonblack guard samples only UV coordinates .25, .5 and
+.75. Material 5's central island is below .83 in image Y, while its side islands
+are near the horizontal edges. All nine samples miss its visible geometry.
+CSS silently rejected a valid composite, so independent controls on this
+material could appear ineffective. Nonblack RGB also cannot validate a legal
+all-black appearance.
+
+The replacement checks that the canvas exists, draws before binding as before,
+updates mipmaps, and requires a successful one-pixel GPU readback. The pinned
+UE 5.6.1 `ReadRenderTargetRawPixelArea` returns an empty array on failure, unlike
+`ReadRenderTargetPixel`, whose error sentinel is indistinguishable from valid
+red content. The new check validates array layout and requires exactly one
+sample, regardless of its color. A live null-target probe confirms the empty
+array failure path. Both development and shipping builds pass. `css_core-colors2.dll` is installed
+and mapped by the restarted game process; the colors4 package and saved state
+are preserved. Live green regression and final appearance review are still
+required.
+
+### Live regression result
+
+With `css_core-colors2.dll` and colors4 loaded, the same live regression passes.
+It reads six texels across face, torso and the previously rejected material 5.
+Ivory matches the expected linear-light composite within one RGB level; the
+surrounding groin skin returns `212,184,155` where the body returns
+`212,184,155`. A second run with `--rgb 000000` keeps the render targets bound
+and returns black at all six points. Both trials restore the complete saved
+state byte-for-byte as parsed JSON. Evidence: `work/colors1/ivory-check` and
+`work/colors1/black-check`. Steam screenshots were inspected. This verifies
+the sparse-atlas regression and the selected shade's texture output; complete
+visual acceptance of all anatomical swatches remains with the user review.
+
+Reproduce against the running CSS preview (coordinates are Eve-specific):
+
+```sh
+python3 tools/authoring-probes/colors/check_eve_live_color.py \
+  --metadata ../CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/work/colors4/metadata \
+  --output work/colors1/next-check
+```
+
+Use a fresh output folder. The check temporarily changes only Skin, captures
+Steam screenshots, reads actual material textures and restores Skin afterward.
+Use it while controls are idle. It aborts without starting the trial if CSS is
+closed. Add `--rgb 000000` for the valid-black case. Do not run another runtime
+request producer or screen recorder concurrently.
