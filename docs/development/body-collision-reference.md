@@ -112,3 +112,86 @@ The complete Next-Gen goal remains active: weapon/default-animation coverage,
 modular physics and morphs, native controls, UI/profile/reset/lifecycle behavior,
 performance and distribution. V43 remains installed; the cooked V44 reference
 candidate still has a null Physics Asset and is not ready to replace it.
+
+## Fitted geometry and actual component queries
+
+`fit_body_physics_reference.py` now produces an isolated neutral collider
+candidate from the verified B2 mesh export. It assigns each skin vertex to the
+largest summed weight among the 22 human bodies, folding helper/finger weights
+into their nearest retained ancestor. The two pelvis primitives partition their
+assigned points by original signed distance. Each shape retains its original
+orientation, fits the assigned cloud with a 0.35 cm margin, and checks enclosure.
+Constraint frame 2 moves to frame 1's world anchor and preserves the source
+joint's relative rest-frame rotation. Limits, drives and other settings remain
+unchanged. Maximum anchor separation is 0.000015572 cm.
+
+The initial fitter failed before fitting because it assumed more than 30,000
+main skin points. The pinned export actually has 19,105. A second run found
+zero foot points because feet are separate modular sections. Slots 23 through
+26 contain covered and footwear skin/nails, as defined in `wardrobe_regions.py`.
+Including both variants yields 24,480 points. These are a union envelope, not
+evidence that both foot variants should be visible together. The failed scripts
+and logs remain in `b2-body-physics-fit-launch-v1` and `-v2`; the corrected
+export hash, material identities and audited topology counts are checked.
+
+`b2-body-physics-fit-v3` passes 23 shape checks and 21 anchor checks.
+`b2-body-physics-fit-v4` adds ray fixtures and produces a byte-identical candidate.
+Of the assigned points, 11,319 lie outside their original assigned shape; that
+is not a union-of-all-original-shapes coverage count. All assigned points are
+inside their fitted shape. This enclosure test is restricted to neutral skin.
+
+`render_body_physics_fit.py` renders both templates against the unchanged
+export in front, side and rear views. All six images in
+`b2-body-physics-render-v1` were reviewed. Original torso/limb shapes are offset
+or undersized. Fitted shapes cover the sample, but the pelvis, calves and foot
+boxes are broad. The second pelvis shape receives only 14 points. This is a
+query-test candidate, not an accepted final ragdoll or gameplay collider layout.
+The renderer shows both foot variants, which explains their overlapping surface.
+
+The C++20 / UE 5.6.1 editor patch
+[b2-body-physics-probes.patch](../../tools/authoring-patches/b2-body-physics-probes.patch)
+adds commandlet-only authoring, inspection and actual physics queries. It builds
+successfully in `b2-body-physics-engine-v1`, after the reference-metadata patch.
+It creates a fresh diagnostic `UPhysicsAsset`, imports the retained body/joint
+properties, constructs physics meshes, restores 212 collision-disable pairs,
+and updates body/bounds indexes. Every supplied property is checked against an
+engine export, including nested fields, rather than trusting converter success.
+
+The pinned `PhysicsConstraintTemplate.cpp` serializer saves `DefaultProfile`
+instead of a temporarily edited `DefaultInstance.ProfileInstance`. The helper
+calls `UpdateProfileInstance()` before saving. Omitting this would risk losing
+the imported game limits/drives during save or cook. This is a save-path
+requirement identified in source, not a claim about an earlier game crash.
+
+Saved asset: `/Game/CSSAuthoring/DiagnosticReferences/PA_B2BodyFit_V1`.
+`probe_body_physics_candidate.py` first saves it, then a fresh-process invocation
+loads it without editing. The probe uses a temporary skeletal mesh component
+in its own physics world, forced reference pose, post-process disabled, and
+explicit `QueryAndPhysics` / block responses. It does not bind or save the
+source mesh, invoke the game, or change the accepted motion settings.
+
+The 270 rays contain 69 primitive-axis rays, 132 rays through regional skin
+extrema, and 69 off-body controls. Four phases apply null, fitted, null and
+fitted assets. `b2-body-physics-query-v1` passes all 1,080 observations:
+
+- Null/removal: zero bodies and zero ray hits.
+- Fitted/reapplied: 22 valid bodies, all 201 intended hits, all 69 controls miss.
+- Cleanup destroys the temporary component/owner/world; protected source
+  assets remain byte-identical.
+
+The query calls `USkeletalMeshComponent::LineTraceComponent`, whose pinned
+implementation tests its actual `FBodyInstance` entries. It is not an analytic
+Python intersection surrogate. Epic's [FBodyInstance reference](https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/FBodyInstance)
+describes that per-body ray API; the local 5.6.1 source fixes the exact version.
+`b2-body-physics-query-v2` loads the saved asset in a fresh process and repeats
+all 1,080 checks successfully. Every supplied body/constraint/solver field and
+all collision-disable pairs survive saving. Both query processes exit zero;
+the fitted asset hash is identical before and after fresh-load testing.
+No assets are saved during the second run.
+
+Remaining acceptance: refine the broad shapes, check public morph extremes,
+posed/moving skin, simulation and ragdoll, collision channels, full cooked
+binding and live damage/parry. The test's block-all query setup does not prove
+the game's channel filtering or damage logic. V43 remains installed; V44's
+new Physics Asset remains isolated and uninstalled. The complete modular
+Next-Gen asset/runtime/UI/profile/lifecycle/performance objective is unchanged.

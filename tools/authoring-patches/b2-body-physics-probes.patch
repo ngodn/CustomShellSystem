@@ -1,0 +1,229 @@
+--- a/Source/CSSAuthoring/CSSAuthoring.Build.cs
++++ b/Source/CSSAuthoring/CSSAuthoring.Build.cs
+@@ -8,7 +8,7 @@
+         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+         CppStandard = CppStandardVersion.Cpp20;
+         PrivateDependencyModuleNames.AddRange(new[] {
+-            "Core", "CoreUObject", "Engine", "UnrealEd", "Json", "JsonUtilities",
++            "Core", "CoreUObject", "Engine", "PhysicsCore", "UnrealEd", "Json", "JsonUtilities",
+             "AssetRegistry", "MeshDescription", "SkeletalMeshDescription",
+             "TargetPlatform", "DesktopPlatform", "AudioPlatformConfiguration", "RHI", "RenderCore",
+             "AnimGraph", "AnimGraphRuntime", "BlueprintGraph", "KismetCompiler",
+--- /dev/null
++++ b/Source/CSSAuthoring/CSSPhysicsProbeLibrary.h
+@@ -0,0 +1,24 @@
++#pragma once
++
++#include "Kismet/BlueprintFunctionLibrary.h"
++#include "CSSPhysicsProbeLibrary.generated.h"
++
++/** Commandlet-only isolated body collision authoring and actual physics queries. */
++UCLASS()
++class UCSSPhysicsProbeLibrary : public UBlueprintFunctionLibrary
++{
++    GENERATED_BODY()
++public:
++    /** Creates a fresh diagnostic asset. Caller owns explicit saving. */
++    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
++    static class UPhysicsAsset* CreateBodyCandidate(class USkeletalMesh* Mesh,
++        const FString& DefinitionJson, const FString& PackagePath);
++
++    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
++    static FString InspectBodyCandidate(class UPhysicsAsset* Asset);
++
++    /** Null/fitted/remove/reapply sequence on a transient component in its own physics world. */
++    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
++    static FString ProbeBodyQueries(class USkeletalMesh* Mesh, class UPhysicsAsset* Asset,
++        const FString& QueriesJson);
++};
+--- /dev/null
++++ b/Source/CSSAuthoring/CSSPhysicsProbeLibrary.cpp
+@@ -0,0 +1,188 @@
++#include "CSSPhysicsProbeLibrary.h"
++
++#include "Components/SkeletalMeshComponent.h"
++#include "Engine/SkeletalMesh.h"
++#include "Engine/World.h"
++#include "GameFramework/Actor.h"
++#include "JsonObjectConverter.h"
++#include "Misc/PackageName.h"
++#include "PhysicsEngine/PhysicsAsset.h"
++#include "PhysicsEngine/BodyInstance.h"
++#include "PhysicsEngine/PhysicsConstraintTemplate.h"
++#include "PhysicsEngine/SkeletalBodySetup.h"
++#include "Serialization/JsonSerializer.h"
++#include "UObject/Package.h"
++
++namespace
++{
++bool Diagnostic(const UObject* Object)
++{
++    return IsRunningCommandlet() && Object &&
++        Object->GetPathName().StartsWith(TEXT("/Game/CSSAuthoring/DiagnosticReferences/"));
++}
++
++bool Import(const TSharedRef<FJsonObject>& Json, const UStruct* Type, void* Value)
++{
++    FText Reason;
++    const bool Ok = FJsonObjectConverter::JsonObjectToUStruct(Json, Type, Value, 0,
++        CPF_Transient | CPF_Deprecated, false, &Reason);
++    if (!Ok) UE_LOG(LogTemp, Error, TEXT("CSS body import: %s"), *Reason.ToString());
++    return Ok;
++}
++
++TSharedRef<FJsonObject> Export(const UStruct* Type, const void* Value)
++{
++    auto Json = MakeShared<FJsonObject>();
++    check(FJsonObjectConverter::UStructToJsonObject(Type, Value, Json, 0, CPF_Transient | CPF_Deprecated));
++    return Json;
++}
++
++FString Text(const TSharedRef<FJsonObject>& Value)
++{
++    FString Result;
++    return FJsonSerializer::Serialize(Value, TJsonWriterFactory<>::Create(&Result)) ? Result : FString();
++}
++}
++
++UPhysicsAsset* UCSSPhysicsProbeLibrary::CreateBodyCandidate(USkeletalMesh* Mesh,
++    const FString& DefinitionJson, const FString& PackagePath)
++{
++    if (!Diagnostic(Mesh) || Mesh->GetRefSkeleton().GetRawBoneNum() != 379 ||
++        !PackagePath.StartsWith(TEXT("/Game/CSSAuthoring/DiagnosticReferences/PA_B2BodyFit")) ||
++        !FPackageName::IsValidLongPackageName(PackagePath) ||
++        FindPackage(nullptr, *PackagePath) || FPackageName::DoesPackageExist(PackagePath)) return nullptr;
++    TSharedPtr<FJsonObject> Json;
++    if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(DefinitionJson), Json)) return nullptr;
++    const auto& Bodies = Json->GetArrayField(TEXT("bodies"));
++    const auto& Constraints = Json->GetArrayField(TEXT("constraints"));
++    if (Bodies.Num() != 22 || Constraints.Num() != 21 || !Json->GetBoolField(TEXT("neutral_vertex_fit"))) return nullptr;
++    UPhysicsAsset* Asset = NewObject<UPhysicsAsset>(CreatePackage(*PackagePath),
++        *FPackageName::GetLongPackageAssetName(PackagePath), RF_Public | RF_Standalone);
++    TSet<FName> Names;
++    for (const auto& Row : Bodies)
++    {
++        USkeletalBodySetup* Body = NewObject<USkeletalBodySetup>(Asset, NAME_None, RF_Transactional);
++        if (!Import(Row->AsObject().ToSharedRef(), USkeletalBodySetup::StaticClass(), Body) ||
++            Body->BoneName.IsNone() || Names.Contains(Body->BoneName) ||
++            Mesh->GetRefSkeleton().FindBoneIndex(Body->BoneName) == INDEX_NONE ||
++            Body->PhysicsType != PhysType_Default || Body->AggGeom.GetElementCount() < 1) return nullptr;
++        Names.Add(Body->BoneName);
++        Body->InvalidatePhysicsData();
++        Body->CreatePhysicsMeshes();
++        Asset->SkeletalBodySetups.Add(Body);
++    }
++    for (const auto& Row : Constraints)
++    {
++        UPhysicsConstraintTemplate* Constraint = NewObject<UPhysicsConstraintTemplate>(Asset, NAME_None, RF_Transactional);
++        if (!Import(Row->AsObject().ToSharedRef(), UPhysicsConstraintTemplate::StaticClass(), Constraint) ||
++            !Names.Contains(Constraint->DefaultInstance.ConstraintBone1) ||
++            !Names.Contains(Constraint->DefaultInstance.ConstraintBone2)) return nullptr;
++        // Serialize saves DefaultProfile, so synchronize it before any save/cook.
++        Constraint->UpdateProfileInstance();
++        Asset->ConstraintSetup.Add(Constraint);
++    }
++    if (!Import(Json->GetObjectField(TEXT("solver_settings")).ToSharedRef(),
++        FPhysicsAssetSolverSettings::StaticStruct(), &Asset->SolverSettings)) return nullptr;
++    for (const auto& Value : Json->GetArrayField(TEXT("collision_disable_table")))
++    {
++        const auto Row = Value->AsObject();
++        const auto Indices = Row->GetArrayField(TEXT("indices"));
++        if (Indices.Num() != 2) return nullptr;
++        const int32 A = Indices[0]->AsNumber(), B = Indices[1]->AsNumber();
++        if (A < 0 || B <= A || B >= Bodies.Num()) return nullptr;
++        Asset->CollisionDisableTable.Add(FRigidBodyIndexPair(A, B), Row->GetBoolField(TEXT("value")));
++    }
++    Asset->UpdateBodySetupIndexMap();
++    Asset->UpdateBoundsBodiesArray();
++    Asset->PreviewSkeletalMesh = Mesh;
++    Asset->MarkPackageDirty();
++    return Asset;
++}
++
++FString UCSSPhysicsProbeLibrary::InspectBodyCandidate(UPhysicsAsset* Asset)
++{
++    if (!Diagnostic(Asset)) return {};
++    auto Report = MakeShared<FJsonObject>();
++    TArray<TSharedPtr<FJsonValue>> Bodies, Constraints, Pairs, Bounds;
++    for (const auto& Body : Asset->SkeletalBodySetups)
++        Bodies.Add(MakeShared<FJsonValueObject>(Export(USkeletalBodySetup::StaticClass(), Body)));
++    for (const auto& Constraint : Asset->ConstraintSetup)
++        Constraints.Add(MakeShared<FJsonValueObject>(Export(UPhysicsConstraintTemplate::StaticClass(), Constraint)));
++    for (const auto& Pair : Asset->CollisionDisableTable)
++    {
++        auto Row = MakeShared<FJsonObject>();
++        Row->SetArrayField(TEXT("indices"), {MakeShared<FJsonValueNumber>(Pair.Key.Indices[0]),
++            MakeShared<FJsonValueNumber>(Pair.Key.Indices[1])});
++        Row->SetBoolField(TEXT("value"), Pair.Value);
++        Pairs.Add(MakeShared<FJsonValueObject>(Row));
++    }
++    for (int32 Index : Asset->BoundsBodies) Bounds.Add(MakeShared<FJsonValueNumber>(Index));
++    Report->SetArrayField(TEXT("bodies"), Bodies);
++    Report->SetArrayField(TEXT("constraints"), Constraints);
++    Report->SetArrayField(TEXT("collision_disable_table"), Pairs);
++    Report->SetArrayField(TEXT("bounds_bodies"), Bounds);
++    Report->SetObjectField(TEXT("solver_settings"), Export(FPhysicsAssetSolverSettings::StaticStruct(), &Asset->SolverSettings));
++    return Text(Report);
++}
++
++FString UCSSPhysicsProbeLibrary::ProbeBodyQueries(USkeletalMesh* Mesh, UPhysicsAsset* Asset,
++    const FString& QueriesJson)
++{
++    if (!Diagnostic(Mesh) || !Diagnostic(Asset) || Mesh->GetPhysicsAsset()) return {};
++    TArray<TSharedPtr<FJsonValue>> Queries;
++    if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(QueriesJson), Queries) ||
++        Queries.IsEmpty() || Queries.Num() > 512) return {};
++    UWorld* World = UWorld::CreateWorld(EWorldType::Game, false, TEXT("CSSBodyQueryWorld"));
++    if (!World || !World->GetPhysicsScene()) return {};
++    AActor* Owner = World->SpawnActor<AActor>();
++    USkeletalMeshComponent* Component = NewObject<USkeletalMeshComponent>(Owner);
++    Owner->SetRootComponent(Component);
++    Component->SetSkeletalMesh(Mesh);
++    Component->SetDisablePostProcessBlueprint(true);
++    Component->SetForceRefPose(true);
++    Component->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
++    Component->SetCollisionResponseToAllChannels(ECR_Block);
++    Component->RegisterComponent();
++    Component->RefreshBoneTransforms();
++    TArray<TSharedPtr<FJsonValue>> Phases;
++    for (int32 Phase = 0; Phase < 4; ++Phase)
++    {
++        const bool Fitted = Phase % 2 == 1;
++        Component->SetPhysicsAsset(Fitted ? Asset : nullptr, true);
++        auto Result = MakeShared<FJsonObject>();
++        Result->SetNumberField(TEXT("phase"), Phase);
++        Result->SetBoolField(TEXT("fitted"), Fitted);
++        Result->SetNumberField(TEXT("body_count"), Component->Bodies.Num());
++        int32 ValidBodies = 0;
++        for (const auto* Body : Component->Bodies) if (Body && Body->IsValidBodyInstance()) ++ValidBodies;
++        Result->SetNumberField(TEXT("valid_bodies"), ValidBodies);
++        TArray<TSharedPtr<FJsonValue>> Hits;
++        for (const auto& QueryValue : Queries)
++        {
++            auto Query = QueryValue->AsObject();
++            auto VectorField = [&Query](const TCHAR* Key) {
++                const auto& Values = Query->GetArrayField(Key);
++                check(Values.Num() == 3);
++                return FVector(Values[0]->AsNumber(), Values[1]->AsNumber(), Values[2]->AsNumber());
++            };
++            FHitResult Hit;
++            const bool Found = Component->LineTraceComponent(Hit, VectorField(TEXT("start")),
++                VectorField(TEXT("end")), FCollisionQueryParams(SCENE_QUERY_STAT(CSSBodyProbe), false));
++            auto Row = MakeShared<FJsonObject>();
++            Row->SetStringField(TEXT("id"), Query->GetStringField(TEXT("id")));
++            Row->SetBoolField(TEXT("hit"), Found);
++            Row->SetStringField(TEXT("bone"), Hit.BoneName.ToString());
++            Row->SetNumberField(TEXT("distance"), Hit.Distance);
++            Hits.Add(MakeShared<FJsonValueObject>(Row));
++        }
++        Result->SetArrayField(TEXT("queries"), Hits);
++        Phases.Add(MakeShared<FJsonValueObject>(Result));
++    }
++    Component->DestroyComponent();
++    Owner->Destroy();
++    World->DestroyWorld(false);
++    auto Report = MakeShared<FJsonObject>();
++    Report->SetArrayField(TEXT("phases"), Phases);
++    Report->SetBoolField(TEXT("world_destroyed"), true);
++    return Text(Report);
++}
