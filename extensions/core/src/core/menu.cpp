@@ -1,0 +1,752 @@
+#include "menu.hpp"
+#include "controls.hpp"
+#include <windows.h>
+#include <algorithm>
+#include <cmath>
+#include <fstream>
+#include <Unreal/UObjectGlobals.hpp>
+#include <Unreal/FProperty.hpp>
+#include <Unreal/Property/FArrayProperty.hpp>
+#include <Unreal/Property/FObjectProperty.hpp>
+#include <Unreal/FString.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
+
+namespace cssx {
+using namespace engine;
+namespace {
+// Palette: Mortal Shell's parchment ink on near-black, gold for selection.
+constexpr Color ink{.62f,.56f,.45f,1}, bright{.86f,.80f,.68f,1}, muted{.36f,.32f,.26f,1}, gold{.72f,.56f,.28f,1};
+constexpr Color danger{.72f,.28f,.22f,1}, warning{.78f,.58f,.22f,1}, good{.42f,.62f,.36f,1};
+constexpr Color backdrop{.012f,.010f,.008f,.96f}, panel{.030f,.026f,.020f,.92f}, row_selected{.09f,.072f,.040f,.85f}, line{.16f,.13f,.09f,1};
+constexpr double reference_h=1080;
+constexpr int library_visible=9, controls_visible=10;
+// Controller prompt glyph ids of the game's WBP_Prompt (E_ControllerButton).
+constexpr uint8_t glyph_accept=3, glyph_secondary=4, glyph_back=5, glyph_left_bumper=8, glyph_right_bumper=9, glyph_up=13, glyph_down=14, glyph_left=15, glyph_right=16;
+const std::array<std::pair<std::string_view,uint8_t>,22> keyboard_icons{{
+    {"LeftMouseButton",0},{"RightMouseButton",1},{"BackSpace",6},{"Tab",7},{"Enter",8},{"Escape",11},{"Spacebar",12},{"Left",17},{"Up",18},{"Right",19},{"Down",20},
+    {"E",37},{"F",38},{"Q",49},{"R",50},{"W",55},{"A",33},{"S",51},{"D",36},{"Ctrl",255},{"Home",16},{"X",56}}};
+std::string effect_label(const Json& c) {
+    const auto effect=c.value("effect",std::string{});
+    if(effect=="irreversible") return "Irreversible: this changes your save";
+    if(effect=="persistent") return "Persists in your save";
+    if(effect=="reversible") return "Reversible while the menu owns it";
+    return {};
+}
+Color severity_color(const Json& c) {
+    const auto s=c.value("severity",std::string{});
+    return s=="danger"?danger:s=="warning"?warning:gold;
+}
+struct Modal { double x,y,w,h; };
+Modal modal_frame(Layout& ui,const std::string& title,double width,double height) {
+    const double w=std::min(920.,width-160.),x=(width-w)/2,y=(reference_h-height)/2;
+    ui.box(0,0,width,reference_h,Color{0,0,0,.90f});
+    ui.box(x-1,y-1,w+2,height+2,line);
+    ui.box(x,y,w,height,Color{.014f,.012f,.009f,1});
+    ui.label(title,x+32,y+24,w-64,60,27,bright,true);
+    ui.box(x+32,y+92,w-64,1,line);
+    ui.box(x+32,y+height-82,w-64,1,line);
+    return {x,y,w,height};
+}
+UObject* scroll_text(Layout& ui,const std::string& value,double x,double y,double w,double h,float size,Color color) {
+    auto* scroll=construct(L"/Script/UMG.ScrollBox",ui.tree);
+    invoke(scroll,L"SetAllowOverscroll",L"NewAllowOverscroll",false);
+    invoke(scroll,L"SetAnimateWheelScrolling",L"bShouldAnimateWheelScrolling",true);
+    invoke(scroll,L"SetScrollbarThickness",L"NewScrollbarThickness",Vec2{3*ui.scale,3*ui.scale});
+    ui.place(scroll,x,y,w,h);
+    auto* label=construct(L"/Script/UMG.TextBlock",ui.tree);
+    text_value(label,value); font_size(label,size*float(ui.scale),ui.serif);
+    invoke(label,L"SetColorAndOpacity",L"InColorAndOpacity",SlateColor{color});
+    invoke(label,L"SetAutoWrapText",L"InAutoTextWrap",true);
+    raw_value(label,L"WrapTextAt",float((w-14)*ui.scale));
+    invoke(label,L"SetVisibility",L"InVisibility",uint8_t{3});
+    Call add(scroll,L"AddChild",2); add.set(L"content",label); add.run();
+    return scroll;
+}
+UObject* text_input(Layout& ui,const std::string& value,double x,double y,double w,bool enabled) {
+    auto* input=construct(L"/Script/UMG.EditableText",ui.tree);
+    text_value(input,value);
+    Call current(input,L"GetFont",1); current.run();
+    Call set(input,L"SetFont",1); set.copy(L"InFontInfo",current,L"ReturnValue");
+    auto* font=set.param(L"InFontInfo"); auto* info=find(L"/Script/SlateCore.SlateFontInfo");
+    member(set.data(font),font->GetElementSize(),info,L"FontObject",ui.serif);
+    member(set.data(font),font->GetElementSize(),info,L"Size",20*float(ui.scale));
+    member(set.data(font),font->GetElementSize(),info,L"TypefaceFontName",FName(L"Regular")); set.run();
+    invoke(input,L"SetIsEnabled",L"bInIsEnabled",enabled); ui.place(input,x,y,w,40);
+    return input;
+}
+void mark(Layout& ui,double x,double y,bool selected) {
+    auto* frame=ui.box(x,y,12,12,muted); invoke(frame,L"SetRenderTransformAngle",L"Angle",45.f);
+    auto* inner=ui.box(x+2,y+2,8,8,Color{.01f,.008f,.006f,1}); invoke(inner,L"SetRenderTransformAngle",L"Angle",45.f);
+    if(selected) { auto* dot=ui.box(x+4,y+4,4,4,gold); invoke(dot,L"SetRenderTransformAngle",L"Angle",45.f); }
+}
+}
+bool Menu::open(const PlayerContext& player,std::string* reason) {
+    auto fail=[&](const std::string& why){ if(reason) *reason=why; return false; };
+    if(open_) return true;
+    if(!player.pc || !player.world) return fail("No player controller yet");
+    auto* handler=object_of(player.pc,L"User Interface Handler Component");
+    if(!handler) return fail("The game's UI handler component is unavailable");
+    try {
+        auto* widget=create_widget(player.pc,static_cast<UClass*>(find(L"/Script/UMG.UserWidget")));
+        UObject* tree=object_of(widget,L"WidgetTree");
+        if(!tree) { tree=construct(L"/Script/UMG.WidgetTree",widget); object_property(widget,L"WidgetTree",tree); }
+        auto* canvas=construct(L"/Script/UMG.CanvasPanel",tree);
+        object_property(tree,L"RootWidget",canvas);
+        invoke(widget,L"AddToViewport",L"ZOrder",int32_t{10000});
+        pc_=player.pc; handler_=handler; widget_=widget; tree_=tree; canvas_=canvas;
+        // The game's own menu path: focus, input mapping, cursor, pause, HUD.
+        Call enable(handler,L"EnableUserInterfaceInput",6);
+        enable.set(L"InWidgetToFocus",widget); enable.set(L"InMouseLockMode",uint8_t{0});
+        enable.set(L"AddInputMapping",true); enable.set(L"ShowCursor",true);
+        enable.set(L"PauseGame",deps_.settings->pause_while_open); enable.set(L"HidePlayerHUD",deps_.settings->hide_hud_while_open); enable.run();
+        invoke(handler,L"UpdateActiveMenu",L"NewWidget",widget);
+        open_=true; dirty_=true; enter_=true; error_.clear(); confirm_=nullptr; details_=picker_=false;
+        bind_inputs();
+        const auto now=GetTickCount64();
+        for(auto& b:bindings_) { b.down=true; b.repeat=now+400; }
+        mouse_left_=true;
+        refresh_library(true);
+        return true;
+    } catch(const std::exception& e) {
+        restore_input(true);
+        return fail(std::string("Menu construction failed: ")+e.what());
+    }
+}
+void Menu::restore_input(bool handler_alive) {
+    auto* handler=handler_.Get();
+    if(handler && handler_alive) {
+        try { invoke(handler,L"ResetActiveMenu"); } catch(...) {}
+        try {
+            Call disable(handler,L"DisableUserInterfaceInput",4);
+            disable.set(L"RemoveInputMapping",true); disable.set(L"UnpauseGame",deps_.settings->pause_while_open);
+            disable.set(L"HideCursor",true); disable.set(L"ShowPlayerHUD",deps_.settings->hide_hud_while_open); disable.run();
+        } catch(const std::exception& e) { if(deps_.log) deps_.log(std::string("Input restore failed: ")+e.what()); }
+    }
+    if(auto* widget=widget_.Get()) { try { invoke(widget,L"RemoveFromParent"); } catch(...) {} }
+    widget_.Reset(); tree_.Reset(); canvas_.Reset(); handler_.Reset(); pc_.Reset(); prompt_.Reset();
+    hits_.clear(); sliders_.clear(); bindings_.clear(); textures_.clear();
+    search_input_.Reset(); search_results_.Reset(); search_count_.Reset(); description_.Reset(); name_input_.Reset();
+}
+void Menu::close() {
+    if(!open_) return;
+    open_=false;
+    restore_input(handler_.Get()!=nullptr);
+}
+void Menu::bind_inputs() {
+    bindings_.clear();
+    auto* pc=pc_.Get(); auto* handler=handler_.Get();
+    auto* mapping=object_of(handler,L"InputMapping");
+    auto* p=mapping?mapping->GetPropertyByNameInChain(L"Mappings"):nullptr;
+    if(!p || !p->IsA<FArrayProperty>()) throw std::runtime_error("Menu input mapping is unavailable");
+    Call subsystem(find(L"/Script/Engine.Default__SubsystemBlueprintLibrary"),L"GetLocalPlayerSubSystemFromPlayerController",3);
+    subsystem.set(L"PlayerController",pc); subsystem.set(L"Class",static_cast<UClass*>(find(L"/Script/EnhancedInput.EnhancedInputLocalPlayerSubsystem"))); subsystem.run();
+    auto* input=subsystem.get<UObject*>();
+    if(!input) throw std::runtime_error("Player input subsystem is unavailable");
+    const std::map<std::wstring,std::string> actions={
+        {L"IA_Menu_Up","up"},{L"IA_Menu_Down","down"},{L"IA_Menu_Left_Primary","left"},{L"IA_Menu_Right_Primary","right"},
+        {L"IA_Menu_Left_Tertiary","previous_section"},{L"IA_Menu_Right_Tertiary","next_section"},
+        {L"IA_Menu_Confirm_Primary_Press","accept"},{L"IA_Menu_Confirm_Secondary_Press","secondary"},{L"IA_Menu_Back","close"}};
+    auto* a=static_cast<FArrayProperty*>(p); FScriptArrayHelper values(a,reinterpret_cast<std::byte*>(mapping)+p->GetOffset_Internal());
+    if(values.Num()<0 || values.Num()>256) throw std::runtime_error("Input map exceeds bound");
+    auto* ap=field(find(L"/Script/EnhancedInput.EnhancedActionKeyMapping"),L"Action",8);
+    auto* kn=field(find(L"/Script/InputCore.Key"),L"KeyName",sizeof(FName));
+    std::set<UObject*> seen;
+    for(int i=0;i<values.Num();++i) {
+        UObject* action{}; std::memcpy(&action,values.GetRawPtr(i)+ap->GetOffset_Internal(),8);
+        if(!action || !seen.insert(action).second) continue;
+        const auto found=actions.find(action->GetName());
+        if(found==actions.end()) continue;
+        Binding binding; binding.input_action=action; binding.action=found->second;
+        Call query(input,L"QueryKeysMappedToAction",2); query.set(L"Action",action); query.run();
+        auto* out=query.param(L"ReturnValue");
+        if(!out->IsA<FArrayProperty>()) throw std::runtime_error("Mapped input keys are not an array");
+        auto* array=static_cast<FArrayProperty*>(out); FScriptArrayHelper keys(array,query.data(out));
+        if(keys.Num()<0 || keys.Num()>32 || kn->GetOffset_Internal()+8>array->GetInner()->GetElementSize()) throw std::runtime_error("Mapped input key layout mismatch");
+        for(int n=0;n<keys.Num();++n) {
+            FName key{}; std::memcpy(&key,keys.GetRawPtr(n)+kn->GetOffset_Internal(),sizeof(key));
+            auto name=narrow(key.ToString());
+            if(name=="Gamepad_LeftX" || name=="Gamepad_LeftY" || name=="Gamepad_RightX" || name=="Gamepad_RightY") continue;
+            binding.keys.push_back(name);
+        }
+        bindings_.push_back(std::move(binding));
+    }
+    if(bindings_.empty()) throw std::runtime_error("No menu navigation actions were found in the input mapping");
+}
+void Menu::poll_input(const PlayerContext& player,uint64_t now) {
+    auto* pc=player.pc; if(!pc) return;
+    for(auto& b:bindings_) {
+        bool down=false;
+        for(const auto& name:b.keys) {
+            Call call(pc,L"IsInputKeyDown",2); auto* p=call.param(L"Key");
+            member(call.data(p),p->GetElementSize(),find(L"/Script/InputCore.Key"),L"KeyName",FName(wide(name).c_str()));
+            call.run(); if(call.get<bool>()) { down=true; break; }
+        }
+        const bool repeating=b.action=="up" || b.action=="down" || b.action=="left" || b.action=="right";
+        if(down && (!b.down || (repeating && now>=b.repeat))) {
+            b.repeat=now+(b.down?90:400);
+            b.down=true;
+            key(b.action);
+            return;   // one action per frame keeps navigation predictable
+        }
+        if(!down) b.down=false;
+    }
+}
+void Menu::poll_mouse(const PlayerContext& player) {
+    auto* pc=player.pc; if(!pc || !player.world) return;
+    Call pos(find(L"/Script/UMG.Default__WidgetLayoutLibrary"),L"GetMousePositionOnViewport",2);
+    pos.set(L"WorldContextObject",player.world); pos.run();
+    const auto m=pos.get<Vec2>();
+    const bool moved=std::abs(m.x-mouse_[0])>0.5 || std::abs(m.y-mouse_[1])>0.5;
+    mouse_={m.x,m.y};
+    Call left(pc,L"IsInputKeyDown",2); auto* p=left.param(L"Key");
+    member(left.data(p),p->GetElementSize(),find(L"/Script/InputCore.Key"),L"KeyName",FName(L"LeftMouseButton"));
+    left.run(); const bool down=left.get<bool>();
+    const bool pressed=down && !mouse_left_; mouse_left_=down;
+    if(!moved && !pressed && !down) return;
+    // Sliders: preview while dragging, commit on release.
+    for(auto& s:sliders_) {
+        auto* widget=s.widget.Get(); if(!widget) continue;
+        Call value(widget,L"GetValue",1); value.run(); const float v=value.get<float>();
+        if(std::abs(v-s.previous)>1e-6f) {
+            s.previous=v;
+            if(auto* label=s.label.Get()) text_value(label,display_value([&]{ auto c=s.control; c["value"]=snap_value(s.control,v); return c; }()));
+            if(!down) act({{"action","value"},{"value",snap_value(s.control,v)}});
+        }
+    }
+    if(!pressed) return;
+    for(const auto& hit:hits_) {
+        auto* widget=hit.widget.Get(); if(!widget) continue;
+        Call hovered(widget,L"IsHovered",1); hovered.run();
+        if(hovered.get<bool>()) { act(hit.action); return; }
+    }
+}
+void Menu::tick(const PlayerContext& player,double) {
+    if(!open_) return;
+    auto* handler=handler_.Get(); auto* widget=widget_.Get();
+    if(!handler || !widget || player.pc!=pc_.Get()) {
+        // World travel or pawn replacement destroyed our context: restore
+        // what still exists and forget the rest.
+        if(deps_.log) deps_.log("Menu closed because its player context went away");
+        open_=false; restore_input(handler!=nullptr); return;
+    }
+    // Another menu took over (the game's own menu key still reaches the UI
+    // handler): yield rather than fight for input.
+    if(object_of(handler,L"ActiveMenu")!=widget) { if(deps_.log) deps_.log("Menu closed because the game opened another menu"); close(); return; }
+    const auto now=GetTickCount64();
+    if(now>=layout_check_) {
+        layout_check_=now+500;
+        Call vp(find(L"/Script/UMG.Default__WidgetLayoutLibrary"),L"GetViewportSize",2);
+        vp.set(L"WorldContextObject",player.world); vp.run(); const auto size=vp.get<Vec2>();
+        if(std::abs(size.x-viewport_[0])>.5 || std::abs(size.y-viewport_[1])>.5) { viewport_={size.x,size.y}; dirty_=true; }
+    }
+    if(auto* prompt=prompt_.Get()) { try { const bool gamepad=read<uint8_t>(prompt,L"InputType")==1; if(gamepad!=gamepad_) { gamepad_=gamepad; dirty_=true; } } catch(...) {} }
+    if(now>=library_check_) { library_check_=now+250; refresh_library(false); }
+    if(picker_) if(auto* search=search_input_.Get()) {
+        try { const auto query=text_of(search,256); if(query!=search_query_) { search_query_=query; if(options_.filter(query)) build_results(); } }
+        catch(const std::exception& e) { error_=e.what(); }
+    }
+    try { poll_input(player,now); poll_mouse(player); }
+    catch(const std::exception& e) { error_=e.what(); dirty_=true; }
+    if(!open_) return;
+    if(dirty_) { try { build(); } catch(const std::exception& e) { if(deps_.log) deps_.log(std::string("Menu build failed: ")+e.what()); error_=e.what(); dirty_=false; } }
+}
+void Menu::refresh_library(bool force) {
+    if(!deps_.runtime) { library_={{"revision",0},{"extensions",Json::array()},{"errors",Json::array()}}; return; }
+    auto library=deps_.runtime->library();
+    const auto revision=library.value("revision",uint64_t{});
+    if(force || revision!=library_revision_) { library_revision_=revision; library_=std::move(library); if(screen_==Screen::Extension) refresh_model(); dirty_=true; }
+    else if(screen_==Screen::Library) { library_=std::move(library); }   // status summaries may change without a revision bump
+}
+void Menu::refresh_model() {
+    if(!deps_.runtime || extension_id_.empty()) { model_=nullptr; return; }
+    try { model_=deps_.runtime->model(extension_id_); }
+    catch(const std::exception& e) { model_=nullptr; error_=e.what(); }
+}
+const Json* Menu::current_control() const {
+    if(screen_!=Screen::Extension || !model_.is_object() || !model_.contains("sections")) return nullptr;
+    const auto& sections=model_["sections"]; if(section_<0 || section_>=int(sections.size())) return nullptr;
+    const auto& controls=sections[section_]["controls"]; if(row_<0 || row_>=int(controls.size())) return nullptr;
+    return &controls[row_];
+}
+void Menu::send_event(const Json& event) {
+    try { deps_.runtime->event(extension_id_,event); error_.clear(); }
+    catch(const std::exception& e) { error_=e.what(); }
+    refresh_library(true); refresh_model(); dirty_=true;
+}
+void Menu::key(const std::string& action) {
+    if(picker_) {
+        if(action=="close") act({{"action","pick_cancel"}});
+        else if(action=="up" || action=="down" || action=="previous_section" || action=="next_section") { options_.move(action=="up"?-1:action=="down"?1:action=="previous_section"?-8:8); build_results(); }
+        else if(action=="accept") act({{"action","pick_apply"}});
+        return;
+    }
+    if(!confirm_.is_null()) { if(action=="accept") act({{"action","confirm"}}); else if(action=="close") act({{"action","cancel"}}); return; }
+    if(details_) {
+        if(action=="close" || action=="secondary") act({{"action","details"}});
+        else if((action=="up" || action=="down")) if(auto* d=description_.Get()) { Call offset(d,L"GetScrollOffset",1); offset.run(); invoke(d,L"SetScrollOffset",L"NewScrollOffset",std::max(0.f,offset.get<float>()+(action=="up"?-60.f:60.f))); }
+        return;
+    }
+    if(screen_==Screen::Library) {
+        const int count=int(library_["extensions"].size())+1;   // + CSSX settings entry
+        if(action=="up" || action=="down") { library_row_=std::clamp(library_row_+(action=="up"?-1:1),0,std::max(0,count-1)); dirty_=true; }
+        else if(action=="accept") act({{"action","open"},{"row",library_row_}});
+        else if(action=="close") close();
+        return;
+    }
+    if(screen_==Screen::Settings) {
+        if(action=="close") act({{"action","library"}});
+        else if(action=="up" || action=="down") { settings_row_=std::clamp(settings_row_+(action=="up"?-1:1),0,4); dirty_=true; }
+        else if(action=="left" || action=="right" || action=="accept") act({{"action","settings_adjust"},{"delta",action=="left"?-1:1}});
+        return;
+    }
+    // Extension screen
+    if(action=="close") { act({{"action","library"}}); return; }
+    if(action=="secondary") { act({{"action","details"}}); return; }
+    if(action=="previous_section" || action=="next_section") { act({{"action","section_delta"},{"delta",action=="previous_section"?-1:1}}); return; }
+    if(action=="up" || action=="down") { act({{"action","row_delta"},{"delta",action=="up"?-1:1}}); return; }
+    if(action=="left" || action=="right") { act({{"action","adjust"},{"delta",action=="left"?-1:1}}); return; }
+    if(action=="accept") act({{"action","activate"}});
+}
+void Menu::act(const Json& action) {
+    const auto name=action.value("action",std::string{});
+    if(name!="value") error_.clear();
+    if(picker_) {
+        if(name=="pick_cancel" || name=="library") { picker_=false; dirty_=true; return; }
+        if(name=="pick_row") { options_.selected=std::min(action.at("row").get<size_t>(),options_.matches.empty()?size_t{}:options_.matches.size()-1); build_results(); return; }
+        if(name=="pick_apply") {
+            const auto value=options_.value(); if(value.is_null()) return;
+            const auto* c=current_control(); if(!c) return;
+            Json event={{"id",c->at("id")},{"value",value}};
+            picker_=false;
+            if(c->contains("confirm")) confirm_={{"event",event},{"message",c->at("confirm")}};
+            else send_event(event);
+            dirty_=true; return;
+        }
+        return;
+    }
+    if(!confirm_.is_null()) {
+        if(name=="confirm") { auto event=confirm_.at("event"); event["confirmed"]=true; confirm_=nullptr; send_event(event); }
+        else if(name=="cancel") { confirm_=nullptr; dirty_=true; }
+        return;
+    }
+    if(name=="details") { details_=!details_; details_offset_=0; dirty_=true; return; }
+    if(details_) return;
+    if(name=="library") { screen_=Screen::Library; extension_id_.clear(); model_=nullptr; dirty_=true; enter_=true; return; }
+    if(name=="open") {
+        const int row=action.value("row",library_row_); library_row_=row;
+        const auto& entries=library_["extensions"];
+        if(row>=int(entries.size())) { screen_=Screen::Settings; settings_row_=0; dirty_=true; enter_=true; return; }
+        const auto& entry=entries[row];
+        if(!entry.value("available",false)) { error_="This extension is unavailable: "+entry.value("error",std::string{}); dirty_=true; return; }
+        extension_id_=entry.at("id").get<std::string>(); screen_=Screen::Extension; section_=row_=first_row_=0; confirm_=nullptr;
+        refresh_model(); dirty_=true; enter_=true; return;
+    }
+    if(name=="settings_row" && screen_==Screen::Settings) { settings_row_=std::clamp(action.value("row",0),0,4); dirty_=true; return; }
+    if(name=="settings_adjust" && screen_==Screen::Settings) {
+        auto& s=*deps_.settings; const int delta=action.value("delta",1);
+        switch(settings_row_) {
+        case 0: s.ui_scale=std::clamp(std::round((s.ui_scale+delta*0.05)*100)/100,0.75,1.5); break;
+        case 1: s.pause_while_open=!s.pause_while_open; break;
+        case 2: s.hide_hud_while_open=!s.hide_hud_while_open; break;
+        case 3: s.show_extension_status=!s.show_extension_status; break;
+        default: break;
+        }
+        try { if(deps_.save_settings) deps_.save_settings(); } catch(const std::exception& e) { error_=std::string("Settings not saved: ")+e.what(); }
+        dirty_=true; return;
+    }
+    if(screen_!=Screen::Extension || !model_.is_object()) return;
+    const auto& sections=model_["sections"]; const int count=int(sections.size());
+    if(name=="section" || name=="section_delta") {
+        if(count) section_=name=="section"?std::clamp(action.at("section").get<int>(),0,count-1):(section_+action.at("delta").get<int>()+count)%count;
+        row_=first_row_=0; dirty_=true; enter_=true; return;
+    }
+    if(!count) return;
+    const auto& controls=sections[section_]["controls"]; const int rows=int(controls.size());
+    if(name=="row_delta") { row_=std::clamp(row_+action.at("delta").get<int>(),0,std::max(0,rows-1)); dirty_=true; return; }
+    if(name=="row") { row_=std::clamp(action.at("row").get<int>(),0,std::max(0,rows-1)); dirty_=true; return; }
+    if(name=="scroll") { first_row_=std::clamp(first_row_+action.at("delta").get<int>(),0,std::max(0,rows-controls_visible)); row_=std::clamp(row_,first_row_,first_row_+controls_visible-1); dirty_=true; return; }
+    const auto* c=current_control(); if(!c || !interactive(*c)) return;
+    const auto type=c->at("type").get<std::string>();
+    if(type=="choice" && (name=="pick" || name=="activate")) {
+        options_.reset(c->at("options"),[](const std::string& text){
+            const auto source=wide(text);
+            const int length=LCMapStringEx(LOCALE_NAME_INVARIANT,LCMAP_LOWERCASE,source.data(),int(source.size()),nullptr,0,nullptr,nullptr,0);
+            if(length<=0) return OptionSearch::ascii_fold(text);
+            std::wstring result(size_t(length),L'\0');
+            if(!LCMapStringEx(LOCALE_NAME_INVARIANT,LCMAP_LOWERCASE,source.data(),int(source.size()),result.data(),length,nullptr,nullptr,0)) return OptionSearch::ascii_fold(text);
+            return narrow(result);
+        });
+        for(size_t i=0;i<options_.matches.size();++i) if(options_.options[i].at("id")==c->at("value")) options_.selected=i;
+        search_query_.clear(); picker_=true; dirty_=true; return;
+    }
+    Json event={{"id",c->at("id")}};
+    if(name=="value" || name=="text") {
+        if(name=="text" && type=="text") event["value"]=text_of(name_input_.Get(),4096);
+        else if(name=="value" && (type=="radio" || type=="slider")) event["value"]=type=="slider"?Json(snap_value(*c,action.at("value").get<double>())):action.at("value");
+        else return;
+    } else if(name=="activate" || name=="adjust") {
+        if(type=="toggle" && name=="activate") event["value"]=!c->at("value").get<bool>();
+        else if(adjustable(*c)) event["value"]=adjusted_value(*c,action.value("delta",1));
+        else if(type!="button" || name!="activate") return;
+    } else return;
+    if(c->contains("confirm")) { confirm_={{"event",event},{"message",c->at("confirm")}}; dirty_=true; return; }
+    send_event(event);
+}
+bool Menu::texture(Layout& ui,const std::string& file,double x,double y,double w,double h) {
+    if(file.empty()) return false; auto path=utf8_path(file); std::error_code ec; if(!fs::exists(path,ec)) return false;
+    auto& saved=textures_[file]; auto* image=saved.Get();
+    if(!image) {
+        Call import(find(L"/Script/Engine.Default__KismetRenderingLibrary"),L"ImportFileAsTexture2D",3);
+        import.set(L"WorldContextObject",pc_.Get()); import.set(L"Filename",FString(path.c_str())); import.run();
+        image=import.get<UObject*>(); if(!image) return false; saved=image;
+    }
+    ui.image(image,x,y,w,h); return true;
+}
+UObject* Menu::prompt(Layout& ui,const std::string& action,const std::string& text,double x,double y,double w,uint8_t icon) {
+    auto* cls=static_cast<UClass*>(load("/Game/Sparta/UI/Core/Navigation/WBP_Prompt.WBP_Prompt_C"));
+    auto* widget=create_widget(pc_.Get(),cls);
+    for(const auto& binding:bindings_) if(binding.action==action) {
+        object_property(widget,L"InputAction",binding.input_action.Get());
+        for(auto k:binding.keys) if(!k.starts_with("Gamepad_")) {
+            if(k=="SpaceBar") k="Spacebar"; if(k=="LeftControl") k="Ctrl";
+            for(const auto& [name,value]:keyboard_icons) if(name==k && value!=255) { raw_value(widget,L"KBMPrompt",value); break; }
+            break;
+        }
+    }
+    raw_value(widget,L"ControllerPrompt",icon);
+    raw_value(widget,L"PromptSize",Vec2{80,80}); raw_value(widget,L"OverrideControllerSize",Vec2{80,80}); raw_value(widget,L"OverrideKBMSize",Vec2{80,80});
+    ui.place(widget,x,y,28,28); invoke(widget,L"UpdatePrompt"); invoke(widget,L"UpdatePromptSize");
+    invoke(widget,L"SetVisibility",L"InVisibility",uint8_t{3});
+    if(!text.empty()) ui.label(text,x+36,y+2,w-36,30,18,muted);
+    prompt_=widget;
+    return widget;
+}
+void Menu::build_footer(Layout& ui,double width,const std::vector<std::pair<std::string,std::string>>& left,const std::vector<std::pair<std::string,std::string>>& right) {
+    // Reserved hint band: left = navigation, right = contextual actions. The
+    // status line sits above it and never overlaps.
+    const double y=reference_h-70;
+    ui.box(60,y-14,width-120,1,line);
+    struct Glyph { const char* action; uint8_t icon; };
+    static const std::map<std::string,uint8_t> icons={{"accept",glyph_accept},{"secondary",glyph_secondary},{"close",glyph_back},{"previous_section",glyph_left_bumper},{"next_section",glyph_right_bumper},{"up",glyph_up},{"down",glyph_down},{"left",glyph_left},{"right",glyph_right}};
+    double x=70;
+    for(const auto& [action,text]:left) { prompt(ui,action,text,x,y,260,icons.at(action)); x+=text.empty()?40:std::min(280.,60+text.size()*10.5); }
+    double rx=width-70;
+    for(auto it=right.rbegin();it!=right.rend();++it) { const double w=std::min(300.,60+it->second.size()*10.5); rx-=w; prompt(ui,it->first,it->second,rx,y,w,icons.at(it->first)); rx-=24; }
+    const auto status=error_.empty()?(model_.is_object()?model_.value("status",std::string{}):std::string{}):error_;
+    if(!status.empty()) ui.label(status,70,y-58,width-140,36,18,error_.empty()?muted:danger);
+}
+void Menu::build() {
+    auto* canvas=canvas_.Get(); auto* tree=tree_.Get(); if(!canvas || !tree) return;
+    const auto started=monotonic_us();
+    invoke(canvas,L"ClearChildren"); hits_.clear(); sliders_.clear(); search_input_.Reset(); search_results_.Reset(); search_count_.Reset(); description_.Reset(); name_input_.Reset();
+    if(viewport_[0]<640 || viewport_[1]<360) {
+        Call vp(find(L"/Script/UMG.Default__WidgetLayoutLibrary"),L"GetViewportSize",2);
+        vp.set(L"WorldContextObject",object_of(pc_.Get(),L"Level")?pc_.Get():pc_.Get()); vp.run(); const auto size=vp.get<Vec2>(); viewport_={size.x,size.y};
+        if(viewport_[0]<640 || viewport_[1]<360) { dirty_=false; return; }
+    }
+    // DPI: UMG applies the project's DPI curve; our reference is 1080 rows.
+    Call dpi(find(L"/Script/UMG.Default__WidgetLayoutLibrary"),L"GetViewportScale",2); dpi.set(L"WorldContextObject",pc_.Get()); dpi.run();
+    const double viewport_scale=std::max(0.1f,dpi.get<float>());
+    const double scale=(viewport_[1]/viewport_scale)/reference_h*deps_.settings->ui_scale;
+    const double width=(viewport_[0]/viewport_scale)/scale;
+    auto* serif=load("/Game/Sparta/UI/Fonts/CrimsonText-Regular_Font.CrimsonText-Regular_Font");
+    auto* title=load("/Game/Sparta/UI/Fonts/Trajan_Pro_Regular_Font.Trajan_Pro_Regular_Font");
+    Layout ui{tree,canvas,scale,serif,title};
+    ui.box(0,0,width,reference_h,backdrop);
+    switch(screen_) {
+    case Screen::Library: build_library(ui,width); break;
+    case Screen::Extension: build_extension(ui,width); break;
+    case Screen::Settings: build_settings(ui,width); break;
+    }
+    build_modal(ui,width);
+    dirty_=false; enter_=false;
+    const auto took=monotonic_us()-started;
+    ++cost_.builds; cost_.build_us+=took; cost_.last_build_us=took; cost_.widgets=ui.placed.size();
+}
+void Menu::build_library(Layout& ui,double width) {
+    const auto& entries=library_["extensions"];
+    ui.label("CSSX",80,44,600,64,40,bright,true);
+    ui.label("Custom Shell System Extensions  /  "+deps_.version,84,112,700,30,18,muted);
+    ui.box(80,152,width-160,1,line);
+    const int count=int(entries.size())+1;
+    library_row_=std::clamp(library_row_,0,count-1);
+    const double list_x=80,list_w=std::min(1040.,width*0.55),row_h=74,top=180;
+    const int first=std::clamp(library_row_-library_visible+1,0,std::max(0,count-library_visible));
+    for(int i=first;i<std::min(first+library_visible,count);++i) {
+        const double y=top+(i-first)*row_h; const bool selected=i==library_row_;
+        auto* hit=ui.button("",list_x,y,list_w,row_h-6,selected,true);
+        hits_.push_back({WeakObject(hit),{{"action","open"},{"row",i}},false});
+        if(selected) { ui.box(list_x,y,list_w,row_h-6,row_selected); ui.box(list_x,y+10,3,row_h-26,gold); }
+        if(i<int(entries.size())) {
+            const auto& e=entries[i]; const bool available=e.value("available",false);
+            ui.label(e.value("title",std::string{}),list_x+24,y+10,list_w*0.62,34,23,available?(selected?bright:ink):muted);
+            ui.label("by "+e.value("author",std::string{})+"  /  "+e.value("version",std::string{}),list_x+24,y+42,list_w*0.62,24,15,muted);
+            std::string right=available?e.value("status",Json::object()).value("summary",std::string{}):"Unavailable";
+            if(!deps_.settings->show_extension_status && available) right.clear();
+            const bool active=available && e.value("status",Json::object()).value("active",false);
+            ui.label(right,list_x+list_w*0.64,y+18,list_w*0.34,32,17,available?(active?good:muted):danger,false,2);
+        } else {
+            ui.label("CSSX settings",list_x+24,y+10,list_w*0.62,34,23,selected?bright:ink);
+            ui.label("Hotkeys, scale, pause and HUD behaviour",list_x+24,y+42,list_w*0.62,24,15,muted);
+        }
+    }
+    if(count>library_visible) {
+        const double track=library_visible*row_h;
+        ui.box(list_x+list_w+8,top,3,track,Color{.05f,.04f,.03f,1});
+        ui.box(list_x+list_w+8,top+track*first/count,3,std::max(12.,track*library_visible/count),gold);
+    }
+    // Right panel: what the selected entry is, plus framework notices.
+    const double px=list_x+list_w+60,pw=width-px-80;
+    ui.box(px,top,pw,760,panel); ui.box(px+24,top,pw-48,1,line);
+    if(library_row_<int(entries.size())) {
+        const auto& e=entries[library_row_];
+        ui.label(e.value("title",std::string{}),px+24,top+22,pw-48,44,26,bright,true);
+        const auto banner=e.value("banner",std::string{});
+        double y=top+80;
+        if(!banner.empty() && texture(ui,banner,px+24,y,pw-48,(pw-48)*0.42)) y+=(pw-48)*0.42+16;
+        auto* d=scroll_text(ui,e.value("description",std::string{}),px+24,y,pw-48,220,19,ink); description_=d;
+        y+=236;
+        const auto& err=e.value("error",std::string{});
+        if(!err.empty()) ui.label("Unavailable: "+err,px+24,y,pw-48,120,17,danger);
+        else {
+            ui.label("Extension id  "+e.value("id",std::string{}),px+24,y,pw-48,26,15,muted); y+=28;
+            ui.label(std::string("Kind  ")+e.value("kind",std::string{})+"   /   API "+std::to_string(e.value("api",0)),px+24,y,pw-48,26,15,muted); y+=28;
+            const auto& cost=e.value("cost",Json::object());
+            if(cost.value("tick_calls",uint64_t{})) {
+                const double per=double(cost.value("tick_us",uint64_t{}))/double(cost.value("tick_calls",uint64_t{1}));
+                char text[96]; std::snprintf(text,sizeof text,"Average tick %.0f us over %llu ticks",per,(unsigned long long)cost.value("tick_calls",uint64_t{}));
+                ui.label(text,px+24,y,pw-48,26,15,muted);
+            }
+        }
+    } else {
+        ui.label("CSSX settings",px+24,top+22,pw-48,44,26,bright,true);
+        scroll_text(ui,"Open with "+[&]{ std::string s; for(const auto& k:deps_.settings->open_keyboard) s+=(s.empty()?"":" + ")+k; return s; }()+" on the keyboard or "+[&]{ std::string s; for(const auto& k:deps_.settings->open_gamepad) s+=(s.empty()?"":" + ")+k; return s; }()+" on a controller. Change these in settings.json with the game closed.",px+24,top+80,pw-48,200,19,ink);
+    }
+    Json notice=deps_.notice?deps_.notice():Json::object();
+    const auto text=notice.value("notice",std::string{});
+    if(!text.empty()) { ui.box(px+24,top+640,pw-48,1,line); ui.label(text,px+24,top+652,pw-48,96,16,warning); }
+    else if(!library_["errors"].empty()) { ui.box(px+24,top+640,pw-48,1,line); ui.label(std::to_string(library_["errors"].size())+" extension folder(s) could not load. See logs/cssx.jsonl.",px+24,top+652,pw-48,60,16,warning); }
+    if(entries.empty()) ui.label("No extensions installed. Add extension folders under Mods/CSSX/extensions.",list_x,top+library_visible*row_h+12,list_w,40,18,muted);
+    build_footer(ui,width,{{"up",""},{"down","Browse"},{"close","Close"}},{{"accept","Open"}});
+}
+void Menu::build_settings(Layout& ui,double width) {
+    ui.label("CSSX settings",80,44,800,64,40,bright,true);
+    ui.label("Saved to Mods/CSSX/settings.json",84,112,700,30,18,muted);
+    ui.box(80,152,width-160,1,line);
+    const auto& s=*deps_.settings;
+    struct Row { std::string label,value,hint; };
+    char scale[16]; std::snprintf(scale,sizeof scale,"%.0f%%",s.ui_scale*100);
+    const std::vector<Row> rows={
+        {"Menu scale",scale,"Size of this menu relative to the 1080p layout. 75% to 150%."},
+        {"Pause the game while open",s.pause_while_open?"On":"Off","Uses the game's own pause counter through its UI handler."},
+        {"Hide the HUD while open",s.hide_hud_while_open?"On":"Off","Hides the player HUD like the game's menus do."},
+        {"Show extension status in the library",s.show_extension_status?"On":"Off","Extensions can report a one-line status, for example active cheats."},
+        {"Open keys",[&]{ std::string t; for(const auto& k:s.open_keyboard) t+=(t.empty()?"":"+")+k; t+="  /  "; std::string g; for(const auto& k:s.open_gamepad) g+=(g.empty()?"":"+")+k; return t+g; }(),"Edit open_keyboard and open_gamepad in settings.json with the game closed. Unreal key names."}};
+    const double x=80,w=std::min(1000.,width*0.55),row_h=68,top=180;
+    for(size_t i=0;i<rows.size();++i) {
+        const double y=top+i*row_h; const bool selected=int(i)==settings_row_;
+        auto* hit=ui.button("",x,y,w,row_h-6,selected,true); hits_.push_back({WeakObject(hit),{{"action","settings_row"},{"row",int(i)}},false});
+        if(selected) { ui.box(x,y,w,row_h-6,row_selected); ui.box(x,y+10,3,row_h-26,gold); }
+        ui.label(rows[i].label,x+24,y+16,w*0.6,32,21,selected?bright:ink);
+        ui.label(rows[i].value,x+w*0.62,y+17,w*0.36,30,19,selected?gold:muted,false,2);
+    }
+    const double px=x+w+60,pw=width-px-80;
+    ui.box(px,top,pw,420,panel);
+    ui.label(rows[settings_row_].label,px+24,top+22,pw-48,44,24,bright,true);
+    scroll_text(ui,rows[settings_row_].hint,px+24,top+80,pw-48,200,19,ink);
+    if(settings_row_<4) {
+        auto* less=ui.button("<",px+24,top+300,56,48,false,true,22,ink); hits_.push_back({WeakObject(less),{{"action","settings_adjust"},{"delta",-1}},false});
+        auto* more=ui.button(">",px+pw-80,top+300,56,48,false,true,22,ink); hits_.push_back({WeakObject(more),{{"action","settings_adjust"},{"delta",1}},false});
+        ui.label(rows[settings_row_].value,px+90,top+306,pw-180,40,22,gold,false,1);
+    }
+    build_footer(ui,width,{{"up",""},{"down","Browse"},{"close","Library"}},settings_row_<4?std::vector<std::pair<std::string,std::string>>{{"left",""},{"right","Adjust"}}:std::vector<std::pair<std::string,std::string>>{});
+}
+void Menu::build_extension(Layout& ui,double width) {
+    const Json* entry=nullptr; for(const auto& e:library_["extensions"]) if(e.value("id",std::string{})==extension_id_) entry=&e;
+    if(!entry) { screen_=Screen::Library; extension_id_.clear(); build_library(ui,width); return; }
+    ui.label(entry->value("title",std::string{}),80,44,width-160,64,36,bright,true);
+    ui.label("by "+entry->value("author",std::string{})+"  /  "+entry->value("version",std::string{}),84,110,width-400,30,18,muted);
+    ui.box(80,152,width-160,1,line);
+    if(!model_.is_object() || !model_.contains("sections")) {
+        ui.label(error_.empty()?"This extension has no menu.":error_,80,220,width-160,200,22,danger);
+        build_footer(ui,width,{{"close","Library"}},{}); return;
+    }
+    const auto& sections=model_["sections"]; const int count=int(sections.size());
+    section_=std::clamp(section_,0,std::max(0,count-1));
+    // Left rail: sections.
+    const double rail_x=80,rail_w=280,top=176;
+    for(int i=0;i<count;++i) {
+        const double y=top+i*56; const bool selected=i==section_;
+        auto* hit=ui.button(sections[i].value("title",std::string{}),rail_x,y,rail_w,50,selected,true,20,selected?bright:ink);
+        hits_.push_back({WeakObject(hit),{{"action","section"},{"section",i}},false});
+        if(selected) ui.box(rail_x,y+8,3,34,gold);
+    }
+    if(count>1) ui.label("Sections",rail_x+4,top-30,rail_w,26,15,muted);
+    // Centre: control rows.
+    const double list_x=rail_x+rail_w+40,list_w=std::min(880.,width*0.46),row_h=62;
+    const auto& controls=count?sections[section_]["controls"]:Json::array();
+    const int rows=int(controls.size());
+    row_=std::clamp(row_,0,std::max(0,rows-1));
+    if(row_<first_row_) first_row_=row_; if(row_>=first_row_+controls_visible) first_row_=row_-controls_visible+1;
+    first_row_=std::clamp(first_row_,0,std::max(0,rows-controls_visible));
+    const auto section_help=sections[section_].value("description",std::string{});
+    double list_top=top;
+    if(!section_help.empty()) { ui.label(section_help,list_x,top-4,list_w,40,16,muted); list_top+=44; }
+    for(int i=first_row_;i<std::min(first_row_+controls_visible,rows);++i) {
+        const auto& c=controls[i]; const double y=list_top+(i-first_row_)*row_h; const bool selected=i==row_;
+        const bool enabled=c.value("enabled",true) && !c.value("busy",false);
+        auto* hit=ui.button("",list_x,y,list_w,row_h-4,selected && enabled,true);
+        hits_.push_back({WeakObject(hit),{{"action","row"},{"row",i}},false});
+        if(selected) { ui.box(list_x,y,list_w,row_h-4,enabled?row_selected:Color{.04f,.04f,.04f,.8f}); ui.box(list_x,y+10,3,row_h-24,enabled?gold:muted); }
+        const auto type=c.at("type").get<std::string>();
+        ui.label(c.value("label",std::string{}),list_x+22,y+14,list_w*0.6-22,32,20,enabled?(selected?bright:ink):muted);
+        std::string value=c.value("busy",false)?"Working...":!c.value("enabled",true)?c.value("disabled_label",std::string("Unavailable")):display_value(c);
+        if(!value.empty() && c.contains("unit") && (type=="number" || type=="slider")) value+=c.value("unit",std::string{});
+        Color vc=enabled?(type=="toggle"?(c.value("value",false)?good:muted):gold):muted;
+        if(c.value("severity",std::string{})=="danger" && type=="button") vc=danger;
+        ui.label(value,list_x+list_w*0.6,y+15,list_w*0.4-22,30,18,vc,false,2);
+    }
+    if(rows>controls_visible) {
+        const double track=controls_visible*row_h;
+        ui.box(list_x+list_w+8,list_top,3,track,Color{.05f,.04f,.03f,1});
+        ui.box(list_x+list_w+8,list_top+track*first_row_/rows,3,std::max(12.,track*controls_visible/rows),gold);
+        ui.label(std::to_string(first_row_+1)+" - "+std::to_string(std::min(first_row_+controls_visible,rows))+" of "+std::to_string(rows),list_x,list_top+track+8,list_w,26,15,muted);
+    }
+    if(!rows) ui.label("This section has no controls.",list_x,list_top+20,list_w,40,18,muted);
+    // Right: detail and editor for the selected control.
+    const double px=list_x+list_w+40,pw=width-px-80;
+    ui.box(px,top,pw,740,panel); ui.box(px+24,top,pw-48,1,line);
+    if(rows) {
+        const auto& c=controls[row_]; const auto type=c.at("type").get<std::string>();
+        const bool enabled=interactive(c);
+        ui.label(c.value("label",std::string{}),px+24,top+20,pw-48,44,24,bright,true);
+        const auto effect=effect_label(c);
+        double y=top+72;
+        if(!effect.empty()) { ui.label(effect,px+24,y,pw-48,26,15,severity_color(c)); y+=30; }
+        const auto description=c.value("description",std::string{});
+        auto* d=scroll_text(ui,description,px+24,y,pw-48,150,19,ink); description_=d;
+        if(description.size()>200) { auto* more=ui.button("",px+24,y+152,pw-48,34,false,true); hits_.push_back({WeakObject(more),{{"action","details"}},false}); prompt(ui,"secondary","Read the full description",px+24,y+156,pw-48,glyph_secondary); }
+        y+=196;
+        const auto hint=c.value("hint",std::string{});
+        if(!hint.empty()) { ui.label(hint,px+24,y,pw-48,48,16,muted); y+=52; }
+        ui.box(px+24,y,pw-48,1,line); y+=16;
+        std::vector<std::pair<std::string,std::string>> right;
+        if(type=="radio") {
+            const auto& options=c.at("options");
+            for(size_t i=0;i<options.size();++i) {
+                const double oy=y+i*36; const bool chosen=options[i].at("id")==c.at("value");
+                auto* hit=ui.button("",px+24,oy,pw-48,32,chosen,enabled); hits_.push_back({WeakObject(hit),{{"action","value"},{"value",options[i].at("id")}},false});
+                mark(ui,px+32,oy+10,chosen);
+                ui.label(options[i].value("label",std::string{}),px+60,oy+3,pw-96,30,19,chosen?gold:(enabled?ink:muted));
+            }
+            if(enabled) right={{"left",""},{"right","Choose"}};
+        } else if(type=="slider") {
+            auto* slider=construct(L"/Script/UMG.Slider",tree_.Get());
+            for(const auto& setting:{std::pair{L"SetMinValue","min"},std::pair{L"SetMaxValue","max"},std::pair{L"SetStepSize","step"},std::pair{L"SetValue","value"}})
+                invoke(slider,setting.first,L"InValue",c.at(setting.second).get<float>());
+            invoke(slider,L"SetSliderBarColor",L"InValue",Color{.10f,.08f,.06f,1});
+            invoke(slider,L"SetSliderHandleColor",L"InValue",gold);
+            invoke(slider,L"SetIsEnabled",L"bInIsEnabled",enabled);
+            ui.place(slider,px+32,y+44,pw-64,36);
+            auto* label=ui.label(display_value(c)+c.value("unit",std::string{}),px+24,y,pw-48,36,24,bright,false,1);
+            sliders_.push_back({WeakObject(slider),WeakObject(label),c,c.at("value").get<float>()});
+            if(enabled) right={{"left",""},{"right","Adjust"}};
+        } else if(type=="number" || type=="choice") {
+            auto* less=ui.button("<",px+24,y,56,52,false,enabled,24,ink); hits_.push_back({WeakObject(less),{{"action","adjust"},{"delta",-1}},false});
+            auto* more=ui.button(">",px+pw-80,y,56,52,false,enabled,24,ink); hits_.push_back({WeakObject(more),{{"action","adjust"},{"delta",1}},false});
+            ui.label(display_value(c)+(type=="number"?c.value("unit",std::string{}):std::string{}),px+88,y+8,pw-176,40,22,bright,false,1);
+            if(type=="choice") {
+                auto* browse=ui.button("",px+24,y+66,pw-48,44,false,enabled); hits_.push_back({WeakObject(browse),{{"action","pick"}},false});
+                if(enabled) prompt(ui,"accept","Browse and search options",px+36,y+74,pw-72,glyph_accept);
+            }
+            if(enabled) right={{"left",""},{"right","Adjust"}};
+        } else if(type=="text") {
+            const auto key=extension_id_+"/"+c.at("id").get<std::string>();
+            if(text_key_!=key) { text_key_=key; text_draft_=c.value("value",std::string{}); }
+            ui.box(px+24,y,pw-48,48,Color{.05f,.04f,.03f,1});
+            name_input_=text_input(ui,text_draft_,px+36,y+4,pw-72,enabled);
+            auto* save=ui.button("Save text",px+24,y+62,pw-48,46,false,enabled,20,ink); hits_.push_back({WeakObject(save),{{"action","text"}},false});
+            if(enabled) right={{"accept","Save text"}};
+        } else if(type=="progress" || type=="loading") {
+            const bool loading=type=="loading" && c.value("value",false);
+            ui.box(px+24,y+30,pw-48,6,Color{.07f,.06f,.04f,1});
+            ui.box(px+24,y+30,std::max(2.,(pw-48)*(type=="progress"?std::clamp(c.value("value",0.0),0.0,1.0):(loading?0.3:1.0))),6,gold);
+            ui.label(display_value(c),px+24,y-4,pw-48,30,20,bright);
+        } else if(type!="label") {
+            const auto label=type=="toggle"?(c.value("value",false)?"Turn off":"Turn on"):c.value("label",std::string{});
+            auto* action=ui.button("",px+24,y,pw-48,52,false,enabled); hits_.push_back({WeakObject(action),{{"action","activate"}},false});
+            ui.box(px+24,y,pw-48,52,enabled?(c.value("severity",std::string{})=="danger"?Color{.16f,.05f,.04f,.9f}:Color{.06f,.05f,.03f,.9f}):Color{.03f,.03f,.03f,.9f});
+            if(enabled) prompt(ui,"accept",label,px+40,y+12,pw-80,glyph_accept);
+            else ui.label(c.value("busy",false)?"Working...":c.value("disabled_label",std::string("Unavailable")),px+40,y+12,pw-80,30,19,muted);
+            if(enabled) right={{"accept",label}};
+        }
+        if(c.contains("confirm") && enabled) ui.label("Asks for confirmation",px+24,top+700,pw-48,26,15,muted);
+        build_footer(ui,width,{{"close","Library"},{"previous_section",""},{"next_section","Sections"},{"up",""},{"down","Browse"}},right);
+    } else build_footer(ui,width,{{"close","Library"},{"previous_section",""},{"next_section","Sections"}},{});
+}
+void Menu::build_modal(Layout& ui,double width) {
+    if(picker_) {
+        const auto* c=current_control(); if(!c) { picker_=false; return; }
+        const auto m=modal_frame(ui,"Choose "+c->value("label",std::string{}),width,840);
+        ui.label("Type to search by name",m.x+32,m.y+108,m.w-64,28,17,muted);
+        ui.box(m.x+32,m.y+142,m.w-64,46,Color{.05f,.04f,.03f,1});
+        search_input_=text_input(ui,search_query_,m.x+44,m.y+146,m.w-88,true);
+        auto* list=construct(L"/Script/UMG.CanvasPanel",tree_.Get()); search_results_=list;
+        ui.place(list,m.x+32,m.y+206,m.w-64,440);
+        search_count_=ui.label("",m.x+32,m.y+656,m.w-64,28,16,muted);
+        auto* cancel=ui.button("",m.x+24,m.y+m.h-66,200,46,false,true); hits_.push_back({WeakObject(cancel),{{"action","pick_cancel"}},false});
+        prompt(ui,"close","Back",m.x+36,m.y+m.h-56,170,glyph_back);
+        auto* apply=ui.button("",m.x+m.w-244,m.y+m.h-66,220,46,true,true); hits_.push_back({WeakObject(apply),{{"action","pick_apply"}},false});
+        prompt(ui,"accept","Select",m.x+m.w-230,m.y+m.h-56,190,glyph_accept);
+        build_results();
+        return;
+    }
+    if(details_) {
+        const auto* c=current_control(); if(!c) { details_=false; return; }
+        const auto m=modal_frame(ui,c->value("label",std::string{}),width,760);
+        description_=scroll_text(ui,c->value("description",std::string{}),m.x+32,m.y+112,m.w-64,m.h-220,20,ink);
+        auto* back=ui.button("",m.x+24,m.y+m.h-66,200,46,false,true); hits_.push_back({WeakObject(back),{{"action","details"}},false});
+        prompt(ui,"close","Back",m.x+36,m.y+m.h-56,170,glyph_back);
+        prompt(ui,"up","",m.x+m.w-250,m.y+m.h-56,28,glyph_up); prompt(ui,"down","Scroll",m.x+m.w-214,m.y+m.h-56,180,glyph_down);
+        return;
+    }
+    if(!confirm_.is_null()) {
+        const auto m=modal_frame(ui,"Confirm",width,420);
+        const auto* c=current_control();
+        if(c) { const auto effect=effect_label(*c); if(!effect.empty()) ui.label(effect,m.x+32,m.y+104,m.w-64,26,16,severity_color(*c)); }
+        description_=scroll_text(ui,confirm_.value("message",std::string("Continue?")),m.x+32,m.y+136,m.w-64,150,20,ink);
+        const double w=(m.w-80)/2,y=m.y+m.h-66;
+        auto* cancel=ui.button("",m.x+24,y,w,46,false,true); hits_.push_back({WeakObject(cancel),{{"action","cancel"}},false});
+        ui.box(m.x+24,y,w,46,Color{.03f,.026f,.02f,1}); prompt(ui,"close","Cancel",m.x+40,y+9,w-24,glyph_back);
+        auto* confirm=ui.button("",m.x+m.w-w-24,y,w,46,true,true); hits_.push_back({WeakObject(confirm),{{"action","confirm"}},false});
+        ui.box(m.x+m.w-w-24,y,w,46,c && c->value("severity",std::string{})=="danger"?Color{.16f,.05f,.04f,1}:Color{.07f,.055f,.03f,1}); prompt(ui,"accept","Confirm",m.x+m.w-w-8,y+9,w-24,glyph_accept);
+    }
+}
+void Menu::build_results() {
+    auto* canvas=search_results_.Get(); if(!canvas) return;
+    invoke(canvas,L"ClearChildren");
+    std::erase_if(hits_,[](const auto& hit){ return hit.action.value("action",std::string{})=="pick_row"; });
+    auto* serif=load("/Game/Sparta/UI/Fonts/CrimsonText-Regular_Font.CrimsonText-Regular_Font");
+    auto* title=load("/Game/Sparta/UI/Fonts/Trajan_Pro_Regular_Font.Trajan_Pro_Regular_Font");
+    Call dpi(find(L"/Script/UMG.Default__WidgetLayoutLibrary"),L"GetViewportScale",2); dpi.set(L"WorldContextObject",pc_.Get()); dpi.run();
+    const double scale=(viewport_[1]/std::max(0.1f,dpi.get<float>()))/reference_h*deps_.settings->ui_scale;
+    Layout ui{tree_.Get(),canvas,scale,serif,title};
+    const double width=std::min(920.,(viewport_[0]/std::max(0.1f,dpi.get<float>()))/scale-160.)-64;
+    const size_t first=options_.selected/8*8;
+    for(size_t i=first;i<std::min(first+8,options_.matches.size());++i) {
+        const auto& option=options_.options[options_.matches[i]]; const double y=(i-first)*54.;
+        auto* button=ui.button("",0,y,width,50,i==options_.selected,true);
+        if(i==options_.selected) ui.box(0,y,width,50,row_selected);
+        mark(ui,16,y+19,i==options_.selected);
+        ui.label(option.value("label",std::string{}),44,y+10,width-60,32,20,i==options_.selected?bright:ink);
+        hits_.push_back({WeakObject(button),{{"action","pick_row"},{"row",i}},false});
+    }
+    if(options_.matches.empty()) ui.label("No matching options",20,140,width-40,40,20,muted);
+    if(auto* count=search_count_.Get()) text_value(count,std::to_string(options_.matches.size())+" matches / "+std::to_string(options_.options.size())+" options");
+}
+Json Menu::diagnostics() const {
+    return {{"open",open_},{"screen",screen_==Screen::Library?"library":screen_==Screen::Extension?"extension":"settings"},{"extension",extension_id_},
+            {"section",section_},{"row",row_},{"library_row",library_row_},{"picker",picker_},{"details",details_},{"confirm",!confirm_.is_null()},
+            {"error",error_},{"hits",hits_.size()},{"widgets",cost_.widgets},{"builds",cost_.builds},{"last_build_us",cost_.last_build_us},{"viewport",viewport_},{"gamepad",gamepad_}};
+}
+}

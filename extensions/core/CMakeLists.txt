@@ -104,7 +104,7 @@ target_link_libraries(cssx_sdk INTERFACE "${CSSX_UE4SS_IMPORT_LIBRARY}")
 
 add_library(main SHARED src/loader/loader.cpp src/loader/hook_service.cpp)
 target_include_directories(main PRIVATE src/shared src/runtime "${CSSX_VENDOR}" "${CMAKE_CURRENT_BINARY_DIR}/generated")
-target_link_libraries(main PRIVATE cssx_sdk user32)
+target_link_libraries(main PRIVATE cssx_sdk cssx_runtime user32)
 
 add_library(cssx_core SHARED
   src/core/core.cpp src/core/engine.cpp src/core/bridge.cpp src/core/hud.cpp src/core/menu.cpp src/core/devchannel.cpp)
