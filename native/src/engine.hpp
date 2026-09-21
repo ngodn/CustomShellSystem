@@ -14,6 +14,7 @@
 #include "inventory_backdrop.hpp"
 #include "inventory_light.hpp"
 #include "inventory_keys.hpp"
+#include "inventory_light_keys.hpp"
 #include "extension_client.hpp"
 #include "cssx/hud.h"
 #include "extension_search.hpp"

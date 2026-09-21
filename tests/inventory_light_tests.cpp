@@ -1,7 +1,9 @@
 #include "inventory_light.hpp"
 #include "inventory_motion.hpp"
+#include "inventory_light_keys.hpp"
 #include <iostream>
 #include <limits>
+#include <vector>
 
 using css::InventoryLightOrbit;
 using css::LightVector;
@@ -19,6 +21,16 @@ InventoryLightOrbit baseline() {
     o.screen_right={0,1,0};o.screen_up={0,0,1};o.validate();return o;
 }
 int main() {
+    struct Binding {std::string action;std::vector<std::string> keys;};
+    std::vector<Binding> keys={{"close",{"Escape","Gamepad_FaceButton_Right"}},
+        {"tertiary",{"C","Gamepad_FaceButton_Top"}},
+        {"toggle_light",{"I","Gamepad_Special_Left"}}};
+    css::inventory_light_keys(keys,{"Escape","Gamepad_FaceButton_Right"});
+    require(keys[0].keys==std::vector<std::string>{"Escape","Gamepad_FaceButton_Right"},"Back mapping changed");
+    require(keys[1].keys==std::vector<std::string>{"C","Gamepad_Special_Left"},"Row action must move to Select and retain C");
+    require(keys[2].keys==std::vector<std::string>{"I","Gamepad_FaceButton_Top"},"Lighting must use Y and retain I");
+    css::inventory_light_keys(keys,{"Gamepad_FaceButton_Top","Gamepad_Special_Left"});
+    require(keys[1].keys==std::vector<std::string>{"C"} && keys[2].keys==std::vector<std::string>{"I"},"Conflicting remapped navigation must retain priority");
     auto o=baseline();
     require(near(o.location(),o.position),"Zero orbit must preserve original position");
     o.move(90,0);

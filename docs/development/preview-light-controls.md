@@ -1,9 +1,8 @@
 # CSS preview light controls
 
-The native orbit and menu controls are implemented and compiled locally. They
-are not installed or visually accepted. V44 gameplay verification remains the
-active live test. Lighting work proceeded while that game process had no player
-pawn; this does not establish a finished, verified lighting feature.
+The native orbit and menu controls are installed in the short-path trial core.
+Live lighting/input/lifecycle acceptance remains open. The controller correction
+below is compiled but awaits the next normal restart.
 
 ## Actual game references
 
@@ -70,8 +69,8 @@ request channel:
 - `inventory_light_move`, with numeric `horizontal` and `vertical` degrees
 - `inventory_light_stop`
 
-They contain no script-side lighting behavior. They must not be sent to the
-currently installed V44 core, which predates these commands. Start is
+They contain no script-side lighting behavior. They are available in the installed short-path trial core. The older accepted
+V44 core predates them and must not receive these commands. Start is
 idempotent, so repeated start requests cannot overwrite the captured original.
 Stop currently restores the original light as a diagnostic cleanup operation.
 The user-facing toggle is separate and retains the edited light when returning
@@ -85,8 +84,9 @@ so it no longer discards edited lighting.
 
 The center controls now offer `Lighting` beside `Reset view`. In lighting mode,
 they become `View controls` and `Reset light`, with `Lighting control (view
-locked)` and a move-light hint. The default shortcut is controller Select/View
-or keyboard `I`, following the native Inspect remapping. If the current input
+locked)` and a move-light hint. The requested controller shortcut is Y, with Select/View taking the former Y
+row actions (favorite, reset all and delete profile). Keyboard `I` still follows
+the native Inspect remapping; row actions retain their keyboard mappings. If the current input
 method has no nonconflicting shortcut, the clickable control remains available
 without advertising a misleading key glyph. Home/right-stick click resets the
 currently controlled object. Text entry, pickers and confirmation dialogs retain
@@ -127,3 +127,28 @@ Before enabling the feature for users:
 
 The full modular physics/motion architecture and V44 weapon, damage/parry,
 grounding, heel geometry and gameplay acceptance remain open.
+
+## Y shortcut correction
+
+2026-09-21: The user reported B beside Lighting and explicitly requested Y.
+The previous call supplied controller enum 1, which the shipped
+`E_ControllerButton` defines as Back. The live mapping was still Select/View,
+so the visible glyph did not describe the polled key. The shipped enum defines
+FaceUp as 2 and SpecialLeft as 17. Evidence: retained
+`work/inventory-integration/blueprints/E_ControllerButton.json`,
+`WBP_Prompt.json`, and fresh `work/paths/live1/input1.json`.
+
+CSS now assigns Y to lighting and Select/View to the former tertiary controller
+action. It retains keyboard mappings and does not change native input settings.
+Keys reserved by other native menu actions, including a remapped Back action,
+take priority; the clickable controls remain. Both changed prompts use their
+actual CSS key and omit the native InputAction that could refresh a conflicting
+icon. An unavailable lighting action no longer falls through to a row action.
+
+C++23 host tests cover Y/Select ownership, unchanged B/Escape and C/I bindings,
+and conflicting remapped navigation. The first host compile exposed a missing
+vector include; its subsequently executed old test binary is not evidence for
+this change. After correcting the include, `work/light-y1/host2-exit.json`,
+`tests-exit.json` and `build2-exit.json` all report zero. The Windows development
+core is compiled. Installation, the displayed glyphs and physical Y/B/Select
+behavior still require a normal restart and live review.

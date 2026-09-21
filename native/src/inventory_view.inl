@@ -120,15 +120,19 @@ void InventoryUI::bind_inputs() {
         for(int n=0;n<keys.Num();++n) {
             FName key{}; std::memcpy(&key,keys.GetRawPtr(n)+kn->GetOffset_Internal(),sizeof(key));
             auto name=narrow(key.ToString());
-            if(binding.action!="toggle_light") reserved_keys.insert(name);
+            if(binding.action!="toggle_light" && binding.action!="tertiary") reserved_keys.insert(name);
             // The analog sticks belong to the character view on this page.
             if(name=="Gamepad_LeftX" || name=="Gamepad_LeftY" || name=="Gamepad_RightX" || name=="Gamepad_RightY") continue;
             binding.keys.push_back(name);
         }
         if(!binding.action.empty()) bindings_.push_back(std::move(binding));
     }
-    // Reuse the game's mapped Inspect action only when its physical key is
-    // not also assigned to another current menu action, including top tabs.
+    // Y controls lighting; Select/View takes the former Y row action. These
+    // shortcuts are local to CSS and do not alter the game's input settings.
+    inventory_light_keys(bindings_,reserved_keys);
+    // Keyboard Inspect must also avoid the unchanged tertiary keyboard action.
+    for(const auto& binding:bindings_) if(binding.action=="tertiary")
+        for(const auto& key:binding.keys) reserved_keys.insert(key);
     for(auto& binding:bindings_) if(binding.action=="toggle_light")
         std::erase_if(binding.keys,[&](const auto& key){return reserved_keys.contains(key);});
     bindings_.push_back({"reset_view",{"Home","Gamepad_RightThumbstick"},false,0,{}});
@@ -187,7 +191,18 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         auto* cls=static_cast<UClass*>(load("/Game/Sparta/UI/Core/Navigation/WBP_Prompt.WBP_Prompt_C"));
         auto* widget=inventory_create(pc,cls);
         for(const auto& b:bindings_) if(b.action==action) {
-            object_property(widget,L"InputAction",b.input_action.Get());
+            // These two controller shortcuts differ from their native actions.
+            // An InputAction would refresh the icon back to the game's mapping.
+            if(action!="toggle_light" && action!="tertiary")
+                object_property(widget,L"InputAction",b.input_action.Get());
+            else {
+                object_property(widget,L"InputAction",nullptr);
+                fallback=45; // E_ControllerButton::None, no conflicting shortcut.
+                for(const auto& key:b.keys) {
+                    if(key=="Gamepad_FaceButton_Top") fallback=2;
+                    if(key=="Gamepad_Special_Left") fallback=17;
+                }
+            }
             for(auto key:b.keys) if(!key.starts_with("Gamepad_")) {
                 if(key=="SpaceBar") key="Spacebar";
                 if(key=="LeftControl") key="Ctrl";
@@ -928,7 +943,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         for(const auto& binding:bindings_) if(binding.action=="toggle_light")
             for(const auto& key:binding.keys) if(key.starts_with("Gamepad_")==gamepad_) shortcut=true;
         bind(ui.button(shortcut?"":title,width/2+15,980,185,40),{{"action","ui_toggle_light"}});
-        if(shortcut) prompt("toggle_light",title,width/2+20,985,180,1);
+        if(shortcut) prompt("toggle_light",title,width/2+20,985,180,2);
     }
     if(light_edit_) {
         auto* mode=ui.label("Lighting control (view locked)",width/2-210,949,420,28,16,muted);
@@ -1633,7 +1648,10 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         }
         if(binding.action=="close") return dispatch({{"action","ui_close"}},state);
         if(binding.action=="reset_view") return dispatch({{"action",light_edit_?"ui_reset_light":"ui_reset_view"}},state);
-        if(binding.action=="toggle_light" && character_controls) return dispatch({{"action","ui_toggle_light"}},state);
+        if(binding.action=="toggle_light") {
+            if(character_controls) return dispatch({{"action","ui_toggle_light"}},state);
+            continue;
+        }
         if(binding.action=="previous_section" || binding.action=="next_section") return dispatch({{"action","ui_section"},{"section",(section_+(binding.action=="next_section"?1:3))%4}},state);
         if(rows_.empty()) continue;
         if(binding.action=="up" || binding.action=="down") {
