@@ -2,6 +2,8 @@
 
 Updated 2026-09-21 after the user's path correction.
 
+Follow-up: [30 materials and 90 textures now have verified short cooked paths](short-material-paths.md). The byte-preserving material relocation and editor texture duplication replace the old padded-hash method for this candidate. Remaining mesh/rig/physics/animation and editor material bindings are still pending; the historical findings below describe the original input.
+
 ## Required for new candidates
 
 - Unreal asset packages belong under `/Game/CSS/`, meaning `Content/CSS/` on disk. Use readable names such as `/Game/CSS/SeduXtress/SK_Body` and `/Game/CSS/Shared/SKEL_Base`. These are naming examples, not already migrated assets or audited runtime skeletons.
