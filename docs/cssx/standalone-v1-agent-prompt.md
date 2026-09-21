@@ -8,7 +8,16 @@ execution task, not a request for an architecture proposal alone.
 
 CSSX is a standalone UE4SS mod and extension platform. It installs, starts,
 renders its own UI, loads extensions and manages settings without CSS being
-installed. CSSX Cheat Menu is a separate extension/download that requires only
+installed.
+
+Installation root (decided by the user on 2026-09-21): CSSX is its own UE4SS
+mod directory, `MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/`, started by UE4SS
+through its own `dlls/main.dll` and `enabled.txt`. Nothing new is written
+inside `ue4ss/Mods/CustomShellSystem/`. That legacy folder belongs to CSS; the
+old `CustomShellSystem/cssx.json`, `cores/cssx_core*.dll` and
+`CustomShellSystem/extensions/` were the pre-standalone layout and are only
+touched by the migration policy in Milestone 2. Extensions install under
+`Mods/CSSX/extensions/<id>/`; settings, logs and output live under `Mods/CSSX/`. CSSX Cheat Menu is a separate extension/download that requires only
 CSSX v1.0.0 and the pinned UE4SS runtime. Both must also work alongside the
 unchanged published CSS v1.0.0-alpha.1 and Eve Black Pearl sample.
 
@@ -171,8 +180,10 @@ regression check. Keep the historical ABI-1 question open if it remains unproven
 
 ## Milestone 2: standalone runtime and CSS coexistence
 
-Provide a distinct UE4SS mod installation root, activation marker, loader,
-versioned ABI, settings, logs and extension directory. CSSX must own its engine
+Provide a distinct UE4SS mod installation root (`ue4ss/Mods/CSSX/`, see the
+required outcome above), activation marker (`enabled.txt`), loader
+(`dlls/main.dll`), versioned ABI, settings, logs and extension directory. Do not
+install CSSX files into `ue4ss/Mods/CustomShellSystem/`. CSSX must own its engine
 access, scheduling, UI and input lifecycle. It must work with CSS completely
 absent, including no CSS DLLs, state, catalog, artwork or request bridge.
 
