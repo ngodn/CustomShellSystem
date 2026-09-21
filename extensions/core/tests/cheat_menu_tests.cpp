@@ -122,7 +122,7 @@ struct Host {
             if(p=="ActiveSealItemHandle") return object(81);
             if(p=="ItemDef") return {{"$object",82},{"name","BlueprintGeneratedClass /Game/Seals."+seal}};
             if(combat_fixture && j.at("target").at("$object")==80 && cooldown.contains(p.get<std::string>())) return cooldown.at(p.get<std::string>());
-            if(combat_fixture && (p=="StoneFormCooldown" || p=="PerfectStoneFormCooldown")) throw std::runtime_error("CSSX property is missing");
+            if(combat_fixture && (p=="StoneFormCooldown" || p=="PerfectStoneFormCooldown")) throw std::runtime_error("Property is missing: "+p.get<std::string>());
             if(p=="HealthSet") return object(6);
             if(p=="Resolve") return {{"CurrentValue",0}};
             if(p=="MaxResolve") return {{"CurrentValue",100}};
@@ -295,7 +295,8 @@ int main(int argc,char** argv) {
         if(failure==5) h.fail_hook_add=1;
         m.event({{"id","genessa_clones"},{"value",true}});
         rejects([&]{m.event({{"id","apply_settings"}});});
-        check(h.spawn_count==1 && h.count("SpawnPrimaryClone")==0 && h.hooks.empty(),"Rejected clone setup left a mutation");
+        if(failure==2) check(h.spawn_count==9999 && h.hooks.size()==1 && m.model()["values"]["genessa_clones"]==true,"Preference save failure undid the live power");
+        else check(h.spawn_count==1 && h.count("SpawnPrimaryClone")==0 && h.hooks.empty(),"Rejected clone setup left a mutation");
     }
     {
         Host h;h.power_fixture="GA_AstralClones_Action_C";cheat::Menu m(&h.api);m.tick(.25);
@@ -333,7 +334,8 @@ int main(int argc,char** argv) {
         h.stance_active=true;h.stance_handle=77;m.event({{"id","smert_stance"},{"value",true}});
         rejects([&]{m.event({{"id","apply_settings"}});});
         check(h.count("RemovePermanentFightStance")==0,"Pre-existing Smert stance was removed");
-        h.stance_active=false;m.event({{"id","apply_settings"}});m.tick(.5);
+        check(m.model()["values"]["smert_stance"]==false,"Failed power stayed as a pending edit");
+        h.stance_active=false;m.event({{"id","smert_stance"},{"value",true}});m.event({{"id","apply_settings"}});m.tick(.5);
         check(h.stance_active && h.count("EnableFightStance")==1,"Smert stance did not activate");
         h.stance_handle=99;m.event({{"id","disable_all"}});
         check(h.stance_active && h.count("RemovePermanentFightStance")==0,"Newer Smert effect was removed");
@@ -403,8 +405,11 @@ int main(int argc,char** argv) {
     menu.event({{"id","discard_changes"}});check(menu.model()["values"]["god"]==false,"Discard lost applied state");
     menu.event({{"id","god"},{"value",true}});host.fail_save=true;
     rejects([&]{menu.event({{"id","apply_settings"}});});
-    check(host.damageable,"Save failure left newly enabled God active");host.fail_save=false;
-    menu.event({{"id","apply_settings"}});check(!host.damageable,"God did not apply");
+    // A failed preference save is reported but never undoes a live cheat.
+    check(!host.damageable && menu.model()["values"]["god"]==true,"Save failure undid the live God cheat");host.fail_save=false;
+    check(!menu.model()["error"].get<std::string>().empty(),"Save failure was not reported");
+    menu.event({{"id","god"},{"value",false}});menu.event({{"id","apply_settings"}});check(host.damageable,"God did not turn off");
+    menu.event({{"id","god"},{"value",true}});menu.event({{"id","apply_settings"}});check(!host.damageable,"God did not apply");
     menu.event({{"id","shell"},{"value","Proxima"}});
     rejects([&]{menu.event({{"id","switch_shell"},{"confirmed",true}});});
     check(host.count("S_SwitchToShell")==0,"Unsafe shell switch dispatched");
@@ -528,8 +533,8 @@ int main(int argc,char** argv) {
     points.point_limits=original_points;points.fail_save=true;
     point_menu.event({{"id","max_shell_points"},{"value",true}});
     rejects([&]{point_menu.event({{"id","apply_settings"}});});
-    check(points.point_limits==original_points,"Failed settings save left point limits enabled");
-    points.fail_save=false;point_menu.event({{"id","apply_settings"}});points.fail_point_restore=true;
+    check(points.point_limits!=original_points && point_menu.model()["values"]["max_shell_points"]==true,"Failed settings save undid the live point limits");
+    points.fail_save=false;points.fail_point_restore=true;
     check(!point_menu.stop(),"Failed point cleanup allowed unloading");
     points.fail_point_restore=false;check(point_menu.stop() && points.point_limits==original_points,"Point cleanup retry lost original values");
     Host restart;cheat::Menu restarting(&restart.api);restarting.tick(.25);
@@ -556,8 +561,20 @@ int main(int argc,char** argv) {
     combat_menu.event({{"id","perfect_parry"},{"value",true}});combat_menu.event({{"id","apply_settings"}});
     check(combat.hooks.size()==3,"Parry hook group incomplete");
     combat.seal="ID_Seal_Stone_C";combat_menu.tick(1.1);
-    check(combat.hooks.empty() && combat_menu.model()["values"]["perfect_parry"]==false,"Seal change kept parry enabled");
+    check(combat.hooks.empty() && combat_menu.model()["values"]["perfect_parry"]==true,"Seal change did not disarm the parry hooks while keeping the toggle armed");
+    check(combat_menu.model()["status"].get<std::string>().find("waits for the Infinite seal")!=std::string::npos,"Armed parry did not say which seal it waits for");
+    combat.seal="ID_Seal_Infinite_C";combat_menu.tick(1.1);
+    check(combat.hooks.size()==3,"Re-equipping the seal did not re-arm the parry hooks");
     check(combat_menu.stop(),"Combat cleanup failed");
+    // Apply is per feature: a failing power leaves the working cheats live and names the failure.
+    Host mixed;mixed.combat_fixture=true;mixed.shell="Genessa";mixed.power_missing=true;cheat::Menu mixed_menu(&mixed.api);mixed_menu.tick(.25);
+    mixed_menu.event({{"id","god"},{"value",true}});mixed_menu.event({{"id","no_cooldown"},{"value",true}});mixed_menu.event({{"id","genessa_clones"},{"value",true}});
+    rejects([&]{mixed_menu.event({{"id","apply_settings"}});});
+    check(!mixed.damageable && mixed.hooks.size()==2,"Per-feature apply rolled back the working cheats");
+    check(mixed_menu.model()["values"]["genessa_clones"]==false && mixed_menu.model()["values"]["god"]==true,"Failed power was not reverted on its own");
+    check(mixed_menu.model()["error"].get<std::string>().find("Genessa clones")!=std::string::npos,"Failure report does not name the feature");
+    check(!mixed_menu.model()["enabled"]["apply_settings"].get<bool>(),"Partial apply left phantom pending edits");
+    check(mixed_menu.stop() && mixed.damageable && mixed.hooks.empty(),"Mixed apply cleanup failed");
     for(int scenario=0;scenario<3;++scenario) {
         Host broken;broken.combat_fixture=true;cheat::Menu candidate(&broken.api);candidate.tick(.25);
         if(scenario==0) broken.hook_available=false;
@@ -565,8 +582,10 @@ int main(int argc,char** argv) {
         if(scenario==2) broken.fail_save=true;
         candidate.event({{"id","no_cooldown"},{"value",true}});rejects([&]{candidate.event({{"id","apply_settings"}});});
         check(!candidate.model()["error"].get<std::string>().empty(),"Failed combat apply reported success");
-        check(broken.hooks.empty() && broken.cooldown==original_cooldown,"Failed combat apply left edits or hooks behind");
-        check(candidate.stop(),"Failed apply prevented cleanup");
+        // A failed preference save keeps the live cheat; a failed hook install does not.
+        if(scenario==2) check(broken.hooks.size()==2 && candidate.model()["values"]["no_cooldown"]==true,"Save failure undid a working cheat");
+        else check(broken.hooks.empty() && broken.cooldown==original_cooldown,"Failed combat apply left edits or hooks behind");
+        check(candidate.stop() && broken.hooks.empty() && broken.cooldown==original_cooldown,"Failed apply prevented cleanup");
     }
     Host retry_combat;retry_combat.combat_fixture=true;cheat::Menu retry_menu(&retry_combat.api);retry_menu.tick(.25);
     retry_menu.event({{"id","no_cooldown"},{"value",true}});retry_menu.event({{"id","apply_settings"}});

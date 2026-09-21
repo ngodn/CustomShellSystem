@@ -1,13 +1,18 @@
 # Performance investigation: evidence index, method, status
 
-Status line (update this first): **residual FPS loss is unresolved.** The one
-proven defect is fixed in the legacy host; the new framework is built to avoid
-it by construction. First live numbers (2026-09-21, below) show the new core's
-per-frame work is 0.27 ms mean and that switching every per-frame function off
-in-process does not change the frame rate, so whatever the user sees is not
-work inside CSSX's callbacks. The controlled restart pair (CSSX absent versus
-present, same beacon, MangoHud frame-time log) is the next step and the only
-thing that can attribute the remaining gap.
+Status line (update this first): **no measurable average cost; periodic
+hitch source removed 2026-09-22.** The one proven legacy defect (P1) is
+designed out. The controlled MangoHud pair (below) shows CSSX loaded versus
+absent within noise on the median and better on p95/p99. The user still
+reported "random frame drops" after that pair, and a code audit found a real
+periodic stall that a median cannot show: the core wrote `runtime/status.json`
+every 5 s **on the game thread with FlushFileBuffers plus a write-through
+rename**, which under Proton is an fsync on the game thread while the game
+streams from the same disk. That, and every log append, now goes through a
+background writer thread; the game thread never touches the disk for
+informational files. `frame.stats` now attributes every hitch frame to the
+core's own time inside it, so the next live session can say per hitch whether
+CSSX was involved (`tools/hitches.py`).
 
 ## Raw evidence index (all under `CustomShellSystem/work/`)
 
@@ -131,6 +136,41 @@ today's baseline without CSSX is 42 fps in the same play area.
 Idle after the changes (cheats off, menu closed, 40 s): core tick 121 µs
 mean / 384 µs p99 per frame, extension ticks 12 µs mean, menu 2 µs. Loader
 ring in the same window: median 23.4 ms, p99 38.7 ms, 41.9 Hz.
+
+### 2026-09-22 game-thread disk I/O audit (code evidence, live numbers pending the next launch)
+
+What ran on the game thread and could stall it, found by reading every write
+path (`grep ofstream|FlushFileBuffers|MoveFileEx`):
+
+| Path | Frequency | Stall mechanism | Fix |
+| --- | --- | --- | --- |
+| `Core::publish_status` → `atomic_json` | every 5 s | temp write, `FlushFileBuffers` (fsync), `MoveFileEx(WRITE_THROUGH)` | queued to `Writer` (background thread), no fsync |
+| `Storage::log` (every log line, incl. "Hotkey:") | on events | two `stat` calls, append, flush | queued to `Writer` |
+| loader `runtime/frames.json`, `loader.json` | 10 s (dev), on switch | fsync + write-through on the UE4SS update thread | `durable=false` |
+| dev channel `response.json` | per request (dev only) | fsync | `durable=false` |
+| settings save, extension `state.save` | explicit user action only | fsync, backup copy | kept: durability matters there and it is one hitch per Apply |
+
+Also removed from the per-frame path:
+
+- `find()` (StaticFindObject by path) was called for `/Script/InputCore.Key`
+  and `Default__GameplayStatics` on every input poll and every player lookup.
+  It now caches by path with weak validation (`engine.cpp`).
+- The global Blueprint script hook (installed while a combat cheat is on)
+  took a recursive mutex on **every Blueprint call in the game**. It now
+  checks a lock-free snapshot of the hooked functions first; the mutex is
+  taken only for calls that are ours (`hook_service.cpp`).
+
+New instrument: `frame.stats.hitches` lists every frame above twice the
+median in the window with the core's own microseconds inside that frame
+(`worst`, `core_share_max_us`, `frames_where_core_exceeds_quarter`). The
+Settings page shows the same numbers to the player ("Performance" row) so
+the cost is visible without tools.
+
+Cheat Menu correctness found in the same pass (both from the user's logs):
+`no_cooldown` aborted on "Property is missing: StoneFormCooldown" because the
+code compared lowercase text; and one failing toggle (perfect parry without
+its seal) rejected the whole Apply. Apply is now per feature (D11) and seal
+cheats arm instead of failing (D12).
 
 ### 2026-09-21 first live session (standalone CSSX dev core, CSS alpha present)
 

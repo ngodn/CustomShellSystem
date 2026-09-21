@@ -117,6 +117,9 @@ def stage(game: Path, dev: bool, cheat_menu: bool, core_only: bool = False) -> N
             old.unlink()
     for name in ('README.txt', 'THIRD_PARTY_NOTICES.txt'):
         copy_verified(ROOT / 'packaging' / name, mod / name)
+    (mod / 'assets').mkdir(parents=True, exist_ok=True)
+    for name in ('logo.png', 'banner.png'):
+        copy_verified(ROOT / 'assets' / name, mod / 'assets' / name)
     (mod / 'extensions').mkdir(parents=True, exist_ok=True)
     (mod / 'runtime').mkdir(parents=True, exist_ok=True)
     if dev:

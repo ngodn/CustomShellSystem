@@ -9,10 +9,12 @@ Install (game closed):
   Extract this archive so that you get
   MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/
     enabled.txt, dlls/main.dll, core/cssx_core-@VERSION@.dll, core.json,
-    README.txt, THIRD_PARTY_NOTICES.txt, release.json
+    assets/logo.png, assets/banner.png, README.txt, THIRD_PARTY_NOTICES.txt,
+    release.json
 
-Open the menu in the world: F6 on the keyboard, or press both thumbsticks on
-a controller. Change the keys in Mods/CSSX/settings.json (Unreal key names).
+CSSX is a tab of the game's Player Menu (after CSS, before TARSTONES). Open
+it from the world with F6 on the keyboard or by pressing both thumbsticks on
+a controller, or open the Player Menu and switch tabs. Change the keys in Mods/CSSX/settings.json (Unreal key names).
 Extensions install as folders under Mods/CSSX/extensions/. CSSX Cheat Menu is
 a separate download.
 

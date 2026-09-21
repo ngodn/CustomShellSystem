@@ -146,6 +146,11 @@ Json bind_menu(const Json& definition,const Json& model) {
     }
     result["status"]=model.value("status",std::string{});
     result["error"]=text(model,"error",2048,false);
+    // Optional notice: one pending thing with its action, e.g. unapplied edits.
+    if(model.contains("notice") && model["notice"].is_object()) {
+        const auto& n=model["notice"];
+        result["notice"]={{"text",text(n,"text",160)},{"label",text(n,"label",64,false)},{"action",text(n,"action",96,false)}};
+    }
     validate_model(result);return result;
 }
 }

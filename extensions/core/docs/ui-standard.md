@@ -15,11 +15,22 @@ by the user's `ui_scale`. Three screens and three overlays:
 | --- | --- | --- | --- |
 | Library | List: title, author/version, status summary (green when active); "CSSX settings" as the last row | | Selected extension: banner, description, id, API, average tick cost; framework notice (migration, load errors) |
 | Extension | Section rail | Control rows: label left, value right; 9 visible, scroll indicator | Detail: label, effect line, description (scroll), hint, editor, "asks for confirmation" |
-| Settings | Rows: menu scale, status in library, open keys | | Explanation and adjust buttons |
+| Settings | Rows: menu scale, status in library, open keys, performance | | Explanation and adjust buttons; the performance row shows CSSX's own ms per frame over the last ten seconds |
 
 Overlays: option picker (search field, 8 results, count), full description,
 confirmation (effect line, message, Cancel/Confirm). An overlay blocks input
 to what is beneath it; Back closes it.
+
+Framework pages (library, settings) carry the CSSX emblem (`assets/logo.png`)
+left of the title; the library's "CSSX" entry shows `assets/banner.png`, the
+open keys and the performance line. Extension pages carry the extension's
+title and banner only.
+
+Notice strip: an extension model may carry `notice` (`text`, `label`,
+`action`). The extension page draws it at the top right under the title
+(gold edge), clickable, and the `run` action activates that control by id
+from any section, with the control's confirmation if it has one. The Cheat
+Menu uses it for "N unapplied edits > Apply settings" and for cleanup.
 
 Reserved bands: header (title, subtitle, divider at y=208 under the game's
 top bar), status line (y=1080−128, error text in red, otherwise the
@@ -63,7 +74,9 @@ character preview to rotate).
 
 Retained widgets. A rebuild happens on model revision, selection change,
 section change, overlay change, viewport change or input-device change, never
-per frame. The menu records build count, widget count and microseconds per
+per frame. Until the game's key bindings are known (first ticks after the tab
+opens) footer hints are drawn as text without a glyph, so the prompt widget's
+default mouse icon never shows for a keyboard action. The menu records build count, widget count and microseconds per
 build; `frame.stats` exposes them. While the CSSX tab is not showing, the page is not rebuilt and no input is polled; with the Player Menu closed the only per-frame cost is one `bOpen` read.
 
 Unavailable controls stay selectable so the player can read why

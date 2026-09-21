@@ -1,6 +1,7 @@
 #include "hook_service.hpp"
 #include <windows.h>
 #include <atomic>
+#include <array>
 #include <algorithm>
 #include <map>
 #include <vector>
@@ -23,6 +24,23 @@ struct CssxHookService::State {
     Hook::GlobalCallbackId script_id=0;
     std::map<uint64_t,std::shared_ptr<Slot>> slots;
     std::map<UFunction*,std::vector<std::shared_ptr<Slot>>> scripts;
+    // Lock-free pre-filter for the global script callback: the hooked
+    // Blueprint functions, published under the gate, read without it. Every
+    // Blueprint call in the game passes through that callback while a
+    // Blueprint rule exists, so the common case (not ours) must cost a few
+    // loads and no mutex.
+    std::array<std::atomic<UFunction*>,128> fast{};
+    std::atomic<uint32_t> fast_count{0};
+    void publish_fast() {
+        uint32_t n=0;
+        for(const auto& [function,slots]:scripts) { if(n>=fast.size()) break; fast[n++].store(function,std::memory_order_relaxed); }
+        fast_count.store(n,std::memory_order_release);
+    }
+    bool maybe_hooked(UFunction* node) const noexcept {
+        const auto n=fast_count.load(std::memory_order_acquire);
+        for(uint32_t i=0;i<n;++i) if(fast[i].load(std::memory_order_relaxed)==node) return true;
+        return false;
+    }
     struct Root { unsigned users=0; bool owned=false; };
     std::map<UFunction*,Root> roots;
     uint64_t next=1;
@@ -64,13 +82,14 @@ uint64_t CssxHookService::add(void* context,void* target,CssxHookCallback callba
                 });
             } else {
                 if(!UObject::ProcessLocalScriptFunctionInternal.is_ready()) throw std::runtime_error("Script dispatcher is unavailable");
-                state->scripts[function].push_back(slot);
+                state->scripts[function].push_back(slot); state->publish_fast();
                 if(!state->script_id) {
                     // One global script-function interception for every Blueprint rule.
                     // Installed on the first Blueprint rule and removed with the last,
                     // so it costs nothing while no such rule exists.
                     state->script_id=Hook::RegisterProcessLocalScriptFunctionPostCallback([state](auto&,UObject* object,FFrame& frame,void* result) {
                         if(!state->enabled || state->thread!=GetCurrentThreadId()) return;
+                        if(!state->maybe_hooked(frame.Node())) return;   // no lock on the common path
                         std::lock_guard lock(*state->gate);
                         if(state->stopped) return;
                         const auto found=state->scripts.find(frame.Node());
@@ -103,6 +122,7 @@ int CssxHookService::remove(void* context,uint64_t id) {
             auto& values=scripts->second;
             values.erase(std::remove(values.begin(),values.end(),slot),values.end());
             if(values.empty()) state->scripts.erase(scripts);
+            state->publish_fast();
         }
         if(slot->rooted) {
             auto root=state->roots.find(slot->function);
@@ -126,6 +146,6 @@ void CssxHookService::stats(void* context,uint64_t* calls,uint64_t* ticks,int* s
 void CssxHookService::quiesce() {
     std::lock_guard lock(*state_->gate); state_->stopped=true; state_->enabled=false;
     for(auto& [id,slot]:state_->slots) { slot->callback=nullptr; slot->user=nullptr; }
-    state_->scripts.clear();
+    state_->scripts.clear(); state_->publish_fast();
 }
 CssxHookService::~CssxHookService() { quiesce(); }

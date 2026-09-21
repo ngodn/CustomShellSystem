@@ -31,7 +31,7 @@ option(CSSX_DEV "Developer build: extra probes in the core" OFF)
 # ---- portable runtime pieces (compile on Linux for tests and on Windows) ----
 add_library(cssx_runtime STATIC
   src/runtime/common.cpp src/runtime/manifest.cpp src/runtime/storage.cpp
-  src/runtime/settings.cpp src/runtime/extensions.cpp)
+  src/runtime/settings.cpp src/runtime/extensions.cpp src/runtime/writer.cpp)
 target_include_directories(cssx_runtime PUBLIC include src/runtime src/shared "${CSSX_VENDOR}" "${CMAKE_CURRENT_BINARY_DIR}/generated")
 set_target_properties(cssx_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
@@ -42,7 +42,8 @@ add_library(cssx_lua STATIC ${cssx_lua_sources})
 set_source_files_properties(${cssx_lua_sources} PROPERTIES LANGUAGE CXX)
 target_include_directories(cssx_lua PUBLIC "${CSSX_VENDOR}/lua")
 set_target_properties(cssx_lua PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(cssx_runtime PUBLIC cssx_lua ${CMAKE_DL_LIBS})
+find_package(Threads REQUIRED)
+target_link_libraries(cssx_runtime PUBLIC cssx_lua ${CMAKE_DL_LIBS} Threads::Threads)
 
 # ---- Cheat Menu gameplay logic (portable, tested against a fake host) ----
 file(GLOB cssx_cheat_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/cheat-menu/src/*.cpp")

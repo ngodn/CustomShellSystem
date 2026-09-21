@@ -1,4 +1,5 @@
 #include "cheat_menu.hpp"
+#include <cctype>
 
 namespace cheat {
 namespace {
@@ -34,6 +35,7 @@ void Menu::combat_hook(const std::string& feature,const Json& target,const Json&
     catch(...) {combat_hooks_.erase(it);throw;}
 }
 void Menu::combat_clear(const std::string& feature) {
+    if(feature.empty()) armed_.clear();
     for(auto it=combat_hooks_.begin();it!=combat_hooks_.end();) {
         if(!feature.empty() && it->second.feature!=feature) {++it;continue;}
         try {
@@ -66,15 +68,20 @@ void Menu::combat_sync() {
     struct SealCheat {const char* id;const char* seal;const char* ability;};
     constexpr SealCheat seal_cheats[]={{"perfect_parry","ID_Seal_Infinite_C","GA_Parry_Handler_C"},
         {"perfect_block","ID_Seal_Default_C","GA_ActiveBlock_C"},{"perfect_harden","ID_Seal_Stone_C","GA_Harden_Original_C"}};
-    for(const auto& cheat:seal_cheats) if(applied_[cheat.id]==true) {
+    auto seal_label=[](const std::string& seal){ auto s=seal; if(s.starts_with("ID_Seal_")) s=s.substr(8); if(s.ends_with("_C")) s.resize(s.size()-2); return s+" seal"; };
+    std::set<std::string> waiting;
+    for(const auto& cheat:seal_cheats) {
+        if(applied_[cheat.id]!=true) { armed_.erase(cheat.id); continue; }
         const auto item=host_.get(player.at("controller"),"ActiveSealItemHandle");
         const auto definition=handle(item)?host_.get(item,"ItemDef"):item.value("ItemDef",Json());
         const auto name=definition.value("name",std::string{});
         const auto dot=name.rfind('.');
         if(dot==std::string::npos || name.substr(dot+1)!=cheat.seal) {
-            combat_clear(cheat.id);applied_[cheat.id]=values_[cheat.id]=false;
-            throw std::runtime_error(std::string("Equip the matching seal before enabling ")+cheat.id+".");
-        }
+            // Not an error: the cheat waits, hook-free, until that seal is on.
+            combat_clear(cheat.id); waiting.insert(cheat.id);
+            const auto note=pretty(cheat.id)+" waits for the "+seal_label(cheat.seal)+".";
+            if(armed_[cheat.id]!=note) { armed_[cheat.id]=note; host_.request({{"op","invalidate"}}); }
+        } else if(armed_.erase(cheat.id)) host_.request({{"op","invalidate"}});
     }
     // Decoding every ability instance costs several milliseconds. Between full
     // syncs (every 10 s) only re-decode when the list length changed.
@@ -110,7 +117,10 @@ void Menu::combat_sync() {
                 Json value;
                 try {value=host_.get(ability,field);}
                 catch(const std::exception& error) {
-                    if(std::string(error.what()).find("property is missing")!=std::string::npos) continue;
+                    // Abilities differ in which cooldown fields they carry; a
+                    // missing field is the normal case, not a failure.
+                    std::string text=error.what(); for(auto& c:text) c=char(std::tolower((unsigned char)c));
+                    if(text.find("property is missing")!=std::string::npos || text.find("is missing")!=std::string::npos) continue;
                     throw;
                 }
                 if(!value.is_number() || !std::isfinite(value.get<double>()))
@@ -126,7 +136,7 @@ void Menu::combat_sync() {
             cooldown_seen_.insert(id);
         }
     }
-    for(const auto& cheat:seal_cheats) if(applied_[cheat.id]==true) {
+    for(const auto& cheat:seal_cheats) if(applied_[cheat.id]==true && !waiting.contains(cheat.id)) {
         bool found=false;
         for(const auto& ability:abilities) if(class_name(ability)==cheat.ability) {
             found=true;
@@ -134,7 +144,8 @@ void Menu::combat_sync() {
             if(std::string(cheat.id)=="perfect_parry") {add("IsInParryWindow",true);add("IsUnparryableAttack",false);add("IsParryingAICharacter",true);}
             else add(std::string(cheat.id)=="perfect_block"?"CanPerfectBlock":"IsInPerfectStoneForm",true);
         }
-        if(!found) throw std::runtime_error("The equipped seal's player ability is not ready.");
+        if(!found) { const auto note=pretty(cheat.id)+" waits for the seal's ability to load."; if(armed_[cheat.id]!=note) { armed_[cheat.id]=note; host_.request({{"op","invalidate"}}); } }
+        else if(armed_.erase(cheat.id)) host_.request({{"op","invalidate"}});
     }
 }
 }

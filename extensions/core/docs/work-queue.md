@@ -2,6 +2,20 @@
 
 Newest first. Each entry says what is done, what evidence exists and what is next.
 
+2026-09-22 (hitches, UX, Cheat Menu): User still sees random drops after the
+controlled pair, plus Cheat Menu failures and no logo. Found and fixed: the
+5 s status write did an fsync on the game thread (now a background writer,
+D10); `find()` uncached on the per-frame input path; global script hook
+took a mutex on every Blueprint call (lock-free pre-filter). Cheat Menu:
+"Property is missing" case bug broke No cooldown; one refused toggle threw
+away the whole Apply (now per feature, D11); seal cheats arm instead of
+failing (D12). UI: CSSX logo/banner (D13), performance row and line, notice
+strip for unapplied edits, no mouse-glyph placeholder before bindings load.
+Host tests 4/4 incl. the writer. Dev build staged; `work/live/on_launch.sh`
+runs hitch attribution, 10-cycle stress, the full `cheat_audit.py` and
+screenshots at the next launch. Next: read those results, then re-tag and
+rebuild the release ZIPs.
+
 2026-09-22 (rc1): Tag `v1.0.0-cssx-rc1` built from a clean worktree into
 `extensions/core/dist/v1.0.0-rc1/` (both ZIPs verified, SHA-256 sidecars). The
 exact release DLLs are staged at the next game exit for the in-game check.

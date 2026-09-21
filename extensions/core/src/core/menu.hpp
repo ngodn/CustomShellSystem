@@ -21,6 +21,8 @@ public:
         std::function<Json()> notice;             // framework notice for the library (migration etc.)
         std::function<void()> save_settings;
         std::string version;
+        fs::path root;                            // Mods/CSSX (assets/logo.png, assets/banner.png)
+        std::function<Json()> perf;               // {hz, median_ms, core_mean_us, core_max_us, core_p99_us}
     };
     explicit Menu(Deps deps):deps_(std::move(deps)) {}
     ~Menu() { try { detach(); } catch(...) {} }
@@ -93,6 +95,9 @@ private:
     void build_settings(engine::Layout& ui,double width);
     void build_footer(engine::Layout& ui,double width,const std::vector<std::pair<std::string,std::string>>& left,const std::vector<std::pair<std::string,std::string>>& right);
     void build_modal(engine::Layout& ui,double width);
+    void header(engine::Layout& ui,double width,const std::string& title,const std::string& subtitle);
+    std::string perf_line(bool brief=false) const;
+    std::string perf_detail() const;
     void build_results();
     engine::UObject* prompt(engine::Layout& ui,const std::string& action,const std::string& text,double x,double y,double w,uint8_t icon);
     void refresh_library(bool force);

@@ -157,3 +157,39 @@ QueryPerformanceCounter read and one mutex per frame.
 - No hot reload for players.
 - No ABI-2 minimap operations.
 - No claim of zero cost; the `frame.stats` numbers are the claim.
+
+## D10. The game thread never waits on the disk for informational files (2026-09-22)
+
+Status, frame dumps, logs and dev responses are written by one background
+thread (`src/runtime/writer.{hpp,cpp}`), queued as bytes; the game thread
+returns at once. Only explicit user actions (settings save, extension state
+save) keep the synchronous fsynced path. Reason: `FlushFileBuffers` plus a
+write-through rename every 5 s on the game thread is an fsync under Proton
+and showed up to the user as periodic drops that a median cannot reveal. The
+writer is owned by `Core`, so it is joined before the core DLL is unloaded.
+
+## D11. Cheat Menu Apply is per feature, never all-or-nothing (2026-09-22)
+
+Each feature (God, movement, shell points, heal/resolve, combat group, each
+shell power) applies inside its own try. A feature that fails reverts to its
+previous value, is named in the status line in red, and the rest goes live.
+A failed preference save is reported and never undoes a live cheat. Reason:
+the user's log showed one refused toggle ("Equip the matching seal") throwing
+away every other edit, which read as "nothing works".
+
+## D12. Seal cheats arm; they do not fail (2026-09-22)
+
+Perfect parry/block/harden keep their toggle on while the matching seal is
+not equipped; no hook exists until it is, and the status says "Perfect parry
+waits for the Infinite seal." Equipping the seal installs the hooks on the
+next sync (1 s); unequipping removes them and keeps the toggle armed. The
+loader hook rule still checks the seal at call time, so the cheat can never
+act through another seal.
+
+## D13. CSSX has a face (2026-09-22)
+
+`assets/logo.png` and `assets/banner.png` (drawn as SVG in `assets/`,
+rasterised with rsvg-convert) ship in the framework ZIP and are read by the
+menu through the same `ImportFileAsTexture2D` path as extension banners.
+Framework pages (library, settings) carry the emblem; extension pages carry
+the extension's own title and banner.

@@ -1,4 +1,5 @@
 #include "storage.hpp"
+#include "writer.hpp"
 #include "manifest.hpp"
 #include <chrono>
 #include <ctime>
@@ -47,16 +48,8 @@ void Storage::log(const std::string& id,const std::string& level,const std::stri
     auto path=id=="cssx"?root_/"logs/cssx.jsonl":root_/"logs"/utf8_path(id)/"current.jsonl";
     ensure_beneath(root_,path);
     const auto line=Json{{"time",timestamp()},{"level",level},{"extension",id},{"message",message},{"fields",fields}}.dump()+"\n";
-    fs::create_directories(path.parent_path());
-    if(fs::exists(path) && fs::file_size(path)>0 && fs::file_size(path)+line.size()>policy_.max_bytes) {
-        auto rotated=[&](unsigned index){auto p=path;p+="."+std::to_string(index);ensure_beneath(root_,p);return p;};
-        for(unsigned i=policy_.backups;i>1;--i) if(fs::exists(rotated(i-1))) {
-            if(fs::exists(rotated(i))) fs::remove(rotated(i));fs::rename(rotated(i-1),rotated(i));
-        }
-        if(fs::exists(rotated(1))) fs::remove(rotated(1));fs::rename(path,rotated(1));
-    }
-    std::ofstream file(path,std::ios::binary|std::ios::app);file.write(line.data(),static_cast<std::streamsize>(line.size()));file.flush();
-    if(!file) throw std::runtime_error("Cannot append extension log");
+    if(writer_) { writer_->append(path,line,policy_.max_bytes,policy_.backups); return; }
+    Writer::append_now(path,line,policy_.max_bytes,policy_.backups);
 }
 fs::path Storage::output(const std::string& id,const std::string& filename,const std::string& bytes) {
     identity(id);

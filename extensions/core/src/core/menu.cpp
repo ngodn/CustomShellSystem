@@ -410,7 +410,7 @@ void Menu::key(const std::string& action) {
     }
     if(screen_==Screen::Settings) {
         if(action=="close") act({{"action","library"}});
-        else if(action=="up" || action=="down") { settings_row_=std::clamp(settings_row_+(action=="up"?-1:1),0,2); dirty_=true; }
+        else if(action=="up" || action=="down") { settings_row_=std::clamp(settings_row_+(action=="up"?-1:1),0,3); dirty_=true; }
         else if(action=="left" || action=="right" || action=="accept") act({{"action","settings_adjust"},{"delta",action=="left"?-1:1}});
         return;
     }
@@ -456,7 +456,19 @@ void Menu::act(const Json& action) {
         extension_id_=entry.at("id").get<std::string>(); screen_=Screen::Extension; section_=row_=first_row_=0; confirm_=nullptr;
         refresh_model(); dirty_=true; enter_=true; return;
     }
-    if(name=="settings_row" && screen_==Screen::Settings) { settings_row_=std::clamp(action.value("row",0),0,2); dirty_=true; return; }
+    if(name=="settings_row" && screen_==Screen::Settings) { settings_row_=std::clamp(action.value("row",0),0,3); dirty_=true; return; }
+    if(name=="run" && screen_==Screen::Extension && model_.is_object()) {
+        // Activate a control by id from anywhere on the page (notice strip).
+        const auto id=action.value("id",std::string{});
+        for(const auto& section:model_.value("sections",Json::array())) for(const auto& c:section.value("controls",Json::array())) if(c.value("id",std::string{})==id) {
+            if(!interactive(c)) { error_="That action is not available right now."; dirty_=true; return; }
+            Json event={{"id",id}};
+            if(c.contains("confirm")) { confirm_={{"event",event},{"message",c.at("confirm")}}; dirty_=true; }
+            else send_event(event);
+            return;
+        }
+        return;
+    }
     if(name=="settings_adjust" && screen_==Screen::Settings) {
         auto& s=*deps_.settings; const int delta=action.value("delta",1);
         switch(settings_row_) {
@@ -516,6 +528,10 @@ bool Menu::texture(Layout& ui,const std::string& file,double x,double y,double w
     ui.image(image,x,y,w,h); return true;
 }
 UObject* Menu::prompt(Layout& ui,const std::string& action,const std::string& text,double x,double y,double w,uint8_t icon) {
+    // Until the game's bindings are known the prompt widget would show its
+    // default (mouse) glyph, so draw the text alone and let the rebuild that
+    // follows binding discovery add the real glyphs.
+    if(!bindings_ready_ && !gamepad_) { if(!text.empty()) ui.label(text,x+12,y+2,w-12,30,18,muted); return nullptr; }
     auto* cls=static_cast<UClass*>(load("/Game/Sparta/UI/Core/Navigation/WBP_Prompt.WBP_Prompt_C"));
     auto* widget=create_widget(pc_.Get(),cls);
     for(const auto& binding:bindings_) if(binding.action==action) {
@@ -533,6 +549,30 @@ UObject* Menu::prompt(Layout& ui,const std::string& action,const std::string& te
     if(!text.empty()) ui.label(text,x+76,y+2,w-76,30,18,muted);
     prompt_=widget;
     return widget;
+}
+void Menu::header(Layout& ui,double width,const std::string& title,const std::string& subtitle) {
+    // Framework pages carry the CSSX emblem; extension pages carry their own title.
+    const bool logo=texture(ui,path_utf8(deps_.root/"assets/logo.png"),80,116,74,74);
+    const double x=logo?172:80;
+    ui.label(title,x,124,600,52,30,bright,true);
+    ui.label(subtitle,x+4,174,700,28,16,muted);
+    ui.box(80,208,width-160,1,line);
+}
+std::string Menu::perf_line(bool brief) const {
+    Json p=deps_.perf?deps_.perf():Json::object();
+    if(!p.is_object() || p.value("frames",0)<10) return brief?"Measuring...":"Performance: measuring (needs a few seconds in the world)";
+    char text[160];
+    if(brief) std::snprintf(text,sizeof text,"%.2f ms per frame",p.value("core_mean_us",0.0)/1000);
+    else std::snprintf(text,sizeof text,"CSSX cost %.2f ms of %.1f ms per frame (%.0f fps), peak %.2f ms",p.value("core_mean_us",0.0)/1000,p.value("median_ms",0.0),p.value("hz",0.0),p.value("core_max_us",0.0)/1000);
+    return text;
+}
+std::string Menu::perf_detail() const {
+    Json p=deps_.perf?deps_.perf():Json::object();
+    if(!p.is_object() || p.value("frames",0)<10) return "Frame cost of CSSX itself over the last ten seconds. It needs a few seconds in the world to measure.";
+    char text[400];
+    std::snprintf(text,sizeof text,"Over the last ten seconds the game rendered at %.0f fps (median %.1f ms per frame). CSSX, its menu and every extension together took %.3f ms per frame on average and %.3f ms at most (99th percentile %.3f ms). With the Player Menu closed this is the whole cost; nothing else runs per frame.",
+        p.value("hz",0.0),p.value("median_ms",0.0),p.value("core_mean_us",0.0)/1000,p.value("core_max_us",0.0)/1000,p.value("core_p99_us",0.0)/1000);
+    return text;
 }
 void Menu::build_footer(Layout& ui,double width,const std::vector<std::pair<std::string,std::string>>& left,const std::vector<std::pair<std::string,std::string>>& right) {
     // Reserved hint band: left = navigation, right = contextual actions. The
@@ -581,9 +621,7 @@ void Menu::build() {
 }
 void Menu::build_library(Layout& ui,double width) {
     const auto& entries=library_["extensions"];
-    ui.label("Extensions",80,124,600,52,30,bright,true);
-    ui.label("CSSX "+deps_.version,84,174,700,28,16,muted);
-    ui.box(80,208,width-160,1,line);
+    header(ui,width,"Extensions","CSSX "+deps_.version);
     const int count=int(entries.size())+1;
     library_row_=std::clamp(library_row_,0,count-1);
     const double list_x=80,list_w=std::min(1040.,width*0.55),row_h=74,top=232;
@@ -635,8 +673,13 @@ void Menu::build_library(Layout& ui,double width) {
             }
         }
     } else {
-        ui.label("CSSX settings",px+24,top+22,pw-48,44,26,bright,true);
-        scroll_text(ui,"Open with "+[&]{ std::string s; for(const auto& k:deps_.settings->open_keyboard) s+=(s.empty()?"":" + ")+k; return s; }()+" on the keyboard or "+[&]{ std::string s; for(const auto& k:deps_.settings->open_gamepad) s+=(s.empty()?"":" + ")+k; return s; }()+" on a controller. Change these in settings.json with the game closed.",px+24,top+80,pw-48,200,19,ink);
+        ui.label("CSSX "+deps_.version,px+24,top+22,pw-48,44,26,bright,true);
+        double y=top+80;
+        if(texture(ui,path_utf8(deps_.root/"assets/banner.png"),px+24,y,pw-48,(pw-48)*0.42)) y+=(pw-48)*0.42+16;
+        scroll_text(ui,"Custom Shell System Extensions: one menu for every extension. Open it with "+[&]{ std::string s; for(const auto& k:deps_.settings->open_keyboard) s+=(s.empty()?"":" + ")+k; return s; }()+" on the keyboard or "+[&]{ std::string s; for(const auto& k:deps_.settings->open_gamepad) s+=(s.empty()?"":" + ")+k; return s; }()+" on a controller, or switch to this tab in the Player Menu.",px+24,y,pw-48,150,19,ink);
+        y+=166;
+        ui.label(perf_line(),px+24,y,pw-48,26,15,muted); y+=28;
+        ui.label("Extensions folder  Mods/CSSX/extensions",px+24,y,pw-48,26,15,muted);
     }
     Json notice=deps_.notice?deps_.notice():Json::object();
     const auto text=notice.value("notice",std::string{});
@@ -646,9 +689,7 @@ void Menu::build_library(Layout& ui,double width) {
     build_footer(ui,width,{{"up",""},{"down","Browse"},{"close","Close"}},{{"accept","Open"}});
 }
 void Menu::build_settings(Layout& ui,double width) {
-    ui.label("CSSX settings",80,124,800,52,30,bright,true);
-    ui.label("Saved to Mods/CSSX/settings.json",84,174,700,28,16,muted);
-    ui.box(80,208,width-160,1,line);
+    header(ui,width,"CSSX settings","Saved to Mods/CSSX/settings.json");
     const auto& s=*deps_.settings;
     struct Row { std::string label,value,hint; };
     char scale[16]; std::snprintf(scale,sizeof scale,"%.0f%%",s.ui_scale*100);
@@ -656,7 +697,9 @@ void Menu::build_settings(Layout& ui,double width) {
     const std::vector<Row> rows={
         {"Menu scale",scale,"Size of this page relative to the 1080p layout. 75% to 150%."},
         {"Show extension status in the library",s.show_extension_status?"On":"Off","Extensions can report a one-line status, for example active cheats."},
-        {"Open keys",[&]{ std::string t; for(const auto& k:s.open_keyboard) t+=(t.empty()?"":"+")+k; t+="  /  "; std::string g; for(const auto& k:s.open_gamepad) g+=(g.empty()?"":"+")+k; return t+g; }(),"Shortcut that opens the Player Menu on the CSSX tab. Edit open_keyboard and open_gamepad in settings.json with the game closed (Unreal key names)."}};
+        {"Open keys",[&]{ std::string t; for(const auto& k:s.open_keyboard) t+=(t.empty()?"":"+")+k; t+="  /  "; std::string g; for(const auto& k:s.open_gamepad) g+=(g.empty()?"":"+")+k; return t+g; }(),"Shortcut that opens the Player Menu on the CSSX tab. Edit open_keyboard and open_gamepad in settings.json with the game closed (Unreal key names)."},
+        {"Performance",perf_line(true),perf_detail()}};
+    settings_row_=std::clamp(settings_row_,0,int(rows.size())-1);
     const double x=80,w=std::min(1000.,width*0.55),row_h=68,top=232;
     for(size_t i=0;i<rows.size();++i) {
         const double y=top+i*row_h; const bool selected=int(i)==settings_row_;
@@ -680,8 +723,19 @@ void Menu::build_extension(Layout& ui,double width) {
     const Json* entry=nullptr; for(const auto& e:library_["extensions"]) if(e.value("id",std::string{})==extension_id_) entry=&e;
     if(!entry) { screen_=Screen::Library; extension_id_.clear(); build_library(ui,width); return; }
     ui.label(entry->value("title",std::string{}),80,124,width-160,52,30,bright,true);
-    ui.label("by "+entry->value("author",std::string{})+"  /  "+entry->value("version",std::string{}),84,174,width-400,28,16,muted);
+    ui.label("by "+entry->value("author",std::string{})+"  /  "+entry->value("version",std::string{}),84,174,width-640,28,16,muted);
     ui.box(80,208,width-160,1,line);
+    // Notice strip: the extension's one pending thing (unapplied edits,
+    // cleanup) with its action, reachable by mouse or from any section.
+    if(model_.is_object() && model_.contains("notice") && model_["notice"].is_object()) {
+        const auto& n=model_["notice"];
+        const auto text=n.value("text",std::string{}),label=n.value("label",std::string{}),action=n.value("action",std::string{});
+        const double w=std::min(560.,120+(text.size()+label.size())*11.5),x=width-80-w,y=156;
+        auto* hit=ui.button("",x,y,w,44,false,!action.empty()); hits_.push_back({WeakObject(hit),{{"action","run"},{"id",action}},false});
+        ui.box(x,y,w,44,Color{.10f,.075f,.035f,.95f}); ui.box(x,y,3,44,gold);
+        ui.label(text,x+18,y+8,w-36,30,18,bright);
+        if(!label.empty()) ui.label(label+"  >",x+18,y+8,w-36,30,18,gold,false,2);
+    }
     if(!model_.is_object() || !model_.contains("sections")) {
         ui.label(error_.empty()?"This extension has no menu.":error_,80,220,width-160,200,22,danger);
         build_footer(ui,width,{{"close","Library"}},{}); return;

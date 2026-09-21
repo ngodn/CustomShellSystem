@@ -50,6 +50,8 @@ def framework_files(version: str, build: Path) -> dict[str, bytes]:
         'CSSX/core.json': (json.dumps({'file': core}, indent=2) + '\n').encode(),
         'CSSX/README.txt': (ROOT / 'packaging/README.txt').read_text().replace('@VERSION@', version).encode(),
         'CSSX/THIRD_PARTY_NOTICES.txt': (ROOT / 'packaging/THIRD_PARTY_NOTICES.txt').read_bytes(),
+        'CSSX/assets/logo.png': (ROOT / 'assets/logo.png').read_bytes(),
+        'CSSX/assets/banner.png': (ROOT / 'assets/banner.png').read_bytes(),
     }
 
 

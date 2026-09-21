@@ -27,7 +27,7 @@ bool DevChannel::poll() {
     Json response={{"id",id}};
     try { response["result"]=handler_(request); response["ok"]=true; }
     catch(const std::exception& e) { response["ok"]=false; response["error"]=e.what(); }
-    try { atomic_json(root_/"runtime/response.json",response,false); } catch(...) {}
+    try { atomic_json(root_/"runtime/response.json",response,false,false,false); } catch(...) {}
     return true;
 }
 }

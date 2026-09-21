@@ -24,7 +24,17 @@ std::string narrow(const std::wstring& s) {
     WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,s.data(),static_cast<int>(s.size()),result.data(),size,nullptr,nullptr);
     return result;
 }
-UObject* find_optional(const wchar_t* path) { return UObjectGlobals::StaticFindObject<UObject*>(nullptr,nullptr,path); }
+namespace { std::unordered_map<std::wstring,WeakObject> s_find_cache; }
+UObject* find_optional(const wchar_t* path) {
+    // Per-frame callers (input polling, player lookup) name the same handful
+    // of classes and default objects every time; resolve each path once and
+    // revalidate through the weak reference so a replaced object is re-found.
+    auto it=s_find_cache.find(path);
+    if(it!=s_find_cache.end()) { if(auto* live=it->second.Get()) return live; s_find_cache.erase(it); }
+    auto* object=UObjectGlobals::StaticFindObject<UObject*>(nullptr,nullptr,path);
+    if(object && s_find_cache.size()<512) s_find_cache.emplace(path,WeakObject(object));
+    return object;
+}
 UObject* find(const wchar_t* path) {
     auto* object=find_optional(path);
     if(!object) throw std::runtime_error("Required reflected object is missing: "+narrow(path));

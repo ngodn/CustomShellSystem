@@ -22,7 +22,7 @@ Json read_json(const fs::path& path) {
     if (!in) throw std::runtime_error("Cannot read: " + path_utf8(path));
     return Json::parse(in);
 }
-void atomic_json(const fs::path& path, const Json& data, bool backup, bool verify) {
+void atomic_json(const fs::path& path, const Json& data, bool backup, bool verify, bool durable) {
     fs::create_directories(path.parent_path());
     auto temp = path; temp += ".tmp";
     const auto bytes = data.dump(2) + "\n";
@@ -38,11 +38,14 @@ void atomic_json(const fs::path& path, const Json& data, bool backup, bool verif
         fs::copy_file(path, previous, fs::copy_options::overwrite_existing);
     }
 #ifdef _WIN32
-    auto file = CreateFileW(temp.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
-    if (file == INVALID_HANDLE_VALUE) throw std::runtime_error("Cannot flush " + path_utf8(path));
-    const bool flushed = FlushFileBuffers(file) != 0;
-    CloseHandle(file);
-    if (!flushed || !MoveFileExW(temp.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+    bool flushed = true;
+    if (durable) {
+        auto file = CreateFileW(temp.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+        if (file == INVALID_HANDLE_VALUE) throw std::runtime_error("Cannot flush " + path_utf8(path));
+        flushed = FlushFileBuffers(file) != 0;
+        CloseHandle(file);
+    }
+    if (!flushed || !MoveFileExW(temp.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | (durable ? MOVEFILE_WRITE_THROUGH : 0)))
         throw std::runtime_error("Cannot atomically replace " + path_utf8(path));
 #else
     fs::rename(temp, path);

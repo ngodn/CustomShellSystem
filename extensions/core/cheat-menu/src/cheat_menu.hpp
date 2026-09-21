@@ -30,6 +30,7 @@ class Menu {
     Json power_ability(const Json&,const char*);
     bool gameplay_ready(const Json&);
     void power_sync();
+    void power_start(const std::string& feature);
     void power_clear(const std::string& feature={});
     void power_tick(double);
     Json binding_actions() const;
@@ -49,6 +50,12 @@ class Menu {
     struct OwnedHook {uint64_t id;std::string feature;Json target;};
     std::map<std::string,OwnedHook> combat_hooks_;
     std::set<uint64_t> cooldown_seen_;
+    // Seal cheats stay "armed" while their seal is not equipped: the toggle
+    // keeps its value, the hooks are absent, and the status says what is
+    // missing. Equipping the seal installs the hooks on the next sync.
+    std::map<std::string,std::string> armed_;
+    std::vector<std::string> problems_;      // per-feature apply failures of the last Apply
+    static std::string pretty(const std::string& id);
     double combat_time_=0;
     Json owned_abilities(const Json&);
     void combat_sync();

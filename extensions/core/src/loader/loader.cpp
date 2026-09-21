@@ -94,7 +94,7 @@ class Loader final : public RC::CppUserModBase {
         module_ = candidate; api_ = api; core_ = instance; loaded_ = filename; stop_pending_ = false;
         log_line(("Core activated: " + loaded_ + " (" + std::string(api->version ? api->version : "?") + ")").c_str());
         cssx::atomic_json(root_ / "runtime/loader.json", {{"abi", CSSX_CORE_ABI}, {"core", loaded_}, {"core_version", api->version ? api->version : ""},
-                          {"loader_version", CSSX_VERSION}, {"pid", GetCurrentProcessId()}, {"tick_ms", GetTickCount64()}}, false);
+                          {"loader_version", CSSX_VERSION}, {"pid", GetCurrentProcessId()}, {"tick_ms", GetTickCount64()}}, false, false, false);
     }
 public:
     Loader() {
@@ -159,7 +159,7 @@ public:
             std::vector<int64_t> window; int64_t budget = 20 * ring_.frequency;
             for (auto it = all.rbegin(); it != all.rend() && budget > 0; ++it) { window.push_back(*it); budget -= *it; }
             cssx::atomic_json(root_ / "runtime/frames.json", {{"core", loaded_}, {"frames_total", uint64_t(ring_.total)}, {"window_s", 20},
-                {"engine", cssx::summarize(window, ring_.frequency).json()}, {"tick_ms", now}}, false, false);
+                {"engine", cssx::summarize(window, ring_.frequency).json()}, {"tick_ms", now}}, false, false, false);
         } catch (...) {}
     }
     ~Loader() override {

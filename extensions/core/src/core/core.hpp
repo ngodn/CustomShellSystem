@@ -12,6 +12,7 @@
 #include "extensions.hpp"
 #include "settings.hpp"
 #include "storage.hpp"
+#include "writer.hpp"
 #include "frame_stats.hpp"
 #include <memory>
 #include <map>
@@ -26,6 +27,7 @@ public:
 private:
     const CssxLoaderHost host_;
     fs::path root_, mods_root_;
+    Writer writer_;                 // declared before Storage: it outlives every user
     Storage storage_;
     Settings settings_;
     std::unique_ptr<Bridge> bridge_;
@@ -49,6 +51,7 @@ private:
     FrameRing<4096> phase_tick_, phase_menu_, phase_hud_, phase_ext_;
     std::map<std::string,std::pair<uint64_t,uint64_t>> op_stats_;   // op -> (calls, microseconds)
     Json frame_stats(double seconds) const;
+    Json perf_brief() const;        // one-line cost summary for the menu
     // Services for the runtime
     Json service(const Json& request);
     Json dev_request(const Json& request);

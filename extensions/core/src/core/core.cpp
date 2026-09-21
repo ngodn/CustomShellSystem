@@ -16,6 +16,7 @@ Core::Core(const CssxLoaderHost& host):host_(host),root_(host.root),mods_root_(h
     std::string note;
     settings_=Settings::load(root_/"settings.json",&note);
     if(!note.empty()) log("info",note);
+    storage_.set_writer(&writer_);   // log appends never block the game thread
     hotkey_down_.assign(2,true);   // require a release before the first open
     bridge_=std::make_unique<Bridge>(host.hooks);
     hud_.set_logger([this](const std::string& m){ log("warning",m); });
@@ -117,7 +118,7 @@ void Core::tick(void* engine,float delta) {
         try { if(!Version::IsAtLeast(5,6) || !Version::IsBelow(5,7)) log("warning","CSSX targets UE 5.6; the detected engine version differs"); } catch(...) {}
         check_legacy();
         menu_=std::make_unique<Menu>(Menu::Deps{nullptr,&settings_,[this](const std::string& m){ log("warning",m); },
-            [this]{ return status(); },[this]{ settings_.save(root_/"settings.json"); },CSSX_VERSION});
+            [this]{ return status(); },[this]{ settings_.save(root_/"settings.json"); },CSSX_VERSION,root_,[this]{ return perf_brief(); }});
         // CSS is optional. When it is installed and enabled it adds its own Player
         // Menu tab first; CSSX waits briefly for that so CSS's page-count checks
         // keep passing. Without CSS, CSSX attaches at once.
@@ -168,6 +169,25 @@ Json Core::frame_stats(double seconds) const {
         result["frames_total"]=uint64_t(ring->total);
         auto phase=[&](const FrameRing<4096>& r){ auto v=r.newest(size_t(window.size())); auto s=summarize(v,ring->frequency); long double sum=0; for(auto x:v) sum+=(long double)x; return Json{{"count",v.size()},{"mean_us",v.empty()?0.0:double(sum)*1e6/double(ring->frequency)/double(v.size())},{"max_us",s.max_ms*1000},{"p99_us",s.p99_ms*1000}}; };
         result["phases"]={{"core_tick",phase(phase_tick_)},{"extensions",phase(phase_ext_)},{"hud",phase(phase_hud_)},{"menu",phase(phase_menu_)}};
+        // Hitch attribution: for every frame above twice the median, the
+        // core's own time in that frame. If the core share stays in
+        // microseconds while the frame is tens of milliseconds, the hitch
+        // is not CSSX's.
+        const auto core=phase_tick_.newest(window.size());
+        const double to_ms=1000.0/double(ring->frequency), to_us=1e6/double(ring->frequency);
+        const auto engine=summarize(window,ring->frequency);
+        Json worst=Json::array(); double core_at_hitches_max_us=0; uint64_t core_hitches=0;
+        for(size_t i=0;i<window.size();++i) {
+            const double ms=double(window[i])*to_ms; if(ms<=engine.median_ms*2) continue;
+            const size_t k=core.size()>=window.size()?i+(core.size()-window.size()):i;
+            const double us=k<core.size()?double(core[k])*to_us:0;
+            core_at_hitches_max_us=std::max(core_at_hitches_max_us,us);
+            if(us>ms*1000*0.25) ++core_hitches;
+            worst.push_back({{"frame_ms",ms},{"core_us",us},{"age_frames",window.size()-1-i}});
+        }
+        std::sort(worst.begin(),worst.end(),[](const Json& a,const Json& b){ return a["frame_ms"].get<double>()>b["frame_ms"].get<double>(); });
+        if(worst.size()>12) worst.erase(worst.begin()+12,worst.end());
+        result["hitches"]={{"count",engine.hitches},{"core_share_max_us",core_at_hitches_max_us},{"frames_where_core_exceeds_quarter",core_hitches},{"worst",worst}};
     }
     result["hooks"]=bridge_->hook_stats();
     Json ops=Json::array();
@@ -186,7 +206,22 @@ Json Core::status() {
     if(!extensions_allowed()) s["notice"]="Legacy CSSX files are active inside CustomShellSystem. Close the game and run the CSSX migration; extensions stay unloaded until then.";
     return s;
 }
-void Core::publish_status() { try { atomic_json(root_/"runtime/status.json",status(),false,false); } catch(...) {} }
+void Core::publish_status() { try { writer_.replace(root_/"runtime/status.json",status().dump(2)+"\n"); } catch(...) {} }
+Json Core::perf_brief() const {
+    // Last ~10 s: engine frame time and the core's own share of it.
+    Json out={{"hz",0.0},{"median_ms",0.0},{"core_mean_us",0.0},{"core_max_us",0.0},{"core_p99_us",0.0},{"frames",0}};
+    const auto* ring=host_.frames; if(!ring || ring->frequency<=0) return out;
+    auto all=newest_of(ring->intervals,ring->capacity,ring->head,ring->total,ring->capacity);
+    std::vector<int64_t> window; int64_t budget=int64_t(10*ring->frequency);
+    for(auto it=all.rbegin();it!=all.rend() && budget>0;++it) { window.push_back(*it); budget-=*it; }
+    const auto engine=summarize(window,ring->frequency);
+    const auto core=phase_tick_.newest(window.size()); const auto cs=summarize(core,ring->frequency);
+    long double sum=0; for(auto v:core) sum+=(long double)v;
+    out["hz"]=engine.hz; out["median_ms"]=engine.median_ms; out["frames"]=engine.count;
+    out["core_mean_us"]=core.empty()?0.0:double(sum)*1e6/double(ring->frequency)/double(core.size());
+    out["core_max_us"]=cs.max_ms*1000; out["core_p99_us"]=cs.p99_ms*1000;
+    return out;
+}
 Json Core::dev_request(const Json& request) {
     const auto op=request.value("op",std::string{});
     if(op=="status") return status();

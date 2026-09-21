@@ -77,7 +77,9 @@ colours danger actions, prints the effect above the description and repeats
 it in the confirmation dialog.
 
 Model bindings for a static menu: `values`, `options`, `enabled`, `busy`,
-`confirmations`, `status`, `error`.
+`confirmations`, `status`, `error`, and optional `notice` (`{"text","label",
+"action"}`: one pending thing with the control id that resolves it; the menu
+draws it as a strip on every section).
 
 ## Loader/core ABI 1 (`src/shared/core_abi.h`)
 

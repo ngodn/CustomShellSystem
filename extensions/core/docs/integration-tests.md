@@ -13,6 +13,7 @@ stated. Release is gated on every row being a pass.
 | Legacy detection | `status.legacy` fields; activation absent on this machine, stale cheat-menu folder reported as shared id | Pass |
 | Migration (game closed) | `tools/cssx_migrate.py` dry run then perform; backup `Mods/CSSX/backup/20260921T160844Z` | Pass 2026-09-22: 6 moves, 16 stale cssx_core DLLs removed, CSS files untouched, saved Cheat Menu preferences carried over |
 | Dev channel round trip | `tools/cssx.py request '{"op":"status"}'` | Pass |
+| Exact rc1 release DLLs load in game | `dist/v1.0.0-rc1/*.built` staged at exit; loader.json, library, `cheat_check.py` after relaunch | Pass 2026-09-22 (core 1.0.0, both extensions available, cheat check 6/6) |
 | Live core switch while the game runs | stage `--core-only`, watch `CSSX.log` for "Core activated" | Pass ×8 in one session; first attempt needed the watch-path fix (loader now watches the mod root) |
 | Extension load: ABI 3 Cheat Menu | `library` shows available, cost counters advance | Pass |
 | Legacy ABI 1/2 extension loads | host lifecycle test with fixtures; in game the migrated `cssx.ui-kit` (schema 1, Lua) loads beside the ABI 3 Cheat Menu | Pass (fixtures + live Lua 2026-09-22); legacy native DLL in game not yet |
@@ -30,7 +31,9 @@ stated. Release is gated on every row being a pass.
 | Library, extension page, sections, confirm, picker, settings | screenshots 05–13 | Pass (visual review) |
 | Keyboard/controller glyphs follow the game's bindings | diagnostics `bindings`, screenshot 13 | Pass for keyboard glyphs; controller glyph rendering not yet seen |
 | Controller navigation in the page (D-pad, sticks, A/B, triggers) | user test | Not yet confirmed |
-| Hotkey F6 / L3+R3 opens on the CSSX tab, closes from it | dev `menu.hotkey` path pass; real key press | Code path pass; physical key press not yet confirmed |
+| Hotkey F6 / L3+R3 opens on the CSSX tab, closes from it | dev `menu.hotkey` path pass; real key press | Pass for opening: single "Hotkey: opening" log lines at 16:36 and 19:56 outside any tool run are real presses. Closing from another tab switches back instead (by design) |
+| Logo in library/settings header, banner + performance line on the CSSX entry, performance row in settings | screenshots `20-22` (next launch) | Not yet |
+| Notice strip shows unapplied edits and applies from any section | screenshot `23` (next launch) | Not yet |
 | Back on library closes the Player Menu; Back inside an extension returns | dev `menu.key close` | Pass |
 | Menu instance replaced by travel: tab dropped and re-attached | beacon travel with the menu closed and open | Not yet |
 | Repeated open/close without leaks | `tools/menu_stress.py --cycles 3` (during the user's play; 30 cycles pending an idle window) | Pass 3/3, menu and game menu closed afterwards, 33 widgets per page, 6 ms mean rebuild |
@@ -43,6 +46,8 @@ stated. Release is gated on every row being a pass.
 | --- | --- | --- |
 | Model validates against menu.json schema 2 | host test + live `model` | Pass |
 | Draft does not touch gameplay; Apply enables God; Disable all restores | `tools/cheat_check.py` | Pass 2026-09-22 (6/6, pawn damageable afterwards) |
+| Every reversible control audited live (God, movement, damage target, auto heal, heal, infinite resolve, resolve, shell points, no cooldown, seal cheats armed, powers, lists, revive, shortcuts, confirmations) | `tools/cheat_audit.py` (runs from `work/live/on_launch.sh` at the next launch) | Not yet |
+| No cooldown with abilities lacking a cooldown field; Apply with one failing feature | host tests (`cssx_cheat_menu`) | Pass 2026-09-22 (missing-field text fixed; per-feature apply; armed seal cheats) |
 | Confirmation before persistent grants | screenshot 10, cancelled | Pass |
 | Shell picker lists the live catalog | screenshot 11 | Pass |
 | Death, respawn, beacon travel, shell change, load/save with cheats on | user play | Not yet |
@@ -52,3 +57,8 @@ stated. Release is gated on every row being a pass.
 ## Performance
 
 See `performance.md`. Rows A/B need MangoHud or the loader-only row; rows C, D, E, F, G through `fps_probe.py`.
+
+| Check | How | Last result |
+| --- | --- | --- |
+| No disk write on the game thread for status/logs | code: `Writer` thread; host test `cssx_runtime` (replace/append/rotate/drain) | Pass 2026-09-22 (host) |
+| Hitch attribution: core share at hitch frames | `tools/hitches.py` (next launch, two 60 s windows) | Not yet |

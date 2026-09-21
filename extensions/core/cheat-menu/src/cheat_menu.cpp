@@ -57,7 +57,7 @@ Menu::Menu(const CssxHost* host):host_(host),recovery_(host) {
     }
     applied_=values_;
     binding_reset();
-    status_="Cheats start off. Edit settings, then Apply settings.";
+    status_="Cheats start off. Edit, then Apply settings.";
 }
 void Menu::report(const std::string& text) {
     if(status_==text) return;status_=text;host_.log(text);host_.request({{"op","invalidate"}});
@@ -74,32 +74,45 @@ void Menu::persist(const Json& values) {
     next["bindings"]=values.at("bindings");
     host_.request({{"op","state.save"},{"value",next}});settings_=std::move(next);
 }
+std::string Menu::pretty(const std::string& id) {
+    std::string text=id; for(auto& c:text) if(c=='_') c=' ';
+    if(!text.empty()) text[0]=char(std::toupper((unsigned char)text[0]));
+    return text;
+}
 void Menu::apply_settings() {
     if(cleanup_required_) throw std::runtime_error("Turn off all cheats to finish cleanup before applying more settings.");
     if(!has_changes()) return;
     binding_validate();
     const auto before=applied_;
     applied_=values_;
-    try {
-        if(applied_["god"]!=before["god"]) god(applied_["god"].get<bool>());
-        if(applied_["move_fast"]!=before["move_fast"] ||
-           (applied_["move_fast"]==true && applied_["move_multiplier"]!=before["move_multiplier"]))
-            movement(applied_["move_fast"].get<bool>());
-        if(applied_["max_shell_points"]!=before["max_shell_points"]) shell_points(applied_["max_shell_points"].get<bool>());
-        if(applied_["auto_heal"]==true || applied_["infinite_resolve"]==true) require_player();
-        combat_sync();
-        power_sync();
-        persist(applied_);
-    } catch(const std::exception& e) {
-        const std::string reason=e.what();applied_=before;
-        try {god(before["god"].get<bool>());movement(before["move_fast"].get<bool>());shell_points(before["max_shell_points"].get<bool>());combat_sync();power_sync();}
-        catch(const std::exception& cleanup) {
-            cleanup_required_=true;
-            throw std::runtime_error("Apply failed: "+reason+". Cleanup needs retry: "+cleanup.what());
+    problems_.clear();
+    // Each feature applies on its own. A feature that fails reverts to its
+    // previous value and is named in the report; everything else goes live.
+    auto attempt=[&](std::initializer_list<const char*> ids,auto&& work,auto&& undo) {
+        try { work(); }
+        catch(const std::exception& e) {
+            std::string names; for(auto id:ids) { if(!names.empty()) names+=", "; names+=pretty(id); }
+            problems_.push_back(names+": "+e.what());
+            for(auto id:ids) applied_[id]=values_[id]=before.at(id);
+            try { undo(); } catch(const std::exception& u) { cleanup_required_=true; problems_.push_back(std::string("Cleanup needs retry: ")+u.what()); }
         }
-        throw std::runtime_error("Settings were not applied: "+reason);
-    }
-    bindings_checked_=true;binding_reset();heal_time_=resolve_time_=power_time_=0;reapply_pending_=false;report("Settings applied. Preferences and shortcuts saved; cheats remain session-only.");
+    };
+    attempt({"god"},[&]{ if(applied_["god"]!=before["god"]) god(applied_["god"].get<bool>()); },[&]{ god(before["god"].get<bool>()); });
+    attempt({"move_fast","move_multiplier"},[&]{
+        if(applied_["move_fast"]!=before["move_fast"] || (applied_["move_fast"]==true && applied_["move_multiplier"]!=before["move_multiplier"])) movement(applied_["move_fast"].get<bool>()); },
+        [&]{ movement(before["move_fast"].get<bool>()); });
+    attempt({"max_shell_points"},[&]{ if(applied_["max_shell_points"]!=before["max_shell_points"]) shell_points(applied_["max_shell_points"].get<bool>()); },[&]{ shell_points(before["max_shell_points"].get<bool>()); });
+    attempt({"auto_heal","infinite_resolve"},[&]{ if(applied_["auto_heal"]==true || applied_["infinite_resolve"]==true) require_player(); },[]{});
+    attempt({"no_cooldown","perfect_parry","perfect_block","perfect_harden"},[&]{ combat_sync(); },[&]{ combat_sync(); });
+    power_sync();
+    // Preferences are a convenience; a failed save never undoes live cheats.
+    try { persist(applied_); } catch(const std::exception& e) { problems_.push_back(std::string("Preferences were not saved: ")+e.what()); }
+    bindings_checked_=true;binding_reset();heal_time_=resolve_time_=power_time_=0;reapply_pending_=false;
+    if(problems_.empty()) { report("Settings applied."); return; }
+    std::string text=problems_.size()==1?problems_.front():"Applied with "+std::to_string(problems_.size())+" problems: ";
+    if(problems_.size()>1) for(size_t i=0;i<problems_.size();++i) text+=(i?"  |  ":"")+problems_[i];
+    report(text);
+    throw std::runtime_error(text);
 }
 void Menu::disable_all() {
     reapply_pending_=false;
@@ -176,9 +189,16 @@ Json Menu::model() {
     enabled["apply_settings"]=has_changes() && !pending_ && !cleanup_required_;
     enabled["discard_changes"]=has_changes() && !pending_;
     enabled["disable_all"]=!pending_ && (cleanup_required_ || !powers_.empty() || !combat_hooks_.empty() || !points_saved_.empty() || applied_["max_shell_points"]==true || !saved_.empty() || applied_["auto_heal"]==true || applied_["infinite_resolve"]==true || applied_["god"]==true || applied_["move_fast"]==true);
-    std::string summary=cleanup_required_?"Cleanup needs retry. Use Turn off all cheats.":has_changes()?"Pending edits. Apply settings or Discard changes.":"Settings are applied.";
+    unsigned edits=0;for(auto it=values_.begin();it!=values_.end();++it) if(!applied_.contains(it.key()) || applied_[it.key()]!=it.value()) ++edits;
+    std::string summary=cleanup_required_?"Cleanup needs retry: use Turn off all cheats. ":has_changes()?std::to_string(edits)+(edits==1?" unapplied edit. ":" unapplied edits. "):"";
     unsigned active=0;for(const auto* id:toggle_ids) if(applied_[id]==true) ++active;
-    summary+=" Active cheats: "+std::to_string(active)+".";
+    summary+="Active cheats: "+std::to_string(active);
+    if(!armed_.empty()) summary+=" ("+std::to_string(armed_.size())+" waiting for a seal)";
+    summary+=".";
+    for(const auto& [id,note]:armed_) summary+=" "+note;
+    Json notice=nullptr;
+    if(has_changes() && !pending_ && !cleanup_required_) notice={{"text",std::to_string(edits)+(edits==1?" unapplied edit":" unapplied edits")},{"action","apply_settings"},{"label","Apply settings"}};
+    else if(cleanup_required_) notice={{"text","Cleanup needs retry"},{"action","disable_all"},{"label","Turn off all cheats"}};
     Json confirmations=Json::object();
     for(const auto& action:grants) confirmations[std::string("grant_")+action.id]="Add "+std::to_string(int(values_["grant_amount"].get<double>()))+" "+action.id+"? The game can save this change.";
     confirmations["set_harbinger"]="Set Harbinger level to "+std::to_string(int(values_["harbinger_level"].get<double>()))+"? Progression and achievements can change.";
@@ -190,7 +210,9 @@ Json Menu::model() {
     if(binding_consent()) confirmations["apply_settings"]="Save these shortcuts? Assigned gameplay-shell and health-reduction shortcuts run when pressed in gameplay, without another confirmation. They do not bypass active-cheat or game-state checks.";
     auto display_values=values_;display_values["binding_action"]=binding_action_;
     display_values["binding_key"]=values_["bindings"].value(binding_action_,std::string("none"));
-    return {{"values",display_values},{"options",{{"shell",shells_},{"pickup",pickups_},{"tarstone",tarstones_},{"binding_action",binding_actions()},{"binding_key",binding_key_options()}}},{"enabled",enabled},{"status",summary+" "+status_},{"error",action_error_},{"confirmations",confirmations}};
+    Json out={{"values",display_values},{"options",{{"shell",shells_},{"pickup",pickups_},{"tarstone",tarstones_},{"binding_action",binding_actions()},{"binding_key",binding_key_options()}}},{"enabled",enabled},{"status",summary+" "+status_},{"error",action_error_},{"confirmations",confirmations}};
+    if(!notice.is_null()) out["notice"]=notice;
+    return out;
 }
 void Menu::override_value(const Json& object,const std::string& property,const Json& value) {
     const auto key=std::to_string(identity(object))+":"+property;

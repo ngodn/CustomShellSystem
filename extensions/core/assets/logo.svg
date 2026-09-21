@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="62%">
+      <stop offset="0" stop-color="#1a1610"/>
+      <stop offset="0.7" stop-color="#0a0806"/>
+      <stop offset="1" stop-color="#030302"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e8cf8a"/>
+      <stop offset="0.45" stop-color="#b8893a"/>
+      <stop offset="1" stop-color="#6e4d1c"/>
+    </linearGradient>
+    <linearGradient id="gold2" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0dca0"/>
+      <stop offset="0.5" stop-color="#c49a48"/>
+      <stop offset="1" stop-color="#7a5620"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#55504a"/>
+      <stop offset="1" stop-color="#1d1a16"/>
+    </linearGradient>
+  </defs>
+  <!-- plate -->
+  <circle cx="256" cy="256" r="248" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="236" fill="none" stroke="#3a2f1c" stroke-width="2"/>
+  <circle cx="256" cy="256" r="224" fill="none" stroke="url(#gold)" stroke-width="5"/>
+  <!-- inner hexagonal shell facet -->
+  <polygon points="256,62 424,159 424,353 256,450 88,353 88,159" fill="none" stroke="#6e5a33" stroke-width="3" opacity="0.9"/>
+  <polygon points="256,86 403,171 403,341 256,426 109,341 109,171" fill="none" stroke="#2c2416" stroke-width="10" opacity="0.8"/>
+  <!-- three shell ribs (the CSS layers) -->
+  <g stroke="url(#gold)" stroke-width="10" stroke-linecap="round" fill="none" opacity="0.95">
+    <path d="M 120 205 Q 256 150 392 205"/>
+    <path d="M 108 256 Q 256 196 404 256"/>
+    <path d="M 120 307 Q 256 246 392 307"/>
+  </g>
+  <!-- the X: two blades -->
+  <path d="M 168 130 L 208 130 L 344 382 L 304 382 Z" fill="url(#gold2)" stroke="#2a1e0c" stroke-width="3"/>
+  <path d="M 344 130 L 304 130 L 168 382 L 208 382 Z" fill="url(#gold)" stroke="#2a1e0c" stroke-width="3"/>
+  <!-- centre rivet -->
+  <circle cx="256" cy="256" r="18" fill="url(#steel)" stroke="#e0c380" stroke-width="3"/>
+  <circle cx="256" cy="256" r="6" fill="#f0dca0"/>
+</svg>

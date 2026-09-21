@@ -3,6 +3,7 @@
 #include "manifest.hpp"
 #include "controls.hpp"
 #include "storage.hpp"
+#include "writer.hpp"
 #include "settings.hpp"
 #include "frame_stats.hpp"
 #include <fstream>
@@ -94,6 +95,23 @@ int main() {
     auto raw=newest_of(ring.data(),ring.capacity,ring.head(),ring.total(),64);
     check(raw.size()==64 && raw.back()==hz/60,"raw view matches");
     check(summarize({},hz).count==0,"empty summary safe");
+
+    // Background writer: replace coalesces, append rotates, drain waits.
+    {
+        Writer writer;
+        for(int i=0;i<50;++i) writer.replace(root/"runtime/status.json",std::to_string(i));
+        writer.drain();
+        std::ifstream in(root/"runtime/status.json");std::string last;in>>last;
+        check(last=="49" && !fs::exists(root/"runtime/status.json.tmp"),"replace writes the newest bytes atomically");
+        for(int i=0;i<40;++i) writer.append(root/"logs/x.jsonl",std::string(20,'a')+"\n",256,2);
+        writer.drain();
+        check(fs::exists(root/"logs/x.jsonl.1") && fs::exists(root/"logs/x.jsonl.2") && fs::file_size(root/"logs/x.jsonl")<=256,"append rotates at the byte limit");
+        check(writer.failures()==0 && writer.queued()==0,"writer reports no failures");
+        Storage queued(root,LogPolicy{256,2});queued.set_writer(&writer);
+        queued.log("cssx","info","queued line");writer.drain();
+        std::ifstream log(root/"logs/cssx.jsonl");std::string all((std::istreambuf_iterator<char>(log)),std::istreambuf_iterator<char>());
+        check(all.find("queued line")!=std::string::npos,"storage log goes through the writer");
+    }
 
     fs::remove_all(root);
     std::cout<<checks<<" runtime checks passed\n";
