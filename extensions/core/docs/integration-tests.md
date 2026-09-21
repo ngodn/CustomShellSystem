@@ -32,11 +32,12 @@ stated. Release is gated on every row being a pass.
 | Keyboard/controller glyphs follow the game's bindings | diagnostics `bindings`, screenshot 13 | Pass for keyboard glyphs; controller glyph rendering not yet seen |
 | Controller navigation in the page (D-pad, sticks, A/B, triggers) | user test | Not yet confirmed |
 | Hotkey F6 / L3+R3 opens on the CSSX tab, closes from it | dev `menu.hotkey` path pass; real key press | Pass for opening: single "Hotkey: opening" log lines at 16:36 and 19:56 outside any tool run are real presses. Closing from another tab switches back instead (by design) |
-| Logo in library/settings header, banner + performance line on the CSSX entry, performance row in settings | screenshots `20-22` (next launch) | Not yet |
-| Notice strip shows unapplied edits and applies from any section | screenshot `23` (next launch) | Not yet |
+| Logo in library header, banner + performance line on the CSSX entry | screenshots `20-21` | Pass 2026-09-22 |
+| Notice strip shows unapplied edits and applies from any section | screenshot `23` | Pass 2026-09-22 (strip visible; Apply through the strip not yet clicked by hand) |
+| Live core switch does not crash the game | four switches in one session (rc1, diagnostic, cache-free, glyph build) | Pass 2026-09-22 |
 | Back on library closes the Player Menu; Back inside an extension returns | dev `menu.key close` | Pass |
 | Menu instance replaced by travel: tab dropped and re-attached | beacon travel with the menu closed and open | Not yet |
-| Repeated open/close without leaks | `tools/menu_stress.py --cycles 3` (during the user's play; 30 cycles pending an idle window) | Pass 3/3, menu and game menu closed afterwards, 33 widgets per page, 6 ms mean rebuild |
+| Repeated open/close without leaks | `tools/menu_stress.py --cycles 10` | Pass 10/10 (2026-09-22), 51 rebuilds at 3 ms, 34 widgets, menu and game menu closed afterwards |
 | Mouse: rows, buttons, slider drag, picker rows | user test | Not yet |
 | Text entry (search field) | user test | Not yet |
 
@@ -46,7 +47,8 @@ stated. Release is gated on every row being a pass.
 | --- | --- | --- |
 | Model validates against menu.json schema 2 | host test + live `model` | Pass |
 | Draft does not touch gameplay; Apply enables God; Disable all restores | `tools/cheat_check.py` | Pass 2026-09-22 (6/6, pawn damageable afterwards) |
-| Every reversible control audited live (God, movement, damage target, auto heal, heal, infinite resolve, resolve, shell points, no cooldown, seal cheats armed, powers, lists, revive, shortcuts, confirmations) | `tools/cheat_audit.py` (runs from `work/live/on_launch.sh` at the next launch) | Not yet |
+| Every reversible control audited live (God, movement, damage target, auto heal, heal, infinite resolve, resolve, shell points, no cooldown, seal cheats armed, powers, lists, revive, shortcuts, confirmations) | `tools/cheat_audit.py` (`work/live/audit/cheat-audit-1.json`) | 31/33 on 2026-09-22; the two fails were audit bugs (measured body instead of shell health; counted an amount field as an action), both fixed. Movement off had crashed the game before the bridge fix (in-place struct writes); verified clean afterwards with repeated struct reads |
+| Damage to target acts on shell health first | manual read of GetShellHealth before/after | Pass (130.9 → 65.4 → healed 130.9) |
 | No cooldown with abilities lacking a cooldown field; Apply with one failing feature | host tests (`cssx_cheat_menu`) | Pass 2026-09-22 (missing-field text fixed; per-feature apply; armed seal cheats) |
 | Confirmation before persistent grants | screenshot 10, cancelled | Pass |
 | Shell picker lists the live catalog | screenshot 11 | Pass |
@@ -61,4 +63,4 @@ See `performance.md`. Rows A/B need MangoHud or the loader-only row; rows C, D, 
 | Check | How | Last result |
 | --- | --- | --- |
 | No disk write on the game thread for status/logs | code: `Writer` thread; host test `cssx_runtime` (replace/append/rotate/drain) | Pass 2026-09-22 (host) |
-| Hitch attribution: core share at hitch frames | `tools/hitches.py` (next launch, two 60 s windows) | Not yet |
+| Hitch attribution: core share at hitch frames | `tools/hitches.py` (`work/live/audit/hitches-steady-1.json`) | Pass 2026-09-22: 60 s of play, 2642 frames, 0 hitches, max frame 37 ms, p99 29.7 ms, 44 fps, core 129 µs mean, largest core frame 2.1 ms |

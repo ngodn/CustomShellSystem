@@ -137,7 +137,23 @@ Idle after the changes (cheats off, menu closed, 40 s): core tick 121 µs
 mean / 384 µs p99 per frame, extension ticks 12 µs mean, menu 2 µs. Loader
 ring in the same window: median 23.4 ms, p99 38.7 ms, 41.9 Hz.
 
-### 2026-09-22 game-thread disk I/O audit (code evidence, live numbers pending the next launch)
+### 2026-09-22 live results after the disk I/O change
+
+Steady state while the user played (60 s, cheats off, menu closed, writer
+thread on): 2642 frames, median 23.24 ms, p99 29.69 ms, max 37.4 ms, 44.0
+fps, **0 hitch frames** (none above twice the median). Core share: 129 µs
+mean, 2.1 ms worst frame. Raw: `work/live/audit/hitches-steady-1.json`.
+Compare the earlier idle figure (core 121 µs) and the D row (p99 38 ms):
+same average, and the periodic stalls are gone from the window.
+
+Two crashes found and fixed the same day by live bisect (loader alone ran;
+core switched live between builds): a weak-reference cache for reflected
+path lookups killed the game within a second (removed), and the bridge's
+whole-struct write through a temporary copy freed the Movement struct's map
+storage so the next read crashed (non-plain-data properties are now written
+in place). Neither was a frame-rate issue; both were correctness.
+
+### 2026-09-22 game-thread disk I/O audit (code evidence)
 
 What ran on the game thread and could stall it, found by reading every write
 path (`grep ofstream|FlushFileBuffers|MoveFileEx`):

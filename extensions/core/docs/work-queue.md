@@ -2,6 +2,16 @@
 
 Newest first. Each entry says what is done, what evidence exists and what is next.
 
+2026-09-22 (live session, later): Three failed launches traced by bisect
+to the new path-lookup cache (removed) and then a crash in Movement off
+traced through the dev channel's last request to the bridge's struct write
+(now in place). Live results: 10/10 menu stress, Cheat Menu audit 31/33
+(both fails were audit bugs), Movement on/off clean, 0 hitches in 60 s of
+play with core 129 µs mean, logo/banner/notice strip on screen. Four live
+core switches in one session without a crash. Open: physical controller
+navigation report from the user, beacon travel re-attach, cheats-on row,
+then rc2 tag and ZIPs.
+
 2026-09-22 (hitches, UX, Cheat Menu): User still sees random drops after the
 controlled pair, plus Cheat Menu failures and no logo. Found and fixed: the
 5 s status write did an fsync on the game thread (now a background writer,
