@@ -1,0 +1,68 @@
+--- a/tools/package_seduxtress.py
++++ b/tools/package_seduxtress.py
+@@ -16,7 +16,6 @@
+ import subprocess
+ import sys
+ import tempfile
+-import time
+ from PIL import Image
+ 
+ PROJECT_ROOT = Path("/home/eins0fx/development/mods/msII")
+@@ -48,6 +47,7 @@
+     parser.add_argument('--candidate-only', action='store_true', help='Keep the verified trio in work without replacing dist or installing')
+     parser.add_argument('--candidate-output', type=Path, help='Unused workspace directory for this candidate trio')
+     parser.add_argument('--install', action='store_true', help='Install the verified trio with a backup; requires the game closed')
++    parser.add_argument('--windows-root', required=True, help='Intended absolute Windows staging/extraction root for full-path validation')
+     parser.add_argument('--nextgen', action='store_true', help='Package the checked fitted candidate, material plan and generated controls')
+     parser.add_argument('--cook-output', type=Path, help='Existing workspace cook output')
+     parser.add_argument('--material-plan', type=Path, default=MOD_DIR / 'work/material-stage-bind-v14/plan.json')
+@@ -64,6 +64,39 @@
+     for path in (cook_out, args.material_plan, args.metadata):
+         if not path.resolve().is_relative_to(PROJECT_ROOT):
+             parser.error('Cook, material and metadata inputs must stay inside the workspace')
++    sys.path.insert(0, str(CSS_DIR / 'tools'))
++    from css_paths import component, package_path, output_path, windows_destination
++    # Run before creating, deleting or copying staging files.
++    component(stem)
++    if not args.nextgen:
++        raise ValueError('The historical default uses CSSAuthoring assets; use a migrated --nextgen plan')
++    plan = json.loads(args.material_plan.read_text())
++    packages = [line.strip() for line in (args.material_plan.parent / 'packages.txt').read_text().splitlines()
++                if line.strip() and not line.lstrip().startswith('#')]
++    packages += [entry['package'] for entry in plan['materials']]
++    packages.append(plan['mesh'])
++    for package in packages:
++        package_path(package)
++        relative = 'MortalShell2/Content/' + package.removeprefix('/Game/') + '.uasset'
++        windows_destination(args.windows_root, relative)
++        output_path(WORK_DIR / 'stage' / relative)
++        output_path(cook_out / 'CSSAuthoring/Content' / (package.removeprefix('/Game/') + '.uasset'))
++    for file in args.metadata.rglob('*'):
++        if file.is_file():
++            relative = file.relative_to(args.metadata)
++            for part in relative.parts:
++                component(part)
++            windows_destination(args.windows_root, str(Path('MortalShell2/Content/CSS/Packages') / pkg_id / relative))
++            output_path(WORK_DIR / 'stage_pak/MortalShell2/Content/CSS/Packages' / pkg_id / relative)
++            if file.suffix == '.json':
++                # Check object paths in catalog/recipes, not authoring filesystem evidence.
++                import re
++                for match in re.findall(r'/Game/(?:CSS|CSSAuthoring)/[A-Za-z0-9_/.]+', file.read_text()):
++                    package_path(match.split('.')[0])
++    for suffix in ('.pak', '.utoc', '.ucas'):
++        output_path(DIST_DIR / (stem + suffix))
++        windows_destination(args.windows_root, stem + '/' + stem + suffix)
++
+     WORK_DIR.mkdir(parents=True, exist_ok=True)
+     DIST_DIR.mkdir(parents=True, exist_ok=True)
+     temporary = WORK_DIR / 'tmp'
+@@ -481,7 +514,8 @@
+         return
+ 
+     # Preserve the prior distribution until the candidate passes every check.
+-    backup = WORK_DIR / f'previous-dist-{time.time_ns()}'
++    from css_paths import new_directory
++    backup = new_directory(WORK_DIR, 'previous') / 'dist'
+     if RELEASE_DIR.exists():
+         RELEASE_DIR.rename(backup)
+     try:

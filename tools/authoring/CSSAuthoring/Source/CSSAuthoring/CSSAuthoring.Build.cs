@@ -11,6 +11,7 @@ public class CSSAuthoring : ModuleRules
             "Core", "CoreUObject", "Engine", "UnrealEd", "Json",
             "AssetRegistry", "MeshDescription", "SkeletalMeshDescription",
             "TargetPlatform", "DesktopPlatform", "AudioPlatformConfiguration", "RHI", "RenderCore",
+            "ControlRig", "ControlRigDeveloper", "RigVM", "RigVMDeveloper",
             "ClothingSystemEditor", "ClothingSystemEditorInterface", "ClothingSystemRuntimeCommon", "ChaosCloth"
         });
         PrivateIncludePathModuleNames.Add("TextureCompressor");

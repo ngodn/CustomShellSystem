@@ -1,0 +1,115 @@
+--- a/Source/CSSAuthoring/CSSCookAssetsCommandlet.cpp
++++ b/Source/CSSAuthoring/CSSCookAssetsCommandlet.cpp
+@@ -27,6 +27,7 @@
+ #include "Misc/FileHelper.h"
+ #include "Misc/PackageName.h"
+ #include "Misc/Paths.h"
++#include "Internationalization/Regex.h"
+ #include "Misc/ScopeExit.h"
+ #include "UObject/GarbageCollection.h"
+ #include "UObject/Package.h"
+@@ -34,6 +35,28 @@
+ #include "UObject/UObjectGlobals.h"
+ 
+ DEFINE_LOG_CATEGORY_STATIC(LogCSSCookAssets, Log, All);
++
++// New production candidates use short CSS packages. Historical cooks stay on disk.
++static bool CSSPortablePackage(const FString& Package)
++{
++    if (!Package.StartsWith(TEXT("/Game/CSS/")) || Package.Len() > 96 ||
++        !FPackageName::IsValidLongPackageName(Package)) return false;
++    TArray<FString> Parts;
++    Package.ParseIntoArray(Parts, TEXT("/"), false);
++    const FRegexPattern Hash(TEXT("[0-9a-fA-F]{16,}"));
++    const FRegexPattern Readable(TEXT("^[A-Za-z0-9_]{1,48}$"));
++    for (int32 Index = 1; Index < Parts.Num(); ++Index)
++    {
++        FRegexMatcher HashMatch(Hash, Parts[Index]);
++        FRegexMatcher NameMatch(Readable, Parts[Index]);
++        const FString Upper = Parts[Index].ToUpper();
++        if (!NameMatch.FindNext() || HashMatch.FindNext() ||
++            Upper == TEXT("CON") || Upper == TEXT("PRN") || Upper == TEXT("AUX") || Upper == TEXT("NUL") ||
++            (Upper.Len() == 4 && (Upper.StartsWith(TEXT("COM")) || Upper.StartsWith(TEXT("LPT"))) &&
++             Upper[3] >= '1' && Upper[3] <= '9')) return false;
++    }
++    return true;
++}
+ 
+ UCSSCookAssetsCommandlet::UCSSCookAssetsCommandlet()
+ {
+@@ -86,6 +109,15 @@
+         UE_LOG(LogCSSCookAssets, Error, TEXT("A readable package list and unused output directory are required."));
+         return 1;
+     }
++    // The actual destination/extraction root matters, even when cooking on Linux.
++    FString WindowsRoot;
++    if (!FParse::Value(*Params, TEXT("WindowsRoot="), WindowsRoot) ||
++        WindowsRoot.Len() < 3 || !FChar::IsAlpha(WindowsRoot[0]) || WindowsRoot[1] != ':' ||
++        (WindowsRoot[2] != '/' && WindowsRoot[2] != '\\'))
++    {
++        UE_LOG(LogCSSCookAssets, Error, TEXT("Provide -WindowsRoot=C:/... for the intended cook/staging extraction root."));
++        return 1;
++    }
+     Output = FPaths::ConvertRelativePathToFull(Output);
+     if (IFileManager::Get().DirectoryExists(*Output) || IFileManager::Get().FileExists(*Output))
+     {
+@@ -97,10 +129,17 @@
+     {
+         PackageName.TrimStartAndEndInline();
+         if (PackageName.IsEmpty() || PackageName.StartsWith(TEXT("#"))) continue;
+-        if ((!PackageName.StartsWith(TEXT("/Game/CSSAuthoring/")) && !PackageName.StartsWith(TEXT("/Game/CSS/"))) ||
+-            !FPackageName::IsValidLongPackageName(PackageName))
+-        {
+-            UE_LOG(LogCSSCookAssets, Error, TEXT("Only explicit /Game/CSSAuthoring/ or /Game/CSS/ packages are allowed: %s"), *PackageName);
++        if (!CSSPortablePackage(PackageName))
++        {
++            UE_LOG(LogCSSCookAssets, Error, TEXT("Use short readable /Game/CSS/ packages without hash folders: %s"), *PackageName);
++            return 1;
++        }
++        const FString Relative = TEXT("CSSAuthoring/Content/") + PackageName.Mid(6) + TEXT(".uasset");
++        const FString Source = FPackageName::LongPackageNameToFilename(PackageName, TEXT(".uasset"));
++        if (FPaths::ConvertRelativePathToFull(Source).Len() > 240 ||
++            (Output / Relative).Len() > 240 || (WindowsRoot / Relative).Len() > 240)
++        {
++            UE_LOG(LogCSSCookAssets, Error, TEXT("Source, cook or Windows destination exceeds the 240-character budget: %s"), *PackageName);
+             return 1;
+         }
+         const FString ObjectPath = PackageName + TEXT(".") + FPackageName::GetShortName(PackageName);
+@@ -133,6 +172,37 @@
+     {
+         UE_LOG(LogCSSCookAssets, Error, TEXT("The package list is empty."));
+         return 1;
++    }
++
++    // Include hard and soft package dependencies. A renamed mesh still referring
++    // to the old skeleton/material paths is not a completed migration.
++    IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
++    Registry.SearchAllAssets(true);
++    TArray<FName> Pending;
++    for (const FString& Package : Validated) Pending.Add(FName(*Package));
++    TSet<FName> Visited;
++    while (!Pending.IsEmpty())
++    {
++        const FName Current = Pending.Pop();
++        if (Visited.Contains(Current)) continue;
++        Visited.Add(Current);
++        TArray<FName> Dependencies;
++        if (!Registry.GetDependencies(Current, Dependencies, UE::AssetRegistry::EDependencyCategory::Package))
++        {
++            UE_LOG(LogCSSCookAssets, Error, TEXT("Cannot inspect dependencies of %s"), *Current.ToString());
++            return 1;
++        }
++        for (FName Dependency : Dependencies)
++        {
++            const FString Path = Dependency.ToString();
++            if (!Path.StartsWith(TEXT("/Game/CSS/")) && !Path.StartsWith(TEXT("/Game/CSSAuthoring/"))) continue;
++            if (!CSSPortablePackage(Path))
++            {
++                UE_LOG(LogCSSCookAssets, Error, TEXT("Unmigrated CSS dependency: %s -> %s"), *Current.ToString(), *Path);
++                return 1;
++            }
++            Pending.Add(Dependency);
++        }
+     }
+ 
+     const int32 InitialErrors = GWarn->GetNumErrors();

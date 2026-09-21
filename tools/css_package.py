@@ -5,12 +5,11 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
-import tempfile
-import time
 import zipfile
 
 from css import GAME, ROOT, atomic, copy_verified, processes
 from css_convert import DEFAULT_REPAK, PACKAGE_ROOT, digest, png_info
+from css_paths import new_directory, temporary_directory
 
 
 def verify(directory: Path, repak: Path = DEFAULT_REPAK) -> dict:
@@ -21,7 +20,7 @@ def verify(directory: Path, repak: Path = DEFAULT_REPAK) -> dict:
     expected={pak.with_suffix(suffix).name for suffix in ('.pak','.utoc','.ucas')}
     if {p.name for p in directory.iterdir()}!=expected:
         raise ValueError(f'Package directory must contain exactly the matching three files: {directory}')
-    with tempfile.TemporaryDirectory(prefix='css-verify-') as temporary:
+    with temporary_directory(ROOT/'work/tmp', 'verify') as temporary:
         unpacked=Path(temporary)
         subprocess.run([str(repak),'unpack',str(pak),'--output',str(unpacked)],check=True,stdout=subprocess.DEVNULL)
         manifests=list((unpacked/PACKAGE_ROOT).glob('*/manifest.json'))
@@ -68,7 +67,7 @@ def release_zip(directory: Path, output: Path, repak: Path = DEFAULT_REPAK) -> P
     if any(p.is_symlink() for p in directory.iterdir()):
         raise ValueError('Release package members must be regular files, not symlinks')
     output.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix='.css-release-', dir=output.parent) as temporary:
+    with temporary_directory(output.parent, 'release') as temporary:
         root = Path(temporary)
         snapshot = root / stem
         shutil.copytree(directory, snapshot)
@@ -147,8 +146,7 @@ def install(directories: list[Path], game: Path, migrate: bool, repak: Path, rep
         for name in ('BeauteGenessa_P','BeauteKnightLady_P'):
             retiring.extend(paks/(name+s) for s in ('.pak','.utoc','.ucas'))
     retiring=list(dict.fromkeys(p for p in retiring if p.exists()))
-    backup=ROOT/'backups'/f'packages-{time.time_ns()}'
-    backup.mkdir(parents=True)
+    backup=new_directory(ROOT/'backups', 'packages')
     records=[]
     for index,source in enumerate(retiring):
         saved=backup/f'{index:02d}-{source.name}'

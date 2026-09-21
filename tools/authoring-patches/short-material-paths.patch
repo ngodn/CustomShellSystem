@@ -1,0 +1,19 @@
+--- a/tools/stage_nextgen_materials.py
++++ b/tools/stage_nextgen_materials.py
+@@ -31,12 +31,10 @@
+ 
+ 
+ def alias(slot, old):
+-    leaf = old.rsplit('/', 1)[1]
+-    budget = len(old) - len('/Game/CSS//') - len(leaf)
+-    if budget < 12:
+-        raise ValueError('Insufficient package namespace')
+-    tag = hashlib.shake_256(f'seduxtress-nextgen-v1:{slot}:{old}'.encode()).hexdigest(budget)[:budget]
+-    return '/Game/CSS/' + tag + '/' + leaf
++    raise RuntimeError(
++        'Historical fixed-length material relocation is retired: it generates hash folders. '
++        'Use short /Game/CSS/ names with serialized reference rebuild/readback. '
++        'See CustomShellSystem/docs/development/asset-path-policy.md')
+ 
+ 
+ def verified_image(directory, entry):
