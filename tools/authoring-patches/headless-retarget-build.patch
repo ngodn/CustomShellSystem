@@ -1,0 +1,11 @@
+--- a/Source/CSSAuthoring/CSSAuthoring.Build.cs
++++ b/Source/CSSAuthoring/CSSAuthoring.Build.cs
+@@ -14,7 +14,7 @@
+             "Core", "CoreUObject", "AssetTools", "Engine", "PhysicsCore", "UnrealEd", "Json", "JsonUtilities",
+             "AssetRegistry", "MeshDescription", "SkeletalMeshDescription",
+             "TargetPlatform", "DesktopPlatform", "AudioPlatformConfiguration", "RHI", "RenderCore",
+-            "AnimGraph", "AnimGraphRuntime", "BlueprintGraph", "KismetCompiler",
++            "IKRig", "AnimationBlueprintLibrary", "AnimGraph", "AnimGraphRuntime", "BlueprintGraph", "KismetCompiler",
+             "ControlRig", "ControlRigDeveloper", "RigVM", "RigVMDeveloper",
+             "ClothingSystemEditor", "ClothingSystemEditorInterface", "ClothingSystemRuntimeCommon", "ChaosCloth", "Chaos"
+         });

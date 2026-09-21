@@ -3,10 +3,6 @@ import argparse
 import json
 from pathlib import Path
 
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from matplotlib.animation import FFMpegWriter
 import numpy as np
 
 
@@ -69,6 +65,11 @@ def pose(data, selected, seconds):
 
 
 def main():
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    from matplotlib.animation import FFMpegWriter
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('work', type=Path)
     parser.add_argument('--video', action='store_true')

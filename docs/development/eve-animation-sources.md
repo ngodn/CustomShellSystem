@@ -1,7 +1,7 @@
 # Eve animation sources and gameplay boundaries
 
-2026-09-21. This milestone prepares source animation keys and identifies the
-gameplay boundaries for expanded locomotion. No new animation is installed.
+2026-09-21. Source keys and the first offline walk/idle retarget candidates are
+prepared. No new animation is installed.
 The accepted V44 rig, original proportions, hair 200/24, body dynamics and
 -3 cm grounding remain unchanged. CSSX remains disabled.
 
@@ -120,7 +120,78 @@ poses; Peaceful Idle02 includes a broad arm-opening gesture. The joint preview
 cannot establish how Eve's skin, outfit, heels, fingers or secondary motion will
 look. It is not gameplay or animation acceptance.
 
-Next: select and retarget source motion onto the accepted CSS bind pose without
-changing proportions; evaluate actual skinned motion in the editor, author the
-beacon pair, then connect modder metadata, saved choices, contextual UI and
-runtime cancellation/weapon restoration. Full release acceptance remains open.
+## First fitted-mesh candidates
+
+Evidence is under `work/anim2/`. `Proto_Walk` and `P_Eve_Peaceful_Idle01` now
+retarget through Unreal 5.6.1 onto `SK_BlackPearl2`, using its accepted mesh
+bind pose. The source rig contains 54 body/finger bones with their original
+parent hierarchy and local reference transforms. It omits mirrored accessory
+helpers, not body proportions. An initial 314-bone selection was rejected by
+the importer's positive-scale guard; do not weaken that guard. CSS retains its
+own secondary-motion rig.
+
+Twenty named chains map spine, head, clavicles, arms, legs, toes and fingers.
+Target reference alignment uses the engine's automatic alignment. Outputs
+`/Game/CSS/AnimLab/RT_Walk` and `RT_Idle` explicitly set their retarget source to
+the fitted target mesh. Do not substitute the shared Skeleton's reference
+rotations, which would reopen the earlier hand-binding problem.
+
+The editor's `IKRetargetBatchOperation.duplicate_and_retarget` is unsuitable
+for this headless commandlet: its completion path accesses Slate and crashed
+with `CurrentApplication.IsValid()`. This was an offline editor crash, not a
+game crash. `CSSAnimationLibrary` uses the pinned engine's pose processor
+directly and never invokes the UI completion path. It accepts bone-only,
+non-additive clips at rate 1, rejects curves, attributes, notifies and speed
+planting, refuses existing output packages, and never saves assets itself.
+The local 5.6.1 implementation is authoritative; newer API documentation has
+different signatures. Epic describes the necessary external source-scale
+step in [ScaleSourcePose](https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/IKRig/FIKRetargetProcessor/ScaleSourcePose?application_version=5.6).
+
+Tool files under `tools/authoring-probes/animations/`:
+
+- `prepare_eve.py` recreates the 54-bone import payload and original-time samples.
+  Its outputs match the initial prepared JSON exactly (`preparation-result.json`).
+- `CSSAnimationLibrary.h/.cpp` are copied into the editor project's
+  `Source/CSSAuthoring/`. Apply `tools/authoring-patches/headless-retarget-build.patch`
+  there to add IKRig and AnimationBlueprintLibrary dependencies. The existing
+  editor project uses C++20. The final build exits 0.
+- `retarget_eve.py` creates private rigs, imports source sequences, converts
+  and saves the two candidates, and samples all frames. Its optional
+  `resume.json` permits only explicitly hashed assets left by an interrupted
+  preparation. It refuses an already completed batch.
+- `verify_eve.py` reloads both saved clips in a fresh editor process and repeats
+  both conversions without saving the repeats. All 37 walk and 211 idle frames,
+  including 388 evaluated bones, match the earlier raw poses exactly.
+- `render_eve.py` replays those transforms on the V45C source blend, preserves
+  authored fit shapes, and checks all 379 bones against the engine transforms.
+  It never saves the blend. Maximum observed replay position error is below
+  0.00064 cm; the reported quaternion-angle error is zero at Blender precision.
+
+The helper initially checked the animation's cached sampled-key count inside
+an open edit bracket. That cache updates later. The corrected guard reads the
+data model's key count directly. Retarget and fresh readback commandlets exit 0;
+the remaining warnings are blocked writes to the host Epic configuration,
+which is intentionally read-only. Engine user data, logs and scratch remain in
+the workspace.
+
+Loop endpoint differences are below 0.000071 cm / 0.087 degrees for walk and
+0.00223 cm / 0.007 degrees for idle, including virtual bones. These are endpoint
+checks, not guarantees of smooth velocity or planted feet. Review videos retain
+the original 1.2-second and 7-second durations at 10 fps; the repeated endpoint
+image is excluded from encoding. See `walk-review.mp4`, `idle-review.mp4` and
+`motion-review.json`.
+
+Reviewed stills show a recognizable walking sway and the idle's relaxed turn
+with a hand resting near the opposite arm. This is preliminary visual review.
+The solid-material renderer does not reproduce body/foot opacity masks, so
+bare-foot surfaces appear through the shoes. Hair is rigid because secondary
+motion is not evaluated. Neither artifact proves a defect in the installed mod.
+Do not accept heels, hair, finger contacts or game integration from these views.
+The protected production mesh and shared Skeleton remain byte-identical.
+
+Next: bring the preview's visibility and secondary motion into agreement with
+the game, inspect hand/heel contact and full motion from more angles, extend the
+candidate set to jog/sprint, then validate compressed/cooked playback. Author
+the beacon pair and connect modder metadata, saved choices, contextual UI and
+runtime cancellation/weapon restoration. No game restart or runtime write was
+needed for this checkpoint. Full release acceptance remains open.
