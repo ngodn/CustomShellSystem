@@ -537,3 +537,28 @@ Release provenance note: the supplied PDF lists CC BY-NC-ND 4.0 on page 3.
 Record the author's applicable permissions before distributing derived source
 assets or a starter kit. This inspection establishes the local document's
 contents, not a legal conclusion about the user's separate author agreement.
+
+
+## I1 custom idle creation checkpoint (2026-09-21)
+
+Paused for the user's CSSX-agent handoff request. work/anim15 contains a fitted
+P_Eve_Peaceful_Idle01 candidate, seven seconds at 30 fps. The reusable
+fit_leg_trajectories.py reproduces all 19 accepted S1 movement documents exactly
+after their existing phase shifts. For idle it changes only six leg rotations;
+the combined lateral foot span changes from 34.093 to 20.537 cm. Original local
+translations/scales, other tracks and proportions remain untouched. The solver
+accepts existing near-unit bind rounding below 0.0001; it does not support
+arbitrarily scaled rigs. The largest raw loop endpoint angle is 0.0071 degrees.
+
+The UE creation command exited zero. idle_eve.py creates RT_I1_Idle privately
+and AN_I1_Idle plus BS_I1_Idle under /Game/CSS/Eve/Anim. Both sequences pass
+211-frame raw comparisons over 379 bones, and the carrier's sampled asset/rate
+checks pass. All pre-existing CSS asset hashes remain unchanged. This is a
+creation checkpoint, not cooked or live acceptance. Fresh readback, timed
+component playback and visual review are pending. No native runtime change or
+game deployment was made. Weapon hiding/restoration and playback integration
+remain required. Do not reuse the old V2 carrier equivalence failure as a pass.
+
+Evidence: work/anim15/create-exit.json, create-result.json, protected.json,
+trajectory-report.json and regression-result.json. The authoring scripts are
+in tools/authoring-probes/animations. The published alpha remains installed.
