@@ -6,13 +6,15 @@
 #endif
 
 namespace cssx {
-Writer::Writer():thread_([this]{ run(); }) {}
+Writer::Writer() {}
+void Writer::start() { if(!thread_.joinable()) thread_=std::thread([this]{ run(); }); }
 Writer::~Writer() {
     { std::lock_guard lock(mutex_); stop_=true; }
     wake_.notify_all();
     if(thread_.joinable()) thread_.join();
 }
 void Writer::replace(fs::path path,std::string bytes) {
+    if(!running()) { replace_now(path,bytes); return; }
     { std::lock_guard lock(mutex_); if(stop_) return;
       // Coalesce: a newer replace of the same file supersedes a queued one.
       for(auto& job:jobs_) if(!job.append && job.path==path) { job.bytes=std::move(bytes); return; }
@@ -20,10 +22,12 @@ void Writer::replace(fs::path path,std::string bytes) {
     wake_.notify_one();
 }
 void Writer::append(fs::path path,std::string bytes,size_t max_bytes,unsigned backups) {
+    if(!running()) { append_now(path,bytes,max_bytes,backups); return; }
     { std::lock_guard lock(mutex_); if(stop_) return; jobs_.push_back({std::move(path),std::move(bytes),max_bytes,backups,true}); }
     wake_.notify_one();
 }
 void Writer::drain() {
+    if(!running()) return;
     std::unique_lock lock(mutex_);
     idle_.wait(lock,[this]{ return jobs_.empty() && running_==0; });
 }

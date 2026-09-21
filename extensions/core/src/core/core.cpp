@@ -16,7 +16,12 @@ Core::Core(const CssxLoaderHost& host):host_(host),root_(host.root),mods_root_(h
     std::string note;
     settings_=Settings::load(root_/"settings.json",&note);
     if(!note.empty()) log("info",note);
-    storage_.set_writer(&writer_);   // log appends never block the game thread
+    // Diagnostic switches (dev/*.txt) isolate the two per-frame mechanisms.
+    { std::error_code ec;
+      const bool no_writer=fs::exists(root_/"dev/no-writer.txt",ec), no_cache=fs::exists(root_/"dev/no-find-cache.txt",ec);
+      engine::set_find_cache(!no_cache);
+      if(!no_writer) { writer_.start(); storage_.set_writer(&writer_); }   // log appends never block the game thread
+      log("info","Core switches",{{"writer_thread",!no_writer},{"find_cache",!no_cache}}); }
     hotkey_down_.assign(2,true);   // require a release before the first open
     bridge_=std::make_unique<Bridge>(host.hooks);
     hud_.set_logger([this](const std::string& m){ log("warning",m); });
@@ -24,6 +29,7 @@ Core::Core(const CssxLoaderHost& host):host_(host),root_(host.root),mods_root_(h
     dev_=std::make_unique<DevChannel>(root_,[this](const Json& r){ return dev_request(r); });
     log("info","CSSX core " CSSX_VERSION " created",{{"dev_channel",dev_->enabled()},{"loader",host.loader_version?host.loader_version:""}});
 }
+void Core::report_tick_failure(const std::string& what) { try { log("error","Core tick failed: "+what); } catch(...) {} if(host_.log) host_.log(("error: core tick failed: "+what).c_str()); }
 void Core::log(const std::string& level,const std::string& message,const Json& fields) {
     try { storage_.log("cssx",level,message,fields); } catch(...) {}
     if(level=="error" || level=="warning") host_.log((level+": "+message).c_str());
@@ -272,7 +278,14 @@ void* create(const CssxLoaderHost* host) {
     catch(const std::exception& e) { if(host && host->log) host->log((std::string("CSSX core creation failed: ")+e.what()).c_str()); return nullptr; }
     catch(...) { return nullptr; }
 }
-void tick(void* core,void* engine,float delta) { try { static_cast<Core*>(core)->tick(engine,delta); } catch(const std::exception& e) { OutputDebugStringA(e.what()); } catch(...) {} }
+void tick(void* core,void* engine,float delta) {
+    // An exception here would otherwise vanish (OutputDebugString is invisible
+    // under Proton); log each distinct message once through the loader.
+    static std::string last;
+    try { static_cast<Core*>(core)->tick(engine,delta); }
+    catch(const std::exception& e) { if(last!=e.what()) { last=e.what(); static_cast<Core*>(core)->report_tick_failure(last); } }
+    catch(...) { if(last!="unknown") { last="unknown"; static_cast<Core*>(core)->report_tick_failure("non-standard exception"); } }
+}
 int stop(void* core) { try { return static_cast<Core*>(core)->stop()?1:0; } catch(...) { return 0; } }
 void destroy(void* core) { delete static_cast<Core*>(core); }
 const CssxCoreApi api{CSSX_CORE_ABI,sizeof(CssxCoreApi),CSSX_VERSION,create,tick,stop,destroy};

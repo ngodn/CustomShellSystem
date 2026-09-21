@@ -98,7 +98,7 @@ int main() {
 
     // Background writer: replace coalesces, append rotates, drain waits.
     {
-        Writer writer;
+        Writer writer; writer.start();
         for(int i=0;i<50;++i) writer.replace(root/"runtime/status.json",std::to_string(i));
         writer.drain();
         std::ifstream in(root/"runtime/status.json");std::string last;in>>last;

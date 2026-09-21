@@ -24,6 +24,7 @@ public:
     void tick(void* engine,float delta);
     bool stop();
     Json status();
+    void report_tick_failure(const std::string& what);
 private:
     const CssxLoaderHost host_;
     fs::path root_, mods_root_;

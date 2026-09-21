@@ -13,8 +13,10 @@
 namespace cssx {
 class Writer {
 public:
-    Writer();
+    Writer();                                    // no thread yet: every call runs synchronously
     ~Writer();                                   // drains the queue, then joins
+    void start();                                // spawn the worker; calls after this are queued
+    bool running() const { return thread_.joinable(); }
     // Replace `path` with `bytes` through a temp file and rename. No fsync.
     void replace(fs::path path,std::string bytes);
     // Append one record to a log, rotating at `max_bytes` with `backups` copies.

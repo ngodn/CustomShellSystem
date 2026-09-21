@@ -24,6 +24,7 @@ std::string narrow(const std::wstring&);
 // Existing object by full path, or throw.
 UObject* find(const wchar_t* path);
 UObject* find_optional(const wchar_t* path);
+void set_find_cache(bool enabled);   // kept for the core switch log; no cache exists
 // Load an asset by path (blocking on first use), cached by weak handle.
 UObject* load(const std::string& path);
 FProperty* field(UObject* object,const wchar_t* name,size_t size);
