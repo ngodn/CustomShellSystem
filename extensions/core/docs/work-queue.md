@@ -2,6 +2,10 @@
 
 Newest first. Each entry says what is done, what evidence exists and what is next.
 
+2026-09-22 (rc1): Tag `v1.0.0-cssx-rc1` built from a clean worktree into
+`extensions/core/dist/v1.0.0-rc1/` (both ZIPs verified, SHA-256 sidecars). The
+exact release DLLs are staged at the next game exit for the in-game check.
+
 2026-09-22 (later): Controlled MangoHud pair done: CSS alone 22.24 ms median
 / 42.0 fps; with CSSX + Cheat Menu + UI Kit 22.53 ms / 44.4 fps. No
 measurable cost from loading CSSX. Per-op accounting then removed the real
