@@ -2,6 +2,15 @@
 
 Newest first. Each entry says what is done, what evidence exists and what is next.
 
+2026-09-22: Menu moved into the Player Menu as a tab after CSS (user
+decision); library, sections, confirm, picker and settings verified by
+screenshot (`work/screens/05-13`). Hotkey path verified through the dev
+channel; a second raw-keyboard path through UE4SS input added in the loader.
+Migration run with backup. Controlled FPS pair in progress with MangoHud
+(Steam restarted with `MANGOHUD=1`): row B (CSS alone) median 22.2 ms /
+42 fps while playing; row D (CSSX on) recording next. User reports the
+hotkey and controller "not working"; physical confirmation still pending.
+
 2026-09-21 (later): Loader, core, bridge, HUD service, menu, extension runtime,
 settings, dev channel, tools and tests exist and build: Linux host tests pass
 (runtime, cheat menu, lifecycle with ABI 1/2/3 fixtures, tools), Windows

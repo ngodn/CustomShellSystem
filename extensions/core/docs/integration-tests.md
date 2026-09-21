@@ -10,7 +10,8 @@ stated. Release is gated on every row being a pass.
 | --- | --- | --- |
 | Loader starts as its own UE4SS mod beside CSS | `UE4SS.log` shows `Mod 'CSSX' has enabled.txt` and `Mod 'CustomShellSystem'`; `CSSX.log` shows core activated | Pass 2026-09-21 15:35 (dev build) |
 | Core starts with no player yet, then finds the player | `runtime/status.json` player flag after loading | Pass 2026-09-21 |
-| Legacy detection | `status.legacy` fields; activation absent on this machine, stale cheat-menu folder reported as shared id | Pass (detection); migration run not yet |
+| Legacy detection | `status.legacy` fields; activation absent on this machine, stale cheat-menu folder reported as shared id | Pass |
+| Migration (game closed) | `tools/cssx_migrate.py` dry run then perform; backup `Mods/CSSX/backup/20260921T160844Z` | Pass 2026-09-22: 6 moves, 16 stale cssx_core DLLs removed, CSS files untouched, saved Cheat Menu preferences carried over |
 | Dev channel round trip | `tools/cssx.py request '{"op":"status"}'` | Pass |
 | Live core switch while the game runs | stage `--core-only`, watch `CSSX.log` for "Core activated" | Pass ×8 in one session; first attempt needed the watch-path fix (loader now watches the mod root) |
 | Extension load: ABI 3 Cheat Menu | `library` shows available, cost counters advance | Pass |

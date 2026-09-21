@@ -95,6 +95,18 @@ Results table lives below and is empty until the live window happens.
 
 ## Results
 
+### 2026-09-22 controlled pair, MangoHud frame-time log (identical instrument for both rows)
+
+Steam restarted with `MANGOHUD=1` and `MANGOHUD_CONFIGFILE=work/perf/mangohud.conf`
+so every launch gets the same overlay and per-frame log (`log_interval=0`,
+automatic 120 s window starting 120 s after launch). Player free-roaming
+near the same beacon. Raw CSVs: `work/perf/B-css-only-1.csv`, `D-cssx-1.csv`.
+
+| Row | Configuration | Frames | Median ms | p95 ms | p99 ms | Mean fps |
+| --- | --- | --- | --- | --- | --- | --- |
+| B | CSS alpha alone, CSSX `enabled.txt` absent | 5042 (4202 after 20 s) | 22.24 (22.19) | 30.20 | 39.04 | 42.0 |
+| D | B + CSSX dev core + Cheat Menu, menu closed, cheats off | pending | | | | |
+
 ### 2026-09-21 first live session (standalone CSSX dev core, CSS alpha present)
 
 Same save, player standing at a beacon, no input, Player Menu closed, Cheat
