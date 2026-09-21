@@ -9,7 +9,6 @@ namespace cssx {
 using namespace engine;
 namespace {
 int64_t qpc() { LARGE_INTEGER v; QueryPerformanceCounter(&v); return v.QuadPart; }
-int64_t qpc_frequency() { LARGE_INTEGER v; QueryPerformanceFrequency(&v); return v.QuadPart; }
 struct Phase { FrameRing<4096>& ring; int64_t start; Phase(FrameRing<4096>& r):ring(r),start(qpc()) {} ~Phase() { ring.push(qpc()-start); } };
 std::string lower(std::string s) { for(auto& c:s) c=char(std::tolower((unsigned char)c)); return s; }
 }
@@ -122,16 +121,13 @@ void Core::tick(void* engine,float delta) {
             CssxFrame frame; hud_.update(player_,(menu_ && menu_->is_open()) || game_menu_open(),frame); frame.seconds=delta;
             runtime_->render(frame);
         }
-        if(!menu_->is_open() && runtime_) {
-            // The runtime exposes the extension runtime to the menu only once loaded.
-        }
     }
     // Menu: hotkeys sampled at 30 Hz while a player controller exists.
     hotkey_accumulator_+=delta;
     if(player_.pc && hotkey_accumulator_>=1.0/30) {
         hotkey_accumulator_=0;
         bool pressed=false;
-        try { pressed=hotkey_pressed(settings_.open_keyboard,0) | hotkey_pressed(settings_.open_gamepad,1); } catch(...) {}
+        try { const bool keyboard=hotkey_pressed(settings_.open_keyboard,0); const bool gamepad=hotkey_pressed(settings_.open_gamepad,1); pressed=keyboard || gamepad; } catch(...) {}
         if(pressed) {
             if(menu_->is_open()) menu_->close();
             else if(game_menu_open()) log("info","CSSX hotkey ignored while a game menu is open");

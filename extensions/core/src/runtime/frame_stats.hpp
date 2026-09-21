@@ -46,7 +46,7 @@ template<size_t N> class FrameRing {
     volatile uint64_t total_=0;
 public:
     static constexpr uint32_t capacity=uint32_t(N);
-    void push(int64_t ticks) noexcept { values_[head_]=ticks; head_=(head_+1)%capacity; ++total_; }
+    void push(int64_t ticks) noexcept { values_[head_]=ticks; head_=(head_+1)%capacity; total_=total_+1; }
     uint64_t total() const noexcept { return total_; }
     uint32_t head() const noexcept { return head_; }
     const int64_t* data() const noexcept { return values_.data(); }
