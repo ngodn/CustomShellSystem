@@ -1,5 +1,5 @@
 """UE 5.6.1: build the source-fitted Eve idle and validate its timed carrier."""
-import hashlib,json,math,os
+import hashlib,json,math,os,re
 from pathlib import Path
 import unreal
 
@@ -9,9 +9,11 @@ assert WORK.is_relative_to(ROOT/'CustomShellSystem/work')
 MODE=os.environ.get('CSS_IDLE_MODE','create')
 assert MODE in ('create','readback') and not (WORK/(MODE+'-result.json')).exists()
 content=ROOT/'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
-private='/Game/CSS/AnimLab/RT_I1_Idle'
-public='/Game/CSS/Eve/Anim/AN_I1_Idle'
-carrier_path='/Game/CSS/Eve/Anim/BS_I1_Idle'
+revision=os.environ.get('CSS_IDLE_REVISION','I1')
+assert re.fullmatch(r'I[1-9][0-9]?',revision)
+private=f'/Game/CSS/AnimLab/RT_{revision}_Idle'
+public=f'/Game/CSS/Eve/Anim/AN_{revision}_Idle'
+carrier_path=f'/Game/CSS/Eve/Anim/BS_{revision}_Idle'
 outputs={content/(p.removeprefix('/Game/')+'.uasset') for p in (private,public,carrier_path)}
 if MODE=='create':
     assert not any(p.exists() for p in outputs)
@@ -26,13 +28,16 @@ bind=json.loads((ROOT/'CustomShellSystem/work/anim10/batch/target-bind.json').re
 names=[b['name'] for b in bind]
 document=json.loads((WORK/'idle-motion.json').read_text())
 changed={n+'_'+s for n in ('thigh','calf','foot') for s in ('l','r')}
+gesture=set(document.get('authored_rotation_bones',[]))
+assert gesture <= {'neck_01','neck_02','head'}
+changed |= gesture
 options=unreal.AnimPoseEvaluationOptions()
 options.set_editor_property('evaluation_type',unreal.AnimDataEvalType.RAW)
 options.set_editor_property('optional_skeletal_mesh',mesh)
 tools=unreal.AssetToolsHelpers.get_asset_tools()
 if MODE=='create':
     source=unreal.load_asset('/Game/CSS/AnimLab/RT_D2_Idle')
-    clip=tools.duplicate_asset('RT_I1_Idle','/Game/CSS/AnimLab',source)
+    clip=tools.duplicate_asset(f'RT_{revision}_Idle','/Game/CSS/AnimLab',source)
     assert clip
     edit=clip.get_editor_property('controller')
     edit.open_bracket('Fit Eve idle leg trajectories',False)
@@ -46,7 +51,7 @@ if MODE=='create':
                 [unreal.Vector(*[t['Scale3D'][k] for k in 'XYZ']) for t in ts],False)
     finally:edit.close_bracket(False)
     assert unreal.EditorAssetLibrary.save_loaded_asset(clip,False)
-    exported=tools.duplicate_asset('AN_I1_Idle','/Game/CSS/Eve/Anim',clip)
+    exported=tools.duplicate_asset(f'AN_{revision}_Idle','/Game/CSS/Eve/Anim',clip)
     assert exported and unreal.EditorAssetLibrary.save_loaded_asset(exported,False)
     carrier=unreal.CSSAnimationLibrary.create_idle_carrier(mesh,exported,carrier_path)
     assert carrier and unreal.EditorAssetLibrary.save_loaded_asset(carrier,False)

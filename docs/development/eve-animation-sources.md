@@ -626,3 +626,61 @@ post-process sequence route needs equivalent combat bypass and pose evidence.
 No native runtime, game installation, accepted movement or release files changed
 during this checkpoint. Custom idle, weapon restoration and beacon work remain
 unfinished.
+
+### I2 gentler idle gesture
+
+`prepare_idle_gesture.py` creates a separate candidate from I1. It retains
+45 percent of the local rotation excursion from the first pose for `neck_01`,
+`neck_02` and `head`, using shortest-path quaternion interpolation. Each frame
+is checked to ensure everything outside those three rotations is unchanged.
+This preserves the hand gesture, stance, timing, translations, scales and body
+proportions. Maximum local excursion drops from 19.482 to 8.767 degrees.
+This factor is an artistic trial, not a physics correction.
+
+The UE authoring probe now accepts a short `CSS_IDLE_REVISION` such as I2 and
+the explicit three-bone gesture manifest. It still rejects overwriting output
+assets and verifies hashes of pre-existing CSS assets. I1 remains available
+for comparison. Created assets are `RT_I2_Idle` in the private AnimLab folder
+and `AN_I2_Idle`/`BS_I2_Idle` under `/Game/CSS/Eve/Anim`.
+
+Creation and fresh readback both exited zero. Both sequences retain 211 frames
+and 379 bones within the same raw comparison tolerances as I1. Center and
+corner playback each pass 841 frames over two loops. All protected asset
+hashes match. The final fitted replay produces 106 three-quarter frames and
+15 front stills, with maximum position error 0.000404 cm and the original
+blend unchanged. The footwear height range matches I1 exactly.
+
+Reviewed frames at the downward head gesture show a smaller backward ponytail
+sweep. Across the timed recording, the maximum angle of the first-to-last
+ponytail bone chord from vertical drops from 52.176 to 44.673 degrees. This
+metric does not prove hair surface clearance or live-game behavior. The
+movement and hair physics settings are unchanged. A comparison video places
+I1 on the left and I2 on the right; the user has been asked to review the style.
+Do not mark either candidate accepted until that review and live checks.
+
+Evidence: `work/anim16/gesture-report.json`, `gesture-comparison.json`,
+`create-result.json`, `readback-result.json`, their exit receipts,
+`render-idle/report.json`, `render-front/report.json`, `idle-preview.mp4` and
+`idle-comparison.mp4`. Reproduce preparation with:
+
+```sh
+python3 tools/authoring-probes/animations/prepare_idle_gesture.py \
+  --input work/anim15/idle-motion.json \
+  --output work/anim16/idle-motion.json --factor 0.45
+```
+
+The output must not already exist. The saved command/environment for UE uses
+`CSS_ANIM_WORK=.../work/anim16`, `CSS_IDLE_REVISION=I2` and
+`CSS_IDLE_MODE=create` or `readback`. The installed alpha, native code and
+accepted movement assets have not changed. Cooking and runtime integration
+remain pending.
+
+Further static graph tracing is recorded in
+`work/anim16/game-graph-summary.json`, with source hash and all 62 nodes.
+`DefaultSlot` is not the final pose stage: its output feeds additive/reaction
+and aiming/late-update paths, followed by additive pose offsets, hand
+correction, melee assist, Control Rig and head tracking. A dynamic montage in
+that slot alone therefore does not establish an unarmed final hand pose.
+Also, CSS's current `Appearance::ready_to_apply` rejects any active montage;
+an owned idle montage would need coordinated release to avoid holding up an
+outfit change. These are integration requirements, not proof of a live fault.
