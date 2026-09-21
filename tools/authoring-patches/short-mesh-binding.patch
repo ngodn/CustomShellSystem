@@ -1,0 +1,31 @@
+--- a/Source/CSSAuthoring/CSSRetargetLibrary.cpp
++++ b/Source/CSSAuthoring/CSSRetargetLibrary.cpp
+@@ -112,8 +112,12 @@
+ bool UCSSRetargetLibrary::BindDiagnosticMeshSkeleton(USkeletalMesh* Mesh, USkeleton* Skeleton)
+ {
+     const FString Prefix = TEXT("/Game/CSSAuthoring/DiagnosticReferences/");
+-    if (!Mesh || !Skeleton || !Mesh->GetPathName().StartsWith(Prefix) ||
+-        !Skeleton->GetPathName().StartsWith(Prefix)) return false;
++    if (!Mesh || !Skeleton) return false;
++    const bool ShortCandidate = IsRunningCommandlet() &&
++        Mesh->GetPathName() == TEXT("/Game/CSS/SeduXtress/SK_BlackPearl2.SK_BlackPearl2") &&
++        Skeleton->GetPathName() == TEXT("/Game/CSS/Shared/SKEL_Base.SKEL_Base");
++    if (!ShortCandidate && (!Mesh->GetPathName().StartsWith(Prefix) ||
++        !Skeleton->GetPathName().StartsWith(Prefix))) return false;
+     // Editor linkup can merge missing mesh bones into a Skeleton. Reject that
+     // here before asynchronous animation compression can observe shifted indices.
+     const auto& MeshReference = Mesh->GetRefSkeleton();
+--- a/Source/CSSAuthoring/CSSHandIKProbe.cpp
++++ b/Source/CSSAuthoring/CSSHandIKProbe.cpp
+@@ -46,7 +46,10 @@
+ 
+ int32 UCSSRetargetLibrary::RefreshDiagnosticVirtualBones(USkeletalMesh* Mesh)
+ {
+-    if (!Diagnostic(Mesh) || !Diagnostic(Mesh->GetSkeleton())) return INDEX_NONE;
++    const bool ShortCandidate = IsRunningCommandlet() && Mesh && Mesh->GetSkeleton() &&
++        Mesh->GetPathName() == TEXT("/Game/CSS/SeduXtress/SK_BlackPearl2.SK_BlackPearl2") &&
++        Mesh->GetSkeleton()->GetPathName() == TEXT("/Game/CSS/Shared/SKEL_Base.SKEL_Base");
++    if (!ShortCandidate && (!Diagnostic(Mesh) || !Diagnostic(Mesh->GetSkeleton()))) return INDEX_NONE;
+     Mesh->GetRefSkeleton().RebuildRefSkeleton(Mesh->GetSkeleton(), true);
+     return Mesh->GetRefSkeleton().GetNum() - Mesh->GetRefSkeleton().GetRawBoneNum();
+ }
