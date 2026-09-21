@@ -1,0 +1,99 @@
+# V44 trial installation and live acceptance
+
+V44 is installed for a gameplay trial. A normal Steam restart loaded the new
+core. Gameplay appearance, weapon contact, damage/parry and lifecycle acceptance
+are still pending. No DLL hot reload was used. CSSX remains disabled.
+
+## Prepared package
+
+`tools/prepare_v44_trial.py` assembles the five verified packages from
+`work/grip-grounding-v1/b2-body-bound-cook-v2` with the V43 cooked textures,
+materials and control resources. The previous main mesh is replaced in the
+explicit package list by `SK_B2PhysicsBound_V1`. Other existing cooked packages
+are retained. Original material payload hashes are checked before copying.
+
+The candidate is under the SeduXtress authoring mod's
+`work/v44-trial-v1/candidate`, with exactly one matching pak/utoc/ucas trio.
+The existing packager verifies the container, manifest, resource hashes and
+customization recipes. Its shared staging directory is not reused.
+
+The catalog keeps the outfit and variant IDs and all body controls. It points
+the variant at the new mesh. Hair defaults in both the catalog and embedded
+recipe are updated from 150/18 to the user's accepted 200/24, matching the
+verified animation defaults. Existing saved overrides are retained.
+
+`work/grip-grounding-v1/v44-final-package-readback-v1` independently decodes the
+**final combined container**. All five new package JSON exports exactly match
+the independently verified collision cook, including the mesh's Physics Asset
+reference. The preparation and final decode both exit 0.
+
+## Exact runtime compatibility
+
+The old native allowlist only accepted the game human/CSS base pair. It would
+reject the separate B2 reference Skeleton despite the retained engine tests.
+The regression first fails with `Audited V44 B2 target rejected`.
+
+`skeleton_compatibility.hpp` now permits directional transitions among the
+exact audited human, CSS base and B2 paths. The B2 path is:
+
+`/Game/CSSAuthoring/DiagnosticReferences/SKEL_B2GameReferenceMetadata_V2.SKEL_B2GameReferenceMetadata_V2`
+
+Unknown paths, similarly named rigs in other folders, missing paths and invalid
+suffixes remain rejected. This is not generic structural validation or a shared
+Skeleton migration. The host regression and C++23 Windows core build pass in
+`work/grip-grounding-v1/v44-core-build-v1`. The pre-build DLL hash matched the
+installed preview-layer core, so this rebuild starts from that known binary.
+
+## Deployment and startup evidence
+
+`tools/deploy_v44_trial.py` requires the verified candidate, final decode,
+passing build/test results, exactly one game process, the pinned UE4SS hash,
+the exact V43 baseline trio and disabled CSSX. It backs up the outfit, old core
+and selector, and CSS state. It invokes the reflected normal `QuitGame`, waits
+for the process to exit, then replaces the trio and selects the new core.
+Partial file-copy failure restores the old trio and selector. It never writes
+player movement input or changes save files directly.
+
+Evidence and rollback files are in
+`work/grip-grounding-v1/v44-trial-live-v1`:
+
+- `deployment.json`: exact installed hashes, old/new core selectors and state
+  hashes. The CSS state after normal quit is unchanged by installation.
+- `backup/outfit`: original V43 trio.
+- `backup/core.json` and the prior core DLL: original core selection and binary.
+- `backup/state-before-quit` and `backup/state-after-quit`: retained CSS state.
+- `startup.json`: fresh Linux process 1127949, distinct from old process
+  2384672; loader reports `css_core-v44-f434601d670b1502.dll`.
+- `startup.requests.jsonl`: fresh acknowledged player query after restart.
+  Controller and pawn are null, so it is not gameplay validation.
+- `startup.jpg`: reviewed Steam screenshot is black before character load.
+  It does not establish that the title menu or world has rendered correctly.
+- `settled-startup.json` / `settled-startup.jpg`: a later fresh query still has
+  no controller or pawn, and the Steam capture is still black. The process
+  remains responsive; do not infer a rendered menu or diagnose a crash from it.
+
+The launcher exits 0 and the new process answers requests. Runtime catalog
+errors are empty. These observations prove startup/core activation only. The
+user has been asked to Continue into the world with Martyr's Blade; no menu
+navigation or movement input was injected to force that state.
+
+To roll back, first close the game normally and confirm no shipping process
+remains. Copy the backed-up outfit trio over the installed trio and restore
+`backup/core.json` to the runtime selector. The old DLL remains in `cores`.
+Do not restore saved CSS state unless needed and explicitly intended; installing
+this trial did not modify it. Relaunch through Steam and verify the live mesh.
+
+## Next live checks
+
+1. Fresh player/mesh probe must resolve `SK_B2PhysicsBound_V1`, the B2 reference
+   Skeleton and `PA_B2BodyFit_V3`, with no unexpected component override.
+2. Check actual body/hair/hand post-process, accepted 200/24 and preserved public
+   customization. Review Steam stills and game-window motion footage.
+3. Test Martyr's Blade, scythe, sidearm and the remaining weapon/posture matrix,
+   including transitions and the previously tolerable Axe & Dagger/Axatana.
+4. Test enemy hit/damage and parry behavior. Asset presence is not causality.
+5. Verify death/recovery, travel, menu recreation, profiles/reset and performance.
+
+Grounding/heel geometry, preview light controls, modular/fantasy-chain coverage,
+full native/UI/build/distribution acceptance and the complete CSS Next-Gen goal
+remain active. Original body proportions and source blends remain preserved.

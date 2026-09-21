@@ -106,3 +106,9 @@ preview light controls and the complete modular Next-Gen runtime/UI/profile
 and distribution requirements remain active. Preserve source proportions,
 379 authored bones plus nine virtual bones, accepted hair 200/24 and body
 motion, and disabled CSSX. V43 remains the installed fallback.
+
+## Trial promotion
+
+The [V44 trial](v44-live-trial.md) now installs this verified binding and the
+exact native compatibility update. V43 is retained as the rollback copy.
+Startup is verified; actual gameplay acceptance remains pending.
