@@ -6,23 +6,25 @@ and the visual review checks against.
 
 ## Structure
 
-Reference space 1920×1080, scaled by viewport height, DPI-aware, times the
-user's `ui_scale`. Three screens and three overlays:
+CSSX is a tab of the game's Player Menu (INVENTORY, CSS, **CSSX**, TARSTONES,
+MAP; CSS is absent when it is not installed). The page is the switcher area
+under the game's top bar. Reference space 1920×1080 scaled to that area, then
+by the user's `ui_scale`. Three screens and three overlays:
 
 | Screen | Left | Centre | Right |
 | --- | --- | --- | --- |
-| Library | List: title, author/version, status summary (green when active) | | Selected extension: banner, description, id, API, average tick cost; framework notice (migration, load errors) |
-| Extension | Section rail | Control rows: label left, value right; 10 visible, scroll indicator | Detail: label, effect line, description (scroll), hint, editor, "asks for confirmation" |
-| Settings | CSSX settings rows | | Explanation and adjust buttons |
+| Library | List: title, author/version, status summary (green when active); "CSSX settings" as the last row | | Selected extension: banner, description, id, API, average tick cost; framework notice (migration, load errors) |
+| Extension | Section rail | Control rows: label left, value right; 9 visible, scroll indicator | Detail: label, effect line, description (scroll), hint, editor, "asks for confirmation" |
+| Settings | Rows: menu scale, status in library, open keys | | Explanation and adjust buttons |
 
 Overlays: option picker (search field, 8 results, count), full description,
 confirmation (effect line, message, Cancel/Confirm). An overlay blocks input
 to what is beneath it; Back closes it.
 
-Reserved bands: header (title, subtitle, divider at y=152), status line
-(y=1080−128, error text in red, otherwise the extension's `status`), footer
-hints (y=1080−70): navigation on the left, contextual actions on the right.
-Nothing else draws in those bands, so status never collides with controls.
+Reserved bands: header (title, subtitle, divider at y=208 under the game's
+top bar), status line (y=1080−128, error text in red, otherwise the
+extension's `status`), footer hints (y=1080−70): navigation on the left,
+contextual actions on the right. Nothing else draws in those bands.
 
 ## Input
 
@@ -46,21 +48,23 @@ buttons are click targets; sliders drag and commit on release; the mouse
 position is read once per frame and hover tests run only on a click. Text
 fields take keyboard input directly (Slate).
 
-Opening: hotkey chord (`settings.json`), sampled at 30 Hz only while a player
-controller exists, ignored while the game reports a menu. Opening calls the
-game's `EnableUserInterfaceInput` (focus, mapping context, cursor, pause, HUD)
-and `UpdateActiveMenu`; closing calls `ResetActiveMenu` and
-`DisableUserInterfaceInput`. Every close path (Back, hotkey, another menu
-taking over, travel, controller loss, core stop) goes through the same
-restore.
+Opening: the game's own Player Menu key, then bumper/Q/E to the CSSX tab; or
+the hotkey chord (`settings.json`, default F6 or L3+R3), sampled at 30 Hz only
+while a player controller exists, which opens the Player Menu through the
+game's `HandleGameMenu` and selects the CSSX tab, or closes the menu when the
+CSSX page is showing. Pause, cursor, HUD and the menu input context are the
+game's: CSSX never toggles them. Back on the library closes the Player Menu
+the way CSS does (`HandleGameMenu(0, true)`).
+
+Left stick moves the selection as well as the D-pad (the page has no
+character preview to rotate).
 
 ## Rendering rules
 
 Retained widgets. A rebuild happens on model revision, selection change,
 section change, overlay change, viewport change or input-device change, never
 per frame. The menu records build count, widget count and microseconds per
-build; `frame.stats` exposes them. With the menu closed no widget exists and
-no per-frame UI work runs.
+build; `frame.stats` exposes them. While the CSSX tab is not showing, the page is not rebuilt and no input is polled; with the Player Menu closed the only per-frame cost is one `bOpen` read.
 
 Unavailable controls stay selectable so the player can read why
 (`disabled_label`, description). Long labels and values use ellipsis, never

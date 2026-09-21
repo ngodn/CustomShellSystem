@@ -40,10 +40,10 @@ def plan(css: Path, cssx: Path) -> dict:
     if state.is_dir():
         for file in sorted(state.glob('*.json*')):
             target = cssx / 'state' / file.name
-            if target.exists():
+            if target.exists() and target.read_text().strip() not in ('{}', ''):
                 skipped.append(f'state/{file.name}: already present in Mods/CSSX, left in place')
             else:
-                moves.append((file, target))
+                moves.append((file, target))   # an empty placeholder written by a fresh start is replaced
     logs = css / 'logs/extensions'
     if logs.is_dir():
         for folder in sorted(p for p in logs.iterdir() if p.is_dir()):
@@ -111,6 +111,8 @@ def perform(css: Path, cssx: Path, dry_run: bool) -> Path | None:
     (backup / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     for source, target in p['moves']:
         target.parent.mkdir(parents=True, exist_ok=True)
+        if target.is_file():
+            target.unlink()   # empty placeholder (see plan)
         shutil.move(str(source), str(target))
         if file_hashes(target) != next(e['hashes'] for e in manifest['entries'] if e['source'] == str(source.relative_to(css))):
             raise RuntimeError(f'Move verification failed for {target}')

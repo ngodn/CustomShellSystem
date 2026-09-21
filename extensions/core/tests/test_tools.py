@@ -95,3 +95,44 @@ class ProbeMath(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class ReleaseVerify(unittest.TestCase):
+    def setUp(self):
+        import cssx_release
+        self.rel = cssx_release
+        self.temp = Path(tempfile.mkdtemp(prefix='cssx-rel-'))
+
+    def tearDown(self):
+        shutil.rmtree(self.temp)
+
+    def make(self, files, manifest_name='CSSX/release.json', tamper=None):
+        import zipfile
+        meta = {'product': 'CSSX', 'version': '1.0.0', 'source_commit': 'abc', 'manifest_name': manifest_name,
+                'files': {k: self.rel.digest(v) for k, v in files.items()}}
+        path = self.temp / 'x.zip'
+        with zipfile.ZipFile(path, 'w') as z:
+            for k, v in files.items():
+                z.writestr(k, v if not (tamper and k == tamper) else v + b'x')
+            z.writestr(manifest_name, json.dumps(meta))
+        return path
+
+    def test_good_archive_verifies(self):
+        path = self.make({'CSSX/enabled.txt': b'', 'CSSX/core.json': b'{}'})
+        self.assertEqual(self.rel.verify(path)['version'], '1.0.0')
+
+    def test_checksum_mismatch_rejected(self):
+        path = self.make({'CSSX/core.json': b'{}'}, tamper='CSSX/core.json')
+        with self.assertRaises(ValueError):
+            self.rel.verify(path)
+
+    def test_forbidden_members_rejected(self):
+        for name in ('CSSX/dev/enabled.txt', 'CSSX/logs/cssx.jsonl', 'CSSX/UE4SS.dll', 'CSSX/core/css_core-1.dll', 'CSSX/state/x.json'):
+            path = self.make({name: b'', 'CSSX/core.json': b'{}'})
+            with self.assertRaises(ValueError, msg=name):
+                self.rel.verify(path)
+
+    def test_non_dll_named_dll_rejected(self):
+        path = self.make({'CSSX/dlls/main.dll': b'not a dll'})
+        with self.assertRaises(ValueError):
+            self.rel.verify(path)
