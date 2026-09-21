@@ -146,6 +146,15 @@ mean, 2.1 ms worst frame. Raw: `work/live/audit/hitches-steady-1.json`.
 Compare the earlier idle figure (core 121 µs) and the D row (p99 38 ms):
 same average, and the periodic stalls are gone from the window.
 
+Cheats on (God off; auto heal, infinite resolve, max shell points, no
+cooldown, perfect parry on; 231 hook rules), 60 s of play: before the
+ability-scan and image fixes, CSSX made six frames of 22 to 64 ms in the
+window (forced 10 s ability re-scan, first menu build decoding two 1 MB
+banners). After: 3016 frames, median 18.3 ms, p99 39.8 ms, 50 fps, CSSX
+mean 135 µs, **worst CSSX frame 2.7 ms**, zero frames where CSSX exceeded a
+quarter of the frame; the 44 hitches in that window (up to 179 ms) carry
+under 0.4 ms of CSSX each. Raw: `work/live/audit/hitches-cheats-on-{1,2}.json`.
+
 Two crashes found and fixed the same day by live bisect (loader alone ran;
 core switched live between builds): a weak-reference cache for reflected
 path lookups killed the game within a second (removed), and the bridge's

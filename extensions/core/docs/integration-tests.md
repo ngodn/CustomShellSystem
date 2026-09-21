@@ -65,4 +65,6 @@ See `performance.md`. Rows A/B need MangoHud or the loader-only row; rows C, D, 
 | Check | How | Last result |
 | --- | --- | --- |
 | No disk write on the game thread for status/logs | code: `Writer` thread; host test `cssx_runtime` (replace/append/rotate/drain) | Pass 2026-09-22 (host) |
+| Cheats-on cost row (five cheats, 231 hook rules) | `tools/hitches.py` 60 s (`hitches-cheats-on-2.json`) | Pass 2026-09-22: CSSX mean 135 µs, worst 2.7 ms, no frame where CSSX exceeds a quarter |
+| Beacon travel keeps the tab working | user test | Pass 2026-09-22 ("seems good") |
 | Hitch attribution: core share at hitch frames | `tools/hitches.py` (`work/live/audit/hitches-steady-1.json`) | Pass 2026-09-22: 60 s of play, 2642 frames, 0 hitches, max frame 37 ms, p99 29.7 ms, 44 fps, core 129 µs mean, largest core frame 2.1 ms |
