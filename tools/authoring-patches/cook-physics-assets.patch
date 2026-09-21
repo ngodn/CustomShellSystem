@@ -1,0 +1,20 @@
+--- a/Source/CSSAuthoring/CSSCookAssetsCommandlet.cpp
++++ b/Source/CSSAuthoring/CSSCookAssetsCommandlet.cpp
+@@ -9,6 +9,7 @@
+ #include "DeviceProfiles/DeviceProfileManager.h"
+ #include "Engine/SkeletalMesh.h"
+ #include "Engine/Texture2D.h"
++#include "PhysicsEngine/PhysicsAsset.h"
+ #include "Animation/Skeleton.h"
+ #include "Animation/AnimBlueprint.h"
+ #include "Animation/AnimInstance.h"
+@@ -104,7 +105,8 @@
+         }
+         const FString ObjectPath = PackageName + TEXT(".") + FPackageName::GetShortName(PackageName);
+         UObject* Asset = StaticLoadObject(UObject::StaticClass(), nullptr, *ObjectPath);
+-        bool Allowed = Asset && (Asset->IsA<UTexture2D>() || Asset->IsA<USkeletalMesh>() || Asset->IsA<USkeleton>());
++        bool Allowed = Asset && (Asset->IsA<UTexture2D>() || Asset->IsA<USkeletalMesh>() ||
++            Asset->IsA<USkeleton>() || Asset->IsA<UPhysicsAsset>());
+         if (UMaterialInstanceConstant* Instance = Cast<UMaterialInstanceConstant>(Asset))
+         {
+             Allowed = Instance->Parent && !Instance->bHasStaticPermutationResource &&

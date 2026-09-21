@@ -31,10 +31,10 @@
 +    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
 +    static FString InspectBodyCandidate(class UPhysicsAsset* Asset);
 +
-+    /** Null/fitted/remove/reapply sequence on a transient component in its own physics world. */
++    /** Transient component queries; optionally use the saved mesh binding and recreate physics. */
 +    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
 +    static FString ProbeBodyQueries(class USkeletalMesh* Mesh, class UPhysicsAsset* Asset,
-+        const FString& QueriesJson);
++        const FString& QueriesJson, bool UseMeshBinding = false);
 +
 +    /** Normal animation-to-physics updates, or a bounded simulated fall, in an isolated world. */
 +    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
@@ -43,7 +43,7 @@
 +};
 --- /dev/null
 +++ b/Source/CSSAuthoring/CSSPhysicsProbeLibrary.cpp
-@@ -0,0 +1,337 @@
+@@ -0,0 +1,344 @@
 +#include "CSSPhysicsProbeLibrary.h"
 +
 +#include "Components/SkeletalMeshComponent.h"
@@ -177,9 +177,10 @@
 +}
 +
 +FString UCSSPhysicsProbeLibrary::ProbeBodyQueries(USkeletalMesh* Mesh, UPhysicsAsset* Asset,
-+    const FString& QueriesJson)
++    const FString& QueriesJson, bool UseMeshBinding)
 +{
-+    if (!Diagnostic(Mesh) || !Diagnostic(Asset) || Mesh->GetPhysicsAsset()) return {};
++    if (!Diagnostic(Mesh) || !Diagnostic(Asset) ||
++        (UseMeshBinding ? Mesh->GetPhysicsAsset() != Asset : Mesh->GetPhysicsAsset() != nullptr)) return {};
 +    TArray<TSharedPtr<FJsonValue>> Queries;
 +    if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(QueriesJson), Queries) ||
 +        Queries.IsEmpty() || Queries.Num() > 512) return {};
@@ -196,13 +197,18 @@
 +    Component->RegisterComponent();
 +    Component->RefreshBoneTransforms();
 +    TArray<TSharedPtr<FJsonValue>> Phases;
-+    for (int32 Phase = 0; Phase < 4; ++Phase)
++    for (int32 Phase = 0; Phase < (UseMeshBinding ? 2 : 4); ++Phase)
 +    {
-+        const bool Fitted = Phase % 2 == 1;
-+        Component->SetPhysicsAsset(Fitted ? Asset : nullptr, true);
++        const bool Fitted = UseMeshBinding || Phase % 2 == 1;
++        if (UseMeshBinding)
++        {
++            if (Phase == 1) Component->RecreatePhysicsState();
++        }
++        else Component->SetPhysicsAsset(Fitted ? Asset : nullptr, true);
 +        auto Result = MakeShared<FJsonObject>();
 +        Result->SetNumberField(TEXT("phase"), Phase);
 +        Result->SetBoolField(TEXT("fitted"), Fitted);
++        Result->SetStringField(TEXT("effective_asset"), Component->GetPhysicsAsset() ? Component->GetPhysicsAsset()->GetPathName() : TEXT(""));
 +        Result->SetNumberField(TEXT("body_count"), Component->Bodies.Num());
 +        int32 ValidBodies = 0;
 +        for (const auto* Body : Component->Bodies) if (Body && Body->IsValidBodyInstance()) ++ValidBodies;
@@ -243,6 +249,7 @@
 +    World->DestroyWorld(false);
 +    auto Report = MakeShared<FJsonObject>();
 +    Report->SetArrayField(TEXT("phases"), Phases);
++    Report->SetBoolField(TEXT("uses_mesh_binding"), UseMeshBinding);
 +    Report->SetBoolField(TEXT("world_destroyed"), true);
 +    return Text(Report);
 +}

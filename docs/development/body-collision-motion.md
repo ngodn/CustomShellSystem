@@ -106,7 +106,8 @@ hash-identical.
 
 ## Remaining gates
 
-Bind/cook an isolated V44 mesh and verify the saved and decoded references.
+The [saved binding and cooked-reference checks](body-collision-binding.md) now
+pass for an isolated V44 mesh.
 Actual game damage/parry, animation-to-ragdoll-to-animation recovery, all weapon
 and sidearm poses, collision filtering, performance and visual contact remain
 open. Preserve source proportions, 379 authored bones plus nine virtual bones,
