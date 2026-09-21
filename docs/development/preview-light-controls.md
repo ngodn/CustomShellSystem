@@ -3,7 +3,8 @@
 The native orbit and menu controls are installed in the short-path trial core.
 Live lighting/input/lifecycle acceptance remains open. The controller correction
 below is installed in `css_core-ui1.dll`; the user reports the controls work.
-The controlled live lifecycle measurements are still in progress.
+Controlled orbit/reset, tab exit/reentry and fresh-menu defaults now pass.
+Input remapping, focus loss and broader performance coverage remain open.
 
 ## Actual game references
 
@@ -177,3 +178,33 @@ Steam stills were visually reviewed and show the changed illumination. Physical
 Y/Select/B use is separately supported by the user's confirmation and actual
 live bindings. Remapped-input UI, retoggle/view-reset preservation, focus loss,
 menu recreation and performance still need their broader lifecycle checks.
+
+## Tab exit and menu recreation
+
+`tools/check_preview_light_lifecycle.py` passes in
+`work/ui-live1/lifecycle3/verification.json` on the installed grounding core.
+After an edited light, switching to Inventory restores the original transform
+within 8.15e-12 cm and 2.85e-14 degrees, and CSS reentry retains that baseline.
+After another edit and full menu close, reopening creates a different light
+whose original relative position, rotation and intensity match exactly. The
+reopened Steam still was reviewed. No runtime lighting code changed for this
+check; the new grounding core carries the previously tested lighting code.
+
+Retained failures explain the corrected probe:
+
+- `lifecycle1` incorrectly required the old component's detached relative
+  transform to match even after full menu teardown. A weak handle was still
+  readable briefly; later it invalidated and a new light had the exact baseline.
+- `lifecycle2` discovered that the old component's `GetOwner` returns null during
+  teardown. The subsequent actor-function description rejected the null target
+  before invocation. The probe now handles absent ownership explicitly.
+- `lifecycle3` records that same ownerless old component and checks the fresh
+  replacement. It does not claim the detached old component was restored.
+
+The engine exposes component destruction separately from reference validity;
+see the pinned `ActorComponent.h` and
+[Epic's IsBeingDestroyed reference](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/Components/UActorComponent/IsBeingDestroyed?application_version=5.5).
+The observed old component returns false for that function despite having no
+owner, so the check does not equate weak validity or that one flag with a live
+preview actor. This covers one tab cycle and one complete menu recreation,
+not input remapping, focus changes or a performance benchmark.

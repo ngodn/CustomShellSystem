@@ -1,5 +1,7 @@
 # Current work queue
 
+2026-09-21: [Preview-light tab exit/reentry and menu recreation](development/preview-light-controls.md#tab-exit-and-menu-recreation) now pass. The old ownerless component must not be mistaken for the newly created light; both rejected probe assumptions are documented. The new preview starts with exactly the original light transform/intensity, and the reopened Steam still is reviewed. Remapping, focus and broader release acceptance remain open.
+
 2026-09-21: Ground contact is accepted at -3 cm and installed in `css_core-ground1.dll` with a metadata-only Black Pearl package. [Evidence](development/footwear-grounding-followup.md#accepted-3-cm-correction): user-approved world-motion trial, exact cooked-container preservation, passing host/development/shipping builds and native -99 → -96 → -99 cm disable/enable read-back with the entire saved look preserved. Stop tuning the amount and move to remaining fixes. The full release goal remains active.
 
 2026-09-21: Ground-contact acceptance clarified: feet should look planted. A slight visual overlap with the floor is acceptable, but visibly buried shoes are not. Do not prolong tuning to force mathematically exact zero clearance. Preserve proportions and the accepted rig; use measured clearance to choose a small reversible trial and judge it in world motion.
