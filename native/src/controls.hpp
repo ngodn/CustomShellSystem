@@ -10,6 +10,11 @@
 
 namespace css {
 using ControlValue = std::array<float,4>;
+struct ColorSwatch {
+    std::string name;
+    ControlValue color;
+    bool reset=false;
+};
 struct ControlBinding {
     int slot = 0;
     std::string parameter;
@@ -100,6 +105,7 @@ struct Control {
     std::optional<float> gravity_scale;    // -5..5
     int planar_constraint = 0;         // 0: none, 1: X, 2: Y, 3: Z
     std::vector<ControlBinding> bindings;
+    std::vector<ColorSwatch> swatches;
 };
 struct SpringAxes {
     std::array<bool,3> translate{}, rotate{};

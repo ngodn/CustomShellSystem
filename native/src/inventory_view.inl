@@ -32,15 +32,16 @@ struct InventoryLayout : Layout {
 // one without anybody having to think in RGB. What the author chose comes first, then
 // what each palette gives this part, then a hue ring and a brightness ramp off the
 // author's own colour. Exact RGB is still there behind a toggle for when you want it.
-std::vector<ControlValue> color_swatches(const ControlSet& options,const Control& control) {
-    std::vector<ControlValue> out;
+std::vector<ColorSwatch> color_swatches(const ControlSet& options,const Control& control) {
+    if(!control.swatches.empty()) return control.swatches;
+    std::vector<ColorSwatch> out;
     auto add=[&](ControlValue value) {
         for(size_t i=0;i<3;++i) value[i]=std::clamp(value[i],control.minimum,control.maximum);
         for(const auto& had:out)
-            if(std::abs(had[0]-value[0])+std::abs(had[1]-value[1])+std::abs(had[2]-value[2])<.03f) return;
+            if(std::abs(had.color[0]-value[0])+std::abs(had.color[1]-value[1])+std::abs(had.color[2]-value[2])<.03f) return;
         // Four rows of six. The panel has the room for it now that it starts under the
         // top bar, and a wider strip is the whole point of picking rather than mixing.
-        if(out.size()<24) out.push_back(value);
+        if(out.size()<24) out.push_back({"",value,false});
     };
     add(control.value);
     for(const auto& palette:options.palettes) {
@@ -59,11 +60,13 @@ std::vector<ControlValue> color_swatches(const ControlSet& options,const Control
     }
     return out;
 }
-size_t nearest_swatch(const std::vector<ControlValue>& swatches,const ControlValue& value) {
+size_t nearest_swatch(const std::vector<ColorSwatch>& swatches,const ControlValue& value,bool inherited=false) {
+    if(inherited && swatches.front().reset) return 0;
     size_t best=0; float closest=1e9f;
     for(size_t i=0;i<swatches.size();++i) {
+        if(swatches[i].reset) continue;
         float distance=0;
-        for(size_t c=0;c<3;++c) distance+=(swatches[i][c]-value[c])*(swatches[i][c]-value[c]);
+        for(size_t c=0;c<3;++c) distance+=(swatches[i].color[c]-value[c])*(swatches[i].color[c]-value[c]);
         if(distance<closest) { closest=distance; best=i; }
     }
     return best;
@@ -602,9 +605,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     // Left and Right walk the strip instead of nudging one channel, which
                     // is the whole point of having one.
                     const auto strip=color_swatches(options,c);
-                    const auto here=nearest_swatch(strip,values.contains(c.id)?values.at(c.id):c.value);
+                    const auto here=nearest_swatch(strip,custom.values.contains(c.id)?custom.values.at(c.id)
+                        :values.contains(c.id)?values.at(c.id):c.value,!custom.values.contains(c.id));
                     auto pick=[&](size_t index) {
-                        const auto& v=strip[index];
+                        if(strip[index].reset) return Json{{"action","reset_control"},{"control",c.id}};
+                        const auto& v=strip[index].color;
                         return Json{{"action","control"},{"control",c.id},{"rgb",{v[0],v[1],v[2]}}};
                     };
                     minus=pick((here+strip.size()-1)%strip.size());
@@ -808,8 +813,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     // then shades of it. Picking is the common case, so it is what the
                     // pane opens on; Exact colour is one button away.
                     const auto strip=color_swatches(options,control);
-                    const auto here=nearest_swatch(strip,value);
-                    detail(control.name,worn->name,control.hue_locked
+                    const auto here=nearest_swatch(strip,custom.values.contains(control.id)?custom.values.at(control.id):value,
+                        !custom.values.contains(control.id));
+                    detail(control.name,worn->name,!control.swatches.empty()
+                        ? "Choose a shade. Default restores this part's current palette or original texture."
+                        :control.hue_locked
                         ? "Choose a shade. This part keeps its own hue on purpose: it reads as a material rather than a colour, and rotating it is what makes a recolour look wrong."
                         : "Choose a colour. The first is the author's, then this part in each palette, then hues and shades of it.");
                     // A chip is drawn, not styled. flat_button clears every brush a CSS
@@ -822,10 +830,15 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                         // Only the chosen chip gets a surround, which keeps the widget
                         // count on this page down as well as reading more clearly.
                         if(i==here) ui.box(sx-3,sy-3,chip+6,chip+6,gold);
-                        ui.box(sx,sy,chip,chip,{srgb_linear(strip[i][0]),srgb_linear(strip[i][1]),srgb_linear(strip[i][2]),1});
-                        bind(ui.button("",sx,sy,chip,chip),
-                             {{"action","control"},{"control",control.id},{"rgb",{strip[i][0],strip[i][1],strip[i][2]}}});
+                        const auto& swatch=strip[i];const auto& color=swatch.color;
+                        ui.box(sx,sy,chip,chip,{srgb_linear(color[0]),srgb_linear(color[1]),srgb_linear(color[2]),1});
+                        if(swatch.reset) ui.label("Default",sx+2,sy+chip/2-10,chip-4,24,12,
+                            color[0]*.2126f+color[1]*.7152f+color[2]*.0722f>.6f?Color{.015f,.012f,.01f,1}:ivory);
+                        bind(ui.button("",sx,sy,chip,chip),swatch.reset
+                             ?Json{{"action","reset_control"},{"control",control.id}}
+                             :Json{{"action","control"},{"control",control.id},{"rgb",{color[0],color[1],color[2]}}});
                     }
+                    if(!control.swatches.empty()) ui.label(strip[here].name,right,controls_y+double((strip.size()+5)/6)*pitch+45,360,28,17,ivory);
                     direction_hint(true,"Choose a colour",right,
                                    controls_y+double((strip.size()+size_t(columns)-1)/size_t(columns))*pitch+8,360);
                     action_button("secondary","Exact colour",795,Json{{"action","ui_exact"}},4);

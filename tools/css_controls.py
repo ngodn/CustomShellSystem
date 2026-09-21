@@ -140,6 +140,7 @@ def validate(recipe:dict) -> set[str]:
         if c.get('type','color') not in ('color','scalar','intensity'): raise ValueError('Invalid color control type')
         if 'kind' in c and c['kind'] not in KINDS: raise ValueError('Invalid color control kind')
         if 'kind' in c and 'type' in c and scalar(c)!=(c['type'] in ('scalar','intensity')): raise ValueError('Color control kind contradicts its type')
+        if 'swatches' in c and kind_of(c)!='color':raise ValueError('Only color controls accept swatches')
         if kind_of(c)=='glow':
             number(c.get('pulse_hz',0),0,10)
             if not isinstance(c.get('combat_reactive',False),bool):
@@ -275,6 +276,17 @@ def validate(recipe:dict) -> set[str]:
             number(step,0,maximum-minimum)
             if not step: raise ValueError('Slider step cannot be zero')
         for v in c['default'][:1 if scalar(c) else 3]:number(v,minimum,maximum)
+        if 'swatches' in c:
+            swatches=c['swatches'];bounded_array(swatches,24)
+            if len(swatches)<2:raise ValueError('Expected 2 to 24 color swatches')
+            names=set()
+            for index,swatch in enumerate(swatches):
+                name=swatch['name'];reset=swatch.get('reset',False)
+                if not isinstance(name,str) or not 1<=len(name.encode('utf-8'))<=32 or name in names or type(reset) is not bool or reset!=(index==0):
+                    raise ValueError('Swatches require distinct names and a first Default reset entry')
+                names.add(name);vector(swatch['color'])
+                for channel in swatch['color'][:3]:number(channel,minimum,maximum)
+                if swatch['color'][3]!=c['default'][3]:raise ValueError('Swatch changes protected opacity')
         bindings=c.get('bindings',[]);bounded_array(bindings,128)
         for b in bindings:
             if type(b['slot']) is not int: raise ValueError('Material slot must be an integer')

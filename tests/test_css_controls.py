@@ -9,6 +9,23 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
 from css_controls import validate,embed,verify_resources,lint_convention
 
 class ControlTests(unittest.TestCase):
+    def test_authored_swatches(self):
+        control=dict(id='skin',name='Skin',kind='color',default=[1,1,1,1],
+                     swatches=[dict(name='Default',color=[.8,.7,.6,1],reset=True),
+                               dict(name='Tan',color=[.6,.4,.3,1])])
+        recipe=dict(schema=1,controls=[control],surfaces=[dict(id='skin',parameter='BaseColor',slots=[0],layers={'skin':'dye-skin.png'})])
+        validate(recipe)
+        for patch in ({'name':'Default'}, {'reset':True}, {'color':[.5,.4,.3,.5]}):
+            bad=copy.deepcopy(recipe);bad['controls'][0]['swatches'][1].update(patch)
+            with self.assertRaises(ValueError):validate(bad)
+        bad=copy.deepcopy(recipe);bad['controls'][0]['swatches'][0]['reset']=False
+        with self.assertRaises(ValueError):validate(bad)
+        # Alpha remains protected independently of the RGB slider maximum.
+        bounded=copy.deepcopy(recipe);bounded['controls'][0]['max']=.8
+        bounded['controls'][0]['default']=[.8,.8,.8,1];validate(bounded)
+        bad=copy.deepcopy(recipe);bad['controls'][0]['swatches'][1]['name']='é'*17
+        with self.assertRaises(ValueError):validate(bad)
+
     def test_independent_body_regions(self):
         body=dict(id='chest-motion',name='Chest motion',kind='rig',solver='angular_body',regions=['brust001','brust002'],
                   frequency=dict(min=.5,max=6,default=2),damping_ratio=dict(min=.1,max=2,default=.7),

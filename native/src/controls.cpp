@@ -536,6 +536,20 @@ ControlSet ControlSet::parse(const Json& j) {
             }
         }
         valid_value(control,control.value);
+        if(c.contains("swatches")) {
+            const auto& list=c.at("swatches");
+            if(control.kind!=ControlKind::Color || !list.is_array() || list.size()<2 || list.size()>24)
+                throw std::runtime_error("Expected 2 to 24 color swatches");
+            std::set<std::string> names;
+            for(const auto& entry:list) {
+                ColorSwatch swatch{entry.at("name"),value(entry.at("color")),entry.value("reset",false)};
+                if(swatch.name.empty() || swatch.name.size()>32 || !names.insert(swatch.name).second ||
+                   swatch.reset!=control.swatches.empty())
+                    throw std::runtime_error("Swatches require distinct names and a first Default reset entry");
+                valid_value(control,swatch.color);
+                control.swatches.push_back(std::move(swatch));
+            }
+        }
         if(c.contains("bindings") && !c.at("bindings").is_array()) throw std::runtime_error("Bindings require an array");
         for(const auto& b:c.value("bindings",Json::array())) {
             ControlBinding binding; binding.slot=b.at("slot"); binding.parameter=b.at("parameter");

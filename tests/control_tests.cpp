@@ -88,6 +88,27 @@ int main() {
           "surfaces":[{"id":"body","parameter":"BaseColorMap  non VT","slots":[0,1],"layers":{"cloth":"dye-cloth.png"}}],
           "palettes":[{"id":"red","name":"Crimson","values":{"cloth":[0.6,0.1,0.2,1]}}]})");
         auto options=ControlSet::parse(source);
+        {
+            auto authored=source;
+            authored["controls"][0]["swatches"]=Json::parse(R"([
+                {"name":"Default","color":[0.1,0.1,0.1,1],"reset":true},
+                {"name":"Wine","color":[0.4,0.1,0.2,1]}])");
+            auto checked=ControlSet::parse(authored);
+            expect(checked.controls[0].swatches.size()==2 && checked.controls[0].swatches[0].reset,
+                   "Authored Default swatch lost");
+            expect(checked.controls[0].swatches[1].name=="Wine" && checked.controls[0].swatches[1].color[0]==.4f,
+                   "Authored swatch color or order changed");
+            expect(control_values(checked,{}).empty(),"Swatch previews must not dye the initial appearance");
+            for(const auto* field:{"reset","name","color"}) {
+                auto bad=authored;
+                if(std::string(field)=="reset") bad["controls"][0]["swatches"][0][field]=false;
+                else if(std::string(field)=="name") bad["controls"][0]["swatches"][1][field]="Default";
+                else bad["controls"][0]["swatches"][1][field]={.1,.2,.3,.5};
+                rejects([&]{ControlSet::parse(bad);});
+            }
+            auto bad=authored;bad["controls"][1]["swatches"]=authored["controls"][0]["swatches"];
+            rejects([&]{ControlSet::parse(bad);});
+        }
         Outfit outfit;outfit.controls=options;
         Variant variant;variant.id="different";
         auto variant_source=source;

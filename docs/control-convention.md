@@ -90,6 +90,32 @@ and skin as skin. Without it a group hue shift produces green "gold" and blue sk
 | `kind` | see below | what the control *is*; everything but `color` is a single number |
 | `hue_locked` | bool | defaults from `role`; set it explicitly when the default is wrong |
 
+### Authored color swatches
+
+A color control can supply an ordered `swatches` list instead of the generated
+strip. Provide 2 to 24 entries with distinct names (1 to 32 UTF-8 bytes), RGBA
+colors within the control's limits, and the same alpha as its default value.
+The first entry must have `reset: true`. All subsequent entries omit `reset`
+or set it to false.
+
+```json
+"swatches": [
+  {"name": "Default", "color": [0.8, 0.7, 0.6, 1], "reset": true},
+  {"name": "Warm tan", "color": [0.6, 0.4, 0.3, 1]}
+]
+```
+
+The first chip's color is a preview only. Selecting it removes that part's
+override, restoring its selected palette value, or its original texture when
+the palette does not own the part. It never paints the preview RGB onto the
+original texture. Group tint continues to apply to palette values. Other chips
+set the chosen RGB before group tint; cycling uses that stored value so tinting
+cannot make the selector skip or get stuck. Mouse and left/right controls share
+the same order, including the reset chip. Exact RGB editing remains available.
+
+Omitting `swatches` preserves the generated strip for existing packages. The list
+is optional author metadata, not a list of colors to apply on installation.
+
 ### Control kinds
 
 Colour is one kind of control, not the only one. A control declares which it is, and the
