@@ -38,7 +38,7 @@
 +};
 --- /dev/null
 +++ b/Source/CSSAuthoring/CSSPhysicsProbeLibrary.cpp
-@@ -0,0 +1,188 @@
+@@ -0,0 +1,197 @@
 +#include "CSSPhysicsProbeLibrary.h"
 +
 +#include "Components/SkeletalMeshComponent.h"
@@ -214,6 +214,15 @@
 +            Row->SetBoolField(TEXT("hit"), Found);
 +            Row->SetStringField(TEXT("bone"), Hit.BoneName.ToString());
 +            Row->SetNumberField(TEXT("distance"), Hit.Distance);
++            if (Query->HasField(TEXT("probe_point")))
++            {
++                const FName Bone(*Query->GetStringField(TEXT("probe_bone")));
++                FBodyInstance* Body = Component->GetBodyInstance(Bone);
++                FVector Closest;
++                const float Distance = Body ? Body->GetDistanceToBody(VectorField(TEXT("probe_point")), Closest) : -1.f;
++                Row->SetNumberField(TEXT("point_distance"), Distance);
++                Row->SetStringField(TEXT("point_body"), Bone.ToString());
++            }
 +            Hits.Add(MakeShared<FJsonValueObject>(Row));
 +        }
 +        Result->SetArrayField(TEXT("queries"), Hits);

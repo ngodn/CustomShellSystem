@@ -25,7 +25,8 @@ from export_seduxtress_eve import read_bones, TO_UE
 source_path = WORK / 'arm-rest-correctives-export-v1/candidate.mesh.json'
 bind_path = WORK / 'arm-rest-b2-full-import-v1/engine-b2-bind.json'
 candidate_path = FIT / 'candidate.json'
-template_path = WORK / 'b2-body-physics-reference-v1/template.json'
+template_path = Path(os.environ.get('CSS_BODY_PHYSICS_BASELINE', str(WORK / 'b2-body-physics-reference-v1/template.json'))).resolve()
+assert template_path.is_relative_to(WORK.resolve())
 inputs = [source_path, bind_path, candidate_path, template_path]
 digest = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
 hashes = {str(p): digest(p) for p in inputs}
@@ -37,7 +38,18 @@ slots = set(range(8)) | {23, 24, 25, 26}
 faces = [[source['wedges'][w][0] for w in f[:3]] for f in source['faces'] if f[3] in slots]
 ids = sorted({i for face in faces for i in face})
 remap = {original: index for index, original in enumerate(ids)}
-vertices = [to_blender @ Vector(source['points'][i]) for i in ids]
+morph_names = ('FBMBodyTone', 'PBMBreastsSize', 'PBMGlutesSize', 'PBMHipSize', 'PBMThighsTone', 'PBMWaistWidth')
+morph_values = json.loads(os.environ.get('CSS_BODY_PHYSICS_RENDER_MORPHS', '[0,0,0,0,0,0]'))
+assert len(morph_values) == 6 and all(0 <= value <= 1 for value in morph_values)
+coordinates = {i: Vector(source['points'][i]) for i in ids}
+for shape in source['morph_targets']:
+    if shape['name'] not in morph_names:
+        continue
+    weight = morph_values[morph_names.index(shape['name'])]
+    for vertex, *delta in shape['deltas']:
+        if vertex in coordinates:
+            coordinates[vertex] += Vector(delta)*weight
+vertices = [to_blender @ coordinates[i] for i in ids]
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.object.delete(use_global=False)
 mesh = bpy.data.meshes.new('Unmodified B2 exported skin')
@@ -147,5 +159,5 @@ for label in collections:
 assert all(digest(Path(p)) == h for p, h in hashes.items())
 (OUT / 'report.json').write_text(json.dumps(dict(
     protected_hashes=hashes, skin_vertices=len(ids), skin_triangles=len(faces),
-    bounds_metres=[list(minimum), list(maximum)], views=list(views),
+    bounds_metres=[list(minimum), list(maximum)], views=list(views), morph_values=morph_values,
     scope=__doc__, visual_review_pending=True), indent=2)+'\n')

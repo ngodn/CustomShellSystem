@@ -195,3 +195,78 @@ binding and live damage/parry. The test's block-all query setup does not prove
 the game's channel filtering or damage logic. V43 remains installed; V44's
 new Physics Asset remains isolated and uninstalled. The complete modular
 Next-Gen asset/runtime/UI/profile/lifecycle/performance objective is unchanged.
+
+## Morph coverage and orientation refinement
+
+The initial neutral fit is insufficient for the public sliders. The V43 catalog
+sets all six body morphs to a 0 through 1 range, with zero defaults.
+`audit_body_physics_morphs.py` directly applies the exported deltas to the
+24,480 skin/foot points at all 64 corners. It checks both each assigned body
+and the union of all collision shapes. `b2-body-morph-audit-v1` finds uncovered
+skin at 56 corners, with a worst union gap of 3.522879 cm at chest size one
+and all other values zero. Neutral coverage still passes. This is geometry
+evidence, not a claim that 56 character configurations cannot receive damage.
+
+`refine_body_physics_fit.py` fits every assigned point across all corners.
+The bone and primitive assignments stay fixed. It compares the old orientation
+with principal-axis orientations, then tries deterministic 10, 5 and 2 degree
+local adjustments. It minimizes summed primitive volume while checking every
+assigned corner point remains inside with the original 0.35 cm fitting margin.
+The fitter uses the serialized Unreal Rotator for its geometry checks, including
+the pinned engine's quaternion singularity rules. Bone layout, constraint
+anchors/limits/drives and 212 collision-disable pairs are unchanged.
+
+`b2-body-refined-fit-v1` passes. For the same full-morph point clouds, its summed
+primitive volume is 11.15% smaller than a fit restricted to the old orientations.
+Calf volume falls about 30%, foot boxes 39 to 41%, and clavicle shapes about 30%.
+These percentages compare equivalent morph coverage. The sum remains 7.90%
+larger than the earlier neutral-only fit. It counts overlapping primitives
+separately and is not a measurement of body volume or final collision-union size.
+
+Separate coverage runs `b2-body-morph-audit-v2` and `-v3` find zero uncovered
+vertices at all 64 corners; v3 also records the worst point and its assigned
+body for engine queries. The fit covers the reference pose only. The exported
+public shape deltas are linear and each fixed primitive is convex, so enclosure
+of a point's corners also encloses its interpolated slider values in this pose.
+That argument does not cover animation, changing bone transforms, skin weights
+blended across moving bones, helper motion, garments or ragdoll.
+
+Neutral and maximum-slider renders are in `b2-body-refined-render-v1` and
+`b2-body-refined-max-render-v1`. The refined front/side/back views were reviewed
+in both, plus the earlier fit's front/side views at maximum sliders. The calves,
+shoulders, hands and feet follow the anatomy more closely. The torso/pelvis
+envelope is broader than neutral to cover the slider range. Both modular foot
+variants remain visible together in this diagnostic. Original mesh/blend data
+is unchanged; the render applies public deltas only in its temporary scene.
+
+The saved engine asset is
+`/Game/CSSAuthoring/DiagnosticReferences/PA_B2BodyFit_V2`. It preserves 22 bodies,
+23 primitives and 21 constraints. The updated C++ helper also calls the intended
+body's actual `FBodyInstance::GetDistanceToBody` for sampled morph points and
+their far-away controls. A hit against another body therefore cannot satisfy
+that point's containment check. The API returns zero inside a body and negative
+one when no valid body is available, per the pinned implementation and physics
+interface; the observed null/apply/remove/reapply behavior verifies those cases.
+
+`prepare_body_physics_morph_queries.py` binds the query fixtures to the audited
+candidate hash. It adds one worst point per morph corner and its displaced
+control to the earlier 270 rays, producing 398 rays and 128 point queries per
+phase. `b2-body-refined-query-v1` passes all 1,592 ray observations and 512 point
+distance observations. Each fitted phase has 22 valid bodies, 265 ray hits,
+133 misses, all 64 intended points at distance zero and all displaced points
+more than 100 cm away. Null/removal phases have no bodies, no ray hits and
+distance negative one. Source assets remain byte-identical.
+
+The updated helper builds successfully in `b2-body-physics-engine-v2`. The
+source patch still applies after the reference-metadata patch and reverse-checks
+against the current authoring source. `b2-body-refined-query-v2` loads this saved asset in a fresh process without
+editing, preserves every supplied property and its exact file hash, and repeats
+all 1,592 ray and 512 distance checks successfully. Both query processes exit
+zero. No game files were changed.
+
+Next test posed/moving collision and simulation/ragdoll, cook and bind the
+verified asset to the isolated V44 mesh, then check live damage/parry and the
+complete weapon, motion, controls, UI/profile, lifecycle and performance scope.
+This checkpoint does not accept gameplay contact distances or imply the separate
+floating-foot/heel-support defects are fixed. V43 remains installed and CSSX
+disabled; original proportions and accepted body/hair settings stay preserved.

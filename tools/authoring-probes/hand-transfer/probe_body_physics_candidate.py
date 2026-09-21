@@ -16,16 +16,21 @@ WORK = ROOT / 'CustomShellSystem/work/grip-grounding-v1'
 OUT = Path(os.environ['CSS_BODY_PHYSICS_PROBE_DIR']).resolve()
 assert OUT.parent == WORK.resolve() and not OUT.exists()
 OUT.mkdir()
-FIT = WORK / 'b2-body-physics-fit-v4'
+FIT = Path(os.environ.get('CSS_BODY_PHYSICS_FIT_DIR', str(WORK / 'b2-body-physics-fit-v4'))).resolve()
+assert FIT.parent == WORK.resolve()
 CONTENT = ROOT / 'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
-PACKAGE = '/Game/CSSAuthoring/DiagnosticReferences/PA_B2BodyFit_V1'
+PACKAGE = os.environ.get('CSS_BODY_PHYSICS_PACKAGE', '/Game/CSSAuthoring/DiagnosticReferences/PA_B2BodyFit_V1')
+assert PACKAGE.startswith('/Game/CSSAuthoring/DiagnosticReferences/PA_B2BodyFit')
 MESH = '/Game/CSSAuthoring/DiagnosticReferences/SK_B2GameReferenceMetadata_V2'
 digest = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
 write = lambda name, value: (OUT/name).write_text(json.dumps(value, indent=2)+'\n')
 protected = json.loads((WORK/'b2-reference-fresh-v2/report.json').read_text())['protected_hashes']
 assert all(digest(Path(path)) == value for path, value in protected.items())
 definition = json.loads((FIT/'candidate.json').read_text())
-queries = json.loads((FIT/'queries.json').read_text())
+query_path = Path(os.environ.get('CSS_BODY_PHYSICS_QUERIES', str(FIT/'queries.json'))).resolve()
+assert query_path.is_relative_to(WORK.resolve())
+queries = json.loads(query_path.read_text())
+protected.update({str(p): digest(p) for p in (FIT/'candidate.json', query_path)})
 mesh = unreal.load_asset(MESH)
 assert mesh and mesh.get_editor_property('physics_asset') is None
 create = os.environ.get('CSS_BODY_PHYSICS_CREATE') == '1'
@@ -82,6 +87,12 @@ for phase in result['phases']:
     for query, observed in zip(queries, phase['queries'], strict=True):
         assert query['id'] == observed['id']
         expected = query['expected'] and phase['fitted']
+        if 'probe_point' in query:
+            distance = observed['point_distance']
+            assert observed['point_body'].lower() == query['probe_bone'].lower()
+            correct_distance = (distance >= 0 and distance <= .001) if expected else (distance > 100 if phase['fitted'] else distance == -1)
+            if not correct_distance:
+                failures.append(dict(phase=phase['phase'], expected_point_inside=expected, **observed))
         if observed['hit'] != expected:
             failures.append(dict(phase=phase['phase'], expected=expected, **observed))
 write('query-failures.json', failures)
@@ -89,7 +100,7 @@ assert not failures, failures[:10]
 assert mesh.get_editor_property('physics_asset') is None
 assert all(digest(Path(path)) == value for path, value in protected.items())
 write('report.json', dict(passed=True, created=create, package=PACKAGE,
-    query_cases=len(queries)*4, bodies=22, constraints=21,
+    query_cases=len(queries)*4, point_distance_cases=4*sum('probe_point' in q for q in queries), bodies=22, constraints=21,
     protected_hashes=protected, fitted_asset_sha256=digest(CONTENT/(PACKAGE.removeprefix('/Game/')+'.uasset')),
     scope=__doc__, game_damage_parry_verified=False, ragdoll_verified=False))
 print('CSS_BODY_PHYSICS_QUERIES_PASS', len(queries)*4, flush=True)
