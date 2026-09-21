@@ -12,7 +12,12 @@ using CUE4Parse_Conversion.Animations;
 
 if (args.Length < 4) throw new ArgumentException("MeshExport CONTAINERS MAPPINGS OBJECT_PATH OUTPUT [EXTRA_PACKAGE...]");
 Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
-using var provider = new DefaultFileProvider(args[0], SearchOption.TopDirectoryOnly, new VersionContainer(EGame.GAME_UE5_6), StringComparer.OrdinalIgnoreCase);
+var sourceGame = Environment.GetEnvironmentVariable("CSS_SOURCE_GAME") switch {
+    null or "" or "GAME_UE5_6" => EGame.GAME_UE5_6,
+    "GAME_StellarBlade" => EGame.GAME_StellarBlade,
+    var unsupported => throw new ArgumentException($"Unsupported source game: {unsupported}")
+};
+using var provider = new DefaultFileProvider(args[0], SearchOption.TopDirectoryOnly, new VersionContainer(sourceGame), StringComparer.OrdinalIgnoreCase);
 provider.MappingsContainer = new FileUsmapTypeMappingsProvider(args[1]);
 provider.ReadScriptData = true;
 provider.Initialize();
@@ -20,6 +25,14 @@ provider.Mount();
 var mesh = provider.LoadPackageObject(args[2]);
 Directory.CreateDirectory(args[3]);
 File.WriteAllText(Path.Combine(args[3], "source-mesh.json"), JsonConvert.SerializeObject(mesh, Formatting.Indented));
+if (Environment.GetEnvironmentVariable("CSS_SOURCE_TRACKS") == "1") {
+    if (new[] { "CSS_ABSOLUTE_TRACKS", "CSS_ADDITIVE_POSE_DELTAS", "CSS_ANIMATION_POSES" }
+        .Any(key => Environment.GetEnvironmentVariable(key) == "1"))
+        throw new ArgumentException("Choose one animation export mode");
+    if (mesh is not UAnimSequence source) throw new ArgumentException("Source tracks require an AnimSequence");
+    SourceTracks.Export(source, sourceGame.ToString(), args[3]);
+    return;
+}
 if (Environment.GetEnvironmentVariable("CSS_ABSOLUTE_TRACKS") == "1") {
     if (Environment.GetEnvironmentVariable("CSS_ADDITIVE_POSE_DELTAS") == "1" ||
         Environment.GetEnvironmentVariable("CSS_ANIMATION_POSES") == "1")
