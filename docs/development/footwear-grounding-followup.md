@@ -37,7 +37,7 @@ they are not a measured V44 shoe-to-world-floor gap.
 separate shoe object with 168 vertices, 328 exported triangles, the existing
 footwear material and two influences per vertex. Each collar seats into the
 existing sole; the tapered lower cap reaches that shoe's authored sole plane.
-Original objects and the source blend are unchanged. V44 stays installed.
+Original objects and the source blend are unchanged. This was the pre-cook checkpoint; the short-path version is now installed as described below.
 
 The optional exporter flag `--heel-supports` appends the object to material
 section 20, so it shares the existing shoes toggle without another slot. The
@@ -133,3 +133,24 @@ shoe renders and then in-world floor-contact checks. Keep changes isolated from
 the baseline until reviewed. Preview lighting remains compiled locally and
 queued after these appearance defects. Broader gameplay and modular Next-Gen
 release acceptance remains open.
+
+## Short-path live follow-up
+
+2026-09-21: The supports are now cooked and installed in `SK_BlackPearl2`; see
+[the combined package/live trial](short-mesh-package.md#live-trial-checkpoint).
+The Steam rear still shows both supports. The world clip covers idle only, so
+walking attachment and exact ground contact remain unverified.
+
+`capture_footwear_floor.py --profile short1` accepts only the exact installed
+mesh path, retaining V44 as its default profile. It checks velocity before and
+after capture. `work/paths/live1/floor1.json` captures a stationary pose with
+body tone zero and a capsule FloorDist of 2.239874 cm. This is not shoe clearance.
+`pose1/pose.json` replays the protected original footwear and C support source
+with those actual transforms/morph values; the Blender process exits zero.
+
+The scene-trace step rejected this sample because the character transform had
+changed before tracing. `traces1.requests.jsonl` retains the failed check. No
+new shoe-to-floor clearance is claimed from this attempt. The analyzer and
+tracer now accept explicit workspace inputs so a fresh stationary sample can
+be used without overwriting historical evidence. Lighting input correction
+and favorite sorting took priority following user feedback.

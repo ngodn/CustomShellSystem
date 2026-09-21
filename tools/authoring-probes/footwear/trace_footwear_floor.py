@@ -4,6 +4,7 @@ No input, collision setting or actor transform is changed. Hit positions are
 reconstructed from trace Time because reflected net-quantized vectors decode
 as empty objects in the current bridge. Distance supplies an independent check.
 """
+import argparse
 import json
 import math
 import sys
@@ -13,9 +14,16 @@ sys.path.insert(0,str(CSS/'tools'))
 from css_live_snapshot import Probe
 from check_inventory_camera import checked_get,checked_call
 w=CSS/'work/grip-grounding-v1'
-pose=json.loads((w/'heel-support-pose-v2/pose.json').read_text())
-live=json.loads((w/'footwear-followup-v1/live-floor-v2.json').read_text())
-out=w/'footwear-followup-v1/floor-traces-v3.json';assert not out.exists()
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--pose',type=Path,default=w/'heel-support-pose-v2/pose.json')
+parser.add_argument('--live',type=Path,default=w/'footwear-followup-v1/live-floor-v2.json')
+parser.add_argument('--output',type=Path,default=w/'footwear-followup-v1/floor-traces-v3.json')
+args=parser.parse_args()
+assert all(path.resolve().is_relative_to(CSS/'work') for path in (args.pose,args.live,args.output))
+pose=json.loads(args.pose.read_text())
+live=json.loads(args.live.read_text())
+assert pose['player']==live['player'] and pose['mesh_transform']==live['mesh_transform_before']
+out=args.output;assert not out.exists()
 report=dict(scope='Four local scene traces in one stationary pose, not all terrain or locomotion acceptance.',rows=[],failures=[])
 with out.with_suffix('.requests.jsonl').open('x') as f:
  p=Probe(f);player=p.send('player');assert player==pose['player'];mesh=checked_get(p,player['pawn'],'Mesh')

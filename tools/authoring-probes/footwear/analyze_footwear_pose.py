@@ -15,13 +15,15 @@ ROOT=Path(__file__).resolve().parents[4]
 WORK=ROOT/'CustomShellSystem/work/grip-grounding-v1'
 MOD=ROOT/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx'
 OUT=Path(os.environ['CSS_FOOTWEAR_ANALYSIS']).resolve()
-assert OUT.parent==WORK and not OUT.exists()
+assert OUT.is_relative_to(ROOT/'CustomShellSystem/work') and not OUT.exists()
 OUT.mkdir()
 sys.path.insert(0,str(MOD/'tools'))
 from export_seduxtress_eve import read_bones, TO_UE
 source=json.loads((WORK/'arm-rest-correctives-export-v1/candidate.mesh.json').read_text())
 audit=json.loads((WORK/'arm-rest-correctives-export-v1/candidate.mesh.audit.json').read_text())
-live=json.loads((WORK/'footwear-followup-v1/live-floor-v2.json').read_text())
+live_path=Path(os.environ.get('CSS_FOOTWEAR_LIVE',str(WORK/'footwear-followup-v1/live-floor-v2.json'))).resolve()
+assert live_path.is_relative_to(ROOT/'CustomShellSystem/work')
+live=json.loads(live_path.read_text())
 assert live['mesh_transform_before']==live['mesh_transform_after']
 assert live['movement_values']['Velocity']==dict(X=0,Y=0,Z=0)
 bones,bind=read_bones(WORK/'arm-rest-b2-full-import-v1/engine-b2-bind.json')
@@ -67,6 +69,6 @@ for side,sign in [('l',1),('r',-1)]:
  rows[side]=dict(shoe_low_vertex=low,shoe_low_world_cm=list(result[low]),
                  support_low_world_cm=list(new[support_low]),
                  support_vs_shoe_z_cm=new[support_low].z-result[low].z)
-report=dict(rows=rows,mesh_transform=live['mesh_transform_before'],player=live['player'],
+report=dict(rows=rows,mesh_transform=live['mesh_transform_before'],player=live['player'],live_capture=str(live_path),
             morphs=live['morphs'],scope='Linear skin replay of one actual pose with captured public morphs. Scene floor has not been traced.')
 (OUT/'pose.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report,indent=2))
