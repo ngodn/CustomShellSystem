@@ -562,7 +562,7 @@ int main(int argc,char** argv) {
     check(combat.hooks.size()==3,"Parry hook group incomplete");
     combat.seal="ID_Seal_Stone_C";combat_menu.tick(1.1);
     check(combat.hooks.empty() && combat_menu.model()["values"]["perfect_parry"]==true,"Seal change did not disarm the parry hooks while keeping the toggle armed");
-    check(combat_menu.model()["status"].get<std::string>().find("waits for the Infinite seal")!=std::string::npos,"Armed parry did not say which seal it waits for");
+    check(combat_menu.model()["status"].get<std::string>().find("waits for the Infinite Seal")!=std::string::npos,"Armed parry did not say which seal it waits for");
     combat.seal="ID_Seal_Infinite_C";combat_menu.tick(1.1);
     check(combat.hooks.size()==3,"Re-equipping the seal did not re-arm the parry hooks");
     check(combat_menu.stop(),"Combat cleanup failed");

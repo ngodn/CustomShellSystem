@@ -68,7 +68,12 @@ void Menu::combat_sync() {
     struct SealCheat {const char* id;const char* seal;const char* ability;};
     constexpr SealCheat seal_cheats[]={{"perfect_parry","ID_Seal_Infinite_C","GA_Parry_Handler_C"},
         {"perfect_block","ID_Seal_Default_C","GA_ActiveBlock_C"},{"perfect_harden","ID_Seal_Stone_C","GA_Harden_Original_C"}};
-    auto seal_label=[](const std::string& seal){ auto s=seal; if(s.starts_with("ID_Seal_")) s=s.substr(8); if(s.ends_with("_C")) s.resize(s.size()-2); return s+" seal"; };
+    // In-game names (ST_Core_Seals): Untarnished = guard, Infinite = parry, Vatra's = harden.
+    auto seal_label=[](const std::string& seal){
+        if(seal=="ID_Seal_Default_C") return std::string("Untarnished Seal (guard)");
+        if(seal=="ID_Seal_Infinite_C") return std::string("Infinite Seal (parry)");
+        if(seal=="ID_Seal_Stone_C") return std::string("Vatra's Seal (harden)");
+        auto s=seal; if(s.starts_with("ID_Seal_")) s=s.substr(8); if(s.ends_with("_C")) s.resize(s.size()-2); return s+" Seal"; };
     std::set<std::string> waiting;
     for(const auto& cheat:seal_cheats) {
         if(applied_[cheat.id]!=true) { armed_.erase(cheat.id); continue; }
