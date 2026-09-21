@@ -191,8 +191,94 @@ UBlendSpace* UCSSAnimationLibrary::CreateIdleCarrier(USkeletalMesh* Mesh,
     return Result;
 }
 
+UBlendSpace* UCSSAnimationLibrary::CreateMovementBlend(USkeletalMesh* Mesh,
+    const TArray<UAnimSequence*>& Animations, const TArray<FVector>& Points,
+    const TArray<float>& Rates, float MaxSpeed, const FString& OutputPackage)
+{
+    if (!IsRunningCommandlet() || !Mesh || Animations.Num() < 4 || Animations.Num() > 128 ||
+        Points.Num() != Animations.Num() || Rates.Num() != Animations.Num() ||
+        !FMath::IsFinite(MaxSpeed) || MaxSpeed <= 0 || MaxSpeed > 2000 ||
+        !OutputPackage.StartsWith(TEXT("/Game/CSS/AnimLab/BS_")) || OutputPackage.Len() > 100 ||
+        !FPackageName::IsValidLongPackageName(OutputPackage) ||
+        FPackageName::DoesPackageExist(OutputPackage) || FindPackage(nullptr, *OutputPackage)) return nullptr;
+    for (int32 I = 0; I < Animations.Num(); ++I)
+    {
+        const auto* A = Animations[I]; const auto& P = Points[I];
+        if (!A || A->GetSkeleton() != Mesh->GetSkeleton() || A->IsValidAdditive() ||
+            A->RateScale != 1.f || A->GetPlayLength() <= 0 || A->bEnableRootMotion || !A->Notifies.IsEmpty() ||
+            !FMath::IsFinite(Rates[I]) || Rates[I] < .05f || Rates[I] > 8.f ||
+            P.ContainsNaN() || P.X < -180 || P.X > 180 || P.Y < 0 || P.Y > MaxSpeed || P.Z != 0)
+            return nullptr;
+        for (int32 J = 0; J < I; ++J) if (P.Equals(Points[J], .001)) return nullptr;
+    }
+    for (const FVector Corner : {FVector(-180,0,0),FVector(180,0,0),
+                                 FVector(-180,MaxSpeed,0),FVector(180,MaxSpeed,0)})
+        if (!Points.ContainsByPredicate([&](const FVector& P) { return P.Equals(Corner, .001); })) return nullptr;
+    auto* AxesProperty = FindFProperty<FStructProperty>(UBlendSpace::StaticClass(), TEXT("BlendParameters"));
+    auto* SamplesProperty = FindFProperty<FArrayProperty>(UBlendSpace::StaticClass(), TEXT("SampleData"));
+    auto* SampleType = SamplesProperty ? CastField<FStructProperty>(SamplesProperty->Inner) : nullptr;
+    if (!AxesProperty || AxesProperty->Struct != FBlendParameter::StaticStruct() || AxesProperty->ArrayDim != 3 ||
+        !SampleType || SampleType->Struct != FBlendSample::StaticStruct()) return nullptr;
+    auto* Result = NewObject<UBlendSpace>(CreatePackage(*OutputPackage),
+        *FPackageName::GetLongPackageAssetName(OutputPackage), RF_Public | RF_Standalone);
+    Result->SetSkeleton(Mesh->GetSkeleton()); Result->SetPreviewMesh(Mesh);
+    auto* Axes = AxesProperty->ContainerPtrToValuePtr<FBlendParameter>(Result);
+    Axes[0].DisplayName = TEXT("Direction"); Axes[0].Min = -180; Axes[0].Max = 180;
+    Axes[0].GridNum = 8; Axes[0].bWrapInput = true; Axes[0].bSnapToGrid = false;
+    Axes[1].DisplayName = TEXT("Speed"); Axes[1].Min = 0; Axes[1].Max = MaxSpeed;
+    Axes[1].GridNum = 8; Axes[1].bSnapToGrid = false;
+    Result->bAllowMarkerBasedSync = false;
+    auto* ScaleAxis = FindFProperty<FByteProperty>(UBlendSpace::StaticClass(), TEXT("AxisToScaleAnimation"));
+    if (!ScaleAxis || ScaleAxis->GetPropertyValue_InContainer(Result) != uint8(BSA_None)) return nullptr;
+    auto& Samples = *SamplesProperty->ContainerPtrToValuePtr<TArray<FBlendSample>>(Result);
+    for (int32 I = 0; I < Animations.Num(); ++I)
+    {
+        const int32 Index = Result->AddSample(Animations[I], Points[I]);
+        if (!Samples.IsValidIndex(Index)) return nullptr;
+        Samples[Index].RateScale = Rates[I];
+    }
+    Result->ValidateSampleData(); Result->ResampleData();
+    if (Result->GetNumberOfBlendSamples() != Animations.Num() || Result->GetBlendSpaceData().IsEmpty()) return nullptr;
+    Result->MarkPackageDirty(); return Result;
+}
+
+FString UCSSAnimationLibrary::InspectMovementBlend(UBlendSpace* Blend, const TArray<FVector>& Inputs)
+{
+    if (!IsRunningCommandlet() || !Blend || Blend->GetClass() != UBlendSpace::StaticClass() ||
+        !Blend->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/BS_")) || Inputs.IsEmpty() || Inputs.Num() > 2048)
+        return {};
+    auto Report = MakeShared<FJsonObject>(); TArray<TSharedPtr<FJsonValue>> Queries;
+    for (const auto& Input : Inputs)
+    {
+        if (Input.ContainsNaN()) return {};
+        TArray<FBlendSampleData> Weights; int32 CachedIndex = INDEX_NONE;
+        if (!Blend->GetSamplesFromBlendInput(Input, Weights, CachedIndex, false) || Weights.IsEmpty()) return {};
+        auto Query = MakeShared<FJsonObject>(); TArray<TSharedPtr<FJsonValue>> Values;
+        Query->SetNumberField(TEXT("direction"), Input.X); Query->SetNumberField(TEXT("speed"), Input.Y);
+        double Total = 0;
+        for (const auto& W : Weights)
+        {
+            if (!Blend->GetBlendSamples().IsValidIndex(W.SampleDataIndex) ||
+                !FMath::IsFinite(W.TotalWeight) || W.TotalWeight < 0) return {};
+            const auto& Sample = Blend->GetBlendSamples()[W.SampleDataIndex];
+            if (!Sample.Animation) return {};
+            auto Value = MakeShared<FJsonObject>();
+            Value->SetNumberField(TEXT("index"), W.SampleDataIndex);
+            Value->SetStringField(TEXT("animation"), Sample.Animation->GetPathName());
+            Value->SetNumberField(TEXT("weight"), W.TotalWeight);
+            Value->SetNumberField(TEXT("rate"), Sample.RateScale);
+            Values.Add(MakeShared<FJsonValueObject>(Value)); Total += W.TotalWeight;
+        }
+        if (FMath::Abs(Total - 1.) > .00001) return {};
+        Query->SetArrayField(TEXT("samples"), Values); Queries.Add(MakeShared<FJsonValueObject>(Query));
+    }
+    Report->SetArrayField(TEXT("queries"), Queries);
+    FString Text;
+    return FJsonSerializer::Serialize(Report, TJsonWriterFactory<>::Create(&Text)) ? Text : FString();
+}
+
 FString UCSSAnimationLibrary::EvaluateClip(USkeletalMesh* Mesh, UAnimSequence* Animation,
-    UAnimBlueprint* Blueprint, int32 Loops, UBlendSpace* Carrier, FVector BlendInput)
+    UAnimBlueprint* Blueprint, int32 Loops, UBlendSpace* Carrier, FVector BlendInput, bool AdvanceBlendClock)
 {
     auto Fail = [](const TCHAR* Message) -> FString {
         UE_LOG(LogTemp, Error, TEXT("CSS EvaluateClip: %s"), Message);
@@ -205,15 +291,25 @@ FString UCSSAnimationLibrary::EvaluateClip(USkeletalMesh* Mesh, UAnimSequence* A
         Blueprint->TargetSkeleton != Mesh->GetSkeleton() || Animation->GetSkeleton() != Mesh->GetSkeleton() ||
         Loops < 1 || Loops > 3 || Animation->GetPlayLength() <= 0 || Animation->GetPlayLength()*Loops > 22)
         return Fail(TEXT("Invalid isolated component input"));
+    if (AdvanceBlendClock && !Carrier) return Fail(TEXT("Advancing a blend requires a carrier"));
     if (Carrier)
     {
         if (Carrier->GetSkeleton() != Mesh->GetSkeleton() || Carrier->IsValidAdditive() ||
             !Carrier->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/BS_")) ||
-            Carrier->GetNumberOfBlendSamples() != 4 || BlendInput.ContainsNaN())
+            (!AdvanceBlendClock && Carrier->GetNumberOfBlendSamples() != 4) ||
+            Carrier->GetNumberOfBlendSamples() < 1 || Carrier->GetNumberOfBlendSamples() > 128 || BlendInput.ContainsNaN())
             return Fail(TEXT("Invalid idle carrier"));
         for (const auto& Sample : Carrier->GetBlendSamples())
-            if (Sample.Animation != Animation || Sample.RateScale != 1.f)
-                return Fail(TEXT("Carrier does not contain only the expected idle"));
+        {
+            if (!Sample.Animation || Sample.Animation->GetSkeleton() != Mesh->GetSkeleton() ||
+                Sample.Animation->IsValidAdditive() || Sample.Animation->bEnableRootMotion ||
+                !Sample.Animation->Notifies.IsEmpty() || !FMath::IsFinite(Sample.RateScale) || Sample.RateScale <= 0 ||
+                (!AdvanceBlendClock && (Sample.Animation != Animation || Sample.RateScale != 1.f)))
+                return Fail(TEXT("Carrier has incompatible samples"));
+            Sample.Animation->BeginCacheDerivedDataForCurrentPlatform();
+            Sample.Animation->WaitOnExistingCompression(true);
+            if (!Sample.Animation->IsCompressedDataValid()) return Fail(TEXT("Uncompressed carrier sample"));
+        }
     }
     FMemMark Memory(FMemStack::Get());
     Animation->BeginCacheDerivedDataForCurrentPlatform();
@@ -233,7 +329,8 @@ FString UCSSAnimationLibrary::EvaluateClip(USkeletalMesh* Mesh, UAnimSequence* A
         C->InitAnim(true);
         C->SetAnimation(Carrier ? static_cast<UAnimationAsset*>(Carrier) : Animation);
         if (Carrier) C->GetSingleNodeInstance()->SetBlendSpacePosition(BlendInput);
-        C->Stop();
+        if (AdvanceBlendClock) { C->GetSingleNodeInstance()->SetLooping(true); C->GetSingleNodeInstance()->SetPlaying(true); }
+        else C->Stop();
         return C;
     };
     auto* Upstream = MakeComponent(false);
@@ -315,7 +412,7 @@ FString UCSSAnimationLibrary::EvaluateClip(USkeletalMesh* Mesh, UAnimSequence* A
         for (auto* C : {Upstream, Component})
         {
             // Single-node blend spaces expose normalized position, sequences seconds.
-            C->SetPosition(float(Carrier ? ClipTime/Duration : ClipTime), false);
+            if (!AdvanceBlendClock) C->SetPosition(float(Carrier ? ClipTime/Duration : ClipTime), false);
             C->TickAnimation(Frame ? 1.f/Fps : 0.f, true);
             C->RefreshBoneTransforms();
         }
@@ -335,7 +432,9 @@ FString UCSSAnimationLibrary::EvaluateClip(USkeletalMesh* Mesh, UAnimSequence* A
         Pose->SetObjectField(TEXT("Snapshot"), PoseJson(B));
         Sample->SetObjectField(TEXT("pose"), Pose);
         Sample->SetObjectField(TEXT("upstream"), PoseJson(A));
-        Sample->SetNumberField(TEXT("time"), Time);Sample->SetNumberField(TEXT("clip_time"), ClipTime);
+        Sample->SetNumberField(TEXT("time"), Time);
+        if (AdvanceBlendClock) Sample->SetNumberField(TEXT("blend_normalized_time"), Component->GetSingleNodeInstance()->GetCurrentTime());
+        else Sample->SetNumberField(TEXT("clip_time"), ClipTime);
         auto Morphs = MakeShared<FJsonObject>();
         for (UMorphTarget* Morph : Mesh->GetMorphTargets())
         {
@@ -369,6 +468,7 @@ FString UCSSAnimationLibrary::EvaluateClip(USkeletalMesh* Mesh, UAnimSequence* A
     Report->SetObjectField(TEXT("defaults"), Defaults);Report->SetArrayField(TEXT("filters"), FilterReport);
     Report->SetBoolField(TEXT("compressed_source"), true);Report->SetNumberField(TEXT("loops"), Loops);
     Report->SetStringField(TEXT("carrier"), Carrier ? Carrier->GetPathName() : TEXT(""));
+    Report->SetBoolField(TEXT("advance_blend_clock"), AdvanceBlendClock);
     Report->SetNumberField(TEXT("unaffected_position_cm"), UnaffectedPosition);
     Report->SetNumberField(TEXT("unaffected_angle_rad"), UnaffectedAngle);
     FString Text;

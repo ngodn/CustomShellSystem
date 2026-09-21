@@ -431,6 +431,63 @@ check phase/cadence and game weapon layering, then review actual moving-owner
 hair/contact behavior with the new motion. Do not retune the accepted physics
 merely to make stationary-owner sample images pass.
 
+## Direction and speed blend candidates M1
+
+`work/anim11` contains three private, uncooked `/Game/CSS/AnimLab/BS_M1_*`
+BlendSpaces for Walk, Jog and Sprint, using the corrected D2 sequences.
+Each has 36 samples: nine directions including matching -180/180 endpoints,
+and four speed rows from idle to the slot maximum (300, 650 and 900 cm/s).
+Forward uses the relaxed movement clips. Sprint's diagonal samples use SL/SR;
+its remaining side/back samples temporarily use directional run clips. These
+fallbacks are not native backward-sprint source animations.
+
+`prepare_movement.py` estimates source speed from the median horizontal foot
+velocity in the lowest height quartile, excluding endpoints. This is a
+provisional rate estimate, not measured shoe contact. It records uncertainty
+percentiles and a foot-height phase indicator. Left directional jog is about
+0.208 cycles out of phase with forward; no phase correction is applied in M1.
+Sample rates reach 2.553 for Walk, 4.043 for Jog and 5.599 for Sprint. These
+tables must not be treated as accepted cadence or deployed as release motion.
+
+The editor helper creates plain two-axis BlendSpaces with a wrapped direction
+axis, explicit sample rates and marker sync disabled. It rejects incompatible
+skeletons, additive/root-motion/event-bearing clips, invalid rates, duplicate
+points, missing corners and overwriting existing packages. The implementation
+uses the pinned UE 5.6.1 source. Epic's [blend parameter reference](https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/FBlendParameter)
+describes cyclic input wrapping; it does not establish gait phase agreement.
+
+Build, creation and fresh-process readback pass. All 264 engine interpolation
+queries match between processes, covering authored samples, interior points,
+speed clamping and wrapped seams. Five negative fixtures pass. The new
+optional engine-clock mode leaves the existing sequence sampler exactly
+unchanged for every preexisting output field.
+
+Nine actual engine-clock component runs cover 1,305 compressed frames through
+the accepted secondary rigs. Independently computed cycle lengths match the
+engine clock with maximum normalized error 2.708e-6. Forward sprint at 800 cm/s
+has a provisional 0.316-second cycle, requiring cadence review. These checks
+use a stationary component owner, not gameplay movement or floor contact.
+All 49 protected asset hashes remain unchanged.
+
+All 27 sampled fitted renders (frames 0, 49 and 98 of each run) were inspected
+in `review-walk.png`, `review-jog.png` and `review-sprint.png`. Replay position
+error is below 0.000924 cm. Hair roots remain behind the head; raised combat
+arms and some strand/body overlaps remain. Sparse stills do not establish
+smooth transitions, acceptable cadence or contact over the complete cycle.
+No new assets or core have been installed.
+
+The cooked player graph in `work/anim1/game.json`, summarized in
+`work/anim11/player-graph.json`, routes the custom BlendSpace through Locomotion
+before downstream aiming and hand correction. The custom route bypasses
+MotionMatching PrimaryUpdate while LateUpdate remains connected. This is
+static evidence only: weapon handling and the freshness of the gait flags
+under that bypass still require live verification.
+
+Next align phases and review cadence, then validate moving-owner contacts,
+weapon overlays and gait transitions before cooking or deployment. Keep the
+accepted rig, proportions, hair 200/24/0, body settings and grounding intact.
+Custom idle/weapon restoration and paired beacon integration remain open.
+
 ## Original author's pose and deformation references
 
 The user supplied `reference/body-type-variant-EVE/3HVzUb9.gif` and
