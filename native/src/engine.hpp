@@ -131,8 +131,6 @@ class InventoryUI {
     int section_=0, row_=0, channel_=0, tint_field_index_=0;   // which tint slider Left/Right drives
     bool exact_color_=false;      // CUSTOMIZE: swatch strip, or Red/Green/Blue for the people who want it
     std::string last_message_;
-    std::string pinned_outfit_id_;
-    bool was_in_shell_view_=false;
     bool dirty_=true, active_=false, enabled_=true, was_active_=false;
     uint64_t discover_after_=0, last_tick_=0;
     uint64_t transition_started_=0;

@@ -1,6 +1,6 @@
 # Current work queue
 
-2026-09-21: User requests shell ordering: equipped first, then favorites, then non-favorites, with stable ordering within each group. Queue this after the active lighting controller correction (Y for lighting, B stays Back).
+2026-09-21: [Shell ordering](development/favorite-order.md) now uses equipped first, then favorites, then non-favorites, preserving catalog order within groups and selected outfit identity when rows move. Host tests and Windows development build pass. The Y lighting correction is committed as `dd9896f`; both UI changes await the next normal restart and live verification.
 
 2026-09-21: [Short-path live trial](development/short-mesh-package.md#live-trial-checkpoint) is installed after backing up V44. World binding, accepted hair 200/24/0, hand configuration and limited collision geometry queries pass. A reviewed Steam rear still shows both restored heel supports; the reviewed world clip covers idle only. Walking/turning feedback, measured ground contact, preview lighting controls and broader gameplay acceptance remain open. Historical installation claims below describe earlier checkpoints. The later modder kit remains assigned to `CSS-Modding` and its own public GitHub repository.
 

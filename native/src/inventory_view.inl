@@ -140,6 +140,12 @@ void InventoryUI::bind_inputs() {
 void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& appearance) {
     auto* page=page_.Get(); auto* canvas=canvas_.Get(); auto* pc=controller_.Get();
     if(!page || !canvas || !pc) return;
+    // A reordered list must keep focus on the same outfit, not its old index.
+    std::string focused_outfit;
+    if(section_==0 && !enter_transition_ && row_>=0 && row_<int(rows_.size())) {
+        const auto& action=rows_[row_].tertiary;
+        if(action.is_object() && action.value("action","")=="favorite") focused_outfit=action.value("outfit","");
+    }
     if(auto* scroll=scroll_.Get()) { Call offset(scroll,L"GetScrollOffset",1); offset.run(); scroll_offset_=offset.get<float>(); }
     invoke(canvas,L"ClearChildren"); hits_.clear(); rows_.clear(); sliders_.clear(); scroll_.Reset(); name_input_.Reset();
     auto* tree=inventory_object(page,L"WidgetTree");
@@ -388,20 +394,9 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         ui.label(body,right+16,detail_y+145,328,126,16,muted);
     };
     if(section_==0) {
-        // Pin the equipped outfit to the top only when entering the tab or returning to it,
-        // NEVER dynamically while the player is actively browsing/selecting inside the SHELL
-        // view (so selecting an outfit or cycling variants never jumps the list out from under the cursor).
-        const Outfit* pinned = nullptr;
-        if(!pinned_outfit_id_.empty()) {
-            for(const auto& o:catalog.outfits) if(o.id==pinned_outfit_id_) { pinned=&o; break; }
-        } else {
-            pinned = worn;
-        }
-        if(pinned && !catalog.compatible(pinned->id, appearance.shell)) pinned = nullptr;
-
-        std::vector<const Outfit*> ordered;
-        if(pinned) ordered.push_back(pinned);
-        for(const auto& o:catalog.outfits) if(&o!=pinned) ordered.push_back(&o);
+        const auto ordered=catalog.display_order(worn?worn->id:"",state.favorites);
+        const int row_before=row_;
+        for(size_t i=0;i<ordered.size();++i) if(ordered[i]->id==focused_outfit) row_=int(i)+2;
         const int total=int(ordered.size())+2;
         row_=std::clamp(row_,0,total-1);
         scroll_begin();
@@ -421,6 +416,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             if(chosen) ui.label("Equipped",left+panel-99,y+44,82,24,14,gold);
         }
         scroll_end();
+        if(row_!=row_before && row_>=2) if(auto* scroll=scroll_.Get()) {
+            Call reveal(scroll,L"ScrollWidgetIntoView",4);
+            reveal.set(L"WidgetToFind",rows_[row_].widget.Get());reveal.set(L"AnimateScroll",false);
+            reveal.set(L"ScrollDestination",uint8_t{0});reveal.set(L"Padding",8.f);reveal.run();
+        }
         if(catalog.outfits.empty()) ui.label(catalog.empty_message(),left+18,435,panel-36,130,18,muted);
         if(row_==0) {
             detail("Harbinger outfit",state.harbinger_mirror?"Carry from shell":"Keeps its own",
@@ -1488,18 +1488,6 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     if(!active_ && was_active_) { camera_stop(); closing_=false; transition_started_=0; }
     if(active_) camera_bind_state();
     was_active_=active_;
-    const bool in_shell_view = active_ && !extension_active_ && (section_ == 0);
-    if(was_in_shell_view_ && !in_shell_view) {
-        // Just left the SHELL view (switched tabs, opened CSSX, or closed menu).
-        // Update pinned outfit to whatever is currently worn so it is pinned on next visit.
-        auto sel = state.selections.find(appearance.shell);
-        pinned_outfit_id_ = (sel != state.selections.end()) ? sel->second.outfit : "";
-    } else if(!was_in_shell_view_ && in_shell_view) {
-        // Just entered the SHELL view. Snapshot whatever outfit is currently worn.
-        auto sel = state.selections.find(appearance.shell);
-        pinned_outfit_id_ = (sel != state.selections.end()) ? sel->second.outfit : "";
-    }
-    was_in_shell_view_ = in_shell_view;
     double elapsed=last_tick_?std::clamp((now-last_tick_)/1000.,0.,.05):0.; last_tick_=now;
 #ifdef CSS_INVENTORY_DEV
     if(!active_ || !focused) capture_duration_=0;

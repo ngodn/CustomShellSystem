@@ -345,6 +345,16 @@ std::string Catalog::empty_message() const {
         return "No CSS outfit metadata found. Install the CSS versions of outfit packages, then restart the game.";
     return "No CSS outfit packages found. Install an outfit package, then restart the game.";
 }
+std::vector<const Outfit*> Catalog::display_order(const std::string& equipped,const std::set<std::string>& favorites) const {
+    std::vector<const Outfit*> result;
+    result.reserve(outfits.size());
+    // Preserve catalog order within each group and include every outfit once.
+    for(int rank=0;rank<3;++rank) for(const auto& outfit:outfits) {
+        const int group=outfit.id==equipped?0:favorites.contains(outfit.id)?1:2;
+        if(group==rank) result.push_back(&outfit);
+    }
+    return result;
+}
 const Variant* Catalog::find(const std::string& outfit, const std::string& variant) const {
     for (const auto& o : outfits) if (o.id == outfit)
         for (const auto& v : o.variants) if (v.id == variant) return &v;

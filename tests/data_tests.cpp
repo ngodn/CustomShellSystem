@@ -15,6 +15,25 @@ int main() {
     auto dir = fs::temp_directory_path() / "css-data-tests";
     fs::create_directories(dir);
     try {
+        {
+            Catalog list;
+            for(const auto* id:{"ordinary.a","favorite.a","equipped","ordinary.b","favorite.b"}) {
+                Outfit outfit;outfit.id=id;list.outfits.push_back(std::move(outfit));
+            }
+            auto ids=[](const auto& order) {
+                std::vector<std::string> result;for(auto* outfit:order) result.push_back(outfit->id);return result;
+            };
+            expect(ids(list.display_order("equipped",{"favorite.a","favorite.b","equipped","missing"}))==
+                std::vector<std::string>{"equipped","favorite.a","favorite.b","ordinary.a","ordinary.b"},
+                "Equipped/favorite groups lost priority, stability or uniqueness");
+            expect(ids(list.display_order("missing",{"favorite.b"}))==
+                std::vector<std::string>{"favorite.b","ordinary.a","favorite.a","equipped","ordinary.b"},
+                "Missing equipped outfit or changed favorites broke order");
+            expect(ids(list.display_order("",{}))==
+                std::vector<std::string>{"ordinary.a","favorite.a","equipped","ordinary.b","favorite.b"},
+                "Unranked catalog order changed");
+            expect(Catalog{}.display_order("",{}).empty(),"Empty catalog gained an outfit");
+        }
         expect(valid_id("beaute.genessa"), "Valid id rejected");
         expect(!valid_id("../escape"), "Traversal accepted");
         expect(!valid_id(".."), "Dot traversal accepted");

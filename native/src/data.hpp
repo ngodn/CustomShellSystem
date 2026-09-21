@@ -90,6 +90,7 @@ struct Catalog {
     std::string empty_message() const;
     const Variant* find(const std::string& outfit, const std::string& variant) const;
     bool compatible(const std::string& outfit, const std::string& shell) const;
+    std::vector<const Outfit*> display_order(const std::string& equipped,const std::set<std::string>& favorites) const;
 };
 struct Selection { std::string outfit, variant; Customization custom; };
 // 0.4: a template keeps the animation settings with the outfit selections.
