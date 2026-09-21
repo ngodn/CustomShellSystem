@@ -1,4 +1,4 @@
-# CSS 1.0.0-alpha.1 local delivery
+# CSS 1.0.0-alpha.1 delivery
 
 The user accepted corrected Eve Walk/Jog/Sprint on 2026-09-21: "yeah its good
 now". The alpha includes that correction. The earlier proposal to list sideways
@@ -34,7 +34,7 @@ used movement2, which contains the same movement, idle and UI fixes. The exact
 production DLL passed its normal-restart boot check, with installed files
 matching every release manifest hash. Saved state is identical before and
 after restart/menu entry. Runtime and loader agree on the new Windows PID.
-CSSX remains disabled. Publication details follow once the upload is verified.
+CSSX remains disabled. The prerelease is now published; see the verification below.
 
 Custom Eve idle, weapon hiding and beacon playback remain unfinished, as do
 broad weapon/combat/transition coverage and the modder kit. Full CSS v1.0.0
@@ -62,3 +62,23 @@ Evidence: work/alpha1/live/deployment.json, loader.json, menu-status.json,
 state-in-menu.json, production-menu.mp4, production-world.mp4,
 world-observation.json, after-world-status.json, destination.mp4 and
 destination-observation.json. Game PID remained live after recording.
+
+
+## Published prerelease
+
+Published on 2026-09-21:
+https://github.com/ngodn/CustomShellSystem/releases/tag/v1.0.0-alpha.1
+
+The release contains separate CSS and Eve ZIPs, their SHA-256 sidecars, Eve
+instructions and the verification receipt. All six remote asset digests match
+the local files. Both ZIPs were downloaded back into work/alpha1/remote and
+compared byte-for-byte with the verified originals. Runtime archive validation
+and ZIP CRC checks also pass on the downloaded copies.
+
+GitHub reports isDraft=false and isPrerelease=true. The latest stable release
+remains v0.3.2. The nextgen100 branch and annotated alpha tag are pushed.
+Public release state is captured in work/alpha1/published-release.json.
+
+The uploaded verification receipt records the pre-publication checks. This
+document records publication separately so the checked uploaded files remain
+unchanged. Full v1.0.0, custom Eve idle/beacon and the modder kit remain active.
