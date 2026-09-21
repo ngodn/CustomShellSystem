@@ -774,6 +774,8 @@ void Menu::build_extension(Layout& ui,double width) {
         Color vc=enabled?(type=="toggle"?(c.value("value",false)?good:muted):gold):muted;
         if(c.value("severity",std::string{})=="danger" && type=="button") vc=danger;
         ui.label(value,list_x+list_w*0.6,y+15,list_w*0.4-22,30,18,vc,false,2);
+        // Toggles: a small state lamp at the row edge so active cheats read at a glance.
+        if(type=="toggle") { const bool on=c.value("value",false); ui.box(list_x+list_w-14,y+row_h/2-8,6,12,on?good:Color{.12f,.10f,.08f,1}); }
     }
     if(rows>controls_visible) {
         const double track=controls_visible*row_h;

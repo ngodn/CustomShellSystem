@@ -1,4 +1,5 @@
 #include "cheat_menu.hpp"
+#include <cctype>
 
 namespace cheat {
 void Menu::shell_points(bool enabled) {
@@ -42,7 +43,8 @@ void Menu::shell_points(bool enabled) {
     const auto player=require_player();Json component;
     try {component=host_.get(player.at("controller"),"Progression Component");}
     catch(const std::exception& error) {
-        if(std::string(error.what()).find("property is missing")==std::string::npos) throw;
+        std::string text=error.what(); for(auto& c:text) c=char(std::tolower((unsigned char)c));
+        if(text.find("is missing")==std::string::npos) throw;
         component=host_.get(player.at("controller"),"ProgressionComponent");
     }
     if(!component.is_object() || !component.contains("$object")) throw std::runtime_error("Player progression component is unavailable.");
