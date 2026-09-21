@@ -1,0 +1,31 @@
+{
+  "revision": "V44",
+  "accepted_on": "2026-09-21",
+  "status": "user_accepted_baseline",
+  "user_feedback": "ok it's better now, we lock this, document this, and we move on",
+  "scope": "Accept the improvement and end the current hand-tuning iteration. Full weapon, damage/parry and lifecycle certification remains separate.",
+  "selector": {
+    "abi": 1,
+    "file": "css_core-v44-f434601d670b1502.dll"
+  },
+  "core_sha256": "f434601d670b15020fd056552fea8738a14b34b974748131ee6e5c72bcf4ac04",
+  "package_sha256": {
+    "CSS_SeduXtress_eins0fx_P.utoc": "20cd955afad2edbc361c47c9b3f2c080a04fd827d78468cb507df11e4c419b92",
+    "CSS_SeduXtress_eins0fx_P.ucas": "6ca76e8d53241464ea6f5f0cd7872fbf913a5b3828f61521c9456d2ce32b6832",
+    "CSS_SeduXtress_eins0fx_P.pak": "c32660f6b82a2e36cb4b61635b59a774fa647c582a709718cf46b632730b1529"
+  },
+  "hair": {
+    "stiffness": 200,
+    "damping": 24,
+    "gravity": 0
+  },
+  "cssx_disabled": true,
+  "evidence": {
+    "binding": "work/grip-grounding-v1/v44-trial-live-v1/binding-after-continue.json",
+    "geometry": "work/grip-grounding-v1/v44-trial-live-v1/binding-geometry.json",
+    "video": "work/grip-grounding-v1/v44-trial-live-v1/world-user-test-1.mp4",
+    "video_sha256": "f642761ea12286638a86d6b357c465acbdc18927314087aca16362ff49d7eec4"
+  },
+  "visual_review": "Six frames at five-second intervals show in-world heavy-weapon idle and a small view change. No attack or enemy-contact acceptance is inferred.",
+  "preservation": "Keep original proportions, accepted body motion and hand graph. Isolate footwear changes. Local lighting builds are not the installed core."
+}
