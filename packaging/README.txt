@@ -56,8 +56,8 @@ The CSS wardrobe does not modify the game's save files. Extensions may do so.
 Alpha status and known limitations
 This is CSS 1.0.0-alpha.1, a technology preview, not the final 1.0.0 release.
 Eve Black Pearl is a separate sample package. Its movement options are opt-in.
-Release gate: Eve walk, jog and sprint must pass the movement-stability review.
-Do not publish this alpha while the reported sideways lean remains unresolved.
+Eve walk, jog and sprint include the corrected leg trajectories accepted in
+live gameplay review on 2026-09-21.
 Broad weapon, combat and travel testing remains incomplete.
 Feminine (CSS) idle uses the Cultist Spear Lady standing pose. Eve's custom idle,
 weapon hiding and beacon teleport playback are not included yet. Missing custom

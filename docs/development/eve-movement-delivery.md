@@ -87,3 +87,28 @@ The combined lateral foot span changes from 36.09 to 13.35 cm for forward walk,
 52.83 to 13.47 cm for jog, and 46.08 to 12.64 cm for sprint. These are trajectory
 measurements, not proof of live acceptance. All 19 clips pass fresh raw readback,
 and all nine timed component cases pass. Cook/package and user review follow.
+
+
+## S1 accepted for alpha (2026-09-21)
+
+Cooking and package readback passed. The package preserves 217 accepted export
+and bulk payloads and adds 22 animation packages under /Game/CSS/Eve/Anim.
+Installation used a normal game restart; CSSX remains disabled.
+
+The passive 30-second recording is work/anim14/live/stable-world.mp4. Its 59
+status samples include custom walk, jog, sprint and feminine idle with no
+animation errors. The player also opened inventory during the recording; only
+the world portions are movement evidence. Sampled world frames were inspected.
+The live active-blend read confirms BS_S1_Sprint; successive reads are not an
+atomic snapshot. The user then confirmed: "yeah its good now".
+
+This accepts the reported sideways-footing correction for alpha. Preserve S1,
+the original proportions, accepted hand rig, hair 200/24/0, body physics and
+-3 cm visual offset. It does not establish exhaustive weapon/combat coverage.
+Custom Eve idle, weapon hiding and beacon playback remain unfinished.
+
+Reproduction: prepare_stable.py, stable_eve.py and package_stable.py in
+tools/authoring-probes/animations. Work receipts are in work/anim14, including
+trajectory-report.json, create-result.json, readback-result.json, cook-exit.json,
+pack/verification.json and live/deployment.json. Native production build at
+work/alpha1 passed with CSS_INVENTORY_DEV and CSS_TRANSITION_TESTS disabled.

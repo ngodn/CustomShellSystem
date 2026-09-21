@@ -3,7 +3,8 @@
 The release ZIP contains a single `CustomShellSystem/` folder to extract into
 `MortalShell2/Binaries/Win64/ue4ss/Mods/`. Outfit packages and UE4SS are separate.
 The canonical version is the root `VERSION` file. CMake generates the loader's
-version from it. Tags use `vX.Y.Z`; GitHub release titles use `MSII - CSS vX.Y.Z`.
+version from it. Tags use `vX.Y.Z`, or `vX.Y.Z-alpha.N` for alpha builds. GitHub release titles
+use `MSII - CSS v<version>`.
 
 ## Build
 

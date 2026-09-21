@@ -13,6 +13,8 @@
 
 ### Fixed
 
+- Correct Eve walk, jog and sprint footing to remove the reported sideways instability.
+
 - Restore Feminine (CSS) standing idle when the character stops moving.
 - Place status messages below the contextual control hints.
 - Preserve the accepted Eve hand rig, heel supports, color boundaries and ground offset.
@@ -24,8 +26,7 @@ MortalShell2/Binaries/Win64/ue4ss/Mods/. Install the sample separately under
 MortalShell2/Content/Paks/~mods/. Keep your existing state folder. Use the pinned
 UE4SS NO AOB build listed in README. Keep CSSX disabled for this alpha.
 
-This is **v1.0.0-alpha.1**, not the final release. Release is held until
-Eve walk, jog and sprint pass the movement-stability review. Custom Eve idle,
-weapon hiding and beacon teleport
-playback are unfinished; broader combat/transition testing and the modder kit
+This is **v1.0.0-alpha.1**, not the final release. The corrected Eve movement
+passed the user's gameplay review. Custom Eve idle, weapon hiding and beacon
+teleport playback are unfinished; broader combat/transition testing and the modder kit
 remain pending. These known issues are part of the technology preview.

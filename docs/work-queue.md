@@ -1,5 +1,7 @@
 # Current work queue
 
+2026-09-21: User accepted the S1 movement correction after testing: "yeah its good now". Lock the corrected Walk/Jog/Sprint for alpha; do not ship M3 or reopen accepted body/rig/physics tuning. All three custom gaits and feminine idle were observed in the passive gameplay recording with no animation errors. Production runtime build passed with developer probes disabled. Package CSS v1.0.0-alpha.1 and the separate Eve Black Pearl sample, retaining unfinished idle/beacon/modder-kit work.
+
 2026-09-21: User requires stable Eve Walk/Jog/Sprint in CSS v1.0.0-alpha.1. Do not ship the sideways-lean defect as a known issue. Alpha runtime and separate Eve technology-preview packages are the active delivery; movement stability is a hard release gate. Feminine idle grounded-check and status-footer fixes are installed; idle now engages live.
 
 2026-09-21: User clarified the quota priority and authorized new playable Eve Walk/Jog/Sprint. [Movement delivery](development/eve-movement-delivery.md) is cooked, packaged and installed after a normal restart. Phase and cadence correction, 1,305 compressed component frames, payload-preserving package readback, native build and focused tests pass. New core responds. Live selector, gait/transition and visual review are in progress. The earlier pause question is superseded. Idle/beacon and the full CSS v1.0.0/modder-kit scope remain active.
