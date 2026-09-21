@@ -75,6 +75,7 @@ void InventoryUI::detach() {
     if(auto* tabs=tabs_.Get()) if(auto* nav=inventory_object(tabs,L"NavigationObject")) invoke(nav,L"GetNavigableChildren");
     tab_.Reset(); page_.Reset(); main_.Reset(); tabs_.Reset(); switcher_.Reset(); controller_.Reset();
     canvas_.Reset(); status_.Reset(); scroll_.Reset(); name_input_.Reset();
+    choice_scroll_.Reset();choice_key_.clear();choice_selected_.clear();choice_offset_=0;choice_count_=0;
     hits_.clear(); rows_.clear(); sliders_.clear(); bindings_.clear(); transition_widgets_.clear();
     transition_started_=0; closing_=enter_transition_=false;
     active_=false; was_active_=false; dirty_=true;

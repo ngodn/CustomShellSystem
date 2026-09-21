@@ -150,6 +150,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         if(action.is_object() && action.value("action","")=="favorite") focused_outfit=action.value("outfit","");
     }
     if(auto* scroll=scroll_.Get()) { Call offset(scroll,L"GetScrollOffset",1); offset.run(); scroll_offset_=offset.get<float>(); }
+    if(auto* scroll=choice_scroll_.Get()) { Call offset(scroll,L"GetScrollOffset",1); offset.run(); choice_offset_=offset.get<float>(); }
+    choice_scroll_.Reset();choice_count_=0;
     invoke(canvas,L"ClearChildren"); hits_.clear(); rows_.clear(); sliders_.clear(); scroll_.Reset(); name_input_.Reset();
     auto* tree=inventory_object(page,L"WidgetTree");
     // This page lives inside the game's scaled menu canvas, not the viewport.
@@ -308,9 +310,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     // rows actually reached and sizes the box to that, so a page with rows of several
     // heights does not also have to keep a running total of them.
     UObject* list_box=nullptr; double list_top=0, list_y=0;
-    auto scroll_begin=[&](double y=328) {
-        list_top=list_y=y;
-        auto* scroll=construct(L"/Script/UMG.ScrollBox",tree); scroll_=scroll;
+    auto styled_scroll=[&](double x,double y,double w,double h) {
+        auto* scroll=construct(L"/Script/UMG.ScrollBox",tree);
         // Use the native inventory scrollbar brush without its stick listener.
         auto* character=inventory_object(main_.Get(),L"WBP_MGT_Character");
         auto* bar=inventory_object(inventory_object(character,L"WBP_CSB_Style2"),L"Image_Bar");
@@ -328,7 +329,13 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         invoke(scroll,L"SetAllowOverscroll",L"NewAllowOverscroll",false);
         invoke(scroll,L"SetAnimateWheelScrolling",L"bShouldAnimateWheelScrolling",true);
         invoke(scroll,L"SetScrollbarThickness",L"NewScrollbarThickness",Vec2{4*ui.scale,4*ui.scale});
-        ui.place(scroll,left,y,panel,900-y);
+        ui.place(scroll,x,y,w,h);
+        invoke(scroll,L"SetClipping",L"InClipping",uint8_t{1});
+        return scroll;
+    };
+    auto scroll_begin=[&](double y=328) {
+        list_top=list_y=y;
+        auto* scroll=styled_scroll(left,y,panel,900-y);scroll_=scroll;
         auto* size=construct(L"/Script/UMG.SizeBox",tree); list_box=size;
         auto* list=construct(L"/Script/UMG.CanvasPanel",tree); content(size,list);
         Call add(scroll,L"AddChild",2); add.set(L"content",size); add.run();
@@ -340,6 +347,36 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         invoke(list_box,L"SetHeightOverride",L"InHeightOverride",float(height*ui.scale));
         if(auto* scroll=scroll_.Get()) invoke(scroll,L"SetAlwaysShowScrollbar",L"NewAlwaysShowScrollbar",height>900-list_top);
         ui.canvas=canvas; ui.origin_x=0; ui.origin_y=0;
+    };
+    struct Choice { std::string id,label;Json action; };
+    auto choice_list=[&](const std::string& key,const std::vector<Choice>& choices,const std::string& selected,double y,double height) {
+        constexpr double row_height=48;
+        const bool reveal=choice_key_!=key || choice_selected_!=selected;
+        if(choice_key_!=key) choice_offset_=0;
+        choice_key_=key;choice_selected_=selected;choice_count_=choices.size();
+        auto* scroll=styled_scroll(right,y,360,height);choice_scroll_=scroll;
+        auto* size=construct(L"/Script/UMG.SizeBox",tree);
+        auto* list=construct(L"/Script/UMG.CanvasPanel",tree);content(size,list);
+        invoke(size,L"SetHeightOverride",L"InHeightOverride",float(std::max(1.,choices.size()*row_height)*ui.scale));
+        Call add(scroll,L"AddChild",2);add.set(L"content",size);add.run();
+        invoke(scroll,L"SetAlwaysShowScrollbar",L"NewAlwaysShowScrollbar",choices.size()*row_height>height);
+        ui.canvas=list;ui.origin_x=right;ui.origin_y=y;
+        UObject* selected_widget=nullptr;
+        for(size_t i=0;i<choices.size();++i) {
+            const auto& choice=choices[i];const double top=y+i*row_height;
+            const bool chosen=choice.id==selected;
+            auto* button=ui.button("",right,top,348,row_height-2,chosen,!choice.action.is_null());
+            if(chosen) { ui.box(right,top,348,row_height-2,Color{.055f,.045f,.027f,1});selected_widget=button; }
+            ui.selection_mark(right+15,top+18,chosen);
+            ui.label(choice.label,right+40,top+9,296,32,20,chosen?gold:muted);
+            bind(button,choice.action);
+        }
+        ui.canvas=canvas;ui.origin_x=0;ui.origin_y=0;
+        invoke(scroll,L"SetScrollOffset",L"NewScrollOffset",choice_offset_);
+        if(reveal && selected_widget) {
+            Call show(scroll,L"ScrollWidgetIntoView",4);show.set(L"WidgetToFind",selected_widget);
+            show.set(L"AnimateScroll",false);show.set(L"ScrollDestination",uint8_t{0});show.set(L"Padding",8.f);show.run();
+        }
     };
     // 0.4: a colour row carries a chip of the colour it paints. A list of colours that
     // never shows one is the single worst thing about the old tab.
@@ -377,7 +414,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         row_swatch=nullptr; row_indent=0; row_thumb=false;
         return y;
     };
-    auto direction_hint=[&](bool horizontal,const std::string& label,double x,double y,double width) {
+    auto direction_hint=[&](bool horizontal,const std::string& label) {
+        const double x=horizontal?right:left,y=947,width=horizontal?360:panel;
         if(gamepad_) prompt("",label,x,y,width,horizontal?11:10);
         else {
             prompt(horizontal?"left":"up","",x,y,28,horizontal?15:13);
@@ -419,7 +457,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const auto count=originals?originals->variants.size():0;
         row(2,"Use Original Shell",original_worn?originals->variants[original_index].name:"Choose an official shell",85,
             wear_original(original_index),count?wear_original((original_index+count-1)%count):Json{},
-            count?wear_original((original_index+1)%count):Json{});
+            count?wear_original(original_worn?(original_index+1)%count:0):Json{});
         for(size_t p=0;p<ordered.size();++p) {
             const auto& outfit=*ordered[p]; size_t v=0;
             bool chosen=worn==&outfit;
@@ -454,13 +492,10 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 "Wear an official shell's appearance. Your current shell keeps its abilities and progress.");
             if(!originals) ui.label("Official shell appearances are unavailable in this session.",right+16,controls_y,328,110,18,muted);
             else {
-                const double height=std::min(40.0,420.0/double(count));
-                for(size_t i=0;i<count;++i) {
-                    const auto action=wear_original(i);
-                    bind(ui.button(originals->variants[i].name,right,controls_y+i*height,360,height-2,
-                        original_worn && i==original_index,!action.is_null(),18),action);
-                }
-                direction_hint(true,"Choose a shell",right+50,controls_y+count*height+12,310);
+                std::vector<Choice> choices;
+                for(size_t i=0;i<count;++i) choices.push_back({originals->variants[i].id,originals->variants[i].name,wear_original(i)});
+                choice_list(originals->id,choices,original_worn?originals->variants[original_index].id:"",controls_y,384);
+                direction_hint(true,"Choose a shell");
             }
         } else {
             const auto& outfit=*ordered[row_-3];
@@ -469,12 +504,15 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             std::string variant=outfit.variants.front().name;
             if(worn==&outfit) for(const auto& v:outfit.variants) if(v.id==selection->second.variant) variant=v.name;
             ui.label("Variant",right,controls_y-22,360,28,16,muted);
-            auto* name=ui.label(variant,right+44,controls_y+20,272,55,21,ivory);
-            invoke(name,L"SetJustification",L"InJustification",uint8_t{1});
             if(outfit.variants.size()>1) {
-                bind(ui.button("<",right,controls_y+10,44,44),selected.previous);
-                bind(ui.button(">",right+316,controls_y+10,44,44),selected.next);
-                direction_hint(true,"Change variant",right+72,controls_y+85,280);
+                std::vector<Choice> choices;
+                for(const auto& v:outfit.variants) choices.push_back({v.id,v.name,
+                    catalog.compatible(outfit.id,appearance.shell)?Json{{"action","select"},{"outfit",outfit.id},{"variant",v.id}}:Json{}});
+                choice_list(outfit.id,choices,worn==&outfit?selection->second.variant:"",controls_y,192);
+                direction_hint(true,"Change variant");
+            } else {
+                auto* name=ui.label(variant,right+44,controls_y+20,272,55,21,ivory);
+                invoke(name,L"SetJustification",L"InJustification",uint8_t{1});
             }
             action_button("accept","Wear",655,selected.accept,3,!selected.accept.is_null());
             action_button("tertiary",state.favorites.contains(outfit.id)?"Remove favorite":"Add favorite",713,selected.tertiary,2);
@@ -660,7 +698,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 const double by=controls_y+show_count*46;
                 bind(ui.button("Browse templates...",right,by+6,360,40,false,true,18),
                      {{"action","ui_browse_templates"}});
-                direction_hint(true,"Cycle template",right,by+52,360);
+                direction_hint(true,"Cycle template");
                 action_button("accept","Restore original",by+92,palette_action(0),3);
             } else if(entry.tint) {
                 const auto tint=tint_of(entry.group);
@@ -681,7 +719,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     sliders_.push_back({WeakObject(slider),WeakObject(label),WeakObject(heading),
                         {{"action","tint"},{"group",control_group_name(entry.group)},{"field",field==0?"hue":field==1?"saturation":"brightness"},{"refresh",false}},current[field],true,""});
                 }
-                direction_hint(true,"Adjust selected slider",right,controls_y+246,360);
+                direction_hint(true,"Adjust selected slider");
                 action_button("secondary","Select next slider",795,rows_[row_].secondary,4);
                 action_button("accept","Reset tint",841,rows_[row_].accept,3);
             } else {
@@ -694,7 +732,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     detail(control.name,worn->name,"Show or hide this part of the outfit. Your saved looks keep it.");
                     bind(ui.button("Shown",right,controls_y+50,360,42,on,true,21),set_to(1));
                     bind(ui.button("Hidden",right,controls_y+96,360,42,!on,true,21),set_to(0));
-                    direction_hint(true,on?"Hide this part":"Show this part",right,controls_y+154,360);
+                    direction_hint(true,on?"Hide this part":"Show this part");
                     // Same rhythm as the swatch page, so the reset is in one place on
                     // every part no matter what kind of control it is.
                     action_button("accept",on?"Hide":"Show",795,set_to(on?0:1),3);
@@ -718,7 +756,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                              {{"action","ui_browse_choice"},{"control",control.id}});
                         cy+=44;
                     }
-                    direction_hint(true,"Choose",right,cy,360);
+                    direction_hint(true,"Choose");
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
                     action_button("tertiary","Reset all",887,confirm_reset_all,2);
                 } else if(control.kind==ControlKind::Dynamics || control.kind==ControlKind::Rig) {
@@ -750,7 +788,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     if(rig) bind(ui.button(value[3]==1?"Motion: On":"Motion: Off",right,controls_y+240,360,38,
                         channel_%fieldcount==3,true,19),
                         {{"action","control"},{"control",control.id},{"channel",3},{"value",value[3]==1?0:1}});
-                    direction_hint(true,"Adjust selected setting",right,controls_y+(rig?286:246),360);
+                    direction_hint(true,"Adjust selected setting");
                     action_button("secondary","Select next setting",795,Json{{"action","ui_channel"},{"count",fieldcount}},4);
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
                     action_button("tertiary","Reset all",887,confirm_reset_all,2);
@@ -789,7 +827,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                             {{"action","control"},{"control",control.id},{"channel",field},{"refresh",false}},
                             value[field],true,field==1?"%":field==2?" cm":" Hz"});
                     }
-                    direction_hint(true,"Adjust selected slider",right,controls_y+fieldcount*80+6,360);
+                    direction_hint(true,"Adjust selected slider");
                     action_button("secondary","Select next slider",795,Json{{"action","ui_channel"},{"count",fieldcount}},4);
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
                     action_button("tertiary","Reset all",887,confirm_reset_all,2);
@@ -815,7 +853,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                             {{"action","control"},{"control",control.id},{"channel",field},{"refresh",false}},
                             value[field],true,field==0?" cd/m²":" Hz"});
                     }
-                    direction_hint(true,"Adjust glow intensity",right,controls_y+fieldcount*80+6,360);
+                    direction_hint(true,"Adjust glow intensity");
                     if(fieldcount>1) action_button("secondary","Select next slider",795,Json{{"action","ui_channel"},{"count",fieldcount}},4);
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
                     action_button("tertiary","Reset all",887,confirm_reset_all,2);
@@ -832,7 +870,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     sliders_.push_back({WeakObject(slider),WeakObject(label),WeakObject(heading),
                         {{"action","control"},{"control",control.id},{"channel",0},{"refresh",false}},
                         value[0],false,"%"});
-                    direction_hint(true,"Adjust opacity",right,controls_y+86,360);
+                    direction_hint(true,"Adjust opacity");
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
                     action_button("tertiary","Reset all",887,confirm_reset_all,2);
                 } else if(!control.scalar && !exact_color_) {
@@ -866,8 +904,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                              :Json{{"action","control"},{"control",control.id},{"rgb",{color[0],color[1],color[2]}}});
                     }
                     if(!control.swatches.empty()) ui.label(strip[here].name,right,controls_y+double((strip.size()+5)/6)*pitch+45,360,28,17,ivory);
-                    direction_hint(true,"Choose a colour",right,
-                                   controls_y+double((strip.size()+size_t(columns)-1)/size_t(columns))*pitch+8,360);
+                    direction_hint(true,"Choose a colour");
                     action_button("secondary","Exact colour",795,Json{{"action","ui_exact"}},4);
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
                     action_button("tertiary","Reset all",887,confirm_reset_all,2);
@@ -892,7 +929,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     auto* label=ui.label(slider_text(value[channel],control.scalar),right+305,sy+29,55,30,18);
                     sliders_.push_back({WeakObject(slider),WeakObject(label),WeakObject(heading),{{"action","control"},{"control",control.id},{"channel",channel},{"refresh",false}},value[channel],control.scalar,""});
                 }
-                direction_hint(true,shape?"Adjust shape":control.scalar?"Adjust intensity":"Adjust selected channel",right,controls_y+246,360);
+                direction_hint(true,shape?"Adjust shape":control.scalar?"Adjust intensity":"Adjust selected channel");
                 if(!control.scalar) action_button("secondary","Select next channel",795,rows_[row_].secondary,4);
                 action_button("accept","Reset part",841,rows_[row_].accept,3);
                 action_button("tertiary",control.scalar?"Reset all":"Back to swatches",887,
@@ -922,7 +959,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         detail("Walk animation",sub,body);
         bind(ui.button("Normal",right,controls_y+50,360,42,!feminine,true,21),{{"action","walk_animation"},{"value","normal"}});
         bind(ui.button("Feminine",right,controls_y+96,360,42,feminine,true,21),{{"action","walk_animation"},{"value","feminine"}});
-        direction_hint(true,"Change walk animation",right,controls_y+154,360);
+        direction_hint(true,"Change walk animation");
         action_button("accept",feminine?"Use normal":"Use feminine",controls_y+194,toggle,3);
         std::string note;
         if(has_walk_mod) note=feminine?("Installed: "+walk_mod_name+" by argisht. CSS is holding the walk instead; choose Normal to hand it back.")
@@ -969,7 +1006,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     decoration("T_UI_DescriptionHeader_Divider",left,931,panel,2);
     decoration("T_UI_DescriptionHeader_Divider",right,931,360,2);
     status_=ui.label("",right,953,360,60,16,muted);
-    direction_hint(false,section_==0?"Browse shells":section_==1?"Browse parts":section_==2?"Browse animation options":"Browse profiles",left,947,panel);
+    direction_hint(false,section_==0?"Browse shells":section_==1?"Browse parts":section_==2?"Browse animation options":"Browse profiles");
     bind(ui.button("",left,1025,140,38),{{"action","ui_close"}});
     prompt("close","Close",left,1030,140,5);
     bind(ui.button("",width/2-190,980,170,40),{{"action",light_edit_?"ui_reset_light":"ui_reset_view"}});
@@ -1524,7 +1561,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     const bool extension_before=extension_active_;
     extension_active_=inventory_bool(main,L"bOpen") && selected.get<UObject*>()==extension_page_.Get();
     active_=inventory_bool(main,L"bOpen") && (selected.get<UObject*>()==page_.Get() || extension_active_);
-    if(extension_before!=extension_active_) {light_stop();dirty_=enter_transition_=true;hits_.clear();rows_.clear();sliders_.clear();scroll_.Reset();name_input_.Reset();}
+    if(extension_before!=extension_active_) {light_stop();dirty_=enter_transition_=true;hits_.clear();rows_.clear();sliders_.clear();scroll_.Reset();choice_scroll_.Reset();choice_key_.clear();choice_selected_.clear();choice_offset_=0;choice_count_=0;name_input_.Reset();}
     if(active_ && !was_active_) { appearance.player(engine); bind_inputs(); camera_start(); dirty_=enter_transition_=true; closing_=false; for(auto& b:bindings_) { b.down=true; b.repeat=now+400; } }
     if(!active_ && was_active_) { camera_stop(); closing_=false; transition_started_=0; }
     if(active_) camera_bind_state();
@@ -1746,6 +1783,11 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
 Json InventoryUI::diagnostics() const {
     Json value={{"cssx_active",extension_active_},{"extension",extension_id_},{"extension_page",extension_paging_.page},{"attached",tab_.Get()!=nullptr},{"active",active_},{"section",section_},{"row",row_},{"rows",rows_.size()},{"camera",display_.Get()!=nullptr},{"page_widgets",page_widgets_},{"nested_widgets",nested_widgets_},{"layout_size",layout_size_},{"yaw",yaw_},{"pan",pan_},{"zoom",zoom_},{"frame",frame_},{"gamepad",gamepad_}};
     #ifdef CSS_INVENTORY_DEV
+    if(auto* scroll=choice_scroll_.Get()) {
+        Call offset(scroll,L"GetScrollOffset",1);offset.run();
+        value["choice_list"]={{"path",narrow(scroll->GetPathName())},{"key",choice_key_},
+            {"selected",choice_selected_},{"count",choice_count_},{"offset",offset.get<float>()}};
+    }
     if(extension_active_ && name_input_.Get()) value["text"]=inventory_text(name_input_.Get(),4096);
     value["picker"]=extension_picker_;
     if(extension_picker_) {value["query"]=extension_search_query_;value["matches"]=extension_options_.matches.size();value["selected_option"]=extension_options_.value();}

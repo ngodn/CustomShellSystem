@@ -73,7 +73,8 @@ selection, customization, ground offset, favorites and profiles were restored.
 The only new state is an empty remembered customization for the built-in group.
 Evidence: `work/stock1/check/result.json`, `choices.json` and the screenshots.
 
-The installed module is `css_core-stock2.dll`; deployment receipts and backups
-are in `work/stock1/fix-live/`. Menu re-entry and the requested shared scrolling
-selector are the next UI checks. Combat, travel and every gameplay shell are
-not covered by this idle appearance trial.
+The first successful module was `css_core-stock2.dll`; deployment receipts and
+backups are in `work/stock1/fix-live/`. The subsequent
+[shared scrolling selector](inventory-choice-lists.md) is installed as
+`css_core-choices1.dll` and passes menu re-entry. Combat, travel and every
+gameplay shell are not covered by this idle appearance trial.

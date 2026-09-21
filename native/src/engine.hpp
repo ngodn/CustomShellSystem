@@ -144,6 +144,10 @@ class InventoryUI {
     // (list rows, tab labels), which is the half that grows with the catalog.
     int page_widgets_=0, nested_widgets_=0;
     float scroll_offset_=0;
+    WeakObject choice_scroll_;
+    std::string choice_key_,choice_selected_;
+    float choice_offset_=0;
+    size_t choice_count_=0;
     double yaw_before_=0, yaw_=0, zoom_=0, frame_=0, pan_=0;
     InventoryMotion motion_;
     WeakObject light_component_;

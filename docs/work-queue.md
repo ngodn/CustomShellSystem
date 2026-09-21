@@ -1,5 +1,9 @@
 # Current work queue
 
+2026-09-21: [Shared choice lists and contextual helpers](development/inventory-choice-lists.md) are installed and verified. Shells and outfit variants share fixed-height scrollable rows with an equipped marker and selection reveal. Main-page editing hints share a stable right footer. Mouse/keyboard scrolling, unchanged preview view, restored state and actual menu re-entry pass; Steam screenshots were reviewed. The close-driver mouse-release race is documented and corrected to keyboard Back. Next continue expanded locomotion and release acceptance; investigate safe core DLL reload before relying on it for routine updates.
+
+2026-09-21: User clarified the UI rule applies to context-sensitive helper placement throughout CSS: browsing and Back at left, preview controls at center, current-option helpers at right. Keep stable footer alignment while labels and controller/keyboard icons follow the context. Applied immediately to the shared selector revision.
+
 2026-09-21: [Official-shell appearances](development/original-shell-appearances.md) now pass all ten live menu bindings, independent cooked-reference comparison, world/preview mesh equality, gameplay identity and animation-class preservation, Steam screenshot review and Eve state restoration. The public Eve name is installed and verified. Next implement the requested shared scrollable selector and verify menu re-entry. CSSX remains disabled; full Next-Gen release scope stays open.
 
 2026-09-21: User requested a reusable scrollable choice list for the official-shell selector and other CSS options. Keep readable row sizes, show the equipped choice, preserve scroll position and reveal controller-selected options. Finish the current ten-shell appearance check, then implement this UI correction.

@@ -15,3 +15,11 @@ Checked against the current sources during the CSSX FPS investigation on 2026-09
 The current `Core::stop` also detaches Inventory, releases locomotion and restores the original appearance. The profiling reload on September 20 crashed in parallel animation asset ticking after replacement. The exact lifetime fault is unresolved. Therefore this incident does not establish that DLL reload is unsupported, but game-thread dispatch and successful cleanup acknowledgments alone do not prove animation workers are safe across replacement.
 
 For the FPS comparison we used normal quits and restarts to ensure CSSX and its extensions were actually absent and to avoid repeating that crash. Routine menu editing should continue using the existing JSON reload. A CSSX-only stop/reload path should preserve the character and animation state, close any active extension UI, release owned hooks/widgets and refuse to unload on incomplete cleanup. That path is queued after FPS validation; it has not been implemented or tested yet.
+
+On September 21 the official-shell selector and shared choice-list revisions
+used normal restarts because the animation-worker lifetime fault is still
+unresolved. These DLL-only changes do not inherently require restarting.
+Installing the renamed mounted Eve containers did require a restart. Before
+the next routine DLL replacement, explain which reason applies. Verify the
+existing core cleanup against animation-worker lifetimes before calling hot
+reload safe; a selector acknowledgement alone is insufficient.
