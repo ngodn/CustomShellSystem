@@ -193,3 +193,15 @@ rasterised with rsvg-convert) ship in the framework ZIP and are read by the
 menu through the same `ImportFileAsTexture2D` path as extension banners.
 Framework pages (library, settings) carry the emblem; extension pages carry
 the extension's own title and banner.
+
+## D14. Action parameters are not edits (2026-09-22)
+
+Amount, level and count fields (grant amount, harbinger level, pickup
+count, tarstone level, health target, heal and resolve amounts) apply the
+moment they change and are saved with the preferences. Only values that
+feed a running cheat (movement multiplier, heal percent and interval,
+shockwave interval) and the cheat toggles themselves wait for Apply.
+Reason: the user reported "all unlocks not working"; the cause was that any
+changed amount counted as an unapplied edit, and while one is pending every
+action button is disabled. Disabled controls now also carry the reason
+(model `disabled` map) instead of a bare "Unavailable".

@@ -48,6 +48,8 @@ stated. Release is gated on every row being a pass.
 | Model validates against menu.json schema 2 | host test + live `model` | Pass |
 | Draft does not touch gameplay; Apply enables God; Disable all restores | `tools/cheat_check.py` | Pass 2026-09-22 (6/6, pawn damageable afterwards) |
 | Every reversible control audited live (God, movement, damage target, auto heal, heal, infinite resolve, resolve, shell points, no cooldown, seal cheats armed, powers, lists, revive, shortcuts, confirmations) | `tools/cheat_audit.py` (`work/live/audit/cheat-audit-1.json`) | 31/33 on 2026-09-22; the two fails were audit bugs (measured body instead of shell health; counted an amount field as an action), both fixed. Movement off had crashed the game before the bridge fix (in-place struct writes); verified clean afterwards with repeated struct reads |
+| Grants and unlocks run right after changing an amount; the game applies them (gates, weapons, map) | user test after the D14 switch | Pass 2026-09-22 ("seems working"); unlock bodies confirmed from the exported controller Blueprint (UnlockGate per gate actor, UnlockWeapon per tag, map reveal broadcasts) |
+| Controller navigation in the CSSX tab | user test | Pass 2026-09-22 ("that works") |
 | Damage to target acts on shell health first | manual read of GetShellHealth before/after | Pass (130.9 → 65.4 → healed 130.9) |
 | No cooldown with abilities lacking a cooldown field; Apply with one failing feature | host tests (`cssx_cheat_menu`) | Pass 2026-09-22 (missing-field text fixed; per-feature apply; armed seal cheats) |
 | Confirmation before persistent grants | screenshot 10, cancelled | Pass |
