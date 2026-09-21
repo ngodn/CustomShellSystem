@@ -85,6 +85,33 @@ this trial did not modify it. Relaunch through Steam and verify the live mesh.
 
 ## Next live checks
 
+`tools/check_v44_live_binding.py --output work/<fresh-name>.json` now provides
+a read-only first check. It requires one live game process and a fresh output,
+enumerates properties before reads, describes functions before calls, checks
+parameter sizes against the pinned UE 5.6.1 declarations, and rechecks player
+and mesh identity after sequential reads. It verifies the exact mesh, Skeleton,
+Physics Asset, no component override, actual post-process class, hair 200/24/0
+and enabled hand correction using the raw-game convention. Differences in
+saved hair overrides are reported, never reset by the check.
+
+Exit 2 means `waiting_for_character`, exit 1 means an error or failed binding,
+and exit 0 means only `binding_verified`. `gameplay_accepted` remains false.
+The fresh live run `v44-trial-live-v1/binding-check-1.json` exits 2: process
+1127949 answers, but controller and pawn remain null. No mesh or physics query
+was executed. Replaying the previously recorded V43 references through the
+same inspector correctly rejects them before any function invocation; evidence
+is `binding-old-v43-negative.json`. This checks the rejection path, not V44's
+unexecuted success path.
+
+Optional `--geometry` reads three exterior samples around the pelvis through
+the asset closest-point function and the component's pelvis-body distance
+function. This branch has not yet run in the game. The pinned engine header
+and [Epic's API description](https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/USkeletalMeshComponent/K2_GetClosestPointOnPhysicsAsset)
+explicitly distinguish the asset query from collision state: it uses animation
+geometry independently of collision and welding. Even a positive component
+distance does not establish the game's damage channels, overlap events or
+parry behavior. Do not promote either measurement into gameplay acceptance.
+
 1. Fresh player/mesh probe must resolve `SK_B2PhysicsBound_V1`, the B2 reference
    Skeleton and `PA_B2BodyFit_V3`, with no unexpected component override.
 2. Check actual body/hair/hand post-process, accepted 200/24 and preserved public

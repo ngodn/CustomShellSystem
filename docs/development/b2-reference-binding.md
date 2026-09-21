@@ -1,5 +1,9 @@
 # V44B2 reference binding and weapon review
 
+Historical preparation checkpoint. V44 has since been installed for a trial;
+see [current installation and live acceptance](v44-live-trial.md). References
+to installed V43 below describe the state when these measurements were taken.
+
 V44B2 now has an isolated, saved Skeleton binding with corrected animation
 reference rotations, preserved CSS metadata and nine virtual bones. A fresh
 process verifies its mesh, material bindings, post-process and accepted hair

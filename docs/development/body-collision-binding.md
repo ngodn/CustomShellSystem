@@ -1,5 +1,9 @@
 # Saved V44 body collision binding
 
+Historical preparation checkpoint. The bound mesh has since been installed
+with V44; see [current installation and live acceptance](v44-live-trial.md).
+The V43 installation statements below describe this checkpoint's original state.
+
 The isolated mesh `/Game/CSSAuthoring/DiagnosticReferences/SK_B2PhysicsBound_V1`
 now references `/Game/CSSAuthoring/DiagnosticReferences/PA_B2BodyFit_V3`.
 It duplicates the verified B2 game-reference mesh and changes only its Physics
