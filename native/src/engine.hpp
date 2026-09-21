@@ -298,7 +298,7 @@ public:
     bool proxima_walk_active() const { return proxima_active_; }
     bool engaged() const { return engaged_; }
     const std::string& reason() const { return reason_; }
-    void update(RC::Unreal::UObject* pawn,bool walk_feminine,bool jog_feminine,bool sprint_feminine);
+    void update(RC::Unreal::UObject* pawn,bool idle_feminine,bool walk_feminine,bool jog_feminine,bool sprint_feminine);
     void release();
 };
 // CSSX ABI 2: a retained HUD surface for native extensions. The core owns the
@@ -476,7 +476,7 @@ public:
     void sync_items(const Outfit&,const std::string& variant);
     int worn_item_count() const { return items_.count(); }
     WalkOverride walk;
-    void sync_walk(bool walk_feminine,bool jog_feminine,bool sprint_feminine) { walk.update(observed_pawn_.Get(),walk_feminine,jog_feminine,sprint_feminine); }
+    void sync_walk(bool idle_feminine,bool walk_feminine,bool jog_feminine,bool sprint_feminine) { walk.update(observed_pawn_.Get(),idle_feminine,walk_feminine,jog_feminine,sprint_feminine); }
     Json transition_state(void* engine);
 #ifdef CSS_TRANSITION_TESTS
     void test_reset_mesh();

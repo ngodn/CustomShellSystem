@@ -1,13 +1,18 @@
 # Mod-provided animation options
 
 2026-09-21. Native data and profile support is implemented on the v1.0.0 branch.
-Playback, expanded LOCOMOTION controls and cooked/live acceptance are still in
-development. Do not publish a package relying on these fields yet.
+Expanded LOCOMOTION controls are now implemented in source. Custom asset
+playback and cooked/live acceptance are still in development. Do not publish
+a package relying on these fields or deploy this UI revision yet.
 
 The UI calls the game choice **Default**. The existing walk setting keeps its
 saved `normal` value for compatibility with old state files and profiles.
 The new per-outfit choices reserve `original` for Default; it is never a mod
 option ID. Existing feminine walk saves continue to load unchanged.
+`css.feminine` is also reserved for CSS's built-in idle/walk option. It cannot
+be declared by a mod. Each new idle or walk choice can independently keep
+that built-in animation or select Default. Until a slot has an explicit
+choice, an old global feminine save retains its previous idle/walk behavior.
 
 ## Manifest
 
@@ -93,6 +98,40 @@ instead of silently selecting a different behavior. Existing installed-package
 isolation still rejects only the malformed package; loose authoring catalogs
 remain strict.
 
+## LOCOMOTION selectors and commands
+
+The five rows are Idle animation, Walk animation, Jog animation, Sprint
+animation and Beacon teleport animation. Each uses the shared scrollable
+choice list, selected marker and bottom-right contextual helper. The left
+column browses slots; left/right cycles that slot's available options.
+Default comes first, followed by a built-in CSS option where supported and
+then the mod's declared order. Missing saved options remain visible as
+unavailable, retain their ID and fall back to Default. Cycling skips them.
+They are never silently relabeled as another mod option.
+
+`animation_choice` carries `outfit`, `variant`, `slot` and `value`. The core
+requires the specified outfit/variant to match the current shell's saved
+selection and an installed compatible catalog entry. This rejects a stale
+menu click after an outfit change. Only declared options, Default, or the
+supported built-in idle/walk choice may be selected; arbitrary asset paths
+and missing IDs cannot be injected through this command. Saving preserves
+other variants and uses the same size limits as state loading.
+
+An explicit Default stops the legacy feminine override for that slot without
+erasing the old global setting for other variants. Built-in idle and walk
+are now separate inputs to `WalkOverride`; selecting one no longer activates
+the other. A mod-provided choice also releases the corresponding legacy
+override so it cannot fight the future custom playback owner. The old
+`walk_animation` command remains the global legacy control when no outfit is
+selected. With an outfit selected it updates that variant's idle and walk
+together, preserving the command's old combined behavior without overwriting
+other variants. Its underlying save values remain `normal` and `feminine`.
+
+The new UI and save commands are not proof of custom playback. The current
+runtime still needs custom asset loading, graph ownership/restoration, safe
+weapon visibility and beacon event integration before deployment. A built
+DLL or portable selector test does not establish in-game layout or behavior.
+
 ## Saved choices and profiles
 
 `animation_choices` is keyed by outfit ID, then variant ID, then slot:
@@ -147,3 +186,21 @@ restoration, gait transitions and idle weapon visibility, then connect the
 LOCOMOTION selector. Beacon needs the verified live arrival/cancel route.
 Cooked Eve blend spaces, accepted contacts and in-world motion review remain
 required. The fitted animation candidates are still isolated in `AnimLab`.
+
+## Selector validation checkpoint
+
+`work/anim7/` records the C++23 portable build and Windows core build, both
+exit 0. The focused suites pass: 119 animation checks, 100 data checks,
+314 controls checks and 29 startup checks. Coverage includes five independent
+slots, explicit Default versus legacy unset state, independent built-in idle
+and walk, stale outfit/variant actions, rejected choices leaving state intact,
+64-option wraparound, missing-option navigation, old-command compatibility
+and save reloads. The Windows build reports the existing unused `row` warning
+in `extension_data.cpp`; no new warning was found.
+
+These are source/build and portable behavior checks. The game has not
+acknowledged the earlier read-only request, while its process remains present
+(`game-readback.json`). No additional request or restart was sent. Shared-list
+layout, controller/mouse behavior and actual playback need live checks after
+custom runtime integration. No release-readiness claim follows from this
+checkpoint.

@@ -126,6 +126,10 @@ struct State {
     Json json() const;
 };
 State load_state(const fs::path&, bool* recovered = nullptr);
+bool set_animation_choice(State&,const Catalog&,const std::string& shell,
+    const std::string& outfit,const std::string& variant,AnimationSlot,const std::string& choice);
+bool use_feminine_animation(const State&,const std::string& shell,AnimationSlot);
+bool set_legacy_walk_choice(State&,const Catalog&,const std::string& shell,const std::string& value);
 Json read_json(const fs::path&);
 void atomic_json(const fs::path&, const Json&, bool backup = true);
 bool valid_id(const std::string&);

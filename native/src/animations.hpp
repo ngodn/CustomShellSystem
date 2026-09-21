@@ -7,6 +7,7 @@
 #include <nlohmann/json.hpp>
 
 namespace css {
+inline constexpr const char* feminine_animation_id = "css.feminine";
 enum class AnimationSlot { Idle, Walk, Jog, Sprint, Beacon };
 const char* animation_slot_name(AnimationSlot);
 std::optional<AnimationSlot> animation_slot_from_name(std::string_view);
@@ -31,6 +32,19 @@ struct ResolvedAnimation {
 };
 ResolvedAnimation resolve_animation(const std::vector<AnimationOption>&, AnimationSlot,
     const std::string& choice, const std::string& weapon_tag = {});
+
+struct AnimationMenuItem {
+    std::string id, name;
+    bool available = true;
+};
+struct AnimationMenu {
+    std::vector<AnimationMenuItem> items;
+    size_t selected = 0;
+    std::string step(int direction) const;
+};
+// Missing saved options remain visible, but cycling only visits usable choices.
+AnimationMenu animation_menu(const std::vector<AnimationOption>&, AnimationSlot,
+    const std::string* saved_choice, bool legacy_feminine);
 
 // Choices belong to an outfit and variant, not whichever gameplay shell is
 // currently wearing them. Keep missing-mod IDs for later reinstall/updates.

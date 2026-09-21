@@ -46,7 +46,7 @@ AnimationSet AnimationSet::parse(const Json& value) {
             else fields(entry,{"id","name","blend_space"});
             AnimationOption option;
             option.id=entry.at("id").get<std::string>(); option.name=entry.at("name").get<std::string>();
-            if(!valid_id(option.id) || option.id=="original" || !ids.insert(option.id).second ||
+            if(!valid_id(option.id) || option.id=="original" || option.id==feminine_animation_id || !ids.insert(option.id).second ||
                 option.name.empty() || option.name.size()>96)
                 throw std::runtime_error("Invalid or duplicate animation option");
             if(*slot==AnimationSlot::Idle) {
@@ -86,6 +86,28 @@ ResolvedAnimation resolve_animation(const std::vector<AnimationOption>& options,
     else path=found->blend_space;
     if(path.empty()) return {};
     return {&*found,std::move(path),slot==AnimationSlot::Idle && found->hide_weapons};
+}
+AnimationMenu animation_menu(const std::vector<AnimationOption>& options,AnimationSlot slot,
+    const std::string* saved,bool legacy_feminine) {
+    AnimationMenu menu;
+    menu.items.push_back({"original","Default"});
+    if(slot==AnimationSlot::Walk || slot==AnimationSlot::Idle) menu.items.push_back({feminine_animation_id,"Feminine (CSS)"});
+    for(const auto& option:options) menu.items.push_back({option.id,option.name});
+    const std::string choice=saved?*saved:(slot==AnimationSlot::Walk || slot==AnimationSlot::Idle) && legacy_feminine?feminine_animation_id:"original";
+    for(size_t i=0;i<menu.items.size();++i) if(menu.items[i].id==choice) {menu.selected=i;return menu;}
+    menu.selected=menu.items.size();
+    menu.items.push_back({choice,"Unavailable (using Default)",false});
+    return menu;
+}
+std::string AnimationMenu::step(int direction) const {
+    if(items.empty() || selected>=items.size() || (direction!=1 && direction!=-1))
+        throw std::runtime_error("Invalid animation menu navigation");
+    auto index=selected;
+    for(size_t n=0;n<items.size();++n) {
+        index=direction>0?(index+1)%items.size():(index+items.size()-1)%items.size();
+        if(items[index].available) return items[index].id;
+    }
+    throw std::runtime_error("Animation menu has no available choice");
 }
 AnimationChoices AnimationChoices::parse(const Json& value) {
     if(!value.is_object() || value.size()>4096) throw std::runtime_error("Invalid saved animation outfits");

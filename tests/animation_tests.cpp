@@ -76,6 +76,7 @@ int main() {
             rejects([&]{AnimationSet::parse(bad);});
         const std::vector<std::function<void(Json&)>> mutations={
             [](Json& d){d["idle"][0]["id"]="original";},
+            [](Json& d){d["walk"][0]["id"]=feminine_animation_id;},
             [](Json& d){d["idle"].push_back(d["idle"][0]);},
             [](Json& d){d["idle"][0]["hide_weapons"]="true";},
             [](Json& d){d["idle"][1]["hide_weapons"]=true;},
@@ -98,6 +99,64 @@ int main() {
             malformed=outfit;malformed["variants"][0]["animations"]=d;
             rejects([&]{load(malformed);});
         }
+
+        State choosing;
+        const std::string shell="CharacterId.Player.Shell.Genessa";
+        choosing.walk_animation="feminine";
+        choosing.selections[shell]={"eve","pearl",{}};
+        auto menu=animation_menu(catalog.animation_options("eve","pearl",AnimationSlot::Walk),AnimationSlot::Walk,nullptr,true);
+        expect(menu.items[menu.selected].id==feminine_animation_id && menu.items.front().name=="Default","Legacy walk menu lost selection or Default label");
+        expect(use_feminine_animation(choosing,shell,AnimationSlot::Walk),"Legacy feminine walk lost before explicit choice");
+        expect(set_animation_choice(choosing,catalog,shell,"eve","pearl",AnimationSlot::Walk,"original"),"First explicit Default was discarded");
+        expect(!use_feminine_animation(choosing,shell,AnimationSlot::Walk),"Explicit Default did not release global feminine walk");
+        expect(use_feminine_animation(choosing,shell,AnimationSlot::Idle),"Walk Default unexpectedly changed legacy idle");
+        set_animation_choice(choosing,catalog,shell,"eve","pearl",AnimationSlot::Idle,"original");
+        expect(!use_feminine_animation(choosing,shell,AnimationSlot::Idle),"Idle Default did not release legacy standing pose");
+        expect(!set_animation_choice(choosing,catalog,shell,"eve","pearl",AnimationSlot::Walk,"original"),"Identical choice dirtied state");
+        expect(choosing.walk_animation=="feminine","Per-variant Default destroyed legacy settings");
+        set_animation_choice(choosing,catalog,shell,"eve","pearl",AnimationSlot::Walk,feminine_animation_id);
+        expect(use_feminine_animation(choosing,shell,AnimationSlot::Walk),"Per-variant feminine walk not engaged");
+        expect(!use_feminine_animation(choosing,shell,AnimationSlot::Idle),"Walk choice changed explicit Default idle");
+        set_animation_choice(choosing,catalog,shell,"eve","pearl",AnimationSlot::Walk,"eve");
+        expect(!use_feminine_animation(choosing,shell,AnimationSlot::Walk),"Built-in walk fought the mod choice");
+        for(const auto slot:{AnimationSlot::Idle,AnimationSlot::Jog,AnimationSlot::Sprint,AnimationSlot::Beacon}) {
+            const auto& options=catalog.animation_options("eve","pearl",slot);
+            set_animation_choice(choosing,catalog,shell,"eve","pearl",slot,options.front().id);
+            const auto* saved=choosing.animation_choices.find("eve","pearl",slot);
+            menu=animation_menu(options,slot,saved,true);
+            expect(menu.items[menu.selected].id==options.front().id,"Slots interfered with one another");
+            expect(menu.step(-1)==(slot==AnimationSlot::Idle?feminine_animation_id:"original"),"Previous did not reach preceding choice");
+        }
+        const auto before_rejection=choosing.json();
+        rejects([&]{set_animation_choice(choosing,catalog,shell,"eve","other",AnimationSlot::Jog,"slow");});
+        rejects([&]{set_animation_choice(choosing,catalog,"CharacterId.Player.Shell.Tiel","eve","pearl",AnimationSlot::Idle,"relaxed");});
+        rejects([&]{set_animation_choice(choosing,catalog,shell,"eve","pearl",AnimationSlot::Jog,feminine_animation_id);});
+        rejects([&]{set_animation_choice(choosing,catalog,shell,"eve","pearl",AnimationSlot::Walk,"removed");});
+        rejects([&]{set_animation_choice(choosing,catalog,shell,"eve","pearl",static_cast<AnimationSlot>(99),"original");});
+        expect(choosing.json()==before_rejection,"Rejected action changed saved choices");
+        choosing.selections[shell].variant="other";
+        expect(use_feminine_animation(choosing,shell,AnimationSlot::Walk),"Unset variant borrowed another variant's walk choice");
+        const std::string removed="removed";
+        menu=animation_menu({},AnimationSlot::Jog,&removed,true);
+        expect(!menu.items[menu.selected].available && menu.items[menu.selected].id==removed,"Missing choice hidden or rewritten");
+        expect(menu.step(1)=="original" && menu.step(-1)=="original","Missing option trapped menu navigation");
+        std::vector<AnimationOption> many;
+        for(int i=0;i<64;++i) {AnimationOption option;option.id="item"+std::to_string(i);option.name=option.id;many.push_back(option);}
+        menu=animation_menu(many,AnimationSlot::Jog,nullptr,false);
+        expect(menu.items.size()==65 && menu.step(-1)=="item63","Long option list lost wraparound");
+        menu.selected=64;expect(menu.step(1)=="original","Last option did not wrap to Default");
+        const auto roundtrip=State::parse(choosing.json());
+        expect(roundtrip.animation_choices==choosing.animation_choices,"Chosen options did not survive loading");
+        expect(set_legacy_walk_choice(choosing,catalog,shell,"normal"),"Legacy Default command did not change active variant");
+        expect(!use_feminine_animation(choosing,shell,AnimationSlot::Walk) &&
+               !use_feminine_animation(choosing,shell,AnimationSlot::Idle),"Legacy command did not update idle and walk together");
+        expect(choosing.walk_animation=="feminine" && choosing.animation_choices.get("eve","pearl",AnimationSlot::Walk)=="eve",
+               "Legacy command overwrote another variant or global fallback");
+        expect(!set_legacy_walk_choice(choosing,catalog,shell,"normal"),"Repeated legacy command dirtied state");
+        rejects([&]{set_legacy_walk_choice(choosing,catalog,shell,"sideways");});
+        State bare;
+        expect(set_legacy_walk_choice(bare,catalog,shell,"feminine") && bare.walk_animation=="feminine" && bare.animation_choices.outfits.empty(),
+               "No-outfit legacy walk stopped working");
 
         State state;
         state.walk_animation="feminine";

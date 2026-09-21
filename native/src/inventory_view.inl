@@ -938,36 +938,56 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             }
         }
     } else if(section_==2) {
-        // Per-player locomotion options that profiles save with the outfit.
-        // Only walking is offered. Walking and standing borrow the Cultist Spear Lady,
-        // which is the game's own blendspace, so nothing extra is installed. Jog and
-        // sprint are held at normal until their stride is properly matched; the runtime
-        // still carries the code, and data.cpp keeps both settings pinned to normal.
-        const bool has_walk_mod=appearance.walk.walk_mod_active();
-        const auto& walk_mod_name=appearance.walk.walk_mod_name();
-        const bool feminine=state.walk_animation=="feminine";
-        row_=0;
-        const Json toggle{{"action","walk_animation"},{"value",feminine?"normal":"feminine"}};
-        const std::string sub=feminine?"Feminine":(has_walk_mod?"Default, "+walk_mod_name:"Default");
+        constexpr AnimationSlot slots[]={AnimationSlot::Idle,AnimationSlot::Walk,AnimationSlot::Jog,
+                                         AnimationSlot::Sprint,AnimationSlot::Beacon};
+        constexpr const char* titles[]={"Idle animation","Walk animation","Jog animation",
+                                       "Sprint animation","Beacon teleport animation"};
+        const bool has_variant=worn && catalog.find(worn->id,selection->second.variant);
+        const std::string outfit=has_variant?worn->id:"",variant=has_variant?selection->second.variant:"";
+        row_=std::clamp(row_,0,4);
+        std::vector<AnimationMenu> menus;
+        for(const auto slot:slots) menus.push_back(animation_menu(catalog.animation_options(outfit,variant,slot),slot,
+            has_variant?state.animation_choices.find(outfit,variant,slot):nullptr,state.walk_animation=="feminine"));
+        auto choose=[&](AnimationSlot slot,const std::string& id)->Json {
+            if(has_variant) return {{"action","animation_choice"},{"outfit",outfit},{"variant",variant},
+                                    {"slot",animation_slot_name(slot)},{"value",id}};
+            if(slot==AnimationSlot::Walk) return {{"action","walk_animation"},{"value",id==feminine_animation_id?"feminine":"normal"}};
+            return {};
+        };
         scroll_begin();
-        row(0,"Walk animation",sub,77,toggle,toggle,toggle);
+        for(int i=0;i<5;++i) {
+            const auto& menu=menus[i];
+            const auto next=choose(slots[i],menu.step(1)),previous=choose(slots[i],menu.step(-1));
+            row(i,titles[i],menu.items[menu.selected].name,77,next,previous,next);
+        }
         scroll_end();
-        std::string body=feminine?"Feminine borrows the Cultist Spear Lady's walk and standing pose for any shell, and walks at the pace her cycle was made for so the feet stay planted. CSS holds the animation itself, so another walk mod cannot take it back."
-                                 :"Default keeps the game's own walking, and leaves any installed walk mod free to drive it.";
-        if(has_walk_mod) body+=feminine?(" "+walk_mod_name+" by argisht is installed and is being overridden."):(" "+walk_mod_name+" by argisht is installed and is handling it.");
-        body+=" Jogging and sprinting stay on the game's own animation.";
-        detail("Walk animation",sub,body);
-        bind(ui.button("Default",right,controls_y+50,360,42,!feminine,true,21),{{"action","walk_animation"},{"value","normal"}});
-        bind(ui.button("Feminine",right,controls_y+96,360,42,feminine,true,21),{{"action","walk_animation"},{"value","feminine"}});
-        direction_hint(true,"Change walk animation");
-        action_button("accept",feminine?"Use Default":"Use Feminine",controls_y+194,toggle,3);
-        std::string note;
-        if(has_walk_mod) note=feminine?("Installed: "+walk_mod_name+" by argisht. CSS is holding the walk instead; choose Default to hand it back.")
-                                      :("Installed: "+walk_mod_name+" by argisht. It drives walking while Walk animation is Default.");
-        else if(feminine) note=appearance.walk.engaged()?("Active now: "+appearance.walk.reason()+". Profiles keep this setting.")
-                                                        :"Armed. Move to see it. Profiles keep this setting.";
-        else note="Default selected. CSS is not touching locomotion.";
-        ui.label(note,right,controls_y+250,360,60,14,muted);
+        const auto slot=slots[row_];const auto& menu=menus[row_];
+        const auto& current=menu.items[menu.selected];
+        const auto& options=catalog.animation_options(outfit,variant,slot);
+        std::string body;
+        if(!current.available) body="This saved animation is unavailable. Default is used until the option returns or you choose another.";
+        else if(current.id==feminine_animation_id)
+            body=slot==AnimationSlot::Idle?"The Cultist Spear Lady's standing pose. Your walking choice stays separate."
+                                         :"The Cultist Spear Lady's walk at its authored pace. Your standing pose stays separate.";
+        else if(slot==AnimationSlot::Idle)
+            body="Choose a standing pose. Options can follow your weapon or hide it for a relaxed pose. Combat keeps its own animations.";
+        else if(slot==AnimationSlot::Beacon)
+            body="Choose the kneeling and rising animations for beacon travel. Travel timing and controls stay the same.";
+        else body="Choose this outfit's movement animation. Default keeps the game's animation or an installed movement mod.";
+        if(has_variant) body+=" Saved per outfit variant in profiles.";
+        else body="Wear an outfit to use its custom animations. The CSS feminine walk is also available here.";
+        detail(titles[row_],has_variant?worn->name:"Movement",body);
+        std::vector<Choice> choices;
+        for(const auto& item:menu.items) choices.push_back({item.id,item.name,item.available?choose(slot,item.id):Json{}});
+        choice_list("animation:"+outfit+"/"+variant+"/"+animation_slot_name(slot),choices,current.id,controls_y,336);
+        direction_hint(true,"Choose an animation");
+        if(has_variant && options.empty()) ui.label("No custom animation supplied for this option.",right,controls_y+350,360,48,15,muted);
+        if(slot==AnimationSlot::Walk && appearance.walk.walk_mod_active()) {
+            const auto name=appearance.walk.walk_mod_name();
+            const std::string note=current.id=="original"?"Installed walk mod: "+name:"This choice takes priority over "+name+".";
+            ui.label(note,right,controls_y+408,360,48,14,muted);
+        }
+
     } else {
         std::vector<std::string> names; for(const auto& [name,_]:state.presets) names.push_back(name);
         row_=std::clamp(row_,0,int(names.size()));

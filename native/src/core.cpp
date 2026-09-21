@@ -163,7 +163,7 @@ struct Core {
     void sync_walk_safely(uint64_t now) {
         if(now<walk_after) return;
         walk_after=now+250;
-        try {appearance.walk.walk_mod_active(root.parent_path());appearance.sync_walk(state.walk_animation=="feminine",false,false);walk_error.clear();}
+        try {appearance.walk.walk_mod_active(root.parent_path());appearance.sync_walk(use_feminine_animation(state,appearance.shell,AnimationSlot::Idle),use_feminine_animation(state,appearance.shell,AnimationSlot::Walk),false,false);walk_error.clear();}
         catch(const std::exception& error) {
             if(walk_error!=error.what()) {walk_error=error.what();host.log(("Walk animation deferred: "+walk_error).c_str());}
             walk_after=now+1000;
@@ -305,11 +305,20 @@ struct Core {
                 dirty=true; ui_refresh=true; report("Profile renamed.");
             }
         }
+        else if(action=="animation_choice") {
+            const auto slot=animation_slot_from_name(command.at("slot").get<std::string>());
+            if(!slot) throw std::runtime_error("Unknown animation slot");
+            const auto outfit=command.at("outfit").get<std::string>();
+            const auto variant=command.at("variant").get<std::string>();
+            const auto choice=command.at("value").get<std::string>();
+            if(set_animation_choice(state,catalog,appearance.shell,outfit,variant,*slot,choice)) dirty=true;
+            walk_after=0;ui_refresh=true;
+            report("Animation choice saved for this outfit.");
+        }
         else if (action == "walk_animation") {
             auto value = command.at("value").get<std::string>();
-            if(!valid_walk_animation(value)) throw std::runtime_error("Unknown animation choice");
-            if(state.walk_animation!=value) { state.walk_animation=value; dirty=true; }
-            ui_refresh = true;
+            if(set_legacy_walk_choice(state,catalog,appearance.shell,value)) dirty=true;
+            walk_after=0;ui_refresh = true;
             const bool has_mod = appearance.walk.walk_mod_active(root.parent_path());
             const auto& mod_name = appearance.walk.walk_mod_name();
             if(value=="feminine") {

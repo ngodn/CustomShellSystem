@@ -155,10 +155,10 @@ void WalkOverride::release() {
     pawn_.Reset(); anim_.Reset(); movement_.Reset(); walk_ability_.Reset(); walk_bs_.Reset(); run_bs_.Reset();
     idle_ticks_=off_ticks_=slide_ticks_=0; slide_until_=0; last_heal_=0;
 }
-void WalkOverride::update(UObject* pawn,bool walk_feminine,bool jog_feminine,bool sprint_feminine) {
+void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,bool jog_feminine,bool sprint_feminine) {
     const auto now=GetTickCount64();
     const bool run_feminine=jog_feminine||sprint_feminine;
-    if(!walk_feminine && !run_feminine) { if(engaged_ || hook_ || run_tweaked_) release(); return; }
+    if(!idle_feminine && !walk_feminine && !run_feminine) { if(engaged_ || hook_ || run_tweaked_) release(); return; }
     if(!pawn) { if(engaged_) push_off(); return; }
     if(pawn_.Get()!=pawn) {
         if(engaged_) push_off();
@@ -173,7 +173,7 @@ void WalkOverride::update(UObject* pawn,bool walk_feminine,bool jog_feminine,boo
         anim_=anim;
     }
     if(!movement_.Get()) movement_=read<UObject*>(pawn,L"CharacterMovement");
-    UObject* walk_bs=walk_feminine?blendspace(walk_bs_,WALK_BLENDSPACE):nullptr;
+    UObject* walk_bs=(walk_feminine || idle_feminine)?blendspace(walk_bs_,WALK_BLENDSPACE):nullptr;
     UObject* run_bs=run_feminine?blendspace(run_bs_,RUN_BLENDSPACE):nullptr;
     if(walk_feminine) { hook_speed(); scale_walk_=true; } else { scale_walk_=false; if(hook_) unhook_speed(); }
     if(!run_feminine) restore_run();
@@ -196,8 +196,9 @@ void WalkOverride::update(UObject* pawn,bool walk_feminine,bool jog_feminine,boo
     UObject* want=nullptr; bool hard_off=false; std::string reason;
     if(sprinting && sprint_feminine && run_bs) { want=run_bs; reason="sprint"; }
     else if(jogging && jog_feminine && run_bs) { want=run_bs; reason="jog"; }
-    else if(walk_now && walk_bs) { want=walk_bs; reason="walk"; }
-    else if(settled && walk_bs) { want=walk_bs; reason="idle"; }
+    else if(walk_now && walk_feminine && walk_bs) { want=walk_bs; reason="walk"; }
+    else if(settled && idle_feminine && walk_bs) { want=walk_bs; reason="idle"; }
+    else if((standing && !idle_feminine) || (walk_now && !walk_feminine)) hard_off=true;
     // Slide guard: engaged for walking but still travelling at the stock speed means the
     // scaling has not landed; fall back until the next gait change re-issues the speed.
     if(want && reason=="walk" && speed_known && speed>WALK_SLIDE_MAX) {

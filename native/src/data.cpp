@@ -388,6 +388,55 @@ bool Catalog::compatible(const std::string& outfit, const std::string& shell) co
                std::find(o.shells.begin(), o.shells.end(), shell) != o.shells.end();
     return false;
 }
+bool set_animation_choice(State& state,const Catalog& catalog,const std::string& shell,
+    const std::string& outfit,const std::string& variant,AnimationSlot slot,const std::string& choice) {
+    const auto selected=state.selections.find(shell);
+    if(selected==state.selections.end() || selected->second.outfit!=outfit || selected->second.variant!=variant ||
+        !catalog.find(outfit,variant) || !catalog.compatible(outfit,shell))
+        throw std::runtime_error("Wear this outfit variant before changing its animations");
+    // Validate the enum and the declared option, not just arbitrary save IDs.
+    animation_slot_name(slot);
+    const auto& options=catalog.animation_options(outfit,variant,slot);
+    if(choice!="original" && !((slot==AnimationSlot::Walk || slot==AnimationSlot::Idle) && choice==feminine_animation_id) &&
+        std::none_of(options.begin(),options.end(),[&](const auto& option){return option.id==choice;}))
+        throw std::runtime_error("Animation choice is unavailable for this outfit");
+    const auto* before=state.animation_choices.find(outfit,variant,slot);
+    if(before && *before==choice) return false;
+    auto next=state.animation_choices;
+    next.outfits[outfit][variant][slot]=choice;
+    // Use the same bounds as loading, so choosing an option cannot create an unreadable save.
+    next=AnimationChoices::parse(next.json());
+    state.animation_choices=std::move(next);
+    return true;
+}
+bool use_feminine_animation(const State& state,const std::string& shell,AnimationSlot slot) {
+    if(slot!=AnimationSlot::Idle && slot!=AnimationSlot::Walk) return false;
+    const auto selected=state.selections.find(shell);
+    if(selected!=state.selections.end()) {
+        const auto& selection=selected->second;
+        if(const auto* choice=state.animation_choices.find(selection.outfit,selection.variant,slot))
+            return *choice==feminine_animation_id;
+    }
+    return state.walk_animation=="feminine";
+}
+bool set_legacy_walk_choice(State& state,const Catalog& catalog,const std::string& shell,const std::string& value) {
+    if(!valid_walk_animation(value)) throw std::runtime_error("Unknown animation choice");
+    const auto selected=state.selections.find(shell);
+    if(selected==state.selections.end()) {
+        const bool changed=state.walk_animation!=value;
+        state.walk_animation=value;
+        return changed;
+    }
+    // The old command changed both standing and walking. Keep that behavior,
+    // scoped to this variant, without leaving a half-applied pair on rejection.
+    auto next=state;
+    const auto& selection=selected->second;
+    const std::string choice=value=="feminine"?feminine_animation_id:"original";
+    const bool idle=set_animation_choice(next,catalog,shell,selection.outfit,selection.variant,AnimationSlot::Idle,choice);
+    const bool walk=set_animation_choice(next,catalog,shell,selection.outfit,selection.variant,AnimationSlot::Walk,choice);
+    if(idle || walk) state.animation_choices=std::move(next.animation_choices);
+    return idle || walk;
+}
 static std::map<std::string, Selection> parse_selections(const Json& values) {
     if (!values.is_object() || values.size() > 256) throw std::runtime_error("Invalid selections");
     std::map<std::string, Selection> result;
