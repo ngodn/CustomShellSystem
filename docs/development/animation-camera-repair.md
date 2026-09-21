@@ -1,6 +1,6 @@
 # Eve animation-camera repair
 
-Status: repaired, cooked, packaged and installed. Gameplay review is pending.
+Status: repaired, cooked, packaged, installed and accepted in gameplay review on 2026-09-22.
 
 ## Report and reproduction
 
@@ -82,13 +82,21 @@ Receipt: work/parry1/live2/deployment.json. The user is starting the game.
 No hot reload. Current standalone CSSX work belongs to a separate agent and is
 not part of this alpha asset correction.
 
-## Remaining acceptance
+## Gameplay acceptance
 
-Record the exact installed candidate during a riposte follow-up and trap reaction.
-Check framing at animation entry, through the close-up and when normal camera
-control returns. Also observe normal movement/attacks and a menu round trip.
-Do not claim every cinematic was exercised. Update this status and release
-checksums only after the required gameplay feedback.
+The user tested the installed candidate and answered "Both look correct now"
+for riposte follow-ups and trap close-ups. The two 30-second game-window recordings
+under work/parry1/live2, after.mp4 and after2.mp4, show riposte close-ups, returns
+to normal camera framing, movement and combat. The first also contains a CSS
+menu visit and return. Reviewed sheets: riposte.jpg and after2-sheet.jpg.
+Trap acceptance is the user's direct review; a distinct trap reaction was not
+identified in the sampled recordings. No claim is made for every cinematic.
+Twelve runtime samples have no animation or maintenance error. Installed package
+hashes match the candidate ZIP; the deployment preserves CSS/CSSX runtime files.
+
+This resolves the two reported close-up cases. The shared helper correction
+also applies to other animation cameras that use these bones, but those cases
+still require normal release testing.
 
 Custom Eve idle and the wider v1.0.0 work stay paused until this urgent repair is
 finished. Do not restart accepted hand, proportion or movement tuning.
