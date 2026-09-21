@@ -93,8 +93,11 @@ void Menu::combat_sync() {
     {
         size_t count=abilities_count_;
         try { const auto asc=host_.get(player.at("pawn"),"AbilitySystemComponent"); const auto shallow=host_.request({{"op","get"},{"target",asc},{"property","ActivatableAbilities"},{"count",true}}); count=shallow.value("count",count); } catch(...) {}
-        if(count==abilities_count_ && combat_full_time_<10 && !combat_hooks_.empty()) { combat_full_time_+=1; return; }
-        abilities_count_=count; combat_full_time_=0;
+        // Re-decode only when the ability list changed or work was left over
+        // from the last pass; the old forced full pass every 10 s cost
+        // 20-40 ms per pass with 100+ abilities.
+        if(count==abilities_count_ && !combat_backlog_ && !combat_hooks_.empty()) return;
+        abilities_count_=count; combat_backlog_=false;
     }
     const auto abilities=owned_abilities(player.at("pawn"));
     std::set<uint64_t> live;for(const auto& ability:abilities) live.insert(ability.at("$object").get<uint64_t>());
@@ -114,9 +117,14 @@ void Menu::combat_sync() {
     }
     if(lost_cooldown) {for(const auto* field:cooldown_fields) restore(field);cooldown_seen_.clear();}
     if(applied_["no_cooldown"]==true) {
+        unsigned installed=0;
         for(const auto& ability:abilities) {
             const auto id=ability.at("$object").get<uint64_t>();
             if(cooldown_seen_.contains(id)) continue;
+            // A few new abilities per sync (one second apart) keeps each frame
+            // short; the rest follow on the next syncs.
+            if(installed>=4) { combat_backlog_=true; break; }
+            ++installed;
             std::vector<std::pair<std::string,Json>> fields;
             for(const auto* field:cooldown_fields) {
                 Json value;
