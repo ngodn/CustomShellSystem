@@ -1,6 +1,8 @@
 # Current work queue
 
-**Paused by user on 2026-09-21 to preserve weekly quota. Do not resume work until explicitly requested.** The full goal is unfinished. Read [the restart handoff](development/resume-after-quota.md) first. It records the delivered alpha, I2 review, built-but-unexecuted idle-layer helper, exact next checks, separate CSSX ownership and operating constraints. No authoring/build process remains running from this work; the game was left alone.
+**Resumed by user on 2026-09-22 for an urgent alpha camera fix.** At the start of the parry/riposte animation, the camera sits too far behind and misses the character. Reproduce, fix, rebuild/install/test, then replace the affected alpha release ZIPs as explicitly requested. Check related camera-driven animations. Keep idle development parked and preserve the separate CSSX agent's work. The [prior pause handoff](development/resume-after-quota.md) remains the checkpoint for unfinished idle work.
+2026-09-22: [Animation-camera repair](development/animation-camera-repair.md) is installed for user review. Only camera_pivot/camera_target translation modes change; release replacement awaits riposte/trap gameplay verification. Broader work remains paused.
+
 
 2026-09-21: [I2 gentle Eve idle](development/eve-animation-sources.md#i2-gentler-idle-gesture) changes only three head/neck rotation tracks, preserving I1's stance and hands. Saved/raw checks, two-loop compressed playback and fitted-mesh replay pass. Reviewed frames and measured ponytail inclination show a smaller sweep; the user has a side-by-side style comparison pending. No cooking or game deployment. Next complete custom sequence playback and weapon visibility ownership, accounting for the game graph's downstream hand correction and CSS's active-montage recovery guard. Preserve accepted movement and physics. Full v1.0.0 remains active.
 
