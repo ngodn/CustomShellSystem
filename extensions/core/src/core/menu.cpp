@@ -22,9 +22,12 @@ constexpr double reference_h=1080;
 constexpr int library_visible=9, controls_visible=9;
 // Controller prompt glyph ids of the game's WBP_Prompt (E_ControllerButton).
 constexpr uint8_t glyph_accept=3, glyph_secondary=4, glyph_back=5, glyph_left_bumper=8, glyph_right_bumper=9, glyph_up=13, glyph_down=14, glyph_left=15, glyph_right=16;
-const std::array<std::pair<std::string_view,uint8_t>,22> keyboard_icons{{
-    {"LeftMouseButton",0},{"RightMouseButton",1},{"BackSpace",6},{"Tab",7},{"Enter",8},{"Escape",11},{"Spacebar",12},{"Left",17},{"Up",18},{"Right",19},{"Down",20},
-    {"E",37},{"F",38},{"Q",49},{"R",50},{"W",55},{"A",33},{"S",51},{"D",36},{"Ctrl",255},{"Home",16},{"X",56}}};
+// Keyboard glyph ids of the game's WBP_Prompt (E_KeyboardMouseButton): the
+// letters run contiguously from A=33 to Z=58; the rest were read off screen.
+const std::vector<std::pair<std::string,uint8_t>> keyboard_icons=[]{
+    std::vector<std::pair<std::string,uint8_t>> v{{"LeftMouseButton",0},{"RightMouseButton",1},{"BackSpace",6},{"Tab",7},{"Enter",8},{"Escape",11},{"Spacebar",12},{"Left",17},{"Up",18},{"Right",19},{"Down",20},{"Ctrl",255},{"Home",16}};
+    for(char c='A';c<='Z';++c) v.push_back({std::string(1,c),uint8_t(33+(c-'A'))});
+    return v; }();
 std::string effect_label(const Json& c) {
     const auto effect=c.value("effect",std::string{});
     if(effect=="irreversible") return "Irreversible: this changes your save";

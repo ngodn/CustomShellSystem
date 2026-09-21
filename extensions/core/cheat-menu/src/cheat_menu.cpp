@@ -190,7 +190,9 @@ Json Menu::model() {
     enabled["discard_changes"]=has_changes() && !pending_;
     enabled["disable_all"]=!pending_ && (cleanup_required_ || !powers_.empty() || !combat_hooks_.empty() || !points_saved_.empty() || applied_["max_shell_points"]==true || !saved_.empty() || applied_["auto_heal"]==true || applied_["infinite_resolve"]==true || applied_["god"]==true || applied_["move_fast"]==true);
     unsigned edits=0;for(auto it=values_.begin();it!=values_.end();++it) if(!applied_.contains(it.key()) || applied_[it.key()]!=it.value()) ++edits;
-    std::string summary=cleanup_required_?"Cleanup needs retry: use Turn off all cheats. ":has_changes()?std::to_string(edits)+(edits==1?" unapplied edit. ":" unapplied edits. "):"";
+    // The notice strip already names pending edits and cleanup; the status
+    // line keeps to what is active and what an action last did.
+    std::string summary;
     unsigned active=0;for(const auto* id:toggle_ids) if(applied_[id]==true) ++active;
     summary+="Active cheats: "+std::to_string(active);
     if(!armed_.empty()) summary+=" ("+std::to_string(armed_.size())+" waiting for a seal)";

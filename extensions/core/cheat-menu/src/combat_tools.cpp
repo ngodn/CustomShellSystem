@@ -55,7 +55,7 @@ void Menu::combat_sync() {
     bool active=false;
     for(const auto* id:combat_ids) {
         if(applied_.at(id)==true) active=true;
-        else combat_clear(id);
+        else { combat_clear(id); if(armed_.erase(id)) host_.request({{"op","invalidate"}}); }
     }
     if(!active) return;
     auto status=host_.request({{"op","hooks.status"}});

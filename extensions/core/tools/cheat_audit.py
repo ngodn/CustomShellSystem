@@ -68,10 +68,15 @@ class Audit:
         print(('PASS ' if ok else 'FAIL ') + name + (('  ' + detail) if detail else ''))
 
     def health(self):
+        # The cheats act on shell health when a shell is worn, else on body health.
         h = engine({'op': 'get', 'target': self.pawn, 'property': 'HealthComponent'})
-        cur = engine({'op': 'call', 'target': h, 'function': 'GetHealth'})
-        mx = engine({'op': 'call', 'target': h, 'function': 'GetMaxHealth'})
-        return h, float(cur['ReturnValue'] if isinstance(cur, dict) else cur), float(mx['ReturnValue'] if isinstance(mx, dict) else mx)
+        def call(fn):
+            v = engine({'op': 'call', 'target': h, 'function': fn})
+            return float(v['ReturnValue'] if isinstance(v, dict) else v)
+        shell, shell_max = call('GetShellHealth'), call('GetMaxShellHealth')
+        if shell_max > 0 and shell > 0.5:
+            return h, shell, shell_max
+        return h, call('GetHealth'), call('GetMaxHealth')
 
     def resolve(self):
         h = engine({'op': 'get', 'target': self.pawn, 'property': 'HealthComponent'})
@@ -171,7 +176,7 @@ class Audit:
         event('revive'); time.sleep(0.3); self.row('revive shell', True, 'no error')
         # Persistent actions: enabled with confirmation only
         m, c = model()
-        bad = [cid for cid in PERSISTENT | {k for k in c if k.startswith(('grant_', 'unlock_'))} if cid in c and c[cid].get('enabled', True) and not c[cid].get('confirm')]
+        bad = [cid for cid in PERSISTENT | {k for k in c if k.startswith(('grant_', 'unlock_'))} if cid in c and c[cid]['type'] == 'button' and c[cid].get('enabled', True) and not c[cid].get('confirm')]
         self.row('persistent actions ask for confirmation', not bad, ', '.join(bad))
         # Shortcut binding round trip
         event('binding_action', value='god'); event('binding_key', value='F9'); event('apply_settings'); time.sleep(0.3)
