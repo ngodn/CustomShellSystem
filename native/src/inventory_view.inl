@@ -99,16 +99,19 @@ void InventoryUI::bind_inputs() {
         {L"IA_Menu_Left_Primary","left"},{L"IA_Menu_Right_Primary","right"},
         {L"IA_Menu_Left_Tertiary","previous_section"},{L"IA_Menu_Right_Tertiary","next_section"},
         {L"IA_Menu_Confirm_Primary_Press","accept"},{L"IA_Menu_Confirm_Secondary_Press","secondary"},
-        {L"IA_Menu_Confirm_Tertiary_Press","tertiary"},{L"IA_Menu_Back","close"}};
+        {L"IA_Menu_Confirm_Tertiary_Press","tertiary"},{L"IA_Menu_Back","close"},
+        {L"IA_Menu_Inspect","toggle_light"}};
     auto* a=static_cast<FArrayProperty*>(p); FScriptArrayHelper values(a,reinterpret_cast<std::byte*>(mapping)+p->GetOffset_Internal());
     if(values.Num()<0 || values.Num()>256) throw std::runtime_error("Native input map exceeds bound");
     auto* ap=field(find(L"/Script/EnhancedInput.EnhancedActionKeyMapping"),L"Action",8);
     auto* kn=field(find(L"/Script/InputCore.Key"),L"KeyName",sizeof(FName));
     std::set<UObject*> seen;
+    std::set<std::string> reserved_keys={"Home","Gamepad_RightThumbstick"};
     for(int i=0;i<values.Num();++i) {
         UObject* action{}; std::memcpy(&action,values.GetRawPtr(i)+ap->GetOffset_Internal(),8);
-        if(!action || !seen.insert(action).second || !actions.contains(action->GetName())) continue;
-        Binding binding; binding.action=actions.at(action->GetName()); binding.input_action=action;
+        if(!action || !seen.insert(action).second) continue;
+        Binding binding; binding.input_action=action;
+        if(actions.contains(action->GetName())) binding.action=actions.at(action->GetName());
         Call query(input,L"QueryKeysMappedToAction",2); query.set(L"Action",action); query.run();
         auto* out=query.param(L"ReturnValue");
         if(!out->IsA<FArrayProperty>()) throw std::runtime_error("Mapped input keys are not an array");
@@ -117,12 +120,17 @@ void InventoryUI::bind_inputs() {
         for(int n=0;n<keys.Num();++n) {
             FName key{}; std::memcpy(&key,keys.GetRawPtr(n)+kn->GetOffset_Internal(),sizeof(key));
             auto name=narrow(key.ToString());
+            if(binding.action!="toggle_light") reserved_keys.insert(name);
             // The analog sticks belong to the character view on this page.
             if(name=="Gamepad_LeftX" || name=="Gamepad_LeftY" || name=="Gamepad_RightX" || name=="Gamepad_RightY") continue;
             binding.keys.push_back(name);
         }
-        bindings_.push_back(std::move(binding));
+        if(!binding.action.empty()) bindings_.push_back(std::move(binding));
     }
+    // Reuse the game's mapped Inspect action only when its physical key is
+    // not also assigned to another current menu action, including top tabs.
+    for(auto& binding:bindings_) if(binding.action=="toggle_light")
+        std::erase_if(binding.keys,[&](const auto& key){return reserved_keys.contains(key);});
     bindings_.push_back({"reset_view",{"Home","Gamepad_RightThumbstick"},false,0,{}});
 }
 void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& appearance) {
@@ -909,16 +917,30 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     direction_hint(false,section_==0?"Browse shells":section_==1?"Browse parts":section_==2?"Browse animation options":"Browse profiles",left,947,panel);
     bind(ui.button("",left,1025,140,38),{{"action","ui_close"}});
     prompt("close","Close",left,1030,140,5);
-    bind(ui.button("",width/2-75,980,160,40),{{"action","ui_reset_view"}});
-    auto* reset_prompt=prompt("reset_view","Reset view",width/2-70,985,155,0);
+    bind(ui.button("",width/2-190,980,170,40),{{"action",light_edit_?"ui_reset_light":"ui_reset_view"}});
+    auto* reset_prompt=prompt("reset_view",light_edit_?"Reset light":"Reset view",width/2-185,985,165,0);
     inventory_value(reset_prompt,L"ControllerPrompt",uint8_t{29});
     for(const auto& [key,value]:inventory_keyboard_icons) if(key=="Home") inventory_value(reset_prompt,L"KBMPrompt",value);
     invoke(reset_prompt,L"UpdatePrompt");
-    if(gamepad_) {
+    if(light_edit_ || light_available()) {
+        const auto title=light_edit_?"View controls":"Lighting";
+        bool shortcut=false;
+        for(const auto& binding:bindings_) if(binding.action=="toggle_light")
+            for(const auto& key:binding.keys) if(key.starts_with("Gamepad_")==gamepad_) shortcut=true;
+        bind(ui.button(shortcut?"":title,width/2+15,980,185,40),{{"action","ui_toggle_light"}});
+        if(shortcut) prompt("toggle_light",title,width/2+20,985,180,1);
+    }
+    if(light_edit_) {
+        auto* mode=ui.label("Lighting control (view locked)",width/2-210,949,420,28,16,muted);
+        invoke(mode,L"SetJustification",L"InJustification",uint8_t{1});
+    }
+    if(gamepad_ && light_edit_) {
+        prompt("","Move light",width/2-80,1030,180,30);
+    } else if(gamepad_) {
         prompt("","Rotate / zoom",width/2-210,1030,220,30);
         prompt("","Move framing",width/2+30,1030,210,21);
     } else {
-        auto* hint=ui.label("Right-drag rotate  /  Wheel zoom  /  Left-drag move",width/2-255,1030,510,34,15);
+        auto* hint=ui.label(light_edit_?"Drag to move light":"Right-drag rotate  /  Wheel zoom  /  Left-drag move",width/2-255,1030,510,34,15);
         invoke(hint,L"SetJustification",L"InJustification",uint8_t{1});
     }
     auto modal_box = [&](const std::string& title, double w, double h) {
@@ -1053,7 +1075,13 @@ Json InventoryUI::dispatch(Json action,const State& state) {
     if(name=="ui_channel") { channel_=(channel_+1)%std::clamp(action.value("count",3),1,4); dirty_=true; return {}; }
     if(name=="ui_tint_field") { tint_field_index_=(tint_field_index_+1)%3; dirty_=true; return {}; }
     if(name=="ui_exact") { exact_color_=!exact_color_; dirty_=true; return {}; }
-    if(name=="ui_reset_view") { camera_stop(); camera_start(); return {}; }
+    if(name=="ui_toggle_light") { light_toggle(); return {}; }
+    if(name=="ui_reset_light") { light_reset(); return {}; }
+    if(name=="ui_reset_view") {
+        // Reset the camera without recapturing or resetting an edited light.
+        if(!light_edit_) { motion_.reset();drag_pan_=drag_rotate_=false;camera_move({yaw_before_-yaw_,-zoom_,-pan_,-frame_}); }
+        return {};
+    }
     if(name=="ui_close") {
         if(active_ && !closing_) { closing_=true; transition_started_=GetTickCount64(); }
         return {};
@@ -1604,7 +1632,8 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
             continue;
         }
         if(binding.action=="close") return dispatch({{"action","ui_close"}},state);
-        if(binding.action=="reset_view") return dispatch({{"action","ui_reset_view"}},state);
+        if(binding.action=="reset_view") return dispatch({{"action",light_edit_?"ui_reset_light":"ui_reset_view"}},state);
+        if(binding.action=="toggle_light" && character_controls) return dispatch({{"action","ui_toggle_light"}},state);
         if(binding.action=="previous_section" || binding.action=="next_section") return dispatch({{"action","ui_section"},{"section",(section_+(binding.action=="next_section"?1:3))%4}},state);
         if(rows_.empty()) continue;
         if(binding.action=="up" || binding.action=="down") {

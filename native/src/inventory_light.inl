@@ -1,8 +1,23 @@
-// The mode entry is development-only until native Inspect routing is verified.
 // Transforms belong to one preview instance, never a shared light template.
+bool InventoryUI::light_available() const {
+    if(!active_ || extension_active_ || closing_ || native_picker_ || !confirm_action_.is_null() ||
+       !inventory_bool(main_.Get(),L"bOpen") || !display_.Get() || !camera_component_.Get()) return false;
+    auto* native=inventory_object(main_.Get(),L"WBP_MGT_Character");
+    if(!native || !native->GetFunctionByNameInChain(L"IsMenuOpen")) return false;
+    Call open(native,L"IsMenuOpen",1);open.run();
+    if(open.get<bool>()) return false;
+    // The native page closes and invalidates its inventory before CSS owns
+    // Inspect. Refuse the shortcut if that lifecycle has not settled yet.
+    for(auto* name:{L"WBP_IL_Inventory_Top",L"WBP_IL_Character_Secondary",
+                    L"WBP_IL_Character_Navigation",L"WBP_IL_Character_Back"}) {
+        auto* listener=inventory_object(native,name);
+        auto* enabled=listener?listener->GetPropertyByNameInChain(L"bEnabled"):nullptr;
+        if(!enabled || !enabled->IsA<FBoolProperty>() || inventory_bool(listener,L"bEnabled")) return false;
+    }
+    return inventory_object(display_.Get(),L"RectLight_Left")!=nullptr;
+}
 void InventoryUI::light_start() {
-    if(!active_ || extension_active_ || !inventory_bool(main_.Get(),L"bOpen") ||
-       !display_.Get() || !camera_component_.Get())
+    if(!light_available())
         throw std::runtime_error("Light controls require the CSS character preview");
     Call selected(switcher_.Get(),L"GetActiveWidget",1);selected.run();
     if(selected.get<UObject*>()!=page_.Get())
@@ -25,15 +40,36 @@ void InventoryUI::light_start() {
     orbit.screen_right=vector(camera_component_.Get(),L"GetRightVector");
     orbit.screen_up=vector(camera_component_.Get(),L"GetUpVector");
     orbit.validate();
-    light_location_before_=read<LightVector>(component,L"RelativeLocation");
-    light_rotation_before_=read<LightVector>(component,L"RelativeRotation");
-    if(!InventoryLightOrbit::finite(light_location_before_) || !InventoryLightOrbit::finite(light_rotation_before_))
-        throw std::runtime_error("Invalid preview light restore transform");
+    if(light_component_.Get()!=component) {
+        light_stop();
+        const auto location=read<LightVector>(component,L"RelativeLocation");
+        const auto rotation=read<LightVector>(component,L"RelativeRotation");
+        if(!InventoryLightOrbit::finite(location) || !InventoryLightOrbit::finite(rotation))
+            throw std::runtime_error("Invalid preview light restore transform");
+        light_location_before_=location;light_rotation_before_=rotation;
+    }
     light_component_=component;light_orbit_=orbit;light_edit_=true;
     motion_.reset();drag_pan_=drag_rotate_=false;
 #ifdef CSS_INVENTORY_DEV
     capture_duration_=0;
 #endif
+}
+void InventoryUI::light_toggle() {
+    if(light_edit_) {
+        // Returning to view controls retains the edited light. Keep the first
+        // original transform until explicit reset, page exit or actor replacement.
+        light_edit_=false;motion_.reset();drag_pan_=drag_rotate_=false;
+    } else {
+        if(!light_available()) return;
+        light_start();
+    }
+    dirty_=true;
+}
+void InventoryUI::light_reset() {
+    const bool editing=light_edit_;
+    light_stop();
+    if(editing && light_available()) light_start();
+    dirty_=true;
 }
 void InventoryUI::light_move(double horizontal,double vertical) {
     if(!light_edit_ || (!horizontal && !vertical)) return;

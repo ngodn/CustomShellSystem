@@ -1,9 +1,9 @@
 # CSS preview light controls
 
-The native orbit backend is implemented and compiled, but is not installed or
-exposed as a normal menu action yet. V44 gameplay verification remains the
-active live test. The light backend was developed while that game process had
-no player pawn. It does not establish a finished lighting feature.
+The native orbit and menu controls are implemented and compiled locally. They
+are not installed or visually accepted. V44 gameplay verification remains the
+active live test. Lighting work proceeded while that game process had no player
+pawn; this does not establish a finished, verified lighting feature.
 
 ## Actual game references
 
@@ -22,12 +22,21 @@ Evidence is condensed with source hashes in
 - `work/inventory-integration/blueprints/BP_DisplayMenu_Character.json`
 - `work/inventory-integration/development/1789409134885282595-inspect.json`
 
-The recorded menu input map already assigns `Gamepad_Special_Left` to
-`IA_Menu_Inspect`, also bound to `I`. Do not add a second unexamined handler for
-Select/View. Confirm the native Inspect listener is inactive on the CSS page,
-or explicitly arbitrate that action only while CSS owns the page. `L`, `O` and
-`P` are unused in this recorded menu map; this is not proof about every active
-mapping context or a user's current remapped keys.
+The recorded menu input map assigns `Gamepad_Special_Left` to `IA_Menu_Inspect`,
+also bound to `I`. The same live capture has CSS active, the native character
+page's `bOpen=false`, and all four character-page input listeners disabled.
+The exported `IsMenuOpen` function simply returns that `bOpen` flag.
+`work/preview-light-v2/inspect-routing.json` and `IsMenuOpen.json` retain these
+observations. The native menu-close bytecode calls `UpdateOpenState(false)` and
+invalidates character navigation and inventory before returning.
+
+CSS now reuses that mapped Inspect action only on its own character page. On
+entry to lighting, it checks the native page is closed and those four listeners
+remain disabled. It queries current mapped keys for all actions in the menu
+mapping context and removes a lighting shortcut if another menu action or CSS
+view-reset binding also uses it. The default captured `I` and Select/View keys
+have no such conflicts. Remapping and other active contexts still need live
+verification; the historical capture is not evidence about all configurations.
 
 ## Implemented backend
 
@@ -65,8 +74,23 @@ They contain no script-side lighting behavior. They must not be sent to the
 currently installed V44 core, which predates these commands. Start is
 idempotent, so repeated start requests cannot overwrite the captured original.
 Stop currently restores the original light as a diagnostic cleanup operation.
-The eventual user-facing toggle must retain the edited light when returning to
-view controls, and restore it only on explicit reset or preview exit.
+The user-facing toggle is separate and retains the edited light when returning
+to view controls. Re-entering lighting captures the current world basis while
+retaining the first original relative transform for that component. Explicit
+light reset restores the original and keeps lighting mode active. View reset
+uses the original camera values without stopping/restarting the whole preview,
+so it no longer discards edited lighting.
+
+## Menu controls
+
+The center controls now offer `Lighting` beside `Reset view`. In lighting mode,
+they become `View controls` and `Reset light`, with `Lighting control (view
+locked)` and a move-light hint. The default shortcut is controller Select/View
+or keyboard `I`, following the native Inspect remapping. If the current input
+method has no nonconflicting shortcut, the clickable control remains available
+without advertising a misleading key glyph. Home/right-stick click resets the
+currently controlled object. Text entry, pickers and confirmation dialogs retain
+their existing input handling; lighting cannot be entered through them.
 
 ## Verification and remaining work
 
@@ -83,12 +107,18 @@ build (`windows-build-v2.log`) and shipping build (`shipping-build.log`) both
 exit 0. `verification.json` retains their hashes and the unchanged installed
 V44 core selector. No new DLL was deployed and no live light request was sent.
 
+The menu integration builds separately in `work/preview-light-v2`. Development
+and shipping Windows builds both exit 0. Orbit math is unchanged from the
+passing host test. The menu input, retoggle/reset lifetime and visual layout
+are compiled but still require live validation; a build is not evidence of
+physical controller behavior or exact restoration in the game.
+
 Before enabling the feature for users:
 
-1. Resolve Inspect routing and current key conflicts; add Select/View and a
-   verified keyboard shortcut plus clear mode feedback and clickable controls.
-2. Implement the user toggle separately from diagnostic stop: retain edited
-   light placement on return to view controls, with a separate light reset.
+1. Verify the Inspect handoff, default and remapped keys, keyboard/controller
+   prompts, conflicting bindings and clickable controls in the actual menu.
+2. Check return-to-view/re-enter-light cycles preserve edits, view reset preserves
+   the light, and light reset restores the first original while retaining mode.
 3. In the actual CSS preview, compare rendered camera location, rotation and
    FOV before/during movement, verify actual light readback, and review Steam
    stills or a game-window clip from contrasting light positions.

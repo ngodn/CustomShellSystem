@@ -57,8 +57,6 @@ void inventory_order(UObject* panel,const std::vector<UObject*>& desired) {
 #ifdef CSS_INVENTORY_DEV
 #include "inventory_capture.inl"
 #endif
-// Native light orbit is shared with the eventual menu controls. Only its
-// development command is exposed until controller Inspect routing is checked.
 #include "inventory_light.inl"
 void InventoryUI::detach() {
     camera_tick_restore();

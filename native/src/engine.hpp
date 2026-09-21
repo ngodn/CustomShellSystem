@@ -149,7 +149,10 @@ class InventoryUI {
     InventoryLightOrbit light_orbit_;
     LightVector light_location_before_{}, light_rotation_before_{};
     bool light_edit_=false;
+    bool light_available() const;
     void light_start();
+    void light_toggle();
+    void light_reset();
     void light_move(double horizontal,double vertical);
     void light_stop();
     bool gamepad_=true, mouse_left_=false, mouse_right_=false, drag_pan_=false, drag_rotate_=false;
