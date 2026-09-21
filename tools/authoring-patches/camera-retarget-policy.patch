@@ -1,0 +1,33 @@
+--- a/tools/configure_nextgen_retarget.py
++++ b/tools/configure_nextgen_retarget.py
+@@ -52,7 +52,7 @@
+ errors = {'skeleton': check_reference(before['skeleton'], canonical),
+           'mesh': check_reference(before['mesh'], bind)}
+ mode = unreal.BoneTranslationRetargetingMode
+-moving = [bone['name'] for bone in canonical if bone['name'] == 'root' or bone['name'].startswith('ik_')]
++moving = [bone['name'] for bone in canonical if bone['name'] in ('root', 'camera_pivot', 'camera_target') or bone['name'].startswith('ik_')]
+ expected_modes = {bone['name']: (mode.ANIMATION if bone['name'] in moving else
+                   mode.ANIMATION_SCALED if bone['name'] == 'pelvis' else mode.SKELETON).value for bone in canonical}
+ backup = {}
+--- a/tools/probe_nextgen_retarget.py
++++ b/tools/probe_nextgen_retarget.py
+@@ -154,7 +154,7 @@
+         passed &= report['compressed_skeleton_mode']['max_translation_error_cm'] <= .001
+         passed &= report['compressed_skeleton_mode']['max_rotation_error_radians'] <= .001
+     if production:
+-        moving = [bone['name'] for bone in canonical if bone['name'] == 'root' or bone['name'].startswith('ik_')]
++        moving = [bone['name'] for bone in canonical if bone['name'] in ('root', 'camera_pivot', 'camera_target') or bone['name'].startswith('ik_')]
+         if not unreal.CSSRetargetLibrary.set_translation_retargeting(skeleton, moving, unreal.BoneTranslationRetargetingMode.ANIMATION):
+             raise RuntimeError('Root and IK mode assignment failed')
+         if not unreal.CSSRetargetLibrary.set_translation_retargeting(skeleton, ['pelvis'], unreal.BoneTranslationRetargetingMode.ANIMATION_SCALED):
+--- a/tools/validate_nextgen_cooked.py
++++ b/tools/validate_nextgen_cooked.py
+@@ -74,7 +74,7 @@
+     tree = skeleton['Properties']['BoneTree']
+     require(len(tree) == len(bones), 'Cooked retarget tree differs')
+     for bone, node in zip(bones, tree):
+-        expected = 'Animation' if bone['name'] == 'root' or bone['name'].startswith('ik_') else 'AnimationScaled' if bone['name'] == 'pelvis' else 'Skeleton'
++        expected = 'Animation' if bone['name'] in ('root', 'camera_pivot', 'camera_target') or bone['name'].startswith('ik_') else 'AnimationScaled' if bone['name'] == 'pelvis' else 'Skeleton'
+         require(node['TranslationRetargetingMode'] == 'EBoneTranslationRetargetingMode::' + expected,
+                 'Cooked retarget mode differs: ' + bone['name'])
+     require(any(x['AssetPathName'] == '/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton'

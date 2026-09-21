@@ -1,0 +1,12 @@
+--- a/Source/CSSAuthoring/CSSRetargetLibrary.cpp
++++ b/Source/CSSAuthoring/CSSRetargetLibrary.cpp
+@@ -261,7 +261,8 @@
+ bool UCSSRetargetLibrary::SetTranslationRetargeting(USkeleton* Skeleton, const TArray<FName>& Bones,
+     TEnumAsByte<EBoneTranslationRetargetingMode::Type> Mode)
+ {
+-    if (!Skeleton || !Skeleton->GetPathName().StartsWith(TEXT("/Game/CSSAuthoring/")) ||
++    if (!Skeleton || !(Skeleton->GetPathName().StartsWith(TEXT("/Game/CSSAuthoring/")) ||
++        Skeleton->GetPathName().StartsWith(TEXT("/Game/CSS/"))) ||
+         Bones.IsEmpty() || Bones.Num() > 2048 || Mode > EBoneTranslationRetargetingMode::OrientAndScale)
+         return false;
+     TArray<int32> Indices;
