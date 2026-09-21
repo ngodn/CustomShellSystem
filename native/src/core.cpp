@@ -163,9 +163,27 @@ struct Core {
     void sync_walk_safely(uint64_t now) {
         if(now<walk_after) return;
         walk_after=now+250;
-        try {appearance.walk.walk_mod_active(root.parent_path());appearance.sync_walk(use_feminine_animation(state,appearance.shell,AnimationSlot::Idle),use_feminine_animation(state,appearance.shell,AnimationSlot::Walk),false,false);walk_error.clear();}
+        try {
+            appearance.walk.walk_mod_active(root.parent_path());
+            std::array<std::string,3> movement;
+            const auto selected=state.selections.find(appearance.shell);
+            if(state.enabled && appearance.active() && !apply_pending && !restore_pending && selected!=state.selections.end()) {
+                const auto& selection=selected->second;
+                if(applied_id==selection.outfit+"/"+selection.variant) {
+                    constexpr AnimationSlot slots[]={AnimationSlot::Walk,AnimationSlot::Jog,AnimationSlot::Sprint};
+                    for(size_t i=0;i<movement.size();++i)
+                        movement[i]=resolve_animation(catalog.animation_options(selection.outfit,selection.variant,slots[i]),slots[i],
+                            state.animation_choices.get(selection.outfit,selection.variant,slots[i])).asset;
+                }
+            }
+            appearance.sync_walk(use_feminine_animation(state,appearance.shell,AnimationSlot::Idle),
+                                 use_feminine_animation(state,appearance.shell,AnimationSlot::Walk),movement);
+            walk_error.clear();
+        }
         catch(const std::exception& error) {
-            if(walk_error!=error.what()) {walk_error=error.what();host.log(("Walk animation deferred: "+walk_error).c_str());}
+            try {appearance.walk.release();}
+            catch(const std::exception& cleanup) {host.log(("Walk cleanup pending: "+std::string(cleanup.what())).c_str());}
+            if(walk_error!=error.what()) {walk_error=error.what();report("Animation unavailable: "+walk_error);}
             walk_after=now+1000;
         }
     }
@@ -782,6 +800,7 @@ struct Core {
         status["material_debug"] = appearance.material_debug;
         status["walk_mod_active"] = appearance.walk.walk_mod_active();
         status["walk_mod_name"] = appearance.walk.walk_mod_name();
+        status["animation"]={{"engaged",appearance.walk.engaged()},{"gait",appearance.walk.reason()},{"error",walk_error}};
         if(auto selected=state.selections.find(appearance.shell);selected!=state.selections.end()) status["customize"]=selected->second.custom.json();
         auto serialized = status.dump();
         if (serialized != last_status) {

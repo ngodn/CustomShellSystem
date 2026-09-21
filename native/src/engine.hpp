@@ -16,6 +16,7 @@
 #include "inventory_keys.hpp"
 #include "inventory_light_keys.hpp"
 #include "ground_offset.hpp"
+#include "animation_override.hpp"
 #include "extension_client.hpp"
 #include "cssx/hud.h"
 #include "extension_search.hpp"
@@ -267,29 +268,39 @@ public:
     void sync_morph(const std::string& morph, float weight);
     void sync_morphs(const std::map<std::string, float>& driven_morphs);
 };
-// 0.4: optional feminine walk (LOCOMOTION tab). Drives the game's own carrier
-// blendspace override on the player's animation instance, the way the GenessaWalk
-// and ProximaWalk mods do, for whichever shell is worn.
+// Shared owner for the built-in feminine idle/walk and mod movement options.
+// The game's animation instance evaluates the selected locomotion BlendSpace.
 class WalkOverride {
-    WeakObject pawn_, anim_, movement_, walk_ability_, walk_bs_, run_bs_, active_;
-    uint64_t next_ability_search_=0, last_heal_=0;
+    struct SameWeakObject {
+        bool operator()(const WeakObject& a,const WeakObject& b) const {
+            return a.ObjectIndex==b.ObjectIndex && a.ObjectSerialNumber==b.ObjectSerialNumber;
+        }
+    };
+    using BlendLease=AnimationOverrideLease<WeakObject,SameWeakObject>;
+    BlendLease blend_lease_;
+    bool original_blend_root_owned_=false;
+    WeakObject pawn_, anim_, movement_, walk_bs_, active_;
+    std::array<std::string,3> custom_paths_;
+    std::array<WeakObject,3> custom_blends_;
+    WeakObject custom_skeleton_;
+    uint64_t last_heal_=0;
     int idle_ticks_=0, off_ticks_=0, slide_ticks_=0;
     uint64_t slide_until_=0;
-    bool engaged_=false, run_tweaked_=false;
-    uint8_t original_run_axis_=0;
+    bool engaged_=false;
     std::optional<uint64_t> hook_;
     std::atomic<bool> scale_walk_{false};
+    std::atomic<uint32_t> speed_thread_{0};
     std::string reason_;
     fs::path mods_; bool mods_checked_=false, mod_active_=false; uint64_t mods_check_=0;
     bool genessa_active_=false, proxima_active_=false;
     std::string mod_name_;
     RC::Unreal::UObject* blendspace(WeakObject& slot,const wchar_t* path);
+    RC::Unreal::UObject* custom_blendspace(size_t index,RC::Unreal::UObject* skeleton);
     void push_on(RC::Unreal::UObject* target);
     void push_off();
+    void forget_blend_lease();
     void hook_speed();
     void unhook_speed();
-    void prepare_run(RC::Unreal::UObject* run);
-    void restore_run();
 public:
     bool walk_mod_active(const fs::path& mods);
     bool walk_mod_active() { return walk_mod_active(mods_); }
@@ -298,7 +309,8 @@ public:
     bool proxima_walk_active() const { return proxima_active_; }
     bool engaged() const { return engaged_; }
     const std::string& reason() const { return reason_; }
-    void update(RC::Unreal::UObject* pawn,bool idle_feminine,bool walk_feminine,bool jog_feminine,bool sprint_feminine);
+    void update(RC::Unreal::UObject* pawn,bool idle_feminine,bool walk_feminine,
+                const std::array<std::string,3>& custom_paths);
     void release();
 };
 // CSSX ABI 2: a retained HUD surface for native extensions. The core owns the
@@ -476,7 +488,9 @@ public:
     void sync_items(const Outfit&,const std::string& variant);
     int worn_item_count() const { return items_.count(); }
     WalkOverride walk;
-    void sync_walk(bool idle_feminine,bool walk_feminine,bool jog_feminine,bool sprint_feminine) { walk.update(observed_pawn_.Get(),idle_feminine,walk_feminine,jog_feminine,sprint_feminine); }
+    void sync_walk(bool idle_feminine,bool walk_feminine,const std::array<std::string,3>& custom_paths) {
+        walk.update(observed_pawn_.Get(),idle_feminine,walk_feminine,custom_paths);
+    }
     Json transition_state(void* engine);
 #ifdef CSS_TRANSITION_TESTS
     void test_reset_mesh();

@@ -1,8 +1,8 @@
 # Mod-provided animation options
 
 2026-09-21. Native data and profile support is implemented on the v1.0.0 branch.
-Expanded LOCOMOTION controls are now implemented in source. Custom asset
-playback and cooked/live acceptance are still in development. Do not publish
+Expanded LOCOMOTION controls and a custom movement runtime candidate are now
+implemented in source. Full playback and cooked/live acceptance are still in development. Do not publish
 a package relying on these fields or deploy this UI revision yet.
 
 The UI calls the game choice **Default**. The existing walk setting keeps its
@@ -127,9 +127,10 @@ selected. With an outfit selected it updates that variant's idle and walk
 together, preserving the command's old combined behavior without overwriting
 other variants. Its underlying save values remain `normal` and `feminine`.
 
-The new UI and save commands are not proof of custom playback. The current
-runtime still needs custom asset loading, graph ownership/restoration, safe
-weapon visibility and beacon event integration before deployment. A built
+The new UI and save commands are not proof of custom playback. The movement
+candidate now connects declared Walk/Jog/Sprint BlendSpaces to the existing
+player override and restores its previous owner. Idle carriers, safe weapon
+visibility and beacon event integration remain before deployment. A built
 DLL or portable selector test does not establish in-game layout or behavior.
 
 ## Saved choices and profiles

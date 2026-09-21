@@ -1,34 +1,15 @@
-// Included inside css after attachment_follower.inl. Optional feminine walk and run (0.4).
-//
-// Player locomotion is motion matching keyed by weapon stance, but ABP_Player keeps a
-// blendspace override (UseActiveBlendspace / ActiveBlendSpace). The walk mods fed it a
-// pak copy of the game's own Cultist Spear Lady blendspace; CSS points it straight at the
-// game's assets instead, so nothing extra is installed and any walk mod is ignored:
-//   walk / idle  -> BS_CultistSpearLady (eight walk directions at 85 cm/s, idle at 0)
-//   jog / sprint -> BS_Aristocrat (Tishina's Confessor: idle, eight walks at 77, run at 564)
-// The Cultist cycle is authored for 85 cm/s, so while the feminine walk is on the walking
-// speed the game requests (184) is answered with 85 in SetMaxSpeedAdjustment; jog and
-// sprint pass through untouched.
-//
-// Matching the run to the player's speed is the engine's own job, through
-// UBlendSpace::ComputeAxisScaleFactor: when the speed fed to a blendspace exceeds that
-// axis's Max, and AxisToScaleAnimation names that axis, the engine time-scales the
-// animation by input/Max. The Aristocrat's run is authored at 564 cm/s, which is what the
-// player jogs at (540, a 4% difference nobody sees); sprinting at 800 exceeds the axis and
-// is played 800/564 = 1.42x faster, so the feet keep up. Only AxisToScaleAnimation is set,
-// and it is restored on release. The axis Max is deliberately left alone: raising it both
-// disables that extrapolation and drags the jog pose back toward a walk, because the
-// triangulation baked into the asset is normalised against the authored range.
+// Included inside css after attachment_follower.inl.
+// The player's ActiveBlendSpace/UseActiveBlendspace pair owns base locomotion.
+// Built-in idle/walk borrow the Cultist Spear Lady's 85 cm/s cycle. Mod gaits
+// use their authored direction/speed BlendSpaces without editing shared assets
+// or changing movement speed. The lease restores the pair CSS replaced.
 namespace {
 constexpr const wchar_t* WALK_BLENDSPACE=L"/Game/Sparta/Characters/Enemies/CultistSpearLady/Art/Animation/Locomotion/BS_CultistSpearLady.BS_CultistSpearLady";
-constexpr const wchar_t* RUN_BLENDSPACE=L"/Game/Sparta/Characters/Enemies/Aristocrat/Animation/Locomotion/BS_Aristocrat.BS_Aristocrat";
 constexpr const wchar_t* WALK_SPEED_FUNCTION=L"/Script/Sparta.SpartaCharacterMovementComponent:SetMaxSpeedAdjustment";
-constexpr float WALK_DEFAULT_SPEED=184.f, WALK_BORROWED_SPEED=85.f, WALK_SPEED_TOLERANCE=15.f;
-constexpr uint8_t AXIS_SCALE_Y=2;
 // The game jogs at 540 and sprints at 800 (its own locomotion blendspace samples).
-constexpr double WALK_IDLE_MAX=25., WALK_IDLE_OFF=70., WALK_MIN=20., WALK_FALLBACK_MAX=300., WALK_SLIDE_MAX=130., JOG_MIN=300., SPRINT_MIN=700.;
+constexpr double WALK_IDLE_MAX=25., WALK_IDLE_OFF=70., WALK_SLIDE_MAX=130.;
 constexpr int WALK_IDLE_SETTLE=3, WALK_OFF_DWELL=3;
-constexpr uint64_t WALK_SLIDE_COOLDOWN=1500, WALK_ABILITY_RETRY=3000, WALK_MODS_RECHECK=5000;
+constexpr uint64_t WALK_SLIDE_COOLDOWN=1500, WALK_MODS_RECHECK=5000;
 template<typename T> void write_field(UObject* object,const wchar_t* name,const T& value) {
     auto* p=field(object,name,sizeof(T));
     std::memcpy(reinterpret_cast<std::byte*>(object)+p->GetOffset_Internal(),&value,sizeof(T));
@@ -92,6 +73,62 @@ UObject* WalkOverride::blendspace(WeakObject& slot,const wchar_t* path) {
     if(!asset || !asset->IsA(static_cast<UClass*>(find(L"/Script/Engine.BlendSpace")))) throw std::runtime_error("Locomotion blendspace is unavailable");
     slot=asset; return asset;
 }
+UObject* WalkOverride::custom_blendspace(size_t index,UObject* skeleton) {
+    if(index>=custom_paths_.size() || custom_paths_[index].empty() || !skeleton)
+        throw std::runtime_error("Custom movement option is incomplete");
+    if(custom_skeleton_.Get()!=skeleton) {custom_blends_={};custom_skeleton_=skeleton;}
+    if(auto* cached=custom_blends_[index].Get()) return cached;
+    auto* asset=load(custom_paths_[index]);
+    if(!asset || asset->GetClassPrivate()!=find(L"/Script/Engine.BlendSpace") ||
+       read<UObject*>(asset,L"Skeleton")!=skeleton)
+        throw std::runtime_error("Custom movement requires a 2D BlendSpace on this mesh's skeleton");
+    auto bounded=[](FProperty* p,int32_t size) {
+        return p && p->GetArrayDim()==1 && p->GetOffset_Internal()>=0 && p->GetElementSize()>0 &&
+               p->GetOffset_Internal()<=size-p->GetElementSize();
+    };
+    auto* axes=asset->GetPropertyByNameInChain(L"BlendParameters");
+    if(!axes || !axes->IsA<FStructProperty>() || axes->GetArrayDim()!=3 || axes->GetElementSize()<=0)
+        throw std::runtime_error("Custom movement axes are unavailable");
+    auto* axis_type=static_cast<FStructProperty*>(axes)->GetStruct().Get();
+    auto* minimum=axis_type?axis_type->GetPropertyByNameInChain(L"Min"):nullptr;
+    auto* maximum=axis_type?axis_type->GetPropertyByNameInChain(L"Max"):nullptr;
+    if(!bounded(minimum,axes->GetElementSize()) || !bounded(maximum,axes->GetElementSize()) ||
+       !minimum->IsA<FFloatProperty>() || !maximum->IsA<FFloatProperty>())
+        throw std::runtime_error("Custom movement axis layout mismatch");
+    for(int i=0;i<2;++i) {
+        auto* base=reinterpret_cast<std::byte*>(asset)+axes->GetOffset_Internal()+i*axes->GetElementSize();
+        float lo{},hi{};std::memcpy(&lo,base+minimum->GetOffset_Internal(),sizeof(lo));std::memcpy(&hi,base+maximum->GetOffset_Internal(),sizeof(hi));
+        if(!std::isfinite(lo) || !std::isfinite(hi) || (i==0 && (lo!=-180.f || hi!=180.f)) || (i==1 && (lo!=0.f || hi<=0.f)))
+            throw std::runtime_error("Custom movement expects X direction -180..180 and Y speed from zero");
+    }
+    auto* samples=asset->GetPropertyByNameInChain(L"SampleData");
+    if(!samples || !samples->IsA<FArrayProperty>()) throw std::runtime_error("Custom movement sample array missing");
+    auto* array=static_cast<FArrayProperty*>(samples);
+    if(!array->GetInner()->IsA<FStructProperty>()) throw std::runtime_error("Custom movement samples are not structs");
+    auto* type=static_cast<FStructProperty*>(array->GetInner())->GetStruct().Get();
+    auto* animation=type?type->GetPropertyByNameInChain(L"Animation"):nullptr;
+    auto* rate=type?type->GetPropertyByNameInChain(L"RateScale"):nullptr;
+    const auto size=array->GetInner()->GetElementSize();
+    if(!bounded(animation,size) || !animation->IsA<FObjectProperty>() || !bounded(rate,size) || !rate->IsA<FFloatProperty>())
+        throw std::runtime_error("Custom movement sample layout mismatch");
+    FScriptArrayHelper values(array,reinterpret_cast<std::byte*>(asset)+samples->GetOffset_Internal());
+    if(values.Num()<1 || values.Num()>256) throw std::runtime_error("Custom movement sample count exceeds bound");
+    for(int i=0;i<values.Num();++i) {
+        auto* sample=values.GetRawPtr(i);
+        if(!sample) throw std::runtime_error("Custom movement sample storage missing");
+        auto* sequence=static_cast<FObjectProperty*>(animation)->GetObjectPropertyValue(sample+animation->GetOffset_Internal());
+        float play_rate{};std::memcpy(&play_rate,sample+rate->GetOffset_Internal(),sizeof(play_rate));
+        if(!sequence || !sequence->IsA(static_cast<UClass*>(find(L"/Script/Engine.AnimSequence"))) ||
+           read<UObject*>(sequence,L"Skeleton")!=skeleton || read<uint8_t>(sequence,L"AdditiveAnimType")!=0 ||
+           !std::isfinite(play_rate) || play_rate<=0)
+            throw std::runtime_error("Custom movement has an incompatible, additive or invalid-rate sample");
+        auto* root_motion=sequence->GetPropertyByNameInChain(L"bEnableRootMotion");
+        if(!root_motion || !root_motion->IsA<FBoolProperty>() ||
+           static_cast<FBoolProperty*>(root_motion)->GetPropertyValueInContainer(sequence))
+            throw std::runtime_error("Custom movement samples must be in-place without root motion");
+    }
+    custom_blends_[index]=asset;return asset;
+}
 void WalkOverride::hook_speed() {
     if(hook_) return;
     auto* function=static_cast<UFunction*>(find(WALK_SPEED_FUNCTION));
@@ -104,101 +141,168 @@ void WalkOverride::hook_speed() {
     const auto offset=speed->GetOffset_Internal();
     hook_=function->RegisterPreHook([this,offset](UnrealScriptFunctionCallableContext& context,void*) {
         if(!scale_walk_.load(std::memory_order_relaxed)) return;
+        // The hook is global; only the observed player's movement component may
+        // borrow this pace. Do not resolve weak engine objects on another thread.
+        const bool game_thread=GetCurrentThreadId()==speed_thread_.load(std::memory_order_relaxed);
+        if(!game_thread) return;
+        const bool player_component=context.Context && context.Context==movement_.Get();
+        if(!player_component) return;
         auto* locals=context.TheStack.Locals(); if(!locals) return;
         auto* value=reinterpret_cast<float*>(locals+offset);
-        if(std::isfinite(*value) && std::abs(*value-WALK_DEFAULT_SPEED)<=WALK_SPEED_TOLERANCE) *value=WALK_BORROWED_SPEED;
+        *value=feminine_walk_speed(*value,true,player_component,game_thread);
     });
     if(!*hook_) { hook_.reset(); throw std::runtime_error("Walk speed hook was refused"); }
 }
 void WalkOverride::unhook_speed() {
     scale_walk_=false;
     if(!hook_) return;
-    if(auto* function=static_cast<UFunction*>(find(WALK_SPEED_FUNCTION))) function->UnregisterHook(*hook_);
+    auto* function=static_cast<UFunction*>(find(WALK_SPEED_FUNCTION));
+    if(!function) throw std::runtime_error("Cannot remove walk speed hook: function unavailable");
+    function->UnregisterHook(*hook_);
     hook_.reset();
-}
-void WalkOverride::prepare_run(UObject* run) {
-    if(run_tweaked_) return;
-    original_run_axis_=read<uint8_t>(run,L"AxisToScaleAnimation");
-    write_field<uint8_t>(run,L"AxisToScaleAnimation",AXIS_SCALE_Y);
-    run_tweaked_=true;
-}
-void WalkOverride::restore_run() {
-    if(!run_tweaked_) return;
-    if(auto* run=run_bs_.Get()) { try { write_field<uint8_t>(run,L"AxisToScaleAnimation",original_run_axis_); } catch(...) {} }
-    run_tweaked_=false;
 }
 void WalkOverride::push_on(UObject* target) {
     auto* anim=anim_.Get();
     if(!anim || !target) throw std::runtime_error("Walk animation targets vanished");
-    if(target==run_bs_.Get()) prepare_run(target);
+    // Resolve both properties and all weak handles before the first field write.
+    field(anim,L"ActiveBlendSpace",sizeof(UObject*));field(anim,L"UseActiveBlendspace",sizeof(bool));
+    const BlendLease::Value current{WeakObject(read<UObject*>(anim,L"ActiveBlendSpace")),read<bool>(anim,L"UseActiveBlendspace")};
+    const BlendLease::Value next{WeakObject(target),true};
+    if(!blend_lease_.owns(current)) {
+        forget_blend_lease();
+        if(auto* previous=current.object.Get();previous && !previous->IsRootSet()) {
+            previous->SetRootSet();original_blend_root_owned_=true;
+        }
+    }
+    blend_lease_.claim(current,next);
     write_field<UObject*>(anim,L"ActiveBlendSpace",target);
     write_field<bool>(anim,L"UseActiveBlendspace",true);
-    if(!read<bool>(anim,L"UseActiveBlendspace")) throw std::runtime_error("Walk animation flag did not take");
     active_=target; engaged_=true;
+    if(!read<bool>(anim,L"UseActiveBlendspace") || read<UObject*>(anim,L"ActiveBlendSpace")!=target)
+        throw std::runtime_error("Walk animation readback did not match");
+}
+void WalkOverride::forget_blend_lease() {
+    if(original_blend_root_owned_ && blend_lease_.original())
+        if(auto* original=blend_lease_.original()->object.Get()) original->ClearRootSet();
+    original_blend_root_owned_=false;blend_lease_.reset();
 }
 void WalkOverride::push_off() {
-    // Clear the override only while it still points at the blendspace CSS set. A walk mod
-    // (argisht's GenessaWalk or ProximaWalk) drives the same two fields, so once it owns
-    // them CSS leaves its state alone instead of switching that mod off.
     if(auto* anim=anim_.Get()) {
-        try {
-            auto* mine=active_.Get();
-            if(mine && read<UObject*>(anim,L"ActiveBlendSpace")==mine) write_field<bool>(anim,L"UseActiveBlendspace",false);
-        } catch(...) {}
+        const BlendLease::Value current{WeakObject(read<UObject*>(anim,L"ActiveBlendSpace")),read<bool>(anim,L"UseActiveBlendspace")};
+        if(const auto before=blend_lease_.restoration(current)) {
+            auto* original=before->object.Get();
+            const bool enabled=before->enabled && original;
+            field(anim,L"ActiveBlendSpace",sizeof(UObject*));field(anim,L"UseActiveBlendspace",sizeof(bool));
+            write_field<UObject*>(anim,L"ActiveBlendSpace",original);
+            write_field<bool>(anim,L"UseActiveBlendspace",enabled);
+            if(read<UObject*>(anim,L"ActiveBlendSpace")!=original || read<bool>(anim,L"UseActiveBlendspace")!=enabled)
+                throw std::runtime_error("Walk animation restoration did not match");
+        }
     }
+    forget_blend_lease();
     engaged_=false; active_.Reset(); reason_.clear();
 }
 void WalkOverride::release() {
+    scale_walk_=false;
     push_off();
-    restore_run();
-    try { unhook_speed(); } catch(...) { hook_.reset(); }
-    pawn_.Reset(); anim_.Reset(); movement_.Reset(); walk_ability_.Reset(); walk_bs_.Reset(); run_bs_.Reset();
+    // Keep the hook handle on failure. Core stop must refuse unload while a
+    // callback can still enter this DLL.
+    unhook_speed();
+    pawn_.Reset(); anim_.Reset(); movement_.Reset(); walk_bs_.Reset();
+    custom_paths_={};custom_blends_={};custom_skeleton_.Reset();
     idle_ticks_=off_ticks_=slide_ticks_=0; slide_until_=0; last_heal_=0;
 }
-void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,bool jog_feminine,bool sprint_feminine) {
+void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
+    const std::array<std::string,3>& custom_paths) {
     const auto now=GetTickCount64();
-    const bool run_feminine=jog_feminine||sprint_feminine;
-    if(!idle_feminine && !walk_feminine && !run_feminine) { if(engaged_ || hook_ || run_tweaked_) release(); return; }
-    if(!pawn) { if(engaged_) push_off(); return; }
+    speed_thread_=GetCurrentThreadId();
+    const bool custom=std::any_of(custom_paths.begin(),custom_paths.end(),[](const auto& path){return !path.empty();});
+    if(!idle_feminine && !walk_feminine && !custom) { if(engaged_ || blend_lease_.engaged() || hook_) release(); return; }
+    if(!pawn) { release(); return; }
     if(pawn_.Get()!=pawn) {
-        if(engaged_) push_off();
-        pawn_=pawn; anim_.Reset(); movement_.Reset(); walk_ability_.Reset();
+        release();
+        pawn_=pawn; anim_.Reset(); movement_.Reset();
     }
-    auto* anim=anim_.Get();
-    if(!anim) {
-        auto* mesh=read<UObject*>(pawn,L"Mesh");
-        Call instance(mesh,L"GetAnimInstance",1); instance.run(); anim=instance.get<UObject*>();
+    if(custom_paths_!=custom_paths) {
+        push_off();custom_blends_={};custom_skeleton_.Reset();custom_paths_=custom_paths;
+    }
+    auto* mesh=read<UObject*>(pawn,L"Mesh");
+    if(!mesh) {release();return;}
+    Call instance(mesh,L"GetAnimInstance",1);instance.run();
+    auto* anim=instance.get<UObject*>();
+    if(anim_.Get()!=anim) {
+        push_off();
         if(!anim || !has_field(anim,L"UseActiveBlendspace",sizeof(bool)) || !has_field(anim,L"ActiveBlendSpace",sizeof(UObject*)))
             throw std::runtime_error("Player animation instance has no blendspace override");
         anim_=anim;
     }
-    if(!movement_.Get()) movement_=read<UObject*>(pawn,L"CharacterMovement");
+    if(!anim) {release();return;}
+    movement_=read<UObject*>(pawn,L"CharacterMovement");
+    auto* controller=read<UObject*>(pawn,L"Controller");
+    if(!controller || read<UObject*>(controller,L"Pawn")!=pawn || !movement_.Get() ||
+       !has_field(anim,L"IsMovingOnGround",sizeof(bool)) || !read<bool>(anim,L"IsMovingOnGround")) {
+        release();return;
+    }
+    for(const auto* name:{L"IsMoveInputIgnored",L"IsLookInputIgnored",L"IsInGameMenu"}) {
+        Call blocked(controller,name,1);blocked.run();
+        if(blocked.get<bool>()) {release();return;}
+    }
+    Call montage(anim,L"GetCurrentActiveMontage",1);montage.run();
+    if(montage.get<UObject*>()) {release();return;}
     UObject* walk_bs=(walk_feminine || idle_feminine)?blendspace(walk_bs_,WALK_BLENDSPACE):nullptr;
-    UObject* run_bs=run_feminine?blendspace(run_bs_,RUN_BLENDSPACE):nullptr;
+    // Asset loads may collect objects. Revalidate ownership before dereferencing
+    // any instance captured before the load.
+    if(pawn_.Get()!=pawn || anim_.Get()!=anim) {release();return;}
+    auto* current_mesh=read<UObject*>(pawn,L"Mesh");
+    if(!current_mesh) {release();return;}
+    Call current_instance(current_mesh,L"GetAnimInstance",1);current_instance.run();
+    if(current_instance.get<UObject*>()!=anim) {release();return;}
     if(walk_feminine) { hook_speed(); scale_walk_=true; } else { scale_walk_=false; if(hook_) unhook_speed(); }
-    if(!run_feminine) restore_run();
     auto* movement=movement_.Get();
     double speed=0; bool speed_known=false;
     if(movement) { auto v=read<std::array<double,3>>(movement,L"Velocity"); speed=std::hypot(v[0],v[1]); speed_known=std::isfinite(speed); }
-    std::optional<bool> walking;
-    if(!walk_ability_.Get() && now>=next_ability_search_) {
-        next_ability_search_=now+WALK_ABILITY_RETRY;
-        if(auto* ability=UObjectGlobals::FindFirstOf(L"GA_Walk_C"); ability && has_field(ability,L"IsWalking",sizeof(bool))) walk_ability_=ability;
+    std::optional<bool> walking,sprint_requested;
+    // These flags belong to this player's current linked layer. Never find the
+    // first global walk ability, which could belong to another actor.
+    if(auto* cls=UObjectGlobals::StaticFindObject<UObject*>(nullptr,nullptr,L"/Game/Sparta/Characters/Humans/Player/Animations/ABPL_Locomotion_MotionMatching.ABPL_Locomotion_MotionMatching_C")) {
+        Call layer(anim,L"GetLinkedAnimLayerInstanceByClass",3);
+        layer.set(L"InClass",cls);layer.set(L"bCheckForChildClass",false);layer.run();
+        if(auto* linked=layer.get<UObject*>();linked && has_field(linked,L"IsWalking",sizeof(bool)) && has_field(linked,L"IsSprinting",sizeof(bool))) {
+            walking=read<bool>(linked,L"IsWalking");sprint_requested=read<bool>(linked,L"IsSprinting");
+        }
     }
-    if(auto* ability=walk_ability_.Get()) walking=read<bool>(ability,L"IsWalking");
-    const bool walk_now=walking.value_or(speed_known && speed>WALK_MIN && speed<WALK_FALLBACK_MAX);
-    const bool sprinting=!walk_now && speed_known && speed>=SPRINT_MIN;
-    const bool jogging=!walk_now && speed_known && speed>=JOG_MIN && speed<SPRINT_MIN;
+    if(!speed_known) {release();return;}
+    const auto gait=animation_gait(speed,walking,sprint_requested,custom);
+    if(gait==AnimationGait::None) {release();return;}
+    const bool walk_now=gait==AnimationGait::Walk;
+    const bool sprinting=gait==AnimationGait::Sprint;
+    const bool jogging=gait==AnimationGait::Jog;
     const double idle_cut=(engaged_ && reason_=="idle")?WALK_IDLE_OFF:WALK_IDLE_MAX;
     const bool standing=!walk_now && !jogging && !sprinting && speed_known && speed<idle_cut;
     idle_ticks_=standing?idle_ticks_+1:0;
     const bool settled=standing && (engaged_ || idle_ticks_>=WALK_IDLE_SETTLE);
     UObject* want=nullptr; bool hard_off=false; std::string reason;
-    if(sprinting && sprint_feminine && run_bs) { want=run_bs; reason="sprint"; }
-    else if(jogging && jog_feminine && run_bs) { want=run_bs; reason="jog"; }
+    std::optional<size_t> custom_index;
+    if(sprinting && !custom_paths_[2].empty()) custom_index=2;
+    else if(jogging && !custom_paths_[1].empty()) custom_index=1;
+    else if(walk_now && !custom_paths_[0].empty()) custom_index=0;
+    if(custom_index) {
+        auto* body=mesh_asset(current_mesh);
+        auto* skeleton=body?read<UObject*>(body,L"Skeleton"):nullptr;
+        if(!skeleton) throw std::runtime_error("Custom movement needs a live mesh skeleton");
+        want=custom_blendspace(*custom_index,skeleton);
+        reason=std::array<const char*,3>{"custom walk","custom jog","custom sprint"}[*custom_index];
+        if(pawn_.Get()!=pawn || anim_.Get()!=anim) {release();return;}
+        auto* loaded_mesh=read<UObject*>(pawn,L"Mesh");
+        if(!loaded_mesh || mesh_asset(loaded_mesh)!=body) {release();return;}
+        Call loaded_instance(loaded_mesh,L"GetAnimInstance",1);loaded_instance.run();
+        if(loaded_instance.get<UObject*>()!=anim) {release();return;}
+    }
     else if(walk_now && walk_feminine && walk_bs) { want=walk_bs; reason="walk"; }
     else if(settled && idle_feminine && walk_bs) { want=walk_bs; reason="idle"; }
     else if((standing && !idle_feminine) || (walk_now && !walk_feminine)) hard_off=true;
+    // A custom gait must not linger after its category changes or becomes Default.
+    if(!want && reason_.starts_with("custom ")) hard_off=true;
     // Slide guard: engaged for walking but still travelling at the stock speed means the
     // scaling has not landed; fall back until the next gait change re-issues the speed.
     if(want && reason=="walk" && speed_known && speed>WALK_SLIDE_MAX) {
@@ -207,10 +311,10 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,bo
     if(reason=="walk" && now<slide_until_) { want=nullptr; hard_off=true; }
     if(want) off_ticks_=0;
     else if(hard_off) off_ticks_=WALK_OFF_DWELL;
-    else if(++off_ticks_<WALK_OFF_DWELL && engaged_ && active_.Get() && (!speed_known || speed<=WALK_SLIDE_MAX || active_.Get()==run_bs)) { want=active_.Get(); reason=reason_.empty()?"hold":reason_; }
+    else if(++off_ticks_<WALK_OFF_DWELL && engaged_ && active_.Get() && (!speed_known || speed<=WALK_SLIDE_MAX)) { want=active_.Get(); reason=reason_.empty()?"hold":reason_; }
     if(want) {
         // Re-assert on every mismatch, not on a timer: a walk mod ticking against the same
-        // two fields must not be able to take the animation back while Feminine is chosen.
+        // two fields must not silently replace the option the player selected.
         if(!engaged_ || active_.Get()!=want || !read<bool>(anim,L"UseActiveBlendspace") || read<UObject*>(anim,L"ActiveBlendSpace")!=want) { push_on(want); last_heal_=now; }
         reason_=reason;
     } else if(engaged_) push_off();
