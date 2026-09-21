@@ -52,6 +52,7 @@ private:
     Json dev_request(const Json& request);
     void log(const std::string& level,const std::string& message,const Json& fields=Json::object());
     bool hotkey_pressed(const std::vector<std::string>& keys,size_t slot);
+    void hotkey();
     bool game_menu_open() const;
     void publish_status();
 };

@@ -426,7 +426,13 @@ void Menu::tick(double seconds) {
             catch(const std::exception& e) {report(std::string("Waiting for the shell catalog: ")+e.what());}
         }
         if(pending_ || cleanup_required_) return;
-        const bool live=gameplay_ready(player);
+        // gameplay_ready costs about a dozen host requests. With nothing applied
+        // and nothing pending, no periodic work needs it, so skip it: an idle
+        // Cheat Menu then costs one player request per 250 ms.
+        bool wants=reapply_pending_ || changed || !powers_.empty() || !combat_hooks_.empty();
+        for(const auto* id:{"god","move_fast","max_shell_points","auto_heal","infinite_resolve","no_cooldown","perfect_parry","perfect_block","perfect_harden"})
+            if(applied_.value(id,Json(false))==true) wants=true;
+        const bool live=wants && gameplay_ready(player);
         const auto power_delta=std::min(power_time_,.5);power_time_=0;power_tick(power_delta);
         if((reapply_pending_ || changed || combat_time_>=1.) && live) {combat_time_=0;combat_sync();}
         if(applied_["max_shell_points"]==true && (reapply_pending_ || changed || points_time_>=1.) && live) {points_time_=0;shell_points(true);}

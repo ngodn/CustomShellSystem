@@ -5,6 +5,7 @@
 #include "hook_service.hpp"
 #include "cssx_version.hpp"
 #include "common.hpp"
+#include "frame_stats.hpp"
 #include <windows.h>
 #include <atomic>
 #include <fstream>
@@ -119,10 +120,24 @@ public:
             }, {false, false, STR("CSSX"), STR("CoreDispatch")});
         log_line("CSSX game-thread dispatcher registered");
     }
-    // UE4SS update thread: a zero-timeout wait on the change notification.
+    // UE4SS update thread: a zero-timeout wait on the change notification, and
+    // in developer mode a frame-statistics dump every ten seconds so a
+    // loader-only configuration (no core) can be measured the same way.
+    uint64_t next_dump_ = 0; bool dev_checked_ = false, dev_ = false;
     void on_update() override {
-        if (watch_ == INVALID_HANDLE_VALUE) return;
-        if (WaitForSingleObject(watch_, 0) == WAIT_OBJECT_0) { selector_dirty_ = true; FindNextChangeNotification(watch_); }
+        if (watch_ != INVALID_HANDLE_VALUE && WaitForSingleObject(watch_, 0) == WAIT_OBJECT_0) { selector_dirty_ = true; FindNextChangeNotification(watch_); }
+        const auto now = GetTickCount64();
+        if (now < next_dump_) return;
+        next_dump_ = now + 10000;
+        if (!dev_checked_) { dev_checked_ = true; std::error_code ec; dev_ = std::filesystem::exists(root_ / "dev/enabled.txt", ec); }
+        if (!dev_ || !ring_.total) return;
+        try {
+            auto all = cssx::newest_of(ring_.intervals, ring_.capacity, ring_.head, ring_.total, ring_.capacity);
+            std::vector<int64_t> window; int64_t budget = 20 * ring_.frequency;
+            for (auto it = all.rbegin(); it != all.rend() && budget > 0; ++it) { window.push_back(*it); budget -= *it; }
+            cssx::atomic_json(root_ / "runtime/frames.json", {{"core", loaded_}, {"frames_total", uint64_t(ring_.total)}, {"window_s", 20},
+                {"engine", cssx::summarize(window, ring_.frequency).json()}, {"tick_ms", now}}, false, false);
+        } catch (...) {}
     }
     ~Loader() override {
         std::unique_lock lock(*gate_);

@@ -242,6 +242,9 @@ void Menu::bind_inputs() {
         auto& keys=bindings_[it->second].keys;
         if(usable(name) && !name.empty() && name!="None" && std::find(keys.begin(),keys.end(),name)==keys.end()) keys.push_back(name);
     }
+    // The page has no character preview, so the left stick can navigate too.
+    static const std::map<std::string,std::vector<std::string>> stick={{"up",{"Gamepad_LeftStick_Up"}},{"down",{"Gamepad_LeftStick_Down"}},{"left",{"Gamepad_LeftStick_Left"}},{"right",{"Gamepad_LeftStick_Right"}}};
+    for(auto& binding:bindings_) if(auto extra=stick.find(binding.action); extra!=stick.end()) for(const auto& k:extra->second) if(std::find(binding.keys.begin(),binding.keys.end(),k)==binding.keys.end()) binding.keys.push_back(k);
     // Pass 2: the player's applied mappings (remaps). When the query answers,
     // it replaces the declared keys for that action.
     for(auto& binding:bindings_) {
@@ -253,7 +256,7 @@ void Menu::bind_inputs() {
             if(keys.Num()<=0 || keys.Num()>32 || kn->GetOffset_Internal()+8>array->GetInner()->GetElementSize()) continue;
             std::vector<std::string> applied;
             for(int n=0;n<keys.Num();++n) { FName key{}; std::memcpy(&key,keys.GetRawPtr(n)+kn->GetOffset_Internal(),sizeof(key)); auto name=narrow(key.ToString()); if(usable(name)) applied.push_back(name); }
-            if(!applied.empty()) binding.keys=std::move(applied);
+            if(!applied.empty()) { for(const auto& k:binding.keys) if(k.starts_with("Gamepad_LeftStick_") && std::find(applied.begin(),applied.end(),k)==applied.end()) applied.push_back(k); binding.keys=std::move(applied); }
         } catch(...) {}
     }
     if(bindings_.empty()) throw std::runtime_error("No menu navigation actions were found in the input mapping");

@@ -105,33 +105,35 @@ with a clear error; they never existed outside CSS's engine TU.
 Lua extensions stay supported (same sandbox: base/table/string/math/utf8, memory
 and instruction budgets). The UI Kit gallery is Lua and is the reference menu.
 
-## D6. Menu UI is UMG built by reflection, opened through the game's own UI handler
+## D6. Menu UI is a tab inside the game's Player Menu (user decision, 2026-09-21)
 
-The menu is a `UserWidget` whose root is a `CanvasPanel`, added to the viewport
-with a high Z order. Opening calls
-`BPC_UserInterfaceHandler_C::EnableUserInterfaceInput(widget, lock, addMapping,
-showCursor, pause, hideHUD)` and `UpdateActiveMenu(widget)`; closing calls
-`ResetActiveMenu` and `DisableUserInterfaceInput`. This is the same path the
-game's own Inventory/Map/Options use (header dump `BPC_UserInterfaceHandler`),
-so pause, cursor, HUD hiding, the menu input mapping context and the game's
-"a menu is active" state behave like a native menu. Navigation input is read
-from the game's Enhanced Input menu actions (`IA_Menu_*`) so remapped keys and
-controller glyphs are honoured, as CSS does.
+First implementation was a separate full-screen overlay opened through the
+game's `EnableUserInterfaceInput`; it worked (screens in `work/screens/01-03`)
+but the user wants CSSX where CSS is: a tab in the Player Menu, after CSS and
+before TARSTONES (after INVENTORY when CSS is absent). Implemented like CSS's
+own integration: a `WBP_NB_Menu_C` tab styled from the Inventory tab and a
+`WBP_Menu_Game_Tab_C` page whose root is a CanvasPanel, added to
+`BP_HBC_Menu_Game` / `BP_WS_Menu_Game` and re-ordered with the original
+slot padding scaled (0.6 with five tabs, 0.75 with four).
 
-Every widget is retained; rebuilds happen on model revision, selection or
-layout change, never per frame. Per-frame work while open: key polling and one
-mouse-position read; hover tests only when the cursor moved. Closed menu: no
-widgets exist and no per-frame UI work runs.
+Coexistence with the unchanged CSS alpha: CSS attaches when it sees three
+pages and orders four, both in one tick, so CSSX waits until the page count
+is 4 when CSS is installed and enabled (`Mods/CustomShellSystem/enabled.txt`
+plus `dlls/main.dll`), and attaches at once with 3 pages when CSS is absent.
+If CSS is installed but never attaches, CSSX stops waiting after two seconds.
+A Player Menu with five or more pages before CSSX attaches is refused.
 
-Coexistence rule: CSSX ignores its hotkey while `bIsInGameMenu` is true or
-`ActiveMenu` is set (CSS's tab lives inside the game menu). While CSSX is open,
-if the game reports another active menu, CSSX closes itself and restores input.
-All close paths (Back, hotkey, travel, pawn loss, handler loss, core stop) go
-through one `close()` that restores the prior mode exactly once.
+Input: the game's own menu actions read from its mapping context
+(`InputMapping.Mappings`, keys declared in the context, overridden by the
+player's applied mappings when Enhanced Input answers), plus the left stick
+for navigation because the page has no character preview. Back on the
+library closes the Player Menu through `HandleGameMenu(0, true)` exactly as
+CSS does; Back inside an extension returns to the library. The hotkey (F6 or
+both sticks) opens the Player Menu through `HandleGameMenu(0, false)` and
+selects the CSSX tab, or closes it when the CSSX page is showing.
 
-Rejected: injecting a tab into `WBP_MGT_Main` (that is CSS's integration and
-would couple to CSS's page count checks); ImGui through UE4SS's GUI (external
-render thread, no controller support, not the game's look).
+Rendering rules unchanged: retained widgets, rebuilt on change only, nothing
+built while the tab is not showing.
 
 ## D7. Version numbers
 
@@ -139,7 +141,17 @@ Product 1.0.0 (`VERSION`), extension ABI 3 (`CSSX_ABI`), manifest schema 2,
 menu schema 2 (accepts 1), loader/core ABI 1, settings schema 1. Release
 metadata records all five.
 
-## D8. What is deliberately not promised
+## D8. Loader-only measurement row
+
+The CSS alpha production core does not answer the old `css_probe` counter, so
+a "CSSX absent" row cannot be measured in-process. Two substitutes: MangoHud
+frame-time logs (external, identical for every row) and a loader-only row
+where `core.json` names a missing core, so only `dlls/main.dll` with its one
+tick hook is loaded and the loader itself dumps `runtime/frames.json` every
+ten seconds in developer mode. Loader-only differs from absent by one
+QueryPerformanceCounter read and one mutex per frame.
+
+## D9. What is deliberately not promised
 
 - No sandboxing of native DLLs and no recovery from memory corruption.
 - No hot reload for players.

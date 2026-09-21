@@ -71,13 +71,23 @@ Json Core::service(const Json& request) {
     if(!engine_) throw std::runtime_error("Game thread is not initialized");
     return bridge_->request(player_,request);
 }
+void Core::hotkey() {
+    // On the CSSX page: close the Player Menu. Elsewhere: open it on the CSSX
+    // tab, or switch to it when the Player Menu is already open.
+    if(menu_->is_open()) { log("info","Hotkey: closing the Player Menu"); menu_->close(); return; }
+    std::string reason; menu_->set_runtime(runtime_.get());
+    if(menu_->open(player_,&reason)) log("info","Hotkey: opening the Player Menu on the CSSX tab");
+    else log("info","Hotkey ignored: "+reason);
+}
 bool Core::game_menu_open() const {
     try {
         if(!player_.pc) return false;
         auto* handler=object_of(player_.pc,L"User Interface Handler Component");
         if(!handler) return false;
+        // ActiveDisplayMenu is a world actor that also exists at rest points, so
+        // it is not a menu-open signal. bIsInGameMenu and ActiveMenu are.
         if(bool_of(handler,L"bIsInGameMenu")) return true;
-        if(object_of(handler,L"ActiveMenu") || object_of(handler,L"ActiveDisplayMenu")) return true;
+        if(object_of(handler,L"ActiveMenu")) return true;
         return false;
     } catch(...) { return false; }
 }
@@ -137,12 +147,7 @@ void Core::tick(void* engine,float delta) {
         hotkey_accumulator_=0;
         bool pressed=false;
         try { const bool keyboard=hotkey_pressed(settings_.open_keyboard,0); const bool gamepad=hotkey_pressed(settings_.open_gamepad,1); pressed=keyboard || gamepad; } catch(...) {}
-        if(pressed) {
-            // On the CSSX page: close the Player Menu. Elsewhere: open it on the
-            // CSSX tab (or switch to it when the Player Menu is already open).
-            if(menu_->is_open()) menu_->close();
-            else { std::string reason; menu_->set_runtime(runtime_.get()); if(!menu_->open(player_,&reason)) log("info","CSSX hotkey: "+reason); }
-        }
+        if(pressed) hotkey();
     }
     { Phase p(phase_menu_); menu_->tick(player_,delta); }
     if(!quiet_ && now>=status_after_) { status_after_=now+5000; publish_status(); }
@@ -199,6 +204,7 @@ Json Core::dev_request(const Json& request) {
     if(op=="idle") { idle_=request.value("value",true); if(idle_ && menu_) menu_->close(); return {{"idle",idle_}}; }
     if(op=="quiet") { quiet_=request.value("value",true); return {{"quiet",quiet_}}; }
     if(op=="menu.open") { std::string reason; menu_->set_runtime(runtime_.get()); if(!menu_->is_open() && !menu_->open(player_,&reason)) throw std::runtime_error(reason); return true; }
+    if(op=="menu.hotkey") { hotkey(); return true; }
     if(op=="menu.key") { menu_->drive_key(request.at("key").get<std::string>()); return true; }
     if(op=="menu.act") { menu_->drive(request.at("action")); return true; }
     if(op=="menu.close") { menu_->close(); return true; }
