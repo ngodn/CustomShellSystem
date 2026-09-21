@@ -18,5 +18,11 @@ public:
     /** Evaluate compressed animation with the installed authoring post-process, without saving. */
     UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
     static FString EvaluateClip(class USkeletalMesh* Mesh, class UAnimSequence* Animation,
-        class UAnimBlueprint* Blueprint, int32 Loops = 3);
+        class UAnimBlueprint* Blueprint, int32 Loops = 3,
+        class UBlendSpace* Carrier = nullptr, FVector BlendInput = FVector(0,0,0));
+
+    /** Wrap a sequence in a private constant blend space; never alter a game asset. */
+    UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
+    static class UBlendSpace* CreateIdleCarrier(class USkeletalMesh* Mesh,
+        class UAnimSequence* Animation, const FString& OutputPackage);
 };

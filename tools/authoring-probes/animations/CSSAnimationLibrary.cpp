@@ -13,6 +13,8 @@
 #include "Animation/AnimBlueprint.h"
 #include "Animation/AnimBlueprintGeneratedClass.h"
 #include "Animation/MorphTarget.h"
+#include "Animation/BlendSpace.h"
+#include "Animation/AnimSingleNodeInstance.h"
 #include "AnimNode_ControlRig.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "ControlRig.h"
@@ -131,8 +133,37 @@ UAnimSequence* UCSSAnimationLibrary::RetargetClip(USkeletalMesh* SourceMesh,
     return Result;
 }
 
+UBlendSpace* UCSSAnimationLibrary::CreateIdleCarrier(USkeletalMesh* Mesh,
+    UAnimSequence* Animation, const FString& OutputPackage)
+{
+    if (!IsRunningCommandlet() || !Mesh || !Animation || Animation->GetSkeleton() != Mesh->GetSkeleton() ||
+        Animation->IsValidAdditive() || Animation->RateScale != 1.f || Animation->GetPlayLength() <= 0 ||
+        Animation->bEnableRootMotion || !Animation->Notifies.IsEmpty() ||
+        !OutputPackage.StartsWith(TEXT("/Game/CSS/AnimLab/BS_")) || OutputPackage.Len() > 100 ||
+        !FPackageName::IsValidLongPackageName(OutputPackage) ||
+        FPackageName::DoesPackageExist(OutputPackage) || FindPackage(nullptr, *OutputPackage))
+        return nullptr;
+    auto* Result = NewObject<UBlendSpace>(CreatePackage(*OutputPackage),
+        *FPackageName::GetLongPackageAssetName(OutputPackage), RF_Public | RF_Standalone);
+    Result->SetSkeleton(Mesh->GetSkeleton());
+    Result->SetPreviewMesh(Mesh);
+    auto* Property = FindFProperty<FStructProperty>(UBlendSpace::StaticClass(), TEXT("BlendParameters"));
+    if (!Property || Property->Struct != FBlendParameter::StaticStruct() || Property->ArrayDim != 3)
+        return nullptr;
+    auto* Axes = Property->ContainerPtrToValuePtr<FBlendParameter>(Result);
+    Axes[0].DisplayName = TEXT("Direction"); Axes[0].Min = -180; Axes[0].Max = 180; Axes[0].GridNum = 4;
+    Axes[1].DisplayName = TEXT("Speed"); Axes[1].Min = 0; Axes[1].Max = 800; Axes[1].GridNum = 4;
+    for (const FVector Point : {FVector(-180,0,0),FVector(180,0,0),FVector(-180,800,0),FVector(180,800,0)})
+        if (Result->AddSample(Animation, Point) == INDEX_NONE) return nullptr;
+    Result->ValidateSampleData();
+    Result->ResampleData();
+    if (Result->GetNumberOfBlendSamples() != 4 || Result->GetBlendSpaceData().IsEmpty()) return nullptr;
+    Result->MarkPackageDirty();
+    return Result;
+}
+
 FString UCSSAnimationLibrary::EvaluateClip(USkeletalMesh* Mesh, UAnimSequence* Animation,
-    UAnimBlueprint* Blueprint, int32 Loops)
+    UAnimBlueprint* Blueprint, int32 Loops, UBlendSpace* Carrier, FVector BlendInput)
 {
     auto Fail = [](const TCHAR* Message) -> FString {
         UE_LOG(LogTemp, Error, TEXT("CSS EvaluateClip: %s"), Message);
@@ -145,6 +176,16 @@ FString UCSSAnimationLibrary::EvaluateClip(USkeletalMesh* Mesh, UAnimSequence* A
         Blueprint->TargetSkeleton != Mesh->GetSkeleton() || Animation->GetSkeleton() != Mesh->GetSkeleton() ||
         Loops < 1 || Loops > 3 || Animation->GetPlayLength() <= 0 || Animation->GetPlayLength()*Loops > 22)
         return Fail(TEXT("Invalid isolated component input"));
+    if (Carrier)
+    {
+        if (Carrier->GetSkeleton() != Mesh->GetSkeleton() || Carrier->IsValidAdditive() ||
+            !Carrier->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/BS_")) ||
+            Carrier->GetNumberOfBlendSamples() != 4 || BlendInput.ContainsNaN())
+            return Fail(TEXT("Invalid idle carrier"));
+        for (const auto& Sample : Carrier->GetBlendSamples())
+            if (Sample.Animation != Animation || Sample.RateScale != 1.f)
+                return Fail(TEXT("Carrier does not contain only the expected idle"));
+    }
     FMemMark Memory(FMemStack::Get());
     Animation->BeginCacheDerivedDataForCurrentPlatform();
     Animation->WaitOnExistingCompression(true);
@@ -161,7 +202,8 @@ FString UCSSAnimationLibrary::EvaluateClip(USkeletalMesh* Mesh, UAnimSequence* A
         C->SetDisablePostProcessBlueprint(!PostProcess);
         Scene.AddComponent(C, FTransform::Identity);
         C->InitAnim(true);
-        C->SetAnimation(Animation);
+        C->SetAnimation(Carrier ? static_cast<UAnimationAsset*>(Carrier) : Animation);
+        if (Carrier) C->GetSingleNodeInstance()->SetBlendSpacePosition(BlendInput);
         C->Stop();
         return C;
     };
@@ -243,7 +285,8 @@ FString UCSSAnimationLibrary::EvaluateClip(USkeletalMesh* Mesh, UAnimSequence* A
         const double ClipTime = Frame == Frames ? Duration : FMath::Fmod(Time, Duration);
         for (auto* C : {Upstream, Component})
         {
-            C->SetPosition(float(ClipTime), false);
+            // Single-node blend spaces expose normalized position, sequences seconds.
+            C->SetPosition(float(Carrier ? ClipTime/Duration : ClipTime), false);
             C->TickAnimation(Frame ? 1.f/Fps : 0.f, true);
             C->RefreshBoneTransforms();
         }
@@ -296,6 +339,7 @@ FString UCSSAnimationLibrary::EvaluateClip(USkeletalMesh* Mesh, UAnimSequence* A
     Report->SetArrayField(TEXT("frames"), Samples);Report->SetNumberField(TEXT("fps"), Fps);
     Report->SetObjectField(TEXT("defaults"), Defaults);Report->SetArrayField(TEXT("filters"), FilterReport);
     Report->SetBoolField(TEXT("compressed_source"), true);Report->SetNumberField(TEXT("loops"), Loops);
+    Report->SetStringField(TEXT("carrier"), Carrier ? Carrier->GetPathName() : TEXT(""));
     Report->SetNumberField(TEXT("unaffected_position_cm"), UnaffectedPosition);
     Report->SetNumberField(TEXT("unaffected_angle_rad"), UnaffectedAngle);
     FString Text;

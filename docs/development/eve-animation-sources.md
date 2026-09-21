@@ -267,6 +267,53 @@ acceptance. No animation is installed. Next inspect contacts and transitions,
 then cook and integrate optional animation metadata, saved choices, UI and
 runtime cancellation/weapon restoration. Beacon authoring remains open.
 
+## Locomotion blend sources and idle playback investigation
+
+`work/anim6/` contains successful read-only decodes of Stellar Blade's
+`IdleRun_BS_Peaceful2D`, `LockOn_IdleRun_BS` and `LockOn_Sprint_BS`. The
+peaceful BlendSpace references the Proto clips directly, so they are not
+merely animation-name guesses. This does not prove that the current Stellar
+Blade runtime selects that graph.
+
+Its first axis is Speed, maximum 800; the second is LeftRight, -1 to 1.
+The central samples are Proto_Idle at 0, Proto_Walk at 150, Proto_Jog at
+300, Proto_Run at 500 and Proto_Sprint at 700. Sprint repeats at 800 with
+rate 1.14. The current CSS Jog candidate uses Proto_Run, not Proto_Jog;
+the distinction matters when fitting cadence to Mortal Shell's movement.
+Walk/jog/run also have left/right slide samples. The lock-on locomotion
+BlendSpace uses normalized LeftRight/FrontBack axes and separate cardinal
+and diagonal clips. Do not stretch the current forward clips into strafing
+or copy Stellar Blade's input axes into Mortal Shell's direction/speed API.
+Retargeted stride, transitions and gameplay selection remain unverified.
+
+Pinned UE 5.6.1 `AnimInstance.cpp` lines 2286 and 2395-2398 establish that
+`PlaySlotAnimationAsDynamicMontage` calls `Montage_Play` with its default
+stop-other-montages behavior for the same group. It is therefore unsuitable
+as an unconditional idle replacement alongside game-owned combat/travel.
+The alternative under investigation is a constant BlendSpace containing the
+same idle at four direction/speed corners. This is an idle wrapper only,
+not a directional locomotion asset or a completed runtime integration.
+
+The commandlet helper builds successfully. `idle_carrier.py` creates a
+private `/Game/CSS/AnimLab/BS_V2_Idle` and compares compressed sequence and
+BlendSpace execution on isolated components with the actual secondary rigs.
+Single-node BlendSpace time is normalized, while sequence time is seconds
+(pinned `AnimSingleNodeInstance.cpp`, `GetLength`). The first center-input
+comparison did not pass its strict 0.001-radian full-pose equivalence gate:
+maximum rotation difference was 0.0051216 radians, about 0.293 degrees.
+Fresh-process readback at both corners and an interior input reports the
+same maxima and localizes the largest rotation difference to
+`CSS_Hair_Ponytail_05`; upstream animation differs by only 0.000001061 radians.
+Do not describe this as exact secondary-motion equivalence, widen the gate
+without justification or retune the user's accepted hair physics to hide it.
+Saved assets and production mesh/Skeleton/AnimBP hashes are checked by the
+probe. No animation is cooked or installed by this experiment.
+
+The live player probe timed out while the game process remained present.
+That is not crash evidence. No gameplay input or restart was attempted, and
+runtime animation ownership, weapon restoration and graph layering remain
+pending live verification.
+
 ## Original author's pose and deformation references
 
 The user supplied `reference/body-type-variant-EVE/3HVzUb9.gif` and
