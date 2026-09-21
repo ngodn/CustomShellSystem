@@ -2,6 +2,13 @@
 
 Newest first. Each entry says what is done, what evidence exists and what is next.
 
+2026-09-22 (rc2): User accepted unlocks, grants, controller navigation and
+beacon travel ("seems good, we can release"). Last fixes before the tag:
+action parameters no longer gate actions (D14), disabled reasons, the CSSX
+artwork, ability scan only on change with cooldown hooks a few per second,
+smaller images. Tag `v1.0.0-cssx-rc2`, ZIPs in `dist/v1.0.0-rc2/`; the exact
+release DLLs are installed at the next game exit for the release-build run.
+
 2026-09-22 (live session, later): Three failed launches traced by bisect
 to the new path-lookup cache (removed) and then a crash in Movement off
 traced through the dev channel's last request to the bridge's struct write
