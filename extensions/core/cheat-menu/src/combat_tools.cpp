@@ -60,7 +60,31 @@ void Menu::combat_sync() {
     if(!status.value("available",false)) throw std::runtime_error("Install the complete updated CSS package and restart to use combat cheats.");
     for(const auto& rule:status.value("rules",Json::array())) if(rule.value("failed",false))
         throw std::runtime_error("A combat hook failed its runtime checks. Turn off all cheats before retrying.");
-    const auto player=require_player();const auto abilities=owned_abilities(player.at("pawn"));
+    const auto player=require_player();
+    // Seal checks are cheap and must run every sync: a seal change disables
+    // the matching cheat at once, before the throttled ability scan below.
+    struct SealCheat {const char* id;const char* seal;const char* ability;};
+    constexpr SealCheat seal_cheats[]={{"perfect_parry","ID_Seal_Infinite_C","GA_Parry_Handler_C"},
+        {"perfect_block","ID_Seal_Default_C","GA_ActiveBlock_C"},{"perfect_harden","ID_Seal_Stone_C","GA_Harden_Original_C"}};
+    for(const auto& cheat:seal_cheats) if(applied_[cheat.id]==true) {
+        const auto item=host_.get(player.at("controller"),"ActiveSealItemHandle");
+        const auto definition=handle(item)?host_.get(item,"ItemDef"):item.value("ItemDef",Json());
+        const auto name=definition.value("name",std::string{});
+        const auto dot=name.rfind('.');
+        if(dot==std::string::npos || name.substr(dot+1)!=cheat.seal) {
+            combat_clear(cheat.id);applied_[cheat.id]=values_[cheat.id]=false;
+            throw std::runtime_error(std::string("Equip the matching seal before enabling ")+cheat.id+".");
+        }
+    }
+    // Decoding every ability instance costs several milliseconds. Between full
+    // syncs (every 10 s) only re-decode when the list length changed.
+    {
+        size_t count=abilities_count_;
+        try { const auto asc=host_.get(player.at("pawn"),"AbilitySystemComponent"); const auto shallow=host_.request({{"op","get"},{"target",asc},{"property","ActivatableAbilities"},{"count",true}}); count=shallow.value("count",count); } catch(...) {}
+        if(count==abilities_count_ && combat_full_time_<10 && !combat_hooks_.empty()) { combat_full_time_+=1; return; }
+        abilities_count_=count; combat_full_time_=0;
+    }
+    const auto abilities=owned_abilities(player.at("pawn"));
     std::set<uint64_t> live;for(const auto& ability:abilities) live.insert(ability.at("$object").get<uint64_t>());
     // Remove rules for abilities the player no longer owns, even if another
     // engine object still keeps the old instance alive.
@@ -102,18 +126,7 @@ void Menu::combat_sync() {
             cooldown_seen_.insert(id);
         }
     }
-    struct SealCheat {const char* id;const char* seal;const char* ability;};
-    constexpr SealCheat seal_cheats[]={{"perfect_parry","ID_Seal_Infinite_C","GA_Parry_Handler_C"},
-        {"perfect_block","ID_Seal_Default_C","GA_ActiveBlock_C"},{"perfect_harden","ID_Seal_Stone_C","GA_Harden_Original_C"}};
     for(const auto& cheat:seal_cheats) if(applied_[cheat.id]==true) {
-        const auto item=host_.get(player.at("controller"),"ActiveSealItemHandle");
-        const auto definition=handle(item)?host_.get(item,"ItemDef"):item.value("ItemDef",Json());
-        const auto name=definition.value("name",std::string{});
-        const auto dot=name.rfind('.');
-        if(dot==std::string::npos || name.substr(dot+1)!=cheat.seal) {
-            combat_clear(cheat.id);applied_[cheat.id]=values_[cheat.id]=false;
-            throw std::runtime_error(std::string("Equip the matching seal before enabling ")+cheat.id+".");
-        }
         bool found=false;
         for(const auto& ability:abilities) if(class_name(ability)==cheat.ability) {
             found=true;

@@ -84,7 +84,11 @@ class Menu {
     void persist(const Json&);
     void shell_tick(double);
     void refresh_shells();
-    std::map<std::string,std::string> shell_tokens_;
+    mutable std::map<std::string,std::string> shell_tokens_;
+    bool tokens_complete_=false;
+    std::string token_for(const std::string& shell) const;   // resolves on demand, cached per process
+    void resolve_shell_token();
+    size_t abilities_count_=0; double combat_full_time_=1e9;
     bool shell_matches(const Json& tag,const std::string& target) const;
     void unlock_shells(const Json& player);
     void override_value(const Json&,const std::string&,const Json&);

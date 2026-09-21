@@ -35,7 +35,8 @@ private:
     struct Tracked { engine::WeakObject weak; };
     std::map<uint64_t,Tracked> objects_;
     std::unordered_map<engine::UObject*,uint64_t> reverse_;
-    std::map<std::string,engine::WeakObject> defaults_;
+    struct CachedDefault { engine::UObject* raw; int32_t index; };
+    std::map<std::string,CachedDefault> defaults_;
     uint64_t next_=1, sweep_=0;
     Json decode(engine::FProperty*,void*,unsigned);
     void encode(engine::FProperty*,void*,const Json&,unsigned);

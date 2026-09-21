@@ -27,8 +27,8 @@ bool Menu::shell_matches(const Json& tag,const std::string& target) const {
     const auto value=tag.is_object()?tag.value("TagName",std::string{}):tag.is_string()?tag.get<std::string>():std::string{};
     const auto text=normalized(value),needle=normalized(target);
     if(!needle.empty() && text.find(needle)!=std::string::npos) return true;
-    const auto token=shell_tokens_.find(target);
-    return token!=shell_tokens_.end() && !token->second.empty() && text.find(token->second)!=std::string::npos;
+    const auto token=token_for(target);
+    return !token.empty() && text.find(token)!=std::string::npos;
 }
 Menu::Menu(const CssxHost* host):host_(host),recovery_(host) {
     settings_=host_.request({{"op","state.load"}});
@@ -121,18 +121,7 @@ void Menu::refresh_shells() {
         if(!text.empty() && key.find("loadfromsave")==std::string::npos) choices.push_back({{"id",text},{"label",text}});
     }
     if(choices.empty()) throw std::runtime_error("The game returned no selectable shells.");
-    std::map<std::string,std::string> tokens;
-    for(const auto& choice:choices) {
-        const auto name=choice.at("id").get<std::string>();
-        const auto definition=host_.call(settings,"GetShellItemDefinition",Json::array({name}));
-        const auto path=definition.is_object()?definition.value("name",std::string{}):std::string{};
-        const auto prefix=path.rfind(".ID_Shell_");
-        if(prefix!=std::string::npos) {
-            auto token=path.substr(prefix+10);if(token.ends_with("_C")) token.resize(token.size()-2);
-            tokens[name]=normalized(token);
-        }
-    }
-    shell_tokens_=std::move(tokens);
+    tokens_complete_=std::all_of(choices.begin(),choices.end(),[&](const Json& choice){ return shell_tokens_.contains(choice.at("id").get<std::string>()); });
     if(choices!=shells_) {
         bindings_checked_=false;
         shells_=std::move(choices);bool found=false;for(const auto& option:shells_) if(option["id"]==values_["shell"]) found=true;
@@ -140,6 +129,28 @@ void Menu::refresh_shells() {
         applied_["shell"]=values_["shell"];
         host_.request({{"op","invalidate"}});
     }
+}
+std::string Menu::token_for(const std::string& shell) const {
+    if(auto it=shell_tokens_.find(shell); it!=shell_tokens_.end()) return it->second;
+    std::string token;
+    try {
+        auto settings=host_.find("/Script/Sparta.Default__SpartaGameSettings");
+        const auto definition=host_.call(settings,"GetShellItemDefinition",Json::array({shell}));
+        const auto path=definition.is_object()?definition.value("name",std::string{}):std::string{};
+        const auto prefix=path.rfind(".ID_Shell_");
+        if(prefix!=std::string::npos) { token=path.substr(prefix+10);if(token.ends_with("_C")) token.resize(token.size()-2); token=normalized(token); }
+    } catch(...) { return {}; }   // not cached: retried on the next use
+    shell_tokens_[shell]=token;
+    return token;
+}
+void Menu::resolve_shell_token() {
+    auto settings=host_.find("/Script/Sparta.Default__SpartaGameSettings");
+    for(const auto& choice:shells_) {
+        const auto name=choice.at("id").get<std::string>();
+        if(name=="none" || shell_tokens_.contains(name)) continue;
+        (void)settings; token_for(name); return;
+    }
+    tokens_complete_=true;
 }
 Json Menu::model() {
     Json enabled=Json::object();const bool live=current_.is_object() && identity(current_.value("pawn",Json()));
@@ -424,6 +435,12 @@ void Menu::tick(double seconds) {
             catalog_time_=0;
             try {refresh_shells();catalog_ready_=true;}
             catch(const std::exception& e) {report(std::string("Waiting for the shell catalog: ")+e.what());}
+        } else if(catalog_ready_ && !tokens_complete_) {
+            // GetShellItemDefinition costs about 10 ms per shell (it resolves an
+            // item class). Resolve one shell per tick, once per process, instead
+            // of a 100 ms hitch. Tokens only sharpen shell matching; names are
+            // already usable.
+            try {resolve_shell_token();} catch(...) {tokens_complete_=true;}
         }
         if(pending_ || cleanup_required_) return;
         // gameplay_ready costs about a dozen host requests. With nothing applied

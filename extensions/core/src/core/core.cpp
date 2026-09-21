@@ -64,6 +64,7 @@ void Core::start_runtime() {
 }
 Json Core::service(const Json& request) {
     const auto op=request.at("op").get<std::string>();
+    struct Count { std::pair<uint64_t,uint64_t>& slot; uint64_t start; ~Count() { ++slot.first; slot.second+=monotonic_us()-start; } } count{op_stats_[op+(request.contains("function")?":"+request["function"].get<std::string>():request.contains("property")?":"+request["property"].get<std::string>():"")],monotonic_us()};
     if(op=="log") { log(request.value("level",std::string("info")),request.at("message").get<std::string>(),request.value("fields",Json::object())); return nullptr; }
     if(op=="menu.status") return {{"menu_open",menu_ && menu_->is_open()},{"game_menu_open",game_menu_open()}};
     if(op=="menu.close") { if(menu_) menu_->close(); return true; }
@@ -169,6 +170,11 @@ Json Core::frame_stats(double seconds) const {
         result["phases"]={{"core_tick",phase(phase_tick_)},{"extensions",phase(phase_ext_)},{"hud",phase(phase_hud_)},{"menu",phase(phase_menu_)}};
     }
     result["hooks"]=bridge_->hook_stats();
+    Json ops=Json::array();
+    for(const auto& [op,v]:op_stats_) ops.push_back({{"op",op},{"calls",v.first},{"us",v.second}});
+    std::sort(ops.begin(),ops.end(),[](const Json& a,const Json& b){ return a["us"].get<uint64_t>()>b["us"].get<uint64_t>(); });
+    if(ops.size()>40) ops.erase(ops.begin()+40,ops.end());
+    result["requests"]=ops;
     if(menu_) result["menu_builds"]={{"builds",menu_->cost().builds},{"build_us",menu_->cost().build_us},{"last_build_us",menu_->cost().last_build_us},{"widgets",menu_->cost().widgets}};
     return result;
 }

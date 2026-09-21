@@ -3,6 +3,7 @@
 #include <cctype>
 #include <cmath>
 #include <Unreal/UObjectGlobals.hpp>
+#include <Unreal/UObjectArray.hpp>
 #include <Unreal/UFunction.hpp>
 #include <Unreal/UFunctionStructs.hpp>
 #include <Unreal/CoreUObject/UObject/Class.hpp>
@@ -269,7 +270,13 @@ Json Bridge::request(const PlayerContext& player,const Json& request) {
     if(op=="class_default") {
         const auto name=request.at("class").get<std::string>();
         if(name.empty() || name.size()>96) throw std::runtime_error("Invalid default class name");
-        if(auto it=defaults_.find(name);it!=defaults_.end()) if(auto* object=it->second.Get()) return handle(object);
+        if(auto it=defaults_.find(name);it!=defaults_.end()) {
+            // Class default objects of native classes live for the process; the
+            // weak pointer path can report them dead, so validate by object-array slot.
+            auto* raw=it->second.raw; auto* item=raw?FUObjectArray::IndexToObject(it->second.index):nullptr;
+            if(item && item->GetUObject()==raw) return handle(raw);
+            defaults_.erase(it);
+        }
         auto key=FName(wide(name).c_str());UObject* match=nullptr;bool duplicate=false;
         UObjectGlobals::ForEachUObject([&](UObject* object,int32,int32) {
             if(object && object->HasAnyFlags(RF_ClassDefaultObject) && object->GetClassPrivate()->GetFName()==key) {
@@ -279,7 +286,7 @@ Json Bridge::request(const PlayerContext& player,const Json& request) {
             return RC::LoopAction::Continue;
         });
         if(duplicate) throw std::runtime_error("Ambiguous default class name; use a full object path");
-        if(match) {if(defaults_.size()>=128) throw std::runtime_error("Default-object cache limit reached");defaults_[name]=match;}
+        if(match) {if(defaults_.size()>=128) throw std::runtime_error("Default-object cache limit reached");defaults_[name]=CachedDefault{match,match->GetInternalIndex()};}
         return handle(match);
     }
     if(op=="find" || op=="load") {
@@ -318,6 +325,17 @@ Json Bridge::request(const PlayerContext& player,const Json& request) {
         auto* type=object->IsA<UStruct>()?static_cast<UStruct*>(object):object->GetClassPrivate();
         auto* p=property_in(type,name);if(!p || p->GetOffset_Internal()<0) throw std::runtime_error("Property is missing: "+request.at("property").get<std::string>());
         auto* data=reinterpret_cast<std::byte*>(object)+p->GetOffset_Internal();
+        if(op=="get" && request.value("count",false)) {
+            // Shallow: the element count of an array, map or struct-with-Items
+            // without decoding it. Used by extensions to detect changes cheaply.
+            if(p->IsA<FArrayProperty>()) { FScriptArrayHelper array(static_cast<FArrayProperty*>(p),data); return {{"count",array.Num()}}; }
+            if(p->IsA<FMapProperty>()) { MapView view(static_cast<FMapProperty*>(p),data); return {{"count",view.count}}; }
+            if(p->IsA<FStructProperty>()) {
+                auto* type=static_cast<FStructProperty*>(p)->GetStruct().Get();
+                if(auto* items=type?property_in(type,L"Items"):nullptr; items && items->IsA<FArrayProperty>()) { FScriptArrayHelper array(static_cast<FArrayProperty*>(items),data+items->GetOffset_Internal()); return {{"count",array.Num()}}; }
+            }
+            throw std::runtime_error("count is only available for arrays, maps and structs with an Items array");
+        }
         if(op=="map.update") {
             if(object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject|RF_ArchetypeObject))) throw std::runtime_error("Default-object writes are refused");
             if(!p->IsA<FMapProperty>()) throw std::runtime_error("Property is not a map");
