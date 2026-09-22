@@ -9,13 +9,16 @@ and the visual review checks against.
 CSSX is a tab of the game's Player Menu (INVENTORY, CSS, **CSSX**, TARSTONES,
 MAP; CSS is absent when it is not installed). The page is the switcher area
 under the game's top bar. Reference space 1920×1080 scaled to that area, then
-by the user's `ui_scale`. Three screens and three overlays:
+by the user's `ui_scale`. The layout mirrors the CSS tab so both feel like one
+family:
 
-| Screen | Left | Centre | Right |
-| --- | --- | --- | --- |
-| Library | List: title, author/version, status summary (green when active); "CSSX settings" as the last row | | Selected extension: banner, description, id, API, average tick cost; framework notice (migration, load errors) |
-| Extension | Section rail | Control rows: label left, value right; 9 visible, scroll indicator | Detail: label, effect line, description (scroll), hint, editor, "asks for confirmation" |
-| Settings | Rows: menu scale, status in library, open keys, performance | | Explanation and adjust buttons; the performance row shows CSSX's own ms per frame over the last ten seconds |
+| Band | y (reference) | Content |
+| --- | --- | --- |
+| Artwork and title | 80–260 | `assets/banner.png` (the CSSX artwork) top-left, 400 wide; page title in Trajan beside it with the subtitle under it (library: "Extensions / CSSX 1.0.0"; extension: its title / by author / version). The notice strip sits top-right. |
+| Tab strip | 270–322 | Left bumper glyph, tabs in Trajan capitals (selected bright with a gold underline), right bumper glyph, then a rule. Library page: LIBRARY and SETTINGS. Extension page: its sections. The strip measures itself and shrinks the face to fit the width. |
+| Content | 340–936 | Left: list rows, half the width (library entries, settings rows, or the section's controls; 58 px rows, as many as fit, scroll bar and "n of m" under it). Right: full-height detail panel (selected entry or control: title, effect line, description, hint, editor, confirmation note). |
+| Status line | 952 | Error text in red, otherwise the extension's `status`. |
+| Footer | 1010 | Navigation hints on the left, contextual actions on the right. |
 
 Overlays: option picker (search field, 8 results, count), full description,
 confirmation (effect line, message, Cancel/Confirm). An overlay blocks input
