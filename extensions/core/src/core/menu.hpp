@@ -95,7 +95,7 @@ private:
     void build_settings(engine::Layout& ui,double width);
     void build_footer(engine::Layout& ui,double width,const std::vector<std::pair<std::string,std::string>>& left,const std::vector<std::pair<std::string,std::string>>& right);
     void build_modal(engine::Layout& ui,double width);
-    void frame(engine::Layout& ui,double width,const std::string& title,const std::string& subtitle,const std::vector<std::string>& tabs,int selected,const std::string& tab_action);
+    void frame(engine::Layout& ui,double width,double column_w,const std::string& title,const std::string& subtitle,const std::vector<std::string>& tabs,int selected,const std::string& tab_action);
     std::string perf_line(bool brief=false) const;
     std::string perf_detail() const;
     void build_results();
