@@ -42,6 +42,7 @@ shell}`; `valid {target}`; `find {path}`; `load {path}`; `class_default
 {target,property,key,expected,value}`; `input.keys {target,keys}`.
 
 Host: `menu.status` → `{menu_open, game_menu_open}`; `menu.close`;
+`frame.brief` → `{hz, median_ms, frames, core_mean_us, core_max_us, core_p99_us}` (last ten seconds);
 `input.focus`.
 
 Hooks: `hooks.status`, `hooks.add {target,pawn,controller,function,mode,

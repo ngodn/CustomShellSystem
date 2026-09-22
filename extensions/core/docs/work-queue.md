@@ -2,6 +2,10 @@
 
 Newest first. Each entry says what is done, what evidence exists and what is next.
 
+2026-09-22 (v1.0.0, re-cut): Added the CSSX Performance extension (Lua,
+`performance/`) and the `frame.brief` host op it uses; tag `v1.0.0-cssx`
+moved to this commit and the three ZIPs rebuilt (nothing had been uploaded).
+
 2026-09-22 (v1.0.0): Tag `v1.0.0-cssx` on the rc2 commit; ZIPs in
 `dist/v1.0.0/` (MSII-CSSX-v1.0.0.zip febd278a…, CSSX-Cheat-Menu-v1.0.0.zip
 acc0e4c7…), verified. The exact release DLLs are installed in Mods/CSSX for

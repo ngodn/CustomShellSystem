@@ -75,6 +75,7 @@ Json Core::service(const Json& request) {
     if(op=="log") { log(request.value("level",std::string("info")),request.at("message").get<std::string>(),request.value("fields",Json::object())); return nullptr; }
     if(op=="menu.status") return {{"menu_open",menu_ && menu_->is_open()},{"game_menu_open",game_menu_open()}};
     if(op=="menu.close") { if(menu_) menu_->close(); return true; }
+    if(op=="frame.brief") return perf_brief();   // {hz, median_ms, core_mean_us, ...} over the last ten seconds
     if(op=="input.focus") { DWORD pid=0; const auto window=GetForegroundWindow(); if(window) GetWindowThreadProcessId(window,&pid); return window && pid==GetCurrentProcessId(); }
     if(!engine_) throw std::runtime_error("Game thread is not initialized");
     return bridge_->request(player_,request);

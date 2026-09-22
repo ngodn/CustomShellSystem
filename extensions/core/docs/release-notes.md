@@ -37,6 +37,16 @@ evidence behind each line is in `integration-tests.md` and `performance.md`.
   pickups, Tarstones, shell switch, shortcuts and intro-lock recovery.
 - Anything that changes the save asks for confirmation and says so.
 
+## CSSX Performance 1.0.0
+
+- Live graphics settings inside the CSSX tab for A/B testing: the ten
+  scalability groups, screen percentage, motion blur, depth of field,
+  volumetric fog, Lumen async compute and a frame cap. Each change applies
+  at once through the engine console; the status line shows the frame rate
+  and CSSX's own cost; Restore puts the game's values back; "Re-apply at
+  launch" keeps your choices.
+- Lua extension, no native code. Works on CSSX 1.0.0.
+
 ## Known limits
 
 - Developer core hot reload is a developer path; players restart the game.

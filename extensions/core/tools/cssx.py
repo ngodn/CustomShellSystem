@@ -85,7 +85,7 @@ def build(dev: bool) -> Path:
     return out
 
 
-def stage(game: Path, dev: bool, cheat_menu: bool, core_only: bool = False) -> None:
+def stage(game: Path, dev: bool, cheat_menu: bool, core_only: bool = False, performance: bool = False) -> None:
     ue4ss = game / 'Binaries/Win64/ue4ss'
     if sha(ue4ss / 'UE4SS.dll') != PIN['dll_sha256']:
         raise RuntimeError('Installed UE4SS differs from the pinned runtime; refusing to stage')
@@ -141,6 +141,11 @@ def stage(game: Path, dev: bool, cheat_menu: bool, core_only: bool = False) -> N
         manifest = json.loads((ROOT / 'cheat-menu/extension.json').read_text())
         manifest['entry'] = dll_name
         atomic(target / 'extension.json', manifest)
+    if performance:
+        target = mod / 'extensions/cssx.performance'
+        target.mkdir(parents=True, exist_ok=True)
+        for name in ('extension.json', 'main.lua', 'menu.json', 'README.txt'):
+            copy_verified(ROOT / 'performance' / name, target / name)
     atomic(mod / 'core.json', {'file': core_name})
     atomic(mod / 'release.json', {'version': VERSION, 'dev': dev, 'loader_sha256': sha(loader_target), 'core': core_name,
                                   'core_sha256': sha(core_target), 'ue4ss_dll_sha256': PIN['dll_sha256'], 'staged_utc': stamp})
@@ -183,6 +188,7 @@ def main() -> None:
     parser.add_argument('json', nargs='?')
     parser.add_argument('--dev', action='store_true')
     parser.add_argument('--cheat-menu', action='store_true')
+    parser.add_argument('--performance', action='store_true', help='also stage the CSSX Performance extension')
     parser.add_argument('--core-only', action='store_true', help='stage: keep the installed loader')
     parser.add_argument('--seconds', type=float, default=10)
     args = parser.parse_args()
@@ -190,7 +196,7 @@ def main() -> None:
     if args.action == 'build':
         print(build(args.dev))
     elif args.action == 'stage':
-        stage(args.game, args.dev, args.cheat_menu, args.core_only)
+        stage(args.game, args.dev, args.cheat_menu, args.core_only, args.performance)
     elif args.action == 'status':
         for name in ('loader', 'status'):
             path = mod / 'runtime' / f'{name}.json'

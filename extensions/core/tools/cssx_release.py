@@ -71,6 +71,18 @@ def cheat_files(version: str, build: Path) -> dict[str, bytes]:
     return files
 
 
+def performance_files(version: str) -> dict[str, bytes]:
+    manifest = json.loads((ROOT / 'performance/extension.json').read_text())
+    manifest['version'] = version
+    base = 'cssx.performance/'
+    return {
+        base + 'extension.json': (json.dumps(manifest, indent=2) + '\n').encode(),
+        base + 'main.lua': (ROOT / 'performance/main.lua').read_bytes(),
+        base + 'menu.json': (ROOT / 'performance/menu.json').read_bytes(),
+        base + 'README.txt': (ROOT / 'performance/README.txt').read_bytes(),
+    }
+
+
 def write_zip(target: Path, files: dict[str, bytes], meta: dict, stamp) -> None:
     if target.exists():
         raise FileExistsError(target)
@@ -147,9 +159,12 @@ def build(tag: str, output: Path) -> list[Path]:
             write_zip(fw, framework_files(version, out), dict(common, product='CSSX', manifest_name='CSSX/release.json'), stamp)
             write_zip(cm, cheat_files(version, out), dict(common, product='CSSX Cheat Menu', requires='CSSX ' + version,
                                                            manifest_name='eins0fx.cheat-menu/release.json'), stamp)
+            pf = output / f'CSSX-Performance-v{version}.zip'
+            write_zip(pf, performance_files(version), dict(common, product='CSSX Performance', requires='CSSX ' + version,
+                                                        manifest_name='cssx.performance/release.json'), stamp)
             for name in ('main.dll', 'cssx_core.dll', 'cheat_menu.dll'):
                 shutil.copy2(out / name, output / f'{name}.{version}.built')
-            return [fw, cm]
+            return [fw, cm, pf]
         finally:
             subprocess.run(['git', 'worktree', 'remove', '--force', str(tree)], cwd=REPO, check=False, capture_output=True)
 

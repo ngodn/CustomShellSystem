@@ -1,0 +1,388 @@
+{
+  "schema": 2,
+  "sections": [
+    {
+      "id": "scalability",
+      "title": "Scalability",
+      "description": "The game's own quality groups, applied at once. Watch the fps in the status line after each change.",
+      "controls": [
+        {
+          "id": "shadow",
+          "label": "Shadows",
+          "type": "choice",
+          "description": "sg.ShadowQuality. Virtual shadow maps are usually the single most expensive setting in UE5; High to Medium is the first thing to try.",
+          "value": "2",
+          "options": [
+            {
+              "id": "0",
+              "label": "Low"
+            },
+            {
+              "id": "1",
+              "label": "Medium"
+            },
+            {
+              "id": "2",
+              "label": "High"
+            },
+            {
+              "id": "3",
+              "label": "Epic"
+            },
+            {
+              "id": "4",
+              "label": "Cinematic"
+            }
+          ],
+          "hint": "Biggest single GPU cost"
+        },
+        {
+          "id": "gi",
+          "label": "Global illumination",
+          "type": "choice",
+          "description": "sg.GlobalIlluminationQuality. Lumen GI quality. Medium keeps Lumen with cheaper traces.",
+          "value": "2",
+          "options": [
+            {
+              "id": "0",
+              "label": "Low"
+            },
+            {
+              "id": "1",
+              "label": "Medium"
+            },
+            {
+              "id": "2",
+              "label": "High"
+            },
+            {
+              "id": "3",
+              "label": "Epic"
+            },
+            {
+              "id": "4",
+              "label": "Cinematic"
+            }
+          ],
+          "hint": "Lumen cost, second biggest"
+        },
+        {
+          "id": "reflection",
+          "label": "Reflections",
+          "type": "choice",
+          "description": "sg.ReflectionQuality. Lumen reflections; Medium is a large saving in wet or metallic scenes.",
+          "value": "2",
+          "options": [
+            {
+              "id": "0",
+              "label": "Low"
+            },
+            {
+              "id": "1",
+              "label": "Medium"
+            },
+            {
+              "id": "2",
+              "label": "High"
+            },
+            {
+              "id": "3",
+              "label": "Epic"
+            },
+            {
+              "id": "4",
+              "label": "Cinematic"
+            }
+          ]
+        },
+        {
+          "id": "view",
+          "label": "View distance",
+          "type": "choice",
+          "description": "sg.ViewDistanceQuality. How far detail is drawn; affects the game thread as well as the GPU.",
+          "value": "2",
+          "options": [
+            {
+              "id": "0",
+              "label": "Low"
+            },
+            {
+              "id": "1",
+              "label": "Medium"
+            },
+            {
+              "id": "2",
+              "label": "High"
+            },
+            {
+              "id": "3",
+              "label": "Epic"
+            },
+            {
+              "id": "4",
+              "label": "Cinematic"
+            }
+          ]
+        },
+        {
+          "id": "post",
+          "label": "Post processing",
+          "type": "choice",
+          "description": "sg.PostProcessQuality. Bloom, tone mapping, ambient occlusion detail.",
+          "value": "2",
+          "options": [
+            {
+              "id": "0",
+              "label": "Low"
+            },
+            {
+              "id": "1",
+              "label": "Medium"
+            },
+            {
+              "id": "2",
+              "label": "High"
+            },
+            {
+              "id": "3",
+              "label": "Epic"
+            },
+            {
+              "id": "4",
+              "label": "Cinematic"
+            }
+          ]
+        },
+        {
+          "id": "effects",
+          "label": "Effects",
+          "type": "choice",
+          "description": "sg.EffectsQuality. Particles and fog detail.",
+          "value": "2",
+          "options": [
+            {
+              "id": "0",
+              "label": "Low"
+            },
+            {
+              "id": "1",
+              "label": "Medium"
+            },
+            {
+              "id": "2",
+              "label": "High"
+            },
+            {
+              "id": "3",
+              "label": "Epic"
+            },
+            {
+              "id": "4",
+              "label": "Cinematic"
+            }
+          ]
+        },
+        {
+          "id": "foliage",
+          "label": "Foliage",
+          "type": "choice",
+          "description": "sg.FoliageQuality. Grass and foliage density.",
+          "value": "2",
+          "options": [
+            {
+              "id": "0",
+              "label": "Low"
+            },
+            {
+              "id": "1",
+              "label": "Medium"
+            },
+            {
+              "id": "2",
+              "label": "High"
+            },
+            {
+              "id": "3",
+              "label": "Epic"
+            },
+            {
+              "id": "4",
+              "label": "Cinematic"
+            }
+          ]
+        },
+        {
+          "id": "shading",
+          "label": "Shading",
+          "type": "choice",
+          "description": "sg.ShadingQuality. Material quality level.",
+          "value": "2",
+          "options": [
+            {
+              "id": "0",
+              "label": "Low"
+            },
+            {
+              "id": "1",
+              "label": "Medium"
+            },
+            {
+              "id": "2",
+              "label": "High"
+            },
+            {
+              "id": "3",
+              "label": "Epic"
+            },
+            {
+              "id": "4",
+              "label": "Cinematic"
+            }
+          ]
+        },
+        {
+          "id": "texture",
+          "label": "Textures",
+          "type": "choice",
+          "description": "sg.TextureQuality. Streaming pool and mip bias. Lower if VRAM is full; it does not change frame rate otherwise.",
+          "value": "2",
+          "options": [
+            {
+              "id": "0",
+              "label": "Low"
+            },
+            {
+              "id": "1",
+              "label": "Medium"
+            },
+            {
+              "id": "2",
+              "label": "High"
+            },
+            {
+              "id": "3",
+              "label": "Epic"
+            },
+            {
+              "id": "4",
+              "label": "Cinematic"
+            }
+          ]
+        },
+        {
+          "id": "aa",
+          "label": "Anti-aliasing",
+          "type": "choice",
+          "description": "sg.AntiAliasingQuality. TSR/TAA quality.",
+          "value": "2",
+          "options": [
+            {
+              "id": "0",
+              "label": "Low"
+            },
+            {
+              "id": "1",
+              "label": "Medium"
+            },
+            {
+              "id": "2",
+              "label": "High"
+            },
+            {
+              "id": "3",
+              "label": "Epic"
+            },
+            {
+              "id": "4",
+              "label": "Cinematic"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rendering",
+      "title": "Rendering",
+      "description": "Individual switches that trade image quality for frame time.",
+      "controls": [
+        {
+          "id": "screen_percentage",
+          "label": "Screen percentage",
+          "type": "slider",
+          "description": "r.ScreenPercentage. Internal render resolution before upscaling. 100 is native; 75 is close to DLSS Quality's input size.",
+          "value": 100,
+          "min": 50,
+          "max": 100,
+          "step": 5,
+          "unit": "%"
+        },
+        {
+          "id": "motion_blur",
+          "label": "Motion blur",
+          "type": "toggle",
+          "description": "r.MotionBlurQuality. Off saves a little GPU time and makes stutter less visible.",
+          "value": true
+        },
+        {
+          "id": "depth_of_field",
+          "label": "Depth of field",
+          "type": "toggle",
+          "description": "r.DepthOfFieldQuality. Off saves GPU time in cutscenes and close-ups.",
+          "value": true
+        },
+        {
+          "id": "volumetric_fog",
+          "label": "Volumetric fog",
+          "type": "toggle",
+          "description": "r.VolumetricFog. The fog volume pass; off is a measurable saving in foggy areas.",
+          "value": true
+        },
+        {
+          "id": "lumen_async",
+          "label": "Lumen async compute",
+          "type": "toggle",
+          "description": "r.LumenScene.Lighting.AsyncCompute, r.Lumen.DiffuseIndirect.AsyncCompute, r.Lumen.Reflections.AsyncCompute. Overlaps Lumen work with other passes; helps some GPUs, hurts others. Test both.",
+          "value": false
+        },
+        {
+          "id": "fps_cap",
+          "label": "Frame cap",
+          "type": "number",
+          "description": "t.MaxFPS. 0 is uncapped. A cap just under what the machine sustains evens out frame times.",
+          "value": 0,
+          "min": 0,
+          "max": 240,
+          "step": 10,
+          "unit": " fps"
+        }
+      ]
+    },
+    {
+      "id": "session",
+      "title": "Session",
+      "description": "What happens to these changes.",
+      "controls": [
+        {
+          "id": "remember",
+          "label": "Re-apply at launch",
+          "type": "toggle",
+          "description": "Keep the changed values and apply them again the next time the world loads. Off means the game's own settings return after a restart.",
+          "value": false
+        },
+        {
+          "id": "restore",
+          "label": "Restore game values",
+          "type": "button",
+          "description": "Put back every value the game had before the first change in this session.",
+          "effect": "reversible"
+        },
+        {
+          "id": "refresh",
+          "label": "Re-read from the engine",
+          "type": "button",
+          "description": "Read the current console values again, for example after changing the game's own options menu."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "schema": 2,
+  "api": 3,
+  "id": "cssx.performance",
+  "title": "CSSX Performance",
+  "author": "_eins0fx",
+  "version": "1.0.0",
+  "description": "Live graphics settings for A/B testing: scalability groups, screen percentage, motion blur, depth of field, volumetric fog, Lumen async compute and a frame cap. Every change applies at once through the engine console; Restore puts the game's values back. The status line shows the frame rate and CSSX's own cost.",
+  "kind": "lua",
+  "layout": "tabs",
+  "entry": "main.lua",
+  "menu": "menu.json"
+}
