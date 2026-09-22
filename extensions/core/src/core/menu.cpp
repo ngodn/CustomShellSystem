@@ -609,9 +609,11 @@ void Menu::frame(Layout& ui,double width,double column_w,const std::string& titl
     invoke(box,L"SetClipping",L"InClipping",uint8_t{1});   // never draw under the right glyph
     ui.place(box,x,y,right-64-x,48);
     auto add_text=[&](const std::string& text,Color color,bool on,const Json* action)->UObject* {
-        auto* button=construct(L"/Script/UMG.Button",ui.tree); flat_button(button,on);
-        { auto* focusable=button->GetPropertyByNameInChain(L"IsFocusable"); if(focusable && focusable->IsA<FBoolProperty>()) static_cast<FBoolProperty*>(focusable)->SetPropertyValueInContainer(button,false); }
-        invoke(button,L"SetBackgroundColor",L"InBackgroundColor",Color{1,1,1,1});
+        // Border, not Button: a Button would swallow the click (see Layout::button).
+        auto* button=construct(L"/Script/UMG.Border",ui.tree);
+        invoke(button,L"SetBrushColor",L"InBrushColor",on?Color{.09f,.072f,.040f,.55f}:Color{0,0,0,0.003f});
+        invoke(button,L"SetPadding",L"InPadding",Margin{0,0,0,0});
+        invoke(button,L"SetVisibility",L"InVisibility",uint8_t{0});
         auto* column=construct(L"/Script/UMG.VerticalBox",ui.tree);
         auto* label=construct(L"/Script/UMG.TextBlock",ui.tree);
         text_value(label,text); font_size(label,15*float(ui.scale),ui.title_font);
@@ -625,7 +627,7 @@ void Menu::frame(Layout& ui,double width,double column_w,const std::string& titl
         invoke(underline,L"SetVisibility",L"InVisibility",uint8_t{4});
         { Call add(column,L"AddChildToVerticalBox",2); add.set(L"content",underline); add.run(); auto* slot=add.get<UObject*>();
           invoke(slot,L"SetPadding",L"InPadding",Margin{float(8*ui.scale),0,float(8*ui.scale),0}); invoke(slot,L"SetHorizontalAlignment",L"InHorizontalAlignment",uint8_t{3}); }
-        { Call add(button,L"AddChild",2); add.set(L"content",column); add.run(); }
+        content(button,column);
         { Call add(box,L"AddChildToHorizontalBox",2); add.set(L"content",button); add.run(); auto* slot=add.get<UObject*>();
           invoke(slot,L"SetPadding",L"InPadding",Margin{0,0,float(4*ui.scale),0}); invoke(slot,L"SetVerticalAlignment",L"InVerticalAlignment",uint8_t{2}); }
         if(action) hits_.push_back({WeakObject(button),*action,false});
