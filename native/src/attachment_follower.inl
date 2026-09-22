@@ -196,7 +196,7 @@ bool AttachmentOffsets::push_for(UObject* component,UObject* child,const Attachm
     last_push_=push;
 #endif
     out=to_local(socket_basis,{direction[0]*push,direction[1]*push,direction[2]*push});
-    return push!=0;
+    return true;
 }
 void AttachmentOffsets::apply(UObject* component,Tracked& item,const AttachmentOffset& offset,bool live) {
     auto* child=item.child.Get(); if(!child) return;
@@ -214,9 +214,14 @@ void AttachmentOffsets::apply(UObject* component,Tracked& item,const AttachmentO
         unreal_basis(socket_rotation.get<std::array<double,3>>(),socket_basis);
         // The prop is already sitting at last frame's correction, so the measurement
         // includes it; carrying it forward is what makes this settle instead of oscillate.
-        if(push_for(component,child,offset,socket_basis,extra))
+        if(push_for(component,child,offset,socket_basis,extra)) {
             for(int i=0;i<3;++i) extra[i]+=current_location[i]-item.location[i]-offset.location[i];
-        else extra={};
+            double extra_len = std::sqrt(extra[0]*extra[0] + extra[1]*extra[1] + extra[2]*extra[2]);
+            if(extra_len > offset.collision.max_push && extra_len > 1e-4) {
+                double scale = offset.collision.max_push / extra_len;
+                for(int i=0;i<3;++i) extra[i] *= scale;
+            }
+        } else extra={};
     }
     std::array<double,3> target_location{},target_rotation{};
     for(int i=0;i<3;++i) {
@@ -227,9 +232,80 @@ void AttachmentOffsets::apply(UObject* component,Tracked& item,const AttachmentO
     set_relative(child,target_location,target_rotation);
     item.applied=target_location; item.owned=true;
 }
+static std::map<std::string,AttachmentOffset> default_attachment_offsets() {
+    std::map<std::string,AttachmentOffset> d;
+    auto add_back = [&](const char* socket, double clearance, double max_push, const char* anchor = "spine_03") {
+        AttachmentOffset off;
+        off.collision.anchor = anchor;
+        off.collision.clearance = clearance;
+        off.collision.max_push = max_push;
+        off.collision.direction = {0.0, -1.0, 0.0};
+        d[socket] = off;
+    };
+    auto add_hip_r = [&](const char* socket, double clearance, double max_push) {
+        AttachmentOffset off;
+        off.location = {0.31, 0.2644, 2.9722};
+        off.collision.anchor = "pelvis";
+        off.collision.clearance = clearance;
+        off.collision.max_push = max_push;
+        off.collision.direction = {0.32561, -0.81726, 0.47546};
+        d[socket] = off;
+    };
+    auto add_hip_l = [&](const char* socket, double clearance, double max_push) {
+        AttachmentOffset off;
+        off.location = {-0.31, 0.2644, 2.9722};
+        off.collision.anchor = "pelvis";
+        off.collision.clearance = clearance;
+        off.collision.max_push = max_push;
+        off.collision.direction = {-0.32561, -0.81726, 0.47546};
+        d[socket] = off;
+    };
+
+    // Stowed back weapons & heavy firearms / bows / melee
+    add_back("Socket_NailShotgun_Stowed", 2.5, 35.0);
+    add_back("Socket_Ballistazooka_Stowed", 3.0, 35.0);
+    add_back("Socket_CrossBow_Stowed", 2.5, 35.0);
+    add_back("Socket_CrossBow_Shoot_Weap_Stowed", 2.5, 35.0);
+    add_back("Socket_Trebuchaxe_Stowed", 2.5, 35.0);
+    add_back("Socket_ParasiteGun_Stowed", 2.5, 35.0);
+    add_back("Socket_CursedChild_Stowed", 2.5, 35.0);
+    add_back("Socket_MachineGun_Stowed", 2.5, 35.0);
+    add_back("Socket_Lute_Simple_Stowed", 3.0, 35.0);
+    add_back("Socket_MartyrBlade_Stowed", 3.0, 35.0);
+    add_back("Socket_AxatanaAxe_Stowed_01", 3.0, 35.0);
+    add_back("Socket_Sarcophagus_Sword_Stowed", 3.0, 35.0);
+    add_back("Socket_Prop_Stowed_01", 3.0, 35.0);
+    add_back("Socket_Prop_Stowed_02", 3.0, 35.0);
+    add_back("Socket_Prop_Stowed_03", 3.0, 35.0, "spine_02");
+
+    // Tarnished Seal / Slayer Seal & Stowed waist props
+    add_hip_r("Socket_Prop_Stowed_InfiniteSeal_Right", 3.0, 15.0);
+    add_hip_r("Socket_Prop_Stowed_InfiniteSeal", 3.0, 15.0);
+    add_hip_r("Socket_Prop_Stowed_SlayerSeal_Right", 3.0, 15.0);
+    add_hip_r("Socket_Prop_Stowed_ShellItem_01", 3.0, 15.0);
+
+    // Daggers & Sidearms
+    AttachmentOffset tiel_dagger;
+    tiel_dagger.collision.anchor = "pelvis";
+    tiel_dagger.collision.clearance = 2.5;
+    tiel_dagger.collision.max_push = 15.0;
+    tiel_dagger.collision.direction = {-0.7169, 0.6162, 0.3261};
+    d["Socket_Prop_Tiel_Dagger"] = tiel_dagger;
+
+    add_hip_r("Socket_KatanaR_Stowed_01", 2.5, 15.0);
+    add_hip_l("Socket_KatanaL_Stowed_01", 2.5, 15.0);
+    add_hip_l("Socket_Prop_Stowed_LeftWeapon_01", 2.5, 15.0);
+
+    return d;
+}
 void AttachmentOffsets::configure(const std::map<std::string,AttachmentOffset>& offsets) {
-    if(offsets_==offsets) return;
-    release(); offsets_=offsets;
+    auto combined = default_attachment_offsets();
+    for(const auto& [socket, offset] : offsets) {
+        combined[socket] = offset;
+    }
+    if(offsets_ == combined) return;
+    release();
+    offsets_ = std::move(combined);
 }
 bool AttachmentOffsets::collides() const {
     for(const auto& [socket,offset]:offsets_) if(offset.collision.active()) return true;
@@ -239,7 +315,7 @@ void AttachmentOffsets::release() {
     for(auto& item:tracked_) if(auto* child=item.child.Get();child && item.owned) {
         try { if(attach_socket(child).ToString()==item.socket) set_relative(child,item.location,item.rotation); } catch(...) {}
     }
-    tracked_.clear(); poses_.clear();
+    tracked_.clear(); poses_.clear(); offsets_.clear();
 }
 void AttachmentOffsets::update(UObject* component) {
     if(!component) { release(); return; }
