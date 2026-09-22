@@ -334,8 +334,6 @@ static Json material_snapshot(UObject* component,UObject* mesh) {
     }
     return result;
 }
-#include "attachment_follower.inl"
-#include "walk_override.inl"
 static UObject* menu_character(UObject* player) {
     if(!player) return nullptr;
     auto* pc=read<UObject*>(player,L"Controller");
@@ -347,6 +345,8 @@ static UObject* menu_character(UObject* player) {
     Call character(menu,L"GetDisplayMenuCharacter",1); character.run();
     return character.get<UObject*>();
 }
+#include "attachment_follower.inl"
+#include "walk_override.inl"
 UObject* Appearance::player(void* engine) {
     shell.clear(); pawn_name.clear(); current_mesh.clear();
     if (!Version::IsAtLeast(5, 6) || !Version::IsBelow(5, 7)) throw std::runtime_error("CSS adapter requires UE5.6");
@@ -773,20 +773,44 @@ std::string Appearance::ready_to_apply_reason() const {
     if(!pc) return "no observed controller";
     if(read<UObject*>(pc,L"Pawn")!=pawn) return "controller pawn != pawn";
     if(!mesh_asset(component)) return "no mesh asset on component";
-    Call move(pc,L"IsMoveInputIgnored",1); move.run();
-    Call look(pc,L"IsLookInputIgnored",1); look.run();
-    if(move.get<bool>()) return "move input ignored";
-    if(look.get<bool>()) return "look input ignored";
+    bool in_menu = false;
+    auto* handler=read<UObject*>(pc,L"User Interface Handler Component");
+    if(handler) {
+        try {
+            if(read<bool>(handler, L"bIsInGameMenu")
+               || read<UObject*>(handler, L"ActiveMenu")
+               || read<UObject*>(handler, L"ActiveDisplayMenu")) {
+                in_menu = true;
+            }
+        } catch(...) {}
+    }
+    if(!in_menu) {
+        try {
+            Call call(pc, L"IsInGameMenu", 1); call.run();
+            if(call.get<bool>()) in_menu = true;
+        } catch(...) {}
+    }
+    if(!in_menu) {
+        try { if(read<bool>(pc, L"bShowMouseCursor")) in_menu = true; } catch(...) {}
+    }
+
+    if(!in_menu) {
+        Call move(pc,L"IsMoveInputIgnored",1); move.run();
+        Call look(pc,L"IsLookInputIgnored",1); look.run();
+        if(move.get<bool>()) return "move input ignored";
+        if(look.get<bool>()) return "look input ignored";
+    }
     if(is_quest_or_teleport_active(pc)) return "quest or teleport active";
     if(is_traversal_ability_active(pawn)) return "traversal ability active";
-    auto* handler=read<UObject*>(pc,L"User Interface Handler Component");
     if(!handler) return "no UI handler component";
     auto* transition=read<UObject*>(handler,L"CurrentTransitionWidget");
     if(transition) { Call shown(transition,L"IsInViewport",1); shown.run(); if(shown.get<bool>()) return "transition widget in viewport"; }
-    Call animation(component,L"GetAnimInstance",1); animation.run();
-    if(auto* anim=animation.get<UObject*>()) {
-        Call montage(anim,L"GetCurrentActiveMontage",1); montage.run();
-        if(montage.get<UObject*>()) return "anim montage active";
+    if(!in_menu) {
+        Call animation(component,L"GetAnimInstance",1); animation.run();
+        if(auto* anim=animation.get<UObject*>()) {
+            Call montage(anim,L"GetCurrentActiveMontage",1); montage.run();
+            if(montage.get<UObject*>()) return "anim montage active";
+        }
     }
     if(component==component_.Get() && mesh_asset(component)==applied_.Get()) {
         if(!materials_match() && !repair_materials_needed()) return "retained mesh materials mismatch and no repair needed";
@@ -1763,12 +1787,61 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
     try {
         if(std::any_of(options.controls.begin(),options.controls.end(),[&](const auto& c){return body_rig_control(c) && values.contains(c.id);})) {
             auto* anim=post_process_instance(component);
-            const auto inputs=body_rig_inputs(anim);
-            if(body_rig_instance_.Get()!=anim) { body_rig_original_.reset(); body_rig_instance_=anim; }
-            if(!body_rig_original_) body_rig_original_=inputs.capture();
-            const auto tuning=body_rig_settings(options.controls,values,*body_rig_original_);
-            if(body_rig_applied_!=tuning) inputs.apply(tuning);
-            body_rig_applied_=tuning;
+            if(anim && has_body_rig_inputs(anim)) {
+                const auto inputs=body_rig_inputs(anim);
+                if(body_rig_instance_.Get()!=anim) { body_rig_original_.reset(); body_rig_instance_=anim; }
+                if(!body_rig_original_) body_rig_original_=inputs.capture();
+                const auto tuning=body_rig_settings(options.controls,values,*body_rig_original_);
+                if(body_rig_applied_!=tuning) inputs.apply(tuning);
+                body_rig_applied_=tuning;
+            } else if(anim) {
+                auto nodes=spring_nodes(anim);
+                if(!nodes.empty()) {
+                    if(spring_instance_.Get()!=anim) { spring_originals_.clear(); spring_instance_=anim; }
+                    for(const auto& control:options.controls) {
+                        if(!body_rig_control(control) || !values.contains(control.id)) continue;
+                        const auto& val=values.at(control.id);
+                        float freq = val[0];
+                        float damp_ratio = val[1];
+                        float motion = val[2];
+                        bool enabled = val[3] == 1.0f;
+                        const auto tuning = spring_tuning(freq, damp_ratio);
+                        std::vector<std::string> target_bones;
+                        if(control.rig) {
+                            for(auto r : control.rig->regions) {
+                                if(r < body_region_names.size()) target_bones.push_back(body_region_names[r]);
+                            }
+                        }
+                        if(target_bones.empty()) target_bones = control.nodes;
+                        for(const auto& bone : target_bones) {
+                            auto found = nodes.find(bone);
+                            if(found == nodes.end()) continue;
+                            const auto& node = found->second;
+                            spring_originals_.try_emplace(bone, SpringOriginal{
+                                node.get(node.stiffness), node.get(node.damping),
+                                node.get(node.max_displacement), node.get(node.error_reset), node.flag(node.limit),
+                                {node.flag(node.translate[0]), node.flag(node.translate[1]), node.flag(node.translate[2])},
+                                {node.flag(node.rotate[0]), node.flag(node.rotate[1]), node.flag(node.rotate[2])}});
+                            const auto& orig = spring_originals_.at(bone);
+                            if(!enabled) {
+                                node.put(node.stiffness, orig.stiffness * 5.0);
+                                node.put(node.damping, orig.damping * 5.0);
+                                node.put(node.max_displacement, 0.1);
+                            } else {
+                                node.put(node.stiffness, tuning.stiffness);
+                                node.put(node.damping, tuning.damping);
+                                double base_disp = orig.max_displacement > 0.1 ? orig.max_displacement : 2.0;
+                                double new_disp = std::clamp(base_disp * double(motion), 0.5, 25.0);
+                                node.put(node.max_displacement, new_disp);
+                                node.set_flag(node.limit, true);
+                            }
+                            node.set_flag(node.translate[0], true);
+                            node.set_flag(node.translate[1], true);
+                            node.set_flag(node.translate[2], true);
+                        }
+                    }
+                }
+            }
         }
         auto* library=find(L"/Script/Engine.Default__KismetRenderingLibrary");
         for(const auto& surface:options.surfaces) {
@@ -1886,12 +1959,30 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
             if(control.kind==ControlKind::Rig) {
                 if(body_rig_control(control)) continue;
                 auto* anim=post_process_instance(component);
-                const auto inputs=rig_inputs(anim);
-                const auto tuning=rig_settings(control,values.at(control.id));
-                if(rig_instance_.Get()!=anim) { rig_original_.reset(); rig_instance_=anim; }
-                if(!rig_original_) rig_original_=inputs.capture();
-                inputs.apply(tuning);
-                rig_applied_=tuning;
+                if(anim && has_rig_inputs(anim)) {
+                    const auto inputs=rig_inputs(anim);
+                    const auto tuning=rig_settings(control,values.at(control.id));
+                    if(rig_instance_.Get()!=anim) { rig_original_.reset(); rig_instance_=anim; }
+                    if(!rig_original_) rig_original_=inputs.capture();
+                    inputs.apply(tuning);
+                    rig_applied_=tuning;
+                } else if(anim) {
+                    auto nodes=spring_nodes(anim);
+                    if(!nodes.empty()) {
+                        const auto& v=values.at(control.id);
+                        for(auto& [bname, node] : nodes) {
+                            if(bname.find("Hair")!=std::string::npos || bname.find("Ponytail")!=std::string::npos || bname.find("Bangs")!=std::string::npos) {
+                                spring_originals_.try_emplace(bname, SpringOriginal{
+                                    node.get(node.stiffness), node.get(node.damping),
+                                    node.get(node.max_displacement), node.get(node.error_reset), node.flag(node.limit),
+                                    {node.flag(node.translate[0]), node.flag(node.translate[1]), node.flag(node.translate[2])},
+                                    {node.flag(node.rotate[0]), node.flag(node.rotate[1]), node.flag(node.rotate[2])}});
+                                node.put(node.stiffness, double(v[0]));
+                                node.put(node.damping, double(v[1]));
+                            }
+                        }
+                    }
+                }
                 continue;
             }
             // AnimDynamics uses direct solver values. Damping changes require a
