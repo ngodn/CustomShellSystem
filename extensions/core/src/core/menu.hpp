@@ -79,7 +79,6 @@ private:
     std::vector<Hit> hits_;
     struct SliderHit { engine::WeakObject widget, label; Json control; float previous; };
     std::vector<SliderHit> sliders_;
-    std::array<double,2> mouse_{};
     bool mouse_left_=false;
     BuildCost cost_;
     std::map<std::string,engine::WeakObject> textures_;

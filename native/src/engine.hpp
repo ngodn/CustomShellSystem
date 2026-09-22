@@ -480,7 +480,7 @@ public:
     bool restore();
     void set_ground_offset(double offset);
     bool active() const;
-    bool repair_materials_needed();
+    bool repair_materials_needed() const;
     bool repair_mesh_needed() const;
     bool ready_to_apply() const;
     void sync_menu();

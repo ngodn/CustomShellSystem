@@ -8,6 +8,7 @@
 #include <Unreal/FProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
+#include <Unreal/Property/FBoolProperty.hpp>
 #include <Unreal/FString.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 
@@ -291,17 +292,22 @@ void Menu::poll_input(const PlayerContext& player,uint64_t now) {
     }
 }
 void Menu::poll_mouse(const PlayerContext& player) {
-    auto* pc=player.pc; if(!pc || !player.world) return;
-    Call pos(find(L"/Script/UMG.Default__WidgetLayoutLibrary"),L"GetMousePositionOnViewport",2);
-    pos.set(L"WorldContextObject",player.world); pos.run();
-    const auto m=pos.get<Vec2>();
-    const bool moved=std::abs(m.x-mouse_[0])>0.5 || std::abs(m.y-mouse_[1])>0.5;
-    mouse_={m.x,m.y};
-    Call left(pc,L"IsInputKeyDown",2); auto* p=left.param(L"Key");
-    member(left.data(p),p->GetElementSize(),find(L"/Script/InputCore.Key"),L"KeyName",FName(L"LeftMouseButton"));
-    left.run(); const bool down=left.get<bool>();
-    const bool pressed=down && !mouse_left_; mouse_left_=down;
-    if(!moved && !pressed && !down) return;
+    if(!player.pc || !player.world) return;
+    // Idle cost is one Win32 key read: no reflection call until the left
+    // button is actually down (or was, for the release edge). The key state
+    // comes from the OS, so it does not matter who consumed the Slate event.
+    const bool down=(GetAsyncKeyState(VK_LBUTTON)&0x8000)!=0;
+    const bool was=mouse_left_; mouse_left_=down;
+    if(!down && !was) return;
+    if(down) {
+        // Clicks: each button's IsPressed with edge detection, the way the
+        // CSS inventory tab does. act() may rebuild the page, so return at once.
+        for(auto& hit:hits_) if(auto* widget=hit.widget.Get()) {
+            Call pressed(widget,L"IsPressed",1); pressed.run(); const bool now=pressed.get<bool>();
+            const bool click=now && !hit.down; hit.down=now;
+            if(click) { act(hit.action); return; }
+        }
+    } else for(auto& hit:hits_) hit.down=false;
     // Sliders: preview while dragging, commit on release.
     for(auto& s:sliders_) {
         auto* widget=s.widget.Get(); if(!widget) continue;
@@ -311,12 +317,6 @@ void Menu::poll_mouse(const PlayerContext& player) {
             if(auto* label=s.label.Get()) text_value(label,display_value([&]{ auto c=s.control; c["value"]=snap_value(s.control,v); return c; }()));
             if(!down) act({{"action","value"},{"value",snap_value(s.control,v)}});
         }
-    }
-    if(!pressed) return;
-    for(const auto& hit:hits_) {
-        auto* widget=hit.widget.Get(); if(!widget) continue;
-        Call hovered(widget,L"IsHovered",1); hovered.run();
-        if(hovered.get<bool>()) { act(hit.action); return; }
     }
 }
 void Menu::tick(const PlayerContext& player,double) {
@@ -609,11 +609,11 @@ void Menu::frame(Layout& ui,double width,double column_w,const std::string& titl
     invoke(box,L"SetClipping",L"InClipping",uint8_t{1});   // never draw under the right glyph
     ui.place(box,x,y,right-64-x,48);
     auto add_text=[&](const std::string& text,Color color,bool on,const Json* action)->UObject* {
-        // Border, not Button: a Button would swallow the click (see Layout::button).
-        auto* button=construct(L"/Script/UMG.Border",ui.tree);
-        invoke(button,L"SetBrushColor",L"InBrushColor",on?Color{.09f,.072f,.040f,.55f}:Color{0,0,0,0.003f});
-        invoke(button,L"SetPadding",L"InPadding",Margin{0,0,0,0});
-        invoke(button,L"SetVisibility",L"InVisibility",uint8_t{0});
+        // A real UMG Button, like the CSS tab strip: clicks are read by polling IsPressed.
+        auto* button=construct(L"/Script/UMG.Button",ui.tree);
+        flat_button(button,on);
+        if(auto* focusable=button->GetPropertyByNameInChain(L"IsFocusable"); focusable && focusable->IsA<FBoolProperty>())
+            static_cast<FBoolProperty*>(focusable)->SetPropertyValueInContainer(button,false);
         auto* column=construct(L"/Script/UMG.VerticalBox",ui.tree);
         auto* label=construct(L"/Script/UMG.TextBlock",ui.tree);
         text_value(label,text); font_size(label,15*float(ui.scale),ui.title_font);

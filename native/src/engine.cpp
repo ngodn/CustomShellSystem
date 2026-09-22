@@ -490,21 +490,36 @@ bool Appearance::materials_match() const {
     }
     return true;
 }
-bool Appearance::repair_materials_needed() {
+static bool is_quest_or_teleport_active(UObject* pc);
+static bool is_traversal_ability_active(UObject* pawn);
+
+bool Appearance::repair_materials_needed() const {
     auto* component=component_.Get();
     if(!component || mesh_asset(component)!=applied_.Get() || materials_match()) { return false; }
-    // A completed shell effect restores stock asset materials. Repair that
-    // specific transition at the end of this frame, leaving active MIDs and
-    // unfamiliar effect materials under the game's control.
+    auto* pc=observed_controller_.Get();
+    if(is_quest_or_teleport_active(pc)) return false;
+    auto* pawn=observed_pawn_.Get();
+    if(is_traversal_ability_active(pawn)) return false;
+    // A completed shell effect or fast-travel resets stock shell materials onto the mesh.
+    // Repair that transition, leaving only active transient MIDs with parameter overrides
+    // (such as Harden or active elemental debuffs) under the game's control until finished.
     auto values=overrides(component);
     for(int i=0;i<values.Num();++i) {
         UObject* value{}; std::memcpy(&value,values.GetRawPtr(i),sizeof(value));
         auto* expected=i<static_cast<int>(expected_materials_.size())?expected_materials_[i].Get():nullptr;
         if(value && value!=expected) {
-            auto* asset=material_base_asset(value);
-            if(!asset) return false;
-            auto path=narrow(asset->GetPathName());
-            if(!original_default_materials_.contains(path) && std::find(original_materials_.begin(),original_materials_.end(),path)==original_materials_.end()) return false;
+            if(dynamic_material(value)) {
+                auto* asset=material_base_asset(value);
+                std::string path=asset?narrow(asset->GetPathName()):std::string{};
+                bool is_stock_shell=original_default_materials_.contains(path) ||
+                                    std::find(original_materials_.begin(),original_materials_.end(),path)!=original_materials_.end() ||
+                                    path.find("/Characters/Shells/")!=std::string::npos ||
+                                    path.find("/Sparta/MasterMaterials/")!=std::string::npos;
+                if(!is_stock_shell && material_has_overrides(value)) {
+                    // Active non-shell dynamic effect with parameter overrides.
+                    return false;
+                }
+            }
         }
     }
     return true;
@@ -593,9 +608,176 @@ void Appearance::test_reset_mesh() {
     restore_materials(component,original_materials_);
 }
 #endif
+static bool is_blocking_camera_state(UObject* state) {
+    if(!state) return false;
+    auto* klass = state->GetClassPrivate();
+    if(!klass) return false;
+    std::string name = narrow(klass->GetName());
+    if(name.find("BoneGate") != std::string::npos ||
+       name.find("GateCleansed") != std::string::npos ||
+       name.find("Beacon") != std::string::npos ||
+       name.find("Traversal") != std::string::npos ||
+       name.find("Memory") != std::string::npos ||
+       name.find("Teleport") != std::string::npos ||
+       name.find("Skydive") != std::string::npos ||
+       name.find("Spline") != std::string::npos ||
+       name.find("Tarforge") != std::string::npos ||
+       name.find("TarredCorpse") != std::string::npos ||
+       name.find("Cinematic") != std::string::npos ||
+       name.find("Cutscene") != std::string::npos ||
+       name.find("Sequence") != std::string::npos) {
+        return true;
+    }
+    for(const UStruct* k = klass->GetSuperStruct(); k; k = k->GetSuperStruct()) {
+        std::string sname = narrow(k->GetName());
+        if(sname == "CSCameraState_Fixed" ||
+           sname == "CSCameraState_Action" ||
+           sname == "CSCameraState_ProgressCameraActors" ||
+           sname == "CSCameraState_CameraActor") {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool is_quest_or_teleport_active(UObject* pc) {
+    if(!pc) return false;
+    auto* temp_shell_prop = pc->GetPropertyByNameInChain(L"TemporaryShellItemDefinition");
+    if(temp_shell_prop && temp_shell_prop->GetElementSize() == sizeof(UObject*)) {
+        UObject* temp_shell = nullptr;
+        std::memcpy(&temp_shell, reinterpret_cast<const std::byte*>(pc) + temp_shell_prop->GetOffset_Internal(), sizeof(UObject*));
+        if(temp_shell) return true;
+    }
+    auto* temp_weap_prop = pc->GetPropertyByNameInChain(L"TemporaryWeaponItemDefinition");
+    if(temp_weap_prop && temp_weap_prop->GetElementSize() == sizeof(UObject*)) {
+        UObject* temp_weap = nullptr;
+        std::memcpy(&temp_weap, reinterpret_cast<const std::byte*>(pc) + temp_weap_prop->GetOffset_Internal(), sizeof(UObject*));
+        if(temp_weap) return true;
+    }
+    auto* tp_mgr_prop = pc->GetPropertyByNameInChain(L"Teleport Manager");
+    if(tp_mgr_prop && tp_mgr_prop->GetElementSize() == sizeof(UObject*)) {
+        UObject* tp_mgr = nullptr;
+        std::memcpy(&tp_mgr, reinterpret_cast<const std::byte*>(pc) + tp_mgr_prop->GetOffset_Internal(), sizeof(UObject*));
+        if(tp_mgr) {
+            auto* tp_cam_prop = tp_mgr->GetPropertyByNameInChain(L"CameraState");
+            if(tp_cam_prop && tp_cam_prop->GetElementSize() == sizeof(UObject*)) {
+                UObject* tp_cam = nullptr;
+                std::memcpy(&tp_cam, reinterpret_cast<const std::byte*>(tp_mgr) + tp_cam_prop->GetOffset_Internal(), sizeof(UObject*));
+                if(tp_cam) return true;
+            }
+            auto* tp_evt_prop = tp_mgr->GetPropertyByNameInChain(L"CurrentDungeonEvent");
+            if(tp_evt_prop && tp_evt_prop->GetElementSize() == sizeof(UObject*)) {
+                UObject* tp_evt = nullptr;
+                std::memcpy(&tp_evt, reinterpret_cast<const std::byte*>(tp_mgr) + tp_evt_prop->GetOffset_Internal(), sizeof(UObject*));
+                if(tp_evt) return true;
+            }
+        }
+    }
+    auto* sm_comp_prop = pc->GetPropertyByNameInChain(L"Shell Memory Handler Component");
+    if(sm_comp_prop && sm_comp_prop->GetElementSize() == sizeof(UObject*)) {
+        UObject* sm_comp = nullptr;
+        std::memcpy(&sm_comp, reinterpret_cast<const std::byte*>(pc) + sm_comp_prop->GetOffset_Internal(), sizeof(UObject*));
+        if(sm_comp) {
+            auto* actor_prop = sm_comp->GetPropertyByNameInChain(L"HandlerActor");
+            if(actor_prop && actor_prop->GetElementSize() == sizeof(UObject*)) {
+                UObject* actor = nullptr;
+                std::memcpy(&actor, reinterpret_cast<const std::byte*>(sm_comp) + actor_prop->GetOffset_Internal(), sizeof(UObject*));
+                if(actor) {
+                    auto* mem_prop = actor->GetPropertyByNameInChain(L"SpawnedShellMemory");
+                    if(mem_prop && mem_prop->GetElementSize() == sizeof(UObject*)) {
+                        UObject* mem = nullptr;
+                        std::memcpy(&mem, reinterpret_cast<const std::byte*>(actor) + mem_prop->GetOffset_Internal(), sizeof(UObject*));
+                        if(mem) return true;
+                    }
+                }
+            }
+        }
+    }
+    auto* cam_mgr_prop = pc->GetPropertyByNameInChain(L"PlayerCameraManager");
+    if(cam_mgr_prop && cam_mgr_prop->GetElementSize() == sizeof(UObject*)) {
+        UObject* cam_mgr = nullptr;
+        std::memcpy(&cam_mgr, reinterpret_cast<const std::byte*>(pc) + cam_mgr_prop->GetOffset_Internal(), sizeof(UObject*));
+        if(cam_mgr) {
+            auto* active_inst_prop = cam_mgr->GetPropertyByNameInChain(L"ActiveCameraInstance");
+            if(active_inst_prop && active_inst_prop->GetElementSize() == sizeof(UObject*)) {
+                UObject* active_inst = nullptr;
+                std::memcpy(&active_inst, reinterpret_cast<const std::byte*>(cam_mgr) + active_inst_prop->GetOffset_Internal(), sizeof(UObject*));
+                if(active_inst) {
+                    auto* state_prop = active_inst->GetPropertyByNameInChain(L"CameraState");
+                    if(state_prop && state_prop->GetElementSize() == sizeof(UObject*)) {
+                        UObject* active_state = nullptr;
+                        std::memcpy(&active_state, reinterpret_cast<const std::byte*>(active_inst) + state_prop->GetOffset_Internal(), sizeof(UObject*));
+                        if(is_blocking_camera_state(active_state)) return true;
+                    }
+                }
+            }
+            auto* stack_prop = cam_mgr->GetPropertyByNameInChain(L"CameraStack");
+            if(stack_prop && stack_prop->IsA<FArrayProperty>()) {
+                auto* arr = static_cast<FArrayProperty*>(stack_prop);
+                FScriptArrayHelper_InContainer helper(arr, cam_mgr);
+                for(int32_t i = 0; i < helper.Num(); ++i) {
+                    auto* state_ptr = *reinterpret_cast<UObject**>(helper.GetRawPtr(i));
+                    if(is_blocking_camera_state(state_ptr)) return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+static bool is_traversal_ability_active(UObject* pawn) {
+    if(!pawn) return false;
+    auto* asc_prop = pawn->GetPropertyByNameInChain(L"AbilitySystemComponent");
+    if(!asc_prop || asc_prop->GetElementSize() != sizeof(UObject*)) return false;
+    UObject* asc = nullptr;
+    std::memcpy(&asc, reinterpret_cast<const std::byte*>(pawn) + asc_prop->GetOffset_Internal(), sizeof(UObject*));
+    if(!asc) return false;
+
+    auto* act_prop = asc->GetPropertyByNameInChain(L"ActivatableAbilities");
+    if(!act_prop || !act_prop->IsA<FStructProperty>()) return false;
+    auto* sp = static_cast<FStructProperty*>(act_prop);
+    auto* struct_type = sp->GetStruct().Get();
+    if(!struct_type) return false;
+    auto* items_field = struct_type->GetPropertyByNameInChain(L"Items");
+    if(!items_field || !items_field->IsA<FArrayProperty>()) return false;
+    auto* arr = static_cast<FArrayProperty*>(items_field);
+    auto* inner = arr->GetInner();
+    if(!inner || !inner->IsA<FStructProperty>()) return false;
+    auto* spec_struct = static_cast<FStructProperty*>(inner)->GetStruct().Get();
+    if(!spec_struct) return false;
+
+    auto* ability_prop = spec_struct->GetPropertyByNameInChain(L"Ability");
+    auto* active_prop = spec_struct->GetPropertyByNameInChain(L"ActiveCount");
+    if(!ability_prop || !active_prop) return false;
+
+    const size_t ab_off = ability_prop->GetOffset_Internal();
+    const size_t act_off = active_prop->GetOffset_Internal();
+    const void* container = reinterpret_cast<const std::byte*>(asc) + act_prop->GetOffset_Internal();
+    FScriptArrayHelper helper(arr, arr->ContainerPtrToValuePtr<void>(container));
+
+    for(int32_t i = 0; i < helper.Num(); ++i) {
+        const uint8* spec_ptr = helper.GetRawPtr(i);
+        uint8_t active_count = *(spec_ptr + act_off);
+        if(active_count > 0) {
+            auto* ability = *reinterpret_cast<UObject* const*>(spec_ptr + ab_off);
+            if(ability && ability->GetClassPrivate()) {
+                std::string ab_name = narrow(ability->GetClassPrivate()->GetName());
+                if(ab_name.rfind("GA_Traversal_", 0) == 0) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 bool Appearance::repair_mesh_needed() const {
     auto* component=component_.Get();
     if(!component || component!=observed_component_.Get()) return false;
+    auto* pc=observed_controller_.Get();
+    if(is_quest_or_teleport_active(pc)) return false;
+    auto* pawn=observed_pawn_.Get();
+    if(is_traversal_ability_active(pawn)) return false;
     auto* mesh=mesh_asset(component);
     // Only reclaim the stock mesh captured for this component. An unfamiliar
     // replacement can belong to another mod or an unfinished transformation.
@@ -607,6 +789,8 @@ bool Appearance::ready_to_apply() const {
     Call move(pc,L"IsMoveInputIgnored",1); move.run();
     Call look(pc,L"IsLookInputIgnored",1); look.run();
     if(move.get<bool>() || look.get<bool>()) return false;
+    if(is_quest_or_teleport_active(pc)) return false;
+    if(is_traversal_ability_active(pawn)) return false;
     auto* handler=read<UObject*>(pc,L"User Interface Handler Component");
     if(!handler) return false;
     auto* transition=read<UObject*>(handler,L"CurrentTransitionWidget");
@@ -617,7 +801,9 @@ bool Appearance::ready_to_apply() const {
         if(montage.get<UObject*>()) return false;
     }
     // Retained player/controller changes can keep our own material instances.
-    if(component==component_.Get() && mesh_asset(component)==applied_.Get()) return materials_match();
+    if(component==component_.Get() && mesh_asset(component)==applied_.Get()) {
+        return materials_match() || repair_materials_needed();
+    }
     // Reclaiming the stock mesh after a teleporter/jump-point return has already recorded
     // the stable original baseline; do not block recovery on transient effect parameters.
     if(repair_mesh_needed()) return true;
@@ -627,6 +813,7 @@ bool Appearance::ready_to_apply() const {
 }
 bool Appearance::active() const { auto* c=component_.Get(); return c && c==observed_component_.Get() && applied_.Get() && mesh_asset(c)==applied_.Get(); }
 bool Appearance::apply(void* engine, const std::string& mesh_path, const std::map<int,std::string>& materials) {
+    if(!ready_to_apply()) return false;
     auto* pawn = player(engine);
     if (!pawn) return false;
     auto* component = read<UObject*>(pawn, L"Mesh");

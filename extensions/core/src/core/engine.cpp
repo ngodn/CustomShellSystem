@@ -229,14 +229,14 @@ UObject* Layout::label(const std::string& text,double x,double y,double w,double
     place(widget,x,y,w,h); return widget;
 }
 UObject* Layout::button(const std::string& text,double x,double y,double w,double h,bool active,bool enabled,float size,Color ink) {
-    // A hit target, not a UMG Button: a Button handles the mouse press itself
-    // and the player controller never sees it, so a polled click can not be
-    // detected. A visible Border reports IsHovered and lets the press through
-    // to the game's input, where the menu polls it.
-    auto* widget=construct(L"/Script/UMG.Border",tree);
-    invoke(widget,L"SetBrushColor",L"InBrushColor",active?Color{.09f,.072f,.040f,.55f}:Color{0,0,0,0.003f});
-    invoke(widget,L"SetPadding",L"InPadding",Margin{0,0,0,0});
-    invoke(widget,L"SetVisibility",L"InVisibility",enabled?uint8_t{0}:uint8_t{3});   // Visible (hit-testable) or HitTestInvisible
+    // Same recipe as the CSS inventory tab: a UMG Button with focus off and a
+    // flat style. The menu detects clicks by polling IsPressed on each button,
+    // so nothing depends on the player controller seeing the mouse.
+    auto* widget=construct(L"/Script/UMG.Button",tree);
+    flat_button(widget,active);
+    auto* focusable=widget->GetPropertyByNameInChain(L"IsFocusable");
+    if(!focusable || !focusable->IsA<FBoolProperty>()) throw std::runtime_error("Button focus property mismatch");
+    static_cast<FBoolProperty*>(focusable)->SetPropertyValueInContainer(widget,false);
     if(!text.empty()) {
         auto* label=construct(L"/Script/UMG.TextBlock",tree);
         text_value(label,text); font_size(label,size*static_cast<float>(scale),serif);
@@ -246,9 +246,8 @@ UObject* Layout::button(const std::string& text,double x,double y,double w,doubl
         invoke(label,L"SetTextOverflowPolicy",L"InOverflowPolicy",uint8_t{1});
         invoke(label,L"SetVisibility",L"InVisibility",uint8_t{3});
         content(widget,label);
-        invoke(widget,L"SetVerticalAlignment",L"InVerticalAlignment",uint8_t{2});
-        invoke(widget,L"SetHorizontalAlignment",L"InHorizontalAlignment",uint8_t{2});
     }
+    invoke(widget,L"SetIsEnabled",L"bInIsEnabled",enabled);
     place(widget,x,y,w,h); return widget;
 }
 UObject* Layout::image(UObject* texture,double x,double y,double w,double h,float opacity,UVRect uv) {

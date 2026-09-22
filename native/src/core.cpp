@@ -577,7 +577,7 @@ struct Core {
             maintenance_next=now+150;
             if(state.enabled && !apply_pending && now>=maintenance_after) {
                 try {
-                    if(state.selections.contains(appearance.shell) && appearance.repair_materials_needed()) {
+                    if(appearance.repair_materials_needed()) {
                         apply_pending=true;
                         host.log("Restoring cosmetic materials after gameplay material reset");
                     }
@@ -680,7 +680,7 @@ struct Core {
                               ? state.selections.at(reconcile_key).outfit+"/"+state.selections.at(reconcile_key).variant
                               : std::string("<nothing for this shell>"))).c_str());
             }
-            if (apply_pending && !appearance.shell.empty()) {
+            if (apply_pending && !appearance.shell.empty() && appearance.ready_to_apply()) {
                 apply_pending = false;
                 // The shell this reconcile is for. Applying loads a mesh, and that takes
                 // long enough for a shell switch to finish underneath it, so everything
