@@ -108,6 +108,8 @@ class InventoryUI {
     Json confirm_action_;
     bool native_picker_=false;
     std::string native_picker_title_, native_picker_kind_, native_picker_target_;
+    std::string physics_modal_control_;
+    int physics_modal_channel_=0;
     extensions::OptionSearch native_options_;
     WeakObject native_search_input_, native_search_results_, native_search_count_;
     std::string native_search_query_;
@@ -213,6 +215,7 @@ class AttachmentFollower {
 public:
     void update(RC::Unreal::UObject* component,const std::string& original);
     void release();
+    RC::Unreal::UObject* proxy() const { return proxy_.Get(); }
 };
 // 0.4: per-outfit socket corrections for stowed items (seals sink into wider hips).
 class AttachmentOffsets {
@@ -299,6 +302,8 @@ class WalkOverride {
     bool custom_idle_engaged_=false;
     WeakObject custom_idle_post_;
     std::vector<WeakObject> hidden_weapons_;
+    uint64_t next_footstep_=0;
+    bool foot_left_=false;
     RC::Unreal::UObject* blendspace(WeakObject& slot,const wchar_t* path);
     RC::Unreal::UObject* custom_blendspace(size_t index,RC::Unreal::UObject* skeleton);
     void set_weapon_hidden(RC::Unreal::UObject* pawn,bool hide);
@@ -314,6 +319,7 @@ public:
     bool genessa_walk_active() const { return genessa_active_; }
     bool proxima_walk_active() const { return proxima_active_; }
     bool engaged() const { return engaged_ || custom_idle_engaged_; }
+    bool custom_idle_engaged() const { return custom_idle_engaged_; }
     const std::string& reason() const { return reason_; }
     void update(RC::Unreal::UObject* pawn,bool idle_feminine,bool walk_feminine,
                 const std::array<std::string,3>& custom_paths,

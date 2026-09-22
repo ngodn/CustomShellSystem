@@ -510,4 +510,57 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
         if(!engaged_ || active_.Get()!=want || !read<bool>(anim,L"UseActiveBlendspace") || read<UObject*>(anim,L"ActiveBlendSpace")!=want) { push_on(want); last_heal_=now; }
         reason_=reason;
     } else if(engaged_) push_off();
+
+    // Footstep audio and VFX cadence pulse during custom locomotion override
+    if(engaged_ && speed_known && speed >= 25.0) {
+        if(now >= next_footstep_) {
+            float interval = std::clamp(540.0f - (float(speed) * 0.35f), 260.0f, 520.0f);
+            next_footstep_ = now + static_cast<uint64_t>(interval);
+            foot_left_ = !foot_left_;
+            try {
+                if(pawn->GetFunctionByNameInChain(L"HandleFootDown")) {
+                    Call step(pawn, L"HandleFootDown", 2);
+                    step.set(L"FloorLineTraceLength", 150.0f);
+                    auto* prop = step.param(L"FootstepData");
+                    if(prop && prop->IsA<FStructProperty>()) {
+                        auto* st = static_cast<FStructProperty*>(prop)->GetStruct().Get();
+                        void* base = step.data(prop);
+                        if(st) {
+                            if(auto* tag_prop = st->GetPropertyByNameInChain(L"Tag")) {
+                                FName tag(foot_left_ ? L"Foley.BoneLocation.Foot.Foot_L" : L"Foley.BoneLocation.Foot.Foot_R");
+                                std::memcpy(static_cast<std::byte*>(base) + tag_prop->GetOffset_Internal(), &tag, sizeof(FName));
+                            }
+                            std::array<double, 3> foot_loc{};
+                            bool has_loc = false;
+                            if(auto* mesh = read<UObject*>(pawn, L"Mesh")) {
+                                if(mesh->GetFunctionByNameInChain(L"GetSocketLocation")) {
+                                    Call sock(mesh, L"GetSocketLocation", 2);
+                                    sock.set(L"InSocketName", FName(foot_left_ ? L"ball_l" : L"ball_r"));
+                                    sock.run();
+                                    foot_loc = sock.get<std::array<double, 3>>(L"ReturnValue");
+                                    has_loc = foot_loc[0] != 0.0 || foot_loc[1] != 0.0 || foot_loc[2] != 0.0;
+                                }
+                            }
+                            if(!has_loc) {
+                                Call loc_call(pawn, L"K2_GetActorLocation", 1);
+                                loc_call.run();
+                                foot_loc = loc_call.get<std::array<double, 3>>(L"ReturnValue");
+                                foot_loc[2] -= 85.0;
+                            }
+                            if(auto* loc_prop = st->GetPropertyByNameInChain(L"Location")) {
+                                std::memcpy(static_cast<std::byte*>(base) + loc_prop->GetOffset_Internal(), &foot_loc, sizeof(foot_loc));
+                            }
+                            if(auto* dist_prop = st->GetPropertyByNameInChain(L"LastFootDownDistance")) {
+                                float dist = 50.0f;
+                                std::memcpy(static_cast<std::byte*>(base) + dist_prop->GetOffset_Internal(), &dist, sizeof(float));
+                            }
+                        }
+                    }
+                    step.run();
+                }
+            } catch(...) {}
+        }
+    } else {
+        next_footstep_ = now + 150;
+    }
 }
