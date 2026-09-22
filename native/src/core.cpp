@@ -431,7 +431,13 @@ struct Core {
                 report("Applied template: " + tmpl->name);
             }
             else if(action=="physics_preset") {
-                auto preset=command.at("preset").get<std::string>(); // "normal", "more_jiggle", "earthquake"
+                auto preset=command.at("preset").get<std::string>();
+                for(char& c : preset) c = char(std::tolower(static_cast<unsigned char>(c)));
+                if(preset=="normal") preset="natural";
+                else if(preset=="more_jiggle") preset="bouncy";
+                else if(preset=="saggy") preset="soft";
+                else if(preset=="omg_earthquake") preset="earthquake";
+
                 std::string target_id=command.value("control",std::string{});
                 auto is_chest_glute=[](const std::string& raw_id) {
                     std::string id=raw_id;
@@ -439,10 +445,17 @@ struct Core {
                     return id.find("chest")!=std::string::npos || id.find("glute")!=std::string::npos ||
                            id.find("breast")!=std::string::npos || id.find("butt")!=std::string::npos;
                 };
-                std::string tmpl_id=preset=="normal"?"body_normal":preset=="more_jiggle"?"body_more_jiggle":"body_earthquake";
+                std::string tmpl_id = preset=="firm" ? "body_firm" :
+                                      preset=="natural" ? "body_natural" :
+                                      preset=="bouncy" ? "body_bouncy" :
+                                      preset=="soft" ? "body_soft" : "body_earthquake";
                 const Template* tmpl=nullptr;
                 for(const auto& t:outfit->templates) {
-                    if(t.id==tmpl_id || t.id==preset || t.name==(preset=="normal"?"Normal":preset=="more_jiggle"?"More Jiggle":"OMG! Earthquake!")) {
+                    if(t.id==tmpl_id || t.id==preset ||
+                       t.name==(preset=="firm"?"Firm":
+                                preset=="natural"?"Natural":
+                                preset=="bouncy"?"Bouncy":
+                                preset=="soft"?"Soft / Saggy":"OMG! Earthquake!")) {
                         tmpl=&t; break;
                     }
                 }
@@ -466,17 +479,24 @@ struct Core {
                         if(!target_id.empty() && ctrl.id!=target_id) continue;
                         const bool is_glute = ctrl.id.find("glute")!=std::string::npos || ctrl.id.find("butt")!=std::string::npos;
                         if(body_rig_control(ctrl)) {
-                            if(preset=="normal") custom.values[ctrl.id]={2.0f,0.70f,1.0f,1.0f};
-                            else if(preset=="more_jiggle") custom.values[ctrl.id]={is_glute?1.6f:1.5f,is_glute?0.30f:0.25f,1.0f,1.0f};
-                            else if(preset=="earthquake") custom.values[ctrl.id]={is_glute?0.9f:0.8f,is_glute?0.12f:0.10f,1.0f,1.0f};
+                            if(preset=="firm") custom.values[ctrl.id]={is_glute?2.50f:2.60f, 0.65f, is_glute?0.65f:0.60f, 1.0f};
+                            else if(preset=="natural") custom.values[ctrl.id]={is_glute?2.10f:2.15f, is_glute?0.50f:0.48f, 1.00f, 1.0f};
+                            else if(preset=="bouncy") custom.values[ctrl.id]={is_glute?1.65f:1.70f, is_glute?0.30f:0.28f, 1.80f, 1.0f};
+                            else if(preset=="soft") custom.values[ctrl.id]={is_glute?1.20f:1.25f, is_glute?0.20f:0.18f, is_glute?2.50f:2.60f, 1.0f};
+                            else if(preset=="earthquake") custom.values[ctrl.id]={0.85f, is_glute?0.08f:0.06f, 4.20f, 1.0f};
                         } else if(ctrl.kind==ControlKind::Spring) {
-                            if(preset=="normal") custom.values[ctrl.id]={2.0f,0.35f,1.5f,1.0f};
-                            else if(preset=="more_jiggle") custom.values[ctrl.id]={1.5f,0.15f,3.0f,1.0f};
-                            else if(preset=="earthquake") custom.values[ctrl.id]={1.0f,0.05f,6.0f,1.0f};
+                            if(preset=="firm") custom.values[ctrl.id]={is_glute?2.50f:2.60f, 0.65f, is_glute?1.50f:1.20f, 1.0f};
+                            else if(preset=="natural") custom.values[ctrl.id]={is_glute?2.10f:2.15f, is_glute?0.50f:0.48f, 2.20f, 1.0f};
+                            else if(preset=="bouncy") custom.values[ctrl.id]={is_glute?1.65f:1.70f, is_glute?0.30f:0.28f, 4.50f, 1.0f};
+                            else if(preset=="soft") custom.values[ctrl.id]={is_glute?1.20f:1.25f, is_glute?0.20f:0.18f, is_glute?7.00f:7.50f, 1.0f};
+                            else if(preset=="earthquake") custom.values[ctrl.id]={0.85f, is_glute?0.08f:0.06f, 14.0f, 1.0f};
                         }
                     }
                 }
-                const std::string label=preset=="normal"?"Normal":preset=="more_jiggle"?"More Jiggle":"OMG! Earthquake!";
+                const std::string label = preset=="firm" ? "Firm" :
+                                          preset=="natural" ? "Natural" :
+                                          preset=="bouncy" ? "Bouncy" :
+                                          preset=="soft" ? "Soft / Saggy" : "OMG! Earthquake!";
                 report("Applied physics preset: "+label);
             }
             else if(action=="tint" || action=="reset_tint") {
@@ -524,8 +544,10 @@ struct Core {
                 }
             }
             control_values(options,custom);
+            selected->second.custom=custom;
             pending_custom=std::move(custom); custom_only=true; refresh_custom=command.value("refresh",true);
             apply_pending=true; save_after=GetTickCount64()+600;
+            ui_refresh=true;
         }
         else if (action == "select") {
             const auto outfit = command.at("outfit").get<std::string>();

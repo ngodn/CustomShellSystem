@@ -89,7 +89,7 @@ def rig_ranges(control):
     ranges=[]
     if control.get('solver','positional_hair') not in ('positional_hair','angular_body'):
         raise ValueError('Unknown rig solver')
-    fields=([('frequency',.5,6),('damping_ratio',.1,2),('motion_amount',0,1)] if body_rig(control)
+    fields=([('frequency',.2,10),('damping_ratio',.01,3),('motion_amount',0,5)] if body_rig(control)
             else [('stiffness',1,1000),('damping',0,120),('gravity',-5,5)])
     for key,low,high in fields:
         value=control.get(key)

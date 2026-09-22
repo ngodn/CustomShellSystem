@@ -29,6 +29,9 @@ struct InventoryLayout : Layout {
     }
 };
 static bool is_chest_or_glute_control(const Control& control) {
+    if(control.kind != ControlKind::Spring && control.kind != ControlKind::Dynamics && control.kind != ControlKind::Rig) {
+        return false;
+    }
     std::string id = control.id;
     for(char& c : id) c = char(std::tolower(static_cast<unsigned char>(c)));
     std::string name = control.name;
@@ -41,6 +44,61 @@ static bool is_chest_or_glute_control(const Control& control) {
            name.find("glute") != std::string::npos ||
            name.find("breast") != std::string::npos ||
            name.find("butt") != std::string::npos;
+}
+struct BodyPhysicsPresetDef {
+    const char* id;
+    const char* name;
+    const char* subtitle;
+    float chest_freq;
+    float chest_damp;
+    float chest_motion;
+    float glute_freq;
+    float glute_damp;
+    float glute_motion;
+    float spring_chest_freq;
+    float spring_chest_damp;
+    float spring_chest_travel;
+    float spring_glute_freq;
+    float spring_glute_damp;
+    float spring_glute_travel;
+};
+
+static const BodyPhysicsPresetDef kBodyPhysicsPresets[] = {
+    {"firm", "Firm", "High stiffness & damping, perky sculpted look",
+     2.60f, 0.65f, 0.60f, 2.50f, 0.65f, 0.65f,
+     2.60f, 0.65f, 1.20f, 2.50f, 0.65f, 1.50f},
+    {"natural", "Natural", "Realistic soft-tissue sway, balanced & restrained",
+     2.15f, 0.48f, 1.00f, 2.10f, 0.50f, 1.00f,
+     2.15f, 0.48f, 2.20f, 2.10f, 0.50f, 2.20f},
+    {"bouncy", "Bouncy", "Playful, energetic motion with high elasticity",
+     1.70f, 0.28f, 1.80f, 1.65f, 0.30f, 1.80f,
+     1.70f, 0.28f, 4.50f, 1.65f, 0.30f, 4.50f},
+    {"soft", "Soft / Saggy", "Heavier relaxed tissue, slower pendular sway",
+     1.25f, 0.18f, 2.60f, 1.20f, 0.20f, 2.50f,
+     1.25f, 0.18f, 7.50f, 1.20f, 0.20f, 7.00f},
+    {"earthquake", "OMG! Earthquake!", "Maximum exaggerated comedic jiggle & wobble",
+     0.85f, 0.06f, 4.20f, 0.85f, 0.08f, 4.20f,
+     0.85f, 0.06f, 14.0f, 0.85f, 0.08f, 14.0f}
+};
+
+static inline std::string detect_body_physics_preset(const Control& control, const ControlValue& held) {
+    const bool is_glute = control.id.find("glute") != std::string::npos || control.id.find("butt") != std::string::npos;
+    const bool is_spring = control.kind == ControlKind::Spring;
+    for(const auto& p : kBodyPhysicsPresets) {
+        float tf = is_spring ? (is_glute ? p.spring_glute_freq : p.spring_chest_freq) : (is_glute ? p.glute_freq : p.chest_freq);
+        float td = is_spring ? (is_glute ? p.spring_glute_damp : p.spring_chest_damp) : (is_glute ? p.glute_damp : p.chest_damp);
+        if(std::abs(held[0] - tf) < 0.18f && std::abs(held[1] - td) < 0.08f) {
+            return p.id;
+        }
+    }
+    return "custom";
+}
+
+static inline std::string get_body_physics_preset_name(const std::string& id) {
+    for(const auto& p : kBodyPhysicsPresets) {
+        if(p.id == id) return p.name;
+    }
+    return "Custom";
 }
 // 0.4: a short, deterministic strip of colours for one part, so a controller can pick
 // one without anybody having to think in RGB. What the author chose comes first, then
@@ -664,18 +722,26 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     const int here=std::clamp(int(std::lround(held[0])),0,int(c.options.size())-1);
                     source=c.options[here].name;
                 } else if(c.kind==ControlKind::Spring) {
-                    source="Bounce "+slider_text(held[0],true)+" Hz, settle "+std::to_string(int(std::lround(held[1]*100)))+"%";
-                    if(c.spring_clamp) source+=", travel "+slider_text(held[2],true)+" cm";
+                    const bool has_presets=is_chest_or_glute_control(c);
+                    if(has_presets) {
+                        std::string pid = detect_body_physics_preset(c, held);
+                        std::string pname = get_body_physics_preset_name(pid);
+                        source = (pid == "custom") ? ("Custom (" + slider_text(held[0], true) + " Hz)")
+                                                   : (pname + " (" + slider_text(held[0], true) + " Hz)");
+                    } else {
+                        source="Bounce "+slider_text(held[0],true)+" Hz, settle "+std::to_string(int(std::lround(held[1]*100)))+"%";
+                        if(c.spring_clamp) source+=", travel "+slider_text(held[2],true)+" cm";
+                    }
                 } else if(c.kind==ControlKind::Dynamics || c.kind==ControlKind::Rig) {
                     const bool has_presets=is_chest_or_glute_control(c);
                     if(has_presets) {
-                        const bool body=body_rig_control(c);
-                        const bool is_glute=c.id.find("glute")!=std::string::npos || c.id.find("butt")!=std::string::npos;
-                        const bool is_normal=(body&&std::abs(held[0]-2.0f)<0.15f&&std::abs(held[1]-0.7f)<0.15f);
-                        const bool is_more=(body&&std::abs(held[0]-(is_glute?1.6f:1.5f))<0.15f&&std::abs(held[1]-(is_glute?0.30f:0.25f))<0.15f);
-                        const bool is_earth=(body&&std::abs(held[0]-(is_glute?0.9f:0.8f))<0.15f&&std::abs(held[1]-(is_glute?0.12f:0.10f))<0.10f);
-                        std::string p=is_normal?"Normal":is_more?"More Jiggle":is_earth?"OMG! Earthquake!":"Custom";
-                        source=p+" ("+slider_text(held[0],true)+" Hz)";
+                        std::string pid = detect_body_physics_preset(c, held);
+                        std::string pname = get_body_physics_preset_name(pid);
+                        if(pid == "custom") {
+                            source = "Custom (" + slider_text(held[0], true) + " Hz, " + slider_text(held[1], true) + " damp)";
+                        } else {
+                            source = pname + " (" + slider_text(held[0], true) + " Hz)";
+                        }
                     } else {
                         source=body_rig_control(c) ? "Bounce "+slider_text(held[0],true)+" Hz, damping "+slider_text(held[1],true)+", motion "+slider_text(held[2],true)
                             : "Stiffness "+slider_text(held[0],true)+", damping "+slider_text(held[1],true)+", gravity "+slider_text(held[2],true);
@@ -690,22 +756,22 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     source="Weight "+slider_text(held[0],true);
                 }
                 const bool has_presets=is_chest_or_glute_control(c);
-                const int fieldcount=has_presets?(c.kind==ControlKind::Rig?5:4):control_channel_count(c);
+                const int fieldcount=has_presets?1:control_channel_count(c);
                 const int channel=channel_%fieldcount;
                 Json minus, plus;
-                if(has_presets && channel==0) {
-                    const bool body=body_rig_control(c);
-                    const bool is_glute=c.id.find("glute")!=std::string::npos || c.id.find("butt")!=std::string::npos;
-                    const bool is_normal=(body&&std::abs(held[0]-2.0f)<0.15f&&std::abs(held[1]-0.7f)<0.15f);
-                    const bool is_more=(body&&std::abs(held[0]-(is_glute?1.6f:1.5f))<0.15f&&std::abs(held[1]-(is_glute?0.30f:0.25f))<0.15f);
-                    const bool is_earth=(body&&std::abs(held[0]-(is_glute?0.9f:0.8f))<0.15f&&std::abs(held[1]-(is_glute?0.12f:0.10f))<0.10f);
-                    std::string prev_p = is_earth ? "more_jiggle" : is_more ? "normal" : "earthquake";
-                    std::string next_p = is_normal ? "more_jiggle" : is_more ? "earthquake" : "normal";
-                    minus = Json{{"action","physics_preset"},{"preset",prev_p},{"control",c.id}};
-                    plus = Json{{"action","physics_preset"},{"preset",next_p},{"control",c.id}};
+                if(has_presets) {
+                    std::string pid = detect_body_physics_preset(c, held);
+                    int cur_idx = 1; // default to natural
+                    const int total_presets = int(sizeof(kBodyPhysicsPresets)/sizeof(kBodyPhysicsPresets[0]));
+                    for(int i=0; i<total_presets; ++i) {
+                        if(kBodyPhysicsPresets[i].id == pid) { cur_idx = i; break; }
+                    }
+                    int prev_idx = (cur_idx - 1 + total_presets) % total_presets;
+                    int next_idx = (cur_idx + 1) % total_presets;
+                    minus = Json{{"action","physics_preset"},{"preset",kBodyPhysicsPresets[prev_idx].id},{"control",c.id}};
+                    plus = Json{{"action","physics_preset"},{"preset",kBodyPhysicsPresets[next_idx].id},{"control",c.id}};
                 } else {
-                    const int slider_ch = has_presets ? (channel - 1) : channel;
-                    minus={{"action","control"},{"control",c.id},{"channel",slider_ch},{"delta",-1}};
+                    minus={{"action","control"},{"control",c.id},{"channel",channel},{"delta",-1}};
                     plus=minus; plus["delta"]=1;
                 }
                 if(!c.scalar && !exact_color_) {
@@ -722,8 +788,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     minus=pick((here+strip.size()-1)%strip.size());
                     plus=pick((here+1)%strip.size());
                 }
-                row(int(i),c.name,source,line,accept,minus,plus,
-                    {{"action","ui_channel"},{"count",fieldcount}},
+                const Json secondary_action = has_presets ?
+                    Json{{"action","ui_physics_modal"},{"control",c.id}} :
+                    Json{{"action","ui_channel"},{"count",fieldcount}};
+                row(int(i),c.name,source,line,has_presets ? secondary_action : accept,minus,plus,
+                    has_presets ? Json{{"action","reset_control"},{"control",c.id}} : secondary_action,
                     {{"action","palette"},{"palette","original"}});
             }
             scroll_end();
@@ -805,118 +874,184 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     const bool rig=control.kind==ControlKind::Rig;
                     const bool body=body_rig_control(control);
                     const bool has_presets=is_chest_or_glute_control(control);
-                    const int fieldcount=has_presets?(rig?5:4):(rig?4:3);
-                    const int selected=channel_%fieldcount;
-                    detail(control.name,worn->name,
-                           body ? "Frequency sets the bounce speed. Damping controls how quickly it settles. Motion amount controls the response to movement." :
-                           "Stiffness controls how strongly this part returns toward its rest direction. "
-                           "Damping reduces motion. Gravity changes downward pull; negative values pull upward.");
-                    double cur_y = controls_y;
                     if(has_presets) {
-                        const bool is_glute = control.id.find("glute")!=std::string::npos || control.id.find("butt")!=std::string::npos;
-                        const bool is_normal=(body&&std::abs(value[0]-2.0f)<0.15f&&std::abs(value[1]-0.7f)<0.15f);
-                        const bool is_more=(body&&std::abs(value[0]-(is_glute?1.6f:1.5f))<0.15f&&std::abs(value[1]-(is_glute?0.30f:0.25f))<0.15f);
-                        const bool is_earth=(body&&std::abs(value[0]-(is_glute?0.9f:0.8f))<0.15f&&std::abs(value[1]-(is_glute?0.12f:0.10f))<0.10f);
-                        const bool is_custom = !is_normal && !is_more && !is_earth;
-                        
-                        ui.label("PRESET", right, cur_y, 180, 22, 15, selected==0?gold:muted);
-                        std::string badge = is_normal ? "Active: Normal" : is_more ? "Active: More Jiggle" : is_earth ? "Active: OMG! Earthquake!" : "Active: Custom";
-                        ui.label(badge, right+180, cur_y, 180, 22, 14, is_custom?muted:gold);
-                        
-                        const double bw=114, bgap=9, by=cur_y+22;
-                        bind(ui.button("Normal",right,by,bw,36,is_normal,true,16),
-                             {{"action","physics_preset"},{"preset","normal"},{"control",control.id}});
-                        bind(ui.button("More Jiggle",right+bw+bgap,by,bw,36,is_more,true,15),
-                             {{"action","physics_preset"},{"preset","more_jiggle"},{"control",control.id}});
-                        bind(ui.button("OMG! Earthquake!",right+(bw+bgap)*2,by,bw,36,is_earth,true,13),
-                             {{"action","physics_preset"},{"preset","earthquake"},{"control",control.id}});
-                        cur_y += 68;
+                        detail(control.name, worn->name,
+                               "Choose an anatomical motion preset below. To customize bounce frequency, settling damping, and travel limits, select Customize Sliders.");
+                        double cur_y = controls_y;
+                        ui.label("MOTION PRESETS", right, cur_y, 360, 20, 14, gold);
+                        cur_y += 24;
+
+                        const std::string active_pid = detect_body_physics_preset(control, value);
+                        const int total_presets = int(sizeof(kBodyPhysicsPresets)/sizeof(kBodyPhysicsPresets[0]));
+                        const double row_h = 44;
+                        const double row_gap = 4;
+
+                        for(int i=0; i<total_presets; ++i) {
+                            const auto& p = kBodyPhysicsPresets[i];
+                            const bool is_active = (active_pid == p.id);
+                            auto* btn = ui.button("", right, cur_y, 360, row_h, is_active, true);
+                            bind(btn, {{"action","physics_preset"},{"preset",p.id},{"control",control.id}});
+                            if(is_active) {
+                                ui.box(right, cur_y, 360, row_h, Color{.055f,.045f,.027f,1});
+                                ui.box(right, cur_y, 3, row_h, gold);
+                            }
+                            ui.selection_mark(right + 14, cur_y + 22, is_active);
+                            ui.label(p.name, right + 36, cur_y + 4, 210, 20, 16, is_active ? gold : ivory);
+                            ui.label(p.subtitle, right + 36, cur_y + 23, 310, 17, 12, muted);
+                            if(is_active) {
+                                auto* active_lbl = ui.label("Active", right + 296, cur_y + 4, 56, 20, 12, gold);
+                                invoke(active_lbl, L"SetJustification", L"InJustification", uint8_t{2});
+                            }
+                            cur_y += row_h + row_gap;
+                        }
+
+                        cur_y += 8;
+                        if(active_pid == "custom") {
+                            auto* custom_badge = ui.label("Active: Custom Sliders", right, cur_y, 360, 20, 13, gold);
+                            invoke(custom_badge, L"SetJustification", L"InJustification", uint8_t{1});
+                            cur_y += 24;
+                        }
+
+                        auto* cust_btn = ui.button("", right, cur_y, 360, 42, false, true);
+                        bind(cust_btn, {{"action","ui_physics_modal"},{"control",control.id}});
+                        ui.box(right, cur_y, 360, 42, Color{.04f,.034f,.022f,1});
+                        prompt("secondary", "Customize Sliders...", right + 24, cur_y + 7, 310, 4);
+                        cur_y += 50;
+
+                        if(rig) {
+                            const bool motion_on = (value[3] == 1);
+                            auto* toggle_btn = ui.button(motion_on ? "Motion: Enabled" : "Motion: Disabled", right, cur_y, 360, 36, false, true, 16);
+                            bind(toggle_btn, {{"action","control"},{"control",control.id},{"channel",3},{"value",motion_on ? 0 : 1}});
+                        }
+
+                        direction_hint(true, "Cycle preset");
+                        action_button("accept", "Customize sliders", 841, {{"action","ui_physics_modal"},{"control",control.id}}, 3);
+                        action_button("secondary", "Reset part", 795, {{"action","reset_control"},{"control",control.id}}, 4);
+                        action_button("tertiary", "Reset all", 887, confirm_reset_all, 2);
+                    } else {
+                        const int fieldcount = rig ? 4 : 3;
+                        const int selected = channel_ % fieldcount;
+                        detail(control.name, worn->name,
+                               body ? "Frequency sets the bounce speed. Damping controls how quickly it settles. Motion amount controls the response to movement." :
+                               "Stiffness controls how strongly this part returns toward its rest direction. "
+                               "Damping reduces motion. Gravity changes downward pull; negative values pull upward.");
+                        double cur_y = controls_y;
+                        const char* fields[]={body?"Bounce Frequency (Hz)":"Stiffness",body?"Damping Ratio":"Damping",body?"Motion Amount":"Gravity"};
+                        for(int field=0;field<3;++field) {
+                            const auto range=control_channel(control,field);
+                            const double sy=cur_y+field*76;
+                            const bool is_focused = (selected == field);
+                            auto* heading=ui.label(fields[field],right,sy,230,26,17,is_focused?gold:ivory);
+                            auto* slider=construct(L"/Script/UMG.Slider",tree);
+                            invoke(slider,L"SetMinValue",L"InValue",range.minimum);
+                            invoke(slider,L"SetMaxValue",L"InValue",range.maximum);
+                            invoke(slider,L"SetStepSize",L"InValue",range.step);
+                            invoke(slider,L"SetValue",L"InValue",value[field]);
+                            invoke(slider,L"SetSliderBarColor",L"InValue",Color{.10f,.09f,.07f,1});
+                            invoke(slider,L"SetSliderHandleColor",L"InValue",gold);
+                            ui.place(slider,right,sy+26,262,30);
+                            auto* label=ui.label(slider_text(value[field],true),right+270,sy+26,90,30,18);
+                            sliders_.push_back({WeakObject(slider),WeakObject(label),WeakObject(heading),
+                                {{"action","control"},{"control",control.id},{"channel",field},{"ui_channel",field},{"refresh",false}},
+                                value[field],true,""});
+                        }
+                        cur_y += 3*76 + 6;
+                        if(rig) {
+                            const bool is_motion_focused = (selected == 3);
+                            bind(ui.button(value[3]==1?"Motion: On":"Motion: Off",right,cur_y,360,36,
+                                is_motion_focused,true,18),
+                                {{"action","control"},{"control",control.id},{"channel",3},{"value",value[3]==1?0:1}});
+                        }
+                        if(rig && selected==3) direction_hint(true,"Toggle motion");
+                        else direction_hint(true,"Adjust selected slider");
+                        action_button("secondary","Select next setting",795,Json{{"action","ui_channel"},{"count",fieldcount}},4);
+                        action_button("accept","Reset part",841,rows_[row_].accept,3);
+                        action_button("tertiary","Reset all",887,confirm_reset_all,2);
                     }
-                    const char* fields[]={body?"Frequency (Hz)":"Stiffness",body?"Damping ratio":"Damping",body?"Motion amount":"Gravity"};
-                    for(int field=0;field<3;++field) {
-                        const auto range=control_channel(control,field);
-                        const double sy=cur_y+field*74;
-                        const bool is_focused = has_presets ? (selected == field + 1) : (selected == field);
-                        auto* heading=ui.label(fields[field],right,sy,230,26,18,is_focused?gold:ivory);
-                        auto* slider=construct(L"/Script/UMG.Slider",tree);
-                        invoke(slider,L"SetMinValue",L"InValue",range.minimum);
-                        invoke(slider,L"SetMaxValue",L"InValue",range.maximum);
-                        invoke(slider,L"SetStepSize",L"InValue",range.step);
-                        invoke(slider,L"SetValue",L"InValue",value[field]);
-                        invoke(slider,L"SetSliderBarColor",L"InValue",Color{.10f,.09f,.07f,1});
-                        invoke(slider,L"SetSliderHandleColor",L"InValue",gold);
-                        ui.place(slider,right,sy+26,262,30);
-                        auto* label=ui.label(slider_text(value[field],true),right+270,sy+26,90,30,18);
-                        sliders_.push_back({WeakObject(slider),WeakObject(label),WeakObject(heading),
-                            {{"action","control"},{"control",control.id},{"channel",field},{"ui_channel",has_presets?field+1:field},{"refresh",false}},
-                            value[field],true,""});
-                    }
-                    cur_y += 3*74 + 4;
-                    if(rig) {
-                        const bool is_motion_focused = has_presets ? (selected == 4) : (selected == 3);
-                        bind(ui.button(value[3]==1?"Motion: On":"Motion: Off",right,cur_y,360,36,
-                            is_motion_focused,true,18),
-                            {{"action","control"},{"control",control.id},{"channel",3},{"value",value[3]==1?0:1}});
-                    }
-                    if(has_presets && selected==0) direction_hint(true,"Cycle preset");
-                    else if(rig && ((has_presets && selected==4) || (!has_presets && selected==3))) direction_hint(true,"Toggle motion");
-                    else direction_hint(true,"Adjust selected slider");
-                    action_button("secondary","Select next setting",795,Json{{"action","ui_channel"},{"count",fieldcount}},4);
-                    action_button("accept","Reset part",841,rows_[row_].accept,3);
-                    action_button("tertiary","Reset all",887,confirm_reset_all,2);
                 } else if(control.kind==ControlKind::Spring) {
-                    // Two or three sliders, the same shape as a group tint. The numbers are
-                    // frequency, damping ratio, and (with a clamp) travel; the words say what
-                    // they do. Travel is how far the part may swing, which is what keeps a
-                    // lively bounce on the body instead of letting it fly off.
-                    const int fieldcount=control.spring_clamp?3:2;
-                    const int selected=channel_%fieldcount;
-                    detail(control.name,worn->name,control.spring_clamp?
-                           "Bounce is how quickly this part moves, Settle how quickly it stops, "
-                           "Travel how far it swings. More travel is a bigger jiggle; if it keeps "
-                           "moving after you stop, turn Settle up.":
-                           "Bounce is how quickly this part moves. Settle is how quickly it stops. "
-                           "If it keeps going after you do, turn settle up.");
-                    const char* fields[]={"Bounce","Settle","Travel"};
-                    const float lows[]={control.minimum,control.damping_minimum,control.displacement_minimum};
-                    const float highs[]={control.maximum,control.damping_maximum,control.displacement_maximum};
-                    const float sizes[]={control.step,control.damping_step,control.displacement_step};
-                    for(int field=0;field<fieldcount;++field) {
-                        const double sy=controls_y+field*80;
-                        auto* heading=ui.label(fields[field],right,sy,230,28,19,field==selected?gold:ivory);
-                        auto* slider=construct(L"/Script/UMG.Slider",tree);
-                        invoke(slider,L"SetMinValue",L"InValue",lows[field]); invoke(slider,L"SetMaxValue",L"InValue",highs[field]);
-                        invoke(slider,L"SetStepSize",L"InValue",sizes[field]); invoke(slider,L"SetValue",L"InValue",value[field]);
-                        invoke(slider,L"SetSliderBarColor",L"InValue",Color{.10f,.09f,.07f,1}); invoke(slider,L"SetSliderHandleColor",L"InValue",gold);
-                        ui.place(slider,right,sy+29,262,30);
-                        // "1.60 Hz" needs more room than a bare number, so the readout is
-                        // wider here than on the channel sliders and the bar gives it back.
-                        const std::string readout=field==1?std::to_string(int(std::lround(value[1]*100)))+"%"
-                                                 :field==2?slider_text(value[2],true)+" cm"
-                                                 :slider_text(value[0],true)+" Hz";
-                        auto* label=ui.label(readout,right+270,sy+29,90,30,18);
-                        sliders_.push_back({WeakObject(slider),WeakObject(label),WeakObject(heading),
-                            {{"action","control"},{"control",control.id},{"channel",field},{"refresh",false}},
-                            value[field],true,field==1?"%":field==2?" cm":" Hz"});
+                    const bool has_presets = is_chest_or_glute_control(control);
+                    if(has_presets) {
+                        detail(control.name, worn->name,
+                               "Choose an anatomical motion preset below. To customize bounce frequency, settling damping, and travel limits, select Customize Sliders.");
+                        double cur_y = controls_y;
+                        ui.label("MOTION PRESETS", right, cur_y, 360, 20, 14, gold);
+                        cur_y += 24;
+
+                        const std::string active_pid = detect_body_physics_preset(control, value);
+                        const int total_presets = int(sizeof(kBodyPhysicsPresets)/sizeof(kBodyPhysicsPresets[0]));
+                        const double row_h = 44;
+                        const double row_gap = 4;
+
+                        for(int i=0; i<total_presets; ++i) {
+                            const auto& p = kBodyPhysicsPresets[i];
+                            const bool is_active = (active_pid == p.id);
+                            auto* btn = ui.button("", right, cur_y, 360, row_h, is_active, true);
+                            bind(btn, {{"action","physics_preset"},{"preset",p.id},{"control",control.id}});
+                            if(is_active) {
+                                ui.box(right, cur_y, 360, row_h, Color{.055f,.045f,.027f,1});
+                                ui.box(right, cur_y, 3, row_h, gold);
+                            }
+                            ui.selection_mark(right + 14, cur_y + 22, is_active);
+                            ui.label(p.name, right + 36, cur_y + 4, 210, 20, 16, is_active ? gold : ivory);
+                            ui.label(p.subtitle, right + 36, cur_y + 23, 310, 17, 12, muted);
+                            if(is_active) {
+                                auto* active_lbl = ui.label("Active", right + 296, cur_y + 4, 56, 20, 12, gold);
+                                invoke(active_lbl, L"SetJustification", L"InJustification", uint8_t{2});
+                            }
+                            cur_y += row_h + row_gap;
+                        }
+
+                        cur_y += 8;
+                        if(active_pid == "custom") {
+                            auto* custom_badge = ui.label("Active: Custom Sliders", right, cur_y, 360, 20, 13, gold);
+                            invoke(custom_badge, L"SetJustification", L"InJustification", uint8_t{1});
+                            cur_y += 24;
+                        }
+
+                        auto* cust_btn = ui.button("", right, cur_y, 360, 42, false, true);
+                        bind(cust_btn, {{"action","ui_physics_modal"},{"control",control.id}});
+                        ui.box(right, cur_y, 360, 42, Color{.04f,.034f,.022f,1});
+                        prompt("secondary", "Customize Sliders...", right + 24, cur_y + 7, 310, 4);
+                        cur_y += 50;
+
+                        direction_hint(true, "Cycle preset");
+                        action_button("accept", "Customize sliders", 841, {{"action","ui_physics_modal"},{"control",control.id}}, 3);
+                        action_button("secondary", "Reset part", 795, {{"action","reset_control"},{"control",control.id}}, 4);
+                        action_button("tertiary", "Reset all", 887, confirm_reset_all, 2);
+                    } else {
+                        const int fieldcount=control.spring_clamp?3:2;
+                        const int selected=channel_%fieldcount;
+                        detail(control.name,worn->name,control.spring_clamp?
+                               "Bounce is how quickly this part moves, Settle how quickly it stops, "
+                               "Travel how far it swings. More travel is a bigger jiggle; if it keeps "
+                               "moving after you stop, turn Settle up.":
+                               "Bounce is how quickly this part moves. Settle is how quickly it stops. "
+                               "If it keeps going after you do, turn settle up.");
+                        const char* fields[]={"Bounce Frequency","Settling Damping","Max Travel"};
+                        const float lows[]={control.minimum,control.damping_minimum,control.displacement_minimum};
+                        const float highs[]={control.maximum,control.damping_maximum,control.displacement_maximum};
+                        const float sizes[]={control.step,control.damping_step,control.displacement_step};
+                        for(int field=0;field<fieldcount;++field) {
+                            const double sy=controls_y+field*80;
+                            auto* heading=ui.label(fields[field],right,sy,230,28,18,field==selected?gold:ivory);
+                            auto* slider=construct(L"/Script/UMG.Slider",tree);
+                            invoke(slider,L"SetMinValue",L"InValue",lows[field]); invoke(slider,L"SetMaxValue",L"InValue",highs[field]);
+                            invoke(slider,L"SetStepSize",L"InValue",sizes[field]); invoke(slider,L"SetValue",L"InValue",value[field]);
+                            invoke(slider,L"SetSliderBarColor",L"InValue",Color{.10f,.09f,.07f,1}); invoke(slider,L"SetSliderHandleColor",L"InValue",gold);
+                            ui.place(slider,right,sy+29,262,30);
+                            const std::string readout=field==1?std::to_string(int(std::lround(value[1]*100)))+"%"
+                                                     :field==2?slider_text(value[2],true)+" cm"
+                                                     :slider_text(value[0],true)+" Hz";
+                            auto* label=ui.label(readout,right+270,sy+29,90,30,18);
+                            sliders_.push_back({WeakObject(slider),WeakObject(label),WeakObject(heading),
+                                {{"action","control"},{"control",control.id},{"channel",field},{"refresh",false}},
+                                value[field],true,field==1?"%":field==2?" cm":" Hz"});
+                        }
+                        direction_hint(true,"Adjust selected slider");
+                        action_button("secondary","Select next slider",795,Json{{"action","ui_channel"},{"count",fieldcount}},4);
+                        action_button("accept","Reset part",841,rows_[row_].accept,3);
+                        action_button("tertiary","Reset all",887,confirm_reset_all,2);
                     }
-                    if(is_chest_or_glute_control(control)) {
-                        const double py=controls_y+fieldcount*80+8;
-                        ui.label("PRESETS",right,py,360,20,14,muted);
-                        const double bw=114,bgap=9,by=py+22;
-                        const bool is_normal=std::abs(value[0]-2.0f)<0.15f&&std::abs(value[1]-0.35f)<0.10f;
-                        const bool is_more=std::abs(value[0]-1.5f)<0.15f&&std::abs(value[1]-0.15f)<0.08f;
-                        const bool is_earth=std::abs(value[0]-1.0f)<0.15f&&std::abs(value[1]-0.05f)<0.05f;
-                        bind(ui.button("Normal",right,by,bw,36,is_normal,true,16),
-                             {{"action","physics_preset"},{"preset","normal"},{"control",control.id}});
-                        bind(ui.button("More Jiggle",right+bw+bgap,by,bw,36,is_more,true,15),
-                             {{"action","physics_preset"},{"preset","more_jiggle"},{"control",control.id}});
-                        bind(ui.button("OMG! Earthquake!",right+(bw+bgap)*2,by,bw,36,is_earth,true,13),
-                             {{"action","physics_preset"},{"preset","earthquake"},{"control",control.id}});
-                    }
-                    direction_hint(true,"Adjust selected slider");
-                    action_button("secondary","Select next slider",795,Json{{"action","ui_channel"},{"count",fieldcount}},4);
-                    action_button("accept","Reset part",841,rows_[row_].accept,3);
-                    action_button("tertiary","Reset all",887,confirm_reset_all,2);
                 } else if(control.kind==ControlKind::Glow) {
                     detail(control.name,worn->name,"Adjust emissive glow radiance. Turn up intensity for arcane luminescence; breathing pulse animates in combat.");
                     const int fieldcount=control.pulse_hz>0?2:1;
@@ -1197,6 +1332,94 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         prompt("accept", "Select", mx + mw - 220, my + mh - 53, 180, 3);
         build_native_picker_results();
     }
+    if(!physics_modal_control_.empty() && worn && selection != state.selections.end()) {
+        const auto& options = worn->controls_for(selection->second.variant);
+        const auto* ctrl = options.find(physics_modal_control_);
+        if(ctrl) {
+            const auto& custom = selection->second.custom;
+            auto values = control_values(options, custom);
+            auto value = values.contains(ctrl->id) ? values.at(ctrl->id) : ctrl->value;
+            const bool rig = (ctrl->kind == ControlKind::Rig);
+            const bool body = body_rig_control(*ctrl);
+            const bool is_spring = (ctrl->kind == ControlKind::Spring);
+
+            std::string title = ctrl->name.empty() ? ctrl->id : ctrl->name;
+            for(char& c : title) c = char(std::toupper(static_cast<unsigned char>(c)));
+            const auto m = modal_box("CUSTOMIZE " + title, std::min(720., width - 140.), 660);
+            const double mx = m[0], my = m[1], mw = m[2], mh = m[3];
+
+            auto* sub = ui.label("Fine-tune bounce frequency, settling damping, and displacement limits in real-time.", mx + 36, my + 114, mw - 72, 22, 14, muted);
+            invoke(sub, L"SetJustification", L"InJustification", uint8_t{1});
+
+            const char* field_names[] = {
+                body ? "Bounce Frequency" : (is_spring ? "Bounce Frequency" : "Stiffness"),
+                body ? "Damping Ratio" : (is_spring ? "Settling Damping" : "Damping"),
+                body ? "Motion Travel" : (is_spring ? "Max Travel" : "Gravity")
+            };
+            const char* field_units[] = {
+                " Hz",
+                is_spring ? "%" : "",
+                is_spring ? " cm" : (body ? "x" : "")
+            };
+            const char* field_hints[] = {
+                "Natural oscillation rate. Higher values bounce faster; lower values swing with heavier inertia.",
+                "How quickly movement settles. Higher damping eliminates wobble; lower damping creates bounce.",
+                "Displacement travel factor in response to movement, attacks, dodging, and acceleration impulses."
+            };
+
+            for(int field = 0; field < 3; ++field) {
+                const auto range = control_channel(*ctrl, field);
+                const double sy = my + 142 + field * 114;
+                const bool is_focused = (physics_modal_channel_ == field);
+
+                auto* heading = ui.label(field_names[field], mx + 36, sy, 320, 24, 17, is_focused ? gold : ivory);
+
+                std::string readout;
+                if(is_spring && field == 1) readout = std::to_string(int(std::lround(value[1] * 100))) + "%";
+                else readout = slider_text(value[field], true) + field_units[field];
+
+                auto* label = ui.label(readout, mx + mw - 156, sy, 120, 24, 17, gold);
+                invoke(label, L"SetJustification", L"InJustification", uint8_t{2});
+
+                auto* slider = construct(L"/Script/UMG.Slider", tree);
+                invoke(slider, L"SetMinValue", L"InValue", range.minimum);
+                invoke(slider, L"SetMaxValue", L"InValue", range.maximum);
+                invoke(slider, L"SetStepSize", L"InValue", range.step);
+                invoke(slider, L"SetValue", L"InValue", value[field]);
+                invoke(slider, L"SetSliderBarColor", L"InValue", Color{.10f, .09f, .07f, 1});
+                invoke(slider, L"SetSliderHandleColor", L"InValue", gold);
+                ui.place(slider, mx + 36, sy + 26, mw - 72, 28);
+
+                ui.label(field_hints[field], mx + 36, sy + 58, mw - 72, 26, 12, muted);
+
+                sliders_.push_back({WeakObject(slider), WeakObject(label), WeakObject(heading),
+                    {{"action","control"},{"control",ctrl->id},{"channel",field},{"ui_channel",field},{"refresh",false}},
+                    value[field], true, field_units[field]});
+            }
+
+            const double btn_row_y = my + 490;
+            if(rig) {
+                const bool motion_on = (value[3] == 1);
+                const bool is_toggle_focused = (physics_modal_channel_ == 3);
+                auto* toggle_btn = ui.button(motion_on ? "Motion: Enabled" : "Motion: Disabled", mx + 36, btn_row_y, (mw - 84) / 2, 42, is_toggle_focused, true, 16);
+                bind(toggle_btn, {{"action","control"},{"control",ctrl->id},{"channel",3},{"value",motion_on ? 0 : 1}});
+            }
+
+            const bool is_reset_focused = (physics_modal_channel_ == 4);
+            auto* reset_btn = ui.button("Reset Part Defaults", mx + (rig ? (mw / 2 + 6) : 36), btn_row_y, rig ? ((mw - 84) / 2) : (mw - 72), 42, is_reset_focused, true, 16);
+            bind(reset_btn, {{"action","reset_control"},{"control",ctrl->id}});
+
+            const double bot_y = my + mh - 64;
+            const double bot_w = 160;
+            bind(ui.button("", mx + 24, bot_y, bot_w, 44), {{"action", "ui_physics_modal_close"}});
+            ui.box(mx + 24, bot_y, bot_w, 44, Color{.024f, .021f, .016f, 1});
+            prompt("close", "Close", mx + 36, bot_y + 8, bot_w - 24, 5);
+
+            bind(ui.button("", mx + mw - bot_w - 24, bot_y, bot_w, 44, true), {{"action", "ui_physics_modal_close"}});
+            ui.box(mx + mw - bot_w - 24, bot_y, bot_w, 44, Color{.06f, .048f, .026f, 1});
+            prompt("accept", "Done", mx + mw - bot_w - 10, bot_y + 8, bot_w - 24, 3);
+        }
+    }
     transition_widgets_.clear();
     // The slide-in needs every widget on the page and where it sits. That used to mean
     // asking the engine to enumerate the canvas, which is bounded, and one panel wide
@@ -1268,8 +1491,8 @@ Json InventoryUI::dispatch(Json action,const State& state) {
     if(action.is_null()) return {};
     auto name=action.value("action","");
     if(name.starts_with("x_")) return dispatch_extension(action);
-    if(name=="ui_section") { const int next=std::clamp(action.at("section").get<int>(),0,3); if(next==section_) return {}; section_=next; enter_transition_=true; row_=0; scroll_offset_=0; if(auto* s=scroll_.Get()) invoke(s,L"SetScrollOffset",L"NewScrollOffset",0.f); dirty_=true; return {}; }
-    if(name=="ui_row") { row_=std::clamp(action.at("row").get<int>(),0,std::max(0,int(rows_.size())-1)); dirty_=true; if(section_!=1 && action.value("apply",false) && !rows_.empty()) return dispatch(rows_[row_].accept,state); return {}; }
+    if(name=="ui_section") { const int next=std::clamp(action.at("section").get<int>(),0,3); if(next==section_) return {}; section_=next; enter_transition_=true; row_=0; scroll_offset_=0; physics_modal_control_.clear(); if(auto* s=scroll_.Get()) invoke(s,L"SetScrollOffset",L"NewScrollOffset",0.f); dirty_=true; return {}; }
+    if(name=="ui_row") { row_=std::clamp(action.at("row").get<int>(),0,std::max(0,int(rows_.size())-1)); physics_modal_control_.clear(); dirty_=true; if(section_!=1 && action.value("apply",false) && !rows_.empty()) return dispatch(rows_[row_].accept,state); return {}; }
     // The channel count comes from the page, because a spring has two and a colour three.
     if(name=="ui_channel") { channel_=(channel_+1)%std::clamp(action.value("count",3),1,4); dirty_=true; return {}; }
     if(name=="ui_tint_field") { tint_field_index_=(tint_field_index_+1)%3; dirty_=true; return {}; }
@@ -1282,7 +1505,19 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         return {};
     }
     if(name=="ui_close") {
+        physics_modal_control_.clear();
         if(active_ && !closing_) { closing_=true; transition_started_=GetTickCount64(); }
+        return {};
+    }
+    if(name=="ui_physics_modal") {
+        physics_modal_control_ = action.value("control", std::string{});
+        physics_modal_channel_ = 0;
+        dirty_ = true;
+        return {};
+    }
+    if(name=="ui_physics_modal_close") {
+        physics_modal_control_.clear();
+        dirty_ = true;
         return {};
     }
     if(name=="ui_confirm") {
@@ -1751,7 +1986,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     if(extension_active_ && !extension_id_.empty()) for(const auto& entry:extension_library_.at("extensions"))
         if(entry.at("id")==extension_id_) character_controls=entry.at("layout")=="inventory";
     if(extension_picker_ && extension_search_input_.Get()) {Call focus(extension_search_input_.Get(),L"HasKeyboardFocus",1);focus.run();typing=typing || focus.get<bool>();}
-    if(extension_details_ || extension_picker_ || !extension_confirm_.is_null() || native_picker_ || !confirm_action_.is_null()) character_controls=false;
+    if(extension_details_ || extension_picker_ || !extension_confirm_.is_null() || native_picker_ || !confirm_action_.is_null() || !physics_modal_control_.empty()) character_controls=false;
     if(!typing && character_controls) camera_update(elapsed,state.invert_orbit_x);
     else { motion_.reset(); drag_pan_=drag_rotate_=false; }
     if(extension_active_ && !typing && now>=extension_wheel_after_) {
@@ -1781,7 +2016,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     if(typing) for(auto& binding:bindings_) {
         bool down=false,allowed=false;
         for(const auto& key:binding.keys) if(inventory_key(controller_.Get(),key)) {
-            down=true;if((extension_picker_ || native_picker_) && (key.starts_with("Gamepad_") || key=="Escape")) allowed=true;
+            down=true;if((extension_picker_ || native_picker_ || !physics_modal_control_.empty()) && (key.starts_with("Gamepad_") || key=="Escape")) allowed=true;
         }
         const bool repeat=binding.action=="up" || binding.action=="down";
         const bool trigger=allowed && down && (!binding.down || (repeat && now>=binding.repeat));
@@ -1796,6 +2031,9 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
                 if(binding.action=="down") { native_options_.move(1); build_native_picker_results(); return {}; }
                 if(binding.action=="accept") return dispatch({{"action","ui_pick_apply"}},state);
                 if(binding.action=="close") return dispatch({{"action","ui_pick_cancel"}},state);
+            }
+            if(!physics_modal_control_.empty()) {
+                if(binding.action=="close") return dispatch({{"action","ui_physics_modal_close"}},state);
             }
         }
     }
@@ -1819,6 +2057,50 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
             if(binding.action=="close") return dispatch({{"action","ui_pick_cancel"}},state);
             continue;
         }
+        if(!physics_modal_control_.empty()) {
+            if(binding.action=="close") return dispatch({{"action","ui_physics_modal_close"}},state);
+            const int max_channels = 5; // 0, 1, 2 = sliders, 3 = toggle motion, 4 = reset part defaults
+            if(binding.action=="up") {
+                physics_modal_channel_ = (physics_modal_channel_ - 1 + max_channels) % max_channels;
+                dirty_ = true; return {};
+            }
+            if(binding.action=="down") {
+                physics_modal_channel_ = (physics_modal_channel_ + 1) % max_channels;
+                dirty_ = true; return {};
+            }
+            if(binding.action=="left" || binding.action=="right") {
+                const float dir = binding.action=="right" ? 1.0f : -1.0f;
+                if(physics_modal_channel_ >= 0 && physics_modal_channel_ <= 2) {
+                    dirty_ = true;
+                    return dispatch({{"action","control"},{"control",physics_modal_control_},{"channel",physics_modal_channel_},{"delta",dir}},state);
+                }
+            }
+            if(binding.action=="accept") {
+                if(physics_modal_channel_ == 3 && catalog_ && appearance_) {
+                    auto sel = state.selections.find(appearance_->shell);
+                    const Outfit* worn_outfit = nullptr;
+                    if(sel != state.selections.end()) {
+                        for(const auto& o : catalog_->outfits) {
+                            if(o.id == sel->second.outfit) { worn_outfit = &o; break; }
+                        }
+                    }
+                    if(worn_outfit) {
+                        const auto& opts = worn_outfit->controls_for(sel->second.variant);
+                        const auto* ctrl = opts.find(physics_modal_control_);
+                        if(ctrl) {
+                            auto vals = control_values(opts, sel->second.custom);
+                            float cur = vals.contains(ctrl->id) ? vals.at(ctrl->id)[3] : ctrl->value[3];
+                            return dispatch({{"action","control"},{"control",physics_modal_control_},{"channel",3},{"value",cur == 1.f ? 0.f : 1.f}},state);
+                        }
+                    }
+                } else if(physics_modal_channel_ == 4) {
+                    return dispatch({{"action","reset_control"},{"control",physics_modal_control_}},state);
+                } else {
+                    return dispatch({{"action","ui_physics_modal_close"}},state);
+                }
+            }
+            continue;
+        }
         if(binding.action=="close") return dispatch({{"action","ui_close"}},state);
         if(binding.action=="reset_view") return dispatch({{"action",light_edit_?"ui_reset_light":"ui_reset_view"}},state);
         if(binding.action=="toggle_light") {
@@ -1834,6 +2116,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         }
         const auto& row=rows_[row_];
         auto action=binding.action=="left"?row.previous:binding.action=="right"?row.next:binding.action=="accept"?row.accept:binding.action=="secondary"?row.secondary:row.tertiary;
+        dirty_=true;
         return dispatch(action,state);
     }
     for(auto& slider:sliders_) if(auto* widget=slider.widget.Get()) {

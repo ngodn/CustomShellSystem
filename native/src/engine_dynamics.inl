@@ -157,6 +157,16 @@ struct RigInputs {
     }
 };
 
+bool has_rig_inputs(UObject* instance) {
+    if(!instance || !instance->IsA(static_cast<UClass*>(find(L"/Script/Engine.AnimInstance"))) ||
+       instance->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject|RF_ArchetypeObject)))
+        return false;
+    auto* owner=instance->GetClassPrivate();
+    if(!owner || !narrow(owner->GetPathName()).starts_with("/Game/CSS/"))
+        return false;
+    return owner->GetPropertyByNameInChain(L"CSSStiffness") != nullptr;
+}
+
 RigInputs rig_inputs(UObject* instance) {
     if(!instance || !instance->IsA(static_cast<UClass*>(find(L"/Script/Engine.AnimInstance"))) ||
        instance->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject|RF_ArchetypeObject)))
@@ -250,6 +260,16 @@ struct BodyRigInputs {
         advance_rig_epoch(instance,epoch);
     }
 };
+
+bool has_body_rig_inputs(UObject* instance) {
+    if(!instance || !instance->IsA(static_cast<UClass*>(find(L"/Script/Engine.AnimInstance"))) ||
+       instance->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject|RF_ArchetypeObject)))
+        return false;
+    auto* owner=instance->GetClassPrivate();
+    if(!owner || !narrow(owner->GetPathName()).starts_with("/Game/CSS/"))
+        return false;
+    return owner->GetPropertyByNameInChain(L"CSSBodyRegionFrequencies") != nullptr;
+}
 
 BodyRigInputs body_rig_inputs(UObject* instance) {
     if(!instance || !instance->IsA(static_cast<UClass*>(find(L"/Script/Engine.AnimInstance"))) ||

@@ -324,7 +324,7 @@ ControlSet ControlSet::parse(const Json& j) {
             c.contains("role")?role_hue_locked(control.role):fallback.hue_locked);
         control.minimum=c.value("min",0.f);
         control.maximum=c.value("max",control.kind==ControlKind::Glow?32.f:1.f);
-        control.step=c.value("step",.01f);
+        control.step=c.value("step",control.kind==ControlKind::Shape?.02f:.01f);
         // A toggle is on or off. It has no range to declare, so it is given one rather
         // than letting a package invent a half-hidden section.
         if(control.kind==ControlKind::Toggle) { control.minimum=0; control.maximum=1; control.step=1; }
@@ -394,9 +394,9 @@ ControlSet ControlSet::parse(const Json& j) {
             } else for(const auto* key:{"frequency","damping_ratio","motion_amount","regions"})
                 if(c.contains(key)) throw std::runtime_error("Hair rig does not accept body settings");
             const char* names[]={settings.body?"frequency":"stiffness",settings.body?"damping_ratio":"damping",settings.body?"motion_amount":"gravity"};
-            const float low[]={settings.body?.5f:1,settings.body?.1f:0,settings.body?0.f:-5},
-                        high[]={settings.body?6.f:1000,settings.body?2.f:120,settings.body?1.f:5},
-                        steps[]={settings.body?.1f:1,settings.body?.05f:1,.05f};
+            const float low[]={settings.body?.2f:1,settings.body?.01f:0,settings.body?0.f:-5},
+                        high[]={settings.body?10.f:1000,settings.body?3.f:120,settings.body?5.f:5},
+                        steps[]={settings.body?.05f:1,settings.body?.01f:1,.05f};
             for(size_t i=0;i<3;++i) {
                 const auto& r=c.at(names[i]);
                 if(!r.is_object() || r.size()!=3 || !r.contains("min") || !r.contains("max") || !r.contains("default"))

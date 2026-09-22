@@ -1,6 +1,7 @@
 // Transforms belong to one preview instance, never a shared light template.
 bool InventoryUI::light_available() const {
     if(!active_ || extension_active_ || closing_ || native_picker_ || !confirm_action_.is_null() ||
+       !physics_modal_control_.empty() ||
        !inventory_bool(main_.Get(),L"bOpen") || !display_.Get() || !camera_component_.Get()) return false;
     auto* native=inventory_object(main_.Get(),L"WBP_MGT_Character");
     if(!native || !native->GetFunctionByNameInChain(L"IsMenuOpen")) return false;
