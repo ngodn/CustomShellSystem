@@ -412,7 +412,7 @@ void Menu::key(const std::string& action) {
         return;
     }
     if(screen_==Screen::Library) {
-        const int count=int(library_["extensions"].size())+1;   // + CSSX settings entry
+        const int count=int(library_["extensions"].size());
         if(action=="up" || action=="down") { library_row_=std::clamp(library_row_+(action=="up"?-1:1),0,std::max(0,count-1)); dirty_=true; }
         else if(action=="accept") act({{"action","open"},{"row",library_row_}});
         else if(action=="previous_section" || action=="next_section") act({{"action","framework_tab"},{"section",1}});
@@ -462,7 +462,7 @@ void Menu::act(const Json& action) {
     if(name=="open") {
         const int row=action.value("row",library_row_); library_row_=row;
         const auto& entries=library_["extensions"];
-        if(row>=int(entries.size())) { screen_=Screen::Settings; settings_row_=0; dirty_=true; enter_=true; return; }
+        if(row>=int(entries.size())) return;
         const auto& entry=entries[row];
         if(!entry.value("available",false)) { error_="This extension is unavailable: "+entry.value("error",std::string{}); dirty_=true; return; }
         extension_id_=entry.at("id").get<std::string>(); screen_=Screen::Extension; section_=row_=first_row_=0; confirm_=nullptr;
@@ -574,15 +574,20 @@ void Menu::frame(Layout& ui,double width,const std::string& title,const std::str
     const double strip_y=strip_top;
     double x=70;
     if(tabs.size()>1) { prompt(ui,"previous_section","",x,strip_y+6,40,glyph_left_bumper); x+=60; }
-    for(size_t i=0;i<tabs.size();++i) {
-        std::string name=tabs[i]; for(auto& ch:name) ch=char(std::toupper((unsigned char)ch));
-        const double w=28+name.size()*11.5; const bool on=int(i)==selected;
+    // Fit the strip: Trajan capitals are wide, so measure at 15 px and shrink
+    // the face until every tab fits between the two bumper glyphs.
+    std::vector<std::string> names; double total=0;
+    for(const auto& t:tabs) { std::string n=t; for(auto& ch:n) ch=char(std::toupper((unsigned char)ch)); names.push_back(n); total+=36+n.size()*12.2; }
+    const double avail=width-70-x-80; float size=15; double per=1;
+    if(total>avail) { size=float(std::max(11.0,15.0*avail/total)); per=avail/total; }
+    for(size_t i=0;i<names.size();++i) {
+        const double w=(36+names[i].size()*12.2)*per; const bool on=int(i)==selected;
         auto* hit=ui.button("",x,strip_y,w,40,on,true); hits_.push_back({WeakObject(hit),{{"action",tab_action},{"section",int(i)}},false});
-        ui.label(name,x,strip_y+9,w,28,15,on?bright:ink,true,1);
-        if(on) ui.box(x+6,strip_y+40,w-12,2,gold);
-        x+=w+6;
+        ui.label(names[i],x,strip_y+9+(15-size)/2,w,28,size,on?bright:ink,true,1);
+        if(on) ui.box(x+8,strip_y+40,w-16,2,gold);
+        x+=w;
     }
-    if(tabs.size()>1) prompt(ui,"next_section","",x+8,strip_y+6,40,glyph_right_bumper);
+    if(tabs.size()>1) prompt(ui,"next_section","",x+12,strip_y+6,40,glyph_right_bumper);
     ui.box(70,strip_top+52,width-140,1,line);
 }
 std::string Menu::perf_line(bool brief) const {
@@ -649,8 +654,8 @@ void Menu::build() {
 void Menu::build_library(Layout& ui,double width) {
     const auto& entries=library_["extensions"];
     frame(ui,width,"Extensions","CSSX "+deps_.version,{"Library","Settings"},0,"framework_tab");
-    const int count=int(entries.size())+1;
-    library_row_=std::clamp(library_row_,0,count-1);
+    const int count=int(entries.size());
+    library_row_=std::clamp(library_row_,0,std::max(0,count-1));
     const double list_x=70,list_w=std::min(1000.,width*0.50),row_h=66,top=content_top,panel_h=reference_h-128-16-content_top;
     const int visible=std::max(3,int((panel_h-20)/row_h));
     const int first=std::clamp(library_row_-visible+1,0,std::max(0,count-visible));
@@ -659,7 +664,7 @@ void Menu::build_library(Layout& ui,double width) {
         auto* hit=ui.button("",list_x,y,list_w,row_h-6,selected,true);
         hits_.push_back({WeakObject(hit),{{"action","open"},{"row",i}},false});
         if(selected) { ui.box(list_x,y,list_w,row_h-6,row_selected); ui.box(list_x,y+9,3,row_h-24,gold); }
-        if(i<int(entries.size())) {
+        {
             const auto& e=entries[i]; const bool available=e.value("available",false);
             ui.label(e.value("title",std::string{}),list_x+24,y+7,list_w*0.62,32,22,available?(selected?bright:ink):muted);
             ui.label("by "+e.value("author",std::string{})+"  /  "+e.value("version",std::string{}),list_x+24,y+37,list_w*0.62,22,14,muted);
@@ -667,9 +672,6 @@ void Menu::build_library(Layout& ui,double width) {
             if(!deps_.settings->show_extension_status && available) right.clear();
             const bool active=available && e.value("status",Json::object()).value("active",false);
             ui.label(right,list_x+list_w*0.64,y+15,list_w*0.34,32,17,available?(active?good:muted):danger,false,2);
-        } else {
-            ui.label("CSSX settings",list_x+24,y+7,list_w*0.62,32,22,selected?bright:ink);
-            ui.label("Scale, status, open keys, performance",list_x+24,y+37,list_w*0.62,22,14,muted);
         }
     }
     if(count>visible) {
@@ -722,7 +724,8 @@ void Menu::build_settings(Layout& ui,double width) {
     const std::vector<Row> rows={
         {"Menu scale",scale,"Size of this page relative to the 1080p layout. 75% to 150%."},
         {"Show extension status in the library",s.show_extension_status?"On":"Off","Extensions can report a one-line status, for example active cheats."},
-        {"Open keys",[&]{ std::string t; for(const auto& k:s.open_keyboard) t+=(t.empty()?"":"+")+k; t+="  /  "; std::string g; for(const auto& k:s.open_gamepad) g+=(g.empty()?"":"+")+k; return t+g; }(),"Shortcut that opens the Player Menu on the CSSX tab. Edit open_keyboard and open_gamepad in settings.json with the game closed (Unreal key names)."},
+        {"Open keys",[&]{ auto shortname=[](std::string k){ if(k=="Gamepad_LeftThumbstick") return std::string("L3"); if(k=="Gamepad_RightThumbstick") return std::string("R3"); if(k.starts_with("Gamepad_")) k=k.substr(8); return k; };
+            std::string t; for(const auto& k:s.open_keyboard) t+=(t.empty()?"":"+")+k; t+="  /  "; std::string g; for(const auto& k:s.open_gamepad) g+=(g.empty()?"":"+")+shortname(k); return t+g; }(),"Shortcut that opens the Player Menu on the CSSX tab. Edit open_keyboard and open_gamepad in settings.json with the game closed (Unreal key names)."},
         {"Performance",perf_line(true),perf_detail()}};
     settings_row_=std::clamp(settings_row_,0,int(rows.size())-1);
     const double x=70,w=std::min(1000.,width*0.50),row_h=62,top=content_top,panel_h=reference_h-128-16-content_top;
