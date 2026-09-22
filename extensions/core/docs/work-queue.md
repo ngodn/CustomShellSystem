@@ -2,6 +2,12 @@
 
 Newest first. Each entry says what is done, what evidence exists and what is next.
 
+2026-09-22 (v1.0.0): Tag `v1.0.0-cssx` on the rc2 commit; ZIPs in
+`dist/v1.0.0/` (MSII-CSSX-v1.0.0.zip febd278a…, CSSX-Cheat-Menu-v1.0.0.zip
+acc0e4c7…), verified. The exact release DLLs are installed in Mods/CSSX for
+the user's next launch; if that run differs from the dev build the tag is
+replaced before upload. Public upload is the user's.
+
 2026-09-22 (rc2): User accepted unlocks, grants, controller navigation and
 beacon travel ("seems good, we can release"). Last fixes before the tag:
 action parameters no longer gate actions (D14), disabled reasons, the CSSX
