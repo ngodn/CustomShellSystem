@@ -310,6 +310,19 @@ Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& re
         }
         return result;
     }
+    if(op=="functions") {
+        Json result=Json::array();std::set<std::string> seen;unsigned depth=0;
+        for(UStruct* type=object->IsA<UStruct>()?static_cast<UStruct*>(object):object->GetClassPrivate();type;type=type->GetSuperStruct()) {
+            if(++depth>64) throw std::runtime_error("CSSX class hierarchy exceeds bound");
+            for(auto* fn:type->ForEachFunction()) {
+                auto name=narrow(fn->GetName());if(!seen.insert(name).second) continue;
+                if(result.size()>=2048) throw std::runtime_error("CSSX function metadata exceeds bound");
+                result.push_back(name);
+            }
+            if(!request.value("inherited",false)) break;
+        }
+        return result;
+    }
     if(op=="call" || op=="describe") {
         const auto name=wide(request.at("function").get<std::string>());auto* fn=object->GetFunctionByNameInChain(name.c_str());
         if(!fn) throw std::runtime_error("CSSX function is missing: "+request.at("function").get<std::string>());
@@ -329,6 +342,17 @@ Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& re
                     Json entries=Json::array();
                     for(int i=0;i<count;++i) {auto entry=enumeration->GetEnumNameByIndex(i);entries.push_back({{"name",narrow(entry.Key.ToString())},{"value",entry.Value}});}
                     result[key]["enum"]=std::move(entries);
+                }
+                if(p->IsA<FStructProperty>()) {
+                    auto* st=static_cast<FStructProperty*>(p)->GetStruct().Get();
+                    if(st) {
+                        result[key]["struct"]=narrow(st->GetName());
+                        Json fields=Json::array();
+                        for(auto* field:st->ForEachProperty()) {
+                            fields.push_back({{"name",narrow(field->GetName())},{"size",field->GetElementSize()}});
+                        }
+                        result[key]["fields"]=std::move(fields);
+                    }
                 }
                 continue;
             }
