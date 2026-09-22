@@ -573,17 +573,19 @@ void Menu::frame(Layout& ui,double width,double column_w,const std::string& titl
     ui.label(title,tx,116,tw,52,30,bright,true);
     ui.label(subtitle,tx+4,166,tw,28,16,muted);
     const double y=strip_top,left=70,right=70+column_w;
-    // Tabs in Trajan capitals with a fixed gap. When they do not fit between
-    // the two bumper glyphs, a window of tabs around the selected one shows
-    // and the glyphs say there is more; bumpers and mouse still reach all.
+    // Tabs in Trajan capitals. Slate lays the strip out (a horizontal box of
+    // auto-sized tabs with fixed padding) so the gaps are exact whatever the
+    // font's metrics are. The estimate below only decides how many tabs fit
+    // between the two bumper glyphs; hidden ones are reachable by bumper.
+    auto glyph_w=[](char c){ switch(c) { case 'I': case 'J': case 'L': case '1': case ' ': return 8.0; case 'M': case 'W': return 20.0;
+        case 'A': case 'H': case 'K': case 'N': case 'U': case 'V': case 'X': case 'Y': case 'D': case 'G': case 'O': case 'Q': return 16.0; default: return 14.0; } };
     std::vector<std::string> names; std::vector<double> widths;
-    for(const auto& t:tabs) { std::string n=t; for(auto& ch:n) ch=char(std::toupper((unsigned char)ch)); names.push_back(n); widths.push_back(24+n.size()*12.6); }
+    for(const auto& t:tabs) { std::string n=t; for(auto& ch:n) ch=char(std::toupper((unsigned char)ch)); double w=30; for(char c:n) w+=glyph_w(c); names.push_back(n); widths.push_back(w); }
     const bool many=tabs.size()>1;
-    const double avail=right-left-(many?2*56:0);
+    const double avail=right-left-(many?2*60:0)-40;
     size_t first=0,last=names.size();
-    { double total=0; for(double w:widths) total+=w; 
+    { double total=0; for(double w:widths) total+=w;
       if(total>avail) {
-        // grow a window around the selection: selected first, then neighbours
         size_t lo=size_t(std::clamp(selected,0,int(names.size())-1)),hi=lo+1; double used=widths[lo];
         while(true) {
             bool grew=false;
@@ -594,16 +596,35 @@ void Menu::frame(Layout& ui,double width,double column_w,const std::string& titl
         first=lo; last=hi;
       } }
     double x=left;
-    if(many) { prompt(ui,"previous_section","",x,y+6,40,glyph_left_bumper); x+=56; }
-    if(first>0) ui.label("...",x-14,y+8,20,28,15,muted,true,1);
-    for(size_t i=first;i<last;++i) {
-        const double w=widths[i]; const bool on=int(i)==selected;
-        auto* hit=ui.button("",x,y,w,40,on,true); hits_.push_back({WeakObject(hit),{{"action",tab_action},{"section",int(i)}},false});
-        ui.label(names[i],x,y+9,w,28,15,on?bright:ink,true,1);
-        if(on) ui.box(x+8,y+40,w-16,2,gold);
-        x+=w;
-    }
-    if(last<names.size()) ui.label("...",x-4,y+8,20,28,15,muted,true,1);
+    if(many) { prompt(ui,"previous_section","",x,y+6,40,glyph_left_bumper); x+=60; }
+    auto* box=construct(L"/Script/UMG.HorizontalBox",ui.tree);
+    ui.place(box,x,y,right-60-x,48);
+    auto add_text=[&](const std::string& text,Color color,bool on,const Json* action)->UObject* {
+        auto* button=construct(L"/Script/UMG.Button",ui.tree); flat_button(button,on);
+        { auto* focusable=button->GetPropertyByNameInChain(L"IsFocusable"); if(focusable && focusable->IsA<FBoolProperty>()) static_cast<FBoolProperty*>(focusable)->SetPropertyValueInContainer(button,false); }
+        invoke(button,L"SetBackgroundColor",L"InBackgroundColor",Color{1,1,1,1});
+        auto* column=construct(L"/Script/UMG.VerticalBox",ui.tree);
+        auto* label=construct(L"/Script/UMG.TextBlock",ui.tree);
+        text_value(label,text); font_size(label,15*float(ui.scale),ui.title_font);
+        invoke(label,L"SetColorAndOpacity",L"InColorAndOpacity",SlateColor{color});
+        invoke(label,L"SetVisibility",L"InVisibility",uint8_t{3});
+        { Call add(column,L"AddChildToVerticalBox",2); add.set(L"content",label); add.run(); auto* slot=add.get<UObject*>();
+          invoke(slot,L"SetPadding",L"InPadding",Margin{float(14*ui.scale),float(9*ui.scale),float(14*ui.scale),float(4*ui.scale)}); }
+        auto* underline=construct(L"/Script/UMG.Border",ui.tree);
+        invoke(underline,L"SetBrushColor",L"InBrushColor",on?gold:Color{0,0,0,0});
+        invoke(underline,L"SetPadding",L"InPadding",Margin{0,float(1*ui.scale),0,float(1*ui.scale)});
+        invoke(underline,L"SetVisibility",L"InVisibility",uint8_t{4});
+        { Call add(column,L"AddChildToVerticalBox",2); add.set(L"content",underline); add.run(); auto* slot=add.get<UObject*>();
+          invoke(slot,L"SetPadding",L"InPadding",Margin{float(8*ui.scale),0,float(8*ui.scale),0}); invoke(slot,L"SetHorizontalAlignment",L"InHorizontalAlignment",uint8_t{3}); }
+        { Call add(button,L"AddChild",2); add.set(L"content",column); add.run(); }
+        { Call add(box,L"AddChildToHorizontalBox",2); add.set(L"content",button); add.run(); auto* slot=add.get<UObject*>();
+          invoke(slot,L"SetPadding",L"InPadding",Margin{0,0,float(4*ui.scale),0}); invoke(slot,L"SetVerticalAlignment",L"InVerticalAlignment",uint8_t{2}); }
+        if(action) hits_.push_back({WeakObject(button),*action,false});
+        return button;
+    };
+    if(first>0) { Json prev={{"action",tab_action},{"section",int(first)-1}}; add_text("...",muted,false,&prev); }
+    for(size_t i=first;i<last;++i) { Json act={{"action",tab_action},{"section",int(i)}}; add_text(names[i],int(i)==selected?bright:ink,int(i)==selected,&act); }
+    if(last<names.size()) { Json next={{"action",tab_action},{"section",int(last)}}; add_text("...",muted,false,&next); }
     if(many) prompt(ui,"next_section","",right-44,y+6,40,glyph_right_bumper);
     ui.box(left,strip_top+52,column_w,1,line);
 }
