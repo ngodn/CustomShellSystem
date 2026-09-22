@@ -248,7 +248,6 @@ static UObject* material_asset(UObject* value) {
     std::set<UObject*> seen;
     while(dynamic_material(value)) {
         if(seen.size()>=16 || !seen.insert(value).second) throw std::runtime_error("Invalid dynamic material parent chain");
-        if(material_has_overrides(value)) throw std::runtime_error("A material effect still owns parameter overrides. Let it finish before changing appearance.");
         value=read<UObject*>(value,L"Parent");
         if(!value) throw std::runtime_error("Dynamic material has no asset parent");
     }
@@ -613,12 +612,14 @@ static bool is_blocking_camera_state(UObject* state) {
     auto* klass = state->GetClassPrivate();
     if(!klass) return false;
     std::string name = narrow(klass->GetName());
+    if(name.find("Menu") != std::string::npos) return false;
     if(name.find("BoneGate") != std::string::npos ||
        name.find("GateCleansed") != std::string::npos ||
        name.find("Beacon") != std::string::npos ||
        name.find("Traversal") != std::string::npos ||
-       name.find("Memory") != std::string::npos ||
+       name.find("ShellMemory") != std::string::npos ||
        name.find("Teleport") != std::string::npos ||
+       name.find("FastTravel") != std::string::npos ||
        name.find("Skydive") != std::string::npos ||
        name.find("Spline") != std::string::npos ||
        name.find("Tarforge") != std::string::npos ||
@@ -627,15 +628,6 @@ static bool is_blocking_camera_state(UObject* state) {
        name.find("Cutscene") != std::string::npos ||
        name.find("Sequence") != std::string::npos) {
         return true;
-    }
-    for(const UStruct* k = klass->GetSuperStruct(); k; k = k->GetSuperStruct()) {
-        std::string sname = narrow(k->GetName());
-        if(sname == "CSCameraState_Fixed" ||
-           sname == "CSCameraState_Action" ||
-           sname == "CSCameraState_ProgressCameraActors" ||
-           sname == "CSCameraState_CameraActor") {
-            return true;
-        }
     }
     return false;
 }
@@ -711,15 +703,6 @@ static bool is_quest_or_teleport_active(UObject* pc) {
                     }
                 }
             }
-            auto* stack_prop = cam_mgr->GetPropertyByNameInChain(L"CameraStack");
-            if(stack_prop && stack_prop->IsA<FArrayProperty>()) {
-                auto* arr = static_cast<FArrayProperty*>(stack_prop);
-                FScriptArrayHelper_InContainer helper(arr, cam_mgr);
-                for(int32_t i = 0; i < helper.Num(); ++i) {
-                    auto* state_ptr = *reinterpret_cast<UObject**>(helper.GetRawPtr(i));
-                    if(is_blocking_camera_state(state_ptr)) return true;
-                }
-            }
         }
     }
     return false;
@@ -783,33 +766,37 @@ bool Appearance::repair_mesh_needed() const {
     // replacement can belong to another mod or an unfinished transformation.
     return mesh && mesh!=applied_.Get() && narrow(mesh->GetPathName())==original_;
 }
-bool Appearance::ready_to_apply() const {
+std::string Appearance::ready_to_apply_reason() const {
     auto* pawn=observed_pawn_.Get(); auto* component=observed_component_.Get(); auto* pc=observed_controller_.Get();
-    if(!pawn || !component || !pc || read<UObject*>(pc,L"Pawn")!=pawn || !mesh_asset(component)) return false;
+    if(!pawn) return "no observed pawn";
+    if(!component) return "no observed component";
+    if(!pc) return "no observed controller";
+    if(read<UObject*>(pc,L"Pawn")!=pawn) return "controller pawn != pawn";
+    if(!mesh_asset(component)) return "no mesh asset on component";
     Call move(pc,L"IsMoveInputIgnored",1); move.run();
     Call look(pc,L"IsLookInputIgnored",1); look.run();
-    if(move.get<bool>() || look.get<bool>()) return false;
-    if(is_quest_or_teleport_active(pc)) return false;
-    if(is_traversal_ability_active(pawn)) return false;
+    if(move.get<bool>()) return "move input ignored";
+    if(look.get<bool>()) return "look input ignored";
+    if(is_quest_or_teleport_active(pc)) return "quest or teleport active";
+    if(is_traversal_ability_active(pawn)) return "traversal ability active";
     auto* handler=read<UObject*>(pc,L"User Interface Handler Component");
-    if(!handler) return false;
+    if(!handler) return "no UI handler component";
     auto* transition=read<UObject*>(handler,L"CurrentTransitionWidget");
-    if(transition) { Call shown(transition,L"IsInViewport",1); shown.run(); if(shown.get<bool>()) return false; }
+    if(transition) { Call shown(transition,L"IsInViewport",1); shown.run(); if(shown.get<bool>()) return "transition widget in viewport"; }
     Call animation(component,L"GetAnimInstance",1); animation.run();
     if(auto* anim=animation.get<UObject*>()) {
         Call montage(anim,L"GetCurrentActiveMontage",1); montage.run();
-        if(montage.get<UObject*>()) return false;
+        if(montage.get<UObject*>()) return "anim montage active";
     }
-    // Retained player/controller changes can keep our own material instances.
     if(component==component_.Get() && mesh_asset(component)==applied_.Get()) {
-        return materials_match() || repair_materials_needed();
+        if(!materials_match() && !repair_materials_needed()) return "retained mesh materials mismatch and no repair needed";
     }
-    // Reclaiming the stock mesh after a teleporter/jump-point return has already recorded
-    // the stable original baseline; do not block recovery on transient effect parameters.
-    if(repair_mesh_needed()) return true;
-    // World-owned dynamic effects have no stable asset path for rollback.
-    try { material_paths(component); } catch(const std::runtime_error&) { return false; }
-    return true;
+    if(repair_mesh_needed()) return "";
+    try { material_paths(component); } catch(const std::runtime_error& e) { return std::string("material_paths: ") + e.what(); }
+    return "";
+}
+bool Appearance::ready_to_apply() const {
+    return ready_to_apply_reason().empty();
 }
 bool Appearance::active() const { auto* c=component_.Get(); return c && c==observed_component_.Get() && applied_.Get() && mesh_asset(c)==applied_.Get(); }
 bool Appearance::apply(void* engine, const std::string& mesh_path, const std::map<int,std::string>& materials) {

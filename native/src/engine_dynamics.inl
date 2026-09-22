@@ -239,6 +239,13 @@ struct BodyRigInputs {
             }
         }
         use_regions->SetPropertyValueInContainer(instance,value.use_regions);
+        const std::array<float,3> global_values={value.global_frequency,value.global_damping,value.global_motion};
+        for(size_t i=0;i<3;++i) {
+            std::memcpy(reinterpret_cast<std::byte*>(instance)+globals[i]->GetOffset_Internal(), &global_values[i], sizeof(float));
+        }
+        if(auto* ep=instance->GetClassPrivate()->GetPropertyByNameInChain(L"CSSBodyEnabled"); ep && ep->IsA<FBoolProperty>()) {
+            static_cast<FBoolProperty*>(ep)->SetPropertyValueInContainer(instance, true);
+        }
         if(!same_owned(capture(),value)) throw std::runtime_error("Body rig input read-back failed");
         advance_rig_epoch(instance,epoch);
     }

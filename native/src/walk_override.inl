@@ -202,47 +202,143 @@ void WalkOverride::push_off() {
     forget_blend_lease();
     engaged_=false; active_.Reset(); reason_.clear();
 }
+static void hide_game_object(UObject* obj, bool hide) {
+    if(!obj) return;
+    try {
+        auto* fn_act = obj->GetFunctionByNameInChain(L"SetActorHiddenInGame");
+        if(fn_act && fn_act->GetNumParms() == 1) {
+            Call set_act(obj, L"SetActorHiddenInGame", 1);
+            set_act.set(L"bNewHidden", hide);
+            set_act.run();
+            return;
+        }
+    } catch(...) {}
+    try {
+        auto* fn_comp = obj->GetFunctionByNameInChain(L"SetHiddenInGame");
+        if(fn_comp) {
+            if(fn_comp->GetNumParms() == 2) {
+                Call set_comp(obj, L"SetHiddenInGame", 2);
+                set_comp.set(L"NewHidden", hide);
+                set_comp.set(L"bPropagateToChildren", false);
+                set_comp.run();
+                return;
+            } else if(fn_comp->GetNumParms() == 1) {
+                Call set_comp(obj, L"SetHiddenInGame", 1);
+                set_comp.set(L"NewHidden", hide);
+                set_comp.run();
+                return;
+            }
+        }
+    } catch(...) {}
+}
+static bool is_hand_weapon_socket(const FName& socket_name) {
+    std::string lower = narrow(socket_name.ToString());
+    for(char& c : lower) c = char(std::tolower(static_cast<unsigned char>(c)));
+    if(lower.empty() || lower == "none" || lower == "root") return false;
+    // Exclude stowed equipment, body sockets, accessories
+    if(lower.find("stowed") != std::string::npos ||
+       lower.find("crown") != std::string::npos ||
+       lower.find("flower") != std::string::npos ||
+       lower.find("head") != std::string::npos ||
+       lower.find("spine") != std::string::npos ||
+       lower.find("pelvis") != std::string::npos ||
+       lower.find("foot") != std::string::npos ||
+       lower.find("ball") != std::string::npos ||
+       lower.find("thigh") != std::string::npos ||
+       lower.find("calf") != std::string::npos ||
+       lower.find("arm") != std::string::npos ||
+       lower.find("clavicle") != std::string::npos ||
+       lower.find("neck") != std::string::npos) return false;
+    
+    // Check if attached to hand or weapon or prop sockets
+    if(lower.find("hand") != std::string::npos ||
+       lower.find("weapon") != std::string::npos ||
+       lower.find("prop") != std::string::npos ||
+       lower.find("katana") != std::string::npos ||
+       lower.find("axatana") != std::string::npos ||
+       lower.find("dagger") != std::string::npos ||
+       lower.find("shield") != std::string::npos ||
+       lower.find("crossbow") != std::string::npos) {
+        return true;
+    }
+    return false;
+}
 void WalkOverride::set_weapon_hidden(UObject* pawn,bool hide) {
     if(!pawn) return;
-    auto* weapons=read<UObject*>(pawn,L"WeaponsComponent");
-    if(hide) {
-        if(weapons) {
-            Call get_in_hand(weapons,L"GetWeaponInHand",1);
-            get_in_hand.run();
-            if(auto* weapon=get_in_hand.get<UObject*>()) {
-                Call set_hidden(weapon,L"SetActorHiddenInGame",1);
-                set_hidden.set(L"bNewHidden",true);
-                set_hidden.run();
-                hidden_weapon_=weapon;
+    try {
+        auto* weapons=read<UObject*>(pawn,L"WeaponsComponent");
+        if(hide) {
+            if(weapons) {
+                try {
+                    Call get_in_hand(weapons,L"GetWeaponInHand",1);
+                    get_in_hand.run();
+                    if(auto* weapon=get_in_hand.get<UObject*>()) {
+                        hide_game_object(weapon, true);
+                        hidden_weapons_.emplace_back(weapon);
+                        // Check if the weapon actor itself has attached offhand or sub-components
+                        try {
+                            Call get_root(weapon, L"K2_GetRootComponent", 1);
+                            get_root.run();
+                            if(auto* root = get_root.get<UObject*>()) {
+                                for(auto& wchild : attached_children(root)) {
+                                    if(auto* c = wchild.Get()) {
+                                        hide_game_object(c, true);
+                                        hidden_weapons_.emplace_back(c);
+                                    }
+                                }
+                            }
+                        } catch(...) {}
+                    }
+                } catch(...) {}
+            }
+            if(auto* mesh=read<UObject*>(pawn,L"Mesh")) {
+                for(auto& child_weak:attached_children(mesh)) {
+                    auto* child=child_weak.Get();
+                    if(!child) continue;
+                    FName socket=attach_socket(child);
+                    if(!is_hand_weapon_socket(socket)) continue;
+                    try {
+                        Call owner_call(child,L"GetOwner",1); owner_call.run();
+                        auto* owner=owner_call.get<UObject*>();
+                        if(owner && owner!=pawn) {
+                            hide_game_object(owner, true);
+                            hidden_weapons_.emplace_back(owner);
+                        }
+                    } catch(...) {}
+                    hide_game_object(child, true);
+                    hidden_weapons_.emplace_back(child);
+                }
+            }
+        } else {
+            for(auto& weak:hidden_weapons_) {
+                if(auto* obj=weak.Get()) {
+                    hide_game_object(obj, false);
+                }
+            }
+            hidden_weapons_.clear();
+            if(weapons) {
+                try {
+                    Call get_in_hand(weapons,L"GetWeaponInHand",1);
+                    get_in_hand.run();
+                    if(auto* weapon=get_in_hand.get<UObject*>()) {
+                        hide_game_object(weapon, false);
+                    }
+                } catch(...) {}
             }
         }
-    } else {
-        if(auto* w=hidden_weapon_.Get()) {
-            Call set_hidden(w,L"SetActorHiddenInGame",1);
-            set_hidden.set(L"bNewHidden",false);
-            set_hidden.run();
-            hidden_weapon_.Reset();
-        }
-        if(weapons) {
-            Call get_in_hand(weapons,L"GetWeaponInHand",1);
-            get_in_hand.run();
-            if(auto* weapon=get_in_hand.get<UObject*>()) {
-                Call set_hidden(weapon,L"SetActorHiddenInGame",1);
-                set_hidden.set(L"bNewHidden",false);
-                set_hidden.run();
-            }
-        }
-    }
+    } catch(...) {}
 }
 void WalkOverride::release() {
     scale_walk_=false;
     push_off();
-    if(custom_idle_engaged_) {
-        if(auto* post=custom_idle_post_.Get()) {
-            if(has_field(post,L"CSSIdleEnabled",sizeof(bool)))
-                write_field<bool>(post,L"CSSIdleEnabled",false);
-        }
-        if(hide_weapons_ && pawn_.Get()) set_weapon_hidden(pawn_.Get(),false);
+    if(custom_idle_engaged_ || !hidden_weapons_.empty()) {
+        try {
+            if(auto* post=custom_idle_post_.Get()) {
+                if(has_field(post,L"CSSIdleEnabled",sizeof(bool)))
+                    write_field<bool>(post,L"CSSIdleEnabled",false);
+            }
+            if(pawn_.Get()) set_weapon_hidden(pawn_.Get(),false);
+        } catch(...) {}
         custom_idle_engaged_=false;
         custom_idle_post_.Reset();
     }

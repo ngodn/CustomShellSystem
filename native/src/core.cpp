@@ -384,7 +384,7 @@ struct Core {
         else if(action=="palette" || action=="control" || action=="reset_control" ||
                 action=="color" || action=="reset_color" ||
                 action=="tint" || action=="reset_tint" ||
-                action=="template") {
+                action=="template" || action=="physics_preset") {
             const bool clearing=action=="reset_control" || action=="reset_color";
             auto selected=state.selections.find(appearance.shell);
             if(selected==state.selections.end()) throw std::runtime_error("Wear an appearance before changing it");
@@ -410,7 +410,7 @@ struct Core {
                             if(v.is_number()) {
                                 cv[0] = v.get<float>();
                             } else if(v.is_array()) {
-                                for(size_t i=0; i<std::min(v.size(), size_t(3)); ++i) cv[i] = v[i].get<float>();
+                                for(size_t i=0; i<std::min(v.size(), size_t(4)); ++i) cv[i] = v[i].get<float>();
                             }
                             custom.values[k] = cv;
                         }
@@ -429,6 +429,55 @@ struct Core {
                     }
                 }
                 report("Applied template: " + tmpl->name);
+            }
+            else if(action=="physics_preset") {
+                auto preset=command.at("preset").get<std::string>(); // "normal", "more_jiggle", "earthquake"
+                std::string target_id=command.value("control",std::string{});
+                auto is_chest_glute=[](const std::string& raw_id) {
+                    std::string id=raw_id;
+                    for(char& c:id) c=char(std::tolower(static_cast<unsigned char>(c)));
+                    return id.find("chest")!=std::string::npos || id.find("glute")!=std::string::npos ||
+                           id.find("breast")!=std::string::npos || id.find("butt")!=std::string::npos;
+                };
+                std::string tmpl_id=preset=="normal"?"body_normal":preset=="more_jiggle"?"body_more_jiggle":"body_earthquake";
+                const Template* tmpl=nullptr;
+                for(const auto& t:outfit->templates) {
+                    if(t.id==tmpl_id || t.id==preset || t.name==(preset=="normal"?"Normal":preset=="more_jiggle"?"More Jiggle":"OMG! Earthquake!")) {
+                        tmpl=&t; break;
+                    }
+                }
+                if(tmpl && tmpl->data.contains("values") && tmpl->data.at("values").is_object()) {
+                    for(const auto& [k, v] : tmpl->data.at("values").items()) {
+                        if(!is_chest_glute(k)) continue;
+                        if(!target_id.empty() && k!=target_id) continue;
+                        auto* ctrl = options.find(k);
+                        if(ctrl) {
+                            auto cv = ctrl->value;
+                            if(v.is_number()) cv[0] = v.get<float>();
+                            else if(v.is_array()) {
+                                for(size_t i=0; i<std::min(v.size(), size_t(4)); ++i) cv[i] = v[i].get<float>();
+                            }
+                            custom.values[k] = cv;
+                        }
+                    }
+                } else {
+                    for(const auto& ctrl:options.controls) {
+                        if(!is_chest_glute(ctrl.id)) continue;
+                        if(!target_id.empty() && ctrl.id!=target_id) continue;
+                        const bool is_glute = ctrl.id.find("glute")!=std::string::npos || ctrl.id.find("butt")!=std::string::npos;
+                        if(body_rig_control(ctrl)) {
+                            if(preset=="normal") custom.values[ctrl.id]={2.0f,0.70f,1.0f,1.0f};
+                            else if(preset=="more_jiggle") custom.values[ctrl.id]={is_glute?1.6f:1.5f,is_glute?0.30f:0.25f,1.0f,1.0f};
+                            else if(preset=="earthquake") custom.values[ctrl.id]={is_glute?0.9f:0.8f,is_glute?0.12f:0.10f,1.0f,1.0f};
+                        } else if(ctrl.kind==ControlKind::Spring) {
+                            if(preset=="normal") custom.values[ctrl.id]={2.0f,0.35f,1.5f,1.0f};
+                            else if(preset=="more_jiggle") custom.values[ctrl.id]={1.5f,0.15f,3.0f,1.0f};
+                            else if(preset=="earthquake") custom.values[ctrl.id]={1.0f,0.05f,6.0f,1.0f};
+                        }
+                    }
+                }
+                const std::string label=preset=="normal"?"Normal":preset=="more_jiggle"?"More Jiggle":"OMG! Earthquake!";
+                report("Applied physics preset: "+label);
             }
             else if(action=="tint" || action=="reset_tint") {
                 auto group=command.at("group").get<std::string>();
@@ -672,16 +721,33 @@ struct Core {
             const std::string reconcile_key=outfit_key(appearance.shell);
             recovery.observe(state.enabled,state.auto_apply,state.selections.contains(reconcile_key),changed,stock_reset);
             if(stock_reset || !appearance.active()) applied_id.clear();
-            if(!apply_pending && recovery.due(now) && appearance.ready_to_apply()) {
-                apply_pending=true;
-                host.log(("Reconciling saved appearance after player/mesh transition: shell "+
-                          (appearance.shell.empty()?std::string("<none>"):appearance.shell)+
-                          ", saved "+(state.selections.contains(reconcile_key)
-                              ? state.selections.at(reconcile_key).outfit+"/"+state.selections.at(reconcile_key).variant
-                              : std::string("<nothing for this shell>"))).c_str());
+            if(!apply_pending && recovery.due(now)) {
+                auto reason = appearance.ready_to_apply_reason();
+                if(reason.empty()) {
+                    apply_pending=true;
+                    host.log(("Reconciling saved appearance after player/mesh transition: shell "+
+                              (appearance.shell.empty()?std::string("<none>"):appearance.shell)+
+                              ", saved "+(state.selections.contains(reconcile_key)
+                                  ? state.selections.at(reconcile_key).outfit+"/"+state.selections.at(reconcile_key).variant
+                                  : std::string("<nothing for this shell>"))).c_str());
+                } else {
+                    static uint64_t last_rec_log = 0;
+                    if(now >= last_rec_log) {
+                        last_rec_log = now + 1000;
+                        host.log(("Recovery blocked by: " + reason).c_str());
+                    }
+                }
             }
-            if (apply_pending && !appearance.shell.empty() && appearance.ready_to_apply()) {
-                apply_pending = false;
+            if (apply_pending && !appearance.shell.empty()) {
+                auto reason = appearance.ready_to_apply_reason();
+                if(!reason.empty()) {
+                    static uint64_t last_apply_log = 0;
+                    if(now >= last_apply_log) {
+                        last_apply_log = now + 1000;
+                        host.log(("Apply pending blocked by: " + reason).c_str());
+                    }
+                } else {
+                    apply_pending = false;
                 // The shell this reconcile is for. Applying loads a mesh, and that takes
                 // long enough for a shell switch to finish underneath it, so everything
                 // below is resolved and recorded against this one rather than against
@@ -752,6 +818,7 @@ struct Core {
                             custom_only=false;
                         }
                     } else { recovery.failed(now); report("No playable character mesh is ready."); }
+                }
                 }
             }
         }

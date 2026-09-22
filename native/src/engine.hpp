@@ -298,7 +298,7 @@ class WalkOverride {
     bool hide_weapons_=false;
     bool custom_idle_engaged_=false;
     WeakObject custom_idle_post_;
-    WeakObject hidden_weapon_;
+    std::vector<WeakObject> hidden_weapons_;
     RC::Unreal::UObject* blendspace(WeakObject& slot,const wchar_t* path);
     RC::Unreal::UObject* custom_blendspace(size_t index,RC::Unreal::UObject* skeleton);
     void set_weapon_hidden(RC::Unreal::UObject* pawn,bool hide);
@@ -483,6 +483,7 @@ public:
     bool repair_materials_needed() const;
     bool repair_mesh_needed() const;
     bool ready_to_apply() const;
+    std::string ready_to_apply_reason() const;
     void sync_menu();
     void sync_attachments();
     void sync_seals();   // every frame, unlike sync_attachments: a stride is faster than 4 Hz

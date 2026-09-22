@@ -110,6 +110,22 @@ Json InventoryUI::command(void* engine,const Json& command) {
         auto* pages=inventory_object(main,L"BP_WS_Menu_Game");
         auto* original=inventory_object(main,L"WBP_NBM_Inventory");
         if(!tabs || !pages || !original) throw std::runtime_error("Inventory layout is unavailable");
+        auto* stock_inv = inventory_object(main, L"WBP_NBM_Inventory");
+        auto* stock_tar = inventory_object(main, L"WBP_NBM_Tarstones");
+        auto* stock_map = inventory_object(main, L"WBP_NBM_Map");
+        for(auto* child : inventory_children(tabs)) {
+            if(child && child != stock_inv && child != stock_tar && child != stock_map) {
+                invoke(child, L"RemoveFromParent");
+            }
+        }
+        auto* stock_char_page = inventory_object(main, L"WBP_MGT_Character");
+        auto* stock_tar_page = inventory_object(main, L"WBP_MGT_Tarstones");
+        auto* stock_map_page = inventory_object(main, L"WBP_MGT_WorldMap");
+        for(auto* child : inventory_children(pages)) {
+            if(child && child != stock_char_page && child != stock_tar_page && child != stock_map_page) {
+                invoke(child, L"RemoveFromParent");
+            }
+        }
         Call count(pages,L"GetChildrenCount",1); count.run();
         if(count.get<int32_t>()!=3) throw std::runtime_error("Unexpected Inventory page count");
         controller_=pc; main_=main; tabs_=tabs; switcher_=pages;

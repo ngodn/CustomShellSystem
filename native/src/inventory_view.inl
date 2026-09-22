@@ -28,6 +28,20 @@ struct InventoryLayout : Layout {
         if(selected) {auto* dot=box(x+4,y+4,4,4,Color{.42f,.34f,.22f,1});invoke(dot,L"SetRenderTransformAngle",L"Angle",45.f);}
     }
 };
+static bool is_chest_or_glute_control(const Control& control) {
+    std::string id = control.id;
+    for(char& c : id) c = char(std::tolower(static_cast<unsigned char>(c)));
+    std::string name = control.name;
+    for(char& c : name) c = char(std::tolower(static_cast<unsigned char>(c)));
+    return id.find("chest") != std::string::npos ||
+           id.find("glute") != std::string::npos ||
+           id.find("breast") != std::string::npos ||
+           id.find("butt") != std::string::npos ||
+           name.find("chest") != std::string::npos ||
+           name.find("glute") != std::string::npos ||
+           name.find("breast") != std::string::npos ||
+           name.find("butt") != std::string::npos;
+}
 // 0.4: a short, deterministic strip of colours for one part, so a controller can pick
 // one without anybody having to think in RGB. What the author chose comes first, then
 // what each palette gives this part, then a hue ring and a brightness ramp off the
@@ -653,8 +667,19 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     source="Bounce "+slider_text(held[0],true)+" Hz, settle "+std::to_string(int(std::lround(held[1]*100)))+"%";
                     if(c.spring_clamp) source+=", travel "+slider_text(held[2],true)+" cm";
                 } else if(c.kind==ControlKind::Dynamics || c.kind==ControlKind::Rig) {
-                    source=body_rig_control(c) ? "Bounce "+slider_text(held[0],true)+" Hz, damping "+slider_text(held[1],true)+", motion "+slider_text(held[2],true)
-                        : "Stiffness "+slider_text(held[0],true)+", damping "+slider_text(held[1],true)+", gravity "+slider_text(held[2],true);
+                    const bool has_presets=is_chest_or_glute_control(c);
+                    if(has_presets) {
+                        const bool body=body_rig_control(c);
+                        const bool is_glute=c.id.find("glute")!=std::string::npos || c.id.find("butt")!=std::string::npos;
+                        const bool is_normal=(body&&std::abs(held[0]-2.0f)<0.15f&&std::abs(held[1]-0.7f)<0.15f);
+                        const bool is_more=(body&&std::abs(held[0]-(is_glute?1.6f:1.5f))<0.15f&&std::abs(held[1]-(is_glute?0.30f:0.25f))<0.15f);
+                        const bool is_earth=(body&&std::abs(held[0]-(is_glute?0.9f:0.8f))<0.15f&&std::abs(held[1]-(is_glute?0.12f:0.10f))<0.10f);
+                        std::string p=is_normal?"Normal":is_more?"More Jiggle":is_earth?"OMG! Earthquake!":"Custom";
+                        source=p+" ("+slider_text(held[0],true)+" Hz)";
+                    } else {
+                        source=body_rig_control(c) ? "Bounce "+slider_text(held[0],true)+" Hz, damping "+slider_text(held[1],true)+", motion "+slider_text(held[2],true)
+                            : "Stiffness "+slider_text(held[0],true)+", damping "+slider_text(held[1],true)+", gravity "+slider_text(held[2],true);
+                    }
                     if(c.kind==ControlKind::Rig && held[3]==0) source="Motion off";
                 } else if(c.kind==ControlKind::Glow) {
                     source="Glow "+slider_text(held[0],true)+" cd/m²";
@@ -664,8 +689,25 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 } else if(c.kind==ControlKind::Shape) {
                     source="Weight "+slider_text(held[0],true);
                 }
-                const int channel=channel_%control_channel_count(c);
-                Json minus={{"action","control"},{"control",c.id},{"channel",channel},{"delta",-1}},plus=minus; plus["delta"]=1;
+                const bool has_presets=is_chest_or_glute_control(c);
+                const int fieldcount=has_presets?(c.kind==ControlKind::Rig?5:4):control_channel_count(c);
+                const int channel=channel_%fieldcount;
+                Json minus, plus;
+                if(has_presets && channel==0) {
+                    const bool body=body_rig_control(c);
+                    const bool is_glute=c.id.find("glute")!=std::string::npos || c.id.find("butt")!=std::string::npos;
+                    const bool is_normal=(body&&std::abs(held[0]-2.0f)<0.15f&&std::abs(held[1]-0.7f)<0.15f);
+                    const bool is_more=(body&&std::abs(held[0]-(is_glute?1.6f:1.5f))<0.15f&&std::abs(held[1]-(is_glute?0.30f:0.25f))<0.15f);
+                    const bool is_earth=(body&&std::abs(held[0]-(is_glute?0.9f:0.8f))<0.15f&&std::abs(held[1]-(is_glute?0.12f:0.10f))<0.10f);
+                    std::string prev_p = is_earth ? "more_jiggle" : is_more ? "normal" : "earthquake";
+                    std::string next_p = is_normal ? "more_jiggle" : is_more ? "earthquake" : "normal";
+                    minus = Json{{"action","physics_preset"},{"preset",prev_p},{"control",c.id}};
+                    plus = Json{{"action","physics_preset"},{"preset",next_p},{"control",c.id}};
+                } else {
+                    const int slider_ch = has_presets ? (channel - 1) : channel;
+                    minus={{"action","control"},{"control",c.id},{"channel",slider_ch},{"delta",-1}};
+                    plus=minus; plus["delta"]=1;
+                }
                 if(!c.scalar && !exact_color_) {
                     // Left and Right walk the strip instead of nudging one channel, which
                     // is the whole point of having one.
@@ -681,7 +723,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     plus=pick((here+1)%strip.size());
                 }
                 row(int(i),c.name,source,line,accept,minus,plus,
-                    {{"action","ui_channel"},{"count",control_channel_count(c)}},
+                    {{"action","ui_channel"},{"count",fieldcount}},
                     {{"action","palette"},{"palette","original"}});
             }
             scroll_end();
@@ -762,16 +804,40 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 } else if(control.kind==ControlKind::Dynamics || control.kind==ControlKind::Rig) {
                     const bool rig=control.kind==ControlKind::Rig;
                     const bool body=body_rig_control(control);
-                    const int fieldcount=control_channel_count(control);
+                    const bool has_presets=is_chest_or_glute_control(control);
+                    const int fieldcount=has_presets?(rig?5:4):(rig?4:3);
+                    const int selected=channel_%fieldcount;
                     detail(control.name,worn->name,
                            body ? "Frequency sets the bounce speed. Damping controls how quickly it settles. Motion amount controls the response to movement." :
                            "Stiffness controls how strongly this part returns toward its rest direction. "
                            "Damping reduces motion. Gravity changes downward pull; negative values pull upward.");
+                    double cur_y = controls_y;
+                    if(has_presets) {
+                        const bool is_glute = control.id.find("glute")!=std::string::npos || control.id.find("butt")!=std::string::npos;
+                        const bool is_normal=(body&&std::abs(value[0]-2.0f)<0.15f&&std::abs(value[1]-0.7f)<0.15f);
+                        const bool is_more=(body&&std::abs(value[0]-(is_glute?1.6f:1.5f))<0.15f&&std::abs(value[1]-(is_glute?0.30f:0.25f))<0.15f);
+                        const bool is_earth=(body&&std::abs(value[0]-(is_glute?0.9f:0.8f))<0.15f&&std::abs(value[1]-(is_glute?0.12f:0.10f))<0.10f);
+                        const bool is_custom = !is_normal && !is_more && !is_earth;
+                        
+                        ui.label("PRESET", right, cur_y, 180, 22, 15, selected==0?gold:muted);
+                        std::string badge = is_normal ? "Active: Normal" : is_more ? "Active: More Jiggle" : is_earth ? "Active: OMG! Earthquake!" : "Active: Custom";
+                        ui.label(badge, right+180, cur_y, 180, 22, 14, is_custom?muted:gold);
+                        
+                        const double bw=114, bgap=9, by=cur_y+22;
+                        bind(ui.button("Normal",right,by,bw,36,is_normal,true,16),
+                             {{"action","physics_preset"},{"preset","normal"},{"control",control.id}});
+                        bind(ui.button("More Jiggle",right+bw+bgap,by,bw,36,is_more,true,15),
+                             {{"action","physics_preset"},{"preset","more_jiggle"},{"control",control.id}});
+                        bind(ui.button("OMG! Earthquake!",right+(bw+bgap)*2,by,bw,36,is_earth,true,13),
+                             {{"action","physics_preset"},{"preset","earthquake"},{"control",control.id}});
+                        cur_y += 68;
+                    }
                     const char* fields[]={body?"Frequency (Hz)":"Stiffness",body?"Damping ratio":"Damping",body?"Motion amount":"Gravity"};
                     for(int field=0;field<3;++field) {
                         const auto range=control_channel(control,field);
-                        const double sy=controls_y+field*80;
-                        auto* heading=ui.label(fields[field],right,sy,230,28,19,field==channel_%fieldcount?gold:ivory);
+                        const double sy=cur_y+field*74;
+                        const bool is_focused = has_presets ? (selected == field + 1) : (selected == field);
+                        auto* heading=ui.label(fields[field],right,sy,230,26,18,is_focused?gold:ivory);
                         auto* slider=construct(L"/Script/UMG.Slider",tree);
                         invoke(slider,L"SetMinValue",L"InValue",range.minimum);
                         invoke(slider,L"SetMaxValue",L"InValue",range.maximum);
@@ -779,16 +845,22 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                         invoke(slider,L"SetValue",L"InValue",value[field]);
                         invoke(slider,L"SetSliderBarColor",L"InValue",Color{.10f,.09f,.07f,1});
                         invoke(slider,L"SetSliderHandleColor",L"InValue",gold);
-                        ui.place(slider,right,sy+29,262,30);
-                        auto* label=ui.label(slider_text(value[field],true),right+270,sy+29,90,30,18);
+                        ui.place(slider,right,sy+26,262,30);
+                        auto* label=ui.label(slider_text(value[field],true),right+270,sy+26,90,30,18);
                         sliders_.push_back({WeakObject(slider),WeakObject(label),WeakObject(heading),
-                            {{"action","control"},{"control",control.id},{"channel",field},{"refresh",false}},
+                            {{"action","control"},{"control",control.id},{"channel",field},{"ui_channel",has_presets?field+1:field},{"refresh",false}},
                             value[field],true,""});
                     }
-                    if(rig) bind(ui.button(value[3]==1?"Motion: On":"Motion: Off",right,controls_y+240,360,38,
-                        channel_%fieldcount==3,true,19),
-                        {{"action","control"},{"control",control.id},{"channel",3},{"value",value[3]==1?0:1}});
-                    direction_hint(true,"Adjust selected setting");
+                    cur_y += 3*74 + 4;
+                    if(rig) {
+                        const bool is_motion_focused = has_presets ? (selected == 4) : (selected == 3);
+                        bind(ui.button(value[3]==1?"Motion: On":"Motion: Off",right,cur_y,360,36,
+                            is_motion_focused,true,18),
+                            {{"action","control"},{"control",control.id},{"channel",3},{"value",value[3]==1?0:1}});
+                    }
+                    if(has_presets && selected==0) direction_hint(true,"Cycle preset");
+                    else if(rig && ((has_presets && selected==4) || (!has_presets && selected==3))) direction_hint(true,"Toggle motion");
+                    else direction_hint(true,"Adjust selected slider");
                     action_button("secondary","Select next setting",795,Json{{"action","ui_channel"},{"count",fieldcount}},4);
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
                     action_button("tertiary","Reset all",887,confirm_reset_all,2);
@@ -826,6 +898,20 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                         sliders_.push_back({WeakObject(slider),WeakObject(label),WeakObject(heading),
                             {{"action","control"},{"control",control.id},{"channel",field},{"refresh",false}},
                             value[field],true,field==1?"%":field==2?" cm":" Hz"});
+                    }
+                    if(is_chest_or_glute_control(control)) {
+                        const double py=controls_y+fieldcount*80+8;
+                        ui.label("PRESETS",right,py,360,20,14,muted);
+                        const double bw=114,bgap=9,by=py+22;
+                        const bool is_normal=std::abs(value[0]-2.0f)<0.15f&&std::abs(value[1]-0.35f)<0.10f;
+                        const bool is_more=std::abs(value[0]-1.5f)<0.15f&&std::abs(value[1]-0.15f)<0.08f;
+                        const bool is_earth=std::abs(value[0]-1.0f)<0.15f&&std::abs(value[1]-0.05f)<0.05f;
+                        bind(ui.button("Normal",right,by,bw,36,is_normal,true,16),
+                             {{"action","physics_preset"},{"preset","normal"},{"control",control.id}});
+                        bind(ui.button("More Jiggle",right+bw+bgap,by,bw,36,is_more,true,15),
+                             {{"action","physics_preset"},{"preset","more_jiggle"},{"control",control.id}});
+                        bind(ui.button("OMG! Earthquake!",right+(bw+bgap)*2,by,bw,36,is_earth,true,13),
+                             {{"action","physics_preset"},{"preset","earthquake"},{"control",control.id}});
                     }
                     direction_hint(true,"Adjust selected slider");
                     action_button("secondary","Select next slider",795,Json{{"action","ui_channel"},{"count",fieldcount}},4);
@@ -1782,14 +1868,16 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
                 if(row_>=0 && row_<int(rows_.size())) for(auto* action:{&rows_[row_].previous,&rows_[row_].next})
                     if(action->is_object() && action->value("action",std::string{})=="tint") (*action)["field"]=field;
             } else if(slider.action.contains("channel")) {
-                channel_=slider.action.at("channel").get<int>();
+                channel_=slider.action.value("ui_channel", slider.action.at("channel").get<int>());
                 for(const auto& channel:sliders_) if(auto* heading=channel.heading.Get())
-                    if(channel.action.contains("channel"))
+                    if(channel.action.contains("channel")) {
+                        const int ui_ch=channel.action.value("ui_channel", channel.action.at("channel").get<int>());
                         invoke(heading,L"SetColorAndOpacity",L"InColorAndOpacity",
-                               SlateColor{channel.action.at("channel").get<int>()==channel_?gold:ivory});
+                               SlateColor{ui_ch==channel_?gold:ivory});
+                    }
                 if(row_>=0 && row_<int(rows_.size())) for(auto* action:{&rows_[row_].previous,&rows_[row_].next})
                     if(action->is_object() && action->value("action",std::string{})=="control" && action->contains("channel"))
-                        (*action)["channel"]=channel_;
+                        (*action)["channel"]=slider.action.at("channel").get<int>();
             }
             auto action=slider.action; action["value"]=v; return action;
         }
