@@ -577,28 +577,37 @@ void Menu::frame(Layout& ui,double width,double column_w,const std::string& titl
     // auto-sized tabs with fixed padding) so the gaps are exact whatever the
     // font's metrics are. The estimate below only decides how many tabs fit
     // between the two bumper glyphs; hidden ones are reachable by bumper.
-    auto glyph_w=[](char c){ switch(c) { case 'I': case 'J': case 'L': case '1': case ' ': return 8.0; case 'M': case 'W': return 20.0;
-        case 'A': case 'H': case 'K': case 'N': case 'U': case 'V': case 'X': case 'Y': case 'D': case 'G': case 'O': case 'Q': return 16.0; default: return 14.0; } };
+    // Conservative Trajan capital widths at 15 px (measured from the game:
+    // about 15 units per letter on average) plus the tab padding.
+    auto glyph_w=[](char c){ switch(c) { case 'I': case 'J': case '1': return 9.0; case 'L': case ' ': return 11.0; case 'M': case 'W': return 22.0;
+        case 'A': case 'H': case 'K': case 'N': case 'U': case 'V': case 'X': case 'Y': case 'D': case 'G': case 'O': case 'Q': case 'C': case 'R': return 17.0; default: return 15.0; } };
     std::vector<std::string> names; std::vector<double> widths;
-    for(const auto& t:tabs) { std::string n=t; for(auto& ch:n) ch=char(std::toupper((unsigned char)ch)); double w=30; for(char c:n) w+=glyph_w(c); names.push_back(n); widths.push_back(w); }
+    for(const auto& t:tabs) { std::string n=t; for(auto& ch:n) ch=char(std::toupper((unsigned char)ch)); double w=34; for(char c:n) w+=glyph_w(c); names.push_back(n); widths.push_back(w); }
     const bool many=tabs.size()>1;
-    const double avail=right-left-(many?2*60:0)-40;
+    const double ellipsis_w=52,avail=right-left-(many?2*60:0)-24;
     size_t first=0,last=names.size();
     { double total=0; for(double w:widths) total+=w;
       if(total>avail) {
+        // Grow a window around the selection; an ellipsis on either side
+        // takes room too, so the budget shrinks as soon as a side is cut.
         size_t lo=size_t(std::clamp(selected,0,int(names.size())-1)),hi=lo+1; double used=widths[lo];
+        auto budget=[&]{ return avail-(lo>0?ellipsis_w:0)-(hi<names.size()?ellipsis_w:0); };
         while(true) {
             bool grew=false;
-            if(hi<names.size() && used+widths[hi]<=avail) { used+=widths[hi]; ++hi; grew=true; }
-            if(lo>0 && used+widths[lo-1]<=avail) { used+=widths[lo-1]; --lo; grew=true; }
+            if(hi<names.size() && used+widths[hi]<=budget()-(hi+1<names.size()?0:0)) { used+=widths[hi]; ++hi; grew=true; }
+            if(lo>0 && used+widths[lo-1]<=budget()) { used+=widths[lo-1]; --lo; grew=true; }
             if(!grew) break;
         }
+        // The last growth step may have removed an ellipsis and freed room, or
+        // added one and overrun: shrink until the window and its ellipses fit.
+        while(used>budget() && hi-lo>1) { if(hi-1>size_t(selected)) { --hi; used-=widths[hi]; } else { used-=widths[lo]; ++lo; } }
         first=lo; last=hi;
       } }
     double x=left;
     if(many) { prompt(ui,"previous_section","",x,y+6,40,glyph_left_bumper); x+=60; }
     auto* box=construct(L"/Script/UMG.HorizontalBox",ui.tree);
-    ui.place(box,x,y,right-60-x,48);
+    invoke(box,L"SetClipping",L"InClipping",uint8_t{1});   // never draw under the right glyph
+    ui.place(box,x,y,right-64-x,48);
     auto add_text=[&](const std::string& text,Color color,bool on,const Json* action)->UObject* {
         auto* button=construct(L"/Script/UMG.Button",ui.tree); flat_button(button,on);
         { auto* focusable=button->GetPropertyByNameInChain(L"IsFocusable"); if(focusable && focusable->IsA<FBoolProperty>()) static_cast<FBoolProperty*>(focusable)->SetPropertyValueInContainer(button,false); }
