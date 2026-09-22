@@ -19,7 +19,8 @@ constexpr Color ink{.62f,.56f,.45f,1}, bright{.86f,.80f,.68f,1}, muted{.36f,.32f
 constexpr Color danger{.72f,.28f,.22f,1}, warning{.78f,.58f,.22f,1}, good{.42f,.62f,.36f,1};
 constexpr Color backdrop{.012f,.010f,.008f,.96f}, panel{.030f,.026f,.020f,.92f}, row_selected{.09f,.072f,.040f,.85f}, line{.16f,.13f,.09f,1};
 constexpr double reference_h=1080;
-constexpr int library_visible=9, controls_visible=9;
+constexpr double strip_top=270, content_top=340;   // tab strip under the artwork; content below its rule
+constexpr int controls_visible=10;                   // mouse-wheel scroll step bound; the page computes the real count
 // Controller prompt glyph ids of the game's WBP_Prompt (E_ControllerButton).
 constexpr uint8_t glyph_accept=3, glyph_secondary=4, glyph_back=5, glyph_left_bumper=8, glyph_right_bumper=9, glyph_up=13, glyph_down=14, glyph_left=15, glyph_right=16;
 // Keyboard glyph ids of the game's WBP_Prompt (E_KeyboardMouseButton): the
@@ -266,9 +267,15 @@ void Menu::bind_inputs() {
 }
 void Menu::poll_input(const PlayerContext& player,uint64_t now) {
     auto* pc=player.pc; if(!pc) return;
+    // Each key test is a reflected call; only the keys of the device in use
+    // are tested (the game's prompt widget reports the device), which halves
+    // the per-frame cost while the page is open. A press on the other device
+    // flips the prompt within a frame, so nothing is lost.
     for(auto& b:bindings_) {
         bool down=false;
         for(const auto& name:b.keys) {
+            const bool pad=name.starts_with("Gamepad_");
+            if(pad!=gamepad_ && prompt_.Get()) continue;
             Call call(pc,L"IsInputKeyDown",2); auto* p=call.param(L"Key");
             member(call.data(p),p->GetElementSize(),find(L"/Script/InputCore.Key"),L"KeyName",FName(wide(name).c_str()));
             call.run(); if(call.get<bool>()) { down=true; break; }
@@ -408,11 +415,13 @@ void Menu::key(const std::string& action) {
         const int count=int(library_["extensions"].size())+1;   // + CSSX settings entry
         if(action=="up" || action=="down") { library_row_=std::clamp(library_row_+(action=="up"?-1:1),0,std::max(0,count-1)); dirty_=true; }
         else if(action=="accept") act({{"action","open"},{"row",library_row_}});
+        else if(action=="previous_section" || action=="next_section") act({{"action","framework_tab"},{"section",1}});
         else if(action=="close") close();   // like CSS: the page closes the Player Menu itself
         return;
     }
     if(screen_==Screen::Settings) {
-        if(action=="close") act({{"action","library"}});
+        if(action=="close") close();
+        else if(action=="previous_section" || action=="next_section") act({{"action","framework_tab"},{"section",0}});
         else if(action=="up" || action=="down") { settings_row_=std::clamp(settings_row_+(action=="up"?-1:1),0,3); dirty_=true; }
         else if(action=="left" || action=="right" || action=="accept") act({{"action","settings_adjust"},{"delta",action=="left"?-1:1}});
         return;
@@ -459,6 +468,7 @@ void Menu::act(const Json& action) {
         extension_id_=entry.at("id").get<std::string>(); screen_=Screen::Extension; section_=row_=first_row_=0; confirm_=nullptr;
         refresh_model(); dirty_=true; enter_=true; return;
     }
+    if(name=="framework_tab") { screen_=action.value("section",0)==1?Screen::Settings:Screen::Library; extension_id_.clear(); model_=nullptr; dirty_=true; enter_=true; return; }
     if(name=="settings_row" && screen_==Screen::Settings) { settings_row_=std::clamp(action.value("row",0),0,3); dirty_=true; return; }
     if(name=="run" && screen_==Screen::Extension && model_.is_object()) {
         // Activate a control by id from anywhere on the page (notice strip).
@@ -553,13 +563,27 @@ UObject* Menu::prompt(Layout& ui,const std::string& action,const std::string& te
     prompt_=widget;
     return widget;
 }
-void Menu::header(Layout& ui,double width,const std::string& title,const std::string& subtitle) {
-    // Framework pages carry the CSSX emblem; extension pages carry their own title.
-    const bool logo=texture(ui,path_utf8(deps_.root/"assets/logo.png"),80,116,74,74);
-    const double x=logo?172:80;
-    ui.label(title,x,124,600,52,30,bright,true);
-    ui.label(subtitle,x+4,174,700,28,16,muted);
-    ui.box(80,208,width-160,1,line);
+void Menu::frame(Layout& ui,double width,const std::string& title,const std::string& subtitle,const std::vector<std::string>& tabs,int selected,const std::string& tab_action) {
+    // The CSS layout: artwork top-left, page title beside it, then a
+    // horizontal tab strip with the bumper glyphs at both ends and a rule.
+    const double art_w=400,art_h=art_w*0.413;
+    const bool art=texture(ui,path_utf8(deps_.root/"assets/banner.png"),70,80,art_w,art_h);
+    const double tx=art?70+art_w+36:70;
+    ui.label(title,tx,120,width-tx-640,52,30,bright,true);
+    ui.label(subtitle,tx+4,170,width-tx-640,28,16,muted);
+    const double strip_y=strip_top;
+    double x=70;
+    if(tabs.size()>1) { prompt(ui,"previous_section","",x,strip_y+6,40,glyph_left_bumper); x+=60; }
+    for(size_t i=0;i<tabs.size();++i) {
+        std::string name=tabs[i]; for(auto& ch:name) ch=char(std::toupper((unsigned char)ch));
+        const double w=28+name.size()*11.5; const bool on=int(i)==selected;
+        auto* hit=ui.button("",x,strip_y,w,40,on,true); hits_.push_back({WeakObject(hit),{{"action",tab_action},{"section",int(i)}},false});
+        ui.label(name,x,strip_y+9,w,28,15,on?bright:ink,true,1);
+        if(on) ui.box(x+6,strip_y+40,w-12,2,gold);
+        x+=w+6;
+    }
+    if(tabs.size()>1) prompt(ui,"next_section","",x+8,strip_y+6,40,glyph_right_bumper);
+    ui.box(70,strip_top+52,width-140,1,line);
 }
 std::string Menu::perf_line(bool brief) const {
     Json p=deps_.perf?deps_.perf():Json::object();
@@ -624,50 +648,51 @@ void Menu::build() {
 }
 void Menu::build_library(Layout& ui,double width) {
     const auto& entries=library_["extensions"];
-    header(ui,width,"Extensions","CSSX "+deps_.version);
+    frame(ui,width,"Extensions","CSSX "+deps_.version,{"Library","Settings"},0,"framework_tab");
     const int count=int(entries.size())+1;
     library_row_=std::clamp(library_row_,0,count-1);
-    const double list_x=80,list_w=std::min(1040.,width*0.55),row_h=74,top=232;
-    const int first=std::clamp(library_row_-library_visible+1,0,std::max(0,count-library_visible));
-    for(int i=first;i<std::min(first+library_visible,count);++i) {
+    const double list_x=70,list_w=std::min(1000.,width*0.50),row_h=66,top=content_top,panel_h=reference_h-128-16-content_top;
+    const int visible=std::max(3,int((panel_h-20)/row_h));
+    const int first=std::clamp(library_row_-visible+1,0,std::max(0,count-visible));
+    for(int i=first;i<std::min(first+visible,count);++i) {
         const double y=top+(i-first)*row_h; const bool selected=i==library_row_;
         auto* hit=ui.button("",list_x,y,list_w,row_h-6,selected,true);
         hits_.push_back({WeakObject(hit),{{"action","open"},{"row",i}},false});
-        if(selected) { ui.box(list_x,y,list_w,row_h-6,row_selected); ui.box(list_x,y+10,3,row_h-26,gold); }
+        if(selected) { ui.box(list_x,y,list_w,row_h-6,row_selected); ui.box(list_x,y+9,3,row_h-24,gold); }
         if(i<int(entries.size())) {
             const auto& e=entries[i]; const bool available=e.value("available",false);
-            ui.label(e.value("title",std::string{}),list_x+24,y+10,list_w*0.62,34,23,available?(selected?bright:ink):muted);
-            ui.label("by "+e.value("author",std::string{})+"  /  "+e.value("version",std::string{}),list_x+24,y+42,list_w*0.62,24,15,muted);
+            ui.label(e.value("title",std::string{}),list_x+24,y+7,list_w*0.62,32,22,available?(selected?bright:ink):muted);
+            ui.label("by "+e.value("author",std::string{})+"  /  "+e.value("version",std::string{}),list_x+24,y+37,list_w*0.62,22,14,muted);
             std::string right=available?e.value("status",Json::object()).value("summary",std::string{}):"Unavailable";
             if(!deps_.settings->show_extension_status && available) right.clear();
             const bool active=available && e.value("status",Json::object()).value("active",false);
-            ui.label(right,list_x+list_w*0.64,y+18,list_w*0.34,32,17,available?(active?good:muted):danger,false,2);
+            ui.label(right,list_x+list_w*0.64,y+15,list_w*0.34,32,17,available?(active?good:muted):danger,false,2);
         } else {
-            ui.label("CSSX settings",list_x+24,y+10,list_w*0.62,34,23,selected?bright:ink);
-            ui.label("Hotkeys, scale, pause and HUD behaviour",list_x+24,y+42,list_w*0.62,24,15,muted);
+            ui.label("CSSX settings",list_x+24,y+7,list_w*0.62,32,22,selected?bright:ink);
+            ui.label("Scale, status, open keys, performance",list_x+24,y+37,list_w*0.62,22,14,muted);
         }
     }
-    if(count>library_visible) {
-        const double track=library_visible*row_h;
+    if(count>visible) {
+        const double track=visible*row_h;
         ui.box(list_x+list_w+8,top,3,track,Color{.05f,.04f,.03f,1});
-        ui.box(list_x+list_w+8,top+track*first/count,3,std::max(12.,track*library_visible/count),gold);
+        ui.box(list_x+list_w+8,top+track*first/count,3,std::max(12.,track*visible/count),gold);
     }
     // Right panel: what the selected entry is, plus framework notices.
-    const double px=list_x+list_w+60,pw=width-px-80;
-    ui.box(px,top,pw,700,panel); ui.box(px+24,top,pw-48,1,line);
+    const double px=list_x+list_w+36,pw=width-px-70;
+    ui.box(px,top,pw,panel_h,panel); ui.box(px+24,top,pw-48,1,line);
     if(library_row_<int(entries.size())) {
         const auto& e=entries[library_row_];
-        ui.label(e.value("title",std::string{}),px+24,top+22,pw-48,44,26,bright,true);
+        ui.label(e.value("title",std::string{}),px+24,top+20,pw-48,44,26,bright,true);
         const auto banner=e.value("banner",std::string{});
-        double y=top+80;
-        if(!banner.empty() && texture(ui,banner,px+24,y,pw-48,(pw-48)*0.42)) y+=(pw-48)*0.42+16;
-        auto* d=scroll_text(ui,e.value("description",std::string{}),px+24,y,pw-48,220,19,ink); description_=d;
-        y+=236;
+        double y=top+76;
+        if(!banner.empty() && texture(ui,banner,px+24,y,pw-48,(pw-48)*0.34)) y+=(pw-48)*0.34+16;
+        auto* d=scroll_text(ui,e.value("description",std::string{}),px+24,y,pw-48,std::max(120.,panel_h-(y-top)-150),19,ink); description_=d;
+        y=top+panel_h-130;
         const auto& err=e.value("error",std::string{});
-        if(!err.empty()) ui.label("Unavailable: "+err,px+24,y,pw-48,120,17,danger);
+        if(!err.empty()) ui.label("Unavailable: "+err,px+24,y,pw-48,100,17,danger);
         else {
-            ui.label("Extension id  "+e.value("id",std::string{}),px+24,y,pw-48,26,15,muted); y+=28;
-            ui.label(std::string("Kind  ")+e.value("kind",std::string{})+"   /   API "+std::to_string(e.value("api",0)),px+24,y,pw-48,26,15,muted); y+=28;
+            ui.label("Extension id  "+e.value("id",std::string{}),px+24,y,pw-48,26,15,muted); y+=26;
+            ui.label(std::string("Kind  ")+e.value("kind",std::string{})+"   /   API "+std::to_string(e.value("api",0)),px+24,y,pw-48,26,15,muted); y+=26;
             const auto& cost=e.value("cost",Json::object());
             if(cost.value("tick_calls",uint64_t{})) {
                 const double per=double(cost.value("tick_us",uint64_t{}))/double(cost.value("tick_calls",uint64_t{1}));
@@ -676,23 +701,20 @@ void Menu::build_library(Layout& ui,double width) {
             }
         }
     } else {
-        ui.label("CSSX "+deps_.version,px+24,top+22,pw-48,44,26,bright,true);
-        double y=top+80;
-        if(texture(ui,path_utf8(deps_.root/"assets/banner.png"),px+24,y,pw-48,(pw-48)*0.413)) y+=(pw-48)*0.413+16;   // artwork is 1648x681
-        scroll_text(ui,"Custom Shell System Extensions: one menu for every extension. Open it with "+[&]{ std::string s; for(const auto& k:deps_.settings->open_keyboard) s+=(s.empty()?"":" + ")+k; return s; }()+" on the keyboard or "+[&]{ std::string s; for(const auto& k:deps_.settings->open_gamepad) s+=(s.empty()?"":" + ")+k; return s; }()+" on a controller, or switch to this tab in the Player Menu.",px+24,y,pw-48,150,19,ink);
-        y+=166;
-        ui.label(perf_line(),px+24,y,pw-48,26,15,muted); y+=28;
-        ui.label("Extensions folder  Mods/CSSX/extensions",px+24,y,pw-48,26,15,muted);
+        ui.label("CSSX "+deps_.version,px+24,top+20,pw-48,44,26,bright,true);
+        scroll_text(ui,"Custom Shell System Extensions: one menu for every extension. Open it with "+[&]{ std::string s; for(const auto& k:deps_.settings->open_keyboard) s+=(s.empty()?"":" + ")+k; return s; }()+" on the keyboard or "+[&]{ std::string s; for(const auto& k:deps_.settings->open_gamepad) s+=(s.empty()?"":" + ")+k; return s; }()+" on a controller, or switch to this tab in the Player Menu. Extensions install as folders under Mods/CSSX/extensions.",px+24,top+76,pw-48,220,19,ink);
+        ui.label(perf_line(),px+24,top+panel_h-130,pw-48,26,15,muted);
+        ui.label("Settings tab: scale, status, open keys, performance",px+24,top+panel_h-104,pw-48,26,15,muted);
     }
     Json notice=deps_.notice?deps_.notice():Json::object();
     const auto text=notice.value("notice",std::string{});
-    if(!text.empty()) { ui.box(px+24,top+580,pw-48,1,line); ui.label(text,px+24,top+592,pw-48,96,16,warning); }
-    else if(!library_["errors"].empty()) { ui.box(px+24,top+580,pw-48,1,line); ui.label(std::to_string(library_["errors"].size())+" extension folder(s) could not load. See logs/cssx.jsonl.",px+24,top+592,pw-48,60,16,warning); }
-    if(entries.empty()) ui.label("No extensions installed. Add extension folders under Mods/CSSX/extensions.",list_x,top+library_visible*row_h+12,list_w,40,18,muted);
-    build_footer(ui,width,{{"up",""},{"down","Browse"},{"close","Close"}},{{"accept","Open"}});
+    if(!text.empty()) { ui.box(px+24,top+panel_h-72,pw-48,1,line); ui.label(text,px+24,top+panel_h-64,pw-48,56,15,warning); }
+    else if(!library_["errors"].empty()) { ui.box(px+24,top+panel_h-72,pw-48,1,line); ui.label(std::to_string(library_["errors"].size())+" extension folder(s) could not load. See logs/cssx.jsonl.",px+24,top+panel_h-64,pw-48,56,15,warning); }
+    if(entries.empty()) ui.label("No extensions installed. Add extension folders under Mods/CSSX/extensions.",list_x,top+visible*row_h+12,list_w,40,18,muted);
+    build_footer(ui,width,{{"up",""},{"down","Browse"},{"previous_section",""},{"next_section","Settings"},{"close","Close"}},{{"accept","Open"}});
 }
 void Menu::build_settings(Layout& ui,double width) {
-    header(ui,width,"CSSX settings","Saved to Mods/CSSX/settings.json");
+    frame(ui,width,"Extensions","CSSX "+deps_.version,{"Library","Settings"},1,"framework_tab");
     const auto& s=*deps_.settings;
     struct Row { std::string label,value,hint; };
     char scale[16]; std::snprintf(scale,sizeof scale,"%.0f%%",s.ui_scale*100);
@@ -703,93 +725,86 @@ void Menu::build_settings(Layout& ui,double width) {
         {"Open keys",[&]{ std::string t; for(const auto& k:s.open_keyboard) t+=(t.empty()?"":"+")+k; t+="  /  "; std::string g; for(const auto& k:s.open_gamepad) g+=(g.empty()?"":"+")+k; return t+g; }(),"Shortcut that opens the Player Menu on the CSSX tab. Edit open_keyboard and open_gamepad in settings.json with the game closed (Unreal key names)."},
         {"Performance",perf_line(true),perf_detail()}};
     settings_row_=std::clamp(settings_row_,0,int(rows.size())-1);
-    const double x=80,w=std::min(1000.,width*0.55),row_h=68,top=232;
+    const double x=70,w=std::min(1000.,width*0.50),row_h=62,top=content_top,panel_h=reference_h-128-16-content_top;
     for(size_t i=0;i<rows.size();++i) {
         const double y=top+i*row_h; const bool selected=int(i)==settings_row_;
         auto* hit=ui.button("",x,y,w,row_h-6,selected,true); hits_.push_back({WeakObject(hit),{{"action","settings_row"},{"row",int(i)}},false});
-        if(selected) { ui.box(x,y,w,row_h-6,row_selected); ui.box(x,y+10,3,row_h-26,gold); }
-        ui.label(rows[i].label,x+24,y+16,w*0.6,32,21,selected?bright:ink);
-        ui.label(rows[i].value,x+w*0.62,y+17,w*0.36,30,19,selected?gold:muted,false,2);
+        if(selected) { ui.box(x,y,w,row_h-6,row_selected); ui.box(x,y+9,3,row_h-24,gold); }
+        ui.label(rows[i].label,x+24,y+13,w*0.6,32,21,selected?bright:ink);
+        ui.label(rows[i].value,x+w*0.62,y+14,w*0.36,30,19,selected?gold:muted,false,2);
     }
-    const double px=x+w+60,pw=width-px-80;
-    ui.box(px,top,pw,420,panel);
-    ui.label(rows[settings_row_].label,px+24,top+22,pw-48,44,24,bright,true);
-    scroll_text(ui,rows[settings_row_].hint,px+24,top+80,pw-48,200,19,ink);
+    ui.label("Saved to Mods/CSSX/settings.json",x+4,top+rows.size()*row_h+8,w,26,14,muted);
+    const double px=x+w+36,pw=width-px-70;
+    ui.box(px,top,pw,panel_h,panel); ui.box(px+24,top,pw-48,1,line);
+    ui.label(rows[settings_row_].label,px+24,top+20,pw-48,44,24,bright,true);
+    scroll_text(ui,rows[settings_row_].hint,px+24,top+76,pw-48,240,19,ink);
     if(settings_row_<2) {
-        auto* less=ui.button("<",px+24,top+300,56,48,false,true,22,ink); hits_.push_back({WeakObject(less),{{"action","settings_adjust"},{"delta",-1}},false});
-        auto* more=ui.button(">",px+pw-80,top+300,56,48,false,true,22,ink); hits_.push_back({WeakObject(more),{{"action","settings_adjust"},{"delta",1}},false});
-        ui.label(rows[settings_row_].value,px+90,top+306,pw-180,40,22,gold,false,1);
+        auto* less=ui.button("<",px+24,top+340,56,48,false,true,22,ink); hits_.push_back({WeakObject(less),{{"action","settings_adjust"},{"delta",-1}},false});
+        auto* more=ui.button(">",px+pw-80,top+340,56,48,false,true,22,ink); hits_.push_back({WeakObject(more),{{"action","settings_adjust"},{"delta",1}},false});
+        ui.label(rows[settings_row_].value,px+90,top+346,pw-180,40,22,gold,false,1);
     }
-    build_footer(ui,width,{{"up",""},{"down","Browse"},{"close","Library"}},settings_row_<2?std::vector<std::pair<std::string,std::string>>{{"left",""},{"right","Adjust"}}:std::vector<std::pair<std::string,std::string>>{});
+    build_footer(ui,width,{{"up",""},{"down","Browse"},{"previous_section",""},{"next_section","Library"},{"close","Close"}},settings_row_<2?std::vector<std::pair<std::string,std::string>>{{"left",""},{"right","Adjust"}}:std::vector<std::pair<std::string,std::string>>{});
 }
 void Menu::build_extension(Layout& ui,double width) {
     const Json* entry=nullptr; for(const auto& e:library_["extensions"]) if(e.value("id",std::string{})==extension_id_) entry=&e;
     if(!entry) { screen_=Screen::Library; extension_id_.clear(); build_library(ui,width); return; }
-    ui.label(entry->value("title",std::string{}),80,124,width-160,52,30,bright,true);
-    ui.label("by "+entry->value("author",std::string{})+"  /  "+entry->value("version",std::string{}),84,174,width-640,28,16,muted);
-    ui.box(80,208,width-160,1,line);
+    if(!model_.is_object() || !model_.contains("sections")) {
+        frame(ui,width,entry->value("title",std::string{}),"by "+entry->value("author",std::string{})+"  /  "+entry->value("version",std::string{}),{},0,"section");
+        ui.label(error_.empty()?"This extension has no menu.":error_,70,content_top,width-140,200,22,danger);
+        build_footer(ui,width,{{"close","Library"}},{}); return;
+    }
+    const auto& sections=model_["sections"]; const int count=int(sections.size());
+    section_=std::clamp(section_,0,std::max(0,count-1));
+    std::vector<std::string> tabs; for(const auto& sct:sections) tabs.push_back(sct.value("title",std::string{}));
+    frame(ui,width,entry->value("title",std::string{}),"by "+entry->value("author",std::string{})+"  /  "+entry->value("version",std::string{}),tabs,section_,"section");
     // Notice strip: the extension's one pending thing (unapplied edits,
     // cleanup) with its action, reachable by mouse or from any section.
-    if(model_.is_object() && model_.contains("notice") && model_["notice"].is_object()) {
+    if(model_.contains("notice") && model_["notice"].is_object()) {
         const auto& n=model_["notice"];
         const auto text=n.value("text",std::string{}),label=n.value("label",std::string{}),action=n.value("action",std::string{});
-        const double w=std::min(560.,120+(text.size()+label.size())*11.5),x=width-80-w,y=156;
+        const double w=std::min(560.,120+(text.size()+label.size())*11.5),x=width-70-w,y=150;
         auto* hit=ui.button("",x,y,w,44,false,!action.empty()); hits_.push_back({WeakObject(hit),{{"action","run"},{"id",action}},false});
         ui.box(x,y,w,44,Color{.10f,.075f,.035f,.95f}); ui.box(x,y,3,44,gold);
         ui.label(text,x+18,y+8,w-36,30,18,bright);
         if(!label.empty()) ui.label(label+"  >",x+18,y+8,w-36,30,18,gold,false,2);
     }
-    if(!model_.is_object() || !model_.contains("sections")) {
-        ui.label(error_.empty()?"This extension has no menu.":error_,80,220,width-160,200,22,danger);
-        build_footer(ui,width,{{"close","Library"}},{}); return;
-    }
-    const auto& sections=model_["sections"]; const int count=int(sections.size());
-    section_=std::clamp(section_,0,std::max(0,count-1));
-    // Left rail: sections.
-    const double rail_x=80,rail_w=280,top=240;
-    for(int i=0;i<count;++i) {
-        const double y=top+i*56; const bool selected=i==section_;
-        auto* hit=ui.button(sections[i].value("title",std::string{}),rail_x,y,rail_w,50,selected,true,20,selected?bright:ink);
-        hits_.push_back({WeakObject(hit),{{"action","section"},{"section",i}},false});
-        if(selected) ui.box(rail_x,y+8,3,34,gold);
-    }
-    if(count>1) ui.label("Sections",rail_x+4,top-30,rail_w,26,15,muted);
-    // Centre: control rows.
-    const double list_x=rail_x+rail_w+40,list_w=std::min(880.,width*0.46),row_h=62;
+    // Left: control rows, as wide as the CSS list. Right: detail panel.
+    const double list_x=70,list_w=std::min(1000.,width*0.50),row_h=58,top=content_top,panel_h=reference_h-128-16-content_top;
     const auto& controls=count?sections[section_]["controls"]:Json::array();
     const int rows=int(controls.size());
-    row_=std::clamp(row_,0,std::max(0,rows-1));
-    if(row_<first_row_) first_row_=row_; if(row_>=first_row_+controls_visible) first_row_=row_-controls_visible+1;
-    first_row_=std::clamp(first_row_,0,std::max(0,rows-controls_visible));
     const auto section_help=sections[section_].value("description",std::string{});
     double list_top=top;
-    if(!section_help.empty()) { ui.label(section_help,list_x,top-4,list_w,40,16,muted); list_top+=44; }
-    for(int i=first_row_;i<std::min(first_row_+controls_visible,rows);++i) {
+    if(!section_help.empty()) { ui.label(section_help,list_x+4,top,list_w,30,15,muted); list_top+=34; }
+    const int visible=std::max(4,int((panel_h-(list_top-top)-30)/row_h));
+    row_=std::clamp(row_,0,std::max(0,rows-1));
+    if(row_<first_row_) first_row_=row_; if(row_>=first_row_+visible) first_row_=row_-visible+1;
+    first_row_=std::clamp(first_row_,0,std::max(0,rows-visible));
+    for(int i=first_row_;i<std::min(first_row_+visible,rows);++i) {
         const auto& c=controls[i]; const double y=list_top+(i-first_row_)*row_h; const bool selected=i==row_;
         const bool enabled=c.value("enabled",true) && !c.value("busy",false);
         auto* hit=ui.button("",list_x,y,list_w,row_h-4,selected && enabled,true);
         hits_.push_back({WeakObject(hit),{{"action","row"},{"row",i}},false});
-        if(selected) { ui.box(list_x,y,list_w,row_h-4,enabled?row_selected:Color{.04f,.04f,.04f,.8f}); ui.box(list_x,y+10,3,row_h-24,enabled?gold:muted); }
+        if(selected) { ui.box(list_x,y,list_w,row_h-4,enabled?row_selected:Color{.04f,.04f,.04f,.8f}); ui.box(list_x,y+9,3,row_h-22,enabled?gold:muted); }
         const auto type=c.at("type").get<std::string>();
-        ui.label(c.value("label",std::string{}),list_x+22,y+14,list_w*0.6-22,32,20,enabled?(selected?bright:ink):muted);
+        ui.label(c.value("label",std::string{}),list_x+22,y+12,list_w*0.6-22,32,20,enabled?(selected?bright:ink):muted);
         std::string value=c.value("busy",false)?"Working...":!c.value("enabled",true)?c.value("disabled_label",std::string("Unavailable")):display_value(c);
         if(!value.empty() && c.contains("unit") && (type=="number" || type=="slider")) value+=c.value("unit",std::string{});
         Color vc=enabled?(type=="toggle"?(c.value("value",false)?good:muted):gold):muted;
         if(c.value("severity",std::string{})=="danger" && type=="button") vc=danger;
-        ui.label(value,list_x+list_w*0.6,y+15,list_w*0.4-22,30,18,vc,false,2);
+        ui.label(value,list_x+list_w*0.6,y+13,list_w*0.4-30,30,18,vc,false,2);
         // Toggles: a small state lamp at the row edge so active cheats read at a glance.
         if(type=="toggle") { const bool on=c.value("value",false); ui.box(list_x+list_w-14,y+row_h/2-8,6,12,on?good:Color{.12f,.10f,.08f,1}); }
     }
-    if(rows>controls_visible) {
-        const double track=controls_visible*row_h;
+    if(rows>visible) {
+        const double track=visible*row_h;
         ui.box(list_x+list_w+8,list_top,3,track,Color{.05f,.04f,.03f,1});
-        ui.box(list_x+list_w+8,list_top+track*first_row_/rows,3,std::max(12.,track*controls_visible/rows),gold);
-        ui.label(std::to_string(first_row_+1)+" - "+std::to_string(std::min(first_row_+controls_visible,rows))+" of "+std::to_string(rows),list_x,list_top+track+8,list_w,26,15,muted);
+        ui.box(list_x+list_w+8,list_top+track*first_row_/rows,3,std::max(12.,track*visible/rows),gold);
+        ui.label(std::to_string(first_row_+1)+" - "+std::to_string(std::min(first_row_+visible,rows))+" of "+std::to_string(rows),list_x,list_top+track+6,list_w,26,15,muted);
     }
     if(!rows) ui.label("This section has no controls.",list_x,list_top+20,list_w,40,18,muted);
     // Right: detail and editor for the selected control.
-    const double px=list_x+list_w+40,pw=width-px-80;
-    ui.box(px,top,pw,690,panel); ui.box(px+24,top,pw-48,1,line);
+    const double px=list_x+list_w+36,pw=width-px-70;
+    ui.box(px,top,pw,panel_h,panel); ui.box(px+24,top,pw-48,1,line);
     if(rows) {
         const auto& c=controls[row_]; const auto type=c.at("type").get<std::string>();
         const bool enabled=interactive(c);
@@ -854,7 +869,7 @@ void Menu::build_extension(Layout& ui,double width) {
             else ui.label(c.value("busy",false)?"Working...":c.value("disabled_label",std::string("Unavailable")),px+40,y+12,pw-80,30,19,muted);
             if(enabled) right={{"accept",label}};
         }
-        if(c.contains("confirm") && enabled) ui.label("Asks for confirmation",px+24,top+650,pw-48,26,15,muted);
+        if(c.contains("confirm") && enabled) ui.label("Asks for confirmation",px+24,top+panel_h-40,pw-48,26,15,muted);
         build_footer(ui,width,{{"close","Library"},{"previous_section",""},{"next_section","Sections"},{"up",""},{"down","Browse"}},right);
     } else build_footer(ui,width,{{"close","Library"},{"previous_section",""},{"next_section","Sections"}},{});
 }
