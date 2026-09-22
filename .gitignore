@@ -10,6 +10,7 @@ reference/
 /tmp/
 
 # Runtime state and developer catalogs are specific to an installation.
+/scratch/
 /state/
 /runtime/
 /logs/

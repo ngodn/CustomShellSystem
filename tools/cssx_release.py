@@ -30,7 +30,7 @@ def verify_framework(path: Path) -> dict:
             raise ValueError('Duplicate or damaged CSSX ZIP members')
         manifest = json.loads(archive.read('cssx-release.json'))
         version = manifest['version']
-        if not isinstance(version, str) or not re.fullmatch(r'\d+\.\d+\.\d+', version):
+        if not isinstance(version, str) or not re.fullmatch(css_release.VERSION_PATTERN, version):
             raise ValueError('Invalid CSSX version')
         expected = framework_names(version)
         if set(names) != expected | {'cssx-release.json'} or set(manifest['files']) != expected:
@@ -77,7 +77,7 @@ def write_framework(output: Path, version: str, revision: str, build: Path) -> P
 
 def build_all(output: Path, sdk: Path) -> list[Path]:
     version = (ROOT/'VERSION').read_text().strip()
-    if not re.fullmatch(r'\d+\.\d+\.\d+', version):
+    if not re.fullmatch(css_release.VERSION_PATTERN, version):
         raise ValueError('Invalid VERSION')
     revision = css_release.git('rev-parse', 'HEAD')
     if css_release.git('rev-parse', f'v{version}^{{commit}}') != revision:
