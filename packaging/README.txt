@@ -54,17 +54,19 @@ Reset CSS preferences only with the game closed by moving state/ to a backup.
 The CSS wardrobe does not modify the game's save files. Extensions may do so.
 
 Alpha status and known limitations
-This is CSS 1.0.0-alpha.1, a technology preview, not the final 1.0.0 release.
-Eve Black Pearl is a separate sample package. Its movement options are opt-in.
+This is CSS 1.0.0-alpha.2, a technology preview, not the final 1.0.0 release.
+Eve Black Pearl is a separate sample package. Its movement and idle options are opt-in.
 Eve walk, jog and sprint include the corrected leg trajectories accepted in
 live gameplay review on 2026-09-21.
-Broad weapon, combat and travel testing remains incomplete.
-Feminine (CSS) idle uses the Cultist Spear Lady standing pose. Eve's custom idle,
-weapon hiding and beacon teleport playback are not included yet. Missing custom
-animation options fall back to the game; the five UI rows are not five finished
-Eve animations. The modder kit and authoring tutorial are still being prepared.
+Custom idle animation and automatic in-hand weapon hiding are supported natively
+via CSS post-process animation layers.
+Broad weapon, combat and travel testing remains in progress.
+Beacon teleport playback is not included yet. Missing custom animation options
+fall back to the game; the UI rows only display authored options. The modder
+kit and authoring tutorial are still being prepared.
 
 Use normal game restarts when updating DLLs or outfit containers. Animation
 DLL hot reload previously crashed the game and is not part of this alpha workflow.
 CSSX is not included. Keep it disabled for this preview while its reported
 performance regression remains under investigation.
+

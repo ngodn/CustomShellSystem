@@ -294,8 +294,14 @@ class WalkOverride {
     fs::path mods_; bool mods_checked_=false, mod_active_=false; uint64_t mods_check_=0;
     bool genessa_active_=false, proxima_active_=false;
     std::string mod_name_;
+    std::string custom_idle_clip_;
+    bool hide_weapons_=false;
+    bool custom_idle_engaged_=false;
+    WeakObject custom_idle_post_;
+    WeakObject hidden_weapon_;
     RC::Unreal::UObject* blendspace(WeakObject& slot,const wchar_t* path);
     RC::Unreal::UObject* custom_blendspace(size_t index,RC::Unreal::UObject* skeleton);
+    void set_weapon_hidden(RC::Unreal::UObject* pawn,bool hide);
     void push_on(RC::Unreal::UObject* target);
     void push_off();
     void forget_blend_lease();
@@ -307,10 +313,12 @@ public:
     const std::string& walk_mod_name() const { return mod_name_; }
     bool genessa_walk_active() const { return genessa_active_; }
     bool proxima_walk_active() const { return proxima_active_; }
-    bool engaged() const { return engaged_; }
+    bool engaged() const { return engaged_ || custom_idle_engaged_; }
     const std::string& reason() const { return reason_; }
     void update(RC::Unreal::UObject* pawn,bool idle_feminine,bool walk_feminine,
-                const std::array<std::string,3>& custom_paths);
+                const std::array<std::string,3>& custom_paths,
+                const std::string& custom_idle_clip={},
+                bool hide_weapons=false);
     void release();
 };
 // CSSX ABI 2: a retained HUD surface for native extensions. The core owns the
@@ -488,8 +496,9 @@ public:
     void sync_items(const Outfit&,const std::string& variant);
     int worn_item_count() const { return items_.count(); }
     WalkOverride walk;
-    void sync_walk(bool idle_feminine,bool walk_feminine,const std::array<std::string,3>& custom_paths) {
-        walk.update(observed_pawn_.Get(),idle_feminine,walk_feminine,custom_paths);
+    void sync_walk(bool idle_feminine,bool walk_feminine,const std::array<std::string,3>& custom_paths,
+                   const std::string& custom_idle_clip={},bool hide_weapons=false) {
+        walk.update(observed_pawn_.Get(),idle_feminine,walk_feminine,custom_paths,custom_idle_clip,hide_weapons);
     }
     Json transition_state(void* engine);
 #ifdef CSS_TRANSITION_TESTS

@@ -171,6 +171,7 @@ struct Core {
         try {
             appearance.walk.walk_mod_active(root.parent_path());
             std::array<std::string,3> movement;
+            ResolvedAnimation custom_idle;
             const auto selected=state.selections.find(appearance.shell);
             if(state.enabled && appearance.active() && !apply_pending && !restore_pending && selected!=state.selections.end()) {
                 const auto& selection=selected->second;
@@ -179,10 +180,14 @@ struct Core {
                     for(size_t i=0;i<movement.size();++i)
                         movement[i]=resolve_animation(catalog.animation_options(selection.outfit,selection.variant,slots[i]),slots[i],
                             state.animation_choices.get(selection.outfit,selection.variant,slots[i])).asset;
+                    custom_idle=resolve_animation(catalog.animation_options(selection.outfit,selection.variant,AnimationSlot::Idle),
+                        AnimationSlot::Idle,
+                        state.animation_choices.get(selection.outfit,selection.variant,AnimationSlot::Idle));
                 }
             }
             appearance.sync_walk(use_feminine_animation(state,appearance.shell,AnimationSlot::Idle),
-                                 use_feminine_animation(state,appearance.shell,AnimationSlot::Walk),movement);
+                                 use_feminine_animation(state,appearance.shell,AnimationSlot::Walk),movement,
+                                 custom_idle.asset,custom_idle.hide_weapons);
             walk_error.clear();
         }
         catch(const std::exception& error) {

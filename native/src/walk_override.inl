@@ -202,29 +202,89 @@ void WalkOverride::push_off() {
     forget_blend_lease();
     engaged_=false; active_.Reset(); reason_.clear();
 }
+void WalkOverride::set_weapon_hidden(UObject* pawn,bool hide) {
+    if(!pawn) return;
+    auto* weapons=read<UObject*>(pawn,L"WeaponsComponent");
+    if(hide) {
+        if(weapons) {
+            Call get_in_hand(weapons,L"GetWeaponInHand",1);
+            get_in_hand.run();
+            if(auto* weapon=get_in_hand.get<UObject*>()) {
+                Call set_hidden(weapon,L"SetActorHiddenInGame",1);
+                set_hidden.set(L"bNewHidden",true);
+                set_hidden.run();
+                hidden_weapon_=weapon;
+            }
+        }
+    } else {
+        if(auto* w=hidden_weapon_.Get()) {
+            Call set_hidden(w,L"SetActorHiddenInGame",1);
+            set_hidden.set(L"bNewHidden",false);
+            set_hidden.run();
+            hidden_weapon_.Reset();
+        }
+        if(weapons) {
+            Call get_in_hand(weapons,L"GetWeaponInHand",1);
+            get_in_hand.run();
+            if(auto* weapon=get_in_hand.get<UObject*>()) {
+                Call set_hidden(weapon,L"SetActorHiddenInGame",1);
+                set_hidden.set(L"bNewHidden",false);
+                set_hidden.run();
+            }
+        }
+    }
+}
 void WalkOverride::release() {
     scale_walk_=false;
     push_off();
+    if(custom_idle_engaged_) {
+        if(auto* post=custom_idle_post_.Get()) {
+            if(has_field(post,L"CSSIdleEnabled",sizeof(bool)))
+                write_field<bool>(post,L"CSSIdleEnabled",false);
+        }
+        if(hide_weapons_ && pawn_.Get()) set_weapon_hidden(pawn_.Get(),false);
+        custom_idle_engaged_=false;
+        custom_idle_post_.Reset();
+    }
     // Keep the hook handle on failure. Core stop must refuse unload while a
     // callback can still enter this DLL.
     unhook_speed();
     pawn_.Reset(); anim_.Reset(); movement_.Reset(); walk_bs_.Reset();
     custom_paths_={};custom_blends_={};custom_skeleton_.Reset();
+    custom_idle_clip_.clear(); hide_weapons_=false;
     idle_ticks_=off_ticks_=slide_ticks_=0; slide_until_=0; last_heal_=0;
 }
 void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
-    const std::array<std::string,3>& custom_paths) {
+    const std::array<std::string,3>& custom_paths,
+    const std::string& custom_idle_clip,
+    bool hide_weapons) {
     const auto now=GetTickCount64();
     speed_thread_=GetCurrentThreadId();
     const bool custom=std::any_of(custom_paths.begin(),custom_paths.end(),[](const auto& path){return !path.empty();});
-    if(!idle_feminine && !walk_feminine && !custom) { if(engaged_ || blend_lease_.engaged() || hook_) release(); return; }
+    const bool has_custom_idle=!custom_idle_clip.empty();
+    if(!idle_feminine && !walk_feminine && !custom && !has_custom_idle) {
+        if(engaged_ || blend_lease_.engaged() || hook_ || custom_idle_engaged_) release();
+        return;
+    }
     if(!pawn) { release(); return; }
     if(pawn_.Get()!=pawn) {
         release();
         pawn_=pawn; anim_.Reset(); movement_.Reset();
     }
-    if(custom_paths_!=custom_paths) {
-        push_off();custom_blends_={};custom_skeleton_.Reset();custom_paths_=custom_paths;
+    if(custom_paths_!=custom_paths || custom_idle_clip_!=custom_idle_clip || hide_weapons_!=hide_weapons) {
+        push_off();
+        if(custom_idle_engaged_) {
+            if(auto* post=custom_idle_post_.Get()) {
+                if(has_field(post,L"CSSIdleEnabled",sizeof(bool)))
+                    write_field<bool>(post,L"CSSIdleEnabled",false);
+            }
+            if(hide_weapons_) set_weapon_hidden(pawn,false);
+            custom_idle_engaged_=false;
+        }
+        custom_blends_={};custom_skeleton_.Reset();
+        custom_paths_=custom_paths;
+        custom_idle_clip_=custom_idle_clip;
+        hide_weapons_=hide_weapons;
     }
     auto* mesh=read<UObject*>(pawn,L"Mesh");
     if(!mesh) {release();return;}
@@ -285,6 +345,39 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     idle_ticks_=standing?idle_ticks_+1:0;
     const bool settled=standing && (engaged_ || idle_ticks_>=WALK_IDLE_SETTLE);
     UObject* want=nullptr; bool hard_off=false; std::string reason;
+    if(settled && has_custom_idle) {
+        auto* post=read<UObject*>(current_mesh,L"PostProcessAnimInstance");
+        if(!post) {
+            Call get_post(current_mesh,L"GetPostProcessInstance",1);
+            get_post.run();
+            post=get_post.get<UObject*>();
+        }
+        if(post && has_field(post,L"CSSIdleEnabled",sizeof(bool)) && has_field(post,L"CSSIdleSequence",sizeof(UObject*))) {
+            auto* clip=load(custom_idle_clip_);
+            if(clip) {
+                if(!custom_idle_engaged_ || custom_idle_post_.Get()!=post ||
+                   read<UObject*>(post,L"CSSIdleSequence")!=clip || !read<bool>(post,L"CSSIdleEnabled")) {
+                    write_field<UObject*>(post,L"CSSIdleSequence",clip);
+                    write_field<bool>(post,L"CSSIdleEnabled",true);
+                    custom_idle_engaged_=true;
+                    custom_idle_post_=post;
+                    if(hide_weapons_) set_weapon_hidden(pawn,true);
+                }
+                reason="custom idle";
+                hard_off=true;
+            }
+        }
+    }
+    else if(!standing || !settled) {
+        if(custom_idle_engaged_) {
+            if(auto* post=custom_idle_post_.Get()) {
+                if(has_field(post,L"CSSIdleEnabled",sizeof(bool)))
+                    write_field<bool>(post,L"CSSIdleEnabled",false);
+            }
+            if(hide_weapons_) set_weapon_hidden(pawn,false);
+            custom_idle_engaged_=false;
+        }
+    }
     std::optional<size_t> custom_index;
     if(sprinting && !custom_paths_[2].empty()) custom_index=2;
     else if(jogging && !custom_paths_[1].empty()) custom_index=1;
@@ -302,7 +395,7 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
         if(loaded_instance.get<UObject*>()!=anim) {release();return;}
     }
     else if(walk_now && walk_feminine && walk_bs) { want=walk_bs; reason="walk"; }
-    else if(settled && idle_feminine && walk_bs) { want=walk_bs; reason="idle"; }
+    else if(settled && !has_custom_idle && idle_feminine && walk_bs) { want=walk_bs; reason="idle"; }
     else if((standing && !idle_feminine) || (walk_now && !walk_feminine)) hard_off=true;
     // A custom gait must not linger after its category changes or becomes Default.
     if(!want && reason_.starts_with("custom ")) hard_off=true;
