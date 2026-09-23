@@ -827,6 +827,8 @@ bool Appearance::ready_to_apply() const {
     return ready_to_apply_reason().empty();
 }
 bool Appearance::active() const { auto* c=component_.Get(); return c && c==observed_component_.Get() && applied_.Get() && mesh_asset(c)==applied_.Get(); }
+#ifdef CSS_INVENTORY_DEV
+#endif
 bool Appearance::apply(void* engine, const std::string& mesh_path, const std::map<int,std::string>& materials) {
     if(!ready_to_apply()) return false;
     auto* pawn = player(engine);
@@ -880,13 +882,19 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
         // Once recovery is allowed, preserve valid dye resources here too.
         if(returning_to_outfit) {
             set_mesh(component,target);
+            applied_hidden_.clear();   // a fresh mesh shows every section; see note below
             if(materials_match() || reuse_materials()) {
                 current_mesh=narrow(target->GetPathName());
                 return true;
             }
         }
         reset_controls();
-        if(before!=target && !returning_to_outfit) set_mesh(component, target);
+        // SetSkeletalMeshAsset brings up a mesh with every material section shown, so the
+        // cached hidden set no longer matches the component. Clearing it makes the follow-up
+        // reconcile_sections() (in customize()) re-hide from scratch instead of short-circuiting
+        // on a stale want==applied_hidden_. This is why a launchpad/gate that swapped the pawn
+        // to Harbinger and back used to drop the outfit's cut sections. Event-only, no frame cost.
+        if(before!=target && !returning_to_outfit) { set_mesh(component, target); applied_hidden_.clear(); }
         const int count=overrides(component).Num();
         for(int i=0;i<count;++i) material(component,i,nullptr);
         auto defaults=material_snapshot(component,target).at("defaults");
@@ -1738,6 +1746,7 @@ void Appearance::prepare_deformation_materials() {
     }
 }
 void Appearance::customize(const Outfit& outfit,const std::string& variant,const Customization& custom) {
+    color_check_valid_=false;   // recaptured below from the first colour CSS actually writes
     const auto& options=outfit.controls_for(variant);
     auto values=control_values(options,custom);
     auto* component=component_.Get();
@@ -2095,6 +2104,13 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 readback.copy(L"ParameterInfo",set,L"ParameterInfo"); readback.run();
                 if(control.scalar ? std::abs(readback.get<float>()-color[0])>.00001f : readback.get<ControlValue>()!=color)
                     throw std::runtime_error("Color parameter read-back failed");
+                // Remember the first colour written as the transition fingerprint (one value, so
+                // customization_reset() costs a single reflected read on the slow maintenance tick).
+                if(!color_check_valid_) {
+                    color_check_mid_=mid; color_check_param_=parameter;
+                    color_check_assoc_=uint8_t(binding.association); color_check_layer_=binding.layer;
+                    color_check_scalar_=control.scalar; color_check_value_=color; color_check_valid_=true;
+                }
             }
         }
         sync_body_geometry(component);
@@ -2106,6 +2122,53 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
         material_debug["dye_targets"]=dye_targets_.size();
         remember_materials();
     } catch(...) { reset_controls(); throw; }
+}
+// Cheap transition check: re-read the one dye value CSS wrote and see whether it still holds. A
+// launchpad/Harbinger gate resets material parameters in place (same MID object), which every
+// pointer/aliveness check misses; a divergence here is the only reliable signal that the
+// customization was silently reset and needs re-applying. One reflected read; called at ~7 Hz.
+bool Appearance::customization_reset() const {
+    auto* comp=component_.Get();
+    if(!comp || mesh_asset(comp)!=applied_.Get()) return false;   // only while our outfit is worn
+    // Colour: re-read the one dye value CSS wrote.
+    if(color_check_valid_) if(auto* mid=color_check_mid_.Get()) try {
+        Call rb(mid,color_check_scalar_?L"K2_GetScalarParameterValueByInfo":L"K2_GetVectorParameterValueByInfo",2);
+        auto* p=rb.param(L"ParameterInfo"); auto* info=find(L"/Script/Engine.MaterialParameterInfo");
+        member(rb.data(p),p->GetElementSize(),info,L"Name",color_check_param_);
+        member(rb.data(p),p->GetElementSize(),info,L"Association",color_check_assoc_);
+        member(rb.data(p),p->GetElementSize(),info,L"Index",color_check_layer_);
+        rb.run();
+        if(color_check_scalar_) { if(std::abs(double(rb.get<float>())-double(color_check_value_[0]))>.02) return true; }
+        else { auto v=rb.get<ControlValue>(); for(int i=0;i<3;++i) if(std::abs(double(v[i])-double(color_check_value_[i]))>.02) return true; }
+    } catch(...) {}
+    // Body shape: a transition clears the morph-target curves, reverting the sliders. Re-read one
+    // driven morph and the body-geometry shape morphs against what CSS set.
+    auto morph=[&](const std::string& name)->float {
+        Call g(comp,L"GetMorphTarget",2); g.set(L"MorphTargetName",FName(wide(name).c_str(),FNAME_Add)); g.run();
+        return g.get<float>();
+    };
+    if(!driven_morphs_.empty()) try {
+        const auto& [name,weight]=*driven_morphs_.begin();
+        if(std::abs(double(morph(name))-double(weight))>.02) return true;
+    } catch(...) {}
+    if(body_geometry_morphs_ && body_geometry_model_) try {
+        for(size_t i=0;i<body_geometry_morphs_->size() && i<body_geometry_model_->morphs.size();++i)
+            if(std::abs(double(morph(body_geometry_model_->morphs[i]))-double((*body_geometry_morphs_)[i]))>.02) return true;
+    } catch(...) {}
+    // Hidden sections (clothing the outfit covers): a transition can show them again.
+    if(!applied_hidden_.empty()) try {
+        const int section=*applied_hidden_.begin();
+        Call rb(comp,L"IsMaterialSectionShown",3);
+        rb.set(L"MaterialID",int32_t(section)); rb.set(L"LODIndex",int32_t(0)); rb.run();
+        if(rb.get<bool>()) return true;   // a section CSS hid is visible again
+    } catch(...) {}
+    return false;
+}
+// True while a teleport/gate/traversal is mid-flight. Its falling edge is the moment a gate has
+// finished, which is when CSS re-checks and re-applies once - as opposed to polling continuously,
+// which would fight a mod's own locomotion-driven visibility.
+bool Appearance::transition_active() const {
+    return is_quest_or_teleport_active(observed_controller_.Get()) || is_traversal_ability_active(observed_pawn_.Get());
 }
 
 }

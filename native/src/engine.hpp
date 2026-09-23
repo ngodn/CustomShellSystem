@@ -475,6 +475,14 @@ class Appearance {
     std::map<std::string,WeakObject> dye_targets_, dye_textures_;
     std::map<std::string,ControlValue> last_values_;
     std::string control_outfit_;
+    // Transition guard: one dye value CSS wrote, cheap to re-read. A launchpad/Harbinger gate
+    // resets material parameters in place - same MID objects, so every pointer check misses it -
+    // and if this value has diverged the customization was silently reset and must be re-applied.
+    WeakObject color_check_mid_;
+    RC::Unreal::FName color_check_param_;
+    uint8_t color_check_assoc_=0; int32_t color_check_layer_=0;
+    bool color_check_scalar_=false, color_check_valid_=false;
+    ControlValue color_check_value_{};
     std::vector<WeakObject> expected_materials_;
     WeakObject menu_component_, menu_applied_;
     std::string menu_original_;
@@ -514,6 +522,8 @@ public:
     void set_ground_offset(double offset);
     bool active() const;
     bool repair_materials_needed() const;
+    bool customization_reset() const;        // a transition reset CSS's applied customization in place
+    bool transition_active() const;   // a teleport/gate/traversal is currently in progress
     bool repair_mesh_needed() const;
     bool ready_to_apply() const;
     std::string ready_to_apply_reason() const;
@@ -546,6 +556,8 @@ public:
         walk.update(observed_pawn_.Get(),idle_feminine,walk_feminine,custom_paths,custom_idle_clip,hide_weapons);
     }
     Json transition_state(void* engine);
+#ifdef CSS_INVENTORY_DEV
+#endif
 #ifdef CSS_TRANSITION_TESTS
     void test_reset_mesh();
     void test_effect(bool begin,bool parameters=false);

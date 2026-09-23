@@ -116,6 +116,7 @@ struct Core {
     std::optional<bool> test_cursor_pending;
 #endif
     std::string maintenance_error;
+    bool was_transition_=false;   // previous tick's teleport/gate/traversal state, for edge detection
     std::string attachment_error;
     uint64_t attachments_after=0;
     std::string misc_error;
@@ -762,6 +763,23 @@ struct Core {
                     maintenance_after=now+1000;
                     host.log(error.what());
                 }
+            }
+            // A teleport/gate/traversal just finished (its guards fell from active to inactive).
+            // Different gate types revert different things - some the mesh (caught above), some
+            // only the customization in place. Re-apply ONCE on that edge if anything reverted.
+            // Edge-driven, so it never fights a mod's own locomotion-based visibility.
+            if(state.enabled) {
+                bool transition_now=false;
+                try { transition_now=appearance.transition_active(); } catch(...) {}
+                if(was_transition_ && !transition_now && !apply_pending) {
+                    try {
+                        if(!appearance.active() || appearance.customization_reset()) {
+                            apply_pending=true;
+                            host.log("Restoring appearance after a teleport/gate transition");
+                        }
+                    } catch(...) {}
+                }
+                was_transition_=transition_now;
             }
             if(state.enabled && !apply_pending) sync_menu_safely();
         }
