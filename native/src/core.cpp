@@ -866,7 +866,16 @@ struct Core {
             }
             const bool stock_reset=appearance.repair_mesh_needed();
             const std::string reconcile_key=outfit_key(appearance.shell);
-            recovery.observe(state.enabled,state.auto_apply,state.selections.contains(reconcile_key),changed,stock_reset);
+            // A saved look is only worth recovering if its package is still installed and fits
+            // this shell. A stale note (uninstalled outfit or variant) must not arm recovery, or
+            // it retries and logs the failure on every tick; treat it like no saved look and let
+            // the shell show its default instead.
+            auto selection_applicable=[&](const std::string& key){
+                auto it=state.selections.find(key);
+                return it!=state.selections.end() && catalog.find(it->second.outfit,it->second.variant)
+                       && catalog.compatible(it->second.outfit,appearance.shell);
+            };
+            recovery.observe(state.enabled,state.auto_apply,selection_applicable(reconcile_key),changed,stock_reset);
             if(stock_reset || !appearance.active()) applied_id.clear();
             if(!apply_pending && recovery.due(now)) {
                 auto reason = appearance.ready_to_apply_reason();
@@ -923,8 +932,16 @@ struct Core {
                 if (!requested.outfit.empty()) {
                     if(pending_custom) { requested.custom=*pending_custom; pending_custom.reset(); }
                     auto* variant = catalog.find(requested.outfit, requested.variant);
-                    if (!variant || !catalog.compatible(requested.outfit, shell))
-                        throw std::runtime_error("Saved outfit is missing or incompatible.");
+                    if (!variant || !catalog.compatible(requested.outfit, shell)) {
+                        // A stale saved look whose package or variant is no longer installed.
+                        // Show this shell's default quietly and settle, instead of failing and
+                        // retrying every reconcile. The note is kept, so the look returns if the
+                        // package is reinstalled. (An explicit wear is validated earlier, so only
+                        // a saved selection reaches here.)
+                        host.log(("Saved look for "+shell+" ("+requested.outfit+"/"+requested.variant+
+                                  ") is not installed; showing default").c_str());
+                        recovery.clear();
+                    } else {
                     auto start = std::chrono::steady_clock::now();
                     appearance.set_attachment_offsets(variant->attachments);
                     if (appearance.apply(engine, variant->mesh, variant->materials)) {
@@ -965,6 +982,7 @@ struct Core {
                             custom_only=false;
                         }
                     } else { recovery.failed(now); report("No playable character mesh is ready."); }
+                    }
                 }
                 }
             }
