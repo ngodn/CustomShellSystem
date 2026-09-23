@@ -655,17 +655,18 @@ static bool is_quest_or_teleport_active(UObject* pc) {
         UObject* tp_mgr = nullptr;
         std::memcpy(&tp_mgr, reinterpret_cast<const std::byte*>(pc) + tp_mgr_prop->GetOffset_Internal(), sizeof(UObject*));
         if(tp_mgr) {
+            // CameraState is the teleport warp camera: set only while a gate/beacon warp
+            // is actually playing, which is what we must not fight. CurrentDungeonEvent is
+            // NOT checked: it stays set the whole time you are inside a dungeon (alongside
+            // bIsInDungeon), so treating it as "teleport active" blocked every appearance
+            // apply for the entire dungeon, on all shells and on the severed Harbinger. The
+            // real cutscene cameras below (PlayerCameraManager.ActiveCameraInstance) cover
+            // the bond-quest and warp cases without that persistent over-block.
             auto* tp_cam_prop = tp_mgr->GetPropertyByNameInChain(L"CameraState");
             if(tp_cam_prop && tp_cam_prop->GetElementSize() == sizeof(UObject*)) {
                 UObject* tp_cam = nullptr;
                 std::memcpy(&tp_cam, reinterpret_cast<const std::byte*>(tp_mgr) + tp_cam_prop->GetOffset_Internal(), sizeof(UObject*));
                 if(tp_cam) return true;
-            }
-            auto* tp_evt_prop = tp_mgr->GetPropertyByNameInChain(L"CurrentDungeonEvent");
-            if(tp_evt_prop && tp_evt_prop->GetElementSize() == sizeof(UObject*)) {
-                UObject* tp_evt = nullptr;
-                std::memcpy(&tp_evt, reinterpret_cast<const std::byte*>(tp_mgr) + tp_evt_prop->GetOffset_Internal(), sizeof(UObject*));
-                if(tp_evt) return true;
             }
         }
     }
