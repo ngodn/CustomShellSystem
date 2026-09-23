@@ -439,6 +439,13 @@ struct Core {
                 else if(preset=="omg_earthquake") preset="earthquake";
 
                 std::string target_id=command.value("control",std::string{});
+                auto is_hair_ctrl = [](const Control& ctrl) {
+                    if(ctrl.kind != ControlKind::Rig) return false;
+                    if(ctrl.rig && ctrl.rig->body) return false;
+                    std::string id = ctrl.id;
+                    for(char& c : id) c = char(std::tolower(static_cast<unsigned char>(c)));
+                    return id.find("hair") != std::string::npos || id.find("ponytail") != std::string::npos;
+                };
                 auto classify_region=[](const std::string& raw_id) -> int {
                     std::string id=raw_id;
                     for(char& c:id) c=char(std::tolower(static_cast<unsigned char>(c)));
@@ -451,9 +458,32 @@ struct Core {
                     return -1;
                 };
                 for(const auto& ctrl:options.controls) {
+                    if(!target_id.empty() && ctrl.id!=target_id) continue;
+                    if(is_hair_ctrl(ctrl)) {
+                        ControlValue target_val;
+                        if(preset=="firm") {
+                            target_val = {240.0f, 22.0f, 0.04f, 1.0f};
+                        } else if(preset=="natural" || preset=="normal") {
+                            target_val = {200.0f, 24.0f, 0.08f, 1.0f};
+                        } else if(preset=="silky" || preset=="bouncy" || preset=="flowing") {
+                            target_val = {160.0f, 18.0f, 0.12f, 1.0f};
+                        } else if(preset=="heavy" || preset=="soft" || preset=="weighted") {
+                            target_val = {185.0f, 24.0f, 0.20f, 1.0f};
+                        } else if(preset=="floaty" || preset=="earthquake" || preset=="anime") {
+                            target_val = {120.0f, 14.0f, 0.00f, 1.0f};
+                        } else {
+                            continue;
+                        }
+                        if(ctrl.rig) {
+                            for(size_t ch=0; ch<3; ++ch) {
+                                target_val[ch] = std::clamp(target_val[ch], ctrl.rig->channels[ch].minimum, ctrl.rig->channels[ch].maximum);
+                            }
+                        }
+                        custom.values[ctrl.id] = target_val;
+                        continue;
+                    }
                     const int region = classify_region(ctrl.id);
                     if(region < 0) continue;
-                    if(!target_id.empty() && ctrl.id!=target_id) continue;
                     if(body_rig_control(ctrl)) {
                         ControlValue target_val;
                         if(preset=="firm") {
@@ -532,10 +562,20 @@ struct Core {
                         custom.values[ctrl.id] = target_val;
                     }
                 }
-                const std::string label = preset=="firm" ? "Firm" :
-                                          preset=="natural" ? "Natural" :
-                                          preset=="bouncy" ? "Bouncy" :
-                                          preset=="soft" ? "Soft / Saggy" : "OMG! Earthquake!";
+                std::string target_ctrl = target_id;
+                for(char& c:target_ctrl) c=char(std::tolower(static_cast<unsigned char>(c)));
+                const bool is_hair_target = target_ctrl.find("hair")!=std::string::npos || target_ctrl.find("ponytail")!=std::string::npos;
+                const std::string label = is_hair_target ? (
+                    preset=="firm" ? "Firm" :
+                    preset=="natural" ? "Natural" :
+                    (preset=="silky" || preset=="bouncy" || preset=="flowing") ? "Silky" :
+                    (preset=="heavy" || preset=="soft" || preset=="weighted") ? "Heavy" : "Floaty"
+                ) : (
+                    preset=="firm" ? "Firm" :
+                    preset=="natural" ? "Natural" :
+                    preset=="bouncy" ? "Bouncy" :
+                    preset=="soft" ? "Soft / Saggy" : "OMG! Earthquake!"
+                );
                 report("Applied physics preset: "+label);
             }
             else if(action=="tint" || action=="reset_tint") {

@@ -189,6 +189,49 @@ static inline std::string get_body_physics_preset_name(const std::string& id) {
     }
     return "Custom";
 }
+
+struct HairPhysicsPresetDef {
+    const char* id;
+    const char* name;
+    const char* subtitle;
+    float stiffness;
+    float damping;
+    float gravity;
+};
+
+static const HairPhysicsPresetDef kHairPhysicsPresets[] = {
+    {"firm", "Firm", "Clean, disciplined ponytail with hairspray hold", 240.0f, 22.0f, 0.04f},
+    {"natural", "Natural", "Eve signature athletic flow, responsive & stable", 200.0f, 24.0f, 0.08f},
+    {"silky", "Silky", "Soft, elegant hair with loose fluid sway", 160.0f, 18.0f, 0.12f},
+    {"heavy", "Heavy", "Dense weighted hair, hugs back and resists lift", 185.0f, 24.0f, 0.20f},
+    {"floaty", "Floaty", "Airy cinematic strands with buoyant trailing wave", 120.0f, 14.0f, 0.00f}
+};
+
+static inline bool is_hair_physics_control(const Control& control) {
+    if(control.kind != ControlKind::Rig) return false;
+    if(control.rig && control.rig->body) return false;
+    std::string id = control.id;
+    for(char& c : id) c = char(std::tolower(static_cast<unsigned char>(c)));
+    return id.find("hair") != std::string::npos || id.find("ponytail") != std::string::npos;
+}
+
+static inline std::string detect_hair_physics_preset(const Control& control, const ControlValue& held) {
+    for(const auto& p : kHairPhysicsPresets) {
+        if(std::abs(held[0] - p.stiffness) < 12.0f &&
+           std::abs(held[1] - p.damping) < 1.5f &&
+           std::abs(held[2] - p.gravity) < 0.03f) {
+            return p.id;
+        }
+    }
+    return "custom";
+}
+
+static inline std::string get_hair_physics_preset_name(const std::string& id) {
+    for(const auto& p : kHairPhysicsPresets) {
+        if(p.id == id) return p.name;
+    }
+    return "Custom";
+}
 // 0.4: a short, deterministic strip of colours for one part, so a controller can pick
 // one without anybody having to think in RGB. What the author chose comes first, then
 // what each palette gives this part, then a hue ring and a brightness ramp off the
@@ -822,14 +865,23 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                         if(c.spring_clamp) source+=", travel "+slider_text(held[2],true)+" cm";
                     }
                 } else if(c.kind==ControlKind::Dynamics || c.kind==ControlKind::Rig) {
-                    const bool has_presets=is_chest_or_glute_control(c);
-                    if(has_presets) {
+                    const bool has_body_presets=is_body_physics_control(c);
+                    const bool has_hair_presets=is_hair_physics_control(c);
+                    if(has_body_presets) {
                         std::string pid = detect_body_physics_preset(c, held);
                         std::string pname = get_body_physics_preset_name(pid);
                         if(pid == "custom") {
                             source = "Custom (" + slider_text(held[0], true) + " Hz, " + slider_text(held[1], true) + " damp)";
                         } else {
                             source = pname + " (" + slider_text(held[0], true) + " Hz)";
+                        }
+                    } else if(has_hair_presets) {
+                        std::string pid = detect_hair_physics_preset(c, held);
+                        std::string pname = get_hair_physics_preset_name(pid);
+                        if(pid == "custom") {
+                            source = "Custom (" + slider_text(held[0], true) + " stiff, " + slider_text(held[1], true) + " damp)";
+                        } else {
+                            source = pname + " (" + slider_text(held[0], true) + " stiff)";
                         }
                     } else {
                         source=body_rig_control(c) ? "Bounce "+slider_text(held[0],true)+" Hz, damping "+slider_text(held[1],true)+", motion "+slider_text(held[2],true)
@@ -844,11 +896,13 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 } else if(c.kind==ControlKind::Shape) {
                     source="Weight "+slider_text(held[0],true);
                 }
-                const bool has_presets=is_chest_or_glute_control(c);
+                const bool has_body_presets=is_body_physics_control(c);
+                const bool has_hair_presets=is_hair_physics_control(c);
+                const bool has_presets=has_body_presets || has_hair_presets;
                 const int fieldcount=has_presets?1:control_channel_count(c);
                 const int channel=channel_%fieldcount;
                 Json minus, plus;
-                if(has_presets) {
+                if(has_body_presets) {
                     std::string pid = detect_body_physics_preset(c, held);
                     int cur_idx = -1;
                     const int total_presets = int(sizeof(kBodyPhysicsPresets)/sizeof(kBodyPhysicsPresets[0]));
@@ -859,6 +913,17 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     int next_idx = (cur_idx < 0 || cur_idx >= total_presets - 1) ? 0 : (cur_idx + 1);
                     minus = Json{{"action","physics_preset"},{"preset",kBodyPhysicsPresets[prev_idx].id},{"control",c.id}};
                     plus = Json{{"action","physics_preset"},{"preset",kBodyPhysicsPresets[next_idx].id},{"control",c.id}};
+                } else if(has_hair_presets) {
+                    std::string pid = detect_hair_physics_preset(c, held);
+                    int cur_idx = -1;
+                    const int total_presets = int(sizeof(kHairPhysicsPresets)/sizeof(kHairPhysicsPresets[0]));
+                    for(int i=0; i<total_presets; ++i) {
+                        if(kHairPhysicsPresets[i].id == pid) { cur_idx = i; break; }
+                    }
+                    int prev_idx = (cur_idx <= 0) ? (total_presets - 1) : (cur_idx - 1);
+                    int next_idx = (cur_idx < 0 || cur_idx >= total_presets - 1) ? 0 : (cur_idx + 1);
+                    minus = Json{{"action","physics_preset"},{"preset",kHairPhysicsPresets[prev_idx].id},{"control",c.id}};
+                    plus = Json{{"action","physics_preset"},{"preset",kHairPhysicsPresets[next_idx].id},{"control",c.id}};
                 } else {
                     minus={{"action","control"},{"control",c.id},{"channel",channel},{"delta",-1}};
                     plus=minus; plus["delta"]=1;
@@ -963,6 +1028,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     const bool rig=control.kind==ControlKind::Rig;
                     const bool body=body_rig_control(control);
                     const bool has_presets=is_chest_or_glute_control(control);
+                    const bool has_hair=is_hair_physics_control(control);
                     if(has_presets) {
                         detail(control.name, worn->name,
                                "Choose an anatomical motion preset below. To customize bounce frequency, settling damping, and travel limits, select Customize Sliders.");
@@ -977,6 +1043,54 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
 
                         for(int i=0; i<total_presets; ++i) {
                             const auto& p = kBodyPhysicsPresets[i];
+                            const bool is_active = (active_pid == p.id);
+                            auto* btn = ui.button("", right, cur_y, 360, row_h, is_active, true);
+                            bind(btn, {{"action","physics_preset"},{"preset",p.id},{"control",control.id}});
+                            if(is_active) {
+                                ui.box(right, cur_y, 360, row_h, Color{.055f,.045f,.027f,1});
+                                ui.box(right, cur_y, 3, row_h, gold);
+                            }
+                            ui.selection_mark(right + 14, cur_y + 22, is_active);
+                            ui.label(p.name, right + 36, cur_y + 4, 210, 20, 16, is_active ? gold : ivory);
+                            ui.label(p.subtitle, right + 36, cur_y + 23, 310, 17, 12, muted);
+                            if(is_active) {
+                                auto* active_lbl = ui.label("Active", right + 296, cur_y + 4, 56, 20, 12, gold);
+                                invoke(active_lbl, L"SetJustification", L"InJustification", uint8_t{2});
+                            }
+                            cur_y += row_h + row_gap;
+                        }
+
+                        cur_y += 8;
+                        if(active_pid == "custom") {
+                            auto* custom_badge = ui.label("Active: Custom Sliders", right, cur_y, 360, 20, 13, gold);
+                            invoke(custom_badge, L"SetJustification", L"InJustification", uint8_t{1});
+                            cur_y += 24;
+                        }
+
+                        if(rig) {
+                            const bool motion_on = (value[3] == 1);
+                            auto* toggle_btn = ui.button(motion_on ? "Motion: Enabled" : "Motion: Disabled", right, cur_y, 360, 36, false, true, 16);
+                            bind(toggle_btn, {{"action","control"},{"control",control.id},{"channel",3},{"value",motion_on ? 0 : 1}});
+                        }
+
+                        action_button("accept", "Customize sliders", 795, {{"action","ui_physics_modal"},{"control",control.id}}, 3);
+                        action_button("secondary", "Reset part", 841, {{"action","reset_control"},{"control",control.id}}, 4);
+                        action_button("tertiary", "Reset all", 887, confirm_reset_all, 2);
+                        direction_hint(true, "Cycle preset");
+                    } else if(has_hair) {
+                        detail(control.name, worn->name,
+                               "Choose a hair motion preset below. To customize spring stiffness, settling damping, and gravity drape, select Customize Sliders.");
+                        double cur_y = controls_y;
+                        ui.label("HAIR MOTION PRESETS", right, cur_y, 360, 20, 14, gold);
+                        cur_y += 24;
+
+                        const std::string active_pid = detect_hair_physics_preset(control, value);
+                        const int total_presets = int(sizeof(kHairPhysicsPresets)/sizeof(kHairPhysicsPresets[0]));
+                        const double row_h = 44;
+                        const double row_gap = 4;
+
+                        for(int i=0; i<total_presets; ++i) {
+                            const auto& p = kHairPhysicsPresets[i];
                             const bool is_active = (active_pid == p.id);
                             auto* btn = ui.button("", right, cur_y, 360, row_h, is_active, true);
                             bind(btn, {{"action","physics_preset"},{"preset",p.id},{"control",control.id}});
