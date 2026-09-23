@@ -462,15 +462,15 @@ struct Core {
                     if(is_hair_ctrl(ctrl)) {
                         ControlValue target_val;
                         if(preset=="firm") {
-                            target_val = {240.0f, 22.0f, 0.04f, 1.0f};
+                            target_val = {260.0f, 26.0f, 0.04f, 1.0f};
                         } else if(preset=="natural" || preset=="normal") {
-                            target_val = {200.0f, 24.0f, 0.08f, 1.0f};
+                            target_val = {180.0f, 16.0f, 0.08f, 1.0f};
                         } else if(preset=="silky" || preset=="bouncy" || preset=="flowing") {
-                            target_val = {160.0f, 18.0f, 0.12f, 1.0f};
+                            target_val = {110.0f, 10.0f, 0.14f, 1.0f};
                         } else if(preset=="heavy" || preset=="soft" || preset=="weighted") {
-                            target_val = {185.0f, 24.0f, 0.20f, 1.0f};
+                            target_val = {190.0f, 22.0f, 0.35f, 1.0f};
                         } else if(preset=="floaty" || preset=="earthquake" || preset=="anime") {
-                            target_val = {120.0f, 14.0f, 0.00f, 1.0f};
+                            target_val = {55.0f, 6.0f, 0.00f, 1.0f};
                         } else {
                             continue;
                         }

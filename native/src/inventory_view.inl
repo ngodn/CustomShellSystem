@@ -200,11 +200,11 @@ struct HairPhysicsPresetDef {
 };
 
 static const HairPhysicsPresetDef kHairPhysicsPresets[] = {
-    {"firm", "Firm", "Clean, disciplined ponytail with hairspray hold", 240.0f, 22.0f, 0.04f},
-    {"natural", "Natural", "Eve signature athletic flow, responsive & stable", 200.0f, 24.0f, 0.08f},
-    {"silky", "Silky", "Soft, elegant hair with loose fluid sway", 160.0f, 18.0f, 0.12f},
-    {"heavy", "Heavy", "Dense weighted hair, hugs back and resists lift", 185.0f, 24.0f, 0.20f},
-    {"floaty", "Floaty", "Airy cinematic strands with buoyant trailing wave", 120.0f, 14.0f, 0.00f}
+    {"firm", "Firm", "Clean, disciplined ponytail with hairspray hold", 260.0f, 26.0f, 0.04f},
+    {"natural", "Natural", "Eve signature athletic flow, responsive & stable", 180.0f, 16.0f, 0.08f},
+    {"silky", "Silky", "Soft, elegant hair with loose fluid sway", 110.0f, 10.0f, 0.14f},
+    {"heavy", "Heavy", "Dense weighted hair, hugs back and resists lift", 190.0f, 22.0f, 0.35f},
+    {"floaty", "Floaty", "Airy cinematic strands with buoyant trailing wave", 55.0f, 6.0f, 0.00f}
 };
 
 static inline bool is_hair_physics_control(const Control& control) {
@@ -217,9 +217,9 @@ static inline bool is_hair_physics_control(const Control& control) {
 
 static inline std::string detect_hair_physics_preset(const Control& control, const ControlValue& held) {
     for(const auto& p : kHairPhysicsPresets) {
-        if(std::abs(held[0] - p.stiffness) < 12.0f &&
-           std::abs(held[1] - p.damping) < 1.5f &&
-           std::abs(held[2] - p.gravity) < 0.03f) {
+        if(std::abs(held[0] - p.stiffness) < 18.0f &&
+           std::abs(held[1] - p.damping) < 2.5f &&
+           std::abs(held[2] - p.gravity) < 0.04f) {
             return p.id;
         }
     }

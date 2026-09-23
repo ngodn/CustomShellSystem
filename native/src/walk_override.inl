@@ -350,6 +350,22 @@ void WalkOverride::release() {
         custom_idle_engaged_=false;
         custom_idle_post_.Reset();
     }
+    if(hair_aerodynamics_active_) {
+        try {
+            if(auto* mesh = read<UObject*>(pawn_.Get(), L"Mesh")) {
+                auto* post = read<UObject*>(mesh, L"PostProcessAnimInstance");
+                if(!post) {
+                    Call get_post(mesh, L"GetPostProcessInstance", 1);
+                    get_post.run();
+                    post = get_post.get<UObject*>();
+                }
+                if(post && hair_resting_gravity_ && has_field(post, L"CSSGravity", sizeof(std::array<double, 3>)))
+                    write_field<std::array<double, 3>>(post, L"CSSGravity", *hair_resting_gravity_);
+            }
+        } catch(...) {}
+        hair_aerodynamics_active_ = false;
+        hair_resting_gravity_.reset();
+    }
     // Keep the hook handle on failure. Core stop must refuse unload while a
     // callback can still enter this DLL.
     unhook_speed();
@@ -427,7 +443,8 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     if(walk_feminine) { hook_speed(); scale_walk_=true; } else { scale_walk_=false; if(hook_) unhook_speed(); }
     auto* movement=movement_.Get();
     double speed=0; bool speed_known=false;
-    if(movement) { auto v=read<std::array<double,3>>(movement,L"Velocity"); speed=std::hypot(v[0],v[1]); speed_known=std::isfinite(speed); }
+    std::array<double,3> velocity{};
+    if(movement) { velocity=read<std::array<double,3>>(movement,L"Velocity"); speed=std::hypot(velocity[0],velocity[1]); speed_known=std::isfinite(speed); }
     std::optional<bool> walking,sprint_requested;
     // These flags belong to this player's current linked layer. Never find the
     // first global walk ability, which could belong to another actor.
@@ -570,5 +587,41 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
         }
     } else {
         next_footstep_ = now + 150;
+    }
+
+    // Dynamic aerodynamic wind & lift for hair during locomotion (walk, jog, sprint)
+    if(current_mesh) {
+        auto* post = read<UObject*>(current_mesh, L"PostProcessAnimInstance");
+        if(!post) {
+            Call get_post(current_mesh, L"GetPostProcessInstance", 1);
+            get_post.run();
+            post = get_post.get<UObject*>();
+        }
+        if(post && has_field(post, L"CSSGravity", sizeof(std::array<double, 3>))) {
+            const auto current_grav = read<std::array<double, 3>>(post, L"CSSGravity");
+            if(speed_known && speed >= 25.0) {
+                if(!hair_aerodynamics_active_) {
+                    hair_resting_gravity_ = current_grav;
+                    hair_aerodynamics_active_ = true;
+                }
+                const double base_z = hair_resting_gravity_ ? (*hair_resting_gravity_)[2] : current_grav[2];
+                // Drag opposes horizontal movement in world space (-0.22 * Velocity)
+                // Lift opposes downward gravity proportionally to forward speed (+0.16 * Speed)
+                const double drag_factor = 0.22;
+                const double lift_factor = 0.16;
+                std::array<double, 3> aero_grav = {
+                    -drag_factor * velocity[0],
+                    -drag_factor * velocity[1],
+                    base_z + (lift_factor * speed)
+                };
+                write_field<std::array<double, 3>>(post, L"CSSGravity", aero_grav);
+            } else if(hair_aerodynamics_active_) {
+                if(hair_resting_gravity_) {
+                    write_field<std::array<double, 3>>(post, L"CSSGravity", *hair_resting_gravity_);
+                }
+                hair_aerodynamics_active_ = false;
+                hair_resting_gravity_.reset();
+            }
+        }
     }
 }

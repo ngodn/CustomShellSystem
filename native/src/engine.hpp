@@ -304,6 +304,8 @@ class WalkOverride {
     std::vector<WeakObject> hidden_weapons_;
     uint64_t next_footstep_=0;
     bool foot_left_=false;
+    std::optional<std::array<double,3>> hair_resting_gravity_;
+    bool hair_aerodynamics_active_=false;
     RC::Unreal::UObject* blendspace(WeakObject& slot,const wchar_t* path);
     RC::Unreal::UObject* custom_blendspace(size_t index,RC::Unreal::UObject* skeleton);
     void set_weapon_hidden(RC::Unreal::UObject* pawn,bool hide);
