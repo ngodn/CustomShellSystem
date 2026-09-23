@@ -389,8 +389,8 @@ struct Core {
             // Re-reconcile now so the change is visible without waiting for the next sever.
             if(!appearance.shell.empty()) { last_shell.clear(); apply_pending=true; }
             ui_refresh = true;
-            report(value ? "Harbinger will wear your shell's outfit."
-                         : "Harbinger keeps its own saved outfit.");
+            report(value ? "Harbinger will carry your shell's look."
+                         : "Harbinger keeps its own look.");
         }
         // MISC visibility. A category's mode cycles with left/right or is set outright from the
         // mode list. It mutates state.misc_rules, hands the new rules to the appearance so the

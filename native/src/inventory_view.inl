@@ -646,7 +646,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         row_=std::clamp(row_,0,total-1);
         scroll_begin();
         const Json harbinger{{"action","harbinger_mirror"},{"value",!state.harbinger_mirror}};
-        row(0,"Harbinger outfit",state.harbinger_mirror?"Carry from shell":"Keeps its own",85,harbinger,harbinger,harbinger);
+        row(0,"Harbinger look",state.harbinger_mirror?"Carry from shell":"Keeps its own",85,harbinger,harbinger,harbinger);
         row(1,"Original appearance","Restore your current shell",85,{{"action","restore"}});
         const Outfit* originals=nullptr;
         for(const auto& outfit:catalog.outfits) if(outfit.id==original_shells_id) originals=&outfit;
@@ -682,11 +682,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         }
         if(ordered.empty()) ui.label(catalog.empty_message(),left+18,605,panel-36,130,18,muted);
         if(row_==0) {
-            detail("Harbinger outfit",state.harbinger_mirror?"Carry from shell":"Keeps its own",
+            detail("Harbinger look",state.harbinger_mirror?"Carry from shell":"Keeps its own",
                    state.harbinger_mirror
-                     ?"When you sever into the Harbinger, it wears your current shell's outfit, so dying mid-fight keeps your look. Cosmetic only."
-                     :"The Harbinger keeps its own saved outfit. Turn this on to carry your shell's outfit over automatically.");
-            action_button("accept",state.harbinger_mirror?"Give Harbinger its own":"Carry outfit into Harbinger",655,rows_[0].accept,3);
+                     ?"When you sever out of your shell into the Harbinger, it carries your current shell's look, so losing your shell mid-fight keeps your appearance. Cosmetic only."
+                     :"The Harbinger keeps its own saved look. Turn this on to carry your shell's look over automatically when you sever.");
+            action_button("accept",state.harbinger_mirror?"Give Harbinger its own":"Carry look into Harbinger",655,rows_[0].accept,3);
         } else if(row_==1) {
             detail("Original appearance","Your current shell","Restore the appearance supplied by the game and any installed base replacements. Your shell's abilities stay the same.");
             action_button("accept","Restore original",controls_y+20,rows_[1].accept,3);
