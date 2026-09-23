@@ -884,6 +884,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
         if(returning_to_outfit) {
             set_mesh(component,target);
             applied_hidden_.clear();   // a fresh mesh shows every section; see note below
+            ground_offset_={}; ground_component_.Reset();   // and resets RelativeLocation; drop the stale heel baseline
             if(materials_match() || reuse_materials()) {
                 current_mesh=narrow(target->GetPathName());
                 return true;
@@ -895,7 +896,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
         // reconcile_sections() (in customize()) re-hide from scratch instead of short-circuiting
         // on a stale want==applied_hidden_. This is why a launchpad/gate that swapped the pawn
         // to Harbinger and back used to drop the outfit's cut sections. Event-only, no frame cost.
-        if(before!=target && !returning_to_outfit) { set_mesh(component, target); applied_hidden_.clear(); }
+        if(before!=target && !returning_to_outfit) { set_mesh(component, target); applied_hidden_.clear(); ground_offset_={}; ground_component_.Reset(); }
         const int count=overrides(component).Num();
         for(int i=0;i<count;++i) material(component,i,nullptr);
         auto defaults=material_snapshot(component,target).at("defaults");
