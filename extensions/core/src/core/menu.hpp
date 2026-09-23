@@ -26,9 +26,9 @@ public:
     };
     explicit Menu(Deps deps):deps_(std::move(deps)) {}
     ~Menu() { try { detach(); } catch(...) {} }
-    // Hosted in the game's Player Menu: CSSX is a tab after CSS (after
-    // Inventory when CSS is absent) and before Tarstones. is_open() means the
-    // CSSX page is the active tab of an open Player Menu.
+    // Hosted in the game's Player Menu: CSSX is the last tab, right after CSS when
+    // it is present, otherwise straight after the native tabs (Inventory, Tarstones,
+    // Map). is_open() means the CSSX page is the active tab of an open Player Menu.
     bool is_open() const { return active_; }
     bool attached() const { return page_.Get()!=nullptr; }
     // Ask the game to open its Player Menu and select the CSSX tab. Returns

@@ -157,8 +157,9 @@ bool Menu::attach(const PlayerContext& player) {
 void Menu::order_tabs() {
     auto tabs=children(tabs_.Get()); auto pages=children(switcher_.Get());
     if(tabs.size()!=pages.size() || tabs.size()<4 || tabs.size()>5) throw std::runtime_error("Player Menu tab count is unexpected");
-    // Inventory, [CSS], CSSX, Tarstones, Map. CSS puts itself at 1; we go after it.
-    const int index=int(tabs.size())==5?2:1;
+    // Inventory, Tarstones, Map, [CSS], CSSX. CSS sits after the native tabs, and CSSX is the
+    // last tab, right after CSS when it is present. Keeps the tabs players use most at the front.
+    const int index=int(tabs.size())-1;
     auto move_to=[&](auto& values,UObject* value){ auto it=std::find(values.begin(),values.end(),value); if(it==values.end()) throw std::runtime_error("CSSX child is missing"); values.erase(it); values.insert(values.begin()+index,value); };
     move_to(tabs,tab_.Get()); move_to(pages,page_.Get());
     reorder(switcher_.Get(),pages); reorder(tabs_.Get(),tabs);

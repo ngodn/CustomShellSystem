@@ -135,8 +135,12 @@ Json InventoryUI::command(void* engine,const Json& command) {
         inventory_navigate(tabs_.Get(),0);
         auto tabs=inventory_children(tabs_.Get()), pages=inventory_children(switcher_.Get());
         if(tabs.size()<4 || pages.size()!=tabs.size()) throw std::runtime_error("Inventory ordering requires at least four pages");
-        auto move_second=[](auto& values,UObject* value) { auto it=std::find(values.begin(),values.end(),value); if(it==values.end()) throw std::runtime_error("CSS child is missing"); values.erase(it); values.insert(values.begin()+1,value); };
-        move_second(tabs,tab_.Get()); move_second(pages,page_.Get());
+        // CSS sits after the game's own tabs (Inventory, Tarstones, Map) so the tabs players
+        // reach for most stay first. CSSX, when present, places itself right after CSS. Three
+        // native tabs means index 3; clamp so a menu with fewer tabs still lands at the end.
+        const size_t native=3;
+        auto move_after_native=[&](auto& values,UObject* value) { auto it=std::find(values.begin(),values.end(),value); if(it==values.end()) throw std::runtime_error("CSS child is missing"); values.erase(it); values.insert(values.begin()+std::min(native,values.size()),value); };
+        move_after_native(tabs,tab_.Get()); move_after_native(pages,page_.Get());
         inventory_order(switcher_.Get(),pages); inventory_order(tabs_.Get(),tabs);
         // Titles share the original top bar. Retain native type and spacing.
         const float factor=tabs.size()>=5?.6f:.75f;
