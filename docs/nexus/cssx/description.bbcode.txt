@@ -14,38 +14,33 @@ I built CSSX so extension mods can share one place in Inventory. Open CSSX, choo
 
 [size=4][b]Install[/b][/size]
 [list=1]
-[*]Install CSS 0.3.0 or later and its required UE4SS build.
-[*]Close the game. Extract this ZIP inside ue4ss/Mods/CustomShellSystem/.
-[*]Check that cssx.json sits beside core.json, and the CSSX DLL is inside cores/.
-[*]Install your chosen extension folders under CustomShellSystem/extensions/.
-[*]Enter the game world, open Inventory and select CSSX.
+[*]Install the required UE4SS build for Mortal Shell II.
+[*]Close the game. Extract this ZIP so that you get [b]ue4ss/Mods/CSSX/[/b].
+[*]Install your chosen extension folders under [b]Mods/CSSX/extensions/[/b].
+[*]Enter the game world, open Inventory and select [b]CSSX[/b] (or press F6 / press both gamepad thumbsticks).
 [/list]
 
-CSS works without CSSX. Ordinary UE4SS scripts and DLLs need a CSSX adapter; they do not become library entries just by moving their files.
+CSSX is standalone and runs alongside CSS without sharing files. Ordinary UE4SS scripts and DLLs need a CSSX adapter; they do not become library entries just by moving their files.
 
 [b]Expected folders after extraction[/b]
-Install CSS first. Extract the CSSX ZIP [b]inside CustomShellSystem/[/b], merging its assets and cores folders. With both installed, the files should look like this:
+Extract the [b]CSSX[/b] folder into [b]MortalShell2/Binaries/Win64/ue4ss/Mods/[/b].
 
-[code]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/CustomShellSystem/
-|-- CSSX-README.txt
-|-- CSSX-THIRD_PARTY_NOTICES.txt
-|-- README.txt
-|-- THIRD_PARTY_NOTICES.txt
-|-- assets/
-|   |-- cssx-logo.png
-|   `-- inventory-logo-v1.png
-|-- core.json
-|-- cores/
-|   |-- css_core-0.3.2.dll
-|   `-- cssx_core-0.3.0.dll
-|-- cssx-release.json
-|-- cssx.json
-|-- dlls/
-|   `-- main.dll
-|-- enabled.txt
-`-- release.json[/code]
+[code]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/
+`-- CSSX/
+    |-- README.txt
+    |-- THIRD_PARTY_NOTICES.txt
+    |-- assets/
+    |   |-- banner.png
+    |   `-- logo.png
+    |-- core.json
+    |-- core/
+    |   `-- cssx_core-1.0.0.dll
+    |-- dlls/
+    |   `-- main.dll
+    |-- enabled.txt
+    `-- release.json[/code]
 
-core.json and cssx.json belong beside each other. Do not create an extra CSSX folder. Install extensions separately under CustomShellSystem/extensions/.
+Install extensions separately under [b]Mods/CSSX/extensions/[/b].
 
 [size=4][b]Controls[/b][/size]
 LB/RB or Q/E changes the main Inventory tabs. LT/RT or Z/X changes extension sections. Use the D-pad or W/S to browse, left/right or A/D to adjust, A or Space to activate, and B or Esc to go back. The page shows prompts for the current action. Mouse selection, scrolling and sliders are supported. Typing needs a keyboard.

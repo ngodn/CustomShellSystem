@@ -263,6 +263,24 @@ static bool is_hand_weapon_socket(const FName& socket_name) {
     }
     return false;
 }
+static bool is_visual_mesh_component(UObject* obj) {
+    if(!obj) return false;
+    auto* cls = obj->GetClassPrivate();
+    if(!cls) return false;
+    auto name = narrow(cls->GetName());
+    return name.find("SkeletalMesh") != std::string::npos ||
+           name.find("StaticMesh") != std::string::npos;
+}
+static bool is_component_hidden_in_game(UObject* obj) {
+    if(!obj) return true;
+    try {
+        auto* p = obj->GetPropertyByNameInChain(L"bHiddenInGame");
+        if(p && p->IsA<FBoolProperty>()) {
+            return static_cast<FBoolProperty*>(p)->GetPropertyValue(reinterpret_cast<std::byte*>(obj) + p->GetOffset_Internal());
+        }
+    } catch(...) {}
+    return false;
+}
 void WalkOverride::set_weapon_hidden(UObject* pawn,bool hide) {
     if(!pawn) return;
     try {
@@ -275,19 +293,6 @@ void WalkOverride::set_weapon_hidden(UObject* pawn,bool hide) {
                     if(auto* weapon=get_in_hand.get<UObject*>()) {
                         hide_game_object(weapon, true);
                         hidden_weapons_.emplace_back(weapon);
-                        // Check if the weapon actor itself has attached offhand or sub-components
-                        try {
-                            Call get_root(weapon, L"K2_GetRootComponent", 1);
-                            get_root.run();
-                            if(auto* root = get_root.get<UObject*>()) {
-                                for(auto& wchild : attached_children(root)) {
-                                    if(auto* c = wchild.Get()) {
-                                        hide_game_object(c, true);
-                                        hidden_weapons_.emplace_back(c);
-                                    }
-                                }
-                            }
-                        } catch(...) {}
                     }
                 } catch(...) {}
             }
@@ -303,10 +308,13 @@ void WalkOverride::set_weapon_hidden(UObject* pawn,bool hide) {
                         if(owner && owner!=pawn) {
                             hide_game_object(owner, true);
                             hidden_weapons_.emplace_back(owner);
+                            continue;
                         }
                     } catch(...) {}
-                    hide_game_object(child, true);
-                    hidden_weapons_.emplace_back(child);
+                    if(is_visual_mesh_component(child) && !is_component_hidden_in_game(child)) {
+                        hide_game_object(child, true);
+                        hidden_weapons_.emplace_back(child);
+                    }
                 }
             }
         } else {

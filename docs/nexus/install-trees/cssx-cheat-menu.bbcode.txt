@@ -1,7 +1,7 @@
 [b]Expected folders after extraction[/b]
-Install CSS and CSSX first. Extract the [b]eins0fx.cheat-menu[/b] folder into [b]CustomShellSystem/extensions/[/b]. The extension files should be here:
+Install CSSX first. Extract the [b]eins0fx.cheat-menu[/b] folder into [b]CSSX/extensions/[/b]. The extension files should be here:
 
-[code]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/CustomShellSystem/extensions/
+[code]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/extensions/
 `-- eins0fx.cheat-menu/
     |-- CREDITS.txt
     |-- LICENSE

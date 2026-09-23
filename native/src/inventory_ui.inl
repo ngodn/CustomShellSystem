@@ -110,24 +110,6 @@ Json InventoryUI::command(void* engine,const Json& command) {
         auto* pages=inventory_object(main,L"BP_WS_Menu_Game");
         auto* original=inventory_object(main,L"WBP_NBM_Inventory");
         if(!tabs || !pages || !original) throw std::runtime_error("Inventory layout is unavailable");
-        auto* stock_inv = inventory_object(main, L"WBP_NBM_Inventory");
-        auto* stock_tar = inventory_object(main, L"WBP_NBM_Tarstones");
-        auto* stock_map = inventory_object(main, L"WBP_NBM_Map");
-        for(auto* child : inventory_children(tabs)) {
-            if(child && child != stock_inv && child != stock_tar && child != stock_map) {
-                invoke(child, L"RemoveFromParent");
-            }
-        }
-        auto* stock_char_page = inventory_object(main, L"WBP_MGT_Character");
-        auto* stock_tar_page = inventory_object(main, L"WBP_MGT_Tarstones");
-        auto* stock_map_page = inventory_object(main, L"WBP_MGT_WorldMap");
-        for(auto* child : inventory_children(pages)) {
-            if(child && child != stock_char_page && child != stock_tar_page && child != stock_map_page) {
-                invoke(child, L"RemoveFromParent");
-            }
-        }
-        Call count(pages,L"GetChildrenCount",1); count.run();
-        if(count.get<int32_t>()!=3) throw std::runtime_error("Unexpected Inventory page count");
         controller_=pc; main_=main; tabs_=tabs; switcher_=pages;
         for(auto* child:inventory_children(tabs)) if(auto* slot=inventory_object(child,L"Slot")) top_padding_.push_back({WeakObject(child),read<std::array<float,4>>(slot,L"Padding")});
         AssetLoadRoots roots;
@@ -147,22 +129,21 @@ Json InventoryUI::command(void* engine,const Json& command) {
             Call button(tabs,L"AddChildToHorizontalBox",2);button.set(L"content",tab);button.run();
         };
         create_page(L"CSS",tab_,page_,canvas_);
-        if(extensions_ && extensions_->ready()) create_page(L"CSSX",extension_tab_,extension_page_,extension_canvas_);
         invoke(inventory_object(tabs,L"NavigationObject"),L"GetNavigableChildren");
         dirty_=true; bind_inputs();
     } else if(action=="inventory_order") {
         inventory_navigate(tabs_.Get(),0);
         auto tabs=inventory_children(tabs_.Get()), pages=inventory_children(switcher_.Get());
-        if(tabs.size()!=(extension_tab_.Get()?5:4) || pages.size()!=tabs.size()) throw std::runtime_error("Inventory ordering requires five pages");
+        if(tabs.size()<4 || pages.size()!=tabs.size()) throw std::runtime_error("Inventory ordering requires at least four pages");
         auto move_second=[](auto& values,UObject* value) { auto it=std::find(values.begin(),values.end(),value); if(it==values.end()) throw std::runtime_error("CSS child is missing"); values.erase(it); values.insert(values.begin()+1,value); };
-        if(extension_tab_.Get()) {move_second(tabs,extension_tab_.Get());move_second(pages,extension_page_.Get());}
         move_second(tabs,tab_.Get()); move_second(pages,page_.Get());
         inventory_order(switcher_.Get(),pages); inventory_order(tabs_.Get(),tabs);
-        // Five titles share the original top bar. Retain native type and spacing.
+        // Titles share the original top bar. Retain native type and spacing.
+        const float factor=tabs.size()>=5?.6f:.75f;
         for(auto* child:tabs) if(auto* slot=inventory_object(child,L"Slot")) {
             auto padding=top_padding_.empty()?std::array<float,4>{80,0,80,0}:top_padding_.front().second;
             for(const auto& [original,value]:top_padding_) if(original.Get()==child) padding=value;
-            const float factor=extension_tab_.Get()?.6f:.75f; padding[0]*=factor; padding[2]*=factor;
+            padding[0]*=factor; padding[2]*=factor;
             invoke(slot,L"SetPadding",L"InPadding",padding);
             invoke(slot,L"SetHorizontalAlignment",L"InHorizontalAlignment",uint8_t{2});
             invoke(slot,L"SetVerticalAlignment",L"InVerticalAlignment",uint8_t{2});

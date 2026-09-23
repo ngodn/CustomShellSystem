@@ -439,58 +439,97 @@ struct Core {
                 else if(preset=="omg_earthquake") preset="earthquake";
 
                 std::string target_id=command.value("control",std::string{});
-                auto is_chest_glute=[](const std::string& raw_id) {
+                auto classify_region=[](const std::string& raw_id) -> int {
                     std::string id=raw_id;
                     for(char& c:id) c=char(std::tolower(static_cast<unsigned char>(c)));
-                    return id.find("chest")!=std::string::npos || id.find("glute")!=std::string::npos ||
-                           id.find("breast")!=std::string::npos || id.find("butt")!=std::string::npos;
+                    if(id.find("chest")!=std::string::npos || id.find("breast")!=std::string::npos ||
+                       id.find("boob")!=std::string::npos || id.find("bust")!=std::string::npos) return 0; // chest
+                    if(id.find("glute")!=std::string::npos || id.find("butt")!=std::string::npos) return 1; // glute
+                    if(id.find("thigh")!=std::string::npos || id.find("hip")!=std::string::npos) return 2; // thigh
+                    if(id.find("belly")!=std::string::npos || id.find("waist")!=std::string::npos ||
+                       id.find("abdomen")!=std::string::npos || id.find("stomach")!=std::string::npos) return 3; // belly
+                    return -1;
                 };
-                std::string tmpl_id = preset=="firm" ? "body_firm" :
-                                      preset=="natural" ? "body_natural" :
-                                      preset=="bouncy" ? "body_bouncy" :
-                                      preset=="soft" ? "body_soft" : "body_earthquake";
-                const Template* tmpl=nullptr;
-                for(const auto& t:outfit->templates) {
-                    if(t.id==tmpl_id || t.id==preset ||
-                       t.name==(preset=="firm"?"Firm":
-                                preset=="natural"?"Natural":
-                                preset=="bouncy"?"Bouncy":
-                                preset=="soft"?"Soft / Saggy":"OMG! Earthquake!")) {
-                        tmpl=&t; break;
-                    }
-                }
-                if(tmpl && tmpl->data.contains("values") && tmpl->data.at("values").is_object()) {
-                    for(const auto& [k, v] : tmpl->data.at("values").items()) {
-                        if(!is_chest_glute(k)) continue;
-                        if(!target_id.empty() && k!=target_id) continue;
-                        auto* ctrl = options.find(k);
-                        if(ctrl) {
-                            auto cv = ctrl->value;
-                            if(v.is_number()) cv[0] = v.get<float>();
-                            else if(v.is_array()) {
-                                for(size_t i=0; i<std::min(v.size(), size_t(4)); ++i) cv[i] = v[i].get<float>();
+                for(const auto& ctrl:options.controls) {
+                    const int region = classify_region(ctrl.id);
+                    if(region < 0) continue;
+                    if(!target_id.empty() && ctrl.id!=target_id) continue;
+                    if(body_rig_control(ctrl)) {
+                        ControlValue target_val;
+                        if(preset=="firm") {
+                            if(region==0) target_val={2.60f, 0.65f, 0.60f, 1.0f};
+                            else if(region==1) target_val={2.50f, 0.65f, 0.65f, 1.0f};
+                            else if(region==2) target_val={2.80f, 0.72f, 0.40f, 1.0f};
+                            else if(region==3) target_val={2.70f, 0.68f, 0.45f, 1.0f};
+                        }
+                        else if(preset=="natural") {
+                            if(region==0) target_val={2.15f, 0.48f, 1.00f, 1.0f};
+                            else if(region==1) target_val={2.10f, 0.50f, 1.00f, 1.0f};
+                            else if(region==2) target_val={2.35f, 0.58f, 0.75f, 1.0f};
+                            else if(region==3) target_val={2.20f, 0.52f, 0.85f, 1.0f};
+                        }
+                        else if(preset=="bouncy") {
+                            if(region==0) target_val={1.70f, 0.28f, 1.80f, 1.0f};
+                            else if(region==1) target_val={1.65f, 0.30f, 1.80f, 1.0f};
+                            else if(region==2) target_val={1.85f, 0.38f, 1.35f, 1.0f};
+                            else if(region==3) target_val={1.75f, 0.32f, 1.50f, 1.0f};
+                        }
+                        else if(preset=="soft") {
+                            if(region==0) target_val={1.25f, 0.18f, 2.60f, 1.0f};
+                            else if(region==1) target_val={1.20f, 0.20f, 2.50f, 1.0f};
+                            else if(region==2) target_val={1.40f, 0.25f, 2.00f, 1.0f};
+                            else if(region==3) target_val={1.30f, 0.22f, 2.20f, 1.0f};
+                        }
+                        else if(preset=="earthquake") {
+                            if(region==0) target_val={0.85f, 0.06f, 4.20f, 1.0f};
+                            else if(region==1) target_val={0.85f, 0.08f, 4.20f, 1.0f};
+                            else if(region==2) target_val={0.95f, 0.10f, 3.50f, 1.0f};
+                            else if(region==3) target_val={0.90f, 0.08f, 3.80f, 1.0f};
+                        }
+                        if(ctrl.rig) {
+                            for(size_t ch=0; ch<3; ++ch) {
+                                target_val[ch] = std::clamp(target_val[ch], ctrl.rig->channels[ch].minimum, ctrl.rig->channels[ch].maximum);
                             }
-                            custom.values[k] = cv;
                         }
-                    }
-                } else {
-                    for(const auto& ctrl:options.controls) {
-                        if(!is_chest_glute(ctrl.id)) continue;
-                        if(!target_id.empty() && ctrl.id!=target_id) continue;
-                        const bool is_glute = ctrl.id.find("glute")!=std::string::npos || ctrl.id.find("butt")!=std::string::npos;
-                        if(body_rig_control(ctrl)) {
-                            if(preset=="firm") custom.values[ctrl.id]={is_glute?2.50f:2.60f, 0.65f, is_glute?0.65f:0.60f, 1.0f};
-                            else if(preset=="natural") custom.values[ctrl.id]={is_glute?2.10f:2.15f, is_glute?0.50f:0.48f, 1.00f, 1.0f};
-                            else if(preset=="bouncy") custom.values[ctrl.id]={is_glute?1.65f:1.70f, is_glute?0.30f:0.28f, 1.80f, 1.0f};
-                            else if(preset=="soft") custom.values[ctrl.id]={is_glute?1.20f:1.25f, is_glute?0.20f:0.18f, is_glute?2.50f:2.60f, 1.0f};
-                            else if(preset=="earthquake") custom.values[ctrl.id]={0.85f, is_glute?0.08f:0.06f, 4.20f, 1.0f};
-                        } else if(ctrl.kind==ControlKind::Spring) {
-                            if(preset=="firm") custom.values[ctrl.id]={is_glute?2.50f:2.60f, 0.65f, is_glute?1.50f:1.20f, 1.0f};
-                            else if(preset=="natural") custom.values[ctrl.id]={is_glute?2.10f:2.15f, is_glute?0.50f:0.48f, 2.20f, 1.0f};
-                            else if(preset=="bouncy") custom.values[ctrl.id]={is_glute?1.65f:1.70f, is_glute?0.30f:0.28f, 4.50f, 1.0f};
-                            else if(preset=="soft") custom.values[ctrl.id]={is_glute?1.20f:1.25f, is_glute?0.20f:0.18f, is_glute?7.00f:7.50f, 1.0f};
-                            else if(preset=="earthquake") custom.values[ctrl.id]={0.85f, is_glute?0.08f:0.06f, 14.0f, 1.0f};
+                        custom.values[ctrl.id] = target_val;
+                    } else if(ctrl.kind==ControlKind::Spring) {
+                        ControlValue target_val;
+                        if(preset=="firm") {
+                            if(region==0) target_val={2.60f, 0.65f, 1.20f, 1.0f};
+                            else if(region==1) target_val={2.50f, 0.65f, 1.50f, 1.0f};
+                            else if(region==2) target_val={2.80f, 0.72f, 0.80f, 1.0f};
+                            else if(region==3) target_val={2.70f, 0.68f, 0.90f, 1.0f};
                         }
+                        else if(preset=="natural") {
+                            if(region==0) target_val={2.15f, 0.48f, 2.20f, 1.0f};
+                            else if(region==1) target_val={2.10f, 0.50f, 2.20f, 1.0f};
+                            else if(region==2) target_val={2.35f, 0.58f, 1.60f, 1.0f};
+                            else if(region==3) target_val={2.20f, 0.52f, 1.80f, 1.0f};
+                        }
+                        else if(preset=="bouncy") {
+                            if(region==0) target_val={1.70f, 0.28f, 4.50f, 1.0f};
+                            else if(region==1) target_val={1.65f, 0.30f, 4.50f, 1.0f};
+                            else if(region==2) target_val={1.85f, 0.38f, 3.20f, 1.0f};
+                            else if(region==3) target_val={1.75f, 0.32f, 3.80f, 1.0f};
+                        }
+                        else if(preset=="soft") {
+                            if(region==0) target_val={1.25f, 0.18f, 7.50f, 1.0f};
+                            else if(region==1) target_val={1.20f, 0.20f, 7.00f, 1.0f};
+                            else if(region==2) target_val={1.40f, 0.25f, 5.50f, 1.0f};
+                            else if(region==3) target_val={1.30f, 0.22f, 6.50f, 1.0f};
+                        }
+                        else if(preset=="earthquake") {
+                            if(region==0) target_val={0.85f, 0.06f, 14.0f, 1.0f};
+                            else if(region==1) target_val={0.85f, 0.08f, 14.0f, 1.0f};
+                            else if(region==2) target_val={0.95f, 0.10f, 10.0f, 1.0f};
+                            else if(region==3) target_val={0.90f, 0.08f, 13.0f, 1.0f};
+                        }
+                        target_val[0] = std::clamp(target_val[0], ctrl.minimum, ctrl.maximum);
+                        target_val[1] = std::clamp(target_val[1], ctrl.damping_minimum, ctrl.damping_maximum);
+                        if(ctrl.spring_clamp) {
+                            target_val[2] = std::clamp(target_val[2], ctrl.displacement_minimum, ctrl.displacement_maximum);
+                        }
+                        custom.values[ctrl.id] = target_val;
                     }
                 }
                 const std::string label = preset=="firm" ? "Firm" :
@@ -565,30 +604,7 @@ struct Core {
 #else
         player_recovery.tick(delta);
 #endif
-        if(!extension_attempted) {
-            extension_attempted=true;
-            try {if(fs::exists(root/"cores/cssx_core.dll") || fs::exists(root/"cssx.json")) {extensions.start(root,{CSSX_ABI,sizeof(CssxHost),this,extension_request,static_cast<const CssxHudApi*>(hud_.api())});inventory.extensions(&extensions);}}
-            catch(const std::exception& e) {host.log((std::string("CSSX startup: ")+e.what()).c_str());}
-        }
-        if(extensions.ready()) {
-#ifdef CSS_INVENTORY_DEV
-            measured(FrameProfile::cssx_tick,[&] { extensions.tick(delta); });
-            if(extensions.needs_frame()) {
-                CssxFrame frame;
-                measured(FrameProfile::hud_prepare,[&] { hud_.update(engine,frame); });
-                frame.seconds=delta;
-                measured(FrameProfile::cssx_render,[&] { extensions.render(frame); });
-            }
-#else
-            extensions.tick(delta);
-            // ABI 2: drive per-frame HUD extensions. The core resolves the HUD and
-            // computes the frame inputs; each extension pushes cheap updates back.
-            if(extensions.needs_frame()) {
-                CssxFrame frame; hud_.update(engine,frame); frame.seconds=delta;
-                extensions.render(frame);
-            }
-#endif
-        }
+
         if(!content_path_checked) {
             content_path_checked=true;
             try {
@@ -963,7 +979,6 @@ void render(void* ptr) noexcept {
 bool stop(void* ptr) noexcept {
     auto& core = *static_cast<css::Core*>(ptr);
     try {
-        if(!core.extensions.stop()) {core.report("CSSX cleanup pending; reload deferred.");return false;}
         if(!core.extension_bridge.stop_hooks()) {core.report("CSSX hook cleanup pending; reload deferred.");return false;}
         core.hud_.release();
         css::minimap_destroy();

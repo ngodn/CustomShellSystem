@@ -15,9 +15,6 @@ I built Custom Shell System to let you change your appearance without changing y
 
 Available variants and color controls depend on the outfit package. CSS saves your choices separately from the game save. You do not need to unlock all shells, weapons or seals.
 
-[size=4][b]Optional: CSSX extensions[/b][/size]
-CSS 0.3.2 can load CSSX as a separate download. CSSX adds an extension library beside CSS in Inventory. Install CSSX inside CustomShellSystem, then install its extension folders under extensions/. CSSX UI Kit and CSSX Cheat Menu are separate downloads. The wardrobe and existing outfit packages still work without them.
-
 [size=4][b]Install[/b][/size]
 [list=1]
 [*]Close the game.
@@ -40,7 +37,7 @@ Extract the [b]CustomShellSystem[/b] folder into [b]MortalShell2/Binaries/Win64/
     |   `-- inventory-logo-v1.png
     |-- core.json
     |-- cores/
-    |   `-- css_core-0.3.2.dll
+    |   `-- css_core-1.0.0.dll
     |-- dlls/
     |   `-- main.dll
     |-- enabled.txt
@@ -78,7 +75,7 @@ Close the game and replace the CSS runtime files. [b]Keep CustomShellSystem/stat
 
 Install outfits marked as CSS-compatible. Regular mesh replacements do not appear in the wardrobe automatically. Replacers that overwrite the game's base meshes or materials can affect CSS outfits that use those assets.
 
-[b]Existing CSS outfit ZIPs still work with 0.3.2.[/b] Keep your Beaute, HIT2, Seductress and other CSS packages installed. Only replace the CSS runtime.
+[b]Existing CSS outfit ZIPs still work.[/b] Keep your Beaute, HIT2, Seductress and other CSS packages installed. Only replace the CSS runtime.
 
 CSS now uses Inventory's character display and lighting. Animation, physics and clipping still depend on the outfit. If you find a problem, send your CSS and UE4SS versions, outfit, gameplay shell, other installed mods and steps to reproduce it. A screenshot or recording helps me track it down.
 
@@ -100,7 +97,7 @@ The [url=https://github.com/ngodn/CustomShellSystem/blob/main/docs/css-packages.
 
 The [url=https://github.com/ngodn/CustomShellSystem/blob/main/docs/modding/README.md]CSS modding guide[/url] is now available, with a [url=https://github.com/ngodn/CustomShellSystem/blob/main/tools/css_project.py]project utility[/url] for repeatable builds and verified outfit ZIPs. It covers the current package format, mesh variants and color recipes. CSS is still developing; I'll keep the guide updated as the framework settles.
 
-[size=4][b]CSS 0.2.0 in-game[/b][/size]
+[size=4][b]CSS in-game[/b][/size]
 
 [img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v0.2.0/inventory-css.jpg[/img]
 Seductress in the new Shell page.
@@ -125,4 +122,4 @@ Seductress showcase, 1080p / 60 fps.
 [*]Seductress source credits: Skirbie, dantemk2, Larian Studios and Volno's Lazy Tailor library. I adapted and packaged the outfit for CSS; it is a separate download.
 [/list]
 
-[url=https://github.com/ngodn/CustomShellSystem/releases/tag/v0.3.2]CSS 0.3.2 on GitHub[/url] | [url=https://github.com/ngodn/CustomShellSystem]Source and tools[/url]
+[url=https://github.com/ngodn/CustomShellSystem]CSS on GitHub[/url] | [url=https://github.com/ngodn/CustomShellSystem]Source and tools[/url]

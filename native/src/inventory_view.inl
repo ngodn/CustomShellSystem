@@ -28,65 +28,154 @@ struct InventoryLayout : Layout {
         if(selected) {auto* dot=box(x+4,y+4,4,4,Color{.42f,.34f,.22f,1});invoke(dot,L"SetRenderTransformAngle",L"Angle",45.f);}
     }
 };
-static bool is_chest_or_glute_control(const Control& control) {
+enum class BodyPhysicsRegion : uint8_t {
+    Chest,
+    Glute,
+    Thigh,
+    Belly,
+    Unknown
+};
+
+static inline BodyPhysicsRegion classify_body_physics_region(const std::string& raw_id, const std::string& raw_name = "") {
+    std::string id = raw_id;
+    for(char& c : id) c = char(std::tolower(static_cast<unsigned char>(c)));
+    std::string name = raw_name;
+    for(char& c : name) c = char(std::tolower(static_cast<unsigned char>(c)));
+
+    if(id.find("chest") != std::string::npos || id.find("breast") != std::string::npos ||
+       id.find("boob") != std::string::npos || id.find("bust") != std::string::npos ||
+       name.find("chest") != std::string::npos || name.find("breast") != std::string::npos ||
+       name.find("boob") != std::string::npos || name.find("bust") != std::string::npos) {
+        return BodyPhysicsRegion::Chest;
+    }
+    if(id.find("glute") != std::string::npos || id.find("butt") != std::string::npos ||
+       name.find("glute") != std::string::npos || name.find("butt") != std::string::npos) {
+        return BodyPhysicsRegion::Glute;
+    }
+    if(id.find("thigh") != std::string::npos || id.find("hip") != std::string::npos ||
+       name.find("thigh") != std::string::npos || name.find("hip") != std::string::npos) {
+        return BodyPhysicsRegion::Thigh;
+    }
+    if(id.find("belly") != std::string::npos || id.find("waist") != std::string::npos ||
+       id.find("abdomen") != std::string::npos || id.find("stomach") != std::string::npos ||
+       name.find("belly") != std::string::npos || name.find("waist") != std::string::npos ||
+       name.find("abdomen") != std::string::npos || name.find("stomach") != std::string::npos) {
+        return BodyPhysicsRegion::Belly;
+    }
+    return BodyPhysicsRegion::Unknown;
+}
+
+static inline bool is_body_physics_control(const Control& control) {
     if(control.kind != ControlKind::Spring && control.kind != ControlKind::Dynamics && control.kind != ControlKind::Rig) {
         return false;
     }
-    std::string id = control.id;
-    for(char& c : id) c = char(std::tolower(static_cast<unsigned char>(c)));
-    std::string name = control.name;
-    for(char& c : name) c = char(std::tolower(static_cast<unsigned char>(c)));
-    return id.find("chest") != std::string::npos ||
-           id.find("glute") != std::string::npos ||
-           id.find("breast") != std::string::npos ||
-           id.find("butt") != std::string::npos ||
-           name.find("chest") != std::string::npos ||
-           name.find("glute") != std::string::npos ||
-           name.find("breast") != std::string::npos ||
-           name.find("butt") != std::string::npos;
+    return classify_body_physics_region(control.id, control.name) != BodyPhysicsRegion::Unknown;
 }
+
+static inline bool is_chest_or_glute_control(const Control& control) {
+    return is_body_physics_control(control);
+}
+
 struct BodyPhysicsPresetDef {
     const char* id;
     const char* name;
     const char* subtitle;
-    float chest_freq;
-    float chest_damp;
-    float chest_motion;
-    float glute_freq;
-    float glute_damp;
-    float glute_motion;
-    float spring_chest_freq;
-    float spring_chest_damp;
-    float spring_chest_travel;
-    float spring_glute_freq;
-    float spring_glute_damp;
-    float spring_glute_travel;
+    // Rig values
+    float chest_freq, chest_damp, chest_motion;
+    float glute_freq, glute_damp, glute_motion;
+    float thigh_freq, thigh_damp, thigh_motion;
+    float belly_freq, belly_damp, belly_motion;
+    // Spring values
+    float spring_chest_freq, spring_chest_damp, spring_chest_travel;
+    float spring_glute_freq, spring_glute_damp, spring_glute_travel;
+    float spring_thigh_freq, spring_thigh_damp, spring_thigh_travel;
+    float spring_belly_freq, spring_belly_damp, spring_belly_travel;
 };
 
 static const BodyPhysicsPresetDef kBodyPhysicsPresets[] = {
     {"firm", "Firm", "High stiffness & damping, perky sculpted look",
-     2.60f, 0.65f, 0.60f, 2.50f, 0.65f, 0.65f,
-     2.60f, 0.65f, 1.20f, 2.50f, 0.65f, 1.50f},
+     // Rig: Chest, Glute, Thigh, Belly
+     2.60f, 0.65f, 0.60f,
+     2.50f, 0.65f, 0.65f,
+     2.80f, 0.72f, 0.40f,
+     2.70f, 0.68f, 0.45f,
+     // Spring: Chest, Glute, Thigh, Belly
+     2.60f, 0.65f, 1.20f,
+     2.50f, 0.65f, 1.50f,
+     2.80f, 0.72f, 0.80f,
+     2.70f, 0.68f, 0.90f},
+
     {"natural", "Natural", "Realistic soft-tissue sway, balanced & restrained",
-     2.15f, 0.48f, 1.00f, 2.10f, 0.50f, 1.00f,
-     2.15f, 0.48f, 2.20f, 2.10f, 0.50f, 2.20f},
+     // Rig: Chest, Glute, Thigh, Belly
+     2.15f, 0.48f, 1.00f,
+     2.10f, 0.50f, 1.00f,
+     2.35f, 0.58f, 0.75f,
+     2.20f, 0.52f, 0.85f,
+     // Spring: Chest, Glute, Thigh, Belly
+     2.15f, 0.48f, 2.20f,
+     2.10f, 0.50f, 2.20f,
+     2.35f, 0.58f, 1.60f,
+     2.20f, 0.52f, 1.80f},
+
     {"bouncy", "Bouncy", "Playful, energetic motion with high elasticity",
-     1.70f, 0.28f, 1.80f, 1.65f, 0.30f, 1.80f,
-     1.70f, 0.28f, 4.50f, 1.65f, 0.30f, 4.50f},
+     // Rig: Chest, Glute, Thigh, Belly
+     1.70f, 0.28f, 1.80f,
+     1.65f, 0.30f, 1.80f,
+     1.85f, 0.38f, 1.35f,
+     1.75f, 0.32f, 1.50f,
+     // Spring: Chest, Glute, Thigh, Belly
+     1.70f, 0.28f, 4.50f,
+     1.65f, 0.30f, 4.50f,
+     1.85f, 0.38f, 3.20f,
+     1.75f, 0.32f, 3.80f},
+
     {"soft", "Soft / Saggy", "Heavier relaxed tissue, slower pendular sway",
-     1.25f, 0.18f, 2.60f, 1.20f, 0.20f, 2.50f,
-     1.25f, 0.18f, 7.50f, 1.20f, 0.20f, 7.00f},
+     // Rig: Chest, Glute, Thigh, Belly
+     1.25f, 0.18f, 2.60f,
+     1.20f, 0.20f, 2.50f,
+     1.40f, 0.25f, 2.00f,
+     1.30f, 0.22f, 2.20f,
+     // Spring: Chest, Glute, Thigh, Belly
+     1.25f, 0.18f, 7.50f,
+     1.20f, 0.20f, 7.00f,
+     1.40f, 0.25f, 5.50f,
+     1.30f, 0.22f, 6.50f},
+
     {"earthquake", "OMG! Earthquake!", "Maximum exaggerated comedic jiggle & wobble",
-     0.85f, 0.06f, 4.20f, 0.85f, 0.08f, 4.20f,
-     0.85f, 0.06f, 14.0f, 0.85f, 0.08f, 14.0f}
+     // Rig: Chest, Glute, Thigh, Belly
+     0.85f, 0.06f, 4.20f,
+     0.85f, 0.08f, 4.20f,
+     0.95f, 0.10f, 3.50f,
+     0.90f, 0.08f, 3.80f,
+     // Spring: Chest, Glute, Thigh, Belly
+     0.85f, 0.06f, 14.0f,
+     0.85f, 0.08f, 14.0f,
+     0.95f, 0.10f, 10.0f,
+     0.90f, 0.08f, 13.0f}
 };
 
 static inline std::string detect_body_physics_preset(const Control& control, const ControlValue& held) {
-    const bool is_glute = control.id.find("glute") != std::string::npos || control.id.find("butt") != std::string::npos;
+    const auto region = classify_body_physics_region(control.id, control.name);
     const bool is_spring = control.kind == ControlKind::Spring;
     for(const auto& p : kBodyPhysicsPresets) {
-        float tf = is_spring ? (is_glute ? p.spring_glute_freq : p.spring_chest_freq) : (is_glute ? p.glute_freq : p.chest_freq);
-        float td = is_spring ? (is_glute ? p.spring_glute_damp : p.spring_chest_damp) : (is_glute ? p.glute_damp : p.chest_damp);
+        float tf = 0, td = 0;
+        if(is_spring) {
+            switch(region) {
+                case BodyPhysicsRegion::Chest: tf = p.spring_chest_freq; td = p.spring_chest_damp; break;
+                case BodyPhysicsRegion::Glute: tf = p.spring_glute_freq; td = p.spring_glute_damp; break;
+                case BodyPhysicsRegion::Thigh: tf = p.spring_thigh_freq; td = p.spring_thigh_damp; break;
+                case BodyPhysicsRegion::Belly: tf = p.spring_belly_freq; td = p.spring_belly_damp; break;
+                default: tf = p.spring_chest_freq; td = p.spring_chest_damp; break;
+            }
+        } else {
+            switch(region) {
+                case BodyPhysicsRegion::Chest: tf = p.chest_freq; td = p.chest_damp; break;
+                case BodyPhysicsRegion::Glute: tf = p.glute_freq; td = p.glute_damp; break;
+                case BodyPhysicsRegion::Thigh: tf = p.thigh_freq; td = p.thigh_damp; break;
+                case BodyPhysicsRegion::Belly: tf = p.belly_freq; td = p.belly_damp; break;
+                default: tf = p.chest_freq; td = p.chest_damp; break;
+            }
+        }
         if(std::abs(held[0] - tf) < 0.18f && std::abs(held[1] - td) < 0.08f) {
             return p.id;
         }
@@ -761,13 +850,13 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 Json minus, plus;
                 if(has_presets) {
                     std::string pid = detect_body_physics_preset(c, held);
-                    int cur_idx = 1; // default to natural
+                    int cur_idx = -1;
                     const int total_presets = int(sizeof(kBodyPhysicsPresets)/sizeof(kBodyPhysicsPresets[0]));
                     for(int i=0; i<total_presets; ++i) {
                         if(kBodyPhysicsPresets[i].id == pid) { cur_idx = i; break; }
                     }
-                    int prev_idx = (cur_idx - 1 + total_presets) % total_presets;
-                    int next_idx = (cur_idx + 1) % total_presets;
+                    int prev_idx = (cur_idx <= 0) ? (total_presets - 1) : (cur_idx - 1);
+                    int next_idx = (cur_idx < 0 || cur_idx >= total_presets - 1) ? 0 : (cur_idx + 1);
                     minus = Json{{"action","physics_preset"},{"preset",kBodyPhysicsPresets[prev_idx].id},{"control",c.id}};
                     plus = Json{{"action","physics_preset"},{"preset",kBodyPhysicsPresets[next_idx].id},{"control",c.id}};
                 } else {
@@ -912,22 +1001,16 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                             cur_y += 24;
                         }
 
-                        auto* cust_btn = ui.button("", right, cur_y, 360, 42, false, true);
-                        bind(cust_btn, {{"action","ui_physics_modal"},{"control",control.id}});
-                        ui.box(right, cur_y, 360, 42, Color{.04f,.034f,.022f,1});
-                        prompt("secondary", "Customize Sliders...", right + 24, cur_y + 7, 310, 4);
-                        cur_y += 50;
-
                         if(rig) {
                             const bool motion_on = (value[3] == 1);
                             auto* toggle_btn = ui.button(motion_on ? "Motion: Enabled" : "Motion: Disabled", right, cur_y, 360, 36, false, true, 16);
                             bind(toggle_btn, {{"action","control"},{"control",control.id},{"channel",3},{"value",motion_on ? 0 : 1}});
                         }
 
-                        direction_hint(true, "Cycle preset");
-                        action_button("accept", "Customize sliders", 841, {{"action","ui_physics_modal"},{"control",control.id}}, 3);
-                        action_button("secondary", "Reset part", 795, {{"action","reset_control"},{"control",control.id}}, 4);
+                        action_button("accept", "Customize sliders", 795, {{"action","ui_physics_modal"},{"control",control.id}}, 3);
+                        action_button("secondary", "Reset part", 841, {{"action","reset_control"},{"control",control.id}}, 4);
                         action_button("tertiary", "Reset all", 887, confirm_reset_all, 2);
+                        direction_hint(true, "Cycle preset");
                     } else {
                         const int fieldcount = rig ? 4 : 3;
                         const int selected = channel_ % fieldcount;
@@ -1008,16 +1091,10 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                             cur_y += 24;
                         }
 
-                        auto* cust_btn = ui.button("", right, cur_y, 360, 42, false, true);
-                        bind(cust_btn, {{"action","ui_physics_modal"},{"control",control.id}});
-                        ui.box(right, cur_y, 360, 42, Color{.04f,.034f,.022f,1});
-                        prompt("secondary", "Customize Sliders...", right + 24, cur_y + 7, 310, 4);
-                        cur_y += 50;
-
-                        direction_hint(true, "Cycle preset");
-                        action_button("accept", "Customize sliders", 841, {{"action","ui_physics_modal"},{"control",control.id}}, 3);
-                        action_button("secondary", "Reset part", 795, {{"action","reset_control"},{"control",control.id}}, 4);
+                        action_button("accept", "Customize sliders", 795, {{"action","ui_physics_modal"},{"control",control.id}}, 3);
+                        action_button("secondary", "Reset part", 841, {{"action","reset_control"},{"control",control.id}}, 4);
                         action_button("tertiary", "Reset all", 887, confirm_reset_all, 2);
+                        direction_hint(true, "Cycle preset");
                     } else {
                         const int fieldcount=control.spring_clamp?3:2;
                         const int selected=channel_%fieldcount;

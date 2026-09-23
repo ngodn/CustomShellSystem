@@ -18,15 +18,15 @@ I rewrote the Cheat Menu in C++ for CSSX, based on [url=https://www.nexusmods.co
 [size=4][b]Install[/b][/size]
 [list=1]
 [*]Close the game and disable or remove the original MortalShell2Mod.
-[*]Install CSS 0.3.0 or later and CSSX 0.3.0.
-[*]Extract eins0fx.cheat-menu into ue4ss/Mods/CustomShellSystem/extensions/.
+[*]Install CSSX (in ue4ss/Mods/CSSX/).
+[*]Extract eins0fx.cheat-menu into ue4ss/Mods/CSSX/extensions/.
 [*]Restart, enter the world and open Inventory > CSSX > CSSX Cheat Menu.
 [/list]
 
 [b]Expected folders after extraction[/b]
-Install CSS and CSSX first. Extract the [b]eins0fx.cheat-menu[/b] folder into [b]CustomShellSystem/extensions/[/b]. The extension files should be here:
+Install CSSX first. Extract the [b]eins0fx.cheat-menu[/b] folder into [b]CSSX/extensions/[/b]. The extension files should be here:
 
-[code]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/CustomShellSystem/extensions/
+[code]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/extensions/
 `-- eins0fx.cheat-menu/
     |-- CREDITS.txt
     |-- LICENSE

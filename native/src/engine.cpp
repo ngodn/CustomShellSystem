@@ -909,7 +909,8 @@ void Appearance::restore_ground_offset() {
             location[2]=*original;
             Call move(component,L"K2_SetRelativeLocation",4);
             move.set(L"NewLocation",location);move.set(L"bSweep",false);move.set(L"bTeleport",true);move.run();
-            if(read<std::array<double,3>>(component,L"RelativeLocation")!=location)
+            auto readback=read<std::array<double,3>>(component,L"RelativeLocation");
+            if(std::abs(readback[2]-location[2])>0.05)
                 throw std::runtime_error("World mesh height restoration failed");
         }
         ground_offset_=next;
@@ -929,7 +930,8 @@ void Appearance::set_ground_offset(double offset) {
     location[2]=target;
     Call move(component,L"K2_SetRelativeLocation",4);
     move.set(L"NewLocation",location);move.set(L"bSweep",false);move.set(L"bTeleport",true);move.run();
-    if(read<std::array<double,3>>(component,L"RelativeLocation")!=location)
+    auto readback=read<std::array<double,3>>(component,L"RelativeLocation");
+    if(std::abs(readback[2]-location[2])>0.05)
         throw std::runtime_error("World mesh height read-back failed");
 }
 bool Appearance::restore() {
