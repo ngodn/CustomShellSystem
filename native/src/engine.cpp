@@ -347,6 +347,7 @@ static UObject* menu_character(UObject* player) {
 }
 #include "attachment_follower.inl"
 #include "walk_override.inl"
+#include "misc_visibility.inl"
 UObject* Appearance::player(void* engine) {
     shell.clear(); pawn_name.clear(); current_mesh.clear();
     if (!Version::IsAtLeast(5, 6) || !Version::IsBelow(5, 7)) throw std::runtime_error("CSS adapter requires UE5.6");
@@ -375,6 +376,7 @@ UObject* Appearance::player(void* engine) {
 }
 void Appearance::restore_menu() {
     restore_menu_physics();
+    menu_misc_.restore();   // show any accessories MISC hid on the wardrobe preview
     menu_attachments_.release();
     menu_items_.release();
     if(auto* preview=menu_component_.Get()) for(int section:menu_hidden_sections_)
@@ -453,6 +455,8 @@ void Appearance::sync_menu() {
         }
         it=menu_hidden_sections_.erase(it);
     }
+    // MISC on the wardrobe preview is driven from sync_misc (which resolves the display
+    // character itself), so it also works on a default shell where this function returns early.
 }
 void Appearance::remember_materials() {
     expected_materials_.clear();

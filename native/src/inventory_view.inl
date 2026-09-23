@@ -435,8 +435,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         return widget;
     };
     auto bind=[&](UObject* widget,Json action) { hits_.push_back({WeakObject(widget),std::move(action),false}); };
-    const char* sections[]={"SHELL","CUSTOMIZE","LOCOMOTION","PROFILE"};
-    constexpr int section_count=4;
+    const char* sections[]={"SHELL","CUSTOMIZE","LOCOMOTION","MISC","PROFILE"};
+    constexpr int section_count=5;
     // The labels live in a clipped strip between the LT/RT prompts, like the game's
     // inventory tabs: a fixed gap between words, the selected label always whole, and
     // its neighbours cut at the strip edges until you move to them.
@@ -1400,6 +1400,44 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             ui.label(note,right,controls_y+408,360,48,14,muted);
         }
 
+    } else if(section_==3) {
+        // MISC visibility: one row per item category, each cycling a visibility mode. Nothing
+        // here touches the body mesh; the runtime hides only the item actors (misc_visibility.inl).
+        struct MiscDef { const char* key,*title,*subtitle,*detail; };
+        static const MiscDef defs[]={
+            {"seal","Seals","Defensive seals","Your seal, worn on the waist and forearm. Hide it for a cleaner look, or only while you are actually using it."},
+            {"sidearm","Sidearms","Your equipped sidearm","Nail Shotgun, Ballistazooka, Crossbow, Machine Gun and the like, carried on the back until drawn."},
+            {"stowed_weapons","Weapons","Your primary weapon","Axatana, blades, hammers and other primary weapons, sheathed on the body until drawn."},
+            {"accessories","Accessories & Shell Tools","Ornaments and shell items","Eredrim's Diapason, flower crowns, capes, pouches and relics. Usable shell tools show when their ability fires."},
+        };
+        auto mode_label=[](const std::string& m)->std::string {
+            if(m=="hidden") return "Always Hidden";
+            if(m=="in_use") return "Only When In Use";
+            return "Default (game)";
+        };
+        auto rule_for=[&](const std::string& key)->MiscRule {
+            auto it=state.misc_rules.find(key);
+            return it!=state.misc_rules.end()?it->second:MiscRule{};
+        };
+        row_=std::clamp(row_,0,3);
+        scroll_begin();
+        for(int i=0;i<4;++i) {
+            const MiscRule rule=rule_for(defs[i].key);
+            Json next{{"action","misc_mode"},{"category",defs[i].key},{"delta",1}};
+            Json prev{{"action","misc_mode"},{"category",defs[i].key},{"delta",-1}};
+            row(i,defs[i].title,mode_label(rule.mode),77,next,prev,next);
+        }
+        scroll_end();
+        const MiscRule current=rule_for(defs[row_].key);
+        detail(defs[row_].title,mode_label(current.mode),defs[row_].detail);
+        std::vector<Choice> choices={
+            {"default","Default (game)",{{"action","misc_mode"},{"category",defs[row_].key},{"mode","default"}}},
+            {"in_use","Only When In Use",{{"action","misc_mode"},{"category",defs[row_].key},{"mode","in_use"}}},
+            {"hidden","Always Hidden",{{"action","misc_mode"},{"category",defs[row_].key},{"mode","hidden"}}},
+        };
+        choice_list(std::string("misc:")+defs[row_].key,choices,current.mode,controls_y,300);
+        direction_hint(true,"Choose visibility");
+
     } else {
         std::vector<std::string> names; for(const auto& [name,_]:state.presets) names.push_back(name);
         row_=std::clamp(row_,0,int(names.size()));
@@ -1439,7 +1477,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     decoration("T_UI_DescriptionHeader_Divider",right,931,360,2);
     // Contextual controls occupy the first footer row. Keep feedback below it.
     status_=ui.label("",right,998,360,66,16,muted);
-    direction_hint(false,section_==0?"Browse shells":section_==1?"Browse parts":section_==2?"Browse animation options":"Browse profiles");
+    direction_hint(false,section_==0?"Browse shells":section_==1?"Browse parts":section_==2?"Browse animation options":section_==3?"Browse categories":"Browse profiles");
     bind(ui.button("",left,1025,140,38),{{"action","ui_close"}});
     prompt("close","Close",left,1030,140,5);
     bind(ui.button("",width/2-190,980,170,40),{{"action",light_edit_?"ui_reset_light":"ui_reset_view"}});
@@ -1682,7 +1720,7 @@ Json InventoryUI::dispatch(Json action,const State& state) {
     if(action.is_null()) return {};
     auto name=action.value("action","");
     if(name.starts_with("x_")) return dispatch_extension(action);
-    if(name=="ui_section") { const int next=std::clamp(action.at("section").get<int>(),0,3); if(next==section_) return {}; section_=next; enter_transition_=true; row_=0; scroll_offset_=0; physics_modal_control_.clear(); if(auto* s=scroll_.Get()) invoke(s,L"SetScrollOffset",L"NewScrollOffset",0.f); dirty_=true; return {}; }
+    if(name=="ui_section") { const int next=std::clamp(action.at("section").get<int>(),0,4); if(next==section_) return {}; section_=next; enter_transition_=true; row_=0; scroll_offset_=0; physics_modal_control_.clear(); if(auto* s=scroll_.Get()) invoke(s,L"SetScrollOffset",L"NewScrollOffset",0.f); dirty_=true; return {}; }
     if(name=="ui_row") { row_=std::clamp(action.at("row").get<int>(),0,std::max(0,int(rows_.size())-1)); physics_modal_control_.clear(); dirty_=true; if(section_!=1 && action.value("apply",false) && !rows_.empty()) return dispatch(rows_[row_].accept,state); return {}; }
     // The channel count comes from the page, because a spring has two and a colour three.
     if(name=="ui_channel") { channel_=(channel_+1)%std::clamp(action.value("count",3),1,4); dirty_=true; return {}; }
@@ -2298,7 +2336,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
             if(character_controls) return dispatch({{"action","ui_toggle_light"}},state);
             continue;
         }
-        if(binding.action=="previous_section" || binding.action=="next_section") return dispatch({{"action","ui_section"},{"section",(section_+(binding.action=="next_section"?1:3))%4}},state);
+        if(binding.action=="previous_section" || binding.action=="next_section") return dispatch({{"action","ui_section"},{"section",(section_+(binding.action=="next_section"?1:4))%5}},state);
         if(rows_.empty()) continue;
         if(binding.action=="up" || binding.action=="down") {
             row_=std::clamp(row_+(binding.action=="up"?-1:1),0,int(rows_.size())-1);

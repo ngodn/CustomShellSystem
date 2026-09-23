@@ -450,6 +450,30 @@ static std::map<std::string, Selection> parse_selections(const Json& values) {
     return result;
 }
 bool valid_walk_animation(const std::string& value) { return value=="normal" || value=="feminine"; }
+Json MiscRule::json() const { return {{"mode",mode}}; }
+MiscRule MiscRule::parse(const Json& j) {
+    MiscRule r;
+    std::string mode;
+    if(j.is_boolean()) mode = j.get<bool>() ? "default" : "hidden";   // legacy bare toggle
+    else if(j.is_object()) mode = j.value("mode","default");
+    // Map the retired 5-mode set onto the three we keep. Anything conditional becomes
+    // "default" so an old save never surprises the player by hiding something.
+    if(mode=="hidden") r.mode="hidden";
+    else if(mode=="in_use") r.mode="in_use";
+    else r.mode="default";   // default, shown, combat, exploration, custom -> default
+    return r;
+}
+static std::map<std::string,MiscRule> parse_misc_rules(const Json& j) {
+    std::map<std::string,MiscRule> out;
+    if(!j.is_object()) return out;
+    for(const auto& cat:misc_categories()) if(j.contains(cat)) out[cat]=MiscRule::parse(j.at(cat));
+    return out;
+}
+static Json misc_rules_json(const std::map<std::string,MiscRule>& rules) {
+    Json out = Json::object();
+    for(const auto& [cat,rule]:rules) out[cat]=rule.json();
+    return out;
+}
 static Preset parse_preset(const Json& j) {
     Preset result;
     // 0.4 templates are {"selections":{...},"walk_animation":...}; older ones are the bare selection map.
@@ -462,6 +486,7 @@ static Preset parse_preset(const Json& j) {
         // Jog and sprint are pinned to normal: the 0.3.3 preview shipped a
         // "run_animation" and then a jog/sprint pair, and neither had its stride
         // matched. Whatever a template holds, it loads as normal.
+        result.misc_rules=parse_misc_rules(j.value("misc_rules",Json::object()));
     } else result.selections=parse_selections(j);
     return result;
 }
@@ -491,6 +516,7 @@ State State::parse(const Json& j) {
     }
     result.favorites = j.value("favorites", std::set<std::string>{});
     for (const auto& id : result.favorites) if (!valid_id(id)) throw std::runtime_error("Invalid favorite");
+    result.misc_rules = parse_misc_rules(j.value("misc_rules", Json::object()));
     const auto presets_key = j.contains("profiles") ? "profiles" : "presets";
     if (j.contains(presets_key)) for (const auto& [key, values] : j.at(presets_key).items()) {
         if (!valid_id(key) || result.presets.size() >= 64) throw std::runtime_error("Invalid profile");
@@ -507,11 +533,12 @@ Json State::json() const {
     Json presets_json = Json::object();
     Json remembered = Json::object();
     for(const auto& [id,custom]:remembered_custom) remembered[id]=custom.json();
-    for (const auto& [name, preset] : presets) presets_json[name] = {{"selections", selections_json(preset.selections)}, {"walk_animation", preset.walk_animation}, {"animation_choices",preset.animation_choices.json()}};
+    for (const auto& [name, preset] : presets) presets_json[name] = {{"selections", selections_json(preset.selections)}, {"walk_animation", preset.walk_animation}, {"animation_choices",preset.animation_choices.json()}, {"misc_rules", misc_rules_json(preset.misc_rules)}};
     return {{"schema", 1}, {"enabled", enabled}, {"auto_apply", auto_apply},
             {"invert_orbit_x", invert_orbit_x}, {"invert_orbit_y", invert_orbit_y}, {"walk_animation", walk_animation},
             {"harbinger_mirror", harbinger_mirror},
             {"animation_choices",animation_choices.json()},
-            {"selections", selections_json(selections)}, {"favorites", favorites}, {"presets", presets_json}, {"remembered_custom",remembered}};
+            {"selections", selections_json(selections)}, {"favorites", favorites}, {"presets", presets_json}, {"remembered_custom",remembered},
+            {"misc_rules", misc_rules_json(misc_rules)}};
 }
 }

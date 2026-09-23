@@ -100,11 +100,34 @@ struct Catalog {
         const std::string& variant,AnimationSlot) const;
 };
 struct Selection { std::string outfit, variant; Customization custom; };
+// 1.0.0-alpha.7: MISC visibility. Per category the player picks one of three modes. There is
+// no combat/locomotion detection: CSS only ever acts on an item while it rests on its stowed
+// or cosmetic socket, so a weapon you draw leaves that socket and shows on its own. That makes
+// "only when in use" fall out for free, and "always hidden" is the same plus hiding the drawn
+// copy too. Modes: "default" (never touch, the game decides), "hidden" (hide it, even in use),
+// "in_use" (hide it while it rests on the body; it shows the moment you draw/use it).
+struct MiscRule {
+    std::string mode = "default";   // default | hidden | in_use
+    bool hides_at_rest() const { return mode=="hidden" || mode=="in_use"; }
+    bool hides_when_drawn() const { return mode=="hidden"; }
+    bool operator==(const MiscRule&) const = default;
+    Json json() const;
+    static MiscRule parse(const Json&);
+};
+inline const std::array<const char*,4>& misc_categories() {
+    static const std::array<const char*,4> c{"seal","sidearm","stowed_weapons","accessories"};
+    return c;
+}
+// Every category offers all three modes: some accessories are usable shell tools (Eredrim's
+// Diapason fires a shell ability), so none are locked out of "only when in use". A piece that
+// never leaves its socket simply behaves the same under "in_use" as under "hidden".
+inline bool misc_category_has_in_use(const std::string&) { return true; }
 // 0.4: a template keeps the animation settings with the outfit selections.
 struct Preset {
     std::map<std::string, Selection> selections;
     std::string walk_animation = "normal";
     AnimationChoices animation_choices;
+    std::map<std::string, MiscRule> misc_rules;
 };
 bool valid_walk_animation(const std::string&);
 // 1.0.0-beta: Profile is the full character snapshot across all systems
@@ -119,6 +142,7 @@ struct State {
     std::map<std::string, Selection> selections;
     std::map<std::string, Customization> remembered_custom;
     std::set<std::string> favorites;
+    std::map<std::string, MiscRule> misc_rules;   // global MISC visibility, applied to any shell
     std::map<std::string, Preset> presets;
     std::map<std::string, Profile>& profiles() { return presets; }
     const std::map<std::string, Profile>& profiles() const { return presets; }

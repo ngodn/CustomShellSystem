@@ -156,7 +156,7 @@ Json InventoryUI::command(void* engine,const Json& command) {
     } else if(action.starts_with("inventory_cinema_")) {
         cinema_command(pc,command);
     } else if(action=="inventory_capture_row") {
-        section_=std::clamp(command.value("section",0),0,3); row_=std::max(0,command.value("row",0));
+        section_=std::clamp(command.value("section",0),0,4); row_=std::max(0,command.value("row",0));
         scroll_offset_=std::max(0.f,command.value("offset",0.f));
         if(auto* s=scroll_.Get()) invoke(s,L"SetScrollOffset",L"NewScrollOffset",scroll_offset_);
         dirty_=true;
@@ -173,7 +173,7 @@ Json InventoryUI::command(void* engine,const Json& command) {
         for(auto& [widget,padding]:top_padding_) padding={80,0,80,0};
         for(auto* child:inventory_children(tabs_.Get())) if(auto* slot=inventory_object(child,L"Slot")) invoke(slot,L"SetPadding",L"InPadding",Margin{60,0,60,0});
     } else if(action=="inventory_section") {
-        section_=std::clamp(command.value("section",0),0,3); row_=std::max(0,command.value("row",0)); dirty_=true;
+        section_=std::clamp(command.value("section",0),0,4); row_=std::max(0,command.value("row",0)); dirty_=true;
     } else if(action=="inventory_select") {
         inventory_navigate(inventory_object(main,L"BP_HBC_Menu_Game"),command.at("index").get<int32_t>());
     } else if(action=="inventory_test_motion") {

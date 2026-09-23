@@ -118,6 +118,8 @@ struct Core {
     std::string maintenance_error;
     std::string attachment_error;
     uint64_t attachments_after=0;
+    std::string misc_error;
+    uint64_t misc_after=0;
     void sync_attachments_safely(uint64_t now) {
         if(now<attachments_after) return;
         attachments_after=now+250;
@@ -162,6 +164,25 @@ struct Core {
     uint64_t walk_after=0;
     uint64_t walk_updates=0;
     double walk_ms=0,walk_total_ms=0,walk_max_ms=0;
+    uint64_t misc_frames=0;
+    double misc_ms=0,misc_total_ms=0,misc_max_ms=0;   // per-frame cost of the MISC pass
+    void sync_misc_safely(uint64_t now) {
+        const auto started=std::chrono::steady_clock::now();
+        // Decide + enforce visibility on the cached items EVERY frame (cheap: only ~10 items),
+        // so an item hides the instant an action ends with no flash and the game never wins a
+        // frame. Rebuild the candidate item list (the heavy 200+ component walk) only every 50 ms.
+        try { appearance.tick_misc(); } catch(...) {}
+        if(now>=misc_after) {
+            misc_after=now+50;
+            try { appearance.sync_misc(); misc_error.clear(); }
+            catch(const std::exception& error) {
+                if(misc_error!=error.what()) { misc_error=error.what(); host.log(("MISC visibility deferred: "+misc_error).c_str()); }
+                misc_after=now+1000;
+            }
+        }
+        misc_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count();
+        ++misc_frames; misc_total_ms+=misc_ms; misc_max_ms=std::max(misc_max_ms,misc_ms);
+    }
     void sync_walk_safely(uint64_t now) {
         if(now<walk_after) return;
         // Gait changes and montage release need to follow input promptly.
@@ -239,6 +260,7 @@ struct Core {
         inventory.assets(root);
         bool recovered=false;
         state=load_state(root / "state/state.json", &recovered);
+        appearance.set_misc_rules(state.misc_rules);
         if(recovered) message="Recovered CSS state from its backup.";
         if (fs::exists(root / "request.json")) {
             try { last_request = read_json(root / "request.json").at("id").get<std::string>(); }
@@ -309,7 +331,7 @@ struct Core {
         else if (action == "save_look" || action == "save_profile") {
             auto name = command.at("name").get<std::string>();
             if (!valid_id(name) || (state.presets.size() >= 64 && !state.presets.contains(name))) throw std::runtime_error("Invalid profile slot");
-            state.presets[name] = Preset{state.selections, state.walk_animation, state.animation_choices}; dirty = true; ui_refresh = true; report("Current character profile saved to " + name);
+            state.presets[name] = Preset{state.selections, state.walk_animation, state.animation_choices, state.misc_rules}; dirty = true; ui_refresh = true; report("Current character profile saved to " + name);
         }
         else if (action == "load_look" || action == "load_profile") {
             auto name = command.at("name").get<std::string>();
@@ -320,6 +342,7 @@ struct Core {
             else { selected_outfit = selected->second.outfit; selected_variant = selected->second.variant; pending_custom=selected->second.custom; apply_pending = true; }
             if(state.walk_animation!=preset.walk_animation) { state.walk_animation=preset.walk_animation; dirty=true; }
             if(state.animation_choices!=preset.animation_choices) { state.animation_choices=preset.animation_choices; dirty=true; }
+            if(!preset.misc_rules.empty() && state.misc_rules!=preset.misc_rules) { state.misc_rules=preset.misc_rules; appearance.set_misc_rules(state.misc_rules); dirty=true; }
             ui_refresh = true; report("Profile loaded: " + name);
         }
         else if(action=="delete_look" || action=="delete_profile") {
@@ -368,6 +391,33 @@ struct Core {
             report(value ? "Harbinger will wear your shell's outfit."
                          : "Harbinger keeps its own saved outfit.");
         }
+        // MISC visibility. A category's mode cycles with left/right or is set outright from the
+        // mode list. It mutates state.misc_rules, hands the new rules to the appearance so the
+        // world and menu passes pick them up, and persists.
+        else if (action == "misc_mode" || action == "misc_reset") {
+            static const char* modes[]={"default","hidden","in_use"};
+            auto valid_category=[](const std::string& c){ for(const auto* k:css::misc_categories()) if(c==k) return true; return false; };
+            if(action=="misc_reset") { state.misc_rules.clear(); }
+            else {
+                const auto category=command.at("category").get<std::string>();
+                if(!valid_category(category)) throw std::runtime_error("Unknown MISC category");
+                const int mode_count = css::misc_category_has_in_use(category) ? 3 : 2;
+                auto& rule=state.misc_rules[category];
+                if(command.contains("mode")) {   // absolute set from the mode list
+                    const auto mode=command.at("mode").get<std::string>();
+                    bool ok=false; for(int i=0;i<mode_count;++i) if(mode==modes[i]) ok=true;
+                    if(!ok) throw std::runtime_error("Unknown MISC mode");
+                    rule.mode=mode;
+                } else {                         // relative cycle from a row's left/right
+                    int index=0; for(int i=0;i<mode_count;++i) if(rule.mode==modes[i]) index=i;
+                    const int delta=command.value("delta",1);
+                    index=((index+delta)%mode_count+mode_count)%mode_count;
+                    rule.mode=modes[index];
+                }
+            }
+            appearance.set_misc_rules(state.misc_rules);
+            dirty=true; ui_refresh=true;
+        }
         // 0.3.3 preview offered these two. They are answered so an old binding or a
         // stale UI does not error, but the setting no longer exists.
         else if (action == "jog_animation" || action == "sprint_animation") {
@@ -375,7 +425,7 @@ struct Core {
             report("Jogging and sprinting use the game's own animation in this version.");
         }
         else if (action == "enable") { state.enabled = true; apply_pending = true; dirty = true; report("CSS enabled. Open Inventory and choose CSS."); }
-        else if (action == "disable") { state.enabled = false; restore_pending = true; dirty = true; }
+        else if (action == "disable") { state.enabled = false; restore_pending = true; appearance.restore_misc(); dirty = true; }
         else if (action == "restore") { restore_pending = true; forget_current = true; }
         else if (action == "rescan") { rescan_pending = true; }
         // 1.0 renamed "color"/"reset_color" to "control"/"reset_control", since a control
@@ -718,6 +768,7 @@ struct Core {
         sync_attachments_safely(now);
         sync_seals_safely(now);
         sync_walk_safely(now);
+        if(state.enabled) sync_misc_safely(now);
         if (now < next_poll && !ui_refresh && !apply_pending) return;
         next_poll = now + 250;
         auto command_file = root / "request.json";
@@ -946,6 +997,14 @@ struct Core {
                     {"applied", applied_id}, {"message", message}, {"last_request", last_request},
                     {"apply_ms", last_apply_ms}, {"pid", GetCurrentProcessId()}};
         status["worn_items"]=appearance.worn_item_count();
+        status["misc"]=appearance.misc_diagnostics();
+        status["misc"]["frames"]=misc_frames;
+        status["misc"]["last_ms"]=misc_ms;
+        status["misc"]["mean_ms"]=misc_frames?misc_total_ms/misc_frames:0.;
+        status["misc"]["max_ms"]=misc_max_ms;
+#ifdef CSS_INVENTORY_DEV
+        try { status["misc"]["items"]=appearance.misc_report(); } catch(...) {}
+#endif
         status["recovery_pending"]=recovery.pending();
         status["maintenance_error"]=maintenance_error;
         auto path=package_root.generic_u8string();
@@ -1024,6 +1083,7 @@ bool stop(void* ptr) noexcept {
         css::minimap_destroy();
         core.inventory.detach();
         core.appearance.walk.release();
+        core.appearance.restore_misc();
         core.appearance.restore(); if (core.dirty) core.save();
         core.last_pawn.clear(); core.apply_pending = core.state.enabled;
         return true;

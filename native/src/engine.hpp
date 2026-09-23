@@ -329,6 +329,26 @@ public:
                 bool hide_weapons=false);
     void release();
 };
+// MISC visibility applier. Bounded: it hides only the OWNER ACTORS of accessories found as
+// direct children of a mesh, never the body (which is the parent) and never in-hand weapons
+// (a socket gate). One instance drives the world pawn, another the wardrobe preview. Method
+// bodies live in misc_visibility.inl. See that file and investigation/2026-09-23.
+class MiscVisibility {
+    struct Item { WeakObject component, owner; std::string category; };
+    std::vector<Item> candidates_;   // item mesh components found at the last enumeration (~20 Hz)
+    std::vector<Item> hidden_;       // components currently hidden
+public:
+    // Rebuild the candidate list by walking the containers. The heavy pass (a fully dressed body
+    // has hundreds of components), so it runs rate-limited, not every frame.
+    void enumerate(const std::vector<RC::Unreal::UObject*>& containers, RC::Unreal::UObject* pawn);
+    // Decide and enforce visibility for the cached candidates. Cheap (only the ~10 real items),
+    // so it runs EVERY frame: it re-reads each item's socket (a draw/sheathe/use changes it),
+    // re-hides anything the game turned back on, and reveals an item the instant it is used - no
+    // 50 ms flash when an action ends.
+    void evaluate(const std::map<std::string,MiscRule>& rules, bool action_active);
+    void restore();
+    bool any() const { return !hidden_.empty(); }
+};
 // CSSX ABI 2: a retained HUD surface for native extensions. The core owns the
 // widgets (injected into WBP_Player_HUD); an extension holds only opaque layer
 // handles and pushes cheap per-frame updates through the CssxHudApi vtable. All
@@ -461,6 +481,11 @@ class Appearance {
     std::vector<std::string> menu_original_materials_;
     std::vector<WeakObject> menu_original_live_materials_;
     AttachmentFollower attachments_, menu_attachments_;
+    // MISC visibility: the active rules (a copy of state.misc_rules), the appliers for the
+    // world pawn and the wardrobe preview, and the last sampled locomotion so the world pass
+    // only re-hides when the player's state actually changes.
+    MiscVisibility misc_, menu_misc_;
+    std::map<std::string, MiscRule> misc_rules_;
     // The wardrobe previews a second component, so everything CSS puts on the body has to
     // be put on that one too: its accessories, its hidden sections and its shapes. Keeping
     // a separate WornItems for the preview matches how attachments already work.
@@ -495,6 +520,17 @@ public:
     void sync_menu();
     void sync_attachments();
     void sync_seals();   // every frame, unlike sync_attachments: a stride is faster than 4 Hz
+    // MISC visibility. `set_misc_rules` copies the player's choices in; `sync_misc` re-hides
+    // the world pawn's accessories when locomotion changes (called from the tick); the menu
+    // pass runs inside sync_menu against the wardrobe preview character.
+    void set_misc_rules(const std::map<std::string, MiscRule>& rules) { misc_rules_ = rules; }
+    void sync_misc();          // rate-limited: rebuild the candidate item lists
+    void tick_misc();          // every frame: decide + enforce visibility on the cached items
+    void restore_misc() { misc_.restore(); menu_misc_.restore(); }
+    Json misc_diagnostics() const {
+        return {{"rules", misc_rules_.size()}, {"world_hidden", misc_.any()}, {"menu_hidden", menu_misc_.any()}};
+    }
+    Json misc_report() const;   // per-item live visibility state on the world pawn (dev diagnostic)
 #ifdef CSS_INVENTORY_DEV
     Json seal_diagnostics() const;
     Json tune_seals(double lift,double clearance,double max_push) { return offsets_.tune(lift,clearance,max_push); }
