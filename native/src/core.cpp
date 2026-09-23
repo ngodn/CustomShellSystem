@@ -438,10 +438,10 @@ struct Core {
                 action=="template" || action=="physics_preset") {
             const bool clearing=action=="reset_control" || action=="reset_color";
             auto selected=state.selections.find(appearance.shell);
-            if(selected==state.selections.end()) throw std::runtime_error("Wear an appearance before changing it");
+            if(selected==state.selections.end()) throw std::runtime_error("Wear an appearance before changing it.");
             const Outfit* outfit=nullptr;
             for(const auto& o:catalog.outfits) if(o.id==selected->second.outfit) outfit=&o;
-            if(!outfit) throw std::runtime_error("The selected outfit is missing");
+            if(!outfit) throw std::runtime_error("The selected outfit is missing.");
             const auto& options=outfit->controls_for(selected->second.variant);
             auto custom=selected->second.custom;
             if(action=="palette") custom=choose_palette(options,custom,command.at("palette").get<std::string>());
@@ -924,7 +924,7 @@ struct Core {
                     if(pending_custom) { requested.custom=*pending_custom; pending_custom.reset(); }
                     auto* variant = catalog.find(requested.outfit, requested.variant);
                     if (!variant || !catalog.compatible(requested.outfit, shell))
-                        throw std::runtime_error("Saved outfit is missing or incompatible");
+                        throw std::runtime_error("Saved outfit is missing or incompatible.");
                     auto start = std::chrono::steady_clock::now();
                     appearance.set_attachment_offsets(variant->attachments);
                     if (appearance.apply(engine, variant->mesh, variant->materials)) {

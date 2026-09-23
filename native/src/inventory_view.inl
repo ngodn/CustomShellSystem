@@ -117,7 +117,7 @@ static const BodyPhysicsPresetDef kBodyPhysicsPresets[] = {
      2.35f, 0.58f, 1.60f,
      2.20f, 0.52f, 1.80f},
 
-    {"bouncy", "Bouncy", "Playful, energetic motion with high elasticity",
+    {"bouncy", "Bouncy", "Playful, energetic motion with plenty of bounce",
      // Rig: Chest, Glute, Thigh, Belly
      1.70f, 0.28f, 1.80f,
      1.65f, 0.30f, 1.80f,
@@ -129,7 +129,7 @@ static const BodyPhysicsPresetDef kBodyPhysicsPresets[] = {
      1.85f, 0.38f, 3.20f,
      1.75f, 0.32f, 3.80f},
 
-    {"soft", "Soft / Saggy", "Heavier relaxed tissue, slower pendular sway",
+    {"soft", "Soft / Saggy", "Heavier relaxed tissue, slow and swinging",
      // Rig: Chest, Glute, Thigh, Belly
      1.25f, 0.18f, 2.60f,
      1.20f, 0.20f, 2.50f,
@@ -201,10 +201,10 @@ struct HairPhysicsPresetDef {
 
 static const HairPhysicsPresetDef kHairPhysicsPresets[] = {
     {"firm", "Firm", "Clean, disciplined ponytail with hairspray hold", 260.0f, 26.0f, 0.04f},
-    {"natural", "Natural", "Eve signature athletic flow, responsive & stable", 180.0f, 16.0f, 0.08f},
+    {"natural", "Natural", "Eve's athletic flow, quick and steady", 180.0f, 16.0f, 0.08f},
     {"silky", "Silky", "Soft, elegant hair with loose fluid sway", 110.0f, 10.0f, 0.14f},
     {"heavy", "Heavy", "Dense weighted hair, hugs back and resists lift", 190.0f, 22.0f, 0.35f},
-    {"floaty", "Floaty", "Airy cinematic strands with buoyant trailing wave", 55.0f, 6.0f, 0.00f}
+    {"floaty", "Floaty", "Light strands with a slow trailing wave", 55.0f, 6.0f, 0.00f}
 };
 
 static inline bool is_hair_physics_control(const Control& control) {
@@ -723,7 +723,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             action_button("secondary","Search catalog...",771,{{"action","ui_browse_shells"}},4);
         }
     } else if(section_==1) {
-        if(!worn || worn->controls_for(selection->second.variant).controls.empty()) detail("Customize","Nothing to adjust","Wear an outfit whose author left something adjustable, and it shows up here.");
+        if(!worn || worn->controls_for(selection->second.variant).controls.empty()) detail("Customize","Nothing to adjust","Wear an outfit that has adjustable parts, and they show up here.");
         else {
             const auto& options=worn->controls_for(selection->second.variant); const auto& custom=selection->second.custom;
             auto values=control_values(options,custom);
@@ -743,8 +743,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             for(size_t i=0;i<options.palettes.size();++i) {
                 const auto& p=options.palettes[i];
                 tmpl_items.push_back({
-                    p.id, p.name, "Color Palette", "Palette",
-                    "Author-curated color palette: "+p.name,
+                    p.id, p.name, "Colour palette", "Palette",
+                    "The author's colour palette: "+p.name,
                     palette_action(i+1), true
                 });
             }
@@ -952,7 +952,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             scroll_end();
 
             const auto& entry=entries[row_];
-            const auto confirm_reset_all=Json{{"action","ui_confirm"},{"title","Reset All Customizations"},{"message","Reset all customization overrides for this outfit back to original defaults?"},{"target",rows_[row_].tertiary}};
+            const auto confirm_reset_all=Json{{"action","ui_confirm"},{"title","Reset all customization"},{"message","Reset every change on this outfit back to the author's defaults?"},{"target",rows_[row_].tertiary}};
             if(row_==0) {
                 detail("Templates & Presets",worn->name,"Use Left / Right to cycle templates. Choose an author combination, material palette, body archetype, or physics preset.");
                 const size_t show_count=std::min(tmpl_items.size(),size_t(6));
@@ -1031,7 +1031,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     const bool has_hair=is_hair_physics_control(control);
                     if(has_presets) {
                         detail(control.name, worn->name,
-                               "Choose an anatomical motion preset below. To customize bounce frequency, settling damping, and travel limits, select Customize Sliders.");
+                               "Choose an anatomical motion preset below. To customize bounce frequency, settling damping, and travel limits, select Customize sliders.");
                         double cur_y = controls_y;
                         ui.label("MOTION PRESETS", right, cur_y, 360, 20, 14, gold);
                         cur_y += 24;
@@ -1069,7 +1069,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
 
                         if(rig) {
                             const bool motion_on = (value[3] == 1);
-                            auto* toggle_btn = ui.button(motion_on ? "Motion: Enabled" : "Motion: Disabled", right, cur_y, 360, 36, false, true, 16);
+                            auto* toggle_btn = ui.button(motion_on ? "Motion: On" : "Motion: Off", right, cur_y, 360, 36, false, true, 16);
                             bind(toggle_btn, {{"action","control"},{"control",control.id},{"channel",3},{"value",motion_on ? 0 : 1}});
                         }
 
@@ -1079,7 +1079,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                         direction_hint(true, "Cycle preset");
                     } else if(has_hair) {
                         detail(control.name, worn->name,
-                               "Choose a hair motion preset below. To customize spring stiffness, settling damping, and gravity drape, select Customize Sliders.");
+                               "Choose a hair motion preset below. To customize spring stiffness, settling damping, and gravity, select Customize sliders.");
                         double cur_y = controls_y;
                         ui.label("HAIR MOTION PRESETS", right, cur_y, 360, 20, 14, gold);
                         cur_y += 24;
@@ -1117,7 +1117,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
 
                         if(rig) {
                             const bool motion_on = (value[3] == 1);
-                            auto* toggle_btn = ui.button(motion_on ? "Motion: Enabled" : "Motion: Disabled", right, cur_y, 360, 36, false, true, 16);
+                            auto* toggle_btn = ui.button(motion_on ? "Motion: On" : "Motion: Off", right, cur_y, 360, 36, false, true, 16);
                             bind(toggle_btn, {{"action","control"},{"control",control.id},{"channel",3},{"value",motion_on ? 0 : 1}});
                         }
 
@@ -1133,7 +1133,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                                "Stiffness controls how strongly this part returns toward its rest direction. "
                                "Damping reduces motion. Gravity changes downward pull; negative values pull upward.");
                         double cur_y = controls_y;
-                        const char* fields[]={body?"Bounce Frequency (Hz)":"Stiffness",body?"Damping Ratio":"Damping",body?"Motion Amount":"Gravity"};
+                        const char* fields[]={body?"Bounce Frequency (Hz)":"Stiffness",body?"Damping":"Damping",body?"Motion Amount":"Gravity"};
                         for(int field=0;field<3;++field) {
                             const auto range=control_channel(control,field);
                             const double sy=cur_y+field*76;
@@ -1169,7 +1169,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     const bool has_presets = is_chest_or_glute_control(control);
                     if(has_presets) {
                         detail(control.name, worn->name,
-                               "Choose an anatomical motion preset below. To customize bounce frequency, settling damping, and travel limits, select Customize Sliders.");
+                               "Choose an anatomical motion preset below. To customize bounce frequency, settling damping, and travel limits, select Customize sliders.");
                         double cur_y = controls_y;
                         ui.label("MOTION PRESETS", right, cur_y, 360, 20, 14, gold);
                         cur_y += 24;
@@ -1244,7 +1244,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                         action_button("tertiary","Reset all",887,confirm_reset_all,2);
                     }
                 } else if(control.kind==ControlKind::Glow) {
-                    detail(control.name,worn->name,"Adjust emissive glow radiance. Turn up intensity for arcane luminescence; breathing pulse animates in combat.");
+                    detail(control.name,worn->name,"Set how brightly this part glows. Turn intensity up for a stronger glow; the pulse makes it breathe during combat.");
                     const int fieldcount=control.pulse_hz>0?2:1;
                     const int selected=channel_%fieldcount;
                     const char* fields[]={"Intensity","Pulse Rate"};
@@ -1270,7 +1270,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     action_button("accept","Reset part",841,rows_[row_].accept,3);
                     action_button("tertiary","Reset all",887,confirm_reset_all,2);
                 } else if(control.kind==ControlKind::Opacity) {
-                    detail(control.name,worn->name,"Adjust fabric transparency and sheer alpha. 0% is invisible sheer; 100% is solid opaque.");
+                    detail(control.name,worn->name,"Set how see-through this part is. 0% is fully transparent; 100% is fully solid.");
                     const double sy=controls_y;
                     auto* heading=ui.label("Opacity",right,sy,230,28,19,gold);
                     auto* slider=construct(L"/Script/UMG.Slider",tree);
@@ -1444,8 +1444,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         scroll_begin();
         row(0,"New profile","Save your current character profile",77,{{"action","ui_save_profile"}});
         for(size_t i=0;i<names.size();++i) {
-            Json rep_act{{"action","ui_confirm"},{"title","Overwrite Profile"},{"message","Overwrite profile '"+names[i]+"' with your current character snapshot?"},{"target",Json{{"action","save_look"},{"name",names[i]}}}};
-            Json del_act{{"action","ui_confirm"},{"title","Delete Profile"},{"message","Delete saved profile '"+names[i]+"'?\nThis action cannot be undone."},{"target",Json{{"action","delete_look"},{"name",names[i]}}}};
+            Json rep_act{{"action","ui_confirm"},{"title","Overwrite profile"},{"message","Overwrite profile '"+names[i]+"' with your current character snapshot?"},{"target",Json{{"action","save_look"},{"name",names[i]}}}};
+            Json del_act{{"action","ui_confirm"},{"title","Delete profile"},{"message","Delete saved profile '"+names[i]+"'?\nThis action cannot be undone."},{"target",Json{{"action","delete_look"},{"name",names[i]}}}};
             row(int(i)+1,names[i],"Saved character profile",77,{{"action","load_look"},{"name",names[i]}},{},{},rep_act,del_act);
         }
         scroll_end();
@@ -1466,8 +1466,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         if(!row_) action_button("accept","Save profile",631,{{"action","ui_save_profile"}},3);
         else {
             action_button("accept","Load profile",631,rows_[row_].accept,3);
-            auto confirm_replace = Json{{"action", "ui_confirm"}, {"title", "Overwrite Profile"}, {"message", "Overwrite profile '" + selected + "' with your current character snapshot?"}, {"target", rows_[row_].secondary}};
-            auto confirm_delete = Json{{"action", "ui_confirm"}, {"title", "Delete Profile"}, {"message", "Delete saved profile '" + selected + "'?\nThis action cannot be undone."}, {"target", rows_[row_].tertiary}};
+            auto confirm_replace = Json{{"action", "ui_confirm"}, {"title", "Overwrite profile"}, {"message", "Overwrite profile '" + selected + "' with your current character snapshot?"}, {"target", rows_[row_].secondary}};
+            auto confirm_delete = Json{{"action", "ui_confirm"}, {"title", "Delete profile"}, {"message", "Delete saved profile '" + selected + "'?\nThis action cannot be undone."}, {"target", rows_[row_].tertiary}};
             action_button("secondary","Replace with current character",681,confirm_replace,4);
             bind(ui.button("Rename",right,controls_y+231,360,43,false,true,20),{{"action","ui_rename_profile"},{"name",selected}});
             action_button("tertiary","Delete profile",801,confirm_delete,2);
@@ -1531,7 +1531,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         return input;
     };
     if(!confirm_action_.is_null()) {
-        const auto m = modal_box(confirm_action_.value("title", std::string("Confirm Action")), std::min(640., width - 140.), 380);
+        const auto m = modal_box(confirm_action_.value("title", std::string("Confirm action")), std::min(640., width - 140.), 380);
         const double mx = m[0], my = m[1], mw = m[2], mh = m[3];
         std::string msg = confirm_action_.value("message", std::string("Are you sure you want to proceed?"));
         auto* mlabel = ui.label(msg, mx + 32, my + 130, mw - 64, 130, 18, muted);
@@ -1577,12 +1577,12 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             const auto m = modal_box("CUSTOMIZE " + title, std::min(720., width - 140.), 660);
             const double mx = m[0], my = m[1], mw = m[2], mh = m[3];
 
-            auto* sub = ui.label("Fine-tune bounce frequency, settling damping, and displacement limits in real-time.", mx + 36, my + 114, mw - 72, 22, 14, muted);
+            auto* sub = ui.label("Fine-tune the bounce speed, how quickly it settles, and how far it travels.", mx + 36, my + 114, mw - 72, 22, 14, muted);
             invoke(sub, L"SetJustification", L"InJustification", uint8_t{1});
 
             const char* field_names[] = {
                 body ? "Bounce Frequency" : (is_spring ? "Bounce Frequency" : "Stiffness"),
-                body ? "Damping Ratio" : (is_spring ? "Settling Damping" : "Damping"),
+                body ? "Damping" : (is_spring ? "Settling Damping" : "Damping"),
                 body ? "Motion Travel" : (is_spring ? "Max Travel" : "Gravity")
             };
             const char* field_units[] = {
@@ -1591,9 +1591,9 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 is_spring ? " cm" : (body ? "x" : "")
             };
             const char* field_hints[] = {
-                "Natural oscillation rate. Higher values bounce faster; lower values swing with heavier inertia.",
+                "How fast this part bounces. Higher is quicker; lower swings slower and heavier.",
                 "How quickly movement settles. Higher damping eliminates wobble; lower damping creates bounce.",
-                "Displacement travel factor in response to movement, attacks, dodging, and acceleration impulses."
+                "How far this part travels when you move, attack, dodge, or change speed."
             };
 
             for(int field = 0; field < 3; ++field) {
@@ -1630,12 +1630,12 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             if(rig) {
                 const bool motion_on = (value[3] == 1);
                 const bool is_toggle_focused = (physics_modal_channel_ == 3);
-                auto* toggle_btn = ui.button(motion_on ? "Motion: Enabled" : "Motion: Disabled", mx + 36, btn_row_y, (mw - 84) / 2, 42, is_toggle_focused, true, 16);
+                auto* toggle_btn = ui.button(motion_on ? "Motion: On" : "Motion: Off", mx + 36, btn_row_y, (mw - 84) / 2, 42, is_toggle_focused, true, 16);
                 bind(toggle_btn, {{"action","control"},{"control",ctrl->id},{"channel",3},{"value",motion_on ? 0 : 1}});
             }
 
             const bool is_reset_focused = (physics_modal_channel_ == 4);
-            auto* reset_btn = ui.button("Reset Part Defaults", mx + (rig ? (mw / 2 + 6) : 36), btn_row_y, rig ? ((mw - 84) / 2) : (mw - 72), 42, is_reset_focused, true, 16);
+            auto* reset_btn = ui.button("Reset part defaults", mx + (rig ? (mw / 2 + 6) : 36), btn_row_y, rig ? ((mw - 84) / 2) : (mw - 72), 42, is_reset_focused, true, 16);
             bind(reset_btn, {{"action","reset_control"},{"control",ctrl->id}});
 
             const double bot_y = my + mh - 64;
@@ -1752,7 +1752,7 @@ Json InventoryUI::dispatch(Json action,const State& state) {
     if(name=="ui_confirm") {
         confirm_action_={
             {"action",action.at("target")},
-            {"title",action.value("title",std::string("Confirm Action"))},
+            {"title",action.value("title",std::string("Confirm action"))},
             {"message",action.value("message",std::string("Are you sure you want to proceed?"))}
         };
         dirty_=true; return {};
