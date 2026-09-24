@@ -32,18 +32,6 @@ class Menu {
     void power_sync();
     void power_clear(const std::string& feature={});
     void power_tick(double);
-    Json binding_actions() const;
-    const Json& binding_keys() const;
-    Json binding_key_options() const;
-    void binding_validate() const;
-    bool binding_consent() const;
-    void binding_tick(double);
-    void binding_fire(const std::string&);
-    void binding_reset();
-    std::string binding_action_="god";
-    std::map<std::string,bool> binding_down_;
-    double binding_time_=0;
-    bool bindings_checked_=false;
     inline static constexpr const char* combat_ids[]{"no_cooldown","perfect_parry","perfect_block","perfect_harden"};
     inline static constexpr const char* cooldown_fields[]{"CooldownDuration","GlobalCooldownDuration","Cooldown","GlobalCooldown","StoneFormCooldown","PerfectStoneFormCooldown"};
     struct OwnedHook {uint64_t id;std::string feature;Json target;};

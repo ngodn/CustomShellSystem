@@ -49,14 +49,7 @@ Menu::Menu(const CssxHost* host):host_(host),recovery_(host) {
     for(const auto* id:combat_ids) values_[id]=false;
     for(const auto* id:power_ids) values_[id]=false;
     values_["shockwave_interval"]=number("shockwave_interval",3,.5,5);
-    values_["bindings"]=settings_.value("bindings",Json::object());
-    if(!values_["bindings"].is_object() || values_["bindings"].size()>64) values_["bindings"]=Json::object();
-    const auto keys=binding_keys();
-    for(auto it=values_["bindings"].begin();it!=values_["bindings"].end();) {
-        if(!it.value().is_string() || !keys.contains(it.value().get<std::string>())) it=values_["bindings"].erase(it);else ++it;
-    }
     applied_=values_;
-    binding_reset();
     status_="Cheats start off. Edit settings, then Apply settings.";
 }
 void Menu::report(const std::string& text) {
@@ -71,13 +64,11 @@ bool Menu::has_changes() const {return values_!=applied_;}
 void Menu::persist(const Json& values) {
     Json next=Json::object();
     for(auto it=values.begin();it!=values.end();++it) if(it.value().is_number()) next[it.key()]=it.value();
-    next["bindings"]=values.at("bindings");
     host_.request({{"op","state.save"},{"value",next}});settings_=std::move(next);
 }
 void Menu::apply_settings() {
     if(cleanup_required_) throw std::runtime_error("Turn off all cheats to finish cleanup before applying more settings.");
     if(!has_changes()) return;
-    binding_validate();
     const auto before=applied_;
     applied_=values_;
     try {
@@ -99,7 +90,7 @@ void Menu::apply_settings() {
         }
         throw std::runtime_error("Settings were not applied: "+reason);
     }
-    bindings_checked_=true;binding_reset();heal_time_=resolve_time_=power_time_=0;reapply_pending_=false;report("Settings applied. Preferences and shortcuts saved; cheats remain session-only.");
+    heal_time_=resolve_time_=power_time_=0;reapply_pending_=false;report("Settings applied. Preferences saved; cheats remain session-only.");
 }
 void Menu::disable_all() {
     reapply_pending_=false;
@@ -109,7 +100,6 @@ void Menu::disable_all() {
     power_clear();combat_clear();god(false);movement(false);shell_points(false);
     for(const auto* id:toggle_ids) values_[id]=false;
     cleanup_required_=false;report("All cheats off. Other pending edits were kept.");
-    binding_reset();
 }
 void Menu::refresh_shells() {
     // The shell catalog is game-global and never changes during a session, so read it once
@@ -138,7 +128,6 @@ void Menu::refresh_shells() {
     }
     shell_tokens_=std::move(tokens);
     if(choices!=shells_) {
-        bindings_checked_=false;
         shells_=std::move(choices);bool found=false;for(const auto& option:shells_) if(option["id"]==values_["shell"]) found=true;
         if(!found) values_["shell"]=shells_[0]["id"];
         applied_["shell"]=values_["shell"];
@@ -180,10 +169,7 @@ Json Menu::model() {
     for(const auto& option:tarstones_) if(option["id"]==values_["tarstone"])
         confirmations["add_tarstone"]="Add "+option["label"].get<std::string>()+"? An owned Tarstone will keep its current level and experience.";
     confirmations["set_tarstone_level"]="Set "+values_["tarstone_scope"].get<std::string>()+" owned Tarstones to level "+std::to_string(values_["tarstone_level"].get<int>())+"? Experience, durability and stacks will be kept. The game can save this change.";
-    if(binding_consent()) confirmations["apply_settings"]="Save these shortcuts? Assigned gameplay-shell and health-reduction shortcuts run when pressed in gameplay, without another confirmation. They do not bypass active-cheat or game-state checks.";
-    auto display_values=values_;display_values["binding_action"]=binding_action_;
-    display_values["binding_key"]=values_["bindings"].value(binding_action_,std::string("none"));
-    return {{"values",display_values},{"options",{{"shell",shells_},{"pickup",pickups_},{"tarstone",tarstones_},{"binding_action",binding_actions()},{"binding_key",binding_key_options()}}},{"enabled",enabled},{"status",summary+" "+status_},{"error",action_error_},{"confirmations",confirmations}};
+    return {{"values",values_},{"options",{{"shell",shells_},{"pickup",pickups_},{"tarstone",tarstones_}}},{"enabled",enabled},{"status",summary+" "+status_},{"error",action_error_},{"confirmations",confirmations}};
 }
 void Menu::override_value(const Json& object,const std::string& property,const Json& value) {
     const auto key=std::to_string(identity(object))+":"+property;
@@ -268,16 +254,6 @@ void Menu::apply_event(const Json& event) {
     const auto id=event.at("id").get<std::string>();
     if(id=="cancel_recovery") {recovery_.cancel();report("Intro-lock check cancelled.");return;}
     if(pending_) throw std::runtime_error("Wait for the current shell switch to finish.");
-    if(id=="binding_action") {
-        for(const auto& option:binding_actions()) if(option.at("id")==event.at("value")) {binding_action_=event.at("value").get<std::string>();return;}
-        throw std::runtime_error("Unknown shortcut action.");
-    }
-    if(id=="binding_key") {
-        const auto key=event.at("value").get<std::string>();if(!binding_keys().contains(key)) throw std::runtime_error("Unsupported shortcut key.");
-        if(key=="none") values_["bindings"].erase(binding_action_);else values_["bindings"][binding_action_]=key;
-        return;
-    }
-    if(id=="clear_bindings") {values_["bindings"]=Json::object();return;}
     if(id=="refresh_pickups") {refresh_pickups();return;}
     if(id=="refresh_tarstones") {refresh_tarstones();return;}
     if(id=="tarstone") {
@@ -295,7 +271,7 @@ void Menu::apply_event(const Json& event) {
     if(id=="repair_intro") {if(!event.value("confirmed",false)) throw std::runtime_error("Confirm the intro-lock check first.");recovery_.start();report(recovery_.message());return;}
     if(id=="disable_all") {disable_all();return;}
     if(id=="discard_changes") {values_=applied_;report("Pending settings discarded.");return;}
-    if(id=="apply_settings") {if(binding_consent() && !event.value("confirmed",false)) throw std::runtime_error("Confirm the gameplay shortcuts before applying settings.");apply_settings();return;}
+    if(id=="apply_settings") {apply_settings();return;}
     if(cleanup_required_) throw std::runtime_error("Finish cleanup with Turn off all cheats first.");
     if(values_.contains(id) && values_[id].is_boolean()) {
         values_[id]=event.at("value").get<bool>();return;
@@ -403,7 +379,6 @@ void Menu::shell_tick(double delta) {
 }
 void Menu::tick(double seconds) {
     if(stopped_) return;
-    binding_tick(seconds);
     const auto recovery_message=recovery_.message();recovery_.tick(seconds);
     if(recovery_.message()!=recovery_message) report(recovery_.message());
     try {shell_tick(seconds);} catch(const std::exception& e){pending_.reset();report(std::string("Shell switch stopped: ")+e.what());}
