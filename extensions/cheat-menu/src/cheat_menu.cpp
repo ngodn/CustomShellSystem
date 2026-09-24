@@ -112,6 +112,10 @@ void Menu::disable_all() {
     binding_reset();
 }
 void Menu::refresh_shells() {
+    // The shell catalog is game-global and never changes during a session, so read it once
+    // per process. It used to re-fetch a definition per shell (up to 128 bridge round-trips)
+    // on every pawn change, which is a ~40 ms hitch mid-combat. Once loaded, skip it.
+    if(!shells_.empty() && !shell_tokens_.empty()) return;
     auto settings=host_.find("/Script/Sparta.Default__SpartaGameSettings");
     auto names=host_.call(settings,"GetShellNames");
     if(!names.is_array() || names.size()>128) throw std::runtime_error("Game shell list is not available.");
