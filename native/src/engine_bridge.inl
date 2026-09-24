@@ -1,7 +1,7 @@
 // Included after engine.cpp's reflected frame and lifetime helpers.
 namespace css {
 namespace {
-FProperty* extension_property(UStruct* type,const std::wstring& name) {
+FProperty* bridge_property(UStruct* type,const std::wstring& name) {
     // UE4SS's GetPropertyByNameInChain compares only FName's base index.
     // Blueprint fields such as SpringBone_1 and SpringBone_2 need the number too.
     const FName wanted(name.c_str());
@@ -13,10 +13,10 @@ FProperty* extension_property(UStruct* type,const std::wstring& name) {
     }
     return nullptr;
 }
-struct ExtensionMapView {
+struct BridgeMapView {
     FProperty* key;FProperty* value;FScriptMap* map;const FScriptMapLayout& layout;
     int count,end;
-    ExtensionMapView(FMapProperty* p,void* data):key(p->GetKeyProp()),value(p->GetValueProp()),
+    BridgeMapView(FMapProperty* p,void* data):key(p->GetKeyProp()),value(p->GetValueProp()),
         map(static_cast<FScriptMap*>(data)),layout(p->GetMapLayout()) {
         if(p->GetArrayDim()!=1 || p->GetElementSize()!=sizeof(FScriptMap) || !key || !value ||
            key->GetSize()<=0 || value->GetSize()<=0 || layout.ValueOffset<key->GetSize() ||
@@ -28,21 +28,21 @@ struct ExtensionMapView {
     }
     std::byte* pair(int index) {return static_cast<std::byte*>(map->GetData(index,layout));}
 };
-struct ExtensionValue {
+struct BridgeValue {
     FProperty* property;std::vector<std::max_align_t> storage;
-    explicit ExtensionValue(FProperty* p):property(p) {
+    explicit BridgeValue(FProperty* p):property(p) {
         const auto size=p->GetSize(),alignment=p->GetMinAlignment();
         if(size<=0 || size>65536 || alignment<=0 || alignment>int(alignof(std::max_align_t)) || (alignment&(alignment-1)))
             throw std::runtime_error("CSSX property exceeds write buffer bounds");
         storage.resize((size+sizeof(std::max_align_t)-1)/sizeof(std::max_align_t));
         property->InitializeValue(storage.data());
     }
-    ~ExtensionValue(){property->DestroyValue(storage.data());}
-    ExtensionValue(const ExtensionValue&)=delete;
+    ~BridgeValue(){property->DestroyValue(storage.data());}
+    BridgeValue(const BridgeValue&)=delete;
     void* data(){return storage.data();}
 };
 }
-Json ExtensionBridge::handle(UObject* object) {
+Json EngineBridge::handle(UObject* object) {
     if(!object) return nullptr;
     for(auto it=objects_.begin();it!=objects_.end();) {
         auto* live=it->second.Get();if(!live) it=objects_.erase(it);
@@ -52,18 +52,14 @@ Json ExtensionBridge::handle(UObject* object) {
     const auto id=next_++;objects_.emplace(id,WeakObject(object));
     return {{"$object",id},{"name",narrow(object->GetFullName())},{"class",narrow(object->GetClassPrivate()->GetFullName())}};
 }
-uint64_t ExtensionBridge::track(UObject* object) {
-    auto h=handle(object);
-    return h.is_object()?h.value("$object",uint64_t{0}):0;
-}
-UObject* ExtensionBridge::resolve(const Json& value) {
+UObject* EngineBridge::resolve(const Json& value) {
     if(value.is_null()) return nullptr;
     if(!value.is_object() || !value.contains("$object")) throw std::runtime_error("Expected CSSX object handle");
     auto it=objects_.find(value.at("$object").get<uint64_t>());
     auto* result=it==objects_.end()?nullptr:it->second.Get();
     if(!result) throw std::runtime_error("CSSX object expired");return result;
 }
-Json ExtensionBridge::decode(FProperty* p,void* data,unsigned depth) {
+Json EngineBridge::decode(FProperty* p,void* data,unsigned depth) {
     if(depth>12 || p->GetArrayDim()!=1 || p->GetElementSize()<0) throw std::runtime_error("Unsupported CSSX property shape");
     if(p->IsA<FEnumProperty>()) {
         auto* underlying=static_cast<FEnumProperty*>(p)->GetUnderlyingProperty();
@@ -107,7 +103,7 @@ Json ExtensionBridge::decode(FProperty* p,void* data,unsigned depth) {
         Json result=Json::array();for(int i=0;i<array.Num();++i) result.push_back(decode(a->GetInner(),array.GetRawPtr(i),depth+1));return result;
     }
     if(p->IsA<FMapProperty>()) {
-        ExtensionMapView view(static_cast<FMapProperty*>(p),data);
+        BridgeMapView view(static_cast<FMapProperty*>(p),data);
         Json entries=Json::array();
         for(int index=0;index<view.end;++index) if(view.map->IsValidIndex(index)) {
             auto* pair=view.pair(index);
@@ -119,7 +115,7 @@ Json ExtensionBridge::decode(FProperty* p,void* data,unsigned depth) {
     }
     throw std::runtime_error("CSSX does not support this reflected property type");
 }
-void ExtensionBridge::encode(FProperty* p,void* data,const Json& value,unsigned depth) {
+void EngineBridge::encode(FProperty* p,void* data,const Json& value,unsigned depth) {
     if(depth>12 || p->GetArrayDim()!=1) throw std::runtime_error("Unsupported CSSX property shape");
     if(value.is_object() && value.contains("$table_field")) {
         const auto& source=value.at("$table_field");
@@ -131,7 +127,7 @@ void ExtensionBridge::encode(FProperty* p,void* data,const Json& value,unsigned 
         for(const auto* name:{&row_name,&field_name}) if(name->empty() || name->size()>256 || name->find('\0')!=std::string::npos)
             throw std::runtime_error("CSSX table row or field name is invalid");
         const auto row=wide(row_name),field=wide(field_name);
-        auto* property=extension_property(type,field);
+        auto* property=bridge_property(type,field);
         if(!property || property->GetOffset_Internal()<0 || property->GetOffset_Internal()+property->GetSize()>type->GetPropertiesSize() || !p->SameType(property))
             throw std::runtime_error("CSSX table field type does not match the parameter");
         const auto& rows=table->GetRowMap();if(rows.Num()<0 || rows.Num()>4096) throw std::runtime_error("CSSX table exceeds bound");
@@ -181,7 +177,7 @@ void ExtensionBridge::encode(FProperty* p,void* data,const Json& value,unsigned 
         if(!value.is_object()) throw std::runtime_error("CSSX struct requires an object");
         auto* type=static_cast<FStructProperty*>(p)->GetStruct().Get();
         for(auto it=value.begin();it!=value.end();++it) {
-            auto key=wide(it.key());auto* field=extension_property(type,key);
+            auto key=wide(it.key());auto* field=bridge_property(type,key);
             if(!field || field->GetOffset_Internal()<0 || field->GetOffset_Internal()+field->GetSize()>p->GetElementSize()) throw std::runtime_error("CSSX struct member mismatch: "+it.key());
             encode(field,static_cast<std::byte*>(data)+field->GetOffset_Internal(),it.value(),depth+1);
         }
@@ -189,7 +185,7 @@ void ExtensionBridge::encode(FProperty* p,void* data,const Json& value,unsigned 
     }
     throw std::runtime_error("CSSX cannot write this reflected property type");
 }
-Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& request) {
+Json EngineBridge::request(void* engine,Appearance& appearance,const Json& request) {
     const auto op=request.at("op").get<std::string>();
     if(op=="valid") {
         const auto& target=request.at("target");if(target.is_null()) return false;
@@ -197,7 +193,6 @@ Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& re
         const auto found=objects_.find(target.at("$object").get<uint64_t>());
         return found!=objects_.end() && found->second.Get()!=nullptr;
     }
-    if(op.starts_with("hooks.")) return hook_request(request);
 #ifdef CSS_INVENTORY_DEV
     // Startup probes need a world context before a playable character exists.
     if(op=="engine") return handle(static_cast<UObject*>(engine));
@@ -261,12 +256,12 @@ Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& re
     if(op=="get" || op=="set" || op=="map.update") {
         const auto name=wide(request.at("property").get<std::string>());
         auto* type=object->IsA<UStruct>()?static_cast<UStruct*>(object):object->GetClassPrivate();
-        auto* p=extension_property(type,name);if(!p || p->GetOffset_Internal()<0) throw std::runtime_error("CSSX property is missing");
+        auto* p=bridge_property(type,name);if(!p || p->GetOffset_Internal()<0) throw std::runtime_error("CSSX property is missing");
         auto* data=reinterpret_cast<std::byte*>(object)+p->GetOffset_Internal();
         if(op=="map.update") {
             if(object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject|RF_ArchetypeObject))) throw std::runtime_error("CSSX refuses default-object writes");
             if(!p->IsA<FMapProperty>()) throw std::runtime_error("CSSX property is not a map");
-            ExtensionMapView view(static_cast<FMapProperty*>(p),data);
+            BridgeMapView view(static_cast<FMapProperty*>(p),data);
             std::byte* selected=nullptr;
             // Keys must be supplied exactly as returned by get. Keys and map
             // membership are never modified, so no rehash or insertion occurs.
@@ -279,7 +274,7 @@ Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& re
             }
             if(!selected) throw std::runtime_error("CSSX map key no longer exists");
             if(decode(view.value,selected,0)!=request.at("expected")) throw std::runtime_error("CSSX map value changed; refresh before editing");
-            ExtensionValue next(view.value);view.value->CopyCompleteValue(next.data(),selected);
+            BridgeValue next(view.value);view.value->CopyCompleteValue(next.data(),selected);
             encode(view.value,next.data(),request.at("value"),0);
             const auto result=decode(view.value,next.data(),0);
             if(result.dump().size()>1024*1024) throw std::runtime_error("CSSX map result exceeds 1 MiB");
@@ -289,7 +284,7 @@ Json ExtensionBridge::request(void* engine,Appearance& appearance,const Json& re
         }
         if(op=="set") {
             if(object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject|RF_ArchetypeObject))) throw std::runtime_error("CSSX refuses default-object writes");
-            ExtensionValue next(p);p->CopyCompleteValue(next.data(),data);
+            BridgeValue next(p);p->CopyCompleteValue(next.data(),data);
             encode(p,next.data(),request.at("value"),0);
             const auto result=decode(p,next.data(),0);
             if(result.dump().size()>1024*1024) throw std::runtime_error("CSSX property result exceeds 1 MiB");

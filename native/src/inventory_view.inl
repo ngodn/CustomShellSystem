@@ -1719,7 +1719,6 @@ void InventoryUI::animate(uint64_t now) {
 Json InventoryUI::dispatch(Json action,const State& state) {
     if(action.is_null()) return {};
     auto name=action.value("action","");
-    if(name.starts_with("x_")) return dispatch_extension(action);
     if(name=="ui_section") { const int next=std::clamp(action.at("section").get<int>(),0,4); if(next==section_) return {}; section_=next; enter_transition_=true; row_=0; scroll_offset_=0; physics_modal_control_.clear(); if(auto* s=scroll_.Get()) invoke(s,L"SetScrollOffset",L"NewScrollOffset",0.f); dirty_=true; return {}; }
     if(name=="ui_row") { row_=std::clamp(action.at("row").get<int>(),0,std::max(0,int(rows_.size())-1)); physics_modal_control_.clear(); dirty_=true; if(section_!=1 && action.value("apply",false) && !rows_.empty()) return dispatch(rows_[row_].accept,state); return {}; }
     // The channel count comes from the page, because a spring has two and a colour three.
@@ -2129,10 +2128,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     if(!main || !switcher || !page_.Get()) { detach(); return {}; }
     if(!inventory_bool(main,L"bOpen")) camera_tick_restore();
     Call selected(switcher,L"GetActiveWidget",1); selected.run();
-    const bool extension_before=extension_active_;
-    extension_active_=inventory_bool(main,L"bOpen") && selected.get<UObject*>()==extension_page_.Get();
-    active_=inventory_bool(main,L"bOpen") && (selected.get<UObject*>()==page_.Get() || extension_active_);
-    if(extension_before!=extension_active_) {light_stop();dirty_=enter_transition_=true;hits_.clear();rows_.clear();sliders_.clear();scroll_.Reset();choice_scroll_.Reset();choice_key_.clear();choice_selected_.clear();choice_offset_=0;choice_count_=0;name_input_.Reset();}
+    active_=inventory_bool(main,L"bOpen") && selected.get<UObject*>()==page_.Get();
     if(active_ && !was_active_) { appearance.player(engine); bind_inputs(); camera_start(); dirty_=enter_transition_=true; closing_=false; for(auto& b:bindings_) { b.down=true; b.repeat=now+400; } }
     if(!active_ && was_active_) { camera_stop(); closing_=false; transition_started_=0; }
     if(active_) camera_bind_state();
@@ -2153,24 +2149,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         const bool gamepad=read<uint8_t>(prompt,L"InputType")==1;
         if(gamepad!=gamepad_) { gamepad_=gamepad; dirty_=true; }
     }
-    if(extension_active_ && extensions_ && now>=extension_check_) {
-        extension_check_=now+250;
-        auto library=extensions_->request({{"op","library"}});
-        if(library.value("revision",uint64_t{})!=extension_revision_) {extension_revision_=library.value("revision",uint64_t{});dirty_=true;}
-        extension_library_=std::move(library);
-    }
-    bool editing_extension=false, editing_native=false;
-    if(extension_active_ && extension_picker_) if(auto* search=extension_search_input_.Get()) {
-        // Keep the search field and caret alive. Replace only result rows.
-        try {
-            const auto query=inventory_text(search,256);
-            if(query!=extension_search_query_) {
-                extension_search_query_=query;
-                if(extension_options_.filter(query)) build_extension_results();
-            }
-        } catch(const std::exception& error) {extension_error_=error.what();}
-        editing_extension=true;
-    }
+    bool editing_native=false;
     if(native_picker_) if(auto* search=native_search_input_.Get()) {
         try {
             const auto query=inventory_text(search,256);
@@ -2181,20 +2160,8 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         } catch(...) {}
         editing_native=true;
     }
-    if(extension_active_) {
-        if(auto* input=name_input_.Get()) {
-            Call focus(input,L"HasKeyboardFocus",1);focus.run();editing_extension=editing_extension || focus.get<bool>();
-            try {extension_text_draft_=inventory_text(input,4096);}
-            catch(const std::exception& e) {extension_error_=e.what();editing_extension=true;}
-        }
-        if(!sliders_.empty() && inventory_key(controller_.Get(),"LeftMouseButton")) editing_extension=true;
-    }
-    if(dirty_ && !editing_extension && !editing_native) {if(extension_active_) build_extensions();else build(catalog,state,appearance);}
+    if(dirty_ && !editing_native) build(catalog,state,appearance);
     animate(GetTickCount64());
-    if(extension_active_) for(const auto& bar:extension_loading_) if(auto* widget=bar.Get()) {
-        const float pulse=.5f+.5f*float(std::sin(now*.004));
-        invoke(widget,L"SetRenderOpacity",L"InOpacity",.35f+.65f*pulse);
-    }
     if(!active_ || closing_) return {};
     // Scripted filming continues without desktop focus; input still requires it.
 #ifdef CSS_INVENTORY_DEV
@@ -2211,28 +2178,11 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     bool typing=false;
     if(auto* input=name_input_.Get()) { Call focus(input,L"HasKeyboardFocus",1); focus.run(); typing=focus.get<bool>(); }
     if(native_picker_) if(auto* search=native_search_input_.Get()) { Call focus(search,L"HasKeyboardFocus",1); focus.run(); typing=typing || focus.get<bool>(); }
-    bool character_controls=!extension_active_;
-    if(extension_active_ && !extension_id_.empty()) for(const auto& entry:extension_library_.at("extensions"))
-        if(entry.at("id")==extension_id_) character_controls=entry.at("layout")=="inventory";
-    if(extension_picker_ && extension_search_input_.Get()) {Call focus(extension_search_input_.Get(),L"HasKeyboardFocus",1);focus.run();typing=typing || focus.get<bool>();}
-    if(extension_details_ || extension_picker_ || !extension_confirm_.is_null() || native_picker_ || !confirm_action_.is_null() || !physics_modal_control_.empty()) character_controls=false;
+    bool character_controls=true;
+    if(native_picker_ || !confirm_action_.is_null() || !physics_modal_control_.empty()) character_controls=false;
     if(!typing && character_controls) camera_update(elapsed,state.invert_orbit_x);
     else { motion_.reset(); drag_pan_=drag_rotate_=false; }
-    if(extension_active_ && !typing && now>=extension_wheel_after_) {
-        Call wheel(controller_.Get(),L"GetInputAnalogKeyState",2);auto* key=wheel.param(L"Key");
-        member(wheel.data(key),key->GetElementSize(),find(L"/Script/InputCore.Key"),L"KeyName",FName(L"MouseWheelAxis"));wheel.run();
-        const float scroll=wheel.get<float>();
-        bool over_details=false;
-        if(auto* description=extension_description_.Get()) {Call hover(description,L"IsHovered",1);hover.run();over_details=hover.get<bool>();}
-        if(std::abs(scroll)>.01f && extension_picker_) {
-            extension_wheel_after_=now+100;return dispatch_extension({{"action","x_pick_move"},{"delta",scroll<0?1:-1}});
-        }
-        if(std::abs(scroll)>.01f && !character_controls && !over_details && !extension_details_) {
-            extension_wheel_after_=now+100;
-            return dispatch_extension(extension_id_.empty()?Json{{"action","x_page"},{"direction",scroll<0?1:-1}}:Json{{"action","x_scroll"},{"delta",scroll<0?1:-1}});
-        }
-    }
-    if(!extension_active_ && native_picker_ && !typing && now>=native_wheel_after_) {
+    if(native_picker_ && !typing && now>=native_wheel_after_) {
         Call wheel(controller_.Get(),L"GetInputAnalogKeyState",2);auto* key=wheel.param(L"Key");
         member(wheel.data(key),key->GetElementSize(),find(L"/Script/InputCore.Key"),L"KeyName",FName(L"MouseWheelAxis"));wheel.run();
         const float scroll=wheel.get<float>();
@@ -2245,7 +2195,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     if(typing) for(auto& binding:bindings_) {
         bool down=false,allowed=false;
         for(const auto& key:binding.keys) if(inventory_key(controller_.Get(),key)) {
-            down=true;if((extension_picker_ || native_picker_ || !physics_modal_control_.empty()) && (key.starts_with("Gamepad_") || key=="Escape")) allowed=true;
+            down=true;if((native_picker_ || !physics_modal_control_.empty()) && (key.starts_with("Gamepad_") || key=="Escape")) allowed=true;
         }
         const bool repeat=binding.action=="up" || binding.action=="down";
         const bool trigger=allowed && down && (!binding.down || (repeat && now>=binding.repeat));
@@ -2254,7 +2204,6 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         else if(!allowed) binding.repeat=now+360;
         binding.down=down;
         if(trigger) {
-            if(extension_active_) {extension_input(binding.action);return {};}
             if(native_picker_) {
                 if(binding.action=="up") { native_options_.move(-1); build_native_picker_results(); return {}; }
                 if(binding.action=="down") { native_options_.move(1); build_native_picker_results(); return {}; }
@@ -2273,7 +2222,6 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         if(down && !binding.down) binding.repeat=now+360; else if(triggered) binding.repeat=now+110;
         binding.down=down;
         if(!triggered) continue;
-        if(extension_active_ && extension_input(binding.action)) return {};
         if(!confirm_action_.is_null()) {
             if(binding.action=="accept") return dispatch({{"action","ui_confirm_proceed"}},state);
             if(binding.action=="close") return dispatch({{"action","ui_confirm_cancel"}},state);
@@ -2351,14 +2299,6 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     for(auto& slider:sliders_) if(auto* widget=slider.widget.Get()) {
         Call value(widget,L"GetValue",1); value.run(); auto v=value.get<float>();
         if(std::abs(v-slider.previous)>.00001f) {
-            if(extension_active_ && slider.action.value("action",std::string{})=="x_value") {
-                auto c=extension_model_["sections"][extension_section_]["controls"][extension_row_];
-                c["value"]=extensions::snap_value(c,v);
-                text_value(slider.label.Get(),extensions::display_value(c));
-                if(inventory_key(controller_.Get(),"LeftMouseButton")) continue;
-                slider.previous=v;
-                return dispatch_extension({{"action","x_value"},{"value",c.at("value")}});
-            }
             // Hue is degrees, not a 0 to 100 proportion, so it reads as a whole number.
             const bool tint_slider=slider.action.contains("field");
             const bool degrees=tint_slider && slider.action.at("field")=="hue";
@@ -2402,16 +2342,14 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     return {};
 }
 Json InventoryUI::diagnostics() const {
-    Json value={{"cssx_active",extension_active_},{"extension",extension_id_},{"extension_page",extension_paging_.page},{"attached",tab_.Get()!=nullptr},{"active",active_},{"section",section_},{"row",row_},{"rows",rows_.size()},{"camera",display_.Get()!=nullptr},{"page_widgets",page_widgets_},{"nested_widgets",nested_widgets_},{"layout_size",layout_size_},{"yaw",yaw_},{"pan",pan_},{"zoom",zoom_},{"frame",frame_},{"gamepad",gamepad_}};
+    Json value={{"attached",tab_.Get()!=nullptr},{"active",active_},{"section",section_},{"row",row_},{"rows",rows_.size()},{"camera",display_.Get()!=nullptr},{"page_widgets",page_widgets_},{"nested_widgets",nested_widgets_},{"layout_size",layout_size_},{"yaw",yaw_},{"pan",pan_},{"zoom",zoom_},{"frame",frame_},{"gamepad",gamepad_}};
     #ifdef CSS_INVENTORY_DEV
     if(auto* scroll=choice_scroll_.Get()) {
         Call offset(scroll,L"GetScrollOffset",1);offset.run();
         value["choice_list"]={{"path",narrow(scroll->GetPathName())},{"key",choice_key_},
             {"selected",choice_selected_},{"count",choice_count_},{"offset",offset.get<float>()}};
     }
-    if(extension_active_ && name_input_.Get()) value["text"]=inventory_text(name_input_.Get(),4096);
-    value["picker"]=extension_picker_;
-    if(extension_picker_) {value["query"]=extension_search_query_;value["matches"]=extension_options_.matches.size();value["selected_option"]=extension_options_.value();}
+    value["picker"]=native_picker_;
     value["confirm_dialog"]=!confirm_action_.is_null();
     value["native_picker"]=native_picker_;
     if(native_picker_) {value["native_query"]=native_search_query_;value["native_matches"]=native_options_.matches.size();value["native_selected"]=native_options_.value();}

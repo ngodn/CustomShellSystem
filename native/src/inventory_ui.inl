@@ -65,9 +65,6 @@ void InventoryUI::detach() {
 #endif
     camera_stop();
     if(auto* tabs=tabs_.Get(); tabs && tab_.Get() && main_.Get() && active_) inventory_navigate(tabs,0);
-    if(auto* page=extension_page_.Get()) invoke(page,L"RemoveFromParent");
-    if(auto* tab=extension_tab_.Get()) invoke(tab,L"RemoveFromParent");
-    extension_tab_.Reset();extension_page_.Reset();extension_canvas_.Reset();extension_active_=false;
     if(auto* page=page_.Get()) invoke(page,L"RemoveFromParent");
     if(auto* tab=tab_.Get()) invoke(tab,L"RemoveFromParent");
     for(const auto& [widget,padding]:top_padding_) if(auto* child=widget.Get()) if(auto* slot=inventory_object(child,L"Slot")) invoke(slot,L"SetPadding",L"InPadding",padding);
@@ -155,8 +152,6 @@ Json InventoryUI::command(void* engine,const Json& command) {
         invoke(inventory_object(tabs_.Get(),L"NavigationObject"),L"GetNavigableChildren");
         inventory_navigate(tabs_.Get(),0);
 #ifdef CSS_INVENTORY_DEV
-    } else if(action=="inventory_cssx") {
-        dispatch_extension(command.at("event"));
     } else if(action.starts_with("inventory_cinema_")) {
         cinema_command(pc,command);
     } else if(action=="inventory_capture_row") {
@@ -191,14 +186,6 @@ Json InventoryUI::command(void* engine,const Json& command) {
         if(point[0]<0 || point[1]<0 || point[0]>=client.right || point[1]>=client.bottom) throw std::runtime_error("Pointer test outside game viewport");
         POINT pixel{LONG(point[0]),LONG(point[1])}; ClientToScreen(window,&pixel);
         SetCursorPos(pixel.x,pixel.y);
-    } else if(action=="inventory_cssx_search") {
-        auto* input=extension_search_input_.Get();
-        if(!extension_picker_ || !input) throw std::runtime_error("CSSX option picker is not open");
-        text_value(input,command.at("text").get<std::string>());
-    } else if(action=="inventory_cssx_text") {
-        auto* input=name_input_.Get();
-        if(!extension_active_ || !input) throw std::runtime_error("CSSX text field is not open");
-        if(command.contains("text")) text_value(input,command.at("text").get<std::string>());
     } else if(action=="inventory_test_mouse") {
         auto window=GetForegroundWindow(); DWORD pid=0; GetWindowThreadProcessId(window,&pid);
         if(!active_ || pid!=GetCurrentProcessId()) throw std::runtime_error("Mouse test requires focused CSS");

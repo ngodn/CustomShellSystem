@@ -1,4 +1,3 @@
-#include "extension_controls.hpp"
 #include "engine.hpp"
 #include <windows.h>
 #include "startup.hpp"
@@ -2291,14 +2290,4 @@ bool Appearance::transition_active() const {
 
 #include "inventory_view.inl"
 
-#include "extension_hud.inl"
-
-#include "minimap_widget.inl"
-
-#include "markers.inl"
-
-#include "extension_hooks.inl"
-#include "extension_engine.inl"
-
-#include "extension_kit.inl"
-#include "extension_view.inl"
+#include "engine_bridge.inl"

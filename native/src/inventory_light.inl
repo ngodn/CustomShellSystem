@@ -1,6 +1,6 @@
 // Transforms belong to one preview instance, never a shared light template.
 bool InventoryUI::light_available() const {
-    if(!active_ || extension_active_ || closing_ || native_picker_ || !confirm_action_.is_null() ||
+    if(!active_ || closing_ || native_picker_ || !confirm_action_.is_null() ||
        !physics_modal_control_.empty() ||
        !inventory_bool(main_.Get(),L"bOpen") || !display_.Get() || !camera_component_.Get()) return false;
     auto* native=inventory_object(main_.Get(),L"WBP_MGT_Character");
@@ -75,7 +75,7 @@ void InventoryUI::light_reset() {
 void InventoryUI::light_move(double horizontal,double vertical) {
     if(!light_edit_ || (!horizontal && !vertical)) return;
     auto* component=light_component_.Get();
-    if(!active_ || extension_active_ || !inventory_bool(main_.Get(),L"bOpen") ||
+    if(!active_ || !inventory_bool(main_.Get(),L"bOpen") ||
        !component || component!=inventory_object(display_.Get(),L"RectLight_Left")) {
         light_stop();return;
     }

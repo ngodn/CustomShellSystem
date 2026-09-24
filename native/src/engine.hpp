@@ -17,10 +17,7 @@
 #include "inventory_light_keys.hpp"
 #include "ground_offset.hpp"
 #include "animation_override.hpp"
-#include "extension_client.hpp"
-#include "cssx/hud.h"
-#include "extension_search.hpp"
-#include "hook_api.hpp"
+#include "extension_search.hpp"   // OptionSearch, reused by CSS's own native outfit search
 #include <memory>
 #include <Unreal/UObject.hpp>
 #include <Unreal/FWeakObjectPtr.hpp>
@@ -37,13 +34,10 @@ public:
     WeakObject& operator=(RC::Unreal::UObject* object);
 };
 class Appearance;
-class ExtensionBridge {
-    struct HookGroup;
-    const CssHookHost* hook_host_=nullptr;
-    std::map<RC::Unreal::UFunction*,std::unique_ptr<HookGroup>> hooks_;
-    uint64_t next_hook_=1;
-    static void hook_callback(void*,void*,void*,void*) noexcept;
-    Json hook_request(const Json&);
+// CSS's own reflected access to the live game (player/get/set/call/find). This is not an
+// extension host; the shell-revive recovery and CSS's dev probes use it to read and drive the
+// engine through JSON ops. It keeps a handle table so a caller can hold an object across calls.
+class EngineBridge {
     std::map<uint64_t,WeakObject> objects_;
     std::map<std::string,WeakObject> defaults_;
     uint64_t next_=1;
@@ -52,14 +46,7 @@ class ExtensionBridge {
     Json decode(RC::Unreal::FProperty*,void*,unsigned);
     void encode(RC::Unreal::FProperty*,void*,const Json&,unsigned);
 public:
-    ExtensionBridge();
-    ~ExtensionBridge();
-    void configure_hooks(void* loader_address) noexcept;
-    bool stop_hooks() noexcept;
     Json request(void* engine,Appearance&,const Json&);
-    // Register an object and return its $object id (0 for null), so the HUD can
-    // hand an extension a handle for a widget it built (e.g. SpartaMapWidget).
-    uint64_t track(RC::Unreal::UObject*);
 };
 class InventoryUI {
 #ifdef CSS_INVENTORY_DEV
@@ -73,31 +60,7 @@ class InventoryUI {
     void cinema_update(bool focused);
     void cinema_command(RC::Unreal::UObject*,const Json&);
 #endif
-    fs::path logo_path_, extension_logo_path_;
-    ExtensionClient* extensions_=nullptr;
-    WeakObject extension_tab_, extension_page_, extension_canvas_;
-    bool extension_active_=false;
-    std::string extension_id_, extension_text_key_, extension_text_draft_, extension_error_;
-    Json extension_model_, extension_library_, extension_confirm_;
-    extensions::LibraryPage extension_paging_;
-    int extension_section_=0, extension_row_=0;
-    std::vector<WeakObject> extension_loading_;
-    WeakObject extension_description_;
-    std::string extension_description_key_;
-    float extension_description_offset_=0;
-    bool extension_details_=false, extension_picker_=false;
-    extensions::OptionSearch extension_options_;
-    WeakObject extension_search_input_, extension_search_results_, extension_search_count_;
-    std::string extension_search_query_;
-    void build_extension_results();
-    int extension_slide_=1;
-    uint64_t extension_wheel_after_=0;
-    uint64_t extension_revision_=0, extension_check_=0;
-    void build_extensions();
-    void build_extension_page();
-    Json dispatch_extension(const Json&);
-    Json dispatch_extension_action(const Json&);
-    bool extension_input(const std::string&);
+    fs::path logo_path_;
     WeakObject main_, tabs_, switcher_, tab_, page_, controller_;
     WeakObject canvas_, status_, scroll_, name_input_, display_, camera_component_, input_prompt_;
     WeakObject camera_tick_controller_;
@@ -193,14 +156,12 @@ class InventoryUI {
 public:
     void assets(const fs::path& root) {
         logo_path_=root/"assets/inventory-logo-v1.png";
-        extension_logo_path_=root/"assets/cssx-logo.png";
     }
     Json command(void* engine, const Json&);
     Json poll(void* engine,const Catalog&,const State&,Appearance&,float delta,bool focused);
     Json diagnostics() const;
     void message(const std::string&);
     void refresh() { dirty_=true; }
-    void extensions(ExtensionClient* client) {extensions_=client;}
     void close() {close_menu();}
     bool active() const { return active_; }
     void detach();
@@ -349,70 +310,6 @@ public:
     void restore();
     bool any() const { return !hidden_.empty(); }
 };
-// CSSX ABI 2: a retained HUD surface for native extensions. The core owns the
-// widgets (injected into WBP_Player_HUD); an extension holds only opaque layer
-// handles and pushes cheap per-frame updates through the CssxHudApi vtable. All
-// calls happen on the game thread from the core's per-frame tick.
-class HudService {
-    struct Layer {
-        WeakObject widget, slot;   // slot is the CanvasPanelSlot (null for the root)
-        uint8_t kind=0;            // 0 image, 1 text, 2 generic widget
-        uintptr_t owner=0;
-        // last values written, so redundant Slate writes are skipped
-        float tx=1e30f, ty=1e30f, sx=1e30f, sy=1e30f, px=1e30f, py=1e30f, angle=1e30f, opacity=1e30f;
-        int8_t visible=-1;
-    };
-    std::map<uint64_t,Layer> layers_;
-    std::map<std::wstring,WeakObject> textures_;
-    WeakObject hud_, tree_, overlay_;   // overlay_ is our root CanvasPanel in the HUD
-    uint64_t next_layer_=1;
-    uint32_t generation_=0;
-    void* pc_=nullptr;                  // resolved player controller for this frame
-    std::function<void(const std::string&)> log_;   // optional diagnostic sink
-    std::function<uint64_t(RC::Unreal::UObject*)> minter_;   // widget -> $object id
-    int log_tick_=0;
-    void drop_scene();                  // forget overlay + all layers (world teardown)
-    Layer* find_layer(uint64_t id);
-    RC::Unreal::UObject* parent_canvas(uint64_t parent);
-public:
-    HudService();
-    ~HudService();
-    const void* api() const;            // &CssxHudApi, threaded into the extension host
-    void set_logger(std::function<void(const std::string&)> fn) { log_=std::move(fn); }
-    void set_object_minter(std::function<uint64_t(RC::Unreal::UObject*)> fn) { minter_=std::move(fn); }
-    // Per frame: resolve the HUD, (re)build the overlay, fill `frame`, detect teardown.
-    void update(void* engine,CssxFrame& frame);
-    void release();                     // on core stop
-    // Backends for the vtable (called with an owner token and layer ids):
-    uint64_t create_layer(uint8_t kind,uint64_t parent,const char* path,size_t len,uintptr_t owner);
-    void destroy_layer(uint64_t id);
-    uint64_t import_texture(const char* path,size_t len);
-    uint64_t layer_object(uint64_t id);
-    void set_brush(uint64_t id,uint64_t texture);
-    void set_rect(uint64_t id,float x,float y,float w,float h,float ax,float ay,int32_t z);
-    void set_translation(uint64_t id,float x,float y);
-    void set_scale(uint64_t id,float sx,float sy);
-    void set_angle(uint64_t id,float deg);
-    void set_pivot(uint64_t id,float px,float py);
-    void set_opacity(uint64_t id,float a);
-    void set_color(uint64_t id,float r,float g,float b,float a);
-    void set_visible(uint64_t id,int32_t visible);
-    void set_text(uint64_t id,const char* utf8,size_t len);
-    void set_font(uint64_t id,float size);
-    void set_clip(uint64_t id,int32_t clip);
-    void set_anchor(uint64_t id,float minx,float miny,float maxx,float maxy);
-};
-// Native minimap (ported from Cartographer's Map/NativeWidget.lua). The
-// SpartaMapWidget must be configured inline on the live object, so it lives in
-// the engine TU (minimap_widget.inl) and the extension drives it through the
-// hud.minimap.* request ops. Defined over a single file-static instance.
-bool minimap_build(void* engine, const Json& config);
-void minimap_update(const Json& update);
-void minimap_update_direct(int vis, float sc, float op, float aa, float ma, double px, double py, double zm, uint32_t flags);
-void minimap_destroy();
-void minimap_set_logger(std::function<void(const std::string&)> fn);
-// Native world-marker provider (Lost Gloom, nearby dungeons, map pings).
-Json markers_collect(void* engine, double radius_m);
 class Appearance {
     WeakObject component_, applied_;
     WeakObject ground_component_;

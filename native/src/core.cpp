@@ -24,31 +24,19 @@ struct Core {
     State state;
     Appearance appearance;
     InventoryUI inventory;
-    ExtensionBridge extension_bridge;
-    ExtensionClient extensions;
-    HudService hud_;
-    CssxHost recovery_host{CSSX_ABI,sizeof(CssxHost),this,extension_request,nullptr};
+    EngineBridge engine_bridge;
+    CssxHost recovery_host{CSSX_ABI,sizeof(CssxHost),this,engine_request,nullptr};
     PlayerRecovery player_recovery{&recovery_host};
     void* current_engine=nullptr;
-    bool extension_attempted=false;
-    static int extension_request(void* context,const char* bytes,CssxSink sink,void* output) {
+    // Reflected access for the shell-revive recovery (and CSS's own dev probes): log lines and
+    // the player/get/call/find ops the bridge understands. Not an extension host.
+    static int engine_request(void* context,const char* bytes,CssxSink sink,void* output) {
         auto& core=*static_cast<Core*>(context);
         try {
             const auto request=Json::parse(bytes);const auto op=request.at("op").get<std::string>();
             Json result;
             if(op=="log") {core.host.log(request.at("message").get<std::string>().c_str());}
-            else if(op=="menu.close") {core.inventory.close();result=true;}
-            else if(op=="menu.status") result=core.inventory.diagnostics();
-            else if(op=="input.focus") {
-                DWORD pid=0;const auto window=GetForegroundWindow();
-                if(window) GetWindowThreadProcessId(window,&pid);
-                result=window && pid==GetCurrentProcessId();
-            }
-            else if(op=="hud.minimap.build") { if(!core.current_engine) throw std::runtime_error("Game thread is not initialized"); result=minimap_build(core.current_engine,request.value("config",Json::object())); }
-            else if(op=="hud.minimap.update") { minimap_update(request.value("update",Json::object())); result=true; }
-            else if(op=="hud.minimap.destroy") { minimap_destroy(); result=true; }
-            else if(op=="hud.markers") { if(!core.current_engine) throw std::runtime_error("Game thread is not initialized"); result=markers_collect(core.current_engine,request.value("radius",500.0)); }
-            else if(core.current_engine) result=core.extension_bridge.request(core.current_engine,core.appearance,request);
+            else if(core.current_engine) result=core.engine_bridge.request(core.current_engine,core.appearance,request);
             else throw std::runtime_error("Game thread is not initialized");
             auto data=result.dump();sink(output,data.data(),data.size());return 1;
         } catch(const std::exception& error) {auto data=Json{{"error",error.what()}}.dump();sink(output,data.data(),data.size());return 0;}
@@ -62,18 +50,17 @@ struct Core {
             rows.push_back({{"engine_ms",row.engine_ms},{"interval_ms",row.interval_ms},
                 {"core_ms",row.core_ms},{"phase_ms",row.phase_ms},{"failed",row.failed}});
         atomic_json(root/"runtime/frame-profile.json",{{"id",frame_profile.id()},
-            {"stop_reason",frame_profile.reason()},{"cssx_loaded",extensions.ready()},
-            {"phases",{"recovery","cssx_tick","hud_prepare","cssx_render","inventory"}},
+            {"stop_reason",frame_profile.reason()},
+            {"phases",{"recovery","inventory"}},
             {"rows",rows}},false);
     }
-    Json extension_command;
     Json probe_command;
     Json motion_probe;
     uint64_t motion_probe_until=0,motion_probe_start=0;
     void sample_motion(uint64_t now) {
         if(!motion_probe_until) return;
         try {
-            auto query=[&](const Json& value){return extension_bridge.request(current_engine,appearance,value);};
+            auto query=[&](const Json& value){return engine_bridge.request(current_engine,appearance,value);};
             const auto player=query({{"op","player"}});
             if(player.at("pawn")!=motion_probe.at("pawn")) throw std::runtime_error("Player changed during motion sampling");
             auto mesh=query({{"op","get"},{"target",player.at("pawn")},{"property","Mesh"}});
@@ -253,10 +240,6 @@ struct Core {
         } catch(const std::exception& e) { host.log((std::string("CSS catalog failed: ")+e.what()).c_str()); throw; }
     }
     explicit Core(const CssHost& h) : host(h), root(h.root), package_root(package_directory()), catalog(load_catalog(package_root)), message(wardrobe_startup_message(catalog.outfits.size())) {
-        extension_bridge.configure_hooks(reinterpret_cast<void*>(h.log));
-        hud_.set_logger([this](const std::string& m){ host.log(m.c_str()); });
-        hud_.set_object_minter([this](RC::Unreal::UObject* w){ return extension_bridge.track(w); });
-        minimap_set_logger([this](const std::string& m){ host.log(m.c_str()); });
         player_recovery.watch();
         inventory.assets(root);
         bool recovered=false;
@@ -290,10 +273,10 @@ struct Core {
             auto bones=command.at("bones").get<std::vector<std::string>>();
             if(bones.empty() || bones.size()>12) throw std::runtime_error("Motion sampling requires 1 to 12 bones");
             for(const auto& name:bones) if(name.empty() || name.size()>96) throw std::runtime_error("Invalid sample bone");
-            const auto player=extension_bridge.request(current_engine,appearance,{{"op","player"}});
-            const auto mesh=extension_bridge.request(current_engine,appearance,{{"op","get"},{"target",player.at("pawn")},{"property","Mesh"}});
+            const auto player=engine_bridge.request(current_engine,appearance,{{"op","player"}});
+            const auto mesh=engine_bridge.request(current_engine,appearance,{{"op","get"},{"target",player.at("pawn")},{"property","Mesh"}});
             for(const auto& name:bones) {
-                auto index=extension_bridge.request(current_engine,appearance,{{"op","call"},{"target",mesh},
+                auto index=engine_bridge.request(current_engine,appearance,{{"op","call"},{"target",mesh},
                     {"function","GetBoneIndex"},{"args",{{"BoneName",name}}}});
                 if(index.at("ReturnValue").get<int>()<0) throw std::runtime_error("Sample bone missing: "+name);
             }
@@ -303,7 +286,6 @@ struct Core {
             return;
         }
         if (action.starts_with("inventory_")) { inventory_command=command; return; }
-        if (action=="cssx_debug") {extension_command=command;return;}
         if (action=="seal_tune") {
             atomic_json(root/"runtime/seal-tune.json",
                         appearance.tune_seals(command.value("lift",-1.),command.value("clearance",-1.),command.value("max_push",-1.)),false);
@@ -1016,18 +998,9 @@ struct Core {
 #ifdef CSS_INVENTORY_DEV
         if(!probe_command.is_null()) {
             auto pending=std::exchange(probe_command,Json{});Json result={{"id",pending.at("id")}};
-            try {result["result"]=extension_bridge.request(current_engine,appearance,pending.at("request"));result["ok"]=true;}
+            try {result["result"]=engine_bridge.request(current_engine,appearance,pending.at("request"));result["ok"]=true;}
             catch(const std::exception& error){result["ok"]=false;result["error"]=error.what();}
             atomic_json(root/"runtime/css-probe.json",result,false);
-        }
-        if(!extension_command.is_null()) {
-            auto pending=std::exchange(extension_command,Json{});Json result={{"id",pending.at("id")}};
-            try {
-                const auto& value=pending.at("request");
-                result["result"]=pending.value("host",false)?cssx::Client(&recovery_host).request(value):extensions.request(value);
-                result["ok"]=true;
-            } catch(const std::exception& error){result["ok"]=false;result["error"]=error.what();}
-            atomic_json(root/"runtime/cssx-debug.json",result,false);
         }
 #endif
         if(status_dirty || (now - last_publish_ms >= 500)) {
@@ -1123,9 +1096,6 @@ void render(void* ptr) noexcept {
 bool stop(void* ptr) noexcept {
     auto& core = *static_cast<css::Core*>(ptr);
     try {
-        if(!core.extension_bridge.stop_hooks()) {core.report("CSSX hook cleanup pending; reload deferred.");return false;}
-        core.hud_.release();
-        css::minimap_destroy();
         core.inventory.detach();
         core.appearance.walk.release();
         core.appearance.restore_misc();
