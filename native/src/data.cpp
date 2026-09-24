@@ -441,11 +441,15 @@ static std::map<std::string, Selection> parse_selections(const Json& values) {
     if (!values.is_object() || values.size() > 256) throw std::runtime_error("Invalid selections");
     std::map<std::string, Selection> result;
     for (const auto& [key, value] : values.items()) {
-        Selection selection{value.at("outfit"), value.at("variant"), {}};
-        selection.custom=Customization::parse(customize_block(value));
-        if (!valid_id(key) || !valid_id(selection.outfit) || !valid_id(selection.variant))
-            throw std::runtime_error("Invalid saved selection");
-        result.emplace(key, std::move(selection));
+        // A corrupt or unreadable saved selection drops just that shell (it falls back to
+        // its original look), instead of throwing and bricking the whole state load.
+        try {
+            if(!value.is_object() || !value.contains("outfit") || !value.contains("variant")) continue;
+            Selection selection{value.at("outfit").get<std::string>(), value.at("variant").get<std::string>(), {}};
+            if (!valid_id(key) || !valid_id(selection.outfit) || !valid_id(selection.variant)) continue;
+            selection.custom=Customization::parse(customize_block(value));
+            result.emplace(key, std::move(selection));
+        } catch(const std::exception&) { continue; }
     }
     return result;
 }
@@ -526,7 +530,10 @@ State State::parse(const Json& j) {
     if(j.contains(remembered_key)) {
         if(!j.at(remembered_key).is_object() || j.at(remembered_key).size()>4096) throw std::runtime_error("Invalid saved outfit settings");
         for(const auto& [id,value]:j.at(remembered_key).items()) {
-            if(!valid_id(id)) throw std::runtime_error("Invalid saved outfit id");
+            // A malformed key (e.g. an older build that wrote a compound "outfit/variant"
+            // key the id rules reject) drops just that remembered customization rather than
+            // failing the whole state load and stranding every shell, favorite and preset.
+            if(!valid_id(id)) continue;
             result.remembered_custom[id]=Customization::parse(value);
         }
     }
