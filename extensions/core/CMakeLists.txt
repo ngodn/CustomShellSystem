@@ -55,6 +55,14 @@ add_library(cheat_menu SHARED cheat-menu/src/main.cpp)
 target_link_libraries(cheat_menu PRIVATE cssx_cheat_logic)
 set_target_properties(cheat_menu PROPERTIES PREFIX "")
 
+# ---- Teleport extension (pure bridge + HUD; single source tree at extensions/teleport) ----
+set(CSSX_TELEPORT "${CSSX_REPO}/extensions/teleport")
+add_library(teleport SHARED
+  "${CSSX_TELEPORT}/src/main.cpp" "${CSSX_TELEPORT}/src/teleport.cpp"
+  "${CSSX_TELEPORT}/src/runtime.cpp" "${CSSX_TELEPORT}/src/overlay.cpp")
+target_include_directories(teleport PRIVATE include "${CSSX_VENDOR}")
+set_target_properties(teleport PROPERTIES PREFIX "" POSITION_INDEPENDENT_CODE ON)
+
 # ---- tests (host) ----
 if(NOT WIN32)
   enable_testing()
@@ -114,7 +122,7 @@ target_link_libraries(cssx_core PRIVATE cssx_sdk cssx_runtime user32 psapi)
 if(CSSX_DEV)
   target_compile_definitions(cssx_core PRIVATE CSSX_DEV)
 endif()
-foreach(target main cssx_core cssx_runtime cheat_menu)
+foreach(target main cssx_core cssx_runtime cheat_menu teleport)
   target_compile_options(${target} PRIVATE /W4 /EHsc /permissive-)
 endforeach()
 set_target_properties(main cssx_core PROPERTIES PREFIX "")

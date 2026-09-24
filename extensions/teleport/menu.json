@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "sections": [
+    {
+      "id": "settings",
+      "title": "Settings",
+      "controls": [
+        {
+          "id": "enable",
+          "type": "toggle",
+          "label": "Map teleport",
+          "value": true,
+          "description": "Show the Teleport prompt on the world map. Hover a point, then press T on the keyboard or R3 (right stick) on a controller. Turning this off leaves the game's own map untouched."
+        },
+        {
+          "id": "confirmation",
+          "type": "choice",
+          "label": "Confirmation",
+          "value": "show",
+          "options": [
+            { "id": "show", "label": "Ask before teleporting" },
+            { "id": "skip", "label": "Teleport right away" }
+          ],
+          "description": "Whether pressing Teleport opens a short confirmation first. Ask before teleporting is the safe default; Teleport right away jumps on the first press."
+        },
+        {
+          "id": "allow_locked",
+          "type": "toggle",
+          "label": "Allow locked points",
+          "value": true,
+          "description": "Teleport to points you have not unlocked or activated yet, including gates and dungeons the game would normally gate behind fast travel. Turn this off to show the prompt only on points the game already lets you fast travel to."
+        },
+        {
+          "id": "camera",
+          "type": "choice",
+          "label": "Departure camera",
+          "value": "front",
+          "options": [
+            { "id": "front", "label": "Face the character" },
+            { "id": "default", "label": "Keep the game camera" }
+          ],
+          "description": "Face the character swings the camera to look at your character from the front as the teleport begins. Keep the game camera leaves the view as it is. The teleport itself is the same either way."
+        }
+      ]
+    }
+  ]
+}
