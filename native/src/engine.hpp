@@ -184,7 +184,7 @@ class AttachmentOffsets {
     // correction is always measured from the game's own stow pose. `applied` is what
     // CSS last wrote, so a re-stow can be told apart from CSS's own live push.
     struct Tracked {
-        WeakObject child; std::wstring socket;
+        WeakObject child; RC::Unreal::FName socket; std::string socket_key;   // socket_key = narrow(socket), the offsets_ map key, cached so push() never allocates
         std::array<double,3> location{}, rotation{}, applied{};
         bool owned=false;
     };

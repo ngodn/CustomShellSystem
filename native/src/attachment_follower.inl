@@ -208,8 +208,7 @@ void AttachmentOffsets::apply(UObject* component,Tracked& item,const AttachmentO
     }
     std::array<double,3> extra{};
     if(live && offset.collision.active()) {
-        const FName socket(item.socket.c_str());
-        Call socket_rotation(component,L"GetSocketRotation",2); socket_rotation.set(L"InSocketName",socket); socket_rotation.run();
+        Call socket_rotation(component,L"GetSocketRotation",2); socket_rotation.set(L"InSocketName",item.socket); socket_rotation.run();
         double socket_basis[3][3];
         unreal_basis(socket_rotation.get<std::array<double,3>>(),socket_basis);
         // The prop is already sitting at last frame's correction, so the measurement
@@ -313,7 +312,7 @@ bool AttachmentOffsets::collides() const {
 }
 void AttachmentOffsets::release() {
     for(auto& item:tracked_) if(auto* child=item.child.Get();child && item.owned) {
-        try { if(attach_socket(child).ToString()==item.socket) set_relative(child,item.location,item.rotation); } catch(...) {}
+        try { if(attach_socket(child)==item.socket) set_relative(child,item.location,item.rotation); } catch(...) {}
     }
     tracked_.clear(); poses_.clear(); offsets_.clear();
 }
@@ -326,19 +325,20 @@ void AttachmentOffsets::update(UObject* component) {
     auto children=attached_children(component);
     std::erase_if(tracked_,[&](auto& item){
         auto* child=item.child.Get();
-        return !child || std::none_of(children.begin(),children.end(),[&](const auto& w){return w.Get()==child;}) || attach_socket(child).ToString()!=item.socket;
+        return !child || std::none_of(children.begin(),children.end(),[&](const auto& w){return w.Get()==child;}) || attach_socket(child)!=item.socket;
     });
     poses_.clear();
     for(const auto& weak:children) {
         auto* child=weak.Get(); if(!child) continue;
         if(!child->IsA(static_cast<UClass*>(find(L"/Script/Engine.SkeletalMeshComponent"))) &&
            !child->IsA(static_cast<UClass*>(find(L"/Script/Engine.StaticMeshComponent")))) continue;
-        const auto socket=attach_socket(child).ToString();
-        const auto entry=offsets_.find(narrow(socket)); if(entry==offsets_.end()) continue;
+        const auto socket=attach_socket(child);
+        auto key=narrow(socket.ToString());
+        const auto entry=offsets_.find(key); if(entry==offsets_.end()) continue;
         auto tracked=std::find_if(tracked_.begin(),tracked_.end(),[&](const auto& item){return item.child.Get()==child;});
         if(tracked==tracked_.end()) {
             if(tracked_.size()>=64) throw std::runtime_error("Too many corrected attachments");
-            tracked_.push_back({weak,socket,relative_location(child),relative_rotation(child),{},false});
+            tracked_.push_back({weak,socket,std::move(key),relative_location(child),relative_rotation(child),{},false});
             tracked=std::prev(tracked_.end());
         }
         apply(component,*tracked,entry->second,true);
@@ -350,7 +350,7 @@ Json AttachmentOffsets::diagnostics() const {
     for(const auto& [socket,offset]:offsets_)
         sockets.push_back({{"socket",socket},{"clearance",offset.collision.clearance},{"active",offset.collision.active()}});
     Json tracked=Json::array();
-    for(const auto& item:tracked_) tracked.push_back({{"socket",narrow(item.socket)},{"owned",item.owned},{"base",item.location}});
+    for(const auto& item:tracked_) tracked.push_back({{"socket",item.socket_key},{"owned",item.owned},{"base",item.location}});
     return {{"distance_to_body",last_distance_},{"push",last_push_},
             {"configured",std::move(sockets)},{"tracked",std::move(tracked)}};
 }
@@ -360,12 +360,12 @@ void AttachmentOffsets::push(UObject* component) {
     poses_.clear();
     for(auto& item:tracked_) {
         auto* child=item.child.Get(); if(!child) continue;
-        const auto entry=offsets_.find(narrow(item.socket));
+        const auto entry=offsets_.find(item.socket_key);
         if(entry==offsets_.end() || !entry->second.collision.active()) continue;
         // Some animations borrow a stowed item: a parry reaches for the seal and the game
         // re-attaches it to a hand until the move ends. While it is somewhere else it is
         // not ours to correct, and the discovery pass only reruns four times a second.
-        if(attach_socket(child).ToString()!=item.socket) { item.owned=false; continue; }
+        if(attach_socket(child)!=item.socket) { item.owned=false; continue; }
         apply(component,item,entry->second,true);
     }
 }
