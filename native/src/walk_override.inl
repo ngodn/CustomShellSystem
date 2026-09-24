@@ -448,7 +448,7 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     std::optional<bool> walking,sprint_requested;
     // These flags belong to this player's current linked layer. Never find the
     // first global walk ability, which could belong to another actor.
-    if(auto* cls=UObjectGlobals::StaticFindObject<UObject*>(nullptr,nullptr,L"/Game/Sparta/Characters/Humans/Player/Animations/ABPL_Locomotion_MotionMatching.ABPL_Locomotion_MotionMatching_C")) {
+    if(auto* cls=find_optional(L"/Game/Sparta/Characters/Humans/Player/Animations/ABPL_Locomotion_MotionMatching.ABPL_Locomotion_MotionMatching_C")) {
         Call layer(anim,L"GetLinkedAnimLayerInstanceByClass",3);
         layer.set(L"InClass",cls);layer.set(L"bCheckForChildClass",false);layer.run();
         if(auto* linked=layer.get<UObject*>();linked && has_field(linked,L"IsWalking",sizeof(bool)) && has_field(linked,L"IsSprinting",sizeof(bool))) {

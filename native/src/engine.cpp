@@ -10,6 +10,8 @@
 #include <limits>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
+#include <unordered_map>
 #include <vector>
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UObjectArray.hpp>
@@ -48,13 +50,98 @@ static std::string narrow(const std::wstring& s) {
     return result;
 }
 static UObject* find(const wchar_t* path) {
+    // Kept raw on purpose: WeakObject's constructor calls find() to initialize an object's
+    // serial number, so find() must not itself build a WeakObject or the two would recurse.
     auto* object = UObjectGlobals::StaticFindObject<UObject*>(nullptr, nullptr, path);
     if (!object) throw std::runtime_error("Required reflected object is missing");
     return object;
 }
+
+// Reflection handle cache. Resolving a UFunction or FProperty by name walks the class
+// chain and hashes an FName at each level, and building a call's parameter list is another
+// allocation. In the per-frame seal and MISC passes that is dozens of chain walks and small
+// heap allocations every frame for a fixed set of names. The resolved handles are invariant
+// for as long as their owning object (the class, or the found object) stays alive, so we
+// resolve once and keep them, keyed by (owner, name). A WeakObject on the owner is the
+// validity gate: FWeakObjectPtr carries a serial number, so if the class is garbage
+// collected, or its slot is reused by a different class on a level load, Get() returns null
+// and we re-resolve. Every call happens on the game thread (engine.hpp), so no locking.
+// Lookups take a wstring_view and never allocate; only a miss allocates the stored key once.
+namespace refl {
+struct Key { const void* owner; std::wstring name; };
+struct View { const void* owner; std::wstring_view name; };
+struct Hash {
+    using is_transparent = void;
+    static size_t mix(const void* owner, std::wstring_view name) noexcept {
+        size_t h = std::hash<const void*>{}(owner) + 0x9e3779b97f4a7c15ull;
+        h ^= std::hash<std::wstring_view>{}(name) + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2);
+        return h;
+    }
+    size_t operator()(const Key& k) const noexcept { return mix(k.owner, k.name); }
+    size_t operator()(const View& k) const noexcept { return mix(k.owner, k.name); }
+};
+struct Eq {
+    using is_transparent = void;
+    bool operator()(const Key& a, const Key& b) const noexcept { return a.owner==b.owner && a.name==b.name; }
+    bool operator()(const Key& a, const View& b) const noexcept { return a.owner==b.owner && a.name==b.name; }
+    bool operator()(const View& a, const Key& b) const noexcept { return a.owner==b.owner && a.name==b.name; }
+    bool operator()(const View& a, const View& b) const noexcept { return a.owner==b.owner && a.name==b.name; }
+};
+struct WHash { using is_transparent = void; size_t operator()(std::wstring_view s) const noexcept { return std::hash<std::wstring_view>{}(s); } };
+struct WEq { using is_transparent = void; bool operator()(std::wstring_view a, std::wstring_view b) const noexcept { return a==b; } };
+// Read-only liveness check for a cached owner (a UClass). It mirrors WeakObject's array
+// check but never forces serial initialization: doing so would issue a reflected Call and
+// recurse back through this very cache before the entry is stored. Pointer identity catches
+// a freed or replaced slot; the serial, when the class has one, catches slot reuse.
+struct OwnerGuard {
+    const void* ptr = nullptr; int32_t index = -1; int32_t serial = 0;
+    void capture(UObject* object) {
+        ptr = object; index = object->GetInternalIndex();
+        auto* item = FUObjectArray::IndexToObject(index);
+        serial = item ? item->GetSerialNumber() : 0;
+    }
+    bool alive() const {
+        if (!ptr || index < 0) return false;
+        auto* item = FUObjectArray::IndexToObject(index);
+        return item && item->GetUObject() == ptr && item->GetSerialNumber() == serial;
+    }
+};
+}
+
+static UObject* find_optional(const wchar_t*);
+
+// Non-throwing, cached StaticFindObject for fixed objects (class-default objects, engine
+// classes). Safe against reuse because the stored WeakObject re-resolves once the found
+// object dies. Distinct from find(): WeakObject's own serial init routes through raw find(),
+// so this never sits on that path and cannot recurse.
+static std::unordered_map<std::wstring, WeakObject, refl::WHash, refl::WEq> s_object_cache;
+static UObject* find_optional(const wchar_t* path) {
+    if (auto it = s_object_cache.find(std::wstring_view{path}); it != s_object_cache.end()) {
+        if (auto* cached = it->second.Get()) return cached;
+    }
+    auto* object = UObjectGlobals::StaticFindObject<UObject*>(nullptr, nullptr, path);
+    if (object) s_object_cache.insert_or_assign(std::wstring{path}, WeakObject(object));
+    return object;
+}
+
+struct FieldEntry { refl::OwnerGuard owner; FProperty* property = nullptr; };
+static std::unordered_map<refl::Key, FieldEntry, refl::Hash, refl::Eq> s_field_cache;
 static FProperty* field(UObject* object, const wchar_t* name, size_t size) {
     if (!object) throw std::runtime_error("No live object");
-    auto* property = object->GetPropertyByNameInChain(name);
+    UObject* owner = object->GetClassPrivate();
+    FProperty* property = nullptr;
+    if (owner) {
+        if (auto it = s_field_cache.find(refl::View{owner, name}); it != s_field_cache.end() && it->second.owner.alive())
+            property = it->second.property;
+    }
+    if (!property) {
+        property = object->GetPropertyByNameInChain(name);
+        if (property && owner) {
+            FieldEntry entry; entry.owner.capture(owner); entry.property = property;
+            s_field_cache.insert_or_assign(refl::Key{owner, name}, entry);
+        }
+    }
+    // The size/dim check stays per call: it validates the caller's T against this property.
     if (!property || property->GetElementSize() != static_cast<int32_t>(size) || property->GetArrayDim() != 1)
         throw std::runtime_error("Reflected property layout does not match: "+narrow(name));
     return property;
@@ -68,32 +155,57 @@ template<typename T> static T read(UObject* object, const wchar_t* name) {
 
 // Parameter offsets and ownership come from live reflection. The frame never
 // assumes the old UE4 FSoftObjectPath layout in the compatibility headers.
+// The resolved function and its parameter list are invariant for a class, so they are
+// cached per (class, name) and validated read-only (OwnerGuard). resolve_call issues no
+// reflected Call of its own, so it cannot re-enter the cache. The parameter vector lives in
+// the cache and a Call only points at it, so constructing a Call allocates nothing.
+struct CallEntry { refl::OwnerGuard owner; UFunction* function = nullptr; std::vector<FProperty*> params; };
+static std::unordered_map<refl::Key, CallEntry, refl::Hash, refl::Eq> s_call_cache;
+static const CallEntry& resolve_call(UObject* object, const wchar_t* name) {
+    UObject* owner = object->GetClassPrivate();
+    if (owner) {
+        if (auto it = s_call_cache.find(refl::View{owner, name}); it != s_call_cache.end() && it->second.owner.alive())
+            return it->second;
+    }
+    CallEntry entry;
+    entry.function = object->GetFunctionByNameInChain(name);
+    if (!entry.function || entry.function->GetParmsSize() > 2048)
+        throw std::runtime_error("Reflected function signature mismatch: " + narrow(name));
+    for (auto* p : entry.function->ForEachProperty()) {
+        if (!p->HasAnyPropertyFlags(CPF_Parm)) continue;
+        if (p->GetOffset_Internal() < 0 || p->GetArrayDim() != 1 ||
+            p->GetOffset_Internal() + p->GetElementSize() > entry.function->GetParmsSize())
+            throw std::runtime_error("Parameter exceeds reflected frame");
+        entry.params.push_back(p);
+    }
+    // Should not happen for a real UObject; without a class we cannot key, so return an
+    // uncached scratch entry so the caller still works (unbatched, this frame only).
+    if (!owner) { static thread_local CallEntry scratch; scratch = std::move(entry); return scratch; }
+    entry.owner.capture(owner);
+    // unordered_map keeps element references stable across rehash, so a live Call's pointer
+    // into params stays valid; we never erase entries.
+    return s_call_cache.insert_or_assign(refl::Key{owner, name}, std::move(entry)).first->second;
+}
 class Call {
     UObject* object_;
-    UFunction* function_;
+    UFunction* function_ = nullptr;
     alignas(16) std::array<std::byte, 2048> bytes_{};
-    std::vector<FProperty*> properties_;
+    const std::vector<FProperty*>* params_ = nullptr;   // owned by s_call_cache, stable across rehash
 public:
     Call(UObject* object, const wchar_t* name, unsigned count) : object_(object) {
         if (!object) throw std::runtime_error("No target for reflected call");
-        function_ = object->GetFunctionByNameInChain(name);
-        if (!function_ || function_->GetNumParms() != count || function_->GetParmsSize() > bytes_.size())
+        const CallEntry& entry = resolve_call(object, name);
+        if (entry.function->GetNumParms() != count || entry.params.size() != count)
             throw std::runtime_error("Reflected function signature mismatch: " + narrow(name));
-        for (auto* p : function_->ForEachProperty()) {
-            if (!p->HasAnyPropertyFlags(CPF_Parm)) continue;
-            if (p->GetOffset_Internal() < 0 || p->GetArrayDim() != 1 ||
-                p->GetOffset_Internal() + p->GetElementSize() > function_->GetParmsSize())
-                throw std::runtime_error("Parameter exceeds reflected frame");
-            properties_.push_back(p);
-        }
-        if (properties_.size() != count) throw std::runtime_error("Parameter enumeration mismatch");
-        for (auto* p : properties_) p->InitializeValue(bytes_.data() + p->GetOffset_Internal());
+        function_ = entry.function;
+        params_ = &entry.params;
+        for (auto* p : *params_) p->InitializeValue(bytes_.data() + p->GetOffset_Internal());
     }
-    ~Call() { for (auto* p : properties_) p->DestroyValue(bytes_.data() + p->GetOffset_Internal()); }
+    ~Call() { if (params_) for (auto* p : *params_) p->DestroyValue(bytes_.data() + p->GetOffset_Internal()); }
     Call(const Call&) = delete;
     Call& operator=(const Call&) = delete;
     FProperty* param(const wchar_t* name) {
-        for (auto* p : properties_) if (p->GetName() == name) return p;
+        for (auto* p : *params_) if (p->GetName() == name) return p;
         throw std::runtime_error("Missing parameter: " + narrow(name));
     }
     void* data(FProperty* p) { return bytes_.data() + p->GetOffset_Internal(); }
@@ -117,7 +229,7 @@ public:
     // know (native setters the Lua reference calls positionally).
     FProperty* arg(size_t index) {
         size_t i = 0;
-        for (auto* p : properties_) if (!p->HasAnyPropertyFlags(CPF_ReturnParm)) { if (i == index) return p; ++i; }
+        for (auto* p : *params_) if (!p->HasAnyPropertyFlags(CPF_ReturnParm)) { if (i == index) return p; ++i; }
         throw std::runtime_error("Reflected argument index out of range");
     }
     template<typename T> void set_arg(size_t index, const T& value) {

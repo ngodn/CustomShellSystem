@@ -109,7 +109,7 @@ static bool component_game_hidden(UObject* comp) {
 static std::vector<WeakObject> actor_mesh_components(UObject* actor) {
     std::vector<WeakObject> out;
     if(!actor) return out;
-    UObject* mesh_class=find(L"/Script/Engine.MeshComponent");   // base of skeletal + static mesh
+    UObject* mesh_class=find_optional(L"/Script/Engine.MeshComponent");   // base of skeletal + static mesh, cached
     if(!mesh_class) return out;
     try {
         Call call(actor,L"K2_GetComponentsByClass",2);
@@ -241,6 +241,7 @@ void MiscVisibility::evaluate(const std::map<std::string,MiscRule>& rules, bool 
     auto rule_of=[&](const std::string& cat)->const MiscRule* { auto it=rules.find(cat); return it==rules.end()?nullptr:&it->second; };
     auto has=[&](std::vector<Item>& v,UObject* comp){ for(auto& h:v) if(h.component.Get()==comp) return true; return false; };
     std::vector<Item> want;
+    want.reserve(candidates_.size());   // bounded candidate set; avoid per-frame reallocation growth
     for(auto& cand:candidates_) {
         auto* comp=cand.component.Get();
         if(!comp) continue;
