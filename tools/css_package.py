@@ -27,6 +27,8 @@ def verify(directory: Path, repak: Path = DEFAULT_REPAK) -> dict:
         if len(manifests)!=1:
             raise ValueError('Expected one embedded CSS manifest')
         source=manifests[0]
+        if source.stat().st_size > 256 * 1024:
+            raise ValueError(f'Manifest size {source.stat().st_size} exceeds native limit of 256 KiB')
         manifest=json.loads(source.read_text())
         if (manifest['format'],manifest['format_version'],manifest['game'],manifest['engine'])!=('CSS.Package',1,'MortalShell2','5.6'):
             raise ValueError('Unsupported CSS package format')

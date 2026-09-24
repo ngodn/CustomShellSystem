@@ -898,7 +898,9 @@ struct Core {
                 bool mirror_sourced=false;   // look came from the mirror's source slot, not this shell's own
                 if (!selected_outfit.empty()) {
                     requested = {std::move(selected_outfit), std::move(selected_variant), {}};
-                    if(state.remembered_custom.contains(requested.outfit)) requested.custom=state.remembered_custom.at(requested.outfit);
+                    const std::string custom_key = requested.outfit + "/" + requested.variant;
+                    if(state.remembered_custom.contains(custom_key)) requested.custom=state.remembered_custom.at(custom_key);
+                    else if(state.remembered_custom.contains(requested.outfit)) requested.custom=state.remembered_custom.at(requested.outfit);
                     for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit)
                         requested.custom=compatible_values(outfit.controls_for(requested.variant),requested.custom);
                     selected_outfit.clear(); selected_variant.clear();
@@ -965,6 +967,8 @@ struct Core {
                             if(state.harbinger_mirror && shell.starts_with(DARKFORM_PREFIX) && !last_living_shell.empty()) {
                                 state.selections[last_living_shell] = requested;
                             }
+                            const std::string custom_key = requested.outfit + "/" + requested.variant;
+                            state.remembered_custom[custom_key]=requested.custom;
                             state.remembered_custom[requested.outfit]=requested.custom;
                             state.enabled = true; dirty = true; ui_refresh = !custom_only || refresh_custom;
                             applied_id = requested.outfit + "/" + requested.variant;

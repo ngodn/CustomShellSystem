@@ -530,10 +530,16 @@ State State::parse(const Json& j) {
     if(j.contains(remembered_key)) {
         if(!j.at(remembered_key).is_object() || j.at(remembered_key).size()>4096) throw std::runtime_error("Invalid saved outfit settings");
         for(const auto& [id,value]:j.at(remembered_key).items()) {
-            // A malformed key (e.g. an older build that wrote a compound "outfit/variant"
-            // key the id rules reject) drops just that remembered customization rather than
-            // failing the whole state load and stranding every shell, favorite and preset.
-            if(!valid_id(id)) continue;
+            // Accept a plain outfit id, or the compound "outfit/variant" key the per-variant
+            // customization writes (both halves valid). Anything else, a truly malformed key,
+            // drops just that entry rather than failing the whole load and stranding every
+            // shell, favorite and preset.
+            const auto slash=id.find('/');
+            const bool ok = slash==std::string::npos
+                ? valid_id(id)
+                : slash>0 && id.find('/',slash+1)==std::string::npos
+                  && valid_id(id.substr(0,slash)) && valid_id(id.substr(slash+1));
+            if(!ok) continue;
             result.remembered_custom[id]=Customization::parse(value);
         }
     }
