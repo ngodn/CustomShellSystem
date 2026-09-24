@@ -261,6 +261,9 @@ struct Core {
         inventory.assets(root);
         bool recovered=false;
         state=load_state(root / "state/state.json", &recovered);
+        // The one-time Harbinger-slot cleanup ran in load if the flag was unset; persist it so it
+        // never runs again (and the cleaned selections are written back).
+        if(!state.darkform_mirror_cleaned) { state.darkform_mirror_cleaned=true; dirty=true; }
         appearance.set_misc_rules(state.misc_rules);
         if(recovered) message="Recovered CSS state from its backup.";
         if (fs::exists(root / "request.json")) {
@@ -910,6 +913,7 @@ struct Core {
                 // whatever the player happens to be wearing by the time it lands.
                 const auto shell = appearance.shell;
                 Selection requested;
+                bool mirror_sourced=false;   // look came from the mirror's source slot, not this shell's own
                 if (!selected_outfit.empty()) {
                     requested = {std::move(selected_outfit), std::move(selected_variant), {}};
                     if(state.remembered_custom.contains(requested.outfit)) requested.custom=state.remembered_custom.at(requested.outfit);
@@ -920,6 +924,7 @@ struct Core {
                         throw std::runtime_error("This outfit does not support the current shell: " + shell);
                 } else if (auto selected = state.selections.find(outfit_key(shell)); selected != state.selections.end()) {
                     requested = selected->second;
+                    mirror_sourced = outfit_key(shell)!=shell;   // the Harbinger mirror redirected to a living shell's slot
                     // The same filter the wear path uses. A saved look can name a part the
                     // installed package no longer has, and 0.4 makes that likelier because
                     // a variant can carry its own recipe. Dropping the part it cannot place
@@ -970,7 +975,11 @@ struct Core {
                             attachments_after=0;sync_attachments_safely(now);
                             recovery.clear();
                             last_apply_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
-                            state.selections[shell] = requested;
+                            // Never write the mirror's look into this shell's own slot. Doing so
+                            // polluted the Harbinger's own choice with the living shell's look, so
+                            // "keeps its own" could never fall back to the default once the mirror
+                            // had fired. Only save a look the shell picked for itself.
+                            if(!mirror_sourced) state.selections[shell] = requested;
                             if(state.harbinger_mirror && shell.starts_with(DARKFORM_PREFIX) && !last_living_shell.empty()) {
                                 state.selections[last_living_shell] = requested;
                             }

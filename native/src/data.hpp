@@ -139,6 +139,7 @@ struct State {
     std::string walk_animation = "normal";   // "normal" or "feminine" (LOCOMOTION tab). Jog and sprint stay on the game's own animation in 0.4.
     AnimationChoices animation_choices;
     bool harbinger_mirror = true;            // when severed into the Harbinger (Darkform), wear the living shell's current outfit instead of its own saved one.
+    bool darkform_mirror_cleaned = false;    // one-time: dropped Harbinger slots the old mirror polluted with a living shell's look.
     std::map<std::string, Selection> selections;
     std::map<std::string, Customization> remembered_custom;
     std::set<std::string> favorites;

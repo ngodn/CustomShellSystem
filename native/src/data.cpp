@@ -505,6 +505,22 @@ State State::parse(const Json& j) {
     // Jog and sprint stay normal, so a state written by the 0.3.3 preview comes
     // back with the game's own run rather than the unmatched borrowed one.
     result.selections = parse_selections(j.at("selections"));
+    // One-time cleanup: builds before 1.0.0-beta.3 let the Harbinger mirror write the living
+    // shell's look into the Harbinger's own slot, so "keeps its own" kept re-applying it. Drop any
+    // Darkform slot whose outfit and variant match a living shell's slot (the mirror's signature),
+    // so the Harbinger falls back to its own genuine choice or the game default. The flag is left
+    // as read here; core.cpp sets it and saves once so this runs a single time.
+    result.darkform_mirror_cleaned = j.value("darkform_mirror_cleaned", false);
+    if(!result.darkform_mirror_cleaned) {
+        std::set<std::pair<std::string,std::string>> living;
+        for(const auto& [key,sel]:result.selections)
+            if(key.starts_with("CharacterId.Player.Shell.")) living.emplace(sel.outfit,sel.variant);
+        for(auto it=result.selections.begin(); it!=result.selections.end(); ) {
+            if(it->first.starts_with("CharacterId.Player.Darkform.") && living.count({it->second.outfit,it->second.variant}))
+                it=result.selections.erase(it);
+            else ++it;
+        }
+    }
     // Same rename, same compatibility: a state file written by 0.4 still loads.
     const auto remembered_key=j.contains("remembered_custom")?"remembered_custom":"remembered_colors";
     if(j.contains(remembered_key)) {
@@ -537,6 +553,7 @@ Json State::json() const {
     return {{"schema", 1}, {"enabled", enabled}, {"auto_apply", auto_apply},
             {"invert_orbit_x", invert_orbit_x}, {"invert_orbit_y", invert_orbit_y}, {"walk_animation", walk_animation},
             {"harbinger_mirror", harbinger_mirror},
+            {"darkform_mirror_cleaned", darkform_mirror_cleaned},
             {"animation_choices",animation_choices.json()},
             {"selections", selections_json(selections)}, {"favorites", favorites}, {"presets", presets_json}, {"remembered_custom",remembered},
             {"misc_rules", misc_rules_json(misc_rules)}};
