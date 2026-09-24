@@ -51,9 +51,9 @@ public:
 // A reflected function call frame. Parameter offsets come from the UFunction.
 class Call {
     UObject* object_;
-    UFunction* function_;
+    UFunction* function_=nullptr;
     alignas(16) std::array<std::byte,2048> bytes_{};
-    std::vector<FProperty*> properties_;
+    const std::vector<FProperty*>* params_=nullptr;   // owned by the reflected-call cache, stable across rehash
 public:
     Call(UObject* object,const wchar_t* name,unsigned count);
     ~Call();

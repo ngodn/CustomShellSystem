@@ -1,5 +1,6 @@
 #include "engine.hpp"
 #include <windows.h>
+#include <string_view>
 #include <unordered_map>
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UObjectArray.hpp>
@@ -28,6 +29,55 @@ std::string narrow(const std::wstring& s) {
 // game within a second (2026-09-22 live bisect). StaticFindObject per call it is.
 UObject* find_optional(const wchar_t* path) { return UObjectGlobals::StaticFindObject<UObject*>(nullptr,nullptr,path); }
 void set_find_cache(bool) {}
+
+// Reflection handle cache. Resolving a UFunction/FProperty by name walks the class chain every
+// call, and a reflected call's parameter list is a fresh heap allocation each construction. Those
+// handles are invariant for a class, so cache them per (class, name), validated read-only through
+// OwnerGuard. Unlike the find-path cache that crashed the game (see above), this never constructs
+// a WeakObject and never issues a reflected call while caching, so it cannot re-enter or hand back
+// a freed pointer: the OwnerGuard re-reads the class from the live object array by index and only
+// trusts it when the pointer and serial still match. Game-thread only, so no locking.
+namespace {
+struct ReflKey { const void* owner; std::wstring name; };
+struct ReflView { const void* owner; std::wstring_view name; };
+struct ReflHash {
+    using is_transparent=void;
+    static size_t mix(const void* o,std::wstring_view n) noexcept {
+        size_t h=std::hash<const void*>{}(o)+0x9e3779b97f4a7c15ull;
+        h^=std::hash<std::wstring_view>{}(n)+0x9e3779b97f4a7c15ull+(h<<6)+(h>>2); return h;
+    }
+    size_t operator()(const ReflKey& k) const noexcept { return mix(k.owner,k.name); }
+    size_t operator()(const ReflView& k) const noexcept { return mix(k.owner,k.name); }
+};
+struct ReflEq {
+    using is_transparent=void;
+    bool operator()(const ReflKey& a,const ReflKey& b) const noexcept { return a.owner==b.owner && a.name==b.name; }
+    bool operator()(const ReflKey& a,const ReflView& b) const noexcept { return a.owner==b.owner && a.name==b.name; }
+    bool operator()(const ReflView& a,const ReflKey& b) const noexcept { return a.owner==b.owner && a.name==b.name; }
+    bool operator()(const ReflView& a,const ReflView& b) const noexcept { return a.owner==b.owner && a.name==b.name; }
+};
+struct OwnerGuard {
+    const void* ptr=nullptr; int32_t index=-1; int32_t serial=0;
+    void capture(UObject* o) { ptr=o; index=o->GetInternalIndex(); auto* it=FUObjectArray::IndexToObject(index); serial=it?it->GetSerialNumber():0; }
+    bool alive() const { if(!ptr||index<0) return false; auto* it=FUObjectArray::IndexToObject(index); return it && it->GetUObject()==ptr && it->GetSerialNumber()==serial; }
+};
+struct FieldEntry { OwnerGuard owner; FProperty* property=nullptr; };
+std::unordered_map<ReflKey,FieldEntry,ReflHash,ReflEq> g_field_cache;
+struct CallEntry { OwnerGuard owner; UFunction* function=nullptr; std::vector<FProperty*> params; };
+std::unordered_map<ReflKey,CallEntry,ReflHash,ReflEq> g_call_cache;
+}
+// Cached property lookup: the FProperty for (object's class, name), or nullptr if absent.
+static FProperty* resolve_field(UObject* object,const wchar_t* name) {
+    if(!object) return nullptr;
+    UObject* owner=object->GetClassPrivate();
+    if(owner) {
+        if(auto it=g_field_cache.find(ReflView{owner,name}); it!=g_field_cache.end() && it->second.owner.alive())
+            return it->second.property;
+    }
+    auto* property=object->GetPropertyByNameInChain(name);
+    if(property && owner) { FieldEntry e; e.owner.capture(owner); e.property=property; g_field_cache.insert_or_assign(ReflKey{owner,name},e); }
+    return property;
+}
 UObject* find(const wchar_t* path) {
     auto* object=find_optional(path);
     if(!object) throw std::runtime_error("Required reflected object is missing: "+narrow(path));
@@ -35,19 +85,18 @@ UObject* find(const wchar_t* path) {
 }
 FProperty* field(UObject* object,const wchar_t* name,size_t size) {
     if(!object) throw std::runtime_error("No live object for "+narrow(name));
-    auto* property=object->GetPropertyByNameInChain(name);
+    auto* property=resolve_field(object,name);
     if(!property || property->GetElementSize()!=static_cast<int32_t>(size) || property->GetArrayDim()!=1)
         throw std::runtime_error("Reflected property layout does not match: "+narrow(name));
     return property;
 }
 UObject* object_of(UObject* object,const wchar_t* name) {
-    if(!object) return nullptr;
-    auto* p=object->GetPropertyByNameInChain(name);
+    auto* p=resolve_field(object,name);
     if(!p || !p->IsA<FObjectProperty>() || p->GetElementSize()!=sizeof(UObject*)) return nullptr;
     return read<UObject*>(object,name);
 }
 bool bool_of(UObject* object,const wchar_t* name,bool fallback) {
-    auto* p=object?object->GetPropertyByNameInChain(name):nullptr;
+    auto* p=resolve_field(object,name);
     if(!p || !p->IsA<FBoolProperty>()) return fallback;
     return static_cast<FBoolProperty*>(p)->GetPropertyValueInContainer(object);
 }
@@ -65,23 +114,43 @@ WeakObject& WeakObject::operator=(UObject* object) {
     FWeakObjectPtr::operator=(object);
     return *this;
 }
+// The resolved function and its parameter layout are invariant for a class, so cache them per
+// (class, name) and validate read-only (OwnerGuard). resolve_call issues no reflected call of
+// its own, so it cannot re-enter the cache; the parameter vector lives in the cache and a Call
+// only points at it, so constructing a Call allocates nothing.
+static const CallEntry& resolve_call(UObject* object,const wchar_t* name) {
+    UObject* owner=object->GetClassPrivate();
+    if(owner) {
+        if(auto it=g_call_cache.find(ReflView{owner,name}); it!=g_call_cache.end() && it->second.owner.alive())
+            return it->second;
+    }
+    CallEntry entry;
+    entry.function=object->GetFunctionByNameInChain(name);
+    if(!entry.function || entry.function->GetParmsSize()>2048)
+        throw std::runtime_error("Reflected function signature mismatch: "+narrow(name));
+    for(auto* p:entry.function->ForEachProperty()) {
+        if(!p->HasAnyPropertyFlags(CPF_Parm)) continue;
+        if(p->GetOffset_Internal()<0 || p->GetArrayDim()!=1 || p->GetOffset_Internal()+p->GetElementSize()>entry.function->GetParmsSize())
+            throw std::runtime_error("Parameter exceeds reflected frame: "+narrow(name));
+        entry.params.push_back(p);
+    }
+    if(!owner) { static thread_local CallEntry scratch; scratch=std::move(entry); return scratch; }
+    entry.owner.capture(owner);
+    // unordered_map keeps element references stable across rehash, so a live Call's pointer into
+    // params stays valid; entries are never erased.
+    return g_call_cache.insert_or_assign(ReflKey{owner,name},std::move(entry)).first->second;
+}
 Call::Call(UObject* object,const wchar_t* name,unsigned count):object_(object) {
     if(!object) throw std::runtime_error("No target for reflected call "+narrow(name));
-    function_=object->GetFunctionByNameInChain(name);
-    if(!function_ || function_->GetNumParms()!=count || function_->GetParmsSize()>bytes_.size())
+    const CallEntry& entry=resolve_call(object,name);
+    if(entry.function->GetNumParms()!=count || entry.params.size()!=count)
         throw std::runtime_error("Reflected function signature mismatch: "+narrow(name));
-    for(auto* p:function_->ForEachProperty()) {
-        if(!p->HasAnyPropertyFlags(CPF_Parm)) continue;
-        if(p->GetOffset_Internal()<0 || p->GetArrayDim()!=1 || p->GetOffset_Internal()+p->GetElementSize()>function_->GetParmsSize())
-            throw std::runtime_error("Parameter exceeds reflected frame: "+narrow(name));
-        properties_.push_back(p);
-    }
-    if(properties_.size()!=count) throw std::runtime_error("Parameter enumeration mismatch: "+narrow(name));
-    for(auto* p:properties_) p->InitializeValue(bytes_.data()+p->GetOffset_Internal());
+    function_=entry.function; params_=&entry.params;
+    for(auto* p:*params_) p->InitializeValue(bytes_.data()+p->GetOffset_Internal());
 }
-Call::~Call() { for(auto* p:properties_) p->DestroyValue(bytes_.data()+p->GetOffset_Internal()); }
+Call::~Call() { if(params_) for(auto* p:*params_) p->DestroyValue(bytes_.data()+p->GetOffset_Internal()); }
 FProperty* Call::param(const wchar_t* name) {
-    for(auto* p:properties_) if(p->GetName()==name) return p;
+    for(auto* p:*params_) if(p->GetName()==name) return p;
     throw std::runtime_error("Missing parameter: "+narrow(name));
 }
 void Call::copy(const wchar_t* name,Call& other,const wchar_t* other_name) {
