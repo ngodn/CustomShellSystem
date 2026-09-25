@@ -1,7 +1,7 @@
 [center][size=6][b]Traverse[/b][/size]
 [size=4]Fast travel to any point on the world map, and arrive as a meteor.[/size][/center]
 
-[center][img]GIF_RAW_URL_HERE[/img][/center]
+[center][youtube]YOUTUBE_VIDEO_ID_HERE[/youtube][/center]
 
 [size=5][b]What it does[/b][/size]
 Open the world map, hover any beacon, gate, dungeon or well, and a native [b]Traverse[/b] prompt appears in the map's own prompt bar. Press the button and you travel straight there, using the game's own streaming teleport, so there is no loading screen. It works from anywhere on the map, including points you have not unlocked yet.
