@@ -15,7 +15,7 @@ from css_paths import new_directory
 ROOT = Path(__file__).resolve().parents[1]
 UE4SS_RUNTIME = json.loads((ROOT / 'native/ue4ss-runtime.json').read_text())
 PREFIX = 'CustomShellSystem/'
-VERSION_PATTERN = r'\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.[1-9]\d*)?'
+VERSION_PATTERN = r'\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.[1-9]\d*)?(?:-hotfix\.[1-9]\d*)?'
 
 
 def digest(data: bytes) -> str:
