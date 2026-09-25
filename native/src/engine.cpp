@@ -1329,9 +1329,19 @@ DyeMipUpdate resolve_dye_mip_update() {
     }
     throw std::runtime_error("Dye mipmaps require a verified Mortal Shell II build");
 }
+// Resolved once and cached: the native mip-regen entry point, or null when this build/environment
+// does not expose it (an off build, or another mod moved the reflected wrapper the scan anchors on).
+// Null is not fatal: dye then uses a single-mip texture instead of being disabled, so colour still
+// applies. The module scan is deterministic within a session, so a null result will not flip later.
+DyeMipUpdate dye_mip_update() {
+    static const DyeMipUpdate fn = [] () -> DyeMipUpdate {
+        try { return resolve_dye_mip_update(); } catch(...) { return nullptr; }
+    }();
+    return fn;
+}
 void update_dye_mips(UObject* target) {
-    // Resolved once and cached; a throw during init leaves it uninitialised and is retried next call.
-    static const DyeMipUpdate update=resolve_dye_mip_update();
+    auto update=dye_mip_update();
+    if(!update) return;   // single-mip dye: nothing to regenerate, and colour has already been drawn
     if(!target->IsA(static_cast<UClass*>(find(L"/Script/Engine.TextureRenderTarget2D")))) throw std::runtime_error("Invalid dye render target");
     update(target,false);
 }
@@ -2005,7 +2015,11 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 if(!target) {
                     Call create(library,L"CreateRenderTarget2D",8); create.set(L"WorldContextObject",component);
                     create.set(L"Width",surface.resolution); create.set(L"Height",surface.resolution); create.set(L"Format",uint8_t{3});
-                    create.set(L"bAutoGenerateMipMaps",true); create.run(); target=create.get<UObject*>();
+                    // Auto-mips only when we can regenerate them after the canvas composite. Without that
+                    // regen the lower mips stay at the clear colour (a dark body at distance), so where the
+                    // mip regen is unreachable we make a single-mip target instead: correct colour at every
+                    // distance, only without mip filtering, and dye keeps working.
+                    create.set(L"bAutoGenerateMipMaps",dye_mip_update()!=nullptr); create.run(); target=create.get<UObject*>();
                     if(!target) throw std::runtime_error("Could not create the dye texture"); weak=target;
                 }
                 // 0.4: the render target used to be bound to the materials before the layer
