@@ -1282,43 +1282,58 @@ UObject* view_target(UObject* pc) {
 
 namespace css {
 namespace {
-void update_dye_mips(UObject* target) {
-    // The Canvas path does not regenerate lower mip levels. Resolve the same
-    // engine method called by the verified CreateRenderTarget2D native wrapper.
-    // Only engine code is queued on the render thread, never a CSS callback.
+using DyeMipUpdate=void(*)(UObject*,bool);
+// The Canvas dye composite (Begin/EndDrawCanvasToRenderTarget) writes only mip 0;
+// UE regenerates the lower mips only from UTextureRenderTarget2D::UpdateResourceImmediate,
+// which the engine itself calls right after DrawMaterialToRenderTarget. That method is not
+// a reflected UFUNCTION, so it cannot be reached through normal reflection. Rather than pin
+// its absolute address per game build (every patch relocates the image and breaks it), anchor
+// on the reflected CreateRenderTarget2D wrapper, whose own body calls UpdateResourceImmediate(true),
+// and follow that relative call to its target. This depends on the UE 5.6.1 codegen of that one
+// wrapper, not on the game build, so ordinary content patches no longer break dye. If the pattern
+// is ever absent the caller throws and dye stays safely disabled instead of jumping to a wrong address.
+DyeMipUpdate resolve_dye_mip_update() {
     auto* module=reinterpret_cast<const unsigned char*>(GetModuleHandleW(nullptr));
-    struct Adapter {
-        uintptr_t wrapper,callsite,update;
-        std::array<unsigned char,10> caller;
-        std::array<unsigned char,32> prologue;
-    };
-    // Both paths were traced from CreateRenderTarget2D through its direct
-    // call and checked against the render-resource enqueue implementation.
-    // Keep the old build supported. Never fall back to a nearby address.
-    constexpr Adapter adapters[]{
-        {0x3f28b70,0x3f28e5a,0x44c85d0,
-         {0xb2,0x01,0x48,0x8b,0xcb,0xe8,0x6c,0xf7,0x59,0},
-         {0x40,0x53,0x57,0x48,0x81,0xec,0xa8,0,0,0,0x48,0x8b,0x05,0x9f,0xd4,0xbd,0x06,0x48,0x33,0xc4,0x48,0x89,0x84,0x24,0x80,0,0,0,0x0f,0xb6,0xda,0x48}},
-        // Steam build 25265616, September 15 hotfix.
-        {0x3f28ba0,0x3f28e8a,0x44c8700,
-         {0xb2,0x01,0x48,0x8b,0xcb,0xe8,0x6c,0xf8,0x59,0},
-         {0x40,0x53,0x57,0x48,0x81,0xec,0xa8,0,0,0,0x48,0x8b,0x05,0xaf,0xb3,0xbd,0x06,0x48,0x33,0xc4,0x48,0x89,0x84,0x24,0x80,0,0,0,0x0f,0xb6,0xda,0x48}}
-    };
+    if(!module) throw std::runtime_error("Dye mipmaps require a verified Mortal Shell II build");
     auto* dos=reinterpret_cast<const IMAGE_DOS_HEADER*>(module);
     if(dos->e_magic!=IMAGE_DOS_SIGNATURE || dos->e_lfanew<=0 || dos->e_lfanew>4096) throw std::runtime_error("Unknown game image for dye mipmaps");
     auto* nt=reinterpret_cast<const IMAGE_NT_HEADERS64*>(module+dos->e_lfanew);
-    auto* function=find(L"/Script/Engine.Default__KismetRenderingLibrary")->GetFunctionByNameInChain(L"CreateRenderTarget2D");
-    const Adapter* match=nullptr;
-    if(nt->Signature==IMAGE_NT_SIGNATURE && function) for(const auto& adapter:adapters) {
-        if(nt->OptionalHeader.SizeOfImage<adapter.update+adapter.prologue.size() ||
-           nt->OptionalHeader.SizeOfImage<adapter.callsite+adapter.caller.size() ||
-           reinterpret_cast<const unsigned char*>(function->GetFuncPtr())!=module+adapter.wrapper) continue;
-        if(!std::memcmp(module+adapter.callsite,adapter.caller.data(),adapter.caller.size()) &&
-           !std::memcmp(module+adapter.update,adapter.prologue.data(),adapter.prologue.size())) {match=&adapter;break;}
+    if(nt->Signature!=IMAGE_NT_SIGNATURE) throw std::runtime_error("Unknown game image for dye mipmaps");
+    const uintptr_t image_size=nt->OptionalHeader.SizeOfImage;
+    auto* library=find(L"/Script/Engine.Default__KismetRenderingLibrary");
+    auto* create=library ? library->GetFunctionByNameInChain(L"CreateRenderTarget2D") : nullptr;
+    if(!create) throw std::runtime_error("Dye mipmaps require a verified Mortal Shell II build");
+    const auto* wrapper=reinterpret_cast<const unsigned char*>(create->GetFuncPtr());
+    if(wrapper<module || wrapper>=module+image_size) throw std::runtime_error("Dye mipmaps require a verified Mortal Shell II build");
+    // UpdateResourceImmediate prologue: push rbx; push rdi; sub rsp,0A8h; mov rax,[rip+GStackGuard]; xor rax,rsp.
+    // Bytes 13-16 are the RIP-relative stack-guard displacement and legitimately drift, so they are masked out.
+    static constexpr unsigned char sig[]={0x40,0x53,0x57,0x48,0x81,0xec,0xa8,0,0,0,0x48,0x8b,0x05,0,0,0,0,0x48,0x33,0xc4};
+    static constexpr bool fixed[]={1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1};
+    // The wrapper's call to UpdateResourceImmediate(true) sits a few hundred bytes in; the window stays
+    // well short of the adjacent CreateRenderTarget2DArray/Volume wrappers (~0x800 away) so the first
+    // match is the 2D one.
+    constexpr uintptr_t window=0x600;
+    const uintptr_t start=static_cast<uintptr_t>(wrapper-module);
+    const uintptr_t limit=std::min<uintptr_t>(start+window,image_size);
+    for(uintptr_t at=start; at+10<=limit; ++at) {
+        // mov dl,1 ; mov rcx,<reg> ; call rel32   -> this->UpdateResourceImmediate(/*bClearRenderTarget=*/true)
+        if(module[at]!=0xb2 || module[at+1]!=0x01 || module[at+2]!=0x48 || module[at+3]!=0x8b) continue;
+        if(module[at+4]<0xc8 || module[at+4]>0xcf || module[at+5]!=0xe8) continue;
+        int32_t rel; std::memcpy(&rel,module+at+6,sizeof rel);
+        const uintptr_t target=at+10+static_cast<uintptr_t>(static_cast<int64_t>(rel));
+        if(target>=image_size || target+sizeof(sig)>image_size) continue;
+        bool ok=true;
+        for(size_t i=0;i<sizeof(sig);++i) if(fixed[i] && module[target+i]!=sig[i]) {ok=false;break;}
+        if(!ok) continue;
+        return reinterpret_cast<DyeMipUpdate>(const_cast<unsigned char*>(module)+target);
     }
-    if(!match) throw std::runtime_error("Dye mipmaps require a verified Mortal Shell II build");
+    throw std::runtime_error("Dye mipmaps require a verified Mortal Shell II build");
+}
+void update_dye_mips(UObject* target) {
+    // Resolved once and cached; a throw during init leaves it uninitialised and is retried next call.
+    static const DyeMipUpdate update=resolve_dye_mip_update();
     if(!target->IsA(static_cast<UClass*>(find(L"/Script/Engine.TextureRenderTarget2D")))) throw std::runtime_error("Invalid dye render target");
-    reinterpret_cast<void(*)(UObject*,bool)>(const_cast<unsigned char*>(module)+match->update)(target,false);
+    update(target,false);
 }
 }
 namespace {
