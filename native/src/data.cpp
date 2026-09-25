@@ -506,6 +506,7 @@ State State::parse(const Json& j) {
     if(!valid_walk_animation(result.walk_animation))
         throw std::runtime_error("Invalid walk animation setting");
     result.harbinger_mirror = j.value("harbinger_mirror", true);
+    result.keep_default_attachments = j.value("keep_default_attachments", false);
     // Jog and sprint stay normal, so a state written by the 0.3.3 preview comes
     // back with the game's own run rather than the unmatched borrowed one.
     result.selections = parse_selections(j.at("selections"));
@@ -566,6 +567,7 @@ Json State::json() const {
     return {{"schema", 1}, {"enabled", enabled}, {"auto_apply", auto_apply},
             {"invert_orbit_x", invert_orbit_x}, {"invert_orbit_y", invert_orbit_y}, {"walk_animation", walk_animation},
             {"harbinger_mirror", harbinger_mirror},
+            {"keep_default_attachments", keep_default_attachments},
             {"darkform_mirror_cleaned", darkform_mirror_cleaned},
             {"animation_choices",animation_choices.json()},
             {"selections", selections_json(selections)}, {"favorites", favorites}, {"presets", presets_json}, {"remembered_custom",remembered},

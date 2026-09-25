@@ -1419,7 +1419,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             auto it=state.misc_rules.find(key);
             return it!=state.misc_rules.end()?it->second:MiscRule{};
         };
-        row_=std::clamp(row_,0,3);
+        row_=std::clamp(row_,0,4);
         scroll_begin();
         for(int i=0;i<4;++i) {
             const MiscRule rule=rule_for(defs[i].key);
@@ -1427,16 +1427,33 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             Json prev{{"action","misc_mode"},{"category",defs[i].key},{"delta",-1}};
             row(i,defs[i].title,mode_label(rule.mode),77,next,prev,next);
         }
+        // Global position switch: keep the sidearm (and other gear holstered on the body) where the
+        // game puts it, or let CSS hold it off a larger custom body so it does not clip.
+        const Json kda{{"action","keep_default_attachments"},{"value",!state.keep_default_attachments}};
+        const char* kda_label=state.keep_default_attachments?"Default (game)":"Auto (avoid clipping)";
+        row(4,"Sidearm position",kda_label,77,kda,kda,kda);
         scroll_end();
-        const MiscRule current=rule_for(defs[row_].key);
-        detail(defs[row_].title,mode_label(current.mode),defs[row_].detail);
-        std::vector<Choice> choices={
-            {"default","Default (game)",{{"action","misc_mode"},{"category",defs[row_].key},{"mode","default"}}},
-            {"in_use","Only When In Use",{{"action","misc_mode"},{"category",defs[row_].key},{"mode","in_use"}}},
-            {"hidden","Always Hidden",{{"action","misc_mode"},{"category",defs[row_].key},{"mode","hidden"}}},
-        };
-        choice_list(std::string("misc:")+defs[row_].key,choices,current.mode,controls_y,300);
-        direction_hint(true,"Choose visibility");
+        if(row_<4) {
+            const MiscRule current=rule_for(defs[row_].key);
+            detail(defs[row_].title,mode_label(current.mode),defs[row_].detail);
+            std::vector<Choice> choices={
+                {"default","Default (game)",{{"action","misc_mode"},{"category",defs[row_].key},{"mode","default"}}},
+                {"in_use","Only When In Use",{{"action","misc_mode"},{"category",defs[row_].key},{"mode","in_use"}}},
+                {"hidden","Always Hidden",{{"action","misc_mode"},{"category",defs[row_].key},{"mode","hidden"}}},
+            };
+            choice_list(std::string("misc:")+defs[row_].key,choices,current.mode,controls_y,300);
+            direction_hint(true,"Choose visibility");
+        } else {
+            detail("Sidearm position",kda_label,
+                   "Auto holds your sidearm and other gear holstered on your body off a larger custom shell "
+                   "so it does not clip through. Choose Default to keep it exactly where the game places it.");
+            std::vector<Choice> choices={
+                {"auto","Auto (avoid clipping)",{{"action","keep_default_attachments"},{"value",false}}},
+                {"default","Default (game)",{{"action","keep_default_attachments"},{"value",true}}},
+            };
+            choice_list("misc:attachments",choices,state.keep_default_attachments?"default":"auto",controls_y,300);
+            direction_hint(true,"Choose position");
+        }
 
     } else {
         std::vector<std::string> names; for(const auto& [name,_]:state.presets) names.push_back(name);

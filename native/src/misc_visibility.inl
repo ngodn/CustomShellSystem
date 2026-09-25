@@ -251,10 +251,16 @@ void MiscVisibility::evaluate(const std::map<std::string,MiscRule>& rules, bool 
         if(r->mode=="hidden") hide=true;
         else if(r->mode=="in_use") {
             // Re-read the socket each frame: it changes the instant the item is drawn or used.
-            // Held in the hand -> hidden unless an action (swing/parry/ability) is playing.
             // Resting on its holster/ornament socket -> hidden; it shows when the game moves it
             // off that socket to use it, so each item reveals only when IT is used.
-            hide = misc_held_in_hand(narrow(attach_socket(comp).ToString())) ? !action_active : true;
+            if(!misc_held_in_hand(narrow(attach_socket(comp).ToString()))) hide = true;
+            // A sidearm/ranged weapon only ever leaves its holster to be aimed or fired, so being
+            // in the hand already means "in use" -> show it (aiming is not a montage, so gating a
+            // drawn sidearm on action_active hid it while the player was aiming without firing).
+            else if(cand.category=="sidearm") hide = false;
+            // A melee weapon is held in the hand even at idle, so it only counts as in use while
+            // an action (swing/parry/ability) montage is playing.
+            else hide = !action_active;
         }
         if(hide && !has(want,comp)) want.push_back(cand);
     }

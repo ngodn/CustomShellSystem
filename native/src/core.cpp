@@ -377,6 +377,16 @@ struct Core {
             report(value ? "Harbinger will carry your shell's look."
                          : "Harbinger keeps its own look.");
         }
+        // MISC safety switch: leave stowed weapons on their native game position instead of
+        // running the anti-clip servos. Re-reconcile so the change is visible immediately.
+        else if (action == "keep_default_attachments") {
+            const bool value = command.at("value").get<bool>();
+            if(state.keep_default_attachments!=value) { state.keep_default_attachments=value; dirty=true; }
+            if(!appearance.shell.empty()) { last_shell.clear(); apply_pending=true; }
+            ui_refresh = true;
+            report(value ? "Sidearm keeps the game's default position."
+                         : "Sidearm is held off the body to avoid clipping.");
+        }
         // MISC visibility. A category's mode cycles with left/right or is set outright from the
         // mode list. It mutates state.misc_rules, hands the new rules to the appearance so the
         // world and menu passes pick them up, and persists.
@@ -932,7 +942,8 @@ struct Core {
                         recovery.clear();
                     } else {
                     auto start = std::chrono::steady_clock::now();
-                    appearance.set_attachment_offsets(variant->attachments);
+                    if (state.keep_default_attachments) appearance.set_attachment_offsets({}, false);
+                    else appearance.set_attachment_offsets(variant->attachments);
                     if (appearance.apply(engine, variant->mesh, variant->materials)) {
                         try {
                             appearance.set_ground_offset(variant->ground_offset_cm);

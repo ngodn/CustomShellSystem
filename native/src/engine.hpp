@@ -197,7 +197,7 @@ class AttachmentOffsets {
                   const double socket_basis[3][3],std::array<double,3>& out);
     void apply(RC::Unreal::UObject* component,Tracked& item,const AttachmentOffset& offset,bool live);
 public:
-    void configure(const std::map<std::string,AttachmentOffset>& offsets);
+    void configure(const std::map<std::string,AttachmentOffset>& offsets, bool include_defaults=true);
     void update(RC::Unreal::UObject* component);        // 4 Hz: find and track stowed children
     void push(RC::Unreal::UObject* component);          // every frame: keep them out of the moving body
     void release();
@@ -442,7 +442,7 @@ public:
     Json seal_diagnostics() const;
     Json tune_seals(double lift,double clearance,double max_push) { return offsets_.tune(lift,clearance,max_push); }
 #endif
-    void set_attachment_offsets(const std::map<std::string,AttachmentOffset>& offsets) { offsets_.configure(offsets); }
+    void set_attachment_offsets(const std::map<std::string,AttachmentOffset>& offsets, bool include_defaults=true) { offsets_.configure(offsets, include_defaults); }
     // Put the variant's accessories on the body and hide what they cover. Safe to call
     // repeatedly: it rebuilds only when the outfit or variant changes.
     void sync_items(const Outfit&,const std::string& variant);

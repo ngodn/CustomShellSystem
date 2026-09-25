@@ -191,7 +191,12 @@ bool AttachmentOffsets::push_for(UObject* component,UObject* child,const Attachm
         BonePose anchor; if(!pose(component,collision.anchor,anchor)) return false;
         direction=to_world(anchor.basis,collision.direction);
     }
-    const double push=std::clamp(collision.clearance-distance,-collision.max_push,collision.max_push);
+    // 1.0.x: one-sided servo. The correction may only hold a prop AWAY from the body, never pull it
+    // inward: a stowed weapon the game already hangs at or beyond `clearance` keeps its native
+    // position, and only one sitting closer (about to clip a larger custom body) is pushed out. The
+    // old two-sided form settled every prop to exactly `clearance`, which moved the sidearm off its
+    // default spot even on a stock-sized body. Floor at zero to drop the pull-in.
+    const double push=std::clamp(collision.clearance-distance,0.0,collision.max_push);
 #ifdef CSS_INVENTORY_DEV
     last_push_=push;
 #endif
@@ -297,8 +302,11 @@ static std::map<std::string,AttachmentOffset> default_attachment_offsets() {
 
     return d;
 }
-void AttachmentOffsets::configure(const std::map<std::string,AttachmentOffset>& offsets) {
-    auto combined = default_attachment_offsets();
+void AttachmentOffsets::configure(const std::map<std::string,AttachmentOffset>& offsets, bool include_defaults) {
+    // The MISC "keep default position" switch drops the built-in servos: with no defaults and no
+    // per-variant offsets, offsets_ ends empty, update() no-ops and release() returns every tracked
+    // prop to its native game transform.
+    std::map<std::string,AttachmentOffset> combined = include_defaults ? default_attachment_offsets() : std::map<std::string,AttachmentOffset>{};
     for(const auto& [socket, offset] : offsets) {
         combined[socket] = offset;
     }

@@ -281,6 +281,26 @@ static bool is_component_hidden_in_game(UObject* obj) {
     } catch(...) {}
     return false;
 }
+// Is the player aiming a sidearm, i.e. a ranged weapon drawn into the hand? Only then does the
+// cosmetic idle need to yield, so the game's aim pose holds. A main weapon held at idle must NOT
+// disable the idle: a shell that carries its weapon (Eve, and others) would otherwise never play
+// its custom idle at all. The in-hand weapon's own WeaponSlot tag says which slot it belongs to.
+static bool sidearm_in_hand(UObject* pawn) {
+    if(!pawn) return false;
+    try {
+        auto* weapons=read<UObject*>(pawn,L"WeaponsComponent");
+        if(!weapons) return false;
+        Call in_hand(weapons,L"GetWeaponInHand",1); in_hand.run();
+        auto* weapon=in_hand.get<UObject*>();
+        if(!weapon) return false;
+        auto* slot=weapon->GetPropertyByNameInChain(L"WeaponSlot");   // FGameplayTag; its FName is the first member
+        if(!slot || slot->GetElementSize()<int(sizeof(FName))) return false;
+        FName tag{}; std::memcpy(&tag,reinterpret_cast<std::byte*>(weapon)+slot->GetOffset_Internal(),sizeof(FName));
+        std::string name=narrow(tag.ToString());
+        for(char& c:name) c=char(std::tolower(static_cast<unsigned char>(c)));
+        return name.find("sidearm")!=std::string::npos;
+    } catch(...) { return false; }
+}
 void WalkOverride::set_weapon_hidden(UObject* pawn,bool hide) {
     if(!pawn) return;
     try {
@@ -466,7 +486,11 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     idle_ticks_=standing?idle_ticks_+1:0;
     const bool settled=standing && (engaged_ || idle_ticks_>=WALK_IDLE_SETTLE);
     UObject* want=nullptr; bool hard_off=false; std::string reason;
-    if(settled && has_custom_idle) {
+    // Aiming a sidearm is not a montage, so the player still reads as "settled/standing" here. Treat
+    // only that as not-idle, so the cosmetic idle yields to the aim pose instead of dropping the hands.
+    // A main weapon carried at idle does not count, or a shell's custom idle would never get to play.
+    const bool aiming_sidearm=sidearm_in_hand(pawn);
+    if(settled && has_custom_idle && !aiming_sidearm) {
         auto* post=read<UObject*>(current_mesh,L"PostProcessAnimInstance");
         if(!post) {
             Call get_post(current_mesh,L"GetPostProcessInstance",1);
@@ -489,7 +513,7 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
             }
         }
     }
-    else if(!standing || !settled) {
+    else if(!standing || !settled || aiming_sidearm) {
         if(custom_idle_engaged_) {
             if(auto* post=custom_idle_post_.Get()) {
                 if(has_field(post,L"CSSIdleEnabled",sizeof(bool)))
