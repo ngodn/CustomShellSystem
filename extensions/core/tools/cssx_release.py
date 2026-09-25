@@ -171,20 +171,26 @@ def build(tag: str, output: Path) -> list[Path]:
             stamp = time.gmtime(max(315532800, int(git('show', '-s', '--format=%ct', commit))))[:6]
             common = {'version': version, 'source_commit': commit, 'tag': tag, 'extension_abi': 3, 'manifest_schema': 2, 'menu_schema': 2,
                       'loader_core_abi': 1, 'ue4ss_revision': PIN['revision'], 'ue4ss_dll_sha256': PIN['dll_sha256']}
-            fw = output / f'MSII-CSSX-v{version}.zip'
-            cm = output / f'CSSX-Cheat-Menu-v{version}.zip'
+            # The CSSX framework, Cheat Menu and Performance ship together under
+            # cssx-v<version>/; the Traverse extension has its own version and folder.
+            fwdir = output / f'cssx-v{version}'
+            fwdir.mkdir(parents=True, exist_ok=True)
+            fw = fwdir / f'MSII-CSSX-v{version}.zip'
+            cm = fwdir / f'CSSX-Cheat-Menu-v{version}.zip'
             write_zip(fw, framework_files(version, out), dict(common, product='CSSX', manifest_name='CSSX/release.json'), stamp)
             write_zip(cm, cheat_files(version, out), dict(common, product='CSSX Cheat Menu', requires='CSSX ' + version,
                                                            manifest_name='eins0fx.cheat-menu/release.json'), stamp)
-            pf = output / f'CSSX-Performance-v{version}.zip'
+            pf = fwdir / f'CSSX-Performance-v{version}.zip'
             write_zip(pf, performance_files(version), dict(common, product='CSSX Performance', requires='CSSX ' + version,
                                                         manifest_name='cssx.performance/release.json'), stamp)
             tvers, tfiles = traverse_files(out)
-            tv = output / f'MSII-Traverse-v{tvers}.zip'
+            tvdir = output / f'cssx-traverse-v{tvers}'
+            tvdir.mkdir(parents=True, exist_ok=True)
+            tv = tvdir / f'MSII-Traverse-v{tvers}.zip'
             write_zip(tv, tfiles, dict(common, version=tvers, product='CSSX Traverse', requires='CSSX ' + version,
                                        manifest_name='eins0fx.traverse/release.json'), stamp)
             for name in ('main.dll', 'cssx_core.dll', 'cheat_menu.dll'):
-                shutil.copy2(out / name, output / f'{name}.{version}.built')
+                shutil.copy2(out / name, fwdir / f'{name}.{version}.built')
             return [fw, cm, pf, tv]
         finally:
             subprocess.run(['git', 'worktree', 'remove', '--force', str(tree)], cwd=REPO, check=False, capture_output=True)
