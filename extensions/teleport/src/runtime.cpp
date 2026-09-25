@@ -1,11 +1,19 @@
 #include "teleport.hpp"
 #include <string>
 
-// The world-map watch. render() runs once per rendered frame while a world is
-// ready. Outside a menu it does nothing (one branch), so there is no gameplay
-// cost. Inside a menu it scans at ~20 Hz over cached handles to find the hovered
-// map point, shows the prompt, reads the Teleport key, and fires the game's own
-// streaming teleport. No reflected work happens on the gameplay path.
+// The world-map watch. render() runs once per rendered frame. Outside a menu it does
+// nothing except drive an in-flight meteor. While the world map is open it finds the
+// hovered map icon (the one flagged Selected under the crosshair), shows the native
+// Traverse prompt in the map's prompt bar, and on the key opens the game's
+// confirmation dialog (or, with confirmation off, traverses straight away). The scan
+// is throttled to ~16 Hz; the only per-frame work is the meteor descent while it is
+// running.
+//
+// Path, verified live:
+//   controller -> "User Interface Handler Component" -> ActiveMenu (WBP_Menu_Game)
+//   -> WBP_Menu_Main -> WBP_MGT_WorldMap (bOpen == map tab active)
+//   -> WBP_Icons[] -> the icon with Selected == true -> OwnerActor (teleport handler).
+// The destination transform comes from that handler (see destination_transform).
 
 namespace teleport {
 
@@ -15,18 +23,29 @@ bool is_object(const Json& j) { return j.is_object() && j.contains("$object"); }
 
 void Extension::invalidate_handles() {
     handles_ready_ = false;
-    controller_ = world_ = ui_handler_ = map_handler_ = nullptr;
+    icons_ready_ = false;
+    controller_ = world_ = ui_handler_ = map_screen_ = nullptr;
+    icons_ = nullptr;
+    map_prompts_ = prompt_box_ = nullptr;
 }
 
 bool Extension::refresh_handles() {
+    icons_ready_ = false;
+    icons_ = nullptr;
+    map_prompts_ = prompt_box_ = nullptr;
     try {
         auto p = host_.player();
         controller_ = p.value("controller", Json());
         world_ = p.value("world", Json());
         if (!is_object(controller_)) return false;
         ui_handler_ = host_.get(controller_, "User Interface Handler Component");
-        map_handler_ = host_.get(controller_, "World Map Handler");
-        if (!is_object(map_handler_)) return false;
+        if (!is_object(ui_handler_)) return false;
+        auto active = host_.get(ui_handler_, "ActiveMenu");   // null unless a menu is open
+        if (!is_object(active)) return false;
+        auto main = host_.get(active, "WBP_Menu_Main");
+        if (!is_object(main)) return false;
+        map_screen_ = host_.get(main, "WBP_MGT_WorldMap");
+        if (!is_object(map_screen_)) return false;
         handles_ready_ = true;
         return true;
     } catch (...) {
@@ -35,27 +54,24 @@ bool Extension::refresh_handles() {
     }
 }
 
-Json Extension::focused_selector() {
-    Json widgets;
-    try { widgets = host_.get(map_handler_, "MapActorWidgets"); }
-    catch (...) { handles_ready_ = false; return nullptr; }
-    if (!widgets.is_array() || widgets.empty()) return nullptr;
-    if (!diag_logged_) {
-        diag_logged_ = true;
-        try { host_.log("world map open: " + std::to_string(widgets.size()) + " map actor widgets", "debug"); } catch (...) {}
+bool Extension::map_open() {
+    try { auto o = host_.get(map_screen_, "bOpen"); return o.is_boolean() && o.get<bool>(); }
+    catch (...) { handles_ready_ = false; return false; }
+}
+
+Json Extension::hovered_icon() {
+    if (!icons_ready_) {
+        try { icons_ = host_.get(map_screen_, "WBP_Icons"); }
+        catch (...) { handles_ready_ = false; return nullptr; }
+        if (!icons_.is_array()) { icons_ = nullptr; return nullptr; }
+        icons_ready_ = true;
     }
-    for (const auto& w : widgets) {
-        if (!is_object(w)) continue;
-        if (w.value("class", std::string{}).find("LandingAreaSelector") == std::string::npos) continue;
-        bool shown = false;
-        try { auto s = host_.get(w, "IsShown"); shown = s.is_boolean() && s.get<bool>(); } catch (...) {}
-        if (!shown) continue;
-        Json widget;
-        try { widget = host_.get(w, "MapActorWidget"); } catch (...) { continue; }
-        if (!is_object(widget)) continue;
-        bool focus = false;
-        try { auto fo = host_.get(widget, "HasFocus"); focus = fo.is_boolean() && fo.get<bool>(); } catch (...) {}
-        if (focus) return widget;
+    for (const auto& ic : icons_) {
+        if (!is_object(ic)) continue;
+        bool sel = false;
+        try { auto s = host_.get(ic, "Selected"); sel = s.is_boolean() && s.get<bool>(); }
+        catch (...) { handles_ready_ = false; icons_ready_ = false; return nullptr; }
+        if (sel) return ic;
     }
     return nullptr;
 }
@@ -73,72 +89,69 @@ bool Extension::edge(const std::vector<std::string>& keys, bool& latch) {
     return rising;
 }
 
-std::optional<Json> Extension::destination_transform(const Json& area) {
-    // Preferred: the landing area's beacon teleport object gives the authored
-    // landing spot (already placed in front of the point), as an FRotator pair.
-    try {
-        auto beacon = host_.get(area, "TeleportHandlerObject");
-        if (is_object(beacon)) {
-            auto loc = host_.call(beacon, "GetTeleportLocation");
-            auto rot = host_.call(beacon, "GetTeleportRotation");
-            auto ctl = host_.call(beacon, "GetTeleportControlRotation");
-            if (loc.is_object() && rot.is_object()) {
-                if (!ctl.is_object()) ctl = rot;
-                return Json{{"loc", loc}, {"rot", rot}, {"control", ctl}};
+std::optional<Json> Extension::destination_transform(const Json& owner) {
+    // Turn a game FTransform (quaternion rotation) into the location + rotators
+    // the streaming teleport wants.
+    auto from_tf = [&](const Json& tf) -> std::optional<Json> {
+        if (!tf.is_object() || !tf.contains("Translation")) return std::nullopt;
+        const auto loc = tf["Translation"];
+        Json rot;
+        try {
+            auto math = host_.request({{"op", "find"}, {"path", "/Script/Engine.Default__KismetMathLibrary"}});
+            if (is_object(math)) {
+                auto br = host_.request({{"op", "call"}, {"target", math}, {"function", "BreakTransform"}, {"args", {{"InTransform", tf}}}});
+                if (br.is_object()) rot = br.value("Rotation", Json());
             }
+        } catch (...) {}
+        if (loc.is_object() && rot.is_object()) return Json{{"loc", loc}, {"rot", rot}, {"control", rot}, {"zone", nullptr}};
+        return std::nullopt;
+    };
+    // Beacon (BP_LandingAreaBase): GetStartTransform(false) is where the player
+    // stands after arriving. Verified to match the game's own landing spot.
+    try {
+        auto r = host_.request({{"op", "call"}, {"target", owner}, {"function", "GetStartTransform"}, {"args", {{"InvertRotation", false}}}});
+        if (r.is_object()) { auto d = from_tf(r.value("ReturnValue", Json())); if (d) return d; }
+    } catch (...) {}
+    // STH handler (dungeon / gate / well): GetOptionalTeleportDestination is this
+    // point's own transform (not the linked exit the seamless getters return).
+    try {
+        auto r = host_.request({{"op", "call"}, {"target", owner}, {"function", "GetOptionalTeleportDestination"}});
+        if (r.is_object() && r.value("Success", false)) { auto d = from_tf(r.value("ReturnValue", Json())); if (d) return d; }
+    } catch (...) {}
+    // Fallbacks: seamless getters, then the actor transform.
+    try {
+        auto loc = host_.call(owner, "GetSeamlessTeleportLocation");
+        auto rot = host_.call(owner, "GetSeamlessTeleportRotation");
+        auto ctl = host_.call(owner, "GetSeamlessTeleportControlRotation");
+        if (loc.is_object() && rot.is_object()) {
+            if (!ctl.is_object()) ctl = rot;
+            return Json{{"loc", loc}, {"rot", rot}, {"control", ctl}, {"zone", nullptr}};
         }
     } catch (...) {}
-    // Fallback: the landing area actor's own transform.
     try {
-        auto loc = host_.call(area, "K2_GetActorLocation");
-        auto rot = host_.call(area, "K2_GetActorRotation");
-        if (loc.is_object() && rot.is_object()) return Json{{"loc", loc}, {"rot", rot}, {"control", rot}};
+        auto loc = host_.call(owner, "K2_GetActorLocation");
+        auto rot = host_.call(owner, "K2_GetActorRotation");
+        if (loc.is_object() && rot.is_object()) return Json{{"loc", loc}, {"rot", rot}, {"control", rot}, {"zone", nullptr}};
     } catch (...) {}
     return std::nullopt;
 }
 
-void Extension::push_front_camera() {
-    Json cam;
-    try { cam = host_.get(controller_, "PlayerCameraManager"); } catch (...) { return; }
-    if (!is_object(cam)) return;
-    Json pawn;
-    try { pawn = host_.player().value("pawn", Json()); } catch (...) { return; }
-    if (!is_object(pawn)) return;
-    Json fwd;
-    try { fwd = host_.call(pawn, "GetActorForwardVector"); } catch (...) { return; }
-    if (!fwd.is_object()) return;
-    const double x = fwd.value("X", 0.0), y = fwd.value("Y", 0.0), z = fwd.value("Z", 0.0);
-    if (x == 0.0 && y == 0.0 && z == 0.0) return;
-    // View direction that looks at the character from the front: opposite the pawn's
-    // facing. bDisableOnLookInput stays false so the player is never locked out.
-    const Json dir = {{"X", -x}, {"Y", -y}, {"Z", -z}};
-    try {
-        host_.call(cam, "SetDesiredViewFromDirection",
-                   {{"BlendTime", 0.5}, {"bDisableOnLookInput", false}, {"Direction", dir}});
-    } catch (...) {}
-}
+bool Extension::teleport_to(const Json& owner) {
+    auto dest = destination_transform(owner);
+    if (!dest) { report("Could not read that point's traverse location."); return false; }
+    if (!is_object(world_)) { report("No world to traverse in."); return false; }
 
-void Extension::clear_camera() {
-    // Nothing to undo: the departure view is a one-shot desired-view blend that the
-    // gameplay camera resumes on its own. Kept for lifecycle symmetry.
-    camera_clear_in_ = 0;
-    camera_state_ = nullptr;
-}
-
-bool Extension::teleport_to(const Json& area) {
-    auto dest = destination_transform(area);
-    if (!dest) { report("Could not read that point's teleport location."); return false; }
-    if (!is_object(world_)) { report("No world to teleport in."); return false; }
-
-    // Close the world map so the jump plays in the world, not behind the menu.
+    hide_dialog();
     try { host_.call(ui_handler_, "HandleGameMenu", {{"SubTabIndex", 0}, {"AllowClose", true}}); } catch (...) {}
 
-    if (camera_ == "front") { try { push_front_camera(); } catch (...) {} }
+    // With the meteor on, the arrival is a full skydive under the game's own camera
+    // states; with it off, it is a plain streaming teleport that keeps the game view.
+    const bool meteor_run = meteor_ && load_meteor_assets();
 
     Json lib;
     try { lib = host_.request({{"op", "class_default"}, {"class", "BPFL_WorldStreaming_C"}}); }
-    catch (...) { report("Teleport library is unavailable."); return false; }
-    if (!is_object(lib)) { report("Teleport library is unavailable."); return false; }
+    catch (...) { report("Traverse library is unavailable."); return false; }
+    if (!is_object(lib)) { report("Traverse library is unavailable."); return false; }
 
     const Json args = {
         {"Location", (*dest)["loc"]},
@@ -152,85 +165,112 @@ bool Extension::teleport_to(const Json& area) {
         {"__WorldContext", world_},
     };
     try { host_.call(lib, "TeleportPlayerWithStreaming", args); }
-    catch (const std::exception& e) { report(std::string("Teleport failed: ") + e.what()); return false; }
+    catch (const std::exception& e) { report(std::string("Traverse failed: ") + e.what()); return false; }
 
-    hide_prompt();
-    hide_confirm();
+    // Arrive as a meteor: hide the character now (the teleport fade covers it) and
+    // let render() drive the fall. begin_meteor is a no-op if it cannot grab the pawn.
+    if (meteor_run) begin_meteor((*dest)["loc"], (*dest)["rot"]);
+
+    my_prompt_ = nullptr;
+    map_prompts_ = prompt_box_ = nullptr;
+    prompt_text_shown_.clear();
     confirming_ = false;
-    hovered_area_ = nullptr;
-    press_latch_ = cancel_latch_ = true;   // swallow the release of the confirming press
-    camera_clear_in_ = 4.0;
-    report("Teleporting to " + hovered_name_ + ".");
+    hovered_owner_ = nullptr;
+    icons_ready_ = false;
+    press_latch_ = cancel_latch_ = true;
+    report("Traversing to " + hovered_name_ + ".");
     return true;
 }
 
 void Extension::scan(const CssxFrame* frame) {
-    if (!handles_ready_ && !refresh_handles()) {
-        if (prompt_visible_) hide_prompt();
-        if (confirm_visible_) hide_confirm();
-        return;
-    }
-    // While confirming, the target is locked to what was hovered when the prompt
-    // was pressed, so moving the map cursor behind the dialog cannot retarget it.
-    if (confirming_) {
-        if (prompt_visible_) hide_prompt();
-        show_confirm(frame, confirm_name_);
-        if (edge({"T", "Gamepad_RightThumbstick"}, press_latch_)) { confirming_ = false; hide_confirm(); teleport_to(confirm_area_); return; }
-        if (edge({"Escape", "Gamepad_FaceButton_Right"}, cancel_latch_)) { confirming_ = false; hide_confirm(); report("Teleport cancelled."); }
-        return;
-    }
-    Json sel = focused_selector();
-    if (!is_object(sel)) {
-        if (confirming_) { confirming_ = false; hide_confirm(); }
-        if (prompt_visible_) hide_prompt();
-        hovered_area_ = nullptr;
+    (void)frame;
+    if (!handles_ready_ && !refresh_handles()) { hide_prompt(); hide_dialog(); confirming_ = false; return; }
+    if (!map_open()) {
+        icons_ready_ = false;
+        icons_ = nullptr;
+        map_prompts_ = prompt_box_ = nullptr;
+        hide_prompt();
+        hide_dialog();
+        confirming_ = false;
+        hovered_owner_ = nullptr;
         press_latch_ = cancel_latch_ = false;
         return;
     }
 
-    // Resolve the hovered landing area (or a gate-only selector).
-    Json area;
-    try { auto r = host_.call(sel, "GetSelectedLandingArea"); if (r.is_object()) area = r.value("Output", Json()); } catch (...) {}
-    if (!is_object(area)) {
-        try { auto g = host_.get(sel, "LinkedGate"); if (is_object(g)) area = g; } catch (...) {}
-    }
-    if (!is_object(area)) {
-        if (prompt_visible_) hide_prompt();
-        hovered_area_ = nullptr;
+    // Confirmation dialog is up. Its own listener cannot fire (it is not the
+    // focused input layer), so we drive it: left/right cycles Traverse (0) and
+    // Cancel (1) with a live highlight, the game's confirm button acts on the
+    // selection, the game's back button cancels. The map is frozen underneath.
+    if (confirming_) {
+        hide_prompt();
+        bool alive = false;
+        try { alive = is_object(my_dialog_) && host_.request({{"op", "valid"}, {"target", my_dialog_}}) == true; } catch (...) {}
+        if (!alive) { confirming_ = false; hide_dialog(); return; }
+        // Auto-cancel so a dialog can never wedge the feature (e.g. controller input
+        // not reaching us). ~10 s at the 16 Hz scan rate.
+        if (++confirm_scans_ > 160) { confirming_ = false; hide_dialog(); report("Traverse cancelled."); return; }
+        bool left = false, right = false;
+        try {
+            auto r = host_.request({{"op", "input.keys"}, {"target", controller_},
+                {"keys", {"Left", "A", "Gamepad_DPad_Left", "Gamepad_LeftStick_Left",
+                          "Right", "D", "Gamepad_DPad_Right", "Gamepad_LeftStick_Right"}}});
+            left = r.value("Left", false) || r.value("A", false)
+                || r.value("Gamepad_DPad_Left", false) || r.value("Gamepad_LeftStick_Left", false);
+            right = r.value("Right", false) || r.value("D", false)
+                || r.value("Gamepad_DPad_Right", false) || r.value("Gamepad_LeftStick_Right", false);
+        } catch (...) {}
+        const bool nav = left || right;
+        if (nav && !nav_latch_) {
+            const int want = left ? 0 : 1;
+            if (want != last_option_index_) { last_option_index_ = want; highlight_option(want); }
+        }
+        nav_latch_ = nav;
+        if (edge({"Enter", "E", "SpaceBar", "Gamepad_FaceButton_Bottom"}, press_latch_)) {
+            confirming_ = false; hide_dialog();
+            if (last_option_index_ == 0) teleport_to(confirm_owner_); else report("Traverse cancelled.");
+            return;
+        }
+        if (edge({"Escape", "BackSpace", "Gamepad_FaceButton_Right"}, cancel_latch_)) { confirming_ = false; hide_dialog(); report("Traverse cancelled."); }
         return;
     }
 
-    // Eligibility: honour "allow locked".
+    Json icon = hovered_icon();
+    Json owner;
+    if (is_object(icon)) { try { owner = host_.get(icon, "OwnerActor"); } catch (...) {} }
+
     bool eligible = true;
-    for (const char* fn : {"CanFastTravel", "EligibleForFastTravel", "IsUnlocked"}) {
-        try { auto v = host_.call(area, fn); if (v.is_boolean()) { eligible = v.get<bool>(); break; } } catch (...) {}
+    if (is_object(owner)) {
+        for (const char* fn : {"IsUnlocked", "CanFastTravel", "EligibleForFastTravel"}) {
+            try { auto v = host_.call(owner, fn); if (v.is_boolean()) { eligible = v.get<bool>(); break; } } catch (...) {}
+        }
     }
-    hovered_eligible_ = eligible;
-    if (!eligible && !allow_locked_) {
-        if (prompt_visible_) hide_prompt();
-        if (confirming_) { confirming_ = false; hide_confirm(); }
-        hovered_area_ = nullptr;
+
+    const bool showable = is_object(owner) && (eligible || allow_locked_);
+    if (!showable) {
+        hide_prompt();
+        hovered_owner_ = nullptr;
+        press_latch_ = false;
         return;
     }
 
-    // Name.
     std::string name = "this point";
-    try { auto n = host_.get(area, "Area Name"); if (n.is_string() && !n.get<std::string>().empty()) name = n.get<std::string>(); } catch (...) {}
-    if (name == "this point") {
-        try { auto n = host_.call(area, "GetLocationName"); if (n.is_string() && !n.get<std::string>().empty()) name = n.get<std::string>(); } catch (...) {}
+    if (is_object(icon)) {
+        try { auto tt = host_.get(icon, "MapTooltip"); if (is_object(tt)) { auto n = host_.get(tt, "Name"); if (n.is_string() && !n.get<std::string>().empty()) name = n.get<std::string>(); } }
+        catch (...) {}
     }
-    hovered_area_ = area;
+    hovered_owner_ = owner;
     hovered_name_ = name;
 
-    show_prompt(frame, eligible ? name : name + "  (locked)");
-    if (edge({"T", "Gamepad_RightThumbstick"}, press_latch_)) {
-        if (confirmation_ == "skip") { teleport_to(area); return; }
-        confirm_area_ = area;
-        confirm_name_ = name;
+    show_prompt("Traverse");
+    if (edge({"T", "Gamepad_LeftThumbstick"}, press_latch_)) {
+        if (confirmation_ == "skip") { teleport_to(owner); return; }
+        confirm_owner_ = owner;
         confirming_ = true;
+        last_option_index_ = 0;
+        confirm_scans_ = 0;
         hide_prompt();
-        cancel_latch_ = true;   // ignore a cancel key that happens to be down this instant
-        show_confirm(frame, name);
+        cancel_latch_ = true;
+        show_dialog(name);
     }
 }
 
@@ -238,34 +278,43 @@ int Extension::render(const CssxFrame* frame) {
     if (stopped_ || !frame) return 1;
     if (frame->world_generation != world_gen_) {
         world_gen_ = frame->world_generation;
+        // A world swap invalidates every cached handle, including the in-flight
+        // meteor's; drop it without touching stale objects, then forget the assets.
+        cleanup_meteor(false);
+        meteor_assets_ready_ = false;
+        niagara_lib_ = ww_statics_ = cam_anim_class_ = cam_combat_class_ = nullptr;
+        a_comet_ = a_impact_ = a_dive_montage_ = a_land_montage_ = a_ff_dive_ = a_ff_land_ = a_shake_ = a_snd_land_ = nullptr;
+        // Tear the prompt and dialog down through their own paths so the map input
+        // listeners frozen for the confirmation are re-enabled and the widgets are
+        // unparented; both tolerate stale handles. Then drop the cached references.
+        hide_prompt();
+        hide_dialog();
+        my_prompt_ = nullptr;
+        dialog_class_ = nullptr;
+        prompt_text_shown_.clear();
+        prompt_refs_ready_ = false;
+        widget_lib_ = prompt_class_ = prompt_template_ = nullptr;
+        confirming_ = false;
         invalidate_handles();
-        // The host dropped our layers on the world change; forget their ids.
-        prompt_bg_ = prompt_key_ = prompt_label_ = 0;
-        confirm_bg_ = confirm_title_ = confirm_msg_ = confirm_yes_ = confirm_no_ = 0;
-        prompt_visible_ = confirm_visible_ = false;
-        panel_tex_ = 0;
-        tex_tried_ = false;
-        diag_logged_ = false;
-        confirming_ = false;
     }
+    // The meteor plays out after the map closes, so drive it every frame (for a
+    // smooth fall) before the in-menu gate and let it own the frame while active.
+    if (meteor_phase_ != MeteorPhase::Idle) { tick_meteor(frame->seconds); return 1; }
     if (!enable_ || !frame->in_menu) {
-        if (prompt_visible_) hide_prompt();
-        if (confirm_visible_) hide_confirm();
+        if (is_object(my_prompt_)) { hide_prompt(); my_prompt_ = nullptr; }
+        if (is_object(my_dialog_)) { hide_dialog(); }
         confirming_ = false;
-        hovered_area_ = nullptr;
+        hovered_owner_ = nullptr;
         press_latch_ = cancel_latch_ = false;
-        scan_acc_ = 1e9;   // scan immediately when a menu next opens
+        handles_ready_ = false;
+        scan_acc_ = 1e9;
         return 1;
     }
     scan_acc_ += frame->seconds;
-    if (scan_acc_ < 0.05) return 1;   // ~20 Hz while a menu is open
+    if (scan_acc_ < 0.06) return 1;   // ~16 Hz while a menu is open
     scan_acc_ = 0;
     try { scan(frame); }
-    catch (...) {
-        handles_ready_ = false;
-        if (prompt_visible_) hide_prompt();
-        if (confirm_visible_) hide_confirm();
-    }
+    catch (...) { handles_ready_ = false; try { hide_prompt(); hide_dialog(); } catch (...) {} confirming_ = false; }
     return 1;
 }
 

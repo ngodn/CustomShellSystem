@@ -59,7 +59,8 @@ set_target_properties(cheat_menu PROPERTIES PREFIX "")
 set(CSSX_TELEPORT "${CSSX_REPO}/extensions/teleport")
 add_library(teleport SHARED
   "${CSSX_TELEPORT}/src/main.cpp" "${CSSX_TELEPORT}/src/teleport.cpp"
-  "${CSSX_TELEPORT}/src/runtime.cpp" "${CSSX_TELEPORT}/src/overlay.cpp")
+  "${CSSX_TELEPORT}/src/runtime.cpp" "${CSSX_TELEPORT}/src/overlay.cpp"
+  "${CSSX_TELEPORT}/src/meteor.cpp")
 target_include_directories(teleport PRIVATE include "${CSSX_VENDOR}")
 set_target_properties(teleport PROPERTIES PREFIX "" POSITION_INDEPENDENT_CODE ON)
 

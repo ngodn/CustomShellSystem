@@ -1,0 +1,51 @@
+[center][size=6][b]Traverse[/b][/size]
+[size=4]Fast travel to any point on the world map, and arrive as a meteor.[/size][/center]
+
+[center][img]GIF_RAW_URL_HERE[/img][/center]
+
+[size=5][b]What it does[/b][/size]
+Open the world map, hover any beacon, gate, dungeon or well, and a native [b]Traverse[/b] prompt appears in the map's own prompt bar. Press the button and you travel straight there, using the game's own streaming teleport, so there is no loading screen. It works from anywhere on the map, including points you have not unlocked yet.
+
+By default the arrival is a [b]meteor[/b]: your character drops from the sky as the game's own comet, under the game's dive and landing cameras, and touches down with the 4-point landing, impact effects, controller rumble and sound. It is the launcher dive, reused for every traverse.
+
+[size=5][b]Features[/b][/size]
+[list]
+[*][b]Meteor arrival[/b] rebuilt from the game's own launcher dive: comet, dive camera, 4-point landing, impact VFX, rumble and sound. Can be turned off for a plain streaming teleport.
+[*][b]Native everything[/b]: the on-map prompt and the confirmation dialog are the game's own widgets, so it matches the game's style, spacing and controls exactly.
+[*][b]Keyboard and controller[/b]: T on keyboard, or click the left stick (L3) on a controller. The confirmation dialog is fully controllable with the dpad or left stick.
+[*][b]Works from anywhere[/b]: traverse to any point, not only the ones the game lets you fast travel to (optional).
+[*][b]Shell-agnostic[/b]: works the same on a stock shell or a CSS custom shell.
+[*][b]No loading screen[/b], no FPS cost when idle.
+[/list]
+
+[size=5][b]Requirements[/b][/size]
+[list]
+[*][b]CSSX 1.1.1[/b] or newer. Install CSSX first.
+[/list]
+
+[size=5][b]Installation[/b][/size]
+[list=1]
+[*]Install CSSX (1.1.1+).
+[*]Extract this mod into [font=Courier New]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/[/font] so the [font=Courier New]eins0fx.traverse[/font] folder lands in [font=Courier New]Mods/CSSX/extensions/[/font].
+[*]Launch the game. Traverse appears as a tab in the CSSX menu.
+[/list]
+
+[size=5][b]How to use[/b][/size]
+[list]
+[*]Open the world map and hover a point. The Traverse prompt shows in the map's prompt bar.
+[*]Press [b]T[/b] (keyboard) or click the [b]left stick / L3[/b] (controller).
+[*]With confirmation on, pick Traverse or Cancel with the dpad or left stick, then confirm or back out.
+[/list]
+
+[size=5][b]Settings[/b] (CSSX tab > Traverse)[/size]
+[list]
+[*][b]Map traverse[/b]: turn the whole feature on or off.
+[*][b]Confirmation[/b]: ask before traversing, or go on the first press.
+[*][b]Allow locked points[/b]: traverse to points you have not unlocked yet. Turn off to show the prompt only where the game already lets you fast travel.
+[*][b]Meteor arrival[/b]: arrive as a falling meteor, or with a plain streaming teleport.
+[/list]
+
+[size=5][b]Credits[/b][/size]
+[list]
+[*]Built on CSSX. Made by _eins0fx.
+[/list]

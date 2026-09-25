@@ -143,7 +143,13 @@ def stage(game: Path, dev: bool, cheat_menu: bool, core_only: bool = False, perf
         atomic(target / 'extension.json', manifest)
     if teleport:
         src = REPO / 'extensions/teleport'
-        target = mod / 'extensions/eins0fx.teleport'
+        tid = json.loads((src / 'extension.json').read_text())['id']
+        # remove any previous id folder for this source (the mod was renamed)
+        for old_dir in ('eins0fx.teleport', 'eins0fx.traverse'):
+            if old_dir != tid:
+                import shutil as _sh
+                _sh.rmtree(mod / 'extensions' / old_dir, ignore_errors=True)
+        target = mod / 'extensions' / tid
         target.mkdir(parents=True, exist_ok=True)
         for name in ('menu.json', 'README.txt', 'THIRD_PARTY_NOTICES.txt'):
             copy_verified(src / name, target / name)

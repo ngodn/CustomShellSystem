@@ -239,6 +239,29 @@ void Bridge::encode(FProperty* p,void* data,const Json& value,unsigned depth) {
     }
     if(p->IsA<FNameProperty>()) {auto text=wide(value.get<std::string>());FName name(text.c_str());p->CopyCompleteValue(data,&name);return;}
     if(p->IsA<FStrProperty>()) {auto text=wide(value.get<std::string>());FString s(text.c_str());p->CopyCompleteValue(data,&s);return;}
+    if(p->IsA<FTextProperty>()) {
+        // Build an FText from a plain string through the same Kismet path decode uses in
+        // reverse. The result is a runtime (non-localized) text, which is what a mod that
+        // sets UI copy wants.
+        Call convert(find(L"/Script/Engine.Default__KismetTextLibrary"),L"Conv_StringToText",2);
+        auto* input=convert.param(L"InString");
+        if(!input->IsA<FStrProperty>()) throw std::runtime_error("Localized text conversion is unsupported");
+        auto text=wide(value.get<std::string>());FString s(text.c_str());input->CopyCompleteValue(convert.data(input),&s);
+        convert.run();
+        auto* result=convert.param(L"ReturnValue");
+        if(!result->SameType(p) || result->GetElementSize()!=p->GetElementSize()) throw std::runtime_error("Localized text layout is unsupported");
+        p->CopyCompleteValue(data,convert.data(result));return;
+    }
+    if(p->IsA<FArrayProperty>()) {
+        // Element-wise write into the existing array without changing its length
+        // (growing needs the allocator's ResizeAllocation, which the pinned UE4SS
+        // import library does not export). Same count only.
+        if(!value.is_array()) throw std::runtime_error("Array input required");
+        auto* a=static_cast<FArrayProperty*>(p);FScriptArrayHelper array(a,data);
+        if(int(value.size())!=array.Num()) throw std::runtime_error("Array length is fixed; write the same number of elements");
+        for(size_t i=0;i<value.size();++i) encode(a->GetInner(),array.GetRawPtr(static_cast<int32>(i)),value[i],depth+1);
+        return;
+    }
     if(p->IsA<FStructProperty>()) {
         if(!value.is_object()) throw std::runtime_error("Struct requires an object");
         auto* type=static_cast<FStructProperty*>(p)->GetStruct().Get();
@@ -393,6 +416,21 @@ Json Bridge::request(const PlayerContext& player,const Json& request) {
                 result.push_back({{"name",name},{"size",p->GetElementSize()},{"array_dim",p->GetArrayDim()}});
             }
             if(!request.value("inherited",false)) break;
+        }
+        return result;
+    }
+    if(op=="functions") {
+        Json result=Json::array();std::set<std::string> seen;unsigned depth=0;
+        const auto filter=request.value("contains",std::string());
+        for(UStruct* type=object->GetClassPrivate();type;type=type->GetSuperStruct()) {
+            if(++depth>64) throw std::runtime_error("Class hierarchy exceeds bound");
+            for(auto* fn:type->ForEachFunction()) {
+                auto name=narrow(fn->GetName());if(!seen.insert(name).second) continue;
+                if(!filter.empty() && name.find(filter)==std::string::npos) continue;
+                if(result.size()>=4096) throw std::runtime_error("Function metadata exceeds bound");
+                result.push_back(name);
+            }
+            if(!request.value("inherited",true)) break;
         }
         return result;
     }

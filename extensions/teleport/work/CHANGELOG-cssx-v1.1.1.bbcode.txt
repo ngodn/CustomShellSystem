@@ -1,0 +1,21 @@
+[size=4][b]CSSX 1.1.1[/b][/size]
+
+A small, backward-compatible update to the CSSX host. Existing extensions built for 1.1.0 keep working with no changes; this release adds a few reflection-bridge capabilities that native extensions can use.
+
+[b]Reflection bridge[/b]
+[list]
+[*][b]FText writes[/b]: extensions can now set FText properties from a plain string, routed through the game's own text conversion, so native UI text written through the bridge displays correctly.
+[*][b]Array writes[/b]: extensions can now write array properties element-for-element (same-length writes), for reflected fields that take a fixed list.
+[*][b]New "functions" op[/b]: list a class's callable reflected functions from the dev channel, for inspecting and reverse-engineering game classes.
+[/list]
+
+[b]Notes[/b]
+[list]
+[*]Additive and safe: no behaviour changes for existing extensions or the Cheat Menu.
+[*]This is the host version the new [b]Traverse[/b] extension is built against. Traverse ships as its own separate download.
+[/list]
+
+[b]Install[/b]
+[list]
+[*]Extract into [font=Courier New]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/[/font] so it lands in [font=Courier New]Mods/CSSX/[/font], overwriting the previous version. Your settings are kept.
+[/list]

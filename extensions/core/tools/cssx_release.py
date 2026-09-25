@@ -83,6 +83,23 @@ def performance_files(version: str) -> dict[str, bytes]:
     }
 
 
+def traverse_files(build: Path) -> tuple[str, dict[str, bytes]]:
+    # The Traverse extension carries its own version (extension.json), independent of
+    # the CSSX framework version. Ships like the Cheat Menu: extracts under extensions/.
+    src = REPO / 'extensions/teleport'
+    manifest = json.loads((src / 'extension.json').read_text())
+    manifest['entry'] = 'teleport.dll'
+    base = manifest['id'] + '/'
+    files = {
+        base + 'extension.json': (json.dumps(manifest, indent=2) + '\n').encode(),
+        base + 'teleport.dll': (build / 'teleport.dll').read_bytes(),
+        base + 'menu.json': (src / 'menu.json').read_bytes(),
+    }
+    for name in manifest.get('files', []):
+        files[base + name] = (src / name).read_bytes()
+    return manifest['version'], files
+
+
 def write_zip(target: Path, files: dict[str, bytes], meta: dict, stamp) -> None:
     if target.exists():
         raise FileExistsError(target)
@@ -162,9 +179,13 @@ def build(tag: str, output: Path) -> list[Path]:
             pf = output / f'CSSX-Performance-v{version}.zip'
             write_zip(pf, performance_files(version), dict(common, product='CSSX Performance', requires='CSSX ' + version,
                                                         manifest_name='cssx.performance/release.json'), stamp)
+            tvers, tfiles = traverse_files(out)
+            tv = output / f'MSII-Traverse-v{tvers}.zip'
+            write_zip(tv, tfiles, dict(common, version=tvers, product='CSSX Traverse', requires='CSSX ' + version,
+                                       manifest_name='eins0fx.traverse/release.json'), stamp)
             for name in ('main.dll', 'cssx_core.dll', 'cheat_menu.dll'):
                 shutil.copy2(out / name, output / f'{name}.{version}.built')
-            return [fw, cm, pf]
+            return [fw, cm, pf, tv]
         finally:
             subprocess.run(['git', 'worktree', 'remove', '--force', str(tree)], cwd=REPO, check=False, capture_output=True)
 
