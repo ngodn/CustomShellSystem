@@ -132,6 +132,11 @@ void Menu::close() {
     if(!main_.Get() || !bool_of(main_.Get(),L"bOpen")) return;
     auto* handler=handler_.Get(); if(!handler) return;
     if(deps_.log) deps_.log("Menu: closing the Player Menu from the CSSX page");
+    // Leaving the page from here (a key, a click, an extension's menu.close inside an event)
+    // must restore what the page borrowed before the tick's own leave path is skipped:
+    // the game's input listeners a confirmation froze, and the dialog itself.
+    try { dialog_close(); } catch(...) {}
+    confirm_=nullptr; picker_=false; hits_.clear(); sliders_.clear(); drag_slider_=-1;
     Call close_call(handler,L"HandleGameMenu",2); close_call.set(L"SubTabIndex",int32_t{0}); close_call.set(L"AllowClose",true); close_call.run();
     active_=was_active_=false;
 }
@@ -323,7 +328,11 @@ void Menu::tick(const PlayerContext& player,double) {
     const bool menu_open=bool_of(main,L"bOpen");
     if(open_requested_ && menu_open) { open_requested_=false; try { navigate(tab_index_); } catch(const std::exception& e) { if(deps_.log) deps_.log(std::string("Could not select the CSSX tab: ")+e.what()); } }
     if(open_requested_ && now-open_requested_at_>3000) open_requested_=false;
-    if(!menu_open) { active_=false; if(was_active_) { was_active_=false; transition_started_=0; try { dialog_close(); } catch(...) {} } return; }
+    if(!menu_open) {
+        active_=false; was_active_=false; transition_started_=0;
+        if(!frozen_listeners_.empty() || !dialog_shown_.empty()) { try { dialog_close(); } catch(...) {} }
+        return;
+    }
     Call selected(switcher,L"GetActiveWidget",1); selected.run();
     active_=selected.get<UObject*>()==page_.Get();
     if(active_ && !was_active_) {
@@ -334,9 +343,13 @@ void Menu::tick(const PlayerContext& player,double) {
         refresh_library(true,now);
         invalidate_page();   // the reopened menu reconstructed every widget on the page
     }
-    if(!active_ && was_active_) { hits_.clear(); sliders_.clear(); transition_started_=0; try { dialog_close(); } catch(...) {} }
+    if(!active_ && was_active_) { hits_.clear(); sliders_.clear(); transition_started_=0; }
     was_active_=active_;
-    if(!active_) { warm(now); return; }
+    if(!active_) {
+        // Nothing of the game's may stay borrowed while the page is not showing.
+        if(!frozen_listeners_.empty() || !dialog_shown_.empty()) { try { dialog_close(); } catch(...) {} }
+        warm(now); return;
+    }
     // Enhanced Input rebuilds its key mappings a tick after the game adds the
     // menu context, so the first query can come back empty. Retry until keys
     // appear, then redraw the hints with the real glyphs.
@@ -494,8 +507,8 @@ void Menu::act(const Json& action) {
         return;
     }
     if(!confirm_.is_null()) {
-        if(name=="confirm") { auto event=confirm_.at("event"); event["confirmed"]=true; confirm_=nullptr; send_event(event); }
-        else if(name=="cancel") { confirm_=nullptr; dirty_=true; }
+        if(name=="confirm") { auto event=confirm_.at("event"); event["confirmed"]=true; confirm_=nullptr; try { dialog_close(); } catch(...) {} send_event(event); }
+        else if(name=="cancel") { confirm_=nullptr; try { dialog_close(); } catch(...) {} dirty_=true; }
         return;
     }
     if(name=="details") { dirty_=true; return; }   // the details window scrolls; kept for tooling

@@ -268,6 +268,30 @@ Json Core::dev_request(const Json& request) {
     if(op=="menu.close") { menu_->close(); return true; }
     if(op=="menu.diagnostics") return menu_->diagnostics();
     if(op=="engine") { if(!request.contains("request")) throw std::runtime_error("engine needs a request"); return service(request.at("request")); }
+    if(op=="input.unblock") {
+        // Recovery: strip the game's UI.Input.Block.All tag from the player when a screen
+        // transition left it behind (every menu listener reads as disabled while it is set).
+        if(!player_.pawn) throw std::runtime_error("No player pawn");
+        const auto tag=request.value("tag",std::string("UI.Input.Block.All"));
+        auto* tags=find(L"/Script/GameplayTags.Default__BlueprintGameplayTagLibrary");
+        auto* abilities=find(L"/Script/GameplayAbilities.Default__AbilitySystemBlueprintLibrary");
+        auto* tag_struct=find(L"/Script/GameplayTags.GameplayTag");
+        const FName name(wide(tag).c_str());
+        int removed=0; bool present=false;
+        for(int i=0;i<64;++i) {
+            Call has(player_.pawn,L"HasMatchingGameplayTag",2); auto* p=has.param(L"TagToCheck");
+            member(has.data(p),p->GetElementSize(),tag_struct,L"TagName",name); has.run();
+            present=has.get<bool>(); if(!present) break;
+            Call make(tags,L"MakeGameplayTagContainerFromTag",2); auto* single=make.param(L"SingleTag");
+            member(make.data(single),single->GetElementSize(),tag_struct,L"TagName",name); make.run();
+            Call remove(abilities,L"RemoveLooseGameplayTags",4);
+            remove.set(L"Actor",player_.pawn); remove.copy(L"GameplayTags",make,L"ReturnValue"); remove.set(L"bShouldReplicate",false); remove.run();
+            if(!remove.get<bool>()) break;
+            ++removed;
+        }
+        log("warning","input.unblock: removed "+std::to_string(removed)+" x "+tag+(present?" (still present)":""));
+        return {{"tag",tag},{"removed",removed},{"present",present}};
+    }
     if(op=="quit") { if(!player_.world) throw std::runtime_error("No world"); Call quit(find(L"/Script/Engine.Default__KismetSystemLibrary"),L"QuitGame",4); quit.set(L"WorldContextObject",player_.world); quit.set(L"SpecificPlayer",static_cast<UObject*>(nullptr)); quit.set(L"QuitPreference",uint8_t{0}); quit.set(L"bIgnorePlatformRestrictions",false); quit.run(); return true; }
     throw std::runtime_error("Unknown dev request: "+op);
 }

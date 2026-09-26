@@ -1218,9 +1218,15 @@ void Menu::dialog() {
             auto* found=all.param(L"FoundWidgets");
             if(found->IsA<FArrayProperty>()) {
                 FScriptArrayHelper listeners(static_cast<FArrayProperty*>(found),all.data(found));
+                auto* menu_root=main_.Get();
                 for(int i=0;i<std::min(listeners.Num(),256);++i) {
                     UObject* listener{}; std::memcpy(&listener,listeners.GetRawPtr(i),sizeof(listener));
                     if(!listener) continue;
+                    // Only the Player Menu's own listeners (its tabs and pages): the rest of the
+                    // game's menus are none of this dialog's business.
+                    bool inside=false;
+                    for(auto* outer=listener->GetOuterPrivate();outer;outer=outer->GetOuterPrivate()) if(outer==menu_root) { inside=true; break; }
+                    if(!inside) continue;
                     Call enabled(listener,L"IsEnabled",1); enabled.run();
                     if(!enabled.get<bool>()) continue;
                     invoke(listener,L"SetEnabledState",L"bEnabled",false);
