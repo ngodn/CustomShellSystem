@@ -109,8 +109,9 @@ class InventoryUI {
         WeakObject widget, hit, hit_left, hit_right, text_block, value_block, extra;
         std::vector<WeakObject> cells;                 // swatch chips: frame, colour, selection, button
         std::string text, value;                       // what is on screen now
-        int selected=-1, badge=-1, shown=-1, enabled=-1, icon_shown=-1;   // icon_shown: 0 none, 1 picture, 2 colour chip, 3 empty slot
+        int selected=-1, badge=-1, shown=-1, enabled=-1, icon_shown=-1;   // icon_shown: 0 none, 1 picture, 2 colour chip, 3 empty slot; +4 in a two-line list
         const void* icon=nullptr; std::array<float,4> chip{}; float fill=-2.f;
+        float name_width=-1.f;                         // list rows: the name box, shortened by a state word
         std::string glyph;                             // binding + fallback + device the glyph was set for
     };
     // A stack is a column of fixed cells. Each cell keeps one widget per kind it has ever

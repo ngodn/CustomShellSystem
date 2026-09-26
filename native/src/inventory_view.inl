@@ -428,17 +428,22 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         }
         return texture;
     };
-    // A native list row: thumbnail or colour chip in its icon slot, the name, the E badge
-    // for what is worn or active, and the selected glow.
+    // A native list row: thumbnail or colour chip in its icon slot, the name, the selected
+    // glow, and the game's E (Equipped) badge. E only ever marks what is worn or in use:
+    // the outfit, a variant, a template, an animation. Other states (a hidden part, a Misc
+    // rule) show in the details window, not as an E.
     // `reserve` keeps the icon slot open when there is no picture, so names in a list where
     // some rows carry a chip still line up.
-    struct RowLook { UObject* icon=nullptr; const Color* chip=nullptr; bool badge=false, enabled=true, reserve=false; };
+    // `value` is a state word (Hidden, Edited, a preset name) shown under the name, only
+    // when the thing differs from the author's default.
+    struct RowLook { UObject* icon=nullptr; const Color* chip=nullptr; bool badge=false, enabled=true, reserve=false, two_line=false; std::string value; };
+    auto* page_tree=inventory_object(page,L"WidgetTree");
     auto fill_row=[&](NativeItem& item,const std::string& title,const RowLook& look,bool selected) {
         auto* widget=item.widget.Get();
         native_text(item.text_block.Get(),item.text,title);
         if(item.badge!=int(look.badge)) { native_visibility(native_part(widget,L"O_Equipped"),look.badge?shown_self_passive:uint8_t{2}); item.badge=look.badge; }
         const int mode=look.icon?1:look.chip?2:look.reserve?3:0;
-        if(item.icon_shown!=mode) {
+        if(item.icon_shown!=mode+(look.two_line?4:0)) {
             auto* box=native_part(widget,L"SizeBox_Icon");
             auto* image=native_part(widget,L"Image_Icon");
             native_visibility(box,mode?shown_self_passive:collapsed);
@@ -446,8 +451,9 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             // A picture fills the slot; a colour chip sits small in its middle, the size of
             // the E badge beside it, so it reads as a swatch rather than a blank tile.
             native_visibility(image,mode==3?uint8_t{2}:shown_self_passive);
-            native_padding(inventory_object(image,L"Slot"),mode==2?Margin{31,31,31,31}:Margin{0,0,0,0});
-            item.icon_shown=mode;
+            // In a two-line list the name sits above the row's middle; the chip rises to meet it.
+            native_padding(inventory_object(image,L"Slot"),mode!=2?Margin{0,0,0,0}:look.two_line?Margin{31,0,31,62}:Margin{31,31,31,31});
+            item.icon_shown=mode+(look.two_line?4:0);
         }
         if(mode==1 || mode==2) {
             auto* image=native_part(widget,L"Image_Icon");
@@ -459,6 +465,32 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             if(item.chip!=wanted) { invoke(image,L"SetBrushTintColor",L"TintColor",SlateColor{tint}); item.chip=wanted; }
         }
         if(item.enabled!=int(look.enabled)) { invoke(widget,L"SetRenderOpacity",L"InOpacity",look.enabled?1.f:.45f); item.enabled=look.enabled; }
+        // A state word goes on a second line under the name, smaller and in the muted label
+        // colour. In a list that can carry one (`two_line`), every name sits a line
+        // higher so names stay level whether or not their row has a word.
+        const int layout=look.two_line?1:0;
+        if(item.name_width!=float(layout)) {
+            native_padding(inventory_object(native_part(widget,L"SizeBox_Name"),L"Slot"),Margin{15,0,0,look.two_line?52.f:10.f});
+            invoke(native_part(widget,L"SizeBox_Name"),L"SetWidthOverride",L"InWidthOverride",look.reserve?760.f:620.f);
+            item.name_width=float(layout);
+        }
+        if(item.value!=look.value) {
+            auto* block=item.value_block.Get();
+            if(!block && !look.value.empty()) {
+                auto* serif=load("/Game/Sparta/UI/Fonts/CrimsonText-Regular_Font.CrimsonText-Regular_Font");
+                block=native_text_block(page_tree,28,serif,native_muted,false);
+                auto* slot=native_add(native_part(widget,L"Overlay_Main"),block);
+                invoke(slot,L"SetHorizontalAlignment",L"InHorizontalAlignment",uint8_t{1});   // left, under the name
+                invoke(slot,L"SetVerticalAlignment",L"InVerticalAlignment",uint8_t{3});       // bottom
+                native_padding(slot,Margin{15,0,0,4});
+                item.value_block=block;
+            }
+            if(block) {
+                if(!look.value.empty()) text_value(block,look.value);
+                native_visibility(block,look.value.empty()?collapsed:shown_passive);
+            }
+            item.value=look.value;
+        }
         native_state(item,selected);
     };
     RowLook row_look; row_look.reserve=true;   // one name column on every tab, pictures or not
@@ -478,8 +510,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         bind(item.hit,{{"action","ui_row"},{"row",index},{"apply",false}});
         rows_.push_back({item.widget,item.hit,accept,previous,next,secondary,tertiary,heading});
         heading.Reset();
-        const bool reserve=row_look.reserve;
-        row_look=RowLook{}; row_look.reserve=reserve;
+        const bool reserve=row_look.reserve, two_line=row_look.two_line;
+        row_look=RowLook{}; row_look.reserve=reserve; row_look.two_line=two_line;
     };
     UObject* detail_texture=nullptr;
     UObject* panel_focus=nullptr;   // what the details window scrolls to keep in view
@@ -785,6 +817,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             };
             auto tint_of=[&](ControlGroup group) { auto found=custom.tints.find(control_group_name(group)); return found==custom.tints.end()?ColorTint{}:found->second; };
             section("Template");
+            row_look.two_line=true;   // part rows can carry a state word
             const Json browse_templates{{"action","ui_browse_templates"}};
             row(0,cur_tmpl.name,palette_action(0),tmpl_step(-1),tmpl_step(1),browse_templates);
             // Reset all asks first, from the prompt and from its key alike.
@@ -796,6 +829,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     section(entry.group==ControlGroup::Body?"Body":"Outfit");
                     Json reset={{"action","reset_tint"},{"group",control_group_name(entry.group)}};
                     Json minus={{"action","tint"},{"group",control_group_name(entry.group)},{"field",tint_field_index_==0?"hue":tint_field_index_==1?"saturation":"brightness"},{"delta",-1}},plus=minus; plus["delta"]=1;
+                    if(!tint_of(entry.group).neutral()) row_look.value="Edited";
                     row(int(i),"Tint",reset,minus,plus,{{"action","ui_tint_field"}});
                     continue;
                 }
@@ -803,12 +837,36 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 const auto& c=options.controls[entry.control];
                 const auto held_value=values.contains(c.id)?values.at(c.id):c.value;
                 chips[i]=swatch_of(c);
+                {
+                    // State word: what this part is now, when that is not the author's default
+                    // (the palette's value on a palette). The group tint shows on its Tint row.
+                    ControlValue base=c.value;
+                    if(custom.palette!="original") for(const auto& palette:options.palettes)
+                        if(palette.id==custom.palette) if(auto found=palette.values.find(c.id);found!=palette.values.end()) base=found->second;
+                    const auto saved=custom.values.find(c.id);
+                    const ControlValue raw=saved!=custom.values.end()?saved->second:base;
+                    bool differs=false;
+                    for(size_t k=0;k<raw.size();++k) differs=differs || std::abs(raw[k]-base[k])>1e-3f;
+                    const bool body_presets=is_body_physics_control(c), hair_presets=!body_presets && is_hair_physics_control(c);
+                    if(c.kind==ControlKind::Toggle) { if((raw[0]>=.5f)!=(base[0]>=.5f)) row_look.value=raw[0]>=.5f?"Shown":"Hidden"; }
+                    else if(c.kind==ControlKind::Choice) {
+                        const int at=std::clamp(int(std::lround(raw[0])),0,std::max(0,int(c.options.size())-1));
+                        if(differs && at<int(c.options.size())) row_look.value=c.options[at].name.size()<=16?c.options[at].name:"Edited";
+                    } else if(body_presets || hair_presets) {
+                        const auto now=body_presets?detect_body_physics_preset(c,raw):detect_hair_physics_preset(c,raw);
+                        const auto was=body_presets?detect_body_physics_preset(c,base):detect_hair_physics_preset(c,base);
+                        if(now!=was) {
+                            row_look.value="Custom";
+                            if(body_presets) { for(const auto& preset:kBodyPhysicsPresets) if(now==preset.id) row_look.value=preset.name; }
+                            else for(const auto& preset:kHairPhysicsPresets) if(now==preset.id) row_look.value=preset.name;
+                        } else if(differs) row_look.value="Edited";
+                    } else if(differs) row_look.value="Edited";
+                }
                 if(c.kind==ControlKind::Color || c.kind==ControlKind::Intensity || c.kind==ControlKind::Scalar || c.kind==ControlKind::Glow || c.kind==ControlKind::Opacity) row_look.chip=&chips[i];
                 Json accept={{"action","reset_control"},{"control",c.id}};
                 if(c.kind==ControlKind::Toggle) {
                     const bool on=held_value[0]>=.5f;
                     accept={{"action","control"},{"control",c.id},{"channel",0},{"value",on?0:1}};
-                    row_look.badge=on;
                 }
                 const bool has_body_presets=is_body_physics_control(c);
                 const bool has_hair_presets=is_hair_physics_control(c);
@@ -1139,16 +1197,19 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         auto rule_for=[&](const std::string& key)->MiscRule { auto it=state.misc_rules.find(key); return it!=state.misc_rules.end()?it->second:MiscRule{}; };
         row_=std::clamp(row_,0,4);
         section("Visibility");
+        row_look.two_line=true;
         for(int i=0;i<4;++i) {
             const MiscRule rule=rule_for(defs[i].key);
             Json next{{"action","misc_mode"},{"category",defs[i].key},{"delta",1}};
             Json prev{{"action","misc_mode"},{"category",defs[i].key},{"delta",-1}};
-            row_look.badge=rule.mode!="default";
+            if(rule.mode=="hidden") row_look.value="Hidden";
+            else if(rule.mode=="in_use") row_look.value="When in use";
             row(i,defs[i].title,next,prev,next);
         }
         section("Position");
         const Json kda{{"action","keep_default_attachments"},{"value",!state.keep_default_attachments}};
         const char* kda_label=state.keep_default_attachments?"Default (game)":"Auto (avoid clipping)";
+        if(state.keep_default_attachments) row_look.value="Game position";   // Auto is the default
         row(4,"Sidearm position",kda,kda,kda);
         if(row_<4) {
             const MiscRule current=rule_for(defs[row_].key);

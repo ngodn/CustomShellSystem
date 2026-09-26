@@ -385,7 +385,13 @@ InventoryUI::NativeItem& InventoryUI::native_take(NativeStack& stack,NativeKind 
         // Change Shade's names are short; outfit names are not. Use the row's full glow width
         // and end a name that still does not fit with an ellipsis instead of running on.
         invoke(native_part(widget,L"SizeBox_Name"),L"SetWidthOverride",L"InWidthOverride",620.f);
+        // Its overlay slot fills, which would stretch the box past its width; left-aligned,
+        // the width is what the name gets (fill_row narrows it for a state word).
+        invoke(inventory_object(native_part(widget,L"SizeBox_Name"),L"Slot"),L"SetHorizontalAlignment",L"InHorizontalAlignment",uint8_t{1});
         invoke(item.text_block.Get(),L"SetTextOverflowPolicy",L"InOverflowPolicy",uint8_t{1});
+        // Slate only draws the ellipsis on left- or right-justified text; the row centres its
+        // name (which already sits left in its box), so justify left.
+        invoke(item.text_block.Get(),L"SetJustification",L"InJustification",uint8_t{0});
         break;
     case NativeKind::header:
         widget=inventory_create(pc,native_class(native_header_class)); slot=native_add(box,widget);
