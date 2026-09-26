@@ -6,6 +6,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Latest Prototype source is `planet-suit-f4c.blend`, fresh-load verified with one garment, eight shape keys and 0.00001532 cm maximum fitted-point error. It has placeholder materials with original slot names for reassembly. Production rig/materials must be reattached; no game acceptance. Earlier two dependency-heavy library copies were removed with a cleanup receipt. Next inspect source outfit masking because blanket covered-foot hiding exposes a calf opening.
+
 - Prototype fit4 improves chest, seat and calf bind-pose coverage in inspected front/back renders. `planet-fit4/` contains the candidate, offsets and receipt; no source blend, import or release changed. Source modifier/driver evidence is `planet-source.json` and `planet-foot-source.json`. See the latest goal checkpoint before further edits.
 
 - **Latest user instruction: skip Holiday. Active order is the existing Planet Diving model, Skin Suit, then others.** Reference checks identify this model as Prototype Planet Diving Suit, not 6th. Its lower-back strip needs a fixed upper attachment and dedicated motion below it; see [installed-game evidence](eve-planet-reference.md). All Holiday experiments below are parked.
