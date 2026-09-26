@@ -106,3 +106,6 @@ Broader sprint contact and hem feasibility: `follow-clearance.json`, `follow-spr
 
 
 Persistent contact projection rejected: `tools/eve-fit/probe_hem_sequence.py`, `work/eve26/hemseq2.json`, `hemseq2-pose.json`, and inspected `hemseq24-views/default-rear.png`. Across 65 sprint frames it produces correction jumps up to 8.392 cm and edge ratios up to 13.323. Do not mistake successful contact in a single frame for a usable solver. First-run report serialization failure is fixed; fresh rerun succeeds with identical pose output.
+
+
+Joint shape/contact carrier test: `hemshape.json`, `hemshape-pose.json`, and inspected `hemshape8-views/default-side.png`. Smoother than contact-only but still clips and stretches, not accepted. Refreshed `skirt-f11.json` and `skirt-f11.audit.json` preserve current F11 positions/weights and include source vertex IDs for a direct fabric-surface reference. Existing panel assets and original source blends remain unchanged.

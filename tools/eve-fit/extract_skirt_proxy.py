@@ -1,11 +1,19 @@
 """Extract Holiday's main connected fabric panel as a simulation-surface candidate."""
 import json
 import math
+import argparse
 from collections import defaultdict
 from pathlib import Path
 
 WORK = Path(__file__).resolve().parents[2] / 'work/eve26'
-data = json.loads((WORK / 'holiday.mesh.json').read_text())
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--mesh', type=Path, default=WORK/'holiday.mesh.json')
+parser.add_argument('--name', default='skirt-surface')
+args = parser.parse_args()
+assert args.name.replace('-', '').isalnum()
+output = WORK / f'{args.name}.json'
+assert not output.exists()
+data = json.loads(args.mesh.read_text())
 slot = data['materials'].index('MI_CH_P_EVE_Christmas_01_01.001')
 triangles = [[data['wedges'][w][0] for w in f[:3]] for f in data['faces'] if f[3] == slot]
 neighbors = defaultdict(set)
@@ -58,14 +66,13 @@ for vertex, bone, weight in data['influences']:
     if vertex in lookup:
         weights[lookup[vertex]].append([data['bones'][bone]['name'], weight])
 assert all(w and len(w) <= 8 and abs(sum(v for _, v in w)-1) < 1e-5 for w in weights)
-output = WORK / 'skirt-surface.json'
-assert not output.exists()
 output.write_text(json.dumps({'positions': positions, 'normals': normals,
+    'source_mesh':str(args.mesh),'source_vertices':selected,
     'weights': weights, 'indices': [i for face in faces for i in face]}, separators=(',', ':')))
 report = {'vertices': len(positions), 'triangles': len(faces),
     'boundary_edges': sum(n == 1 for n in edges.values()),
     'nonmanifold_edges': sum(n > 2 for n in edges.values()),
     'z_cm': [min(p[2] for p in positions), max(p[2] for p in positions)],
     'stage': 'Undecimated connected surface with original weights; anchors, weight retargeting and render attachments pending'}
-(WORK / 'skirt-surface.audit.json').write_text(json.dumps(report, indent=2)+'\n')
+(WORK / f'{args.name}.audit.json').write_text(json.dumps(report, indent=2)+'\n')
 print(json.dumps(report, indent=2))

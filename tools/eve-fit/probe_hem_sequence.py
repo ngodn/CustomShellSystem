@@ -15,6 +15,8 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--clip', choices=('walk', 'jog', 'sprint'), default='sprint')
 parser.add_argument('--name', required=True)
 parser.add_argument('--morph', choices=('default', 'hip-waist'), default='default')
+parser.add_argument('--shape', action='store_true', help='Solve contact and fabric-edge residuals jointly in carrier space')
+parser.add_argument('--end', type=int, help='Last frame, inclusive, for a bounded feasibility check')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert args.name.isalnum()
 output = work / f'{args.name}-pose.json'
@@ -69,6 +71,8 @@ previous_delta = np.zeros_like(points)
 frames, reports = [], []
 previous_basis = None
 for fi, frame in enumerate(source['frames']):
+    if args.end is not None and fi > args.end:
+        break
     snapshot = frame['pose']['Snapshot']
     local = dict(zip(snapshot['BoneNames'], snapshot['LocalTransforms'], strict=True))
     pose = []
@@ -89,6 +93,10 @@ for fi, frame in enumerate(source['frames']):
     if previous_basis is not None:
         shifts = (basis @ previous_basis.T @ shifts.T).T * math.exp(-dt / .08)
     previous_basis = basis
+    prior = shifts.copy()
+    edge_weights = W[edges[:, 0]]-W[edges[:, 1]]
+    edge_base = xyz[edges[:, 0]]-xyz[edges[:, 1]]
+    edge_lengths = np.linalg.norm(edge_base, axis=1)
 
     def contacts():
         hits = []
@@ -101,6 +109,34 @@ for fi, frame in enumerate(source['frames']):
         return sorted(hits)
 
     for _ in range(12):
+        if args.shape:
+            current_edges = edge_base+edge_weights@shifts
+            lengths = np.linalg.norm(current_edges, axis=1)
+            valid_edges = (edge_lengths > .01) & (lengths > 1e-6)
+            # Relative edge residuals keep short fabric edges from absorbing a large tear.
+            direction = current_edges[valid_edges]/lengths[valid_edges, None]
+            J = (edge_weights[valid_edges, :, None]*direction[:, None, :]).reshape((-1, len(carriers)*3))
+            J /= edge_lengths[valid_edges, None]
+            target = (edge_lengths[valid_edges]-lengths[valid_edges])/edge_lengths[valid_edges]
+            contact_rows, contact_targets = [], []
+            for _, v in contacts():
+                if W[v].sum() < .1:
+                    continue
+                p = Vector(xyz[v]+W[v]@shifts)
+                near, normal, _, _ = tree.find_nearest(p)
+                contact_rows.append((W[v, :, None]*np.asarray(normal)[None, :]).ravel()*5.)
+                contact_targets.append((.025-(p-near).dot(normal))*5.)
+            if contact_rows:
+                J = np.concatenate((J, np.asarray(contact_rows)))
+                target = np.concatenate((target, np.asarray(contact_targets)))
+            regularization = .1
+            lhs = J.T@J+np.eye(len(carriers)*3)*regularization
+            rhs = J.T@target+regularization*(prior-shifts).ravel()
+            step = np.linalg.solve(lhs, rhs).reshape((-1, 3))
+            step *= min(1., 1./max(float(np.linalg.norm(step, axis=1).max()), 1e-9))
+            shifts += step*.8
+            shifts *= np.minimum(1., 8./np.maximum(np.linalg.norm(shifts, axis=1), 1e-9))[:, None]
+            continue
         for _, v in contacts():
             p = Vector(xyz[v]+W[v]@shifts)
             near, normal, _, _ = tree.find_nearest(p)
@@ -140,8 +176,8 @@ for fi, frame in enumerate(source['frames']):
     frames.append(result)
     if fi % 8 == 0:
         print(reports[-1], flush=True)
-scope = 'Offline persistent contact projection with 80 ms decay, 8 cm carrier cap, no inertial cloth dynamics or edge constraints. Diagnostic only, not accepted fitting or runtime code.'
+scope = 'Offline persistent contact projection with 80 ms decay and 8 cm carrier cap. Optional shape mode jointly minimizes relative edge-length and contact residuals with a temporal prior. No inertial cloth dynamics, bending or self collision. Diagnostic only, not accepted fitting or runtime code.'
 output.write_text(json.dumps({'scope': scope, 'morph_case': args.morph, 'frames': frames}, separators=(',', ':')))
-receipt.write_text(json.dumps({'scope': scope, 'clip': args.clip, 'morph_case': args.morph,
+receipt.write_text(json.dumps({'scope': scope, 'clip': args.clip, 'morph_case': args.morph, 'shape': args.shape,
     'cases': reports}, indent=2)+'\n')
 print('Finished', len(frames), 'frames', flush=True)
