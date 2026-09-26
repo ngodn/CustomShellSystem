@@ -6,6 +6,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Prototype original tail already has a cloth proxy and bone follower rig. `planet-tail-author.json` records 18 proxy vertices, four pins and eight bones; `planet-tail-proxy.json` aligns it to the fitted export with <0.0000041 cm residual. Reviewed back/side plot confirms placement. Native adaptation and collision/motion still pending.
+
 - Latest Prototype interchange: `planet-export/`, regenerated from F7 with corrected normals/triangulation and preserved UV/color corners. Private Unreal import and fresh hierarchy audit pass (`planet-compat.json`); protected production hashes unchanged. No cloth assets, production binding or game acceptance yet.
 
 - Latest Prototype source: `planet-suit-f7.blend`. Bounded pose-derived offsets change 532 garment vertices by <=0.400 cm; fresh reload error <0.00001828 cm, weights and relative morphs preserved. Frame24 combined-max knee breakthrough is removed in inspected views. `planet-fit7/receipt.json` contains pre-correction hits and skipped larger proposals, not a post-correction all-clear verdict.
