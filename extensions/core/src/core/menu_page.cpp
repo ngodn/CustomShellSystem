@@ -264,14 +264,15 @@ bool Menu::page(double width,double height) {
     left_root_=left; right_root_=right;
     // Header band: the CSSX emblem, the page title in Trajan and its subtitle, the way the
     // game's optional list header reads. The emblem is the user's own artwork (assets/logo.png).
-    auto* logo=image_widget(tree,nullptr); place(left,logo,40,110,300,300); logo_image_=logo; visibility(logo,collapsed); logo_shown_=0;
-    auto* title=text_block(tree,50,trajan,title_ink,false); place(left,title,370,150,740,70); title_text_=title;
-    auto* subtitle=text_block(tree,30,trajan,subtitle_ink,false); place(left,subtitle,372,228,740,50); subtitle_text_=subtitle;
+    // Emblem 100..360; the title and subtitle block (70 + 48) centred on its middle.
+    auto* logo=image_widget(tree,nullptr); place(left,logo,40,100,260,260); logo_image_=logo; visibility(logo,collapsed); logo_shown_=0;
+    auto* title=text_block(tree,50,trajan,title_ink,false); place(left,title,330,171,780,70); title_text_=title;
+    auto* subtitle=text_block(tree,30,trajan,subtitle_ink,false); place(left,subtitle,332,243,780,48); subtitle_text_=subtitle;
     // Section strip: the Inventory filter strip recipe. T_UI_Nav_TitleBG, a bumper prompt each
     // side, and the tabs in a clipped horizontal scroll that slides the selected tab in, so a
     // long section list never truncates.
     auto* strip_frame=construct(L"/Script/UMG.Overlay",tree);
-    place(left,strip_frame,40,520,1056,150);
+    place(left,strip_frame,40,390,1056,150);
     fill(add_child(strip_frame,image_widget(tree,game_texture("T_UI_Nav_TitleBG"))));
     auto* strip=construct(L"/Script/UMG.HorizontalBox",tree);
     auto* strip_slot=add_child(strip_frame,strip);
@@ -301,12 +302,12 @@ bool Menu::page(double width,double height) {
     auto* tabs=construct(L"/Script/UMG.HorizontalBox",tree);
     add_child(strip_scroll,tabs); tab_items_.box=tabs;
     prompt("next_section",glyph_right_bumper,strip_next_,strip_next_glyph_);
-    place(left,image_widget(tree,game_texture("T_UI_Nav_Title_Divider")),0,690,native_column,6);
+    place(left,image_widget(tree,game_texture("T_UI_Nav_Title_Divider")),0,560,native_column,6);
     // The list: Change Shade's 1000-wide scroll with the Inventory scrollbar brush.
     auto* list_size=construct(L"/Script/UMG.SizeBox",tree);
     invoke(list_size,L"SetWidthOverride",L"InWidthOverride",1040.f);
-    invoke(list_size,L"SetHeightOverride",L"InHeightOverride",float(design_height-910));
-    place(left,list_size,48,720);
+    invoke(list_size,L"SetHeightOverride",L"InHeightOverride",float(design_height-780));
+    place(left,list_size,48,590);
     auto* list_scroll=construct(L"/Script/UMG.ScrollBox",tree);
     if(auto* bar=object_of(object_of(character,L"WBP_CSB_Style2"),L"Image_Bar")) {
         auto* style=list_scroll->GetPropertyByNameInChain(L"WidgetBarStyle");
