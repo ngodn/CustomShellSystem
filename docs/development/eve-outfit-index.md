@@ -6,6 +6,9 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Latest: `panel-stop-*` completes the interrupted garment-follow/backstop trial. Radius 30, offset 0, movement limit 3 cm improve the visible envelope but leave hem clipping and side-trim distortion. Not accepted. Animation-only frame 68 already has -4.05 cm minimum signed fabric distance; investigate garment deformation before more physics tuning. Read the current goal checkpoint before older collider proposals.
+- `rigid-regions.json` measures 582 pose/morph cases: simple dominant-bone following reaches 11.17/11.73 cm error. This is correspondence evidence, not a universal rejection of regional collision.
+
 - Mapped-surface follow-up: `ls-local32-surface/surface.json` traces cross-leg corner weights at right-thigh index 8275. Its 15.27 cm correspondence error is a 2.64 cm nearest-surface gap. `ls-local64-surface/motion.json` completes 582 cases with 8.47 cm worst correspondence; frame-56 surface gap p95 is 0.390 cm, maximum 2.20 cm in the skirt ROI. Inspected subdivision-2 rear comparison and subdivision-4 rear/side mapped surfaces show residual folds. This is approximate mapped triangulation, not native SDF containment. Next native recipe import/query, then cost if fit supports it.
 
 - Complete local-transfer comparisons supersede the selected-three-point result: `ls-local16e/motion.json` and `ls-local32/motion.json`, 582 cases each. Coarse-grid worst local errors are 25.62/27.32 cm; half-sized cells improve every default pose but still reach 15.27 cm. These are correspondence measurements, not signed-distance or cloth acceptance. Inspect sprint frame 56, body index 8275 next. Recipes and native replay reports live beside each report. The fitting playbook records the numerical preflight failures and replacement checks.
@@ -47,6 +50,9 @@ Paths in this table are relative to the workspace root unless linked.
 
 | Artifact | Finding or purpose |
 | --- | --- |
+| `CustomShellSystem/tools/eve-fit/prepare_follow_proxy.py`, `work/eve26/panel-follow-proxy.json` | Explicit source-garment weight trial, 289 changed proxy rows, unchanged geometry/topology |
+| `CustomShellSystem/work/eve26/panel-stop-comparison.json`, `panel-stop-clearance68.json`, `panel-stop-views68/`, `panel-stop-protected.json` | Completed backstop trial, inspected residual fit defects, original assets unchanged |
+| `CustomShellSystem/tools/eve-fit/audit_rigid_regions.py`, `work/eve26/rigid-regions.json` | Full recorded pose/morph check of dominant-bone approximation |
 | `CustomShellSystem/tools/eve-fit/audit_capsule_coverage.py`, `work/eve26/capsule-motion-bands.json` | Original primitive recipe undercovers even lower hip/thigh bands across seven poses and combined morph; arm-dominated points excluded |
 | `CustomShellSystem/tools/eve-fit/fit_secondary_spheres.py`, `work/eve26/secondary-coverage.json` | Four rest-inscribed secondary-bone spheres barely improve coverage and slightly worsen one garment-overlap case; not imported or accepted |
 | `CustomShellSystem/tools/eve-fit/trace_panel_contact.py`, `work/eve26/panel-contact-history.json` | Frame-end dynamic contact history and six-ray checks establish deep late-sprint penetration; no internal solver readback |

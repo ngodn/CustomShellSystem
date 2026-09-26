@@ -69,6 +69,14 @@ int32 UCSSEvePanelCommandlet::Main(const FString& Params)
         }
         Data->SetNumberField(TEXT("pinned"),Pinned);
         Data->SetNumberField(TEXT("zero_distance"),ZeroDistance);
+        auto Maps=MakeShared<FJsonObject>();
+        for (FName Name:Cloth.GetWeightMapNames())
+        {
+            TArray<TSharedPtr<FJsonValue>> Values;
+            for (float Value:Cloth.GetWeightMap(Name)) Values.Add(MakeShared<FJsonValueNumber>(Value));
+            Maps->SetArrayField(Name.ToString(),Values);
+        }
+        Data->SetObjectField(TEXT("weight_maps"),Maps);
         TArray<TSharedPtr<FJsonValue>> Rows;
         for (const auto& Section:Asset->GetImportedModel()->LODModels[0].Sections)
         {
@@ -149,6 +157,19 @@ int32 UCSSEvePanelCommandlet::Main(const FString& Params)
     Cloth.SetSkeletalMeshPathName(Mesh->GetPathName());
     Cloth.SetPhysicsAssetPathName(TEXT("/Game/CSS/EveTest/PA_Holiday.PA_Holiday"));
     Cloth.AddWeightMap(TEXT("MaxDistance"));
+    float MaxMove=18.f,BackstopRadius=0.f,BackstopDistance=0.f;
+    FParse::Value(*Params,TEXT("MaxMove="),MaxMove);
+    FParse::Value(*Params,TEXT("BackstopRadius="),BackstopRadius);
+    FParse::Value(*Params,TEXT("BackstopDistance="),BackstopDistance);
+    if (!FMath::IsFinite(MaxMove) || MaxMove<=0 || MaxMove>18 ||
+        !FMath::IsFinite(BackstopRadius) || BackstopRadius<0 || BackstopRadius>100 ||
+        !FMath::IsFinite(BackstopDistance) || FMath::Abs(BackstopDistance)>1)
+        return Fail(TEXT("Invalid movement or backstop trial bounds"));
+    if (BackstopRadius>0)
+    {
+        Cloth.AddWeightMap(TEXT("BackstopRadius"));
+        Cloth.AddWeightMap(TEXT("BackstopDistance"));
+    }
     int32 Pinned=0;
     for (int32 I=0; I<Positions.Num(); ++I)
     {
@@ -164,8 +185,13 @@ int32 UCSSEvePanelCommandlet::Main(const FString& Params)
         }
         if (!FMath::IsNearlyEqual(Sum,1.f,.001f)) return Fail(TEXT("Proxy weights not normalized"));
         const float Alpha=FMath::Clamp((Top-20.f-Positions[I].Z)/12.f,0.f,1.f);
-        const float Distance=18.f*Alpha*Alpha*(3.f-2.f*Alpha);
+        const float Distance=MaxMove*Alpha*Alpha*(3.f-2.f*Alpha);
         Cloth.GetWeightMap(TEXT("MaxDistance"))[I]=Distance;
+        if (BackstopRadius>0)
+        {
+            Cloth.GetWeightMap(TEXT("BackstopRadius"))[I]=BackstopRadius;
+            Cloth.GetWeightMap(TEXT("BackstopDistance"))[I]=BackstopDistance;
+        }
         Pinned+=Distance<.1f;
     }
     const TSet<FString> Wanted={Primary,TEXT("MI_CH_P_EVE_Christmas_01_Decal.001"),
@@ -225,6 +251,8 @@ int32 UCSSEvePanelCommandlet::Main(const FString& Params)
     Config->BendingStiffnessWeighted={.12f,.12f}; Config->AnimDriveStiffness={.05f,.05f};
     Config->DampingCoefficient=.15f; Config->CollisionThickness=ContactCm; Config->FrictionCoefficient=.3f;
     Config->bUseSelfCollisions=true; Config->SelfCollisionThickness=.35f;
+    Config->bUseLegacyBackstop=false;
+    UE_LOG(LogCSSEvePanel,Display,TEXT("Movement %.3f cm; backstop radius %.3f cm, distance %.3f cm"),MaxMove,BackstopRadius,BackstopDistance);
     ::Chaos::FClothingSimulationConfig SimulationConfig;
     SimulationConfig.Initialize(Config,Shared);
     SimulationConfig.GetPropertyCollection(0)->CopyTo(&Collection.Get());

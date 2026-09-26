@@ -13,6 +13,7 @@ p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--input',type=Path,default=work/'panel-motion.json')
 p.add_argument('--output',type=Path,default=work/'panel-motion-verified.json')
 p.add_argument('--proxy',type=Path,default=work/'skirt-proxies.json')
+p.add_argument('--mapping',type=Path,help='Use fresh saved MaxDistance map instead of the original 18 cm recipe')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 output = a.output
 assert not output.exists()
@@ -33,6 +34,11 @@ rows = np.asarray(rows)
 vi, bi, weights = rows[:, 0].astype(int), rows[:, 1].astype(int), rows[:, 2]
 alpha = np.clip((proxy.get('anchor_top_cm',points[:, 2].max())-20.-points[:, 2])/12., 0., 1.)
 distance = 18.*alpha**2*(3.-2.*alpha)
+if a.mapping:
+    mapping = json.loads(a.mapping.read_text())
+    assert mapping['asset'] == result['asset']
+    distance = np.asarray(mapping['weight_maps']['MaxDistance'])
+    assert distance.shape == alpha.shape and np.isfinite(distance).all() and (distance>=0).all()
 fixed = distance == 0
 faces = np.asarray(proxy['indices']).reshape((-1, 3))
 edges = sorted({tuple(sorted((int(t[i]), int(t[(i+1) % 3])))) for t in faces for i in range(3)})
@@ -77,6 +83,7 @@ passed = max(r['fixed_max_cm'] for r in reports) < .02
 output.write_text(json.dumps({'scope':'Saved panel coordinates/order check using exactly zero-distance particles and the panel source weights. Edge ratios use the old source rest mesh. Not fitting, collision or game acceptance.',
     'source_result':str(a.input),'source_sha256':hashlib.sha256(a.input.read_bytes()).hexdigest(),
     'source_proxy':str(a.proxy),'proxy_sha256':hashlib.sha256(a.proxy.read_bytes()).hexdigest(),
+    'mapping_sha256':hashlib.sha256(a.mapping.read_bytes()).hexdigest() if a.mapping else None,
     'passed':passed,'zero_distance':int(fixed.sum()),'cases':reports},indent=2)+'\n')
 print('Passed',passed,'worst fixed cm',max(r['fixed_max_cm'] for r in reports),'worst edge ratio',max(r['edge_ratio_max'] for r in reports))
 assert passed, 'Resolve particle mapping or pose-space mismatch before rendering'

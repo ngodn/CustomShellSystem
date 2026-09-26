@@ -142,3 +142,13 @@ Stage `CSSEvePanelDeformer.inl` for explicit mapping experiments. `-MultiMap` ge
 `-ContactCm=<0.1..1>` creates a separate collision-gap trial; default remains 0.3 cm. Pair any change with the same proxy, mapping, pose sequence and collider. `audit_cloth_clearance.py` compares simulation vertices/triangle centroids, resolved fabric and skin-only fabric against both the original posed body and native collider reference. Its signed nearest-normal measurements cover only the selected frame and default morph, so visual inspection and broader motion/morph checks remain required.
 
 Creation and motion accept `-Mesh=/Game/CSS/EveTest/SK_<name>.<name>` for separate fitted candidates. The default remains SK_Holiday. Motion receipts identify the actual source mesh. Stage both commandlet and `CSSEvePanelMotion.inl` when adding this option. Do not overwrite a baseline mesh to test new geometry. `update_waist_proxy.py` preserves the old proxy's intentional pelvis-based simulation weights, topology and pin height while transferring the verified F12 fit through saved barycentric correspondence; render weights remain those of the new source mesh.
+
+### Garment-follow and backstop diagnostics (September 27)
+
+`prepare_follow_proxy.py --output work/eve26/panel-follow-proxy.json` creates an explicit weight-only trial from the fitted source. Run it with the workspace system Python. It refuses to overwrite output and verifies unchanged non-weight proxy data.
+
+The panel creation commandlet accepts `-MaxMove=3`, `-BackstopRadius=30` and `-BackstopDistance=0`. Defaults remain 18, 0 and 0. Use a new private asset path, the prepared proxy and `-RepairMap`. The inspector exports `weight_maps`; verify saved values before running motion. CA_Follow uses default movement, CA_Near uses 3 cm, CA_Stop also enables the backstop. All use the same garment-follow proxy and existing body-joint6 motion input.
+
+Pass `--mapping work/eve26/panel-stop-saved.json` to `verify_panel_motion.py` so its fixed-particle check uses the saved map. Resolve with `resolve_panel_render.py`, then audit using `audit_cloth_clearance.py --source-mesh work/eve26/holiday-waist-source.mesh.json`. Render rear and side with `render_skirt_bone_trial.py --mapped-render ... --lower-dress`; do not combine mapped-render with upstream mode.
+
+These candidates are unaccepted. See the goal checkpoint and `panel-stop-comparison.json`. Official backstop reference: https://dev.epicgames.com/documentation/unreal-engine/clothing-tool-in-unreal-engine---properties-reference . Pinned implementation: `Chaos/PBDSphericalConstraint.h`, nonlegacy sphere center uses animated position minus (radius + distance) times animated normal. A correct target fit is still required.

@@ -32,6 +32,22 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**September 27, interrupted session recovered: garment-follow and backstop trials remain unaccepted.** The pending `panel-stop-motion` process completed with exit 0; its existing 69-frame output was reused. Fresh verification, render mapping, clearance audit and rear/side renders all completed with exit 0. No game installation or release change occurred.
+
+Explicit garment-follow proxy weights change 289 of 670 rows while preserving all non-weight proxy data. CA_Follow uses those weights with the old 18 cm limit; it is faster in this one diagnostic run but still visibly clips. CA_Near reduces the limit to 3 cm. CA_Stop adds native nonlegacy backstops (radius 30 cm, distance 0), verified from the saved maps. Actual MaxDistance values now drive the particle verifier. Changed movement maps can change render attachments, so do not claim attachment identity across CA_Follow and CA_Near.
+
+At frame 68, dense mapped-fabric samples deeper than 1 mm are 25,400 for Follow, 28,495 for Near and 15,932 for Stop; their minimum signed distances are -6.44, -2.79 and -4.61 cm. Stop's rear/side renders show a better skirt envelope than the earlier collapse, but residual rear-hem clipping and side-trim distortion remain. Nearest-normal signed measurements are not exact containment at folds. Backstops are a candidate to retain for later evaluation, not an accepted outfit fix. Stop's maximum recorded edge ratio reaches 10.49 somewhere in the sequence; particle-coordinate verification is not deformation acceptance.
+
+The important baseline is **animation-only fabric**: the same frame has 15,792 dense samples deeper than 1 mm and a -4.05 cm minimum. Correct that underlying garment deformation before more cloth parameter tuning. Separate torso/leg intersection from arm contact and separate fabric from trim. Preserve the original body and rest shape while checking the local garment influences; do not assume nearest-body weight transfer will preserve a skirt's intended leg separation.
+
+Near/Stop last-nine-frame editor means are 2.782/2.720 ms. Their maximum trajectory difference is 3.666 cm, with exactly matching body references. These single runs do not establish a statistically isolated backstop effect or game FPS; saved maps and visual results establish what was actually tested. The rigid-region audit separately found up to 11.17 cm default / 11.73 cm combined hip-waist correspondence error over 582 pose/morph cases. This rejects simple single-carrier following as an accurate body substitute, not every possible regional collider.
+
+Evidence: `rigid-regions.json`, `panel-follow-*`, `panel-near-*`, `panel-stop-*` under `work/eve26/`. Protected hashes all match in `panel-stop-protected.json`. Reproduction controls are documented in `tools/eve-fit/native/README.md`.
+
+**Next:** locate the animation-only frame-68 hem failures and inspect their source influences and nearby body deformation. Make one isolated garment fitting/weight candidate, compare the original shape and recorded movement/morph cases, then revisit cloth on a sound baseline. Holiday Reveler remains first, Planet Diving 6th next. Production uses the improved 386-bone skeleton, never this private diagnostic rig.
+
+## Superseded checkpoint: whole-body Local64 collider
+
 **Native Local64 is not accepted, with or without CCD.** The separate `PA_CBodyLocal64` saves/reloads all 130,585 recipe nodes: position difference below 9e-13 cm, weight difference below 3e-8. Rest signed-distance agreement is within 0.001215 cm (explicit 0.002 cm numerical tolerance, not fitting acceptance). Native frame-56 inverse queries find several overlapping embeddings; the deepest maps a pelvis sample into thigh interior, producing -11.79 cm projected distance. Direct mapped-surface improvement alone did not predict this.
 
 The actual CA_Fit cloth trial completed 69 warmup/sprint frames. Without CCD it collapses through the rear/thighs at frame 64: 14,570 dense mapped-fabric samples deeper than 1 mm, versus baseline 2,108. With CCD, frame 64 improves to 2,155 and visible skirt collapse is prevented, but frame 68 still has thigh breakthrough: 25,479 failing dense samples, worst -7.61 cm, versus the earlier repeat baseline 17,245 / -6.68 cm. These nearest-normal measurements can be ambiguous at folds; rear/side render review independently rejects both trials. Do not promote a selected frame's recovery to full motion acceptance.

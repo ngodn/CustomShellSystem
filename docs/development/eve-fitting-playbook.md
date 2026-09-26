@@ -74,3 +74,11 @@ The faster route is to avoid disproven experiments and detect source errors earl
 Keep originals, the accepted working source, useful rollback points, scripts, measurements and representative renders. Delete only confirmed superseded generated files after recording their identity and why they are safe to remove. Do not use broad cleanup commands in shared worktrees.
 
 After a coherent checkpoint, update the current status and evidence index and commit only this effort's explicit paths. Keep concurrent CSS runtime/UI work separate. A next session should find the current reference, rejected alternatives and next test without reading the entire transcript.
+
+## September 27: fix the animated target before restricting cloth to it
+
+A garment-follow proxy plus a 3 cm movement limit and native backstop improves the skirt envelope, but the animation-only garment already intersects the body at the late sprint pose. Backstops follow animated cloth targets; they cannot establish correct fitting if those targets are wrong. Inspect skin-only fabric, simulated fabric and trim separately before another constraint experiment. Evidence: `panel-stop-clearance68.json` and inspected rear/side views.
+
+Read actual saved movement maps for verification. A vertex below 0.1 cm MaxDistance is not necessarily fixed; only exactly zero counts as the kinematic reference in this check. Movement-map changes can also alter render mapping, so reload and verify attachments for each candidate. Keep geometry-only proxy updates separate from deliberate weight trials and hash the unchanged data.
+
+When interrupted, poll the existing process and inspect completed artifacts before rerunning. This session recovered all 69 frames and the process exit status without generating another Unreal trial.
