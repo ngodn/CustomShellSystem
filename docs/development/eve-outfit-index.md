@@ -4,6 +4,8 @@ Updated 2026-09-27. Start here after a context reset; the goal log's current che
 
 ## Findings to preserve
 
+- User's September 27 outfit order: Holiday Reveler, then Planet Diving 6th (planet suit), then the others. All outfit requirements remain active.
+- Late-sprint native collider penetration responds strongly to 16 substeps, but that costs about 71 ms and still clips render surfaces. Ordinary UseCCD does not cover the separate skinned-triangle constraint path. Keep this as diagnosis, not a release setting.
 - Current private reference: F12 / SK_Waist / CA_Fit, full body-joint6, contact 0.3 cm. Repaired render attachments pass rest reconstruction; hip/arm fitting and physics cost remain unresolved. No production deployment.
 - Identical reported full-collider runs differ by up to 3.559 cm, yet frame-64 clipping remains nearly unchanged. Do not attribute a smaller candidate's 1.977 cm trajectory difference to its geometry alone or demand exact particle reproducibility as fitting acceptance.
 - Skirt motion must retain the fitted garment's original leg-follow deformation. Same-pose upstream renders expose clipping from the old four-chain weights before physics. `CR_HolidayFollow` and its paired export preserve original influence values through eleven existing carrier bones; direct rig execution passes 291 recorded poses. This is the current base for adding dynamics, not finished cloth.
@@ -31,6 +33,8 @@ Paths in this table are relative to the workspace root unless linked.
 
 | Artifact | Finding or purpose |
 | --- | --- |
+| `CustomShellSystem/tools/eve-fit/trace_panel_contact.py`, `work/eve26/panel-contact-history.json` | Frame-end dynamic contact history and six-ray checks establish deep late-sprint penetration; no internal solver readback |
+| `CustomShellSystem/work/eve26/panel-step16-contact.json`, `panel-step16-clearance.json`, `panel-step16-views/` | More temporal sampling reduces deep particle penetration but costs too much and leaves visible surface clipping; side/rear inspected |
 | `CustomShellSystem/work/eve26/panel-support-trace.json` | 55 supports traced at frame 64; dynamic support vertices clear collider within 1 mm, one fixed support penetrates; radius checks do not justify global loosening |
 | `CustomShellSystem/tools/eve-fit/reweight_panel_mapping.py`, `work/eve26/panel-localmap-preserved.json`, `map-local-68-clearance.json` | Isolated attachment counterfactual improves counts but fails visual comparison; no native implementation or installation |
 | `CustomShellSystem/work/eve26/panel-repeat-trace.json`, `panel-hip-trace-summary.json` | All 19 distinct clipped dynamic lower vertices have positive skin-only clearance; preserve fitted shape and address cloth contact separately from 56 fixed upper arm-contact vertices |
