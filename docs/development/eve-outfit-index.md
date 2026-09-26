@@ -6,7 +6,7 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
-- **Latest user instruction: skip Holiday. Active order is Planet Diving 6th, Skin Suit, then others.** All Holiday experiments below are parked. No more automatic collider experiments; begin Planet's visible fitting review.
+- **Latest user instruction: skip Holiday. Active order is the existing Planet Diving model, Skin Suit, then others.** Reference checks identify this model as Prototype Planet Diving Suit, not 6th. Its lower-back strip needs a fixed upper attachment and dedicated motion below it; see [installed-game evidence](eve-planet-reference.md). All Holiday experiments below are parked.
 - Final Holiday diagnostics reject automatic regional colliders: native frame68 approximate surface gaps 2.14 / 11.38 / 6.75 cm for pelvis/left/right. Independent pose checks pass. `region-native/` contains measurements and inspected views; `region-*-local16*` contains completed offline local-transfer comparisons, not adopted native assets.
 
 - Native preparation now uses `export_skin_regions.py`, isolated SK_CPelv/SK_CThighL/SK_CThighR imports and the guarded `-Mesh` level-set probe. Generation metadata roots all three at pelvis, with 16/10/10 used bones. Smaller volumes are a deformation-partition experiment, not a proven root-motion repair. Fresh native distance and cloth checks remain required.
