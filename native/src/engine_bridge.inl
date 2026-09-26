@@ -173,6 +173,36 @@ void EngineBridge::encode(FProperty* p,void* data,const Json& value,unsigned dep
     }
     if(p->IsA<FNameProperty>()) {auto text=wide(value.get<std::string>());FName name(text.c_str());p->CopyCompleteValue(data,&name);return;}
     if(p->IsA<FStrProperty>()) {auto text=wide(value.get<std::string>());FString s(text.c_str());p->CopyCompleteValue(data,&s);return;}
+    if(p->IsA<FTextProperty>()) {
+        // FText is built by the engine from a string, then copied into place.
+        auto text=wide(value.get<std::string>());
+        Call convert(find(L"/Script/Engine.Default__KismetTextLibrary"),L"Conv_StringToText",2);
+        convert.set(L"InString",FString(text.c_str())); convert.run();
+        auto* result=convert.param(L"ReturnValue");
+        if(!result->SameType(p)) throw std::runtime_error("CSSX text property type mismatch");
+        p->CopyCompleteValue(data,convert.data(result));return;
+    }
+    if(p->IsA<FArrayProperty>()) {
+        if(!value.is_array() || value.size()>4096) throw std::runtime_error("CSSX array requires an array of at most 4096 items");
+        // FScriptArray is {data, num, max}. Its resize helpers do not link against this UE4SS
+        // build, so the storage is resized through the engine's own allocator (GMalloc).
+        struct RawArray { void* data; int32 num; int32 max; };
+        auto* a=static_cast<FArrayProperty*>(p); auto* inner=a->GetInner();
+        auto* raw=static_cast<RawArray*>(data);
+        const auto size=static_cast<size_t>(inner->GetSize());
+        if(raw->num<0 || raw->num>raw->max || size==0) throw std::runtime_error("CSSX array header is invalid");
+        for(int32 i=0;i<raw->num;++i) inner->DestroyValue(static_cast<std::byte*>(raw->data)+i*size);
+        const auto count=static_cast<int32>(value.size());
+        raw->data=count?(*GMalloc)->Realloc(raw->data,count*size,static_cast<uint32>(inner->GetMinAlignment())):((*GMalloc)->Free(raw->data),nullptr);
+        if(count && !raw->data) throw std::runtime_error("CSSX array allocation failed");
+        raw->num=raw->max=count;
+        for(int32 i=0;i<count;++i) {
+            auto* item=static_cast<std::byte*>(raw->data)+i*size;
+            std::memset(item,0,size); inner->InitializeValue(item);
+            encode(inner,item,value[i],depth+1);
+        }
+        return;
+    }
     if(p->IsA<FStructProperty>()) {
         if(!value.is_object()) throw std::runtime_error("CSSX struct requires an object");
         auto* type=static_cast<FStructProperty*>(p)->GetStruct().Get();
@@ -221,6 +251,15 @@ Json EngineBridge::request(void* engine,Appearance& appearance,const Json& reque
         if(op=="load") return handle(load(path));
         auto text=wide(path);return handle(UObjectGlobals::StaticFindObject<UObject*>(nullptr,nullptr,text.c_str()));
     }
+#ifdef CSS_INVENTORY_DEV
+    // Dev prototyping: build a plain UMG widget (panel, image, text) inside a widget tree.
+    if(op=="construct") {
+        const auto path=request.at("class").get<std::string>();
+        if(!path.starts_with("/Script/UMG.")) throw std::runtime_error("Only /Script/UMG widget classes can be constructed");
+        auto* outer=resolve(request.at("outer"));if(!outer) throw std::runtime_error("Construct needs a live outer");
+        return handle(construct(wide(path).c_str(),outer));
+    }
+#endif
     auto* object=resolve(request.at("target"));if(!object) throw std::runtime_error("CSSX target is null");
     if(op=="animation.reset_dynamics") {
         if(!object->IsA(static_cast<UClass*>(find(L"/Script/Engine.AnimInstance"))))

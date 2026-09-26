@@ -65,6 +65,7 @@ void InventoryUI::detach() {
 #endif
     camera_stop();
     if(auto* tabs=tabs_.Get(); tabs && tab_.Get() && main_.Get() && active_) inventory_navigate(tabs,0);
+    native_forget();
     if(auto* page=page_.Get()) invoke(page,L"RemoveFromParent");
     if(auto* tab=tab_.Get()) invoke(tab,L"RemoveFromParent");
     for(const auto& [widget,padding]:top_padding_) if(auto* child=widget.Get()) if(auto* slot=inventory_object(child,L"Slot")) invoke(slot,L"SetPadding",L"InPadding",padding);
@@ -171,6 +172,8 @@ Json InventoryUI::command(void* engine,const Json& command) {
         // Repair this development session's old prototype, not a startup path.
         for(auto& [widget,padding]:top_padding_) padding={80,0,80,0};
         for(auto* child:inventory_children(tabs_.Get())) if(auto* slot=inventory_object(child,L"Slot")) invoke(slot,L"SetPadding",L"InPadding",Margin{60,0,60,0});
+    } else if(action=="inventory_freeze") {
+        frozen_=command.value("on",true);
     } else if(action=="inventory_section") {
         section_=std::clamp(command.value("section",0),0,4); row_=std::max(0,command.value("row",0)); dirty_=true;
     } else if(action=="inventory_select") {
@@ -202,7 +205,7 @@ Json InventoryUI::command(void* engine,const Json& command) {
         DWORD pid=0; GetWindowThreadProcessId(GetForegroundWindow(),&pid);
         if(pid!=GetCurrentProcessId()) throw std::runtime_error("Key test requires focused game");
         const auto key=command.at("key").get<std::string>();
-        const WORD code=key.size()==1 && std::string("IWASDEFR").find(key[0])!=std::string::npos?WORD(key[0]):
+        const WORD code=key.size()==1 && key[0]>='A' && key[0]<='Z'?WORD(key[0]):
             key=="Space"?VK_SPACE:key=="Shift"?VK_LSHIFT:key=="Ctrl"?VK_LCONTROL:key=="Escape"?VK_ESCAPE:key=="Home"?VK_HOME:key=="F8"?VK_F8:0;
         if(!code) throw std::runtime_error("Unsupported menu test key");
         INPUT input{}; input.type=INPUT_KEYBOARD; input.ki.wVk=code;

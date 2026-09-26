@@ -85,10 +85,43 @@ class InventoryUI {
     // `unit` is what the readout says after the number: "" for a bare value, " Hz" for a
     // frequency, "%" for a ratio shown as a percentage. It has to live here because the
     // drag handler redraws the label and only ever sees the slider.
-    struct Slider { WeakObject widget, label, heading; Json action; float previous; bool scalar; std::string unit; };
+    // `widget` is the native bar the value is read off when dragged, `heading` the whole row
+    // (its selected state marks the channel Left/Right adjusts).
+    struct Slider { WeakObject widget, label, heading; Json action; float previous; bool scalar; std::string unit;
+                    float minimum=0, maximum=1, step=0; };
     struct Binding { std::string action; std::vector<std::string> keys; bool down=false; uint64_t repeat=0; WeakObject input_action; };
     std::vector<Hit> hits_;
-    bool mouse_was_down_=false;
+    bool mouse_was_down_=false, left_was_down_=false;
+    int drag_slider_=-1;          // index into sliders_ while a bar is being dragged
+    // ---- beta.5 native page (inventory_native.inl) ----
+    // The page is the game's own widgets, created once and kept. A build runs the same
+    // immediate-mode code as before, but each call takes the next pooled widget of its kind
+    // and changes only what differs, so moving the selection is a few restyles instead of
+    // a teardown and rebuild of every widget on the page.
+    enum class NativeKind : uint8_t { none, row, header, option, slider, divider, action, swatches, input, paragraph, tab };
+    struct NativeItem {
+        NativeKind kind=NativeKind::none;
+        WeakObject widget, hit, hit_left, hit_right, text_block, value_block, extra;
+        std::vector<WeakObject> cells;                 // swatch chips: frame, colour, selection, button
+        std::string text, value;                       // what is on screen now
+        int selected=-1, badge=-1, shown=-1, enabled=-1, icon_shown=-1;
+        const void* icon=nullptr; std::array<float,4> chip{}; float fill=-2.f;
+        std::string glyph;                             // binding + fallback + device the glyph was set for
+    };
+    struct NativeStack { WeakObject box; std::vector<NativeItem> items; size_t used=0; };
+    WeakObject design_, left_root_, right_root_, center_root_, list_scroll_, strip_scroll_, details_, panel_scroll_, status_text_;
+    NativeStack tab_items_, list_, panel_, actions_, footer_, camera_bar_;
+    double design_w_=0, design_scale_=0;
+    int shown_section_=-1, revealed_row_=-1;
+    std::string detail_title_, detail_sub_, detail_body_, status_shown_;
+    const void* detail_icon_=reinterpret_cast<const void*>(1);
+    WeakObject dialog_, dialog_primary_, dialog_secondary_;
+    std::vector<WeakObject> frozen_listeners_;
+    std::string dialog_shown_;
+    int dialog_focus_=0, dialog_focus_shown_=-1;
+#ifdef CSS_INVENTORY_DEV
+    bool frozen_=false;   // inventory_freeze: no page rebuilds while prototyping
+#endif
     std::vector<Row> rows_;
     std::vector<Slider> sliders_;
     std::vector<Binding> bindings_;
@@ -140,6 +173,16 @@ class InventoryUI {
     double backdrop_aspect_=0;
     std::array<double,3> location_before_{}, camera_rotation_before_{}, camera_location_before_{}, camera_world_rotation_{}, camera_world_location_{};
     void build(const Catalog&,const State&,Appearance&);
+    bool native_page(double width,double height);
+    void native_forget();
+    NativeItem& native_take(NativeStack&,NativeKind);
+    void native_finish(NativeStack&);
+    void native_glyph(RC::Unreal::UObject* prompt,const std::string& action,uint8_t fallback,uint8_t keyboard=255);
+    void native_visible(NativeItem&,bool);
+    void native_text(RC::Unreal::UObject* block,std::string& shown,const std::string& value);
+    void native_state(NativeItem&,bool selected);
+    void native_dialog();
+    void native_dialog_close();
     void bind_inputs();
     void camera_start();
     void camera_stop();
