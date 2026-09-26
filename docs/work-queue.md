@@ -1,5 +1,11 @@
 # Current work queue
 
+**Latest September 26 instruction: fitting first.** Focus on garment fitting to Black Pearl's standard. Park palette implementation. Start with Holiday Reveler, whose latest saved blend has missing vertex weights, then validate fitting, morphs and motion before extending to other outfits. Preserve Gemini's improved custom skeleton, including its game sockets. See the [updated execution order](development/eve-outfit-goal.md#next-implementation-steps).
+
+**2026-09-26: Eve outfit work resumed.** Current priority is the [Eve outfit goal](development/eve-outfit-goal.md), with [evidence index](development/eve-outfit-index.md). User requires Original plus at least five clothing palettes per outfit and complete applicable customization, fitting and physics. Installed metadata confirms all ten added outfits currently have hair-only palettes because the generator removes garment controls and redirects suit colors to hair. Repair actual garment bindings before counting palettes as delivered. Claude Code owns concurrent CSS UI/UX and performance work. Older pause/alpha entries below are historical; the camera fix was subsequently accepted, and current manifests include Eve I2 idle.
+
+## Earlier checkpoints
+
 **Resumed by user on 2026-09-22 for an urgent alpha camera fix.** At the start of the parry/riposte animation, the camera sits too far behind and misses the character. Reproduce, fix, rebuild/install/test, then replace the affected alpha release ZIPs as explicitly requested. Check related camera-driven animations. Keep idle development parked and preserve the separate CSSX agent's work. The [prior pause handoff](development/resume-after-quota.md) remains the checkpoint for unfinished idle work.
 2026-09-22: [Animation-camera repair](development/animation-camera-repair.md) is installed for user review. Only camera_pivot/camera_target translation modes change; release replacement awaits riposte/trap gameplay verification. Broader work remains paused.
 
