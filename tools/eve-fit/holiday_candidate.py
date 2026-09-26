@@ -40,11 +40,29 @@ def frame(a, b, c):
     return Matrix((x, y, z)).transposed()
 
 
+def fitted_points(obj):
+    keys = obj.data.shape_keys
+    points = coords(keys.key_blocks[0].data) if keys else coords(obj.data.vertices)
+    if keys:
+        for key in keys.key_blocks[1:]:
+            if key.mute or not key.value:
+                continue
+            delta = coords(key.data) - coords(key.relative_key.data)
+            if key.vertex_group:
+                group = obj.vertex_groups[key.vertex_group]
+                mask = np.asarray([next((g.weight for g in v.groups if g.group == group.index), 0)
+                                   for v in obj.data.vertices])
+                delta *= mask[:, None]
+            points += delta * key.value
+    return [obj.matrix_world @ Vector(point) for point in points]
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--master', type=Path, required=True)
     p.add_argument('--baseline', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--evaluated-source', action='store_true')
     a = p.parse_args(sys.argv[sys.argv.index('--') + 1:])
     if a.output.exists() or a.output.with_suffix('.json').exists():
         raise FileExistsError(a.output)
@@ -52,6 +70,39 @@ def main():
     bpy.ops.wm.open_mainfile(filepath=str(a.master))
     source = bpy.data.objects['Eve Body']
     source_points = [source.matrix_world @ v.co for v in source.data.vertices]
+    evaluated_cloth = {}
+    if a.evaluated_source:
+        collection = bpy.data.collections.new('Holiday source evaluation')
+        bpy.context.scene.collection.children.link(collection)
+        for name in ['Eve Body'] + names:
+            obj = bpy.data.objects[name]
+            collection.objects.link(obj)
+            obj.driver_remove('hide_render')
+            obj.driver_remove('hide_viewport')
+            obj.hide_render = False
+            obj.hide_viewport = False
+            obj.hide_set(False)
+        bpy.context.view_layer.update()
+        for obj in bpy.data.objects:
+            for modifier in obj.modifiers:
+                enabled = modifier.show_render
+                obj.driver_remove(modifier.path_from_id() + '.show_viewport')
+                obj.driver_remove(modifier.path_from_id() + '.show_render')
+                modifier.show_viewport = enabled and modifier.type not in ('SUBSURF', 'PARTICLE_SYSTEM')
+        bpy.context.view_layer.update()
+        dg = bpy.context.evaluated_depsgraph_get()
+        for name in ['Eve Body'] + names:
+            obj = bpy.data.objects[name]
+            evaluated = obj.evaluated_get(dg)
+            mesh = evaluated.to_mesh()
+            assert len(mesh.vertices) == len(obj.data.vertices), (name, 'Evaluated topology changed')
+            assert [tuple(p.vertices) for p in mesh.polygons] == [tuple(p.vertices) for p in obj.data.polygons]
+            points = [obj.matrix_world @ v.co for v in mesh.vertices]
+            if name == 'Eve Body':
+                source_points = points
+            else:
+                evaluated_cloth[name] = points
+            evaluated.to_mesh_clear()
     source_faces = [tuple(p.vertices) for p in source.data.polygons]
     source.data.calc_loop_triangles()
     triangles = [tuple(t.vertices) for t in source.data.loop_triangles]
@@ -61,6 +112,8 @@ def main():
     before = digest(body)
     assert [tuple(p.vertices) for p in body.data.polygons] == source_faces, 'Body topology differs'
     target_points = [body.matrix_world @ v.co for v in body.data.vertices]
+    if a.evaluated_source:
+        target_points = fitted_points(body)
     rig = bpy.data.objects['SKEL_CSS_Base']
     rig_before = [(b.name, b.parent.name if b.parent else None, list(b.matrix_local)) for b in rig.data.bones]
     bone_names = {b.name for b in rig.data.bones}
@@ -85,7 +138,7 @@ def main():
         weights = []
         distances = []
         for index, vertex in enumerate(original):
-            point = world @ Vector(vertex)
+            point = evaluated_cloth[name][index] if a.evaluated_source else world @ Vector(vertex)
             hit, normal, ti, distance = tree.find_nearest(point)
             ids = triangles[ti]
             src = [source_points[i] for i in ids]
@@ -106,6 +159,7 @@ def main():
             distances.append(distance)
         for modifier in list(obj.modifiers):
             obj.modifiers.remove(modifier)
+        obj.animation_data_clear()
         obj.parent = rig
         obj.matrix_parent_inverse = rig.matrix_world.inverted()
         obj.matrix_world = Matrix.Identity(4)
@@ -115,10 +169,13 @@ def main():
             for n, w in row.items():
                 groups[n].add([index], w, 'REPLACE')
         obj.data.vertices.foreach_set('co', mapped.ravel())
+        matrices = np.asarray([np.asarray(m @ world.to_3x3()) for m in transforms], dtype=np.float32)
         for key in obj.data.shape_keys.key_blocks:
             offsets = original_keys[key.name] - original
-            transformed = np.asarray([transforms[i] @ (world.to_3x3() @ Vector(v)) for i, v in enumerate(offsets)], dtype=np.float32)
+            transformed = np.einsum('nij,nj->ni', matrices, offsets)
             key.data.foreach_set('co', (mapped + transformed).ravel())
+            if a.evaluated_source:
+                key.value = 0
         obj.data.shape_keys.animation_data_clear()
         arm = obj.modifiers.new('CSS skin', 'ARMATURE')
         arm.object = rig
@@ -136,8 +193,9 @@ def main():
     bpy.ops.wm.save_as_mainfile(filepath=str(a.output))
     a.output.with_suffix('.json').write_text(json.dumps(dict(source=str(a.master), baseline=str(a.baseline),
         output=str(a.output), body_sha256=before, body_unchanged=True, rig_unchanged=True, parts=rows,
-        scope='F1 offline surface correspondence candidate. Clearance, morph endpoints, motion and game rendering not yet accepted.'), indent=2)+'\n')
-    print('HOLIDAY_F1_SAVED', flush=True)
+        evaluated_source=a.evaluated_source,
+        scope='Offline surface correspondence candidate. Clearance, morph endpoints, motion and game rendering not yet accepted.'), indent=2)+'\n')
+    print('HOLIDAY_CANDIDATE_SAVED', flush=True)
 
 
 if __name__ == '__main__':

@@ -51,3 +51,7 @@ References already reviewed: local cloth-physics-guide, MustardUI README and Com
 
 - `CustomShellSystem/work/eve26/original-visible`: pristine source with wardrobe visibility enabled. Reviewed front shows correct chest coverage and loose sleeves with the original deformation stack. This is the intended shape reference for F2. The source logs eight dependency-cycle warnings; evaluate and verify explicitly before baking.
 - Do not reuse `original-views` as garment evidence: source visibility drivers hid the outfit in that first capture.
+
+- `CustomShellSystem/work/eve26/holiday-f2.json` and `f2-bind`: evaluated-source candidate, unchanged body/rig, full garment weights, visually improved chest/sleeves. Current best offline baseline; a small sleeve clip remains.
+- `CustomShellSystem/work/eve26/holiday-f3.log`: bounded clearance rejected dress displacement before saving. Inspect failing regions, do not blindly raise the threshold.
+- `CustomShellSystem/work/eve26/evaluation.json`: initial source viewport modifier probe; F2 subsequently uses render-time enablement, so this probe alone does not describe F2's modifier state.
