@@ -264,3 +264,8 @@ CSSX disabled for Next-Gen: normal QuitGame/start completed, both CSSX startup p
 Preserve the original untracked `catalog/dev-items.disabled`. Steam screenshots remain the still-capture preference; avoid changing desktop focus for inspection. All authoring, builds, scratch and backups stay inside the workspace.
 
 Completed capture-tool limitation: the development-only Steam action returns before player/Inventory lookup. Windows build, loader-contract checks, acknowledged replacement, module mappings and actual inspected Steam images pass. Evidence: `work/steam-title-capture-v1/`. The subsequently observed preview-camera defect is resolved in `work/preview-camera-v1/revision2/`; see the latest checkpoint above.
+
+
+### Eve Holiday cloth integration investigation (2026-09-26)
+
+Eve authoring is evaluating a separate ChaosClothAsset/ChaosClothComponent candidate because stock skeletal cloth rebuild rejects one shared cloth LOD across several material sections. Current game SDK and executable contain panel-cloth classes; runtime asset compatibility is not yet tested. No CSS core edits or integration requests yet. Before runtime integration, coordinate component ownership, outfit switching, preview, morph/color controls and cleanup with the agent working on CSS UI/performance. Details: `docs/development/eve-outfit-goal.md`.
