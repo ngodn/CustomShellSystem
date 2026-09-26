@@ -2,6 +2,19 @@
 
 Newest first. Each entry says what is done, what evidence exists and what is next.
 
+2026-09-27 (v1.2.0, native page): The CSSX page is rebuilt on the game's own
+widget blueprints with a pooled widget model (`src/core/menu_page.cpp`, the
+CSS beta.5 recipe, no CSS dependency). Verified live through the dev channel
+with screenshots `work/screens/50-76`: library, extension sections, toggles,
+numbers, sliders (drag and arrows), the inline picker, the pooled confirmation
+dialog, settings and the 95% rescale. Costs from `menu.diagnostics`: selection
+move 0.1-0.6 ms, new pooled kinds 1.5-5 ms once, dialog 4 / 2.4 ms, skeleton
+30 ms once (warm-up path when the Player Menu opens on another tab), idle
+with the page open ~0.06 ms per frame, closed ~3 us. Extension DLLs
+untouched (ABI 3, menu schema 2). Driver scripts: `work/ui-overhaul/drive*.py`.
+Open: the user's own look at it in game (controller glyphs, mouse clicks on
+the game's transparent buttons), then a release build and tag.
+
 2026-09-22 (v1.0.0, re-cut): Added the CSSX Performance extension (Lua,
 `performance/`) and the `frame.brief` host op it uses; tag `v1.0.0-cssx`
 moved to this commit and the three ZIPs rebuilt (nothing had been uploaded).

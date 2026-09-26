@@ -14,6 +14,15 @@ informational files. `frame.stats` now attributes every hitch frame to the
 core's own time inside it, so the next live session can say per hitch whether
 CSSX was involved (`tools/hitches.py`).
 
+## 2026-09-27 menu rebuild cost (1.2.0)
+
+`frame.stats.menu_builds` before: 46 builds, 564 ms total, 12 to 30 ms each
+(every selection move tore the hand-drawn page down and rebuilt ~115 widgets
+with ~800 reflected calls). After the native pooled page: 58 builds, 182 ms
+total including the one-off skeleton (30 ms) and pool creation; a selection
+move is 0.1 to 0.6 ms, idle with the page open 2.6 to 60 us per frame
+(the key poll), closed 3 us. Method and screenshots: `work/ui-overhaul/`.
+
 ## Raw evidence index (all under `CustomShellSystem/work/`)
 
 | Artifact | What it is | Scope |

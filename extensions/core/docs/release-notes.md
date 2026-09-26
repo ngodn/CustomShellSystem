@@ -3,6 +3,25 @@
 Draft, updated with every release candidate. Player-facing wording; the
 evidence behind each line is in `integration-tests.md` and `performance.md`.
 
+## CSSX 1.2.0
+
+- The CSSX page is built from Mortal Shell II's own menu widgets, like the
+  CSS tab: the Change Shade list rows and category headers, the options
+  menu's selector and slider rows, the Inventory details window with its
+  prompt list, the Inventory's tab strip with edge fades, and the game's
+  confirmation dialog. Fonts, frames, glyphs and highlights are the game's.
+- Section tabs scroll instead of truncating; the selected one slides into view.
+- Every control's value shows under its name in the list; the game's E badge
+  marks toggles that are on and extensions that report themselves active.
+- No hitches while navigating: widgets are pooled and only what changed is
+  written. Moving the selection costs a fraction of a millisecond instead of
+  rebuilding the page (12 to 30 ms before). The page warms up while the
+  Player Menu is open on another tab, so the CSSX tab opens ready.
+- Menu scale (Settings) now scales the whole page like the game's menus do.
+- Extensions need no change: the extension ABI, the menu schema and every
+  request operation are unchanged. CSSX Cheat Menu 1.1.1 and Traverse 1.0.0
+  run as shipped.
+
 ## CSSX 1.0.0
 
 - CSSX is its own UE4SS mod at `ue4ss/Mods/CSSX/`. It does not need CSS and

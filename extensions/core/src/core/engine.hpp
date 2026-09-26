@@ -108,7 +108,13 @@ template<class T> void raw_value(UObject* object,const wchar_t* name,const T& va
 void text_value(UObject* widget,const std::string& text);
 std::string text_of(UObject* widget,int limit=256);
 void font_size(UObject* widget,float size,UObject* font_object=nullptr);
-void flat_button(UObject* widget,bool active);
+// A UMG Button with no drawn faces: an `active` one shows a faint fill, a `silent` one draws
+// nothing at all, not even a hover box (the game's prompts do not).
+void flat_button(UObject* widget,bool active,bool silent=false);
+// Copy one reflected property between two objects of the same type (style copies).
+void copy_property(UObject* to,UObject* from,const wchar_t* name);
+// Write an FText property through the engine's own string conversion.
+void text_property(UObject* object,const wchar_t* name,const std::string& value);
 UObject* content(UObject* parent,UObject* child);
 std::vector<UObject*> children(UObject* panel,int limit=256);
 UObject* create_widget(UObject* pc,UClass* type);   // WidgetBlueprintLibrary.Create
@@ -117,18 +123,4 @@ UObject* create_widget(UObject* pc,UClass* type);   // WidgetBlueprintLibrary.Cr
 struct PlayerContext { UObject* world=nullptr; UObject* pc=nullptr; UObject* pawn=nullptr; };
 PlayerContext player_context(void* engine);
 
-// Coordinates in a 1920x1080 reference space scaled to the live viewport.
-struct Layout {
-    UObject* tree; UObject* canvas; double scale; UObject* serif; UObject* title_font;
-    double origin_x=0, origin_y=0;
-    struct Placed { UObject* widget; UObject* canvas; double x,y,w,h; };
-    std::vector<Placed> placed{};
-    std::vector<UObject*> on(UObject* target) const;
-    double extent_of(UObject* target) const;
-    UObject* place(UObject* widget,double x,double y,double w,double h);   // returns the canvas slot
-    UObject* box(double x,double y,double w,double h,Color color);
-    UObject* label(const std::string& text,double x,double y,double w,double h,float size,Color color,bool title=false,uint8_t justify=0);
-    UObject* button(const std::string& text,double x,double y,double w,double h,bool active=false,bool enabled=true,float size=20,Color ink={1,1,1,1});
-    UObject* image(UObject* texture,double x,double y,double w,double h,float opacity=1,UVRect uv={});
-};
 }

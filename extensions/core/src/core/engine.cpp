@@ -173,7 +173,7 @@ UObject* load(const std::string& path) {
     if(auto it=s_asset_cache.find(path);it!=s_asset_cache.end()) if(auto* cached=it->second.Get()) return cached;
     auto name=wide(path);
     if(auto* object=find_optional(name.c_str())) { s_asset_cache[path]=object; return object; }
-    auto* kismet=find(L"/Script/Engine.Default__KismetSystemLibrary");
+    auto* kismet=find_cached(L"/Script/Engine.Default__KismetSystemLibrary");
     Call make(kismet,L"MakeSoftObjectPath",2);
     FString string(name.c_str()); make.set(L"PathString",string); make.run();
     Call convert(kismet,L"Conv_SoftObjPathToSoftObjRef",2);
@@ -193,20 +193,20 @@ UObject* construct_class(UClass* cls,UObject* outer) {
     if(!object) throw std::runtime_error("Could not construct object");
     return object;
 }
-UObject* construct(const wchar_t* type,UObject* outer) { return construct_class(static_cast<UClass*>(find(type)),outer); }
+UObject* construct(const wchar_t* type,UObject* outer) { return construct_class(static_cast<UClass*>(find_cached(type)),outer); }
 void object_property(UObject* object,const wchar_t* name,UObject* value) {
     auto* p=field(object,name,sizeof(UObject*));
     p->CopyCompleteValue(reinterpret_cast<std::byte*>(object)+p->GetOffset_Internal(),&value);
 }
 void text_value(UObject* widget,const std::string& text) {
-    Call convert(find(L"/Script/Engine.Default__KismetTextLibrary"),L"Conv_StringToText",2);
+    Call convert(find_cached(L"/Script/Engine.Default__KismetTextLibrary"),L"Conv_StringToText",2);
     FString value(wide(text).c_str()); convert.set(L"InString",value); convert.run();
     Call set(widget,L"SetText",1); set.copy(L"InText",convert,L"ReturnValue"); set.run();
 }
 std::string text_of(UObject* widget,int limit) {
     if(!widget) return {};
     Call text(widget,L"GetText",1); text.run();
-    Call convert(find(L"/Script/Engine.Default__KismetTextLibrary"),L"Conv_TextToString",2);
+    Call convert(find_cached(L"/Script/Engine.Default__KismetTextLibrary"),L"Conv_TextToString",2);
     convert.copy(L"InText",text,L"ReturnValue"); convert.run();
     const auto& value=*static_cast<FString*>(convert.data(convert.param(L"ReturnValue")));
     const auto& chars=value.GetCharArray();
@@ -215,7 +215,7 @@ std::string text_of(UObject* widget,int limit) {
 }
 void font_size(UObject* widget,float size,UObject* font_object) {
     auto* font=widget->GetPropertyByNameInChain(L"Font");
-    auto* info=find(L"/Script/SlateCore.SlateFontInfo");
+    auto* info=find_cached(L"/Script/SlateCore.SlateFontInfo");
     auto* size_field=field(info,L"Size",sizeof(float));
     Call set(widget,L"SetFont",1);
     auto* param=set.param(L"InFontInfo");
@@ -227,19 +227,20 @@ void font_size(UObject* widget,float size,UObject* font_object) {
     member(set.data(param),param->GetElementSize(),info,L"TypefaceFontName",FName(L"Regular"));
     set.run();
 }
-void flat_button(UObject* widget,bool active) {
+void flat_button(UObject* widget,bool active,bool silent) {
     Call set(widget,L"SetStyle",1);
     auto* param=set.param(L"InStyle");
     auto* source=widget->GetPropertyByNameInChain(L"WidgetStyle");
     if(!source || !source->SameType(param)) throw std::runtime_error("Button style layout mismatch");
     param->CopyCompleteValue(set.data(param),reinterpret_cast<std::byte*>(widget)+source->GetOffset_Internal());
-    auto* style=find(L"/Script/SlateCore.ButtonStyle"); auto* brush=find(L"/Script/SlateCore.SlateBrush");
+    auto* style=find_cached(L"/Script/SlateCore.ButtonStyle"); auto* brush=find_cached(L"/Script/SlateCore.SlateBrush");
     for(const auto* name:{L"Normal",L"Hovered",L"Pressed",L"Disabled"}) {
         auto* p=style->GetPropertyByNameInChain(name);
         if(!p || p->GetOffset_Internal()<0 || p->GetOffset_Internal()+p->GetElementSize()>param->GetElementSize()) throw std::runtime_error("Invalid button brush");
         auto* data=static_cast<std::byte*>(set.data(param))+p->GetOffset_Internal();
         Color tint{0,0,0,0};
-        if(std::wstring_view(name)==L"Hovered") tint={0.18f,0.135f,0.075f,0.55f};
+        if(silent) tint={0,0,0,0};
+        else if(std::wstring_view(name)==L"Hovered") tint={0.18f,0.135f,0.075f,0.55f};
         else if(std::wstring_view(name)==L"Pressed") tint={0.30f,0.225f,0.12f,0.7f};
         else if(active) tint={0.10f,0.075f,0.035f,0.25f};
         member(data,p->GetElementSize(),brush,L"DrawAs",uint8_t{3});
@@ -248,6 +249,19 @@ void flat_button(UObject* widget,bool active) {
         member(data,p->GetElementSize(),brush,L"Margin",Margin{});
     }
     set.run();
+}
+void copy_property(UObject* to,UObject* from,const wchar_t* name) {
+    auto* p=to->GetPropertyByNameInChain(name); auto* q=from->GetPropertyByNameInChain(name);
+    if(!p || !q || !p->SameType(q)) throw std::runtime_error("Style property mismatch: "+narrow(name));
+    p->CopyCompleteValue(reinterpret_cast<std::byte*>(to)+p->GetOffset_Internal(),reinterpret_cast<std::byte*>(from)+q->GetOffset_Internal());
+}
+void text_property(UObject* object,const wchar_t* name,const std::string& value) {
+    Call convert(find_cached(L"/Script/Engine.Default__KismetTextLibrary"),L"Conv_StringToText",2);
+    convert.set(L"InString",FString(wide(value).c_str())); convert.run();
+    auto* p=object->GetPropertyByNameInChain(name);
+    auto* result=convert.param(L"ReturnValue");
+    if(!p || !p->SameType(result)) throw std::runtime_error("Text property mismatch: "+narrow(name));
+    p->CopyCompleteValue(reinterpret_cast<std::byte*>(object)+p->GetOffset_Internal(),convert.data(result));
 }
 UObject* content(UObject* parent,UObject* child) { Call c(parent,L"SetContent",2); c.set(L"content",child); c.run(); return c.get<UObject*>(); }
 std::vector<UObject*> children(UObject* panel,int limit) {
@@ -258,7 +272,7 @@ std::vector<UObject*> children(UObject* panel,int limit) {
     return result;
 }
 UObject* create_widget(UObject* pc,UClass* type) {
-    Call c(find(L"/Script/UMG.Default__WidgetBlueprintLibrary"),L"Create",4);
+    Call c(find_cached(L"/Script/UMG.Default__WidgetBlueprintLibrary"),L"Create",4);
     c.set(L"WorldContextObject",pc); c.set(L"WidgetType",type); c.set(L"OwningPlayer",pc); c.run();
     auto* widget=c.get<UObject*>();
     if(!widget) throw std::runtime_error("Widget creation failed");
@@ -277,67 +291,5 @@ PlayerContext player_context(void* engine) {
     if(out.pc && WeakObject(out.pc).Get()!=out.pc) out.pc=nullptr;
     if(out.pc) out.pawn=object_of(out.pc,L"Pawn");
     return out;
-}
-std::vector<UObject*> Layout::on(UObject* target) const { std::vector<UObject*> r; for(const auto& p:placed) if(p.canvas==target) r.push_back(p.widget); return r; }
-double Layout::extent_of(UObject* target) const { double bottom=0; for(const auto& p:placed) if(p.canvas==target) bottom=std::max(bottom,p.y+p.h); return bottom; }
-UObject* Layout::place(UObject* widget,double x,double y,double w,double h) {
-    Call add(canvas,L"AddChildToCanvas",2); add.set(L"content",widget); add.run();
-    auto* slot=add.get<UObject*>();
-    invoke(slot,L"SetPosition",L"InPosition",Vec2{(x-origin_x)*scale,(y-origin_y)*scale});
-    invoke(slot,L"SetSize",L"InSize",Vec2{w*scale,h*scale});
-    placed.push_back({widget,canvas,x-origin_x,y-origin_y,w,h});
-    return slot;
-}
-UObject* Layout::box(double x,double y,double w,double h,Color color) {
-    auto* widget=construct(L"/Script/UMG.Border",tree);
-    invoke(widget,L"SetBrushColor",L"InBrushColor",color);
-    invoke(widget,L"SetVisibility",L"InVisibility",uint8_t{4});   // SelfHitTestInvisible
-    place(widget,x,y,w,h); return widget;
-}
-UObject* Layout::label(const std::string& text,double x,double y,double w,double h,float size,Color color,bool title,uint8_t justify) {
-    auto* widget=construct(L"/Script/UMG.TextBlock",tree);
-    text_value(widget,text); font_size(widget,size*static_cast<float>(scale),title?title_font:serif);
-    invoke(widget,L"SetColorAndOpacity",L"InColorAndOpacity",SlateColor{color});
-    invoke(widget,L"SetAutoWrapText",L"InAutoTextWrap",h>size*2.2);
-    invoke(widget,L"SetJustification",L"InJustification",justify);
-    invoke(widget,L"SetClipping",L"InClipping",uint8_t{1});
-    invoke(widget,L"SetTextOverflowPolicy",L"InOverflowPolicy",uint8_t{1});
-    invoke(widget,L"SetVisibility",L"InVisibility",uint8_t{3});   // HitTestInvisible
-    place(widget,x,y,w,h); return widget;
-}
-UObject* Layout::button(const std::string& text,double x,double y,double w,double h,bool active,bool enabled,float size,Color ink) {
-    // Same recipe as the CSS inventory tab: a UMG Button with focus off and a
-    // flat style. The menu detects clicks by polling IsPressed on each button,
-    // so nothing depends on the player controller seeing the mouse.
-    auto* widget=construct(L"/Script/UMG.Button",tree);
-    flat_button(widget,active);
-    auto* focusable=widget->GetPropertyByNameInChain(L"IsFocusable");
-    if(!focusable || !focusable->IsA<FBoolProperty>()) throw std::runtime_error("Button focus property mismatch");
-    static_cast<FBoolProperty*>(focusable)->SetPropertyValueInContainer(widget,false);
-    if(!text.empty()) {
-        auto* label=construct(L"/Script/UMG.TextBlock",tree);
-        text_value(label,text); font_size(label,size*static_cast<float>(scale),serif);
-        invoke(label,L"SetColorAndOpacity",L"InColorAndOpacity",SlateColor{enabled?ink:Color{ink.r*.6f,ink.g*.6f,ink.b*.6f,1}});
-        invoke(label,L"SetJustification",L"InJustification",uint8_t{1});
-        invoke(label,L"SetClipping",L"InClipping",uint8_t{1});
-        invoke(label,L"SetTextOverflowPolicy",L"InOverflowPolicy",uint8_t{1});
-        invoke(label,L"SetVisibility",L"InVisibility",uint8_t{3});
-        content(widget,label);
-    }
-    invoke(widget,L"SetIsEnabled",L"bInIsEnabled",enabled);
-    place(widget,x,y,w,h); return widget;
-}
-UObject* Layout::image(UObject* texture,double x,double y,double w,double h,float opacity,UVRect uv) {
-    auto* widget=construct(L"/Script/UMG.Image",tree);
-    Call brush(widget,L"SetBrushFromTexture",2); brush.set(L"Texture",texture); brush.set(L"bMatchSize",false); brush.run();
-    Call set(widget,L"SetBrush",1); auto* p=set.param(L"InBrush");
-    auto* source=widget->GetPropertyByNameInChain(L"Brush");
-    if(!source || !source->SameType(p)) throw std::runtime_error("Image brush layout mismatch");
-    p->CopyCompleteValue(set.data(p),reinterpret_cast<std::byte*>(widget)+source->GetOffset_Internal());
-    member(set.data(p),p->GetElementSize(),find(L"/Script/SlateCore.SlateBrush"),L"UVRegion",uv);
-    set.run();
-    invoke(widget,L"SetVisibility",L"InVisibility",uint8_t{3});
-    invoke(widget,L"SetRenderOpacity",L"InOpacity",opacity);
-    place(widget,x,y,w,h); return widget;
 }
 }
