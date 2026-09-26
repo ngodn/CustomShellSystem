@@ -28,6 +28,8 @@ Paths in this table are relative to the workspace root unless linked.
 | Artifact | Finding or purpose |
 | --- | --- |
 | [Current goal/status](eve-outfit-goal.md) | Scope, acceptance criteria, takeover findings and next steps |
+| `CustomShellSystem/work/eve26/follow-component.json`, `follow-skinning-verified.json`, `follow-component-views` | Original vs copied secondary graph comparison over 291 actual compressed frames; exact non-skirt local poses, carrier error below 0.000576 cm, two inspected jog/morph side views |
+| `CustomShellSystem/tools/eve-fit/native/holiday-follow.patch` | Exact private mesh/graph probe extension; source backups remain in work/eve26 |
 | `CustomShellSystem/work/eve26/jog-fit-upstream`, `jog-bones-upstream`, `jog-driver-views` | Same-pose fitting vs old skirt weighting, then rejected average-driver approximation |
 | `CustomShellSystem/tools/eve-fit/prepare_skirt_follow.py`, `verify_skirt_follow.py` | One-to-one carrier export and offline skinning preservation check with default/combined morph geometry |
 | `CustomShellSystem/work/eve26/skirt-follow-evaluated.json`, `jog-follow-views` | Fresh saved-rig direct execution over 291 poses; separately inspected offline fitted-coverage render |

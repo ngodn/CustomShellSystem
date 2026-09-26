@@ -10,6 +10,8 @@
 #include "AnimGraphNode_SpringBone.h"
 #include "AnimGraphNode_AnimDynamics.h"
 #include "AnimGraphNode_ModifyBone.h"
+#include "AnimGraphNode_ControlRig.h"
+#include "ControlRigBlueprint.h"
 #include "EdGraph/EdGraphPin.h"
 #include "EdGraph/EdGraphSchema.h"
 #include "Engine/SkeletalMesh.h"
@@ -66,7 +68,9 @@ int32 UCSSEveMotionCommandlet::Main(const FString& Params)
     FString RecipePath, Text;
     FString Output = TEXT("/Game/CSS/EveTest/ABP_Holiday");
     FParse::Value(*Params, TEXT("Output="), Output);
-    if (Output != TEXT("/Game/CSS/EveTest/ABP_Holiday") && Output != TEXT("/Game/CSS/EveTest/ABP_Holiday2"))
+    const bool Follow = FParse::Param(*Params, TEXT("Follow"));
+    if (Follow ? Output != TEXT("/Game/CSS/EveTest/ABP_HolidayFollow") :
+        (Output != TEXT("/Game/CSS/EveTest/ABP_Holiday") && Output != TEXT("/Game/CSS/EveTest/ABP_Holiday2")))
         return Fail(TEXT("Invalid private output"));
     if (!FParse::Value(*Params, TEXT("Recipe="), RecipePath) || FPackageName::DoesPackageExist(Output))
         return Fail(TEXT("Expected a recipe and unused private output"));
@@ -102,12 +106,54 @@ int32 UCSSEveMotionCommandlet::Main(const FString& Params)
     auto* ExistingOutput = Result->LinkedTo[0];
     ExistingOutput->BreakLinkTo(Result);
     int32 X = Root->NodePosX;
+    TSet<FName> Seen;
+    if (Follow)
+    {
+        auto* RigBP = LoadObject<UControlRigBlueprint>(nullptr, TEXT("/Game/CSS/EveTest/CR_HolidayFollow.CR_HolidayFollow"));
+        const TSharedPtr<FJsonObject>* Drivers = nullptr;
+        if (!RigBP || !RigBP->GeneratedClass || !Recipe->TryGetObjectField(TEXT("drivers"), Drivers) || (*Drivers)->Values.Num() != 11)
+            return Fail(TEXT("Invalid private carrier rig or driver map"));
+        auto* Rig = AddNode<UAnimGraphNode_ControlRig>(Graph, X);
+        Rig->Node.SetControlRigClass(RigBP->GeneratedClass.Get());
+        Rig->ReconstructNode();
+        for (const auto& Pair : {TPair<FName,bool>(TEXT("bResetInputPoseToInitial"),true),
+                                TPair<FName,bool>(TEXT("bTransferInputPose"),true),
+                                TPair<FName,bool>(TEXT("bTransferInputCurves"),true),
+                                TPair<FName,bool>(TEXT("bTransferPoseInGlobalSpace"),false)})
+        {
+            auto* Property = FindFProperty<FBoolProperty>(FAnimNode_ControlRigBase::StaticStruct(), Pair.Key);
+            if (!Property) return Fail(TEXT("Missing pose transfer flag"));
+            Property->SetPropertyValue_InContainer(&Rig->Node, Pair.Value);
+        }
+        auto* Filter = FindFProperty<FArrayProperty>(FAnimNode_ControlRigBase::StaticStruct(), TEXT("OutputBonesToTransfer"));
+        if (!Filter) return Fail(TEXT("Missing native rig output filter"));
+        auto& Bones = *Filter->ContainerPtrToValuePtr<TArray<FBoneReference>>(&Rig->Node);
+        for (const auto& Pair : (*Drivers)->Values)
+        {
+            const FName Name(*Pair.Key);
+            if (!Pair.Key.StartsWith(TEXT("CSS_Cloth_Skirt_")) || Mesh->GetRefSkeleton().FindBoneIndex(Name) == INDEX_NONE)
+                return Fail(TEXT("Invalid carrier bone"));
+            Seen.Add(Name);
+        }
+        // Transfer compensating child locals as well as the driven carriers.
+        for (int32 Index = 0; Index < Mesh->GetRefSkeleton().GetRawBoneNum(); ++Index)
+        {
+            const FName Name = Mesh->GetRefSkeleton().GetBoneName(Index);
+            if (!Name.ToString().StartsWith(TEXT("CSS_Cloth_Skirt_"))) continue;
+            FBoneReference Bone; Bone.BoneName = Name; Bones.Add(Bone);
+        }
+        if (Bones.Num() != 24) return Fail(TEXT("Expected complete existing skirt output filter"));
+        if (!Graph->GetSchema()->TryCreateConnection(ExistingOutput, Rig->FindPin(TEXT("Source"))) || !ConnectPose(Graph, Rig, Root))
+            return Fail(TEXT("Cannot connect carrier rig"));
+        X += 220;
+    }
+    else
+    {
     auto* ToComponent = AddNode<UAnimGraphNode_LocalToComponentSpace>(Graph, X);
     X += 220;
     if (!Graph->GetSchema()->TryCreateConnection(ExistingOutput, ToComponent->FindPin(TEXT("LocalPose"))))
         return Fail(TEXT("Cannot connect existing secondary output"));
     UEdGraphNode* Previous = ToComponent;
-    TSet<FName> Seen;
     if (const FString Error = AddDynamicsChains(Recipe, Mesh, Graph, Previous, X, Seen); !Error.IsEmpty())
         return Fail(Error);
     if (Seen.Num() != 12) return Fail(TEXT("Expected twelve garment bones"));
@@ -117,6 +163,7 @@ int32 UCSSEveMotionCommandlet::Main(const FString& Params)
     auto* ToLocal = AddNode<UAnimGraphNode_ComponentToLocalSpace>(Graph, X);
     if (!ConnectPose(Graph, Previous, ToLocal) || !ConnectPose(Graph, ToLocal, Root))
         return Fail(TEXT("Cannot connect garment output"));
+    }
     Root->NodePosX = X + 220;
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     FCompilerResultsLog Results;

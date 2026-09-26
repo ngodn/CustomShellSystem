@@ -1,0 +1,45 @@
+--- a/CSSRetargetLibrary.cpp
++++ b/CSSRetargetLibrary.cpp
+@@ -117,7 +117,8 @@
+     if (!Mesh || !Skeleton) return false;
+     const bool ShortCandidate = IsRunningCommandlet() &&
+         (Mesh->GetPathName() == TEXT("/Game/CSS/SeduXtress/SK_BlackPearl2.SK_BlackPearl2") ||
+-         Mesh->GetPathName() == TEXT("/Game/CSS/EveTest/SK_HolidayBones.SK_HolidayBones")) &&
++         Mesh->GetPathName() == TEXT("/Game/CSS/EveTest/SK_HolidayBones.SK_HolidayBones") ||
++         Mesh->GetPathName() == TEXT("/Game/CSS/EveTest/SK_HolidayFollow.SK_HolidayFollow")) &&
+         Skeleton->GetPathName() == TEXT("/Game/CSS/Shared/SKEL_Base.SKEL_Base");
+     if (!ShortCandidate && (!Mesh->GetPathName().StartsWith(Prefix) ||
+         !Skeleton->GetPathName().StartsWith(Prefix))) return false;
+--- a/CSSAnimationLibrary.cpp
++++ b/CSSAnimationLibrary.cpp
+@@ -343,6 +343,12 @@
+         UE_LOG(LogTemp, Error, TEXT("CSS EvaluateClip: %s"), Message);
+         return {};
+     };
++    const bool Follow = Mesh && Blueprint && Animation &&
++        Mesh->GetPathName() == TEXT("/Game/CSS/EveTest/SK_HolidayFollow.SK_HolidayFollow") &&
++        (Blueprint->GetPathName() == TEXT("/Game/CSS/EveTest/ABP_HolidayFollow.ABP_HolidayFollow") ||
++         Blueprint->GetPathName() == TEXT("/Game/CSS/SeduXtress/ABP_Secondary.ABP_Secondary")) &&
++        (Animation->GetName() == TEXT("AN_Walk") || Animation->GetName() == TEXT("AN_Jog") || Animation->GetName() == TEXT("AN_Sprint")) &&
++        Animation->GetPathName().StartsWith(TEXT("/Game/CSS/Eve/Anim/"));
+     const bool Holiday = Mesh && Blueprint && Animation &&
+         Mesh->GetPathName() == TEXT("/Game/CSS/EveTest/SK_HolidayBones.SK_HolidayBones") &&
+         (Blueprint->GetPathName() == TEXT("/Game/CSS/EveTest/ABP_Holiday.ABP_Holiday") ||
+@@ -350,7 +356,7 @@
+         (Animation->GetName() == TEXT("AN_Walk") || Animation->GetName() == TEXT("AN_Jog") || Animation->GetName() == TEXT("AN_Sprint")) &&
+         Animation->GetPathName().StartsWith(TEXT("/Game/CSS/Eve/Anim/"));
+     if (!IsRunningCommandlet() || !Mesh || !Animation || !Blueprint || !Blueprint->GeneratedClass ||
+-        (!Holiday && (Mesh->GetPathName() != TEXT("/Game/CSS/SeduXtress/SK_BlackPearl2.SK_BlackPearl2") ||
++        (!Holiday && !Follow && (Mesh->GetPathName() != TEXT("/Game/CSS/SeduXtress/SK_BlackPearl2.SK_BlackPearl2") ||
+         Blueprint->GetPathName() != TEXT("/Game/CSS/SeduXtress/ABP_Secondary.ABP_Secondary") ||
+         !Animation->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/RT_")))) ||
+         Blueprint->TargetSkeleton != Mesh->GetSkeleton() || Animation->GetSkeleton() != Mesh->GetSkeleton() ||
+@@ -440,7 +446,7 @@
+         Entry->SetArrayField(TEXT("bones"), Names);
+         FilterReport.Add(MakeShared<FJsonValueObject>(Entry));
+     }
+-    if (FilterReport.Num() < 2 || FilterReport.Num() > 3 || ChangedBones.Num() < 36)
++    if (FilterReport.Num() < 2 || FilterReport.Num() > (Follow ? 4 : 3) || ChangedBones.Num() < 36)
+         return Fail(TEXT("Unexpected secondary rig layout"));
+     if (Holiday)
+     {
