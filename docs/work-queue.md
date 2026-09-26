@@ -1,5 +1,7 @@
 # Current work queue
 
+2026-09-27 final scope correction: deliver **Black Pearl + Prototype Planet Diving Suit + Skin Suit + Vacation Bikini + Casual Knitwear + Midsummer Alice + War Aegis**. User confirmed Prototype, not 6th. Fit Prototype first, then follow this list. Holiday and unlisted outfits are out of this delivery. Retain Original plus five garment palettes, fitting, customization and physics requirements. Prototype tail must have physics and independent persisted Show/Hide control. Current bind-pose candidate and remaining defects are in `development/eve-outfit-goal.md`.
+
 2026-09-27 latest user priority: **skip Holiday Reveler** because its investigation is consuming too much time and tokens. Work on **Planet Diving 6th, then Skin Suit, then the remaining outfits**. Holiday experiments are parked, not accepted or awaiting more automatic tests. Keep the complete fitting, physics and customization requirements for the active outfits.
 
 2026-09-26 Eve hem follow-up: unconstrained persistent contact projection fails the full sprint sequence with large correction jumps and fabric stretching. Saved rejection evidence in `work/eve26/hemseq2.json`. Next solver experiment must enforce fabric shape and temporal continuity together with contact, not raise the projection cap. No game/release changes.

@@ -31,7 +31,8 @@ for part in audit['parts']:
              for f in source['faces'][face_offset:face_offset+face_count]]
     assert all(0 <= i < count for f in faces for i in f)
     mesh = bpy.data.meshes.new(name)
-    mesh.from_pydata([(x/100, -y/100, z/100) for x, y, z in points], [], [list(reversed(f)) for f in faces])
+    # The Y reflection converts Unreal clockwise faces to outward Blender winding.
+    mesh.from_pydata([(x/100, -y/100, z/100) for x, y, z in points], [], faces)
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(obj)
     hair = 'Hair' in name

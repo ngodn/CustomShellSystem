@@ -6,9 +6,9 @@ Updated 2026-09-27, interrupted skinned-region checks recovered and verified. Re
 
 The [fitting playbook](eve-fitting-playbook.md) records reusable lessons and rejected shortcuts for subsequent outfits. Update it when a trial changes the workflow, alongside the detailed evidence index.
 
-Latest September 27 user instruction: **skip Holiday Reveler and switch now to Planet Diving 6th, then Skin Suit, then the remaining outfits**. Holiday's investigation is parked because of excessive time/token cost. Do not resume its pending experiments automatically. This supersedes all Holiday-first instructions in older checkpoints and the original tracker wording.
+Latest September 27 user scope: **Black Pearl, Prototype Planet Diving Suit, Skin Suit, Vacation Bikini, Casual Knitwear, Midsummer Alice and War Aegis**. Finish Prototype first, then the remaining new outfits in that order. The user explicitly confirmed Prototype after the naming correction. Holiday and unlisted outfits are excluded from this delivery. This supersedes the original all-outfits tracker wording and older Holiday-first checkpoints.
 
-Deliver `CSS_EveStellarBlade_eins0fx_P` with all available Eve outfit variants, properly fitted to the original body proportions, complete applicable clothing customization, and verified clothing and secondary-motion physics. Every outfit needs **Original plus at least five clothing color palettes**. Hair-only recoloring does not satisfy this requirement. The user clarified this on September 26 and reports the latest Gemini outfit work is incomplete.
+Deliver `CSS_EveStellarBlade_eins0fx_P` with those seven outfit variants, properly fitted to the original body proportions, complete applicable clothing customization, and verified clothing and secondary-motion physics. Every outfit needs **Original plus at least five clothing color palettes**. Hair-only recoloring does not satisfy this requirement. The user clarified this on September 26 and reports the latest Gemini outfit work is incomplete.
 
 The user supplied this updated objective and resumed the goal through the conversation goal control. The September 26 fitting milestone is active; do not revert to the older quota-pause instructions.
 
@@ -31,6 +31,10 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 - Package under `/Game/CSS/`, use short readable paths, retain source provenance, and commit by coherent change. Do not publish until the candidate has passed these checks.
 
 ## Latest checkpoint
+
+**Prototype bind-pose clearance candidate, September 27:** `work/eve26/planet-fit3/` changes 1,639 suit vertices by at most 0.588 cm. Body, other parts and all non-point fields remain unchanged. Corrected-winding baseline and candidate renders completed; rear comparison shows the large seat and calf breakthroughs removed. Front still has chest breakthrough; upper-back and footwear issues remain. No source blend or production import changed. Next inspect residual areas and source-pose footwear mismatch, then map accepted offsets to source shapes. User requires tail physics and independent persisted CSS Show/Hide control; both remain pending.
+
+`planet-fit1` is rejected because the diagnostic reversed already-converted winding. `planet-fit2` stopped on its normal assertion. `planet-fit3` checks winding against exported normals, records 190 local disagreements among 61,814 body faces, and uses authored face-average normals for bounded proposals. These proposals are not proof of containment or motion quality. Review tool now preserves face order after the Y reflection. All fit3 and baseline render/tool processes exited successfully.
 
 **September 27, switched to Planet Diving on explicit user instruction.** Holiday is skipped. Next is Skin Suit, then other outfits. Planet's current Gemini export has a suit, tail and two ribbons, plus the body and hair assembly: 123,959 points / 175,142 triangles. Begin with a neutral-material review of the actual exported geometry and its existing weights. Source is `gemini-work/exports/SK_Eve_PlanetDiving.mesh.json`; do not execute old overwrite/packaging scripts blindly.
 

@@ -24,6 +24,8 @@ Keep the upper attachment fixed to the lower-back fitting and restore appropriat
 
 ## Local evidence and remaining work
 
+User confirmed this is the intended Prototype outfit and explicitly requires tail physics plus a separate CSS Show/Hide option, saved per outfit. Hiding the tail must not hide the suit, ribbons, hair or body. These features remain pending.
+
 Under `work/eve26/planet-ref/`: `prototype.jpg`, decoded mesh in `game/`, post-process defaults in `anim/`, shared skeleton in `skeleton/`, `physics-summary.json`, and `tail-chain.json`. Decodes completed successfully without modifying the installed game. `tail-chain.json` also contains unrelated head-tail entries; filter garment names explicitly.
 
 No attachment or weight repair has been implemented yet. Measure the exported attachment against the fitting, correct garment clearance while preserving intentional openings, then validate the attachment and tail during motion. Continue the main suit fitting rather than expanding this into another collider investigation.
