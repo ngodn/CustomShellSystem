@@ -4,11 +4,18 @@
 #include "Components/PoseableMeshComponent.h"
 #include "PreviewScene.h"
 #include "HAL/FileManager.h"
+#include "Misc/ScopeExit.h"
 
 static int32 EvaluateHolidayPanel(const FString& Params)
 {
     auto Fail=[](const TCHAR* Message) { UE_LOG(LogCSSEvePanel,Error,TEXT("Panel motion: %s"),Message); return 1; };
     FString Input,Report,Text;
+    const bool NoBodyCollision=FParse::Param(*Params,TEXT("NoBodyCollision"));
+    const bool NoSelfCollision=FParse::Param(*Params,TEXT("NoSelfCollision"));
+    const bool UseCCD=FParse::Param(*Params,TEXT("CCD"));
+    int32 Substeps=0;
+    FParse::Value(*Params,TEXT("Substeps="),Substeps);
+    if (Substeps<0 || Substeps>16) return Fail(TEXT("Substeps must be 0 (asset default) or 1..16"));
     int32 Count=9;
     int32 Iterations=0;
     FParse::Value(*Params,TEXT("Iterations="),Iterations);
@@ -27,6 +34,9 @@ static int32 EvaluateHolidayPanel(const FString& Params)
     FAssetCompilingManager::Get().FinishAllCompilation();
     if (!Asset->HasValidClothSimulationModels() || Asset->GetClothCollections().Num()!=1) return Fail(TEXT("Invalid panel simulation"));
     const UE::Chaos::ClothAsset::FCollectionClothConstFacade Collection(Asset->GetClothCollections()[0]);
+    UPhysicsAsset* OriginalPhysics=Asset->GetPhysicsAsset();
+    ON_SCOPE_EXIT { Asset->SetPhysicsAsset(OriginalPhysics); };
+    if (NoBodyCollision) Asset->SetPhysicsAsset(nullptr);
     FMemMark Memory(FMemStack::Get());
     FPreviewScene Scene(FPreviewScene::ConstructionValues().SetCreateDefaultLighting(false));
     auto* Pose=NewObject<UPoseableMeshComponent>();
@@ -46,6 +56,25 @@ static int32 EvaluateHolidayPanel(const FString& Params)
         Interactor->SetIntValue(TEXT("NumIterations"),-1,Iterations);
         Interactor->SetIntValue(TEXT("MaxNumIterations"),-1,Iterations);
         if (Interactor->GetIntValue(TEXT("NumIterations"))!=Iterations) return Fail(TEXT("Iteration override failed"));
+    }
+    auto* Properties=Cloth->GetClothOutfitInteractor();
+    if (!Properties) return Fail(TEXT("Missing property interactor"));
+    if (UseCCD)
+    {
+        Properties->SetIntValue(TEXT("UseCCD"),-1,1);
+        if (Properties->GetIntValue(TEXT("UseCCD"),0,-1)!=1) return Fail(TEXT("CCD override failed"));
+    }
+    if (Substeps)
+    {
+        Properties->SetIntValue(TEXT("NumSubsteps"),-1,Substeps);
+        if (Properties->GetIntValue(TEXT("NumSubsteps"),0,-1)!=Substeps) return Fail(TEXT("Substep override failed"));
+    }
+    if (NoSelfCollision)
+    {
+        Cloth->WaitForExistingParallelClothSimulation_GameThread();
+        Properties->SetIntValue(TEXT("UseSelfCollisions"),-1,0);
+        if (Properties->GetIntValue(TEXT("UseSelfCollisions"),0,-1)!=0) return Fail(TEXT("Self-collision override failed"));
+        Cloth->RecreateClothSimulationProxy();
     }
     const auto& Ref=Mesh->GetRefSkeleton();
     if (Pose->BoneSpaceTransforms.Num()!=Ref.GetNum()) return Fail(TEXT("Pose component has wrong bone count"));
@@ -117,6 +146,12 @@ static int32 EvaluateHolidayPanel(const FString& Params)
     Result->SetStringField(TEXT("source_motion"),Input);
     Result->SetStringField(TEXT("asset"),Asset->GetPathName());
     Result->SetNumberField(TEXT("requested_iterations"),Iterations);
+    Result->SetNumberField(TEXT("requested_substeps"),Substeps);
+    Result->SetNumberField(TEXT("ccd_property"),Properties->GetIntValue(TEXT("UseCCD"),0,-1));
+    Result->SetBoolField(TEXT("diagnostic_no_body_collision"),NoBodyCollision);
+    Result->SetBoolField(TEXT("diagnostic_no_self_collision"),NoSelfCollision);
+    Result->SetStringField(TEXT("physics_asset_during_run"),GetPathNameSafe(Asset->GetPhysicsAsset()));
+    Result->SetNumberField(TEXT("self_collision_property"),Properties->GetIntValue(TEXT("UseSelfCollisions"),0,-1));
     Result->SetArrayField(TEXT("frames"),Rows);
     Scene.RemoveComponent(Cloth); Scene.RemoveComponent(Pose);
     return FJsonSerializer::Serialize(Result,TJsonWriterFactory<>::Create(&Text)) && FFileHelper::SaveStringToFile(Text,*Report)

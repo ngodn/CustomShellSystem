@@ -66,3 +66,16 @@ The sequential editor patches `holiday-controls.patch`, `holiday-inertia.patch`,
 `../build_skirt_follow.py` creates private `/Game/CSS/EveTest/CR_HolidayFollow` through existing Python graph helpers, requiring no editor module rebuild. It pairs with `holiday-follow.mesh.json` produced by `prepare_skirt_follow.py`, not the old circumferentially weighted mesh. Eleven carrier bones copy original garment driver deformation with bind compensation; no dynamics yet. `evaluate_skirt_follow.py` reloads the saved rig and checks 291 recorded upstream poses. Its first run failed on RigElementKey constructor ordering; the fixed named arguments pass in `follow-eval2.log`. Do not use the old follow-eval.log as the final result. Neither paired mesh import nor post-process component integration has been done yet.
 
 Update: paired mesh import and component integration now pass. Stage the current CSSEveMotionCommandlet.cpp and review/apply `holiday-follow.patch` against current editor sources, then rebuild only while that authoring project's editor is stopped. `-run=CSSEveMotion -Follow -Output=/Game/CSS/EveTest/ABP_HolidayFollow -Recipe=<workspace>/CustomShellSystem/work/eve26/skirt-follow.json` creates an unused copied graph. It transfers all 24 skirt bones to retain compensating child locals. `evaluate_holiday_follow.py` compares both graphs on imported SK_HolidayFollow; `verify_follow_component.py` checks resulting skinning transforms in Blender. Results and scope are recorded in the goal checkpoint. The private baseline has no new cloth dynamics and is not a release candidate.
+
+
+## Saved panel motion probe
+
+`CSSEvePanelCommandlet.cpp` includes `CSSEvePanelMotion.inl`; stage both when building the editor module. The motion path loads the exact private SK_Holiday/CA_Holiday assets, consumes recorded local poses and exports actual Chaos particles without saving assets.
+
+```text
+-run=CSSEvePanel -Motion -Frames=9 -Input=<workspace>/CustomShellSystem/work/eve26/follow-sprint-base.json -Report=<workspace>/CustomShellSystem/work/eve26/unused.json
+```
+
+Optional diagnostic controls: `-Iterations=1..16`, `-Substeps=1..16`, `-CCD`, `-NoSelfCollision`, `-NoBodyCollision`. Iteration/substep zero means asset defaults. NoSelfCollision changes component properties and recreates the simulation proxy so the non-animatable property takes effect. NoBodyCollision temporarily clears the loaded asset physics pointer and restores it on scope exit; it never saves the asset. Record and check protected file hashes separately. Collision-off results are attribution controls, never fitting acceptance. Reports include requested settings, effective property values and used iteration/substep counts.
+
+Verify coordinates with Blender `verify_panel_motion.py --input <report> --output <unused receipt>`. The verifier checks fixed points against the exact old panel proxy weights, not the newer F11 mesh. Its pass only confirms coordinate/pose ordering. `prepare_panel_render.py` requires that exact report hash in the receipt. Rendering its output with `render_skirt_bone_trial.py --surface-motion <prepared report>` replaces the main surface only; trim is not an engine render-mapping validation.
