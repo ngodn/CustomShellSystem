@@ -12,12 +12,14 @@ p.add_argument('--mesh', type=Path, required=True)
 p.add_argument('--audit', type=Path, required=True)
 p.add_argument('--output', type=Path, required=True)
 p.add_argument('--hide-material', action='append', default=[])
+p.add_argument('--body-mask', type=Path)
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
 a.output.mkdir(exist_ok=False)
 raw = a.mesh.read_bytes()
 source = json.loads(raw)
 assert set(a.hide_material) <= set(source['materials'])
 hidden_slots = {source['materials'].index(name) for name in a.hide_material}
+hidden_faces = set(json.loads(a.body_mask.read_text())['hidden_body_faces']) if a.body_mask else set()
 audit = json.loads(a.audit.read_text())
 assert hashlib.sha256(raw).hexdigest() == audit['output_sha256']
 bpy.ops.object.select_all(action='SELECT')
@@ -33,8 +35,8 @@ for part in audit['parts']:
     faces = [[source['wedges'][w][0]-point_offset for w in f[:3]]
              for f in source['faces'][face_offset:face_offset+face_count]]
     assert all(0 <= i < count for f in faces for i in f)
-    visible_faces = [face for face, record in zip(faces, source['faces'][face_offset:face_offset+face_count])
-                     if record[3] not in hidden_slots]
+    visible_faces = [face for index, (face, record) in enumerate(zip(faces, source['faces'][face_offset:face_offset+face_count]), face_offset)
+                     if record[3] not in hidden_slots and index not in hidden_faces]
     mesh = bpy.data.meshes.new(name)
     # The Y reflection converts Unreal clockwise faces to outward Blender winding.
     mesh.from_pydata([(x/100, -y/100, z/100) for x, y, z in points], [], visible_faces)
@@ -72,4 +74,5 @@ for label, direction in [('front', (0, -1, 0)), ('back', (0, 1, 0)), ('side', (1
 (a.output/'review.json').write_text(json.dumps(dict(
     scope='Existing exported geometry in bind pose, neutral materials and hair hidden for garment inspection. No source edit, animation, morph or game acceptance.',
     source=str(a.mesh), source_sha256=hashlib.sha256(raw).hexdigest(),
-    hidden_materials=a.hide_material, parts=parts), indent=2)+'\n')
+    hidden_materials=a.hide_material, body_mask=str(a.body_mask) if a.body_mask else None,
+    hidden_face_count=len(hidden_faces), parts=parts), indent=2)+'\n')

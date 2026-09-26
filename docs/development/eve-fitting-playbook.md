@@ -130,3 +130,7 @@ Closed topology does not rule out tiny sliver triangles. The right-thigh regiona
 ## Exported winding and clearance proposals
 
 The Planet interchange uses Unreal clockwise winding. Reflecting Y for Blender already converts the face order; reversing it again makes geometric normals point inward. Check against exported normals before displacement. The first rejected Planet candidate moved 16,812 vertices; corrected authored-normal proposals move 1,639. There are 190 local geometric/authored-normal disagreements among 61,814 body faces, so a global convention check does not make every nearest face reliable. Keep displacements bounded and visually inspect residuals. `planet-fit3` improves rear seat/calf breakthrough but leaves chest, upper-back and footwear issues. It is not a source or game repair yet.
+
+## Match authored visibility before reshaping footwear
+
+Prototype's apparent bare-foot problem repeats an earlier Black Pearl preview mistake. Hiding the entire covered-foot material removes too much calf skin. Evaluate the author's outfit-specific mask instead: original `SuitBMask` maps exactly to the current body, hiding 7,029 faces while preserving the open calf strip in inspected views. Keep those faces in reversible covered sections tied to the garment toggle; do not delete them or change body proportions. Extend original shader and color bindings to duplicated slots. Tail/ribbon sections must be independent from suit material sections before offering independent visibility.
