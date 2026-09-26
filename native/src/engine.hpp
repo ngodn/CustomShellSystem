@@ -160,7 +160,11 @@ class InventoryUI {
     std::vector<Row> rows_;
     std::vector<Slider> sliders_;
     std::vector<Binding> bindings_;
+    // Imported PNGs (thumbnails, logo), rooted for the page's lifetime: the game's widgets drop
+    // their brushes on every menu reopen, so an unrooted texture is collected and imported again.
     std::map<std::string,WeakObject> textures_;
+    std::vector<WeakObject> rooted_textures_;
+    RC::Unreal::UObject* import_texture(const std::wstring& file);
     std::map<std::string,std::pair<int,int>> texture_sizes_;
     std::vector<std::pair<WeakObject,std::array<float,4>>> top_padding_;
     std::array<double,2> layout_size_{};

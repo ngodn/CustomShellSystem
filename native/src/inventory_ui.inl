@@ -66,6 +66,8 @@ void InventoryUI::detach() {
     camera_stop();
     if(auto* tabs=tabs_.Get(); tabs && tab_.Get() && main_.Get() && active_) inventory_navigate(tabs,0);
     native_forget();
+    for(auto& rooted:rooted_textures_) if(auto* texture=rooted.Get()) { try { texture->ClearRootSet(); } catch(...) {} }
+    rooted_textures_.clear(); textures_.clear();
     if(auto* page=page_.Get()) invoke(page,L"RemoveFromParent");
     if(auto* tab=tab_.Get()) invoke(tab,L"RemoveFromParent");
     for(const auto& [widget,padding]:top_padding_) if(auto* child=widget.Get()) if(auto* slot=inventory_object(child,L"Slot")) invoke(slot,L"SetPadding",L"InPadding",padding);
