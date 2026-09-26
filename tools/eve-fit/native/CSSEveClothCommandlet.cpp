@@ -20,6 +20,7 @@
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "Rendering/SkeletalMeshModel.h"
 #include "Rendering/SkeletalMeshLODModel.h"
+#include "SkeletalMeshTypes.h"
 #include "UObject/SavePackage.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogCSSEveCloth, Log, All);
@@ -312,13 +313,18 @@ int32 UCSSEveClothCommandlet::Main(const FString& Params)
             Config->AnimDriveDamping = { DriveDamping, DriveDamping };
         }
         Cloth->ApplyParameterMasks(true, true);
-        if (!Cloth->BindToSkeletalMesh(Mesh, 0, Section, 0))
-            return Fail(TEXT("Cloth render mapping failed"));
-        auto& Model = Mesh->GetImportedModel()->LODModels[0];
-        auto& UserData = Model.UserSectionsData.FindOrAdd(Model.Sections[Section].OriginalDataSectionIndex);
-        UserData.CorrespondClothAssetIndex = static_cast<int16>(Mesh->GetMeshClothingAssets().IndexOfByKey(Cloth));
-        UserData.ClothingData.AssetGuid = Cloth->GetAssetGuid();
-        UserData.ClothingData.AssetLodIndex = 0;
+        {
+            // Bind triggers PostEditChange on scope exit. Persist section metadata before that rebuild.
+            FScopedSkeletalMeshPostEditChange DeferredRebuild(Mesh);
+            if (!Cloth->BindToSkeletalMesh(Mesh, 0, Section, 0))
+                return Fail(TEXT("Cloth render mapping failed"));
+            auto& Model = Mesh->GetImportedModel()->LODModels[0];
+            auto& UserData = Model.UserSectionsData.FindOrAdd(Model.Sections[Section].OriginalDataSectionIndex);
+            UserData.CorrespondClothAssetIndex = static_cast<int16>(Mesh->GetMeshClothingAssets().IndexOfByKey(Cloth));
+            UserData.ClothingData.AssetGuid = Cloth->GetAssetGuid();
+            UserData.ClothingData.AssetLodIndex = 0;
+        }
+        FAssetCompilingManager::Get().FinishAllCompilation();
         UE_LOG(LogCSSEveCloth, Display, TEXT("Section %d: %d simulation vertices, %d pinned, %d connected pieces. Runtime motion not yet tested."),
             Section, Data.Vertices.Num(), Pinned, Components);
     }
@@ -377,8 +383,25 @@ int32 UCSSEveClothCommandlet::Main(const FString& Params)
     }
     Model.RequiredBones.Sort();
     Mesh->GetRefSkeleton().EnsureParentsExistAndSort(Model.ActiveBoneIndices);
+    auto LogSections = [&](const TCHAR* Stage)
+    {
+        const auto& Current = Mesh->GetImportedModel()->LODModels[0];
+        for (int32 I = 0; I < Current.Sections.Num(); ++I)
+        {
+            const auto& S = Current.Sections[I];
+            UE_LOG(LogCSSEveCloth, Display,
+                TEXT("%s section=%d original=%d slot=%s asset=%d guid=%s mappings=%d render=%s"),
+                Stage, I, S.OriginalDataSectionIndex,
+                *Mesh->GetMaterials()[S.MaterialIndex].MaterialSlotName.ToString(),
+                S.CorrespondClothAssetIndex, *S.ClothingData.AssetGuid.ToString(),
+                S.ClothMappingDataLODs.IsEmpty() ? 0 : S.ClothMappingDataLODs[0].Num(),
+                *GetPathNameSafe(Mesh->GetSectionClothingAsset(0,I)));
+        }
+    };
+    LogSections(TEXT("BeforeRebuild"));
     Mesh->PostEditChange();
     FAssetCompilingManager::Get().FinishAllCompilation();
+    LogSections(TEXT("AfterRebuild"));
     for (int32 I : AttachedSections)
     {
         const auto& Section = Mesh->GetImportedModel()->LODModels[0].Sections[I];
@@ -409,6 +432,11 @@ int32 UCSSEveClothCommandlet::Main(const FString& Params)
     }
     if (Mesh->GetPhysicsAsset() != MeshPhysics || Mesh->GetPostProcessAnimBlueprint() != OriginalPostProcess)
         return Fail(TEXT("Secondary asset assignment did not persist"));
+    if (FParse::Param(*Params, TEXT("NoSave")))
+    {
+        UE_LOG(LogCSSEveCloth, Display, TEXT("Diagnostic checks passed; NoSave requested, mesh not saved."));
+        return 0;
+    }
     UE_LOG(LogCSSEveCloth, Display, TEXT("Bound %d cloth sections on %s; physics and post-process references set."), Sections.Num(), *MeshPath);
     Mesh->MarkPackageDirty();
     FSavePackageArgs Save;

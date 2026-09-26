@@ -21,3 +21,8 @@ Fresh inspection arguments:
 Run `python3 tools/eve-fit/verify_cloth_collision.py` against that report. Unreal's Python reflection does not expose `PhysicsAsset.skeletal_body_setups` in this build; use the C++ inspector instead. Preserve production-asset hashes before/after authoring.
 
 The current geometry is still a collision experiment with known body-coverage gaps. A saved/read-back asset is not cloth simulation acceptance. Shared skirt-to-trim mapping, anchors in a native simulation, animated collision and body morph checks remain necessary before cooking or installation.
+
+
+## Experimental cloth binder
+
+`CSSEveClothCommandlet` is an isolated, unfinished experiment restricted to `/Game/CSS/EveTest/`. `-NoSave` runs binding and rebuild checks without saving the mesh. The primary-only diagnostic now passes after deferring PostEditChange until section metadata is stored. Manually sharing the cloth GUID across `-Attachments` does not survive the stock engine rebuild and is not production-ready. See `docs/development/eve-outfit-goal.md` and `work/eve26/cloth-bind3.log` before using or changing this code. Do not deploy its output as completed Holiday clothing.
