@@ -18,6 +18,7 @@ public class CSSAuthoring : ModuleRules
             "ClothingSystemEditor", "ClothingSystemEditorInterface", "ClothingSystemRuntimeCommon", "ChaosCloth"
         });
         PrivateIncludePathModuleNames.Add("TextureCompressor");
+        PrivateDependencyModuleNames.Add("PhysicsUtilities");
         PrivateIncludePaths.Add(Path.Combine(EngineDirectory, "Source/Developer/AssetTools/Internal"));
         PrivateIncludePaths.Add(Path.Combine(EngineDirectory, "Source/Runtime/CoreUObject/Internal"));
         PrivateIncludePaths.Add(Path.Combine(EngineDirectory,

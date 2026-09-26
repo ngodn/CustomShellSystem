@@ -24,6 +24,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogCSSEvePanel, Log, All);
 #include "CSSEvePanelMotion.inl"
 #include "CSSEvePanelMapping.inl"
 #include "CSSEvePanelDeformer.inl"
+#include "CSSEveLevelSet.inl"
 
 UCSSEvePanelCommandlet::UCSSEvePanelCommandlet()
 {
@@ -36,6 +37,7 @@ UCSSEvePanelCommandlet::UCSSEvePanelCommandlet()
 int32 UCSSEvePanelCommandlet::Main(const FString& Params)
 {
     if (FParse::Param(*Params,TEXT("Motion"))) return EvaluateHolidayPanel(Params);
+    if (FParse::Param(*Params,TEXT("LevelSet"))) return CreateEveLevelSet(Params);
     using namespace UE::Chaos::ClothAsset;
     auto Fail = [](const TCHAR* Message) { UE_LOG(LogCSSEvePanel, Error, TEXT("%s"), Message); return 1; };
     FString Input, Output, Text;

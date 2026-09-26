@@ -1,5 +1,15 @@
 # Eve cloth collision authoring
 
+## Private skinned level-set probe
+
+Stage `CSSEveLevelSet.inl` with `CSSEvePanelCommandlet.cpp` and its other includes. The authoring module needs the `PhysicsUtilities` dependency in addition to the existing panel dependencies. Do not replace the working project's Build.cs wholesale with the older tracked template.
+
+`prepare_collision_body.py` extracts the unchanged body from the F12 export into private `SK_CBody` / `SKEL_CBody`. Import using `CSSImportMesh`, inspect using `CSSInspectMesh`, and run `verify_collision_body.py` through the Python commandlet. The private 379-bone import is not a replacement for the production 386-bone shared skeleton.
+
+Generate with `-run=CSSEvePanel -LevelSet -Output=/Game/CSS/EveTest/PA_CBody64 -Grid=64 -Lattice=16 -Report=<unused workspace JSON>`. Add `-InspectLevelSet` to reload that saved collider without regenerating or saving it. Generation refuses existing output packages. Both modes refuse an existing report. This uses the exported UE 5.6.1 `FPhysicsAssetUtils::CreateFromSkeletalMesh` API with mesh assignment and progress dialogs disabled.
+
+Generation and fresh-load metadata do not prove surface coverage, morph support, motion stability or affordable runtime cost. Do not assign this test collider to production assets before those checks.
+
 These files are the tracked source of the isolated `CSSEveCollision` editor commandlet. Copy them into `CSS-eins0fx-collections/tools/CSSAuthoring/Source/CSSAuthoring` to build with the existing UE 5.6.1 project. Inspect current files and running editor/build processes before replacing or compiling anything. This commandlet is separate from CSS's native game DLL.
 
 Build `CSSAuthoringEditor Linux Development` with `-NoHotReload -NoUBA` and an absolute workspace-local `-Log` filename. Use the established bwrap workspace binding, local temporary directory and `DOTNET_CLI_HOME`. UBA otherwise selects `~/.epic/UnrealBuildAccelerator`, outside the writable workspace. The first build attempt was explicitly stopped after confirming that configuration; ordinary compilation with `-NoUBA` succeeded.
