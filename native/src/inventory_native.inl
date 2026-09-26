@@ -353,6 +353,11 @@ void InventoryUI::native_fit_panel() {
     panel_max_=room;
     panel_fit_pending_=true;   // measure again once the new height has laid out
 }
+bool InventoryUI::native_ready(const NativeStack& stack,NativeKind kind) const {
+    if(stack.used<stack.cells.size())
+        for(const auto& item:stack.cells[stack.used].kinds) if(item.kind==kind && item.widget.Get()) return true;
+    return native_budget_>0;
+}
 InventoryUI::NativeItem& InventoryUI::native_take(NativeStack& stack,NativeKind kind) {
     auto* column=stack.box.Get();
     if(!column) throw std::runtime_error("Native page container is unavailable");
@@ -373,6 +378,7 @@ InventoryUI::NativeItem& InventoryUI::native_take(NativeStack& stack,NativeKind 
     auto* pc=controller_.Get(); auto* tree=inventory_object(page_.Get(),L"WidgetTree");
     auto* serif=load("/Game/Sparta/UI/Fonts/CrimsonText-Regular_Font.CrimsonText-Regular_Font");
     NativeItem item; item.kind=kind; item.shown=1;
+    --native_budget_;
 #ifdef CSS_INVENTORY_DEV
     ++created_widgets_;
 #endif

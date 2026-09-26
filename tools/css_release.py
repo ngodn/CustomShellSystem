@@ -28,7 +28,7 @@ def git(*args: str) -> str:
 
 def payload_names(version: str, interface: str = "inventory") -> set[str]:
     files = {'enabled.txt', 'core.json', 'dlls/main.dll', f'cores/css_core-{version}.dll',
-             'README.txt', 'THIRD_PARTY_NOTICES.txt'}
+             'README.txt', 'THIRD_PARTY_NOTICES.txt', 'catalog/npc-appearances.css.json'}
     if interface == 'standalone':
         files.add('assets/wardrobe-v1.png')
     elif interface == 'inventory':
@@ -97,7 +97,9 @@ def build(args: argparse.Namespace) -> Path:
              'dlls/main.dll': (build_dir / 'main.dll').read_bytes(),
              f'cores/css_core-{version}.dll': (build_dir / 'css_core.dll').read_bytes(),
              'README.txt': (ROOT / 'packaging/README.txt').read_text().replace('@VERSION@', version).encode(),
-             'THIRD_PARTY_NOTICES.txt': (ROOT / 'packaging/THIRD_PARTY_NOTICES.txt').read_bytes()}
+             'THIRD_PARTY_NOTICES.txt': (ROOT / 'packaging/THIRD_PARTY_NOTICES.txt').read_bytes(),
+             # The Use NPC / Enemy roster: a plain catalog document the core loads from Mods/CustomShellSystem/catalog.
+             'catalog/npc-appearances.css.json': (ROOT / 'packaging/catalog/npc-appearances.css.json').read_bytes()}
     manifest = {'version': version, 'source_commit': revision, 'abi': 1, 'interface': 'inventory',
                 'ue4ss_revision': UE4SS_RUNTIME['revision'],
                 'ue4ss_dll_sha256': UE4SS_RUNTIME['dll_sha256'],

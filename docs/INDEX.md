@@ -57,6 +57,7 @@ Local changes are grouped in the [2026-09-20 commit checkpoint](development/chec
 
 - [Next-Gen takeover status](../../CSS-Mod-Authoring/docs/next-gen-status.md) is the current roadmap for `nextgen100`. The beta controls have been integrated with 0.4.2 recovery/HUD changes; SeduXtress materials and package authoring still require repair. [Evidence](../../CSS-Mod-Authoring/docs/next-gen-baseline-findings.md).
 
+- [Use NPC / Enemy](npc-appearances.md) wears any game enemy, person or Harbinger form built on the player's skeleton; the roster ships as an editable catalog file (1.0.0-beta.5).
 - [Native Inventory CSS](inventory-ui-development.md) is the current interface in development. Four-page navigation, native display retention, mouse controls and startup have been checked locally. It replaces the standalone N wardrobe. Older preview and camera findings below are historical.
 
 - [Color customization](colors.md) documents per-part palettes/sliders, self-contained dye resources, exact Original reset, and the verified game-specific mipmap adapter.

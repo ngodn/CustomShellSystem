@@ -12,6 +12,11 @@
 
 namespace css {
 inline constexpr const char* original_shells_id = "css.original_shells";
+// Outfits shipped with CSS as catalog/npc-appearances.css.json: the game's enemies, people
+// and Harbinger forms on the player's skeleton. They share one SHELL row, "Use NPC / Enemy",
+// instead of listing under Custom Shells.
+inline constexpr const char* npc_outfit_prefix = "css.npc.";
+inline bool npc_outfit(const std::string& id) { return id.starts_with(npc_outfit_prefix); }
 using Json = nlohmann::json;
 namespace fs = std::filesystem;
 inline std::string path_utf8(const fs::path& path) {

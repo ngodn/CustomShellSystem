@@ -41,7 +41,8 @@ No weapon, seal or shell unlocks are required for supported cosmetic outfits.
 Settings and updates
 CSS creates state/state.json on first initialization with clean defaults.
 It creates runtime/ acknowledgements and caches package artwork/color resources
-as needed. catalog/ is optional and is not required for packaged outfits.
+as needed. catalog/npc-appearances.css.json is the Use NPC / Enemy roster; it is
+ordinary JSON you may edit, and the rest of catalog/ is optional.
 CSS starts with no selected outfit. Select one in the wardrobe to enable it.
 A previous valid state is kept as state/state.json.bak after settings change.
 

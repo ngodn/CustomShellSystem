@@ -123,6 +123,12 @@ class InventoryUI {
     struct NativeStack { WeakObject box; std::deque<NativeCell> cells; size_t used=0; };   // deque: taken items keep their address
     void native_slot(NativeKind kind,RC::Unreal::UObject* slot);
     void native_setup(NativeItem& item);
+    // Creating a game widget costs about a millisecond, so a build creates at most this
+    // many; a long list (the outfit list, a picker's results, the NPC roster) stops there,
+    // marks the page dirty and continues next frame. Widgets already pooled are free.
+    int native_budget_=0;
+    static constexpr int native_budget_per_build=4;
+    bool native_ready(const NativeStack& stack,NativeKind kind) const;   // the next take needs no creation
     void native_invalidate();
     WeakObject design_, left_root_, right_root_, center_root_, list_scroll_, strip_scroll_, details_, panel_scroll_, panel_size_, status_text_, strip_previous_, strip_next_, strip_previous_glyph_, strip_next_glyph_;
     NativeStack tab_items_, list_, panel_head_, panel_, actions_, footer_, camera_bar_;   // panel_head_: fixed, above the scroll

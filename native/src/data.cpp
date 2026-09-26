@@ -388,7 +388,7 @@ std::vector<const Outfit*> Catalog::display_order(const std::string& equipped,co
     result.reserve(outfits.size());
     // Preserve catalog order within each group and include every outfit once.
     for(int rank=0;rank<3;++rank) for(const auto& outfit:outfits) {
-        if(outfit.id==original_shells_id) continue; // Its dedicated SHELL row stays below Original appearance.
+        if(outfit.id==original_shells_id || npc_outfit(outfit.id)) continue; // Their dedicated SHELL rows stay under Appearance.
         const int group=outfit.id==equipped?0:favorites.contains(outfit.id)?1:2;
         if(group==rank) result.push_back(&outfit);
     }

@@ -176,6 +176,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     for(const auto& hit:hits_) if(auto* w=hit.widget.Get()) held[w]=hit.down;
     hits_.clear(); rows_.clear(); sliders_.clear(); name_input_.Reset(); native_search_input_.Reset();
     for(auto* stack:{&tab_items_,&list_,&panel_head_,&panel_,&actions_,&footer_,&camera_bar_}) stack->used=0;
+    native_budget_=native_budget_per_build;
+    bool deferred=false;   // a long list stopped at the budget; build again next frame
     auto bind=[&](const WeakObject& widget,Json action) {
         auto* w=widget.Get(); if(!w || action.is_null()) return;
         auto it=held.find(w);
@@ -336,6 +338,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     auto choice_rows=[&](const std::vector<Choice>& choices,const std::string& selected) {
         if(!panel_open) return;
         for(const auto& choice:choices) {
+            if(!native_ready(panel_,NativeKind::row)) { deferred=true; break; }
             auto& item=native_take(panel_,NativeKind::row);
             RowLook look; look.badge=choice.id==selected; look.enabled=!choice.action.is_null();
             fill_row(item,choice.label,look,choice.id==selected);
@@ -453,6 +456,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         constexpr size_t shown=100;
         const size_t first=search.selected<shown?0:search.selected-shown+1;
         for(size_t i=first;i<std::min(first+shown,search.matches.size());++i) {
+            if(!native_ready(panel_,NativeKind::row)) { deferred=true; break; }
             const auto& found=search.options[search.matches[i]];
             auto& item=native_take(panel_,NativeKind::row);
             fill_row(item,found.at("label").get<std::string>(),RowLook{},i==search.selected);
@@ -466,8 +470,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     if(section_==0) {
         const auto ordered=catalog.display_order(worn?worn->id:"",state.favorites);
         const int row_before=row_;
-        for(size_t i=0;i<ordered.size();++i) if(ordered[i]->id==focused_outfit) row_=int(i)+3;
-        const int total=int(ordered.size())+3;
+        for(size_t i=0;i<ordered.size();++i) if(ordered[i]->id==focused_outfit) row_=int(i)+4;
+        const int total=int(ordered.size())+4;
         row_=std::clamp(row_,0,total-1);
         section("Appearance");
         const Json harbinger{{"action","harbinger_mirror"},{"value",!state.harbinger_mirror}};
@@ -489,9 +493,28 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         row_look.badge=original_worn;
         row(2,"Use Original Shell",wear_original(original_index),count?wear_original((original_index+count-1)%count):Json{},
             count?wear_original(original_worn?(original_index+1)%count:0):Json{});
+        // The game's enemies, people and Harbinger forms, one flat list across the shipped
+        // css.npc.* outfits so Left/Right walks all of them.
+        struct NpcChoice { const Outfit* outfit; size_t variant; };
+        std::vector<NpcChoice> npcs;
+        for(const auto& outfit:catalog.outfits) if(npc_outfit(outfit.id))
+            for(size_t i=0;i<outfit.variants.size();++i) npcs.push_back({&outfit,i});
+        size_t npc_index=0; bool npc_worn=false;
+        for(size_t i=0;i<npcs.size();++i)
+            if(worn==npcs[i].outfit && npcs[i].outfit->variants[npcs[i].variant].id==selection->second.variant) { npc_index=i; npc_worn=true; }
+        auto wear_npc=[&](size_t i) {
+            const auto& choice=npcs[i];
+            return catalog.compatible(choice.outfit->id,appearance.shell)
+                ?Json{{"action","select"},{"outfit",choice.outfit->id},{"variant",choice.outfit->variants[choice.variant].id}}:Json{};
+        };
+        const auto npc_count=npcs.size();
+        row_look.badge=npc_worn;
+        row(3,"Use NPC / Enemy",npc_count?wear_npc(npc_index):Json{},npc_count?wear_npc((npc_index+npc_count-1)%npc_count):Json{},
+            npc_count?wear_npc(npc_worn?(npc_index+1)%npc_count:0):Json{},npc_count?Json{{"action","ui_browse_npc"}}:Json{});
         // Favorites first under their own header, the way the game groups shells.
         bool in_favorites=false, headed=false;
         for(size_t p=0;p<ordered.size();++p) {
+            if(!native_ready(list_,NativeKind::row)) { deferred=true; break; }
             const auto& outfit=*ordered[p]; size_t v=0;
             const bool favorite=state.favorites.contains(outfit.id);
             if(!headed || (in_favorites && !favorite)) {
@@ -503,11 +526,13 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             const bool compatible=catalog.compatible(outfit.id,appearance.shell);
             auto wear=[&](size_t index) { return compatible?Json{{"action","select"},{"outfit",outfit.id},{"variant",outfit.variants[index].id}}:Json{}; };
             row_look.icon=thumbnail(outfit); row_look.badge=chosen; row_look.enabled=compatible;
-            row(int(p)+3,outfit.name,wear(v),wear((v+outfit.variants.size()-1)%outfit.variants.size()),wear((v+1)%outfit.variants.size()),browse_shells,{{"action","favorite"},{"outfit",outfit.id}});
+            row(int(p)+4,outfit.name,wear(v),wear((v+outfit.variants.size()-1)%outfit.variants.size()),wear((v+1)%outfit.variants.size()),browse_shells,{{"action","favorite"},{"outfit",outfit.id}});
         }
         if(ordered.empty()) list_note(catalog.empty_message());
         (void)row_before;
-        if(row_==0) {
+        if(row_>=int(rows_.size())) {
+            // The list is still streaming in (creation budget); its details come next frame.
+        } else if(row_==0) {
             detail("Harbinger look",state.harbinger_mirror?"Carry from shell":"Keeps its own",
                    state.harbinger_mirror
                      ?"When you sever out of your shell into the Harbinger, it carries your current shell's look, so losing your shell mid-fight keeps your appearance. Cosmetic only."
@@ -518,6 +543,23 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             detail("Original appearance","Your current shell","Restore the appearance supplied by the game and any installed base replacements. Your shell's abilities stay the same.");
             action_button("accept","Restore original",rows_[1].accept,3);
             action_button("secondary","Search catalog...",{{"action","ui_browse_shells"}},4);
+        } else if(row_==3) {
+            detail("Use NPC / Enemy",npc_worn?npcs[npc_index].outfit->variants[npcs[npc_index].variant].name:"Appearance only",
+                "Wear one of the game's enemies, people or Harbinger forms. Your current shell keeps its abilities and progress; "
+                "the character keeps the look the game gives it.");
+            if(npcs.empty()) note("No NPC or enemy appearances are installed. CSS ships them in catalog/npc-appearances.css.json.");
+            else {
+                for(const auto& outfit:catalog.outfits) if(npc_outfit(outfit.id)) {
+                    divider(outfit.name);
+                    std::vector<Choice> choices;
+                    for(size_t i=0;i<npcs.size();++i) if(npcs[i].outfit==&outfit)
+                        choices.push_back({npcs[i].outfit->id+"/"+outfit.variants[npcs[i].variant].id,outfit.variants[npcs[i].variant].name,wear_npc(i)});
+                    choice_rows(choices,npc_worn?npcs[npc_index].outfit->id+"/"+npcs[npc_index].outfit->variants[npcs[npc_index].variant].id:"");
+                }
+                direction_hint(true,"Choose a character");
+                action_button("accept","Wear",rows_[3].accept,3,!rows_[3].accept.is_null());
+                action_button("secondary","Search characters...",rows_[3].secondary,4);
+            }
         } else if(row_==2) {
             detail("Use Original Shell",original_worn?originals->variants[original_index].name:"Appearance only",
                 "Wear an official shell's appearance. Your current shell keeps its abilities and progress.");
@@ -530,7 +572,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 action_button("accept","Wear",rows_[2].accept,3,!rows_[2].accept.is_null());
             }
         } else {
-            const auto& outfit=*ordered[row_-3];
+            const auto& outfit=*ordered[row_-4];
             detail_texture=thumbnail(outfit);
             detail(outfit.name,"By "+outfit.author,outfit.description.empty()?"Choose an outfit variant. Appearance changes keep your current shell's abilities.":outfit.description);
             const auto& selected=rows_[row_];
@@ -1167,7 +1209,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     page_widgets_=0; nested_widgets_=0;
     for(auto* stack:{&tab_items_,&list_,&panel_head_,&panel_,&actions_,&footer_,&camera_bar_}) { page_widgets_+=int(stack->used); for(const auto& cell:stack->cells) nested_widgets_+=int(cell.kinds.size()); }
     if(enter_transition_) { transition_started_=GetTickCount64(); enter_transition_=false; }
-    last_message_.clear(); dirty_=false;
+    last_message_.clear(); dirty_=deferred;
 #ifdef CSS_INVENTORY_DEV
     LARGE_INTEGER build_end; QueryPerformanceCounter(&build_end);
     const double ms=double(build_end.QuadPart-build_start.QuadPart)*1000./double(frequency.QuadPart);
@@ -1247,7 +1289,7 @@ Json InventoryUI::dispatch(Json action,const State& state) {
     if(name=="ui_browse_shells" && catalog_) {
         Json opts=Json::array();
         for(const auto& o:catalog_->outfits) {
-            if(o.id==original_shells_id) continue;
+            if(o.id==original_shells_id || npc_outfit(o.id)) continue;
             opts.push_back({{"id",o.id},{"label",o.name+" ("+o.author+")"}});
         }
         native_options_.reset(opts);
@@ -1257,6 +1299,17 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         native_picker_target_.clear();
         native_search_query_.clear();
         dirty_=true;
+        return {};
+    }
+    if(name=="ui_browse_npc" && catalog_) {
+        Json opts=Json::array();
+        for(const auto& o:catalog_->outfits) if(npc_outfit(o.id))
+            for(const auto& v:o.variants) opts.push_back({{"id",o.id+"/"+v.id},{"label",v.name+" ("+o.name+")"}});
+        native_options_.reset(opts);
+        native_picker_=true;
+        native_picker_title_="Browse NPCs & Enemies";
+        native_picker_kind_="npc";
+        native_search_query_.clear(); dirty_=true;
         return {};
     }
     if(name=="ui_browse_templates" && catalog_ && appearance_) {
@@ -1327,6 +1380,10 @@ Json InventoryUI::dispatch(Json action,const State& state) {
             std::string variant_id;
             if(catalog_) for(const auto& o:catalog_->outfits) if(o.id==outfit_id && !o.variants.empty()) { variant_id=o.variants.front().id; break; }
             return {{"action","select"},{"outfit",outfit_id},{"variant",variant_id}};
+        } else if(native_picker_kind_=="npc") {
+            const auto id=val.get<std::string>(); const auto slash=id.find('/');
+            if(slash==std::string::npos) return {};
+            return {{"action","select"},{"outfit",id.substr(0,slash)},{"variant",id.substr(slash+1)}};
         } else if(native_picker_kind_=="choice") {
             int idx=val.is_number()?val.get<int>():std::stoi(val.get<std::string>());
             return {{"action","control"},{"control",native_picker_target_},{"channel",0},{"value",double(idx)}};
@@ -1861,6 +1918,7 @@ std::optional<Json> InventoryUI::press(const std::string& key,const State& state
         row_=std::clamp(row_+(key=="up"?-1:1),0,int(rows_.size())-1);
         dirty_=true; return Json{};   // the build scrolls the row into view
     }
+    if(row_>=int(rows_.size())) return std::nullopt;   // the list is still streaming in
     const auto& row=rows_[row_];
     auto action=key=="left"?row.previous:key=="right"?row.next:key=="accept"?row.accept:key=="secondary"?row.secondary:row.tertiary;
     dirty_=true;

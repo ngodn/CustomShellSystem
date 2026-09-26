@@ -1,0 +1,386 @@
+{
+ "schema": 1,
+ "outfits": [
+  {
+   "id": "css.npc.enemies",
+   "name": "Enemies",
+   "author": "Cold Symmetry",
+   "description": "Wear an enemy the way the game draws it. Your shell keeps its abilities; the enemy keeps its default materials.",
+   "compatibility": "same_skeleton",
+   "shells": [
+    "CharacterId.Player.Shell.Genessa"
+   ],
+   "variants": [
+    {
+     "id": "sk_aristocrat",
+     "name": "Aristocrat",
+     "mesh": "/Game/Sparta/Characters/Enemies/Aristocrat/Art/Mesh/SK_Aristocrat.SK_Aristocrat"
+    },
+    {
+     "id": "sk_ballboy",
+     "name": "Ball Boy",
+     "mesh": "/Game/Sparta/Characters/Enemies/BallBoy/Art/Mesh/SK_BallBoy.SK_BallBoy"
+    },
+    {
+     "id": "sk_ballboy_02",
+     "name": "Ball Boy, second look",
+     "mesh": "/Game/Sparta/Characters/Enemies/BallBoy/Art/Mesh/SK_BallBoy_02.SK_BallBoy_02"
+    },
+    {
+     "id": "sk_ballistahead",
+     "name": "Ballista Head",
+     "mesh": "/Game/Sparta/Characters/Enemies/BallistaHead/Art/Mesh/SK_BallistaHead.SK_BallistaHead"
+    },
+    {
+     "id": "sk_ballistahead_armored",
+     "name": "Armored Ballista Head",
+     "mesh": "/Game/Sparta/Characters/Enemies/BallistaHead/Art/Mesh/SK_BallistaHead_Armored.SK_BallistaHead_Armored"
+    },
+    {
+     "id": "sk_ballistahead_miniboss",
+     "name": "Ballista Head, miniboss",
+     "mesh": "/Game/Sparta/Characters/Enemies/BallistaHead/Art/Mesh/SK_BallistaHead_Miniboss.SK_BallistaHead_Miniboss"
+    },
+    {
+     "id": "sk_batushka",
+     "name": "Viletongue Batushka",
+     "mesh": "/Game/Sparta/Characters/Enemies/Batushka/Art/Mesh/SK_Batushka.SK_Batushka"
+    },
+    {
+     "id": "sk_brigbase",
+     "name": "Brigand",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/BrigBase/Art/Mesh/MatFix/SK_BrigBase.SK_BrigBase"
+    },
+    {
+     "id": "sk_brighorde_regal",
+     "name": "Regal Brigand",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/BrigBase/Art/Mesh/Regal/SK_BrigHorde_Regal.SK_BrigHorde_Regal"
+    },
+    {
+     "id": "sk_brigelite",
+     "name": "Brigand Elite",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/BrigElite/Art/Mesh/SK_BrigElite.SK_BrigElite"
+    },
+    {
+     "id": "sk_brigelite_02",
+     "name": "Brigand Elite, second look",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/BrigElite/Art/Mesh/SK_BrigElite_02.SK_BrigElite_02"
+    },
+    {
+     "id": "sk_brigelite_boss",
+     "name": "Brigand Elite, miniboss",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/BrigElite/Art/Mesh/SK_BrigElite_Boss.SK_BrigElite_Boss"
+    },
+    {
+     "id": "sk_brigkinghtly",
+     "name": "Knightly Brigand",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/BrigKnightly/Art/SK_BrigKinghtly.SK_BrigKinghtly"
+    },
+    {
+     "id": "sk_brigranged_armored",
+     "name": "Armored Ranged Brigand",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/BrigRanged_Armored/Art/Mesh/SK_BrigRanged_Armored.SK_BrigRanged_Armored"
+    },
+    {
+     "id": "sk_brigranged_rock",
+     "name": "Ranged Brigand",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/BrigRanged_Rock/Art/Mesh/SK_BrigRanged_Rock.SK_BrigRanged_Rock"
+    },
+    {
+     "id": "sk_brigtanky",
+     "name": "Heavy Brigand",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/BrigTanky/Art/Mesh/SK_BrigTanky.SK_BrigTanky"
+    },
+    {
+     "id": "sk_brigtanky_nohelmet",
+     "name": "Heavy Brigand, no helmet",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/BrigTanky/Art/Mesh/SK_BrigTanky_NoHelmet.SK_BrigTanky_NoHelmet"
+    },
+    {
+     "id": "sk_brigtanky_rusty",
+     "name": "Rusty Heavy Brigand",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/BrigTanky/Art/Mesh/SK_BrigTanky_Rusty.SK_BrigTanky_Rusty"
+    },
+    {
+     "id": "sk_brigand_robe",
+     "name": "Robed Brigand",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/Brigand_Robe/Art/Mesh/SK_Brigand_Robe.SK_Brigand_Robe"
+    },
+    {
+     "id": "sk_brigand_heavy",
+     "name": "Brigand Brute",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/Heavy/Art/Mesh/SK_Brigand_Heavy.SK_Brigand_Heavy"
+    },
+    {
+     "id": "sk_brigand_depraved",
+     "name": "Depraved Brigand",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/HordeBrigand/Art/Mesh/SK_Brigand_Depraved.SK_Brigand_Depraved"
+    },
+    {
+     "id": "sk_depraved_body_naked",
+     "name": "Depraved, bare",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/HordeBrigand/Art/Mesh_02/SK_Depraved_Body_Naked.SK_Depraved_Body_Naked"
+    },
+    {
+     "id": "sk_brighorde_tarbody",
+     "name": "Tarred Horde Brigand",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/HordeBrigand/Art/TarBody/SK_BrigHorde_TarBody.SK_BrigHorde_TarBody"
+    },
+    {
+     "id": "sk_brigand_horde_cage",
+     "name": "Caged Horde Brigand",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/HordeShieldBrigand/Art/Mesh/SK_Brigand_Horde_Cage.SK_Brigand_Horde_Cage"
+    },
+    {
+     "id": "sk_brigmed_baghead",
+     "name": "Baghead",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/Medium/Art/Mesh/SK_BrigMed_Baghead.SK_BrigMed_Baghead"
+    },
+    {
+     "id": "sk_ms1_brigan_v1",
+     "name": "Fallgrim Brigand",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/Medium/Art/Mesh/SK_MS1_Brigan_V1.SK_MS1_Brigan_V1"
+    },
+    {
+     "id": "sk_ms1_brigand_v3",
+     "name": "Fallgrim Brigand, second look",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/Medium/Art/Mesh/SK_MS1_Brigand_V3.SK_MS1_Brigand_V3"
+    },
+    {
+     "id": "sk_ms1_brigand_ranged",
+     "name": "Fallgrim Ranged Brigand",
+     "mesh": "/Game/Sparta/Characters/Enemies/Brigands/Medium/Art/Mesh/SK_MS1_Brigand_Ranged.SK_MS1_Brigand_Ranged"
+    },
+    {
+     "id": "sk_cannibalknight",
+     "name": "Cannibal Knight",
+     "mesh": "/Game/Sparta/Characters/Enemies/CannibalKnight/Art/Mesh/SK_CannibalKnight.SK_CannibalKnight"
+    },
+    {
+     "id": "sk_cannibalboss",
+     "name": "Cannibal Knight, miniboss",
+     "mesh": "/Game/Sparta/Characters/Enemies/CannibalKnight/Art/MiniBoss/Mesh/SK_CannibalBoss.SK_CannibalBoss"
+    },
+    {
+     "id": "sk_centipedeghost",
+     "name": "Centipede Ghost",
+     "mesh": "/Game/Sparta/Characters/Enemies/CentipedeGhost/Art/Mesh/SK_CentipedeGhost.SK_CentipedeGhost"
+    },
+    {
+     "id": "sk_cultistbase",
+     "name": "Cultist",
+     "mesh": "/Game/Sparta/Characters/Enemies/CultistBase/Art/Mesh/MatFix/Base/SK_CultistBase.SK_CultistBase"
+    },
+    {
+     "id": "sk_cultistspearlady",
+     "name": "Cultist Spear Lady",
+     "mesh": "/Game/Sparta/Characters/Enemies/CultistSpearLady/Art/Mesh/SK_CultistSpearLady.SK_CultistSpearLady"
+    },
+    {
+     "id": "sk_cultistspearlady_cloth2",
+     "name": "Cultist Spear Lady, second robe",
+     "mesh": "/Game/Sparta/Characters/Enemies/CultistSpearLady/Art/Mesh/SK_CultistSpearLady_Cloth2.SK_CultistSpearLady_Cloth2"
+    },
+    {
+     "id": "sk_heavycultist",
+     "name": "Heavy Cultist",
+     "mesh": "/Game/Sparta/Characters/Enemies/MS1_HeavyCultist/Art/Mesh/SK_HeavyCultist.SK_HeavyCultist"
+    },
+    {
+     "id": "sk_draugr",
+     "name": "Draugr",
+     "mesh": "/Game/Sparta/Characters/Enemies/Draugr/Art/Mesh/SK_Draugr.SK_Draugr"
+    },
+    {
+     "id": "sk_dungeonchampion",
+     "name": "Dungeon Champion",
+     "mesh": "/Game/Sparta/Characters/Enemies/DungeonChampion/Art/Mesh/SK_DungeonChampion.SK_DungeonChampion"
+    },
+    {
+     "id": "sk_frogmama",
+     "name": "Frog Mama",
+     "mesh": "/Game/Sparta/Characters/Enemies/FrogMama/Art/Mesh/SK_FrogMama.SK_FrogMama"
+    },
+    {
+     "id": "sk_grishahunter",
+     "name": "Grisha Hunter",
+     "mesh": "/Game/Sparta/Characters/Enemies/GrishaHunter/Art/Mesh/SK_GrishaHunter.SK_GrishaHunter"
+    },
+    {
+     "id": "sk_hutchbackcarrier",
+     "name": "Hunchback Carrier",
+     "mesh": "/Game/Sparta/Characters/Enemies/HutchbackCarrier/Art/Mesh/SK_HutchbackCarrier.SK_HutchbackCarrier"
+    },
+    {
+     "id": "sk_twinsisters",
+     "name": "The Silent Sester",
+     "mesh": "/Game/Sparta/Characters/Enemies/MS1_TwinSisters/Art/Mesh/SK_TwinSisters.SK_TwinSisters"
+    },
+    {
+     "id": "sk_twinsisters_02",
+     "name": "The Silent Sester, twin",
+     "mesh": "/Game/Sparta/Characters/Enemies/MS1_TwinSisters/Art/Mesh/SK_TwinSisters_02.SK_TwinSisters_02"
+    },
+    {
+     "id": "sk_miner",
+     "name": "Resurrected Miner",
+     "mesh": "/Game/Sparta/Characters/Enemies/Miner/Art/Mesh/SK_Miner.SK_Miner"
+    },
+    {
+     "id": "sk_sicario",
+     "name": "Sicario",
+     "mesh": "/Game/Sparta/Characters/Enemies/Sicario/Art/Mesh/SK_Sicario.SK_Sicario"
+    },
+    {
+     "id": "sk_tarredcorpse",
+     "name": "Tarred Corpse",
+     "mesh": "/Game/Sparta/Characters/Enemies/TarredCorpse/Art/Mesh/SK_TarredCorpse.SK_TarredCorpse"
+    },
+    {
+     "id": "sk_tarredstoner",
+     "name": "Tarred Stoner",
+     "mesh": "/Game/Sparta/Characters/Enemies/TarredStoner/Art/Mesh/SK_TarredStoner.SK_TarredStoner"
+    },
+    {
+     "id": "sk_warden",
+     "name": "Warden",
+     "mesh": "/Game/Sparta/Characters/Enemies/Warden/Art/Mesh/SK_Warden.SK_Warden"
+    },
+    {
+     "id": "sk_warden_maskless",
+     "name": "Warden, no mask",
+     "mesh": "/Game/Sparta/Characters/Enemies/Warden/Art/Mesh/SK_Warden_Maskless.SK_Warden_Maskless"
+    },
+    {
+     "id": "sk_wraith",
+     "name": "Gloombound Wraith",
+     "mesh": "/Game/Sparta/Characters/Enemies/Wraith/Art/Mesh/SK_Wraith.SK_Wraith"
+    },
+    {
+     "id": "sk_ms1_vampire",
+     "name": "Fallgrim Vampire",
+     "mesh": "/Game/MS1/Characters/Enemies/Fallgrim/Vampire/Mesh/SK_MS1_Vampire.SK_MS1_Vampire"
+    },
+    {
+     "id": "sk_offspring",
+     "name": "Offspring",
+     "mesh": "/Game/Sparta/Characters/Bosses/Offspring/Art/Mesh/SK_Offspring.SK_Offspring"
+    }
+   ]
+  },
+  {
+   "id": "css.npc.people",
+   "name": "People",
+   "author": "Cold Symmetry",
+   "description": "Wear one of the game's people. Your shell keeps its abilities.",
+   "compatibility": "same_skeleton",
+   "shells": [
+    "CharacterId.Player.Shell.Genessa"
+   ],
+   "variants": [
+    {
+     "id": "sk_blacksmith",
+     "name": "Franz",
+     "mesh": "/Game/Sparta/Characters/NPCs/Blacksmith/Blacksmith_Old/Art/Mesh/SK_Blacksmith.SK_Blacksmith"
+    },
+    {
+     "id": "sk_sester_genessa",
+     "name": "Sester Genessa, first form",
+     "mesh": "/Game/Sparta/Characters/NPCs/SesterGenessa/Art/Mesh/Sk_Sester_Genessa.Sk_Sester_Genessa"
+    },
+    {
+     "id": "sk_sester_genessa_v4_corrupted",
+     "name": "Corrupted Sester",
+     "mesh": "/Game/Sparta/Characters/NPCs/SesterGenessa/Art/Mesh/Sk_Sester_Genessa_V4_Corrupted.Sk_Sester_Genessa_V4_Corrupted"
+    },
+    {
+     "id": "sk_sester_genessa_v6_redghost",
+     "name": "Sester Genessa, red ghost",
+     "mesh": "/Game/Sparta/Characters/NPCs/SesterGenessa/Art/Mesh/SK_Sester_Genessa_V6_RedGhost.SK_Sester_Genessa_V6_RedGhost"
+    },
+    {
+     "id": "sk_villagecultist_female",
+     "name": "Villager, woman",
+     "mesh": "/Game/Sparta/Characters/NPCs/VillageCultist/Art/Mesh/SK_VillageCultist_Female.SK_VillageCultist_Female"
+    },
+    {
+     "id": "sk_villagecultist_male",
+     "name": "Villager, man",
+     "mesh": "/Game/Sparta/Characters/NPCs/VillageCultist/Art/Mesh/SK_VillageCultist_Male.SK_VillageCultist_Male"
+    },
+    {
+     "id": "sk_villagecultist_malechild_low",
+     "name": "Villager, child",
+     "mesh": "/Game/Sparta/Characters/NPCs/VillageCultist/Art/Mesh/SK_VillageCultist_MaleChild_low.SK_VillageCultist_MaleChild_low"
+    },
+    {
+     "id": "sk_poorvlas",
+     "name": "Vlas",
+     "mesh": "/Game/Sparta/Characters/NPCs/Vlas/Art/Mesh/SK_PoorVlas.SK_PoorVlas"
+    },
+    {
+     "id": "sk_willam",
+     "name": "William",
+     "mesh": "/Game/Sparta/Characters/NPCs/William/Art/Mesh/SK_Willam.SK_Willam"
+    },
+    {
+     "id": "sk_hilga",
+     "name": "Hilga",
+     "mesh": "/Game/Sparta/Characters/Enemies/FrogMama/Art/Mesh/SK_Hilga.SK_Hilga"
+    }
+   ]
+  },
+  {
+   "id": "css.npc.harbinger",
+   "name": "Harbinger forms",
+   "author": "Cold Symmetry",
+   "description": "Wear a Harbinger form while you still have a shell.",
+   "compatibility": "same_skeleton",
+   "shells": [
+    "CharacterId.Player.Shell.Genessa"
+   ],
+   "variants": [
+    {
+     "id": "sk_darkform",
+     "name": "Harbinger",
+     "mesh": "/Game/Sparta/Characters/Shells/DarkForm/Art/Mesh/SK_DarkForm.SK_DarkForm"
+    },
+    {
+     "id": "sk_darkform_02",
+     "name": "Harbinger, second look",
+     "mesh": "/Game/Sparta/Characters/Shells/DarkForm/Art/Mesh/SK_DarkForm_02.SK_DarkForm_02"
+    },
+    {
+     "id": "sk_darkform_bulk",
+     "name": "Harbinger, bulk",
+     "mesh": "/Game/Sparta/Characters/Shells/DarkForm_Bulk/Art/Mesh/SK_DarkForm_Bulk.SK_DarkForm_Bulk"
+    },
+    {
+     "id": "sk_darkform_bulk_frogmask",
+     "name": "Harbinger with Hilga's Mask",
+     "mesh": "/Game/Sparta/Characters/Shells/DarkForm_Bulk/Art/Mesh/SK_DarkForm_Bulk_FrogMask.SK_DarkForm_Bulk_FrogMask"
+    },
+    {
+     "id": "sk_darkform_bulk_robe",
+     "name": "Robed Harbinger",
+     "mesh": "/Game/Sparta/Characters/Shells/DarkForm_Bulk/Art/Mesh/SK_DarkForm_Bulk_Robe.SK_DarkForm_Bulk_Robe"
+    },
+    {
+     "id": "sk_darkform_bulk_onlyrobe",
+     "name": "Harbinger, robe only",
+     "mesh": "/Game/Sparta/Characters/Shells/DarkForm_Bulk/Art/Mesh/SK_DarkForm_Bulk_OnlyRobe.SK_DarkForm_Bulk_OnlyRobe"
+    },
+    {
+     "id": "sk_darkform_bulk_backpack",
+     "name": "Harbinger with pack",
+     "mesh": "/Game/Sparta/Characters/Shells/DarkForm_Bulk/Art/Mesh/SK_DarkForm_Bulk_backpack.SK_DarkForm_Bulk_backpack"
+    },
+    {
+     "id": "sk_darkbro_skeleton",
+     "name": "Skeletal Harbinger",
+     "mesh": "/Game/Sparta/Characters/Shells/DarkForm_Skel/Art/Mesh/SK_DarkBro_SKeleton.SK_DarkBro_SKeleton"
+    }
+   ]
+  }
+ ]
+}
