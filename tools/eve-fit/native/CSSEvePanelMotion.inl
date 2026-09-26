@@ -1,0 +1,111 @@
+#include "ChaosClothAsset/ClothComponent.h"
+#include "ChaosClothAsset/ClothSimulationProxy.h"
+#include "Components/PoseableMeshComponent.h"
+#include "PreviewScene.h"
+#include "HAL/FileManager.h"
+
+static int32 EvaluateHolidayPanel(const FString& Params)
+{
+    auto Fail=[](const TCHAR* Message) { UE_LOG(LogCSSEvePanel,Error,TEXT("Panel motion: %s"),Message); return 1; };
+    FString Input,Report,Text;
+    int32 Count=9;
+    FParse::Value(*Params,TEXT("Frames="),Count);
+    if (!FParse::Value(*Params,TEXT("Input="),Input) || !FParse::Value(*Params,TEXT("Report="),Report) ||
+        Count<2 || Count>300 || IFileManager::Get().FileExists(*Report)) return Fail(TEXT("Require input, unused report and 2..300 frames"));
+    TSharedPtr<FJsonObject> Root;
+    if (!FFileHelper::LoadFileToString(Text,*Input) ||
+        !FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text),Root) || !Root.IsValid()) return Fail(TEXT("Invalid pose JSON"));
+    const TArray<TSharedPtr<FJsonValue>>* Frames=nullptr;
+    if (!Root->TryGetArrayField(TEXT("frames"),Frames) || Frames->Num()<Count) return Fail(TEXT("Missing frames"));
+    auto* Mesh=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/CSS/EveTest/SK_Holiday.SK_Holiday"));
+    auto* Asset=LoadObject<UChaosClothAsset>(nullptr,TEXT("/Game/CSS/EveTest/CA_Holiday.CA_Holiday"));
+    if (!Mesh || !Asset) return Fail(TEXT("Private reference assets missing"));
+    FAssetCompilingManager::Get().FinishAllCompilation();
+    if (!Asset->HasValidClothSimulationModels() || Asset->GetClothCollections().Num()!=1) return Fail(TEXT("Invalid panel simulation"));
+    const UE::Chaos::ClothAsset::FCollectionClothConstFacade Collection(Asset->GetClothCollections()[0]);
+    FMemMark Memory(FMemStack::Get());
+    FPreviewScene Scene(FPreviewScene::ConstructionValues().SetCreateDefaultLighting(false));
+    auto* Pose=NewObject<UPoseableMeshComponent>();
+    Pose->SetSkinnedAssetAndUpdate(Mesh);
+    Scene.AddComponent(Pose,FTransform::Identity);
+    auto* Cloth=NewObject<UChaosClothComponent>();
+    Cloth->SetAsset(Asset);
+    Cloth->SetupAttachment(Pose);
+    Cloth->SetEnableSimulation(true);
+    Cloth->SetSimulateInEditor(true);
+    Scene.AddComponent(Cloth,FTransform::Identity);
+    Cloth->SetLeaderPoseComponent(Pose,true);
+    const auto& Ref=Mesh->GetRefSkeleton();
+    if (Pose->BoneSpaceTransforms.Num()!=Ref.GetNum()) return Fail(TEXT("Pose component has wrong bone count"));
+    auto ReadVector=[](const TSharedPtr<FJsonObject>& O) {
+        return FVector(O->GetNumberField(TEXT("X")),O->GetNumberField(TEXT("Y")),O->GetNumberField(TEXT("Z")));
+    };
+    TArray<TSharedPtr<FJsonValue>> Rows;
+    double PreviousTime=0;
+    for (int32 Index=0;Index<Count;++Index)
+    {
+        const auto Frame=(*Frames)[Index]->AsObject();
+        const auto Snapshot=Frame->GetObjectField(TEXT("pose"))->GetObjectField(TEXT("Snapshot"));
+        const auto& Names=Snapshot->GetArrayField(TEXT("BoneNames"));
+        const auto& Transforms=Snapshot->GetArrayField(TEXT("LocalTransforms"));
+        if (Names.Num()!=Transforms.Num()) return Fail(TEXT("Mismatched pose arrays"));
+        TSet<int32> Seen;
+        for (int32 I=0;I<Names.Num();++I)
+        {
+            const int32 Bone=Ref.FindBoneIndex(FName(*Names[I]->AsString()));
+            if (Bone==INDEX_NONE) continue;
+            if (Seen.Contains(Bone)) return Fail(TEXT("Duplicate pose bone"));
+            Seen.Add(Bone);
+            const auto Entry=Transforms[I]->AsObject();
+            const auto Rotation=Entry->GetObjectField(TEXT("Rotation"));
+            FQuat Q(Rotation->GetNumberField(TEXT("X")),Rotation->GetNumberField(TEXT("Y")),
+                Rotation->GetNumberField(TEXT("Z")),Rotation->GetNumberField(TEXT("W")));
+            FTransform T(Q,ReadVector(Entry->GetObjectField(TEXT("Translation"))),ReadVector(Entry->GetObjectField(TEXT("Scale3D"))));
+            if (T.ContainsNaN() || !Q.IsNormalized()) return Fail(TEXT("Invalid recorded transform"));
+            Pose->BoneSpaceTransforms[Bone]=T;
+        }
+        if (Seen.Num()!=Ref.GetNum()) return Fail(TEXT("Incomplete recorded pose"));
+        Pose->MarkRefreshTransformDirty();
+        Pose->RefreshBoneTransforms();
+        const double Time=Frame->GetNumberField(TEXT("time"));
+        const float Dt=Index?float(Time-PreviousTime):1.f/60.f;
+        if (Dt<0.f || Dt>.1f) return Fail(TEXT("Unexpected pose interval"));
+        if (!Index) Cloth->ForceNextUpdateTeleportAndReset();
+        static_cast<UActorComponent*>(Cloth)->TickComponent(Dt,LEVELTICK_All,nullptr);
+        Cloth->WaitForExistingParallelClothSimulation_GameThread();
+        const auto* Proxy=Cloth->GetClothSimulationProxy();
+        if (!Proxy) return Fail(TEXT("Missing simulation proxy"));
+        const auto& Data=Proxy->GetCurrentSimulationData_AnyThread();
+        const auto* Sim=Data.Find(0);
+        if (!Sim || Sim->Positions.Num()!=Collection.GetNumSimVertices3D()) return Fail(TEXT("Unexpected simulation particle count"));
+        TArray<TSharedPtr<FJsonValue>> Positions;
+        for (const FVector3f& P:Sim->Positions)
+        {
+            const FVector World=Sim->Transform.TransformPosition(FVector(P));
+            if (World.ContainsNaN() || World.GetAbsMax()>10000.) return Fail(TEXT("Unbounded simulation position"));
+            TArray<TSharedPtr<FJsonValue>> XYZ={MakeShared<FJsonValueNumber>(World.X),MakeShared<FJsonValueNumber>(World.Y),MakeShared<FJsonValueNumber>(World.Z)};
+            Positions.Add(MakeShared<FJsonValueArray>(XYZ));
+        }
+        auto Row=MakeShared<FJsonObject>();
+        Row->SetNumberField(TEXT("frame"),Index); Row->SetNumberField(TEXT("time"),Time);
+        Row->SetNumberField(TEXT("simulation_dt"),Dt);
+        Row->SetNumberField(TEXT("dynamic_particles"),Proxy->GetNumDynamicParticles());
+        Row->SetNumberField(TEXT("kinematic_particles"),Proxy->GetNumKinematicParticles());
+        Row->SetNumberField(TEXT("iterations"),Proxy->GetNumIterations());
+        Row->SetNumberField(TEXT("substeps"),Proxy->GetNumSubsteps());
+        Row->SetNumberField(TEXT("simulation_ms"),Proxy->GetSimulationTime());
+        Row->SetArrayField(TEXT("positions_cm"),Positions);
+        Rows.Add(MakeShared<FJsonValueObject>(Row));
+        UE_LOG(LogCSSEvePanel,Display,TEXT("Panel frame %d: %d dynamic, %d kinematic, %d positions"),Index,
+            Proxy->GetNumDynamicParticles(),Proxy->GetNumKinematicParticles(),Positions.Num());
+        PreviousTime=Time;
+    }
+    auto Result=MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("scope"),TEXT("Actual saved CA_Holiday Chaos component simulation on recorded original-graph poses. Old reference asset geometry/weights; no F11, morph, material or game acceptance."));
+    Result->SetStringField(TEXT("source_motion"),Input);
+    Result->SetStringField(TEXT("asset"),Asset->GetPathName());
+    Result->SetArrayField(TEXT("frames"),Rows);
+    Scene.RemoveComponent(Cloth); Scene.RemoveComponent(Pose);
+    return FJsonSerializer::Serialize(Result,TJsonWriterFactory<>::Create(&Text)) && FFileHelper::SaveStringToFile(Text,*Report)
+        ?0:Fail(TEXT("Cannot save motion report"));
+}

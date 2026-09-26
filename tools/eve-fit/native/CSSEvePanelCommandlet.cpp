@@ -21,6 +21,8 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogCSSEvePanel, Log, All);
 
+#include "CSSEvePanelMotion.inl"
+
 UCSSEvePanelCommandlet::UCSSEvePanelCommandlet()
 {
     IsEditor = true;
@@ -31,6 +33,7 @@ UCSSEvePanelCommandlet::UCSSEvePanelCommandlet()
 
 int32 UCSSEvePanelCommandlet::Main(const FString& Params)
 {
+    if (FParse::Param(*Params,TEXT("Motion"))) return EvaluateHolidayPanel(Params);
     using namespace UE::Chaos::ClothAsset;
     auto Fail = [](const TCHAR* Message) { UE_LOG(LogCSSEvePanel, Error, TEXT("%s"), Message); return 1; };
     FString Input, Output, Text;

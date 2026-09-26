@@ -455,3 +455,16 @@ Consulted the primary [Position Based Dynamics paper](https://matthias-research.
 A separate `--mass uniform` control isolates the inverse-mass gradient near the pinned boundary. `fabricmass.json` changes only free-particle masses from the previous height gradient to equal masses, with the same fixed region, contact and substeps; velocity-contact correction is disabled for this control. It does not solve the instability: peak speed is 8,568 cm/s, maximum edge ratio 26.588, and there are up to 17 failing surface samples. Do not attribute the failure solely to the graded mass or retain uniform mass as a proven fix.
 
 The offline reference still lacks continuous collision and stable coupled contact handling. Further arbitrary mass/damping tuning is not supported by these controls. Trace the moving cloth/body contact crossing or use a validated collision implementation before another production-mapping attempt. Keep the existing Chaos panel asset and single-section legacy-cloth evidence available as engine-supported alternatives, with their documented morph/material limitations still unresolved. No body edits, pose changes, game installation, cook or release replacement occurred. All processes are terminal.
+
+
+### Native Chaos motion evaluated, fitting still rejected (2026-09-26)
+
+The user clarified that asking why Holiday Reveler takes time was curiosity, not a priority change. Continue fitting Holiday, then all remaining outfits under the existing full customization/physics goal.
+
+Added a read-only `CSSEvePanel -Motion` path using the saved private SK_Holiday and CA_Holiday assets, recorded sprint bone poses, a poseable leader and the actual Chaos cloth component. It waits for simulation completion and exports particles transformed from reference space. No assets are saved. Editor builds completed successfully.
+
+The first run used a zero-time initialization tick and returned bind-pose cloth on frame 0. A 1/60-second reset tick fixes that initialization. `panel-motion2.json` contains nine completed frames. `verify_panel_motion.py` independently reconstructs the exact panel proxy skinning, using its own source weights. All fixed particles match within 0.0000286 cm, confirming pose/coordinate ordering. This is not a fitting pass: maximum tested edge ratio remains 13.476.
+
+`prepare_panel_render.py` requires a passing verification receipt with the exact input SHA256, checks source vertex positions and particle counts, and prepares the main surface for diagnostic rendering. Inspected `panel-motion2-views/default-side.png` at sprint frame 4. There is substantial visible thigh penetration and fabric distortion. Reject this panel/configuration as a production candidate. The render uses the old panel geometry and only replaces its main surface; trim remains skinned, so it does not validate the engine render attachment mapping or F11 fitting.
+
+Both motion commandlets and the Blender verification/render processes exited successfully. `panel-motion2-protected.json` confirms unchanged shared skeleton, production PA_Body, private skeletal mesh and cloth asset hashes. No game install, cook or release changes. Next investigate the native collision coverage and garment constraints on a private candidate, preserve the accepted body/poses, and address supported trim mapping and combined morphs before runtime acceptance.
