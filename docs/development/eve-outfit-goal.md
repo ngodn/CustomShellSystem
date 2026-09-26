@@ -1,8 +1,10 @@
 # Eve outfit goal and current status
 
-Updated 2026-09-27, native cloth repeatability checkpoint. Read [the evidence index](eve-outfit-index.md) before resuming.
+Updated 2026-09-27, private skinned level-set generation checkpoint. Read [the evidence index](eve-outfit-index.md) before resuming.
 
 ## Active objective
+
+The [fitting playbook](eve-fitting-playbook.md) records reusable lessons and rejected shortcuts for subsequent outfits. Update it when a trial changes the workflow, alongside the detailed evidence index.
 
 Outfit order confirmed September 27: finish Holiday Reveler, then Planet Diving 6th (planet suit), then the remaining outfits. This changes the queue after Holiday, not the active fitting task or acceptance requirements.
 
@@ -29,6 +31,8 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 - Package under `/Game/CSS/`, use short readable paths, retain source provenance, and commit by coherent change. Do not publish until the candidate has passed these checks.
 
 ## Latest checkpoint
+
+The next collision candidate is private `SK_CBody` / `PA_CBody64`, extracted from the unchanged F12 body. The saved level-set collider reloads with matching metadata (one pelvis-rooted volume, 33 influencing bones, level-set grid 65x23x35, lattice 16x10x12). This is generation/serialization evidence only. Measure signed surface coverage and deformed coverage, then trial cloth motion and cost before adopting it. The old triangle collider's late-sprint tunneling and expensive 16-substep workaround are documented below. No new collider has been assigned to production or accepted.
 
 **Current working reference is F12 / SK_Waist / CA_Fit, with the full body-joint6 collider and 0.3 cm contact setting.** Repaired render attachments remove the long fur spikes, and local source fitting improves waist clearance. Holiday remains unfinished: hip breakthrough, arm contact, local deformation, physics cost and complete morph coverage are open. No game install or release replacement has occurred during these private trials.
 
@@ -709,3 +713,15 @@ Worst lower/hip samples include strong butt001/butt002 influences (roughly 0.42.
 Installed engine source exposes another candidate requiring actual measurement: `PhysicsAssetUtils.h:26` names skinned level sets as experimental, cloth-only; exported `CreateCollisionFromBones` / `CreateCollisionsFromBones` provide authoring routes without accessing the private SkinnedLevelSetBuilder. `PBDSoftBodyCollisionConstraint.cpp:792..843` includes the weighted-lattice level-set object in the ordinary intersection/CCD path and its bone-aware friction handling. This is source evidence of a supported code path, not proof of continuous deforming-surface correctness, fitting, speed or shipping-game compatibility.
 
 Next prepare a separate body-only private mesh using the preserved geometry/weights, then an isolated skinned-level-set collider through the public authoring API. Do not generate collision from the full outfit mesh, which would include garments/accessories. Measure saved/rest and animated body coverage before native cloth trials; preserve the small CA_Fit cloth reference and compare the same late-sprint case/cost. Morph adaptation and experimental-runtime compatibility remain gates. All coverage/preparation processes exited 0, no native assets or game files changed, and the other agent's CSSX source edits were untouched.
+
+## September 27: body-only level-set generation checkpoint
+
+`prepare_collision_body.py` extracts the F12 body's 36,787 points and 61,814 faces into `cbody.mesh.json`. Positions, face order and weights match `body-collider.json`; UVs, normals, colors and the body's 22 morph deltas are retained by remapping. `CSSImportMesh` exits 0. Fresh `CSSInspectMesh` readback confirms 379 private bones, 61,814 triangles, 16 body material slots and all 22 morph names. The imported render mesh has 183,313 seam-split vertices; do not confuse that with source point count.
+
+`CSSEveLevelSet.inl` adds an isolated `-LevelSet` mode using the exported PhysicsUtilities API. It generates only from `SK_CBody`, refuses existing output packages, disables source mesh assignment and constraints, checks bone resolution, and saves only the new private physics asset. Initial compilation caught a `TObjectPtr` range-loop type mismatch; explicitly naming `USkeletalBodySetup*` fixed it. `cbody-build2` and `cbody-build3` finish successfully.
+
+`PA_CBody64` was generated with requested level-set resolution 64 and lattice resolution 16. Actual grids are 65x23x35 and 16x10x12, respectively. There is one pelvis-rooted volume with 33 influencing bones, including `butt001` and `butt002`. `-InspectLevelSet` reloads without generation or saving: `cbody-readback.json` exactly matches the generated body metadata. Both processes exit 0. This does not prove grid accuracy or contact behavior.
+
+`verify_collision_body.py` reloads the source and body-only mesh. Saved skeleton and mesh bind transforms match the private F12 source, no physics asset is assigned to `SK_CBody`, and the four protected hashes match `panel-motion-before.json`. The Python commandlet exits 0; see `cbody-rig.json`. The production shared skeleton remains separate and unchanged.
+
+Next: sample signed distances against the saved volume at rest, evaluate the deformed volume against recorded body poses and morph cases, then compare cloth motion and cost with the same F12/full-triangle reference. The new collider is not adopted or installed. Skinning of a level-set lattice does not by itself establish support for body morphs. Keep missing outfit accessories, full assembly and game review open.

@@ -2,7 +2,11 @@
 
 Updated 2026-09-27. Start here after a context reset; the goal log's current checkpoint supersedes historical approaches below.
 
+Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It distills mistakes, replacement checks and what Planet Diving can reuse without copying Holiday-specific settings.
+
 ## Findings to preserve
+
+- Private body-only level-set generation: `cbody-source.json`, `cbody-inspect.json`, `cbody-levelset.json`, `cbody-readback.json`. The export preserves 36,787 body points, 61,814 faces, weights and 22 morphs; saved import retains all morph names. Generation and fresh-load metadata match for a 33-bone collider. Coverage, deformation, morph support and solver cost are still unverified. Never replace the shared skeleton with the private 379-bone import. See `tools/eve-fit/native/README.md` for replay commands.
 
 - User's September 27 outfit order: Holiday Reveler, then Planet Diving 6th (planet suit), then the others. All outfit requirements remain active.
 - Late-sprint native collider penetration responds strongly to 16 substeps, but that costs about 71 ms and still clips render surfaces. Ordinary UseCCD does not cover the separate skinned-triangle constraint path. Keep this as diagnosis, not a release setting.
