@@ -15,10 +15,13 @@ parser.add_argument('--mesh', type=Path, default=WORK/'holiday-bones.mesh.json')
 parser.add_argument('--output', type=Path, default=WORK/'skirt-bone-views')
 parser.add_argument('--motion', type=Path, help='Use a measured UE local-pose snapshot instead of synthetic bends')
 parser.add_argument('--frame', type=int, default=0)
+parser.add_argument('--upstream', action='store_true', help='Render the recorded pose before secondary dynamics')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 data = json.loads(args.mesh.read_text())
-record = json.loads(args.motion.read_text())['frames'][args.frame] if args.motion else None
-snapshot = record['pose']['Snapshot'] if record else None
+motion_data = json.loads(args.motion.read_text()) if args.motion else None
+record = motion_data['frames'][args.frame] if motion_data else None
+assert not args.upstream or record, '--upstream requires --motion'
+snapshot = (record['upstream'] if args.upstream else record['pose']['Snapshot']) if record else None
 measured = dict(zip(snapshot['BoneNames'], snapshot['LocalTransforms'], strict=True)) if snapshot else None
 if measured:
     assert snapshot['bIsValid'] and len(measured) == len(snapshot['BoneNames'])
@@ -114,7 +117,9 @@ for label, selections in [('default', {}), ('hip-waist', {'PBMHipSize': 1., 'PBM
         cam.rotation_euler = (target-cam.location).to_track_quat('-Z', 'Y').to_euler()
         scene.render.filepath = str(out/f'{label}-{view}.png')
         bpy.ops.render.render(write_still=True)
-scope = ('Measured editor component pose applied to exported weights. Combined morph view reuses that pose; it does not rerun collision for changed body shapes.'
+scope = ('Recorded pose applied to exported weights; source_scope identifies measured versus generated transforms. Combined morph view reuses that pose; it does not rerun collision for changed body shapes.'
          if record else 'Synthetic 4-degree outward bend per joint on the first three bones of each skirt chain. No simulation, collisions or gameplay playback.')
 (out/'report.json').write_text(json.dumps({'rows': rows, 'motion': str(args.motion) if record else None,
-    'frame': args.frame if record else None, 'scope': scope}, indent=2)+'\n')
+    'frame': args.frame if record else None, 'upstream': args.upstream,
+    'source_scope': motion_data.get('scope', 'Measured editor evaluation') if motion_data else None,
+    'scope': scope}, indent=2)+'\n')

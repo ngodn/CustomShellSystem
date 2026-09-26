@@ -4,6 +4,7 @@ Updated 2026-09-26. Goal resumed with the new outfit objective. Start here after
 
 ## Findings to preserve
 
+- Skirt motion must retain the fitted garment's original leg-follow deformation. Same-pose upstream renders expose clipping from the old four-chain weights before physics. `CR_HolidayFollow` and its paired export preserve original influence values through eleven existing carrier bones; direct rig execution passes 291 recorded poses. This is the current base for adding dynamics, not finished cloth.
 - Five palette entries do not prove five working garment palettes. All ten Gemini additions currently redirect garment palette colors to hair.
 - Preserve the accepted original body proportions, V44 hand repair, camera translation repair and corrected S1 movement while extending outfits.
 - The user requires five additional clothing palettes plus Original for every outfit, not five saved looks.
@@ -27,6 +28,9 @@ Paths in this table are relative to the workspace root unless linked.
 | Artifact | Finding or purpose |
 | --- | --- |
 | [Current goal/status](eve-outfit-goal.md) | Scope, acceptance criteria, takeover findings and next steps |
+| `CustomShellSystem/work/eve26/jog-fit-upstream`, `jog-bones-upstream`, `jog-driver-views` | Same-pose fitting vs old skirt weighting, then rejected average-driver approximation |
+| `CustomShellSystem/tools/eve-fit/prepare_skirt_follow.py`, `verify_skirt_follow.py` | One-to-one carrier export and offline skinning preservation check with default/combined morph geometry |
+| `CustomShellSystem/work/eve26/skirt-follow-evaluated.json`, `jog-follow-views` | Fresh saved-rig direct execution over 291 poses; separately inspected offline fitted-coverage render |
 | `CustomShellSystem/work/eve26/motion-controls.json`, `motion-inertia.json`, `motion-cube.json` | Force controls isolate initial inertia failure and residual contact displacement; no accepted motion |
 | `CustomShellSystem/work/eve26/skirt-rest-contacts.json`, `skirt-body-centers.json` | Initial center/body overlap measured; geometry-derived reference clearance does not ensure animated clearance |
 | `CustomShellSystem/work/eve26/holiday2-motion-verdict.json`, `jog-centers-views`, `holiday2-protected.json` | Second candidate rejected in jog; inspected actual-pose render and protected asset hashes |
