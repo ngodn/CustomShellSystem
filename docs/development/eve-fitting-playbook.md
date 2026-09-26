@@ -134,3 +134,9 @@ The Planet interchange uses Unreal clockwise winding. Reflecting Y for Blender a
 ## Match authored visibility before reshaping footwear
 
 Prototype's apparent bare-foot problem repeats an earlier Black Pearl preview mistake. Hiding the entire covered-foot material removes too much calf skin. Evaluate the author's outfit-specific mask instead: original `SuitBMask` maps exactly to the current body, hiding 7,029 faces while preserving the open calf strip in inspected views. Keep those faces in reversible covered sections tied to the garment toggle; do not delete them or change body proportions. Extend original shader and color bindings to duplicated slots. Tail/ribbon sections must be independent from suit material sections before offering independent visibility.
+
+## Verify garment morph deltas, not just key names
+
+Prototype had all six keys but combining documented maximum values produced large sheets and spikes. Neutral fitting and weight normalization did not detect this. Check individual and combined morphs before physics. Rebuilding suit deltas from the unchanged body's nearest triangles removed the large distortion in the inspected combined-max views, and fresh source reload verifies the six arrays. This remains a candidate: check edge clearance, accessories, mixed values and motion rather than declaring all morphs solved from one combination.
+
+An accessory bone's name also does not establish its bind location. Prototype's existing diagnostic tail chain root is 23.59 cm from the garment attachment and extends in a different direction. Gemini's earlier single-tail-bone assignment already caused fan deformation and was removed. Preserve that rejection and measure the chain before weighting it again.

@@ -6,6 +6,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Latest Prototype garment source is `planet-suit-f5.blend`, with six repaired morphs and a fresh-load receipt. Combined-max inherited morphs produced sheets/spikes; repaired front/back/side views remove that failure. Body/base preserved. The diagnostic tail root is 23.59 cm from the attachment; Gemini already rejected blindly weighting this chain. Read the latest checkpoint before tail authoring.
+
 - Prototype authored `SuitBMask` resolves the footwear preview without blanking the open calf strip. Exact source mask in `planet-body-mask.json`; inspected views in `planet-fit4/source-mask/`. `planet-sections/` adds reversible covered-body slots and independent tail/ribbon sections; tail-hidden rear inspected. Body faces are preserved, not deleted. Production rig/material/color integration, tail physics, morph/motion and game checks remain open.
 
 - Latest Prototype source is `planet-suit-f4c.blend`, fresh-load verified with one garment, eight shape keys and 0.00001532 cm maximum fitted-point error. It has placeholder materials with original slot names for reassembly. Production rig/materials must be reattached; no game acceptance. Earlier two dependency-heavy library copies were removed with a cleanup receipt. Next inspect source outfit masking because blanket covered-foot hiding exposes a calf opening.

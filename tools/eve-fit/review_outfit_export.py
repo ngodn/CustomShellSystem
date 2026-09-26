@@ -13,10 +13,21 @@ p.add_argument('--audit', type=Path, required=True)
 p.add_argument('--output', type=Path, required=True)
 p.add_argument('--hide-material', action='append', default=[])
 p.add_argument('--body-mask', type=Path)
+p.add_argument('--morph', action='append', default=[], help='Name=weight, applied to exported deltas')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
 a.output.mkdir(exist_ok=False)
 raw = a.mesh.read_bytes()
 source = json.loads(raw)
+morphs = {}
+targets = {target['name']: target['deltas'] for target in source['morph_targets']}
+for setting in a.morph:
+    name, weight = setting.rsplit('=', 1)
+    assert name in targets and name not in morphs
+    weight = float(weight)
+    assert -1 <= weight <= 1
+    morphs[name] = weight
+    for index, x, y, z in targets[name]:
+        source['points'][index] = [v+weight*d for v, d in zip(source['points'][index], (x, y, z))]
 assert set(a.hide_material) <= set(source['materials'])
 hidden_slots = {source['materials'].index(name) for name in a.hide_material}
 hidden_faces = set(json.loads(a.body_mask.read_text())['hidden_body_faces']) if a.body_mask else set()
@@ -75,4 +86,4 @@ for label, direction in [('front', (0, -1, 0)), ('back', (0, 1, 0)), ('side', (1
     scope='Existing exported geometry in bind pose, neutral materials and hair hidden for garment inspection. No source edit, animation, morph or game acceptance.',
     source=str(a.mesh), source_sha256=hashlib.sha256(raw).hexdigest(),
     hidden_materials=a.hide_material, body_mask=str(a.body_mask) if a.body_mask else None,
-    hidden_face_count=len(hidden_faces), parts=parts), indent=2)+'\n')
+    hidden_face_count=len(hidden_faces), morphs=morphs, parts=parts), indent=2)+'\n')
