@@ -509,3 +509,7 @@ The build and `panel-body.json` nine-frame evaluation completed successfully. Fi
 Inspected `panel-body-views/default-side.png`: more hip coverage, but patchy penetration remains and the geometry is not acceptable. The full-resolution collider costs roughly 2,669–2,807 ms in the reported smoothed editor simulation timing. It is strictly a feasibility reference, never a production candidate or a game performance claim. No game files, source body or shared skeleton changed; `panel-body-protected.json` confirms protected hashes. All sessions are terminal.
 
 Next independently verify the native collider's posed surface, then construct a lightweight collision proxy with measured error against the unchanged body across poses and morphs. Check contact initialization, triangle orientation and between-vertex penetration before spending more time on solver counts. Any proxy must retain relevant butt/belly/thigh/arm deformation; arbitrary inscribed primitives missed this. Combined morphs, attachment mapping, full motion and game validation are still required.
+
+### Storage cleanup (2026-09-27)
+
+[Cleanup manifest](eve-cleanup-2026-09-27.md): removed superseded F2, F3b, F3d and F4 through F8 blend intermediates, reclaiming about 39 GiB. F1/F9/F10/F11, original sources and all reports/renders remain. Historical references above are evidence, not promises that obsolete blend files still exist. Regenerate old stages if needed; continue fitting from retained F10/F11.
