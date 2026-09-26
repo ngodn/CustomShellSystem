@@ -115,3 +115,6 @@ Direct fabric reference: `probe_fabric_surface.py`, `fabric1.json` (initial velo
 
 
 Surface-contact and anchoring audit: `fabricface.json` (4x8), `fabricsmall.json` (16x2), `fabricwaist.json` (waist pins), inspected `fabricwaist8-views/default-side.png`, and `bodytrace.json`. Persistent hip-pinned edges explain some unsatisfiable contact; waist pins improve a selected frame but the sequence still has severe stretch/speed spikes. No trial accepted. Source vertex IDs and exact comparisons are in the goal log.
+
+
+Arm-spike attribution: `fabrictrace.json`, `fabrictrace-drivers.json`, `fabrictorso.json`. Right-upper-arm contact against almost-pinned waist cloth causes the largest corrections. Diagnostic arm exclusion reduces motion spikes but whole-body clearance still fails. Attachment renders `fabrictorso-attached` and `fabrictorso-rotated` were inspected and rejected for folding/spikes; do not deploy renderer mappings as cloth attachments.

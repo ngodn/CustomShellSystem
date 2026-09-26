@@ -8,6 +8,7 @@ from pathlib import Path
 import bpy
 import numpy as np
 from mathutils import Matrix, Quaternion, Vector
+from mathutils.bvhtree import BVHTree
 
 WORK = Path(__file__).resolve().parents[2] / 'work/eve26'
 parser = argparse.ArgumentParser(description=__doc__)
@@ -19,11 +20,15 @@ parser.add_argument('--upstream', action='store_true', help='Render the recorded
 parser.add_argument('--views', nargs='+', choices=('front','side','rear'), default=['front','side'])
 parser.add_argument('--lower-dress', action='store_true', help='Center the camera on the posed lower dress')
 parser.add_argument('--surface-motion', type=Path, help='Apply an offline fabric surface only to its matching pose and morph case')
+parser.add_argument('--transfer-trim', action='store_true', help='Diagnostic barycentric displacement transfer to other dress sections')
+parser.add_argument('--rotate-trim', action='store_true', help='Rotate attachment offsets with the fabric triangle, without scaling the offsets')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 data = json.loads(args.mesh.read_text())
 motion_data = json.loads(args.motion.read_text()) if args.motion else None
 record = motion_data['frames'][args.frame] if motion_data else None
 surface_motion = json.loads(args.surface_motion.read_text()) if args.surface_motion else None
+assert not args.transfer_trim or surface_motion
+assert not args.rotate_trim or args.transfer_trim
 if surface_motion:
     assert args.motion and not args.upstream
     assert Path(surface_motion['source_motion']).resolve() == args.motion.resolve()
@@ -120,6 +125,51 @@ for label, selections in [('default', {}), ('hip-waist', {'PBMHipSize': 1., 'PBM
         deformed[i] = sum((weight*(transforms[bone] @ point)[:3] for bone, weight in row), np.zeros(3))
     assert np.isfinite(deformed).all()
     if surface_motion:
+        if args.transfer_trim:
+            source_ids = surface_motion['source_vertices']
+            lookup = {v:i for i,v in enumerate(source_ids)}
+            triangles = [[lookup[data['wedges'][w][0]] for w in f[:3]] for f in data['faces']
+                         if f[3] == main_slot and all(data['wedges'][w][0] in lookup for w in f[:3])]
+            tree = BVHTree.FromPolygons(rest[source_ids].tolist(), triangles, all_triangles=True)
+            displacements = np.asarray(surface_frame['positions_cm'])-deformed[source_ids]
+            old_surface = deformed[source_ids].copy()
+            new_surface = np.asarray(surface_frame['positions_cm'])
+            rotations = {}
+            dress_slots = {data['materials'].index(name) for name in (
+                'MI_CH_P_EVE_Christmas_01_01.001', 'MI_CH_P_EVE_Christmas_01_Decal.001',
+                'MI_EVE_HR_Christmas_01_Fur.001', 'MI_EVE_HR_15_Emissive1.001',
+                'MI_CH_P_EVE_Christmas_01_03.001')}
+            attached = {data['wedges'][w][0] for f in data['faces'] if f[3] in dress_slots for w in f[:3]}-set(source_ids)
+            assert all(v >= audit['parts'][0]['points'] for v in attached)
+            max_distance = 0.
+            for v in sorted(attached):
+                point, _, face, distance = tree.find_nearest(Vector(rest[v]))
+                tri = triangles[face]
+                origin, b, c = rest[np.asarray(source_ids)[tri]]
+                basis = np.column_stack((b-origin, c-origin))
+                uv = np.linalg.lstsq(basis, np.asarray(point)-origin, rcond=None)[0]
+                bary = np.asarray([1-uv.sum(), *uv])
+                assert bary.min() > -1e-4 and bary.max() < 1.0001
+                if args.rotate_trim:
+                    if face not in rotations:
+                        bases = []
+                        for positions in (old_surface, new_surface):
+                            first = positions[tri[1]]-positions[tri[0]]
+                            second = positions[tri[2]]-positions[tri[0]]
+                            normal = np.cross(first, second)
+                            assert np.linalg.norm(normal) > 1e-9
+                            bases.append(np.column_stack((first, second, normal/np.linalg.norm(normal))))
+                        u, _, vt = np.linalg.svd(bases[1]@np.linalg.inv(bases[0]))
+                        fix = np.diag((1., 1., np.linalg.det(u@vt)))
+                        rotations[face] = u@fix@vt
+                    offset = deformed[v]-bary@old_surface[tri]
+                    deformed[v] = bary@new_surface[tri]+rotations[face]@offset
+                else:
+                    deformed[v] += bary@displacements[tri]
+                max_distance = max(max_distance, distance)
+            rows.append({'attachment_vertices':len(attached), 'max_reference_distance_cm':max_distance,
+                         'method': 'Diagnostic triangle rotation and displacement transfer' if args.rotate_trim else 'Diagnostic displacement transfer only',
+                         'independent_attachment_collision': False})
         deformed[surface_motion['source_vertices']] = np.asarray(surface_frame['positions_cm'])
     for obj, points in objects:
         xyz = deformed[points].copy()/100
@@ -146,5 +196,7 @@ scope = ('Recorded pose applied to exported weights; source_scope identifies mea
     'views':args.views,'lower_dress':args.lower_dress,
     'surface_motion': str(args.surface_motion) if surface_motion else None,
     'surface_scope': surface_motion['scope'] if surface_motion else None,
+    'transfer_trim': args.transfer_trim,
+    'rotate_trim': args.rotate_trim,
     'source_scope': motion_data.get('scope', 'Measured editor evaluation') if motion_data else None,
     'scope': scope}, indent=2)+'\n')

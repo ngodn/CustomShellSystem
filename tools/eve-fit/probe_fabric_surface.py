@@ -2,6 +2,7 @@
 import argparse
 import json
 import math
+import heapq
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -21,6 +22,8 @@ p.add_argument('--iterations', type=int, default=8)
 p.add_argument('--surface-contact', action='store_true')
 p.add_argument('--pin-z', type=float, default=112.)
 p.add_argument('--free-z', type=float, default=103.)
+p.add_argument('--contact-region', choices=('all', 'torso-legs'), default='all',
+               help='Diagnostic collider isolation only; final clearance still measures the whole body')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert a.name.isalnum()
 assert 1 <= a.substeps <= 64 and 1 <= a.iterations <= 64
@@ -85,6 +88,14 @@ for f in mesh['faces'][:count]:
     if np.dot(np.cross(points[vertices[1]]-points[vertices[0]], points[vertices[2]]-points[vertices[0]]), normal) < 0:
         vertices[1], vertices[2] = vertices[2], vertices[1]
     body.append(vertices)
+body_all = list(body)
+if a.contact_region == 'torso-legs':
+    arm_mass = np.zeros(len(points))
+    for v, bone, weight in mesh['influences']:
+        name = mesh['bones'][bone]['name']
+        if any(part in name for part in ('upperarm', 'lowerarm', 'hand', 'thumb', 'index', 'middle', 'ring', 'pinky')):
+            arm_mass[v] += weight
+    body = [tri for tri in body_all if not all(arm_mass[v] > .5 for v in tri)]
 
 def skin(frame):
     snapshot = frame['pose']['Snapshot']
@@ -117,10 +128,12 @@ def distance_pass(x, pairs, lengths, groups, multipliers, alpha):
 def collision_pass(x, tree):
     for v in free:
         point = Vector(x[v])
-        nearest, normal, _, _ = tree.find_nearest(point)
+        nearest, normal, body_face, _ = tree.find_nearest(point)
         signed = (point-nearest).dot(normal)
         if signed < .05:
-            x[v] += np.asarray(normal)*(.05-signed)
+            shift = np.asarray(normal)*(.05-signed)
+            trace_contact('vertex', [v], shift[None, :], signed, body_face, normal)
+            x[v] += shift
     if a.surface_contact:
         for vertices, bary in contact_samples:
             mass = inverse_mass[vertices]
@@ -128,15 +141,35 @@ def collision_pass(x, tree):
             if denominator < 1e-10:
                 continue
             point = Vector(bary@x[vertices])
-            nearest, normal, _, _ = tree.find_nearest(point)
+            nearest, normal, body_face, _ = tree.find_nearest(point)
             signed = (point-nearest).dot(normal)
             if signed < .05:
                 correction = np.asarray(normal)*(.05-signed)/denominator
-                x[vertices] += (mass*bary)[:, None]*correction
+                shifts = (mass*bary)[:, None]*correction
+                trace_contact('surface', vertices, shifts, signed, body_face, normal)
+                x[vertices] += shifts
+
+def trace_contact(kind, vertices, shifts, signed, body_face, normal):
+    global contact_serial
+    size = float(np.linalg.norm(shifts, axis=1).max())
+    if len(contact_trace) == 8 and size <= contact_trace[0][0]:
+        return
+    row = {'kind': kind, 'shift_cm': size, 'signed_cm': signed, 'phase': phase,
+        'source_vertices': [int(ids[v]) for v in vertices],
+        'inverse_mass': [float(inverse_mass[v]) for v in vertices],
+        'body_vertices': body[body_face], 'normal': list(normal)}
+    contact_serial += 1
+    entry = (size, contact_serial, row)
+    if len(contact_trace) < 8:
+        heapq.heappush(contact_trace, entry)
+    else:
+        heapq.heapreplace(contact_trace, entry)
 
 frames, reports = [], []
 previous = None
 for fi, frame in enumerate(source['frames'][:a.end+1]):
+    contact_trace, contact_serial = [], 0
+    phase = 'settle'
     target = skin(frame)
     if previous is None:
         x = target[ids].copy()
@@ -151,6 +184,7 @@ for fi, frame in enumerate(source['frames'][:a.end+1]):
     dt = (frame['time']-source['frames'][fi-1]['time'])/a.substeps if fi else 1./(60*a.substeps)
     assert dt > 0
     for sub in range(a.substeps if fi else 0):
+        phase = f'substep-{sub}'
         body_xyz = previous+(target-previous)*(sub+1)/a.substeps
         tree = BVHTree.FromPolygons(body_xyz.tolist(), body, all_triangles=True)
         old = x.copy()
@@ -165,7 +199,7 @@ for fi, frame in enumerate(source['frames'][:a.end+1]):
             collision_pass(x, tree)
         velocity = (x-old)/dt
         velocity[pinned] = 0
-    tree = BVHTree.FromPolygons(target.tolist(), body, all_triangles=True)
+    tree = BVHTree.FromPolygons(target.tolist(), body_all, all_triangles=True)
     signed = []
     for v in free:
         point = Vector(x[v])
@@ -192,6 +226,7 @@ for fi, frame in enumerate(source['frames'][:a.end+1]):
         'max_from_skin_cm': float(np.linalg.norm(x-target[ids], axis=1).max()),
         'face_samples_over_1mm': len(sample_hits),
         'worst_face_samples': sample_hits[:3],
+        'largest_contact_corrections': [entry[2] for entry in sorted(contact_trace, reverse=True)],
         'max_speed_cm_s': float(np.linalg.norm(velocity[free], axis=1).max())})
     assert np.isfinite(x).all() and np.max(np.abs(x)) < 10000, reports[-1]
     frames.append({'frame': fi, 'positions_cm': x.tolist()})
@@ -202,6 +237,7 @@ scope = 'Offline fabric reference: hard edge distances, compliant opposite-verte
 output.write_text(json.dumps({'scope': scope, 'source_motion': str(work/f'follow-{a.clip}-base.json'),
     'substeps': a.substeps, 'iterations': a.iterations, 'surface_contact': a.surface_contact,
     'pin_z_cm': a.pin_z, 'free_z_cm': a.free_z,
+    'contact_region': a.contact_region, 'clearance_region': 'whole body',
     'morph_case': a.morph, 'source_vertices': ids.tolist(), 'free_vertices': len(free),
     'frames': frames, 'cases': reports}, separators=(',', ':')))
 print('Finished', len(frames), 'frames', flush=True)
