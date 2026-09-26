@@ -1201,7 +1201,8 @@ void font_size(UObject* widget, float size, UObject* font_object=nullptr) {
     member(set.data(param),param->GetElementSize(),info,L"TypefaceFontName",FName(L"Regular"));
     set.run();
 }
-void flat_button(UObject* widget,bool active) {
+// `feedback` scales the hover and press tints; 0 leaves a button that draws nothing.
+void flat_button(UObject* widget,bool active,float feedback=1.f) {
     Call set(widget,L"SetStyle",1);
     auto* param=set.param(L"InStyle");
     auto* source=widget->GetPropertyByNameInChain(L"WidgetStyle");
@@ -1213,8 +1214,8 @@ void flat_button(UObject* widget,bool active) {
         if(!p || p->GetOffset_Internal()<0 || p->GetOffset_Internal()+p->GetElementSize()>param->GetElementSize()) throw std::runtime_error("Invalid button brush");
         auto* data=static_cast<std::byte*>(set.data(param))+p->GetOffset_Internal();
         Color tint{0,0,0,0};
-        if(std::wstring_view(name)==L"Hovered") tint={0.18f,0.135f,0.075f,0.55f};
-        else if(std::wstring_view(name)==L"Pressed") tint={0.30f,0.225f,0.12f,0.7f};
+        if(std::wstring_view(name)==L"Hovered") tint={0.18f,0.135f,0.075f,0.55f*feedback};
+        else if(std::wstring_view(name)==L"Pressed") tint={0.30f,0.225f,0.12f,0.7f*feedback};
         else if(active) tint={0.10f,0.075f,0.035f,0.25f};
         member(data,p->GetElementSize(),brush,L"DrawAs",uint8_t{3});
         member(data,p->GetElementSize(),brush,L"TintColor",SlateColor{tint});

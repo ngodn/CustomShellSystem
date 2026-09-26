@@ -356,6 +356,10 @@ void InventoryUI::bind_inputs() {
 void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& appearance) {
     auto* page=page_.Get(); auto* canvas=canvas_.Get(); auto* pc=controller_.Get();
     if(!page || !canvas || !pc) return;
+#ifdef CSS_INVENTORY_DEV
+    LARGE_INTEGER build_start,frequency; QueryPerformanceCounter(&build_start); QueryPerformanceFrequency(&frequency);
+    created_widgets_=0;
+#endif
     // A reordered list must keep focus on the same outfit, not its old index.
     std::string focused_outfit;
     if(section_==0 && !enter_transition_ && row_>=0 && row_<int(rows_.size())) {
@@ -375,11 +379,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     std::map<UObject*,bool> held;
     for(const auto& hit:hits_) if(auto* w=hit.widget.Get()) held[w]=hit.down;
     hits_.clear(); rows_.clear(); sliders_.clear(); name_input_.Reset(); native_search_input_.Reset();
-    for(auto* stack:{&tab_items_,&list_,&panel_,&actions_,&footer_,&camera_bar_}) stack->used=0;
+    for(auto* stack:{&tab_items_,&list_,&panel_head_,&panel_,&actions_,&footer_,&camera_bar_}) stack->used=0;
     auto bind=[&](const WeakObject& widget,Json action) {
         auto* w=widget.Get(); if(!w || action.is_null()) return;
         auto it=held.find(w);
-        hits_.push_back({widget,std::move(action),it!=held.end() && it->second});
+        hits_.push_back({widget,std::move(action),it!=held.end() && it->second,{},{}});
     };
     auto* white=load(native_white);
     // While the search picker is open it owns the details window; the page underneath
@@ -401,6 +405,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         bind(tab.hit,{{"action","ui_section"},{"section",i}});
     }
     native_finish(tab_items_);
+    for(const bool next:{false,true}) {
+        const auto& strip=next?strip_next_:strip_previous_;
+        bind(strip,{{"action","ui_press"},{"binding",next?"next_section":"previous_section"}});
+        if(!hits_.empty() && hits_.back().widget.Get()==strip.Get()) hits_.back().glyph=next?strip_next_glyph_:strip_previous_glyph_;
+    }
     if(shown_section_!=section_ && selected_tab) if(auto* strip=strip_scroll_.Get()) {
         Call reveal(strip,L"ScrollWidgetIntoView",4); reveal.set(L"WidgetToFind",selected_tab);
         reveal.set(L"AnimateScroll",true); reveal.set(L"ScrollDestination",uint8_t{2}); reveal.set(L"Padding",0.f); reveal.run();
@@ -421,19 +430,26 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     };
     // A native list row: thumbnail or colour chip in its icon slot, the name, the E badge
     // for what is worn or active, and the selected glow.
-    struct RowLook { UObject* icon=nullptr; const Color* chip=nullptr; bool badge=false, enabled=true; };
+    // `reserve` keeps the icon slot open when there is no picture, so names in a list where
+    // some rows carry a chip still line up.
+    struct RowLook { UObject* icon=nullptr; const Color* chip=nullptr; bool badge=false, enabled=true, reserve=false; };
     auto fill_row=[&](NativeItem& item,const std::string& title,const RowLook& look,bool selected) {
         auto* widget=item.widget.Get();
         native_text(item.text_block.Get(),item.text,title);
         if(item.badge!=int(look.badge)) { native_visibility(native_part(widget,L"O_Equipped"),look.badge?shown_self_passive:uint8_t{2}); item.badge=look.badge; }
-        const bool want_icon=look.icon || look.chip;
-        if(item.icon_shown!=int(want_icon)) {
+        const int mode=look.icon?1:look.chip?2:look.reserve?3:0;
+        if(item.icon_shown!=mode) {
             auto* box=native_part(widget,L"SizeBox_Icon");
-            native_visibility(box,want_icon?shown_self_passive:collapsed);
-            if(want_icon) { invoke(box,L"SetWidthOverride",L"InWidthOverride",110.f); invoke(box,L"SetHeightOverride",L"InHeightOverride",110.f); }
-            item.icon_shown=want_icon;
+            auto* image=native_part(widget,L"Image_Icon");
+            native_visibility(box,mode?shown_self_passive:collapsed);
+            if(mode) { invoke(box,L"SetWidthOverride",L"InWidthOverride",110.f); invoke(box,L"SetHeightOverride",L"InHeightOverride",110.f); }
+            // A picture fills the slot; a colour chip sits small in its middle, the size of
+            // the E badge beside it, so it reads as a swatch rather than a blank tile.
+            native_visibility(image,mode==3?uint8_t{2}:shown_self_passive);
+            native_padding(inventory_object(image,L"Slot"),mode==2?Margin{31,31,31,31}:Margin{0,0,0,0});
+            item.icon_shown=mode;
         }
-        if(want_icon) {
+        if(mode==1 || mode==2) {
             auto* image=native_part(widget,L"Image_Icon");
             UObject* texture=look.icon?look.icon:white;
             const Color tint=look.chip?*look.chip:Color{1,1,1,1};
@@ -445,10 +461,12 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         if(item.enabled!=int(look.enabled)) { invoke(widget,L"SetRenderOpacity",L"InOpacity",look.enabled?1.f:.45f); item.enabled=look.enabled; }
         native_state(item,selected);
     };
-    RowLook row_look;
+    RowLook row_look; row_look.reserve=true;   // one name column on every tab, pictures or not
+    WeakObject heading;   // the header just placed, until a row claims it
     auto section=[&](const std::string& title) {
         auto& item=native_take(list_,NativeKind::header);
         native_text(item.text_block.Get(),item.text,title);
+        heading=item.widget;
     };
     auto list_note=[&](const std::string& text) {
         auto& item=native_take(list_,NativeKind::paragraph);
@@ -458,12 +476,24 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         auto& item=native_take(list_,NativeKind::row);
         fill_row(item,title,row_look,index==row_);
         bind(item.hit,{{"action","ui_row"},{"row",index},{"apply",false}});
-        rows_.push_back({item.widget,item.hit,accept,previous,next,secondary,tertiary});
-        row_look=RowLook{};
+        rows_.push_back({item.widget,item.hit,accept,previous,next,secondary,tertiary,heading});
+        heading.Reset();
+        const bool reserve=row_look.reserve;
+        row_look=RowLook{}; row_look.reserve=reserve;
     };
     UObject* detail_texture=nullptr;
-    auto detail=[&](const std::string& title,const std::string& subtitle,const std::string& body) {
+    UObject* panel_focus=nullptr;   // what the details window scrolls to keep in view
+    auto note=[&](const std::string& text) {
         if(!panel_open) return;
+        auto& item=native_take(panel_,NativeKind::paragraph);
+        native_text(item.text_block.Get(),item.text,text);
+    };
+    // The window's description area has no scroll and grows with its text, so a long author
+    // description goes to the top of the scrolling part instead, where all of it stays readable.
+    auto detail=[&](const std::string& title,const std::string& subtitle,std::string body) {
+        if(!panel_open) return;
+        constexpr size_t description_limit=360;
+        if(body.size()>description_limit) { note(body); body.clear(); }
         auto* d=details_.Get();
         if(detail_title_!=title) { text_value(native_part(d,L"MyHeader"),title); detail_title_=title; }
         if(detail_sub_!=subtitle) {
@@ -481,6 +511,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             auto& item=native_take(panel_,NativeKind::row);
             RowLook look; look.badge=choice.id==selected; look.enabled=!choice.action.is_null();
             fill_row(item,choice.label,look,choice.id==selected);
+            if(choice.id==selected) panel_focus=item.widget.Get();
             bind(item.hit,choice.action);
         }
     };
@@ -488,11 +519,6 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         if(!panel_open) return;
         auto& item=native_take(panel_,NativeKind::divider);
         native_text(item.text_block.Get(),item.text,title);
-    };
-    auto note=[&](const std::string& text) {
-        if(!panel_open) return;
-        auto& item=native_take(panel_,NativeKind::paragraph);
-        native_text(item.text_block.Get(),item.text,text);
     };
     // A selector row: name, the current value between two arrows. Left/Right (and the
     // arrows) step it; the row itself is highlighted when it is the one Left/Right drives.
@@ -502,6 +528,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         native_text(item.text_block.Get(),item.text,name);
         native_text(item.value_block.Get(),item.value,value);
         native_state(item,focused);
+        if(focused) panel_focus=item.widget.Get();
         bind(item.hit_left,minus); bind(item.hit_right,plus);
     };
     // The options menu slider row. The game's bar only steps with its arrows; CSS reads the
@@ -515,25 +542,29 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const float fill=high>low?std::clamp((value-low)/(high-low),0.f,1.f):0.f;
         if(std::abs(item.fill-fill)>1e-4f) { invoke(item.extra.Get(),L"UpdateProgressBar",L"InPercent",fill); item.fill=fill; }
         native_state(item,focused);
+        if(focused) panel_focus=item.widget.Get();
         bind(item.hit_left,minus); bind(item.hit_right,plus);
         action["refresh"]=false;
         sliders_.push_back({item.extra,item.value_block,item.widget,std::move(action),value,scalar,unit,low,high,step});
     };
     auto step_action=[](Json action,int delta) { action["delta"]=delta; action.erase("value"); action.erase("refresh"); return action; };
+    // An empty binding is a click-only action: it shows the left mouse button, and is left
+    // out on a controller, which has nothing to press for it.
     auto action_button=[&](const std::string& binding,const std::string& label,Json action,uint8_t icon,bool enabled=true) {
-        if(!panel_open) return;
+        if(!panel_open || (binding.empty() && gamepad_)) return;
         auto& item=native_take(actions_,NativeKind::action);
         native_text(item.text_block.Get(),item.text,label);
         const auto glyph=binding+"/"+std::to_string(icon);
         if(item.glyph!=glyph) {
             auto* prompt=item.extra.Get();
-            if(binding.empty()) native_visibility(prompt,collapsed);
-            else { native_visibility(prompt,shown_passive); native_glyph(prompt,binding,icon); }
+            native_visibility(prompt,shown_passive);
+            if(binding.empty()) native_glyph(prompt,"",45,0);   // 0: LeftMouseButton
+            else native_glyph(prompt,binding,icon);
             native_visibility(item.cells.front().Get(),collapsed);
             item.glyph=glyph;
         }
         if(item.enabled!=int(enabled)) { invoke(item.widget.Get(),L"SetRenderOpacity",L"InOpacity",enabled?1.f:.45f); item.enabled=enabled; }
-        if(enabled) bind(item.hit,std::move(action));
+        if(enabled) { bind(item.hit,std::move(action)); if(!binding.empty() && !hits_.empty()) hits_.back().glyph=item.extra; }
     };
     // A prompt on one of the bottom bars: one glyph, or two (A / D on a keyboard).
     auto bar_prompt=[&](NativeStack& bar,const std::string& label,Json action,
@@ -550,7 +581,19 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             if(two) native_glyph(extra,second,second_icon,second_key);
             item.glyph=glyph;
         }
+        // A prompt that names keys but has no action of its own does what its key does when
+        // clicked: each glyph its own key, the label the forward one (S, D).
+        if(action.is_null() && !first.empty()) {
+            auto key=[](const std::string& binding) { return Json{{"action","ui_press"},{"binding",binding}}; };
+            action=key(second.empty()?first:second);
+            bind(item.hit,action);
+            if(hits_.empty()) return;
+            hits_.back().glyph=second.empty()?item.extra:item.cells.front();
+            if(!second.empty()) hits_.back().parts={{item.extra,key(first)},{item.cells.front(),key(second)}};
+            return;
+        }
         bind(item.hit,std::move(action));
+        if(!hits_.empty() && hits_.back().widget.Get()==item.hit.Get()) hits_.back().glyph=item.extra;
     };
     std::string hint_vertical, hint_horizontal;
 
@@ -564,22 +607,30 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     if(native_picker_) {
         // Search, inline in the details window: the query, then up to eight matches a page.
         detail(native_picker_title_.empty()?"Browse":native_picker_title_,"Search by name or keyword",
-               "Type to filter. Up / Down to move, then Select.");
-        auto& input=native_take(panel_,NativeKind::input);
+               "Type to narrow the list. Up / Down to move, then Select.");
+        auto& input=native_take(panel_head_,NativeKind::input);
         native_search_input_=input.extra;
         if(input.value!=native_search_query_) {
             if(!has_focus(input.extra.Get())) text_value(input.extra.Get(),native_search_query_);
             input.value=native_search_query_;
         }
         const auto& search=native_options_;
-        const size_t first=search.selected/8*8;
-        for(size_t i=first;i<std::min(first+8,search.matches.size());++i) {
+        // The field and the count stay above the results while they scroll.
+        auto& count=native_take(panel_head_,NativeKind::paragraph);
+        native_text(count.text_block.Get(),count.text,
+            search.matches.empty()?"No matches. Try fewer or shorter words."
+            :search.matches.size()==search.options.size()?std::to_string(search.options.size())+" options"
+            :std::to_string(search.matches.size())+" of "+std::to_string(search.options.size())+" match");
+        // Every match in one scrolling list, bounded so a huge catalog stays a few widgets.
+        constexpr size_t shown=100;
+        const size_t first=search.selected<shown?0:search.selected-shown+1;
+        for(size_t i=first;i<std::min(first+shown,search.matches.size());++i) {
             const auto& found=search.options[search.matches[i]];
             auto& item=native_take(panel_,NativeKind::row);
             fill_row(item,found.at("label").get<std::string>(),RowLook{},i==search.selected);
+            if(i==search.selected) panel_focus=item.widget.Get();
             bind(item.hit,{{"action","ui_pick_row"},{"row",i}});
         }
-        note(search.matches.empty()?"No matching options":std::to_string(search.matches.size())+" matches / "+std::to_string(search.options.size())+" options");
         action_button("accept","Select",{{"action","ui_pick_apply"}},3);
         action_button("close","Back",{{"action","ui_pick_cancel"}},5);
         panel_open=false;
@@ -648,6 +699,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 for(size_t i=0;i<count;++i) choices.push_back({originals->variants[i].id,originals->variants[i].name,wear_original(i)});
                 choice_rows(choices,original_worn?originals->variants[original_index].id:"");
                 direction_hint(true,"Choose a shell");
+                action_button("accept","Wear",rows_[2].accept,3,!rows_[2].accept.is_null());
             }
         } else {
             const auto& outfit=*ordered[row_-3];
@@ -723,11 +775,20 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 if(c.kind==ControlKind::Glow) { const float t=std::clamp(v[0]/std::max(c.maximum,.001f),0.f,1.f); return Color{1.f*t+.15f,0.85f*t+.08f,0.3f*t+.03f,1}; }
                 if(c.kind==ControlKind::Opacity) { const float a=std::clamp(v[0],0.f,1.f); return Color{0.65f*a+.2f,0.65f*a+.2f,0.7f*a+.2f,1}; }
                 if(c.scalar) { const float t=std::clamp(v[0]/std::max(c.maximum,.001f),0.f,1.f); return Color{gold_chip.r*t+.02f,gold_chip.g*t+.02f,gold_chip.b*t+.02f,1}; }
+                // A part with the author's own swatches shows the one it is on: "Default" is the
+                // original texture's colour, not the white multiplier underneath it.
+                if(!c.swatches.empty()) {
+                    const auto& chosen=c.swatches[nearest_swatch(c.swatches,v,!custom.values.contains(c.id))].color;
+                    return Color{srgb_linear(chosen[0]),srgb_linear(chosen[1]),srgb_linear(chosen[2]),1};
+                }
                 return Color{srgb_linear(v[0]),srgb_linear(v[1]),srgb_linear(v[2]),1};
             };
             auto tint_of=[&](ControlGroup group) { auto found=custom.tints.find(control_group_name(group)); return found==custom.tints.end()?ColorTint{}:found->second; };
             section("Template");
-            row(0,cur_tmpl.name,cur_tmpl.action,tmpl_step(-1),tmpl_step(1));
+            const Json browse_templates{{"action","ui_browse_templates"}};
+            row(0,cur_tmpl.name,palette_action(0),tmpl_step(-1),tmpl_step(1),browse_templates);
+            // Reset all asks first, from the prompt and from its key alike.
+            const Json confirm_reset_all{{"action","ui_confirm"},{"title","Reset all customization"},{"message","Reset every change on this outfit back to the author's defaults?"},{"target",palette_action(0)}};
             std::vector<Color> chips(entries.size());
             for(size_t i=1;i<entries.size();++i) {
                 const auto& entry=entries[i];
@@ -776,21 +837,30 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     minus=pick((here+strip.size()-1)%strip.size());
                     plus=pick((here+1)%strip.size());
                 }
-                const Json secondary_action=has_presets?Json{{"action","ui_physics_modal"},{"control",c.id}}:Json{{"action","ui_channel"},{"count",fieldcount}};
-                row(int(i),c.name,has_presets?secondary_action:accept,minus,plus,
-                    has_presets?Json{{"action","reset_control"},{"control",c.id}}:secondary_action,{{"action","palette"},{"palette","original"}});
+                // Secondary and tertiary do what the details window's prompts say for this kind.
+                const bool physics_kind=c.kind==ControlKind::Spring || c.kind==ControlKind::Dynamics || c.kind==ControlKind::Rig;
+                const bool colour=!c.scalar && c.kind!=ControlKind::Toggle && c.kind!=ControlKind::Choice && !physics_kind
+                                  && c.kind!=ControlKind::Glow && c.kind!=ControlKind::Opacity;
+                Json secondary=Json{{"action","ui_channel"},{"count",fieldcount}}, tertiary=confirm_reset_all;
+                if(has_presets) { accept={{"action","ui_physics_modal"},{"control",c.id}}; secondary={{"action","reset_control"},{"control",c.id}}; }
+                else if(c.kind==ControlKind::Toggle) secondary=Json{};
+                else if(c.kind==ControlKind::Choice) secondary=c.options.size()>4?Json{{"action","ui_browse_choice"},{"control",c.id}}:Json{};
+                else if(colour) {
+                    const Json exact{{"action","ui_exact"}};
+                    if(exact_color_) tertiary=exact; else secondary=exact;
+                }
+                row(int(i),c.name,accept,minus,plus,secondary,tertiary);
             }
             const auto& entry=entries[row_];
-            const auto confirm_reset_all=Json{{"action","ui_confirm"},{"title","Reset all customization"},{"message","Reset every change on this outfit back to the author's defaults?"},{"target",rows_[row_].tertiary}};
             if(row_==0) {
                 detail("Templates & Presets",worn->name,"Choose an author combination, material palette, body archetype or physics preset. Left / Right cycles them.");
                 divider("Templates");
                 std::vector<Choice> choices;
-                for(size_t i=0;i<tmpl_items.size() && i<8;++i) choices.push_back({std::to_string(i),tmpl_items[i].name,tmpl_items[i].action});
+                for(size_t i=0;i<tmpl_items.size();++i) choices.push_back({std::to_string(i),tmpl_items[i].name,tmpl_items[i].action});
                 choice_rows(choices,std::to_string(active_tmpl));
                 direction_hint(true,"Cycle template");
                 action_button("accept","Restore original",palette_action(0),3);
-                action_button("","Browse templates...",{{"action","ui_browse_templates"}},0);
+                action_button("secondary","Browse templates...",browse_templates,4);
             } else if(entry.tint) {
                 const auto tint=tint_of(entry.group);
                 detail(entry.group==ControlGroup::Body?"Body tint":"Outfit tint",worn->name,
@@ -840,6 +910,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     if(modal && panel_open) {
                         auto& reset=native_take(panel_,NativeKind::row);
                         fill_row(reset,"Reset part defaults",RowLook{},focus==stops-1);
+                        if(focus==stops-1) panel_focus=reset.widget.Get();
                         bind(reset.hit,{{"action","reset_control"},{"control",control.id}});
                     }
                 };
@@ -857,7 +928,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     for(size_t i=0;i<control.options.size();++i) choices.push_back({std::to_string(i),control.options[i].name,set_to(double(i))});
                     choice_rows(choices,std::to_string(here));
                     direction_hint(true,"Choose");
-                    if(control.options.size()>4) action_button("","Search choices...",{{"action","ui_browse_choice"},{"control",control.id}},0);
+                    if(control.options.size()>4) action_button("secondary","Search choices...",rows_[row_].secondary,4);
                     action_button("accept","Reset part",rows_[row_].accept,3);
                     action_button("tertiary","Reset all",confirm_reset_all,2);
                 } else if(physics && (has_body_presets || has_hair_presets) && physics_modal_control_!=control.id) {
@@ -968,9 +1039,13 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                             native_visibility(grid.cells[i*parts+1].Get(),i==here?shown_passive:uint8_t{2});
                             auto* label=grid.cells[i*parts+2].Get();
                             text_value(label,swatch.reset?"Default":"");
+                            // Dark text on a light swatch, light text on a dark one.
+                            const bool light=.2126f*c[0]+.7152f*c[1]+.0722f*c[2]>.5f;
+                            invoke(label,L"SetColorAndOpacity",L"InColorAndOpacity",SlateColor{light?Color{.02f,.018f,.015f,1}:Color{.86f,.82f,.74f,1}});
                         }
                         grid.value=signature;
                     }
+                    if(here<strip.size()) panel_focus=grid.cells[here*parts+4].Get();
                     for(size_t i=0;i<strip.size();++i) {
                         const auto& c=strip[i].color;
                         bind(grid.cells[i*parts+3],strip[i].reset?Json{{"action","reset_control"},{"control",control.id}}
@@ -979,7 +1054,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     }
                     if(!control.swatches.empty()) note(strip[here].name);
                     direction_hint(true,"Choose a colour");
-                    action_button("secondary","Exact colour",Json{{"action","ui_exact"}},4);
+                    action_button("secondary","Exact colour",rows_[row_].secondary,4);
                     action_button("accept","Reset part",rows_[row_].accept,3);
                     action_button("tertiary","Reset all",confirm_reset_all,2);
                 } else {
@@ -998,7 +1073,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     direction_hint(true,shape?"Adjust shape":control.scalar?"Adjust intensity":"Adjust selected channel");
                     if(!control.scalar) action_button("secondary","Select next channel",rows_[row_].secondary,4);
                     action_button("accept","Reset part",rows_[row_].accept,3);
-                    action_button("tertiary",control.scalar?"Reset all":"Back to swatches",control.scalar?confirm_reset_all:Json{{"action","ui_exact"}},2);
+                    action_button("tertiary",control.scalar?"Reset all":"Back to swatches",rows_[row_].tertiary,2);
                 }
             }
         }
@@ -1086,8 +1161,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             direction_hint(true,"Choose visibility");
         } else {
             detail("Sidearm position",kda_label,
-                   "Auto holds your sidearm and other gear holstered on your body off a larger custom shell "
-                   "so it does not clip through. Choose Default to keep it exactly where the game places it.");
+                   "Auto moves your holstered sidearm and gear out from a larger custom shell so they "
+                   "do not clip through it. Default leaves them where the game puts them.");
             choice_rows({
                 {"auto","Auto (avoid clipping)",{{"action","keep_default_attachments"},{"value",false}}},
                 {"default","Default (game)",{{"action","keep_default_attachments"},{"value",true}}},
@@ -1111,7 +1186,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         if(suggested.empty()) { int n=1; do { suggested="profile."+std::to_string(n++); } while(state.presets.contains(suggested)); }
         divider("Name");
         if(panel_open) {
-            auto& input=native_take(panel_,NativeKind::input);
+            auto& input=native_take(panel_head_,NativeKind::input);
             name_input_=input.extra;
             // Only rewrite the field when what it should suggest changed, never under typing.
             if(input.value!=suggested && !has_focus(input.extra.Get())) { text_value(input.extra.Get(),suggested); input.value=suggested; }
@@ -1131,7 +1206,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         if(gamepad_) bar_prompt(actions_,hint_horizontal,Json{},"",11,255);
         else bar_prompt(actions_,hint_horizontal,Json{},"left",15,255,"right",16,255);
     }
-    native_finish(list_); native_finish(panel_); native_finish(actions_);
+    native_finish(list_); native_finish(panel_head_); native_finish(panel_); native_finish(actions_);
     // The details window's big icon: the outfit thumbnail on the black shell backing.
     if(native_picker_) detail_texture=nullptr;   // the picker's window describes the search, not an outfit
     if(detail_icon_!=detail_texture) {
@@ -1145,14 +1220,39 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         native_visibility(backing,detail_texture?shown_self_passive:collapsed);
         detail_icon_=detail_texture;
     }
+    auto reveal=[](UObject* scroll,UObject* target,bool animate,uint8_t destination) {
+        if(!scroll || !target) return;
+        Call call(scroll,L"ScrollWidgetIntoView",4);
+        call.set(L"WidgetToFind",target); call.set(L"AnimateScroll",animate);
+        // About one row, so the selection never sits under a scroll box's edge fade.
+        call.set(L"ScrollDestination",destination); call.set(L"Padding",120.f); call.run();
+    };
     if(revealed_row_!=row_ || shown_section_!=section_) {
-        if(row_>=0 && row_<int(rows_.size())) if(auto* scroll=list_scroll_.Get()) if(auto* target=rows_[row_].marker.Get()) {
-            Call reveal(scroll,L"ScrollWidgetIntoView",4);
-            reveal.set(L"WidgetToFind",target);reveal.set(L"AnimateScroll",true);
-            reveal.set(L"ScrollDestination",uint8_t{0});reveal.set(L"Padding",24.f);reveal.run();
+        if(row_>=0 && row_<int(rows_.size())) {
+            // Going up onto the first row of a group shows its header too; going down, the
+            // header is already above.
+            const bool upward=shown_section_!=section_ || row_<revealed_row_;
+            auto* target=upward && rows_[row_].heading.Get()?rows_[row_].heading.Get():rows_[row_].marker.Get();
+            if(shown_section_==section_) { pending_reveals_[0]={}; reveal(list_scroll_.Get(),target,true,0); }
+            else pending_reveals_[0]={list_scroll_,WeakObject(target),0,2};
         }
         revealed_row_=row_;
     }
+    // A new subject in the details window opens at its top, or centred on its current choice
+    // when that sits further down (Center clamps at the top, so short lists stay put). Moving
+    // between choices after that only scrolls as far as needed.
+    {
+        std::string context=std::to_string(section_)+"/"+std::to_string(row_)+"/"+physics_modal_control_+(native_picker_?"/search":"");
+        const bool fresh=context!=panel_context_;
+        if(auto* scroll=panel_scroll_.Get(); scroll && (fresh || panel_focus!=panel_revealed_)) {
+            pending_reveals_[1]={};   // a newer subject or choice replaces one still waiting
+            if(fresh) invoke(scroll,L"ScrollToStart");
+            if(panel_focus && fresh) pending_reveals_[1]={panel_scroll_,WeakObject(panel_focus),2,2};
+            else if(panel_focus) reveal(scroll,panel_focus,true,0);
+        }
+        panel_context_=std::move(context); panel_revealed_=panel_focus;
+    }
+    panel_fit_pending_=true;
     shown_section_=section_;
     // ---- bottom bars
     bar_prompt(footer_,"Close",{{"action","ui_close"}},"close",5,255);
@@ -1174,9 +1274,17 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     native_finish(camera_bar_);
     if(!confirm_action_.is_null()) native_dialog(); else native_dialog_close();
     page_widgets_=0; nested_widgets_=0;
-    for(auto* stack:{&tab_items_,&list_,&panel_,&actions_,&footer_,&camera_bar_}) { page_widgets_+=int(stack->used); nested_widgets_+=int(stack->items.size()); }
+    for(auto* stack:{&tab_items_,&list_,&panel_head_,&panel_,&actions_,&footer_,&camera_bar_}) { page_widgets_+=int(stack->used); for(const auto& cell:stack->cells) nested_widgets_+=int(cell.kinds.size()); }
     if(enter_transition_) { transition_started_=GetTickCount64(); enter_transition_=false; }
     last_message_.clear(); dirty_=false;
+#ifdef CSS_INVENTORY_DEV
+    LARGE_INTEGER build_end; QueryPerformanceCounter(&build_end);
+    const double ms=double(build_end.QuadPart-build_start.QuadPart)*1000./double(frequency.QuadPart);
+    if(ms>1.) {
+        if(slow_builds_.size()>=32) slow_builds_.erase(slow_builds_.begin());
+        slow_builds_.push_back({{"ms",std::round(ms*100)/100},{"created",created_widgets_},{"section",section_},{"row",row_}});
+    }
+#endif
 }
 void InventoryUI::build_native_picker_results() { dirty_=true; }
 void InventoryUI::close_menu() {
@@ -1202,6 +1310,7 @@ Json InventoryUI::dispatch(Json action,const State& state) {
     if(action.is_null()) return {};
     auto name=action.value("action","");
     if(name=="ui_section") { const int next=std::clamp(action.at("section").get<int>(),0,4); if(next==section_) return {}; section_=next; enter_transition_=true; row_=0; scroll_offset_=0; physics_modal_control_.clear(); if(auto* s=scroll_.Get()) invoke(s,L"SetScrollOffset",L"NewScrollOffset",0.f); dirty_=true; return {}; }
+    if(name=="ui_press") { auto result=press(action.value("binding",""),state); return result?*result:Json{}; }
     if(name=="ui_row") { row_=std::clamp(action.at("row").get<int>(),0,std::max(0,int(rows_.size())-1)); physics_modal_control_.clear(); dirty_=true; if(section_!=1 && action.value("apply",false) && !rows_.empty()) return dispatch(rows_[row_].accept,state); return {}; }
     // The channel count comes from the page, because a spring has two and a colour three.
     if(name=="ui_channel") { channel_=(channel_+1)%std::clamp(action.value("count",3),1,4); dirty_=true; return {}; }
@@ -1650,6 +1759,8 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
 #endif
     // The search field is a kept widget now, so a rebuild while typing leaves it alone.
     (void)editing_native;
+    native_fit_panel();   // measures the previous build, which has laid out by now
+    native_reveal_pending();
     if(dirty_) build(catalog,state,appearance);
     animate(GetTickCount64());
     if(!active_ || closing_) return {};
@@ -1712,73 +1823,15 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         if(down && !binding.down) binding.repeat=now+360; else if(triggered) binding.repeat=now+110;
         binding.down=down;
         if(!triggered) continue;
-        if(!confirm_action_.is_null()) {
-            if(binding.action=="accept") return dispatch({{"action","ui_confirm_proceed"}},state);
-            if(binding.action=="close") return dispatch({{"action","ui_confirm_cancel"}},state);
-            continue;
-        }
-        if(native_picker_) {
-            if(binding.action=="up") { native_options_.move(-1); build_native_picker_results(); return {}; }
-            if(binding.action=="down") { native_options_.move(1); build_native_picker_results(); return {}; }
-            if(binding.action=="accept") return dispatch({{"action","ui_pick_apply"}},state);
-            if(binding.action=="close") return dispatch({{"action","ui_pick_cancel"}},state);
-            continue;
-        }
-        if(!physics_modal_control_.empty()) {
-            if(binding.action=="close") return dispatch({{"action","ui_physics_modal_close"}},state);
-            // Stops: the sliders, a Motion switch on a rig, then Reset part defaults.
-            const Control* ctrl=nullptr; const Selection* worn_selection=nullptr; const Outfit* worn_outfit=nullptr;
-            if(catalog_ && appearance_) if(auto sel=state.selections.find(appearance_->shell);sel!=state.selections.end()) {
-                worn_selection=&sel->second;
-                for(const auto& o:catalog_->outfits) if(o.id==sel->second.outfit) worn_outfit=&o;
-                if(worn_outfit) ctrl=worn_outfit->controls_for(sel->second.variant).find(physics_modal_control_);
-            }
-            if(!ctrl) return dispatch({{"action","ui_physics_modal_close"}},state);
-            const bool rig=ctrl->kind==ControlKind::Rig;
-            const int fields=3, motion=rig?fields:-1, reset=fields+(rig?1:0), stops=reset+1;
-            const int focus=physics_modal_channel_%stops;
-            if(binding.action=="up" || binding.action=="down") {
-                physics_modal_channel_=(focus+(binding.action=="down"?1:stops-1))%stops;
-                dirty_=true; return {};
-            }
-            const bool sideways=binding.action=="left" || binding.action=="right";
-            if(sideways && focus<fields) return dispatch({{"action","control"},{"control",physics_modal_control_},{"channel",focus},{"ui_channel",focus},{"delta",binding.action=="right"?1:-1}},state);
-            // Left/Right on the Motion switch flips it, like Accept.
-            if(binding.action=="accept" || (sideways && focus==motion)) {
-                if(focus==motion) {
-                    const auto& opts=worn_outfit->controls_for(worn_selection->variant);
-                    auto vals=control_values(opts,worn_selection->custom);
-                    const float current=vals.contains(ctrl->id)?vals.at(ctrl->id)[3]:ctrl->value[3];
-                    return dispatch({{"action","control"},{"control",physics_modal_control_},{"channel",3},{"value",current==1.f?0.f:1.f}},state);
-                }
-                if(sideways) continue;
-                if(focus==reset) return dispatch({{"action","reset_control"},{"control",physics_modal_control_}},state);
-                return dispatch({{"action","ui_physics_modal_close"}},state);
-            }
-            continue;
-        }
-        if(binding.action=="close") return dispatch({{"action","ui_close"}},state);
-        if(binding.action=="reset_view") return dispatch({{"action",light_edit_?"ui_reset_light":"ui_reset_view"}},state);
-        if(binding.action=="toggle_light") {
-            if(character_controls) return dispatch({{"action","ui_toggle_light"}},state);
-            continue;
-        }
-        if(binding.action=="previous_section" || binding.action=="next_section") return dispatch({{"action","ui_section"},{"section",(section_+(binding.action=="next_section"?1:4))%5}},state);
-        if(rows_.empty()) continue;
-        if(binding.action=="up" || binding.action=="down") {
-            row_=std::clamp(row_+(binding.action=="up"?-1:1),0,int(rows_.size())-1);
-            if(auto* scroll=scroll_.Get()) { Call reveal(scroll,L"ScrollWidgetIntoView",4); reveal.set(L"WidgetToFind",rows_[row_].widget.Get()); reveal.set(L"AnimateScroll",false); reveal.set(L"ScrollDestination",uint8_t{0}); reveal.set(L"Padding",8.f); reveal.run(); }
-            dirty_=true; return {};
-        }
-        const auto& row=rows_[row_];
-        auto action=binding.action=="left"?row.previous:binding.action=="right"?row.next:binding.action=="accept"?row.accept:binding.action=="secondary"?row.secondary:row.tertiary;
-        dirty_=true;
-        return dispatch(action,state);
+        if(auto result=press(binding.action,state)) return *result;
     }
     // Buttons and sliders only change under the mouse, so they are read while a mouse button
     // is down and for one frame after release (the slider's final value, a quick click).
-    const bool left_now=inventory_key(controller_.Get(),"LeftMouseButton");
-    const bool mouse_now=left_now || inventory_key(controller_.Get(),"RightMouseButton");
+    // The OS button state, not the controller's: it holds in every input mode the menu can
+    // be in. GetAsyncKeyState reads physical buttons, so swapped buttons are swapped back.
+    const bool swapped=GetSystemMetrics(SM_SWAPBUTTON)!=0;
+    const bool left_now=(GetAsyncKeyState(swapped?VK_RBUTTON:VK_LBUTTON)&0x8000)!=0;
+    const bool mouse_now=left_now || (GetAsyncKeyState(swapped?VK_LBUTTON:VK_RBUTTON)&0x8000)!=0;
     const bool mouse=mouse_now || mouse_was_down_;
     const bool left_pressed=left_now && !left_was_down_;
     mouse_was_down_=mouse_now; left_was_down_=left_now;
@@ -1835,12 +1888,96 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     for(auto& hit:hits_) if(auto* widget=hit.widget.Get()) {
         Call pressed(widget,L"IsPressed",1); pressed.run(); bool down=pressed.get<bool>();
         bool click=down && !hit.down; hit.down=down;
-        if(click) return dispatch(hit.action,state);
+        if(!click) continue;
+        // A two-key prompt (W / S, A / D): the glyph under the pointer picks the direction.
+        if(!hit.parts.empty()) {
+            Call pointer(find(L"/Script/UMG.Default__WidgetLayoutLibrary"),L"GetMousePositionOnPlatform",1); pointer.run();
+            for(const auto& [part,action]:hit.parts) if(auto* glyph=part.Get()) {
+                Call geometry(glyph,L"GetCachedGeometry",1); geometry.run();
+                Call under(find(L"/Script/UMG.Default__SlateBlueprintLibrary"),L"IsUnderLocation",3);
+                under.copy(L"Geometry",geometry,L"ReturnValue"); under.set(L"AbsoluteCoordinate",pointer.get<Vec2>()); under.run();
+                if(under.get<bool>()) { invoke(glyph,L"TriggerInputAnim"); return dispatch(action,state); }
+            }
+        }
+        if(auto* glyph=hit.glyph.Get()) invoke(glyph,L"TriggerInputAnim");
+        return dispatch(hit.action,state);
     }
     return {};
 }
+// What one menu key does on the page right now. A click on a key's glyph comes here too,
+// so a prompt clicked with the mouse does exactly what its key does. nullopt: the key
+// means nothing here.
+std::optional<Json> InventoryUI::press(const std::string& key,const State& state) {
+    const bool character_controls=!native_picker_ && confirm_action_.is_null() && physics_modal_control_.empty();
+    if(!confirm_action_.is_null()) {
+        if(key=="accept") return dispatch({{"action","ui_confirm_proceed"}},state);
+        if(key=="close") return dispatch({{"action","ui_confirm_cancel"}},state);
+        return std::nullopt;
+    }
+    if(native_picker_) {
+        if(key=="up") { native_options_.move(-1); build_native_picker_results(); return Json{}; }
+        if(key=="down") { native_options_.move(1); build_native_picker_results(); return Json{}; }
+        if(key=="accept") return dispatch({{"action","ui_pick_apply"}},state);
+        if(key=="close") return dispatch({{"action","ui_pick_cancel"}},state);
+        return std::nullopt;
+    }
+    if(!physics_modal_control_.empty()) {
+        if(key=="close") return dispatch({{"action","ui_physics_modal_close"}},state);
+        // Stops: the sliders, a Motion switch on a rig, then Reset part defaults.
+        const Control* ctrl=nullptr; const Selection* worn_selection=nullptr; const Outfit* worn_outfit=nullptr;
+        if(catalog_ && appearance_) if(auto sel=state.selections.find(appearance_->shell);sel!=state.selections.end()) {
+            worn_selection=&sel->second;
+            for(const auto& o:catalog_->outfits) if(o.id==sel->second.outfit) worn_outfit=&o;
+            if(worn_outfit) ctrl=worn_outfit->controls_for(sel->second.variant).find(physics_modal_control_);
+        }
+        if(!ctrl) return dispatch({{"action","ui_physics_modal_close"}},state);
+        const bool rig=ctrl->kind==ControlKind::Rig;
+        const int fields=3, motion=rig?fields:-1, reset=fields+(rig?1:0), stops=reset+1;
+        const int focus=physics_modal_channel_%stops;
+        if(key=="up" || key=="down") {
+            physics_modal_channel_=(focus+(key=="down"?1:stops-1))%stops;
+            dirty_=true; return Json{};
+        }
+        const bool sideways=key=="left" || key=="right";
+        if(sideways && focus<fields) return dispatch({{"action","control"},{"control",physics_modal_control_},{"channel",focus},{"ui_channel",focus},{"delta",key=="right"?1:-1}},state);
+        // Left/Right on the Motion switch flips it, like Accept.
+        if(key=="accept" || (sideways && focus==motion)) {
+            if(focus==motion) {
+                const auto& opts=worn_outfit->controls_for(worn_selection->variant);
+                auto vals=control_values(opts,worn_selection->custom);
+                const float current=vals.contains(ctrl->id)?vals.at(ctrl->id)[3]:ctrl->value[3];
+                return dispatch({{"action","control"},{"control",physics_modal_control_},{"channel",3},{"value",current==1.f?0.f:1.f}},state);
+            }
+            if(sideways) return std::nullopt;
+            if(focus==reset) return dispatch({{"action","reset_control"},{"control",physics_modal_control_}},state);
+            return dispatch({{"action","ui_physics_modal_close"}},state);
+        }
+        return std::nullopt;
+    }
+    if(key=="close") return dispatch({{"action","ui_close"}},state);
+    if(key=="reset_view") return dispatch({{"action",light_edit_?"ui_reset_light":"ui_reset_view"}},state);
+    if(key=="toggle_light") {
+        if(character_controls) return dispatch({{"action","ui_toggle_light"}},state);
+        return std::nullopt;
+    }
+    if(key=="previous_section" || key=="next_section") return dispatch({{"action","ui_section"},{"section",(section_+(key=="next_section"?1:4))%5}},state);
+    if(rows_.empty()) return std::nullopt;
+    if(key=="up" || key=="down") {
+        row_=std::clamp(row_+(key=="up"?-1:1),0,int(rows_.size())-1);
+        dirty_=true; return Json{};   // the build scrolls the row into view
+    }
+    const auto& row=rows_[row_];
+    auto action=key=="left"?row.previous:key=="right"?row.next:key=="accept"?row.accept:key=="secondary"?row.secondary:row.tertiary;
+    dirty_=true;
+    return dispatch(action,state);
+    return std::nullopt;
+}
 Json InventoryUI::diagnostics() const {
-    Json value={{"attached",tab_.Get()!=nullptr},{"active",active_},{"section",section_},{"row",row_},{"rows",rows_.size()},{"camera",display_.Get()!=nullptr},{"page_widgets",page_widgets_},{"nested_widgets",nested_widgets_},{"layout_size",layout_size_},{"yaw",yaw_},{"pan",pan_},{"zoom",zoom_},{"frame",frame_},{"gamepad",gamepad_}};
+    Json value={{"attached",tab_.Get()!=nullptr},{"active",active_},{"section",section_},{"row",row_},{"rows",rows_.size()},{"camera",display_.Get()!=nullptr},{"page_widgets",page_widgets_},{"nested_widgets",nested_widgets_},
+#ifdef CSS_INVENTORY_DEV
+        {"slow_builds",slow_builds_},
+#endif
+        {"layout_size",layout_size_},{"yaw",yaw_},{"pan",pan_},{"zoom",zoom_},{"frame",frame_},{"gamepad",gamepad_}};
     #ifdef CSS_INVENTORY_DEV
     if(auto* scroll=choice_scroll_.Get()) {
         Call offset(scroll,L"GetScrollOffset",1);offset.run();

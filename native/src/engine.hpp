@@ -8,6 +8,7 @@
 #include <fstream>
 #include <set>
 #include <vector>
+#include <deque>
 #include "data.hpp"
 #include "body_geometry.hpp"
 #include "inventory_motion.hpp"
@@ -80,8 +81,12 @@ class InventoryUI {
     const Catalog* catalog_=nullptr;
     const Appearance* appearance_=nullptr;
     void build_native_picker_results();
-    struct Hit { WeakObject widget; Json action; bool down=false; };
-    struct Row { WeakObject marker, widget; Json accept, previous, next, secondary, tertiary; };
+    // `parts`: glyphs inside the hit that each do their own thing (W / S on one prompt).
+    // `glyph`: the WBP_Prompt that flashes when the hit is clicked, as it does for its key.
+    struct Hit { WeakObject widget; Json action; bool down=false; std::vector<std::pair<WeakObject,Json>> parts; WeakObject glyph; };
+    // `heading` is the category header right above the row, if any, so moving up onto it
+    // brings the header into view too.
+    struct Row { WeakObject marker, widget; Json accept, previous, next, secondary, tertiary; WeakObject heading; };
     // `unit` is what the readout says after the number: "" for a bare value, " Hz" for a
     // frequency, "%" for a ratio shown as a percentage. It has to live here because the
     // drag handler redraws the label and only ever sees the slider.
@@ -104,15 +109,36 @@ class InventoryUI {
         WeakObject widget, hit, hit_left, hit_right, text_block, value_block, extra;
         std::vector<WeakObject> cells;                 // swatch chips: frame, colour, selection, button
         std::string text, value;                       // what is on screen now
-        int selected=-1, badge=-1, shown=-1, enabled=-1, icon_shown=-1;
+        int selected=-1, badge=-1, shown=-1, enabled=-1, icon_shown=-1;   // icon_shown: 0 none, 1 picture, 2 colour chip, 3 empty slot
         const void* icon=nullptr; std::array<float,4> chip{}; float fill=-2.f;
         std::string glyph;                             // binding + fallback + device the glyph was set for
     };
-    struct NativeStack { WeakObject box; std::vector<NativeItem> items; size_t used=0; };
-    WeakObject design_, left_root_, right_root_, center_root_, list_scroll_, strip_scroll_, details_, panel_scroll_, status_text_;
-    NativeStack tab_items_, list_, panel_, actions_, footer_, camera_bar_;
+    // A stack is a column of fixed cells. Each cell keeps one widget per kind it has ever
+    // shown and switches which one is visible, so a layout change (a divider where a row
+    // was) never creates, removes or reparents a widget once each shape has been seen.
+    // Creating a game widget, or moving one to a new parent, rebuilds its Slate tree and
+    // costs about a millisecond; a visibility switch costs almost nothing.
+    struct NativeCell { WeakObject holder; std::vector<NativeItem> kinds; int shown=-1; };
+    struct NativeStack { WeakObject box; std::deque<NativeCell> cells; size_t used=0; };   // deque: taken items keep their address
+    void native_slot(NativeKind kind,RC::Unreal::UObject* slot);
+    WeakObject design_, left_root_, right_root_, center_root_, list_scroll_, strip_scroll_, details_, panel_scroll_, panel_size_, status_text_, strip_previous_, strip_next_, strip_previous_glyph_, strip_next_glyph_;
+    NativeStack tab_items_, list_, panel_head_, panel_, actions_, footer_, camera_bar_;   // panel_head_: fixed, above the scroll
     double design_w_=0, design_scale_=0;
     int shown_section_=-1, revealed_row_=-1;
+    // The details window scroll follows the control Left/Right drives. `panel_context_` names
+    // what the window shows (section, row, modal, search), so a new subject starts at its top.
+    std::string panel_context_;
+    const void* panel_revealed_=nullptr;
+    // The window grows with its description and prompts; the scrolling part takes what is left
+    // above the status line. Measured the frame after a build, once layout has run.
+    bool panel_fit_pending_=false;
+    // A scroll to a widget the build just showed waits a frame: until layout has measured
+    // the new content, the scroll box clamps to the old content height.
+    struct PendingReveal { WeakObject scroll, target; uint8_t destination=0; int frames=0; };
+    std::array<PendingReveal,2> pending_reveals_{};   // the list, the details window
+    void native_reveal_pending();
+    float panel_max_=720.f;
+    void native_fit_panel();
     std::string detail_title_, detail_sub_, detail_body_, status_shown_;
     const void* detail_icon_=reinterpret_cast<const void*>(1);
     WeakObject dialog_, dialog_primary_, dialog_secondary_;
@@ -143,6 +169,11 @@ class InventoryUI {
     // page canvas itself, nested_widgets_ is everything on the canvases inside it
     // (list rows, tab labels), which is the half that grows with the catalog.
     int page_widgets_=0, nested_widgets_=0;
+#ifdef CSS_INVENTORY_DEV
+    // Builds slower than 1 ms: time, widgets created, and where the page was.
+    int created_widgets_=0;
+    std::vector<Json> slow_builds_;
+#endif
     float scroll_offset_=0;
     WeakObject choice_scroll_;
     std::string choice_key_,choice_selected_;
@@ -197,6 +228,7 @@ class InventoryUI {
     void animate(uint64_t now);
     void close_menu();
     Json dispatch(Json,const State&);
+    std::optional<Json> press(const std::string& key,const State&);
 public:
     void assets(const fs::path& root) {
         logo_path_=root/"assets/inventory-logo-v1.png";

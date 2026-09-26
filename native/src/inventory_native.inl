@@ -91,9 +91,11 @@ UObject* native_text_block(UObject* tree,float size,UObject* font,Color color,bo
     native_visibility(text,shown_passive);
     return text;
 }
+// The game's prompts draw no box when hovered, so these buttons draw nothing at all; a
+// click plays the glyph's own key-press flash instead (see the Hit glyph).
 UObject* native_flat_button(UObject* tree) {
     auto* button=construct(L"/Script/UMG.Button",tree);
-    flat_button(button,false);
+    flat_button(button,false,0.f);
     auto* focusable=button->GetPropertyByNameInChain(L"IsFocusable");
     if(!focusable || !focusable->IsA<FBoolProperty>()) throw std::runtime_error("Button focus property mismatch");
     static_cast<FBoolProperty*>(focusable)->SetPropertyValueInContainer(button,false);
@@ -153,10 +155,11 @@ void InventoryUI::native_glyph(UObject* widget,const std::string& action,uint8_t
 }
 void InventoryUI::native_forget() {
     native_dialog_close();
-    for(auto* stack:{&tab_items_,&list_,&panel_,&actions_,&footer_,&camera_bar_}) { stack->items.clear(); stack->used=0; stack->box.Reset(); }
+    for(auto* stack:{&tab_items_,&list_,&panel_head_,&panel_,&actions_,&footer_,&camera_bar_}) { stack->cells.clear(); stack->used=0; stack->box.Reset(); }
     design_.Reset(); left_root_.Reset(); right_root_.Reset(); center_root_.Reset();
-    list_scroll_.Reset(); strip_scroll_.Reset(); details_.Reset(); panel_scroll_.Reset(); status_text_.Reset();
+    list_scroll_.Reset(); strip_scroll_.Reset(); details_.Reset(); panel_scroll_.Reset(); panel_size_.Reset(); status_text_.Reset(); strip_previous_.Reset(); strip_next_.Reset(); strip_previous_glyph_.Reset(); strip_next_glyph_.Reset();
     design_w_=design_scale_=0; shown_section_=revealed_row_=-1;
+    panel_context_.clear(); panel_revealed_=nullptr; panel_fit_pending_=false; panel_max_=720.f; pending_reveals_={};
     detail_title_.clear(); detail_sub_.clear(); detail_body_.clear(); status_shown_.clear();
     detail_icon_=reinterpret_cast<const void*>(1);
 }
@@ -227,15 +230,19 @@ bool InventoryUI::native_page(double width,double height) {
     auto* strip_slot=native_add(strip_frame,strip);
     invoke(strip_slot,L"SetHorizontalAlignment",L"InHorizontalAlignment",uint8_t{2});
     invoke(strip_slot,L"SetVerticalAlignment",L"InVerticalAlignment",uint8_t{2});
-    auto prompt=[&](const std::string& action,uint8_t fallback) {
-        auto* glyph=inventory_create(pc,native_class(native_prompt_class));
-        auto* slot=native_add(strip,glyph);
+    // Each glyph sits on a flat button, so a click on Z or X switches tabs like the key.
+    auto prompt=[&](const std::string& action,uint8_t fallback,WeakObject& hit,WeakObject& shown) {
+        auto* button=native_flat_button(tree);
+        auto* slot=native_add(strip,button);
         invoke(slot,L"SetVerticalAlignment",L"InVerticalAlignment",uint8_t{2});
+        auto* glyph=inventory_create(pc,native_class(native_prompt_class));
+        content(button,glyph);
         native_glyph(glyph,action,fallback);
         native_visibility(glyph,shown_passive);
+        hit=button; shown=glyph;
         return glyph;
     };
-    input_prompt_=prompt("previous_section",8);
+    input_prompt_=prompt("previous_section",8,strip_previous_,strip_previous_glyph_);
     auto* clip=construct(L"/Script/UMG.SizeBox",tree);
     invoke(clip,L"SetWidthOverride",L"InWidthOverride",780.f); invoke(clip,L"SetHeightOverride",L"InHeightOverride",80.f);
     auto* clip_slot=native_add(strip,clip);
@@ -247,7 +254,7 @@ bool InventoryUI::native_page(double width,double height) {
     faded(clip,scroll,L"WBP_SBFH_InventoryFilter",left); strip_scroll_=scroll;
     auto* tabs=construct(L"/Script/UMG.HorizontalBox",tree);
     native_add(scroll,tabs); tab_items_.box=tabs;
-    prompt("next_section",9);
+    prompt("next_section",9,strip_next_,strip_next_glyph_);
     native_place(left,native_image(tree,native_texture("T_UI_Nav_Title_Divider")),0,690,native_column,6);
     // The list: Change Shade's 1000-wide scroll with the Inventory scrollbar brush.
     auto* list_size=construct(L"/Script/UMG.SizeBox",tree);
@@ -294,11 +301,18 @@ bool InventoryUI::native_page(double width,double height) {
         if(auto* box=inventory_object(details,name)) invoke(box,L"ClearChildren");
     if(auto* sample=inventory_object(details,L"DetailsPrompt")) native_visibility(sample,collapsed);
     native_visibility(native_part(details,L"Size_SubHeader"),collapsed);
+    // What must stay put while the part below scrolls, such as the search field.
+    auto* head=construct(L"/Script/UMG.VerticalBox",tree);
+    native_add(native_part(details,L"VB_CustomWidgets"),head);
+    panel_head_.box=head;
     auto* panel_size=construct(L"/Script/UMG.SizeBox",tree);
-    invoke(panel_size,L"SetMaxDesiredHeight",L"InMaxDesiredHeight",720.f);
+    invoke(panel_size,L"SetMaxDesiredHeight",L"InMaxDesiredHeight",panel_max_);
     native_add(native_part(details,L"VB_CustomWidgets"),panel_size);
+    panel_size_=panel_size;
     auto* panel_scroll=construct(L"/Script/UMG.ScrollBox",tree);
     invoke(panel_scroll,L"SetScrollBarVisibility",L"NewScrollBarVisibility",uint8_t{1});
+    invoke(panel_scroll,L"SetAllowOverscroll",L"NewAllowOverscroll",false);
+    invoke(panel_scroll,L"SetAnimateWheelScrolling",L"bShouldAnimateWheelScrolling",true);
     faded(panel_size,panel_scroll,L"WBP_SBFH_Inventory",right); panel_scroll_=panel_scroll;
     auto* panel=construct(L"/Script/UMG.VerticalBox",tree);
     native_add(panel_scroll,panel); panel_.box=panel;
@@ -312,25 +326,66 @@ bool InventoryUI::native_page(double width,double height) {
     transition_widgets_={{WeakObject(left),{-150,0}},{WeakObject(right),{150,0}},{WeakObject(center),{0,30}}};
     return true;
 }
-InventoryUI::NativeItem& InventoryUI::native_take(NativeStack& stack,NativeKind kind) {
-    auto* box=stack.box.Get();
-    if(!box) throw std::runtime_error("Native page container is unavailable");
-    if(stack.used<stack.items.size()) {
-        auto& item=stack.items[stack.used];
-        if(item.kind==kind && item.widget.Get()) { ++stack.used; native_visible(item,true); return item; }
-        // A different layout from here on (another section): drop the tail and rebuild it.
-        for(size_t i=stack.used;i<stack.items.size();++i) if(auto* w=stack.items[i].widget.Get()) invoke(w,L"RemoveFromParent");
-        stack.items.resize(stack.used);
+void InventoryUI::native_reveal_pending() {
+    for(auto& pending:pending_reveals_) {
+        if(pending.frames<=0 || --pending.frames>0) continue;
+        auto* scroll=pending.scroll.Get(); auto* target=pending.target.Get();
+        if(!scroll || !target) continue;
+        Call call(scroll,L"ScrollWidgetIntoView",4);
+        call.set(L"WidgetToFind",target); call.set(L"AnimateScroll",false);
+        call.set(L"ScrollDestination",pending.destination); call.set(L"Padding",120.f); call.run();
     }
+}
+// The window's own parts (title, picture, description, prompts) keep their size; the
+// scrolling part gets the height left between the window's top and the status line.
+void InventoryUI::native_fit_panel() {
+    if(!panel_fit_pending_) return;
+    panel_fit_pending_=false;
+    auto* details=details_.Get(); auto* size=panel_size_.Get();
+    if(!details || !size) return;
+    Call window(details,L"GetDesiredSize",1); window.run();
+    Call panel(size,L"GetDesiredSize",1); panel.run();
+    constexpr float window_top=150.f, status_top=1990.f, gap=24.f;
+    const float fixed=float(window.get<Vec2>().y-panel.get<Vec2>().y);
+    const float room=std::clamp(status_top-gap-window_top-fixed,320.f,1200.f);
+    if(std::abs(room-panel_max_)<=2.f) return;
+    invoke(size,L"SetMaxDesiredHeight",L"InMaxDesiredHeight",room);
+    panel_max_=room;
+    panel_fit_pending_=true;   // measure again once the new height has laid out
+}
+InventoryUI::NativeItem& InventoryUI::native_take(NativeStack& stack,NativeKind kind) {
+    auto* column=stack.box.Get();
+    if(!column) throw std::runtime_error("Native page container is unavailable");
+    if(stack.used==stack.cells.size()) {
+        auto* holder=construct(L"/Script/UMG.Overlay",inventory_object(page_.Get(),L"WidgetTree"));
+        native_add(column,holder);
+        native_visibility(holder,shown_self_passive);
+        stack.cells.push_back({WeakObject(holder),{},1});
+    }
+    auto& cell=stack.cells[stack.used++];
+    auto* box=cell.holder.Get();
+    if(!box) throw std::runtime_error("Native page cell is unavailable");
+    if(cell.shown!=1) { native_visibility(box,shown_self_passive); cell.shown=1; }
+    NativeItem* wanted=nullptr;
+    for(auto& item:cell.kinds) if(item.kind==kind && item.widget.Get()) wanted=&item;
+    for(auto& item:cell.kinds) if(&item!=wanted) native_visible(item,false);
+    if(wanted) { native_visible(*wanted,true); return *wanted; }
     auto* pc=controller_.Get(); auto* tree=inventory_object(page_.Get(),L"WidgetTree");
     auto* serif=load("/Game/Sparta/UI/Fonts/CrimsonText-Regular_Font.CrimsonText-Regular_Font");
     NativeItem item; item.kind=kind; item.shown=1;
+#ifdef CSS_INVENTORY_DEV
+    ++created_widgets_;
+#endif
     UObject* widget=nullptr; UObject* slot=nullptr;
     switch(kind) {
     case NativeKind::row:
         widget=inventory_create(pc,native_class(native_row_class)); slot=native_add(box,widget);
         item.text_block=native_part(widget,L"Button_Text");
         item.hit=native_button(widget,L"MyNavigationButton");
+        // Change Shade's names are short; outfit names are not. Use the row's full glow width
+        // and end a name that still does not fit with an ellipsis instead of running on.
+        invoke(native_part(widget,L"SizeBox_Name"),L"SetWidthOverride",L"InWidthOverride",620.f);
+        invoke(item.text_block.Get(),L"SetTextOverflowPolicy",L"InOverflowPolicy",uint8_t{1});
         break;
     case NativeKind::header:
         widget=inventory_create(pc,native_class(native_header_class)); slot=native_add(box,widget);
@@ -362,7 +417,6 @@ InventoryUI::NativeItem& InventoryUI::native_take(NativeStack& stack,NativeKind 
     case NativeKind::divider:
         widget=inventory_create(pc,native_class(native_divider_class)); slot=native_add(box,widget);
         item.text_block=native_part(widget,L"Text_DividerName");
-        native_padding(slot,Margin{30,24,30,6});
         break;
     case NativeKind::tab: {
         widget=inventory_create(pc,native_class(native_tab_class)); slot=native_add(box,widget);
@@ -396,18 +450,15 @@ InventoryUI::NativeItem& InventoryUI::native_take(NativeStack& stack,NativeKind 
         invoke(label_slot,L"SetVerticalAlignment",L"InVerticalAlignment",uint8_t{2});
         native_padding(label_slot,Margin{14,0,0,0});
         item.hit=widget; item.extra=glyph; item.text_block=label;
-        native_padding(slot,Margin{40,4,20,4});
         break;
     }
     case NativeKind::swatches: {
         widget=construct(L"/Script/UMG.UniformGridPanel",tree); slot=native_add(box,widget);
         invoke(widget,L"SetSlotPadding",L"InSlotPadding",Margin{6,6,6,6});
-        native_padding(slot,Margin{40,16,40,16});
         break;
     }
     case NativeKind::input: {
         widget=construct(L"/Script/UMG.Overlay",tree); slot=native_add(box,widget);
-        native_padding(slot,Margin{40,12,40,12});
         auto* back=native_image(tree,native_texture("T_UI_Resource_BG_02"));
         native_fill(native_add(widget,back));
         auto* input=construct(L"/Script/UMG.EditableText",tree);
@@ -418,23 +469,41 @@ InventoryUI::NativeItem& InventoryUI::native_take(NativeStack& stack,NativeKind 
         member(set.data(font),font->GetElementSize(),info,L"Size",34.f);
         member(set.data(font),font->GetElementSize(),info,L"TypefaceFontName",FName(L"Regular")); set.run();
         native_padding(native_fill(native_add(widget,input)),Margin{28,16,28,16});
+        native_call_text(input,L"SetHintText",L"InHintText","Type a name or keyword");
         item.extra=input;
         break;
     }
     case NativeKind::paragraph: {
         widget=native_text_block(tree,30,serif,native_muted,true); slot=native_add(box,widget);
-        native_padding(slot,Margin{40,10,40,10});
         item.text_block=widget;
         break;
     }
     case NativeKind::none: throw std::runtime_error("Native item without a kind");
     }
     item.widget=widget;
-    stack.items.push_back(std::move(item)); ++stack.used;
-    return stack.items.back();
+    native_slot(kind,slot);
+    cell.kinds.push_back(std::move(item));
+    return cell.kinds.back();
+}
+// Slot padding per kind, inside the cell.
+void InventoryUI::native_slot(NativeKind kind,UObject* slot) {
+    native_fill(slot);   // an overlay slot starts top-left; the cell stands in for a box slot, which fills
+    switch(kind) {
+    case NativeKind::divider: native_padding(slot,Margin{30,24,30,6}); break;
+    case NativeKind::action: native_padding(slot,Margin{40,4,20,4}); break;
+    case NativeKind::swatches: native_padding(slot,Margin{40,16,40,16}); break;
+    case NativeKind::input: native_padding(slot,Margin{40,12,40,12}); break;
+    case NativeKind::paragraph: native_padding(slot,Margin{40,10,40,10}); break;
+    default: break;   // rows, headers, options and sliders size themselves; tabs are styled at creation
+    }
 }
 void InventoryUI::native_finish(NativeStack& stack) {
-    for(size_t i=stack.used;i<stack.items.size();++i) native_visible(stack.items[i],false);
+    for(size_t i=stack.used;i<stack.cells.size();++i) {
+        auto& cell=stack.cells[i];
+        if(cell.shown==0) continue;
+        if(auto* holder=cell.holder.Get()) native_visibility(holder,collapsed);
+        cell.shown=0;
+    }
 }
 // The confirmation is the game's WBP_ConfirmationPrompt_Default, driven the way Traverse
 // drives it: texts, InitData, its own listener off, every live menu listener frozen while
@@ -507,8 +576,8 @@ void InventoryUI::native_dialog() {
         if(on) invoke(on,L"OnHighlightedState");
         dialog_focus_shown_=dialog_focus_;
     }
-    if(auto* primary=dialog_primary_.Get()) hits_.push_back({WeakObject(native_button(primary,L"WBP_NavigationButton")),{{"action","ui_confirm_proceed"}},false});
-    if(auto* secondary=dialog_secondary_.Get()) hits_.push_back({WeakObject(native_button(secondary,L"WBP_NavigationButton")),{{"action","ui_confirm_cancel"}},false});
+    if(auto* primary=dialog_primary_.Get()) hits_.push_back({WeakObject(native_button(primary,L"WBP_NavigationButton")),{{"action","ui_confirm_proceed"}},false,{},{}});
+    if(auto* secondary=dialog_secondary_.Get()) hits_.push_back({WeakObject(native_button(secondary,L"WBP_NavigationButton")),{{"action","ui_confirm_cancel"}},false,{},{}});
 }
 void InventoryUI::native_dialog_close() {
     for(auto& listener:frozen_listeners_) if(auto* l=listener.Get()) { try { invoke(l,L"SetEnabledState",L"bEnabled",true); } catch(...) {} }
