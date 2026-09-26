@@ -1,0 +1,67 @@
+--- a/CSSRetargetLibrary.cpp
++++ b/CSSRetargetLibrary.cpp
+@@ -116,7 +116,8 @@
+     const FString Prefix = TEXT("/Game/CSSAuthoring/DiagnosticReferences/");
+     if (!Mesh || !Skeleton) return false;
+     const bool ShortCandidate = IsRunningCommandlet() &&
+-        Mesh->GetPathName() == TEXT("/Game/CSS/SeduXtress/SK_BlackPearl2.SK_BlackPearl2") &&
++        (Mesh->GetPathName() == TEXT("/Game/CSS/SeduXtress/SK_BlackPearl2.SK_BlackPearl2") ||
++         Mesh->GetPathName() == TEXT("/Game/CSS/EveTest/SK_HolidayBones.SK_HolidayBones")) &&
+         Skeleton->GetPathName() == TEXT("/Game/CSS/Shared/SKEL_Base.SKEL_Base");
+     if (!ShortCandidate && (!Mesh->GetPathName().StartsWith(Prefix) ||
+         !Skeleton->GetPathName().StartsWith(Prefix))) return false;
+--- a/CSSAnimationLibrary.cpp
++++ b/CSSAnimationLibrary.cpp
+@@ -16,6 +16,7 @@
+ #include "Animation/BlendSpace.h"
+ #include "Animation/AnimSingleNodeInstance.h"
+ #include "AnimNode_ControlRig.h"
++#include "BoneControllers/AnimNode_AnimDynamics.h"
+ #include "Components/SkeletalMeshComponent.h"
+ #include "ControlRig.h"
+ #include "Dom/JsonObject.h"
+@@ -342,10 +343,15 @@
+         UE_LOG(LogTemp, Error, TEXT("CSS EvaluateClip: %s"), Message);
+         return {};
+     };
++    const bool Holiday = Mesh && Blueprint && Animation &&
++        Mesh->GetPathName() == TEXT("/Game/CSS/EveTest/SK_HolidayBones.SK_HolidayBones") &&
++        Blueprint->GetPathName() == TEXT("/Game/CSS/EveTest/ABP_Holiday.ABP_Holiday") &&
++        (Animation->GetName() == TEXT("AN_Walk") || Animation->GetName() == TEXT("AN_Jog") || Animation->GetName() == TEXT("AN_Sprint")) &&
++        Animation->GetPathName().StartsWith(TEXT("/Game/CSS/Eve/Anim/"));
+     if (!IsRunningCommandlet() || !Mesh || !Animation || !Blueprint || !Blueprint->GeneratedClass ||
+-        Mesh->GetPathName() != TEXT("/Game/CSS/SeduXtress/SK_BlackPearl2.SK_BlackPearl2") ||
++        (!Holiday && (Mesh->GetPathName() != TEXT("/Game/CSS/SeduXtress/SK_BlackPearl2.SK_BlackPearl2") ||
+         Blueprint->GetPathName() != TEXT("/Game/CSS/SeduXtress/ABP_Secondary.ABP_Secondary") ||
+-        !Animation->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/RT_")) ||
++        !Animation->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/RT_")))) ||
+         Blueprint->TargetSkeleton != Mesh->GetSkeleton() || Animation->GetSkeleton() != Mesh->GetSkeleton() ||
+         Loops < 1 || Loops > 3 || Animation->GetPlayLength() <= 0 || Animation->GetPlayLength()*Loops > 22)
+         return Fail(TEXT("Invalid isolated component input"));
+@@ -433,6 +439,26 @@
+     }
+     if (FilterReport.Num() < 2 || FilterReport.Num() > 3 || ChangedBones.Num() < 36)
+         return Fail(TEXT("Unexpected secondary rig layout"));
++    if (Holiday)
++    {
++        int32 Count = 0;
++        for (TFieldIterator<FStructProperty> It(Instance->GetClass()); It; ++It)
++        {
++            if (It->Struct != FAnimNode_AnimDynamics::StaticStruct()) continue;
++            auto* Node = It->ContainerPtrToValuePtr<FAnimNode_AnimDynamics>(Instance);
++            Node->bDoPhysicsUpdateInEditor = true;
++            for (const auto& Body : Node->PhysicsBodyDefinitions)
++            {
++                const FName Name = Body.BoundBone.BoneName;
++                const int32 Index = Ref.FindBoneIndex(Name);
++                if (Index == INDEX_NONE || ChangedBones.Contains(Index) || !Name.ToString().StartsWith(TEXT("CSS_Cloth_Skirt_")))
++                    return Fail(TEXT("Unexpected Holiday dynamics bone"));
++                ChangedBones.Add(Index);
++                ++Count;
++            }
++        }
++        if (Count != 12) return Fail(TEXT("Expected twelve Holiday dynamics bones"));
++    }
+     auto VectorJson = [](FVector V) {
+         auto O = MakeShared<FJsonObject>();
+         O->SetNumberField(TEXT("X"), V.X); O->SetNumberField(TEXT("Y"), V.Y); O->SetNumberField(TEXT("Z"), V.Z);

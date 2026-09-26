@@ -47,3 +47,12 @@ Fresh readback:
 ```
 
 The initial candidate uses the 3D rest surface with isotropic configuration; its projected 2D coordinates are not a tailored panel pattern and must not be used as an anisotropic fabric rest layout. The 20 cm anchor band, 12 cm falloff and 18 cm displacement limit reproduce the earlier proxy trial. These and collision geometry are trial settings, not approved cloth behavior. `pinned` in the report counts distances below 0.1 cm; `zero_distance` counts exact zero.
+
+
+## Combined skirt motion experiment
+
+`CSSEveMotionCommandlet` duplicates the existing secondary graph into unused `/Game/CSS/EveTest/ABP_Holiday`, retaining original nodes and CSS defaults, then appends twelve skirt bones. It uses the existing module's `CSSDynamicsRecipe.inl`. Stage its `.h/.cpp` alongside the other commandlets and rebuild the editor module. Run with `-run=CSSEveMotion -Recipe=<workspace>/CustomShellSystem/work/eve26/holiday-dynamics.json`.
+
+`holiday-probes.patch` records narrowly scoped editor probe changes for `SK_HolidayBones`, the new graph and the three Eve movement clips. `enable_motion_probe.py` applied these once with workspace backups; it intentionally refuses to overwrite those backups. Inspect current source before any later application. The Python launcher requires `-run=pythonscript -script=...`, not `-ExecutePythonScript`.
+
+**The first simulation is rejected.** `verify_holiday_motion.py` detects enormous translations despite finite poses and preserved unrelated bones. Do not deploy this graph or recipe. The goal checkpoint records the earlier hair solver lessons and the next controlled diagnostic. F11 garment fitting is a separate validated offline result.

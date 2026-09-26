@@ -87,3 +87,6 @@ Weight cleanup follow-up: `work/eve26/source-weights.json` reproduces old cleanu
 
 
 Fresh corrected exports now pass: `holiday-base-clean.mesh.json`, `holiday-hip-clean.mesh.json`, receipts and `hip-source-verified.json`. This supersedes the pending-export statements above. Combined weight trial: `holiday-hip-bones.mesh.json`, `hip-skirt-bones.json` (zero discarded influence mass), and reviewed `hip-bones-views/`. Nine local region/morph cases pass in `hip-clean-morphs.json`. Full assembly, actual physics and game validation remain open.
+
+
+Combined motion trial (rejected): `motion-create.log`, `holiday-dynamics-saved.json`, `holiday-{walk,jog,sprint}-motion.json`, and `holiday-motion-verdict.json`. Graph preservation/import succeed; actual skirt motion diverges at frame one. Existing assets protected by `motion-protected.json`. See the latest goal checkpoint and older `next-gen-dynamics-investigation.md` before changing spring targets or inertia. No simulation render, cook or deployment acceptance.
