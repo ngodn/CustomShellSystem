@@ -107,6 +107,22 @@ constexpr Color native_muted{.24f,.21f,.17f,1};    // prompt labels on dark art
 constexpr Color native_prompt{.40f,.37f,.33f,1};   // bottom bar labels
 }
 
+// A PNG imported once as a Texture2D and rooted while the page lives. The rooting is what
+// keeps a reopen cheap: the game's Construct resets every Image brush, and a texture only a
+// brush referenced was collected and imported again (5 ms per picture, 40-55 ms per open).
+UObject* InventoryUI::import_texture(const std::wstring& file) {
+    if(file.empty()) return nullptr;
+    const auto key=narrow(file);
+    auto& cached=textures_[key]; if(auto* texture=cached.Get()) return texture;
+    std::error_code ec; if(!fs::exists(fs::path(file),ec)) return nullptr;
+    auto* pc=controller_.Get(); if(!pc) return nullptr;
+    Call import(find(L"/Script/Engine.Default__KismetRenderingLibrary"),L"ImportFileAsTexture2D",3);
+    import.set(L"WorldContextObject",pc); import.set(L"Filename",FString(file.c_str())); import.run();
+    auto* texture=import.get<UObject*>(); if(!texture) return nullptr;
+    cached=texture;
+    if(!texture->IsRootSet()) { texture->SetRootSet(); rooted_textures_.push_back(WeakObject(texture)); }
+    return texture;
+}
 void InventoryUI::native_visible(NativeItem& item,bool on) {
     if(item.shown==int(on)) return;
     if(auto* widget=item.widget.Get()) native_visibility(widget,on?shown_self_passive:collapsed);
@@ -210,15 +226,7 @@ bool InventoryUI::native_page(double width,double height) {
     auto* center=column(native_column,std::max(1.,design_width-2*native_column));
     left_root_=left; right_root_=right; center_root_=center;
     // Logo: CSS's own mark stays above the tab strip (runtime-imported texture).
-    if(!logo_path_.empty() && fs::exists(logo_path_)) {
-        auto& cached=textures_[path_utf8(logo_path_)]; auto* texture=cached.Get();
-        if(!texture) {
-            Call import(find(L"/Script/Engine.Default__KismetRenderingLibrary"),L"ImportFileAsTexture2D",3);
-            import.set(L"WorldContextObject",pc); import.set(L"Filename",FString(logo_path_.c_str())); import.run();
-            texture=import.get<UObject*>(); cached=texture;
-        }
-        if(texture) native_place(left,native_image(tree,texture),8,100,1120,373);
-    }
+    if(!logo_path_.empty()) if(auto* texture=import_texture(logo_path_.wstring())) native_place(left,native_image(tree,texture),8,100,1120,373);
     // Section strip: the Inventory filter strip recipe. T_UI_Nav_TitleBG, a Z/X prompt each
     // side, and the tabs in a clipped horizontal scroll that slides the selected tab in.
     // The frame and its contents share one overlay, the row centred in it, so the Z and X

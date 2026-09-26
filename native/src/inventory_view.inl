@@ -217,15 +217,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     auto selection=state.selections.find(appearance.shell);
     const Outfit* worn=nullptr;
     if(selection!=state.selections.end()) for(const auto& outfit:catalog.outfits) if(outfit.id==selection->second.outfit) worn=&outfit;
-    auto thumbnail=[&](const Outfit& outfit)->UObject* {
-        if(outfit.thumbnail.empty() || !fs::exists(outfit.thumbnail)) return nullptr;
-        auto key=path_utf8(outfit.thumbnail); auto& cached=textures_[key]; auto* texture=cached.Get();
-        if(!texture) {
-            Call import(find(L"/Script/Engine.Default__KismetRenderingLibrary"),L"ImportFileAsTexture2D",3);
-            import.set(L"WorldContextObject",pc); import.set(L"Filename",FString(outfit.thumbnail.c_str())); import.run(); texture=import.get<UObject*>(); cached=texture;
-        }
-        return texture;
-    };
+    auto thumbnail=[&](const Outfit& outfit)->UObject* { return outfit.thumbnail.empty()?nullptr:import_texture(outfit.thumbnail.wstring()); };
     // A native list row: thumbnail or colour chip in its icon slot, the name, the selected
     // glow, and the game's E (Equipped) badge. E only ever marks what is worn or in use:
     // the outfit, a variant, a template, an animation. Other states (a hidden part, a Misc
