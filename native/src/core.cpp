@@ -1004,7 +1004,8 @@ void* create(const CssHost* host) noexcept {
         css::async_file_writer = [](const std::filesystem::path& path, std::string bytes, bool backup) {
             if (s_write) s_write(path.c_str(), bytes.data(), bytes.size(), backup ? 1u : 0u);
         };
-    }
+        host->log("Host ABI 2: state and runtime files are written off the game thread");
+    } else host->log("Host ABI 1: files are written on the game thread (restart the game to use the new loader)");
     try { return new css::Core(*host); }
     catch (const std::exception& error) { host->log(error.what()); return nullptr; }
 }
