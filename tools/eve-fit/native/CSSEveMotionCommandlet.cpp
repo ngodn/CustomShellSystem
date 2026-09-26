@@ -64,7 +64,10 @@ int32 UCSSEveMotionCommandlet::Main(const FString& Params)
 {
     auto Fail = [](const FString& Why) { UE_LOG(LogTemp, Error, TEXT("Eve motion: %s"), *Why); return 1; };
     FString RecipePath, Text;
-    const FString Output = TEXT("/Game/CSS/EveTest/ABP_Holiday");
+    FString Output = TEXT("/Game/CSS/EveTest/ABP_Holiday");
+    FParse::Value(*Params, TEXT("Output="), Output);
+    if (Output != TEXT("/Game/CSS/EveTest/ABP_Holiday") && Output != TEXT("/Game/CSS/EveTest/ABP_Holiday2"))
+        return Fail(TEXT("Invalid private output"));
     if (!FParse::Value(*Params, TEXT("Recipe="), RecipePath) || FPackageName::DoesPackageExist(Output))
         return Fail(TEXT("Expected a recipe and unused private output"));
     auto* Source = LoadObject<UAnimBlueprint>(nullptr, TEXT("/Game/CSS/SeduXtress/ABP_Secondary.ABP_Secondary"));
@@ -76,7 +79,7 @@ int32 UCSSEveMotionCommandlet::Main(const FString& Params)
         !FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text), Recipe) || !Recipe.IsValid())
         return Fail(TEXT("Invalid recipe"));
     auto* Blueprint = Cast<UAnimBlueprint>(FAssetToolsModule::GetModule().Get().DuplicateAsset(
-        TEXT("ABP_Holiday"), TEXT("/Game/CSS/EveTest"), Source));
+        FPackageName::GetLongPackageAssetName(Output), TEXT("/Game/CSS/EveTest"), Source));
     if (!Blueprint || Blueprint->TargetSkeleton != Source->TargetSkeleton)
         return Fail(TEXT("Cannot preserve secondary graph skeleton"));
     UEdGraph* Graph = nullptr;

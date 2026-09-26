@@ -1,12 +1,20 @@
 """Reject catastrophic skirt motion even when transforms are finite and other bones are stable."""
 import json
 import math
+import argparse
 from pathlib import Path
 
 work=Path(__file__).resolve().parents[2]/'work/eve26'
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--candidate', choices=('holiday','holiday2'), default='holiday')
+args=parser.parse_args()
 reports={}
 for kind in ('walk','jog','sprint'):
-    data=json.loads((work/f'holiday-{kind}-motion.json').read_text())
+    path=work/f'{args.candidate}-{kind}-motion.json'
+    if not path.exists():
+        reports[kind]={'bounded':False,'missing':True}
+        continue
+    data=json.loads(path.read_text())
     worst_angle=(0,0,'')
     worst_translation=0.
     for index,frame in enumerate(data['frames']):
@@ -27,6 +35,6 @@ for kind in ('walk','jog','sprint'):
         'frame':worst_angle[1],'bone':worst_angle[2], 'max_local_translation_cm':worst_translation,
         'bounded':worst_translation<10 and worst_angle[0]<60}
 report={'clips':reports,'scope':'Coarse instability rejection only. Passing does not establish cloth fitting or gameplay acceptance.'}
-(work/'holiday-motion-verdict.json').write_text(json.dumps(report,indent=2)+'\n')
+(work/f'{args.candidate}-motion-verdict.json').write_text(json.dumps(report,indent=2)+'\n')
 print(json.dumps(report,indent=2))
 assert all(c['bounded'] for c in reports.values()), 'Unstable Holiday solver candidate. Do not deploy.'

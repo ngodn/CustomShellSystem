@@ -1,0 +1,12 @@
+--- a/CSSAnimationLibrary.cpp
++++ b/CSSAnimationLibrary.cpp
+@@ -345,7 +345,8 @@
+     };
+     const bool Holiday = Mesh && Blueprint && Animation &&
+         Mesh->GetPathName() == TEXT("/Game/CSS/EveTest/SK_HolidayBones.SK_HolidayBones") &&
+-        Blueprint->GetPathName() == TEXT("/Game/CSS/EveTest/ABP_Holiday.ABP_Holiday") &&
++        (Blueprint->GetPathName() == TEXT("/Game/CSS/EveTest/ABP_Holiday.ABP_Holiday") ||
++         Blueprint->GetPathName() == TEXT("/Game/CSS/EveTest/ABP_Holiday2.ABP_Holiday2")) &&
+         (Animation->GetName() == TEXT("AN_Walk") || Animation->GetName() == TEXT("AN_Jog") || Animation->GetName() == TEXT("AN_Sprint")) &&
+         Animation->GetPathName().StartsWith(TEXT("/Game/CSS/Eve/Anim/"));
+     if (!IsRunningCommandlet() || !Mesh || !Animation || !Blueprint || !Blueprint->GeneratedClass ||

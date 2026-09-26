@@ -1,0 +1,48 @@
+--- a/CSSAnimationLibrary.h
++++ b/CSSAnimationLibrary.h
+@@ -26,7 +26,7 @@
+     static FString EvaluateClip(class USkeletalMesh* Mesh, class UAnimSequence* Animation,
+         class UAnimBlueprint* Blueprint, int32 Loops = 3,
+         class UBlendSpace* Carrier = nullptr, FVector BlendInput = FVector(0,0,0),
+-        bool AdvanceBlendClock = false);
++        bool AdvanceBlendClock = false, int32 HolidayControl = 0);
+ 
+     /** Wrap a sequence in a private constant blend space; never alter a game asset. */
+     UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
+--- a/CSSAnimationLibrary.cpp
++++ b/CSSAnimationLibrary.cpp
+@@ -337,7 +337,7 @@
+ }
+ 
+ FString UCSSAnimationLibrary::EvaluateClip(USkeletalMesh* Mesh, UAnimSequence* Animation,
+-    UAnimBlueprint* Blueprint, int32 Loops, UBlendSpace* Carrier, FVector BlendInput, bool AdvanceBlendClock)
++    UAnimBlueprint* Blueprint, int32 Loops, UBlendSpace* Carrier, FVector BlendInput, bool AdvanceBlendClock, int32 HolidayControl)
+ {
+     auto Fail = [](const TCHAR* Message) -> FString {
+         UE_LOG(LogTemp, Error, TEXT("CSS EvaluateClip: %s"), Message);
+@@ -355,6 +355,8 @@
+         Blueprint->TargetSkeleton != Mesh->GetSkeleton() || Animation->GetSkeleton() != Mesh->GetSkeleton() ||
+         Loops < 1 || Loops > 3 || Animation->GetPlayLength() <= 0 || Animation->GetPlayLength()*Loops > 22)
+         return Fail(TEXT("Invalid isolated component input"));
++    if (HolidayControl < 0 || HolidayControl > 3 || (!Holiday && HolidayControl != 0))
++        return Fail(TEXT("Invalid Holiday transient control"));
+     if (AdvanceBlendClock && !Carrier) return Fail(TEXT("Advancing a blend requires a carrier"));
+     if (Carrier)
+     {
+@@ -447,6 +449,8 @@
+             if (It->Struct != FAnimNode_AnimDynamics::StaticStruct()) continue;
+             auto* Node = It->ContainerPtrToValuePtr<FAnimNode_AnimDynamics>(Instance);
+             Node->bDoPhysicsUpdateInEditor = true;
++            if (HolidayControl & 1) Node->bAngularSpring = false;
++            if (HolidayControl & 2) Node->bUseSphericalLimits = false;
+             for (const auto& Body : Node->PhysicsBodyDefinitions)
+             {
+                 const FName Name = Body.BoundBone.BoneName;
+@@ -550,6 +554,7 @@
+     auto Report = MakeShared<FJsonObject>();
+     Report->SetArrayField(TEXT("frames"), Samples);Report->SetNumberField(TEXT("fps"), Fps);
+     Report->SetObjectField(TEXT("defaults"), Defaults);Report->SetArrayField(TEXT("filters"), FilterReport);
++    Report->SetNumberField(TEXT("holiday_control"), HolidayControl);
+     Report->SetBoolField(TEXT("compressed_source"), true);Report->SetNumberField(TEXT("loops"), Loops);
+     Report->SetStringField(TEXT("carrier"), Carrier ? Carrier->GetPathName() : TEXT(""));
+     Report->SetBoolField(TEXT("advance_blend_clock"), AdvanceBlendClock);

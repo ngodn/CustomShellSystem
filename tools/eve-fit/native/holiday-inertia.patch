@@ -1,0 +1,31 @@
+--- a/CSSAnimationLibrary.cpp
++++ b/CSSAnimationLibrary.cpp
+@@ -355,7 +355,7 @@
+         Blueprint->TargetSkeleton != Mesh->GetSkeleton() || Animation->GetSkeleton() != Mesh->GetSkeleton() ||
+         Loops < 1 || Loops > 3 || Animation->GetPlayLength() <= 0 || Animation->GetPlayLength()*Loops > 22)
+         return Fail(TEXT("Invalid isolated component input"));
+-    if (HolidayControl < 0 || HolidayControl > 3 || (!Holiday && HolidayControl != 0))
++    if (HolidayControl < 0 || HolidayControl > 15 || (!Holiday && HolidayControl != 0))
+         return Fail(TEXT("Invalid Holiday transient control"));
+     if (AdvanceBlendClock && !Carrier) return Fail(TEXT("Advancing a blend requires a carrier"));
+     if (Carrier)
+@@ -451,8 +451,10 @@
+             Node->bDoPhysicsUpdateInEditor = true;
+             if (HolidayControl & 1) Node->bAngularSpring = false;
+             if (HolidayControl & 2) Node->bUseSphericalLimits = false;
+-            for (const auto& Body : Node->PhysicsBodyDefinitions)
++            for (auto& Body : Node->PhysicsBodyDefinitions)
+             {
++                if (HolidayControl & 4)
++                    Body.BoxExtents = FVector(FMath::Sqrt(Body.BoxExtents.SizeSquared() / 3.));
+                 const FName Name = Body.BoundBone.BoneName;
+                 const int32 Index = Ref.FindBoneIndex(Name);
+                 if (Index == INDEX_NONE || ChangedBones.Contains(Index) || !Name.ToString().StartsWith(TEXT("CSS_Cloth_Skirt_")))
+@@ -462,6 +464,7 @@
+             }
+         }
+         if (Count != 12) return Fail(TEXT("Expected twelve Holiday dynamics bones"));
++        if (HolidayControl & 8) Instance->ResetDynamics(ETeleportType::ResetPhysics);
+     }
+     auto VectorJson = [](FVector V) {
+         auto O = MakeShared<FJsonObject>();

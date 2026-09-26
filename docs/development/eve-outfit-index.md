@@ -13,6 +13,7 @@ Updated 2026-09-26. Goal resumed with the new outfit objective. Start here after
 
 ## Failed approaches and traps
 
+- Holiday AnimDynamics trials are rejected. Equal-axis inertia removes the numerical explosion, but moving simulated centers onto the fitted dress still produces 18.30 cm jog displacement and visible hip clipping. Do not repeat spring/inertia/center tuning. Next adapt the existing constrained ControlRig approach, with cloth-specific geometry and morph checks.
 - Do not redirect unsupported garment colors to hair. It hides missing customization and produces the reported behavior.
 - Do not assume generic object-name matching or first-material selection identifies hair versus accessories.
 - Do not rerun Gemini fitting/packaging scripts blindly: some overwrite source blends or delete staging directories.
@@ -26,6 +27,9 @@ Paths in this table are relative to the workspace root unless linked.
 | Artifact | Finding or purpose |
 | --- | --- |
 | [Current goal/status](eve-outfit-goal.md) | Scope, acceptance criteria, takeover findings and next steps |
+| `CustomShellSystem/work/eve26/motion-controls.json`, `motion-inertia.json`, `motion-cube.json` | Force controls isolate initial inertia failure and residual contact displacement; no accepted motion |
+| `CustomShellSystem/work/eve26/skirt-rest-contacts.json`, `skirt-body-centers.json` | Initial center/body overlap measured; geometry-derived reference clearance does not ensure animated clearance |
+| `CustomShellSystem/work/eve26/holiday2-motion-verdict.json`, `jog-centers-views`, `holiday2-protected.json` | Second candidate rejected in jog; inspected actual-pose render and protected asset hashes |
 | `CustomShellSystem/tools/eve_source_audit.py` | Distinguishes palette count from declared garment binding coverage; not a visual acceptance test |
 | `CustomShellSystem/tools/authoring-probes/eve_inventory.py` | Read-only Blender object, material, weight and skeleton inventory |
 | `CustomShellSystem/work/eve26/installed-manifest.json` | Metadata extracted from the installed Eve pak |
