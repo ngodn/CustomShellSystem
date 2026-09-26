@@ -10,12 +10,14 @@ from mathutils.bvhtree import BVHTree
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--input', type=Path, required=True)
 p.add_argument('--output', type=Path, required=True)
+p.add_argument('--source-mesh', type=Path)
+p.add_argument('--body', type=Path)
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert not a.output.exists()
 w = Path(__file__).resolve().parents[2]/'work/eve26'
 query = json.loads(a.input.read_text())['bodies'][0]
-mesh = json.loads((w/'cbody.mesh.json').read_text())
-body = json.loads((w/'body-collider.json').read_text())
+mesh = json.loads((a.source_mesh or w/'cbody.mesh.json').read_text())
+body = json.loads((a.body or w/'body-collider.json').read_text())
 snapshot = json.loads(Path(query['sample_motion']).read_text())['frames'][query['sample_frame']]['pose']['Snapshot']
 recorded = dict(zip(snapshot['BoneNames'], snapshot['LocalTransforms'], strict=True))
 bind, pose = [], []

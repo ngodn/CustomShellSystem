@@ -6,6 +6,9 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- **Latest user instruction: skip Holiday. Active order is Planet Diving 6th, Skin Suit, then others.** All Holiday experiments below are parked. No more automatic collider experiments; begin Planet's visible fitting review.
+- Final Holiday diagnostics reject automatic regional colliders: native frame68 approximate surface gaps 2.14 / 11.38 / 6.75 cm for pelvis/left/right. Independent pose checks pass. `region-native/` contains measurements and inspected views; `region-*-local16*` contains completed offline local-transfer comparisons, not adopted native assets.
+
 - Native preparation now uses `export_skin_regions.py`, isolated SK_CPelv/SK_CThighL/SK_CThighR imports and the guarded `-Mesh` level-set probe. Generation metadata roots all three at pelvis, with 16/10/10 used bones. Smaller volumes are a deformation-partition experiment, not a proven root-motion repair. Fresh native distance and cloth checks remain required.
 - Right-thigh import initially rejected microscopic cut slivers. `region-right-fix/receipt.json` records three welded vertices, maximum 0.00093443 cm displacement, six collapsed faces removed and closed edge incidence preserved. `region-right-import2.log` is the corrected successful import. Native area preflight is now in the exporter.
 
@@ -70,6 +73,7 @@ Paths in this table are relative to the workspace root unless linked.
 
 | Artifact | Finding or purpose |
 | --- | --- |
+| `CustomShellSystem/work/eve26/region-native/`, `region-*-trace.json`, `region-*-local16*/` | Parked Holiday native deformation failure and offline counterfactuals; do not continue after user's priority switch |
 | `CustomShellSystem/tools/eve-fit/export_skin_regions.py`, `work/eve26/region-import/`, `region-right-fix/` | Private native mesh serialization and bounded cut-sliver repair; first right-thigh JSON rejected |
 | `CustomShellSystem/work/eve26/region-*-create.json`, `tools/eve-fit/native/CSSEveLevelSet.inl` | Regional generation metadata and guarded mesh selection; all automatic roots remain pelvis |
 | `CustomShellSystem/tools/eve-fit/prepare_skin_regions.py`, `work/eve26/skin-regions2/` | Closed regional surfaces with original body provenance, interpolated weights and recorded discarded components |

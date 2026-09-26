@@ -6,13 +6,13 @@ Updated 2026-09-27, interrupted skinned-region checks recovered and verified. Re
 
 The [fitting playbook](eve-fitting-playbook.md) records reusable lessons and rejected shortcuts for subsequent outfits. Update it when a trial changes the workflow, alongside the detailed evidence index.
 
-Outfit order confirmed September 27: finish Holiday Reveler, then Planet Diving 6th (planet suit), then the remaining outfits. This changes the queue after Holiday, not the active fitting task or acceptance requirements.
+Latest September 27 user instruction: **skip Holiday Reveler and switch now to Planet Diving 6th, then Skin Suit, then the remaining outfits**. Holiday's investigation is parked because of excessive time/token cost. Do not resume its pending experiments automatically. This supersedes all Holiday-first instructions in older checkpoints and the original tracker wording.
 
 Deliver `CSS_EveStellarBlade_eins0fx_P` with all available Eve outfit variants, properly fitted to the original body proportions, complete applicable clothing customization, and verified clothing and secondary-motion physics. Every outfit needs **Original plus at least five clothing color palettes**. Hair-only recoloring does not satisfy this requirement. The user clarified this on September 26 and reports the latest Gemini outfit work is incomplete.
 
 The user supplied this updated objective and resumed the goal through the conversation goal control. The September 26 fitting milestone is active; do not revert to the older quota-pause instructions.
 
-**Latest priority correction: fitting first.** The user explicitly asked to focus on fitting every outfit to the same standard as Black Pearl. Palette implementation is parked until the fitting foundation is sound. Start with Holiday Reveler, then apply the proven process to the other outfits. Keep all customization requirements queued.
+**Latest priority correction: fitting first, Planet Diving now.** Match the accepted Black Pearl fitting standard. Inspect the current Planet Diving export visually, correct concrete defects, and use established body/hair physics where applicable. Keep customization requirements active. Avoid open-ended collider research before establishing the outfit's visible defects.
 
 Claude Code owns CSS runtime UI/UX and performance work. This effort owns Eve assets, authoring scripts, verification and documentation. Do not stage, revert or replace the other agent's native changes. Current beta source, local release artifacts and installed binaries must be checked separately; an old installed `release.json` is not reliable version evidence.
 
@@ -31,6 +31,14 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 - Package under `/Game/CSS/`, use short readable paths, retain source provenance, and commit by coherent change. Do not publish until the candidate has passed these checks.
 
 ## Latest checkpoint
+
+**September 27, switched to Planet Diving on explicit user instruction.** Holiday is skipped. Next is Skin Suit, then other outfits. Planet's current Gemini export has a suit, tail and two ribbons, plus the body and hair assembly: 123,959 points / 175,142 triangles. Begin with a neutral-material review of the actual exported geometry and its existing weights. Source is `gemini-work/exports/SK_Eve_PlanetDiving.mesh.json`; do not execute old overwrite/packaging scripts blindly.
+
+Holiday evidence is parked: nine native regional rest/frame64/frame68 queries and six independent pose checks completed successfully as diagnostics, but reject the automatic colliders. Frame68 approximate mapped-surface gaps reach 2.14 cm pelvis, 11.38 cm left thigh, 6.75 cm right thigh; inspected mapped side/rear views show distortion. All roots remain pelvis. Selected-corner local weight transfer helps but full-grid comparisons still have residual errors. Each region's offline comparison completed 582 default/combined-morph cases; no revised collider was imported. Some worst cut-strip samples in each thigh region are driven by the opposite leg. Do not restart this research now.
+
+Evidence: `region-native/`, `region-*-{rest,64,68,64-pose,68-pose,64-trace,68-trace,64-local,68-local}.json`, `region-Pelv-local16/`, `region-ThighL-local16b/`, `region-ThighR-local16b/`. First ThighL local16 stopped on 0.000152 cm nearest-face reconstruction error; explicit 0.001 cm numerical tolerance allowed the diagnostic replay, with actual maxima recorded. This is not a fitting tolerance. All processes have exited. Production/game/release assets unchanged. Read-only inspection batching was added to avoid repeated editor startup/shutdown for related queries.
+
+## Parked Holiday checkpoint: native regional authoring
 
 **September 27, the three private regional meshes and native level sets are now authored.** `export_skin_regions.py` writes short `/Game/CSS/EveTest/` paths with the unchanged private 379-bone definitions and applicable morph deltas. SK_CPelv and SK_CThighL import directly. SK_CThighR initially fails the native triangle-area threshold on three microscopic cut slivers. A collision-copy-only weld of three vertices, maximum 0.00093443 cm, removes six collapsed faces while retaining a closed surface. The corrected right mesh has 2,866 points / 5,728 faces. Do not reuse the rejected first right-thigh export.
 

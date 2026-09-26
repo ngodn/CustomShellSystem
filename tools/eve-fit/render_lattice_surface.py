@@ -9,11 +9,12 @@ from mathutils import Vector
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--input', type=Path, required=True)
 p.add_argument('--output', type=Path, required=True)
+p.add_argument('--body', type=Path, help='Optional regional surface JSON')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
 a.output.mkdir(exist_ok=False)
 report = json.loads(a.input.read_text())
 w = Path(__file__).resolve().parents[2]/'work/eve26'
-body = json.loads((w/'body-collider.json').read_text())
+body = json.loads((a.body or w/'body-collider.json').read_text())
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.object.delete(use_global=False)
 objects = []

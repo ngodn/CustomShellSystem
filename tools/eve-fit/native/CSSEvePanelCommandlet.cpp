@@ -36,6 +36,7 @@ UCSSEvePanelCommandlet::UCSSEvePanelCommandlet()
 
 int32 UCSSEvePanelCommandlet::Main(const FString& Params)
 {
+    if (Params.Contains(TEXT("-InspectLevelSetBatch="))) return InspectEveLevelSetBatch(Params);
     if (FParse::Param(*Params,TEXT("Motion"))) return EvaluateHolidayPanel(Params);
     if (FParse::Param(*Params,TEXT("LevelSet"))) return CreateEveLevelSet(Params);
     using namespace UE::Chaos::ClothAsset;

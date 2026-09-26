@@ -13,7 +13,12 @@ p.add_argument('--input', type=Path, required=True)
 p.add_argument('--output', type=Path, required=True)
 p.add_argument('--subdivide', type=int, choices=(1, 2, 4), default=1)
 p.add_argument('--surface-frame', help='Export an approximate mapped body surface at clip:frame.')
+p.add_argument('--source-mesh', type=Path)
+p.add_argument('--body', type=Path)
+p.add_argument('--native-reference', type=Path, help='Native sprint frame 8 samples (warmup frame 68)')
+p.add_argument('--closest-tolerance', type=float, default=.0001, help='Numerical nearest-face reconstruction tolerance in cm')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
+assert .0001 <= a.closest_tolerance <= .001
 a.output.mkdir(exist_ok=False)
 w = Path(__file__).resolve().parents[2]/'work/eve26'
 native = json.loads(a.input.read_text())
@@ -34,8 +39,9 @@ target_nodes = nodes if a.subdivide == 1 else [
     for x in range(target_counts[0]+1) for y in range(target_counts[1]+1) for z in range(target_counts[2]+1)]
 target_rest = np.asarray([n['rest_cm'] for n in target_nodes])
 target_lookup = {tuple(n['index']): i for i,n in enumerate(target_nodes)}
-mesh = json.loads((w/'cbody.mesh.json').read_text())
-body = json.loads((w/'body-collider.json').read_text())
+mesh = json.loads((a.source_mesh or w/'cbody.mesh.json').read_text())
+body_path = a.body or w/'body-collider.json'
+body = json.loads(body_path.read_text())
 points = np.asarray(body['positions'])
 assert np.array_equal(points, np.asarray(mesh['points']))
 names = {b['name']: i for i, b in enumerate(mesh['bones'])}
@@ -54,7 +60,7 @@ for node in target_nodes:
     clamped_count += int(bary.min() < 0 or bary.max() > 1)
     bary = np.clip(bary, 0, 1); bary /= bary.sum()
     closest_error = float(np.linalg.norm(bary@triangle-np.asarray(closest)))
-    assert closest_error < .0001, {'node':node['index'],'face':face_id,'error_cm':closest_error}
+    assert closest_error < a.closest_tolerance, {'node':node['index'],'face':face_id,'error_cm':closest_error}
     max_closest_error = max(max_closest_error, closest_error)
     weights = {}
     for vertex, amount in zip(face, bary, strict=True):
@@ -67,8 +73,9 @@ for node in target_nodes:
                           'nearest_body_face': face_id, 'barycentric': bary.tolist(), 'surface_distance_cm': distance})
 recipe = {'source_asset': native['asset'], 'root_bone': collider['root_bone'],
           'source_grid_sha256': hashlib.sha256(a.input.read_bytes()).hexdigest(),
-          'body_sha256': hashlib.sha256((w/'body-collider.json').read_bytes()).hexdigest(),
+          'body_sha256': hashlib.sha256(body_path.read_bytes()).hexdigest(),
           'grid': {'counts': target_counts.tolist(), 'nodes': revised_nodes}, 'subdivision':a.subdivide,
+          'closest_reconstruction_tolerance_cm': a.closest_tolerance,
           'scope': 'Offline local weight recipe with fixed domain bounds, not a saved collider or accepted fit.'}
 (a.output/'weights.json').write_text(json.dumps(recipe, separators=(',', ':'))+'\n')
 
@@ -142,7 +149,7 @@ def stats(error):
             'skirt_over_1cm': int((region > 1).sum())}
 
 rows, native_error = [], None
-native_check = json.loads((w/'ls128-map68.json').read_text())['bodies'][0]
+native_check = json.loads((a.native_reference or w/'ls128-map68.json').read_text())['bodies'][0]
 for clip in ('sprint', 'walk', 'jog'):
     motion = json.loads((w/f'follow-{clip}-base.json').read_text())
     for frame_index, frame in enumerate(motion['frames']):

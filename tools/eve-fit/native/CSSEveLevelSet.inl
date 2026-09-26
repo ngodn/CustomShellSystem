@@ -344,3 +344,30 @@ static int32 CreateEveLevelSet(const FString& Params)
         return Fail(TEXT("Collider report failed"));
     return 0;
 }
+
+static int32 InspectEveLevelSetBatch(const FString& Params)
+{
+    FString Filename, Text;
+    TSharedPtr<FJsonObject> Input;
+    const TArray<TSharedPtr<FJsonValue>>* Jobs=nullptr;
+    if (!FParse::Value(*Params,TEXT("InspectLevelSetBatch="),Filename) ||
+        !FFileHelper::LoadFileToString(Text,*Filename) ||
+        !FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text),Input) ||
+        !Input->TryGetArrayField(TEXT("jobs"),Jobs) || Jobs->IsEmpty() || Jobs->Num()>16)
+    {
+        UE_LOG(LogCSSEvePanel,Error,TEXT("Require 1..16 read-only level-set inspection jobs"));
+        return 1;
+    }
+    for (const auto& Job:*Jobs)
+    {
+        FString Arguments;
+        if (!Job->TryGetString(Arguments) || !FParse::Param(*Arguments,TEXT("InspectLevelSet")))
+        {
+            UE_LOG(LogCSSEvePanel,Error,TEXT("Batch jobs must inspect existing level sets"));
+            return 1;
+        }
+    }
+    for (const auto& Job:*Jobs)
+        if (CreateEveLevelSet(Job->AsString())!=0) return 1;
+    return 0;
+}

@@ -1,6 +1,6 @@
 # Current work queue
 
-2026-09-27 user priority: finish Holiday Reveler, then prioritize Planet Diving 6th (the planet suit), then the remaining Eve outfits. Keep the complete fitting, physics and customization requirements for every outfit.
+2026-09-27 latest user priority: **skip Holiday Reveler** because its investigation is consuming too much time and tokens. Work on **Planet Diving 6th, then Skin Suit, then the remaining outfits**. Holiday experiments are parked, not accepted or awaiting more automatic tests. Keep the complete fitting, physics and customization requirements for the active outfits.
 
 2026-09-26 Eve hem follow-up: unconstrained persistent contact projection fails the full sprint sequence with large correction jumps and fabric stretching. Saved rejection evidence in `work/eve26/hemseq2.json`. Next solver experiment must enforce fabric shape and temporal continuity together with contact, not raise the projection cap. No game/release changes.
 
