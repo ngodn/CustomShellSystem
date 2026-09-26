@@ -59,6 +59,9 @@ def copy_verified(source: Path, target: Path) -> None:
         raise RuntimeError(f'Copy verification failed: {target}')
 
 
+LOADER_ABI = 2   # CssHost ABI the shipped main.dll speaks (native/src/api.hpp css_host_abi)
+
+
 def stage_core(mod: Path) -> str:
     source = ROOT / 'build/windows/css_core.dll'
     name = f'css_core-{sha(source)[:16]}-{time.time_ns()}.dll'
@@ -81,9 +84,12 @@ def install(game: Path) -> None:
     copy_verified(ROOT / 'build/windows/main.dll', mod / 'dlls/main.dll')
     copy_verified(ROOT / 'assets/inventory-logo-v1.png', mod / 'assets/inventory-logo-v1.png')
     (mod / 'catalog').mkdir(parents=True, exist_ok=True)
-    for source in (ROOT / 'catalog').glob('*.css.json'):
+    for source in (ROOT / 'packaging/catalog').glob('*.css.json'):
         copy_verified(source, mod / 'catalog' / source.name)
-    atomic(mod / 'loader-contract.json', {'abi': 1, 'dll_sha256': sha(mod / 'dlls/main.dll'),
+    # The loader's host ABI (2 since 1.0.0-beta.5: write_file). `reload` refuses a core swap
+    # once the loader sources differ from this record, because a loader change needs the
+    # game closed and a fresh install.
+    atomic(mod / 'loader-contract.json', {'abi': LOADER_ABI, 'dll_sha256': sha(mod / 'dlls/main.dll'),
            'sources': {name: sha(ROOT / name) for name in ('native/src/loader.cpp', 'native/src/api.hpp', 'native/src/hook_api.hpp', 'native/src/hook_host.hpp', 'native/src/hook_host.cpp')}})
     name = stage_core(mod)
     (mod / 'enabled.txt').touch()
@@ -122,11 +128,11 @@ def main() -> None:
             raise RuntimeError('Install the permanent loader first')
         build(core_only=True)
         contract = json.loads((mod / 'loader-contract.json').read_text())
-        if contract['abi'] != 1 or sha(mod / 'dlls/main.dll') != contract['dll_sha256']:
+        if contract['abi'] != LOADER_ABI or sha(mod / 'dlls/main.dll') != contract['dll_sha256']:
             raise RuntimeError('The installed loader no longer matches its ABI contract')
         if any(sha(ROOT / name) != digest for name, digest in contract['sources'].items()):
             raise RuntimeError('Loader source or ABI changed. Install that update with the game closed.')
-        for source in (ROOT / 'catalog').glob('*.css.json'):
+        for source in (ROOT / 'packaging/catalog').glob('*.css.json'):
             copy_verified(source, mod / 'catalog' / source.name)
         for source in (ROOT / 'assets').glob('*.png'):
             destination = mod / 'assets' / source.name
