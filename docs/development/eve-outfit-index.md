@@ -16,6 +16,7 @@ Updated 2026-09-27. Start here after a context reset; the goal log's current che
 
 ## Failed approaches and traps
 
+- CA_Hip centroid refinement is rejected: unchanged rest surface but worse mapped clipping, edge ratio 7.919 and roughly double editor solver cost. See `panel-hip-motion.json`, `panel-hip-clearance.json`, and inspected `panel-hip-views`; do not repeat density increases alone as an untested fix.
 - Holiday AnimDynamics trials are rejected. Equal-axis inertia removes the numerical explosion, but moving simulated centers onto the fitted dress still produces 18.30 cm jog displacement and visible hip clipping. Do not repeat spring/inertia/center tuning. Next adapt the existing constrained ControlRig approach, with cloth-specific geometry and morph checks.
 - Do not redirect unsupported garment colors to hair. It hides missing customization and produces the reported behavior.
 - Do not assume generic object-name matching or first-material selection identifies hair versus accessories.
@@ -29,6 +30,8 @@ Paths in this table are relative to the workspace root unless linked.
 
 | Artifact | Finding or purpose |
 | --- | --- |
+| `CustomShellSystem/work/eve26/panel-repeat-trace.json`, `panel-hip-trace-summary.json` | All 19 distinct clipped dynamic lower vertices have positive skin-only clearance; preserve fitted shape and address cloth contact separately from 56 fixed upper arm-contact vertices |
+| `CustomShellSystem/tools/eve-fit/refine_panel_hips.py`, `work/eve26/panel-hip-prepared.json`, `panel-hip-mapcheck.json` | Private centroid refinement preserves rest surface, original weights and anchors; fresh native mapping passes, motion acceptance required |
 | `CustomShellSystem/tools/eve-fit/compare_panel_repeat.py`, `work/eve26/panel-repeat-comparison.json` | Strict reported-setting comparison and hashed 69-frame repeatability evidence; cause of variation unproven |
 | `CustomShellSystem/work/eve26/panel-repeat-clearance.json`, `panel-repeat-views/` | Repeated full-collider frame 64 still clips, with nearly unchanged sample counts; side/rear renders inspected |
 | [Current goal/status](eve-outfit-goal.md) | Scope, acceptance criteria, takeover findings and next steps |

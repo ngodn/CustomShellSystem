@@ -17,6 +17,7 @@ p.add_argument('--proxy', type=Path, required=True)
 p.add_argument('--mapping', type=Path, required=True)
 p.add_argument('--output', type=Path, required=True)
 p.add_argument('--zmax', type=float, default=140.)
+p.add_argument('--source-mesh', type=Path, help='Exact source export for native vertex tracing')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert not a.output.exists()
 w = Path(__file__).resolve().parents[2]/'work/eve26'
@@ -27,7 +28,8 @@ assert mapped['mapping_sha256'] == hashlib.sha256(a.mapping.read_bytes()).hexdig
 mapping = json.loads(a.mapping.read_text())
 frame = mapped['frame']
 native = motion['frames'][frame]
-mesh = json.loads((w/'holiday.mesh.json').read_text())
+source_mesh_path = a.source_mesh or w/'holiday.mesh.json'
+mesh = json.loads(source_mesh_path.read_text())
 body = json.loads((w/'body-collider.json').read_text())
 collider = json.loads(Path(motion['body_collision_input']).read_text())
 proxy = json.loads(a.proxy.read_text())['slots']['MI_CH_P_EVE_Christmas_01_01.001']
@@ -102,12 +104,13 @@ section = mapping['render_geometry']['sections'][1]
 actual = mapped['sections'][1]
 assert 'XM_Dress01' in mapping['sections'][1]['material']
 check('mapped_fabric', section['positions'], actual['positions_cm'], section['indices'])
-check('skin_only_fabric', section['positions'], skin(np.asarray(section['positions']), section['weights']), section['indices'])
+skin_positions = skin(np.asarray(section['positions']), section['weights'])
+check('skin_only_fabric', section['positions'], skin_positions, section['indices'])
 lookup = KDTree(len(mesh['points']))
 for i, point in enumerate(mesh['points']):
     lookup.insert(Vector(point), i)
 lookup.balance()
-latest = json.loads((w/'holiday-hip-clean.mesh.json').read_text())
+latest = mesh if a.source_mesh else json.loads((w/'holiday-hip-clean.mesh.json').read_text())
 records = np.asarray(section['mapping']).reshape((len(section['positions']), -1, 9))
 clipped = []
 for i, (rest, point) in enumerate(zip(section['positions'], actual['positions_cm'], strict=True)):
@@ -118,16 +121,25 @@ for i, (rest, point) in enumerate(zip(section['positions'], actual['positions_cm
     if signed >= -.1:
         continue
     _, source_vertex, source_error = lookup.find(Vector(rest))
+    skin_near, skin_normal, _, _ = body_tree.find_nearest(Vector(skin_positions[i]))
+    collider_near, collider_normal, _, _ = collider_tree.find_nearest(Vector(point))
+    flags = records[i, :, 3]
+    blend = float(np.where(flags < 65535, 1.-flags/65535., 0.).mean())
     body_weights = {}
     for v in body['indices'][face]:
         for bone, weight in body['weights'][v]:
             body_weights[bone] = body_weights.get(bone, 0.) + weight/3
     clipped.append({'render_vertex': i, 'rest_cm': rest, 'signed_cm': signed,
+        'cloth_blend': blend,
+        'skin_only_signed_cm': (Vector(skin_positions[i])-skin_near).dot(skin_normal),
+        'collider_signed_cm': (Vector(point)-collider_near).dot(collider_normal),
+        'cloth_displacement_cm': float(np.linalg.norm(np.asarray(point)-skin_positions[i])),
         'fully_skinned': bool(np.all(records[i, :, 3] == 65535)),
         'source_vertex': source_vertex, 'source_match_cm': source_error,
         'latest_source_offset_cm': float(np.linalg.norm(np.asarray(latest['points'][source_vertex])-mesh['points'][source_vertex])),
         'garment_weights': section['weights'][i],
         'nearest_body_face_weights': sorted(body_weights.items(), key=lambda x: -x[1])})
 a.output.write_text(json.dumps({'scope': 'One default-morph frame, vertices, triangle centroids and 16 subtriangle centres. Signed nearest-normal distances may be ambiguous at folds. Collider is native shape API reference, not solver internal readback. Not full-surface or game acceptance.', 'rest_z_range_cm': [90, a.zmax],
-    'frame': frame, 'motion': str(a.motion), 'mapped': str(a.mapped), 'rows': rows,
+    'frame': frame, 'motion': str(a.motion), 'mapped': str(a.mapped),
+    'source_mesh': str(source_mesh_path), 'source_mesh_sha256': hashlib.sha256(source_mesh_path.read_bytes()).hexdigest(), 'rows': rows,
     'clipped_mapped_vertices': clipped}, indent=2)+'\n')
