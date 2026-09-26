@@ -57,7 +57,7 @@ Known follow-ups that genuinely need that focused pass (flagged in DESIGN.md):
 
 ## How to iterate
 
-- Edit sources under `extensions/teleport/src/`.
+- Edit sources under `extensions/traverse/src/`.
 - Rebuild + hot-swap into the running game:
   `python3 extensions/core/tools/cssx.py stage --core-only --teleport`
   then force a rescan by flipping `Mods/CSSX/core.json` between the two staged
@@ -67,7 +67,7 @@ Known follow-ups that genuinely need that focused pass (flagged in DESIGN.md):
 
 ## Layout
 
-Single source tree at `extensions/teleport/` (not duplicated into
+Single source tree at `extensions/traverse/` (not duplicated into
 `extensions/core/`, to avoid the divergence the cheat-menu copies have). The CSSX
 CMake and `cssx.py` point at it directly. Distribution (`cssx_release.py`
 `teleport_files` + a zip) is not wired yet; say the word and I will add it for a

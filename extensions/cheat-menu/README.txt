@@ -1,11 +1,15 @@
-CSSX Cheat Menu
+CSSX Cheat Menu v1.0.0
 
-Requires matching CSS and CSSX versions. Close the game, then extract the
-eins0fx.cheat-menu folder into ue4ss/Mods/CustomShellSystem/extensions/.
-Disable or remove the original MortalShell2Mod first, then restart.
-Open Inventory > CSSX > CSSX Cheat Menu. Edit settings, then Apply settings.
-Cheats start off at launch. Grants and progression changes may affect your
-game save and are not undone by turning off cheats or deleting this extension.
+Requires CSSX v1.0.0 (Mods/CSSX). Close the game, then extract the
+eins0fx.cheat-menu folder into MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/extensions/.
+Disable or remove the original MortalShell2Mod Lua menu first, then start the
+game, load into the world and press F6 (or both thumbsticks) > CSSX Cheat Menu.
 
-Keep CustomShellSystem/state/ when updating. Logs are managed under
-CustomShellSystem/logs/extensions/eins0fx.cheat-menu/.
+Toggles and numbers are drafts until Settings > Apply settings. Cheats start
+off at every launch. Actions marked "Persists in your save" or "Irreversible"
+change your save file and are not undone by turning cheats off or removing
+this extension. "Turn off all cheats" restores every value the menu owns and
+leaves newer changes made by the game or another mod alone.
+
+Your settings live in Mods/CSSX/state/eins0fx.cheat-menu.json; logs in
+Mods/CSSX/logs/eins0fx.cheat-menu/.

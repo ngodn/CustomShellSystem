@@ -23,6 +23,6 @@ int stop(void* instance) noexcept {
 void destroy(void* instance) noexcept {delete static_cast<cheat::Menu*>(instance);}
 }
 extern "C" CSSX_EXPORT const CssxExtension* cssx_get_extension() {
-    static const CssxExtension api{CSSX_ABI,sizeof(CssxExtension),create,tick,model,event,stop,destroy};
+    static const CssxExtension api{CSSX_ABI,sizeof(CssxExtension),create,tick,model,event,stop,destroy,nullptr,nullptr};
     return &api;
 }

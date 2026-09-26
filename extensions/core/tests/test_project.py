@@ -25,9 +25,10 @@ class ProjectLayout(unittest.TestCase):
             self.assertRegex(data['id'], r'^[a-z][a-z0-9._-]*$')
 
     def test_cheat_menu_manifest_targets_abi3(self):
-        data = json.loads((ROOT / 'cheat-menu/extension.json').read_text())
+        data = json.loads((ROOT.parent / 'cheat-menu/extension.json').read_text())
         self.assertEqual((data['schema'], data['api']), (2, 3))
-        self.assertEqual(data['version'], (ROOT / 'VERSION').read_text().strip())
+        # Versioned independently of the CSSX framework (it ships its own release zip).
+        self.assertRegex(data['version'], r'^\d+\.\d+\.\d+$')
 
     def test_docs_present(self):
         for name in ('decisions.md', 'performance.md', 'migration.md', 'work-queue.md'):

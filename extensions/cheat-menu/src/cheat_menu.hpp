@@ -30,13 +30,32 @@ class Menu {
     Json power_ability(const Json&,const char*);
     bool gameplay_ready(const Json&);
     void power_sync();
+    void power_start(const std::string& feature);
     void power_clear(const std::string& feature={});
     void power_tick(double);
+    Json binding_actions() const;
+    const Json& binding_keys() const;
+    Json binding_key_options() const;
+    void binding_validate() const;
+    bool binding_consent() const;
+    void binding_tick(double);
+    void binding_fire(const std::string&);
+    void binding_reset();
+    std::string binding_action_="god";
+    std::map<std::string,bool> binding_down_;
+    double binding_time_=0;
+    bool bindings_checked_=false;
     inline static constexpr const char* combat_ids[]{"no_cooldown","perfect_parry","perfect_block","perfect_harden"};
     inline static constexpr const char* cooldown_fields[]{"CooldownDuration","GlobalCooldownDuration","Cooldown","GlobalCooldown","StoneFormCooldown","PerfectStoneFormCooldown"};
     struct OwnedHook {uint64_t id;std::string feature;Json target;};
     std::map<std::string,OwnedHook> combat_hooks_;
     std::set<uint64_t> cooldown_seen_;
+    // Seal cheats stay "armed" while their seal is not equipped: the toggle
+    // keeps its value, the hooks are absent, and the status says what is
+    // missing. Equipping the seal installs the hooks on the next sync.
+    std::map<std::string,std::string> armed_;
+    std::vector<std::string> problems_;      // per-feature apply failures of the last Apply
+    static std::string pretty(const std::string& id);
     double combat_time_=0;
     Json owned_abilities(const Json&);
     void combat_sync();
@@ -72,7 +91,11 @@ class Menu {
     void persist(const Json&);
     void shell_tick(double);
     void refresh_shells();
-    std::map<std::string,std::string> shell_tokens_;
+    mutable std::map<std::string,std::string> shell_tokens_;
+    bool tokens_complete_=false;
+    std::string token_for(const std::string& shell) const;   // resolves on demand, cached per process
+    void resolve_shell_token();
+    size_t abilities_count_=0; bool combat_backlog_=false;
     bool shell_matches(const Json& tag,const std::string& target) const;
     void unlock_shells(const Json& player);
     void override_value(const Json&,const std::string&,const Json&);

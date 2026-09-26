@@ -55,20 +55,21 @@ def framework_files(version: str, build: Path) -> dict[str, bytes]:
     }
 
 
-def cheat_files(version: str, build: Path) -> dict[str, bytes]:
-    manifest = json.loads((ROOT / 'cheat-menu/extension.json').read_text())
-    manifest['version'] = version
+def cheat_files(build: Path) -> tuple[str, dict[str, bytes]]:
+    # The Cheat Menu carries its own version (extension.json), like Traverse; it is not
+    # stamped with the CSSX framework version. Ships under extensions/.
+    manifest = json.loads((REPO / 'extensions/cheat-menu/extension.json').read_text())
     manifest['entry'] = 'cheat_menu.dll'
     base = 'eins0fx.cheat-menu/'
     files = {
         base + 'extension.json': (json.dumps(manifest, indent=2) + '\n').encode(),
         base + 'cheat_menu.dll': (build / 'cheat_menu.dll').read_bytes(),
-        base + 'menu.json': (ROOT / 'cheat-menu/menu.json').read_bytes(),
-        base + 'assets/banner-v1.png': (ROOT / 'cheat-menu/assets/banner-v1.png').read_bytes(),
+        base + 'menu.json': (REPO / 'extensions/cheat-menu/menu.json').read_bytes(),
+        base + 'assets/banner-v1.png': (REPO / 'extensions/cheat-menu/assets/banner-v1.png').read_bytes(),
     }
     for name in manifest.get('files', []):
-        files[base + name] = (ROOT / 'cheat-menu' / name).read_bytes()
-    return files
+        files[base + name] = (REPO / 'extensions/cheat-menu' / name).read_bytes()
+    return manifest['version'], files
 
 
 def performance_files(version: str) -> dict[str, bytes]:
@@ -86,7 +87,7 @@ def performance_files(version: str) -> dict[str, bytes]:
 def traverse_files(build: Path) -> tuple[str, dict[str, bytes]]:
     # The Traverse extension carries its own version (extension.json), independent of
     # the CSSX framework version. Ships like the Cheat Menu: extracts under extensions/.
-    src = REPO / 'extensions/teleport'
+    src = REPO / 'extensions/traverse'
     manifest = json.loads((src / 'extension.json').read_text())
     manifest['entry'] = 'teleport.dll'
     base = manifest['id'] + '/'
@@ -176,10 +177,11 @@ def build(tag: str, output: Path) -> list[Path]:
             fwdir = output / f'cssx-v{version}'
             fwdir.mkdir(parents=True, exist_ok=True)
             fw = fwdir / f'MSII-CSSX-v{version}.zip'
-            cm = fwdir / f'CSSX-Cheat-Menu-v{version}.zip'
+            cmvers, cmfiles = cheat_files(out)
+            cm = fwdir / f'CSSX-Cheat-Menu-v{cmvers}.zip'
             write_zip(fw, framework_files(version, out), dict(common, product='CSSX', manifest_name='CSSX/release.json'), stamp)
-            write_zip(cm, cheat_files(version, out), dict(common, product='CSSX Cheat Menu', requires='CSSX ' + version,
-                                                           manifest_name='eins0fx.cheat-menu/release.json'), stamp)
+            write_zip(cm, cmfiles, dict(common, version=cmvers, product='CSSX Cheat Menu', requires='CSSX ' + version,
+                                        manifest_name='eins0fx.cheat-menu/release.json'), stamp)
             pf = fwdir / f'CSSX-Performance-v{version}.zip'
             write_zip(pf, performance_files(version), dict(common, product='CSSX Performance', requires='CSSX ' + version,
                                                         manifest_name='cssx.performance/release.json'), stamp)
@@ -187,8 +189,12 @@ def build(tag: str, output: Path) -> list[Path]:
             tvdir = output / f'cssx-traverse-v{tvers}'
             tvdir.mkdir(parents=True, exist_ok=True)
             tv = tvdir / f'MSII-Traverse-v{tvers}.zip'
-            write_zip(tv, tfiles, dict(common, version=tvers, product='CSSX Traverse', requires='CSSX ' + version,
-                                       manifest_name='eins0fx.traverse/release.json'), stamp)
+            if tv.exists():
+                # Independently versioned: an unchanged Traverse keeps its published archive.
+                print(f'Traverse v{tvers} is already released at {tv}; left unchanged (bump extensions/traverse/extension.json to ship a new build)')
+            else:
+                write_zip(tv, tfiles, dict(common, version=tvers, product='CSSX Traverse', requires='CSSX ' + version,
+                                           manifest_name='eins0fx.traverse/release.json'), stamp)
             for name in ('main.dll', 'cssx_core.dll', 'cheat_menu.dll'):
                 shutil.copy2(out / name, fwdir / f'{name}.{version}.built')
             return [fw, cm, pf, tv]

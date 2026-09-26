@@ -45,22 +45,23 @@ set_target_properties(cssx_lua PROPERTIES POSITION_INDEPENDENT_CODE ON)
 find_package(Threads REQUIRED)
 target_link_libraries(cssx_runtime PUBLIC cssx_lua ${CMAKE_DL_LIBS} Threads::Threads)
 
-# ---- Cheat Menu gameplay logic (portable, tested against a fake host) ----
-file(GLOB cssx_cheat_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/cheat-menu/src/*.cpp")
+# ---- Cheat Menu extension (sibling source tree at extensions/cheat-menu) ----
+set(CSSX_CHEAT_MENU "${CSSX_REPO}/extensions/cheat-menu")
+file(GLOB cssx_cheat_sources CONFIGURE_DEPENDS "${CSSX_CHEAT_MENU}/src/*.cpp")
 list(FILTER cssx_cheat_sources EXCLUDE REGEX "/main\\.cpp$")
 add_library(cssx_cheat_logic STATIC ${cssx_cheat_sources})
-target_include_directories(cssx_cheat_logic PUBLIC include cheat-menu/src "${CSSX_VENDOR}")
+target_include_directories(cssx_cheat_logic PUBLIC include "${CSSX_CHEAT_MENU}/src" "${CSSX_VENDOR}")
 set_target_properties(cssx_cheat_logic PROPERTIES POSITION_INDEPENDENT_CODE ON)
-add_library(cheat_menu SHARED cheat-menu/src/main.cpp)
+add_library(cheat_menu SHARED "${CSSX_CHEAT_MENU}/src/main.cpp")
 target_link_libraries(cheat_menu PRIVATE cssx_cheat_logic)
 set_target_properties(cheat_menu PROPERTIES PREFIX "")
 
-# ---- Teleport extension (pure bridge + HUD; single source tree at extensions/teleport) ----
-set(CSSX_TELEPORT "${CSSX_REPO}/extensions/teleport")
+# ---- Traverse extension (pure bridge + HUD; sibling source tree at extensions/traverse) ----
+set(CSSX_TRAVERSE "${CSSX_REPO}/extensions/traverse")
 add_library(teleport SHARED
-  "${CSSX_TELEPORT}/src/main.cpp" "${CSSX_TELEPORT}/src/teleport.cpp"
-  "${CSSX_TELEPORT}/src/runtime.cpp" "${CSSX_TELEPORT}/src/overlay.cpp"
-  "${CSSX_TELEPORT}/src/meteor.cpp")
+  "${CSSX_TRAVERSE}/src/main.cpp" "${CSSX_TRAVERSE}/src/teleport.cpp"
+  "${CSSX_TRAVERSE}/src/runtime.cpp" "${CSSX_TRAVERSE}/src/overlay.cpp"
+  "${CSSX_TRAVERSE}/src/meteor.cpp")
 target_include_directories(teleport PRIVATE include "${CSSX_VENDOR}")
 set_target_properties(teleport PROPERTIES PREFIX "" POSITION_INDEPENDENT_CODE ON)
 
@@ -73,7 +74,7 @@ if(NOT WIN32)
   add_test(NAME cssx_runtime COMMAND cssx_runtime_tests)
   add_executable(cssx_cheat_tests tests/cheat_menu_tests.cpp)
   target_link_libraries(cssx_cheat_tests PRIVATE cssx_cheat_logic cssx_runtime)
-  add_test(NAME cssx_cheat_menu COMMAND cssx_cheat_tests ${CMAKE_CURRENT_SOURCE_DIR}/cheat-menu/menu.json)
+  add_test(NAME cssx_cheat_menu COMMAND cssx_cheat_tests ${CSSX_CHEAT_MENU}/menu.json)
   foreach(mode RANGE 1 4)
     add_library(cssx_fixture_${mode} SHARED tests/extension_fixture.cpp)
     target_include_directories(cssx_fixture_${mode} PRIVATE include)

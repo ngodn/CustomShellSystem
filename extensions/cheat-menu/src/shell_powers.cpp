@@ -82,6 +82,19 @@ void Menu::power_sync() {
     for(const auto* feature:power_ids) {
         if(applied_.at(feature)!=true) {power_clear(feature);continue;}
         if(powers_.contains(feature)) continue;
+        try { power_start(feature); }
+        catch(const std::exception& e) {
+            // One power failing leaves the others alone: record, revert this
+            // toggle, clean whatever it started.
+            applied_[feature]=values_[feature]=false;
+            problems_.push_back(pretty(feature)+": "+e.what());
+            try { power_clear(feature); } catch(const std::exception& cleanup) { cleanup_required_=true; problems_.push_back(std::string("Cleanup needs retry: ")+cleanup.what()); }
+        }
+    }
+}
+void Menu::power_start(const std::string& feature_id) {
+    const char* feature=feature_id.c_str();
+    {
         const auto player=require_player();const auto ability=power_ability(player,ability_class(feature));
         Power power;power.pawn=player.at("pawn");power.controller=player.at("controller");power.ability=ability;
         const std::string name=feature;

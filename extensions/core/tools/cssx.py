@@ -129,20 +129,20 @@ def stage(game: Path, dev: bool, cheat_menu: bool, core_only: bool = False, perf
         target = mod / 'extensions/eins0fx.cheat-menu'
         target.mkdir(parents=True, exist_ok=True)
         for name in ('menu.json', 'LICENSE', 'THIRD_PARTY_NOTICES.txt', 'CREDITS.txt', 'README.txt'):
-            copy_verified(ROOT / 'cheat-menu' / name, target / name)
+            copy_verified(REPO / 'extensions/cheat-menu' / name, target / name)
         (target / 'assets').mkdir(exist_ok=True)
-        copy_verified(ROOT / 'cheat-menu/assets/banner-v1.png', target / 'assets/banner-v1.png')
+        copy_verified(REPO / 'extensions/cheat-menu/assets/banner-v1.png', target / 'assets/banner-v1.png')
         dll_name = f'cheat_menu-{sha(out / "cheat_menu.dll")[:12]}.dll'
         if not (target / dll_name).exists():
             copy_verified(out / 'cheat_menu.dll', target / dll_name)
         for old in target.glob('cheat_menu-*.dll'):
             if old.name != dll_name:
                 old.unlink()
-        manifest = json.loads((ROOT / 'cheat-menu/extension.json').read_text())
+        manifest = json.loads((REPO / 'extensions/cheat-menu/extension.json').read_text())
         manifest['entry'] = dll_name
         atomic(target / 'extension.json', manifest)
     if teleport:
-        src = REPO / 'extensions/teleport'
+        src = REPO / 'extensions/traverse'
         tid = json.loads((src / 'extension.json').read_text())['id']
         # remove any previous id folder for this source (the mod was renamed)
         for old_dir in ('eins0fx.teleport', 'eins0fx.traverse'):

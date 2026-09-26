@@ -1,4 +1,5 @@
 #include "cheat_menu.hpp"
+#include <cctype>
 
 namespace cheat {
 namespace {
@@ -34,6 +35,7 @@ void Menu::combat_hook(const std::string& feature,const Json& target,const Json&
     catch(...) {combat_hooks_.erase(it);throw;}
 }
 void Menu::combat_clear(const std::string& feature) {
+    if(feature.empty()) armed_.clear();
     for(auto it=combat_hooks_.begin();it!=combat_hooks_.end();) {
         if(!feature.empty() && it->second.feature!=feature) {++it;continue;}
         try {
@@ -53,14 +55,51 @@ void Menu::combat_sync() {
     bool active=false;
     for(const auto* id:combat_ids) {
         if(applied_.at(id)==true) active=true;
-        else combat_clear(id);
+        else { combat_clear(id); if(armed_.erase(id)) host_.request({{"op","invalidate"}}); }
     }
     if(!active) return;
     auto status=host_.request({{"op","hooks.status"}});
     if(!status.value("available",false)) throw std::runtime_error("Install the complete updated CSS package and restart to use combat cheats.");
     for(const auto& rule:status.value("rules",Json::array())) if(rule.value("failed",false))
         throw std::runtime_error("A combat hook failed its runtime checks. Turn off all cheats before retrying.");
-    const auto player=require_player();const auto abilities=owned_abilities(player.at("pawn"));
+    const auto player=require_player();
+    // Seal checks are cheap and must run every sync: a seal change disables
+    // the matching cheat at once, before the throttled ability scan below.
+    struct SealCheat {const char* id;const char* seal;const char* ability;};
+    constexpr SealCheat seal_cheats[]={{"perfect_parry","ID_Seal_Infinite_C","GA_Parry_Handler_C"},
+        {"perfect_block","ID_Seal_Default_C","GA_ActiveBlock_C"},{"perfect_harden","ID_Seal_Stone_C","GA_Harden_Original_C"}};
+    // In-game names (ST_Core_Seals): Untarnished = guard, Infinite = parry, Vatra's = harden.
+    auto seal_label=[](const std::string& seal){
+        if(seal=="ID_Seal_Default_C") return std::string("Untarnished Seal (guard)");
+        if(seal=="ID_Seal_Infinite_C") return std::string("Infinite Seal (parry)");
+        if(seal=="ID_Seal_Stone_C") return std::string("Vatra's Seal (harden)");
+        auto s=seal; if(s.starts_with("ID_Seal_")) s=s.substr(8); if(s.ends_with("_C")) s.resize(s.size()-2); return s+" Seal"; };
+    std::set<std::string> waiting;
+    for(const auto& cheat:seal_cheats) {
+        if(applied_[cheat.id]!=true) { armed_.erase(cheat.id); continue; }
+        const auto item=host_.get(player.at("controller"),"ActiveSealItemHandle");
+        const auto definition=handle(item)?host_.get(item,"ItemDef"):item.value("ItemDef",Json());
+        const auto name=definition.value("name",std::string{});
+        const auto dot=name.rfind('.');
+        if(dot==std::string::npos || name.substr(dot+1)!=cheat.seal) {
+            // Not an error: the cheat waits, hook-free, until that seal is on.
+            combat_clear(cheat.id); waiting.insert(cheat.id);
+            const auto note=pretty(cheat.id)+" waits for the "+seal_label(cheat.seal)+".";
+            if(armed_[cheat.id]!=note) { armed_[cheat.id]=note; host_.request({{"op","invalidate"}}); }
+        } else if(armed_.erase(cheat.id)) host_.request({{"op","invalidate"}});
+    }
+    // Decoding every ability instance costs several milliseconds. Between full
+    // syncs (every 10 s) only re-decode when the list length changed.
+    {
+        size_t count=abilities_count_;
+        try { const auto asc=host_.get(player.at("pawn"),"AbilitySystemComponent"); const auto shallow=host_.request({{"op","get"},{"target",asc},{"property","ActivatableAbilities"},{"count",true}}); count=shallow.value("count",count); } catch(...) {}
+        // Re-decode only when the ability list changed or work was left over
+        // from the last pass; the old forced full pass every 10 s cost
+        // 20-40 ms per pass with 100+ abilities.
+        if(count==abilities_count_ && !combat_backlog_ && !combat_hooks_.empty()) return;
+        abilities_count_=count; combat_backlog_=false;
+    }
+    const auto abilities=owned_abilities(player.at("pawn"));
     std::set<uint64_t> live;for(const auto& ability:abilities) live.insert(ability.at("$object").get<uint64_t>());
     // Remove rules for abilities the player no longer owns, even if another
     // engine object still keeps the old instance alive.
@@ -78,15 +117,23 @@ void Menu::combat_sync() {
     }
     if(lost_cooldown) {for(const auto* field:cooldown_fields) restore(field);cooldown_seen_.clear();}
     if(applied_["no_cooldown"]==true) {
+        unsigned installed=0;
         for(const auto& ability:abilities) {
             const auto id=ability.at("$object").get<uint64_t>();
             if(cooldown_seen_.contains(id)) continue;
+            // A few new abilities per sync (one second apart) keeps each frame
+            // short; the rest follow on the next syncs.
+            if(installed>=4) { combat_backlog_=true; break; }
+            ++installed;
             std::vector<std::pair<std::string,Json>> fields;
             for(const auto* field:cooldown_fields) {
                 Json value;
                 try {value=host_.get(ability,field);}
                 catch(const std::exception& error) {
-                    if(std::string(error.what()).find("property is missing")!=std::string::npos) continue;
+                    // Abilities differ in which cooldown fields they carry; a
+                    // missing field is the normal case, not a failure.
+                    std::string text=error.what(); for(auto& c:text) c=char(std::tolower((unsigned char)c));
+                    if(text.find("property is missing")!=std::string::npos || text.find("is missing")!=std::string::npos) continue;
                     throw;
                 }
                 if(!value.is_number() || !std::isfinite(value.get<double>()))
@@ -102,18 +149,7 @@ void Menu::combat_sync() {
             cooldown_seen_.insert(id);
         }
     }
-    struct SealCheat {const char* id;const char* seal;const char* ability;};
-    constexpr SealCheat seal_cheats[]={{"perfect_parry","ID_Seal_Infinite_C","GA_Parry_Handler_C"},
-        {"perfect_block","ID_Seal_Default_C","GA_ActiveBlock_C"},{"perfect_harden","ID_Seal_Stone_C","GA_Harden_Original_C"}};
-    for(const auto& cheat:seal_cheats) if(applied_[cheat.id]==true) {
-        const auto item=host_.get(player.at("controller"),"ActiveSealItemHandle");
-        const auto definition=handle(item)?host_.get(item,"ItemDef"):item.value("ItemDef",Json());
-        const auto name=definition.value("name",std::string{});
-        const auto dot=name.rfind('.');
-        if(dot==std::string::npos || name.substr(dot+1)!=cheat.seal) {
-            combat_clear(cheat.id);applied_[cheat.id]=values_[cheat.id]=false;
-            throw std::runtime_error(std::string("Equip the matching seal before enabling ")+cheat.id+".");
-        }
+    for(const auto& cheat:seal_cheats) if(applied_[cheat.id]==true && !waiting.contains(cheat.id)) {
         bool found=false;
         for(const auto& ability:abilities) if(class_name(ability)==cheat.ability) {
             found=true;
@@ -121,7 +157,8 @@ void Menu::combat_sync() {
             if(std::string(cheat.id)=="perfect_parry") {add("IsInParryWindow",true);add("IsUnparryableAttack",false);add("IsParryingAICharacter",true);}
             else add(std::string(cheat.id)=="perfect_block"?"CanPerfectBlock":"IsInPerfectStoneForm",true);
         }
-        if(!found) throw std::runtime_error("The equipped seal's player ability is not ready.");
+        if(!found) { const auto note=pretty(cheat.id)+" waits for the seal's ability to load."; if(armed_[cheat.id]!=note) { armed_[cheat.id]=note; host_.request({{"op","invalidate"}}); } }
+        else if(armed_.erase(cheat.id)) host_.request({{"op","invalidate"}});
     }
 }
 }

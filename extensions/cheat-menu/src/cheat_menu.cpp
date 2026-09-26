@@ -27,8 +27,8 @@ bool Menu::shell_matches(const Json& tag,const std::string& target) const {
     const auto value=tag.is_object()?tag.value("TagName",std::string{}):tag.is_string()?tag.get<std::string>():std::string{};
     const auto text=normalized(value),needle=normalized(target);
     if(!needle.empty() && text.find(needle)!=std::string::npos) return true;
-    const auto token=shell_tokens_.find(target);
-    return token!=shell_tokens_.end() && !token->second.empty() && text.find(token->second)!=std::string::npos;
+    const auto token=token_for(target);
+    return !token.empty() && text.find(token)!=std::string::npos;
 }
 Menu::Menu(const CssxHost* host):host_(host),recovery_(host) {
     settings_=host_.request({{"op","state.load"}});
@@ -49,8 +49,15 @@ Menu::Menu(const CssxHost* host):host_(host),recovery_(host) {
     for(const auto* id:combat_ids) values_[id]=false;
     for(const auto* id:power_ids) values_[id]=false;
     values_["shockwave_interval"]=number("shockwave_interval",3,.5,5);
+    values_["bindings"]=settings_.value("bindings",Json::object());
+    if(!values_["bindings"].is_object() || values_["bindings"].size()>64) values_["bindings"]=Json::object();
+    const auto keys=binding_keys();
+    for(auto it=values_["bindings"].begin();it!=values_["bindings"].end();) {
+        if(!it.value().is_string() || !keys.contains(it.value().get<std::string>())) it=values_["bindings"].erase(it);else ++it;
+    }
     applied_=values_;
-    status_="Cheats start off. Edit settings, then Apply settings.";
+    binding_reset();
+    status_="Cheats start off. Edit, then Apply settings.";
 }
 void Menu::report(const std::string& text) {
     if(status_==text) return;status_=text;host_.log(text);host_.request({{"op","invalidate"}});
@@ -64,33 +71,48 @@ bool Menu::has_changes() const {return values_!=applied_;}
 void Menu::persist(const Json& values) {
     Json next=Json::object();
     for(auto it=values.begin();it!=values.end();++it) if(it.value().is_number()) next[it.key()]=it.value();
+    next["bindings"]=values.at("bindings");
     host_.request({{"op","state.save"},{"value",next}});settings_=std::move(next);
+}
+std::string Menu::pretty(const std::string& id) {
+    std::string text=id; for(auto& c:text) if(c=='_') c=' ';
+    if(!text.empty()) text[0]=char(std::toupper((unsigned char)text[0]));
+    return text;
 }
 void Menu::apply_settings() {
     if(cleanup_required_) throw std::runtime_error("Turn off all cheats to finish cleanup before applying more settings.");
     if(!has_changes()) return;
+    binding_validate();
     const auto before=applied_;
     applied_=values_;
-    try {
-        if(applied_["god"]!=before["god"]) god(applied_["god"].get<bool>());
-        if(applied_["move_fast"]!=before["move_fast"] ||
-           (applied_["move_fast"]==true && applied_["move_multiplier"]!=before["move_multiplier"]))
-            movement(applied_["move_fast"].get<bool>());
-        if(applied_["max_shell_points"]!=before["max_shell_points"]) shell_points(applied_["max_shell_points"].get<bool>());
-        if(applied_["auto_heal"]==true || applied_["infinite_resolve"]==true) require_player();
-        combat_sync();
-        power_sync();
-        persist(applied_);
-    } catch(const std::exception& e) {
-        const std::string reason=e.what();applied_=before;
-        try {god(before["god"].get<bool>());movement(before["move_fast"].get<bool>());shell_points(before["max_shell_points"].get<bool>());combat_sync();power_sync();}
-        catch(const std::exception& cleanup) {
-            cleanup_required_=true;
-            throw std::runtime_error("Apply failed: "+reason+". Cleanup needs retry: "+cleanup.what());
+    problems_.clear();
+    // Each feature applies on its own. A feature that fails reverts to its
+    // previous value and is named in the report; everything else goes live.
+    auto attempt=[&](std::initializer_list<const char*> ids,auto&& work,auto&& undo) {
+        try { work(); }
+        catch(const std::exception& e) {
+            std::string names; for(auto id:ids) { if(!names.empty()) names+=", "; names+=pretty(id); }
+            problems_.push_back(names+": "+e.what());
+            for(auto id:ids) applied_[id]=values_[id]=before.at(id);
+            try { undo(); } catch(const std::exception& u) { cleanup_required_=true; problems_.push_back(std::string("Cleanup needs retry: ")+u.what()); }
         }
-        throw std::runtime_error("Settings were not applied: "+reason);
-    }
-    heal_time_=resolve_time_=power_time_=0;reapply_pending_=false;report("Settings applied. Preferences saved; cheats remain session-only.");
+    };
+    attempt({"god"},[&]{ if(applied_["god"]!=before["god"]) god(applied_["god"].get<bool>()); },[&]{ god(before["god"].get<bool>()); });
+    attempt({"move_fast","move_multiplier"},[&]{
+        if(applied_["move_fast"]!=before["move_fast"] || (applied_["move_fast"]==true && applied_["move_multiplier"]!=before["move_multiplier"])) movement(applied_["move_fast"].get<bool>()); },
+        [&]{ movement(before["move_fast"].get<bool>()); });
+    attempt({"max_shell_points"},[&]{ if(applied_["max_shell_points"]!=before["max_shell_points"]) shell_points(applied_["max_shell_points"].get<bool>()); },[&]{ shell_points(before["max_shell_points"].get<bool>()); });
+    attempt({"auto_heal","infinite_resolve"},[&]{ if(applied_["auto_heal"]==true || applied_["infinite_resolve"]==true) require_player(); },[]{});
+    attempt({"no_cooldown","perfect_parry","perfect_block","perfect_harden"},[&]{ combat_sync(); },[&]{ combat_sync(); });
+    power_sync();
+    // Preferences are a convenience; a failed save never undoes live cheats.
+    try { persist(applied_); } catch(const std::exception& e) { problems_.push_back(std::string("Preferences were not saved: ")+e.what()); }
+    bindings_checked_=true;binding_reset();heal_time_=resolve_time_=power_time_=0;reapply_pending_=false;
+    if(problems_.empty()) { report("Settings applied."); return; }
+    std::string text=problems_.size()==1?problems_.front():"Applied with "+std::to_string(problems_.size())+" problems: ";
+    if(problems_.size()>1) for(size_t i=0;i<problems_.size();++i) text+=(i?"  |  ":"")+problems_[i];
+    report(text);
+    throw std::runtime_error(text);
 }
 void Menu::disable_all() {
     reapply_pending_=false;
@@ -100,12 +122,9 @@ void Menu::disable_all() {
     power_clear();combat_clear();god(false);movement(false);shell_points(false);
     for(const auto* id:toggle_ids) values_[id]=false;
     cleanup_required_=false;report("All cheats off. Other pending edits were kept.");
+    binding_reset();
 }
 void Menu::refresh_shells() {
-    // The shell catalog is game-global and never changes during a session, so read it once
-    // per process. It used to re-fetch a definition per shell (up to 128 bridge round-trips)
-    // on every pawn change, which is a ~40 ms hitch mid-combat. Once loaded, skip it.
-    if(!shells_.empty() && !shell_tokens_.empty()) return;
     auto settings=host_.find("/Script/Sparta.Default__SpartaGameSettings");
     auto names=host_.call(settings,"GetShellNames");
     if(!names.is_array() || names.size()>128) throw std::runtime_error("Game shell list is not available.");
@@ -115,24 +134,36 @@ void Menu::refresh_shells() {
         if(!text.empty() && key.find("loadfromsave")==std::string::npos) choices.push_back({{"id",text},{"label",text}});
     }
     if(choices.empty()) throw std::runtime_error("The game returned no selectable shells.");
-    std::map<std::string,std::string> tokens;
-    for(const auto& choice:choices) {
-        const auto name=choice.at("id").get<std::string>();
-        const auto definition=host_.call(settings,"GetShellItemDefinition",Json::array({name}));
-        const auto path=definition.is_object()?definition.value("name",std::string{}):std::string{};
-        const auto prefix=path.rfind(".ID_Shell_");
-        if(prefix!=std::string::npos) {
-            auto token=path.substr(prefix+10);if(token.ends_with("_C")) token.resize(token.size()-2);
-            tokens[name]=normalized(token);
-        }
-    }
-    shell_tokens_=std::move(tokens);
+    tokens_complete_=std::all_of(choices.begin(),choices.end(),[&](const Json& choice){ return shell_tokens_.contains(choice.at("id").get<std::string>()); });
     if(choices!=shells_) {
+        bindings_checked_=false;
         shells_=std::move(choices);bool found=false;for(const auto& option:shells_) if(option["id"]==values_["shell"]) found=true;
         if(!found) values_["shell"]=shells_[0]["id"];
         applied_["shell"]=values_["shell"];
         host_.request({{"op","invalidate"}});
     }
+}
+std::string Menu::token_for(const std::string& shell) const {
+    if(auto it=shell_tokens_.find(shell); it!=shell_tokens_.end()) return it->second;
+    std::string token;
+    try {
+        auto settings=host_.find("/Script/Sparta.Default__SpartaGameSettings");
+        const auto definition=host_.call(settings,"GetShellItemDefinition",Json::array({shell}));
+        const auto path=definition.is_object()?definition.value("name",std::string{}):std::string{};
+        const auto prefix=path.rfind(".ID_Shell_");
+        if(prefix!=std::string::npos) { token=path.substr(prefix+10);if(token.ends_with("_C")) token.resize(token.size()-2); token=normalized(token); }
+    } catch(...) { return {}; }   // not cached: retried on the next use
+    shell_tokens_[shell]=token;
+    return token;
+}
+void Menu::resolve_shell_token() {
+    auto settings=host_.find("/Script/Sparta.Default__SpartaGameSettings");
+    for(const auto& choice:shells_) {
+        const auto name=choice.at("id").get<std::string>();
+        if(name=="none" || shell_tokens_.contains(name)) continue;
+        (void)settings; token_for(name); return;
+    }
+    tokens_complete_=true;
 }
 Json Menu::model() {
     Json enabled=Json::object();const bool live=current_.is_object() && identity(current_.value("pawn",Json()));
@@ -158,9 +189,18 @@ Json Menu::model() {
     enabled["apply_settings"]=has_changes() && !pending_ && !cleanup_required_;
     enabled["discard_changes"]=has_changes() && !pending_;
     enabled["disable_all"]=!pending_ && (cleanup_required_ || !powers_.empty() || !combat_hooks_.empty() || !points_saved_.empty() || applied_["max_shell_points"]==true || !saved_.empty() || applied_["auto_heal"]==true || applied_["infinite_resolve"]==true || applied_["god"]==true || applied_["move_fast"]==true);
-    std::string summary=cleanup_required_?"Cleanup needs retry. Use Turn off all cheats.":has_changes()?"Pending edits. Apply settings or Discard changes.":"Settings are applied.";
+    unsigned edits=0;for(auto it=values_.begin();it!=values_.end();++it) if(!applied_.contains(it.key()) || applied_[it.key()]!=it.value()) ++edits;
+    // The notice strip already names pending edits and cleanup; the status
+    // line keeps to what is active and what an action last did.
+    std::string summary;
     unsigned active=0;for(const auto* id:toggle_ids) if(applied_[id]==true) ++active;
-    summary+=" Active cheats: "+std::to_string(active)+".";
+    summary+="Active cheats: "+std::to_string(active);
+    if(!armed_.empty()) summary+=" ("+std::to_string(armed_.size())+" waiting for a seal)";
+    summary+=".";
+    for(const auto& [id,note]:armed_) summary+=" "+note;
+    Json notice=nullptr;
+    if(has_changes() && !pending_ && !cleanup_required_) notice={{"text",std::to_string(edits)+(edits==1?" unapplied edit":" unapplied edits")},{"action","apply_settings"},{"label","Apply settings"}};
+    else if(cleanup_required_) notice={{"text","Cleanup needs retry"},{"action","disable_all"},{"label","Turn off all cheats"}};
     Json confirmations=Json::object();
     for(const auto& action:grants) confirmations[std::string("grant_")+action.id]="Add "+std::to_string(int(values_["grant_amount"].get<double>()))+" "+action.id+"? The game can save this change.";
     confirmations["set_harbinger"]="Set Harbinger level to "+std::to_string(int(values_["harbinger_level"].get<double>()))+"? Progression and achievements can change.";
@@ -169,7 +209,27 @@ Json Menu::model() {
     for(const auto& option:tarstones_) if(option["id"]==values_["tarstone"])
         confirmations["add_tarstone"]="Add "+option["label"].get<std::string>()+"? An owned Tarstone will keep its current level and experience.";
     confirmations["set_tarstone_level"]="Set "+values_["tarstone_scope"].get<std::string>()+" owned Tarstones to level "+std::to_string(values_["tarstone_level"].get<int>())+"? Experience, durability and stacks will be kept. The game can save this change.";
-    return {{"values",values_},{"options",{{"shell",shells_},{"pickup",pickups_},{"tarstone",tarstones_}}},{"enabled",enabled},{"status",summary+" "+status_},{"error",action_error_},{"confirmations",confirmations}};
+    if(binding_consent()) confirmations["apply_settings"]="Save these shortcuts? Assigned gameplay-shell and health-reduction shortcuts run when pressed in gameplay, without another confirmation. They do not bypass active-cheat or game-state checks.";
+    auto display_values=values_;display_values["binding_action"]=binding_action_;
+    display_values["binding_key"]=values_["bindings"].value(binding_action_,std::string("none"));
+    // Why a control is off right now, shown in place of "Unavailable".
+    Json disabled=Json::object();
+    const std::string why=!live?"Enter the world first":pending_?"Wait for the shell switch":cleanup_required_?"Turn off all cheats first":has_changes()?"Apply or discard edits first":"";
+    for(auto it=enabled.begin();it!=enabled.end();++it) if(it.value()==false) {
+        std::string reason=why;
+        const std::string id=it.key();
+        if(reason.empty() && (id=="switch_shell" || id=="add_tarstone" || id=="add_pickup" || id=="remove_pickup" || id=="set_tarstone_level")) reason="Choose an item first";
+        if(reason.empty() && (id=="genessa_clones" || id=="smert_stance" || id=="lazlo_detonation")) reason="Needs the matching shell";
+        if(reason.empty() && id=="apply_settings") reason="No unapplied edits";
+        if(reason.empty() && id=="discard_changes") reason="Nothing to discard";
+        if(reason.empty() && id=="disable_all") reason="No cheat is on";
+        if(reason.empty() && id=="cancel_recovery") reason="No check running";
+        if(reason.empty() && id=="repair_intro") reason="Check already running";
+        if(!reason.empty()) disabled[id]=reason;
+    }
+    Json out={{"values",display_values},{"options",{{"shell",shells_},{"pickup",pickups_},{"tarstone",tarstones_},{"binding_action",binding_actions()},{"binding_key",binding_key_options()}}},{"enabled",enabled},{"disabled",disabled},{"status",summary+" "+status_},{"error",action_error_},{"confirmations",confirmations}};
+    if(!notice.is_null()) out["notice"]=notice;
+    return out;
 }
 void Menu::override_value(const Json& object,const std::string& property,const Json& value) {
     const auto key=std::to_string(identity(object))+":"+property;
@@ -254,6 +314,16 @@ void Menu::apply_event(const Json& event) {
     const auto id=event.at("id").get<std::string>();
     if(id=="cancel_recovery") {recovery_.cancel();report("Intro-lock check cancelled.");return;}
     if(pending_) throw std::runtime_error("Wait for the current shell switch to finish.");
+    if(id=="binding_action") {
+        for(const auto& option:binding_actions()) if(option.at("id")==event.at("value")) {binding_action_=event.at("value").get<std::string>();return;}
+        throw std::runtime_error("Unknown shortcut action.");
+    }
+    if(id=="binding_key") {
+        const auto key=event.at("value").get<std::string>();if(!binding_keys().contains(key)) throw std::runtime_error("Unsupported shortcut key.");
+        if(key=="none") values_["bindings"].erase(binding_action_);else values_["bindings"][binding_action_]=key;
+        return;
+    }
+    if(id=="clear_bindings") {values_["bindings"]=Json::object();return;}
     if(id=="refresh_pickups") {refresh_pickups();return;}
     if(id=="refresh_tarstones") {refresh_tarstones();return;}
     if(id=="tarstone") {
@@ -271,7 +341,7 @@ void Menu::apply_event(const Json& event) {
     if(id=="repair_intro") {if(!event.value("confirmed",false)) throw std::runtime_error("Confirm the intro-lock check first.");recovery_.start();report(recovery_.message());return;}
     if(id=="disable_all") {disable_all();return;}
     if(id=="discard_changes") {values_=applied_;report("Pending settings discarded.");return;}
-    if(id=="apply_settings") {apply_settings();return;}
+    if(id=="apply_settings") {if(binding_consent() && !event.value("confirmed",false)) throw std::runtime_error("Confirm the gameplay shortcuts before applying settings.");apply_settings();return;}
     if(cleanup_required_) throw std::runtime_error("Finish cleanup with Turn off all cheats first.");
     if(values_.contains(id) && values_[id].is_boolean()) {
         values_[id]=event.at("value").get<bool>();return;
@@ -288,7 +358,14 @@ void Menu::apply_event(const Json& event) {
         if(whole && std::floor(value)!=value) throw std::runtime_error("Use a whole number for this setting.");
         if(!whole && std::abs(value*4-std::round(value*4))>1e-8) throw std::runtime_error("Use quarter-step values for this setting.");
         if(id=="shockwave_interval" && std::abs(value*2-std::round(value*2))>1e-8) throw std::runtime_error("Use half-second values for the shockwave interval.");
-        values_[id]=whole?Json(int(value)):Json(value);return;
+        values_[id]=whole?Json(int(value)):Json(value);
+        // Parameters of one-shot actions (amounts, levels, counts, the health
+        // target) are not cheats: they take effect at once and never gate the
+        // action buttons behind Apply. Only values that feed a running cheat
+        // (multiplier, heal percent/interval, shockwave interval) stay pending.
+        static const std::set<std::string> immediate={"grant_amount","harbinger_level","pickup_amount","tarstone_level","damage_percent","heal_amount","resolve_amount"};
+        if(immediate.contains(id)) { applied_[id]=values_[id]; try { persist(applied_); } catch(...) {} }
+        return;
     }
     if(id=="shell") {
         for(const auto& option:shells_) if(option["id"]==event.at("value")){values_[id]=event["value"];applied_[id]=values_[id];return;}
@@ -379,6 +456,7 @@ void Menu::shell_tick(double delta) {
 }
 void Menu::tick(double seconds) {
     if(stopped_) return;
+    binding_tick(seconds);
     const auto recovery_message=recovery_.message();recovery_.tick(seconds);
     if(recovery_.message()!=recovery_message) report(recovery_.message());
     try {shell_tick(seconds);} catch(const std::exception& e){pending_.reset();report(std::string("Shell switch stopped: ")+e.what());}
@@ -403,9 +481,21 @@ void Menu::tick(double seconds) {
             catalog_time_=0;
             try {refresh_shells();catalog_ready_=true;}
             catch(const std::exception& e) {report(std::string("Waiting for the shell catalog: ")+e.what());}
+        } else if(catalog_ready_ && !tokens_complete_) {
+            // GetShellItemDefinition costs about 10 ms per shell (it resolves an
+            // item class). Resolve one shell per tick, once per process, instead
+            // of a 100 ms hitch. Tokens only sharpen shell matching; names are
+            // already usable.
+            try {resolve_shell_token();} catch(...) {tokens_complete_=true;}
         }
         if(pending_ || cleanup_required_) return;
-        const bool live=gameplay_ready(player);
+        // gameplay_ready costs about a dozen host requests. With nothing applied
+        // and nothing pending, no periodic work needs it, so skip it: an idle
+        // Cheat Menu then costs one player request per 250 ms.
+        bool wants=reapply_pending_ || changed || !powers_.empty() || !combat_hooks_.empty();
+        for(const auto* id:{"god","move_fast","max_shell_points","auto_heal","infinite_resolve","no_cooldown","perfect_parry","perfect_block","perfect_harden"})
+            if(applied_.value(id,Json(false))==true) wants=true;
+        const bool live=wants && gameplay_ready(player);
         const auto power_delta=std::min(power_time_,.5);power_time_=0;power_tick(power_delta);
         if((reapply_pending_ || changed || combat_time_>=1.) && live) {combat_time_=0;combat_sync();}
         if(applied_["max_shell_points"]==true && (reapply_pending_ || changed || points_time_>=1.) && live) {points_time_=0;shell_points(true);}
