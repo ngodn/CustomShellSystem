@@ -210,10 +210,15 @@ int32 UCSSEvePanelCommandlet::Main(const FString& Params)
         }
     }
     if (Found.Num()!=5 || Pinned==0 || Pinned==Positions.Num()) return Fail(TEXT("Incomplete garment or anchors"));
+    float ContactCm=.3f;
+    FParse::Value(*Params,TEXT("ContactCm="),ContactCm);
+    if (!FMath::IsFinite(ContactCm) || ContactCm<.1f || ContactCm>1.f)
+        return Fail(TEXT("ContactCm must be within 0.1..1 cm"));
+    UE_LOG(LogCSSEvePanel,Display,TEXT("Collision thickness %.3f cm"),ContactCm);
     UChaosClothConfig* Config=NewObject<UChaosClothConfig>();
     UChaosClothSharedSimConfig* Shared=NewObject<UChaosClothSharedSimConfig>();
     Config->BendingStiffnessWeighted={.12f,.12f}; Config->AnimDriveStiffness={.05f,.05f};
-    Config->DampingCoefficient=.15f; Config->CollisionThickness=.3f; Config->FrictionCoefficient=.3f;
+    Config->DampingCoefficient=.15f; Config->CollisionThickness=ContactCm; Config->FrictionCoefficient=.3f;
     Config->bUseSelfCollisions=true; Config->SelfCollisionThickness=.35f;
     ::Chaos::FClothingSimulationConfig SimulationConfig;
     SimulationConfig.Initialize(Config,Shared);
