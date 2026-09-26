@@ -90,3 +90,11 @@ The lower-garment transfer trial changes only 2,815 garment weight rows and pres
 At the worst sample the nearest rest body face still produces about 96% pelvis weight, while the intersecting animated surface is thigh-driven. Nearest-rest-surface transfer therefore does not establish correct skirt following. Do not repeat it as a generic fix for this hem. Keep the no-arm contact isolation, but include arm contact again before final acceptance. Reports and renders: `work/eve26/garment-transfer/`; script: `tools/eve-fit/prepare_garment_transfer.py`.
 
 Blender documents nearest-face interpolation as a transfer mapping, not a fitting guarantee: [Data Transfer Modifier](https://docs.blender.org/manual/en/latest/modeling/modifiers/modify/data_transfer.html).
+
+### Compare actual solver settings, not asset names
+
+Freshly authored candidates used one substep while the older reference used four. Always compare native per-frame iterations/substeps, particle counts and collision settings before interpreting timing. The four-substep Stop run still clips and costs 11.49 ms; the earlier cross-setting timings cannot isolate a weight/backstop benefit. Evidence: `panel-stop4-*`.
+
+Backstop direction is relative to the animated cloth, not automatically to a moving body surface. Particle 329 is outside its reconstructed backstop but inside the thigh. More allowed movement or more substeps did not fix that relationship. Keep reconstructed math distinct from solver readback.
+
+Inspect both simulation edges and attachment coefficients before calling a trim spike a mapping-only bug. An edge grew 0.245→2.095 cm, and an attached fur record extrapolates beyond its triangle. Clamping the coefficients would lose exact rest reconstruction. Fix the underlying surface/contact problem and then validate any attachment change in the same pose.

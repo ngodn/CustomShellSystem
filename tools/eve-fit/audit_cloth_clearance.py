@@ -171,7 +171,8 @@ if a.support_detail:
     rest_proxy = np.asarray(proxy['positions'])
     skin_proxy = skin(rest_proxy, proxy['weights'])
     alpha = np.clip((proxy['anchor_top_cm']-20-rest_proxy[:, 2])/12, 0, 1)
-    limits = 18*alpha**2*(3-2*alpha)
+    limits = np.asarray(mapping['weight_maps']['MaxDistance']) if 'weight_maps' in mapping else 18*alpha**2*(3-2*alpha)
+    assert limits.shape == alpha.shape and np.isfinite(limits).all()
     for vertex in sorted(support_ids):
         record = {'vertex': vertex, 'rest_cm': rest_proxy[vertex].tolist(),
                   'max_distance_cm': float(limits[vertex]),

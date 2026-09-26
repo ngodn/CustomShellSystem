@@ -6,6 +6,9 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Latest backstop audit: worst particle is outside its reconstructed backstop sphere but inside a crossing thigh. `panel-stop-direction.json` is offline reconstruction, not solver-buffer readback. More substeps still fail visually (`panel-stop4-*`). Current next step is regional collision surface coverage, not more scalar tuning.
+- Correct timing comparison: CA_Fit used 4 substeps; Follow/Near/Stop/Room used 1. Stop normalized to 4 costs 11.49 ms in one editor run and still clips. Do not claim the earlier 17.39→2.7 ms change isolates a backstop/weight benefit.
+
 - Current follow-up rejects nearest-body garment transfer and 6 cm backstop movement allowance. `garment-transfer/comparison.json` and `panel-room-*` document the regressions. Before another parameter trial, inspect animated backstop normal direction and failing render support attachments. The 3 cm CA_Stop comparison is still unaccepted.
 
 - Latest: `panel-stop-*` completes the interrupted garment-follow/backstop trial. Radius 30, offset 0, movement limit 3 cm improve the visible envelope but leave hem clipping and side-trim distortion. Not accepted. Animation-only frame 68 already has -4.05 cm minimum signed fabric distance; investigate garment deformation before more physics tuning. Read the current goal checkpoint before older collider proposals.
@@ -56,6 +59,8 @@ Paths in this table are relative to the workspace root unless linked.
 
 | Artifact | Finding or purpose |
 | --- | --- |
+| `CustomShellSystem/tools/eve-fit/audit_backstop_direction.py`, `work/eve26/panel-stop-direction.json` | Reconstructed sphere clearance and animated-normal comparison at clipped particles |
+| `CustomShellSystem/work/eve26/panel-stop-support68.json`, `panel-stop-attachments68.json`, `panel-stop4-*` | Saved movement-map support audit, attachment amplification evidence, rejected normalized four-substep trial |
 | `CustomShellSystem/tools/eve-fit/prepare_follow_proxy.py`, `work/eve26/panel-follow-proxy.json` | Explicit source-garment weight trial, 289 changed proxy rows, unchanged geometry/topology |
 | `CustomShellSystem/work/eve26/panel-stop-comparison.json`, `panel-stop-clearance68.json`, `panel-stop-views68/`, `panel-stop-protected.json` | Completed backstop trial, inspected residual fit defects, original assets unchanged |
 | `CustomShellSystem/tools/eve-fit/audit_rigid_regions.py`, `work/eve26/rigid-regions.json` | Full recorded pose/morph check of dominant-bone approximation |
