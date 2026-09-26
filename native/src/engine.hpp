@@ -122,6 +122,8 @@ class InventoryUI {
     struct NativeCell { WeakObject holder; std::vector<NativeItem> kinds; int shown=-1; };
     struct NativeStack { WeakObject box; std::deque<NativeCell> cells; size_t used=0; };   // deque: taken items keep their address
     void native_slot(NativeKind kind,RC::Unreal::UObject* slot);
+    void native_setup(NativeItem& item);
+    void native_invalidate();
     WeakObject design_, left_root_, right_root_, center_root_, list_scroll_, strip_scroll_, details_, panel_scroll_, panel_size_, status_text_, strip_previous_, strip_next_, strip_previous_glyph_, strip_next_glyph_;
     NativeStack tab_items_, list_, panel_head_, panel_, actions_, footer_, camera_bar_;   // panel_head_: fixed, above the scroll
     double design_w_=0, design_scale_=0;

@@ -382,16 +382,6 @@ InventoryUI::NativeItem& InventoryUI::native_take(NativeStack& stack,NativeKind 
         widget=inventory_create(pc,native_class(native_row_class)); slot=native_add(box,widget);
         item.text_block=native_part(widget,L"Button_Text");
         item.hit=native_button(widget,L"MyNavigationButton");
-        // Change Shade's names are short; outfit names are not. Use the row's full glow width
-        // and end a name that still does not fit with an ellipsis instead of running on.
-        invoke(native_part(widget,L"SizeBox_Name"),L"SetWidthOverride",L"InWidthOverride",620.f);
-        // Its overlay slot fills, which would stretch the box past its width; left-aligned,
-        // the width is what the name gets (fill_row narrows it for a state word).
-        invoke(inventory_object(native_part(widget,L"SizeBox_Name"),L"Slot"),L"SetHorizontalAlignment",L"InHorizontalAlignment",uint8_t{1});
-        invoke(item.text_block.Get(),L"SetTextOverflowPolicy",L"InOverflowPolicy",uint8_t{1});
-        // Slate only draws the ellipsis on left- or right-justified text; the row centres its
-        // name (which already sits left in its box), so justify left.
-        invoke(item.text_block.Get(),L"SetJustification",L"InJustification",uint8_t{0});
         break;
     case NativeKind::header:
         widget=inventory_create(pc,native_class(native_header_class)); slot=native_add(box,widget);
@@ -403,20 +393,13 @@ InventoryUI::NativeItem& InventoryUI::native_take(NativeStack& stack,NativeKind 
         item.text_block=native_part(widget,L"Text_Option");
         item.value_block=native_part(widget,L"Text_Option_Value");
         item.hit=native_button(widget,L"WBP_NavButton_Main");
-        if(auto* name=inventory_object(widget,L"SizeBox_OptionName")) invoke(name,L"SetWidthOverride",L"InWidthOverride",300.f);
         if(slider) {
             item.hit_left=native_part(native_part(widget,L"WBP_ArrowButton_L"),L"ArrowButton");
             item.hit_right=native_part(native_part(widget,L"WBP_ArrowButton_R"),L"ArrowButton");
             item.extra=native_part(widget,L"WBP_GenericBar");
-            if(auto* arrows=inventory_object(widget,L"SizeBox_SliderAndArrows")) invoke(arrows,L"SetWidthOverride",L"InWidthOverride",430.f);
         } else {
-            // Construct sizes the value box from OptionWidthOverride, which only the
-            // settings logic object sets; without it the value and arrows are zero-width.
             item.hit_left=native_part(widget,L"Button_Left");
             item.hit_right=native_part(widget,L"Button_Right");
-            invoke(native_part(widget,L"SizeBox_OptionValueAndArrows"),L"SetWidthOverride",L"InWidthOverride",560.f);
-            invoke(native_part(widget,L"SizeBox_OptionValue"),L"SetWidthOverride",L"InWidthOverride",440.f);
-            invoke(native_part(widget,L"Spacer_57"),L"SetSize",L"InSize",Vec2{24,0});
         }
         break;
     }
@@ -488,8 +471,65 @@ InventoryUI::NativeItem& InventoryUI::native_take(NativeStack& stack,NativeKind 
     }
     item.widget=widget;
     native_slot(kind,slot);
+    native_setup(item);
     cell.kinds.push_back(std::move(item));
     return cell.kinds.back();
+}
+// Layout the game's blueprints reset in their Construct, which runs again every time the
+// menu reopens: applied at creation and again by native_invalidate.
+void InventoryUI::native_setup(NativeItem& item) {
+    auto* widget=item.widget.Get();
+    if(!widget) return;
+    switch(item.kind) {
+    case NativeKind::row:
+        // Change Shade's names are short; outfit names are not. Its overlay slot fills, which
+        // would stretch the box past its width; left-aligned, the width is what the name gets.
+        invoke(native_part(widget,L"SizeBox_Name"),L"SetWidthOverride",L"InWidthOverride",620.f);
+        invoke(inventory_object(native_part(widget,L"SizeBox_Name"),L"Slot"),L"SetHorizontalAlignment",L"InHorizontalAlignment",uint8_t{1});
+        invoke(item.text_block.Get(),L"SetTextOverflowPolicy",L"InOverflowPolicy",uint8_t{1});
+        // Slate only draws the ellipsis on left- or right-justified text; the row centres its
+        // name (which already sits left in its box), so justify left.
+        invoke(item.text_block.Get(),L"SetJustification",L"InJustification",uint8_t{0});
+        break;
+    case NativeKind::option: case NativeKind::slider:
+        if(auto* name=inventory_object(widget,L"SizeBox_OptionName")) invoke(name,L"SetWidthOverride",L"InWidthOverride",300.f);
+        if(item.kind==NativeKind::slider) {
+            if(auto* arrows=inventory_object(widget,L"SizeBox_SliderAndArrows")) invoke(arrows,L"SetWidthOverride",L"InWidthOverride",430.f);
+        } else {
+            // Construct sizes the value box from OptionWidthOverride, which only the
+            // settings logic object sets; without it the value and arrows are zero-width.
+            invoke(native_part(widget,L"SizeBox_OptionValueAndArrows"),L"SetWidthOverride",L"InWidthOverride",560.f);
+            invoke(native_part(widget,L"SizeBox_OptionValue"),L"SetWidthOverride",L"InWidthOverride",440.f);
+            invoke(native_part(widget,L"Spacer_57"),L"SetSize",L"InSize",Vec2{24,0});
+        }
+        break;
+    default: break;
+    }
+}
+// The menu reopened: its blueprints ran Construct again and put back their designer
+// text, badges, highlights and box sizes. Forget what the page believes is on screen so
+// the next build writes all of it, and redo the layout Construct undid.
+void InventoryUI::native_invalidate() {
+    for(auto* stack:{&tab_items_,&list_,&panel_head_,&panel_,&actions_,&footer_,&camera_bar_})
+        for(auto& cell:stack->cells) {
+            cell.shown=-1;
+            for(auto& item:cell.kinds) {
+                item.text.clear(); item.value.clear(); item.glyph.clear();
+                item.selected=item.badge=item.shown=item.enabled=item.icon_shown=-1;
+                item.icon=nullptr; item.chip={-1,-1,-1,-1}; item.fill=-2.f; item.name_width=-1.f;
+                native_setup(item);
+            }
+        }
+    detail_title_.clear(); detail_sub_.clear(); detail_body_.clear(); status_shown_.clear();
+    detail_icon_=reinterpret_cast<const void*>(1);
+    if(auto* details=details_.Get()) {
+        invoke(details,L"Show");
+        invoke(native_part(details,L"SizeBox_Main"),L"SetWidthOverride",L"InWidthOverride",945.f);
+        invoke(details,L"CollapseDetails");
+        if(auto* sample=inventory_object(details,L"DetailsPrompt")) native_visibility(sample,collapsed);
+    }
+    panel_context_.clear(); panel_revealed_=nullptr; revealed_row_=-1; shown_section_=-1;
+    panel_fit_pending_=true;
 }
 // Slot padding per kind, inside the cell.
 void InventoryUI::native_slot(NativeKind kind,UObject* slot) {

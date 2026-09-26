@@ -1614,7 +1614,11 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     UObject* shown=nullptr;
     if(open) { Call selected(switcher,L"GetActiveWidget",1); selected.run(); shown=selected.get<UObject*>(); }
     active_=open && shown==page_.Get();
-    if(active_ && !was_active_) { appearance.player(engine); bind_inputs(); camera_start(); dirty_=enter_transition_=true; closing_=false; for(auto& b:bindings_) { b.down=true; b.repeat=now+400; } }
+    if(active_ && !was_active_) {
+        appearance.player(engine); bind_inputs(); camera_start(); dirty_=enter_transition_=true; closing_=false;
+        for(auto& b:bindings_) { b.down=true; b.repeat=now+400; }
+        native_invalidate();   // the reopened menu reconstructed every widget on the page
+    }
     if(!active_ && was_active_) { camera_stop(); closing_=false; transition_started_=0; }
     if(active_) camera_bind_state();
     was_active_=active_;
