@@ -66,6 +66,14 @@ std::unordered_map<ReflKey,FieldEntry,ReflHash,ReflEq> g_field_cache;
 struct CallEntry { OwnerGuard owner; UFunction* function=nullptr; std::vector<FProperty*> params; };
 std::unordered_map<ReflKey,CallEntry,ReflHash,ReflEq> g_call_cache;
 }
+UObject* find_cached(const wchar_t* path) {
+    static std::unordered_map<std::wstring,OwnerGuard> cache;
+    if(auto it=cache.find(path); it!=cache.end() && it->second.alive())
+        return static_cast<UObject*>(const_cast<void*>(it->second.ptr));
+    auto* object=find(path);
+    OwnerGuard guard; guard.capture(object); cache.insert_or_assign(path,guard);
+    return object;
+}
 // Cached property lookup: the FProperty for (object's class, name), or nullptr if absent.
 static FProperty* resolve_field(UObject* object,const wchar_t* name) {
     if(!object) return nullptr;
@@ -263,7 +271,7 @@ PlayerContext player_context(void* engine) {
     if(!viewport) return out;
     out.world=object_of(viewport,L"World");
     if(!out.world) return out;
-    Call pc(find(L"/Script/Engine.Default__GameplayStatics"),L"GetPlayerController",3);
+    Call pc(find_cached(L"/Script/Engine.Default__GameplayStatics"),L"GetPlayerController",3);
     pc.set(L"WorldContextObject",out.world); pc.set(L"PlayerIndex",int32_t{0}); pc.run();
     out.pc=pc.get<UObject*>();
     if(out.pc && WeakObject(out.pc).Get()!=out.pc) out.pc=nullptr;

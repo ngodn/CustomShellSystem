@@ -103,9 +103,12 @@ bool Core::game_menu_open() const {
 bool Core::hotkey_pressed(const std::vector<std::string>& keys,size_t slot) {
     if(!player_.pc || keys.empty()) return false;
     bool down=true;
+    static std::unordered_map<std::string,FName> names;   // game thread only
+    auto* key_struct=find_cached(L"/Script/InputCore.Key");
     for(const auto& name:keys) {
+        auto it=names.find(name); if(it==names.end()) it=names.emplace(name,FName(wide(name).c_str())).first;
         Call call(player_.pc,L"IsInputKeyDown",2); auto* p=call.param(L"Key");
-        member(call.data(p),p->GetElementSize(),find(L"/Script/InputCore.Key"),L"KeyName",FName(wide(name).c_str()));
+        member(call.data(p),p->GetElementSize(),key_struct,L"KeyName",it->second);
         call.run(); if(!call.get<bool>()) { down=false; break; }
     }
     const bool fired=down && !hotkey_down_[slot];

@@ -27,6 +27,11 @@ class HudService {
     std::function<uint64_t(engine::UObject*)> minter_;
     bool minimap_warned_=false;
     uint64_t resolve_failures_=0;
+    uint64_t hud_check_after_=0,viewport_after_=0;   // steady_clock ms deadlines
+    const void* hud_pc_=nullptr;                      // controller the HUD was verified against
+    double viewport_w_=0,viewport_h_=0;
+    const void* verified_pawn_=nullptr;               // pawn whose direct transform read was cross-checked
+    bool direct_transform_=true;                      // off for good if a cross-check ever disagrees
     void drop_scene();
     Layer* find_layer(uint64_t id);
     engine::UObject* parent_canvas(uint64_t parent);

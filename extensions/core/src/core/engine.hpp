@@ -24,6 +24,10 @@ std::string narrow(const std::wstring&);
 // Existing object by full path, or throw.
 UObject* find(const wchar_t* path);
 UObject* find_optional(const wchar_t* path);
+// find() for permanent native objects (class defaults, script structs) used on hot paths.
+// Revalidated read-only on every use (object-array index + serial, like the field cache);
+// never builds a WeakObject, so it cannot repeat the path-cache crash. Game thread only.
+UObject* find_cached(const wchar_t* path);
 void set_find_cache(bool enabled);   // kept for the core switch log; no cache exists
 // Load an asset by path (blocking on first use), cached by weak handle.
 UObject* load(const std::string& path);

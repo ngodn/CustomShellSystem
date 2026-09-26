@@ -1,4 +1,5 @@
 #include "hud.hpp"
+#include <chrono>
 #include <cmath>
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/FString.hpp>
@@ -46,12 +47,17 @@ void HudService::update(const PlayerContext& player,bool in_menu,CssxFrame& fram
         pc_=player.pc;
         // The live HUD comes from the controller's UI handler component: one
         // property read per frame, no object-array search.
+        // Re-verify it (two reads plus a reflected IsInViewport) at 4 Hz, or at once when the
+        // controller changes or the cached widget dies; in between, the cached widget stands.
         UObject* hud=nullptr;
-        if(player.pc) {
+        const uint64_t now=uint64_t(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
+        if(player.pc && player.pc==hud_pc_ && now<hud_check_after_) hud=hud_.Get();
+        else if(player.pc) {
+            hud_check_after_=now+250; hud_pc_=player.pc;
             auto* handler=object_of(player.pc,L"User Interface Handler Component");
             hud=object_of(handler,L"WBP_Player_HUD");
             if(hud) { Call shown(hud,L"IsInViewport",1); shown.run(); if(!shown.get<bool>()) hud=nullptr; }
-        }
+        } else hud_pc_=nullptr;
         const bool have_scene=overlay_.Get() && hud_.Get() && hud_.Get()==hud;
         if(!have_scene) {
             drop_scene();
@@ -73,10 +79,35 @@ void HudService::update(const PlayerContext& player,bool in_menu,CssxFrame& fram
             }
         }
         if(player.pawn) {
-            Call loc(player.pawn,L"K2_GetActorLocation",1); loc.run();
-            const auto p=loc.get<FVectorD>(); frame.player_x=p.x; frame.player_y=p.y; frame.player_z=p.z;
-            Call rot(player.pawn,L"K2_GetActorRotation",1); rot.run();
-            frame.player_yaw=normalize_deg(rot.get<FRotatorD>().yaw);
+            // An unattached root component's relative transform is the actor's world transform,
+            // so two reflected field reads replace two ProcessEvent calls per frame. Attached
+            // roots (mounts, grabs, cutscene attachments) use the reflected calls. Each new pawn
+            // is cross-checked once against the reflected calls; a mismatch disables the shortcut.
+            bool direct=false;
+            if(direct_transform_) {
+                UObject* root=object_of(player.pawn,L"RootComponent");
+                if(root && !object_of(root,L"AttachParent")) {
+                    const auto p=read<FVectorD>(root,L"RelativeLocation"); const auto r=read<FRotatorD>(root,L"RelativeRotation");
+                    frame.player_x=p.x; frame.player_y=p.y; frame.player_z=p.z; frame.player_yaw=normalize_deg(r.yaw);
+                    direct=true;
+                    if(player.pawn!=verified_pawn_) {
+                        verified_pawn_=player.pawn;
+                        Call loc(player.pawn,L"K2_GetActorLocation",1); loc.run(); const auto q=loc.get<FVectorD>();
+                        Call rot(player.pawn,L"K2_GetActorRotation",1); rot.run();
+                        const double dyaw=std::abs(normalize_deg(rot.get<FRotatorD>().yaw)-frame.player_yaw);
+                        if(std::abs(q.x-p.x)>1 || std::abs(q.y-p.y)>1 || std::abs(q.z-p.z)>1 || std::min(dyaw,360-dyaw)>.5) {
+                            direct_transform_=false; direct=false;
+                            if(log_) log_("HUD: direct actor transform disagreed with the reflected call; using reflected calls");
+                        }
+                    }
+                }
+            }
+            if(!direct) {
+                Call loc(player.pawn,L"K2_GetActorLocation",1); loc.run();
+                const auto p=loc.get<FVectorD>(); frame.player_x=p.x; frame.player_y=p.y; frame.player_z=p.z;
+                Call rot(player.pawn,L"K2_GetActorRotation",1); rot.run();
+                frame.player_yaw=normalize_deg(rot.get<FRotatorD>().yaw);
+            }
             if(UObject* movement=object_of(player.pawn,L"CharacterMovement")) {
                 const auto v=read<std::array<double,3>>(movement,L"Velocity");
                 frame.velocity_x=v[0]; frame.velocity_y=v[1]; frame.velocity_z=v[2];
@@ -88,11 +119,14 @@ void HudService::update(const PlayerContext& player,bool in_menu,CssxFrame& fram
                 frame.camera_yaw=normalize_deg(cam.get<FRotatorD>().yaw);
             }
         }
-        if(player.world) {
-            Call vp(find(L"/Script/UMG.Default__WidgetLayoutLibrary"),L"GetViewportSize",2);
+        if(player.world && (now>=viewport_after_ || viewport_w_<=0)) {
+            // The viewport only changes on a window resize; 2 Hz is plenty.
+            viewport_after_=now+500;
+            Call vp(find_cached(L"/Script/UMG.Default__WidgetLayoutLibrary"),L"GetViewportSize",2);
             vp.set(L"WorldContextObject",player.world); vp.run();
-            const auto size=vp.get<Vec2>(); frame.viewport_w=size.x; frame.viewport_h=size.y;
+            const auto size=vp.get<Vec2>(); viewport_w_=size.x; viewport_h_=size.y;
         }
+        if(player.world) { frame.viewport_w=viewport_w_; frame.viewport_h=viewport_h_; }
         frame.world_ready=(overlay_.Get() && player.pawn)?1:0;
         frame.in_menu=in_menu?1:0;
         if(minter_) { frame.pawn=player.pawn?minter_(player.pawn):0; frame.controller=player.pc?minter_(player.pc):0; }

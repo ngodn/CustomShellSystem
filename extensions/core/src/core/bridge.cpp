@@ -123,7 +123,15 @@ Json Bridge::handle(UObject* object) {
     reverse_[object]=id;
     return {{"$object",id},{"name",narrow(object->GetFullName())},{"class",narrow(object->GetClassPrivate()->GetFullName())}};
 }
-uint64_t Bridge::track(UObject* object) { auto h=handle(object); return h.is_object()?h.value("$object",uint64_t{0}):0; }
+uint64_t Bridge::track(UObject* object) {
+    // The HUD frame asks for the pawn and controller ids every frame. An already-tracked,
+    // still-live object needs only its id: skip handle(), which builds the object's and the
+    // class's full path strings. A dead or replaced object falls through to handle() as before.
+    if(!object) return 0;
+    if(auto found=reverse_.find(object);found!=reverse_.end())
+        if(auto it=objects_.find(found->second);it!=objects_.end() && it->second.weak.Get()==object) return found->second;
+    auto h=handle(object); return h.is_object()?h.value("$object",uint64_t{0}):0;
+}
 UObject* Bridge::resolve(const Json& value) {
     if(value.is_null()) return nullptr;
     if(!value.is_object() || !value.contains("$object")) throw std::runtime_error("Expected an object handle");
