@@ -281,6 +281,32 @@ The separate AnimDynamics experiment and remaining native adapter are tracked in
 Packages written before this said `"type": "scalar"` and meant a strength, so that reads
 as `intensity`, not as the new generic `scalar`. Nothing published changes meaning.
 
+### Physics presets
+
+Presets tune CSS's own motion, so CSS ships the built-in set (1.0.0-beta.5):
+Firm, Natural, Bouncy, Soft / Saggy and OMG! Earthquake! for a body part, and
+Firm, Natural, Silky, Heavy and Floaty for a `positional_hair` rig. A body rig
+gets the values for the region its `regions` bones name (`brust*` chest,
+`butt*` glute, `thigh*` thigh, `belly`); a spring gets them from its `nodes`.
+Only a part that declares neither falls back to words in its id or name.
+AnimDynamics controls get no built-ins.
+
+A spring, rig or dynamics control may add its own presets. They follow the
+built-ins in the part's Preset selector:
+
+```json
+"presets": [
+  { "id": "studio", "name": "Studio", "description": "Tuned for this mesh", "value": [3, 0.9, 0.5] }
+]
+```
+
+`value` is the control's first three channels in its own units (a body rig's
+frequency, damping ratio and motion amount; a spring's frequency, damping ratio
+and travel) and must sit inside the control's ranges. Up to sixteen presets;
+`name` up to 48 characters, `description` up to 160 and optional. An `id` must be
+unique on the control and may not reuse a built-in id. Applying a preset leaves
+a rig's motion switch alone.
+
 ### AnimDynamics controls (experimental)
 
 The native branch now accepts `kind: "dynamics"` for UE's built-in AnimDynamics

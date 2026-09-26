@@ -55,6 +55,9 @@ height and restores it when leaving the appearance. It does not resize the
 body, move the gameplay capsule or alter preview framing. This requires the
 Next-Gen grounding runtime; older CSS builds ignore the field. Include it in
 the source catalog before packaging, then verify visual contact in game.
+Players can override it per variant with Customize > Placement > Ground height
+(1.0.0-beta.5); the declared value is where that setting starts and what its
+reset returns to.
 
 The converter records original/tool hashes, relocated paths, export identities and round-trip checks in `conversion.json`. `runtime_tested: false` means exactly that. In-game testing is recorded separately; an offline build does not mark itself gameplay-tested.
 
