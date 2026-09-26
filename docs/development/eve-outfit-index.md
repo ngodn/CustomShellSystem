@@ -33,6 +33,8 @@ Paths in this table are relative to the workspace root unless linked.
 
 | Artifact | Finding or purpose |
 | --- | --- |
+| `CustomShellSystem/tools/eve-fit/audit_capsule_coverage.py`, `work/eve26/capsule-motion-bands.json` | Original primitive recipe undercovers even lower hip/thigh bands across seven poses and combined morph; arm-dominated points excluded |
+| `CustomShellSystem/tools/eve-fit/fit_secondary_spheres.py`, `work/eve26/secondary-coverage.json` | Four rest-inscribed secondary-bone spheres barely improve coverage and slightly worsen one garment-overlap case; not imported or accepted |
 | `CustomShellSystem/tools/eve-fit/trace_panel_contact.py`, `work/eve26/panel-contact-history.json` | Frame-end dynamic contact history and six-ray checks establish deep late-sprint penetration; no internal solver readback |
 | `CustomShellSystem/work/eve26/panel-step16-contact.json`, `panel-step16-clearance.json`, `panel-step16-views/` | More temporal sampling reduces deep particle penetration but costs too much and leaves visible surface clipping; side/rear inspected |
 | `CustomShellSystem/work/eve26/panel-support-trace.json` | 55 supports traced at frame 64; dynamic support vertices clear collider within 1 mm, one fixed support penetrates; radius checks do not justify global loosening |
