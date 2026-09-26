@@ -26,6 +26,16 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 - Review actual game screenshots and short movement recordings. Offline renders support diagnosis but do not replace game verification.
 - Package under `/Game/CSS/`, use short readable paths, retain source provenance, and commit by coherent change. Do not publish until the candidate has passed these checks.
 
+## Latest checkpoint
+
+F11's local hip repair now passes fresh export verification through the corrected weight cleanup. `holiday-base-clean.mesh.json` and `holiday-hip-clean.mesh.json` have identical influences; baseline geometry matches the earlier baseline exactly. The candidate preserves body points and all 22 morphs. `hip-source-verified.json` records the measured tolerances. These are private partial-outfit exports, not installed assets.
+
+The repaired export was combined with the existing skirt-bone trial in `holiday-hip-bones.mesh.json`: 4,963 garment vertices use the existing 12 skirt bones, with zero discarded weight. `hip-bones-views/` front, combined hip/waist front and side renders were reviewed. The previous visible hip patch is gone; the trim remains attached under the synthetic four-degree bone bends. Nine local morph grid checks in `hip-clean-morphs.json` also pass. This is not a simulated motion/collision test or a full-body clipping guarantee.
+
+Next validate actual skirt motion while preserving the current secondary animation graph, then complete the whole-outfit assembly and game fitting review. Hair, hat, earrings and footwear remain outside these partial exports and must not be forgotten. Do not replace the source graph with a newly generated graph that omits Gemini's body/hair physics or accepted idle behavior. Keep independent body-morph support; the panel-cloth single-active-morph limitation remains unresolved.
+
+The user's question about time spent on Holiday was explicitly curiosity, not a priority change. Keep the existing fitting and clothing-motion plan, avoid reopening settled experiments, and retain all outfit/customization requirements.
+
 ## Current evidence
 
 | Capability | Finding | Evidence |

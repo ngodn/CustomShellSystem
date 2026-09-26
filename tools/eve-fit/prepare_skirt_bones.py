@@ -2,12 +2,18 @@
 import hashlib
 import json
 import math
+import argparse
 from pathlib import Path
 
 WORK = Path(__file__).resolve().parents[2] / 'work/eve26'
-source = WORK / 'holiday.mesh.json'
-output = WORK / 'holiday-bones.mesh.json'
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--source', type=Path, default=WORK/'holiday.mesh.json')
+parser.add_argument('--output', type=Path, default=WORK/'holiday-bones.mesh.json')
+parser.add_argument('--report', type=Path, default=WORK/'skirt-bones.json')
+args = parser.parse_args()
+source, output = args.source, args.output
 assert not output.exists(), output
+assert not args.report.exists(), args.report
 data = json.loads(source.read_text())
 names = {b['name']: i for i, b in enumerate(data['bones'])}
 slots = {
@@ -23,6 +29,7 @@ for vertex, bone, weight in data['influences']:
 protected = {k: hashlib.sha256(json.dumps(data[k], separators=(',', ':')).encode()).hexdigest()
              for k in data if k not in ('influences', 'mesh_package')}
 changes = {}
+max_dropped = 0.
 used = set()
 directions = ['L', 'B', 'R', 'F']
 for index in sorted(vertices):
@@ -50,6 +57,7 @@ for index in sorted(vertices):
     ordered = sorted(row.items(), key=lambda item: (-item[1], item[0]))
     dropped = sum(weight for _, weight in ordered[8:])
     assert dropped < .015, (index, dropped)
+    max_dropped = max(max_dropped, dropped)
     total = sum(weight for _, weight in ordered[:8])
     changes[index] = {bone: weight/total for bone, weight in ordered[:8]}
     used.update(names_inv for names_inv in changes[index] if data['bones'][names_inv]['name'].startswith('CSS_Cloth_Skirt'))
@@ -62,9 +70,10 @@ assert all(hashlib.sha256(json.dumps(data[k], separators=(',', ':')).encode()).h
 output.write_text(json.dumps(data, separators=(',', ':')))
 report = {
     'changed_vertices': len(changes), 'garment_vertices': len(vertices),
+    'max_discarded_weight': max_dropped,
     'skirt_bones': [data['bones'][i]['name'] for i in sorted(used)],
     'protected_fields_sha256': protected, 'source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
     'scope': 'Weight-only export trial. Body, geometry, UVs, skeleton and all 22 morphs unchanged. No dynamics or visual acceptance.',
 }
-(WORK / 'skirt-bones.json').write_text(json.dumps(report, indent=2)+'\n')
+args.report.write_text(json.dumps(report, indent=2)+'\n')
 print(json.dumps({k: report[k] for k in ('changed_vertices', 'garment_vertices', 'skirt_bones')}, indent=2))
