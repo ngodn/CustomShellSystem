@@ -195,8 +195,8 @@ def build(tag: str, output: Path) -> list[Path]:
             else:
                 write_zip(tv, tfiles, dict(common, version=tvers, product='CSSX Traverse', requires='CSSX ' + version,
                                            manifest_name='eins0fx.traverse/release.json'), stamp)
-            for name in ('main.dll', 'cssx_core.dll', 'cheat_menu.dll'):
-                shutil.copy2(out / name, fwdir / f'{name}.{version}.built')
+            for name, built in (('main.dll', version), ('cssx_core.dll', version), ('cheat_menu.dll', cmvers)):
+                shutil.copy2(out / name, fwdir / f'{name}.{built}.built')
             return [fw, cm, pf, tv]
         finally:
             subprocess.run(['git', 'worktree', 'remove', '--force', str(tree)], cwd=REPO, check=False, capture_output=True)
