@@ -6,6 +6,9 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Native preparation now uses `export_skin_regions.py`, isolated SK_CPelv/SK_CThighL/SK_CThighR imports and the guarded `-Mesh` level-set probe. Generation metadata roots all three at pelvis, with 16/10/10 used bones. Smaller volumes are a deformation-partition experiment, not a proven root-motion repair. Fresh native distance and cloth checks remain required.
+- Right-thigh import initially rejected microscopic cut slivers. `region-right-fix/receipt.json` records three welded vertices, maximum 0.00093443 cm displacement, six collapsed faces removed and closed edge incidence preserved. `region-right-import2.log` is the corrected successful import. Native area preflight is now in the exporter.
+
 - Current: closed source-weighted pelvis/thigh regions (`skin-regions2/`) preserve source provenance and pass sampled geometry coverage across 62 cases. Three residual garment contact candidates lie within 0.048 cm of the reference body in sprint60. Native deformation, cloth behavior, morph support and cost remain untested. Read the latest goal checkpoint before native authoring.
 - Concave/folded surface nearest-normal signs can falsely label embedded garment points as clear. Regional three-ray voting and reference-body ray crosschecks resolve most candidates, but the arm-excluded body is open and 364 queries have disagreeing votes. Do not call this watertight proof or use minimum overlapping-region negative distance as exact penetration depth.
 - UE5.6.1 automatic skinned-level-set generation selects a common ancestor root from merged bones (`PhysicsAssetUtils.cpp:391`); a mesh called thigh does not guarantee a thigh root. Inspect actual native root/influences before claiming improved rigid collision motion.
@@ -67,6 +70,8 @@ Paths in this table are relative to the workspace root unless linked.
 
 | Artifact | Finding or purpose |
 | --- | --- |
+| `CustomShellSystem/tools/eve-fit/export_skin_regions.py`, `work/eve26/region-import/`, `region-right-fix/` | Private native mesh serialization and bounded cut-sliver repair; first right-thigh JSON rejected |
+| `CustomShellSystem/work/eve26/region-*-create.json`, `tools/eve-fit/native/CSSEveLevelSet.inl` | Regional generation metadata and guarded mesh selection; all automatic roots remain pelvis |
 | `CustomShellSystem/tools/eve-fit/prepare_skin_regions.py`, `work/eve26/skin-regions2/` | Closed regional surfaces with original body provenance, interpolated weights and recorded discarded components |
 | `CustomShellSystem/work/eve26/skin-regions2-parity/`, `skin-regions2-trace12b/`, `skin-regions2-trace60/` | Sampled geometry coverage, corrected sign diagnostics and the final three near-body overlap candidates |
 | `CustomShellSystem/work/eve26/skin-regions2-check/views48/`, `skin-regions-protected.json` | Inspected regional silhouette and unchanged protected asset hashes after interruption |

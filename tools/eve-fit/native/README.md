@@ -1,5 +1,21 @@
 # Eve cloth collision authoring
 
+## Private regional meshes
+
+`prepare_skin_regions.py` creates closed, source-weighted collision copies. Use the verified `work/eve26/skin-regions2` input, not the first export containing disconnected remnants. Serialize them with system Python 3.14.7:
+
+```sh
+python3 tools/eve-fit/export_skin_regions.py --regions work/eve26/skin-regions2 --output work/eve26/unused-region-import
+```
+
+Import the three resulting JSON files separately with `CSSImportMesh -Input=<absolute file>`. They use unused `/Game/CSS/EveTest/SK_CPelv`, `SK_CThighL`, `SK_CThighR` and corresponding private skeleton packages. The importer refuses existing packages. The source 379-bone diagnostic rig is retained; these skeletons must never replace the production 386-bone rig. Cut geometry carries interpolated original weights and applicable morph deltas; morphs with no regional deltas are omitted and listed in the receipt. Face winding matches the existing import convention, with outward face normals.
+
+The first right-thigh export failed native degenerate-triangle validation. Re-export only that region with `--only thigh_r --weld .001` into an unused directory. This repairs microscopic cut slivers and checks closed edge incidence. The completed inputs are `region-import/pelvis.mesh.json`, `region-import/thigh_l.mesh.json`, and `region-right-fix/thigh_r.mesh.json`. The first `region-import/thigh_r.mesh.json` is rejected. Keep the repair receipt with the candidate.
+
+The level-set probe accepts these three exact mesh object paths through `-Mesh=...`. Whole-body recipe imports remain restricted to SK_CBody. Generate separate unused `PA_CBody...` outputs and fresh-load them using the same mesh argument. Read the actual `root_bone` and `bones` fields, since the automatic builder chooses a common ancestor, not a root based on the region's name. Use the source regional JSON as `-Samples=...` for rest or recorded-pose queries. `verify_region_rigs.py` checks saved rig/bind equality against SK_Waist, no assigned physics asset, and protected package hashes through the Python commandlet.
+
+Successful import/generation is preparation only. Native surface/deformation checks, combined cloth motion, morph behavior and cost are still required before adopting these colliders.
+
 ## Offline lattice transfer comparison
 
 Export all saved lattice nodes without changing the asset:

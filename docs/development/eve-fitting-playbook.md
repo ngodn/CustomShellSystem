@@ -120,3 +120,9 @@ At folded or self-overlapping surfaces, nearest-triangle normal sign can disagre
 ### Verify collider roots instead of inferring them from filenames
 
 Pinned UE5.6.1 automatic generation computes a common ancestor of merged bones. Original pelvis influence can keep a thigh-shaped collider rooted at the pelvis. Separating geometry may reduce cross-leg lattice mixing, but that alone does not establish better rigid motion for continuous collision. Export and inspect root, used bones and relative bind transforms before comparing a native regional trial with the rejected whole-body lattice. Do not alter the accepted body weights to force a preferred root.
+
+### Match native triangle validation before import
+
+Closed topology does not rule out tiny sliver triangles. The right-thigh regional cut passed closure but failed CSSImportMesh's float cross-product squared threshold of 1e-12. Three source-copy vertices were welded within 0.001 cm, maximum displacement 0.00093443 cm, removing six collapsed faces while retaining a closed surface. This is less than 0.01 mm, and changes only the private collision copy. The corrected import exits successfully; `region-right-import.log` is the rejected run, `region-right-import2.log` the repaired run. Preserve both receipts and do not loosen native validation to hide the defect.
+
+`export_skin_regions.py` now checks the area threshold and reports any optional weld, requiring every surface edge to have exactly two incident faces. Its `--weld` is capped at 0.001 cm. The retained point supplies its original weights and morph provenance. Larger topology or deformation repairs need their own checks; this small tolerance is not general outfit fitting permission.

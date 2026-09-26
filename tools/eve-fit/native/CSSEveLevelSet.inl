@@ -13,7 +13,15 @@ static int32 CreateEveLevelSet(const FString& Params)
         !FPackageName::IsValidLongPackageName(Output) || (!Inspect && FPackageName::DoesPackageExist(Output)) ||
         !FParse::Value(*Params,TEXT("Report="),Report) || IFileManager::Get().FileExists(*Report))
         return Fail(TEXT("Require unused private PA_CBody output and report"));
-    auto* Mesh=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/CSS/EveTest/SK_CBody.SK_CBody"));
+    FString MeshPath=TEXT("/Game/CSS/EveTest/SK_CBody.SK_CBody");
+    FParse::Value(*Params,TEXT("Mesh="),MeshPath);
+    const bool BodyMesh=MeshPath==TEXT("/Game/CSS/EveTest/SK_CBody.SK_CBody");
+    const bool RegionMesh=MeshPath==TEXT("/Game/CSS/EveTest/SK_CPelv.SK_CPelv") ||
+        MeshPath==TEXT("/Game/CSS/EveTest/SK_CThighL.SK_CThighL") ||
+        MeshPath==TEXT("/Game/CSS/EveTest/SK_CThighR.SK_CThighR");
+    if ((!BodyMesh && !RegionMesh) || (RegionMesh && !Recipe.IsEmpty()))
+        return Fail(TEXT("Require an isolated collision mesh; whole-body recipes cannot target regions"));
+    auto* Mesh=LoadObject<USkeletalMesh>(nullptr,*MeshPath);
     if (!Mesh) return Fail(TEXT("Missing verified body-only mesh"));
     FAssetCompilingManager::Get().FinishAllCompilation();
     const auto* OriginalPhysics=Mesh->GetPhysicsAsset();
