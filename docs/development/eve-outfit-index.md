@@ -6,6 +6,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Current: `region-hulls/coverage.json` tests actual regional rigid hull union coverage over 62 sampled pose/morph cases. It rejects this seven-hull recipe: 3.42/4.47 cm worst undercoverage and avoidable garment overlap. Rear/side overlays inspected. Next investigate separately skinned regional volumes with inherited source geometry/weights, not rigid enlargement.
+
 - Latest backstop audit: worst particle is outside its reconstructed backstop sphere but inside a crossing thigh. `panel-stop-direction.json` is offline reconstruction, not solver-buffer readback. More substeps still fail visually (`panel-stop4-*`). Current next step is regional collision surface coverage, not more scalar tuning.
 - Correct timing comparison: CA_Fit used 4 substeps; Follow/Near/Stop/Room used 1. Stop normalized to 4 costs 11.49 ms in one editor run and still clips. Do not claim the earlier 17.39→2.7 ms change isolates a backstop/weight benefit.
 
@@ -36,6 +38,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Failed approaches and traps
 
+- Seven regional rigid convex hulls (mass >=0.25, Z75..142) fail actual surface coverage and garment clearance. `region-hulls/*` gives measurements and images. Do not interpret successful generation or much smaller point error as accepted collision fitting; native assets were deliberately not created.
+
 - CA_Room increases CA_Stop movement allowance 3→6 cm with unchanged source proxy and backstop. Frame-68 deepest mapped intersection worsens -4.61→-6.34 cm, recorded max edge ratio 10.49→16.24, and inspected side trim spikes worsen. Reject increased allowance alone; `panel-room-*`.
 
 - Lower-garment nearest-body weight transfer is rejected: `garment-transfer/comparison.json`, 62 sampled cases, worst -5.68 cm versus -4.31 cm baseline. Rest-nearest weights can remain pelvis-driven while a moving thigh intersects the fabric. Geometry/body/morphs were preserved; rear/side renders inspected. Do not repeat this as an assumed hem fix.
@@ -59,6 +63,7 @@ Paths in this table are relative to the workspace root unless linked.
 
 | Artifact | Finding or purpose |
 | --- | --- |
+| `CustomShellSystem/tools/eve-fit/audit_region_hulls.py`, `render_region_hulls.py`, `work/eve26/region-hulls/` | Offline regional rigid hull union fails body coverage and overfills otherwise clear garment points across sampled poses |
 | `CustomShellSystem/tools/eve-fit/audit_backstop_direction.py`, `work/eve26/panel-stop-direction.json` | Reconstructed sphere clearance and animated-normal comparison at clipped particles |
 | `CustomShellSystem/work/eve26/panel-stop-support68.json`, `panel-stop-attachments68.json`, `panel-stop4-*` | Saved movement-map support audit, attachment amplification evidence, rejected normalized four-substep trial |
 | `CustomShellSystem/tools/eve-fit/prepare_follow_proxy.py`, `work/eve26/panel-follow-proxy.json` | Explicit source-garment weight trial, 289 changed proxy rows, unchanged geometry/topology |

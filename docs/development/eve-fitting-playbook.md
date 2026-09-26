@@ -98,3 +98,11 @@ Freshly authored candidates used one substep while the older reference used four
 Backstop direction is relative to the animated cloth, not automatically to a moving body surface. Particle 329 is outside its reconstructed backstop but inside the thigh. More allowed movement or more substeps did not fix that relationship. Keep reconstructed math distinct from solver readback.
 
 Inspect both simulation edges and attachment coefficients before calling a trim spike a mapping-only bug. An edge grew 0.245→2.095 cm, and an attached fur record extrapolates beyond its triangle. Clamping the coefficients would lose exact rest reconstruction. Fix the underlying surface/contact problem and then validate any attachment change in the same pose.
+
+### Regional collision needs both coverage and clearance
+
+Rigid regional point correspondence did not tell whether a union of volumes could fit the body. Testing the actual seven-hull union answered that question for this recipe: it leaves body points outside while also enclosing garment points that clear the body. Enlarging it is not a sufficient repair. Record both body-to-volume coverage and garment-to-volume interference, use the same pose/morph cases, and visually inspect overlaps. These are offline hulls, not native collision behavior.
+
+For overlapping volumes, the minimum per-volume signed distance classifies membership, but its negative value is not the exact distance to the union boundary. Internal hull faces also appear in surface sampling. State those limitations rather than presenting all distances as physical penetration depth. Evidence and scripts: `region-hulls/`, `audit_region_hulls.py`, `render_region_hulls.py`.
+
+Pinned UE5.6.1 `ChaosClothingSimulationCollider.cpp` has a convex collision path (around line 237) and separate skinned-level-set paths. The [Epic collider API reference](https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/ChaosCloth/ChaosCloth/FClothingSimulationCollider?application_version=5.5) documents physics-asset extraction, but the installed engine source determines this project's implementation. Existence of a collision type does not prove its fit or performance.
