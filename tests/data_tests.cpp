@@ -33,6 +33,16 @@ int main() {
             expect(!height.restore(-92),"Cleanup overwrote an external height change");
             rejects([&]{height.set(-96,11);});
             rejects([&]{height.set(-96,std::numeric_limits<double>::quiet_NaN());});
+            // A fresh core finds the mesh where the last one left it: anchored to the authored
+            // height, the offset is recognised instead of stacked, and restore returns to it.
+            GroundOffset resumed;
+            expect(resumed.set(-99,-3,-96)==-99,"Resumed offset stacked on itself");
+            expect(resumed.restore(-99)==-96,"Resumed offset did not restore the authored height");
+            GroundOffset fresh;
+            expect(fresh.set(-96,-3,-96)==-99,"Authored baseline changed the correction");
+            GroundOffset foreign;
+            expect(foreign.set(-90,-3,-96)==-93,"A height another owner set was not respected");
+            expect(foreign.restore(-93)==-90,"Restore did not return the other owner's height");
         }
         {
             Catalog list;

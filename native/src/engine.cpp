@@ -1049,9 +1049,13 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
         // The same pawn can briefly return to its stock mesh during travel.
         // Once recovery is allowed, preserve valid dye resources here too.
         if(returning_to_outfit) {
+            // The heel offset belongs to the mesh going away: put the height back first, so
+            // the next variant starts from the authored height and its own offset never
+            // stacks on this one. (Forgetting the baseline without restoring leaked 3 cm per
+            // Black Pearl wear onto every other variant.)
+            restore_ground_offset();
             set_mesh(component,target);
             applied_hidden_.clear();   // a fresh mesh shows every section; see note below
-            ground_offset_={}; ground_component_.Reset();   // and resets RelativeLocation; drop the stale heel baseline
             if(materials_match() || reuse_materials()) {
                 current_mesh=narrow(target->GetPathName());
                 return true;
@@ -1063,7 +1067,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
         // reconcile_sections() (in customize()) re-hide from scratch instead of short-circuiting
         // on a stale want==applied_hidden_. This is why a launchpad/gate that swapped the pawn
         // to Harbinger and back used to drop the outfit's cut sections. Event-only, no frame cost.
-        if(before!=target && !returning_to_outfit) { set_mesh(component, target); applied_hidden_.clear(); ground_offset_={}; ground_component_.Reset(); }
+        if(before!=target && !returning_to_outfit) { restore_ground_offset(); set_mesh(component, target); applied_hidden_.clear(); }
         const int count=overrides(component).Num();
         for(int i=0;i<count;++i) material(component,i,nullptr);
         auto defaults=material_snapshot(component,target).at("defaults");
@@ -1098,6 +1102,27 @@ void Appearance::restore_ground_offset() {
     }
     ground_component_.Reset();ground_offset_={};
 }
+// The mesh height the pawn's class authors (BP_PlayerCharacter's Mesh sits at -96): the
+// class default object's own Mesh template. Read once per pawn class.
+static std::optional<double> authored_ground_height(UObject* component) {
+    static std::unordered_map<UObject*,std::optional<double>> cache;
+    auto* pawn=component?component->GetOuterPrivate():nullptr;
+    auto* pawn_class=pawn?pawn->GetClassPrivate():nullptr;
+    if(!pawn_class) return std::nullopt;
+    if(auto it=cache.find(pawn_class);it!=cache.end()) return it->second;
+    std::optional<double> height;
+    try {
+        const auto path=pawn_class->GetPathName();
+        const auto dot=path.rfind(L'.');
+        if(dot!=std::wstring::npos) {
+            if(auto* defaults=find((path.substr(0,dot+1)+L"Default__"+path.substr(dot+1)).c_str()))
+                if(auto* mesh=read<UObject*>(defaults,L"Mesh"))
+                    height=read<std::array<double,3>>(mesh,L"RelativeLocation")[2];
+        }
+    } catch(const std::exception&) {}
+    cache.emplace(pawn_class,height);
+    return height;
+}
 void Appearance::set_ground_offset(double offset) {
     if(!GroundOffset::valid(offset)) throw std::runtime_error("Invalid ground offset");
     auto* component=component_.Get();
@@ -1106,7 +1131,7 @@ void Appearance::set_ground_offset(double offset) {
     if(offset==0) return;
     auto location=read<std::array<double,3>>(component,L"RelativeLocation");
     ground_component_=component;
-    const auto target=ground_offset_.set(location[2],offset);
+    const auto target=ground_offset_.set(location[2],offset,authored_ground_height(component));
     if(target==location[2]) return;
     location[2]=target;
     Call move(component,L"K2_SetRelativeLocation",4);
