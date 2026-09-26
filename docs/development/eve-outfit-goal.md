@@ -4,6 +4,8 @@ Updated 2026-09-27, native cloth repeatability checkpoint. Read [the evidence in
 
 ## Active objective
 
+Outfit order confirmed September 27: finish Holiday Reveler, then Planet Diving 6th (planet suit), then the remaining outfits. This changes the queue after Holiday, not the active fitting task or acceptance requirements.
+
 Deliver `CSS_EveStellarBlade_eins0fx_P` with all available Eve outfit variants, properly fitted to the original body proportions, complete applicable clothing customization, and verified clothing and secondary-motion physics. Every outfit needs **Original plus at least five clothing color palettes**. Hair-only recoloring does not satisfy this requirement. The user clarified this on September 26 and reports the latest Gemini outfit work is incomplete.
 
 The user supplied this updated objective and resumed the goal through the conversation goal control. The September 26 fitting milestone is active; do not revert to the older quota-pause instructions.
