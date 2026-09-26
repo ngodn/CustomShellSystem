@@ -513,3 +513,26 @@ Next independently verify the native collider's posed surface, then construct a 
 ### Storage cleanup (2026-09-27)
 
 [Cleanup manifest](eve-cleanup-2026-09-27.md): removed superseded F2, F3b, F3d and F4 through F8 blend intermediates, reclaiming about 39 GiB. F1/F9/F10/F11, original sources and all reports/renders remain. Historical references above are evidence, not promises that obsolete blend files still exist. Regenerate old stages if needed; continue fitting from retained F10/F11.
+
+### Lightweight weighted collider trials (2026-09-27)
+
+`CSSEvePanelMotion.inl` now exports `body_reference_skin_cm` using the native FSkinnedTriangleMesh skinning API and the recorded component-space pose. Independent matrix/weight evaluation agrees within 0.002367 cm for the checked frames of both the first low-resolution and latest 6,000-face proxies. This verifies the native shape skinning inputs, not a readback of the solver's internal collider state. The prior editor-module build completed successfully (`panel-low-build.log`); subsequent commandlets used that compiled helper.
+
+`simplify_body_collider.py` decimates a separate body collision copy, projects its vertices onto the unchanged source surface, and transfers weights and morph correspondence barycentrically. Tiny degenerate query triangles are excluded; projection error must remain below 0.001 cm. The native 12-influence cap loses at most 8.3e-10 weight in these trials. No original blend is saved. `verify_body_proxy.py` tests seven recorded sprint poses at default and combined hip/waist maximum. Its 7,181 body vertex samples cover rest Z 90..125 cm only, not every surface, morph or motion.
+
+| Trial | Faces | Worst default gap | Worst hip/waist gap |
+| --- | ---: | ---: | ---: |
+| body-low | 2,200 | 2.687 cm | 2.874 cm |
+| body-hip | 2,199 | 2.462 cm | 3.104 cm |
+| body-joint | 2,200 | 2.087 cm | 2.231 cm |
+| body-joint6 | 6,000 | 0.954 cm | 1.440 cm |
+
+The first proxy loses actual butt/thigh transition geometry, not just internal anatomy. The soft-protection trial prioritizes 304 butt/thigh transition vertices but worsens the combined-morph worst case elsewhere. Hard protection retains 582 pelvis/butt-to-thigh transition vertices; the remaining largest gaps move to the waist. A 6,000-face budget improves both regions but still fails close body coverage. Do not call any proxy accepted or change the visible body to compensate.
+
+Protection semantics were checked against [Blender's edge-collapse implementation](https://raw.githubusercontent.com/blender/blender/main/source/blender/bmesh/tools/bmesh_decimate_collapse.cc): low allowance weights raise collapse cost, and zero-weight endpoints exclude an edge. The installed Blender 5.2.2 runs produced the measured results above. `--protect-hips` and `--lock-hips` are explicit diagnostic alternatives; the latter may exceed the requested face budget.
+
+`panel-low.json` had worst cloth edge ratio 8.283 and smoothed editor simulation time 3.52..4.06 ms. `panel-joint6.json` has 9.272 and 7.80..7.96 ms. Both use nine sprint frames and the existing panel asset with default iterations/substeps. These are editor timings, not game benchmarks. Increasing collider detail therefore did not fix cloth stretching. Fixed cloth coordinates pass the independent weight check within 0.0000286 cm; that check does not establish visual quality.
+
+Reviewed `panel-joint6-views/default-side.png` and `default-rear.png` at sprint frame 4: broad hip penetration and wrinkling persist. Trim remains ordinary skinning in these diagnostic renders, not engine attachment mapping. All current processes terminated successfully, and `panel-joint6-protected.json` confirms unchanged shared skeleton, production PA_Body and private mesh/cloth assets. No game install or release replacement.
+
+Next examine contact initialization before another density/settings sweep. UE 5.6.1 `PBDKinematicTriangleMeshCollisions.cpp` discovers contacts using a point-proximity query at 1.5 times thickness, retains contacts temporarily, and rejects excessive depth. The probe resets cloth directly into sprint frame 0. This makes initial penetration a testable hypothesis, not an established cause: measure starting particle/body distances and compare a controlled bind-to-first-pose initialization using the same geometry/settings. Also verify internal solver collider transforms if the measured contact behavior disagrees with the native skin API. Preserve the eventual morph, attachment, full-outfit and game-validation requirements.

@@ -145,6 +145,29 @@ static int32 EvaluateHolidayPanel(const FString& Params)
         Row->SetNumberField(TEXT("substeps"),Proxy->GetNumSubsteps());
         Row->SetNumberField(TEXT("simulation_ms"),Proxy->GetSimulationTime());
         Row->SetArrayField(TEXT("positions_cm"),Positions);
+        if (!BodyInput.IsEmpty())
+        {
+            const auto& Shape=Asset->GetPhysicsAsset()->SkeletalBodySetups[0]->AggGeom.SkinnedTriangleMeshElems[0].GetSkinnedTriangleMesh();
+            const auto& ComponentPose=Pose->GetComponentSpaceTransforms();
+            TArray<FTransform> RelativeTransforms;
+            for (const FName& Name:Shape->GetUsedBones())
+            {
+                const int32 Bone=Ref.FindBoneIndex(Name);
+                if (!ComponentPose.IsValidIndex(Bone)) return Fail(TEXT("Collider pose bone missing"));
+                RelativeTransforms.Add(ComponentPose[Bone].GetRelativeTransform(ComponentPose[0]));
+            }
+            TArray<Chaos::FVec3f> Skinned;
+            Skinned.SetNumUninitialized(Shape->GetReferencePositions().Num());
+            Shape->SkinPositions(RelativeTransforms,MakeArrayView(Skinned));
+            TArray<TSharedPtr<FJsonValue>> BodyPositions;
+            for (const Chaos::FVec3f& P:Skinned)
+            {
+                const FVector Position=ComponentPose[0].TransformPosition(FVector(P));
+                TArray<TSharedPtr<FJsonValue>> XYZ={MakeShared<FJsonValueNumber>(Position.X),MakeShared<FJsonValueNumber>(Position.Y),MakeShared<FJsonValueNumber>(Position.Z)};
+                BodyPositions.Add(MakeShared<FJsonValueArray>(XYZ));
+            }
+            Row->SetArrayField(TEXT("body_reference_skin_cm"),BodyPositions);
+        }
         Rows.Add(MakeShared<FJsonValueObject>(Row));
         UE_LOG(LogCSSEvePanel,Display,TEXT("Panel frame %d: %d dynamic, %d kinematic, %d positions"),Index,
             Proxy->GetNumDynamicParticles(),Proxy->GetNumKinematicParticles(),Positions.Num());
