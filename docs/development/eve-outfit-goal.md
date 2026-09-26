@@ -1,6 +1,6 @@
 # Eve outfit goal and current status
 
-Updated 2026-09-27, skinned level-set rest and sprint checks. Read [the evidence index](eve-outfit-index.md) before resuming.
+Updated 2026-09-27, lattice weight tracing and local-transfer counterfactual. Read [the evidence index](eve-outfit-index.md) before resuming.
 
 ## Active objective
 
@@ -32,7 +32,9 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
-Private level-set generation and rest/sprint sampling now work. Neither `PA_CBody64` nor `PA_CBody128` is accepted: the finer distance grid improves rest fit, but its 16-resolution embedding lattice has up to 24.18 cm direct mapping error in skirt-region body points at sprint frame 68. Independent body skinning passes within 0.000390 cm. Next inspect lattice influence distribution and distinguish coarse spatial interpolation from inaccurate transferred weights before another generation trial. The old triangle collider's late-sprint tunneling and expensive 16-substep workaround are documented below. No new collider has been assigned to production or accepted.
+Three worst thigh samples now have exact native lattice traces. Their generated weights mix in unrelated fingers, arms and spine while reducing the main thigh influence to about 14%. A same-grid, selected-corner counterfactual using nearest body triangle weights reduces 23.5–24.2 cm errors to 1.2–1.5 cm. Independent replay of original native corners agrees within 0.000138 cm. Next export the complete grid, test local transfer across the whole surface and recorded poses, then build a separate candidate only if the wider result supports it. This has not repaired or installed a collider yet.
+
+Private level-set generation and rest/sprint sampling now work. Neither `PA_CBody64` nor `PA_CBody128` is accepted: the finer distance grid improves rest fit, but its 16-resolution embedding lattice has up to 24.18 cm direct mapping error in skirt-region body points at sprint frame 68. Independent body skinning passes within 0.000390 cm. The old triangle collider's late-sprint tunneling and expensive 16-substep workaround are documented below. No new collider has been assigned to production or accepted.
 
 **Current working reference is F12 / SK_Waist / CA_Fit, with the full body-joint6 collider and 0.3 cm contact setting.** Repaired render attachments remove the long fur spikes, and local source fitting improves waist clearance. Holiday remains unfinished: hip breakthrough, arm contact, local deformation, physics cost and complete morph coverage are open. No game install or release replacement has occurred during these private trials.
 
@@ -747,3 +749,21 @@ A second native query records direct lattice-mapped positions separately from di
 Evidence: `ls-rest{,-audit}.json`, `ls128-rest{,-audit}.json`, `ls128-f68{,-audit,-pose}.json`, `ls128-map68{,-audit}.json`. Builds `lsample-build`, `lsmotion-build`, `lsmap-build` pass. The rest and first frame-68 commandlets exit 0, as do Blender verification/renders. The final mapping commandlet logged result 0 and completed its JSON, but its outer process returned 143 during shutdown; the log includes a trace daemon receiving signal 15. Do not call that last outer shutdown clean. No retry was needed to infer the already-reproduced failed deformation, and no collider was installed.
 
 `ls-protected.json` matches all four protected hashes. Next inspect generated lattice weights versus source weights near the largest errors, then choose a specific correction or alternative based on that result. Morph-dependent collision, physics cost, full outfit assembly and gameplay validation remain open.
+
+## September 27: trace transferred lattice weights before changing density
+
+The trace now exports the exact four native tetrahedron corners and coefficients for selected body points. The first `TraceSamples` run returned only index 2796 because `FParse::Value` treats commas as separators by default. Explicitly disabling that separator fixes the probe. `ls128-trace3.json` contains all requested indices 2795, 2796 and 2807; both trace runs and both builds exit 0.
+
+`audit_lattice_trace.py` reconstructs rest and deformed points from their four corners, with errors below 6e-14 cm. These cells are not empty. The body's primary left-thigh weight is 72–74%, but the barycentrically combined generated lattice gives that bone about 14%, plus calf, spine, clavicle, arm and finger influences. Weight-vector L1 differences are 1.35–1.37. This is measured influence disagreement, not an assertion that all collider error has one cause.
+
+`test_local_lattice_weights.py` transfers weights from the nearest source body triangle to those same corners. It retains up to the native 12 influences, normalizes, and skins the unchanged corner positions using the recorded pose. It also replays the original native corner weights first: maximum position difference is 0.00013728 cm, so the offline comparison uses the same deformation convention. No source body, lattice grid or saved asset is changed.
+
+| Body sample | Original lattice error | Local-transfer counterfactual |
+| --- | ---: | ---: |
+| 2795 | 23.542 cm | 1.520 cm |
+| 2796 | 24.183 cm | 1.382 cm |
+| 2807 | 23.813 cm | 1.227 cm |
+
+Evidence: `ls128-trace3{,-audit}.json`, `ls-local-weights3.json`, matching commandlet/Blender logs. The earlier one-point counterfactual is `ls-local-weights.json`. All independent replay assertions pass. `ltrace-protected.json` retains the four protected hashes.
+
+This supports local weight transfer as the next controlled trial. It does not establish a full-body improvement or acceptable clothing fit: all three samples are nearby worst points, residual error exceeds the earlier contact margin, and other poses/morphs remain untested. Export the whole grid and evaluate the transferred weights across the surface and recorded motion before authoring a new private collider. Keep original grid/SDF fixed initially to separate weight changes from resolution changes.

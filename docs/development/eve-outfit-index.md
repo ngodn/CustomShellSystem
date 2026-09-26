@@ -6,6 +6,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Lattice failure traced to badly mixed influences at three worst thigh samples: `ls128-trace3-audit.json`, `ls-local-weights3.json`. Exact tetrahedron reconstruction passes. Effective left-thigh weight drops from about 72–74% on the body to 14% on the generated lattice, with unrelated arm/finger/spine weights. Local triangle-based weight transfer on the same corners reduces their 23.5–24.2 cm errors to 1.2–1.5 cm. Native corner replay is independently verified. Next test full-grid local transfer before claiming a fix; no new collider was authored by that counterfactual.
+
 - Private body-only level-set generation: `cbody-source.json`, `cbody-inspect.json`, `cbody-levelset.json`, `cbody-readback.json`. The export preserves 36,787 body points, 61,814 faces, weights and 22 morphs; saved import retains all morph names. Generation and fresh-load metadata match for a 33-bone collider. Coverage, deformation, morph support and solver cost are still unverified. Never replace the shared skeleton with the private 379-bone import. See `tools/eve-fit/native/README.md` for replay commands.
 
 - User's September 27 outfit order: Holiday Reveler, then Planet Diving 6th (planet suit), then the others. All outfit requirements remain active.

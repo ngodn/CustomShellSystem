@@ -146,6 +146,24 @@ static int32 CreateEveLevelSet(const FString& Params)
                 TArray<TSharedPtr<FJsonValue>> Results;
                 TArray<TSharedPtr<FJsonValue>> SamplePositions;
                 TArray<TSharedPtr<FJsonValue>> LatticePositions;
+                TArray<TSharedPtr<FJsonValue>> Traces;
+                TSet<int32> TraceIndices;
+                FString TraceText;
+                if (FParse::Value(*Params,TEXT("TraceSamples="),TraceText,false))
+                {
+                    TArray<FString> Parts;
+                    TraceText.ParseIntoArray(Parts,TEXT(","));
+                    if (Parts.Num()>32) return Fail(TEXT("Too many trace samples"));
+                    for (const FString& Part:Parts)
+                    {
+                        int32 Index=-1;
+                        if (!LexTryParseString(Index,*Part) || !Positions->IsValidIndex(Index)) return Fail(TEXT("Invalid trace index"));
+                        TraceIndices.Add(Index);
+                    }
+                }
+                auto JsonVector=[](const FVector& V) {
+                    return TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueNumber>(V.X),MakeShared<FJsonValueNumber>(V.Y),MakeShared<FJsonValueNumber>(V.Z)};
+                };
                 const FTransform BindRootInverse{FMatrix(Inv[RootIndex])};
                 for (int32 PointIndex=0;PointIndex<Positions->Num();++PointIndex)
                 {
@@ -182,6 +200,40 @@ static int32 CreateEveLevelSet(const FString& Params)
                         const FVector LatticePoint=RootInverse.InverseTransformPosition(FVector(Query->GetDeformedPoint(RestLocal)));
                         LatticePositions.Add(MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{
                             MakeShared<FJsonValueNumber>(LatticePoint.X),MakeShared<FJsonValueNumber>(LatticePoint.Y),MakeShared<FJsonValueNumber>(LatticePoint.Z)}));
+                        if (TraceIndices.Contains(PointIndex))
+                        {
+                            const auto Cell=Grid.Cell(RestLocal);
+                            const Chaos::FVec3 Alpha=(RestLocal-Grid.Node(Cell))/Grid.Dx();
+                            const Chaos::FWeightedLatticeImplicitObject::FEmbeddingCoordinate Embedding(Cell,Alpha);
+                            const auto& Offsets=Embedding.TetrahedronOffsets();
+                            auto Trace=MakeShared<FJsonObject>();
+                            Trace->SetNumberField(TEXT("body_index"),PointIndex);
+                            Trace->SetBoolField(TEXT("empty_cell"),Query->GetEmptyCells()(Cell));
+                            Trace->SetArrayField(TEXT("rest_cm"),JsonVector(Point));
+                            Trace->SetArrayField(TEXT("skin_cm"),JsonVector(Sample));
+                            Trace->SetArrayField(TEXT("lattice_cm"),JsonVector(LatticePoint));
+                            if (Weights) Trace->SetArrayField(TEXT("skin_weights"),(*Weights)[PointIndex]->AsArray());
+                            TArray<TSharedPtr<FJsonValue>> Corners;
+                            for (int32 Corner=0;Corner<4;++Corner)
+                            {
+                                const auto Node=Cell+Offsets[Corner];
+                                const auto& Influence=Query->GetBoneData()(Node);
+                                auto CornerData=MakeShared<FJsonObject>();
+                                const double Bary=Corner<3?Embedding.BarycentricCoordinate[Corner]:1.-Embedding.BarycentricCoordinate.X-Embedding.BarycentricCoordinate.Y-Embedding.BarycentricCoordinate.Z;
+                                CornerData->SetNumberField(TEXT("barycentric_weight"),Bary);
+                                CornerData->SetArrayField(TEXT("rest_cm"),JsonVector(BindRootInverse.InverseTransformPosition(FVector(Grid.Node(Node)))));
+                                CornerData->SetArrayField(TEXT("posed_cm"),JsonVector(RootInverse.InverseTransformPosition(FVector(Query->GetDeformedPoints()(Node)))));
+                                TArray<TSharedPtr<FJsonValue>> NodeWeights;
+                                for (int32 I=0;I<Influence.NumInfluences;++I)
+                                    NodeWeights.Add(MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{
+                                        MakeShared<FJsonValueString>(Query->GetUsedBones()[Influence.BoneIndices[I]].ToString()),
+                                        MakeShared<FJsonValueNumber>(Influence.BoneWeights[I])}));
+                                CornerData->SetArrayField(TEXT("weights"),NodeWeights);
+                                Corners.Add(MakeShared<FJsonValueObject>(CornerData));
+                            }
+                            Trace->SetArrayField(TEXT("corners"),Corners);
+                            Traces.Add(MakeShared<FJsonValueObject>(Trace));
+                        }
                     }
                     else LatticePositions.Add(MakeShared<FJsonValueNull>());
                     const Chaos::FVec3 Local(RootInverse.TransformPosition(Sample));
@@ -199,6 +251,7 @@ static int32 CreateEveLevelSet(const FString& Params)
                 Row->SetNumberField(TEXT("sample_frame"),FrameIndex);
                 Row->SetArrayField(TEXT("sample_positions_cm"),SamplePositions);
                 Row->SetArrayField(TEXT("sample_lattice_positions_cm"),LatticePositions);
+                Row->SetArrayField(TEXT("trace_samples"),Traces);
                 Row->SetArrayField(TEXT("samples"),Results);
             }
             Bodies.Add(MakeShared<FJsonValueObject>(Row));
