@@ -5,11 +5,13 @@
 #include "PreviewScene.h"
 #include "HAL/FileManager.h"
 #include "Misc/ScopeExit.h"
+#include "CSSEvePanelBody.inl"
 
 static int32 EvaluateHolidayPanel(const FString& Params)
 {
     auto Fail=[](const TCHAR* Message) { UE_LOG(LogCSSEvePanel,Error,TEXT("Panel motion: %s"),Message); return 1; };
-    FString Input,Report,Text;
+    FString Input,Report,Text,BodyInput;
+    FParse::Value(*Params,TEXT("Body="),BodyInput);
     const bool NoBodyCollision=FParse::Param(*Params,TEXT("NoBodyCollision"));
     const bool NoSelfCollision=FParse::Param(*Params,TEXT("NoSelfCollision"));
     const bool UseCCD=FParse::Param(*Params,TEXT("CCD"));
@@ -37,6 +39,13 @@ static int32 EvaluateHolidayPanel(const FString& Params)
     UPhysicsAsset* OriginalPhysics=Asset->GetPhysicsAsset();
     ON_SCOPE_EXIT { Asset->SetPhysicsAsset(OriginalPhysics); };
     if (NoBodyCollision) Asset->SetPhysicsAsset(nullptr);
+    if (!BodyInput.IsEmpty())
+    {
+        if (NoBodyCollision) return Fail(TEXT("Body and NoBodyCollision are mutually exclusive"));
+        UPhysicsAsset* BodyPhysics=MakePanelBodyCollision(BodyInput,Mesh);
+        if (!BodyPhysics) return Fail(TEXT("Invalid transient body collision input"));
+        Asset->SetPhysicsAsset(BodyPhysics);
+    }
     FMemMark Memory(FMemStack::Get());
     FPreviewScene Scene(FPreviewScene::ConstructionValues().SetCreateDefaultLighting(false));
     auto* Pose=NewObject<UPoseableMeshComponent>();
@@ -145,6 +154,7 @@ static int32 EvaluateHolidayPanel(const FString& Params)
     Result->SetStringField(TEXT("scope"),TEXT("Actual saved CA_Holiday Chaos component simulation on recorded original-graph poses. Old reference asset geometry/weights; no F11, morph, material or game acceptance."));
     Result->SetStringField(TEXT("source_motion"),Input);
     Result->SetStringField(TEXT("asset"),Asset->GetPathName());
+    Result->SetStringField(TEXT("body_collision_input"),BodyInput);
     Result->SetNumberField(TEXT("requested_iterations"),Iterations);
     Result->SetNumberField(TEXT("requested_substeps"),Substeps);
     Result->SetNumberField(TEXT("ccd_property"),Properties->GetIntValue(TEXT("UseCCD"),0,-1));
