@@ -28,210 +28,6 @@ struct InventoryLayout : Layout {
         if(selected) {auto* dot=box(x+4,y+4,4,4,Color{.42f,.34f,.22f,1});invoke(dot,L"SetRenderTransformAngle",L"Angle",45.f);}
     }
 };
-enum class BodyPhysicsRegion : uint8_t {
-    Chest,
-    Glute,
-    Thigh,
-    Belly,
-    Unknown
-};
-
-static inline BodyPhysicsRegion classify_body_physics_region(const std::string& raw_id, const std::string& raw_name = "") {
-    std::string id = raw_id;
-    for(char& c : id) c = char(std::tolower(static_cast<unsigned char>(c)));
-    std::string name = raw_name;
-    for(char& c : name) c = char(std::tolower(static_cast<unsigned char>(c)));
-
-    if(id.find("chest") != std::string::npos || id.find("breast") != std::string::npos ||
-       id.find("boob") != std::string::npos || id.find("bust") != std::string::npos ||
-       name.find("chest") != std::string::npos || name.find("breast") != std::string::npos ||
-       name.find("boob") != std::string::npos || name.find("bust") != std::string::npos) {
-        return BodyPhysicsRegion::Chest;
-    }
-    if(id.find("glute") != std::string::npos || id.find("butt") != std::string::npos ||
-       name.find("glute") != std::string::npos || name.find("butt") != std::string::npos) {
-        return BodyPhysicsRegion::Glute;
-    }
-    if(id.find("thigh") != std::string::npos || id.find("hip") != std::string::npos ||
-       name.find("thigh") != std::string::npos || name.find("hip") != std::string::npos) {
-        return BodyPhysicsRegion::Thigh;
-    }
-    if(id.find("belly") != std::string::npos || id.find("waist") != std::string::npos ||
-       id.find("abdomen") != std::string::npos || id.find("stomach") != std::string::npos ||
-       name.find("belly") != std::string::npos || name.find("waist") != std::string::npos ||
-       name.find("abdomen") != std::string::npos || name.find("stomach") != std::string::npos) {
-        return BodyPhysicsRegion::Belly;
-    }
-    return BodyPhysicsRegion::Unknown;
-}
-
-static inline bool is_body_physics_control(const Control& control) {
-    if(control.kind != ControlKind::Spring && control.kind != ControlKind::Dynamics && control.kind != ControlKind::Rig) {
-        return false;
-    }
-    return classify_body_physics_region(control.id, control.name) != BodyPhysicsRegion::Unknown;
-}
-
-static inline bool is_chest_or_glute_control(const Control& control) {
-    return is_body_physics_control(control);
-}
-
-struct BodyPhysicsPresetDef {
-    const char* id;
-    const char* name;
-    const char* subtitle;
-    // Rig values
-    float chest_freq, chest_damp, chest_motion;
-    float glute_freq, glute_damp, glute_motion;
-    float thigh_freq, thigh_damp, thigh_motion;
-    float belly_freq, belly_damp, belly_motion;
-    // Spring values
-    float spring_chest_freq, spring_chest_damp, spring_chest_travel;
-    float spring_glute_freq, spring_glute_damp, spring_glute_travel;
-    float spring_thigh_freq, spring_thigh_damp, spring_thigh_travel;
-    float spring_belly_freq, spring_belly_damp, spring_belly_travel;
-};
-
-static const BodyPhysicsPresetDef kBodyPhysicsPresets[] = {
-    {"firm", "Firm", "High stiffness & damping, perky sculpted look",
-     // Rig: Chest, Glute, Thigh, Belly
-     2.60f, 0.65f, 0.60f,
-     2.50f, 0.65f, 0.65f,
-     2.80f, 0.72f, 0.40f,
-     2.70f, 0.68f, 0.45f,
-     // Spring: Chest, Glute, Thigh, Belly
-     2.60f, 0.65f, 1.20f,
-     2.50f, 0.65f, 1.50f,
-     2.80f, 0.72f, 0.80f,
-     2.70f, 0.68f, 0.90f},
-
-    {"natural", "Natural", "Realistic soft-tissue sway, balanced & restrained",
-     // Rig: Chest, Glute, Thigh, Belly
-     2.15f, 0.48f, 1.00f,
-     2.10f, 0.50f, 1.00f,
-     2.35f, 0.58f, 0.75f,
-     2.20f, 0.52f, 0.85f,
-     // Spring: Chest, Glute, Thigh, Belly
-     2.15f, 0.48f, 2.20f,
-     2.10f, 0.50f, 2.20f,
-     2.35f, 0.58f, 1.60f,
-     2.20f, 0.52f, 1.80f},
-
-    {"bouncy", "Bouncy", "Playful, energetic motion with plenty of bounce",
-     // Rig: Chest, Glute, Thigh, Belly
-     1.70f, 0.28f, 1.80f,
-     1.65f, 0.30f, 1.80f,
-     1.85f, 0.38f, 1.35f,
-     1.75f, 0.32f, 1.50f,
-     // Spring: Chest, Glute, Thigh, Belly
-     1.70f, 0.28f, 4.50f,
-     1.65f, 0.30f, 4.50f,
-     1.85f, 0.38f, 3.20f,
-     1.75f, 0.32f, 3.80f},
-
-    {"soft", "Soft / Saggy", "Heavier relaxed tissue, slow and swinging",
-     // Rig: Chest, Glute, Thigh, Belly
-     1.25f, 0.18f, 2.60f,
-     1.20f, 0.20f, 2.50f,
-     1.40f, 0.25f, 2.00f,
-     1.30f, 0.22f, 2.20f,
-     // Spring: Chest, Glute, Thigh, Belly
-     1.25f, 0.18f, 7.50f,
-     1.20f, 0.20f, 7.00f,
-     1.40f, 0.25f, 5.50f,
-     1.30f, 0.22f, 6.50f},
-
-    {"earthquake", "OMG! Earthquake!", "Maximum exaggerated comedic jiggle & wobble",
-     // Rig: Chest, Glute, Thigh, Belly
-     0.85f, 0.06f, 4.20f,
-     0.85f, 0.08f, 4.20f,
-     0.95f, 0.10f, 3.50f,
-     0.90f, 0.08f, 3.80f,
-     // Spring: Chest, Glute, Thigh, Belly
-     0.85f, 0.06f, 14.0f,
-     0.85f, 0.08f, 14.0f,
-     0.95f, 0.10f, 10.0f,
-     0.90f, 0.08f, 13.0f}
-};
-
-static inline std::string detect_body_physics_preset(const Control& control, const ControlValue& held) {
-    const auto region = classify_body_physics_region(control.id, control.name);
-    const bool is_spring = control.kind == ControlKind::Spring;
-    for(const auto& p : kBodyPhysicsPresets) {
-        float tf = 0, td = 0;
-        if(is_spring) {
-            switch(region) {
-                case BodyPhysicsRegion::Chest: tf = p.spring_chest_freq; td = p.spring_chest_damp; break;
-                case BodyPhysicsRegion::Glute: tf = p.spring_glute_freq; td = p.spring_glute_damp; break;
-                case BodyPhysicsRegion::Thigh: tf = p.spring_thigh_freq; td = p.spring_thigh_damp; break;
-                case BodyPhysicsRegion::Belly: tf = p.spring_belly_freq; td = p.spring_belly_damp; break;
-                default: tf = p.spring_chest_freq; td = p.spring_chest_damp; break;
-            }
-        } else {
-            switch(region) {
-                case BodyPhysicsRegion::Chest: tf = p.chest_freq; td = p.chest_damp; break;
-                case BodyPhysicsRegion::Glute: tf = p.glute_freq; td = p.glute_damp; break;
-                case BodyPhysicsRegion::Thigh: tf = p.thigh_freq; td = p.thigh_damp; break;
-                case BodyPhysicsRegion::Belly: tf = p.belly_freq; td = p.belly_damp; break;
-                default: tf = p.chest_freq; td = p.chest_damp; break;
-            }
-        }
-        if(std::abs(held[0] - tf) < 0.18f && std::abs(held[1] - td) < 0.08f) {
-            return p.id;
-        }
-    }
-    return "custom";
-}
-
-static inline std::string get_body_physics_preset_name(const std::string& id) {
-    for(const auto& p : kBodyPhysicsPresets) {
-        if(p.id == id) return p.name;
-    }
-    return "Custom";
-}
-
-struct HairPhysicsPresetDef {
-    const char* id;
-    const char* name;
-    const char* subtitle;
-    float stiffness;
-    float damping;
-    float gravity;
-};
-
-static const HairPhysicsPresetDef kHairPhysicsPresets[] = {
-    {"firm", "Firm", "Clean, disciplined ponytail with hairspray hold", 260.0f, 26.0f, 0.04f},
-    {"natural", "Natural", "Eve's athletic flow, quick and steady", 180.0f, 16.0f, 0.08f},
-    {"silky", "Silky", "Soft, elegant hair with loose fluid sway", 110.0f, 10.0f, 0.14f},
-    {"heavy", "Heavy", "Dense weighted hair, hugs back and resists lift", 190.0f, 22.0f, 0.35f},
-    {"floaty", "Floaty", "Light strands with a slow trailing wave", 55.0f, 6.0f, 0.00f}
-};
-
-static inline bool is_hair_physics_control(const Control& control) {
-    if(control.kind != ControlKind::Rig) return false;
-    if(control.rig && control.rig->body) return false;
-    std::string id = control.id;
-    for(char& c : id) c = char(std::tolower(static_cast<unsigned char>(c)));
-    return id.find("hair") != std::string::npos || id.find("ponytail") != std::string::npos;
-}
-
-static inline std::string detect_hair_physics_preset(const Control& control, const ControlValue& held) {
-    for(const auto& p : kHairPhysicsPresets) {
-        if(std::abs(held[0] - p.stiffness) < 18.0f &&
-           std::abs(held[1] - p.damping) < 2.5f &&
-           std::abs(held[2] - p.gravity) < 0.04f) {
-            return p.id;
-        }
-    }
-    return "custom";
-}
-
-static inline std::string get_hair_physics_preset_name(const std::string& id) {
-    for(const auto& p : kHairPhysicsPresets) {
-        if(p.id == id) return p.name;
-    }
-    return "Custom";
-}
 // 0.4: a short, deterministic strip of colours for one part, so a controller can pick
 // one without anybody having to think in RGB. What the author chose comes first, then
 // what each palette gives this part, then a hue ring and a brightness ramp off the
@@ -752,9 +548,40 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             action_button("secondary","Search catalog...",{{"action","ui_browse_shells"}},4);
         }
     } else if(section_==1) {
-        if(!worn || worn->controls_for(selection->second.variant).controls.empty()) {
-            detail("Customize","Nothing to adjust","Wear an outfit that has adjustable parts, and they show up here.");
-            list_note("Wear an outfit that has adjustable parts.");
+        // Ground height: where the worn variant stands. The outfit may declare its own value;
+        // the player's setting overrides it and Reset part goes back to it. It is CSS's own
+        // row, after the package's parts, so every outfit has it.
+        auto placement=[&](int index,const Json& reset_all) {
+            const auto& custom=selection->second.custom;
+            const auto* worn_variant=catalog.find(worn->id,selection->second.variant);
+            const double authored=worn_variant?worn_variant->ground_offset_cm:0.;
+            const double ground=custom.ground_offset_cm.value_or(authored);
+            const Json base{{"action","ground_offset"}}, reset{{"action","reset_ground_offset"}};
+            auto centimetres=[](double v) {
+                char text[24]; std::snprintf(text,sizeof text,"%+.1f cm",v);
+                return std::abs(v)<.05?std::string("0.0 cm"):std::string(text);
+            };
+            section("Placement");
+            row_look.two_line=true;
+            if(custom.ground_offset_cm) row_look.value="Edited";
+            row(index,"Ground height",reset,step_action(base,-1),step_action(base,1),Json{},reset_all);
+            if(row_!=index) return;
+            detail("Ground height",worn->name,
+                   "Raise or lower where this outfit stands, when its feet sink into the ground or float above it. "
+                   "Only the model moves; you see the change in the world once the menu closes.");
+            slider("Height",float(ground),-10.f,10.f,.5f,centimetres(ground),true,base,true," cm",
+                   step_action(base,-1),step_action(base,1));
+            note("The outfit's own setting: "+centimetres(authored)+".");
+            direction_hint(true,"Adjust height");
+            action_button("accept","Reset to the outfit's setting",reset,3,custom.ground_offset_cm.has_value());
+            if(!reset_all.is_null()) action_button("tertiary","Reset all",reset_all,2);
+        };
+        if(!worn) {
+            detail("Customize","Nothing to adjust","Wear an outfit, and its adjustable parts show up here.");
+            list_note("Wear an outfit to customize it.");
+        } else if(worn->controls_for(selection->second.variant).controls.empty()) {
+            row_=0;
+            placement(0,Json{});
         } else {
             const auto& options=worn->controls_for(selection->second.variant); const auto& custom=selection->second.custom;
             auto values=control_values(options,custom);
@@ -801,7 +628,9 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 if(tintable) entries.push_back({true,group,-1});
                 for(int i:members) entries.push_back({false,group,i});
             }
-            row_=std::clamp(row_,0,int(entries.size())-1);
+            // The last row is CSS's own Ground height, after the package's parts.
+            const int ground_row=int(entries.size());
+            row_=std::clamp(row_,0,ground_row);
             auto swatch_of=[&](const Control& c) {
                 auto v=values.contains(c.id)?values.at(c.id):c.value;
                 if(c.kind==ControlKind::Glow) { const float t=std::clamp(v[0]/std::max(c.maximum,.001f),0.f,1.f); return Color{1.f*t+.15f,0.85f*t+.08f,0.3f*t+.03f,1}; }
@@ -847,18 +676,15 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     const ControlValue raw=saved!=custom.values.end()?saved->second:base;
                     bool differs=false;
                     for(size_t k=0;k<raw.size();++k) differs=differs || std::abs(raw[k]-base[k])>1e-3f;
-                    const bool body_presets=is_body_physics_control(c), hair_presets=!body_presets && is_hair_physics_control(c);
                     if(c.kind==ControlKind::Toggle) { if((raw[0]>=.5f)!=(base[0]>=.5f)) row_look.value=raw[0]>=.5f?"Shown":"Hidden"; }
                     else if(c.kind==ControlKind::Choice) {
                         const int at=std::clamp(int(std::lround(raw[0])),0,std::max(0,int(c.options.size())-1));
                         if(differs && at<int(c.options.size())) row_look.value=c.options[at].name.size()<=16?c.options[at].name:"Edited";
-                    } else if(body_presets || hair_presets) {
-                        const auto now=body_presets?detect_body_physics_preset(c,raw):detect_hair_physics_preset(c,raw);
-                        const auto was=body_presets?detect_body_physics_preset(c,base):detect_hair_physics_preset(c,base);
+                    } else if(!physics_presets(c).empty()) {
+                        const auto now=matching_physics_preset(c,raw), was=matching_physics_preset(c,base);
                         if(now!=was) {
                             row_look.value="Custom";
-                            if(body_presets) { for(const auto& preset:kBodyPhysicsPresets) if(now==preset.id) row_look.value=preset.name; }
-                            else for(const auto& preset:kHairPhysicsPresets) if(now==preset.id) row_look.value=preset.name;
+                            for(const auto& preset:physics_presets(c)) if(preset.id==now) row_look.value=preset.name;
                         } else if(differs) row_look.value="Edited";
                     } else if(differs) row_look.value="Edited";
                 }
@@ -868,20 +694,20 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     const bool on=held_value[0]>=.5f;
                     accept={{"action","control"},{"control",c.id},{"channel",0},{"value",on?0:1}};
                 }
-                const bool has_body_presets=is_body_physics_control(c);
-                const bool has_hair_presets=is_hair_physics_control(c);
-                const bool has_presets=has_body_presets || has_hair_presets;
+                const auto presets=physics_presets(c);
+                const bool has_presets=!presets.empty();
                 const int fieldcount=has_presets?1:control_channel_count(c);
                 const int channel=channel_%fieldcount;
                 Json minus, plus;
-                auto preset_steps=[&](const auto& presets,const std::string& current) {
-                    const int total=int(std::size(presets)); int index=-1;
-                    for(int p=0;p<total;++p) if(presets[p].id==current) index=p;
-                    minus=Json{{"action","physics_preset"},{"preset",presets[index<=0?total-1:index-1].id},{"control",c.id}};
-                    plus=Json{{"action","physics_preset"},{"preset",presets[index<0 || index>=total-1?0:index+1].id},{"control",c.id}};
-                };
-                if(has_body_presets) preset_steps(kBodyPhysicsPresets,detect_body_physics_preset(c,held_value));
-                else if(has_hair_presets) preset_steps(kHairPhysicsPresets,detect_hair_physics_preset(c,held_value));
+                if(has_presets) {
+                    // Left / Right walk the part's presets from the one it is on; off every
+                    // preset, Right starts at the first and Left at the last.
+                    const auto current=matching_physics_preset(c,held_value);
+                    const int total=int(presets.size()); int index=-1;
+                    for(int p=0;p<total;++p) if(presets[size_t(p)].id==current) index=p;
+                    minus=Json{{"action","physics_preset"},{"preset",presets[size_t(index<=0?total-1:index-1)].id},{"control",c.id}};
+                    plus=Json{{"action","physics_preset"},{"preset",presets[size_t(index<0 || index>=total-1?0:index+1)].id},{"control",c.id}};
+                }
                 else { minus={{"action","control"},{"control",c.id},{"channel",channel},{"delta",-1}}; plus=minus; plus["delta"]=1; }
                 if(!c.scalar && !exact_color_) {
                     // Left and Right walk the strip instead of nudging one channel.
@@ -909,8 +735,11 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 }
                 row(int(i),c.name,accept,minus,plus,secondary,tertiary);
             }
-            const auto& entry=entries[row_];
-            if(row_==0) {
+            placement(ground_row,confirm_reset_all);
+            const auto& entry=entries[std::min(row_,ground_row-1)];
+            if(row_==ground_row) {
+                // placement() drew the details window
+            } else if(row_==0) {
                 detail("Templates & Presets",worn->name,"Choose an author combination, material palette, body archetype or physics preset. Left / Right cycles them.");
                 divider("Templates");
                 std::vector<Choice> choices;
@@ -940,7 +769,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 const auto& control=options.controls[entry.control]; auto value=values.contains(control.id)?values.at(control.id):control.value;
                 auto set_to=[&](double v) { return Json{{"action","control"},{"control",control.id},{"channel",0},{"value",v}}; };
                 auto channel_base=[&](int channel) { return Json{{"action","control"},{"control",control.id},{"channel",channel}}; };
-                const bool has_body_presets=is_body_physics_control(control), has_hair_presets=is_hair_physics_control(control);
+                const auto presets=physics_presets(control);
+                const bool hair_rig=control.kind==ControlKind::Rig && !body_rig_control(control);
                 const bool physics=control.kind==ControlKind::Spring || control.kind==ControlKind::Dynamics || control.kind==ControlKind::Rig;
                 const bool rig=control.kind==ControlKind::Rig;
                 // Physics sliders: the preset panel's "Customize sliders", or a physics part
@@ -948,7 +778,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 // Damping / Gravity (hair), and a Motion switch on a rig.
                 auto physics_sliders=[&](bool modal) {
                     const bool spring=control.kind==ControlKind::Spring;
-                    const bool body=body_rig_control(control) || spring || has_body_presets;
+                    const bool body=!hair_rig && (body_rig_control(control) || spring || physics_region(control)!=PhysicsRegion::none);
                     const int fields=spring?(control.spring_clamp || modal?3:2):3;
                     const int stops=fields+(rig?1:0)+(modal?1:0);
                     const int focus=modal?physics_modal_channel_%stops:channel_%(fields+(rig?1:0));
@@ -989,18 +819,18 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     if(control.options.size()>4) action_button("secondary","Search choices...",rows_[row_].secondary,4);
                     action_button("accept","Reset part",rows_[row_].accept,3);
                     action_button("tertiary","Reset all",confirm_reset_all,2);
-                } else if(physics && (has_body_presets || has_hair_presets) && physics_modal_control_!=control.id) {
+                } else if(physics && !presets.empty() && physics_modal_control_!=control.id) {
                     // Presets: one selector for the whole set, its description underneath.
-                    const bool hair=has_hair_presets && !has_body_presets;
-                    const std::string pid=hair?detect_hair_physics_preset(control,value):detect_body_physics_preset(control,value);
+                    const auto pid=matching_physics_preset(control,value);
                     std::string name="Custom sliders", about="Your own values. Customize sliders tunes them, a preset replaces them.";
-                    if(hair) { for(const auto& p:kHairPhysicsPresets) if(pid==p.id) { name=p.name; about=p.subtitle; } }
-                    else { for(const auto& p:kBodyPhysicsPresets) if(pid==p.id) { name=p.name; about=p.subtitle; } }
-                    detail(control.name,worn->name,hair
+                    for(const auto& p:presets) if(pid==p.id) { name=p.name; about=p.description; }
+                    detail(control.name,worn->name,hair_rig
                         ?"Choose a hair motion preset. Customize sliders tunes stiffness, damping and gravity yourself."
-                        :"Choose a motion preset. Customize sliders tunes bounce, settling and travel yourself.");
+                        :control.kind==ControlKind::Spring
+                        ?"Choose a motion preset. Customize sliders tunes bounce, settling and travel yourself."
+                        :"Choose a motion preset. Customize sliders tunes bounce, settling and amount yourself.");
                     option("Preset",name,true,rows_[row_].previous,rows_[row_].next);
-                    note(about);
+                    if(!about.empty()) note(about);
                     if(rig) {
                         const Json flip={{"action","control"},{"control",control.id},{"channel",3},{"value",value[3]==1?0:1}};
                         option("Motion",value[3]==1?"On":"Off",false,flip,flip);
@@ -1014,7 +844,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                     const bool spring=control.kind==ControlKind::Spring;
                     detail(control.name,worn->name,spring
                         ?"Bounce is how quickly this part moves, Settle how quickly it stops, Travel how far it swings. If it keeps moving after you stop, turn Settle up."
-                        :body_rig_control(control) || has_body_presets
+                        :!hair_rig && (body_rig_control(control) || physics_region(control)!=PhysicsRegion::none)
                         ?"Bounce sets the speed, Settle how quickly it calms, Amount how strongly it answers your movement."
                         :"Stiffness pulls this part back toward its rest direction, Damping calms it, Gravity pulls it down; negative values pull up.");
                     physics_sliders(modal);

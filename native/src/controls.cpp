@@ -1,4 +1,5 @@
 #include "controls.hpp"
+#include "physics_presets.hpp"
 #include "data.hpp"
 #include <cctype>
 #include <algorithm>
@@ -563,6 +564,36 @@ ControlSet ControlSet::parse(const Json& j) {
             if(control.bindings.size()>=128) throw std::runtime_error("Too many linked material bindings");
             control.bindings.push_back(binding);
         }
+        // A package's own physics presets, in the control's channel units. They join CSS's
+        // built-ins in the part's Preset selector, so their ids must not reuse one.
+        if(c.contains("presets")) {
+            if(control.kind!=ControlKind::Spring && control.kind!=ControlKind::Rig && control.kind!=ControlKind::Dynamics)
+                throw std::runtime_error("Only a spring, rig or dynamics control accepts presets");
+            const auto& list=c.at("presets");
+            if(!list.is_array() || list.empty() || list.size()>16) throw std::runtime_error("Presets need one to sixteen entries");
+            std::set<std::string> preset_ids;
+            for(const auto& entry:list) {
+                if(!entry.is_object()) throw std::runtime_error("A preset needs an object");
+                PhysicsPreset preset;
+                preset.id=entry.at("id").get<std::string>();
+                preset.name=entry.at("name").get<std::string>();
+                preset.description=entry.value("description",std::string{});
+                if(!valid_id(preset.id) || !preset_ids.insert(preset.id).second) throw std::runtime_error("Invalid or repeated preset id");
+                if(builtin_physics_preset(preset.id)) throw std::runtime_error("Preset id is a CSS built-in: "+preset.id);
+                if(preset.name.empty() || preset.name.size()>48 || preset.description.size()>160)
+                    throw std::runtime_error("A preset needs a name up to 48 characters and a description up to 160");
+                const auto& v=entry.at("value");
+                if(!v.is_array() || v.size()!=3) throw std::runtime_error("A preset value needs three numbers");
+                for(size_t i=0;i<3;++i) {
+                    if(!v[i].is_number()) throw std::runtime_error("A preset value needs three numbers");
+                    preset.channels[i]=v[i].get<float>();
+                }
+                ControlValue check=control.value;
+                for(size_t i=0;i<3;++i) check[i]=preset.channels[i];
+                valid_value(control,check);
+                control.presets.push_back(std::move(preset));
+            }
+        }
         out.controls.push_back(std::move(control));
     }
     std::set<std::string> ids, destinations;
@@ -645,6 +676,12 @@ Customization Customization::parse(const Json& j) {
         valid_tint(group,tint);
         if(!tint.neutral()) result.tints[group]=tint;
     }
+    if(j.contains("ground_offset_cm")) {
+        const auto& offset=j.at("ground_offset_cm");
+        if(!offset.is_number() || !std::isfinite(offset.get<double>()) || std::abs(offset.get<double>())>10)
+            throw std::runtime_error("Invalid saved ground height");
+        result.ground_offset_cm=offset.get<double>();
+    }
     return result;
 }
 Json Customization::json() const {
@@ -655,6 +692,7 @@ Json Customization::json() const {
             saved[group]={{"hue",tint.hue},{"saturation",tint.saturation},{"brightness",tint.brightness}};
         out["tints"]=std::move(saved);
     }
+    if(ground_offset_cm) out["ground_offset_cm"]=*ground_offset_cm;
     return out;
 }
 Customization compatible_values(const ControlSet& options,const Customization& source) {
@@ -670,6 +708,7 @@ Customization compatible_values(const ControlSet& options,const Customization& s
         if(std::any_of(options.controls.begin(),options.controls.end(),
                        [&](const auto& c){return !c.scalar && control_group_name(c.group)==group;}))
             result.tints[group]=tint;
+    result.ground_offset_cm=source.ground_offset_cm;   // a placement, not tied to any part
     return result;
 }
 const char* control_kind_name(ControlKind kind) {
@@ -700,7 +739,8 @@ const char* control_group_name(ControlGroup group) { return group==ControlGroup:
 Customization choose_palette(const ControlSet& options,const Customization& current,const std::string& palette) {
     Customization result=current;
     result.palette=palette;
-    if(palette=="original") { result.values.clear(); result.tints.clear(); return result; }
+    // Original is the author's look, placement included.
+    if(palette=="original") { result.values.clear(); result.tints.clear(); result.ground_offset_cm.reset(); return result; }
     auto found=std::find_if(options.palettes.begin(),options.palettes.end(),
                             [&](const auto& p){return p.id==palette;});
     if(found==options.palettes.end()) throw std::runtime_error("That palette is not installed");

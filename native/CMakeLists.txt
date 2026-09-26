@@ -11,7 +11,7 @@ file(READ "${CMAKE_CURRENT_SOURCE_DIR}/ue4ss-runtime.json" CSS_UE4SS_RUNTIME_JSO
 string(JSON CSS_UE4SS_RUNTIME_REVISION GET "${CSS_UE4SS_RUNTIME_JSON}" revision)
 string(JSON CSS_UE4SS_IMPORT_RELATIVE GET "${CSS_UE4SS_RUNTIME_JSON}" import_library)
 set(CSS_UE4SS_IMPORT_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/../${CSS_UE4SS_IMPORT_RELATIVE}" CACHE FILEPATH "Pinned runtime import library; headers remain at CSS_SDK")
-add_library(css_data STATIC src/data.cpp src/animations.cpp src/packages.cpp src/controls.cpp src/body_geometry.cpp src/extension_data.cpp)
+add_library(css_data STATIC src/data.cpp src/animations.cpp src/packages.cpp src/controls.cpp src/physics_presets.cpp src/body_geometry.cpp src/extension_data.cpp)
 set_target_properties(css_data PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(css_data PUBLIC src vendor)
 if(WIN32)

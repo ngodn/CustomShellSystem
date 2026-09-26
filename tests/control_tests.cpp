@@ -1,4 +1,5 @@
 #include "data.hpp"
+#include "physics_presets.hpp"
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -9,6 +10,52 @@ void expect(bool condition,const char* message) { ++checks; if(!condition) throw
 template<class F> void rejects(F action) { bool rejected=false; try { action(); } catch(const std::exception&) { rejected=true; } expect(rejected,"Invalid colors accepted"); }
 int main() {
     try {
+        {
+            // Physics presets: the built-ins follow what the manifest declares (region bones,
+            // the hair solver), not the words in a part's id; a package adds its own after them.
+            auto recipe=Json::parse(R"({"schema":1,"controls":[
+              {"id":"part-a","name":"Front","kind":"rig","solver":"angular_body","regions":["butt001","butt002"],
+               "frequency":{"min":0.5,"max":6,"default":2},"damping_ratio":{"min":0.1,"max":2,"default":0.7},
+               "motion_amount":{"min":0,"max":5,"default":1},
+               "presets":[{"id":"studio","name":"Studio","description":"Tuned for this mesh","value":[3,0.9,0.5]}]},
+              {"id":"strands","name":"Strands","kind":"rig",
+               "stiffness":{"min":1,"max":400,"default":150},"damping":{"min":0,"max":60,"default":12},
+               "gravity":{"min":-1,"max":1,"default":0}}]})");
+            auto model=ControlSet::parse(recipe);
+            const auto& body=model.controls[0]; const auto& hair=model.controls[1];
+            expect(physics_region(body)==PhysicsRegion::glute,"Declared region bones not used");
+            auto presets=physics_presets(body);
+            expect(presets.size()==6 && presets.front().id=="firm" && presets.back().id=="studio" && !presets.back().builtin,
+                   "Built-ins then package presets expected");
+            expect(presets[1].channels[0]==2.10f && presets[1].channels[1]==.50f,"Glute values not chosen from the declared region");
+            const ControlValue motion_off{2,.7f,1,0};
+            const auto applied=physics_preset_value(body,presets.back(),motion_off);
+            expect(applied[0]==3 && applied[1]==.9f && applied[2]==.5f && applied[3]==0,"Preset must keep the motion switch");
+            expect(matching_physics_preset(body,applied)=="studio","Applied preset not recognised");
+            auto nudged=applied; nudged[0]+=.1f;
+            expect(matching_physics_preset(body,nudged).empty(),"A moved slider still matched a preset");
+            expect(physics_presets(hair).size()==5 && physics_presets(hair)[1].id=="natural","Hair solver presets missing");
+            expect(physics_presets(hair)[0].channels[0]==260 && physics_presets(hair)[4].channels[2]==0,"Hair preset values changed");
+            expect(physics_preset_id("OMG_Earthquake")=="earthquake" && physics_preset_id("saggy")=="soft","Legacy preset ids not mapped");
+            auto clash=recipe; clash["controls"][0]["presets"][0]["id"]="natural";
+            rejects([&]{ControlSet::parse(clash);});
+            auto outside=recipe; outside["controls"][0]["presets"][0]["value"]={9,0.9,0.5};
+            rejects([&]{ControlSet::parse(outside);});
+            auto colour=Json::parse(R"({"schema":1,"controls":[{"id":"tint","name":"Tint","kind":"color","bindings":[{"slot":0,"parameter":"Tint"}],
+              "presets":[{"id":"x","name":"X","value":[1,1,1]}]}]})");
+            rejects([&]{ControlSet::parse(colour);});
+        }
+        {
+            // Ground height is saved with the look, bounded, carried to a compatible variant
+            // and cleared by the author's original.
+            Customization look; look.ground_offset_cm=-2.5;
+            expect(Customization::parse(look.json()).ground_offset_cm==-2.5,"Ground height not saved");
+            expect(!Customization::parse(Customization{}.json()).ground_offset_cm,"Unset ground height saved");
+            rejects([&]{Customization::parse(Json::parse(R"({"palette":"original","values":{},"ground_offset_cm":12})"));});
+            ControlSet none;
+            expect(compatible_values(none,look).ground_offset_cm==-2.5,"Ground height lost between variants");
+            expect(!choose_palette(none,look,"original").ground_offset_cm,"Original kept the ground height");
+        }
         {
             auto recipe=Json::parse(R"({"schema":1,"controls":[{"id":"chest-motion","name":"Chest motion","kind":"rig",
               "solver":"angular_body","regions":["brust001","brust002"],

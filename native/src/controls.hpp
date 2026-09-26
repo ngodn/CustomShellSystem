@@ -10,6 +10,13 @@
 
 namespace css {
 using ControlValue = std::array<float,4>;
+// A physics preset: the first three channels of a spring, rig or AnimDynamics part.
+// Built-ins come from CSS (physics_presets.cpp); a package adds its own per control.
+struct PhysicsPreset {
+    std::string id, name, description;
+    std::array<float,3> channels{};
+    bool builtin=false;
+};
 struct ColorSwatch {
     std::string name;
     ControlValue color;
@@ -106,6 +113,7 @@ struct Control {
     int planar_constraint = 0;         // 0: none, 1: X, 2: Y, 3: Z
     std::vector<ControlBinding> bindings;
     std::vector<ColorSwatch> swatches;
+    std::vector<PhysicsPreset> presets;   // spring, rig or dynamics: the package's own presets
 };
 struct SpringAxes {
     std::array<bool,3> translate{}, rotate{};
@@ -170,6 +178,8 @@ struct Customization {
     std::string palette = "original";
     std::map<std::string,ControlValue> values;
     std::map<std::string,ColorTint> tints;   // keyed by group name: "outfit" or "body"
+    // The player's Ground height, in cm (-10..10). Unset: the variant's ground_offset_cm.
+    std::optional<double> ground_offset_cm;
     static Customization parse(const nlohmann::json&);
     nlohmann::json json() const;
     bool operator==(const Customization&) const = default;

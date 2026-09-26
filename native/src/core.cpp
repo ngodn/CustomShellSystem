@@ -1,5 +1,6 @@
 #include "api.hpp"
 #include "data.hpp"
+#include "physics_presets.hpp"
 #include "engine.hpp"
 #include "recovery.hpp"
 #include "player_recovery.hpp"
@@ -435,7 +436,8 @@ struct Core {
         else if(action=="palette" || action=="control" || action=="reset_control" ||
                 action=="color" || action=="reset_color" ||
                 action=="tint" || action=="reset_tint" ||
-                action=="template" || action=="physics_preset") {
+                action=="template" || action=="physics_preset" ||
+                action=="ground_offset" || action=="reset_ground_offset") {
             const bool clearing=action=="reset_control" || action=="reset_color";
             auto selected=state.selections.find(appearance.shell);
             if(selected==state.selections.end()) throw std::runtime_error("Wear an appearance before changing it.");
@@ -481,152 +483,38 @@ struct Core {
                 }
                 report("Applied template: " + tmpl->name);
             }
+            else if(action=="ground_offset" || action=="reset_ground_offset") {
+                // Ground height: the player's placement for this variant, in half-centimetre
+                // steps. Landing back on the outfit's own value drops the override.
+                const auto* variant=catalog.find(selected->second.outfit,selected->second.variant);
+                const double authored=variant?variant->ground_offset_cm:0.;
+                if(action=="reset_ground_offset") custom.ground_offset_cm.reset();
+                else {
+                    double offset=command.contains("value")?command.at("value").get<double>()
+                        :custom.ground_offset_cm.value_or(authored)+command.at("delta").get<double>()*.5;
+                    if(!std::isfinite(offset)) throw std::runtime_error("Invalid ground height");
+                    offset=std::clamp(std::round(offset*2)/2,-10.,10.);
+                    if(std::abs(offset-authored)<1e-6) custom.ground_offset_cm.reset();
+                    else custom.ground_offset_cm=offset;
+                }
+            }
             else if(action=="physics_preset") {
-                auto preset=command.at("preset").get<std::string>();
-                for(char& c : preset) c = char(std::tolower(static_cast<unsigned char>(c)));
-                if(preset=="normal") preset="natural";
-                else if(preset=="more_jiggle") preset="bouncy";
-                else if(preset=="saggy") preset="soft";
-                else if(preset=="omg_earthquake") preset="earthquake";
-
-                std::string target_id=command.value("control",std::string{});
-                auto is_hair_ctrl = [](const Control& ctrl) {
-                    if(ctrl.kind != ControlKind::Rig) return false;
-                    if(ctrl.rig && ctrl.rig->body) return false;
-                    std::string id = ctrl.id;
-                    for(char& c : id) c = char(std::tolower(static_cast<unsigned char>(c)));
-                    return id.find("hair") != std::string::npos || id.find("ponytail") != std::string::npos;
-                };
-                auto classify_region=[](const std::string& raw_id) -> int {
-                    std::string id=raw_id;
-                    for(char& c:id) c=char(std::tolower(static_cast<unsigned char>(c)));
-                    if(id.find("chest")!=std::string::npos || id.find("breast")!=std::string::npos ||
-                       id.find("boob")!=std::string::npos || id.find("bust")!=std::string::npos) return 0; // chest
-                    if(id.find("glute")!=std::string::npos || id.find("butt")!=std::string::npos) return 1; // glute
-                    if(id.find("thigh")!=std::string::npos || id.find("hip")!=std::string::npos) return 2; // thigh
-                    if(id.find("belly")!=std::string::npos || id.find("waist")!=std::string::npos ||
-                       id.find("abdomen")!=std::string::npos || id.find("stomach")!=std::string::npos) return 3; // belly
-                    return -1;
-                };
+                // One control's preset (the page's Preset selector), or with no control every
+                // part that has a preset of that id.
+                const auto preset_id=physics_preset_id(command.at("preset").get<std::string>());
+                const auto target_id=command.value("control",std::string{});
+                const auto current=control_values(options,custom);
+                std::string label;
                 for(const auto& ctrl:options.controls) {
                     if(!target_id.empty() && ctrl.id!=target_id) continue;
-                    if(is_hair_ctrl(ctrl)) {
-                        ControlValue target_val;
-                        if(preset=="firm") {
-                            target_val = {260.0f, 26.0f, 0.04f, 1.0f};
-                        } else if(preset=="natural" || preset=="normal") {
-                            target_val = {180.0f, 16.0f, 0.08f, 1.0f};
-                        } else if(preset=="silky" || preset=="bouncy" || preset=="flowing") {
-                            target_val = {110.0f, 10.0f, 0.14f, 1.0f};
-                        } else if(preset=="heavy" || preset=="soft" || preset=="weighted") {
-                            target_val = {190.0f, 22.0f, 0.35f, 1.0f};
-                        } else if(preset=="floaty" || preset=="earthquake" || preset=="anime") {
-                            target_val = {55.0f, 6.0f, 0.00f, 1.0f};
-                        } else {
-                            continue;
-                        }
-                        if(ctrl.rig) {
-                            for(size_t ch=0; ch<3; ++ch) {
-                                target_val[ch] = std::clamp(target_val[ch], ctrl.rig->channels[ch].minimum, ctrl.rig->channels[ch].maximum);
-                            }
-                        }
-                        custom.values[ctrl.id] = target_val;
-                        continue;
-                    }
-                    const int region = classify_region(ctrl.id);
-                    if(region < 0) continue;
-                    if(body_rig_control(ctrl)) {
-                        ControlValue target_val;
-                        if(preset=="firm") {
-                            if(region==0) target_val={2.60f, 0.65f, 0.60f, 1.0f};
-                            else if(region==1) target_val={2.50f, 0.65f, 0.65f, 1.0f};
-                            else if(region==2) target_val={2.80f, 0.72f, 0.40f, 1.0f};
-                            else if(region==3) target_val={2.70f, 0.68f, 0.45f, 1.0f};
-                        }
-                        else if(preset=="natural") {
-                            if(region==0) target_val={2.15f, 0.48f, 1.00f, 1.0f};
-                            else if(region==1) target_val={2.10f, 0.50f, 1.00f, 1.0f};
-                            else if(region==2) target_val={2.35f, 0.58f, 0.75f, 1.0f};
-                            else if(region==3) target_val={2.20f, 0.52f, 0.85f, 1.0f};
-                        }
-                        else if(preset=="bouncy") {
-                            if(region==0) target_val={1.70f, 0.28f, 1.80f, 1.0f};
-                            else if(region==1) target_val={1.65f, 0.30f, 1.80f, 1.0f};
-                            else if(region==2) target_val={1.85f, 0.38f, 1.35f, 1.0f};
-                            else if(region==3) target_val={1.75f, 0.32f, 1.50f, 1.0f};
-                        }
-                        else if(preset=="soft") {
-                            if(region==0) target_val={1.25f, 0.18f, 2.60f, 1.0f};
-                            else if(region==1) target_val={1.20f, 0.20f, 2.50f, 1.0f};
-                            else if(region==2) target_val={1.40f, 0.25f, 2.00f, 1.0f};
-                            else if(region==3) target_val={1.30f, 0.22f, 2.20f, 1.0f};
-                        }
-                        else if(preset=="earthquake") {
-                            if(region==0) target_val={0.85f, 0.06f, 4.20f, 1.0f};
-                            else if(region==1) target_val={0.85f, 0.08f, 4.20f, 1.0f};
-                            else if(region==2) target_val={0.95f, 0.10f, 3.50f, 1.0f};
-                            else if(region==3) target_val={0.90f, 0.08f, 3.80f, 1.0f};
-                        }
-                        if(ctrl.rig) {
-                            for(size_t ch=0; ch<3; ++ch) {
-                                target_val[ch] = std::clamp(target_val[ch], ctrl.rig->channels[ch].minimum, ctrl.rig->channels[ch].maximum);
-                            }
-                        }
-                        custom.values[ctrl.id] = target_val;
-                    } else if(ctrl.kind==ControlKind::Spring) {
-                        ControlValue target_val;
-                        if(preset=="firm") {
-                            if(region==0) target_val={2.60f, 0.65f, 1.20f, 1.0f};
-                            else if(region==1) target_val={2.50f, 0.65f, 1.50f, 1.0f};
-                            else if(region==2) target_val={2.80f, 0.72f, 0.80f, 1.0f};
-                            else if(region==3) target_val={2.70f, 0.68f, 0.90f, 1.0f};
-                        }
-                        else if(preset=="natural") {
-                            if(region==0) target_val={2.15f, 0.48f, 2.20f, 1.0f};
-                            else if(region==1) target_val={2.10f, 0.50f, 2.20f, 1.0f};
-                            else if(region==2) target_val={2.35f, 0.58f, 1.60f, 1.0f};
-                            else if(region==3) target_val={2.20f, 0.52f, 1.80f, 1.0f};
-                        }
-                        else if(preset=="bouncy") {
-                            if(region==0) target_val={1.70f, 0.28f, 4.50f, 1.0f};
-                            else if(region==1) target_val={1.65f, 0.30f, 4.50f, 1.0f};
-                            else if(region==2) target_val={1.85f, 0.38f, 3.20f, 1.0f};
-                            else if(region==3) target_val={1.75f, 0.32f, 3.80f, 1.0f};
-                        }
-                        else if(preset=="soft") {
-                            if(region==0) target_val={1.25f, 0.18f, 7.50f, 1.0f};
-                            else if(region==1) target_val={1.20f, 0.20f, 7.00f, 1.0f};
-                            else if(region==2) target_val={1.40f, 0.25f, 5.50f, 1.0f};
-                            else if(region==3) target_val={1.30f, 0.22f, 6.50f, 1.0f};
-                        }
-                        else if(preset=="earthquake") {
-                            if(region==0) target_val={0.85f, 0.06f, 14.0f, 1.0f};
-                            else if(region==1) target_val={0.85f, 0.08f, 14.0f, 1.0f};
-                            else if(region==2) target_val={0.95f, 0.10f, 10.0f, 1.0f};
-                            else if(region==3) target_val={0.90f, 0.08f, 13.0f, 1.0f};
-                        }
-                        target_val[0] = std::clamp(target_val[0], ctrl.minimum, ctrl.maximum);
-                        target_val[1] = std::clamp(target_val[1], ctrl.damping_minimum, ctrl.damping_maximum);
-                        if(ctrl.spring_clamp) {
-                            target_val[2] = std::clamp(target_val[2], ctrl.displacement_minimum, ctrl.displacement_maximum);
-                        }
-                        custom.values[ctrl.id] = target_val;
-                    }
+                    const auto presets=physics_presets(ctrl);
+                    const auto found=std::find_if(presets.begin(),presets.end(),[&](const auto& p){ return p.id==preset_id; });
+                    if(found==presets.end()) continue;
+                    const auto held=current.contains(ctrl.id)?current.at(ctrl.id):ctrl.value;
+                    custom.values[ctrl.id]=physics_preset_value(ctrl,*found,held);
+                    label=found->name;
                 }
-                std::string target_ctrl = target_id;
-                for(char& c:target_ctrl) c=char(std::tolower(static_cast<unsigned char>(c)));
-                const bool is_hair_target = target_ctrl.find("hair")!=std::string::npos || target_ctrl.find("ponytail")!=std::string::npos;
-                const std::string label = is_hair_target ? (
-                    preset=="firm" ? "Firm" :
-                    preset=="natural" ? "Natural" :
-                    (preset=="silky" || preset=="bouncy" || preset=="flowing") ? "Silky" :
-                    (preset=="heavy" || preset=="soft" || preset=="weighted") ? "Heavy" : "Floaty"
-                ) : (
-                    preset=="firm" ? "Firm" :
-                    preset=="natural" ? "Natural" :
-                    preset=="bouncy" ? "Bouncy" :
-                    preset=="soft" ? "Soft / Saggy" : "OMG! Earthquake!"
-                );
+                if(label.empty()) throw std::runtime_error("No part has the physics preset "+preset_id);
                 report("Applied physics preset: "+label);
             }
             else if(action=="tint" || action=="reset_tint") {
@@ -960,7 +848,7 @@ struct Core {
                     else appearance.set_attachment_offsets(variant->attachments);
                     if (appearance.apply(engine, variant->mesh, variant->materials)) {
                         try {
-                            appearance.set_ground_offset(variant->ground_offset_cm);
+                            appearance.set_ground_offset(requested.custom.ground_offset_cm.value_or(variant->ground_offset_cm));
                             for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit) {
                                 // Items before controls: an accessory can hide body
                                 // sections, and a toggle may then show one of them again.

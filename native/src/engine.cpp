@@ -1,6 +1,7 @@
 #include "engine.hpp"
 #include <windows.h>
 #include "startup.hpp"
+#include "physics_presets.hpp"
 #include "skeleton_compatibility.hpp"
 #include <array>
 #include <cctype>
