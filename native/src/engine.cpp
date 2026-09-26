@@ -127,9 +127,16 @@ static UObject* find(const wchar_t* path) {
 
 struct FieldEntry { refl::OwnerGuard owner; FProperty* property = nullptr; };
 static std::unordered_map<refl::Key, FieldEntry, refl::Hash, refl::Eq> s_field_cache;
+// The type whose properties GetPropertyByNameInChain searches, which is what a cached
+// property belongs to: a struct or class object is searched itself, anything else through
+// its class. Keying a struct by its class would put every struct under UScriptStruct and
+// hand one struct's "Size" or "Name" to another.
+static UObject* field_owner(UObject* object) {
+    return object->IsA<UStruct>() ? object : object->GetClassPrivate();
+}
 static FProperty* field(UObject* object, const wchar_t* name, size_t size) {
     if (!object) throw std::runtime_error("No live object");
-    UObject* owner = object->GetClassPrivate();
+    UObject* owner = field_owner(object);
     FProperty* property = nullptr;
     if (owner) {
         if (auto it = s_field_cache.find(refl::View{owner, name}); it != s_field_cache.end() && it->second.owner.alive())
@@ -152,7 +159,7 @@ static FProperty* field(UObject* object, const wchar_t* name, size_t size) {
 // call. (field() treats a cached null as a miss and walks again, so the two share the cache.)
 static FProperty* optional_field(UObject* object, const wchar_t* name) {
     if (!object) return nullptr;
-    UObject* owner = object->GetClassPrivate();
+    UObject* owner = field_owner(object);
     if (!owner) return object->GetPropertyByNameInChain(name);
     if (auto it = s_field_cache.find(refl::View{owner, name}); it != s_field_cache.end() && it->second.owner.alive())
         return it->second.property;

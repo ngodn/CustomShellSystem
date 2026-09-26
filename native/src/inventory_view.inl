@@ -275,9 +275,15 @@ size_t nearest_swatch(const std::vector<ColorSwatch>& swatches,const ControlValu
     }
     return best;
 }
+// The menu asks this for every mapped key every frame; each key's FName is made once.
+FName key_name(const std::string& key) {
+    static std::unordered_map<std::string,FName> names;
+    if(auto it=names.find(key);it!=names.end()) return it->second;
+    return names.emplace(key,FName(wide(key).c_str())).first->second;
+}
 bool inventory_key(UObject* pc,const std::string& key) {
     Call call(pc,L"IsInputKeyDown",2); auto* p=call.param(L"Key");
-    member(call.data(p),p->GetElementSize(),find(L"/Script/InputCore.Key"),L"KeyName",FName(wide(key).c_str()));
+    member(call.data(p),p->GetElementSize(),find(L"/Script/InputCore.Key"),L"KeyName",key_name(key));
     call.run(); return call.get<bool>();
 }
 std::string inventory_text(UObject* widget,int limit=256) {
@@ -2316,6 +2322,12 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         dirty_=true;
         return dispatch(action,state);
     }
+    // Buttons and sliders only change under the mouse, so they are read while a mouse button
+    // is down and for one frame after release (the slider's final value, a quick click).
+    const bool mouse_now=inventory_key(controller_.Get(),"LeftMouseButton") || inventory_key(controller_.Get(),"RightMouseButton");
+    const bool mouse=mouse_now || mouse_was_down_;
+    mouse_was_down_=mouse_now;
+    if(!mouse) { for(auto& hit:hits_) hit.down=false; return {}; }
     for(auto& slider:sliders_) if(auto* widget=slider.widget.Get()) {
         Call value(widget,L"GetValue",1); value.run(); auto v=value.get<float>();
         if(std::abs(v-slider.previous)>.00001f) {

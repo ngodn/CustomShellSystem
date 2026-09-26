@@ -88,6 +88,7 @@ class InventoryUI {
     struct Slider { WeakObject widget, label, heading; Json action; float previous; bool scalar; std::string unit; };
     struct Binding { std::string action; std::vector<std::string> keys; bool down=false; uint64_t repeat=0; WeakObject input_action; };
     std::vector<Hit> hits_;
+    bool mouse_was_down_=false;
     std::vector<Row> rows_;
     std::vector<Slider> sliders_;
     std::vector<Binding> bindings_;
