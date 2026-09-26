@@ -65,6 +65,27 @@ int32 UCSSEveClothCommandlet::Main(const FString& Params)
             Row->SetNumberField(TEXT("mapping_count"),Section.ClothMappingDataLODs.IsEmpty()?0:Section.ClothMappingDataLODs[0].Num());
             Rows.Add(MakeShared<FJsonValueObject>(Row));
         }
+        TArray<TSharedPtr<FJsonValue>> Assets;
+        for (const auto& Base:Mesh->GetMeshClothingAssets())
+        {
+            const auto* Cloth=Cast<UClothingAssetCommon>(Base);
+            if (!Cloth || Cloth->LodData.Num()!=1) return Fail(TEXT("Unexpected saved cloth asset"));
+            auto Row=MakeShared<FJsonObject>();
+            Row->SetStringField(TEXT("physics"),GetPathNameSafe(Cloth->PhysicsAsset));
+            const auto& Physical=Cloth->LodData[0].PhysicalMeshData;
+            Row->SetNumberField(TEXT("particles"),Physical.Vertices.Num());
+            const auto* Distances=Physical.FindWeightMap(EWeightMapTargetCommon::MaxDistance);
+            if (!Distances) return Fail(TEXT("Missing saved distance map"));
+            TArray<TSharedPtr<FJsonValue>> Values;
+            for (int32 I=0; I<Distances->Num(); ++I) Values.Add(MakeShared<FJsonValueNumber>((*Distances)[I]));
+            Row->SetArrayField(TEXT("max_distances"),Values);
+            const auto* SharedConfig=Cloth->GetClothConfig<UChaosClothSharedSimConfig>();
+            if (!SharedConfig) return Fail(TEXT("Missing shared simulation config"));
+            Row->SetNumberField(TEXT("iterations"),SharedConfig->IterationCount);
+            Row->SetNumberField(TEXT("max_iterations"),SharedConfig->MaxIterationCount);
+            Assets.Add(MakeShared<FJsonValueObject>(Row));
+        }
+        Root->SetArrayField(TEXT("assets"),Assets);
         Root->SetArrayField(TEXT("sections"),Rows);
         if (!FJsonSerializer::Serialize(Root,TJsonWriterFactory<>::Create(&Text)) || !FFileHelper::SaveStringToFile(Text,*Report))
             return Fail(TEXT("Cannot save inspection"));
