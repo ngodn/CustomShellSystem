@@ -43,6 +43,24 @@ After the trial, record the result as adopted, rejected or still unverified, wit
 
 ## What Planet Diving can reuse
 
+### September 27: a promising sample is not a complete result
+
+Local collision-weight transfer reduced error at three selected thigh points, but the full coarse-grid trial still reached 25.62 cm default and 27.32 cm combined hip/waist correspondence error across 582 recorded cases. Half-sized cells improved the maximum in all 291 default poses and 284 of 291 morph poses, but still reached about 15.27 cm. Neither is an accepted collider. Reports: `ls-local16e/motion.json` and `ls-local32/motion.json`.
+
+The reusable lesson is to run the complete recorded pose set before building on a selected-frame success. Separate weight transfer from grid spacing, preserve the same bounds, and record the worst vertex indices so the next investigation has a concrete location. Correspondence distance also includes tangential motion; it is not automatically penetration depth. Check the actual surface and native distance queries before making that claim.
+
+Two numerical checks initially stopped these trials. Tiny negative nearest-triangle barycentric values were corrected only when clamping preserved the closest point within 0.0001 cm. Independent original-grid replay differed by up to 0.004063 cm overall and 0.000369 cm in the skirt region. The offline guards now allow 0.01 cm overall and 0.001 cm locally, while reporting actual errors. Those numerical agreement tolerances are not garment-fit acceptance thresholds. Keep failed-run diagnostics rather than silently loosening checks.
+
+### Record after each useful experiment
+
+- Problem and hypothesis, including what evidence justified another attempt.
+- Source revision, exact command, changed variable and baseline.
+- Result, measurements and representative visual evidence when applicable.
+- Decision: adopted, rejected, or unverified, with the remaining limitation.
+- Reusable script/check and the next action. Put outfit-specific settings separately from general rules.
+
+Update this playbook for a changed workflow, the evidence index for artifact lookup, and the goal checkpoint for what to do next. Do not turn every tool call into a diary entry.
+
 Reuse the source/weight audit, protected-asset checks, recorded pose inputs where compatible, morph comparisons, export verification, render-attachment checks, contact analysis and visual review sequence. Begin with the original Planet Diving source and identify its actual flexible parts. Do not copy Holiday's skirt weights, collision cutoffs, proxy density, stiffness or clearance offsets blindly.
 
 The faster route is to avoid disproven experiments and detect source errors early. Holiday's final physics recipe is not established yet, so there is no proven universal preset to apply to every outfit.

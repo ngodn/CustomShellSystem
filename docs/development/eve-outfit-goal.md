@@ -1,6 +1,6 @@
 # Eve outfit goal and current status
 
-Updated 2026-09-27, lattice weight tracing and local-transfer counterfactual. Read [the evidence index](eve-outfit-index.md) before resuming.
+Updated 2026-09-27, complete local-transfer comparisons and reusable lessons. Read [the evidence index](eve-outfit-index.md) before resuming.
 
 ## Active objective
 
@@ -31,6 +31,8 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 - Package under `/Game/CSS/`, use short readable paths, retain source provenance, and commit by coherent change. Do not publish until the candidate has passed these checks.
 
 ## Latest checkpoint
+
+Full-grid local transfer has now completed 582 cases at each of two spacings. The coarse grid still reaches 25.62 cm default / 27.32 cm hip-waist correspondence error. Half-sized cells within the same bounds improve all 291 default poses and 284/291 morph poses, but still reach 15.27 cm. Reports: `work/eve26/ls-local16e/motion.json` and `ls-local32/motion.json`; recipes are offline JSON only. The finer trial's worst default sample is body vertex 8275 at sprint frame 56. Next inspect that location and the mapped surface, distinguishing tangential correspondence error from actual collider undercoverage, before creating any native candidate. No signed-distance, cloth-cost or game acceptance follows from these comparisons. The selected-point result below is superseded by this broader checkpoint.
 
 Three worst thigh samples now have exact native lattice traces. Their generated weights mix in unrelated fingers, arms and spine while reducing the main thigh influence to about 14%. A same-grid, selected-corner counterfactual using nearest body triangle weights reduces 23.5–24.2 cm errors to 1.2–1.5 cm. Independent replay of original native corners agrees within 0.000138 cm. Next export the complete grid, test local transfer across the whole surface and recorded poses, then build a separate candidate only if the wider result supports it. This has not repaired or installed a collider yet.
 
