@@ -6,7 +6,7 @@ Updated 2026-09-26, takeover session 1. Read [the evidence index](eve-outfit-ind
 
 Deliver `CSS_EveStellarBlade_eins0fx_P` with all available Eve outfit variants, properly fitted to the original body proportions, complete applicable clothing customization, and verified clothing and secondary-motion physics. Every outfit needs **Original plus at least five clothing color palettes**. Hair-only recoloring does not satisfy this requirement. The user clarified this on September 26 and reports the latest Gemini outfit work is incomplete.
 
-The user resumed work and replaced the immediate priority with this outfit milestone. The conversation goal tracker still says paused with the older CSS Next-Gen objective. Its available tools cannot change the objective or resume it; do not mark that unfinished objective complete to bypass this limitation. This document records the current authorized scope.
+The user supplied this updated objective and resumed the goal through the conversation goal control. The September 26 fitting milestone is active; do not revert to the older quota-pause instructions.
 
 **Latest priority correction: fitting first.** The user explicitly asked to focus on fitting every outfit to the same standard as Black Pearl. Palette implementation is parked until the fitting foundation is sound. Start with Holiday Reveler, then apply the proven process to the other outfits. Keep all customization requirements queued.
 
@@ -62,3 +62,15 @@ The added meshes also have a different material order from Black Pearl. For exam
 4. After fitting, repair name-based material mappings, independent toggles and outfit-specific dye layers; deliver five clothing palettes plus Original and per-outfit save/load checks. Keep accepted Black Pearl behavior as a regression baseline.
 
 Local diagnostic outputs are under `CustomShellSystem/work/eve26/`; source assets remain in the authoring collection. No new asset candidate was installed during the takeover audit. The previous quota-era queue entries below September 26 are history, not the current build state.
+
+## Holiday F1 investigation
+
+The original `eve_beta10.blend` and the authoring master both retain full Holiday dress/sleeve skin weights. The current `Variants_Fixed` has lost them. Gemini's fitting script clears all groups and applies Data Transfer without generating destination layers. Blender documents that the modifier does not create those layers: https://docs.blender.org/manual/en/4.3/modeling/modifiers/modify/data_transfer.html. The saved dress also has a 4.98 mm maximum discrepancy between mesh coordinates and its shape-key Basis, while the source has none.
+
+The original sleeves have the same coordinates as the broken candidate, although the target body's arm pose differs from the original body. Weight repair alone therefore cannot establish a correct fit. F1 reconstructs four garment objects from the intact master using matching body topology and surface correspondence, preserving loose cloth offsets. It directly creates normalized CSS skin weights and keeps shape-key coordinates consistent. Body geometry, morphs and weights are hashed before/after; the Blender rig is checked unchanged. This is a separate offline candidate, not an installed repair.
+
+Probe: `tools/eve-fit/probe_sources.py`, results: `work/eve26/fit-probe.json`. Candidate builder: `tools/eve-fit/holiday_candidate.py`; neutral-material review: `tools/eve-fit/render_holiday.py`. Pending acceptance includes visual silhouette/clearance, morph endpoints, deformation, cloth setup and installed cooked-skeleton preservation.
+
+F1 outcome: all four rebuilt pieces have complete weights and unchanged body/rig checks pass. Front and side review, including the exporter-equivalent no-modifier view, still show chest penetration and distorted sleeves. **Rejected for deployment.** Surface correspondence alone is insufficient. Next inspect the pristine source's evaluated armature/surface-deform/corrective stack and reproduce its intended garment shape before adapting it to the CSS body; do not repeat F1 with arbitrary clearance increases.
+
+Pristine source visual check: `work/eve26/original-visible/front.png` shows a covered chest, correctly shaped collar and coherent loose sleeves when the original deformation stack is retained. The initial `original-views` capture was invalid because wardrobe visibility drivers hid the outfit. The review tool now overrides visibility drivers and links requested pieces into a visible collection without saving the source. Source evaluation logs warn about eight dependency cycles, so explicitly validate the evaluated mesh and modifier dependencies before baking. Next candidate should start from that evaluated garment shape, not raw mesh vertices. Preserve the CSS body rather than importing any outfit-driven source body deformation.

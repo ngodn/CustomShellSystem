@@ -1,6 +1,6 @@
 # Eve outfit evidence index
 
-Updated 2026-09-26. Start here after a context reset.
+Updated 2026-09-26. Goal resumed with the new outfit objective. Start here after a context reset.
 
 ## Findings to preserve
 
@@ -40,3 +40,14 @@ Paths in this table are relative to the workspace root unless linked.
 | [Modding colors](../modding/colors.md) | Dye layer format and material binding contract |
 
 References already reviewed: local cloth-physics-guide, MustardUI README and CommanderWhite Daz/MHX addon inventory. MustardUI is an authoring interface, not proof of Unreal cloth export support. Use matching UE 5.6.1 source for Chaos implementation details.
+
+## Fitting reconstruction evidence
+
+- `CustomShellSystem/work/eve26/fit-probe.json`: intact original/master weights compared with the damaged saved blend; different source/target arm rest geometry.
+- `CustomShellSystem/tools/eve-fit/holiday_candidate.py`: F1 reconstructs dress, sleeves, leg pieces and underwear from intact master geometry onto the target body.
+- `CustomShellSystem/work/eve26/holiday-f1.json`: all four parts weighted; body geometry, morphs and weights unchanged; Blender rig unchanged. Offline candidate only.
+- `CustomShellSystem/tools/eve-fit/render_holiday.py`: neutral-material review; `--bind` matches export's saved-fit-key/no-modifier policy. Do not confuse authoring pose previews with exported bind geometry.
+- `CustomShellSystem/work/eve26/f1-views`: initial authoring pose views expose remaining chest penetration and sleeve silhouette problems. F1 is not accepted for deployment.
+
+- `CustomShellSystem/work/eve26/original-visible`: pristine source with wardrobe visibility enabled. Reviewed front shows correct chest coverage and loose sleeves with the original deformation stack. This is the intended shape reference for F2. The source logs eight dependency-cycle warnings; evaluate and verify explicitly before baking.
+- Do not reuse `original-views` as garment evidence: source visibility drivers hid the outfit in that first capture.
