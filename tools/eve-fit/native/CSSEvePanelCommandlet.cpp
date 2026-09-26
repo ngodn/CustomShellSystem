@@ -23,6 +23,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogCSSEvePanel, Log, All);
 
 #include "CSSEvePanelMotion.inl"
 #include "CSSEvePanelMapping.inl"
+#include "CSSEvePanelDeformer.inl"
 
 UCSSEvePanelCommandlet::UCSSEvePanelCommandlet()
 {
@@ -218,6 +219,9 @@ int32 UCSSEvePanelCommandlet::Main(const FString& Params)
     SimulationConfig.Initialize(Config,Shared);
     SimulationConfig.GetPropertyCollection(0)->CopyTo(&Collection.Get());
     FClothEngineTools::GenerateTethers(Collection,TEXT("MaxDistance"),true);
+    if ((FParse::Param(*Params,TEXT("MultiMap")) || FParse::Param(*Params,TEXT("RepairMap"))) &&
+        !GeneratePanelDeformer(Cloth,FParse::Param(*Params,TEXT("RepairMap"))))
+        return Fail(TEXT("Explicit cloth mapping failed"));
     UPackage* Package=CreatePackage(*Output);
     UChaosClothAsset* Asset=NewObject<UChaosClothAsset>(Package,*FPackageName::GetLongPackageAssetName(Output),RF_Public|RF_Standalone);
     FText Error,Verbose;
