@@ -102,7 +102,10 @@ int32 UCSSEvePanelCommandlet::Main(const FString& Params)
         !(*Proxy)->TryGetArrayField(TEXT("weights"),W) || !(*Proxy)->TryGetArrayField(TEXT("indices"),T) ||
         P->Num()<3 || P->Num()>5000 || N->Num()!=P->Num() || W->Num()!=P->Num() || T->Num()%3 || T->IsEmpty())
         return Fail(TEXT("Invalid proxy dimensions"));
-    USkeletalMesh* Mesh = LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/CSS/EveTest/SK_Holiday.SK_Holiday"));
+    FString MeshPath=TEXT("/Game/CSS/EveTest/SK_Holiday.SK_Holiday");
+    FParse::Value(*Params,TEXT("Mesh="),MeshPath);
+    if (!MeshPath.StartsWith(TEXT("/Game/CSS/EveTest/SK_"))) return Fail(TEXT("Mesh must be a private test asset"));
+    USkeletalMesh* Mesh = LoadObject<USkeletalMesh>(nullptr,*MeshPath);
     if (!Mesh) return Fail(TEXT("Private source mesh missing"));
     FAssetCompilingManager::Get().FinishAllCompilation();
     if (!Mesh->GetImportedModel() || Mesh->GetImportedModel()->LODModels.Num()!=1)

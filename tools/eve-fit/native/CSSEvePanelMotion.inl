@@ -30,7 +30,10 @@ static int32 EvaluateHolidayPanel(const FString& Params)
         !FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text),Root) || !Root.IsValid()) return Fail(TEXT("Invalid pose JSON"));
     const TArray<TSharedPtr<FJsonValue>>* Frames=nullptr;
     if (!Root->TryGetArrayField(TEXT("frames"),Frames) || Frames->Num()<Count) return Fail(TEXT("Missing frames"));
-    auto* Mesh=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/CSS/EveTest/SK_Holiday.SK_Holiday"));
+    FString MeshPath=TEXT("/Game/CSS/EveTest/SK_Holiday.SK_Holiday");
+    FParse::Value(*Params,TEXT("Mesh="),MeshPath);
+    if (!MeshPath.StartsWith(TEXT("/Game/CSS/EveTest/SK_"))) return Fail(TEXT("Mesh must be a private test asset"));
+    auto* Mesh=LoadObject<USkeletalMesh>(nullptr,*MeshPath);
     FString ClothPath=TEXT("/Game/CSS/EveTest/CA_Holiday.CA_Holiday");
     FParse::Value(*Params,TEXT("Cloth="),ClothPath);
     if (!ClothPath.StartsWith(TEXT("/Game/CSS/EveTest/CA_"))) return Fail(TEXT("Cloth must be a private candidate"));
@@ -186,7 +189,8 @@ static int32 EvaluateHolidayPanel(const FString& Params)
         PreviousTime=Time;
     }
     auto Result=MakeShared<FJsonObject>();
-    Result->SetStringField(TEXT("scope"),TEXT("Actual saved CA_Holiday Chaos component simulation on recorded original-graph poses. Old reference asset geometry/weights; no F11, morph, material or game acceptance."));
+    Result->SetStringField(TEXT("scope"),TEXT("Actual saved private Chaos asset on recorded poses. Source mesh identifies the geometry revision; no morph, material or game acceptance."));
+    Result->SetStringField(TEXT("source_mesh"),Mesh->GetPathName());
     Result->SetStringField(TEXT("source_motion"),Input);
     Result->SetStringField(TEXT("asset"),Asset->GetPathName());
     Result->SetStringField(TEXT("body_collision_input"),BodyInput);
