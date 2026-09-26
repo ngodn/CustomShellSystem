@@ -1,5 +1,7 @@
 # Current work queue
 
+2026-09-26 Eve hem follow-up: unconstrained persistent contact projection fails the full sprint sequence with large correction jumps and fabric stretching. Saved rejection evidence in `work/eve26/hemseq2.json`. Next solver experiment must enforce fabric shape and temporal continuity together with contact, not raise the projection cap. No game/release changes.
+
 2026-09-26 Eve fitting: broader sprint checks find rear-hem/thigh penetration despite exact baseline-follow preservation. Static 22-carrier contact trial is diagnostic only. Residual upper-hip penetration is swinging-left-forearm contact, not a reason to enlarge the hip or edit body proportions. Continue lower-hem control and separate arm/sleeve contact diagnosis. See `development/eve-outfit-goal.md`; no game or release changes.
 
 **Latest September 26 instruction: fitting first.** Focus on garment fitting to Black Pearl's standard. Park palette implementation. Start with Holiday Reveler, whose latest saved blend has missing vertex weights, then validate fitting, morphs and motion before extending to other outfits. Preserve Gemini's improved custom skeleton, including its game sockets. See the [updated execution order](development/eve-outfit-goal.md#next-implementation-steps).

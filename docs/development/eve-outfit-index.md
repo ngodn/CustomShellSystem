@@ -103,3 +103,6 @@ Combined motion trial (rejected): `motion-create.log`, `holiday-dynamics-saved.j
 
 
 Broader sprint contact and hem feasibility: `follow-clearance.json`, `follow-sprint48-rays.json`, `holiday-hem.mesh.json`, `holiday-hem2.mesh.json`, `skirt-{hem,hem2}.json`, `sprint48-{hem,hem2}-verified.json`, and `hem2-{contact,radial,independent}.json`. The independent trial reduces deep hem penetration in one static pose but is not a solver or accepted fitting. `hip-sprint48.json` attributes residual upper-hip contact to the swinging left forearm; `hip-sprint48-noarms.json` isolates torso/leg clearance. See the goal log before editing hip geometry. Render tooling now supports rear views and lower-dress framing. Body, source blends, shared skeleton and installed assets remain unchanged.
+
+
+Persistent contact projection rejected: `tools/eve-fit/probe_hem_sequence.py`, `work/eve26/hemseq2.json`, `hemseq2-pose.json`, and inspected `hemseq24-views/default-rear.png`. Across 65 sprint frames it produces correction jumps up to 8.392 cm and edge ratios up to 13.323. Do not mistake successful contact in a single frame for a usable solver. First-run report serialization failure is fixed; fresh rerun succeeds with identical pose output.
