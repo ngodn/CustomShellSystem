@@ -6,6 +6,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Prototype fit4 improves chest, seat and calf bind-pose coverage in inspected front/back renders. `planet-fit4/` contains the candidate, offsets and receipt; no source blend, import or release changed. Source modifier/driver evidence is `planet-source.json` and `planet-foot-source.json`. See the latest goal checkpoint before further edits.
+
 - **Latest user instruction: skip Holiday. Active order is the existing Planet Diving model, Skin Suit, then others.** Reference checks identify this model as Prototype Planet Diving Suit, not 6th. Its lower-back strip needs a fixed upper attachment and dedicated motion below it; see [installed-game evidence](eve-planet-reference.md). All Holiday experiments below are parked.
 - Final Holiday diagnostics reject automatic regional colliders: native frame68 approximate surface gaps 2.14 / 11.38 / 6.75 cm for pelvis/left/right. Independent pose checks pass. `region-native/` contains measurements and inspected views; `region-*-local16*` contains completed offline local-transfer comparisons, not adopted native assets.
 
