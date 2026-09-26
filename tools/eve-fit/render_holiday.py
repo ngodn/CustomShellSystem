@@ -1,5 +1,6 @@
 """Blender 5.2 neutral-material fitting views; writes images, never saves the blend."""
 import argparse
+import json
 import sys
 from pathlib import Path
 import bpy
@@ -9,6 +10,8 @@ p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('--output',type=Path,required=True)
 p.add_argument('--bind',action='store_true',help='Match exporter geometry: saved fit keys, no modifiers')
 p.add_argument('--morph-review',action='store_true',help='Also render the six controls at 1 and their combined maximum')
+p.add_argument('--clearance',type=Path,help='Highlight reported clearance-sample triangles for diagnosis')
+p.add_argument('--hide-body',action='store_true',help='Diagnostic garment interior view only')
 a=p.parse_args(sys.argv[sys.argv.index('--')+1:])
 a.output.mkdir(parents=True,exist_ok=False)
 visible={'Eve Body','Eve Christmas - Dress','Eve Christmas - Arms','Eve Christmas - Legs','Eve Christmas - Panties','Eve Extras - Heels'}
@@ -40,6 +43,23 @@ s.render.resolution_percentage=100
 s.render.image_settings.file_format='PNG'
 s.display.shading.light='STUDIO'
 s.display.shading.color_type='OBJECT'
+if a.clearance:
+ s.display.shading.color_type='MATERIAL'
+ fabric=bpy.data.materials.new('Review fabric');fabric.diffuse_color=(.12,.38,.55,1)
+ skin=bpy.data.materials.new('Review body');skin.diffuse_color=(.58,.36,.22,1)
+ warning=bpy.data.materials.new('Review clearance warning');warning.diffuse_color=(1,.025,.025,1)
+ regions=json.loads(a.clearance.read_text())
+ for name in visible:
+  obj=bpy.data.objects.get(name)
+  if not obj:continue
+  obj.data.materials.clear();obj.data.materials.append(skin if name=='Eve Body' else fabric)
+  obj.data.materials.append(warning)
+  groups=regions.get(name.removeprefix('Eve Christmas - '),[])
+  triangles=[set(row[4:7]) for group in groups for row in group['samples']]
+  for face in obj.data.polygons:
+   ids=set(face.vertices)
+   face.material_index=int(any(triangle<=ids for triangle in triangles))
+if a.hide_body:bpy.data.objects['Eve Body'].hide_render=True
 s.display.shading.show_cavity=True
 s.display.shading.cavity_type='BOTH'
 s.display.shading.background_type='WORLD'
