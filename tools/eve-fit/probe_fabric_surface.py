@@ -24,6 +24,8 @@ p.add_argument('--pin-z', type=float, default=112.)
 p.add_argument('--free-z', type=float, default=103.)
 p.add_argument('--contact-region', choices=('all', 'torso-legs'), default='all',
                help='Diagnostic collider isolation only; final clearance still measures the whole body')
+p.add_argument('--velocity-contact', action='store_true', help='Limit post-projection separating velocity relative to moving body contacts')
+p.add_argument('--mass', choices=('graded', 'uniform'), default='graded')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert a.name.isalnum()
 assert 1 <= a.substeps <= 64 and 1 <= a.iterations <= 64
@@ -66,6 +68,8 @@ bend_lengths = np.linalg.norm(rest[bends[:, 0]]-rest[bends[:, 1]], axis=1)
 edge_colors, bend_colors = colors(edges), colors(bends)
 inverse_mass = np.clip((a.pin_z-rest[:, 2])/(a.pin_z-a.free_z), 0., 1.)
 inverse_mass = inverse_mass**2*(3.-2.*inverse_mass)
+if a.mass == 'uniform':
+    inverse_mass = (rest[:, 2] < a.pin_z).astype(float)
 free = np.flatnonzero(inverse_mass > 0)
 pinned = inverse_mass == 0
 active_faces = np.flatnonzero(np.sum(inverse_mass[faces], axis=1) > 0)
@@ -134,6 +138,8 @@ def collision_pass(x, tree):
             shift = np.asarray(normal)*(.05-signed)
             trace_contact('vertex', [v], shift[None, :], signed, body_face, normal)
             x[v] += shift
+            if a.velocity_contact:
+                velocity_contacts[((int(v),), (1.,))] = (np.asarray(normal), body_face)
     if a.surface_contact:
         for vertices, bary in contact_samples:
             mass = inverse_mass[vertices]
@@ -148,6 +154,8 @@ def collision_pass(x, tree):
                 shifts = (mass*bary)[:, None]*correction
                 trace_contact('surface', vertices, shifts, signed, body_face, normal)
                 x[vertices] += shifts
+                if a.velocity_contact:
+                    velocity_contacts[(tuple(int(v) for v in vertices), tuple(bary))] = (np.asarray(normal), body_face)
 
 def trace_contact(kind, vertices, shifts, signed, body_face, normal):
     global contact_serial
@@ -169,6 +177,7 @@ frames, reports = [], []
 previous = None
 for fi, frame in enumerate(source['frames'][:a.end+1]):
     contact_trace, contact_serial = [], 0
+    velocity_contacts = {}
     phase = 'settle'
     target = skin(frame)
     if previous is None:
@@ -185,11 +194,13 @@ for fi, frame in enumerate(source['frames'][:a.end+1]):
     assert dt > 0
     for sub in range(a.substeps if fi else 0):
         phase = f'substep-{sub}'
+        velocity_contacts = {}
         body_xyz = previous+(target-previous)*(sub+1)/a.substeps
         tree = BVHTree.FromPolygons(body_xyz.tolist(), body, all_triangles=True)
         old = x.copy()
         velocity *= math.exp(-4.*dt)
         velocity[free, 2] -= 980.*dt
+        predicted_velocity = velocity.copy()
         x[free] += velocity[free]*dt
         x[pinned] = body_xyz[ids[pinned]]
         edge_lambda, bend_lambda = np.zeros(len(edges)), np.zeros(len(bends))
@@ -198,6 +209,20 @@ for fi, frame in enumerate(source['frames'][:a.end+1]):
             distance_pass(x, bends, bend_lengths, bend_colors, bend_lambda, .0001/(dt*dt))
             collision_pass(x, tree)
         velocity = (x-old)/dt
+        if a.velocity_contact:
+            body_velocity = (target-previous)/(dt*a.substeps)
+            for _ in range(2):
+                for (vertices, bary), (normal, body_face) in velocity_contacts.items():
+                    vertices, bary = np.asarray(vertices), np.asarray(bary)
+                    mass = inverse_mass[vertices]
+                    denominator = float(np.sum(mass*bary*bary))
+                    if denominator < 1e-10:
+                        continue
+                    collider_velocity = body_velocity[body[body_face]].mean(axis=0)
+                    incoming = float(np.dot(bary@predicted_velocity[vertices]-collider_velocity, normal))
+                    outgoing = float(np.dot(bary@velocity[vertices]-collider_velocity, normal))
+                    impulse = (max(0., incoming)-outgoing)/denominator
+                    velocity[vertices] += (mass*bary)[:, None]*normal*impulse
         velocity[pinned] = 0
     tree = BVHTree.FromPolygons(target.tolist(), body_all, all_triangles=True)
     signed = []
@@ -238,6 +263,8 @@ output.write_text(json.dumps({'scope': scope, 'source_motion': str(work/f'follow
     'substeps': a.substeps, 'iterations': a.iterations, 'surface_contact': a.surface_contact,
     'pin_z_cm': a.pin_z, 'free_z_cm': a.free_z,
     'contact_region': a.contact_region, 'clearance_region': 'whole body',
+    'velocity_contact': a.velocity_contact,
+    'mass': a.mass,
     'morph_case': a.morph, 'source_vertices': ids.tolist(), 'free_vertices': len(free),
     'frames': frames, 'cases': reports}, separators=(',', ':')))
 print('Finished', len(frames), 'frames', flush=True)

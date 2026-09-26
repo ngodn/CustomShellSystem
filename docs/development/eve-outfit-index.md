@@ -118,3 +118,6 @@ Surface-contact and anchoring audit: `fabricface.json` (4x8), `fabricsmall.json`
 
 
 Arm-spike attribution: `fabrictrace.json`, `fabrictrace-drivers.json`, `fabrictorso.json`. Right-upper-arm contact against almost-pinned waist cloth causes the largest corrections. Diagnostic arm exclusion reduces motion spikes but whole-body clearance still fails. Attachment renders `fabrictorso-attached` and `fabrictorso-rotated` were inspected and rejected for folding/spikes; do not deploy renderer mappings as cloth attachments.
+
+
+Arm/torso check and numerical controls: `audit_arm_clearance.py`, `arm-torso.json`, `fabricvel.json`, inspected `fabricvel4-views/default-side.png`, and `fabricmass.json`. Exact traced arm vertices are outside the torso subset; no body/pose correction is justified by that sample. Velocity correction and equal free-particle masses both fail motion/shape acceptance. Do not repeat these as untested fixes or deploy the Python reference.
