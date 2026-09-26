@@ -1,6 +1,6 @@
 # Eve outfit goal and current status
 
-Updated 2026-09-27, complete local-transfer comparisons and reusable lessons. Read [the evidence index](eve-outfit-index.md) before resuming.
+Updated 2026-09-27, interrupted skinned-region checks recovered and verified. Read [the evidence index](eve-outfit-index.md) before resuming.
 
 ## Active objective
 
@@ -31,6 +31,18 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 - Package under `/Game/CSS/`, use short readable paths, retain source provenance, and commit by coherent change. Do not publish until the candidate has passed these checks.
 
 ## Latest checkpoint
+
+**September 27, closed skinned regions pass the sampled geometry preflight, not cloth acceptance.** `prepare_skin_regions.py` cuts overlapping pelvis and two thigh surfaces from the original body, closes their boundaries and preserves source-point provenance. It interpolates original skin weights and uses the same provenance for morph deltas. `skin-regions2/` keeps the main closed component of each region, removing disconnected forearm remnants and internal fragments from the pelvis collision copy. It does not edit the source body. All three regions have zero nonmanifold surface edges, positive volume and rest provenance error below 0.000004 cm. Their vertex counts are 2,760 / 2,874 / 2,869.
+
+`skin-regions2-parity/coverage.json` covers 62 sampled walk/jog/sprint and default/combined hip-waist cases. No sampled ROI body point is outside the region union by more than 3 mm. The largest cut-point skinning versus interpolated posed-source difference is 0.278 cm. Three extra-contact candidates remain after body ray crosschecks, all in sprint frame 60. The targeted trace puts those garment vertices within 0.048 cm of the reference body surface; two touch the pelvis bottom-cut area and one lies in pelvis/thigh overlap. This supports continuing the diagnostic, not dismissing every overlap as harmless.
+
+Nearest-face normal signs falsely classified folded body surfaces as clear. Three oblique ray votes correct the regional sign test; the body crosscheck also resolves many false extra-contact reports. There are 364 queries with disagreeing votes across the run. The arm-excluded reference body has open boundaries, so its ray classification remains diagnostic. Minimum per-region signed distances classify union membership, but their negative magnitudes are not exact union-boundary distances. Morphs are transferred offline here; native collider morph support is still unproven.
+
+Evidence: `work/eve26/skin-regions2/{receipt,pelvis,thigh_l,thigh_r}.json`, `skin-regions2-parity/coverage.json`, `skin-regions2-trace12b/coverage.json`, `skin-regions2-trace60/coverage.json`, and inspected rear/side images in `skin-regions2-check/views48/`. Earlier `skin-regions/` retains unwanted disconnected components; `skin-regions2-check/` uses the superseded nearest-normal sign calculation. Keep them as rejected/intermediate evidence. All recovered processes exited 0. `skin-regions-protected.json` rechecks the four protected asset hashes successfully after the interruption. No native asset, game install or release changed.
+
+**Next:** export these three private collision meshes, then generate and fresh-load native regional level sets. First make root selection explicit: pinned UE5.6.1 `PhysicsAssetUtils.cpp:391` chooses a common ancestor of merged bones, not a root from the mesh name. Original pelvis influences in a thigh region can therefore prevent an automatic thigh-rooted collider. Read back the actual root and influences before interpreting any trial as a change in rigid collision motion. The private commandlet currently accepts only SK_CBody and a single collider; extend those guards deliberately, with isolated outputs, before a combined cloth trial. Test native distance/deformation, then the same late-sprint cloth case and cost. Holiday remains first, Planet Diving 6th next.
+
+## Previous checkpoint: rigid regional hulls
 
 **September 27, regional rigid hulls are not a fitting solution.** `audit_region_hulls.py` creates seven overlapping offline convex hulls from original body points with at least 0.25 weight on pelvis, spine_01/02, butt001/002 or a thigh (twist mass merged to that thigh). Only rest Z75..142 cm and non-arm points participate. The hulls follow each named bone rigidly. No native collision asset is created and no production geometry is changed.
 

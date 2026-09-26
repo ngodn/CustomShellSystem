@@ -1,4 +1,4 @@
-"""Measure rigid regional hull coverage before creating a native collision asset."""
+"""Measure rigid or skinned regional coverage before native collision authoring."""
 import argparse
 import json
 import sys
@@ -11,6 +11,8 @@ from mathutils.bvhtree import BVHTree
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--output', type=Path, required=True)
+p.add_argument('--skin-regions', type=Path, help='Use closed source-weighted regions instead of rigid hulls')
+p.add_argument('--sample', help='Limit diagnostic to clip:frame')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
 a.output.mkdir(exist_ok=False)
 w = Path(__file__).resolve().parents[2]/'work/eve26'
@@ -34,29 +36,33 @@ for i, weights in enumerate(body['weights']):
 roi = np.flatnonzero((body_points[:, 2] >= 90)&(body_points[:, 2] <= 125)&(arm_mass < .25))
 face_ids = [f for f in body['indices'] if not any(arm_mass[v] > .25 for v in f)]
 body_faces = [[c, b, a] for a, b, c in face_ids]
-hulls = []
-for j, name in enumerate(regions):
-    ids = np.flatnonzero((mass[:, j] >= .25)&(body_points[:, 2] >= 75)&(body_points[:, 2] <= 142)&(arm_mass < .25))
-    bm = bmesh.new()
-    for point in body_points[ids]:
-        bm.verts.new(point)
-    bmesh.ops.convex_hull(bm, input=list(bm.verts), use_existing_faces=False)
-    bmesh.ops.triangulate(bm, faces=list(bm.faces))
-    used = {vertex for face in bm.faces for vertex in face.verts}
-    vertices = list(used)
-    lookup = {vertex: i for i, vertex in enumerate(vertices)}
-    rest = np.asarray([list(vertex.co) for vertex in vertices])
-    center = rest.mean(axis=0)
-    faces = []
-    for face in bm.faces:
-        ids3 = [lookup[vertex] for vertex in face.verts]
-        tri = rest[ids3]
-        if np.dot(np.cross(tri[1]-tri[0], tri[2]-tri[0]), tri.mean(axis=0)-center) < 0:
-            ids3.reverse()
-        faces.append(ids3)
-    bm.free()
-    hulls.append({'bone': name, 'positions': rest.tolist(), 'indices': faces, 'source_vertices': len(ids)})
-(a.output/'hulls.json').write_text(json.dumps({'scope': 'Offline overlapping regional convex hulls. Source mass >=0.25, rest Z75..142 cm, arms excluded. Not imported or accepted.', 'regions': hulls}, indent=2)+'\n')
+if a.skin_regions:
+    hulls = [json.loads((a.skin_regions/(name+'.json')).read_text()) for name in ('pelvis', 'thigh_l', 'thigh_r')]
+    assert all(h['report']['nonmanifold_surface_edges'] == 0 for h in hulls)
+else:
+    hulls = []
+    for j, name in enumerate(regions):
+        ids = np.flatnonzero((mass[:, j] >= .25)&(body_points[:, 2] >= 75)&(body_points[:, 2] <= 142)&(arm_mass < .25))
+        bm = bmesh.new()
+        for point in body_points[ids]:
+            bm.verts.new(point)
+        bmesh.ops.convex_hull(bm, input=list(bm.verts), use_existing_faces=False)
+        bmesh.ops.triangulate(bm, faces=list(bm.faces))
+        used = {vertex for face in bm.faces for vertex in face.verts}
+        vertices = list(used)
+        lookup = {vertex: i for i, vertex in enumerate(vertices)}
+        rest = np.asarray([list(vertex.co) for vertex in vertices])
+        center = rest.mean(axis=0)
+        faces = []
+        for face in bm.faces:
+            ids3 = [lookup[vertex] for vertex in face.verts]
+            tri = rest[ids3]
+            if np.dot(np.cross(tri[1]-tri[0], tri[2]-tri[0]), tri.mean(axis=0)-center) < 0:
+                ids3.reverse()
+            faces.append(ids3)
+        bm.free()
+        hulls.append({'bone': name, 'positions': rest.tolist(), 'indices': faces, 'source_vertices': len(ids)})
+(a.output/'hulls.json').write_text(json.dumps({'scope': 'Source-weighted closed regions' if a.skin_regions else 'Offline overlapping regional rigid convex hulls; not imported or accepted', 'regions': hulls}, indent=2)+'\n')
 print('Hull points', [(h['bone'], len(h['positions'])) for h in hulls], flush=True)
 slot = mesh['materials'].index('MI_CH_P_EVE_Christmas_01_01.001')
 garment = sorted({mesh['wedges'][wedge][0] for face in mesh['faces'] if face[3] == slot
@@ -74,8 +80,28 @@ for morph in mesh['morph_targets']:
         for i, *delta in morph['deltas']:
             cases['hip-waist'][i] += delta
 
-def signed(tree, point):
-    closest, normal, _, _ = tree.find_nearest(Vector(point))
+ray_disagreements = 0
+
+def signed(tree, point, closed=False):
+    global ray_disagreements
+    closest, normal, _, distance = tree.find_nearest(Vector(point))
+    if closed:
+        if distance < .0001:
+            return 0.
+        votes = []
+        for direction in (Vector((1., .137, .071)), Vector((.093, 1., .173)), Vector((.119, .083, 1.))):
+            direction.normalize()
+            origin, crossings = Vector(point), 0
+            for _ in range(64):
+                hit, _, _, _ = tree.ray_cast(origin, direction, 500)
+                if hit is None:
+                    break
+                crossings += 1
+                origin = hit+direction*.0001
+            assert crossings < 64, 'Ray traversal did not converge'
+            votes.append(crossings % 2)
+        ray_disagreements += int(len(set(votes)) > 1)
+        return -distance if sum(votes) >= 2 else distance
     return (Vector(point)-closest).dot(normal)
 
 def stats(values):
@@ -86,8 +112,12 @@ def stats(values):
 
 reports = []
 for clip in ('walk', 'jog', 'sprint'):
+    if a.sample and clip != a.sample.split(':')[0]:
+        continue
     frames = json.loads((w/f'follow-{clip}-base.json').read_text())['frames']
     selected = sorted(set(range(0, len(frames), 12)) | {len(frames)-1, 6 if clip == 'jog' else 20 if clip == 'sprint' else 4})
+    if a.sample:
+        selected = [int(a.sample.split(':')[1])]
     for fi in selected:
         snapshot = frames[fi]['pose']['Snapshot']
         local = dict(zip(snapshot['BoneNames'], snapshot['LocalTransforms'], strict=True))
@@ -97,29 +127,65 @@ for clip in ('walk', 'jog', 'sprint'):
             m = Matrix.LocRotScale(Vector([t['Translation'][k] for k in 'XYZ']), Quaternion([t['Rotation'][k] for k in 'WXYZ']), Vector([t['Scale3D'][k] for k in 'XYZ']))
             pose.append(pose[bone['parent']]@m if bone['parent'] >= 0 else m)
         transforms = np.asarray([np.asarray(m@b.inverted()) for m, b in zip(pose, bind, strict=True)])
-        trees, hull_samples, posed_hulls = [], [], []
-        for hull in hulls:
-            matrix = transforms[names[hull['bone']]]
-            xyz = np.asarray(hull['positions'])@matrix[:3, :3].T+matrix[:3, 3]
-            trees.append(BVHTree.FromPolygons(xyz.tolist(), hull['indices'], all_triangles=True))
-            hull_samples.extend(xyz.tolist())
-            hull_samples.extend(xyz[np.asarray(hull['indices'])].mean(axis=1).tolist())
-            posed_hulls.append({**hull, 'posed_cm': xyz.tolist()})
         for label, rest in cases.items():
             posed = np.zeros_like(rest)
             np.add.at(posed, vi, (np.einsum('nij,nj->ni', transforms[bi, :3, :3], rest[vi])+transforms[bi, :3, 3])*weight[:, None])
+            trees, hull_samples, posed_hulls, interpolation_errors = [], [], [], []
+            for hull in hulls:
+                if a.skin_regions:
+                    region_points = np.asarray(hull['positions']).copy()
+                    interpolated_pose = np.zeros_like(region_points)
+                    for i, row in enumerate(hull['source_transfer']):
+                        for source_id, amount in row:
+                            region_points[i] += amount*(rest[source_id]-points[source_id])
+                            interpolated_pose[i] += amount*posed[source_id]
+                    xyz = np.zeros_like(region_points)
+                    for i, row in enumerate(hull['weights']):
+                        for name, amount in row:
+                            matrix = transforms[names[name]]
+                            xyz[i] += amount*(matrix[:3, :3]@region_points[i]+matrix[:3, 3])
+                    interpolation_errors.extend(np.linalg.norm(xyz-interpolated_pose, axis=1).tolist())
+                else:
+                    matrix = transforms[names[hull['bone']]]
+                    xyz = np.asarray(hull['positions'])@matrix[:3, :3].T+matrix[:3, 3]
+                trees.append(BVHTree.FromPolygons(xyz.tolist(), hull['indices'], all_triangles=True))
+                hull_samples.extend(xyz.tolist())
+                hull_samples.extend(xyz[np.asarray(hull['indices'])].mean(axis=1).tolist())
+                posed_hulls.append({**hull, 'posed_cm': xyz.tolist()})
             body_tree = BVHTree.FromPolygons(posed[:len(body_points)].tolist(), body_faces, all_triangles=True)
-            coverage = [min(signed(tree, point) for tree in trees) for point in posed[roi]]
-            garment_hull = [min(signed(tree, point) for tree in trees) for point in posed[garment]]
+            coverage = [min(signed(tree, point, closed=bool(a.skin_regions)) for tree in trees) for point in posed[roi]]
+            garment_hull = [min(signed(tree, point, closed=bool(a.skin_regions)) for tree in trees) for point in posed[garment]]
             garment_body = [signed(body_tree, point) for point in posed[garment]]
+            body_ray_checks = {i: signed(body_tree, posed[garment[i]], closed=True)
+                               for i in range(len(garment)) if garment_body[i] >= -.1 and garment_hull[i] < -.3}
+            extra_after_ray = sum(value >= -.1 for value in body_ray_checks.values())
             overfill = [signed(body_tree, point) for point in hull_samples]
+            suspect = []
+            for i in sorted(body_ray_checks, key=lambda i: (body_ray_checks[i] < -.1, garment_hull[i])):
+                if garment_body[i] < -.1 or garment_hull[i] >= -.3:
+                    continue
+                v = garment[i]
+                contacts = []
+                for hull, tree in zip(hulls, trees, strict=True):
+                    near, normal, face_id, distance = tree.find_nearest(Vector(posed[v]))
+                    contacts.append({'region': hull['bone'], 'face': face_id, 'distance_cm': distance,
+                                     'face_rest_cm': [hull['positions'][j] for j in hull['indices'][face_id]],
+                                     'closest_cm': list(near)})
+                suspect.append({'garment_vertex': v, 'rest_cm': points[v].tolist(), 'posed_cm': posed[v].tolist(),
+                                'body_signed_cm': garment_body[i], 'body_ray_signed_cm': body_ray_checks[i],
+                                'region_signed_cm': garment_hull[i], 'contacts': contacts})
+                if len(suspect) == 8:
+                    break
             reports.append({'clip': clip, 'frame': fi, 'case': label, 'body_to_hull_union': stats(coverage),
                             'garment_to_hull_union': stats(garment_hull), 'garment_to_body': stats(garment_body),
                             'all_hull_samples_to_body': stats(overfill),
+                            'cut_skin_interpolation_error_max_cm': max(interpolation_errors, default=0.),
                             'worst_uncovered_body': int(roi[int(np.argmax(coverage))]),
+                            'worst_extra_garment_contacts': suspect,
+                            'extra_garment_contacts_after_body_ray_check': extra_after_ray,
                             'garment_clear_of_body_but_inside_hull': sum(b >= -.1 and h < -.3 for b, h in zip(garment_body, garment_hull))})
             if clip == 'sprint' and fi == 48 and label == 'default':
-                (a.output/'sprint48.json').write_text(json.dumps({'hulls': posed_hulls, 'body_positions': posed[:len(body_points)].tolist(), 'body_faces': body_faces}, separators=(',', ':'))+'\n')
+                (a.output/'sprint48.json').write_text(json.dumps({'scope': 'Skinned closed regions' if a.skin_regions else 'Rigid regional hulls', 'hulls': posed_hulls, 'body_positions': posed[:len(body_points)].tolist(), 'body_faces': body_faces}, separators=(',', ':'))+'\n')
     print(clip, 'cases', len(reports), flush=True)
-(a.output/'coverage.json').write_text(json.dumps({'scope': 'Sampled regional hull feasibility, not native collision or cloth acceptance. Min per-hull signed distances classify union membership but negative magnitudes are not exact union-boundary distances. Hull overfill samples include internal overlap faces. Body and garment morphs vary while hulls remain default-rest geometry. Arms excluded to isolate torso/legs.', 'cases': reports}, indent=2)+'\n')
+(a.output/'coverage.json').write_text(json.dumps({'scope': 'Sampled regional hull feasibility, not native collision or cloth acceptance. Min per-hull signed distances classify union membership but negative magnitudes are not exact union-boundary distances. Hull overfill samples include internal overlap faces. See morph_scope for whether regions receive the same morphs. Arms excluded to isolate torso/legs. The arm-excluded reference body has open cut boundaries: its ray crosschecks are diagnostic, not watertight containment proof.', 'ray_disagreements': ray_disagreements, 'region_sign_method': 'Three oblique ray votes for closed skinned regions; nearest-normal for convex hulls', 'skinned_regions': str(a.skin_regions) if a.skin_regions else None, 'morph_scope': 'Skinned region points receive transferred body morphs' if a.skin_regions else 'Rigid hulls stay at default shape', 'cases': reports}, indent=2)+'\n')
 print('Worst uncovered cm', max(r['body_to_hull_union']['maximum_cm'] for r in reports), flush=True)

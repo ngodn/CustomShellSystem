@@ -6,6 +6,10 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Current: closed source-weighted pelvis/thigh regions (`skin-regions2/`) preserve source provenance and pass sampled geometry coverage across 62 cases. Three residual garment contact candidates lie within 0.048 cm of the reference body in sprint60. Native deformation, cloth behavior, morph support and cost remain untested. Read the latest goal checkpoint before native authoring.
+- Concave/folded surface nearest-normal signs can falsely label embedded garment points as clear. Regional three-ray voting and reference-body ray crosschecks resolve most candidates, but the arm-excluded body is open and 364 queries have disagreeing votes. Do not call this watertight proof or use minimum overlapping-region negative distance as exact penetration depth.
+- UE5.6.1 automatic skinned-level-set generation selects a common ancestor root from merged bones (`PhysicsAssetUtils.cpp:391`); a mesh called thigh does not guarantee a thigh root. Inspect actual native root/influences before claiming improved rigid collision motion.
+
 - Current: `region-hulls/coverage.json` tests actual regional rigid hull union coverage over 62 sampled pose/morph cases. It rejects this seven-hull recipe: 3.42/4.47 cm worst undercoverage and avoidable garment overlap. Rear/side overlays inspected. Next investigate separately skinned regional volumes with inherited source geometry/weights, not rigid enlargement.
 
 - Latest backstop audit: worst particle is outside its reconstructed backstop sphere but inside a crossing thigh. `panel-stop-direction.json` is offline reconstruction, not solver-buffer readback. More substeps still fail visually (`panel-stop4-*`). Current next step is regional collision surface coverage, not more scalar tuning.
@@ -63,6 +67,9 @@ Paths in this table are relative to the workspace root unless linked.
 
 | Artifact | Finding or purpose |
 | --- | --- |
+| `CustomShellSystem/tools/eve-fit/prepare_skin_regions.py`, `work/eve26/skin-regions2/` | Closed regional surfaces with original body provenance, interpolated weights and recorded discarded components |
+| `CustomShellSystem/work/eve26/skin-regions2-parity/`, `skin-regions2-trace12b/`, `skin-regions2-trace60/` | Sampled geometry coverage, corrected sign diagnostics and the final three near-body overlap candidates |
+| `CustomShellSystem/work/eve26/skin-regions2-check/views48/`, `skin-regions-protected.json` | Inspected regional silhouette and unchanged protected asset hashes after interruption |
 | `CustomShellSystem/tools/eve-fit/audit_region_hulls.py`, `render_region_hulls.py`, `work/eve26/region-hulls/` | Offline regional rigid hull union fails body coverage and overfills otherwise clear garment points across sampled poses |
 | `CustomShellSystem/tools/eve-fit/audit_backstop_direction.py`, `work/eve26/panel-stop-direction.json` | Reconstructed sphere clearance and animated-normal comparison at clipped particles |
 | `CustomShellSystem/work/eve26/panel-stop-support68.json`, `panel-stop-attachments68.json`, `panel-stop4-*` | Saved movement-map support audit, attachment amplification evidence, rejected normalized four-substep trial |

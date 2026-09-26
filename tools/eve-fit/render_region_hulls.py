@@ -48,4 +48,4 @@ for mode in ('body', 'hulls', 'overlay'):
         camera.rotation_euler = (target-camera.location).to_track_quat('-Z', 'Y').to_euler()
         scene.render.filepath = str(a.output/f'{mode}-{view}.png')
         bpy.ops.render.render(write_still=True)
-(a.output/'scope.json').write_text(json.dumps({'input': str(a.input), 'scope': 'Matching diagnostic views. Body red, regional rigid hulls blue. Hulls cover only the rest-height band used by the audit, not the whole body. No native asset or simulation.'}, indent=2)+'\n')
+(a.output/'scope.json').write_text(json.dumps({'input': str(a.input), 'region_type': data.get('scope', 'Rigid regional hulls'), 'scope': 'Matching diagnostic views. Body red, regional surfaces blue. Hulls cover only the rest-height band used by the audit, not the whole body. No native asset or simulation.'}, indent=2)+'\n')

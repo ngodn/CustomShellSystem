@@ -106,3 +106,17 @@ Rigid regional point correspondence did not tell whether a union of volumes coul
 For overlapping volumes, the minimum per-volume signed distance classifies membership, but its negative value is not the exact distance to the union boundary. Internal hull faces also appear in surface sampling. State those limitations rather than presenting all distances as physical penetration depth. Evidence and scripts: `region-hulls/`, `audit_region_hulls.py`, `render_region_hulls.py`.
 
 Pinned UE5.6.1 `ChaosClothingSimulationCollider.cpp` has a convex collision path (around line 237) and separate skinned-level-set paths. The [Epic collider API reference](https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/ChaosCloth/ChaosCloth/FClothingSimulationCollider?application_version=5.5) documents physics-asset extraction, but the installed engine source determines this project's implementation. Existence of a collision type does not prove its fit or performance.
+
+### Keep provenance when cutting collision regions
+
+Store original body-point coefficients through cuts, then use them to interpolate both skin weights and morph deltas. Check closure, connected components, volume and reconstruction error before importing anything. Cutting the pelvis slab also captured disconnected forearm remnants and internal geometry; the first export was therefore superseded. Removing those components is appropriate only in this derived collision copy, not in the production body.
+
+Interpolating weights at a cut point is not identical to interpolating already-skinned points. Measure that difference over motion instead of assuming equality. The current regional candidate reaches 0.278 cm across sampled poses. Source provenance, bounds and component decisions are recorded in `skin-regions2/receipt.json`. The pinned [Blender 5.2 BMesh API](https://docs.blender.org/api/5.2/bmesh.ops.html) documents the cut, fill and normal operations used by `prepare_skin_regions.py`.
+
+### Validate the sign before counting clipping
+
+At folded or self-overlapping surfaces, nearest-triangle normal sign can disagree with containment even when two surfaces share the same triangle. In sprint12, one supposed extra contact had body normal distance +4.194 cm but body ray distance -4.194 cm, matching the region. Investigate sign reliability before modifying geometry to fix a count. Use multiple rays, record disagreements, and disclose open reference boundaries. The remaining three sprint60 candidates are near the body and overlap/cut regions; they still need native testing.
+
+### Verify collider roots instead of inferring them from filenames
+
+Pinned UE5.6.1 automatic generation computes a common ancestor of merged bones. Original pelvis influence can keep a thigh-shaped collider rooted at the pelvis. Separating geometry may reduce cross-leg lattice mixing, but that alone does not establish better rigid motion for continuous collision. Export and inspect root, used bones and relative bind transforms before comparing a native regional trial with the rejected whole-body lattice. Do not alter the accepted body weights to force a preferred root.
