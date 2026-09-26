@@ -100,3 +100,6 @@ Fresh corrected exports now pass: `holiday-base-clean.mesh.json`, `holiday-hip-c
 
 
 Combined motion trial (rejected): `motion-create.log`, `holiday-dynamics-saved.json`, `holiday-{walk,jog,sprint}-motion.json`, and `holiday-motion-verdict.json`. Graph preservation/import succeed; actual skirt motion diverges at frame one. Existing assets protected by `motion-protected.json`. See the latest goal checkpoint and older `next-gen-dynamics-investigation.md` before changing spring targets or inertia. No simulation render, cook or deployment acceptance.
+
+
+Broader sprint contact and hem feasibility: `follow-clearance.json`, `follow-sprint48-rays.json`, `holiday-hem.mesh.json`, `holiday-hem2.mesh.json`, `skirt-{hem,hem2}.json`, `sprint48-{hem,hem2}-verified.json`, and `hem2-{contact,radial,independent}.json`. The independent trial reduces deep hem penetration in one static pose but is not a solver or accepted fitting. `hip-sprint48.json` attributes residual upper-hip contact to the swinging left forearm; `hip-sprint48-noarms.json` isolates torso/leg clearance. See the goal log before editing hip geometry. Render tooling now supports rear views and lower-dress framing. Body, source blends, shared skeleton and installed assets remain unchanged.

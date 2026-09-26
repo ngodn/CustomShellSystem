@@ -16,6 +16,8 @@ parser.add_argument('--output', type=Path, default=WORK/'skirt-bone-views')
 parser.add_argument('--motion', type=Path, help='Use a measured UE local-pose snapshot instead of synthetic bends')
 parser.add_argument('--frame', type=int, default=0)
 parser.add_argument('--upstream', action='store_true', help='Render the recorded pose before secondary dynamics')
+parser.add_argument('--views', nargs='+', choices=('front','side','rear'), default=['front','side'])
+parser.add_argument('--lower-dress', action='store_true', help='Center the camera on the posed lower dress')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 data = json.loads(args.mesh.read_text())
 motion_data = json.loads(args.motion.read_text()) if args.motion else None
@@ -51,6 +53,9 @@ for bone in data['bones']:
     pose.append(current)
 transforms = [np.asarray(p @ b.inverted()) for p, b in zip(pose, bind)]
 base = np.asarray(data['points'], dtype=np.float64)
+main_slot=data['materials'].index('MI_CH_P_EVE_Christmas_01_01.001')
+lower_vertices=sorted({data['wedges'][w][0] for f in data['faces'] if f[3]==main_slot
+                       for w in f[:3] if data['points'][data['wedges'][w][0]][2]<120})
 weights = {}
 for vertex, bone, weight in data['influences']:
     weights.setdefault(vertex, []).append((bone, weight))
@@ -111,8 +116,14 @@ for label, selections in [('default', {}), ('hip-waist', {'PBMHipSize': 1., 'PBM
         obj.data.vertices.foreach_set('co', xyz.ravel())
         obj.data.update()
     rows.append({'case': label, 'morphs': selections, 'max_displacement_cm': float(np.linalg.norm(deformed-rest, axis=1).max())})
-    for view, direction in [('front', (0, -3, 0)), ('side', (3, 0, 0))]:
+    directions={'front':(0,-3,0),'side':(3,0,0),'rear':(0,3,0)}
+    for view in args.views:
+        direction=directions[view]
         target = Vector((0, 0, 1.12))
+        if args.lower_dress:
+            center=np.mean(deformed[lower_vertices],axis=0)/100
+            center[1]*=-1
+            target=Vector(center)
         cam.location = target+Vector(direction)
         cam.rotation_euler = (target-cam.location).to_track_quat('-Z', 'Y').to_euler()
         scene.render.filepath = str(out/f'{label}-{view}.png')
@@ -121,5 +132,6 @@ scope = ('Recorded pose applied to exported weights; source_scope identifies mea
          if record else 'Synthetic 4-degree outward bend per joint on the first three bones of each skirt chain. No simulation, collisions or gameplay playback.')
 (out/'report.json').write_text(json.dumps({'rows': rows, 'motion': str(args.motion) if record else None,
     'frame': args.frame if record else None, 'upstream': args.upstream,
+    'views':args.views,'lower_dress':args.lower_dress,
     'source_scope': motion_data.get('scope', 'Measured editor evaluation') if motion_data else None,
     'scope': scope}, indent=2)+'\n')

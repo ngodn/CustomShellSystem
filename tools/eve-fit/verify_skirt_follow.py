@@ -13,14 +13,16 @@ p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('--motion',type=Path,required=True)
 p.add_argument('--frame',type=int,required=True)
 p.add_argument('--name',required=True)
+p.add_argument('--candidate',choices=('follow','hem','hem2'),default='follow')
+p.add_argument('--postprocess',action='store_true',help='Use the original graph output including existing body physics')
 a=p.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert a.name.isalnum()
-out=work/f'{a.name}-follow-pose.json';assert not out.exists()
+out=work/f'{a.name}-{a.candidate}-pose.json';assert not out.exists()
 source=json.loads((work/'holiday-hip-clean.mesh.json').read_text())
-trial=json.loads((work/'holiday-follow.mesh.json').read_text())
-mapping=json.loads((work/'skirt-follow.json').read_text())['drivers']
+trial=json.loads((work/f'holiday-{a.candidate}.mesh.json').read_text())
+mapping=json.loads((work/f'skirt-{a.candidate}.json').read_text())['drivers']
 frame=copy.deepcopy(json.loads(a.motion.read_text())['frames'][a.frame])
-snapshot=frame['upstream']
+snapshot=frame['pose']['Snapshot'] if a.postprocess else frame['upstream']
 entries=dict(zip(snapshot['BoneNames'],snapshot['LocalTransforms'],strict=True))
 indices={b['name']:i for i,b in enumerate(source['bones'])}
 bind=[];pose=[]
@@ -69,7 +71,7 @@ for label,weights in [('default',{}),('hip-waist',{'PBMHipSize':1.,'PBMWaistWidt
     reports[label]={'max_cm':float(error.max()),'p95_cm':float(np.percentile(error,95))}
     assert error.max()<.001,reports[label]
 frame['pose']['Snapshot']=result
-scope='Offline bind-compensated driver transforms on measured upstream animation. No secondary dynamics or game validation.'
+scope='Offline bind-compensated driver transforms on measured animation. No added secondary dynamics or game validation.'
 out.write_text(json.dumps({'scope':scope,'frames':[frame]},separators=(',',':')))
-(work/f'{a.name}-follow-verified.json').write_text(json.dumps({'scope':scope,'source_motion':str(a.motion),'frame':a.frame,'cases':reports},indent=2)+'\n')
+(work/f'{a.name}-{a.candidate}-verified.json').write_text(json.dumps({'scope':scope,'source_motion':str(a.motion),'frame':a.frame,'postprocess':a.postprocess,'cases':reports},indent=2)+'\n')
 print(reports)
