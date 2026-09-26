@@ -32,7 +32,7 @@ native = motion['frames'][frame]
 source_mesh_path = a.source_mesh or w/'holiday.mesh.json'
 mesh = json.loads(source_mesh_path.read_text())
 body = json.loads((w/'body-collider.json').read_text())
-collider = json.loads(Path(motion['body_collision_input']).read_text())
+collider = json.loads(Path(motion['body_collision_input']).read_text()) if motion['body_collision_input'] else None
 proxy = json.loads(a.proxy.read_text())['slots']['MI_CH_P_EVE_Christmas_01_01.001']
 source = json.loads(Path(motion['source_motion']).read_text())
 snapshot = source['frames'][frame]['pose']['Snapshot']
@@ -60,7 +60,10 @@ def tree(points, faces):
     return BVHTree.FromPolygons(points, [[c, b, a] for a, b, c in faces], all_triangles=True)
 
 body_tree = tree(skin(np.asarray(body['positions']), body['weights']).tolist(), body['indices'])
-collider_tree = tree(native['body_reference_skin_cm'], collider['indices'])
+collider_tree = tree(native['body_reference_skin_cm'], collider['indices']) if collider else None
+surfaces = {'body':body_tree}
+if collider_tree:
+    surfaces['collider'] = collider_tree
 
 def measure(points, surface):
     values = []
@@ -90,15 +93,15 @@ def check(label, rest, actual, faces):
     for sample, r, pts in [('vertices', rest, actual), ('centroids', rest[faces].mean(axis=1), actual[faces].mean(axis=1)), ('subtriangle_centres16', dense_rest, dense_actual)]:
         roi = (r[:, 2] >= 90) & (r[:, 2] <= a.zmax)
         pts = pts[roi]
-        row = {'surface': label, 'sampling': sample, 'body': measure(pts, body_tree), 'collider': measure(pts, collider_tree)}
-        for surface in ('body', 'collider'):
+        row = {'surface': label, 'sampling': sample, **{name:measure(pts,bvh) for name,bvh in surfaces.items()}}
+        for surface in surfaces:
             for item in row[surface]['worst']:
                 i = item['sample']
                 item['rest_cm'] = r[roi][i].tolist()
                 item['posed_cm'] = pts[i].tolist()
                 item['source_sample'] = int(np.flatnonzero(roi)[i])
         rows.append(row)
-        print({**row, **{s: {k: v for k, v in row[s].items() if k != 'worst'} for s in ('body', 'collider')}}, flush=True)
+        print({**row, **{s: {k: v for k, v in row[s].items() if k != 'worst'} for s in surfaces}}, flush=True)
 
 check('simulation', proxy['positions'], native['positions_cm'], proxy['indices'])
 section = mapping['render_geometry']['sections'][1]
@@ -125,7 +128,10 @@ for i, (rest, point) in enumerate(zip(section['positions'], actual['positions_cm
         continue
     _, source_vertex, source_error = lookup.find(Vector(rest))
     skin_near, skin_normal, _, _ = body_tree.find_nearest(Vector(skin_positions[i]))
-    collider_near, collider_normal, _, _ = collider_tree.find_nearest(Vector(point))
+    collider_signed = None
+    if collider_tree:
+        collider_near, collider_normal, _, _ = collider_tree.find_nearest(Vector(point))
+        collider_signed = (Vector(point)-collider_near).dot(collider_normal)
     flags = records[i, :, 3]
     blend = float(np.where(flags < 65535, 1.-flags/65535., 0.).mean())
     body_weights = {}
@@ -135,7 +141,7 @@ for i, (rest, point) in enumerate(zip(section['positions'], actual['positions_cm
     record = {'render_vertex': i, 'rest_cm': rest, 'signed_cm': signed,
         'cloth_blend': blend,
         'skin_only_signed_cm': (Vector(skin_positions[i])-skin_near).dot(skin_normal),
-        'collider_signed_cm': (Vector(point)-collider_near).dot(collider_normal),
+        'collider_signed_cm': collider_signed,
         'cloth_displacement_cm': float(np.linalg.norm(np.asarray(point)-skin_positions[i])),
         'fully_skinned': bool(np.all(records[i, :, 3] == 65535)),
         'source_vertex': source_vertex, 'source_match_cm': source_error,
@@ -171,11 +177,12 @@ if a.support_detail:
                   'max_distance_cm': float(limits[vertex]),
                   'displacement_cm': float(np.linalg.norm(simulated[vertex]-skin_proxy[vertex]))}
         for name, positions in (('simulated', simulated), ('skinned', skin_proxy)):
-            for surface, bvh in (('body', body_tree), ('collider', collider_tree)):
+            for surface, bvh in surfaces.items():
                 near, normal, _, _ = bvh.find_nearest(Vector(positions[vertex]))
                 record[name+'_'+surface+'_signed_cm'] = (Vector(positions[vertex])-near).dot(normal)
         support_rows.append(record)
-a.output.write_text(json.dumps({'scope': 'One default-morph frame, vertices, triangle centroids and 16 subtriangle centres. Signed nearest-normal distances may be ambiguous at folds. Collider is native shape API reference, not solver internal readback. Not full-surface or game acceptance.', 'rest_z_range_cm': [90, a.zmax],
+a.output.write_text(json.dumps({'scope': 'One default-morph frame, vertices, triangle centroids and 16 subtriangle centres. Signed nearest-normal distances may be ambiguous at folds. Optional triangle-collider comparison is native shape API reference, not solver internal readback; omitted for implicit colliders. Not full-surface or game acceptance.', 'rest_z_range_cm': [90, a.zmax],
+    'collider_reference_available':collider_tree is not None,
     'frame': frame, 'motion': str(a.motion), 'mapped': str(a.mapped),
     'source_mesh': str(source_mesh_path), 'source_mesh_sha256': hashlib.sha256(source_mesh_path.read_bytes()).hexdigest(), 'rows': rows,
     'clipped_mapped_vertices': clipped, 'dynamic_support_particles': support_rows}, indent=2)+'\n')

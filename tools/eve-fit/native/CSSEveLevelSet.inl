@@ -1,10 +1,12 @@
 #include "PhysicsAssetUtils.h"
 #include "PhysicsEngine/SkeletalBodySetup.h"
+#include "CSSEveLatticeRecipe.inl"
 
 static int32 CreateEveLevelSet(const FString& Params)
 {
     auto Fail=[](const TCHAR* Why) { UE_LOG(LogCSSEvePanel,Error,TEXT("%s"),Why); return 1; };
-    FString Output, Report;
+    FString Output, Report, Recipe;
+    FParse::Value(*Params,TEXT("LatticeRecipe="),Recipe);
     const bool Inspect=FParse::Param(*Params,TEXT("InspectLevelSet"));
     if (!FParse::Value(*Params,TEXT("Output="),Output) ||
         !Output.StartsWith(TEXT("/Game/CSS/EveTest/PA_CBody")) ||
@@ -34,6 +36,11 @@ static int32 CreateEveLevelSet(const FString& Params)
         Asset=LoadObject<UPhysicsAsset>(nullptr,*ObjectPath);
         if (!Asset) return Fail(TEXT("Cannot reload saved collider"));
     }
+    else if (!Recipe.IsEmpty())
+    {
+        Asset=ImportEveLatticeRecipe(Mesh,Output,Recipe);
+        if (!Asset) return 1;
+    }
     else
     {
         auto* Package=CreatePackage(*Output);
@@ -48,7 +55,8 @@ static int32 CreateEveLevelSet(const FString& Params)
     Data->SetStringField(TEXT("asset"),Asset->GetPathName());
     Data->SetStringField(TEXT("scope"),TEXT("Private collider generation only; coverage, motion and cost unverified"));
     Data->SetBoolField(TEXT("fresh_load"),Inspect);
-    if (!Inspect)
+    Data->SetStringField(TEXT("lattice_recipe"),Recipe);
+    if (!Inspect && Recipe.IsEmpty())
     {
         Data->SetNumberField(TEXT("requested_grid"),Settings.LevelSetResolution);
         Data->SetNumberField(TEXT("requested_lattice"),Settings.LatticeResolution);
@@ -272,6 +280,30 @@ static int32 CreateEveLevelSet(const FString& Params)
                     Chaos::FWeightedLatticeImplicitObject::FEmbeddingCoordinate Coordinate;
                     const double Phi=Query->PhiWithNormal(Local,Normal);
                     const double ClothPhi=Query->PhiWithNormalAndSurfacePoint(Local,ClothNormal,Coordinate,false);
+                    if (InsideGrid && TraceIndices.Contains(PointIndex))
+                    {
+                        const auto Trace=Traces.Last()->AsObject();
+                        TArray<Chaos::FWeightedLatticeImplicitObject::FEmbeddingCoordinate> Embeddings;
+                        Query->GetEmbeddingCoordinates(Local,Embeddings,false);
+                        TArray<TSharedPtr<FJsonValue>> Candidates;
+                        for (const auto& Embedding:Embeddings)
+                        {
+                            const auto RestPosition=Embedding.UndeformedPosition(Grid);
+                            Chaos::FVec3 RestNormal;
+                            const double RestPhi=Query->GetEmbeddedObject()->PhiWithNormal(RestPosition,RestNormal);
+                            auto Candidate=MakeShared<FJsonObject>();
+                            Candidate->SetArrayField(TEXT("rest_cm"),JsonVector(BindRootInverse.InverseTransformPosition(FVector(RestPosition))));
+                            Candidate->SetNumberField(TEXT("rest_phi_cm"),RestPhi);
+                            Candidates.Add(MakeShared<FJsonValueObject>(Candidate));
+                        }
+                        Trace->SetArrayField(TEXT("query_embeddings"),Candidates);
+                        Trace->SetNumberField(TEXT("cloth_phi_cm"),ClothPhi);
+                        if (Coordinate.IsValid())
+                        {
+                            Trace->SetArrayField(TEXT("query_surface_rest_cm"),JsonVector(BindRootInverse.InverseTransformPosition(FVector(Coordinate.UndeformedPosition(Grid)))));
+                            Trace->SetArrayField(TEXT("query_surface_posed_cm"),JsonVector(RootInverse.InverseTransformPosition(FVector(Coordinate.DeformedPosition(Query->GetDeformedPoints())))));
+                        }
+                    }
                     const FVector WorldNormal=RootInverse.InverseTransformVectorNoScale(FVector(Normal));
                     TArray<TSharedPtr<FJsonValue>> Values={MakeShared<FJsonValueNumber>(Phi),MakeShared<FJsonValueNumber>(ClothPhi),
                         MakeShared<FJsonValueNumber>(WorldNormal.X),MakeShared<FJsonValueNumber>(WorldNormal.Y),MakeShared<FJsonValueNumber>(WorldNormal.Z)};

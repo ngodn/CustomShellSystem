@@ -28,6 +28,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Failed approaches and traps
 
+- Native whole-body Local64 recipe, with and without CCD: rejected by actual CA_Fit cloth renders. CCD prevents frame-64 collapse, but frame-68 thigh breakthrough remains and dense failing samples rise to 25,479 versus the earlier repeat baseline 17,245. See `lrecipe-cloth*`, `lrecipe-ccd*`, `lrecipe-querytrace.json`. Accurate saved weights and improved direct lattice mapping do not prove correct inverse collision queries. Do not repeat resolution/CCD alone. Current-geometry intersection uses old/current rigid transforms; investigate regional motion representation next.
+
 - Whole-body level-set 128/16 is rejected as an animated collider. Finer SDF resolution reduced resting skirt-region undercoverage, but frame 68 has 24.18 cm direct lattice mapping error and 30.69 cm maximum positive signed-distance sample. Independent body skinning passes within 0.000390 cm. Evidence: `ls-rest*`, `ls128-rest*`, `ls128-f68*`, `ls128-map68*`; rear and side heatmaps inspected as recorded in the goal log. Inspect lattice weight distribution next, not a blind resolution increase. No cloth/game trial used this collider.
 
 - Single locally scored attachment is not adopted: lower clipping counts at frames 60/64/68, but a larger visible hip patch at frame 68. `panel-localmap-*`, `map-{base,local}-68-views` are hypothetical replay only, not native assets. Do not equate sample-count improvement with visual acceptance.

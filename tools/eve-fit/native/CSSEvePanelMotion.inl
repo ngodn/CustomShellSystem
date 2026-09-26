@@ -10,7 +10,8 @@
 static int32 EvaluateHolidayPanel(const FString& Params)
 {
     auto Fail=[](const TCHAR* Message) { UE_LOG(LogCSSEvePanel,Error,TEXT("Panel motion: %s"),Message); return 1; };
-    FString Input,Report,Text,BodyInput;
+    FString Input,Report,Text,BodyInput,PhysicsPath;
+    FParse::Value(*Params,TEXT("Physics="),PhysicsPath);
     FParse::Value(*Params,TEXT("Body="),BodyInput);
     const bool NoBodyCollision=FParse::Param(*Params,TEXT("NoBodyCollision"));
     const bool NoSelfCollision=FParse::Param(*Params,TEXT("NoSelfCollision"));
@@ -51,6 +52,21 @@ static int32 EvaluateHolidayPanel(const FString& Params)
         UPhysicsAsset* BodyPhysics=MakePanelBodyCollision(BodyInput,Mesh);
         if (!BodyPhysics) return Fail(TEXT("Invalid transient body collision input"));
         Asset->SetPhysicsAsset(BodyPhysics);
+    }
+    if (!PhysicsPath.IsEmpty())
+    {
+        if (!BodyInput.IsEmpty() || NoBodyCollision || !PhysicsPath.StartsWith(TEXT("/Game/CSS/EveTest/PA_CBody")))
+            return Fail(TEXT("Physics requires a private collider and excludes Body/NoBodyCollision"));
+        auto* Physics=LoadObject<UPhysicsAsset>(nullptr,*PhysicsPath);
+        if (!Physics || Physics->SkeletalBodySetups.Num()!=1 || !Physics->ConstraintSetup.IsEmpty())
+            return Fail(TEXT("Invalid private physics asset"));
+        const auto* Setup=Physics->SkeletalBodySetups[0].Get();
+        if (Setup->AggGeom.SkinnedLevelSetElems.Num()!=1) return Fail(TEXT("Expected one weighted level set"));
+        const auto& Volume=Setup->AggGeom.SkinnedLevelSetElems[0].WeightedLevelSet();
+        if (!Volume || Mesh->GetRefSkeleton().FindBoneIndex(Setup->BoneName)==INDEX_NONE) return Fail(TEXT("Invalid collider root"));
+        for (const FName Bone:Volume->GetUsedBones())
+            if (Mesh->GetRefSkeleton().FindBoneIndex(Bone)==INDEX_NONE) return Fail(TEXT("Collider bone missing on motion mesh"));
+        Asset->SetPhysicsAsset(Physics);
     }
     FMemMark Memory(FMemStack::Get());
     FPreviewScene Scene(FPreviewScene::ConstructionValues().SetCreateDefaultLighting(false));

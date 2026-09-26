@@ -19,6 +19,22 @@ Subdivision 1, 2 and 4 retain the original domain bounds. Reports compare all 29
 
 ## Private skinned level-set probe
 
+`CSSEveLatticeRecipe.inl` imports an offline recipe through `-LatticeRecipe=<weights.json>` when creating an unused `PA_CBody...` asset. Stage it with `CSSEveLevelSet.inl`. The importer requires the private PA_CBody128 source, copies its SDF, checks every node against the original domain in reference space, resolves and normalizes influences, and duplicates the physics asset before replacing its lattice. It never assigns the result to a mesh. Creation metadata from the first `lrecipe-create.json` still contains unused default requested-grid fields; use its actual `bodies` grid sizes. Later code omits those defaults for recipe imports.
+
+Completed trial: `/Game/CSS/EveTest/PA_CBodyLocal64`, from `work/eve26/ls-local64-surface/weights.json`. Fresh inspection with `-LatticeGeometry -Samples=<body-collider.json>` provides readback for:
+
+```sh
+python3 tools/eve-fit/verify_lattice_recipe.py --recipe work/eve26/ls-local64-surface/weights.json --readback work/eve26/lrecipe-rest.json --reference work/eve26/ls128-rest.json --output work/eve26/unused-verification.json
+```
+
+The verifier permits 0.002 cm rest-distance difference between embedding grids, records the measured maximum, and compares every node position and weight. The initial 0.001 cm threshold failed at 0.001215 cm; p95 was 0.000408 cm. This is numerical rest agreement, not fitting acceptance. The older rest-only report identifies its scope in text rather than a `sample_frame` field. The first build needed an explicit `.Get()` when deducing a pointer from `TObjectPtr`; the successful build is `lrecipe-build2.log`.
+
+With motion and `-TraceSamples=...`, the report also records every inverse query embedding's rest position/phi and the selected surface's rest/posed positions. This distinguishes direct mapping error from the implicit query's projection path. Keep both measurements. Local64's frame-56 native test remains unaccepted despite accurate recipe readback and much better mapping.
+
+The cloth motion probe accepts `-Physics=/Game/CSS/EveTest/PA_CBodyLocal64.PA_CBodyLocal64` instead of `-Body`. It validates the single weighted volume's bone names, temporarily sets the private cloth asset's physics pointer, restores it on exit and never saves the assignment. It excludes `-Body` and `-NoBodyCollision`. `audit_cloth_clearance.py` still compares the garment to the original skinned body, but omits triangle-collider metrics when no triangle reference exists. The report explicitly records that absence. Do not supply fake triangle data for an implicit volume.
+
+Local64 cloth trial inputs: `-Motion -Frames=69 -Cloth=/Game/CSS/EveTest/CA_Fit.CA_Fit -Mesh=/Game/CSS/EveTest/SK_Waist.SK_Waist -Physics=/Game/CSS/EveTest/PA_CBodyLocal64.PA_CBodyLocal64 -Input=<workspace>/CustomShellSystem/work/eve26/panel-warm-motion.json -Report=<unused path>`. Repeat with `-CCD` for the recorded temporal diagnostic. Both fitting results are rejected; see the goal checkpoint before rerunning them.
+
 Stage `CSSEveLevelSet.inl` with `CSSEvePanelCommandlet.cpp` and its other includes. The authoring module needs the `PhysicsUtilities` dependency in addition to the existing panel dependencies. Do not replace the working project's Build.cs wholesale with the older tracked template.
 
 `prepare_collision_body.py` extracts the unchanged body from the F12 export into private `SK_CBody` / `SKEL_CBody`. Import using `CSSImportMesh`, inspect using `CSSInspectMesh`, and run `verify_collision_body.py` through the Python commandlet. The private 379-bone import is not a replacement for the production 386-bone shared skeleton.

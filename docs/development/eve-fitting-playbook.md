@@ -51,6 +51,8 @@ The reusable lesson is to run the complete recorded pose set before building on 
 
 Follow-up demonstrated that distinction: the 15.27 cm correspondence outlier has a 2.64 cm nearest-surface gap on the mapped triangulation. Its corners span both legs. Quarter-sized cells improve the visible hip shape, but retain inner-thigh and underarm folds and require 130,585 nodes. Do not turn finer spacing into an unlimited remedy: native containment and measured cost must decide whether it is useful. A mapped body triangulation is only an approximation of an implicit collider surface.
 
+The native recipe then passed save/reload checks but failed actual cloth fitting. Inverse queries can find several overlapping deformed cells and choose an interior point from another body region. CCD rescued one frame, yet the later sprint frame still broke through. Reuse the recipe verifier and query tracing, not this collider as a production preset. Also separate fully skinned clothing from simulated clothing in clipping reports: all 334 fixed failures at the checked frame contacted the upper arm and were unchanged by collider choice.
+
 Two numerical checks initially stopped these trials. Tiny negative nearest-triangle barycentric values were corrected only when clamping preserved the closest point within 0.0001 cm. Independent original-grid replay differed by up to 0.004063 cm overall and 0.000369 cm in the skirt region. The offline guards now allow 0.01 cm overall and 0.001 cm locally, while reporting actual errors. Those numerical agreement tolerances are not garment-fit acceptance thresholds. Keep failed-run diagnostics rather than silently loosening checks.
 
 ### Record after each useful experiment
