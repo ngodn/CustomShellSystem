@@ -168,3 +168,9 @@ The panel creation commandlet accepts `-MaxMove=3`, `-BackstopRadius=30` and `-B
 Pass `--mapping work/eve26/panel-stop-saved.json` to `verify_panel_motion.py` so its fixed-particle check uses the saved map. Resolve with `resolve_panel_render.py`, then audit using `audit_cloth_clearance.py --source-mesh work/eve26/holiday-waist-source.mesh.json`. Render rear and side with `render_skirt_bone_trial.py --mapped-render ... --lower-dress`; do not combine mapped-render with upstream mode.
 
 These candidates are unaccepted. See the goal checkpoint and `panel-stop-comparison.json`. Official backstop reference: https://dev.epicgames.com/documentation/unreal-engine/clothing-tool-in-unreal-engine---properties-reference . Pinned implementation: `Chaos/PBDSphericalConstraint.h`, nonlegacy sphere center uses animated position minus (radius + distance) times animated normal. A correct target fit is still required.
+
+## Prototype tail trial
+
+`CSSEvePanel` accepts `-Slot=PlanetTail_17` to use only that render material and the identically named proxy key. Optional `max_distances` supplies one finite value per proxy particle, bounded by `-MaxMove`; absent this map, the historical Holiday anchor calculation remains. `-Physics` selects an existing `/Game/CSS/` physics asset. These options are for private candidates, not a production deployment.
+
+`prepare_planet_tail_cloth.py` uses the aligned original 18-point proxy and four authored pins with nearest existing tail skin weights. Its 18 cm motion cap is a trial setting, not copied Blender solver behavior. The module compiled in `planet-panel-build-console.log`; private `/Game/CSS/EveTest/CA_PTail` was built in `planet-tail-create.log`. Fresh geometry inspection and rest mapping checks must precede motion claims. `check_panel_mapping.py --slot PlanetTail_17` selects this proxy for the existing readback verifier.

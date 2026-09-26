@@ -10,10 +10,11 @@ p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--mapping',type=Path,required=True)
 p.add_argument('--proxy',type=Path,required=True)
 p.add_argument('--output',type=Path,required=True)
+p.add_argument('--slot',default='MI_CH_P_EVE_Christmas_01_01.001')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert not a.output.exists()
 mapping = json.loads(a.mapping.read_text())
-proxy = json.loads(a.proxy.read_text())['slots']['MI_CH_P_EVE_Christmas_01_01.001']
+proxy = json.loads(a.proxy.read_text())['slots'][a.slot]
 positions = np.asarray(proxy['positions'])
 faces = np.asarray(proxy['indices']).reshape((-1,3))
 normals = np.zeros_like(positions)

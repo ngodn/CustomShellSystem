@@ -103,11 +103,12 @@ int32 UCSSEvePanelCommandlet::Main(const FString& Params)
     if (!FFileHelper::LoadFileToString(Text, *Input) ||
         !FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text), Root) || !Root.IsValid())
         return Fail(TEXT("Invalid proxy JSON"));
-    const FString Primary = TEXT("MI_CH_P_EVE_Christmas_01_01.001");
+    FString Primary = TEXT("MI_CH_P_EVE_Christmas_01_01.001");
+    const bool SingleSlot = FParse::Value(*Params,TEXT("Slot="),Primary);
     const TSharedPtr<FJsonObject>* Slots = nullptr;
     const TSharedPtr<FJsonObject>* Proxy = nullptr;
     if (!Root->TryGetObjectField(TEXT("slots"), Slots) || !(*Slots)->TryGetObjectField(Primary, Proxy))
-        return Fail(TEXT("Missing Holiday proxy"));
+        return Fail(TEXT("Missing requested garment proxy"));
     const TArray<TSharedPtr<FJsonValue>> *P = nullptr, *N = nullptr, *W = nullptr, *T = nullptr;
     if (!(*Proxy)->TryGetArrayField(TEXT("positions"),P) || !(*Proxy)->TryGetArrayField(TEXT("normals"),N) ||
         !(*Proxy)->TryGetArrayField(TEXT("weights"),W) || !(*Proxy)->TryGetArrayField(TEXT("indices"),T) ||
@@ -156,7 +157,11 @@ int32 UCSSEvePanelCommandlet::Main(const FString& Params)
     Cloth.DefineSchema();
     Cloth.AddGetSimPattern().Initialize(PatternPositions,Positions,Triangles,INDEX_NONE,Normals);
     Cloth.SetSkeletalMeshPathName(Mesh->GetPathName());
-    Cloth.SetPhysicsAssetPathName(TEXT("/Game/CSS/EveTest/PA_Holiday.PA_Holiday"));
+    FString PhysicsPath=TEXT("/Game/CSS/EveTest/PA_Holiday.PA_Holiday");
+    FParse::Value(*Params,TEXT("Physics="),PhysicsPath);
+    if (!PhysicsPath.StartsWith(TEXT("/Game/CSS/")) || !LoadObject<UPhysicsAsset>(nullptr,*PhysicsPath))
+        return Fail(TEXT("Expected existing CSS physics asset"));
+    Cloth.SetPhysicsAssetPathName(PhysicsPath);
     Cloth.AddWeightMap(TEXT("MaxDistance"));
     float MaxMove=18.f,BackstopRadius=0.f,BackstopDistance=0.f;
     FParse::Value(*Params,TEXT("MaxMove="),MaxMove);
@@ -171,6 +176,10 @@ int32 UCSSEvePanelCommandlet::Main(const FString& Params)
         Cloth.AddWeightMap(TEXT("BackstopRadius"));
         Cloth.AddWeightMap(TEXT("BackstopDistance"));
     }
+    const TArray<TSharedPtr<FJsonValue>>* ExplicitDistances=nullptr;
+    if ((*Proxy)->HasField(TEXT("max_distances")) &&
+        (!(*Proxy)->TryGetArrayField(TEXT("max_distances"),ExplicitDistances) || ExplicitDistances->Num()!=Positions.Num()))
+        return Fail(TEXT("Invalid explicit distance map dimensions"));
     int32 Pinned=0;
     for (int32 I=0; I<Positions.Num(); ++I)
     {
@@ -186,7 +195,9 @@ int32 UCSSEvePanelCommandlet::Main(const FString& Params)
         }
         if (!FMath::IsNearlyEqual(Sum,1.f,.001f)) return Fail(TEXT("Proxy weights not normalized"));
         const float Alpha=FMath::Clamp((Top-20.f-Positions[I].Z)/12.f,0.f,1.f);
-        const float Distance=MaxMove*Alpha*Alpha*(3.f-2.f*Alpha);
+        const float Distance=ExplicitDistances ? float((*ExplicitDistances)[I]->AsNumber()) : MaxMove*Alpha*Alpha*(3.f-2.f*Alpha);
+        if (!FMath::IsFinite(Distance) || Distance<0 || Distance>MaxMove)
+            return Fail(TEXT("Explicit distance exceeds movement bounds"));
         Cloth.GetWeightMap(TEXT("MaxDistance"))[I]=Distance;
         if (BackstopRadius>0)
         {
@@ -195,8 +206,9 @@ int32 UCSSEvePanelCommandlet::Main(const FString& Params)
         }
         Pinned+=Distance<.1f;
     }
-    const TSet<FString> Wanted={Primary,TEXT("MI_CH_P_EVE_Christmas_01_Decal.001"),
+    TSet<FString> Wanted={Primary,TEXT("MI_CH_P_EVE_Christmas_01_Decal.001"),
         TEXT("MI_EVE_HR_Christmas_01_Fur.001"),TEXT("MI_EVE_HR_15_Emissive1.001"),TEXT("MI_CH_P_EVE_Christmas_01_03.001")};
+    if (SingleSlot) { Wanted.Reset(); Wanted.Add(Primary); }
     TSet<FString> Found;
     const auto& Model=Mesh->GetImportedModel()->LODModels[0];
     for (const auto& Section:Model.Sections)
@@ -241,7 +253,7 @@ int32 UCSSEvePanelCommandlet::Main(const FString& Params)
             Pattern.GetRenderIndices()[I]=Face;
         }
     }
-    if (Found.Num()!=5 || Pinned==0 || Pinned==Positions.Num()) return Fail(TEXT("Incomplete garment or anchors"));
+    if (Found.Num()!=Wanted.Num() || Pinned==0 || Pinned==Positions.Num()) return Fail(TEXT("Incomplete garment or anchors"));
     float ContactCm=.3f;
     FParse::Value(*Params,TEXT("ContactCm="),ContactCm);
     if (!FMath::IsFinite(ContactCm) || ContactCm<.1f || ContactCm>1.f)
@@ -266,12 +278,12 @@ int32 UCSSEvePanelCommandlet::Main(const FString& Params)
     FText Error,Verbose;
     Asset->Build({Collection},nullptr,&Error,&Verbose);
     FAssetCompilingManager::Get().FinishAllCompilation();
-    if (!Error.IsEmpty() || !Asset->HasValidClothSimulationModels() || Asset->GetNumClothSimulationModels()!=1 || Asset->GetMaterials().Num()!=5)
+    if (!Error.IsEmpty() || !Asset->HasValidClothSimulationModels() || Asset->GetNumClothSimulationModels()!=1 || Asset->GetMaterials().Num()!=Wanted.Num())
     {
         UE_LOG(LogCSSEvePanel,Error,TEXT("Build failed: %s %s"),*Error.ToString(),*Verbose.ToString());
         return 1;
     }
-    UE_LOG(LogCSSEvePanel,Display,TEXT("Built one simulation, %d particles (%d pinned), five materials; motion untested."),Positions.Num(),Pinned);
+    UE_LOG(LogCSSEvePanel,Display,TEXT("Built one simulation, %d particles (%d pinned), %d materials; motion untested."),Positions.Num(),Pinned,Wanted.Num());
     FSavePackageArgs Save;
     Save.TopLevelFlags=RF_Public|RF_Standalone;
     const FString Filename=FPackageName::LongPackageNameToFilename(Output,FPackageName::GetAssetPackageExtension());
