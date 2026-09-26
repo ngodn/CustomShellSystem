@@ -136,6 +136,28 @@ static int32 EvaluateHolidayPanel(const FString& Params)
             if (T.ContainsNaN() || !Q.IsNormalized()) return Fail(TEXT("Invalid recorded transform"));
             Pose->BoneSpaceTransforms[Bone]=T;
         }
+        for (int32 Bone=0; Bone<Ref.GetRawBoneNum(); ++Bone)
+            if (!Seen.Contains(Bone)) return Fail(TEXT("Incomplete recorded raw pose"));
+        // Recordings contain deform bones. Derive missing virtual helpers from
+        // their current source/target transforms, as the animation pose does.
+        TArray<FTransform> ComponentPose;
+        ComponentPose.SetNum(Ref.GetNum());
+        for (int32 Bone=0; Bone<Ref.GetRawBoneNum(); ++Bone)
+        {
+            const int32 Parent=Ref.GetParentIndex(Bone);
+            ComponentPose[Bone]=Parent==INDEX_NONE ? Pose->BoneSpaceTransforms[Bone] :
+                Pose->BoneSpaceTransforms[Bone]*ComponentPose[Parent];
+        }
+        for (const auto& Virtual:Ref.GetVirtualBoneRefData())
+        {
+            if (!Seen.Contains(Virtual.SourceRefSkelIndex) || !Seen.Contains(Virtual.TargetRefSkelIndex))
+                return Fail(TEXT("Virtual bone dependency missing"));
+            if (!Seen.Contains(Virtual.VBRefSkelIndex))
+                Pose->BoneSpaceTransforms[Virtual.VBRefSkelIndex]=
+                    ComponentPose[Virtual.TargetRefSkelIndex].GetRelativeTransform(ComponentPose[Virtual.SourceRefSkelIndex]);
+            ComponentPose[Virtual.VBRefSkelIndex]=Pose->BoneSpaceTransforms[Virtual.VBRefSkelIndex]*ComponentPose[Virtual.SourceRefSkelIndex];
+            Seen.Add(Virtual.VBRefSkelIndex);
+        }
         if (Seen.Num()!=Ref.GetNum()) return Fail(TEXT("Incomplete recorded pose"));
         Pose->MarkRefreshTransformDirty();
         Pose->RefreshBoneTransforms();

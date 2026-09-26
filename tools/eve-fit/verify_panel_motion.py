@@ -13,12 +13,14 @@ p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--input',type=Path,default=work/'panel-motion.json')
 p.add_argument('--output',type=Path,default=work/'panel-motion-verified.json')
 p.add_argument('--proxy',type=Path,default=work/'skirt-proxies.json')
+p.add_argument('--mesh',type=Path,default=work/'holiday.mesh.json')
+p.add_argument('--slot',default='MI_CH_P_EVE_Christmas_01_01.001')
 p.add_argument('--mapping',type=Path,help='Use fresh saved MaxDistance map instead of the original 18 cm recipe')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 output = a.output
 assert not output.exists()
-mesh = json.loads((work/'holiday.mesh.json').read_text())
-proxy = json.loads(a.proxy.read_text())['slots']['MI_CH_P_EVE_Christmas_01_01.001']
+mesh = json.loads(a.mesh.read_text())
+proxy = json.loads(a.proxy.read_text())['slots'][a.slot]
 result = json.loads(a.input.read_text())
 motion = json.loads(Path(result['source_motion']).read_text())
 points = np.asarray(proxy['positions'], dtype=float)

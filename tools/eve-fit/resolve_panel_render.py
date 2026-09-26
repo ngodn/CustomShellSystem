@@ -9,6 +9,8 @@ import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 
 p = argparse.ArgumentParser(description=__doc__)
+p.add_argument('--mesh',type=Path)
+p.add_argument('--slot')
 p.add_argument('--mapping',type=Path,required=True)
 p.add_argument('--motion',type=Path,required=True)
 p.add_argument('--proxy',type=Path,required=True)
@@ -25,8 +27,8 @@ w = Path(__file__).resolve().parents[2]/'work/eve26'
 mapping = json.loads(a.mapping.read_text())
 motion = json.loads(a.motion.read_text())
 assert mapping['asset'] == motion['asset']
-proxy = json.loads(a.proxy.read_text())['slots']['MI_CH_P_EVE_Christmas_01_01.001']
-mesh = json.loads((w/'holiday.mesh.json').read_text())
+proxy = json.loads(a.proxy.read_text())['slots'][a.slot or 'MI_CH_P_EVE_Christmas_01_01.001']
+mesh = json.loads((a.mesh or w/'holiday.mesh.json').read_text())
 source = json.loads(Path(motion['source_motion']).read_text())
 snapshot = source['frames'][a.frame]['pose']['Snapshot']
 entries = dict(zip(snapshot['BoneNames'],snapshot['LocalTransforms'],strict=True))
@@ -65,7 +67,7 @@ material_slots = {
 }
 for section, summary in zip(mapping['render_geometry']['sections'],mapping['sections'],strict=True):
     # The private import uses distinct material packages with identical short names.
-    material = material_slots[Path(summary['material']).parent.name]
+    material = a.slot or material_slots[Path(summary['material']).parent.name]
     rest = np.asarray(section['positions']);count = len(rest)
     assert count == summary['vertices']
     data = np.asarray(section['mapping'])
