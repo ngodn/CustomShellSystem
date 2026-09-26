@@ -30,6 +30,7 @@ Updated September 27, 2026. Read this before starting the next outfit, then chec
 | Trusting capsule coverage from the rest pose | Measure animated and morphed body coverage, including secondary-bone deformation. Four extra spheres did not solve the observed gaps. | `capsule-motion-bands.json`, rejected `secondary-coverage.json` |
 | Generating body collision from a combined body-and-outfit mesh | Extract and verify a separate body-only source first. Otherwise garment geometry can contaminate the collision volume. | `prepare_collision_body.py`, `cbody-source.json` |
 | Treating a successful import, build or save as finished clothing | Reload saved assets, measure deformation and cost, visually inspect, then validate the cooked candidate in game. | Private collider generation is still unaccepted |
+| Accepting a level-set collider because its resting surface fits | Compare direct lattice mapping with independently verified skinning in a difficult pose, separately from signed-distance lookup. Inspect lattice weights before another resolution trial. | `ls128-map68-audit.json`: 24.18 cm maximum skirt-region mapping error despite improved resting fit |
 
 Evidence filenames above are under `work/eve26/` unless a script, asset or commit is named. The evidence index and dated goal appendices carry the detailed results and limitations.
 

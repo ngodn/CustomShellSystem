@@ -22,6 +22,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Failed approaches and traps
 
+- Whole-body level-set 128/16 is rejected as an animated collider. Finer SDF resolution reduced resting skirt-region undercoverage, but frame 68 has 24.18 cm direct lattice mapping error and 30.69 cm maximum positive signed-distance sample. Independent body skinning passes within 0.000390 cm. Evidence: `ls-rest*`, `ls128-rest*`, `ls128-f68*`, `ls128-map68*`; rear and side heatmaps inspected as recorded in the goal log. Inspect lattice weight distribution next, not a blind resolution increase. No cloth/game trial used this collider.
+
 - Single locally scored attachment is not adopted: lower clipping counts at frames 60/64/68, but a larger visible hip patch at frame 68. `panel-localmap-*`, `map-{base,local}-68-views` are hypothetical replay only, not native assets. Do not equate sample-count improvement with visual acceptance.
 - CA_Hip centroid refinement is rejected: unchanged rest surface but worse mapped clipping, edge ratio 7.919 and roughly double editor solver cost. See `panel-hip-motion.json`, `panel-hip-clearance.json`, and inspected `panel-hip-views`; do not repeat density increases alone as an untested fix.
 - Holiday AnimDynamics trials are rejected. Equal-axis inertia removes the numerical explosion, but moving simulated centers onto the fitted dress still produces 18.30 cm jog displacement and visible hip clipping. Do not repeat spring/inertia/center tuning. Next adapt the existing constrained ControlRig approach, with cloth-specific geometry and morph checks.

@@ -1,6 +1,6 @@
 # Eve outfit goal and current status
 
-Updated 2026-09-27, private skinned level-set generation checkpoint. Read [the evidence index](eve-outfit-index.md) before resuming.
+Updated 2026-09-27, skinned level-set rest and sprint checks. Read [the evidence index](eve-outfit-index.md) before resuming.
 
 ## Active objective
 
@@ -32,7 +32,7 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
-The next collision candidate is private `SK_CBody` / `PA_CBody64`, extracted from the unchanged F12 body. The saved level-set collider reloads with matching metadata (one pelvis-rooted volume, 33 influencing bones, level-set grid 65x23x35, lattice 16x10x12). This is generation/serialization evidence only. Measure signed surface coverage and deformed coverage, then trial cloth motion and cost before adopting it. The old triangle collider's late-sprint tunneling and expensive 16-substep workaround are documented below. No new collider has been assigned to production or accepted.
+Private level-set generation and rest/sprint sampling now work. Neither `PA_CBody64` nor `PA_CBody128` is accepted: the finer distance grid improves rest fit, but its 16-resolution embedding lattice has up to 24.18 cm direct mapping error in skirt-region body points at sprint frame 68. Independent body skinning passes within 0.000390 cm. Next inspect lattice influence distribution and distinguish coarse spatial interpolation from inaccurate transferred weights before another generation trial. The old triangle collider's late-sprint tunneling and expensive 16-substep workaround are documented below. No new collider has been assigned to production or accepted.
 
 **Current working reference is F12 / SK_Waist / CA_Fit, with the full body-joint6 collider and 0.3 cm contact setting.** Repaired render attachments remove the long fur spikes, and local source fitting improves waist clearance. Holiday remains unfinished: hip breakthrough, arm contact, local deformation, physics cost and complete morph coverage are open. No game install or release replacement has occurred during these private trials.
 
@@ -725,3 +725,25 @@ Next prepare a separate body-only private mesh using the preserved geometry/weig
 `verify_collision_body.py` reloads the source and body-only mesh. Saved skeleton and mesh bind transforms match the private F12 source, no physics asset is assigned to `SK_CBody`, and the four protected hashes match `panel-motion-before.json`. The Python commandlet exits 0; see `cbody-rig.json`. The production shared skeleton remains separate and unchanged.
 
 Next: sample signed distances against the saved volume at rest, evaluate the deformed volume against recorded body poses and morph cases, then compare cloth motion and cost with the same F12/full-triangle reference. The new collider is not adopted or installed. Skinning of a level-set lattice does not by itself establish support for body morphs. Keep missing outfit accessories, full assembly and game review open.
+
+## September 27: level-set surface and sprint rejection
+
+The native sampler reloads a saved collider and deforms a transient deep copy. Rest transforms and recorded local poses use the engine's sub-bone-relative-to-root convention. Both ordinary `PhiWithNormal` and cloth-style `PhiWithNormalAndSurfacePoint(..., false)` are recorded because the latter excludes empty cells. Source body vertices include creases and internal surfaces, so counts alone are not visible-surface acceptance.
+
+| Query | Skirt-region samples | Cloth query misses | Outside by over 3 mm | Inside by over 3 mm | Maximum positive distance |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 64 distance grid / 16 lattice, rest | 3,287 | 0 | 937 | 548 | 0.739 cm |
+| 128 distance grid / 16 lattice, rest | 3,287 | 0 | 11 | 1,836 | 0.427 cm |
+| 128 distance grid / 16 lattice, sprint frame 68 | 3,287 | 0 | 1,388 | 1,351 | 30.688 cm |
+
+Whole-body rest queries on 64/16 miss 24,060 of 36,787 samples; 128/16 has no rest misses. Finer generation changes grid bounds and inferred influences as well as voxel spacing, so this is a controlled requested-resolution comparison, not proof that every output property except voxel spacing is identical. The actual 128 grid is 129x41x65, and its embedding lattice is 16x10x12.
+
+Rear and side diagnostic heatmaps were inspected for both rest resolutions and frame 68: `ls-rest-views`, `ls128-rest-views`, `ls128-f68-views`. Coarse rest undercoverage is visible across the rear and arms. The finer rest views improve substantially, with remaining overcoverage around deep creases. Sprint fails broadly across the visible hips/thighs and arms. These images color the body by face-average sample distances; they are not rendered collider surfaces or garment acceptance views.
+
+`verify_levelset_pose.py` independently reconstructs all 36,787 sampled body points from the source weights and recorded locals in Blender. Maximum difference is 0.00038956 cm, passing the 0.001 cm check. Thus the sampled body skinning is consistent with the source.
+
+A second native query records direct lattice-mapped positions separately from distance lookup. `ls128-map68-audit.json` shows a maximum 24.183 cm skirt-region mapping error, p95 9.892 cm; all region points are within the lattice grid. This establishes that the current mapping already fails, without attributing the entire error to signed-distance lookup. The ordinary distance samples and body positions match the first frame-68 run exactly. Do not raise resolution again without first inspecting the lattice influence field and its agreement with source skin weights.
+
+Evidence: `ls-rest{,-audit}.json`, `ls128-rest{,-audit}.json`, `ls128-f68{,-audit,-pose}.json`, `ls128-map68{,-audit}.json`. Builds `lsample-build`, `lsmotion-build`, `lsmap-build` pass. The rest and first frame-68 commandlets exit 0, as do Blender verification/renders. The final mapping commandlet logged result 0 and completed its JSON, but its outer process returned 143 during shutdown; the log includes a trace daemon receiving signal 15. Do not call that last outer shutdown clean. No retry was needed to infer the already-reproduced failed deformation, and no collider was installed.
+
+`ls-protected.json` matches all four protected hashes. Next inspect generated lattice weights versus source weights near the largest errors, then choose a specific correction or alternative based on that result. Morph-dependent collision, physics cost, full outfit assembly and gameplay validation remain open.
