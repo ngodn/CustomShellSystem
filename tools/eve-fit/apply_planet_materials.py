@@ -5,7 +5,7 @@ from pathlib import Path
 import unreal
 
 work = Path('/home/eins0fx/development/mods/msII/CustomShellSystem/work/eve26')
-report = work / 'planet-material-apply.json'
+report = work / 'planet-material-apply2.json'
 assert not report.exists()
 data = json.loads((work / 'planet-material-map.json').read_text())
 mesh = unreal.load_asset('/Game/CSS/EveTest/SK_PlanetFit')
@@ -17,8 +17,12 @@ for row in data['slots']:
     assert str(slots[index].material_slot_name) == row['name']
     material = unreal.load_asset(row['material'])
     assert material
-    slots[index].material_interface = material
+    slot = slots[index]
+    slot.material_interface = material
+    slots[index] = slot
 mesh.set_editor_property('materials', slots)
+for row, actual in zip(data['slots'], mesh.get_editor_property('materials'), strict=True):
+    assert actual.material_interface.get_path_name() == row['material'], (row['slot'], actual.material_interface.get_path_name(), row['material'])
 assert unreal.EditorAssetLibrary.save_loaded_asset(mesh, False)
 protected = json.loads((work / 'planet-protected-before.json').read_text())
 assert all(hashlib.sha256(Path(p).read_bytes()).hexdigest() == sha for p, sha in protected.items())

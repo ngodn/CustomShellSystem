@@ -140,3 +140,7 @@ Prototype's apparent bare-foot problem repeats an earlier Black Pearl preview mi
 Prototype had all six keys but combining documented maximum values produced large sheets and spikes. Neutral fitting and weight normalization did not detect this. Check individual and combined morphs before physics. Rebuilding suit deltas from the unchanged body's nearest triangles removed the large distortion in the inspected combined-max views, and fresh source reload verifies the six arrays. This remains a candidate: check edge clearance, accessories, mixed values and motion rather than declaring all morphs solved from one combination.
 
 An accessory bone's name also does not establish its bind location. Prototype's existing diagnostic tail chain root is 23.59 cm from the garment attachment and extends in a different direction. Gemini's earlier single-tail-bone assignment already caused fan deformation and was removed. Preserve that rejection and measure the chain before weighting it again.
+
+## Unreal material array readback
+
+An indexed Unreal struct can be returned as a copy. For material assignments, modify a local slot, write it back into the array, assign the array, then compare every material reference before saving and again in a fresh editor process. A successful save is not proof the references changed. Prototype caught this in `planet-assembly-check.log`; `apply_planet_materials.py` contains the corrected writeback.
