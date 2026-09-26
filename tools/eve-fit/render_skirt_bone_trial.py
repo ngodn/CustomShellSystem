@@ -22,11 +22,17 @@ parser.add_argument('--lower-dress', action='store_true', help='Center the camer
 parser.add_argument('--surface-motion', type=Path, help='Apply an offline fabric surface only to its matching pose and morph case')
 parser.add_argument('--transfer-trim', action='store_true', help='Diagnostic barycentric displacement transfer to other dress sections')
 parser.add_argument('--rotate-trim', action='store_true', help='Rotate attachment offsets with the fabric triangle, without scaling the offsets')
+parser.add_argument('--mapped-render', type=Path, help='Resolved native cloth mapping for all dress sections at this frame')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 data = json.loads(args.mesh.read_text())
 motion_data = json.loads(args.motion.read_text()) if args.motion else None
 record = motion_data['frames'][args.frame] if motion_data else None
 surface_motion = json.loads(args.surface_motion.read_text()) if args.surface_motion else None
+mapped_render = json.loads(args.mapped_render.read_text()) if args.mapped_render else None
+if mapped_render:
+    assert not surface_motion and args.motion and not args.upstream
+    assert mapped_render['frame'] == args.frame
+    assert Path(mapped_render['source_motion']).resolve() == args.motion.resolve()
 assert not args.transfer_trim or surface_motion
 assert not args.rotate_trim or args.transfer_trim
 if surface_motion:
@@ -98,6 +104,18 @@ for part in audit['parts']:
     bpy.context.collection.objects.link(obj)
     objects.append((obj, points))
 scene = bpy.context.scene
+if mapped_render:
+    for obj,_ in objects:
+        if obj.name == 'Eve Christmas - Dress': obj.hide_render = True
+    for section in mapped_render['sections']:
+        xyz = np.asarray(section['positions_cm'])/100;xyz[:,1] *= -1
+        faces = np.asarray(section['indices']).reshape((-1,3))[:,::-1]
+        cloth_mesh = bpy.data.meshes.new(section['material'])
+        cloth_mesh.from_pydata(xyz.tolist(),[],faces.tolist())
+        cloth_mesh.materials.append(materials[data['materials'].index(section['material'])])
+        for polygon in cloth_mesh.polygons:polygon.use_smooth = True
+        obj = bpy.data.objects.new(section['material'],cloth_mesh)
+        bpy.context.collection.objects.link(obj)
 scene.render.engine = 'BLENDER_WORKBENCH'
 scene.display.shading.color_type = 'MATERIAL'
 scene.display.shading.show_cavity = True
@@ -111,6 +129,7 @@ cam.data.type = 'ORTHO'
 cam.data.ortho_scale = .70
 rows = []
 for label, selections in [('default', {}), ('hip-waist', {'PBMHipSize': 1., 'PBMWaistWidth': 1.})]:
+    if mapped_render and label != 'default': continue
     if surface_motion and label != surface_motion['morph_case']:
         continue
     selections = {**(record.get('morphs', {}) if record else {}), **selections}
@@ -198,5 +217,6 @@ scope = ('Recorded pose applied to exported weights; source_scope identifies mea
     'surface_scope': surface_motion['scope'] if surface_motion else None,
     'transfer_trim': args.transfer_trim,
     'rotate_trim': args.rotate_trim,
+    'mapped_render':str(args.mapped_render) if mapped_render else None,
     'source_scope': motion_data.get('scope', 'Measured editor evaluation') if motion_data else None,
     'scope': scope}, indent=2)+'\n')

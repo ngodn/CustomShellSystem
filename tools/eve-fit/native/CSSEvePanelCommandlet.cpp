@@ -22,6 +22,7 @@
 DEFINE_LOG_CATEGORY_STATIC(LogCSSEvePanel, Log, All);
 
 #include "CSSEvePanelMotion.inl"
+#include "CSSEvePanelMapping.inl"
 
 UCSSEvePanelCommandlet::UCSSEvePanelCommandlet()
 {
@@ -76,6 +77,7 @@ int32 UCSSEvePanelCommandlet::Main(const FString& Params)
             Rows.Add(MakeShared<FJsonValueObject>(Row));
         }
         Data->SetArrayField(TEXT("sections"),Rows);
+        if (FParse::Param(*Params,TEXT("Geometry"))) Data->SetObjectField(TEXT("render_geometry"),ExportPanelRenderMapping(Asset));
         if (!FJsonSerializer::Serialize(Data,TJsonWriterFactory<>::Create(&Text)) || !FFileHelper::SaveStringToFile(Text,*Report))
             return Fail(TEXT("Cannot save cloth report"));
         return 0;
@@ -119,6 +121,13 @@ int32 UCSSEvePanelCommandlet::Main(const FString& Params)
         // Isotropic legacy constraints use the 3D rest mesh. This is not a tailored 2D pattern.
         PatternPositions.Add(FVector2f(Pos.X,Pos.Z));
         Top=FMath::Max(Top,Pos.Z);
+    }
+    double AnchorTop=Top;
+    if ((*Proxy)->TryGetNumberField(TEXT("anchor_top_cm"),AnchorTop))
+    {
+        if (!FMath::IsFinite(AnchorTop) || AnchorTop<Top-.01 || AnchorTop>Top+5.)
+            return Fail(TEXT("Invalid preserved anchor height"));
+        Top=float(AnchorTop);
     }
     for (const auto& Value:*T)
     {

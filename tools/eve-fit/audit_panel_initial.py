@@ -12,6 +12,7 @@ p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--input', type=Path, required=True)
 p.add_argument('--frames', type=int, nargs='+', required=True)
 p.add_argument('--output', type=Path, required=True)
+p.add_argument('--proxy', type=Path)
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert not a.output.exists()
 w = Path(__file__).resolve().parents[2]/'work/eve26'
@@ -19,7 +20,7 @@ result = json.loads(a.input.read_text())
 body = json.loads(Path(result['body_collision_input']).read_text())
 motion = json.loads(Path(result['source_motion']).read_text())
 mesh = json.loads((w/'holiday.mesh.json').read_text())
-panel = json.loads((w/'skirt-proxies.json').read_text())['slots']['MI_CH_P_EVE_Christmas_01_01.001']
+panel = json.loads((a.proxy or w/'skirt-proxies.json').read_text())['slots']['MI_CH_P_EVE_Christmas_01_01.001']
 names = {b['name']:i for i,b in enumerate(mesh['bones'])}
 bind = []
 for bone in mesh['bones']:
@@ -27,7 +28,7 @@ for bone in mesh['bones']:
     m = Matrix.LocRotScale(Vector(bone['translation']), Quaternion((q[3],*q[:3])), Vector(bone['scale']))
     bind.append(bind[bone['parent']]@m if bone['parent']>=0 else m)
 rest = np.asarray(panel['positions'])
-alpha = np.clip((rest[:,2].max()-20.-rest[:,2])/12.,0.,1.)
+alpha = np.clip((panel.get('anchor_top_cm',rest[:,2].max())-20.-rest[:,2])/12.,0.,1.)
 free = 18.*alpha**2*(3.-2.*alpha) >= .1
 assert all(int(free.sum()) == result['frames'][frame]['dynamic_particles'] for frame in a.frames)
 reports = []

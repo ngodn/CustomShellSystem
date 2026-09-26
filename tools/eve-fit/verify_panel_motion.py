@@ -12,11 +12,12 @@ work = Path(__file__).resolve().parents[2]/'work/eve26'
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--input',type=Path,default=work/'panel-motion.json')
 p.add_argument('--output',type=Path,default=work/'panel-motion-verified.json')
+p.add_argument('--proxy',type=Path,default=work/'skirt-proxies.json')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 output = a.output
 assert not output.exists()
 mesh = json.loads((work/'holiday.mesh.json').read_text())
-proxy = json.loads((work/'skirt-proxies.json').read_text())['slots']['MI_CH_P_EVE_Christmas_01_01.001']
+proxy = json.loads(a.proxy.read_text())['slots']['MI_CH_P_EVE_Christmas_01_01.001']
 result = json.loads(a.input.read_text())
 motion = json.loads(Path(result['source_motion']).read_text())
 points = np.asarray(proxy['positions'], dtype=float)
@@ -30,7 +31,7 @@ inverse = [m.inverted() for m in bind]
 rows = [(v, names[b], w) for v, influences in enumerate(proxy['weights']) for b, w in influences]
 rows = np.asarray(rows)
 vi, bi, weights = rows[:, 0].astype(int), rows[:, 1].astype(int), rows[:, 2]
-alpha = np.clip((points[:, 2].max()-20.-points[:, 2])/12., 0., 1.)
+alpha = np.clip((proxy.get('anchor_top_cm',points[:, 2].max())-20.-points[:, 2])/12., 0., 1.)
 distance = 18.*alpha**2*(3.-2.*alpha)
 fixed = distance == 0
 faces = np.asarray(proxy['indices']).reshape((-1, 3))
@@ -75,6 +76,7 @@ for row in result['frames']:
 passed = max(r['fixed_max_cm'] for r in reports) < .02
 output.write_text(json.dumps({'scope':'Saved panel coordinates/order check using exactly zero-distance particles and the panel source weights. Edge ratios use the old source rest mesh. Not fitting, collision or game acceptance.',
     'source_result':str(a.input),'source_sha256':hashlib.sha256(a.input.read_bytes()).hexdigest(),
+    'source_proxy':str(a.proxy),'proxy_sha256':hashlib.sha256(a.proxy.read_bytes()).hexdigest(),
     'passed':passed,'zero_distance':int(fixed.sum()),'cases':reports},indent=2)+'\n')
 print('Passed',passed,'worst fixed cm',max(r['fixed_max_cm'] for r in reports),'worst edge ratio',max(r['edge_ratio_max'] for r in reports))
 assert passed, 'Resolve particle mapping or pose-space mismatch before rendering'

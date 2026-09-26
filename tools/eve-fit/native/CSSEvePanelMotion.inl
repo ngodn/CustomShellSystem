@@ -31,7 +31,10 @@ static int32 EvaluateHolidayPanel(const FString& Params)
     const TArray<TSharedPtr<FJsonValue>>* Frames=nullptr;
     if (!Root->TryGetArrayField(TEXT("frames"),Frames) || Frames->Num()<Count) return Fail(TEXT("Missing frames"));
     auto* Mesh=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/CSS/EveTest/SK_Holiday.SK_Holiday"));
-    auto* Asset=LoadObject<UChaosClothAsset>(nullptr,TEXT("/Game/CSS/EveTest/CA_Holiday.CA_Holiday"));
+    FString ClothPath=TEXT("/Game/CSS/EveTest/CA_Holiday.CA_Holiday");
+    FParse::Value(*Params,TEXT("Cloth="),ClothPath);
+    if (!ClothPath.StartsWith(TEXT("/Game/CSS/EveTest/CA_"))) return Fail(TEXT("Cloth must be a private candidate"));
+    auto* Asset=LoadObject<UChaosClothAsset>(nullptr,*ClothPath);
     if (!Mesh || !Asset) return Fail(TEXT("Private reference assets missing"));
     FAssetCompilingManager::Get().FinishAllCompilation();
     if (!Asset->HasValidClothSimulationModels() || Asset->GetClothCollections().Num()!=1) return Fail(TEXT("Invalid panel simulation"));
@@ -145,6 +148,15 @@ static int32 EvaluateHolidayPanel(const FString& Params)
         Row->SetNumberField(TEXT("substeps"),Proxy->GetNumSubsteps());
         Row->SetNumberField(TEXT("simulation_ms"),Proxy->GetSimulationTime());
         Row->SetArrayField(TEXT("positions_cm"),Positions);
+        TArray<TSharedPtr<FJsonValue>> Normals;
+        for (const FVector3f& N:Sim->Normals)
+        {
+            const FVector World=Sim->Transform.TransformVector(FVector(N));
+            TArray<TSharedPtr<FJsonValue>> XYZ={MakeShared<FJsonValueNumber>(World.X),MakeShared<FJsonValueNumber>(World.Y),MakeShared<FJsonValueNumber>(World.Z)};
+            Normals.Add(MakeShared<FJsonValueArray>(XYZ));
+        }
+        if (Normals.Num()!=Positions.Num()) return Fail(TEXT("Missing simulation normals"));
+        Row->SetArrayField(TEXT("normals"),Normals);
         if (!BodyInput.IsEmpty())
         {
             const auto& Shape=Asset->GetPhysicsAsset()->SkeletalBodySetups[0]->AggGeom.SkinnedTriangleMeshElems[0].GetSkinnedTriangleMesh();

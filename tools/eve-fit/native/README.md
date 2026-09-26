@@ -84,3 +84,6 @@ Verify coordinates with Blender `verify_panel_motion.py --input <report> --outpu
 
 
 `-Body` motion reports also export `body_reference_skin_cm`, independently skinned through the native shape API for comparison with `verify_body_proxy.py`. This is not internal solver collision-state readback. The lightweight proxies produced by `simplify_body_collider.py` remain rejected fitting experiments; see the September 27 measurements in the outfit goal log before reusing them.
+
+
+For reduced-proxy diagnostics, stage `CSSEvePanelMapping.inl` together with the commandlet and existing helpers. Motion accepts `-Cloth=/Game/CSS/EveTest/CA_<name>.<name>` and exports particle normals. Inspection adds full render geometry and baked cloth mappings only with `-Geometry`. Proxy JSON can preserve the old pin/falloff height using `anchor_top_cm`; do not infer a new pin boundary from a simplified mesh's altered bounds. `resolve_panel_render.py` replays the pinned shader position formula, but is not a game-render acceptance test. Current CA_Small mapping has confirmed rest outliers and must not ship.
