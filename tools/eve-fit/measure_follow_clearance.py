@@ -1,5 +1,6 @@
 """Measure lower-dress/body proximity on sampled actual post-process poses."""
 import json
+import hashlib
 import argparse
 import sys
 from pathlib import Path
@@ -16,9 +17,10 @@ p.add_argument('--min-z',type=float,default=float('-inf'))
 p.add_argument('--max-z',type=float,default=120.)
 p.add_argument('--exclude-arms',action='store_true',help='Separate swinging-arm contact from torso/leg fitting')
 p.add_argument('--output',type=Path,default=work/'follow-clearance.json')
+p.add_argument('--mesh',type=Path,default=work/'holiday-hip-clean.mesh.json')
 args=p.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 output=args.output;assert not output.exists()
-mesh=json.loads((work/'holiday-hip-clean.mesh.json').read_text())
+mesh=json.loads(args.mesh.read_text())
 audit=json.loads((work/'holiday.mesh.audit.json').read_text())
 base=np.asarray(mesh['points'],dtype=float)
 arm_mass={}
@@ -114,6 +116,7 @@ for kind in ('walk','jog','sprint'):
                 'minimum_signed_cm':minimum,'over_1mm':len(hits),'worst_samples':hits[:8]})
     print(kind,'cases',len(reports),flush=True)
 output.write_text(json.dumps({'scope':'Nearest-triangle signed distances for lower main-dress vertices on sampled recorded baseline component poses. Body normals oriented using exported normals. Diagnostic only: open/concave surfaces and intentional openings need visual review. Morph endpoints reuse recorded pose, without resimulating dynamics.',
+    'mesh':str(args.mesh),'mesh_sha256':hashlib.sha256(args.mesh.read_bytes()).hexdigest(),
     'body_triangles':len(body_faces),'excluded_arm_triangles':body_count-len(body_faces),
     'rest_height_interval_cm':[args.min_z if np.isfinite(args.min_z) else None,args.max_z],
     'cases':reports},indent=2)+'\n')

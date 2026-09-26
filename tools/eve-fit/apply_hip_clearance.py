@@ -15,15 +15,25 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from export_variant_clean import TO_UE, fitted_mesh
 from holiday_candidate import coords, digest
 
-output = WORK/'holiday-f11.blend'
+import argparse
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--source',type=Path,default=WORK/'holiday-f10.blend')
+parser.add_argument('--mesh',type=Path,default=WORK/'holiday.mesh.json')
+parser.add_argument('--offsets',type=Path,default=WORK/'hip-offsets.json')
+parser.add_argument('--output',type=Path,default=WORK/'holiday-f11.blend')
+parser.add_argument('--receipt',type=Path,default=WORK/'holiday-f11.json')
+args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+output = args.output
 assert not output.exists()
-data = json.loads((WORK/'holiday.mesh.json').read_text())
-offsets = json.loads((WORK/'hip-offsets.json').read_text())['offsets']
+assert not args.receipt.exists()
+assert output.resolve().parent == WORK.resolve() and args.receipt.resolve().parent == WORK.resolve()
+data = json.loads(args.mesh.read_text())
+offsets = json.loads(args.offsets.read_text())['offsets']
 parts = json.loads((WORK/'holiday.mesh.audit.json').read_text())['parts']
 start = parts[0]['points']
 count = parts[1]['points']
 assert parts[1]['name'] == 'Eve Christmas - Dress'
-bpy.ops.wm.open_mainfile(filepath=str(WORK/'holiday-f10.blend'))
+bpy.ops.wm.open_mainfile(filepath=str(args.source))
 body = bpy.data.objects['Eve Body']
 before = digest(body)
 obj = bpy.data.objects['Eve Christmas - Dress']
@@ -80,10 +90,10 @@ error = float(np.linalg.norm(actual-(expected+expected_delta), axis=1).max())
 assert error < .0005, error
 assert digest(body) == before, 'Body changed'
 bpy.ops.wm.save_as_mainfile(filepath=str(output))
-(WORK/'holiday-f11.json').write_text(json.dumps({
+args.receipt.write_text(json.dumps({
     'body_digest': before, 'body_unchanged': True, 'changed_dress_vertices': len(offsets),
-    'max_offset_cm': .25, 'mapping_error_cm': mapping_error, 'fitted_output_error_cm': error,
-    'relative_shapes_preserved': True, 'source': 'holiday-f10.blend',
+    'max_offset_cm': float(np.linalg.norm(expected_delta,axis=1).max()), 'mapping_error_cm': mapping_error, 'fitted_output_error_cm': error,
+    'relative_shapes_preserved': True, 'source': str(args.source), 'offsets': str(args.offsets),
     'scope': 'Local dress clearance source candidate. Requires fresh reload/export and gameplay pose checks.',
 }, indent=2)+'\n')
-print('HOLIDAY_F11_HIP_SAVED')
+print('HOLIDAY_FIT_SAVED',output)

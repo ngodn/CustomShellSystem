@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 from mathutils.bvhtree import BVHTree
+from mathutils.kdtree import KDTree
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--motion', type=Path, required=True)
@@ -67,7 +68,8 @@ def measure(points, surface):
     return {'samples': len(values), 'inside': int((values < 0).sum()),
             'inside_over_1mm': int((values < -.1).sum()),
             'min_signed_cm': float(values.min()), 'p05_signed_cm': float(np.percentile(values, 5)),
-            'median_signed_cm': float(np.median(values)), 'p95_signed_cm': float(np.percentile(values, 95))}
+            'median_signed_cm': float(np.median(values)), 'p95_signed_cm': float(np.percentile(values, 95)),
+            'worst': [{'sample': int(i), 'signed_cm': float(values[i])} for i in np.argsort(values)[:8]]}
 
 rows = []
 def check(label, rest, actual, faces):
@@ -86,8 +88,14 @@ def check(label, rest, actual, faces):
         roi = (r[:, 2] >= 90) & (r[:, 2] <= a.zmax)
         pts = pts[roi]
         row = {'surface': label, 'sampling': sample, 'body': measure(pts, body_tree), 'collider': measure(pts, collider_tree)}
+        for surface in ('body', 'collider'):
+            for item in row[surface]['worst']:
+                i = item['sample']
+                item['rest_cm'] = r[roi][i].tolist()
+                item['posed_cm'] = pts[i].tolist()
+                item['source_sample'] = int(np.flatnonzero(roi)[i])
         rows.append(row)
-        print(row, flush=True)
+        print({**row, **{s: {k: v for k, v in row[s].items() if k != 'worst'} for s in ('body', 'collider')}}, flush=True)
 
 check('simulation', proxy['positions'], native['positions_cm'], proxy['indices'])
 section = mapping['render_geometry']['sections'][1]
@@ -95,5 +103,31 @@ actual = mapped['sections'][1]
 assert 'XM_Dress01' in mapping['sections'][1]['material']
 check('mapped_fabric', section['positions'], actual['positions_cm'], section['indices'])
 check('skin_only_fabric', section['positions'], skin(np.asarray(section['positions']), section['weights']), section['indices'])
+lookup = KDTree(len(mesh['points']))
+for i, point in enumerate(mesh['points']):
+    lookup.insert(Vector(point), i)
+lookup.balance()
+latest = json.loads((w/'holiday-hip-clean.mesh.json').read_text())
+records = np.asarray(section['mapping']).reshape((len(section['positions']), -1, 9))
+clipped = []
+for i, (rest, point) in enumerate(zip(section['positions'], actual['positions_cm'], strict=True)):
+    if not 90 <= rest[2] <= a.zmax:
+        continue
+    near, normal, face, _ = body_tree.find_nearest(Vector(point))
+    signed = (Vector(point)-near).dot(normal)
+    if signed >= -.1:
+        continue
+    _, source_vertex, source_error = lookup.find(Vector(rest))
+    body_weights = {}
+    for v in body['indices'][face]:
+        for bone, weight in body['weights'][v]:
+            body_weights[bone] = body_weights.get(bone, 0.) + weight/3
+    clipped.append({'render_vertex': i, 'rest_cm': rest, 'signed_cm': signed,
+        'fully_skinned': bool(np.all(records[i, :, 3] == 65535)),
+        'source_vertex': source_vertex, 'source_match_cm': source_error,
+        'latest_source_offset_cm': float(np.linalg.norm(np.asarray(latest['points'][source_vertex])-mesh['points'][source_vertex])),
+        'garment_weights': section['weights'][i],
+        'nearest_body_face_weights': sorted(body_weights.items(), key=lambda x: -x[1])})
 a.output.write_text(json.dumps({'scope': 'One default-morph frame, vertices, triangle centroids and 16 subtriangle centres. Signed nearest-normal distances may be ambiguous at folds. Collider is native shape API reference, not solver internal readback. Not full-surface or game acceptance.', 'rest_z_range_cm': [90, a.zmax],
-    'frame': frame, 'motion': str(a.motion), 'mapped': str(a.mapped), 'rows': rows}, indent=2)+'\n')
+    'frame': frame, 'motion': str(a.motion), 'mapped': str(a.mapped), 'rows': rows,
+    'clipped_mapped_vertices': clipped}, indent=2)+'\n')
