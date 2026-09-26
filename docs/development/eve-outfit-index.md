@@ -112,3 +112,6 @@ Joint shape/contact carrier test: `hemshape.json`, `hemshape-pose.json`, and ins
 
 
 Direct fabric reference: `probe_fabric_surface.py`, `fabric1.json` (initial velocity artifact), `fabric2.json` (settling fixed), `fabric3.json` (surface probes added), inspected `fabric1-views/default-side.png`. Vertex clearance hides triangle/edge penetration; frame 8 has 168 failing surface samples despite passing vertex clearance. Renderer `--surface-motion` enforces matching motion/frame/morph. Cloth remains unaccepted and trim attachments are pending.
+
+
+Surface-contact and anchoring audit: `fabricface.json` (4x8), `fabricsmall.json` (16x2), `fabricwaist.json` (waist pins), inspected `fabricwaist8-views/default-side.png`, and `bodytrace.json`. Persistent hip-pinned edges explain some unsatisfiable contact; waist pins improve a selected frame but the sequence still has severe stretch/speed spikes. No trial accepted. Source vertex IDs and exact comparisons are in the goal log.

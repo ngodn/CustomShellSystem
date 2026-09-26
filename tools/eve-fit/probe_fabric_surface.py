@@ -16,8 +16,15 @@ p.add_argument('--clip', choices=('walk', 'jog', 'sprint'), default='sprint')
 p.add_argument('--end', type=int, default=17)
 p.add_argument('--name', required=True)
 p.add_argument('--morph', choices=('default', 'hip-waist'), default='default')
+p.add_argument('--substeps', type=int, default=4)
+p.add_argument('--iterations', type=int, default=8)
+p.add_argument('--surface-contact', action='store_true')
+p.add_argument('--pin-z', type=float, default=112.)
+p.add_argument('--free-z', type=float, default=103.)
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert a.name.isalnum()
+assert 1 <= a.substeps <= 64 and 1 <= a.iterations <= 64
+assert a.pin_z > a.free_z
 output = work/f'{a.name}.json'
 assert not output.exists()
 mesh = json.loads((work/'holiday-hip-clean.mesh.json').read_text())
@@ -54,10 +61,14 @@ def colors(pairs):
 edge_lengths = np.linalg.norm(rest[edges[:, 0]]-rest[edges[:, 1]], axis=1)
 bend_lengths = np.linalg.norm(rest[bends[:, 0]]-rest[bends[:, 1]], axis=1)
 edge_colors, bend_colors = colors(edges), colors(bends)
-inverse_mass = np.clip((112.-rest[:, 2])/9., 0., 1.)
+inverse_mass = np.clip((a.pin_z-rest[:, 2])/(a.pin_z-a.free_z), 0., 1.)
 inverse_mass = inverse_mass**2*(3.-2.*inverse_mass)
 free = np.flatnonzero(inverse_mass > 0)
 pinned = inverse_mass == 0
+active_faces = np.flatnonzero(np.sum(inverse_mass[faces], axis=1) > 0)
+contact_samples = [(tri, np.full(3, 1/3)) for tri in faces[active_faces]]
+contact_samples += [(pair, np.full(2, .5)) for pair in edges
+                    if np.sum(inverse_mass[pair]) > 0]
 bind = []
 for bone in mesh['bones']:
     q = bone['rotation']
@@ -110,6 +121,18 @@ def collision_pass(x, tree):
         signed = (point-nearest).dot(normal)
         if signed < .05:
             x[v] += np.asarray(normal)*(.05-signed)
+    if a.surface_contact:
+        for vertices, bary in contact_samples:
+            mass = inverse_mass[vertices]
+            denominator = float(np.sum(mass*bary*bary))
+            if denominator < 1e-10:
+                continue
+            point = Vector(bary@x[vertices])
+            nearest, normal, _, _ = tree.find_nearest(point)
+            signed = (point-nearest).dot(normal)
+            if signed < .05:
+                correction = np.asarray(normal)*(.05-signed)/denominator
+                x[vertices] += (mass*bary)[:, None]*correction
 
 frames, reports = [], []
 previous = None
@@ -125,10 +148,10 @@ for fi, frame in enumerate(source['frames'][:a.end+1]):
             distance_pass(x, edges, edge_lengths, edge_colors, edge_lambda, 0.)
             distance_pass(x, bends, bend_lengths, bend_colors, bend_lambda, .0001*240.*240.)
             collision_pass(x, tree)
-    dt = (frame['time']-source['frames'][fi-1]['time'])/4 if fi else 1./240
+    dt = (frame['time']-source['frames'][fi-1]['time'])/a.substeps if fi else 1./(60*a.substeps)
     assert dt > 0
-    for sub in range(4 if fi else 0):
-        body_xyz = previous+(target-previous)*(sub+1)/4.
+    for sub in range(a.substeps if fi else 0):
+        body_xyz = previous+(target-previous)*(sub+1)/a.substeps
         tree = BVHTree.FromPolygons(body_xyz.tolist(), body, all_triangles=True)
         old = x.copy()
         velocity *= math.exp(-4.*dt)
@@ -136,7 +159,7 @@ for fi, frame in enumerate(source['frames'][:a.end+1]):
         x[free] += velocity[free]*dt
         x[pinned] = body_xyz[ids[pinned]]
         edge_lambda, bend_lambda = np.zeros(len(edges)), np.zeros(len(bends))
-        for _ in range(8):
+        for _ in range(a.iterations):
             distance_pass(x, edges, edge_lengths, edge_colors, edge_lambda, 0.)
             distance_pass(x, bends, bend_lengths, bend_colors, bend_lambda, .0001/(dt*dt))
             collision_pass(x, tree)
@@ -152,7 +175,6 @@ for fi, frame in enumerate(source['frames'][:a.end+1]):
     active = ((inverse_mass[edges[:, 0]]+inverse_mass[edges[:, 1]]) > 0) & (edge_lengths > .01)
     ratios = lengths[active]/edge_lengths[active]
     sample_hits = []
-    active_faces = np.flatnonzero(np.sum(inverse_mass[faces], axis=1) > 0)
     for face_id in active_faces:
         tri = faces[face_id]
         for bary in ((1/3, 1/3, 1/3), (.5, .5, 0), (0, .5, .5), (.5, 0, .5)):
@@ -161,6 +183,7 @@ for fi, frame in enumerate(source['frames'][:a.end+1]):
             distance = (position-nearest).dot(normal)
             if distance < -.1:
                 sample_hits.append({'face': int(face_id), 'barycentric': bary,
+                    'movable': bool(np.sum(inverse_mass[tri]*np.asarray(bary)**2) > 1e-10),
                     'signed_cm': distance, 'body_triangle': body_face})
     sample_hits.sort(key=lambda row: row['signed_cm'])
     reports.append({'frame': fi, 'time': frame['time'], 'min_signed_cm': min(signed),
@@ -175,8 +198,10 @@ for fi, frame in enumerate(source['frames'][:a.end+1]):
     previous = target
     if fi % 4 == 0:
         print(reports[-1], flush=True)
-scope = 'Offline 4-substep fabric reference: hard edge distances, compliant opposite-vertex bending, pinned upper dress and nearest-triangle contact. Initial settling has zero velocity. No self collision, CCD, friction, trim attachments or runtime integration. Not accepted fitting.'
+scope = 'Offline fabric reference: hard edge distances, compliant opposite-vertex bending, pinned upper dress and nearest-triangle contact. Optional barycentric surface-contact projection. Initial settling has zero velocity. No self collision, CCD, friction, trim attachments or runtime integration. Not accepted fitting.'
 output.write_text(json.dumps({'scope': scope, 'source_motion': str(work/f'follow-{a.clip}-base.json'),
+    'substeps': a.substeps, 'iterations': a.iterations, 'surface_contact': a.surface_contact,
+    'pin_z_cm': a.pin_z, 'free_z_cm': a.free_z,
     'morph_case': a.morph, 'source_vertices': ids.tolist(), 'free_vertices': len(free),
     'frames': frames, 'cases': reports}, separators=(',', ':')))
 print('Finished', len(frames), 'frames', flush=True)
