@@ -1064,33 +1064,55 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         auto mode_label=[](const std::string& m)->std::string {
             if(m=="hidden") return "Always Hidden";
             if(m=="in_use") return "Only When In Use";
+            if(m=="shown") return "Always Shown";
             return "Default (game)";
         };
         auto rule_for=[&](const std::string& key)->MiscRule { auto it=state.misc_rules.find(key); return it!=state.misc_rules.end()?it->second:MiscRule{}; };
-        row_=std::clamp(row_,0,4);
-        section("Visibility");
-        row_look.two_line=true;
-        for(int i=0;i<4;++i) {
-            const MiscRule rule=rule_for(defs[i].key);
-            Json next{{"action","misc_mode"},{"category",defs[i].key},{"delta",1}};
-            Json prev{{"action","misc_mode"},{"category",defs[i].key},{"delta",-1}};
+        // The worn shell's own items (Gragu's Revered Heart, Genessa's Catalyst), each with its
+        // own rule that beats the Accessories rule. Listed live from what is on the body now.
+        const auto shell_items=appearance.misc_shell_items();
+        const int position_row=4+int(shell_items.size());
+        row_=std::clamp(row_,0,position_row);
+        auto mode_word=[&](const MiscRule& rule) {
             if(rule.mode=="hidden") row_look.value="Hidden";
             else if(rule.mode=="in_use") row_look.value="When in use";
-            row(i,defs[i].title,next,prev,next);
+            else if(rule.mode=="shown") row_look.value="Shown";
+        };
+        auto mode_row=[&](int index,const std::string& key,const std::string& title) {
+            Json next{{"action","misc_mode"},{"category",key},{"delta",1}};
+            Json prev{{"action","misc_mode"},{"category",key},{"delta",-1}};
+            mode_word(rule_for(key));
+            row(index,title,next,prev,next);
+        };
+        section("Visibility");
+        row_look.two_line=true;
+        for(int i=0;i<4;++i) mode_row(i,defs[i].key,defs[i].title);
+        if(!shell_items.empty()) {
+            // "Genessa's items": the shell's name is the last part of its tag.
+            std::string shell_name=appearance.shell.substr(appearance.shell.rfind('.')+1);
+            if(shell_name=="StrongOne" || appearance.shell.starts_with("CharacterId.Player.Darkform")) shell_name="Harbinger";
+            section(shell_name+"'s items");
+            for(size_t i=0;i<shell_items.size();++i) mode_row(4+int(i),"item:"+shell_items[i].key,shell_items[i].name);
         }
         section("Position");
         const Json kda{{"action","keep_default_attachments"},{"value",!state.keep_default_attachments}};
         const char* kda_label=state.keep_default_attachments?"Default (game)":"Auto (avoid clipping)";
         if(state.keep_default_attachments) row_look.value="Game position";   // Auto is the default
-        row(4,"Sidearm position",kda,kda,kda);
-        if(row_<4) {
-            const MiscRule current=rule_for(defs[row_].key);
-            detail(defs[row_].title,mode_label(current.mode),defs[row_].detail);
-            choice_rows({
-                {"default","Default (game)",{{"action","misc_mode"},{"category",defs[row_].key},{"mode","default"}}},
-                {"in_use","Only When In Use",{{"action","misc_mode"},{"category",defs[row_].key},{"mode","in_use"}}},
-                {"hidden","Always Hidden",{{"action","misc_mode"},{"category",defs[row_].key},{"mode","hidden"}}},
-            },current.mode);
+        row(position_row,"Sidearm position",kda,kda,kda);
+        if(row_<position_row) {
+            const bool category_row=row_<4;
+            const std::string key=category_row?defs[row_].key:"item:"+shell_items[size_t(row_-4)].key;
+            const std::string title=category_row?defs[row_].title:shell_items[size_t(row_-4)].name;
+            const std::string about=category_row?defs[row_].detail:shell_items[size_t(row_-4)].detail;
+            const MiscRule current=rule_for(key);
+            detail(title,mode_label(current.mode),category_row?about:about+" Default follows the Accessories & Shell Tools rule; Always Shown keeps it even when that rule hides the rest.");
+            std::vector<Choice> modes={
+                {"default",category_row?"Default (game)":"Follow Accessories",{{"action","misc_mode"},{"category",key},{"mode","default"}}},
+                {"in_use","Only When In Use",{{"action","misc_mode"},{"category",key},{"mode","in_use"}}},
+                {"hidden","Always Hidden",{{"action","misc_mode"},{"category",key},{"mode","hidden"}}},
+            };
+            if(!category_row) modes.push_back({"shown","Always Shown",{{"action","misc_mode"},{"category",key},{"mode","shown"}}});
+            choice_rows(modes,current.mode);
             direction_hint(true,"Choose visibility");
         } else {
             detail("Sidearm position",kda_label,

@@ -35,6 +35,18 @@ int main() {
             rejects([&]{height.set(-96,std::numeric_limits<double>::quiet_NaN());});
             // A fresh core finds the mesh where the last one left it: anchored to the authored
             // height, the offset is recognised instead of stacked, and restore returns to it.
+            // A shell item's own MISC rule survives a save; junk keys and extra items are dropped.
+            State with_item;
+            with_item.misc_rules["item:wp_alienheart"]=MiscRule{"hidden"};
+            with_item.misc_rules["seal"]=MiscRule{"in_use"};
+            auto back=State::parse(with_item.json());
+            expect(back.misc_rules.at("item:wp_alienheart").mode=="hidden" && back.misc_rules.at("seal").mode=="in_use","Shell item rule not saved");
+            auto junk=with_item.json(); junk["misc_rules"]["item:Bad Key!"]={{"mode","hidden"}}; junk["misc_rules"]["hat"]={{"mode","hidden"}};
+            expect(State::parse(junk).misc_rules.size()==2,"Unknown MISC rule keys were kept");
+            expect(misc_item_rule_key("item:wp_x") && !misc_item_rule_key("item:") && !misc_item_rule_key("wp_x"),"Item rule key check wrong");
+            auto shown=with_item.json(); shown["misc_rules"]["item:wp_alienheart"]={{"mode","shown"}}; shown["misc_rules"]["seal"]={{"mode","shown"}};
+            auto kept=State::parse(shown);
+            expect(kept.misc_rules.at("item:wp_alienheart").mode=="shown" && kept.misc_rules.at("seal").mode=="default","Always Shown must be an item-only mode");
             GroundOffset resumed;
             expect(resumed.set(-99,-3,-96)==-99,"Resumed offset stacked on itself");
             expect(resumed.restore(-99)==-96,"Resumed offset did not restore the authored height");

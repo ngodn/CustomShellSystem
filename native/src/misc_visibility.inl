@@ -161,8 +161,9 @@ static bool misc_action_active(UObject* pawn) {
 //   Weapon.Slot.*Seal*     -> seal
 //   Weapon.Slot.Primary/Secondary -> stowed_weapons (the primary weapon)
 //   Weapon.Slot.Body.*     -> fists/kicks, skipped
-static std::map<UObject*,std::string> misc_weapon_slots(UObject* pawn) {
-    std::map<UObject*,std::string> out;
+struct MiscSlot { std::string category; bool shell_item=false; };
+static std::map<UObject*,MiscSlot> misc_weapon_slots(UObject* pawn) {
+    std::map<UObject*,MiscSlot> out;
     if(!pawn) return out;
     UObject* wc=nullptr;
     try { wc=read<UObject*>(pawn,L"WeaponsComponent"); } catch(...) { return out; }
@@ -187,14 +188,16 @@ static std::map<UObject*,std::string> misc_weapon_slots(UObject* pawn) {
             UObject* weapon=nullptr; std::memcpy(&weapon,pair+layout.ValueOffset,sizeof(weapon));
             if(!weapon) continue;
             auto in=[&](const char* n){ return tag.find(n)!=std::string::npos; };
-            std::string cat;
+            MiscSlot slot;
             if(in("body")||in("fist")||in("leg")||in("kick")) continue;
-            else if(in("shell")) cat="accessories";
-            else if(in("sidearm")) cat="sidearm";
-            else if(in("seal")) cat="seal";
-            else if(in("primary")||in("secondary")) cat="stowed_weapons";
+            // Weapon.Slot.Shell.* is a shell's own tool; Weapon.Slot.Charges is a shell's charge
+            // item (Gragu's Revered Heart). Both are shell-specific, so both get their own row.
+            else if(in("shell")||in("charges")) { slot.category="accessories"; slot.shell_item=true; }
+            else if(in("sidearm")) slot.category="sidearm";
+            else if(in("seal")) slot.category="seal";
+            else if(in("primary")||in("secondary")) slot.category="stowed_weapons";
             else continue;
-            out[weapon]=cat;
+            out[weapon]=slot;
         }
     } catch(...) {}
     return out;
@@ -224,14 +227,14 @@ void MiscVisibility::enumerate(const std::vector<UObject*>& containers, UObject*
             UObject* owner=nullptr;
             try { Call oc(child,L"GetOwner",1); oc.run(); owner=oc.get<UObject*>(); } catch(...) { continue; }
             if(!owner || owner==pawn) continue;
-            std::string category;
-            if(auto it=slots.find(owner); it!=slots.end()) category=it->second;   // authoritative
-            else {   // a non-weapon accessory (flower crown, cape): fall back to the socket
-                std::string owner_class; if(auto* cls=owner->GetClassPrivate()) owner_class=narrow(cls->GetName());
-                category=misc_category(narrow(attach_socket(child).ToString()),owner_class);
-            }
+            std::string category; bool shell_item=false;
+            std::string owner_class; if(auto* cls=owner->GetClassPrivate()) owner_class=narrow(cls->GetName());
+            if(auto it=slots.find(owner); it!=slots.end()) { category=it->second.category; shell_item=it->second.shell_item; }   // authoritative
+            else category=misc_category(narrow(attach_socket(child).ToString()),owner_class);   // a non-weapon accessory (flower crown, cape): fall back to the socket
             if(category.empty()) continue;
-            found.push_back({WeakObject(child),WeakObject(owner),category});
+            std::string key=misc_lower(owner_class);
+            if(key.ends_with("_c")) key.resize(key.size()-2);
+            found.push_back({WeakObject(child),WeakObject(owner),category,key,shell_item});
         }
     }
     candidates_=std::move(found);
@@ -245,10 +248,13 @@ void MiscVisibility::evaluate(const std::map<std::string,MiscRule>& rules, bool 
     for(auto& cand:candidates_) {
         auto* comp=cand.component.Get();
         if(!comp) continue;
-        const MiscRule* r=rule_of(cand.category);   // category is authoritative, decided at enumerate
+        // The item's own rule first (a shell item row on the MISC tab), else its category's.
+        const MiscRule* r=cand.shell_item?rule_of("item:"+cand.key):nullptr;
+        if(!r) r=rule_of(cand.category);   // category is authoritative, decided at enumerate
         if(!r) continue;
         bool hide=false;
         if(r->mode=="hidden") hide=true;
+        else if(r->mode=="shown") hide=false;   // an item row keeping its item while its category hides
         else if(r->mode=="in_use") {
             // Re-read the socket each frame: it changes the instant the item is drawn or used.
             // Resting on its holster/ornament socket -> hidden; it shows when the game moves it
@@ -277,6 +283,33 @@ void MiscVisibility::evaluate(const std::map<std::string,MiscRule>& rules, bool 
     hidden_=std::move(want);
 }
 
+// Names and one-line descriptions for the shell items the game ships (from its own text where
+// it has one). Anything else gets its class name made readable.
+static MiscShellItem misc_shell_item_info(const std::string& key) {
+    static const MiscShellItem known[]={
+        {"wp_alienheart","Revered Heart","Gragu's heart, carried on the belt and eaten to restore health. Hidden, it still heals."},
+        {"wp_eredrim_diapason","Diapason","Eredrim's bell, hung on the body until his ability rings it."},
+        {"wp_eredrim_diapason_obsidian","Diapason","Eredrim's bell, hung on the body until his ability rings it."},
+        {"wp_genessa_catalyst","Catalyst","Genessa's incense burner, stowed on the body until her ability uses it."},
+        {"wp_knightlady_hook_left","Hook","Proxima's hook, carried on the left until thrown."},
+        {"wp_thornarmor","Thorns","Thorn's spines, worn over the body."},
+        {"wp_tiel_dagger_right","Dagger","Tiel's charm dagger, worn on the body."},
+        {"wp_tiel_dagger_right_ghost","Dagger","Tiel's charm dagger, worn on the body."},
+    };
+    for(const auto& item:known) if(item.key==key) return item;
+    std::string name=key.starts_with("wp_")?key.substr(3):key; bool cap=true;
+    for(char& c:name) { if(c=='_') { c=' '; cap=true; } else if(cap) { c=char(std::toupper(static_cast<unsigned char>(c))); cap=false; } }
+    return {key,name,name+" is carried on the body. Hide it, or show it only while it is used."};
+}
+std::vector<MiscShellItem> MiscVisibility::shell_items() const {
+    std::vector<MiscShellItem> out;
+    for(const auto& cand:candidates_) {
+        if(!cand.shell_item || !cand.component.Get()) continue;
+        if(std::any_of(out.begin(),out.end(),[&](const auto& i){ return i.key==cand.key; })) continue;
+        out.push_back(misc_shell_item_info(cand.key));
+    }
+    return out;
+}
 void MiscVisibility::restore() {
     for(auto& h:hidden_) { auto* comp=h.component.Get(); if(comp) set_item_hidden(comp,h.owner.Get(),false); }
     hidden_.clear();
@@ -400,7 +433,10 @@ bool Appearance::misc_layout_changed() {
 
 void Appearance::sync_misc() {   // on a layout change: rebuild candidate lists
     auto* pawn=observed_pawn_.Get();
-    if(!pawn || misc_rules_.empty()) { misc_.restore(); menu_misc_.restore(); return; }
+    if(!pawn) { misc_.restore(); menu_misc_.restore(); return; }
+    // With no rule set nothing is enforced, but the world list still feeds the MISC tab's
+    // shell item rows, so the worn shell's items appear before any rule exists.
+    if(misc_rules_.empty()) { misc_.restore(); menu_misc_.restore(); misc_.enumerate({read<UObject*>(pawn,L"Mesh"), attachments_.proxy()}, pawn); return; }
     if(auto* display=menu_character(pawn)) {
         auto* display_mesh=read<UObject*>(display,L"Mesh");
         menu_display_mesh_=display_mesh;

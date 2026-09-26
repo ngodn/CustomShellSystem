@@ -494,13 +494,19 @@ MiscRule MiscRule::parse(const Json& j) {
     // "default" so an old save never surprises the player by hiding something.
     if(mode=="hidden") r.mode="hidden";
     else if(mode=="in_use") r.mode="in_use";
-    else r.mode="default";   // default, shown, combat, exploration, custom -> default
+    else if(mode=="shown") r.mode="shown";   // meaningful on a shell item row; a category never offers it
+    else r.mode="default";   // default, combat, exploration, custom -> default
     return r;
 }
 static std::map<std::string,MiscRule> parse_misc_rules(const Json& j) {
     std::map<std::string,MiscRule> out;
     if(!j.is_object()) return out;
-    for(const auto& cat:misc_categories()) if(j.contains(cat)) out[cat]=MiscRule::parse(j.at(cat));
+    for(const auto& cat:misc_categories()) if(j.contains(cat)) {
+        out[cat]=MiscRule::parse(j.at(cat));
+        if(out[cat].mode=="shown") out[cat].mode="default";   // only an item row can override its category
+    }
+    size_t items=0;
+    for(const auto& [key,value]:j.items()) if(misc_item_rule_key(key) && items<32) { out[key]=MiscRule::parse(value); ++items; }
     return out;
 }
 static Json misc_rules_json(const std::map<std::string,MiscRule>& rules) {

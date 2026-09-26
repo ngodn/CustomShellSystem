@@ -112,7 +112,7 @@ struct Selection { std::string outfit, variant; Customization custom; };
 // copy too. Modes: "default" (never touch, the game decides), "hidden" (hide it, even in use),
 // "in_use" (hide it while it rests on the body; it shows the moment you draw/use it).
 struct MiscRule {
-    std::string mode = "default";   // default | hidden | in_use
+    std::string mode = "default";   // default | hidden | in_use | shown (shell item rows only: show it even when its category is hidden)
     bool hides_at_rest() const { return mode=="hidden" || mode=="in_use"; }
     bool hides_when_drawn() const { return mode=="hidden"; }
     bool operator==(const MiscRule&) const = default;
@@ -127,6 +127,12 @@ inline const std::array<const char*,4>& misc_categories() {
 // Diapason fires a shell ability), so none are locked out of "only when in use". A piece that
 // never leaves its socket simply behaves the same under "in_use" as under "hidden".
 inline bool misc_category_has_in_use(const std::string&) { return true; }
+// A rule key for one shell item: "item:" then the item's class name, lowercased.
+inline bool misc_item_rule_key(const std::string& key) {
+    if(!key.starts_with("item:") || key.size()<7 || key.size()>64) return false;
+    for(size_t i=5;i<key.size();++i) { const char c=key[i]; if(!((c>='a'&&c<='z')||(c>='0'&&c<='9')||c=='_')) return false; }
+    return true;
+}
 // 0.4: a template keeps the animation settings with the outfit selections.
 struct Preset {
     std::map<std::string, Selection> selections;

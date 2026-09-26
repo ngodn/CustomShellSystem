@@ -397,13 +397,13 @@ struct Core {
         // mode list. It mutates state.misc_rules, hands the new rules to the appearance so the
         // world and menu passes pick them up, and persists.
         else if (action == "misc_mode" || action == "misc_reset") {
-            static const char* modes[]={"default","hidden","in_use"};
-            auto valid_category=[](const std::string& c){ for(const auto* k:css::misc_categories()) if(c==k) return true; return false; };
+            static const char* modes[]={"default","hidden","in_use","shown"};   // shown: item rows only
+            auto valid_category=[](const std::string& c){ if(css::misc_item_rule_key(c)) return true; for(const auto* k:css::misc_categories()) if(c==k) return true; return false; };
             if(action=="misc_reset") { state.misc_rules.clear(); }
             else {
                 const auto category=command.at("category").get<std::string>();
                 if(!valid_category(category)) throw std::runtime_error("Unknown MISC category");
-                const int mode_count = css::misc_category_has_in_use(category) ? 3 : 2;
+                const int mode_count = css::misc_item_rule_key(category) ? 4 : css::misc_category_has_in_use(category) ? 3 : 2;
                 auto& rule=state.misc_rules[category];
                 if(command.contains("mode")) {   // absolute set from the mode list
                     const auto mode=command.at("mode").get<std::string>();

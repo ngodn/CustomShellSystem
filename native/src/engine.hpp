@@ -387,8 +387,12 @@ public:
 // direct children of a mesh, never the body (which is the parent) and never in-hand weapons
 // (a socket gate). One instance drives the world pawn, another the wardrobe preview. Method
 // bodies live in misc_visibility.inl. See that file and investigation/2026-09-23.
+// A shell-specific item the worn shell carries (Gragu's Revered Heart, Eredrim's Diapason),
+// listed on the MISC tab with its own rule. `key` is the game's actor class, lowercased,
+// and the rule for it is saved under "item:<key>".
+struct MiscShellItem { std::string key, name, detail; };
 class MiscVisibility {
-    struct Item { WeakObject component, owner; std::string category; };
+    struct Item { WeakObject component, owner; std::string category, key; bool shell_item=false; };
     std::vector<Item> candidates_;   // item mesh components found at the last enumeration (~20 Hz)
     std::vector<Item> hidden_;       // components currently hidden
 public:
@@ -402,6 +406,8 @@ public:
     void evaluate(const std::map<std::string,MiscRule>& rules, bool action_active);
     void restore();
     bool any() const { return !hidden_.empty(); }
+    // The shell-specific items among the candidates, one entry per item class, in list order.
+    std::vector<MiscShellItem> shell_items() const;
 };
 class Appearance {
     WeakObject component_, applied_;
@@ -541,6 +547,7 @@ public:
     void sync_misc();          // on a layout change (and once a second): rebuild the candidate item lists
     void tick_misc();          // every frame: decide + enforce visibility on the cached items
     void restore_misc() { misc_.restore(); menu_misc_.restore(); }
+    std::vector<MiscShellItem> misc_shell_items() const { return misc_.shell_items(); }
     Json misc_diagnostics() const {
         return {{"rules", misc_rules_.size()}, {"world_hidden", misc_.any()}, {"menu_hidden", menu_misc_.any()}};
     }
