@@ -4,6 +4,9 @@
 #include <stdexcept>
 #include <functional>
 #include <limits>
+#include <chrono>
+#include <fstream>
+#include <thread>
 
 using namespace css;
 static unsigned checks;
@@ -107,8 +110,10 @@ int main() {
         rejects([&] { State::parse(invalid); });
         invalid = state.json(); invalid["enabled"] = "true";
         rejects([&] { State::parse(invalid); });
+        // An invalid saved selection is dropped on its own; the rest of the state still loads.
         invalid = state.json(); invalid["selections"]["../bad"] = {{"outfit", "x"}, {"variant", "x"}};
-        rejects([&] { State::parse(invalid); });
+        auto dropped = State::parse(invalid);
+        expect(!dropped.selections.contains("../bad") && dropped.selections.size() == state.selections.size(), "Invalid selection key was kept");
         auto file = dir / "state.json";
         atomic_json(file, state.json());
         auto original = state.json(); state.enabled = false;
@@ -293,6 +298,28 @@ int main() {
         rejects([&] { Catalog::load(catalog_dir); });
         catalog["outfits"] = {item}; catalog["outfits"][0]["variants"][0]["mesh"] = "/Script/Engine.Object";
         atomic_json(catalog_file, catalog, false); rejects([&] { Catalog::load(catalog_dir); });
+        {
+            // runtime/*.json: created with its folder, replaced in place, no temp file left behind.
+            auto runtime = dir / "runtime" / "status.json";
+            write_runtime_json(runtime, {{"a", 1}});
+            write_runtime_json(runtime, {{"a", 2}});
+            expect(read_json(runtime).at("a") == 2 && !fs::exists(runtime.string() + ".tmp"), "Runtime JSON was not replaced");
+            write_runtime_json(runtime, {{"text", std::string("bad \xff byte")}});
+            expect(read_json(runtime).contains("text"), "Runtime JSON rejected invalid UTF-8 instead of replacing it");
+            // A damaged state file is archived, but only the newest three archives are kept.
+            auto states = dir / "damaged"; fs::create_directories(states);
+            auto primary = states / "state.json";
+            atomic_json(primary, State{}.json()); atomic_json(primary, State{}.json());   // second write leaves a .bak
+            for (int i = 0; i < 5; ++i) {
+                { std::ofstream(primary, std::ios::trunc) << "broken"; }
+                load_state(primary);
+                std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            }
+            size_t archived = 0;
+            for (const auto& entry : fs::directory_iterator(states))
+                archived += entry.path().filename().string().starts_with("state.json.corrupt-");
+            expect(archived == 3, "Damaged state archives were not pruned to three");
+        }
         fs::remove_all(dir);
         std::cout << checks << " behavioral checks passed\n";
         return 0;

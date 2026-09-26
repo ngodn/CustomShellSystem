@@ -252,8 +252,15 @@ class WalkOverride {
     uint64_t slide_until_=0;
     bool engaged_=false;
     std::optional<uint64_t> hook_;
-    std::atomic<bool> scale_walk_{false};
-    std::atomic<uint32_t> speed_thread_{0};
+    // What the walk-speed hook reads. The hook holds its own reference, so a hook still
+    // registered when the core is torn down at exit (never on the game thread, so it cannot be
+    // unregistered safely there) reads a switched-off flag instead of a freed WalkOverride.
+    struct SpeedHook {
+        std::atomic<bool> scale{false};
+        std::atomic<uint32_t> thread{0};
+        std::atomic<const void*> movement{nullptr};   // compared by address only, never dereferenced
+    };
+    std::shared_ptr<SpeedHook> speed_=std::make_shared<SpeedHook>();
     std::string reason_;
     fs::path mods_; bool mods_checked_=false, mod_active_=false; uint64_t mods_check_=0;
     bool genessa_active_=false, proxima_active_=false;
@@ -276,6 +283,7 @@ class WalkOverride {
     void hook_speed();
     void unhook_speed();
 public:
+    ~WalkOverride() { speed_->scale=false; }
     bool walk_mod_active(const fs::path& mods);
     bool walk_mod_active() { return walk_mod_active(mods_); }
     const std::string& walk_mod_name() const { return mod_name_; }
@@ -316,6 +324,10 @@ class Appearance {
     GroundOffset ground_offset_;
     void restore_ground_offset();
     WeakObject observed_pawn_, observed_component_, observed_controller_;
+    // player()'s string cache: rebuilt only when the tag, pawn or mesh changes.
+    uint64_t shell_tag_ = 0;
+    std::string shell_text_, pawn_text_, mesh_text_;
+    WeakObject mesh_seen_;
     std::string original_;
     std::vector<std::string> original_materials_;
     std::set<std::string> original_default_materials_;
@@ -390,7 +402,10 @@ class Appearance {
     // world pawn and the wardrobe preview, and the last sampled locomotion so the world pass
     // only re-hides when the player's state actually changes.
     MiscVisibility misc_, menu_misc_;
-    std::map<std::string, MiscRule> misc_rules_;
+    std::map<std::string, MiscRule> misc_rules_;   // only the categories set to something other than Default
+    uint64_t misc_signature_ = 0;                  // what misc_layout_changed() last saw attached
+    bool misc_rules_changed_ = false;
+    WeakObject menu_display_mesh_;
     // The wardrobe previews a second component, so everything CSS puts on the body has to
     // be put on that one too: its accessories, its hidden sections and its shapes. Keeping
     // a separate WornItems for the preview matches how attachments already work.
@@ -430,8 +445,15 @@ public:
     // MISC visibility. `set_misc_rules` copies the player's choices in; `sync_misc` re-hides
     // the world pawn's accessories when locomotion changes (called from the tick); the menu
     // pass runs inside sync_menu against the wardrobe preview character.
-    void set_misc_rules(const std::map<std::string, MiscRule>& rules) { misc_rules_ = rules; }
-    void sync_misc();          // rate-limited: rebuild the candidate item lists
+    // Default means "never touch", so it is not kept: with every category on Default the MISC
+    // passes see an empty rule set and cost nothing.
+    void set_misc_rules(const std::map<std::string, MiscRule>& rules) {
+        misc_rules_.clear();
+        for(const auto& [category,rule]:rules) if(rule.mode!="default") misc_rules_.emplace(category,rule);
+        misc_rules_changed_=true;   // relist (or restore everything) on the next frame
+    }
+    bool misc_layout_changed();   // every frame: did anything attach, detach or swap on the bodies?
+    void sync_misc();          // on a layout change (and once a second): rebuild the candidate item lists
     void tick_misc();          // every frame: decide + enforce visibility on the cached items
     void restore_misc() { misc_.restore(); menu_misc_.restore(); }
     Json misc_diagnostics() const {

@@ -10,9 +10,7 @@
 #include <imgui.h>
 #include <UE4SSProgram.hpp>
 #include <USMapGenerator/Generator.hpp>
-#ifdef CSS_INVENTORY_DEV
 #include "frame_profile.hpp"
-#endif
 
 namespace css {
 struct Core {
@@ -49,10 +47,10 @@ struct Core {
         for(const auto& row:frame_profile.rows())
             rows.push_back({{"engine_ms",row.engine_ms},{"interval_ms",row.interval_ms},
                 {"core_ms",row.core_ms},{"phase_ms",row.phase_ms},{"failed",row.failed}});
-        atomic_json(root/"runtime/frame-profile.json",{{"id",frame_profile.id()},
+        write_runtime_json(root/"runtime/frame-profile.json",{{"id",frame_profile.id()},
             {"stop_reason",frame_profile.reason()},
-            {"phases",{"recovery","inventory"}},
-            {"rows",rows}},false);
+            {"phases",{"recovery","inventory","maintenance","attachments","seals","walk","misc","reconcile"}},
+            {"rows",rows}});
     }
     Json probe_command;
     Json motion_probe;
@@ -75,7 +73,7 @@ struct Core {
             if(now<motion_probe_until && motion_probe["frames"].size()<1800) return;
         } catch(const std::exception& error) { motion_probe["error"]=error.what(); }
         motion_probe_until=0;
-        atomic_json(root/"runtime/motion-sample.json",motion_probe);
+        write_runtime_json(root/"runtime/motion-sample.json",motion_probe);
         motion_probe=Json{};
     }
 #endif
@@ -83,8 +81,18 @@ struct Core {
     bool content_path_checked=false;
     uint64_t inventory_retry_after=0;
     std::string message;
-    std::string last_request, last_shell, last_pawn, applied_id, last_status;
-    uint64_t last_publish_ms = 0;
+    std::string last_request, last_shell, last_pawn, applied_id;
+    // status.json is rebuilt on a real change and on a 2 s heartbeat, and written only when its
+    // content differs. The timing counters change every frame, so they are left out of that
+    // comparison and ride along at most every 10 s.
+    Json last_status, published_catalog_, published_materials_;
+    uint64_t last_publish_ms = 0, timings_publish_after = 0;
+    fs::file_time_type request_time{};
+    std::string blocked_reason;       // last "blocked by" reason logged, so each is logged once
+    uint64_t apply_check_after = 0;   // next readiness check while an apply is blocked
+    uint64_t focus_after = 0;
+    bool focused = true;
+    uintmax_t request_size = 0;
     bool status_dirty = true;
     std::string selected_outfit, selected_variant;
     std::string last_living_shell;   // most recent CharacterId.Player.Shell.* worn, for Harbinger carry-over.
@@ -107,7 +115,7 @@ struct Core {
     std::string attachment_error;
     uint64_t attachments_after=0;
     std::string misc_error;
-    uint64_t misc_after=0;
+    uint64_t misc_after=0, misc_error_after=0;
     void sync_attachments_safely(uint64_t now) {
         if(now<attachments_after) return;
         attachments_after=now+250;
@@ -132,17 +140,9 @@ struct Core {
     // correction would just make it flicker.
     std::string seal_error;
     uint64_t seal_after=0;
-#ifdef CSS_INVENTORY_DEV
-    uint64_t seal_report_after=0;
-#endif
     void sync_seals_safely(uint64_t now) {
         if(now<seal_after) return;
-        try {
-            appearance.sync_seals();seal_error.clear();
-#ifdef CSS_INVENTORY_DEV
-            if(now>=seal_report_after) { seal_report_after=now+500; atomic_json(root/"runtime/seal.json",appearance.seal_diagnostics(),false); }
-#endif
-        }
+        try { appearance.sync_seals();seal_error.clear(); }
         catch(const std::exception& error) {
             if(seal_error!=error.what()) {seal_error=error.what();host.log(("Stowed item collision deferred: "+seal_error).c_str());}
             seal_after=now+1000;
@@ -156,18 +156,22 @@ struct Core {
     double misc_ms=0,misc_total_ms=0,misc_max_ms=0;   // per-frame cost of the MISC pass
     void sync_misc_safely(uint64_t now) {
         const auto started=std::chrono::steady_clock::now();
-        // Decide + enforce visibility on the cached items EVERY frame (cheap: only ~10 items),
-        // so an item hides the instant an action ends with no flash and the game never wins a
-        // frame. Rebuild the candidate item list (the heavy 200+ component walk) only every 50 ms.
-        try { appearance.tick_misc(); } catch(...) {}
-        if(now>=misc_after) {
-            misc_after=now+50;
+        // Rebuild the candidate item list (the heavy 200+ component walk) only when something
+        // attached, detached or swapped, checked every frame from a cheap pointer fingerprint,
+        // plus once a second as a safety net. Then decide + enforce visibility on the cached
+        // items EVERY frame (cheap: only ~10 items), so a new item is hidden the frame it
+        // appears, an item hides the instant an action ends, and the game never wins a frame.
+        bool relist=now>=misc_after;
+        try { relist=appearance.misc_layout_changed() || relist; } catch(...) { relist=true; }
+        if(relist && now>=misc_error_after) {
+            misc_after=now+1000;
             try { appearance.sync_misc(); misc_error.clear(); }
             catch(const std::exception& error) {
                 if(misc_error!=error.what()) { misc_error=error.what(); host.log(("MISC visibility deferred: "+misc_error).c_str()); }
-                misc_after=now+1000;
+                misc_error_after=now+1000;
             }
         }
+        try { appearance.tick_misc(); } catch(...) {}
         misc_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count();
         ++misc_frames; misc_total_ms+=misc_ms; misc_max_ms=std::max(misc_max_ms,misc_ms);
     }
@@ -286,9 +290,10 @@ struct Core {
             return;
         }
         if (action.starts_with("inventory_")) { inventory_command=command; return; }
-        if (action=="seal_tune") {
-            atomic_json(root/"runtime/seal-tune.json",
-                        appearance.tune_seals(command.value("lift",-1.),command.value("clearance",-1.),command.value("max_push",-1.)),false);
+        if (action=="seal_report") { write_runtime_json(root/"runtime/seal.json",appearance.seal_diagnostics()); return; }
+                if (action=="seal_tune") {
+            write_runtime_json(root/"runtime/seal-tune.json",
+                        appearance.tune_seals(command.value("lift",-1.),command.value("clearance",-1.),command.value("max_push",-1.)));
             report("Stowed item correction retuned.");
             return;
         }
@@ -686,10 +691,10 @@ struct Core {
         current_engine=engine;
 #ifdef CSS_INVENTORY_DEV
         auto measured=[&](FrameProfile::Phase phase,auto&& call) { frame_profile.measure(phase,call); };
-        measured(FrameProfile::recovery,[&] { player_recovery.tick(delta); });
 #else
-        player_recovery.tick(delta);
+        auto measured=[](FrameProfile::Phase,auto&& call) { call(); };
 #endif
+        measured(FrameProfile::recovery,[&] { player_recovery.tick(delta); });
 
         if(!content_path_checked) {
             content_path_checked=true;
@@ -708,9 +713,14 @@ struct Core {
                 }
             } catch(const std::exception& e) { host.log((std::string("CSS content lookup fallback: ")+e.what()).c_str()); }
         }
-        DWORD foreground_pid = 0;
-        GetWindowThreadProcessId(GetForegroundWindow(), &foreground_pid);
-        bool focused = foreground_pid == GetCurrentProcessId();
+        // Window focus only matters to the menu's camera drag and text entry; ten checks a
+        // second is plenty and keeps the Win32 round trip off every frame.
+        if(GetTickCount64()>=focus_after) {
+            focus_after=GetTickCount64()+100;
+            DWORD foreground_pid = 0;
+            GetWindowThreadProcessId(GetForegroundWindow(), &foreground_pid);
+            focused = foreground_pid == GetCurrentProcessId();
+        }
         if(inventory_failed && GetTickCount64()>=inventory_retry_after) {
             try { inventory.detach(); inventory_failed=false; }
             catch(...) { inventory_retry_after=GetTickCount64()+2000; }
@@ -718,15 +728,10 @@ struct Core {
         if(!inventory_failed) {
             Json inventory_action;
             try {
-#ifdef CSS_INVENTORY_DEV
                 measured(FrameProfile::inventory,[&] {
                     inventory_action=inventory.poll(engine,catalog,state,appearance,delta,focused);
                     inventory.message(message);
                 });
-#else
-                inventory_action=inventory.poll(engine,catalog,state,appearance,delta,focused);
-                inventory.message(message);
-#endif
             } catch(const std::exception& error) {
                 inventory_failed=true;
                 inventory_retry_after=GetTickCount64()+2000;
@@ -742,6 +747,14 @@ struct Core {
 #ifdef CSS_INVENTORY_DEV
         sample_motion(now);
 #endif
+        measured(FrameProfile::maintenance,[&] { maintain(now); });
+        measured(FrameProfile::attachments,[&] { sync_attachments_safely(now); });
+        measured(FrameProfile::seals,[&] { sync_seals_safely(now); });
+        measured(FrameProfile::walk,[&] { sync_walk_safely(now); });
+        if(state.enabled) measured(FrameProfile::misc,[&] { sync_misc_safely(now); });
+        measured(FrameProfile::reconcile,[&] { reconcile(engine,now); });
+    }
+    void maintain(uint64_t now) {
         // Cosmetic maintenance (material-reset repair + menu-preview sync) are recovery
         // checks, not per-frame work. Rate-limit them to ~7 Hz: a stock/material reset
         // still corrects within ~150 ms, imperceptibly, while staying off the frame
@@ -778,18 +791,20 @@ struct Core {
             }
             if(state.enabled && !apply_pending) sync_menu_safely();
         }
-        sync_attachments_safely(now);
-        sync_seals_safely(now);
-        sync_walk_safely(now);
-        if(state.enabled) sync_misc_safely(now);
+    }
+    void reconcile(void* engine,uint64_t now) {
         if (now < next_poll && !ui_refresh && !apply_pending) return;
         next_poll = now + 250;
-        auto command_file = root / "request.json";
-        if (fs::exists(command_file)) {
+        const auto command_file = root / "request.json";
+        std::error_code missing;
+        const auto request_changed = fs::last_write_time(command_file, missing);
+        const auto request_bytes = missing ? 0 : fs::file_size(command_file, missing);
+        if (!missing && (request_changed != request_time || request_bytes != request_size)) {
+            request_time = request_changed; request_size = request_bytes;
             auto command = read_json(command_file);
             auto id = command.at("id").get<std::string>();
             if (id != last_request) {
-                last_request = id;
+                last_request = id; status_dirty = true;
                 request(command);
             }
         }
@@ -881,24 +896,23 @@ struct Core {
                               ", saved "+(state.selections.contains(reconcile_key)
                                   ? state.selections.at(reconcile_key).outfit+"/"+state.selections.at(reconcile_key).variant
                                   : std::string("<nothing for this shell>"))).c_str());
-                } else {
-                    static uint64_t last_rec_log = 0;
-                    if(now >= last_rec_log) {
-                        last_rec_log = now + 1000;
-                        host.log(("Recovery blocked by: " + reason).c_str());
-                    }
+                } else if(reason!=blocked_reason) {
+                    blocked_reason=reason;
+                    host.log(("Recovery blocked by: " + reason).c_str());
                 }
             }
-            if (apply_pending && !appearance.shell.empty()) {
+            // A blocked apply (teleport, montage, menu) waits 200 ms between readiness checks.
+            // Each check is a handful of engine calls, and a blocked state lasts seconds.
+            if (apply_pending && !appearance.shell.empty() && now>=apply_check_after) {
                 auto reason = appearance.ready_to_apply_reason();
                 if(!reason.empty()) {
-                    static uint64_t last_apply_log = 0;
-                    if(now >= last_apply_log) {
-                        last_apply_log = now + 1000;
+                    apply_check_after = now + 200;
+                    if(reason!=blocked_reason) {
+                        blocked_reason=reason;
                         host.log(("Apply pending blocked by: " + reason).c_str());
                     }
                 } else {
-                    apply_pending = false;
+                    apply_pending = false; apply_check_after = 0; blocked_reason.clear();
                 // The shell this reconcile is for. Applying loads a mesh, and that takes
                 // long enough for a shell switch to finish underneath it, so everything
                 // below is resolved and recorded against this one rather than against
@@ -999,26 +1013,28 @@ struct Core {
         if(transition_inspect_pending) {
             auto result=appearance.transition_state(engine); result["id"]=last_request;
             result["inventory"]=inventory.diagnostics(); result["recovery_pending"]=recovery.pending();
-            atomic_json(root/"runtime/transition.json",result,false); transition_inspect_pending=false;
+            write_runtime_json(root/"runtime/transition.json",result); transition_inspect_pending=false;
         }
         if(inspect_pending) {
             auto result=appearance.transition_state(engine); result["id"]=last_request; result["inventory"]=inventory.diagnostics();
-            atomic_json(root / "runtime/inspection.json",result,false); inspect_pending=false;
+            // The per-item MISC report walks every attached mesh; it is on demand, never on a timer.
+            try { result["misc_items"]=appearance.misc_report(); } catch(const std::exception& error) { result["misc_items"]=error.what(); }
+            write_runtime_json(root / "runtime/inspection.json",result); inspect_pending=false;
         }
         if(!inventory_command.is_null()) {
             auto pending=std::exchange(inventory_command,Json{});
             auto result=inventory.command(engine,pending); result["id"]=last_request;
-            atomic_json(root/"runtime/inventory.json",result,false);
+            write_runtime_json(root/"runtime/inventory.json",result);
         }
 #ifdef CSS_INVENTORY_DEV
         if(!probe_command.is_null()) {
             auto pending=std::exchange(probe_command,Json{});Json result={{"id",pending.at("id")}};
             try {result["result"]=engine_bridge.request(current_engine,appearance,pending.at("request"));result["ok"]=true;}
             catch(const std::exception& error){result["ok"]=false;result["error"]=error.what();}
-            atomic_json(root/"runtime/css-probe.json",result,false);
+            write_runtime_json(root/"runtime/css-probe.json",result);
         }
 #endif
-        if(status_dirty || (now - last_publish_ms >= 500)) {
+        if(status_dirty || (now - last_publish_ms >= 2000)) {
             status_dirty = false;
             last_publish_ms = now;
             publish();
@@ -1031,33 +1047,34 @@ struct Core {
                     {"apply_ms", last_apply_ms}, {"pid", GetCurrentProcessId()}};
         status["worn_items"]=appearance.worn_item_count();
         status["misc"]=appearance.misc_diagnostics();
-        status["misc"]["frames"]=misc_frames;
-        status["misc"]["last_ms"]=misc_ms;
-        status["misc"]["mean_ms"]=misc_frames?misc_total_ms/misc_frames:0.;
-        status["misc"]["max_ms"]=misc_max_ms;
-#ifdef CSS_INVENTORY_DEV
-        try { status["misc"]["items"]=appearance.misc_report(); } catch(...) {}
-#endif
         status["recovery_pending"]=recovery.pending();
         status["maintenance_error"]=maintenance_error;
-        auto path=package_root.generic_u8string();
-        status["catalog"]=catalog.diagnostics;
-        status["catalog"]["folder"]=std::string(path.begin(),path.end());
-        status["catalog"]["outfits"]=catalog.outfits.size();
         status["inventory"] = inventory.diagnostics();
         status["inventory_failed"] = inventory_failed;
-        status["material_debug"] = appearance.material_debug;
         status["walk_mod_active"] = appearance.walk.walk_mod_active();
         status["walk_mod_name"] = appearance.walk.walk_mod_name();
-        status["animation"]={{"engaged",appearance.walk.engaged()},{"gait",appearance.walk.reason()},{"error",walk_error},
-            {"updates",walk_updates},{"last_ms",walk_ms},{"mean_ms",walk_updates?walk_total_ms/walk_updates:0.},
-            {"max_ms",walk_max_ms}};
+        status["animation"]={{"engaged",appearance.walk.engaged()},{"gait",appearance.walk.reason()},{"error",walk_error}};
         if(auto selected=state.selections.find(appearance.shell);selected!=state.selections.end()) status["customize"]=selected->second.custom.json();
-        auto serialized = status.dump();
-        if (serialized != last_status) {
-            atomic_json(root / "runtime/status.json", status, false);
-            last_status = std::move(serialized);
-        }
+        // The catalog report and the material snapshot are the bulk of the file and change only
+        // on a rescan or an apply: compared in place, copied only when they differ.
+        const bool bulk_changed=catalog.diagnostics!=published_catalog_ || appearance.material_debug!=published_materials_;
+        const auto now=GetTickCount64();
+        const bool changed=bulk_changed || status!=last_status;
+        if(!changed && now<timings_publish_after) return;
+        if(bulk_changed) { published_catalog_=catalog.diagnostics; published_materials_=appearance.material_debug; }
+        Json written=status;
+        auto path=package_root.generic_u8string();
+        written["catalog"]=published_catalog_;
+        written["catalog"]["folder"]=std::string(path.begin(),path.end());
+        written["catalog"]["outfits"]=catalog.outfits.size();
+        written["material_debug"]=published_materials_;
+        written["misc"].update({{"frames",misc_frames},{"last_ms",misc_ms},
+            {"mean_ms",misc_frames?misc_total_ms/misc_frames:0.},{"max_ms",misc_max_ms}});
+        written["animation"].update({{"updates",walk_updates},{"last_ms",walk_ms},
+            {"mean_ms",walk_updates?walk_total_ms/walk_updates:0.},{"max_ms",walk_max_ms}});
+        write_runtime_json(root / "runtime/status.json", written);
+        last_status = std::move(status);
+        timings_publish_after = now + 10000;
     }
     void render() {
         auto* context = RC::UE4SSProgram::get_current_imgui_context();

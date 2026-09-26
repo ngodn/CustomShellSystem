@@ -5,13 +5,13 @@ namespace css {
 #endif
 namespace {
 UObject* inventory_object(UObject* object,const wchar_t* name) {
-    if(!object) return nullptr;
-    auto* p=object->GetPropertyByNameInChain(name);
+    auto* p=optional_field(object,name);
     if(!p || !p->IsA<FObjectProperty>() || p->GetElementSize()!=sizeof(UObject*)) return nullptr;
-    return read<UObject*>(object,name);
+    UObject* value{}; std::memcpy(&value,reinterpret_cast<const std::byte*>(object)+p->GetOffset_Internal(),sizeof(value));
+    return value;
 }
 bool inventory_bool(UObject* object,const wchar_t* name) {
-    auto* p=object?object->GetPropertyByNameInChain(name):nullptr;
+    auto* p=optional_field(object,name);
     return p && p->IsA<FBoolProperty>() && static_cast<FBoolProperty*>(p)->GetPropertyValueInContainer(object);
 }
 UObject* inventory_create(UObject* pc,UClass* type) {

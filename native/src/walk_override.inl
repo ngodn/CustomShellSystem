@@ -139,13 +139,13 @@ void WalkOverride::hook_speed() {
        speed->GetOffset_Internal()+int32_t(sizeof(float))>function->GetParmsSize())
         throw std::runtime_error("Walk speed parameter layout mismatch");
     const auto offset=speed->GetOffset_Internal();
-    hook_=function->RegisterPreHook([this,offset](UnrealScriptFunctionCallableContext& context,void*) {
-        if(!scale_walk_.load(std::memory_order_relaxed)) return;
+    hook_=function->RegisterPreHook([state=speed_,offset](UnrealScriptFunctionCallableContext& context,void*) {
+        if(!state->scale.load(std::memory_order_relaxed)) return;
         // The hook is global; only the observed player's movement component may
         // borrow this pace. Do not resolve weak engine objects on another thread.
-        const bool game_thread=GetCurrentThreadId()==speed_thread_.load(std::memory_order_relaxed);
+        const bool game_thread=GetCurrentThreadId()==state->thread.load(std::memory_order_relaxed);
         if(!game_thread) return;
-        const bool player_component=context.Context && context.Context==movement_.Get();
+        const bool player_component=context.Context && context.Context==state->movement.load(std::memory_order_relaxed);
         if(!player_component) return;
         auto* locals=context.TheStack.Locals(); if(!locals) return;
         auto* value=reinterpret_cast<float*>(locals+offset);
@@ -154,7 +154,7 @@ void WalkOverride::hook_speed() {
     if(!*hook_) { hook_.reset(); throw std::runtime_error("Walk speed hook was refused"); }
 }
 void WalkOverride::unhook_speed() {
-    scale_walk_=false;
+    speed_->scale=false;
     if(!hook_) return;
     auto* function=static_cast<UFunction*>(find(WALK_SPEED_FUNCTION));
     if(!function) throw std::runtime_error("Cannot remove walk speed hook: function unavailable");
@@ -357,7 +357,7 @@ void WalkOverride::set_weapon_hidden(UObject* pawn,bool hide) {
     } catch(...) {}
 }
 void WalkOverride::release() {
-    scale_walk_=false;
+    speed_->scale=false;
     push_off();
     if(custom_idle_engaged_ || !hidden_weapons_.empty()) {
         try {
@@ -389,7 +389,7 @@ void WalkOverride::release() {
     // Keep the hook handle on failure. Core stop must refuse unload while a
     // callback can still enter this DLL.
     unhook_speed();
-    pawn_.Reset(); anim_.Reset(); movement_.Reset(); walk_bs_.Reset();
+    pawn_.Reset(); anim_.Reset(); movement_.Reset(); walk_bs_.Reset(); speed_->movement=nullptr;
     custom_paths_={};custom_blends_={};custom_skeleton_.Reset();
     custom_idle_clip_.clear(); hide_weapons_=false;
     idle_ticks_=off_ticks_=slide_ticks_=0; slide_until_=0; last_heal_=0;
@@ -399,7 +399,7 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     const std::string& custom_idle_clip,
     bool hide_weapons) {
     const auto now=GetTickCount64();
-    speed_thread_=GetCurrentThreadId();
+    speed_->thread=GetCurrentThreadId();
     const bool custom=std::any_of(custom_paths.begin(),custom_paths.end(),[](const auto& path){return !path.empty();});
     const bool has_custom_idle=!custom_idle_clip.empty();
     if(!idle_feminine && !walk_feminine && !custom && !has_custom_idle) {
@@ -409,7 +409,7 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     if(!pawn) { release(); return; }
     if(pawn_.Get()!=pawn) {
         release();
-        pawn_=pawn; anim_.Reset(); movement_.Reset();
+        pawn_=pawn; anim_.Reset(); movement_.Reset(); speed_->movement=nullptr;
     }
     if(custom_paths_!=custom_paths || custom_idle_clip_!=custom_idle_clip || hide_weapons_!=hide_weapons) {
         push_off();
@@ -438,6 +438,7 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     }
     if(!anim) {release();return;}
     movement_=read<UObject*>(pawn,L"CharacterMovement");
+    speed_->movement=movement_.Get();
     auto* controller=read<UObject*>(pawn,L"Controller");
     if(!controller || read<UObject*>(controller,L"Pawn")!=pawn || !movement_.Get()) {
         release();return;
@@ -460,7 +461,7 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     if(!current_mesh) {release();return;}
     Call current_instance(current_mesh,L"GetAnimInstance",1);current_instance.run();
     if(current_instance.get<UObject*>()!=anim) {release();return;}
-    if(walk_feminine) { hook_speed(); scale_walk_=true; } else { scale_walk_=false; if(hook_) unhook_speed(); }
+    if(walk_feminine) { hook_speed(); speed_->scale=true; } else { speed_->scale=false; if(hook_) unhook_speed(); }
     auto* movement=movement_.Get();
     double speed=0; bool speed_known=false;
     std::array<double,3> velocity{};

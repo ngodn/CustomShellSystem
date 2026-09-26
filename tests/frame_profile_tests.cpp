@@ -31,9 +31,9 @@ int main() {
     require(!p.active() && p.reason()=="frame_capacity" && p.rows().size()==FrameProfile::capacity);
     p.arm("measured-callback",3,t); p.begin(.016,t+seconds(1));
     bool called=false;
-    try { p.measure(FrameProfile::cssx_tick,[&] { called=true; throw std::runtime_error("callback"); }); }
+    try { p.measure(FrameProfile::seals,[&] { called=true; throw std::runtime_error("callback"); }); }
     catch(const std::exception&) {}
     require(called); p.end(true,t+seconds(4));
-    require(p.rows()[0].failed && p.rows()[0].phase_ms[FrameProfile::cssx_tick]>=0);
+    require(p.rows()[0].failed && p.rows()[0].phase_ms[FrameProfile::seals]>=0);
     std::cout<<"Frame profile: slow-frame timing, warmup, failures, overlap, reset and bounded sampling passed\n";
 }

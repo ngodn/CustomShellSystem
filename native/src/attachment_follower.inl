@@ -14,12 +14,11 @@ static std::vector<WeakObject> attached_children(UObject* component) {
     for(int i=0;i<values.Num();++i) {UObject* child{};std::memcpy(&child,values.GetRawPtr(i),sizeof(child));result.emplace_back(child);}
     return result;
 }
-static UObject* attach_parent(UObject* component) {
-    Call call(component,L"GetAttachParent",1);call.run();return call.get<UObject*>();
-}
-static FName attach_socket(UObject* component) {
-    Call call(component,L"GetAttachSocketName",1);call.run();return call.get<FName>();
-}
+// USceneComponent's AttachParent and AttachSocketName are reflected properties, and the
+// Get* functions only return them, so they are read in place: the MISC and seal passes ask
+// this for every tracked item every frame.
+static UObject* attach_parent(UObject* component) { return read<UObject*>(component,L"AttachParent"); }
+static FName attach_socket(UObject* component) { return read<FName>(component,L"AttachSocketName"); }
 static bool socket_bone_present(UObject* component,FName socket) {
     Call bone(component,L"GetSocketBoneName",2);bone.set(L"InSocketName",socket);bone.run();
     Call index(component,L"GetBoneIndex",2);index.set(L"BoneName",bone.get<FName>());index.run();

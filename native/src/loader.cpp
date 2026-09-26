@@ -11,11 +11,23 @@
 
 namespace {
 std::filesystem::path log_path;
+std::mutex log_mutex;
+std::ofstream log_file;
+// The log stays open for the session (one write per line, not an open/close), and a log that
+// grew past 2 MB is rotated to CSS.log.1 when the game starts, so it can never grow unbounded.
 void log_line(const char* message) noexcept {
     try {
-        std::ofstream out(log_path, std::ios::app);
-        out << GetTickCount64() << " " << message << '\n';
-        out.flush();
+        std::lock_guard lock(log_mutex);
+        if (!log_file.is_open()) {
+            std::error_code error;
+            if (std::filesystem::file_size(log_path, error) > 2 * 1024 * 1024 && !error) {
+                auto previous = log_path; previous += ".1";
+                std::filesystem::rename(log_path, previous, error);
+            }
+            log_file.open(log_path, std::ios::app);
+        }
+        log_file << GetTickCount64() << " " << message << '\n';
+        log_file.flush();
     } catch (...) {}
 }
 class Loader final : public RC::CppUserModBase {
@@ -55,8 +67,10 @@ class Loader final : public RC::CppUserModBase {
         if (module_) FreeLibrary(module_);
         module_ = candidate; api_ = api; core_ = instance; loaded_ = filename;
         log_line(("Core activated: " + loaded_).c_str());
-        css::atomic_json(root_ / "runtime/loader.json", {{"abi", css_abi}, {"core", loaded_},
-                         {"pid", GetCurrentProcessId()}, {"tick_ms", GetTickCount64()}}, false);
+        try {
+            css::write_runtime_json(root_ / "runtime/loader.json", {{"abi", css_abi}, {"core", loaded_},
+                                    {"pid", GetCurrentProcessId()}, {"tick_ms", GetTickCount64()}});
+        } catch (const std::exception& error) { log_line(error.what()); }
     }
 public:
     Loader() {
@@ -99,10 +113,15 @@ public:
         auto now = GetTickCount64();
         if (now < next_poll_) return;
         next_poll_ = now + 250;
+        // Read core.json before taking the gate. The game thread takes that gate every tick
+        // and must never wait on this disk read.
+        std::string filename, failure;
+        try { filename = css::read_json(root_ / "core.json").at("file").get<std::string>(); }
+        catch (const std::exception& error) { failure = error.what(); }
         std::unique_lock lock(*gate_, std::try_to_lock);
         if (!lock || stopped_) return;
         try {
-            auto filename = css::read_json(root_ / "core.json").at("file").get<std::string>();
+            if (!failure.empty()) throw std::runtime_error(failure);
             if (filename == observed_) return;
             observed_ = filename;
             if (!filename.starts_with("css_core-") || !filename.ends_with(".dll") || !css::valid_id(filename))

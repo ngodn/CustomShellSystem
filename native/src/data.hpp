@@ -158,6 +158,9 @@ bool use_feminine_animation(const State&,const std::string& shell,AnimationSlot)
 bool set_legacy_walk_choice(State&,const Catalog&,const std::string& shell,const std::string& value);
 Json read_json(const fs::path&);
 void atomic_json(const fs::path&, const Json&, bool backup = true);
+// runtime/*.json is diagnostics for tools and support logs, not saved state: a plain write
+// and rename, with no fsync and no read-back, so the game thread never waits on the disk.
+void write_runtime_json(const fs::path&, const Json&);
 bool valid_id(const std::string&);
 bool valid_asset(const std::string&);
 }

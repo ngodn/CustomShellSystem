@@ -98,6 +98,35 @@ void atomic_json(const fs::path& path, const Json& data, bool backup) {
     fs::rename(temp, path);
 #endif
 }
+void write_runtime_json(const fs::path& path, const Json& data) {
+    auto temp = path; temp += ".tmp";
+    const auto bytes = data.dump(2, ' ', false, Json::error_handler_t::replace) + "\n";
+    std::ofstream out(temp, std::ios::binary | std::ios::trunc);
+    if (!out) { fs::create_directories(path.parent_path()); out.open(temp, std::ios::binary | std::ios::trunc); }
+    out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+    out.close();
+    if (!out) throw std::runtime_error("Failed writing " + path_utf8(path));
+#ifdef _WIN32
+    if (!MoveFileExW(temp.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING))
+        throw std::runtime_error("Cannot replace " + path_utf8(path));
+#else
+    fs::rename(temp, path);
+#endif
+}
+// Keep only the newest `keep` damaged copies of a state file; each failed load adds one.
+static void prune_corrupt_copies(const fs::path& file, size_t keep) {
+    std::error_code error;
+    const auto prefix=file.filename().string()+".corrupt-";
+    std::vector<std::pair<long long,fs::path>> copies;
+    for(const auto& entry:fs::directory_iterator(file.parent_path(),error)) {
+        const auto name=entry.path().filename().string();
+        if(!name.starts_with(prefix)) continue;
+        try { copies.emplace_back(std::stoll(name.substr(prefix.size())),entry.path()); } catch(...) {}
+    }
+    if(copies.size()<=keep) return;
+    std::sort(copies.begin(),copies.end(),[](const auto& a,const auto& b){ return a.first>b.first; });
+    for(size_t i=keep;i<copies.size();++i) fs::remove(copies[i].second,error);
+}
 State load_state(const fs::path& file, bool* recovered) {
     if(recovered) *recovered=false;
     auto backup=file; backup+=".bak";
@@ -113,6 +142,7 @@ State load_state(const fs::path& file, bool* recovered) {
             auto stamp=std::chrono::system_clock::now().time_since_epoch().count();
             auto archived=file; archived+=".corrupt-"+std::to_string(stamp);
             fs::copy_file(file,archived);
+            prune_corrupt_copies(file,3);
             if(!fs::exists(backup)) throw;
         }
     }

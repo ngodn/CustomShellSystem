@@ -143,9 +143,10 @@ int main() {
         auto reopened=State::parse(legacy);
         expect(reopened.selections.begin()->second.custom==custom,"A 0.4 selection lost what the player chose");
         expect(reopened.remembered_custom.at("test")==custom,"A 0.4 remembered outfit lost what the player chose");
-        // Naming both is a mistake, not a merge.
+        // Naming both is a mistake, not a merge. The damaged selection is dropped (that shell falls
+        // back to its original look) instead of failing the whole state load.
         auto muddled=state.json();muddled["selections"].begin().value()["colors"]=Json::object();
-        rejects([&]{State::parse(muddled);});
+        expect(State::parse(muddled).selections.empty(),"A selection naming both colors and customize was kept");
         custom.values["glow"][0]=6;rejects([&]{control_values(options,custom);});custom.values.erase("glow");
         custom.values["missing"]={1,1,1,1};rejects([&]{control_values(options,custom);});custom.values.clear();
         Customization previous;previous.palette="removed";previous.values["missing"]={1,1,1,1};previous.values["cloth"]={.2f,.3f,.4f,1};

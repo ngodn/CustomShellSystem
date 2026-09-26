@@ -48,13 +48,6 @@ static std::string narrow(const std::wstring& s) {
     WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,s.data(),static_cast<int>(s.size()),result.data(),size,nullptr,nullptr);
     return result;
 }
-static UObject* find(const wchar_t* path) {
-    // Kept raw on purpose: WeakObject's constructor calls find() to initialize an object's
-    // serial number, so find() must not itself build a WeakObject or the two would recurse.
-    auto* object = UObjectGlobals::StaticFindObject<UObject*>(nullptr, nullptr, path);
-    if (!object) throw std::runtime_error("Required reflected object is missing");
-    return object;
-}
 
 // Reflection handle cache. Resolving a UFunction or FProperty by name walks the class
 // chain and hashes an FName at each level, and building a call's parameter list is another
@@ -92,34 +85,43 @@ struct WEq { using is_transparent = void; bool operator()(std::wstring_view a, s
 // check but never forces serial initialization: doing so would issue a reflected Call and
 // recurse back through this very cache before the entry is stored. Pointer identity catches
 // a freed or replaced slot; the serial, when the class has one, catches slot reuse.
+// The name is compared too: an object that never needed a weak pointer has serial 0, and then
+// only the name tells a reused slot at the same address apart.
 struct OwnerGuard {
-    const void* ptr = nullptr; int32_t index = -1; int32_t serial = 0;
+    const void* ptr = nullptr; int32_t index = -1; int32_t serial = 0; FName name{};
     void capture(UObject* object) {
-        ptr = object; index = object->GetInternalIndex();
+        ptr = object; index = object->GetInternalIndex(); name = object->GetNamePrivate();
         auto* item = FUObjectArray::IndexToObject(index);
         serial = item ? item->GetSerialNumber() : 0;
     }
-    bool alive() const {
-        if (!ptr || index < 0) return false;
+    UObject* get() const {
+        if (!ptr || index < 0) return nullptr;
         auto* item = FUObjectArray::IndexToObject(index);
-        return item && item->GetUObject() == ptr && item->GetSerialNumber() == serial;
+        if (!item || item->GetUObject() != ptr || item->GetSerialNumber() != serial) return nullptr;
+        auto* object = static_cast<UObject*>(item->GetUObject());
+        return object->GetNamePrivate() == name ? object : nullptr;
     }
+    bool alive() const { return get() != nullptr; }
 };
 }
 
-static UObject* find_optional(const wchar_t*);
-
-// Non-throwing, cached StaticFindObject for fixed objects (class-default objects, engine
-// classes). Safe against reuse because the stored WeakObject re-resolves once the found
-// object dies. Distinct from find(): WeakObject's own serial init routes through raw find(),
-// so this never sits on that path and cannot recurse.
-static std::unordered_map<std::wstring, WeakObject, refl::WHash, refl::WEq> s_object_cache;
+// Objects by path, cached. StaticFindObject parses the path and creates an FName per segment,
+// and several callers run every frame. Every path CSS looks up names a native class, struct or
+// class-default object, which live for the whole session, and assets whose guard fails simply
+// resolve again. The cache is validated read-only (OwnerGuard) and never builds a WeakObject:
+// WeakObject's serial initialization calls find(), and a WeakObject built inside a cache is the
+// pattern that crashed CSSX.
+static std::unordered_map<std::wstring, refl::OwnerGuard, refl::WHash, refl::WEq> s_object_cache;
 static UObject* find_optional(const wchar_t* path) {
-    if (auto it = s_object_cache.find(std::wstring_view{path}); it != s_object_cache.end()) {
-        if (auto* cached = it->second.Get()) return cached;
-    }
+    if (auto it = s_object_cache.find(std::wstring_view{path}); it != s_object_cache.end())
+        if (auto* cached = it->second.get()) return cached;
     auto* object = UObjectGlobals::StaticFindObject<UObject*>(nullptr, nullptr, path);
-    if (object) s_object_cache.insert_or_assign(std::wstring{path}, WeakObject(object));
+    if (object) { refl::OwnerGuard guard; guard.capture(object); s_object_cache.insert_or_assign(std::wstring{path}, guard); }
+    return object;
+}
+static UObject* find(const wchar_t* path) {
+    auto* object = find_optional(path);
+    if (!object) throw std::runtime_error("Required reflected object is missing");
     return object;
 }
 
@@ -145,6 +147,19 @@ static FProperty* field(UObject* object, const wchar_t* name, size_t size) {
         throw std::runtime_error("Reflected property layout does not match: "+narrow(name));
     return property;
 }
+// field() for a property the class may not have: returns null instead of throwing. Misses are
+// cached as well, so asking a class for a property it lacks costs one chain walk, not one per
+// call. (field() treats a cached null as a miss and walks again, so the two share the cache.)
+static FProperty* optional_field(UObject* object, const wchar_t* name) {
+    if (!object) return nullptr;
+    UObject* owner = object->GetClassPrivate();
+    if (!owner) return object->GetPropertyByNameInChain(name);
+    if (auto it = s_field_cache.find(refl::View{owner, name}); it != s_field_cache.end() && it->second.owner.alive())
+        return it->second.property;
+    FieldEntry entry; entry.owner.capture(owner); entry.property = object->GetPropertyByNameInChain(name);
+    s_field_cache.insert_or_assign(refl::Key{owner, name}, entry);
+    return entry.property;
+}
 template<typename T> static T read(UObject* object, const wchar_t* name) {
     auto* p = field(object, name, sizeof(T));
     T value{};
@@ -158,7 +173,9 @@ template<typename T> static T read(UObject* object, const wchar_t* name) {
 // cached per (class, name) and validated read-only (OwnerGuard). resolve_call issues no
 // reflected Call of its own, so it cannot re-enter the cache. The parameter vector lives in
 // the cache and a Call only points at it, so constructing a Call allocates nothing.
-struct CallEntry { refl::OwnerGuard owner; UFunction* function = nullptr; std::vector<FProperty*> params; };
+// Parameter names are resolved to strings once here: FField::GetName() builds a new string on
+// every call, and Call::param() used to do that for each parameter it looked at.
+struct CallEntry { refl::OwnerGuard owner; UFunction* function = nullptr; std::vector<FProperty*> params; std::vector<std::wstring> names; };
 static std::unordered_map<refl::Key, CallEntry, refl::Hash, refl::Eq> s_call_cache;
 static const CallEntry& resolve_call(UObject* object, const wchar_t* name) {
     UObject* owner = object->GetClassPrivate();
@@ -176,6 +193,7 @@ static const CallEntry& resolve_call(UObject* object, const wchar_t* name) {
             p->GetOffset_Internal() + p->GetElementSize() > entry.function->GetParmsSize())
             throw std::runtime_error("Parameter exceeds reflected frame");
         entry.params.push_back(p);
+        entry.names.push_back(p->GetName());
     }
     // Should not happen for a real UObject; without a class we cannot key, so return an
     // uncached scratch entry so the caller still works (unbatched, this frame only).
@@ -188,8 +206,9 @@ static const CallEntry& resolve_call(UObject* object, const wchar_t* name) {
 class Call {
     UObject* object_;
     UFunction* function_ = nullptr;
-    alignas(16) std::array<std::byte, 2048> bytes_{};
+    alignas(16) std::array<std::byte, 2048> bytes_;     // only the function's own frame is cleared
     const std::vector<FProperty*>* params_ = nullptr;   // owned by s_call_cache, stable across rehash
+    const std::vector<std::wstring>* names_ = nullptr;
 public:
     Call(UObject* object, const wchar_t* name, unsigned count) : object_(object) {
         if (!object) throw std::runtime_error("No target for reflected call");
@@ -198,13 +217,15 @@ public:
             throw std::runtime_error("Reflected function signature mismatch: " + narrow(name));
         function_ = entry.function;
         params_ = &entry.params;
+        names_ = &entry.names;
+        std::memset(bytes_.data(), 0, static_cast<size_t>(function_->GetParmsSize()));
         for (auto* p : *params_) p->InitializeValue(bytes_.data() + p->GetOffset_Internal());
     }
     ~Call() { if (params_) for (auto* p : *params_) p->DestroyValue(bytes_.data() + p->GetOffset_Internal()); }
     Call(const Call&) = delete;
     Call& operator=(const Call&) = delete;
     FProperty* param(const wchar_t* name) {
-        for (auto* p : *params_) if (p->GetName() == name) return p;
+        for (size_t i = 0; i < params_->size(); ++i) if ((*names_)[i] == name) return (*params_)[i];
         throw std::runtime_error("Missing parameter: " + narrow(name));
     }
     void* data(FProperty* p) { return bytes_.data() + p->GetOffset_Internal(); }
@@ -263,14 +284,15 @@ WeakObject& WeakObject::operator=(UObject* object) {
     RC::Unreal::FWeakObjectPtr::operator=(object);
     return *this;
 }
-static std::unordered_map<std::string, WeakObject> s_asset_cache;
+// Loaded assets by path, validated the same read-only way as find(): an asset that was garbage
+// collected fails its guard and is found or loaded again.
+static std::unordered_map<std::string, refl::OwnerGuard> s_asset_cache;
 static UObject* load(const std::string& path) {
-    if (auto it = s_asset_cache.find(path); it != s_asset_cache.end()) {
-        if (auto* cached = it->second.Get()) return cached;
-    }
+    if (auto it = s_asset_cache.find(path); it != s_asset_cache.end())
+        if (auto* cached = it->second.get()) return cached;
     auto name = wide(path);
     if (auto* object = UObjectGlobals::StaticFindObject<UObject*>(nullptr, nullptr, name.c_str())) {
-        s_asset_cache[path] = object;
+        s_asset_cache[path].capture(object);
         return object;
     }
     static UObject* s_kismet = nullptr;
@@ -283,7 +305,7 @@ static UObject* load(const std::string& path) {
     loading.copy(L"Asset", convert, L"ReturnValue"); loading.run();
     auto* object = loading.get<UObject*>();
     if (!object) throw std::runtime_error("Asset could not load: " + path);
-    s_asset_cache[path] = object;
+    s_asset_cache[path].capture(object);
     return object;
 }
 // Blocking asset loads can run garbage collection between successive imports.
@@ -445,13 +467,18 @@ static Json material_snapshot(UObject* component,UObject* mesh) {
     }
     return result;
 }
-static UObject* menu_character(UObject* player) {
+// The menu display actor currently shown (the Inventory's character stage), or null. Plain
+// cached property reads, cheap enough to check every frame.
+static UObject* active_display_menu(UObject* player) {
     if(!player) return nullptr;
     auto* pc=read<UObject*>(player,L"Controller");
-    if(!pc || !pc->GetPropertyByNameInChain(L"User Interface Handler Component")) return nullptr;
+    if(!pc || !optional_field(pc,L"User Interface Handler Component")) return nullptr;
     auto* handler=read<UObject*>(pc,L"User Interface Handler Component");
     if(!handler) return nullptr;
-    auto* menu=read<UObject*>(handler,L"ActiveDisplayMenu");
+    return read<UObject*>(handler,L"ActiveDisplayMenu");
+}
+static UObject* menu_character(UObject* player) {
+    auto* menu=active_display_menu(player);
     if(!menu) return nullptr;
     Call character(menu,L"GetDisplayMenuCharacter",1); character.run();
     return character.get<UObject*>();
@@ -461,7 +488,8 @@ static UObject* menu_character(UObject* player) {
 #include "misc_visibility.inl"
 UObject* Appearance::player(void* engine) {
     shell.clear(); pawn_name.clear(); current_mesh.clear();
-    if (!Version::IsAtLeast(5, 6) || !Version::IsBelow(5, 7)) throw std::runtime_error("CSS adapter requires UE5.6");
+    static const bool supported = Version::IsAtLeast(5, 6) && Version::IsBelow(5, 7);
+    if (!supported) throw std::runtime_error("CSS adapter requires UE5.6");
     auto* viewport = read<UObject*>(static_cast<UObject*>(engine), L"GameViewport");
     if (!viewport) return nullptr;
     auto* world = read<UObject*>(viewport, L"World");
@@ -469,19 +497,30 @@ UObject* Appearance::player(void* engine) {
     Call player_call(find(L"/Script/Engine.Default__GameplayStatics"), L"GetPlayerCharacter", 3);
     player_call.set(L"WorldContextObject", world); player_call.set(L"PlayerIndex", int32_t{0}); player_call.run();
     auto* pawn = player_call.get<UObject*>();
-    if (!pawn || WeakObject(pawn).Get()!=pawn || !pawn->GetPropertyByNameInChain(L"CharacterId")) return nullptr;
+    if (!pawn || WeakObject(pawn).Get()!=pawn || !optional_field(pawn, L"CharacterId")) return nullptr;
+    // This runs several times a second, so the name and path strings are kept and rebuilt only
+    // when the tag, the pawn or the mesh they describe changes.
     // FGameplayTag contains the reflected FName TagName (8 bytes in this build).
-    shell = narrow(read<FName>(pawn, L"CharacterId").ToString());
-    if (!shell.starts_with("CharacterId.Player.")) { shell.clear(); return nullptr; }
-    pawn_name = narrow(pawn->GetFullName());
+    const auto tag = read<FName>(pawn, L"CharacterId");
+    static_assert(sizeof(FName) == sizeof(shell_tag_));
+    uint64_t raw_tag{}; std::memcpy(&raw_tag, &tag, sizeof(raw_tag));
+    if (raw_tag != shell_tag_ || shell_text_.empty()) { shell_text_ = narrow(tag.ToString()); shell_tag_ = raw_tag; }
+    if (!shell_text_.starts_with("CharacterId.Player.")) return nullptr;
+    shell = shell_text_;
     auto* component = read<UObject*>(pawn, L"Mesh");
     auto* controller=read<UObject*>(pawn,L"Controller");
     if(observed_pawn_.Get()!=pawn || observed_component_.Get()!=component || observed_controller_.Get()!=controller) {
         ++player_revision; observed_pawn_=pawn; observed_component_=component; observed_controller_=controller;
+        pawn_text_.clear();
     }
+    if (pawn_text_.empty()) pawn_text_ = narrow(pawn->GetFullName());
+    pawn_name = pawn_text_;
     if (component) {
         if(component==component_.Get()) detach_residual_controls();
-        if(auto* mesh = mesh_asset(component)) current_mesh = narrow(mesh->GetPathName());
+        if(auto* mesh = mesh_asset(component)) {
+            if (mesh_seen_.Get() != mesh || mesh_text_.empty()) { mesh_seen_ = mesh; mesh_text_ = narrow(mesh->GetPathName()); }
+            current_mesh = mesh_text_;
+        }
     }
     return pawn;
 }
@@ -722,11 +761,21 @@ void Appearance::test_reset_mesh() {
     restore_materials(component,original_materials_);
 }
 #endif
+static bool camera_class_blocks(const std::string& name);
+// Asked several times a second for whichever camera state is active; the answer depends only
+// on the state's class, so it is kept per class instead of rebuilding the class name each time.
 static bool is_blocking_camera_state(UObject* state) {
     if(!state) return false;
     auto* klass = state->GetClassPrivate();
     if(!klass) return false;
-    std::string name = narrow(klass->GetName());
+    struct Verdict { refl::OwnerGuard owner; bool blocks = false; };
+    static std::unordered_map<const void*, Verdict> verdicts;
+    if(auto it = verdicts.find(klass); it != verdicts.end() && it->second.owner.alive()) return it->second.blocks;
+    Verdict verdict; verdict.owner.capture(klass); verdict.blocks = camera_class_blocks(narrow(klass->GetName()));
+    verdicts.insert_or_assign(klass, verdict);
+    return verdict.blocks;
+}
+static bool camera_class_blocks(const std::string& name) {
     if(name.find("Menu") != std::string::npos) return false;
     if(name.find("BoneGate") != std::string::npos ||
        name.find("GateCleansed") != std::string::npos ||
@@ -749,19 +798,19 @@ static bool is_blocking_camera_state(UObject* state) {
 
 static bool is_quest_or_teleport_active(UObject* pc) {
     if(!pc) return false;
-    auto* temp_shell_prop = pc->GetPropertyByNameInChain(L"TemporaryShellItemDefinition");
+    auto* temp_shell_prop = optional_field(pc,L"TemporaryShellItemDefinition");
     if(temp_shell_prop && temp_shell_prop->GetElementSize() == sizeof(UObject*)) {
         UObject* temp_shell = nullptr;
         std::memcpy(&temp_shell, reinterpret_cast<const std::byte*>(pc) + temp_shell_prop->GetOffset_Internal(), sizeof(UObject*));
         if(temp_shell) return true;
     }
-    auto* temp_weap_prop = pc->GetPropertyByNameInChain(L"TemporaryWeaponItemDefinition");
+    auto* temp_weap_prop = optional_field(pc,L"TemporaryWeaponItemDefinition");
     if(temp_weap_prop && temp_weap_prop->GetElementSize() == sizeof(UObject*)) {
         UObject* temp_weap = nullptr;
         std::memcpy(&temp_weap, reinterpret_cast<const std::byte*>(pc) + temp_weap_prop->GetOffset_Internal(), sizeof(UObject*));
         if(temp_weap) return true;
     }
-    auto* tp_mgr_prop = pc->GetPropertyByNameInChain(L"Teleport Manager");
+    auto* tp_mgr_prop = optional_field(pc,L"Teleport Manager");
     if(tp_mgr_prop && tp_mgr_prop->GetElementSize() == sizeof(UObject*)) {
         UObject* tp_mgr = nullptr;
         std::memcpy(&tp_mgr, reinterpret_cast<const std::byte*>(pc) + tp_mgr_prop->GetOffset_Internal(), sizeof(UObject*));
@@ -773,7 +822,7 @@ static bool is_quest_or_teleport_active(UObject* pc) {
             // apply for the entire dungeon, on all shells and on the severed Harbinger. The
             // real cutscene cameras below (PlayerCameraManager.ActiveCameraInstance) cover
             // the bond-quest and warp cases without that persistent over-block.
-            auto* tp_cam_prop = tp_mgr->GetPropertyByNameInChain(L"CameraState");
+            auto* tp_cam_prop = optional_field(tp_mgr,L"CameraState");
             if(tp_cam_prop && tp_cam_prop->GetElementSize() == sizeof(UObject*)) {
                 UObject* tp_cam = nullptr;
                 std::memcpy(&tp_cam, reinterpret_cast<const std::byte*>(tp_mgr) + tp_cam_prop->GetOffset_Internal(), sizeof(UObject*));
@@ -781,17 +830,17 @@ static bool is_quest_or_teleport_active(UObject* pc) {
             }
         }
     }
-    auto* sm_comp_prop = pc->GetPropertyByNameInChain(L"Shell Memory Handler Component");
+    auto* sm_comp_prop = optional_field(pc,L"Shell Memory Handler Component");
     if(sm_comp_prop && sm_comp_prop->GetElementSize() == sizeof(UObject*)) {
         UObject* sm_comp = nullptr;
         std::memcpy(&sm_comp, reinterpret_cast<const std::byte*>(pc) + sm_comp_prop->GetOffset_Internal(), sizeof(UObject*));
         if(sm_comp) {
-            auto* actor_prop = sm_comp->GetPropertyByNameInChain(L"HandlerActor");
+            auto* actor_prop = optional_field(sm_comp,L"HandlerActor");
             if(actor_prop && actor_prop->GetElementSize() == sizeof(UObject*)) {
                 UObject* actor = nullptr;
                 std::memcpy(&actor, reinterpret_cast<const std::byte*>(sm_comp) + actor_prop->GetOffset_Internal(), sizeof(UObject*));
                 if(actor) {
-                    auto* mem_prop = actor->GetPropertyByNameInChain(L"SpawnedShellMemory");
+                    auto* mem_prop = optional_field(actor,L"SpawnedShellMemory");
                     if(mem_prop && mem_prop->GetElementSize() == sizeof(UObject*)) {
                         UObject* mem = nullptr;
                         std::memcpy(&mem, reinterpret_cast<const std::byte*>(actor) + mem_prop->GetOffset_Internal(), sizeof(UObject*));
@@ -801,17 +850,17 @@ static bool is_quest_or_teleport_active(UObject* pc) {
             }
         }
     }
-    auto* cam_mgr_prop = pc->GetPropertyByNameInChain(L"PlayerCameraManager");
+    auto* cam_mgr_prop = optional_field(pc,L"PlayerCameraManager");
     if(cam_mgr_prop && cam_mgr_prop->GetElementSize() == sizeof(UObject*)) {
         UObject* cam_mgr = nullptr;
         std::memcpy(&cam_mgr, reinterpret_cast<const std::byte*>(pc) + cam_mgr_prop->GetOffset_Internal(), sizeof(UObject*));
         if(cam_mgr) {
-            auto* active_inst_prop = cam_mgr->GetPropertyByNameInChain(L"ActiveCameraInstance");
+            auto* active_inst_prop = optional_field(cam_mgr,L"ActiveCameraInstance");
             if(active_inst_prop && active_inst_prop->GetElementSize() == sizeof(UObject*)) {
                 UObject* active_inst = nullptr;
                 std::memcpy(&active_inst, reinterpret_cast<const std::byte*>(cam_mgr) + active_inst_prop->GetOffset_Internal(), sizeof(UObject*));
                 if(active_inst) {
-                    auto* state_prop = active_inst->GetPropertyByNameInChain(L"CameraState");
+                    auto* state_prop = optional_field(active_inst,L"CameraState");
                     if(state_prop && state_prop->GetElementSize() == sizeof(UObject*)) {
                         UObject* active_state = nullptr;
                         std::memcpy(&active_state, reinterpret_cast<const std::byte*>(active_inst) + state_prop->GetOffset_Internal(), sizeof(UObject*));
@@ -826,13 +875,13 @@ static bool is_quest_or_teleport_active(UObject* pc) {
 
 static bool is_traversal_ability_active(UObject* pawn) {
     if(!pawn) return false;
-    auto* asc_prop = pawn->GetPropertyByNameInChain(L"AbilitySystemComponent");
+    auto* asc_prop = optional_field(pawn,L"AbilitySystemComponent");
     if(!asc_prop || asc_prop->GetElementSize() != sizeof(UObject*)) return false;
     UObject* asc = nullptr;
     std::memcpy(&asc, reinterpret_cast<const std::byte*>(pawn) + asc_prop->GetOffset_Internal(), sizeof(UObject*));
     if(!asc) return false;
 
-    auto* act_prop = asc->GetPropertyByNameInChain(L"ActivatableAbilities");
+    auto* act_prop = optional_field(asc,L"ActivatableAbilities");
     if(!act_prop || !act_prop->IsA<FStructProperty>()) return false;
     auto* sp = static_cast<FStructProperty*>(act_prop);
     auto* struct_type = sp->GetStruct().Get();
@@ -873,14 +922,13 @@ static bool is_traversal_ability_active(UObject* pawn) {
 bool Appearance::repair_mesh_needed() const {
     auto* component=component_.Get();
     if(!component || component!=observed_component_.Get()) return false;
-    auto* pc=observed_controller_.Get();
-    if(is_quest_or_teleport_active(pc)) return false;
-    auto* pawn=observed_pawn_.Get();
-    if(is_traversal_ability_active(pawn)) return false;
+    // Cheapest test first: nearly always our own mesh is on, and nothing else matters.
     auto* mesh=mesh_asset(component);
+    if(!mesh || mesh==applied_.Get()) return false;
     // Only reclaim the stock mesh captured for this component. An unfamiliar
     // replacement can belong to another mod or an unfinished transformation.
-    return mesh && mesh!=applied_.Get() && narrow(mesh->GetPathName())==original_;
+    if(narrow(mesh->GetPathName())!=original_) return false;
+    return !is_quest_or_teleport_active(observed_controller_.Get()) && !is_traversal_ability_active(observed_pawn_.Get());
 }
 std::string Appearance::ready_to_apply_reason() const {
     auto* pawn=observed_pawn_.Get(); auto* component=observed_component_.Get(); auto* pc=observed_controller_.Get();

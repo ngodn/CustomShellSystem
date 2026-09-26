@@ -362,18 +362,60 @@ Json Appearance::misc_report() const {
     return r;
 }
 
-void Appearance::sync_misc() {   // rate-limited: rebuild candidate lists
+// A cheap fingerprint of everything attached to the bodies MISC watches: the containers and the
+// pointers in their AttachChildren arrays, read in place. Equipping, swapping, drawing a new
+// weapon or opening the menu changes it, so the candidate lists are rebuilt the same frame
+// instead of being re-walked (a PE per child, hundreds of children) twenty times a second.
+static void misc_mix(uint64_t& hash, const void* pointer) {
+    hash^=reinterpret_cast<uintptr_t>(pointer); hash*=0x100000001b3ull;
+}
+static void misc_mix_children(uint64_t& hash, UObject* container) {
+    misc_mix(hash,container);
+    if(!container) return;
+    auto* property=optional_field(container,L"AttachChildren");
+    if(!property || !property->IsA<FArrayProperty>()) return;
+    auto* array=static_cast<FArrayProperty*>(property);
+    if(!array->GetInner()->IsA<FObjectProperty>() || array->GetInner()->GetElementSize()!=sizeof(UObject*)) return;
+    FScriptArrayHelper values(array,reinterpret_cast<std::byte*>(container)+property->GetOffset_Internal());
+    const int n=values.Num();
+    misc_mix(hash,reinterpret_cast<const void*>(static_cast<uintptr_t>(n)));
+    if(n<=0 || n>4096) return;
+    for(int i=0;i<n;++i) { UObject* child{}; std::memcpy(&child,values.GetRawPtr(i),sizeof(child)); misc_mix(hash,child); }
+}
+bool Appearance::misc_layout_changed() {
+    if(std::exchange(misc_rules_changed_,false)) { misc_signature_=0; return true; }
+    auto* pawn=observed_pawn_.Get();
+    if(!pawn || misc_rules_.empty()) return false;
+    uint64_t hash=0xcbf29ce484222325ull;
+    misc_mix(hash,pawn);
+    misc_mix_children(hash,read<UObject*>(pawn,L"Mesh"));
+    misc_mix_children(hash,attachments_.proxy());
+    misc_mix(hash,active_display_menu(pawn));
+    misc_mix_children(hash,menu_display_mesh_.Get());
+    misc_mix_children(hash,menu_attachments_.proxy());
+    const bool changed=hash!=misc_signature_;
+    misc_signature_=hash;
+    return changed;
+}
+
+void Appearance::sync_misc() {   // on a layout change: rebuild candidate lists
     auto* pawn=observed_pawn_.Get();
     if(!pawn || misc_rules_.empty()) { misc_.restore(); menu_misc_.restore(); return; }
-    if(auto* display=menu_character(pawn))
-        menu_misc_.enumerate({read<UObject*>(display,L"Mesh"), menu_attachments_.proxy()}, display);
+    if(auto* display=menu_character(pawn)) {
+        auto* display_mesh=read<UObject*>(display,L"Mesh");
+        menu_display_mesh_=display_mesh;
+        menu_misc_.enumerate({display_mesh, menu_attachments_.proxy()}, display);
+    } else menu_display_mesh_=nullptr;
     misc_.enumerate({read<UObject*>(pawn,L"Mesh"), attachments_.proxy()}, pawn);
 }
 
 void Appearance::tick_misc() {   // every frame: decide + enforce on the cached items
     auto* pawn=observed_pawn_.Get();
     if(!pawn || misc_rules_.empty()) return;
-    const bool action_active=misc_action_active(pawn);
+    // Only "only when in use" asks whether an action is playing; skip the two engine calls otherwise.
+    bool in_use=false;
+    for(const auto& [category,rule]:misc_rules_) in_use=in_use || rule.mode=="in_use";
+    const bool action_active=in_use && misc_action_active(pawn);
     misc_.evaluate(misc_rules_, action_active);
     // The wardrobe preview stands idle, so no action is ever active for it.
     menu_misc_.evaluate(misc_rules_, false);

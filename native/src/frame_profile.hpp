@@ -13,7 +13,7 @@ class FrameProfile {
 public:
     using Clock = std::chrono::steady_clock;
     using Time = Clock::time_point;
-    enum Phase { recovery, cssx_tick, hud_prepare, cssx_render, inventory, phase_count };
+    enum Phase { recovery, inventory, maintenance, attachments, seals, walk, misc, reconcile, phase_count };
     struct Row {
         double engine_ms{}, interval_ms{}, core_ms{};
         std::array<double, phase_count> phase_ms{};

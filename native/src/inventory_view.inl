@@ -2143,9 +2143,12 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     }
     auto* main=main_.Get(); auto* switcher=switcher_.Get();
     if(!main || !switcher || !page_.Get()) { detach(); return {}; }
-    if(!inventory_bool(main,L"bOpen")) camera_tick_restore();
-    Call selected(switcher,L"GetActiveWidget",1); selected.run();
-    active_=inventory_bool(main,L"bOpen") && selected.get<UObject*>()==page_.Get();
+    // Menu closed: one cached flag read, no engine call.
+    const bool open=inventory_bool(main,L"bOpen");
+    if(!open) camera_tick_restore();
+    UObject* shown=nullptr;
+    if(open) { Call selected(switcher,L"GetActiveWidget",1); selected.run(); shown=selected.get<UObject*>(); }
+    active_=open && shown==page_.Get();
     if(active_ && !was_active_) { appearance.player(engine); bind_inputs(); camera_start(); dirty_=enter_transition_=true; closing_=false; for(auto& b:bindings_) { b.down=true; b.repeat=now+400; } }
     if(!active_ && was_active_) { camera_stop(); closing_=false; transition_started_=0; }
     if(active_) camera_bind_state();
