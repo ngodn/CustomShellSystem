@@ -1,4 +1,6 @@
 """Fit an isolated collision trial to the preserved exported body, in centimetres."""
+import argparse
+import sys
 import json
 from pathlib import Path
 import numpy as np
@@ -6,6 +8,9 @@ from mathutils import Matrix, Quaternion, Vector
 from mathutils.bvhtree import BVHTree
 
 WORK = Path(__file__).resolve().parents[2] / 'work/eve26'
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--rear',action='store_true')
+a=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 data = json.loads((WORK/'planet-export/planet.mesh.json').read_text())
 audit = json.loads((WORK/'planet-export/planet.mesh.audit.json').read_text())
 assert audit['parts'][0]['name'] == 'Eve Body'
@@ -44,6 +49,8 @@ for side in ('l','r'):
     name='calf_'+side
     for fraction in (.15,.45,.75):
         seeds.append((name,bind[name].translation.lerp(bind['foot_'+side].translation,fraction)))
+if a.rear:
+    seeds.extend(('pelvis',Vector((x,-10,z))) for x in (-5,5) for z in (100,104,108))
 spheres, rejected = [],[]
 for bone,center in seeds:
     votes = inside(center)
@@ -63,7 +70,7 @@ region = np.asarray([data['points'][i] for i in body_ids if 40 <= data['points']
 coverage = gap(region)
 initial_coverage = float(np.quantile(coverage,.95))
 clearance = gap(proxy)
-out = WORK/'planet-tail-spheres.json'
+out = WORK/('planet-tail-rear-spheres.json' if a.rear else 'planet-tail-spheres.json')
 assert not out.exists()
 report = {'spheres':spheres,'connections':[],'sphere_count':len(spheres),'initial_p95_gap_cm':initial_coverage,'rejected_seeds':rejected,'tail_inside_vertices':int((clearance<0).sum()),
           'minimum_tail_clearance_cm':float(clearance.min()),'body_region_vertices':len(region),
