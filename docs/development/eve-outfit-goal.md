@@ -32,6 +32,10 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**Prototype material assembly, September 27:** `inspect_planet_materials.py` resolves all 29 candidate slots to 21 original production materials using the explicit alias map and exact slot-name checks. `apply_planet_materials.py` saves those references only on `/Game/CSS/EveTest/SK_PlanetFit`. Receipts `planet-material-map.json` and `planet-material-apply.json` confirm protected production hashes unchanged. Fresh reload and textured visual verification remain pending. The commandlet reported zero errors; its shutdown must finish before another editor commandlet.
+
+The existing `CSSBindClothV2 -SkeletonOnly` commandlet can bind this candidate to the shared skeleton without `-MergeBones`; source inspection confirms it saves the shared skeleton only when explicitly merging missing bones. Prior fresh hierarchy checks pass. Binding has not been run yet. Do not use the diagnostic Python binding helper: its current allowlist excludes SK_PlanetFit.
+
 **Prototype corrected source imported privately, September 27:** `export_planet_source.py` reassembles F7 into `planet-export/`, regenerating suit corner normals and triangulation together. Fitting changes 86 triangle records; requiring unchanged tessellation was rejected. The successful exporter preserves the UV/color corner multiset, original material names and every other part. Source SHA is unchanged; fitted point error is 0.00001532 cm. Receipt: `planet-export/receipt.json`.
 
 `CSSImportMesh` succeeded for `/Game/CSS/EveTest/SK_PlanetFit` with 22 morph targets. Fresh editor audit `planet-compat.json` confirms all 379 private bone names/parents match the shared rig, which retains 386 bones, 82 sockets and nine virtual bones. The three protected production packages match their pre-import hashes. The first audit referenced the wrong test path and failed; corrected `planet-compat2.log` exited successfully. No game or release files changed.
