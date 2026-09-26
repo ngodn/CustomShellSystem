@@ -72,6 +72,37 @@ static int32 CreateEveLevelSet(const FString& Params)
                 Bones.Add(MakeShared<FJsonValueString>(Bone.ToString()));
             }
             Row->SetArrayField(TEXT("bones"),Bones);
+            if (FParse::Param(*Params,TEXT("LatticeGeometry")))
+            {
+                const int32 RootIndex=Mesh->GetRefSkeleton().FindBoneIndex(Body->BoneName);
+                if (RootIndex==INDEX_NONE) return Fail(TEXT("Invalid lattice root"));
+                const FTransform RootReference=FTransform(FMatrix(Mesh->GetRefBasesInvMatrix()[RootIndex])).Inverse();
+                const auto& Grid=Volume->GetGrid();
+                const auto Counts=Grid.Counts();
+                auto Geometry=MakeShared<FJsonObject>();
+                Geometry->SetArrayField(TEXT("counts"),{MakeShared<FJsonValueNumber>(Counts.X),MakeShared<FJsonValueNumber>(Counts.Y),MakeShared<FJsonValueNumber>(Counts.Z)});
+                TArray<TSharedPtr<FJsonValue>> Nodes;
+                for (int32 X=0;X<=Counts.X;++X)
+                    for (int32 Y=0;Y<=Counts.Y;++Y)
+                        for (int32 Z=0;Z<=Counts.Z;++Z)
+                        {
+                            const Chaos::TVec3<int32> Index(X,Y,Z);
+                            const FVector Position=RootReference.TransformPosition(FVector(Grid.Node(Index)));
+                            auto Node=MakeShared<FJsonObject>();
+                            Node->SetArrayField(TEXT("index"),{MakeShared<FJsonValueNumber>(X),MakeShared<FJsonValueNumber>(Y),MakeShared<FJsonValueNumber>(Z)});
+                            Node->SetArrayField(TEXT("rest_cm"),{MakeShared<FJsonValueNumber>(Position.X),MakeShared<FJsonValueNumber>(Position.Y),MakeShared<FJsonValueNumber>(Position.Z)});
+                            const auto& Influence=Volume->GetBoneData()(Index);
+                            TArray<TSharedPtr<FJsonValue>> Weights;
+                            for (int32 I=0;I<Influence.NumInfluences;++I)
+                                Weights.Add(MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{
+                                    MakeShared<FJsonValueString>(Volume->GetUsedBones()[Influence.BoneIndices[I]].ToString()),
+                                    MakeShared<FJsonValueNumber>(Influence.BoneWeights[I])}));
+                            Node->SetArrayField(TEXT("weights"),Weights);
+                            Nodes.Add(MakeShared<FJsonValueObject>(Node));
+                        }
+                Geometry->SetArrayField(TEXT("nodes"),Nodes);
+                Row->SetObjectField(TEXT("lattice_geometry"),Geometry);
+            }
             FString Samples;
             if (FParse::Value(*Params,TEXT("Samples="),Samples))
             {

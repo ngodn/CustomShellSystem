@@ -49,6 +49,8 @@ Local collision-weight transfer reduced error at three selected thigh points, bu
 
 The reusable lesson is to run the complete recorded pose set before building on a selected-frame success. Separate weight transfer from grid spacing, preserve the same bounds, and record the worst vertex indices so the next investigation has a concrete location. Correspondence distance also includes tangential motion; it is not automatically penetration depth. Check the actual surface and native distance queries before making that claim.
 
+Follow-up demonstrated that distinction: the 15.27 cm correspondence outlier has a 2.64 cm nearest-surface gap on the mapped triangulation. Its corners span both legs. Quarter-sized cells improve the visible hip shape, but retain inner-thigh and underarm folds and require 130,585 nodes. Do not turn finer spacing into an unlimited remedy: native containment and measured cost must decide whether it is useful. A mapped body triangulation is only an approximation of an implicit collider surface.
+
 Two numerical checks initially stopped these trials. Tiny negative nearest-triangle barycentric values were corrected only when clamping preserved the closest point within 0.0001 cm. Independent original-grid replay differed by up to 0.004063 cm overall and 0.000369 cm in the skirt region. The offline guards now allow 0.01 cm overall and 0.001 cm locally, while reporting actual errors. Those numerical agreement tolerances are not garment-fit acceptance thresholds. Keep failed-run diagnostics rather than silently loosening checks.
 
 ### Record after each useful experiment

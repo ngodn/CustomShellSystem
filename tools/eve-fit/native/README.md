@@ -1,5 +1,22 @@
 # Eve cloth collision authoring
 
+## Offline lattice transfer comparison
+
+Export all saved lattice nodes without changing the asset:
+
+```sh
+python3 tools/eve-fit/run_ue.py --log unused-grid.log -- -run=CSSEvePanel -LevelSet -InspectLevelSet -LatticeGeometry -Output=/Game/CSS/EveTest/PA_CBody128 -Report=/absolute/workspace/CustomShellSystem/work/eve26/unused-grid.json
+```
+
+From CustomShellSystem, use the pinned Blender and unused output directories:
+
+```sh
+../CSS-eins0fx-collections/reference-tools/blender/blender -b --python-exit-code 1 --python tools/eve-fit/test_local_lattice_grid.py -- --input work/eve26/ls128-grid.json --output work/eve26/unused-local --subdivide 4 --surface-frame sprint:56
+../CSS-eins0fx-collections/reference-tools/blender/blender -b --python-exit-code 1 --python tools/eve-fit/render_lattice_surface.py -- --input work/eve26/unused-local/surface.json --output work/eve26/unused-views
+```
+
+Subdivision 1, 2 and 4 retain the original domain bounds. Reports compare all 291 recorded poses at default and combined hip/waist morphs. `weights.json` is an offline recipe, not a saved native collider. `surface.json` maps the original body triangulation and measures unsigned nearest distance; it does not evaluate the native implicit surface or containment. Colors carry face-average distances onto corresponding faces in both render sets. Original-grid frame-8 replay is checked against native frame 68 before accepting the complete report. Required existing inputs are named in the script; retain the body/grid hashes with each recipe.
+
 ## Private skinned level-set probe
 
 Stage `CSSEveLevelSet.inl` with `CSSEvePanelCommandlet.cpp` and its other includes. The authoring module needs the `PhysicsUtilities` dependency in addition to the existing panel dependencies. Do not replace the working project's Build.cs wholesale with the older tracked template.
