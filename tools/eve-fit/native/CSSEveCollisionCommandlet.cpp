@@ -25,7 +25,8 @@ int32 UCSSEveCollisionCommandlet::Main(const FString& Params)
     if (FParse::Param(*Params, TEXT("Inspect")))
     {
         FString Report;
-        if (!FParse::Value(*Params, TEXT("Output="), Output) || !Output.StartsWith(TEXT("/Game/CSS/EveTest/PA_")) ||
+        if (!FParse::Value(*Params, TEXT("Output="), Output) ||
+            (!Output.StartsWith(TEXT("/Game/CSS/EveTest/PA_")) && Output != TEXT("/Game/CSS/SeduXtress/PA_Body")) ||
             !FParse::Value(*Params, TEXT("Report="), Report)) return Fail(TEXT("Inspect needs private Output asset and Report filename"));
         UPhysicsAsset* Asset = LoadObject<UPhysicsAsset>(nullptr,*Output);
         if (!Asset) return Fail(TEXT("Cannot load private collision asset"));
