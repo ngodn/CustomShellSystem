@@ -11,17 +11,26 @@ from holiday_candidate import coords,digest,fitted_points
 p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('--output',type=Path,required=True)
 p.add_argument('--outer',action='store_true',help='Correct outward-facing fabric; exclude fur roots and inner walls')
+p.add_argument('--morph',help='Correct only this garment morph at value 1; preserve the default fit')
+p.add_argument('--part',choices=('Dress','Arms','Legs','Panties'),action='append')
 a=p.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert not a.output.exists()
 body=bpy.data.objects['Eve Body'];before=digest(body)
-points=fitted_points(body);body.data.calc_loop_triangles()
+saved_values={key.name:key.value for key in body.data.shape_keys.key_blocks}
+if a.morph:
+ for name in ('FBMBodyTone','PBMBreastsSize','PBMGlutesSize','PBMHipSize','PBMThighsTone','PBMWaistWidth'):
+  body.data.shape_keys.key_blocks[name].value=float(name==a.morph)
+points=fitted_points(body)
+for name,value in saved_values.items():body.data.shape_keys.key_blocks[name].value=value
+body.data.calc_loop_triangles()
 tree=BVHTree.FromPolygons(points,[tuple(t.vertices) for t in body.data.loop_triangles],all_triangles=True)
 report={}
 samples=np.asarray(((1,0,0),(0,1,0),(0,0,1),(.5,.5,0),(.5,0,.5),(0,.5,.5),(1/3,1/3,1/3)))
-for part in ('Dress','Arms','Legs','Panties'):
+for part in a.part or ('Dress','Arms','Legs','Panties'):
  obj=bpy.data.objects['Eve Christmas - '+part]
  assert obj.matrix_world == Matrix.Identity(4)
- original=coords(obj.data.vertices);cloth=original.copy()
+ original=coords(obj.data.shape_keys.key_blocks[a.morph].data) if a.morph else coords(obj.data.vertices)
+ cloth=original.copy()
  obj.data.calc_loop_triangles()
  selected=[t for t in obj.data.loop_triangles if not a.outer or 'Fur' not in obj.data.materials[t.material_index].name]
  faces=np.asarray([t.vertices[:] for t in selected])
@@ -61,17 +70,24 @@ for part in ('Dress','Arms','Legs','Panties'):
  offset=cloth-original
  snapshots={key.name:coords(key.data) for key in obj.data.shape_keys.key_blocks}
  basis_name=obj.data.shape_keys.key_blocks[0].name
- basis_error=float(np.max(np.abs(snapshots[basis_name]-original)))
+ mesh_before=coords(obj.data.vertices)
+ basis_error=float(np.max(np.abs(snapshots[basis_name]-mesh_before)))
  assert basis_error<1e-6,(part,'Input Basis differs from mesh',basis_error)
- obj.data.vertices.foreach_set('co',cloth.ravel())
- for key in obj.data.shape_keys.key_blocks:
-  changed=cloth if key.name==basis_name else cloth+(snapshots[key.name]-snapshots[basis_name])
-  key.data.foreach_set('co',changed.ravel())
+ if a.morph:
+  obj.data.shape_keys.key_blocks[a.morph].data.foreach_set('co',cloth.ravel())
+ else:
+  obj.data.vertices.foreach_set('co',cloth.ravel())
+  for key in obj.data.shape_keys.key_blocks:
+   changed=cloth if key.name==basis_name else cloth+(snapshots[key.name]-snapshots[basis_name])
+   key.data.foreach_set('co',changed.ravel())
  obj.data.update()
- assert np.array_equal(coords(obj.data.vertices),cloth)
- assert np.array_equal(coords(obj.data.shape_keys.key_blocks[0].data),cloth)
+ assert np.array_equal(coords(obj.data.vertices),mesh_before if a.morph else cloth)
+ assert np.array_equal(coords(obj.data.shape_keys.key_blocks[0].data),snapshots[basis_name] if a.morph else cloth)
+ if a.morph:
+  for key in obj.data.shape_keys.key_blocks:
+   assert np.array_equal(coords(key.data),cloth if key.name==a.morph else snapshots[key.name])
  report[part]=dict(history=history,max_move_mm=float(np.linalg.norm(offset,axis=1).max()*1000),budget_reached=budget_reached,sampled_clearance_passed=history[-1]['samples_below_clearance']==0)
 assert digest(body)==before
 bpy.ops.wm.save_as_mainfile(filepath=str(a.output))
-a.output.with_suffix('.json').write_text(json.dumps(dict(body_unchanged=True,body_sha256=before,parts=report,outer_fabric_only=a.outer,scope='Local 8 mm search-radius sample clearance only. Not proof of all intersections or morph/motion acceptance.'),indent=2)+'\n')
+a.output.with_suffix('.json').write_text(json.dumps(dict(body_unchanged=True,body_sha256=before,parts=report,morph=a.morph,outer_fabric_only=a.outer,scope='Local 8 mm search-radius sample clearance only. Not proof of all intersections or morph/motion acceptance.'),indent=2)+'\n')
 print('CLEARANCE_CANDIDATE_SAVED')

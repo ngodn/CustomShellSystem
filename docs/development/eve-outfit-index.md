@@ -61,3 +61,8 @@ References already reviewed: local cloth-physics-guide, MustardUI README and Com
 
 - `CustomShellSystem/work/eve26/holiday-f3d.json`: corrected clearance save. Fresh reload in the successful F4 build passed exact Basis/mesh equality; supersedes failed F3b/F3c candidates.
 - `CustomShellSystem/work/eve26/holiday-f4.json`, `f4-morphs`: six transferred controls, unchanged body, 18 generated views. Default back improves; maximum chest reveals a central upper-band split. Fix seam/displacement continuity next; no morph acceptance yet.
+
+- `CustomShellSystem/tools/eve-fit/probe_morph_seams.py`, `work/eve26/seam-probe.json`: near-duplicate gaps and connected-edge stretch. F4's worst chest edge stretches 33.45 times its base length; no expanding gaps found within the narrow 0.1 mm proximity test.
+- `CustomShellSystem/tools/eve-fit/holiday_morph_continuity.py`, `work/eve26/holiday-f5.json`, `f5-morphs`: chest displacement continuity correction, unchanged body/default fit. Reviewed front closes the center opening; a crease and tiny skin point remain. Current continuity baseline, not deployment-ready.
+- `CustomShellSystem/work/eve26/holiday-f6.json`: dress chest-key-only clearance trial, maximum additional move 0.865 mm. Four sub-clearance samples reduced to zero, with default mesh and other keys preserved. Sparse nearest-surface samples do not establish absence of all intersections; fresh visual review required.
+- `CustomShellSystem/work/eve26/f6-morphs`: fresh-load renders. Chest and combined front checks no longer show F5's tiny skin breakthrough; center opening remains closed. F6 supersedes F5 as the working fitting baseline, with center crease, sleeve/leg sample limitations and motion/physics validation still open.
