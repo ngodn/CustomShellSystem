@@ -1,5 +1,7 @@
 """Inspect shared garment deformation with synthetic bone bends and combined body morphs."""
 import json
+import argparse
+import sys
 import math
 from pathlib import Path
 
@@ -8,9 +10,13 @@ import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 
 WORK = Path(__file__).resolve().parents[2] / 'work/eve26'
-data = json.loads((WORK / 'holiday-bones.mesh.json').read_text())
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--mesh', type=Path, default=WORK/'holiday-bones.mesh.json')
+parser.add_argument('--output', type=Path, default=WORK/'skirt-bone-views')
+args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+data = json.loads(args.mesh.read_text())
 audit = json.loads((WORK / 'holiday.mesh.audit.json').read_text())
-out = WORK / 'skirt-bone-views'
+out = args.output
 out.mkdir(exist_ok=False)
 local, bind, pose = [], [], []
 for bone in data['bones']:
