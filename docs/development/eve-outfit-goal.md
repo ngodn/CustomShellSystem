@@ -1,6 +1,6 @@
 # Eve outfit goal and current status
 
-Updated 2026-09-26, takeover session 1. Read [the evidence index](eve-outfit-index.md) before resuming.
+Updated 2026-09-27, native cloth repeatability checkpoint. Read [the evidence index](eve-outfit-index.md) before resuming.
 
 ## Active objective
 
@@ -27,6 +27,12 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 - Package under `/Game/CSS/`, use short readable paths, retain source provenance, and commit by coherent change. Do not publish until the candidate has passed these checks.
 
 ## Latest checkpoint
+
+**Current working reference is F12 / SK_Waist / CA_Fit, with the full body-joint6 collider and 0.3 cm contact setting.** Repaired render attachments remove the long fur spikes, and local source fitting improves waist clearance. Holiday remains unfinished: hip breakthrough, arm contact, local deformation, physics cost and complete morph coverage are open. No game install or release replacement has occurred during these private trials.
+
+Two identical reported native runs differ by up to 3.559 cm in particle position, while collider skin references match exactly. Frame-64 fitting remains essentially unchanged in measured clipping and inspected side/rear views. Do not attribute the smaller collider's 1.977 cm trajectory difference solely to its geometry. Its fitting remains unaccepted and its sequence-derived bounds are not a production collider. See the September 27 appendices for evidence and next steps.
+
+## Superseded checkpoint: animation-follow and F11 source fitting
 
 **Current result: animation-follow preserves the fitted baseline, but broader sprint checks expose real rear-hem clipping.** Independent hem controls reduce one measured pose's deepest penetration from 4.30 cm to 0.86 cm; this is a static feasibility test, not dynamics or acceptance. The remaining upper-hip penetration in that pose is the swinging left forearm. Excluding arm triangles leaves no upper-hip intersections deeper than 1 mm against the torso/legs, for default and combined hip/waist. Do not enlarge the fitted hip to compensate for forearm contact. The original carrier/component baseline still passes, both AnimDynamics candidates remain rejected, and source/game/release assets are unchanged.
 
@@ -645,3 +651,11 @@ The body-local run (`panel-fit-local.json`) costs 3.80..4.09 ms, last-nine mean 
 Fixed-particle verification passes within 0.00004794 cm; worst edge ratio 3.048. Reviewed frame-64 side/rear renders in `panel-local-views`: body breakthrough remains and rear hem separation is worse than the full-collider fitted baseline. Broad-band mapped fabric samples deeper than 1 mm rise slightly: vertices 426 to 443, triangle centres 122 to 126, dense samples 2,108 to 2,204 (`panel-local-clearance.json`). Reject this subset as an accepted fitting replacement, while retaining the measured cost-reduction direction. Do not apply the expensive global 0.7 cm thickness as a shortcut.
 
 All diagnostic motion runs, verifiers and render processes terminated successfully. Four protected asset hashes match (`panel-local-protected.json`), with no game or release changes. Next resolve the repeatability/trajectory difference and improve simulation-surface contact coverage; a general collider must cover all supported poses and morphs. Keep F12/CA_Fit/full collider as the fitting reference until a faster candidate matches or improves its behavior.
+
+### September 27: unchanged full-collider repeatability
+
+The pending native repeat completed with exit 0 (`panel-fit-repeat.log/json`). `compare_panel_repeat.py` checks every reported non-timing setting and frame field, then compares all 69 frames with strict particle counts. Metadata, timestep, poses' recorded frame identifiers and settings match. Native body skin references match exactly. Particle trajectories first diverge at frame 8 (0.000477 cm), reaching 3.559 cm at frame 68. This is larger than the earlier full-versus-subset maximum of 1.977 cm. The underlying cause remains unproven; two runs do not establish a statistical variation envelope or collider equivalence. Raw inputs are hashed in `panel-repeat-comparison.json`.
+
+Fixed-coordinate verification passes at 0.00004794 cm and worst edge ratio 3.040 (`panel-repeat-verified.json`). Resolved native render mappings at frame 64 and inspected side/rear Blender views in `panel-repeat-views`. Hip breakthrough persists, and the repeated full-collider hem remains visibly more coherent than the earlier subset sample. Broad-band mapped-fabric samples deeper than 1 mm are 425 vertices / 123 triangle centres / 2,112 dense samples, compared with baseline 426 / 122 / 2,108 and subset 443 / 126 / 2,204. These remain one-pose diagnostic samples, not game or complete intersection validation.
+
+Keep the full-collider reference and the subset cost evidence, but remove trajectory maximum alone as a rejection reason. Both fail the required fitting standard independently. Next trace the persistent hip samples by source vertex, skin blend and collision coverage, separating fixed/near-fixed transition fitting from dynamic contact. Then make a bounded garment-only correction and compare identical poses/morphs before another native trial. Do not spend more cycles trying to force exact particle agreement as a substitute for fitting, or increase the rejected global contact thickness. All repeat, verification, mapping, audit and render handles terminated normally; no production asset was written.

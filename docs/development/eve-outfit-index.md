@@ -1,9 +1,11 @@
 # Eve outfit evidence index
 
-Updated 2026-09-26. Goal resumed with the new outfit objective. Start here after a context reset.
+Updated 2026-09-27. Start here after a context reset; the goal log's current checkpoint supersedes historical approaches below.
 
 ## Findings to preserve
 
+- Current private reference: F12 / SK_Waist / CA_Fit, full body-joint6, contact 0.3 cm. Repaired render attachments pass rest reconstruction; hip/arm fitting and physics cost remain unresolved. No production deployment.
+- Identical reported full-collider runs differ by up to 3.559 cm, yet frame-64 clipping remains nearly unchanged. Do not attribute a smaller candidate's 1.977 cm trajectory difference to its geometry alone or demand exact particle reproducibility as fitting acceptance.
 - Skirt motion must retain the fitted garment's original leg-follow deformation. Same-pose upstream renders expose clipping from the old four-chain weights before physics. `CR_HolidayFollow` and its paired export preserve original influence values through eleven existing carrier bones; direct rig execution passes 291 recorded poses. This is the current base for adding dynamics, not finished cloth.
 - Five palette entries do not prove five working garment palettes. All ten Gemini additions currently redirect garment palette colors to hair.
 - Preserve the accepted original body proportions, V44 hand repair, camera translation repair and corrected S1 movement while extending outfits.
@@ -27,6 +29,8 @@ Paths in this table are relative to the workspace root unless linked.
 
 | Artifact | Finding or purpose |
 | --- | --- |
+| `CustomShellSystem/tools/eve-fit/compare_panel_repeat.py`, `work/eve26/panel-repeat-comparison.json` | Strict reported-setting comparison and hashed 69-frame repeatability evidence; cause of variation unproven |
+| `CustomShellSystem/work/eve26/panel-repeat-clearance.json`, `panel-repeat-views/` | Repeated full-collider frame 64 still clips, with nearly unchanged sample counts; side/rear renders inspected |
 | [Current goal/status](eve-outfit-goal.md) | Scope, acceptance criteria, takeover findings and next steps |
 | `CustomShellSystem/work/eve26/follow-component.json`, `follow-skinning-verified.json`, `follow-component-views` | Original vs copied secondary graph comparison over 291 actual compressed frames; exact non-skirt local poses, carrier error below 0.000576 cm, two inspected jog/morph side views |
 | `CustomShellSystem/tools/eve-fit/native/holiday-follow.patch` | Exact private mesh/graph probe extension; source backups remain in work/eve26 |
