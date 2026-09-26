@@ -18,6 +18,7 @@ p.add_argument('--mapping', type=Path, required=True)
 p.add_argument('--output', type=Path, required=True)
 p.add_argument('--zmax', type=float, default=140.)
 p.add_argument('--source-mesh', type=Path, help='Exact source export for native vertex tracing')
+p.add_argument('--support-detail', action='store_true', help='Trace cloth supports and movement limits for clipped dynamic vertices')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert not a.output.exists()
 w = Path(__file__).resolve().parents[2]/'work/eve26'
@@ -112,6 +113,8 @@ for i, point in enumerate(mesh['points']):
 lookup.balance()
 latest = mesh if a.source_mesh else json.loads((w/'holiday-hip-clean.mesh.json').read_text())
 records = np.asarray(section['mapping']).reshape((len(section['positions']), -1, 9))
+support_ids = set()
+simulated = np.asarray(native['positions_cm'])
 clipped = []
 for i, (rest, point) in enumerate(zip(section['positions'], actual['positions_cm'], strict=True)):
     if not 90 <= rest[2] <= a.zmax:
@@ -129,7 +132,7 @@ for i, (rest, point) in enumerate(zip(section['positions'], actual['positions_cm
     for v in body['indices'][face]:
         for bone, weight in body['weights'][v]:
             body_weights[bone] = body_weights.get(bone, 0.) + weight/3
-    clipped.append({'render_vertex': i, 'rest_cm': rest, 'signed_cm': signed,
+    record = {'render_vertex': i, 'rest_cm': rest, 'signed_cm': signed,
         'cloth_blend': blend,
         'skin_only_signed_cm': (Vector(skin_positions[i])-skin_near).dot(skin_normal),
         'collider_signed_cm': (Vector(point)-collider_near).dot(collider_normal),
@@ -138,8 +141,41 @@ for i, (rest, point) in enumerate(zip(section['positions'], actual['positions_cm
         'source_vertex': source_vertex, 'source_match_cm': source_error,
         'latest_source_offset_cm': float(np.linalg.norm(np.asarray(latest['points'][source_vertex])-mesh['points'][source_vertex])),
         'garment_weights': section['weights'][i],
-        'nearest_body_face_weights': sorted(body_weights.items(), key=lambda x: -x[1])})
+        'nearest_body_face_weights': sorted(body_weights.items(), key=lambda x: -x[1])}
+    if a.support_detail and blend > 0:
+        active = [row for row in records[i] if row[3] < 65535 and row[8] > 0]
+        total = sum(row[8] for row in active)
+        assert total > 0
+        zero_offset = np.zeros(3)
+        influences = []
+        for row in active:
+            ids = row[:3].astype(int)
+            bary = np.asarray([row[4], row[5], 1-row[4]-row[5]])
+            zero_offset += (bary[:, None]*simulated[ids]).sum(axis=0)*row[8]/total
+            support_ids.update(int(v) for v in ids)
+            influences.append({'vertices': ids.tolist(), 'barycentric': bary.tolist(),
+                               'normal_offset_cm': float(row[7]), 'weight': float(row[8]/total)})
+        zero_offset = zero_offset*blend + skin_positions[i]*(1-blend)
+        near_zero, normal_zero, _, _ = body_tree.find_nearest(Vector(zero_offset))
+        record['without_normal_offset_signed_cm'] = (Vector(zero_offset)-near_zero).dot(normal_zero)
+        record['supports'] = influences
+    clipped.append(record)
+support_rows = []
+if a.support_detail:
+    rest_proxy = np.asarray(proxy['positions'])
+    skin_proxy = skin(rest_proxy, proxy['weights'])
+    alpha = np.clip((proxy['anchor_top_cm']-20-rest_proxy[:, 2])/12, 0, 1)
+    limits = 18*alpha**2*(3-2*alpha)
+    for vertex in sorted(support_ids):
+        record = {'vertex': vertex, 'rest_cm': rest_proxy[vertex].tolist(),
+                  'max_distance_cm': float(limits[vertex]),
+                  'displacement_cm': float(np.linalg.norm(simulated[vertex]-skin_proxy[vertex]))}
+        for name, positions in (('simulated', simulated), ('skinned', skin_proxy)):
+            for surface, bvh in (('body', body_tree), ('collider', collider_tree)):
+                near, normal, _, _ = bvh.find_nearest(Vector(positions[vertex]))
+                record[name+'_'+surface+'_signed_cm'] = (Vector(positions[vertex])-near).dot(normal)
+        support_rows.append(record)
 a.output.write_text(json.dumps({'scope': 'One default-morph frame, vertices, triangle centroids and 16 subtriangle centres. Signed nearest-normal distances may be ambiguous at folds. Collider is native shape API reference, not solver internal readback. Not full-surface or game acceptance.', 'rest_z_range_cm': [90, a.zmax],
     'frame': frame, 'motion': str(a.motion), 'mapped': str(a.mapped),
     'source_mesh': str(source_mesh_path), 'source_mesh_sha256': hashlib.sha256(source_mesh_path.read_bytes()).hexdigest(), 'rows': rows,
-    'clipped_mapped_vertices': clipped}, indent=2)+'\n')
+    'clipped_mapped_vertices': clipped, 'dynamic_support_particles': support_rows}, indent=2)+'\n')

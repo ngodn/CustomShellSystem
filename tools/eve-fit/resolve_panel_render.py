@@ -101,4 +101,7 @@ out = {'scope':'UE 5.6 GpuSkinVertexFactory.ush position mapping replay from act
     'frame':a.frame,'source_motion':motion['source_motion'],'asset':motion['asset'],
     'mapping_sha256':hashlib.sha256(a.mapping.read_bytes()).hexdigest(),
     'simulation_sha256':hashlib.sha256(a.motion.read_bytes()).hexdigest(),'sections':sections}
+if 'diagnostic_mapping' in mapping:
+    out['scope'] = 'Hypothetical modified mapping replay on unchanged native particles. Not a saved native mapping or deployed asset.'
+    out['diagnostic_mapping'] = mapping['diagnostic_mapping']
 a.output.write_text(json.dumps(out)+'\n')

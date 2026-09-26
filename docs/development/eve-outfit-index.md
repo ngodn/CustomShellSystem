@@ -16,6 +16,7 @@ Updated 2026-09-27. Start here after a context reset; the goal log's current che
 
 ## Failed approaches and traps
 
+- Single locally scored attachment is not adopted: lower clipping counts at frames 60/64/68, but a larger visible hip patch at frame 68. `panel-localmap-*`, `map-{base,local}-68-views` are hypothetical replay only, not native assets. Do not equate sample-count improvement with visual acceptance.
 - CA_Hip centroid refinement is rejected: unchanged rest surface but worse mapped clipping, edge ratio 7.919 and roughly double editor solver cost. See `panel-hip-motion.json`, `panel-hip-clearance.json`, and inspected `panel-hip-views`; do not repeat density increases alone as an untested fix.
 - Holiday AnimDynamics trials are rejected. Equal-axis inertia removes the numerical explosion, but moving simulated centers onto the fitted dress still produces 18.30 cm jog displacement and visible hip clipping. Do not repeat spring/inertia/center tuning. Next adapt the existing constrained ControlRig approach, with cloth-specific geometry and morph checks.
 - Do not redirect unsupported garment colors to hair. It hides missing customization and produces the reported behavior.
@@ -30,6 +31,8 @@ Paths in this table are relative to the workspace root unless linked.
 
 | Artifact | Finding or purpose |
 | --- | --- |
+| `CustomShellSystem/work/eve26/panel-support-trace.json` | 55 supports traced at frame 64; dynamic support vertices clear collider within 1 mm, one fixed support penetrates; radius checks do not justify global loosening |
+| `CustomShellSystem/tools/eve-fit/reweight_panel_mapping.py`, `work/eve26/panel-localmap-preserved.json`, `map-local-68-clearance.json` | Isolated attachment counterfactual improves counts but fails visual comparison; no native implementation or installation |
 | `CustomShellSystem/work/eve26/panel-repeat-trace.json`, `panel-hip-trace-summary.json` | All 19 distinct clipped dynamic lower vertices have positive skin-only clearance; preserve fitted shape and address cloth contact separately from 56 fixed upper arm-contact vertices |
 | `CustomShellSystem/tools/eve-fit/refine_panel_hips.py`, `work/eve26/panel-hip-prepared.json`, `panel-hip-mapcheck.json` | Private centroid refinement preserves rest surface, original weights and anchors; fresh native mapping passes, motion acceptance required |
 | `CustomShellSystem/tools/eve-fit/compare_panel_repeat.py`, `work/eve26/panel-repeat-comparison.json` | Strict reported-setting comparison and hashed 69-frame repeatability evidence; cause of variation unproven |
