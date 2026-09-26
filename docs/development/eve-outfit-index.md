@@ -55,3 +55,9 @@ References already reviewed: local cloth-physics-guide, MustardUI README and Com
 - `CustomShellSystem/work/eve26/holiday-f2.json` and `f2-bind`: evaluated-source candidate, unchanged body/rig, full garment weights, visually improved chest/sleeves. Current best offline baseline; a small sleeve clip remains.
 - `CustomShellSystem/work/eve26/holiday-f3.log`: bounded clearance rejected dress displacement before saving. Inspect failing regions, do not blindly raise the threshold.
 - `CustomShellSystem/work/eve26/evaluation.json`: initial source viewport modifier probe; F2 subsequently uses render-time enablement, so this probe alone does not describe F2's modifier state.
+
+- `CustomShellSystem/work/eve26/clearance-regions.json`: material/body-region breakdown of negative signed samples; distinguish fur and inner walls from fabric.
+- F3b failed fresh Basis validation. Do not use it or the nonexistent F4 from that failed build. F3c also stopped before saving. Current clearance writer snapshots keys, writes Basis directly and preserves relative deltas.
+
+- `CustomShellSystem/work/eve26/holiday-f3d.json`: corrected clearance save. Fresh reload in the successful F4 build passed exact Basis/mesh equality; supersedes failed F3b/F3c candidates.
+- `CustomShellSystem/work/eve26/holiday-f4.json`, `f4-morphs`: six transferred controls, unchanged body, 18 generated views. Default back improves; maximum chest reveals a central upper-band split. Fix seam/displacement continuity next; no morph acceptance yet.

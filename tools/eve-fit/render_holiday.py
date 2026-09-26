@@ -8,6 +8,7 @@ from mathutils import Vector
 p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('--output',type=Path,required=True)
 p.add_argument('--bind',action='store_true',help='Match exporter geometry: saved fit keys, no modifiers')
+p.add_argument('--morph-review',action='store_true',help='Also render the six controls at 1 and their combined maximum')
 a=p.parse_args(sys.argv[sys.argv.index('--')+1:])
 a.output.mkdir(parents=True,exist_ok=False)
 visible={'Eve Body','Eve Christmas - Dress','Eve Christmas - Arms','Eve Christmas - Legs','Eve Christmas - Panties','Eve Extras - Heels'}
@@ -48,9 +49,22 @@ s.collection.objects.link(cam)
 cam.data.type='ORTHO'
 cam.data.ortho_scale=1.35
 s.camera=cam
-for name,position in [('front',(0,-3,1.18)),('back',(0,3,1.18)),('side',(3,0,1.18)),('quarter',(2,-3,1.18))]:
- cam.location=Vector(position)
- cam.rotation_euler=(Vector((0,0,1.18))-cam.location).to_track_quat('-Z','Y').to_euler()
- s.render.filepath=str(a.output/(name+'.png'))
- bpy.ops.render.render(write_still=True)
+shapes=('FBMBodyTone','PBMBreastsSize','PBMGlutesSize','PBMHipSize','PBMThighsTone','PBMWaistWidth')
+cases=['default']+list(shapes)+['combined'] if a.morph_review else ['default']
+views=[('front',(0,-3,1.18)),('back',(0,3,1.18)),('side',(3,0,1.18)),('quarter',(2,-3,1.18))]
+for case in cases:
+ if a.morph_review:
+  for obj in bpy.data.objects:
+   if obj.name not in visible or not obj.data.shape_keys:continue
+   for name in shapes:
+    key=obj.data.shape_keys.key_blocks.get(name)
+    if key:
+     key.mute=False
+     key.value=1 if case in (name,'combined') else 0
+ for name,position in views if case=='default' else views[::2]:
+  cam.location=Vector(position)
+  cam.rotation_euler=(Vector((0,0,1.18))-cam.location).to_track_quat('-Z','Y').to_euler()
+  label=name if case=='default' else case+'-'+name
+  s.render.filepath=str(a.output/(label+'.png'))
+  bpy.ops.render.render(write_still=True)
 print('HOLIDAY_VIEWS_DONE')
