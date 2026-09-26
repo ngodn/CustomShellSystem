@@ -6,6 +6,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Latest Prototype source: `planet-suit-f7.blend`. Bounded pose-derived offsets change 532 garment vertices by <=0.400 cm; fresh reload error <0.00001828 cm, weights and relative morphs preserved. Frame24 combined-max knee breakthrough is removed in inspected views. `planet-fit7/receipt.json` contains pre-correction hits and skipped larger proposals, not a post-correction all-clear verdict.
+
 - Latest Prototype garment source: `planet-suit-f6.blend`, with repaired six morphs and body-corresponding suit weights above 22 cm. Fresh-load weight error <2.99e-8; geometry/keys unchanged from F5. Sampled upstream sprint frame16 collar gap is closed. Combined-max frames8/24 show remaining small edge/knee breakthrough. No full-motion or game acceptance.
 
 - Latest Prototype garment source is `planet-suit-f5.blend`, with six repaired morphs and a fresh-load receipt. Combined-max inherited morphs produced sheets/spikes; repaired front/back/side views remove that failure. Body/base preserved. The diagnostic tail root is 23.59 cm from the attachment; Gemini already rejected blindly weighting this chain. Read the latest checkpoint before tail authoring.
