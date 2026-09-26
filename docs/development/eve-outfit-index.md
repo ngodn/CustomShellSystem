@@ -109,3 +109,6 @@ Persistent contact projection rejected: `tools/eve-fit/probe_hem_sequence.py`, `
 
 
 Joint shape/contact carrier test: `hemshape.json`, `hemshape-pose.json`, and inspected `hemshape8-views/default-side.png`. Smoother than contact-only but still clips and stretches, not accepted. Refreshed `skirt-f11.json` and `skirt-f11.audit.json` preserve current F11 positions/weights and include source vertex IDs for a direct fabric-surface reference. Existing panel assets and original source blends remain unchanged.
+
+
+Direct fabric reference: `probe_fabric_surface.py`, `fabric1.json` (initial velocity artifact), `fabric2.json` (settling fixed), `fabric3.json` (surface probes added), inspected `fabric1-views/default-side.png`. Vertex clearance hides triangle/edge penetration; frame 8 has 168 failing surface samples despite passing vertex clearance. Renderer `--surface-motion` enforces matching motion/frame/morph. Cloth remains unaccepted and trim attachments are pending.

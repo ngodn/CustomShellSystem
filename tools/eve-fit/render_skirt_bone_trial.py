@@ -18,10 +18,17 @@ parser.add_argument('--frame', type=int, default=0)
 parser.add_argument('--upstream', action='store_true', help='Render the recorded pose before secondary dynamics')
 parser.add_argument('--views', nargs='+', choices=('front','side','rear'), default=['front','side'])
 parser.add_argument('--lower-dress', action='store_true', help='Center the camera on the posed lower dress')
+parser.add_argument('--surface-motion', type=Path, help='Apply an offline fabric surface only to its matching pose and morph case')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 data = json.loads(args.mesh.read_text())
 motion_data = json.loads(args.motion.read_text()) if args.motion else None
 record = motion_data['frames'][args.frame] if motion_data else None
+surface_motion = json.loads(args.surface_motion.read_text()) if args.surface_motion else None
+if surface_motion:
+    assert args.motion and not args.upstream
+    assert Path(surface_motion['source_motion']).resolve() == args.motion.resolve()
+    surface_frame = surface_motion['frames'][args.frame]
+    assert surface_frame['frame'] == args.frame
 assert not args.upstream or record, '--upstream requires --motion'
 snapshot = (record['upstream'] if args.upstream else record['pose']['Snapshot']) if record else None
 measured = dict(zip(snapshot['BoneNames'], snapshot['LocalTransforms'], strict=True)) if snapshot else None
@@ -99,6 +106,8 @@ cam.data.type = 'ORTHO'
 cam.data.ortho_scale = .70
 rows = []
 for label, selections in [('default', {}), ('hip-waist', {'PBMHipSize': 1., 'PBMWaistWidth': 1.})]:
+    if surface_motion and label != surface_motion['morph_case']:
+        continue
     selections = {**(record.get('morphs', {}) if record else {}), **selections}
     rest = base.copy()
     for name, amount in selections.items():
@@ -110,6 +119,8 @@ for label, selections in [('default', {}), ('hip-waist', {'PBMHipSize': 1., 'PBM
         point = np.append(rest[i], 1.)
         deformed[i] = sum((weight*(transforms[bone] @ point)[:3] for bone, weight in row), np.zeros(3))
     assert np.isfinite(deformed).all()
+    if surface_motion:
+        deformed[surface_motion['source_vertices']] = np.asarray(surface_frame['positions_cm'])
     for obj, points in objects:
         xyz = deformed[points].copy()/100
         xyz[:, 1] *= -1
@@ -133,5 +144,7 @@ scope = ('Recorded pose applied to exported weights; source_scope identifies mea
 (out/'report.json').write_text(json.dumps({'rows': rows, 'motion': str(args.motion) if record else None,
     'frame': args.frame if record else None, 'upstream': args.upstream,
     'views':args.views,'lower_dress':args.lower_dress,
+    'surface_motion': str(args.surface_motion) if surface_motion else None,
+    'surface_scope': surface_motion['scope'] if surface_motion else None,
     'source_scope': motion_data.get('scope', 'Measured editor evaluation') if motion_data else None,
     'scope': scope}, indent=2)+'\n')
