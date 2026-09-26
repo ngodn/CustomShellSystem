@@ -6,6 +6,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Current follow-up rejects nearest-body garment transfer and 6 cm backstop movement allowance. `garment-transfer/comparison.json` and `panel-room-*` document the regressions. Before another parameter trial, inspect animated backstop normal direction and failing render support attachments. The 3 cm CA_Stop comparison is still unaccepted.
+
 - Latest: `panel-stop-*` completes the interrupted garment-follow/backstop trial. Radius 30, offset 0, movement limit 3 cm improve the visible envelope but leave hem clipping and side-trim distortion. Not accepted. Animation-only frame 68 already has -4.05 cm minimum signed fabric distance; investigate garment deformation before more physics tuning. Read the current goal checkpoint before older collider proposals.
 - `rigid-regions.json` measures 582 pose/morph cases: simple dominant-bone following reaches 11.17/11.73 cm error. This is correspondence evidence, not a universal rejection of regional collision.
 
@@ -30,6 +32,10 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 - Latest user priority is outfit fitting, starting with Holiday Reveler. Palette work is parked. `Variants_Fixed` has fully unweighted sleeve/leg/underwear/Christmas heel objects and mostly unweighted dress vertices; do not export it as a repaired candidate without resolving this.
 
 ## Failed approaches and traps
+
+- CA_Room increases CA_Stop movement allowance 3→6 cm with unchanged source proxy and backstop. Frame-68 deepest mapped intersection worsens -4.61→-6.34 cm, recorded max edge ratio 10.49→16.24, and inspected side trim spikes worsen. Reject increased allowance alone; `panel-room-*`.
+
+- Lower-garment nearest-body weight transfer is rejected: `garment-transfer/comparison.json`, 62 sampled cases, worst -5.68 cm versus -4.31 cm baseline. Rest-nearest weights can remain pelvis-driven while a moving thigh intersects the fabric. Geometry/body/morphs were preserved; rear/side renders inspected. Do not repeat this as an assumed hem fix.
 
 - Native whole-body Local64 recipe, with and without CCD: rejected by actual CA_Fit cloth renders. CCD prevents frame-64 collapse, but frame-68 thigh breakthrough remains and dense failing samples rise to 25,479 versus the earlier repeat baseline 17,245. See `lrecipe-cloth*`, `lrecipe-ccd*`, `lrecipe-querytrace.json`. Accurate saved weights and improved direct lattice mapping do not prove correct inverse collision queries. Do not repeat resolution/CCD alone. Current-geometry intersection uses old/current rigid transforms; investigate regional motion representation next.
 

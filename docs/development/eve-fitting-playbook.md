@@ -82,3 +82,11 @@ A garment-follow proxy plus a 3 cm movement limit and native backstop improves t
 Read actual saved movement maps for verification. A vertex below 0.1 cm MaxDistance is not necessarily fixed; only exactly zero counts as the kinematic reference in this check. Movement-map changes can also alter render mapping, so reload and verify attachments for each candidate. Keep geometry-only proxy updates separate from deliberate weight trials and hash the unchanged data.
 
 When interrupted, poll the existing process and inspect completed artifacts before rerunning. This session recovered all 69 frames and the process exit status without generating another Unreal trial.
+
+### Rest-space weight transfer can preserve the wrong driver
+
+The lower-garment transfer trial changes only 2,815 garment weight rows and preserves geometry, body, morphs and skeleton data. Smooth blending reaches full nearest-face body weights below 100 cm and retains original weights above 112 cm. It excludes arm-dominated source faces. Across 62 sampled default/combined-morph locomotion cases, the worst signed vertex distance regresses from -4.31 to -5.68 cm; 36 cases have deeper minima and 23 have more failing vertices. Rear/side renders still show a folded hem. This candidate is rejected.
+
+At the worst sample the nearest rest body face still produces about 96% pelvis weight, while the intersecting animated surface is thigh-driven. Nearest-rest-surface transfer therefore does not establish correct skirt following. Do not repeat it as a generic fix for this hem. Keep the no-arm contact isolation, but include arm contact again before final acceptance. Reports and renders: `work/eve26/garment-transfer/`; script: `tools/eve-fit/prepare_garment_transfer.py`.
+
+Blender documents nearest-face interpolation as a transfer mapping, not a fitting guarantee: [Data Transfer Modifier](https://docs.blender.org/manual/en/latest/modeling/modifiers/modify/data_transfer.html).
