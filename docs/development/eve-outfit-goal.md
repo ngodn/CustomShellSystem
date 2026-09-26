@@ -32,6 +32,8 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**Tail rest mapping readback:** `planet-tail-map-check.json` inspects 4,916 render vertices. Maximum rest reconstruction error is 0.06015 cm, p99 0.001376 cm, none above 1 mm. However, 793 dynamic vertices lack a bounded accurate influence, and 25 lack an influence accurate within 0.01 cm. This is not dynamic acceptance: evaluate the decorative tip under bending before adopting the mapping. Fresh inspection process may still be shutting down.
+
 **Prototype native tail trial created, September 27:** authoring tool now accepts an explicit single garment slot, per-particle distance map and existing CSS physics reference. Existing Holiday defaults remain available; no Holiday experiments resumed. Build `planet-panel-build-console.log` succeeded. `prepare_planet_tail_cloth.py` retains 18 authored proxy points/four pins, uses nearest existing tail skin weights and a conservative 18 cm trial cap. Native `/Game/CSS/EveTest/CA_PTail` creation exited 0 with 18 particles, four pinned and one material. Protected production hashes remain unchanged.
 
 Fresh inspection launched in `planet-tail-inspect.log`, producing `planet-tail-native.json`; poll its live process before more UE work. Next run `check_panel_mapping.py -- --mapping work/eve26/planet-tail-native.json --proxy work/eve26/planet-tail-cloth.json --slot PlanetTail_17 --output work/eve26/planet-tail-map-check.json`. Rest readback, dynamic render attachment, collision, CSS integration and game motion remain unaccepted. Do not treat this separate Chaos asset as an installed tail simulation.
