@@ -290,6 +290,28 @@ int32 UCSSEveClothCommandlet::Main(const FString& Params)
             }
             ++Components;
         }
+        if (Proxies.IsValid())
+        {
+            const auto& Slots=Proxies->GetObjectField(TEXT("slots"));
+            if (Slots->HasField(SlotName))
+            {
+                const auto& Proxy=Slots->GetObjectField(SlotName);
+                if (Proxy->HasField(TEXT("max_distances")))
+                {
+                    const auto& Values=Proxy->GetArrayField(TEXT("max_distances"));
+                    if (Values.Num()!=Data.Vertices.Num()) return Fail(TEXT("Explicit anchor map size mismatch"));
+                    Pinned=0;
+                    for (int32 I=0; I<Values.Num(); ++I)
+                    {
+                        double Value;
+                        if (!Values[I]->TryGetNumber(Value) || !FMath::IsFinite(Value) || Value<0 || Value>35)
+                            return Fail(TEXT("Invalid explicit anchor distance"));
+                        Distances[I]=float(Value);
+                        Pinned+=Value==0;
+                    }
+                }
+            }
+        }
         if (!Pinned || Pinned == Data.Vertices.Num())
             return Fail(TEXT("Cloth must contain both pinned and simulated vertices"));
         LOD.PointWeightMaps.Reset();
@@ -311,6 +333,11 @@ int32 UCSSEveClothCommandlet::Main(const FString& Params)
             Config->SelfCollisionThickness = .35f;
             Config->AnimDriveStiffness = { Drive, Drive };
             Config->AnimDriveDamping = { DriveDamping, DriveDamping };
+        }
+        if (auto* SharedConfig=Cloth->GetClothConfig<UChaosClothSharedSimConfig>())
+        {
+            SharedConfig->IterationCount=int32(Setting(SlotName,TEXT("Iterations"),SharedConfig->IterationCount,1,16));
+            SharedConfig->MaxIterationCount=FMath::Max(SharedConfig->MaxIterationCount,SharedConfig->IterationCount);
         }
         Cloth->ApplyParameterMasks(true, true);
         {

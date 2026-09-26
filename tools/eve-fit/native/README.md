@@ -174,3 +174,9 @@ These candidates are unaccepted. See the goal checkpoint and `panel-stop-compari
 `CSSEvePanel` accepts `-Slot=PlanetTail_17` to use only that render material and the identically named proxy key. Optional `max_distances` supplies one finite value per proxy particle, bounded by `-MaxMove`; absent this map, the historical Holiday anchor calculation remains. `-Physics` selects an existing `/Game/CSS/` physics asset. These options are for private candidates, not a production deployment.
 
 `prepare_planet_tail_cloth.py` uses the aligned original 18-point proxy and four authored pins with nearest existing tail skin weights. Its 18 cm motion cap is a trial setting, not copied Blender solver behavior. The module compiled in `planet-panel-build-console.log`; private `/Game/CSS/EveTest/CA_PTail` was built in `planet-tail-create.log`. Fresh geometry inspection and rest mapping checks must precede motion claims. `check_panel_mapping.py --slot PlanetTail_17` selects this proxy for the existing readback verifier.
+
+## Embedded Prototype tail candidate
+
+The existing `CSSEveCloth` skeletal-mesh path accepts the same named `slots` proxy. It now honors an optional `max_distances` array exactly (finite0..35 cm, one value per particle) and an optional per-slot `Iterations` setting1..16. Defaults remain unchanged without those inputs. The original four tail pins must survive this path; do not substitute the component-top heuristic.
+
+`prepare_planet_embedded.py` duplicates the fitted mesh into `SK_PTailRun` and restores existing production gameplay physics/secondary references without saving production packages. Bind only `PlanetTail_17`, using `planet-tail-cloth.json`, `planet-tail-config.json`, and private `PA_PTailRear`. This avoids requiring a new standalone ChaosClothComponent item in CSS. It still needs fresh saved-asset and actual skeletal-cloth motion validation; panel-component tests are not equivalent runtime evidence.
