@@ -5,7 +5,8 @@ import json
 import sys
 from pathlib import Path
 import bpy
-from mathutils import Vector
+import numpy as np
+from mathutils import Vector, Matrix, Quaternion
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--mesh', type=Path, required=True)
@@ -14,6 +15,8 @@ p.add_argument('--output', type=Path, required=True)
 p.add_argument('--hide-material', action='append', default=[])
 p.add_argument('--body-mask', type=Path)
 p.add_argument('--morph', action='append', default=[], help='Name=weight, applied to exported deltas')
+p.add_argument('--pose-motion', type=Path, help='Recorded upstream animation snapshots, without cloth simulation')
+p.add_argument('--pose-frame', type=int, default=0)
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
 a.output.mkdir(exist_ok=False)
 raw = a.mesh.read_bytes()
@@ -28,6 +31,29 @@ for setting in a.morph:
     morphs[name] = weight
     for index, x, y, z in targets[name]:
         source['points'][index] = [v+weight*d for v, d in zip(source['points'][index], (x, y, z))]
+if a.pose_motion:
+    motion = json.loads(a.pose_motion.read_text())
+    snapshot = motion['frames'][a.pose_frame]['upstream']
+    assert snapshot['bIsValid']
+    recorded = dict(zip(snapshot['BoneNames'], snapshot['LocalTransforms'], strict=True))
+    bind, pose = [], []
+    for bone in source['bones']:
+        q = bone['rotation']
+        local = Matrix.LocRotScale(Vector(bone['translation']), Quaternion((q[3], *q[:3])), Vector(bone['scale']))
+        parent = bone['parent']
+        bind.append(bind[parent] @ local if parent >= 0 else local)
+        t = recorded[bone['name']]
+        local = Matrix.LocRotScale(Vector([t['Translation'][k] for k in 'XYZ']),
+            Quaternion([t['Rotation'][k] for k in 'WXYZ']), Vector([t['Scale3D'][k] for k in 'XYZ']))
+        pose.append(pose[parent] @ local if parent >= 0 else local)
+    matrices = np.asarray([np.asarray(p @ b.inverted()) for p, b in zip(pose, bind)])
+    points = np.asarray(source['points'])
+    influences = np.asarray(source['influences'])
+    vertices, bones, weights = influences[:, 0].astype(int), influences[:, 1].astype(int), influences[:, 2]
+    transformed = np.zeros_like(points)
+    np.add.at(transformed, vertices, (np.einsum('nij,nj->ni', matrices[bones, :3, :3], points[vertices])+matrices[bones, :3, 3])*weights[:, None])
+    assert np.isfinite(transformed).all()
+    source['points'] = transformed.tolist()
 assert set(a.hide_material) <= set(source['materials'])
 hidden_slots = {source['materials'].index(name) for name in a.hide_material}
 hidden_faces = set(json.loads(a.body_mask.read_text())['hidden_body_faces']) if a.body_mask else set()
@@ -83,7 +109,9 @@ for label, direction in [('front', (0, -1, 0)), ('back', (0, 1, 0)), ('side', (1
     s.render.filepath = str(a.output/(label+'.png'))
     bpy.ops.render.render(write_still=True)
 (a.output/'review.json').write_text(json.dumps(dict(
-    scope='Existing exported geometry in bind pose, neutral materials and hair hidden for garment inspection. No source edit, animation, morph or game acceptance.',
+    scope='Offline garment review, neutral materials and hair hidden. Optional morphs and recorded upstream pose are explicit below. No physics simulation or game acceptance.',
     source=str(a.mesh), source_sha256=hashlib.sha256(raw).hexdigest(),
     hidden_materials=a.hide_material, body_mask=str(a.body_mask) if a.body_mask else None,
-    hidden_face_count=len(hidden_faces), morphs=morphs, parts=parts), indent=2)+'\n')
+    hidden_face_count=len(hidden_faces), morphs=morphs,
+    pose_motion=str(a.pose_motion) if a.pose_motion else None,
+    pose_frame=a.pose_frame if a.pose_motion else None, parts=parts), indent=2)+'\n')
