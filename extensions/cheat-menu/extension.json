@@ -4,7 +4,7 @@
   "id": "eins0fx.cheat-menu",
   "title": "CSSX Cheat Menu",
   "author": "_eins0fx",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "Player controls, gameplay shells, resources and progression tools.",
   "kind": "native",
   "entry": "cheat_menu.dll",

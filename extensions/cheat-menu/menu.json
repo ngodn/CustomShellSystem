@@ -9,7 +9,7 @@
           "id": "apply_settings",
           "type": "button",
           "label": "Apply settings",
-          "description": "Apply pending settings and save preferences and shortcuts. Enabled cheats run only for this session. This does not grant items, unlock progression or switch shells immediately.",
+          "description": "Apply pending settings and save preferences. Enabled cheats run only for this session. This does not grant items, unlock progression or switch shells immediately.",
           "disabled_label": "Nothing to apply"
         },
         {
@@ -199,6 +199,24 @@
           "max": 5,
           "step": 0.25,
           "description": "Edit here, then use Settings > Apply settings.",
+          "unit": "x"
+        },
+        {
+          "id": "game_speed",
+          "type": "toggle",
+          "label": "Game speed",
+          "value": false,
+          "description": "Scales the whole game clock: player, enemies, cutscenes and elevators all at once, so it stays fair. This is separate from Movement multiplier, which only changes your own character. Edit here, then use Settings > Apply settings."
+        },
+        {
+          "id": "game_speed_scale",
+          "type": "slider",
+          "label": "Game speed",
+          "value": 1,
+          "min": 0,
+          "max": 5,
+          "step": 0.05,
+          "description": "1.0 is normal. Below 1 is slow motion, above 1 is faster, and 0 freezes the world clock. Edit here, then use Settings > Apply settings.",
           "unit": "x"
         },
         {
@@ -689,45 +707,6 @@
         }
       ],
       "description": "Ownership and levels are saved by the game."
-    },
-    {
-      "id": "shortcuts",
-      "title": "Shortcuts",
-      "controls": [
-        {
-          "id": "binding_action",
-          "type": "choice",
-          "label": "Action",
-          "value": "god",
-          "options": [
-            {
-              "id": "god",
-              "label": "God mode"
-            }
-          ],
-          "description": "Choose a cheat or gameplay shell. Use the option search to find an action. Inventory and CSSX still open through the game's normal Inventory controls."
-        },
-        {
-          "id": "binding_key",
-          "type": "choice",
-          "label": "Keyboard or controller shortcut",
-          "value": "none",
-          "options": [
-            {
-              "id": "none",
-              "label": "None"
-            }
-          ],
-          "description": "Choose a key or R3 plus D-pad combination, then Apply settings. None removes this binding. Shortcuts supplement game controls; choose combinations you do not already use."
-        },
-        {
-          "id": "clear_bindings",
-          "type": "button",
-          "label": "Clear all shortcuts",
-          "description": "Stage removal of every shortcut. Apply settings saves the removal; Discard changes keeps your current shortcuts."
-        }
-      ],
-      "description": "Bind a keyboard or controller chord to an action; saved with Apply settings."
     },
     {
       "id": "recovery",

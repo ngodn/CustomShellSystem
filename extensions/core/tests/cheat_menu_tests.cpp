@@ -16,6 +16,7 @@ struct Host {
     std::string power_fixture;
     bool focused=true,paused=false,input_blocked=false,power_missing=false,power_foreign=false,fail_clone_remove=false,fail_second_clone=false,delayed_clones=false,stance_active=false;
     double health=80.;bool dead=false;
+    double dilation=1.,min_dilation=.0001,max_dilation=20.;bool no_dilation=false,fail_definition=false;
     int spawn_count=1,stance_handle=-1;
     Json primary_clone,secondary_clone;
     Json pressed_keys=Json::object();unsigned input_polls=0;
@@ -160,7 +161,10 @@ struct Host {
         }
         if(op=="call") {
             calls.push_back(j);const auto function=j.at("function");
+            if(function=="SetGlobalTimeDilation") {if(no_dilation) throw std::runtime_error("Function not found");dilation=std::clamp(j.at("args").at("TimeDilation").get<double>(),min_dilation,max_dilation);return Json::object();}
+            if(function=="GetGlobalTimeDilation") {if(no_dilation) throw std::runtime_error("Function not found");return {{"ReturnValue",dilation}};}
             if(function=="GetShellItemDefinition") {
+                if(fail_definition) throw std::runtime_error("Item class unavailable");
                 auto name=j.at("args")[0].get<std::string>();if(name=="Lazlo") name="Necrophage";
                 return {{"ReturnValue",{{"$object",99},{"name","BlueprintGeneratedClass /Game/Test.ID_Shell_"+name+"_C"}}}};
             }
@@ -237,39 +241,70 @@ int main(int argc,char** argv) {
     if(argc!=2) return 2;
     const auto definition=cssx::read_json(cssx::utf8_path(argv[1]));
     {
-        Host h;cheat::Menu m(&h.api);m.tick(.25);m.tick(.25);check(h.input_polls==0,"Unbound shortcuts polled keys");
-        m.event({{"id","binding_key"},{"value","F5"}});h.pressed_keys["F5"]=true;m.tick(.25);
-        check(h.damageable && h.input_polls==0,"Shortcut draft fired");
-        m.event({{"id","apply_settings"}});m.tick(.25);check(h.damageable,"Held key fired immediately after applying");
-        h.pressed_keys["F5"]=false;m.tick(.025);h.pressed_keys["F5"]=true;m.tick(.025);
-        check(!h.damageable,"Short press between gameplay updates was missed");m.tick(.25);check(!h.damageable,"Held shortcut repeated");
-        h.open=true;h.pressed_keys["F5"]=false;m.tick(.025);h.pressed_keys["F5"]=true;m.tick(.025);h.open=false;m.tick(.025);
-        check(!h.damageable,"Menu key leaked into gameplay");
-        h.pressed_keys["F5"]=false;m.tick(.025);h.pressed_keys["F5"]=true;m.tick(.025);check(h.damageable,"Fresh key press did not toggle off");
-        check(h.state["bindings"]["god"]=="F5" && !h.state.contains("god"),"Shortcut preference or passive boot contract broken");
-        Host restart;restart.state=h.state;restart.pressed_keys["F5"]=true;cheat::Menu resumed(&restart.api);resumed.tick(.25);resumed.tick(.25);
-        check(restart.damageable,"Restored shortcut fired while held at startup");
-        restart.pressed_keys["F5"]=false;resumed.tick(.025);restart.focused=false;restart.pressed_keys["F5"]=true;resumed.tick(.025);restart.focused=true;resumed.tick(.025);
-        check(restart.damageable,"Focus regain fired held shortcut");
+        // Shortcuts were removed (per-tick input polling was the menu's largest per-frame
+        // cost). The menu must never poll input over the bridge, with or without cheats on,
+        // and an old saved binding or a shortcut event must not bring the feature back.
+        Host h;h.state={{"bindings",{{"god","F5"}}}};h.pressed_keys["F5"]=true;
+        cheat::Menu m(&h.api);for(int i=0;i<20;++i) m.tick(.25);
+        m.event({{"id","god"},{"value",true}});m.event({{"id","apply_settings"}});
+        for(int i=0;i<20;++i) m.tick(.025);
+        for(int i=0;i<20;++i) m.tick(.25);
+        check(h.input_polls==0,"Cheat Menu polled input");
+        check(!m.model()["values"].contains("bindings") && !h.state.contains("bindings"),"Shortcut state survived");
+        rejects([&]{m.event({{"id","binding_key"},{"value","F5"}});});
+        rejects([&]{m.event({{"id","clear_bindings"}});});
         cssx::validate_model(cssx::bind_menu(definition,m.model()));
     }
     {
-        Host h;cheat::Menu m(&h.api);m.tick(.25);
-        m.event({{"id","binding_key"},{"value","F5"}});m.event({{"id","binding_action"},{"value","heal"}});m.event({{"id","binding_key"},{"value","F5"}});
-        rejects([&]{m.event({{"id","apply_settings"}});});check(h.state.empty(),"Conflicting shortcuts were saved");
-        m.event({{"id","binding_key"},{"value","LeftCtrl+F5"}});rejects([&]{m.event({{"id","apply_settings"}});});
-        m.event({{"id","binding_key"},{"value","R3+D-pad Up"}});m.event({{"id","apply_settings"}});m.tick(.025);
-        h.pressed_keys["Gamepad_RightThumbstick"]=true;m.tick(.025);check(h.count("S_Heal")==0,"Partial controller chord fired");
-        h.pressed_keys["Gamepad_DPad_Up"]=true;m.tick(.025);m.tick(.025);check(h.count("S_Heal")==1,"Controller chord did not fire once");
-        m.event({{"id","clear_bindings"}});m.event({{"id","discard_changes"}});check(m.model()["values"]["bindings"].size()==2,"Discard did not restore shortcut draft");
-        m.event({{"id","clear_bindings"}});m.event({{"id","apply_settings"}});const auto polls=h.input_polls;m.tick(.25);check(h.input_polls==polls && h.state["bindings"].empty(),"Cleared shortcuts still polled");
+        // Shell tokens (GetShellItemDefinition loads an item class, ~10 ms each) are never
+        // resolved as a warm-up during gameplay, and a failing lookup is not retried on every use.
+        Host h;cheat::Menu m(&h.api);for(int i=0;i<40;++i) m.tick(.25);
+        check(h.count("GetShellItemDefinition")==0,"Shell tokens were resolved during idle gameplay");
+        h.fail_definition=true;m.model();const auto first=h.count("GetShellItemDefinition");
+        for(int i=0;i<10;++i) m.model();
+        check(first>0 && h.count("GetShellItemDefinition")==first,"A failing shell lookup was retried on every menu build");
     }
     {
+        // Game speed: the whole world clock through the engine's global time dilation.
         Host h;cheat::Menu m(&h.api);m.tick(.25);
-        m.event({{"id","binding_action"},{"value","switch:Proxima"}});m.event({{"id","binding_key"},{"value","F6"}});
-        rejects([&]{m.event({{"id","apply_settings"}});});check(h.state.empty(),"Gameplay shortcut saved without confirmation");
-        m.event({{"id","apply_settings"},{"confirmed",true}});m.tick(.025);h.pressed_keys["F6"]=true;m.tick(.1);m.tick(.5);
-        check(h.count("S_SwitchToShell")==1 && h.shell=="Proxima","Confirmed shell shortcut failed");
+        m.event({{"id","game_speed_scale"},{"value",3.}});m.event({{"id","game_speed"},{"value",true}});
+        check(h.dilation==1.,"Game speed draft changed the world clock");
+        m.event({{"id","apply_settings"}});
+        check(h.dilation==3. && h.count("SetGlobalTimeDilation")==1,"Game speed did not apply once");
+        const auto readiness=h.count("IsInGameMenu");
+        for(int i=0;i<40;++i) m.tick(.25);
+        check(h.count("SetGlobalTimeDilation")==1,"Idle game speed re-sent the same scale");
+        check(h.count("IsInGameMenu")==readiness,"Game speed alone forced the gameplay readiness probe");
+        check(h.count("GetGlobalTimeDilation")<=22,"Game speed drift check ran more than twice a second");
+        h.dilation=.2;m.tick(.25);m.tick(.25);check(h.dilation==3.,"Game speed lost to an in-game slow motion");
+        h.input_blocked=true;h.dilation=.5;m.tick(.25);m.tick(.25);check(h.dilation==3.,"Game speed paused during a cutscene");
+        h.input_blocked=false;h.pawn=object(71);h.dilation=1.;m.tick(.25);check(h.dilation==3.,"Game speed lost on a new level or respawn");
+        h.min_dilation=.01;m.event({{"id","game_speed_scale"},{"value",0.}});m.event({{"id","apply_settings"}});
+        const auto frozen=h.count("SetGlobalTimeDilation");check(h.dilation==.01,"Freeze did not reach the world minimum");
+        for(int i=0;i<20;++i) m.tick(.25);
+        check(h.count("SetGlobalTimeDilation")==frozen,"Frozen clock was re-sent every check");
+        m.event({{"id","game_speed_scale"},{"value",1.05}});m.event({{"id","apply_settings"}});check(std::abs(h.dilation-1.05)<1e-9,"0.05 step not applied");
+        for(const double bad:{1.03,5.05,-.05}) rejects([&]{m.event({{"id","game_speed_scale"},{"value",bad}});});
+        m.event({{"id","game_speed"},{"value",false}});m.event({{"id","apply_settings"}});check(h.dilation==1.,"Disabling did not restore normal speed");
+        m.event({{"id","game_speed_scale"},{"value",2.75}});m.event({{"id","apply_settings"}});
+        cheat::Menu fresh(&h.api);
+        check(fresh.model()["values"]["game_speed_scale"]==2.75 && fresh.model()["values"]["game_speed"]==false,"Speed preference or passive boot broken");
+        cssx::validate_model(cssx::bind_menu(definition,m.model()));
+    }
+    {
+        // Ownership: never touch a time scale this extension did not set.
+        Host h;cheat::Menu m(&h.api);m.tick(.25);h.dilation=.5;
+        m.event({{"id","disable_all"}});check(h.dilation==.5 && h.count("SetGlobalTimeDilation")==0,"Turn off all cheats changed another mod's time scale");
+        m.event({{"id","game_speed_scale"},{"value",4.}});m.event({{"id","game_speed"},{"value",true}});m.event({{"id","apply_settings"}});
+        check(m.stop() && h.dilation==1.,"Unload left the world clock scaled");
+    }
+    {
+        // A game build without the reflected function fails only this feature.
+        Host h;h.no_dilation=true;cheat::Menu m(&h.api);m.tick(.25);
+        m.event({{"id","game_speed"},{"value",true}});m.event({{"id","god"},{"value",true}});
+        rejects([&]{m.event({{"id","apply_settings"}});});
+        check(m.model()["values"]["game_speed"]==false && !h.damageable,"Game speed failure blocked other cheats or stayed on");
+        check(m.stop(),"Cleanup failed after a game speed error");
     }
     {
         Host h;h.power_fixture="GA_AstralClones_Action_C";cheat::Menu m(&h.api);m.tick(.25);

@@ -2,6 +2,7 @@
 #include <cssx/client.hpp>
 #include "prologue_recovery.hpp"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <map>
 #include <optional>
@@ -17,7 +18,7 @@ struct PendingShell {
     double elapsed=0;
 };
 class Menu {
-    inline static constexpr const char* toggle_ids[]{"god","auto_heal","infinite_resolve","move_fast","max_shell_points","no_cooldown","perfect_parry","perfect_block","perfect_harden","smert_stance","genessa_clones","lazlo_detonation"};
+    inline static constexpr const char* toggle_ids[]{"god","auto_heal","infinite_resolve","move_fast","game_speed","max_shell_points","no_cooldown","perfect_parry","perfect_block","perfect_harden","smert_stance","genessa_clones","lazlo_detonation"};
     inline static constexpr const char* power_ids[]{"smert_stance","genessa_clones","lazlo_detonation"};
     struct Power {
         Json pawn,controller,ability,primary,secondary,effect;
@@ -33,18 +34,6 @@ class Menu {
     void power_start(const std::string& feature);
     void power_clear(const std::string& feature={});
     void power_tick(double);
-    Json binding_actions() const;
-    const Json& binding_keys() const;
-    Json binding_key_options() const;
-    void binding_validate() const;
-    bool binding_consent() const;
-    void binding_tick(double);
-    void binding_fire(const std::string&);
-    void binding_reset();
-    std::string binding_action_="god";
-    std::map<std::string,bool> binding_down_;
-    double binding_time_=0;
-    bool bindings_checked_=false;
     inline static constexpr const char* combat_ids[]{"no_cooldown","perfect_parry","perfect_block","perfect_harden"};
     inline static constexpr const char* cooldown_fields[]{"CooldownDuration","GlobalCooldownDuration","Cooldown","GlobalCooldown","StoneFormCooldown","PerfectStoneFormCooldown"};
     struct OwnedHook {uint64_t id;std::string feature;Json target;};
@@ -92,9 +81,9 @@ class Menu {
     void shell_tick(double);
     void refresh_shells();
     mutable std::map<std::string,std::string> shell_tokens_;
-    bool tokens_complete_=false;
+    mutable std::map<std::string,std::chrono::steady_clock::time_point> token_retry_;
+    bool shells_loaded_=false;
     std::string token_for(const std::string& shell) const;   // resolves on demand, cached per process
-    void resolve_shell_token();
     size_t abilities_count_=0; bool combat_backlog_=false;
     bool shell_matches(const Json& tag,const std::string& target) const;
     void unlock_shells(const Json& player);
@@ -102,6 +91,11 @@ class Menu {
     void restore(const std::string&);
     void god(bool);
     void movement(bool);
+    void game_speed(bool);
+    void set_global_time_dilation(const Json& pawn,double value);
+    double speed_time_=0;
+    bool speed_owned_=false;
+    double speed_applied_=-1.;   // engine-reported scale after our last set (post-clamp)
     struct MapSaved {Json owner,key,before,expected;};
     std::map<std::string,MapSaved> points_saved_;
     void shell_points(bool);
