@@ -73,6 +73,7 @@ Paths in this table are relative to the workspace root unless linked.
 
 | Artifact | Finding or purpose |
 | --- | --- |
+| `CustomShellSystem/tools/eve-fit/review_outfit_export.py`, `work/eve26/planet-first/` | Planet exported bind-pose review: visible chest/back/seat/calf breakthrough; all parts weighted; intentional side openings preserved |
 | `CustomShellSystem/work/eve26/region-native/`, `region-*-trace.json`, `region-*-local16*/` | Parked Holiday native deformation failure and offline counterfactuals; do not continue after user's priority switch |
 | `CustomShellSystem/tools/eve-fit/export_skin_regions.py`, `work/eve26/region-import/`, `region-right-fix/` | Private native mesh serialization and bounded cut-sliver repair; first right-thigh JSON rejected |
 | `CustomShellSystem/work/eve26/region-*-create.json`, `tools/eve-fit/native/CSSEveLevelSet.inl` | Regional generation metadata and guarded mesh selection; all automatic roots remain pelvis |
