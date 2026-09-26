@@ -1,4 +1,5 @@
 #include "ChaosClothAsset/ClothComponent.h"
+#include "ChaosClothAsset/ClothAssetInteractor.h"
 #include "ChaosClothAsset/ClothSimulationProxy.h"
 #include "Components/PoseableMeshComponent.h"
 #include "PreviewScene.h"
@@ -9,6 +10,9 @@ static int32 EvaluateHolidayPanel(const FString& Params)
     auto Fail=[](const TCHAR* Message) { UE_LOG(LogCSSEvePanel,Error,TEXT("Panel motion: %s"),Message); return 1; };
     FString Input,Report,Text;
     int32 Count=9;
+    int32 Iterations=0;
+    FParse::Value(*Params,TEXT("Iterations="),Iterations);
+    if (Iterations<0 || Iterations>16) return Fail(TEXT("Iterations must be 0 (asset default) or 1..16"));
     FParse::Value(*Params,TEXT("Frames="),Count);
     if (!FParse::Value(*Params,TEXT("Input="),Input) || !FParse::Value(*Params,TEXT("Report="),Report) ||
         Count<2 || Count>300 || IFileManager::Get().FileExists(*Report)) return Fail(TEXT("Require input, unused report and 2..300 frames"));
@@ -35,6 +39,14 @@ static int32 EvaluateHolidayPanel(const FString& Params)
     Cloth->SetSimulateInEditor(true);
     Scene.AddComponent(Cloth,FTransform::Identity);
     Cloth->SetLeaderPoseComponent(Pose,true);
+    if (Iterations)
+    {
+        auto* Interactor=Cloth->GetClothOutfitInteractor();
+        if (!Interactor) return Fail(TEXT("Missing property interactor"));
+        Interactor->SetIntValue(TEXT("NumIterations"),-1,Iterations);
+        Interactor->SetIntValue(TEXT("MaxNumIterations"),-1,Iterations);
+        if (Interactor->GetIntValue(TEXT("NumIterations"))!=Iterations) return Fail(TEXT("Iteration override failed"));
+    }
     const auto& Ref=Mesh->GetRefSkeleton();
     if (Pose->BoneSpaceTransforms.Num()!=Ref.GetNum()) return Fail(TEXT("Pose component has wrong bone count"));
     auto ReadVector=[](const TSharedPtr<FJsonObject>& O) {
@@ -104,6 +116,7 @@ static int32 EvaluateHolidayPanel(const FString& Params)
     Result->SetStringField(TEXT("scope"),TEXT("Actual saved CA_Holiday Chaos component simulation on recorded original-graph poses. Old reference asset geometry/weights; no F11, morph, material or game acceptance."));
     Result->SetStringField(TEXT("source_motion"),Input);
     Result->SetStringField(TEXT("asset"),Asset->GetPathName());
+    Result->SetNumberField(TEXT("requested_iterations"),Iterations);
     Result->SetArrayField(TEXT("frames"),Rows);
     Scene.RemoveComponent(Cloth); Scene.RemoveComponent(Pose);
     return FJsonSerializer::Serialize(Result,TJsonWriterFactory<>::Create(&Text)) && FFileHelper::SaveStringToFile(Text,*Report)

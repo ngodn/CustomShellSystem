@@ -56,7 +56,20 @@ for row in result['frames']:
     assert actual.shape == expected.shape and np.isfinite(actual).all()
     error = np.linalg.norm(actual-expected, axis=1)
     ratios = np.linalg.norm(actual[edges[:, 0]]-actual[edges[:, 1]], axis=1)[active]/lengths[active]
-    reports.append({'frame':frame, 'fixed_max_cm':float(error[fixed].max()),
+    active_ids = np.flatnonzero(active)
+    worst_edges = []
+    for local in np.argsort(ratios)[-8:][::-1]:
+        edge_id = int(active_ids[local])
+        endpoints = edges[edge_id]
+        worst_edges.append({'vertices':endpoints.tolist(),
+            'rest_cm':float(lengths[edge_id]), 'ratio':float(ratios[local]),
+            'max_distance_cm':distance[endpoints].tolist(),
+            'rest_positions_cm':points[endpoints].tolist(),
+            'actual_positions_cm':actual[endpoints].tolist(),
+            'skin_positions_cm':expected[endpoints].tolist(),
+            'skin_ratio':float(np.linalg.norm(expected[endpoints[0]]-expected[endpoints[1]])/lengths[edge_id]),
+            'weights':[proxy['weights'][int(v)] for v in endpoints]})
+    reports.append({'frame':frame, 'worst_edges':worst_edges, 'fixed_max_cm':float(error[fixed].max()),
         'fixed_p95_cm':float(np.percentile(error[fixed],95)), 'max_from_skin_cm':float(error.max()),
         'edge_ratio_max':float(ratios.max()), 'edge_ratio_p95':float(np.percentile(ratios,95))})
 passed = max(r['fixed_max_cm'] for r in reports) < .02
