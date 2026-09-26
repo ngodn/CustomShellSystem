@@ -36,6 +36,10 @@ int main() {
             // A fresh core finds the mesh where the last one left it: anchored to the authored
             // height, the offset is recognised instead of stacked, and restore returns to it.
             // A shell item's own MISC rule survives a save; junk keys and extra items are dropped.
+            State severed; severed.last_living_shell="CharacterId.Player.Shell.Genessa";
+            expect(State::parse(severed.json()).last_living_shell=="CharacterId.Player.Shell.Genessa","Last living shell not saved");
+            auto odd=severed.json(); odd["last_living_shell"]="CharacterId.Player.Darkform.StrongOne";
+            expect(State::parse(odd).last_living_shell.empty(),"A Darkform tag must not pass as the last living shell");
             State with_item;
             with_item.misc_rules["item:wp_alienheart"]=MiscRule{"hidden"};
             with_item.misc_rules["seal"]=MiscRule{"in_use"};

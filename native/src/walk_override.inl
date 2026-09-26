@@ -73,6 +73,21 @@ UObject* WalkOverride::blendspace(WeakObject& slot,const wchar_t* path) {
     if(!asset || !asset->IsA(static_cast<UClass*>(find(L"/Script/Engine.BlendSpace")))) throw std::runtime_error("Locomotion blendspace is unavailable");
     slot=asset; return asset;
 }
+void WalkOverride::preload_assets() {
+    auto warm=[&](const std::string& path)->UObject* {
+        if(path.empty()) return nullptr;
+        UObject* asset=nullptr;
+        try { asset=load(path); } catch(const std::exception&) { return nullptr; }   // a bad path fails later, with its message, when it engages
+        if(asset && !asset->IsRootSet()) { asset->SetRootSet(); rooted_assets_.emplace_back(asset); }
+        return asset;
+    };
+    for(const auto& path:custom_paths_) warm(path);
+    custom_idle_asset_=warm(custom_idle_clip_);
+}
+void WalkOverride::unroot_assets() {
+    for(auto& weak:rooted_assets_) if(auto* asset=weak.Get()) asset->ClearRootSet();
+    rooted_assets_.clear(); custom_idle_asset_.Reset();
+}
 UObject* WalkOverride::custom_blendspace(size_t index,UObject* skeleton) {
     if(index>=custom_paths_.size() || custom_paths_[index].empty() || !skeleton)
         throw std::runtime_error("Custom movement option is incomplete");
@@ -390,6 +405,7 @@ void WalkOverride::release() {
     // callback can still enter this DLL.
     unhook_speed();
     pawn_.Reset(); anim_.Reset(); movement_.Reset(); walk_bs_.Reset(); speed_->movement=nullptr;
+    unroot_assets();
     custom_paths_={};custom_blends_={};custom_skeleton_.Reset();
     custom_idle_clip_.clear(); hide_weapons_=false;
     idle_ticks_=off_ticks_=slide_ticks_=0; slide_until_=0; last_heal_=0;
@@ -422,9 +438,11 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
             custom_idle_engaged_=false;
         }
         custom_blends_={};custom_skeleton_.Reset();
+        unroot_assets();
         custom_paths_=custom_paths;
         custom_idle_clip_=custom_idle_clip;
         hide_weapons_=hide_weapons;
+        preload_assets();
     }
     auto* mesh=read<UObject*>(pawn,L"Mesh");
     if(!mesh) {release();return;}
@@ -499,7 +517,8 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
             post=get_post.get<UObject*>();
         }
         if(post && has_field(post,L"CSSIdleEnabled",sizeof(bool)) && has_field(post,L"CSSIdleSequence",sizeof(UObject*))) {
-            auto* clip=load(custom_idle_clip_);
+            auto* clip=custom_idle_asset_.Get();
+            if(!clip) { clip=load(custom_idle_clip_); custom_idle_asset_=clip; }
             if(clip) {
                 if(!custom_idle_engaged_ || custom_idle_post_.Get()!=post ||
                    read<UObject*>(post,L"CSSIdleSequence")!=clip || !read<bool>(post,L"CSSIdleEnabled")) {

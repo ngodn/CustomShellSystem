@@ -742,16 +742,29 @@ struct Core {
             // whatever the Darkform itself has (or the game's own look).
             static constexpr const char* SHELL_PREFIX = "CharacterId.Player.Shell";
             static constexpr const char* DARKFORM_PREFIX = "CharacterId.Player.Darkform";
-            if(appearance.shell.starts_with(SHELL_PREFIX)) last_living_shell=appearance.shell;
+            // The last living shell is saved with the state, so a core that starts (or is
+            // hot-swapped) while you are severed still knows whose look to mirror.
+            if(appearance.shell.starts_with(SHELL_PREFIX) && last_living_shell!=appearance.shell) {
+                last_living_shell=appearance.shell;
+                if(state.last_living_shell!=last_living_shell) { state.last_living_shell=last_living_shell; dirty=true; }
+            }
+            if(last_living_shell.empty()) last_living_shell=state.last_living_shell;
             auto outfit_key=[&](const std::string& tag)->std::string {
                 if(state.harbinger_mirror && tag.starts_with(DARKFORM_PREFIX)) {
-                    if(!last_living_shell.empty()) {
-                        auto it=state.selections.find(last_living_shell);
-                        if(it!=state.selections.end() && catalog.compatible(it->second.outfit,tag)) return last_living_shell;
-                    } else if(tag.size() > std::string_view(DARKFORM_PREFIX).size()) {
-                        std::string inferred = std::string(SHELL_PREFIX) + tag.substr(std::string_view(DARKFORM_PREFIX).size());
-                        auto it=state.selections.find(inferred);
-                        if(it!=state.selections.end() && catalog.compatible(it->second.outfit,tag)) return inferred;
+                    auto mirrors=[&](const std::string& key) {
+                        auto it=state.selections.find(key);
+                        return it!=state.selections.end() && catalog.compatible(it->second.outfit,tag);
+                    };
+                    if(!last_living_shell.empty() && mirrors(last_living_shell)) return last_living_shell;
+                    // No shell seen yet: the Darkform's own name is usually the shell's, sometimes
+                    // with "Corrupted" in front (Darkform.CorruptedGenessa is Shell.Genessa).
+                    if(tag.size() > std::string_view(DARKFORM_PREFIX).size()) {
+                        std::string name = tag.substr(std::string_view(DARKFORM_PREFIX).size()+1);
+                        for(const auto& candidate:{name, name.starts_with("Corrupted")?name.substr(9):std::string{}}) {
+                            if(candidate.empty()) continue;
+                            const std::string inferred = std::string(SHELL_PREFIX) + "." + candidate;
+                            if(mirrors(inferred)) return inferred;
+                        }
                     }
                 }
                 return tag;

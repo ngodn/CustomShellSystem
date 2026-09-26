@@ -542,6 +542,8 @@ State State::parse(const Json& j) {
     if(!valid_walk_animation(result.walk_animation))
         throw std::runtime_error("Invalid walk animation setting");
     result.harbinger_mirror = j.value("harbinger_mirror", true);
+    result.last_living_shell = j.value("last_living_shell", std::string{});
+    if(!result.last_living_shell.starts_with("CharacterId.Player.Shell.") || result.last_living_shell.size()>128) result.last_living_shell.clear();
     result.keep_default_attachments = j.value("keep_default_attachments", false);
     // Jog and sprint stay normal, so a state written by the 0.3.3 preview comes
     // back with the game's own run rather than the unmatched borrowed one.
@@ -602,7 +604,7 @@ Json State::json() const {
     for (const auto& [name, preset] : presets) presets_json[name] = {{"selections", selections_json(preset.selections)}, {"walk_animation", preset.walk_animation}, {"animation_choices",preset.animation_choices.json()}, {"misc_rules", misc_rules_json(preset.misc_rules)}};
     return {{"schema", 1}, {"enabled", enabled}, {"auto_apply", auto_apply},
             {"invert_orbit_x", invert_orbit_x}, {"invert_orbit_y", invert_orbit_y}, {"walk_animation", walk_animation},
-            {"harbinger_mirror", harbinger_mirror},
+            {"harbinger_mirror", harbinger_mirror}, {"last_living_shell", last_living_shell},
             {"keep_default_attachments", keep_default_attachments},
             {"darkform_mirror_cleaned", darkform_mirror_cleaned},
             {"animation_choices",animation_choices.json()},

@@ -354,6 +354,13 @@ class WalkOverride {
     bool hide_weapons_=false;
     bool custom_idle_engaged_=false;
     WeakObject custom_idle_post_;
+    // The selection's custom blendspaces and idle clip, loaded when the selection arrives (the
+    // wear already loads a mesh, so the cost lands there) and rooted while it is active. Loaded
+    // on the first step instead, an asset the engine had collected came back from disk mid-walk.
+    WeakObject custom_idle_asset_;
+    std::vector<WeakObject> rooted_assets_;
+    void preload_assets();
+    void unroot_assets();
     std::vector<WeakObject> hidden_weapons_;
     uint64_t next_footstep_=0;
     bool foot_left_=false;
