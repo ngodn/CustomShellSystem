@@ -1,0 +1,57 @@
+[b]CSS 1.0.0-beta.5[/b] (2026-09-27)
+
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v1.0.0-beta.5/hilga-world.jpg[/img]
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/v1.0.0-beta.5/hilga-menu.jpg[/img]
+Hilga, worn through the new Use NPC / Enemy row, in the world and in the menu.
+
+Big one. The CSS page now uses the game's own menu widgets, you can wear enemies and NPCs, and the runtime got a full performance pass. Update notes at the bottom.
+
+[size=4][b]New[/b][/size]
+[list]
+[*][b]Use NPC / Enemy.[/b] A new row on the Shell tab. Wear 69 of the game's characters: the Brigand family, Cultists, Cannibal Knight, Warden, Wraith, Draugr, Dungeon Champion, Batushka, Ball Boy, Sicario, Franz, Vlas, William, Hilga, the Sesters, villagers, and eight Harbinger forms. Your shell keeps its abilities. Only characters on the player's skeleton, so no spiders or golems.[/*]
+[*][b]Ground height.[/b] At the end of Customize on every outfit. Slide from -10 to +10 cm when an outfit's feet sink or float. Saved per outfit variant.[/*]
+[*][b]Your shell's items in Misc.[/b] Gragu's heart, Eredrim's bell, Genessa's burner, Proxima's hook, Thorn's spines, Tiel's dagger each get their own row: follow the Accessories rule, only when in use, always hidden, or always shown. Thanks to Neesplord for asking about the heart.[/*]
+[*][b]Motion presets for hair.[/b] Firm, Natural, Silky, Heavy, Floaty, next to the body ones. Outfit authors can ship their own presets too.[/*]
+[*][b]Search on every long list.[/b] Press F. The search box stays put and every match is listed.[/*]
+[/list]
+
+[size=4][b]Changed[/b][/size]
+[list]
+[*]The whole CSS page is drawn with the game's Inventory widgets: rows, headers, sliders, prompts, dialogs, the details window. Same look as the rest of the menu.[/*]
+[*]Everything clicks. Rows, tabs, the Z / X arrows, every prompt in the details window and the bottom bars. Sliders drag with the mouse.[/*]
+[*]The details window scrolls and follows your selection, so long variant lists fit.[/*]
+[*]Customize and Misc rows say how a part differs from the default on a second line: Hidden, Edited, a preset name, When in use. The E badge only marks what's equipped now.[/*]
+[*]Keys match their prompts. C on a part asks before it resets everything. F on a colour opens exact RGB. Space on Template restores the original.[/*]
+[*]Physics presets pick the right set from what the outfit declares, not from the part's name. Applying one no longer flips a part's Motion switch.[/*]
+[/list]
+
+[size=4][b]Fixed[/b][/size]
+[list]
+[*]Feet stay where the outfit puts them. Wearing an outfit with a heel offset (Black Pearl) used to leave that offset on whatever you wore next, and add 3 cm more every time you came back. That was the sunk feet and the limp.[/*]
+[*]Reopening the menu no longer shows "None" and "Category" rows or wrong slider values until you switched tabs.[/*]
+[*]F on an outfit row opens Search (it did nothing before).[/*]
+[*]If you get severed and CSS restarts, the Harbinger still gets your living shell's look.[/*]
+[*]Gragu's heart is hideable (it was hiding under Weapons).[/*]
+[*]The Z and X prompts sit the same distance inside the tab strip.[/*]
+[/list]
+
+[size=4][b]Under the hood[/b][/size]
+Numbers from CSS's own frame profiler, before and after on the same spot and outfit.
+[list]
+[*]With the menu closed, CSS costs 0.19 to 0.45 ms a frame (was 0.68 to 0.93), and the worst frames dropped from 11 ms to about 1 ms. Frames over 4 ms in 15 seconds: from about 55 to under 5.[/*]
+[*]Scrolling the outfit list: 0.4 ms a frame, was 3.1 ms, and the 43 ms hitch is gone.[/*]
+[*]Saves and status files are written on a separate thread now, not the game thread.[/*]
+[*]Custom walk animations load when you wear the outfit, not on your first step, so no 49 ms hitch mid-walk.[/*]
+[*]Seals and sidearms measure their clearance against the body part they hang from. Back-stowed props were measured against the hip before, so they never pushed out of a bigger body.[/*]
+[*]Long lists build a few rows per frame instead of all at once.[/*]
+[/list]
+
+[size=4][b]For modders[/b][/size]
+[list]
+[*]Presets per control in the manifest, a ground_offset_cm players can override, and the NPC roster as an editable JSON (catalog/npc-appearances.css.json). Docs: control-convention.md, package-contract.md, npc-appearances.md, misc-shell-items.md.[/*]
+[/list]
+
+[b]Updating from beta.4:[/b]
+Close the game, extract the ZIP into [b]MortalShell2/Binaries/Win64/ue4ss/Mods/[/b], keep your [b]CustomShellSystem/state/[/b] folder. Nothing to migrate. Restart the game once so the new loader runs.
+
+[url=https://github.com/ngodn/CustomShellSystem/releases/tag/v1.0.0-beta.5]Download CSS 1.0.0-beta.5[/url]
