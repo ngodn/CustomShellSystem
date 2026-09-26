@@ -47,7 +47,9 @@ Json PlayerRecovery::inspect(const Json& pawn) {
     return {{"ability",match},{"asc",asc},{"effect",token}};
 }
 void PlayerRecovery::tick(double seconds) {
-    if(!running_) return;elapsed_+=seconds;if(elapsed_<1) return;elapsed_=0;
+    // While nothing is being watched (the usual case) look every five seconds; once a lock
+    // candidate is under observation, or on a manual check, keep the one-second cadence.
+    if(!running_) return;elapsed_+=seconds;if(elapsed_<((automatic_ && !ability_)?5:1)) return;elapsed_=0;
     try {
         const auto player=host_.player();
         if(automatic_) {

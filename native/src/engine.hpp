@@ -272,6 +272,8 @@ class AttachmentOffsets {
         WeakObject child; RC::Unreal::FName socket; std::string socket_key;   // socket_key = narrow(socket), the offsets_ map key, cached so push() never allocates
         std::array<double,3> location{}, rotation{}, applied{};
         bool owned=false;
+        double distance=-1, push=0, distance_root=-1;   // last measurement, for the seal diagnostics (root: what NAME_None alone would read)
+        std::string body;             // which body it was measured against
     };
     struct BonePose { std::array<double,3> location{}; double basis[3][3]{}; };
     std::vector<Tracked> tracked_;
@@ -279,7 +281,7 @@ class AttachmentOffsets {
     std::map<std::string,BonePose> poses_;
     bool pose(RC::Unreal::UObject* component,const std::string& bone,BonePose& out);
     bool push_for(RC::Unreal::UObject* component,RC::Unreal::UObject* child,const AttachmentOffset& offset,
-                  const double socket_basis[3][3],std::array<double,3>& out);
+                  const double socket_basis[3][3],std::array<double,3>& out,Tracked* item=nullptr);
     void apply(RC::Unreal::UObject* component,Tracked& item,const AttachmentOffset& offset,bool live);
 public:
     void configure(const std::map<std::string,AttachmentOffset>& offsets, bool include_defaults=true);

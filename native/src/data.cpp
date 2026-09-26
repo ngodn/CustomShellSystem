@@ -73,9 +73,10 @@ Json read_json(const fs::path& path) {
     return Json::parse(in);
 }
 void atomic_json(const fs::path& path, const Json& data, bool backup) {
+    auto bytes = data.dump(2) + "\n";
+    if(async_file_writer) { async_file_writer(path,std::move(bytes),backup); return; }
     fs::create_directories(path.parent_path());
     auto temp = path; temp += ".tmp";
-    auto bytes = data.dump(2) + "\n";
     {
         std::ofstream out(temp, std::ios::binary | std::ios::trunc);
         out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
@@ -99,8 +100,9 @@ void atomic_json(const fs::path& path, const Json& data, bool backup) {
 #endif
 }
 void write_runtime_json(const fs::path& path, const Json& data) {
+    auto bytes = data.dump(2, ' ', false, Json::error_handler_t::replace) + "\n";
+    if(async_file_writer) { async_file_writer(path,std::move(bytes),false); return; }
     auto temp = path; temp += ".tmp";
-    const auto bytes = data.dump(2, ' ', false, Json::error_handler_t::replace) + "\n";
     std::ofstream out(temp, std::ios::binary | std::ios::trunc);
     if (!out) { fs::create_directories(path.parent_path()); out.open(temp, std::ios::binary | std::ios::trunc); }
     out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));

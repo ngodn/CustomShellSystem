@@ -995,7 +995,16 @@ struct Core {
 }
 namespace {
 void* create(const CssHost* host) noexcept {
-    if (!host || host->abi != css_abi) return nullptr;
+    if (!host || (host->abi != 1 && host->abi != css_host_abi)) return nullptr;
+    // Host ABI 2: JSON writes leave the game thread. The pointer targets the loader, which
+    // outlives every core, and is cleared again in destroy.
+    if (host->abi >= 2 && host->write_file) {
+        static void (*s_write)(const wchar_t*, const char*, size_t, uint32_t) noexcept = nullptr;
+        s_write = host->write_file;
+        css::async_file_writer = [](const std::filesystem::path& path, std::string bytes, bool backup) {
+            if (s_write) s_write(path.c_str(), bytes.data(), bytes.size(), backup ? 1u : 0u);
+        };
+    }
     try { return new css::Core(*host); }
     catch (const std::exception& error) { host->log(error.what()); return nullptr; }
 }
@@ -1038,7 +1047,11 @@ bool stop(void* ptr) noexcept {
     }
     catch (const std::exception& error) { core.report(error.what()); return false; }
 }
-void destroy(void* ptr) noexcept { delete static_cast<css::Core*>(ptr); }
+void destroy(void* ptr) noexcept {
+    css::async_file_writer = nullptr;   // the next core decides again from its own host
+    delete static_cast<css::Core*>(ptr);
+}
 const CssCore api{css_abi, create, tick, render, stop, destroy};
 }
 extern "C" __declspec(dllexport) const CssCore* css_get_api() noexcept { return &api; }
+extern "C" __declspec(dllexport) const CssCore* css_get_api2() noexcept { return &api; }   // this core understands host ABI 2

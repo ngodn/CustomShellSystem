@@ -2,10 +2,12 @@
 #include "hook_host.hpp"
 #include "css_version.hpp"
 #include "data.hpp"
+#include "file_writer.hpp"
 #include <windows.h>
 #include <chrono>
 #include <fstream>
 #include <mutex>
+#include <optional>
 #include <Mod/CppUserModBase.hpp>
 #include <Unreal/Hooks/Hooks.hpp>
 
@@ -30,13 +32,21 @@ void log_line(const char* message) noexcept {
         log_file.flush();
     } catch (...) {}
 }
+// The writer thread the core hands its JSON to (host ABI 2). Namespace scope so the plain
+// function pointer in CssHost can reach it; it drains and joins when the loader stops.
+std::optional<css::FileWriter> file_writer;
+void write_file(const wchar_t* path, const char* data, size_t size, uint32_t flags) noexcept {
+    try { if (file_writer && path && data) file_writer->post(std::filesystem::path(path), std::string(data, size), (flags & 1u) != 0); }
+    catch (...) {}
+}
 class Loader final : public RC::CppUserModBase {
     std::shared_ptr<std::recursive_mutex> gate_=std::make_shared<std::recursive_mutex>();
     std::shared_ptr<bool> alive_=std::make_shared<bool>(true);
     CssHookService hook_service_{gate_};
     std::filesystem::path root_;
     std::wstring root_string_;
-    CssHost host_{};
+    CssHost host_{};      // host ABI 2, for a core that exports css_get_api2
+    CssHost host_v1_{};   // host ABI 1, the first three fields, for an older core
     HMODULE module_{};
     const CssCore* api_{};
     void* core_{};
@@ -51,13 +61,15 @@ class Loader final : public RC::CppUserModBase {
         auto candidate = LoadLibraryW((root_ / "cores" / filename).c_str());
         if (!candidate) { log_line("Core load failed; current core retained"); return; }
         auto entry = reinterpret_cast<CssGetApi>(GetProcAddress(candidate, "css_get_api"));
-        auto* api = entry ? entry() : nullptr;
+        auto entry2 = reinterpret_cast<CssGetApi>(GetProcAddress(candidate, "css_get_api2"));
+        auto* api = entry2 ? entry2() : entry ? entry() : nullptr;
+        const CssHost* host = entry2 ? &host_ : &host_v1_;
         if (!api || api->abi != css_abi || !api->create || !api->tick || !api->render || !api->stop || !api->destroy) {
             FreeLibrary(candidate); log_line("Core ABI rejected; current core retained"); return;
         }
         // Core construction is passive. Validate the new instance before stopping
         // the working one, so a failed constructor cannot leave CSS stopped.
-        auto* instance = api->create(&host_);
+        auto* instance = api->create(host);
         if (!instance) { FreeLibrary(candidate); log_line("Core initialization failed; current core retained"); return; }
         if (api_ && !api_->stop(core_)) {
             if(api->stop(instance)) {api->destroy(instance);FreeLibrary(candidate);}
@@ -83,7 +95,9 @@ public:
         root_ = std::filesystem::path(path).parent_path().parent_path();
         root_string_ = root_.wstring();
         log_path = root_ / "CSS.log";
-        host_ = {css_abi, root_string_.c_str(), log_line};
+        file_writer.emplace([](const std::string& message) { log_line(message.c_str()); });
+        host_ = {css_host_abi, root_string_.c_str(), log_line, write_file};
+        host_v1_ = {css_abi, root_string_.c_str(), log_line, nullptr};
         ModName = STR("CSS - Custom Shell System");
         ModVersion = CSS_VERSION_WIDE;
         ModDescription = STR("Native shell appearance system with reloadable C++ core");
@@ -145,6 +159,7 @@ public:
         // UE4SS shutdown is not guaranteed to be on the game thread. Never call
         // engine functions here. The OS releases modules on process exit.
         if (api_) api_->destroy(core_);
+        file_writer.reset();   // writes what is still queued, then joins
         log_line("CSS loader stopped");
     }
 };

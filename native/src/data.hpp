@@ -174,5 +174,8 @@ void atomic_json(const fs::path&, const Json&, bool backup = true);
 // and rename, with no fsync and no read-back, so the game thread never waits on the disk.
 void write_runtime_json(const fs::path&, const Json&);
 bool valid_id(const std::string&);
+// Set by the core when its host offers an off-thread writer (host ABI 2): every
+// write_runtime_json / atomic_json then queues its bytes there instead of touching the disk.
+inline void (*async_file_writer)(const std::filesystem::path& path,std::string bytes,bool backup)=nullptr;
 bool valid_asset(const std::string&);
 }

@@ -1,4 +1,8 @@
 #include "data.hpp"
+#include "file_writer.hpp"
+#include <chrono>
+#include <fstream>
+#include <thread>
 #include "ground_offset.hpp"
 #include <iostream>
 #include <stdexcept>
@@ -36,6 +40,22 @@ int main() {
             // A fresh core finds the mesh where the last one left it: anchored to the authored
             // height, the offset is recognised instead of stacked, and restore returns to it.
             // A shell item's own MISC rule survives a save; junk keys and extra items are dropped.
+            // The loader's writer: writes land in order, the last one wins, .bak keeps the
+            // previous content when asked, and a missing directory is created.
+            const auto dir=std::filesystem::temp_directory_path()/("css-writer-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+            const auto file=dir/"nested"/"state.json";
+            auto contents=[&](const std::filesystem::path& p){ std::ifstream in(p,std::ios::binary); return std::string((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>()); };
+            { FileWriter writer; writer.post(file,"one",true); }   // destruction drains the queue
+            expect(contents(file)=="one","Writer did not create the directory and file");
+            {
+                FileWriter writer;
+                writer.post(file,"two",true);
+                writer.post(file,"three",true);   // supersedes "two": one write, not two
+            }
+            expect(contents(file)=="three","Writer lost the last write");
+            expect(contents(dir/"nested"/"state.json.bak")=="one","Backup is not the content the write replaced");
+            expect(!std::filesystem::exists(dir/"nested"/"state.json.tmp"),"Writer left its temp file");
+            std::filesystem::remove_all(dir);
             State severed; severed.last_living_shell="CharacterId.Player.Shell.Genessa";
             expect(State::parse(severed.json()).last_living_shell=="CharacterId.Player.Shell.Genessa","Last living shell not saved");
             auto odd=severed.json(); odd["last_living_shell"]="CharacterId.Player.Darkform.StrongOne";

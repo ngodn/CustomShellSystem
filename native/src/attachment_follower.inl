@@ -142,9 +142,15 @@ static std::array<double,3> to_local(const double rows[3][3],const std::array<do
             v[0]*rows[1][0]+v[1]*rows[1][1]+v[2]*rows[1][2],
             v[0]*rows[2][0]+v[1]*rows[2][1]+v[2]*rows[2][2]};
 }
+// Bone names as FNames, made once: the seal pass asks for the same few every frame.
+static FName bone_name(const std::string& bone) {
+    static std::unordered_map<std::string,FName> names;
+    if(auto it=names.find(bone);it!=names.end()) return it->second;
+    return names.emplace(bone,FName(wide(bone).c_str())).first->second;
+}
 bool AttachmentOffsets::pose(UObject* component,const std::string& bone,BonePose& out) {
     if(auto cached=poses_.find(bone);cached!=poses_.end()) { out=cached->second; return true; }
-    const FName name(wide(bone).c_str());
+    const FName name=bone_name(bone);
     BonePose result;
     Call location(component,L"GetSocketLocation",2); location.set(L"InSocketName",name); location.run();
     result.location=location.get<std::array<double,3>>();
@@ -169,22 +175,35 @@ bool AttachmentOffsets::pose(UObject* component,const std::string& bone,BonePose
 // offer. That is what the recorded direction is for; it rides a bone, so it still turns
 // with the hips.
 bool AttachmentOffsets::push_for(UObject* component,UObject* child,const AttachmentOffset& offset,
-                                 const double socket_basis[3][3],std::array<double,3>& out) {
+                                 const double socket_basis[3][3],std::array<double,3>& out,Tracked* item) {
     const auto& collision=offset.collision;
     if(!collision.active()) return false;
     Call where(child,L"K2_GetComponentLocation",1); where.run();
     const auto point=where.get<std::array<double,3>>();
-    Call closest(component,L"GetClosestPointOnCollision",4);
-    closest.set(L"Point",point); closest.set(L"BoneName",FName(L"None")); closest.run();
-    const double distance=closest.get<float>();
+    // GetClosestPointOnCollision with no bone name measures against the mesh's ROOT body only
+    // (UE 5.6.1 USkeletalMeshComponent::GetBodyInstance: NAME_None is the root body), the
+    // pelvis on these rigs. A prop stowed on the back was therefore measured against the
+    // pelvis, read as far away, and never pushed off a bigger body. Measure against the body
+    // of the bone it rides (its anchor) and the root, and keep the nearer.
+    double distance=-1; std::array<double,3> body_point{}; std::string body_used;
+    auto measure=[&](const FName& bone,const char* label) {
+        Call closest(component,L"GetClosestPointOnCollision",4);
+        closest.set(L"Point",point); closest.set(L"BoneName",bone); closest.run();
+        const double found=closest.get<float>();
+        if(item && label==std::string_view("root")) item->distance_root=found;
+        if(found<0 || (distance>=0 && found>=distance)) return;
+        distance=found; body_point=closest.get<std::array<double,3>>(L"OutPointOnBody"); body_used=label;
+    };
+    if(!collision.anchor.empty()) measure(bone_name(collision.anchor),collision.anchor.c_str());
+    measure(bone_name("None"),"root");
 #ifdef CSS_INVENTORY_DEV
     last_distance_=distance;
 #endif
+    if(item) { item->distance=distance; item->body=body_used; }
     if(distance<0) return false;             // the mesh has no collision to measure against
     std::array<double,3> direction{};
     if(distance>1e-3) {
-        const auto body=closest.get<std::array<double,3>>(L"OutPointOnBody");
-        for(int i=0;i<3;++i) direction[i]=(point[i]-body[i])/distance;
+        for(int i=0;i<3;++i) direction[i]=(point[i]-body_point[i])/distance;
     } else {
         if(collision.anchor.empty()) return false;
         BonePose anchor; if(!pose(component,collision.anchor,anchor)) return false;
@@ -196,6 +215,7 @@ bool AttachmentOffsets::push_for(UObject* component,UObject* child,const Attachm
     // old two-sided form settled every prop to exactly `clearance`, which moved the sidearm off its
     // default spot even on a stock-sized body. Floor at zero to drop the pull-in.
     const double push=std::clamp(collision.clearance-distance,0.0,collision.max_push);
+    if(item) item->push=push;
 #ifdef CSS_INVENTORY_DEV
     last_push_=push;
 #endif
@@ -217,7 +237,7 @@ void AttachmentOffsets::apply(UObject* component,Tracked& item,const AttachmentO
         unreal_basis(socket_rotation.get<std::array<double,3>>(),socket_basis);
         // The prop is already sitting at last frame's correction, so the measurement
         // includes it; carrying it forward is what makes this settle instead of oscillate.
-        if(push_for(component,child,offset,socket_basis,extra)) {
+        if(push_for(component,child,offset,socket_basis,extra,&item)) {
             for(int i=0;i<3;++i) extra[i]+=current_location[i]-item.location[i]-offset.location[i];
             double extra_len = std::sqrt(extra[0]*extra[0] + extra[1]*extra[1] + extra[2]*extra[2]);
             if(extra_len > offset.collision.max_push && extra_len > 1e-4) {
@@ -345,7 +365,7 @@ void AttachmentOffsets::update(UObject* component) {
         auto tracked=std::find_if(tracked_.begin(),tracked_.end(),[&](const auto& item){return item.child.Get()==child;});
         if(tracked==tracked_.end()) {
             if(tracked_.size()>=64) throw std::runtime_error("Too many corrected attachments");
-            tracked_.push_back({weak,socket,std::move(key),relative_location(child),relative_rotation(child),{},false});
+            tracked_.push_back({weak,socket,std::move(key),relative_location(child),relative_rotation(child),{},false,-1,0,-1,{}});
             tracked=std::prev(tracked_.end());
         }
         apply(component,*tracked,entry->second,true);
@@ -357,7 +377,8 @@ Json AttachmentOffsets::diagnostics() const {
     for(const auto& [socket,offset]:offsets_)
         sockets.push_back({{"socket",socket},{"clearance",offset.collision.clearance},{"active",offset.collision.active()}});
     Json tracked=Json::array();
-    for(const auto& item:tracked_) tracked.push_back({{"socket",item.socket_key},{"owned",item.owned},{"base",item.location}});
+    for(const auto& item:tracked_) tracked.push_back({{"socket",item.socket_key},{"owned",item.owned},{"base",item.location},
+                                                     {"distance",item.distance},{"distance_root",item.distance_root},{"push",item.push},{"body",item.body}});
     return {{"distance_to_body",last_distance_},{"push",last_push_},
             {"configured",std::move(sockets)},{"tracked",std::move(tracked)}};
 }
