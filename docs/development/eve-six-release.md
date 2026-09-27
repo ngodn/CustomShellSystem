@@ -59,3 +59,9 @@ A live `inventory_inspect` request timed out waiting for a developer acknowledge
 ## Author naming evidence
 
 Read the supplied author PDF into `work/eve26/author-page.txt`. Its feature list distinguishes game outfits from additional outfits but does not give official game names for the bikini or sweater. Source object names retained in the original-scene inspection and Gemini's export selection are `Eve Bikini - Top`, `Eve Bikini - Shorts` and `Eve Extras - Sweater` (with Extras heels/glasses). This does not establish a match to a named official Nano Suit. Keep Vacation Bikini and Casual Knitwear as descriptive mod labels and do not advertise them as verified official names. No source blend or outfit geometry was changed during this check.
+
+## Final thumbnail and candidate assembled
+
+User clarified maximum 1:1 crop anchored at top-right, then resize to 512 x 512. Source `Untitled_9bsq091.png` is 2160 x 3840; the crop is (0, 0, 2160, 2160). ImageMagick produced `work/eve26/thumb/thumbnail.png`; visually inspected. `thumb/receipt.json` records source/output hashes and exact rectangle. This supersedes the earlier screenshot and padding question.
+
+`six-candidate1/CSS_EveStellarBlade_eins0fx_P` is now assembled with the selected thumbnail, all six variants and updated container hashes. Package verification passes; current native loader tests pass against this exact candidate (`six-final-loader.log`). Installation and live review remain pending; no public ZIP has been replaced.
