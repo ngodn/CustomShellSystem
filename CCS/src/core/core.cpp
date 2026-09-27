@@ -145,6 +145,31 @@ void Core::save_settings_or_log() {
     if (combat_) { std::array<std::string, 11> slots; for (size_t i = 0; i < slots.size(); ++i) slots[i] = combat_->slot_move(SlotId(i)); settings_->set_slots(std::move(slots)); }
     if (!settings_->save()) last_message_ = "Settings could not be saved";
 }
+// A preset names moves by catalog id; older or hand-written files may only carry the montage
+// path, which resolves through the catalogs. Every slot is set (the preset is the whole state),
+// unknown moves and moves that do not fit their slot are skipped and reported.
+void Core::apply_preset(const std::string& name) {
+    auto preset = storage_->load_preset(name);
+    if (!preset) throw std::runtime_error("Preset could not be read: " + name);
+    if (!combat_) throw std::runtime_error("Combat engine is not running");
+    unsigned applied = 0, unknown = 0, misplaced = 0;
+    for (unsigned i = 0; i < slot_count && i < preset->slots.size(); ++i) {
+        const auto& binding = preset->slots[i];
+        std::string id;
+        if (!binding.move_id.empty() || !binding.montage_path.empty()) {
+            if (catalog_.find_move(binding.move_id) || binding.move_id.starts_with("found:")) id = binding.move_id;
+            else if (!binding.montage_path.empty()) for (const auto& move : catalog_.moves()) if (move.montage_path == binding.montage_path) { id = move.id; break; }
+            if (id.empty()) ++unknown;
+            else if (const auto* move = catalog_.find_move(id); move && !eligible(*move, i)) { ++misplaced; id.clear(); }
+            else ++applied;
+        }
+        combat_->set_slot(SlotId(i), id);
+    }
+    save_name_ = preset->name; save_settings_or_log(); ++model_revision_;
+    last_message_ = "Loaded " + name + ": " + std::to_string(applied) + " slot(s) set"
+        + (unknown ? ", " + std::to_string(unknown) + " unknown move(s) skipped" : "")
+        + (misplaced ? ", " + std::to_string(misplaced) + " not allowed in that slot" : "");
+}
 void Core::list_presets(uint64_t now, bool force) {
     if (!force && now < presets_listed_) return;
     presets_listed_ = now + 2000;
@@ -310,24 +335,19 @@ void Core::handle_event(const nlohmann::json& event) {
         const auto slot = string_to_slot(id.substr(5));
         if (!slot || !combat_) throw std::runtime_error("Unknown slot");
         combat_->set_slot(*slot, event.at("value").get<std::string>());
-        save_settings_or_log(); return;
+        save_settings_or_log(); ++model_revision_; return;
     }
     if (id == "enabled") { settings_->set_enabled(event.at("value").get<bool>()); if (combat_) combat_->set_enabled(settings_->enabled()); save_settings_or_log(); return; }
     if (id == "rate") { settings_->set_attack_speed_scale(event.at("value").get<double>()); if (combat_) combat_->set_rate(settings_->attack_speed_scale()); save_settings_or_log(); return; }
     if (id == "ui_scale") { settings_->set_ui_scale(event.at("value").get<double>()); save_settings_or_log(); return; }
     if (id == "reset") { if (combat_) for (unsigned i = 0; i < slot_count; ++i) combat_->set_slot(SlotId(i), ""); save_settings_or_log(); return; }
-    if (id == "preset.selected") { selected_preset_ = event.at("value").get<std::string>(); return; }
+    if (id == "preset.selected") { selected_preset_ = event.at("value").get<std::string>(); apply_preset(selected_preset_); return; }   // choosing a preset applies it
     if (id == "preset.name") {
         const auto name = event.at("value").get<std::string>();
         if (!runtime::valid_preset_name(name)) throw std::runtime_error("Use letters, digits, dash or underscore, up to 64 characters");
         save_name_ = name; return;
     }
-    if (id == "preset.load") {
-        auto preset = storage_->load_preset(selected_preset_);
-        if (!preset) throw std::runtime_error("Preset could not be read: " + selected_preset_);
-        if (combat_) for (const auto& binding : preset->slots) combat_->set_slot(binding.slot, binding.move_id);
-        save_name_ = preset->name; save_settings_or_log(); last_message_ = "Loaded " + selected_preset_; return;
-    }
+    if (id == "preset.load") { apply_preset(selected_preset_); return; }
     if (id == "preset.save") {
         if (!runtime::valid_preset_name(save_name_)) throw std::runtime_error("Invalid preset name");
         PresetData preset; preset.name = save_name_; preset.author = "eins0fx"; preset.description = "Custom Combat System preset";

@@ -158,7 +158,8 @@ void Menu::bind_inputs() {
     static const std::map<std::wstring, std::string> actions = {
         {L"IA_Menu_Up", "up"}, {L"IA_Menu_Down", "down"}, {L"IA_Menu_Left_Primary", "left"}, {L"IA_Menu_Right_Primary", "right"},
         {L"IA_Menu_Left_Tertiary", "previous_section"}, {L"IA_Menu_Right_Tertiary", "next_section"},
-        {L"IA_Menu_Confirm_Primary_Press", "accept"}, {L"IA_Menu_Confirm_Secondary_Press", "secondary"}, {L"IA_Menu_Back", "close"}};
+        {L"IA_Menu_Confirm_Primary_Press", "accept"}, {L"IA_Menu_Confirm_Secondary_Press", "secondary"}, {L"IA_Menu_Back", "close"},
+        {L"IA_Menu_Confirm_Tertiary_Press", "search"}};   // the third face button (Y / triangle) and its keyboard key focus the search field
     auto* a = static_cast<FArrayProperty*>(p); FScriptArrayHelper values(a, reinterpret_cast<std::byte*>(mapping) + p->GetOffset_Internal());
     if (values.Num() < 0 || values.Num() > 256) throw std::runtime_error("Input map exceeds bound");
     auto* mapping_struct = find_cached(L"/Script/EnhancedInput.EnhancedActionKeyMapping");
@@ -410,6 +411,7 @@ void Menu::key(const std::string& action) {
         return;
     }
     if (model_.is_object() && model_.contains("sections") && section_ < int(model_["sections"].size()) && model_["sections"][section_].value("kind", std::string{}) == "slots") {
+        if (action == "search") { act({{"action", "search"}}); return; }
         if (action == "close" && typing_now_) {   // Escape in the search field clears it instead of leaving the page
             search_query_.clear(); if (auto* search = search_input_.Get()) { try { text_value(search, ""); } catch (...) {} }
             try { options_.filter(""); } catch (...) {}
@@ -479,6 +481,10 @@ void Menu::act(const Json& action) {
     // Candidates are searched: options_ holds the active slot's list, options_.matches the rows
     // shown for the query and options_.selected the highlighted row. The build resets options_
     // whenever the slot changes (slot_options_key_).
+    if (name == "search") {   // put the caret in the search field; typing then filters the list
+        if (auto* search = search_input_.Get()) { try { Call focus(search, L"SetKeyboardFocus", 0); focus.run(); } catch (const std::exception& e) { error_ = e.what(); dirty_ = true; } }
+        return;
+    }
     if (name == "slot" || name == "slot_delta") {
         const int wanted = name == "slot" ? action.at("index").get<int>() : row_ + action.at("delta").get<int>();
         row_ = rows ? (wanted % rows + rows) % rows : 0;

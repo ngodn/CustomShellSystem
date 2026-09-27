@@ -75,6 +75,7 @@ private:
     void apply_slots_from_settings();
     void save_settings_or_log();
     void list_presets(uint64_t now, bool force);
+    void apply_preset(const std::string& name);   // resolves each move, fills every slot, refreshes the page
     std::string move_label(const std::string& id) const;
     std::string move_group(const std::string& id) const;
     std::string move_icon(const std::string& id) const;

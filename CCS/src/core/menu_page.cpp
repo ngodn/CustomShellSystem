@@ -37,7 +37,7 @@ constexpr const char* title_font = "/Game/Sparta/UI/Fonts/Trajan_Pro_Regular_Fon
 constexpr double native_height = 2160, native_column = 1136;
 constexpr double window_x = 95, window_top = 150, window_w = 945;
 constexpr uint8_t collapsed = 1, hidden = 2, shown_passive = 3, shown_self_passive = 4;
-constexpr uint8_t glyph_accept = 3, glyph_secondary = 4, glyph_back = 5, glyph_left_bumper = 8, glyph_right_bumper = 9, glyph_dpad_vertical = 10, glyph_dpad_horizontal = 11, glyph_up = 13, glyph_down = 14, glyph_left = 15, glyph_right = 16, glyph_none = 45;
+constexpr uint8_t glyph_accept = 3, glyph_secondary = 4, glyph_back = 5, glyph_tertiary = 6, glyph_left_bumper = 8, glyph_right_bumper = 9, glyph_dpad_vertical = 10, glyph_dpad_horizontal = 11, glyph_up = 13, glyph_down = 14, glyph_left = 15, glyph_right = 16, glyph_none = 45;
 constexpr Color body{.49f, .42f, .30f, 1};
 constexpr Color muted{.24f, .21f, .17f, 1};
 constexpr Color title_ink{.223f, .186f, .133f, 1};
@@ -1132,6 +1132,7 @@ void Menu::build_slots(const Json& section, bool& deferred) {
         if (!slot->value("value", std::string{}).empty()) action_prompt("secondary", "Restore the weapon's own attack", {{"action", "clear"}}, glyph_secondary);
         if (gamepad_) bar_prompt_actions("Slot", "", glyph_dpad_horizontal); else bar_prompt_actions("Slot", "left", glyph_left, "right", glyph_right);
     } else detail(deps_.title, "", "");
+    action_prompt("search", typing_now_ ? "Typing filters the list" : "Search the list", {{"action", "search"}}, glyph_tertiary);
     const std::string context = "slots/" + std::to_string(row_) + "/" + std::to_string(cand);
     if (context != panel_context_) { if (auto* scroll = panel_scroll_.Get()) invoke(scroll, L"ScrollToStart"); panel_context_ = context; panel_revealed_ = nullptr; }
     finish(list_); finish(head_); finish(panel_); finish(actions_);
