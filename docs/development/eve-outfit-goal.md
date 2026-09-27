@@ -32,6 +32,14 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**Knitwear bounded F3 fitting trial improves sampled contact, remains private:** The extended `knit-proxy-motion3.json` audit identifies dominant skin bones of nearest body triangles (summed triangle weights, not exact contact semantics). Sprint 24 default contacts are predominantly pelvis70, right thigh41 and spine01/05 22. Sprint32 max also includes lowerarm_r10 and hand_r2. Do not expand the garment to clear a passing arm.
+
+`skin_joint_clearance.py` produced `knit-fit3/knit.mesh.json` from export2 using neutral plus the same upstream sprint frames24/32, default/all-six-max, z65..155 cm, 0.4 cm displacement cap. Exit0:758 vertices changed,767 conflicting vertices unchanged. Assertions preserve the entire body, every other part, weights, morph deltas and all non-position fields. This candidate has not been persisted to Blender source, refreshed normals, imported or adopted.
+
+The nonlinear three-axis audit (`knit-fit3-contact.json`, exit0) reprojects the existing proxy through identical triangle correspondence and compares with the render surface. Inside counts change neutral1/1 to0/0, sprint24 134/157 to123/142, sprint32 30/79 to25/63 (default/max). Remaining contacts are not solved. Nearby counts vary slightly because the 1 cm query cutoff selects a slightly different set; these are diagnostic counts, not a complete collision metric. Base normals remain inherited and need regeneration before any final export. The script now accepts a point-only candidate mesh and rejects changes to other mesh fields. Its initially repeated full point-array conversion was hoisted outside the loop after the completed run; arithmetic is unchanged.
+
+`knit-fit3-sprint24` front/back renders were inspected. Silhouette remains similar to export2; central rear-hem crease persists. Other poses and max-morph visuals still need checking before adopting this modest correction. Avoid continuing to increase static clearance: constraints already conflict and most motion contact remains. Next inspect the remaining contact geometry and how bounded cloth motion/backstop can complement the fitted baseline, rather than declaring F3 sufficient or expanding it blindly.
+
 **Knitwear sampled proxy motion separates fitting from decimation:** `audit_knit_proxy_motion.py` evaluates neutral plus `feet-sprint-base.json` upstream frames 24 and 32, each at default and all six supported morphs at 1. Both the first audit and the extended render-correspondence audit exit 0 (`knit-proxy-motion1/2.json`). Three axis-ray parity votes classify nearby points as inside/outside/ambiguous; only points within 1 cm of the body are included, so counts are not a whole-mesh collision test.
 
 | Case | Proxy inside | Also inside at interpolated render location | Proxy inside, render outside |

@@ -1,21 +1,37 @@
 """Check proxy/body contact direction in sampled poses before cloth simulation."""
+import argparse
 import hashlib
 import json
+import sys
 from pathlib import Path
 import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 from mathutils.bvhtree import BVHTree
 
 work = Path(__file__).resolve().parents[2] / 'work/eve26'
-output = work / 'knit-proxy-motion2.json'
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--mesh',type=Path,default=work/'knit-export2/knit.mesh.json')
+parser.add_argument('--output',type=Path,default=work/'knit-proxy-motion3.json')
+args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+output = args.output
 assert not output.exists()
-mesh_path = work / 'knit-export2/knit.mesh.json'
+mesh_path = args.mesh
 proxy_path = work / 'knit-proxy2.json'
 motion_path = work / 'feet-sprint-base.json'
 mesh = json.loads(mesh_path.read_text())
 audit = json.loads(mesh_path.with_suffix('.audit.json').read_text())
 proxy = json.loads(proxy_path.read_text())
-assert hashlib.sha256(mesh_path.read_bytes()).hexdigest() == audit['output_sha256'] == proxy['report']['source_sha256']
+assert hashlib.sha256(mesh_path.read_bytes()).hexdigest() == audit['output_sha256']
+if audit['output_sha256'] != proxy['report']['source_sha256']:
+    original_path = work/'knit-export2/knit.mesh.json'
+    assert hashlib.sha256(original_path.read_bytes()).hexdigest() == proxy['report']['source_sha256']
+    original = json.loads(original_path.read_text())
+    assert all(mesh[k] == v for k,v in original.items() if k != 'points')
+    count = audit['parts'][0]['points']
+    slot = proxy['slots']['Collar-1']
+    candidate_points = np.asarray(mesh['points'])
+    slot['positions'] = [(np.asarray(r['barycentric']) @ candidate_points[np.asarray(r['vertices'])+count]).tolist()
+        for r in slot['transfer']]
 slot = proxy['slots']['Collar-1']
 nb = audit['parts'][0]['points']
 body_faces = [[mesh['wedges'][i][0] for i in f[:3]] for f in mesh['faces'][:audit['parts'][0]['faces']]]
@@ -35,6 +51,16 @@ for bone in mesh['bones']:
     bind.append(bind[bone['parent']] @ local if bone['parent'] >= 0 else local)
 lookup = {bone['name']: i for i, bone in enumerate(mesh['bones'])}
 body_weights = np.asarray([row for row in mesh['influences'] if row[0] < nb])
+vertex_weights = [[] for _ in range(nb)]
+for v,b,w in body_weights:
+    vertex_weights[int(v)].append((int(b),w))
+face_bones = []
+for face in body_faces:
+    combined = {}
+    for v in face:
+        for b,w in vertex_weights[v]:
+            combined[b] = combined.get(b,0)+w
+    face_bones.append(mesh['bones'][max(combined,key=combined.get)]['name'])
 ng = audit['parts'][1]['points']
 garment_weights = np.asarray([[v-nb,b,w] for v,b,w in mesh['influences'] if nb <= v < nb+ng])
 transfer_ids = np.asarray([r['vertices'] for r in slot['transfer']])
@@ -85,11 +111,12 @@ for frame in (-1,24,32):
         tree = BVHTree.FromPolygons(body.tolist(),body_faces,all_triangles=True)
         rows = []
         for i,point in enumerate(points):
-            hit,_,_,distance = tree.find_nearest(Vector(point))
+            hit,_,face,distance = tree.find_nearest(Vector(point))
             if distance >= 1: continue
             direction = (point-np.asarray(hit))/max(distance,1e-9)
             reference_hit,_,_,reference_distance = tree.find_nearest(Vector(reference[i]))
             rows.append(dict(vertex=i,distance_cm=distance,dot=float(direction @ normals[i]),
+                nearest_body_face=face, nearest_body_bone=face_bones[face],
                 containment=containment(tree,point), reference_containment=containment(tree,reference[i]),
                 reference_distance_cm=reference_distance, reference_error_cm=float(error[i])))
         case = dict(frame=frame,maximum_morphs=maximum,nearby=len(rows),
@@ -103,4 +130,4 @@ for frame in (-1,24,32):
         print(json.dumps({k:v for k,v in case.items() if k!='rows'}),flush=True)
 output.write_text(json.dumps(dict(inputs={p.name:hashlib.sha256(p.read_bytes()).hexdigest()
     for p in (mesh_path,proxy_path,motion_path)},cases=cases,
-    scope='Sampled skinned proxy only, no cloth. Proxy morphs interpolated offline; normals use base normals with blended bone transforms, not regenerated morph normals.'),separators=(',',':'))+'\n')
+    scope='Sampled skinned proxy only, no cloth. Point-only candidates reproject the proxy through existing correspondence. Proxy morphs interpolated offline; normals use base normals with blended bone transforms, not regenerated morph normals.'),separators=(',',':'))+'\n')
