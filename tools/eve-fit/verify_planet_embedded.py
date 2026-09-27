@@ -1,13 +1,20 @@
 """Verify fresh native readback of the private skeletal tail cloth candidate."""
+import argparse
 import hashlib
 import json
 from pathlib import Path
 
 w=Path(__file__).resolve().parents[2]/'work/eve26'
-out=w/'planet-embedded-verified.json'
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--input',type=Path,default=w/'planet-embedded-native.json')
+parser.add_argument('--output',type=Path,default=w/'planet-embedded-verified.json')
+parser.add_argument('--asset')
+args=parser.parse_args()
+out=args.output
 assert not out.exists()
-readback=w/'planet-embedded-native.json'
+readback=args.input
 d=json.loads(readback.read_text())
+if args.asset:assert d['asset']==args.asset
 assert d['skeleton']=='/Game/CSS/Shared/SKEL_Base.SKEL_Base'
 assert d['mesh_physics']=='/Game/CSS/SeduXtress/PA_Body.PA_Body'
 assert d['post_process']=='/Game/CSS/SeduXtress/ABP_Secondary.ABP_Secondary_C'
