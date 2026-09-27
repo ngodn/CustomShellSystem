@@ -305,7 +305,7 @@ UObject* Combat::build_transplant(UObject* original, UObject* replacement) {
             auto* b = segs.GetRawPtr(int(i)); const auto& g = plan[i]; const int32_t loops = 1;
             std::memcpy(b + off_anim, &g.anim, sizeof(g.anim)); std::memcpy(b + off_pos, &g.start_pos, 4); std::memcpy(b + off_start, &g.anim_start, 4);
             std::memcpy(b + off_end, &g.anim_end, 4); std::memcpy(b + off_rate, &g.rate, 4); std::memcpy(b + off_loop, &loops, 4);
-            b[off_valid] = std::byte{1};
+            b[off_valid] = 1;
         }
     }
     // Notify links point at the montage they belong to; absolute times stay valid on the clone.
