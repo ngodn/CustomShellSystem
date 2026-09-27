@@ -6,6 +6,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Vacation Bikini current diagnostic is `bikini-morph1/`: six garment morphs rebuilt on unchanged Top+Shorts base. Saved Gemini Top/Shorts/Heels points match the old export exactly. Heels also match original author undeformed geometry, so inspect authored rig deformation before geometry edits. No bikini candidate source/import/game acceptance yet.
+
 - Skin F16 private test package is ready at `s16trial/CSS_EveSkinFit16_P/`. Cook, IoStore payload readback,22 morph exports and CSS manifest checks pass. Requires installed Eve dependencies; game visibility, motion and profile persistence remain unverified. No final palettes yet. Prototype stays first in the runtime queue.
 
 - Skin current source candidate is `skin-suit-f16.blend` with `skin-f16-export/`. A five-vertex coupled surface correction removes the measured sprint24 sleeve spot; standing combined-max side review and source reload pass. Private Unreal remains F12. F14/F15 sleeve trials are rejected. Read the current goal checkpoint for remaining shoulder-edge and game checks.

@@ -32,6 +32,13 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**Vacation Bikini fitting started:** `bikini-source-comparison.json` confirms Top(6,918 points), Shorts(5,461) and Extras Heels(31,668) match Gemini's saved source point-for-point; source hash preserved. Initial front/back/side renders are `bikini-initial/`. Combined-max renders `bikini-initial-max/` expose jagged straps and displaced lower garment. The exported base is current, not stale.
+
+`repair_planet_morphs.py --garment bikini` rebuilds the six body-driven morphs across Top+Shorts only, leaving base geometry, body morphs and other parts unchanged. Candidate `bikini-morph1/` and inspected front/back `bikini-morph1-max/` remove the obvious inherited strap distortion. BodyTone garment maximum displacement changes2.303→0.483 cm; ThighTone2.279→0.222 cm. This candidate is not saved back to a Blender garment source or imported. Edge fitting, weights, motion, controls and physics remain pending.
+
+**Heels require rig evaluation before editing:** `bikini-author-heels.json` proves exported heel points also match the original author source exactly with its armature modifier disabled. The long heel tips in neutral renders are therefore not introduced by Gemini's mesh export. Check the authored armature's foot/heel pose and correct fitting method before cutting/replacing geometry. Black Pearl's lining principle remains useful, but its footwear is a different mesh and must not be substituted blindly. Original files and installed game remain unchanged.
+
+
 **Skin F16 private trial packaged:** cook65325, IoStore packaging27004 and trial metadata generation all exited0. `s16pack/verification.json` proves byte-identical cooked mesh payload after container readback and preserved export identities, including22 morph targets. `s16trial/CSS_EveSkinFit16_P/` contains a242,497-byte pak,32,188,630-byte ucas and6,340-byte utoc. CSS manifest verification passes with Suit, Hair and six body-shape controls. Suit off/on sections and material references were already fresh-load checked. This package requires the installed Eve package; its dependency hashes are recorded. It is not the final customized outfit or a standalone public release.
 
 Packaging helpers now accept `--kind skin --revision 16`, preserving Prototype defaults. Re-verifying existing Prototype F14 passed (37643 exit0). No deployment or release archive changed. Prototype remains first in the game test queue, then Skin Suit. Pending restart approval remains unanswered. Continue independent fitting work with Vacation Bikini while awaiting runtime access, preserving both ready trials.

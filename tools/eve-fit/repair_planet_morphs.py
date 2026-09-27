@@ -1,4 +1,4 @@
-"""Rebuild Prototype suit morph deltas from corresponding unchanged body triangles."""
+"""Rebuild garment morph deltas from corresponding unchanged body triangles."""
 import argparse,copy,hashlib,json,sys
 from pathlib import Path
 import numpy as np
@@ -8,13 +8,14 @@ root=Path(__file__).resolve().parents[2];work=root/'work/eve26'
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--mesh',type=Path,default=work/'planet-sections/planet.mesh.json')
 parser.add_argument('--output',type=Path,default=work/'planet-morph-repair')
-parser.add_argument('--garment',choices=('prototype','skin'),default='prototype')
+parser.add_argument('--garment',choices=('prototype','skin','bikini'),default='prototype')
 args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 p=args.mesh;raw=p.read_bytes();source=json.loads(raw)
 audit=json.loads(p.with_suffix('.audit.json').read_text())
-assert audit['parts'][1]['name']=={'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin Suit - Suit Complete'}[args.garment]
+expected={'prototype':['Eve Prototype Planet Diving Suit - Suit'],'skin':['Eve Skin Suit - Suit Complete'],'bikini':['Eve Bikini - Top','Eve Bikini - Shorts']}[args.garment]
+assert [part['name'] for part in audit['parts'][1:1+len(expected)]]==expected
 assert hashlib.sha256(raw).hexdigest()==audit['output_sha256']
-body_count=audit['parts'][0]['points'];suit_count=audit['parts'][1]['points']
+body_count=audit['parts'][0]['points'];suit_count=sum(part['points'] for part in audit['parts'][1:1+len(expected)])
 points=[Vector((x,-y,z)) for x,y,z in source['points']]
 faces=[[source['wedges'][w][0] for w in f[:3]] for f in source['faces'][:audit['parts'][0]['faces']]]
 tree=BVHTree.FromPolygons(points[:body_count],faces,all_triangles=True)
@@ -45,7 +46,7 @@ for target in result['morph_targets']:
  assert [d for d in target['deltas'] if d[0]<body_count]==[d for d in source['morph_targets'][result['morph_targets'].index(target)]['deltas'] if d[0]<body_count]
 assert all(result[k]==v for k,v in source.items() if k!='morph_targets')
 out=args.output;out.mkdir(exist_ok=False)
-stem='planet' if args.garment=='prototype' else 'skin'
+stem={'prototype':'planet','skin':'skin','bikini':'bikini'}[args.garment]
 f=out/f'{stem}.mesh.json';f.write_text(json.dumps(result,separators=(',',':'))+'\n')
 audit['output_sha256']=hashlib.sha256(f.read_bytes()).hexdigest()
 (out/f'{stem}.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')
