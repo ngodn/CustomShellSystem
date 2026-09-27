@@ -63,6 +63,10 @@ struct ObjectHandle {
     std::string why_dead() const;   // diagnostic: which liveness check fails, with the raw item flags
 };
 
+// Liveness under the running engine's flag layout: an object is gone when it is Unreachable
+// (bit 28) or Garbage (bit 21). The SDK's IsValid() reads bit 29 as PendingKill, but 5.6 uses
+// that bit for RefCounted, so a montage held by a strong pointer would look dead.
+bool item_alive(FUObjectItem* item);
 class WeakObject : public FWeakObjectPtr {
 public:
     WeakObject() = default;

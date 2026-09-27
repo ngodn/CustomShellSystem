@@ -91,7 +91,8 @@ void Discovery::scan() {
         const auto* bytes = rows.GetRawPtr(next_);
         ++seen_;
         FName class_asset{}; std::memcpy(&class_asset, bytes + class_path_->GetOffset_Internal() + sizeof(FName), sizeof(FName));
-        if (narrow(class_asset.ToString()) != "AnimMontage") continue;
+        static const FName montage_class(L"AnimMontage", FNAME_Add);   // an 8 byte compare per row, no text
+        if (std::memcmp(&class_asset, &montage_class, sizeof(FName)) != 0) continue;
         FName package{}, asset{};
         std::memcpy(&package, bytes + package_name_->GetOffset_Internal(), sizeof(FName));
         std::memcpy(&asset, bytes + asset_name_->GetOffset_Internal(), sizeof(FName));

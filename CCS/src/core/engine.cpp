@@ -1,5 +1,6 @@
 #include "engine.hpp"
 #include <windows.h>
+#include <chrono>
 #include <string_view>
 #include <unordered_map>
 #include <algorithm>
@@ -60,7 +61,7 @@ void validate_serial_initializer(Call& call) {
 }
 void initialize_serial(UObject* object) {
     auto* item = FUObjectArray::IndexToObject(object->GetInternalIndex());
-    if (!item || item->GetUObject() != object || !item->IsValid(false))
+    if (!item || item->GetUObject() != object || !item_alive(item))
         throw std::runtime_error("Object is not live for serial initialization");
     if (item->GetSerialNumber() > 0) return;
     static thread_local bool busy{};
@@ -73,7 +74,7 @@ void initialize_serial(UObject* object) {
         Call::Cache::SerialInitializer);
     call.set(L"Object", object); call.run();
     item = FUObjectArray::IndexToObject(index);
-    if (!item || item->GetUObject() != object || !item->IsValid(false) || item->GetSerialNumber() <= 0 ||
+    if (!item || item->GetUObject() != object || !item_alive(item) || item->GetSerialNumber() <= 0 ||
         object->GetNamePrivate() != name)
         throw std::runtime_error("Engine did not establish the live object serial");
 }
@@ -82,7 +83,7 @@ void initialize_serial(UObject* object) {
 // PendingKill, but Unreal 5.6 uses bit 29 for RefCounted (objects held by strong pointers), so
 // a ref-counted montage looked dead and its slot silently stopped swapping. In 5.6 an object
 // is gone when it is Unreachable (bit 28) or Garbage (bit 21).
-static bool item_alive(FUObjectItem* item) {
+bool item_alive(FUObjectItem* item) {
     constexpr auto gone = static_cast<EInternalObjectFlags>((1 << 28) | (1 << 21));
     return item && item->GetUObject() && !item->HasAnyFlags(gone);
 }
@@ -294,6 +295,10 @@ Call::~Call() {
 }
 
 FProperty* Call::param(const wchar_t* name) {
+    // Name-table lookup, then an 8 byte compare per parameter: no string is built. A name the
+    // table does not know cannot be a parameter, so the text compare below only runs on a miss.
+    const FName wanted(name, FNAME_Find);
+    if (!wanted.IsNone()) { for (size_t i = 0; i < param_count_; ++i) if (params_[i]->GetFName() == wanted) return params_[i]; }
     for (size_t i = 0; i < param_count_; ++i) if (params_[i]->GetName() == name) return params_[i];
     throw std::runtime_error("Missing parameter: " + narrow(name));
 }
@@ -661,21 +666,31 @@ void nav_children_refresh(UObject* panel) {
     if (auto* nav = object_of(panel, L"NavigationObject")) invoke(nav, L"GetNavigableChildren");
 }
 
+// The world is two cached field reads per frame. The controller costs a reflected call, so it
+// is asked for again only when the world changes, the cached one dies, or 250 ms pass; the pawn
+// and its ability component are read from it every frame (possession changes on death).
 PlayerContext player_context(void* engine) {
+    static ObjectHandle cached_world, cached_pc;
+    static uint64_t refresh_at{};
     PlayerContext out;
     if (!engine) return out;
     auto* viewport = object_of(static_cast<UObject*>(engine), L"GameViewport");
     auto* world = object_of(viewport, L"World");
-    if (!world) return out;
+    if (!world) { cached_world = {}; cached_pc = {}; return out; }
     out.world = world;
-    Call pc(find_cached(L"/Script/Engine.Default__GameplayStatics"), L"GetPlayerController", 3);
-    pc.set(L"WorldContextObject", world);
-    pc.set(L"PlayerIndex", int32_t{0});
-    pc.run();
-    out.pc = pc.get<UObject*>();
-    ObjectHandle controller;
-    controller.capture(out.pc);
-    out.pc = controller.get();
+    const auto now = uint64_t(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
+    UObject* controller = cached_world.get() == world ? cached_pc.get() : nullptr;
+    if (!controller || now >= refresh_at) {
+        Call pc(find_cached(L"/Script/Engine.Default__GameplayStatics"), L"GetPlayerController", 3);
+        pc.set(L"WorldContextObject", world);
+        pc.set(L"PlayerIndex", int32_t{0});
+        pc.run();
+        cached_world = {}; cached_pc = {}; refresh_at = now + 250;
+        cached_world.capture(world);
+        if (auto* fresh = pc.get<UObject*>()) cached_pc.capture(fresh);
+        controller = cached_pc.get();
+    }
+    out.pc = controller;
     out.pawn = object_of(out.pc, L"Pawn");
     out.asc = object_of(out.pawn, L"AbilitySystemComponent");
     return out;

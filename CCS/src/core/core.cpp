@@ -7,6 +7,7 @@
 #include <cctype>
 #include <unordered_set>
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 
 namespace ccs {
@@ -183,7 +184,7 @@ void Core::apply_preset(const std::string& name) {
 }
 void Core::list_presets(uint64_t now, bool force) {
     if (!force && now < presets_listed_) return;
-    presets_listed_ = now + 2000;
+    presets_listed_ = now + 10000;   // a directory listing on the game thread; saves and deletes force it
     std::vector<std::string> names;
     if (storage_->list_presets(names) && names != preset_names_) { preset_names_ = std::move(names); ++model_revision_; }
     if (selected_preset_.empty() && !preset_names_.empty()) selected_preset_ = preset_names_.front();
@@ -219,6 +220,48 @@ std::string Core::move_description(const std::string& id) const {
     text += " Montage " + (pos == std::string::npos ? move->montage_path : move->montage_path.substr(pos + 1)) + ".";
     return text;
 }
+// The candidate rows are the same for every slot (any move may go in any slot): the player
+// weapons' moves sorted by weapon, the enemy moves by family, then montages the running game
+// lists that no catalog knows. Built once, and again only when the registry scan changes them.
+const nlohmann::json& Core::candidate_options() const {
+    using Json = nlohmann::json;
+    const bool scanned = discovery_.done();
+    const uint64_t key = (scanned ? 1u : 0u) + discovery_.found().size() * 2u + catalog_.moves().size() * 65536u;
+    if (candidates_.is_array() && key == candidates_key_) return candidates_;
+    std::vector<const MoveDefinition*> moves, enemy;
+    for (const auto& move : catalog_.moves()) {
+        if (move.origin == MoveOrigin::EnemyHumanoid) enemy.push_back(&move);
+        else moves.push_back(&move);
+    }
+    std::sort(moves.begin(), moves.end(), [](const MoveDefinition* a, const MoveDefinition* b) { return weapon_name(a->source_name) < weapon_name(b->source_name); });
+    std::sort(enemy.begin(), enemy.end(), [](const MoveDefinition* a, const MoveDefinition* b) { return std::tie(a->source_name, a->display_name) < std::tie(b->source_name, b->display_name); });
+    auto missing = [&](const MoveDefinition& move) { return scanned && !discovery_.known(move.montage_path); };
+    Json options = Json::array();
+    for (const auto* move : moves) {
+        const bool sidearm = move->category == "Sidearm";
+        if (sidearm && !sidearm_slot_enabled) continue;   // the sidearm slot is parked
+        Json option = {{"id", move->id}, {"label", sidearm ? move->display_name : weapon_name(move->source_name)}, {"group", sidearm ? "Player's Sidearm" : "Player's Weapon"}, {"icon", sidearm ? std::string{} : weapon_icon(move->source_name)},
+            {"title", sidearm ? move->display_name : weapon_name(move->source_name)}, {"subtitle", sidearm ? std::string("Sidearm fire") : pretty(move->display_name)}, {"description", sidearm ? move->description : move_description(move->id)}, {"value", sidearm ? std::string{} : pretty(move->display_name)}};
+        if (missing(*move)) { option["enabled"] = false; option["disabled_label"] = "Not in this game version"; }
+        options.push_back(std::move(option));
+    }
+    for (const auto* move : enemy) {
+        options.push_back({{"id", move->id}, {"label", move->display_name}, {"group", "Enemy: " + enemy_name(move->source_name)}, {"title", move->display_name}, {"icon", enemy_icon(move->source_name)},
+            {"subtitle", enemy_name(move->source_name) + " attack"}, {"enabled", !missing(*move)}, {"disabled_label", "Not in this game version"}, {"description", move->description}, {"value", move->payload_known ? std::string{} : std::string("No hit window in this animation")}});
+    }
+    if (scanned) {   // montages the running game lists that neither catalog knows: new content after a patch
+        std::unordered_set<std::string> known;
+        for (const auto& move : catalog_.moves()) known.insert(move.montage_path);
+        for (const auto& f : discovery_.found()) {
+            if (known.contains(f.path)) continue;
+            options.push_back({{"id", "found:" + f.path}, {"label", pretty(f.name)}, {"group", std::string(f.player ? "New player move: " : "New enemy move: ") + enemy_name(f.source)},
+                {"title", pretty(f.name)}, {"subtitle", "Found in this game version, not yet verified"},
+                {"description", "Listed by the game's asset registry but absent from the shipped catalog. Assigning it loads and checks the animation the same way; hit windows are unknown until then."}});
+        }
+    }
+    candidates_ = std::move(options); candidates_key_ = key;
+    return candidates_;
+}
 // Anything the page shows comes from here; the menu asks for the model only when this moves.
 uint64_t Core::model_revision() {
     uint64_t signature = 0;
@@ -241,51 +284,11 @@ nlohmann::json Core::model() const {
         Json options = Json::array();
         options.push_back({{"id", ""}, {"label", ranged_slot ? "Sidearm's own fire" : "Weapon's own attack"}, {"group", ranged_slot ? "Player's Sidearm" : "Player's Weapon"}, {"title", ranged_slot ? "Sidearm's own fire" : "Weapon's own attack"},
             {"description", "The slot plays whatever the equipped weapon does here. This is the game's behaviour."}});
-        std::vector<const MoveDefinition*> moves, enemy;
-        for (const auto& move : catalog_.moves()) {
-            if (!eligible(move, i)) continue;
-            if (move.origin == MoveOrigin::EnemyHumanoid) enemy.push_back(&move);
-            else moves.push_back(&move);
-        }
-        std::sort(moves.begin(), moves.end(), [](const MoveDefinition* a, const MoveDefinition* b) { return weapon_name(a->source_name) < weapon_name(b->source_name); });
-        std::sort(enemy.begin(), enemy.end(), [](const MoveDefinition* a, const MoveDefinition* b) { return std::tie(a->source_name, a->display_name) < std::tie(b->source_name, b->display_name); });
-        const bool scanned = discovery_.done();
-        auto missing = [&](const MoveDefinition& move) { return scanned && !discovery_.known(move.montage_path); };
-        for (const auto* move : moves) {
-            const bool sidearm = move->category == "Sidearm";
-            Json option = {{"id", move->id}, {"label", sidearm ? move->display_name : weapon_name(move->source_name)}, {"group", sidearm ? "Player's Sidearm" : "Player's Weapon"}, {"icon", sidearm ? std::string{} : weapon_icon(move->source_name)},
-                {"title", sidearm ? move->display_name : weapon_name(move->source_name)}, {"subtitle", sidearm ? std::string("Sidearm fire") : pretty(move->display_name)}, {"description", sidearm ? move->description : move_description(move->id)}, {"value", sidearm ? std::string{} : pretty(move->display_name)}};
-            if (missing(*move)) { option["enabled"] = false; option["disabled_label"] = "Not in this game version"; }
-            if (combat_ && combat_->slot_move(slot) == move->id) {
-                const auto& err = combat_->slot_error(slot);
-                option["hint"] = !err.empty() ? "Not applied: " + err : !combat_->slot_ready(slot) ? std::string("Loading the animation...") : "Applied. Played " + std::to_string(combat_->slot_hits(slot)) + " time(s) this session.";
-            }
-            options.push_back(std::move(option));
-        }
-        for (const auto* move : enemy) {
-            Json option = {{"id", move->id}, {"label", move->display_name}, {"group", "Enemy: " + enemy_name(move->source_name)}, {"title", move->display_name}, {"icon", enemy_icon(move->source_name)},
-                {"subtitle", enemy_name(move->source_name) + " attack"}, {"enabled", !missing(*move)}, {"disabled_label", "Not in this game version"}, {"description", move->description}, {"value", move->payload_known ? std::string{} : std::string("No hit window in this animation")}};
-            if (combat_ && combat_->slot_move(slot) == move->id) {
-                const auto& err = combat_->slot_error(slot);
-                option["hint"] = !err.empty() ? "Not applied: " + err : !combat_->slot_ready(slot) ? std::string("Loading the animation...") : "Applied. Played " + std::to_string(combat_->slot_hits(slot)) + " time(s) this session.";
-            }
-            options.push_back(std::move(option));
-        }
-        // Montages the running game lists that neither catalog knows: new content after a patch.
-        if (scanned) {
-            std::unordered_set<std::string> known;
-            for (const auto& move : catalog_.moves()) known.insert(move.montage_path);
-            for (const auto& f : discovery_.found()) {
-                if (known.contains(f.path)) continue;
-                // Unverified content follows the same rules by name: finisher, hold and ranged words.
-                const bool hold = f.name.find("Hold") != std::string::npos, finisher = f.name.find("Finisher") != std::string::npos;
-                const bool ranged = f.name.find("Shoot") != std::string::npos || f.name.find("Crossbow") != std::string::npos || f.name.find("Throw") != std::string::npos;
-                const auto role = slot_role(i);
-                (void)ranged; (void)hold; (void)finisher; (void)role;   // every found montage in every slot
-                options.push_back({{"id", "found:" + f.path}, {"label", pretty(f.name)}, {"group", std::string(f.player ? "New player move: " : "New enemy move: ") + enemy_name(f.source)},
-                    {"title", pretty(f.name)}, {"subtitle", "Found in this game version, not yet verified"},
-                    {"description", "Listed by the game's asset registry but absent from the shipped catalog. Assigning it loads and checks the animation the same way; hit windows are unknown until then."}});
-            }
+        for (const auto& row : candidate_options()) options.push_back(row);
+        if (combat_ && !id.empty()) for (auto& option : options) if (option.value("id", std::string{}) == id) {
+            const auto& err = combat_->slot_error(slot);
+            option["hint"] = !err.empty() ? "Not applied: " + err : !combat_->slot_ready(slot) ? std::string("Loading the animation...") : "Applied. Played " + std::to_string(combat_->slot_hits(slot)) + " time(s) this session.";
+            break;
         }
         // Per-slot settings: rows at the top of the same list, so keys and pad reach them like any
         // candidate. Each mirrors a choice control under "settings" that the event path validates.
@@ -447,8 +450,10 @@ void Core::tick(const CcsPlayerContext* player, double delta) {
 #elif defined(CCS_SWAP_PROBE)
     swap_probe_->tick(player ? player->engine : nullptr);
 #else
-    const auto context = engine::player_context(player ? player->engine : nullptr);
     const auto now = GetTickCount64();
+    engine::PlayerContext context;
+    if (!phase(0, "player lookup", now, [&] { context = engine::player_context(player ? player->engine : nullptr); })) return;
+    phase(1, "combat", now, [&] {
     // The equipped weapon, for the slots that play its own attack: one cached read, compared by pointer.
     if (now >= weapon_check_) {
         weapon_check_ = now + 500;
@@ -464,7 +469,9 @@ void Core::tick(const CcsPlayerContext* player, double delta) {
         }
     }
     if (combat_) combat_->tick(context, now);
+    });
     // The registry scan runs once, spread over ticks, and the page reflects it when it finishes.
+    phase(2, "asset scan", now, [&] {
     if (!discovery_.done()) {
         const auto before = discovery_.state();
         discovery_.tick(context);
@@ -481,10 +488,36 @@ void Core::tick(const CcsPlayerContext* player, double delta) {
         } else if (discovery_.state() == Discovery::State::Failed && before != Discovery::State::Failed)
             writer_->write(nlohmann::json{{"level", "warn"}, {"msg", "Asset registry scan failed"}, {"error", discovery_.error()}}.dump());
     }
-    if (menu_ && menu_->is_open()) list_presets(now, false);
-    if (menu_) menu_->tick(context, delta);
-    if (status_ && now >= status_after_) { status_after_ = now + 5000; status_->publish(get_status_json()); }
+    });
+    phase(3, "menu", now, [&] {
+        if (menu_ && menu_->is_open()) list_presets(now, false);
+        if (menu_) menu_->tick(context, delta);
+    });
+    phase(4, "status", now, [&] {
+        if (status_ && now >= status_after_) { status_after_ = now + 5000; status_->publish(get_status_json()); }
+    });
 #endif
+}
+template<class F> bool Core::phase(unsigned index, const char* name, uint64_t now, F&& body) {
+    auto& p = phases_[index];
+    if (p.disabled || now < p.retry_at) return false;
+    const auto started = std::chrono::steady_clock::now();
+    bool ok = true;
+    try { body(); p.failures = 0; }
+    catch (const std::exception& e) { ok = false; phase_failed(p, name, e.what(), now); }
+    catch (...) { ok = false; phase_failed(p, name, "unknown failure", now); }
+    const auto us = uint64_t(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count());
+    p.total_us += us; ++p.samples; if (us > p.max_us) p.max_us = us;
+    return ok;
+}
+void Core::phase_failed(Phase& p, const char* name, const char* what, uint64_t now) {
+    ++p.failures; p.retry_at = now + 1000;
+    const std::string message = std::string("CCS ") + name + " failed: " + what;
+    if (message != p.last_error) { p.last_error = message; if (writer_) writer_->write(nlohmann::json{{"level", "warn"}, {"msg", message}}.dump()); }
+    if (p.failures >= 60 && !p.disabled) {
+        p.disabled = true;
+        if (writer_) writer_->write(nlohmann::json{{"level", "error"}, {"msg", std::string("CCS ") + name + " switched off after sixty failures in a row; restart the game to try again"}}.dump());
+    }
 }
 void Core::on_hotkey(uint32_t key) {
     if (error_reported_) return;
@@ -559,6 +592,15 @@ const char* Core::get_status_json() {
     if (menu_) status["menu"] = menu_->diagnostics();
     status["current_weapon"] = current_weapon_;
     status["discovery"] = {{"state", int(discovery_.state())}, {"assets", discovery_.assets_seen()}, {"montages", discovery_.present().size()}, {"error", discovery_.error()}};
+    // Cost per phase since the last status write: microseconds on the game thread, average and worst tick.
+    static const char* phase_names[] = {"player_lookup", "combat", "asset_scan", "menu", "status"};
+    nlohmann::json timing = nlohmann::json::object();
+    for (size_t i = 0; i < phases_.size(); ++i) {
+        auto& p = phases_[i];
+        timing[phase_names[i]] = {{"average_us", p.samples ? p.total_us / p.samples : 0}, {"max_us", p.max_us}, {"ticks", p.samples}, {"disabled", p.disabled}};
+        p.total_us = 0; p.max_us = 0; p.samples = 0;
+    }
+    status["timing"] = std::move(timing);
 #endif
     status_json_ = status.dump();
     return status_json_.c_str();

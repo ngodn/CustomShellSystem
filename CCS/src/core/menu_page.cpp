@@ -674,25 +674,29 @@ void Menu::fit_panel() {
     panel_fit_pending_ = false;
     auto* details = details_.Get(); auto* size = panel_size_.Get();
     if (!details || !size) return;
-    Call window(details, L"GetDesiredSize", 1); window.run();
-    Call panel(size, L"GetDesiredSize", 1); panel.run();
-    const float status_top = float(design_h_ - 170), gap = 24.f;
-    const float fixed = float(window.get<Vec2>().y - panel.get<Vec2>().y);
-    const float room = std::clamp(status_top - gap - float(window_top) - fixed, 320.f, std::max(320.f, float(design_h_ - 960)));
-    if (std::abs(room - panel_max_) <= 2.f) return;
-    invoke(size, L"SetMaxDesiredHeight", L"InMaxDesiredHeight", room);
-    invoke(size, L"SetMinDesiredHeight", L"InMinDesiredHeight", room);
-    panel_max_ = room;
-    panel_fit_pending_ = true;
+    try {
+        Call window(details, L"GetDesiredSize", 1); window.run();
+        Call panel(size, L"GetDesiredSize", 1); panel.run();
+        const float status_top = float(design_h_ - 170), gap = 24.f;
+        const float fixed = float(window.get<Vec2>().y - panel.get<Vec2>().y);
+        const float room = std::clamp(status_top - gap - float(window_top) - fixed, 320.f, std::max(320.f, float(design_h_ - 960)));
+        if (std::abs(room - panel_max_) <= 2.f) return;
+        invoke(size, L"SetMaxDesiredHeight", L"InMaxDesiredHeight", room);
+        invoke(size, L"SetMinDesiredHeight", L"InMinDesiredHeight", room);
+        panel_max_ = room;
+        panel_fit_pending_ = true;
+    } catch (const std::exception&) {}   // the widgets are being rebuilt; the next build fits again
 }
 void Menu::reveal_pending() {
     for (auto& pending : pending_reveals_) {
         if (pending.frames <= 0 || --pending.frames > 0) continue;
         auto* scroll = pending.scroll.Get(); auto* target = pending.target.Get();
         if (!scroll || !target) continue;
-        Call call(scroll, L"ScrollWidgetIntoView", 4);
-        call.set(L"WidgetToFind", target); call.set(L"AnimateScroll", false);
-        call.set(L"ScrollDestination", pending.destination); call.set(L"Padding", 120.f); call.run();
+        try {
+            Call call(scroll, L"ScrollWidgetIntoView", 4);
+            call.set(L"WidgetToFind", target); call.set(L"AnimateScroll", false);
+            call.set(L"ScrollDestination", pending.destination); call.set(L"Padding", 120.f); call.run();
+        } catch (const std::exception&) {}
     }
 }
 void Menu::animate(uint64_t now) {

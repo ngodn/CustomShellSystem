@@ -149,6 +149,7 @@ private:
     bool attach(const engine::PlayerContext& player);
     void order_tabs();
     void navigate(int index);
+    int paired_index();   // our page and tab must sit at the same index in their strips; throws when they do not
     void forget();
     void bind_inputs();
     bool typing() const;
@@ -194,6 +195,8 @@ private:
     void dialog_close(bool destroy = false);
     struct RowLook { UObject* icon = nullptr; bool badge = false, enabled = true; std::string value; };
     std::map<UObject*, bool> held_;
+    uint64_t pairing_check_{}, search_check_{};
+    std::string last_attach_error_, last_warm_error_;   // repeated failures log once
     void fill_row(Item& item, const std::string& title, const RowLook& look, bool selected);
     void paragraph(Stack& stack, const std::string& value, Color color);
     void bind(const WeakObject& widget, Json action, const std::map<UObject*, bool>& held);

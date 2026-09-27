@@ -44,8 +44,20 @@ bool Writer::flush() {
     return !failed_;
 }
 
+// The log rotates at four megabytes: the current file becomes ".1" (replacing the previous
+// one) and a fresh file starts, so a long session or a repeating warning cannot grow it forever.
 void Writer::worker_loop() {
     std::ofstream out;
+    constexpr uintmax_t rotate_bytes = uintmax_t(4) << 20;
+    uintmax_t bytes = 0;
+    auto rotate = [&] {
+        out.close();
+        std::error_code ec;
+        auto previous = path_; previous += ".1";
+        std::filesystem::remove(previous, ec);
+        std::filesystem::rename(path_, previous, ec);
+        bytes = 0;
+    };
     while (true) {
         std::string item;
         {
@@ -58,11 +70,19 @@ void Writer::worker_loop() {
 
         bool written = false;
         try {
-            if (!out.is_open()) out.open(path_, std::ios::out | std::ios::app);
+            if (!out.is_open()) {
+                std::error_code ec;
+                bytes = std::filesystem::file_size(path_, ec);
+                if (ec) bytes = 0;
+                if (bytes > rotate_bytes) rotate();
+                out.open(path_, std::ios::out | std::ios::app);
+            }
             if (out.is_open()) {
                 out << item << "\n";
                 out.flush();
                 written = static_cast<bool>(out);
+                bytes += item.size() + 1;
+                if (bytes > rotate_bytes) rotate();
             }
         } catch (...) {}
         {

@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include "ccs_abi.h"
 #include "settings.hpp"
 #include "storage.hpp"
@@ -41,6 +42,13 @@ private:
     const CcsHookHost* hooks_{};
     std::string status_json_;
     bool initialized_{false}, error_reported_{false}, fault_cleanup_complete_{};
+    // Each phase of a tick fails on its own: the failure is logged when its message changes,
+    // the phase is retried a second later and switched off after sixty failures in a row. One
+    // bad frame in the menu never stops combat, and nothing stops the whole mod for the session.
+    struct Phase { std::string last_error; uint64_t retry_at{}; unsigned failures{}; bool disabled{}; uint64_t max_us{}, total_us{}, samples{}; };
+    std::array<Phase, 5> phases_{};   // player context, combat, discovery, menu, status
+    template<class F> bool phase(unsigned index, const char* name, uint64_t now, F&& body);
+    void phase_failed(Phase& phase, const char* name, const char* what, uint64_t now);
     uint64_t fault_cleanup_after_{};
 #ifdef CCS_FRAME_PROFILE
     std::unique_ptr<runtime::FrameProfile> timing_;
@@ -68,6 +76,9 @@ private:
     uint64_t weapon_check_{};
     uint64_t presets_listed_{};
     nlohmann::json options_;                  // the move options, built once from the catalog
+    mutable nlohmann::json candidates_;       // the candidate rows every slot lists, rebuilt only when the scan changes them
+    mutable uint64_t candidates_key_{};
+    const nlohmann::json& candidate_options() const;
     nlohmann::json model() const;
     uint64_t model_revision();
     uint64_t model_revision_{1}, model_signature_{};

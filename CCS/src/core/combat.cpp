@@ -121,7 +121,7 @@ void Combat::release(Slot& slot) {
     if (shown_montage_.get() && shown_montage_.get() == slot.montage.get()) restore_weapon();
     if (slot.rooted) { if (auto* montage = slot.montage.get()) drop_referenced(world_.get(), montage); slot.rooted = false; }
     if (auto* copy = slot.play.get(); copy && copy != slot.montage.get()) drop_referenced(world_.get(), copy);
-    slot.play = {};
+    slot.play = {}; slot.play_hold = false;
     if (slot.show_rooted) { if (auto* mesh = slot.show_mesh.get()) drop_referenced(world_.get(), mesh); slot.show_rooted = false; }
     slot.montage = {}; slot.show_mesh = {}; slot.was_ready = false;   // a deliberate release is not a loss
 }
@@ -133,23 +133,34 @@ const wchar_t* payload_fields[] = {L"HealthDamage", L"PoiseDamageOption", L"Brea
     L"StrikeDirection", L"PoiseDamage", L"PoiseDamageEffect", L"BreakDamage", L"BreakDamageEffect", L"PoiseBrokenEffect", L"PoiseDamageDataTag", L"BreakDamageDataTag",
     L"PayloadTags", L"CustomElementalStacks"};
 }
+const Combat::NotifyLayout& Combat::notify_layout() const {
+    auto* montage_class = static_cast<UClass*>(find_cached(L"/Script/Engine.AnimMontage"));
+    if (layout_.notifies && layout_.montage_class == montage_class) return layout_;
+    NotifyLayout l; l.montage_class = montage_class;
+    auto* p = montage_class ? montage_class->GetPropertyByNameInChain(L"Notifies") : nullptr;
+    if (!p || !p->IsA<FArrayProperty>()) throw std::runtime_error("AnimMontage.Notifies is missing");
+    auto* inner = static_cast<FArrayProperty*>(p)->GetInner();
+    if (!inner || !inner->IsA<FStructProperty>()) throw std::runtime_error("AnimMontage.Notifies is not a struct array");
+    auto* row = static_cast<FStructProperty*>(inner)->GetStruct().Get();
+    l.notifies = p;
+    l.notify = row ? row->GetPropertyByNameInChain(L"Notify") : nullptr;
+    l.state = row ? row->GetPropertyByNameInChain(L"NotifyStateClass") : nullptr;
+    l.link = row ? row->GetPropertyByNameInChain(L"LinkValue") : nullptr;
+    if (!l.notify || !l.state || !l.link || !l.notify->IsA<FObjectProperty>() || !l.state->IsA<FObjectProperty>()) throw std::runtime_error("FAnimNotifyEvent layout changed");
+    l.hit_state = find_cached(L"/Script/Sparta.SpartaAnimNotifyState_HitCheck");
+    l.hit_notify = find_cached(L"/Script/Sparta.SpartaAnimNotify_HitCheck");
+    layout_ = l;
+    return layout_;
+}
 std::vector<UObject*> Combat::hit_payloads(UObject* montage) const {
     std::vector<UObject*> out;
     if (!montage) return out;
-    auto* p = montage->GetPropertyByNameInChain(L"Notifies");
-    if (!p || !p->IsA<FArrayProperty>()) return out;
-    auto* array = static_cast<FArrayProperty*>(p); auto* inner = array->GetInner();
-    if (!inner->IsA<FStructProperty>()) return out;
-    auto* row = static_cast<FStructProperty*>(inner)->GetStruct().Get();
-    auto* notify = row ? row->GetPropertyByNameInChain(L"Notify") : nullptr;
-    auto* state = row ? row->GetPropertyByNameInChain(L"NotifyStateClass") : nullptr;
-    if (!notify || !state || !notify->IsA<FObjectProperty>() || !state->IsA<FObjectProperty>()) return out;
-    auto* hit_state = static_cast<UClass*>(find_cached(L"/Script/Sparta.SpartaAnimNotifyState_HitCheck"));
-    auto* hit_notify = static_cast<UClass*>(find_cached(L"/Script/Sparta.SpartaAnimNotify_HitCheck"));
-    FScriptArrayHelper rows(array, reinterpret_cast<std::byte*>(montage) + p->GetOffset_Internal());
+    const auto& l = notify_layout();
+    auto* hit_state = static_cast<UClass*>(l.hit_state); auto* hit_notify = static_cast<UClass*>(l.hit_notify);
+    FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(montage) + l.notifies->GetOffset_Internal());
     const int count = std::min(rows.Num(), 256);
     for (int i = 0; i < count; ++i) {
-        for (auto* field : {notify, state}) {
+        for (auto* field : {l.notify, l.state}) {
             UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + field->GetOffset_Internal(), sizeof(object));
             if (!object || !((hit_state && object->IsA(hit_state)) || (hit_notify && object->IsA(hit_notify)))) continue;
             if (auto* payload = object_of(object, L"DamagePayload")) out.push_back(payload);
@@ -211,24 +222,15 @@ void resize_raw_array(std::byte* array, int element_size, int count) {
 }
 float Combat::first_hit_time(UObject* montage) const {
     if (!montage) return -1.f;
-    auto* p = montage->GetPropertyByNameInChain(L"Notifies");
-    if (!p || !p->IsA<FArrayProperty>()) return -1.f;
-    auto* array = static_cast<FArrayProperty*>(p); auto* inner = array->GetInner();
-    if (!inner->IsA<FStructProperty>()) return -1.f;
-    auto* row = static_cast<FStructProperty*>(inner)->GetStruct().Get();
-    auto* notify = row ? row->GetPropertyByNameInChain(L"Notify") : nullptr;
-    auto* state = row ? row->GetPropertyByNameInChain(L"NotifyStateClass") : nullptr;
-    auto* link = row ? row->GetPropertyByNameInChain(L"LinkValue") : nullptr;
-    if (!notify || !state || !link) return -1.f;
-    auto* hit_state = static_cast<UClass*>(find_cached(L"/Script/Sparta.SpartaAnimNotifyState_HitCheck"));
-    auto* hit_notify = static_cast<UClass*>(find_cached(L"/Script/Sparta.SpartaAnimNotify_HitCheck"));
-    FScriptArrayHelper rows(array, reinterpret_cast<std::byte*>(montage) + p->GetOffset_Internal());
+    const auto& l = notify_layout();
+    auto* hit_state = static_cast<UClass*>(l.hit_state); auto* hit_notify = static_cast<UClass*>(l.hit_notify);
+    FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(montage) + l.notifies->GetOffset_Internal());
     float best = -1.f;
     for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
-        for (auto* field : {notify, state}) {
+        for (auto* field : {l.notify, l.state}) {
             UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + field->GetOffset_Internal(), sizeof(object));
             if (!object || !((hit_state && object->IsA(hit_state)) || (hit_notify && object->IsA(hit_notify)))) continue;
-            float at{}; std::memcpy(&at, rows.GetRawPtr(i) + link->GetOffset_Internal(), sizeof(at));
+            float at{}; std::memcpy(&at, rows.GetRawPtr(i) + l.link->GetOffset_Internal(), sizeof(at));
             if (std::isfinite(at) && at >= 0.f && (best < 0.f || at < best)) best = at;
         }
     }
@@ -394,21 +396,27 @@ UObject* Combat::build_transplant(UObject* original, UObject* replacement) {
 // replacement's own wind-up (first hit to first hit, else length to length).
 int Combat::hold_handler_index(UObject* montage) const {
     if (!montage) return -1;
-    auto* p = montage->GetPropertyByNameInChain(L"Notifies");
-    if (!p || !p->IsA<FArrayProperty>()) return -1;
-    auto* array = static_cast<FArrayProperty*>(p); auto* inner = array->GetInner();
-    if (!inner->IsA<FStructProperty>()) return -1;
-    auto* row = static_cast<FStructProperty*>(inner)->GetStruct().Get();
-    auto* state = row ? row->GetPropertyByNameInChain(L"NotifyStateClass") : nullptr;
-    if (!state) return -1;
-    FScriptArrayHelper rows(array, reinterpret_cast<std::byte*>(montage) + p->GetOffset_Internal());
+    const auto& l = notify_layout();
+    FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(montage) + l.notifies->GetOffset_Internal());
     for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
-        UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + state->GetOffset_Internal(), sizeof(object));
+        UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + l.state->GetOffset_Internal(), sizeof(object));
         if (!object || !object->GetClassPrivate()) continue;
         const auto cls = narrow(object->GetClassPrivate()->GetNamePrivate().ToString());
         if (cls.find("HoldAttackHandler") != std::string::npos || cls.starts_with("ANS_HAH_")) return i;
     }
     return -1;
+}
+const Combat::MontageFacts& Combat::montage_facts(UObject* montage) {
+    const auto key = name_key(montage->GetNamePrivate());
+    if (auto it = montage_facts_.find(key); it != montage_facts_.end() && it->second.montage == montage) return it->second;
+    if (montage_facts_.size() >= 256) montage_facts_.clear();
+    MontageFacts facts; facts.montage = montage;
+    // Some abilities play companion clips around the attack (the Axatana heavy plays the axe
+    // transform before its hold and cut). Those stay the game's; only the attack clip is swapped.
+    const auto played = narrow(montage->GetNamePrivate().ToString());
+    for (const char* companion : {"Transform", "Equip", "Unequip", "Draw", "Stow", "Sheath"}) if (played.find(companion) != std::string::npos) facts.companion = true;
+    try { facts.hold = hold_handler_index(montage) >= 0; } catch (...) { facts.hold = false; }
+    return montage_facts_[key] = facts;
 }
 UObject* Combat::carry_hold(Slot& s, UObject* original, UObject* replacement) {
     for (auto& t : s.holds) if (t.original.get() == original) { if (auto* clone = t.clone.get()) return clone; }
@@ -580,6 +588,7 @@ void Combat::load_pending(const PlayerContext& player) {
                 std::string list; for (const auto& d : dropped) list += (list.empty() ? "" : ", ") + d;
                 log("CCS cleaned copy of " + narrow(montage->GetNamePrivate().ToString()) + (dropped.empty() ? ": nothing to drop" : ": dropped " + list));
             }
+            try { s.play_hold = hold_handler_index(s.play.get() ? s.play.get() : montage) >= 0; } catch (...) { s.play_hold = false; }
             if (!s.show_mesh_path.empty()) {
                 try {
                     auto* mesh = load(s.show_mesh_path);
@@ -647,7 +656,8 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         world_ = {}; world_.capture(player.world);
         if (had_world) {
             log("CCS world changed; reloading the slots");
-            for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); s.was_ready = false; if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.play = {}; s.show_mesh = {}; s.pending = true; } }
+            montage_facts_.clear();
+            for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); s.holds.clear(); s.was_ready = false; if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.play = {}; s.play_hold = false; s.show_mesh = {}; s.pending = true; } }
         }
     }
     for (auto& s : slots_) {   // a loaded montage that stops answering: say why once, and load it again
@@ -661,7 +671,7 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         load_pending(player);
         if (!token_ && now >= retry_after_) {
             try { ensure_hook(); error_.clear(); }
-            catch (const std::exception& e) { error_ = e.what(); retry_after_ = now + 2000; log(std::string("CCS combat hook failed: ") + e.what()); }
+            catch (const std::exception& e) { if (error_ != e.what()) log(std::string("CCS combat hook failed: ") + e.what()); error_ = e.what(); retry_after_ = now + 2000; }
         }
         active_ = token_ != 0 && player.pawn != nullptr;
     } else {
@@ -730,13 +740,11 @@ void Combat::observe(void* frame_ptr) {
         // Some abilities play companion clips around the attack (the Axatana heavy plays the axe
         // transform before its hold and cut). Those stay the game's; the attack clip is swapped.
         // The exact attack montage varies with the shell the body wears, so it is not matched by name.
-        if (original) {
-            const auto played = narrow(original->GetNamePrivate().ToString());
-            for (const char* companion : {"Transform", "Equip", "Unequip", "Draw", "Stow", "Sheath"}) if (played.find(companion) != std::string::npos) {
-                ++skipped_; note_recent(cls, slot, "companion clip left alone");
-                if (noted_.size() < 64 && noted_.insert(key ^ 0x9e3779b97f4a7c15ull).second) log("CCS attack left alone: " + narrow(cls->GetNamePrivate().ToString()) + " played its companion clip " + played);
-                return;
-            }
+        const MontageFacts* facts = original ? &montage_facts(original) : nullptr;
+        if (facts && facts->companion) {
+            ++skipped_; note_recent(cls, slot, "companion clip left alone");
+            if (noted_.size() < 64 && noted_.insert(key ^ 0x9e3779b97f4a7c15ull).second) log("CCS attack left alone: " + narrow(cls->GetNamePrivate().ToString()) + " played its companion clip " + narrow(original->GetNamePrivate().ToString()));
+            return;
         }
         UObject* pointer = replacement;
         if (s.tuning.feel == "game" && original && original != source) {
@@ -747,7 +755,7 @@ void Combat::observe(void* frame_ptr) {
         } else if (original && original != replacement) {
             // The move's own feel keeps the charge window: without the original's hold handler a
             // long press could never charge (and on hold-first weapons never fall back to the cut).
-            if (hold_handler_index(original) >= 0 && hold_handler_index(replacement) < 0) {
+            if (facts && facts->hold && !s.play_hold) {
                 try { if (auto* carried = carry_hold(s, original, replacement)) pointer = carried; }
                 catch (const std::exception& e) { ++failures_; if (!s.hold_warned) { s.hold_warned = true; log("CCS hold window unavailable for " + s.move_id + ": " + e.what() + "; long presses will not charge this move"); } }
             }

@@ -21,17 +21,23 @@ struct CcsHookService::State {
         CallbackId native_id{};
         bool rooted{};
         ccs::runtime::HookTarget target;
+        // 5.6 liveness: Unreachable (bit 28) or Garbage (bit 21) means gone. The SDK's IsValid()
+        // reads bit 29 as PendingKill, which 5.6 uses for RefCounted.
+        static bool live(FUObjectItem* item) {
+            constexpr auto gone = static_cast<EInternalObjectFlags>((1 << 28) | (1 << 21));
+            return item && item->GetUObject() && !item->HasAnyFlags(gone);
+        }
         Slot(UFunction* value, CcsNativePreHook callback, void* user)
             : function(value), index(value->GetInternalIndex()), name(value->GetNamePrivate()), target(callback, user) {
             auto* item = FUObjectArray::IndexToObject(index);
-            if (!item || item->GetUObject() != value || !item->IsValid(false))
+            if (!item || item->GetUObject() != value || !live(item))
                 throw std::runtime_error("Native hook function is not live");
             serial = item->GetSerialNumber();
             if (serial <= 0) throw std::runtime_error("Native hook function serial is not initialized");
         }
         UFunction* get() const {
             auto* item = FUObjectArray::IndexToObject(index);
-            if (!item || item->GetUObject() != function || !item->IsValid(false) ||
+            if (!item || item->GetUObject() != function || !live(item) ||
                 !function->IsRootSet() || function->GetNamePrivate() != name || !function->IsA<UFunction>()) return nullptr;
             return item->GetSerialNumber() == serial ? function : nullptr;
         }
@@ -65,7 +71,7 @@ uint64_t CcsHookService::add(void* context, void* function, CcsNativePreHook cal
             state->slots.size() >= 16 || state->next == std::numeric_limits<uint64_t>::max()) return 0;
         auto* value = static_cast<UFunction*>(function);
         auto* item = FUObjectArray::IndexToObject(value->GetInternalIndex());
-        if (!item || item->GetUObject() != value || !item->IsValid(false) || item->GetSerialNumber() <= 0 ||
+        if (!item || item->GetUObject() != value || !State::Slot::live(item) || item->GetSerialNumber() <= 0 ||
             !value->IsA<UFunction>() || !value->HasAnyFunctionFlags(FUNC_Native) ||
             value->HasAnyFunctionFlags(FUNC_Delegate | FUNC_MulticastDelegate)) return 0;
         for (const auto& [id, slot] : state->slots) if (slot->function == value) return 0;

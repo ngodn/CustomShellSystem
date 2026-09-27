@@ -39,16 +39,20 @@ bool has_focus(UObject* widget) {
     Call focus(widget, L"HasKeyboardFocus", 1); focus.run(); return focus.get<bool>();
 }
 }
+int Menu::paired_index() {
+    auto* tabs = tabs_.Get();
+    if (!tabs || !page_.Get() || !tab_.Get() || !switcher_.Get()) throw std::runtime_error("CCS tab widgets are gone");
+    // Another mod may reorder the strip after attachment: resolve our paired children by asking.
+    Call page_index(switcher_.Get(), L"GetChildIndex", 2); page_index.set(L"content", page_.Get()); page_index.run();
+    Call tab_index(tabs, L"GetChildIndex", 2); tab_index.set(L"content", tab_.Get()); tab_index.run();
+    const int index = page_index.get<int32_t>();
+    if (index < 0 || index != tab_index.get<int32_t>()) throw std::runtime_error("CCS tab/page pairing is inconsistent");
+    tab_index_ = index;
+    return index;
+}
 void Menu::navigate(int index) {
     auto* tabs = tabs_.Get(); if (!tabs) return;
-    if (index == tab_index_ && page_.Get() && tab_.Get() && switcher_.Get()) {
-        // Another mod may reorder the strip after attachment: resolve our paired children when opening.
-        Call page_index(switcher_.Get(), L"GetChildIndex", 2); page_index.set(L"content", page_.Get()); page_index.run();
-        Call tab_index(tabs, L"GetChildIndex", 2); tab_index.set(L"content", tab_.Get()); tab_index.run();
-        index = page_index.get<int32_t>();
-        if (index < 0 || index != tab_index.get<int32_t>()) throw std::runtime_error("CCS tab/page pairing is inconsistent");
-        tab_index_ = index;
-    }
+    if (index == tab_index_ && page_.Get() && tab_.Get() && switcher_.Get()) index = paired_index();
     Call nav(tabs, L"NavigateToCustomIndex", 3); nav.set(L"Index", int32_t{index}); nav.run();
     if (!nav.get<bool>(L"Success")) throw std::runtime_error("Player Menu tab navigation rejected the index");
 }
@@ -314,7 +318,11 @@ void Menu::tick(const PlayerContext& player, double) {
     if (!page_.Get()) {
         if (now < discover_after_) return; discover_after_ = now + 250;
         if (!player.pc) return;
-        try { if (!attach(player)) return; } catch (const std::exception& e) { if (deps_.log) deps_.log(std::string("CCS tab attach failed: ") + e.what()); discover_after_ = now + 2000; return; }
+        try { if (!attach(player)) return; last_attach_error_.clear(); }
+        catch (const std::exception& e) {
+            if (deps_.log && last_attach_error_ != e.what()) { last_attach_error_ = e.what(); deps_.log(std::string("CCS tab attach failed: ") + e.what()); }
+            discover_after_ = now + 2000; return;
+        }
     }
     auto* main = main_.Get(); auto* switcher = switcher_.Get(); if (!main || !switcher) { forget(); return; }
     const bool menu_open = bool_of(main, L"bOpen");
@@ -323,8 +331,15 @@ void Menu::tick(const PlayerContext& player, double) {
         if (!frozen_listeners_.empty() || !dialog_shown_.empty()) { try { dialog_close(); } catch (...) {} }
         return;
     }
-    Call selected(switcher, L"GetActiveWidget", 1); selected.run();
-    active_ = selected.get<UObject*>() == page_.Get();
+    try { Call selected(switcher, L"GetActiveWidget", 1); selected.run(); active_ = selected.get<UObject*>() == page_.Get(); }
+    catch (const std::exception&) { active_ = false; was_active_ = false; return; }   // a rebuilt menu: try again next frame
+    // The game reruns the menu's Construct on reopen and other mods add tabs: once a second, make
+    // sure our page and tab still sit together in their strips; otherwise drop and attach again.
+    if (now >= pairing_check_) {
+        pairing_check_ = now + 1000;
+        try { paired_index(); }
+        catch (const std::exception& e) { if (deps_.log) deps_.log(std::string("CCS tab dropped: ") + e.what()); detach(); return; }
+    }
     if (active_ && !was_active_) {
         bindings_ready_ = false; bind_retry_ = 0;
         try { bind_inputs(); ++bindings_generation_; } catch (const std::exception& e) { if (deps_.log) deps_.log(std::string("Menu input binding failed: ") + e.what()); }
@@ -350,19 +365,23 @@ void Menu::tick(const PlayerContext& player, double) {
     }
     if (now >= layout_check_) {
         layout_check_ = now + 500;
-        Call geometry(switcher, L"GetCachedGeometry", 1); geometry.run();
-        Call size(find_cached(L"/Script/UMG.Default__SlateBlueprintLibrary"), L"GetLocalSize", 2); size.copy(L"Geometry", geometry, L"ReturnValue"); size.run();
-        const auto extent = size.get<Vec2>();
-        if (std::abs(extent.x - viewport_[0]) > .5 || std::abs(extent.y - viewport_[1]) > .5) { viewport_ = {extent.x, extent.y}; dirty_ = true; }
+        try {
+            Call geometry(switcher, L"GetCachedGeometry", 1); geometry.run();
+            Call size(find_cached(L"/Script/UMG.Default__SlateBlueprintLibrary"), L"GetLocalSize", 2); size.copy(L"Geometry", geometry, L"ReturnValue"); size.run();
+            const auto extent = size.get<Vec2>();
+            if (std::abs(extent.x - viewport_[0]) > .5 || std::abs(extent.y - viewport_[1]) > .5) { viewport_ = {extent.x, extent.y}; dirty_ = true; }
+        } catch (const std::exception&) {}   // measured again in half a second
     }
     if (auto* prompt = input_prompt_.Get()) { try { const bool gamepad = read<uint8_t>(prompt, L"InputType") == 1; if (gamepad != gamepad_) { gamepad_ = gamepad; dirty_ = true; } } catch (...) {} }
     if (now >= model_check_) { model_check_ = now + 250; refresh_model(false, now); }
     bool typing_now = false;
-    if (auto* search = search_input_.Get()) {
+    try { typing_now = typing(); } catch (...) {}
+    // The search text is read every frame only while the field has focus; otherwise four times a second.
+    if (auto* search = search_input_.Get(); search && (typing_now || now >= search_check_)) {
+        search_check_ = now + 250;
         try { const auto query = text_of(search, 256); if (query != search_query_) { search_query_ = query; if (options_.filter(query)) dirty_ = true; } }
         catch (const std::exception& e) { error_ = e.what(); }
     }
-    try { typing_now = typing(); } catch (...) {}
     typing_now_ = typing_now;
     fit_panel();
     reveal_pending();
@@ -398,7 +417,10 @@ void Menu::warm(uint64_t now) {
         if (warm_texture_ < 1) { texture_at(deps_.root / "assets/logo.png"); ++warm_texture_; return; }
         if (now >= model_check_) { model_check_ = now + 250; refresh_model(false, now); }
         if (dirty_) build();
-    } catch (const std::exception& e) { if (deps_.log) deps_.log(std::string("Menu warm-up failed: ") + e.what()); dirty_ = false; }
+    } catch (const std::exception& e) {
+        if (deps_.log && last_warm_error_ != e.what()) { last_warm_error_ = e.what(); deps_.log(std::string("Menu warm-up failed: ") + e.what()); }
+        dirty_ = false;
+    }
 }
 // The model is asked for at most four times a second while the page shows; a build happens
 // only when it changed.
@@ -501,13 +523,14 @@ void Menu::act(const Json& action) {
     }
     if (name == "run" && model_.is_object()) {
         const auto id = action.value("id", std::string{});
-        for (const auto& section : model_.value("sections", Json::array())) for (const auto& c : section.value("controls", Json::array())) if (c.value("id", std::string{}) == id) {
+        if (!model_.contains("sections")) return;
+        for (const auto& section : model_.at("sections")) { if (!section.contains("controls")) continue; for (const auto& c : section.at("controls")) if (c.value("id", std::string{}) == id) {
             if (!interactive(c)) { error_ = "That action is not available right now."; dirty_ = true; return; }
             Json event = {{"id", id}};
             if (c.contains("confirm")) { confirm_ = {{"event", event}, {"message", c.at("confirm")}}; dialog_focus_ = 0; dirty_ = true; }
             else send_event(event);
             return;
-        }
+        } }
         return;
     }
     if (!model_.is_object() || !model_.contains("sections")) return;
