@@ -11,7 +11,9 @@ static int32 EvaluateEmbeddedEveCloth(const FString& Params)
     FString Report,Clip=TEXT("Sprint");
     FString MeshPath=TEXT("/Game/CSS/EveTest/SK_PTailRun");
     FParse::Value(*Params,TEXT("Mesh="),MeshPath);
-    if (MeshPath!=TEXT("/Game/CSS/EveTest/SK_PTailRun") && MeshPath!=TEXT("/Game/CSS/EveTest/SK_PFit13"))
+    const bool Knit = MeshPath == TEXT("/Game/CSS/EveTest/SK_KCloth1");
+    const int32 ExpectedParticles = Knit ? 1679 : 18;
+    if (!Knit && MeshPath!=TEXT("/Game/CSS/EveTest/SK_PTailRun") && MeshPath!=TEXT("/Game/CSS/EveTest/SK_PFit13"))
         return Fail(TEXT("Require a known private cloth candidate"));
     const bool Secondary=FParse::Param(*Params,TEXT("Secondary"));
     FParse::Value(*Params,TEXT("Clip="),Clip);
@@ -55,11 +57,11 @@ static int32 EvaluateEmbeddedEveCloth(const FString& Params)
         Component->WaitForExistingParallelClothSimulation_GameThread();
         const auto& Sim=Component->GetCurrentClothingData_AnyThread();
         const auto* Data=Sim.Find(0);
-        if (!Data || Data->Positions.Num()!=18 || Data->Normals.Num()!=18) return Fail(TEXT("Missing embedded simulation particles"));
+        if (!Data || Data->Positions.Num()!=ExpectedParticles || Data->Normals.Num()!=ExpectedParticles) return Fail(TEXT("Missing embedded simulation particles"));
         auto Row=MakeShared<FJsonObject>();
         Row->SetNumberField(TEXT("frame"),Frame); Row->SetNumberField(TEXT("time"),Time);
         TArray<TSharedPtr<FJsonValue>> Positions,Normals;
-        for (int32 I=0; I<18; ++I)
+        for (int32 I=0; I<ExpectedParticles; ++I)
         {
             const FVector P=Data->Transform.TransformPosition(FVector(Data->Positions[I]));
             const FVector N=Data->Transform.TransformVector(FVector(Data->Normals[I]));
