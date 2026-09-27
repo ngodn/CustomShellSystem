@@ -310,7 +310,7 @@ nlohmann::json Core::model() const {
                     "Weapon's own: the numbers your weapon's normal attack has in this slot, on this animation's timing. Base damage is always your weapon's."}});
         }
         if (!id.empty()) {
-            settings_rows.push_back({{"type", "choice"}, {"id", sid + ".weapon"}, {"label", "Weapon in hand"}, {"value", tune.weapon},
+            settings_rows.push_back({{"type", "choice"}, {"id", sid + ".weapon"}, {"label", "Visual"}, {"value", tune.weapon},
                 {"options", Json::array({{{"id", "inventory"}, {"label", "My weapon"}}, {{"id", "move"}, {"label", "Move's weapon"}}})},
                 {"description", std::string("Which weapon you hold while this move plays. Move's weapon: the weapon this move belongs to appears in your hand for the swing, then yours comes back. Hits still use your weapon.")
                     + (mesh_ready ? "" : " No model is known for this move's weapon, so your own stays.")}});

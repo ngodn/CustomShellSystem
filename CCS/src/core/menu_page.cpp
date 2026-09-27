@@ -1133,12 +1133,16 @@ void Menu::build_slots(const Json& section, bool& deferred) {
     const std::string slot_label = slot ? slot->value("label", std::string{}) : std::string{};
     if (slot && (focused_setting || !matches.empty())) {
         const auto slot_name = slot->value("name", slot->value("label", std::string{}));
-        if (focused_setting) detail(focused_setting->value("label", std::string{}), "Setting for " + slot_label, focused_setting->value("description", std::string{}), nullptr);
-        else {
-            const auto& o = options[matches[size_t(cand)]];
+        // The card always shows a move: the highlighted candidate, or the slot's own move while its
+        // settings have the focus. The focused setting explains itself under the rows.
+        const Json* shown = nullptr;
+        if (focused_setting) { for (const auto& candidate : options) if (candidate.at("id") == slot->at("value")) { shown = &candidate; break; } }
+        if (!shown && !matches.empty()) shown = &options[matches[size_t(cand)]];
+        if (shown) {
+            const auto& o = *shown;
             detail(o.value("title", o.value("label", std::string{})), o.value("subtitle", slot_name), o.value("description", std::string{}), game_icon(o.value("icon", std::string{})));
             if (const auto hint = o.value("hint", std::string{}); !hint.empty()) paragraph(panel_, hint, muted);
-        }
+        } else detail(deps_.title, "", "");
         // The slot's own settings as option rows in the window; a click or the settings key focuses them.
         for (size_t k = 0; k < settings.size(); ++k) {
             const auto& st = settings[k];
@@ -1146,6 +1150,7 @@ void Menu::build_slots(const Json& section, bool& deferred) {
             option_row(st.value("label", std::string{}), value, focus_ == Focus::panel && panel_focus_ == int(k), {{"action", "setting_delta"}, {"delta", -1}, {"index", int(k)}},
                 {{"action", "setting_delta"}, {"delta", 1}, {"index", int(k)}}, true, {{"action", "setting_focus"}, {"index", int(k)}});
         }
+        if (focused_setting) paragraph(panel_, focused_setting->value("description", std::string{}), muted);
         // Prompts follow the focus: what Confirm, Secondary, Back and the directions do right now.
         const auto& o = options[matches[size_t(cand)]];
         const bool assigned = o.at("id") == slot->at("value");
