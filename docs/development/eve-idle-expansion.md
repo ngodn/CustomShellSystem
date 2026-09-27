@@ -92,3 +92,15 @@ Added `--measure-only` to the accepted Blender replay tool, reporting visible-bo
 The raw retargets need ground correction. Some kneeling/floor poses penetrate the nominal floor by approximately 7 to 19 cm. Clip 708 has about 6.5 cm variation across the sampled contact heights, so a constant lift alone cannot keep it closely planted. Next author a conservative per-clip correction, verify its loop continuity and resample ground contact. Keep the existing per-variant mesh offsets, including Black Pearl's -3 cm, in the live comparison.
 
 Read-only review of `native/src/walk_override.inl` confirms the existing custom idle path releases on active montages, movement and sidearm aiming and restores hidden weapons. The authoring idle overlay blends in over 0.18 seconds and exits immediately to preserve attack starts. These source checks do not replace runtime interruption tests. No runtime edits were made.
+
+## E5 ground correction
+
+`ground_idles.py` uses the corrected visible contact measurements. Clips with at most 3 cm contact variation receive a constant offset. Other clips use periodic interpolation and a five-frame weighted smoothing filter. Nominal target contact is 2 cm, accounting for the already accepted Black Pearl -3 cm display offset without changing it. This is a trial placement choice; the other outfits and real ground still require review.
+
+All 1414 frames differ from E4 only in root local translation Z. Root correction endpoints match exactly. Predicted sampled contacts span 0.50 to 3.23 cm before existing variant offsets. Receipts: `work/eve-idle1/e5/grounding.json` and `root-only-check.json`.
+
+`import_grounded_idles.py` duplicates E4 into private E5 assets, edits only root translation keys and evaluates every physical bone at every frame. All 14 completed, maximum local translation error 0.00000060 cm; original rotations/scales pass unchanged. Existing CSS asset hashes were verified unchanged. The commandlet process exited 0; log `work/eve26/idle-e5-ground.log`, receipt `work/eve-idle1/e5/import-result.json`.
+
+A denser skinned render and contact pass is running for all E5 clips at stride 2 (15 fps samples). Outputs are `work/eve-idle1/e5-render700` through `e5-render713`; each completed clip has its own report. Do not infer completion from directory existence. Full sequence has 51 rendered samples including the duplicate loop endpoint; encode only the first 50 at 15 fps to preserve the original 3.333-second cycle.
+
+The accepted manifest stores animation options per variant, not at outfit level. All six variants currently carry Eve Default Idle plus movement slots. Add new options to all six while preserving their existing definitions.
