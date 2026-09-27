@@ -19,7 +19,11 @@ struct Core {
     fs::path root;
     fs::path package_root;
     Catalog catalog;
-    bool original_shells_attempted=false;
+    // Official shell discovery runs once a player exists; a failure retries a few times
+    // spaced out, since the first attempt can land while the world is still loading.
+    int original_shells_attempts=0;
+    static constexpr int original_shells_max_attempts=3;
+    uint64_t original_shells_retry_after=0;
     State state;
     Appearance appearance;
     InventoryUI inventory;
@@ -596,7 +600,7 @@ struct Core {
                 if(candidate!=package_root) {
                     auto resolved=load_catalog(candidate);
                     package_root=std::move(candidate); catalog=std::move(resolved); ui_refresh=true;
-                    original_shells_attempted=false;
+                    original_shells_attempts=0; original_shells_retry_after=0;
                     message=wardrobe_startup_message(catalog.outfits.size());
                 }
             } catch(const std::exception& e) { host.log((std::string("CSS content lookup fallback: ")+e.what()).c_str()); }
@@ -703,27 +707,38 @@ struct Core {
             rescan_pending = false;
             auto updated = load_catalog(package_root);
             catalog = std::move(updated);
-            original_shells_attempted=false;
+            original_shells_attempts=0; original_shells_retry_after=0;
             ui_refresh=true;
             report(catalog.outfits.empty()?wardrobe_startup_message(0):"Catalog reloaded.");
         }
-        if(!original_shells_attempted && appearance.player(engine)) {
-            original_shells_attempted=true;
+        if(original_shells_attempts<original_shells_max_attempts && now>=original_shells_retry_after && appearance.player(engine)) {
+            ++original_shells_attempts;
+            std::vector<std::string> skipped;
             try {
-                auto originals=discover_original_shells();
+                auto originals=discover_original_shells(skipped);
                 catalog.diagnostics["original_shells"]=originals.variants.size();
+                catalog.diagnostics["original_shells_skipped"]=skipped;
                 auto& choices=catalog.diagnostics["original_shell_choices"];choices=Json::array();
                 for(const auto& variant:originals.variants)
                     choices.push_back({{"id",variant.id},{"name",variant.name},{"mesh",variant.mesh}});
+                host.log(("Official shell appearances: "+std::to_string(originals.variants.size())+
+                          (skipped.empty()?std::string{}:", skipped "+std::to_string(skipped.size()))).c_str());
+                for(const auto& entry:skipped) host.log(("Official shell skipped: "+entry).c_str());
                 catalog.outfits.push_back(std::move(originals));
                 inventory.refresh();ui_refresh=true;
+                original_shells_attempts=original_shells_max_attempts;
             } catch(const std::exception& error) {
                 catalog.diagnostics["original_shells_error"]=error.what();
-                host.log((std::string("Official shell appearances unavailable: ")+error.what()).c_str());
+                catalog.diagnostics["original_shells_skipped"]=skipped;
+                for(const auto& entry:skipped) host.log(("Official shell skipped: "+entry).c_str());
+                const bool again=original_shells_attempts<original_shells_max_attempts;
+                original_shells_retry_after=now+15000;
+                host.log((std::string("Official shell appearances unavailable: ")+error.what()+
+                          (again?" (retrying in 15 s)":" (giving up for this session)")).c_str());
             }
         }
         if (restore_pending) {
-            appearance.restore(); recovery.clear(); restore_pending = false; applied_id.clear();
+            appearance.restore(); appearance.release_caches(); recovery.clear(); restore_pending = false; applied_id.clear();
             pending_custom.reset(); custom_only=false; apply_pending=false; selected_outfit.clear(); selected_variant.clear();
             appearance.player(engine);
             if (forget_current && !appearance.shell.empty()) state.selections.erase(appearance.shell);
@@ -857,16 +872,31 @@ struct Core {
                         recovery.clear();
                     } else {
                     auto start = std::chrono::steady_clock::now();
+                    // Where an apply spends its time, for the log line at the end. Event-only.
+                    auto lap_from=start; std::string laps;
+                    auto lap=[&](const char* name) {
+                        const auto at=std::chrono::steady_clock::now();
+                        laps+=std::string(laps.empty()?"":", ")+name+" "+std::to_string(int(std::chrono::duration<double,std::milli>(at-lap_from).count()+0.5));
+                        lap_from=at;
+                    };
                     if (state.keep_default_attachments) appearance.set_attachment_offsets({}, false);
                     else appearance.set_attachment_offsets(variant->attachments);
                     if (appearance.apply(engine, variant->mesh, variant->materials)) {
+                        lap("apply");
+                        laps+=" (load "+std::to_string(int(appearance.apply_load_ms+0.5))+", swap "+std::to_string(int(appearance.apply_swap_ms+0.5))+")";
                         try {
                             appearance.set_ground_offset(requested.custom.ground_offset_cm.value_or(variant->ground_offset_cm));
+                            lap("ground");
                             for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit) {
                                 // Items before controls: an accessory can hide body
                                 // sections, and a toggle may then show one of them again.
                                 appearance.sync_items(outfit,requested.variant);
+                                lap("items");
                                 appearance.customize(outfit,requested.variant,requested.custom);
+                                lap("customize");
+                                laps+=" (";
+                                for(const auto& [name,ms]:appearance.customize_ms) if(ms>=0.5) laps+=name+" "+std::to_string(int(ms+0.5))+" ";
+                                laps+=") keep-alive "+keep_alive_status();
                             }
                         } catch(...) {
                             applied_id.clear(); appearance.restore(); throw;
@@ -882,7 +912,9 @@ struct Core {
                                       "; not saving it, reconciling again").c_str());
                         } else {
                             sync_menu_safely();
+                            lap("menu");
                             attachments_after=0;sync_attachments_safely(now);
+                            lap("attachments");
                             recovery.clear();
                             last_apply_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
                             // Never write the mirror's look into this shell's own slot. Doing so
@@ -898,7 +930,7 @@ struct Core {
                             state.remembered_custom[requested.outfit]=requested.custom;
                             state.enabled = true; dirty = true; ui_refresh = !custom_only || refresh_custom;
                             applied_id = requested.outfit + "/" + requested.variant;
-                            host.log(("Appearance verified: " + applied_id).c_str());
+                            host.log(("Appearance verified: " + applied_id + " in " + std::to_string(int(last_apply_ms+0.5)) + " ms: " + laps).c_str());
                             report(custom_only?"Settings updated.":"Wearing " + variant->name + ".");
                             custom_only=false;
                         }
@@ -1042,7 +1074,7 @@ bool stop(void* ptr) noexcept {
         core.inventory.detach();
         core.appearance.walk.release();
         core.appearance.restore_misc();
-        core.appearance.restore(); if (core.dirty) core.save();
+        core.appearance.restore(); core.appearance.release_caches(); if (core.dirty) core.save();
         core.last_pawn.clear(); core.apply_pending = core.state.enabled;
         return true;
     }

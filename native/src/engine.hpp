@@ -25,7 +25,7 @@
 
 namespace css {
 fs::path engine_content_directory();
-Outfit discover_original_shells();
+Outfit discover_original_shells(std::vector<std::string>& skipped);
 // UE4SS's serial-allocation fallback uses a legacy soft-reference layout.
 // Initialize new serials through a reflected frame before constructing a weak handle.
 class WeakObject : public RC::Unreal::FWeakObjectPtr {
@@ -33,6 +33,28 @@ public:
     WeakObject() = default;
     WeakObject(RC::Unreal::UObject* object);
     WeakObject& operator=(RC::Unreal::UObject* object);
+};
+// Hooks the keep-alive to the running game instance. Cheap; called with the player lookup.
+void keep_alive_attach(void* engine);
+std::string keep_alive_status();
+// Assets kept alive for as long as their owner wants them, through the game instance's
+// ReferencedObjects (see keep_alive in engine.cpp for why not the root set). Blocking loads
+// can run garbage collection between successive imports, so a scope keeps this operation's
+// assets alive until component references own them. A longer-lived owner takes them over
+// with take(): a pawn swap (beacon respawn, sever, recover) drops every hard reference to
+// the worn look, and without an owner the next collection frees it and the reconcile reads
+// it back from disk on the game thread.
+class AssetLoadRoots {
+    std::vector<RC::Unreal::UObject*> owned_;
+public:
+    AssetLoadRoots() = default;
+    AssetLoadRoots(const AssetLoadRoots&) = delete;
+    AssetLoadRoots& operator=(const AssetLoadRoots&) = delete;
+    void keep(RC::Unreal::UObject* object);
+    void take(AssetLoadRoots& other) { owned_.insert(owned_.end(),other.owned_.begin(),other.owned_.end()); other.owned_.clear(); }
+    void release() noexcept;
+    size_t size() const { return owned_.size(); }
+    ~AssetLoadRoots() noexcept { release(); }
 };
 class Appearance;
 // CSS's own reflected access to the live game (player/get/set/call/find). This is not an
@@ -163,7 +185,7 @@ class InventoryUI {
     // Imported PNGs (thumbnails, logo), rooted for the page's lifetime: the game's widgets drop
     // their brushes on every menu reopen, so an unrooted texture is collected and imported again.
     std::map<std::string,WeakObject> textures_;
-    std::vector<WeakObject> rooted_textures_;
+    AssetLoadRoots rooted_textures_;
     RC::Unreal::UObject* import_texture(const std::wstring& file);
     std::map<std::string,std::pair<int,int>> texture_sizes_;
     std::vector<std::pair<WeakObject,std::array<float,4>>> top_padding_;
@@ -310,6 +332,7 @@ class WornItems {
     struct Worn { std::string id; WeakObject component; };
     WeakObject body_;
     std::vector<Worn> worn_;
+    AssetLoadRoots retained_;   // the accessories' meshes and materials, alive while worn
     // outfit:variant:mesh. Anything that changes it rebuilds the set rather than trying
     // to reconcile two lists of components, which is not worth the bookkeeping for at
     // most fifteen accessories.
@@ -333,7 +356,7 @@ class WalkOverride {
     };
     using BlendLease=AnimationOverrideLease<WeakObject,SameWeakObject>;
     BlendLease blend_lease_;
-    bool original_blend_root_owned_=false;
+    AssetLoadRoots original_blend_root_;
     WeakObject pawn_, anim_, movement_, walk_bs_, active_;
     std::array<std::string,3> custom_paths_;
     std::array<WeakObject,3> custom_blends_;
@@ -364,7 +387,7 @@ class WalkOverride {
     // wear already loads a mesh, so the cost lands there) and rooted while it is active. Loaded
     // on the first step instead, an asset the engine had collected came back from disk mid-walk.
     WeakObject custom_idle_asset_;
-    std::vector<WeakObject> rooted_assets_;
+    AssetLoadRoots rooted_assets_;
     void preload_assets();
     void unroot_assets();
     std::vector<WeakObject> hidden_weapons_;
@@ -424,9 +447,12 @@ public:
 };
 class Appearance {
     WeakObject component_, applied_;
+    AssetLoadRoots retained_;            // the worn body mesh and its material overrides
+    AssetLoadRoots original_retained_;   // the stock mesh CSS replaced, for the way back
     WeakObject ground_component_;
     GroundOffset ground_offset_;
     void restore_ground_offset();
+    void timed_set_mesh(RC::Unreal::UObject* component, RC::Unreal::UObject* mesh);
     WeakObject observed_pawn_, observed_component_, observed_controller_;
     // player()'s string cache: rebuilt only when the tag, pawn or mesh changes.
     uint64_t shell_tag_ = 0;
@@ -486,6 +512,14 @@ class Appearance {
     void push_morphs(RC::Unreal::UObject* component);
     std::map<int,WeakObject> control_mids_;
     std::map<std::string,WeakObject> dye_targets_, dye_textures_;
+    // Colour masks decoded from the worn outfit's PNGs, keyed outfit/file. Decoding is the
+    // slow part of a dye (222 ms for Skin Suit), and every pawn swap (beacon respawn, sever,
+    // recover) resets the controls, so the masks stay rooted while that outfit is worn instead
+    // of being read from disk again on every transition. Dropped when another outfit is dyed,
+    // when the player restores the original look, and when the core unloads.
+    std::string mask_cache_outfit_;
+    std::map<std::string,WeakObject> mask_cache_;
+    AssetLoadRoots mask_roots_;
     std::map<std::string,ControlValue> last_values_;
     std::string control_outfit_;
     // Transition guard: one dye value CSS wrote, cheap to re-read. A launchpad/Harbinger gate
@@ -531,10 +565,13 @@ class Appearance {
 public:
     std::string shell, pawn_name, current_mesh;
     uint64_t player_revision = 0;
+    double apply_load_ms = 0, apply_swap_ms = 0;   // last apply(): time in asset loads, time in the mesh swap
+    std::map<std::string,double> customize_ms;     // last customize(): time per step, for the apply log line
     Json material_debug;
     RC::Unreal::UObject* player(void* engine);
     bool apply(void* engine, const std::string& mesh_path, const std::map<int,std::string>& materials = {});
     bool restore();
+    void release_caches() { mask_cache_.clear(); mask_roots_.release(); mask_cache_outfit_.clear(); }
     void set_ground_offset(double offset);
     bool active() const;
     bool repair_materials_needed() const;

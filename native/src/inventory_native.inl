@@ -120,7 +120,7 @@ UObject* InventoryUI::import_texture(const std::wstring& file) {
     import.set(L"WorldContextObject",pc); import.set(L"Filename",FString(file.c_str())); import.run();
     auto* texture=import.get<UObject*>(); if(!texture) return nullptr;
     cached=texture;
-    if(!texture->IsRootSet()) { texture->SetRootSet(); rooted_textures_.push_back(WeakObject(texture)); }
+    rooted_textures_.keep(texture);
     return texture;
 }
 void InventoryUI::native_visible(NativeItem& item,bool on) {
