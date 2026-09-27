@@ -26,10 +26,12 @@ p.add_argument('--exported-normals', action='store_true', help='Inspect saved co
 p.add_argument('--morph', action='append', default=[], help='Name=weight, applied to exported deltas')
 p.add_argument('--pose-motion', type=Path, help='Recorded upstream animation snapshots, without cloth simulation')
 p.add_argument('--pose-frame', type=int, default=0)
+p.add_argument('--post-process-pose', action='store_true', help='Render the evaluated post-process snapshot instead of its upstream pose')
 p.add_argument('--foot-pose', type=Path, help='Diagnostic heel rotation receipt applied through foot bones, without editing source geometry')
 p.add_argument('--cloth-render', type=Path, help='Verified native mapping replay replacing its named material sections')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert not a.foot_pose or (a.pose_motion and not a.cloth_render)
+assert not a.post_process_pose or (a.pose_motion and not a.foot_pose)
 foot_corrections = {row['foot_bone']: row for row in json.loads(a.foot_pose.read_text())['shoes']} if a.foot_pose else {}
 assert set(foot_corrections) <= {'foot_l', 'foot_r'}
 if a.probe:
@@ -52,7 +54,7 @@ for setting in a.morph:
 if a.pose_motion:
     motion = json.loads(a.pose_motion.read_text())
     row = motion['frames'][a.pose_frame]
-    snapshot = row['upstream'] if 'upstream' in row else row['pose']['Snapshot']
+    snapshot = row['upstream'] if 'upstream' in row and not a.post_process_pose else row['pose']['Snapshot']
     assert snapshot.get('bIsValid', True)
     recorded = dict(zip(snapshot['BoneNames'], snapshot['LocalTransforms'], strict=True))
     bind, pose = [], []
@@ -202,6 +204,7 @@ for label, direction in [('front', (0, -1, 0)), ('back', (0, 1, 0)), ('side', (1
     exported_normals=a.exported_normals,
     hidden_face_count=len(hidden_faces), morphs=morphs,
     pose_motion=str(a.pose_motion) if a.pose_motion else None,
+    post_process_pose=a.post_process_pose,
     foot_pose=str(a.foot_pose) if a.foot_pose else None,
     foot_corrections=foot_corrections,
     cloth_render=str(a.cloth_render) if a.cloth_render else None,
