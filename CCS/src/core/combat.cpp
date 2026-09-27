@@ -337,6 +337,19 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         if (token_) remove_hook();
     }
 }
+// Why a montage-task call was left alone, once per ability class: the class, then its outer
+// chain (instance, then owners) so a rejected owner shows what the game used instead of the pawn.
+void Combat::note_skip(const char* why, UObject* ability) {
+    if (!ability || !ability->GetClassPrivate() || noted_.size() >= 64) return;
+    const auto key = name_key(ability->GetClassPrivate()->GetNamePrivate());
+    if (!noted_.insert(key).second) return;
+    std::string chain;
+    auto* object = ability;
+    for (unsigned depth = 0; object && depth < 6; ++depth, object = object->GetOuterPrivate())
+        chain += (depth ? " < " : "") + narrow(object->GetNamePrivate().ToString()) + " (" + (object->GetClassPrivate() ? narrow(object->GetClassPrivate()->GetNamePrivate().ToString()) : std::string("?")) + ")";
+    log(std::string("CCS attack skipped: ") + why + ": " + narrow(ability->GetClassPrivate()->GetNamePrivate().ToString()) + "; outers: " + chain
+        + "; pawn " + (pawn_.get() ? narrow(pawn_.get()->GetNamePrivate().ToString()) : std::string("none")) + ", asc " + (asc_.get() ? narrow(asc_.get()->GetNamePrivate().ToString()) : std::string("none")));
+}
 void Combat::count_whoosh(void* user, void*, void*, void*) noexcept { ++static_cast<Combat*>(user)->whoosh_; }
 void Combat::count_vox(void* user, void*, void*, void*) noexcept { ++static_cast<Combat*>(user)->vox_; }
 void Combat::callback(void* user, void*, void* frame, void*) noexcept {
@@ -355,7 +368,7 @@ void Combat::observe(void* frame_ptr) {
     if (!locals || frame->Node() != function_.get()) { ++wrong_frame_; return; }
     auto* bytes = static_cast<std::byte*>(static_cast<void*>(locals));
     auto* ability = static_cast<FObjectProperty*>(inputs_[0])->GetObjectPropertyValue(bytes + inputs_[0]->GetOffset_Internal());
-    if (!player_outer(ability)) { ++skipped_; return; }
+    if (!player_outer(ability)) { ++skipped_; note_skip("owner is not the player", ability); return; }
     auto* cls = ability->GetClassPrivate();
     if (!cls) { ++skipped_; return; }
     const auto key = name_key(cls->GetNamePrivate());
@@ -365,7 +378,7 @@ void Combat::observe(void* frame_ptr) {
         slot = classify(narrow(cls->GetNamePrivate().ToString()));
         if (class_slots_.size() < max_cached_classes) class_slots_.emplace(key, int8_t(slot));
     }
-    if (slot < 0) { ++skipped_; return; }
+    if (slot < 0) { ++skipped_; note_skip("class name has no slot", ability); return; }
     auto& s = slots_[size_t(slot)];
     bool changed = false;
     if (auto* replacement = s.montage.get()) {

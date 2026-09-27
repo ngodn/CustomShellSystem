@@ -13,6 +13,7 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace ccs {
 class Combat {
@@ -66,6 +67,7 @@ private:
     void show_weapon(engine::UObject* mesh, engine::UObject* montage, uint64_t now);
     void restore_weapon();
     void poll_weapon(const engine::PlayerContext& player, uint64_t now);
+    void note_skip(const char* why, engine::UObject* ability);   // one log line per ability class the hook rejects
     static void callback(void*, void*, void*, void*) noexcept;
     void observe(void* frame);
     bool player_outer(engine::UObject* object) const;
@@ -85,6 +87,7 @@ private:
     std::array<engine::FProperty*, 3> inputs_{};      // OwningAbility, MontageToPlay, Rate
     uint64_t token_{}, retry_after_{}, player_check_{}, seen_{}, swapped_{}, skipped_{}, failures_{}, maximum_us_{}, wrong_frame_{};
     std::unordered_map<uint64_t, int8_t> class_slots_;
+    std::unordered_set<uint64_t> noted_;
     std::string error_;
 };
 }
