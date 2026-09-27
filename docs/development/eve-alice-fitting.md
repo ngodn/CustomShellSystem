@@ -122,3 +122,12 @@ Process 60426 completed copy, bind, inspection, native sprint and particle check
 Visual replay attempt 43730 failed because the inspection command omitted `-Geometry`, so readback has no `render_geometry`. No image was produced and no visual acceptance is claimed. Blender exits 0 for Python exceptions unless `--python-exit-code 1` is supplied; use that switch for subsequent scripted pipelines. Obtain a new `-Inspect -Geometry` report, then replay frame 58. Keep the existing valid map inspection receipt.
 
 Process 72493 is running the temporary `-NoBodyCollision` diagnostic on ACloth2 (`alice2-no-body.log`, output `alice-cloth2/no-body.json`). Resume the same handle before another Unreal commandlet. It does not save the disabled collision setting. Compare its motion and rendered contact with the full collision trial before changing private bow colliders. Do not ship a diagnostic simply because particle limits pass.
+
+
+## Collision comparison rendered
+
+72493 and geometry inspection 91722 completed exit 0. `geometry.json` includes the missing render mapping. Replay pipeline 55754 uses `--python-exit-code 1` and completed both full-collision and no-body views at frame 58. Both mappings reproduce rest geometry within 0.000016013 cm.
+
+Inspected `alice2-full58/front.png`: copied body collision visibly inflates and stretches the loops and tails. `alice2-nobody58/front.png`: the bow stays close to its attachment, but loops still crumple. Removing body collision reduces maximum displacement to 1.00150 cm and limit excess to 0.00150 cm, with pinned error 0.00003670 cm; it is not accepted as a final physics setup.
+
+The six connected components identify a simpler appropriate motion scope: 36 and 48 points are hanging ends (minimum Z 145.19 and 143.91 cm); 152 and 168 points are side loops (minimum Z 149.53 and 149.51 cm); 120 and 100 points form the already pinned knot. Next preserve loops and knot with skinning, and restrict secondary motion to the two hanging ends. This retains clothing motion where it is useful while avoiding simulated collapse of a tied bow. Keep this separate from the accepted neck-strap tolerance and preserve repaired chest coverage. Body collision/backstop contact still needs verification for the revised tails.
