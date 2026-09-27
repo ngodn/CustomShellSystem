@@ -301,6 +301,9 @@ UObject* Combat::build_transplant(UObject* original, UObject* replacement) {
         plan.push_back({rep.anim, hit_old, rep.anim_start + hit_new * rep.rate, rep.anim_end, (rep_len - hit_new) / (orig_len - hit_old) * rep.rate});
     } else plan.push_back({rep.anim, 0.f, rep.anim_start, rep.anim_end, rep_len / orig_len * rep.rate});
     plan.back().anim_end += 0.002f * plan.back().rate;   // the track must reach SequenceLength despite float rounding
+    for (const auto& g : plan)   // a bad segment would feed the skinning garbage poses; refuse instead
+        if (!std::isfinite(g.rate) || g.rate < 0.05f || g.rate > 20.f || !std::isfinite(g.anim_start) || !std::isfinite(g.anim_end) || g.anim_end <= g.anim_start || g.start_pos < 0.f)
+            throw std::runtime_error("Time warp produced an unusable segment");
     FScriptArrayHelper tracks(static_cast<FArrayProperty*>(tracks_prop), dst + tracks_prop->GetOffset_Internal());
     if (tracks.Num() < 1) throw std::runtime_error("Original montage has no slot track");
     for (int t = 0; t < tracks.Num(); ++t) {
@@ -471,6 +474,8 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         player_check_ = now + 500;
         if (player.pawn != pawn_.get()) { pawn_ = {}; if (player.pawn) pawn_.capture(player.pawn); skeleton_ = {}; }
         if (player.asc != asc_.get()) { asc_ = {}; if (player.asc) asc_.capture(player.asc); }
+        // The body worn now: a shell change, a CSS body, the Harbinger form. Swaps only happen on a human-family rig.
+        try { const auto rig_now = rig::player_skeleton(player); if (rig_now != pawn_rig_) { pawn_rig_ = rig_now; pawn_humanoid_ = rig::humanoid(pawn_rig_); if (!pawn_humanoid_ && !pawn_rig_.empty()) log("CCS pawn rig is not human: " + rig::short_name(pawn_rig_) + "; swaps paused on it"); } } catch (...) {}
     }
     poll_weapon(player, now);
     if (player.world && player.world != world_.get()) {   // a new world holds none of our references: everything reloads
@@ -540,6 +545,7 @@ void Combat::observe(void* frame_ptr) {
         if (class_slots_.size() < max_cached_classes) class_slots_.emplace(key, int8_t(slot));
     }
     if (slot < 0) { ++skipped_; note_skip("class name has no slot", ability); return; }
+    if (!pawn_humanoid_) { ++skipped_; return; }   // the Harbinger form or a creature shell: its rig cannot play these montages
     auto& s = slots_[size_t(slot)];
     bool changed = false;
     if (auto* replacement = s.montage.get()) {
@@ -567,6 +573,8 @@ void Combat::observe(void* frame_ptr) {
         }
         std::memcpy(bytes + inputs_[1]->GetOffset_Internal(), &pointer, sizeof(pointer));
         ++s.hits; changed = true;
+        if (noted_.size() < 64 && noted_.insert(key ^ 0x51ed270b9d1c3a7full).second)
+            log("CCS swap: " + narrow(cls->GetNamePrivate().ToString()) + " is slot " + slot_to_string(SlotId(slot)) + " -> " + s.move_id + (pointer == replacement ? "" : " (game feel clone)"));
         if (s.tuning.weapon == "move") {
             if (auto* mesh = s.show_mesh.get()) { try { show_weapon(mesh, pointer, GetTickCount64()); } catch (const std::exception& e) { ++failures_; log(std::string("CCS weapon show failed: ") + e.what()); } }
         }

@@ -96,6 +96,8 @@ private:
     uint64_t token_{}, retry_after_{}, player_check_{}, seen_{}, swapped_{}, skipped_{}, failures_{}, maximum_us_{}, wrong_frame_{};
     std::unordered_map<uint64_t, int8_t> class_slots_;
     std::unordered_set<uint64_t> noted_;
+    std::string pawn_rig_;                              // skeleton of the body worn now, refreshed with the pawn
+    bool pawn_humanoid_{};
     std::string error_;
 };
 }

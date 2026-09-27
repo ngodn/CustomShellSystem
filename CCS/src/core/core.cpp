@@ -24,6 +24,8 @@ Role slot_role(unsigned i) { return i == 10 ? Role::Ranged : i >= 11 ? Role::Spr
 // slots; sidearm fire only the ranged slot. Enemy melee fits the melee slots that are not holds,
 // enemy ranged only the ranged slot, unverified.
 bool eligible(const MoveDefinition& move, unsigned i) {
+    (void)move; (void)i;
+    return true;   // every move in every slot, by the user's call; the rig filter is the only gate
     const auto role = slot_role(i);
     if (move.origin == MoveOrigin::EnemyHumanoid) {
         const bool ranged = move.display_name.find("Shoot") != std::string::npos || move.display_name.find("Crossbow") != std::string::npos ||
@@ -278,8 +280,7 @@ nlohmann::json Core::model() const {
                 const bool hold = f.name.find("Hold") != std::string::npos, finisher = f.name.find("Finisher") != std::string::npos;
                 const bool ranged = f.name.find("Shoot") != std::string::npos || f.name.find("Crossbow") != std::string::npos || f.name.find("Throw") != std::string::npos;
                 const auto role = slot_role(i);
-                const bool fits = ranged ? role == Role::Ranged : hold ? role == Role::Hold : finisher ? role == Role::Finisher : (role == Role::Chain || (!f.player && role == Role::Finisher));
-                if (!fits) continue;
+                (void)ranged; (void)hold; (void)finisher; (void)role;   // every found montage in every slot
                 options.push_back({{"id", "found:" + f.path}, {"label", pretty(f.name)}, {"group", std::string(f.player ? "New player move: " : "New enemy move: ") + enemy_name(f.source)},
                     {"title", pretty(f.name)}, {"subtitle", "Found in this game version, not yet verified"},
                     {"description", "Listed by the game's asset registry but absent from the shipped catalog. Assigning it loads and checks the animation the same way; hit windows are unknown until then."}});

@@ -13,6 +13,9 @@ std::string player_skeleton(const PlayerContext& player) {
     auto* skeleton = asset ? object_of(asset, L"Skeleton") : nullptr;
     return skeleton ? narrow(skeleton->GetPathName()) : std::string{};
 }
+bool humanoid(const std::string& skeleton_path) {
+    return !skeleton_path.empty() && (short_name(skeleton_path) == "SKEL_Human_Skeleton" || skeleton_path.starts_with("/Game/CSS/"));
+}
 bool compatible(const std::string& skeleton_path, const std::string& player_skeleton) {
     if (skeleton_path.empty()) return false;
     if (short_name(skeleton_path) == "SKEL_Human_Skeleton") return true;      // the game's own human rig

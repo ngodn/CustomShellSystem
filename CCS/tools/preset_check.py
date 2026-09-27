@@ -128,8 +128,7 @@ def check_file(path: Path, moves: dict[str, dict], fix: bool) -> list[str]:
             if not move:
                 errors.append(f'{path.name}: {slot} names no catalog move (move_id "{entry.get("move_id", "")}", montage "{entry.get("montage", "")}")')
                 continue
-            if slot not in move['fits']:
-                errors.append(f'{path.name}: {slot} cannot take {move["id"]} (fits {", ".join(sorted(move["fits"]))})')
+            # Every move may sit in every slot (the runtime only filters by skeleton); 'fits' stays informational.
             canonical = {'type': move['type'], 'source': move['source'], 'move_id': move['id'], 'ability': move['ability'], 'montage': move['montage']}
             for field, value in canonical.items():
                 if entry.get(field, '') != value:

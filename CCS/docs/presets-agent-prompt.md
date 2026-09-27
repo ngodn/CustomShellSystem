@@ -23,14 +23,13 @@ Slots: light chain `L1 L2 L3`, light finisher `LF`, light charge `LC`; heavy cha
 leaves out keeps the weapon's own attack. When the slot is filled, CCS plays the chosen
 animation instead of the weapon's own, at the moment the game would have played the original.
 
-Eligibility, enforced at load and by the tool:
-
-- Chain moves (a weapon's 1, 2 or 3 of either chain) fit `L1 L2 L3 H1 H2 H3`.
-- Finisher animations fit only `LF` and `HF`.
-- Charge (hold) animations fit only `LC` and `HC`.
-- Sidearm fire animations fit only `R`.
-- Enemy melee animations fit the chain and finisher slots, not the charge slots.
-- Enemy shots, crossbow and throw animations fit only `R`.
+Eligibility: every move may go in every slot; the only gate is the skeleton (all catalog moves
+are on the player's rig). The natural fits are still the sensible design: chain moves in
+`L1 L2 L3 H1 H2 H3`, finisher animations in `LF HF`, charge (hold) animations in `LC HC`,
+sidearm fire in `R`, running attacks in `SL SH`. Enemy melee animations suit the chain and
+finisher slots; enemy shots, crossbow and throw animations suit `R`. Putting a hold animation in
+a chain slot or a shot in a melee slot is allowed but will look wrong; the tool's `list` output
+shows each move's natural fits.
 
 What a swap does to damage (from the exports, `docs/combat-damage-pipeline.md` section 3):
 the hit windows and their payload live inside the animation as hit-check notifies, so a
