@@ -13,6 +13,8 @@ p.add_argument('--mesh', type=Path, required=True)
 p.add_argument('--audit', type=Path, required=True)
 p.add_argument('--output', type=Path, required=True)
 p.add_argument('--hide-material', action='append', default=[])
+p.add_argument('--hide-part', action='append', default=[])
+p.add_argument('--upper-body', action='store_true')
 p.add_argument('--body-mask', type=Path)
 p.add_argument('--morph', action='append', default=[], help='Name=weight, applied to exported deltas')
 p.add_argument('--pose-motion', type=Path, help='Recorded upstream animation snapshots, without cloth simulation')
@@ -68,6 +70,7 @@ if a.cloth_render:
         hidden_slots.add(source['materials'].index(section['material']))
 hidden_faces = set(json.loads(a.body_mask.read_text())['hidden_body_faces']) if a.body_mask else set()
 audit = json.loads(a.audit.read_text())
+assert set(a.hide_part) <= {part['name'] for part in audit['parts']}
 assert hashlib.sha256(raw).hexdigest() == audit['output_sha256']
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.object.delete(use_global=False)
@@ -90,7 +93,7 @@ for part in audit['parts']:
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(obj)
     hair = 'Hair' in name
-    obj.hide_render = hair
+    obj.hide_render = hair or name in a.hide_part
     obj.color = (.58, .36, .22, 1) if name == 'Eve Body' else (.12, .38, .55, 1)
     for polygon in mesh.polygons:
         polygon.use_smooth = True
@@ -123,6 +126,9 @@ s.camera = cam
 cam.data.type = 'ORTHO'
 cam.data.ortho_scale = 2.05
 target = Vector((0, 0, .94))
+if a.upper_body:
+    cam.data.ortho_scale = .85
+    target = Vector((0, 0, 1.30))
 for label, direction in [('front', (0, -1, 0)), ('back', (0, 1, 0)), ('side', (1, 0, 0)), ('quarter', (1, -1, 0))]:
     cam.location = target + Vector(direction)*3
     cam.rotation_euler = (target-cam.location).to_track_quat('-Z', 'Y').to_euler()
@@ -132,6 +138,7 @@ for label, direction in [('front', (0, -1, 0)), ('back', (0, 1, 0)), ('side', (1
     scope='Offline garment review, neutral materials and hair hidden. Optional morphs and recorded upstream pose are explicit below. No physics simulation or game acceptance.',
     source=str(a.mesh), source_sha256=hashlib.sha256(raw).hexdigest(),
     hidden_materials=a.hide_material, body_mask=str(a.body_mask) if a.body_mask else None,
+    hidden_parts=a.hide_part, upper_body=a.upper_body,
     hidden_face_count=len(hidden_faces), morphs=morphs,
     pose_motion=str(a.pose_motion) if a.pose_motion else None,
     cloth_render=str(a.cloth_render) if a.cloth_render else None,
