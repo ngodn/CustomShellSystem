@@ -1,12 +1,18 @@
 """Rebuild Prototype suit morph deltas from corresponding unchanged body triangles."""
-import copy,hashlib,json
+import argparse,copy,hashlib,json,sys
 from pathlib import Path
 import numpy as np
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 root=Path(__file__).resolve().parents[2];work=root/'work/eve26'
-p=work/'planet-sections/planet.mesh.json';raw=p.read_bytes();source=json.loads(raw)
-audit=json.loads(p.with_name('planet.mesh.audit.json').read_text())
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--mesh',type=Path,default=work/'planet-sections/planet.mesh.json')
+parser.add_argument('--output',type=Path,default=work/'planet-morph-repair')
+parser.add_argument('--garment',choices=('prototype','skin'),default='prototype')
+args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+p=args.mesh;raw=p.read_bytes();source=json.loads(raw)
+audit=json.loads(p.with_suffix('.audit.json').read_text())
+assert audit['parts'][1]['name']=={'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin Suit - Suit Complete'}[args.garment]
 assert hashlib.sha256(raw).hexdigest()==audit['output_sha256']
 body_count=audit['parts'][0]['points'];suit_count=audit['parts'][1]['points']
 points=[Vector((x,-y,z)) for x,y,z in source['points']]
@@ -38,9 +44,10 @@ for target in result['morph_targets']:
  report.append(dict(name=target['name'],old_max_cm=max((np.linalg.norm(v) for i,v in before.items() if body_count<=i<body_count+suit_count),default=0),new_max_cm=max((np.linalg.norm(d[1:]) for d in replacement),default=0),changed_suit_vertices=len(replacement)))
  assert [d for d in target['deltas'] if d[0]<body_count]==[d for d in source['morph_targets'][result['morph_targets'].index(target)]['deltas'] if d[0]<body_count]
 assert all(result[k]==v for k,v in source.items() if k!='morph_targets')
-out=work/'planet-morph-repair';out.mkdir(exist_ok=False)
-f=out/'planet.mesh.json';f.write_text(json.dumps(result,separators=(',',':'))+'\n')
+out=args.output;out.mkdir(exist_ok=False)
+stem='planet' if args.garment=='prototype' else 'skin'
+f=out/f'{stem}.mesh.json';f.write_text(json.dumps(result,separators=(',',':'))+'\n')
 audit['output_sha256']=hashlib.sha256(f.read_bytes()).hexdigest()
-(out/'planet.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')
+(out/f'{stem}.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')
 (out/'receipt.json').write_text(json.dumps(dict(source_sha256=hashlib.sha256(raw).hexdigest(),morphs=report,body_and_base_unchanged=True,scope='Nearest-surface garment morph candidate. Source keys, accessories, motion and game integration require further validation.'),indent=2)+'\n')
 print(report)

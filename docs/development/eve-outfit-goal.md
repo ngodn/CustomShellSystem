@@ -32,6 +32,10 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**Skin Suit F4 morph repair saved and reloaded:** F3 source reload67900 matches the candidate within0.0000154 cm. Combined maximum render81171 exposed severely distorted inherited garment morphs. Reused `repair_planet_morphs.py --garment skin` with F3 input to produce `skin-fit4`; process43952 exited0. This replaces six garment deltas through unchanged body-triangle correspondence, preserving base and body. `skin-f4-max/` (87231 exit0) removes the large spikes/folds; small chest and inner-thigh breakthrough remains, plus unresolved footwear. Do not call this full fit acceptance.
+
+`apply_planet_morphs.py --garment skin` saves `skin-suit-f4.blend` and fresh-load verifies it (66192 exit0). `skin-suit-f4.json` records base error0.0000154 cm and maximum morph error0.00000616 cm, protected keys/defaults unchanged. The reusable tool now explicitly maps used export vertices, since Skin Suit includes unused source vertices. Next local clearance under body-shape extremes, then footwear and pose/weight checks. Prototype F14 game restart remains pending; no installed/release changes.
+
 Skin F3 source-save process4868 subsequently exited0; the garment library and receipt are present. Fresh reload remains required.
 
 **Skin Suit F3 visible clearance improvement:** garment-only `skin-garment/` confirms torso openings are authored, while much of the chest/leg coverage was inside the body. F2 uses2 cm nearest-surface search and the existing chest face pass; F3 extends only the face-pass vertical region to22–160 cm. `skin-fit3/receipt.json` records7151 changed garment points, maximum2.19096 cm and513 face samples. Body and all non-point fields are unchanged. Front/back `skin-fit3-review/` show closed large chest and most leg breakthroughs, with openings preserved. Footwear was excluded below22 cm and remains visibly unresolved; small front seam spots and morph/pose behavior still require checks. Processes89312/47589/75677/87212 exited0.
