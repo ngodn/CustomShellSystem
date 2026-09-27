@@ -150,3 +150,60 @@ class AttackReportTests(unittest.TestCase):
         for value in (None, True, -1, 1):
             rows = self.transient_rows(); rows[-1]["unretained_calls"] = value
             self.assertFalse(self.report(rows)["capture_complete"])
+
+
+class AttackReportSchemaFourTests(AttackReportTests):
+    def hooks(self, registered=False, matched=(1, 0, 0), seen=(2, 5, 40)):
+        labels = ("task_factory", "ready_for_activation", "control_getter")
+        return [{"label": label, "function": f"/Script/Test.{label}", "registered": registered, "seen": s,
+                 "matched": m, "func_before": "0x1", "func_after": "0x2", "func_changed": True}
+                for label, s, m in zip(labels, seen, matched)]
+
+    def stats(self, **changes):
+        return {"available": True, "slots": 0, "running": 0, "stopped": False, "calls": 47, "wrong_thread": 0,
+                "failures": 0, **changes}
+
+    def four_rows(self):
+        rows = self.transient_rows(); rows[0]["schema"] = 4
+        rows[1].update(hooks=self.hooks(registered=True, matched=(0, 0, 0), seen=(0, 0, 0)),
+                       task_layout={"montage_offset": 216, "ability_offset": 104}, host_stats=self.stats(calls=0))
+        rows[2]["source"] = "task_factory"
+        rows[-1].update(seen=7, skipped=6, hooks=self.hooks(), control_seen=40, host_stats=self.stats(),
+                        factory_observed=True, ready_observed=False)
+        return rows
+
+    def test_schema_four_complete_capture_reports_sources_and_counters(self):
+        value = self.report(self.four_rows())
+        self.assertTrue(value["capture_complete"])
+        self.assertTrue(value["player_outer_calls_observed"])
+        self.assertEqual(value["sources"], {"task_factory": 1, "ready_for_activation": 0})
+        self.assertEqual(value["control_seen"], 40)
+        self.assertEqual(value["host_stats"]["calls"], 47)
+        self.assertEqual(value["func_swapped"], {label: True for label in ("task_factory", "ready_for_activation", "control_getter")})
+        self.assertFalse(value["combat_verified"])
+
+    def test_schema_four_requires_source_label(self):
+        for source in (None, "", "other"):
+            rows = self.four_rows(); rows[2]["source"] = source
+            with self.assertRaises(ValueError): self.report(rows)
+
+    def test_schema_four_mismatched_hook_counts_rejected(self):
+        rows = self.four_rows(); rows[-1]["hooks"] = self.hooks(matched=(0, 1, 0))
+        with self.assertRaises(ValueError): self.report(rows)
+
+    def test_schema_four_incomplete_without_hooks_stats_or_removal(self):
+        for change in ({"hooks": None}, {"hooks": self.hooks(registered=True)}, {"host_stats": None},
+                       {"host_stats": self.stats(available=False)}, {"control_seen": -1}, {"control_seen": True},
+                       {"hooks": self.hooks(matched=(2, 0, 0))}):
+            rows = self.four_rows(); rows[-1].update(change)
+            if change.get("hooks") and change["hooks"][0]["matched"] == 2:
+                with self.assertRaises(ValueError): self.report(rows)
+                continue
+            self.assertFalse(self.report(rows)["capture_complete"])
+
+    def test_schema_four_zero_calls_is_complete_but_unobserved(self):
+        rows = self.four_rows(); del rows[2]
+        rows[-1].update(recorded=0, seen=6, unretained_calls=0, hooks=self.hooks(matched=(0, 0, 0)), factory_observed=False)
+        value = self.report(rows)
+        self.assertTrue(value["capture_complete"])
+        self.assertFalse(value["player_outer_calls_observed"])
