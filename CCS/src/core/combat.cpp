@@ -544,34 +544,16 @@ void Combat::observe(void* frame_ptr) {
     bool changed = false;
     if (auto* replacement = s.montage.get()) {
         auto* original = static_cast<FObjectProperty*>(inputs_[1])->GetObjectPropertyValue(bytes + inputs_[1]->GetOffset_Internal());
-        // Some abilities play more than one clip (the Axatana heavy: transform, hold, cut). Only the
-        // ability's own attack montage, the one the catalog lists for the class, is swapped.
-        if (original && deps_.catalog) {
-            auto expected = class_montage_.find(key);
-            if (expected == class_montage_.end() && class_montage_.size() < max_cached_classes) {
-                FName name{};
-                if (const auto* move = deps_.catalog->find_move(narrow(cls->GetNamePrivate().ToString()))) {
-                    const auto dot = move->montage_path.rfind('.');
-                    name = FName(wide(dot == std::string::npos ? move->montage_path : move->montage_path.substr(dot + 1)).c_str(), FNAME_Add);
-                }
-                expected = class_montage_.emplace(key, name).first;
-            }
-            if (expected != class_montage_.end() && expected->second != FName() && original->GetNamePrivate() != expected->second) {
+        // Some abilities play companion clips around the attack (the Axatana heavy plays the axe
+        // transform before its hold and cut). Those stay the game's; the attack clip is swapped.
+        // The exact attack montage varies with the shell the body wears, so it is not matched by name.
+        if (original) {
+            const auto played = narrow(original->GetNamePrivate().ToString());
+            for (const char* companion : {"Transform", "Equip", "Unequip", "Draw", "Stow", "Sheath"}) if (played.find(companion) != std::string::npos) {
                 ++skipped_;
-                if (noted_.size() < 64 && noted_.insert(key ^ 0x9e3779b97f4a7c15ull).second)
-                    log("CCS attack left alone: " + narrow(cls->GetNamePrivate().ToString()) + " played " + narrow(original->GetNamePrivate().ToString()) + ", its catalog montage is " + narrow(expected->second.ToString()));
+                if (noted_.size() < 64 && noted_.insert(key ^ 0x9e3779b97f4a7c15ull).second) log("CCS attack left alone: " + narrow(cls->GetNamePrivate().ToString()) + " played its companion clip " + played);
                 return;
             }
-        }
-        UObject* pointer = replacement;
-        if (s.tuning.feel == "game" && original && original != replacement) {
-            // The game's feel: the slot's own montage keeps its input windows, locks, sounds and hit
-            // payload; only the animation inside it is the move's, fitted to the original timing.
-            try { if (auto* clone = transplant(s, original, replacement)) pointer = clone; }
-            catch (const std::exception& e) { ++failures_; if (!s.feel_warned) { s.feel_warned = true; log("CCS game feel unavailable for " + s.move_id + ": " + e.what() + "; playing the move's own montage"); } }
-        } else if (s.tuning.hit_damage == "weapon" && original && original != replacement) {
-            try { apply_weapon_payload(s, original, replacement); }
-            catch (const std::exception& e) { ++failures_; if (s.error.empty()) { s.error = std::string("Hit payload copy failed: ") + e.what(); log("CCS " + s.error); } }
         }
         std::memcpy(bytes + inputs_[1]->GetOffset_Internal(), &pointer, sizeof(pointer));
         ++s.hits; changed = true;
