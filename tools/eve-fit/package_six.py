@@ -26,6 +26,7 @@ def strings(value):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--thumbnail', required=True, type=Path)
+    parser.add_argument('--output', default='six-candidate1', choices=('six-candidate1', 'six-check1'))
     args = parser.parse_args()
     thumbnail = png_info(args.thumbnail)
     work = ROOT / 'work/eve26'
@@ -49,7 +50,7 @@ def main():
     for variant in variants:
         if len(variant['customize'].get('palettes', [])) < 5:
             raise ValueError(f'Incomplete palettes: {variant["id"]}')
-    output = work / 'six-candidate1'
+    output = work / args.output
     output.mkdir(exist_ok=False)
     metadata = output / 'metadata' / PACKAGE_ROOT / manifest['id']
     shutil.copytree(source.parent, metadata)

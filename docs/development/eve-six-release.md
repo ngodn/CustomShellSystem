@@ -39,3 +39,11 @@ Runtime source confirms outfit-level templates have no variant filtering. Remove
 `tools/eve-fit/package_six.py --thumbnail PATH` checks the six-variant scope, five or more palettes per variant, all `/Game/` manifest references against the combined container inventory, source container hashes, thumbnail dimensions, and packed metadata/resource equality. It creates `work/eve26/six-candidate1/CSS_EveStellarBlade_eins0fx_P`; it does not install or create a public ZIP.
 
 The independent reference check completed: all ten mesh/animation references occur in the verified combined container (`six-reference-check.json`). The assembler has not yet been run because the requested portrait is non-square and the user's local-padding/cropping choice remains pending. No replacement portrait was generated. The game was confirmed running through `/proc` executable entries during this check, so no restart was assumed.
+
+## Combined package loader check and replacement backups
+
+`package_six.py --output six-check1` produced a verification-only trio with the existing thumbnail. Python package verification passes. Current native C++23 package loader tests were built separately in `six-host` and pass against that trio: one catalog, thumbnail loading, resource caching, cache repair and corrupt-index rejection. The retained test log is `six-loader-test.log`; the logged run uses workspace TMPDIR. This is not live game rendering or persistence evidence.
+
+User explicitly authorized backing up and removing the installed split trials and old Eve package before installing the new combined trio. All six current installations were copied to `backups/eve-six1` and checked against the fresh audit hashes. `receipt.json` records source paths and hashes. Installed copies have not been removed yet. Recheck them against this receipt before replacement so another agent's changed files are not discarded.
+
+The verification copy uses the old thumbnail and must not become the public download. Final candidate still requires the selected portrait and live review.
