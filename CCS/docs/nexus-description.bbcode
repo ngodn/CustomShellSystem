@@ -1,16 +1,14 @@
-[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/CCS/docs/media/v1.0.0-alpha.1/ccs-nexus-header.png[/img][/center]
-
 [center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/CCS/docs/media/v1.0.0-alpha.1/ccs-clip-1a.gif[/img][/center]
 [center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/CCS/docs/media/v1.0.0-alpha.1/ccs-clip-1b.gif[/img][/center]
 
-I built Custom Combat System to let you choose the animation each attack of your weapon plays. Put an enemy's swing on your light chain, a heavy from another weapon on your finisher, a boss move on your charged attack, then save the set as a preset and share the file. Each slot decides how far it goes: keep your weapon's timing and hit numbers with only the animation changed, or take the move's own timing, its damage multiplier and poise damage, and even its weapon in your hand for the swing. Base damage and Resolve are always your weapon's.
+I built Custom Combat System to let you choose the animation each attack of your weapon plays. Put an enemy's swing on your light chain, a heavy from another weapon on your finisher, a boss move on your charged attack, then save the set as a preset and share the file. For each slot you choose how far it goes: keep your weapon's timing and hit numbers with only the animation changed, or take the move's own timing, its damage multiplier and poise damage, and even its weapon in your hand for the swing. Base damage and Resolve are always your weapon's.
 
 [b]This is an alpha. It works and it is stable in my play, and I am releasing it now to gather feedback, ideas and bug reports before the first full version.[/b]
 
 [size=4][b]What you can do[/b][/size]
 [list]
 [*]Thirteen slots: light L1 L2 L3, light finisher LF, charged light LC, the same five for heavy, and the sprint attacks S+L and S+H.[/*]
-[*]Candidates for every slot: all player weapons' moves, the enemy attacks authored on the player's rig, and any new attack montage the running game lists after a patch.[/*]
+[*]Candidates for every slot: all player weapons' moves, the enemy attacks that use the player's skeleton (so they play on your body), and any new attack animation the running game lists after a patch.[/*]
 [*]Per-slot settings on the right panel: Speed, Feel (the game's timing or the move's own), Damage (the move's hit numbers or your weapon's), and Visual (keep your weapon in hand or show the move's own weapon for the swing).[/*]
 [*]Presets: save, load and delete your sets. They are plain JSON files you can share.[/*]
 [*]Search and filter the candidate list by typing.[/*]
@@ -22,12 +20,12 @@ I built Custom Combat System to let you choose the animation each attack of your
 
 [size=4][b]How it works[/b][/size]
 
-Every player attack starts its animation through one function inside the game. CCS hooks that function and swaps the animation at the moment the attack starts. Nothing runs every frame in combat, and no game file is changed on disk. Enemy animations play through a cleaned copy without the AI-only notifies, so they do not drag you toward targets or read state that a player does not have.
+Every player attack starts its animation through one function inside the game. CCS hooks that function and swaps the animation at the moment the attack starts: one callback per swing, no work per frame in combat. CCS changes no game file on disk. Enemy animations play through a cleaned copy with the parts meant for the AI taken out (the warping toward its target, the turning to face it, its event markers), so they do not drag you across the arena or read state a player does not have.
 
 [size=4][b]Install[/b][/size]
 [list=1]
 [*]Close the game.[/*]
-[*]Install [url=https://www.nexusmods.com/mortalshell2/mods/45?tab=files]UE4SS for MS2 by Framecore[/url]. CCS is built against UE4SS 3.0.1-1111-g97b7e501, the same build CSS and CSSX use; release.json inside the archive lists it.[/*]
+[*]Install [url=https://www.nexusmods.com/mortalshell2/mods/45?tab=files]UE4SS for MS2 by Framecore[/url]. CCS is built against UE4SS 3.0.1-1111-g97b7e501; release.json inside the archive lists the exact build.[/*]
 [*]Extract the CCS folder from the ZIP into MortalShell2/Binaries/Win64/ue4ss/Mods/. The loader must end up at ue4ss/Mods/CCS/dlls/main.dll, with no extra nested folder.[/*]
 [*]Enter the game world, open the Player Menu and switch to the [b]CCS[/b] tab. It is the last tab. There is no hotkey.[/*]
 [/list]
@@ -59,7 +57,7 @@ The footer of the page always shows the keys for the device you are using.
 
 [size=4][b]Charged attacks[/b][/size]
 
-In Mortal Shell II a charged light attack exists only with the Acolyte's Stone equipped, and a charged heavy attack only with the Unwieldy Stone. That is a rule of the game, not of the mod: without the stone a long press does the normal attack, and the CCS page tells you which stone the LC or HC slot is waiting for. If you want the slots without the stones, set [b]Charged attacks[/b] to [b]Always (cheat)[/b] in the Settings tab. The charge still costs Resolve.
+In Mortal Shell II a charged light attack exists only with the Acolyte's Stone equipped, and a charged heavy attack only with the Unwieldy Stone. The game sets that rule, not the mod: without the stone a long press does the normal attack, and the CCS page tells you which stone the LC or HC slot is waiting for. If you want the slots without the stones, set [b]Charged attacks[/b] to [b]Always (cheat)[/b] in the Settings tab. The charge still costs Resolve.
 
 [size=4][b]Known limits in this alpha[/b][/size]
 [list]
