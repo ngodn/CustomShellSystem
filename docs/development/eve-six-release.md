@@ -55,3 +55,7 @@ The verification copy uses the old thumbnail and must not become the public down
 Workspace-only fixture checks cover success and an injected verification failure after publication (`swap-check1/results.json`). Success leaves only the new trio; failure restores all six old packages byte-for-byte; both preserve backups. These exercise filesystem transaction behavior, not real game installation.
 
 A live `inventory_inspect` request timed out waiting for a developer acknowledgement. Main runtime status instead acknowledged that request as `Unknown CSS command`. Do not repeat this unsupported helper or install a different CSS core over Claude's work. Use available screenshot/recording controls and user review for the eventual combined build.
+
+## Author naming evidence
+
+Read the supplied author PDF into `work/eve26/author-page.txt`. Its feature list distinguishes game outfits from additional outfits but does not give official game names for the bikini or sweater. Source object names retained in the original-scene inspection and Gemini's export selection are `Eve Bikini - Top`, `Eve Bikini - Shorts` and `Eve Extras - Sweater` (with Extras heels/glasses). This does not establish a match to a named official Nano Suit. Keep Vacation Bikini and Casual Knitwear as descriptive mod labels and do not advertise them as verified official names. No source blend or outfit geometry was changed during this check.
