@@ -1,0 +1,42 @@
+--- a/CSSEveEmbeddedMotion.inl
++++ b/CSSEveEmbeddedMotion.inl
+@@ -4,6 +4,7 @@
+ #include "PreviewScene.h"
+ #include "HAL/IConsoleManager.h"
+ #include "HAL/FileManager.h"
++#include "Misc/ScopeExit.h"
+ 
+ static int32 EvaluateEmbeddedEveCloth(const FString& Params)
+ {
+@@ -23,6 +24,21 @@
+     auto* Animation=LoadObject<UAnimSequence>(nullptr,*(TEXT("/Game/CSS/Eve/Anim/AN_")+Clip));
+     if (!Mesh || !Animation || Mesh->GetSkeleton()!=Animation->GetSkeleton() || Mesh->GetMeshClothingAssets().Num()!=1)
+         return Fail(TEXT("Invalid private candidate or animation"));
++    const bool NoBodyCollision=FParse::Param(*Params,TEXT("NoBodyCollision"));
++    const bool NoBackstop=FParse::Param(*Params,TEXT("NoBackstop"));
++    if ((NoBodyCollision || NoBackstop) && !Knit) return Fail(TEXT("Isolation switches require Knitwear candidate"));
++    auto* Cloth=Cast<UClothingAssetCommon>(Mesh->GetMeshClothingAssets()[0]);
++    if (!Cloth || Cloth->LodData.Num()!=1) return Fail(TEXT("Invalid cloth LOD"));
++    auto* Radius=Cloth->LodData[0].PhysicalMeshData.FindWeightMap(EWeightMapTargetCommon::BackstopRadius);
++    if (NoBackstop && !Radius) return Fail(TEXT("Missing backstop radius map"));
++    const auto SavedPhysics=Cloth->PhysicsAsset;
++    const FPointWeightMap SavedRadius=Radius ? *Radius : FPointWeightMap();
++    ON_SCOPE_EXIT {
++        Cloth->PhysicsAsset=SavedPhysics;
++        if (Radius) *Radius=SavedRadius;
++    };
++    if (NoBodyCollision) Cloth->PhysicsAsset=nullptr;
++    if (NoBackstop) for (int32 I=0; I<Radius->Num(); ++I) (*Radius)[I]=0.f;
+     FAssetCompilingManager::Get().FinishAllCompilation();
+     auto* Wait=IConsoleManager::Get().FindConsoleVariable(TEXT("p.ClothPhysics.WaitForParallelClothTask"));
+     if (!Wait || Wait->GetInt()!=0) return Fail(TEXT("Probe requires explicit end-of-step cloth waits"));
+@@ -88,6 +104,9 @@
+     auto Root=MakeShared<FJsonObject>(); Root->SetArrayField(TEXT("frames"),Frames);
+     Root->SetStringField(TEXT("asset"),Mesh->GetPathName()); Root->SetStringField(TEXT("source_motion"),Report);
+     Root->SetBoolField(TEXT("secondary_enabled"),Secondary);
++    Root->SetBoolField(TEXT("diagnostic_no_body_collision"),NoBodyCollision);
++    Root->SetBoolField(TEXT("diagnostic_no_backstop"),NoBackstop);
++    Root->SetStringField(TEXT("cloth_physics_during_run"),GetPathNameSafe(Cloth->PhysicsAsset));
+     Root->SetStringField(TEXT("scope"),TEXT("Private skeletal component cloth tick, single-node clip; see secondary_enabled; no game acceptance"));
+     FString Text;
+     if (!FJsonSerializer::Serialize(Root,TJsonWriterFactory<>::Create(&Text)) || !FFileHelper::SaveStringToFile(Text,*Report)) return Fail(TEXT("Could not save report"));

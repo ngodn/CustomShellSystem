@@ -1,13 +1,18 @@
 """Compare native cloth particles with the same frame's skinned proxy."""
 import hashlib
+import argparse
 import json
 from pathlib import Path
+import sys
 import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 
 work = Path(__file__).resolve().parents[2]/'work/eve26'
-source = work/'knit-cloth1/sprint.json'
-output = work/'knit-cloth1/sprint-check.json'
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--case', default='sprint', choices=['sprint', 'no-body', 'no-backstop', 'no-both'])
+args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+source = work/'knit-cloth1'/f'{args.case}.json'
+output = work/'knit-cloth1'/f'{args.case}-check.json'
 assert not output.exists()
 motion = json.loads(source.read_text())
 mesh = json.loads((work/'knit-export2/knit.mesh.json').read_text())
@@ -49,6 +54,8 @@ for frame in motion['frames']:
         displacement_max_cm=float(delta.max()),over_limit_max_cm=float(np.maximum(delta-limits,0).max()),
         edge_ratio_max=float(ratios.max()),edge_ratio_p95=float(np.percentile(ratios,95))))
 report = dict(source_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),cases=cases,
+    diagnostic_no_body_collision=motion.get('diagnostic_no_body_collision',False),
+    diagnostic_no_backstop=motion.get('diagnostic_no_backstop',False),
     fixed_max_cm=max(c['fixed_max_cm'] for c in cases),
     displacement_max_cm=max(c['displacement_max_cm'] for c in cases),
     over_limit_max_cm=max(c['over_limit_max_cm'] for c in cases),
