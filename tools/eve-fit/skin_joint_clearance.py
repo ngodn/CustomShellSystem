@@ -5,11 +5,14 @@ import numpy as np
 from mathutils import Matrix,Quaternion,Vector
 from mathutils.bvhtree import BVHTree
 w=Path(__file__).resolve().parents[2]/'work/eve26'
-p=w/'skin-weight2/skin.mesh.json';data=json.loads(p.read_text());audit=json.loads(p.with_suffix('.audit.json').read_text())
+p=w/'skin-fit10/skin.mesh.json';data=json.loads(p.read_text());audit=json.loads(p.with_suffix('.audit.json').read_text())
 assert hashlib.sha256(p.read_bytes()).hexdigest()==audit['output_sha256']
 base=np.asarray(data['points']);nb=audit['parts'][0]['points'];ns=audit['parts'][1]['points']
 faces=[[data['wedges'][i][0] for i in f[:3]] for f in data['faces'][:audit['parts'][0]['faces']]]
 selected=[i for i in range(nb,nb+ns) if 75<base[i,2]<110]
+selected_set=set(selected)
+garment_faces=[[data['wedges'][i][0] for i in f[:3]] for f in data['faces'][audit['parts'][0]['faces']:audit['parts'][0]['faces']+audit['parts'][1]['faces']]]
+interior_faces=[ids for ids in garment_faces if all(i in selected_set for i in ids)]
 bind=[]
 for b in data['bones']:
  q=b['rotation'];m=Matrix.LocRotScale(Vector(b['translation']),Quaternion((q[3],*q[:3])),Vector(b['scale']))
@@ -43,7 +46,17 @@ for frame in (-1,8,32,48):
    a=(np.asarray(normal)*reflect)@rotations[i]
    rhs=.06-signed
    constraints[i].append((a,rhs))
-  cases.append(dict(frame=frame,maximum_morphs=maximum,inside_vertices=int(negative)))
+  interior=0
+  for ids in interior_faces:
+   a,b,c=[Vector(posed[i]*reflect) for i in ids]
+   point=(a+b+c)/3;hit,normal,_,distance=tree.find_nearest(point)
+   if distance>.5 or (b-a).cross(c-a).normalized().dot(normal)<.5:continue
+   signed=(point-hit).dot(normal)
+   if signed>=.06:continue
+   interior+=1
+   for i in ids:
+    constraints[i].append(((np.asarray(normal)*reflect)@rotations[i],.06-signed))
+  cases.append(dict(frame=frame,maximum_morphs=maximum,inside_vertices=int(negative),interior_constraints=interior))
 result=copy.deepcopy(data);offsets=[];conflicts=[]
 for i,rows in constraints.items():
  if not rows:continue
@@ -65,11 +78,11 @@ for i,rows in constraints.items():
  result['points'][i]=(base[i]+x).tolist();offsets.append([i,*x.tolist()])
 assert result['points'][:nb]==data['points'][:nb] and result['points'][nb+ns:]==data['points'][nb+ns:]
 assert all(result[k]==v for k,v in data.items() if k!='points')
-out=w/'skin-fit10';out.mkdir(exist_ok=False)
+out=w/'skin-fit11';out.mkdir(exist_ok=False)
 path=out/'skin.mesh.json';path.write_text(json.dumps(result,separators=(',',':'))+'\n')
 audit['output_sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
 (out/'skin.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')
 (out/'offsets.json').write_text(json.dumps(dict(offsets=offsets))+'\n')
 (out/'receipt.json').write_text(json.dumps(dict(cases=cases,changed_vertices=len(offsets),conflicts=conflicts,
-    scope='Simultaneous linearized vertex constraints, 0.4 cm bound. Not triangle-interior or full nonlinear collision acceptance.'),indent=2)+'\n')
+    scope='Simultaneous linearized vertex and centroid constraints, 0.4 cm bound. Unresolved vertices retain original positions. Requires nonlinear and visible collision verification.'),indent=2)+'\n')
 print('Changed:',len(offsets),'Conflicts:',len(conflicts),flush=True)
