@@ -3,6 +3,8 @@ import hashlib,json,sys
 from pathlib import Path
 import bpy
 from mathutils import Vector
+from mathutils.bvhtree import BVHTree
+from mathutils.geometry import barycentric_transform
 root=Path(__file__).resolve().parents[3]
 mod=root/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx'
 w=root/'CustomShellSystem/work/eve26'
@@ -27,10 +29,21 @@ errors=[(points[i]-Vector(data['points'][36787+j])).length for j,i in enumerate(
 triangles=[list(t.vertices) for t in mesh.loop_triangles if t.material_index==skin and
            max(points[i].z for i in t.vertices)<40]
 indices=sorted({i for t in triangles for i in t});remap={v:i for i,v in enumerate(indices)}
-out=w/'skin-ankle-reference.json';assert not out.exists()
+mapped={i:Vector(data['points'][36787+j]) for j,i in enumerate(used)}
+suit_triangles=[list(t.vertices) for t in mesh.loop_triangles if t.material_index==suit and all(i in mapped for i in t.vertices)]
+tree=BVHTree.FromPolygons(points,suit_triangles,all_triangles=True)
+aligned=[]
+for i in indices:
+    hit,_,face,_=tree.find_nearest(points[i])
+    a,b,c=suit_triangles[face]
+    weights=barycentric_transform(hit,points[a],points[b],points[c],Vector((1,0,0)),Vector((0,1,0)),Vector((0,0,1)))
+    delta=sum(((mapped[j]-points[j])*weight for j,weight in zip((a,b,c),weights)),Vector())
+    aligned.append(list(points[i]+delta))
+out=w/'skin-ankle-aligned.json';assert not out.exists()
 assert hashlib.sha256(source.read_bytes()).hexdigest()==digest
 report=dict(source_sha256=digest,source_unchanged=True,foot_suit_vertices=len(errors),
-            foot_suit_max_error_cm=max(errors),points_cm=[list(points[i]) for i in indices],
+            foot_suit_max_error_cm=max(errors),points_cm=aligned,
+            alignment='Interpolated current-minus-original suit displacement at nearest original suit triangle',
             triangles=[[remap[i] for i in t] for t in triangles],
             scope='Original skin surface under 40 cm. Foot suit alignment is measured, not assumed; no production body changes.')
 out.write_text(json.dumps(report,separators=(',',':'))+'\n')
