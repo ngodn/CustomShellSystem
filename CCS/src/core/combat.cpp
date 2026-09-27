@@ -460,9 +460,13 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         if (player.asc != asc_.get()) { asc_ = {}; if (player.asc) asc_.capture(player.asc); }
     }
     poll_weapon(player, now);
-    if (player.world != world_.get()) {   // a new world holds none of our references: everything reloads
-        world_ = {}; if (player.world) world_.capture(player.world);
-        for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.show_mesh = {}; s.pending = true; } }
+    if (player.world && player.world != world_.get()) {   // a new world holds none of our references: everything reloads
+        const bool had_world = world_.ptr != nullptr;
+        world_ = {}; world_.capture(player.world);
+        if (had_world) {
+            log("CCS world changed; reloading the slots");
+            for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); s.was_ready = false; if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.show_mesh = {}; s.pending = true; } }
+        }
     }
     for (auto& s : slots_) {   // a loaded montage that stops answering: say why once, and load it again
         const bool ready = s.montage.alive();
