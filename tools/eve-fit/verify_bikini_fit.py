@@ -1,15 +1,18 @@
 """Fresh-load private Bikini references and check independent section visibility."""
 import hashlib
 import json
+import os
 from pathlib import Path
 import unreal
 
 work = Path('/home/eins0fx/development/mods/msII/CustomShellSystem/work/eve26')
-output = work / 'bikini-verified1.json'
+revision = int(os.environ.get('CSS_BIKINI_FIT_REVISION', '1'))
+assert revision in (1,2)
+output = work / f'bikini-verified{revision}.json'
 assert not output.exists()
 mesh = unreal.load_asset('/Game/CSS/EveTest/SK_BFit1')
 assert mesh
-expected = json.loads((work / 'bikini-prepared1.json').read_text())
+expected = json.loads((work / f'bikini-prepared{revision}.json').read_text())
 slots = mesh.get_editor_property('materials')
 assert len(slots) == 32
 for path, slot in zip(expected['materials'], slots, strict=True):

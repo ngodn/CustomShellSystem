@@ -2,11 +2,14 @@
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import unreal
 
 work = Path('/home/eins0fx/development/mods/msII/CustomShellSystem/work/eve26')
-output = work / 'bikini-prepared1.json'
+revision = int(os.environ.get('CSS_BIKINI_FIT_REVISION', '1'))
+assert revision in (1,2)
+output = work / f'bikini-prepared{revision}.json'
 assert not output.exists()
 protected = json.loads((work / 'bikini-import1/protected.json').read_text())
 def check_protected():
@@ -16,7 +19,8 @@ data = json.loads((work / 'bikini-import1/bikini.mesh.json').read_text())
 mesh = unreal.load_asset('/Game/CSS/EveTest/SK_BFit1')
 source = unreal.load_asset('/Game/CSS/SeduXtress/SK_Eve_Bikini')
 skeleton = unreal.load_asset('/Game/CSS/Shared/SKEL_Base')
-blueprint = unreal.load_asset('/Game/CSS/EveTest/ABP_BikiniFeet')
+graph = '/Game/CSS/EveTest/ABP_BikiniFeet' + ('2' if revision == 2 else '')
+blueprint = unreal.load_asset(graph)
 assert mesh and source and skeleton and blueprint
 assert mesh.get_editor_property('skeleton') == skeleton
 lib = unreal.CSSRetargetLibrary
@@ -49,7 +53,7 @@ for prop in ('physics_asset', 'shadow_physics_asset'):
     if prop == 'physics_asset': assert value
     mesh.set_editor_property(prop, value)
     refs[prop] = value.get_path_name() if value else None
-generated = unreal.load_class(None, '/Game/CSS/EveTest/ABP_BikiniFeet.ABP_BikiniFeet_C')
+generated = unreal.load_class(None, graph+'.'+graph.rsplit('/',1)[1]+'_C')
 assert generated
 mesh.set_editor_property('post_process_anim_blueprint', generated)
 refs['post_process_anim_blueprint'] = generated.get_path_name()

@@ -1,0 +1,68 @@
+--- a/CSSAnimationLibrary.cpp
++++ b/CSSAnimationLibrary.cpp
+@@ -350,6 +350,15 @@
+          Blueprint->GetPathName() == TEXT("/Game/CSS/SeduXtress/ABP_Secondary.ABP_Secondary")) &&
+         (Animation->GetName() == TEXT("AN_Walk") || Animation->GetName() == TEXT("AN_Jog") || Animation->GetName() == TEXT("AN_Sprint")) &&
+         Animation->GetPathName().StartsWith(TEXT("/Game/CSS/Eve/Anim/"));
++    const bool Bikini = Mesh && Blueprint && Animation &&
++        Mesh->GetPathName() == TEXT("/Game/CSS/EveTest/SK_BFit1.SK_BFit1") &&
++        (Blueprint->GetPathName() == TEXT("/Game/CSS/EveTest/ABP_BikiniFeet.ABP_BikiniFeet") ||
++         Blueprint->GetPathName() == TEXT("/Game/CSS/EveTest/ABP_BikiniFeet2.ABP_BikiniFeet2") ||
++         Blueprint->GetPathName() == TEXT("/Game/CSS/SeduXtress/ABP_Secondary.ABP_Secondary")) &&
++        (Animation->GetName() == TEXT("AN_Walk") || Animation->GetName() == TEXT("AN_Jog") || Animation->GetName() == TEXT("AN_Sprint")) &&
++        Animation->GetPathName().StartsWith(TEXT("/Game/CSS/Eve/Anim/"));
++    const bool Visibility = Bikini && Blueprint->GetName() == TEXT("ABP_BikiniFeet2");
++    const bool BikiniFeet = Bikini && Blueprint->GetName() != TEXT("ABP_Secondary");
+     const bool Heels = Mesh && Blueprint && Animation &&
+         Mesh->GetPathName() == TEXT("/Game/CSS/EveTest/SK_HolidayFollow.SK_HolidayFollow") &&
+         Blueprint->GetPathName() == TEXT("/Game/CSS/EveTest/ABP_BikiniFeet.ABP_BikiniFeet") &&
+@@ -362,13 +371,13 @@
+         (Animation->GetName() == TEXT("AN_Walk") || Animation->GetName() == TEXT("AN_Jog") || Animation->GetName() == TEXT("AN_Sprint")) &&
+         Animation->GetPathName().StartsWith(TEXT("/Game/CSS/Eve/Anim/"));
+     if (!IsRunningCommandlet() || !Mesh || !Animation || !Blueprint || !Blueprint->GeneratedClass ||
+-        (!Holiday && !Follow && !Heels && (Mesh->GetPathName() != TEXT("/Game/CSS/SeduXtress/SK_BlackPearl2.SK_BlackPearl2") ||
++        (!Holiday && !Follow && !Heels && !Bikini && (Mesh->GetPathName() != TEXT("/Game/CSS/SeduXtress/SK_BlackPearl2.SK_BlackPearl2") ||
+         Blueprint->GetPathName() != TEXT("/Game/CSS/SeduXtress/ABP_Secondary.ABP_Secondary") ||
+         !Animation->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/RT_")))) ||
+         Blueprint->TargetSkeleton != Mesh->GetSkeleton() || Animation->GetSkeleton() != Mesh->GetSkeleton() ||
+         Loops < 1 || Loops > 3 || Animation->GetPlayLength() <= 0 || Animation->GetPlayLength()*Loops > 22)
+         return Fail(TEXT("Invalid isolated component input"));
+-    if (HolidayControl < 0 || HolidayControl > 15 || (!Holiday && HolidayControl != 0))
++    if (HolidayControl < 0 || HolidayControl > 15 || (!Holiday && !Visibility && HolidayControl != 0) || (Visibility && HolidayControl > 2))
+         return Fail(TEXT("Invalid Holiday transient control"));
+     if (AdvanceBlendClock && !Carrier) return Fail(TEXT("Advancing a blend requires a carrier"));
+     if (Carrier)
+@@ -454,7 +463,7 @@
+     }
+     if (FilterReport.Num() < 2 || FilterReport.Num() > (Follow ? 4 : 3) || ChangedBones.Num() < 36)
+         return Fail(TEXT("Unexpected secondary rig layout"));
+-    if (Heels)
++    if (Heels || BikiniFeet)
+     {
+         int32 Count = 0;
+         for (TFieldIterator<FStructProperty> It(Instance->GetClass()); It; ++It)
+@@ -531,6 +540,10 @@
+     {
+         const double Time = double(Frame)/Fps;
+         const double ClipTime = Frame == Frames ? Duration : FMath::Fmod(Time, Duration);
++        const bool ShoeShown = HolidayControl == 0 || (HolidayControl == 2 && (Frame / 20) % 2 == 0);
++        if (Visibility)
++            for (int32 Material = 23; Material <= 28; ++Material)
++                Component->ShowMaterialSection(Material, INDEX_NONE, ShoeShown, 0);
+         for (auto* C : {Upstream, Component})
+         {
+             // Single-node blend spaces expose normalized position, sequences seconds.
+@@ -554,6 +567,13 @@
+         Pose->SetObjectField(TEXT("Snapshot"), PoseJson(B));
+         Sample->SetObjectField(TEXT("pose"), Pose);
+         Sample->SetObjectField(TEXT("upstream"), PoseJson(A));
++        if (Visibility)
++        {
++            const auto* Enabled = FindFProperty<FBoolProperty>(Instance->GetClass(), TEXT("CSSHeelsEnabled"));
++            if (!Enabled) return Fail(TEXT("Missing private heel visibility state"));
++            Sample->SetBoolField(TEXT("shoe_visible"), ShoeShown);
++            Sample->SetBoolField(TEXT("heel_enabled"), Enabled->GetPropertyValue_InContainer(Instance));
++        }
+         Sample->SetNumberField(TEXT("time"), Time);
+         if (AdvanceBlendClock) Sample->SetNumberField(TEXT("blend_normalized_time"), Component->GetSingleNodeInstance()->GetCurrentTime());
+         else Sample->SetNumberField(TEXT("clip_time"), ClipTime);
