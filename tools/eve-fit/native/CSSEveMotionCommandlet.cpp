@@ -69,8 +69,9 @@ int32 UCSSEveMotionCommandlet::Main(const FString& Params)
     FString Output = TEXT("/Game/CSS/EveTest/ABP_Holiday");
     FParse::Value(*Params, TEXT("Output="), Output);
     const bool Follow = FParse::Param(*Params, TEXT("Follow"));
-    if (Follow ? Output != TEXT("/Game/CSS/EveTest/ABP_HolidayFollow") :
-        (Output != TEXT("/Game/CSS/EveTest/ABP_Holiday") && Output != TEXT("/Game/CSS/EveTest/ABP_Holiday2")))
+    const bool Heels = FParse::Param(*Params, TEXT("Heels"));
+    if ((Follow && Heels) || (Heels ? Output != TEXT("/Game/CSS/EveTest/ABP_BikiniFeet") : Follow ? Output != TEXT("/Game/CSS/EveTest/ABP_HolidayFollow") :
+        (Output != TEXT("/Game/CSS/EveTest/ABP_Holiday") && Output != TEXT("/Game/CSS/EveTest/ABP_Holiday2"))))
         return Fail(TEXT("Invalid private output"));
     if (!FParse::Value(*Params, TEXT("Recipe="), RecipePath) || FPackageName::DoesPackageExist(Output))
         return Fail(TEXT("Expected a recipe and unused private output"));
@@ -107,7 +108,60 @@ int32 UCSSEveMotionCommandlet::Main(const FString& Params)
     ExistingOutput->BreakLinkTo(Result);
     int32 X = Root->NodePosX;
     TSet<FName> Seen;
-    if (Follow)
+    if (Heels)
+    {
+        const TArray<TSharedPtr<FJsonValue>>* Shoes = nullptr;
+        if (!Recipe->TryGetArrayField(TEXT("shoes"), Shoes) || Shoes->Num() != 2)
+            return Fail(TEXT("Expected two foot correction records"));
+        auto* ToComponent = AddNode<UAnimGraphNode_LocalToComponentSpace>(Graph, X);
+        X += 220;
+        if (!Graph->GetSchema()->TryCreateConnection(ExistingOutput, ToComponent->FindPin(TEXT("LocalPose"))))
+            return Fail(TEXT("Cannot connect heel input"));
+        UEdGraphNode* Previous = ToComponent;
+        const auto& Ref = Mesh->GetRefSkeleton();
+        TArray<FTransform> Bind;
+        for (int32 Index = 0; Index < Ref.GetRawBoneNum(); ++Index)
+        {
+            const int32 Parent = Ref.GetParentIndex(Index);
+            Bind.Add(Parent >= 0 ? Ref.GetRefBonePose()[Index] * Bind[Parent] : Ref.GetRefBonePose()[Index]);
+        }
+        for (const auto& Value : *Shoes)
+        {
+            const TSharedPtr<FJsonObject>* Row;
+            FString Name;
+            double Degrees;
+            const TArray<TSharedPtr<FJsonValue>>* Axis;
+            if (!Value->TryGetObject(Row) || !(*Row)->TryGetStringField(TEXT("foot_bone"), Name) ||
+                !(*Row)->TryGetNumberField(TEXT("angle_degrees"), Degrees) || !FMath::IsFinite(Degrees) || FMath::Abs(Degrees) > 45 ||
+                !(*Row)->TryGetArrayField(TEXT("axis"), Axis) || Axis->Num() != 3 ||
+                (Name != TEXT("foot_l") && Name != TEXT("foot_r")) || Seen.Contains(FName(*Name)))
+                return Fail(TEXT("Invalid bounded foot correction"));
+            FVector Direction((*Axis)[0]->AsNumber(), (*Axis)[1]->AsNumber(), (*Axis)[2]->AsNumber());
+            if (Direction.ContainsNaN() || !Direction.Normalize()) return Fail(TEXT("Invalid heel axis"));
+            const int32 Index = Ref.FindBoneIndex(FName(*Name));
+            if (!Bind.IsValidIndex(Index)) return Fail(TEXT("Missing foot bind transform"));
+            const FQuat Rotation = Bind[Index].GetRotation().Inverse() * FQuat(Direction, FMath::DegreesToRadians(Degrees)) * Bind[Index].GetRotation();
+            auto* Node = AddNode<UAnimGraphNode_ModifyBone>(Graph, X);
+            X += 220;
+            Node->Node.BoneToModify.BoneName = FName(*Name);
+            Node->Node.Rotation = Rotation.Rotator();
+            Node->Node.RotationMode = BMM_Additive;
+            Node->Node.RotationSpace = BCS_BoneSpace;
+            Node->Node.TranslationMode = BMM_Ignore;
+            Node->Node.ScaleMode = BMM_Ignore;
+            Node->Node.Alpha = 1.f;
+            if (auto* Pin = Node->FindPin(TEXT("Rotation")))
+                Pin->DefaultValue = FString::Printf(TEXT("(Pitch=%.9f,Yaw=%.9f,Roll=%.9f)"), Node->Node.Rotation.Pitch, Node->Node.Rotation.Yaw, Node->Node.Rotation.Roll);
+            if (auto* Pin = Node->FindPin(TEXT("Alpha"))) Pin->DefaultValue = TEXT("1.0");
+            if (!ConnectPose(Graph, Previous, Node)) return Fail(TEXT("Cannot connect foot correction"));
+            Previous = Node;
+            Seen.Add(FName(*Name));
+        }
+        auto* ToLocal = AddNode<UAnimGraphNode_ComponentToLocalSpace>(Graph, X);
+        if (!ConnectPose(Graph, Previous, ToLocal) || !ConnectPose(Graph, ToLocal, Root))
+            return Fail(TEXT("Cannot connect heel output"));
+    }
+    else if (Follow)
     {
         auto* RigBP = LoadObject<UControlRigBlueprint>(nullptr, TEXT("/Game/CSS/EveTest/CR_HolidayFollow.CR_HolidayFollow"));
         const TSharedPtr<FJsonObject>* Drivers = nullptr;
