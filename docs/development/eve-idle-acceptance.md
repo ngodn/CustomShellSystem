@@ -1,5 +1,7 @@
 # Eve idle gameplay acceptance
 
+The user reported that the installed E6 candidate works, accepted the remaining imperfections, and requested release as `eve-v1.2.0-ANIMTEST`. This is acceptance for an experimental download, not evidence that each matrix entry below has been individually tested. Retain the pending entries for future polish and regression work.
+
 Candidate: E6. Each clip has 101 source frames at 30 fps. All 14 use the provisional common-body mapping documented in `eve-idle-expansion.md`; unresolved source helper indices remain archived.
 
 | Source clip | CSS name | Offline review | Game world, transitions, weapons | Six outfits |

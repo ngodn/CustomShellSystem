@@ -144,3 +144,9 @@ Handoff: install `pack2/CSS_EveStellarBlade_eins0fx_P` using the existing backed
 After the user confirmed closure, verified that no shipping-game process remained. Installed `pack2/CSS_EveStellarBlade_eins0fx_P` using `tools/css_package.py install ... --replace`, which exited 0. Rollback files and their manifest are in `backups/packages-0018`. Independently rehashed every installed container against `pack2/verification.json` and every retired file against the backup manifest. Receipt: `work/eve-idle1/installed-e6.json`.
 
 Only the Eve package was replaced. No CSS runtime or extension code was deployed. The public v1.2.0 ZIP remains unchanged. Asked the user to return to the game and open CSS → LOCOMOTION for the first live review. The candidate retains its baseline version label until release acceptance; use its container hashes to distinguish it. Gameplay acceptance remains pending.
+
+## ANIMTEST release decision
+
+The user tested the installed candidate and reported: "yeah its working, but not perfect, its ok la". They explicitly requested packaging it in `dist/eve-v1.2.0-ANIMTEST`. Ship the exact tested E6 trio as an experimental download, with no further asset edits. Keep its embedded 1.2.0 metadata to preserve those tested bytes; the ZIP, directory and changelog carry the ANIMTEST label. Do not imply that this broad user acceptance proves every individual clip/outfit/interruption combination. The detailed matrix remains pending for further polish.
+
+Release notes are tracked in `docs/releases/eve-v1.2.0-ANIMTEST.bbcode`. No public upload is authorized by this local packaging request.
