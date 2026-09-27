@@ -12,7 +12,7 @@ parser.add_argument('--outfit', choices=('knit','alice'), default='knit')
 args = parser.parse_args()
 trial = args.trial
 alice = args.outfit == 'alice'
-assert not alice or trial in (1,2)
+assert not alice or trial in (1,2,3)
 stem = 'alice' if alice else 'knit'
 prefix = 'A' if alice else 'K'
 particles = 624 if alice else 1679
@@ -42,7 +42,7 @@ for name in ('max_distances','backstop_distances','backstop_radii'):
 assert section['slot'] == slot_name and section['asset_index'] == 0
 assert section['mapping_count'] == section['vertices'] and section['vertices'] > 0
 content = repo.parent/'CSS-eins0fx-collections/tools/CSSAuthoring/Content/CSS'
-protected = json.loads((work/(('alice-import4/protected.json' if trial == 2 else 'alice-import1/protected.json') if alice else 'knit-backstop-before.json')).read_text())
+protected = json.loads((work/(('alice-import4/protected.json' if trial >= 2 else 'alice-import1/protected.json') if alice else 'knit-backstop-before.json')).read_text())
 assert all(hashlib.sha256((content/p).read_bytes()).hexdigest() == sha for p,sha in protected.items())
 output.write_text(json.dumps(dict(readback_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
     map_error_cm=errors,render_vertices=section['vertices'],protected_unchanged=True,

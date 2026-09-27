@@ -131,3 +131,12 @@ Process 72493 is running the temporary `-NoBodyCollision` diagnostic on ACloth2 
 Inspected `alice2-full58/front.png`: copied body collision visibly inflates and stretches the loops and tails. `alice2-nobody58/front.png`: the bow stays close to its attachment, but loops still crumple. Removing body collision reduces maximum displacement to 1.00150 cm and limit excess to 0.00150 cm, with pinned error 0.00003670 cm; it is not accepted as a final physics setup.
 
 The six connected components identify a simpler appropriate motion scope: 36 and 48 points are hanging ends (minimum Z 145.19 and 143.91 cm); 152 and 168 points are side loops (minimum Z 149.53 and 149.51 cm); 120 and 100 points form the already pinned knot. Next preserve loops and knot with skinning, and restrict secondary motion to the two hanging ends. This retains clothing motion where it is useful while avoiding simulated collapse of a tied bow. Keep this separate from the accepted neck-strap tolerance and preserve repaired chest coverage. Body collision/backstop contact still needs verification for the revised tails.
+
+
+## Tails-only bow candidate
+
+`prepare_alice_cloth.py --repaired --tails-only` creates `alice-cloth3`. The two hanging components retain 8/36 and 7/48 pins, with moving limits scaled to a maximum 0.5 cm. The knot and side loops are fully pinned. All geometry and repaired skin weights are unchanged.
+
+The collision-copy recipe uses a private copy of accepted Knitwear `PA_KCloth4` rather than the broad gameplay `PA_Body`. Its 32-sphere recipe has a minimum rest gap of 0.77253 cm to the bow. This supports a motion trial only; posed contact remains unproven. Gameplay physics and the original Knitwear asset remain untouched.
+
+Native ACloth3 probe support is recorded in `alice-bow-tails.patch`. Editor build 80095 succeeded, exit 0. Pipeline 71184 is running copy, collision copy, bind, inspection with `-Geometry`, map verification and sprint diagnostics, sequentially. Resume this handle; logs use `alice3-*.log`, outputs `alice-cloth3`. Blender diagnostics explicitly use `--python-exit-code 1`. Render the worst frame after completion and check that the loops retain their silhouette and the hanging ends stay outside the body before adopting it.

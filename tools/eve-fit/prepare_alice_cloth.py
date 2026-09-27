@@ -8,8 +8,10 @@ from pathlib import Path
 work = Path(__file__).resolve().parents[2] / 'work/eve26'
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--repaired', action='store_true')
+parser.add_argument('--tails-only', action='store_true')
 args = parser.parse_args()
-revision = 2 if args.repaired else 1
+assert not args.tails_only or args.repaired
+revision = 3 if args.tails_only else 2 if args.repaired else 1
 source = work / ('alice-import4/alice.mesh.json' if args.repaired else 'alice-import1/alice.mesh.json')
 data = json.loads(source.read_text())
 audit = json.loads(source.with_suffix('.audit.json').read_text())
@@ -54,6 +56,10 @@ while remaining:
         i = stack.pop(); group.append(i)
         new = neighbors[i] & remaining
         remaining -= new; stack.extend(new)
+    if args.tails_only:
+        is_tail = min(points[i][2] for i in group) < 149
+        for i in group:
+            limits[i] = .5*limits[i] if is_tail else 0.
     pins = sum(limits[i] == 0 for i in group)
     assert pins > 0, 'Every disconnected bow piece must remain attached'
     components.append({'vertices': len(group), 'pins': pins})
@@ -71,11 +77,11 @@ save('config.json', {'AliceRibbon': dict(Iterations=6, BendingStiffness=.5,
     AnimDriveStiffness=.35, AnimDriveDamping=.5, DampingCoefficient=.3,
     CollisionThickness=.1, FrictionCoefficient=.2, GravityScale=1., SelfCollision=0)})
 mesh = '/Game/CSS/EveTest/SK_AFit4' if args.repaired else '/Game/CSS/EveTest/SK_AFit1'
-physics = '/Game/CSS/SeduXtress/PA_Body'
+physics = '/Game/CSS/EveTest/PA_KCloth4' if args.tails_only else '/Game/CSS/SeduXtress/PA_Body'
 save('copy.json', {'mapping': {mesh:f'/Game/CSS/EveTest/SK_ACloth{revision}'}, 'copy':[mesh]})
 save('collision-copy.json', {'mapping': {physics:f'/Game/CSS/EveTest/PA_ACloth{revision}'}, 'copy':[physics]})
 save('receipt.json', dict(source_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
     author_sha256=hashlib.sha256(author_path.read_bytes()).hexdigest(),
-    point_error_cm=error, components=components, max_distance_cm=max(limits),
-    scope='Unverified bow trial. Author chain/root proportions bound displacement to 1 cm; not a conversion of the original solver. Native motion and visual checks required.'))
+    point_error_cm=error, components=components, tails_only=args.tails_only, collision_source=physics, max_distance_cm=max(limits),
+    scope='Unverified bow trial. Displacement bound is recorded by max_distance_cm; tails-only pins the knot and loops and reuses a private Knitwear collider. Native motion and visual checks required.'))
 print(out)
