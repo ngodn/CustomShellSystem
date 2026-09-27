@@ -1,13 +1,16 @@
 """Fresh-load the private heel graph and record its compiled bone controls."""
 import json
+import os
 from pathlib import Path
 import unreal
 
 work = Path('/home/eins0fx/development/mods/msII/CustomShellSystem/work/eve26')
-output = work / 'bikini-foot-graph.json'
+kind = os.environ.get('CSS_HEEL_GRAPH_KIND', 'bikini')
+assert kind in ('bikini', 'knit')
+output = work / f'{kind}-foot-graph.json'
 assert not output.exists()
 base = unreal.load_asset('/Game/CSS/SeduXtress/ABP_Secondary')
-candidate = unreal.load_asset('/Game/CSS/EveTest/ABP_BikiniFeet')
+candidate = unreal.load_asset('/Game/CSS/EveTest/' + ('ABP_BikiniFeet' if kind == 'bikini' else 'ABP_KnitFeet1'))
 assert base and candidate
 assert base.get_editor_property('target_skeleton') == candidate.get_editor_property('target_skeleton')
 rows = {}

@@ -32,6 +32,10 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**Knitwear private Unreal import and heel graph created:** authoring build94153 exits0. `CSSEveMotion -Heels -ShoeVisibility -Knit` creates only unused `/Game/CSS/EveTest/ABP_KnitFeet1`, using material17 instead of Bikini23; other modes retain their previous paths/slots. Graph generation47824 exits0. Fresh-load graph readback3201 exits0 (`knit-foot-graph.json`): exactly two foot controls, additive bone-space rotation, translation/scale ignored, shared skeleton reference retained. This does not verify visibility-event execution or evaluated pose playback.
+
+`setup_bikini_import.py --kind knit` prepares `knit-import1/` with only private package identifiers changed and hashes for protected production assets. Native import73415 exits0, creating `/Game/CSS/EveTest/SK_KFit2`:146,464 points,216,613 triangles,379 raw bones,22 morph targets. Original mesh, shared skeleton, PA_Body and ABP_Secondary hashes remain unchanged after import. Materials are still placeholders. Next run SkeletonOnly binding, prepare original material/physics references and the private graph, fresh-load verification, then bounded shoe-visibility playback. No installed game or release changes.
+
 **Knitwear shoe reuse and refreshed export:** `reuse_part_weights.py` requires identical part points, topology by material name and bone arrays before copying any weights. `knit-heels1/` (55720 exit0) reuses Bikini's accepted offline ankle candidate, changing8,402 vertices only. An independent comparison confirms all17,042 sole/tap/heel/insole vertices retain their weights. Other fields and parts are unchanged. The saved source `bikini-heels-w1.blend` supplies this identical shoe part; no duplicate shoe library is needed.
 
 `knit-heels1-sprint/quarter.png` (90351 exit0) was inspected with the diagnostic foot-bone correction at upstream sprint24. Feet remain within the shoes and tall heel supports remain intact at that view. This is not runtime/floor-contact acceptance. Knitwear needs its own material17 visibility binding instead of Bikini's23 before native assembly.

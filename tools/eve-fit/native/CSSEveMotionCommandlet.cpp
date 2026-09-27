@@ -81,7 +81,8 @@ int32 UCSSEveMotionCommandlet::Main(const FString& Params)
     const bool Follow = FParse::Param(*Params, TEXT("Follow"));
     const bool Heels = FParse::Param(*Params, TEXT("Heels"));
     const bool ShoeVisibility = FParse::Param(*Params, TEXT("ShoeVisibility"));
-    if ((ShoeVisibility && !Heels) || (Follow && Heels) || (Heels ? Output != (ShoeVisibility ? TEXT("/Game/CSS/EveTest/ABP_BikiniFeet2") : TEXT("/Game/CSS/EveTest/ABP_BikiniFeet")) : Follow ? Output != TEXT("/Game/CSS/EveTest/ABP_HolidayFollow") :
+    const bool Knit = FParse::Param(*Params, TEXT("Knit"));
+    if ((Knit && (!Heels || !ShoeVisibility)) || (ShoeVisibility && !Heels) || (Follow && Heels) || (Heels ? Output != (Knit ? TEXT("/Game/CSS/EveTest/ABP_KnitFeet1") : ShoeVisibility ? TEXT("/Game/CSS/EveTest/ABP_BikiniFeet2") : TEXT("/Game/CSS/EveTest/ABP_BikiniFeet")) : Follow ? Output != TEXT("/Game/CSS/EveTest/ABP_HolidayFollow") :
         (Output != TEXT("/Game/CSS/EveTest/ABP_Holiday") && Output != TEXT("/Game/CSS/EveTest/ABP_Holiday2"))))
         return Fail(TEXT("Invalid private output"));
     if (!FParse::Value(*Params, TEXT("Recipe="), RecipePath) || FPackageName::DoesPackageExist(Output))
@@ -99,7 +100,7 @@ int32 UCSSEveMotionCommandlet::Main(const FString& Params)
     if (!Blueprint || Blueprint->TargetSkeleton != Source->TargetSkeleton)
         return Fail(TEXT("Cannot preserve secondary graph skeleton"));
     if (ShoeVisibility)
-        if (const FString Error = AddHeelVisibility(Blueprint); !Error.IsEmpty()) return Fail(Error);
+        if (const FString Error = AddHeelVisibility(Blueprint, Knit ? 17 : 23); !Error.IsEmpty()) return Fail(Error);
     UEdGraph* Graph = nullptr;
     for (auto Candidate : Blueprint->FunctionGraphs)
         if (Candidate->GetFName() == TEXT("AnimGraph")) Graph = Candidate.Get();

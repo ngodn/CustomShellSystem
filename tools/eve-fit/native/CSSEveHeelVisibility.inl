@@ -1,4 +1,4 @@
-FString AddHeelVisibility(UAnimBlueprint* Blueprint)
+FString AddHeelVisibility(UAnimBlueprint* Blueprint, int32 ShoeMaterial)
 {
     FEdGraphPinType Type;
     Type.PinCategory = UEdGraphSchema_K2::PC_Boolean;
@@ -45,7 +45,7 @@ FString AddHeelVisibility(UAnimBlueprint* Blueprint)
     auto* LodPin = Query->FindPin(TEXT("LODIndex"));
     auto* FalsePin = Disabled->FindPin(TEXT("CSSHeelsEnabled"));
     if (!MaterialPin || !LodPin || !FalsePin) return TEXT("Missing shoe visibility parameters");
-    MaterialPin->DefaultValue = TEXT("23");
+    MaterialPin->DefaultValue = FString::FromInt(ShoeMaterial);
     LodPin->DefaultValue = TEXT("0");
     FalsePin->DefaultValue = TEXT("false");
     if (!Link(Sequence->GetThenPinGivenIndex(1), Branch->GetExecPin()) ||
