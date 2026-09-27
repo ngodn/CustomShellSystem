@@ -292,17 +292,21 @@ nlohmann::json Core::model() const {
         Json speed_options = Json::array();
         for (const char* v : speeds) speed_options.push_back({{"id", v}, {"label", std::string(v) + "x"}});
         const bool mesh_ready = combat_ && combat_->slot_weapon_available(slot);
-        const Json settings_rows = Json::array({
-            {{"type", "choice"}, {"id", sid + ".speed"}, {"label", "Speed"}, {"value", speed_id}, {"options", speed_options},
-             {"description", "Play-rate multiplier for this slot, swapped or not. 1x is the game's speed."}},
-            {{"type", "choice"}, {"id", sid + ".hit_damage"}, {"label", "Hit damage"}, {"value", tune.hit_damage},
-             {"options", Json::array({{{"id", "move"}, {"label", "This move's own"}}, {{"id", "weapon"}, {"label", "Weapon's own for this slot"}}})},
-             {"description", "Whose hit payload the swing carries. This move's own keeps its multiplier, poise, reaction and effects. Weapon's own copies the payload of the attack this slot normally plays onto the move's hit windows. Base damage is always the weapon in hand."}},
-            {{"type", "choice"}, {"id", sid + ".weapon"}, {"label", "Weapon in hand"}, {"value", tune.weapon},
-             {"options", Json::array({{{"id", "inventory"}, {"label", "Inventory weapon"}}, {{"id", "move"}, {"label", "This move's weapon"}}})},
-             {"value_note", tune.weapon == "move" && !id.empty() && !mesh_ready ? " (no mesh, inventory stays)" : ""},
-             {"description", std::string("Which weapon shows in your hand while this move plays. This move's weapon swaps the visible mesh for the swing and puts yours back after; damage and collision stay the weapon in hand.")
-                 + (id.empty() || mesh_ready ? "" : " No mesh is known for this move's weapon, so the inventory weapon stays.")}}});
+        // Short values (the row shows about twenty characters beside the arrows); the reasons go
+        // in the description the window shows while the row is focused. An empty slot only has speed.
+        Json settings_rows = Json::array();
+        settings_rows.push_back({{"type", "choice"}, {"id", sid + ".speed"}, {"label", "Speed"}, {"value", speed_id}, {"options", speed_options},
+            {"description", "How fast this slot plays. 1x is the game's own speed."}});
+        if (!id.empty()) {
+            settings_rows.push_back({{"type", "choice"}, {"id", sid + ".hit_damage"}, {"label", "Damage"}, {"value", tune.hit_damage},
+                {"options", Json::array({{{"id", "move"}, {"label", "Move's own"}}, {{"id", "weapon"}, {"label", "Weapon's own"}}})},
+                {"description", "Whose hit this is. Move's own: the damage multiplier, poise damage and stagger that come with this animation. "
+                    "Weapon's own: the numbers your weapon's normal attack has in this slot, on this animation's timing. Base damage is always your weapon's."}});
+            settings_rows.push_back({{"type", "choice"}, {"id", sid + ".weapon"}, {"label", "Weapon in hand"}, {"value", tune.weapon},
+                {"options", Json::array({{{"id", "inventory"}, {"label", "My weapon"}}, {{"id", "move"}, {"label", "Move's weapon"}}})},
+                {"description", std::string("Which weapon you hold while this move plays. Move's weapon: the weapon this move belongs to appears in your hand for the swing, then yours comes back. Hits still use your weapon.")
+                    + (mesh_ready ? "" : " No model is known for this move's weapon, so your own stays.")}});
+        }
         customize.push_back({{"type", "choice"}, {"id", sid}, {"label", slot_to_string(slot)}, {"name", slot_titles[i] + 4},
             {"value", id}, {"icon", id.empty() ? weapon_icon(current_weapon_) : move_icon(id)}, {"options", std::move(options)}, {"settings", settings_rows},
             {"settings_key", speed_id + "/" + tune.hit_damage + "/" + tune.weapon + (mesh_ready ? "/m" : "")}, {"enabled", combat_ != nullptr && catalog_error_.empty()}});

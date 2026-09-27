@@ -1142,7 +1142,6 @@ void Menu::build_slots(const Json& section, bool& deferred) {
         for (size_t k = 0; k < settings.size(); ++k) {
             const auto& st = settings[k];
             std::string value; for (const auto& o : st.at("options")) if (o.at("id") == st.at("value")) value = o.value("label", std::string{});
-            value += st.value("value_note", std::string{});
             option_row(st.value("label", std::string{}), value, panel_focus_ == int(k), {{"action", "setting_delta"}, {"delta", -1}, {"index", int(k)}},
                 {{"action", "setting_delta"}, {"delta", 1}, {"index", int(k)}}, true, {{"action", "setting_focus"}, {"index", int(k)}});
         }
