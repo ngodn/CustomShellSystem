@@ -18,7 +18,7 @@ parser.add_argument('--iterations',type=int,default=150)
 parser.add_argument('--frames',type=int,nargs='+',default=[8,32,48])
 parser.add_argument('--motion',type=Path,default=w/'planet-f13-sprint.json')
 parser.add_argument('--upstream',action='store_true',help='Use recorded upstream transforms rather than post-process output')
-parser.add_argument('--stem',choices=('skin','knit','alice'),default='skin')
+parser.add_argument('--stem',choices=('skin','knit','alice','aegis'),default='skin')
 args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 assert 0 < args.max_offset_cm <= 1.0
 assert args.min_z<args.max_z and not args.output.exists()

@@ -28,3 +28,12 @@ The original author's isolated object comparison has median difference 0 cm but 
 Initial run stopped on missing helper import, corrected by adding the script directory. Next run stopped because fitted quad diagonals differ. The revised guard proves each exported triangle stays within its original source polygon, then retains exported topology. Final process 46858 exits 0 and produces `aegis-fit1`. Original-to-body surface distance reaches 8.44349 cm, including loose geometry, so do not blanket-collapse the entire garment onto skin.
 
 Base and all-six-sliders-at-one renders (60936,39583) complete exit 0. Inspected front views: maximum-slider inflation is removed, but broad chest/arm clipping remains in base and morphed views. Do not accept or package this fit. Next correct garment surface clearance locally while preserving loose parts and intentional openings. Normals must be refreshed from the eventual saved garment before production. No Unreal or game assets changed.
+
+
+## Base clearance and chest correction
+
+`fit_aegis_clearance.py` produces fit2 from fit1 by lifting intersecting/near-surface garment points along saved body normals to 0.2 cm clearance, limited to points within 3 cm of the body. It changes 9,412 garment points, maximum offset 2.08453 cm, with one deeper point left unresolved. Body, rig, accessories and morph deltas are unchanged. Default and all-six-maximum front views show broad chest, shoulder and arm breakthroughs removed, with small nipple spots remaining.
+
+The Alice clearance solver now supports the `aegis` stem. Fit3 selects 3,325 chest points, checks bind plus sprint frames 24/34/48 at default and maximum sliders, changes 1,288 points and leaves 95 conflicting constraints unresolved. This is not zero-intersection proof. Aegis and the recorded Alice motion have exactly identical body points and reference bones, verified before pose reuse.
+
+Base and frame-34 front/back renders completed exit 0. Inspected views show nipple contours covered, broad torso/sleeve clipping removed, and rear hanging strips preserved. Some glove/finger skin still protrudes during sprint, requiring follow-up. The hanging rear strips currently use skin weights only and need their authored 44-point cloth source adapted. Fit3 remains an offline candidate, not installed. Save the corrected garment source and refresh normals before production; confirm supported slider extremes and glove correction before import.
