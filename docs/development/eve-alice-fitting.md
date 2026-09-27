@@ -39,3 +39,11 @@ The import and skeleton-only binding now completed with exit 0 (`alice-import.lo
 Fresh-load `verify_bikini_fit.py` produced `alice-verified1.json`: 27 materials and references match, protected assets remain unchanged, and transient hide/restore checks isolate suit, shoes, hair and ribbon sections correctly. Its commandlet shutdown was still pending when this note was written; resume process handle 52754 before calling its outer run successful. These editor checks do not establish CSS profile persistence or game rendering.
 
 The separate ribbon is a small chest bow, 624 source points, entirely weighted to `spine_04`, spanning approximately 9.7 by 6.0 by 7.7 cm. Plan restrained motion with pinned attachment, not a large skirt solver. No cloth has been attached to Alice yet. Individual slider extremes, ribbon physics and runtime motion remain open.
+
+## Original bow rig recovered
+
+The fresh-reference commandlet completed exit 0 (process 52754). `inspect_knit_motion_source.py --outfit alice` now inspects Alice in the original `eve_beta10.blend` without saving it. `alice-author-motion2.json` retains world points and named weights for the ribbon. All 624 points match the exported ribbon in order after the documented axis conversion, maximum error 0.000007633 cm. The source hash is unchanged.
+
+Unlike Gemini's rigid spine export, the author's ribbon has its own armature, neck/root groups and multiple left/right ribbon chains. No dForce maps are present. Root weights range from 0.0353 to 0.5529, so they must not be mistaken for a ready-made zero/one cloth pin mask. Inspect attachment geometry before deciding the pin transition; preserve the recovered point correspondence rather than guessing a spatial nearest-neighbor mapping.
+
+An extra all-minus-one render (`alice-min1`) shows undesirable chest folding, but the current manifest explicitly supports shape values 0 through 1. This negative extrapolation is outside that range and is not a release blocker. Do not spend time correcting unsupported negative morph values. Individual positive slider checks remain useful.

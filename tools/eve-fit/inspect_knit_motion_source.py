@@ -9,13 +9,15 @@ import bpy
 root = Path(__file__).resolve().parents[3]
 source = root / 'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/reference/body-type-variant-EVE/eve_beta10.blend'
 parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--outfit', choices=('knit', 'alice'), default='knit')
 parser.add_argument('--output', type=Path, default=root / 'CustomShellSystem/work/eve26/knit-author-motion.json')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 output = args.output
 assert not output.exists()
 digest = hashlib.sha256(source.read_bytes()).hexdigest()
 bpy.ops.wm.open_mainfile(filepath=str(source))
-selected = [o for o in bpy.data.objects if any(term in o.name.lower() for term in ('sweater', 'knit'))]
+terms = ('alice',) if args.outfit == 'alice' else ('sweater', 'knit')
+selected = [o for o in bpy.data.objects if any(term in o.name.lower() for term in terms)]
 assert selected
 rows = []
 for obj in selected:
@@ -37,6 +39,10 @@ for obj in selected:
             shape_keys=[k.name for k in obj.data.shape_keys.key_blocks] if obj.data.shape_keys else [])
         used = {g.group for v in obj.data.vertices for g in v.groups if g.weight > 0}
         row['weighted_groups'] = [g.name for g in obj.vertex_groups if g.index in used]
+        if args.outfit == 'alice' and obj.name == 'Eve Midsummer Alice - Ribbon':
+            row['points_world'] = [list(obj.matrix_world @ v.co) for v in obj.data.vertices]
+            row['weights'] = [[v.index, obj.vertex_groups[g.group].name, g.weight]
+                for v in obj.data.vertices for g in v.groups if g.weight > 0]
         maps = {g.index:g.name for g in obj.vertex_groups if g.name.startswith('dForce')}
         row['cloth_groups'] = {name:[] for name in maps.values()}
         for vertex in obj.data.vertices:
@@ -64,5 +70,5 @@ for obj in selected:
     rows.append(row)
 assert hashlib.sha256(source.read_bytes()).hexdigest() == digest
 output.write_text(json.dumps(dict(source_sha256=digest, source_unchanged=True, objects=rows,
-    scope='Named Knitwear objects and directly weighted rig bones only. Does not prove absence of indirect driver or proxy dependencies.'), indent=2) + '\n')
+    scope='Named outfit objects and directly weighted rig bones only. Does not prove absence of indirect driver or proxy dependencies.'), indent=2) + '\n')
 print([(r['name'], r['type']) for r in rows])
