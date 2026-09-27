@@ -11,6 +11,7 @@
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/Property/FStrProperty.hpp>
+#include <Unreal/FMemory.hpp>
 #include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 
@@ -102,6 +103,19 @@ void ObjectHandle::capture(UObject* object) {
     if (!object) return;
     initialize_serial(object);
     if (!capture_existing(object)) throw std::runtime_error("Object identity changed during capture");
+}
+std::string ObjectHandle::why_dead() const {
+    if (!ptr || index < 0 || serial <= 0) return "never captured";
+    auto* item = FUObjectArray::IndexToObject(index);
+    if (!item) return "no item at index " + std::to_string(index);
+    std::string flags;
+    for (int bit = 14; bit < 32; ++bit) if (item->HasAnyFlags(static_cast<EInternalObjectFlags>(1 << bit))) flags += (flags.empty() ? "" : ",") + std::to_string(bit);
+    if (item->GetUObject() != ptr) return "slot reused (object pointer differs); flags " + flags;
+    if (item->GetSerialNumber() != serial) return "serial changed " + std::to_string(serial) + " -> " + std::to_string(item->GetSerialNumber()) + "; flags " + flags;
+    if (!item_alive(item)) return "flagged gone; flags " + flags;
+    auto* object = static_cast<UObject*>(item->GetUObject());
+    if (object->GetNamePrivate() != name) return "renamed to " + narrow(object->GetNamePrivate().ToString()) + "; flags " + flags;
+    return "alive; flags " + flags;
 }
 UObject* ObjectHandle::get() const {
     if (!ptr || index < 0 || serial <= 0) return nullptr;
@@ -360,6 +374,40 @@ UObject* construct_class(UClass* cls, UObject* outer) {
 
 UObject* construct(const wchar_t* type, UObject* outer) {
     return construct_class(static_cast<UClass*>(find_cached(type)), outer);
+}
+namespace {
+struct RawObjectArray { UObject** data; int32_t num; int32_t max; };
+RawObjectArray* extra_references(UObject* world) {
+    if (!world) return nullptr;
+    auto* p = world->GetPropertyByNameInChain(L"ExtraReferencedObjects");
+    if (!p || !p->IsA<FArrayProperty>() || !static_cast<FArrayProperty*>(p)->GetInner()->IsA<FObjectProperty>() || p->GetOffset_Internal() < 0) return nullptr;
+    return reinterpret_cast<RawObjectArray*>(reinterpret_cast<std::byte*>(world) + p->GetOffset_Internal());
+}
+}
+bool keep_referenced(UObject* world, UObject* object) {
+    auto* raw = extra_references(world);
+    if (!raw || !object || raw->num < 0 || raw->num > raw->max || raw->num > 100000) return false;
+    for (int32_t i = 0; i < raw->num; ++i) if (raw->data[i] == object) return true;
+    if (raw->num >= raw->max) {   // grow through the engine's allocator, which also frees the buffer later
+        if (!GMalloc || !*GMalloc) return false;
+        const int32_t grown = std::max<int32_t>(8, raw->max * 2);
+        auto** fresh = static_cast<UObject**>((*GMalloc)->Malloc(size_t(grown) * sizeof(UObject*), 8));
+        if (!fresh) return false;
+        if (raw->data) { std::memcpy(fresh, raw->data, size_t(raw->num) * sizeof(UObject*)); (*GMalloc)->Free(raw->data); }
+        raw->data = fresh; raw->max = grown;
+    }
+    raw->data[raw->num++] = object;
+    return true;
+}
+bool drop_referenced(UObject* world, UObject* object) {
+    auto* raw = extra_references(world);
+    if (!raw || !object || raw->num <= 0 || raw->num > raw->max) return false;
+    for (int32_t i = 0; i < raw->num; ++i) if (raw->data[i] == object) {
+        for (int32_t j = i + 1; j < raw->num; ++j) raw->data[j - 1] = raw->data[j];
+        raw->data[--raw->num] = nullptr;
+        return true;
+    }
+    return false;
 }
 
 void object_property(UObject* object, const wchar_t* name, UObject* value) {

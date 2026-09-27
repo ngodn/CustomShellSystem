@@ -60,6 +60,7 @@ struct ObjectHandle {
     bool capture_existing(UObject* object);
     UObject* get() const;
     bool alive() const { return get() != nullptr; }
+    std::string why_dead() const;   // diagnostic: which liveness check fails, with the raw item flags
 };
 
 class WeakObject : public FWeakObjectPtr {
@@ -137,6 +138,12 @@ void invoke(UObject* object, const wchar_t* fn, const wchar_t* param, const T& v
 }
 
 UObject* construct(const wchar_t* type, UObject* outer);
+// Keeping objects alive. On this engine (5.6) the collector takes its roots from a private index
+// set, so the SDK's root flag protects nothing; a real reference from the world does. The world
+// keeps UWorld::ExtraReferencedObjects for exactly this. Game thread only; a world change drops
+// everything it held, so callers reload what they lose.
+bool keep_referenced(UObject* world, UObject* object);
+bool drop_referenced(UObject* world, UObject* object);
 UObject* construct_class(UClass* type, UObject* outer);
 void object_property(UObject* object, const wchar_t* name, UObject* value);
 // Write one member of a reflected struct inside a buffer of `bytes` bytes.

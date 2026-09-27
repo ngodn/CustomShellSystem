@@ -111,8 +111,8 @@ void Combat::release(Slot& slot) {
     restore_payload(slot);
     release_transplants(slot);
     if (shown_montage_.get() && shown_montage_.get() == slot.montage.get()) restore_weapon();
-    if (slot.rooted) { if (auto* montage = slot.montage.get()) montage->ClearRootSet(); slot.rooted = false; }
-    if (slot.show_rooted) { if (auto* mesh = slot.show_mesh.get()) mesh->ClearRootSet(); slot.show_rooted = false; }
+    if (slot.rooted) { if (auto* montage = slot.montage.get()) drop_referenced(world_.get(), montage); slot.rooted = false; }
+    if (slot.show_rooted) { if (auto* mesh = slot.show_mesh.get()) drop_referenced(world_.get(), mesh); slot.show_rooted = false; }
     slot.montage = {}; slot.show_mesh = {};
 }
 // ---- hit payload: every hit-check notify inside a montage owns its payload object (multiplier,
@@ -225,16 +225,16 @@ float Combat::first_hit_time(UObject* montage) const {
 }
 UObject* Combat::transplant(Slot& s, UObject* original, UObject* replacement) {
     for (auto& t : s.feel) if (t.original.get() == original) { if (auto* clone = t.clone.get()) return clone; }
-    if (s.feel.size() >= 4) { auto& old = s.feel.front(); if (old.rooted) if (auto* c = old.clone.get()) c->ClearRootSet(); s.feel.erase(s.feel.begin()); }
+    if (s.feel.size() >= 4) { auto& old = s.feel.front(); if (auto* c = old.clone.get()) drop_referenced(world_.get(), c); s.feel.erase(s.feel.begin()); }
     auto* clone = build_transplant(original, replacement);
     Transplant t; t.original.capture(original); t.clone.capture(clone);
-    if (!clone->IsRootSet()) { clone->SetRootSet(); t.rooted = true; }
+    keep_referenced(world_.get(), clone);
     s.feel.push_back(std::move(t));
     log("CCS game feel: " + narrow(original->GetNamePrivate().ToString()) + " now plays " + narrow(replacement->GetNamePrivate().ToString()));
     return clone;
 }
 void Combat::release_transplants(Slot& s) {
-    for (auto& t : s.feel) if (t.rooted) if (auto* c = t.clone.get()) c->ClearRootSet();
+    for (auto& t : s.feel) if (auto* c = t.clone.get()) drop_referenced(world_.get(), c);
     s.feel.clear(); s.feel_warned = false;
 }
 UObject* Combat::build_transplant(UObject* original, UObject* replacement) {
@@ -397,13 +397,14 @@ void Combat::load_pending(const PlayerContext& player) {
             const auto rig_path = skeleton ? narrow(skeleton->GetPathName()) : std::string{};
             if (!rig::compatible(rig_path, rig::player_skeleton(player)))
                 throw std::runtime_error("Montage is not on the player's rig (" + (skeleton ? rig::short_name(rig_path) : std::string("no skeleton")) + ")");
-            if (!montage->IsRootSet()) { montage->SetRootSet(); s.rooted = true; }
+            if (!keep_referenced(player.world, montage)) throw std::runtime_error("No world to hold the animation");
+            s.rooted = true;
             s.montage.capture(montage);
             if (!s.show_mesh_path.empty()) {
                 try {
                     auto* mesh = load(s.show_mesh_path);
                     if (!mesh->IsA(static_cast<UClass*>(find_cached(L"/Script/Engine.StaticMesh")))) throw std::runtime_error("Not a static mesh");
-                    if (!mesh->IsRootSet()) { mesh->SetRootSet(); s.show_rooted = true; }
+                    if (keep_referenced(player.world, mesh)) s.show_rooted = true;
                     s.show_mesh.capture(mesh);
                 } catch (const std::exception& e) { log("CCS weapon mesh unavailable for " + s.move_id + ": " + e.what()); }
             }
@@ -459,6 +460,15 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         if (player.asc != asc_.get()) { asc_ = {}; if (player.asc) asc_.capture(player.asc); }
     }
     poll_weapon(player, now);
+    if (player.world != world_.get()) {   // a new world holds none of our references: everything reloads
+        world_ = {}; if (player.world) world_.capture(player.world);
+        for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.show_mesh = {}; s.pending = true; } }
+    }
+    for (auto& s : slots_) {   // a loaded montage that stops answering: say why once, and load it again
+        const bool ready = s.montage.alive();
+        if (s.was_ready && !ready) { log("CCS slot lost its montage: " + s.move_id + ": " + s.montage.why_dead()); s.rooted = false; s.feel.clear(); s.pending = !s.path.empty(); }
+        s.was_ready = ready;
+    }
     bool tuned = false; for (const auto& s : slots_) if (std::abs(s.tuning.speed - 1.0) > 1e-6) tuned = true;
     const bool wanted = enabled_ && (assigned() > 0 || tuned);
     if (wanted) {

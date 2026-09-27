@@ -55,11 +55,11 @@ private:
     struct PayloadBackup { engine::ObjectHandle payload; std::vector<std::pair<engine::FProperty*, std::vector<std::byte>>> values; };
     // "Game" feel: a runtime clone of the slot's own montage (its notifies, sections and settings)
     // whose animation track holds the move's animation, keyed by the original it was cloned from.
-    struct Transplant { engine::ObjectHandle original, clone; bool rooted{}; };
+    struct Transplant { engine::ObjectHandle original, clone; };
     struct Slot {
         std::string move_id, path, error; engine::ObjectHandle montage; bool rooted{}, pending{}; uint64_t hits{};
         SlotTuning tuning;
-        std::vector<Transplant> feel; bool feel_warned{};
+        std::vector<Transplant> feel; bool feel_warned{}; bool was_ready{};
         std::string show_mesh_path; engine::ObjectHandle show_mesh; bool show_rooted{};   // the move's weapon mesh, loaded with the montage
         engine::ObjectHandle payload_source; std::vector<PayloadBackup> backups;          // original payload copied onto the replacement
     };
@@ -91,7 +91,7 @@ private:
     std::vector<engine::ObjectHandle> shown_materials_;
     uint64_t shown_since_{}; bool shown_seen_playing_{};
     std::array<Slot, size_t(SlotId::Count)> slots_{};
-    engine::ObjectHandle function_, pawn_, asc_, skeleton_;
+    engine::ObjectHandle function_, pawn_, asc_, skeleton_, world_;   // world_: what holds our references
     std::array<engine::FProperty*, 3> inputs_{};      // OwningAbility, MontageToPlay, Rate
     uint64_t token_{}, retry_after_{}, player_check_{}, seen_{}, swapped_{}, skipped_{}, failures_{}, maximum_us_{}, wrong_frame_{};
     std::unordered_map<uint64_t, int8_t> class_slots_;
