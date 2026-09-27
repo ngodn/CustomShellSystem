@@ -65,3 +65,11 @@ Process 76756 completed all three operations with exit 0. Fresh inspection `alic
 `alice-bow-motion.patch` adds only the private Alice candidate and its 624-particle count to the native motion probe. Build succeeded. The inspection pipeline (5466) stopped at its duplicate verification call because the receipt had already been produced successfully while editor shutdown was pending. This was an output-exists guard, not failed asset verification; no inspection retry is needed.
 
 The corrected motion-only pipeline is process 46075, using the actual `-Motion` commandlet switch, then the Blender particle checker. Resume it before launching anything else. Its output is `alice-cloth1/sprint.json` and `sprint-check.json`; log `alice-cloth-sprint.log`. Native motion, rendered bow contact and game acceptance remain pending.
+
+## Bow trial rejected after native motion and visual replay
+
+Process 46075 exited 0. The 65-frame sprint preserves pinned points within 0.00003318 cm, but maximum displacement is 6.1166 cm and edge ratio reaches 39.57. This exceeds the intended movement bound. Native render replay at frame 34 (`alice-cloth1-view34/front.png`) confirms a visibly inflated, stretched bow. Reject this trial.
+
+`alice-bow-isolation.patch` enables existing temporary collision-isolation switches for this private Alice candidate. Build and process 16097 exit 0. With only body collision disabled, displacement drops to 0.8873 cm, limit excess to 0.00003318 cm, and maximum edge ratio to 4.173. Thus the copied body collider drives the large outward displacement, but removing it is not a fit fix.
+
+Coordinate verification and render replay processes exit 0. `alice-nobody-view34/front.png` shows most of the bow buried in the chest in the bent sprint pose. The inherited spine-only skinning is a candidate cause. Before more collision tuning, compare the no-cloth skinned bow at that same postprocess pose and transfer attachment weights from the fitted suit/body as appropriate. Keep the original geometric shape and author pin partition. Do not ship collision-disabled trial as accepted physics or repeat the collider-only parameter loop.

@@ -1,0 +1,11 @@
+--- a/CSSEveEmbeddedMotion.inl
++++ b/CSSEveEmbeddedMotion.inl
+@@ -27,7 +27,7 @@
+         return Fail(TEXT("Invalid private candidate or animation"));
+     const bool NoBodyCollision=FParse::Param(*Params,TEXT("NoBodyCollision"));
+     const bool NoBackstop=FParse::Param(*Params,TEXT("NoBackstop"));
+-    if ((NoBodyCollision || NoBackstop) && !Knit) return Fail(TEXT("Isolation switches require Knitwear candidate"));
++    if ((NoBodyCollision || NoBackstop) && !Knit && !Alice) return Fail(TEXT("Isolation switches require a private Knitwear or Alice candidate"));
+     auto* Cloth=Cast<UClothingAssetCommon>(Mesh->GetMeshClothingAssets()[0]);
+     if (!Cloth || Cloth->LodData.Num()!=1) return Fail(TEXT("Invalid cloth LOD"));
+     auto* Radius=Cloth->LodData[0].PhysicalMeshData.FindWeightMap(EWeightMapTargetCommon::BackstopRadius);

@@ -14,7 +14,7 @@ parser.add_argument('--trial', type=int, choices=[1,2,3,4], default=1)
 parser.add_argument('--outfit', choices=('knit','alice'), default='knit')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 alice = args.outfit == 'alice'
-assert not alice or (args.trial == 1 and args.case == 'sprint')
+assert not alice or (args.trial == 1 and args.case in ('sprint','no-body','no-backstop','no-both'))
 stem = 'alice' if alice else 'knit'
 prefix = 'A' if alice else 'K'
 source = work/f'{stem}-cloth{args.trial}'/f'{args.case}.json'
