@@ -45,6 +45,13 @@ Later the same evening:
 
 ## Open items
 
+00. **Move's own weapon in hand (user's request, evening):** the animation swaps but the
+   character keeps holding the inventory weapon; the user wants the move's weapon shown for
+   that swing (the Hammer while the Hammer's A3 plays) and the equipped weapon back after.
+   Research running: weapon actor and mesh path, variants, spawn-versus-mesh-swap designs.
+000. **No sound on swapped animations (user's report):** swing whoosh and grunt are missing
+   for swapped montages. Research running: which notify or ability path produces attack audio
+   for a normal swing and how to bind it for a replacement montage.
 0. **Hit payload setting (user's request, agreed):** Settings row "Hit damage: replacement's
    own / your weapon's for that slot". In weapon mode, copy the slot's original notify payload
    (multiplier, poise, break, reaction, extra effects) onto the replacement montage's hit-check
