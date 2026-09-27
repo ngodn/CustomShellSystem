@@ -19,3 +19,12 @@ A separate original `Eve War Aegis` mesh has 44 vertices, a Cloth modifier with 
 Read-only comparison 29948 completed exit 0, `aegis-source-compare.json`. All 38,242 evaluated Gemini garment points match the export exactly. Therefore the default clipping shown in the baseline is already present in this saved garment path, not introduced by JSON export. Both blend hashes remained unchanged.
 
 The original author's isolated object comparison has median difference 0 cm but maximum 33.7899 cm against the export. Locate affected regions and compare evaluated source/body correspondence before adopting any original coordinates. This script isolates library objects and clears driver animation for export-style evaluation; its active-key dictionaries are empty, unlike the full-scene inspection. It does not prove that the original full-scene corrective keys are absent or ineffective. Preserve that distinction and do not globally push the garment outward based on this result alone.
+
+
+## Original surface-transfer candidate
+
+`fit_aegis_source.py` reuses the Holiday body-surface correspondence method. Full-scene source garment/body saved fit positions are mapped to the unchanged exported CSS body, preserving local surface offsets. Garment weights and six slider deltas follow the same body triangles. Body points, skeleton, accessories, UVs and export faces are preserved; source blend hash remains unchanged.
+
+Initial run stopped on missing helper import, corrected by adding the script directory. Next run stopped because fitted quad diagonals differ. The revised guard proves each exported triangle stays within its original source polygon, then retains exported topology. Final process 46858 exits 0 and produces `aegis-fit1`. Original-to-body surface distance reaches 8.44349 cm, including loose geometry, so do not blanket-collapse the entire garment onto skin.
+
+Base and all-six-sliders-at-one renders (60936,39583) complete exit 0. Inspected front views: maximum-slider inflation is removed, but broad chest/arm clipping remains in base and morphed views. Do not accept or package this fit. Next correct garment surface clearance locally while preserving loose parts and intentional openings. Normals must be refreshed from the eventual saved garment before production. No Unreal or game assets changed.
