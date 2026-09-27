@@ -32,6 +32,18 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**Knitwear sampled proxy motion separates fitting from decimation:** `audit_knit_proxy_motion.py` evaluates neutral plus `feet-sprint-base.json` upstream frames 24 and 32, each at default and all six supported morphs at 1. Both the first audit and the extended render-correspondence audit exit 0 (`knit-proxy-motion1/2.json`). Three axis-ray parity votes classify nearby points as inside/outside/ambiguous; only points within 1 cm of the body are included, so counts are not a whole-mesh collision test.
+
+| Case | Proxy inside | Also inside at interpolated render location | Proxy inside, render outside |
+| --- | ---: | ---: | ---: |
+| Neutral, default / max | 1 / 1 | 1 / 1 | 0 / 0 |
+| Sprint 24, default / max | 134 / 157 | 134 / 156 | 0 / 1 |
+| Sprint 32, default / max | 30 / 79 | 30 / 79 | 0 / 0 |
+
+At rest proxy-to-render correspondence differs by less than 5e-9 cm. In motion maximum difference is 0.1872 cm, p95 at most 0.00609 cm. Most sampled contact therefore exists on the fitted render surface too; increasing proxy density alone is not the next fix. Ambiguous ray classifications remain separate (6 to 70 samples per case). Base normals are bone-transformed, not regenerated for morphs. Offline proxy morph interpolation is not proof of native cloth morph support.
+
+`knit-contact24` front/back views were rendered and inspected from the same upstream frame, exit 0. The dress follows the raised leg and a central rear-hem crease remains visible; the views do not establish that all numerically inside samples are visible clipping. Avoid inflating the garment based only on counts. Localize those samples against nearby body regions, including arm contact, before adding corrections or backstop maps. The neutral inside sample is only about 0.0063 cm deep. In sprint, near-body sampled depths reach approximately 1 cm, the audit cutoff. No assets were installed or native cloth bound. Initial render command omitted Blender's argument separator and failed before rendering; corrected command completed in `knit-contact24b.log`.
+
 **Knitwear proxy normal defect corrected offline:** `audit_knit_proxy_normals.py` exits 0 and transfers fitted render corner normals using the proxy's saved triangle/barycentric correspondence. Of 1,679 original proxy normals, 1,660 oppose the transferred normals and 1,576 have dot product below -0.9 (median -0.99690). The proxy builder had recomputed normals from triangle cross products instead of preserving the exported render-normal convention. It now transfers the render normals when building a new proxy.
 
 `repair_knit_proxy_normals.py` creates `knit-proxy2.json`, SHA256 `72ce07816ebb68938dd95f9dd459d1a9f1fef06e10a0a4f5f13610632db99023`. Saved readback proves only `slots.Collar-1.normals` changed; positions, triangle indices, weights, maps and correspondence are identical to proxy1. Original source/render geometry and all native assets are untouched. Use proxy2 for subsequent Knitwear physics work.
