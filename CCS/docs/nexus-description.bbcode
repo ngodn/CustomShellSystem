@@ -1,0 +1,80 @@
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/CCS/docs/media/v1.0.0-alpha.1/ccs-nexus-header.png[/img][/center]
+
+[youtube]YOUTUBE_ID[/youtube]
+
+I built Custom Combat System to let you choose the animation each attack of your weapon plays. Put an enemy's swing on your light chain, a heavy from another weapon on your finisher, a boss move on your charged attack, then save the set as a preset and share the file. Base damage and Resolve stay your weapon's own, so the game's balance is still the game's.
+
+[b]This is an alpha. It works and it is stable in my play, and I am releasing it now to gather feedback, ideas and bug reports before the first full version.[/b]
+
+[size=4][b]What you can do[/b][/size]
+[list]
+[*]Thirteen slots: light L1 L2 L3, light finisher LF, charged light LC, the same five for heavy, and the sprint attacks S+L and S+H.[/*]
+[*]Candidates for every slot: all player weapons' moves, the enemy attacks authored on the player's rig, and any new attack montage the running game lists after a patch.[/*]
+[*]Per-slot settings on the right panel: Speed, Feel (the game's timing or the move's own), Damage (the move's hit numbers or your weapon's), and Visual (keep your weapon in hand or show the move's own weapon for the swing).[/*]
+[*]Presets: save, load and delete your sets. They are plain JSON files you can share.[/*]
+[*]Search and filter the candidate list by typing.[/*]
+[*]A master switch that puts every attack back to the weapon's own animation at once.[/*]
+[/list]
+
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/CCS/docs/media/v1.0.0-alpha.1/ccs-customize.png[/img][/center]
+
+[size=4][b]How it works[/b][/size]
+
+Every player attack starts its animation through one function inside the game. CCS hooks that function and swaps the animation at the moment the attack starts. Nothing runs every frame in combat, and no game file is changed on disk. Enemy animations play through a cleaned copy without the AI-only notifies, so they do not drag you toward targets or read state that a player does not have.
+
+[size=4][b]Install[/b][/size]
+[list=1]
+[*]Close the game.[/*]
+[*]Install [url=https://www.nexusmods.com/mortalshell2/mods/45?tab=files]UE4SS for MS2 by Framecore[/url]. CCS is built against UE4SS 3.0.1-1111-g97b7e501, the same build CSS and CSSX use; release.json inside the archive lists it.[/*]
+[*]Extract the CCS folder from the ZIP into MortalShell2/Binaries/Win64/ue4ss/Mods/. The loader must end up at ue4ss/Mods/CCS/dlls/main.dll, with no extra nested folder.[/*]
+[*]Enter the game world, open the Player Menu and switch to the [b]CCS[/b] tab. It is the last tab. There is no hotkey.[/*]
+[/list]
+
+CCS does not need CSS or CSSX and works alongside both. If they are installed, CCS waits for their tabs and appends itself after them.
+
+[size=4][b]Controls[/b][/size]
+
+The footer of the page always shows the keys for the device you are using.
+
+[b]Controller[/b]
+[list]
+[*]D-pad left/right: pick a slot. Up/down: move through the candidates.[/*]
+[*]A: assign the highlighted move. X: put the weapon's own attack back.[/*]
+[*]Right stick click: open the slot's settings on the right. Left/right changes a value, up/down moves between rows.[/*]
+[*]B: back to the slots, then close.[/*]
+[/list]
+
+[b]Mouse and keyboard[/b]
+[list]
+[*]A/D or left/right: pick a slot. W/S or up/down: browse the candidates.[/*]
+[*]Space: assign. F: put the weapon's own attack back.[/*]
+[*]Tab: the slot's settings on the right.[/*]
+[*]The search key shown in the footer puts the caret in the search field; typing filters the list.[/*]
+[*]Click rows and buttons, or use the scrollbar. Escape clears the search, then closes the menu.[/*]
+[/list]
+
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/CCS/docs/media/v1.0.0-alpha.1/ccs-slot-settings.png[/img][/center]
+
+[size=4][b]Charged attacks[/b][/size]
+
+In Mortal Shell II a charged light attack exists only with the Acolyte's Stone equipped, and a charged heavy attack only with the Unwieldy Stone. That is a rule of the game, not of the mod: without the stone a long press does the normal attack, and the CCS page tells you which stone the LC or HC slot is waiting for. If you want the slots without the stones, set [b]Charged attacks[/b] to [b]Always (cheat)[/b] in the Settings tab. The charge still costs Resolve.
+
+[size=4][b]Known limits in this alpha[/b][/size]
+[list]
+[*]The sidearm's fire cannot be customised yet.[/*]
+[*]Moves play on the human rig only. When you die and fight on as the Harbinger, or wear a creature shell, the swaps pause until you are back on a human body.[/*]
+[*]With Feel set to Move's own, an enemy move plays with its own timing, so combo windows can feel different from your weapon's. Game's keeps your weapon's timing with the new animation fitted in.[/*]
+[*]No presets ship with the mod yet. Save your own; I would like to see what you come up with.[/*]
+[/list]
+
+[size=4][b]Updating and removing[/b][/size]
+
+Close the game and replace dlls/, core/, core.json and the catalog files. Keep settings.json and presets/ to retain your slots and presets. To remove the mod, delete the Mods/CCS folder. CCS creates settings.json, presets/, logs/ccs.jsonl, runtime/status.json and CCS.log inside its own folder and nothing anywhere else.
+
+[size=4][b]Feedback[/b][/size]
+
+Tell me what breaks, what feels wrong and what you want next. When you report a bug, attach Mods/CCS/logs/ccs.jsonl and say which weapon and which slots were set; that file holds what the mod did on every swing. Ideas for the next versions are as welcome as bug reports.
+
+[size=4][b]Source[/b][/size]
+
+[url=https://github.com/ngodn/CustomShellSystem/tree/main/CCS]github.com/ngodn/CustomShellSystem[/url]

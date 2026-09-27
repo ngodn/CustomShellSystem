@@ -1,11 +1,13 @@
 # Custom Combat System
 
 CCS is a standalone UE4SS C++23 mod for Mortal Shell II (UE 5.6.1). It lets you choose which
-animation each attack plays, in eleven slots: the light chain L1 L2 L3, the light finisher LF,
-the light charge LC, the same five for heavy (H1 H2 H3 HF HC), and the sidearm's fire R. The
+animation each attack plays, in thirteen slots: the light chain L1 L2 L3, the light finisher LF,
+the charged light LC, the same five for heavy (H1 H2 H3 HF HC), and the sprint attacks S+L and
+S+H. The sidearm's fire slot R exists in the code but is parked (`sidearm_slot_enabled`). The
 candidates are every player weapon's own moves, the enemy attacks authored on the player's rig,
 and any new montage the running game lists after a patch. Attack speed is scalable and the
-result saves as shareable presets. The page is the last tab of the game's Player Menu, built
+result saves as shareable presets. Charged attacks need the Acolyte's or Unwieldy Stone, or the
+Settings cheat that applies the game's own unlock effects. The page is the last tab of the game's Player Menu, built
 from the game's own widgets the way the CSS and CSSX tabs are. There is no hotkey. CCS needs
 neither CSS nor CSSX and never asks either to update.
 
