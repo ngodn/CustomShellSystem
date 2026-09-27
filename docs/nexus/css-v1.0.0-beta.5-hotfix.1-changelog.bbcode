@@ -1,0 +1,21 @@
+[b]CSS 1.0.0-beta.5-hotfix.1[/b] (2026-09-28)
+
+Two fixes from your reports. Thanks Goagnus, VaultSchebnik and Cerfuck.
+
+[size=4][b]Fixed[/b][/size]
+[list]
+[*][b]Use Original Shell works on every save.[/b] It lists all official shells, including ones you haven't unlocked yet. If you saw "Official shell appearances are unavailable in this session" or "the shell definition is not a class" in the log, that's this one. It also skips a broken entry instead of losing the whole list, and tries again if the game wasn't ready.[/*]
+[*][b]No more freeze on beacon respawn, severing into the Harbinger or recovering your shell.[/b] Dyed outfits came back with a hitch of about a third of a second, long enough to walk off a cliff. Skin Suit on my machine: 330 ms before, 25 ms now.[/*]
+[*]Menu thumbnails and custom walk animations stay loaded like they were meant to, so reopening the menu and your first steps don't reload them.[/*]
+[/list]
+
+[size=4][b]Under the hood[/b][/size]
+[list]
+[*]CSS now keeps the assets it needs through the game instance, the way the engine's own code does. The old method didn't hold anything on UE 5.6, so the game cleaned them up about once a minute and CSS read them from disk again.[/*]
+[*]Every outfit change writes its time to CSS.log, split by step. If you still get a hitch, send me that line.[/*]
+[/list]
+
+[b]Updating from beta.5:[/b]
+Close the game, extract the ZIP into [b]MortalShell2/Binaries/Win64/ue4ss/Mods/[/b] and overwrite. Keep your [b]CustomShellSystem/state/[/b] folder. Nothing to migrate.
+
+[url=https://github.com/ngodn/CustomShellSystem/releases/tag/v1.0.0-beta.5-hotfix.1]Download CSS 1.0.0-beta.5-hotfix.1[/url]
