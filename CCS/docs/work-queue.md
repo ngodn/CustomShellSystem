@@ -27,12 +27,36 @@ Latest changes (this evening):
   `CCS/release.json` checksums, a `.sha256` beside it, and a member check that refuses logs,
   runtime state, presets, settings, PDBs and probe files. Player text in `packaging/`.
 
+Later the same evening:
+
+- Search shortcut: `IA_Menu_Confirm_Tertiary_Press` (the third face button and its keyboard
+  key) focuses the search field; the prompt strip shows "Search the list". Live key names are
+  read from the game's mapping when the menu opens; confirm the glyph in play.
+- Presets: choosing one in the Preset row applies it (Load does too). Moves resolve by id or
+  montage path, misfits are skipped and counted in the status line, every slot is set, and the
+  Customize page rebuilds. The four Gemini presets were fiction (montage paths that do not
+  exist) and are removed from the repo; the copies in `Mods/CCS/presets/` still exist until
+  the user deletes them. `tools/preset_check.py` validates and lists;
+  `docs/presets-agent-prompt.md` briefs an agent to author fifteen real presets.
+- Damage facts (exports): each hit-check notify inside a montage owns its own hit payload, so
+  a swapped swing uses the replacement's multiplier, poise, reaction and timing with the
+  equipped weapon's base damage; enemy payloads resolve their base from character data,
+  unverified for the player.
+
 ## Open items
+
+0. **Hit payload setting (user's request, agreed):** Settings row "Hit damage: replacement's
+   own / your weapon's for that slot". In weapon mode, copy the slot's original notify payload
+   (multiplier, poise, break, reaction, extra effects) onto the replacement montage's hit-check
+   notifies at load, keep the replacement's timing and trace, restore on clear or core stop.
+   Default to weapon mode once verified live. Later: let a preset carry the choice.
 
 1. Play test of the R slot with a sidearm move, melee slots in a real fight, preset round trip,
    search, tile icons and the 11th tile's layout. Slot R still holds the Batman shoot montage
    the user assigned before the filter existed; it reports the rig error until cleared.
-2. Three enemy-catalog entries are absent from the registry (`MS1_TwinSisters` crossbow
+2. Catalog gaps: nine player abilities are unresolved in `catalog.json` (AxeDagger and Katana
+   double attacks, Scythe A3/B3 finishers, Martyr's Blade B3 hold), so those moves cannot be
+   chosen. Three enemy-catalog entries are absent from the registry (`MS1_TwinSisters` crossbow
    montages); they show as "Not in this game version". Confirm whether the cooked files exist
    in the paks or drop them from the catalog.
 3. Performance comparison, CCS on versus off, in the same fight and menu scenarios, with the
