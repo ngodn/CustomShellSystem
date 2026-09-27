@@ -149,3 +149,21 @@ Pipeline 71184 completed every step exit 0. Saved maps match within 1.45302e-8 c
 Visual replay 80066 completed exit 0, using fresh saved render mapping with rest reconstruction error 0.000009934 cm. Inspected `alice3-worst/front.png` at frame 52: hanging ends stay attached and outside the visible chest, and the previous inflated bow is gone. The right loop remains compressed by skinning in this bent pose, and the already accepted neck-strap intersections remain. Do not claim perfect bow shape or universal collision clearance. The chest fabric still covers both nipple contours in this view.
 
 Use `SK_ACloth3` as the bounded-motion candidate for the next game review, preserving this limitation for user assessment rather than restarting neck/bow perfection work. Next complete Alice's modular controls/body motion/palettes and package a private trial, then record in-game movement before merging into the final Eve mod. No game package or release archive changed here. All motion/replay processes are terminal.
+
+
+## User acceptance
+
+User explicitly accepted the current Alice fit and tails-only bow motion ("its fine bro, thats already acceptable"). Lock this offline candidate and proceed to customization and packaging. Do not reopen minor neck or loop deformation work unless a new gameplay problem warrants it. In-game package review is still pending.
+
+
+## Alice customization trial installed
+
+Cook 74527, container round-trip 17765, metadata/palette generation 24257 and model palette rendering 63986 all completed exit 0. `a3pack/verification.json` verifies container integrity and unchanged decoded cooked payloads for SK_ACloth3, PA_ACloth3 and ABP_KnitFeet1. Existing Eve dependencies are hash checked.
+
+`prepare_alice_trial.py` builds `a3trial/CSS_EveAliceFit3_P` with suit, ribbon, shoes and hair toggles, six shape sliders, five body/hair motion controls, separate accepted body/anatomical/hair color controls, and suit/ribbon/shoe/buckle colors. All color controls provide Default plus eleven swatches. Original plus five clothing palettes: Oasis Alice, Xion Midnight, Eidos Rose, Orbital Pearl and Wasteland Iris. Palettes only assign clothing controls. Existing idle ID stays `eve`, displayed as Eve Default Idle.
+
+Inspected Oasis Alice front and Xion Midnight rear model renders show the garment texture and ribbon/shoe recolors in their intended slots. These are Workbench UV-placement checks with neutral body and hair omitted, not live material, animation or cloth verification. Footwear is shown without runtime corrective pose.
+
+Installation 90575 completed exit 0. New folder `Content/Paks/~mods/CSS_EveAliceFit3_P` is installed and hashes match all three source files (`a3trial/install.json`). No game restart or input was sent. It activates on the user's next normal launch. Base Eve and release archives are unchanged. Final delivery still merges accepted outfits into one Eve trio.
+
+After restart, review Alice's outfit/palette options, body motion, ribbon motion, visibility, Default restoration and saved selections in CSS and the game world. Continue War Aegis fitting while waiting; do not reopen the user-accepted Alice fit without new evidence of a significant issue.

@@ -23,21 +23,22 @@ def sha(path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--verify-existing', action='store_true')
-    parser.add_argument('--revision', type=int, choices=(1,4,13,14,16), default=13)
-    parser.add_argument('--kind', choices=('prototype','skin','bikini','knit'), default='prototype')
+    parser.add_argument('--revision', type=int, choices=(1,3,4,13,14,16), default=13)
+    parser.add_argument('--kind', choices=('prototype','skin','bikini','knit','alice'), default='prototype')
     args = parser.parse_args()
     work = ROOT / 'work/eve26'
     revision=args.revision
     skin=args.kind=='skin'
     bikini=args.kind=='bikini'
     knit=args.kind=='knit'
-    assert (knit and revision==4) or (bikini and revision==1) or (skin and revision==16) or (args.kind=='prototype' and revision in (13,14))
-    prefix='k' if knit else 'b' if bikini else 's' if skin else 'p'
-    assets=('SK_KCloth4','PA_KCloth4','ABP_KnitFeet1') if knit else ('SK_BFit1','ABP_BikiniFeet2') if bikini else (f'SK_SFit{revision}',) if skin else (f'SK_PFit{revision}', 'PA_PTailRear')
-    stem='CSS_EveKnitFit4_P' if knit else 'CSS_EveBikiniFit1_P' if bikini else f'CSS_EveSkinFit{revision}_P' if skin else f'CSS_EveFit{revision}_P'
-    output = work / ('k4pack' if knit else 'b1pack' if bikini else 's16pack' if skin else ('p13pack2' if revision==13 else 'p14pack'))
+    alice=args.kind=='alice'
+    assert (alice and revision==3) or (knit and revision==4) or (bikini and revision==1) or (skin and revision==16) or (args.kind=='prototype' and revision in (13,14))
+    prefix='a' if alice else 'k' if knit else 'b' if bikini else 's' if skin else 'p'
+    assets=('SK_ACloth3','PA_ACloth3','ABP_KnitFeet1') if alice else ('SK_KCloth4','PA_KCloth4','ABP_KnitFeet1') if knit else ('SK_BFit1','ABP_BikiniFeet2') if bikini else (f'SK_SFit{revision}',) if skin else (f'SK_PFit{revision}', 'PA_PTailRear')
+    stem='CSS_EveAliceFit3_P' if alice else 'CSS_EveKnitFit4_P' if knit else 'CSS_EveBikiniFit1_P' if bikini else f'CSS_EveSkinFit{revision}_P' if skin else f'CSS_EveFit{revision}_P'
+    output = work / ('a3pack' if alice else 'k4pack' if knit else 'b1pack' if bikini else 's16pack' if skin else ('p13pack2' if revision==13 else 'p14pack'))
     if args.verify_existing:
-        verify(output, work / f'{prefix}{revision}cook/CSSAuthoring/Content/CSS/EveTest',revision,skin,bikini,knit)
+        verify(output, work / f'{prefix}{revision}cook/CSSAuthoring/Content/CSS/EveTest',revision,skin,bikini,knit,alice)
         return
     output.mkdir(exist_ok=False)
     stage = output / 'stage/MortalShell2/Content/CSS/EveTest'
@@ -63,17 +64,17 @@ def main():
         (output / 'containers' / container.with_suffix(suffix).name).symlink_to(container.with_suffix(suffix))
     converter.run(converter.retoc, 'to-legacy', output / 'containers', output / 'readback',
                   '--version', 'UE5_6', '--no-parallel', '--no-shaders', '-f', '/CSS/EveTest/')
-    verify(output, source,revision,skin,bikini,knit)
+    verify(output, source,revision,skin,bikini,knit,alice)
 
 
-def verify(output, source,revision,skin=False,bikini=False,knit=False):
-    stem='CSS_EveKnitFit4_P' if knit else 'CSS_EveBikiniFit1_P' if bikini else f'CSS_EveSkinFit{revision}_P' if skin else f'CSS_EveFit{revision}_P'
+def verify(output, source,revision,skin=False,bikini=False,knit=False,alice=False):
+    stem='CSS_EveAliceFit3_P' if alice else 'CSS_EveKnitFit4_P' if knit else 'CSS_EveBikiniFit1_P' if bikini else f'CSS_EveSkinFit{revision}_P' if skin else f'CSS_EveFit{revision}_P'
     container = output / (stem+'.utoc')
     dependencies = json.loads((output / 'dependencies.json').read_text())
     for name, expected in dependencies.items():
         assert sha(output / 'containers' / name) == expected, 'Installed dependency changed'
     rows = []
-    assets=('SK_KCloth4','PA_KCloth4','ABP_KnitFeet1') if knit else ('SK_BFit1','ABP_BikiniFeet2') if bikini else (f'SK_SFit{revision}',) if skin else (f'SK_PFit{revision}', 'PA_PTailRear')
+    assets=('SK_ACloth3','PA_ACloth3','ABP_KnitFeet1') if alice else ('SK_KCloth4','PA_KCloth4','ABP_KnitFeet1') if knit else ('SK_BFit1','ABP_BikiniFeet2') if bikini else (f'SK_SFit{revision}',) if skin else (f'SK_PFit{revision}', 'PA_PTailRear')
     for name in assets:
         readback = output / 'readback/MortalShell2/Content/CSS/EveTest' / name
         cooked = source / name
