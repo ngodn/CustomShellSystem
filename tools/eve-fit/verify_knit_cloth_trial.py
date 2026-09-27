@@ -1,15 +1,19 @@
 """Verify fresh private Knitwear cloth binding and all three saved distance maps."""
 import hashlib
+import argparse
 import json
 from pathlib import Path
 
 repo = Path(__file__).resolve().parents[2]
 work = repo/'work/eve26'
-source = work/'knit-cloth1/readback.json'
-output = work/'knit-cloth1/verified.json'
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--trial', type=int, choices=[1,2], default=1)
+trial = parser.parse_args().trial
+source = work/f'knit-cloth{trial}/readback.json'
+output = work/f'knit-cloth{trial}/verified.json'
 assert not output.exists()
 data = json.loads(source.read_text())
-assert data['asset'] == '/Game/CSS/EveTest/SK_KCloth1.SK_KCloth1'
+assert data['asset'] == f'/Game/CSS/EveTest/SK_KCloth{trial}.SK_KCloth{trial}'
 assert data['skeleton'] == '/Game/CSS/Shared/SKEL_Base.SKEL_Base'
 assert data['mesh_physics'] == '/Game/CSS/SeduXtress/PA_Body.PA_Body'
 assert data['post_process'] == '/Game/CSS/EveTest/ABP_KnitFeet1.ABP_KnitFeet1_C'
@@ -19,7 +23,7 @@ section = data['sections'][0]
 assert asset['physics'] == '/Game/CSS/EveTest/PA_KCloth1.PA_KCloth1'
 assert asset['particles'] == 1679 and asset['iterations'] == 8 and asset['max_iterations'] >= 8
 assert asset['legacy_backstop'] is False
-expected = json.loads((work/'knit-cloth1/proxy.json').read_text())['slots']['Collar-1']
+expected = json.loads((work/f'knit-cloth{trial}/proxy.json').read_text())['slots']['Collar-1']
 errors = {}
 for name in ('max_distances','backstop_distances','backstop_radii'):
     assert len(asset[name]) == len(expected[name]) == 1679

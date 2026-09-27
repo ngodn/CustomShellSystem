@@ -10,14 +10,15 @@ from mathutils import Matrix, Quaternion, Vector
 work = Path(__file__).resolve().parents[2]/'work/eve26'
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--case', default='sprint', choices=['sprint', 'no-body', 'no-backstop', 'no-both'])
+parser.add_argument('--trial', type=int, choices=[1,2], default=1)
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
-source = work/'knit-cloth1'/f'{args.case}.json'
-output = work/'knit-cloth1'/f'{args.case}-check.json'
+source = work/f'knit-cloth{args.trial}'/f'{args.case}.json'
+output = work/f'knit-cloth{args.trial}'/f'{args.case}-check.json'
 assert not output.exists()
 motion = json.loads(source.read_text())
-mesh = json.loads((work/'knit-export2/knit.mesh.json').read_text())
-proxy = json.loads((work/'knit-cloth1/proxy.json').read_text())['slots']['Collar-1']
-assert motion['asset'] == '/Game/CSS/EveTest/SK_KCloth1.SK_KCloth1'
+mesh = json.loads((work/('knit-w2/knit.mesh.json' if args.trial == 2 else 'knit-export2/knit.mesh.json')).read_text())
+proxy = json.loads((work/f'knit-cloth{args.trial}/proxy.json').read_text())['slots']['Collar-1']
+assert motion['asset'] == f'/Game/CSS/EveTest/SK_KCloth{args.trial}.SK_KCloth{args.trial}'
 assert len(motion['frames']) == 65
 bind = []
 for bone in mesh['bones']:
