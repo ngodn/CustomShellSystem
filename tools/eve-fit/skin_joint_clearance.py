@@ -15,6 +15,9 @@ parser.add_argument('--surface-grid',type=int,default=0)
 parser.add_argument('--vertices',type=Path)
 parser.add_argument('--iterations',type=int,default=150)
 parser.add_argument('--frames',type=int,nargs='+',default=[8,32,48])
+parser.add_argument('--motion',type=Path,default=w/'planet-f13-sprint.json')
+parser.add_argument('--upstream',action='store_true',help='Use recorded upstream transforms rather than post-process output')
+parser.add_argument('--stem',choices=('skin','knit'),default='skin')
 args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 assert args.min_z<args.max_z and not args.output.exists()
 assert 0<=args.surface_grid<=16
@@ -38,13 +41,15 @@ morph=np.zeros_like(base)
 for target in data['morph_targets']:
  if target['name'] in ('FBMBodyTone','PBMBreastsSize','PBMGlutesSize','PBMHipSize','PBMThighsTone','PBMWaistWidth'):
   for i,*v in target['deltas']:morph[i]+=v
-motion=json.loads((w/'planet-f13-sprint.json').read_text())
+motion=json.loads(args.motion.read_text())
 constraints={i:[] for i in selected};surface_constraints=[];cases=[];reflect=np.array([1,-1,1])
 for frame in [-1,*args.frames]:
  pose=[]
  if frame==-1:pose=bind
  else:
-  snap=motion['frames'][frame]['pose']['Snapshot'];entries=dict(zip(snap['BoneNames'],snap['LocalTransforms'],strict=True))
+  row=motion['frames'][frame]
+  snap=row['upstream'] if args.upstream else row['pose']['Snapshot']
+  entries=dict(zip(snap['BoneNames'],snap['LocalTransforms'],strict=True))
   for b in data['bones']:
    t=entries[b['name']];m=Matrix.LocRotScale(Vector([t['Translation'][k] for k in 'XYZ']),Quaternion([t['Rotation'][k] for k in 'WXYZ']),Vector([t['Scale3D'][k] for k in 'XYZ']))
    pose.append(pose[b['parent']]@m if b['parent']>=0 else m)
@@ -129,10 +134,10 @@ else:
 assert result['points'][:nb]==data['points'][:nb] and result['points'][nb+ns:]==data['points'][nb+ns:]
 assert all(result[k]==v for k,v in data.items() if k!='points')
 out=args.output;out.mkdir(exist_ok=False)
-path=out/'skin.mesh.json';path.write_text(json.dumps(result,separators=(',',':'))+'\n')
+path=out/f'{args.stem}.mesh.json';path.write_text(json.dumps(result,separators=(',',':'))+'\n')
 audit['output_sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
-(out/'skin.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')
+(out/f'{args.stem}.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')
 (out/'offsets.json').write_text(json.dumps(dict(offsets=offsets))+'\n')
-(out/'receipt.json').write_text(json.dumps(dict(source_sha256=hashlib.sha256(p.read_bytes()).hexdigest(),region_z_cm=[args.min_z,args.max_z],selected_vertices=len(selected),iterations=args.iterations,surface_grid=args.surface_grid,coupled=args.coupled,cases=cases,changed_vertices=len(offsets),conflicts=conflicts,
+(out/'receipt.json').write_text(json.dumps(dict(source_sha256=hashlib.sha256(p.read_bytes()).hexdigest(),motion=str(args.motion),motion_sha256=hashlib.sha256(args.motion.read_bytes()).hexdigest(),upstream=args.upstream,region_z_cm=[args.min_z,args.max_z],selected_vertices=len(selected),iterations=args.iterations,surface_grid=args.surface_grid,coupled=args.coupled,cases=cases,changed_vertices=len(offsets),conflicts=conflicts,
     scope='Simultaneous linearized vertex and centroid constraints, 0.4 cm bound. Unresolved vertices retain original positions. Requires nonlinear and visible collision verification.'),indent=2)+'\n')
 print('Changed:',len(offsets),'Conflicts:',len(conflicts),flush=True)
