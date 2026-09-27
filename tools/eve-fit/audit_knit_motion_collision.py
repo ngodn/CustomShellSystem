@@ -1,16 +1,20 @@
 """Find impossible cloth-distance/collider combinations in recorded Knitwear poses."""
 import json
+import sys
 from pathlib import Path
 import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 from mathutils.bvhtree import BVHTree
 
 work = Path(__file__).resolve().parents[2]/'work/eve26'
-out = work/'knit-w2/collision-body.json'
+trial3 = '--trial3' in sys.argv
+trim = '--trim' in sys.argv
+assert not trim or trial3
+out = work/('knit-cloth3/collision-trim.json' if trim else 'knit-cloth3/collision-body.json' if trial3 else 'knit-w2/collision-body.json')
 assert not out.exists()
 mesh = json.loads((work/'knit-w2/knit.mesh.json').read_text())
 proxy = json.loads((work/'knit-cloth2/proxy.json').read_text())['slots']['Collar-1']
-recipe = json.loads((work/'knit-spheres2.json').read_text())
+recipe = json.loads((work/('knit-cloth3/collision.json' if trial3 else 'knit-spheres2.json')).read_text())
 motion = json.loads((work/'knit-cloth1/sprint.json').read_text())
 lookup = {b['name']:i for i,b in enumerate(mesh['bones'])}
 bind = []
@@ -24,6 +28,7 @@ points = np.asarray(proxy['positions'])
 limits = np.asarray(proxy['max_distances'])
 cases = []
 worst_body = None
+radius_caps = np.asarray([s['radius_cm'] for s in recipe['spheres']])
 for frame in motion['frames']:
     snap = frame['pose']['Snapshot']
     entries = dict(zip(snap['BoneNames'],snap['LocalTransforms'],strict=True))
@@ -37,11 +42,13 @@ for frame in motion['frames']:
     np.add.at(skinned,vi,(np.einsum('nij,nj->ni',matrices[bi,:3,:3],points[vi])+matrices[bi,:3,3])*wt[:,None])
     impossible = np.zeros(len(points),dtype=bool)
     worst = dict(deficit_cm=0.)
-    for sphere in recipe['spheres']:
+    for sphere_index,sphere in enumerate(recipe['spheres']):
         transform = pose[lookup[sphere['bone']]]
         assert max(abs(v-1) for v in transform.to_scale()) < .001
         center = np.asarray(transform @ Vector(sphere['local_center_cm']))
-        penetration = sphere['radius_cm']+.15-np.linalg.norm(skinned-center,axis=1)
+        distances = np.linalg.norm(skinned-center,axis=1)
+        penetration = sphere['radius_cm']+.15-distances
+        radius_caps[sphere_index] = min(radius_caps[sphere_index],float(np.min((distances+limits-.15-.05)[limits>0])))
         deficit = penetration-limits
         impossible |= (limits>0) & (deficit>1e-4)
         movable = np.where(limits>0,deficit,-np.inf)
@@ -80,5 +87,14 @@ report = dict(cases=cases,worst=max(cases,key=lambda c:c['worst']['deficit_cm'])
     worst_body_comparison=worst_body,
     collision_thickness_cm=.15,
     scope='Analytic recorded-pose sphere test using the authored recipe. Positive deficit means no point inside the max-distance ball can escape that sphere. Excludes solver interpolation, other constraints and rendered body coverage; not native collider readback.')
+if trim:
+    changes = []
+    spheres = []
+    for index,(sphere,cap) in enumerate(zip(recipe['spheres'],radius_caps,strict=True)):
+        if cap < sphere['radius_cm']:
+            changes.append(dict(index=index,bone=sphere['bone'],old_radius_cm=sphere['radius_cm'],new_radius_cm=float(cap),removed=bool(cap<.5)))
+        if cap>=.5:spheres.append(dict(sphere,radius_cm=float(cap)))
+    report = dict(spheres=spheres,connections=[],changes=changes,
+        scope='Radius-only diagnostic recipe bounded by each movable particle max-distance ball across all65 recorded poses, with0.05 cm margin and0.15 cm thickness. Individual-sphere feasibility only; overlapping spheres, actual contact and native motion remain unverified.')
 out.write_text(json.dumps(report,indent=2)+'\n')
-print(report['worst'])
+print(report['changes'] if trim else report['worst'])

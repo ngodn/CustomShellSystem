@@ -7,8 +7,10 @@ from pathlib import Path
 work = Path(__file__).resolve().parents[2]/'work/eve26'
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--w2', action='store_true')
-w2 = parser.parse_args().w2
-number = 2 if w2 else 1
+parser.add_argument('--collision-trial', action='store_true')
+args = parser.parse_args()
+w2 = args.w2 or args.collision_trial
+number = 3 if args.collision_trial else 2 if w2 else 1
 out = work/f'knit-cloth{number}'
 assert not out.exists()
 proxy_path = work/('knit-w2/proxy.json' if w2 else 'knit-proxy3.json')
@@ -32,11 +34,18 @@ if w2:
     assert all(slot[k] == value for k,value in prior.items() if k != 'weights')
     assert config == json.loads((work/'knit-cloth1/config.json').read_text())
 out.mkdir()
+if args.collision_trial:
+    recipe = json.loads((work/'knit-spheres7.json').read_text())
+    recipe['spheres'] = recipe['spheres'][:32]
+    recipe['sphere_count'] = 32
+    recipe['candidate_unsigned_gaps_cm'] = next(row['gaps_cm'] for row in recipe['budget_comparison'] if row['spheres']==32)
+    recipe['scope'] = 'Native isolation trial of sampled inscribed spheres. Coverage remains insufficient; not a release candidate.'
+    (out/'collision.json').write_text(json.dumps(recipe,indent=2)+'\n')
 (out/'proxy.json').write_text(json.dumps(proxy,separators=(',',':'))+'\n')
 (out/'config.json').write_text(json.dumps(config,indent=2)+'\n')
 (out/'copy.json').write_text(json.dumps(dict(mapping={source:target},copy=[source]),indent=2)+'\n')
 (out/'receipt.json').write_text(json.dumps(dict(proxy_sha256=hashlib.sha256(proxy_path.read_bytes()).hexdigest(),
-    mesh_source=source,mesh_target=target,collision_recipe='knit-spheres2.json',
+    mesh_source=source,mesh_target=target,collision_recipe='collision.json' if args.collision_trial else 'knit-spheres2.json',
     max_distance_cm=max(limits),zero_pins=sum(v==0 for v in limits),
     scope='Coarse sphere coverage is insufficient alone. Evaluate backstop, collision, render mapping, morph behavior and cost before adoption. Self-collision disabled only for initial diagnostic.'),indent=2)+'\n')
 print((out/'receipt.json').read_text())

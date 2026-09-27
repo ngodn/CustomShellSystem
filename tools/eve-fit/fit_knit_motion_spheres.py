@@ -10,7 +10,9 @@ from mathutils.bvhtree import BVHTree
 work = Path(__file__).resolve().parents[2]/'work/eve26'
 coverage_only = '--coverage-only' in sys.argv
 surface_seeds = '--surface-seeds' in sys.argv
-output = work/('knit-w2/coverage-regions.json' if coverage_only else 'knit-spheres6.json' if surface_seeds else 'knit-spheres4.json')
+active_region = '--active-region' in sys.argv
+assert not active_region or surface_seeds
+output = work/('knit-w2/coverage-regions.json' if coverage_only else 'knit-spheres7.json' if active_region else 'knit-spheres6.json' if surface_seeds else 'knit-spheres4.json')
 assert not output.exists()
 path = work/'knit-w2/knit.mesh.json'
 mesh = json.loads(path.read_text())
@@ -48,6 +50,25 @@ for frame in frames:
     body=np.zeros((count,3))
     np.add.at(body,vi,(np.einsum('nij,nj->ni',matrices[bi,:3,:3],points[vi])+matrices[bi,:3,3])*wt[:,None])
     poses.append(pose);trees.append(BVHTree.FromPolygons(body.tolist(),body_faces,all_triangles=True));regions.append(body[region_ids])
+original_region_count = len(region_ids)
+if active_region:
+    cloth = json.loads((work/'knit-cloth2/proxy.json').read_text())['slots']['Collar-1']
+    limits = np.asarray(cloth['max_distances'])
+    movable = limits > .001
+    proxy_points = np.asarray(cloth['positions'])
+    proxy_rows = np.asarray([[i,lookup[b],w] for i,rows in enumerate(cloth['weights']) for b,w in rows])
+    pv,pb,pw = proxy_rows[:,0].astype(int),proxy_rows[:,1].astype(int),proxy_rows[:,2]
+    reachable = np.zeros(len(region_ids),dtype=bool)
+    for pose,region in zip(poses,regions,strict=True):
+        matrices = np.asarray([np.asarray(a @ b.inverted()) for a,b in zip(pose,bind,strict=True)])
+        skinned = np.zeros_like(proxy_points)
+        np.add.at(skinned,pv,(np.einsum('nij,nj->ni',matrices[pb,:3,:3],proxy_points[pv])+matrices[pb,:3,3])*pw[:,None])
+        distance = np.linalg.norm(region[:,None,:]-skinned[None,movable,:],axis=2)
+        reachable |= np.any(distance <= limits[None,movable]+.5,axis=1)
+    region_ids = [v for v,keep in zip(region_ids,reachable,strict=True) if keep]
+    regions = [region[reachable] for region in regions]
+    assert region_ids
+    print('reachable body vertices',len(region_ids),'of',original_region_count,flush=True)
 if coverage_only:
     recipe_path = work/'knit-spheres4.json'
     recipe = json.loads(recipe_path.read_text())
@@ -104,6 +125,7 @@ if surface_seeds:
     for row in coverage['vertices']:
         if row['maximum_gap_cm'] < 2: break
         vertex = row['vertex']
+        if active_region and vertex not in region_ids:continue
         point = points[vertex]
         if any(np.linalg.norm(point-p)<2 for p in selected_points):continue
         normal = normals[vertex]
@@ -161,6 +183,7 @@ for sphere in old['spheres']:
 spheres=[{k:v for k,v in candidates[i].items() if k!='moved'} for i in chosen]
 report=dict(source_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),spheres=spheres,connections=[],
     frames=frames,candidate_count=len(candidates),sphere_count=len(spheres),body_region_vertices=len(region_ids),seed_count=len(seeds),
+    active_region=active_region,original_region_count=original_region_count,
     original_unsigned_gaps_cm=stats(baseline),candidate_unsigned_gaps_cm=stats(current),
     budget_comparison=budgets,all_candidates_lower_bound_cm=stats(gaps.min(axis=0)),
     scope='Sampled default-morph inscribed spheres with 0.15 cm inset and rest proxy triangle clearance. Unsigned coverage rewards the old protruding spheres, so compare alongside protrusion. No interpolation, max morphs, native simulation or game acceptance.')
