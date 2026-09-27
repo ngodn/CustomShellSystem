@@ -81,3 +81,11 @@ Release target: `dist/eve-v1.2.0/CSS_EveStellarBlade_eins0fx_P-v1.2.0.zip`, with
 Release ZIP creation completed with CRC, extraction, manifest and file-hash checks. The user requested installation of the ZIP itself and confirmed the game closed. After verifying no game process, the archive was extracted to `six-zip1`, checked against the release hashes and installed with the existing package installer. Backup: `backups/packages-0017`.
 
 `six-v120/install.json` records archive SHA256, installed file hashes and version 1.2.0. All three installed files match the exact release ZIP; the five split trial directories remain absent. User acceptance of the earlier identical-assets build is recorded above; review of the versioned release installation is now available on next launch. No game launch or public upload was performed.
+
+## Release cleanup
+
+User clarified that working/useful files must be retained. Cleanup removed only redundant combined-package copies, regenerated container extraction/readback trees, duplicate unpacked metadata and tiny installer-test fixtures. `work/eve26/cleanup-release1.json` records every removed regular file's size and SHA256 and every removed dependency symlink target. Total logical file bytes removed: 9.28 GiB; filesystem free space increased from approximately 34 to 36 GiB, so do not equate logical bytes with physical space reclaimed.
+
+Retained: original Blender/source assets, accepted and deferred outfit fitting work, private candidate sources, all authoring/build scripts, logs and verification reports, combined metadata, native loader test build, approved thumbnail and crop receipt, final `six-v120` trio, public v1.2.0 ZIP/changelog/checksum, and both rollback backup sets. Other agents' worktree changes were untouched.
+
+Some historical verification paths now name removed duplicate scratch outputs; consult the cleanup receipt. Recover the final trio from `six-v120` or the release ZIP; recover the prior installed candidate from `backups/packages-0017`. Extracted container scratch can be regenerated from retained containers and game dependencies. No further cleanup of fitting work is authorized by an assumption that age or rejection alone makes it useless.
