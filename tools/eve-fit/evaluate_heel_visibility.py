@@ -1,15 +1,18 @@
 """Check visible, hidden and mid-clip footwear pose states on the Bikini mesh."""
 import json
+import os
 from pathlib import Path
 import unreal
 
 work = Path('/home/eins0fx/development/mods/msII/CustomShellSystem/work/eve26')
-out = work / 'heel-visibility1'
+outfit = os.environ.get('CSS_FIT_KIND', 'bikini')
+assert outfit in ('bikini', 'knit')
+out = work / ('heel-visibility1' if outfit == 'bikini' else 'knit-visibility1')
 out.mkdir(exist_ok=False)
-mesh = unreal.load_asset('/Game/CSS/EveTest/SK_BFit1')
+mesh = unreal.load_asset('/Game/CSS/EveTest/' + ('SK_BFit1' if outfit == 'bikini' else 'SK_KFit2'))
 base = unreal.load_asset('/Game/CSS/SeduXtress/ABP_Secondary')
 fixed = unreal.load_asset('/Game/CSS/EveTest/ABP_BikiniFeet')
-candidate = unreal.load_asset('/Game/CSS/EveTest/ABP_BikiniFeet2')
+candidate = unreal.load_asset('/Game/CSS/EveTest/' + ('ABP_BikiniFeet2' if outfit == 'bikini' else 'ABP_KnitFeet1'))
 assert mesh and base and fixed and candidate
 results = {}
 for kind in ('Walk', 'Jog', 'Sprint'):

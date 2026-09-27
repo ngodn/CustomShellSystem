@@ -32,6 +32,10 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**Knitwear shoe visibility playback verified:** bounded native fixture patch `knit-visibility-probe.patch` adds only SK_KFit2 with ABP_KnitFeet1, fixed-foot reference and original secondary graph on the three Eve locomotion clips. Shoe visibility uses17–22; Bikini retains23–28. Authoring build52571 exits0.
+
+Evaluation70502 exits0. `knit-visibility1/verification.json` covers four cases (shown, hidden, toggle every20 frames, newly recreated shown instance) on Walk73, Jog41 and Sprint33 frames each,588 candidate frames total. Every recorded CSSHeelsEnabled flag matches visibility; every local transform equals the corresponding normal or corrected-foot reference with zero component error. This establishes the native component path, not game floor contact, CSS profile restoration, frame-time cost or full garment physics. No installed or release assets changed. Continue appropriate skirt/ribbon cloth and broader fitting review; these passes do not make Knitwear release-ready.
+
 **Knitwear native references prepared:** SkeletonOnly binding80752 and preparation89004 exit0. `knit-prepared1.json` assigns original28 materials, PA_Body, no shadow physics override and ABP_KnitFeet1 to private SK_KFit2. Shared skeleton counts386/82/9 and original bind transforms pass; protected production hashes remain unchanged. Preparation/verification scripts accept CSS_FIT_KIND=knit while retaining Bikini defaults.
 
 Verification73341 exits0. `knit-verified1.json` fresh-load checks all28 material paths, physics/post-process references and shared skeleton identity. Transient Dress16, Shoes17–22, Glasses23–24 and Hair25–27 hide/restore independently. This is not CSS UI/profile, body-occlusion, visibility-driven foot-pose or game-render acceptance. Next extend the bounded native clip fixture for SK_KFit2/ABP_KnitFeet1 using shoe indices17–22, then verify shown/hidden/toggle/new-instance cases on walk/jog/sprint before packaging. No installation or release archive changed.

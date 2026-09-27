@@ -1,0 +1,39 @@
+--- a/CSSAnimationLibrary.cpp
++++ b/CSSAnimationLibrary.cpp
+@@ -357,8 +357,16 @@
+          Blueprint->GetPathName() == TEXT("/Game/CSS/SeduXtress/ABP_Secondary.ABP_Secondary")) &&
+         (Animation->GetName() == TEXT("AN_Walk") || Animation->GetName() == TEXT("AN_Jog") || Animation->GetName() == TEXT("AN_Sprint")) &&
+         Animation->GetPathName().StartsWith(TEXT("/Game/CSS/Eve/Anim/"));
+-    const bool Visibility = Bikini && Blueprint->GetName() == TEXT("ABP_BikiniFeet2");
+-    const bool BikiniFeet = Bikini && Blueprint->GetName() != TEXT("ABP_Secondary");
++    const bool Knit = Mesh && Blueprint && Animation &&
++        Mesh->GetPathName() == TEXT("/Game/CSS/EveTest/SK_KFit2.SK_KFit2") &&
++        (Blueprint->GetPathName() == TEXT("/Game/CSS/EveTest/ABP_BikiniFeet.ABP_BikiniFeet") ||
++         Blueprint->GetPathName() == TEXT("/Game/CSS/EveTest/ABP_KnitFeet1.ABP_KnitFeet1") ||
++         Blueprint->GetPathName() == TEXT("/Game/CSS/SeduXtress/ABP_Secondary.ABP_Secondary")) &&
++        (Animation->GetName() == TEXT("AN_Walk") || Animation->GetName() == TEXT("AN_Jog") || Animation->GetName() == TEXT("AN_Sprint")) &&
++        Animation->GetPathName().StartsWith(TEXT("/Game/CSS/Eve/Anim/"));
++    const bool Visibility = (Bikini && Blueprint->GetName() == TEXT("ABP_BikiniFeet2")) ||
++        (Knit && Blueprint->GetName() == TEXT("ABP_KnitFeet1"));
++    const bool BikiniFeet = (Bikini || Knit) && Blueprint->GetName() != TEXT("ABP_Secondary");
+     const bool Heels = Mesh && Blueprint && Animation &&
+         Mesh->GetPathName() == TEXT("/Game/CSS/EveTest/SK_HolidayFollow.SK_HolidayFollow") &&
+         Blueprint->GetPathName() == TEXT("/Game/CSS/EveTest/ABP_BikiniFeet.ABP_BikiniFeet") &&
+@@ -371,7 +379,7 @@
+         (Animation->GetName() == TEXT("AN_Walk") || Animation->GetName() == TEXT("AN_Jog") || Animation->GetName() == TEXT("AN_Sprint")) &&
+         Animation->GetPathName().StartsWith(TEXT("/Game/CSS/Eve/Anim/"));
+     if (!IsRunningCommandlet() || !Mesh || !Animation || !Blueprint || !Blueprint->GeneratedClass ||
+-        (!Holiday && !Follow && !Heels && !Bikini && (Mesh->GetPathName() != TEXT("/Game/CSS/SeduXtress/SK_BlackPearl2.SK_BlackPearl2") ||
++        (!Holiday && !Follow && !Heels && !Bikini && !Knit && (Mesh->GetPathName() != TEXT("/Game/CSS/SeduXtress/SK_BlackPearl2.SK_BlackPearl2") ||
+         Blueprint->GetPathName() != TEXT("/Game/CSS/SeduXtress/ABP_Secondary.ABP_Secondary") ||
+         !Animation->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/RT_")))) ||
+         Blueprint->TargetSkeleton != Mesh->GetSkeleton() || Animation->GetSkeleton() != Mesh->GetSkeleton() ||
+@@ -542,7 +550,7 @@
+         const double ClipTime = Frame == Frames ? Duration : FMath::Fmod(Time, Duration);
+         const bool ShoeShown = HolidayControl == 0 || (HolidayControl == 2 && (Frame / 20) % 2 == 0);
+         if (Visibility)
+-            for (int32 Material = 23; Material <= 28; ++Material)
++            for (int32 Material = Knit ? 17 : 23; Material <= (Knit ? 22 : 28); ++Material)
+                 Component->ShowMaterialSection(Material, INDEX_NONE, ShoeShown, 0);
+         for (auto* C : {Upstream, Component})
+         {
