@@ -6,6 +6,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Latest customization checkpoint: [shared customization](eve-shared-customization.md). Prototype F14, Skin F16 and Bikini F1 have Original plus five garment palettes and restored body/hair swatches installed (`p14custom`, `s16custom`, `b1custom`). Prototype fitting, tail and body motion are user-accepted. New colors need live review; older pending-motion/no-palettes entries below are historical.
+
 - Prototype F14 fitting and tail are user-accepted. Body motion is the next delivery: the trial packager dropped all rig controls. Metadata-only repair `p14motion/CSS_EveFit14_P` is installed with verified hashes and backup `backups/packages-0010`; live motion review remains pending. See the goal checkpoint; do not repeat fitting or tail refinement.
 
 - Casual Knitwear current source candidate is `knit-w1.blend`, with `knit-weight1/`. Six morphs repaired and body-corresponding garment weights persisted without body/base edits. Sprint24 seat breakthrough improves; sprint48 still has hem/thigh penetration. Read the current goal checkpoint before clearance or cloth work. Knitwear shoe slots17–22 differ from Bikini23–28 despite identical original shoe geometry/weights.
