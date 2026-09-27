@@ -10,9 +10,12 @@ from mathutils.bvhtree import BVHTree
 WORK = Path(__file__).resolve().parents[2] / 'work/eve26'
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--rear',action='store_true')
+parser.add_argument('--knit',action='store_true')
 a=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
-data = json.loads((WORK/'planet-export/planet.mesh.json').read_text())
-audit = json.loads((WORK/'planet-export/planet.mesh.audit.json').read_text())
+assert not (a.rear and a.knit)
+source=WORK/('knit-export2/knit.mesh.json' if a.knit else 'planet-export/planet.mesh.json')
+data = json.loads(source.read_text())
+audit = json.loads(source.with_suffix('.audit.json').read_text())
 assert audit['parts'][0]['name'] == 'Eve Body'
 faces = [[data['wedges'][w][0] for w in f[:3]] for f in data['faces'][:audit['parts'][0]['faces']]]
 points = [Vector(p) for p in data['points']]
@@ -45,10 +48,18 @@ for side in ('l','r'):
     calf = bind['calf_'+side].translation
     for fraction in (.15,.4,.65,.85):
         seeds.append((name,start.lerp(calf,fraction)))
-for side in ('l','r'):
-    name='calf_'+side
-    for fraction in (.15,.45,.75):
-        seeds.append((name,bind[name].translation.lerp(bind['foot_'+side].translation,fraction)))
+if a.knit:
+    for name in ('spine_01','spine_02','spine_03','spine_04','spine_05','neck_01'):
+        seeds.append((name,bind[name].translation))
+    for side in ('l','r'):
+        name='upperarm_'+side
+        for fraction in (.2,.6):
+            seeds.append((name,bind[name].translation.lerp(bind['lowerarm_'+side].translation,fraction)))
+else:
+    for side in ('l','r'):
+        name='calf_'+side
+        for fraction in (.15,.45,.75):
+            seeds.append((name,bind[name].translation.lerp(bind['foot_'+side].translation,fraction)))
 if a.rear:
     seeds.extend(('pelvis',Vector((x,-10,z))) for x in (-5,5) for z in (100,104,108))
 spheres, rejected = [],[]
@@ -61,16 +72,21 @@ for bone,center in seeds:
     radius = distance-.15
     assert radius>0
     spheres.append({'bone':bone,'center_cm':list(center),'local_center_cm':list(bind[bone].inverted()@center),'radius_cm':radius})
-proxy = np.asarray(json.loads((WORK/'planet-tail-cloth.json').read_text())['slots']['PlanetTail_17']['positions'])
+proxy = np.asarray(json.loads((WORK/('knit-proxy1.json' if a.knit else 'planet-tail-cloth.json')).read_text())['slots']['Collar-1' if a.knit else 'PlanetTail_17']['positions'])
 def gap(vertices):
     return np.min(np.stack([np.linalg.norm(vertices-np.asarray(s['center_cm']),axis=1)-s['radius_cm'] for s in spheres]),axis=0)
 clearance = gap(proxy)
 body_ids = sorted({v for f in faces for v in f})
-region = np.asarray([data['points'][i] for i in body_ids if 40 <= data['points'][i][2] <= 118 and abs(data['points'][i][0])<12 and data['points'][i][1]<0])
+if a.knit:
+    garment_faces=[[data['wedges'][wi][0] for wi in f[:3]] for f in data['faces'][audit['parts'][0]['faces']:audit['parts'][0]['faces']+audit['parts'][1]['faces']]]
+    garment_tree=BVHTree.FromPolygons(points,garment_faces,all_triangles=True)
+    region=np.asarray([data['points'][i] for i in body_ids if garment_tree.find_nearest(points[i])[3]<1.0])
+else:
+    region = np.asarray([data['points'][i] for i in body_ids if 40 <= data['points'][i][2] <= 118 and abs(data['points'][i][0])<12 and data['points'][i][1]<0])
 coverage = gap(region)
 initial_coverage = float(np.quantile(coverage,.95))
 clearance = gap(proxy)
-out = WORK/('planet-tail-rear-spheres.json' if a.rear else 'planet-tail-spheres.json')
+out = WORK/('knit-spheres1.json' if a.knit else 'planet-tail-rear-spheres.json' if a.rear else 'planet-tail-spheres.json')
 assert not out.exists()
 report = {'spheres':spheres,'connections':[],'sphere_count':len(spheres),'initial_p95_gap_cm':initial_coverage,'rejected_seeds':rejected,'tail_inside_vertices':int((clearance<0).sum()),
           'minimum_tail_clearance_cm':float(clearance.min()),'body_region_vertices':len(region),
