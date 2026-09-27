@@ -8,6 +8,7 @@ root=Path(__file__).resolve().parents[2];work=root/'work/eve26'
 p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('--garment',choices=('prototype','skin','bikini'),default='prototype')
 p.add_argument('--part',help='Exact garment object name for multipart outfits')
+p.add_argument('--extract-source',action='store_true',help='Extract the named source object and remove runtime dependencies before saving')
 p.add_argument('--source',type=Path,default=work/'planet-suit-f5.blend')
 p.add_argument('--candidate',type=Path,default=work/'planet-weight-repair')
 p.add_argument('--output',type=Path,default=work/'planet-suit-f6.blend')
@@ -26,11 +27,14 @@ start=sum(part['points'] for part in audit['parts'][:part_index]);count=audit['p
 def load(path):
  bpy.ops.wm.read_factory_settings(use_empty=True)
  with bpy.data.libraries.load(str(path),link=False) as (src,dst):
-  assert list(src.objects)==[name];dst.objects=[name]
+  assert name in src.objects
+  assert a.extract_source or list(src.objects)==[name]
+  dst.objects=[name]
  obj=dst.objects[0];bpy.context.scene.collection.objects.link(obj);return obj
 def geometry_digest(obj):
  h=hashlib.sha256()
- for key in obj.data.shape_keys.key_blocks:
+ points=np.empty(len(obj.data.vertices)*3,dtype=np.float32);obj.data.vertices.foreach_get('co',points);h.update(points.tobytes())
+ for key in obj.data.shape_keys.key_blocks if obj.data.shape_keys else []:
   points=np.empty(len(obj.data.vertices)*3,dtype=np.float32);key.data.foreach_get('co',points)
   h.update(key.name.encode());h.update(points.tobytes());h.update(str((key.value,key.relative_key.name)).encode())
  return h.hexdigest()
@@ -48,6 +52,16 @@ obj.vertex_groups.clear()
 for bone in sorted({b for _,b,_ in weights}):obj.vertex_groups.new(name=bone)
 for vertex,bone,weight in weights:obj.vertex_groups[bone].add([vertex],weight,'REPLACE')
 assert geometry_digest(obj)==before
+if a.extract_source:
+ for modifier in list(obj.modifiers):obj.modifiers.remove(modifier)
+ for constraint in list(obj.constraints):obj.constraints.remove(constraint)
+ world=obj.matrix_world.copy();obj.parent=None;obj.matrix_world=world
+ obj.animation_data_clear()
+ if obj.data.shape_keys:obj.data.shape_keys.animation_data_clear()
+ material_names=[m.name if m else '' for m in obj.data.materials]
+ obj.data.materials.clear()
+ for index,material_name in enumerate(material_names):
+  material=bpy.data.materials.new(f'FitSlot{index}');material['CSS_source_material']=material_name;obj.data.materials.append(material)
 bpy.data.libraries.write(str(output),{obj},fake_user=True,compress=True)
 obj=load(output);assert geometry_digest(obj)==before
 actual={(v.index,obj.vertex_groups[g.group].name):g.weight for v in obj.data.vertices for g in v.groups}
