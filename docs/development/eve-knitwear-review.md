@@ -20,4 +20,4 @@ The complete trio was installed as a new directory while the game was running. I
 
 ## Remaining review
 
-After the next user-controlled restart, check Knitwear in the world through turns, sprint and attacks; check motion controls, garment visibility, all palettes, Default restoration and saved selections. Do not equate package verification with these live checks. Final delivery still merges accepted outfits into one `CSS_EveStellarBlade_eins0fx_P` trio. Proceed to Midsummer Alice fitting while waiting for game review, then War Aegis. Fourteen additional idles remain queued separately.
+After the next user-controlled restart, check Knitwear in the world through turns, sprint and attacks; check motion controls, garment visibility, all palettes, Default restoration and saved selections. Do not equate package verification with these live checks. Final delivery still merges accepted outfits into one `CSS_EveStellarBlade_eins0fx_P` trio. Alice fitting is now accepted at the practical quality target. War Aegis is deferred by the user; proceed with the six retained outfits and combined-package verification. Fourteen additional idles remain queued separately.

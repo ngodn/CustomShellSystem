@@ -1,5 +1,7 @@
 # War Aegis fitting baseline
 
+**Deferred by user on September 27:** “we can skip War Aegis for now, move to others.” The candidates below are unfinished research, excluded from the current six-outfit delivery. Resume only if the user brings this outfit back into scope.
+
 Source: Gemini `exports/SK_Eve_WarAegis.mesh.json`, SHA256 `9c58a1b5dec47adc14ed1fa8a1a8e4af00753a5ba25febc2c5504399d84b6a67`. Original untouched.
 
 While Alice's bow pipeline runs, baseline renders `work/eve26/aegis-base1` and `aegis-max1` completed exit 0 and front views were inspected. Default has broad chest, shoulder and arm intersections. All six supported sliders at 1 cause severe inflated and folded garment deformation. Do not accept this export or hide the body to cover the problem. Verify intended suit coverage against the original authoring reference before changing any apparent openings.

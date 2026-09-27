@@ -166,4 +166,4 @@ Inspected Oasis Alice front and Xion Midnight rear model renders show the garmen
 
 Installation 90575 completed exit 0. New folder `Content/Paks/~mods/CSS_EveAliceFit3_P` is installed and hashes match all three source files (`a3trial/install.json`). No game restart or input was sent. It activates on the user's next normal launch. Base Eve and release archives are unchanged. Final delivery still merges accepted outfits into one Eve trio.
 
-After restart, review Alice's outfit/palette options, body motion, ribbon motion, visibility, Default restoration and saved selections in CSS and the game world. Continue War Aegis fitting while waiting; do not reopen the user-accepted Alice fit without new evidence of a significant issue.
+After restart, review Alice's outfit/palette options, body motion, ribbon motion, visibility, Default restoration and saved selections in CSS and the game world. War Aegis is now deferred by the user. Continue the six retained outfits toward combined-package verification; do not reopen the user-accepted Alice fit without new evidence of a significant issue.

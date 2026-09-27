@@ -6,9 +6,9 @@ Updated 2026-09-27, interrupted skinned-region checks recovered and verified. Re
 
 The [fitting playbook](eve-fitting-playbook.md) records reusable lessons and rejected shortcuts for subsequent outfits. Update it when a trial changes the workflow, alongside the detailed evidence index.
 
-Latest September 27 user scope: **Black Pearl, Prototype Planet Diving Suit, Skin Suit, Vacation Bikini, Casual Knitwear, Midsummer Alice and War Aegis**. Finish Prototype first, then the remaining new outfits in that order. The user explicitly confirmed Prototype after the naming correction. Holiday and unlisted outfits are excluded from this delivery. This supersedes the original all-outfits tracker wording and older Holiday-first checkpoints.
+Latest September 27 user scope: **Black Pearl, Prototype Planet Diving Suit, Skin Suit, Vacation Bikini, Casual Knitwear and Midsummer Alice**. The user explicitly deferred War Aegis: “we can skip War Aegis for now, move to others.” Holiday Reveler remains deferred. Preserve the Aegis investigation for later, but do not spend further fitting or physics work on it for this delivery. This supersedes the seven-outfit scope, original all-outfits tracker wording and older Holiday-first checkpoints.
 
-Deliver `CSS_EveStellarBlade_eins0fx_P` with those seven outfit variants, properly fitted to the original body proportions, complete applicable clothing customization, and verified clothing and secondary-motion physics. Every outfit needs **Original plus at least five clothing color palettes**. Hair-only recoloring does not satisfy this requirement. The user clarified this on September 26 and reports the latest Gemini outfit work is incomplete.
+Deliver `CSS_EveStellarBlade_eins0fx_P` with those six outfit variants, properly fitted to the original body proportions, complete applicable clothing customization, and verified clothing and secondary-motion physics. Every outfit needs **Original plus at least five clothing color palettes**. Hair-only recoloring does not satisfy this requirement. The user clarified this on September 26 and reports the latest Gemini outfit work is incomplete.
 
 The user supplied this updated objective and resumed the goal through the conversation goal control. The September 26 fitting milestone is active; do not revert to the older quota-pause instructions.
 
@@ -31,6 +31,8 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 - Package under `/Game/CSS/`, use short readable paths, retain source provenance, and commit by coherent change. Do not publish until the candidate has passed these checks.
 
 ## Latest checkpoint
+
+**War Aegis deferred by the user.** Continue the six retained outfits toward one combined package. Alice and Knitwear fitting have reached the user-accepted practical quality target; do not reopen minor clipping. Audit their installed trial packages and remaining in-game customization, motion and persistence checks before merging. Fourteen additional idle animations plus Eve Default Idle remain queued.
 
 **User priority correction: stop chasing minor Knitwear clipping.** The user says visual acceptability is sufficient for now and does not require a perfect hem. Treat the current W2 fit plus PA_KCloth4 and15 cm backstop trial as the candidate for packaging/game review. Do not spend another iteration on the small raised-leg hem intersections unless game review reveals a material problem. This is acceptance of the practical offline quality target, not evidence of in-game acceptance. The collider/radius settings were transient overrides: persist them in a separate candidate before cooking, retaining body/hair motion controls, garment modularity and Original plus five palettes. Continue remaining outfits afterward.
 
