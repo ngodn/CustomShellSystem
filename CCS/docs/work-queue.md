@@ -15,6 +15,12 @@ and CSSX sources). None found a crash or memory-safety defect. What changed:
   (hold-first: the normal cut). The maximum timer fires the success on its own. So the carried
   window keeps the original's absolute start (commit 463aca1); scaling it to the replacement's
   first hit delayed the charge by 0.4 s on the Axatana and a normal hold hit the fail path.
+- Hold attacks are an upgrade: `GE_Unlock_Attack_Hold_Light` / `_Heavy` (Player/Upgrades/Effects)
+  grant `Character.Unlocked.HoldAttack.*`. The user's character had neither (verified live
+  through `HasMatchingGameplayTag` on the pawn with a control tag), which is why every long
+  press ended in the normal attack, in vanilla too. Commit 163c32d: locked hold abilities are
+  left alone, the LC/HC hint and the status line say the slot waits for the upgrade,
+  `status.json` has `combat.hold_unlocked`, and the attack trace carries timestamps.
 - Classifier coverage: 165 `GA_Player_*` classes in the export; the Duality Stone doubles now
   map to their step. Still unmapped on purpose: the Scythe Grinder, Fists Smert memory steps,
   the plunging attack, executions, and the abstract bases.
