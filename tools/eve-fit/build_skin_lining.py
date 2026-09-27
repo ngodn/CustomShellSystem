@@ -1,12 +1,18 @@
 """Create a reversible Skin Suit footwear lining with an unchanged body seam."""
-import copy,hashlib,json
+import argparse,copy,hashlib,json,sys
 from collections import defaultdict
 from pathlib import Path
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 from mathutils.geometry import barycentric_transform
+import numpy as np
 
 w=Path(__file__).resolve().parents[2]/'work/eve26'
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--retain',type=float,default=.01)
+parser.add_argument('--output',type=Path,default=w/'skin-lining6')
+args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+assert 0<args.retain<.1
 source=w/'skin-foot-sections/skin.mesh.json'
 data=json.loads(source.read_text());audit=json.loads(source.with_suffix('.audit.json').read_text())
 assert hashlib.sha256(source.read_bytes()).hexdigest()==audit['output_sha256']
@@ -66,11 +72,36 @@ for old in used:
     hit=hit.lerp(surface,.95)
     t=0 if old in boundary else max(0,min(1,(22-point.z)/5))
     t=t*t*(3-2*t)
-    target=point.lerp(hit,t*.995)
+    target=point.lerp(hit,t*(1-args.retain))
     assert (target-point).length<20
     distances.append((target-point).length)
     result['points'].append(list(target))
 for old in boundary:assert result['points'][point_map[old]]==data['points'][old]
+precision_repairs={}
+for iteration in range(20):
+    failures=0
+    for face in selected:
+        original=[data['wedges'][i][0] for i in face[:3]]
+        indices=[point_map[i] for i in original]
+        tri=np.asarray([result['points'][i] for i in indices],dtype=np.float32)
+        cross=np.cross(tri[1]-tri[0],tri[2]-tri[0])
+        if float(cross@cross)>=1e-12:continue
+        failures+=1
+        movable=[k for k in range(3) if original[k] not in boundary]
+        assert movable,'Importer-small triangle touches only protected seam vertices'
+        k=max(movable,key=lambda k:np.linalg.norm(tri[(k+2)%3]-tri[(k+1)%3]))
+        edge=Vector(tri[(k+2)%3].tolist())-Vector(tri[(k+1)%3].tolist())
+        normal=Vector(data['normals'][face[0]])
+        direction=normal.cross(edge).normalized()
+        assert direction.length>.99 and edge.length>1e-5
+        step=direction*(1e-5/edge.length)
+        assert step.length<.005,'Precision repair exceeds 0.05 mm'
+        idx=indices[k];precision_repairs.setdefault(idx,Vector(result['points'][idx]))
+        value=Vector(result['points'][idx])+step
+        assert (value-precision_repairs[idx]).length<.005
+        result['points'][idx]=list(value)
+    if failures==0:break
+assert failures==0,'Importer precision repair did not converge'
 material_map={20:len(data['materials']),21:len(data['materials'])+1}
 result['materials']+=['SkinFootLining','SkinToenailLining']
 wedges={}
@@ -105,7 +136,7 @@ for old,new in wedges.items():
 assert result['points'][:len(data['points'])]==data['points']
 assert result['faces'][:len(data['faces'])]==data['faces']
 result['mesh_package']='/Game/CSS/EveTest/SK_SkinLining'
-out=w/'skin-lining4';out.mkdir(exist_ok=False)
+out=args.output;out.mkdir(exist_ok=False)
 path=out/'skin.mesh.json';path.write_text(json.dumps(result,separators=(',',':'))+'\n')
 audit['output_sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
 audit['parts'].append(dict(name='Eve Skin Suit - Footwear Lining',points=len(used),faces=len(selected),material_slots=list(material_map.values())))
@@ -116,5 +147,6 @@ controls[0]['sections']+=list(material_map.values())
 (out/'controls.json').write_text(json.dumps(controls,indent=2)+'\n')
 (out/'receipt.json').write_text(json.dumps(dict(points=len(used),faces=len(selected),boundary_vertices=len(boundary),
     max_displacement_cm=max(distances),interpolated_vertices=unmatched,original_geometry_unchanged=True,body_seam_exact=True,
-    original_volume_retained=.005,seam_normal_blend_cm=[17,22],
+    original_volume_retained=args.retain,seam_normal_blend_cm=[17,22],
+    precision_repaired_vertices=len(precision_repairs),precision_max_offset_cm=max(((Vector(result['points'][i])-v).length for i,v in precision_repairs.items()),default=0),
     scope='Duplicate foot surface only. Inherited morphs and weights need motion checks; body UVs retained. Not runtime acceptance.'),indent=2)+'\n')

@@ -147,3 +147,8 @@ An indexed Unreal struct can be returned as a copy. For material assignments, mo
 # Check original material panels before calling exposed skin clipping
 
 Skin Suit's original garment contains a separate `MI_EVE_Costume_Temp_Inner_Skin01` panel. Gemini removed those faces, but the original body mask still assumes they exist. Applying that mask to the stripped garment creates holes. Conversely, broad exposed rear-leg skin is intentional in the original design, as shown in `work/eve26/skin-author-panels/back.png`; it must not be inflated over as a clipping fix. Inspect the original garment with material panels distinguished before changing geometry or applying its mask. A footwear close-up cannot validate the full-body mask. Keep authored openings and repair only the demonstrated ankle discontinuity.
+
+
+### Match geometry checks to importer precision
+
+Skin lining4 passed a permissive area check but failed the native importer. Validate triangle cross products in float32 with the exact native squared threshold (currently `1e-12` in CSSImportMeshCommandlet). Keep seam vertices fixed during local repairs and recheck original geometry, weights and morph deltas. Do not loosen the importer to admit collapsed projected triangles. Lining6 repaired four vertices by less than 0.05 mm and passed the matching check; game motion remains separate acceptance.

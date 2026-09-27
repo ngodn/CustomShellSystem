@@ -1,15 +1,19 @@
 """Save and freshly reload the tested ankle lining as a standalone authoring library."""
-import hashlib,json
+import argparse,hashlib,json,sys
 from pathlib import Path
 import bpy
 from mathutils import Vector
 w=Path(__file__).resolve().parents[2]/'work/eve26'
-source=w/'skin-lining4/skin.mesh.json';data=json.loads(source.read_text())
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--candidate',type=Path,default=w/'skin-lining6/skin.mesh.json')
+parser.add_argument('--output',type=Path,default=w/'skin-foot-lining6.blend')
+args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+source=args.candidate;data=json.loads(source.read_text())
 audit=json.loads(source.with_suffix('.audit.json').read_text())
 assert hashlib.sha256(source.read_bytes()).hexdigest()==audit['output_sha256']
 part=audit['parts'][-1];assert part['name']=='Eve Skin Suit - Footwear Lining'
 begin=len(data['points'])-part['points'];records=data['faces'][-part['faces']:]
-output=w/'skin-foot-lining.blend';assert not output.exists()
+output=args.output;assert not output.exists() and not output.with_suffix('.json').exists()
 bpy.ops.wm.read_factory_settings(use_empty=True)
 def converted(p):return (p[0]/100,-p[1]/100,p[2]/100)
 positions=[converted(p) for p in data['points'][begin:]]
@@ -74,4 +78,4 @@ report=dict(source_sha256=audit['output_sha256'],saved_sha256=hashlib.sha256(out
     vertices=len(positions),faces=len(faces),reload_position_error_cm=error*100,
     weights_uvs_shapes_verified=True,shape_names=list(expected_shapes),
     scope='Separate lining source library; no rig object. Assembly, normals/material import and game verification remain required.')
-(w/'skin-foot-lining.json').write_text(json.dumps(report,indent=2)+'\n');print(report)
+output.with_suffix('.json').write_text(json.dumps(report,indent=2)+'\n');print(report)

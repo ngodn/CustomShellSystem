@@ -24,11 +24,13 @@ for v in seam:
 for target in data['morph_targets']:
     deltas={v:xyz for v,*xyz in target['deltas']}
     for v in seam:assert deltas.get(v,[0,0,0])==deltas.get(mapping[v],[0,0,0])
-points=np.asarray(data['points'])
+points=np.asarray(data['points'],dtype=np.float32)
 faces=np.asarray([[data['wedges'][w][0] for w in f[:3]] for f in data['faces'][len(old['faces']):]])
-area=np.linalg.norm(np.cross(points[faces[:,1]]-points[faces[:,0]],points[faces[:,2]]-points[faces[:,0]]),axis=1)/2
+cross=np.cross(points[faces[:,1]]-points[faces[:,0]],points[faces[:,2]]-points[faces[:,0]])
+squared=np.sum(cross*cross,axis=1);area=np.sqrt(squared)/2
 report=dict(source_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),triangles=len(faces),
-    degenerate_triangles=int((area<1e-8).sum()),minimum_area_cm2=float(area.min()),
+    degenerate_triangles=int((squared<1e-12).sum()),minimum_area_cm2=float(area.min()),
+    importer_check='float32 cross-product squared < 1e-12, CSSImportMeshCommandlet.cpp:243',
     seam_vertices=len(seam),seam_positions_weights_morphs_exact=True,original_geometry_unchanged=True,
     scope='Exact seam inputs imply identical linear skinning for the same pose. Interior folds, normals, visibility and actual runtime still require inspection.')
 out=a.candidate/'geometry-check.json';assert not out.exists()
