@@ -32,6 +32,12 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**Knitwear shoe reuse and refreshed export:** `reuse_part_weights.py` requires identical part points, topology by material name and bone arrays before copying any weights. `knit-heels1/` (55720 exit0) reuses Bikini's accepted offline ankle candidate, changing8,402 vertices only. An independent comparison confirms all17,042 sole/tap/heel/insole vertices retain their weights. Other fields and parts are unchanged. The saved source `bikini-heels-w1.blend` supplies this identical shoe part; no duplicate shoe library is needed.
+
+`knit-heels1-sprint/quarter.png` (90351 exit0) was inspected with the diagnostic foot-bone correction at upstream sprint24. Feet remain within the shoes and tall heel supports remain intact at that view. This is not runtime/floor-contact acceptance. Knitwear needs its own material17 visibility binding instead of Bikini's23 before native assembly.
+
+`knit-export2/` (90747 exit0) refreshes the F2 sweater normals and triangulation from `knit-f2.blend`, preserving UV/color corner data and the other parts, including reused shoe weights.77,584 corners refreshed,16 triangle records changed, source point error0.00001527 cm. Exact original sweater material Collar-1 is asserted against the existing export. The exporter now supports Knitwear, and repeated source extraction preserves an existing CSS_source_material alias instead of replacing it with FitSlot0. An initially repeated material-set assertion was moved outside the triangle loop after the run to avoid redundant work. No Unreal import or game/release change yet.
+
 **Knitwear F2 bounded clearance candidate saved:** `skin_joint_clearance.py` now accepts an explicit motion recording, upstream selection and output stem, retaining Skin defaults. `knit-fit2/` uses neutral plus upstream sprint24/48, each default and combined-max. Generation10431 exits0:8,088 selected vertices,732 offsets bounded to0.395611 cm;270 conflicting vertices are unchanged. Counts in its receipt are pre-correction constraints, not a post-correction collision pass.
 
 Inspected `knit-fit2-sprint48/` front/back (31028), `knit-fit2-sprint24/back.png` (73150), and `knit-fit2-max/front.png` (30329), all processes exit0. Visible front hem strips and the inspected rear seat spot improve without inflating the whole garment. Center rear hem deformation, unsampled poses and cloth remain unaccepted. Do not treat the270 conflicts as resolved.

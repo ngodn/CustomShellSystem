@@ -10,13 +10,13 @@ parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--source',type=Path,default=w/'planet-suit-f7.blend')
 parser.add_argument('--candidate',type=Path,default=w/'planet-fit7/planet.mesh.json')
 parser.add_argument('--output',type=Path,default=w/'planet-export')
-parser.add_argument('--garment',choices=('prototype','skin'),default='prototype')
+parser.add_argument('--garment',choices=('prototype','skin','knit'),default='prototype')
 a=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 source=a.source;before=hashlib.sha256(source.read_bytes()).hexdigest()
 p=a.candidate;data=json.loads(p.read_text());audit=json.loads(p.with_suffix('.audit.json').read_text())
 assert hashlib.sha256(p.read_bytes()).hexdigest()==audit['output_sha256']
 bpy.ops.wm.read_factory_settings(use_empty=True)
-name={'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin Suit - Suit Complete'}[a.garment]
+name={'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin Suit - Suit Complete','knit':'Eve Extras - Sweater'}[a.garment]
 with bpy.data.libraries.load(str(source),link=False) as (src,dst):dst.objects=[name]
 obj=dst.objects[0];bpy.context.scene.collection.objects.link(obj)
 mesh,_,_=fitted_mesh(obj);mesh.calc_loop_triangles();matrix=TO_UE@obj.matrix_world;normal_matrix=matrix.to_3x3().inverted().transposed()
@@ -30,6 +30,10 @@ compact={v:i for i,v in enumerate(used)}
 assert len(used)==part['points'] and len(triangles)==part['faces']
 error=max((matrix@mesh.vertices[v].co-Vector(data['points'][start+i])).length for i,v in enumerate(used));assert error<.0005
 old_faces=data['faces'][face_start:face_start+part['faces']]
+single_material={'skin':'MI_EVE_Costume_Temp_Inner_Suit','knit':'Collar-1'}.get(a.garment)
+if single_material:
+ assert len(mesh.materials)==1
+ assert {data['materials'][f[3]] for f in old_faces} == {single_material}
 old_wedges={wi for face in old_faces for wi in face[:3]};lo=min(old_wedges);hi=max(old_wedges)+1
 assert old_wedges==set(range(lo,hi))
 assert not old_wedges.intersection(wi for index,face in enumerate(data['faces']) if not face_start<=index<face_start+part['faces'] for wi in face[:3])
@@ -48,9 +52,9 @@ for triangle in triangles:
    rgba=color.data[loop_index if color.domain=='CORNER' else loop.vertex_index].color if color else (1,1,1,1)
    corner_map[loop_index]=lo+len(wedges);wedges.append(wedge);normals.append(list(normal));colors.append([round(max(0,min(1,v))*255) for v in rgba])
   face.append(corner_map[loop_index])
- if a.garment=='skin':
+ if a.garment in ('skin','knit'):
   assert len(mesh.materials)==1 and triangle.material_index==0
-  material='MI_EVE_Costume_Temp_Inner_Suit'
+  material='MI_EVE_Costume_Temp_Inner_Suit' if a.garment=='skin' else 'Collar-1'
  else:material=mesh.materials[triangle.material_index]['CSS_source_material']
  faces.append(face+[data['materials'].index(material)])
 assert len(wedges)==hi-lo
@@ -62,7 +66,7 @@ data['wedges'][lo:hi]=wedges;data['normals'][lo:hi]=normals;data['colors'][lo:hi
 data['faces'][face_start:face_start+part['faces']]=faces
 for i,v in enumerate(used):data['points'][start+i]=list(matrix@mesh.vertices[v].co)
 out=a.output;out.mkdir(exist_ok=False)
-stem='skin' if a.garment=='skin' else 'planet'
+stem={'skin':'skin','prototype':'planet','knit':'knit'}[a.garment]
 p=out/f'{stem}.mesh.json';p.write_text(json.dumps(data,separators=(',',':'))+'\n')
 audit['output_sha256']=hashlib.sha256(p.read_bytes()).hexdigest();audit['parts'][1]['max_influences']=8
 (out/f'{stem}.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')

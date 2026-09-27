@@ -101,7 +101,7 @@ for modifier in list(obj.modifiers):
 obj.data.shape_keys.animation_data_clear()
 obj.animation_data_clear()
 obj.parent = None
-material_names = [m.name if m else '' for m in obj.data.materials]
+material_names = [m.get('CSS_source_material', m.name) if m else '' for m in obj.data.materials]
 obj.data.materials.clear()
 for index, name in enumerate(material_names):
     material = bpy.data.materials.new(f'FitSlot{index}')
