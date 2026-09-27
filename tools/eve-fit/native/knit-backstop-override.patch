@@ -1,0 +1,24 @@
+--- a/CSSEveEmbeddedMotion.inl
++++ b/CSSEveEmbeddedMotion.inl
+@@ -48,6 +48,13 @@
+     }
+     if (NoBodyCollision) Cloth->PhysicsAsset=nullptr;
+     if (NoBackstop) for (int32 I=0; I<Radius->Num(); ++I) (*Radius)[I]=0.f;
++    float BackstopRadiusOverride=-1.f;
++    if (FParse::Value(*Params,TEXT("BackstopRadius="),BackstopRadiusOverride))
++    {
++        if (!Knit || NoBackstop || !Radius || !FMath::IsFinite(BackstopRadiusOverride) || BackstopRadiusOverride<.5f || BackstopRadiusOverride>35.f)
++            return Fail(TEXT("Backstop override requires Knitwear and a radius from0.5 to35 cm"));
++        for (int32 I=0; I<Radius->Num(); ++I) if ((*Radius)[I]>0.f) (*Radius)[I]=BackstopRadiusOverride;
++    }
+     FAssetCompilingManager::Get().FinishAllCompilation();
+     auto* Wait=IConsoleManager::Get().FindConsoleVariable(TEXT("p.ClothPhysics.WaitForParallelClothTask"));
+     if (!Wait || Wait->GetInt()!=0) return Fail(TEXT("Probe requires explicit end-of-step cloth waits"));
+@@ -115,6 +122,7 @@
+     Root->SetBoolField(TEXT("secondary_enabled"),Secondary);
+     Root->SetBoolField(TEXT("diagnostic_no_body_collision"),NoBodyCollision);
+     Root->SetBoolField(TEXT("diagnostic_no_backstop"),NoBackstop);
++    Root->SetNumberField(TEXT("diagnostic_backstop_radius_override_cm"),BackstopRadiusOverride);
+     Root->SetStringField(TEXT("cloth_physics_during_run"),GetPathNameSafe(Cloth->PhysicsAsset));
+     Root->SetStringField(TEXT("scope"),TEXT("Private skeletal component cloth tick, single-node clip; see secondary_enabled; no game acceptance"));
+     FString Text;

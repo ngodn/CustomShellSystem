@@ -1,0 +1,17 @@
+--- a/CSSEveClothCommandlet.cpp
++++ b/CSSEveClothCommandlet.cpp
+@@ -110,6 +110,14 @@
+             Row->SetStringField(TEXT("physics"),GetPathNameSafe(Cloth->PhysicsAsset));
+             const auto& Physical=Cloth->LodData[0].PhysicalMeshData;
+             Row->SetNumberField(TEXT("particles"),Physical.Vertices.Num());
++            TArray<TSharedPtr<FJsonValue>> PhysicalNormals;
++            for (const auto& Normal : Physical.Normals)
++            {
++                TArray<TSharedPtr<FJsonValue>> Components;
++                for (int32 Axis=0; Axis<3; ++Axis) Components.Add(MakeShared<FJsonValueNumber>(Normal[Axis]));
++                PhysicalNormals.Add(MakeShared<FJsonValueArray>(Components));
++            }
++            Row->SetArrayField(TEXT("physical_normals"),PhysicalNormals);
+             const auto* Distances=Physical.FindWeightMap(EWeightMapTargetCommon::MaxDistance);
+             if (!Distances) return Fail(TEXT("Missing saved distance map"));
+             TArray<TSharedPtr<FJsonValue>> Values;

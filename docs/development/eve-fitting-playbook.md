@@ -4,6 +4,8 @@ Updated September 27, 2026. Read this before starting the next outfit, then chec
 
 ## Start each outfit from evidence
 
+Compare skinned and simulated contact before changing a fitted garment. Knitwear's frame6 waist patch had9.655 mm ray clearance before cloth, but intersected after simulation. Native normals matched the source within2.98e-8, ruling out the suspected normal replacement. The3 cm spherical backstop allowed about0.4 cm inward travel while a particle slid about1.5 cm sideways around its surface. UE5.6 `PBDSphericalConstraint.h` places the non-legacy sphere at `AnimationPosition - (Radius + Distance) * AnimationNormal`; zero distance does not make that surface a plane. A15 cm radius removed the measured waist patch in a private trial without changing garment geometry or MaxDistance. Other hem intersections remained. Check the actual mapped garment and additional poses before promoting a radius change.
+
 For cloth colliders, measure both protrusion during motion and uncovered body surface. A smaller sphere can fix protrusion while leaving the skirt unsupported. Knitwear's617 candidates around existing centers still left a6.50 cm gap even using their entire union, so increasing the count was not sufficient. Group coverage gaps by body region before placing new centers. Check exported triangle normal direction with containment before using it for inward offsets; Knitwear's first surface-seed trial generated zero new seeds because its winding pointed inward. Treat a zero-new-seed run as a failed setup, not an independent fit experiment.
 
 1. Inventory every garment and accessory against the source: dress, sleeves, underwear, hair, hat, earrings and shoes as applicable. A partial diagnostic export is not the complete outfit.

@@ -9,7 +9,7 @@ from mathutils import Matrix, Quaternion, Vector
 
 work = Path(__file__).resolve().parents[2]/'work/eve26'
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--case', default='sprint', choices=['sprint', 'no-body', 'no-backstop', 'no-both', 'trimmed'])
+parser.add_argument('--case', default='sprint', choices=['sprint', 'no-body', 'no-backstop', 'no-both', 'trimmed', 'backstop15'])
 parser.add_argument('--trial', type=int, choices=[1,2,3], default=1)
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 source = work/f'knit-cloth{args.trial}'/f'{args.case}.json'
@@ -57,6 +57,7 @@ for frame in motion['frames']:
 report = dict(source_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),cases=cases,
     diagnostic_no_body_collision=motion.get('diagnostic_no_body_collision',False),
     diagnostic_no_backstop=motion.get('diagnostic_no_backstop',False),
+    diagnostic_backstop_radius_override_cm=motion.get('diagnostic_backstop_radius_override_cm',-1),
     fixed_max_cm=max(c['fixed_max_cm'] for c in cases),
     displacement_max_cm=max(c['displacement_max_cm'] for c in cases),
     over_limit_max_cm=max(c['over_limit_max_cm'] for c in cases),
