@@ -32,6 +32,10 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**F13 Windows cook completed:** process71328 exited0. `work/eve26/p13cook` contains the private fitted mesh and tail physics asset under `/Game/CSS/EveTest/`. `planet-f13-cook-verified.json` records decoded cooked headers, sizes and hashes. The mesh header retains its clothing asset, Chaos configs and22 morph exports, including the hand corrective targets. This confirms cooked structure only, not runtime playback. IoStore round-trip, trial metadata and game validation remain next. No installed or release files changed.
+
+For trial metadata, do not copy Gemini's Planet customization bindings unchanged: its hair toggle includes garment/accessory and sword slots, and several body color bindings target the wrong materials in this mesh. Use the fresh29-slot material map and the independently verified Suit/Tail/Ribbon controls. The final outfit still requires full applicable customization and Original plus five garment palettes.
+
 Process85853 subsequently exited0. All processes from the F13 motion/visibility checks are terminal.
 
 **F13 motion and material visibility verified offline:** the embedded motion probe now accepts explicit `-Mesh=/Game/CSS/EveTest/SK_PFit13`. `planet-f13-sprint.json` records65 secondary-enabled frames; independent verification finds maximum anchor error0.00002235 cm and peak edge ratio1.0518811. Native mapping replay and full-body frame53 review are in `planet-f13-render.json` and `planet-f13-sprint-review/`. Inspected side view keeps the tail continuous, attached and clear of the legs. This is one sampled view, not game acceptance.
