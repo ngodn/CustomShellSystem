@@ -6,7 +6,7 @@ from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 root=Path(__file__).resolve().parents[2];work=root/'work/eve26'
 parser=argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--garment',choices=('prototype','skin'),default='prototype')
+parser.add_argument('--garment',choices=('prototype','skin','bikini'),default='prototype')
 parser.add_argument('--mesh',type=Path,default=work/'planet-morph-repair/planet.mesh.json')
 parser.add_argument('--output',type=Path,default=work/'planet-weight-repair')
 parser.add_argument('--region',choices=('groin','all'),default='groin',help='Skin Suit transfer region; Prototype retains its existing above-22-cm behavior')
@@ -14,8 +14,9 @@ args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv els
 p=args.mesh;raw=p.read_bytes();source=json.loads(raw)
 audit=json.loads(p.with_suffix('.audit.json').read_text())
 assert hashlib.sha256(raw).hexdigest()==audit['output_sha256']
-assert audit['parts'][1]['name']=={'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin Suit - Suit Complete'}[args.garment]
-body_count=audit['parts'][0]['points'];suit_count=audit['parts'][1]['points']
+expected={'prototype':['Eve Prototype Planet Diving Suit - Suit'],'skin':['Eve Skin Suit - Suit Complete'],'bikini':['Eve Bikini - Top','Eve Bikini - Shorts']}[args.garment]
+assert [part['name'] for part in audit['parts'][1:1+len(expected)]]==expected
+body_count=audit['parts'][0]['points'];suit_count=sum(part['points'] for part in audit['parts'][1:1+len(expected)])
 points=[Vector((x,-y,z)) for x,y,z in source['points']]
 faces=[[source['wedges'][w][0] for w in f[:3]] for f in source['faces'][:audit['parts'][0]['faces']]]
 tree=BVHTree.FromPolygons(points[:body_count],faces,all_triangles=True)
@@ -54,7 +55,7 @@ result['influences']=[row for row in source['influences'] if row[0] not in chang
 assert all(result[k]==v for k,v in source.items() if k!='influences')
 assert [row for row in result['influences'] if row[0]<body_count]==[row for row in source['influences'] if row[0]<body_count]
 out=args.output;out.mkdir(exist_ok=False)
-stem='skin' if args.garment=='skin' else 'planet'
+stem={'prototype':'planet','skin':'skin','bikini':'bikini'}[args.garment]
 f=out/f'{stem}.mesh.json';f.write_text(json.dumps(result,separators=(',',':'))+'\n')
 audit['output_sha256']=hashlib.sha256(f.read_bytes()).hexdigest()
 (out/f'{stem}.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')

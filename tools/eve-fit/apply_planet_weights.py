@@ -6,20 +6,23 @@ import numpy as np
 from mathutils import Vector
 root=Path(__file__).resolve().parents[2];work=root/'work/eve26'
 p=argparse.ArgumentParser(description=__doc__)
-p.add_argument('--garment',choices=('prototype','skin'),default='prototype')
+p.add_argument('--garment',choices=('prototype','skin','bikini'),default='prototype')
+p.add_argument('--part',help='Exact garment object name for multipart outfits')
 p.add_argument('--source',type=Path,default=work/'planet-suit-f5.blend')
 p.add_argument('--candidate',type=Path,default=work/'planet-weight-repair')
 p.add_argument('--output',type=Path,default=work/'planet-suit-f6.blend')
 a=p.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
-name={'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin Suit - Suit Complete'}[a.garment]
-stem='planet' if a.garment=='prototype' else 'skin'
+assert a.garment!='bikini' or a.part
+name=a.part or {'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin Suit - Suit Complete'}[a.garment]
+stem={'prototype':'planet','skin':'skin','bikini':'bikini'}[a.garment]
 sys.path.insert(0,str(root.parent/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work'))
 from export_variant_clean import TO_UE
 output=a.output;assert not output.exists() and not output.with_suffix('.json').exists()
 raw=(a.candidate/f'{stem}.mesh.json').read_bytes();data=json.loads(raw)
 audit=json.loads((a.candidate/f'{stem}.mesh.audit.json').read_text())
 assert hashlib.sha256(raw).hexdigest()==audit['output_sha256']
-start=audit['parts'][0]['points'];count=audit['parts'][1]['points']
+part_index=next(i for i,part in enumerate(audit['parts']) if part['name']==name)
+start=sum(part['points'] for part in audit['parts'][:part_index]);count=audit['parts'][part_index]['points']
 def load(path):
  bpy.ops.wm.read_factory_settings(use_empty=True)
  with bpy.data.libraries.load(str(path),link=False) as (src,dst):

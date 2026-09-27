@@ -1,13 +1,19 @@
 """Compare lower-torso suit weights with nearby body triangles, without editing."""
-import hashlib,json
+import argparse,hashlib,json,sys
 from pathlib import Path
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 from mathutils.geometry import barycentric_transform
 w=Path(__file__).resolve().parents[2]/'work/eve26'
-p=w/'skin-lining4/skin.mesh.json';d=json.loads(p.read_text());a=json.loads(p.with_suffix('.audit.json').read_text())
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--mesh',type=Path,default=w/'skin-lining4/skin.mesh.json')
+parser.add_argument('--output',type=Path,default=w/'skin-groin-weights.json')
+parser.add_argument('--parts',type=int,default=1)
+parser.add_argument('--all',action='store_true')
+args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+p=args.mesh;d=json.loads(p.read_text());a=json.loads(p.with_suffix('.audit.json').read_text())
 assert hashlib.sha256(p.read_bytes()).hexdigest()==a['output_sha256']
-n=a['parts'][0]['points'];s=a['parts'][1]['points']
+n=a['parts'][0]['points'];s=sum(part['points'] for part in a['parts'][1:1+args.parts])
 points=[Vector(p) for p in d['points']]
 faces=[[d['wedges'][i][0] for i in f[:3]] for f in d['faces'][:a['parts'][0]['faces']]]
 tree=BVHTree.FromPolygons(points[:n],faces,all_triangles=True)
@@ -16,7 +22,7 @@ for v,b,value in d['influences']:weights.setdefault(v,{})[b]=value
 rows=[]
 for v in range(n,n+s):
     point=points[v]
-    if not (75<point.z<115 and abs(point.x)<20):continue
+    if not args.all and not (75<point.z<115 and abs(point.x)<20):continue
     hit,_,face,distance=tree.find_nearest(point)
     ids=faces[face]
     bary=barycentric_transform(hit,*[points[i] for i in ids],Vector((1,0,0)),Vector((0,1,0)),Vector((0,0,1)))
@@ -29,7 +35,7 @@ for v in range(n,n+s):
     rows.append(dict(vertex=v,position_cm=list(point),distance_cm=distance,l1_difference=difference,
                      garment=named(current),body=named(target)))
 rows.sort(key=lambda r:r['l1_difference'],reverse=True)
-out=w/'skin-groin-weights.json';assert not out.exists()
+out=args.output;assert not out.exists()
 out.write_text(json.dumps(dict(source_sha256=a['output_sha256'],vertices=len(rows),
     difference_above_point2=sum(r['l1_difference']>.2 for r in rows),worst=rows[:30],
     scope='Nearest body weight comparison only. Differences are not automatically defects.'),indent=2)+'\n')
