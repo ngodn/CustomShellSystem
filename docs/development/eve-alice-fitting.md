@@ -23,3 +23,11 @@ The maximum-shape sprint frame 48 front/back views in `alice-morph1-sprint48` sh
 `prepare_alice_sections.py` produces `alice-sections1/alice.mesh.json`: all 1,224 ribbon faces move from suit slot 16 to independent slot 26 (`AliceRibbon`). Positions, triangle vertices, weights and morphs remain unchanged. Its material alias must resolve to the original suit material during import; independent ribbon visibility is not yet tested live. New import paths use `/Game/CSS/EveTest/`.
 
 Next outstanding work: individual slider extremes, heel correction, material/rig assembly, ribbon motion and game review. Do not redo the saved-source or section-split work.
+
+## Heel reuse prepared
+
+Alice's 31,668 shoe points and complete bone array exactly equal the accepted Knitwear W2 interchange. Its original shoe weights differ. `prepare_alice_heels.py` transfers only the verified shoe weights with local vertex remapping, preserving body weights, geometry and all morphs. The resulting 41,222 shoe influence rows are in `alice-heels1`, with source/reference hashes recorded.
+
+`alice-heels1-sprint` quarter view was inspected at upstream sprint frame 24 using the measured foot correction from `bikini-heelpose1/receipt.json`. Shoes follow the feet in this diagnostic; this does not validate the runtime graph or floor contact. Both outfits use shoe material slots 17–22, so `ABP_KnitFeet1` is a candidate for reuse after binding checks.
+
+`setup_bikini_import.py --kind alice` prepares `alice-import1/alice.mesh.json` at `/Game/CSS/EveTest/SK_AFit1` and snapshots protected production asset hashes. No Unreal import has run yet. The separately saved `alice-m1.blend` contains the suit morph repair, while shoe weight reuse is currently in the assembly interchange only. Preserve that distinction when preparing the final authoring kit.
