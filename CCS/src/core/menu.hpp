@@ -80,8 +80,13 @@ private:
     uint64_t bindings_generation_ = 0, strip_glyph_generation_ = ~0ull;
     bool gamepad_ = false, typing_now_ = false;
     std::string slot_options_key_;            // which slot's candidates options_ currently holds
-    int panel_focus_ = -1;                    // which per-slot setting row in the window has keyboard focus, -1 = the candidate list
+    // The slots page has three panels and one focus: the slot tiles (default), the candidate list
+    // for the focused tile, and the tile's settings in the window. Keys act on the focused panel.
+    enum class Focus : uint8_t { grid, list, panel };
+    Focus focus_ = Focus::grid;
+    int panel_focus_ = 0;                     // which setting row the window highlights while focus_ is panel
     const Json* highlighted_setting() const;  // the focused per-slot setting control, or null
+    static int grid_move(int slot, int dx, int dy);   // tile navigation across the two chains and the ranged tile
     struct Hit { WeakObject widget; Json action; bool down = false; std::vector<std::pair<WeakObject, Json>> parts; WeakObject glyph; };
     std::vector<Hit> hits_;
     struct SliderHit { WeakObject bar, value_block, row; Json control; double previous, low, high, step; std::string unit; };

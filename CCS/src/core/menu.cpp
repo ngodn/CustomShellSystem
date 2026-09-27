@@ -185,7 +185,12 @@ void Menu::bind_inputs() {
     }
     static const std::map<std::string, std::vector<std::string>> stick = {{"up", {"Gamepad_LeftStick_Up"}}, {"down", {"Gamepad_LeftStick_Down"}}, {"left", {"Gamepad_LeftStick_Left"}}, {"right", {"Gamepad_LeftStick_Right"}}};
     for (auto& binding : bindings_) if (auto extra = stick.find(binding.action); extra != stick.end()) for (const auto& k : extra->second) if (std::find(binding.keys.begin(), binding.keys.end(), k) == binding.keys.end()) binding.keys.push_back(k);
+    // Fixed keys of our own: the settings panel toggle (no menu action covers it), and the search
+    // field is keyboard only, since every pad button the game maps here already means something.
+    { Binding panel; panel.action = "panel"; panel.keys = {"Tab", "Gamepad_RightThumbstick"}; bindings_.push_back(std::move(panel)); }
+    for (auto& binding : bindings_) if (binding.action == "search") std::erase_if(binding.keys, [](const std::string& k) { return k.starts_with("Gamepad_"); });
     for (auto& binding : bindings_) {
+        if (!binding.input_action.Get()) continue;
         try {
             Call query(input, L"QueryKeysMappedToAction", 2); query.set(L"Action", binding.input_action.Get()); query.run();
             auto* out = query.param(L"ReturnValue");
@@ -202,8 +207,17 @@ void Menu::bind_inputs() {
 bool Menu::typing() const { return has_focus(search_input_.Get()) || has_focus(name_input_.Get()); }
 const Json* Menu::highlighted_setting() const {
     const auto* c = current_control();
-    if (!c || panel_focus_ < 0 || !c->contains("settings") || !c->at("settings").is_array() || size_t(panel_focus_) >= c->at("settings").size()) return nullptr;
+    if (!c || focus_ != Focus::panel || panel_focus_ < 0 || !c->contains("settings") || !c->at("settings").is_array() || size_t(panel_focus_) >= c->at("settings").size()) return nullptr;
     return &c->at("settings")[size_t(panel_focus_)];
+}
+// Tiles: L1 L2 L3 LF LC over H1 H2 H3 HF HC, with R at the right of both rows. Left/right run along
+// a row and through R; up/down swap rows.
+int Menu::grid_move(int slot, int dx, int dy) {
+    static const int light[] = {0, 1, 2, 3, 4, 10}, heavy[] = {5, 6, 7, 8, 9, 10};
+    if (dy) { if (slot == 10) return dy < 0 ? 4 : 9; return slot < 5 ? slot + 5 : slot - 5; }
+    const int* row = (slot >= 5 && slot < 10) ? heavy : light;
+    int at = 0; for (int i = 0; i < 6; ++i) if (row[i] == slot) at = i;
+    return row[(at + 6 + dx) % 6];
 }
 void Menu::poll_input(const PlayerContext& player, uint64_t now, bool typing) {
     auto* pc = player.pc; if (!pc) return;
@@ -416,30 +430,37 @@ void Menu::key(const std::string& action) {
         return;
     }
     if (model_.is_object() && model_.contains("sections") && section_ < int(model_["sections"].size()) && model_["sections"][section_].value("kind", std::string{}) == "slots") {
-        if (action == "search") { act({{"action", "search"}}); return; }
+        if (action == "search") { if (!gamepad_) act({{"action", "search"}}); return; }
         if (action == "close" && typing_now_) {   // Escape in the search field clears it instead of leaving the page
             search_query_.clear(); if (auto* search = search_input_.Get()) { try { text_value(search, ""); } catch (...) {} }
             try { options_.filter(""); } catch (...) {}
             dirty_ = true; return;
         }
         if (action == "previous_section" || action == "next_section") { act({{"action", "section_delta"}, {"delta", action == "previous_section" ? -1 : 1}}); return; }
-        // The window's setting rows sit "above" the candidate list for the keys: Up from the first
-        // candidate enters them, Down from the first setting returns, left/right adjust the value.
+        if (action == "panel") { act({{"action", "focus"}, {"target", focus_ == Focus::panel ? "grid" : "panel"}}); return; }
         const auto* c = current_control();
         const int settings = c && c->contains("settings") && c->at("settings").is_array() ? int(c->at("settings").size()) : 0;
-        if (action == "left" || action == "right") { act({{"action", highlighted_setting() ? "setting_delta" : "slot_delta"}, {"delta", action == "left" ? -1 : 1}}); return; }
-        if (action == "up") {
-            if (panel_focus_ >= 0) { panel_focus_ = std::max(0, panel_focus_ - 1); dirty_ = true; return; }
-            if (options_.selected == 0 && settings > 0) { panel_focus_ = settings - 1; dirty_ = true; return; }
-            act({{"action", "cand_delta"}, {"delta", -1}}); return;
+        switch (focus_) {
+        case Focus::grid:   // the tiles: move between slots, Confirm opens the list, Secondary clears, Back leaves
+            if (action == "left" || action == "right") { act({{"action", "slot_move"}, {"dx", action == "left" ? -1 : 1}, {"dy", 0}}); return; }
+            if (action == "up" || action == "down") { act({{"action", "slot_move"}, {"dx", 0}, {"dy", action == "up" ? -1 : 1}}); return; }
+            if (action == "accept") { act({{"action", "focus"}, {"target", "list"}}); return; }
+            if (action == "secondary") { act({{"action", "clear"}}); return; }
+            if (action == "close") { close(); return; }
+            return;
+        case Focus::list:   // the candidates: move, Confirm assigns, Back returns to the tiles
+            if (action == "up" || action == "down") { act({{"action", "cand_delta"}, {"delta", action == "up" ? -1 : 1}}); return; }
+            if (action == "accept") { act({{"action", "assign"}}); return; }
+            if (action == "secondary") { act({{"action", "clear"}}); return; }
+            if (action == "close") { act({{"action", "focus"}, {"target", "grid"}}); return; }
+            return;
+        case Focus::panel:  // the settings: move between rows, left/right or Confirm change the value, Back returns
+            if (action == "up" || action == "down") { panel_focus_ = std::clamp(panel_focus_ + (action == "up" ? -1 : 1), 0, std::max(0, settings - 1)); dirty_ = true; return; }
+            if (action == "left" || action == "right") { act({{"action", "setting_delta"}, {"delta", action == "left" ? -1 : 1}}); return; }
+            if (action == "accept") { act({{"action", "setting_delta"}, {"delta", 1}}); return; }
+            if (action == "close") { act({{"action", "focus"}, {"target", "grid"}}); return; }
+            return;
         }
-        if (action == "down") {
-            if (panel_focus_ >= 0) { panel_focus_ = panel_focus_ + 1 < settings ? panel_focus_ + 1 : -1; dirty_ = true; return; }
-            act({{"action", "cand_delta"}, {"delta", 1}}); return;
-        }
-        if (action == "accept") { act({{"action", highlighted_setting() ? "setting_delta" : "assign"}, {"delta", 1}}); return; }
-        if (action == "secondary") { act({{"action", "clear"}}); return; }
-        if (action == "close") { close(); return; }
         return;
     }
     if (action == "close") { close(); return; }   // like CSS: the page closes the Player Menu itself
@@ -487,6 +508,7 @@ void Menu::act(const Json& action) {
     if (!model_.is_object() || !model_.contains("sections")) return;
     const auto& sections = model_["sections"]; const int count = int(sections.size());
     if (name == "section" || name == "section_delta") {
+        focus_ = Focus::grid; panel_focus_ = 0;
         if (count) section_ = name == "section" ? std::clamp(action.at("section").get<int>(), 0, count - 1) : (section_ + action.at("delta").get<int>() + count) % count;
         row_ = 0; dirty_ = true; enter_ = true; return;
     }
@@ -502,11 +524,21 @@ void Menu::act(const Json& action) {
         if (auto* search = search_input_.Get()) { try { Call focus(search, L"SetKeyboardFocus", 0); focus.run(); } catch (const std::exception& e) { error_ = e.what(); dirty_ = true; } }
         return;
     }
-    if (name == "slot" || name == "slot_delta") {
-        const int wanted = name == "slot" ? action.at("index").get<int>() : row_ + action.at("delta").get<int>();
+    if (name == "focus") {
+        const auto target = action.value("target", std::string("grid"));
+        focus_ = target == "list" ? Focus::list : target == "panel" ? Focus::panel : Focus::grid;
+        if (focus_ == Focus::panel) panel_focus_ = 0;
+        dirty_ = true; return;
+    }
+    if (name == "slot" || name == "slot_delta" || name == "slot_move") {
+        int wanted = row_;
+        if (name == "slot") { wanted = action.at("index").get<int>(); focus_ = Focus::grid; }   // a tile was clicked
+        else if (name == "slot_delta") wanted = row_ + action.at("delta").get<int>();
+        else if (rows == 11) wanted = grid_move(row_, action.value("dx", 0), action.value("dy", 0));
+        else wanted = row_ + action.value("dx", 0);
         row_ = rows ? (wanted % rows + rows) % rows : 0;
         slot_options_key_.clear();   // the build reloads the candidates and lands on the assigned one
-        panel_focus_ = -1;
+        panel_focus_ = 0;
         dirty_ = true; return;
     }
     if (name == "cand_delta" || name == "cand") {
@@ -514,10 +546,10 @@ void Menu::act(const Json& action) {
         else options_.move(action.at("delta").get<int>());
         dirty_ = true; return;
     }
-    if (name == "setting_focus") { panel_focus_ = action.value("index", -1); dirty_ = true; return; }
+    if (name == "setting_focus") { focus_ = Focus::panel; panel_focus_ = action.value("index", 0); dirty_ = true; return; }
     if (name == "setting_delta") {
-        // A per-slot setting in the window: step its value; the focus stays on the row.
-        if (action.contains("index")) panel_focus_ = action.at("index").get<int>();
+        // A per-slot setting in the window: step its value; the focus moves to that row.
+        if (action.contains("index")) { focus_ = Focus::panel; panel_focus_ = action.at("index").get<int>(); }
         const auto* setting = highlighted_setting(); if (!setting) return;
         const auto& options = setting->at("options");
         if (!options.is_array() || options.empty()) return;
@@ -528,7 +560,7 @@ void Menu::act(const Json& action) {
     }
     if (name == "assign" || name == "clear") {
         const auto* c = current_control(); if (!c) return;
-        if (name == "assign" && action.contains("index")) { options_.selected = std::min(action.at("index").get<size_t>(), options_.matches.empty() ? size_t{} : options_.matches.size() - 1); panel_focus_ = -1; }
+        if (name == "assign" && action.contains("index")) { options_.selected = std::min(action.at("index").get<size_t>(), options_.matches.empty() ? size_t{} : options_.matches.size() - 1); focus_ = Focus::list; }
         Json value = "";
         if (name == "assign") {
             if (options_.matches.empty()) return;

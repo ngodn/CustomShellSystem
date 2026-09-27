@@ -37,7 +37,7 @@ constexpr const char* title_font = "/Game/Sparta/UI/Fonts/Trajan_Pro_Regular_Fon
 constexpr double native_height = 2160, native_column = 1136;
 constexpr double window_x = 95, window_top = 150, window_w = 945;
 constexpr uint8_t collapsed = 1, hidden = 2, shown_passive = 3, shown_self_passive = 4;
-constexpr uint8_t glyph_accept = 3, glyph_secondary = 4, glyph_back = 5, glyph_tertiary = 6, glyph_left_bumper = 8, glyph_right_bumper = 9, glyph_dpad_vertical = 10, glyph_dpad_horizontal = 11, glyph_up = 13, glyph_down = 14, glyph_left = 15, glyph_right = 16, glyph_none = 45;
+constexpr uint8_t glyph_accept = 3, glyph_secondary = 4, glyph_back = 5, glyph_tertiary = 6, glyph_right_stick_button = 29, glyph_left_bumper = 8, glyph_right_bumper = 9, glyph_dpad_vertical = 10, glyph_dpad_horizontal = 11, glyph_up = 13, glyph_down = 14, glyph_left = 15, glyph_right = 16, glyph_none = 45;
 constexpr Color body{.49f, .42f, .30f, 1};
 constexpr Color muted{.24f, .21f, .17f, 1};
 constexpr Color title_ink{.223f, .186f, .133f, 1};
@@ -1119,7 +1119,7 @@ void Menu::build_slots(const Json& section, bool& deferred) {
         RowLook look; look.icon = game_icon(o.value("icon", std::string{})); look.enabled = o.value("enabled", true);
         look.badge = slot && o.at("id") == slot->at("value");
         look.value = look.enabled ? o.value("value", std::string{}) : o.value("disabled_label", std::string("Unavailable"));
-        fill_row(item, o.value("label", std::string{}), look, int(i) == cand);
+        fill_row(item, o.value("label", std::string{}), look, focus_ == Focus::list && int(i) == cand);
         bind(item.hit, {{"action", "assign"}, {"index", int(i)}}, held_);
         if (int(i) == cand) { selected_widget = item.widget.Get(); selected_heading = heading; }
         heading = nullptr;
@@ -1127,38 +1127,52 @@ void Menu::build_slots(const Json& section, bool& deferred) {
     if (last < matches.size()) paragraph(list_, std::to_string(matches.size() - last) + " more below. Type to search.", muted);
     // ---- the window: the highlighted candidate, on the slot it would fill
     const auto& settings = slot && slot->contains("settings") && slot->at("settings").is_array() ? slot->at("settings") : Json::array();
-    if (panel_focus_ >= int(settings.size())) panel_focus_ = -1;
-    const Json* focused_setting = panel_focus_ >= 0 ? &settings[size_t(panel_focus_)] : nullptr;
+    if (panel_focus_ >= int(settings.size())) panel_focus_ = std::max(0, int(settings.size()) - 1);
+    if (focus_ == Focus::panel && settings.empty()) focus_ = Focus::grid;
+    const Json* focused_setting = focus_ == Focus::panel ? &settings[size_t(panel_focus_)] : nullptr;
+    const std::string slot_label = slot ? slot->value("label", std::string{}) : std::string{};
     if (slot && (focused_setting || !matches.empty())) {
         const auto slot_name = slot->value("name", slot->value("label", std::string{}));
-        if (focused_setting) detail(focused_setting->value("label", std::string{}), "Setting for " + slot->value("label", std::string{}), focused_setting->value("description", std::string{}), nullptr);
+        if (focused_setting) detail(focused_setting->value("label", std::string{}), "Setting for " + slot_label, focused_setting->value("description", std::string{}), nullptr);
         else {
             const auto& o = options[matches[size_t(cand)]];
             detail(o.value("title", o.value("label", std::string{})), o.value("subtitle", slot_name), o.value("description", std::string{}), game_icon(o.value("icon", std::string{})));
             if (const auto hint = o.value("hint", std::string{}); !hint.empty()) paragraph(panel_, hint, muted);
         }
-        // The slot's own settings, as option rows in the window: arrows and clicks for the mouse,
-        // Up from the first candidate for the keys.
+        // The slot's own settings as option rows in the window; a click or the settings key focuses them.
         for (size_t k = 0; k < settings.size(); ++k) {
             const auto& st = settings[k];
             std::string value; for (const auto& o : st.at("options")) if (o.at("id") == st.at("value")) value = o.value("label", std::string{});
-            option_row(st.value("label", std::string{}), value, panel_focus_ == int(k), {{"action", "setting_delta"}, {"delta", -1}, {"index", int(k)}},
+            option_row(st.value("label", std::string{}), value, focus_ == Focus::panel && panel_focus_ == int(k), {{"action", "setting_delta"}, {"delta", -1}, {"index", int(k)}},
                 {{"action", "setting_delta"}, {"delta", 1}, {"index", int(k)}}, true, {{"action", "setting_focus"}, {"index", int(k)}});
         }
-        if (focused_setting) {
-            action_prompt("accept", "Next value", {{"action", "setting_delta"}, {"delta", 1}}, glyph_accept);
-            if (gamepad_) bar_prompt_actions("Value", "", glyph_dpad_horizontal); else bar_prompt_actions("Value", "left", glyph_left, "right", glyph_right);
-        } else {
-            const auto& o = options[matches[size_t(cand)]];
-            const bool assigned = o.at("id") == slot->at("value");
-            if (!o.value("enabled", true)) paragraph(panel_, o.value("disabled_label", std::string("Unavailable")), muted);
-            else if (assigned) paragraph(panel_, "Assigned to " + slot->value("label", std::string{}) + ".", muted);
-            else action_prompt("accept", "Assign to " + slot->value("label", std::string{}), {{"action", "assign"}}, glyph_accept);
-            if (!slot->value("value", std::string{}).empty()) action_prompt("secondary", "Restore the weapon's own attack", {{"action", "clear"}}, glyph_secondary);
+        // Prompts follow the focus: what Confirm, Secondary, Back and the directions do right now.
+        const auto& o = options[matches[size_t(cand)]];
+        const bool assigned = o.at("id") == slot->at("value");
+        const bool has_move = !slot->value("value", std::string{}).empty();
+        switch (focus_) {
+        case Focus::grid:
+            action_prompt("accept", "Choose a move for " + slot_label, {{"action", "focus"}, {"target", "list"}}, glyph_accept);
+            if (has_move) action_prompt("secondary", "Restore the weapon's own attack", {{"action", "clear"}}, glyph_secondary);
+            if (!settings.empty()) action_prompt("panel", gamepad_ ? "Slot settings" : "Slot settings (Tab)", {{"action", "focus"}, {"target", "panel"}}, glyph_right_stick_button);
             if (gamepad_) bar_prompt_actions("Slot", "", glyph_dpad_horizontal); else bar_prompt_actions("Slot", "left", glyph_left, "right", glyph_right);
+            break;
+        case Focus::list:
+            if (!o.value("enabled", true)) paragraph(panel_, o.value("disabled_label", std::string("Unavailable")), muted);
+            else if (assigned) paragraph(panel_, "Assigned to " + slot_label + ".", muted);
+            else action_prompt("accept", "Assign to " + slot_label, {{"action", "assign"}}, glyph_accept);
+            if (has_move) action_prompt("secondary", "Restore the weapon's own attack", {{"action", "clear"}}, glyph_secondary);
+            action_prompt("close", "Back to the slots", {{"action", "focus"}, {"target", "grid"}}, glyph_back);
+            if (gamepad_) bar_prompt_actions("Move", "", glyph_dpad_vertical); else bar_prompt_actions("Move", "up", glyph_up, "down", glyph_down);
+            break;
+        case Focus::panel:
+            action_prompt("accept", "Next value", {{"action", "setting_delta"}, {"delta", 1}}, glyph_accept);
+            action_prompt("close", "Back to the slots", {{"action", "focus"}, {"target", "grid"}}, glyph_back);
+            if (gamepad_) bar_prompt_actions("Value", "", glyph_dpad_horizontal); else bar_prompt_actions("Value", "left", glyph_left, "right", glyph_right);
+            break;
         }
     } else detail(deps_.title, "", "");
-    action_prompt("search", typing_now_ ? "Typing filters the list" : "Search the list", {{"action", "search"}}, glyph_tertiary);
+    if (!gamepad_ && focus_ == Focus::list) action_prompt("search", typing_now_ ? "Typing filters the list" : "Search the list", {{"action", "search"}}, glyph_tertiary);
     const std::string context = "slots/" + std::to_string(row_) + "/" + std::to_string(cand);
     if (context != panel_context_) { if (auto* scroll = panel_scroll_.Get()) invoke(scroll, L"ScrollToStart"); panel_context_ = context; panel_revealed_ = nullptr; }
     finish(list_); finish(head_); finish(top_); finish(panel_); finish(actions_);
