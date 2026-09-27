@@ -177,3 +177,7 @@ The Bikini top/shorts omit some shared body morph keys. In these sources, newly 
 ### Treat rigid shoe alignment as a diagnostic, not a fitted foot
 
 Bikini heelpose1 rotates the original shoes about the foot bind pivots by approximately 34.68 degrees. This preserves the heel silhouette and aligns neutral sole minima, but recorded idle120 shows the unchanged feet outside the shoes. Do not promote this result or apply its measured height offset. A matching foot pose, ankle continuity and posed contact checks are required. Preserve original body proportions and keep the shoe-only trial separate from current garment sources.
+
+### Inspect body-side footwear keys and respect masks
+
+Extras Heels has no shape keys, but the author's Body contains OutfitHeelsFix. Reading only shoe and armature controls missed it. The key's raw coordinates differ over most of the body; its Feet mask restricts the effective correction to2,409 vertices below22.62 cm. Measure deltas against the relative key, multiply by the vertex-group weights, and inspect the result before adoption. Do not strip this mask or assume its name proves that it fits a particular shoe.
