@@ -33,3 +33,9 @@ Combine cooked assets while preserving accepted base dependencies and rejecting 
 The container preserves the entire accepted base dependency set, including unused legacy outfit assets. Only six variants are exposed by the staged manifest. Removing unused cooked assets is deferred until dependency reachability can be proved.
 
 Runtime source confirms outfit-level templates have no variant filtering. Removed Black Pearl-only clothing combinations from the combined metadata to avoid no-op presets on other outfits. Individual toggles remain intact. Retained shared physics presets, checked their control IDs exist in all six variants, and renamed their Normal display label to Default. This does not modify CSS runtime code.
+
+## Final package assembler prepared
+
+`tools/eve-fit/package_six.py --thumbnail PATH` checks the six-variant scope, five or more palettes per variant, all `/Game/` manifest references against the combined container inventory, source container hashes, thumbnail dimensions, and packed metadata/resource equality. It creates `work/eve26/six-candidate1/CSS_EveStellarBlade_eins0fx_P`; it does not install or create a public ZIP.
+
+The independent reference check completed: all ten mesh/animation references occur in the verified combined container (`six-reference-check.json`). The assembler has not yet been run because the requested portrait is non-square and the user's local-padding/cropping choice remains pending. No replacement portrait was generated. The game was confirmed running through `/proc` executable entries during this check, so no restart was assumed.
