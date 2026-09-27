@@ -11,7 +11,7 @@ light_chain {L1 L2 L3 LF LC}, heavy_chain {H1 H2 H3 HF HC}, ranged {R}; each ent
 catalog move by move_id. Chain moves fit slots 1/2/3 of either chain, finishers only F,
 holds only C, sidearm fire only R, enemy melee the chain and finisher slots, enemy ranged R.
 Each entry may also carry per-slot tuning: "speed" (0.5 to 2.0, default 1.0), "feel" ("game" or
-"move", default "game"), "hit_damage"
+"move", default "move"), "hit_damage"
 ("move" or "weapon", default "move") and "weapon" ("inventory" or "move", default "inventory").
 An entry with an empty move_id keeps the weapon's own attack and may still carry tuning.
 """
