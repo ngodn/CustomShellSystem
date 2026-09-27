@@ -77,7 +77,7 @@ for vertex in obj.data.vertices:
     for i, factor in zip(ids, bary):
         for name, weight in weights[i]:
             combined[name] = combined.get(name, 0) + float(factor)*weight
-    rows = sorted(combined.items(), key=lambda row:-row[1])[:8]
+    rows = sorted(((name, weight) for name, weight in combined.items() if weight > 0), key=lambda row:-row[1])[:8]
     total = sum(weight for _, weight in rows)
     assert total > 0
     transferred.append([[name, weight/total] for name, weight in rows])

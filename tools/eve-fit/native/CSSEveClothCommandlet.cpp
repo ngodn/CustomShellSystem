@@ -115,6 +115,16 @@ int32 UCSSEveClothCommandlet::Main(const FString& Params)
             TArray<TSharedPtr<FJsonValue>> Values;
             for (int32 I=0; I<Distances->Num(); ++I) Values.Add(MakeShared<FJsonValueNumber>((*Distances)[I]));
             Row->SetArrayField(TEXT("max_distances"),Values);
+            for (const auto Target : {EWeightMapTargetCommon::BackstopDistance, EWeightMapTargetCommon::BackstopRadius})
+            {
+                const auto* Map = Physical.FindWeightMap(Target);
+                if (!Map) continue;
+                TArray<TSharedPtr<FJsonValue>> BackstopValues;
+                for (int32 I = 0; I < Map->Num(); ++I) BackstopValues.Add(MakeShared<FJsonValueNumber>((*Map)[I]));
+                Row->SetArrayField(Target == EWeightMapTargetCommon::BackstopDistance ? TEXT("backstop_distances") : TEXT("backstop_radii"), BackstopValues);
+            }
+            if (const auto* ChaosConfig = Cloth->GetClothConfig<UChaosClothConfig>())
+                Row->SetBoolField(TEXT("legacy_backstop"), ChaosConfig->bUseLegacyBackstop);
             const auto* SharedConfig=Cloth->GetClothConfig<UChaosClothSharedSimConfig>();
             if (!SharedConfig) return Fail(TEXT("Missing shared simulation config"));
             Row->SetNumberField(TEXT("iterations"),SharedConfig->IterationCount);
@@ -378,6 +388,37 @@ int32 UCSSEveClothCommandlet::Main(const FString& Params)
         UChaosClothConfig* Config = Cloth->GetClothConfig<UChaosClothConfig>();
         if (!Config)
             return Fail(TEXT("Chaos cloth configuration was not created"));
+        if (Proxies.IsValid() && Proxies->GetObjectField(TEXT("slots"))->HasField(SlotName))
+        {
+            const auto& Proxy = Proxies->GetObjectField(TEXT("slots"))->GetObjectField(SlotName);
+            const bool HasDistance = Proxy->HasField(TEXT("backstop_distances"));
+            const bool HasRadius = Proxy->HasField(TEXT("backstop_radii"));
+            if (HasDistance != HasRadius) return Fail(TEXT("Backstop requires both distance and radius maps"));
+            if (HasDistance)
+            {
+                for (const auto Target : {EWeightMapTargetCommon::BackstopDistance, EWeightMapTargetCommon::BackstopRadius})
+                {
+                    const bool IsRadius = Target == EWeightMapTargetCommon::BackstopRadius;
+                    const TCHAR* Key = IsRadius ? TEXT("backstop_radii") : TEXT("backstop_distances");
+                    const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+                    if (!Proxy->TryGetArrayField(Key, Values) || Values->Num() != Data.Vertices.Num())
+                        return Fail(TEXT("Backstop map size or type mismatch"));
+                    FPointWeightMap Map(Data.Vertices.Num());
+                    Map.Name = Key;
+                    Map.CurrentTarget = static_cast<uint8>(Target);
+                    Map.bEnabled = true;
+                    for (int32 I = 0; I < Values->Num(); ++I)
+                    {
+                        double Value;
+                        if (!(*Values)[I]->TryGetNumber(Value) || !FMath::IsFinite(Value) || Value > 35. || Value < (IsRadius ? 0. : -35.))
+                            return Fail(TEXT("Invalid backstop value"));
+                        Map[I] = float(Value);
+                    }
+                    LOD.PointWeightMaps.Add(MoveTemp(Map));
+                }
+                Config->bUseLegacyBackstop = false;
+            }
+        }
         {
             const float Bending = Setting(SlotName, TEXT("BendingStiffness"), .08, 0., 1.);
             const float Drive = Setting(SlotName, TEXT("AnimDriveStiffness"), .18, 0., 1.);
@@ -503,6 +544,21 @@ int32 UCSSEveClothCommandlet::Main(const FString& Params)
         const auto* Distances = Data.FindWeightMap(EWeightMapTargetCommon::MaxDistance);
         if (!Distances || Distances->Num() != Data.Vertices.Num())
             return Fail(TEXT("Cloth lost its MaxDistance map"));
+        const FString SlotName = Mesh->GetMaterials()[Mesh->GetImportedModel()->LODModels[0].Sections[Section].MaterialIndex].MaterialSlotName.ToString();
+        if (Proxies.IsValid() && Proxies->GetObjectField(TEXT("slots"))->HasField(SlotName))
+        {
+            const auto& Proxy = Proxies->GetObjectField(TEXT("slots"))->GetObjectField(SlotName);
+            for (const auto Target : {EWeightMapTargetCommon::BackstopDistance, EWeightMapTargetCommon::BackstopRadius})
+            {
+                const TCHAR* Key = Target == EWeightMapTargetCommon::BackstopRadius ? TEXT("backstop_radii") : TEXT("backstop_distances");
+                if (!Proxy->HasField(Key)) continue;
+                const auto* Map = Data.FindWeightMap(Target);
+                const auto& Expected = Proxy->GetArrayField(Key);
+                if (!Map || Map->Num() != Expected.Num()) return Fail(TEXT("Backstop map lost during rebuild"));
+                for (int32 I = 0; I < Map->Num(); ++I)
+                    if ((*Map)[I] != float(Expected[I]->AsNumber())) return Fail(TEXT("Backstop value changed during rebuild"));
+            }
+        }
         int32 Kinematic = 0;
         for (int32 Index = 0; Index < Distances->Num(); ++Index)
         {
