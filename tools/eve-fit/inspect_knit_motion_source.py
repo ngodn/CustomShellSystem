@@ -9,14 +9,14 @@ import bpy
 root = Path(__file__).resolve().parents[3]
 source = root / 'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/reference/body-type-variant-EVE/eve_beta10.blend'
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--outfit', choices=('knit', 'alice'), default='knit')
+parser.add_argument('--outfit', choices=('knit', 'alice', 'aegis'), default='knit')
 parser.add_argument('--output', type=Path, default=root / 'CustomShellSystem/work/eve26/knit-author-motion.json')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 output = args.output
 assert not output.exists()
 digest = hashlib.sha256(source.read_bytes()).hexdigest()
 bpy.ops.wm.open_mainfile(filepath=str(source))
-terms = ('alice',) if args.outfit == 'alice' else ('sweater', 'knit')
+terms = {'alice': ('alice',), 'aegis': ('aegis',), 'knit': ('sweater', 'knit')}[args.outfit]
 selected = [o for o in bpy.data.objects if any(term in o.name.lower() for term in terms)]
 assert selected
 rows = []
@@ -37,6 +37,7 @@ for obj in selected:
         row.update(vertices=len(obj.data.vertices), faces=len(obj.data.polygons),
             groups=[g.name for g in obj.vertex_groups],
             shape_keys=[k.name for k in obj.data.shape_keys.key_blocks] if obj.data.shape_keys else [])
+        row['shape_values'] = {k.name: k.value for k in obj.data.shape_keys.key_blocks} if obj.data.shape_keys else {}
         used = {g.group for v in obj.data.vertices for g in v.groups if g.weight > 0}
         row['weighted_groups'] = [g.name for g in obj.vertex_groups if g.index in used]
         if args.outfit == 'alice' and obj.name == 'Eve Midsummer Alice - Ribbon':
