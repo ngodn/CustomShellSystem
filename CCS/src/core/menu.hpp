@@ -117,7 +117,7 @@ private:
     // The slot grid: ten of the game's equipment slot tiles with a label over each, built once
     // in the centre column and restyled per build.
     struct Tile { WeakObject widget, label, hit; int selected = -1, shown = -1, dimmed = -1; const void* icon = nullptr; std::string text, icon_path; };
-    std::array<Tile, 11> tiles_{};
+    std::array<Tile, 13> tiles_{};
     WeakObject grid_root_, banner_image_;
     int banner_shown_ = -1;
     WeakObject design_, left_root_, right_root_, list_scroll_, strip_scroll_, details_, panel_scroll_, panel_size_,
@@ -134,7 +134,8 @@ private:
     struct PendingReveal { WeakObject scroll, target; uint8_t destination = 0; int frames = 0; };
     std::array<PendingReveal, 2> pending_reveals_{};
     std::string detail_title_, detail_sub_, detail_body_, status_shown_, title_shown_, subtitle_shown_;
-    WeakObject detail_text_;   // our fixed-height description block (the game's own one grows with the text)
+    WeakObject detail_text_, detail_box_;   // our fixed-height description block (the game's own one grows with the text)
+    bool prompts_in_footer_ = false;        // the slots page puts its control guide in the page footer
     int status_error_shown_ = -1, logo_shown_ = -1;
     uint64_t transition_started_ = 0;
     // ---- confirmation dialog: the game's WBP_ConfirmationPrompt_Default

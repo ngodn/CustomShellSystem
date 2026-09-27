@@ -347,7 +347,7 @@ bool Menu::page(double width, double height) {
     invoke(description_size, L"SetWidthOverride", L"InWidthOverride", float(window_w - 80));
     invoke(description_size, L"SetClipping", L"InClipping", uint8_t{1});
     auto* description = text_block(tree, 30, serif, body, true);
-    add_child(description_size, description); detail_text_ = description;
+    add_child(description_size, description); detail_text_ = description; detail_box_ = description_size;
     padding(add_child(part(details, L"VB_CustomWidgets"), description_size), Margin{40, 8, 40, 16});
     auto* head = construct(L"/Script/UMG.VerticalBox", tree);
     add_child(part(details, L"VB_CustomWidgets"), head);
@@ -368,8 +368,10 @@ bool Menu::page(double width, double height) {
     auto* actions = construct(L"/Script/UMG.VerticalBox", tree);
     padding(add_child(part(details, L"VB_DynamicPrompts"), actions), Margin{0, 10, 0, 10});
     actions_.box = actions;
+    // The status line sits centred under the slot tiles.
     auto* status = text_block(tree, 30, serif, muted, true);
-    place(right, status, window_x, design_height - 170, window_w, 110);
+    invoke(status, L"SetJustification", L"InJustification", uint8_t{1});
+    place(centre, status, 0, design_height - 250, std::max(0., design_width - 2 * native_column), 90);
     status_text_ = status;
     return true;
 }
@@ -708,6 +710,8 @@ void Menu::animate(uint64_t now) {
 void Menu::build() {
     auto* pc = pc_.Get(); if (!pc || !page_.Get()) return;
     const auto started = monotonic_us();
+    prompts_in_footer_ = false;
+    if (auto* box = detail_box_.Get()) visibility(box, shown_passive);
     if (viewport_[0] < 320 || viewport_[1] < 240) {
         Call geometry(switcher_.Get(), L"GetCachedGeometry", 1); geometry.run();
         Call size(find_cached(L"/Script/UMG.Default__SlateBlueprintLibrary"), L"GetLocalSize", 2); size.copy(L"Geometry", geometry, L"ReturnValue"); size.run();
@@ -764,7 +768,7 @@ void Menu::strip(const std::vector<std::string>& names, int selected, const std:
 }
 void Menu::action_prompt(const std::string& binding, const std::string& label, Json action, uint8_t icon, bool enabled) {
     if (binding.empty() && gamepad_) return;
-    auto& item = take(actions_, Kind::action);
+    auto& item = take(prompts_in_footer_ ? footer_ : actions_, Kind::action);
     text(item.text_block.Get(), item.text, label);
     const auto signature = binding + "/" + std::to_string(icon) + "#" + std::to_string(bindings_generation_);
     if (item.glyph != signature) {
@@ -827,7 +831,7 @@ void Menu::slider_row(const std::string& name, const Json& control, bool focused
     sliders_.push_back({item.extra, item.value_block, item.widget, control, value, low, high, step, unit});
 }
 void Menu::bar_prompt_actions(const std::string& label, const std::string& first, uint8_t first_icon, const std::string& second, uint8_t second_icon) {
-    auto& item = take(actions_, Kind::action);
+    auto& item = take(prompts_in_footer_ ? footer_ : actions_, Kind::action);
     text(item.text_block.Get(), item.text, label);
     const auto signature = first + "/" + std::to_string(first_icon) + "|" + second + "/" + std::to_string(second_icon) + "#" + std::to_string(bindings_generation_);
     if (item.glyph != signature) {
@@ -1027,7 +1031,7 @@ bool Menu::ensure_tiles() {
     auto* grid = grid_root_.Get(); auto* tree = tree_.Get(); auto* pc = pc_.Get();
     if (!grid || !tree || !pc) return false;
     const double width = std::max(0., design_w_ - 2 * native_column);
-    const double row_width = 6 * tile_size + 6 * tile_gap;
+    const double row_width = 7 * tile_size + 7 * tile_gap;
     const double x0 = std::max(0., (width - row_width) / 2), y0 = design_h_ * 0.56;
     auto* trajan = load(title_font);
     for (size_t i = 0; i < tiles_.size(); ++i) {
@@ -1035,9 +1039,11 @@ bool Menu::ensure_tiles() {
         if (tile.widget.Get()) continue;
         if (budget_ <= 0) return false;
         --budget_; ++cost_.created;
-        // Ten chain tiles in two rows of five; the ranged tile to the right, between the rows.
-        const double x = i < 10 ? x0 + double(i % 5) * (tile_size + tile_gap) : x0 + 5 * (tile_size + tile_gap) + tile_gap;
-        const double y = i < 10 ? y0 + double(i / 5) * (tile_size + tile_row_gap) : y0 + (tile_size + tile_row_gap) / 2;
+        // Ten chain tiles in two rows of five, the sprint tiles S+L and S+H as a sixth column, and
+        // the ranged tile at the far right between the rows.
+        const double step = tile_size + tile_gap;
+        const double x = i < 10 ? x0 + double(i % 5) * step : i >= 11 ? x0 + 5 * step + tile_gap : x0 + 6 * step + 2 * tile_gap;
+        const double y = i < 10 ? y0 + double(i / 5) * (tile_size + tile_row_gap) : i >= 11 ? y0 + double(i - 11) * (tile_size + tile_row_gap) : y0 + (tile_size + tile_row_gap) / 2;
         auto* label = text_block(tree, 30, trajan, title_ink, false);
         invoke(label, L"SetJustification", L"InJustification", uint8_t{1});
         place(grid, label, x, y - 52, tile_size, 44);
@@ -1054,6 +1060,8 @@ bool Menu::ensure_tiles() {
     return true;
 }
 void Menu::build_slots(const Json& section, bool& deferred) {
+    prompts_in_footer_ = true;                                  // the control guide lives in the page footer here
+    if (auto* box = detail_box_.Get()) visibility(box, collapsed);   // the description goes under the rows instead
     const auto& controls = section["controls"]; const int rows = int(controls.size());
     if (!ensure_tiles()) deferred = true;
     // ---- the tiles
@@ -1064,7 +1072,7 @@ void Menu::build_slots(const Json& section, bool& deferred) {
         if (tile.shown != int(present)) { visibility(widget, present ? shown_self_passive : collapsed); if (auto* l = tile.label.Get()) visibility(l, present ? shown_passive : collapsed); tile.shown = present; }
         if (!present) continue;
         const auto& c = controls[i];
-        const auto label = c.value("label", std::string{});
+        const auto label = c.value("tile", c.value("label", std::string{}));
         if (tile.text != label) { text_value(tile.label.Get(), label); tile.text = label; }
         const auto icon_path = c.value("icon", std::string{});
         if (tile.icon_path != icon_path) {
@@ -1158,7 +1166,7 @@ void Menu::build_slots(const Json& section, bool& deferred) {
         if (!shown && !matches.empty()) shown = &options[matches[size_t(cand)]];
         if (shown) {
             const auto& o = *shown;
-            detail(o.value("title", o.value("label", std::string{})), o.value("subtitle", slot_name), o.value("description", std::string{}), game_icon(o.value("icon", std::string{})));
+            detail(o.value("title", o.value("label", std::string{})), o.value("subtitle", slot_name), "", game_icon(o.value("icon", std::string{})));
             if (const auto hint = o.value("hint", std::string{}); !hint.empty()) paragraph(panel_, hint, muted);
         } else detail(deps_.title, "", "");
         // The slot's own settings as option rows in the window; a click or the settings key focuses them.
@@ -1176,7 +1184,8 @@ void Menu::build_slots(const Json& section, bool& deferred) {
             }
         }
         if (focus_ != Focus::panel) panel_focus_shown_ = -1;
-        if (focused_setting) paragraph(panel_, focused_setting->value("description", std::string{}), muted);
+        // The selection's description, under the rows: the focused setting's note, or the shown move's text.
+        paragraph(panel_, focused_setting ? focused_setting->value("description", std::string{}) : shown ? shown->value("description", std::string{}) : std::string{}, body);
         // Prompts follow the focus: what Confirm, Secondary, Back and the directions do right now.
         const auto& o = options[matches[size_t(cand)]];
         const bool assigned = o.at("id") == slot->at("value");
@@ -1184,6 +1193,7 @@ void Menu::build_slots(const Json& section, bool& deferred) {
         switch (focus_) {
         case Focus::grid:
             action_prompt("accept", "Choose a move for " + slot_label, {{"action", "focus"}, {"target", "list"}}, glyph_accept);
+            action_prompt("close", "Close", {{"action", "close"}}, glyph_back);
             if (has_move) action_prompt("secondary", "Restore the weapon's own attack", {{"action", "clear"}}, glyph_secondary);
             if (!settings.empty()) action_prompt("panel", gamepad_ ? "Slot settings" : "Slot settings (Tab)", {{"action", "focus"}, {"target", "panel"}}, glyph_right_stick_button);
             if (gamepad_) bar_prompt_actions("Slot", "", glyph_dpad_horizontal); else bar_prompt_actions("Slot", "left", glyph_left, "right", glyph_right);
@@ -1219,9 +1229,6 @@ void Menu::build_slots(const Json& section, bool& deferred) {
         revealed_row_ = cand;
     }
     shown_section_ = key;
-    bar_prompt("Close", {{"action", "close"}}, "close", glyph_back, 255);
-    if (gamepad_) bar_prompt("Browse", Json{}, "", glyph_dpad_vertical, 255);
-    else bar_prompt("Browse", Json{}, "up", glyph_up, 255, "down", glyph_down, 255);
     finish(footer_);
 }
 

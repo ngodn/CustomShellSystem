@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "source": "work/movesets/export ability class defaults (Montage), 27 September 2026",
+  "moves": [
+    {
+      "id": "GA_Player_Attack_Katanas_RunningAttack_Axe_C",
+      "display_name": "Sprint light attack",
+      "source_name": "Axatana",
+      "ability": "GA_Player_Attack_Katanas_RunningAttack_Axe_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Axatana/RunningAttack/A_Shared_Attacks_Axeatana_Running_Axe_02_Montage.A_Shared_Attacks_Axeatana_Running_Axe_02_Montage",
+      "skeleton": "SKEL_Human_Skeleton",
+      "slots": [
+        "SL"
+      ],
+      "description": "Axatana (axe): the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+    },
+    {
+      "id": "GA_Player_Attack_Katanas_RunningAttack_C",
+      "display_name": "Sprint light attack",
+      "source_name": "Katanas",
+      "ability": "GA_Player_Attack_Katanas_RunningAttack_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Axatana/RunningAttack/A_Shared_Attacks_Axeatana_Running_Katanas_Montage.A_Shared_Attacks_Axeatana_Running_Katanas_Montage",
+      "skeleton": "SKEL_Human_Skeleton",
+      "slots": [
+        "SL"
+      ],
+      "description": "Axatana (katanas): the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+    },
+    {
+      "id": "GA_Running_Attack_AxeDagger_A_C",
+      "display_name": "Sprint light attack",
+      "source_name": "AxeDagger",
+      "ability": "GA_Running_Attack_AxeDagger_A_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/AxeDagger/A_Shared_Attacks_AxeDagger_Running_B_Montage.A_Shared_Attacks_AxeDagger_Running_B_Montage",
+      "skeleton": "SKEL_Human_Skeleton",
+      "slots": [
+        "SL"
+      ],
+      "description": "Axe & Dagger: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+    },
+    {
+      "id": "GA_Running_Attack_AxeDagger_B_C",
+      "display_name": "Sprint heavy attack",
+      "source_name": "AxeDagger",
+      "ability": "GA_Running_Attack_AxeDagger_B_C",
+      "montage": "/Game/Sparta/Characters/Humans/Player/Animations/HammerChisel/A_MS1_Player_Hammer_Run_Attack5_Montage.A_MS1_Player_Hammer_Run_Attack5_Montage",
+      "skeleton": "SKEL_Human_Skeleton",
+      "slots": [
+        "SH"
+      ],
+      "description": "Axe & Dagger: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+    },
+    {
+      "id": "GA_Running_Attack_B_BattleAxe_C",
+      "display_name": "Sprint heavy attack",
+      "source_name": "BattleAxe",
+      "ability": "GA_Running_Attack_B_BattleAxe_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BattleAxe/A_Shared_Actions_BattleAxe_Running_B_Montage.A_Shared_Actions_BattleAxe_Running_B_Montage",
+      "skeleton": "SKEL_Human_Skeleton",
+      "slots": [
+        "SH"
+      ],
+      "description": "Veteran's Battle Axe: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+    },
+    {
+      "id": "GA_Running_Attack_BattleAxe_C",
+      "display_name": "Sprint light attack",
+      "source_name": "BattleAxe",
+      "ability": "GA_Running_Attack_BattleAxe_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BattleAxe/A_Shared_Attacks_BattleAxe_Running_01_Montage.A_Shared_Attacks_BattleAxe_Running_01_Montage",
+      "skeleton": "SKEL_Human_Skeleton",
+      "slots": [
+        "SL"
+      ],
+      "description": "Veteran's Battle Axe: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+    },
+    {
+      "id": "GA_Running_Attack_BlackNeedle_C",
+      "display_name": "Sprint light attack",
+      "source_name": "BlackNeedle",
+      "ability": "GA_Running_Attack_BlackNeedle_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BlackNeedle/A_Shared_Attacks_BlackNeedle_Running_01_Montage.A_Shared_Attacks_BlackNeedle_Running_01_Montage",
+      "skeleton": "SKEL_Human_Skeleton",
+      "slots": [
+        "SL"
+      ],
+      "description": "Black Needle: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+    },
+    {
+      "id": "GA_Running_Attack_BlackNeedle_B_C",
+      "display_name": "Sprint heavy attack",
+      "source_name": "BlackNeedle",
+      "ability": "GA_Running_Attack_BlackNeedle_B_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BlackNeedle/A_Shared_Attacks_BlackNeedle_Running_B_Montage.A_Shared_Attacks_BlackNeedle_Running_B_Montage",
+      "skeleton": "SKEL_Human_Skeleton",
+      "slots": [
+        "SH"
+      ],
+      "description": "Black Needle: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+    },
+    {
+      "id": "GA_Running_Attack_ClockworkScythe_C",
+      "display_name": "Sprint light attack",
+      "source_name": "Scythe",
+      "ability": "GA_Running_Attack_ClockworkScythe_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/A_Shared_Attacks_Scythe_Running_Montage.A_Shared_Attacks_Scythe_Running_Montage",
+      "skeleton": "SKEL_Human_Skeleton",
+      "slots": [
+        "SL"
+      ],
+      "description": "Clockwork Scythe: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+    },
+    {
+      "id": "GA_Running_Attack_ClockworkScythe_B_C",
+      "display_name": "Sprint heavy attack",
+      "source_name": "Scythe",
+      "ability": "GA_Running_Attack_ClockworkScythe_B_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/RunningB/A_Shared_Attacks_Scythe_Running_B_02_Montage.A_Shared_Attacks_Scythe_Running_B_02_Montage",
+      "skeleton": "SKEL_Human_Skeleton",
+      "slots": [
+        "SH"
+      ],
+      "description": "Clockwork Scythe: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+    },
+    {
+      "id": "GA_Player_HadernsSword_RunningAttack_C",
+      "display_name": "Sprint light attack",
+      "source_name": "HadernSword",
+      "ability": "GA_Player_HadernsSword_RunningAttack_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HadernSword/A_Shared_Attacks_HadernSword_Running_A_Montage.A_Shared_Attacks_HadernSword_Running_A_Montage",
+      "skeleton": "SKEL_Human_Skeleton",
+      "slots": [
+        "SL"
+      ],
+      "description": "The Iconoclast: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+    },
+    {
+      "id": "GA_Player_HadernsSword_RunningAttack_B_C",
+      "display_name": "Sprint heavy attack",
+      "source_name": "HadernSword",
+      "ability": "GA_Player_HadernsSword_RunningAttack_B_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HadernSword/A_Shared_Attacks_HadernSword_Running_B_Montage.A_Shared_Attacks_HadernSword_Running_B_Montage",
+      "skeleton": "SKEL_Human_Skeleton",
+      "slots": [
+        "SH"
+      ],
+      "description": "The Iconoclast: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+    },
+    {
+      "id": "GA_Running_Attack_HeavyHammer_C",
+      "display_name": "Sprint light attack",
+      "source_name": "HeavyHammer",
+      "ability": "GA_Running_Attack_HeavyHammer_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HeavyHammer/A_Shared_Attacks_HeavyHammer_Running_03_Montage.A_Shared_Attacks_HeavyHammer_Running_03_Montage",
+      "skeleton": "SKEL_Human_Skeleton",
+      "slots": [
+        "SL"
+      ],
+      "description": "Obsidian Hammer: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+    },
+    {
+      "id": "GA_Running_Attack_HeavyHammer_B_C",
+      "display_name": "Sprint heavy attack",
+      "source_name": "HeavyHammer",
+      "ability": "GA_Running_Attack_HeavyHammer_B_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HeavyHammer/A_Shared_Attacks_HeavyHammer_Running_02_Montage.A_Shared_Attacks_HeavyHammer_Running_02_Montage",
+      "skeleton": "SKEL_Human_Skeleton",
+      "slots": [
+        "SH"
+      ],
+      "description": "Obsidian Hammer: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+    },
+    {
+      "id": "GA_Running_Attack_MartyrsBlade_C",
+      "display_name": "Sprint light attack",
+      "source_name": "MartyrsBlade",
+      "ability": "GA_Running_Attack_MartyrsBlade_C",
+      "montage": "/Game/Sparta/Characters/Humans/Player/Animations/MartyrsBlade/AM_Shells_MartyrsBlade_Run_Attack.AM_Shells_MartyrsBlade_Run_Attack",
+      "skeleton": "SKEL_Human_Skeleton",
+      "slots": [
+        "SL"
+      ],
+      "description": "Great Martyr's Blade: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+    },
+    {
+      "id": "GA_Running_Attack_MartyrsBlade_B_C",
+      "display_name": "Sprint heavy attack",
+      "source_name": "MartyrsBlade",
+      "ability": "GA_Running_Attack_MartyrsBlade_B_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/MartyrsBlade/RunningB/A_Shared_Attacks_MartyrsBlade_Running_B_Stab_Montage.A_Shared_Attacks_MartyrsBlade_Running_B_Stab_Montage",
+      "skeleton": "SKEL_Human_Skeleton",
+      "slots": [
+        "SH"
+      ],
+      "description": "Great Martyr's Blade: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+    }
+  ]
+}

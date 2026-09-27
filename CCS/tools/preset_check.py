@@ -27,7 +27,8 @@ DATA = ROOT / 'data'
 LIGHT = ['L1', 'L2', 'L3', 'LF', 'LC']
 HEAVY = ['H1', 'H2', 'H3', 'HF', 'HC']
 RANGED = ['R']
-SLOTS = LIGHT + HEAVY + RANGED
+SPRINT = ['SL', 'SH']
+SLOTS = LIGHT + HEAVY + RANGED + SPRINT
 CHAIN = {'L1', 'L2', 'L3', 'H1', 'H2', 'H3'}
 FINISHER = {'LF', 'HF'}
 HOLD = {'LC', 'HC'}
@@ -46,7 +47,7 @@ def load_catalogs() -> dict[str, dict]:
         elif slots & FINISHER:
             fits = set(FINISHER)
         else:
-            fits = set(CHAIN)
+            fits = set(CHAIN) | set(SPRINT)
         payload = m.get('payload') or {}
         moves[m['id']] = {'id': m['id'], 'origin': 'player', 'type': 'hold' if fits == set(HOLD) else 'tarstone_finisher' if fits == set(FINISHER) else 'player',
                           'source': m.get('source_name', ''), 'name': m.get('display_name', ''), 'montage': m['montage'],
@@ -57,12 +58,16 @@ def load_catalogs() -> dict[str, dict]:
         name = m.get('display_name', '')
         ranged = any(w in name for w in ('Shoot', 'Crossbow', 'Throw', 'Bow '))
         moves[m['id']] = {'id': m['id'], 'origin': 'enemy', 'type': 'enemy', 'source': m.get('source_name', ''), 'name': name,
-                          'montage': m['montage'], 'ability': '', 'fits': {'R'} if ranged else CHAIN | FINISHER, 'original_slots': [],
+                          'montage': m['montage'], 'ability': '', 'fits': {'R'} if ranged else CHAIN | FINISHER | set(SPRINT), 'original_slots': [],
                           'info': f"{m.get('length', 0):.1f} s, {m.get('hit_windows', 0)} hit window(s), motion warp {'yes' if m.get('motion_warp') else 'no'}"}
     ranged_catalog = json.loads((DATA / 'ranged-catalog.json').read_text())
     for m in ranged_catalog['moves']:
         moves[m['id']] = {'id': m['id'], 'origin': 'player', 'type': 'player', 'source': m.get('source_name', ''), 'name': m.get('display_name', ''),
                           'montage': m['montage'], 'ability': m.get('ability', ''), 'fits': {'R'}, 'original_slots': ['R'], 'info': 'sidearm fire'}
+    running = json.loads((DATA / 'running-catalog.json').read_text())
+    for m in running['moves']:
+        moves[m['id']] = {'id': m['id'], 'origin': 'player', 'type': 'player', 'source': m.get('source_name', ''), 'name': m.get('display_name', ''),
+                          'montage': m['montage'], 'ability': m.get('ability', ''), 'fits': set(SPRINT), 'original_slots': m.get('slots', []), 'info': 'sprint attack'}
     return moves
 
 
@@ -93,7 +98,7 @@ def check_file(path: Path, moves: dict[str, dict], fix: bool) -> list[str]:
         errors.append(f'{path.name}: description is required (what the combo is for and why the moves fit)')
     montages = by_montage(moves)
     filled = 0
-    for chain, slots in (('light_chain', LIGHT), ('heavy_chain', HEAVY), ('ranged', RANGED)):
+    for chain, slots in (('light_chain', LIGHT), ('heavy_chain', HEAVY), ('ranged', RANGED), ('sprint', SPRINT)):
         block = data.get(chain, {})
         if not isinstance(block, dict):
             errors.append(f'{path.name}: {chain} must be an object')

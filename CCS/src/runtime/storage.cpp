@@ -80,6 +80,7 @@ nlohmann::json Storage::preset_to_json(const PresetData& preset) {
     nlohmann::json light = nlohmann::json::object();
     nlohmann::json ranged = nlohmann::json::object();
     nlohmann::json heavy = nlohmann::json::object();
+    nlohmann::json sprint = nlohmann::json::object();
 
     for (const auto& slot : preset.slots) {
         nlohmann::json sj = {
@@ -103,7 +104,8 @@ nlohmann::json Storage::preset_to_json(const PresetData& preset) {
         const char* s_str = slot_to_string(slot.slot);
         if (slot.slot <= SlotId::LC) light[s_str] = sj;
         else if (slot.slot <= SlotId::HC) heavy[s_str] = sj;
-        else ranged[s_str] = sj;
+        else if (slot.slot == SlotId::R) ranged[s_str] = sj;
+        else sprint[s_str] = sj;
     }
 
     return {
@@ -114,7 +116,8 @@ nlohmann::json Storage::preset_to_json(const PresetData& preset) {
         {"base_weapon", preset.base_weapon},
         {"light_chain", light},
         {"heavy_chain", heavy},
-        {"ranged", ranged}
+        {"ranged", ranged},
+        {"sprint", sprint}
     };
 }
 
@@ -170,6 +173,7 @@ std::optional<PresetData> Storage::json_to_preset(const nlohmann::json& j) {
         parse_chain("light_chain", true);
         parse_chain("heavy_chain", false);
         if (j.contains("ranged")) parse_chain("ranged", false);
+        if (j.contains("sprint")) parse_chain("sprint", false);
         return preset;
     } catch (const std::exception&) {
         return std::nullopt;

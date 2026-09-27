@@ -14,10 +14,11 @@ static std::unique_ptr<Core> g_core;
 namespace {
 const char* slot_titles[] = {"L1  Light attack 1", "L2  Light attack 2", "L3  Light attack 3", "LF  Light finisher", "LC  Light charged (hold)",
                              "H1  Heavy attack 1", "H2  Heavy attack 2", "H3  Heavy attack 3", "HF  Heavy finisher", "HC  Heavy charged (hold)",
-                             "R   Ranged (sidearm fire)"};
-constexpr unsigned slot_count = 11;
-enum class Role { Chain, Finisher, Hold, Ranged };
-Role slot_role(unsigned i) { return i == 10 ? Role::Ranged : (i == 3 || i == 8) ? Role::Finisher : (i == 4 || i == 9) ? Role::Hold : Role::Chain; }
+                             "R   Ranged (sidearm fire)", "SL  Sprint light attack", "SH  Sprint heavy attack"};
+const char* tile_labels[] = {"L1", "L2", "L3", "LF", "LC", "H1", "H2", "H3", "HF", "HC", "R", "S+L", "S+H"};
+constexpr unsigned slot_count = 13;
+enum class Role { Chain, Finisher, Hold, Ranged, Sprint };
+Role slot_role(unsigned i) { return i == 10 ? Role::Ranged : i >= 11 ? Role::Sprint : (i == 3 || i == 8) ? Role::Finisher : (i == 4 || i == 9) ? Role::Hold : Role::Chain; }
 // What a move may do in a slot. Chain moves fit any chain position of either chain; finisher
 // montages only the finisher slots; hold montages (wind-up plus charged release) only the hold
 // slots; sidearm fire only the ranged slot. Enemy melee fits the melee slots that are not holds,
@@ -27,12 +28,13 @@ bool eligible(const MoveDefinition& move, unsigned i) {
     if (move.origin == MoveOrigin::EnemyHumanoid) {
         const bool ranged = move.display_name.find("Shoot") != std::string::npos || move.display_name.find("Crossbow") != std::string::npos ||
                             move.display_name.find("Throw") != std::string::npos || move.display_name.find("Bow ") != std::string::npos;
-        return ranged ? role == Role::Ranged : (role == Role::Chain || role == Role::Finisher);
+        return ranged ? role == Role::Ranged : (role == Role::Chain || role == Role::Finisher || role == Role::Sprint);
     }
     if (move.compatible_slots & (1u << unsigned(SlotId::R))) return role == Role::Ranged;
+    if (move.category == "Running") return role == Role::Sprint;   // sprint attacks carry their run-in
     if (move.is_hold) return role == Role::Hold;
     if (move.is_finisher) return role == Role::Finisher;
-    return role == Role::Chain;
+    return role == Role::Chain || role == Role::Sprint;
 }
 std::string pretty(std::string text) {
     for (const char* prefix : {"Attack_", "Player_"}) if (text.starts_with(prefix)) text.erase(0, std::strlen(prefix));
@@ -42,7 +44,7 @@ std::string pretty(std::string text) {
 std::string weapon_icon(const std::string& source) {
     static const std::pair<const char*, const char*> icons[] = {
         {"HadernSword", "HadernSword"}, {"HadernsSword", "HadernSword"}, {"AxeDagger", "AxeDagger"}, {"BattleAxe", "BattleAxe"}, {"MartyrsBlade", "MartyrsBlade"},
-        {"HeavyHammer", "HeavyHammer"}, {"Axatana", "Axatana"}, {"BlackNeedle", "BlackNeedle"}, {"Scythe", "ClockworkScythe"}, {"ClockworkScythe", "ClockworkScythe"}};
+        {"HeavyHammer", "HeavyHammer"}, {"Axatana", "Axatana"}, {"Katanas", "Axatana"}, {"BlackNeedle", "BlackNeedle"}, {"Scythe", "ClockworkScythe"}, {"ClockworkScythe", "ClockworkScythe"}};
     for (const auto& [key, name] : icons) if (source == key || source.starts_with(std::string(key) + "_")) return std::string("/Game/Sparta/UI/Icons/Weapons/T_UI_Icon_") + name + ".T_UI_Icon_" + name;
     return {};
 }
@@ -59,7 +61,7 @@ std::string enemy_name(const std::string& source) {
 std::string weapon_name(const std::string& source) {
     static const std::pair<const char*, const char*> names[] = {
         {"HadernSword", "The Iconoclast"}, {"HadernsSword", "The Iconoclast"}, {"AxeDagger", "Axe & Dagger"}, {"BattleAxe", "Veteran's Battle Axe"},
-        {"MartyrsBlade", "Great Martyr's Blade"}, {"HeavyHammer", "Obsidian Hammer"}, {"Axatana", "Axatana"}, {"BlackNeedle", "Black Needle"},
+        {"MartyrsBlade", "Great Martyr's Blade"}, {"HeavyHammer", "Obsidian Hammer"}, {"Axatana", "Axatana"}, {"Katanas", "Axatana (katanas)"}, {"BlackNeedle", "Black Needle"},
         {"Scythe", "Clockwork Scythe"}, {"ClockworkScythe", "Clockwork Scythe"}, {"Combos", "Smert's fists"}};
     for (const auto& [key, name] : names) if (source == key || source.starts_with(std::string(key) + "_")) return name;
     return source.empty() ? "Other" : source;
@@ -91,6 +93,7 @@ Core::Core(const CcsLoaderContext* loader) {
     else {
         if (!catalog_.load_enemy(root_dir_ / "enemy-catalog.json")) log("Enemy catalog unavailable: " + catalog_.error());
         if (!catalog_.load_ranged(root_dir_ / "ranged-catalog.json")) log("Ranged catalog unavailable: " + catalog_.error());
+        if (!catalog_.load_running(root_dir_ / "running-catalog.json")) log("Running catalog unavailable: " + catalog_.error());
     }
     // Move options once: id, label and weapon group, sorted by weapon then name.
     std::vector<const MoveDefinition*> moves;
@@ -144,7 +147,7 @@ void Core::apply_slots_from_settings() {
 }
 void Core::save_settings_or_log() {
     if (combat_) {
-        std::array<std::string, 11> slots; for (size_t i = 0; i < slots.size(); ++i) { slots[i] = combat_->slot_move(SlotId(i)); settings_->set_tuning(i, combat_->tuning(SlotId(i))); }
+        std::array<std::string, 13> slots; for (size_t i = 0; i < slots.size(); ++i) { slots[i] = combat_->slot_move(SlotId(i)); settings_->set_tuning(i, combat_->tuning(SlotId(i))); }
         settings_->set_slots(std::move(slots));
     }
     if (!settings_->save()) last_message_ = "Settings could not be saved";
@@ -315,7 +318,7 @@ nlohmann::json Core::model() const {
                 {"description", std::string("Which weapon you hold while this move plays. Move's weapon: the weapon this move belongs to appears in your hand for the swing, then yours comes back. Hits still use your weapon.")
                     + (mesh_ready ? "" : " No model is known for this move's weapon, so your own stays.")}});
         }
-        customize.push_back({{"type", "choice"}, {"id", sid}, {"label", slot_to_string(slot)}, {"name", slot_titles[i] + 4},
+        customize.push_back({{"type", "choice"}, {"id", sid}, {"label", slot_to_string(slot)}, {"tile", tile_labels[i]}, {"name", slot_titles[i] + 4},
             {"value", id}, {"icon", id.empty() ? weapon_icon(current_weapon_) : move_icon(id)}, {"options", std::move(options)}, {"settings", settings_rows},
             {"settings_key", speed_id + "/" + tune.hit_damage + "/" + tune.weapon + (mesh_ready ? "/m" : "")}, {"enabled", combat_ != nullptr && catalog_error_.empty()}});
     }

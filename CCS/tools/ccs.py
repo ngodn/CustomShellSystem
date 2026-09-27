@@ -82,7 +82,7 @@ BANNER = ROOT / 'assets/inventory-logo-1120x373-v2.png'
 
 def stage_data() -> None:
     copy_verified(ROOT / 'data/catalog.json', MOD_DEST / 'catalog.json')
-    for extra in ('enemy-catalog.json', 'ranged-catalog.json'):
+    for extra in ('enemy-catalog.json', 'ranged-catalog.json', 'running-catalog.json'):
         if (ROOT / 'data' / extra).is_file():
             copy_verified(ROOT / 'data' / extra, MOD_DEST / extra)
     if BANNER.is_file():
@@ -135,7 +135,7 @@ def release_files(version: str, out: Path) -> dict[str, bytes]:
         'CCS/THIRD_PARTY_NOTICES.txt': (ROOT / 'packaging/THIRD_PARTY_NOTICES.txt').read_bytes(),
         'CCS/assets/banner.png': BANNER.read_bytes(),
     }
-    for name in ('catalog.json', 'enemy-catalog.json', 'ranged-catalog.json'):
+    for name in ('catalog.json', 'enemy-catalog.json', 'ranged-catalog.json', 'running-catalog.json'):
         files['CCS/' + name] = (ROOT / 'data' / name).read_bytes()
     for icon in sorted((ROOT / 'assets/enemy-icons').glob('*.png')):
         files['CCS/assets/enemy-icons/' + icon.name] = icon.read_bytes()

@@ -213,11 +213,15 @@ const Json* Menu::highlighted_setting() const {
 // Tiles: L1 L2 L3 LF LC over H1 H2 H3 HF HC, with R at the right of both rows. Left/right run along
 // a row and through R; up/down swap rows.
 int Menu::grid_move(int slot, int dx, int dy) {
-    static const int light[] = {0, 1, 2, 3, 4, 10}, heavy[] = {5, 6, 7, 8, 9, 10};
-    if (dy) { if (slot == 10) return dy < 0 ? 4 : 9; return slot < 5 ? slot + 5 : slot - 5; }
-    const int* row = (slot >= 5 && slot < 10) ? heavy : light;
-    int at = 0; for (int i = 0; i < 6; ++i) if (row[i] == slot) at = i;
-    return row[(at + 6 + dx) % 6];
+    static const int light[] = {0, 1, 2, 3, 4, 11, 10}, heavy[] = {5, 6, 7, 8, 9, 12, 10};
+    if (dy) {
+        if (slot == 10) return dy < 0 ? 11 : 12;
+        if (slot == 11) return 12; if (slot == 12) return 11;
+        return slot < 5 ? slot + 5 : slot - 5;
+    }
+    const int* row = ((slot >= 5 && slot < 10) || slot == 12) ? heavy : light;
+    int at = 0; for (int i = 0; i < 7; ++i) if (row[i] == slot) at = i;
+    return row[(at + 7 + dx) % 7];
 }
 void Menu::poll_input(const PlayerContext& player, uint64_t now, bool typing) {
     auto* pc = player.pc; if (!pc) return;
@@ -534,7 +538,7 @@ void Menu::act(const Json& action) {
         int wanted = row_;
         if (name == "slot") { wanted = action.at("index").get<int>(); focus_ = Focus::grid; }   // a tile was clicked
         else if (name == "slot_delta") wanted = row_ + action.at("delta").get<int>();
-        else if (rows == 11) wanted = grid_move(row_, action.value("dx", 0), action.value("dy", 0));
+        else if (rows == 13) wanted = grid_move(row_, action.value("dx", 0), action.value("dy", 0));
         else wanted = row_ + action.value("dx", 0);
         row_ = rows ? (wanted % rows + rows) % rows : 0;
         slot_options_key_.clear();   // the build reloads the candidates and lands on the assigned one

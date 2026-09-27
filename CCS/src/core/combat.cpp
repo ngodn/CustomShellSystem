@@ -36,6 +36,12 @@ int Combat::classify(const std::string& full) {
     if (name.starts_with("GA_") && !name.starts_with("GA_Player") &&
         (ends_with(name, "Attack_Primary") || ends_with(name, "Attack_Primary_InfiniteAmmo") || name == "GA_SidearmRangedAttackBase" ||
          name == "GA_SidearmRangedBurstAttackBase" || name == "GA_SidearmRangedChargedAttackBase")) return int(SlotId::R);
+    // Sprint attacks: GA_Running_Attack_<Weapon>[_B], GA_Running_Attack_B_<Weapon>, GA_Player_<Weapon>_RunningAttack[_B],
+    // GA_Player_Attack_Katanas_RunningAttack[_Axe]. The B variants are the sprint heavy.
+    if (name.find("Running") != std::string::npos && (name.starts_with("GA_Running") || name.starts_with("GA_Player"))) {
+        const bool heavy = ends_with(name, "_B") || name.find("_Attack_B_") != std::string::npos || name.find("RunningAttack_B") != std::string::npos;
+        return int(heavy ? SlotId::SH : SlotId::SL);
+    }
     if (!full.starts_with("GA_Player")) return -1;
     if (ends_with(name, "_A_Finisher") || ends_with(name, "_A3_Finisher")) return int(SlotId::LF);
     if (ends_with(name, "_B_Finisher") || ends_with(name, "_B3_Finisher")) return int(SlotId::HF);
@@ -79,6 +85,7 @@ std::string Combat::weapon_mesh_path(const std::string& source) {
     static const std::pair<const char*, const char*> meshes[] = {
         {"HeavyHammer", "/Game/Sparta/Weapons/Player/HeavyHammer/Art/Mesh/SM_ObsidianHammer_01"},
         {"Axatana", "/Game/Sparta/Weapons/Player/Axatana/Katanas/Katanas/SM_Axatana_Axe_Offset"},
+        {"Katanas", "/Game/Sparta/Weapons/Player/Axatana/Katanas/Katanas/SM_Axatana_Katana_R_Model"},
         {"Scythe", "/Game/Sparta/Weapons/Player/Clockwork_Scythe/Art/Mesh/SM_Clockwork_Scythe"},
         {"ClockworkScythe", "/Game/Sparta/Weapons/Player/Clockwork_Scythe/Art/Mesh/SM_Clockwork_Scythe"},
         {"BattleAxe", "/Game/Sparta/Weapons/Player/BattleAxe/SM_Gragu_BattleAxe_01"},

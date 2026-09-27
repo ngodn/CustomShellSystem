@@ -12,6 +12,8 @@ public:
     bool load_enemy(const std::filesystem::path& path);
     // Sidearm fire montages (data/ranged-catalog.json): the ranged slot's player candidates.
     bool load_ranged(const std::filesystem::path& path);
+    // Sprint attacks (data/running-catalog.json): the sprint slots' player candidates.
+    bool load_running(const std::filesystem::path& path);
     size_t enemy_count() const { return enemy_count_; }
     const std::vector<MoveDefinition>& moves() const { return moves_; }
     const std::vector<TarstoneDefinition>& tarstones() const { return tarstones_; }
