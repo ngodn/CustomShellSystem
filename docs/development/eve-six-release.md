@@ -47,3 +47,11 @@ The independent reference check completed: all ten mesh/animation references occ
 User explicitly authorized backing up and removing the installed split trials and old Eve package before installing the new combined trio. All six current installations were copied to `backups/eve-six1` and checked against the fresh audit hashes. `receipt.json` records source paths and hashes. Installed copies have not been removed yet. Recheck them against this receipt before replacement so another agent's changed files are not discarded.
 
 The verification copy uses the old thumbnail and must not become the public download. Final candidate still requires the selected portrait and live review.
+
+## Replacement transaction prepared
+
+`install_six.py` uses only the six explicitly recorded packages. It requires the game stopped, checks installed files and workspace backups against their hashes, stages the final candidate outside Paks, moves old directories out of mount discovery, and publishes the verified trio. On an installation failure it restores all retired directories. It does not launch the game or alter CSS runtime files.
+
+Workspace-only fixture checks cover success and an injected verification failure after publication (`swap-check1/results.json`). Success leaves only the new trio; failure restores all six old packages byte-for-byte; both preserve backups. These exercise filesystem transaction behavior, not real game installation.
+
+A live `inventory_inspect` request timed out waiting for a developer acknowledgement. Main runtime status instead acknowledged that request as `Unknown CSS command`. Do not repeat this unsupported helper or install a different CSS core over Claude's work. Use available screenshot/recording controls and user review for the eventual combined build.
