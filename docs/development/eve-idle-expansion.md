@@ -138,3 +138,9 @@ Decoded five native ACL samples per packaged clip and compared their 379 common 
 Removed only superseded `pack1/legacy` and `pack1/readback` extraction duplicates after successful E6 verification, reclaiming 3,248,547,958 bytes. Kept both candidate trios, all cook/source assets, logs and verification receipts. Cleanup inventory: `cleanup-pack1.json`. The game remained running; installation still awaits the requested closure.
 
 Handoff: install `pack2/CSS_EveStellarBlade_eins0fx_P` using the existing backed-up package installer after the game closes. Do not use `pack1`. No build processes remain running. Closure has remained pending across three goal turns, with the same shipping-game PID observed; offline work progressed through packaging, contact correction and compression checks during that time. Live acceptance and final release version/ZIP/BBCode remain unfinished.
+
+## E6 installed for live review
+
+After the user confirmed closure, verified that no shipping-game process remained. Installed `pack2/CSS_EveStellarBlade_eins0fx_P` using `tools/css_package.py install ... --replace`, which exited 0. Rollback files and their manifest are in `backups/packages-0018`. Independently rehashed every installed container against `pack2/verification.json` and every retired file against the backup manifest. Receipt: `work/eve-idle1/installed-e6.json`.
+
+Only the Eve package was replaced. No CSS runtime or extension code was deployed. The public v1.2.0 ZIP remains unchanged. Asked the user to return to the game and open CSS → LOCOMOTION for the first live review. The candidate retains its baseline version label until release acceptance; use its container hashes to distinguish it. Gameplay acceptance remains pending.
