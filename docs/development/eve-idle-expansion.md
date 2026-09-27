@@ -64,3 +64,13 @@ The preview now composes positive scales separately from rotation, matching the 
 Validation: a three-joint chain with non-uniform scales and two 90-degree rotations produced the expected endpoint (8,-4,0). All 211 Default Idle frames remain within 0.000016 cm of the old preview; the tiny difference comes from retaining nearly-unit source scale rather than ignoring it. Receipt: `work/eve-idle1/scale-evaluator-check.json`. The second batch now renders; inspected `review2/joints-0.png`. Full motion, skinning and in-game acceptance remain pending.
 
 Additional compatibility evidence: the source clip SkeletonGuid is `A2B5776B-4857537B-77166983-647708BD`, whereas the freshly loaded base skeleton GUID is `2C8DEB63-499D8C56-DAA3AD80-AF949D71`. Therefore the missing mapping is not merely an exporter range check. Asked the user asynchronously for any ESAP source project, skeleton or requirements link. Known-joint previews are diagnostic assumptions based on the installed skeleton, not proof that every reference index has the author's intended bone identity.
+
+## E4 offline candidates
+
+A different GUID alone does not prove the common body indices are incompatible. The fresh base skeleton matches all 3267 retained names, parents and reference transforms exactly. Added indices are interleaved after existing bones, including finger endpoints. Their exact identities remain unconfirmed. The requested author requirements page was age-gated in the web tool, so no requirements claim was derived from it.
+
+Prepared all 14 references as provisional 54-bone body/finger candidates in `work/eve-idle1/e4`, retaining complete 234-track audits separately. These candidates use the base-game mapping and must be visually validated; they are not evidence that the extra indices have been resolved. Added an explicit `--allow-positive-scale` preparation option. Default behavior still requires unit scale. Old preparation outputs for peaceful idles 02 through 04 match byte-for-byte (`prepare-regression.json`).
+
+Source mesh import exited 0 (`work/eve26/idle-e4-source.log`). The complete retarget batch also exited 0 (`idle-e4-retarget.log`), producing 14 private `/Game/CSS/AnimLab/RT_E4_Idle700` through `RT_E4_Idle713` candidates and 101 sampled poses per clip. Result: `work/eve-idle1/e4/retarget-result.json`. Protected Black Pearl mesh and shared skeleton hashes remain unchanged.
+
+The existing source mesh bind has 379 entries and evaluated target poses have 388 entries, including virtual bones. Before release, compare this authoring state against the exact accepted v1.2.0 cooked rig; do not infer compatibility from an old bone-count label alone. No public animation names, package manifest or installed files have been changed.

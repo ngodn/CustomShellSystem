@@ -19,6 +19,8 @@ def main():
     parser.add_argument('--clip-map', type=Path, help='Short output labels mapped to decoded source directory names')
     parser.add_argument('--revision', default='')
     parser.add_argument('--source-yaw', type=int, choices=(0, 90), default=0)
+    parser.add_argument('--allow-positive-scale', action='store_true',
+                        help='Preserve positive animated scale for offline retarget candidates')
     args = parser.parse_args()
     if args.clip_map:
         sources = json.loads(args.clip_map.read_text())
@@ -83,7 +85,9 @@ def main():
                                  ('translation', 'translations', 'translationTimes', 'Translation'),
                                  ('rotation', 'rotations', 'rotationTimes', 'Rotation'),
                                  ('scale', 'scales', 'scaleTimes', 'Scale3D')]})
-                assert np.allclose(keys[-1]['scale'], 1, atol=.0001)
+                scale = np.asarray(keys[-1]['scale'])
+                assert np.isfinite(scale).all() and np.all(scale > 0)
+                assert args.allow_positive_scale or np.allclose(scale, 1, atol=.0001)
                 if args.source_yaw and parent == -1:
                     orient_root(keys[-1])
             tracks.append(dict(name=bone['name'], keys=keys))
@@ -103,7 +107,8 @@ def main():
     (args.output/'batch.json').write_text(json.dumps(
         [[name, sources[name]] for name in args.clips], indent=2)+'\n')
     (args.output/'batch-config.json').write_text(json.dumps(dict(revision=args.revision,
-        source_yaw_degrees=args.source_yaw, source_basis=basis.tolist()), indent=2)+'\n')
+        source_yaw_degrees=args.source_yaw, source_basis=basis.tolist(),
+        preserve_positive_scale=args.allow_positive_scale), indent=2)+'\n')
 
 
 if __name__ == '__main__':
