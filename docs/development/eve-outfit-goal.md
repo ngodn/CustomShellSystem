@@ -32,6 +32,10 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**Knitwear surface-seeded collision trial measured:** `fit_knit_surface_collision.py` completes with exit 0 and writes `knit-spheres2.json`. From 4,962 candidates it selects 32 spheres. For the same 1,741 nearby body vertices, rest-pose coverage gaps improve to median 0.6672 cm, p95 1.8515 cm and maximum 3.0781 cm. Minimum proxy-vertex clearance is 0.3357 cm, with no proxy vertices inside. This is substantially better than the bone-seeded recipe, but still leaves centimetre-scale body undercoverage. It is not accepted or imported.
+
+The clearance calculation checks proxy vertices, not full triangles. Bone assignment uses the source vertex's dominant weight, so animation and morph coverage remain unverified. Do not treat the zero inside-vertex count as proof of safe cloth contact. Keep this result as a bounded offline experiment; do not launch another native simulation with known coverage gaps. Original render assets and gameplay physics remain unchanged.
+
 **Knitwear bone-seeded sphere recipe rejected for coverage:** `fit_planet_tail_collision.py --knit`3689 exits0 and writes `knit-spheres1.json`. It uses inscribed body spheres with0.15 cm surface inset, explicit multi-ray containment checks and torso/upper-arm seeds instead of the tail-only calf seeds. All proxy vertices clear the candidate, minimum0.4695 cm, but1,741 nearby body surface vertices have median3.9321 cm,p9510.1037 cm,max10.9298 cm distance outside the sphere union. This is not an acceptable full cloth collider and was not imported. Clearing the garment alone is insufficient.
 
 Next candidate must derive placement from body surface coverage rather than repeating bone-centred spheres or inflating this recipe. Keep the negative result and avoid another native simulation with these known gaps. Gameplay PA_Body and all render/source assets remain unchanged. This trial does not establish whether local backstop constraints could complement a different coarse collision set.
