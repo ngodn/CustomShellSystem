@@ -67,6 +67,15 @@ def main():
                                controls=len(recipe['controls']), palettes=len(recipe.get('palettes', []))))
     assert len(outfit['variants']) == 6
     assert len({v['id'] for v in outfit['variants']}) == 6
+    # Runtime templates apply to every variant, but these toggle IDs belong only to Black Pearl.
+    outfit.get('templates', {}).pop('combinations', None)
+    for template in outfit.get('templates', {}).get('physics', []):
+        if template['name'] == 'Normal':
+            template['name'] = 'Default'
+        for variant in outfit['variants']:
+            controls = {c['id'] for c in variant['customize']['controls']}
+            if not set(template['values']) <= controls:
+                raise ValueError('Shared physics preset references a missing control')
     encoded = json.dumps(manifest, separators=(',', ':')) + '\n'
     if len(encoded.encode()) > 256 * 1024:
         raise ValueError('Combined manifest exceeds runtime size limit')
@@ -74,7 +83,7 @@ def main():
     (output / 'report.json').write_text(json.dumps(dict(
         variants=report, manifest_bytes=len(encoded.encode()),
         pending=['Replace thumbnail with user-selected image', 'Build combined asset containers',
-                 'Update container hashes', 'Review inherited Black Pearl templates for variant scope',
+                 'Update container hashes',
                  'Verify combined package and live outfit switching']), indent=2) + '\n')
     print(output)
 

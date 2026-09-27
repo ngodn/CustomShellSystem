@@ -25,3 +25,11 @@ Vacation Bikini and Casual Knitwear are retained working names, not confirmed of
 ## Remaining assembly
 
 Combine cooked assets while preserving accepted base dependencies and rejecting conflicting duplicate asset paths. Round-trip the combined container and compare decoded payloads. Replace thumbnail, update hashes and verify the embedded manifest/resources. Review outfit switching, colors, modular controls, physics and persistence in game. Only then replace release archives. Do not modify Claude-owned runtime changes.
+
+## Combined asset container verified
+
+`build_six_assets.py` completed into `work/eve26/six-assets1`. All 323 unique asset paths are under `/Game/CSS/`. The sole candidate overlap, ABP_KnitFeet1 in Alice and Knitwear, has identical decoded uasset/uexp hashes. Combined retoc verification passed, then extraction using game dependencies plus only the combined mod matched every decoded header and every uexp/ubulk/uptnl payload. No installed package or release ZIP changed.
+
+The container preserves the entire accepted base dependency set, including unused legacy outfit assets. Only six variants are exposed by the staged manifest. Removing unused cooked assets is deferred until dependency reachability can be proved.
+
+Runtime source confirms outfit-level templates have no variant filtering. Removed Black Pearl-only clothing combinations from the combined metadata to avoid no-op presets on other outfits. Individual toggles remain intact. Retained shared physics presets, checked their control IDs exist in all six variants, and renamed their Normal display label to Default. This does not modify CSS runtime code.
