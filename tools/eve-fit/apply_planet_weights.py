@@ -1,13 +1,19 @@
 """Save and fresh-load verify Prototype suit weights without changing its geometry."""
-import json,hashlib
+import argparse,json,hashlib,sys
 from pathlib import Path
 import bpy
 import numpy as np
 root=Path(__file__).resolve().parents[2];work=root/'work/eve26'
 name='Eve Prototype Planet Diving Suit - Suit'
-output=work/'planet-suit-f6.blend';assert not output.exists()
-data=json.loads((work/'planet-weight-repair/planet.mesh.json').read_text())
-audit=json.loads((work/'planet-weight-repair/planet.mesh.audit.json').read_text())
+p=argparse.ArgumentParser(description=__doc__)
+p.add_argument('--source',type=Path,default=work/'planet-suit-f5.blend')
+p.add_argument('--candidate',type=Path,default=work/'planet-weight-repair')
+p.add_argument('--output',type=Path,default=work/'planet-suit-f6.blend')
+a=p.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+output=a.output;assert not output.exists() and not output.with_suffix('.json').exists()
+raw=(a.candidate/'planet.mesh.json').read_bytes();data=json.loads(raw)
+audit=json.loads((a.candidate/'planet.mesh.audit.json').read_text())
+assert hashlib.sha256(raw).hexdigest()==audit['output_sha256']
 start=audit['parts'][0]['points'];count=audit['parts'][1]['points']
 def load(path):
  bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -20,7 +26,7 @@ def geometry_digest(obj):
   points=np.empty(count*3,dtype=np.float32);key.data.foreach_get('co',points)
   h.update(key.name.encode());h.update(points.tobytes());h.update(str((key.value,key.relative_key.name)).encode())
  return h.hexdigest()
-obj=load(work/'planet-suit-f5.blend');before=geometry_digest(obj)
+obj=load(a.source);before=geometry_digest(obj)
 weights=[(v-start,data['bones'][b]['name'],w) for v,b,w in data['influences'] if start<=v<start+count]
 obj.vertex_groups.clear()
 for bone in sorted({b for _,b,_ in weights}):obj.vertex_groups.new(name=bone)
@@ -33,5 +39,6 @@ expected={(v,b):w for v,b,w in weights};assert actual.keys()==expected.keys()
 error=max(abs(actual[k]-v) for k,v in expected.items());assert error<1e-6
 report=dict(points=count,groups=len(obj.vertex_groups),weight_rows=len(weights),max_weight_reload_error=error,
             geometry_and_shape_keys_unchanged=True,geometry_digest=before,
-            scope='Garment weights persisted and fresh-load verified. Footwear and accessories retain prior weights. Not a full-motion or game acceptance.')
-(work/'planet-suit-f6.json').write_text(json.dumps(report,indent=2)+'\n');print(report)
+            source=str(a.source),candidate_sha256=hashlib.sha256(raw).hexdigest(),
+            scope='Candidate garment weights persisted and fresh-load verified; geometry and shape keys unchanged. Not full-motion or game acceptance.')
+output.with_suffix('.json').write_text(json.dumps(report,indent=2)+'\n');print(report)
