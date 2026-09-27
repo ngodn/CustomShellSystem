@@ -5,6 +5,19 @@
 Four reviews before the alpha (hot path, menu, core and runtime, and a comparison with the CSS
 and CSSX sources). None found a crash or memory-safety defect. What changed:
 
+- Hold mechanics, read from the blueprints (`work/release-hardening/kismet_dump.py` over the
+  CUE4Parse exports): the handler's NotifyBegin needs the unlock tag, the `Input.Attack.<x>.Hold`
+  tag and the resolve cost, then `BPC_Player_ComboCounter::StartHoldAttack` sets the montage to
+  the holding play rate and starts two timers, minimum (0.5 s) and maximum (1.05 s). Release
+  inside the window (NotifyTick without the input tag) or the window's end calls
+  `StopHoldAttack`: held time within the thresholds fires the success event (normal-first:
+  the `_Hold` selector; hold-first: none, the montage just continues), otherwise the fail event
+  (hold-first: the normal cut). The maximum timer fires the success on its own. So the carried
+  window keeps the original's absolute start (commit 463aca1); scaling it to the replacement's
+  first hit delayed the charge by 0.4 s on the Axatana and a normal hold hit the fail path.
+- Classifier coverage: 165 `GA_Player_*` classes in the export; the Duality Stone doubles now
+  map to their step. Still unmapped on purpose: the Scythe Grinder, Fists Smert memory steps,
+  the plunging attack, executions, and the abstract bases.
 - Tick phases fail on their own (`Core::phase`): player lookup, combat, asset scan, menu,
   status. A failure is logged when its message changes, retried after a second, and the phase
   is switched off after sixty failures in a row. Before, any exception in `Core::tick` stopped
