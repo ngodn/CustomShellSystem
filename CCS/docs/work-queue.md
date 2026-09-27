@@ -1,5 +1,33 @@
 # CCS work queue
 
+## State on 28 September 2026, night (v1.0.0-alpha.1)
+
+Core `ccs_core-1.0.0-alpha.1-8208485836d6.dll` is live (commit 40b9144). Thirteen slots (the
+sprint pair S+L and S+H joined on the 28th); the sidearm slot R is parked.
+
+- Long presses now charge with "Move's own" feel. Hadern's-style weapons decide a charge inside
+  a hold-handler notify state on the normal swing (`ANS_HoldAttackHandler`, window about 0.24 to
+  0.52 s, hold 0.5 to 1.05 s at play rate 0.2, fires `Event.Attack.Selector.<x>.Hold`); hold-first
+  weapons run `ANS_HAH_*` on the `_Hold` montage with a fail event that starts the cut. A
+  replacement without that notify could never charge or fall back. `build_hold_carry` clones the
+  replacement and appends the original's handler rows with the window scaled first hit to first
+  hit (else length to length), links re-pointed, absolute link method. Cached per original in
+  `Slot::holds` (four deep), logged once as "CCS hold window carried". The handler requires
+  `Character.Unlocked.HoldAttack.Light/Heavy` on the character; whether the current save has it
+  is unverified, so test a hold with no slot assigned first.
+- `status.json` `combat.recent` lists the last 24 player attacks the hook saw with the slot and
+  what happened (swapped, nothing assigned, no slot, companion clip, rig). An empty slot logs once:
+  "CCS attack seen: <class> is slot <S>, nothing assigned". Use this to read the L2 then H2 report.
+- Sidearm slot parked behind `sidearm_slot_enabled = false` (`ccs_types.hpp`): the classifier
+  never returns R, the tile is hidden (`hidden` on the control, grid rows six wide), presets skip
+  the R entry. Everything stays in the code for later.
+- Crash retest this evening, nothing reproduced: sidearm draw, stow and slingshot fire pass
+  through untouched; a Genessa astral double running the player's own sword abilities was skipped
+  by the owner guard on every swing; five sprint-light swaps with the cleaned Sicario copy, zero
+  failures. Death into the Harbinger or Stray Genessa is still untested by the user.
+- The working tree shows `CCS/presets/*.json` and one enemy icon deleted (not by the tool;
+  `ccs.py` only copies presets). Restore with `git checkout -- CCS/presets` if that was not meant.
+
 ## State on 27 September 2026, evening (v1.0.0-alpha.1)
 
 The product build is live and verified in play: the native page (CSSX recipe, CSS icons and
