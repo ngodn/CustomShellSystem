@@ -9,11 +9,12 @@ from mathutils import Vector
 root=Path(__file__).resolve().parents[2]
 work=root/'work/eve26'
 parser=argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--outfit',choices=('prototype','skin'),default='prototype')
+parser.add_argument('--outfit',choices=('prototype','skin','bikini'),default='prototype')
 a=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 skin=a.outfit=='skin'
-folder=work/('s16colors' if skin else 'p14colors')
-meshpath=work/('skin-f16-import/skin.mesh.json' if skin else 'planet-f14-import/planet.mesh.json')
+bikini=a.outfit=='bikini'
+folder=work/('b1colors' if bikini else 's16colors' if skin else 'p14colors')
+meshpath=work/('bikini-import1/bikini.mesh.json' if bikini else 'skin-f16-import/skin.mesh.json' if skin else 'planet-f14-import/planet.mesh.json')
 out=folder/'model';out.mkdir(exist_ok=False)
 data=json.loads(meshpath.read_text())
 proof=json.loads((folder/'verification.json').read_text())
@@ -26,7 +27,7 @@ scene.display.shading.show_shadows=True
 scene.display.shading.background_type='WORLD'
 scene.world.color=(.12,.12,.12)
 scene.render.resolution_x=600;scene.render.resolution_y=850;scene.render.resolution_percentage=100
-hidden=(17,18,19,20,21) if skin else (18,19,20,21,22,23,24,25)
+hidden=(29,30,31) if bikini else (17,18,19,20,21) if skin else (18,19,20,21,22,23,24,25)
 faces=[f for f in data['faces'] if f[3] not in hidden]
 # Undo the exporter winding reflection for a Blender review.
 faces=[[*reversed(f[:3]),f[3]] for f in faces]
@@ -45,8 +46,9 @@ cam=bpy.data.objects.new('Review camera',bpy.data.cameras.new('Review camera'));
 cam.data.type='ORTHO';cam.data.ortho_scale=1.95;scene.camera=cam
 source=root.parent/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work/textures_staged'
 for palette in ['original']+[p['id'] for p in proof['palettes']]:
-    for atlas,slots in ([('SS_Suit',[16])] if skin else [('PD_Suit',[16]),('PD_Acc',[17,26,27,28])]):
-        path=source/atlas/'T_ShellKeeper_Hair_01_BC.png' if palette=='original' else folder/f'{palette}-{atlas.lower()}.png'
+    for atlas,entry in proof['atlases'].items():
+        slots=entry['slots']
+        path=source/('BK_Trim' if atlas=='BK_Metal' else atlas)/'T_ShellKeeper_Hair_01_BC.png' if palette=='original' else folder/f'{palette}-{atlas.lower()}.png'
         image=bpy.data.images.load(str(path),check_existing=True)
         for slot in slots:mesh.materials[slot].node_tree.nodes.active.image=image
     for name,pos in [('front',(2,-4,1.1)),('back',(-2,4,1.1))]:

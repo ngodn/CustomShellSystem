@@ -32,6 +32,11 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**Bikini garment palettes installed:** `prepare_prototype_palettes.py --outfit bikini` builds `b1colors` with five independent clothing color controls and Original plus Oasis, Sunset, Deep Sea, Orchid and Pearl Shore. Recipe/resource roundtrip and unchanged cooked asset hashes pass. Existing motion, shape and visibility controls remain exact. Blender front/back review of all six appearances inspected in `b1colors/model/review.jpg`; colors reach top, bottom, ties/lace, heels and rings without body targets. Shorts require a garment-only grayscale floor to dye the authored pure-black fabric; see [Bikini palette notes](eve-bikini-palettes.md). Model review omits hair and uses bind pose, so heel articulation is established by separate motion reviews, not this render.
+
+Installed with backup `backups/packages-0015`, installed trio hashes verified in `b1colors/installed.json`. No game launch. Live palette/material/reset/persistence checks and full body/anatomical/hair controls remain unfinished. These three isolated fitting trials are not a replacement for the complete final Eve package.
+
+
 **Skin Suit garment palettes installed:** Generalized palette authoring/render helpers with `--outfit skin`. `s16colors/CSS_EveSkinFit16_P` preserves all previous controls and byte-identical cooked assets while adding Suit panels, Inset panels and Hardware color controls, each Default plus11 swatches. Five palettes: Lunar Pearl, Rose Alloy, Abyssal Blue, Jade Circuit and Crimson Eclipse, plus built-in Original. Only garment slot16 is targeted; body, lining and hair slots are excluded. Source-specific masks use the inspected SS_Suit atlas, not Prototype thresholds. Packed resource/manifest verification passes. Blender generated twelve Original/palette front/back views; atlas sheet plus Abyssal front and Jade back were inspected. This is a UV/color-placement review, not game shader validation.
 
 Installed while the game was closed, backup `backups/packages-0014`; hashes match `s16colors/installed.json`. No game launch. Live color application, Original restoration, skin/anatomical/hair customization and profile checks are still unfinished. Continue Bikini clothing palettes independently; do not wait for restart.

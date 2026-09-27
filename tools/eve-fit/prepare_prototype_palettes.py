@@ -18,13 +18,14 @@ from css_package import verify
 
 WORK = ROOT/'work/eve26'
 parser=argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--outfit',choices=('prototype','skin'),default='prototype')
+parser.add_argument('--outfit',choices=('prototype','skin','bikini'),default='prototype')
 args=parser.parse_args()
 SKIN=args.outfit=='skin'
-OUT = WORK/('s16colors' if SKIN else 'p14colors')
-BASE = WORK/('s16motion' if SKIN else 'p14motion')
+BIKINI=args.outfit=='bikini'
+OUT = WORK/('b1colors' if BIKINI else 's16colors' if SKIN else 'p14colors')
+BASE = WORK/('b1motion' if BIKINI else 's16motion' if SKIN else 'p14motion')
 SOURCE = ROOT.parent/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work/textures_staged'
-STEM = 'CSS_EveSkinFit16_P' if SKIN else 'CSS_EveFit14_P'
+STEM = 'CSS_EveBikiniFit1_P' if BIKINI else 'CSS_EveSkinFit16_P' if SKIN else 'CSS_EveFit14_P'
 PALETTES = [
     ('xion_ember', 'Xion Ember', '542D3A', '55B5AA', 'C58E64'),
     ('wasteland_recon', 'Wasteland Recon', '3E5147', 'D7AF66', '88918B'),
@@ -45,6 +46,18 @@ if SKIN:
         ('crimson_eclipse','Crimson Eclipse','542431','96606A','B8ADB5'),
     ]
     PARTS=[('suit_color','Suit panels','garment'),('inset_color','Inset panels','accent'),('hardware_color','Hardware','metal')]
+
+if BIKINI:
+    PALETTES=[
+        ('oasis','Oasis','267B83','194D56','DDD5B5','385B58','CAB67C'),
+        ('sunset','Sunset','BA5C57','763D53','F0CCA6','874A51','CDA77E'),
+        ('deep_sea','Deep Sea','344E88','252F53','AABEDB','303D66','C2CCD6'),
+        ('orchid','Orchid','8E608F','513C65','DDBECF','654961','CDB9C9'),
+        ('pearl_shore','Pearl Shore','DED8C8','B9C9C9','688F94','C5BFAF','BBA271'),
+    ]
+    PARTS=[('top_color','Top color','garment'),('shorts_color','Shorts color','garment'),
+           ('ties_color','Ties and lace','accent'),('shoes_color','Heels color','leather'),
+           ('metal_color','Buckles and rings','metal')]
 
 def rgba(value):
     return [round(int(value[i:i+2],16)/255,7) for i in (0,2,4)]+[1]
@@ -78,8 +91,10 @@ recipe['palettes']=[dict(id=p[0],name=p[1],values={part[0]:rgba(p[i+2]) for i,pa
 previews={p[0]:[] for p in PALETTES}
 proof={}
 atlases=[('SS_Suit',[16])] if SKIN else [('PD_Suit',[16]),('PD_Acc',[17,26,27,28])]
+bikini_sources={'BK_Top':('BK_Top',0),'BK_Shorts':('BK_Shorts',1),'BK_Trim':('BK_Trim',2),'CS_Heels':('CS_Heels',3),'BK_Metal':('BK_Trim',4)}
+if BIKINI:atlases=[('BK_Top',[18]),('BK_Shorts',[20]),('BK_Trim',[16,17,19,21]),('CS_Heels',[23,24,25,26,27]),('BK_Metal',[22,28])]
 for atlas,slots in atlases:
-    path=SOURCE/atlas/'T_ShellKeeper_Hair_01_BC.png'
+    path=SOURCE/(bikini_sources[atlas][0] if BIKINI else atlas)/'T_ShellKeeper_Hair_01_BC.png'
     tex=np.asarray(Image.open(path).convert('RGBA').resize((2048,2048),Image.Resampling.LANCZOS),dtype=np.float32)/255
     rgb=tex[:,:,:3];r,g,b=rgb.transpose(2,0,1)
     # These thresholds are specific to the inspected garment atlases.
@@ -94,31 +109,39 @@ for atlas,slots in atlases:
         masks=[panels,inset,hardware]
     else:
         masks=[cloth,tech,trim]
+    if BIKINI:
+        masks=[np.ones_like(r) if i==bikini_sources[atlas][1] else np.zeros_like(r) for i in range(len(PARTS))]
     assert np.max(sum(masks))<=1.00001
     detail=[];layers={}
-    for (identity,_,_),mask in zip(PARTS,masks):
+    for part_index,((identity,_,_),mask) in enumerate(zip(PARTS,masks)):
+        if not np.any(mask>.8):continue
         light=np.max(linear(rgb),axis=2)
         reference=float(np.percentile(light[mask>.8],90))
         gray=np.clip(light/max(reference,.001),0,1)
+        if BIKINI and atlas=='BK_Shorts':
+            # The authored bottom fabric is pure black, so multiplication cannot
+            # dye it. Lift only this garment atlas while retaining its pattern.
+            gray=.55+.45*gray
         alpha=mask*tex[:,:,3]
         layer=np.dstack([srgb(gray)]*3+[alpha])
         filename=f'dye-{atlas.lower()}-{identity}.png'
         Image.fromarray(np.rint(np.clip(layer,0,1)*255).astype(np.uint8)).save(metadata/filename)
         layers[identity]=filename
         manifest['resources'][filename]=resource_info(metadata/filename)
-        detail.append((gray,alpha))
+        detail.append((part_index,gray,alpha))
     recipe['surfaces'].append(dict(id=atlas.lower(),parameter='BaseColorMap  non VT',slots=slots,resolution=2048,layers=layers))
     proof[atlas]=dict(source_sha256=digest(path),slots=slots,coverage=[float(m.mean()) for m in masks])
     for p in PALETTES:
         composite=linear(rgb).copy()
-        for i,(gray,alpha) in enumerate(detail):
+        for i,gray,alpha in detail:
             color=linear(np.array(rgba(p[i+2])[:3]))
             composite=composite*(1-alpha[:,:,None])+gray[:,:,None]*color*alpha[:,:,None]
         image=Image.fromarray(np.rint(np.clip(srgb(composite),0,1)*255).astype(np.uint8))
         image.save(OUT/f'{p[0]}-{atlas.lower()}.png')
         previews[p[0]].append(image)
 assert all(set(p['values'])=={x[0] for x in PARTS} for p in recipe['palettes'])
-assert all(slot>=16 and slot not in (18,19,20) for s in recipe['surfaces'] for slot in s['slots'])
+allowed=set(range(16,29)) if BIKINI else {16} if SKIN else {16,17,26,27,28}
+assert all(slot in allowed for s in recipe['surfaces'] for slot in s['slots'])
 validate(recipe)
 (metadata/'manifest.json').write_text(json.dumps(manifest,separators=(',',':'))+'\n')
 trio=OUT/STEM;trio.mkdir()
@@ -128,7 +151,7 @@ for suffix in ('.ucas','.utoc'):
 with (OUT/'pack.log').open('w') as log:
     subprocess.run([str(DEFAULT_REPAK),'pack',str(OUT/'metadata'),str(trio/(STEM+'.pak')),'--version','V8B'],check=True,stdout=log,stderr=subprocess.STDOUT)
 assert verify(trio)==manifest
-sheet=Image.new('RGB',(1500,650),'#242424');draw=ImageDraw.Draw(sheet)
+sheet=Image.new('RGB',(1500,40+300*len(atlases)),'#242424');draw=ImageDraw.Draw(sheet)
 for i,p in enumerate(PALETTES):
     draw.text((i*300+10,10),p[1],fill='white')
     for j,img in enumerate(previews[p[0]]):sheet.paste(img.resize((300,300)),(i*300,40+j*300))
