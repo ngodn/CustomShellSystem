@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "preset_name": "Cultist_Procession",
+  "author": "_eins0fx",
+  "description": "Made for Clockwork Scythe and Cursed Child, this mixes shaft sweeps with a Cultist torch ending and a Spear Lady spin. The two finishers provide the ritual flourishes, while the chains stay with player weapon animations.",
+  "base_weapon": "Scythe",
+  "light_chain": {
+    "L1": {
+      "move_id": "GA_Player_Attack_ClockworkScythe_A1_C",
+      "type": "player",
+      "source": "Scythe",
+      "ability": "GA_Player_Attack_ClockworkScythe_A1_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/Hold_V2/A_Shared_Attacks_Scythe_A_02_V2_Montage.A_Shared_Attacks_Scythe_A_02_V2_Montage"
+    },
+    "L2": {
+      "move_id": "GA_Player_Attack_ClockworkScythe_A2_C",
+      "type": "player",
+      "source": "Scythe",
+      "ability": "GA_Player_Attack_ClockworkScythe_A2_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/Hold_V2/A_Shared_Attacks_Scythe_AA_02_Montage.A_Shared_Attacks_Scythe_AA_02_Montage"
+    },
+    "L3": {
+      "move_id": "GA_Player_Attack_ClockworkScythe_A3_C",
+      "type": "player",
+      "source": "Scythe",
+      "ability": "GA_Player_Attack_ClockworkScythe_A3_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/Hold_V2/A_Shared_Attacks_Scythe_AAA_03_Montage.A_Shared_Attacks_Scythe_AAA_03_Montage"
+    },
+    "LF": {
+      "move_id": "enemy:A_CultistBase_Attacks_Torch_Attack_new_06_Montage",
+      "type": "enemy",
+      "source": "CultistBase",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Enemies/CultistBase/Animation/Attacks/A_CultistBase_Attacks_Torch_Attack_new_06_Montage.A_CultistBase_Attacks_Torch_Attack_new_06_Montage"
+    },
+    "LC": {
+      "move_id": "GA_Player_Attack_ClockworkScythe_A1_Hold_C",
+      "type": "hold",
+      "source": "Scythe",
+      "ability": "GA_Player_Attack_ClockworkScythe_A1_Hold_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/Hold_V2/A_Shared_Attacks_Scythe_A_02_Hold_V2_Montage.A_Shared_Attacks_Scythe_A_02_Hold_V2_Montage"
+    }
+  },
+  "heavy_chain": {
+    "H1": {
+      "move_id": "GA_Player_BlackNeedle_B1_C",
+      "type": "player",
+      "source": "BlackNeedle",
+      "ability": "GA_Player_BlackNeedle_B1_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BlackNeedle/HoldV2/A_Shared_Attacks_BlackNeedle_B_CUT_Montage.A_Shared_Attacks_BlackNeedle_B_CUT_Montage"
+    },
+    "H2": {
+      "move_id": "GA_Player_BlackNeedle_B2_C",
+      "type": "player",
+      "source": "BlackNeedle",
+      "ability": "GA_Player_BlackNeedle_B2_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BlackNeedle/HoldV2/A_Shared_Attacks_BlackNeedle_BB_CUT_Montage.A_Shared_Attacks_BlackNeedle_BB_CUT_Montage"
+    },
+    "H3": {
+      "move_id": "GA_Player_Attack_ClockworkScythe_B3_C",
+      "type": "player",
+      "source": "Scythe",
+      "ability": "GA_Player_Attack_ClockworkScythe_B3_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/Hold_V2/A_Shared_Attacks_Scythe_BBB_10_Montage.A_Shared_Attacks_Scythe_BBB_10_Montage"
+    },
+    "HF": {
+      "move_id": "enemy:A_CultistSpearLady_Attack_Spins_03_Montage",
+      "type": "enemy",
+      "source": "CultistSpearLady",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Enemies/CultistSpearLady/Art/Animation/Attacks/A_CultistSpearLady_Attack_Spins_03_Montage.A_CultistSpearLady_Attack_Spins_03_Montage"
+    },
+    "HC": {
+      "move_id": "GA_Player_Attack_ClockworkScythe_B3_Hold_C",
+      "type": "hold",
+      "source": "Scythe",
+      "ability": "GA_Player_Attack_ClockworkScythe_B3_Hold_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/Hold_V2/A_Shared_Attacks_Scythe_BBB_10_Hold_V2_Montage.A_Shared_Attacks_Scythe_BBB_10_Hold_V2_Montage"
+    }
+  },
+  "ranged": {
+    "R": {
+      "move_id": "ranged:A_Shared_CursedChild_Shot_Montage",
+      "type": "player",
+      "source": "CursedChild",
+      "ability": "GA_CursedChildAttack_Primary_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Actions/CursedChild/A_Shared_CursedChild_Shot_Montage.A_Shared_CursedChild_Shot_Montage"
+    }
+  }
+}

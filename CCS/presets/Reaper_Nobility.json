@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "preset_name": "Reaper_Nobility",
+  "author": "_eins0fx",
+  "description": "Made for Clockwork Scythe, this reorders scythe sweeps around an Aristocrat overhead ending. The heavy finisher is a deliberate 7.633-second four-window combo; reserve it for a large opening.",
+  "base_weapon": "Scythe",
+  "light_chain": {
+    "L1": {
+      "move_id": "GA_Player_Attack_ClockworkScythe_A3_C",
+      "type": "player",
+      "source": "Scythe",
+      "ability": "GA_Player_Attack_ClockworkScythe_A3_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/Hold_V2/A_Shared_Attacks_Scythe_AAA_03_Montage.A_Shared_Attacks_Scythe_AAA_03_Montage"
+    },
+    "L2": {
+      "move_id": "GA_Player_BlackNeedle_B1_C",
+      "type": "player",
+      "source": "BlackNeedle",
+      "ability": "GA_Player_BlackNeedle_B1_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BlackNeedle/HoldV2/A_Shared_Attacks_BlackNeedle_B_CUT_Montage.A_Shared_Attacks_BlackNeedle_B_CUT_Montage"
+    },
+    "L3": {
+      "move_id": "GA_Player_Attack_ClockworkScythe_A2_C",
+      "type": "player",
+      "source": "Scythe",
+      "ability": "GA_Player_Attack_ClockworkScythe_A2_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/Hold_V2/A_Shared_Attacks_Scythe_AA_02_Montage.A_Shared_Attacks_Scythe_AA_02_Montage"
+    },
+    "LF": {
+      "move_id": "enemy:A_Aristocrat_Attack_PunchOverhead_Montage",
+      "type": "enemy",
+      "source": "Aristocrat",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Enemies/Aristocrat/Animation/Attacks/A_Aristocrat_Attack_PunchOverhead_Montage.A_Aristocrat_Attack_PunchOverhead_Montage"
+    },
+    "LC": {
+      "move_id": "GA_Player_Attack_ClockworkScythe_A3_Hold_C",
+      "type": "hold",
+      "source": "Scythe",
+      "ability": "GA_Player_Attack_ClockworkScythe_A3_Hold_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/Hold_V2/A_Shared_Attacks_Scythe_AAA_03_Hold_60fps_V2_Montage.A_Shared_Attacks_Scythe_AAA_03_Hold_60fps_V2_Montage"
+    }
+  },
+  "heavy_chain": {
+    "H1": {
+      "move_id": "GA_Player_Attack_ClockworkScythe_B3_C",
+      "type": "player",
+      "source": "Scythe",
+      "ability": "GA_Player_Attack_ClockworkScythe_B3_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/Hold_V2/A_Shared_Attacks_Scythe_BBB_10_Montage.A_Shared_Attacks_Scythe_BBB_10_Montage"
+    },
+    "H2": {
+      "move_id": "GA_Player_Attack_ClockworkScythe_B1_C",
+      "type": "player",
+      "source": "Scythe",
+      "ability": "GA_Player_Attack_ClockworkScythe_B1_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/Hold_V2/A_Shared_Attacks_Scythe_B_02_Montage.A_Shared_Attacks_Scythe_B_02_Montage"
+    },
+    "H3": {
+      "move_id": "GA_Player_Attack_ClockworkScythe_B2_C",
+      "type": "player",
+      "source": "Scythe",
+      "ability": "GA_Player_Attack_ClockworkScythe_B2_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/Hold_V2/A_Shared_Attacks_Scythe_BB_03_Montage.A_Shared_Attacks_Scythe_BB_03_Montage"
+    },
+    "HF": {
+      "move_id": "enemy:A_Aristocrat_Attack_Combo_02_Montage",
+      "type": "enemy",
+      "source": "Aristocrat",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Enemies/Aristocrat/Animation/Attacks/A_Aristocrat_Attack_Combo_02_Montage.A_Aristocrat_Attack_Combo_02_Montage"
+    },
+    "HC": {
+      "move_id": "GA_Player_Attack_ClockworkScythe_B2_Hold_C",
+      "type": "hold",
+      "source": "Scythe",
+      "ability": "GA_Player_Attack_ClockworkScythe_B2_Hold_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/Hold_V2/A_Shared_Attacks_Scythe_BB_03_Hold_02_V2_Montage.A_Shared_Attacks_Scythe_BB_03_Hold_02_V2_Montage"
+    }
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "preset_name": "Brigand_Rhythm",
+  "author": "_eins0fx",
+  "description": "Made for the Hadern sword and a Crossbow, this keeps the familiar sword chains and gives their endings a Brigand rhythm. The light finisher has two swipes; the heavy finisher steps into a longer two-hit swing.",
+  "base_weapon": "HadernSword",
+  "light_chain": {
+    "L1": {
+      "move_id": "GA_Player_HadernsSword_A1_C",
+      "type": "player",
+      "source": "HadernSword",
+      "ability": "GA_Player_HadernsSword_A1_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HadernSword/A_Shared_HadernSword_A_03_Montage.A_Shared_HadernSword_A_03_Montage"
+    },
+    "L2": {
+      "move_id": "GA_Player_HadernsSword_A2_C",
+      "type": "player",
+      "source": "HadernSword",
+      "ability": "GA_Player_HadernsSword_A2_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HadernSword/A_Shared_HadernSword_AA_Montage.A_Shared_HadernSword_AA_Montage"
+    },
+    "L3": {
+      "move_id": "GA_Player_HadernsSword_A3_C",
+      "type": "player",
+      "source": "HadernSword",
+      "ability": "GA_Player_HadernsSword_A3_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HadernSword/A_Shared_HadernSword_AAA_Montage.A_Shared_HadernSword_AAA_Montage"
+    },
+    "LF": {
+      "move_id": "enemy:A_BrigBase_Attacks_2hit_Swipes_Montage",
+      "type": "enemy",
+      "source": "Brigands",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Enemies/Brigands/BrigBase/Animation/Attacks/A_BrigBase_Attacks_2hit_Swipes_Montage.A_BrigBase_Attacks_2hit_Swipes_Montage"
+    },
+    "LC": {
+      "move_id": "GA_Player_Attack_HadernSword_A1_Hold_C",
+      "type": "hold",
+      "source": "HadernSword",
+      "ability": "GA_Player_Attack_HadernSword_A1_Hold_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HadernSword/A_Shared_HadernSword_A_Hold_Montage.A_Shared_HadernSword_A_Hold_Montage"
+    }
+  },
+  "heavy_chain": {
+    "H1": {
+      "move_id": "GA_Player_HadernsSword_B1_C",
+      "type": "player",
+      "source": "HadernSword",
+      "ability": "GA_Player_HadernsSword_B1_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HadernSword/A_Shared_HadernSword_B_Montage.A_Shared_HadernSword_B_Montage"
+    },
+    "H2": {
+      "move_id": "GA_Player_HadernsSword_B2_C",
+      "type": "player",
+      "source": "HadernSword",
+      "ability": "GA_Player_HadernsSword_B2_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HadernSword/A_Shared_Attacks_HadernSword_BB_02_Montage.A_Shared_Attacks_HadernSword_BB_02_Montage"
+    },
+    "H3": {
+      "move_id": "GA_Player_HadernsSword_B3_C",
+      "type": "player",
+      "source": "HadernSword",
+      "ability": "GA_Player_HadernsSword_B3_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HadernSword/A_Shared_HadernSword_BBB_Montage.A_Shared_HadernSword_BBB_Montage"
+    },
+    "HF": {
+      "move_id": "enemy:A_BrigBase_Attack_Gap_Swings_2hit_Montage",
+      "type": "enemy",
+      "source": "Brigands",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Enemies/Brigands/BrigBase/Animation/Attacks/A_BrigBase_Attack_Gap_Swings_2hit_Montage.A_BrigBase_Attack_Gap_Swings_2hit_Montage"
+    },
+    "HC": {
+      "move_id": "GA_Player_Attack_HadernsSword_B1_Hold_C",
+      "type": "hold",
+      "source": "HadernSword",
+      "ability": "GA_Player_Attack_HadernsSword_B1_Hold_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HadernSword/A_Shared_HadernSword_B_Hold_Montage.A_Shared_HadernSword_B_Hold_Montage"
+    }
+  },
+  "ranged": {
+    "R": {
+      "move_id": "ranged:A_Shells_Crossbow_Shoot_Quick_Montage",
+      "type": "player",
+      "source": "Crossbow",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Humans/Player/Animations/Sidearm/A_Shells_Crossbow_Shoot_Quick_Montage.A_Shells_Crossbow_Shoot_Quick_Montage"
+    }
+  }
+}

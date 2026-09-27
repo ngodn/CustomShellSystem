@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "preset_name": "Quarry_Breaker",
+  "author": "_eins0fx",
+  "description": "Made for Battle Axe, this reorders its cuts around downward shaft swings. Miner finishers are deliberate commitments: the light ending is a 6.667-second single strike, and the heavy ending is a six-second two-window combo.",
+  "base_weapon": "BattleAxe",
+  "light_chain": {
+    "L1": {
+      "move_id": "GA_Player_Attack_BattleAxe_A3_C",
+      "type": "player",
+      "source": "BattleAxe",
+      "ability": "GA_Player_Attack_BattleAxe_A3_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BattleAxe/Temp/A_Shared_Attacks_BattleAxe_AAA_02_Montage.A_Shared_Attacks_BattleAxe_AAA_02_Montage"
+    },
+    "L2": {
+      "move_id": "GA_Player_HadernsSword_A3_C",
+      "type": "player",
+      "source": "HadernSword",
+      "ability": "GA_Player_HadernsSword_A3_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HadernSword/A_Shared_HadernSword_AAA_Montage.A_Shared_HadernSword_AAA_Montage"
+    },
+    "L3": {
+      "move_id": "GA_Player_Attack_BattleAxe_A2_C",
+      "type": "player",
+      "source": "BattleAxe",
+      "ability": "GA_Player_Attack_BattleAxe_A2_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BattleAxe/Temp/A_Shared_Attacks_BattleAxe_AA_01_Cut_Montage.A_Shared_Attacks_BattleAxe_AA_01_Cut_Montage"
+    },
+    "LF": {
+      "move_id": "enemy:A_Miner_Attacks_Attack_01_Montage",
+      "type": "enemy",
+      "source": "Miner",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Enemies/Miner/Art/Animation/Attacks/A_Miner_Attacks_Attack_01_Montage.A_Miner_Attacks_Attack_01_Montage"
+    },
+    "LC": {
+      "move_id": "GA_Player_Attack_BattleAxe_A3_Hold_C",
+      "type": "hold",
+      "source": "BattleAxe",
+      "ability": "GA_Player_Attack_BattleAxe_A3_Hold_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BattleAxe/Temp/A_Shared_Attacks_BattleAxe_AAA_01_Hold_Montage.A_Shared_Attacks_BattleAxe_AAA_01_Hold_Montage"
+    }
+  },
+  "heavy_chain": {
+    "H1": {
+      "move_id": "GA_Player_Attack_BattleAxe_B3_C",
+      "type": "player",
+      "source": "BattleAxe",
+      "ability": "GA_Player_Attack_BattleAxe_B3_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BattleAxe/Temp/B/A_Shared_Attacks_BattleAxe_BBB_01_Cut_Montage.A_Shared_Attacks_BattleAxe_BBB_01_Cut_Montage"
+    },
+    "H2": {
+      "move_id": "GA_Player_Attack_AxeDagger_B3_C",
+      "type": "player",
+      "source": "",
+      "ability": "GA_Player_Attack_AxeDagger_B3_C",
+      "montage": "/Game/Sparta/Characters/Humans/Player/Animations/HammerChisel/A_MS1_Player_Hammer_bbB_Montage.A_MS1_Player_Hammer_bbB_Montage"
+    },
+    "H3": {
+      "move_id": "GA_Player_Attack_BattleAxe_B2_C",
+      "type": "player",
+      "source": "BattleAxe",
+      "ability": "GA_Player_Attack_BattleAxe_B2_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BattleAxe/Temp/B/A_Shared_Attacks_BattleAxe_BB_03_Cut_Montage.A_Shared_Attacks_BattleAxe_BB_03_Cut_Montage"
+    },
+    "HF": {
+      "move_id": "enemy:A_Miner_Attacks_Combo_05_Montage",
+      "type": "enemy",
+      "source": "Miner",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Enemies/Miner/Art/Animation/Attacks/A_Miner_Attacks_Combo_05_Montage.A_Miner_Attacks_Combo_05_Montage"
+    },
+    "HC": {
+      "move_id": "GA_Player_Attack_BattleAxe_B2_Hold_C",
+      "type": "hold",
+      "source": "BattleAxe",
+      "ability": "GA_Player_Attack_BattleAxe_B2_Hold_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BattleAxe/Temp/B/A_Shared_Attacks_BattleAxe_BB_Hold_03_Montage.A_Shared_Attacks_BattleAxe_BB_Hold_03_Montage"
+    }
+  }
+}

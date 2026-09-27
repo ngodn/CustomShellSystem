@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "preset_name": "Pilgrim_Staff",
+  "author": "_eins0fx",
+  "description": "Made for Black Needle, this treats the shaft as a pilgrim staff with reordered thrusts and wider heavy sweeps. A close Cultist torch motion and a Spear Lady spin supply the endings, with one hunter thrust in the heavy chain.",
+  "base_weapon": "BlackNeedle",
+  "light_chain": {
+    "L1": {
+      "move_id": "GA_Player_BlackNeedle_A2_C",
+      "type": "player",
+      "source": "BlackNeedle",
+      "ability": "GA_Player_BlackNeedle_A2_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BlackNeedle/HoldV2/A_Shared_Attacks_BlackNeedle_AA_CUT_Montage.A_Shared_Attacks_BlackNeedle_AA_CUT_Montage"
+    },
+    "L2": {
+      "move_id": "GA_Player_BlackNeedle_A3_C",
+      "type": "player",
+      "source": "BlackNeedle",
+      "ability": "GA_Player_BlackNeedle_A3_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BlackNeedle/HoldV2/A_Shared_Attacks_BlackNeedle_AAA_CUT_Montage.A_Shared_Attacks_BlackNeedle_AAA_CUT_Montage"
+    },
+    "L3": {
+      "move_id": "GA_Player_BlackNeedle_A1_C",
+      "type": "player",
+      "source": "BlackNeedle",
+      "ability": "GA_Player_BlackNeedle_A1_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BlackNeedle/HoldV2/A_Shared_Attacks_BlackNeedle_A_CUT_Montage.A_Shared_Attacks_BlackNeedle_A_CUT_Montage"
+    },
+    "LF": {
+      "move_id": "enemy:A_CultistBase_Attacks_Torch_Attack_new_06_Montage",
+      "type": "enemy",
+      "source": "CultistBase",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Enemies/CultistBase/Animation/Attacks/A_CultistBase_Attacks_Torch_Attack_new_06_Montage.A_CultistBase_Attacks_Torch_Attack_new_06_Montage"
+    },
+    "LC": {
+      "move_id": "GA_Player_Attack_BlackNeedle_A1_Hold_C",
+      "type": "hold",
+      "source": "BlackNeedle",
+      "ability": "GA_Player_Attack_BlackNeedle_A1_Hold_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BlackNeedle/HoldV2/A_Shared_Attacks_BlackNeedle_Hold_A_02_Montage.A_Shared_Attacks_BlackNeedle_Hold_A_02_Montage"
+    }
+  },
+  "heavy_chain": {
+    "H1": {
+      "move_id": "GA_Player_BlackNeedle_B2_C",
+      "type": "player",
+      "source": "BlackNeedle",
+      "ability": "GA_Player_BlackNeedle_B2_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BlackNeedle/HoldV2/A_Shared_Attacks_BlackNeedle_BB_CUT_Montage.A_Shared_Attacks_BlackNeedle_BB_CUT_Montage"
+    },
+    "H2": {
+      "move_id": "GA_Player_BlackNeedle_B3_C",
+      "type": "player",
+      "source": "BlackNeedle",
+      "ability": "GA_Player_BlackNeedle_B3_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BlackNeedle/HoldV2/A_Shared_Attacks_BlackNeedle_BBB_CUT_Montage.A_Shared_Attacks_BlackNeedle_BBB_CUT_Montage"
+    },
+    "H3": {
+      "move_id": "enemy:A_GrishaHunter_Spear_Attack_Thrust_01_Montage",
+      "type": "enemy",
+      "source": "GrishaHunter",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Enemies/GrishaHunter/Animations/Attacks/A_GrishaHunter_Spear_Attack_Thrust_01_Montage.A_GrishaHunter_Spear_Attack_Thrust_01_Montage"
+    },
+    "HF": {
+      "move_id": "enemy:A_CultistSpearLady_Attack_Spins_03_Montage",
+      "type": "enemy",
+      "source": "CultistSpearLady",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Enemies/CultistSpearLady/Art/Animation/Attacks/A_CultistSpearLady_Attack_Spins_03_Montage.A_CultistSpearLady_Attack_Spins_03_Montage"
+    },
+    "HC": {
+      "move_id": "GA_Player_Attack_BlackNeedle_B1_Hold_C",
+      "type": "hold",
+      "source": "BlackNeedle",
+      "ability": "GA_Player_Attack_BlackNeedle_B1_Hold_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BlackNeedle/HoldV2/A_Shared_Attacks_BlackNeedle_Hold_B_03_Montage.A_Shared_Attacks_BlackNeedle_Hold_B_03_Montage"
+    }
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "preset_name": "Sicario_Crosscut",
+  "author": "_eins0fx",
+  "description": "Made for Axatana in twin-katana form and a Nail Shotgun, this keeps alternating blade cuts and gives both finishers multi-window flurries. It uses Sicario and Twin Sister clips instead of the fifteen-second Sicario combo.",
+  "base_weapon": "Axatana",
+  "light_chain": {
+    "L1": {
+      "move_id": "GA_Player_Attack_Katanas_A1_C",
+      "type": "player",
+      "source": "Axatana",
+      "ability": "GA_Player_Attack_Katanas_A1_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Axatana/A/A_Shared_Attacks_Axeatana_A_02_Montage.A_Shared_Attacks_Axeatana_A_02_Montage"
+    },
+    "L2": {
+      "move_id": "GA_Player_Attack_Katanas_A2_C",
+      "type": "player",
+      "source": "Axatana",
+      "ability": "GA_Player_Attack_Katanas_A2_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Axatana/A/A_Shared_Attacks_Axeatana_AA_Montage.A_Shared_Attacks_Axeatana_AA_Montage"
+    },
+    "L3": {
+      "move_id": "GA_Player_Attack_Katanas_A3_C",
+      "type": "player",
+      "source": "Axatana",
+      "ability": "GA_Player_Attack_Katanas_A3_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Axatana/A/A_Shared_Attacks_Axeatana_AAA_Montage.A_Shared_Attacks_Axeatana_AAA_Montage"
+    },
+    "LF": {
+      "move_id": "enemy:A_Sicario_Test_Attack_2Hit_Swing_Montage",
+      "type": "enemy",
+      "source": "Sicario",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Enemies/Sicario/Animation/Attacks/A_Sicario_Test_Attack_2Hit_Swing_Montage.A_Sicario_Test_Attack_2Hit_Swing_Montage"
+    },
+    "LC": {
+      "move_id": "GA_Player_Attack_Katanas_A1_Hold_C",
+      "type": "hold",
+      "source": "Axatana",
+      "ability": "GA_Player_Attack_Katanas_A1_Hold_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Axatana/A/Hold/A_Shared_Attacks_Axeatana_A_Hold_Montage.A_Shared_Attacks_Axeatana_A_Hold_Montage"
+    }
+  },
+  "heavy_chain": {
+    "H1": {
+      "move_id": "GA_Player_Attack_AxeDagger_A3_C",
+      "type": "player",
+      "source": "",
+      "ability": "GA_Player_Attack_AxeDagger_A3_C",
+      "montage": "/Game/Sparta/Characters/Humans/Player/Animations/HammerChisel/AM_Shells_AxeDagger_3Hit_aaA.AM_Shells_AxeDagger_3Hit_aaA"
+    },
+    "H2": {
+      "move_id": "GA_Player_Attack_Katanas_A1_C",
+      "type": "player",
+      "source": "Axatana",
+      "ability": "GA_Player_Attack_Katanas_A1_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Axatana/A/A_Shared_Attacks_Axeatana_A_02_Montage.A_Shared_Attacks_Axeatana_A_02_Montage"
+    },
+    "H3": {
+      "move_id": "GA_Player_Attack_Katanas_A2_C",
+      "type": "player",
+      "source": "Axatana",
+      "ability": "GA_Player_Attack_Katanas_A2_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Axatana/A/A_Shared_Attacks_Axeatana_AA_Montage.A_Shared_Attacks_Axeatana_AA_Montage"
+    },
+    "HF": {
+      "move_id": "enemy:A_TwinSisters_Attack_Combo_03_Montage",
+      "type": "enemy",
+      "source": "MS1",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Enemies/MS1_TwinSisters/Animation/MS1_Anims/Daggers/Attacks/A_TwinSisters_Attack_Combo_03_Montage.A_TwinSisters_Attack_Combo_03_Montage"
+    },
+    "HC": {
+      "move_id": "GA_Player_Attack_Katanas_A2_Hold_C",
+      "type": "hold",
+      "source": "Axatana",
+      "ability": "GA_Player_Attack_Katanas_A2_Hold_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Axatana/A/Hold/A_Shared_Attacks_Axeatana_AA_Hold_Montage.A_Shared_Attacks_Axeatana_AA_Hold_Montage"
+    }
+  },
+  "ranged": {
+    "R": {
+      "move_id": "ranged:AM_Player_2H_Offhand_Shoot_R_NailShotgun",
+      "type": "player",
+      "source": "NailShotgun",
+      "ability": "GA_NailShotgunAttack_Primary_C",
+      "montage": "/Game/Sparta/Characters/Humans/Player/Animations/Sidearm/AM_Player_2H_Offhand_Shoot_R_NailShotgun.AM_Player_2H_Offhand_Shoot_R_NailShotgun"
+    }
+  }
+}

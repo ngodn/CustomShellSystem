@@ -88,6 +88,11 @@ def stage_data() -> None:
     if BANNER.is_file():
         (MOD_DEST / 'assets').mkdir(parents=True, exist_ok=True)
         copy_verified(BANNER, MOD_DEST / 'assets/banner.png')
+    shipped = ROOT / 'presets'
+    if shipped.is_dir():   # shipped presets are ours by name; a player's own presets have other names
+        (MOD_DEST / 'presets').mkdir(parents=True, exist_ok=True)
+        for preset in shipped.glob('*.json'):
+            copy_verified(preset, MOD_DEST / 'presets' / preset.name)
     icons = ROOT / 'assets/enemy-icons'
     if icons.is_dir():
         (MOD_DEST / 'assets/enemy-icons').mkdir(parents=True, exist_ok=True)

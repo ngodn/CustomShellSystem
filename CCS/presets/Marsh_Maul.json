@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "preset_name": "Marsh_Maul",
+  "author": "_eins0fx",
+  "description": "Made for Heavy Hammer and a Nail Shotgun, this mixes crossing shaft swings with familiar overheads. FrogMama supplies the slow forward slam and overhead finishers, each with one hit window rather than a rapid flurry.",
+  "base_weapon": "HeavyHammer",
+  "light_chain": {
+    "L1": {
+      "move_id": "GA_Player_Attack_AxeDagger_B2_C",
+      "type": "player",
+      "source": "",
+      "ability": "GA_Player_Attack_AxeDagger_B2_C",
+      "montage": "/Game/Sparta/Characters/Humans/Player/Animations/HammerChisel/A_MS1_Player_Hammer_bB_Montage_02.A_MS1_Player_Hammer_bB_Montage_02"
+    },
+    "L2": {
+      "move_id": "GA_Player_Attack_HeavyHammer_A2_C",
+      "type": "player",
+      "source": "HeavyHammer",
+      "ability": "GA_Player_Attack_HeavyHammer_A2_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HeavyHammer/A_Shared_HeavyHammer_Overhead_02_Cut_Montage.A_Shared_HeavyHammer_Overhead_02_Cut_Montage"
+    },
+    "L3": {
+      "move_id": "GA_Player_Attack_BattleAxe_A3_C",
+      "type": "player",
+      "source": "BattleAxe",
+      "ability": "GA_Player_Attack_BattleAxe_A3_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BattleAxe/Temp/A_Shared_Attacks_BattleAxe_AAA_02_Montage.A_Shared_Attacks_BattleAxe_AAA_02_Montage"
+    },
+    "LF": {
+      "move_id": "enemy:A_FrogMama_Attack_Slam_Fwd_Montage",
+      "type": "enemy",
+      "source": "FrogMama",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Enemies/FrogMama/Animations/Attacks/A_FrogMama_Attack_Slam_Fwd_Montage.A_FrogMama_Attack_Slam_Fwd_Montage"
+    },
+    "LC": {
+      "move_id": "GA_Player_Attack_HeavyHammer_A3_Hold_C",
+      "type": "hold",
+      "source": "HeavyHammer",
+      "ability": "GA_Player_Attack_HeavyHammer_A3_Hold_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HeavyHammer/A_Shared_HeavyHammer_Overhead_03_Hold_Montage.A_Shared_HeavyHammer_Overhead_03_Hold_Montage"
+    }
+  },
+  "heavy_chain": {
+    "H1": {
+      "move_id": "GA_Player_Attack_HeavyHammer_A2_C",
+      "type": "player",
+      "source": "HeavyHammer",
+      "ability": "GA_Player_Attack_HeavyHammer_A2_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HeavyHammer/A_Shared_HeavyHammer_Overhead_02_Cut_Montage.A_Shared_HeavyHammer_Overhead_02_Cut_Montage"
+    },
+    "H2": {
+      "move_id": "GA_Player_Attack_BattleAxe_B2_C",
+      "type": "player",
+      "source": "BattleAxe",
+      "ability": "GA_Player_Attack_BattleAxe_B2_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BattleAxe/Temp/B/A_Shared_Attacks_BattleAxe_BB_03_Cut_Montage.A_Shared_Attacks_BattleAxe_BB_03_Cut_Montage"
+    },
+    "H3": {
+      "move_id": "GA_Player_Attack_AxeDagger_B3_C",
+      "type": "player",
+      "source": "",
+      "ability": "GA_Player_Attack_AxeDagger_B3_C",
+      "montage": "/Game/Sparta/Characters/Humans/Player/Animations/HammerChisel/A_MS1_Player_Hammer_bbB_Montage.A_MS1_Player_Hammer_bbB_Montage"
+    },
+    "HF": {
+      "move_id": "enemy:A_FrogMama_Attack_Overhead_Montage",
+      "type": "enemy",
+      "source": "FrogMama",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Enemies/FrogMama/Animations/Attacks/A_FrogMama_Attack_Overhead_Montage.A_FrogMama_Attack_Overhead_Montage"
+    },
+    "HC": {
+      "move_id": "GA_Player_Attack_HeavyHammer_B3_Hold_C",
+      "type": "hold",
+      "source": "HeavyHammer",
+      "ability": "GA_Player_Attack_HeavyHammer_B3_Hold_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HeavyHammer/A_Shared_Attacks_HeavyHammer_BBB_Hold_Montage.A_Shared_Attacks_HeavyHammer_BBB_Hold_Montage"
+    }
+  },
+  "ranged": {
+    "R": {
+      "move_id": "ranged:A_Shells_NailShotgun_Shoot_Quick_Montage",
+      "type": "player",
+      "source": "NailShotgun",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Humans/Player/Animations/Sidearm/A_Shells_NailShotgun_Shoot_Quick_Montage.A_Shells_NailShotgun_Shoot_Quick_Montage"
+    }
+  }
+}

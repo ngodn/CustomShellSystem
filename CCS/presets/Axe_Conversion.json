@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "preset_name": "Axe_Conversion",
+  "author": "_eins0fx",
+  "description": "Made for Axatana in axe form and a Machine Gun, this distributes its axe heavies across both chains with Battle Axe cuts between them. A Brigand axe phrase ends the light chain, while a player axe finisher closes the heavy chain.",
+  "base_weapon": "Axatana",
+  "light_chain": {
+    "L1": {
+      "move_id": "GA_Player_Attack_BattleAxe_A2_C",
+      "type": "player",
+      "source": "BattleAxe",
+      "ability": "GA_Player_Attack_BattleAxe_A2_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BattleAxe/Temp/A_Shared_Attacks_BattleAxe_AA_01_Cut_Montage.A_Shared_Attacks_BattleAxe_AA_01_Cut_Montage"
+    },
+    "L2": {
+      "move_id": "GA_Player_Attack_Axatana_Axe_B1_C",
+      "type": "player",
+      "source": "Axatana",
+      "ability": "GA_Player_Attack_Axatana_Axe_B1_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Axatana/B/TransformAndCut/A_Shared_Attacks_Axeatana_Axe_B_Cut_Montage.A_Shared_Attacks_Axeatana_Axe_B_Cut_Montage"
+    },
+    "L3": {
+      "move_id": "GA_Player_Attack_Axatana_Axe_B3_C",
+      "type": "player",
+      "source": "Axatana",
+      "ability": "GA_Player_Attack_Axatana_Axe_B3_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Axatana/B/TransformAndCut/A_Shared_Attacks_Axeatana_Axe_BBB_Cut_Montage.A_Shared_Attacks_Axeatana_Axe_BBB_Cut_Montage"
+    },
+    "LF": {
+      "move_id": "enemy:A_BrigElite_Attack_Swipe_BBB_Montage",
+      "type": "enemy",
+      "source": "Brigands",
+      "ability": "",
+      "montage": "/Game/Sparta/Characters/Enemies/Brigands/BrigElite/Animation/Attacks/A_BrigElite_Attack_Swipe_BBB_Montage.A_BrigElite_Attack_Swipe_BBB_Montage"
+    },
+    "LC": {
+      "move_id": "GA_Player_Attack_BattleAxe_A1_Hold_C",
+      "type": "hold",
+      "source": "BattleAxe",
+      "ability": "GA_Player_Attack_BattleAxe_A1_Hold_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BattleAxe/Temp/A_Shared_Attacks_BattleAxe_A_Hold_04_Montage.A_Shared_Attacks_BattleAxe_A_Hold_04_Montage"
+    }
+  },
+  "heavy_chain": {
+    "H1": {
+      "move_id": "GA_Player_Attack_Axatana_Axe_B2_C",
+      "type": "player",
+      "source": "Axatana",
+      "ability": "GA_Player_Attack_Axatana_Axe_B2_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Axatana/B/TransformAndCut/A_Shared_Attacks_Axeatana_Axe_BB_Cut_Montage.A_Shared_Attacks_Axeatana_Axe_BB_Cut_Montage"
+    },
+    "H2": {
+      "move_id": "GA_Player_Attack_BattleAxe_A3_C",
+      "type": "player",
+      "source": "BattleAxe",
+      "ability": "GA_Player_Attack_BattleAxe_A3_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BattleAxe/Temp/A_Shared_Attacks_BattleAxe_AAA_02_Montage.A_Shared_Attacks_BattleAxe_AAA_02_Montage"
+    },
+    "H3": {
+      "move_id": "GA_Player_Attack_Axatana_Axe_B1_C",
+      "type": "player",
+      "source": "Axatana",
+      "ability": "GA_Player_Attack_Axatana_Axe_B1_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Axatana/B/TransformAndCut/A_Shared_Attacks_Axeatana_Axe_B_Cut_Montage.A_Shared_Attacks_Axeatana_Axe_B_Cut_Montage"
+    },
+    "HF": {
+      "move_id": "GA_Player_Attack_BattleAxe_B_Finisher_C",
+      "type": "tarstone_finisher",
+      "source": "BattleAxe",
+      "ability": "GA_Player_Attack_BattleAxe_B_Finisher_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/BattleAxe/Temp/B/A_Shared_Attacks_BattleAxe_BBB_Finisher_01_Montage.A_Shared_Attacks_BattleAxe_BBB_Finisher_01_Montage"
+    },
+    "HC": {
+      "move_id": "GA_Player_Attack_Axatana_Axe_B3_Hold_C",
+      "type": "hold",
+      "source": "Axatana",
+      "ability": "GA_Player_Attack_Axatana_Axe_B3_Hold_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Axatana/B/A_Shared_Attacks_Axeatana_Axe_BBB_Hold_03_Montage.A_Shared_Attacks_Axeatana_Axe_BBB_Hold_03_Montage"
+    }
+  },
+  "ranged": {
+    "R": {
+      "move_id": "ranged:A_Shared_Actions_MachineGun_Recoils_04_Montage",
+      "type": "player",
+      "source": "MachineGun",
+      "ability": "GA_MachineGunAttack_Primary_C",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Locomotion/MachineGun/A_Shared_Actions_MachineGun_Recoils_04_Montage.A_Shared_Actions_MachineGun_Recoils_04_Montage"
+    }
+  }
+}
