@@ -164,3 +164,12 @@ For the13-vertex neighborhood, the coupled solver uses barycentric surface const
 ### Check footwear in a standing pose before diagnosing the neutral export
 
 Vacation Bikini Extras Heels have identical geometry in the author source and Gemini export. Their saved author armature pose does not change it. The neutral export's long heel tips look less unusual during sprint, but a recorded standing pose confirms heel/forefoot contact mismatch. Compare both sole ends in a grounded pose; translating the entire character cannot fix their relative height. Keep separate conclusions for authored geometry, saved rig state, garment fit and actual game floor contact.
+
+
+### Preserve shoe silhouette when solving contact
+
+The Bikini support-compression trial closes an8 cm neutral support/sole gap but destroys the tall heel profile. It is rejected. Do not equate matching sole heights with a correct fit. Evaluate a heel-pose/footwear adaptation that preserves the design, with separate standing and motion checks.
+
+### Initialize newly added garment morphs explicitly
+
+The Bikini top/shorts omit some shared body morph keys. In these sources, newly added keys started at1; explicitly set new keys to0 before saving replacement deltas. Fresh-load both default values and numerical deltas. No existing mask issue was found in this case.

@@ -17,6 +17,7 @@ from holiday_candidate import coords, digest
 
 import argparse
 parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--part',help='Exact garment object name; defaults to the selected garment preset')
 parser.add_argument('--source',type=Path,default=MOD/'gemini-work/CSS_SeduXtress_Variants_Fixed.blend')
 parser.add_argument('--mesh',type=Path,default=MOD/'gemini-work/exports/SK_Eve_PlanetDiving.mesh.json')
 parser.add_argument('--offsets',type=Path,default=WORK/'planet-fit4/offsets.json')
@@ -31,10 +32,9 @@ assert output.resolve().parent == WORK.resolve() and args.receipt.resolve().pare
 data = json.loads(args.mesh.read_text())
 offsets = json.loads(args.offsets.read_text())['offsets']
 parts = json.loads(args.mesh.with_suffix('.audit.json').read_text())['parts']
-start = parts[0]['points']
-count = parts[1]['points']
-garment={'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin Suit - Suit Complete'}[args.garment]
-assert parts[1]['name'] == garment
+garment=args.part or {'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin Suit - Suit Complete'}[args.garment]
+part_index=next(i for i,part in enumerate(parts) if part['name']==garment)
+start=sum(part['points'] for part in parts[:part_index]);count=parts[part_index]['points']
 bpy.ops.wm.read_factory_settings(use_empty=True)
 with bpy.data.libraries.load(str(args.source), link=False) as (source, loaded):
     loaded.objects = (['Eve Body'] if 'Eve Body' in source.objects else [])+[garment]

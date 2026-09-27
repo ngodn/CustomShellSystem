@@ -9,17 +9,19 @@ sys.path.insert(0,str(root/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress
 from export_variant_clean import TO_UE,fitted_mesh,EXPORT_SHAPES
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--garment',choices=('prototype','skin'),default='prototype')
+parser.add_argument('--part',help='Exact garment object name; defaults to the selected garment preset')
 parser.add_argument('--source',type=Path,default=work/'planet-suit-f4c.blend')
 parser.add_argument('--output',type=Path,default=work/'planet-suit-f5.blend')
 parser.add_argument('--mesh',type=Path,default=work/'planet-morph-repair/planet.mesh.json')
 parser.add_argument('--receipt',type=Path,default=work/'planet-suit-f5.json')
 args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
-name={'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin Suit - Suit Complete'}[args.garment]
+name=args.part or {'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin Suit - Suit Complete'}[args.garment]
 source=args.source;output=args.output
 assert not output.exists()
 data=json.loads(args.mesh.read_text())
 audit=json.loads(args.mesh.with_suffix('.audit.json').read_text())
-start=audit['parts'][0]['points'];count=audit['parts'][1]['points']
+part_index=next(i for i,part in enumerate(audit['parts']) if part['name']==name)
+start=sum(part['points'] for part in audit['parts'][:part_index]);count=audit['parts'][part_index]['points']
 def load(path):
  bpy.ops.wm.read_factory_settings(use_empty=True)
  with bpy.data.libraries.load(str(path),link=False) as (src,dst):
@@ -48,8 +50,11 @@ for target in data['morph_targets']:
  for i,*value in target['deltas']:
   if start<=i<start+count:delta[i-start]=value
  targets[target['name']]=delta
+ if target['name'] not in keys:
+  added=obj.shape_key_add(name=target['name'],from_mix=False)
+  added.value=0.0;original_values[target['name']]=0.0
  key=keys[target['name']]
- assert key.value==0 and not key.vertex_group
+ assert key.value==0 and not key.vertex_group,(key.name,key.value,key.vertex_group)
  local=np.asarray([inverse @ Vector(v) for v in delta])
  replacement=coords(key.relative_key).copy()
  replacement[used]+=local
