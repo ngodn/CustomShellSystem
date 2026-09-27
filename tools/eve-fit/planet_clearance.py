@@ -20,6 +20,7 @@ p.add_argument('--surface-pass', action='store_true')
 p.add_argument('--min-z', type=float, default=22.)
 p.add_argument('--max-z', type=float, default=1000.)
 p.add_argument('--max-distance', type=float, default=.6)
+p.add_argument('--garment', choices=('prototype','skin'), default='prototype')
 a = p.parse_args(sys.argv[sys.argv.index('--') + 1:])
 a.output.mkdir(exist_ok=False)
 raw = a.mesh.read_bytes()
@@ -27,7 +28,8 @@ data = json.loads(raw)
 audit = json.loads(a.audit.read_text())
 assert hashlib.sha256(raw).hexdigest() == audit['output_sha256']
 assert audit['parts'][0]['name'] == 'Eve Body'
-assert audit['parts'][1]['name'] == 'Eve Prototype Planet Diving Suit - Suit'
+assert audit['parts'][1]['name'] == {'prototype':'Eve Prototype Planet Diving Suit - Suit',
+                                   'skin':'Eve Skin Suit - Suit Complete'}[a.garment]
 body_count = audit['parts'][0]['points']
 suit_count = audit['parts'][1]['points']
 body_faces = [[data['wedges'][w][0] for w in f[:3]]
@@ -105,11 +107,12 @@ if a.surface_pass:
 assert candidate['points'][:body_count] == data['points'][:body_count]
 assert candidate['points'][body_count+suit_count:] == data['points'][body_count+suit_count:]
 assert all(candidate[k] == v for k, v in data.items() if k != 'points')
-output = a.output/'planet.mesh.json'
+stem='planet' if a.garment=='prototype' else 'skin'
+output = a.output/f'{stem}.mesh.json'
 output.write_text(json.dumps(candidate, separators=(',', ':'))+'\n')
 audit['output_sha256'] = hashlib.sha256(output.read_bytes()).hexdigest()
 audit['stage'] = 'Private bind-pose clearance candidate; not for import or release'
-(a.output/'planet.mesh.audit.json').write_text(json.dumps(audit, indent=2)+'\n')
+(a.output/f'{stem}.mesh.audit.json').write_text(json.dumps(audit, indent=2)+'\n')
 (a.output/'offsets.json').write_text(json.dumps({'offsets': offsets})+'\n')
 receipt = dict(source=str(a.mesh), source_sha256=hashlib.sha256(raw).hexdigest(),
                changed_vertices=len(offsets), max_offset_cm=max((Vector(v[1:]).length for v in offsets),default=0),

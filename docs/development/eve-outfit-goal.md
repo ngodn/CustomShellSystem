@@ -32,6 +32,10 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**Skin Suit fitting started:** `skin-surface-probe.json` confirms the saved SurfaceDeform is bound but has no target, viewport/render disabled, and enabling it in isolation moves zero vertices. Source hash unchanged. Earlier probe failures incorrectly assumed a body target; final process2338 exited0. This rules out that modifier as the missing fitting in the controlled test.
+
+`planet_clearance.py --garment skin` now supports the known Skin Suit object without duplicating the clearance implementation. `skin-fit1` is a private bind-pose proposal:5551 garment points changed, maximum0.71954 cm,1491 deeper candidates skipped, body and all non-point fields unchanged. Process65864 and review17292 exited0. Front/back `skin-fit1-review/` visibly improve chest/arm coverage but retain substantial apparent gaps. Next render garment alone to distinguish authored openings from penetration, inspect deeper regions, and make bounded corrections. Do not import this proposal or treat base-only clearance as morph acceptance. No game/source/release mutation.
+
 Skin source comparison3664 subsequently exited0. `skin-source-comparison.json` confirms18,633 used garment vertices match the old export exactly (maximum0 cm), with source hash unchanged. Saved modifiers include Armature, SurfaceDeform, CorrectiveSmooth and Subdivision, all removed by `fitted_mesh`. No active fit keys were recorded. Next evaluate whether SurfaceDeform supplies fitting that the export loses; this is a hypothesis, not established cause. Do not blindly rerun geometric fitting from the unmodified export.
 
 **F14 private trial ready:** cook56805 and packaging26421 exited0. `p14pack/verification.json` verifies container integrity, export identities and byte-identical cooked payload readback with installed Eve dependencies. `p14trial/CSS_EveFit14_P` passes CSS package validation with independent controls and corrected mesh path. Both packaging scripts now accept `--revision 14`; F13 files remain separate. Restart answer is still pending and no game/release files changed.
