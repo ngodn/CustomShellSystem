@@ -9,6 +9,8 @@ import unreal
 work = Path('/home/eins0fx/development/mods/msII/CustomShellSystem/work/eve26')
 kind = os.environ.get('CSS_FIT_KIND', 'bikini')
 assert kind in ('bikini', 'knit', 'alice')
+ac4 = os.environ.get('CSS_ALICE_C4') == '1'
+assert not ac4 or kind == 'alice'
 w2 = os.environ.get('CSS_KNIT_W2') == '1'
 assert not w2 or kind == 'knit'
 revision = int(os.environ.get('CSS_BIKINI_FIT_REVISION', '1'))
@@ -16,14 +18,18 @@ assert revision in (1,2)
 output = work / f'{kind}-prepared{revision}.json'
 if w2:
     output = work/'knit-w2-prepared.json'
+if ac4:
+    output = work/'alice-prepared4.json'
 assert not output.exists()
 import_dir = work / ('knit-w2-import' if w2 else f'{kind}-import1')
+if ac4:
+    import_dir = work/'alice-import4'
 protected = json.loads((import_dir / 'protected.json').read_text())
 def check_protected():
     assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest for path,digest in protected.items())
 check_protected()
 data = json.loads((import_dir / f'{kind}.mesh.json').read_text())
-mesh = unreal.load_asset('/Game/CSS/EveTest/' + ('SK_AFit1' if kind == 'alice' else 'SK_KFitW2' if w2 else 'SK_BFit1' if kind == 'bikini' else 'SK_KFit2'))
+mesh = unreal.load_asset('/Game/CSS/EveTest/' + (('SK_AFit4' if ac4 else 'SK_AFit1') if kind == 'alice' else 'SK_KFitW2' if w2 else 'SK_BFit1' if kind == 'bikini' else 'SK_KFit2'))
 source = unreal.load_asset('/Game/CSS/SeduXtress/' + ('SK_Eve_MidsummerAlice' if kind == 'alice' else 'SK_Eve_Bikini' if kind == 'bikini' else 'SK_Eve_CasualSweater'))
 skeleton = unreal.load_asset('/Game/CSS/Shared/SKEL_Base')
 graph = '/Game/CSS/EveTest/ABP_BikiniFeet' + ('2' if revision == 2 else '')

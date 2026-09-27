@@ -1,0 +1,11 @@
+--- a/CSSEveEmbeddedMotion.inl
++++ b/CSSEveEmbeddedMotion.inl
+@@ -13,7 +13,7 @@
+     FString MeshPath=TEXT("/Game/CSS/EveTest/SK_PTailRun");
+     FParse::Value(*Params,TEXT("Mesh="),MeshPath);
+     const bool Knit = MeshPath == TEXT("/Game/CSS/EveTest/SK_KCloth1") || MeshPath == TEXT("/Game/CSS/EveTest/SK_KCloth2") || MeshPath == TEXT("/Game/CSS/EveTest/SK_KCloth3") || MeshPath == TEXT("/Game/CSS/EveTest/SK_KCloth4");
+-    const bool Alice = MeshPath == TEXT("/Game/CSS/EveTest/SK_ACloth1");
++    const bool Alice = MeshPath == TEXT("/Game/CSS/EveTest/SK_ACloth1") || MeshPath == TEXT("/Game/CSS/EveTest/SK_ACloth2");
+     const int32 ExpectedParticles = Alice ? 624 : Knit ? 1679 : 18;
+     if (!Alice && !Knit && MeshPath!=TEXT("/Game/CSS/EveTest/SK_PTailRun") && MeshPath!=TEXT("/Game/CSS/EveTest/SK_PFit13"))
+         return Fail(TEXT("Require a known private cloth candidate"));

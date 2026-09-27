@@ -1,11 +1,16 @@
 """Prepare a bounded Alice bow trial using the author's attachment weights."""
+import argparse
 import hashlib
 import json
 import math
 from pathlib import Path
 
 work = Path(__file__).resolve().parents[2] / 'work/eve26'
-source = work / 'alice-import1/alice.mesh.json'
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--repaired', action='store_true')
+args = parser.parse_args()
+revision = 2 if args.repaired else 1
+source = work / ('alice-import4/alice.mesh.json' if args.repaired else 'alice-import1/alice.mesh.json')
 data = json.loads(source.read_text())
 audit = json.loads(source.with_suffix('.audit.json').read_text())
 assert hashlib.sha256(source.read_bytes()).hexdigest() == audit['output_sha256']
@@ -58,17 +63,17 @@ for i, bone, weight in data['influences']:
 slot = dict(positions=points, normals=normals, indices=triangles, weights=weights,
             max_distances=limits, backstop_distances=[0.]*len(points),
             backstop_radii=[5. if d > 0 else 0. for d in limits])
-out = work / 'alice-cloth1'
+out = work / f'alice-cloth{revision}'
 out.mkdir(exist_ok=False)
 def save(name, value): (out/name).write_text(json.dumps(value, separators=(',', ':'))+'\n')
 save('proxy.json', {'slots': {'AliceRibbon': slot}})
 save('config.json', {'AliceRibbon': dict(Iterations=6, BendingStiffness=.5,
     AnimDriveStiffness=.35, AnimDriveDamping=.5, DampingCoefficient=.3,
     CollisionThickness=.1, FrictionCoefficient=.2, GravityScale=1., SelfCollision=0)})
-mesh = '/Game/CSS/EveTest/SK_AFit1'
+mesh = '/Game/CSS/EveTest/SK_AFit4' if args.repaired else '/Game/CSS/EveTest/SK_AFit1'
 physics = '/Game/CSS/SeduXtress/PA_Body'
-save('copy.json', {'mapping': {mesh:'/Game/CSS/EveTest/SK_ACloth1'}, 'copy':[mesh]})
-save('collision-copy.json', {'mapping': {physics:'/Game/CSS/EveTest/PA_ACloth1'}, 'copy':[physics]})
+save('copy.json', {'mapping': {mesh:f'/Game/CSS/EveTest/SK_ACloth{revision}'}, 'copy':[mesh]})
+save('collision-copy.json', {'mapping': {physics:f'/Game/CSS/EveTest/PA_ACloth{revision}'}, 'copy':[physics]})
 save('receipt.json', dict(source_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
     author_sha256=hashlib.sha256(author_path.read_bytes()).hexdigest(),
     point_error_cm=error, components=components, max_distance_cm=max(limits),

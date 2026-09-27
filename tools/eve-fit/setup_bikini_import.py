@@ -9,12 +9,16 @@ work = root / 'CustomShellSystem/work/eve26'
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--kind', choices=('bikini', 'knit', 'alice'), default='bikini')
 parser.add_argument('--knit-w2', action='store_true')
+parser.add_argument('--alice-c4', action='store_true')
 args = parser.parse_args()
+assert not args.alice_c4 or args.kind == 'alice'
 kind = args.kind
 assert not args.knit_w2 or kind == 'knit'
 source = work / ('alice-heels1/alice.mesh.json' if kind == 'alice' else 'bikini-anklew1/bikini.mesh.json' if kind == 'bikini' else 'knit-export2/knit.mesh.json')
 if args.knit_w2:
     source = work/'knit-w2/knit.mesh.json'
+if args.alice_c4:
+    source = work/'alice-chest4/alice.mesh.json'
 raw = source.read_bytes()
 audit = json.loads(source.with_suffix('.audit.json').read_text())
 assert hashlib.sha256(raw).hexdigest() == audit['output_sha256']
@@ -22,11 +26,15 @@ data = json.loads(raw)
 suffix = 'AFit1' if kind == 'alice' else 'BFit1' if kind == 'bikini' else 'KFit2'
 if args.knit_w2:
     suffix = 'KFitW2'
+if args.alice_c4:
+    suffix = 'AFit4'
 data['mesh_package'] = '/Game/CSS/EveTest/SK_' + suffix
 data['skeleton_package'] = '/Game/CSS/EveTest/SKEL_' + suffix
 out = work / (kind + '-import1')
 if args.knit_w2:
     out = work/'knit-w2-import'
+if args.alice_c4:
+    out = work/'alice-import4'
 out.mkdir(exist_ok=False)
 content = root / 'CSS-eins0fx-collections/tools/CSSAuthoring/Content/CSS'
 assert not (content/'EveTest'/('SK_'+suffix+'.uasset')).exists()

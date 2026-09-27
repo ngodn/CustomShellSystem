@@ -95,3 +95,12 @@ Next candidate `alice-chest4` allows up to 1 cm local clearance against bind and
 Saved garment source `alice-cw4.blend` contains the corrected clearance and body-corresponding weights. Intermediate `alice-c4.blend` preserves relative shape deltas; evaluated geometry differs from the JSON by at most 0.0000170923 cm. Fresh reload of final weights passes with maximum error 2.97943e-8 and identical geometry/shape-key digest. Both save processes exit 0. Final candidate JSON SHA256: `f72ebd548446c68acf6bf49d7925a3dd59691b85551ed1376ec003a667f8f8e9`.
 
 Next: assemble this corrected suit and body-weighted ribbon, reimport the private Alice candidate, then complete restrained clothing motion and customization. Do not package the earlier `SK_AFit1` or `SK_ACloth1` as if they contain this repair. No game package or release archive changed in this step.
+
+
+## Corrected Unreal candidate in progress
+
+`setup_bikini_import.py --kind alice --alice-c4` creates `alice-import4` and `/Game/CSS/EveTest/SK_AFit4`. The import interchange differs from chest4 only in destination package names. Import and shared-skeleton bind have completed exit 0. Process 51490 continues material preparation and fresh reference/section verification, using `CSS_FIT_KIND=alice CSS_ALICE_C4=1`. Resume this handle; do not rerun completed steps or assume preparation completed from import alone. Logs use `alice4-*.log`.
+
+The corrected bow is separately saved as `alice-rw2.blend`. Fresh reload verifies all 1,973 weight rows with maximum error 2.97937e-8 and unchanged geometry/shape keys. Original authoring source remains untouched.
+
+`prepare_alice_cloth.py --repaired` creates `alice-cloth2` for `SK_ACloth2` and `PA_ACloth2`. Its proxy differs from the rejected first trial only in skin weights; particle positions, topology, pin limits, normals and backstops remain identical. This isolates the influence of repaired attachment weights before changing collider parameters. Copy/bind/motion have not run yet. Native probe support for ACloth2 is saved in `native/alice-bow-repaired.patch` and applied to the authoring project source, but requires an editor build after current commandlets finish.
