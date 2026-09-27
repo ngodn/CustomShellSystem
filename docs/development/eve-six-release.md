@@ -67,3 +67,11 @@ User clarified maximum 1:1 crop anchored at top-right, then resize to 512 x 512.
 `six-candidate1/CSS_EveStellarBlade_eins0fx_P` is now assembled with the selected thumbnail, all six variants and updated container hashes. Package verification passes; current native loader tests pass against this exact candidate (`six-final-loader.log`). Installation and live review remain pending; no public ZIP has been replaced.
 
 Installation completed after confirming no game process. `six-candidate1/install.json` records installed hashes and all six retired paths. Only the combined Eve trio remains in place of those six packages; the five split directories are absent. Verified originals remain in `backups/eve-six1`. No game launch or input was sent. Next normal launch loads the combined package. Final in-game review and public ZIP replacement remain outstanding.
+
+## User acceptance and v1.2.0
+
+User tested the installed combined mod and accepted it: "ok, tested, seems good for now". This establishes practical user acceptance of the installed build, not an exhaustive claim that every pose, slider or persistence combination was individually tested.
+
+User requested the ZIP and BBCode changelog for v1.2.0. `package_six.py --output six-v120 --version 1.2.0` produces that release candidate with the approved thumbnail. Comparison against the tested installed build proves only the two manifest/catalog version fields change. Asset containers, controls, palettes and thumbnail remain identical. Installed hashes were rechecked against the installation receipt. Current native package loader checks pass for v1.2.0 (`six-v120-loader.log`).
+
+Release target: `dist/eve-v1.2.0/CSS_EveStellarBlade_eins0fx_P-v1.2.0.zip`, with SHA256 sidecar and `CHANGELOG_Eve_v1.2.0.bbcode`. The tracked changelog is `docs/releases/eve-v1.2.0.bbcode`. Older release archives remain preserved. No CSS core binaries are changed or included. Fourteen additional idle animations remain queued and are explicitly excluded from this release.

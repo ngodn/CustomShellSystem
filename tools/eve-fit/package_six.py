@@ -26,7 +26,8 @@ def strings(value):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--thumbnail', required=True, type=Path)
-    parser.add_argument('--output', default='six-candidate1', choices=('six-candidate1', 'six-check1'))
+    parser.add_argument('--output', default='six-candidate1', choices=('six-candidate1', 'six-check1', 'six-v120'))
+    parser.add_argument('--version', choices=('1.2.0',))
     args = parser.parse_args()
     thumbnail = png_info(args.thumbnail)
     work = ROOT / 'work/eve26'
@@ -37,6 +38,9 @@ def main():
             raise ValueError(f'Verified container changed: {filename}')
     source = next((work / 'six-meta1/metadata').rglob('manifest.json'))
     manifest = json.loads(source.read_text())
+    if args.version:
+        manifest['version'] = args.version
+        manifest['catalog']['outfits'][0]['version'] = args.version
     variants = manifest['catalog']['outfits'][0]['variants']
     expected = {'black_pearl', 'prototype', 'skin_suit', 'bikini', 'casual_sweater', 'midsummer_alice'}
     if len(variants) != 6 or {v['id'] for v in variants} != expected:
