@@ -7,7 +7,7 @@ from pathlib import Path
 repo = Path(__file__).resolve().parents[2]
 work = repo/'work/eve26'
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--trial', type=int, choices=[1,2,3], default=1)
+parser.add_argument('--trial', type=int, choices=[1,2,3,4], default=1)
 trial = parser.parse_args().trial
 source = work/f'knit-cloth{trial}/readback.json'
 output = work/f'knit-cloth{trial}/verified.json'
@@ -20,7 +20,7 @@ assert data['post_process'] == '/Game/CSS/EveTest/ABP_KnitFeet1.ABP_KnitFeet1_C'
 assert data['cloth_assets'] == len(data['assets']) == len(data['sections']) == 1
 asset = data['assets'][0]
 section = data['sections'][0]
-physics_number = 3 if trial == 3 else 1
+physics_number = trial if trial >= 3 else 1
 assert asset['physics'] == f'/Game/CSS/EveTest/PA_KCloth{physics_number}.PA_KCloth{physics_number}'
 assert asset['particles'] == 1679 and asset['iterations'] == 8 and asset['max_iterations'] >= 8
 assert asset['legacy_backstop'] is False

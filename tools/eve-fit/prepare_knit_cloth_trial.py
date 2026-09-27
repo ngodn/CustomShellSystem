@@ -8,9 +8,11 @@ work = Path(__file__).resolve().parents[2]/'work/eve26'
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--w2', action='store_true')
 parser.add_argument('--collision-trial', action='store_true')
+parser.add_argument('--accepted', action='store_true', help='Persist the user-approved offline candidate for game review')
 args = parser.parse_args()
-w2 = args.w2 or args.collision_trial
-number = 3 if args.collision_trial else 2 if w2 else 1
+assert sum((args.w2,args.collision_trial,args.accepted))<=1
+w2 = args.w2 or args.collision_trial or args.accepted
+number = 4 if args.accepted else 3 if args.collision_trial else 2 if w2 else 1
 out = work/f'knit-cloth{number}'
 assert not out.exists()
 proxy_path = work/('knit-w2/proxy.json' if w2 else 'knit-proxy3.json')
@@ -33,6 +35,9 @@ if w2:
     prior = json.loads((work/'knit-cloth1/proxy.json').read_text())['slots']['Collar-1']
     assert all(slot[k] == value for k,value in prior.items() if k != 'weights')
     assert config == json.loads((work/'knit-cloth1/config.json').read_text())
+if args.accepted:
+    slot['backstop_radii'] = [15. if v>0 else 0. for v in limits]
+    proxy['scope'] = 'Accepted offline fit for game review: W2 weights, PA_KCloth4, 15 cm non-legacy backstop. Minor raised-leg hem clipping retained by user direction.'
 out.mkdir()
 if args.collision_trial:
     recipe = json.loads((work/'knit-spheres7.json').read_text())
@@ -45,7 +50,7 @@ if args.collision_trial:
 (out/'config.json').write_text(json.dumps(config,indent=2)+'\n')
 (out/'copy.json').write_text(json.dumps(dict(mapping={source:target},copy=[source]),indent=2)+'\n')
 (out/'receipt.json').write_text(json.dumps(dict(proxy_sha256=hashlib.sha256(proxy_path.read_bytes()).hexdigest(),
-    mesh_source=source,mesh_target=target,collision_recipe='collision.json' if args.collision_trial else 'knit-spheres2.json',
+    mesh_source=source,mesh_target=target,collision_recipe='knit-cloth3/collision-trim.json' if args.accepted else 'collision.json' if args.collision_trial else 'knit-spheres2.json',
     max_distance_cm=max(limits),zero_pins=sum(v==0 for v in limits),
     scope='Coarse sphere coverage is insufficient alone. Evaluate backstop, collision, render mapping, morph behavior and cost before adoption. Self-collision disabled only for initial diagnostic.'),indent=2)+'\n')
 print((out/'receipt.json').read_text())
