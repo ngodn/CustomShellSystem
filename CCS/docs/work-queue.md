@@ -22,6 +22,12 @@ and CSSX sources). None found a crash or memory-safety defect. What changed:
   press ended in the normal attack, in vanilla too. Commit 163c32d: locked hold abilities are
   left alone, the LC/HC hint and the status line say the slot waits for the upgrade,
   `status.json` has `combat.hold_unlocked`, and the attack trace carries timestamps.
+- Settings: "Charged attacks", Need a Tarstone or Always (cheat). Always applies the two unlock
+  effects to the player's ability component (`Combat::sync_hold_cheat`, `BP_ApplyGameplayEffectToSelf`
+  with `MakeEffectContext`), re-applies on a new component, removes them on switch-off and in
+  `Combat::stop`. Verified live through two core swaps: tags appear and the heavy one goes away
+  again (light stayed because the user's Acolyte's Stone was equipped). Saved as
+  `charged_attacks_without_tarstone`.
 - Classifier coverage: 165 `GA_Player_*` classes in the export; the Duality Stone doubles now
   map to their step. Still unmapped on purpose: the Scythe Grinder, Fists Smert memory steps,
   the plunging attack, executions, and the abstract bases.
