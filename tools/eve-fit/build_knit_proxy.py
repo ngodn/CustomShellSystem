@@ -61,7 +61,8 @@ modifier.use_collapse_triangulate = True
 bpy.ops.object.modifier_apply(modifier=modifier.name)
 obj.data.calc_loop_triangles()
 tree = BVHTree.FromPolygons(points.tolist(), faces.tolist(), all_triangles=True)
-positions, transferred, source_map = [], [], []
+positions, transferred, source_map, source_normals = [], [], [], []
+render_faces = data['faces'][first:first+audit['parts'][1]['faces']]
 attributes = {name:[] for name in maps['weights']}
 for vertex in obj.data.vertices:
     hit, _, face, _ = tree.find_nearest(vertex.co)
@@ -69,6 +70,9 @@ for vertex in obj.data.vertices:
     uv = np.linalg.lstsq(np.column_stack((b-origin, c-origin)), np.asarray(hit)-origin, rcond=None)[0]
     bary = np.maximum([1-uv.sum(), *uv], 0); bary /= bary.sum()
     positions.append((bary @ points[ids]).tolist())
+    normal = bary @ np.asarray([data['normals'][i] for i in render_faces[face][:3]])
+    assert np.linalg.norm(normal) > .1
+    source_normals.append(normal / np.linalg.norm(normal))
     combined = {}
     for i, factor in zip(ids, bary):
         for name, weight in weights[i]:
@@ -82,15 +86,12 @@ for vertex in obj.data.vertices:
     source_map.append(dict(vertices=ids.tolist(), barycentric=bary.tolist()))
 triangles = [list(t.vertices) for t in obj.data.loop_triangles]
 positions = np.asarray(positions)
-normals = np.zeros_like(positions)
+normals = np.asarray(source_normals)
 for triangle in triangles:
     a, b, c = positions[triangle]
     normal = np.cross(b-a, c-a)
     assert np.linalg.norm(normal) > 1e-8, 'Degenerate proxy triangle'
-    normals[triangle] += normal
-lengths = np.linalg.norm(normals, axis=1)
-assert np.min(lengths) > 1e-8
-normals /= lengths[:, None]
+assert np.allclose(np.linalg.norm(normals, axis=1), 1)
 proxy_tree = BVHTree.FromPolygons(positions.tolist(), triangles, all_triangles=True)
 distances = np.asarray([proxy_tree.find_nearest(Vector(v))[3] for v in points])
 before, after = components(count, faces), components(len(positions), triangles)

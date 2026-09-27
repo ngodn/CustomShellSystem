@@ -17,6 +17,7 @@ Updated September 27, 2026. Read this before starting the next outfit, then chec
 
 | What went wrong or misled us | What to do instead | Evidence |
 | --- | --- | --- |
+| Recomputing simulation-proxy normals from triangle cross products produced normals opposite the fitted render surface | Transfer exported render corner normals through the same recorded triangle/barycentric correspondence used for proxy positions. Check normalization and orientation before directional backstop constraints. Do not assume handedness/winding conventions agree. | `knit-normals1.json`, `knit-proxy2-repair.json`: 1,660/1,679 old normals opposite; only proxy normals changed |
 | Treating unusual cloth motion as a physics-only problem when the original garment skinning already deformed badly | Compare identical poses with physics disabled first. Preserve or repair the original animation-follow behavior before solver tuning. | Goal log: animation-follow baseline, `CR_HolidayFollow` |
 | Expanding the hip to compensate for a swinging forearm intersecting almost-pinned cloth | Identify the actual contacting body region and cloth drivers. Separate garment fit, arm contact and attachment error. | `panel-repeat-trace.json`, `panel-support-trace.json` |
 | Trusting simulation particles while native render attachments stretched fur into spikes | Check render reconstruction at rest and in motion, including normals, barycentric extrapolation, weight normalization and fully skinned vertices. | `db7be81`, `check_panel_mapping.py` |
