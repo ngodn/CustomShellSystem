@@ -32,6 +32,11 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**Skin Suit garment palettes installed:** Generalized palette authoring/render helpers with `--outfit skin`. `s16colors/CSS_EveSkinFit16_P` preserves all previous controls and byte-identical cooked assets while adding Suit panels, Inset panels and Hardware color controls, each Default plus11 swatches. Five palettes: Lunar Pearl, Rose Alloy, Abyssal Blue, Jade Circuit and Crimson Eclipse, plus built-in Original. Only garment slot16 is targeted; body, lining and hair slots are excluded. Source-specific masks use the inspected SS_Suit atlas, not Prototype thresholds. Packed resource/manifest verification passes. Blender generated twelve Original/palette front/back views; atlas sheet plus Abyssal front and Jade back were inspected. This is a UV/color-placement review, not game shader validation.
+
+Installed while the game was closed, backup `backups/packages-0014`; hashes match `s16colors/installed.json`. No game launch. Live color application, Original restoration, skin/anatomical/hair customization and profile checks are still unfinished. Continue Bikini clothing palettes independently; do not wait for restart.
+
+
 **All-outfit customization reminder confirmed:** The user reiterated that Skin, Bikini and the other outfits need customization, motion and palette templates just like Prototype. Keep Original plus five clothing palettes, separate body/hair/clothing color controls, garment toggles and persistence on every outfit's delivery checklist. Installing a fitting trial does not complete those requirements.
 
 **Skin fitting trial installed:** All twelve secondary-pose views were inspected, with no obvious major detachment in those sampled views. Installed `s16motion/CSS_EveSkinFit16_P` while the game was absent, backup `backups/packages-0012`; installed hashes match `s16motion/installed.json`. Game not launched. Live fitting, motion and profile review remain pending; colors and final customization still need authoring.

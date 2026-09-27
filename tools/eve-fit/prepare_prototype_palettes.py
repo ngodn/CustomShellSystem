@@ -1,4 +1,5 @@
-"""Author garment-only Prototype palettes over the accepted F14 assets. Python 3.14."""
+"""Author garment-only palettes over verified fitting assets. Python 3.14."""
+import argparse
 import copy
 import json
 from pathlib import Path
@@ -16,9 +17,14 @@ from css_convert import DEFAULT_REPAK, PACKAGE_ROOT, digest
 from css_package import verify
 
 WORK = ROOT/'work/eve26'
-OUT = WORK/'p14colors'
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--outfit',choices=('prototype','skin'),default='prototype')
+args=parser.parse_args()
+SKIN=args.outfit=='skin'
+OUT = WORK/('s16colors' if SKIN else 'p14colors')
+BASE = WORK/('s16motion' if SKIN else 'p14motion')
 SOURCE = ROOT.parent/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work/textures_staged'
-STEM = 'CSS_EveFit14_P'
+STEM = 'CSS_EveSkinFit16_P' if SKIN else 'CSS_EveFit14_P'
 PALETTES = [
     ('xion_ember', 'Xion Ember', '542D3A', '55B5AA', 'C58E64'),
     ('wasteland_recon', 'Wasteland Recon', '3E5147', 'D7AF66', '88918B'),
@@ -29,6 +35,16 @@ PALETTES = [
 PARTS = [('suit_color', 'Suit panels', 'garment'),
          ('tech_color', 'Technical accents', 'accent'),
          ('trim_color', 'Trim and markings', 'metal')]
+
+if SKIN:
+    PALETTES = [
+        ('lunar_pearl','Lunar Pearl','C9D7DF','7F99A9','EEE4D1'),
+        ('rose_alloy','Rose Alloy','784858','C18D91','D8BBA3'),
+        ('abyssal_blue','Abyssal Blue','283C61','617C9E','B9CBD5'),
+        ('jade_circuit','Jade Circuit','32564D','79A79B','C3AD79'),
+        ('crimson_eclipse','Crimson Eclipse','542431','96606A','B8ADB5'),
+    ]
+    PARTS=[('suit_color','Suit panels','garment'),('inset_color','Inset panels','accent'),('hardware_color','Hardware','metal')]
 
 def rgba(value):
     return [round(int(value[i:i+2],16)/255,7) for i in (0,2,4)]+[1]
@@ -44,10 +60,10 @@ def smooth(v,lo,hi):
     return t*t*(3-2*t)
 
 assert not OUT.exists()
-manifest=verify(WORK/'p14motion'/STEM)
+manifest=verify(BASE/STEM)
 original=copy.deepcopy(manifest)
 OUT.mkdir()
-shutil.copytree(WORK/'p14motion/metadata',OUT/'metadata')
+shutil.copytree(BASE/'metadata',OUT/'metadata')
 metadata=OUT/'metadata'/PACKAGE_ROOT/manifest['id']
 variant=manifest['catalog']['outfits'][0]['variants'][0]
 recipe=variant['customize']
@@ -61,16 +77,23 @@ for index,(identity,name,role) in enumerate(PARTS):
 recipe['palettes']=[dict(id=p[0],name=p[1],values={part[0]:rgba(p[i+2]) for i,part in enumerate(PARTS)}) for p in PALETTES]
 previews={p[0]:[] for p in PALETTES}
 proof={}
-for atlas,slots in [('PD_Suit',[16]),('PD_Acc',[17,26,27,28])]:
+atlases=[('SS_Suit',[16])] if SKIN else [('PD_Suit',[16]),('PD_Acc',[17,26,27,28])]
+for atlas,slots in atlases:
     path=SOURCE/atlas/'T_ShellKeeper_Hair_01_BC.png'
     tex=np.asarray(Image.open(path).convert('RGBA').resize((2048,2048),Image.Resampling.LANCZOS),dtype=np.float32)/255
     rgb=tex[:,:,:3];r,g,b=rgb.transpose(2,0,1)
-    # These masks target the inspected Prototype atlases only. Warm mesh panels
-    # and neutral hardware remain authored; body material slots are never bound.
+    # These thresholds are specific to the inspected garment atlases.
+    # Body material slots are never bound.
     tech=smooth(g-r,.025,.10)*(1-smooth(r-g,0,.025))
     trim=smooth(r-g,.12,.25)*smooth(g-b,.12,.25)
     cloth=(1-smooth(np.max(rgb,axis=2),.20,.31))*(1-smooth(r-g,.012,.045))*(1-tech)*(1-trim)
-    masks=[cloth,tech,trim]
+    if SKIN:
+        hardware=smooth(np.max(rgb,axis=2),.77,.88)
+        inset=smooth(r-g,.045,.09)*smooth(g-b,.025,.06)*(1-hardware)
+        panels=(1-hardware)*(1-smooth(r-g,.045,.09)*smooth(g-b,.025,.06))
+        masks=[panels,inset,hardware]
+    else:
+        masks=[cloth,tech,trim]
     assert np.max(sum(masks))<=1.00001
     detail=[];layers={}
     for (identity,_,_),mask in zip(PARTS,masks):
@@ -100,8 +123,8 @@ validate(recipe)
 (metadata/'manifest.json').write_text(json.dumps(manifest,separators=(',',':'))+'\n')
 trio=OUT/STEM;trio.mkdir()
 for suffix in ('.ucas','.utoc'):
-    shutil.copy2(WORK/'p14motion'/STEM/(STEM+suffix),trio/(STEM+suffix))
-    assert digest(trio/(STEM+suffix))==digest(WORK/'p14motion'/STEM/(STEM+suffix))
+    shutil.copy2(BASE/STEM/(STEM+suffix),trio/(STEM+suffix))
+    assert digest(trio/(STEM+suffix))==digest(BASE/STEM/(STEM+suffix))
 with (OUT/'pack.log').open('w') as log:
     subprocess.run([str(DEFAULT_REPAK),'pack',str(OUT/'metadata'),str(trio/(STEM+'.pak')),'--version','V8B'],check=True,stdout=log,stderr=subprocess.STDOUT)
 assert verify(trio)==manifest
