@@ -1,0 +1,18 @@
+--- a/CSSEveEmbeddedMotion.inl
++++ b/CSSEveEmbeddedMotion.inl
+@@ -37,6 +37,15 @@
+         Cloth->PhysicsAsset=SavedPhysics;
+         if (Radius) *Radius=SavedRadius;
+     };
++    FString CollisionOverride;
++    if (FParse::Value(*Params,TEXT("CollisionOverride="),CollisionOverride))
++    {
++        if (!Knit || NoBodyCollision || !CollisionOverride.StartsWith(TEXT("/Game/CSS/EveTest/PA_KCloth")))
++            return Fail(TEXT("Collision override requires a private Knitwear collider and enabled body collision"));
++        auto* Replacement=LoadObject<UPhysicsAsset>(nullptr,*CollisionOverride);
++        if (!Replacement) return Fail(TEXT("Cannot load private collision override"));
++        Cloth->PhysicsAsset=Replacement;
++    }
+     if (NoBodyCollision) Cloth->PhysicsAsset=nullptr;
+     if (NoBackstop) for (int32 I=0; I<Radius->Num(); ++I) (*Radius)[I]=0.f;
+     FAssetCompilingManager::Get().FinishAllCompilation();

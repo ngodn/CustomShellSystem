@@ -10,7 +10,7 @@ from mathutils import Matrix, Quaternion, Vector
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--trial', type=int, choices=[2,3], required=True)
-parser.add_argument('--case', choices=['sprint','no-body'], default='sprint')
+parser.add_argument('--case', choices=['sprint','no-body','trimmed'], default='sprint')
 parser.add_argument('--frame', type=int, default=56)
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:])
 work = Path(__file__).resolve().parents[2]/'work/eve26'
@@ -45,7 +45,7 @@ def add(name, vertices, faces, color):
     vertices = np.asarray(vertices)/100
     vertices[:,1] *= -1
     data = bpy.data.meshes.new(name)
-    data.from_pydata(vertices.tolist(),[],[list(reversed(face)) for face in faces])
+    data.from_pydata(vertices.tolist(),[],faces)
     material = bpy.data.materials.new(name)
     material.diffuse_color = color
     data.materials.append(material)

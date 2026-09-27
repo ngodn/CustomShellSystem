@@ -9,7 +9,7 @@ from mathutils import Matrix, Quaternion, Vector
 
 work = Path(__file__).resolve().parents[2]/'work/eve26'
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--case', default='sprint', choices=['sprint', 'no-body', 'no-backstop', 'no-both'])
+parser.add_argument('--case', default='sprint', choices=['sprint', 'no-body', 'no-backstop', 'no-both', 'trimmed'])
 parser.add_argument('--trial', type=int, choices=[1,2,3], default=1)
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 source = work/f'knit-cloth{args.trial}'/f'{args.case}.json'
