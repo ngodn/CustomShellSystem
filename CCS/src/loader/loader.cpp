@@ -42,6 +42,9 @@ class CcsLoader final : public RC::CppUserModBase {
     HMODULE module_{};
     const CcsCoreApi* api_{};
     bool dispatch_failed_{};
+    std::string core_name_;                 // the loaded core file, from core.json
+    uint64_t selector_check_{}, selector_stamp_{};
+    int switch_attempts_{};
     std::shared_ptr<ccs::runtime::Writer> log_writer_;
     std::unique_ptr<CcsHookService> hooks_;
 #ifdef CCS_FRAME_PROFILE
@@ -58,6 +61,7 @@ class CcsLoader final : public RC::CppUserModBase {
             name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-") != std::string::npos)
             throw std::runtime_error("Invalid CCS core selector");
         const auto path = root_ / "core" / name;
+        core_name_ = name;
         module_ = LoadLibraryExW(path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
         if (!module_) throw std::runtime_error("CCS core DLL could not load: " + std::to_string(GetLastError()));
         const auto entry = reinterpret_cast<const CcsCoreApi* (*)()>(GetProcAddress(module_, "ccs_get_core_api"));
@@ -66,7 +70,37 @@ class CcsLoader final : public RC::CppUserModBase {
             !api_->init || !api_->tick || !api_->on_hotkey || !api_->stop || !api_->shutdown || !api_->get_status_json)
             throw std::runtime_error("CCS core ABI rejected");
         if (api_->init(&host_) != 0) throw std::runtime_error("CCS core initialization failed");
-        log_line("CCS foundation initialized passively; combat routing unavailable");
+        log_line(("CCS core loaded: " + name).c_str());
+    }
+    // core.json is the developer's live switch: when its selection changes while the game runs,
+    // the current core is stopped on the game thread (it must be quiescent: hooks removed, menu
+    // detached), shut down, unloaded, and the new file loaded in its place. Players never touch it.
+    // The check is one file-time read per second; nothing is parsed until the stamp moves.
+    void poll_core_selector(uint64_t now) {
+        if (now < selector_check_) return;
+        selector_check_ = now + 1000;
+        WIN32_FILE_ATTRIBUTE_DATA data{};
+        if (!GetFileAttributesExW((root_ / "core.json").c_str(), GetFileExInfoStandard, &data)) return;
+        const uint64_t stamp = (uint64_t(data.ftLastWriteTime.dwHighDateTime) << 32) | data.ftLastWriteTime.dwLowDateTime;
+        if (stamp == selector_stamp_) return;
+        std::string wanted;
+        try {
+            std::ifstream input(root_ / "core.json");
+            wanted = nlohmann::json::parse(input).at("file").get<std::string>();
+        } catch (...) { selector_stamp_ = stamp; return; }
+        if (wanted == core_name_) { selector_stamp_ = stamp; switch_attempts_ = 0; return; }
+        if (api_ && api_->stop() == 0) {
+            if (++switch_attempts_ <= 20) { selector_check_ = now + 250; return; }   // retry while the core drains
+            log_line("CCS core switch abandoned: the running core would not stop");
+            selector_stamp_ = stamp; switch_attempts_ = 0; return;
+        }
+        log_line(("CCS core switching to " + wanted).c_str());
+        if (api_) { api_->shutdown(); api_ = nullptr; }
+        if (module_) { FreeLibrary(module_); module_ = nullptr; }
+        selector_stamp_ = stamp; switch_attempts_ = 0; dispatch_failed_ = false;
+        try { load_core(); }
+        catch (const std::exception& error) { api_ = nullptr; if (module_) { FreeLibrary(module_); module_ = nullptr; } log_line(error.what()); }
+        catch (...) { api_ = nullptr; if (module_) { FreeLibrary(module_); module_ = nullptr; } log_line("CCS core load failed"); }
     }
 public:
     CcsLoader() {
@@ -93,7 +127,9 @@ public:
         host_.log_info = log_line;
         host_.log_warn = log_line;
         host_.log_error = log_line;
+#ifdef CCS_FRAME_PROFILE
         register_keydown_event(RC::Input::Key::F7, [pressed = hotkey_] { pressed->store(true); });
+#endif
         log_line("CCS loader created; engine untouched until first Unreal tick");
     }
     void on_unreal_init() override {
@@ -128,8 +164,9 @@ public:
 #endif
                 if (!*alive) return;
                 try {
-                    if (!api_ || dispatch_failed_) return;
                     if (!hooks_->game_thread()) return;
+                    poll_core_selector(GetTickCount64());
+                    if (!api_ || dispatch_failed_) return;
                     const bool pressed = hotkey_->exchange(false);
 #ifdef CCS_FRAME_PROFILE
                     if (pressed) timing_->arm(entered);

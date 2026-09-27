@@ -73,18 +73,18 @@ if(NOT WIN32)
   return()
 endif()
 
-option(CCS_EXPERIMENTAL_MENU "Build the unverified CCS menu prototype" OFF)
 option(CCS_FRAME_PROFILE "Build F7-triggered diagnostic frame profiling" OFF)
 option(CCS_DISCOVERY_PROBE "Build the read-only loaded combat discovery probe" OFF)
 option(CCS_ATTACK_PROBE "Build the read-only native montage-task call probe" OFF)
 option(CCS_REGISTRY_CONTROLS "Add reflected registry and ability-tag controls to the discovery probe" OFF)
+option(CCS_SWAP_PROBE "Build the F7-armed montage swap test (pre-hook frame rewrite from swap-test.json)" OFF)
+if(CCS_SWAP_PROBE AND (CCS_DISCOVERY_PROBE OR CCS_ATTACK_PROBE))
+  message(FATAL_ERROR "Swap probe requires a separate build")
+endif()
 if(CCS_REGISTRY_CONTROLS AND NOT CCS_DISCOVERY_PROBE)
   message(FATAL_ERROR "Registry controls require the discovery probe")
 endif()
-if(CCS_EXPERIMENTAL_MENU AND CCS_DISCOVERY_PROBE)
-  message(FATAL_ERROR "Discovery probe and experimental menu must be built separately")
-endif()
-if(CCS_ATTACK_PROBE AND (CCS_EXPERIMENTAL_MENU OR CCS_DISCOVERY_PROBE))
+if(CCS_ATTACK_PROBE AND CCS_DISCOVERY_PROBE)
   message(FATAL_ERROR "Attack call probe requires a separate build")
 endif()
 
@@ -141,13 +141,11 @@ set_target_properties(main PROPERTIES PREFIX "")
 # ---- Core Target (core/ccs_core.dll) ----
 add_library(ccs_core SHARED
   src/core/engine.cpp
-  src/core/menu_input.cpp
-  src/core/widget_pool.cpp
-  src/core/moveset_manager.cpp
-  src/core/menu.cpp
-  src/core/menu_page.cpp
   src/core/core.cpp
 )
+if(NOT CCS_DISCOVERY_PROBE AND NOT CCS_ATTACK_PROBE AND NOT CCS_SWAP_PROBE)
+  target_sources(ccs_core PRIVATE src/core/menu.cpp src/core/menu_page.cpp src/core/combat.cpp)
+endif()
 
 target_include_directories(ccs_core PRIVATE
   include
@@ -162,10 +160,6 @@ if(CCS_FRAME_PROFILE)
   target_compile_definitions(main PRIVATE CCS_FRAME_PROFILE)
   target_compile_definitions(ccs_core PRIVATE CCS_FRAME_PROFILE)
 endif()
-if(CCS_EXPERIMENTAL_MENU)
-  target_sources(ccs_core PRIVATE src/core/loaded_moves.cpp)
-  target_compile_definitions(ccs_core PRIVATE CCS_EXPERIMENTAL_MENU)
-endif()
 if(CCS_DISCOVERY_PROBE)
   target_sources(ccs_core PRIVATE src/core/discovery_probe.cpp)
   target_compile_definitions(ccs_core PRIVATE CCS_DISCOVERY_PROBE)
@@ -176,6 +170,10 @@ endif()
 if(CCS_ATTACK_PROBE)
   target_sources(ccs_core PRIVATE src/core/attack_probe.cpp)
   target_compile_definitions(ccs_core PRIVATE CCS_ATTACK_PROBE)
+endif()
+if(CCS_SWAP_PROBE)
+  target_sources(ccs_core PRIVATE src/core/swap_probe.cpp)
+  target_compile_definitions(ccs_core PRIVATE CCS_SWAP_PROBE)
 endif()
 set_target_properties(ccs_core PROPERTIES PREFIX "")
 

@@ -40,7 +40,9 @@ nlohmann::json Settings::to_json() const {
         {"preserve_weapon_mesh", preserve_weapon_mesh_},
         {"show_hud_notification", show_hud_notification_},
         {"attack_speed_scale", attack_speed_scale_},
-        {"damage_scale", damage_scale_}
+        {"damage_scale", damage_scale_},
+        {"ui_scale", ui_scale_},
+        {"slots", slots_}
     };
 }
 
@@ -55,6 +57,19 @@ void Settings::from_json(const nlohmann::json& j) {
     };
     candidate.attack_speed_scale_ = number("attack_speed_scale", attack_speed_scale_);
     candidate.damage_scale_ = number("damage_scale", damage_scale_);
+    {
+        const double scale = j.value("ui_scale", ui_scale_);
+        if (!std::isfinite(scale) || scale < 0.75 || scale > 1.5) throw std::runtime_error("Invalid menu scale");
+        candidate.ui_scale_ = scale;
+    }
+    if (j.contains("slots")) {
+        const auto& slots = j["slots"];
+        if (!slots.is_array() || slots.size() != candidate.slots_.size()) throw std::runtime_error("Invalid slot list");
+        for (size_t i = 0; i < slots.size(); ++i) {
+            if (!slots[i].is_string() || slots[i].get_ref<const std::string&>().size() > 256) throw std::runtime_error("Invalid slot move id");
+            candidate.slots_[i] = slots[i].get<std::string>();
+        }
+    }
     if (j.contains("startup_preset") && (!j["startup_preset"].is_string() ||
         !valid_preset_name(j["startup_preset"].get<std::string>())))
         throw std::runtime_error("Invalid startup preset name");

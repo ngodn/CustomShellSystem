@@ -1,5 +1,15 @@
 # CCS work queue
 
+## 27 September 2026, afternoon: product build
+
+The probe phase is over. The default build is now the product: a CSS/CSSX-style native page
+(`src/core/menu*.cpp`, ported from the CSSX 1.2.0 recipe with CSS beta.5's row and window
+icons) driving the combat engine (`src/core/combat.cpp`, the verified montage-task pre-hook).
+Gemini's prototype menu, widget pool, input dispatcher, loaded-move reader and moveset manager
+are removed. No hotkey: the page is the CCS tab of the Player Menu. The loader switches cores
+live when `core.json` changes. First live run pending.
+
+
 Current priority: finish the verified runtime foundation before enabling combat or the menu.
 
 ## Completed during takeover

@@ -32,10 +32,19 @@ std::string narrow(const std::wstring& wide);
 
 UObject* find(const wchar_t* path);
 UObject* find_optional(const wchar_t* path);
+// find() for permanent native objects (class defaults, script structs) on hot paths, revalidated
+// read-only through the object array on every use.
+UObject* find_cached(const wchar_t* path);
 UObject* load(const std::string& path);
 PlayerContext player_context(void* engine);
 
 FProperty* field(UObject* object, const wchar_t* name, size_t size);
+template<typename T> T read(UObject* object, const wchar_t* name) {
+    static_assert(std::is_trivially_copyable_v<T>);
+    auto* p = field(object, name, sizeof(T));
+    T value{}; std::memcpy(&value, reinterpret_cast<const std::byte*>(object) + p->GetOffset_Internal(), sizeof(T));
+    return value;
+}
 UObject* object_of(UObject* object, const wchar_t* name);
 // Cache misses return null without resolving fields or initializing object serials.
 UObject* cached_object_of(UObject* object, const wchar_t* name);
@@ -80,6 +89,8 @@ public:
 
     FProperty* param(const wchar_t* name);
     void set_bool(const wchar_t* name, bool value);
+    // Copy a parameter value from another frame (same reflected type).
+    void copy(const wchar_t* name, Call& other, const wchar_t* other_name);
     bool get_bool(const wchar_t* name);
     void* data(FProperty* p) { return bytes_.data() + p->GetOffset_Internal(); }
 
@@ -128,6 +139,23 @@ void invoke(UObject* object, const wchar_t* fn, const wchar_t* param, const T& v
 UObject* construct(const wchar_t* type, UObject* outer);
 UObject* construct_class(UClass* type, UObject* outer);
 void object_property(UObject* object, const wchar_t* name, UObject* value);
+// Write one member of a reflected struct inside a buffer of `bytes` bytes.
+template<class T> void member(void* data, size_t bytes, UObject* structure, const wchar_t* name, const T& value) {
+    auto* p = field(structure, name, sizeof(T));
+    if (p->GetOffset_Internal() < 0 || static_cast<size_t>(p->GetOffset_Internal()) + sizeof(T) > bytes)
+        throw std::runtime_error("Struct member exceeds reflected size: " + narrow(name));
+    p->CopyCompleteValue(static_cast<std::byte*>(data) + p->GetOffset_Internal(), &value);
+}
+// Raw write of a trivially copyable property (enums, vectors) on a live object.
+template<class T> void raw_value(UObject* object, const wchar_t* name, const T& value) {
+    static_assert(std::is_trivially_copyable_v<T>);
+    auto* p = field(object, name, sizeof(T));
+    std::memcpy(reinterpret_cast<std::byte*>(object) + p->GetOffset_Internal(), &value, sizeof(T));
+}
+// A UMG Button with no drawn faces: `active` shows a faint fill, `silent` draws nothing at all.
+void flat_button(UObject* widget, bool active, bool silent = false);
+// ContentWidget::SetContent, returning the slot.
+UObject* content(UObject* parent, UObject* child);
 void copy_property(UObject* dest, UObject* src, const wchar_t* name);
 void text_property(UObject* object, const wchar_t* name, const std::string& text);
 void text_value(UObject* widget, const std::string& text);
@@ -138,6 +166,7 @@ void font_style(UObject* widget, UObject* source, const wchar_t* property, float
 
 UObject* create_widget(UObject* owning_object, UClass* widget_class);
 std::vector<UObject*> children(UObject* panel);
+std::vector<UObject*> children(UObject* panel, int limit);
 void reorder(UObject* panel, const std::vector<UObject*>& order);
 void nav_children_refresh(UObject* panel);
 

@@ -28,7 +28,6 @@ class ToolTests(unittest.TestCase):
                 self.assertEqual(tool.build(), out)
                 configure = run.call_args_list[0].args[0]
                 self.assertIn("-DCCS_FRAME_PROFILE=OFF", configure)
-                self.assertIn("-DCCS_EXPERIMENTAL_MENU=OFF", configure)
                 self.assertIn("-DCCS_DISCOVERY_PROBE=OFF", configure)
                 self.assertIn("-DCCS_ATTACK_PROBE=OFF", configure)
 
@@ -57,7 +56,6 @@ class ToolTests(unittest.TestCase):
                 configure = run.call_args_list[0].args[0]
                 self.assertIn("-DCCS_ATTACK_PROBE=ON", configure)
                 self.assertIn("-DCCS_FRAME_PROFILE=ON", configure)
-                self.assertIn("-DCCS_EXPERIMENTAL_MENU=OFF", configure)
                 self.assertIn("-DCCS_DISCOVERY_PROBE=OFF", configure)
 
     def test_cli_rejects_ignored_or_conflicting_variant_flags(self):

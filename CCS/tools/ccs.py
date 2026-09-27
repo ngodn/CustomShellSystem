@@ -24,21 +24,21 @@ def sha(path: Path) -> str:
         return hashlib.file_digest(f, 'sha256').hexdigest()
 
 
-def build(probe: bool = False, registry: bool = False, profile: bool = False, menu: bool = False, attack: bool = False) -> Path:
+def build(probe: bool = False, registry: bool = False, profile: bool = False, menu: bool = False, attack: bool = False, swap: bool = False) -> Path:
     probe = probe or registry
-    if (menu and probe) or (attack and (menu or probe)):
-        raise ValueError('Menu, discovery and attack probes require separate builds')
-    variant = 'windows-attack' if attack else 'windows-registry' if registry else 'windows-probe' if probe else 'windows-menu' if menu else 'windows'
+    if (menu and probe) or (attack and (menu or probe)) or (swap and (menu or probe or attack)):
+        raise ValueError('Menu, discovery, attack and swap probes require separate builds')
+    variant = 'windows-swap' if swap else 'windows-attack' if attack else 'windows-registry' if registry else 'windows-probe' if probe else 'windows-menu' if menu else 'windows'
     out = ROOT / 'build' / (variant + ('-profile' if profile else ''))
     out.mkdir(parents=True, exist_ok=True)
     subprocess.run([
         'cmake', '-S', str(ROOT), '-B', str(out),
         '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release',
         f'-DCMAKE_TOOLCHAIN_FILE={TOOLCHAIN}',
-        f'-DCCS_EXPERIMENTAL_MENU={"ON" if menu else "OFF"}',
         f'-DCCS_FRAME_PROFILE={"ON" if profile else "OFF"}',
         f'-DCCS_DISCOVERY_PROBE={"ON" if probe else "OFF"}',
         f'-DCCS_ATTACK_PROBE={"ON" if attack else "OFF"}',
+        f'-DCCS_SWAP_PROBE={"ON" if swap else "OFF"}',
         f'-DCCS_REGISTRY_CONTROLS={"ON" if registry else "OFF"}'
     ], check=True)
     subprocess.run(['cmake', '--build', str(out), '-j', '2'], check=True)
@@ -74,7 +74,7 @@ def game_processes() -> list[int]:
     return result
 
 
-def stage(confirmed_stopped: bool = False, probe: bool = False, registry: bool = False, attack: bool = False) -> None:
+def stage(confirmed_stopped: bool = False, probe: bool = False, registry: bool = False, attack: bool = False, swap: bool = False) -> None:
     probe = probe or registry
     if not confirmed_stopped:
         raise RuntimeError('Staging requires a fresh confirmation that you stopped playing (--confirm-game-stopped)')
@@ -83,7 +83,7 @@ def stage(confirmed_stopped: bool = False, probe: bool = False, registry: bool =
     pin = json.loads(PIN_FILE.read_text())
     if sha(GAME / 'Binaries/Win64/ue4ss/UE4SS.dll') != pin['dll_sha256']:
         raise RuntimeError('Installed UE4SS differs from the pinned runtime')
-    out = build(probe=probe, registry=registry, attack=attack, profile=attack)
+    out = build(probe=probe, registry=registry, attack=attack, swap=swap, profile=attack or swap)
     if game_processes():
         raise RuntimeError('The game started during the build; refusing to stage')
     MOD_DEST.mkdir(parents=True, exist_ok=True)
@@ -108,7 +108,13 @@ def stage(confirmed_stopped: bool = False, probe: bool = False, registry: bool =
     selector.write_text(json.dumps(core_json, indent=2) + '\n')
     os.replace(selector, MOD_DEST / 'core.json')
 
-    # 5. Copy presets
+    # 5. Move catalog and artwork the core reads at startup.
+    copy_verified(ROOT / 'data/catalog.json', MOD_DEST / 'catalog.json')
+    for asset in (ROOT / 'assets').glob('*.png') if (ROOT / 'assets').is_dir() else []:
+        (MOD_DEST / 'assets').mkdir(parents=True, exist_ok=True)
+        copy_verified(asset, MOD_DEST / 'assets' / asset.name)
+
+    # 5b. Copy presets
     src_presets = ROOT / 'presets'
     if src_presets.exists():
         for preset_file in src_presets.glob('*.json'):
@@ -116,24 +122,32 @@ def stage(confirmed_stopped: bool = False, probe: bool = False, registry: bool =
             if not target.exists():
                 copy_verified(preset_file, target)
 
+    # 6. Swap test mapping: copy the checked-in default only when the user has no edited copy.
+    if swap:
+        default_map = ROOT / 'work/swap-probe/swap-test.json'
+        target = MOD_DEST / 'swap-test.json'
+        if default_map.is_file() and not target.exists():
+            copy_verified(default_map, target)
+
     print(f'[CCS] Staged successfully to {MOD_DEST}')
 
 
 def main():
     parser = argparse.ArgumentParser(description='CCS build and stage tool')
-    parser.add_argument('action', choices=['build', 'build-probe', 'build-registry', 'build-attack', 'build-profile', 'stage', 'status'], default='build', nargs='?')
+    parser.add_argument('action', choices=['build', 'build-probe', 'build-registry', 'build-attack', 'build-swap', 'build-profile', 'stage', 'status'], default='build', nargs='?')
     parser.add_argument('--confirm-game-stopped', action='store_true', help='Confirm you have stopped playing for this installation')
     parser.add_argument('--probe', action='store_true', help='Stage the read-only discovery variant')
     parser.add_argument('--registry', action='store_true', help='Stage the second discovery probe with registry controls')
     parser.add_argument('--menu', action='store_true', help='Include the experimental menu in build-profile')
     parser.add_argument('--attack', action='store_true', help='Select the read-only attack-call probe for stage or build-profile')
+    parser.add_argument('--swap', action='store_true', help='Select the F7-armed montage swap test for stage')
     args = parser.parse_args()
     if args.menu and args.action != 'build-profile':
         parser.error('--menu is supported only by build-profile')
-    if (args.probe or args.registry or args.attack) and args.action not in {'stage', 'build-profile'}:
-        parser.error('--probe, --registry and --attack are supported only by stage or build-profile')
-    if args.attack and (args.menu or args.probe or args.registry):
-        parser.error('Menu, discovery and attack probes require separate builds')
+    if (args.probe or args.registry or args.attack or args.swap) and args.action not in {'stage', 'build-profile'}:
+        parser.error('--probe, --registry, --attack and --swap are supported only by stage or build-profile')
+    if (args.attack and (args.menu or args.probe or args.registry)) or (args.swap and (args.menu or args.probe or args.registry or args.attack)):
+        parser.error('Menu, discovery, attack and swap probes require separate builds')
 
     if args.action == 'build':
         build()
@@ -143,10 +157,12 @@ def main():
         build(registry=True)
     elif args.action == 'build-attack':
         build(attack=True, profile=True)
+    elif args.action == 'build-swap':
+        build(swap=True, profile=True)
     elif args.action == 'build-profile':
-        build(probe=args.probe, registry=args.registry, profile=True, menu=args.menu, attack=args.attack)
+        build(probe=args.probe, registry=args.registry, profile=True, menu=args.menu, attack=args.attack, swap=args.swap)
     elif args.action == 'stage':
-        stage(args.confirm_game_stopped, probe=args.probe, registry=args.registry, attack=args.attack)
+        stage(args.confirm_game_stopped, probe=args.probe, registry=args.registry, attack=args.attack, swap=args.swap)
     elif args.action == 'status':
         print(f'Mod destination: {MOD_DEST}')
         print(f'Exists: {MOD_DEST.exists()}')

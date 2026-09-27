@@ -283,6 +283,11 @@ void Call::run() {
     object_->ProcessEvent(function_, bytes_.data());
 }
 
+void Call::copy(const wchar_t* name, Call& other, const wchar_t* other_name) {
+    auto* p = param(name); auto* q = other.param(other_name);
+    if (p->GetElementSize() != q->GetElementSize() || !p->SameType(q)) throw std::runtime_error("Parameter type mismatch: " + narrow(name));
+    p->CopyCompleteValue(data(p), other.data(q));
+}
 void Call::set_bool(const wchar_t* name, bool value) {
     auto* p = param(name);
     if (!p->IsA<FBoolProperty>() || static_cast<FBoolProperty*>(p)->GetByteOffset() >= p->GetElementSize())
@@ -470,6 +475,32 @@ void font_style(UObject* widget, UObject* source, const wchar_t* name, float siz
     set.run();
 }
 
+UObject* content(UObject* parent, UObject* child) {
+    Call c(parent, L"SetContent", 2); c.set(L"content", child); c.run(); return c.get<UObject*>();
+}
+void flat_button(UObject* widget, bool active, bool silent) {
+    Call set(widget, L"SetStyle", 1);
+    auto* param = set.param(L"InStyle");
+    auto* source = widget->GetPropertyByNameInChain(L"WidgetStyle");
+    if (!source || !source->SameType(param)) throw std::runtime_error("Button style layout mismatch");
+    param->CopyCompleteValue(set.data(param), reinterpret_cast<std::byte*>(widget) + source->GetOffset_Internal());
+    auto* style = find_cached(L"/Script/SlateCore.ButtonStyle"); auto* brush = find_cached(L"/Script/SlateCore.SlateBrush");
+    for (const auto* name : {L"Normal", L"Hovered", L"Pressed", L"Disabled"}) {
+        auto* p = style->GetPropertyByNameInChain(name);
+        if (!p || p->GetOffset_Internal() < 0 || p->GetOffset_Internal() + p->GetElementSize() > param->GetElementSize()) throw std::runtime_error("Invalid button brush");
+        auto* data = static_cast<std::byte*>(set.data(param)) + p->GetOffset_Internal();
+        Color tint{0, 0, 0, 0};
+        if (silent) tint = {0, 0, 0, 0};
+        else if (std::wstring_view(name) == L"Hovered") tint = {0.18f, 0.135f, 0.075f, 0.55f};
+        else if (std::wstring_view(name) == L"Pressed") tint = {0.30f, 0.225f, 0.12f, 0.7f};
+        else if (active) tint = {0.10f, 0.075f, 0.035f, 0.25f};
+        member(data, p->GetElementSize(), brush, L"DrawAs", uint8_t{3});
+        member(data, p->GetElementSize(), brush, L"TintColor", SlateColor{tint});
+        member(data, p->GetElementSize(), brush, L"ResourceObject", static_cast<UObject*>(nullptr));
+        member(data, p->GetElementSize(), brush, L"Margin", Margin{});
+    }
+    set.run();
+}
 UObject* create_widget(UObject* pc, UClass* type) {
     Call c(find_cached(L"/Script/UMG.Default__WidgetBlueprintLibrary"), L"Create", 4);
     c.set(L"WorldContextObject", pc);
@@ -481,11 +512,12 @@ UObject* create_widget(UObject* pc, UClass* type) {
     return widget;
 }
 
-std::vector<UObject*> children(UObject* panel) {
+std::vector<UObject*> children(UObject* panel) { return children(panel, 512); }
+std::vector<UObject*> children(UObject* panel, int limit) {
     Call count(panel, L"GetChildrenCount", 1);
     count.run();
     auto n = count.get<int32_t>();
-    if (n < 0 || n > 512) throw std::runtime_error("Panel child count exceeds bound");
+    if (n < 0 || n > limit) throw std::runtime_error("Panel child count exceeds bound");
     std::vector<UObject*> result;
     for (int i = 0; i < n; ++i) {
         Call get(panel, L"GetChildAt", 2);

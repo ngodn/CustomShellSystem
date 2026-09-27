@@ -1,37 +1,37 @@
 # Custom Combat System
 
-CCS is a standalone UE4SS C++23 mod under development for Mortal Shell II, UE 5.6.1. The default build is a passive foundation. It does not change combat or display the unfinished menu prototype.
+CCS is a standalone UE4SS C++23 mod for Mortal Shell II (UE 5.6.1). It lets you choose which
+animation each attack of the light and heavy chains plays (ten slots: L1 L2 L3 LF LC and H1 H2
+H3 HF HC), scale attack speed, and save the result as shareable presets. The page lives in the
+game's Player Menu as the CCS tab, after CSS and before CSSX when those are installed, built
+from the game's own widgets the way the CSS and CSSX tabs are. There is no hotkey.
 
-[Takeover review](docs/takeover-review.md) records the defects found in Gemini's implementation, fixes, validation, and remaining work. [UI reference](docs/ui-reference.md) records the user's latest layout. [Work queue](docs/work-queue.md) contains the next implementation steps.
+How it works: every player attack starts its animation through one native function, the
+montage task factory. A loader-owned pre-hook on it reads the attacking ability, classifies its
+class name into a slot once, and rewrites the montage and play rate in the parameter frame
+before the native runs. Damage, hit windows and Resolve stay the weapon's own. Nothing runs per
+frame in combat; one callback per swing, about ten microseconds.
 
-Runtime initialization no longer loads `data/catalog.json`. That file is retained only for research and regression tests. The experimental menu reads current player selector references through [bounded loaded-move discovery](docs/loaded-moves-runtime.md). Observed references remain ineligible for assignment until their slot roles and combat compatibility are verified. Owned Tarstones and enemy moves remain unavailable.
+Layout:
 
-Full [live game discovery with patch-aware validation](docs/runtime-discovery.md) remains under development. The first [loaded combat discovery probe](docs/discovery-probe-01.md) verified current Scythe selectors. [Registry controls](docs/discovery-probe-02.md) await live validation. Installed-content identity and metadata-cache invalidation remain unfinished.
+- `src/loader`: `dlls/main.dll`, permanent. Loads the core named in `core.json`, owns the
+  native pre-hook service, switches cores live when `core.json` changes (developer path).
+- `src/core`: the core DLL. `combat.*` the engine, `menu.*` and `menu_page.*` the native page,
+  `engine.*` the reflection and UMG helpers, `core.*` the model and events. `*_probe.*` are the
+  read-only diagnostics that verified the call site (`docs/discovery-probe-03.md`).
+- `src/runtime`: portable code covered by host tests (settings, storage, catalog, writer,
+  controls, search, tab order).
+- `data/catalog.json`: the move catalog extracted from the cooked game (107 player moves).
+- `docs/`: research and design records. `work/`: probes, traces and scripts.
 
 Build and test from the CustomShellSystem repository root:
 
 ```sh
-cmake -S CCS -B CCS/build/host -G Ninja -DCMAKE_BUILD_TYPE=Debug
-cmake --build CCS/build/host -j 4
-ctest --test-dir CCS/build/host --output-on-failure
-python3 CCS/tools/ccs.py build
+python3 CCS/tools/ccs.py build                      # Windows loader + core (clang-cl, pinned UE4SS SDK)
+cmake -S CCS -B CCS/build/host -G Ninja -DCMAKE_BUILD_TYPE=Debug && cmake --build CCS/build/host && ctest --test-dir CCS/build/host
+python3 CCS/tools/ccs.py stage --confirm-game-stopped   # install into Mods/CCS (game closed)
 ```
 
-The Windows build uses the shared clang-cl/xwin toolchain and pinned UE4SS SDK/import library. The compiled mod does not depend on CSS or CSSX at runtime. `CCS_EXPERIMENTAL_MENU` defaults to OFF; the menu prototype remains unverified and should not be staged for normal play.
-
-To regenerate metadata when the retained exports change:
-
-```sh
-python3 CCS/work/takeover/generate_catalog.py
-python3 CCS/work/takeover/generate_catalog.py --check
-```
-
-Staging requires a fresh confirmation that the user stopped playing, a closed game, and the pinned UE4SS DLL. The tool verifies copied files, replaces the selector atomically, and preserves existing presets. Build success alone does not establish safe gameplay or FPS behavior.
-
-Experimental menu file actions use a [bounded asynchronous worker](docs/persistence-runtime.md). The [menu retains pooled widgets](docs/menu-pooling.md), including a [preset name field and save/delete confirmations](docs/preset-menu-runtime.md). Naming and confirmation code is implemented but not clicked through in game. Native glyphs, pointer/focus validation, final widget styling and live item UI still need completion before activation.
-
-Optional [diagnostic profiling](docs/frame-profiling.md) records bounded loader/core captures and writes reports on a worker. It is disabled in normal builds. Live baseline and CSS/CSSX coexistence comparisons remain pending.
-
-A [loader-owned native pre-hook service](docs/native-hook-service.md) now guards callback/core lifetimes. The separate [read-only montage-task probe](docs/discovery-probe-03.md) is compiled locally and registers a bounded observation hook only when armed. It is not installed or live verified. Montage replacement remains unavailable. New candidates require their rebuilt loader because the host context gained a checked capability.
-
-The experimental menu also has [background installation change monitoring](docs/content-monitor.md). It pauses observations on inspection failure and requires restart after changed game/package metadata. This is not a mounted-content or native compatibility certificate; full patch-aware discovery/cache validation remains unfinished.
+Installed layout: `Mods/CCS/{enabled.txt, dlls/main.dll, core/ccs_core-<version>-<hash>.dll,
+core.json, catalog.json, settings.json, presets/*.json, logs/ccs.jsonl}`. During development a
+new core is staged next to the old one; editing `core.json` while the game runs switches to it.

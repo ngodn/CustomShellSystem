@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <string>
 #include <filesystem>
 #include <nlohmann/json.hpp>
@@ -30,6 +31,14 @@ public:
     double damage_scale() const { return damage_scale_; }
     void set_damage_scale(double val) { damage_scale_ = val; }
 
+    double ui_scale() const { return ui_scale_; }
+    void set_ui_scale(double val) { ui_scale_ = val; }
+
+    // Slot assignments (catalog move ids, empty for the weapon's own attack), saved with the settings
+    // so the last customisation returns on the next launch without a named preset.
+    const std::array<std::string, 10>& slots() const { return slots_; }
+    void set_slots(std::array<std::string, 10> slots) { slots_ = std::move(slots); }
+
     nlohmann::json to_json() const;
     void from_json(const nlohmann::json& j);
 
@@ -41,6 +50,8 @@ private:
     bool show_hud_notification_{true};
     double attack_speed_scale_{1.0};
     double damage_scale_{1.0};
+    double ui_scale_{1.0};
+    std::array<std::string, 10> slots_{};
 };
 
 } // namespace ccs::runtime
