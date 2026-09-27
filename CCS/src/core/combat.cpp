@@ -544,6 +544,20 @@ void Combat::observe(void* frame_ptr) {
     bool changed = false;
     if (auto* replacement = s.montage.get()) {
         auto* original = static_cast<FObjectProperty*>(inputs_[1])->GetObjectPropertyValue(bytes + inputs_[1]->GetOffset_Internal());
+        // Some abilities play more than one clip (the Axatana heavy: transform, hold, cut). Only the
+        // ability's own attack montage, the one the catalog lists for the class, is swapped.
+        if (original && deps_.catalog) {
+            auto expected = class_montage_.find(key);
+            if (expected == class_montage_.end() && class_montage_.size() < max_cached_classes) {
+                FName name{};
+                if (const auto* move = deps_.catalog->find_move(narrow(cls->GetNamePrivate().ToString()))) {
+                    const auto dot = move->montage_path.rfind('.');
+                    name = FName(wide(dot == std::string::npos ? move->montage_path : move->montage_path.substr(dot + 1)).c_str(), FNAME_Add);
+                }
+                expected = class_montage_.emplace(key, name).first;
+            }
+            if (expected != class_montage_.end() && expected->second != FName() && original->GetNamePrivate() != expected->second) { ++skipped_; return; }
+        }
         UObject* pointer = replacement;
         if (s.tuning.feel == "game" && original && original != replacement) {
             // The game's feel: the slot's own montage keeps its input windows, locks, sounds and hit

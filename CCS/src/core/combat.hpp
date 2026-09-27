@@ -95,6 +95,7 @@ private:
     std::array<engine::FProperty*, 3> inputs_{};      // OwningAbility, MontageToPlay, Rate
     uint64_t token_{}, retry_after_{}, player_check_{}, seen_{}, swapped_{}, skipped_{}, failures_{}, maximum_us_{}, wrong_frame_{};
     std::unordered_map<uint64_t, int8_t> class_slots_;
+    std::unordered_map<uint64_t, engine::FName> class_montage_;   // the catalog montage of each attack class, by name; other clips it plays stay
     std::unordered_set<uint64_t> noted_;
     std::string error_;
 };
