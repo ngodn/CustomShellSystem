@@ -120,7 +120,7 @@ void Combat::release(Slot& slot) {
     if (shown_montage_.get() && shown_montage_.get() == slot.montage.get()) restore_weapon();
     if (slot.rooted) { if (auto* montage = slot.montage.get()) drop_referenced(world_.get(), montage); slot.rooted = false; }
     if (slot.show_rooted) { if (auto* mesh = slot.show_mesh.get()) drop_referenced(world_.get(), mesh); slot.show_rooted = false; }
-    slot.montage = {}; slot.show_mesh = {};
+    slot.montage = {}; slot.show_mesh = {}; slot.was_ready = false;   // a deliberate release is not a loss
 }
 // ---- hit payload: every hit-check notify inside a montage owns its payload object (multiplier,
 // poise, break, reaction, effects). "Weapon's own" copies the slot's original payload fields onto
