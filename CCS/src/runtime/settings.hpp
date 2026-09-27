@@ -3,6 +3,7 @@
 #include <string>
 #include <filesystem>
 #include <nlohmann/json.hpp>
+#include "ccs_types.hpp"
 
 namespace ccs::runtime {
 
@@ -38,6 +39,9 @@ public:
     // so the last customisation returns on the next launch without a named preset.
     const std::array<std::string, 11>& slots() const { return slots_; }
     void set_slots(std::array<std::string, 11> slots) { slots_ = std::move(slots); }
+    // Per-slot tuning (speed, hit payload source, weapon shown), same order as slots().
+    const std::array<SlotTuning, 11>& tuning() const { return tuning_; }
+    void set_tuning(size_t slot, const SlotTuning& value) { if (slot < tuning_.size() && valid_tuning(value)) tuning_[slot] = value; }
 
     nlohmann::json to_json() const;
     void from_json(const nlohmann::json& j);
@@ -52,6 +56,7 @@ private:
     double damage_scale_{1.0};
     double ui_scale_{1.0};
     std::array<std::string, 11> slots_{};
+    std::array<SlotTuning, 11> tuning_{};
 };
 
 } // namespace ccs::runtime

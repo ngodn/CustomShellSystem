@@ -28,9 +28,15 @@ public:
     // Configuration (game thread). Montages load lazily on later ticks, one per tick.
     void set_enabled(bool on);
     bool enabled() const { return enabled_; }
-    void set_rate(double scale);
-    double rate() const { return rate_; }
     void set_slot(SlotId slot, std::string move_id);   // empty id: the weapon's own attack
+    // Per-slot tuning: speed multiplies the play rate; hit_damage "weapon" copies the slot's original
+    // hit payload onto the replacement's hit-check notifies; weapon "move" shows the move's own weapon
+    // mesh in hand while the montage plays. Applied on the next swing.
+    void set_tuning(SlotId slot, const SlotTuning& tuning);
+    const SlotTuning& tuning(SlotId slot) const { return slots_[size_t(slot)].tuning; }
+    bool slot_weapon_available(SlotId slot) const { return slots_[size_t(slot)].show_mesh.alive(); }
+    // Static mesh of a move source's weapon (player weapons and the enemy weapons with a static mesh), or empty.
+    static std::string weapon_mesh_path(const std::string& source);
     const std::string& slot_move(SlotId slot) const { return slots_[size_t(slot)].move_id; }
     const std::string& slot_error(SlotId slot) const { return slots_[size_t(slot)].error; }
     bool slot_ready(SlotId slot) const { return slots_[size_t(slot)].montage.alive(); }
@@ -45,7 +51,21 @@ public:
     // _A_Finisher / _A3_Finisher LF, _A<n>_Hold LC; B likewise for the heavy chain.
     static int classify(const std::string& class_name);
 private:
-    struct Slot { std::string move_id, path, error; engine::ObjectHandle montage; bool rooted{}, pending{}; uint64_t hits{}; };
+    struct PayloadBackup { engine::ObjectHandle payload; std::vector<std::pair<engine::FProperty*, std::vector<std::byte>>> values; };
+    struct Slot {
+        std::string move_id, path, error; engine::ObjectHandle montage; bool rooted{}, pending{}; uint64_t hits{};
+        SlotTuning tuning;
+        std::string show_mesh_path; engine::ObjectHandle show_mesh; bool show_rooted{};   // the move's weapon mesh, loaded with the montage
+        engine::ObjectHandle payload_source; std::vector<PayloadBackup> backups;          // original payload copied onto the replacement
+    };
+    static void count_whoosh(void* user, void*, void*, void*) noexcept;
+    static void count_vox(void* user, void*, void*, void*) noexcept;
+    std::vector<engine::UObject*> hit_payloads(engine::UObject* montage) const;
+    void apply_weapon_payload(Slot& slot, engine::UObject* original, engine::UObject* replacement);
+    void restore_payload(Slot& slot);
+    void show_weapon(engine::UObject* mesh, engine::UObject* montage, uint64_t now);
+    void restore_weapon();
+    void poll_weapon(const engine::PlayerContext& player, uint64_t now);
     static void callback(void*, void*, void*, void*) noexcept;
     void observe(void* frame);
     bool player_outer(engine::UObject* object) const;
@@ -56,7 +76,10 @@ private:
     void log(const std::string& line) const { if (deps_.log) deps_.log(line); }
     Deps deps_;
     bool enabled_{}, active_{};
-    double rate_{1.0};
+    engine::ObjectHandle shown_component_, shown_original_, shown_montage_;   // weapon mesh swapped for the current swing
+    std::vector<engine::ObjectHandle> shown_materials_;
+    uint64_t shown_since_{}; bool shown_seen_playing_{};
+    uint64_t whoosh_token_{}, vox_token_{}, whoosh_{}, vox_{};                 // audio path counters (diagnostic)
     std::array<Slot, size_t(SlotId::Count)> slots_{};
     engine::ObjectHandle function_, pawn_, asc_, skeleton_;
     std::array<engine::FProperty*, 3> inputs_{};      // OwningAbility, MontageToPlay, Rate

@@ -57,7 +57,15 @@ inline Json adjusted_value(const Json& c, int direction) {
 inline void validate_event(const Json& model, const Json& event) {
     if (!event.is_object()) throw std::runtime_error("Control event must be an object");
     const auto id = event.at("id").get<std::string>();
-    for (const auto& section : model.at("sections")) for (const auto& c : section.at("controls")) if (c.at("id") == id) {
+    // A slot control may carry per-slot settings rows under "settings"; they are controls too.
+    auto find = [&]() -> const Json* {
+        for (const auto& section : model.at("sections")) for (const auto& c : section.at("controls")) {
+            if (c.at("id") == id) return &c;
+            if (c.contains("settings")) for (const auto& s : c.at("settings")) if (s.at("id") == id) return &s;
+        }
+        return nullptr;
+    };
+    if (const auto* found = find()) { const auto& c = *found;
         if (!interactive(c)) throw std::runtime_error("Control is disabled or read-only");
         if (c.contains("confirm") && !event.value("confirmed", false)) throw std::runtime_error("Control requires confirmation");
         const auto type = c.at("type").get<std::string>();

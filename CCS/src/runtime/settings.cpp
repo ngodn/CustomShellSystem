@@ -1,5 +1,7 @@
 #include "settings.hpp"
 #include "common.hpp"
+#include <algorithm>
+#include <cmath>
 #include <fstream>
 #include <cmath>
 #include <stdexcept>
@@ -42,7 +44,12 @@ nlohmann::json Settings::to_json() const {
         {"attack_speed_scale", attack_speed_scale_},
         {"damage_scale", damage_scale_},
         {"ui_scale", ui_scale_},
-        {"slots", slots_}
+        {"slots", slots_},
+        {"slot_tuning", [&] {
+            nlohmann::json list = nlohmann::json::array();
+            for (const auto& t : tuning_) list.push_back({{"speed", t.speed}, {"hit_damage", t.hit_damage}, {"weapon", t.weapon}});
+            return list;
+        }()}
     };
 }
 
@@ -69,6 +76,23 @@ void Settings::from_json(const nlohmann::json& j) {
             if (!slots[i].is_string() || slots[i].get_ref<const std::string&>().size() > 256) throw std::runtime_error("Invalid slot move id");
             candidate.slots_[i] = slots[i].get<std::string>();
         }
+    }
+    if (j.contains("slot_tuning")) {
+        const auto& list = j["slot_tuning"];
+        if (!list.is_array() || list.size() > candidate.tuning_.size()) throw std::runtime_error("Invalid slot tuning list");
+        for (size_t i = 0; i < list.size(); ++i) {
+            const auto& t = list[i];
+            if (!t.is_object()) throw std::runtime_error("Invalid slot tuning");
+            SlotTuning value;
+            value.speed = t.value("speed", 1.0);
+            value.hit_damage = t.value("hit_damage", std::string("move"));
+            value.weapon = t.value("weapon", std::string("inventory"));
+            if (!std::isfinite(value.speed) || !valid_tuning(value)) throw std::runtime_error("Invalid slot tuning");
+            candidate.tuning_[i] = value;
+        }
+    } else if (std::abs(candidate.attack_speed_scale_ - 1.0) > 1e-9) {
+        // Older settings had one global speed; it becomes every slot's speed once.
+        for (auto& t : candidate.tuning_) t.speed = std::clamp(candidate.attack_speed_scale_, 0.5, 2.0);
     }
     if (j.contains("startup_preset") && (!j["startup_preset"].is_string() ||
         !valid_preset_name(j["startup_preset"].get<std::string>())))

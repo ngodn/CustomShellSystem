@@ -102,7 +102,6 @@ Core::Core(const CcsLoaderContext* loader) {
     for (const auto* move : moves) options_.push_back({{"id", move->id}, {"label", pretty(move->display_name)}, {"group", weapon_name(move->source_name)}, {"icon", weapon_icon(move->source_name)}});
     if (hooks_) {
         combat_ = std::make_unique<Combat>(Combat::Deps{hooks_, &catalog_, log});
-        combat_->set_rate(settings_->attack_speed_scale());
         combat_->set_enabled(settings_->enabled());
         apply_slots_from_settings();
     } else log("Loader offers no native hook host; combat disabled");
@@ -140,9 +139,14 @@ void Core::apply_slots_from_settings() {
     if (!combat_) return;
     const auto& slots = settings_->slots();
     for (size_t i = 0; i < slots.size(); ++i) combat_->set_slot(SlotId(i), slots[i]);
+    const auto& tuning = settings_->tuning();
+    for (size_t i = 0; i < tuning.size(); ++i) combat_->set_tuning(SlotId(i), tuning[i]);
 }
 void Core::save_settings_or_log() {
-    if (combat_) { std::array<std::string, 11> slots; for (size_t i = 0; i < slots.size(); ++i) slots[i] = combat_->slot_move(SlotId(i)); settings_->set_slots(std::move(slots)); }
+    if (combat_) {
+        std::array<std::string, 11> slots; for (size_t i = 0; i < slots.size(); ++i) { slots[i] = combat_->slot_move(SlotId(i)); settings_->set_tuning(i, combat_->tuning(SlotId(i))); }
+        settings_->set_slots(std::move(slots));
+    }
     if (!settings_->save()) last_message_ = "Settings could not be saved";
 }
 // A preset names moves by catalog id; older or hand-written files may only carry the montage
@@ -164,6 +168,7 @@ void Core::apply_preset(const std::string& name) {
             else ++applied;
         }
         combat_->set_slot(SlotId(i), id);
+        if (valid_tuning(binding.tuning)) { combat_->set_tuning(SlotId(i), binding.tuning); settings_->set_tuning(i, binding.tuning); }
     }
     save_name_ = preset->name; save_settings_or_log(); ++model_revision_;
     last_message_ = "Loaded " + name + ": " + std::to_string(applied) + " slot(s) set"
@@ -277,8 +282,39 @@ nlohmann::json Core::model() const {
                     {"description", "Listed by the game's asset registry but absent from the shipped catalog. Assigning it loads and checks the animation the same way; hit windows are unknown until then."}});
             }
         }
-        customize.push_back({{"type", "choice"}, {"id", std::string("slot.") + slot_to_string(slot)}, {"label", slot_to_string(slot)}, {"name", slot_titles[i] + 4},
-            {"value", id}, {"icon", id.empty() ? weapon_icon(current_weapon_) : move_icon(id)}, {"options", std::move(options)}, {"enabled", combat_ != nullptr && catalog_error_.empty()}});
+        // Per-slot settings: rows at the top of the same list, so keys and pad reach them like any
+        // candidate. Each mirrors a choice control under "settings" that the event path validates.
+        const SlotTuning tune = combat_ ? combat_->tuning(slot) : SlotTuning{};
+        const std::string sid = std::string("slot.") + slot_to_string(slot);
+        static const char* speeds[] = {"0.5", "0.75", "0.9", "1", "1.1", "1.25", "1.5", "1.75", "2"};
+        std::string speed_id = "1"; double best = 1e9;
+        for (const char* v : speeds) if (const double d = std::abs(std::stod(v) - tune.speed); d < best) { best = d; speed_id = v; }
+        Json speed_options = Json::array();
+        for (const char* v : speeds) speed_options.push_back({{"id", v}, {"label", std::string(v) + "x"}});
+        const bool mesh_ready = combat_ && combat_->slot_weapon_available(slot);
+        const Json settings_rows = Json::array({
+            {{"type", "choice"}, {"id", sid + ".speed"}, {"label", "Speed"}, {"value", speed_id}, {"options", speed_options},
+             {"description", "Play-rate multiplier for this slot, swapped or not. 1x is the game's speed."}},
+            {{"type", "choice"}, {"id", sid + ".hit_damage"}, {"label", "Hit damage"}, {"value", tune.hit_damage},
+             {"options", Json::array({{{"id", "move"}, {"label", "This move's own"}}, {{"id", "weapon"}, {"label", "Weapon's own for this slot"}}})},
+             {"description", "Whose hit payload the swing carries. This move's own keeps its multiplier, poise, reaction and effects. Weapon's own copies the payload of the attack this slot normally plays onto the move's hit windows. Base damage is always the weapon in hand."}},
+            {{"type", "choice"}, {"id", sid + ".weapon"}, {"label", "Weapon in hand"}, {"value", tune.weapon},
+             {"options", Json::array({{{"id", "inventory"}, {"label", "Inventory weapon"}}, {{"id", "move"}, {"label", "This move's weapon"}}})},
+             {"description", std::string("Which weapon shows in your hand while this move plays. This move's weapon swaps the visible mesh for the swing and puts yours back after; damage and collision stay the weapon in hand.")
+                 + (id.empty() || mesh_ready ? "" : " No mesh is known for this move's weapon, so the inventory weapon stays.")}}});
+        Json rows = Json::array();
+        for (const auto& row : settings_rows) {
+            std::string current; Json ids = Json::array();
+            for (const auto& o : row.at("options")) { ids.push_back(o.at("id")); if (o.at("id") == row.at("value")) current = o.at("label"); }
+            if (row.at("id") == sid + ".weapon" && tune.weapon == "move" && !id.empty() && !mesh_ready) current += " (no mesh, inventory stays)";
+            rows.push_back({{"id", "setting:" + row.at("id").get<std::string>()}, {"label", row.at("label")}, {"group", std::string(slot_to_string(slot)) + " settings"},
+                {"value", current}, {"title", row.at("label")}, {"subtitle", std::string("Setting for ") + slot_to_string(slot)}, {"description", row.at("description")},
+                {"setting", {{"id", row.at("id")}, {"value", row.at("value")}, {"options", ids}}}});
+        }
+        for (const auto& o : options) rows.push_back(o);
+        customize.push_back({{"type", "choice"}, {"id", sid}, {"label", slot_to_string(slot)}, {"name", slot_titles[i] + 4},
+            {"value", id}, {"icon", id.empty() ? weapon_icon(current_weapon_) : move_icon(id)}, {"options", std::move(rows)}, {"settings", settings_rows},
+            {"settings_key", speed_id + "/" + tune.hit_damage + "/" + tune.weapon + (mesh_ready ? "/m" : "")}, {"enabled", combat_ != nullptr && catalog_error_.empty()}});
     }
     sections.push_back({{"id", "customize"}, {"title", "Customize"}, {"kind", "slots"}, {"controls", std::move(customize)}});
     // ---- Presets
@@ -303,8 +339,6 @@ nlohmann::json Core::model() const {
     Json settings = Json::array();
     settings.push_back({{"type", "toggle"}, {"id", "enabled"}, {"label", "Custom Combat System"}, {"value", settings_->enabled()},
         {"description", "Master switch. Off restores every attack to the weapon's own animation at once; nothing of the game is changed on disk."}, {"enabled", combat_ != nullptr}});
-    settings.push_back({{"type", "slider"}, {"id", "rate"}, {"label", "Attack speed"}, {"value", settings_->attack_speed_scale()}, {"min", 0.5}, {"max", 2.0}, {"step", 0.05}, {"unit", "x"},
-        {"description", "Play-rate multiplier applied to every attack of the chain, swapped or not. 1x is the game's speed."}, {"enabled", combat_ != nullptr}});
     settings.push_back({{"type", "slider"}, {"id", "ui_scale"}, {"label", "Menu scale"}, {"value", settings_->ui_scale()}, {"min", 0.75}, {"max", 1.5}, {"step", 0.05}, {"unit", "x"},
         {"description", "Size of this page relative to the game's menus."}});
     settings.push_back({{"type", "button"}, {"id", "reset"}, {"label", "Reset all slots"}, {"action_label", "Reset"}, {"enabled", combat_ != nullptr && combat_->assigned() > 0},
@@ -331,6 +365,22 @@ nlohmann::json Core::model() const {
 void Core::handle_event(const nlohmann::json& event) {
     const auto id = event.at("id").get<std::string>();
     last_message_.clear(); ++model_revision_;
+    if (id.starts_with("slot.") && id.find('.', 5) != std::string::npos) {   // slot.<S>.<speed|hit_damage|weapon>
+        const auto second = id.find('.', 5);
+        const auto slot = string_to_slot(id.substr(5, second - 5)); const auto key = id.substr(second + 1);
+        if (!slot || !combat_) throw std::runtime_error("Unknown slot");
+        auto tune = combat_->tuning(*slot);
+        const auto value = event.at("value").get<std::string>();
+        try {
+            if (key == "speed") tune.speed = std::stod(value);
+            else if (key == "hit_damage") tune.hit_damage = value;
+            else if (key == "weapon") tune.weapon = value;
+            else throw std::runtime_error("Unknown slot setting");
+        } catch (const std::logic_error&) { throw std::runtime_error("Invalid slot setting value"); }
+        if (!valid_tuning(tune)) throw std::runtime_error("Invalid slot setting value");
+        combat_->set_tuning(*slot, tune); settings_->set_tuning(size_t(*slot), tune);
+        save_settings_or_log(); ++model_revision_; return;
+    }
     if (id.starts_with("slot.")) {
         const auto slot = string_to_slot(id.substr(5));
         if (!slot || !combat_) throw std::runtime_error("Unknown slot");
@@ -338,7 +388,6 @@ void Core::handle_event(const nlohmann::json& event) {
         save_settings_or_log(); ++model_revision_; return;
     }
     if (id == "enabled") { settings_->set_enabled(event.at("value").get<bool>()); if (combat_) combat_->set_enabled(settings_->enabled()); save_settings_or_log(); return; }
-    if (id == "rate") { settings_->set_attack_speed_scale(event.at("value").get<double>()); if (combat_) combat_->set_rate(settings_->attack_speed_scale()); save_settings_or_log(); return; }
     if (id == "ui_scale") { settings_->set_ui_scale(event.at("value").get<double>()); save_settings_or_log(); return; }
     if (id == "reset") { if (combat_) for (unsigned i = 0; i < slot_count; ++i) combat_->set_slot(SlotId(i), ""); save_settings_or_log(); return; }
     if (id == "preset.selected") { selected_preset_ = event.at("value").get<std::string>(); apply_preset(selected_preset_); return; }   // choosing a preset applies it
@@ -354,6 +403,7 @@ void Core::handle_event(const nlohmann::json& event) {
         for (unsigned i = 0; i < slot_count; ++i) {
             auto& binding = preset.slots[i]; binding.slot = SlotId(i);
             binding.move_id = combat_ ? combat_->slot_move(SlotId(i)) : std::string{};
+            if (combat_) binding.tuning = combat_->tuning(SlotId(i));
             if (const auto* move = binding.move_id.empty() ? nullptr : catalog_.find_move(binding.move_id)) { binding.montage_path = move->montage_path; binding.ability_path = move->ability_path; binding.source = move->source_name; binding.origin = move->origin; }
         }
         if (storage_->save_preset(preset, true) != runtime::FileWriteResult::Success) throw std::runtime_error("Preset could not be written");

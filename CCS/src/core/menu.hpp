@@ -80,6 +80,8 @@ private:
     uint64_t bindings_generation_ = 0, strip_glyph_generation_ = ~0ull;
     bool gamepad_ = false, typing_now_ = false;
     std::string slot_options_key_;            // which slot's candidates options_ currently holds
+    std::string pending_select_id_;           // row to highlight after the next candidate reset (a setting just changed)
+    const Json* highlighted_setting() const;  // the highlighted row's "setting" carrier, or null
     struct Hit { WeakObject widget; Json action; bool down = false; std::vector<std::pair<WeakObject, Json>> parts; WeakObject glyph; };
     std::vector<Hit> hits_;
     struct SliderHit { WeakObject bar, value_block, row; Json control; double previous, low, high, step; std::string unit; };

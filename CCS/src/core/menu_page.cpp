@@ -1066,13 +1066,17 @@ void Menu::build_slots(const Json& section, bool& deferred) {
     // ---- the candidate list for the active slot: a search field, then the matches grouped
     const Json* slot = rows ? &controls[row_] : nullptr;
     const auto& options = slot ? slot->at("options") : Json::array();
-    const std::string options_key = slot ? slot->value("id", std::string{}) + "/" + std::to_string(options.size()) : std::string{};
+    const std::string options_key = slot ? slot->value("id", std::string{}) + "/" + std::to_string(options.size()) + "/" + slot->value("settings_key", std::string{}) : std::string{};
     if (options_key != slot_options_key_) {
         // A new slot: its candidates become the search set, filtered by the query already typed,
         // and the highlight lands on what the slot holds.
         options_.reset(options); search_query_.clear(); list_first_ = 0;
         if (auto* search = search_input_.Get()) { try { text_value(search, ""); } catch (...) {} }
         for (size_t i = 0; i < options_.matches.size(); ++i) if (slot && options[options_.matches[i]].at("id") == slot->at("value")) options_.selected = i;
+        if (!pending_select_id_.empty()) {   // a setting row was just adjusted: stay on it
+            for (size_t i = 0; i < options_.matches.size(); ++i) if (options[options_.matches[i]].at("id") == pending_select_id_) options_.selected = i;
+            pending_select_id_.clear();
+        }
         slot_options_key_ = options_key;
     }
     auto& input = take(list_, Kind::input);
@@ -1126,11 +1130,16 @@ void Menu::build_slots(const Json& section, bool& deferred) {
         detail(o.value("title", o.value("label", std::string{})), o.value("subtitle", slot_name), o.value("description", std::string{}), game_icon(o.value("icon", std::string{})));
         if (const auto hint = o.value("hint", std::string{}); !hint.empty()) paragraph(panel_, hint, muted);
         const bool assigned = o.at("id") == slot->at("value");
-        if (!o.value("enabled", true)) paragraph(panel_, o.value("disabled_label", std::string("Unavailable")), muted);
-        else if (assigned) paragraph(panel_, "Assigned to " + slot->value("label", std::string{}) + ".", muted);
-        else action_prompt("accept", "Assign to " + slot->value("label", std::string{}), {{"action", "assign"}}, glyph_accept);
-        if (!slot->value("value", std::string{}).empty()) action_prompt("secondary", "Restore the weapon's own attack", {{"action", "clear"}}, glyph_secondary);
-        if (gamepad_) bar_prompt_actions("Slot", "", glyph_dpad_horizontal); else bar_prompt_actions("Slot", "left", glyph_left, "right", glyph_right);
+        if (o.contains("setting")) {   // a per-slot setting row: Accept cycles, left/right adjust
+            action_prompt("accept", "Next value", {{"action", "setting_delta"}, {"delta", 1}}, glyph_accept);
+            if (gamepad_) bar_prompt_actions("Value", "", glyph_dpad_horizontal); else bar_prompt_actions("Value", "left", glyph_left, "right", glyph_right);
+        } else {
+            if (!o.value("enabled", true)) paragraph(panel_, o.value("disabled_label", std::string("Unavailable")), muted);
+            else if (assigned) paragraph(panel_, "Assigned to " + slot->value("label", std::string{}) + ".", muted);
+            else action_prompt("accept", "Assign to " + slot->value("label", std::string{}), {{"action", "assign"}}, glyph_accept);
+            if (!slot->value("value", std::string{}).empty()) action_prompt("secondary", "Restore the weapon's own attack", {{"action", "clear"}}, glyph_secondary);
+            if (gamepad_) bar_prompt_actions("Slot", "", glyph_dpad_horizontal); else bar_prompt_actions("Slot", "left", glyph_left, "right", glyph_right);
+        }
     } else detail(deps_.title, "", "");
     action_prompt("search", typing_now_ ? "Typing filters the list" : "Search the list", {{"action", "search"}}, glyph_tertiary);
     const std::string context = "slots/" + std::to_string(row_) + "/" + std::to_string(cand);

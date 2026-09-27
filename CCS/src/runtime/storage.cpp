@@ -1,4 +1,5 @@
 #include "storage.hpp"
+#include <cmath>
 #include "common.hpp"
 #include <algorithm>
 
@@ -88,7 +89,10 @@ nlohmann::json Storage::preset_to_json(const PresetData& preset) {
             {"source", slot.source},
             {"move_id", slot.move_id},
             {"ability", slot.ability_path},
-            {"montage", slot.montage_path}
+            {"montage", slot.montage_path},
+            {"speed", slot.tuning.speed},
+            {"hit_damage", slot.tuning.hit_damage},
+            {"weapon", slot.tuning.weapon}
         };
         if (!slot.tarstone_id.empty()) {
             sj["tarstone_id"] = slot.tarstone_id;
@@ -149,6 +153,10 @@ std::optional<PresetData> Storage::json_to_preset(const nlohmann::json& j) {
                 binding.montage_path = text("montage");
                 binding.tarstone_id = text("tarstone_id");
                 binding.tarstone_name = text("tarstone_name");
+                binding.tuning.speed = val.value("speed", 1.0);
+                binding.tuning.hit_damage = val.value("hit_damage", std::string("move"));
+                binding.tuning.weapon = val.value("weapon", std::string("inventory"));
+                if (!std::isfinite(binding.tuning.speed) || !valid_tuning(binding.tuning)) throw std::runtime_error("Invalid slot tuning");
                 const auto type = val.value("type", std::string{"player"});
                 if (type == "player") binding.origin = MoveOrigin::PlayerWeapon;
                 else if (type == "enemy") binding.origin = MoveOrigin::EnemyHumanoid;

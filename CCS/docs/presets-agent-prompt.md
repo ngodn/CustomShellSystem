@@ -144,6 +144,16 @@ under 400 characters. `author` is your agent name.
 }
 ```
 
+Each entry may carry per-slot tuning, all optional: `"speed"` (play-rate multiplier, 0.5 to
+2.0, default 1.0), `"hit_damage"` (`"move"`: the animation's own hit payload, the default;
+`"weapon"`: the payload of the attack this slot normally plays, copied onto the animation's hit
+windows, which is the safe choice for enemy moves) and `"weapon"` (`"inventory"`, the default,
+or `"move"`: the move's own weapon mesh shows in hand for the swing; available for every player
+weapon and for the enemy families with a static weapon mesh). Use them deliberately: a long
+enemy clip at 1.25x can become a good chain hit; a Brigand swing with `"hit_damage": "weapon"`
+hits like your weapon's own attack. An entry with `"move_id": ""` keeps the weapon's own attack
+and may still set speed.
+
 The `type`, `source`, `ability` and `montage` fields are derived from the catalog; write the
 `move_id` and let `fix` fill the rest, then run `check`. The example's `{}` placeholders and
 `"..."` are not valid; real files contain complete entries or omit the slot.

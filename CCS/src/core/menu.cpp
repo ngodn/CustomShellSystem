@@ -200,6 +200,11 @@ void Menu::bind_inputs() {
     if (bindings_.empty()) throw std::runtime_error("No menu navigation actions were found in the input mapping");
 }
 bool Menu::typing() const { return has_focus(search_input_.Get()) || has_focus(name_input_.Get()); }
+const Json* Menu::highlighted_setting() const {
+    if (options_.matches.empty() || options_.selected >= options_.matches.size()) return nullptr;
+    const auto& row = options_.options.at(options_.matches.at(options_.selected));
+    return row.contains("setting") ? &row : nullptr;
+}
 void Menu::poll_input(const PlayerContext& player, uint64_t now, bool typing) {
     auto* pc = player.pc; if (!pc) return;
     for (auto& b : bindings_) {
@@ -418,7 +423,7 @@ void Menu::key(const std::string& action) {
             dirty_ = true; return;
         }
         if (action == "previous_section" || action == "next_section") { act({{"action", "section_delta"}, {"delta", action == "previous_section" ? -1 : 1}}); return; }
-        if (action == "left" || action == "right") { act({{"action", "slot_delta"}, {"delta", action == "left" ? -1 : 1}}); return; }
+        if (action == "left" || action == "right") { act({{"action", highlighted_setting() ? "setting_delta" : "slot_delta"}, {"delta", action == "left" ? -1 : 1}}); return; }
         if (action == "up" || action == "down") { act({{"action", "cand_delta"}, {"delta", action == "up" ? -1 : 1}}); return; }
         if (action == "accept") { act({{"action", "assign"}}); return; }
         if (action == "secondary") { act({{"action", "clear"}}); return; }
@@ -496,9 +501,20 @@ void Menu::act(const Json& action) {
         else options_.move(action.at("delta").get<int>());
         dirty_ = true; return;
     }
-    if (name == "assign" || name == "clear") {
+    if (name == "assign" || name == "clear" || name == "setting_delta") {
         const auto* c = current_control(); if (!c) return;
         if (name == "assign" && action.contains("index")) options_.selected = std::min(action.at("index").get<size_t>(), options_.matches.empty() ? size_t{} : options_.matches.size() - 1);
+        if (const auto* row = (name == "setting_delta" || name == "assign") ? highlighted_setting() : nullptr) {
+            // A per-slot setting row: step its value and keep the highlight on it across the rebuild.
+            const auto& setting = row->at("setting"); const auto& ids = setting.at("options");
+            if (!ids.is_array() || ids.empty()) return;
+            size_t at = 0; for (size_t i = 0; i < ids.size(); ++i) if (ids[i] == setting.at("value")) at = i;
+            const int delta = action.value("delta", 1);
+            at = (at + ids.size() + size_t((delta % int(ids.size())) + int(ids.size()))) % ids.size();
+            pending_select_id_ = row->at("id").get<std::string>();
+            send_event({{"id", setting.at("id")}, {"value", ids[at]}}); return;
+        }
+        if (name == "setting_delta") return;
         Json value = "";
         if (name == "assign") {
             if (options_.matches.empty()) return;

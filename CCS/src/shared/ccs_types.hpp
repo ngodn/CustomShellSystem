@@ -98,6 +98,18 @@ struct TarstoneDefinition {
     std::vector<std::string> compatibility_tags;
 };
 
+// Per-slot tuning, saved with the settings and inside presets: play-rate, whose hit payload a
+// swapped swing carries, and which weapon shows in hand while it plays.
+struct SlotTuning {
+    double speed{1.0};                 // 0.5 .. 2.0, multiplies the montage play rate
+    std::string hit_damage{"move"};    // "move": the replacement's own hit payload; "weapon": the slot's original payload
+    std::string weapon{"inventory"};   // "inventory": the equipped weapon stays visible; "move": the move's own weapon shows
+    bool operator==(const SlotTuning&) const = default;
+};
+inline bool valid_tuning(const SlotTuning& t) {
+    return t.speed >= 0.5 && t.speed <= 2.0 && (t.hit_damage == "move" || t.hit_damage == "weapon") && (t.weapon == "inventory" || t.weapon == "move");
+}
+
 struct SlotBinding {
     SlotId slot{SlotId::L1};
     MoveOrigin origin{MoveOrigin::PlayerWeapon};
@@ -107,6 +119,7 @@ struct SlotBinding {
     std::string montage_path;
     std::string tarstone_id;       // If finisher/hold tarstone equipped
     std::string tarstone_name;
+    SlotTuning tuning;
 };
 
 struct PresetData {
