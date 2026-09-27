@@ -104,3 +104,17 @@ All 1414 frames differ from E4 only in root local translation Z. Root correction
 A denser skinned render and contact pass is running for all E5 clips at stride 2 (15 fps samples). Outputs are `work/eve-idle1/e5-render700` through `e5-render713`; each completed clip has its own report. Do not infer completion from directory existence. Full sequence has 51 rendered samples including the duplicate loop endpoint; encode only the first 50 at 15 fps to preserve the original 3.333-second cycle.
 
 The accepted manifest stores animation options per variant, not at outfit level. All six variants currently carry Eve Default Idle plus movement slots. Add new options to all six while preserving their existing definitions.
+
+## Combined E5 review candidate
+
+All 14 dense renders finished (714 total samples). Inspected five distributed samples per clip in `e5-review-a.jpg` and `e5-review-b.jpg`. Full-resolution sequences remain in `e5-render700` through `e5-render713`. Replay translation error stays below 0.001 cm and reported rotation error is zero. `e5-dense-review.json` contains per-clip contact ranges. These measurements still use Black Pearl without live secondary simulation.
+
+The dense pass catches a contact peak missed by the earlier stride-five measurements: Deep Squat (712) rises to about 5.95 cm nominal at frames 22, 42, 62 and 82. Black Pearl's existing offset reduces this to about 2.95 cm. Check this in motion and on the other outfits before accepting it; do not describe all contacts as within the earlier predicted range. Other clips range from approximately 0.44 to 3.26 cm nominal. Review videos use the first 50 frames at 15 fps, excluding the duplicate endpoint.
+
+`export_idle_library.py` duplicated the corrected sequences into `/Game/CSS/Eve/Anim/Idles/AN_Idle700` through `AN_Idle713`, preserving all prior authoring asset hashes. Receipt: `e5/export-result.json`. The Windows commandlet cook exited 0 with no errors; the two warnings are attempts to write editor settings outside the writable workspace. Log: `work/eve26/idle-e5-cook.log`.
+
+`package_idle_library.py` built `work/eve-idle1/pack1/CSS_EveStellarBlade_eins0fx_P`. It extracts the exact accepted release, adds only the 14 cooked sequences, then round-trips the combined IoStore. All 323 existing asset headers and payloads match, including the released 386-bone shared skeleton. All 14 added animation payloads match their cooked inputs. Total: 337 assets. No separate shared-assets container participates in verification.
+
+Each of the six variants now has 15 idle entries in this candidate. Existing IDs, choices, customization and other metadata remain unchanged except for the added idle entries and updated container hashes. The candidate deliberately retains the baseline version until release validation; it is not a new public release. Receipt: `pack1/verification.json`.
+
+The game was running when packaging completed. Installation, live physics, floor placement, interruptions, weapon restoration and persistence have not been tested. Requested a convenient game closure for a backed-up installation. No installed package or release ZIP has been changed by this stage.
