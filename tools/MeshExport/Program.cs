@@ -25,6 +25,11 @@ provider.Mount();
 var mesh = provider.LoadPackageObject(args[2]);
 Directory.CreateDirectory(args[3]);
 File.WriteAllText(Path.Combine(args[3], "source-mesh.json"), JsonConvert.SerializeObject(mesh, Formatting.Indented));
+if (Environment.GetEnvironmentVariable("CSS_TRACK_AUDIT") == "1") {
+    if (mesh is not UAnimSequence auditSequence) throw new ArgumentException("Track audit requires an AnimSequence");
+    SourceTrackAudit.Export(auditSequence, args[3]);
+    return;
+}
 if (Environment.GetEnvironmentVariable("CSS_SOURCE_TRACKS") == "1") {
     if (new[] { "CSS_ABSOLUTE_TRACKS", "CSS_ADDITIVE_POSE_DELTAS", "CSS_ANIMATION_POSES" }
         .Any(key => Environment.GetEnvironmentVariable(key) == "1"))

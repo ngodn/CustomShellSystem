@@ -42,3 +42,17 @@ All 14 primary ESAP clips loaded successfully through metadata-only inspection. 
 A fresh read of the installed base skeleton confirms 3267 reference bones and no serialized VirtualBones property. This rules out attributing the extra indices to an available virtual-bone definition without further evidence. Epic distinguishes final reference bones from raw bones, with final bones including virtual bones: https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/FReferenceSkeleton .
 
 Read-only scans of the installed third-party IoStore containers found no override at the exact referenced `CH_P_EVE_01_Skeleton.uasset` path. The scan does not cover legacy-only pak contents. Receipt: `work/eve-idle1/skeleton-candidates.json`. The ATOOL and ESAP IoStore listings also contain no matching skeleton asset. Next inspect legacy pak payloads and source track compatibility before deciding how to resolve the added indices.
+
+## Complete track diagnostic
+
+Added `CSS_TRACK_AUDIT=1` to MeshExport (.NET 10, SDK 10.0.401). It invokes the pinned CUE4Parse per-track decoder for every compressed track rather than iterating only resolved skeleton bones. It preserves unresolved indices without guessing names or parents. This is diagnostic output, not a relaxed production retarget path. Existing SourceTracks validation remains unchanged.
+
+- Build succeeded with zero warnings and errors: `work/eve-idle1/audit-build.log`.
+- All 234 tracks decoded for each of 700 through 713: `work/eve-idle1/audit/<clip>/track-audit.json`.
+- Regression against retained Eve Default Idle: all 138 tracks match exactly across quaternion, translation, scale and all three timestamp arrays. Receipt: `work/eve-idle1/audit-regression.json`.
+- Most unresolved tracks have constant approximately (0,-4,0) offsets, suggesting export helpers, but this is not confirmed bone identity. Some unresolved tracks in 707, 712 and 713 have multiple keys. Do not discard them on the static-helper assumption. Summary: `work/eve-idle1/audit-summary.json`.
+- ESAP and ATOOL legacy pak listings are empty, so they do not supply a hidden skeleton override.
+- Diagnostic known-joint previews for 700 through 706 rendered successfully. Inspected the first contact sheet at `work/eve-idle1/review1/joints-0.png`; poses include standing, kneeling and floor poses. This is not a skinned or full-motion acceptance check.
+- The second preview batch correctly stopped on non-unit source scale. Tracks in 707, 708, 712 and 713 include non-unit leg scale. Keep this as an explicit conversion requirement; the current NumPy preview deliberately refuses it. Use an Unreal-compatible transform evaluator rather than silently stripping scale or composing a shear-producing matrix chain.
+
+No references, installed packages, release artifacts or CSS runtime code were changed by this diagnostic work.
