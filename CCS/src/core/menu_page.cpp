@@ -207,7 +207,7 @@ void Menu::glyph(UObject* widget, const std::string& action, uint8_t fallback, u
 
 // ---- the skeleton
 void Menu::forget_page() {
-    for (auto* stack : {&tab_items_, &list_, &head_, &panel_, &actions_, &footer_}) { stack->cells.clear(); stack->used = 0; stack->box.Reset(); }
+    for (auto* stack : {&tab_items_, &list_, &head_, &top_, &panel_, &actions_, &footer_}) { stack->cells.clear(); stack->used = 0; stack->box.Reset(); }
     design_.Reset(); left_root_.Reset(); right_root_.Reset(); list_scroll_.Reset(); strip_scroll_.Reset(); details_.Reset(); panel_scroll_.Reset(); panel_size_.Reset();
     status_text_.Reset(); title_text_.Reset(); subtitle_text_.Reset(); logo_image_.Reset(); strip_previous_.Reset(); strip_next_.Reset(); strip_previous_glyph_.Reset(); strip_next_glyph_.Reset();
     input_prompt_.Reset(); search_input_.Reset(); name_input_.Reset();
@@ -298,10 +298,15 @@ bool Menu::page(double width, double height) {
     add_child(strip_scroll, tabs); tab_items_.box = tabs;
     prompt("next_section", glyph_right_bumper, strip_next_, strip_next_glyph_);
     place(left, image_widget(tree, game_texture("T_UI_Nav_Title_Divider")), 0, 640, native_column, 6);
+    // The left column: a pinned box (the slots page's search field) above the scrolling list.
+    auto* left_column = construct(L"/Script/UMG.VerticalBox", tree);
+    place(left, left_column, 48, 670);
+    auto* top = construct(L"/Script/UMG.VerticalBox", tree);
+    add_child(left_column, top); top_.box = top;
     auto* list_size = construct(L"/Script/UMG.SizeBox", tree);
     invoke(list_size, L"SetWidthOverride", L"InWidthOverride", 1040.f);
-    invoke(list_size, L"SetHeightOverride", L"InHeightOverride", float(design_height - 860));
-    place(left, list_size, 48, 670);
+    invoke(list_size, L"SetHeightOverride", L"InHeightOverride", float(design_height - 860 - 130));
+    add_child(left_column, list_size);
     auto* list_scroll = construct(L"/Script/UMG.ScrollBox", tree);
     if (auto* bar = object_of(object_of(character, L"WBP_CSB_Style2"), L"Image_Bar")) {
         auto* style = list_scroll->GetPropertyByNameInChain(L"WidgetBarStyle");
@@ -357,7 +362,7 @@ bool Menu::page(double width, double height) {
     return true;
 }
 void Menu::invalidate_page() {
-    for (auto* stack : {&tab_items_, &list_, &head_, &panel_, &actions_, &footer_})
+    for (auto* stack : {&tab_items_, &list_, &head_, &top_, &panel_, &actions_, &footer_})
         for (auto& cell : stack->cells) {
             cell.shown = -1;
             for (auto& item : cell.kinds) {
@@ -696,18 +701,18 @@ void Menu::build() {
     for (const auto& hit : hits_) if (auto* w = hit.widget.Get()) held[w] = hit.down;
     held_ = std::move(held);
     hits_.clear(); sliders_.clear(); name_input_.Reset(); search_input_.Reset();
-    for (auto* stack : {&tab_items_, &list_, &head_, &panel_, &actions_, &footer_}) stack->used = 0;
+    for (auto* stack : {&tab_items_, &list_, &head_, &top_, &panel_, &actions_, &footer_}) stack->used = 0;
     budget_ = budget_per_build;
     bool deferred = false;
     build_page(deferred);
-    for (auto* stack : {&tab_items_, &list_, &head_, &panel_, &actions_, &footer_}) finish(*stack);
+    for (auto* stack : {&tab_items_, &list_, &head_, &top_, &panel_, &actions_, &footer_}) finish(*stack);
     if (!confirm_.is_null()) dialog(); else dialog_close();
     if (enter_) { transition_started_ = active_ ? GetTickCount64() : 0; enter_ = false; }
     panel_fit_pending_ = true;
     dirty_ = deferred;
     const auto took = monotonic_us() - started;
     ++cost_.builds; cost_.build_us += took; cost_.last_build_us = took; cost_.max_build_us = std::max(cost_.max_build_us, took);
-    cost_.widgets = 0; for (const auto* stack : {&tab_items_, &list_, &head_, &panel_, &actions_, &footer_}) cost_.widgets += stack->used;
+    cost_.widgets = 0; for (const auto* stack : {&tab_items_, &list_, &head_, &top_, &panel_, &actions_, &footer_}) cost_.widgets += stack->used;
 }
 void Menu::strip(const std::vector<std::string>& names, int selected, const std::string& action) {
     UObject* selected_tab = nullptr;
@@ -1076,7 +1081,7 @@ void Menu::build_slots(const Json& section, bool& deferred) {
         for (size_t i = 0; i < options_.matches.size(); ++i) if (slot && options[options_.matches[i]].at("id") == slot->at("value")) options_.selected = i;
         slot_options_key_ = options_key;
     }
-    auto& input = take(head_, Kind::input);   // pinned above the scroll box, like the picker's search
+    auto& input = take(top_, Kind::input);   // pinned above the left list's scroll box
     search_input_ = input.extra;
     if (input.value != search_query_) {
         Call focus(input.extra.Get(), L"HasKeyboardFocus", 1); focus.run();
@@ -1101,7 +1106,7 @@ void Menu::build_slots(const Json& section, bool& deferred) {
     }
     const size_t first = list_first_;
     const size_t last = std::min(matches.size(), first + shown);
-    if (first > 0) paragraph(head_, std::to_string(first) + " more above. Type to search.", muted);
+    if (first > 0) paragraph(top_, std::to_string(first) + " more above. Type to search.", muted);
     for (size_t i = first; i < last; ++i) {
         const auto& o = options[matches[i]];
         const auto group = o.value("group", std::string{});
@@ -1157,7 +1162,7 @@ void Menu::build_slots(const Json& section, bool& deferred) {
     action_prompt("search", typing_now_ ? "Typing filters the list" : "Search the list", {{"action", "search"}}, glyph_tertiary);
     const std::string context = "slots/" + std::to_string(row_) + "/" + std::to_string(cand);
     if (context != panel_context_) { if (auto* scroll = panel_scroll_.Get()) invoke(scroll, L"ScrollToStart"); panel_context_ = context; panel_revealed_ = nullptr; }
-    finish(list_); finish(head_); finish(panel_); finish(actions_);
+    finish(list_); finish(head_); finish(top_); finish(panel_); finish(actions_);
     status_line(error_.empty() ? model_.value("status", std::string{}) : error_, !error_.empty());
     const int key = section_ + int(model_["sections"].size()) * 1000 + row_ * 100000;
     if (revealed_row_ != cand || shown_section_ != key) {

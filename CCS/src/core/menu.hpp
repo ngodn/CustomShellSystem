@@ -107,7 +107,7 @@ private:
     };
     struct Cell { WeakObject holder; std::vector<Item> kinds; int shown = -1; };
     struct Stack { WeakObject box; std::deque<Cell> cells; size_t used = 0; };
-    Stack tab_items_, list_, head_, panel_, actions_, footer_;
+    Stack tab_items_, list_, head_, top_, panel_, actions_, footer_;
     // The slot grid: ten of the game's equipment slot tiles with a label over each, built once
     // in the centre column and restyled per build.
     struct Tile { WeakObject widget, label, hit; int selected = -1, shown = -1, dimmed = -1; const void* icon = nullptr; std::string text, icon_path; };
