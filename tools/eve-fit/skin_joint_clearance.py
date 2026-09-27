@@ -10,6 +10,7 @@ parser.add_argument('--mesh',type=Path,default=w/'skin-fit10/skin.mesh.json')
 parser.add_argument('--output',type=Path,default=w/'skin-fit11')
 parser.add_argument('--min-z',type=float,default=75)
 parser.add_argument('--max-z',type=float,default=110)
+parser.add_argument('--max-offset-cm',type=float,default=.4)
 parser.add_argument('--coupled',action='store_true')
 parser.add_argument('--surface-grid',type=int,default=0)
 parser.add_argument('--vertices',type=Path)
@@ -17,8 +18,9 @@ parser.add_argument('--iterations',type=int,default=150)
 parser.add_argument('--frames',type=int,nargs='+',default=[8,32,48])
 parser.add_argument('--motion',type=Path,default=w/'planet-f13-sprint.json')
 parser.add_argument('--upstream',action='store_true',help='Use recorded upstream transforms rather than post-process output')
-parser.add_argument('--stem',choices=('skin','knit'),default='skin')
+parser.add_argument('--stem',choices=('skin','knit','alice'),default='skin')
 args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+assert 0 < args.max_offset_cm <= 1.0
 assert args.min_z<args.max_z and not args.output.exists()
 assert 0<=args.surface_grid<=16
 p=args.mesh;data=json.loads(p.read_text());audit=json.loads(p.with_suffix('.audit.json').read_text())
@@ -104,7 +106,7 @@ if args.coupled:
    x=y+n*max(0,(rhs-n@y)/length) if length>1e-12 else y
    corrections[k]=y-x
   y=x+corrections[-1];blocks=y.reshape(-1,3);lengths=np.linalg.norm(blocks,axis=1)
-  x=(blocks*np.minimum(1,.4/np.maximum(lengths,1e-12))[:,None]).ravel();corrections[-1]=y-x
+  x=(blocks*np.minimum(1,args.max_offset_cm/np.maximum(lengths,1e-12))[:,None]).ravel();corrections[-1]=y-x
   if np.linalg.norm(x-previous)<1e-8 and np.min(a@x-b)>=-1e-6:break
  residual=float(max(0,np.max(b-a@x)))
  if residual>1e-5:conflicts.append(dict(patch=selected,residual_cm=residual))
@@ -125,7 +127,7 @@ else:
     x=y+n*max(0,(rhs-n@y)/length) if length>1e-12 else y
     corrections[k]=y-x
    y=x+corrections[-1];length=np.linalg.norm(y)
-   x=y*min(1,.4/max(length,1e-12));corrections[-1]=y-x
+   x=y*min(1,args.max_offset_cm/max(length,1e-12));corrections[-1]=y-x
    if np.linalg.norm(x-previous)<1e-8 and np.min(a@x-b)>=-1e-6:break
   residual=float(max(0,np.max(b-a@x)))
   if residual>1e-5:conflicts.append(dict(vertex=i,residual_cm=residual));continue
@@ -138,6 +140,6 @@ path=out/f'{args.stem}.mesh.json';path.write_text(json.dumps(result,separators=(
 audit['output_sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
 (out/f'{args.stem}.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')
 (out/'offsets.json').write_text(json.dumps(dict(offsets=offsets))+'\n')
-(out/'receipt.json').write_text(json.dumps(dict(source_sha256=hashlib.sha256(p.read_bytes()).hexdigest(),motion=str(args.motion),motion_sha256=hashlib.sha256(args.motion.read_bytes()).hexdigest(),upstream=args.upstream,region_z_cm=[args.min_z,args.max_z],selected_vertices=len(selected),iterations=args.iterations,surface_grid=args.surface_grid,coupled=args.coupled,cases=cases,changed_vertices=len(offsets),conflicts=conflicts,
-    scope='Simultaneous linearized vertex and centroid constraints, 0.4 cm bound. Unresolved vertices retain original positions. Requires nonlinear and visible collision verification.'),indent=2)+'\n')
+(out/'receipt.json').write_text(json.dumps(dict(source_sha256=hashlib.sha256(p.read_bytes()).hexdigest(),motion=str(args.motion),motion_sha256=hashlib.sha256(args.motion.read_bytes()).hexdigest(),upstream=args.upstream,region_z_cm=[args.min_z,args.max_z],max_offset_cm=args.max_offset_cm,selected_vertices=len(selected),iterations=args.iterations,surface_grid=args.surface_grid,coupled=args.coupled,cases=cases,changed_vertices=len(offsets),conflicts=conflicts,
+    scope='Simultaneous linearized vertex and centroid constraints, Configured displacement bound. Unresolved vertices retain original positions. Requires nonlinear and visible collision verification.'),indent=2)+'\n')
 print('Changed:',len(offsets),'Conflicts:',len(conflicts),flush=True)

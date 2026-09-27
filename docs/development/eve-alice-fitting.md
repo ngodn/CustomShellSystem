@@ -73,3 +73,25 @@ Process 46075 exited 0. The 65-frame sprint preserves pinned points within 0.000
 `alice-bow-isolation.patch` enables existing temporary collision-isolation switches for this private Alice candidate. Build and process 16097 exit 0. With only body collision disabled, displacement drops to 0.8873 cm, limit excess to 0.00003318 cm, and maximum edge ratio to 4.173. Thus the copied body collider drives the large outward displacement, but removing it is not a fit fix.
 
 Coordinate verification and render replay processes exit 0. `alice-nobody-view34/front.png` shows most of the bow buried in the chest in the bent sprint pose. The inherited spine-only skinning is a candidate cause. Before more collision tuning, compare the no-cloth skinned bow at that same postprocess pose and transfer attachment weights from the fitted suit/body as appropriate. Keep the original geometric shape and author pin partition. Do not ship collision-disabled trial as accepted physics or repeat the collider-only parameter loop.
+
+
+## Chest priority and comparison with accepted Knitwear
+
+User accepts the neck straps for now. Stop neck/bow micro-fitting and fix the nipple pokethrough while retaining the contour under fabric. Do not flatten the body or hide exposed regions as a shortcut.
+
+The body-donor ribbon trial `alice-boww2` restores the visible bow at sprint frame 34; the suit-donor trial did not. Neither trial changes geometry or morphs. Physics still requires a fresh bind with corrected weights before acceptance.
+
+Compare the accepted Knitwear fabric near body point 6397: fabric point 49259 carries brust001 0.9411, spine03 0.0554 and clavicle_r 0.0036, matching the body. Alice point 52130 instead carries brust001 0.9962, spine03 0.0035 and clavicle_r 0.0003. Reuse body-corresponding weights rather than treating this only as a fabric offset problem.
+
+`alice-chestw1` transfers body weights to the explicit 1,834-point chest selection, preserving all geometry, morphs and body weights. Its frame-34 render still shows both nipple spots. Weight matching alone is therefore insufficient. `alice-chest3` applies a bounded 0.4 cm clearance to the corrected weights; its inspected frame-34 render also retains both spots. Neither candidate is accepted or installed. The earlier uncorrected-weight chest1/chest2 candidates must not replace the corrected branch.
+
+Next candidate `alice-chest4` allows up to 1 cm local clearance against bind and sprint frames 24/34/48, at default and maximum supported morphs. It remains an offline trial until rendered and checked. Only the selected garment points may move. Preserve the lace openings, silhouette, original body and accepted neck scope.
+
+
+## Chest correction saved and visually checked
+
+`alice-chest4` changes 708 garment points, maximum 0.993854 cm, with body, skeleton and morph deltas unchanged. Seventeen sampled constraints remain unresolved, so this is not a claim of zero intersections everywhere. Inspected front renders `alice-chest4-base`, `alice-chest4-pose34` and `alice-chest4-max34` show both nipple contours covered, including the previously failing bent pose and all six supported sliders at maximum. Neck strap clipping remains within the explicitly accepted scope.
+
+Saved garment source `alice-cw4.blend` contains the corrected clearance and body-corresponding weights. Intermediate `alice-c4.blend` preserves relative shape deltas; evaluated geometry differs from the JSON by at most 0.0000170923 cm. Fresh reload of final weights passes with maximum error 2.97943e-8 and identical geometry/shape-key digest. Both save processes exit 0. Final candidate JSON SHA256: `f72ebd548446c68acf6bf49d7925a3dd59691b85551ed1376ec003a667f8f8e9`.
+
+Next: assemble this corrected suit and body-weighted ribbon, reimport the private Alice candidate, then complete restrained clothing motion and customization. Do not package the earlier `SK_AFit1` or `SK_ACloth1` as if they contain this repair. No game package or release archive changed in this step.
