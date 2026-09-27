@@ -56,9 +56,11 @@ for frame in args.frames:
   points=base+(morph if maximum else 0);posed=np.zeros_like(points)
   np.add.at(posed,vi,(np.einsum('nij,nj->ni',matrices[bi,:3,:3],points[vi])+matrices[bi,:3,3])*wt[:,None])
   xyz=[Vector(v) for v in posed*reflect];tree=BVHTree.FromPolygons(xyz,faces,all_triangles=True);hits=[];skipped=0
+  body_tree=BVHTree.FromPolygons(xyz,[[m['wedges'][j][0] for j in f[:3]] for f in m['faces'][:nf]],all_triangles=True) if args.garment=='skin' else None
   query=[xyz[i] for i in samples]+[sum((xyz[i] for i in ids),Vector())/3 for ids in centroids]
   for i,point in enumerate(query):
    location,normal,face,distance=tree.find_nearest(point);signed=(point-location).dot(normal)
+   if body_tree is not None and normal.dot(body_tree.find_nearest(point)[1])<.5:continue
    if not .01<signed<.5 or distance>signed*1.01:continue
    indices=faces[face];a,b,c=[xyz[j] for j in indices];u,v,d=b-a,c-a,location-a
    denom=u.dot(u)*v.dot(v)-u.dot(v)**2
@@ -82,5 +84,5 @@ stem='planet' if args.garment=='prototype' else 'skin'
 f=out/f'{stem}.mesh.json';f.write_text(json.dumps(result,separators=(',',':'))+'\n');audit['output_sha256']=hashlib.sha256(f.read_bytes()).hexdigest()
 (out/f'{stem}.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')
 (out/'offsets.json').write_text(json.dumps({'offsets':[[i,*v.tolist()] for i,v in proposals.items()]})+'\n')
-report=dict(cases=reports,changed_vertices=len(proposals),max_offset_cm=max((np.linalg.norm(v) for v in proposals.values()),default=0),scope='Bounded pose-derived garment proposal; masked body vertices and non-interior projections excluded. Not watertight collision proof; requires visual review and source application.')
+report=dict(cases=reports,body_normal_alignment_minimum=.5 if args.garment=='skin' else None,changed_vertices=len(proposals),max_offset_cm=max((np.linalg.norm(v) for v in proposals.values()),default=0),scope='Bounded pose-derived garment proposal; masked body vertices and non-interior projections excluded. Not watertight collision proof; requires visual review and source application.')
 (out/'receipt.json').write_text(json.dumps(report,indent=2)+'\n');print(report)
