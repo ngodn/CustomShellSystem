@@ -47,3 +47,13 @@ The fresh-reference commandlet completed exit 0 (process 52754). `inspect_knit_m
 Unlike Gemini's rigid spine export, the author's ribbon has its own armature, neck/root groups and multiple left/right ribbon chains. No dForce maps are present. Root weights range from 0.0353 to 0.5529, so they must not be mistaken for a ready-made zero/one cloth pin mask. Inspect attachment geometry before deciding the pin transition; preserve the recovered point correspondence rather than guessing a spatial nearest-neighbor mapping.
 
 An extra all-minus-one render (`alice-min1`) shows undesirable chest folding, but the current manifest explicitly supports shape values 0 through 1. This negative extrapolation is outside that range and is not a release blocker. Do not spend time correcting unsupported negative morph values. Individual positive slider checks remain useful.
+
+## Bow physics trial prepared
+
+Close-up `alice-bow1/front.png` confirms a chest bow with two loops and hanging ends. The close view also exposes small skin spots through the chest fabric; review those separately from the intentional lace openings before final fitting acceptance.
+
+`prepare_alice_cloth.py` uses the exact 624-point correspondence. Each point's trial displacement limit is moving-chain weight divided by moving-chain plus root weight, capped naturally at 1 cm. Neck weights are excluded from this ratio. This is an authored bounded trial, not a reconstruction of the author's solver. Six disconnected pieces have 8/36, 7/48, 120/120, 100/100, 30/152 and 24/168 pinned points. Thus every piece retains an attachment and two pieces are fully fixed.
+
+`alice-cloth1` contains the full-resolution bow proxy, 6-iteration settings, 5 cm nonlegacy backstop radii, and separate mesh/collider copy recipes. The separate copies preserve the gameplay mesh's original `PA_Body` reference while supplying a private identical collision asset. No shared rig changes are needed.
+
+Pipeline process 76756 is running copy, collision copy, then cloth bind in sequence. Resume that exact handle; do not relaunch on an observation timeout. Logs: `alice-cloth-{copy,pa,bind}.log`. Binding and native motion are not yet verified. Next inspect the saved cloth, run a bounded native motion test, visually replay the bow and check attachment drift before adopting it.
