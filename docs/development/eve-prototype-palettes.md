@@ -28,3 +28,6 @@ Generated atlas previews are offline color-composite approximations. They do not
 ## Model review
 
 `render_prototype_palettes.py` completed in Blender 5.2.2 with exit0. It reconstructs the F14 import mesh and its first UV channel, hides the same covered body sections, and renders Original plus five palettes from front and back. All twelve images were reviewed in `work/eve26/p14colors/model/review.jpg`. Panel, trim, collar, tail and ribbon color placements are consistent across the views. This uses Workbench texture display with a neutral body and no hair; it checks UV placement, not the Unreal shader or runtime restoration. No blend or accepted mesh asset is modified.
+
+
+Installed after the user's explicit instruction, with game processes confirmed absent. Backup `backups/packages-0011`; installed trio hashes verified in `p14colors/installed.json`. Game launch remains the user's choice. Live palette acceptance is pending.
