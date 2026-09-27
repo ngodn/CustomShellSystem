@@ -3,16 +3,21 @@ import argparse,json,hashlib,sys
 from pathlib import Path
 import bpy
 import numpy as np
+from mathutils import Vector
 root=Path(__file__).resolve().parents[2];work=root/'work/eve26'
-name='Eve Prototype Planet Diving Suit - Suit'
 p=argparse.ArgumentParser(description=__doc__)
+p.add_argument('--garment',choices=('prototype','skin'),default='prototype')
 p.add_argument('--source',type=Path,default=work/'planet-suit-f5.blend')
 p.add_argument('--candidate',type=Path,default=work/'planet-weight-repair')
 p.add_argument('--output',type=Path,default=work/'planet-suit-f6.blend')
 a=p.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+name={'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin Suit - Suit Complete'}[a.garment]
+stem='planet' if a.garment=='prototype' else 'skin'
+sys.path.insert(0,str(root.parent/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work'))
+from export_variant_clean import TO_UE
 output=a.output;assert not output.exists() and not output.with_suffix('.json').exists()
-raw=(a.candidate/'planet.mesh.json').read_bytes();data=json.loads(raw)
-audit=json.loads((a.candidate/'planet.mesh.audit.json').read_text())
+raw=(a.candidate/f'{stem}.mesh.json').read_bytes();data=json.loads(raw)
+audit=json.loads((a.candidate/f'{stem}.mesh.audit.json').read_text())
 assert hashlib.sha256(raw).hexdigest()==audit['output_sha256']
 start=audit['parts'][0]['points'];count=audit['parts'][1]['points']
 def load(path):
@@ -23,11 +28,19 @@ def load(path):
 def geometry_digest(obj):
  h=hashlib.sha256()
  for key in obj.data.shape_keys.key_blocks:
-  points=np.empty(count*3,dtype=np.float32);key.data.foreach_get('co',points)
+  points=np.empty(len(obj.data.vertices)*3,dtype=np.float32);key.data.foreach_get('co',points)
   h.update(key.name.encode());h.update(points.tobytes());h.update(str((key.value,key.relative_key.name)).encode())
  return h.hexdigest()
 obj=load(a.source);before=geometry_digest(obj)
-weights=[(v-start,data['bones'][b]['name'],w) for v,b,w in data['influences'] if start<=v<start+count]
+obj.data.calc_loop_triangles();transform=TO_UE@obj.matrix_world
+used=set()
+for tri in obj.data.loop_triangles:
+ x,y,z=[transform@obj.data.vertices[i].co for i in tri.vertices]
+ if (y-x).cross(z-x).length_squared>=1e-12:used.update(tri.vertices)
+used=sorted(used);assert len(used)==count
+error=max((transform@obj.data.vertices[i].co-Vector(data['points'][start+j])).length for j,i in enumerate(used))
+assert error<.0005,error
+weights=[(used[v-start],data['bones'][b]['name'],w) for v,b,w in data['influences'] if start<=v<start+count]
 obj.vertex_groups.clear()
 for bone in sorted({b for _,b,_ in weights}):obj.vertex_groups.new(name=bone)
 for vertex,bone,weight in weights:obj.vertex_groups[bone].add([vertex],weight,'REPLACE')
