@@ -240,9 +240,9 @@ void Combat::release_transplants(Slot& s) {
 UObject* Combat::build_transplant(UObject* original, UObject* replacement) {
     auto* montage_class = static_cast<UClass*>(find_cached(L"/Script/Engine.AnimMontage"));
     if (!original->IsA(montage_class) || !replacement->IsA(montage_class)) throw std::runtime_error("Not montages");
-    UObject* outer = nullptr;
-    try { outer = find(L"/Engine/Transient"); } catch (...) {}
-    auto* clone = construct_class(montage_class, outer ? outer : original);
+    // Outer: the original montage, so the clone shares its package and is not a "dynamic montage"
+    // (transient-package montages get special stop handling in the anim instance).
+    auto* clone = construct_class(montage_class, original);
     auto* src = reinterpret_cast<std::byte*>(original); auto* dst = reinterpret_cast<std::byte*>(clone);
     // Every reflected property of the montage chain (AnimMontage, AnimCompositeBase, AnimSequenceBase,
     // AnimationAsset): notifies, sections, blends, curves, skeleton, root motion flags.
@@ -263,6 +263,11 @@ UObject* Combat::build_transplant(UObject* original, UObject* replacement) {
     auto* segment_struct = static_cast<FStructProperty*>(static_cast<FArrayProperty*>(segments_prop)->GetInner())->GetStruct().Get();
     auto field = [&](const wchar_t* name) { auto* f = segment_struct->GetPropertyByNameInChain(name); if (!f) throw std::runtime_error("AnimSegment field missing"); return f->GetOffset_Internal(); };
     const int off_anim = field(L"AnimReference"), off_pos = field(L"StartPos"), off_start = field(L"AnimStartTime"), off_end = field(L"AnimEndTime"), off_rate = field(L"AnimPlayRate"), off_loop = field(L"LoopingCount");
+    // FAnimSegment::bValid is not reflected: it follows LoopingCount (AnimCompositeBase.h) and the
+    // track evaluates a segment only when it is set. Loaded montages get it from PostLoad; ours must set it.
+    const int segment_size = static_cast<FArrayProperty*>(segments_prop)->GetInner()->GetElementSize();
+    const int off_valid = off_loop + 4;
+    if (off_valid >= segment_size) throw std::runtime_error("AnimSegment layout has no room for the validity flag");
     auto segments_of = [&](UObject* montage, int track) {
         FScriptArrayHelper tracks(static_cast<FArrayProperty*>(tracks_prop), reinterpret_cast<std::byte*>(montage) + tracks_prop->GetOffset_Internal());
         if (track >= tracks.Num()) throw std::runtime_error("Montage has no slot track");
@@ -300,6 +305,7 @@ UObject* Combat::build_transplant(UObject* original, UObject* replacement) {
             auto* b = segs.GetRawPtr(int(i)); const auto& g = plan[i]; const int32_t loops = 1;
             std::memcpy(b + off_anim, &g.anim, sizeof(g.anim)); std::memcpy(b + off_pos, &g.start_pos, 4); std::memcpy(b + off_start, &g.anim_start, 4);
             std::memcpy(b + off_end, &g.anim_end, 4); std::memcpy(b + off_rate, &g.rate, 4); std::memcpy(b + off_loop, &loops, 4);
+            b[off_valid] = std::byte{1};
         }
     }
     // Notify links point at the montage they belong to; absolute times stay valid on the clone.
