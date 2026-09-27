@@ -7,19 +7,24 @@ from pathlib import Path
 import unreal
 
 work = Path('/home/eins0fx/development/mods/msII/CustomShellSystem/work/eve26')
+kind = os.environ.get('CSS_FIT_KIND', 'bikini')
+assert kind in ('bikini', 'knit')
 revision = int(os.environ.get('CSS_BIKINI_FIT_REVISION', '1'))
 assert revision in (1,2)
-output = work / f'bikini-prepared{revision}.json'
+output = work / f'{kind}-prepared{revision}.json'
 assert not output.exists()
-protected = json.loads((work / 'bikini-import1/protected.json').read_text())
+protected = json.loads((work / f'{kind}-import1/protected.json').read_text())
 def check_protected():
     assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest for path,digest in protected.items())
 check_protected()
-data = json.loads((work / 'bikini-import1/bikini.mesh.json').read_text())
-mesh = unreal.load_asset('/Game/CSS/EveTest/SK_BFit1')
-source = unreal.load_asset('/Game/CSS/SeduXtress/SK_Eve_Bikini')
+data = json.loads((work / f'{kind}-import1/{kind}.mesh.json').read_text())
+mesh = unreal.load_asset('/Game/CSS/EveTest/' + ('SK_BFit1' if kind == 'bikini' else 'SK_KFit2'))
+source = unreal.load_asset('/Game/CSS/SeduXtress/' + ('SK_Eve_Bikini' if kind == 'bikini' else 'SK_Eve_CasualSweater'))
 skeleton = unreal.load_asset('/Game/CSS/Shared/SKEL_Base')
 graph = '/Game/CSS/EveTest/ABP_BikiniFeet' + ('2' if revision == 2 else '')
+if kind == 'knit':
+    assert revision == 1
+    graph = '/Game/CSS/EveTest/ABP_KnitFeet1'
 blueprint = unreal.load_asset(graph)
 assert mesh and source and skeleton and blueprint
 assert mesh.get_editor_property('skeleton') == skeleton
@@ -37,7 +42,7 @@ counts = [len(json.loads(method(skeleton))) for method in (lib.inspect_skeleton,
 assert counts == [386,82,9]
 slots = mesh.get_editor_property('materials')
 original = source.get_editor_property('materials')
-assert len(slots) == len(original) == len(data['materials']) == 32
+assert len(slots) == len(original) == len(data['materials']) == (32 if kind == 'bikini' else 28)
 materials = []
 for i,slot in enumerate(slots):
     assert str(slot.material_slot_name) == data['materials'][i]
