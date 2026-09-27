@@ -8,18 +8,29 @@ root = Path(__file__).resolve().parents[3]
 work = root / 'CustomShellSystem/work/eve26'
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--kind', choices=('bikini', 'knit'), default='bikini')
-kind = parser.parse_args().kind
+parser.add_argument('--knit-w2', action='store_true')
+args = parser.parse_args()
+kind = args.kind
+assert not args.knit_w2 or kind == 'knit'
 source = work / ('bikini-anklew1/bikini.mesh.json' if kind == 'bikini' else 'knit-export2/knit.mesh.json')
+if args.knit_w2:
+    source = work/'knit-w2/knit.mesh.json'
 raw = source.read_bytes()
 audit = json.loads(source.with_suffix('.audit.json').read_text())
 assert hashlib.sha256(raw).hexdigest() == audit['output_sha256']
 data = json.loads(raw)
 suffix = 'BFit1' if kind == 'bikini' else 'KFit2'
+if args.knit_w2:
+    suffix = 'KFitW2'
 data['mesh_package'] = '/Game/CSS/EveTest/SK_' + suffix
 data['skeleton_package'] = '/Game/CSS/EveTest/SKEL_' + suffix
 out = work / (kind + '-import1')
+if args.knit_w2:
+    out = work/'knit-w2-import'
 out.mkdir(exist_ok=False)
 content = root / 'CSS-eins0fx-collections/tools/CSSAuthoring/Content/CSS'
+assert not (content/'EveTest'/('SK_'+suffix+'.uasset')).exists()
+assert not (content/'EveTest'/('SKEL_'+suffix+'.uasset')).exists()
 protected = {}
 original = 'SK_Eve_Bikini' if kind == 'bikini' else 'SK_Eve_CasualSweater'
 for relative in ('Shared/SKEL_Base', 'SeduXtress/PA_Body', 'SeduXtress/ABP_Secondary', 'SeduXtress/' + original):

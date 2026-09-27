@@ -11,12 +11,13 @@ from mathutils.bvhtree import BVHTree
 work = Path(__file__).resolve().parents[2] / 'work/eve26'
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--mesh',type=Path,default=work/'knit-export2/knit.mesh.json')
+parser.add_argument('--proxy',type=Path,default=work/'knit-proxy2.json')
 parser.add_argument('--output',type=Path,default=work/'knit-proxy-motion3.json')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 output = args.output
 assert not output.exists()
 mesh_path = args.mesh
-proxy_path = work / 'knit-proxy2.json'
+proxy_path = args.proxy
 motion_path = work / 'feet-sprint-base.json'
 mesh = json.loads(mesh_path.read_text())
 audit = json.loads(mesh_path.with_suffix('.audit.json').read_text())

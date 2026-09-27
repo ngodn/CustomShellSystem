@@ -5,7 +5,7 @@ import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 
 work = Path(__file__).resolve().parents[2] / 'work/eve26'
-out = work/'knit-w2/pose-check.json'
+out = work/'knit-w2/pose-edges.json'
 assert not out.exists()
 source = json.loads((work/'knit-export2/knit.mesh.json').read_text())
 trial = json.loads((work/'knit-w2/knit.mesh.json').read_text())
@@ -15,6 +15,14 @@ start = audit['parts'][0]['points']
 assert audit['parts'][1]['name'] == 'Eve Extras - Sweater'
 count = audit['parts'][1]['points']
 points = np.asarray(source['points'])[start:start+count]
+pairs = set()
+for face in source['faces']:
+    ids = [source['wedges'][w][0]-start for w in face[:3]]
+    if all(0 <= i < count for i in ids):
+        pairs.update(tuple(sorted((ids[i],ids[(i+1)%3]))) for i in range(3))
+edges = np.asarray(sorted(pairs))
+rest = np.linalg.norm(points[edges[:,0]]-points[edges[:,1]],axis=1)
+measured_edges = rest >= .05
 bind = []
 for bone in source['bones']:
     q = bone['rotation']
@@ -42,9 +50,15 @@ for frame in motion['frames']:
         np.add.at(posed, vi, (np.einsum('nij,nj->ni', matrices[bi,:3,:3],points[vi])+matrices[bi,:3,3])*wt[:,None])
         ends = [np.asarray(t['barycentric']) @ posed[t['vertices']] for t in transfers]
         row[name+'_edge_cm'] = float(np.linalg.norm(ends[0]-ends[1]))
+        lengths = np.linalg.norm(posed[edges[:,0]]-posed[edges[:,1]],axis=1)
+        ratios = lengths[measured_edges]/rest[measured_edges]
+        row[name+'_all_edges'] = dict(max_ratio=float(ratios.max()),
+            p99_ratio=float(np.percentile(ratios,99)),over_double=int((ratios>2).sum()),
+            max_extension_cm=float((lengths-rest).max()))
     cases.append(row)
 report = dict(cases=cases, original_max_cm=max(r['original_edge_cm'] for r in cases),
     candidate_max_cm=max(r['candidate_edge_cm'] for r in cases),
-    scope='Render-triangle correspondence at the diagnosed proxy edge over 65 identical poses. Skinning only, no cloth or contact acceptance.')
+    edge_count=len(edges),ratio_min_rest_length_cm=.05,
+    scope='Diagnosed proxy correspondence and all garment triangle edges over 65 identical poses. Ratios exclude edges below 0.05 cm; absolute extension covers all edges. Skinning only, no cloth or contact acceptance.')
 out.write_text(json.dumps(report,indent=2)+'\n')
 print({k:v for k,v in report.items() if k!='cases'})
