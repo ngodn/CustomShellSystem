@@ -1,4 +1,8 @@
+> Tab-order correction from the user (27 September 2026): Inventory, Tarstones, Map, optional CSS, CCS, optional CSSX. Earlier recommendations to append CCS after CSSX are superseded.
+
 # CCS architecture reference
+
+Current CCS identity behavior differs from the reference baseline below. [Object identity](object-identity-runtime.md) now requires positive serials and uses a dedicated uncached initializer, so cold serial setup does not reenter the normal lookup cache. Hook callbacks only use existing identities and warm fields. This revised path is compiled but not live verified; baseline CSS/CSSX timings do not establish its cost.
 
 How to scaffold Custom Combat System (CCS), a standalone UE4SS native C++ mod for Mortal
 Shell II (UE 5.6.1), on the patterns that CSS (`native/`, 1.0.0-beta.5) and CSSX
@@ -363,7 +367,7 @@ layouts and offsets come from live reflection (`extensions/core/src/core/engine.
 | `find_optional(path)` | `UObjectGlobals::StaticFindObject<UObject*>(nullptr,nullptr,path)` every call | `engine.cpp:30` |
 | `find(path)` | same, throws "Required reflected object is missing" | `engine.cpp:89-93` |
 | `find_cached(path)` | for permanent natives (`Default__...`, `/Script/...` structs) on hot paths; cached by path with an `OwnerGuard` (index + serial re-read from `FUObjectArray::IndexToObject`), never a `WeakObject` | `engine.cpp:69-76`, guard at 59-63 |
-| CSS `find_optional` | the same guard cache for every path, plus an `FName` compare so a reused slot at the same address is caught even when the serial is 0 | `native/src/engine.cpp:91-127` |
+| CSS `find_optional` | the same guard cache for every path, plus an `FName` compare that catches a changed name even when the serial is 0; identical-name reuse still needs a real serial | `native/src/engine.cpp:91-127` |
 | `load(path)` | `StaticFindObject` first, else `KismetSystemLibrary.MakeSoftObjectPath -> Conv_SoftObjPathToSoftObjRef -> LoadAsset_Blocking`; cached by `WeakObject` (CSSX) or `OwnerGuard` (CSS) | `engine.cpp:171-187`, `native/src/engine.cpp:297-318` |
 | `class_default {class}` | `UObjectGlobals::ForEachUObject` scan for `RF_ClassDefaultObject` with that class name, cached by object-array slot (a weak pointer reports native CDOs dead) | `bridge.cpp:301-322` |
 | `AssetLoadRoots` | RAII `SetRootSet` on objects loaded in one operation, cleared at scope exit; blocking loads can run GC between successive imports | `native/src/engine.cpp:319-332` |
@@ -374,6 +378,8 @@ serial-allocation fallback uses a legacy layout. Consequence: constructing a `We
 issues a reflected call, so it must never be built inside a lookup cache (it re-enters the
 cache and, live, "killed the game within a second", `performance.md:167-172`,
 `engine.cpp:28-29`). Read-only guards (`OwnerGuard`) are the only safe cache validator.
+
+That warning describes the reference implementation's recursive setup path. CCS now initializes a missing serial through an uncached, prevalidated call that does not capture cache owners, then stores a read-only positive-serial guard. Normal reflected calls guard both owner and UFunction, and keep their parameter pointers in an instance-owned fixed array. Cold setup still calls the engine and belongs outside hooks. The historical crash and the new path's unverified runtime behavior are both reasons to check native reentry, GC and timing before enabling combat.
 
 ### 3.2 Reading and writing properties
 
@@ -577,7 +583,7 @@ Attach (`menu.cpp:81-93`):
 Detach (`152-158`): navigate to 0 if active, `RemoveFromParent` on page and tab, refresh
 navigable children, forget everything (`143-151`) including unrooting textures.
 
-### 4.2 Tab placement for CCS (after CSS and CSSX)
+### 4.2 Tab placement for CCS (after CSS, before CSSX)
 
 Order today: Inventory 0, Tarstones 1, Map 2, CSS 3, CSSX 4
 (`memory:driving-css-menu-headless.md`; CSS inserts itself at index 3 with
@@ -590,7 +596,7 @@ pages before attaching (`menu.cpp:69-80`); it also refuses to order when the cou
 4 or 5 (`97`). CSS detects `css_present` by `Mods/CustomShellSystem/enabled.txt` plus
 `dlls/main.dll` (`core.cpp:135`).
 
-Therefore CCS must be the last to attach and tolerant of the count:
+CCS waits for CSSX to attach when present so its current page-count checks succeed. Attachment timing and visible order are separate. The requested visible order is Inventory, Tarstones, Map, optional CSS, CCS, optional CSSX.
 
 - Detect `css_present` and `cssx_present` the same way (`enabled.txt` + `dlls/main.dll`
   under `Mods/CustomShellSystem` and `Mods/CSSX`).
@@ -601,7 +607,7 @@ Therefore CCS must be the last to attach and tolerant of the count:
   possibility once; the fix is CSSX-side (accept 5 pages when CCS is present) and belongs in
   the CSSX repo, not in a CCS workaround.
 - Order and count checks in CCS accept 4..6 tabs; padding factor `0.6` for five or more.
-- Index for CCS = `tabs.size()-1`; keep it in `tab_index_` for `navigate()`.
+- Insert CCS immediately after CSS when present, otherwise after Map, moving CSSX after CCS. Derive the index from the live tab identities and keep it in `tab_index_` for `navigate()`. Update the page/navigation order together.
 - A menu instance replaced by travel drops the tab; re-attach on the next open with the
   same wait (`menu.cpp:320-325`).
 
@@ -995,7 +1001,7 @@ loader log `CCS.log`; core log `logs/ccs.jsonl`; settings `settings.json` schema
 `open_keyboard ["F7"]`, `open_gamepad ["Gamepad_LeftThumbstick","Gamepad_DPad_Down"]`,
 `ui_scale`, plus CCS's own switches; state under `state/`. Build option `CCS_DEV`.
 
-Tab placement: last, after CSSX, with the wait and tolerance rules of section 4.2. Hotkey:
+Tab placement: after optional CSS and before optional CSSX, following Map when CSS is absent, with the attachment wait rules of section 4.2. Hotkey:
 F7 and the chord above, both verified live before release (section 4.3).
 
 Starting points to copy, in the order to bring them up (each step is testable on its own):
@@ -1012,7 +1018,7 @@ Starting points to copy, in the order to bring them up (each step is testable on
    `hitches.py` shows a core mean under 50 us with nothing else running.
 5. `engine.*` and `bridge.*`: `engine` ops work through the dev channel; probe the combat
    classes from `CCS/work/runtime-surface/` live.
-6. `menu.*`, `menu_page.cpp`, `menu_keys.hpp` with a placeholder screen: attach after CSSX,
+6. `menu.*`, `menu_page.cpp`, `menu_keys.hpp` with a placeholder screen: wait for CSSX attachment when present, then insert CCS after CSS or Map and before CSSX,
    open by hotkey, `menu_stress.py` 10/10, screenshots reviewed.
 7. First combat feature behind a settings toggle, with its own `Phase` ring, a `stop()`
    that restores, and a row in `docs/integration-tests.md`.
@@ -1107,4 +1113,4 @@ Each entry: the trap, where it was found, what the code does now.
 39. Installing a DLL or pak needs a fresh "yes, I stopped playing" every time
     (`memory:install-requires-confirmation.md`).
 40. CSSX refuses to attach when more than four Player Menu pages exist before it does
-    (`menu.cpp:79`); CCS attaches last (section 4.2).
+    (`menu.cpp:79`); CCS follows CSS and precedes CSSX when present (user correction, 27 September 2026).

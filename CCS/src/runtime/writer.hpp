@@ -5,6 +5,7 @@
 #include <thread>
 #include <condition_variable>
 #include <filesystem>
+#include <cstdint>
 
 namespace ccs::runtime {
 
@@ -13,8 +14,10 @@ public:
     explicit Writer(std::filesystem::path log_file);
     ~Writer();
 
-    void write(std::string message);
-    void flush();
+    bool write(std::string message);
+    bool flush();
+    enum class DrainState { Pending, Complete, Failed };
+    DrainState drain_state();
 
 private:
     void worker_loop();
@@ -24,6 +27,11 @@ private:
     std::condition_variable cv_;
     std::queue<std::string> queue_;
     bool stop_{false};
+    bool failed_{false};
+    uint64_t submitted_{0};
+    uint64_t completed_{0};
+    static constexpr size_t queue_limit = 1024;
+    static constexpr size_t message_limit = 64 * 1024;
     std::thread thread_;
 };
 

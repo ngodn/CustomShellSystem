@@ -35,7 +35,7 @@ public:
 
 private:
     std::filesystem::path path_;
-    bool enabled_{true};
+    bool enabled_{false};
     std::string startup_preset_{"default"};
     bool preserve_weapon_mesh_{true};
     bool show_hud_notification_{true};

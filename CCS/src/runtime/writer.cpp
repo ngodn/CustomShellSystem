@@ -20,17 +20,28 @@ Writer::~Writer() {
     }
 }
 
-void Writer::write(std::string message) {
+bool Writer::write(std::string message) {
     {
         std::lock_guard<std::mutex> lock(mutex_);
+        if (stop_ || queue_.size() >= queue_limit || message.size() > message_limit) return false;
         queue_.push(std::move(message));
+        ++submitted_;
     }
     cv_.notify_one();
+    return true;
 }
 
-void Writer::flush() {
+Writer::DrainState Writer::drain_state() {
+    std::lock_guard lock(mutex_);
+    if (failed_) return DrainState::Failed;
+    return completed_ >= submitted_ ? DrainState::Complete : DrainState::Pending;
+}
+
+bool Writer::flush() {
     std::unique_lock<std::mutex> lock(mutex_);
-    cv_.wait(lock, [this] { return queue_.empty(); });
+    const auto target = submitted_;
+    cv_.wait(lock, [this, target] { return completed_ >= target; });
+    return !failed_;
 }
 
 void Writer::worker_loop() {
@@ -45,13 +56,21 @@ void Writer::worker_loop() {
             queue_.pop();
         }
 
-        if (!out.is_open()) {
-            out.open(path_, std::ios::out | std::ios::app);
+        bool written = false;
+        try {
+            if (!out.is_open()) out.open(path_, std::ios::out | std::ios::app);
+            if (out.is_open()) {
+                out << item << "\n";
+                out.flush();
+                written = static_cast<bool>(out);
+            }
+        } catch (...) {}
+        {
+            std::lock_guard lock(mutex_);
+            failed_ = failed_ || !written;
+            ++completed_;
         }
-        if (out.is_open()) {
-            out << item << "\n";
-            out.flush();
-        }
+        cv_.notify_all();
     }
 }
 

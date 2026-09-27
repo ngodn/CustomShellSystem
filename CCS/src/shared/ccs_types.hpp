@@ -3,6 +3,7 @@
 #include <vector>
 #include <array>
 #include <optional>
+#include <cstdint>
 #include <nlohmann/json.hpp>
 
 namespace ccs {
@@ -73,6 +74,10 @@ struct MoveDefinition {
     std::string reaction_tag;
     bool is_finisher{false};
     bool is_hold{false};
+    uint16_t compatible_slots{0};
+    std::string skeleton;
+    bool runtime_verified{false};
+    bool payload_known{false};
 };
 
 struct TarstoneDefinition {
@@ -85,6 +90,9 @@ struct TarstoneDefinition {
     double bonus_break{25.0};
     double bonus_poise{0.0};
     double resolve_gain{0.0};
+    std::string stat;
+    std::vector<double> levels;
+    std::vector<std::string> compatibility_tags;
 };
 
 struct SlotBinding {
@@ -103,7 +111,7 @@ struct PresetData {
     std::string name{"Default"};
     std::string author{"Community"};
     std::string description{"Custom Combat System moveset preset"};
-    std::string base_weapon{"HadernsSword"};
+    std::string base_weapon;
     std::array<SlotBinding, static_cast<size_t>(SlotId::Count)> slots;
 
     PresetData() {

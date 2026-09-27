@@ -3,6 +3,7 @@
 #include <vector>
 #include <filesystem>
 #include <chrono>
+#include <cstdint>
 
 namespace ccs::runtime {
 
@@ -13,10 +14,11 @@ inline uint64_t now_ms() {
         std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
-std::string narrow(const std::wstring& wide);
-std::wstring widen(const std::string& narrow);
+bool valid_preset_name(const std::string& name);
 
 std::string read_file_text(const fs::path& path);
 bool write_file_atomic(const fs::path& path, const std::string& content);
+enum class FileWriteResult { Success, Exists, Failed };
+FileWriteResult write_file_atomic(const fs::path& path, const std::string& content, bool replace_existing);
 
 } // namespace ccs::runtime

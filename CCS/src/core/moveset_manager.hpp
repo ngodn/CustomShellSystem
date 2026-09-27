@@ -1,10 +1,10 @@
 #pragma once
 #include "ccs_types.hpp"
 #include "engine.hpp"
+#include "catalog.hpp"
 #include <vector>
-#include <map>
 #include <string>
-#include <memory>
+#include <span>
 
 namespace ccs {
 
@@ -12,16 +12,17 @@ using RC::Unreal::UObject;
 
 class MovesetManager {
 public:
-    MovesetManager();
+    MovesetManager() = default;
     ~MovesetManager() = default;
+    MovesetManager(const MovesetManager&) = delete;
+    MovesetManager& operator=(const MovesetManager&) = delete;
 
-    void initialize_database();
 
-    const std::vector<MoveDefinition>& get_all_moves() const { return moves_db_; }
-    const std::vector<TarstoneDefinition>& get_all_tarstones() const { return tarstones_db_; }
+    const std::vector<MoveDefinition>& get_all_moves() const { return catalog_.moves(); }
+    const std::vector<TarstoneDefinition>& get_all_tarstones() const { return catalog_.tarstones(); }
 
-    std::vector<MoveDefinition> get_moves_for_slot(SlotId slot) const;
-    std::vector<TarstoneDefinition> get_tarstones_for_slot(SlotId slot) const;
+    std::span<const MoveDefinition* const> get_moves_for_slot(SlotId slot, bool enemy = false) const;
+    std::span<const TarstoneDefinition* const> get_tarstones_for_slot(SlotId slot) const;
 
     const MoveDefinition* find_move(const std::string& id) const;
     const TarstoneDefinition* find_tarstone(const std::string& id) const;
@@ -46,14 +47,14 @@ public:
     void unroot_all();
 
 private:
-    std::vector<MoveDefinition> moves_db_;
-    std::vector<TarstoneDefinition> tarstones_db_;
+    runtime::Catalog catalog_;
+    std::array<std::vector<const MoveDefinition*>, static_cast<size_t>(SlotId::Count)> player_slots_, enemy_slots_;
+    std::array<std::vector<const TarstoneDefinition*>, static_cast<size_t>(SlotId::Count)> stone_slots_;
     PresetData active_preset_;
-    bool applied_{false};
 
-    // Cached vanilla montage pointers for clean rollback (class name -> weak montage)
-    std::map<std::wstring, engine::WeakObject> vanilla_montages_;
-    std::vector<UObject*> rooted_assets_;
+
+    // Only roots acquired by CCS are released on the game thread.
+    std::vector<engine::WeakObject> rooted_assets_;
 };
 
 } // namespace ccs

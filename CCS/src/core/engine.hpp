@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 #include <optional>
+#include <stdexcept>
+#include <type_traits>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UFunction.hpp>
@@ -18,6 +20,7 @@ namespace ccs::engine {
 using namespace RC::Unreal;
 
 struct PlayerContext {
+    UObject* world{nullptr};
     UObject* pc{nullptr};         // APlayerController*
     UObject* pawn{nullptr};       // ASpartaCharacter*
     UObject* weapon{nullptr};     // ASpartaWeapon*
@@ -30,10 +33,25 @@ std::string narrow(const std::wstring& wide);
 UObject* find(const wchar_t* path);
 UObject* find_optional(const wchar_t* path);
 UObject* load(const std::string& path);
+PlayerContext player_context(void* engine);
 
 FProperty* field(UObject* object, const wchar_t* name, size_t size);
 UObject* object_of(UObject* object, const wchar_t* name);
+// Cache misses return null without resolving fields or initializing object serials.
+UObject* cached_object_of(UObject* object, const wchar_t* name);
 bool bool_of(UObject* object, const wchar_t* name, bool fallback = false);
+
+struct ObjectHandle {
+    const void* ptr{nullptr};
+    int32_t index{-1};
+    int32_t serial{0};
+    FName name{};
+    // Cold capture may call the engine to initialize a weak serial. Hooks use capture_existing.
+    void capture(UObject* object);
+    bool capture_existing(UObject* object);
+    UObject* get() const;
+    bool alive() const { return get() != nullptr; }
+};
 
 class WeakObject : public FWeakObjectPtr {
 public:
@@ -49,31 +67,45 @@ class Call {
     UObject* object_{nullptr};
     UFunction* function_{nullptr};
     alignas(16) std::array<std::byte, 2048> bytes_{};
-    const std::vector<FProperty*>* params_{nullptr};
+    std::array<FProperty*, 64> params_{};
+    size_t param_count_{}, initialized_{};
+    ObjectHandle target_identity_, function_identity_;
 
 public:
-    Call(UObject* object, const wchar_t* name, unsigned count = 0);
+    enum class Cache { Use, SerialInitializer };
+    Call(UObject* object, const wchar_t* name, unsigned count = 0, Cache cache = Cache::Use);
     ~Call();
     Call(const Call&) = delete;
     Call& operator=(const Call&) = delete;
 
     FProperty* param(const wchar_t* name);
+    void set_bool(const wchar_t* name, bool value);
+    bool get_bool(const wchar_t* name);
     void* data(FProperty* p) { return bytes_.data() + p->GetOffset_Internal(); }
 
     template<typename T>
     void set(const wchar_t* name, const T& value) {
-        auto* p = param(name);
-        if (p->GetElementSize() != sizeof(T)) throw std::runtime_error("Parameter size mismatch: " + narrow(name));
-        p->CopyCompleteValue(data(p), &value);
+        if constexpr (std::is_same_v<T, bool>) {
+            set_bool(name, value);
+        } else {
+            auto* p = param(name);
+            if (p->GetElementSize() != sizeof(T)) throw std::runtime_error("Parameter size mismatch: " + narrow(name));
+            p->CopyCompleteValue(data(p), &value);
+        }
     }
 
     template<typename T>
     T get(const wchar_t* name = L"ReturnValue") {
-        auto* p = param(name);
-        if (p->GetElementSize() != sizeof(T)) throw std::runtime_error("Return size mismatch: " + narrow(name));
-        T value{};
-        std::memcpy(&value, data(p), sizeof(T));
-        return value;
+        static_assert(std::is_trivially_copyable_v<T>, "Read owning reflected values in-place or with CopyCompleteValue");
+        if constexpr (std::is_same_v<T, bool>) {
+            return get_bool(name);
+        } else {
+            auto* p = param(name);
+            if (p->GetElementSize() != sizeof(T)) throw std::runtime_error("Return size mismatch: " + narrow(name));
+            T value{};
+            std::memcpy(&value, data(p), sizeof(T));
+            return value;
+        }
     }
 
     void run();
@@ -100,7 +132,9 @@ void copy_property(UObject* dest, UObject* src, const wchar_t* name);
 void text_property(UObject* object, const wchar_t* name, const std::string& text);
 void text_value(UObject* widget, const std::string& text);
 std::string text_of(UObject* widget, int limit = 256);
+std::string text_property_string(UObject* object, const wchar_t* name, int limit = 256);
 void font_size(UObject* widget, float size, UObject* font_object = nullptr);
+void font_style(UObject* widget, UObject* source, const wchar_t* property, float size);
 
 UObject* create_widget(UObject* owning_object, UClass* widget_class);
 std::vector<UObject*> children(UObject* panel);

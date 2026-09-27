@@ -1,0 +1,38 @@
+# Native montage-task probe 03
+
+Status: compiled locally, not installed or observed live. This candidate uses the [loader-owned native hook service](native-hook-service.md). It records task requests without changing parameters, calling the task, loading assets or editing abilities/montages.
+
+F7 arms a capture and the optional frame profiler together. A second press cancels the task capture. The probe waits up to five seconds for the current player, retrying at 250 ms intervals. It checks the already-loaded `AbilityTask_PlayMontageAndWaitWithNotifies` function before registering a pre-hook: native/nondelegate flags, eight parameters, bounded frame size, seven input names, input directions, nonoverlapping storage and exact property kinds. Ability and montage inputs must declare the expected engine classes. All offsets come from reflection. The interface record includes the observed offsets, sizes, function path and declared classes.
+
+Each callback checks the live function identity, FFrame node and locals, then the captured world/controller/pawn/ASC/weapon-item/shell identities. It accepts an ability only when its physical Outer chain reaches that pawn or ASC within eight links. CDOs and archetypes are rejected. This is **physical ancestry only**. It does not prove ASC grant membership, ActorInfo avatar, attack role, combo slot or replacement compatibility. Player-owned nonattack montage tasks may appear. Captured paths are observations, never selectable moves.
+
+All retained identities require positive object-array serials. Cold setup uses the [uncached serial initializer](object-identity-runtime.md); callbacks only read existing identities and warm reflection-cache entries. Missing ability/montage identities are skipped and counted separately as `identity_skipped`. A new per-execution instance may not yet have an engine weak serial at the task's pre-hook, so live coverage must be checked rather than assuming all player calls will be retained. No callback initializes a serial through ProcessEvent.
+
+Schema 2 also records `CurrentEventData.EventTag` and `bIsActive` from the owning ability at the callback. Before registration, reflection checks the GameplayAbility, GameplayEventData and GameplayTag owners, field bounds and property kinds. Weak identities guard the owners throughout capture. The callback reads only the nested FName and bool, without copying an owning event struct or calling an ability getter. A missing event tag may be valid. An inactive ability's retained event may be historical. Even a tag on an active ability is an observation, not proof of a unique slot.
+
+The callback copies object identities, three names, scalar inputs and a timestamp into a fixed 64-row buffer. It performs no text formatting, JSON serialization or file writes. The game-thread tick formats at most four rows per pass and queues them to the background writer. It stops after 64 accepted records, 30 seconds, cancellation, a generation change, an invalid contract or a measured callback over 2 ms. The timing check runs after the callback returns; it cannot preempt work or guarantee frame time. Idle captures retain no hook.
+
+Removal is retried at 250 ms intervals when the SDK defers physical unregistration. The probe retains its token and reflected property pointers until removal succeeds; normal core unload refuses during that interval. Output failure disables further captures and still attempts removal. Completion is reported only after the terminal record has drained through the worker, without a game-thread flush wait. Missing output or an abrupt shutdown cannot establish a successful capture.
+
+## Build and inspect
+
+```sh
+python3 CCS/tools/ccs.py build-attack
+python3 CCS/work/takeover/attack_report.py path/to/attack-calls.jsonl
+```
+
+The candidate is `CCS/build/windows-attack-profile`. It includes diagnostic profiling, disables the menu and registry/discovery probe, and writes `logs/attack-calls.jsonl` under the installed CCS directory when eventually used. Normal builds explicitly disable the attack-probe option.
+
+The report verifier accepts schemas 1 and 2, checks the latest capture, bounded sequential calls, finite inputs, physical ownership labels, native signature, terminal counters, timing and physical removal. Schema 2 additionally requires a valid event layout, bounded tag string and typed active flag. Its active-tag list excludes empty/None and inactive observations. A complete capture with zero calls does not prove the call site. Expired ability/montage references, missing or nonpositive serials, and invalid indexes cannot prove an observed live reference. `combat_verified` remains false even for a complete trace. Host tests check report integrity and loader callback lifetime; they do not execute the Unreal hook.
+
+The local candidate and verification hashes are recorded under `CCS/work/attack-call-probe`. Live registration, FFrame layout, calls, travel/weapon/shell cancellation, removal, coexistence and timing remain pending. Both loader and core must be installed together, after a fresh stopped-playing confirmation and with the game closed. The previously installed Probe 01 is unchanged while the user rests.
+
+An independent read through the already-installed CSSX dev bridge confirmed that the current weapon item is Clockwork Scythe, the shell is Genessa, and one previously captured light-selector instance's `GetAvatarActorFromActorInfo` returns the current pawn. The getter's single eight-byte return signature was checked before calling it. Raw request/response IDs and object handles are retained in `CCS/work/attack-call-probe/player-reference.json`. This supports the next ownership check; it does not run Probe 03, observe a native montage call or prove every ability's ownership. No game settings, equipment or combat data were changed.
+
+## Evidence needed before a swap
+
+A later read-only CSSX capture resolved four current Scythe selector instances and 15 referenced primary ability classes through native spec-handle getters. The handle list remained at 137 entries across the capture; these separate queries were not atomic. The normal light selector references the same A3_Finisher class at combo position three and in AdditionalAttacks. The getter returned class defaults, with `bIsInstance=false`, for all 15 referenced attacks. Their A3_Finisher and B3_Finisher defaults contain only generic Primary/Melee.Weapon tags, without a finisher tag. The separately found A3_Finisher CDO agrees. Raw acknowledgements and observations are retained in `CCS/work/ability-ownership/slot-reference.json`. This contradicts using the extracted fixture's finisher tags or class names as live role authority, and supports recording event-time context before choosing a routing rule.
+
+A follow-up read of each returned ability's `InstancingPolicy` gave value 2 for all 15 attacks. The retained UE 5.6.1 engine header declares value 2 as `InstancedPerExecution`. `GetGameplayAbilityFromSpecHandle` attempts `GetPrimaryInstance()` and otherwise returns the CDO, so this getter result does not prove the absence of execution instances. Capture-time execution instances and their tags still need native observations. Raw policy query IDs are retained in `CCS/work/ability-ownership/instancing-reference.json`.
+
+Compare actual task calls with observed player grants and selector relationships. Confirm ActorInfo ownership and the attack's instancing policy, active weapon/shell generations, combo stage and slot. Verify montage skeleton/slot/notifies, payload and motion-warp requirements. Then validate a single controlled replacement and its interruption, death, travel, disable and restore paths. Probe 03 does not authorize or enable any of those writes.

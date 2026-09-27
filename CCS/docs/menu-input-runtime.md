@@ -1,0 +1,19 @@
+# Player Menu input foundation
+
+The experimental CCS menu now connects its action dispatcher to live input mappings. It reads `InputMapping.Mappings` from the current UI handler, resolves the known native menu action roles, gets the player's Enhanced Input subsystem, and calls `QueryKeysMappedToAction` for the currently applied keys. The old fixed navigation button numbers are removed. No default keyboard or controller key is substituted when an action is unmapped.
+
+CSS and CSSX's mapped input implementations are the reference. CCS validates array inner struct types, owner bounds, object/name fields and the reflected key contract before publishing a candidate mapping. It snapshots weak action references before making reflected calls, so it does not retain a live array address across those calls. The supported native action names are an interface contract, not a move or equipment database. Renamed/unsupported actions require an updated, verified adapter.
+
+Bounds: at most 256 context entries, ten recognized action objects, 32 returned keys per action and 64 distinct keys overall. Each distinct key is polled once per visible-menu tick, even if several actions share it. Key names are resolved during mapping refresh. Mapping refresh runs on entry, every two seconds while active, and every 200 ms while the initial applied mapping remains unavailable. It does not run during combat or on another menu page. Key order is canonicalized so an equivalent reordered query result does not reset held-key state.
+
+Opening, changing mappings or changing the player/menu generation suppresses buttons already held until release. Directional actions repeat after 400 ms and then at 90 ms intervals. Confirmation, deletion and tab changes never auto-repeat. All action states are updated before selecting one event per frame, with Cancel taking priority over confirmation. Simultaneous held secondary buttons do not become delayed fresh presses. A stalled frame does not produce catch-up bursts.
+
+Reflected boolean call parameters and results now use `FBoolProperty` accessors with storage checks. They no longer use raw byte copies that would misread or overwrite packed boolean masks.
+
+Primary background: [Epic Enhanced Input overview](https://dev.epicgames.com/documentation/unreal-engine/enhanced-input-in-unreal-engine) and [Enhanced Input subsystem interface](https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/EnhancedInput/IEnhancedInputSubsystemInterface). The documentation currently defaults to a newer engine version, so the pinned game SDK, local CSS/CSSX implementation and reflected layout checks remain the implementation evidence for this UE 5.6.1 game. CCS live verification has not yet been performed.
+
+Ten host test suites pass normally and with ASan/UBSan. The input suite covers entry suppression, repeat delays, hitches, simultaneous buttons, nonrepeating destructive actions, reopen suppression, clock rollback and typing-key policy. Windows variants compile. These checks do not prove native focus behavior or frame cost in game. The experimental menu stays disabled in the default build.
+
+The [preset editor](preset-menu-runtime.md) now suppresses mapped keyboard letters while typing and resets held-state suppression on focus changes and confirmation entry. Its Escape exception filters an existing Cancel route; it does not create a fallback binding. Pointer release-inside checks and Save-button mapped keyboard focus are wired into file actions, with live verification pending.
+
+Remaining work: native glyph prompts and device filtering, text commit/virtual keyboard behavior, mouse short clicks, native navigation/event coexistence, trigger/chord semantics, and in-game remap/controller/focus validation. Prototype text prompts use resolved key names. Native glyphs still require real prompt widgets. Final reference layout/native item integration remains unfinished.

@@ -8,8 +8,6 @@ import json
 import os
 import shutil
 import subprocess
-import sys
-import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -26,15 +24,24 @@ def sha(path: Path) -> str:
         return hashlib.file_digest(f, 'sha256').hexdigest()
 
 
-def build() -> Path:
-    out = ROOT / 'build/windows'
+def build(probe: bool = False, registry: bool = False, profile: bool = False, menu: bool = False, attack: bool = False) -> Path:
+    probe = probe or registry
+    if (menu and probe) or (attack and (menu or probe)):
+        raise ValueError('Menu, discovery and attack probes require separate builds')
+    variant = 'windows-attack' if attack else 'windows-registry' if registry else 'windows-probe' if probe else 'windows-menu' if menu else 'windows'
+    out = ROOT / 'build' / (variant + ('-profile' if profile else ''))
     out.mkdir(parents=True, exist_ok=True)
     subprocess.run([
         'cmake', '-S', str(ROOT), '-B', str(out),
         '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release',
-        f'-DCMAKE_TOOLCHAIN_FILE={TOOLCHAIN}'
+        f'-DCMAKE_TOOLCHAIN_FILE={TOOLCHAIN}',
+        f'-DCCS_EXPERIMENTAL_MENU={"ON" if menu else "OFF"}',
+        f'-DCCS_FRAME_PROFILE={"ON" if profile else "OFF"}',
+        f'-DCCS_DISCOVERY_PROBE={"ON" if probe else "OFF"}',
+        f'-DCCS_ATTACK_PROBE={"ON" if attack else "OFF"}',
+        f'-DCCS_REGISTRY_CONTROLS={"ON" if registry else "OFF"}'
     ], check=True)
-    subprocess.run(['cmake', '--build', str(out), '-j', '8'], check=True)
+    subprocess.run(['cmake', '--build', str(out), '-j', '2'], check=True)
 
     for name in ('main.dll', 'ccs_core.dll'):
         if not (out / name).is_file():
@@ -43,8 +50,42 @@ def build() -> Path:
     return out
 
 
-def stage() -> None:
-    out = build()
+def copy_verified(source: Path, target: Path) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_name(target.name + '.tmp')
+    shutil.copy2(source, temporary)
+    if sha(source) != sha(temporary):
+        raise RuntimeError(f'Copy verification failed: {target}')
+    os.replace(temporary, target)
+
+
+def game_processes() -> list[int]:
+    result = []
+    for proc in Path('/proc').iterdir():
+        if not proc.name.isdigit():
+            continue
+        try:
+            command = (proc / 'cmdline').read_bytes().split(b'\0')
+            if any(Path(arg.decode(errors='replace').replace('\\', '/')).name.lower() in
+                   {'mortalshell2.exe', 'mortalshell2-win64-shipping.exe'} for arg in command):
+                result.append(int(proc.name))
+        except (OSError, ValueError):
+            continue
+    return result
+
+
+def stage(confirmed_stopped: bool = False, probe: bool = False, registry: bool = False, attack: bool = False) -> None:
+    probe = probe or registry
+    if not confirmed_stopped:
+        raise RuntimeError('Staging requires a fresh confirmation that you stopped playing (--confirm-game-stopped)')
+    if game_processes():
+        raise RuntimeError('Mortal Shell II is running; close it before staging CCS')
+    pin = json.loads(PIN_FILE.read_text())
+    if sha(GAME / 'Binaries/Win64/ue4ss/UE4SS.dll') != pin['dll_sha256']:
+        raise RuntimeError('Installed UE4SS differs from the pinned runtime')
+    out = build(probe=probe, registry=registry, attack=attack, profile=attack)
+    if game_processes():
+        raise RuntimeError('The game started during the build; refusing to stage')
     MOD_DEST.mkdir(parents=True, exist_ok=True)
     (MOD_DEST / 'dlls').mkdir(parents=True, exist_ok=True)
     (MOD_DEST / 'core').mkdir(parents=True, exist_ok=True)
@@ -54,35 +95,58 @@ def stage() -> None:
     (MOD_DEST / 'enabled.txt').touch(exist_ok=True)
 
     # 2. main.dll
-    shutil.copy2(out / 'main.dll', MOD_DEST / 'dlls/main.dll')
+    copy_verified(out / 'main.dll', MOD_DEST / 'dlls/main.dll')
 
     # 3. ccs_core.dll
-    core_name = f'ccs_core-1.0.0-{sha(out / "ccs_core.dll")[:12]}.dll'
-    shutil.copy2(out / 'ccs_core.dll', MOD_DEST / 'core' / core_name)
+    version = (ROOT / 'VERSION').read_text().strip()
+    core_name = f'ccs_core-{version}-{sha(out / "ccs_core.dll")[:12]}.dll'
+    copy_verified(out / 'ccs_core.dll', MOD_DEST / 'core' / core_name)
 
     # 4. core.json
     core_json = {"file": core_name}
-    with (MOD_DEST / 'core.json').open('w') as f:
-        json.dump(core_json, f, indent=2)
+    selector = MOD_DEST / 'core.json.tmp'
+    selector.write_text(json.dumps(core_json, indent=2) + '\n')
+    os.replace(selector, MOD_DEST / 'core.json')
 
     # 5. Copy presets
     src_presets = ROOT / 'presets'
     if src_presets.exists():
         for preset_file in src_presets.glob('*.json'):
-            shutil.copy2(preset_file, MOD_DEST / 'presets' / preset_file.name)
+            target = MOD_DEST / 'presets' / preset_file.name
+            if not target.exists():
+                copy_verified(preset_file, target)
 
     print(f'[CCS] Staged successfully to {MOD_DEST}')
 
 
 def main():
     parser = argparse.ArgumentParser(description='CCS build and stage tool')
-    parser.add_argument('action', choices=['build', 'stage', 'status'], default='build', nargs='?')
+    parser.add_argument('action', choices=['build', 'build-probe', 'build-registry', 'build-attack', 'build-profile', 'stage', 'status'], default='build', nargs='?')
+    parser.add_argument('--confirm-game-stopped', action='store_true', help='Confirm you have stopped playing for this installation')
+    parser.add_argument('--probe', action='store_true', help='Stage the read-only discovery variant')
+    parser.add_argument('--registry', action='store_true', help='Stage the second discovery probe with registry controls')
+    parser.add_argument('--menu', action='store_true', help='Include the experimental menu in build-profile')
+    parser.add_argument('--attack', action='store_true', help='Select the read-only attack-call probe for stage or build-profile')
     args = parser.parse_args()
+    if args.menu and args.action != 'build-profile':
+        parser.error('--menu is supported only by build-profile')
+    if (args.probe or args.registry or args.attack) and args.action not in {'stage', 'build-profile'}:
+        parser.error('--probe, --registry and --attack are supported only by stage or build-profile')
+    if args.attack and (args.menu or args.probe or args.registry):
+        parser.error('Menu, discovery and attack probes require separate builds')
 
     if args.action == 'build':
         build()
+    elif args.action == 'build-probe':
+        build(probe=True)
+    elif args.action == 'build-registry':
+        build(registry=True)
+    elif args.action == 'build-attack':
+        build(attack=True, profile=True)
+    elif args.action == 'build-profile':
+        build(probe=args.probe, registry=args.registry, profile=True, menu=args.menu, attack=args.attack)
     elif args.action == 'stage':
-        stage()
+        stage(args.confirm_game_stopped, probe=args.probe, registry=args.registry, attack=args.attack)
     elif args.action == 'status':
         print(f'Mod destination: {MOD_DEST}')
         print(f'Exists: {MOD_DEST.exists()}')

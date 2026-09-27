@@ -1,5 +1,6 @@
 #pragma once
 #include "ccs_types.hpp"
+#include "common.hpp"
 #include <filesystem>
 #include <vector>
 #include <memory>
@@ -11,8 +12,10 @@ public:
     explicit Storage(std::filesystem::path presets_dir);
 
     std::vector<std::string> list_presets() const;
+    bool list_presets(std::vector<std::string>& names) const;
     std::optional<PresetData> load_preset(const std::string& name) const;
-    bool save_preset(const PresetData& preset);
+    bool save_preset(const PresetData& preset); // Creates a new preset; replacement must be explicit.
+    FileWriteResult save_preset(const PresetData& preset, bool replace_existing);
     bool delete_preset(const std::string& name);
 
     static nlohmann::json preset_to_json(const PresetData& preset);

@@ -1,18 +1,20 @@
-# Custom Combat System (CCS) — Architectural & Design Specification
+# Custom Combat System (CCS): Architectural & Design Specification
 
-**Document Version:** 1.0.0  
-**Target Engine:** Unreal Engine 5.6.1 (`MortalShell2-5.6.1-0+++Sparta-Depot+Main+CL93241`)  
-**Mod Architecture:** Standalone UE4SS Dual-DLL C++ Mod (`ue4ss/Mods/CCS/`)  
-**Reference Concept:** [`screenshot-2026-09-27_07-47-24.png`](file:///home/eins0fx/Pictures/screenshot-2026-09-27_07-47-24.png)  
+**Status:** Design proposal, not implemented or runtime verified. See [takeover review](takeover-review.md) for current capabilities and corrected data.
+
+**Document Version:** 1.0.0
+**Target Engine:** Unreal Engine 5.6.1 (`MortalShell2-5.6.1-0+++Sparta-Depot+Main+CL93241`)
+**Mod Architecture:** Standalone UE4SS Dual-DLL C++ Mod (`ue4ss/Mods/CCS/`)
+**Reference Concept:** [`screenshot-2026-09-27_08-27-59.png`](/home/eins0fx/Pictures/screenshot-2026-09-27_08-27-59.png)
 **Companion Documents:**
-- [`architecture-reference.md`](file:///home/eins0fx/development/mods/msII/CustomShellSystem/CCS/docs/architecture-reference.md)
-- [`combat-movesets.md`](file:///home/eins0fx/development/mods/msII/CustomShellSystem/CCS/docs/combat-movesets.md)
-- [`combat-damage-pipeline.md`](file:///home/eins0fx/development/mods/msII/CustomShellSystem/CCS/docs/combat-damage-pipeline.md)
-- [`combat-pipeline-resolutions.md`](file:///home/eins0fx/development/mods/msII/CustomShellSystem/CCS/docs/combat-pipeline-resolutions.md)
-- [`combat-runtime-surface.md`](file:///home/eins0fx/development/mods/msII/CustomShellSystem/CCS/docs/combat-runtime-surface.md)
-- [`enemy-damage-pipeline.md`](file:///home/eins0fx/development/mods/msII/CustomShellSystem/CCS/docs/enemy-damage-pipeline.md)
-- [`enemy-movesets.md`](file:///home/eins0fx/development/mods/msII/CustomShellSystem/CCS/docs/enemy-movesets.md)
-- [`enemy-runtime-surface.md`](file:///home/eins0fx/development/mods/msII/CustomShellSystem/CCS/docs/enemy-runtime-surface.md)
+- [`architecture-reference.md`](architecture-reference.md)
+- [`combat-movesets.md`](combat-movesets.md)
+- [`combat-damage-pipeline.md`](combat-damage-pipeline.md)
+- [`combat-pipeline-resolutions.md`](combat-pipeline-resolutions.md)
+- [`combat-runtime-surface.md`](combat-runtime-surface.md)
+- [`enemy-damage-pipeline.md`](enemy-damage-pipeline.md)
+- [`enemy-movesets.md`](enemy-movesets.md)
+- [`enemy-runtime-surface.md`](enemy-runtime-surface.md)
 
 ---
 
@@ -21,7 +23,7 @@
 ### 1.1 The Core Question
 > *"hmmm i think for enemy what do u think? enemy moveset into slot 1 2 3 F C or enemy weapon? im thinking easier for enemy moveset, not sure tho"*
 
-### 1.2 The Verdict: **Enemy Movesets into Slots 1, 2, 3, F, C is 100% the Superior Choice**
+### 1.2 Proposed direction: individual moves in slots 1, 2, 3, F, C
 
 After decompiling Mortal Shell II's weapon actor classes (`AWP_*`), attack selectors (`UGA_Player_AttackSelectorBase_C`), and enemy abilities (`GA_<Enemy>_*`), **slotting individual Enemy Movesets directly into slots `1, 2, 3, F, C` is both technically simpler and vastly superior for gameplay:**
 
@@ -30,14 +32,14 @@ After decompiling Mortal Shell II's weapon actor classes (`AWP_*`), attack selec
 | **Engine Alignment** | **Native 1:1 Mapping.** Player attack selectors execute combos via `ComboAttackList[0, 1, 2]`, `ShouldTriggerComboFinisher()`, and `HoldAttack`. Each slot expects a single `UGA_AttackBase_C` class or `UAnimMontage*`. Swapping individual moves fits the engine seamlessly. | **Engine Friction.** Enemies in Mortal Shell II do *not* possess player weapon actors (`AWP_Player_*`). Their weapons are static meshes attached to enemy bones with no player stat tables, no upgrade trees, and no light/heavy 10-combo definitions. |
 | **Move Variety & Gaps** | **No Gaps.** Players can pick only the best, most functional enemy attacks and freely combine them with player moves. | **Major Gaps.** Most enemies only have 2 to 4 attacks (e.g. 1 swipe, 1 lunge, 1 grab). A "full weapon" would leave half the 10 slots empty or redundant. |
 | **Combo Customization** | **Infinite Combinations.** Mix player sword openers (`L1`), Sicario dual cross-slashes (`L2`), Cultist 360 whirlwinds (`L3`), and Stillblade Tarstone finishers (`LF`). | **Locked Combos.** Rigidly locks player to a fixed enemy sequence. |
-| **Bug & Crash Risk** | **Virtually Zero.** Overwrites or hooks existing `UAnimMontage*` pointers on the player's active ability instances. No actor spawning, no collision reconstruction, no attachment glitches. | **High Risk.** Requires synthesizing fake `ASpartaWeapon` actors, spoofing weapon attachment sockets, handling sheath/unholster logic, and hacking inventory tables. |
+| **Bug & Crash Risk** | **Unverified.** Requires ownership checks, skeleton validation, notify and payload compatibility, and a tested rollback path. | **High Risk.** Requires synthesizing fake `ASpartaWeapon` actors, spoofing weapon attachment sockets, handling sheath/unholster logic, and hacking inventory tables. |
 | **Community Presets** | **Full Support.** Any desired "full enemy moveset" can easily be saved and shared as a single `.json` preset (e.g. `Cultist_Full_Spear.json`). | Requires complex custom asset packs. |
 
 ---
 
 ## 2. Concept UI & User Experience Architecture
 
-The UI directly implements the design established in [`screenshot-2026-09-27_07-47-24.png`](file:///home/eins0fx/Pictures/screenshot-2026-09-27_07-47-24.png).
+The UI directly implements the design established in [`screenshot-2026-09-27_08-27-59.png`](/home/eins0fx/Pictures/screenshot-2026-09-27_08-27-59.png).
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -100,9 +102,9 @@ Finisher Tarstones function by hooking into `UGA_Player_AttackSelectorBase_C::Sh
 | Tarstone Name | Cooked Item Class | Compatible Slot | Game Description & Mechanics |
 | :--- | :--- | :---: | :--- |
 | **Stillblade's Stone** | `ID_Melee_LightAttackFinisher_Break` | **`LF`** | **Grants access to a special Light Combo Finisher.**<br>• Level 1: Finisher deals **+10 Break Damage**.<br>• Level 2: Finisher deals **+15 Break Damage**.<br>• Level 3: Finisher deals **+25 Break Damage**.<br>*(Applies `GA_Player_Attack_Light::Finisher_BreakDamage`)*. |
-| **Zealot's Stone** | `ID_Melee_LightAttackFinisher_Resolve` | **`LF`** | **Grants access to a special Light Combo Finisher.**<br>• Restores **0.5 / 1.0 / 1.5 Resolve bars** on successful light combo finisher hit.<br>*(Applies `GE_Melee_ResolveGain_Finisher`)*. |
-| **Clerik's Stone** | `ID_Melee_HeavyAttackFinisher_Critical` | **`HF`** | **Grants access to a special Heavy Combo Finisher.**<br>• Guaranteed **Critical Hit** on heavy finisher.<br>• Inflicts **+50 Poise Damage** and breaks heavy guard. |
-| **Tyrant's Stone** | `ID_Melee_HeavyAttackFinisher_Weak` | **`HF`** | **Grants access to a special Heavy Combo Finisher.**<br>• Forces **Flyback Knockdown** via `GE_ForceFlybackReaction`.<br>• Inflicts `State.Debuff.Weakness` (target deals 25% reduced damage for 8s). |
+| **Zealot's Stone** | `ID_Melee_LightAttackFinisher_Resolve` | **`LF`** | **Grants access to a special Light Combo Finisher.**<br>• Light-finisher Resolve stat levels: **1.4 / 1.7 / 2.5**. The unit and resulting live gain need verification.<br>*(Applies `GE_Melee_ResolveGain_Finisher`)*. |
+| **Clerik's Stone** | `ID_Melee_HeavyAttackFinisher_Critical` | **`HF`** | **Grants access to a special Heavy Combo Finisher.**<br>• Heavy-finisher Critical stat: **0.3 / 0.35 / 0.4**.<br>• Live effect semantics remain unverified. |
+| **Tyrant's Stone** | `ID_Melee_HeavyAttackFinisher_Weak` | **`HF`** | **Grants access to a special Heavy Combo Finisher.**<br>• Forces **Flyback Knockdown** via `GE_ForceFlybackReaction`.<br>• Heavy-finisher Weak stat levels: **4 / 5 / 6 stacks**. The generic Weak effect uses 0.95 per stack for 5 seconds; verify the finisher's live application. |
 
 ### 3.2 Charged / Hold Tarstones (`LC` & `HC`)
 Hold Tarstones activate the charged attack input branch on `ANS_HoldAttackHandler`:
@@ -126,18 +128,18 @@ The following Tarstones are **global modifiers** or **super abilities** and are 
 ### 4.1 Skeletal Rig & Compatibility Rules
 1. **Compatible Rig (`SKEL_Human_Skeleton`)**:
    - All player pawns use `SKEL_Human_Skeleton`.
-   - Humanoid enemies share this exact bone hierarchy and socket naming (`weapon_r`, `weapon_l`, `hand_r`, `hand_l`, `head`, `root`).
-   - Their attack montages (`UAnimMontage*`) can be assigned directly to player attack abilities with **flawless motion, proper root motion, and zero mesh distortion**.
+   - Enemy compatibility is unverified. Inspect each source skeleton, slot track, hit trace socket and notify before offering it as an equip option.
+   - A shared skeleton alone does not establish compatible motion warping, combo windows or damage payloads.
 2. **Incompatible Non-Humanoid Rigs (Filtered Out)**:
-   - **Grisha** (`SKEL_Grisha` — 4 arms, quadruped rig).
-   - **Hexapod** (`SKEL_Hexapod` — 6-legged arachnid rig).
-   - **MouthBoss / HeadBoss** (`SKEL_Mouth` — floating giant head).
-   - **BellSnail / Harpy** — custom creature skeletons.
+   - **Grisha** (`SKEL_Grisha`: 4 arms, quadruped rig).
+   - **Hexapod** (`SKEL_Hexapod`: 6-legged arachnid rig).
+   - **MouthBoss / HeadBoss** (`SKEL_Mouth`: floating giant head).
+   - **BellSnail / Harpy**: custom creature skeletons.
    *(These are strictly filtered out to prevent mesh explosion or engine crashes)*.
 
 ### 4.2 Compatible Enemy Move Catalog by Slot
 
-#### Slot 1 (`L1` / `H1`) — Opener Attacks
+#### Slot 1 (`L1` / `H1`): Opener Attacks
 *Requirements: Fast windup (<0.50s), forward step (50–200cm), low commitment.*
 
 | Enemy Archetype | Move Name | Ability Class | Cooked Animation Montage | Hit Mult / Poise |
@@ -149,7 +151,7 @@ The following Tarstones are **global modifiers** or **super abilities** and are 
 | **Wraith Knight** | Diagonal Slash | `GA_Wraith_Sword_Combo_01` | `AM_Wraith_Sword_Combo_01` | 1.0x / 25 |
 | **Cultist Zealot** | Torch Arc | `GA_CultistBase_Torch_03` | `AM_CultistBase_Attacks_Torch_Attack_03` | 0.9x / 15 |
 
-#### Slot 2 (`L2` / `H2`) — Mid-Combo Linkers & Feints
+#### Slot 2 (`L2` / `H2`): Mid-Combo Linkers & Feints
 *Requirements: Smooth combo flow, lateral repositioning, evasive properties, moderate damage.*
 
 | Enemy Archetype | Move Name | Ability Class | Cooked Animation Montage | Hit Mult / Poise |
@@ -161,7 +163,7 @@ The following Tarstones are **global modifiers** or **super abilities** and are 
 | **Wraith Knight** | Horizontal Guard Cut | `GA_Wraith_Sword_Combo_02` | `AM_Wraith_Sword_Combo_02` | 1.1x / 25 |
 | **Shield Brigand** | Shield Bash Shove | `GA_BrigCageShield_Attack_Swing` | `AM_BrigCageShield_Attack_Swing` | 0.8x / 35 |
 
-#### Slot 3 (`L3` / `H3`) — String Climax / Combo Enders
+#### Slot 3 (`L3` / `H3`): String Climax / Combo Enders
 *Requirements: High commitment, heavy poise damage (35–50), knockdown or pushback.*
 
 | Enemy Archetype | Move Name | Ability Class | Cooked Animation Montage | Hit Mult / Poise |
@@ -172,7 +174,7 @@ The following Tarstones are **global modifiers** or **super abilities** and are 
 | **Depraved Horde** | 4-Hit Bat Beatdown | `GA_Brigand_Depraved_Bat_4hit` | `AM_Brigand_Depraved_Bat_Attack_Frenzy_4hit` | 0.8x (x4) / 40 |
 | **Wraith Knight** | Double Spinning Slash | `GA_Wraith_Sword_Combo_03` | `AM_Wraith_Sword_Combo_03` | 1.25x / 35 |
 
-#### Slot F (`LF` / `HF`) — Tarstone Finisher Slots
+#### Slot F (`LF` / `HF`): Tarstone Finisher Slots
 *Requirements: High impact, shield break (`GE_BreakShield`), flyback knockdown (`GE_ForceFlybackReaction`), full synergy with Tarstones.*
 
 | Enemy Archetype | Move Name | Ability Class | Cooked Animation Montage | Special Reaction / Effects |
@@ -183,7 +185,7 @@ The following Tarstones are **global modifiers** or **super abilities** and are 
 | **Tarred Stoner** | Brutal Gap Slam | `GA_TarredStoner_Attack_Gab_Slam` | `AM_TarredStoner_Attacks_Gap_Slam` | 60 Poise Dmg, Knocks down targets |
 | **Sicario Assassin** | Vanish Counterstrike | `GA_Sicario_Counter_Attack` | `AM_Sicario_Counter_Attack` | 1.8x Multiplier, Bleed application |
 
-#### Slot C (`LC` / `HC`) — Charged / Hold Attacks
+#### Slot C (`LC` / `HC`): Charged / Hold Attacks
 *Requirements: Sustained windup window, hyperarmor (`ANS_HyperArmor`), massive damage on full release.*
 
 | Enemy Archetype | Move Name | Ability Class | Cooked Animation Montage | Charge Profile |
@@ -310,7 +312,7 @@ The `SETTINGS` tab hosts mod configuration items with instant runtime persistenc
 │  ─────────────────────────────────────────────────────────────────────────────────────────────────────────────  │
 │   Custom Combat System (Master)              [ < ENABLED > ]             Master enable/disable switch for CCS.   │
 │                                                                          When disabled, stock game movesets are  │
-│                                                                          restored with zero runtime overhead.    │
+│                                                                          restored with minimal measured overhead.    │
 │                                                                                                                  │
 │   Startup Default Preset                     [ < Brigand_Slayer > ]      Preset loaded automatically on game boot│
 │                                                                                                                  │
@@ -329,21 +331,22 @@ The `SETTINGS` tab hosts mod configuration items with instant runtime persistenc
 When the user toggles **Custom Combat System -> DISABLED**:
 1. The mod unhooks `PlayMontageAndWaitWithNotifies` and resets `ComboAttackList` pointers to stock weapon classes.
 2. Active Tarstone overrides are released.
-3. The game returns 100% to vanilla behavior with **0.00ms execution cost** and no orphaned state.
+3. The game returns to vanilla behavior with measured callback cost and no orphaned state.
 
 ---
 
 ## 7. Implementation Architecture & Performance Guardrails
 
-### 7.1 Standalone Dual-DLL Layout
-Following [`architecture-reference.md`](file:///home/eins0fx/development/mods/msII/CustomShellSystem/CCS/docs/architecture-reference.md):
-- **Loader DLL**: `ue4ss/Mods/CCS/dlls/CCSLoader.dll` (lightweight, never unloads, listens for hotkey `F7` and chord `L3 + D-Pad Down`).
-- **Core DLL**: `ue4ss/Mods/CCS/dlls/CCSCore.dll` (contains all UMG widgets, moveset swap logic, and JSON serialization; supports hot-reload in under 2 seconds).
+### 7.1 Standalone Dual-DLL Layout (target)
+Following [`architecture-reference.md`](architecture-reference.md):
+- **Loader DLL**: `ue4ss/Mods/CCS/dlls/main.dll` (lightweight, never unloads, listens for hotkey `F7` and chord `L3 + D-Pad Down`).
+- **Core DLL**: `ue4ss/Mods/CCS/core/ccs_core-<version>-<hash>.dll` (contains all UMG widgets, moveset swap logic, and JSON serialization; hot reload remains unimplemented).
 
-### 7.2 Zero Per-Frame Reflection (Zero Lag Guarantee)
-- All `UClass*`, `UFunction*`, and `UAnimMontage*` pointers are resolved **once** during level load or weapon equip.
-- During live combat, combo routing is a single pointer read from an indexed array (`TArray<UAnimMontage*> CustomSlots[10]`).
-- Execution time per swing is under **0.0004 milliseconds**, guaranteeing **zero FPS drops and zero stutter**.
+### 7.2 Performance targets and verification
+
+Resolve stable metadata outside combat. Combat routing should use indexed slots without synchronous asset loads, object scans or file writes. Measure callback and frame costs before publishing performance claims. The earlier 0.0004 ms claim had no CCS measurement behind it and is withdrawn.
+
+The default build currently installs no combat hooks and does not activate the menu prototype. It is a foundation for the verified implementation, not a finished combat mod.
 
 ### 7.3 Memory Hygiene & GC Pinning
 - Any dynamically loaded enemy montage or Tarstone item is rooted in `CCS_RootSet` (`AddToRoot()` or rooted via custom container) so Unreal Engine's Garbage Collector never evicts assets while equipped.
