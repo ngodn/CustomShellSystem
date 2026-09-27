@@ -1,11 +1,17 @@
 """Propose bounded suit offsets for measured triangle-interior sprint intersections."""
-import copy,hashlib,json
+import argparse,copy,hashlib,json,sys
 from pathlib import Path
 import numpy as np
 from mathutils import Matrix,Quaternion,Vector
 from mathutils.bvhtree import BVHTree
 w=Path(__file__).resolve().parents[2]/'work/eve26'
-p=w/'planet-weight-repair/planet.mesh.json';raw=p.read_bytes();m=json.loads(raw)
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--mesh',type=Path,default=w/'planet-weight-repair/planet.mesh.json')
+parser.add_argument('--motion',type=Path,default=w/'holiday-sprint-motion.json')
+parser.add_argument('--frames',type=int,nargs='+',default=[8,16,24])
+parser.add_argument('--output',type=Path,default=w/'planet-fit7')
+args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+p=args.mesh;raw=p.read_bytes();m=json.loads(raw)
 audit=json.loads(p.with_name('planet.mesh.audit.json').read_text());assert hashlib.sha256(raw).hexdigest()==audit['output_sha256']
 nb=audit['parts'][0]['points'];ns=audit['parts'][1]['points'];nf=audit['parts'][0]['faces']
 base=np.asarray(m['points']);faces=[[m['wedges'][j][0] for j in f[:3]] for f in m['faces'][nf:nf+audit['parts'][1]['faces']]]
@@ -17,14 +23,14 @@ bind=[]
 for b in m['bones']:
  q=b['rotation'];local=Matrix.LocRotScale(Vector(b['translation']),Quaternion((q[3],*q[:3])),Vector(b['scale']))
  bind.append(bind[b['parent']]@local if b['parent']>=0 else local)
-motion=json.loads((w/'holiday-sprint-motion.json').read_text())
+motion=json.loads(args.motion.read_text())
 morph=np.zeros_like(base)
 for target in m['morph_targets']:
  if target['name'].startswith(('FBM','PBM')):
   for i,*v in target['deltas']:morph[i]+=v
 proposals={};reports=[]
-for frame in [8,16,24]:
- snap=motion['frames'][frame]['upstream'];entries=dict(zip(snap['BoneNames'],snap['LocalTransforms'],strict=True));pose=[]
+for frame in args.frames:
+ row=motion['frames'][frame];snap=row['upstream'] if 'upstream' in row else row['pose']['Snapshot'];entries=dict(zip(snap['BoneNames'],snap['LocalTransforms'],strict=True));pose=[]
  for b in m['bones']:
   t=entries[b['name']];local=Matrix.LocRotScale(Vector([t['Translation'][k] for k in 'XYZ']),Quaternion([t['Rotation'][k] for k in 'WXYZ']),Vector([t['Scale3D'][k] for k in 'XYZ']))
   pose.append(pose[b['parent']]@local if b['parent']>=0 else local)
@@ -54,7 +60,7 @@ for i,delta in proposals.items():result['points'][i]=(base[i]+delta).tolist()
 assert result['points'][:nb]==m['points'][:nb]
 assert result['points'][nb+ns:]==m['points'][nb+ns:]
 assert all(result[k]==v for k,v in m.items() if k!='points')
-out=w/'planet-fit7';out.mkdir(exist_ok=False)
+out=args.output;out.mkdir(exist_ok=False)
 f=out/'planet.mesh.json';f.write_text(json.dumps(result,separators=(',',':'))+'\n');audit['output_sha256']=hashlib.sha256(f.read_bytes()).hexdigest()
 (out/'planet.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')
 (out/'offsets.json').write_text(json.dumps({'offsets':[[i,*v.tolist()] for i,v in proposals.items()]})+'\n')

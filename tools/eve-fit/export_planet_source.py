@@ -1,13 +1,18 @@
 """Refresh corrected suit points and corner normals from the verified Blender source."""
-import hashlib,json,sys
+import argparse,hashlib,json,sys
 from pathlib import Path
 import bpy
 from mathutils import Vector
 root=Path(__file__).resolve().parents[3];w=root/'CustomShellSystem/work/eve26'
 sys.path.insert(0,str(root/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work'))
 from export_variant_clean import TO_UE,fitted_mesh
-source=w/'planet-suit-f7.blend';before=hashlib.sha256(source.read_bytes()).hexdigest()
-p=w/'planet-fit7/planet.mesh.json';data=json.loads(p.read_text());audit=json.loads(p.with_name('planet.mesh.audit.json').read_text())
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--source',type=Path,default=w/'planet-suit-f7.blend')
+parser.add_argument('--candidate',type=Path,default=w/'planet-fit7/planet.mesh.json')
+parser.add_argument('--output',type=Path,default=w/'planet-export')
+a=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+source=a.source;before=hashlib.sha256(source.read_bytes()).hexdigest()
+p=a.candidate;data=json.loads(p.read_text());audit=json.loads(p.with_name('planet.mesh.audit.json').read_text())
 assert hashlib.sha256(p.read_bytes()).hexdigest()==audit['output_sha256']
 bpy.ops.wm.read_factory_settings(use_empty=True)
 with bpy.data.libraries.load(str(source),link=False) as (src,dst):dst.objects=['Eve Prototype Planet Diving Suit - Suit']
@@ -45,7 +50,7 @@ changed_triangles=sum([data['wedges'][i][0] for i in old[:3]] != [wedges[i-lo][0
 data['wedges'][lo:hi]=wedges;data['normals'][lo:hi]=normals;data['colors'][lo:hi]=colors
 data['faces'][face_start:face_start+part['faces']]=faces
 for v in mesh.vertices:data['points'][start+v.index]=list(matrix@v.co)
-out=w/'planet-export';out.mkdir(exist_ok=False)
+out=a.output;out.mkdir(exist_ok=False)
 p=out/'planet.mesh.json';p.write_text(json.dumps(data,separators=(',',':'))+'\n')
 audit['output_sha256']=hashlib.sha256(p.read_bytes()).hexdigest();audit['parts'][1]['max_influences']=8
 (out/'planet.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')

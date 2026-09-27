@@ -6,6 +6,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Current Prototype source candidate is `planet-suit-f10.blend`: F8 neckline clearance, F9 fastener weights, then bounded secondary-pose/morph clearance. `planet-fit10/` contains its matching interchange before refreshed corner normals. Existing private Unreal tail candidate still uses F7. Read the current goal checkpoint for verification limits; neither is game-accepted. Older entries below describe their state at the time of those checks.
+
 - Prototype original tail already has a cloth proxy and bone follower rig. `planet-tail-author.json` records 18 proxy vertices, four pins and eight bones; `planet-tail-proxy.json` aligns it to the fitted export with <0.0000041 cm residual. Reviewed back/side plot confirms placement. Native adaptation and collision/motion still pending.
 
 - Latest Prototype interchange: `planet-export/`, regenerated from F7 with corrected normals/triangulation and preserved UV/color corners. Private Unreal import and fresh hierarchy audit pass (`planet-compat.json`); protected production hashes unchanged. No cloth assets, production binding or game acceptance yet.
