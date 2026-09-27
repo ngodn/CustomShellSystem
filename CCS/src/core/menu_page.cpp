@@ -30,6 +30,8 @@ constexpr const char* details_class = "/Game/Sparta/UI/Menu/Equipment/WBP_Equipm
 constexpr const char* dialog_class = "/Game/Sparta/UI/Menu/Misc/WBP_ConfirmationPrompt_Default.WBP_ConfirmationPrompt_Default_C";
 constexpr const char* listener_class = "/Game/Sparta/UI/Core/Navigation/WBP_InputListener.WBP_InputListener_C";
 constexpr const char* fade_class = "/Game/Sparta/UI/Core/WBP_ScrollBoxFadeHandler.WBP_ScrollBoxFadeHandler_C";
+constexpr const char* tile_class = "/Game/Sparta/UI/Menu/Equipment/WBP_Player_Slot.WBP_Player_Slot_C";
+constexpr double tile_size = 176, tile_gap = 36, tile_row_gap = 120;
 constexpr const char* serif_font = "/Game/Sparta/UI/Fonts/CrimsonText-Regular_Font.CrimsonText-Regular_Font";
 constexpr const char* title_font = "/Game/Sparta/UI/Fonts/Trajan_Pro_Regular_Font.Trajan_Pro_Regular_Font";
 constexpr double native_height = 2160, native_column = 1136;
@@ -68,6 +70,18 @@ UObject* fill(UObject* slot) {
     return slot;
 }
 void visibility(UObject* widget, uint8_t value) { invoke(widget, L"SetVisibility", L"InVisibility", value); }
+// The game's lazy images (CommonLazyImage) take a soft reference and stream the texture in
+// themselves, the way the Inventory fills its slots; a plain brush set skips that and the
+// texture can stay unstreamed. The reference is made through the engine's own converters.
+void lazy_brush(UObject* image, const std::string& path, bool match = false) {
+    auto* kismet = find_cached(L"/Script/Engine.Default__KismetSystemLibrary");
+    Call make(kismet, L"MakeSoftObjectPath", 2);
+    FString string(wide(path).c_str()); make.set(L"PathString", string); make.run();
+    Call convert(kismet, L"Conv_SoftObjPathToSoftObjRef", 2);
+    convert.copy(L"SoftObjectPath", make, L"ReturnValue"); convert.run();
+    Call set(image, L"SetBrushFromLazyTexture", 2);
+    set.copy(L"LazyTexture", convert, L"ReturnValue"); set.set(L"bMatchSize", match); set.run();
+}
 void brush(UObject* image, UObject* texture, bool match = false) {
     Call set(image, L"SetBrushFromTexture", 2); set.set(L"Texture", texture); set.set(L"bMatchSize", match); set.run();
 }
@@ -196,6 +210,8 @@ void Menu::forget_page() {
     design_.Reset(); left_root_.Reset(); right_root_.Reset(); list_scroll_.Reset(); strip_scroll_.Reset(); details_.Reset(); panel_scroll_.Reset(); panel_size_.Reset();
     status_text_.Reset(); title_text_.Reset(); subtitle_text_.Reset(); logo_image_.Reset(); strip_previous_.Reset(); strip_next_.Reset(); strip_previous_glyph_.Reset(); strip_next_glyph_.Reset();
     input_prompt_.Reset(); search_input_.Reset(); name_input_.Reset();
+    grid_root_.Reset(); banner_image_.Reset(); banner_shown_ = -1;
+    for (auto& tile : tiles_) tile = {};
     design_w_ = design_h_ = design_scale_ = 0; shown_section_ = revealed_row_ = -1;
     panel_context_.clear(); panel_revealed_ = nullptr; panel_fit_pending_ = false; panel_max_ = 720.f; pending_reveals_ = {};
     detail_title_.clear(); detail_sub_.clear(); detail_body_ = "\x01"; status_shown_.clear(); title_shown_.clear(); subtitle_shown_.clear();
@@ -240,10 +256,17 @@ bool Menu::page(double width, double height) {
     auto* left = column(0, native_column); auto* right = column(design_width - native_column, native_column);
     left_root_ = left; right_root_ = right;
     auto* logo = image_widget(tree, nullptr); place(left, logo, 40, 100, 260, 260); logo_image_ = logo; visibility(logo, collapsed); logo_shown_ = 0;
-    auto* title = text_block(tree, 50, trajan, title_ink, false); place(left, title, 330, 171, 780, 70); title_text_ = title;
+    // The user's banner where CSS puts its own (1120x373 in the left column); the text title
+    // only shows when the banner file is missing.
+    auto* banner = image_widget(tree, nullptr); place(left, banner, 64, 90, 1008, 336); banner_image_ = banner; visibility(banner, collapsed); banner_shown_ = 0;
+    // The centre column between the two side columns hosts the slot grid.
+    auto* centre = construct(L"/Script/UMG.CanvasPanel", tree);
+    place(design, centre, native_column, 0, std::max(0., design_width - 2 * native_column), design_height);
+    grid_root_ = centre;
+    auto* title = text_block(tree, 40, trajan, title_ink, false); place(left, title, 330, 171, 780, 70); title_text_ = title;
     auto* subtitle = text_block(tree, 30, trajan, subtitle_ink, false); place(left, subtitle, 332, 243, 780, 48); subtitle_text_ = subtitle;
     auto* strip_frame = construct(L"/Script/UMG.Overlay", tree);
-    place(left, strip_frame, 40, 390, 1056, 150);
+    place(left, strip_frame, 40, 470, 1056, 150);
     fill(add_child(strip_frame, image_widget(tree, game_texture("T_UI_Nav_TitleBG"))));
     auto* strip = construct(L"/Script/UMG.HorizontalBox", tree);
     auto* strip_slot = add_child(strip_frame, strip);
@@ -273,11 +296,11 @@ bool Menu::page(double width, double height) {
     auto* tabs = construct(L"/Script/UMG.HorizontalBox", tree);
     add_child(strip_scroll, tabs); tab_items_.box = tabs;
     prompt("next_section", glyph_right_bumper, strip_next_, strip_next_glyph_);
-    place(left, image_widget(tree, game_texture("T_UI_Nav_Title_Divider")), 0, 560, native_column, 6);
+    place(left, image_widget(tree, game_texture("T_UI_Nav_Title_Divider")), 0, 640, native_column, 6);
     auto* list_size = construct(L"/Script/UMG.SizeBox", tree);
     invoke(list_size, L"SetWidthOverride", L"InWidthOverride", 1040.f);
-    invoke(list_size, L"SetHeightOverride", L"InHeightOverride", float(design_height - 780));
-    place(left, list_size, 48, 590);
+    invoke(list_size, L"SetHeightOverride", L"InHeightOverride", float(design_height - 860));
+    place(left, list_size, 48, 670);
     auto* list_scroll = construct(L"/Script/UMG.ScrollBox", tree);
     if (auto* bar = object_of(object_of(character, L"WBP_CSB_Style2"), L"Image_Bar")) {
         auto* style = list_scroll->GetPropertyByNameInChain(L"WidgetBarStyle");
@@ -344,7 +367,8 @@ void Menu::invalidate_page() {
             }
         }
     detail_title_.clear(); detail_sub_.clear(); detail_body_ = "\x01"; status_shown_.clear(); title_shown_.clear(); subtitle_shown_.clear();
-    status_error_shown_ = -1; logo_shown_ = -1; detail_icon_ = reinterpret_cast<const void*>(1);
+    status_error_shown_ = -1; logo_shown_ = -1; banner_shown_ = -1; detail_icon_ = reinterpret_cast<const void*>(1);
+    for (auto& tile : tiles_) { tile.selected = -1; tile.shown = -1; tile.dimmed = -1; tile.icon = nullptr; tile.icon_path.clear(); tile.text.clear(); }
     if (auto* details = details_.Get()) {
         try {
             invoke(details, L"Show");
@@ -578,8 +602,16 @@ void Menu::paragraph(Stack& stack, const std::string& value, Color color) {
     if (item.color != wanted) { invoke(item.text_block.Get(), L"SetColorAndOpacity", L"InColorAndOpacity", SlateColor{color}); item.color = wanted; }
 }
 void Menu::header(const std::string& title, const std::string& subtitle) {
-    text(title_text_.Get(), title_shown_, title);
-    text(subtitle_text_.Get(), subtitle_shown_, subtitle);
+    auto* art = texture_at(deps_.root / "assets/banner.png");
+    if (auto* banner = banner_image_.Get()) {
+        const int wanted = art ? 1 : 0;
+        if (banner_shown_ != wanted) { if (art) brush(banner, art); visibility(banner, art ? shown_passive : collapsed); banner_shown_ = wanted; }
+    }
+    if (auto* block = title_text_.Get()) visibility(block, art ? collapsed : shown_passive);
+    if (auto* block = subtitle_text_.Get()) visibility(block, art ? collapsed : shown_passive);
+    text(title_text_.Get(), title_shown_, art ? std::string{} : title);
+    text(subtitle_text_.Get(), subtitle_shown_, art ? std::string{} : subtitle);
+    if (art) { if (auto* logo = logo_image_.Get()) { if (logo_shown_ != 0) { visibility(logo, collapsed); logo_shown_ = 0; } } return; }
     if (auto* logo = logo_image_.Get()) {
         auto* art = texture_at(deps_.root / "assets/logo.png");
         const int wanted = art ? 1 : 0;
@@ -848,6 +880,9 @@ void Menu::build_page(bool& deferred) {
     const auto& controls = count ? sections[section_]["controls"] : Json::array();
     const int rows = int(controls.size());
     row_ = std::clamp(row_, 0, std::max(0, rows - 1));
+    const bool slots_section = count && sections[section_].value("kind", std::string{}) == "slots";
+    if (auto* grid = grid_root_.Get()) visibility(grid, slots_section ? shown_self_passive : collapsed);
+    if (slots_section) { build_slots(sections[section_], deferred); return; }
     const auto section_help = count ? sections[section_].value("description", std::string{}) : std::string{};
     if (!section_help.empty()) paragraph(list_, section_help, muted);
     UObject* selected_widget = nullptr; UObject* heading = nullptr; UObject* selected_heading = nullptr;
@@ -954,6 +989,162 @@ void Menu::build_page(bool& deferred) {
         }
         revealed_row_ = row_;
     }
+    bar_prompt("Close", {{"action", "close"}}, "close", glyph_back, 255);
+    if (gamepad_) bar_prompt("Browse", Json{}, "", glyph_dpad_vertical, 255);
+    else bar_prompt("Browse", Json{}, "up", glyph_up, 255, "down", glyph_down, 255);
+    finish(footer_);
+}
+
+// ---- the slot grid: ten of the game's equipment slot tiles (WBP_Player_Slot), created once in
+// the centre column with a Trajan label over each, then only restyled: the icon of the assigned
+// move's weapon and the game's own selected state on the active slot.
+bool Menu::ensure_tiles() {
+    auto* grid = grid_root_.Get(); auto* tree = tree_.Get(); auto* pc = pc_.Get();
+    if (!grid || !tree || !pc) return false;
+    const double width = std::max(0., design_w_ - 2 * native_column);
+    const double row_width = 6 * tile_size + 6 * tile_gap;
+    const double x0 = std::max(0., (width - row_width) / 2), y0 = design_h_ * 0.56;
+    auto* trajan = load(title_font);
+    for (size_t i = 0; i < tiles_.size(); ++i) {
+        auto& tile = tiles_[i];
+        if (tile.widget.Get()) continue;
+        if (budget_ <= 0) return false;
+        --budget_; ++cost_.created;
+        // Ten chain tiles in two rows of five; the ranged tile to the right, between the rows.
+        const double x = i < 10 ? x0 + double(i % 5) * (tile_size + tile_gap) : x0 + 5 * (tile_size + tile_gap) + tile_gap;
+        const double y = i < 10 ? y0 + double(i / 5) * (tile_size + tile_row_gap) : y0 + (tile_size + tile_row_gap) / 2;
+        auto* label = text_block(tree, 30, trajan, title_ink, false);
+        invoke(label, L"SetJustification", L"InJustification", uint8_t{1});
+        place(grid, label, x, y - 52, tile_size, 44);
+        auto* widget = create_widget(pc, game_class(tile_class));
+        place(grid, widget, x, y, tile_size, tile_size);
+        for (auto fn : {L"InitBackground", L"InitializeInnerSize", L"Show"}) { try { invoke(widget, fn); } catch (...) {} }
+        for (auto name : {L"Image_Disabled", L"SizeBox_Charges", L"Size_Level", L"Text_MaxAmount", L"Text_CurrentAmount", L"Text_Level", L"Overlay_Effect"})
+            if (auto* w = object_of(widget, name)) visibility(w, collapsed);
+        for (auto name : {L"InnerHighlight", L"OuterHighlight"}) if (auto* w = object_of(widget, name)) visibility(w, hidden);
+        visibility(widget, shown_self_passive);
+        tile.widget = widget; tile.label = label; tile.shown = 1;
+        try { tile.hit = nav_button(widget, L"WBP_NavigationButton"); } catch (...) {}
+    }
+    return true;
+}
+void Menu::build_slots(const Json& section, bool& deferred) {
+    const auto& controls = section["controls"]; const int rows = int(controls.size());
+    if (!ensure_tiles()) deferred = true;
+    // ---- the tiles
+    for (size_t i = 0; i < tiles_.size(); ++i) {
+        auto& tile = tiles_[i];
+        auto* widget = tile.widget.Get(); if (!widget) continue;
+        const bool present = int(i) < rows;
+        if (tile.shown != int(present)) { visibility(widget, present ? shown_self_passive : collapsed); if (auto* l = tile.label.Get()) visibility(l, present ? shown_passive : collapsed); tile.shown = present; }
+        if (!present) continue;
+        const auto& c = controls[i];
+        const auto label = c.value("label", std::string{});
+        if (tile.text != label) { text_value(tile.label.Get(), label); tile.text = label; }
+        const auto icon_path = c.value("icon", std::string{});
+        if (tile.icon_path != icon_path) {
+            if (auto* image = object_of(widget, L"LazyIcon")) {
+                if (!icon_path.empty()) { try { lazy_brush(image, icon_path); } catch (...) { if (auto* t = game_icon(icon_path)) brush(image, t); } }
+                visibility(image, icon_path.empty() ? hidden : shown_self_passive);
+            }
+            tile.icon_path = icon_path;
+        }
+        const bool selected = int(i) == row_;
+        if (tile.selected != int(selected)) {
+            try { invoke(widget, selected ? L"OnSelectedState" : L"OnNullState"); } catch (...) {}
+            // The slot's selected state also raises its dark inner highlight over the icon; only the frame is wanted.
+            if (auto* inner = object_of(widget, L"InnerHighlight")) visibility(inner, hidden);
+            tile.selected = selected;
+        }
+        // A slot on the weapon's own attack shows the equipped weapon's icon, dimmed.
+        const bool vanilla = c.value("value", std::string{}).empty();
+        if (tile.dimmed != int(vanilla)) { if (auto* image = object_of(widget, L"LazyIcon")) invoke(image, L"SetRenderOpacity", L"InOpacity", vanilla ? .45f : 1.f); tile.dimmed = vanilla; }
+        bind(tile.hit, {{"action", "slot"}, {"index", int(i)}}, held_);
+    }
+    // ---- the candidate list for the active slot: a search field, then the matches grouped
+    const Json* slot = rows ? &controls[row_] : nullptr;
+    const auto& options = slot ? slot->at("options") : Json::array();
+    const std::string options_key = slot ? slot->value("id", std::string{}) + "/" + std::to_string(options.size()) : std::string{};
+    if (options_key != slot_options_key_) {
+        // A new slot: its candidates become the search set, filtered by the query already typed,
+        // and the highlight lands on what the slot holds.
+        options_.reset(options); search_query_.clear(); list_first_ = 0;
+        if (auto* search = search_input_.Get()) { try { text_value(search, ""); } catch (...) {} }
+        for (size_t i = 0; i < options_.matches.size(); ++i) if (slot && options[options_.matches[i]].at("id") == slot->at("value")) options_.selected = i;
+        slot_options_key_ = options_key;
+    }
+    auto& input = take(list_, Kind::input);
+    search_input_ = input.extra;
+    if (input.value != search_query_) {
+        Call focus(input.extra.Get(), L"HasKeyboardFocus", 1); focus.run();
+        if (!focus.get<bool>()) text_value(input.extra.Get(), search_query_);
+        input.value = search_query_;
+    }
+    if (input.text != "hint") { call_text(input.extra.Get(), L"SetHintText", L"InHintText", "Search moves by name or weapon"); input.text = "hint"; }
+    const auto& matches = options_.matches;
+    if (options_.selected >= matches.size()) options_.selected = matches.empty() ? 0 : matches.size() - 1;
+    const int cand = int(options_.selected);
+    UObject* selected_widget = nullptr; UObject* heading = nullptr; UObject* selected_heading = nullptr;
+    std::string last_group;
+    if (matches.empty()) paragraph(list_, "No move matches. Try fewer or shorter words.", muted);
+    // A window of rows around the highlight: the list never holds more than `shown` live rows
+    // however long the candidate set is (the registry adds hundreds).
+    constexpr size_t shown = 80, margin = 6;
+    if (matches.size() <= shown) list_first_ = 0;
+    else {
+        if (size_t(cand) < list_first_ + margin) list_first_ = size_t(std::max(0, cand - int(margin)));
+        else if (size_t(cand) + margin >= list_first_ + shown) list_first_ = size_t(cand) + margin + 1 - shown;
+        list_first_ = std::min(list_first_, matches.size() - shown);
+    }
+    const size_t first = list_first_;
+    const size_t last = std::min(matches.size(), first + shown);
+    if (first > 0) paragraph(list_, std::to_string(first) + " more above. Type to search.", muted);
+    for (size_t i = first; i < last; ++i) {
+        const auto& o = options[matches[i]];
+        const auto group = o.value("group", std::string{});
+        if (!group.empty() && group != last_group) {
+            if (!ready(list_, Kind::header)) { deferred = true; break; }
+            auto& item = take(list_, Kind::header); text(item.text_block.Get(), item.text, group); heading = item.widget.Get(); last_group = group;
+        }
+        if (!ready(list_, Kind::row)) { deferred = true; break; }
+        auto& item = take(list_, Kind::row);
+        RowLook look; look.icon = game_icon(o.value("icon", std::string{})); look.enabled = o.value("enabled", true);
+        look.badge = slot && o.at("id") == slot->at("value");
+        look.value = look.enabled ? o.value("value", std::string{}) : o.value("disabled_label", std::string("Unavailable"));
+        fill_row(item, o.value("label", std::string{}), look, int(i) == cand);
+        bind(item.hit, {{"action", "assign"}, {"index", int(i)}}, held_);
+        if (int(i) == cand) { selected_widget = item.widget.Get(); selected_heading = heading; }
+        heading = nullptr;
+    }
+    if (last < matches.size()) paragraph(list_, std::to_string(matches.size() - last) + " more below. Type to search.", muted);
+    // ---- the window: the highlighted candidate, on the slot it would fill
+    if (slot && !matches.empty()) {
+        const auto& o = options[matches[size_t(cand)]];
+        const auto slot_name = slot->value("name", slot->value("label", std::string{}));
+        detail(o.value("title", o.value("label", std::string{})), o.value("subtitle", slot_name), o.value("description", std::string{}), game_icon(o.value("icon", std::string{})));
+        if (const auto hint = o.value("hint", std::string{}); !hint.empty()) paragraph(panel_, hint, muted);
+        const bool assigned = o.at("id") == slot->at("value");
+        if (!o.value("enabled", true)) paragraph(panel_, o.value("disabled_label", std::string("Unavailable")), muted);
+        else if (assigned) paragraph(panel_, "Assigned to " + slot->value("label", std::string{}) + ".", muted);
+        else action_prompt("accept", "Assign to " + slot->value("label", std::string{}), {{"action", "assign"}}, glyph_accept);
+        if (!slot->value("value", std::string{}).empty()) action_prompt("secondary", "Restore the weapon's own attack", {{"action", "clear"}}, glyph_secondary);
+        if (gamepad_) bar_prompt_actions("Slot", "", glyph_dpad_horizontal); else bar_prompt_actions("Slot", "left", glyph_left, "right", glyph_right);
+    } else detail(deps_.title, "", "");
+    const std::string context = "slots/" + std::to_string(row_) + "/" + std::to_string(cand);
+    if (context != panel_context_) { if (auto* scroll = panel_scroll_.Get()) invoke(scroll, L"ScrollToStart"); panel_context_ = context; panel_revealed_ = nullptr; }
+    finish(list_); finish(head_); finish(panel_); finish(actions_);
+    status_line(error_.empty() ? model_.value("status", std::string{}) : error_, !error_.empty());
+    const int key = section_ + int(model_["sections"].size()) * 1000 + row_ * 100000;
+    if (revealed_row_ != cand || shown_section_ != key) {
+        if (selected_widget) {
+            const bool upward = cand < revealed_row_;
+            auto* target = upward && selected_heading ? selected_heading : selected_widget;
+            if (shown_section_ == key) { pending_reveals_[0] = {}; if (auto* scroll = list_scroll_.Get()) { Call reveal(scroll, L"ScrollWidgetIntoView", 4); reveal.set(L"WidgetToFind", target); reveal.set(L"AnimateScroll", true); reveal.set(L"ScrollDestination", uint8_t{0}); reveal.set(L"Padding", 120.f); reveal.run(); } }
+            else pending_reveals_[0] = {list_scroll_, WeakObject(target), 0, 2};
+        }
+        revealed_row_ = cand;
+    }
+    shown_section_ = key;
     bar_prompt("Close", {{"action", "close"}}, "close", glyph_back, 255);
     if (gamepad_) bar_prompt("Browse", Json{}, "", glyph_dpad_vertical, 255);
     else bar_prompt("Browse", Json{}, "up", glyph_up, 255, "down", glyph_down, 255);

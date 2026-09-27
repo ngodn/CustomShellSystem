@@ -17,6 +17,8 @@
 #define CCS_PRODUCT 1
 #include "combat.hpp"
 #include "menu.hpp"
+#include "discovery.hpp"
+#include "status_writer.hpp"
 #endif
 #include <memory>
 #include <filesystem>
@@ -55,11 +57,19 @@ private:
     std::string catalog_error_;
     std::unique_ptr<Combat> combat_;
     std::unique_ptr<Menu> menu_;
+    Discovery discovery_;
+    bool discovery_reported_{};
+    std::unique_ptr<runtime::StatusWriter> status_;
+    uint64_t status_after_{};
     std::vector<std::string> preset_names_;
-    std::string selected_preset_, save_name_, last_message_;
+    std::string selected_preset_, save_name_, last_message_, current_weapon_;
+    const void* current_weapon_object_{};
+    uint64_t weapon_check_{};
     uint64_t presets_listed_{};
     nlohmann::json options_;                  // the move options, built once from the catalog
     nlohmann::json model() const;
+    uint64_t model_revision();
+    uint64_t model_revision_{1}, model_signature_{};
     void handle_event(const nlohmann::json& event);
     void apply_slots_from_settings();
     void save_settings_or_log();

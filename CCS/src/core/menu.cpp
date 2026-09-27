@@ -3,7 +3,6 @@
 // neither CSS nor CSSX at runtime.
 #include "menu.hpp"
 #include "menu_keys.hpp"
-#include "tab_order.hpp"
 #include <windows.h>
 #include <algorithm>
 #include <cmath>
@@ -64,12 +63,16 @@ bool Menu::attach(const PlayerContext& player) {
     if (page_list.size() != tab_list.size() || page_list.size() < 3 || page_list.size() > 8) return false;
     // CSS attaches first when it is installed (it expects exactly three pages). Wait for it for
     // two seconds; a broken CSS must never hide CCS. CSSX orders itself last whenever it attaches.
+    // CSS attaches first when installed (it expects exactly three pages), and the shipped CSSX
+    // 1.2.0 refuses to attach once any extra tab precedes it. So CCS waits for both, up to three
+    // seconds each, and takes the last place. Nothing in CSS or CSSX needs to know about CCS.
     const auto now = GetTickCount64();
-    bool css_seen = false;
-    for (size_t i = 3; i < tab_list.size(); ++i) { const auto title = tab_title(tab_list[i]); if (title == "CSS") css_seen = true; if (title == "CCS") throw std::runtime_error("Another CCS tab is already attached"); }
-    if (deps_.css_present && !css_seen) {
+    bool css_seen = false, cssx_seen = false;
+    for (size_t i = 3; i < tab_list.size(); ++i) { const auto title = tab_title(tab_list[i]); if (title == "CSS") css_seen = true; if (title == "CSSX") cssx_seen = true; if (title == "CCS") throw std::runtime_error("Another CCS tab is already attached"); }
+    if ((deps_.css_present && !css_seen) || (deps_.cssx_present && !cssx_seen)) {
         if (!attach_wait_since_) attach_wait_since_ = now;
-        if (now - attach_wait_since_ < 2000) return false;
+        if (now - attach_wait_since_ < 3000) return false;
+        if (deps_.log) deps_.log("CCS: proceeding without waiting further for the other menu tabs");
     }
     attach_wait_since_ = 0;
     struct Construction {
@@ -97,21 +100,13 @@ bool Menu::attach(const PlayerContext& player) {
     if (deps_.log) deps_.log("CCS tab attached to the Player Menu at index " + std::to_string(tab_index_));
     return true;
 }
-// Inventory, Tarstones, Map, CSS (if present), CCS, CSSX (if present): the order the user set.
+// Inventory, Tarstones, Map, CSS, CSSX, CCS: CCS is appended last, so the other mods' tab indices
+// never move under them.
 void Menu::order_tabs() {
     auto tabs = children(tabs_.Get()); auto pages = children(switcher_.Get());
     if (tabs.size() != pages.size() || tabs.size() < 4 || tabs.size() > 8) throw std::runtime_error("Player Menu tab count is unexpected");
-    using Role = runtime::TabRole;
-    std::vector<Role> roles(tabs.size(), Role::Other);
-    roles[0] = Role::Inventory; roles[1] = Role::Tarstones; roles[2] = Role::Map;
-    for (size_t i = 3; i < tabs.size(); ++i) {
-        if (tabs[i] == tab_.Get()) roles[i] = Role::Ccs;
-        else { const auto title = tab_title(tabs[i]); roles[i] = title == "CSS" ? Role::Css : title == "CSSX" ? Role::Cssx : Role::Other; }
-    }
-    const auto order = runtime::player_menu_order(roles);
-    std::vector<UObject*> new_tabs, new_pages;
-    for (const auto index : order.indices) { new_tabs.push_back(tabs[index]); new_pages.push_back(pages[index]); }
-    reorder(switcher_.Get(), new_pages); reorder(tabs_.Get(), new_tabs);
+    if (tabs.back() != tab_.Get() || pages.back() != page_.Get()) throw std::runtime_error("CCS tab is not the last Player Menu tab");
+    const auto& new_tabs = tabs;
     // Share the original top bar spacing across the extra title(s), as CSS does.
     const float factor = new_tabs.size() >= 5 ? .6f : .75f;
     std::array<float, 4> reference{80, 0, 80, 0};
@@ -123,7 +118,7 @@ void Menu::order_tabs() {
         invoke(slot, L"SetVerticalAlignment", L"InVerticalAlignment", uint8_t{2});
     }
     nav_children_refresh(tabs_.Get());
-    tab_index_ = int(order.ccs_index);
+    tab_index_ = int(new_tabs.size()) - 1;
 }
 void Menu::close() {
     if (!main_.Get() || !bool_of(main_.Get(), L"bOpen")) return;
@@ -338,11 +333,12 @@ void Menu::tick(const PlayerContext& player, double) {
     if (auto* prompt = input_prompt_.Get()) { try { const bool gamepad = read<uint8_t>(prompt, L"InputType") == 1; if (gamepad != gamepad_) { gamepad_ = gamepad; dirty_ = true; } } catch (...) {} }
     if (now >= model_check_) { model_check_ = now + 250; refresh_model(false, now); }
     bool typing_now = false;
-    if (picker_) if (auto* search = search_input_.Get()) {
+    if (auto* search = search_input_.Get()) {
         try { const auto query = text_of(search, 256); if (query != search_query_) { search_query_ = query; if (options_.filter(query)) dirty_ = true; } }
         catch (const std::exception& e) { error_ = e.what(); }
     }
     try { typing_now = typing(); } catch (...) {}
+    typing_now_ = typing_now;
     fit_panel();
     reveal_pending();
     if (dirty_) { try { build(); } catch (const std::exception& e) { if (deps_.log) deps_.log(std::string("Menu build failed: ") + e.what()); error_ = e.what(); dirty_ = false; } }
@@ -384,8 +380,9 @@ void Menu::warm(uint64_t now) {
 void Menu::refresh_model(bool force, uint64_t) {
     if (!deps_.model) { model_ = nullptr; return; }
     try {
-        auto model = deps_.model();
-        if (force || model != model_) { model_ = std::move(model); dirty_ = true; }
+        const auto revision = deps_.revision ? deps_.revision() : model_revision_ + 1;
+        if (!force && revision == model_revision_) return;
+        model_ = deps_.model(); model_revision_ = revision; dirty_ = true;
     } catch (const std::exception& e) { error_ = e.what(); dirty_ = true; }
 }
 const Json* Menu::current_control() const {
@@ -410,6 +407,20 @@ void Menu::key(const std::string& action) {
         if (action == "close") act({{"action", "pick_cancel"}});
         else if (action == "up" || action == "down" || action == "previous_section" || action == "next_section") { options_.move(action == "up" ? -1 : action == "down" ? 1 : action == "previous_section" ? -8 : 8); dirty_ = true; }
         else if (action == "accept") act({{"action", "pick_apply"}});
+        return;
+    }
+    if (model_.is_object() && model_.contains("sections") && section_ < int(model_["sections"].size()) && model_["sections"][section_].value("kind", std::string{}) == "slots") {
+        if (action == "close" && typing_now_) {   // Escape in the search field clears it instead of leaving the page
+            search_query_.clear(); if (auto* search = search_input_.Get()) { try { text_value(search, ""); } catch (...) {} }
+            try { options_.filter(""); } catch (...) {}
+            dirty_ = true; return;
+        }
+        if (action == "previous_section" || action == "next_section") { act({{"action", "section_delta"}, {"delta", action == "previous_section" ? -1 : 1}}); return; }
+        if (action == "left" || action == "right") { act({{"action", "slot_delta"}, {"delta", action == "left" ? -1 : 1}}); return; }
+        if (action == "up" || action == "down") { act({{"action", "cand_delta"}, {"delta", action == "up" ? -1 : 1}}); return; }
+        if (action == "accept") { act({{"action", "assign"}}); return; }
+        if (action == "secondary") { act({{"action", "clear"}}); return; }
+        if (action == "close") { close(); return; }
         return;
     }
     if (action == "close") { close(); return; }   // like CSS: the page closes the Player Menu itself
@@ -464,6 +475,33 @@ void Menu::act(const Json& action) {
     const auto& controls = sections[section_]["controls"]; const int rows = int(controls.size());
     if (name == "row_delta") { row_ = std::clamp(row_ + action.at("delta").get<int>(), 0, std::max(0, rows - 1)); dirty_ = true; return; }
     if (name == "row") { row_ = std::clamp(action.at("row").get<int>(), 0, std::max(0, rows - 1)); dirty_ = true; return; }
+    // ---- the slot grid (a section of kind "slots": each control is a slot, its options the candidates)
+    // Candidates are searched: options_ holds the active slot's list, options_.matches the rows
+    // shown for the query and options_.selected the highlighted row. The build resets options_
+    // whenever the slot changes (slot_options_key_).
+    if (name == "slot" || name == "slot_delta") {
+        const int wanted = name == "slot" ? action.at("index").get<int>() : row_ + action.at("delta").get<int>();
+        row_ = rows ? (wanted % rows + rows) % rows : 0;
+        slot_options_key_.clear();   // the build reloads the candidates and lands on the assigned one
+        dirty_ = true; return;
+    }
+    if (name == "cand_delta" || name == "cand") {
+        if (name == "cand") options_.selected = std::min(action.at("index").get<size_t>(), options_.matches.empty() ? size_t{} : options_.matches.size() - 1);
+        else options_.move(action.at("delta").get<int>());
+        dirty_ = true; return;
+    }
+    if (name == "assign" || name == "clear") {
+        const auto* c = current_control(); if (!c) return;
+        if (name == "assign" && action.contains("index")) options_.selected = std::min(action.at("index").get<size_t>(), options_.matches.empty() ? size_t{} : options_.matches.size() - 1);
+        Json value = "";
+        if (name == "assign") {
+            if (options_.matches.empty()) return;
+            const auto& option = options_.options.at(options_.matches.at(options_.selected));
+            if (!option.value("enabled", true)) { error_ = option.value("disabled_label", std::string("Not available")); dirty_ = true; return; }
+            value = option.at("id");
+        }
+        send_event({{"id", c->at("id")}, {"value", value}}); return;
+    }
     const auto* c = current_control(); if (!c || !interactive(*c)) return;
     const auto type = c->at("type").get<std::string>();
     if (type == "choice" && (name == "pick" || (name == "activate" && c->at("options").size() > 8))) {

@@ -74,6 +74,33 @@ def game_processes() -> list[int]:
     return result
 
 
+BANNER = ROOT / 'assets/inventory-logo-1120x373-v2.png'
+
+
+def stage_data() -> None:
+    copy_verified(ROOT / 'data/catalog.json', MOD_DEST / 'catalog.json')
+    for extra in ('enemy-catalog.json', 'ranged-catalog.json'):
+        if (ROOT / 'data' / extra).is_file():
+            copy_verified(ROOT / 'data' / extra, MOD_DEST / extra)
+    if BANNER.is_file():
+        (MOD_DEST / 'assets').mkdir(parents=True, exist_ok=True)
+        copy_verified(BANNER, MOD_DEST / 'assets/banner.png')
+
+
+def swap_core() -> None:
+    """Build the product core and switch the running game to it through core.json (the loader polls it)."""
+    out = build()
+    (MOD_DEST / 'core').mkdir(parents=True, exist_ok=True)
+    stage_data()
+    version = (ROOT / 'VERSION').read_text().strip()
+    core_name = f'ccs_core-{version}-{sha(out / "ccs_core.dll")[:12]}.dll'
+    copy_verified(out / 'ccs_core.dll', MOD_DEST / 'core' / core_name)
+    selector = MOD_DEST / 'core.json.tmp'
+    selector.write_text(json.dumps({"file": core_name}, indent=2) + '\n')
+    os.replace(selector, MOD_DEST / 'core.json')
+    print(f'[CCS] core.json now selects {core_name}; the loader switches within a second')
+
+
 def stage(confirmed_stopped: bool = False, probe: bool = False, registry: bool = False, attack: bool = False, swap: bool = False) -> None:
     probe = probe or registry
     if not confirmed_stopped:
@@ -109,10 +136,7 @@ def stage(confirmed_stopped: bool = False, probe: bool = False, registry: bool =
     os.replace(selector, MOD_DEST / 'core.json')
 
     # 5. Move catalog and artwork the core reads at startup.
-    copy_verified(ROOT / 'data/catalog.json', MOD_DEST / 'catalog.json')
-    for asset in (ROOT / 'assets').glob('*.png') if (ROOT / 'assets').is_dir() else []:
-        (MOD_DEST / 'assets').mkdir(parents=True, exist_ok=True)
-        copy_verified(asset, MOD_DEST / 'assets' / asset.name)
+    stage_data()
 
     # 5b. Copy presets
     src_presets = ROOT / 'presets'
@@ -134,7 +158,7 @@ def stage(confirmed_stopped: bool = False, probe: bool = False, registry: bool =
 
 def main():
     parser = argparse.ArgumentParser(description='CCS build and stage tool')
-    parser.add_argument('action', choices=['build', 'build-probe', 'build-registry', 'build-attack', 'build-swap', 'build-profile', 'stage', 'status'], default='build', nargs='?')
+    parser.add_argument('action', choices=['build', 'build-probe', 'build-registry', 'build-attack', 'build-swap', 'build-profile', 'stage', 'swap-core', 'status'], default='build', nargs='?')
     parser.add_argument('--confirm-game-stopped', action='store_true', help='Confirm you have stopped playing for this installation')
     parser.add_argument('--probe', action='store_true', help='Stage the read-only discovery variant')
     parser.add_argument('--registry', action='store_true', help='Stage the second discovery probe with registry controls')
@@ -161,6 +185,8 @@ def main():
         build(swap=True, profile=True)
     elif args.action == 'build-profile':
         build(probe=args.probe, registry=args.registry, profile=True, menu=args.menu, attack=args.attack, swap=args.swap)
+    elif args.action == 'swap-core':
+        swap_core()
     elif args.action == 'stage':
         stage(args.confirm_game_stopped, probe=args.probe, registry=args.registry, attack=args.attack, swap=args.swap)
     elif args.action == 'status':

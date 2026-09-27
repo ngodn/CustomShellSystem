@@ -64,7 +64,7 @@ void Settings::from_json(const nlohmann::json& j) {
     }
     if (j.contains("slots")) {
         const auto& slots = j["slots"];
-        if (!slots.is_array() || slots.size() != candidate.slots_.size()) throw std::runtime_error("Invalid slot list");
+        if (!slots.is_array() || slots.size() > candidate.slots_.size()) throw std::runtime_error("Invalid slot list");
         for (size_t i = 0; i < slots.size(); ++i) {
             if (!slots[i].is_string() || slots[i].get_ref<const std::string&>().size() > 256) throw std::runtime_error("Invalid slot move id");
             candidate.slots_[i] = slots[i].get<std::string>();

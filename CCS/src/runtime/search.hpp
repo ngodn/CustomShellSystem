@@ -24,7 +24,7 @@ public:
         return text;
     }
     void reset(const Json& source, std::function<std::string(const std::string&)> fold = ascii_fold) {
-        if (!source.is_array() || source.size() > 512) throw std::runtime_error("Option search exceeds 512 choices");
+        if (!source.is_array() || source.size() > 4096) throw std::runtime_error("Option search exceeds 4096 choices");
         options = source; fold_ = std::move(fold); keys_.clear(); keys_.reserve(source.size());
         for (const auto& item : source) keys_.push_back(fold_(item.at("label").get<std::string>() + " " + item.at("id").get<std::string>()));
         query_ = "\xff"; filter("");

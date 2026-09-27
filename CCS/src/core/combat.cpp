@@ -24,9 +24,13 @@ Combat::Combat(Deps deps) : deps_(std::move(deps)) {
         throw std::runtime_error("Combat engine needs the loader's native hook host");
 }
 int Combat::classify(const std::string& full) {
-    if (!full.starts_with("GA_Player")) return -1;
     std::string name = full;
     if (ends_with(name, "_C")) name.resize(name.size() - 2);
+    // Sidearm primary fire: GA_<Sidearm>Attack_Primary and the shared ranged attack bases.
+    if (name.starts_with("GA_") && !name.starts_with("GA_Player") &&
+        (ends_with(name, "Attack_Primary") || ends_with(name, "Attack_Primary_InfiniteAmmo") || name == "GA_SidearmRangedAttackBase" ||
+         name == "GA_SidearmRangedBurstAttackBase" || name == "GA_SidearmRangedChargedAttackBase")) return int(SlotId::R);
+    if (!full.starts_with("GA_Player")) return -1;
     if (ends_with(name, "_A_Finisher") || ends_with(name, "_A3_Finisher")) return int(SlotId::LF);
     if (ends_with(name, "_B_Finisher") || ends_with(name, "_B3_Finisher")) return int(SlotId::HF);
     if (ends_with(name, "_Hold")) {
@@ -54,6 +58,7 @@ void Combat::set_slot(SlotId slot, std::string move_id) {
     release(s);
     s.move_id = std::move(move_id); s.error.clear(); s.hits = 0; s.path.clear();
     if (s.move_id.empty()) { s.pending = false; return; }
+    if (s.move_id.starts_with("found:")) { s.path = s.move_id.substr(6); s.pending = s.path.starts_with("/Game/") && s.path.size() < 1024; if (!s.pending) s.error = "Invalid montage path"; return; }
     const auto* move = deps_.catalog ? deps_.catalog->find_move(s.move_id) : nullptr;
     if (!move) { s.error = "Unknown move"; s.pending = false; return; }
     s.path = move->montage_path; s.pending = true;
@@ -81,19 +86,16 @@ void Combat::load_pending(const PlayerContext& player) {
         try {
             auto* montage = load(s.path);
             if (!montage->IsA(static_cast<UClass*>(find_cached(L"/Script/Engine.AnimMontage")))) throw std::runtime_error("Not an animation montage");
-            if (!skeleton_.alive()) {
-                auto* mesh = object_of(player.pawn, L"Mesh");
-                UObject* asset = nullptr;
-                try { asset = object_of(mesh, L"SkeletalMeshAsset"); } catch (...) {}
-                if (!asset) asset = object_of(mesh, L"SkeletalMesh");
-                auto* skeleton = object_of(asset, L"Skeleton");
-                if (!skeleton) throw std::runtime_error("Player skeleton is unavailable");
-                skeleton_.capture(skeleton);
-            }
-            if (object_of(montage, L"Skeleton") != skeleton_.get()) throw std::runtime_error("Montage skeleton does not match the player");
+            // Every shell body, including the ones CSS swaps in, is driven by the montages the game
+            // authored on SKEL_Human_Skeleton; a montage on any other rig would not play on the player.
+            // The mesh asset's own Skeleton object is not the test (a swapped body carries its own copy).
+            auto* skeleton = object_of(montage, L"Skeleton");
+            if (!skeleton || narrow(skeleton->GetNamePrivate().ToString()) != "SKEL_Human_Skeleton")
+                throw std::runtime_error("Montage is not on the player's rig (" + (skeleton ? narrow(skeleton->GetNamePrivate().ToString()) : std::string("no skeleton")) + ")");
             if (!montage->IsRootSet()) { montage->SetRootSet(); s.rooted = true; }
             s.montage.capture(montage);
             s.error.clear();
+            log("CCS slot ready: " + s.move_id + " -> " + narrow(montage->GetNamePrivate().ToString()));
         } catch (const std::exception& e) { s.error = e.what(); release(s); log("CCS slot load failed: " + s.move_id + ": " + e.what()); }
         return;
     }

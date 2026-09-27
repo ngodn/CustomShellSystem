@@ -4,6 +4,8 @@
 #include "ccs_version.hpp"
 #include <windows.h>
 #include <cstring>
+#include <cctype>
+#include <unordered_set>
 #include <algorithm>
 #include <cmath>
 
@@ -11,7 +13,27 @@ namespace ccs {
 static std::unique_ptr<Core> g_core;
 namespace {
 const char* slot_titles[] = {"L1  Light attack 1", "L2  Light attack 2", "L3  Light attack 3", "LF  Light finisher", "LC  Light charged (hold)",
-                             "H1  Heavy attack 1", "H2  Heavy attack 2", "H3  Heavy attack 3", "HF  Heavy finisher", "HC  Heavy charged (hold)"};
+                             "H1  Heavy attack 1", "H2  Heavy attack 2", "H3  Heavy attack 3", "HF  Heavy finisher", "HC  Heavy charged (hold)",
+                             "R   Ranged (sidearm fire)"};
+constexpr unsigned slot_count = 11;
+enum class Role { Chain, Finisher, Hold, Ranged };
+Role slot_role(unsigned i) { return i == 10 ? Role::Ranged : (i == 3 || i == 8) ? Role::Finisher : (i == 4 || i == 9) ? Role::Hold : Role::Chain; }
+// What a move may do in a slot. Chain moves fit any chain position of either chain; finisher
+// montages only the finisher slots; hold montages (wind-up plus charged release) only the hold
+// slots; sidearm fire only the ranged slot. Enemy melee fits the melee slots that are not holds,
+// enemy ranged only the ranged slot, unverified.
+bool eligible(const MoveDefinition& move, unsigned i) {
+    const auto role = slot_role(i);
+    if (move.origin == MoveOrigin::EnemyHumanoid) {
+        const bool ranged = move.display_name.find("Shoot") != std::string::npos || move.display_name.find("Crossbow") != std::string::npos ||
+                            move.display_name.find("Throw") != std::string::npos || move.display_name.find("Bow ") != std::string::npos;
+        return ranged ? role == Role::Ranged : (role == Role::Chain || role == Role::Finisher);
+    }
+    if (move.compatible_slots & (1u << unsigned(SlotId::R))) return role == Role::Ranged;
+    if (move.is_hold) return role == Role::Hold;
+    if (move.is_finisher) return role == Role::Finisher;
+    return role == Role::Chain;
+}
 std::string pretty(std::string text) {
     for (const char* prefix : {"Attack_", "Player_"}) if (text.starts_with(prefix)) text.erase(0, std::strlen(prefix));
     std::replace(text.begin(), text.end(), '_', ' ');
@@ -21,15 +43,25 @@ std::string weapon_icon(const std::string& source) {
     static const std::pair<const char*, const char*> icons[] = {
         {"HadernSword", "HadernSword"}, {"HadernsSword", "HadernSword"}, {"AxeDagger", "AxeDagger"}, {"BattleAxe", "BattleAxe"}, {"MartyrsBlade", "MartyrsBlade"},
         {"HeavyHammer", "HeavyHammer"}, {"Axatana", "Axatana"}, {"BlackNeedle", "BlackNeedle"}, {"Scythe", "ClockworkScythe"}, {"ClockworkScythe", "ClockworkScythe"}};
-    for (const auto& [key, name] : icons) if (source == key) return std::string("/Game/Sparta/UI/Icons/Weapons/T_UI_Icon_") + name + ".T_UI_Icon_" + name;
+    for (const auto& [key, name] : icons) if (source == key || source.starts_with(std::string(key) + "_")) return std::string("/Game/Sparta/UI/Icons/Weapons/T_UI_Icon_") + name + ".T_UI_Icon_" + name;
     return {};
+}
+std::string enemy_name(const std::string& source) {
+    if (source == "MS1") return "Mortal Shell 1";
+    std::string out;
+    for (size_t i = 0; i < source.size(); ++i) {
+        const char ch = source[i];
+        if (i && std::isupper(static_cast<unsigned char>(ch)) && !std::isupper(static_cast<unsigned char>(source[i - 1]))) out += ' ';
+        out += ch;
+    }
+    return out;
 }
 std::string weapon_name(const std::string& source) {
     static const std::pair<const char*, const char*> names[] = {
         {"HadernSword", "The Iconoclast"}, {"HadernsSword", "The Iconoclast"}, {"AxeDagger", "Axe & Dagger"}, {"BattleAxe", "Veteran's Battle Axe"},
         {"MartyrsBlade", "Great Martyr's Blade"}, {"HeavyHammer", "Obsidian Hammer"}, {"Axatana", "Axatana"}, {"BlackNeedle", "Black Needle"},
         {"Scythe", "Clockwork Scythe"}, {"ClockworkScythe", "Clockwork Scythe"}, {"Combos", "Smert's fists"}};
-    for (const auto& [key, name] : names) if (source == key) return name;
+    for (const auto& [key, name] : names) if (source == key || source.starts_with(std::string(key) + "_")) return name;
     return source.empty() ? "Other" : source;
 }
 }
@@ -56,6 +88,10 @@ Core::Core(const CcsLoaderContext* loader) {
     if (!settings_->load()) log("Settings rejected; using defaults");
     storage_ = std::make_unique<runtime::Storage>(root_dir_ / "presets");
     if (!catalog_.load(root_dir_ / "catalog.json")) { catalog_error_ = catalog_.error(); log("Catalog unavailable: " + catalog_error_); }
+    else {
+        if (!catalog_.load_enemy(root_dir_ / "enemy-catalog.json")) log("Enemy catalog unavailable: " + catalog_.error());
+        if (!catalog_.load_ranged(root_dir_ / "ranged-catalog.json")) log("Ranged catalog unavailable: " + catalog_.error());
+    }
     // Move options once: id, label and weapon group, sorted by weapon then name.
     std::vector<const MoveDefinition*> moves;
     for (const auto& move : catalog_.moves()) moves.push_back(&move);
@@ -73,6 +109,7 @@ Core::Core(const CcsLoaderContext* loader) {
     Menu::Deps deps;
     deps.log = log;
     deps.model = [this] { return model(); };
+    deps.revision = [this] { return model_revision(); };
     deps.event = [this](const nlohmann::json& event) { handle_event(event); };
     deps.ui_scale = [this] { return settings_->ui_scale(); };
     deps.version = CCS_VERSION;
@@ -86,6 +123,7 @@ Core::Core(const CcsLoaderContext* loader) {
     deps.cssx_present = present("CSSX");
     menu_ = std::make_unique<Menu>(std::move(deps));
     save_name_ = "my-preset";
+    status_ = std::make_unique<runtime::StatusWriter>(root_dir_ / "runtime/status.json");
 #endif
     initialized_ = true;
     writer_->write(R"({"level":"info","msg":"CCS core initialized"})");
@@ -99,19 +137,20 @@ void Core::apply_slots_from_settings() {
     for (size_t i = 0; i < slots.size(); ++i) combat_->set_slot(SlotId(i), slots[i]);
 }
 void Core::save_settings_or_log() {
-    if (combat_) { std::array<std::string, 10> slots; for (size_t i = 0; i < slots.size(); ++i) slots[i] = combat_->slot_move(SlotId(i)); settings_->set_slots(std::move(slots)); }
+    if (combat_) { std::array<std::string, 11> slots; for (size_t i = 0; i < slots.size(); ++i) slots[i] = combat_->slot_move(SlotId(i)); settings_->set_slots(std::move(slots)); }
     if (!settings_->save()) last_message_ = "Settings could not be saved";
 }
 void Core::list_presets(uint64_t now, bool force) {
     if (!force && now < presets_listed_) return;
     presets_listed_ = now + 2000;
     std::vector<std::string> names;
-    if (storage_->list_presets(names)) preset_names_ = std::move(names);
+    if (storage_->list_presets(names) && names != preset_names_) { preset_names_ = std::move(names); ++model_revision_; }
     if (selected_preset_.empty() && !preset_names_.empty()) selected_preset_ = preset_names_.front();
     if (!selected_preset_.empty() && std::find(preset_names_.begin(), preset_names_.end(), selected_preset_) == preset_names_.end()) selected_preset_ = preset_names_.empty() ? "" : preset_names_.front();
 }
 std::string Core::move_label(const std::string& id) const {
     if (id.empty()) return "Weapon's own attack";
+    if (id.starts_with("found:")) { const auto at = id.rfind('.'); return pretty(at == std::string::npos ? id.substr(6) : id.substr(at + 1)); }
     const auto* move = catalog_.find_move(id);
     return move ? pretty(move->display_name) : "Unknown move (" + id + ")";
 }
@@ -127,35 +166,85 @@ std::string Core::move_description(const std::string& id) const {
     const auto* move = id.empty() ? nullptr : catalog_.find_move(id);
     if (!move) return "The slot plays the equipped weapon's own attack.";
     std::string text = weapon_name(move->source_name) + ", " + pretty(move->display_name) + ".";
-    std::string slots; for (unsigned i = 0; i < 10; ++i) if (move->compatible_slots & (1u << i)) slots += (slots.empty() ? "" : ", ") + std::string(slot_to_string(SlotId(i)));
+    std::string slots; for (unsigned i = 0; i < slot_count; ++i) if (move->compatible_slots & (1u << i)) slots += (slots.empty() ? "" : ", ") + std::string(slot_to_string(SlotId(i)));
     if (!slots.empty()) text += " Originally the weapon's " + slots + " attack.";
     const auto pos = move->montage_path.rfind('.');
     text += " Montage " + (pos == std::string::npos ? move->montage_path : move->montage_path.substr(pos + 1)) + ".";
     return text;
 }
+// Anything the page shows comes from here; the menu asks for the model only when this moves.
+uint64_t Core::model_revision() {
+    uint64_t signature = 0;
+    if (combat_) for (unsigned i = 0; i < slot_count; ++i) { const auto slot = SlotId(i); signature = signature * 31 + combat_->slot_hits(slot) * 4 + (combat_->slot_ready(slot) ? 2 : 0) + (combat_->slot_error(slot).empty() ? 0 : 1); }
+    signature = signature * 31 + (combat_ && combat_->hooked() ? 1 : 0) + preset_names_.size() * 2;
+    if (signature != model_signature_) { model_signature_ = signature; ++model_revision_; }
+    return model_revision_;
+}
 nlohmann::json Core::model() const {
     using Json = nlohmann::json;
     Json sections = Json::array();
-    // ---- Customize
+    // ---- Customize: a slots section. Each control is a slot; its options are the candidates
+    // for that slot, grouped the way the user sketched them: the weapons that have a move for
+    // this position, then the finisher and hold Tarstones, then enemy moves (later).
     Json customize = Json::array();
-    for (unsigned i = 0; i < 10; ++i) {
+    for (unsigned i = 0; i < slot_count; ++i) {
         const auto slot = SlotId(i);
         const auto id = combat_ ? combat_->slot_move(slot) : std::string{};
-        Json control = {{"type", "choice"}, {"id", std::string("slot.") + slot_to_string(slot)}, {"label", slot_titles[i]},
-            {"group", i < 5 ? "Light chain" : "Heavy chain"}, {"value", id}, {"options", options_}, {"value_label", "Move"},
-            {"title", move_label(id)}, {"subtitle", move_group(id)}, {"description", move_description(id)}, {"icon", move_icon(id)}, {"enabled", combat_ != nullptr && catalog_error_.empty()},
-            {"disabled_label", catalog_error_.empty() ? "Combat engine unavailable" : "Move catalog missing"}};
-        if (combat_) {
-            const auto& err = combat_->slot_error(slot);
-            if (!err.empty()) control["hint"] = "Not applied: " + err;
-            else if (!id.empty() && !combat_->slot_ready(slot)) control["hint"] = "Loading the animation...";
-            else if (!id.empty()) control["hint"] = "Applied. Played " + std::to_string(combat_->slot_hits(slot)) + " time(s) this session.";
-            control["badge"] = !id.empty() && combat_->slot_ready(slot);
+        const bool ranged_slot = slot_role(i) == Role::Ranged;
+        Json options = Json::array();
+        options.push_back({{"id", ""}, {"label", ranged_slot ? "Sidearm's own fire" : "Weapon's own attack"}, {"group", ranged_slot ? "Player's Sidearm" : "Player's Weapon"}, {"title", ranged_slot ? "Sidearm's own fire" : "Weapon's own attack"},
+            {"description", "The slot plays whatever the equipped weapon does here. This is the game's behaviour."}});
+        std::vector<const MoveDefinition*> moves, enemy;
+        for (const auto& move : catalog_.moves()) {
+            if (!eligible(move, i)) continue;
+            if (move.origin == MoveOrigin::EnemyHumanoid) enemy.push_back(&move);
+            else moves.push_back(&move);
         }
-        customize.push_back(std::move(control));
+        std::sort(moves.begin(), moves.end(), [](const MoveDefinition* a, const MoveDefinition* b) { return weapon_name(a->source_name) < weapon_name(b->source_name); });
+        std::sort(enemy.begin(), enemy.end(), [](const MoveDefinition* a, const MoveDefinition* b) { return std::tie(a->source_name, a->display_name) < std::tie(b->source_name, b->display_name); });
+        const bool scanned = discovery_.done();
+        auto missing = [&](const MoveDefinition& move) { return scanned && !discovery_.known(move.montage_path); };
+        for (const auto* move : moves) {
+            const bool sidearm = move->category == "Sidearm";
+            Json option = {{"id", move->id}, {"label", sidearm ? move->display_name : weapon_name(move->source_name)}, {"group", sidearm ? "Player's Sidearm" : "Player's Weapon"}, {"icon", sidearm ? std::string{} : weapon_icon(move->source_name)},
+                {"title", sidearm ? move->display_name : weapon_name(move->source_name)}, {"subtitle", sidearm ? std::string("Sidearm fire") : pretty(move->display_name)}, {"description", sidearm ? move->description : move_description(move->id)}, {"value", sidearm ? std::string{} : pretty(move->display_name)}};
+            if (missing(*move)) { option["enabled"] = false; option["disabled_label"] = "Not in this game version"; }
+            if (combat_ && combat_->slot_move(slot) == move->id) {
+                const auto& err = combat_->slot_error(slot);
+                option["hint"] = !err.empty() ? "Not applied: " + err : !combat_->slot_ready(slot) ? std::string("Loading the animation...") : "Applied. Played " + std::to_string(combat_->slot_hits(slot)) + " time(s) this session.";
+            }
+            options.push_back(std::move(option));
+        }
+        for (const auto* move : enemy) {
+            Json option = {{"id", move->id}, {"label", move->display_name}, {"group", "Enemy: " + enemy_name(move->source_name)}, {"title", move->display_name},
+                {"subtitle", enemy_name(move->source_name) + " attack"}, {"enabled", !missing(*move)}, {"disabled_label", "Not in this game version"}, {"description", move->description}, {"value", move->payload_known ? std::string{} : std::string("No hit window in this animation")}};
+            if (combat_ && combat_->slot_move(slot) == move->id) {
+                const auto& err = combat_->slot_error(slot);
+                option["hint"] = !err.empty() ? "Not applied: " + err : !combat_->slot_ready(slot) ? std::string("Loading the animation...") : "Applied. Played " + std::to_string(combat_->slot_hits(slot)) + " time(s) this session.";
+            }
+            options.push_back(std::move(option));
+        }
+        // Montages the running game lists that neither catalog knows: new content after a patch.
+        if (scanned) {
+            std::unordered_set<std::string> known;
+            for (const auto& move : catalog_.moves()) known.insert(move.montage_path);
+            for (const auto& f : discovery_.found()) {
+                if (known.contains(f.path)) continue;
+                // Unverified content follows the same rules by name: finisher, hold and ranged words.
+                const bool hold = f.name.find("Hold") != std::string::npos, finisher = f.name.find("Finisher") != std::string::npos;
+                const bool ranged = f.name.find("Shoot") != std::string::npos || f.name.find("Crossbow") != std::string::npos || f.name.find("Throw") != std::string::npos;
+                const auto role = slot_role(i);
+                const bool fits = ranged ? role == Role::Ranged : hold ? role == Role::Hold : finisher ? role == Role::Finisher : (role == Role::Chain || (!f.player && role == Role::Finisher));
+                if (!fits) continue;
+                options.push_back({{"id", "found:" + f.path}, {"label", pretty(f.name)}, {"group", std::string(f.player ? "New player move: " : "New enemy move: ") + enemy_name(f.source)},
+                    {"title", pretty(f.name)}, {"subtitle", "Found in this game version, not yet verified"},
+                    {"description", "Listed by the game's asset registry but absent from the shipped catalog. Assigning it loads and checks the animation the same way; hit windows are unknown until then."}});
+            }
+        }
+        customize.push_back({{"type", "choice"}, {"id", std::string("slot.") + slot_to_string(slot)}, {"label", slot_to_string(slot)}, {"name", slot_titles[i] + 4},
+            {"value", id}, {"icon", id.empty() ? weapon_icon(current_weapon_) : move_icon(id)}, {"options", std::move(options)}, {"enabled", combat_ != nullptr && catalog_error_.empty()}});
     }
-    sections.push_back({{"id", "customize"}, {"title", "Customize"}, {"controls", std::move(customize)},
-        {"description", "Pick which animation each attack of the chain plays. Any weapon's move fits any slot; the weapon in hand keeps its damage and hit timing rules."}});
+    sections.push_back({{"id", "customize"}, {"title", "Customize"}, {"kind", "slots"}, {"controls", std::move(customize)}});
     // ---- Presets
     Json presets = Json::array();
     Json preset_options = Json::array();
@@ -205,7 +294,7 @@ nlohmann::json Core::model() const {
 }
 void Core::handle_event(const nlohmann::json& event) {
     const auto id = event.at("id").get<std::string>();
-    last_message_.clear();
+    last_message_.clear(); ++model_revision_;
     if (id.starts_with("slot.")) {
         const auto slot = string_to_slot(id.substr(5));
         if (!slot || !combat_) throw std::runtime_error("Unknown slot");
@@ -215,7 +304,7 @@ void Core::handle_event(const nlohmann::json& event) {
     if (id == "enabled") { settings_->set_enabled(event.at("value").get<bool>()); if (combat_) combat_->set_enabled(settings_->enabled()); save_settings_or_log(); return; }
     if (id == "rate") { settings_->set_attack_speed_scale(event.at("value").get<double>()); if (combat_) combat_->set_rate(settings_->attack_speed_scale()); save_settings_or_log(); return; }
     if (id == "ui_scale") { settings_->set_ui_scale(event.at("value").get<double>()); save_settings_or_log(); return; }
-    if (id == "reset") { if (combat_) for (unsigned i = 0; i < 10; ++i) combat_->set_slot(SlotId(i), ""); save_settings_or_log(); return; }
+    if (id == "reset") { if (combat_) for (unsigned i = 0; i < slot_count; ++i) combat_->set_slot(SlotId(i), ""); save_settings_or_log(); return; }
     if (id == "preset.selected") { selected_preset_ = event.at("value").get<std::string>(); return; }
     if (id == "preset.name") {
         const auto name = event.at("value").get<std::string>();
@@ -231,7 +320,7 @@ void Core::handle_event(const nlohmann::json& event) {
     if (id == "preset.save") {
         if (!runtime::valid_preset_name(save_name_)) throw std::runtime_error("Invalid preset name");
         PresetData preset; preset.name = save_name_; preset.author = "eins0fx"; preset.description = "Custom Combat System preset";
-        for (unsigned i = 0; i < 10; ++i) {
+        for (unsigned i = 0; i < slot_count; ++i) {
             auto& binding = preset.slots[i]; binding.slot = SlotId(i);
             binding.move_id = combat_ ? combat_->slot_move(SlotId(i)) : std::string{};
             if (const auto* move = binding.move_id.empty() ? nullptr : catalog_.find_move(binding.move_id)) { binding.montage_path = move->montage_path; binding.ability_path = move->ability_path; binding.source = move->source_name; binding.origin = move->origin; }
@@ -269,9 +358,39 @@ void Core::tick(const CcsPlayerContext* player, double delta) {
 #else
     const auto context = engine::player_context(player ? player->engine : nullptr);
     const auto now = GetTickCount64();
+    // The equipped weapon, for the slots that play its own attack: one cached read, compared by pointer.
+    if (now >= weapon_check_) {
+        weapon_check_ = now + 500;
+        auto* item = context.pc ? engine::cached_object_of(context.pc, L"ActiveWeaponItemDefinition") : nullptr;
+        if (!item && context.pc) { try { item = engine::object_of(context.pc, L"ActiveWeaponItemDefinition"); } catch (...) {} }
+        if (item != current_weapon_object_) {
+            current_weapon_object_ = item;
+            auto name = item ? engine::narrow(item->GetNamePrivate().ToString()) : std::string{};
+            if (name.starts_with("ID_")) name.erase(0, 3);
+            if (name.ends_with("_C")) name.resize(name.size() - 2);
+            current_weapon_ = name; ++model_revision_;
+        }
+    }
     if (combat_) combat_->tick(context, now);
+    // The registry scan runs once, spread over ticks, and the page reflects it when it finishes.
+    if (!discovery_.done()) {
+        const auto before = discovery_.state();
+        discovery_.tick(context);
+        if (discovery_.done() && !discovery_reported_) {
+            discovery_reported_ = true;
+            nlohmann::json missing = nlohmann::json::array();
+            std::unordered_set<std::string> known;
+            for (const auto& move : catalog_.moves()) { known.insert(move.montage_path); if (!discovery_.known(move.montage_path) && missing.size() < 32) missing.push_back(move.montage_path); }
+            size_t fresh = 0; for (const auto& f : discovery_.found()) if (!known.contains(f.path)) ++fresh;
+            writer_->write(nlohmann::json{{"level", "info"}, {"msg", "Asset registry scan done"}, {"assets", discovery_.assets_seen()}, {"attack_montages", discovery_.present().size()},
+                {"catalog_missing", missing}, {"new_candidates", fresh}}.dump());
+            ++model_revision_;
+        } else if (discovery_.state() == Discovery::State::Failed && before != Discovery::State::Failed)
+            writer_->write(nlohmann::json{{"level", "warn"}, {"msg", "Asset registry scan failed"}, {"error", discovery_.error()}}.dump());
+    }
     if (menu_ && menu_->is_open()) list_presets(now, false);
     if (menu_) menu_->tick(context, delta);
+    if (status_ && now >= status_after_) { status_after_ = now + 5000; status_->publish(get_status_json()); }
 #endif
 }
 void Core::on_hotkey(uint32_t key) {
@@ -345,6 +464,8 @@ const char* Core::get_status_json() {
 #else
     if (combat_) status["combat"] = combat_->status();
     if (menu_) status["menu"] = menu_->diagnostics();
+    status["current_weapon"] = current_weapon_;
+    status["discovery"] = {{"state", int(discovery_.state())}, {"assets", discovery_.assets_seen()}, {"montages", discovery_.present().size()}, {"error", discovery_.error()}};
 #endif
     status_json_ = status.dump();
     return status_json_.c_str();

@@ -30,6 +30,7 @@ public:
     struct Deps {
         std::function<void(const std::string&)> log;
         std::function<Json()> model;                       // the page: {"sections":[...],"status":"..."}
+        std::function<uint64_t()> revision;                // moves whenever the model would differ; the menu fetches only then
         std::function<void(const Json&)> event;            // a validated control event; throws with the error to show
         std::function<double()> ui_scale;                  // 0.75 .. 1.5
         std::string title{"Custom Combat System"}, version;
@@ -65,7 +66,7 @@ private:
     // ---- navigation state
     Json model_;
     uint64_t model_revision_ = 0, model_check_ = 0;
-    int section_ = 0, row_ = 0;
+    int section_ = 0, row_ = 0, cand_ = 0;   // on a slots section row_ is the active slot, cand_ the candidate
     std::string error_, text_key_, text_draft_;
     Json confirm_;                  // {"event":..., "message":...}
     bool picker_ = false;
@@ -77,7 +78,8 @@ private:
     std::vector<Binding> bindings_;
     bool bindings_ready_ = false; uint64_t bind_retry_ = 0;
     uint64_t bindings_generation_ = 0, strip_glyph_generation_ = ~0ull;
-    bool gamepad_ = false;
+    bool gamepad_ = false, typing_now_ = false;
+    std::string slot_options_key_;            // which slot's candidates options_ currently holds
     struct Hit { WeakObject widget; Json action; bool down = false; std::vector<std::pair<WeakObject, Json>> parts; WeakObject glyph; };
     std::vector<Hit> hits_;
     struct SliderHit { WeakObject bar, value_block, row; Json control; double previous, low, high, step; std::string unit; };
@@ -104,12 +106,19 @@ private:
     struct Cell { WeakObject holder; std::vector<Item> kinds; int shown = -1; };
     struct Stack { WeakObject box; std::deque<Cell> cells; size_t used = 0; };
     Stack tab_items_, list_, head_, panel_, actions_, footer_;
+    // The slot grid: ten of the game's equipment slot tiles with a label over each, built once
+    // in the centre column and restyled per build.
+    struct Tile { WeakObject widget, label, hit; int selected = -1, shown = -1, dimmed = -1; const void* icon = nullptr; std::string text, icon_path; };
+    std::array<Tile, 11> tiles_{};
+    WeakObject grid_root_, banner_image_;
+    int banner_shown_ = -1;
     WeakObject design_, left_root_, right_root_, list_scroll_, strip_scroll_, details_, panel_scroll_, panel_size_,
                status_text_, title_text_, subtitle_text_, logo_image_, strip_previous_, strip_next_, strip_previous_glyph_, strip_next_glyph_;
     double design_w_ = 0, design_h_ = 0, design_scale_ = 0;
     int budget_ = 0;
     static constexpr int budget_per_build = 4;
     int shown_section_ = -1, revealed_row_ = -1;
+    size_t list_first_ = 0;                                  // first candidate row shown; moves only when the highlight leaves the window
     std::string panel_context_;
     const void* panel_revealed_ = nullptr;
     bool panel_fit_pending_ = false;
@@ -161,6 +170,8 @@ private:
     void unroot_all();
     void build();
     void build_page(bool& deferred);
+    void build_slots(const Json& section, bool& deferred);
+    bool ensure_tiles();
     void build_picker(bool& deferred);
     void header(const std::string& title, const std::string& subtitle);
     void detail(const std::string& title, const std::string& subtitle, std::string body, UObject* icon = nullptr);

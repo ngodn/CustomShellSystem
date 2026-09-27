@@ -1,0 +1,114 @@
+{
+ "schema_version": 1,
+ "source": "work/sidearm-catalog/export (32 sidearm abilities, 27 Sep 2026)",
+ "moves": [
+  {
+   "id": "ranged:AM_Player_2H_Offhand_Shoot_R_NailShotgun",
+   "display_name": "Naylshotte",
+   "source_name": "NailShotgun",
+   "ability": "GA_NailShotgunAttack_Primary_C",
+   "montage": "/Game/Sparta/Characters/Humans/Player/Animations/Sidearm/AM_Player_2H_Offhand_Shoot_R_NailShotgun.AM_Player_2H_Offhand_Shoot_R_NailShotgun",
+   "skeleton": "SKEL_Human_Skeleton",
+   "slots": [
+    "R"
+   ],
+   "description": "Naylshotte fire animation, from the sidearm's primary attack ability. Played on the player's rig; the shot itself still comes from the sidearm in hand, so an animation without the fire notify fires nothing."
+  },
+  {
+   "id": "ranged:A_Shells_NailShotgun_Shoot_Quick_Montage",
+   "display_name": "Naylshotte quick shot",
+   "source_name": "NailShotgun",
+   "ability": "",
+   "montage": "/Game/Sparta/Characters/Humans/Player/Animations/Sidearm/A_Shells_NailShotgun_Shoot_Quick_Montage.A_Shells_NailShotgun_Shoot_Quick_Montage",
+   "skeleton": "SKEL_Human_Skeleton",
+   "slots": [
+    "R"
+   ],
+   "description": "Naylshotte quick shot fire animation, from the sidearm's primary attack ability. Played on the player's rig; the shot itself still comes from the sidearm in hand, so an animation without the fire notify fires nothing."
+  },
+  {
+   "id": "ranged:A_Shells_Crossbow_Shoot_Quick_Montage",
+   "display_name": "Forgotten Crossbow quick shot",
+   "source_name": "Crossbow",
+   "ability": "",
+   "montage": "/Game/Sparta/Characters/Humans/Player/Animations/Sidearm/A_Shells_Crossbow_Shoot_Quick_Montage.A_Shells_Crossbow_Shoot_Quick_Montage",
+   "skeleton": "SKEL_Human_Skeleton",
+   "slots": [
+    "R"
+   ],
+   "description": "Forgotten Crossbow quick shot fire animation, from the sidearm's primary attack ability. Played on the player's rig; the shot itself still comes from the sidearm in hand, so an animation without the fire notify fires nothing."
+  },
+  {
+   "id": "ranged:A_Shells_2H_Offhand_ParasiteGun_Shoot",
+   "display_name": "Caged Hystrix",
+   "source_name": "ParasiteGun",
+   "ability": "GA_ParasiteGunAttack_Primary_C",
+   "montage": "/Game/Sparta/Characters/Humans/Player/Animations/Sidearm/A_Shells_2H_Offhand_ParasiteGun_Shoot.A_Shells_2H_Offhand_ParasiteGun_Shoot",
+   "skeleton": "SKEL_Human_Skeleton",
+   "slots": [
+    "R"
+   ],
+   "description": "Caged Hystrix fire animation, from the sidearm's primary attack ability. Played on the player's rig; the shot itself still comes from the sidearm in hand, so an animation without the fire notify fires nothing."
+  },
+  {
+   "id": "ranged:A_Shared_CursedChild_Shot_Montage",
+   "display_name": "Cursed Child",
+   "source_name": "CursedChild",
+   "ability": "GA_CursedChildAttack_Primary_C",
+   "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Actions/CursedChild/A_Shared_CursedChild_Shot_Montage.A_Shared_CursedChild_Shot_Montage",
+   "skeleton": "SKEL_Human_Skeleton",
+   "slots": [
+    "R"
+   ],
+   "description": "Cursed Child fire animation, from the sidearm's primary attack ability. Played on the player's rig; the shot itself still comes from the sidearm in hand, so an animation without the fire notify fires nothing."
+  },
+  {
+   "id": "ranged:A_Shells_Locomotion_Ballistazooka_Shoot_Stand_Montage",
+   "display_name": "Ballistazooka",
+   "source_name": "Ballistazooka",
+   "ability": "GA_BallistazookaAttack_Primary_C",
+   "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Locomotion/Ballistazooka/A_Shells_Locomotion_Ballistazooka_Shoot_Stand_Montage.A_Shells_Locomotion_Ballistazooka_Shoot_Stand_Montage",
+   "skeleton": "SKEL_Human_Skeleton",
+   "slots": [
+    "R"
+   ],
+   "description": "Ballistazooka fire animation, from the sidearm's primary attack ability. Played on the player's rig; the shot itself still comes from the sidearm in hand, so an animation without the fire notify fires nothing."
+  },
+  {
+   "id": "ranged:A_Shared_Actions_MachineGun_Recoils_04_Montage",
+   "display_name": "Triarch Repeater",
+   "source_name": "MachineGun",
+   "ability": "GA_MachineGunAttack_Primary_C",
+   "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Locomotion/MachineGun/A_Shared_Actions_MachineGun_Recoils_04_Montage.A_Shared_Actions_MachineGun_Recoils_04_Montage",
+   "skeleton": "SKEL_Human_Skeleton",
+   "slots": [
+    "R"
+   ],
+   "description": "Triarch Repeater fire animation, from the sidearm's primary attack ability. Played on the player's rig; the shot itself still comes from the sidearm in hand, so an animation without the fire notify fires nothing."
+  },
+  {
+   "id": "ranged:A_Shells_Locomotion_Lute_Chord_Montage",
+   "display_name": "Troubadour's Lute",
+   "source_name": "SimpleLute",
+   "ability": "GA_SimpleLuteAttack_Primary_C",
+   "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Locomotion/Lute/A_Shells_Locomotion_Lute_Chord_Montage.A_Shells_Locomotion_Lute_Chord_Montage",
+   "skeleton": "SKEL_Human_Skeleton",
+   "slots": [
+    "R"
+   ],
+   "description": "Troubadour's Lute fire animation, from the sidearm's primary attack ability. Played on the player's rig; the shot itself still comes from the sidearm in hand, so an animation without the fire notify fires nothing."
+  },
+  {
+   "id": "ranged:A_Shells_Locomotion_TrebuchAxe_Shoot_Big_Montage",
+   "display_name": "Salvaged Trebuchaxe",
+   "source_name": "Trebuchaxe",
+   "ability": "GA_TrebuchaxeAttack_Primary_C",
+   "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Locomotion/TrebuchAxe/Big/A_Shells_Locomotion_TrebuchAxe_Shoot_Big_Montage.A_Shells_Locomotion_TrebuchAxe_Shoot_Big_Montage",
+   "skeleton": "SKEL_Human_Skeleton",
+   "slots": [
+    "R"
+   ],
+   "description": "Salvaged Trebuchaxe fire animation, from the sidearm's primary attack ability. Played on the player's rig; the shot itself still comes from the sidearm in hand, so an animation without the fire notify fires nothing."
+  }
+ ]
+}

@@ -144,7 +144,7 @@ add_library(ccs_core SHARED
   src/core/core.cpp
 )
 if(NOT CCS_DISCOVERY_PROBE AND NOT CCS_ATTACK_PROBE AND NOT CCS_SWAP_PROBE)
-  target_sources(ccs_core PRIVATE src/core/menu.cpp src/core/menu_page.cpp src/core/combat.cpp)
+  target_sources(ccs_core PRIVATE src/core/menu.cpp src/core/menu_page.cpp src/core/combat.cpp src/core/discovery.cpp)
 endif()
 
 target_include_directories(ccs_core PRIVATE

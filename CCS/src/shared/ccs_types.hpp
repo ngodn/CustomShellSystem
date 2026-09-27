@@ -19,7 +19,8 @@ enum class SlotId : uint8_t {
     H3 = 7,
     HF = 8,
     HC = 9,
-    Count = 10
+    R = 10,        // ranged: the sidearm's primary fire
+    Count = 11
 };
 
 inline const char* slot_to_string(SlotId slot) {
@@ -34,6 +35,7 @@ inline const char* slot_to_string(SlotId slot) {
         case SlotId::H3: return "H3";
         case SlotId::HF: return "HF";
         case SlotId::HC: return "HC";
+        case SlotId::R: return "R";
         default: return "Unknown";
     }
 }
@@ -49,6 +51,7 @@ inline std::optional<SlotId> string_to_slot(const std::string& str) {
     if (str == "H3") return SlotId::H3;
     if (str == "HF") return SlotId::HF;
     if (str == "HC") return SlotId::HC;
+    if (str == "R") return SlotId::R;
     return std::nullopt;
 }
 
