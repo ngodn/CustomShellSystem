@@ -1,15 +1,23 @@
 """Fit lower-torso garment vertices against simultaneous sampled body planes."""
-import copy,hashlib,json
+import argparse,copy,hashlib,json,sys
 from pathlib import Path
 import numpy as np
 from mathutils import Matrix,Quaternion,Vector
 from mathutils.bvhtree import BVHTree
 w=Path(__file__).resolve().parents[2]/'work/eve26'
-p=w/'skin-fit10/skin.mesh.json';data=json.loads(p.read_text());audit=json.loads(p.with_suffix('.audit.json').read_text())
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--mesh',type=Path,default=w/'skin-fit10/skin.mesh.json')
+parser.add_argument('--output',type=Path,default=w/'skin-fit11')
+parser.add_argument('--min-z',type=float,default=75)
+parser.add_argument('--max-z',type=float,default=110)
+parser.add_argument('--frames',type=int,nargs='+',default=[8,32,48])
+args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+assert args.min_z<args.max_z and not args.output.exists()
+p=args.mesh;data=json.loads(p.read_text());audit=json.loads(p.with_suffix('.audit.json').read_text())
 assert hashlib.sha256(p.read_bytes()).hexdigest()==audit['output_sha256']
 base=np.asarray(data['points']);nb=audit['parts'][0]['points'];ns=audit['parts'][1]['points']
 faces=[[data['wedges'][i][0] for i in f[:3]] for f in data['faces'][:audit['parts'][0]['faces']]]
-selected=[i for i in range(nb,nb+ns) if 75<base[i,2]<110]
+selected=[i for i in range(nb,nb+ns) if args.min_z<base[i,2]<args.max_z]
 selected_set=set(selected)
 garment_faces=[[data['wedges'][i][0] for i in f[:3]] for f in data['faces'][audit['parts'][0]['faces']:audit['parts'][0]['faces']+audit['parts'][1]['faces']]]
 interior_faces=[ids for ids in garment_faces if all(i in selected_set for i in ids)]
@@ -24,7 +32,7 @@ for target in data['morph_targets']:
   for i,*v in target['deltas']:morph[i]+=v
 motion=json.loads((w/'planet-f13-sprint.json').read_text())
 constraints={i:[] for i in selected};cases=[];reflect=np.array([1,-1,1])
-for frame in (-1,8,32,48):
+for frame in [-1,*args.frames]:
  pose=[]
  if frame==-1:pose=bind
  else:
@@ -78,11 +86,11 @@ for i,rows in constraints.items():
  result['points'][i]=(base[i]+x).tolist();offsets.append([i,*x.tolist()])
 assert result['points'][:nb]==data['points'][:nb] and result['points'][nb+ns:]==data['points'][nb+ns:]
 assert all(result[k]==v for k,v in data.items() if k!='points')
-out=w/'skin-fit11';out.mkdir(exist_ok=False)
+out=args.output;out.mkdir(exist_ok=False)
 path=out/'skin.mesh.json';path.write_text(json.dumps(result,separators=(',',':'))+'\n')
 audit['output_sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
 (out/'skin.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')
 (out/'offsets.json').write_text(json.dumps(dict(offsets=offsets))+'\n')
-(out/'receipt.json').write_text(json.dumps(dict(cases=cases,changed_vertices=len(offsets),conflicts=conflicts,
+(out/'receipt.json').write_text(json.dumps(dict(source_sha256=hashlib.sha256(p.read_bytes()).hexdigest(),region_z_cm=[args.min_z,args.max_z],cases=cases,changed_vertices=len(offsets),conflicts=conflicts,
     scope='Simultaneous linearized vertex and centroid constraints, 0.4 cm bound. Unresolved vertices retain original positions. Requires nonlinear and visible collision verification.'),indent=2)+'\n')
 print('Changed:',len(offsets),'Conflicts:',len(conflicts),flush=True)

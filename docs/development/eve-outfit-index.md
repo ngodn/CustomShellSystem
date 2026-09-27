@@ -6,6 +6,9 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Current Prototype trial is F14 (`p14trial/CSS_EveFit14_P`), with independent tail controls and verified cooked payload readback. It still needs game validation. Older "private UE remains F7" statements below are historical.
+- Current Skin private import is `/Game/CSS/EveTest/SK_SFit12`, assembled from F11 garment and lining6. Fresh-load references and section state pass (`skin-f12-sections.json`); shared assets are unchanged. Sprint frame24 default front/back and combined-max front/back/side were reviewed. Max side exposes small knee/thigh/upper-arm breakthrough, so this is not fitting acceptance. A joint correction must retain earlier pose constraints and preserve original body geometry.
+
 - Latest Prototype source/interchange: `planet-suit-f13.blend` and `planet-f13-export/`. A 32-vertex front-seam adjustment closes the inspected maximum-morph patches; body, garment weights and relative morphs remain unchanged. F11/F12 were rejected, not applied. Private UE remains F7 pending assembly update.
 
 - Current Prototype source candidate is `planet-suit-f10.blend`: F8 neckline clearance, F9 fastener weights, then bounded secondary-pose/morph clearance. `planet-fit10/` contains its matching interchange before refreshed corner normals. Existing private Unreal tail candidate still uses F7. Read the current goal checkpoint for verification limits; neither is game-accepted. Older entries below describe their state at the time of those checks.
