@@ -32,6 +32,12 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**Prototype five garment palettes packaged for review:** `prepare_prototype_palettes.py` writes `p14colors/CSS_EveFit14_P` from accepted motion-repaired F14. Original plus Xion Ember, Wasteland Recon, Great Desert, Stargazer and Angel's Descent. Three separate garment controls target suit slot16 and accessories17/26/27/28; no body/hair/blade material targets. The source-specific masks and five atlas previews were visually inspected. Packed manifest/resource verification passes, original controls remain identical, and cooked mesh/physics containers are byte-identical. See [palette design and validation limits](eve-prototype-palettes.md). Not installed yet; normal restart approval requested. Live appearance, Original restoration and persistence still pending.
+
+
+**Prototype body motion accepted:** User confirms motion is working after installing `p14motion`. Fitting and tail remain accepted. Current request is Original plus five garment palettes for Prototype, inspired creatively by Stellar Blade lore. Do not treat the older hair-only palettes as meeting this requirement.
+
+
 **Queued Skin and Bikini motion controls repaired:** Audit of their packed manifests confirmed the same missing five rig controls. Generalized the metadata repair script with `--outfit skin|bikini`; both runs pass manifest roundtrip and asset byte-identity checks. Use `s16motion/CSS_EveSkinFit16_P` and `b1motion/CSS_EveBikiniFit1_P` for future trials, not the older control-incomplete archives. Neither has been installed. Fresh Prototype runtime readback after restart confirms `eins0fx.evefit14/prototype`, SK_PFit14, animation engaged and no animation/maintenance error. This does not yet prove visible body motion.
 
 
