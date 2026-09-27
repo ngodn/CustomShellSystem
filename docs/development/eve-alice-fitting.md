@@ -57,3 +57,11 @@ Close-up `alice-bow1/front.png` confirms a chest bow with two loops and hanging 
 `alice-cloth1` contains the full-resolution bow proxy, 6-iteration settings, 5 cm nonlegacy backstop radii, and separate mesh/collider copy recipes. The separate copies preserve the gameplay mesh's original `PA_Body` reference while supplying a private identical collision asset. No shared rig changes are needed.
 
 Pipeline process 76756 is running copy, collision copy, then cloth bind in sequence. Resume that exact handle; do not relaunch on an observation timeout. Logs: `alice-cloth-{copy,pa,bind}.log`. Binding and native motion are not yet verified. Next inspect the saved cloth, run a bounded native motion test, visually replay the bow and check attachment drift before adopting it.
+
+## Saved bow binding verified
+
+Process 76756 completed all three operations with exit 0. Fresh inspection `alice-cloth1/readback.json` and `verified.json` confirm 624 particles, six iterations, one ribbon section with 3,664 render vertices, original gameplay `PA_Body`, shared skeleton and `ABP_KnitFeet1`. Saved Max Distance differs from authored values by at most 2.969e-8 cm; both backstop maps match exactly. Protected production hashes pass.
+
+`alice-bow-motion.patch` adds only the private Alice candidate and its 624-particle count to the native motion probe. Build succeeded. The inspection pipeline (5466) stopped at its duplicate verification call because the receipt had already been produced successfully while editor shutdown was pending. This was an output-exists guard, not failed asset verification; no inspection retry is needed.
+
+The corrected motion-only pipeline is process 46075, using the actual `-Motion` commandlet switch, then the Blender particle checker. Resume it before launching anything else. Its output is `alice-cloth1/sprint.json` and `sprint-check.json`; log `alice-cloth-sprint.log`. Native motion, rendered bow contact and game acceptance remain pending.
