@@ -56,3 +56,11 @@ Added `CSS_TRACK_AUDIT=1` to MeshExport (.NET 10, SDK 10.0.401). It invokes the 
 - The second preview batch correctly stopped on non-unit source scale. Tracks in 707, 708, 712 and 713 include non-unit leg scale. Keep this as an explicit conversion requirement; the current NumPy preview deliberately refuses it. Use an Unreal-compatible transform evaluator rather than silently stripping scale or composing a shear-producing matrix chain.
 
 No references, installed packages, release artifacts or CSS runtime code were changed by this diagnostic work.
+
+## Scale-aware joint review
+
+The preview now composes positive scales separately from rotation, matching the positive-scale branch of FTransform multiplication in the checked CUE4Parse source. Negative or zero scale still fails explicitly. Reference: https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/TTransform/Multiply .
+
+Validation: a three-joint chain with non-uniform scales and two 90-degree rotations produced the expected endpoint (8,-4,0). All 211 Default Idle frames remain within 0.000016 cm of the old preview; the tiny difference comes from retaining nearly-unit source scale rather than ignoring it. Receipt: `work/eve-idle1/scale-evaluator-check.json`. The second batch now renders; inspected `review2/joints-0.png`. Full motion, skinning and in-game acceptance remain pending.
+
+Additional compatibility evidence: the source clip SkeletonGuid is `A2B5776B-4857537B-77166983-647708BD`, whereas the freshly loaded base skeleton GUID is `2C8DEB63-499D8C56-DAA3AD80-AF949D71`. Therefore the missing mapping is not merely an exporter range check. Asked the user asynchronously for any ESAP source project, skeleton or requirements link. Known-joint previews are diagnostic assumptions based on the installed skeleton, not proof that every reference index has the author's intended bone identity.

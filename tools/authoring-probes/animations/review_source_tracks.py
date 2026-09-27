@@ -55,13 +55,17 @@ def pose(data, selected, seconds):
         q = sample(bone, 'rotations', 'rotationTimes', 'Rotation', frame, data['frameCount'])
         p = sample(bone, 'translations', 'translationTimes', 'Translation', frame, data['frameCount'])
         s = sample(bone, 'scales', 'scaleTimes', 'Scale3D', frame, data['frameCount'])
-        if not np.allclose(s, 1, atol=0.0001):
-            raise ValueError('Non-unit source body scale needs an Unreal transform evaluator')
-        transform = np.eye(4)
-        transform[:3, :3] = rotation(q)
-        transform[:3, 3] = p
-        world[i] = world[bone['parent']] @ transform if bone['parent'] >= 0 else transform
-    return {i: value[:3, 3] for i, value in world.items()}
+        if not np.isfinite(s).all() or np.any(s <= 0):
+            raise ValueError('Non-positive source scale needs the Unreal matrix fallback')
+        r = rotation(q)
+        if bone['parent'] >= 0:
+            parent_r, parent_p, parent_s = world[bone['parent']]
+            # FTransform's positive-scale composition keeps rotation and scale separate.
+            # Multiplying full matrices here would introduce shear in scaled limb chains.
+            world[i] = (parent_r @ r, parent_p + parent_r @ (parent_s * p), parent_s * s)
+        else:
+            world[i] = (r, p, s)
+    return {i: value[1] for i, value in world.items()}
 
 
 def main():
