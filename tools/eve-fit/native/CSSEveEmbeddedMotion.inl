@@ -9,11 +9,15 @@ static int32 EvaluateEmbeddedEveCloth(const FString& Params)
 {
     auto Fail=[](const TCHAR* Why) { UE_LOG(LogCSSEveCloth,Error,TEXT("Embedded motion: %s"),Why); return 1; };
     FString Report,Clip=TEXT("Sprint");
+    FString MeshPath=TEXT("/Game/CSS/EveTest/SK_PTailRun");
+    FParse::Value(*Params,TEXT("Mesh="),MeshPath);
+    if (MeshPath!=TEXT("/Game/CSS/EveTest/SK_PTailRun") && MeshPath!=TEXT("/Game/CSS/EveTest/SK_PFit13"))
+        return Fail(TEXT("Require a known private cloth candidate"));
     const bool Secondary=FParse::Param(*Params,TEXT("Secondary"));
     FParse::Value(*Params,TEXT("Clip="),Clip);
     if (!FParse::Value(*Params,TEXT("Report="),Report) || IFileManager::Get().FileExists(*Report) ||
         (Clip!=TEXT("Walk") && Clip!=TEXT("Jog") && Clip!=TEXT("Sprint"))) return Fail(TEXT("Require unused report and supported clip"));
-    auto* Mesh=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/CSS/EveTest/SK_PTailRun"));
+    auto* Mesh=LoadObject<USkeletalMesh>(nullptr,*MeshPath);
     auto* Animation=LoadObject<UAnimSequence>(nullptr,*(TEXT("/Game/CSS/Eve/Anim/AN_")+Clip));
     if (!Mesh || !Animation || Mesh->GetSkeleton()!=Animation->GetSkeleton() || Mesh->GetMeshClothingAssets().Num()!=1)
         return Fail(TEXT("Invalid private candidate or animation"));

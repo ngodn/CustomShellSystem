@@ -32,6 +32,14 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+Process85853 subsequently exited0. All processes from the F13 motion/visibility checks are terminal.
+
+**F13 motion and material visibility verified offline:** the embedded motion probe now accepts explicit `-Mesh=/Game/CSS/EveTest/SK_PFit13`. `planet-f13-sprint.json` records65 secondary-enabled frames; independent verification finds maximum anchor error0.00002235 cm and peak edge ratio1.0518811. Native mapping replay and full-body frame53 review are in `planet-f13-render.json` and `planet-f13-sprint-review/`. Inspected side view keeps the tail continuous, attached and clear of the legs. This is one sampled view, not game acceptance.
+
+`planet-f13-sections.json` freshly verifies all29 material references, skeleton/gameplay references and transient component hide/restore cases for Suit, Tail, Ribbon Left and Ribbon Right. Each accessory hides only its own material slot; Suit restores the five covered body slots when hidden. No CSS profile/UI persistence claim. Next prepare broader motion/game validation and remaining morph/cloth integration checks; ribbons are still skinned, not independently simulated.
+
+First motion launch crashed before commandlet startup (exit139). `planet-f13-startup-crash.txt` records systemd core info for PID247636: trace worker logging entered the low-level memory tracker allocator while the main thread was in PreInit. The exact underlying cause is unproven; no mesh evaluation occurred. UE5.6 source confirms `-notracethreading -notraceserver`; retry `planet-f13-sprint2.log` completed and exited0 with these tracing-only flags. No solver/game change. No core copy was extracted. Sections check completed its receipt; process85853 was still awaiting final shutdown at last check, so poll it before another editor/build.
+
 **F13 embedded cloth saved and fresh-read verified:** `/Game/CSS/EveTest/SK_PFit13` now carries the authored tail proxy/config using private PA_PTailRear. `planet-f13-cloth.log` exited0. Fresh `planet-f13-native.json` and `planet-f13-verified.json` confirm one cloth asset/section,18 particles, four exact zero-distance pins,4916 render mappings,8 iterations, production PA_Body/ABP_Secondary references and unchanged protected production hashes. Imported material assignment was verified in the prior preparation process, not by this cloth-only inspector.
 
 Next make the motion probe explicitly select F13 (it currently defaults to F7 SK_PTailRun), run the candidate, and finish material/morph/toggle checks before game deployment. Do not reuse F7 motion results as F13 acceptance. Fresh inspection completed its report; process76129 was still shutting down at the last poll, so poll that exact handle before starting another editor/build. No installed or release files changed. All prior import/bind/preparation processes exited0.
