@@ -41,8 +41,9 @@ def main():
         controls = json.loads((work / ('skin-lining6/controls.json' if skin else 'planet-sections/controls.json')).read_text())
         controls.append(dict(id='hair', name='Hair', kind='toggle', role='piece',
                          default=[1, 0, 0, 1], sections=[17,18] if skin else [18,19]))
-    controls.extend(c for c in variant['customize']['controls'] if c['kind'] == 'shape')
-    assert len(controls) == (10 if bikini else 8 if skin else 11)
+    controls.extend(c for c in variant['customize']['controls'] if c['kind'] in ('shape','rig'))
+    assert {c['id'] for c in controls if c['kind']=='rig'} == {'hair_motion','chest_motion','glute_motion','thigh_motion','belly_motion'}
+    assert len(controls) == (15 if bikini else 13 if skin else 16)
     available = {e['name'] for e in proof['assets'][0]['exports']['exports'] if e['class'] == 'MorphTarget'}
     assert all(c['morph'] in available for c in controls if c['kind'] == 'shape')
     mesh_name='SK_BFit1' if bikini else f'SK_SFit{revision}' if skin else f'SK_PFit{revision}'

@@ -183,3 +183,8 @@ Bikini heelpose1 rotates the original shoes about the foot bind pivots by approx
 ### Inspect body-side footwear keys and respect masks
 
 Extras Heels has no shape keys, but the author's Body contains OutfitHeelsFix. Reading only shoe and armature controls missed it. The key's raw coordinates differ over most of the body; its Feet mask restricts the effective correction to2,409 vertices below22.62 cm. Measure deltas against the relative key, multiply by the vertex-group weights, and inspect the result before adoption. Do not strip this mask or assume its name proves that it fits a particular shoe.
+
+
+## Preserve secondary-motion controls when packaging fitting trials
+
+Prototype F14 looked acceptable in-game, but the trial manifest filter kept only shape controls and discarded hair, chest, glute, thigh and belly rig controls. Keeping the skeleton and post-process graph alone does not preserve the customization contract. Preserve applicable rig controls alongside shapes, then verify their IDs in the packed manifest and check actual motion in-game. A successful package/schema check does not establish motion playback. Audit already-built Skin and Bikini trial manifests before installing them. For an accepted mesh, repair metadata without recooking or changing geometry; verify the asset containers remain byte-identical.
