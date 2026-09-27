@@ -1,0 +1,1 @@
+Choose the animation each attack of your weapon plays. Thirteen slots for light, heavy, finisher, charged and sprint attacks, filled from every player weapon and the enemy moves that fit the player's skeleton. Per slot: speed, timing, hit numbers and the weapon shown. Save and share presets. Alpha release, built to gather feedback.
