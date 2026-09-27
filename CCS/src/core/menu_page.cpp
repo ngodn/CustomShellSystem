@@ -1068,7 +1068,7 @@ void Menu::build_slots(const Json& section, bool& deferred) {
     for (size_t i = 0; i < tiles_.size(); ++i) {
         auto& tile = tiles_[i];
         auto* widget = tile.widget.Get(); if (!widget) continue;
-        const bool present = int(i) < rows;
+        const bool present = int(i) < rows && !controls[i].value("hidden", false);
         if (tile.shown != int(present)) { visibility(widget, present ? shown_self_passive : collapsed); if (auto* l = tile.label.Get()) visibility(l, present ? shown_passive : collapsed); tile.shown = present; }
         if (!present) continue;
         const auto& c = controls[i];

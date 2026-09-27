@@ -33,7 +33,7 @@ int Combat::classify(const std::string& full) {
     std::string name = full;
     if (ends_with(name, "_C")) name.resize(name.size() - 2);
     // Sidearm primary fire: GA_<Sidearm>Attack_Primary and the shared ranged attack bases.
-    if (name.starts_with("GA_") && !name.starts_with("GA_Player") &&
+    if (sidearm_slot_enabled && name.starts_with("GA_") && !name.starts_with("GA_Player") &&
         (ends_with(name, "Attack_Primary") || ends_with(name, "Attack_Primary_InfiniteAmmo") || name == "GA_SidearmRangedAttackBase" ||
          name == "GA_SidearmRangedBurstAttackBase" || name == "GA_SidearmRangedChargedAttackBase")) return int(SlotId::R);
     // Sprint attacks: GA_Running_Attack_<Weapon>[_B], GA_Running_Attack_B_<Weapon>, GA_Player_<Weapon>_RunningAttack[_B],
@@ -117,6 +117,7 @@ int Combat::assigned() const { int n = 0; for (const auto& s : slots_) if (!s.mo
 void Combat::release(Slot& slot) {
     restore_payload(slot);
     release_transplants(slot);
+    release_holds(slot);
     if (shown_montage_.get() && shown_montage_.get() == slot.montage.get()) restore_weapon();
     if (slot.rooted) { if (auto* montage = slot.montage.get()) drop_referenced(world_.get(), montage); slot.rooted = false; }
     if (auto* copy = slot.play.get(); copy && copy != slot.montage.get()) drop_referenced(world_.get(), copy);
@@ -384,6 +385,105 @@ UObject* Combat::build_transplant(UObject* original, UObject* replacement) {
     }
     return clone;
 }
+// ---- the charge window. Hadern's-style weapons check the button inside a window on the normal
+// swing (ANS_HoldAttackHandler: Input.Attack.<x>.Hold held past the threshold fires the _Hold
+// selector event); hold-first weapons run the same check on the _Hold montage (ANS_HAH_*: released
+// early fires the fail event that starts the normal cut). Both live in a notify state on the
+// original montage. A replacement without one can never charge and never fall back, so the
+// original's handler rides along on a copy of the replacement, its window scaled to the
+// replacement's own wind-up (first hit to first hit, else length to length).
+int Combat::hold_handler_index(UObject* montage) const {
+    if (!montage) return -1;
+    auto* p = montage->GetPropertyByNameInChain(L"Notifies");
+    if (!p || !p->IsA<FArrayProperty>()) return -1;
+    auto* array = static_cast<FArrayProperty*>(p); auto* inner = array->GetInner();
+    if (!inner->IsA<FStructProperty>()) return -1;
+    auto* row = static_cast<FStructProperty*>(inner)->GetStruct().Get();
+    auto* state = row ? row->GetPropertyByNameInChain(L"NotifyStateClass") : nullptr;
+    if (!state) return -1;
+    FScriptArrayHelper rows(array, reinterpret_cast<std::byte*>(montage) + p->GetOffset_Internal());
+    for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
+        UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + state->GetOffset_Internal(), sizeof(object));
+        if (!object || !object->GetClassPrivate()) continue;
+        const auto cls = narrow(object->GetClassPrivate()->GetNamePrivate().ToString());
+        if (cls.find("HoldAttackHandler") != std::string::npos || cls.starts_with("ANS_HAH_")) return i;
+    }
+    return -1;
+}
+UObject* Combat::carry_hold(Slot& s, UObject* original, UObject* replacement) {
+    for (auto& t : s.holds) if (t.original.get() == original) { if (auto* clone = t.clone.get()) return clone; }
+    if (s.holds.size() >= 4) { auto& old = s.holds.front(); if (auto* c = old.clone.get()) drop_referenced(world_.get(), c); s.holds.erase(s.holds.begin()); }
+    auto* clone = build_hold_carry(original, replacement);
+    Transplant t; t.original.capture(original); t.clone.capture(clone);
+    keep_referenced(world_.get(), clone);
+    s.holds.push_back(std::move(t));
+    return clone;
+}
+void Combat::release_holds(Slot& s) {
+    for (auto& t : s.holds) if (auto* c = t.clone.get()) drop_referenced(world_.get(), c);
+    s.holds.clear(); s.hold_warned = false;
+}
+UObject* Combat::build_hold_carry(UObject* original, UObject* replacement) {
+    auto* montage_class = static_cast<UClass*>(find_cached(L"/Script/Engine.AnimMontage"));
+    if (!original->IsA(montage_class) || !replacement->IsA(montage_class)) throw std::runtime_error("Not montages");
+    auto* notifies_prop = montage_class->GetPropertyByNameInChain(L"Notifies");
+    if (!notifies_prop || !notifies_prop->IsA<FArrayProperty>()) throw std::runtime_error("Notifies missing");
+    auto* inner = static_cast<FArrayProperty*>(notifies_prop)->GetInner();
+    auto* event_struct = static_cast<FStructProperty*>(inner)->GetStruct().Get();
+    auto field = [&](UStruct* type, const wchar_t* name) { auto* f = type->GetPropertyByNameInChain(name); if (!f) throw std::runtime_error("Notify event field missing"); return f; };
+    auto* state = field(event_struct, L"NotifyStateClass");
+    auto* link_value = field(event_struct, L"LinkValue"); auto* link_method = field(event_struct, L"LinkMethod"); auto* linked = field(event_struct, L"LinkedMontage");
+    auto* trigger_offset = field(event_struct, L"TriggerTimeOffset"); auto* end_offset = field(event_struct, L"EndTriggerTimeOffset"); auto* duration = field(event_struct, L"duration");
+    auto* end_link = field(event_struct, L"EndLink");
+    if (!end_link->IsA<FStructProperty>()) throw std::runtime_error("EndLink is not a struct");
+    auto* link_struct = static_cast<FStructProperty*>(end_link)->GetStruct().Get();
+    const int end_value = end_link->GetOffset_Internal() + field(link_struct, L"LinkValue")->GetOffset_Internal();
+    const int end_method = end_link->GetOffset_Internal() + field(link_struct, L"LinkMethod")->GetOffset_Internal();
+    const int end_linked = end_link->GetOffset_Internal() + field(link_struct, L"LinkedMontage")->GetOffset_Internal();
+    // The handler rows on the original.
+    std::vector<int> handlers;
+    FScriptArrayHelper source(static_cast<FArrayProperty*>(notifies_prop), reinterpret_cast<std::byte*>(original) + notifies_prop->GetOffset_Internal());
+    for (int i = 0; i < std::min(source.Num(), 256); ++i) {
+        UObject* object{}; std::memcpy(&object, source.GetRawPtr(i) + state->GetOffset_Internal(), sizeof(object));
+        if (!object || !object->GetClassPrivate()) continue;
+        const auto cls = narrow(object->GetClassPrivate()->GetNamePrivate().ToString());
+        if (cls.find("HoldAttackHandler") != std::string::npos || cls.starts_with("ANS_HAH_")) handlers.push_back(i);
+    }
+    if (handlers.empty()) throw std::runtime_error("Original has no hold handler");
+    const float orig_len = read<float>(original, L"SequenceLength"), rep_len = read<float>(replacement, L"SequenceLength");
+    if (!(orig_len > 0.05f) || !(rep_len > 0.05f)) throw std::runtime_error("Montage length unusable");
+    const float hit_old = first_hit_time(original), hit_new = first_hit_time(replacement);
+    const float scale = (hit_old > 0.05f && hit_new > 0.05f) ? hit_new / hit_old : rep_len / orig_len;
+    if (!std::isfinite(scale) || scale < 0.05f || scale > 20.f) throw std::runtime_error("Hold window scale unusable");
+    auto* clone = clone_montage(replacement);
+    auto* array = reinterpret_cast<std::byte*>(clone) + notifies_prop->GetOffset_Internal();
+    FScriptArrayHelper events(static_cast<FArrayProperty*>(notifies_prop), array);
+    const int count = events.Num(), element = inner->GetElementSize(), total = count + int(handlers.size());
+    if (!GMalloc || !*GMalloc) throw std::runtime_error("Engine allocator unavailable");
+    struct Raw { std::byte* data; int32_t num; int32_t max; };
+    auto* raw = reinterpret_cast<Raw*>(array);
+    auto* fresh = static_cast<std::byte*>((*GMalloc)->Malloc(size_t(total) * size_t(element), 16));
+    if (!fresh) throw std::runtime_error("Out of memory");
+    for (int i = 0; i < count; ++i) { inner->InitializeValue(fresh + size_t(i) * element); inner->CopyCompleteValue(fresh + size_t(i) * element, raw->data + size_t(i) * element); }
+    for (size_t k = 0; k < handlers.size(); ++k) {
+        auto* b = fresh + size_t(count + int(k)) * element;
+        inner->InitializeValue(b); inner->CopyCompleteValue(b, source.GetRawPtr(handlers[k]));
+        float start{}, end{}; std::memcpy(&start, b + link_value->GetOffset_Internal(), 4); std::memcpy(&end, b + end_value, 4);
+        start = std::clamp(start * scale, 0.f, std::max(0.f, rep_len - 0.03f));
+        end = std::clamp(end * scale, start + 0.02f, std::max(start + 0.02f, rep_len - 0.01f));
+        const float length = end - start, zero = 0.f; const uint8_t absolute = 0;
+        std::memcpy(b + link_value->GetOffset_Internal(), &start, 4); std::memcpy(b + end_value, &end, 4); std::memcpy(b + duration->GetOffset_Internal(), &length, 4);
+        std::memcpy(b + trigger_offset->GetOffset_Internal(), &zero, 4); std::memcpy(b + end_offset->GetOffset_Internal(), &zero, 4);
+        std::memcpy(b + link_method->GetOffset_Internal(), &absolute, 1); std::memcpy(b + end_method, &absolute, 1);
+        std::memcpy(b + linked->GetOffset_Internal(), &clone, sizeof(clone)); std::memcpy(b + end_linked, &clone, sizeof(clone));
+    }
+    for (int i = 0; i < raw->num; ++i) inner->DestroyValue(raw->data + size_t(i) * element);
+    if (raw->data) (*GMalloc)->Free(raw->data);
+    raw->data = fresh; raw->num = total; raw->max = total;
+    float first_start{}, first_end{}; std::memcpy(&first_start, fresh + size_t(count) * element + link_value->GetOffset_Internal(), 4); std::memcpy(&first_end, fresh + size_t(count) * element + end_value, 4);
+    log("CCS hold window carried: " + narrow(original->GetNamePrivate().ToString()) + " -> " + narrow(replacement->GetNamePrivate().ToString()) + " at " + std::to_string(first_start).substr(0, 4) + " to " + std::to_string(first_end).substr(0, 4) + " s");
+    return clone;
+}
 // ---- weapon in hand: the held weapon actor (WP_WeaponBase_Static) draws its SM_Weapon static
 // mesh component; swapping that mesh shows the move's weapon without touching inventory, slots,
 // abilities or collision. Restored when the montage stops playing (polled while shown).
@@ -582,6 +682,13 @@ void Combat::note_skip(const char* why, UObject* ability) {
     log(std::string("CCS attack skipped: ") + why + ": " + narrow(ability->GetClassPrivate()->GetNamePrivate().ToString()) + "; outers: " + chain
         + "; pawn " + (pawn_.get() ? narrow(pawn_.get()->GetNamePrivate().ToString()) : std::string("none")) + ", asc " + (asc_.get() ? narrow(asc_.get()->GetNamePrivate().ToString()) : std::string("none")));
 }
+void Combat::note_recent(UObject* cls, int slot, const char* what) {
+    std::string line = cls ? narrow(cls->GetNamePrivate().ToString()) : std::string("?");
+    if (slot >= 0) line += " -> " + std::string(slot_to_string(SlotId(slot)));
+    line += ": "; line += what;
+    recent_.push_back(std::move(line));
+    while (recent_.size() > 24) recent_.pop_front();
+}
 void Combat::callback(void* user, void*, void* frame, void*) noexcept {
     auto* self = static_cast<Combat*>(user);
     const auto started = now_us();
@@ -608,10 +715,15 @@ void Combat::observe(void* frame_ptr) {
         slot = classify(narrow(cls->GetNamePrivate().ToString()));
         if (class_slots_.size() < max_cached_classes) class_slots_.emplace(key, int8_t(slot));
     }
-    if (slot < 0) { ++skipped_; note_skip("class name has no slot", ability); return; }
-    if (!pawn_humanoid_) { ++skipped_; return; }   // the Harbinger form or a creature shell: its rig cannot play these montages
+    if (slot < 0) { ++skipped_; note_skip("class name has no slot", ability); note_recent(cls, slot, "no slot"); return; }
+    if (!pawn_humanoid_) { ++skipped_; note_recent(cls, slot, "rig not humanoid"); return; }   // the Harbinger form or a creature shell: its rig cannot play these montages
     auto& s = slots_[size_t(slot)];
     bool changed = false;
+    if (!s.montage.get()) {
+        note_recent(cls, slot, s.move_id.empty() ? "nothing assigned" : "move not ready");
+        if (s.move_id.empty() && noted_.size() < 64 && noted_.insert(key ^ 0x2545f4914f6cdd1dull).second)
+            log("CCS attack seen: " + narrow(cls->GetNamePrivate().ToString()) + " is slot " + slot_to_string(SlotId(slot)) + ", nothing assigned, the game's own attack plays");
+    }
     if (auto* source = s.montage.get()) {
         auto* replacement = s.play.get() ? s.play.get() : source;   // move feel plays the cleaned copy when there is one
         auto* original = static_cast<FObjectProperty*>(inputs_[1])->GetObjectPropertyValue(bytes + inputs_[1]->GetOffset_Internal());
@@ -621,7 +733,7 @@ void Combat::observe(void* frame_ptr) {
         if (original) {
             const auto played = narrow(original->GetNamePrivate().ToString());
             for (const char* companion : {"Transform", "Equip", "Unequip", "Draw", "Stow", "Sheath"}) if (played.find(companion) != std::string::npos) {
-                ++skipped_;
+                ++skipped_; note_recent(cls, slot, "companion clip left alone");
                 if (noted_.size() < 64 && noted_.insert(key ^ 0x9e3779b97f4a7c15ull).second) log("CCS attack left alone: " + narrow(cls->GetNamePrivate().ToString()) + " played its companion clip " + played);
                 return;
             }
@@ -632,12 +744,21 @@ void Combat::observe(void* frame_ptr) {
             // payload; only the animation inside it is the move's, fitted to the original timing.
             try { if (auto* clone = transplant(s, original, source)) pointer = clone; }
             catch (const std::exception& e) { ++failures_; if (!s.feel_warned) { s.feel_warned = true; log("CCS game feel unavailable for " + s.move_id + ": " + e.what() + "; playing the move's own montage"); } }
-        } else if (s.tuning.hit_damage == "weapon" && original && original != replacement) {
-            try { apply_weapon_payload(s, original, replacement); }
-            catch (const std::exception& e) { ++failures_; if (s.error.empty()) { s.error = std::string("Hit payload copy failed: ") + e.what(); log("CCS " + s.error); } }
+        } else if (original && original != replacement) {
+            // The move's own feel keeps the charge window: without the original's hold handler a
+            // long press could never charge (and on hold-first weapons never fall back to the cut).
+            if (hold_handler_index(original) >= 0 && hold_handler_index(replacement) < 0) {
+                try { if (auto* carried = carry_hold(s, original, replacement)) pointer = carried; }
+                catch (const std::exception& e) { ++failures_; if (!s.hold_warned) { s.hold_warned = true; log("CCS hold window unavailable for " + s.move_id + ": " + e.what() + "; long presses will not charge this move"); } }
+            }
+            if (s.tuning.hit_damage == "weapon") {
+                try { apply_weapon_payload(s, original, replacement); }
+                catch (const std::exception& e) { ++failures_; if (s.error.empty()) { s.error = std::string("Hit payload copy failed: ") + e.what(); log("CCS " + s.error); } }
+            }
         }
         std::memcpy(bytes + inputs_[1]->GetOffset_Internal(), &pointer, sizeof(pointer));
         ++s.hits; changed = true;
+        note_recent(cls, slot, pointer == replacement ? "swapped" : (s.tuning.feel == "game" ? "swapped, game feel" : "swapped, hold window carried"));
         if (noted_.size() < 64 && noted_.insert(key ^ 0x51ed270b9d1c3a7full).second)
             log("CCS swap: " + narrow(cls->GetNamePrivate().ToString()) + " is slot " + slot_to_string(SlotId(slot)) + " -> " + s.move_id + (pointer == replacement ? "" : " (game feel clone)")
                 + "; feel " + s.tuning.feel + ", damage " + s.tuning.hit_damage + ", visual " + s.tuning.weapon + ", speed " + std::to_string(s.tuning.speed) + ", rig " + rig::short_name(pawn_rig_));
@@ -663,7 +784,7 @@ nlohmann::json Combat::status() const {
     if (deps_.hooks->statistics(deps_.hooks->context, &stats))
         host = {{"available", true}, {"slots", stats.slots}, {"calls", stats.calls}, {"wrong_thread", stats.wrong_thread}, {"failures", stats.failures}};
     return {{"enabled", enabled_}, {"active", active_}, {"hooked", token_ != 0}, {"seen", seen_}, {"swapped", swapped_},
-        {"skipped", skipped_}, {"failures", failures_}, {"wrong_frame", wrong_frame_}, {"maximum_callback_us", maximum_us_},
+        {"skipped", skipped_}, {"failures", failures_}, {"wrong_frame", wrong_frame_}, {"maximum_callback_us", maximum_us_}, {"recent", recent_},
         {"cached_classes", class_slots_.size()}, {"error", error_}, {"slots", std::move(slots)}, {"host", std::move(host)}};
 }
 }

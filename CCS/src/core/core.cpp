@@ -165,6 +165,7 @@ void Core::apply_preset(const std::string& name) {
     for (unsigned i = 0; i < slot_count && i < preset->slots.size(); ++i) {
         const auto& binding = preset->slots[i];
         std::string id;
+        if (slot_role(i) == Role::Ranged && !sidearm_slot_enabled) continue;   // the sidearm slot is parked
         if (!binding.move_id.empty() || !binding.montage_path.empty()) {
             if (catalog_.find_move(binding.move_id) || binding.move_id.starts_with("found:")) id = binding.move_id;
             else if (!binding.montage_path.empty()) for (const auto& move : catalog_.moves()) if (move.montage_path == binding.montage_path) { id = move.id; break; }
@@ -319,7 +320,7 @@ nlohmann::json Core::model() const {
                 {"description", std::string("Which weapon you hold while this move plays. Move's weapon: the weapon this move belongs to appears in your hand for the swing, then yours comes back. Hits still use your weapon.")
                     + (mesh_ready ? "" : " No model is known for this move's weapon, so your own stays.")}});
         }
-        customize.push_back({{"type", "choice"}, {"id", sid}, {"label", slot_to_string(slot)}, {"tile", tile_labels[i]}, {"name", slot_titles[i] + 4},
+        customize.push_back({{"type", "choice"}, {"id", sid}, {"label", slot_to_string(slot)}, {"tile", tile_labels[i]}, {"name", slot_titles[i] + 4}, {"hidden", ranged_slot && !sidearm_slot_enabled},
             {"value", id}, {"icon", id.empty() ? weapon_icon(current_weapon_) : move_icon(id)}, {"options", std::move(options)}, {"settings", settings_rows},
             {"settings_key", speed_id + "/" + tune.hit_damage + "/" + tune.weapon + (mesh_ready ? "/m" : "")}, {"enabled", combat_ != nullptr && catalog_error_.empty()}});
     }

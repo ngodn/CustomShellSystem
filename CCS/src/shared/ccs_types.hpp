@@ -8,6 +8,9 @@
 
 namespace ccs {
 
+// The sidearm fire slot (R) is parked: its routing, tile and preset entries stay in the code but
+// are switched off until its design is settled. Flip this to bring it back.
+constexpr bool sidearm_slot_enabled = false;
 enum class SlotId : uint8_t {
     L1 = 0,
     L2 = 1,

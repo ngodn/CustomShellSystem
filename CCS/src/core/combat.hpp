@@ -10,6 +10,7 @@
 #include "ccs_types.hpp"
 #include <nlohmann/json.hpp>
 #include <array>
+#include <deque>
 #include <functional>
 #include <string>
 #include <unordered_map>
@@ -61,6 +62,7 @@ private:
         engine::ObjectHandle play;                     // what "Move's own" plays: a cleaned clone for enemy montages, the montage itself otherwise
         SlotTuning tuning;
         std::vector<Transplant> feel; bool feel_warned{}; bool was_ready{};
+        std::vector<Transplant> holds; bool hold_warned{};   // "Move's own" copies that carry the original's hold-attack window
         std::string show_mesh_path; engine::ObjectHandle show_mesh; bool show_rooted{};   // the move's weapon mesh, loaded with the montage
         engine::ObjectHandle payload_source; std::vector<PayloadBackup> backups;          // original payload copied onto the replacement
     };
@@ -71,6 +73,13 @@ private:
     engine::UObject* clone_montage(engine::UObject* source);
     std::vector<std::string> strip_ai_notifies(engine::UObject* clone);
     void release_transplants(Slot& slot);
+    // The charge window: the game's hold-handler notify state on the slot's original montage. A
+    // "Move's own" replacement gets a copy of the original's handler, timed to its own wind-up.
+    int hold_handler_index(engine::UObject* montage) const;
+    engine::UObject* carry_hold(Slot& slot, engine::UObject* original, engine::UObject* replacement);
+    engine::UObject* build_hold_carry(engine::UObject* original, engine::UObject* replacement);
+    void release_holds(Slot& slot);
+    void note_recent(engine::UObject* cls, int slot, const char* what);   // the last few player attacks, for status.json
     void apply_weapon_payload(Slot& slot, engine::UObject* original, engine::UObject* replacement);
     void restore_payload(Slot& slot);
     void show_weapon(engine::UObject* mesh, engine::UObject* montage, uint64_t now);
@@ -99,6 +108,7 @@ private:
     uint64_t token_{}, retry_after_{}, player_check_{}, seen_{}, swapped_{}, skipped_{}, failures_{}, maximum_us_{}, wrong_frame_{};
     std::unordered_map<uint64_t, int8_t> class_slots_;
     std::unordered_set<uint64_t> noted_;
+    std::deque<std::string> recent_;
     std::string pawn_rig_;                              // skeleton of the body worn now, refreshed with the pawn
     bool pawn_humanoid_{};
     std::string error_;
