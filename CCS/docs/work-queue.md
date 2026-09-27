@@ -1,5 +1,40 @@
 # CCS work queue
 
+## Release hardening, 28 September 2026 (commit 1ccf3c8, core e4465f86f757)
+
+Four reviews before the alpha (hot path, menu, core and runtime, and a comparison with the CSS
+and CSSX sources). None found a crash or memory-safety defect. What changed:
+
+- Tick phases fail on their own (`Core::phase`): player lookup, combat, asset scan, menu,
+  status. A failure is logged when its message changes, retried after a second, and the phase
+  is switched off after sixty failures in a row. Before, any exception in `Core::tick` stopped
+  the whole mod for the session (the loader's `dispatch_failed_` still exists as the last resort).
+- 5.6 liveness (`engine::item_alive`, Unreachable or Garbage) now also guards the serial
+  initializer and the loader's hook host; the SDK's `IsValid(false)` reads bit 29 as PendingKill.
+- The player controller is asked for at most four times a second (`player_context` caches the
+  world and controller); the pawn and ability component are still read every frame.
+- `Call::param` matches by FName (`FNAME_Find`), no string per parameter. The asset scan
+  compares the class FName. The hook resolves the notify layout once (`notify_layout`) and keeps
+  per-montage facts (companion clip, hold handler) and a per-slot `play_hold` flag, so a swing
+  costs no property lookup and no name text.
+- Menu: one cached candidate list shared by all thirteen slots (`candidate_options`, rebuilt
+  when the scan changes it); the four reflected calls in tick are guarded; the tab and page
+  pairing is checked once a second and the tab re-attaches through `detach()`; the search text
+  is read every frame only while typing; attach and warm-up failures log once; `act("run")`
+  no longer copies the model. Presets are listed every ten seconds while the tab is open.
+- The log rotates at four megabytes (`ccs.jsonl.1`). `status.json` carries `timing` per phase
+  (average and worst microseconds since the last write). Measured with the Player Menu closed:
+  about 45 microseconds a tick in total; the menu warm-up build is one 23 ms frame.
+
+Not done, noted for later: `runtime/persistence.cpp` and `content_monitor.cpp` are compiled
+into the static runtime but unused by the core (the linker drops them); `menu_layout.hpp`,
+`input_edges.hpp` and `visible_window.hpp` are exercised only by tests; `settings.json` still
+carries unused fields (`startup_preset`, `preserve_weapon_mesh`, `show_hud_notification`,
+`attack_speed_scale`, `damage_scale`). The first swing per original montage still builds its
+clone inside the hook (watch `maximum_callback_us`). Duality Stone double variants
+(`_A1_Double` and so on) match no slot and play untouched. The presets folder was removed at
+the user's request.
+
 ## State on 28 September 2026, night (v1.0.0-alpha.1)
 
 Core `ccs_core-1.0.0-alpha.1-8208485836d6.dll` is live (commit 40b9144). Thirteen slots (the
