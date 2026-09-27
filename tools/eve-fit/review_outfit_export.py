@@ -18,11 +18,13 @@ p.add_argument('--upper-body', action='store_true')
 p.add_argument('--hip-detail', action='store_true')
 p.add_argument('--foot-detail', action='store_true')
 p.add_argument('--body-mask', type=Path)
+p.add_argument('--exported-normals', action='store_true', help='Inspect saved corner normals in the unposed base mesh')
 p.add_argument('--morph', action='append', default=[], help='Name=weight, applied to exported deltas')
 p.add_argument('--pose-motion', type=Path, help='Recorded upstream animation snapshots, without cloth simulation')
 p.add_argument('--pose-frame', type=int, default=0)
 p.add_argument('--cloth-render', type=Path, help='Verified native mapping replay replacing its named material sections')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
+assert not a.exported_normals or not (a.pose_motion or a.morph or a.cloth_render), 'Saved normals are base-pose only'
 a.output.mkdir(exist_ok=False)
 raw = a.mesh.read_bytes()
 source = json.loads(raw)
@@ -99,6 +101,10 @@ for part in audit['parts']:
     obj.color = (.58, .36, .22, 1) if name == 'Eve Body' or name == 'Eve Skin Suit - Footwear Lining' else (.12, .38, .55, 1)
     for polygon in mesh.polygons:
         polygon.use_smooth = True
+    if a.exported_normals:
+        corners=[source['normals'][w] for index,record in enumerate(source['faces'][face_offset:face_offset+face_count],face_offset)
+                 if record[3] not in hidden_slots and index not in hidden_faces for w in record[:3]]
+        mesh.normals_split_custom_set([(x,-y,z) for x,y,z in corners])
     weights = totals[point_offset:point_offset+count]
     parts.append(dict(name=name, points=count, faces=face_count,
                       visible_faces=len(visible_faces),
@@ -151,6 +157,7 @@ for label, direction in [('front', (0, -1, 0)), ('back', (0, 1, 0)), ('side', (1
     hidden_parts=a.hide_part, upper_body=a.upper_body,
     hip_detail=a.hip_detail,
     foot_detail=a.foot_detail,
+    exported_normals=a.exported_normals,
     hidden_face_count=len(hidden_faces), morphs=morphs,
     pose_motion=str(a.pose_motion) if a.pose_motion else None,
     cloth_render=str(a.cloth_render) if a.cloth_render else None,

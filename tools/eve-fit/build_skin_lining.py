@@ -66,7 +66,7 @@ for old in used:
     hit=hit.lerp(surface,.95)
     t=0 if old in boundary else max(0,min(1,(22-point.z)/5))
     t=t*t*(3-2*t)
-    target=point.lerp(hit,t)
+    target=point.lerp(hit,t*.995)
     assert (target-point).length<20
     distances.append((target-point).length)
     result['points'].append(list(target))
@@ -97,11 +97,15 @@ for f in result['faces'][len(data['faces']):]:
     for i in indices:normals[i]+=n
 for old,new in wedges.items():
     n=normals[result['wedges'][new][0]]
-    result['normals'][new]=list(n.normalized()) if n.length>1e-9 and data['wedges'][old][0] not in boundary else data['normals'][old]
+    vertex=data['wedges'][old][0]
+    blend=0 if vertex in boundary else max(0,min(1,(22-data['points'][vertex][2])/5))
+    blend=blend*blend*(3-2*blend)
+    original=Vector(data['normals'][old])
+    result['normals'][new]=list(original.lerp(n.normalized(),blend).normalized()) if n.length>1e-9 else list(original)
 assert result['points'][:len(data['points'])]==data['points']
 assert result['faces'][:len(data['faces'])]==data['faces']
 result['mesh_package']='/Game/CSS/EveTest/SK_SkinLining'
-out=w/'skin-lining3';out.mkdir(exist_ok=False)
+out=w/'skin-lining4';out.mkdir(exist_ok=False)
 path=out/'skin.mesh.json';path.write_text(json.dumps(result,separators=(',',':'))+'\n')
 audit['output_sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
 audit['parts'].append(dict(name='Eve Skin Suit - Footwear Lining',points=len(used),faces=len(selected),material_slots=list(material_map.values())))
@@ -112,4 +116,5 @@ controls[0]['sections']+=list(material_map.values())
 (out/'controls.json').write_text(json.dumps(controls,indent=2)+'\n')
 (out/'receipt.json').write_text(json.dumps(dict(points=len(used),faces=len(selected),boundary_vertices=len(boundary),
     max_displacement_cm=max(distances),interpolated_vertices=unmatched,original_geometry_unchanged=True,body_seam_exact=True,
+    original_volume_retained=.005,seam_normal_blend_cm=[17,22],
     scope='Duplicate foot surface only. Inherited morphs and weights need motion checks; body UVs retained. Not runtime acceptance.'),indent=2)+'\n')
