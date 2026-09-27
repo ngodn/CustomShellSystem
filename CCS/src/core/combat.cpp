@@ -43,6 +43,8 @@ int Combat::classify(const std::string& full) {
         return int(heavy ? SlotId::SH : SlotId::SL);
     }
     if (!full.starts_with("GA_Player")) return -1;
+    // Duality Stone variants (two hit windows) are the same step: GA_Player_Attack_Katanas_A1_double.
+    for (const char* twin : {"_Double", "_double", "_dble"}) if (ends_with(name, twin)) { name.resize(name.size() - std::string_view(twin).size()); break; }
     if (ends_with(name, "_A_Finisher") || ends_with(name, "_A3_Finisher")) return int(SlotId::LF);
     if (ends_with(name, "_B_Finisher") || ends_with(name, "_B3_Finisher")) return int(SlotId::HF);
     if (ends_with(name, "_Hold")) {
@@ -458,11 +460,9 @@ UObject* Combat::build_hold_carry(UObject* original, UObject* replacement) {
         if (cls.find("HoldAttackHandler") != std::string::npos || cls.starts_with("ANS_HAH_")) handlers.push_back(i);
     }
     if (handlers.empty()) throw std::runtime_error("Original has no hold handler");
-    const float orig_len = read<float>(original, L"SequenceLength"), rep_len = read<float>(replacement, L"SequenceLength");
-    if (!(orig_len > 0.05f) || !(rep_len > 0.05f)) throw std::runtime_error("Montage length unusable");
-    const float hit_old = first_hit_time(original), hit_new = first_hit_time(replacement);
-    const float scale = (hit_old > 0.05f && hit_new > 0.05f) ? hit_new / hit_old : rep_len / orig_len;
-    if (!std::isfinite(scale) || scale < 0.05f || scale > 20.f) throw std::runtime_error("Hold window scale unusable");
+    const float rep_len = read<float>(replacement, L"SequenceLength");
+    if (!(rep_len > 0.05f)) throw std::runtime_error("Montage length unusable");
+    const float hit_new = first_hit_time(replacement);
     auto* clone = clone_montage(replacement);
     auto* array = reinterpret_cast<std::byte*>(clone) + notifies_prop->GetOffset_Internal();
     FScriptArrayHelper events(static_cast<FArrayProperty*>(notifies_prop), array);
@@ -477,8 +477,16 @@ UObject* Combat::build_hold_carry(UObject* original, UObject* replacement) {
         auto* b = fresh + size_t(count + int(k)) * element;
         inner->InitializeValue(b); inner->CopyCompleteValue(b, source.GetRawPtr(handlers[k]));
         float start{}, end{}; std::memcpy(&start, b + link_value->GetOffset_Internal(), 4); std::memcpy(&end, b + end_value, 4);
-        start = std::clamp(start * scale, 0.f, std::max(0.f, rep_len - 0.03f));
-        end = std::clamp(end * scale, start + 0.02f, std::max(start + 0.02f, rep_len - 0.01f));
+        // The window is input timing, not animation: the combo counter starts its 0.5 s and 1.05 s
+        // timers when the window begins, so it keeps the original's absolute times and a held
+        // button charges after the same delay on every weapon. It moves earlier only when the
+        // replacement's first hit would land inside it, and never leaves the montage.
+        const float window = std::max(0.02f, end - start);
+        float limit = rep_len - 0.01f;
+        if (hit_new > 0.05f) limit = std::min(limit, hit_new - 0.02f);
+        if (end > limit) { end = limit; start = end - window; }
+        start = std::clamp(start, 0.f, std::max(0.f, rep_len - 0.03f));
+        end = std::clamp(end, start + 0.02f, std::max(start + 0.02f, rep_len - 0.01f));
         const float length = end - start, zero = 0.f; const uint8_t absolute = 0;
         std::memcpy(b + link_value->GetOffset_Internal(), &start, 4); std::memcpy(b + end_value, &end, 4); std::memcpy(b + duration->GetOffset_Internal(), &length, 4);
         std::memcpy(b + trigger_offset->GetOffset_Internal(), &zero, 4); std::memcpy(b + end_offset->GetOffset_Internal(), &zero, 4);
