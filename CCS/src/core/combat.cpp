@@ -556,7 +556,12 @@ void Combat::observe(void* frame_ptr) {
                 }
                 expected = class_montage_.emplace(key, name).first;
             }
-            if (expected != class_montage_.end() && expected->second != FName() && original->GetNamePrivate() != expected->second) { ++skipped_; return; }
+            if (expected != class_montage_.end() && expected->second != FName() && original->GetNamePrivate() != expected->second) {
+                ++skipped_;
+                if (noted_.size() < 64 && noted_.insert(key ^ 0x9e3779b97f4a7c15ull).second)
+                    log("CCS attack left alone: " + narrow(cls->GetNamePrivate().ToString()) + " played " + narrow(original->GetNamePrivate().ToString()) + ", its catalog montage is " + narrow(expected->second.ToString()));
+                return;
+            }
         }
         UObject* pointer = replacement;
         if (s.tuning.feel == "game" && original && original != replacement) {
