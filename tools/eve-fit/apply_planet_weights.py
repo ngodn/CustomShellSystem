@@ -6,7 +6,7 @@ import numpy as np
 from mathutils import Vector
 root=Path(__file__).resolve().parents[2];work=root/'work/eve26'
 p=argparse.ArgumentParser(description=__doc__)
-p.add_argument('--garment',choices=('prototype','skin','bikini'),default='prototype')
+p.add_argument('--garment',choices=('prototype','skin','bikini','knit'),default='prototype')
 p.add_argument('--part',help='Exact garment object name for multipart outfits')
 p.add_argument('--extract-source',action='store_true',help='Extract the named source object and remove runtime dependencies before saving')
 p.add_argument('--source',type=Path,default=work/'planet-suit-f5.blend')
@@ -14,8 +14,8 @@ p.add_argument('--candidate',type=Path,default=work/'planet-weight-repair')
 p.add_argument('--output',type=Path,default=work/'planet-suit-f6.blend')
 a=p.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 assert a.garment!='bikini' or a.part
-name=a.part or {'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin Suit - Suit Complete'}[a.garment]
-stem={'prototype':'planet','skin':'skin','bikini':'bikini'}[a.garment]
+name=a.part or {'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin Suit - Suit Complete','knit':'Eve Extras - Sweater'}[a.garment]
+stem={'prototype':'planet','skin':'skin','bikini':'bikini','knit':'knit'}[a.garment]
 sys.path.insert(0,str(root.parent/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work'))
 from export_variant_clean import TO_UE
 output=a.output;assert not output.exists() and not output.with_suffix('.json').exists()

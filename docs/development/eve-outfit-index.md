@@ -6,6 +6,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Casual Knitwear current source candidate is `knit-w1.blend`, with `knit-weight1/`. Six morphs repaired and body-corresponding garment weights persisted without body/base edits. Sprint24 seat breakthrough improves; sprint48 still has hem/thigh penetration. Read the current goal checkpoint before clearance or cloth work. Knitwear shoe slots17–22 differ from Bikini23–28 despite identical original shoe geometry/weights.
+
 - Vacation Bikini current garment sources are `bikini-top-w1.blend` and `bikini-shorts-w1.blend`, with `bikini-weight1/`. Body-corresponding weights remove the inspected sprint48 upper-cup breakthrough. Source reload preserves geometry and all M1 morphs. Heel contact, broader movement, cloth and game acceptance remain pending.
 
 - Vacation Bikini current diagnostic is `bikini-morph1/`: six garment morphs rebuilt on unchanged Top+Shorts base. Saved Gemini Top/Shorts/Heels points match the old export exactly. Heels also match original author undeformed geometry, so inspect authored rig deformation before geometry edits. No bikini candidate source/import/game acceptance yet.
