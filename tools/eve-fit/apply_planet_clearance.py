@@ -37,11 +37,11 @@ garment={'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin 
 assert parts[1]['name'] == garment
 bpy.ops.wm.read_factory_settings(use_empty=True)
 with bpy.data.libraries.load(str(args.source), link=False) as (source, loaded):
-    loaded.objects = ['Eve Body', garment]
+    loaded.objects = (['Eve Body'] if 'Eve Body' in source.objects else [])+[garment]
 for item in loaded.objects:
     bpy.context.scene.collection.objects.link(item)
-body = bpy.data.objects['Eve Body']
-before = digest(body)
+body = bpy.data.objects.get('Eve Body')
+before = digest(body) if body else None
 obj = bpy.data.objects[garment]
 transform = TO_UE @ obj.matrix_world
 
@@ -94,7 +94,7 @@ used_after, actual = evaluate()
 assert used_after == used
 error = float(np.linalg.norm(actual-(expected+expected_delta), axis=1).max())
 assert error < .0005, error
-assert digest(body) == before, 'Body changed'
+assert body is None or digest(body) == before, 'Body changed'
 ignored_modifiers = [m.type for m in obj.modifiers]
 for modifier in list(obj.modifiers):
     obj.modifiers.remove(modifier)

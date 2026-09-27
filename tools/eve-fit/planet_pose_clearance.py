@@ -12,17 +12,20 @@ parser.add_argument('--frames',type=int,nargs='+',default=[8,16,24])
 parser.add_argument('--interior-margin',type=float,default=.03)
 parser.add_argument('--centroids',action='store_true')
 parser.add_argument('--output',type=Path,default=w/'planet-fit7')
+parser.add_argument('--garment',choices=('prototype','skin'),default='prototype')
 args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 p=args.mesh;raw=p.read_bytes();m=json.loads(raw)
-audit=json.loads(p.with_name('planet.mesh.audit.json').read_text());assert hashlib.sha256(raw).hexdigest()==audit['output_sha256']
+audit=json.loads(p.with_suffix('.audit.json').read_text());assert hashlib.sha256(raw).hexdigest()==audit['output_sha256']
+assert audit['parts'][1]['name']=={'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin Suit - Suit Complete'}[args.garment]
 nb=audit['parts'][0]['points'];ns=audit['parts'][1]['points'];nf=audit['parts'][0]['faces']
 base=np.asarray(m['points']);faces=[[m['wedges'][j][0] for j in f[:3]] for f in m['faces'][nf:nf+audit['parts'][1]['faces']]]
 reflect=np.array([1,-1,1]);tree=BVHTree.FromPolygons([Vector(v) for v in base*reflect],faces,all_triangles=True)
-hidden=set(json.loads((w/'planet-body-mask.json').read_text())['hidden_vertices'])
+mask=json.loads((w/'planet-body-mask.json').read_text()) if args.garment=='prototype' else {}
+hidden=set(mask.get('hidden_vertices',[]))
 samples=[i for i in range(nb) if i not in hidden and base[i,2]>22 and tree.find_nearest(Vector(base[i]*reflect))[3]<.7]
 centroids=[]
 if args.centroids:
- hidden_faces=set(json.loads((w/'planet-body-mask.json').read_text())['hidden_body_faces'])
+ hidden_faces=set(mask.get('hidden_body_faces',[]))
  for index,face in enumerate(m['faces'][:nf]):
   if index in hidden_faces:continue
   ids=[m['wedges'][j][0] for j in face[:3]];point=base[ids].mean(axis=0)
@@ -32,7 +35,7 @@ bind=[]
 for b in m['bones']:
  q=b['rotation'];local=Matrix.LocRotScale(Vector(b['translation']),Quaternion((q[3],*q[:3])),Vector(b['scale']))
  bind.append(bind[b['parent']]@local if b['parent']>=0 else local)
-motion=json.loads(args.motion.read_text())
+motion=json.loads(args.motion.read_text()) if any(f>=0 for f in args.frames) else None
 morph=np.zeros_like(base)
 for target in m['morph_targets']:
  if target['name'].startswith(('FBM','PBM')):
@@ -75,8 +78,9 @@ assert result['points'][:nb]==m['points'][:nb]
 assert result['points'][nb+ns:]==m['points'][nb+ns:]
 assert all(result[k]==v for k,v in m.items() if k!='points')
 out=args.output;out.mkdir(exist_ok=False)
-f=out/'planet.mesh.json';f.write_text(json.dumps(result,separators=(',',':'))+'\n');audit['output_sha256']=hashlib.sha256(f.read_bytes()).hexdigest()
-(out/'planet.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')
+stem='planet' if args.garment=='prototype' else 'skin'
+f=out/f'{stem}.mesh.json';f.write_text(json.dumps(result,separators=(',',':'))+'\n');audit['output_sha256']=hashlib.sha256(f.read_bytes()).hexdigest()
+(out/f'{stem}.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')
 (out/'offsets.json').write_text(json.dumps({'offsets':[[i,*v.tolist()] for i,v in proposals.items()]})+'\n')
 report=dict(cases=reports,changed_vertices=len(proposals),max_offset_cm=max((np.linalg.norm(v) for v in proposals.values()),default=0),scope='Bounded pose-derived garment proposal; masked body vertices and non-interior projections excluded. Not watertight collision proof; requires visual review and source application.')
 (out/'receipt.json').write_text(json.dumps(report,indent=2)+'\n');print(report)

@@ -16,6 +16,7 @@ p.add_argument('--hide-material', action='append', default=[])
 p.add_argument('--hide-part', action='append', default=[])
 p.add_argument('--upper-body', action='store_true')
 p.add_argument('--hip-detail', action='store_true')
+p.add_argument('--foot-detail', action='store_true')
 p.add_argument('--body-mask', type=Path)
 p.add_argument('--morph', action='append', default=[], help='Name=weight, applied to exported deltas')
 p.add_argument('--pose-motion', type=Path, help='Recorded upstream animation snapshots, without cloth simulation')
@@ -134,6 +135,10 @@ if a.hip_detail:
     assert not a.upper_body
     cam.data.ortho_scale = .65
     target = Vector((0, 0, 1.05))
+if a.foot_detail:
+    assert not a.upper_body and not a.hip_detail
+    cam.data.ortho_scale = .65
+    target = Vector((0, 0, .12))
 for label, direction in [('front', (0, -1, 0)), ('back', (0, 1, 0)), ('side', (1, 0, 0)), ('quarter', (1, -1, 0))]:
     cam.location = target + Vector(direction)*3
     cam.rotation_euler = (target-cam.location).to_track_quat('-Z', 'Y').to_euler()
