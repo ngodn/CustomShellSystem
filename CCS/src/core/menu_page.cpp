@@ -1169,7 +1169,7 @@ void Menu::build_slots(const Json& section, bool& deferred) {
                 {{"action", "setting_delta"}, {"delta", 1}, {"index", int(k)}}, true, {{"action", "setting_focus"}, {"index", int(k)}});
             // The rows scroll inside the fixed-height area; the focused one is kept in view.
             if (focus_ == Focus::panel && panel_focus_ == int(k) && panel_focus_shown_ != int(k) && panel_.used > 0) {
-                if (auto* row_widget = panel_.cells[panel_.used - 1].widget.Get()) if (auto* scroll = panel_scroll_.Get()) {
+                if (auto* row_widget = panel_.cells[panel_.used - 1].holder.Get()) if (auto* scroll = panel_scroll_.Get()) {
                     try { Call reveal(scroll, L"ScrollWidgetIntoView", 4); reveal.set(L"WidgetToFind", row_widget); reveal.set(L"AnimateScroll", true); reveal.set(L"ScrollDestination", uint8_t{0}); reveal.set(L"Padding", 40.f); reveal.run(); } catch (...) {}
                 }
                 panel_focus_shown_ = int(k);
