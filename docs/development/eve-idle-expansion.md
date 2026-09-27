@@ -74,3 +74,13 @@ Prepared all 14 references as provisional 54-bone body/finger candidates in `wor
 Source mesh import exited 0 (`work/eve26/idle-e4-source.log`). The complete retarget batch also exited 0 (`idle-e4-retarget.log`), producing 14 private `/Game/CSS/AnimLab/RT_E4_Idle700` through `RT_E4_Idle713` candidates and 101 sampled poses per clip. Result: `work/eve-idle1/e4/retarget-result.json`. Protected Black Pearl mesh and shared skeleton hashes remain unchanged.
 
 The existing source mesh bind has 379 entries and evaluated target poses have 388 entries, including virtual bones. Before release, compare this authoring state against the exact accepted v1.2.0 cooked rig; do not infer compatibility from an old bone-count label alone. No public animation names, package manifest or installed files have been changed.
+
+## Released rig and first skinned review
+
+Read Black Pearl and SKEL_Base directly from the exact v1.2.0 release containers plus base-game dependencies, without a separate SharedAssets package. MeshExport audit mode now emits `reference-skeleton.json` for skeletal meshes.
+
+The released Black Pearl mesh has 379 bones. Every name and parent matches the E4 target. Maximum reference differences: translation 0.00000361 cm, quaternion component-vector distance 0.000000054, scale zero. The released shared skeleton has 386 bones, with the same initial 379 names in order. The extra seven are Eredrim_Diapazon, Eredrim_Shoulder_l, tiel_dagger, unrealHelmet1_M, unrealBarrel1_R, weapon_l and weapon_r. No shared skeleton replacement is needed for these body animation candidates. Evidence: `work/eve-idle1/release-rig-comparison.json` and `release-rig/`.
+
+Rendered five samples each for all 14 candidates using the accepted fitted Black Pearl blend and the existing replay verifier. All 70 samples passed its pose-replay tolerances. Inspected frame zero for each candidate. These are solid-material offline poses, without secondary simulation. Hair sticking outward in bent poses is not evidence of live physics failure. Visible body/clothing contact at knees and hands needs review; do not reopen accepted fitting automatically from a diagnostic render.
+
+Loop endpoint checks cover all sampled local transforms, including virtual bones: worst angle below 0.005 degrees, worst translation below 0.005 cm. This establishes endpoint continuity only, not velocity continuity or gameplay transition quality. Per-clip receipt: `work/eve-idle1/candidate-review.json`. Full-speed motion review, ground placement, interruptions, six-outfit checks and packaging remain outstanding.

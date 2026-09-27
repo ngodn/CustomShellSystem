@@ -148,6 +148,9 @@ if (!string.IsNullOrEmpty(recipePath)) {
 }
 if (Environment.GetEnvironmentVariable("CSS_AUDIT_ONLY") == "1") {
     File.WriteAllText(Path.Combine(args[3], "effective-mesh.json"), JsonConvert.SerializeObject(mesh, Formatting.Indented));
+    if (mesh is USkeletalMesh auditedMesh)
+        File.WriteAllText(Path.Combine(args[3], "reference-skeleton.json"),
+            JsonConvert.SerializeObject(auditedMesh.ReferenceSkeleton, Formatting.Indented));
     Console.WriteLine("Resolved mesh and configured material overrides");
     return;
 }
