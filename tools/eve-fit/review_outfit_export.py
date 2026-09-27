@@ -96,7 +96,7 @@ for part in audit['parts']:
     bpy.context.collection.objects.link(obj)
     hair = 'Hair' in name
     obj.hide_render = hair or name in a.hide_part
-    obj.color = (.58, .36, .22, 1) if name == 'Eve Body' else (.12, .38, .55, 1)
+    obj.color = (.58, .36, .22, 1) if name == 'Eve Body' or name == 'Eve Skin Suit - Footwear Lining' else (.12, .38, .55, 1)
     for polygon in mesh.polygons:
         polygon.use_smooth = True
     weights = totals[point_offset:point_offset+count]
@@ -150,6 +150,7 @@ for label, direction in [('front', (0, -1, 0)), ('back', (0, 1, 0)), ('side', (1
     hidden_materials=a.hide_material, body_mask=str(a.body_mask) if a.body_mask else None,
     hidden_parts=a.hide_part, upper_body=a.upper_body,
     hip_detail=a.hip_detail,
+    foot_detail=a.foot_detail,
     hidden_face_count=len(hidden_faces), morphs=morphs,
     pose_motion=str(a.pose_motion) if a.pose_motion else None,
     cloth_render=str(a.cloth_render) if a.cloth_render else None,

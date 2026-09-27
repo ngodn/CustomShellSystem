@@ -39,6 +39,8 @@ for f in bp['faces']:
 cage_points=[Vector(p) for p in data['points'][:36787]]
 cage=BVHTree.FromPolygons(cage_points,cage_faces,all_triangles=True)
 unmatched=[]
+ref=json.loads((w/'skin-ankle-aligned.json').read_text())
+skin_tree=BVHTree.FromPolygons([Vector(p) for p in ref['points_cm']],ref['triangles'],all_triangles=True)
 covered={20,21}
 body_faces=audit['parts'][0]['faces']
 selected=[f for f in data['faces'][:body_faces] if f[3] in covered]
@@ -58,6 +60,10 @@ for old in used:
         targets[old]=sum((targets[i]*weight for i,weight in zip((a,b,c),weights)),Vector())
         unmatched.append([old,distance])
     hit=point+targets[old]
+    surface,_,_,distance=skin_tree.find_nearest(hit)
+    assert distance<6,(old,distance)
+    # Keep a small amount of the heel volume rather than flattening it entirely.
+    hit=hit.lerp(surface,.95)
     t=0 if old in boundary else max(0,min(1,(22-point.z)/5))
     t=t*t*(3-2*t)
     target=point.lerp(hit,t)
@@ -91,11 +97,11 @@ for f in result['faces'][len(data['faces']):]:
     for i in indices:normals[i]+=n
 for old,new in wedges.items():
     n=normals[result['wedges'][new][0]]
-    result['normals'][new]=list(n.normalized()) if n.length>1e-9 else data['normals'][old]
+    result['normals'][new]=list(n.normalized()) if n.length>1e-9 and data['wedges'][old][0] not in boundary else data['normals'][old]
 assert result['points'][:len(data['points'])]==data['points']
 assert result['faces'][:len(data['faces'])]==data['faces']
 result['mesh_package']='/Game/CSS/EveTest/SK_SkinLining'
-out=w/'skin-lining2';out.mkdir(exist_ok=False)
+out=w/'skin-lining3';out.mkdir(exist_ok=False)
 path=out/'skin.mesh.json';path.write_text(json.dumps(result,separators=(',',':'))+'\n')
 audit['output_sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
 audit['parts'].append(dict(name='Eve Skin Suit - Footwear Lining',points=len(used),faces=len(selected),material_slots=list(material_map.values())))
