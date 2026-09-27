@@ -9,6 +9,7 @@ static int32 EvaluateEmbeddedEveCloth(const FString& Params)
 {
     auto Fail=[](const TCHAR* Why) { UE_LOG(LogCSSEveCloth,Error,TEXT("Embedded motion: %s"),Why); return 1; };
     FString Report,Clip=TEXT("Sprint");
+    const bool Secondary=FParse::Param(*Params,TEXT("Secondary"));
     FParse::Value(*Params,TEXT("Clip="),Clip);
     if (!FParse::Value(*Params,TEXT("Report="),Report) || IFileManager::Get().FileExists(*Report) ||
         (Clip!=TEXT("Walk") && Clip!=TEXT("Jog") && Clip!=TEXT("Sprint"))) return Fail(TEXT("Require unused report and supported clip"));
@@ -24,13 +25,14 @@ static int32 EvaluateEmbeddedEveCloth(const FString& Params)
     auto* Component=NewObject<USkeletalMeshComponent>();
     Component->SetSkeletalMesh(Mesh);
     Component->SetAnimationMode(EAnimationMode::AnimationSingleNode);
-    Component->SetDisablePostProcessBlueprint(true);
+    Component->SetDisablePostProcessBlueprint(!Secondary);
     Component->VisibilityBasedAnimTickOption=EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
     Component->bWaitForParallelClothTask=false;
     Scene.AddComponent(Component,FTransform::Identity);
     Component->InitAnim(true);
     Component->SetAnimation(Animation);
     Component->Stop();
+    if (Secondary && !Component->GetPostProcessInstance()) return Fail(TEXT("Secondary graph did not initialize"));
     if (!Component->GetClothingSimulation()) return Fail(TEXT("Component has no cloth simulation"));
     auto Vec=[](const FVector& V) {
         auto O=MakeShared<FJsonObject>();
@@ -79,7 +81,8 @@ static int32 EvaluateEmbeddedEveCloth(const FString& Params)
     }
     auto Root=MakeShared<FJsonObject>(); Root->SetArrayField(TEXT("frames"),Frames);
     Root->SetStringField(TEXT("asset"),Mesh->GetPathName()); Root->SetStringField(TEXT("source_motion"),Report);
-    Root->SetStringField(TEXT("scope"),TEXT("Private skeletal component cloth tick, single-node clip; postprocess disabled; no game acceptance"));
+    Root->SetBoolField(TEXT("secondary_enabled"),Secondary);
+    Root->SetStringField(TEXT("scope"),TEXT("Private skeletal component cloth tick, single-node clip; see secondary_enabled; no game acceptance"));
     FString Text;
     if (!FJsonSerializer::Serialize(Root,TJsonWriterFactory<>::Create(&Text)) || !FFileHelper::SaveStringToFile(Text,*Report)) return Fail(TEXT("Could not save report"));
     return 0;

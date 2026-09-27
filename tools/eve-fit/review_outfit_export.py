@@ -17,6 +17,7 @@ p.add_argument('--body-mask', type=Path)
 p.add_argument('--morph', action='append', default=[], help='Name=weight, applied to exported deltas')
 p.add_argument('--pose-motion', type=Path, help='Recorded upstream animation snapshots, without cloth simulation')
 p.add_argument('--pose-frame', type=int, default=0)
+p.add_argument('--cloth-render', type=Path, help='Verified native mapping replay replacing its named material sections')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
 a.output.mkdir(exist_ok=False)
 raw = a.mesh.read_bytes()
@@ -33,8 +34,9 @@ for setting in a.morph:
         source['points'][index] = [v+weight*d for v, d in zip(source['points'][index], (x, y, z))]
 if a.pose_motion:
     motion = json.loads(a.pose_motion.read_text())
-    snapshot = motion['frames'][a.pose_frame]['upstream']
-    assert snapshot['bIsValid']
+    row = motion['frames'][a.pose_frame]
+    snapshot = row['upstream'] if 'upstream' in row else row['pose']['Snapshot']
+    assert snapshot.get('bIsValid', True)
     recorded = dict(zip(snapshot['BoneNames'], snapshot['LocalTransforms'], strict=True))
     bind, pose = [], []
     for bone in source['bones']:
@@ -56,6 +58,14 @@ if a.pose_motion:
     source['points'] = transformed.tolist()
 assert set(a.hide_material) <= set(source['materials'])
 hidden_slots = {source['materials'].index(name) for name in a.hide_material}
+cloth = None
+if a.cloth_render:
+    assert a.pose_motion and not morphs, 'Cloth replay requires its recorded pose and no extra morphs'
+    cloth = json.loads(a.cloth_render.read_text())
+    assert cloth['frame'] == a.pose_frame
+    assert cloth['simulation_sha256'] == hashlib.sha256(a.pose_motion.read_bytes()).hexdigest()
+    for section in cloth['sections']:
+        hidden_slots.add(source['materials'].index(section['material']))
 hidden_faces = set(json.loads(a.body_mask.read_text())['hidden_body_faces']) if a.body_mask else set()
 audit = json.loads(a.audit.read_text())
 assert hashlib.sha256(raw).hexdigest() == audit['output_sha256']
@@ -92,6 +102,16 @@ for part in audit['parts']:
     point_offset += count
     face_offset += face_count
 assert point_offset == len(source['points']) and face_offset == len(source['faces'])
+if cloth:
+    for section in cloth['sections']:
+        mesh = bpy.data.meshes.new(section['material'])
+        faces = np.asarray(section['indices']).reshape(-1,3).tolist()
+        mesh.from_pydata([(x/100,-y/100,z/100) for x,y,z in section['positions_cm']], [], faces)
+        obj = bpy.data.objects.new(section['material'],mesh)
+        bpy.context.collection.objects.link(obj)
+        obj.color = (.65,.45,.12,1)
+        for polygon in mesh.polygons:
+            polygon.use_smooth = True
 s = bpy.context.scene
 s.render.engine = 'BLENDER_WORKBENCH'
 s.render.resolution_x, s.render.resolution_y, s.render.resolution_percentage = 720, 960, 100
@@ -114,4 +134,5 @@ for label, direction in [('front', (0, -1, 0)), ('back', (0, 1, 0)), ('side', (1
     hidden_materials=a.hide_material, body_mask=str(a.body_mask) if a.body_mask else None,
     hidden_face_count=len(hidden_faces), morphs=morphs,
     pose_motion=str(a.pose_motion) if a.pose_motion else None,
+    cloth_render=str(a.cloth_render) if a.cloth_render else None,
     pose_frame=a.pose_frame if a.pose_motion else None, parts=parts), indent=2)+'\n')

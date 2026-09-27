@@ -1,10 +1,12 @@
-static TSharedPtr<FJsonObject> ExportPanelRenderMapping(const UChaosClothAsset* Asset)
+template<typename TAsset>
+static TSharedPtr<FJsonObject> ExportPanelRenderMapping(const TAsset* Asset, bool ClothOnly=false)
 {
     const auto& Model=Asset->GetImportedModel()->LODModels[0];
     auto Result=MakeShared<FJsonObject>();
     TArray<TSharedPtr<FJsonValue>> Sections;
     for (const auto& Section:Model.Sections)
     {
+        if (ClothOnly && Section.CorrespondClothAssetIndex==INDEX_NONE) continue;
         auto Row=MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("material"),Asset->GetMaterials()[Section.MaterialIndex].MaterialSlotName.ToString());
         TArray<TSharedPtr<FJsonValue>> Positions,Weights,Faces,Mappings;

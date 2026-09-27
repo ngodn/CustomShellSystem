@@ -26,6 +26,7 @@
 DEFINE_LOG_CATEGORY_STATIC(LogCSSEveCloth, Log, All);
 
 #include "CSSEveEmbeddedMotion.inl"
+#include "CSSEvePanelMapping.inl"
 
 UCSSEveClothCommandlet::UCSSEveClothCommandlet()
 {
@@ -52,6 +53,9 @@ int32 UCSSEveClothCommandlet::Main(const FString& Params)
         if (!Mesh || !Mesh->GetImportedModel() || Mesh->GetImportedModel()->LODModels.Num()!=1)
             return Fail(TEXT("Cannot inspect mesh"));
         auto Root = MakeShared<FJsonObject>();
+        Root->SetStringField(TEXT("asset"),Mesh->GetPathName());
+        if (FParse::Param(*Params,TEXT("Geometry")))
+            Root->SetObjectField(TEXT("render_geometry"),ExportPanelRenderMapping(Mesh,true));
         Root->SetStringField(TEXT("skeleton"),GetPathNameSafe(Mesh->GetSkeleton()));
         Root->SetStringField(TEXT("mesh_physics"),GetPathNameSafe(Mesh->GetPhysicsAsset()));
         Root->SetStringField(TEXT("post_process"),GetPathNameSafe(Mesh->GetPostProcessAnimBlueprint()));
