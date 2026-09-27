@@ -1,5 +1,9 @@
 # Eve cloth collision authoring
 
+## Cloth-section morph readback
+
+`CSSEveCloth -Inspect -Geometry -Morphs -Mesh=/Game/CSS/EveTest/SK_PFit14 -Report=<unused workspace JSON>` includes `cloth_section_morphs`: saved LOD0 position deltas indexed locally within each cloth section. Compare those indices with `render_geometry` mapping weights to establish whether the corrected attachment vertices remain skinned. Each section also reports `base_vertex`. This path reads assets without saving them. A successful dump is not proof of runtime morph playback.
+
 ## Private regional meshes
 
 `prepare_skin_regions.py` creates closed, source-weighted collision copies. Use the verified `work/eve26/skin-regions2` input, not the first export containing disconnected remnants. Serialize them with system Python 3.14.7:

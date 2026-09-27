@@ -3,6 +3,7 @@
 #include "AssetCompilingManager.h"
 #include "Animation/AnimBlueprint.h"
 #include "Animation/AnimInstance.h"
+#include "Animation/MorphTarget.h"
 #include "ClothingAsset.h"
 #include "ClothingAssetFactory.h"
 #include "ClothLODData.h"
@@ -61,6 +62,7 @@ int32 UCSSEveClothCommandlet::Main(const FString& Params)
         Root->SetStringField(TEXT("post_process"),GetPathNameSafe(Mesh->GetPostProcessAnimBlueprint()));
         Root->SetNumberField(TEXT("cloth_assets"),Mesh->GetMeshClothingAssets().Num());
         TArray<TSharedPtr<FJsonValue>> Rows;
+        TArray<TSharedPtr<FJsonValue>> MorphRows;
         for (const auto& Section : Mesh->GetImportedModel()->LODModels[0].Sections)
         {
             if (Section.CorrespondClothAssetIndex == INDEX_NONE) continue;
@@ -69,8 +71,35 @@ int32 UCSSEveClothCommandlet::Main(const FString& Params)
             Row->SetNumberField(TEXT("asset_index"),Section.CorrespondClothAssetIndex);
             Row->SetStringField(TEXT("guid"),Section.ClothingData.AssetGuid.ToString());
             Row->SetNumberField(TEXT("vertices"),Section.SoftVertices.Num());
+            Row->SetNumberField(TEXT("base_vertex"),Section.BaseVertexIndex);
             Row->SetNumberField(TEXT("mapping_count"),Section.ClothMappingDataLODs.IsEmpty()?0:Section.ClothMappingDataLODs[0].Num());
             Rows.Add(MakeShared<FJsonValueObject>(Row));
+            if (FParse::Param(*Params,TEXT("Morphs")))
+            {
+                for (const UMorphTarget* Morph : Mesh->GetMorphTargets())
+                {
+                    int32 Count=0;
+                    const FMorphTargetDelta* Deltas=Morph->GetMorphTargetDelta(0,Count);
+                    TArray<TSharedPtr<FJsonValue>> Entries;
+                    for (int32 I=0; I<Count; ++I)
+                    {
+                        const auto& Delta=Deltas[I];
+                        const int64 Local=int64(Delta.SourceIdx)-Section.BaseVertexIndex;
+                        if (Local<0 || Local>=Section.SoftVertices.Num()) continue;
+                        TArray<TSharedPtr<FJsonValue>> Values;
+                        Values.Add(MakeShared<FJsonValueNumber>(Local));
+                        for (int32 Axis=0; Axis<3; ++Axis)
+                            Values.Add(MakeShared<FJsonValueNumber>(Delta.PositionDelta[Axis]));
+                        Entries.Add(MakeShared<FJsonValueArray>(Values));
+                    }
+                    if (Entries.IsEmpty()) continue;
+                    auto Entry=MakeShared<FJsonObject>();
+                    Entry->SetStringField(TEXT("morph"),Morph->GetName());
+                    Entry->SetStringField(TEXT("slot"),Mesh->GetMaterials()[Section.MaterialIndex].MaterialSlotName.ToString());
+                    Entry->SetArrayField(TEXT("deltas"),Entries);
+                    MorphRows.Add(MakeShared<FJsonValueObject>(Entry));
+                }
+            }
         }
         TArray<TSharedPtr<FJsonValue>> Assets;
         for (const auto& Base:Mesh->GetMeshClothingAssets())
@@ -94,6 +123,7 @@ int32 UCSSEveClothCommandlet::Main(const FString& Params)
         }
         Root->SetArrayField(TEXT("assets"),Assets);
         Root->SetArrayField(TEXT("sections"),Rows);
+        if (FParse::Param(*Params,TEXT("Morphs"))) Root->SetArrayField(TEXT("cloth_section_morphs"),MorphRows);
         if (!FJsonSerializer::Serialize(Root,TJsonWriterFactory<>::Create(&Text)) || !FFileHelper::SaveStringToFile(Text,*Report))
             return Fail(TEXT("Cannot save inspection"));
         return 0;

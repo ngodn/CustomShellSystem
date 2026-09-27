@@ -1,16 +1,18 @@
-"""Restore production references on the isolated F13 mesh after skeleton binding."""
-import hashlib,json
+"""Restore production references on a private fitted mesh after skeleton binding."""
+import hashlib,json,re
 from pathlib import Path
 import unreal
 
 w=Path('/home/eins0fx/development/mods/msII/CustomShellSystem/work/eve26')
-report=w/'planet-f13-prepared.json'
+match=re.search(r'(?:^|\s)-FitRevision=(13|14)(?:\s|$)',unreal.SystemLibrary.get_command_line())
+revision=match.group(1) if match else '13'
+report=w/f'planet-f{revision}-prepared.json'
 assert not report.exists()
 protected=json.loads((w/'planet-protected-before.json').read_text())
 def check_protected():
     assert all(hashlib.sha256(Path(p).read_bytes()).hexdigest()==sha for p,sha in protected.items())
 check_protected()
-mesh=unreal.load_asset('/Game/CSS/EveTest/SK_PFit13')
+mesh=unreal.load_asset(f'/Game/CSS/EveTest/SK_PFit{revision}')
 source=unreal.load_asset('/Game/CSS/SeduXtress/SK_Eve_PlanetDiving')
 skeleton=unreal.load_asset('/Game/CSS/Shared/SKEL_Base')
 assert mesh and source and skeleton and mesh.get_editor_property('skeleton')==skeleton
@@ -42,5 +44,5 @@ assert unreal.CSSRetargetLibrary.inspect_mesh_bind_pose(mesh)==bind
 assert unreal.EditorAssetLibrary.save_loaded_asset(mesh,False)
 check_protected()
 report.write_text(json.dumps(dict(mesh=mesh.get_path_name(),references=refs,materials=mapping,skeleton_counts=counts,mesh_bind_unchanged=True,
-    protected_unchanged=True,scope='F13 reference assignment saved; fresh reload and cloth binding still required.'),indent=2)+'\n')
-unreal.log('PLANET_F13_PREPARED')
+    protected_unchanged=True,scope=f'F{revision} reference assignment saved; fresh reload and cloth binding still required.'),indent=2)+'\n')
+unreal.log(f'PLANET_F{revision}_PREPARED')
