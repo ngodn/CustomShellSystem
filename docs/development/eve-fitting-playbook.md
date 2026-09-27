@@ -152,3 +152,10 @@ Skin Suit's original garment contains a separate `MI_EVE_Costume_Temp_Inner_Skin
 ### Match geometry checks to importer precision
 
 Skin lining4 passed a permissive area check but failed the native importer. Validate triangle cross products in float32 with the exact native squared threshold (currently `1e-12` in CSSImportMeshCommandlet). Keep seam vertices fixed during local repairs and recheck original geometry, weights and morph deltas. Do not loosen the importer to admit collapsed projected triangles. Lining6 repaired four vertices by less than 0.05 mm and passed the matching check; game motion remains separate acceptance.
+
+
+### Diagnose a visible triangle patch before more global fitting
+
+Skin Suit sleeve triangle63272 still showed skin after its centroid was moved outside the body. The reviewer's optional `--probe side 225 490` identified the exact body/garment faces and measured a0.515 mm ray overlap. Vertex and centroid checks alone missed the rest of the triangle surface. A quarter-step barycentric grid improved coverage, but independently requiring every corner to fix the entire surface sample overconstrained the patch. F14/F15 did not remove the visible spot and were not promoted.
+
+For the13-vertex neighborhood, the coupled solver uses barycentric surface constraints across all selected vertices and retains each vertex's0.4 cm bound. Against rest and sprint8,24,32,48, each at default and combined-max shapes, F16 changed five vertices with no unresolved local constraints. The inspected max-sprint24 spot disappears; the same ray hits garment0.814 mm before skin. This is local sampled evidence, not whole-outfit collision acceptance. Preserve the original body and inspect neighboring poses before importing.

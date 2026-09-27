@@ -7,8 +7,10 @@ from pathlib import Path
 import bpy
 import numpy as np
 from mathutils import Vector, Matrix, Quaternion
+from mathutils.bvhtree import BVHTree
 
 p = argparse.ArgumentParser(description=__doc__)
+p.add_argument('--probe',nargs=3,metavar=('VIEW','X','Y'),help='Trace an orthographic review pixel through each visible object')
 p.add_argument('--mesh', type=Path, required=True)
 p.add_argument('--audit', type=Path, required=True)
 p.add_argument('--output', type=Path, required=True)
@@ -24,6 +26,9 @@ p.add_argument('--pose-motion', type=Path, help='Recorded upstream animation sna
 p.add_argument('--pose-frame', type=int, default=0)
 p.add_argument('--cloth-render', type=Path, help='Verified native mapping replay replacing its named material sections')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
+if a.probe:
+    assert a.probe[0] in ('front','back','side','quarter')
+    assert 0<=float(a.probe[1])<720 and 0<=float(a.probe[2])<960
 assert not a.exported_normals or not (a.pose_motion or a.morph or a.cloth_render), 'Saved normals are base-pose only'
 a.output.mkdir(exist_ok=False)
 raw = a.mesh.read_bytes()
@@ -83,6 +88,8 @@ for vertex, bone, weight in source['influences']:
     totals[vertex] += weight
 point_offset = face_offset = 0
 parts = []
+face_records = {}
+probe_hits = []
 for part in audit['parts']:
     name, count, face_count = part['name'], part['points'], part['faces']
     points = source['points'][point_offset:point_offset+count]
@@ -91,6 +98,7 @@ for part in audit['parts']:
     assert all(0 <= i < count for f in faces for i in f)
     visible_faces = [face for index, (face, record) in enumerate(zip(faces, source['faces'][face_offset:face_offset+face_count]), face_offset)
                      if record[3] not in hidden_slots and index not in hidden_faces]
+    face_records[name] = [index for index,record in enumerate(source['faces'][face_offset:face_offset+face_count],face_offset) if record[3] not in hidden_slots and index not in hidden_faces]
     mesh = bpy.data.meshes.new(name)
     # The Y reflection converts Unreal clockwise faces to outward Blender winding.
     mesh.from_pydata([(x/100, -y/100, z/100) for x, y, z in points], [], visible_faces)
@@ -148,6 +156,21 @@ if a.foot_detail:
 for label, direction in [('front', (0, -1, 0)), ('back', (0, 1, 0)), ('side', (1, 0, 0)), ('quarter', (1, -1, 0))]:
     cam.location = target + Vector(direction)*3
     cam.rotation_euler = (target-cam.location).to_track_quat('-Z', 'Y').to_euler()
+    if a.probe and a.probe[0]==label:
+        px,py=map(float,a.probe[1:]);height=cam.data.ortho_scale
+        width=height*s.render.resolution_x/s.render.resolution_y
+        rotation=cam.rotation_euler.to_matrix()
+        origin=cam.location+rotation@Vector(((px+.5)/s.render.resolution_x*width-width/2,height/2-(py+.5)/s.render.resolution_y*height,0))
+        direction=rotation@Vector((0,0,-1))
+        for obj in s.objects:
+            if obj.type!='MESH' or obj.hide_render:continue
+            tree=BVHTree.FromPolygons([v.co for v in obj.data.vertices],[list(poly.vertices) for poly in obj.data.polygons])
+            hit,normal,index,distance=tree.ray_cast(origin,direction)
+            if hit is None:continue
+            original_face=face_records.get(obj.name,[])[index] if obj.name in face_records else None
+            vertices=[source['wedges'][k][0] for k in source['faces'][original_face][:3]] if original_face is not None else None
+            probe_hits.append(dict(object=obj.name,distance_m=distance,point_m=list(hit),face=original_face,vertices=vertices))
+        probe_hits.sort(key=lambda hit:hit['distance_m'])
     s.render.filepath = str(a.output/(label+'.png'))
     bpy.ops.render.render(write_still=True)
 (a.output/'review.json').write_text(json.dumps(dict(
@@ -155,6 +178,7 @@ for label, direction in [('front', (0, -1, 0)), ('back', (0, 1, 0)), ('side', (1
     source=str(a.mesh), source_sha256=hashlib.sha256(raw).hexdigest(),
     hidden_materials=a.hide_material, body_mask=str(a.body_mask) if a.body_mask else None,
     hidden_parts=a.hide_part, upper_body=a.upper_body,
+    probe=a.probe,probe_hits=probe_hits,
     hip_detail=a.hip_detail,
     foot_detail=a.foot_detail,
     exported_normals=a.exported_normals,

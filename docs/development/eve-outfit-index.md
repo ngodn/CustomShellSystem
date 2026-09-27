@@ -6,6 +6,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Skin current source candidate is `skin-suit-f16.blend` with `skin-f16-export/`. A five-vertex coupled surface correction removes the measured sprint24 sleeve spot; standing combined-max side review and source reload pass. Private Unreal remains F12. F14/F15 sleeve trials are rejected. Read the current goal checkpoint for remaining shoulder-edge and game checks.
+
 - Current Prototype trial is F14 (`p14trial/CSS_EveFit14_P`), with independent tail controls and verified cooked payload readback. It still needs game validation. Older "private UE remains F7" statements below are historical.
 - Current Skin private import is `/Game/CSS/EveTest/SK_SFit12`, assembled from F11 garment and lining6. Fresh-load references and section state pass (`skin-f12-sections.json`); shared assets are unchanged. Sprint frame24 default front/back and combined-max front/back/side were reviewed. Max side exposes small knee/thigh/upper-arm breakthrough, so this is not fitting acceptance. A joint correction must retain earlier pose constraints and preserve original body geometry.
 
