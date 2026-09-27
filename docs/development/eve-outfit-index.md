@@ -6,6 +6,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Knitwear W2 is a saved private weight-continuity candidate (`knit-w2.blend`, `knit-w2/`). It reduces the diagnosed cross-thigh edge separation in recorded-pose skinning; limited front/back renders inspected. No new native cloth simulation or game acceptance. Read the latest goal checkpoint before regenerating proxy weights or adopting it.
+
 - Latest customization checkpoint: [shared customization](eve-shared-customization.md). Prototype F14, Skin F16 and Bikini F1 have Original plus five garment palettes and restored body/hair swatches installed (`p14custom`, `s16custom`, `b1custom`). Prototype fitting, tail and body motion are user-accepted. New colors need live review; older pending-motion/no-palettes entries below are historical.
 
 - Prototype F14 fitting and tail are user-accepted. Body motion is the next delivery: the trial packager dropped all rig controls. Metadata-only repair `p14motion/CSS_EveFit14_P` is installed with verified hashes and backup `backups/packages-0010`; live motion review remains pending. See the goal checkpoint; do not repeat fitting or tail refinement.
