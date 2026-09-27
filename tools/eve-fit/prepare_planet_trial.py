@@ -1,4 +1,5 @@
-"""Build an isolated F13 fitting package from verified containers. Python 3.14."""
+"""Build an isolated Prototype fitting package from verified containers. Python 3.14."""
+import argparse
 import copy
 import json
 from pathlib import Path
@@ -12,8 +13,11 @@ from css_package import verify
 
 
 def main():
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--revision', type=int, choices=(13,14), default=13)
+    revision=parser.parse_args().revision
     work = ROOT / 'work/eve26'
-    packed = work / 'p13pack2'
+    packed = work / ('p13pack2' if revision==13 else 'p14pack')
     proof = json.loads((packed / 'verification.json').read_text())
     for name, expected in proof['containers'].items():
         assert digest(packed / name) == expected
@@ -32,21 +36,21 @@ def main():
     available = {e['name'] for e in proof['assets'][0]['exports']['exports'] if e['class'] == 'MorphTarget'}
     assert all(c['morph'] in available for c in controls if c['kind'] == 'shape')
     variant.update(id='prototype', name='Prototype Planet Diving Suit',
-                   mesh='/Game/CSS/EveTest/SK_PFit13.SK_PFit13',
+                   mesh=f'/Game/CSS/EveTest/SK_PFit{revision}.SK_PFit{revision}',
                    customize=dict(schema=1, controls=controls, surfaces=[], palettes=[]))
-    description = 'Private F13 fitting trial. Requires the installed Eve package. Colors and final release validation remain unfinished.'
+    description = f'Private F{revision} fitting trial. Requires the installed Eve package. Colors and final release validation remain unfinished.'
     for entry in (manifest, outfit):
-        entry.update(id='eins0fx.evefit13', name='Eve Prototype Fitting Trial',
-                     version='0.0.13', description=description)
+        entry.update(id=f'eins0fx.evefit{revision}', name='Eve Prototype Fitting Trial',
+                     version=f'0.0.{revision}', description=description)
     outfit['variants'] = [variant]
     outfit.pop('templates', None)
     manifest['resources'] = {}
-    output = work / 'p13trial'
+    output = work / f'p{revision}trial'
     output.mkdir(exist_ok=False)
     metadata = output / 'metadata' / PACKAGE_ROOT / manifest['id']
     metadata.mkdir(parents=True)
     shutil.copy2(source / 'thumbnail.png', metadata / 'thumbnail.png')
-    stem = 'CSS_EveFit13_P'
+    stem = f'CSS_EveFit{revision}_P'
     trio = output / stem
     trio.mkdir()
     for suffix in ('.utoc', '.ucas'):

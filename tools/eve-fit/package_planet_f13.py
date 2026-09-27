@@ -1,4 +1,4 @@
-"""Stage and round-trip the private F13 fitting assets. Python 3.14.
+"""Stage and round-trip private Prototype fitting assets. Python 3.14.
 
 This does not install a mod, create CSS metadata, or replace release archives.
 """
@@ -23,22 +23,24 @@ def sha(path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--verify-existing', action='store_true')
+    parser.add_argument('--revision', type=int, choices=(13,14), default=13)
     args = parser.parse_args()
     work = ROOT / 'work/eve26'
-    output = work / 'p13pack2'
+    revision=args.revision
+    output = work / ('p13pack2' if revision==13 else 'p14pack')
     if args.verify_existing:
-        verify(output, work / 'p13cook/CSSAuthoring/Content/CSS/EveTest')
+        verify(output, work / f'p{revision}cook/CSSAuthoring/Content/CSS/EveTest',revision)
         return
     output.mkdir(exist_ok=False)
     stage = output / 'stage/MortalShell2/Content/CSS/EveTest'
     stage.mkdir(parents=True)
-    source = work / 'p13cook/CSSAuthoring/Content/CSS/EveTest'
-    assets = ('SK_PFit13', 'PA_PTailRear')
+    source = work / f'p{revision}cook/CSSAuthoring/Content/CSS/EveTest'
+    assets = (f'SK_PFit{revision}', 'PA_PTailRear')
     for name in assets:
         for suffix in ('.uasset', '.uexp'):
             shutil.copy2(source / (name + suffix), stage / (name + suffix))
     converter = Converter(ROOT / 'build/retoc-css-target/release/retoc', DEFAULT_REPAK, output)
-    container = output / 'CSS_EveFit13_P.utoc'
+    container = output / f'CSS_EveFit{revision}_P.utoc'
     converter.run(converter.retoc, 'to-zen', output / 'stage', container,
                   '--version', 'UE5_6', '--no-parallel')
     converter.run(converter.retoc, 'verify', container)
@@ -54,16 +56,16 @@ def main():
         (output / 'containers' / container.with_suffix(suffix).name).symlink_to(container.with_suffix(suffix))
     converter.run(converter.retoc, 'to-legacy', output / 'containers', output / 'readback',
                   '--version', 'UE5_6', '--no-parallel', '--no-shaders', '-f', '/CSS/EveTest/')
-    verify(output, source)
+    verify(output, source,revision)
 
 
-def verify(output, source):
-    container = output / 'CSS_EveFit13_P.utoc'
+def verify(output, source,revision):
+    container = output / f'CSS_EveFit{revision}_P.utoc'
     dependencies = json.loads((output / 'dependencies.json').read_text())
     for name, expected in dependencies.items():
         assert sha(output / 'containers' / name) == expected, 'Installed dependency changed'
     rows = []
-    for name in ('SK_PFit13', 'PA_PTailRear'):
+    for name in (f'SK_PFit{revision}', 'PA_PTailRear'):
         readback = output / 'readback/MortalShell2/Content/CSS/EveTest' / name
         cooked = source / name
         before = asset_info(cooked.with_suffix('.uasset').read_bytes())
