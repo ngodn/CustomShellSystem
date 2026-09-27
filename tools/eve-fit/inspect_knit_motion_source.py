@@ -44,6 +44,11 @@ for obj in selected:
             row['points_world'] = [list(obj.matrix_world @ v.co) for v in obj.data.vertices]
             row['weights'] = [[v.index, obj.vertex_groups[g.group].name, g.weight]
                 for v in obj.data.vertices for g in v.groups if g.weight > 0]
+        if args.outfit == 'aegis' and obj.name == 'Eve War Aegis':
+            row['points_world'] = [list(obj.matrix_world @ v.co) for v in obj.data.vertices]
+            row['polygons'] = [list(p.vertices) for p in obj.data.polygons]
+            row['weights'] = [[v.index, obj.vertex_groups[g.group].name, g.weight]
+                for v in obj.data.vertices for g in v.groups if g.weight > 0]
         maps = {g.index:g.name for g in obj.vertex_groups if g.name.startswith('dForce')}
         row['cloth_groups'] = {name:[] for name in maps.values()}
         for vertex in obj.data.vertices:

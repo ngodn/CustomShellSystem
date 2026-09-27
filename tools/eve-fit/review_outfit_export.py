@@ -20,6 +20,7 @@ p.add_argument('--hide-part', action='append', default=[])
 p.add_argument('--upper-body', action='store_true')
 p.add_argument('--hip-detail', action='store_true')
 p.add_argument('--foot-detail', action='store_true')
+p.add_argument('--frame-bone', help='Frame vertices influenced by a bone and its descendants')
 p.add_argument('--frame-part', help='Center and size the review around a named part in its evaluated pose')
 p.add_argument('--body-mask', type=Path)
 p.add_argument('--exported-normals', action='store_true', help='Inspect saved corner normals in the unposed base mesh')
@@ -172,6 +173,20 @@ if a.frame_part:
     low, high = positions.min(axis=0), positions.max(axis=0)
     target = Vector((low+high)/2)
     cam.data.ortho_scale = max(float(high[2]-low[2]), float(max(high[:2]-low[:2]))*960/720, .25)*1.35
+if a.frame_bone:
+    assert not a.frame_part
+    root_index = next(i for i,b in enumerate(source['bones']) if b['name']==a.frame_bone)
+    selected_bones = {root_index}
+    for i,b in enumerate(source['bones']):
+        if b['parent'] in selected_bones: selected_bones.add(i)
+    totals = {}
+    for v,b,w in source['influences']:
+        if b in selected_bones: totals[v] = totals.get(v,0)+w
+    positions = np.asarray([[source['points'][i][0]/100,-source['points'][i][1]/100,source['points'][i][2]/100] for i,w in totals.items() if w>.5])
+    assert len(positions)>0
+    low,high = positions.min(axis=0),positions.max(axis=0)
+    target = Vector((low+high)/2)
+    cam.data.ortho_scale = max(float(high[2]-low[2]),float(max(high[:2]-low[:2]))*960/720,.1)*1.4
 for label, direction in [('front', (0, -1, 0)), ('back', (0, 1, 0)), ('side', (1, 0, 0)), ('quarter', (1, -1, 0))]:
     cam.location = target + Vector(direction)*3
     cam.rotation_euler = (target-cam.location).to_track_quat('-Z', 'Y').to_euler()
@@ -200,7 +215,7 @@ for label, direction in [('front', (0, -1, 0)), ('back', (0, 1, 0)), ('side', (1
     probe=a.probe,probe_hits=probe_hits,
     hip_detail=a.hip_detail,
     foot_detail=a.foot_detail,
-    frame_part=a.frame_part,
+    frame_part=a.frame_part, frame_bone=a.frame_bone,
     exported_normals=a.exported_normals,
     hidden_face_count=len(hidden_faces), morphs=morphs,
     pose_motion=str(a.pose_motion) if a.pose_motion else None,

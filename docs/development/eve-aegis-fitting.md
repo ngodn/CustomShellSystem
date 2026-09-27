@@ -37,3 +37,12 @@ Base and all-six-sliders-at-one renders (60936,39583) complete exit 0. Inspected
 The Alice clearance solver now supports the `aegis` stem. Fit3 selects 3,325 chest points, checks bind plus sprint frames 24/34/48 at default and maximum sliders, changes 1,288 points and leaves 95 conflicting constraints unresolved. This is not zero-intersection proof. Aegis and the recorded Alice motion have exactly identical body points and reference bones, verified before pose reuse.
 
 Base and frame-34 front/back renders completed exit 0. Inspected views show nipple contours covered, broad torso/sleeve clipping removed, and rear hanging strips preserved. Some glove/finger skin still protrudes during sprint, requiring follow-up. The hanging rear strips currently use skin weights only and need their authored 44-point cloth source adapted. Fit3 remains an offline candidate, not installed. Save the corrected garment source and refresh normals before production; confirm supported slider extremes and glove correction before import.
+
+
+## Glove correctives and cloth source recovered
+
+`repair_aegis_hand_shapes.py` confirms all 16 existing body left-hand corrective targets had zero garment deltas. `aegis-hand1` adds body-corresponding glove deltas (70 to 298 points per target), preserving base geometry, body deltas, skeleton and all six customization shapes. Process 42892 exits 0. This is necessary support, not proof that the observed clipping is solved.
+
+`review_outfit_export.py --frame-bone hand_l` adds reusable bone/descendant close framing. Frame-34 diagnostic with explicitly applied pJCMIndex1Dwn_90_L=1 completes exit 0 and shows remaining glove/finger breakthrough. It is an isolated corrective test, not recorded game curve activation. Next check local hand weight correspondence after clearance and actual glove coverage; do not alter the body or shared hand rig.
+
+Original author inspection 57393 exits 0, `aegis-author2.json`, with source hash unchanged. The `Eve War Aegis` proxy has 44 points, 20 polygons and eight Pin weights, plus V0 through V10 and paired .001 groups. Points, topology and all weights are retained for adapting rear-strip physics. Inspect correspondence to rendered strips before binding.
