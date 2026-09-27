@@ -646,6 +646,7 @@ bool Combat::stop() {
     if (token_) return false;
     restore_weapon();
     for (auto& s : slots_) release(s);
+    hold_cheat_ = false; sync_hold_cheat(PlayerContext{});   // a core going away takes its granted unlocks with it
     skeleton_ = {}; pawn_ = {}; asc_ = {};
     return true;
 }
@@ -655,7 +656,8 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         player_check_ = now + 500;
         if (player.pawn != pawn_.get()) { pawn_ = {}; if (player.pawn) pawn_.capture(player.pawn); skeleton_ = {}; }
         if (player.asc != asc_.get()) { asc_ = {}; if (player.asc) asc_.capture(player.asc); }
-        // Whether this character has the hold attack upgrades: the game's own charge check needs the tags.
+        sync_hold_cheat(player);
+        // Whether this character has the hold attack unlocks: the game's own charge check needs the tags.
         if (player.pawn) {
             try {
                 for (int heavy = 0; heavy < 2; ++heavy) {
@@ -718,6 +720,45 @@ void Combat::note_skip(const char* why, UObject* ability) {
         chain += (depth ? " < " : "") + narrow(object->GetNamePrivate().ToString()) + " (" + (object->GetClassPrivate() ? narrow(object->GetClassPrivate()->GetNamePrivate().ToString()) : std::string("?")) + ")";
     log(std::string("CCS attack skipped: ") + why + ": " + narrow(ability->GetClassPrivate()->GetNamePrivate().ToString()) + "; outers: " + chain
         + "; pawn " + (pawn_.get() ? narrow(pawn_.get()->GetNamePrivate().ToString()) : std::string("none")) + ", asc " + (asc_.get() ? narrow(asc_.get()->GetNamePrivate().ToString()) : std::string("none")));
+}
+// The cheat grants the same two effects the Acolyte's and Unwieldy Stones apply, on the player's
+// ability component, and takes them off again when switched off. A new component (death, a new
+// world) gets them again; the charge still costs Resolve like the game's own.
+void Combat::sync_hold_cheat(const PlayerContext& player) {
+    static const char* paths[] = {"/Game/Sparta/Core/Player/Upgrades/Effects/GE_Unlock_Attack_Hold_Light.GE_Unlock_Attack_Hold_Light_C",
+                                  "/Game/Sparta/Core/Player/Upgrades/Effects/GE_Unlock_Attack_Hold_Heavy.GE_Unlock_Attack_Hold_Heavy_C"};
+    auto* asc = player.asc;
+    auto* holder = hold_grant_asc_.get();
+    if (!hold_cheat_ || !asc) {
+        if (!holder && !hold_grant_asc_.ptr) return;
+        if (holder) for (auto& grant : hold_grant_) {
+            if (grant.handle < 0) continue;
+            try { Call remove(holder, L"RemoveActiveGameplayEffect", 3); remove.set(L"Handle", grant); remove.set(L"StacksToRemove", int32_t{-1}); remove.run(); }
+            catch (const std::exception& e) { log(std::string("CCS charged attacks: unlock removal failed: ") + e.what()); }
+        }
+        hold_grant_asc_ = {}; hold_grant_[0] = {}; hold_grant_[1] = {};
+        if (holder) log("CCS charged attacks: the granted unlocks were taken off again");
+        return;
+    }
+    if (holder == asc) return;
+    hold_grant_asc_ = {}; hold_grant_[0] = {}; hold_grant_[1] = {};
+    try {
+        for (int i = 0; i < 2; ++i) {
+            auto* effect = load(paths[i]);
+            if (player.world && hold_effect_world_.get() != player.world) { keep_referenced(player.world, effect); if (i == 1) { hold_effect_world_ = {}; hold_effect_world_.capture(player.world); } }
+            Call context(asc, L"MakeEffectContext", 1); context.run();
+            Call apply(asc, L"BP_ApplyGameplayEffectToSelf", 4);
+            apply.set(L"GameplayEffectClass", static_cast<UObject*>(effect)); apply.set(L"Level", 1.0f);
+            apply.copy(L"EffectContext", context, L"ReturnValue");
+            apply.run();
+            hold_grant_[i] = apply.get<EffectHandle>();
+        }
+        hold_grant_asc_.capture(asc);
+        log("CCS charged attacks: light and heavy unlocks granted without Tarstones (cheat)");
+    } catch (const std::exception& e) {
+        hold_grant_[0] = {}; hold_grant_[1] = {};
+        if (!hold_cheat_warned_) { hold_cheat_warned_ = true; log(std::string("CCS charged attacks cheat unavailable: ") + e.what()); }
+    }
 }
 void Combat::note_recent(UObject* cls, int slot, const char* what) {
     static const uint64_t started = now_us();
@@ -824,7 +865,7 @@ nlohmann::json Combat::status() const {
         host = {{"available", true}, {"slots", stats.slots}, {"calls", stats.calls}, {"wrong_thread", stats.wrong_thread}, {"failures", stats.failures}};
     return {{"enabled", enabled_}, {"active", active_}, {"hooked", token_ != 0}, {"seen", seen_}, {"swapped", swapped_},
         {"skipped", skipped_}, {"failures", failures_}, {"wrong_frame", wrong_frame_}, {"maximum_callback_us", maximum_us_}, {"recent", recent_},
-        {"hold_unlocked", {{"light", hold_unlocked_[0]}, {"heavy", hold_unlocked_[1]}}},
+        {"hold_unlocked", {{"light", hold_unlocked_[0]}, {"heavy", hold_unlocked_[1]}, {"cheat", hold_cheat_}, {"granted", hold_grant_asc_.alive()}}},
         {"cached_classes", class_slots_.size()}, {"error", error_}, {"slots", std::move(slots)}, {"host", std::move(host)}};
 }
 }

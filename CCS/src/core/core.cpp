@@ -109,6 +109,7 @@ Core::Core(const CcsLoaderContext* loader) {
     if (hooks_) {
         combat_ = std::make_unique<Combat>(Combat::Deps{hooks_, &catalog_, log});
         combat_->set_enabled(settings_->enabled());
+        combat_->set_hold_cheat(settings_->charged_without_stone());
         apply_slots_from_settings();
     } else log("Loader offers no native hook host; combat disabled");
     Menu::Deps deps;
@@ -284,14 +285,14 @@ nlohmann::json Core::model() const {
         const bool ranged_slot = slot_role(i) == Role::Ranged;
         Json options = Json::array();
         options.push_back({{"id", ""}, {"label", ranged_slot ? "Sidearm's own fire" : "Weapon's own attack"}, {"group", ranged_slot ? "Player's Sidearm" : "Player's Weapon"}, {"title", ranged_slot ? "Sidearm's own fire" : "Weapon's own attack"},
-            {"description", "The slot plays whatever the equipped weapon does here. This is the game's behaviour."}});
+            {"description", "Your weapon's own attack for this slot. Nothing is swapped."}});
         for (const auto& row : candidate_options()) options.push_back(row);
         if (combat_ && !id.empty()) for (auto& option : options) if (option.value("id", std::string{}) == id) {
             const auto& err = combat_->slot_error(slot);
             const bool hold_slot = slot == SlotId::LC || slot == SlotId::HC;
             const bool locked = hold_slot && !combat_->hold_unlocked(slot == SlotId::HC);
             option["hint"] = !err.empty() ? "Not applied: " + err : !combat_->slot_ready(slot) ? std::string("Loading the animation...")
-                : locked ? std::string("Waiting for the ") + (slot == SlotId::HC ? "Unwieldy Stone (charged heavy attack)" : "Acolyte's Stone (charged light attack)") + ". Without it a long press does the normal attack."
+                : locked ? std::string("Waiting for the ") + (slot == SlotId::HC ? "Unwieldy Stone" : "Acolyte's Stone") + ". Without it a long press does the normal attack. Settings: Charged attacks, Always (cheat) removes the need."
                 : "Applied. Played " + std::to_string(combat_->slot_hits(slot)) + " time(s) this session.";
             break;
         }
@@ -309,24 +310,24 @@ nlohmann::json Core::model() const {
         // in the description the window shows while the row is focused. An empty slot only has speed.
         Json settings_rows = Json::array();
         settings_rows.push_back({{"type", "choice"}, {"id", sid + ".speed"}, {"label", "Speed"}, {"value", speed_id}, {"options", speed_options},
-            {"description", "How fast this slot plays. 1x is the game's own speed."}});
+            {"description", "How fast this slot plays. 1x is the game's speed."}});
         if (!id.empty()) {
             settings_rows.push_back({{"type", "choice"}, {"id", sid + ".feel"}, {"label", "Feel"}, {"value", tune.feel},
                 {"options", Json::array({{{"id", "game"}, {"label", "Game's"}}, {{"id", "move"}, {"label", "Move's own"}}})},
-                {"description", "How the swing behaves. Game's: your weapon's own attack for this slot with this animation fitted into it, so movement lock, combo timing, sounds and damage stay the game's. "
-                    "Move's own: the animation plays the way its owner plays it, with its own hit windows and rules."}});
+                {"description", "Game's: your weapon's attack for this slot, with this animation fitted into it. Movement lock, combo timing, sounds and hit numbers stay the game's. "
+                    "Move's own: the animation plays as its owner plays it, with its own hit windows and timing. Charged attacks still work either way."}});
         }
         if (!id.empty() && tune.feel == "move") {
             settings_rows.push_back({{"type", "choice"}, {"id", sid + ".hit_damage"}, {"label", "Damage"}, {"value", tune.hit_damage},
                 {"options", Json::array({{{"id", "move"}, {"label", "Move's own"}}, {{"id", "weapon"}, {"label", "Weapon's own"}}})},
-                {"description", "Whose hit this is. Move's own: the damage multiplier, poise damage and stagger that come with this animation. "
-                    "Weapon's own: the numbers your weapon's normal attack has in this slot, on this animation's timing. Base damage is always your weapon's."}});
+                {"description", "Move's own: the hit numbers that come with this animation (damage multiplier, poise damage, stagger). "
+                    "Weapon's own: your weapon's numbers for this slot, on this animation's timing. Base damage is always your weapon's."}});
         }
         if (!id.empty()) {
             settings_rows.push_back({{"type", "choice"}, {"id", sid + ".weapon"}, {"label", "Visual"}, {"value", tune.weapon},
                 {"options", Json::array({{{"id", "inventory"}, {"label", "My weapon"}}, {{"id", "move"}, {"label", "Move's weapon"}}})},
-                {"description", std::string("Which weapon you hold while this move plays. Move's weapon: the weapon this move belongs to appears in your hand for the swing, then yours comes back. Hits still use your weapon.")
-                    + (mesh_ready ? "" : " No model is known for this move's weapon, so your own stays.")}});
+                {"description", std::string("My weapon: you keep holding your own weapon. Move's weapon: the weapon this move belongs to appears in your hand for the swing, then yours comes back. Hits always use your weapon.")
+                    + (mesh_ready ? "" : " No model is known for this move's weapon, so yours stays either way.")}});
         }
         customize.push_back({{"type", "choice"}, {"id", sid}, {"label", slot_to_string(slot)}, {"tile", tile_labels[i]}, {"name", slot_titles[i] + 4}, {"hidden", ranged_slot && !sidearm_slot_enabled},
             {"value", id}, {"icon", id.empty() ? weapon_icon(current_weapon_) : move_icon(id)}, {"options", std::move(options)}, {"settings", settings_rows},
@@ -354,11 +355,16 @@ nlohmann::json Core::model() const {
     // ---- Settings
     Json settings = Json::array();
     settings.push_back({{"type", "toggle"}, {"id", "enabled"}, {"label", "Custom Combat System"}, {"value", settings_->enabled()},
-        {"description", "Master switch. Off restores every attack to the weapon's own animation at once; nothing of the game is changed on disk."}, {"enabled", combat_ != nullptr}});
+        {"description", "Master switch. Off puts every attack back to the weapon's own animation at once. Nothing on disk changes."}, {"enabled", combat_ != nullptr}});
+    settings.push_back({{"type", "choice"}, {"id", "charged_attacks"}, {"label", "Charged attacks"}, {"value", settings_->charged_without_stone() ? "always" : "stone"},
+        {"options", Json::array({{{"id", "stone"}, {"label", "Need a Tarstone"}}, {{"id", "always"}, {"label", "Always (cheat)"}}})},
+        {"description", "The game allows a charged light attack only with the Acolyte's Stone equipped, and a charged heavy attack only with the Unwieldy Stone. "
+            "Always (cheat) gives you both unlocks without the stones, so the LC and HC slots work on any build. The charge still costs Resolve. Switching back takes the unlocks away again."},
+        {"enabled", combat_ != nullptr}});
     settings.push_back({{"type", "slider"}, {"id", "ui_scale"}, {"label", "Menu scale"}, {"value", settings_->ui_scale()}, {"min", 0.75}, {"max", 1.5}, {"step", 0.05}, {"unit", "x"},
         {"description", "Size of this page relative to the game's menus."}});
     settings.push_back({{"type", "button"}, {"id", "reset"}, {"label", "Reset all slots"}, {"action_label", "Reset"}, {"enabled", combat_ != nullptr && combat_->assigned() > 0},
-        {"description", "Every slot back to the weapon's own attack. Presets on disk are kept."}, {"confirm", "Clear all ten slots?"}, {"disabled_label", "Nothing assigned"}});
+        {"description", "Every slot back to the weapon's own attack. Presets on disk are kept."}, {"confirm", "Clear every slot?"}, {"disabled_label", "Nothing assigned"}});
     Json lines = Json::array();
     if (combat_) {
         const auto status = combat_->status();
@@ -380,8 +386,8 @@ nlohmann::json Core::model() const {
     if (combat_ && settings_->enabled() && last_message_.empty()) {
         const bool light = !combat_->slot_move(SlotId::LC).empty() && !combat_->hold_unlocked(false);
         const bool heavy = !combat_->slot_move(SlotId::HC).empty() && !combat_->hold_unlocked(true);
-        if (light || heavy) status = std::string("Charged attacks come from Tarstones: ") + (light && heavy ? "LC needs the Acolyte's Stone and HC the Unwieldy Stone" : light ? "LC needs the Acolyte's Stone" : "HC needs the Unwieldy Stone")
-            + ". Without it a long press does the normal attack.";
+        if (light || heavy) status = std::string("Charged attacks need a Tarstone: ") + (light && heavy ? "the Acolyte's Stone for LC and the Unwieldy Stone for HC" : light ? "the Acolyte's Stone for LC" : "the Unwieldy Stone for HC")
+            + ". Or set Charged attacks to Always (cheat) in Settings.";
     }
     return {{"sections", std::move(sections)}, {"status", status}};
 }
@@ -412,6 +418,7 @@ void Core::handle_event(const nlohmann::json& event) {
         save_settings_or_log(); ++model_revision_; return;
     }
     if (id == "enabled") { settings_->set_enabled(event.at("value").get<bool>()); if (combat_) combat_->set_enabled(settings_->enabled()); save_settings_or_log(); return; }
+    if (id == "charged_attacks") { settings_->set_charged_without_stone(event.at("value").get<std::string>() == "always"); if (combat_) combat_->set_hold_cheat(settings_->charged_without_stone()); save_settings_or_log(); return; }
     if (id == "ui_scale") { settings_->set_ui_scale(event.at("value").get<double>()); save_settings_or_log(); return; }
     if (id == "reset") { if (combat_) for (unsigned i = 0; i < slot_count; ++i) combat_->set_slot(SlotId(i), ""); save_settings_or_log(); return; }
     if (id == "preset.selected") { selected_preset_ = event.at("value").get<std::string>(); apply_preset(selected_preset_); return; }   // choosing a preset applies it

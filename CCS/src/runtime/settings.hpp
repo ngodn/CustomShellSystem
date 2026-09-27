@@ -16,6 +16,9 @@ public:
 
     bool enabled() const { return enabled_; }
     void set_enabled(bool val) { enabled_ = val; }
+    // Cheat: charged attacks without the Acolyte's or Unwieldy Stone (the unlock effects are applied by the mod).
+    bool charged_without_stone() const { return charged_without_stone_; }
+    void set_charged_without_stone(bool val) { charged_without_stone_ = val; }
 
     const std::string& startup_preset() const { return startup_preset_; }
     void set_startup_preset(std::string preset) { startup_preset_ = std::move(preset); }
@@ -49,6 +52,7 @@ public:
 private:
     std::filesystem::path path_;
     bool enabled_{false};
+    bool charged_without_stone_{false};
     std::string startup_preset_{"default"};
     bool preserve_weapon_mesh_{true};
     bool show_hud_notification_{true};

@@ -41,6 +41,10 @@ public:
     // Character.Unlocked.HoldAttack tags). Without the tag the game's own charge check fails at
     // once, so the hold slots wait; read from the pawn twice a second.
     bool hold_unlocked(bool heavy) const { return hold_unlocked_[heavy ? 1 : 0]; }
+    // Cheat: apply the game's own unlock effects (GE_Unlock_Attack_Hold_Light/Heavy) to the player
+    // so charged attacks work without the Tarstones. Removed again when switched off.
+    void set_hold_cheat(bool on) { hold_cheat_ = on; }
+    bool hold_cheat() const { return hold_cheat_; }
     // Static mesh of a move source's weapon (player weapons and the enemy weapons with a static mesh), or empty.
     static std::string weapon_mesh_path(const std::string& source);
     const std::string& slot_move(SlotId slot) const { return slots_[size_t(slot)].move_id; }
@@ -125,6 +129,10 @@ private:
     std::deque<std::string> recent_;
     std::string pawn_rig_;                              // skeleton of the body worn now, refreshed with the pawn
     bool hold_unlocked_[2]{}; bool hold_check_warned_{}, hold_check_logged_{};
+    struct EffectHandle { int32_t handle{-1}; bool passed{}; uint8_t pad[3]{}; };   // FActiveGameplayEffectHandle, 8 bytes
+    bool hold_cheat_{}, hold_cheat_warned_{};
+    EffectHandle hold_grant_[2]{}; engine::ObjectHandle hold_grant_asc_, hold_effect_world_;
+    void sync_hold_cheat(const engine::PlayerContext& player);
     bool pawn_humanoid_{};
     std::string error_;
 };
