@@ -291,7 +291,7 @@ nlohmann::json Core::model() const {
             const bool hold_slot = slot == SlotId::LC || slot == SlotId::HC;
             const bool locked = hold_slot && !combat_->hold_unlocked(slot == SlotId::HC);
             option["hint"] = !err.empty() ? "Not applied: " + err : !combat_->slot_ready(slot) ? std::string("Loading the animation...")
-                : locked ? std::string("Waiting for the hold attack upgrade on this character. A long press does the normal attack until then.")
+                : locked ? std::string("Waiting for the ") + (slot == SlotId::HC ? "Unwieldy Stone (charged heavy attack)" : "Acolyte's Stone (charged light attack)") + ". Without it a long press does the normal attack."
                 : "Applied. Played " + std::to_string(combat_->slot_hits(slot)) + " time(s) this session.";
             break;
         }
@@ -380,8 +380,8 @@ nlohmann::json Core::model() const {
     if (combat_ && settings_->enabled() && last_message_.empty()) {
         const bool light = !combat_->slot_move(SlotId::LC).empty() && !combat_->hold_unlocked(false);
         const bool heavy = !combat_->slot_move(SlotId::HC).empty() && !combat_->hold_unlocked(true);
-        if (light || heavy) status = std::string("Hold attacks are locked on this character: ") + (light && heavy ? "LC and HC wait" : light ? "LC waits" : "HC waits")
-            + " for the hold attack upgrade. A long press does the normal attack until then.";
+        if (light || heavy) status = std::string("Charged attacks come from Tarstones: ") + (light && heavy ? "LC needs the Acolyte's Stone and HC the Unwieldy Stone" : light ? "LC needs the Acolyte's Stone" : "HC needs the Unwieldy Stone")
+            + ". Without it a long press does the normal attack.";
     }
     return {{"sections", std::move(sections)}, {"status", status}};
 }
