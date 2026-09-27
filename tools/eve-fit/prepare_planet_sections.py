@@ -1,4 +1,5 @@
-"""Partition Prototype visibility without deleting body or accessory geometry."""
+"""Partition outfit visibility without deleting body or accessory geometry."""
+import argparse
 import copy
 import hashlib
 import json
@@ -6,11 +7,19 @@ from collections import Counter
 from pathlib import Path
 root=Path(__file__).resolve().parents[2]
 work=root/'work/eve26'
-source=work/'planet-fit4/planet.mesh.json'
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--garment',choices=('prototype','skin'),default='prototype')
+parser.add_argument('--mask-max-z',type=float,help='Only mask faces entirely below this height in centimeters')
+parser.add_argument('--output',type=Path)
+args=parser.parse_args()
+skin=args.garment=='skin'
+stem='skin' if skin else 'planet'
+prefix='Skin' if skin else 'Planet'
+source=work/('skin-fit5/skin.mesh.json' if skin else 'planet-fit4/planet.mesh.json')
 data=json.loads(source.read_text())
-audit=json.loads((work/'planet-fit4/planet.mesh.audit.json').read_text())
+audit=json.loads(source.with_suffix('.audit.json').read_text())
 assert hashlib.sha256(source.read_bytes()).hexdigest()==audit['output_sha256']
-mask=json.loads((work/'planet-body-mask.json').read_text())
+mask=json.loads((work/f'{stem}-body-mask.json').read_text())
 assert mask['topology_equal'] and mask['mapping_error_cm']<.0005
 result=copy.deepcopy(data)
 aliases={}
@@ -21,10 +30,12 @@ def duplicate(old,name):
     aliases[str(index)]={'name':name,'source_slot':old,'source_material':data['materials'][old]}
     return index
 covered={}
-for face_index in mask['hidden_body_faces']:
+masked_faces=[i for i in mask['hidden_body_faces'] if args.mask_max_z is None or
+              all(data['points'][data['wedges'][w][0]][2]<=args.mask_max_z for w in data['faces'][i][:3])]
+for face_index in masked_faces:
     assert 0<=face_index<audit['parts'][0]['faces']
     old=data['faces'][face_index][3]
-    if old not in covered:covered[old]=duplicate(old,'PlanetCovered_'+str(old))
+    if old not in covered:covered[old]=duplicate(old,prefix+'Covered_'+str(old))
     result['faces'][face_index][3]=covered[old]
 controls=[]
 face_offset=0
@@ -47,11 +58,11 @@ controls.insert(0,dict(id='suit',name='Suit',kind='toggle',role='piece',default=
 assert len(result['materials'])<=128
 assert all(a[:3]+a[4:]==b[:3]+b[4:] for a,b in zip(data['faces'],result['faces']))
 assert all(result[k]==v for k,v in data.items() if k not in ('faces','materials'))
-result['mesh_package']='/Game/CSS/EveTest/SK_PlanetFit'
-result['skeleton_package']='/Game/CSS/EveTest/SKEL_PlanetFit'
-out=work/'planet-sections'
+result['mesh_package']=f'/Game/CSS/EveTest/SK_{prefix}Fit'
+result['skeleton_package']=f'/Game/CSS/EveTest/SKEL_{prefix}Fit'
+out=args.output or work/f'{stem}-sections'
 out.mkdir(exist_ok=False)
-p=out/'planet.mesh.json';p.write_text(json.dumps(result,separators=(',',':'))+'\n')
+p=out/f'{stem}.mesh.json';p.write_text(json.dumps(result,separators=(',',':'))+'\n')
 audit['output_sha256']=hashlib.sha256(p.read_bytes()).hexdigest()
 audit['stage']='Private visibility partition, not production rig binding or game acceptance'
 audit['mesh_package']=result['mesh_package'];audit['skeleton_package']=result['skeleton_package']
@@ -59,12 +70,12 @@ offset=0
 for part in audit['parts']:
     part['material_slots']=sorted({f[3] for f in result['faces'][offset:offset+part['faces']]})
     offset+=part['faces']
-(out/'planet.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')
+(out/f'{stem}.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')
 (out/'controls.json').write_text(json.dumps(controls,indent=2)+'\n')
 (out/'material-aliases.json').write_text(json.dumps(aliases,indent=2)+'\n')
-report=dict(covered_faces=len(mask['hidden_body_faces']),covered_slots=list(covered.values()),
+report=dict(covered_faces=len(masked_faces),mask_max_z=args.mask_max_z,covered_slots=list(covered.values()),
             materials=len(result['materials']),geometry_preserved=True,weights_and_morphs_preserved=True,
             source_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
-            scope='Private reversible section partition. Original material instances and all color bindings must extend to their duplicate slots. Production 386-bone binding, tail physics and runtime persistence remain pending.')
+            scope='Private reversible section partition. Original material instances and color bindings must extend to duplicate slots. Rig binding, physics and runtime persistence remain pending.')
 (out/'receipt.json').write_text(json.dumps(report,indent=2)+'\n')
 print(report)
