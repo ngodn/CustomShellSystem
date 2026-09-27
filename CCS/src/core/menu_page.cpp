@@ -1076,7 +1076,7 @@ void Menu::build_slots(const Json& section, bool& deferred) {
         for (size_t i = 0; i < options_.matches.size(); ++i) if (slot && options[options_.matches[i]].at("id") == slot->at("value")) options_.selected = i;
         slot_options_key_ = options_key;
     }
-    auto& input = take(list_, Kind::input);
+    auto& input = take(head_, Kind::input);   // pinned above the scroll box, like the picker's search
     search_input_ = input.extra;
     if (input.value != search_query_) {
         Call focus(input.extra.Get(), L"HasKeyboardFocus", 1); focus.run();
@@ -1101,7 +1101,7 @@ void Menu::build_slots(const Json& section, bool& deferred) {
     }
     const size_t first = list_first_;
     const size_t last = std::min(matches.size(), first + shown);
-    if (first > 0) paragraph(list_, std::to_string(first) + " more above. Type to search.", muted);
+    if (first > 0) paragraph(head_, std::to_string(first) + " more above. Type to search.", muted);
     for (size_t i = first; i < last; ++i) {
         const auto& o = options[matches[i]];
         const auto group = o.value("group", std::string{});
