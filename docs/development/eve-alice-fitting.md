@@ -31,3 +31,11 @@ Alice's 31,668 shoe points and complete bone array exactly equal the accepted Kn
 `alice-heels1-sprint` quarter view was inspected at upstream sprint frame 24 using the measured foot correction from `bikini-heelpose1/receipt.json`. Shoes follow the feet in this diagnostic; this does not validate the runtime graph or floor contact. Both outfits use shoe material slots 17–22, so `ABP_KnitFeet1` is a candidate for reuse after binding checks.
 
 `setup_bikini_import.py --kind alice` prepares `alice-import1/alice.mesh.json` at `/Game/CSS/EveTest/SK_AFit1` and snapshots protected production asset hashes. No Unreal import has run yet. The separately saved `alice-m1.blend` contains the suit morph repair, while shoe weight reuse is currently in the assembly interchange only. Preserve that distinction when preparing the final authoring kit.
+
+## Unreal import and reference checks
+
+The import and skeleton-only binding now completed with exit 0 (`alice-import.log`, `alice-bind.log`). `prepare_bikini_fit.py` supports Alice and assigns the original 26 materials plus a duplicate suit material for ribbon slot 26. It preserves `PA_Body`, assigns `ABP_KnitFeet1`, checks the mesh bind pose, and verifies the shared skeleton still has 386 bones, 82 sockets and nine virtual bones. Preparation exits 0; `alice-prepared1.json` records the saved references.
+
+Fresh-load `verify_bikini_fit.py` produced `alice-verified1.json`: 27 materials and references match, protected assets remain unchanged, and transient hide/restore checks isolate suit, shoes, hair and ribbon sections correctly. Its commandlet shutdown was still pending when this note was written; resume process handle 52754 before calling its outer run successful. These editor checks do not establish CSS profile persistence or game rendering.
+
+The separate ribbon is a small chest bow, 624 source points, entirely weighted to `spine_04`, spanning approximately 9.7 by 6.0 by 7.7 cm. Plan restrained motion with pinned attachment, not a large skirt solver. No cloth has been attached to Alice yet. Individual slider extremes, ribbon physics and runtime motion remain open.

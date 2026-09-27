@@ -8,7 +8,7 @@ import unreal
 
 work = Path('/home/eins0fx/development/mods/msII/CustomShellSystem/work/eve26')
 kind = os.environ.get('CSS_FIT_KIND', 'bikini')
-assert kind in ('bikini', 'knit')
+assert kind in ('bikini', 'knit', 'alice')
 w2 = os.environ.get('CSS_KNIT_W2') == '1'
 assert not w2 or kind == 'knit'
 revision = int(os.environ.get('CSS_BIKINI_FIT_REVISION', '1'))
@@ -23,11 +23,11 @@ def check_protected():
     assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest for path,digest in protected.items())
 check_protected()
 data = json.loads((import_dir / f'{kind}.mesh.json').read_text())
-mesh = unreal.load_asset('/Game/CSS/EveTest/' + ('SK_KFitW2' if w2 else 'SK_BFit1' if kind == 'bikini' else 'SK_KFit2'))
-source = unreal.load_asset('/Game/CSS/SeduXtress/' + ('SK_Eve_Bikini' if kind == 'bikini' else 'SK_Eve_CasualSweater'))
+mesh = unreal.load_asset('/Game/CSS/EveTest/' + ('SK_AFit1' if kind == 'alice' else 'SK_KFitW2' if w2 else 'SK_BFit1' if kind == 'bikini' else 'SK_KFit2'))
+source = unreal.load_asset('/Game/CSS/SeduXtress/' + ('SK_Eve_MidsummerAlice' if kind == 'alice' else 'SK_Eve_Bikini' if kind == 'bikini' else 'SK_Eve_CasualSweater'))
 skeleton = unreal.load_asset('/Game/CSS/Shared/SKEL_Base')
 graph = '/Game/CSS/EveTest/ABP_BikiniFeet' + ('2' if revision == 2 else '')
-if kind == 'knit':
+if kind in ('knit', 'alice'):
     assert revision == 1
     graph = '/Game/CSS/EveTest/ABP_KnitFeet1'
 blueprint = unreal.load_asset(graph)
@@ -47,11 +47,13 @@ counts = [len(json.loads(method(skeleton))) for method in (lib.inspect_skeleton,
 assert counts == [386,82,9]
 slots = mesh.get_editor_property('materials')
 original = source.get_editor_property('materials')
-assert len(slots) == len(original) == len(data['materials']) == (32 if kind == 'bikini' else 28)
+assert len(slots) == len(data['materials']) == (27 if kind == 'alice' else 32 if kind == 'bikini' else 28)
+assert len(original) == (26 if kind == 'alice' else len(slots))
 materials = []
 for i,slot in enumerate(slots):
     assert str(slot.material_slot_name) == data['materials'][i]
-    material = original[i].material_interface
+    source_slot = 16 if kind == 'alice' and i == 26 else i
+    material = original[source_slot].material_interface
     assert material
     slot.material_interface = material
     slots[i] = slot

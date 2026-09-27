@@ -7,13 +7,13 @@ import unreal
 
 work = Path('/home/eins0fx/development/mods/msII/CustomShellSystem/work/eve26')
 kind = os.environ.get('CSS_FIT_KIND', 'bikini')
-assert kind in ('bikini', 'knit')
-count = 32 if kind == 'bikini' else 28
+assert kind in ('bikini', 'knit', 'alice')
+count = 27 if kind == 'alice' else 32 if kind == 'bikini' else 28
 revision = int(os.environ.get('CSS_BIKINI_FIT_REVISION', '1'))
 assert revision in (1,2)
 output = work / f'{kind}-verified{revision}.json'
 assert not output.exists()
-mesh = unreal.load_asset('/Game/CSS/EveTest/' + ('SK_BFit1' if kind == 'bikini' else 'SK_KFit2'))
+mesh = unreal.load_asset('/Game/CSS/EveTest/' + ('SK_AFit1' if kind == 'alice' else 'SK_BFit1' if kind == 'bikini' else 'SK_KFit2'))
 assert mesh
 expected = json.loads((work / f'{kind}-prepared{revision}.json').read_text())
 slots = mesh.get_editor_property('materials')
@@ -30,6 +30,8 @@ cases = []
 groups = [('Top', range(16,19)), ('Shorts', range(19,23)), ('Shoes', range(23,29)), ('Hair', range(29,31))]
 if kind == 'knit':
     groups = [('Dress', [16]), ('Shoes', range(17,23)), ('Glasses', range(23,25)), ('Hair', range(25,28))]
+if kind == 'alice':
+    groups = [('Suit', [16]), ('Shoes', range(17,23)), ('Hair', range(23,26)), ('Ribbon', [26])]
 try:
     for name, indices in groups:
         component.show_all_material_sections(0)
