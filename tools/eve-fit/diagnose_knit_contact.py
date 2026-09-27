@@ -1,21 +1,30 @@
 """Inspect the measured waist patch and native backstop inputs without changing assets."""
 import json
+import argparse
+import sys
 from pathlib import Path
 import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 
 work = Path(__file__).resolve().parents[2]/'work/eve26'
 trial = work/'knit-cloth3'
-out = trial/'waist-contact.json'
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--frame',type=int,default=6)
+parser.add_argument('--case',choices=['trimmed','backstop15'],default='trimmed')
+parser.add_argument('--probe',type=Path,default=trial/'trimmed6-probe/review.json')
+parser.add_argument('--output',type=Path,default=trial/'waist-contact.json')
+args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+out = args.output
 assert not out.exists()
 mesh = json.loads((work/'knit-w2/knit.mesh.json').read_text())
 proxy = json.loads((trial/'proxy.json').read_text())['slots']['Collar-1']
 readback = json.loads((trial/'normals.json').read_text())['assets'][0]
-motion = json.loads((trial/'trimmed.json').read_text())
-probe = json.loads((trial/'trimmed6-probe/review.json').read_text())
+motion = json.loads((trial/f'{args.case}.json').read_text())
+probe = json.loads(args.probe.read_text())
+assert probe['pose_frame']==args.frame
 point = np.asarray(next(r['point_m'] for r in probe['probe_hits'] if r['object']=='Eve Body'))*100
 point[1] *= -1
-snapshot = motion['frames'][6]['pose']['Snapshot']
+snapshot = motion['frames'][args.frame]['pose']['Snapshot']
 entries = dict(zip(snapshot['BoneNames'],snapshot['LocalTransforms'],strict=True))
 bind,pose = [],[]
 for bone in mesh['bones']:
@@ -37,12 +46,14 @@ normals = np.zeros_like(rest)
 np.add.at(skinned,vi,(np.einsum('nij,nj->ni',transforms[bi,:3,:3],rest[vi])+transforms[bi,:3,3])*wt[:,None])
 np.add.at(normals,vi,np.einsum('nij,nj->ni',transforms[bi,:3,:3],native_normals[vi])*wt[:,None])
 normals /= np.linalg.norm(normals,axis=1)[:,None]
-actual = np.asarray(motion['frames'][6]['positions_cm'])
+actual = np.asarray(motion['frames'][args.frame]['positions_cm'])
 distances = np.linalg.norm(skinned-point,axis=1)
 rows = []
 for i in np.argsort(distances)[:12]:
     delta = actual[i]-skinned[i]
     radius = readback['backstop_radii'][i]
+    if radius>0 and motion.get('diagnostic_backstop_radius_override_cm',-1)>0:
+        radius=motion['diagnostic_backstop_radius_override_cm']
     offset = readback['backstop_distances'][i]
     center = skinned[i]-(radius+offset)*normals[i]
     rows.append(dict(vertex=int(i),rest_cm=rest[i].tolist(),skinned_cm=skinned[i].tolist(),actual_cm=actual[i].tolist(),
@@ -51,7 +62,7 @@ for i in np.argsort(distances)[:12]:
         normal_dot_patch_direction=float(normals[i] @ (skinned[i]-point)/max(distances[i],1e-8)),
         backstop_surface_margin_cm=float(np.linalg.norm(actual[i]-center)-radius),
         max_distance_cm=readback['max_distances'][i],normal=normals[i].tolist()))
-report=dict(frame=6,body_patch_cm=point.tolist(),
+report=dict(frame=args.frame,case=args.case,body_patch_cm=point.tolist(),
     native_vs_proxy_normal_max=float(np.max(np.abs(native_normals-np.asarray(proxy['normals'])))),
     rows=rows,scope='Local measured patch, native saved normals and non-legacy backstop sphere equation. Direction toward the probe is not a general surface normal. No runtime constraint-order readback.')
 out.write_text(json.dumps(report,indent=2)+'\n')
