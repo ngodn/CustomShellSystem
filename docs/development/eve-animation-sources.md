@@ -1,5 +1,13 @@
 # Eve animation sources and gameplay boundaries
 
+## September 27: additional user-supplied references
+
+The user supplied `CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/reference/body-type-variant-EVE/animations/` (relative to the msII workspace). It contains extracted `ESAP Beta 3782 0.7` and `HD-ATOOL-k3-1662-6-1` packages, each with a `.pak/.ucas/.utoc` trio, plus their original ZIPs. HD-ATOOL includes a bilingual readme and a preview image, both inspected.
+
+The readme describes a Stellar Blade pose/expression/animation loader with path-and-name-based animation slots. This is source-discovery guidance, not a Mortal Shell runtime dependency. Inventory and decode the actual clip assets before choosing or retargeting them; the folder listing does not prove fourteen suitable idle loops exist. Preserve these references unchanged. Do not install their Stellar Blade loaders into Mortal Shell.
+
+The confirmed target is fourteen new idle animations plus the existing idle, fifteen total. Rename only the existing idle display label to `Eve Default Idle`, preserving its ID and saved selections. Include converted assets in the single final `CSS_EveStellarBlade_eins0fx_P` trio. Outfit fitting remains the active priority; animation expansion is queued.
+
 2026-09-21. Four corrected offline candidates and compressed component previews
 are prepared. [Native animation metadata and profiles](animation-options.md)
 now support their separate slots; runtime/UI integration remains open.
