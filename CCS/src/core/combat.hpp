@@ -37,6 +37,10 @@ public:
     void set_tuning(SlotId slot, const SlotTuning& tuning);
     const SlotTuning& tuning(SlotId slot) const { return slots_[size_t(slot)].tuning; }
     bool slot_weapon_available(SlotId slot) const { return slots_[size_t(slot)].show_mesh.alive(); }
+    // Hold attacks are an upgrade in this game (GE_Unlock_Attack_Hold_Light/Heavy grant the
+    // Character.Unlocked.HoldAttack tags). Without the tag the game's own charge check fails at
+    // once, so the hold slots wait; read from the pawn twice a second.
+    bool hold_unlocked(bool heavy) const { return hold_unlocked_[heavy ? 1 : 0]; }
     // Static mesh of a move source's weapon (player weapons and the enemy weapons with a static mesh), or empty.
     static std::string weapon_mesh_path(const std::string& source);
     const std::string& slot_move(SlotId slot) const { return slots_[size_t(slot)].move_id; }
@@ -120,6 +124,7 @@ private:
     std::unordered_set<uint64_t> noted_;
     std::deque<std::string> recent_;
     std::string pawn_rig_;                              // skeleton of the body worn now, refreshed with the pawn
+    bool hold_unlocked_[2]{}; bool hold_check_warned_{}, hold_check_logged_{};
     bool pawn_humanoid_{};
     std::string error_;
 };

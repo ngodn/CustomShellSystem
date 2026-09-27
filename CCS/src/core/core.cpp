@@ -267,6 +267,7 @@ uint64_t Core::model_revision() {
     uint64_t signature = 0;
     if (combat_) for (unsigned i = 0; i < slot_count; ++i) { const auto slot = SlotId(i); signature = signature * 31 + combat_->slot_hits(slot) * 4 + (combat_->slot_ready(slot) ? 2 : 0) + (combat_->slot_error(slot).empty() ? 0 : 1); }
     signature = signature * 31 + (combat_ && combat_->hooked() ? 1 : 0) + preset_names_.size() * 2;
+    if (combat_) signature = signature * 31 + (combat_->hold_unlocked(false) ? 1 : 0) + (combat_->hold_unlocked(true) ? 2 : 0);
     if (signature != model_signature_) { model_signature_ = signature; ++model_revision_; }
     return model_revision_;
 }
@@ -287,7 +288,11 @@ nlohmann::json Core::model() const {
         for (const auto& row : candidate_options()) options.push_back(row);
         if (combat_ && !id.empty()) for (auto& option : options) if (option.value("id", std::string{}) == id) {
             const auto& err = combat_->slot_error(slot);
-            option["hint"] = !err.empty() ? "Not applied: " + err : !combat_->slot_ready(slot) ? std::string("Loading the animation...") : "Applied. Played " + std::to_string(combat_->slot_hits(slot)) + " time(s) this session.";
+            const bool hold_slot = slot == SlotId::LC || slot == SlotId::HC;
+            const bool locked = hold_slot && !combat_->hold_unlocked(slot == SlotId::HC);
+            option["hint"] = !err.empty() ? "Not applied: " + err : !combat_->slot_ready(slot) ? std::string("Loading the animation...")
+                : locked ? std::string("Waiting for the hold attack upgrade on this character. A long press does the normal attack until then.")
+                : "Applied. Played " + std::to_string(combat_->slot_hits(slot)) + " time(s) this session.";
             break;
         }
         // Per-slot settings: rows at the top of the same list, so keys and pad reach them like any
@@ -372,6 +377,12 @@ nlohmann::json Core::model() const {
     else if (!combat_) status = "Combat engine unavailable";
     else if (!settings_->enabled()) status = "Disabled";
     else status = std::to_string(combat_->assigned()) + " slot(s) assigned" + (combat_->hooked() ? ", engine active" : "");
+    if (combat_ && settings_->enabled() && last_message_.empty()) {
+        const bool light = !combat_->slot_move(SlotId::LC).empty() && !combat_->hold_unlocked(false);
+        const bool heavy = !combat_->slot_move(SlotId::HC).empty() && !combat_->hold_unlocked(true);
+        if (light || heavy) status = std::string("Hold attacks are locked on this character: ") + (light && heavy ? "LC and HC wait" : light ? "LC waits" : "HC waits")
+            + " for the hold attack upgrade. A long press does the normal attack until then.";
+    }
     return {{"sections", std::move(sections)}, {"status", status}};
 }
 void Core::handle_event(const nlohmann::json& event) {

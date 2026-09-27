@@ -655,6 +655,25 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         player_check_ = now + 500;
         if (player.pawn != pawn_.get()) { pawn_ = {}; if (player.pawn) pawn_.capture(player.pawn); skeleton_ = {}; }
         if (player.asc != asc_.get()) { asc_ = {}; if (player.asc) asc_.capture(player.asc); }
+        // Whether this character has the hold attack upgrades: the game's own charge check needs the tags.
+        if (player.pawn) {
+            try {
+                for (int heavy = 0; heavy < 2; ++heavy) {
+                    Call has(player.pawn, L"HasMatchingGameplayTag", 2);
+                    has.set(L"TagToCheck", FName(heavy ? L"Character.Unlocked.HoldAttack.Heavy" : L"Character.Unlocked.HoldAttack.Light", FNAME_Add));
+                    has.run();
+                    const bool on = has.get<bool>();
+                    if (on != hold_unlocked_[heavy]) { hold_unlocked_[heavy] = on; log(std::string("CCS ") + (heavy ? "heavy" : "light") + " hold attacks are " + (on ? "unlocked" : "locked") + " on this character"); }
+                }
+                if (!hold_check_logged_) {   // once: the same query on a tag every armed character carries, so a silent miss cannot pass as "locked"
+                    hold_check_logged_ = true;
+                    Call control(player.pawn, L"HasMatchingGameplayTag", 2);
+                    control.set(L"TagToCheck", FName(L"Character.State.PrimaryWeapon", FNAME_Add)); control.run();
+                    log(std::string("CCS hold unlock check: light ") + (hold_unlocked_[0] ? "unlocked" : "locked") + ", heavy " + (hold_unlocked_[1] ? "unlocked" : "locked")
+                        + "; control tag Character.State.PrimaryWeapon " + (control.get<bool>() ? "present" : "absent"));
+                }
+            } catch (const std::exception& e) { if (!hold_check_warned_) { hold_check_warned_ = true; log(std::string("CCS hold unlock check unavailable: ") + e.what()); } }
+        } else hold_unlocked_[0] = hold_unlocked_[1] = false;
         // The body worn now: a shell change, a CSS body, the Harbinger form. Swaps only happen on a human-family rig.
         try { const auto rig_now = rig::player_skeleton(player); if (rig_now != pawn_rig_) { pawn_rig_ = rig_now; pawn_humanoid_ = rig::humanoid(pawn_rig_); if (!pawn_humanoid_ && !pawn_rig_.empty()) log("CCS pawn rig is not human: " + rig::short_name(pawn_rig_) + "; swaps paused on it"); } } catch (...) {}
     }
@@ -701,7 +720,8 @@ void Combat::note_skip(const char* why, UObject* ability) {
         + "; pawn " + (pawn_.get() ? narrow(pawn_.get()->GetNamePrivate().ToString()) : std::string("none")) + ", asc " + (asc_.get() ? narrow(asc_.get()->GetNamePrivate().ToString()) : std::string("none")));
 }
 void Combat::note_recent(UObject* cls, int slot, const char* what) {
-    std::string line = cls ? narrow(cls->GetNamePrivate().ToString()) : std::string("?");
+    static const uint64_t started = now_us();
+    std::string line = std::to_string((now_us() - started) / 1000) + " ms  " + (cls ? narrow(cls->GetNamePrivate().ToString()) : std::string("?"));
     if (slot >= 0) line += " -> " + std::string(slot_to_string(SlotId(slot)));
     line += ": "; line += what;
     recent_.push_back(std::move(line));
@@ -735,6 +755,9 @@ void Combat::observe(void* frame_ptr) {
     }
     if (slot < 0) { ++skipped_; note_skip("class name has no slot", ability); note_recent(cls, slot, "no slot"); return; }
     if (!pawn_humanoid_) { ++skipped_; note_recent(cls, slot, "rig not humanoid"); return; }   // the Harbinger form or a creature shell: its rig cannot play these montages
+    // A locked hold: the game's charge check fails as soon as its window opens and the normal
+    // attack follows, so the game's own hold clip stays (it blends into that attack seamlessly).
+    if ((slot == int(SlotId::LC) && !hold_unlocked_[0]) || (slot == int(SlotId::HC) && !hold_unlocked_[1])) { ++skipped_; note_recent(cls, slot, "hold attacks locked on this character, left alone"); return; }
     auto& s = slots_[size_t(slot)];
     bool changed = false;
     if (!s.montage.get()) {
@@ -801,6 +824,7 @@ nlohmann::json Combat::status() const {
         host = {{"available", true}, {"slots", stats.slots}, {"calls", stats.calls}, {"wrong_thread", stats.wrong_thread}, {"failures", stats.failures}};
     return {{"enabled", enabled_}, {"active", active_}, {"hooked", token_ != 0}, {"seen", seen_}, {"swapped", swapped_},
         {"skipped", skipped_}, {"failures", failures_}, {"wrong_frame", wrong_frame_}, {"maximum_callback_us", maximum_us_}, {"recent", recent_},
+        {"hold_unlocked", {{"light", hold_unlocked_[0]}, {"heavy", hold_unlocked_[1]}}},
         {"cached_classes", class_slots_.size()}, {"error", error_}, {"slots", std::move(slots)}, {"host", std::move(host)}};
 }
 }
