@@ -315,19 +315,55 @@ void MovesetManager::unequip_slot(SlotId slot) {
     binding.tarstone_name.clear();
 }
 
+void MovesetManager::root_asset(UObject* asset) {
+    if (!asset) return;
+    if (std::find(rooted_assets_.begin(), rooted_assets_.end(), asset) == rooted_assets_.end()) {
+        try {
+            engine::Call call(asset, L"AddToRoot", 0);
+            call.run();
+        } catch (...) {}
+        rooted_assets_.push_back(asset);
+    }
+}
+
+void MovesetManager::unroot_all() {
+    for (auto* asset : rooted_assets_) {
+        if (asset) {
+            try {
+                engine::Call call(asset, L"RemoveFromRoot", 0);
+                call.run();
+            } catch (...) {}
+        }
+    }
+    rooted_assets_.clear();
+}
+
 bool MovesetManager::apply_to_player(const engine::PlayerContext& player) {
     if (!player.pawn) return false;
+
+    // Pre-load all configured montages in active preset and pin to root so GC never invalidates them
+    for (const auto& binding : active_preset_.slots) {
+        if (!binding.montage_path.empty()) {
+            try {
+                auto* montage = engine::load(binding.montage_path);
+                if (montage) root_asset(montage);
+            } catch (...) {}
+        }
+    }
+
     applied_ = true;
     return true;
 }
 
 void MovesetManager::restore_vanilla(const engine::PlayerContext& /*player*/) {
+    if (!applied_) return;
+    unroot_all();
+    vanilla_montages_.clear();
     applied_ = false;
 }
 
-bool MovesetManager::on_attack_montage_requested(UObject* /*ability*/, UObject*& in_out_montage, double& /*in_out_play_rate*/) {
+bool MovesetManager::on_attack_montage_requested(UObject* /*ability*/, UObject*& /*in_out_montage*/, double& /*in_out_play_rate*/) {
     if (!applied_) return false;
-    // Check active slot and replace in_out_montage with custom montage pointer if mapped
     return false;
 }
 

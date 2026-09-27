@@ -42,14 +42,18 @@ public:
     // Live hook interceptor when an attack starts
     bool on_attack_montage_requested(UObject* ability, UObject*& in_out_montage, double& in_out_play_rate);
 
+    void root_asset(UObject* asset);
+    void unroot_all();
+
 private:
     std::vector<MoveDefinition> moves_db_;
     std::vector<TarstoneDefinition> tarstones_db_;
     PresetData active_preset_;
     bool applied_{false};
 
-    // Cached vanilla montage pointers for clean rollback
-    std::map<std::string, engine::WeakObject> vanilla_montages_;
+    // Cached vanilla montage pointers for clean rollback (class name -> weak montage)
+    std::map<std::wstring, engine::WeakObject> vanilla_montages_;
+    std::vector<UObject*> rooted_assets_;
 };
 
 } // namespace ccs
