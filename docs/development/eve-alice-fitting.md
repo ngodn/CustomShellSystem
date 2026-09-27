@@ -113,3 +113,12 @@ Process 51490 completed all four steps with exit 0. `alice-verified4.json` confi
 The editor build for `alice-bow-repaired.patch` succeeded (80275, exit 0, `alice2-build.log`). Process 60426 now performs copy, private physics copy, bind, fresh inspection/map verification, native sprint motion and particle diagnostics in sequence. Logs are `alice2-{copy,pa,bind,inspect,sprint}.log`; outputs live in `alice-cloth2`. Resume this exact handle. Do not repeat steps based on shutdown delay. The verification scripts now support Alice trial 2 and select its corrected import and separate collision asset.
 
 Once terminal, inspect `alice-cloth2/sprint-check.json` and replay the worst frame visually before accepting any cloth motion. The previous rejected trial remains available for comparison. No release or installed game package changes yet.
+
+
+## Repaired bow still exceeds its movement bound
+
+Process 60426 completed copy, bind, inspection, native sprint and particle checks. Saved maps match within 2.969e-8 cm and protected hashes pass. Native simulation keeps pinned points within 0.00003670 cm, but displacement reaches 4.7154 cm, limit excess 3.8131 cm and edge ratio 24.0147. Worst edge frame is 58. This is improved over trial 1 but remains rejected.
+
+Visual replay attempt 43730 failed because the inspection command omitted `-Geometry`, so readback has no `render_geometry`. No image was produced and no visual acceptance is claimed. Blender exits 0 for Python exceptions unless `--python-exit-code 1` is supplied; use that switch for subsequent scripted pipelines. Obtain a new `-Inspect -Geometry` report, then replay frame 58. Keep the existing valid map inspection receipt.
+
+Process 72493 is running the temporary `-NoBodyCollision` diagnostic on ACloth2 (`alice2-no-body.log`, output `alice-cloth2/no-body.json`). Resume the same handle before another Unreal commandlet. It does not save the disabled collision setting. Compare its motion and rendered contact with the full collision trial before changing private bow colliders. Do not ship a diagnostic simply because particle limits pass.
