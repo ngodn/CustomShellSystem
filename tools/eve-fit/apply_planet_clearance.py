@@ -22,6 +22,7 @@ parser.add_argument('--mesh',type=Path,default=MOD/'gemini-work/exports/SK_Eve_P
 parser.add_argument('--offsets',type=Path,default=WORK/'planet-fit4/offsets.json')
 parser.add_argument('--output',type=Path,default=WORK/'planet-suit-f4c.blend')
 parser.add_argument('--receipt',type=Path,default=WORK/'planet-suit-f4c.json')
+parser.add_argument('--garment',choices=('prototype','skin'),default='prototype')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 output = args.output
 assert not output.exists()
@@ -32,15 +33,16 @@ offsets = json.loads(args.offsets.read_text())['offsets']
 parts = json.loads(args.mesh.with_suffix('.audit.json').read_text())['parts']
 start = parts[0]['points']
 count = parts[1]['points']
-assert parts[1]['name'] == 'Eve Prototype Planet Diving Suit - Suit'
+garment={'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin Suit - Suit Complete'}[args.garment]
+assert parts[1]['name'] == garment
 bpy.ops.wm.read_factory_settings(use_empty=True)
 with bpy.data.libraries.load(str(args.source), link=False) as (source, loaded):
-    loaded.objects = ['Eve Body', 'Eve Prototype Planet Diving Suit - Suit']
+    loaded.objects = ['Eve Body', garment]
 for item in loaded.objects:
     bpy.context.scene.collection.objects.link(item)
 body = bpy.data.objects['Eve Body']
 before = digest(body)
-obj = bpy.data.objects['Eve Prototype Planet Diving Suit - Suit']
+obj = bpy.data.objects[garment]
 transform = TO_UE @ obj.matrix_world
 
 def evaluate():
@@ -102,7 +104,7 @@ obj.parent = None
 material_names = [m.name if m else '' for m in obj.data.materials]
 obj.data.materials.clear()
 for index, name in enumerate(material_names):
-    material = bpy.data.materials.new(f'PlanetSlot{index}')
+    material = bpy.data.materials.new(f'FitSlot{index}')
     material['CSS_source_material'] = name
     obj.data.materials.append(material)
 for constraint in list(obj.constraints):

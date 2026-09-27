@@ -17,6 +17,8 @@ p.add_argument('--mesh', type=Path, required=True)
 p.add_argument('--audit', type=Path, required=True)
 p.add_argument('--output', type=Path, required=True)
 p.add_argument('--surface-pass', action='store_true')
+p.add_argument('--surface-min-z', type=float, default=115.)
+p.add_argument('--surface-max-z', type=float, default=160.)
 p.add_argument('--min-z', type=float, default=22.)
 p.add_argument('--max-z', type=float, default=1000.)
 p.add_argument('--max-distance', type=float, default=.6)
@@ -76,7 +78,7 @@ if a.surface_pass:
     garment = BVHTree.FromPolygons(updated, suit_faces, all_triangles=True)
     proposals = {}
     for point in points[:body_count]:
-        if not max(115,a.min_z) < point.z < min(160,a.max_z):
+        if not max(a.surface_min_z,a.min_z) < point.z < min(a.surface_max_z,a.max_z):
             continue
         location, normal, face, distance = garment.find_nearest(point)
         signed = (point-location).dot(normal)
@@ -120,6 +122,7 @@ receipt = dict(source=str(a.mesh), source_sha256=hashlib.sha256(raw).hexdigest()
                skipped_deep_candidates=len(skipped), body_unchanged=True,
                winding_disagreements=winding_disagreements,
                surface_hits=surface_hits,
+               surface_region_z_cm=[a.surface_min_z,a.surface_max_z],
                other_parts_unchanged=True, non_point_fields_unchanged=True,
                scope='Bind-pose proposal only. Requires visual review, source mapping, morph and motion validation.')
 (a.output/'receipt.json').write_text(json.dumps(receipt, indent=2)+'\n')

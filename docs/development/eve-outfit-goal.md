@@ -32,6 +32,12 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+Skin F3 source-save process4868 subsequently exited0; the garment library and receipt are present. Fresh reload remains required.
+
+**Skin Suit F3 visible clearance improvement:** garment-only `skin-garment/` confirms torso openings are authored, while much of the chest/leg coverage was inside the body. F2 uses2 cm nearest-surface search and the existing chest face pass; F3 extends only the face-pass vertical region to22–160 cm. `skin-fit3/receipt.json` records7151 changed garment points, maximum2.19096 cm and513 face samples. Body and all non-point fields are unchanged. Front/back `skin-fit3-review/` show closed large chest and most leg breakthroughs, with openings preserved. Footwear was excluded below22 cm and remains visibly unresolved; small front seam spots and morph/pose behavior still require checks. Processes89312/47589/75677/87212 exited0.
+
+`apply_planet_clearance.py --garment skin` now supports writing this proposal to a separate garment library. Process4868 is saving `skin-suit-f3.blend` and receipt `skin-suit-f3.json`, log `skin-source-f3.log`; poll before claiming completion. This does not overwrite the Gemini source or body. Next fresh-load verification, remaining local clearance, body-morph transfer and motion checks. No in-game/release mutation; F14 trial restart answer remains pending.
+
 **Skin Suit fitting started:** `skin-surface-probe.json` confirms the saved SurfaceDeform is bound but has no target, viewport/render disabled, and enabling it in isolation moves zero vertices. Source hash unchanged. Earlier probe failures incorrectly assumed a body target; final process2338 exited0. This rules out that modifier as the missing fitting in the controlled test.
 
 `planet_clearance.py --garment skin` now supports the known Skin Suit object without duplicating the clearance implementation. `skin-fit1` is a private bind-pose proposal:5551 garment points changed, maximum0.71954 cm,1491 deeper candidates skipped, body and all non-point fields unchanged. Process65864 and review17292 exited0. Front/back `skin-fit1-review/` visibly improve chest/arm coverage but retain substantial apparent gaps. Next render garment alone to distinguish authored openings from penetration, inspect deeper regions, and make bounded corrections. Do not import this proposal or treat base-only clearance as morph acceptance. No game/source/release mutation.
