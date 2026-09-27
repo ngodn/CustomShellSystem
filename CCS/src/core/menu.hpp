@@ -85,6 +85,7 @@ private:
     enum class Focus : uint8_t { grid, list, panel };
     Focus focus_ = Focus::grid;
     int panel_focus_ = 0;                     // which setting row the window highlights while focus_ is panel
+    int panel_focus_shown_ = -1;              // the row last scrolled into view
     const Json* highlighted_setting() const;  // the focused per-slot setting control, or null
     static int grid_move(int slot, int dx, int dy);   // tile navigation across the two chains and the ranged tile
     struct Hit { WeakObject widget; Json action; bool down = false; std::vector<std::pair<WeakObject, Json>> parts; WeakObject glyph; };
