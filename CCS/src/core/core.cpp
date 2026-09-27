@@ -300,20 +300,11 @@ nlohmann::json Core::model() const {
              {"description", "Whose hit payload the swing carries. This move's own keeps its multiplier, poise, reaction and effects. Weapon's own copies the payload of the attack this slot normally plays onto the move's hit windows. Base damage is always the weapon in hand."}},
             {{"type", "choice"}, {"id", sid + ".weapon"}, {"label", "Weapon in hand"}, {"value", tune.weapon},
              {"options", Json::array({{{"id", "inventory"}, {"label", "Inventory weapon"}}, {{"id", "move"}, {"label", "This move's weapon"}}})},
+             {"value_note", tune.weapon == "move" && !id.empty() && !mesh_ready ? " (no mesh, inventory stays)" : ""},
              {"description", std::string("Which weapon shows in your hand while this move plays. This move's weapon swaps the visible mesh for the swing and puts yours back after; damage and collision stay the weapon in hand.")
                  + (id.empty() || mesh_ready ? "" : " No mesh is known for this move's weapon, so the inventory weapon stays.")}}});
-        Json rows = Json::array();
-        for (const auto& row : settings_rows) {
-            std::string current; Json ids = Json::array();
-            for (const auto& o : row.at("options")) { ids.push_back(o.at("id")); if (o.at("id") == row.at("value")) current = o.at("label"); }
-            if (row.at("id") == sid + ".weapon" && tune.weapon == "move" && !id.empty() && !mesh_ready) current += " (no mesh, inventory stays)";
-            rows.push_back({{"id", "setting:" + row.at("id").get<std::string>()}, {"label", row.at("label")}, {"group", std::string(slot_to_string(slot)) + " settings"},
-                {"value", current}, {"title", row.at("label")}, {"subtitle", std::string("Setting for ") + slot_to_string(slot)}, {"description", row.at("description")},
-                {"setting", {{"id", row.at("id")}, {"value", row.at("value")}, {"options", ids}}}});
-        }
-        for (const auto& o : options) rows.push_back(o);
         customize.push_back({{"type", "choice"}, {"id", sid}, {"label", slot_to_string(slot)}, {"name", slot_titles[i] + 4},
-            {"value", id}, {"icon", id.empty() ? weapon_icon(current_weapon_) : move_icon(id)}, {"options", std::move(rows)}, {"settings", settings_rows},
+            {"value", id}, {"icon", id.empty() ? weapon_icon(current_weapon_) : move_icon(id)}, {"options", std::move(options)}, {"settings", settings_rows},
             {"settings_key", speed_id + "/" + tune.hit_damage + "/" + tune.weapon + (mesh_ready ? "/m" : "")}, {"enabled", combat_ != nullptr && catalog_error_.empty()}});
     }
     sections.push_back({{"id", "customize"}, {"title", "Customize"}, {"kind", "slots"}, {"controls", std::move(customize)}});
@@ -357,6 +348,7 @@ nlohmann::json Core::model() const {
     sections.push_back({{"id", "settings"}, {"title", "Settings"}, {"controls", std::move(settings)}});
     std::string status;
     if (!last_message_.empty()) status = last_message_;
+    if (combat_ && !settings_->enabled()) status = "Custom Combat System is OFF: nothing is swapped. Turn it on in the Settings tab.";
     else if (!combat_) status = "Combat engine unavailable";
     else if (!settings_->enabled()) status = "Disabled";
     else status = std::to_string(combat_->assigned()) + " slot(s) assigned" + (combat_->hooked() ? ", engine active" : "");

@@ -80,8 +80,8 @@ private:
     uint64_t bindings_generation_ = 0, strip_glyph_generation_ = ~0ull;
     bool gamepad_ = false, typing_now_ = false;
     std::string slot_options_key_;            // which slot's candidates options_ currently holds
-    std::string pending_select_id_;           // row to highlight after the next candidate reset (a setting just changed)
-    const Json* highlighted_setting() const;  // the highlighted row's "setting" carrier, or null
+    int panel_focus_ = -1;                    // which per-slot setting row in the window has keyboard focus, -1 = the candidate list
+    const Json* highlighted_setting() const;  // the focused per-slot setting control, or null
     struct Hit { WeakObject widget; Json action; bool down = false; std::vector<std::pair<WeakObject, Json>> parts; WeakObject glyph; };
     std::vector<Hit> hits_;
     struct SliderHit { WeakObject bar, value_block, row; Json control; double previous, low, high, step; std::string unit; };
@@ -194,7 +194,7 @@ private:
     void bar_prompt(const std::string& label, Json action, const std::string& first, uint8_t first_icon, uint8_t first_key,
                     const std::string& second = {}, uint8_t second_icon = 0, uint8_t second_key = 255);
     void bar_prompt_actions(const std::string& label, const std::string& first, uint8_t first_icon, const std::string& second = {}, uint8_t second_icon = 0);
-    void option_row(const std::string& name, const std::string& value, bool focused, Json minus, Json plus, bool arrows);
+    void option_row(const std::string& name, const std::string& value, bool focused, Json minus, Json plus, bool arrows, Json select = Json{});
     void slider_row(const std::string& name, const Json& control, bool focused, Json minus, Json plus);
 };
 }
