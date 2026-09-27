@@ -64,7 +64,28 @@ each preset entry (`speed`, `hit_damage`, `weapon`). The global Attack speed sli
   own weapon, so silence means the notifies are not running; a swing with and without a swap
   will show it in the counters.
 
+Night of 27 September, verified in play (hundreds of swaps, zero failures, nothing dropped):
+
+- **Keep-alive.** On 5.6 the collector takes roots from a private index set, so the SDK's root
+  flag protected nothing and unreferenced enemy montages died within seconds (logged as root and
+  unreachable). Everything CCS loads now sits in `UWorld::ExtraReferencedObjects`; a world change
+  reloads the slots. Liveness reads 5.6's flag layout (bit 29 is RefCounted).
+- **Game feel.** A runtime clone of the slot's own montage carries the move's animation
+  (segments rebuilt through the engine allocator, `FAnimSegment::bValid` set by hand, time-warped
+  so the first hit aligns, links re-pointed, outer = the original). Default feel is Move's own.
+- **Focus model.** Slots (default), list, settings; R3 or Tab enters the settings; prompts and
+  highlight follow the focus; search keyboard only. Window: fixed-height description under the
+  rows, control guide in the page footer, status centred under the tiles, focus frame on rows.
+- **Sprint slots** S+L and S+H (running attacks, 16-move catalog from the ability exports).
+- Companion clips (transform, equip, draw, stow) an ability plays around the attack are left
+  alone by name; an exact catalog match blocked every swing after a fresh start because the
+  attack montage varies with the shell.
+- Per-slot defaults: 1x, Move's own feel, Move's own damage, My weapon.
+
 ## Open items
+
+- After a full game restart, one swing to confirm the swaps run on the fresh world (a silent
+  skip streak was seen once right after a restart, before the companion-clip rule).
 
 - Sound on swapped swings: read `whoosh_calls`/`vox_calls` after a vanilla swing and after a
   swapped one. If swapped swings never count, drive the whoosh from CCS at the hit window
