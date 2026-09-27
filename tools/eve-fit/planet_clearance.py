@@ -17,6 +17,9 @@ p.add_argument('--mesh', type=Path, required=True)
 p.add_argument('--audit', type=Path, required=True)
 p.add_argument('--output', type=Path, required=True)
 p.add_argument('--surface-pass', action='store_true')
+p.add_argument('--min-z', type=float, default=22.)
+p.add_argument('--max-z', type=float, default=1000.)
+p.add_argument('--max-distance', type=float, default=.6)
 a = p.parse_args(sys.argv[sys.argv.index('--') + 1:])
 a.output.mkdir(exist_ok=False)
 raw = a.mesh.read_bytes()
@@ -47,14 +50,14 @@ skipped = []
 for i in range(body_count, body_count + suit_count):
     point = points[i]
     # Shoes need source-pose correction, not displacement toward a bare foot.
-    if point.z < 22:
+    if not a.min_z <= point.z <= a.max_z:
         continue
     location, normal, face, distance = tree.find_nearest(point)
     normal = face_normals[face]
     signed = (point-location).dot(normal)
     if signed >= .12:
         continue
-    if distance > .6:
+    if distance > a.max_distance:
         if signed < 0:
             skipped.append(i)
         continue
@@ -71,7 +74,7 @@ if a.surface_pass:
     garment = BVHTree.FromPolygons(updated, suit_faces, all_triangles=True)
     proposals = {}
     for point in points[:body_count]:
-        if not 115 < point.z < 160:
+        if not max(115,a.min_z) < point.z < min(160,a.max_z):
             continue
         location, normal, face, distance = garment.find_nearest(point)
         signed = (point-location).dot(normal)
@@ -109,7 +112,8 @@ audit['stage'] = 'Private bind-pose clearance candidate; not for import or relea
 (a.output/'planet.mesh.audit.json').write_text(json.dumps(audit, indent=2)+'\n')
 (a.output/'offsets.json').write_text(json.dumps({'offsets': offsets})+'\n')
 receipt = dict(source=str(a.mesh), source_sha256=hashlib.sha256(raw).hexdigest(),
-               changed_vertices=len(offsets), max_offset_cm=max(Vector(v[1:]).length for v in offsets),
+               changed_vertices=len(offsets), max_offset_cm=max((Vector(v[1:]).length for v in offsets),default=0),
+               region_z_cm=[a.min_z,a.max_z], max_distance_cm=a.max_distance,
                skipped_deep_candidates=len(skipped), body_unchanged=True,
                winding_disagreements=winding_disagreements,
                surface_hits=surface_hits,
