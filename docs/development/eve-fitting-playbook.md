@@ -144,3 +144,6 @@ An accessory bone's name also does not establish its bind location. Prototype's 
 ## Unreal material array readback
 
 An indexed Unreal struct can be returned as a copy. For material assignments, modify a local slot, write it back into the array, assign the array, then compare every material reference before saving and again in a fresh editor process. A successful save is not proof the references changed. Prototype caught this in `planet-assembly-check.log`; `apply_planet_materials.py` contains the corrected writeback.
+# Check original material panels before calling exposed skin clipping
+
+Skin Suit's original garment contains a separate `MI_EVE_Costume_Temp_Inner_Skin01` panel. Gemini removed those faces, but the original body mask still assumes they exist. Applying that mask to the stripped garment creates holes. Conversely, broad exposed rear-leg skin is intentional in the original design, as shown in `work/eve26/skin-author-panels/back.png`; it must not be inflated over as a clipping fix. Inspect the original garment with material panels distinguished before changing geometry or applying its mask. A footwear close-up cannot validate the full-body mask. Keep authored openings and repair only the demonstrated ankle discontinuity.
