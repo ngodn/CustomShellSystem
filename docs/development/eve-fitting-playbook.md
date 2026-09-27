@@ -173,3 +173,7 @@ The Bikini support-compression trial closes an8 cm neutral support/sole gap but 
 ### Initialize newly added garment morphs explicitly
 
 The Bikini top/shorts omit some shared body morph keys. In these sources, newly added keys started at1; explicitly set new keys to0 before saving replacement deltas. Fresh-load both default values and numerical deltas. No existing mask issue was found in this case.
+
+### Treat rigid shoe alignment as a diagnostic, not a fitted foot
+
+Bikini heelpose1 rotates the original shoes about the foot bind pivots by approximately 34.68 degrees. This preserves the heel silhouette and aligns neutral sole minima, but recorded idle120 shows the unchanged feet outside the shoes. Do not promote this result or apply its measured height offset. A matching foot pose, ankle continuity and posed contact checks are required. Preserve original body proportions and keep the shoe-only trial separate from current garment sources.

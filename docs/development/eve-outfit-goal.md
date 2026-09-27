@@ -32,6 +32,10 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**Bikini rigid shoe-pose diagnostic:** `pose_bikini_heels.py` produced `bikini-heelpose1/` with approximately 34.68 degrees of rotation around each foot bind pivot. The neutral forefoot sole and heel-tip minima align, preserving each shoe's rigid shape and leaving body, weights, skeleton and morphs unchanged. The measured approximately 5.96 cm height difference is diagnostic only; no character offset was applied.
+
+Recorded idle120 review `bikini-heelpose1-idle/side.png` (process63202 exit0) preserves the tall heel silhouette but clearly leaves the unposed feet outside the shoes. **Do not import or promote this shoe-only candidate.** Matching foot pose and ankle continuity must be solved before any floor-offset decision. Neither neutral sole alignment nor rigid-distance checks establish standing/game contact. No deployment or release archive changed. The current accepted Bikini garment sources remain W1, with original footwear pending adaptation.
+
 **Vacation Bikini weight correction saved:** `bikini-weights.json` compares12,379 Top+Shorts vertices with body-triangle weights;2,344 differ by L1>0.2. This alone is not a defect verdict. Combined-max sprint48 (`bikini-morph1-sprint48/front.png`) visibly exposes upper-cup skin breakthrough. `bikini-weight1/` transfers body-triangle weights to Top+Shorts only, preserving geometry, morphs, body weights and footwear. The corresponding sprint48 front removes the large cup breakthroughs; back view, sprint24 front and recorded idle120 front show no obvious new separation in inspected regions. Broader motion and cloth behavior remain unverified.
 
 Saved `bikini-top-w1.blend` and `bikini-shorts-w1.blend`, fresh-load processes17550/63108 exit0. Top6,918 points/14 groups/24,108 weight rows; Shorts5,461 points/11 groups/19,899 rows. Weight reload errors<3e-8 and geometry/all shape keys unchanged from M1 sources. These are current garment sources; original Extras Heels remain unfitted, with support compression explicitly rejected. No bikini import/deployment or release change.
