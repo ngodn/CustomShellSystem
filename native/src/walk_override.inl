@@ -78,15 +78,14 @@ void WalkOverride::preload_assets() {
         if(path.empty()) return nullptr;
         UObject* asset=nullptr;
         try { asset=load(path); } catch(const std::exception&) { return nullptr; }   // a bad path fails later, with its message, when it engages
-        if(asset && !asset->IsRootSet()) { asset->SetRootSet(); rooted_assets_.emplace_back(asset); }
+        rooted_assets_.keep(asset);
         return asset;
     };
     for(const auto& path:custom_paths_) warm(path);
     custom_idle_asset_=warm(custom_idle_clip_);
 }
 void WalkOverride::unroot_assets() {
-    for(auto& weak:rooted_assets_) if(auto* asset=weak.Get()) asset->ClearRootSet();
-    rooted_assets_.clear(); custom_idle_asset_.Reset();
+    rooted_assets_.release(); custom_idle_asset_.Reset();
 }
 UObject* WalkOverride::custom_blendspace(size_t index,UObject* skeleton) {
     if(index>=custom_paths_.size() || custom_paths_[index].empty() || !skeleton)
@@ -185,9 +184,7 @@ void WalkOverride::push_on(UObject* target) {
     const BlendLease::Value next{WeakObject(target),true};
     if(!blend_lease_.owns(current)) {
         forget_blend_lease();
-        if(auto* previous=current.object.Get();previous && !previous->IsRootSet()) {
-            previous->SetRootSet();original_blend_root_owned_=true;
-        }
+        original_blend_root_.keep(current.object.Get());
     }
     blend_lease_.claim(current,next);
     write_field<UObject*>(anim,L"ActiveBlendSpace",target);
@@ -197,9 +194,7 @@ void WalkOverride::push_on(UObject* target) {
         throw std::runtime_error("Walk animation readback did not match");
 }
 void WalkOverride::forget_blend_lease() {
-    if(original_blend_root_owned_ && blend_lease_.original())
-        if(auto* original=blend_lease_.original()->object.Get()) original->ClearRootSet();
-    original_blend_root_owned_=false;blend_lease_.reset();
+    original_blend_root_.release();blend_lease_.reset();
 }
 void WalkOverride::push_off() {
     if(auto* anim=anim_.Get()) {

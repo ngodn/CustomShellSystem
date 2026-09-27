@@ -24,6 +24,7 @@
 #include <Unreal/Engine/UDataTable.hpp>
 #include <Unreal/FString.hpp>
 #include <Unreal/UnrealVersion.hpp>
+#include <Unreal/Core/HAL/UnrealMemory.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/CoreUObject/UObject/FStrProperty.hpp>
 
@@ -316,20 +317,98 @@ static UObject* load(const std::string& path) {
     s_asset_cache[path].capture(object);
     return object;
 }
-// Blocking asset loads can run garbage collection between successive imports.
-// Keep only this operation's assets rooted until component references own them.
-class AssetLoadRoots {
-    std::vector<WeakObject> owned_;
-public:
-    void keep(UObject* object) {
-        if(object->IsRootSet()) return;
-        owned_.emplace_back(object);
-        object->SetRootSet();
+// UE 5.6 keeps an object alive through a root only when it is listed in the collector's
+// GRoots set, and only the engine's own AddToRoot (FUObjectItem::SetRootFlags) adds it there.
+// UE4SS's SetRootSet flips the RootSet bit alone. MarkRootObjectsAsReachable walks GRoots, and
+// the KeepFlags pass skips flagged objects as already tracked, so a flag-only root is collected
+// at the next garbage collection, about a minute later (5.6.1 GarbageCollection.cpp; measured
+// live: three rooted dye masks gone after one collection). CSS instead lists what it keeps in
+// the game instance's ReferencedObjects, the array UGameInstance::RegisterReferencedObject
+// fills and the collector walks as an ordinary property. Writing it from a tick is safe while
+// reachability runs in one pass (gc.AllowIncrementalReachability 0, the 5.6 default); with it
+// on, an entry added between increments would miss the GC barrier, so the keep-alive stays off.
+namespace keep_alive {
+struct Entry { WeakObject weak; int owners=0; };
+WeakObject instance;
+std::unordered_map<UObject*,Entry> entries;   // CSS's own entries in that array
+int state=0;                                  // 0 not checked, 1 usable, -1 unavailable
+std::string reason;
+// TArray<TObjectPtr<UObject>> in a shipping build: data, count, capacity, with the heap
+// allocator's plain FMemory::Realloc (ContainerAllocationPolicies.h), which UE4SS forwards to
+// the engine's GMalloc. The array helper's own grow path is not exported by the runtime.
+struct RawArray { UObject** data; int32_t num; int32_t max; };
+static_assert(sizeof(RawArray)==16);
+RawArray& array(UObject* gi) {
+    auto* property=gi->GetPropertyByNameInChain(L"ReferencedObjects");
+    if(!property || !property->IsA<FArrayProperty>() || property->GetElementSize()!=sizeof(RawArray))
+        throw std::runtime_error("GameInstance has no ReferencedObjects array");
+    auto* inner=static_cast<FArrayProperty*>(property)->GetInner();
+    if(!inner->IsA<FObjectProperty>() || inner->GetElementSize()!=sizeof(UObject*))
+        throw std::runtime_error("ReferencedObjects layout mismatch");
+    auto& a=*reinterpret_cast<RawArray*>(reinterpret_cast<std::byte*>(gi)+property->GetOffset_Internal());
+    if(a.num<0 || a.max<a.num || a.num>65536 || (a.max && !a.data)) throw std::runtime_error("ReferencedObjects is not a valid array");
+    return a;
+}
+bool add(UObject* object) {
+    auto* gi=instance.Get();
+    if(state!=1 || !gi) return false;
+    if(auto it=entries.find(object);it!=entries.end()) {
+        if(it->second.weak.Get()==object) { ++it->second.owners; return true; }
+        entries.erase(it);   // a dead entry whose address came back as another object
     }
-    ~AssetLoadRoots() noexcept {
-        for(auto& weak:owned_) if(auto* object=weak.Get()) object->ClearRootSet();
+    auto& a=array(gi);
+    for(int32_t i=0;i<a.num;++i) if(a.data[i]==object) return false;   // the game keeps it already
+    if(a.num==a.max) {
+        const int32_t grown=std::max(16,a.max*2);
+        auto* data=static_cast<UObject**>(FMemory::Realloc(a.data,size_t(grown)*sizeof(UObject*)));
+        if(!data) return false;
+        a.data=data; a.max=grown;
     }
-};
+    a.data[a.num++]=object;
+    entries.emplace(object,Entry{WeakObject(object),1});
+    return true;
+}
+void remove(UObject* object) noexcept {
+    auto it=entries.find(object);
+    if(it==entries.end() || --it->second.owners>0) return;
+    entries.erase(it);
+    try {
+        auto* gi=instance.Get(); if(!gi) return;
+        auto& a=array(gi);
+        for(int32_t i=a.num-1;i>=0;--i) if(a.data[i]==object) {
+            std::memmove(a.data+i,a.data+i+1,size_t(a.num-i-1)*sizeof(UObject*));
+            --a.num; break;
+        }
+    } catch(...) {}
+}
+}
+void keep_alive_attach(void* engine) {
+    using namespace keep_alive;
+    if(state==-1 && instance.Get()) return;
+    auto* gi=read<UObject*>(static_cast<UObject*>(engine),L"GameInstance");
+    if(gi==instance.Get() && state!=0) return;
+    // A new game instance brings a new array; the old one's entries went with it.
+    entries.clear(); instance=gi; state=0; reason.clear();
+    if(!gi) return;
+    try {
+        array(gi);
+        Call cvar(find(L"/Script/Engine.Default__KismetSystemLibrary"),L"GetConsoleVariableIntValue",2);
+        cvar.set(L"VariableName",FString(L"gc.AllowIncrementalReachability")); cvar.run();
+        if(cvar.get<int32_t>()!=0) throw std::runtime_error("incremental reachability is on");
+        state=1;
+    } catch(const std::exception& error) { state=-1; reason=error.what(); }
+}
+std::string keep_alive_status() {
+    using namespace keep_alive;
+    return state==1?"on, "+std::to_string(entries.size())+" kept":state==-1?"off: "+reason:"not attached";
+}
+void AssetLoadRoots::keep(UObject* object) {
+    if(object && keep_alive::add(object)) owned_.push_back(object);
+}
+void AssetLoadRoots::release() noexcept {
+    for(auto* object:owned_) keep_alive::remove(object);
+    owned_.clear();
+}
 #include "original_shells.inl"
 static UObject* mesh_asset(UObject* component) {
     Call call(component, L"GetSkeletalMeshAsset", 1); call.run(); return call.get<UObject*>();
@@ -498,6 +577,7 @@ UObject* Appearance::player(void* engine) {
     shell.clear(); pawn_name.clear(); current_mesh.clear();
     static const bool supported = Version::IsAtLeast(5, 6) && Version::IsBelow(5, 7);
     if (!supported) throw std::runtime_error("CSS adapter requires UE5.6");
+    keep_alive_attach(engine);
     auto* viewport = read<UObject*>(static_cast<UObject*>(engine), L"GameViewport");
     if (!viewport) return nullptr;
     auto* world = read<UObject*>(viewport, L"World");
@@ -997,6 +1077,11 @@ bool Appearance::ready_to_apply() const {
 bool Appearance::active() const { auto* c=component_.Get(); return c && c==observed_component_.Get() && applied_.Get() && mesh_asset(c)==applied_.Get(); }
 #ifdef CSS_INVENTORY_DEV
 #endif
+void Appearance::timed_set_mesh(UObject* component, UObject* mesh) {
+    const auto started=std::chrono::steady_clock::now();
+    set_mesh(component,mesh);
+    apply_swap_ms+=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count();
+}
 bool Appearance::apply(void* engine, const std::string& mesh_path, const std::map<int,std::string>& materials) {
     if(!ready_to_apply()) return false;
     auto* pawn = player(engine);
@@ -1008,6 +1093,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     if (component_.Get() && component_.Get() != component && !restore()) return false;
     WeakObject live_component(component), live_pawn(pawn), previous_mesh(before);
     AssetLoadRoots loading_roots;
+    const auto load_started=std::chrono::steady_clock::now();
     auto* target = load(mesh_path); loading_roots.keep(target);
     WeakObject live_target(target);
     std::map<int,WeakObject> loaded_materials;
@@ -1017,6 +1103,8 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
             throw std::runtime_error("Override asset is not a material");
         loaded_materials.emplace(slot,WeakObject(value));
     }
+    apply_load_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-load_started).count();
+    apply_swap_ms=0;
     if(live_target.Get()!=target || std::any_of(loaded_materials.begin(),loaded_materials.end(),[](const auto& pair){return !pair.second.Get();}))
         throw std::runtime_error("Appearance assets changed during loading; request cancelled");
     if (live_component.Get() != component || live_pawn.Get() != pawn || previous_mesh.Get() != before || mesh_asset(component) != before)
@@ -1025,6 +1113,10 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     if (!target->IsA(type)) throw std::runtime_error("Selected asset is not a skeletal mesh");
     if (!is_compatible_skeleton(before, target))
         throw std::runtime_error("Different skeleton: appearance change refused");
+    // From here the look is going on (or is already on): its assets stay rooted until the
+    // outfit changes or CSS restores, so a pawn swap never reloads them from disk.
+    if(applied_.Get()!=target) retained_.release();
+    retained_.take(loading_roots);
     if (before == target && applied_materials_==materials && materials_match()) return true;
     if (before == target && applied_materials_==materials && reuse_materials()) return true;
     const bool returning_to_outfit=applied_.Get()==target && applied_materials_==materials && repair_mesh_needed();
@@ -1035,6 +1127,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
         original_materials_=std::move(materials);
         original_live_materials_=material_objects(component);
         original_default_materials_.clear();
+        original_retained_.release(); original_retained_.keep(before);
         const auto baseline=material_snapshot(component,before);
         for(const auto& name:baseline.at("defaults")) {
             const auto text=name.get<std::string>();const auto space=text.find(' ');
@@ -1054,7 +1147,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
             // stacks on this one. (Forgetting the baseline without restoring leaked 3 cm per
             // Black Pearl wear onto every other variant.)
             restore_ground_offset();
-            set_mesh(component,target);
+            timed_set_mesh(component,target);
             applied_hidden_.clear();   // a fresh mesh shows every section; see note below
             if(materials_match() || reuse_materials()) {
                 current_mesh=narrow(target->GetPathName());
@@ -1067,7 +1160,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
         // reconcile_sections() (in customize()) re-hide from scratch instead of short-circuiting
         // on a stale want==applied_hidden_. This is why a launchpad/gate that swapped the pawn
         // to Harbinger and back used to drop the outfit's cut sections. Event-only, no frame cost.
-        if(before!=target && !returning_to_outfit) { restore_ground_offset(); set_mesh(component, target); applied_hidden_.clear(); }
+        if(before!=target && !returning_to_outfit) { restore_ground_offset(); timed_set_mesh(component, target); applied_hidden_.clear(); }
         const int count=overrides(component).Num();
         for(int i=0;i<count;++i) material(component,i,nullptr);
         auto defaults=material_snapshot(component,target).at("defaults");
@@ -1166,6 +1259,7 @@ bool Appearance::restore() {
     }
     control_mids_.clear(); dye_targets_.clear(); dye_textures_.clear(); last_values_.clear(); control_outfit_.clear();
     expected_materials_.clear();
+    retained_.release(); original_retained_.release();
     component_.Reset(); applied_.Reset(); original_.clear(); original_materials_.clear(); original_default_materials_.clear(); original_live_materials_.clear(); applied_materials_.clear();
     return true;
 }
@@ -1533,6 +1627,7 @@ void WornItems::release() {
         Call destroy(component,L"K2_DestroyComponent",1); destroy.set(L"Object",owner.get<UObject*>()); destroy.run();
     }
     worn_.clear(); body_.Reset(); identity_.clear();
+    retained_.release();
 }
 std::vector<std::string> WornItems::ids() const {
     std::vector<std::string> result;
@@ -1623,6 +1718,7 @@ std::set<int> WornItems::update(UObject* body,const std::string& identity,const 
                         throw std::runtime_error("Item material override is not a material: "+entry->id);
                     material(component,slot,value);
                 }
+                retained_.take(roots);
             }
         } catch(...) { release(); throw; }
     }
@@ -1966,6 +2062,12 @@ void Appearance::prepare_deformation_materials() {
     }
 }
 void Appearance::customize(const Outfit& outfit,const std::string& variant,const Customization& custom) {
+    customize_ms.clear();
+    auto step_from=std::chrono::steady_clock::now();
+    auto step=[&](const char* name) {
+        const auto at=std::chrono::steady_clock::now();
+        customize_ms[name]+=std::chrono::duration<double,std::milli>(at-step_from).count(); step_from=at;
+    };
     color_check_valid_=false;   // recaptured below from the first colour CSS actually writes
     const auto& options=outfit.controls_for(variant);
     auto values=control_values(options,custom);
@@ -2078,6 +2180,8 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 }
             }
         }
+        step("setup");
+        if(!options.surfaces.empty() && mask_cache_outfit_!=outfit.id) { release_caches(); mask_cache_outfit_=outfit.id; }
         auto* library=find(L"/Script/Engine.Default__KismetRenderingLibrary");
         for(const auto& surface:options.surfaces) {
             bool active=false,changed=false;
@@ -2104,6 +2208,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                     create.set(L"bAutoGenerateMipMaps",dye_mip_update()!=nullptr); create.run(); target=create.get<UObject*>();
                     if(!target) throw std::runtime_error("Could not create the dye texture"); weak=target;
                 }
+                step("dye_create");
                 // 0.4: the render target used to be bound to the materials before the layer
                 // textures were imported and drawn. A failed import or draw then left a black
                 // dye texture on the body (the random dark, glossy skin). Keep it alive with a
@@ -2113,15 +2218,23 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 for(const auto& [id,file]:surface.layers) if(values.contains(id)) {
                     auto& texture=dye_textures_[file];
                     if(!texture.Get()) {
-                        auto path=outfit.resources/file;
-                        if(!fs::is_regular_file(path)) throw std::runtime_error("The outfit's color mask is missing");
-                        Call import(library,L"ImportFileAsTexture2D",3); import.set(L"WorldContextObject",component); import.set(L"Filename",FString(path.c_str())); import.run();
-                        auto* loaded=import.get<UObject*>(); if(!loaded) throw std::runtime_error("Could not load the outfit's color mask"); texture=loaded;
+                        const bool known=mask_cache_.contains(outfit.id+"/"+file);
+                        auto& cached=mask_cache_[outfit.id+"/"+file];
+                        if(auto* kept=cached.Get()) { texture=kept; customize_ms["mask_hits"]+=1; }
+                        else {
+                            customize_ms[known?"mask_dead":"mask_absent"]+=1;
+                            auto path=outfit.resources/file;
+                            if(!fs::is_regular_file(path)) throw std::runtime_error("The outfit's color mask is missing");
+                            Call import(library,L"ImportFileAsTexture2D",3); import.set(L"WorldContextObject",component); import.set(L"Filename",FString(path.c_str())); import.run();
+                            auto* loaded=import.get<UObject*>(); if(!loaded) throw std::runtime_error("Could not load the outfit's color mask");
+                            texture=loaded; cached=loaded; mask_roots_.keep(loaded);
+                        }
                     }
                     auto color=values.at(id); for(int i=0;i<3;++i) color[i]=srgb_linear(color[i]);
                     layers.emplace_back(texture,color);
                 }
                 for(const auto& [texture,color]:layers) if(!texture.Get()) throw std::runtime_error("Color textures changed while loading");
+                step("dye_import");
                 Call begin(library,L"BeginDrawCanvasToRenderTarget",5); begin.set(L"WorldContextObject",component); begin.set(L"TextureRenderTarget",target); begin.run();
                 auto end=[&] { Call finish(library,L"EndDrawCanvasToRenderTarget",2); finish.set(L"WorldContextObject",component); finish.copy(L"Context",begin,L"Context"); finish.run(); };
                 try {
@@ -2136,7 +2249,9 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                     for(const auto& [texture,color]:layers) draw(texture.Get(),color,2);
                 } catch(...) { end(); throw; }
                 end();
+                step("dye_draw");
                 update_dye_mips(target);
+                step("dye_mips");
                 // Readback must succeed, but its RGB may legitimately be black.
                 // Fixed nonblack sample points missed sparse UV islands and silently
                 // disabled their controls. Unlike ReadRenderTargetPixel's red error
@@ -2152,6 +2267,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                     throw std::runtime_error("Dye readback array layout mismatch");
                 FScriptArrayHelper samples(static_cast<FArrayProperty*>(output),pixels.data(output));
                 if(samples.Num()!=1) throw std::runtime_error("Could not read the completed dye texture");
+                step("dye_readback");
             }
             for(int slot:surface.slots) {
                 auto* mid=mid_for(slot);
@@ -2159,6 +2275,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 Call readback(mid,L"K2_GetTextureParameterValue",2); readback.set(L"ParameterName",parameter); readback.run();
                 if(readback.get<UObject*>()!=target) throw std::runtime_error("Dye texture read-back failed");
             }
+            step("dye_bind");
         }
         bool dynamics_needs_reset=false;
         for(const auto& control:options.controls) {
@@ -2337,7 +2454,9 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 }
             }
         }
+        step("controls");
         sync_body_geometry(component);
+        step("geometry");
         if(dynamics_needs_reset) reset_dynamics(dynamics_instance_.Get());
         prepare_deformation_materials();
         last_values_=std::move(values); control_outfit_=control_identity;
@@ -2345,6 +2464,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
         material_debug["controls"]=last_values_;
         material_debug["dye_targets"]=dye_targets_.size();
         remember_materials();
+        step("snapshot");
     } catch(...) { reset_controls(); throw; }
 }
 // Cheap transition check: re-read the one dye value CSS wrote and see whether it still holds. A

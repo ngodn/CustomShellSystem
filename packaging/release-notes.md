@@ -1,32 +1,11 @@
-### CSS 1.0.0-beta.5
-
-### Added
-
-- The CSS page is built from the game's own menu widgets: rows, headers, sliders, prompts, dialogs and the details window. Every prompt clicks, sliders drag, the details window scrolls, search lists every result.
-- Use NPC / Enemy: 69 enemies, people and Harbinger forms on the player's skeleton, from an editable `catalog/npc-appearances.css.json`.
-- Ground height per outfit variant (Customize > Placement), overriding the package's `ground_offset_cm`.
-- Physics presets as one framework module; packages may declare their own per control (`presets`).
-- Misc rows for the worn shell's own items (Gragu's Revered Heart, Eredrim's Diapason, Genessa's Catalyst...), with an Always Shown mode.
-- Rows say how a part differs from the author's default (Hidden, Shown, Edited, a preset name, When in use).
-- Host ABI 2: state and runtime files are written on the loader's own thread.
-
-### Changed
-
-- Menu closed: CSS frame cost 0.68 to 0.93 ms mean down to 0.19 to 0.45 ms; p99 11.3 ms to under 1.2 ms. Menu navigation 3.1 ms to 0.40 ms mean.
-- Custom locomotion assets load at wear time and stay referenced while the look is active.
-- The seal and sidearm servo measures against the anchor bone's body, not the root body only.
-- Keys match their prompts (Reset all asks first, F on a colour opens Exact colour, Space on Template restores the original).
-- PlayerRecovery checks every five seconds while idle.
+### CSS 1.0.0-beta.5-hotfix.1
 
 ### Fixed
 
-- A variant's heel offset came off before the next mesh swap and stacked 3 cm on every return (sunk feet, a limp).
-- The page redraws correctly after the menu reopens.
-- The Harbinger mirrors the last living shell from a fresh core.
-- F on an outfit row opens Search catalog.
+- Use Original Shell lists every official shell, including shells the save has not unlocked. Discovery reads the settings object's `Shells` soft references and loads each definition itself; `GetShellItemDefinition` only returns definitions already in memory, so a missing one used to drop the whole list ("the shell definition is not a class"). A bad entry is now skipped and logged, and discovery retries twice if the game was not ready.
+- Beacon respawns, severing into the Harbinger and recovering a shell reapply dyed outfits without re-reading their colour masks from disk (Skin Suit: about 230 ms on the game thread down to about 25 ms).
+- Assets CSS keeps loaded now actually stay loaded. UE 5.6 only honours roots registered through the engine's `AddToRoot`; UE4SS's `SetRootSet` sets the flag alone, which the collector ignores. CSS now lists what it keeps in the game instance's `ReferencedObjects`. This covers the worn mesh and materials, accessory meshes, colour masks, menu thumbnails and custom locomotion.
 
-### Upgrading
+### Changed
 
-Close the game. Extract the runtime's CustomShellSystem folder into
-MortalShell2/Binaries/Win64/ue4ss/Mods/. Keep your existing state folder.
-Restart the game once so the new loader (main.dll) is the one running.
+- The log line for each appearance change reports its time and where it went (load, mesh swap, items, customize steps).
