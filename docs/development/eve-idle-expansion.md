@@ -150,3 +150,15 @@ Only the Eve package was replaced. No CSS runtime or extension code was deployed
 The user tested the installed candidate and reported: "yeah its working, but not perfect, its ok la". They explicitly requested packaging it in `dist/eve-v1.2.0-ANIMTEST`. Ship the exact tested E6 trio as an experimental download, with no further asset edits. Keep its embedded 1.2.0 metadata to preserve those tested bytes; the ZIP, directory and changelog carry the ANIMTEST label. Do not imply that this broad user acceptance proves every individual clip/outfit/interruption combination. The detailed matrix remains pending for further polish.
 
 Release notes are tracked in `docs/releases/eve-v1.2.0-ANIMTEST.bbcode`. No public upload is authorized by this local packaging request.
+
+## Variant idle failure and repair
+
+User confirmed the new idles work only on Black Pearl, Prototype Planet Diving Suit and Skin Suit. Vacation Bikini, Casual Knitwear and Midsummer Alice fail. The released meshes use three different post-process graphs. The working three share ABP_Secondary, which declares CSSIdleEnabled and CSSIdleSequence. Bikini uses ABP_BikiniFeet2; Knitwear and Alice use ABP_KnitFeet1. Both footwear graphs lack those fields. WalkOverride requires them before activating a custom idle, so these variants silently skip the custom-idle branch despite valid animation entries and compatible skeletons.
+
+Reproduction: `python3 tools/authoring-probes/animations/check_idle_contract.py work/eve-idle1/variant-bug` exits 1 against the independently decoded released graph classes, identifying both missing controls in both affected graphs. This is the actual runtime activation contract, not a bone-count check. The initial inventory development probe timed out because that interface is unavailable in the installed runtime; the ordinary inspect request works. No runtime binary was replaced for diagnosis.
+
+Lesson: verify the post-process graph of every variant, including specialized footwear graphs. Skeleton and animation-container checks cannot prove that the runtime can activate an idle. Broad user acceptance is also not a substitute for this per-variant check.
+
+Extended the editor-only CreateIdleLayer helper to add the existing idle branch in place to the two explicitly allowed footwear graphs. Backed up their original authoring assets in `variant-bug/source-backup`. Both compile with the idle switch defaulting off, preserve their two footwear controls exactly, and leave all other authoring assets unchanged. Authoring build, repair commandlet and Windows cook exited 0. Package only these two replacements, preserving all other 335 assets and manifest choices.
+
+Queued user request after the repair: safely reclaim disposable caches and duplicate build output. Preserve source assets, useful work, final releases and rollback backups; record deleted paths and recovered bytes.

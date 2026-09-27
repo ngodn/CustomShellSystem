@@ -45,16 +45,20 @@ UAnimBlueprint* UCSSIdleLibrary::CreateIdleLayer(UAnimBlueprint* Source,
     auto Fail=[](const TCHAR* Why)->UAnimBlueprint* {
         UE_LOG(LogTemp,Error,TEXT("CSS idle layer: %s"),Why); return nullptr;
     };
+    const bool Variant = Source && (
+        Source->GetPathName()==TEXT("/Game/CSS/EveTest/ABP_BikiniFeet2.ABP_BikiniFeet2") ||
+        Source->GetPathName()==TEXT("/Game/CSS/EveTest/ABP_KnitFeet1.ABP_KnitFeet1"));
+    const bool InPlace = Variant && OutputPackage==Source->GetOutermost()->GetName();
     if (!IsRunningCommandlet() || !Source || !Source->GeneratedClass || !Source->TargetSkeleton ||
-        Source->GetPathName()!=TEXT("/Game/CSS/SeduXtress/ABP_Secondary.ABP_Secondary") ||
-        !OutputPackage.StartsWith(TEXT("/Game/CSS/AnimLab/ABP_Idle")) ||
+        (!Variant && Source->GetPathName()!=TEXT("/Game/CSS/SeduXtress/ABP_Secondary.ABP_Secondary")) ||
+        (!InPlace && !OutputPackage.StartsWith(TEXT("/Game/CSS/AnimLab/ABP_Idle"))) ||
         OutputPackage.Len()>80 || !FPackageName::IsValidLongPackageName(OutputPackage) ||
-        FPackageName::DoesPackageExist(OutputPackage) || FindPackage(nullptr,*OutputPackage))
+        (!InPlace && (FPackageName::DoesPackageExist(OutputPackage) || FindPackage(nullptr,*OutputPackage))))
         return Fail(TEXT("Invalid source or isolated output"));
     for (const auto Name:{TEXT("CSSIdleSequence"),TEXT("CSSIdleEnabled")})
         if (FindFProperty<FProperty>(Source->GeneratedClass.Get(),Name))
             return Fail(TEXT("Source already declares idle controls"));
-    auto* Blueprint=Cast<UAnimBlueprint>(FAssetToolsModule::GetModule().Get().DuplicateAsset(
+    auto* Blueprint=InPlace ? Source : Cast<UAnimBlueprint>(FAssetToolsModule::GetModule().Get().DuplicateAsset(
         FPackageName::GetLongPackageAssetName(OutputPackage),
         FPackageName::GetLongPackagePath(OutputPackage),Source));
     if (!Blueprint) return Fail(TEXT("Cannot copy post-process graph"));
