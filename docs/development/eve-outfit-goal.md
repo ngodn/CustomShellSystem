@@ -32,6 +32,11 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**Vacation Bikini heel diagnosis:** `inspect_bikini_heels.py` loads the original Extras Heels and their rig dependencies without changing the source. Armature is in POSE mode; toggling its saved modifier leaves geometry unchanged. Bounds are z=-10.7873..9.3939 cm in both modes (`bikini-heel-rig/`, `bikini-heel-controls/`). Weighted groups are foot/shin/tarsal; the only discovered heel-named custom control is `Christmas Heels=0`, not proof of a control for Extras Heels. Do not infer the complete author UI behavior from this dependency-only load.
+
+`bikini-morph1-sprint/front.png` at combined-max sprint24 looks more plausible than the neutral shoe view, but the standing component pose confirms a real contact mismatch: `bikini-idle-feet/side.png` (recorded `work/anim16/center-component.json`, frame120) shows heel tips substantially below the forefoot soles. A whole-character vertical offset cannot align both. Next fit the footwear using an explicit foot/sole reference while preserving body proportions and original source, rather than cutting heel tips based solely on the neutral export. No geometry repair or game deployment this turn.
+
+
 **Vacation Bikini fitting started:** `bikini-source-comparison.json` confirms Top(6,918 points), Shorts(5,461) and Extras Heels(31,668) match Gemini's saved source point-for-point; source hash preserved. Initial front/back/side renders are `bikini-initial/`. Combined-max renders `bikini-initial-max/` expose jagged straps and displaced lower garment. The exported base is current, not stale.
 
 `repair_planet_morphs.py --garment bikini` rebuilds the six body-driven morphs across Top+Shorts only, leaving base geometry, body morphs and other parts unchanged. Candidate `bikini-morph1/` and inspected front/back `bikini-morph1-max/` remove the obvious inherited strap distortion. BodyTone garment maximum displacement changes2.303→0.483 cm; ThighTone2.279→0.222 cm. This candidate is not saved back to a Blender garment source or imported. Edge fitting, weights, motion, controls and physics remain pending.

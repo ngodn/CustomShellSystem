@@ -159,3 +159,8 @@ Skin lining4 passed a permissive area check but failed the native importer. Vali
 Skin Suit sleeve triangle63272 still showed skin after its centroid was moved outside the body. The reviewer's optional `--probe side 225 490` identified the exact body/garment faces and measured a0.515 mm ray overlap. Vertex and centroid checks alone missed the rest of the triangle surface. A quarter-step barycentric grid improved coverage, but independently requiring every corner to fix the entire surface sample overconstrained the patch. F14/F15 did not remove the visible spot and were not promoted.
 
 For the13-vertex neighborhood, the coupled solver uses barycentric surface constraints across all selected vertices and retains each vertex's0.4 cm bound. Against rest and sprint8,24,32,48, each at default and combined-max shapes, F16 changed five vertices with no unresolved local constraints. The inspected max-sprint24 spot disappears; the same ray hits garment0.814 mm before skin. This is local sampled evidence, not whole-outfit collision acceptance. Preserve the original body and inspect neighboring poses before importing.
+
+
+### Check footwear in a standing pose before diagnosing the neutral export
+
+Vacation Bikini Extras Heels have identical geometry in the author source and Gemini export. Their saved author armature pose does not change it. The neutral export's long heel tips look less unusual during sprint, but a recorded standing pose confirms heel/forefoot contact mismatch. Compare both sole ends in a grounded pose; translating the entire character cannot fix their relative height. Keep separate conclusions for authored geometry, saved rig state, garment fit and actual game floor contact.
