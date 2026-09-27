@@ -11,6 +11,8 @@ parser.add_argument('--motion',type=Path,default=w/'holiday-sprint-motion.json')
 parser.add_argument('--frames',type=int,nargs='+',default=[8,16,24])
 parser.add_argument('--interior-margin',type=float,default=.03)
 parser.add_argument('--centroids',action='store_true')
+parser.add_argument('--min-z',type=float,default=22.)
+parser.add_argument('--max-z',type=float,default=1000.)
 parser.add_argument('--output',type=Path,default=w/'planet-fit7')
 parser.add_argument('--garment',choices=('prototype','skin'),default='prototype')
 args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
@@ -69,7 +71,7 @@ for frame in args.frames:
    if min(1-beta-gamma,beta,gamma)<args.interior_margin:continue
    hits.append((i,signed))
    for j in indices:
-    if base[j,2]<22 or np.linalg.cond(rotations[j])>10:skipped+=1;continue
+    if not args.min_z<=base[j,2]<=args.max_z or np.linalg.cond(rotations[j])>10:skipped+=1;continue
     delta=np.linalg.solve(rotations[j],np.asarray(normal)*reflect*(signed+.06))
     if np.linalg.norm(delta)>.4:skipped+=1;continue
     if j not in proposals or np.linalg.norm(delta)>np.linalg.norm(proposals[j]):proposals[j]=delta

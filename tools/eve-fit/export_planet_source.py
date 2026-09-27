@@ -10,29 +10,37 @@ parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--source',type=Path,default=w/'planet-suit-f7.blend')
 parser.add_argument('--candidate',type=Path,default=w/'planet-fit7/planet.mesh.json')
 parser.add_argument('--output',type=Path,default=w/'planet-export')
+parser.add_argument('--garment',choices=('prototype','skin'),default='prototype')
 a=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 source=a.source;before=hashlib.sha256(source.read_bytes()).hexdigest()
-p=a.candidate;data=json.loads(p.read_text());audit=json.loads(p.with_name('planet.mesh.audit.json').read_text())
+p=a.candidate;data=json.loads(p.read_text());audit=json.loads(p.with_suffix('.audit.json').read_text())
 assert hashlib.sha256(p.read_bytes()).hexdigest()==audit['output_sha256']
 bpy.ops.wm.read_factory_settings(use_empty=True)
-with bpy.data.libraries.load(str(source),link=False) as (src,dst):dst.objects=['Eve Prototype Planet Diving Suit - Suit']
+name={'prototype':'Eve Prototype Planet Diving Suit - Suit','skin':'Eve Skin Suit - Suit Complete'}[a.garment]
+with bpy.data.libraries.load(str(source),link=False) as (src,dst):dst.objects=[name]
 obj=dst.objects[0];bpy.context.scene.collection.objects.link(obj)
 mesh,_,_=fitted_mesh(obj);mesh.calc_loop_triangles();matrix=TO_UE@obj.matrix_world;normal_matrix=matrix.to_3x3().inverted().transposed()
 start=audit['parts'][0]['points'];face_start=audit['parts'][0]['faces'];part=audit['parts'][1]
-assert len(mesh.vertices)==part['points'] and len(mesh.loop_triangles)==part['faces']
-error=max((matrix@v.co-Vector(data['points'][start+v.index])).length for v in mesh.vertices);assert error<.0005
+triangles=[]
+for triangle in mesh.loop_triangles:
+ x,y,z=[matrix@mesh.vertices[i].co for i in triangle.vertices]
+ if (y-x).cross(z-x).length_squared>=1e-12:triangles.append(triangle)
+used=sorted({i for triangle in triangles for i in triangle.vertices})
+compact={v:i for i,v in enumerate(used)}
+assert len(used)==part['points'] and len(triangles)==part['faces']
+error=max((matrix@mesh.vertices[v].co-Vector(data['points'][start+i])).length for i,v in enumerate(used));assert error<.0005
 old_faces=data['faces'][face_start:face_start+part['faces']]
 old_wedges={wi for face in old_faces for wi in face[:3]};lo=min(old_wedges);hi=max(old_wedges)+1
 assert old_wedges==set(range(lo,hi))
 assert not old_wedges.intersection(wi for index,face in enumerate(data['faces']) if not face_start<=index<face_start+part['faces'] for wi in face[:3])
 wedges=[];normals=[];colors=[];faces=[];corner_map={};color=mesh.color_attributes.active_color
-for triangle in mesh.loop_triangles:
+for triangle in triangles:
  loops=list(triangle.loops)
  if matrix.to_3x3().determinant()>0:loops.reverse()
  face=[]
  for loop_index in loops:
   if loop_index not in corner_map:
-   loop=mesh.loops[loop_index];wedge=[start+loop.vertex_index]
+   loop=mesh.loops[loop_index];wedge=[start+compact[loop.vertex_index]]
    for channel in range(data['uv_channels']):
     uv=mesh.uv_layers[min(channel,len(mesh.uv_layers)-1)].data[loop_index].uv
     wedge.extend((uv.x,1-uv.y))
@@ -40,7 +48,10 @@ for triangle in mesh.loop_triangles:
    rgba=color.data[loop_index if color.domain=='CORNER' else loop.vertex_index].color if color else (1,1,1,1)
    corner_map[loop_index]=lo+len(wedges);wedges.append(wedge);normals.append(list(normal));colors.append([round(max(0,min(1,v))*255) for v in rgba])
   face.append(corner_map[loop_index])
- material=mesh.materials[triangle.material_index]['CSS_source_material']
+ if a.garment=='skin':
+  assert len(mesh.materials)==1 and triangle.material_index==0
+  material='MI_EVE_Costume_Temp_Inner_Suit'
+ else:material=mesh.materials[triangle.material_index]['CSS_source_material']
  faces.append(face+[data['materials'].index(material)])
 assert len(wedges)==hi-lo
 from collections import Counter
@@ -49,11 +60,12 @@ assert signatures(wedges,colors)==signatures(data['wedges'][lo:hi],data['colors'
 changed_triangles=sum([data['wedges'][i][0] for i in old[:3]] != [wedges[i-lo][0] for i in new[:3]] for old,new in zip(old_faces,faces,strict=True))
 data['wedges'][lo:hi]=wedges;data['normals'][lo:hi]=normals;data['colors'][lo:hi]=colors
 data['faces'][face_start:face_start+part['faces']]=faces
-for v in mesh.vertices:data['points'][start+v.index]=list(matrix@v.co)
+for i,v in enumerate(used):data['points'][start+i]=list(matrix@mesh.vertices[v].co)
 out=a.output;out.mkdir(exist_ok=False)
-p=out/'planet.mesh.json';p.write_text(json.dumps(data,separators=(',',':'))+'\n')
+stem='skin' if a.garment=='skin' else 'planet'
+p=out/f'{stem}.mesh.json';p.write_text(json.dumps(data,separators=(',',':'))+'\n')
 audit['output_sha256']=hashlib.sha256(p.read_bytes()).hexdigest();audit['parts'][1]['max_influences']=8
-(out/'planet.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')
+(out/f'{stem}.mesh.audit.json').write_text(json.dumps(audit,indent=2)+'\n')
 assert hashlib.sha256(source.read_bytes()).hexdigest()==before
 report=dict(source_sha256=before,source_unchanged=True,suit_point_error_cm=error,uv_and_color_corners_preserved=True,
             refreshed_corners=len(wedges),changed_triangle_records=changed_triangles,other_parts_unchanged=True,
