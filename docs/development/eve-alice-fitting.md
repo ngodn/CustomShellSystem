@@ -140,3 +140,12 @@ The six connected components identify a simpler appropriate motion scope: 36 and
 The collision-copy recipe uses a private copy of accepted Knitwear `PA_KCloth4` rather than the broad gameplay `PA_Body`. Its 32-sphere recipe has a minimum rest gap of 0.77253 cm to the bow. This supports a motion trial only; posed contact remains unproven. Gameplay physics and the original Knitwear asset remain untouched.
 
 Native ACloth3 probe support is recorded in `alice-bow-tails.patch`. Editor build 80095 succeeded, exit 0. Pipeline 71184 is running copy, collision copy, bind, inspection with `-Geometry`, map verification and sprint diagnostics, sequentially. Resume this handle; logs use `alice3-*.log`, outputs `alice-cloth3`. Blender diagnostics explicitly use `--python-exit-code 1`. Render the worst frame after completion and check that the loops retain their silhouette and the hanging ends stay outside the body before adopting it.
+
+
+## Tails-only motion passes bounded sprint trial
+
+Pipeline 71184 completed every step exit 0. Saved maps match within 1.45302e-8 cm; all protected hashes remain unchanged. Native 65-frame sprint with collision and backstop enabled has maximum displacement 0.4989999 cm and pinned/limit error 0.00003802 cm. This removes the previous multi-centimetre inflation. Maximum all-edge ratio is 6.0136 (includes pinned skin deformation); the coordinate verifier's active-edge ratio is 3.6644.
+
+Visual replay 80066 completed exit 0, using fresh saved render mapping with rest reconstruction error 0.000009934 cm. Inspected `alice3-worst/front.png` at frame 52: hanging ends stay attached and outside the visible chest, and the previous inflated bow is gone. The right loop remains compressed by skinning in this bent pose, and the already accepted neck-strap intersections remain. Do not claim perfect bow shape or universal collision clearance. The chest fabric still covers both nipple contours in this view.
+
+Use `SK_ACloth3` as the bounded-motion candidate for the next game review, preserving this limitation for user assessment rather than restarting neck/bow perfection work. Next complete Alice's modular controls/body motion/palettes and package a private trial, then record in-game movement before merging into the final Eve mod. No game package or release archive changed here. All motion/replay processes are terminal.
