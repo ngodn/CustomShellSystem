@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": 1,
+  "preset_name": "Brigand_Slayer",
+  "author": "eins0fx",
+  "description": "Aggressive hybrid moveset combining fast sword openers with Brigand Juke slashes, rapid triple thrusts, and Stillblade Break damage.",
+  "base_weapon": "HadernsSword",
+  "light_chain": {
+    "L1": {
+      "type": "player",
+      "source": "HadernsSword",
+      "ability": "HadernsSword_A1",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HadernSword/A_Shared_HadernSword_A_03_Montage.A_Shared_HadernSword_A_03_Montage"
+    },
+    "L2": {
+      "type": "enemy",
+      "source": "BrigBase",
+      "ability": "GA_BrigBase_Attack_Juke_Left",
+      "montage": "/Game/Sparta/Characters/Enemies/Brigands/BrigBase/Animations/Attacks/AM_BrigBase_Attack_Juke_Left.AM_BrigBase_Attack_Juke_Left"
+    },
+    "L3": {
+      "type": "enemy",
+      "source": "BrigBase",
+      "ability": "GA_BrigBase_Attacks_Stabs_3hit",
+      "montage": "/Game/Sparta/Characters/Enemies/Brigands/BrigBase/Animations/Attacks/AM_BrigBase_Attacks_Stabs_3hit.AM_BrigBase_Attacks_Stabs_3hit"
+    },
+    "LF": {
+      "type": "tarstone_finisher",
+      "tarstone_id": "ID_Melee_LightAttackFinisher_Break",
+      "tarstone_name": "Stillblade's Stone",
+      "ability": "HadernsSword_A_Finisher",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HadernSword/A_Shared_HadernSword_AAA_Finisher_Montage.A_Shared_HadernSword_AAA_Finisher_Montage"
+    },
+    "LC": {
+      "type": "enemy",
+      "source": "BrigBase",
+      "ability": "GA_BrigBase_Attack_Runup_Stab",
+      "montage": "/Game/Sparta/Characters/Enemies/Brigands/BrigBase/Animations/Attacks/AM_BrigBase_Attack_Runup_Stab.AM_BrigBase_Attack_Runup_Stab"
+    }
+  },
+  "heavy_chain": {
+    "H1": {
+      "type": "player",
+      "source": "HadernsSword",
+      "ability": "HadernsSword_B1",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/HadernSword/Temp/B/A_Shared_HadernSword_B_Montage.A_Shared_HadernSword_B_Montage"
+    },
+    "H2": {
+      "type": "enemy",
+      "source": "BrigBase",
+      "ability": "GA_BrigBase_Attack_Swipes_2hit",
+      "montage": "/Game/Sparta/Characters/Enemies/Brigands/BrigBase/Animations/Attacks/AM_BrigBase_Attack_Swipes_2hit.AM_BrigBase_Attack_Swipes_2hit"
+    },
+    "H3": {
+      "type": "enemy",
+      "source": "BrigElite",
+      "ability": "GA_BrigElite_Attack_Overhead_AAA",
+      "montage": "/Game/Sparta/Characters/Enemies/Brigands/BrigElite/Animation/Attacks/AM_BrigElite_Attack_Overhead_AAA.AM_BrigElite_Attack_Overhead_AAA"
+    },
+    "HF": {
+      "type": "enemy",
+      "source": "BrigBase",
+      "ability": "GA_BrigBase_Attack_Gap_Swing_2hit",
+      "montage": "/Game/Sparta/Characters/Enemies/Brigands/BrigBase/Animations/Attacks/AM_BrigBase_Attack_Gap_Swing_2hit.AM_BrigBase_Attack_Gap_Swing_2hit"
+    },
+    "HC": {
+      "type": "enemy",
+      "source": "BrigElite",
+      "ability": "GA_BrigElite_Attack_Jump_Overhead",
+      "montage": "/Game/Sparta/Characters/Enemies/Brigands/BrigElite/Animation/Attacks/AM_BrigElite_Attack_Jump_Overhead.AM_BrigElite_Attack_Jump_Overhead"
+    }
+  }
+}

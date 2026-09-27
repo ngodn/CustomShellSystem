@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": 1,
+  "preset_name": "Cultist_Acrobat",
+  "author": "eins0fx",
+  "description": "Fluid acrobatic spear combat featuring Cultist Spear Lady 360-degree whirlwind spins and aerial dive finishers.",
+  "base_weapon": "ClockworkScythe",
+  "light_chain": {
+    "L1": {
+      "type": "player",
+      "source": "ClockworkScythe",
+      "ability": "ClockworkScythe_A1",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/A_Shared_Attacks_Scythe_A_02_Montage.A_Shared_Attacks_Scythe_A_02_Montage"
+    },
+    "L2": {
+      "type": "enemy",
+      "source": "CultistSpearLady",
+      "ability": "GA_CultistSpearLady_5Hit_Attack",
+      "montage": "/Game/Sparta/Characters/Enemies/CultistSpearLady/Art/Animation/Attacks/AM_CultistSpearLady_5Hit_Attack.AM_CultistSpearLady_5Hit_Attack"
+    },
+    "L3": {
+      "type": "enemy",
+      "source": "CultistSpearLady",
+      "ability": "GA_CultistSpearLady_3Spins_Attack",
+      "montage": "/Game/Sparta/Characters/Enemies/CultistSpearLady/Art/Animation/Attacks/AM_CultistSpearLady_3Spins_Attack.AM_CultistSpearLady_3Spins_Attack"
+    },
+    "LF": {
+      "type": "tarstone_finisher",
+      "tarstone_id": "ID_Melee_LightAttackFinisher_Resolve",
+      "tarstone_name": "Zealot's Stone",
+      "ability": "ClockworkScythe_A3_Finisher",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/A_Shared_Attacks_Scythe_AAA_03_Finisher_Montage.A_Shared_Attacks_Scythe_AAA_03_Finisher_Montage"
+    },
+    "LC": {
+      "type": "enemy",
+      "source": "CultistSpearLady",
+      "ability": "GA_CultistSpearLady_Gap_Thrust_Attack",
+      "montage": "/Game/Sparta/Characters/Enemies/CultistSpearLady/Art/Animation/Attacks/AM_CultistSpearLady_Gap_Thrust_Attack.AM_CultistSpearLady_Gap_Thrust_Attack"
+    }
+  },
+  "heavy_chain": {
+    "H1": {
+      "type": "player",
+      "source": "ClockworkScythe",
+      "ability": "ClockworkScythe_B1",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/A_Shared_Attacks_Scythe_B_Montage.A_Shared_Attacks_Scythe_B_Montage"
+    },
+    "H2": {
+      "type": "enemy",
+      "source": "CultistBase",
+      "ability": "GA_CultistBase_Torch_03",
+      "montage": "/Game/Sparta/Characters/Enemies/CultistBase/Animation/Attacks/AM_CultistBase_Attacks_Torch_Attack_03.AM_CultistBase_Attacks_Torch_Attack_03"
+    },
+    "H3": {
+      "type": "enemy",
+      "source": "CultistSpearLady",
+      "ability": "GA_CultistSpearLady_3Spins_Attack",
+      "montage": "/Game/Sparta/Characters/Enemies/CultistSpearLady/Art/Animation/Attacks/AM_CultistSpearLady_3Spins_Attack.AM_CultistSpearLady_3Spins_Attack"
+    },
+    "HF": {
+      "type": "enemy",
+      "source": "CultistSpearLady",
+      "ability": "GA_CultistSpearLady_StableLeap_Attack",
+      "montage": "/Game/Sparta/Characters/Enemies/CultistSpearLady/Art/Animation/Attacks/AM_CultistSpearLady_StableLeap_Attack.AM_CultistSpearLady_StableLeap_Attack"
+    },
+    "HC": {
+      "type": "player",
+      "source": "ClockworkScythe",
+      "ability": "Attack_ClockworkScythe_B3_Hold",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Scythe/A_Shared_Attacks_Scythe_BBB_10_Hold_V2_Montage.A_Shared_Attacks_Scythe_BBB_10_Hold_V2_Montage"
+    }
+  }
+}

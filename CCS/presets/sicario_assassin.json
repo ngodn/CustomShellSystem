@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": 1,
+  "preset_name": "Sicario_Assassin",
+  "author": "eins0fx",
+  "description": "High-speed dual dagger style using Sicario rush dash-slices, counterstrikes, and Clerik's Stone heavy critical finisher.",
+  "base_weapon": "AxeDagger",
+  "light_chain": {
+    "L1": {
+      "type": "enemy",
+      "source": "Sicario",
+      "ability": "GA_Sicario_Attack_Rush",
+      "montage": "/Game/Sparta/Characters/Enemies/Sicario/Animation/Attacks/AM_Sicario_Attack_Rush.AM_Sicario_Attack_Rush"
+    },
+    "L2": {
+      "type": "enemy",
+      "source": "Sicario",
+      "ability": "GA_Sicario_2Hit_Swing_Attack",
+      "montage": "/Game/Sparta/Characters/Enemies/Sicario/Animation/Attacks/AM_Sicario_2Hit_Swing_Attack.AM_Sicario_2Hit_Swing_Attack"
+    },
+    "L3": {
+      "type": "player",
+      "source": "AxeDagger",
+      "ability": "AxeDagger_A3",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/AxeDagger/A_Shared_Attacks_AxeDagger_AAA_Montage.A_Shared_Attacks_AxeDagger_AAA_Montage"
+    },
+    "LF": {
+      "type": "tarstone_finisher",
+      "tarstone_id": "ID_Melee_LightAttackFinisher_Break",
+      "tarstone_name": "Stillblade's Stone",
+      "ability": "AxeDagger_A_Finisher",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/AxeDagger/A_Shared_Attacks_AxeDagger_AAA_Finisher_Montage.A_Shared_Attacks_AxeDagger_AAA_Finisher_Montage"
+    },
+    "LC": {
+      "type": "player",
+      "source": "AxeDagger",
+      "ability": "Attack_AxeDagger_A3_Hold",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/AxeDagger/HoldAttacks/A_Shared_Attacks_AxeDagger_Hold_A_02_MontageFull.A_Shared_Attacks_AxeDagger_Hold_A_02_MontageFull"
+    }
+  },
+  "heavy_chain": {
+    "H1": {
+      "type": "player",
+      "source": "AxeDagger",
+      "ability": "AxeDagger_B1",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/AxeDagger/Temp/B/A_Shared_Attacks_AxeDagger_B_Montage.A_Shared_Attacks_AxeDagger_B_Montage"
+    },
+    "H2": {
+      "type": "enemy",
+      "source": "Sicario",
+      "ability": "GA_Sicario_Attack_Rush",
+      "montage": "/Game/Sparta/Characters/Enemies/Sicario/Animation/Attacks/AM_Sicario_Attack_Rush.AM_Sicario_Attack_Rush"
+    },
+    "H3": {
+      "type": "enemy",
+      "source": "Sicario",
+      "ability": "GA_Sicario_Jump_Combo",
+      "montage": "/Game/Sparta/Characters/Enemies/Sicario/Animation/Attacks/AM_Sicario_Jump_Combo.AM_Sicario_Jump_Combo"
+    },
+    "HF": {
+      "type": "tarstone_finisher",
+      "tarstone_id": "ID_Melee_HeavyAttackFinisher_Critical",
+      "tarstone_name": "Clerik's Stone",
+      "ability": "AxeDagger_B_Finisher",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/AxeDagger/Temp/B/A_Shared_Attacks_AxeDagger_BBB_Finisher_Montage.A_Shared_Attacks_AxeDagger_BBB_Finisher_Montage"
+    },
+    "HC": {
+      "type": "player",
+      "source": "AxeDagger",
+      "ability": "Attack_AxeDagger_B3_Hold",
+      "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/AxeDagger/HoldAttacks/AM_Shells_Attacks_AxeDagger_Hold_B.AM_Shells_Attacks_AxeDagger_Hold_B"
+    }
+  }
+}

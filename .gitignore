@@ -91,3 +91,6 @@ Thumbs.db
 /tools/authoring/CSSAuthoring/.vs/
 /tools/authoring/CSSAuthoring/*.sln
 /tools/authoring/CSSAuthoring/*.code-workspace
+
+/CCS/work
+/CCS/build/
