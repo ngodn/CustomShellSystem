@@ -133,6 +133,7 @@ private:
     struct PendingReveal { WeakObject scroll, target; uint8_t destination = 0; int frames = 0; };
     std::array<PendingReveal, 2> pending_reveals_{};
     std::string detail_title_, detail_sub_, detail_body_, status_shown_, title_shown_, subtitle_shown_;
+    WeakObject detail_text_;   // our fixed-height description block (the game's own one grows with the text)
     int status_error_shown_ = -1, logo_shown_ = -1;
     uint64_t transition_started_ = 0;
     // ---- confirmation dialog: the game's WBP_ConfirmationPrompt_Default

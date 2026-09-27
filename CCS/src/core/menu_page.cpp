@@ -183,6 +183,7 @@ void Menu::text(UObject* block, std::string& shown, const std::string& value) {
 void Menu::state(Item& item, bool selected) {
     if (item.selected == int(selected)) return;
     if (auto* widget = item.widget.Get()) invoke(widget, selected ? L"OnSelectedState" : L"OnNullState");
+    if ((item.kind == Kind::option || item.kind == Kind::slider)) if (auto* frame = item.extra2.Get()) invoke(frame, L"SetBrushColor", L"InBrushColor", selected ? Color{.86f, .72f, .45f, .22f} : Color{0, 0, 0, 0});
     item.selected = selected;
 }
 void Menu::glyph(UObject* widget, const std::string& action, uint8_t fallback, uint8_t keyboard) {
@@ -338,11 +339,22 @@ bool Menu::page(double width, double height) {
     if (auto* sample = object_of(details, L"DetailsPrompt")) visibility(sample, collapsed);
     visibility(part(details, L"Size_SubHeader"), collapsed);
     for (auto name : {L"MyIcon", L"WidgetSwitcher_IconBG", L"Overlay_Icon", L"Spacer_83"}) if (auto* w = object_of(details, name)) visibility(w, collapsed);
+    // The window keeps one geometry whatever the text: the game's description block is hidden and
+    // replaced by a fixed-height box (long text is clipped), and the rows area has a fixed height.
+    if (auto* flavour = object_of(details, L"RTB_MyFlavourText")) visibility(flavour, collapsed);
+    auto* description_size = construct(L"/Script/UMG.SizeBox", tree);
+    invoke(description_size, L"SetHeightOverride", L"InHeightOverride", 250.f);
+    invoke(description_size, L"SetWidthOverride", L"InWidthOverride", float(window_w - 80));
+    invoke(description_size, L"SetClipping", L"InClipping", uint8_t{1});
+    auto* description = text_block(tree, 30, serif, body, true);
+    add_child(description_size, description); detail_text_ = description;
+    padding(add_child(part(details, L"VB_CustomWidgets"), description_size), Margin{40, 8, 40, 16});
     auto* head = construct(L"/Script/UMG.VerticalBox", tree);
     add_child(part(details, L"VB_CustomWidgets"), head);
     head_.box = head;
     auto* panel_size = construct(L"/Script/UMG.SizeBox", tree);
     invoke(panel_size, L"SetMaxDesiredHeight", L"InMaxDesiredHeight", panel_max_);
+    invoke(panel_size, L"SetMinDesiredHeight", L"InMinDesiredHeight", panel_max_);
     invoke(panel_size, L"SetMinDesiredWidth", L"InMinDesiredWidth", float(window_w - 40));
     add_child(part(details, L"VB_CustomWidgets"), panel_size);
     panel_size_ = panel_size;
@@ -429,7 +441,14 @@ Menu::Item& Menu::take(Stack& stack, Kind kind) {
         break;
     case Kind::option: case Kind::slider: {
         const bool slider = kind == Kind::slider;
-        widget = create_widget(pc, game_class(slider ? slider_class : option_class)); slot = add_child(box, widget);
+        // A frame behind the row that lights up with the focus: the game's option widget only
+        // pulses its text, which does not say where the cursor is.
+        auto* frame = construct(L"/Script/UMG.Border", tree);
+        invoke(frame, L"SetBrushColor", L"InBrushColor", Color{0, 0, 0, 0});
+        invoke(frame, L"SetPadding", L"InPadding", Margin{0, 0, 0, 0});
+        slot = add_child(box, frame);
+        widget = create_widget(pc, game_class(slider ? slider_class : option_class)); add_child(frame, widget);
+        item.extra2 = frame;
         item.text_block = part(widget, L"Text_Option");
         item.value_block = part(widget, L"Text_Option_Value");
         item.hit = nav_button(widget, L"WBP_NavButton_Main");
@@ -625,8 +644,6 @@ void Menu::header(const std::string& title, const std::string& subtitle) {
     }
 }
 void Menu::detail(const std::string& title, const std::string& subtitle, std::string body_text, UObject* icon) {
-    constexpr size_t description_limit = 360;
-    if (body_text.size() > description_limit) { paragraph(panel_, body_text, body); body_text.clear(); }
     auto* d = details_.Get(); if (!d) return;
     if (detail_icon_ != icon) {
         auto* big = part(d, L"MyIcon"); auto* backing = part(d, L"WidgetSwitcher_IconBG");
@@ -643,7 +660,7 @@ void Menu::detail(const std::string& title, const std::string& subtitle, std::st
         visibility(box, subtitle.empty() ? collapsed : shown_self_passive);
         detail_sub_ = subtitle;
     }
-    if (detail_body_ != body_text) { call_text(d, L"SetDescription", L"InText", body_text); detail_body_ = body_text; }
+    if (detail_body_ != body_text) { if (auto* block = detail_text_.Get()) text_value(block, body_text); detail_body_ = body_text; }
 }
 void Menu::status_line(const std::string& value, bool error) {
     auto* block = status_text_.Get(); if (!block) return;
@@ -662,6 +679,7 @@ void Menu::fit_panel() {
     const float room = std::clamp(status_top - gap - float(window_top) - fixed, 320.f, std::max(320.f, float(design_h_ - 960)));
     if (std::abs(room - panel_max_) <= 2.f) return;
     invoke(size, L"SetMaxDesiredHeight", L"InMaxDesiredHeight", room);
+    invoke(size, L"SetMinDesiredHeight", L"InMinDesiredHeight", room);
     panel_max_ = room;
     panel_fit_pending_ = true;
 }
