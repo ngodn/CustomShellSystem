@@ -555,6 +555,16 @@ void Combat::observe(void* frame_ptr) {
                 return;
             }
         }
+        UObject* pointer = replacement;
+        if (s.tuning.feel == "game" && original && original != replacement) {
+            // The game's feel: the slot's own montage keeps its input windows, locks, sounds and hit
+            // payload; only the animation inside it is the move's, fitted to the original timing.
+            try { if (auto* clone = transplant(s, original, replacement)) pointer = clone; }
+            catch (const std::exception& e) { ++failures_; if (!s.feel_warned) { s.feel_warned = true; log("CCS game feel unavailable for " + s.move_id + ": " + e.what() + "; playing the move's own montage"); } }
+        } else if (s.tuning.hit_damage == "weapon" && original && original != replacement) {
+            try { apply_weapon_payload(s, original, replacement); }
+            catch (const std::exception& e) { ++failures_; if (s.error.empty()) { s.error = std::string("Hit payload copy failed: ") + e.what(); log("CCS " + s.error); } }
+        }
         std::memcpy(bytes + inputs_[1]->GetOffset_Internal(), &pointer, sizeof(pointer));
         ++s.hits; changed = true;
         if (s.tuning.weapon == "move") {
