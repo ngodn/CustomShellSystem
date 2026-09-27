@@ -21,6 +21,7 @@ parser.add_argument('--motion', type=Path, required=True)
 parser.add_argument('--bind', type=Path, required=True)
 parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--stride', type=int, default=2)
+parser.add_argument('--measure-only', action='store_true', help='Evaluate mesh contact without rendering images')
 parser.add_argument('--pose', choices=('final', 'upstream'), default='final',
                     help='Compare the final pose with the recorded input before secondary motion.')
 parser.add_argument('--view', choices=('three-quarter', 'front', 'back', 'side'), default='three-quarter')
@@ -169,16 +170,20 @@ for output_frame, frame in enumerate(range(0, len(motion['frames']), args.stride
     shoes = bpy.data.objects['Eve Black Pearl - Footwear'].evaluated_get(graph)
     heel = bpy.data.objects['Eve Black Pearl - Heel Supports'].evaluated_get(graph)
     lowest = min((o.matrix_world @ v.co).z for o in (shoes, heel) for v in o.data.vertices)
+    visible_vertices = {i for polygon in filtered.data.polygons for i in polygon.vertices}
+    body_lowest = min((filtered.matrix_world @ filtered.data.vertices[i].co).z for i in visible_vertices)
     errors.append(dict(frame=frame, position_cm=position_error, angle_rad=angle_error,
-                       footwear_lowest_cm=lowest*100))
-    scene.render.filepath = str(args.output/f'{output_frame:03d}.png')
-    bpy.ops.render.render(write_still=True)
+                       footwear_lowest_cm=lowest*100, body_lowest_cm=body_lowest*100,
+                       contact_lowest_cm=min(lowest, body_lowest)*100))
+    if not args.measure_only:
+        scene.render.filepath = str(args.output/f'{output_frame:03d}.png')
+        bpy.ops.render.render(write_still=True)
 assert hashlib.sha256(blend.read_bytes()).hexdigest() == blend_hash
 (args.output/'report.json').write_text(json.dumps(dict(
     blend=str(blend), blend_sha256=blend_hash, motion=str(args.motion),
     motion_sha256=hashlib.sha256(args.motion.read_bytes()).hexdigest(),
     fps=motion['fps']/args.stride, parts=parts, shapes=shapes, errors=errors, view=args.view,
-    covered_body_faces_removed=expected_removed, pose=args.pose,
+    covered_body_faces_removed=expected_removed, pose=args.pose, measure_only=args.measure_only,
     wardrobe='Heels and stockings shown; flat feet hidden; heeled stocking feet and footwear lining shown.',
     scope=('UE compressed upstream pose before secondary motion and hand morphs, stationary owner. '
            if args.pose == 'upstream' else
