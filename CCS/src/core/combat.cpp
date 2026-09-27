@@ -119,6 +119,8 @@ void Combat::release(Slot& slot) {
     release_transplants(slot);
     if (shown_montage_.get() && shown_montage_.get() == slot.montage.get()) restore_weapon();
     if (slot.rooted) { if (auto* montage = slot.montage.get()) drop_referenced(world_.get(), montage); slot.rooted = false; }
+    if (auto* copy = slot.play.get(); copy && copy != slot.montage.get()) drop_referenced(world_.get(), copy);
+    slot.play = {};
     if (slot.show_rooted) { if (auto* mesh = slot.show_mesh.get()) drop_referenced(world_.get(), mesh); slot.show_rooted = false; }
     slot.montage = {}; slot.show_mesh = {}; slot.was_ready = false;   // a deliberate release is not a loss
 }
@@ -245,15 +247,14 @@ void Combat::release_transplants(Slot& s) {
     for (auto& t : s.feel) if (auto* c = t.clone.get()) drop_referenced(world_.get(), c);
     s.feel.clear(); s.feel_warned = false;
 }
-UObject* Combat::build_transplant(UObject* original, UObject* replacement) {
+// A runtime copy of a montage: every reflected property of the chain (notifies, sections, blends,
+// curves, skeleton, root motion flags), with the notify links pointed at the copy. Outer: the
+// source, so the copy shares its package and is not a "dynamic montage".
+UObject* Combat::clone_montage(UObject* source) {
     auto* montage_class = static_cast<UClass*>(find_cached(L"/Script/Engine.AnimMontage"));
-    if (!original->IsA(montage_class) || !replacement->IsA(montage_class)) throw std::runtime_error("Not montages");
-    // Outer: the original montage, so the clone shares its package and is not a "dynamic montage"
-    // (transient-package montages get special stop handling in the anim instance).
-    auto* clone = construct_class(montage_class, original);
-    auto* src = reinterpret_cast<std::byte*>(original); auto* dst = reinterpret_cast<std::byte*>(clone);
-    // Every reflected property of the montage chain (AnimMontage, AnimCompositeBase, AnimSequenceBase,
-    // AnimationAsset): notifies, sections, blends, curves, skeleton, root motion flags.
+    if (!source || !source->IsA(montage_class)) throw std::runtime_error("Not a montage");
+    auto* clone = construct_class(montage_class, source);
+    auto* src = reinterpret_cast<std::byte*>(source); auto* dst = reinterpret_cast<std::byte*>(clone);
     for (UStruct* type = montage_class; type; type = type->GetSuperStruct()) {
         if (narrow(type->GetNamePrivate().ToString()) == "Object") break;
         for (auto* p : type->ForEachProperty()) {
@@ -261,6 +262,68 @@ UObject* Combat::build_transplant(UObject* original, UObject* replacement) {
             p->CopyCompleteValue(dst + p->GetOffset_Internal(), src + p->GetOffset_Internal());
         }
     }
+    auto* notifies_prop = montage_class->GetPropertyByNameInChain(L"Notifies");
+    if (notifies_prop && notifies_prop->IsA<FArrayProperty>()) {
+        auto* event_struct = static_cast<FStructProperty*>(static_cast<FArrayProperty*>(notifies_prop)->GetInner())->GetStruct().Get();
+        auto* linked = event_struct->GetPropertyByNameInChain(L"LinkedMontage");
+        auto* end_link = event_struct->GetPropertyByNameInChain(L"EndLink");
+        auto* end_linked = end_link && end_link->IsA<FStructProperty>() ? static_cast<FStructProperty*>(end_link)->GetStruct().Get()->GetPropertyByNameInChain(L"LinkedMontage") : nullptr;
+        FScriptArrayHelper events(static_cast<FArrayProperty*>(notifies_prop), dst + notifies_prop->GetOffset_Internal());
+        for (int i = 0; i < std::min(events.Num(), 256); ++i) {
+            auto* b = events.GetRawPtr(i);
+            if (linked) std::memcpy(b + linked->GetOffset_Internal(), &clone, sizeof(clone));
+            if (end_link && end_linked) std::memcpy(b + end_link->GetOffset_Internal() + end_linked->GetOffset_Internal(), &clone, sizeof(clone));
+        }
+    }
+    return clone;
+}
+// Enemy montages carry notifies written for an AI: motion warping toward its target, rotate to
+// face it, warp re-initialisation, weapon equip state, AI events. On the player they read state
+// that does not exist and can produce impossible transforms. A cleaned copy drops them.
+std::vector<std::string> Combat::strip_ai_notifies(UObject* clone) {
+    static const char* dropped_classes[] = {"MotionWarping", "RotateToFaceTarget", "ReinitializeWarpTargets", "AlignHeightToWarpReference", "AI_EarlyOut",
+        "UnparryableAttackWarning", "MeshOffset", "AbyssCheckForRM", "TriggerElementalMechanic", "HandleWeaponsEquipState", "SetWeaponEquipState",
+        "HideWeapon", "PlayWeaponAnimation", "AddGameplayTags", "AddGameplayEffect", "SendGameplayTagEvent", "UnconstrainedMovement"};
+    std::vector<std::string> dropped;
+    auto* montage_class = static_cast<UClass*>(find_cached(L"/Script/Engine.AnimMontage"));
+    auto* notifies_prop = montage_class->GetPropertyByNameInChain(L"Notifies");
+    if (!notifies_prop || !notifies_prop->IsA<FArrayProperty>()) return dropped;
+    auto* inner = static_cast<FArrayProperty*>(notifies_prop)->GetInner();
+    auto* event_struct = static_cast<FStructProperty*>(inner)->GetStruct().Get();
+    auto* notify = event_struct->GetPropertyByNameInChain(L"Notify"); auto* state = event_struct->GetPropertyByNameInChain(L"NotifyStateClass");
+    if (!notify || !state) return dropped;
+    auto* array = reinterpret_cast<std::byte*>(clone) + notifies_prop->GetOffset_Internal();
+    FScriptArrayHelper events(static_cast<FArrayProperty*>(notifies_prop), array);
+    const int count = std::min(events.Num(), 256), element = inner->GetElementSize();
+    std::vector<int> keep;
+    for (int i = 0; i < count; ++i) {
+        std::string cls;
+        for (auto* field : {notify, state}) { UObject* o{}; std::memcpy(&o, events.GetRawPtr(i) + field->GetOffset_Internal(), sizeof(o)); if (o && o->GetClassPrivate()) cls = narrow(o->GetClassPrivate()->GetNamePrivate().ToString()); }
+        bool drop = false; for (const char* word : dropped_classes) if (cls.find(word) != std::string::npos) drop = true;
+        if (drop) dropped.push_back(cls); else keep.push_back(i);
+    }
+    if (dropped.empty()) return dropped;
+    if (!GMalloc || !*GMalloc) throw std::runtime_error("Engine allocator unavailable");
+    struct Raw { std::byte* data; int32_t num; int32_t max; };
+    auto* raw = reinterpret_cast<Raw*>(array);
+    auto* fresh = static_cast<std::byte*>(keep.empty() ? nullptr : (*GMalloc)->Malloc(keep.size() * size_t(element), 16));
+    if (!keep.empty() && !fresh) throw std::runtime_error("Out of memory");
+    for (size_t k = 0; k < keep.size(); ++k) { inner->InitializeValue(fresh + k * element); inner->CopyCompleteValue(fresh + k * element, raw->data + size_t(keep[k]) * element); }
+    for (int i = 0; i < raw->num; ++i) inner->DestroyValue(raw->data + size_t(i) * element);
+    if (raw->data) (*GMalloc)->Free(raw->data);
+    raw->data = fresh; raw->num = int32_t(keep.size()); raw->max = int32_t(keep.size());
+    // Branching-point tables index the notify list; without their notifies they must go too.
+    for (auto name : {L"BranchingPointMarkers", L"BranchingPointStateNotifyIndices"})
+        if (auto* p = montage_class->GetPropertyByNameInChain(name); p && p->IsA<FArrayProperty>())
+            resize_raw_array(reinterpret_cast<std::byte*>(clone) + p->GetOffset_Internal(), static_cast<FArrayProperty*>(p)->GetInner()->GetElementSize(), 0);
+    std::sort(dropped.begin(), dropped.end()); dropped.erase(std::unique(dropped.begin(), dropped.end()), dropped.end());
+    return dropped;
+}
+UObject* Combat::build_transplant(UObject* original, UObject* replacement) {
+    auto* montage_class = static_cast<UClass*>(find_cached(L"/Script/Engine.AnimMontage"));
+    if (!original->IsA(montage_class) || !replacement->IsA(montage_class)) throw std::runtime_error("Not montages");
+    auto* clone = clone_montage(original);
+    auto* dst = reinterpret_cast<std::byte*>(clone);
     // The move's animation: the replacement's first slot track, first segment.
     auto* tracks_prop = montage_class->GetPropertyByNameInChain(L"SlotAnimTracks");
     if (!tracks_prop || !tracks_prop->IsA<FArrayProperty>()) throw std::runtime_error("SlotAnimTracks missing");
@@ -317,20 +380,6 @@ UObject* Combat::build_transplant(UObject* original, UObject* replacement) {
             std::memcpy(b + off_anim, &g.anim, sizeof(g.anim)); std::memcpy(b + off_pos, &g.start_pos, 4); std::memcpy(b + off_start, &g.anim_start, 4);
             std::memcpy(b + off_end, &g.anim_end, 4); std::memcpy(b + off_rate, &g.rate, 4); std::memcpy(b + off_loop, &loops, 4);
             b[off_valid] = 1;
-        }
-    }
-    // Notify links point at the montage they belong to; absolute times stay valid on the clone.
-    auto* notifies_prop = montage_class->GetPropertyByNameInChain(L"Notifies");
-    if (notifies_prop && notifies_prop->IsA<FArrayProperty>()) {
-        auto* event_struct = static_cast<FStructProperty*>(static_cast<FArrayProperty*>(notifies_prop)->GetInner())->GetStruct().Get();
-        auto* linked = event_struct->GetPropertyByNameInChain(L"LinkedMontage");
-        auto* end_link = event_struct->GetPropertyByNameInChain(L"EndLink");
-        auto* end_linked = end_link && end_link->IsA<FStructProperty>() ? static_cast<FStructProperty*>(end_link)->GetStruct().Get()->GetPropertyByNameInChain(L"LinkedMontage") : nullptr;
-        FScriptArrayHelper events(static_cast<FArrayProperty*>(notifies_prop), dst + notifies_prop->GetOffset_Internal());
-        for (int i = 0; i < std::min(events.Num(), 256); ++i) {
-            auto* b = events.GetRawPtr(i);
-            if (linked) std::memcpy(b + linked->GetOffset_Internal(), &clone, sizeof(clone));
-            if (end_link && end_linked) std::memcpy(b + end_link->GetOffset_Internal() + end_linked->GetOffset_Internal(), &clone, sizeof(clone));
         }
     }
     return clone;
@@ -419,6 +468,18 @@ void Combat::load_pending(const PlayerContext& player) {
             if (!keep_referenced(player.world, montage)) throw std::runtime_error("No world to hold the animation");
             s.rooted = true;
             s.montage.capture(montage);
+            // Enemy and unverified montages play through a cleaned copy without their AI notifies.
+            const auto* move = deps_.catalog ? deps_.catalog->find_move(s.move_id) : nullptr;
+            const bool foreign = (move && move->origin == MoveOrigin::EnemyHumanoid) || (!move && s.path.find("/Shells/") == std::string::npos);
+            s.play = {};
+            if (foreign) {
+                auto* cleaned = clone_montage(montage);
+                const auto dropped = strip_ai_notifies(cleaned);
+                keep_referenced(player.world, cleaned);
+                s.play.capture(cleaned);
+                std::string list; for (const auto& d : dropped) list += (list.empty() ? "" : ", ") + d;
+                log("CCS cleaned copy of " + narrow(montage->GetNamePrivate().ToString()) + (dropped.empty() ? ": nothing to drop" : ": dropped " + list));
+            }
             if (!s.show_mesh_path.empty()) {
                 try {
                     auto* mesh = load(s.show_mesh_path);
@@ -486,7 +547,7 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         world_ = {}; world_.capture(player.world);
         if (had_world) {
             log("CCS world changed; reloading the slots");
-            for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); s.was_ready = false; if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.show_mesh = {}; s.pending = true; } }
+            for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); s.was_ready = false; if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.play = {}; s.show_mesh = {}; s.pending = true; } }
         }
     }
     for (auto& s : slots_) {   // a loaded montage that stops answering: say why once, and load it again
@@ -551,7 +612,8 @@ void Combat::observe(void* frame_ptr) {
     if (!pawn_humanoid_) { ++skipped_; return; }   // the Harbinger form or a creature shell: its rig cannot play these montages
     auto& s = slots_[size_t(slot)];
     bool changed = false;
-    if (auto* replacement = s.montage.get()) {
+    if (auto* source = s.montage.get()) {
+        auto* replacement = s.play.get() ? s.play.get() : source;   // move feel plays the cleaned copy when there is one
         auto* original = static_cast<FObjectProperty*>(inputs_[1])->GetObjectPropertyValue(bytes + inputs_[1]->GetOffset_Internal());
         // Some abilities play companion clips around the attack (the Axatana heavy plays the axe
         // transform before its hold and cut). Those stay the game's; the attack clip is swapped.
@@ -565,10 +627,10 @@ void Combat::observe(void* frame_ptr) {
             }
         }
         UObject* pointer = replacement;
-        if (s.tuning.feel == "game" && original && original != replacement) {
+        if (s.tuning.feel == "game" && original && original != source) {
             // The game's feel: the slot's own montage keeps its input windows, locks, sounds and hit
             // payload; only the animation inside it is the move's, fitted to the original timing.
-            try { if (auto* clone = transplant(s, original, replacement)) pointer = clone; }
+            try { if (auto* clone = transplant(s, original, source)) pointer = clone; }
             catch (const std::exception& e) { ++failures_; if (!s.feel_warned) { s.feel_warned = true; log("CCS game feel unavailable for " + s.move_id + ": " + e.what() + "; playing the move's own montage"); } }
         } else if (s.tuning.hit_damage == "weapon" && original && original != replacement) {
             try { apply_weapon_payload(s, original, replacement); }

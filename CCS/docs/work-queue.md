@@ -82,7 +82,27 @@ Night of 27 September, verified in play (hundreds of swaps, zero failures, nothi
   attack montage varies with the shell.
 - Per-slot defaults: 1x, Move's own feel, Move's own damage, My weapon.
 
+28 September, crashes reported (death into Harbinger or Stray Genessa; aim then fire):
+
+- The game's crash records are all "GPU crash" (device removed); the dumps show the game thread
+  waiting on the renderer and no mod code executing, so the damage is data submitted earlier.
+  The log lines that ended each crashed session were the Genessa sever animation and the
+  Slingshot sidearm attack, both left alone by CCS.
+- Hardening shipped: no swap while the body worn is not on a human-family rig (Harbinger and
+  creature shells); every built segment checked for finite sane rates; enemy and unverified
+  montages play through a cleaned copy without AI notifies (motion warping, rotate to target,
+  warp re-init, equip state, AI events, mesh offset), logged as "cleaned copy of ..."; swap
+  lines carry feel, damage, visual, speed and rig; payload copies and weapon mesh swaps are
+  logged. The slot validator is removed (any move in any slot; skeleton is the only gate).
+- Crash analysis tooling: `work/crash-analysis/tools/bin/minidump-stackwalk` (rust-minidump),
+  dumps under the Proton prefix `compatdata/2584270/.../MortalShell2/Saved/Crashes`.
+
 ## Open items
+
+- Confirm the two crash scenarios no longer reproduce; if one does, the log now shows the
+  exact swap, feel, visual and rig state before it.
+- L2 playing H2's move: reproduce with only H2 assigned; the "CCS swap:" line names the class
+  and slot the game actually called.
 
 - After a full game restart, one swing to confirm the swaps run on the fresh world (a silent
   skip streak was seen once right after a restart, before the companion-clip rule).

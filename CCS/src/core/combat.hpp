@@ -58,6 +58,7 @@ private:
     struct Transplant { engine::ObjectHandle original, clone; };
     struct Slot {
         std::string move_id, path, error; engine::ObjectHandle montage; bool rooted{}, pending{}; uint64_t hits{};
+        engine::ObjectHandle play;                     // what "Move's own" plays: a cleaned clone for enemy montages, the montage itself otherwise
         SlotTuning tuning;
         std::vector<Transplant> feel; bool feel_warned{}; bool was_ready{};
         std::string show_mesh_path; engine::ObjectHandle show_mesh; bool show_rooted{};   // the move's weapon mesh, loaded with the montage
@@ -67,6 +68,8 @@ private:
     float first_hit_time(engine::UObject* montage) const;
     engine::UObject* transplant(Slot& slot, engine::UObject* original, engine::UObject* replacement);
     engine::UObject* build_transplant(engine::UObject* original, engine::UObject* replacement);
+    engine::UObject* clone_montage(engine::UObject* source);
+    std::vector<std::string> strip_ai_notifies(engine::UObject* clone);
     void release_transplants(Slot& slot);
     void apply_weapon_payload(Slot& slot, engine::UObject* original, engine::UObject* replacement);
     void restore_payload(Slot& slot);
