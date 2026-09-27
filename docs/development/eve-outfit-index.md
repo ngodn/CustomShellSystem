@@ -6,6 +6,8 @@ Before another outfit, read the [fitting playbook](eve-fitting-playbook.md). It 
 
 ## Findings to preserve
 
+- Skin F16 private test package is ready at `s16trial/CSS_EveSkinFit16_P/`. Cook, IoStore payload readback,22 morph exports and CSS manifest checks pass. Requires installed Eve dependencies; game visibility, motion and profile persistence remain unverified. No final palettes yet. Prototype stays first in the runtime queue.
+
 - Skin current source candidate is `skin-suit-f16.blend` with `skin-f16-export/`. A five-vertex coupled surface correction removes the measured sprint24 sleeve spot; standing combined-max side review and source reload pass. Private Unreal remains F12. F14/F15 sleeve trials are rejected. Read the current goal checkpoint for remaining shoulder-edge and game checks.
 
 - Current Prototype trial is F14 (`p14trial/CSS_EveFit14_P`), with independent tail controls and verified cooked payload readback. It still needs game validation. Older "private UE remains F7" statements below are historical.

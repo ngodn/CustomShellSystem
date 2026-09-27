@@ -32,6 +32,11 @@ Use Gemini's improved custom skeleton as the current baseline, as the user expli
 
 ## Latest checkpoint
 
+**Skin F16 private trial packaged:** cook65325, IoStore packaging27004 and trial metadata generation all exited0. `s16pack/verification.json` proves byte-identical cooked mesh payload after container readback and preserved export identities, including22 morph targets. `s16trial/CSS_EveSkinFit16_P/` contains a242,497-byte pak,32,188,630-byte ucas and6,340-byte utoc. CSS manifest verification passes with Suit, Hair and six body-shape controls. Suit off/on sections and material references were already fresh-load checked. This package requires the installed Eve package; its dependency hashes are recorded. It is not the final customized outfit or a standalone public release.
+
+Packaging helpers now accept `--kind skin --revision 16`, preserving Prototype defaults. Re-verifying existing Prototype F14 passed (37643 exit0). No deployment or release archive changed. Prototype remains first in the game test queue, then Skin Suit. Pending restart approval remains unanswered. Continue independent fitting work with Vacation Bikini while awaiting runtime access, preserving both ready trials.
+
+
 **Skin F16 broader locomotion and import:** reviewed combined-max walking frame18 and jogging frame10, quarter/back views (`skin-f16-walk-max`, `skin-f16-jog-max`). No obvious return of the isolated sleeve spot or ankle gap in those views. These use recorded upstream poses without physics, not game-motion acceptance. Independent current import `/Game/CSS/EveTest/SK_SFit16` completed with114,373 points,153,507 triangles,379 imported bones and22 morph targets. Current protected production asset hashes still match. SkeletonOnly bind59536 and reference preparation82921 exited0. The saved mesh uses the386-bone/82-socket/nine-virtual-bone shared skeleton, unchanged bind transforms, current materials, PA_Body and ABP_Secondary. `skin-f16-preserved.json` independently confirms all36,787 original body points, other part points, bone data, weights, morphs and material names match F12 exactly. Fresh-load `skin-f16-sections.json` verifies24 materials, saved references and transient Suit off/on section state. This is not rendered game visibility or profile persistence. Cook list `skin-f16-cook.txt` is ready; cooking has not started. No game or release changes.
 
 

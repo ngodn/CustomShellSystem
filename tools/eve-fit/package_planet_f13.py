@@ -1,4 +1,4 @@
-"""Stage and round-trip private Prototype fitting assets. Python 3.14.
+"""Stage and round-trip private Eve fitting assets. Python 3.14.
 
 This does not install a mod, create CSS metadata, or replace release archives.
 """
@@ -23,24 +23,29 @@ def sha(path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--verify-existing', action='store_true')
-    parser.add_argument('--revision', type=int, choices=(13,14), default=13)
+    parser.add_argument('--revision', type=int, choices=(13,14,16), default=13)
+    parser.add_argument('--kind', choices=('prototype','skin'), default='prototype')
     args = parser.parse_args()
     work = ROOT / 'work/eve26'
     revision=args.revision
-    output = work / ('p13pack2' if revision==13 else 'p14pack')
+    skin=args.kind=='skin'
+    assert (skin and revision==16) or (not skin and revision in (13,14))
+    prefix='s' if skin else 'p'
+    assets=(f'SK_SFit{revision}',) if skin else (f'SK_PFit{revision}', 'PA_PTailRear')
+    stem=f'CSS_EveSkinFit{revision}_P' if skin else f'CSS_EveFit{revision}_P'
+    output = work / ('s16pack' if skin else ('p13pack2' if revision==13 else 'p14pack'))
     if args.verify_existing:
-        verify(output, work / f'p{revision}cook/CSSAuthoring/Content/CSS/EveTest',revision)
+        verify(output, work / f'{prefix}{revision}cook/CSSAuthoring/Content/CSS/EveTest',revision,skin)
         return
     output.mkdir(exist_ok=False)
     stage = output / 'stage/MortalShell2/Content/CSS/EveTest'
     stage.mkdir(parents=True)
-    source = work / f'p{revision}cook/CSSAuthoring/Content/CSS/EveTest'
-    assets = (f'SK_PFit{revision}', 'PA_PTailRear')
+    source = work / f'{prefix}{revision}cook/CSSAuthoring/Content/CSS/EveTest'
     for name in assets:
         for suffix in ('.uasset', '.uexp'):
             shutil.copy2(source / (name + suffix), stage / (name + suffix))
     converter = Converter(ROOT / 'build/retoc-css-target/release/retoc', DEFAULT_REPAK, output)
-    container = output / f'CSS_EveFit{revision}_P.utoc'
+    container = output / (stem+'.utoc')
     converter.run(converter.retoc, 'to-zen', output / 'stage', container,
                   '--version', 'UE5_6', '--no-parallel')
     converter.run(converter.retoc, 'verify', container)
@@ -56,16 +61,18 @@ def main():
         (output / 'containers' / container.with_suffix(suffix).name).symlink_to(container.with_suffix(suffix))
     converter.run(converter.retoc, 'to-legacy', output / 'containers', output / 'readback',
                   '--version', 'UE5_6', '--no-parallel', '--no-shaders', '-f', '/CSS/EveTest/')
-    verify(output, source,revision)
+    verify(output, source,revision,skin)
 
 
-def verify(output, source,revision):
-    container = output / f'CSS_EveFit{revision}_P.utoc'
+def verify(output, source,revision,skin=False):
+    stem=f'CSS_EveSkinFit{revision}_P' if skin else f'CSS_EveFit{revision}_P'
+    container = output / (stem+'.utoc')
     dependencies = json.loads((output / 'dependencies.json').read_text())
     for name, expected in dependencies.items():
         assert sha(output / 'containers' / name) == expected, 'Installed dependency changed'
     rows = []
-    for name in (f'SK_PFit{revision}', 'PA_PTailRear'):
+    assets=(f'SK_SFit{revision}',) if skin else (f'SK_PFit{revision}', 'PA_PTailRear')
+    for name in assets:
         readback = output / 'readback/MortalShell2/Content/CSS/EveTest' / name
         cooked = source / name
         before = asset_info(cooked.with_suffix('.uasset').read_bytes())
