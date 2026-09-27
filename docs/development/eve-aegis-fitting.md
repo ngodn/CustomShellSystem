@@ -12,3 +12,10 @@ The suit is one source part, 38,242 points and 76,044 triangles, material slots 
 `inspect_knit_motion_source.py --outfit aegis --output work/eve26/aegis-author1.json` completed exit 0, confirms the original blend hash is unchanged, and records shape values, modifiers and rig dependencies. Original suit has the same 38,242 points and active `Fix=1` and `VagShape=1`; the export audit lists no baked garment fit keys. This discrepancy needs an evaluated-coordinate comparison before attributing clipping to omitted keys. It is not yet a proven cause.
 
 A separate original `Eve War Aegis` mesh has 44 vertices, a Cloth modifier with pin group `Pin` and quality 5, followed by the Eve armature. Preserve and inspect this authored motion source instead of inventing a solver from the export alone. No War Aegis source asset was modified.
+
+
+## Export compared with saved Gemini geometry
+
+Read-only comparison 29948 completed exit 0, `aegis-source-compare.json`. All 38,242 evaluated Gemini garment points match the export exactly. Therefore the default clipping shown in the baseline is already present in this saved garment path, not introduced by JSON export. Both blend hashes remained unchanged.
+
+The original author's isolated object comparison has median difference 0 cm but maximum 33.7899 cm against the export. Locate affected regions and compare evaluated source/body correspondence before adopting any original coordinates. This script isolates library objects and clears driver animation for export-style evaluation; its active-key dictionaries are empty, unlike the full-scene inspection. It does not prove that the original full-scene corrective keys are absent or ineffective. Preserve that distinction and do not globally push the garment outward based on this result alone.
