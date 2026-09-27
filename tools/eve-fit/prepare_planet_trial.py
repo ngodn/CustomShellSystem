@@ -14,15 +14,16 @@ from css_package import verify
 
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument('--revision', type=int, choices=(13,14,16), default=13)
-    parser.add_argument('--kind', choices=('prototype','skin'), default='prototype')
+    parser.add_argument('--revision', type=int, choices=(1,13,14,16), default=13)
+    parser.add_argument('--kind', choices=('prototype','skin','bikini'), default='prototype')
     args=parser.parse_args();revision=args.revision;skin=args.kind=='skin'
-    assert (skin and revision==16) or (not skin and revision in (13,14))
-    prefix='s' if skin else 'p'
-    stem=f'CSS_EveSkinFit{revision}_P' if skin else f'CSS_EveFit{revision}_P'
-    identity=f'eins0fx.eveskinfit{revision}' if skin else f'eins0fx.evefit{revision}'
+    bikini=args.kind=='bikini'
+    assert (bikini and revision==1) or (skin and revision==16) or (args.kind=='prototype' and revision in (13,14))
+    prefix='b' if bikini else 's' if skin else 'p'
+    stem='CSS_EveBikiniFit1_P' if bikini else f'CSS_EveSkinFit{revision}_P' if skin else f'CSS_EveFit{revision}_P'
+    identity='eins0fx.evebikinifit1' if bikini else f'eins0fx.eveskinfit{revision}' if skin else f'eins0fx.evefit{revision}'
     work = ROOT / 'work/eve26'
-    packed = work / ('s16pack' if skin else ('p13pack2' if revision==13 else 'p14pack'))
+    packed = work / ('b1pack' if bikini else 's16pack' if skin else ('p13pack2' if revision==13 else 'p14pack'))
     proof = json.loads((packed / 'verification.json').read_text())
     for name, expected in proof['containers'].items():
         assert digest(packed / name) == expected
@@ -32,21 +33,25 @@ def main():
     original = json.loads((source / 'manifest.json').read_text())
     manifest = copy.deepcopy(original)
     outfit = manifest['catalog']['outfits'][0]
-    variant = next(v for v in outfit['variants'] if v['id'] == ('skin_suit' if skin else 'planet_diving'))
-    controls = json.loads((work / ('skin-lining6/controls.json' if skin else 'planet-sections/controls.json')).read_text())
-    controls.append(dict(id='hair', name='Hair', kind='toggle', role='piece',
+    variant = next(v for v in outfit['variants'] if v['id'] == ('bikini' if bikini else 'skin_suit' if skin else 'planet_diving'))
+    if bikini:
+        controls=[dict(id=name.lower(), name=name, kind='toggle', role='piece', default=[1,0,0,1], sections=sections)
+            for name,sections in [('Top',[16,17,18]),('Shorts',[19,20,21,22]),('Shoes',[23,24,25,26,27,28]),('Hair',[29,30,31])]]
+    else:
+        controls = json.loads((work / ('skin-lining6/controls.json' if skin else 'planet-sections/controls.json')).read_text())
+        controls.append(dict(id='hair', name='Hair', kind='toggle', role='piece',
                          default=[1, 0, 0, 1], sections=[17,18] if skin else [18,19]))
     controls.extend(c for c in variant['customize']['controls'] if c['kind'] == 'shape')
-    assert len(controls) == (8 if skin else 11)
+    assert len(controls) == (10 if bikini else 8 if skin else 11)
     available = {e['name'] for e in proof['assets'][0]['exports']['exports'] if e['class'] == 'MorphTarget'}
     assert all(c['morph'] in available for c in controls if c['kind'] == 'shape')
-    mesh_name=f'SK_SFit{revision}' if skin else f'SK_PFit{revision}'
-    variant.update(id='skin_suit' if skin else 'prototype', name='Skin Suit' if skin else 'Prototype Planet Diving Suit',
+    mesh_name='SK_BFit1' if bikini else f'SK_SFit{revision}' if skin else f'SK_PFit{revision}'
+    variant.update(id='bikini' if bikini else 'skin_suit' if skin else 'prototype', name='Vacation Bikini' if bikini else 'Skin Suit' if skin else 'Prototype Planet Diving Suit',
                    mesh=f'/Game/CSS/EveTest/{mesh_name}.{mesh_name}',
                    customize=dict(schema=1, controls=controls, surfaces=[], palettes=[]))
     description = f'Private F{revision} fitting trial. Requires the installed Eve package. Colors and final release validation remain unfinished.'
     for entry in (manifest, outfit):
-        entry.update(id=identity, name='Eve Skin Suit Fitting Trial' if skin else 'Eve Prototype Fitting Trial',
+        entry.update(id=identity, name='Eve Bikini Fitting Trial' if bikini else 'Eve Skin Suit Fitting Trial' if skin else 'Eve Prototype Fitting Trial',
                      version=f'0.0.{revision}', description=description)
     outfit['variants'] = [variant]
     outfit.pop('templates', None)
