@@ -1,12 +1,13 @@
-"""Fresh-load Skin F12 references and exercise material visibility on a transient component."""
-import hashlib,json
+"""Fresh-load Skin Suit references and exercise material visibility on a transient component."""
+import hashlib,json,os
 from pathlib import Path
 import unreal
 
 w=Path('/home/eins0fx/development/mods/msII/CustomShellSystem/work/eve26')
-out=w/'skin-f12-sections.json';assert not out.exists()
-mesh=unreal.load_asset('/Game/CSS/EveTest/SK_SFit12');assert mesh
-expected=json.loads((w/'skin-f12-prepared.json').read_text())
+revision=int(os.environ.get('CSS_SKIN_FIT_REVISION','12'));assert revision in (12,16)
+out=w/f'skin-f{revision}-sections.json';assert not out.exists()
+mesh=unreal.load_asset(f'/Game/CSS/EveTest/SK_SFit{revision}');assert mesh
+expected=json.loads((w/f'skin-f{revision}-prepared.json').read_text())
 slots=mesh.get_editor_property('materials');assert len(slots)==24
 for row,slot in zip(expected['materials'],slots,strict=True):
     assert str(slot.material_slot_name)==row['name']
@@ -33,8 +34,8 @@ try:
         cases.append(dict(control=control['id'],hidden=sorted(actual),restored=sorted(restored)))
 finally:
     component.set_skeletal_mesh_asset(None)
-protected=json.loads((w/'skin-protected-before.json').read_text())
+protected=json.loads((w/('skin-protected-before.json' if revision==12 else f'skin-f{revision}-protected.json')).read_text())
 assert all(hashlib.sha256(Path(p).read_bytes()).hexdigest()==sha for p,sha in protected.items())
 out.write_text(json.dumps(dict(materials_verified=24,references_verified=True,cases=cases,
     protected_unchanged=True,scope='Transient component visibility and fresh references. Not rendered visibility, CSS profile persistence, UI or game acceptance.'),indent=2)+'\n')
-unreal.log('SKIN_F12_SECTIONS_VERIFIED')
+unreal.log(f'SKIN_F{revision}_SECTIONS_VERIFIED')

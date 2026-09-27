@@ -1,15 +1,16 @@
 """Restore current game references on the private Skin Suit fitting import."""
-import hashlib,json,math
+import hashlib,json,math,os
 from pathlib import Path
 import unreal
 w=Path('/home/eins0fx/development/mods/msII/CustomShellSystem/work/eve26')
-report=w/'skin-f12-prepared.json';assert not report.exists()
-protected=json.loads((w/'skin-protected-before.json').read_text())
+revision=int(os.environ.get('CSS_SKIN_FIT_REVISION','12'));assert revision in (12,16)
+report=w/f'skin-f{revision}-prepared.json';assert not report.exists()
+protected=json.loads((w/('skin-protected-before.json' if revision==12 else f'skin-f{revision}-protected.json')).read_text())
 def check_protected():
     assert all(hashlib.sha256(Path(p).read_bytes()).hexdigest()==digest for p,digest in protected.items())
 check_protected()
-data=json.loads((w/'skin-f12-import/skin.mesh.json').read_text())
-mesh=unreal.load_asset('/Game/CSS/EveTest/SK_SFit12')
+data=json.loads((w/f'skin-f{revision}-import/skin.mesh.json').read_text())
+mesh=unreal.load_asset(f'/Game/CSS/EveTest/SK_SFit{revision}')
 source=unreal.load_asset('/Game/CSS/SeduXtress/SK_Eve_SkinSuit')
 skeleton=unreal.load_asset('/Game/CSS/Shared/SKEL_Base')
 assert mesh and source and skeleton and mesh.get_editor_property('skeleton')==skeleton
@@ -46,4 +47,4 @@ check_protected()
 report.write_text(json.dumps(dict(mesh=mesh.get_path_name(),materials=materials,references=refs,
     skeleton_counts=counts,bind_preserved=True,protected_unchanged=True,
     scope='Private saved reference assignment. Requires fresh reload, visibility/morph/motion and game verification.'),indent=2)+'\n')
-unreal.log('SKIN_F12_PREPARED')
+unreal.log(f'SKIN_F{revision}_PREPARED')
