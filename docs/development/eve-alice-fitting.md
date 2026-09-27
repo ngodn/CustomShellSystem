@@ -104,3 +104,12 @@ Next: assemble this corrected suit and body-weighted ribbon, reimport the privat
 The corrected bow is separately saved as `alice-rw2.blend`. Fresh reload verifies all 1,973 weight rows with maximum error 2.97937e-8 and unchanged geometry/shape keys. Original authoring source remains untouched.
 
 `prepare_alice_cloth.py --repaired` creates `alice-cloth2` for `SK_ACloth2` and `PA_ACloth2`. Its proxy differs from the rejected first trial only in skin weights; particle positions, topology, pin limits, normals and backstops remain identical. This isolates the influence of repaired attachment weights before changing collider parameters. Copy/bind/motion have not run yet. Native probe support for ACloth2 is saved in `native/alice-bow-repaired.patch` and applied to the authoring project source, but requires an editor build after current commandlets finish.
+
+
+## Corrected import verified; second bow simulation started
+
+Process 51490 completed all four steps with exit 0. `alice-verified4.json` confirms 27 materials, expected physics/postprocess references, the shared skeleton, independent suit/shoes/hair/ribbon visibility and unchanged protected hashes. This verifies saved asset references and section behavior, not live CSS persistence or game rendering.
+
+The editor build for `alice-bow-repaired.patch` succeeded (80275, exit 0, `alice2-build.log`). Process 60426 now performs copy, private physics copy, bind, fresh inspection/map verification, native sprint motion and particle diagnostics in sequence. Logs are `alice2-{copy,pa,bind,inspect,sprint}.log`; outputs live in `alice-cloth2`. Resume this exact handle. Do not repeat steps based on shutdown delay. The verification scripts now support Alice trial 2 and select its corrected import and separate collision asset.
+
+Once terminal, inspect `alice-cloth2/sprint-check.json` and replay the worst frame visually before accepting any cloth motion. The previous rejected trial remains available for comparison. No release or installed game package changes yet.

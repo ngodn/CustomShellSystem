@@ -14,14 +14,14 @@ parser.add_argument('--trial', type=int, choices=[1,2,3,4], default=1)
 parser.add_argument('--outfit', choices=('knit','alice'), default='knit')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 alice = args.outfit == 'alice'
-assert not alice or (args.trial == 1 and args.case in ('sprint','no-body','no-backstop','no-both'))
+assert not alice or (args.trial in (1,2) and args.case in ('sprint','no-body','no-backstop','no-both'))
 stem = 'alice' if alice else 'knit'
 prefix = 'A' if alice else 'K'
 source = work/f'{stem}-cloth{args.trial}'/f'{args.case}.json'
 output = work/f'{stem}-cloth{args.trial}'/f'{args.case}-check.json'
 assert not output.exists()
 motion = json.loads(source.read_text())
-mesh = json.loads((work/('alice-import1/alice.mesh.json' if alice else 'knit-w2/knit.mesh.json' if args.trial >= 2 else 'knit-export2/knit.mesh.json')).read_text())
+mesh = json.loads((work/(('alice-import4/alice.mesh.json' if args.trial == 2 else 'alice-import1/alice.mesh.json') if alice else 'knit-w2/knit.mesh.json' if args.trial >= 2 else 'knit-export2/knit.mesh.json')).read_text())
 proxy = json.loads((work/f'{stem}-cloth{args.trial}/proxy.json').read_text())['slots']['AliceRibbon' if alice else 'Collar-1']
 assert motion['asset'] == f'/Game/CSS/EveTest/SK_{prefix}Cloth{args.trial}.SK_{prefix}Cloth{args.trial}'
 assert len(motion['frames']) == 65
