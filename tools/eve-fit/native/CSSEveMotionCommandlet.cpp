@@ -29,6 +29,15 @@
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
 #include "UObject/UnrealType.h"
+#include "Components/SkinnedMeshComponent.h"
+#include "EdGraphSchema_K2.h"
+#include "K2Node_CallFunction.h"
+#include "K2Node_Event.h"
+#include "K2Node_ExecutionSequence.h"
+#include "K2Node_IfThenElse.h"
+#include "K2Node_VariableGet.h"
+#include "K2Node_VariableSet.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 UCSSEveMotionCommandlet::UCSSEveMotionCommandlet()
 {
@@ -60,6 +69,7 @@ bool ConnectPose(UEdGraph* Graph, UEdGraphNode* From, UEdGraphNode* To)
     return false;
 }
 #include "CSSDynamicsRecipe.inl"
+#include "CSSEveHeelVisibility.inl"
 }
 
 int32 UCSSEveMotionCommandlet::Main(const FString& Params)
@@ -70,7 +80,8 @@ int32 UCSSEveMotionCommandlet::Main(const FString& Params)
     FParse::Value(*Params, TEXT("Output="), Output);
     const bool Follow = FParse::Param(*Params, TEXT("Follow"));
     const bool Heels = FParse::Param(*Params, TEXT("Heels"));
-    if ((Follow && Heels) || (Heels ? Output != TEXT("/Game/CSS/EveTest/ABP_BikiniFeet") : Follow ? Output != TEXT("/Game/CSS/EveTest/ABP_HolidayFollow") :
+    const bool ShoeVisibility = FParse::Param(*Params, TEXT("ShoeVisibility"));
+    if ((ShoeVisibility && !Heels) || (Follow && Heels) || (Heels ? Output != (ShoeVisibility ? TEXT("/Game/CSS/EveTest/ABP_BikiniFeet2") : TEXT("/Game/CSS/EveTest/ABP_BikiniFeet")) : Follow ? Output != TEXT("/Game/CSS/EveTest/ABP_HolidayFollow") :
         (Output != TEXT("/Game/CSS/EveTest/ABP_Holiday") && Output != TEXT("/Game/CSS/EveTest/ABP_Holiday2"))))
         return Fail(TEXT("Invalid private output"));
     if (!FParse::Value(*Params, TEXT("Recipe="), RecipePath) || FPackageName::DoesPackageExist(Output))
@@ -87,6 +98,8 @@ int32 UCSSEveMotionCommandlet::Main(const FString& Params)
         FPackageName::GetLongPackageAssetName(Output), TEXT("/Game/CSS/EveTest"), Source));
     if (!Blueprint || Blueprint->TargetSkeleton != Source->TargetSkeleton)
         return Fail(TEXT("Cannot preserve secondary graph skeleton"));
+    if (ShoeVisibility)
+        if (const FString Error = AddHeelVisibility(Blueprint); !Error.IsEmpty()) return Fail(Error);
     UEdGraph* Graph = nullptr;
     for (auto Candidate : Blueprint->FunctionGraphs)
         if (Candidate->GetFName() == TEXT("AnimGraph")) Graph = Candidate.Get();
@@ -153,6 +166,18 @@ int32 UCSSEveMotionCommandlet::Main(const FString& Params)
             if (auto* Pin = Node->FindPin(TEXT("Rotation")))
                 Pin->DefaultValue = FString::Printf(TEXT("(Pitch=%.9f,Yaw=%.9f,Roll=%.9f)"), Node->Node.Rotation.Pitch, Node->Node.Rotation.Yaw, Node->Node.Rotation.Roll);
             if (auto* Pin = Node->FindPin(TEXT("Alpha"))) Pin->DefaultValue = TEXT("1.0");
+            if (ShoeVisibility)
+            {
+                Node->Node.AlphaInputType = EAnimAlphaInputType::Bool;
+                Node->Node.AlphaBoolBlend.BlendInTime = 0.f;
+                Node->Node.AlphaBoolBlend.BlendOutTime = 0.f;
+                Node->ReconstructNode();
+                auto* Read = AddNode<UK2Node_VariableGet>(Graph, X);
+                Read->VariableReference.SetSelfMember(TEXT("CSSHeelsEnabled"));
+                Read->ReconstructNode();
+                if (!Graph->GetSchema()->TryCreateConnection(Read->FindPin(TEXT("CSSHeelsEnabled")), Node->FindPin(TEXT("bAlphaBoolEnabled"))))
+                    return Fail(TEXT("Cannot connect shoe visibility alpha"));
+            }
             if (!ConnectPose(Graph, Previous, Node)) return Fail(TEXT("Cannot connect foot correction"));
             Previous = Node;
             Seen.Add(FName(*Name));
