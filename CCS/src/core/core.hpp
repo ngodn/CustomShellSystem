@@ -22,6 +22,7 @@
 #endif
 #include <memory>
 #include <filesystem>
+#include <unordered_set>
 
 namespace ccs {
 class Core {
@@ -77,6 +78,8 @@ private:
     std::string move_label(const std::string& id) const;
     std::string move_group(const std::string& id) const;
     std::string move_icon(const std::string& id) const;
+    std::string enemy_icon(const std::string& source) const;
+    std::unordered_set<std::string> enemy_icons_;
     std::string move_description(const std::string& id) const;
 #endif
 };

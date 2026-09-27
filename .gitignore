@@ -92,5 +92,12 @@ Thumbs.db
 /tools/authoring/CSSAuthoring/*.sln
 /tools/authoring/CSSAuthoring/*.code-workspace
 
-/CCS/work
+/CCS/work/*
+!/CCS/work/takeover/
+/CCS/work/takeover/*
+!/CCS/work/takeover/tests/
+!/CCS/work/takeover/generate_catalog.py
+!/CCS/work/takeover/probe_report.py
+!/CCS/work/takeover/attack_report.py
 /CCS/build/
+/CCS/dist/

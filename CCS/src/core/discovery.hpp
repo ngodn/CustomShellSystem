@@ -14,6 +14,13 @@ namespace ccs {
 class Discovery {
 public:
     struct Found { std::string name, path, source; bool player{}; };
+    // Montages the registry tagged with another rig, and ones with no rig tag at all (kept as
+    // candidates; the load step checks the rig again). Reported once when the scan finishes.
+    size_t rig_skipped() const { return rig_skipped_; }
+    size_t untagged() const { return untagged_; }
+    // Registry rows per scanned content root, in scan order.
+    const std::vector<std::pair<std::string, int32_t>>& path_rows() const { return path_rows_; }
+    const std::string& player_rig() const { return player_rig_; }
     enum class State { Idle, Querying, Scanning, Done, Failed };
     void tick(const engine::PlayerContext& player);
     State state() const { return state_; }
@@ -27,10 +34,17 @@ public:
 private:
     void begin(const engine::PlayerContext& player);
     void scan();
+    std::string rig_of(const uint8_t* row);
     State state_{State::Idle};
     std::string error_;
     std::unique_ptr<engine::Call> query_;   // keeps the result array alive across ticks
     engine::FProperty* out_{};
+    std::unique_ptr<engine::Call> tag_;     // AssetRegistryHelpers.GetTagValue(row, "Skeleton")
+    engine::FProperty* tag_asset_{}; engine::FProperty* tag_out_{};
+    size_t rig_skipped_{}, untagged_{};
+    size_t path_index_{};
+    std::vector<std::pair<std::string, int32_t>> path_rows_;
+    std::string player_rig_;
     engine::FProperty* package_name_{}; engine::FProperty* asset_name_{}; engine::FProperty* class_path_{};
     int32_t element_{}, next_{}, count_{};
     size_t seen_{};

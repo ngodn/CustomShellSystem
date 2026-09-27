@@ -8,6 +8,9 @@ import json
 import os
 import shutil
 import subprocess
+import tempfile
+import time
+import zipfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -85,6 +88,11 @@ def stage_data() -> None:
     if BANNER.is_file():
         (MOD_DEST / 'assets').mkdir(parents=True, exist_ok=True)
         copy_verified(BANNER, MOD_DEST / 'assets/banner.png')
+    icons = ROOT / 'assets/enemy-icons'
+    if icons.is_dir():
+        (MOD_DEST / 'assets/enemy-icons').mkdir(parents=True, exist_ok=True)
+        for icon in icons.glob('*.png'):
+            copy_verified(icon, MOD_DEST / 'assets/enemy-icons' / icon.name)
 
 
 def swap_core() -> None:
@@ -99,6 +107,94 @@ def swap_core() -> None:
     selector.write_text(json.dumps({"file": core_name}, indent=2) + '\n')
     os.replace(selector, MOD_DEST / 'core.json')
     print(f'[CCS] core.json now selects {core_name}; the loader switches within a second')
+
+
+def validate_pe(data: bytes, name: str) -> None:
+    if len(data) < 64 or data[:2] != b'MZ':
+        raise ValueError(f'{name}: not a Windows DLL')
+    offset = int.from_bytes(data[60:64], 'little')
+    pe = data[offset:offset + 24]
+    if pe[:6] != b'PE\0\0\x64\x86' or not int.from_bytes(pe[22:24], 'little') & 0x2000:
+        raise ValueError(f'{name}: not an x64 DLL')
+
+
+def release_files(version: str, out: Path) -> dict[str, bytes]:
+    """Everything a player extracts: the installed layout under CCS/, nothing from a dev session."""
+    core = f'ccs_core-{version}.dll'
+    files = {
+        'CCS/enabled.txt': b'',
+        'CCS/dlls/main.dll': (out / 'main.dll').read_bytes(),
+        f'CCS/core/{core}': (out / 'ccs_core.dll').read_bytes(),
+        'CCS/core.json': (json.dumps({'file': core}, indent=2) + '\n').encode(),
+        'CCS/README.txt': (ROOT / 'packaging/README.txt').read_text().replace('@VERSION@', version).encode(),
+        'CCS/THIRD_PARTY_NOTICES.txt': (ROOT / 'packaging/THIRD_PARTY_NOTICES.txt').read_bytes(),
+        'CCS/assets/banner.png': BANNER.read_bytes(),
+    }
+    for name in ('catalog.json', 'enemy-catalog.json', 'ranged-catalog.json'):
+        files['CCS/' + name] = (ROOT / 'data' / name).read_bytes()
+    for icon in sorted((ROOT / 'assets/enemy-icons').glob('*.png')):
+        files['CCS/assets/enemy-icons/' + icon.name] = icon.read_bytes()
+    return files
+
+
+def verify_release(path: Path) -> dict:
+    with zipfile.ZipFile(path) as archive:
+        names = archive.namelist()
+        if len(names) != len(set(names)) or archive.testzip():
+            raise ValueError('Duplicate or damaged ZIP members')
+        if 'CCS/release.json' not in names:
+            raise ValueError('No release manifest')
+        meta = json.loads(archive.read('CCS/release.json'))
+        if set(meta['files']) | {'CCS/release.json'} != set(names):
+            raise ValueError('ZIP members differ from the manifest')
+        for name, expected in meta['files'].items():
+            data = archive.read(name)
+            if hashlib.sha256(data).hexdigest() != expected:
+                raise ValueError(f'Checksum mismatch: {name}')
+            if name.endswith('.dll'):
+                validate_pe(data, name)
+            lower = name.lower()
+            for forbidden in ('ue4ss.dll', '/logs/', '/runtime/', '/presets/', 'settings.json', '.pdb', '.log', 'swap-test'):
+                if forbidden in lower:
+                    raise ValueError(f'Forbidden member: {name}')
+        return meta
+
+
+def git(*args: str) -> str:
+    return subprocess.run(['git', *args], cwd=REPO, check=True, capture_output=True, text=True).stdout.strip()
+
+
+def release(output: Path | None = None) -> Path:
+    """Build the product and write the player ZIP (extracts to ue4ss/Mods/) with a checksum manifest."""
+    version = (ROOT / 'VERSION').read_text().strip()
+    out = build()
+    pin = json.loads(PIN_FILE.read_text())
+    try:
+        commit = git('rev-parse', 'HEAD')
+        dirty = bool(git('status', '--porcelain', '--', str(ROOT)))
+        stamp = time.gmtime(max(315532800, int(git('show', '-s', '--format=%ct', commit))))[:6]
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        commit, dirty, stamp = 'unknown', True, time.gmtime()[:6]
+    files = release_files(version, out)
+    meta = {'product': 'CCS', 'version': version, 'source_commit': commit, 'dirty_tree': dirty, 'loader_core_abi': 1,
+            'ue4ss_revision': pin['revision'], 'ue4ss_dll_sha256': pin['dll_sha256'],
+            'files': {name: hashlib.sha256(data).hexdigest() for name, data in sorted(files.items())}}
+    files['CCS/release.json'] = (json.dumps(meta, indent=2) + '\n').encode()
+    target = (output or ROOT / 'dist' / f'ccs-v{version}') / f'MSII-CCS-v{version}.zip'
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=target.parent, prefix='ccs-release-') as temporary:
+        candidate = Path(temporary) / target.name
+        with zipfile.ZipFile(candidate, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+            for name, data in sorted(files.items()):
+                entry = zipfile.ZipInfo(name, stamp)
+                entry.compress_type = zipfile.ZIP_DEFLATED
+                entry.external_attr = 0o100644 << 16
+                archive.writestr(entry, data)
+        verify_release(candidate)
+        os.replace(candidate, target)
+    target.with_name(target.name + '.sha256').write_text(f'{sha(target)}  {target.name}\n')
+    print(f'[CCS] Release written to {target} ({target.stat().st_size // 1024} KiB, {len(files)} files, commit {commit[:12]}{", dirty tree" if dirty else ""})')
+    return target
 
 
 def stage(confirmed_stopped: bool = False, probe: bool = False, registry: bool = False, attack: bool = False, swap: bool = False) -> None:
@@ -158,7 +254,7 @@ def stage(confirmed_stopped: bool = False, probe: bool = False, registry: bool =
 
 def main():
     parser = argparse.ArgumentParser(description='CCS build and stage tool')
-    parser.add_argument('action', choices=['build', 'build-probe', 'build-registry', 'build-attack', 'build-swap', 'build-profile', 'stage', 'swap-core', 'status'], default='build', nargs='?')
+    parser.add_argument('action', choices=['build', 'build-probe', 'build-registry', 'build-attack', 'build-swap', 'build-profile', 'stage', 'swap-core', 'release', 'status'], default='build', nargs='?')
     parser.add_argument('--confirm-game-stopped', action='store_true', help='Confirm you have stopped playing for this installation')
     parser.add_argument('--probe', action='store_true', help='Stage the read-only discovery variant')
     parser.add_argument('--registry', action='store_true', help='Stage the second discovery probe with registry controls')
@@ -187,6 +283,8 @@ def main():
         build(probe=args.probe, registry=args.registry, profile=True, menu=args.menu, attack=args.attack, swap=args.swap)
     elif args.action == 'swap-core':
         swap_core()
+    elif args.action == 'release':
+        release()
     elif args.action == 'stage':
         stage(args.confirm_game_stopped, probe=args.probe, registry=args.registry, attack=args.attack, swap=args.swap)
     elif args.action == 'status':

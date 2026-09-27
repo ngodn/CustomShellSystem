@@ -124,6 +124,11 @@ Core::Core(const CcsLoaderContext* loader) {
     menu_ = std::make_unique<Menu>(std::move(deps));
     save_name_ = "my-preset";
     status_ = std::make_unique<runtime::StatusWriter>(root_dir_ / "runtime/status.json");
+    {
+        std::error_code ec;
+        for (const auto& entry : std::filesystem::directory_iterator(root_dir_ / "assets/enemy-icons", ec))
+            if (entry.is_regular_file(ec) && entry.path().extension() == ".png") enemy_icons_.insert(entry.path().stem().string());
+    }
 #endif
     initialized_ = true;
     writer_->write(R"({"level":"info","msg":"CCS core initialized"})");
@@ -156,7 +161,13 @@ std::string Core::move_label(const std::string& id) const {
 }
 std::string Core::move_icon(const std::string& id) const {
     const auto* move = id.empty() ? nullptr : catalog_.find_move(id);
-    return move ? weapon_icon(move->source_name) : std::string{};
+    if (!move) return {};
+    if (move->origin == MoveOrigin::EnemyHumanoid) return enemy_icon(move->source_name);
+    return weapon_icon(move->source_name);
+}
+// An enemy family's icon is the mod's own PNG under assets/enemy-icons, when the file exists.
+std::string Core::enemy_icon(const std::string& source) const {
+    return enemy_icons_.contains(source) ? "file:assets/enemy-icons/" + source + ".png" : std::string{};
 }
 std::string Core::move_group(const std::string& id) const {
     const auto* move = id.empty() ? nullptr : catalog_.find_move(id);
@@ -216,7 +227,7 @@ nlohmann::json Core::model() const {
             options.push_back(std::move(option));
         }
         for (const auto* move : enemy) {
-            Json option = {{"id", move->id}, {"label", move->display_name}, {"group", "Enemy: " + enemy_name(move->source_name)}, {"title", move->display_name},
+            Json option = {{"id", move->id}, {"label", move->display_name}, {"group", "Enemy: " + enemy_name(move->source_name)}, {"title", move->display_name}, {"icon", enemy_icon(move->source_name)},
                 {"subtitle", enemy_name(move->source_name) + " attack"}, {"enabled", !missing(*move)}, {"disabled_label", "Not in this game version"}, {"description", move->description}, {"value", move->payload_known ? std::string{} : std::string("No hit window in this animation")}};
             if (combat_ && combat_->slot_move(slot) == move->id) {
                 const auto& err = combat_->slot_error(slot);
@@ -383,7 +394,8 @@ void Core::tick(const CcsPlayerContext* player, double delta) {
             for (const auto& move : catalog_.moves()) { known.insert(move.montage_path); if (!discovery_.known(move.montage_path) && missing.size() < 32) missing.push_back(move.montage_path); }
             size_t fresh = 0; for (const auto& f : discovery_.found()) if (!known.contains(f.path)) ++fresh;
             writer_->write(nlohmann::json{{"level", "info"}, {"msg", "Asset registry scan done"}, {"assets", discovery_.assets_seen()}, {"attack_montages", discovery_.present().size()},
-                {"catalog_missing", missing}, {"new_candidates", fresh}}.dump());
+                {"catalog_missing", missing}, {"new_candidates", fresh}, {"other_rig", discovery_.rig_skipped()}, {"untagged", discovery_.untagged()},
+                {"roots", discovery_.path_rows()}, {"player_rig", discovery_.player_rig()}}.dump());
             ++model_revision_;
         } else if (discovery_.state() == Discovery::State::Failed && before != Discovery::State::Failed)
             writer_->write(nlohmann::json{{"level", "warn"}, {"msg", "Asset registry scan failed"}, {"error", discovery_.error()}}.dump());

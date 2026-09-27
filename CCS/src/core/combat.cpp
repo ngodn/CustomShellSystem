@@ -1,4 +1,5 @@
 #include "combat.hpp"
+#include "rig.hpp"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -86,12 +87,12 @@ void Combat::load_pending(const PlayerContext& player) {
         try {
             auto* montage = load(s.path);
             if (!montage->IsA(static_cast<UClass*>(find_cached(L"/Script/Engine.AnimMontage")))) throw std::runtime_error("Not an animation montage");
-            // Every shell body, including the ones CSS swaps in, is driven by the montages the game
-            // authored on SKEL_Human_Skeleton; a montage on any other rig would not play on the player.
-            // The mesh asset's own Skeleton object is not the test (a swapped body carries its own copy).
+            // The montage must be authored on a rig the player's body can play: the game's human
+            // skeleton, a CSS package's copy of it, or the exact rig of the body worn now (rig.hpp).
             auto* skeleton = object_of(montage, L"Skeleton");
-            if (!skeleton || narrow(skeleton->GetNamePrivate().ToString()) != "SKEL_Human_Skeleton")
-                throw std::runtime_error("Montage is not on the player's rig (" + (skeleton ? narrow(skeleton->GetNamePrivate().ToString()) : std::string("no skeleton")) + ")");
+            const auto rig_path = skeleton ? narrow(skeleton->GetPathName()) : std::string{};
+            if (!rig::compatible(rig_path, rig::player_skeleton(player)))
+                throw std::runtime_error("Montage is not on the player's rig (" + (skeleton ? rig::short_name(rig_path) : std::string("no skeleton")) + ")");
             if (!montage->IsRootSet()) { montage->SetRootSet(); s.rooted = true; }
             s.montage.capture(montage);
             s.error.clear();

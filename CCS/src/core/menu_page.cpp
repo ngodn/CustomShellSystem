@@ -162,6 +162,7 @@ UObject* Menu::texture_at(const fs::path& file) {
 // never has to load it again.
 UObject* Menu::game_icon(const std::string& path) {
     if (path.empty()) return nullptr;
+    if (path.starts_with("file:")) return texture_at(deps_.root / path.substr(5));   // the mod's own PNGs (enemy icons)
     auto& saved = textures_[path];
     if (auto* object = saved.object.Get()) return object;
     if (saved.missing) return nullptr;
@@ -1044,7 +1045,8 @@ void Menu::build_slots(const Json& section, bool& deferred) {
         const auto icon_path = c.value("icon", std::string{});
         if (tile.icon_path != icon_path) {
             if (auto* image = object_of(widget, L"LazyIcon")) {
-                if (!icon_path.empty()) { try { lazy_brush(image, icon_path); } catch (...) { if (auto* t = game_icon(icon_path)) brush(image, t); } }
+                if (icon_path.starts_with("file:")) { if (auto* t = game_icon(icon_path)) brush(image, t); }
+                else if (!icon_path.empty()) { try { lazy_brush(image, icon_path); } catch (...) { if (auto* t = game_icon(icon_path)) brush(image, t); } }
                 visibility(image, icon_path.empty() ? hidden : shown_self_passive);
             }
             tile.icon_path = icon_path;

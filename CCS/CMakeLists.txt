@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.25)
 
-file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" CCS_VERSION LIMIT_COUNT 1)
-string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" CCS_NUMERIC_VERSION "${CCS_VERSION}")
+# project() below overwrites CCS_VERSION with the numeric part, so the full string keeps its own name.
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" CCS_VERSION_STRING LIMIT_COUNT 1)
+string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" CCS_NUMERIC_VERSION "${CCS_VERSION_STRING}")
 
 project(CCS VERSION ${CCS_NUMERIC_VERSION} LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 23)
@@ -144,7 +145,7 @@ add_library(ccs_core SHARED
   src/core/core.cpp
 )
 if(NOT CCS_DISCOVERY_PROBE AND NOT CCS_ATTACK_PROBE AND NOT CCS_SWAP_PROBE)
-  target_sources(ccs_core PRIVATE src/core/menu.cpp src/core/menu_page.cpp src/core/combat.cpp src/core/discovery.cpp)
+  target_sources(ccs_core PRIVATE src/core/menu.cpp src/core/menu_page.cpp src/core/combat.cpp src/core/discovery.cpp src/core/rig.cpp)
 endif()
 
 target_include_directories(ccs_core PRIVATE

@@ -1,14 +1,53 @@
 # CCS work queue
 
-## 27 September 2026, afternoon: product build
+## State on 27 September 2026, evening (v1.0.0-alpha.1)
 
-The probe phase is over. The default build is now the product: a CSS/CSSX-style native page
-(`src/core/menu*.cpp`, ported from the CSSX 1.2.0 recipe with CSS beta.5's row and window
-icons) driving the combat engine (`src/core/combat.cpp`, the verified montage-task pre-hook).
-Gemini's prototype menu, widget pool, input dispatcher, loaded-move reader and moveset manager
-are removed. No hotkey: the page is the CCS tab of the Player Menu. The loader switches cores
-live when `core.json` changes. First live run pending.
+The product build is live and verified in play: the native page (CSSX recipe, CSS icons and
+banner) drives the combat engine through the montage-task pre-hook, and swapped light attacks
+were seen in the user's recording. The loader switches cores live from `core.json`. Eleven
+slots (L1 L2 L3 LF LC, H1 H2 H3 HF HC, R). Candidates: player moves (catalog.json), enemy moves
+on the human rig (enemy-catalog.json), sidearm fire (ranged-catalog.json), plus new montages
+from the running game's Asset Registry. Search field, grouped headers, tile icons, details
+window, presets and settings pages all work. `ccs.py release` writes the player ZIP.
 
+Latest changes (this evening):
+
+- Registry scan filters by the montage's `Skeleton` tag before offering a candidate, through
+  `AssetRegistryHelpers.GetTagValue`. Live result: 264 creature-rig montages dropped, 187 real
+  new candidates, no untagged montage. Rule in `src/core/rig.hpp`: the game's human skeleton,
+  any skeleton under `/Game/CSS/`, or the exact skeleton of the body worn now (the live pawn
+  reported `/Game/CSS/Shared/SKEL_Base`). The same rule guards the load step.
+- The scan also queries `/Game/CSS`; it returned zero rows because pak mods are not merged into
+  the game's Asset Registry. CSS package animations can therefore only be offered through the
+  catalogs, not discovered.
+- `CCS_VERSION` now carries the full string (`1.0.0-alpha.1`); `project()` had been
+  overwriting it with the numeric part, so status.json and the About row said 1.0.0.
+- Release packaging: `python3 CCS/tools/ccs.py release` builds and writes
+  `dist/ccs-v<version>/MSII-CCS-v<version>.zip` (extracts to `ue4ss/Mods/`) with
+  `CCS/release.json` checksums, a `.sha256` beside it, and a member check that refuses logs,
+  runtime state, presets, settings, PDBs and probe files. Player text in `packaging/`.
+
+## Open items
+
+1. Play test of the R slot with a sidearm move, melee slots in a real fight, preset round trip,
+   search, tile icons and the 11th tile's layout. Slot R still holds the Batman shoot montage
+   the user assigned before the filter existed; it reports the rig error until cleared.
+2. Three enemy-catalog entries are absent from the registry (`MS1_TwinSisters` crossbow
+   montages); they show as "Not in this game version". Confirm whether the cooked files exist
+   in the paks or drop them from the catalog.
+3. Performance comparison, CCS on versus off, in the same fight and menu scenarios, with the
+   optional frame profiler (`docs/frame-profiling.md`). No FPS claim has been recorded yet.
+4. Enemy weapon icons: produced by another agent from `docs/enemy-icons-agent-prompt.md` into
+   `assets/enemy-icons/`; staging and the release pick them up automatically.
+5. Tarstones as a real feature (the placeholder group was removed).
+6. Menu build cost: last build 7 ms, worst 19 ms on a full rebuild. Acceptable for a page that
+   rebuilds only on model changes; revisit if it shows in the profiler.
+
+The CSSX source tree still carries an uncommitted CCS-aware attach change
+(`extensions/core/src/core/menu.cpp`) from the Codex session. CCS attaches last precisely so
+CSSX never needs it; it is not part of CCS and should be dropped or shipped separately.
+
+## Takeover history (Codex session, 27 September morning)
 
 Current priority: finish the verified runtime foundation before enabling combat or the menu.
 
