@@ -118,3 +118,19 @@ The dense pass catches a contact peak missed by the earlier stride-five measurem
 Each of the six variants now has 15 idle entries in this candidate. Existing IDs, choices, customization and other metadata remain unchanged except for the added idle entries and updated container hashes. The candidate deliberately retains the baseline version until release validation; it is not a new public release. Receipt: `pack1/verification.json`.
 
 The game was running when packaging completed. Installation, live physics, floor placement, interruptions, weapon restoration and persistence have not been tested. Requested a convenient game closure for a backed-up installation. No installed package or release ZIP has been changed by this stage.
+
+## E6 seated-contact refinement
+
+The previous goal turn made concrete progress by producing and verifying the combined E5 candidate. With the game still running, continued offline validation instead of replacing mounted containers.
+
+Decoded all six meshes from the combined candidate. All 379 bone names, parents and reference transforms match Black Pearl exactly, including translations, quaternion representations and scales. Receipt: `work/eve-idle1/six-rig-check.json`. This establishes common rig compatibility, not identical clothing deformation.
+
+Measuring clip 712 at every frame found a 6.73 cm peak, larger than the stride-two result. Applied a root-Z-only correction with a three-tap periodic filter (weights 1,4,1). The UE importer now accepts a bounded revision/clip selection via `import-settings.json`, retaining its original E4-to-E5 defaults. All 101 frames pass the existing full physical-bone transform comparison; maximum translation error is 0.000000224 cm. Receipt: `e6/import-result.json`.
+
+Fresh visible-mesh evaluation at all 101 frames gives 1.7342 to 2.8649 cm nominal contact, before existing outfit offsets. All 51 rendered samples pass replay checks. Inspected the tucked pose at full resolution; it is seated with raised knees, so its corrected menu name is **Eve Seated Tuck**, retaining stable ID `eve_idle_712`. Public asset revision is `/Game/CSS/Eve/Anim/Idles/AN_Idle712B`; the original asset is preserved rather than overwritten. The other 13 clips are unchanged. Evidence: `e6-contact712/report.json`, `e6-render712/report.json`, `e6/export-result.json`.
+
+The E6 cook uses `cook-list2.txt` and `cook2`. Build its combined candidate with `package_idle_library.py --revision E6`, producing `pack2`. Do not install the superseded `pack1` when the corrected candidate is ready. The per-clip live acceptance checklist is [eve-idle-acceptance.md](eve-idle-acceptance.md).
+
+E6 cooking and packaging both exited 0. `pack2/verification.json` confirms the same 323 preserved assets and 14 additions. Independently loaded all 14 animation packages from the combined container with base-game dependencies only. All are AnimSequence assets of 3.3333333 seconds and reference the included `/Game/CSS/Shared/SKEL_Base`; see `cooked-clip-check.json`. This is package loading evidence, not gameplay playback evidence.
+
+Removed only superseded `pack1/legacy` and `pack1/readback` extraction duplicates after successful E6 verification, reclaiming 3,248,547,958 bytes. Kept both candidate trios, all cook/source assets, logs and verification receipts. Cleanup inventory: `cleanup-pack1.json`. The game remained running; installation still awaits the requested closure.

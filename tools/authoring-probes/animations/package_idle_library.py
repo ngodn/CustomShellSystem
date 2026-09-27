@@ -3,6 +3,7 @@
 Creates a review candidate only. Never installs or replaces release archives.
 """
 import copy
+import argparse
 import json
 from pathlib import Path
 import shutil
@@ -16,14 +17,18 @@ from convert_beaute import DEFAULT_GAME
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--revision', choices=('E5', 'E6'), default='E5')
+    args = parser.parse_args()
+    generation = 1 if args.revision == 'E5' else 2
     work = ROOT / 'work/eve-idle1'
     baseline = ROOT / 'work/eve26/six-v120'
     stem = 'CSS_EveStellarBlade_eins0fx_P'
     source = baseline / stem
     original = verify(source)
-    entries = json.loads((work / 'e5/export-result.json').read_text())['entries']
+    entries = json.loads((work / args.revision.lower() / 'export-result.json').read_text())['entries']
     assert [e['id'] for e in entries] == [f'eve_idle_{n}' for n in range(700, 714)]
-    output = work / 'pack1'
+    output = work / f'pack{generation}'
     output.mkdir(exist_ok=False)
     converter = Converter(ROOT / 'build/retoc-css-target/release/retoc', DEFAULT_REPAK, output)
     inputs = output / 'inputs'
@@ -45,7 +50,7 @@ def main():
         assert path not in old_paths
         new_paths.add(path)
         for suffix in ('.uasset', '.uexp'):
-            cooked = work / 'cook1/CSSAuthoring/Content' / (relative + suffix)
+            cooked = work / f'cook{generation}/CSSAuthoring/Content' / (relative + suffix)
             destination = legacy / 'MortalShell2/Content' / (relative + suffix)
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(cooked, destination)

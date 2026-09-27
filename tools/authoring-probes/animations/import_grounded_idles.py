@@ -1,4 +1,4 @@
-"""Create private E5 idle candidates with root-height edits only. UE 5.6.1."""
+"""Create private idle candidates with root-height edits only. UE 5.6.1."""
 import hashlib
 import json
 import math
@@ -20,11 +20,19 @@ options = unreal.AnimPoseEvaluationOptions()
 options.set_editor_property('evaluation_type', unreal.AnimDataEvalType.RAW)
 options.set_editor_property('optional_skeletal_mesh', mesh)
 results = []
-for clip in range(700, 714):
-    source = unreal.load_asset(f'/Game/CSS/AnimLab/RT_E4_Idle{clip}')
-    path = f'/Game/CSS/AnimLab/RT_E5_Idle{clip}'
+settings_path = WORK/'import-settings.json'
+settings = json.loads(settings_path.read_text()) if settings_path.exists() else {}
+source_revision = settings.get('source', 'E4')
+target_revision = settings.get('target', 'E5')
+clips = settings.get('clips', list(range(700, 714)))
+assert source_revision in ('E4', 'E5') and target_revision in ('E5', 'E6')
+assert source_revision != target_revision and clips and len(clips) == len(set(clips))
+assert all(clip in range(700, 714) for clip in clips)
+for clip in clips:
+    source = unreal.load_asset(f'/Game/CSS/AnimLab/RT_{source_revision}_Idle{clip}')
+    path = f'/Game/CSS/AnimLab/RT_{target_revision}_Idle{clip}'
     assert source and not unreal.EditorAssetLibrary.does_asset_exist(path)
-    animation = tools.duplicate_asset(f'RT_E5_Idle{clip}', '/Game/CSS/AnimLab', source)
+    animation = tools.duplicate_asset(f'RT_{target_revision}_Idle{clip}', '/Game/CSS/AnimLab', source)
     document = json.loads((WORK/f'idle{clip}-motion.json').read_text())
     snapshots = [f['pose']['Snapshot'] for f in document['frames']]
     root = snapshots[0]['BoneNames'].index('root')
