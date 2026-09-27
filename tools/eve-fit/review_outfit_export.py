@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import math
 import sys
 from pathlib import Path
 import bpy
@@ -19,13 +20,18 @@ p.add_argument('--hide-part', action='append', default=[])
 p.add_argument('--upper-body', action='store_true')
 p.add_argument('--hip-detail', action='store_true')
 p.add_argument('--foot-detail', action='store_true')
+p.add_argument('--frame-part', help='Center and size the review around a named part in its evaluated pose')
 p.add_argument('--body-mask', type=Path)
 p.add_argument('--exported-normals', action='store_true', help='Inspect saved corner normals in the unposed base mesh')
 p.add_argument('--morph', action='append', default=[], help='Name=weight, applied to exported deltas')
 p.add_argument('--pose-motion', type=Path, help='Recorded upstream animation snapshots, without cloth simulation')
 p.add_argument('--pose-frame', type=int, default=0)
+p.add_argument('--foot-pose', type=Path, help='Diagnostic heel rotation receipt applied through foot bones, without editing source geometry')
 p.add_argument('--cloth-render', type=Path, help='Verified native mapping replay replacing its named material sections')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
+assert not a.foot_pose or (a.pose_motion and not a.cloth_render)
+foot_corrections = {row['foot_bone']: row for row in json.loads(a.foot_pose.read_text())['shoes']} if a.foot_pose else {}
+assert set(foot_corrections) <= {'foot_l', 'foot_r'}
 if a.probe:
     assert a.probe[0] in ('front','back','side','quarter')
     assert 0<=float(a.probe[1])<720 and 0<=float(a.probe[2])<960
@@ -58,6 +64,11 @@ if a.pose_motion:
         t = recorded[bone['name']]
         local = Matrix.LocRotScale(Vector([t['Translation'][k] for k in 'XYZ']),
             Quaternion([t['Rotation'][k] for k in 'WXYZ']), Vector([t['Scale3D'][k] for k in 'XYZ']))
+        if bone['name'] in foot_corrections:
+            correction = foot_corrections[bone['name']]
+            rotation = Matrix.Rotation(math.radians(correction['angle_degrees']), 3, Vector(correction['axis']))
+            bind_rotation = bind[-1].to_quaternion().to_matrix()
+            local = local @ (bind_rotation.inverted() @ rotation @ bind_rotation).to_4x4()
         pose.append(pose[parent] @ local if parent >= 0 else local)
     matrices = np.asarray([np.asarray(p @ b.inverted()) for p, b in zip(pose, bind)])
     points = np.asarray(source['points'])
@@ -153,6 +164,12 @@ if a.foot_detail:
     assert not a.upper_body and not a.hip_detail
     cam.data.ortho_scale = .65
     target = Vector((0, 0, .12))
+if a.frame_part:
+    obj = bpy.data.objects[a.frame_part]
+    positions = np.asarray([obj.matrix_world @ vertex.co for vertex in obj.data.vertices])
+    low, high = positions.min(axis=0), positions.max(axis=0)
+    target = Vector((low+high)/2)
+    cam.data.ortho_scale = max(float(high[2]-low[2]), float(max(high[:2]-low[:2]))*960/720, .25)*1.35
 for label, direction in [('front', (0, -1, 0)), ('back', (0, 1, 0)), ('side', (1, 0, 0)), ('quarter', (1, -1, 0))]:
     cam.location = target + Vector(direction)*3
     cam.rotation_euler = (target-cam.location).to_track_quat('-Z', 'Y').to_euler()
@@ -181,8 +198,11 @@ for label, direction in [('front', (0, -1, 0)), ('back', (0, 1, 0)), ('side', (1
     probe=a.probe,probe_hits=probe_hits,
     hip_detail=a.hip_detail,
     foot_detail=a.foot_detail,
+    frame_part=a.frame_part,
     exported_normals=a.exported_normals,
     hidden_face_count=len(hidden_faces), morphs=morphs,
     pose_motion=str(a.pose_motion) if a.pose_motion else None,
+    foot_pose=str(a.foot_pose) if a.foot_pose else None,
+    foot_corrections=foot_corrections,
     cloth_render=str(a.cloth_render) if a.cloth_render else None,
     pose_frame=a.pose_frame if a.pose_motion else None, parts=parts), indent=2)+'\n')
