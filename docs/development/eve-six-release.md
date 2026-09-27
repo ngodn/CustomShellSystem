@@ -89,3 +89,9 @@ User clarified that working/useful files must be retained. Cleanup removed only 
 Retained: original Blender/source assets, accepted and deferred outfit fitting work, private candidate sources, all authoring/build scripts, logs and verification reports, combined metadata, native loader test build, approved thumbnail and crop receipt, final `six-v120` trio, public v1.2.0 ZIP/changelog/checksum, and both rollback backup sets. Other agents' worktree changes were untouched.
 
 Some historical verification paths now name removed duplicate scratch outputs; consult the cleanup receipt. Recover the final trio from `six-v120` or the release ZIP; recover the prior installed candidate from `backups/packages-0017`. Extracted container scratch can be regenerated from retained containers and game dependencies. No further cleanup of fitting work is authorized by an assumption that age or rejection alone makes it useless.
+
+## CSS_SharedAssets dependency check
+
+Compared current installed container inventories: all 28 asset paths in `CSS_SharedAssets_P` also occur in Eve v1.2.0's 323 embedded assets. This includes SKEL_Base, PA_Body, CR_Body, ABP_Secondary and the Eve idle/locomotion assets. The combined container round-trip was independently run with base game containers and the combined Eve package, without CSS_SharedAssets. Eve v1.2.0 therefore does not require this separate shared package. Evidence: `work/eve26/shared-dependency-check.json`.
+
+This does not establish whether other installed mods rely on CSS_SharedAssets or whether its duplicate assets override Eve at runtime. No shared package files were removed during this read-only check.
