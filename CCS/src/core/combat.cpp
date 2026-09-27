@@ -5,6 +5,8 @@
 #include <chrono>
 #include <cmath>
 #include <Unreal/FFrame.hpp>
+#include <Unreal/UStruct.hpp>
+#include <Unreal/FMemory.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
@@ -107,6 +109,7 @@ std::string Combat::weapon_mesh_path(const std::string& source) {
 int Combat::assigned() const { int n = 0; for (const auto& s : slots_) if (!s.move_id.empty()) ++n; return n; }
 void Combat::release(Slot& slot) {
     restore_payload(slot);
+    release_transplants(slot);
     if (shown_montage_.get() && shown_montage_.get() == slot.montage.get()) restore_weapon();
     if (slot.rooted) { if (auto* montage = slot.montage.get()) montage->ClearRootSet(); slot.rooted = false; }
     if (slot.show_rooted) { if (auto* mesh = slot.show_mesh.get()) mesh->ClearRootSet(); slot.show_rooted = false; }
@@ -176,6 +179,145 @@ void Combat::restore_payload(Slot& s) {
     }
     s.backups.clear(); s.payload_source = {};
 }
+// ---- game feel: clone the slot's own montage and fit the move's animation into its track.
+// Everything the game authored for that weapon and slot stays (input block and combo windows,
+// hyper armor, camera, whoosh, hit windows with the weapon's payload, sections, blends, root
+// motion settings); the animation is time-warped so its first hit lands where the original's did.
+namespace {
+struct Segment { UObject* anim{}; float start_pos{}, anim_start{}, anim_end{}, rate{1.f}; };
+// A TArray's raw {Data, Num, Max} resized through the engine's allocator, zero-filled: the SDK's
+// script-array resize helpers do not link, and the engine frees the buffer with the same allocator.
+void resize_raw_array(std::byte* array, int element_size, int count) {
+    struct Raw { void* data; int32_t num; int32_t max; };
+    auto* raw = reinterpret_cast<Raw*>(array);
+    if (!GMalloc || !*GMalloc) throw std::runtime_error("Engine allocator unavailable");
+    void* fresh = count > 0 ? (*GMalloc)->Malloc(size_t(count) * size_t(element_size), 16) : nullptr;
+    if (count > 0 && !fresh) throw std::runtime_error("Out of memory");
+    if (fresh) std::memset(fresh, 0, size_t(count) * size_t(element_size));
+    if (raw->data) (*GMalloc)->Free(raw->data);
+    raw->data = fresh; raw->num = count; raw->max = count;
+}
+}
+float Combat::first_hit_time(UObject* montage) const {
+    if (!montage) return -1.f;
+    auto* p = montage->GetPropertyByNameInChain(L"Notifies");
+    if (!p || !p->IsA<FArrayProperty>()) return -1.f;
+    auto* array = static_cast<FArrayProperty*>(p); auto* inner = array->GetInner();
+    if (!inner->IsA<FStructProperty>()) return -1.f;
+    auto* row = static_cast<FStructProperty*>(inner)->GetStruct().Get();
+    auto* notify = row ? row->GetPropertyByNameInChain(L"Notify") : nullptr;
+    auto* state = row ? row->GetPropertyByNameInChain(L"NotifyStateClass") : nullptr;
+    auto* link = row ? row->GetPropertyByNameInChain(L"LinkValue") : nullptr;
+    if (!notify || !state || !link) return -1.f;
+    auto* hit_state = static_cast<UClass*>(find_cached(L"/Script/Sparta.SpartaAnimNotifyState_HitCheck"));
+    auto* hit_notify = static_cast<UClass*>(find_cached(L"/Script/Sparta.SpartaAnimNotify_HitCheck"));
+    FScriptArrayHelper rows(array, reinterpret_cast<std::byte*>(montage) + p->GetOffset_Internal());
+    float best = -1.f;
+    for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
+        for (auto* field : {notify, state}) {
+            UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + field->GetOffset_Internal(), sizeof(object));
+            if (!object || !((hit_state && object->IsA(hit_state)) || (hit_notify && object->IsA(hit_notify)))) continue;
+            float at{}; std::memcpy(&at, rows.GetRawPtr(i) + link->GetOffset_Internal(), sizeof(at));
+            if (std::isfinite(at) && at >= 0.f && (best < 0.f || at < best)) best = at;
+        }
+    }
+    return best;
+}
+UObject* Combat::transplant(Slot& s, UObject* original, UObject* replacement) {
+    for (auto& t : s.feel) if (t.original.get() == original) { if (auto* clone = t.clone.get()) return clone; }
+    if (s.feel.size() >= 4) { auto& old = s.feel.front(); if (old.rooted) if (auto* c = old.clone.get()) c->ClearRootSet(); s.feel.erase(s.feel.begin()); }
+    auto* clone = build_transplant(original, replacement);
+    Transplant t; t.original.capture(original); t.clone.capture(clone);
+    if (!clone->IsRootSet()) { clone->SetRootSet(); t.rooted = true; }
+    s.feel.push_back(std::move(t));
+    log("CCS game feel: " + narrow(original->GetNamePrivate().ToString()) + " now plays " + narrow(replacement->GetNamePrivate().ToString()));
+    return clone;
+}
+void Combat::release_transplants(Slot& s) {
+    for (auto& t : s.feel) if (t.rooted) if (auto* c = t.clone.get()) c->ClearRootSet();
+    s.feel.clear(); s.feel_warned = false;
+}
+UObject* Combat::build_transplant(UObject* original, UObject* replacement) {
+    auto* montage_class = static_cast<UClass*>(find_cached(L"/Script/Engine.AnimMontage"));
+    if (!original->IsA(montage_class) || !replacement->IsA(montage_class)) throw std::runtime_error("Not montages");
+    UObject* outer = nullptr;
+    try { outer = find(L"/Engine/Transient"); } catch (...) {}
+    auto* clone = construct_class(montage_class, outer ? outer : original);
+    auto* src = reinterpret_cast<std::byte*>(original); auto* dst = reinterpret_cast<std::byte*>(clone);
+    // Every reflected property of the montage chain (AnimMontage, AnimCompositeBase, AnimSequenceBase,
+    // AnimationAsset): notifies, sections, blends, curves, skeleton, root motion flags.
+    for (UStruct* type = montage_class; type; type = type->GetSuperStruct()) {
+        if (narrow(type->GetNamePrivate().ToString()) == "Object") break;
+        for (auto* p : type->ForEachProperty()) {
+            if (p->GetArrayDim() != 1 || p->GetOffset_Internal() < 0) continue;
+            p->CopyCompleteValue(dst + p->GetOffset_Internal(), src + p->GetOffset_Internal());
+        }
+    }
+    // The move's animation: the replacement's first slot track, first segment.
+    auto* tracks_prop = montage_class->GetPropertyByNameInChain(L"SlotAnimTracks");
+    if (!tracks_prop || !tracks_prop->IsA<FArrayProperty>()) throw std::runtime_error("SlotAnimTracks missing");
+    auto* track_struct = static_cast<FStructProperty*>(static_cast<FArrayProperty*>(tracks_prop)->GetInner())->GetStruct().Get();
+    auto* anim_track = track_struct ? track_struct->GetPropertyByNameInChain(L"AnimTrack") : nullptr;
+    auto* segments_prop = anim_track && anim_track->IsA<FStructProperty>() ? static_cast<FStructProperty*>(anim_track)->GetStruct().Get()->GetPropertyByNameInChain(L"AnimSegments") : nullptr;
+    if (!segments_prop || !segments_prop->IsA<FArrayProperty>()) throw std::runtime_error("AnimSegments missing");
+    auto* segment_struct = static_cast<FStructProperty*>(static_cast<FArrayProperty*>(segments_prop)->GetInner())->GetStruct().Get();
+    auto field = [&](const wchar_t* name) { auto* f = segment_struct->GetPropertyByNameInChain(name); if (!f) throw std::runtime_error("AnimSegment field missing"); return f->GetOffset_Internal(); };
+    const int off_anim = field(L"AnimReference"), off_pos = field(L"StartPos"), off_start = field(L"AnimStartTime"), off_end = field(L"AnimEndTime"), off_rate = field(L"AnimPlayRate"), off_loop = field(L"LoopingCount");
+    auto segments_of = [&](UObject* montage, int track) {
+        FScriptArrayHelper tracks(static_cast<FArrayProperty*>(tracks_prop), reinterpret_cast<std::byte*>(montage) + tracks_prop->GetOffset_Internal());
+        if (track >= tracks.Num()) throw std::runtime_error("Montage has no slot track");
+        return FScriptArrayHelper(static_cast<FArrayProperty*>(segments_prop), tracks.GetRawPtr(track) + anim_track->GetOffset_Internal() + segments_prop->GetOffset_Internal());
+    };
+    Segment rep;
+    {
+        auto segs = segments_of(replacement, 0);
+        if (segs.Num() < 1) throw std::runtime_error("Move montage has no animation");
+        auto* b = segs.GetRawPtr(0);
+        std::memcpy(&rep.anim, b + off_anim, sizeof(rep.anim)); std::memcpy(&rep.anim_start, b + off_start, 4); std::memcpy(&rep.anim_end, b + off_end, 4); std::memcpy(&rep.rate, b + off_rate, 4);
+        if (!rep.anim) throw std::runtime_error("Move montage has no animation reference");
+        if (!(rep.rate > 0.f)) rep.rate = 1.f;
+    }
+    const float orig_len = read<float>(original, L"SequenceLength");
+    const float rep_len = (rep.anim_end - rep.anim_start) / rep.rate;
+    if (!(orig_len > 0.05f) || !(rep_len > 0.05f)) throw std::runtime_error("Montage length unusable");
+    // Time warp: the move's first hit lands when the original's did; each side is stretched linearly.
+    const float hit_old = first_hit_time(original), hit_new = first_hit_time(replacement);
+    std::vector<Segment> plan;
+    const bool warp = hit_old > 0.05f && hit_new > 0.05f && hit_old < orig_len - 0.05f && hit_new < rep_len - 0.05f;
+    if (warp) {
+        plan.push_back({rep.anim, 0.f, rep.anim_start, rep.anim_start + hit_new * rep.rate, hit_new / hit_old * rep.rate});
+        plan.push_back({rep.anim, hit_old, rep.anim_start + hit_new * rep.rate, rep.anim_end, (rep_len - hit_new) / (orig_len - hit_old) * rep.rate});
+    } else plan.push_back({rep.anim, 0.f, rep.anim_start, rep.anim_end, rep_len / orig_len * rep.rate});
+    plan.back().anim_end += 0.002f * plan.back().rate;   // the track must reach SequenceLength despite float rounding
+    FScriptArrayHelper tracks(static_cast<FArrayProperty*>(tracks_prop), dst + tracks_prop->GetOffset_Internal());
+    if (tracks.Num() < 1) throw std::runtime_error("Original montage has no slot track");
+    for (int t = 0; t < tracks.Num(); ++t) {
+        auto* array = reinterpret_cast<std::byte*>(tracks.GetRawPtr(t)) + anim_track->GetOffset_Internal() + segments_prop->GetOffset_Internal();
+        const int element = static_cast<FArrayProperty*>(segments_prop)->GetInner()->GetElementSize();
+        resize_raw_array(array, element, int(plan.size()));
+        FScriptArrayHelper segs(static_cast<FArrayProperty*>(segments_prop), array);
+        for (size_t i = 0; i < plan.size(); ++i) {
+            auto* b = segs.GetRawPtr(int(i)); const auto& g = plan[i]; const int32_t loops = 1;
+            std::memcpy(b + off_anim, &g.anim, sizeof(g.anim)); std::memcpy(b + off_pos, &g.start_pos, 4); std::memcpy(b + off_start, &g.anim_start, 4);
+            std::memcpy(b + off_end, &g.anim_end, 4); std::memcpy(b + off_rate, &g.rate, 4); std::memcpy(b + off_loop, &loops, 4);
+        }
+    }
+    // Notify links point at the montage they belong to; absolute times stay valid on the clone.
+    auto* notifies_prop = montage_class->GetPropertyByNameInChain(L"Notifies");
+    if (notifies_prop && notifies_prop->IsA<FArrayProperty>()) {
+        auto* event_struct = static_cast<FStructProperty*>(static_cast<FArrayProperty*>(notifies_prop)->GetInner())->GetStruct().Get();
+        auto* linked = event_struct->GetPropertyByNameInChain(L"LinkedMontage");
+        auto* end_link = event_struct->GetPropertyByNameInChain(L"EndLink");
+        auto* end_linked = end_link && end_link->IsA<FStructProperty>() ? static_cast<FStructProperty*>(end_link)->GetStruct().Get()->GetPropertyByNameInChain(L"LinkedMontage") : nullptr;
+        FScriptArrayHelper events(static_cast<FArrayProperty*>(notifies_prop), dst + notifies_prop->GetOffset_Internal());
+        for (int i = 0; i < std::min(events.Num(), 256); ++i) {
+            auto* b = events.GetRawPtr(i);
+            if (linked) std::memcpy(b + linked->GetOffset_Internal(), &clone, sizeof(clone));
+            if (end_link && end_linked) std::memcpy(b + end_link->GetOffset_Internal() + end_linked->GetOffset_Internal(), &clone, sizeof(clone));
+        }
+    }
+    return clone;
+}
 // ---- weapon in hand: the held weapon actor (WP_WeaponBase_Static) draws its SM_Weapon static
 // mesh component; swapping that mesh shows the move's weapon without touching inventory, slots,
 // abilities or collision. Restored when the montage stops playing (polled while shown).
@@ -197,10 +339,12 @@ void Combat::show_weapon(UObject* mesh, UObject* montage, uint64_t now) {
             FScriptArrayHelper list(static_cast<FArrayProperty*>(out), materials.data(out));
             for (int i = 0; i < std::min(list.Num(), 16); ++i) { UObject* m{}; std::memcpy(&m, list.GetRawPtr(i), sizeof(m)); ObjectHandle h; if (m) h.capture(m); shown_materials_.push_back(h); }
         }
-        shown_component_.capture(component); shown_montage_ = {}; shown_montage_.capture(montage); shown_since_ = now; shown_seen_playing_ = false;
+        shown_component_.capture(component); shown_actor_ = {}; shown_actor_.capture(weapon);
+        shown_montage_ = {}; shown_montage_.capture(montage); shown_since_ = now; shown_seen_playing_ = false;
     }
     Call set(component, L"SetStaticMesh", 2); set.set(L"NewMesh", mesh); set.run();
 }
+void Combat::weapon_changed() { restore_weapon(); }
 void Combat::restore_weapon() {
     auto* component = shown_component_.get();
     if (component) {
@@ -209,13 +353,18 @@ void Combat::restore_weapon() {
             for (size_t i = 0; i < shown_materials_.size(); ++i) if (auto* m = shown_materials_[i].get()) { Call mat(component, L"SetMaterial", 2); mat.set(L"ElementIndex", int32_t(i)); mat.set(L"Material", m); mat.run(); }
         } catch (const std::exception& e) { log(std::string("CCS weapon restore failed: ") + e.what()); }
     }
-    shown_component_ = {}; shown_original_ = {}; shown_montage_ = {}; shown_materials_.clear(); shown_seen_playing_ = false;
+    shown_component_ = {}; shown_original_ = {}; shown_montage_ = {}; shown_actor_ = {}; shown_materials_.clear(); shown_seen_playing_ = false;
 }
 void Combat::poll_weapon(const PlayerContext& player, uint64_t now) {
     if (!shown_component_.ptr) return;
     auto* montage = shown_montage_.get();
     if (!shown_component_.alive() || !player.pawn || player.pawn != pawn_.get() || !montage) { restore_weapon(); return; }
     try {
+        // The weapon left the hand (stowed, switched, dropped): put it back whatever the montage does.
+        if (auto* weapons = object_of(player.pawn, L"WeaponsComponent")) {
+            Call in_hand(weapons, L"GetWeaponInHand", 1); in_hand.run();
+            if (in_hand.get<UObject*>() != shown_actor_.get()) { restore_weapon(); return; }
+        }
         auto* mesh = object_of(player.pawn, L"Mesh"); if (!mesh) { restore_weapon(); return; }
         Call instance(mesh, L"GetAnimInstance", 1); instance.run();
         auto* anim = instance.get<UObject*>(); if (!anim) { restore_weapon(); return; }
@@ -285,31 +434,18 @@ void Combat::ensure_hook() {
     token_ = deps_.hooks->add_native_pre(deps_.hooks->context, function, callback, this);
     if (!token_) { inputs_ = {}; function_ = {}; throw std::runtime_error("Native montage pre-hook registration rejected"); }
     log("CCS combat hook installed");
-    // Diagnostic counters on the two audio paths a swing takes (weapon whoosh, character vocal),
-    // so a silent swapped swing can be told from an unprimed sound bank.
-    auto count = [&](const wchar_t* cdo, const wchar_t* name, CcsNativePreHook fn, uint64_t& token) {
-        try {
-            auto* object = find(cdo); if (!object) return;
-            auto* target = object->GetFunctionByNameInChain(name);
-            if (!target || !target->HasAnyFunctionFlags(FUNC_Native)) return;
-            token = deps_.hooks->add_native_pre(deps_.hooks->context, target, fn, this);
-        } catch (...) {}
-    };
-    count(L"/Script/Sparta.Default__SpartaWeaponComponent_Melee", L"StartWhooshFX", count_whoosh, whoosh_token_);
-    count(L"/Script/Sparta.Default__SpartaCharacterVoxComponent", L"OnCharacterAttack", count_vox, vox_token_);
 }
 void Combat::remove_hook() {
     active_ = false;
     if (!token_) return;
     if (!deps_.hooks->remove(deps_.hooks->context, token_)) { retry_after_ = 0; return; }   // deferred: retried next tick
     token_ = 0; inputs_ = {}; function_ = {};
-    for (auto* token : {&whoosh_token_, &vox_token_}) if (*token && deps_.hooks->remove(deps_.hooks->context, *token)) *token = 0;
     log("CCS combat hook removed");
 }
 bool Combat::stop() {
     enabled_ = false; active_ = false;
     remove_hook();
-    if (token_ || whoosh_token_ || vox_token_) return false;
+    if (token_) return false;
     restore_weapon();
     for (auto& s : slots_) release(s);
     skeleton_ = {}; pawn_ = {}; asc_ = {};
@@ -350,8 +486,6 @@ void Combat::note_skip(const char* why, UObject* ability) {
     log(std::string("CCS attack skipped: ") + why + ": " + narrow(ability->GetClassPrivate()->GetNamePrivate().ToString()) + "; outers: " + chain
         + "; pawn " + (pawn_.get() ? narrow(pawn_.get()->GetNamePrivate().ToString()) : std::string("none")) + ", asc " + (asc_.get() ? narrow(asc_.get()->GetNamePrivate().ToString()) : std::string("none")));
 }
-void Combat::count_whoosh(void* user, void*, void*, void*) noexcept { ++static_cast<Combat*>(user)->whoosh_; }
-void Combat::count_vox(void* user, void*, void*, void*) noexcept { ++static_cast<Combat*>(user)->vox_; }
 void Combat::callback(void* user, void*, void* frame, void*) noexcept {
     auto* self = static_cast<Combat*>(user);
     const auto started = now_us();
@@ -384,14 +518,19 @@ void Combat::observe(void* frame_ptr) {
     if (auto* replacement = s.montage.get()) {
         auto* original = static_cast<FObjectProperty*>(inputs_[1])->GetObjectPropertyValue(bytes + inputs_[1]->GetOffset_Internal());
         UObject* pointer = replacement;
-        std::memcpy(bytes + inputs_[1]->GetOffset_Internal(), &pointer, sizeof(pointer));
-        ++s.hits; changed = true;
-        if (s.tuning.hit_damage == "weapon" && original && original != replacement) {
+        if (s.tuning.feel == "game" && original && original != replacement) {
+            // The game's feel: the slot's own montage keeps its input windows, locks, sounds and hit
+            // payload; only the animation inside it is the move's, fitted to the original timing.
+            try { if (auto* clone = transplant(s, original, replacement)) pointer = clone; }
+            catch (const std::exception& e) { ++failures_; if (!s.feel_warned) { s.feel_warned = true; log("CCS game feel unavailable for " + s.move_id + ": " + e.what() + "; playing the move's own montage"); } }
+        } else if (s.tuning.hit_damage == "weapon" && original && original != replacement) {
             try { apply_weapon_payload(s, original, replacement); }
             catch (const std::exception& e) { ++failures_; if (s.error.empty()) { s.error = std::string("Hit payload copy failed: ") + e.what(); log("CCS " + s.error); } }
         }
+        std::memcpy(bytes + inputs_[1]->GetOffset_Internal(), &pointer, sizeof(pointer));
+        ++s.hits; changed = true;
         if (s.tuning.weapon == "move") {
-            if (auto* mesh = s.show_mesh.get()) { try { show_weapon(mesh, replacement, GetTickCount64()); } catch (const std::exception& e) { ++failures_; log(std::string("CCS weapon show failed: ") + e.what()); } }
+            if (auto* mesh = s.show_mesh.get()) { try { show_weapon(mesh, pointer, GetTickCount64()); } catch (const std::exception& e) { ++failures_; log(std::string("CCS weapon show failed: ") + e.what()); } }
         }
     }
     if (std::abs(s.tuning.speed - 1.0) > 1e-6) {
@@ -405,13 +544,13 @@ nlohmann::json Combat::status() const {
     for (size_t i = 0; i < slots_.size(); ++i) {
         const auto& s = slots_[i];
         slots.push_back({{"slot", slot_to_string(SlotId(i))}, {"move", s.move_id}, {"ready", s.montage.alive()}, {"pending", s.pending}, {"error", s.error}, {"hits", s.hits},
-            {"speed", s.tuning.speed}, {"hit_damage", s.tuning.hit_damage}, {"weapon", s.tuning.weapon}, {"weapon_mesh", s.show_mesh.alive()}, {"payload_copied", !s.backups.empty()}});
+            {"speed", s.tuning.speed}, {"feel", s.tuning.feel}, {"hit_damage", s.tuning.hit_damage}, {"weapon", s.tuning.weapon}, {"weapon_mesh", s.show_mesh.alive()}, {"payload_copied", !s.backups.empty()}, {"clones", s.feel.size()}});
     }
     CcsHookStats stats{}; stats.size = sizeof(stats);
     nlohmann::json host = {{"available", false}};
     if (deps_.hooks->statistics(deps_.hooks->context, &stats))
         host = {{"available", true}, {"slots", stats.slots}, {"calls", stats.calls}, {"wrong_thread", stats.wrong_thread}, {"failures", stats.failures}};
-    return {{"enabled", enabled_}, {"active", active_}, {"hooked", token_ != 0}, {"whoosh_calls", whoosh_}, {"vox_calls", vox_}, {"seen", seen_}, {"swapped", swapped_},
+    return {{"enabled", enabled_}, {"active", active_}, {"hooked", token_ != 0}, {"seen", seen_}, {"swapped", swapped_},
         {"skipped", skipped_}, {"failures", failures_}, {"wrong_frame", wrong_frame_}, {"maximum_callback_us", maximum_us_},
         {"cached_classes", class_slots_.size()}, {"error", error_}, {"slots", std::move(slots)}, {"host", std::move(host)}};
 }

@@ -77,12 +77,20 @@ void initialize_serial(UObject* object) {
         throw std::runtime_error("Engine did not establish the live object serial");
 }
 }
+// Liveness under the running engine's flag layout. The SDK's IsValid() reads bit 29 as
+// PendingKill, but Unreal 5.6 uses bit 29 for RefCounted (objects held by strong pointers), so
+// a ref-counted montage looked dead and its slot silently stopped swapping. In 5.6 an object
+// is gone when it is Unreachable (bit 28) or Garbage (bit 21).
+static bool item_alive(FUObjectItem* item) {
+    constexpr auto gone = static_cast<EInternalObjectFlags>((1 << 28) | (1 << 21));
+    return item && item->GetUObject() && !item->HasAnyFlags(gone);
+}
 bool ObjectHandle::capture_existing(UObject* object) {
     *this = {};
     if (!object) return true;
     const auto object_index = object->GetInternalIndex();
     auto* item = FUObjectArray::IndexToObject(object_index);
-    if (!item || item->GetUObject() != object || !item->IsValid(false) || item->GetSerialNumber() <= 0) return false;
+    if (!item || item->GetUObject() != object || !item_alive(item) || item->GetSerialNumber() <= 0) return false;
     ptr = object;
     index = object_index;
     serial = item->GetSerialNumber();
@@ -98,7 +106,7 @@ void ObjectHandle::capture(UObject* object) {
 UObject* ObjectHandle::get() const {
     if (!ptr || index < 0 || serial <= 0) return nullptr;
     auto* item = FUObjectArray::IndexToObject(index);
-    if (!item || item->GetUObject() != ptr || item->GetSerialNumber() != serial || !item->IsValid(false)) return nullptr;
+    if (!item || item->GetUObject() != ptr || item->GetSerialNumber() != serial || !item_alive(item)) return nullptr;
     auto* object = static_cast<UObject*>(item->GetUObject());
     return object->GetNamePrivate() == name ? object : nullptr;
 }

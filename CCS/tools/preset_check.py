@@ -10,7 +10,8 @@ Mirrors the runtime rules in src/core/core.cpp (eligible) and src/runtime/storag
 light_chain {L1 L2 L3 LF LC}, heavy_chain {H1 H2 H3 HF HC}, ranged {R}; each entry names a
 catalog move by move_id. Chain moves fit slots 1/2/3 of either chain, finishers only F,
 holds only C, sidearm fire only R, enemy melee the chain and finisher slots, enemy ranged R.
-Each entry may also carry per-slot tuning: "speed" (0.5 to 2.0, default 1.0), "hit_damage"
+Each entry may also carry per-slot tuning: "speed" (0.5 to 2.0, default 1.0), "feel" ("game" or
+"move", default "game"), "hit_damage"
 ("move" or "weapon", default "move") and "weapon" ("inventory" or "move", default "inventory").
 An entry with an empty move_id keeps the weapon's own attack and may still carry tuning.
 """
@@ -110,6 +111,8 @@ def check_file(path: Path, moves: dict[str, dict], fix: bool) -> list[str]:
             speed = entry.get('speed', 1.0)
             if not isinstance(speed, (int, float)) or isinstance(speed, bool) or not 0.5 <= speed <= 2.0:
                 errors.append(f'{path.name}: {slot}.speed must be a number from 0.5 to 2.0')
+            if entry.get('feel', 'game') not in ('game', 'move'):
+                errors.append(f'{path.name}: {slot}.feel must be "game" or "move"')
             if entry.get('hit_damage', 'move') not in ('move', 'weapon'):
                 errors.append(f'{path.name}: {slot}.hit_damage must be "move" or "weapon"')
             if entry.get('weapon', 'inventory') not in ('inventory', 'move'):

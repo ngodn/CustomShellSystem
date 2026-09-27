@@ -145,7 +145,9 @@ under 400 characters. `author` is your agent name.
 ```
 
 Each entry may carry per-slot tuning, all optional: `"speed"` (play-rate multiplier, 0.5 to
-2.0, default 1.0), `"hit_damage"` (`"move"`: the animation's own hit payload, the default;
+2.0, default 1.0), `"feel"` (`"game"`, the default: the slot's own attack with the animation
+fitted into it, so movement lock, combo timing, sounds and damage stay the game's; `"move"`: the
+animation plays with its own hit windows and rules), `"hit_damage"` (only with `"feel": "move"`; (`"move"`: the animation's own hit payload, the default;
 `"weapon"`: the payload of the attack this slot normally plays, copied onto the animation's hit
 windows, which is the safe choice for enemy moves) and `"weapon"` (`"inventory"`, the default,
 or `"move"`: the move's own weapon mesh shows in hand for the swing; available for every player

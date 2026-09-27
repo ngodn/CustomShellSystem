@@ -102,12 +102,13 @@ struct TarstoneDefinition {
 // swapped swing carries, and which weapon shows in hand while it plays.
 struct SlotTuning {
     double speed{1.0};                 // 0.5 .. 2.0, multiplies the montage play rate
+    std::string feel{"game"};          // "game": the slot's own montage with the move's animation fitted in; "move": the move's montage as is
     std::string hit_damage{"move"};    // "move": the replacement's own hit payload; "weapon": the slot's original payload
     std::string weapon{"inventory"};   // "inventory": the equipped weapon stays visible; "move": the move's own weapon shows
     bool operator==(const SlotTuning&) const = default;
 };
 inline bool valid_tuning(const SlotTuning& t) {
-    return t.speed >= 0.5 && t.speed <= 2.0 && (t.hit_damage == "move" || t.hit_damage == "weapon") && (t.weapon == "inventory" || t.weapon == "move");
+    return t.speed >= 0.5 && t.speed <= 2.0 && (t.feel == "game" || t.feel == "move") && (t.hit_damage == "move" || t.hit_damage == "weapon") && (t.weapon == "inventory" || t.weapon == "move");
 }
 
 struct SlotBinding {

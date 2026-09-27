@@ -91,6 +91,7 @@ nlohmann::json Storage::preset_to_json(const PresetData& preset) {
             {"ability", slot.ability_path},
             {"montage", slot.montage_path},
             {"speed", slot.tuning.speed},
+            {"feel", slot.tuning.feel},
             {"hit_damage", slot.tuning.hit_damage},
             {"weapon", slot.tuning.weapon}
         };
@@ -154,6 +155,7 @@ std::optional<PresetData> Storage::json_to_preset(const nlohmann::json& j) {
                 binding.tarstone_id = text("tarstone_id");
                 binding.tarstone_name = text("tarstone_name");
                 binding.tuning.speed = val.value("speed", 1.0);
+                binding.tuning.feel = val.value("feel", std::string("game"));
                 binding.tuning.hit_damage = val.value("hit_damage", std::string("move"));
                 binding.tuning.weapon = val.value("weapon", std::string("inventory"));
                 if (!std::isfinite(binding.tuning.speed) || !valid_tuning(binding.tuning)) throw std::runtime_error("Invalid slot tuning");

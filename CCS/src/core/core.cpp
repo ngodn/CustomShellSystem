@@ -298,10 +298,18 @@ nlohmann::json Core::model() const {
         settings_rows.push_back({{"type", "choice"}, {"id", sid + ".speed"}, {"label", "Speed"}, {"value", speed_id}, {"options", speed_options},
             {"description", "How fast this slot plays. 1x is the game's own speed."}});
         if (!id.empty()) {
+            settings_rows.push_back({{"type", "choice"}, {"id", sid + ".feel"}, {"label", "Feel"}, {"value", tune.feel},
+                {"options", Json::array({{{"id", "game"}, {"label", "Game's"}}, {{"id", "move"}, {"label", "Move's own"}}})},
+                {"description", "How the swing behaves. Game's: your weapon's own attack for this slot with this animation fitted into it, so movement lock, combo timing, sounds and damage stay the game's. "
+                    "Move's own: the animation plays the way its owner plays it, with its own hit windows and rules."}});
+        }
+        if (!id.empty() && tune.feel == "move") {
             settings_rows.push_back({{"type", "choice"}, {"id", sid + ".hit_damage"}, {"label", "Damage"}, {"value", tune.hit_damage},
                 {"options", Json::array({{{"id", "move"}, {"label", "Move's own"}}, {{"id", "weapon"}, {"label", "Weapon's own"}}})},
                 {"description", "Whose hit this is. Move's own: the damage multiplier, poise damage and stagger that come with this animation. "
                     "Weapon's own: the numbers your weapon's normal attack has in this slot, on this animation's timing. Base damage is always your weapon's."}});
+        }
+        if (!id.empty()) {
             settings_rows.push_back({{"type", "choice"}, {"id", sid + ".weapon"}, {"label", "Weapon in hand"}, {"value", tune.weapon},
                 {"options", Json::array({{{"id", "inventory"}, {"label", "My weapon"}}, {{"id", "move"}, {"label", "Move's weapon"}}})},
                 {"description", std::string("Which weapon you hold while this move plays. Move's weapon: the weapon this move belongs to appears in your hand for the swing, then yours comes back. Hits still use your weapon.")
@@ -369,6 +377,7 @@ void Core::handle_event(const nlohmann::json& event) {
         const auto value = event.at("value").get<std::string>();
         try {
             if (key == "speed") tune.speed = std::stod(value);
+            else if (key == "feel") tune.feel = value;
             else if (key == "hit_damage") tune.hit_damage = value;
             else if (key == "weapon") tune.weapon = value;
             else throw std::runtime_error("Unknown slot setting");
@@ -446,6 +455,7 @@ void Core::tick(const CcsPlayerContext* player, double delta) {
             if (name.starts_with("ID_")) name.erase(0, 3);
             if (name.ends_with("_C")) name.resize(name.size() - 2);
             current_weapon_ = name; ++model_revision_;
+            if (combat_) combat_->weapon_changed();
         }
     }
     if (combat_) combat_->tick(context, now);

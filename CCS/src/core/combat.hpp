@@ -53,21 +53,30 @@ public:
     static int classify(const std::string& class_name);
 private:
     struct PayloadBackup { engine::ObjectHandle payload; std::vector<std::pair<engine::FProperty*, std::vector<std::byte>>> values; };
+    // "Game" feel: a runtime clone of the slot's own montage (its notifies, sections and settings)
+    // whose animation track holds the move's animation, keyed by the original it was cloned from.
+    struct Transplant { engine::ObjectHandle original, clone; bool rooted{}; };
     struct Slot {
         std::string move_id, path, error; engine::ObjectHandle montage; bool rooted{}, pending{}; uint64_t hits{};
         SlotTuning tuning;
+        std::vector<Transplant> feel; bool feel_warned{};
         std::string show_mesh_path; engine::ObjectHandle show_mesh; bool show_rooted{};   // the move's weapon mesh, loaded with the montage
         engine::ObjectHandle payload_source; std::vector<PayloadBackup> backups;          // original payload copied onto the replacement
     };
-    static void count_whoosh(void* user, void*, void*, void*) noexcept;
-    static void count_vox(void* user, void*, void*, void*) noexcept;
     std::vector<engine::UObject*> hit_payloads(engine::UObject* montage) const;
+    float first_hit_time(engine::UObject* montage) const;
+    engine::UObject* transplant(Slot& slot, engine::UObject* original, engine::UObject* replacement);
+    engine::UObject* build_transplant(engine::UObject* original, engine::UObject* replacement);
+    void release_transplants(Slot& slot);
     void apply_weapon_payload(Slot& slot, engine::UObject* original, engine::UObject* replacement);
     void restore_payload(Slot& slot);
     void show_weapon(engine::UObject* mesh, engine::UObject* montage, uint64_t now);
     void restore_weapon();
     void poll_weapon(const engine::PlayerContext& player, uint64_t now);
     void note_skip(const char* why, engine::UObject* ability);   // one log line per ability class the hook rejects
+public:
+    void weapon_changed();                              // the equipped weapon changed: put any shown mesh back at once
+private:
     static void callback(void*, void*, void*, void*) noexcept;
     void observe(void* frame);
     bool player_outer(engine::UObject* object) const;
@@ -78,10 +87,9 @@ private:
     void log(const std::string& line) const { if (deps_.log) deps_.log(line); }
     Deps deps_;
     bool enabled_{}, active_{};
-    engine::ObjectHandle shown_component_, shown_original_, shown_montage_;   // weapon mesh swapped for the current swing
+    engine::ObjectHandle shown_component_, shown_original_, shown_montage_, shown_actor_;   // weapon mesh swapped for the current swing
     std::vector<engine::ObjectHandle> shown_materials_;
     uint64_t shown_since_{}; bool shown_seen_playing_{};
-    uint64_t whoosh_token_{}, vox_token_{}, whoosh_{}, vox_{};                 // audio path counters (diagnostic)
     std::array<Slot, size_t(SlotId::Count)> slots_{};
     engine::ObjectHandle function_, pawn_, asc_, skeleton_;
     std::array<engine::FProperty*, 3> inputs_{};      // OwningAbility, MontageToPlay, Rate
