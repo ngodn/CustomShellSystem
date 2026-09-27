@@ -32,7 +32,26 @@ Every player attack starts its animation through one function inside the game. C
 [/list]
 
 CCS goes in:
-[code]MortalShell2/Binaries/Win64/ue4ss/Mods/CCS/[/code]
+[code]MortalShell2/Binaries/Win64/ue4ss/Mods/CCS/
+    enabled.txt
+    core.json
+    catalog.json
+    enemy-catalog.json
+    ranged-catalog.json
+    running-catalog.json
+    release.json
+    README.txt
+    THIRD_PARTY_NOTICES.txt
+    dlls/
+        main.dll
+    core/
+        ccs_core-1.0.0-alpha.1.dll
+    assets/
+        banner.png
+        enemy-icons/
+            *.png[/code]
+
+After the first run CCS also creates settings.json, presets/, logs/, runtime/ and CCS.log in that folder.
 
 CCS does not need CSS or CSSX and works alongside both. If they are installed, CCS waits for their tabs and appends itself after them.
 
