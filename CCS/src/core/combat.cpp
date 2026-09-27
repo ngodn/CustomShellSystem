@@ -175,6 +175,7 @@ void Combat::apply_weapon_payload(Slot& s, UObject* original, UObject* replaceme
         s.backups.push_back(std::move(backup));
     }
     s.payload_source.capture(original);
+    log("CCS payload copied onto " + narrow(replacement->GetNamePrivate().ToString()) + " from " + narrow(original->GetNamePrivate().ToString()) + " (" + std::to_string(s.backups.size()) + " hit window(s))");
 }
 void Combat::restore_payload(Slot& s) {
     for (auto& backup : s.backups) {
@@ -359,11 +360,13 @@ void Combat::show_weapon(UObject* mesh, UObject* montage, uint64_t now) {
         shown_montage_ = {}; shown_montage_.capture(montage); shown_since_ = now; shown_seen_playing_ = false;
     }
     Call set(component, L"SetStaticMesh", 2); set.set(L"NewMesh", mesh); set.run();
+    log("CCS weapon shown: " + narrow(mesh->GetNamePrivate().ToString()) + " on " + narrow(weapon->GetNamePrivate().ToString()));
 }
 void Combat::weapon_changed() { restore_weapon(); }
 void Combat::restore_weapon() {
     auto* component = shown_component_.get();
     if (component) {
+        log("CCS weapon restored");
         try {
             Call set(component, L"SetStaticMesh", 2); set.set(L"NewMesh", shown_original_.get()); set.run();
             for (size_t i = 0; i < shown_materials_.size(); ++i) if (auto* m = shown_materials_[i].get()) { Call mat(component, L"SetMaterial", 2); mat.set(L"ElementIndex", int32_t(i)); mat.set(L"Material", m); mat.run(); }
@@ -574,7 +577,8 @@ void Combat::observe(void* frame_ptr) {
         std::memcpy(bytes + inputs_[1]->GetOffset_Internal(), &pointer, sizeof(pointer));
         ++s.hits; changed = true;
         if (noted_.size() < 64 && noted_.insert(key ^ 0x51ed270b9d1c3a7full).second)
-            log("CCS swap: " + narrow(cls->GetNamePrivate().ToString()) + " is slot " + slot_to_string(SlotId(slot)) + " -> " + s.move_id + (pointer == replacement ? "" : " (game feel clone)"));
+            log("CCS swap: " + narrow(cls->GetNamePrivate().ToString()) + " is slot " + slot_to_string(SlotId(slot)) + " -> " + s.move_id + (pointer == replacement ? "" : " (game feel clone)")
+                + "; feel " + s.tuning.feel + ", damage " + s.tuning.hit_damage + ", visual " + s.tuning.weapon + ", speed " + std::to_string(s.tuning.speed) + ", rig " + rig::short_name(pawn_rig_));
         if (s.tuning.weapon == "move") {
             if (auto* mesh = s.show_mesh.get()) { try { show_weapon(mesh, pointer, GetTickCount64()); } catch (const std::exception& e) { ++failures_; log(std::string("CCS weapon show failed: ") + e.what()); } }
         }
