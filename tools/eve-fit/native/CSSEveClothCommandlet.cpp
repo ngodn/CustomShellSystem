@@ -25,6 +25,8 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogCSSEveCloth, Log, All);
 
+#include "CSSEveEmbeddedMotion.inl"
+
 UCSSEveClothCommandlet::UCSSEveClothCommandlet()
 {
     IsEditor = true;
@@ -35,6 +37,7 @@ UCSSEveClothCommandlet::UCSSEveClothCommandlet()
 
 int32 UCSSEveClothCommandlet::Main(const FString& Params)
 {
+    if (FParse::Param(*Params,TEXT("Motion"))) return EvaluateEmbeddedEveCloth(Params);
     auto Fail = [](const TCHAR* Message) {
         UE_LOG(LogCSSEveCloth, Error, TEXT("%s"), Message);
         return 1;

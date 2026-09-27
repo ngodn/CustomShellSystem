@@ -35,7 +35,7 @@ rows = [(v, names[b], w) for v, influences in enumerate(proxy['weights']) for b,
 rows = np.asarray(rows)
 vi, bi, weights = rows[:, 0].astype(int), rows[:, 1].astype(int), rows[:, 2]
 alpha = np.clip((proxy.get('anchor_top_cm',points[:, 2].max())-20.-points[:, 2])/12., 0., 1.)
-distance = 18.*alpha**2*(3.-2.*alpha)
+distance = np.asarray(proxy.get('max_distances',18.*alpha**2*(3.-2.*alpha)),dtype=float)
 if a.mapping:
     mapping = json.loads(a.mapping.read_text())
     assert mapping['asset'] == result['asset']
