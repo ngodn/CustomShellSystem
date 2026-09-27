@@ -4,6 +4,8 @@ Updated September 27, 2026. Read this before starting the next outfit, then chec
 
 ## Start each outfit from evidence
 
+For cloth colliders, measure both protrusion during motion and uncovered body surface. A smaller sphere can fix protrusion while leaving the skirt unsupported. Knitwear's617 candidates around existing centers still left a6.50 cm gap even using their entire union, so increasing the count was not sufficient. Group coverage gaps by body region before placing new centers. Check exported triangle normal direction with containment before using it for inward offsets; Knitwear's first surface-seed trial generated zero new seeds because its winding pointed inward. Treat a zero-new-seed run as a failed setup, not an independent fit experiment.
+
 1. Inventory every garment and accessory against the source: dress, sleeves, underwear, hair, hat, earrings and shoes as applicable. A partial diagnostic export is not the complete outfit.
 2. Audit missing weights, influence counts, material sections, shape keys and garment ownership before fitting. Gemini's Holiday source contained unweighted parts; apparent static fit did not establish usable deformation.
 3. Preserve the original body and the current shared skeleton. Record hashes before edits. The production baseline has 386 bones, 82 sockets and nine virtual bones. Older private 379-bone imports are diagnostic assets only.
