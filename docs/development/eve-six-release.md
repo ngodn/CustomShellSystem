@@ -75,3 +75,9 @@ User tested the installed combined mod and accepted it: "ok, tested, seems good 
 User requested the ZIP and BBCode changelog for v1.2.0. `package_six.py --output six-v120 --version 1.2.0` produces that release candidate with the approved thumbnail. Comparison against the tested installed build proves only the two manifest/catalog version fields change. Asset containers, controls, palettes and thumbnail remain identical. Installed hashes were rechecked against the installation receipt. Current native package loader checks pass for v1.2.0 (`six-v120-loader.log`).
 
 Release target: `dist/eve-v1.2.0/CSS_EveStellarBlade_eins0fx_P-v1.2.0.zip`, with SHA256 sidecar and `CHANGELOG_Eve_v1.2.0.bbcode`. The tracked changelog is `docs/releases/eve-v1.2.0.bbcode`. Older release archives remain preserved. No CSS core binaries are changed or included. Fourteen additional idle animations remain queued and are explicitly excluded from this release.
+
+## Exact v1.2.0 ZIP installed for user review
+
+Release ZIP creation completed with CRC, extraction, manifest and file-hash checks. The user requested installation of the ZIP itself and confirmed the game closed. After verifying no game process, the archive was extracted to `six-zip1`, checked against the release hashes and installed with the existing package installer. Backup: `backups/packages-0017`.
+
+`six-v120/install.json` records archive SHA256, installed file hashes and version 1.2.0. All three installed files match the exact release ZIP; the five split trial directories remain absent. User acceptance of the earlier identical-assets build is recorded above; review of the versioned release installation is now available on next launch. No game launch or public upload was performed.
