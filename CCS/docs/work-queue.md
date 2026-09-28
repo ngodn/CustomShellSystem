@@ -1,5 +1,43 @@
 # CCS work queue
 
+## Steering during a swing, 28 September 2026 (core 82e68d75c1c6, after the alpha)
+
+MS2 lets the stick steer the wind-up of a swing, closes the gap to the target for you and lets
+movement cancel the recovery. All three are notify states on every player attack montage, read
+from the blueprints with `work/release-hardening/kismet_dump.py`:
+
+- `ANS_RotateToFaceTarget` is the turn window (Axe and Dagger light 0 to 0.48 s, Martyr's Blade
+  heavy 0 to 1.5 s, Hammer heavy 0 to 0.68 s; it closes where the first hit lands). Its tick
+  checks `Game.State.Player` and takes a player branch: turn to the lock-on target, else to the
+  targeting component's direction, else the last stick input, or camera forward
+  (`InvalidTargetFacePolicy`). Turn rate is the weapon's `FaceToTargetInterpSpeed` when
+  `bUseWeaponInterpSpeed`, else the character's. It writes through
+  `SetOverrideManualUserRotation` on the movement component. The AI branch never runs on the
+  player, so the notify is safe on enemy montages too.
+- `ANS_SpartaMotionWarping_Translation` and `_Rotation` warp root motion to
+  `WT_DesiredEndLocation` and `WT_DesiredRotation_Target`, both set in `GA_SpartaBase` (the base
+  of every attack ability, the player's included). `ANS_MotionWarpToFaceTarget` and
+  `ANS_MW_Attacker` are AI-only (they warp onto the attacker, `WT_LastAttacker`).
+- `ANS_InterruptWithMovement` on the recovery tail lets the stick cancel the rest of the montage.
+
+What changed (`src/core/combat.cpp`):
+
+- The cleaned copy of an enemy montage no longer drops `RotateToFaceTarget` or the game's own
+  warps. It drops `MotionWarpToFaceTarget`, `MW_Attacker`, `ReinitializeWarpTargets`,
+  `AlignHeightToWarpReference` and the rest of the old list.
+- The hold carry became a window carry: with "Move's own" feel, a replacement that lacks a turn
+  window gets the original's `RotateToFaceTarget` rows appended, opening where the original's
+  did (scaled to the clip) and closing where the replacement's first hit window ends (or at the
+  same fraction of the clip when it has no hit window). Hold rows keep their absolute timing as
+  before. One clone per original, cached in `Slot::carries` (was `holds`); the log line is
+  "CCS windows carried: A -> B: hold x to y s, turn x to y s". `MontageFacts` gained `turn`,
+  `Slot` gained `play_turn`, `first_hit_span` returns the first hit window's begin and end.
+- "Game's" feel is unchanged: the original's rows already stay on the transplant.
+
+Still to verify live: an enemy move with "Move's own" feel turning with the stick during the
+wind-up; whether the enemy's own translation warp overshoots on long lunges (if it does, add
+"SpartaMotionWarping_Translation" back to the drop list, or gate it per slot).
+
 ## Release hardening, 28 September 2026 (commit 1ccf3c8, core e4465f86f757)
 
 Four reviews before the alpha (hot path, menu, core and runtime, and a comparison with the CSS

@@ -119,11 +119,11 @@ int Combat::assigned() const { int n = 0; for (const auto& s : slots_) if (!s.mo
 void Combat::release(Slot& slot) {
     restore_payload(slot);
     release_transplants(slot);
-    release_holds(slot);
+    release_carries(slot);
     if (shown_montage_.get() && shown_montage_.get() == slot.montage.get()) restore_weapon();
     if (slot.rooted) { if (auto* montage = slot.montage.get()) drop_referenced(world_.get(), montage); slot.rooted = false; }
     if (auto* copy = slot.play.get(); copy && copy != slot.montage.get()) drop_referenced(world_.get(), copy);
-    slot.play = {}; slot.play_hold = false;
+    slot.play = {}; slot.play_hold = slot.play_turn = false;
     if (slot.show_rooted) { if (auto* mesh = slot.show_mesh.get()) drop_referenced(world_.get(), mesh); slot.show_rooted = false; }
     slot.montage = {}; slot.show_mesh = {}; slot.was_ready = false;   // a deliberate release is not a loss
 }
@@ -148,6 +148,7 @@ const Combat::NotifyLayout& Combat::notify_layout() const {
     l.notify = row ? row->GetPropertyByNameInChain(L"Notify") : nullptr;
     l.state = row ? row->GetPropertyByNameInChain(L"NotifyStateClass") : nullptr;
     l.link = row ? row->GetPropertyByNameInChain(L"LinkValue") : nullptr;
+    l.duration = row ? row->GetPropertyByNameInChain(L"duration") : nullptr;   // reflected in lowercase; a state's window length
     if (!l.notify || !l.state || !l.link || !l.notify->IsA<FObjectProperty>() || !l.state->IsA<FObjectProperty>()) throw std::runtime_error("FAnimNotifyEvent layout changed");
     l.hit_state = find_cached(L"/Script/Sparta.SpartaAnimNotifyState_HitCheck");
     l.hit_notify = find_cached(L"/Script/Sparta.SpartaAnimNotify_HitCheck");
@@ -222,21 +223,24 @@ void resize_raw_array(std::byte* array, int element_size, int count) {
     raw->data = fresh; raw->num = count; raw->max = count;
 }
 }
-float Combat::first_hit_time(UObject* montage) const {
-    if (!montage) return -1.f;
+float Combat::first_hit_time(UObject* montage) const { return first_hit_span(montage).first; }
+std::pair<float, float> Combat::first_hit_span(UObject* montage) const {
+    if (!montage) return {-1.f, -1.f};
     const auto& l = notify_layout();
     auto* hit_state = static_cast<UClass*>(l.hit_state); auto* hit_notify = static_cast<UClass*>(l.hit_notify);
     FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(montage) + l.notifies->GetOffset_Internal());
-    float best = -1.f;
+    float best = -1.f, best_end = -1.f;
     for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
         for (auto* field : {l.notify, l.state}) {
             UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + field->GetOffset_Internal(), sizeof(object));
             if (!object || !((hit_state && object->IsA(hit_state)) || (hit_notify && object->IsA(hit_notify)))) continue;
-            float at{}; std::memcpy(&at, rows.GetRawPtr(i) + l.link->GetOffset_Internal(), sizeof(at));
-            if (std::isfinite(at) && at >= 0.f && (best < 0.f || at < best)) best = at;
+            float at{}, length{}; std::memcpy(&at, rows.GetRawPtr(i) + l.link->GetOffset_Internal(), sizeof(at));
+            if (l.duration && field == l.state) std::memcpy(&length, rows.GetRawPtr(i) + l.duration->GetOffset_Internal(), sizeof(length));
+            if (!std::isfinite(at) || at < 0.f || (best >= 0.f && at >= best)) continue;
+            best = at; best_end = std::isfinite(length) && length > 0.f ? at + length : at;
         }
     }
-    return best;
+    return {best, best_end};
 }
 UObject* Combat::transplant(Slot& s, UObject* original, UObject* replacement) {
     for (auto& t : s.feel) if (t.original.get() == original) { if (auto* clone = t.clone.get()) return clone; }
@@ -282,11 +286,15 @@ UObject* Combat::clone_montage(UObject* source) {
     }
     return clone;
 }
-// Enemy montages carry notifies written for an AI: motion warping toward its target, rotate to
-// face it, warp re-initialisation, weapon equip state, AI events. On the player they read state
-// that does not exist and can produce impossible transforms. A cleaned copy drops them.
+// Enemy montages carry notifies written for an AI: warps onto the attacker or the AI's target,
+// warp re-initialisation, weapon equip state, AI events. On the player they read state that does
+// not exist and can produce impossible transforms. A cleaned copy drops them. Two stay because the
+// game authors them on the player's own swings too and they read only player state there: the
+// turn window (ANS_RotateToFaceTarget takes a player branch that follows the lock-on, the soft
+// target, the stick, or the camera) and the game's own warps toward WT_DesiredEndLocation and
+// WT_DesiredRotation_Target, which every attack ability sets through GA_SpartaBase.
 std::vector<std::string> Combat::strip_ai_notifies(UObject* clone) {
-    static const char* dropped_classes[] = {"MotionWarping", "RotateToFaceTarget", "ReinitializeWarpTargets", "AlignHeightToWarpReference", "AI_EarlyOut",
+    static const char* dropped_classes[] = {"MotionWarpToFaceTarget", "MW_Attacker", "ReinitializeWarpTargets", "AlignHeightToWarpReference", "AI_EarlyOut",
         "UnparryableAttackWarning", "MeshOffset", "AbyssCheckForRM", "TriggerElementalMechanic", "HandleWeaponsEquipState", "SetWeaponEquipState",
         "HideWeapon", "PlayWeaponAnimation", "AddGameplayTags", "AddGameplayEffect", "SendGameplayTagEvent", "UnconstrainedMovement"};
     std::vector<std::string> dropped;
@@ -418,22 +426,34 @@ const Combat::MontageFacts& Combat::montage_facts(UObject* montage) {
     const auto played = narrow(montage->GetNamePrivate().ToString());
     for (const char* companion : {"Transform", "Equip", "Unequip", "Draw", "Stow", "Sheath"}) if (played.find(companion) != std::string::npos) facts.companion = true;
     try { facts.hold = hold_handler_index(montage) >= 0; } catch (...) { facts.hold = false; }
+    try { facts.turn = has_turn_window(montage); } catch (...) { facts.turn = false; }
     return montage_facts_[key] = facts;
 }
-UObject* Combat::carry_hold(Slot& s, UObject* original, UObject* replacement) {
-    for (auto& t : s.holds) if (t.original.get() == original) { if (auto* clone = t.clone.get()) return clone; }
-    if (s.holds.size() >= 4) { auto& old = s.holds.front(); if (auto* c = old.clone.get()) drop_referenced(world_.get(), c); s.holds.erase(s.holds.begin()); }
-    auto* clone = build_hold_carry(original, replacement);
+bool Combat::has_turn_window(UObject* montage) const {
+    if (!montage) return false;
+    const auto& l = notify_layout();
+    FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(montage) + l.notifies->GetOffset_Internal());
+    for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
+        UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + l.state->GetOffset_Internal(), sizeof(object));
+        if (!object || !object->GetClassPrivate()) continue;
+        if (narrow(object->GetClassPrivate()->GetNamePrivate().ToString()).find("RotateToFaceTarget") != std::string::npos) return true;
+    }
+    return false;
+}
+UObject* Combat::carry_windows(Slot& s, UObject* original, UObject* replacement, bool hold, bool turn) {
+    for (auto& t : s.carries) if (t.original.get() == original) { if (auto* clone = t.clone.get()) return clone; }
+    if (s.carries.size() >= 4) { auto& old = s.carries.front(); if (auto* c = old.clone.get()) drop_referenced(world_.get(), c); s.carries.erase(s.carries.begin()); }
+    auto* clone = build_carry(original, replacement, hold, turn);
     Transplant t; t.original.capture(original); t.clone.capture(clone);
     keep_referenced(world_.get(), clone);
-    s.holds.push_back(std::move(t));
+    s.carries.push_back(std::move(t));
     return clone;
 }
-void Combat::release_holds(Slot& s) {
-    for (auto& t : s.holds) if (auto* c = t.clone.get()) drop_referenced(world_.get(), c);
-    s.holds.clear(); s.hold_warned = false;
+void Combat::release_carries(Slot& s) {
+    for (auto& t : s.carries) if (auto* c = t.clone.get()) drop_referenced(world_.get(), c);
+    s.carries.clear(); s.carry_warned = false;
 }
-UObject* Combat::build_hold_carry(UObject* original, UObject* replacement) {
+UObject* Combat::build_carry(UObject* original, UObject* replacement, bool hold, bool turn) {
     auto* montage_class = static_cast<UClass*>(find_cached(L"/Script/Engine.AnimMontage"));
     if (!original->IsA(montage_class) || !replacement->IsA(montage_class)) throw std::runtime_error("Not montages");
     auto* notifies_prop = montage_class->GetPropertyByNameInChain(L"Notifies");
@@ -450,54 +470,70 @@ UObject* Combat::build_hold_carry(UObject* original, UObject* replacement) {
     const int end_value = end_link->GetOffset_Internal() + field(link_struct, L"LinkValue")->GetOffset_Internal();
     const int end_method = end_link->GetOffset_Internal() + field(link_struct, L"LinkMethod")->GetOffset_Internal();
     const int end_linked = end_link->GetOffset_Internal() + field(link_struct, L"LinkedMontage")->GetOffset_Internal();
-    // The handler rows on the original.
-    std::vector<int> handlers;
+    // The rows to carry from the original: hold handlers and turn windows, each timed its own way.
+    struct Pick { int row; bool turn; };
+    std::vector<Pick> picks;
     FScriptArrayHelper source(static_cast<FArrayProperty*>(notifies_prop), reinterpret_cast<std::byte*>(original) + notifies_prop->GetOffset_Internal());
     for (int i = 0; i < std::min(source.Num(), 256); ++i) {
         UObject* object{}; std::memcpy(&object, source.GetRawPtr(i) + state->GetOffset_Internal(), sizeof(object));
         if (!object || !object->GetClassPrivate()) continue;
         const auto cls = narrow(object->GetClassPrivate()->GetNamePrivate().ToString());
-        if (cls.find("HoldAttackHandler") != std::string::npos || cls.starts_with("ANS_HAH_")) handlers.push_back(i);
+        if (hold && (cls.find("HoldAttackHandler") != std::string::npos || cls.starts_with("ANS_HAH_"))) picks.push_back({i, false});
+        else if (turn && cls.find("RotateToFaceTarget") != std::string::npos) picks.push_back({i, true});
     }
-    if (handlers.empty()) throw std::runtime_error("Original has no hold handler");
+    if (picks.empty()) throw std::runtime_error(hold ? "Original has no hold handler" : "Original has no turn window");
     const float rep_len = read<float>(replacement, L"SequenceLength");
-    if (!(rep_len > 0.05f)) throw std::runtime_error("Montage length unusable");
-    const float hit_new = first_hit_time(replacement);
+    const float orig_len = read<float>(original, L"SequenceLength");
+    if (!(rep_len > 0.05f) || !(orig_len > 0.05f)) throw std::runtime_error("Montage length unusable");
+    const auto [hit_new, hit_new_end] = first_hit_span(replacement);
     auto* clone = clone_montage(replacement);
     auto* array = reinterpret_cast<std::byte*>(clone) + notifies_prop->GetOffset_Internal();
     FScriptArrayHelper events(static_cast<FArrayProperty*>(notifies_prop), array);
-    const int count = events.Num(), element = inner->GetElementSize(), total = count + int(handlers.size());
+    const int count = events.Num(), element = inner->GetElementSize(), total = count + int(picks.size());
     if (!GMalloc || !*GMalloc) throw std::runtime_error("Engine allocator unavailable");
     struct Raw { std::byte* data; int32_t num; int32_t max; };
     auto* raw = reinterpret_cast<Raw*>(array);
     auto* fresh = static_cast<std::byte*>((*GMalloc)->Malloc(size_t(total) * size_t(element), 16));
     if (!fresh) throw std::runtime_error("Out of memory");
     for (int i = 0; i < count; ++i) { inner->InitializeValue(fresh + size_t(i) * element); inner->CopyCompleteValue(fresh + size_t(i) * element, raw->data + size_t(i) * element); }
-    for (size_t k = 0; k < handlers.size(); ++k) {
+    std::string report;
+    for (size_t k = 0; k < picks.size(); ++k) {
         auto* b = fresh + size_t(count + int(k)) * element;
-        inner->InitializeValue(b); inner->CopyCompleteValue(b, source.GetRawPtr(handlers[k]));
+        inner->InitializeValue(b); inner->CopyCompleteValue(b, source.GetRawPtr(picks[k].row));
         float start{}, end{}; std::memcpy(&start, b + link_value->GetOffset_Internal(), 4); std::memcpy(&end, b + end_value, 4);
-        // The window is input timing, not animation: the combo counter starts its 0.5 s and 1.05 s
-        // timers when the window begins, so it keeps the original's absolute times and a held
-        // button charges after the same delay on every weapon. It moves earlier only when the
-        // replacement's first hit would land inside it, and never leaves the montage.
-        const float window = std::max(0.02f, end - start);
-        float limit = rep_len - 0.01f;
-        if (hit_new > 0.05f) limit = std::min(limit, hit_new - 0.02f);
-        if (end > limit) { end = limit; start = end - window; }
-        start = std::clamp(start, 0.f, std::max(0.f, rep_len - 0.03f));
-        end = std::clamp(end, start + 0.02f, std::max(start + 0.02f, rep_len - 0.01f));
+        if (picks[k].turn) {
+            // The turn window is animation timing: the game closes it where the weapon's first
+            // hit lands, so the stick steers the wind-up and never the strike. On the replacement
+            // it closes where that clip's first hit ends, or at the same fraction of the clip when
+            // the clip has no hit window, and opens where the original's did, scaled to the clip.
+            const float scale = rep_len / orig_len;
+            float open = start * scale, close = hit_new_end > 0.05f ? hit_new_end : end * scale;
+            close = std::clamp(close, 0.05f, std::max(0.05f, rep_len - 0.01f));
+            open = std::clamp(open, 0.f, std::max(0.f, close - 0.05f));
+            start = open; end = close;
+        } else {
+            // The hold window is input timing, not animation: the combo counter starts its 0.5 s
+            // and 1.05 s timers when the window begins, so it keeps the original's absolute times
+            // and a held button charges after the same delay on every weapon. It moves earlier only
+            // when the replacement's first hit would land inside it, and never leaves the montage.
+            const float window = std::max(0.02f, end - start);
+            float limit = rep_len - 0.01f;
+            if (hit_new > 0.05f) limit = std::min(limit, hit_new - 0.02f);
+            if (end > limit) { end = limit; start = end - window; }
+            start = std::clamp(start, 0.f, std::max(0.f, rep_len - 0.03f));
+            end = std::clamp(end, start + 0.02f, std::max(start + 0.02f, rep_len - 0.01f));
+        }
         const float length = end - start, zero = 0.f; const uint8_t absolute = 0;
         std::memcpy(b + link_value->GetOffset_Internal(), &start, 4); std::memcpy(b + end_value, &end, 4); std::memcpy(b + duration->GetOffset_Internal(), &length, 4);
         std::memcpy(b + trigger_offset->GetOffset_Internal(), &zero, 4); std::memcpy(b + end_offset->GetOffset_Internal(), &zero, 4);
         std::memcpy(b + link_method->GetOffset_Internal(), &absolute, 1); std::memcpy(b + end_method, &absolute, 1);
         std::memcpy(b + linked->GetOffset_Internal(), &clone, sizeof(clone)); std::memcpy(b + end_linked, &clone, sizeof(clone));
+        report += std::string(report.empty() ? "" : ", ") + (picks[k].turn ? "turn " : "hold ") + std::to_string(start).substr(0, 4) + " to " + std::to_string(end).substr(0, 4) + " s";
     }
     for (int i = 0; i < raw->num; ++i) inner->DestroyValue(raw->data + size_t(i) * element);
     if (raw->data) (*GMalloc)->Free(raw->data);
     raw->data = fresh; raw->num = total; raw->max = total;
-    float first_start{}, first_end{}; std::memcpy(&first_start, fresh + size_t(count) * element + link_value->GetOffset_Internal(), 4); std::memcpy(&first_end, fresh + size_t(count) * element + end_value, 4);
-    log("CCS hold window carried: " + narrow(original->GetNamePrivate().ToString()) + " -> " + narrow(replacement->GetNamePrivate().ToString()) + " at " + std::to_string(first_start).substr(0, 4) + " to " + std::to_string(first_end).substr(0, 4) + " s");
+    log("CCS windows carried: " + narrow(original->GetNamePrivate().ToString()) + " -> " + narrow(replacement->GetNamePrivate().ToString()) + ": " + report);
     return clone;
 }
 // ---- weapon in hand: the held weapon actor (WP_WeaponBase_Static) draws its SM_Weapon static
@@ -597,6 +633,7 @@ void Combat::load_pending(const PlayerContext& player) {
                 log("CCS cleaned copy of " + narrow(montage->GetNamePrivate().ToString()) + (dropped.empty() ? ": nothing to drop" : ": dropped " + list));
             }
             try { s.play_hold = hold_handler_index(s.play.get() ? s.play.get() : montage) >= 0; } catch (...) { s.play_hold = false; }
+            try { s.play_turn = has_turn_window(s.play.get() ? s.play.get() : montage); } catch (...) { s.play_turn = false; }
             if (!s.show_mesh_path.empty()) {
                 try {
                     auto* mesh = load(s.show_mesh_path);
@@ -686,7 +723,7 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         if (had_world) {
             log("CCS world changed; reloading the slots");
             montage_facts_.clear();
-            for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); s.holds.clear(); s.was_ready = false; if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.play = {}; s.play_hold = false; s.show_mesh = {}; s.pending = true; } }
+            for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); s.carries.clear(); s.was_ready = false; if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.play = {}; s.play_hold = s.play_turn = false; s.show_mesh = {}; s.pending = true; } }
         }
     }
     for (auto& s : slots_) {   // a loaded montage that stops answering: say why once, and load it again
@@ -825,11 +862,17 @@ void Combat::observe(void* frame_ptr) {
             try { if (auto* clone = transplant(s, original, source)) pointer = clone; }
             catch (const std::exception& e) { ++failures_; if (!s.feel_warned) { s.feel_warned = true; log("CCS game feel unavailable for " + s.move_id + ": " + e.what() + "; playing the move's own montage"); } }
         } else if (original && original != replacement) {
-            // The move's own feel keeps the charge window: without the original's hold handler a
-            // long press could never charge (and on hold-first weapons never fall back to the cut).
-            if (facts && facts->hold && !s.play_hold) {
-                try { if (auto* carried = carry_hold(s, original, replacement)) pointer = carried; }
-                catch (const std::exception& e) { ++failures_; if (!s.hold_warned) { s.hold_warned = true; log("CCS hold window unavailable for " + s.move_id + ": " + e.what() + "; long presses will not charge this move"); } }
+            // The move's own feel keeps the windows the weapon authors for the player: without the
+            // original's hold handler a long press could never charge (and on hold-first weapons
+            // never fall back to the cut); without its turn window the stick could not steer the
+            // wind-up onto a moving enemy.
+            const bool want_hold = facts && facts->hold && !s.play_hold, want_turn = facts && facts->turn && !s.play_turn;
+            if (want_hold || want_turn) {
+                try { if (auto* carried = carry_windows(s, original, replacement, want_hold, want_turn)) pointer = carried; }
+                catch (const std::exception& e) {
+                    ++failures_;
+                    if (!s.carry_warned) { s.carry_warned = true; log("CCS windows unavailable for " + s.move_id + ": " + e.what() + (want_hold ? "; long presses will not charge this move" : "; the stick will not steer this move")); }
+                }
             }
             if (s.tuning.hit_damage == "weapon") {
                 try { apply_weapon_payload(s, original, replacement); }
@@ -838,7 +881,7 @@ void Combat::observe(void* frame_ptr) {
         }
         std::memcpy(bytes + inputs_[1]->GetOffset_Internal(), &pointer, sizeof(pointer));
         ++s.hits; changed = true;
-        note_recent(cls, slot, pointer == replacement ? "swapped" : (s.tuning.feel == "game" ? "swapped, game feel" : "swapped, hold window carried"));
+        note_recent(cls, slot, pointer == replacement ? "swapped" : (s.tuning.feel == "game" ? "swapped, game feel" : "swapped, windows carried"));
         if (noted_.size() < 64 && noted_.insert(key ^ 0x51ed270b9d1c3a7full).second)
             log("CCS swap: " + narrow(cls->GetNamePrivate().ToString()) + " is slot " + slot_to_string(SlotId(slot)) + " -> " + s.move_id + (pointer == replacement ? "" : " (game feel clone)")
                 + "; feel " + s.tuning.feel + ", damage " + s.tuning.hit_damage + ", visual " + s.tuning.weapon + ", speed " + std::to_string(s.tuning.speed) + ", rig " + rig::short_name(pawn_rig_));

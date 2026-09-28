@@ -21,7 +21,7 @@ I built Custom Combat System to let you choose the animation each attack of your
 
 [size=4][b]How it works[/b][/size]
 
-Every player attack starts its animation through one function inside the game. CCS hooks that function and swaps the animation at the moment the attack starts: one callback per swing, no work per frame in combat. CCS changes no game file on disk. Enemy animations play through a cleaned copy with the parts meant for the AI taken out (the warping toward its target, the turning to face it, its event markers), so they do not drag you across the arena or read state a player does not have.
+Every player attack starts its animation through one function inside the game. CCS hooks that function and swaps the animation at the moment the attack starts: one callback per swing, no work per frame in combat. CCS changes no game file on disk. Enemy animations play through a cleaned copy with the parts meant only for the AI taken out (its warps onto whoever hit it, its event markers), so they do not drag you across the arena or read state a player does not have. The turn window stays, so you steer the wind-up with the stick the same way you steer your own swings, and a move that has no turn window of its own gets your weapon's.
 
 [size=4][b]Install[/b][/size]
 [list=1]

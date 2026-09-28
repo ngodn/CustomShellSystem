@@ -68,35 +68,40 @@ private:
     struct Slot {
         std::string move_id, path, error; engine::ObjectHandle montage; bool rooted{}, pending{}; uint64_t hits{};
         engine::ObjectHandle play;                     // what "Move's own" plays: a cleaned clone for enemy montages, the montage itself otherwise
-        bool play_hold{};                              // that montage carries a hold handler of its own
+        bool play_hold{}, play_turn{};                 // that montage carries a hold handler / a turn window of its own
         SlotTuning tuning;
         std::vector<Transplant> feel; bool feel_warned{}; bool was_ready{};
-        std::vector<Transplant> holds; bool hold_warned{};   // "Move's own" copies that carry the original's hold-attack window
+        std::vector<Transplant> carries; bool carry_warned{};   // "Move's own" copies that carry the original's hold and turn windows
         std::string show_mesh_path; engine::ObjectHandle show_mesh; bool show_rooted{};   // the move's weapon mesh, loaded with the montage
         engine::ObjectHandle payload_source; std::vector<PayloadBackup> backups;          // original payload copied onto the replacement
     };
     // The reflected layout of a montage's notify rows, resolved once: no property lookup per swing.
-    struct NotifyLayout { engine::UObject* montage_class{}; engine::FProperty* notifies{}, *notify{}, *state{}, *link{}; engine::UObject* hit_state{}, *hit_notify{}; };
+    struct NotifyLayout { engine::UObject* montage_class{}; engine::FProperty* notifies{}, *notify{}, *state{}, *link{}, *duration{}; engine::UObject* hit_state{}, *hit_notify{}; };
     mutable NotifyLayout layout_{};
     const NotifyLayout& notify_layout() const;
     // What the hook needs to know about a montage the game plays, learned the first time it is
-    // seen: whether it is a companion clip (left alone) and whether it carries a hold handler.
-    struct MontageFacts { engine::UObject* montage{}; bool companion{}, hold{}; };
+    // seen: whether it is a companion clip (left alone), whether it carries a hold handler and
+    // whether it carries a turn window (the game's rotate-to-face-target notify state).
+    struct MontageFacts { engine::UObject* montage{}; bool companion{}, hold{}, turn{}; };
     std::unordered_map<uint64_t, MontageFacts> montage_facts_;
     const MontageFacts& montage_facts(engine::UObject* montage);
     std::vector<engine::UObject*> hit_payloads(engine::UObject* montage) const;
     float first_hit_time(engine::UObject* montage) const;
+    std::pair<float, float> first_hit_span(engine::UObject* montage) const;   // begin and end of the earliest hit window, or {-1,-1}
     engine::UObject* transplant(Slot& slot, engine::UObject* original, engine::UObject* replacement);
     engine::UObject* build_transplant(engine::UObject* original, engine::UObject* replacement);
     engine::UObject* clone_montage(engine::UObject* source);
     std::vector<std::string> strip_ai_notifies(engine::UObject* clone);
     void release_transplants(Slot& slot);
-    // The charge window: the game's hold-handler notify state on the slot's original montage. A
-    // "Move's own" replacement gets a copy of the original's handler, timed to its own wind-up.
+    // Windows the slot's original montage authors for the player and a "Move's own" replacement
+    // may lack: the charge window (the game's hold-handler notify state) and the turn window (the
+    // rotate-to-face-target notify state that lets the stick steer the wind-up). A replacement
+    // without them plays through a copy that carries the original's rows, timed to its own clip.
     int hold_handler_index(engine::UObject* montage) const;
-    engine::UObject* carry_hold(Slot& slot, engine::UObject* original, engine::UObject* replacement);
-    engine::UObject* build_hold_carry(engine::UObject* original, engine::UObject* replacement);
-    void release_holds(Slot& slot);
+    bool has_turn_window(engine::UObject* montage) const;
+    engine::UObject* carry_windows(Slot& slot, engine::UObject* original, engine::UObject* replacement, bool hold, bool turn);
+    engine::UObject* build_carry(engine::UObject* original, engine::UObject* replacement, bool hold, bool turn);
+    void release_carries(Slot& slot);
     void note_recent(engine::UObject* cls, int slot, const char* what);   // the last few player attacks, for status.json
     void apply_weapon_payload(Slot& slot, engine::UObject* original, engine::UObject* replacement);
     void restore_payload(Slot& slot);
