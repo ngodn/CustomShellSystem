@@ -35,7 +35,9 @@ the keys for the device you are using.
   shown in the footer (keyboard only) puts the caret in the search field;
   typing filters the list.
   Presets: save, load and delete your own presets in Mods/CCS/presets/.
-  Settings: the master switch, Charged attacks, menu scale, reset all slots.
+  Settings: the master switch, Charged attacks, Next attack (where a kept
+  press fires: after the first hit or after the whole move), menu scale,
+  reset all slots.
 
 Charged attacks (the LC and HC slots) exist in the game only with the
 Acolyte's Stone (light) or the Unwieldy Stone (heavy) equipped. Without the
