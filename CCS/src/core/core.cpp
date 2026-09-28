@@ -311,7 +311,7 @@ nlohmann::json Core::model() const {
         // candidate. Each mirrors a choice control under "settings" that the event path validates.
         const SlotTuning tune = combat_ ? combat_->tuning(slot) : SlotTuning{};
         const std::string sid = std::string("slot.") + slot_to_string(slot);
-        static const char* speeds[] = {"0.5", "0.75", "0.9", "1", "1.1", "1.25", "1.5", "1.75", "2"};
+        static const char* speeds[] = {"0.5", "0.75", "0.9", "1", "1.1", "1.25", "1.5", "1.75", "2", "2.5", "3", "4"};
         std::string speed_id = "1"; double best = 1e9;
         for (const char* v : speeds) if (const double d = std::abs(std::stod(v) - tune.speed); d < best) { best = d; speed_id = v; }
         Json speed_options = Json::array();

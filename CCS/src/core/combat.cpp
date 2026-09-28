@@ -151,6 +151,7 @@ const Combat::NotifyLayout& Combat::notify_layout() const {
     l.state = row ? row->GetPropertyByNameInChain(L"NotifyStateClass") : nullptr;
     l.link = row ? row->GetPropertyByNameInChain(L"LinkValue") : nullptr;
     l.duration = row ? row->GetPropertyByNameInChain(L"duration") : nullptr;   // reflected in lowercase; a state's window length
+    l.rate_scale = montage_class->GetPropertyByNameInChain(L"RateScale");    // the montage's own play-rate multiplier
     if (!l.notify || !l.state || !l.link || !l.notify->IsA<FObjectProperty>() || !l.state->IsA<FObjectProperty>()) throw std::runtime_error("FAnimNotifyEvent layout changed");
     l.hit_state = find_cached(L"/Script/Sparta.SpartaAnimNotifyState_HitCheck");
     l.hit_notify = find_cached(L"/Script/Sparta.SpartaAnimNotify_HitCheck");
@@ -1017,7 +1018,7 @@ void Combat::observe(void* frame_ptr) {
     // attack follows, so the game's own hold clip stays (it blends into that attack seamlessly).
     if ((slot == int(SlotId::LC) && !hold_unlocked_[0]) || (slot == int(SlotId::HC) && !hold_unlocked_[1])) { ++skipped_; note_recent(cls, slot, "hold attacks locked on this character, left alone"); return; }
     auto& s = slots_[size_t(slot)];
-    bool changed = false;
+    bool changed = false, scaled = false;
     if (!s.montage.get()) {
         note_recent(cls, slot, s.move_id.empty() ? "nothing assigned" : "move not ready");
         if (s.move_id.empty() && noted_.size() < 64 && noted_.insert(key ^ 0x2545f4914f6cdd1dull).second)
@@ -1071,6 +1072,22 @@ void Combat::observe(void* frame_ptr) {
             try { pointer = overlaid(s, pointer, armor, steer); }
             catch (const std::exception& e) { ++failures_; if (!s.overlay_warned) { s.overlay_warned = true; log("CCS player feel unavailable for " + s.move_id + ": " + e.what()); } }
         }
+        // Speed on a copy of ours goes into the montage's own RateScale, which multiplies whatever
+        // play rate the game sets later: the charge handler resets the rate on release, so a rate
+        // passed to the task alone was lost on the LC and HC slots. The game's own asset is never
+        // touched; there the rate parameter carries the speed instead.
+        if (pointer != source && pointer != original) {
+            try {
+                const auto& l = notify_layout();
+                if (l.rate_scale) {
+                    auto* base_owner = (s.tuning.feel == "game" && original) ? original : source;
+                    float base{}; std::memcpy(&base, reinterpret_cast<std::byte*>(base_owner) + l.rate_scale->GetOffset_Internal(), sizeof(base));
+                    const float value = (std::isfinite(base) && base > 0.f ? base : 1.f) * float(s.tuning.speed);
+                    std::memcpy(reinterpret_cast<std::byte*>(pointer) + l.rate_scale->GetOffset_Internal(), &value, sizeof(value));
+                    scaled = true;
+                }
+            } catch (...) {}
+        }
         std::memcpy(bytes + inputs_[1]->GetOffset_Internal(), &pointer, sizeof(pointer));
         ++s.hits; changed = true;
         note_recent(cls, slot, how);
@@ -1081,7 +1098,7 @@ void Combat::observe(void* frame_ptr) {
             if (auto* mesh = s.show_mesh.get()) { try { show_weapon(mesh, pointer, GetTickCount64()); } catch (const std::exception& e) { ++failures_; log(std::string("CCS weapon show failed: ") + e.what()); } }
         }
     }
-    if (std::abs(s.tuning.speed - 1.0) > 1e-6) {
+    if (!scaled && std::abs(s.tuning.speed - 1.0) > 1e-6) {
         float rate{}; std::memcpy(&rate, bytes + inputs_[2]->GetOffset_Internal(), sizeof(rate));
         if (std::isfinite(rate) && rate > 0.f) { rate *= float(s.tuning.speed); std::memcpy(bytes + inputs_[2]->GetOffset_Internal(), &rate, sizeof(rate)); changed = true; }
     }

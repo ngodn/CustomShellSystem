@@ -139,6 +139,15 @@ replacement's first hit or, with the new Settings row "Next attack: After the wh
 its last hit (`Combat::set_chain`, settings key `next_attack`, default "hit"). Changing it
 drops every slot's carry cache. InputBlock rows are not carried: dodge and parry stay free.
 
+Speed on hold slots (core 04aae46085ac). Speed was passed only as the task's Rate parameter.
+`BPC_Player_ComboCounter` calls `Montage_SetPlayRate(HoldAttackHoldingPlayrate)` at hold start
+and `Montage_SetPlayRate(HoldAttackReleasePlayrate)` on release, so on LC and HC the speed
+vanished after the charge. When the montage played is a copy of ours (cleaned copy, carry,
+overlay, transplant) the speed now goes into the copy's `RateScale` (base RateScale of the
+source times speed; some game montages use 1.5), which the engine multiplies into every play
+rate the game sets afterwards. The game's own asset is never written; the rate parameter
+still carries the speed in that case. Speed range is 0.5 to 4x.
+
 Still to verify live: an enemy move with "Move's own" feel turning with the stick during the
 wind-up; whether the enemy's own translation warp overshoots on long lunges (if it does, add
 "SpartaMotionWarping_Translation" back to the drop list, or gate it per slot).

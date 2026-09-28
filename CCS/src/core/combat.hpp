@@ -80,7 +80,7 @@ private:
         engine::ObjectHandle payload_source; std::vector<PayloadBackup> backups;          // original payload copied onto the replacement
     };
     // The reflected layout of a montage's notify rows, resolved once: no property lookup per swing.
-    struct NotifyLayout { engine::UObject* montage_class{}; engine::FProperty* notifies{}, *notify{}, *state{}, *link{}, *duration{}; engine::UObject* hit_state{}, *hit_notify{}; };
+    struct NotifyLayout { engine::UObject* montage_class{}; engine::FProperty* notifies{}, *notify{}, *state{}, *link{}, *duration{}, *rate_scale{}; engine::UObject* hit_state{}, *hit_notify{}; };
     mutable NotifyLayout layout_{};
     const NotifyLayout& notify_layout() const;
     // What the hook needs to know about a montage the game plays, learned the first time it is
