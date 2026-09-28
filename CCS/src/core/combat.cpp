@@ -47,9 +47,10 @@ int Combat::classify(const std::string& full) {
         (ends_with(name, "Attack_Primary") || ends_with(name, "Attack_Primary_InfiniteAmmo") || name == "GA_SidearmRangedAttackBase" ||
          name == "GA_SidearmRangedBurstAttackBase" || name == "GA_SidearmRangedChargedAttackBase")) return int(SlotId::R);
     // Sprint attacks: GA_Running_Attack_<Weapon>[_B], GA_Running_Attack_B_<Weapon>, GA_Player_<Weapon>_RunningAttack[_B],
-    // GA_Player_Attack_Katanas_RunningAttack[_Axe]. The B variants are the sprint heavy.
+    // GA_Player_Attack_Katanas_RunningAttack[_Axe]. The B variants are the sprint heavy; on the
+    // Axatana the sprint heavy is the axe one (RunningAttack_Axe plays Running_Axe_02).
     if (name.find("Running") != std::string::npos && (name.starts_with("GA_Running") || name.starts_with("GA_Player"))) {
-        const bool heavy = ends_with(name, "_B") || name.find("_Attack_B_") != std::string::npos || name.find("RunningAttack_B") != std::string::npos;
+        const bool heavy = ends_with(name, "_B") || name.find("_Attack_B_") != std::string::npos || name.find("RunningAttack_B") != std::string::npos || ends_with(name, "RunningAttack_Axe");
         return int(heavy ? SlotId::SH : SlotId::SL);
     }
     if (!full.starts_with("GA_Player")) return -1;

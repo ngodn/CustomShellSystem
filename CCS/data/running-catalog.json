@@ -4,15 +4,15 @@
   "moves": [
     {
       "id": "GA_Player_Attack_Katanas_RunningAttack_Axe_C",
-      "display_name": "Sprint light attack",
+      "display_name": "Sprint heavy attack",
       "source_name": "Axatana",
       "ability": "GA_Player_Attack_Katanas_RunningAttack_Axe_C",
       "montage": "/Game/Sparta/Characters/Shells/_Shared/Animation/Attacks/Axatana/RunningAttack/A_Shared_Attacks_Axeatana_Running_Axe_02_Montage.A_Shared_Attacks_Axeatana_Running_Axe_02_Montage",
       "skeleton": "SKEL_Human_Skeleton",
       "slots": [
-        "SL"
+        "SH"
       ],
-      "description": "Axatana (axe): the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+      "description": "Axatana (axe): the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots."
     },
     {
       "id": "GA_Player_Attack_Katanas_RunningAttack_C",
