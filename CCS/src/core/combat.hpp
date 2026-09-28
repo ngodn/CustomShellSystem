@@ -111,7 +111,10 @@ private:
     unsigned row_kinds(engine::UObject* montage) const;        // bit(kind) for every kind the montage carries
     std::vector<float> hit_begins(engine::UObject* montage) const;   // sorted begin times of the hit windows
     engine::UObject* carry_windows(Slot& slot, engine::UObject* original, engine::UObject* replacement, unsigned kinds);
-    engine::UObject* build_carry(engine::UObject* original, engine::UObject* replacement, unsigned kinds);
+    engine::UObject* build_carry(engine::UObject* original, engine::UObject* replacement, unsigned kinds, double speed);
+    // The charge window is wall-clock input timing (0.5 s minimum hold) inside a montage that the
+    // slot's speed runs faster; on a copy of ours the window grows by the speed so it lasts as long.
+    void stretch_hold_rows(engine::UObject* clone, double speed);
     void release_carries(Slot& slot);
     std::string append_rows(engine::UObject* clone, engine::UObject* source, const std::vector<int>& rows, const std::function<void(int, float&, float&)>& time);
     // The player-feel overlay: rows from a donor player montage appended over whatever the slot

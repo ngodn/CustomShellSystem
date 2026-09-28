@@ -90,6 +90,7 @@ void Combat::set_tuning(SlotId slot, const SlotTuning& tuning) {
     if (tuning.hit_damage != "weapon") restore_payload(s);   // back to the replacement's own payload at once
     if (tuning.weapon != "move" && shown_montage_.get() && shown_montage_.get() == s.montage.get()) restore_weapon();
     if (tuning.armor != s.tuning.armor || tuning.steer != s.tuning.steer || tuning.feel != s.tuning.feel) release_overlays(s);   // the overlay's rows depend on all three
+    if (std::abs(tuning.speed - s.tuning.speed) > 1e-9) { release_transplants(s); release_carries(s); release_overlays(s); }   // every copy's charge window is sized by the speed
     s.tuning = tuning;
 }
 // The visible mesh of each move source's weapon: player primaries are WP_<X> blueprints whose
@@ -262,6 +263,7 @@ UObject* Combat::transplant(Slot& s, UObject* original, UObject* replacement) {
     for (auto& t : s.feel) if (t.original.get() == original) { if (auto* clone = t.clone.get()) return clone; }
     if (s.feel.size() >= 4) { auto& old = s.feel.front(); if (auto* c = old.clone.get()) drop_referenced(world_.get(), c); s.feel.erase(s.feel.begin()); }
     auto* clone = build_transplant(original, replacement);
+    try { stretch_hold_rows(clone, s.tuning.speed); } catch (const std::exception& e) { log(std::string("CCS hold window stretch failed: ") + e.what()); }
     Transplant t; t.original.capture(original); t.clone.capture(clone);
     keep_referenced(world_.get(), clone);
     s.feel.push_back(std::move(t));
@@ -438,6 +440,30 @@ Combat::RowKind Combat::row_kind(const std::string& cls) {
     if (cls.find("InputQueue") != std::string::npos) return RowKind::Queue;
     return RowKind::None;
 }
+void Combat::stretch_hold_rows(UObject* clone, double speed) {
+    if (!clone || speed <= 1.0 + 1e-6) return;
+    const auto& l = notify_layout();
+    auto* inner = static_cast<FArrayProperty*>(l.notifies)->GetInner();
+    auto* event_struct = static_cast<FStructProperty*>(inner)->GetStruct().Get();
+    auto field = [&](UStruct* type, const wchar_t* name) { auto* f = type->GetPropertyByNameInChain(name); if (!f) throw std::runtime_error("Notify event field missing"); return f; };
+    auto* end_link = field(event_struct, L"EndLink");
+    const int end_value = end_link->GetOffset_Internal() + field(static_cast<FStructProperty*>(end_link)->GetStruct().Get(), L"LinkValue")->GetOffset_Internal();
+    const float len = read<float>(clone, L"SequenceLength"), hit = first_hit_time(clone);
+    FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(clone) + l.notifies->GetOffset_Internal());
+    for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
+        UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + l.state->GetOffset_Internal(), sizeof(object));
+        if (!object || !object->GetClassPrivate() || row_kind(narrow(object->GetClassPrivate()->GetNamePrivate().ToString())) != RowKind::Hold) continue;
+        auto* b = rows.GetRawPtr(i);
+        float start{}, end{}; std::memcpy(&start, b + l.link->GetOffset_Internal(), 4); std::memcpy(&end, b + end_value, 4);
+        const float window = std::max(0.02f, end - start) * float(speed);
+        float limit = len - 0.01f;
+        if (hit > 0.05f && hit > start) limit = std::min(limit, hit - 0.02f);
+        end = std::min(start + window, limit); start = std::clamp(end - window, 0.f, std::max(0.f, end - 0.02f));
+        const float length = end - start;
+        std::memcpy(b + l.link->GetOffset_Internal(), &start, 4); std::memcpy(b + end_value, &end, 4);
+        if (l.duration) std::memcpy(b + l.duration->GetOffset_Internal(), &length, 4);
+    }
+}
 void Combat::set_chain(const std::string& mode) {
     const std::string wanted = mode == "move" ? "move" : "hit";
     if (wanted == chain_) return;
@@ -492,7 +518,7 @@ const Combat::MontageFacts& Combat::montage_facts(UObject* montage) {
 UObject* Combat::carry_windows(Slot& s, UObject* original, UObject* replacement, unsigned kinds) {
     for (auto& t : s.carries) if (t.original.get() == original) { if (auto* clone = t.clone.get()) return clone; }
     if (s.carries.size() >= 4) { auto& old = s.carries.front(); if (auto* c = old.clone.get()) drop_referenced(world_.get(), c); s.carries.erase(s.carries.begin()); }
-    auto* clone = build_carry(original, replacement, kinds);
+    auto* clone = build_carry(original, replacement, kinds, s.tuning.speed);
     Transplant t; t.original.capture(original); t.clone.capture(clone);
     keep_referenced(world_.get(), clone);
     s.carries.push_back(std::move(t));
@@ -550,7 +576,7 @@ std::string Combat::append_rows(UObject* clone, UObject* source, const std::vect
     raw->data = fresh; raw->num = total; raw->max = total;
     return report;
 }
-UObject* Combat::build_carry(UObject* original, UObject* replacement, unsigned wanted) {
+UObject* Combat::build_carry(UObject* original, UObject* replacement, unsigned wanted, double speed) {
     auto* montage_class = static_cast<UClass*>(find_cached(L"/Script/Engine.AnimMontage"));
     if (!original->IsA(montage_class) || !replacement->IsA(montage_class)) throw std::runtime_error("Not montages");
     // The rows to carry from the original: hold handlers, turn windows, weapon-state notifies and
@@ -623,7 +649,8 @@ UObject* Combat::build_carry(UObject* original, UObject* replacement, unsigned w
             // and 1.05 s timers when the window begins, so it keeps the original's absolute times
             // and a held button charges after the same delay on every weapon. It moves earlier only
             // when the replacement's first hit would land inside it, and never leaves the montage.
-            const float window = std::max(0.02f, end - start);
+            // The slot's speed runs the montage faster, so the window grows by it to last as long.
+            const float window = std::max(0.02f, end - start) * float(std::max(1.0, speed));
             float limit = rep_len - 0.01f;
             if (hit_new > 0.05f) limit = std::min(limit, hit_new - 0.02f);
             if (end > limit) { end = limit; start = end - window; }
@@ -714,6 +741,8 @@ UObject* Combat::overlaid(Slot& s, UObject* source, bool armor, bool steer) {
     for (auto& t : s.overlays) if (t.original.get() == source) { if (auto* clone = t.clone.get()) return clone; }
     if (s.overlays.size() >= 8) { auto& old = s.overlays.front(); if (auto* c = old.clone.get()) drop_referenced(world_.get(), c); s.overlays.erase(s.overlays.begin()); }
     auto* clone = build_overlay(source, armor, steer);
+    // A source that is the montage itself (not a carry or transplant of ours) brings its own hold rows unstretched.
+    if (source == s.montage.get() || source == s.play.get()) { try { stretch_hold_rows(clone, s.tuning.speed); } catch (const std::exception& e) { log(std::string("CCS hold window stretch failed: ") + e.what()); } }
     Transplant t; t.original.capture(source); t.clone.capture(clone);
     keep_referenced(world_.get(), clone);
     s.overlays.push_back(std::move(t));

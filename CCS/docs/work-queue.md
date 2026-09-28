@@ -172,6 +172,17 @@ montage and clears the deadline; a press still held at 450 ms is about to charge
 so the weapon shows back before the charged attack. Applied on every exit of the hook (locked
 hold, companion clip, normal) so it holds whether LC is assigned or not.
 
+Charge window versus speed (core 908dd27950da, in alpha.3). With the speed in the copy's
+`RateScale`, the hold window shrank in wall time: the Katanas' window is 0.2 s of montage time and
+the game runs the montage at 0.2x while the button is held, so it lasted 1 s at 1x, 0.5 s at 2x
+and 0.25 s at 4x, under the 0.5 s minimum hold, and every LC charge failed into the cut. The
+Axe's window is 0.65 s of montage time, so HC held up to about 6x. Every copy of ours now
+grows its hold rows by the speed (`stretch_hold_rows` for transplants and overlays of a raw
+montage, the carry's own timing for carried rows), still ending before the first hit, and a
+speed change drops the slot's transplant, carry and overlay caches. Not covered: a raw player
+montage played without any copy of ours (armor and steer off, no carry), which still uses the
+rate parameter and loses its speed on release, as before alpha.3.
+
 Still to verify live: an enemy move with "Move's own" feel turning with the stick during the
 wind-up; whether the enemy's own translation warp overshoots on long lunges (if it does, add
 "SpartaMotionWarping_Translation" back to the drop list, or gate it per slot).
