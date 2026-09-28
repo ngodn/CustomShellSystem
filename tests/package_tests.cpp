@@ -13,8 +13,22 @@ int main(int argc,char** argv) {
             if(file.path().extension()==".pak") fs::copy_file(file.path(),root/"paks"/file.path().filename());
             else fs::create_symlink(fs::absolute(file.path()),root/"paks"/file.path().filename());
         }
+        // A folder in the old <id>/<hash> layout is removed by the next scan.
+        fs::create_directories(root/"cache/old.package.id/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
         auto packages=package_catalogs(root/"paks",root/"cache");
         if(packages.size()!=1 || !fs::exists(packages[0].artwork/"thumbnail.png")) throw std::runtime_error("Package metadata or thumbnail missing");
+        if(fs::exists(root/"cache/old.package.id")) throw std::runtime_error("Old cache layout was not removed");
+        // One short folder per package, directly under the cache, so Windows' 259-character
+        // limit holds on a default Steam install (docs/css-packages.md).
+        {
+            const auto name=packages[0].artwork.filename().string();
+            if(packages[0].artwork.parent_path()!=root/"cache" || name.size()!=16 ||
+               name.find_first_not_of("0123456789abcdef")!=std::string::npos)
+                throw std::runtime_error("Package cache folder is not 16 hex digits under the cache");
+            for(const auto& file:fs::directory_iterator(packages[0].artwork))
+                if(fs::relative(file.path(),root/"cache").generic_string().size()+4>16+1+96+4)
+                    throw std::runtime_error("Cached file path longer than the documented bound");
+        }
         fs::create_directories(root/"catalog");
         auto catalog=Catalog::load(root/"catalog",root/"paks",root/"cache");
         if(catalog.outfits.size()!=1 || catalog.outfits[0].thumbnail.empty()) throw std::runtime_error("Catalog ignored package thumbnail");

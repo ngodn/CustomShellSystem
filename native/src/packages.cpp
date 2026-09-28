@@ -108,8 +108,34 @@ std::map<std::string,Bytes> contents(const fs::path& path) {
     return result;
 }
 }
+// A package's cache folder: the first 16 hex digits of its manifest hash. Short on purpose.
+// Windows refuses paths past 259 characters unless the executable opts in, and a default Steam
+// install already puts cache/packages/ 125 characters deep. The earlier <id>/<64-hex hash>/
+// layout pushed dye mask temp files of Curvy and Cute (264), BTGG (265) and Beaute Knight
+// Proxima (263) past the limit, and the failed write rejected the whole package. Here the worst
+// case, a 96-character dye name plus ".tmp", ends at 242. The manifest carries the package id,
+// so two packages never share a folder.
+static bool cache_folder_name(const std::string& name) {
+    return name.size()==16 && std::all_of(name.begin(),name.end(),[](unsigned char c){return (c>='0'&&c<='9')||(c>='a'&&c<='f');});
+}
+// Folders from the old layout are never read again; drop them so the masks they hold do not
+// sit on disk forever. Failures are left for the next scan: this is only a cleanup.
+static void prune_legacy_cache(const fs::path& cache) {
+    std::error_code error;
+    fs::directory_iterator it(cache,error),end;
+    if(error) return;
+    std::vector<fs::path> legacy;
+    for(;it!=end;it.increment(error)) {
+        if(error) break;
+        auto status=it->symlink_status(error);
+        if(error) { error.clear(); continue; }
+        if(fs::is_directory(status) && !cache_folder_name(path_utf8(it->path().filename()))) legacy.push_back(it->path());
+    }
+    for(const auto& path:legacy) fs::remove_all(path,error);
+}
 std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path& cache,Json* diagnostics) {
     std::vector<PackageCatalog> result;
+    if(!cache.empty()) prune_legacy_cache(cache);
     Json report={{"pak_files",0},{"files",Json::array()},{"errors",Json::array()}};
     auto path_text=[](const fs::path& path) { auto text=path.generic_u8string(); return std::string(text.begin(),text.end()); };
     auto directory_error=[&](const fs::path& path,const std::string& reason) {
@@ -186,7 +212,7 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
                 throw std::runtime_error("Invalid CSS thumbnail dimensions");
             auto sha=hex(hash(image,true));
             if(thumbnail.at("sha256")!=sha) throw std::runtime_error("CSS thumbnail checksum mismatch");
-            auto directory=cache/id/hex(hash(bytes,true));
+            auto directory=cache/hex(hash(bytes,true)).substr(0,16);
             fs::create_directories(directory);
             auto target=directory/"thumbnail.png";
             bool valid=false;
