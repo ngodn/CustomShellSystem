@@ -1112,7 +1112,8 @@ void Menu::build_slots(const Json& section, bool& deferred) {
     }
     // ---- the candidate list for the active slot: a search field, then the matches grouped
     const Json* slot = rows ? &controls[row_] : nullptr;
-    const auto& options = slot ? slot->at("options") : Json::array();
+    static const Json no_options = Json::array();
+    const auto& options = slot && section.contains("candidates") ? section.at("candidates") : no_options;   // shared by every slot
     const std::string options_key = slot ? slot->value("id", std::string{}) + "/" + std::to_string(options.size()) : std::string{};
     if (options_key != slot_options_key_) {
         // A new slot: its candidates become the search set, filtered by the query already typed,
@@ -1182,7 +1183,7 @@ void Menu::build_slots(const Json& section, bool& deferred) {
         if (shown) {
             const auto& o = *shown;
             detail(o.value("title", o.value("label", std::string{})), o.value("subtitle", slot_name), "", game_icon(o.value("icon", std::string{})));
-            if (const auto hint = o.value("hint", std::string{}); !hint.empty()) paragraph(panel_, hint, muted);
+            if (const auto hint = o.at("id") == slot->at("value") ? slot->value("hint", std::string{}) : std::string{}; !hint.empty()) paragraph(panel_, hint, muted);
         } else detail(deps_.title, "", "");
         // The slot's own settings as option rows in the window; a click or the settings key focuses them.
         for (size_t k = 0; k < settings.size(); ++k) {

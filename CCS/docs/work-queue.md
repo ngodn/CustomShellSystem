@@ -91,6 +91,25 @@ bitmask (`MontageFacts::kinds`, `Slot::play_kinds`, `bit(RowKind)`). Left alone 
 plunges, not by the slot attack abilities), the Scythe's `ANS_ClockworkScytheChain` and
 `ANS_ChainsawHitCheck` (the Clockwork Tarstone's chain hits, a known limit).
 
+Alpha.2 hardening (same day, core 64487718d553). Two reviewers over the new code and the rest:
+- settings.json was written synchronously on the game thread on every row change, and a held
+  direction key changes a row every 90 ms. `Core::save_settings_or_log` now only collects the
+  state and marks it dirty; `Core::flush_settings` writes once 400 ms after the last change
+  (from the status phase of the tick) and on `Core::stop` (core swap, unload).
+- `Core::model` copied the whole candidate list into all thirteen slot controls on every rebuild
+  (every event increments the model revision). The list now lives once on the customize section
+  as `candidates`; each slot control carries `hint` (the assigned move's status) instead of
+  `options`. The menu reads the section's list (`build_slots`, `Menu::act` pick/activate).
+- `ensure_donor` could do a blocking asset load from inside the swing hook the first time a slot
+  wanted armor or steering (and again after a world change). The donor now loads from
+  `load_pending` in the tick as soon as any assigned slot wants it; the hook only uses it once
+  `donor_ready()`, and a swing before that plays without the overlay.
+- A slot whose montage stopped answering cleared only its game-feel cache on reload; carries and
+  overlays (all built from the lost montage) are now released too, with their references dropped.
+- Switching Feel also drops the overlay cache (an overlay built without steering could otherwise
+  be served after a switch when the transplant fell back to the replacement).
+- The focused setting's text moved out of the scrolling rows into a fixed 230 px box under them.
+
 Still to verify live: an enemy move with "Move's own" feel turning with the stick during the
 wind-up; whether the enemy's own translation warp overshoots on long lunges (if it does, add
 "SpartaMotionWarping_Translation" back to the drop list, or gate it per slot).

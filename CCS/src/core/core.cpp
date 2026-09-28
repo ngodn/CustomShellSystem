@@ -154,7 +154,14 @@ void Core::save_settings_or_log() {
         std::array<std::string, 13> slots; for (size_t i = 0; i < slots.size(); ++i) { slots[i] = combat_->slot_move(SlotId(i)); settings_->set_tuning(i, combat_->tuning(SlotId(i))); }
         settings_->set_slots(std::move(slots));
     }
-    if (!settings_->save()) last_message_ = "Settings could not be saved";
+    // The write waits for a quiet spell: a held direction key changes a row eleven times a second,
+    // and each save is a synchronous temp-file write and rename on the game thread.
+    settings_dirty_ = true; settings_flush_at_ = runtime::now_ms() + 400;
+}
+void Core::flush_settings() {
+    if (!settings_dirty_) return;
+    settings_dirty_ = false;
+    if (!settings_->save()) { last_message_ = "Settings could not be saved"; ++model_revision_; }
 }
 // A preset names moves by catalog id; older or hand-written files may only carry the montage
 // path, which resolves through the catalogs. Every slot is set (the preset is the whole state),
@@ -278,23 +285,26 @@ nlohmann::json Core::model() const {
     // ---- Customize: a slots section. Each control is a slot; its options are the candidates
     // for that slot, grouped the way the user sketched them: the weapons that have a move for
     // this position, then the finisher and hold Tarstones, then enemy moves (later).
+    // Every slot offers the same candidates, so the list lives once on the section ("candidates")
+    // and each slot carries only its own state: the assigned move, its status hint and its rows.
+    // (The parked sidearm slot would need its own list headed "Sidearm's own fire"; it is hidden.)
+    Json candidates = Json::array();
+    candidates.push_back({{"id", ""}, {"label", "Weapon's own attack"}, {"group", "Player's Weapon"}, {"title", "Weapon's own attack"},
+        {"description", "Your weapon's own attack for this slot. Nothing is swapped."}});
+    for (const auto& row : candidate_options()) candidates.push_back(row);
     Json customize = Json::array();
     for (unsigned i = 0; i < slot_count; ++i) {
         const auto slot = SlotId(i);
         const auto id = combat_ ? combat_->slot_move(slot) : std::string{};
         const bool ranged_slot = slot_role(i) == Role::Ranged;
-        Json options = Json::array();
-        options.push_back({{"id", ""}, {"label", ranged_slot ? "Sidearm's own fire" : "Weapon's own attack"}, {"group", ranged_slot ? "Player's Sidearm" : "Player's Weapon"}, {"title", ranged_slot ? "Sidearm's own fire" : "Weapon's own attack"},
-            {"description", "Your weapon's own attack for this slot. Nothing is swapped."}});
-        for (const auto& row : candidate_options()) options.push_back(row);
-        if (combat_ && !id.empty()) for (auto& option : options) if (option.value("id", std::string{}) == id) {
+        std::string hint;
+        if (combat_ && !id.empty()) {
             const auto& err = combat_->slot_error(slot);
             const bool hold_slot = slot == SlotId::LC || slot == SlotId::HC;
             const bool locked = hold_slot && !combat_->hold_unlocked(slot == SlotId::HC);
-            option["hint"] = !err.empty() ? "Not applied: " + err : !combat_->slot_ready(slot) ? std::string("Loading the animation...")
+            hint = !err.empty() ? "Not applied: " + err : !combat_->slot_ready(slot) ? std::string("Loading the animation...")
                 : locked ? std::string("Waiting for the ") + (slot == SlotId::HC ? "Unwieldy Stone" : "Acolyte's Stone") + ". Without it a long press does the normal attack. Settings: Charged attacks, Always (cheat) removes the need."
                 : "Applied. Played " + std::to_string(combat_->slot_hits(slot)) + " time(s) this session.";
-            break;
         }
         // Per-slot settings: rows at the top of the same list, so keys and pad reach them like any
         // candidate. Each mirrors a choice control under "settings" that the event path validates.
@@ -340,10 +350,10 @@ nlohmann::json Core::model() const {
                     "Move's own: only the turn windows the move brings, and its recovery plays out."}});
         }
         customize.push_back({{"type", "choice"}, {"id", sid}, {"label", slot_to_string(slot)}, {"tile", tile_labels[i]}, {"name", slot_titles[i] + 4}, {"hidden", ranged_slot && !sidearm_slot_enabled},
-            {"value", id}, {"icon", id.empty() ? weapon_icon(current_weapon_) : move_icon(id)}, {"options", std::move(options)}, {"settings", settings_rows},
+            {"value", id}, {"icon", id.empty() ? weapon_icon(current_weapon_) : move_icon(id)}, {"hint", hint}, {"settings", settings_rows},
             {"settings_key", speed_id + "/" + tune.hit_damage + "/" + tune.weapon + "/" + tune.armor + "/" + tune.steer + (mesh_ready ? "/m" : "")}, {"enabled", combat_ != nullptr && catalog_error_.empty()}});
     }
-    sections.push_back({{"id", "customize"}, {"title", "Customize"}, {"kind", "slots"}, {"controls", std::move(customize)}});
+    sections.push_back({{"id", "customize"}, {"title", "Customize"}, {"kind", "slots"}, {"candidates", std::move(candidates)}, {"controls", std::move(customize)}});
     // ---- Presets
     Json presets = Json::array();
     Json preset_options = Json::array();
@@ -524,6 +534,7 @@ void Core::tick(const CcsPlayerContext* player, double delta) {
         if (menu_) menu_->tick(context, delta);
     });
     phase(4, "status", now, [&] {
+        if (settings_dirty_ && now >= settings_flush_at_) flush_settings();
         if (status_ && now >= status_after_) { status_after_ = now + 5000; status_->publish(get_status_json()); }
     });
 #endif
@@ -566,6 +577,7 @@ void Core::on_hotkey(uint32_t key) {
 }
 bool Core::stop() {
     if (hooks_ && !hooks_->on_game_thread(hooks_->context)) return false;
+    try { flush_settings(); } catch (...) {}
 #if defined(CCS_DISCOVERY_PROBE)
     probe_->cancel();
 #elif defined(CCS_ATTACK_PROBE)

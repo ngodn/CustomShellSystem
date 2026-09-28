@@ -600,8 +600,12 @@ void Menu::act(const Json& action) {
     }
     const auto* c = current_control(); if (!c || !interactive(*c)) return;
     const auto type = c->at("type").get<std::string>();
-    if (type == "choice" && (name == "pick" || (name == "activate" && c->at("options").size() > 8))) {
-        options_.reset(c->at("options"), [](const std::string& text) {
+    // A slot control's candidates live on its section; other choice controls carry their own.
+    static const Json no_options = Json::array();
+    const auto& section = model_["sections"][section_];
+    const Json& choices = c->contains("options") ? c->at("options") : section.contains("candidates") ? section.at("candidates") : no_options;
+    if (type == "choice" && (name == "pick" || (name == "activate" && choices.size() > 8))) {
+        options_.reset(choices, [](const std::string& text) {
             const auto source = wide(text);
             const int length = LCMapStringEx(LOCALE_NAME_INVARIANT, LCMAP_LOWERCASE, source.data(), int(source.size()), nullptr, 0, nullptr, nullptr, 0);
             if (length <= 0) return OptionSearch::ascii_fold(text);

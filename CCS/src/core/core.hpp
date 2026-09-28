@@ -84,7 +84,9 @@ private:
     uint64_t model_revision_{1}, model_signature_{};
     void handle_event(const nlohmann::json& event);
     void apply_slots_from_settings();
-    void save_settings_or_log();
+    void save_settings_or_log();                  // collects the state and marks it for the next flush (no disk write here)
+    void flush_settings();                        // the one place settings.json is written: from the tick after a quiet spell, and on stop
+    bool settings_dirty_{}; uint64_t settings_flush_at_{};
     void list_presets(uint64_t now, bool force);
     void apply_preset(const std::string& name);   // resolves each move, fills every slot, refreshes the page
     std::string move_label(const std::string& id) const;

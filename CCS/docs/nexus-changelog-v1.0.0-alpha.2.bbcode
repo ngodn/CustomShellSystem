@@ -7,6 +7,9 @@
 [*]The Axatana splits back into katanas on the first light attack after a heavy with Feel set to Move's own. The weapon's transform and equip-state notifies now travel with the swap.[/*]
 [*]Elemental Tarstones fire on charged attacks with Feel set to Move's own. The trigger now follows the replacement's hits.[/*]
 [*]The swap line in the log says how the montage was built (game feel, carried windows, hyper armor, steering).[/*]
+[*]The slot's right window keeps its shape with six rows: the rows scroll in the middle and the focused setting's text stays in its own box under them.[/*]
+[*]Changing a setting no longer writes settings.json on the spot. The file is written once, shortly after the last change, so holding a direction on a row does not touch the disk every step.[/*]
+[*]Opening or changing a slot no longer copies the whole candidate list for every slot. The page shares one list.[/*]
 [/list]
 
 Update: close the game, extract the ZIP into [b]MortalShell2/Binaries/Win64/ue4ss/Mods/[/b] and overwrite. Keep settings.json and presets/ to retain your slots and presets. Slots saved by alpha.1 get Armor and Steer switched on.

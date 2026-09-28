@@ -78,7 +78,7 @@ void Combat::set_tuning(SlotId slot, const SlotTuning& tuning) {
     if (!valid_tuning(tuning) || s.tuning == tuning) return;
     if (tuning.hit_damage != "weapon") restore_payload(s);   // back to the replacement's own payload at once
     if (tuning.weapon != "move" && shown_montage_.get() && shown_montage_.get() == s.montage.get()) restore_weapon();
-    if (tuning.armor != s.tuning.armor || tuning.steer != s.tuning.steer) release_overlays(s);   // the overlay's rows depend on both
+    if (tuning.armor != s.tuning.armor || tuning.steer != s.tuning.steer || tuning.feel != s.tuning.feel) release_overlays(s);   // the overlay's rows depend on all three
     s.tuning = tuning;
 }
 // The visible mesh of each move source's weapon: player primaries are WP_<X> blueprints whose
@@ -654,7 +654,7 @@ float Combat::last_hit_end(UObject* montage) const {
     return best;
 }
 UObject* Combat::build_overlay(UObject* source, bool armor, bool steer) {
-    if (!ensure_donor()) throw std::runtime_error("no donor rows");
+    if (!donor_ready()) throw std::runtime_error("player-feel rows not loaded yet");   // never loads from the hook
     const float len = read<float>(source, L"SequenceLength");
     if (!(len > 0.05f)) throw std::runtime_error("Montage length unusable");
     const float last = std::max(0.02f, len - 0.01f);
@@ -757,6 +757,13 @@ bool Combat::player_outer(UObject* object) const {
 // (a few milliseconds from the pak the first time) and the skeleton check needs the pawn's mesh.
 void Combat::load_pending(const PlayerContext& player) {
     if (!player.pawn) return;
+    // The player-feel donor loads here, off the swing hook, as soon as any slot with a move wants
+    // armor or steering; the hook only ever uses it once it is in memory.
+    if (!donor_ready() && !donor_failed_) {
+        bool wanted = false;
+        for (const auto& s : slots_) if (!s.move_id.empty() && (s.tuning.armor == "full" || s.tuning.steer == "full")) wanted = true;
+        if (wanted) ensure_donor();
+    }
     for (auto& s : slots_) {
         if (!s.pending) continue;
         s.pending = false;
@@ -880,7 +887,7 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
     }
     for (auto& s : slots_) {   // a loaded montage that stops answering: say why once, and load it again
         const bool ready = s.montage.alive();
-        if (s.was_ready && !ready) { log("CCS slot lost its montage: " + s.move_id + ": " + s.montage.why_dead()); s.rooted = false; s.feel.clear(); s.pending = !s.path.empty(); }
+        if (s.was_ready && !ready) { log("CCS slot lost its montage: " + s.move_id + ": " + s.montage.why_dead()); s.rooted = false; release_transplants(s); release_carries(s); release_overlays(s); s.pending = !s.path.empty(); }   // every cached copy was built from the lost montage
         s.was_ready = ready;
     }
     bool tuned = false; for (const auto& s : slots_) if (std::abs(s.tuning.speed - 1.0) > 1e-6) tuned = true;
@@ -1039,7 +1046,7 @@ void Combat::observe(void* frame_ptr) {
         // The player-feel overlay: hyper armor over the whole swing, and with "Move's own" feel
         // the weapon's steering and movement cancel ("Game's" feel already carries the weapon's).
         const bool armor = s.tuning.armor == "full", steer = s.tuning.steer == "full" && s.tuning.feel != "game";
-        if (armor || steer) {
+        if ((armor || steer) && donor_ready()) {   // the donor loads from the tick; a swing before that plays without the overlay
             try { pointer = overlaid(s, pointer, armor, steer); }
             catch (const std::exception& e) { ++failures_; if (!s.overlay_warned) { s.overlay_warned = true; log("CCS player feel unavailable for " + s.move_id + ": " + e.what()); } }
         }

@@ -113,6 +113,7 @@ private:
     // plays. "Armor: Hyper armor" adds the game's ANS_HyperArmor over the whole swing; "Steer:
     // Whole move" adds the weapon's turn window up to the last hit and the movement cancel after it.
     bool ensure_donor();
+    bool donor_ready() const { return donor_.get() && donor_armor_ >= 0 && donor_turn_ >= 0 && donor_cancel_ >= 0; }
     engine::UObject* build_overlay(engine::UObject* source, bool armor, bool steer);
     engine::UObject* overlaid(Slot& slot, engine::UObject* source, bool armor, bool steer);
     void release_overlays(Slot& slot);
