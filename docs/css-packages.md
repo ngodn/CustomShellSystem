@@ -60,7 +60,7 @@ The manifest declares `format: CSS.Package`, `format_version: 1`, `game: MortalS
 
 The optional [color recipe](colors.md) and its checksummed `dye-*.png` resources are also embedded in this directory.
 
-CSS scans packages on catalog load/rescan. It validates bounded pak index and entry hashes, manifest identity, the image hash, companion sizes and the small `.utoc` hash. The thumbnail is extracted to a rebuildable cache at `Mods/CustomShellSystem/cache/packages/<id>/<manifest-hash>/thumbnail.png`. The package remains self-contained if that cache is deleted. Large `.ucas` hashing stays outside the game thread:
+CSS scans packages on catalog load/rescan. It validates bounded pak index and entry hashes, manifest identity, the image hash, companion sizes and the small `.utoc` hash. The thumbnail is extracted to a rebuildable cache at `Mods/CustomShellSystem/cache/packages/<first 16 hex digits of the manifest hash>/thumbnail.png`, next to the package's dye masks. The folder name is short on purpose: a default Steam install already puts `cache/packages/` 125 characters deep, and Windows refuses paths past 259 characters. Keep dye mask names under 96 characters (the id rule) and the longest cached temp path stays at 242. Folders from the older `<id>/<manifest-hash>` layout are removed on the next scan. The package remains self-contained if that cache is deleted. Large `.ucas` hashing stays outside the game thread:
 
 ```sh
 python3 tools/css_package.py verify dist/CSS_HIT2_DE_Scyther_XTGMods_P
