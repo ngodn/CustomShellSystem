@@ -162,7 +162,7 @@ std::optional<PresetData> Storage::json_to_preset(const nlohmann::json& j) {
                 binding.tuning.feel = val.value("feel", std::string("move"));
                 binding.tuning.hit_damage = val.value("hit_damage", std::string("move"));
                 binding.tuning.weapon = val.value("weapon", std::string("inventory"));
-                binding.tuning.armor = val.value("armor", std::string("move"));
+                binding.tuning.armor = val.value("armor", std::string("full"));
                 if (!std::isfinite(binding.tuning.speed) || !valid_tuning(binding.tuning)) throw std::runtime_error("Invalid slot tuning");
                 const auto type = val.value("type", std::string{"player"});
                 if (type == "player") binding.origin = MoveOrigin::PlayerWeapon;

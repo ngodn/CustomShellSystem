@@ -43,7 +43,7 @@ the attacks that break armor). Player montages author it on the Martyr's Blade h
 Unyielding upgrade (`ANS_AddGameplayEffectConditional`). Enemy montages keep their own rows on
 the cleaned copy (the Sicario NeverEndingCombo has three windows, 1.79 to 3.70 s, 4.51 to 8.31 s
 and 8.86 to 11.85 s) but the first 1.8 s and the gaps have none. New per-slot row "Armor":
-"Move's own" (default) or "Hyper armor (cheat)". With the cheat, whatever the slot plays
+"Hyper armor (cheat)" (the default, at the user's request) or "Move's own". With the cheat, whatever the slot plays
 (replacement, transplant or carry clone) goes through one more clone with the donor row from
 `AM_Shells_MartyrsBlade_B1` appended over the whole length (`Combat::build_armor`, cached per
 source in `Slot::armors`, donor kept referenced and reloaded after a world change). The row

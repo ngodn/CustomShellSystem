@@ -115,7 +115,7 @@ struct SlotTuning {
     std::string feel{"move"};          // "game": the slot's own montage with the move's animation fitted in; "move": the move's montage as is
     std::string hit_damage{"move"};    // "move": the replacement's own hit payload; "weapon": the slot's original payload
     std::string weapon{"inventory"};   // "inventory": the equipped weapon stays visible; "move": the move's own weapon shows
-    std::string armor{"move"};         // "move": only the hyper armor the montage authors; "full": the game's hyper armor over the whole swing (cheat)
+    std::string armor{"full"};         // "full" (default): the game's hyper armor over the whole swing (cheat); "move": only the hyper armor the montage authors
     bool operator==(const SlotTuning&) const = default;
 };
 inline bool valid_tuning(const SlotTuning& t) {

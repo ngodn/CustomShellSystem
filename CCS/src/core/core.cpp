@@ -329,9 +329,9 @@ nlohmann::json Core::model() const {
                 {"description", std::string("My weapon: you keep holding your own weapon. Move's weapon: the weapon this move belongs to appears in your hand for the swing, then yours comes back. Hits always use your weapon.")
                     + (mesh_ready ? "" : " No model is known for this move's weapon, so yours stays either way.")}});
             settings_rows.push_back({{"type", "choice"}, {"id", sid + ".armor"}, {"label", "Armor"}, {"value", tune.armor},
-                {"options", Json::array({{{"id", "move"}, {"label", "Move's own"}}, {{"id", "full"}, {"label", "Hyper armor (cheat)"}}})},
-                {"description", "Move's own: a hit interrupts this move wherever it would interrupt its owner. Most of your own attacks have no hyper armor, so any hit cancels them. "
-                    "Hyper armor: the game's hyper armor covers the whole move. Hits still hurt but do not stagger you out of it. Attacks that break hyper armor still do."}});
+                {"options", Json::array({{{"id", "full"}, {"label", "Hyper armor (cheat)"}}, {{"id", "move"}, {"label", "Move's own"}}})},
+                {"description", "Hyper armor: the game's hyper armor covers the whole move. Hits still hurt but do not stagger you out of it. Attacks that break hyper armor still do. "
+                    "Move's own: a hit interrupts this move wherever it would interrupt its owner. Most of your own attacks have no hyper armor, so any hit cancels them."}});
         }
         customize.push_back({{"type", "choice"}, {"id", sid}, {"label", slot_to_string(slot)}, {"tile", tile_labels[i]}, {"name", slot_titles[i] + 4}, {"hidden", ranged_slot && !sidearm_slot_enabled},
             {"value", id}, {"icon", id.empty() ? weapon_icon(current_weapon_) : move_icon(id)}, {"options", std::move(options)}, {"settings", settings_rows},

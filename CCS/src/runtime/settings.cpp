@@ -89,7 +89,7 @@ void Settings::from_json(const nlohmann::json& j) {
             value.feel = t.value("feel", std::string("move"));
             value.hit_damage = t.value("hit_damage", std::string("move"));
             value.weapon = t.value("weapon", std::string("inventory"));
-            value.armor = t.value("armor", std::string("move"));
+            value.armor = t.value("armor", std::string("full"));
             if (!std::isfinite(value.speed) || !valid_tuning(value)) throw std::runtime_error("Invalid slot tuning");
             candidate.tuning_[i] = value;
         }
