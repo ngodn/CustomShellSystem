@@ -79,7 +79,16 @@ private:
 
     // ---- teleport execution ----
     bool teleport_to(const Json& owner);
-    std::optional<Json> destination_transform(const Json& owner);  // {"loc","rot","control"}
+    std::optional<Json> destination_transform(const Json& owner);  // {"loc","rot","control","zone"}
+    // The game never fires its streaming teleport without the destination's zone data (the
+    // ability broadcasts the zone change from it, and spawners, ambience and the save's landing
+    // area follow); a traverse without it left the world in the old zone. Guards, checked in
+    // order: a traverse still arriving, a dungeon (the game leaves those through its own exit
+    // path), and a point whose zone cannot be read.
+    double since_fire_ = 1e9;             // seconds since the last traverse fired
+    static constexpr double kFireCooldown = 6.0;
+    bool in_dungeon();
+    Json zone_of(const Json& owner, const Json& read_zone);   // the destination's USpartaZoneData, or null
 
     // ---- meteor arrival transition (meteor.cpp) ----
     // On arrival the character is hidden and shown as the game's own comet

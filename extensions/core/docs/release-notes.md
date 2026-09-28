@@ -3,6 +3,18 @@
 Draft, updated with every release candidate. Player-facing wording; the
 evidence behind each line is in `integration-tests.md` and `performance.md`.
 
+## CSSX 1.2.1 and Traverse 1.0.1
+
+- Traverse passes the destination's zone to the game's streaming teleport, the way
+  the game's own beacons and gates do. A traverse used to arrive with the world
+  still in the old zone, and a beacon trip taken from there could leave the save
+  in a state that crashed on every load (28 September, the Red Keep gate area).
+- Traverse refuses to fire while a previous traverse is still arriving, inside a
+  dungeon (those leave through the game's own exit path), and for a point whose
+  zone cannot be read. Each case says why in the CSSX tab.
+- The CSSX tab keeps its place when CCS is installed as well: the Player Menu
+  can hold Inventory, Tarstones, Map, CSS, CCS and CSSX, and CSSX stays last.
+
 ## CSSX 1.2.0
 
 - The CSSX page is built from Mortal Shell II's own menu widgets, like the

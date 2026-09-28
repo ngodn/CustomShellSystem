@@ -72,3 +72,18 @@ Single source tree at `extensions/traverse/` (not duplicated into
 CMake and `cssx.py` point at it directly. Distribution (`cssx_release.py`
 `teleport_files` + a zip) is not wired yet; say the word and I will add it for a
 Nexus release.
+
+## 1.0.1, 29 September 2026: zone data and guards
+
+Read from the exports in `work/export-guard/` (CUE4Parse, `kismet_dump.py`): the game's own
+travel always passes the destination's `USpartaZoneData`. `BPO_STH_Beacon` calls
+`TeleportPlayerWithStreaming(loc, rot, control, null, 20, 1.5, 1.5, DestinationZoneData, ctx)`;
+`BP_SpartaTeleportHandler` (gates, dungeons, wells) takes the `ZoneData` out parameter of
+`GetOptionalTeleportDestination`, falls back to `LoadedLinkHandler.MyZoneData`, sets
+`IsTeleporting` around the trip, and passes ZOrder 20. `GA_TeleportPlayerWithStreamingSupport`
+broadcasts "Zone changed to Zone {id}, reason Player Teleported" only when the zone data is
+valid; without it the world stays in the old zone (spawners, ambience, the save's landing area).
+1.0.0 passed null. 1.0.1 passes the landing area's `GetZone` result or the handler's ZoneData,
+with `MyZoneData` / `DestinationZoneData` as fallbacks, and refuses to fire without one. Guards:
+a 6 s cooldown after a fire plus the meteor phase, and `BPC_TeleportManager.bIsInDungeon`
+(dungeons leave through `BroadcastLeaveDungeonByTeleport`, not the plain teleport).

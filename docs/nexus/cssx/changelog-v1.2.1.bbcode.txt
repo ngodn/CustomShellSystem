@@ -1,0 +1,8 @@
+[b]CSSX 1.2.1[/b]
+
+[size=4][b]Fixes[/b][/size]
+[list]
+[*]The CSSX tab keeps its place with CCS installed as well. The Player Menu can now hold Inventory, Tarstones, Map, CSS, CCS and CSSX, with CSSX last whichever mod attached first.[/*]
+[/list]
+
+Traverse 1.0.1 ships alongside and needs this version. Install: extract into [font=Courier New]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/[/font] so it lands in [font=Courier New]Mods/CSSX/[/font], overwriting the previous version. Your settings are kept.

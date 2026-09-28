@@ -92,7 +92,7 @@ bool Extension::edge(const std::vector<std::string>& keys, bool& latch) {
 std::optional<Json> Extension::destination_transform(const Json& owner) {
     // Turn a game FTransform (quaternion rotation) into the location + rotators
     // the streaming teleport wants.
-    auto from_tf = [&](const Json& tf) -> std::optional<Json> {
+    auto from_tf = [&](const Json& tf, const Json& zone) -> std::optional<Json> {
         if (!tf.is_object() || !tf.contains("Translation")) return std::nullopt;
         const auto loc = tf["Translation"];
         Json rot;
@@ -103,20 +103,23 @@ std::optional<Json> Extension::destination_transform(const Json& owner) {
                 if (br.is_object()) rot = br.value("Rotation", Json());
             }
         } catch (...) {}
-        if (loc.is_object() && rot.is_object()) return Json{{"loc", loc}, {"rot", rot}, {"control", rot}, {"zone", nullptr}};
+        if (loc.is_object() && rot.is_object()) return Json{{"loc", loc}, {"rot", rot}, {"control", rot}, {"zone", zone_of(owner, zone)}};
         return std::nullopt;
     };
     // Beacon (BP_LandingAreaBase): GetStartTransform(false) is where the player
-    // stands after arriving. Verified to match the game's own landing spot.
+    // stands after arriving. Verified to match the game's own landing spot. The zone
+    // is the landing area's own (GetZone), which the beacon's handler passes as
+    // DestinationZoneData when the game travels there.
     try {
         auto r = host_.request({{"op", "call"}, {"target", owner}, {"function", "GetStartTransform"}, {"args", {{"InvertRotation", false}}}});
-        if (r.is_object()) { auto d = from_tf(r.value("ReturnValue", Json())); if (d) return d; }
+        if (r.is_object()) { auto d = from_tf(r.value("ReturnValue", Json()), nullptr); if (d) return d; }
     } catch (...) {}
     // STH handler (dungeon / gate / well): GetOptionalTeleportDestination is this
-    // point's own transform (not the linked exit the seamless getters return).
+    // point's own transform (not the linked exit the seamless getters return), and its
+    // ZoneData out parameter is what the handler itself passes to the teleport.
     try {
         auto r = host_.request({{"op", "call"}, {"target", owner}, {"function", "GetOptionalTeleportDestination"}});
-        if (r.is_object() && r.value("Success", false)) { auto d = from_tf(r.value("ReturnValue", Json())); if (d) return d; }
+        if (r.is_object() && r.value("Success", false)) { auto d = from_tf(r.value("ReturnValue", Json()), r.value("ZoneData", Json())); if (d) return d; }
     } catch (...) {}
     // Fallbacks: seamless getters, then the actor transform.
     try {
@@ -125,21 +128,49 @@ std::optional<Json> Extension::destination_transform(const Json& owner) {
         auto ctl = host_.call(owner, "GetSeamlessTeleportControlRotation");
         if (loc.is_object() && rot.is_object()) {
             if (!ctl.is_object()) ctl = rot;
-            return Json{{"loc", loc}, {"rot", rot}, {"control", ctl}, {"zone", nullptr}};
+            return Json{{"loc", loc}, {"rot", rot}, {"control", ctl}, {"zone", zone_of(owner, nullptr)}};
         }
     } catch (...) {}
     try {
         auto loc = host_.call(owner, "K2_GetActorLocation");
         auto rot = host_.call(owner, "K2_GetActorRotation");
-        if (loc.is_object() && rot.is_object()) return Json{{"loc", loc}, {"rot", rot}, {"control", rot}, {"zone", nullptr}};
+        if (loc.is_object() && rot.is_object()) return Json{{"loc", loc}, {"rot", rot}, {"control", rot}, {"zone", zone_of(owner, nullptr)}};
     } catch (...) {}
     return std::nullopt;
 }
 
+Json Extension::zone_of(const Json& owner, const Json& read_zone) {
+    if (is_object(read_zone)) return read_zone;
+    // A landing area answers GetZone; a teleport handler carries MyZoneData, or its
+    // linked handler does; a landing area's beacon handler carries DestinationZoneData.
+    try { auto r = host_.request({{"op", "call"}, {"target", owner}, {"function", "GetZone"}}); if (r.is_object() && is_object(r.value("ZoneData", Json()))) return r["ZoneData"]; } catch (...) {}
+    for (const char* name : {"MyZoneData", "DestinationZoneData"}) {
+        try { auto z = host_.get(owner, name); if (is_object(z)) return z; } catch (...) {}
+    }
+    try { auto link = host_.get(owner, "LoadedLinkHandler"); if (is_object(link)) { auto z = host_.get(link, "MyZoneData"); if (is_object(z)) return z; } } catch (...) {}
+    try { auto handler = host_.get(owner, "TeleportHandlerObject"); if (is_object(handler)) { auto z = host_.get(handler, "DestinationZoneData"); if (is_object(z)) return z; } } catch (...) {}
+    return nullptr;
+}
+
+bool Extension::in_dungeon() {
+    try {
+        auto lib = host_.request({{"op", "class_default"}, {"class", "BPFL_WorldStreaming_C"}});
+        if (!is_object(lib)) return false;
+        auto manager = host_.request({{"op", "call"}, {"target", lib}, {"function", "GetTeleportManager"}, {"args", {{"__WorldContext", world_}}}});
+        Json m = manager.is_object() && manager.contains("ReturnValue") ? manager["ReturnValue"] : manager;
+        if (!is_object(m)) return false;
+        auto v = host_.get(m, "bIsInDungeon");
+        return v.is_boolean() && v.get<bool>();
+    } catch (...) { return false; }
+}
+
 bool Extension::teleport_to(const Json& owner) {
+    if (meteor_phase_ != MeteorPhase::Idle || since_fire_ < kFireCooldown) { report("Traverse is still arriving. Wait a moment."); return false; }
+    if (!is_object(world_)) { report("No world to traverse in."); return false; }
+    if (in_dungeon()) { report("Traverse cannot leave a dungeon. Use the dungeon's own exit first."); return false; }
     auto dest = destination_transform(owner);
     if (!dest) { report("Could not read that point's traverse location."); return false; }
-    if (!is_object(world_)) { report("No world to traverse in."); return false; }
+    if (!is_object((*dest)["zone"])) { report("That point has no zone data, so traverse skipped it."); return false; }
 
     hide_dialog();
     try { host_.call(ui_handler_, "HandleGameMenu", {{"SubTabIndex", 0}, {"AllowClose", true}}); } catch (...) {}
@@ -158,14 +189,15 @@ bool Extension::teleport_to(const Json& owner) {
         {"Rotation", (*dest)["rot"]},
         {"ControlRotation", (*dest)["control"]},
         {"ScreenTransitionClass", nullptr},
-        {"TransitionZOrder", 0},
+        {"TransitionZOrder", 20},
         {"FadeInDuration", 0.4},
         {"FadeOutDuration", 0.5},
-        {"OptionalZoneData", nullptr},
+        {"OptionalZoneData", (*dest)["zone"]},
         {"__WorldContext", world_},
     };
     try { host_.call(lib, "TeleportPlayerWithStreaming", args); }
     catch (const std::exception& e) { report(std::string("Traverse failed: ") + e.what()); return false; }
+    since_fire_ = 0;
 
     // Arrive as a meteor: hide the character now (the teleport fade covers it) and
     // let render() drive the fall. begin_meteor is a no-op if it cannot grab the pawn.
@@ -299,6 +331,7 @@ int Extension::render(const CssxFrame* frame) {
     }
     // The meteor plays out after the map closes, so drive it every frame (for a
     // smooth fall) before the in-menu gate and let it own the frame while active.
+    since_fire_ += frame->seconds;
     if (meteor_phase_ != MeteorPhase::Idle) { tick_meteor(frame->seconds); return 1; }
     if (!enable_ || !frame->in_menu) {
         if (is_object(my_prompt_)) { hide_prompt(); my_prompt_ = nullptr; }

@@ -1,0 +1,11 @@
+[b]CSSX Traverse 1.0.1[/b]
+
+[size=4][b]Fixes[/b][/size]
+[list]
+[*]A traverse now tells the game which zone you are arriving in, the way the game's own beacons and gates do. Before, the world stayed in the zone you left: enemies spawned wrong, and a beacon trip taken from that state could corrupt the save so it crashed on every load.[/*]
+[*]Traverse waits until a previous traverse has fully arrived before it fires again.[/*]
+[*]Traverse refuses to fire from inside a dungeon. Leave through the dungeon's own exit first.[/*]
+[*]A point whose zone cannot be read is skipped, with a note in the CSSX tab, instead of fired blind.[/*]
+[/list]
+
+Requires CSSX 1.2.1 or newer. Install: extract into [font=Courier New]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/extensions/[/font], overwriting the previous version.

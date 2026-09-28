@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <algorithm>
 #include <cmath>
+#include <string_view>
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/FProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
@@ -49,6 +50,22 @@ bool key_down(UObject* pc,const std::string& key) {
     member(call.data(p),p->GetElementSize(),find_cached(L"/Script/InputCore.Key"),L"KeyName",key_name(key));
     call.run(); return call.get<bool>();
 }
+bool ccs_tab(UObject* widget) {
+    if(!widget) return false;
+    auto* text=widget->GetPropertyByNameInChain(L"Text");
+    if(!text || !widget->GetClassPrivate()) return false;
+    const auto offset=text->GetOffset_Internal();
+    const auto size=widget->GetClassPrivate()->GetPropertiesSize();
+    if(offset<0 || offset>size || text->GetElementSize()>size-offset) return false;
+    Call convert(find_cached(L"/Script/Engine.Default__KismetTextLibrary"),L"Conv_TextToString",2);
+    auto* input=convert.param(L"InText");
+    if(!text->SameType(input) || text->GetArrayDim()!=1) return false;
+    input->CopyCompleteValue(convert.data(input),reinterpret_cast<const std::byte*>(widget)+text->GetOffset_Internal());
+    convert.run();
+    const auto& value=*static_cast<FString*>(convert.data(convert.param(L"ReturnValue")));
+    const auto& chars=value.GetCharArray();
+    return chars.Num()==4 && chars.GetData() && chars.GetData()[3]==L'\0' && std::wstring_view(chars.GetData(),3)==L"CCS";
+}
 bool has_focus(UObject* widget) {
     if(!widget) return false;
     Call focus(widget,L"HasKeyboardFocus",1); focus.run(); return focus.get<bool>();
@@ -56,6 +73,14 @@ bool has_focus(UObject* widget) {
 }
 void Menu::navigate(int index) {
     auto* tabs=tabs_.Get(); if(!tabs) return;
+    if(index==tab_index_ && page_.Get() && tab_.Get() && switcher_.Get()) {
+        // CCS can insert before CSSX after attachment. Resolve our own paired children when opening.
+        Call page_index(switcher_.Get(),L"GetChildIndex",2); page_index.set(L"content",page_.Get()); page_index.run();
+        Call tab_index(tabs,L"GetChildIndex",2); tab_index.set(L"content",tab_.Get()); tab_index.run();
+        index=page_index.get<int32_t>();
+        if(index<0 || index!=tab_index.get<int32_t>()) throw std::runtime_error("CSSX tab/page pairing is inconsistent");
+        tab_index_=index;
+    }
     Call nav(tabs,L"NavigateToCustomIndex",3); nav.set(L"Index",int32_t{index}); nav.run();
     if(!nav.get<bool>(L"Success")) throw std::runtime_error("Player Menu tab navigation rejected the index");
 }
@@ -71,12 +96,13 @@ bool Menu::attach(const PlayerContext& player) {
     // and orders four). Wait for it when CSS is installed; give up waiting
     // after two seconds so a broken CSS never hides CSSX.
     const auto now=GetTickCount64();
-    const size_t expected=css_present_?4:3;
+    const bool ccs_present=tab_list.size()>=4 && std::any_of(tab_list.begin()+3,tab_list.end(),ccs_tab);
+    const size_t expected=3+static_cast<size_t>(css_present_)+static_cast<size_t>(ccs_present);
     if(page_list.size()!=expected || tab_list.size()!=expected) {
         if(!attach_wait_since_) attach_wait_since_=now;
-        if(page_list.size()<3 || page_list.size()>4 || now-attach_wait_since_<2000) return false;
+        if(page_list.size()<3 || page_list.size()>expected || now-attach_wait_since_<2000) return false;
     }
-    if(page_list.size()>4) throw std::runtime_error("Player Menu already has "+std::to_string(page_list.size())+" pages; another mod owns the extra tab");
+    if(page_list.size()>4+static_cast<size_t>(ccs_present)) throw std::runtime_error("Player Menu already has "+std::to_string(page_list.size())+" pages; another mod owns the extra tab");
     attach_wait_since_=0;
     auto* tab=create_widget(player.pc,original->GetClassPrivate());
     for(auto name:{L"FontData",L"RootSize",L"RootScale",L"DefaultColor",L"SelectedColor",L"bUseHighlight",L"HighlightY"}) copy_property(tab,original,name);
@@ -94,15 +120,14 @@ bool Menu::attach(const PlayerContext& player) {
 }
 void Menu::order_tabs() {
     auto tabs=children(tabs_.Get()); auto pages=children(switcher_.Get());
-    if(tabs.size()!=pages.size() || tabs.size()<4 || tabs.size()>5) throw std::runtime_error("Player Menu tab count is unexpected");
-    // Inventory, Tarstones, Map, [CSS], CSSX. CSS sits after the native tabs, and CSSX is the
-    // last tab, right after CSS when it is present. Keeps the tabs players use most at the front.
+    if(tabs.size()!=pages.size() || tabs.size()<4 || tabs.size()>6 || (tabs.size()==6 && !std::any_of(tabs.begin()+3,tabs.end(),ccs_tab))) throw std::runtime_error("Player Menu tab count is unexpected");
+    // CCS orders its tab after CSS and before CSSX. Keep CSSX last in either attachment order.
     const int index=int(tabs.size())-1;
     auto move_to=[&](auto& values,UObject* value){ auto it=std::find(values.begin(),values.end(),value); if(it==values.end()) throw std::runtime_error("CSSX child is missing"); values.erase(it); values.insert(values.begin()+index,value); };
     move_to(tabs,tab_.Get()); move_to(pages,page_.Get());
     reorder(switcher_.Get(),pages); reorder(tabs_.Get(),tabs);
     // Share the original top bar spacing across the extra title(s), as CSS does.
-    const float factor=tabs.size()==5?.6f:.75f;
+    const float factor=tabs.size()>=5?.6f:.75f;
     std::array<float,4> reference{80,0,80,0};
     for(auto* child:tabs) if(child!=tab_.Get()) if(auto* slot=object_of(child,L"Slot")) { reference=read<std::array<float,4>>(slot,L"Padding"); break; }
     if(auto* slot=object_of(tab_.Get(),L"Slot")) {
