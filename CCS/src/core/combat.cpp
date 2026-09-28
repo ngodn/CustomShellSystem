@@ -651,6 +651,7 @@ UObject* Combat::build_carry(UObject* original, UObject* replacement, unsigned w
             // when the replacement's first hit would land inside it, and never leaves the montage.
             // The slot's speed runs the montage faster, so the window grows by it to last as long.
             const float window = std::max(0.02f, end - start) * float(std::max(1.0, speed));
+            end = start + window;
             float limit = rep_len - 0.01f;
             if (hit_new > 0.05f) limit = std::min(limit, hit_new - 0.02f);
             if (end > limit) { end = limit; start = end - window; }
