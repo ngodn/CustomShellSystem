@@ -72,6 +72,7 @@ private:
         SlotTuning tuning;
         std::vector<Transplant> feel; bool feel_warned{}; bool was_ready{};
         std::vector<Transplant> carries; bool carry_warned{};   // "Move's own" copies that carry the original's hold and turn windows
+        std::vector<Transplant> armors; bool armor_warned{};    // "Armor: Hyper armor" copies of whatever the slot plays, keyed by that montage
         std::string show_mesh_path; engine::ObjectHandle show_mesh; bool show_rooted{};   // the move's weapon mesh, loaded with the montage
         engine::ObjectHandle payload_source; std::vector<PayloadBackup> backups;          // original payload copied onto the replacement
     };
@@ -102,6 +103,13 @@ private:
     engine::UObject* carry_windows(Slot& slot, engine::UObject* original, engine::UObject* replacement, bool hold, bool turn);
     engine::UObject* build_carry(engine::UObject* original, engine::UObject* replacement, bool hold, bool turn);
     void release_carries(Slot& slot);
+    std::string append_rows(engine::UObject* clone, engine::UObject* source, const std::vector<int>& rows, const std::function<void(int, float&, float&)>& time);
+    // Hyper armor over the whole swing: the game's ANS_HyperArmor row from a donor player montage.
+    bool ensure_armor_donor();
+    engine::UObject* build_armor(engine::UObject* source);
+    engine::UObject* armored(Slot& slot, engine::UObject* source);
+    void release_armors(Slot& slot);
+    engine::ObjectHandle armor_donor_; int armor_row_{-1}; bool armor_donor_failed_{};
     void note_recent(engine::UObject* cls, int slot, const char* what);   // the last few player attacks, for status.json
     void apply_weapon_payload(Slot& slot, engine::UObject* original, engine::UObject* replacement);
     void restore_payload(Slot& slot);

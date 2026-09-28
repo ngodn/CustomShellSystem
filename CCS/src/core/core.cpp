@@ -328,10 +328,14 @@ nlohmann::json Core::model() const {
                 {"options", Json::array({{{"id", "inventory"}, {"label", "My weapon"}}, {{"id", "move"}, {"label", "Move's weapon"}}})},
                 {"description", std::string("My weapon: you keep holding your own weapon. Move's weapon: the weapon this move belongs to appears in your hand for the swing, then yours comes back. Hits always use your weapon.")
                     + (mesh_ready ? "" : " No model is known for this move's weapon, so yours stays either way.")}});
+            settings_rows.push_back({{"type", "choice"}, {"id", sid + ".armor"}, {"label", "Armor"}, {"value", tune.armor},
+                {"options", Json::array({{{"id", "move"}, {"label", "Move's own"}}, {{"id", "full"}, {"label", "Hyper armor (cheat)"}}})},
+                {"description", "Move's own: a hit interrupts this move wherever it would interrupt its owner. Most of your own attacks have no hyper armor, so any hit cancels them. "
+                    "Hyper armor: the game's hyper armor covers the whole move. Hits still hurt but do not stagger you out of it. Attacks that break hyper armor still do."}});
         }
         customize.push_back({{"type", "choice"}, {"id", sid}, {"label", slot_to_string(slot)}, {"tile", tile_labels[i]}, {"name", slot_titles[i] + 4}, {"hidden", ranged_slot && !sidearm_slot_enabled},
             {"value", id}, {"icon", id.empty() ? weapon_icon(current_weapon_) : move_icon(id)}, {"options", std::move(options)}, {"settings", settings_rows},
-            {"settings_key", speed_id + "/" + tune.hit_damage + "/" + tune.weapon + (mesh_ready ? "/m" : "")}, {"enabled", combat_ != nullptr && catalog_error_.empty()}});
+            {"settings_key", speed_id + "/" + tune.hit_damage + "/" + tune.weapon + "/" + tune.armor + (mesh_ready ? "/m" : "")}, {"enabled", combat_ != nullptr && catalog_error_.empty()}});
     }
     sections.push_back({{"id", "customize"}, {"title", "Customize"}, {"kind", "slots"}, {"controls", std::move(customize)}});
     // ---- Presets
@@ -394,7 +398,7 @@ nlohmann::json Core::model() const {
 void Core::handle_event(const nlohmann::json& event) {
     const auto id = event.at("id").get<std::string>();
     last_message_.clear(); ++model_revision_;
-    if (id.starts_with("slot.") && id.find('.', 5) != std::string::npos) {   // slot.<S>.<speed|hit_damage|weapon>
+    if (id.starts_with("slot.") && id.find('.', 5) != std::string::npos) {   // slot.<S>.<speed|feel|hit_damage|weapon|armor>
         const auto second = id.find('.', 5);
         const auto slot = string_to_slot(id.substr(5, second - 5)); const auto key = id.substr(second + 1);
         if (!slot || !combat_) throw std::runtime_error("Unknown slot");
@@ -405,6 +409,7 @@ void Core::handle_event(const nlohmann::json& event) {
             else if (key == "feel") tune.feel = value;
             else if (key == "hit_damage") tune.hit_damage = value;
             else if (key == "weapon") tune.weapon = value;
+            else if (key == "armor") tune.armor = value;
             else throw std::runtime_error("Unknown slot setting");
         } catch (const std::logic_error&) { throw std::runtime_error("Invalid slot setting value"); }
         if (!valid_tuning(tune)) throw std::runtime_error("Invalid slot setting value");

@@ -108,16 +108,19 @@ struct TarstoneDefinition {
 };
 
 // Per-slot tuning, saved with the settings and inside presets: play-rate, whose hit payload a
-// swapped swing carries, and which weapon shows in hand while it plays.
+// swapped swing carries, which weapon shows in hand while it plays, and whether the game's
+// hyper armor covers the whole swing.
 struct SlotTuning {
     double speed{1.0};                 // 0.5 .. 2.0, multiplies the montage play rate
     std::string feel{"move"};          // "game": the slot's own montage with the move's animation fitted in; "move": the move's montage as is
     std::string hit_damage{"move"};    // "move": the replacement's own hit payload; "weapon": the slot's original payload
     std::string weapon{"inventory"};   // "inventory": the equipped weapon stays visible; "move": the move's own weapon shows
+    std::string armor{"move"};         // "move": only the hyper armor the montage authors; "full": the game's hyper armor over the whole swing (cheat)
     bool operator==(const SlotTuning&) const = default;
 };
 inline bool valid_tuning(const SlotTuning& t) {
-    return t.speed >= 0.5 && t.speed <= 2.0 && (t.feel == "game" || t.feel == "move") && (t.hit_damage == "move" || t.hit_damage == "weapon") && (t.weapon == "inventory" || t.weapon == "move");
+    return t.speed >= 0.5 && t.speed <= 2.0 && (t.feel == "game" || t.feel == "move") && (t.hit_damage == "move" || t.hit_damage == "weapon") && (t.weapon == "inventory" || t.weapon == "move")
+        && (t.armor == "move" || t.armor == "full");
 }
 
 struct SlotBinding {

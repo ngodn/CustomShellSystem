@@ -34,6 +34,22 @@ What changed (`src/core/combat.cpp`):
   `Slot` gained `play_turn`, `first_hit_span` returns the first hit window's begin and end.
 - "Game's" feel is unchanged: the original's rows already stay on the transplant.
 
+Armor option (same day, core 80ee120c6b56). Getting hit cancels a swapped move exactly as it
+cancels the player's own attacks: the game's hit reaction interrupts any attack unless the
+character carries `State.HyperArmor`, which `ANS_HyperArmor` grants through `GE_HyperArmor`
+(infinite duration, one stack, removed on NotifyEnd; `GE_HyperArmorIgnoreImmunity` strips it for
+the attacks that break armor). Player montages author it on the Martyr's Blade heavies
+(`ANS_HyperArmor_C`, no required tag) and on the Axe and Dagger lights only through the
+Unyielding upgrade (`ANS_AddGameplayEffectConditional`). Enemy montages keep their own rows on
+the cleaned copy (the Sicario NeverEndingCombo has three windows, 1.79 to 3.70 s, 4.51 to 8.31 s
+and 8.86 to 11.85 s) but the first 1.8 s and the gaps have none. New per-slot row "Armor":
+"Move's own" (default) or "Hyper armor (cheat)". With the cheat, whatever the slot plays
+(replacement, transplant or carry clone) goes through one more clone with the donor row from
+`AM_Shells_MartyrsBlade_B1` appended over the whole length (`Combat::build_armor`, cached per
+source in `Slot::armors`, donor kept referenced and reloaded after a world change). The row
+copy shared by the carries and the armor is `Combat::append_rows`. Saved in settings and
+presets as `armor`.
+
 Still to verify live: an enemy move with "Move's own" feel turning with the stick during the
 wind-up; whether the enemy's own translation warp overshoots on long lunges (if it does, add
 "SpartaMotionWarping_Translation" back to the drop list, or gate it per slot).

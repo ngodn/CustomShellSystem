@@ -120,6 +120,7 @@ void Combat::release(Slot& slot) {
     restore_payload(slot);
     release_transplants(slot);
     release_carries(slot);
+    release_armors(slot);
     if (shown_montage_.get() && shown_montage_.get() == slot.montage.get()) restore_weapon();
     if (slot.rooted) { if (auto* montage = slot.montage.get()) drop_referenced(world_.get(), montage); slot.rooted = false; }
     if (auto* copy = slot.play.get(); copy && copy != slot.montage.get()) drop_referenced(world_.get(), copy);
@@ -453,15 +454,17 @@ void Combat::release_carries(Slot& s) {
     for (auto& t : s.carries) if (auto* c = t.clone.get()) drop_referenced(world_.get(), c);
     s.carries.clear(); s.carry_warned = false;
 }
-UObject* Combat::build_carry(UObject* original, UObject* replacement, bool hold, bool turn) {
+// Rows copied from one montage onto a clone of another: the clone's notify list grows by the
+// picked rows, each re-timed by `time` (absolute seconds on the clone) and re-linked to the clone.
+// The copied row keeps its notify-state instance, owned by the source montage, so the source must
+// stay referenced for as long as the clone plays (the game does the same for the hold carry).
+std::string Combat::append_rows(UObject* clone, UObject* source, const std::vector<int>& rows, const std::function<void(int, float&, float&)>& time) {
     auto* montage_class = static_cast<UClass*>(find_cached(L"/Script/Engine.AnimMontage"));
-    if (!original->IsA(montage_class) || !replacement->IsA(montage_class)) throw std::runtime_error("Not montages");
     auto* notifies_prop = montage_class->GetPropertyByNameInChain(L"Notifies");
     if (!notifies_prop || !notifies_prop->IsA<FArrayProperty>()) throw std::runtime_error("Notifies missing");
     auto* inner = static_cast<FArrayProperty*>(notifies_prop)->GetInner();
     auto* event_struct = static_cast<FStructProperty*>(inner)->GetStruct().Get();
     auto field = [&](UStruct* type, const wchar_t* name) { auto* f = type->GetPropertyByNameInChain(name); if (!f) throw std::runtime_error("Notify event field missing"); return f; };
-    auto* state = field(event_struct, L"NotifyStateClass");
     auto* link_value = field(event_struct, L"LinkValue"); auto* link_method = field(event_struct, L"LinkMethod"); auto* linked = field(event_struct, L"LinkedMontage");
     auto* trigger_offset = field(event_struct, L"TriggerTimeOffset"); auto* end_offset = field(event_struct, L"EndTriggerTimeOffset"); auto* duration = field(event_struct, L"duration");
     auto* end_link = field(event_struct, L"EndLink");
@@ -470,26 +473,11 @@ UObject* Combat::build_carry(UObject* original, UObject* replacement, bool hold,
     const int end_value = end_link->GetOffset_Internal() + field(link_struct, L"LinkValue")->GetOffset_Internal();
     const int end_method = end_link->GetOffset_Internal() + field(link_struct, L"LinkMethod")->GetOffset_Internal();
     const int end_linked = end_link->GetOffset_Internal() + field(link_struct, L"LinkedMontage")->GetOffset_Internal();
-    // The rows to carry from the original: hold handlers and turn windows, each timed its own way.
-    struct Pick { int row; bool turn; };
-    std::vector<Pick> picks;
-    FScriptArrayHelper source(static_cast<FArrayProperty*>(notifies_prop), reinterpret_cast<std::byte*>(original) + notifies_prop->GetOffset_Internal());
-    for (int i = 0; i < std::min(source.Num(), 256); ++i) {
-        UObject* object{}; std::memcpy(&object, source.GetRawPtr(i) + state->GetOffset_Internal(), sizeof(object));
-        if (!object || !object->GetClassPrivate()) continue;
-        const auto cls = narrow(object->GetClassPrivate()->GetNamePrivate().ToString());
-        if (hold && (cls.find("HoldAttackHandler") != std::string::npos || cls.starts_with("ANS_HAH_"))) picks.push_back({i, false});
-        else if (turn && cls.find("RotateToFaceTarget") != std::string::npos) picks.push_back({i, true});
-    }
-    if (picks.empty()) throw std::runtime_error(hold ? "Original has no hold handler" : "Original has no turn window");
-    const float rep_len = read<float>(replacement, L"SequenceLength");
-    const float orig_len = read<float>(original, L"SequenceLength");
-    if (!(rep_len > 0.05f) || !(orig_len > 0.05f)) throw std::runtime_error("Montage length unusable");
-    const auto [hit_new, hit_new_end] = first_hit_span(replacement);
-    auto* clone = clone_montage(replacement);
+    FScriptArrayHelper from(static_cast<FArrayProperty*>(notifies_prop), reinterpret_cast<std::byte*>(source) + notifies_prop->GetOffset_Internal());
+    for (int row : rows) if (row < 0 || row >= from.Num()) throw std::runtime_error("Notify row out of range");
     auto* array = reinterpret_cast<std::byte*>(clone) + notifies_prop->GetOffset_Internal();
     FScriptArrayHelper events(static_cast<FArrayProperty*>(notifies_prop), array);
-    const int count = events.Num(), element = inner->GetElementSize(), total = count + int(picks.size());
+    const int count = events.Num(), element = inner->GetElementSize(), total = count + int(rows.size());
     if (!GMalloc || !*GMalloc) throw std::runtime_error("Engine allocator unavailable");
     struct Raw { std::byte* data; int32_t num; int32_t max; };
     auto* raw = reinterpret_cast<Raw*>(array);
@@ -497,11 +485,46 @@ UObject* Combat::build_carry(UObject* original, UObject* replacement, bool hold,
     if (!fresh) throw std::runtime_error("Out of memory");
     for (int i = 0; i < count; ++i) { inner->InitializeValue(fresh + size_t(i) * element); inner->CopyCompleteValue(fresh + size_t(i) * element, raw->data + size_t(i) * element); }
     std::string report;
-    for (size_t k = 0; k < picks.size(); ++k) {
+    for (size_t k = 0; k < rows.size(); ++k) {
         auto* b = fresh + size_t(count + int(k)) * element;
-        inner->InitializeValue(b); inner->CopyCompleteValue(b, source.GetRawPtr(picks[k].row));
+        inner->InitializeValue(b); inner->CopyCompleteValue(b, from.GetRawPtr(rows[k]));
         float start{}, end{}; std::memcpy(&start, b + link_value->GetOffset_Internal(), 4); std::memcpy(&end, b + end_value, 4);
-        if (picks[k].turn) {
+        time(int(k), start, end);
+        const float length = end - start, zero = 0.f; const uint8_t absolute = 0;
+        std::memcpy(b + link_value->GetOffset_Internal(), &start, 4); std::memcpy(b + end_value, &end, 4); std::memcpy(b + duration->GetOffset_Internal(), &length, 4);
+        std::memcpy(b + trigger_offset->GetOffset_Internal(), &zero, 4); std::memcpy(b + end_offset->GetOffset_Internal(), &zero, 4);
+        std::memcpy(b + link_method->GetOffset_Internal(), &absolute, 1); std::memcpy(b + end_method, &absolute, 1);
+        std::memcpy(b + linked->GetOffset_Internal(), &clone, sizeof(clone)); std::memcpy(b + end_linked, &clone, sizeof(clone));
+        report += (report.empty() ? "" : ", ") + std::to_string(start).substr(0, 4) + " to " + std::to_string(end).substr(0, 4) + " s";
+    }
+    for (int i = 0; i < raw->num; ++i) inner->DestroyValue(raw->data + size_t(i) * element);
+    if (raw->data) (*GMalloc)->Free(raw->data);
+    raw->data = fresh; raw->num = total; raw->max = total;
+    return report;
+}
+UObject* Combat::build_carry(UObject* original, UObject* replacement, bool hold, bool turn) {
+    auto* montage_class = static_cast<UClass*>(find_cached(L"/Script/Engine.AnimMontage"));
+    if (!original->IsA(montage_class) || !replacement->IsA(montage_class)) throw std::runtime_error("Not montages");
+    // The rows to carry from the original: hold handlers and turn windows, each timed its own way.
+    const auto& l = notify_layout();
+    std::vector<int> rows; std::vector<bool> is_turn;
+    FScriptArrayHelper source(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(original) + l.notifies->GetOffset_Internal());
+    for (int i = 0; i < std::min(source.Num(), 256); ++i) {
+        UObject* object{}; std::memcpy(&object, source.GetRawPtr(i) + l.state->GetOffset_Internal(), sizeof(object));
+        if (!object || !object->GetClassPrivate()) continue;
+        const auto cls = narrow(object->GetClassPrivate()->GetNamePrivate().ToString());
+        if (hold && (cls.find("HoldAttackHandler") != std::string::npos || cls.starts_with("ANS_HAH_"))) { rows.push_back(i); is_turn.push_back(false); }
+        else if (turn && cls.find("RotateToFaceTarget") != std::string::npos) { rows.push_back(i); is_turn.push_back(true); }
+    }
+    if (rows.empty()) throw std::runtime_error(hold ? "Original has no hold handler" : "Original has no turn window");
+    const float rep_len = read<float>(replacement, L"SequenceLength");
+    const float orig_len = read<float>(original, L"SequenceLength");
+    if (!(rep_len > 0.05f) || !(orig_len > 0.05f)) throw std::runtime_error("Montage length unusable");
+    const auto [hit_new, hit_new_end] = first_hit_span(replacement);
+    auto* clone = clone_montage(replacement);
+    std::string report;
+    append_rows(clone, original, rows, [&](int k, float& start, float& end) {
+        if (is_turn[size_t(k)]) {
             // The turn window is animation timing: the game closes it where the weapon's first
             // hit lands, so the stick steers the wind-up and never the strike. On the replacement
             // it closes where that clip's first hit ends, or at the same fraction of the clip when
@@ -523,18 +546,59 @@ UObject* Combat::build_carry(UObject* original, UObject* replacement, bool hold,
             start = std::clamp(start, 0.f, std::max(0.f, rep_len - 0.03f));
             end = std::clamp(end, start + 0.02f, std::max(start + 0.02f, rep_len - 0.01f));
         }
-        const float length = end - start, zero = 0.f; const uint8_t absolute = 0;
-        std::memcpy(b + link_value->GetOffset_Internal(), &start, 4); std::memcpy(b + end_value, &end, 4); std::memcpy(b + duration->GetOffset_Internal(), &length, 4);
-        std::memcpy(b + trigger_offset->GetOffset_Internal(), &zero, 4); std::memcpy(b + end_offset->GetOffset_Internal(), &zero, 4);
-        std::memcpy(b + link_method->GetOffset_Internal(), &absolute, 1); std::memcpy(b + end_method, &absolute, 1);
-        std::memcpy(b + linked->GetOffset_Internal(), &clone, sizeof(clone)); std::memcpy(b + end_linked, &clone, sizeof(clone));
-        report += std::string(report.empty() ? "" : ", ") + (picks[k].turn ? "turn " : "hold ") + std::to_string(start).substr(0, 4) + " to " + std::to_string(end).substr(0, 4) + " s";
-    }
-    for (int i = 0; i < raw->num; ++i) inner->DestroyValue(raw->data + size_t(i) * element);
-    if (raw->data) (*GMalloc)->Free(raw->data);
-    raw->data = fresh; raw->num = total; raw->max = total;
+        report += std::string(report.empty() ? "" : ", ") + (is_turn[size_t(k)] ? "turn " : "hold ") + std::to_string(start).substr(0, 4) + " to " + std::to_string(end).substr(0, 4) + " s";
+    });
     log("CCS windows carried: " + narrow(original->GetNamePrivate().ToString()) + " -> " + narrow(replacement->GetNamePrivate().ToString()) + ": " + report);
     return clone;
+}
+// ---- hyper armor over the whole swing ("Armor: Hyper armor"): the game's own ANS_HyperArmor
+// notify state, which applies GE_HyperArmor (State.HyperArmor) on begin and removes it on end,
+// covers the clone from its first frame to its last. The row comes from a player montage that
+// authors it with no required tag (the Martyr's Blade heavy), kept referenced as the donor.
+bool Combat::ensure_armor_donor() {
+    if (armor_donor_.get() && armor_row_ >= 0) return true;
+    if (armor_donor_failed_) return false;
+    try {
+        static const char* donor_path = "/Game/Sparta/Characters/Humans/Player/Animations/MartyrsBlade/AM_Shells_MartyrsBlade_B1.AM_Shells_MartyrsBlade_B1";
+        auto* donor = load(donor_path);
+        const auto& l = notify_layout();
+        FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(donor) + l.notifies->GetOffset_Internal());
+        int found = -1;
+        for (int i = 0; i < std::min(rows.Num(), 256) && found < 0; ++i) {
+            UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + l.state->GetOffset_Internal(), sizeof(object));
+            if (object && object->GetClassPrivate() && narrow(object->GetClassPrivate()->GetNamePrivate().ToString()) == "ANS_HyperArmor_C") found = i;
+        }
+        if (found < 0) throw std::runtime_error("donor montage has no hyper armor row");
+        if (!keep_referenced(world_.get(), donor)) throw std::runtime_error("no world to hold the donor");
+        armor_donor_.capture(donor); armor_row_ = found;
+        return true;
+    } catch (const std::exception& e) {
+        armor_donor_failed_ = true;
+        log(std::string("CCS hyper armor unavailable: ") + e.what() + "; Armor stays the move's own");
+        return false;
+    }
+}
+UObject* Combat::build_armor(UObject* source) {
+    if (!ensure_armor_donor()) throw std::runtime_error("no hyper armor donor");
+    const float len = read<float>(source, L"SequenceLength");
+    if (!(len > 0.05f)) throw std::runtime_error("Montage length unusable");
+    auto* clone = clone_montage(source);
+    const auto report = append_rows(clone, armor_donor_.get(), {armor_row_}, [&](int, float& start, float& end) { start = 0.f; end = std::max(0.02f, len - 0.01f); });
+    log("CCS hyper armor added: " + narrow(source->GetNamePrivate().ToString()) + " " + report);
+    return clone;
+}
+UObject* Combat::armored(Slot& s, UObject* source) {
+    for (auto& t : s.armors) if (t.original.get() == source) { if (auto* clone = t.clone.get()) return clone; }
+    if (s.armors.size() >= 8) { auto& old = s.armors.front(); if (auto* c = old.clone.get()) drop_referenced(world_.get(), c); s.armors.erase(s.armors.begin()); }
+    auto* clone = build_armor(source);
+    Transplant t; t.original.capture(source); t.clone.capture(clone);
+    keep_referenced(world_.get(), clone);
+    s.armors.push_back(std::move(t));
+    return clone;
+}
+void Combat::release_armors(Slot& s) {
+    for (auto& t : s.armors) if (auto* c = t.clone.get()) drop_referenced(world_.get(), c);
+    s.armors.clear(); s.armor_warned = false;
 }
 // ---- weapon in hand: the held weapon actor (WP_WeaponBase_Static) draws its SM_Weapon static
 // mesh component; swapping that mesh shows the move's weapon without touching inventory, slots,
@@ -720,10 +784,11 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
     if (player.world && player.world != world_.get()) {   // a new world holds none of our references: everything reloads
         const bool had_world = world_.ptr != nullptr;
         world_ = {}; world_.capture(player.world);
+        armor_donor_ = {}; armor_row_ = -1; armor_donor_failed_ = false;   // the donor row lives in the old world's references
         if (had_world) {
             log("CCS world changed; reloading the slots");
             montage_facts_.clear();
-            for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); s.carries.clear(); s.was_ready = false; if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.play = {}; s.play_hold = s.play_turn = false; s.show_mesh = {}; s.pending = true; } }
+            for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); s.carries.clear(); s.armors.clear(); s.was_ready = false; if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.play = {}; s.play_hold = s.play_turn = false; s.show_mesh = {}; s.pending = true; } }
         }
     }
     for (auto& s : slots_) {   // a loaded montage that stops answering: say why once, and load it again
@@ -879,12 +944,17 @@ void Combat::observe(void* frame_ptr) {
                 catch (const std::exception& e) { ++failures_; if (s.error.empty()) { s.error = std::string("Hit payload copy failed: ") + e.what(); log("CCS " + s.error); } }
             }
         }
+        const char* how = pointer == replacement ? "swapped" : (s.tuning.feel == "game" ? "swapped, game feel" : "swapped, windows carried");
+        if (s.tuning.armor == "full") {
+            try { pointer = armored(s, pointer); }
+            catch (const std::exception& e) { ++failures_; if (!s.armor_warned) { s.armor_warned = true; log("CCS hyper armor unavailable for " + s.move_id + ": " + e.what()); } }
+        }
         std::memcpy(bytes + inputs_[1]->GetOffset_Internal(), &pointer, sizeof(pointer));
         ++s.hits; changed = true;
-        note_recent(cls, slot, pointer == replacement ? "swapped" : (s.tuning.feel == "game" ? "swapped, game feel" : "swapped, windows carried"));
+        note_recent(cls, slot, how);
         if (noted_.size() < 64 && noted_.insert(key ^ 0x51ed270b9d1c3a7full).second)
-            log("CCS swap: " + narrow(cls->GetNamePrivate().ToString()) + " is slot " + slot_to_string(SlotId(slot)) + " -> " + s.move_id + (pointer == replacement ? "" : " (game feel clone)")
-                + "; feel " + s.tuning.feel + ", damage " + s.tuning.hit_damage + ", visual " + s.tuning.weapon + ", speed " + std::to_string(s.tuning.speed) + ", rig " + rig::short_name(pawn_rig_));
+            log("CCS swap: " + narrow(cls->GetNamePrivate().ToString()) + " is slot " + slot_to_string(SlotId(slot)) + " -> " + s.move_id + " (" + how + (s.tuning.armor == "full" ? ", hyper armor)" : ")")
+                + "; feel " + s.tuning.feel + ", damage " + s.tuning.hit_damage + ", visual " + s.tuning.weapon + ", armor " + s.tuning.armor + ", speed " + std::to_string(s.tuning.speed) + ", rig " + rig::short_name(pawn_rig_));
         if (s.tuning.weapon == "move") {
             if (auto* mesh = s.show_mesh.get()) { try { show_weapon(mesh, pointer, GetTickCount64()); } catch (const std::exception& e) { ++failures_; log(std::string("CCS weapon show failed: ") + e.what()); } }
         }
