@@ -68,7 +68,7 @@ private:
     struct Slot {
         std::string move_id, path, error; engine::ObjectHandle montage; bool rooted{}, pending{}; uint64_t hits{};
         engine::ObjectHandle play;                     // what "Move's own" plays: a cleaned clone for enemy montages, the montage itself otherwise
-        bool play_hold{}, play_turn{};                 // that montage carries a hold handler / a turn window of its own
+        bool play_hold{}, play_turn{}, play_state{};   // that montage carries a hold handler / a turn window / a weapon-state notify of its own
         SlotTuning tuning;
         std::vector<Transplant> feel; bool feel_warned{}; bool was_ready{};
         std::vector<Transplant> carries; bool carry_warned{};   // "Move's own" copies that carry the original's hold and turn windows
@@ -81,9 +81,10 @@ private:
     mutable NotifyLayout layout_{};
     const NotifyLayout& notify_layout() const;
     // What the hook needs to know about a montage the game plays, learned the first time it is
-    // seen: whether it is a companion clip (left alone), whether it carries a hold handler and
-    // whether it carries a turn window (the game's rotate-to-face-target notify state).
-    struct MontageFacts { engine::UObject* montage{}; bool companion{}, hold{}, turn{}; };
+    // seen: whether it is a companion clip (left alone), whether it carries a hold handler, a
+    // turn window (the game's rotate-to-face-target notify state) or a weapon-state notify (the
+    // Axatana's transform between katanas and axe, equip-state changes).
+    struct MontageFacts { engine::UObject* montage{}; bool companion{}, hold{}, turn{}, state{}; };
     std::unordered_map<uint64_t, MontageFacts> montage_facts_;
     const MontageFacts& montage_facts(engine::UObject* montage);
     std::vector<engine::UObject*> hit_payloads(engine::UObject* montage) const;
@@ -98,10 +99,11 @@ private:
     // may lack: the charge window (the game's hold-handler notify state) and the turn window (the
     // rotate-to-face-target notify state that lets the stick steer the wind-up). A replacement
     // without them plays through a copy that carries the original's rows, timed to its own clip.
-    int hold_handler_index(engine::UObject* montage) const;
-    bool has_turn_window(engine::UObject* montage) const;
-    engine::UObject* carry_windows(Slot& slot, engine::UObject* original, engine::UObject* replacement, bool hold, bool turn);
-    engine::UObject* build_carry(engine::UObject* original, engine::UObject* replacement, bool hold, bool turn);
+    enum class RowKind { None, Hold, Turn, State };
+    static RowKind row_kind(const std::string& notify_class);
+    bool has_rows(engine::UObject* montage, RowKind kind) const;
+    engine::UObject* carry_windows(Slot& slot, engine::UObject* original, engine::UObject* replacement, bool hold, bool turn, bool state);
+    engine::UObject* build_carry(engine::UObject* original, engine::UObject* replacement, bool hold, bool turn, bool state);
     void release_carries(Slot& slot);
     std::string append_rows(engine::UObject* clone, engine::UObject* source, const std::vector<int>& rows, const std::function<void(int, float&, float&)>& time);
     // The player-feel overlay: rows from a donor player montage appended over whatever the slot

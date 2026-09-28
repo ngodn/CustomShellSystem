@@ -125,7 +125,7 @@ void Combat::release(Slot& slot) {
     if (shown_montage_.get() && shown_montage_.get() == slot.montage.get()) restore_weapon();
     if (slot.rooted) { if (auto* montage = slot.montage.get()) drop_referenced(world_.get(), montage); slot.rooted = false; }
     if (auto* copy = slot.play.get(); copy && copy != slot.montage.get()) drop_referenced(world_.get(), copy);
-    slot.play = {}; slot.play_hold = slot.play_turn = false;
+    slot.play = {}; slot.play_hold = slot.play_turn = slot.play_state = false;
     if (slot.show_rooted) { if (auto* mesh = slot.show_mesh.get()) drop_referenced(world_.get(), mesh); slot.show_rooted = false; }
     slot.montage = {}; slot.show_mesh = {}; slot.was_ready = false;   // a deliberate release is not a loss
 }
@@ -406,17 +406,26 @@ UObject* Combat::build_transplant(UObject* original, UObject* replacement) {
 // original montage. A replacement without one can never charge and never fall back, so the
 // original's handler rides along on a copy of the replacement, its window scaled to the
 // replacement's own wind-up (first hit to first hit, else length to length).
-int Combat::hold_handler_index(UObject* montage) const {
-    if (!montage) return -1;
+// The rows a weapon's own montage authors for the player that a replacement clip may lack.
+Combat::RowKind Combat::row_kind(const std::string& cls) {
+    if (cls.find("HoldAttackHandler") != std::string::npos || cls.starts_with("ANS_HAH_")) return RowKind::Hold;
+    if (cls.find("RotateToFaceTarget") != std::string::npos) return RowKind::Turn;
+    // Weapon state: the Axatana's transform notifies swap the katanas item for the axe item and
+    // back; equip-state notifies stow or draw a slot (fists on Gragu, seal parries).
+    if (cls.find("Transform_To") != std::string::npos || cls.find("WeaponEquipState") != std::string::npos || cls.find("WeaponsEquipState") != std::string::npos) return RowKind::State;
+    return RowKind::None;
+}
+bool Combat::has_rows(UObject* montage, RowKind kind) const {
+    if (!montage) return false;
     const auto& l = notify_layout();
     FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(montage) + l.notifies->GetOffset_Internal());
     for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
-        UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + l.state->GetOffset_Internal(), sizeof(object));
-        if (!object || !object->GetClassPrivate()) continue;
-        const auto cls = narrow(object->GetClassPrivate()->GetNamePrivate().ToString());
-        if (cls.find("HoldAttackHandler") != std::string::npos || cls.starts_with("ANS_HAH_")) return i;
+        for (auto* field : {l.notify, l.state}) {
+            UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + field->GetOffset_Internal(), sizeof(object));
+            if (object && object->GetClassPrivate() && row_kind(narrow(object->GetClassPrivate()->GetNamePrivate().ToString())) == kind) return true;
+        }
     }
-    return -1;
+    return false;
 }
 const Combat::MontageFacts& Combat::montage_facts(UObject* montage) {
     const auto key = name_key(montage->GetNamePrivate());
@@ -427,25 +436,14 @@ const Combat::MontageFacts& Combat::montage_facts(UObject* montage) {
     // transform before its hold and cut). Those stay the game's; only the attack clip is swapped.
     const auto played = narrow(montage->GetNamePrivate().ToString());
     for (const char* companion : {"Transform", "Equip", "Unequip", "Draw", "Stow", "Sheath"}) if (played.find(companion) != std::string::npos) facts.companion = true;
-    try { facts.hold = hold_handler_index(montage) >= 0; } catch (...) { facts.hold = false; }
-    try { facts.turn = has_turn_window(montage); } catch (...) { facts.turn = false; }
+    try { facts.hold = has_rows(montage, RowKind::Hold); facts.turn = has_rows(montage, RowKind::Turn); facts.state = has_rows(montage, RowKind::State); }
+    catch (...) { facts.hold = facts.turn = facts.state = false; }
     return montage_facts_[key] = facts;
 }
-bool Combat::has_turn_window(UObject* montage) const {
-    if (!montage) return false;
-    const auto& l = notify_layout();
-    FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(montage) + l.notifies->GetOffset_Internal());
-    for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
-        UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + l.state->GetOffset_Internal(), sizeof(object));
-        if (!object || !object->GetClassPrivate()) continue;
-        if (narrow(object->GetClassPrivate()->GetNamePrivate().ToString()).find("RotateToFaceTarget") != std::string::npos) return true;
-    }
-    return false;
-}
-UObject* Combat::carry_windows(Slot& s, UObject* original, UObject* replacement, bool hold, bool turn) {
+UObject* Combat::carry_windows(Slot& s, UObject* original, UObject* replacement, bool hold, bool turn, bool state) {
     for (auto& t : s.carries) if (t.original.get() == original) { if (auto* clone = t.clone.get()) return clone; }
     if (s.carries.size() >= 4) { auto& old = s.carries.front(); if (auto* c = old.clone.get()) drop_referenced(world_.get(), c); s.carries.erase(s.carries.begin()); }
-    auto* clone = build_carry(original, replacement, hold, turn);
+    auto* clone = build_carry(original, replacement, hold, turn, state);
     Transplant t; t.original.capture(original); t.clone.capture(clone);
     keep_referenced(world_.get(), clone);
     s.carries.push_back(std::move(t));
@@ -503,21 +501,23 @@ std::string Combat::append_rows(UObject* clone, UObject* source, const std::vect
     raw->data = fresh; raw->num = total; raw->max = total;
     return report;
 }
-UObject* Combat::build_carry(UObject* original, UObject* replacement, bool hold, bool turn) {
+UObject* Combat::build_carry(UObject* original, UObject* replacement, bool hold, bool turn, bool state) {
     auto* montage_class = static_cast<UClass*>(find_cached(L"/Script/Engine.AnimMontage"));
     if (!original->IsA(montage_class) || !replacement->IsA(montage_class)) throw std::runtime_error("Not montages");
-    // The rows to carry from the original: hold handlers and turn windows, each timed its own way.
+    // The rows to carry from the original: hold handlers, turn windows and weapon-state notifies,
+    // each timed its own way.
     const auto& l = notify_layout();
-    std::vector<int> rows; std::vector<bool> is_turn;
+    std::vector<int> rows; std::vector<RowKind> kinds;
     FScriptArrayHelper source(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(original) + l.notifies->GetOffset_Internal());
     for (int i = 0; i < std::min(source.Num(), 256); ++i) {
-        UObject* object{}; std::memcpy(&object, source.GetRawPtr(i) + l.state->GetOffset_Internal(), sizeof(object));
-        if (!object || !object->GetClassPrivate()) continue;
-        const auto cls = narrow(object->GetClassPrivate()->GetNamePrivate().ToString());
-        if (hold && (cls.find("HoldAttackHandler") != std::string::npos || cls.starts_with("ANS_HAH_"))) { rows.push_back(i); is_turn.push_back(false); }
-        else if (turn && cls.find("RotateToFaceTarget") != std::string::npos) { rows.push_back(i); is_turn.push_back(true); }
+        RowKind kind = RowKind::None;
+        for (auto* field : {l.notify, l.state}) {
+            UObject* object{}; std::memcpy(&object, source.GetRawPtr(i) + field->GetOffset_Internal(), sizeof(object));
+            if (object && object->GetClassPrivate()) { const auto k = row_kind(narrow(object->GetClassPrivate()->GetNamePrivate().ToString())); if (k != RowKind::None) kind = k; }
+        }
+        if ((kind == RowKind::Hold && hold) || (kind == RowKind::Turn && turn) || (kind == RowKind::State && state)) { rows.push_back(i); kinds.push_back(kind); }
     }
-    if (rows.empty()) throw std::runtime_error(hold ? "Original has no hold handler" : "Original has no turn window");
+    if (rows.empty()) throw std::runtime_error("Original has none of the rows to carry");
     const float rep_len = read<float>(replacement, L"SequenceLength");
     const float orig_len = read<float>(original, L"SequenceLength");
     if (!(rep_len > 0.05f) || !(orig_len > 0.05f)) throw std::runtime_error("Montage length unusable");
@@ -525,7 +525,14 @@ UObject* Combat::build_carry(UObject* original, UObject* replacement, bool hold,
     auto* clone = clone_montage(replacement);
     std::string report;
     append_rows(clone, original, rows, [&](int k, float& start, float& end) {
-        if (is_turn[size_t(k)]) {
+        const RowKind kind = kinds[size_t(k)];
+        if (kind == RowKind::State) {
+            // Weapon state fires where the weapon's montage fires it (the Axatana joins or splits
+            // in its first frames), kept inside the replacement. An instant notify stays instant.
+            const bool instant = !(end > start + 0.001f);
+            start = std::clamp(start, 0.f, std::max(0.f, rep_len - 0.03f));
+            end = instant ? start : std::clamp(end, start + 0.02f, std::max(start + 0.02f, rep_len - 0.01f));
+        } else if (kind == RowKind::Turn) {
             // The turn window is animation timing: the game closes it where the weapon's first
             // hit lands, so the stick steers the wind-up and never the strike. On the replacement
             // it closes where that clip's first hit ends, or at the same fraction of the clip when
@@ -547,7 +554,7 @@ UObject* Combat::build_carry(UObject* original, UObject* replacement, bool hold,
             start = std::clamp(start, 0.f, std::max(0.f, rep_len - 0.03f));
             end = std::clamp(end, start + 0.02f, std::max(start + 0.02f, rep_len - 0.01f));
         }
-        report += std::string(report.empty() ? "" : ", ") + (is_turn[size_t(k)] ? "turn " : "hold ") + std::to_string(start).substr(0, 4) + " to " + std::to_string(end).substr(0, 4) + " s";
+        report += std::string(report.empty() ? "" : ", ") + (kind == RowKind::Turn ? "turn " : kind == RowKind::State ? "weapon state " : "hold ") + std::to_string(start).substr(0, 4) + (kind == RowKind::State && end <= start ? " s" : " to " + std::to_string(end).substr(0, 4) + " s");
     });
     log("CCS windows carried: " + narrow(original->GetNamePrivate().ToString()) + " -> " + narrow(replacement->GetNamePrivate().ToString()) + ": " + report);
     return clone;
@@ -736,8 +743,8 @@ void Combat::load_pending(const PlayerContext& player) {
                 std::string list; for (const auto& d : dropped) list += (list.empty() ? "" : ", ") + d;
                 log("CCS cleaned copy of " + narrow(montage->GetNamePrivate().ToString()) + (dropped.empty() ? ": nothing to drop" : ": dropped " + list));
             }
-            try { s.play_hold = hold_handler_index(s.play.get() ? s.play.get() : montage) >= 0; } catch (...) { s.play_hold = false; }
-            try { s.play_turn = has_turn_window(s.play.get() ? s.play.get() : montage); } catch (...) { s.play_turn = false; }
+            try { auto* played = s.play.get() ? s.play.get() : montage; s.play_hold = has_rows(played, RowKind::Hold); s.play_turn = has_rows(played, RowKind::Turn); s.play_state = has_rows(played, RowKind::State); }
+            catch (...) { s.play_hold = s.play_turn = s.play_state = false; }
             if (!s.show_mesh_path.empty()) {
                 try {
                     auto* mesh = load(s.show_mesh_path);
@@ -828,7 +835,7 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         if (had_world) {
             log("CCS world changed; reloading the slots");
             montage_facts_.clear();
-            for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); s.carries.clear(); s.overlays.clear(); s.was_ready = false; if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.play = {}; s.play_hold = s.play_turn = false; s.show_mesh = {}; s.pending = true; } }
+            for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); s.carries.clear(); s.overlays.clear(); s.was_ready = false; if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.play = {}; s.play_hold = s.play_turn = s.play_state = false; s.show_mesh = {}; s.pending = true; } }
         }
     }
     for (auto& s : slots_) {   // a loaded montage that stops answering: say why once, and load it again
@@ -971,9 +978,11 @@ void Combat::observe(void* frame_ptr) {
             // original's hold handler a long press could never charge (and on hold-first weapons
             // never fall back to the cut); without its turn window the stick could not steer the
             // wind-up onto a moving enemy.
-            const bool want_hold = facts && facts->hold && !s.play_hold, want_turn = facts && facts->turn && !s.play_turn;
-            if (want_hold || want_turn) {
-                try { if (auto* carried = carry_windows(s, original, replacement, want_hold, want_turn)) pointer = carried; }
+            // Weapon-state notifies come along too: without the Axatana's transform notify a light
+            // attack after a heavy would play with the joined axe still in hand.
+            const bool want_hold = facts && facts->hold && !s.play_hold, want_turn = facts && facts->turn && !s.play_turn, want_state = facts && facts->state && !s.play_state;
+            if (want_hold || want_turn || want_state) {
+                try { if (auto* carried = carry_windows(s, original, replacement, want_hold, want_turn, want_state)) pointer = carried; }
                 catch (const std::exception& e) {
                     ++failures_;
                     if (!s.carry_warned) { s.carry_warned = true; log("CCS windows unavailable for " + s.move_id + ": " + e.what() + (want_hold ? "; long presses will not charge this move" : "; the stick will not steer this move")); }

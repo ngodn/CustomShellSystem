@@ -64,6 +64,19 @@ recovery. The move's own turn rows stay and tick alongside. Saved as `steer`. Ch
 Steer drops the slot's overlay cache. The user chose "steer all the way, cancel the tail" over
 "cancel any time after the first hit".
 
+Weapon state carry (same day, core 6506f3c04dcb). The Axatana joins into the axe for heavies
+and splits for lights through instant notifies on its own montages: `AN_Axatana_Transform_ToKatanas`
+at 0.03 to 0.05 s on the light `_Hold` montages and the katanas running attack,
+`AN_Axatana_Transform_ToAxe` at 0.2 to 0.4 s on the axe hold and running attack and inside the
+0.5 s companion transform clips. The notify's `CommitTransformation` removes the weapon from the
+slot and swaps the item stacks, so it is a real item swap, not a mesh toggle. With "Move's own"
+feel the replacement lacked the notify and the joined axe stayed in hand on the next light.
+`Combat::row_kind` now classifies rows as Hold, Turn or State (`Transform_To`,
+`SetWeaponEquipState`, `HandleWeaponsEquipState`, which also cover fists on Gragu and the seal
+parries) and the carry clone takes the original's State rows at their absolute time, instant
+rows staying instant. `MontageFacts::state`, `Slot::play_state`. Enemy cleaned copies still drop
+the enemy's own equip-state notifies.
+
 Still to verify live: an enemy move with "Move's own" feel turning with the stick during the
 wind-up; whether the enemy's own translation warp overshoots on long lunges (if it does, add
 "SpartaMotionWarping_Translation" back to the drop list, or gate it per slot).
