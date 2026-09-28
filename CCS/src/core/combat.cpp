@@ -29,6 +29,16 @@ Combat::Combat(Deps deps) : deps_(std::move(deps)) {
         !deps_.hooks->add_native_pre || !deps_.hooks->remove || !deps_.hooks->statistics || !deps_.hooks->on_game_thread)
         throw std::runtime_error("Combat engine needs the loader's native hook host");
 }
+int Combat::hold_step(const std::string& full) {
+    std::string name = full;
+    if (ends_with(name, "_C")) name.resize(name.size() - 2);
+    for (const char* twin : {"_Double", "_double", "_dble"}) if (ends_with(name, twin)) { name.resize(name.size() - std::string_view(twin).size()); break; }
+    if (!ends_with(name, "_Hold")) return 0;
+    const auto stem = name.substr(0, name.size() - 5);
+    if (stem.size() < 3 || stem[stem.size() - 3] != '_' || (stem[stem.size() - 2] != 'A' && stem[stem.size() - 2] != 'B')) return 0;
+    const char n = stem.back();
+    return n >= '1' && n <= '3' ? n - '0' : 0;
+}
 int Combat::classify(const std::string& full) {
     std::string name = full;
     if (ends_with(name, "_C")) name.resize(name.size() - 2);
@@ -762,9 +772,13 @@ bool Combat::unarmed_montage(UObject* montage) const {
     }
     return hits > 0;
 }
-void Combat::hide_weapons(UObject* montage, uint64_t now) {
+void Combat::hide_weapons(UObject* montage, uint64_t now, uint64_t provisional_ms) {
     auto* pawn = pawn_.get(); if (!pawn || !montage) return;
-    if (!hidden_actors_.empty()) { hidden_montage_ = {}; hidden_montage_.capture(montage); hidden_since_ = now; hidden_seen_playing_ = false; return; }
+    if (!hidden_actors_.empty()) {   // already hidden: follow the montage that plays now; a firm hide ends a provisional one
+        hidden_montage_ = {}; hidden_montage_.capture(montage); hidden_since_ = now; hidden_seen_playing_ = false;
+        hidden_until_ = provisional_ms ? (hidden_until_ ? now + provisional_ms : 0) : 0;
+        return;
+    }
     auto* weapons = object_of(pawn, L"WeaponsComponent"); if (!weapons) return;
     std::vector<UObject*> actors;
     { Call in_hand(weapons, L"GetWeaponInHand", 1); in_hand.run(); if (auto* w = in_hand.get<UObject*>()) actors.push_back(w); }
@@ -781,7 +795,8 @@ void Combat::hide_weapons(UObject* montage, uint64_t now) {
     }
     if (hidden_actors_.empty()) return;
     hidden_montage_ = {}; hidden_montage_.capture(montage); hidden_since_ = now; hidden_seen_playing_ = false;
-    log("CCS weapon hidden for an unarmed move (" + std::to_string(hidden_actors_.size()) + " actor(s))");
+    hidden_until_ = provisional_ms ? now + provisional_ms : 0;
+    log("CCS weapon hidden for an unarmed move (" + std::to_string(hidden_actors_.size()) + " actor(s)" + (provisional_ms ? ", until the charge stage decides" : "") + ")");
 }
 void Combat::restore_hidden() {
     if (hidden_actors_.empty()) return;
@@ -789,13 +804,14 @@ void Combat::restore_hidden() {
         try { Call show(actor, L"SetActorHiddenInGame", 1); show.set(L"bNewHidden", false); show.run(); }
         catch (const std::exception& e) { log(std::string("CCS weapon show back failed: ") + e.what()); }
     }
-    hidden_actors_.clear(); hidden_montage_ = {}; hidden_seen_playing_ = false;
+    hidden_actors_.clear(); hidden_montage_ = {}; hidden_seen_playing_ = false; hidden_until_ = 0;
     log("CCS weapon shown again");
 }
 void Combat::poll_hidden(const PlayerContext& player, uint64_t now) {
     if (hidden_actors_.empty()) return;
     auto* montage = hidden_montage_.get();
     if (!player.pawn || player.pawn != pawn_.get() || !montage) { restore_hidden(); return; }
+    if (hidden_until_ && now >= hidden_until_) { restore_hidden(); return; }   // the press became a charge: the weapon swings after all
     try {
         auto* mesh = object_of(player.pawn, L"Mesh"); if (!mesh) { restore_hidden(); return; }
         Call instance(mesh, L"GetAnimInstance", 1); instance.run();
@@ -1090,9 +1106,23 @@ void Combat::observe(void* frame_ptr) {
     }
     if (slot < 0) { ++skipped_; note_skip("class name has no slot", ability); note_recent(cls, slot, "no slot"); return; }
     if (!pawn_humanoid_) { ++skipped_; note_recent(cls, slot, "rig not humanoid"); return; }   // the Harbinger form or a creature shell: its rig cannot play these montages
+    // Hold-first weapons play the charge stage on every press; a tap cuts out of it into step
+    // L<n>/H<n>. When that step is an unarmed move with "Move's weapon", the weapon hides from
+    // the first frame of the stage, provisionally: a charge that goes through shows it back.
+    bool tap_hide = false;
+    if (slot == int(SlotId::LC) || slot == int(SlotId::HC)) {
+        if (const int step = hold_step(narrow(cls->GetNamePrivate().ToString()))) {
+            const auto& stage = slots_[size_t(slot)];
+            const auto& target = slots_[size_t(int(slot == int(SlotId::LC) ? SlotId::L1 : SlotId::H1) + step - 1)];
+            const bool stage_hides = stage.montage.get() && stage.tuning.weapon == "move" && stage.unarmed;
+            tap_hide = !stage_hides && target.montage.get() && target.tuning.weapon == "move" && target.unarmed;
+        }
+    }
+    auto frame_montage = [&]() -> UObject* { return static_cast<FObjectProperty*>(inputs_[1])->GetObjectPropertyValue(bytes + inputs_[1]->GetOffset_Internal()); };
+    auto provisional_hide = [&]() { if (!tap_hide) return; try { hide_weapons(frame_montage(), GetTickCount64(), 450); } catch (const std::exception& e) { ++failures_; log(std::string("CCS weapon hide failed: ") + e.what()); } };
     // A locked hold: the game's charge check fails as soon as its window opens and the normal
     // attack follows, so the game's own hold clip stays (it blends into that attack seamlessly).
-    if ((slot == int(SlotId::LC) && !hold_unlocked_[0]) || (slot == int(SlotId::HC) && !hold_unlocked_[1])) { ++skipped_; note_recent(cls, slot, "hold attacks locked on this character, left alone"); return; }
+    if ((slot == int(SlotId::LC) && !hold_unlocked_[0]) || (slot == int(SlotId::HC) && !hold_unlocked_[1])) { ++skipped_; note_recent(cls, slot, "hold attacks locked on this character, left alone"); provisional_hide(); return; }
     auto& s = slots_[size_t(slot)];
     bool changed = false, scaled = false;
     if (!s.montage.get()) {
@@ -1108,7 +1138,7 @@ void Combat::observe(void* frame_ptr) {
         // The exact attack montage varies with the shell the body wears, so it is not matched by name.
         const MontageFacts* facts = original ? &montage_facts(original) : nullptr;
         if (facts && facts->companion) {
-            ++skipped_; note_recent(cls, slot, "companion clip left alone");
+            ++skipped_; note_recent(cls, slot, "companion clip left alone"); provisional_hide();
             if (noted_.size() < 64 && noted_.insert(key ^ 0x9e3779b97f4a7c15ull).second) log("CCS attack left alone: " + narrow(cls->GetNamePrivate().ToString()) + " played its companion clip " + narrow(original->GetNamePrivate().ToString()));
             return;
         }
@@ -1179,6 +1209,7 @@ void Combat::observe(void* frame_ptr) {
         float rate{}; std::memcpy(&rate, bytes + inputs_[2]->GetOffset_Internal(), sizeof(rate));
         if (std::isfinite(rate) && rate > 0.f) { rate *= float(s.tuning.speed); std::memcpy(bytes + inputs_[2]->GetOffset_Internal(), &rate, sizeof(rate)); changed = true; }
     }
+    provisional_hide();
     if (changed) ++swapped_; else ++skipped_;
 }
 nlohmann::json Combat::status() const {

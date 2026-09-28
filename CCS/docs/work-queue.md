@@ -162,6 +162,16 @@ not fight it (it only re-hides items it wants hidden); in "always hidden" the ac
 hidden, CCS skips it and never shows it back. The one visible seam: with "in use", CCS's show-back
 at the end of the swing precedes CSS's next 7 Hz pass by up to 150 ms.
 
+Charge stage before an unarmed step (core 1cc4d731a37d). On hold-first weapons (Axatana,
+Katanas) every press plays `GA_..._A<n>_Hold` first (slot LC/HC) and a tap cuts out of it into
+`_A<n>` (L<n>), so the weapon showed for the stage before the unarmed step hid it. `hold_step`
+reads n from the class name; when step L<n>/H<n> is an unarmed move with "Move's weapon" and
+the stage itself does not hide, the stage's montage hides the weapon provisionally for 450 ms
+(`hide_weapons(montage, now, 450)`, `hidden_until_`): the cut's own firm hide follows the new
+montage and clears the deadline; a press still held at 450 ms is about to charge (0.5 s minimum),
+so the weapon shows back before the charged attack. Applied on every exit of the hook (locked
+hold, companion clip, normal) so it holds whether LC is assigned or not.
+
 Still to verify live: an enemy move with "Move's own" feel turning with the stick during the
 wind-up; whether the enemy's own translation warp overshoots on long lunges (if it does, add
 "SpartaMotionWarping_Translation" back to the drop list, or gate it per slot).

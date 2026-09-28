@@ -151,7 +151,9 @@ private:
     // shown again when it ends.
     std::vector<engine::ObjectHandle> hidden_actors_; engine::ObjectHandle hidden_montage_; uint64_t hidden_since_{}; bool hidden_seen_playing_{};
     bool unarmed_montage(engine::UObject* montage) const;
-    void hide_weapons(engine::UObject* montage, uint64_t now);
+    void hide_weapons(engine::UObject* montage, uint64_t now, uint64_t provisional_ms = 0);   // provisional: shown back after that many ms unless a firm hide follows
+    uint64_t hidden_until_{};
+    static int hold_step(const std::string& class_name);   // 1..3 for GA_..._A<n>_Hold / _B<n>_Hold, the combo step a tap cuts into; else 0
     void restore_hidden();
     void poll_hidden(const engine::PlayerContext& player, uint64_t now);
     std::vector<engine::ObjectHandle> shown_materials_;
