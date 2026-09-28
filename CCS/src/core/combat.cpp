@@ -125,7 +125,7 @@ void Combat::release(Slot& slot) {
     if (shown_montage_.get() && shown_montage_.get() == slot.montage.get()) restore_weapon();
     if (slot.rooted) { if (auto* montage = slot.montage.get()) drop_referenced(world_.get(), montage); slot.rooted = false; }
     if (auto* copy = slot.play.get(); copy && copy != slot.montage.get()) drop_referenced(world_.get(), copy);
-    slot.play = {}; slot.play_kinds = 0;
+    slot.play = {}; slot.play_kinds = 0; slot.unarmed = false;
     if (slot.show_rooted) { if (auto* mesh = slot.show_mesh.get()) drop_referenced(world_.get(), mesh); slot.show_rooted = false; }
     slot.montage = {}; slot.show_mesh = {}; slot.was_ready = false;   // a deliberate release is not a loss
 }
@@ -152,6 +152,8 @@ const Combat::NotifyLayout& Combat::notify_layout() const {
     l.link = row ? row->GetPropertyByNameInChain(L"LinkValue") : nullptr;
     l.duration = row ? row->GetPropertyByNameInChain(L"duration") : nullptr;   // reflected in lowercase; a state's window length
     l.rate_scale = montage_class->GetPropertyByNameInChain(L"RateScale");    // the montage's own play-rate multiplier
+    l.slot_state = l.hit_state ? static_cast<UClass*>(l.hit_state)->GetPropertyByNameInChain(L"WeaponSlot") : nullptr;     // FGameplayTag: which weapon the hit uses
+    l.slot_notify = l.hit_notify ? static_cast<UClass*>(l.hit_notify)->GetPropertyByNameInChain(L"WeaponSlot") : nullptr;
     if (!l.notify || !l.state || !l.link || !l.notify->IsA<FObjectProperty>() || !l.state->IsA<FObjectProperty>()) throw std::runtime_error("FAnimNotifyEvent layout changed");
     l.hit_state = find_cached(L"/Script/Sparta.SpartaAnimNotifyState_HitCheck");
     l.hit_notify = find_cached(L"/Script/Sparta.SpartaAnimNotify_HitCheck");
@@ -738,7 +740,79 @@ void Combat::show_weapon(UObject* mesh, UObject* montage, uint64_t now) {
     log("CCS weapon shown: " + narrow(mesh->GetNamePrivate().ToString()) + " on " + narrow(weapon->GetNamePrivate().ToString()));
 }
 void Combat::weapon_changed() { restore_weapon(); }
+// Unarmed: the montage has hit windows and none of them swings a Primary or Secondary slot
+// weapon; the hits come from Weapon.Slot.Body.* (fists, legs) instead.
+bool Combat::unarmed_montage(UObject* montage) const {
+    if (!montage) return false;
+    const auto& l = notify_layout();
+    auto* hit_state = static_cast<UClass*>(l.hit_state); auto* hit_notify = static_cast<UClass*>(l.hit_notify);
+    FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(montage) + l.notifies->GetOffset_Internal());
+    int hits = 0;
+    for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
+        for (auto* field : {l.notify, l.state}) {
+            UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + field->GetOffset_Internal(), sizeof(object));
+            if (!object) continue;
+            FProperty* slot = hit_state && object->IsA(hit_state) ? l.slot_state : hit_notify && object->IsA(hit_notify) ? l.slot_notify : nullptr;
+            if (!slot) continue;
+            ++hits;
+            FName tag{}; std::memcpy(&tag, reinterpret_cast<std::byte*>(object) + slot->GetOffset_Internal(), sizeof(tag));   // FGameplayTag starts with its FName
+            const auto name = narrow(tag.ToString());
+            if (name.starts_with("Weapon.Slot.Primary") || name.starts_with("Weapon.Slot.Secondary")) return false;
+        }
+    }
+    return hits > 0;
+}
+void Combat::hide_weapons(UObject* montage, uint64_t now) {
+    auto* pawn = pawn_.get(); if (!pawn || !montage) return;
+    if (!hidden_actors_.empty()) { hidden_montage_ = {}; hidden_montage_.capture(montage); hidden_since_ = now; hidden_seen_playing_ = false; return; }
+    auto* weapons = object_of(pawn, L"WeaponsComponent"); if (!weapons) return;
+    std::vector<UObject*> actors;
+    { Call in_hand(weapons, L"GetWeaponInHand", 1); in_hand.run(); if (auto* w = in_hand.get<UObject*>()) actors.push_back(w); }
+    for (const wchar_t* slot : {L"Weapon.Slot.Primary.Left", L"Weapon.Slot.Primary.Right"}) {   // a paired weapon holds one actor per hand
+        Call in_slot(weapons, L"GetWeaponInSlot", 2); in_slot.set(L"WeaponSlot", FName(slot, FNAME_Add)); in_slot.run();
+        if (auto* w = in_slot.get<UObject*>(); w && std::find(actors.begin(), actors.end(), w) == actors.end()) actors.push_back(w);
+    }
+    for (auto* actor : actors) {
+        bool hidden = false;
+        if (auto* p = actor->GetPropertyByNameInChain(L"bHidden"); p && p->IsA<FBoolProperty>()) hidden = static_cast<FBoolProperty*>(p)->GetPropertyValue(reinterpret_cast<std::byte*>(actor) + p->GetOffset_Internal());
+        if (hidden) continue;   // already hidden by the game or another mod: not ours to show back
+        Call hide(actor, L"SetActorHiddenInGame", 1); hide.set(L"bNewHidden", true); hide.run();
+        ObjectHandle h; h.capture(actor); hidden_actors_.push_back(h);
+    }
+    if (hidden_actors_.empty()) return;
+    hidden_montage_ = {}; hidden_montage_.capture(montage); hidden_since_ = now; hidden_seen_playing_ = false;
+    log("CCS weapon hidden for an unarmed move (" + std::to_string(hidden_actors_.size()) + " actor(s))");
+}
+void Combat::restore_hidden() {
+    if (hidden_actors_.empty()) return;
+    for (auto& h : hidden_actors_) if (auto* actor = h.get()) {
+        try { Call show(actor, L"SetActorHiddenInGame", 1); show.set(L"bNewHidden", false); show.run(); }
+        catch (const std::exception& e) { log(std::string("CCS weapon show back failed: ") + e.what()); }
+    }
+    hidden_actors_.clear(); hidden_montage_ = {}; hidden_seen_playing_ = false;
+    log("CCS weapon shown again");
+}
+void Combat::poll_hidden(const PlayerContext& player, uint64_t now) {
+    if (hidden_actors_.empty()) return;
+    auto* montage = hidden_montage_.get();
+    if (!player.pawn || player.pawn != pawn_.get() || !montage) { restore_hidden(); return; }
+    try {
+        auto* mesh = object_of(player.pawn, L"Mesh"); if (!mesh) { restore_hidden(); return; }
+        Call instance(mesh, L"GetAnimInstance", 1); instance.run();
+        auto* anim = instance.get<UObject*>(); if (!anim) { restore_hidden(); return; }
+        Call playing(anim, L"Montage_IsPlaying", 2); playing.set(L"Montage", montage); playing.run();
+        if (playing.get<bool>()) {
+            hidden_seen_playing_ = true;
+            // CSS's MISC "in use" rule shows a held weapon back when an action starts; keep ours hidden until the swing ends.
+            for (auto& h : hidden_actors_) if (auto* actor = h.get())
+                if (auto* p = actor->GetPropertyByNameInChain(L"bHidden"); p && p->IsA<FBoolProperty>() && !static_cast<FBoolProperty*>(p)->GetPropertyValue(reinterpret_cast<std::byte*>(actor) + p->GetOffset_Internal())) {
+                    Call hide(actor, L"SetActorHiddenInGame", 1); hide.set(L"bNewHidden", true); hide.run();
+                }
+        } else if (hidden_seen_playing_ || now - hidden_since_ > 500) restore_hidden();   // the task starts the montage a frame later
+    } catch (const std::exception& e) { log(std::string("CCS weapon hide poll failed: ") + e.what()); restore_hidden(); }
+}
 void Combat::restore_weapon() {
+    restore_hidden();
     auto* component = shown_component_.get();
     if (component) {
         log("CCS weapon restored");
@@ -814,6 +888,7 @@ void Combat::load_pending(const PlayerContext& player) {
                 log("CCS cleaned copy of " + narrow(montage->GetNamePrivate().ToString()) + (dropped.empty() ? ": nothing to drop" : ": dropped " + list));
             }
             try { s.play_kinds = row_kinds(s.play.get() ? s.play.get() : montage); } catch (...) { s.play_kinds = 0; }
+            try { s.unarmed = s.show_mesh_path.empty() && unarmed_montage(montage); } catch (...) { s.unarmed = false; }
             if (!s.show_mesh_path.empty()) {
                 try {
                     auto* mesh = load(s.show_mesh_path);
@@ -897,6 +972,7 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         try { const auto rig_now = rig::player_skeleton(player); if (rig_now != pawn_rig_) { pawn_rig_ = rig_now; pawn_humanoid_ = rig::humanoid(pawn_rig_); if (!pawn_humanoid_ && !pawn_rig_.empty()) log("CCS pawn rig is not human: " + rig::short_name(pawn_rig_) + "; swaps paused on it"); } } catch (...) {}
     }
     poll_weapon(player, now);
+    poll_hidden(player, now);
     if (player.world && player.world != world_.get()) {   // a new world holds none of our references: everything reloads
         const bool had_world = world_.ptr != nullptr;
         world_ = {}; world_.capture(player.world);
@@ -1096,6 +1172,7 @@ void Combat::observe(void* frame_ptr) {
                 + "; feel " + s.tuning.feel + ", damage " + s.tuning.hit_damage + ", visual " + s.tuning.weapon + ", armor " + s.tuning.armor + ", steer " + s.tuning.steer + ", speed " + std::to_string(s.tuning.speed) + ", rig " + rig::short_name(pawn_rig_));
         if (s.tuning.weapon == "move") {
             if (auto* mesh = s.show_mesh.get()) { try { show_weapon(mesh, pointer, GetTickCount64()); } catch (const std::exception& e) { ++failures_; log(std::string("CCS weapon show failed: ") + e.what()); } }
+            else if (s.unarmed) { try { hide_weapons(pointer, GetTickCount64()); } catch (const std::exception& e) { ++failures_; log(std::string("CCS weapon hide failed: ") + e.what()); } }
         }
     }
     if (!scaled && std::abs(s.tuning.speed - 1.0) > 1e-6) {

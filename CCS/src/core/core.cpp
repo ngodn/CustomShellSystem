@@ -338,7 +338,7 @@ nlohmann::json Core::model() const {
             settings_rows.push_back({{"type", "choice"}, {"id", sid + ".weapon"}, {"label", "Visual"}, {"value", tune.weapon},
                 {"options", Json::array({{{"id", "inventory"}, {"label", "My weapon"}}, {{"id", "move"}, {"label", "Move's weapon"}}})},
                 {"description", std::string("My weapon: you keep holding your own weapon. Move's weapon: the weapon this move belongs to appears in your hand for the swing, then yours comes back. Hits always use your weapon.")
-                    + (mesh_ready ? "" : " No model is known for this move's weapon, so yours stays either way.")}});
+                    + (mesh_ready ? "" : combat_ && combat_->slot_unarmed(slot) ? " This move is a punch or a kick, so Move's weapon hides yours for the swing." : " No model is known for this move's weapon, so yours stays either way.")}});
             settings_rows.push_back({{"type", "choice"}, {"id", sid + ".armor"}, {"label", "Armor"}, {"value", tune.armor},
                 {"options", Json::array({{{"id", "full"}, {"label", "Hyper armor (cheat)"}}, {{"id", "move"}, {"label", "Move's own"}}})},
                 {"description", "Hyper armor: the game's hyper armor covers the whole move. Hits still hurt but do not stagger you out of it. Attacks that break hyper armor still do. "
@@ -352,7 +352,7 @@ nlohmann::json Core::model() const {
         }
         customize.push_back({{"type", "choice"}, {"id", sid}, {"label", slot_to_string(slot)}, {"tile", tile_labels[i]}, {"name", slot_titles[i] + 4}, {"hidden", ranged_slot && !sidearm_slot_enabled},
             {"value", id}, {"icon", id.empty() ? weapon_icon(current_weapon_) : move_icon(id)}, {"hint", hint}, {"settings", settings_rows},
-            {"settings_key", speed_id + "/" + tune.hit_damage + "/" + tune.weapon + "/" + tune.armor + "/" + tune.steer + (mesh_ready ? "/m" : "")}, {"enabled", combat_ != nullptr && catalog_error_.empty()}});
+            {"settings_key", speed_id + "/" + tune.hit_damage + "/" + tune.weapon + "/" + tune.armor + "/" + tune.steer + (mesh_ready ? "/m" : combat_ && combat_->slot_unarmed(slot) ? "/u" : "")}, {"enabled", combat_ != nullptr && catalog_error_.empty()}});
     }
     sections.push_back({{"id", "customize"}, {"title", "Customize"}, {"kind", "slots"}, {"candidates", std::move(candidates)}, {"controls", std::move(customize)}});
     // ---- Presets

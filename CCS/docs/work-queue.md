@@ -148,6 +148,20 @@ source times speed; some game montages use 1.5), which the engine multiplies int
 rate the game sets afterwards. The game's own asset is never written; the rate parameter
 still carries the speed in that case. Speed range is 0.5 to 4x.
 
+Unarmed moves hide the weapon (core 3f92eb331fae). "Visual: Move's weapon" left the player's
+weapon in hand on punches and kicks. A move is unarmed when its hit rows exist and none carries a
+`Weapon.Slot.Primary`/`Secondary` tag (the hit check's `WeaponSlot` FGameplayTag; fists and legs
+use `Weapon.Slot.Body.*`): Smert's punches and kicks, Shepherd, SpiderBro, TheHead, the Coffin's
+kicks. On such a swing CCS hides the actors in hand (`GetWeaponInHand` plus the Primary.Left and
+Primary.Right slots for paired weapons) with `SetActorHiddenInGame`, the same call CSS's MISC
+visibility uses on the owner actor, and shows them back when the montage stops. CSS interplay,
+checked against `native/src/misc_visibility.inl`: CSS never touches held weapons in "default";
+in "in use" it shows a held melee weapon back once when an action starts, so CCS re-asserts
+hidden every tick while the swing plays (reads `bHidden`, hides again if cleared) and CSS does
+not fight it (it only re-hides items it wants hidden); in "always hidden" the actor is already
+hidden, CCS skips it and never shows it back. The one visible seam: with "in use", CCS's show-back
+at the end of the swing precedes CSS's next 7 Hz pass by up to 150 ms.
+
 Still to verify live: an enemy move with "Move's own" feel turning with the stick during the
 wind-up; whether the enemy's own translation warp overshoots on long lunges (if it does, add
 "SpartaMotionWarping_Translation" back to the drop list, or gate it per slot).

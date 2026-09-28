@@ -37,6 +37,7 @@ public:
     void set_tuning(SlotId slot, const SlotTuning& tuning);
     const SlotTuning& tuning(SlotId slot) const { return slots_[size_t(slot)].tuning; }
     bool slot_weapon_available(SlotId slot) const { return slots_[size_t(slot)].show_mesh.alive(); }
+    bool slot_unarmed(SlotId slot) const { return slots_[size_t(slot)].unarmed; }   // the move hits with fists or feet only
     // Hold attacks are an upgrade in this game (GE_Unlock_Attack_Hold_Light/Heavy grant the
     // Character.Unlocked.HoldAttack tags). Without the tag the game's own charge check fails at
     // once, so the hold slots wait; read from the pawn twice a second.
@@ -72,6 +73,7 @@ private:
         std::string move_id, path, error; engine::ObjectHandle montage; bool rooted{}, pending{}; uint64_t hits{};
         engine::ObjectHandle play;                     // what "Move's own" plays: a cleaned clone for enemy montages, the montage itself otherwise
         unsigned play_kinds{};                         // RowKind bits that montage carries of its own (hold handler, turn window, weapon state, elemental trigger)
+        bool unarmed{};                                // every hit window is a body slot (fist, leg): no weapon is swung
         SlotTuning tuning;
         std::vector<Transplant> feel; bool feel_warned{}; bool was_ready{};
         std::vector<Transplant> carries; bool carry_warned{};   // "Move's own" copies that carry the original's hold and turn windows
@@ -80,7 +82,7 @@ private:
         engine::ObjectHandle payload_source; std::vector<PayloadBackup> backups;          // original payload copied onto the replacement
     };
     // The reflected layout of a montage's notify rows, resolved once: no property lookup per swing.
-    struct NotifyLayout { engine::UObject* montage_class{}; engine::FProperty* notifies{}, *notify{}, *state{}, *link{}, *duration{}, *rate_scale{}; engine::UObject* hit_state{}, *hit_notify{}; };
+    struct NotifyLayout { engine::UObject* montage_class{}; engine::FProperty* notifies{}, *notify{}, *state{}, *link{}, *duration{}, *rate_scale{}, *slot_state{}, *slot_notify{}; engine::UObject* hit_state{}, *hit_notify{}; };
     mutable NotifyLayout layout_{};
     const NotifyLayout& notify_layout() const;
     // What the hook needs to know about a montage the game plays, learned the first time it is
@@ -143,6 +145,15 @@ private:
     Deps deps_;
     bool enabled_{}, active_{};
     engine::ObjectHandle shown_component_, shown_original_, shown_montage_, shown_actor_;   // weapon mesh swapped for the current swing
+    // Weapons hidden for an unarmed swing (a punch or kick shows no blade): the actors in hand,
+    // hidden through SetActorHiddenInGame like CSS's MISC visibility, re-asserted every tick
+    // while the swing plays (CSS may show a held weapon back at the start of an action) and
+    // shown again when it ends.
+    std::vector<engine::ObjectHandle> hidden_actors_; engine::ObjectHandle hidden_montage_; uint64_t hidden_since_{}; bool hidden_seen_playing_{};
+    bool unarmed_montage(engine::UObject* montage) const;
+    void hide_weapons(engine::UObject* montage, uint64_t now);
+    void restore_hidden();
+    void poll_hidden(const engine::PlayerContext& player, uint64_t now);
     std::vector<engine::ObjectHandle> shown_materials_;
     uint64_t shown_since_{}; bool shown_seen_playing_{};
     std::array<Slot, size_t(SlotId::Count)> slots_{};
