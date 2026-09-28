@@ -2,7 +2,7 @@
 
 [youtube]RsDMhNOcJIk[/youtube]
 
-I built Custom Combat System to let you choose the animation each attack of your weapon plays. Put an enemy's swing on your light chain, a heavy from another weapon on your finisher, a boss move on your charged attack, then save the set as a preset and share the file. For each slot you choose how far it goes: keep your weapon's timing and hit numbers with only the animation changed, or take the move's own timing, its damage multiplier and poise damage, and even its weapon in your hand for the swing. Base damage and Resolve are always your weapon's.
+I built Custom Combat System to let you choose the animation each attack of your weapon plays. Put an enemy's swing on your light chain, a heavy from another weapon on your finisher, a boss move on your charged attack, then save the set as a preset and share the file. For each slot you choose how far it goes: keep your weapon's timing and hit numbers with only the animation changed, or take the move's own timing, its damage multiplier and poise damage, and even its weapon in your hand for the swing. Base damage and Resolve are always your weapon's. The move turns with your stick or your lock-on, and the game's hyper armor can cover it, so a fifteen second enemy combo plays like an attack of your own instead of a cutscene you are stuck in.
 
 [size=4][i][b][color=#ff7700]This is an alpha and I am releasing it now to gather feedback, ideas and bug reports before the first full version.[/color][/b][/i][/size]
 
@@ -10,11 +10,15 @@ I built Custom Combat System to let you choose the animation each attack of your
 [list]
 [*]Thirteen slots: light L1 L2 L3, light finisher LF, charged light LC, the same five for heavy, and the sprint attacks S+L and S+H.[/*]
 [*]Candidates for every slot: all player weapons' moves, the enemy attacks that use the player's skeleton (so they play on your body), and any new attack animation the running game lists after a patch.[/*]
-[*]Per-slot settings on the right panel: Speed, Feel (the game's timing or the move's own), Damage (the move's hit numbers or your weapon's), Visual (keep your weapon in hand or show the move's own weapon for the swing), Armor (the move's own hyper armor, or the game's hyper armor over the whole move, marked as a cheat), and Steer (the stick turns you through the whole move and cancels the recovery after the last hit, or only the move's own turn windows).[/*]
+[*]Six settings per slot on the right panel. Speed. Feel: the game's timing or the move's own. Damage: the move's hit numbers or your weapon's. Visual: keep your weapon in hand or show the move's own weapon for the swing. Armor: the move's own hyper armor, or the game's hyper armor over the whole move. Steer: the stick turns you through the whole move and cancels the recovery after the last hit, or only the turn windows the move brings.[/*]
+[*]Armor and Steer are on by default. Both bend the game's rules, so the Armor value is marked as a cheat. Set either to Move's own for the game's own behaviour.[/*]
 [*]Presets: save, load and delete your sets. They are plain JSON files you can share.[/*]
 [*]Search and filter the candidate list by typing.[/*]
 [*]A master switch that puts every attack back to the weapon's own animation at once.[/*]
 [/list]
+
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/CCS/docs/media/v1.0.0-alpha.2/ccs-slot-armor.png[/img][/center]
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/CCS/docs/media/v1.0.0-alpha.2/ccs-slot-steer.png[/img][/center]
 
 [center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/CCS/docs/media/v1.0.0-alpha.1/ccs-clip-1a.gif[/img][/center]
 [center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/CCS/docs/media/v1.0.0-alpha.1/ccs-clip-1b.gif[/img][/center]
@@ -23,7 +27,11 @@ I built Custom Combat System to let you choose the animation each attack of your
 
 [size=4][b]How it works[/b][/size]
 
-Every player attack starts its animation through one function inside the game. CCS hooks that function and swaps the animation at the moment the attack starts: one callback per swing, no work per frame in combat. CCS changes no game file on disk. Enemy animations play through a cleaned copy with the parts meant only for the AI taken out (its warps onto whoever hit it, its event markers), so they do not drag you across the arena or read state a player does not have. The turn window stays, so you steer the wind-up with the stick the same way you steer your own swings, and a move that has no turn window of its own gets your weapon's.
+Every player attack starts its animation through one function inside the game. CCS hooks that function and swaps the animation at the moment the attack starts: one callback per swing, nothing per frame in combat. CCS changes no game file on disk.
+
+Enemy animations play through a cleaned copy with the parts meant only for the AI taken out (its warps onto whoever hit it, its event markers), so they do not drag you across the arena or read state a player does not have. The move's own turn window stays.
+
+With Feel set to Move's own, the parts of your weapon's attack that the game needs travel with the swap: the charge window for long presses, the turn window when the move has none, the weapon's state changes (the Axatana joins into the axe and splits back into katanas on cue) and the elemental Tarstone triggers after each hit. Armor and Steer add the game's own hyper armor, turn window and movement cancel over the move, copied from a player attack that has them, so they behave exactly as they do on your weapon.
 
 [size=4][b]Install[/b][/size]
 [list=1]
@@ -35,23 +43,23 @@ Every player attack starts its animation through one function inside the game. C
 
 CCS goes in:
 [code]MortalShell2/Binaries/Win64/ue4ss/Mods/CCS/
-    enabled.txt
-    core.json
-    catalog.json
-    enemy-catalog.json
-    ranged-catalog.json
-    running-catalog.json
-    release.json
-    README.txt
-    THIRD_PARTY_NOTICES.txt
-    dlls/
-        main.dll
-    core/
-        ccs_core-1.0.0-alpha.2.dll
-    assets/
-        banner.png
-        enemy-icons/
-            *.png[/code]
+    enabled.txt
+    core.json
+    catalog.json
+    enemy-catalog.json
+    ranged-catalog.json
+    running-catalog.json
+    release.json
+    README.txt
+    THIRD_PARTY_NOTICES.txt
+    dlls/
+        main.dll
+    core/
+        ccs_core-1.0.0-alpha.2.dll
+    assets/
+        banner.png
+        enemy-icons/
+            *.png[/code]
 
 After the first run CCS also creates settings.json, presets/, logs/, runtime/ and CCS.log in that folder.
 
@@ -65,7 +73,7 @@ The footer of the page always shows the keys for the device you are using.
 [list]
 [*]D-pad left/right: pick a slot. Up/down: move through the candidates.[/*]
 [*]A: assign the highlighted move. X: put the weapon's own attack back.[/*]
-[*]Right stick click: open the slot's settings on the right. Left/right changes a value, up/down moves between rows.[/*]
+[*]Right stick click: open the slot's settings on the right. Left/right changes a value, up/down moves between rows. The rows scroll; the focused setting's note stays under them.[/*]
 [*]B: back to the slots, then close.[/*]
 [/list]
 
@@ -86,13 +94,15 @@ In Mortal Shell II a charged light attack exists only with the Acolyte's Stone e
 [list]
 [*]The sidearm's fire cannot be customised yet.[/*]
 [*]Moves play on the human rig only. When you die and fight on as the Harbinger, or wear a creature shell, the swaps pause until you are back on a human body.[/*]
-[*]With Feel set to Move's own, an enemy move plays with its own timing, so combo windows can feel different from your weapon's. Game's keeps your weapon's timing with the new animation fitted in.[/*]
+[*]With Feel set to Move's own, the move keeps its own hit windows and rhythm, so a combo can feel different from your weapon's. Game's keeps your weapon's timing with the new animation fitted in.[/*]
+[*]The Clockwork Scythe's chain hits belong to the Scythe's own attack animations and do not follow a swapped move.[/*]
+[*]Attacks that are built to break hyper armor still break it, whatever the Armor setting.[/*]
 [*]No presets ship with the mod yet. Save your own; I would like to see what you come up with.[/*]
 [/list]
 
 [size=4][b]Updating and removing[/b][/size]
 
-Close the game and replace dlls/, core/, core.json and the catalog files. Keep settings.json and presets/ to retain your slots and presets. To remove the mod, delete the Mods/CCS folder. CCS creates settings.json, presets/, logs/ccs.jsonl, runtime/status.json and CCS.log inside its own folder and nothing anywhere else.
+Close the game and replace dlls/, core/, core.json and the catalog files. Keep settings.json and presets/ to retain your slots and presets. Slots saved by alpha.1 get Armor and Steer switched on. To remove the mod, delete the Mods/CCS folder. CCS creates settings.json, presets/, logs/ccs.jsonl, runtime/status.json and CCS.log inside its own folder and nothing anywhere else.
 
 [size=4][b]Feedback[/b][/size]
 
