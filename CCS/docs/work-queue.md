@@ -77,6 +77,20 @@ parries) and the carry clone takes the original's State rows at their absolute t
 rows staying instant. `MontageFacts::state`, `Slot::play_state`. Enemy cleaned copies still drop
 the enemy's own equip-state notifies.
 
+Elemental trigger carry (same day, core 96717f77f7d0). Audit of the 185 player attack montages
+for rows a "Move's own" replacement loses: besides the carried hold, turn and weapon-state rows,
+the only gameplay row is `AN_TriggerElementalMechanic`, which the charged montages fire a few
+frames after each hit (`Event.TriggerElementalMechanic` with mechanic, slot and spawn data;
+`GA_ElementalMechanicHandler` reads only that payload). That is how elemental Tarstones fire
+on charged attacks. It is now `RowKind::Mechanic` and goes with the replacement's hit of the
+same rank; a replacement with fewer hits keeps only the original's last-hit triggers on its own
+last hit. `hit_begins` merges the paired weapons' two rows per strike. Row kinds are now a
+bitmask (`MontageFacts::kinds`, `Slot::play_kinds`, `bit(RowKind)`). Left alone on purpose:
+`CSAnimNotifyState_SetCameraState`, camera shakes, ground impact and audio (cosmetic),
+`AnimNotify_PlayMontageNotify` names such as Activate (consumed by Tarstone weapon abilities and
+plunges, not by the slot attack abilities), the Scythe's `ANS_ClockworkScytheChain` and
+`ANS_ChainsawHitCheck` (the Clockwork Tarstone's chain hits, a known limit).
+
 Still to verify live: an enemy move with "Move's own" feel turning with the stick during the
 wind-up; whether the enemy's own translation warp overshoots on long lunges (if it does, add
 "SpartaMotionWarping_Translation" back to the drop list, or gate it per slot).

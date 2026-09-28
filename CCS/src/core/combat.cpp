@@ -125,7 +125,7 @@ void Combat::release(Slot& slot) {
     if (shown_montage_.get() && shown_montage_.get() == slot.montage.get()) restore_weapon();
     if (slot.rooted) { if (auto* montage = slot.montage.get()) drop_referenced(world_.get(), montage); slot.rooted = false; }
     if (auto* copy = slot.play.get(); copy && copy != slot.montage.get()) drop_referenced(world_.get(), copy);
-    slot.play = {}; slot.play_hold = slot.play_turn = slot.play_state = false;
+    slot.play = {}; slot.play_kinds = 0;
     if (slot.show_rooted) { if (auto* mesh = slot.show_mesh.get()) drop_referenced(world_.get(), mesh); slot.show_rooted = false; }
     slot.montage = {}; slot.show_mesh = {}; slot.was_ready = false;   // a deliberate release is not a loss
 }
@@ -413,19 +413,44 @@ Combat::RowKind Combat::row_kind(const std::string& cls) {
     // Weapon state: the Axatana's transform notifies swap the katanas item for the axe item and
     // back; equip-state notifies stow or draw a slot (fists on Gragu, seal parries).
     if (cls.find("Transform_To") != std::string::npos || cls.find("WeaponEquipState") != std::string::npos || cls.find("WeaponsEquipState") != std::string::npos) return RowKind::State;
+    // Elemental Tarstones: the weapon's charged montages send Event.TriggerElementalMechanic a
+    // few frames after each hit, with the mechanic (blast, cloud, projectile, shockwave) and the
+    // slot in the payload. GA_ElementalMechanicHandler reads only that payload, never the montage.
+    if (cls.find("TriggerElementalMechanic") != std::string::npos) return RowKind::Mechanic;
     return RowKind::None;
 }
-bool Combat::has_rows(UObject* montage, RowKind kind) const {
-    if (!montage) return false;
+unsigned Combat::row_kinds(UObject* montage) const {
+    if (!montage) return 0;
     const auto& l = notify_layout();
+    FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(montage) + l.notifies->GetOffset_Internal());
+    unsigned kinds = 0;
+    for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
+        for (auto* field : {l.notify, l.state}) {
+            UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + field->GetOffset_Internal(), sizeof(object));
+            if (object && object->GetClassPrivate()) kinds |= bit(row_kind(narrow(object->GetClassPrivate()->GetNamePrivate().ToString())));
+        }
+    }
+    return kinds;
+}
+std::vector<float> Combat::hit_begins(UObject* montage) const {
+    std::vector<float> out;
+    if (!montage) return out;
+    const auto& l = notify_layout();
+    auto* hit_state = static_cast<UClass*>(l.hit_state); auto* hit_notify = static_cast<UClass*>(l.hit_notify);
     FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(montage) + l.notifies->GetOffset_Internal());
     for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
         for (auto* field : {l.notify, l.state}) {
             UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + field->GetOffset_Internal(), sizeof(object));
-            if (object && object->GetClassPrivate() && row_kind(narrow(object->GetClassPrivate()->GetNamePrivate().ToString())) == kind) return true;
+            if (!object || !((hit_state && object->IsA(hit_state)) || (hit_notify && object->IsA(hit_notify)))) continue;
+            float at{}; std::memcpy(&at, rows.GetRawPtr(i) + l.link->GetOffset_Internal(), sizeof(at));
+            if (std::isfinite(at) && at >= 0.f) out.push_back(at);
         }
     }
-    return false;
+    std::sort(out.begin(), out.end());
+    // Paired weapons author two hit rows per strike (one per hand); those count as one hit.
+    std::vector<float> merged;
+    for (float t : out) if (merged.empty() || t - merged.back() > 0.05f) merged.push_back(t);
+    return merged;
 }
 const Combat::MontageFacts& Combat::montage_facts(UObject* montage) {
     const auto key = name_key(montage->GetNamePrivate());
@@ -436,14 +461,13 @@ const Combat::MontageFacts& Combat::montage_facts(UObject* montage) {
     // transform before its hold and cut). Those stay the game's; only the attack clip is swapped.
     const auto played = narrow(montage->GetNamePrivate().ToString());
     for (const char* companion : {"Transform", "Equip", "Unequip", "Draw", "Stow", "Sheath"}) if (played.find(companion) != std::string::npos) facts.companion = true;
-    try { facts.hold = has_rows(montage, RowKind::Hold); facts.turn = has_rows(montage, RowKind::Turn); facts.state = has_rows(montage, RowKind::State); }
-    catch (...) { facts.hold = facts.turn = facts.state = false; }
+    try { facts.kinds = row_kinds(montage); } catch (...) { facts.kinds = 0; }
     return montage_facts_[key] = facts;
 }
-UObject* Combat::carry_windows(Slot& s, UObject* original, UObject* replacement, bool hold, bool turn, bool state) {
+UObject* Combat::carry_windows(Slot& s, UObject* original, UObject* replacement, unsigned kinds) {
     for (auto& t : s.carries) if (t.original.get() == original) { if (auto* clone = t.clone.get()) return clone; }
     if (s.carries.size() >= 4) { auto& old = s.carries.front(); if (auto* c = old.clone.get()) drop_referenced(world_.get(), c); s.carries.erase(s.carries.begin()); }
-    auto* clone = build_carry(original, replacement, hold, turn, state);
+    auto* clone = build_carry(original, replacement, kinds);
     Transplant t; t.original.capture(original); t.clone.capture(clone);
     keep_referenced(world_.get(), clone);
     s.carries.push_back(std::move(t));
@@ -501,13 +525,18 @@ std::string Combat::append_rows(UObject* clone, UObject* source, const std::vect
     raw->data = fresh; raw->num = total; raw->max = total;
     return report;
 }
-UObject* Combat::build_carry(UObject* original, UObject* replacement, bool hold, bool turn, bool state) {
+UObject* Combat::build_carry(UObject* original, UObject* replacement, unsigned wanted) {
     auto* montage_class = static_cast<UClass*>(find_cached(L"/Script/Engine.AnimMontage"));
     if (!original->IsA(montage_class) || !replacement->IsA(montage_class)) throw std::runtime_error("Not montages");
-    // The rows to carry from the original: hold handlers, turn windows and weapon-state notifies,
-    // each timed its own way.
+    // The rows to carry from the original: hold handlers, turn windows, weapon-state notifies and
+    // elemental triggers, each timed its own way.
     const auto& l = notify_layout();
     std::vector<int> rows; std::vector<RowKind> kinds;
+    const auto hits_old = hit_begins(original), hits_new = hit_begins(replacement);
+    // An elemental trigger follows a hit; it goes with the replacement's hit of the same rank. A
+    // replacement with fewer hits keeps only the triggers of the original's last hit, on its own
+    // last hit, so a one-hit clip fires the finishing blast once and not once per lost hit.
+    auto hit_rank = [&](float t) { int r = -1; for (size_t i = 0; i < hits_old.size(); ++i) if (hits_old[i] <= t + 0.001f) r = int(i); return r; };
     FScriptArrayHelper source(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(original) + l.notifies->GetOffset_Internal());
     for (int i = 0; i < std::min(source.Num(), 256); ++i) {
         RowKind kind = RowKind::None;
@@ -515,7 +544,14 @@ UObject* Combat::build_carry(UObject* original, UObject* replacement, bool hold,
             UObject* object{}; std::memcpy(&object, source.GetRawPtr(i) + field->GetOffset_Internal(), sizeof(object));
             if (object && object->GetClassPrivate()) { const auto k = row_kind(narrow(object->GetClassPrivate()->GetNamePrivate().ToString())); if (k != RowKind::None) kind = k; }
         }
-        if ((kind == RowKind::Hold && hold) || (kind == RowKind::Turn && turn) || (kind == RowKind::State && state)) { rows.push_back(i); kinds.push_back(kind); }
+        if (kind == RowKind::None || !(wanted & bit(kind))) continue;
+        if (kind == RowKind::Mechanic) {
+            float at{}; std::memcpy(&at, source.GetRawPtr(i) + l.link->GetOffset_Internal(), sizeof(at));
+            const int rank = hit_rank(at);
+            if (hits_new.empty() || rank < 0) continue;                                        // nothing to hang it on
+            if (rank >= int(hits_new.size()) && rank != int(hits_old.size()) - 1) continue;   // a lost middle hit
+        }
+        rows.push_back(i); kinds.push_back(kind);
     }
     if (rows.empty()) throw std::runtime_error("Original has none of the rows to carry");
     const float rep_len = read<float>(replacement, L"SequenceLength");
@@ -526,7 +562,12 @@ UObject* Combat::build_carry(UObject* original, UObject* replacement, bool hold,
     std::string report;
     append_rows(clone, original, rows, [&](int k, float& start, float& end) {
         const RowKind kind = kinds[size_t(k)];
-        if (kind == RowKind::State) {
+        if (kind == RowKind::Mechanic) {
+            const int rank = hit_rank(start);
+            const size_t j = size_t(std::min(rank, int(hits_new.size()) - 1));
+            start = std::clamp(hits_new[j] + (start - hits_old[size_t(rank)]), 0.f, std::max(0.f, rep_len - 0.01f));
+            end = start;
+        } else if (kind == RowKind::State) {
             // Weapon state fires where the weapon's montage fires it (the Axatana joins or splits
             // in its first frames), kept inside the replacement. An instant notify stays instant.
             const bool instant = !(end > start + 0.001f);
@@ -554,7 +595,7 @@ UObject* Combat::build_carry(UObject* original, UObject* replacement, bool hold,
             start = std::clamp(start, 0.f, std::max(0.f, rep_len - 0.03f));
             end = std::clamp(end, start + 0.02f, std::max(start + 0.02f, rep_len - 0.01f));
         }
-        report += std::string(report.empty() ? "" : ", ") + (kind == RowKind::Turn ? "turn " : kind == RowKind::State ? "weapon state " : "hold ") + std::to_string(start).substr(0, 4) + (kind == RowKind::State && end <= start ? " s" : " to " + std::to_string(end).substr(0, 4) + " s");
+        report += std::string(report.empty() ? "" : ", ") + (kind == RowKind::Turn ? "turn " : kind == RowKind::State ? "weapon state " : kind == RowKind::Mechanic ? "elemental " : "hold ") + std::to_string(start).substr(0, 4) + (end <= start ? " s" : " to " + std::to_string(end).substr(0, 4) + " s");
     });
     log("CCS windows carried: " + narrow(original->GetNamePrivate().ToString()) + " -> " + narrow(replacement->GetNamePrivate().ToString()) + ": " + report);
     return clone;
@@ -743,8 +784,7 @@ void Combat::load_pending(const PlayerContext& player) {
                 std::string list; for (const auto& d : dropped) list += (list.empty() ? "" : ", ") + d;
                 log("CCS cleaned copy of " + narrow(montage->GetNamePrivate().ToString()) + (dropped.empty() ? ": nothing to drop" : ": dropped " + list));
             }
-            try { auto* played = s.play.get() ? s.play.get() : montage; s.play_hold = has_rows(played, RowKind::Hold); s.play_turn = has_rows(played, RowKind::Turn); s.play_state = has_rows(played, RowKind::State); }
-            catch (...) { s.play_hold = s.play_turn = s.play_state = false; }
+            try { s.play_kinds = row_kinds(s.play.get() ? s.play.get() : montage); } catch (...) { s.play_kinds = 0; }
             if (!s.show_mesh_path.empty()) {
                 try {
                     auto* mesh = load(s.show_mesh_path);
@@ -835,7 +875,7 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         if (had_world) {
             log("CCS world changed; reloading the slots");
             montage_facts_.clear();
-            for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); s.carries.clear(); s.overlays.clear(); s.was_ready = false; if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.play = {}; s.play_hold = s.play_turn = s.play_state = false; s.show_mesh = {}; s.pending = true; } }
+            for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); s.carries.clear(); s.overlays.clear(); s.was_ready = false; if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.play = {}; s.play_kinds = 0; s.show_mesh = {}; s.pending = true; } }
         }
     }
     for (auto& s : slots_) {   // a loaded montage that stops answering: say why once, and load it again
@@ -978,11 +1018,13 @@ void Combat::observe(void* frame_ptr) {
             // original's hold handler a long press could never charge (and on hold-first weapons
             // never fall back to the cut); without its turn window the stick could not steer the
             // wind-up onto a moving enemy.
-            // Weapon-state notifies come along too: without the Axatana's transform notify a light
-            // attack after a heavy would play with the joined axe still in hand.
-            const bool want_hold = facts && facts->hold && !s.play_hold, want_turn = facts && facts->turn && !s.play_turn, want_state = facts && facts->state && !s.play_state;
-            if (want_hold || want_turn || want_state) {
-                try { if (auto* carried = carry_windows(s, original, replacement, want_hold, want_turn, want_state)) pointer = carried; }
+            // Weapon-state notifies come along too (without the Axatana's transform notify a light
+            // attack after a heavy would play with the joined axe still in hand), and the elemental
+            // Tarstone triggers that follow the weapon's hits.
+            const unsigned want = facts ? (facts->kinds & ~s.play_kinds) : 0u;
+            const bool want_hold = want & bit(RowKind::Hold);
+            if (want) {
+                try { if (auto* carried = carry_windows(s, original, replacement, want)) pointer = carried; }
                 catch (const std::exception& e) {
                     ++failures_;
                     if (!s.carry_warned) { s.carry_warned = true; log("CCS windows unavailable for " + s.move_id + ": " + e.what() + (want_hold ? "; long presses will not charge this move" : "; the stick will not steer this move")); }
