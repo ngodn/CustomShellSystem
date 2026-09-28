@@ -417,7 +417,18 @@ Combat::RowKind Combat::row_kind(const std::string& cls) {
     // few frames after each hit, with the mechanic (blast, cloud, projectile, shockwave) and the
     // slot in the payload. GA_ElementalMechanicHandler reads only that payload, never the montage.
     if (cls.find("TriggerElementalMechanic") != std::string::npos) return RowKind::Mechanic;
+    // The chain window: while it is open an attack press is buffered, and when it closes the
+    // buffered press fires the next combo step (the game closes it shortly after the hit).
+    // Without it a press during the swing is dropped and only the 0.75 s after the ability ends
+    // chains, which is the "needs perfect timing" feel.
+    if (cls.find("InputQueue") != std::string::npos) return RowKind::Queue;
     return RowKind::None;
+}
+void Combat::set_chain(const std::string& mode) {
+    const std::string wanted = mode == "move" ? "move" : "hit";
+    if (wanted == chain_) return;
+    chain_ = wanted;
+    for (auto& s : slots_) release_carries(s);   // the carried chain windows are timed by the mode
 }
 unsigned Combat::row_kinds(UObject* montage) const {
     if (!montage) return 0;
@@ -545,6 +556,7 @@ UObject* Combat::build_carry(UObject* original, UObject* replacement, unsigned w
             if (object && object->GetClassPrivate()) { const auto k = row_kind(narrow(object->GetClassPrivate()->GetNamePrivate().ToString())); if (k != RowKind::None) kind = k; }
         }
         if (kind == RowKind::None || !(wanted & bit(kind))) continue;
+        if (kind == RowKind::Queue && (hits_new.empty() || hits_old.empty())) continue;   // nothing to anchor the window on
         if (kind == RowKind::Mechanic) {
             float at{}; std::memcpy(&at, source.GetRawPtr(i) + l.link->GetOffset_Internal(), sizeof(at));
             const int rank = hit_rank(at);
@@ -558,11 +570,20 @@ UObject* Combat::build_carry(UObject* original, UObject* replacement, unsigned w
     const float orig_len = read<float>(original, L"SequenceLength");
     if (!(rep_len > 0.05f) || !(orig_len > 0.05f)) throw std::runtime_error("Montage length unusable");
     const auto [hit_new, hit_new_end] = first_hit_span(replacement);
+    const auto [hit_old, hit_old_end] = first_hit_span(original);
+    const float last_new_end = last_hit_end(replacement);
     auto* clone = clone_montage(replacement);
     std::string report;
     append_rows(clone, original, rows, [&](int k, float& start, float& end) {
         const RowKind kind = kinds[size_t(k)];
-        if (kind == RowKind::Mechanic) {
+        if (kind == RowKind::Queue) {
+            // The weapon opens its chain window a little before its hit and closes it a little
+            // after; the replacement keeps that lead and tail around the hit the window ends on.
+            const float lead = hit_old >= 0.f ? start - hit_old : 0.f, tail = hit_old_end >= 0.f ? end - hit_old_end : 0.15f;
+            const float anchor = chain_ == "move" && last_new_end > 0.f ? last_new_end : hit_new_end;
+            start = std::clamp(hit_new + lead, 0.f, std::max(0.f, rep_len - 0.06f));
+            end = std::clamp(anchor + tail, start + 0.05f, std::max(start + 0.05f, rep_len - 0.01f));
+        } else if (kind == RowKind::Mechanic) {
             const int rank = hit_rank(start);
             const size_t j = size_t(std::min(rank, int(hits_new.size()) - 1));
             start = std::clamp(hits_new[j] + (start - hits_old[size_t(rank)]), 0.f, std::max(0.f, rep_len - 0.01f));
@@ -595,7 +616,7 @@ UObject* Combat::build_carry(UObject* original, UObject* replacement, unsigned w
             start = std::clamp(start, 0.f, std::max(0.f, rep_len - 0.03f));
             end = std::clamp(end, start + 0.02f, std::max(start + 0.02f, rep_len - 0.01f));
         }
-        report += std::string(report.empty() ? "" : ", ") + (kind == RowKind::Turn ? "turn " : kind == RowKind::State ? "weapon state " : kind == RowKind::Mechanic ? "elemental " : "hold ") + std::to_string(start).substr(0, 4) + (end <= start ? " s" : " to " + std::to_string(end).substr(0, 4) + " s");
+        report += std::string(report.empty() ? "" : ", ") + (kind == RowKind::Turn ? "turn " : kind == RowKind::State ? "weapon state " : kind == RowKind::Mechanic ? "elemental " : kind == RowKind::Queue ? "chain " : "hold ") + std::to_string(start).substr(0, 4) + (end <= start ? " s" : " to " + std::to_string(end).substr(0, 4) + " s");
     });
     log("CCS windows carried: " + narrow(original->GetNamePrivate().ToString()) + " -> " + narrow(replacement->GetNamePrivate().ToString()) + ": " + report);
     return clone;

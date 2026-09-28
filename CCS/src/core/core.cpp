@@ -110,6 +110,7 @@ Core::Core(const CcsLoaderContext* loader) {
         combat_ = std::make_unique<Combat>(Combat::Deps{hooks_, &catalog_, log});
         combat_->set_enabled(settings_->enabled());
         combat_->set_hold_cheat(settings_->charged_without_stone());
+        combat_->set_chain(settings_->next_attack());
         apply_slots_from_settings();
     } else log("Loader offers no native hook host; combat disabled");
     Menu::Deps deps;
@@ -381,6 +382,11 @@ nlohmann::json Core::model() const {
         {"description", "The game allows a charged light attack only with the Acolyte's Stone equipped, and a charged heavy attack only with the Unwieldy Stone. "
             "Always (cheat) gives you both unlocks without the stones, so the LC and HC slots work on any build. The charge still costs Resolve. Switching back takes the unlocks away again."},
         {"enabled", combat_ != nullptr}});
+    settings.push_back({{"type", "choice"}, {"id", "next_attack"}, {"label", "Next attack"}, {"value", settings_->next_attack()},
+        {"options", Json::array({{{"id", "hit"}, {"label", "After the first hit"}}, {{"id", "move"}, {"label", "After the whole move"}}})},
+        {"description", "When you press the next attack while a swapped move is still playing. After the first hit: the press is kept and the next attack starts right after the move's first hit, the way your own combos chain. "
+            "After the whole move: the press is kept until the move's last hit has landed, so long enemy combos play out before the chain continues. Applies to moves with Feel set to Move's own; Game's already chains like your weapon."},
+        {"enabled", combat_ != nullptr}});
     settings.push_back({{"type", "slider"}, {"id", "ui_scale"}, {"label", "Menu scale"}, {"value", settings_->ui_scale()}, {"min", 0.75}, {"max", 1.5}, {"step", 0.05}, {"unit", "x"},
         {"description", "Size of this page relative to the game's menus."}});
     settings.push_back({{"type", "button"}, {"id", "reset"}, {"label", "Reset all slots"}, {"action_label", "Reset"}, {"enabled", combat_ != nullptr && combat_->assigned() > 0},
@@ -441,6 +447,7 @@ void Core::handle_event(const nlohmann::json& event) {
     }
     if (id == "enabled") { settings_->set_enabled(event.at("value").get<bool>()); if (combat_) combat_->set_enabled(settings_->enabled()); save_settings_or_log(); return; }
     if (id == "charged_attacks") { settings_->set_charged_without_stone(event.at("value").get<std::string>() == "always"); if (combat_) combat_->set_hold_cheat(settings_->charged_without_stone()); save_settings_or_log(); return; }
+    if (id == "next_attack") { settings_->set_next_attack(event.at("value").get<std::string>()); if (combat_) combat_->set_chain(settings_->next_attack()); save_settings_or_log(); return; }
     if (id == "ui_scale") { settings_->set_ui_scale(event.at("value").get<double>()); save_settings_or_log(); return; }
     if (id == "reset") { if (combat_) for (unsigned i = 0; i < slot_count; ++i) combat_->set_slot(SlotId(i), ""); save_settings_or_log(); return; }
     if (id == "preset.selected") { selected_preset_ = event.at("value").get<std::string>(); apply_preset(selected_preset_); return; }   // choosing a preset applies it

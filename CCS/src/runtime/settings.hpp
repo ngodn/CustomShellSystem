@@ -19,6 +19,9 @@ public:
     // Cheat: charged attacks without the Acolyte's or Unwieldy Stone (the unlock effects are applied by the mod).
     bool charged_without_stone() const { return charged_without_stone_; }
     void set_charged_without_stone(bool val) { charged_without_stone_ = val; }
+    // Where a swapped move's chain window ends: "hit" (after the first hit, the game's own way) or "move" (after the last hit).
+    const std::string& next_attack() const { return next_attack_; }
+    void set_next_attack(std::string val) { next_attack_ = val == "move" ? "move" : "hit"; }
 
     const std::string& startup_preset() const { return startup_preset_; }
     void set_startup_preset(std::string preset) { startup_preset_ = std::move(preset); }
@@ -53,6 +56,7 @@ private:
     std::filesystem::path path_;
     bool enabled_{false};
     bool charged_without_stone_{false};
+    std::string next_attack_{"hit"};
     std::string startup_preset_{"default"};
     bool preserve_weapon_mesh_{true};
     bool show_hud_notification_{true};

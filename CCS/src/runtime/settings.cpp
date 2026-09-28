@@ -39,6 +39,7 @@ nlohmann::json Settings::to_json() const {
     return {
         {"enabled", enabled_},
         {"charged_attacks_without_tarstone", charged_without_stone_},
+        {"next_attack", next_attack_},
         {"startup_preset", startup_preset_},
         {"preserve_weapon_mesh", preserve_weapon_mesh_},
         {"show_hud_notification", show_hud_notification_},
@@ -105,6 +106,8 @@ void Settings::from_json(const nlohmann::json& j) {
         if (j.contains(key) && !j[key].is_boolean()) throw std::runtime_error("Invalid settings toggle");
     candidate.enabled_ = j.value("enabled", enabled_);
     candidate.charged_without_stone_ = j.value("charged_attacks_without_tarstone", charged_without_stone_);
+    if (j.contains("next_attack") && !j["next_attack"].is_string()) throw std::runtime_error("Invalid next_attack value");
+    candidate.set_next_attack(j.value("next_attack", next_attack_));
     candidate.startup_preset_ = j.value("startup_preset", startup_preset_);
     candidate.preserve_weapon_mesh_ = j.value("preserve_weapon_mesh", preserve_weapon_mesh_);
     candidate.show_hud_notification_ = j.value("show_hud_notification", show_hud_notification_);

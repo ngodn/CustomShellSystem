@@ -124,6 +124,21 @@ The same evening's game crashes were not CCS: three UE "GPUCrash" reports
 at 17:49, 17:50 and 17:51, and 53 Xid lines since 18 September, the day nvidia-utils went from
 610.57.04 to 615.71.09. CCS logs show no failure before any of them.
 
+Chain window carry (28 September evening, core 695a8703da7d). Combo chaining felt like it
+needed perfect timing with "Move's own" feel. The game's own swings carry two native notify
+states: `AnimNotifyState_InputBlock` from the first frame to shortly after the hit (attack
+presses blocked, dodge and parry allowed by tag list) and `AnimNotifyState_InputQueue` from just
+before the hit to the same end (a press is buffered and fires when the window closes, cutting
+the recovery; `ANS_InterruptWithMovement` starts at that same time). Examples: Axe and Dagger
+light queue 0.32 to 0.67 s around a hit at 0.47 to 0.53; Martyr's Blade B1 queue 1.48 to 2.0
+around 1.21 to 1.49. Without the window a press during the swing is dropped and only the
+0.75 s combo-count grace after the ability ends (`ResetComboCountDelay(0.75)`) chains, which
+is the perfect-timing feel. `RowKind::Queue` now carries the weapon's queue rows onto the
+replacement, keeping the weapon's lead before the hit and tail after it, anchored on the
+replacement's first hit or, with the new Settings row "Next attack: After the whole move",
+its last hit (`Combat::set_chain`, settings key `next_attack`, default "hit"). Changing it
+drops every slot's carry cache. InputBlock rows are not carried: dodge and parry stay free.
+
 Still to verify live: an enemy move with "Move's own" feel turning with the stick during the
 wind-up; whether the enemy's own translation warp overshoots on long lunges (if it does, add
 "SpartaMotionWarping_Translation" back to the drop list, or gate it per slot).

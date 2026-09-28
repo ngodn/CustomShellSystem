@@ -44,6 +44,9 @@ public:
     // Cheat: apply the game's own unlock effects (GE_Unlock_Attack_Hold_Light/Heavy) to the player
     // so charged attacks work without the Tarstones. Removed again when switched off.
     void set_hold_cheat(bool on) { hold_cheat_ = on; }
+    // Where a carried chain window ends: "hit" after the replacement's first hit (the game's own
+    // chaining) or "move" after its last hit (the whole move plays before the next attack).
+    void set_chain(const std::string& mode);
     bool hold_cheat() const { return hold_cheat_; }
     // Static mesh of a move source's weapon (player weapons and the enemy weapons with a static mesh), or empty.
     static std::string weapon_mesh_path(const std::string& source);
@@ -100,7 +103,7 @@ private:
     // may lack: the charge window (the game's hold-handler notify state) and the turn window (the
     // rotate-to-face-target notify state that lets the stick steer the wind-up). A replacement
     // without them plays through a copy that carries the original's rows, timed to its own clip.
-    enum class RowKind { None, Hold, Turn, State, Mechanic };
+    enum class RowKind { None, Hold, Turn, State, Mechanic, Queue };
     static constexpr unsigned bit(RowKind k) { return k == RowKind::None ? 0u : 1u << (unsigned(k) - 1); }
     static RowKind row_kind(const std::string& notify_class);
     unsigned row_kinds(engine::UObject* montage) const;        // bit(kind) for every kind the montage carries
@@ -153,6 +156,7 @@ private:
     bool hold_unlocked_[2]{}; bool hold_check_warned_{}, hold_check_logged_{};
     struct EffectHandle { int32_t handle{-1}; bool passed{}; uint8_t pad[3]{}; };   // FActiveGameplayEffectHandle, 8 bytes
     bool hold_cheat_{}, hold_cheat_warned_{};
+    std::string chain_{"hit"};
     EffectHandle hold_grant_[2]{}; engine::ObjectHandle hold_grant_asc_, hold_effect_world_;
     void sync_hold_cheat(const engine::PlayerContext& player);
     bool pawn_humanoid_{};
