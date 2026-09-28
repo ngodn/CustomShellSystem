@@ -1,5 +1,7 @@
 [center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/CCS/docs/media/v1.0.0-alpha.1/ccs-clip-4.gif[/img][/center]
 
+[youtube]RsDMhNOcJIk[/youtube]
+
 I built Custom Combat System to let you choose the animation each attack of your weapon plays. Put an enemy's swing on your light chain, a heavy from another weapon on your finisher, a boss move on your charged attack, then save the set as a preset and share the file. For each slot you choose how far it goes: keep your weapon's timing and hit numbers with only the animation changed, or take the move's own timing, its damage multiplier and poise damage, and even its weapon in your hand for the swing. Base damage and Resolve are always your weapon's.
 
 [size=4][i][b][color=#ff7700]This is an alpha and I am releasing it now to gather feedback, ideas and bug reports before the first full version.[/color][/b][/i][/size]
@@ -8,7 +10,7 @@ I built Custom Combat System to let you choose the animation each attack of your
 [list]
 [*]Thirteen slots: light L1 L2 L3, light finisher LF, charged light LC, the same five for heavy, and the sprint attacks S+L and S+H.[/*]
 [*]Candidates for every slot: all player weapons' moves, the enemy attacks that use the player's skeleton (so they play on your body), and any new attack animation the running game lists after a patch.[/*]
-[*]Per-slot settings on the right panel: Speed, Feel (the game's timing or the move's own), Damage (the move's hit numbers or your weapon's), Visual (keep your weapon in hand or show the move's own weapon for the swing), and Armor (the move's own hyper armor, or the game's hyper armor over the whole move, marked as a cheat).[/*]
+[*]Per-slot settings on the right panel: Speed, Feel (the game's timing or the move's own), Damage (the move's hit numbers or your weapon's), Visual (keep your weapon in hand or show the move's own weapon for the swing), Armor (the move's own hyper armor, or the game's hyper armor over the whole move, marked as a cheat), and Steer (the stick turns you through the whole move and cancels the recovery after the last hit, or only the move's own turn windows).[/*]
 [*]Presets: save, load and delete your sets. They are plain JSON files you can share.[/*]
 [*]Search and filter the candidate list by typing.[/*]
 [*]A master switch that puts every attack back to the weapon's own animation at once.[/*]
@@ -33,23 +35,23 @@ Every player attack starts its animation through one function inside the game. C
 
 CCS goes in:
 [code]MortalShell2/Binaries/Win64/ue4ss/Mods/CCS/
-    enabled.txt
-    core.json
-    catalog.json
-    enemy-catalog.json
-    ranged-catalog.json
-    running-catalog.json
-    release.json
-    README.txt
-    THIRD_PARTY_NOTICES.txt
-    dlls/
-        main.dll
-    core/
-        ccs_core-1.0.0-alpha.1.dll
-    assets/
-        banner.png
-        enemy-icons/
-            *.png[/code]
+    enabled.txt
+    core.json
+    catalog.json
+    enemy-catalog.json
+    ranged-catalog.json
+    running-catalog.json
+    release.json
+    README.txt
+    THIRD_PARTY_NOTICES.txt
+    dlls/
+        main.dll
+    core/
+        ccs_core-1.0.0-alpha.1.dll
+    assets/
+        banner.png
+        enemy-icons/
+            *.png[/code]
 
 After the first run CCS also creates settings.json, presets/, logs/, runtime/ and CCS.log in that folder.
 
@@ -97,5 +99,4 @@ Close the game and replace dlls/, core/, core.json and the catalog files. Keep s
 Tell me what breaks, what feels wrong and what you want next. When you report a bug, attach Mods/CCS/logs/ccs.jsonl and say which weapon and which slots were set; that file holds what the mod did on every swing. Ideas for the next versions are as welcome as bug reports.
 
 [size=4][b]Source[/b][/size]
-
 [url=https://github.com/ngodn/CustomShellSystem/tree/main/CCS]github.com/ngodn/CustomShellSystem[/url]

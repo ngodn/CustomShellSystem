@@ -116,11 +116,12 @@ struct SlotTuning {
     std::string hit_damage{"move"};    // "move": the replacement's own hit payload; "weapon": the slot's original payload
     std::string weapon{"inventory"};   // "inventory": the equipped weapon stays visible; "move": the move's own weapon shows
     std::string armor{"full"};         // "full" (default): the game's hyper armor over the whole swing (cheat); "move": only the hyper armor the montage authors
+    std::string steer{"full"};         // "full" (default): the stick turns you through the whole move and cancels the recovery; "move": only the move's own windows
     bool operator==(const SlotTuning&) const = default;
 };
 inline bool valid_tuning(const SlotTuning& t) {
     return t.speed >= 0.5 && t.speed <= 2.0 && (t.feel == "game" || t.feel == "move") && (t.hit_damage == "move" || t.hit_damage == "weapon") && (t.weapon == "inventory" || t.weapon == "move")
-        && (t.armor == "move" || t.armor == "full");
+        && (t.armor == "move" || t.armor == "full") && (t.steer == "move" || t.steer == "full");
 }
 
 struct SlotBinding {

@@ -50,6 +50,20 @@ source in `Slot::armors`, donor kept referenced and reloaded after a world chang
 copy shared by the carries and the armor is `Combat::append_rows`. Saved in settings and
 presets as `armor`.
 
+Steer option (same day, core fe516af5b49f). Long enemy moves bring their own short turn windows
+(the Sicario combo has ten, all with the notify's defaults: target sampled once, fixed interp
+speed) and no movement cancel, so the player is locked for the whole clip. New per-slot row
+"Steer": "Whole move" (default) or "Move's own", shown with "Move's own" feel only ("Game's"
+feel already carries the weapon's rows). The armor clone became the player-feel overlay
+(`Combat::build_overlay`, cache `Slot::overlays`, donor rows `donor_armor_`, `donor_turn_`,
+`donor_cancel_` from `AM_Shells_MartyrsBlade_B1`): the donor's `ANS_RotateToFaceTarget` (weapon
+interp speed, continuous target) from the first frame to the last hit's end, then the donor's
+`ANS_InterruptWithMovement` from there to the end so the stick cancels the recovery the way it
+cancels the player's own attacks. A move without hit windows steers to the end and keeps its
+recovery. The move's own turn rows stay and tick alongside. Saved as `steer`. Changing Armor or
+Steer drops the slot's overlay cache. The user chose "steer all the way, cancel the tail" over
+"cancel any time after the first hit".
+
 Still to verify live: an enemy move with "Move's own" feel turning with the stick during the
 wind-up; whether the enemy's own translation warp overshoots on long lunges (if it does, add
 "SpartaMotionWarping_Translation" back to the drop list, or gate it per slot).

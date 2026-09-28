@@ -29,9 +29,11 @@ the keys for the device you are using.
   button puts the weapon's own attack back. Tab or the right stick click
   opens the slot's own settings on the right: Speed, Feel (Game's or Move's
   own), Damage (Move's own or Weapon's own), Visual (My weapon or Move's
-  weapon) and Armor (Move's own, or Hyper armor over the whole move, a
-  cheat). The search key shown in the footer (keyboard only) puts the
-  caret in the search field; typing filters the list.
+  weapon), Armor (Move's own, or Hyper armor over the whole move, a
+  cheat) and Steer (Whole move: the stick turns you through the move and
+  cancels the recovery after the last hit; or Move's own). The search key
+  shown in the footer (keyboard only) puts the caret in the search field;
+  typing filters the list.
   Presets: save, load and delete your own presets in Mods/CCS/presets/.
   Settings: the master switch, Charged attacks, menu scale, reset all slots.
 

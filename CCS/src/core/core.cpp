@@ -333,9 +333,15 @@ nlohmann::json Core::model() const {
                 {"description", "Hyper armor: the game's hyper armor covers the whole move. Hits still hurt but do not stagger you out of it. Attacks that break hyper armor still do. "
                     "Move's own: a hit interrupts this move wherever it would interrupt its owner. Most of your own attacks have no hyper armor, so any hit cancels them."}});
         }
+        if (!id.empty() && tune.feel == "move") {
+            settings_rows.push_back({{"type", "choice"}, {"id", sid + ".steer"}, {"label", "Steer"}, {"value", tune.steer},
+                {"options", Json::array({{{"id", "full"}, {"label", "Whole move"}}, {{"id", "move"}, {"label", "Move's own"}}})},
+                {"description", "Whole move: the stick or your lock-on turns you through the whole move at your weapon's turn rate, and after the last hit pushing the stick cancels the recovery, like your own attacks. "
+                    "Move's own: only the turn windows the move brings, and its recovery plays out."}});
+        }
         customize.push_back({{"type", "choice"}, {"id", sid}, {"label", slot_to_string(slot)}, {"tile", tile_labels[i]}, {"name", slot_titles[i] + 4}, {"hidden", ranged_slot && !sidearm_slot_enabled},
             {"value", id}, {"icon", id.empty() ? weapon_icon(current_weapon_) : move_icon(id)}, {"options", std::move(options)}, {"settings", settings_rows},
-            {"settings_key", speed_id + "/" + tune.hit_damage + "/" + tune.weapon + "/" + tune.armor + (mesh_ready ? "/m" : "")}, {"enabled", combat_ != nullptr && catalog_error_.empty()}});
+            {"settings_key", speed_id + "/" + tune.hit_damage + "/" + tune.weapon + "/" + tune.armor + "/" + tune.steer + (mesh_ready ? "/m" : "")}, {"enabled", combat_ != nullptr && catalog_error_.empty()}});
     }
     sections.push_back({{"id", "customize"}, {"title", "Customize"}, {"kind", "slots"}, {"controls", std::move(customize)}});
     // ---- Presets
@@ -398,7 +404,7 @@ nlohmann::json Core::model() const {
 void Core::handle_event(const nlohmann::json& event) {
     const auto id = event.at("id").get<std::string>();
     last_message_.clear(); ++model_revision_;
-    if (id.starts_with("slot.") && id.find('.', 5) != std::string::npos) {   // slot.<S>.<speed|feel|hit_damage|weapon|armor>
+    if (id.starts_with("slot.") && id.find('.', 5) != std::string::npos) {   // slot.<S>.<speed|feel|hit_damage|weapon|armor|steer>
         const auto second = id.find('.', 5);
         const auto slot = string_to_slot(id.substr(5, second - 5)); const auto key = id.substr(second + 1);
         if (!slot || !combat_) throw std::runtime_error("Unknown slot");
@@ -410,6 +416,7 @@ void Core::handle_event(const nlohmann::json& event) {
             else if (key == "hit_damage") tune.hit_damage = value;
             else if (key == "weapon") tune.weapon = value;
             else if (key == "armor") tune.armor = value;
+            else if (key == "steer") tune.steer = value;
             else throw std::runtime_error("Unknown slot setting");
         } catch (const std::logic_error&) { throw std::runtime_error("Invalid slot setting value"); }
         if (!valid_tuning(tune)) throw std::runtime_error("Invalid slot setting value");

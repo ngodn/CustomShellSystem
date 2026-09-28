@@ -78,6 +78,7 @@ void Combat::set_tuning(SlotId slot, const SlotTuning& tuning) {
     if (!valid_tuning(tuning) || s.tuning == tuning) return;
     if (tuning.hit_damage != "weapon") restore_payload(s);   // back to the replacement's own payload at once
     if (tuning.weapon != "move" && shown_montage_.get() && shown_montage_.get() == s.montage.get()) restore_weapon();
+    if (tuning.armor != s.tuning.armor || tuning.steer != s.tuning.steer) release_overlays(s);   // the overlay's rows depend on both
     s.tuning = tuning;
 }
 // The visible mesh of each move source's weapon: player primaries are WP_<X> blueprints whose
@@ -120,7 +121,7 @@ void Combat::release(Slot& slot) {
     restore_payload(slot);
     release_transplants(slot);
     release_carries(slot);
-    release_armors(slot);
+    release_overlays(slot);
     if (shown_montage_.get() && shown_montage_.get() == slot.montage.get()) restore_weapon();
     if (slot.rooted) { if (auto* montage = slot.montage.get()) drop_referenced(world_.get(), montage); slot.rooted = false; }
     if (auto* copy = slot.play.get(); copy && copy != slot.montage.get()) drop_referenced(world_.get(), copy);
@@ -551,54 +552,93 @@ UObject* Combat::build_carry(UObject* original, UObject* replacement, bool hold,
     log("CCS windows carried: " + narrow(original->GetNamePrivate().ToString()) + " -> " + narrow(replacement->GetNamePrivate().ToString()) + ": " + report);
     return clone;
 }
-// ---- hyper armor over the whole swing ("Armor: Hyper armor"): the game's own ANS_HyperArmor
-// notify state, which applies GE_HyperArmor (State.HyperArmor) on begin and removes it on end,
-// covers the clone from its first frame to its last. The row comes from a player montage that
-// authors it with no required tag (the Martyr's Blade heavy), kept referenced as the donor.
-bool Combat::ensure_armor_donor() {
-    if (armor_donor_.get() && armor_row_ >= 0) return true;
-    if (armor_donor_failed_) return false;
+// ---- the player-feel overlay: rows the game authors on the player's own swings, appended over
+// whatever the slot plays. Hyper armor (ANS_HyperArmor applies GE_HyperArmor, State.HyperArmor,
+// on begin and removes it on end) covers the clone from its first frame to its last. Steering is
+// the weapon's turn window (ANS_RotateToFaceTarget with the weapon's interp speed, continuous
+// target) from the first frame to the last hit, then the movement cancel (ANS_InterruptWithMovement)
+// from the last hit to the end, the shape of every player attack. The rows come from a player
+// montage that authors all three with no required tag (the Martyr's Blade heavy), kept as the donor.
+bool Combat::ensure_donor() {
+    if (donor_.get() && donor_armor_ >= 0 && donor_turn_ >= 0 && donor_cancel_ >= 0) return true;
+    if (donor_failed_) return false;
     try {
         static const char* donor_path = "/Game/Sparta/Characters/Humans/Player/Animations/MartyrsBlade/AM_Shells_MartyrsBlade_B1.AM_Shells_MartyrsBlade_B1";
         auto* donor = load(donor_path);
         const auto& l = notify_layout();
         FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(donor) + l.notifies->GetOffset_Internal());
-        int found = -1;
-        for (int i = 0; i < std::min(rows.Num(), 256) && found < 0; ++i) {
+        int armor = -1, turn = -1, cancel = -1;
+        for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
             UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + l.state->GetOffset_Internal(), sizeof(object));
-            if (object && object->GetClassPrivate() && narrow(object->GetClassPrivate()->GetNamePrivate().ToString()) == "ANS_HyperArmor_C") found = i;
+            if (!object || !object->GetClassPrivate()) continue;
+            const auto cls = narrow(object->GetClassPrivate()->GetNamePrivate().ToString());
+            if (armor < 0 && cls == "ANS_HyperArmor_C") armor = i;
+            else if (turn < 0 && cls == "ANS_RotateToFaceTarget_C") turn = i;
+            else if (cancel < 0 && cls == "ANS_InterruptWithMovement_C") cancel = i;
         }
-        if (found < 0) throw std::runtime_error("donor montage has no hyper armor row");
+        if (armor < 0 || turn < 0 || cancel < 0) throw std::runtime_error("donor montage lacks a hyper armor, turn or movement cancel row");
         if (!keep_referenced(world_.get(), donor)) throw std::runtime_error("no world to hold the donor");
-        armor_donor_.capture(donor); armor_row_ = found;
+        donor_.capture(donor); donor_armor_ = armor; donor_turn_ = turn; donor_cancel_ = cancel;
         return true;
     } catch (const std::exception& e) {
-        armor_donor_failed_ = true;
-        log(std::string("CCS hyper armor unavailable: ") + e.what() + "; Armor stays the move's own");
+        donor_failed_ = true;
+        log(std::string("CCS player-feel rows unavailable: ") + e.what() + "; Armor and Steer stay the move's own");
         return false;
     }
 }
-UObject* Combat::build_armor(UObject* source) {
-    if (!ensure_armor_donor()) throw std::runtime_error("no hyper armor donor");
+float Combat::last_hit_end(UObject* montage) const {
+    if (!montage) return -1.f;
+    const auto& l = notify_layout();
+    auto* hit_state = static_cast<UClass*>(l.hit_state); auto* hit_notify = static_cast<UClass*>(l.hit_notify);
+    FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(montage) + l.notifies->GetOffset_Internal());
+    float best = -1.f;
+    for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
+        for (auto* field : {l.notify, l.state}) {
+            UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + field->GetOffset_Internal(), sizeof(object));
+            if (!object || !((hit_state && object->IsA(hit_state)) || (hit_notify && object->IsA(hit_notify)))) continue;
+            float at{}, length{}; std::memcpy(&at, rows.GetRawPtr(i) + l.link->GetOffset_Internal(), sizeof(at));
+            if (l.duration && field == l.state) std::memcpy(&length, rows.GetRawPtr(i) + l.duration->GetOffset_Internal(), sizeof(length));
+            if (!std::isfinite(at) || at < 0.f) continue;
+            const float end = std::isfinite(length) && length > 0.f ? at + length : at;
+            if (end > best) best = end;
+        }
+    }
+    return best;
+}
+UObject* Combat::build_overlay(UObject* source, bool armor, bool steer) {
+    if (!ensure_donor()) throw std::runtime_error("no donor rows");
     const float len = read<float>(source, L"SequenceLength");
     if (!(len > 0.05f)) throw std::runtime_error("Montage length unusable");
+    const float last = std::max(0.02f, len - 0.01f);
+    // Steering ends where the last hit does; the movement cancel starts there. A move without a
+    // hit window steers to the end and keeps its recovery (nothing marks where it starts).
+    const float hits_end = steer ? last_hit_end(source) : -1.f;
+    const bool cancel = steer && hits_end > 0.05f && hits_end < last - 0.1f;
+    std::vector<int> rows; std::vector<std::pair<float, float>> spans; std::vector<const char*> names;
+    if (armor) { rows.push_back(donor_armor_); spans.push_back({0.f, last}); names.push_back("armor"); }
+    if (steer) { rows.push_back(donor_turn_); spans.push_back({0.f, cancel ? hits_end : last}); names.push_back("turn"); }
+    if (cancel) { rows.push_back(donor_cancel_); spans.push_back({hits_end + 0.02f, last}); names.push_back("cancel"); }
     auto* clone = clone_montage(source);
-    const auto report = append_rows(clone, armor_donor_.get(), {armor_row_}, [&](int, float& start, float& end) { start = 0.f; end = std::max(0.02f, len - 0.01f); });
-    log("CCS hyper armor added: " + narrow(source->GetNamePrivate().ToString()) + " " + report);
+    std::string report;
+    append_rows(clone, donor_.get(), rows, [&](int k, float& start, float& end) {
+        start = spans[size_t(k)].first; end = spans[size_t(k)].second;
+        report += std::string(report.empty() ? "" : ", ") + names[size_t(k)] + " " + std::to_string(start).substr(0, 4) + " to " + std::to_string(end).substr(0, 4) + " s";
+    });
+    log("CCS player feel added: " + narrow(source->GetNamePrivate().ToString()) + ": " + report);
     return clone;
 }
-UObject* Combat::armored(Slot& s, UObject* source) {
-    for (auto& t : s.armors) if (t.original.get() == source) { if (auto* clone = t.clone.get()) return clone; }
-    if (s.armors.size() >= 8) { auto& old = s.armors.front(); if (auto* c = old.clone.get()) drop_referenced(world_.get(), c); s.armors.erase(s.armors.begin()); }
-    auto* clone = build_armor(source);
+UObject* Combat::overlaid(Slot& s, UObject* source, bool armor, bool steer) {
+    for (auto& t : s.overlays) if (t.original.get() == source) { if (auto* clone = t.clone.get()) return clone; }
+    if (s.overlays.size() >= 8) { auto& old = s.overlays.front(); if (auto* c = old.clone.get()) drop_referenced(world_.get(), c); s.overlays.erase(s.overlays.begin()); }
+    auto* clone = build_overlay(source, armor, steer);
     Transplant t; t.original.capture(source); t.clone.capture(clone);
     keep_referenced(world_.get(), clone);
-    s.armors.push_back(std::move(t));
+    s.overlays.push_back(std::move(t));
     return clone;
 }
-void Combat::release_armors(Slot& s) {
-    for (auto& t : s.armors) if (auto* c = t.clone.get()) drop_referenced(world_.get(), c);
-    s.armors.clear(); s.armor_warned = false;
+void Combat::release_overlays(Slot& s) {
+    for (auto& t : s.overlays) if (auto* c = t.clone.get()) drop_referenced(world_.get(), c);
+    s.overlays.clear(); s.overlay_warned = false;
 }
 // ---- weapon in hand: the held weapon actor (WP_WeaponBase_Static) draws its SM_Weapon static
 // mesh component; swapping that mesh shows the move's weapon without touching inventory, slots,
@@ -784,11 +824,11 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
     if (player.world && player.world != world_.get()) {   // a new world holds none of our references: everything reloads
         const bool had_world = world_.ptr != nullptr;
         world_ = {}; world_.capture(player.world);
-        armor_donor_ = {}; armor_row_ = -1; armor_donor_failed_ = false;   // the donor row lives in the old world's references
+        donor_ = {}; donor_armor_ = donor_turn_ = donor_cancel_ = -1; donor_failed_ = false;   // the donor rows live in the old world's references
         if (had_world) {
             log("CCS world changed; reloading the slots");
             montage_facts_.clear();
-            for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); s.carries.clear(); s.armors.clear(); s.was_ready = false; if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.play = {}; s.play_hold = s.play_turn = false; s.show_mesh = {}; s.pending = true; } }
+            for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); s.carries.clear(); s.overlays.clear(); s.was_ready = false; if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.play = {}; s.play_hold = s.play_turn = false; s.show_mesh = {}; s.pending = true; } }
         }
     }
     for (auto& s : slots_) {   // a loaded montage that stops answering: say why once, and load it again
@@ -945,16 +985,19 @@ void Combat::observe(void* frame_ptr) {
             }
         }
         const char* how = pointer == replacement ? "swapped" : (s.tuning.feel == "game" ? "swapped, game feel" : "swapped, windows carried");
-        if (s.tuning.armor == "full") {
-            try { pointer = armored(s, pointer); }
-            catch (const std::exception& e) { ++failures_; if (!s.armor_warned) { s.armor_warned = true; log("CCS hyper armor unavailable for " + s.move_id + ": " + e.what()); } }
+        // The player-feel overlay: hyper armor over the whole swing, and with "Move's own" feel
+        // the weapon's steering and movement cancel ("Game's" feel already carries the weapon's).
+        const bool armor = s.tuning.armor == "full", steer = s.tuning.steer == "full" && s.tuning.feel != "game";
+        if (armor || steer) {
+            try { pointer = overlaid(s, pointer, armor, steer); }
+            catch (const std::exception& e) { ++failures_; if (!s.overlay_warned) { s.overlay_warned = true; log("CCS player feel unavailable for " + s.move_id + ": " + e.what()); } }
         }
         std::memcpy(bytes + inputs_[1]->GetOffset_Internal(), &pointer, sizeof(pointer));
         ++s.hits; changed = true;
         note_recent(cls, slot, how);
         if (noted_.size() < 64 && noted_.insert(key ^ 0x51ed270b9d1c3a7full).second)
-            log("CCS swap: " + narrow(cls->GetNamePrivate().ToString()) + " is slot " + slot_to_string(SlotId(slot)) + " -> " + s.move_id + " (" + how + (s.tuning.armor == "full" ? ", hyper armor)" : ")")
-                + "; feel " + s.tuning.feel + ", damage " + s.tuning.hit_damage + ", visual " + s.tuning.weapon + ", armor " + s.tuning.armor + ", speed " + std::to_string(s.tuning.speed) + ", rig " + rig::short_name(pawn_rig_));
+            log("CCS swap: " + narrow(cls->GetNamePrivate().ToString()) + " is slot " + slot_to_string(SlotId(slot)) + " -> " + s.move_id + " (" + how + (armor ? ", hyper armor" : "") + (steer ? ", steering" : "") + ")"
+                + "; feel " + s.tuning.feel + ", damage " + s.tuning.hit_damage + ", visual " + s.tuning.weapon + ", armor " + s.tuning.armor + ", steer " + s.tuning.steer + ", speed " + std::to_string(s.tuning.speed) + ", rig " + rig::short_name(pawn_rig_));
         if (s.tuning.weapon == "move") {
             if (auto* mesh = s.show_mesh.get()) { try { show_weapon(mesh, pointer, GetTickCount64()); } catch (const std::exception& e) { ++failures_; log(std::string("CCS weapon show failed: ") + e.what()); } }
         }
