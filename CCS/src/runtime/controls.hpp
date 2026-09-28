@@ -19,13 +19,21 @@ inline bool interactive(const Json& c) {
     const auto type = c.at("type");
     return type != "label" && type != "progress" && type != "loading" && c.value("enabled", true) && !c.value("busy", false);
 }
+// A choice control's options: its own, or the shared candidate list of the section it sits in
+// (the slots page keeps one list for all thirteen slots instead of a copy per slot).
+inline const Json& options_of(const Json& c, const Json* section = nullptr) {
+    static const Json none = Json::array();
+    if (c.contains("options")) return c.at("options");
+    if (section && section->contains("candidates")) return section->at("candidates");
+    return none;
+}
 inline std::string display_value(const Json& c) {
     const auto type = c.at("type");
     if (c.value("busy", false)) return "Working...";
     if (type == "toggle") return c.at("value").get<bool>() ? "On" : "Off";
     if (type == "loading") return c.at("value").get<bool>() ? "Loading..." : "Ready";
     if (type == "choice" || type == "radio") {
-        for (const auto& option : c.at("options")) if (option.at("id") == c.at("value")) return option.at("label").get<std::string>();
+        for (const auto& option : options_of(c)) if (option.at("id") == c.at("value")) return option.at("label").get<std::string>();
     }
     if (type == "text") return c.at("value").get<std::string>();
     if (type == "number" || type == "slider" || type == "progress") {
@@ -47,7 +55,8 @@ inline Json adjusted_value(const Json& c, int direction) {
     if (!interactive(c) || !adjustable(c)) throw std::runtime_error("Control cannot be adjusted");
     const auto type = c.at("type");
     if (type == "number" || type == "slider") return snap_value(c, c.at("value").get<double>() + (direction < 0 ? -1 : 1) * c.at("step").get<double>());
-    const auto& options = c.at("options");
+    const auto& options = options_of(c);
+    if (options.empty()) throw std::runtime_error("Control has no options");
     for (size_t i = 0; i < options.size(); ++i) if (options[i].at("id") == c.at("value"))
         return options[(i + options.size() + (direction < 0 ? -1 : 1)) % options.size()].at("id");
     throw std::runtime_error("Selected option no longer exists");
@@ -58,10 +67,11 @@ inline void validate_event(const Json& model, const Json& event) {
     if (!event.is_object()) throw std::runtime_error("Control event must be an object");
     const auto id = event.at("id").get<std::string>();
     // A slot control may carry per-slot settings rows under "settings"; they are controls too.
+    const Json* home = nullptr;   // the section the control was found in, for its shared candidates
     auto find = [&]() -> const Json* {
         for (const auto& section : model.at("sections")) for (const auto& c : section.at("controls")) {
-            if (c.at("id") == id) return &c;
-            if (c.contains("settings")) for (const auto& s : c.at("settings")) if (s.at("id") == id) return &s;
+            if (c.at("id") == id) { home = &section; return &c; }
+            if (c.contains("settings")) for (const auto& s : c.at("settings")) if (s.at("id") == id) { home = &section; return &s; }
         }
         return nullptr;
     };
@@ -78,7 +88,7 @@ inline void validate_event(const Json& model, const Json& event) {
             if (v < c.at("min").get<double>() - 1e-9 || v > c.at("max").get<double>() + 1e-9) throw std::runtime_error("Value is out of range");
         } else if (type == "choice" || type == "radio") {
             bool found = false;
-            for (const auto& option : c.at("options")) if (option.at("id") == value) found = true;
+            for (const auto& option : options_of(c, home)) if (option.at("id") == value) found = true;
             if (!found) throw std::runtime_error("Unknown option");
         } else if (type == "text") {
             if (!value.is_string() || value.get_ref<const std::string&>().size() > 256) throw std::runtime_error("Text must be at most 256 bytes");

@@ -110,6 +110,20 @@ Alpha.2 hardening (same day, core 64487718d553). Two reviewers over the new code
   be served after a switch when the transplant fell back to the replacement).
 - The focused setting's text moved out of the scrolling rows into a fixed 230 px box under them.
 
+Alpha.2 hotfix.1 (same day, core 57cb16af733d). Alpha.2 refused every assignment with
+"[json.exception.out_of_range.403] key 'options' not found" (Nexus report by Magdollz): the
+shared candidate list moved to the section but `validate_event` in `src/runtime/controls.hpp`
+still read each slot control's `options`. `options_of(control, section)` now falls back to the
+section's `candidates`; `display_value` and `adjusted_value` no longer throw on a control
+without options. Host test in `work/alpha2-hotfix/controls_test.cpp` replays the failing event.
+Lesson: the menu model is consumed in three places (page, act, validator); a shape change needs
+all three plus a host test before release.
+
+The same evening's game crashes were not CCS: three UE "GPUCrash" reports
+(DXGI_ERROR_DEVICE_REMOVED) with kernel `NVRM: Xid 13, Graphics SM Warp Exception, MMU Fault`
+at 17:49, 17:50 and 17:51, and 53 Xid lines since 18 September, the day nvidia-utils went from
+610.57.04 to 615.71.09. CCS logs show no failure before any of them.
+
 Still to verify live: an enemy move with "Move's own" feel turning with the stick during the
 wind-up; whether the enemy's own translation warp overshoots on long lunges (if it does, add
 "SpartaMotionWarping_Translation" back to the drop list, or gate it per slot).
