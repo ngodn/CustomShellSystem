@@ -93,11 +93,12 @@ def stage_data() -> None:
         (MOD_DEST / 'presets').mkdir(parents=True, exist_ok=True)
         for preset in shipped.glob('*.json'):
             copy_verified(preset, MOD_DEST / 'presets' / preset.name)
-    icons = ROOT / 'assets/enemy-icons'
-    if icons.is_dir():
-        (MOD_DEST / 'assets/enemy-icons').mkdir(parents=True, exist_ok=True)
-        for icon in icons.glob('*.png'):
-            copy_verified(icon, MOD_DEST / 'assets/enemy-icons' / icon.name)
+    for folder in ('enemy-icons', 'icons'):
+        icons = ROOT / 'assets' / folder
+        if icons.is_dir():
+            (MOD_DEST / 'assets' / folder).mkdir(parents=True, exist_ok=True)
+            for icon in icons.glob('*.png'):
+                copy_verified(icon, MOD_DEST / 'assets' / folder / icon.name)
 
 
 def swap_core() -> None:
@@ -137,8 +138,9 @@ def release_files(version: str, out: Path) -> dict[str, bytes]:
     }
     for name in ('catalog.json', 'enemy-catalog.json', 'ranged-catalog.json', 'running-catalog.json'):
         files['CCS/' + name] = (ROOT / 'data' / name).read_bytes()
-    for icon in sorted((ROOT / 'assets/enemy-icons').glob('*.png')):
-        files['CCS/assets/enemy-icons/' + icon.name] = icon.read_bytes()
+    for folder in ('enemy-icons', 'icons'):
+        for icon in sorted((ROOT / 'assets' / folder).glob('*.png')):
+            files[f'CCS/assets/{folder}/' + icon.name] = icon.read_bytes()
     return files
 
 

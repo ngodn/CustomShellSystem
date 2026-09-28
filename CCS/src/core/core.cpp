@@ -205,11 +205,15 @@ std::string Core::move_label(const std::string& id) const {
     const auto* move = catalog_.find_move(id);
     return move ? pretty(move->display_name) : "Unknown move (" + id + ")";
 }
+// A move without an icon of its own (an enemy family with no render, a montage the asset registry
+// found after a patch) shows the mod's emblem, so an assigned slot never looks empty.
+static const char* fallback_icon = "file:assets/icons/move-fallback.png";
 std::string Core::move_icon(const std::string& id) const {
-    const auto* move = id.empty() ? nullptr : catalog_.find_move(id);
-    if (!move) return {};
-    if (move->origin == MoveOrigin::EnemyHumanoid) return enemy_icon(move->source_name);
-    return weapon_icon(move->source_name);
+    if (id.empty()) return {};
+    const auto* move = catalog_.find_move(id);
+    if (!move) return fallback_icon;
+    const auto icon = move->origin == MoveOrigin::EnemyHumanoid ? enemy_icon(move->source_name) : weapon_icon(move->source_name);
+    return icon.empty() ? fallback_icon : icon;
 }
 // An enemy family's icon is the mod's own PNG under assets/enemy-icons, when the file exists.
 std::string Core::enemy_icon(const std::string& source) const {
@@ -255,7 +259,7 @@ const nlohmann::json& Core::candidate_options() const {
         options.push_back(std::move(option));
     }
     for (const auto* move : enemy) {
-        options.push_back({{"id", move->id}, {"label", move->display_name}, {"group", "Enemy: " + enemy_name(move->source_name)}, {"title", move->display_name}, {"icon", enemy_icon(move->source_name)},
+        options.push_back({{"id", move->id}, {"label", move->display_name}, {"group", "Enemy: " + enemy_name(move->source_name)}, {"title", move->display_name}, {"icon", move_icon(move->id)},
             {"subtitle", enemy_name(move->source_name) + " attack"}, {"enabled", !missing(*move)}, {"disabled_label", "Not in this game version"}, {"description", move->description}, {"value", move->payload_known ? std::string{} : std::string("No hit window in this animation")}});
     }
     if (scanned) {   // montages the running game lists that neither catalog knows: new content after a patch
@@ -264,7 +268,7 @@ const nlohmann::json& Core::candidate_options() const {
         for (const auto& f : discovery_.found()) {
             if (known.contains(f.path)) continue;
             options.push_back({{"id", "found:" + f.path}, {"label", pretty(f.name)}, {"group", std::string(f.player ? "New player move: " : "New enemy move: ") + enemy_name(f.source)},
-                {"title", pretty(f.name)}, {"subtitle", "Found in this game version, not yet verified"},
+                {"title", pretty(f.name)}, {"subtitle", "Found in this game version, not yet verified"}, {"icon", fallback_icon},
                 {"description", "Listed by the game's asset registry but absent from the shipped catalog. Assigning it loads and checks the animation the same way; hit windows are unknown until then."}});
         }
     }
