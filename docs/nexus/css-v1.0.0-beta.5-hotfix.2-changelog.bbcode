@@ -1,14 +1,9 @@
-[b]CSS 1.0.0-beta.5-hotfix.2[/b] (2026-09-28)
+[b]CSS 1.0.0-beta.5-hotfix.2[/b]
 
-[size=4][b]Fixed[/b][/size]
 [list]
-[*][b]Every CSS outfit shows up on a default Steam install.[/b] Curvy and Cute, BTGG and Beaute Knight Proxima were skipped if the game sits in C:\Program Files (x86)\Steam. CSS saves each outfit's colour masks in its cache folder, and for those three the file path went past the 260 character limit Windows allows. The cache folders are much shorter now, with plenty of room left. Thanks StickyFingazu for the report.[/*]
-[*]The old cache folders get cleaned up on their own the first time you launch.[/*]
+[*]Curvy and Cute, BTGG, Beaute Knight Proxima and other outfits with long file names now show up on a default Steam install.[/*]
 [/list]
 
-If an outfit still doesn't show up, open [b]Mods/CustomShellSystem/CSS.log[/b], look for "CSS package rejected", and send me that line.
-
-[b]Updating from beta.5 or hotfix.1:[/b]
-Close the game, extract the ZIP into [b]MortalShell2/Binaries/Win64/ue4ss/Mods/[/b] and overwrite. Keep your [b]CustomShellSystem/state/[/b] folder. Nothing to migrate. The first launch rebuilds the outfit cache, which can take a few extra seconds.
+Update: close the game, extract the ZIP into [b]MortalShell2/Binaries/Win64/ue4ss/Mods/[/b] and overwrite. The first launch takes a few extra seconds.
 
 [url=https://github.com/ngodn/CustomShellSystem/releases/tag/v1.0.0-beta.5-hotfix.2]Download CSS 1.0.0-beta.5-hotfix.2[/url]
