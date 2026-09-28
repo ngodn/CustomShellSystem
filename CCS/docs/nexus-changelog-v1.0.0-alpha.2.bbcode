@@ -1,0 +1,12 @@
+[b]CCS 1.0.0-alpha.2[/b]
+
+[list]
+[*]Enemy moves turn with the stick or your lock-on during the wind-up. The cleaned copy keeps the game's own turn window, and a move without one gets your weapon's.[/*]
+[*]New slot setting [b]Armor[/b]. Hyper armor (cheat), on by default, covers the whole move: a hit still hurts but no longer cancels the move. Move's own keeps only the armor the move brings. Attacks that break hyper armor still break it.[/*]
+[*]New slot setting [b]Steer[/b]. Whole move, on by default, turns you through the whole move at your weapon's turn rate, and after the last hit pushing the stick cancels the recovery, the way your own attacks work. Move's own keeps only the turn windows the move brings.[/*]
+[*]The Axatana splits back into katanas on the first light attack after a heavy with Feel set to Move's own. The weapon's transform and equip-state notifies now travel with the swap.[/*]
+[*]Elemental Tarstones fire on charged attacks with Feel set to Move's own. The trigger now follows the replacement's hits.[/*]
+[*]The swap line in the log says how the montage was built (game feel, carried windows, hyper armor, steering).[/*]
+[/list]
+
+Update: close the game, extract the ZIP into [b]MortalShell2/Binaries/Win64/ue4ss/Mods/[/b] and overwrite. Keep settings.json and presets/ to retain your slots and presets. Slots saved by alpha.1 get Armor and Steer switched on.

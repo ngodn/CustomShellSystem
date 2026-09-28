@@ -629,7 +629,7 @@ void Menu::act(const Json& action) {
 Json Menu::diagnostics() const {
     Json bindings = Json::object(); for (const auto& b : bindings_) bindings[b.action] = b.keys;
     int page_widgets = 0, nested = 0;
-    for (const auto* stack : {&tab_items_, &list_, &head_, &panel_, &actions_, &footer_}) { page_widgets += int(stack->used); for (const auto& cell : stack->cells) nested += int(cell.kinds.size()); }
+    for (const auto* stack : {&tab_items_, &list_, &head_, &panel_, &note_, &actions_, &footer_}) { page_widgets += int(stack->used); for (const auto& cell : stack->cells) nested += int(cell.kinds.size()); }
     return {{"bindings", bindings}, {"open", active_}, {"attached", page_.Get() != nullptr}, {"skeleton", design_.Get() != nullptr}, {"tab_index", tab_index_},
             {"section", section_}, {"row", row_}, {"picker", picker_}, {"confirm", !confirm_.is_null()},
             {"error", error_}, {"hits", hits_.size()}, {"widgets", cost_.widgets}, {"page_widgets", page_widgets}, {"nested_widgets", nested}, {"created", cost_.created},

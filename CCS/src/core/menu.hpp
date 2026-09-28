@@ -113,14 +113,15 @@ private:
     };
     struct Cell { WeakObject holder; std::vector<Item> kinds; int shown = -1; };
     struct Stack { WeakObject box; std::deque<Cell> cells; size_t used = 0; };
-    Stack tab_items_, list_, head_, top_, panel_, actions_, footer_;
+    Stack tab_items_, list_, head_, top_, panel_, note_, actions_, footer_;   // note_: the fixed box under the rows for the focused setting's text
     // The slot grid: ten of the game's equipment slot tiles with a label over each, built once
     // in the centre column and restyled per build.
     struct Tile { WeakObject widget, label, hit; int selected = -1, shown = -1, dimmed = -1; const void* icon = nullptr; std::string text, icon_path; };
     std::array<Tile, 13> tiles_{};
     WeakObject grid_root_, banner_image_;
     int banner_shown_ = -1;
-    WeakObject design_, left_root_, right_root_, list_scroll_, strip_scroll_, details_, panel_scroll_, panel_size_,
+    int note_shown_ = -1;                    // whether the note box under the rows is visible
+    WeakObject design_, left_root_, right_root_, list_scroll_, strip_scroll_, details_, panel_scroll_, panel_size_, note_size_,
                status_text_, title_text_, subtitle_text_, logo_image_, strip_previous_, strip_next_, strip_previous_glyph_, strip_next_glyph_;
     double design_w_ = 0, design_h_ = 0, design_scale_ = 0;
     int budget_ = 0;

@@ -208,11 +208,11 @@ void Menu::glyph(UObject* widget, const std::string& action, uint8_t fallback, u
 
 // ---- the skeleton
 void Menu::forget_page() {
-    for (auto* stack : {&tab_items_, &list_, &head_, &top_, &panel_, &actions_, &footer_}) { stack->cells.clear(); stack->used = 0; stack->box.Reset(); }
-    design_.Reset(); left_root_.Reset(); right_root_.Reset(); list_scroll_.Reset(); strip_scroll_.Reset(); details_.Reset(); panel_scroll_.Reset(); panel_size_.Reset();
+    for (auto* stack : {&tab_items_, &list_, &head_, &top_, &panel_, &note_, &actions_, &footer_}) { stack->cells.clear(); stack->used = 0; stack->box.Reset(); }
+    design_.Reset(); left_root_.Reset(); right_root_.Reset(); list_scroll_.Reset(); strip_scroll_.Reset(); details_.Reset(); panel_scroll_.Reset(); panel_size_.Reset(); note_size_.Reset();
     status_text_.Reset(); title_text_.Reset(); subtitle_text_.Reset(); logo_image_.Reset(); strip_previous_.Reset(); strip_next_.Reset(); strip_previous_glyph_.Reset(); strip_next_glyph_.Reset();
     input_prompt_.Reset(); search_input_.Reset(); name_input_.Reset();
-    grid_root_.Reset(); banner_image_.Reset(); banner_shown_ = -1;
+    grid_root_.Reset(); banner_image_.Reset(); banner_shown_ = -1; note_shown_ = -1;
     for (auto& tile : tiles_) tile = {};
     design_w_ = design_h_ = design_scale_ = 0; shown_section_ = revealed_row_ = -1;
     panel_context_.clear(); panel_revealed_ = nullptr; panel_fit_pending_ = false; panel_max_ = 720.f; pending_reveals_ = {};
@@ -365,6 +365,16 @@ bool Menu::page(double width, double height) {
     faded(panel_size, panel_scroll, L"WBP_SBFH_Inventory", right); panel_scroll_ = panel_scroll;
     auto* panel = construct(L"/Script/UMG.VerticalBox", tree);
     add_child(panel_scroll, panel); panel_.box = panel;
+    // The note under the rows: a fixed-height box of its own, so the focused setting's text never
+    // scrolls away with the rows and the window keeps one geometry however many rows there are.
+    auto* note_size = construct(L"/Script/UMG.SizeBox", tree);
+    invoke(note_size, L"SetHeightOverride", L"InHeightOverride", 230.f);
+    invoke(note_size, L"SetWidthOverride", L"InWidthOverride", float(window_w - 80));
+    invoke(note_size, L"SetClipping", L"InClipping", uint8_t{1});
+    auto* note = construct(L"/Script/UMG.VerticalBox", tree);
+    add_child(note_size, note); note_.box = note; note_size_ = note_size;
+    padding(add_child(part(details, L"VB_CustomWidgets"), note_size), Margin{40, 8, 40, 8});
+    visibility(note_size, collapsed); note_shown_ = 0;
     auto* actions = construct(L"/Script/UMG.VerticalBox", tree);
     padding(add_child(part(details, L"VB_DynamicPrompts"), actions), Margin{0, 10, 0, 10});
     actions_.box = actions;
@@ -376,7 +386,7 @@ bool Menu::page(double width, double height) {
     return true;
 }
 void Menu::invalidate_page() {
-    for (auto* stack : {&tab_items_, &list_, &head_, &top_, &panel_, &actions_, &footer_})
+    for (auto* stack : {&tab_items_, &list_, &head_, &top_, &panel_, &note_, &actions_, &footer_})
         for (auto& cell : stack->cells) {
             cell.shown = -1;
             for (auto& item : cell.kinds) {
@@ -387,7 +397,7 @@ void Menu::invalidate_page() {
             }
         }
     detail_title_.clear(); detail_sub_.clear(); detail_body_ = "\x01"; status_shown_.clear(); title_shown_.clear(); subtitle_shown_.clear();
-    status_error_shown_ = -1; logo_shown_ = -1; banner_shown_ = -1; detail_icon_ = reinterpret_cast<const void*>(1);
+    status_error_shown_ = -1; logo_shown_ = -1; banner_shown_ = -1; note_shown_ = -1; detail_icon_ = reinterpret_cast<const void*>(1);
     for (auto& tile : tiles_) { tile.selected = -1; tile.shown = -1; tile.dimmed = -1; tile.icon = nullptr; tile.icon_path.clear(); tile.text.clear(); }
     if (auto* details = details_.Get()) {
         try {
@@ -727,18 +737,19 @@ void Menu::build() {
     for (const auto& hit : hits_) if (auto* w = hit.widget.Get()) held[w] = hit.down;
     held_ = std::move(held);
     hits_.clear(); sliders_.clear(); name_input_.Reset(); search_input_.Reset();
-    for (auto* stack : {&tab_items_, &list_, &head_, &top_, &panel_, &actions_, &footer_}) stack->used = 0;
+    for (auto* stack : {&tab_items_, &list_, &head_, &top_, &panel_, &note_, &actions_, &footer_}) stack->used = 0;
     budget_ = budget_per_build;
     bool deferred = false;
     build_page(deferred);
-    for (auto* stack : {&tab_items_, &list_, &head_, &top_, &panel_, &actions_, &footer_}) finish(*stack);
+    for (auto* stack : {&tab_items_, &list_, &head_, &top_, &panel_, &note_, &actions_, &footer_}) finish(*stack);
+    if (const int wanted = note_.used ? 1 : 0; wanted != note_shown_) { if (auto* box = note_size_.Get()) { visibility(box, wanted ? shown_passive : collapsed); note_shown_ = wanted; } }
     if (!confirm_.is_null()) dialog(); else dialog_close();
     if (enter_) { transition_started_ = active_ ? GetTickCount64() : 0; enter_ = false; }
     panel_fit_pending_ = true;
     dirty_ = deferred;
     const auto took = monotonic_us() - started;
     ++cost_.builds; cost_.build_us += took; cost_.last_build_us = took; cost_.max_build_us = std::max(cost_.max_build_us, took);
-    cost_.widgets = 0; for (const auto* stack : {&tab_items_, &list_, &head_, &top_, &panel_, &actions_, &footer_}) cost_.widgets += stack->used;
+    cost_.widgets = 0; for (const auto* stack : {&tab_items_, &list_, &head_, &top_, &panel_, &note_, &actions_, &footer_}) cost_.widgets += stack->used;
 }
 void Menu::strip(const std::vector<std::string>& names, int selected, const std::string& action) {
     UObject* selected_tab = nullptr;
@@ -900,7 +911,7 @@ void Menu::build_page(bool& deferred) {
         strip({}, 0, "section");
         paragraph(list_, error_.empty() ? "The page is not ready yet." : error_, danger);
         detail(deps_.title, "", "");
-        finish(list_); finish(head_); finish(panel_); finish(actions_);
+        finish(list_); finish(head_); finish(panel_); finish(note_); finish(actions_);
         status_line(error_, !error_.empty());
         bar_prompt("Close", {{"action", "close"}}, "close", glyph_back, 255);
         finish(footer_);
@@ -1009,7 +1020,7 @@ void Menu::build_page(bool& deferred) {
         const std::string context = std::to_string(section_) + "/" + std::to_string(row_);
         if (context != panel_context_) { if (auto* scroll = panel_scroll_.Get()) invoke(scroll, L"ScrollToStart"); panel_context_ = context; panel_revealed_ = nullptr; }
     }
-    finish(list_); finish(head_); finish(panel_); finish(actions_);
+    finish(list_); finish(head_); finish(panel_); finish(note_); finish(actions_);
     const auto status = model_.value("status", std::string{});
     status_line(error_.empty() ? status : error_, !error_.empty());
     const int key = section_ + count * 1000;
@@ -1189,7 +1200,7 @@ void Menu::build_slots(const Json& section, bool& deferred) {
         }
         if (focus_ != Focus::panel) panel_focus_shown_ = -1;
         // The selection's description, under the rows: the focused setting's note, or the shown move's text.
-        paragraph(panel_, focused_setting ? focused_setting->value("description", std::string{}) : shown ? shown->value("description", std::string{}) : std::string{}, body);
+        paragraph(note_, focused_setting ? focused_setting->value("description", std::string{}) : shown ? shown->value("description", std::string{}) : std::string{}, body);
         // Prompts follow the focus: what Confirm, Secondary, Back and the directions do right now.
         const auto& o = options[matches[size_t(cand)]];
         const bool assigned = o.at("id") == slot->at("value");
@@ -1220,7 +1231,7 @@ void Menu::build_slots(const Json& section, bool& deferred) {
     if (!gamepad_ && focus_ == Focus::list) action_prompt("search", typing_now_ ? "Typing filters the list" : "Search the list", {{"action", "search"}}, glyph_tertiary);
     const std::string context = "slots/" + std::to_string(row_) + "/" + std::to_string(cand);
     if (context != panel_context_) { if (auto* scroll = panel_scroll_.Get()) invoke(scroll, L"ScrollToStart"); panel_context_ = context; panel_revealed_ = nullptr; }
-    finish(list_); finish(head_); finish(top_); finish(panel_); finish(actions_);
+    finish(list_); finish(head_); finish(top_); finish(panel_); finish(note_); finish(actions_);
     status_line(error_.empty() ? model_.value("status", std::string{}) : error_, !error_.empty());
     const int key = section_ + int(model_["sections"].size()) * 1000 + row_ * 100000;
     if (revealed_row_ != cand || shown_section_ != key) {
