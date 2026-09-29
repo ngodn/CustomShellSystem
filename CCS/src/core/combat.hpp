@@ -38,6 +38,14 @@ public:
     const SlotTuning& tuning(SlotId slot) const { return slots_[size_t(slot)].tuning; }
     bool slot_weapon_available(SlotId slot) const { return slots_[size_t(slot)].show_mesh.alive(); }
     bool slot_unarmed(SlotId slot) const { return slots_[size_t(slot)].unarmed; }   // the move hits with fists or feet only
+    // World time without visiting Thestus: the same calls his toggle makes
+    // (BP_DayNight_Interaction_Thestus::SetupLightingChange). The narrative tag World.TimeOfDay.Night
+    // is saved with the game and read by spawners and the Night indicator; GlobalEvent_TriggerNight or
+    // _TriggerDay makes every weather zone relight; GlobalEvent_TimeOfDayChanged tells the rest; the
+    // DL_Day and DL_Night world layers switch. "" when the world can change, else why not.
+    std::string world_time_blocker();
+    bool world_night();
+    std::string set_world_time(bool night);   // returns what happened, for the page's status line
     // Hold attacks are an upgrade in this game (GE_Unlock_Attack_Hold_Light/Heavy grant the
     // Character.Unlocked.HoldAttack tags). Without the tag the game's own charge check fails at
     // once, so the hold slots wait; read from the pawn twice a second.

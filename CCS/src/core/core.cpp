@@ -398,6 +398,15 @@ nlohmann::json Core::model() const {
             "Always night: enemies are that strong in daylight too, and day keeps its light and its world. Always day (cheat): enemies keep their day strength at night, and night keeps its light and its world. "
             "It applies to enemies as they spawn; the ones already standing change after you rest at a beacon or reload."},
         {"enabled", combat_ != nullptr}});
+    {
+        const std::string blocker = combat_ ? combat_->world_time_blocker() : std::string("Combat is unavailable.");
+        const bool night = combat_ && blocker.empty() && combat_->world_night();
+        settings.push_back({{"type", "button"}, {"id", "world_time"}, {"label", night ? "World: night" : "World: day"}, {"action_label", night ? "Seek Daylight" : "Call forth the Night"},
+            {"enabled", blocker.empty()}, {"disabled_label", blocker.empty() ? std::string{} : blocker},
+            {"description", std::string("Does what Thestus does, from here: the world turns to night or back to day, with its lighting and its world layers, and the game saves it. "
+                "Night doubles the health and damage of enemies as they spawn, unless Enemy difficulty holds one strength. ") + (blocker.empty() ? "" : blocker)},
+            {"confirm", night ? "Seek daylight? The world returns to day." : "Call forth the night? The world turns to night."}});
+    }
     settings.push_back({{"type", "slider"}, {"id", "ui_scale"}, {"label", "Menu scale"}, {"value", settings_->ui_scale()}, {"min", 0.75}, {"max", 1.5}, {"step", 0.05}, {"unit", "x"},
         {"description", "Size of this page relative to the game's menus."}});
     settings.push_back({{"type", "button"}, {"id", "reset"}, {"label", "Reset all slots"}, {"action_label", "Reset"}, {"enabled", combat_ != nullptr && combat_->assigned() > 0},
@@ -458,6 +467,10 @@ void Core::handle_event(const nlohmann::json& event) {
     }
     if (id == "enabled") { settings_->set_enabled(event.at("value").get<bool>()); if (combat_) combat_->set_enabled(settings_->enabled()); save_settings_or_log(); return; }
     if (id == "charged_attacks") { settings_->set_charged_without_stone(event.at("value").get<std::string>() == "always"); if (combat_) combat_->set_hold_cheat(settings_->charged_without_stone()); save_settings_or_log(); return; }
+    if (id == "world_time") {
+        if (!combat_) throw std::runtime_error("Combat is unavailable");
+        last_message_ = combat_->set_world_time(!combat_->world_night()); ++model_revision_; return;
+    }
     if (id == "enemy_difficulty") { settings_->set_enemy_difficulty(event.at("value").get<std::string>()); if (combat_) combat_->set_enemy_difficulty(settings_->enemy_difficulty()); save_settings_or_log(); return; }
     if (id == "next_attack") { settings_->set_next_attack(event.at("value").get<std::string>()); if (combat_) combat_->set_chain(settings_->next_attack()); save_settings_or_log(); return; }
     if (id == "ui_scale") { settings_->set_ui_scale(event.at("value").get<double>()); save_settings_or_log(); return; }

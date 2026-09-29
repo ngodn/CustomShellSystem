@@ -1171,6 +1171,75 @@ void Combat::observe_effect(UObject* asc, void* frame_ptr) {
     }
     ++difficulty_added_;
 }
+namespace {
+UObject* library(const char* class_path) {
+    // A blueprint function library's CDO, loading its class first: <package>.<Name>_C -> <package>.Default__<Name>_C.
+    const std::string path = class_path; const auto dot = path.rfind('.');
+    load(path);
+    auto* cdo = find_optional(wide(path.substr(0, dot) + ".Default__" + path.substr(dot + 1)).c_str());
+    if (!cdo) throw std::runtime_error("library missing: " + path);
+    return cdo;
+}
+}
+std::string Combat::world_time_blocker() {
+    auto* pawn = pawn_.get(); auto* world = world_.get();
+    if (!pawn || !world) return "Enter the world first.";
+    if (narrow(world->GetNamePrivate().ToString()) != "L_Core_World_01") return "Only in the open world, not in a dungeon or a boss arena.";
+    try {
+        Call unlocked(library("/Game/Sparta/Core/Utility/BPFL_TimeOfDay.BPFL_TimeOfDay_C"), L"IsThestusUnlocked", 2);
+        unlocked.set(L"__WorldContext", pawn); unlocked.run();
+        if (!unlocked.get<bool>()) return "Thestus has not offered the night yet in this playthrough.";
+        Call instance(find(L"/Script/Engine.Default__GameplayStatics"), L"GetGameInstance", 2);
+        instance.set(L"WorldContextObject", pawn); instance.run();
+        if (auto* gi = instance.get<UObject*>()) {
+            Call boss(gi, L"GetInBossFight", 2); boss.run();
+            if (boss.get<bool>(L"InBossFight")) return "Not during a boss fight.";
+        }
+    } catch (const std::exception& e) { return std::string("Unavailable: ") + e.what(); }
+    return {};
+}
+bool Combat::world_night() {
+    auto* pawn = pawn_.get(); if (!pawn) return false;
+    try {
+        Call night(library("/Game/Sparta/Core/Utility/BPFL_TimeOfDay.BPFL_TimeOfDay_C"), L"IsInNightMode", 2);
+        night.set(L"__WorldContext", pawn); night.run();
+        return night.get<bool>();
+    } catch (...) { return false; }
+}
+std::string Combat::set_world_time(bool night) {
+    if (const auto why = world_time_blocker(); !why.empty()) return why;
+    auto* pawn = pawn_.get();
+    const FName tag(L"World.TimeOfDay.Night", FNAME_Add);
+    auto* player = library("/Game/Sparta/Core/Player/BPFL_Player.BPFL_Player_C");
+    if (night) {
+        Call add(player, L"AddNarrativeTag", 4);
+        add.set(L"TagToAdd", tag); add.set(L"SaveToFile", true); add.set(L"LoadTagsAfterSave", true); add.set(L"__WorldContext", pawn); add.run();
+    } else {
+        Call remove(player, L"RemoveNarrativeTag", 3);
+        remove.set(L"TagToRemove", tag); remove.set(L"SaveToFile", true); remove.set(L"__WorldContext", pawn); remove.run();
+    }
+    // The weather zones relight on TriggerNight or TriggerDay; the rest of the game hears TimeOfDayChanged.
+    auto* events = find(L"/Script/GlobalEventSubsystem.Default__GESFunctions");
+    for (const char* event : {night ? "/Game/Sparta/Core/GES/GlobalEvent_TriggerNight.GlobalEvent_TriggerNight_C" : "/Game/Sparta/Core/GES/GlobalEvent_TriggerDay.GlobalEvent_TriggerDay_C",
+                              "/Game/Sparta/Core/GES/GlobalEvent_TimeOfDayChanged.GlobalEvent_TimeOfDayChanged_C"}) {
+        Call broadcast(events, L"BroadcastEventNoData", 3);
+        broadcast.set(L"EventClass", load(event)); broadcast.set(L"Filter", FName()); broadcast.run();
+    }
+    // The world layers, with the states Thestus sets: night activates DL_Night and unloads DL_Day;
+    // day loads DL_Day and unloads DL_Night.
+    Call manager(find(L"/Script/Engine.Default__WorldPartitionBlueprintLibrary"), L"GetDataLayerManager", 2);
+    manager.set(L"WorldContextObject", pawn); manager.run();
+    if (auto* layers = manager.get<UObject*>()) {
+        const std::pair<const char*, uint8_t> states[] = {{"/Game/Sparta/Environments/Data_Layers/L_Core_World_01/DayNight/DL_Day.DL_Day", uint8_t(night ? 0 : 1)},
+                                                          {"/Game/Sparta/Environments/Data_Layers/L_Core_World_01/DayNight/DL_Night.DL_Night", uint8_t(night ? 2 : 0)}};
+        for (const auto& [asset, state] : states) {
+            Call set(layers, L"SetDataLayerRuntimeState", 4);
+            set.set(L"InDataLayerAsset", load(asset)); set.set(L"InState", state); set.set(L"bInIsRecursive", false); set.run();
+        }
+    }
+    log(std::string("CCS world time set to ") + (night ? "night" : "day") + " from the Settings tab");
+    return night ? "Night falls. Enemies that spawn from now on are night-strong unless Enemy difficulty says otherwise." : "Day returns.";
+}
 void Combat::remove_hook() {
     active_ = false;
     if (!token_) return;
