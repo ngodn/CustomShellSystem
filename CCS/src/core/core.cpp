@@ -399,8 +399,9 @@ nlohmann::json Core::model() const {
             "It applies to enemies as they spawn; the ones already standing change after you rest at a beacon or reload."},
         {"enabled", combat_ != nullptr}});
     {
-        const std::string blocker = combat_ ? combat_->world_time_blocker() : std::string("Combat is unavailable.");
-        const bool night = combat_ && blocker.empty() && combat_->world_night();
+        static const Combat::WorldTime unavailable{"Combat is unavailable.", false};
+        const auto& time = combat_ ? combat_->world_time(runtime::now_ms()) : unavailable;
+        const std::string& blocker = time.blocker; const bool night = time.night;
         settings.push_back({{"type", "button"}, {"id", "world_time"}, {"label", night ? "World: night" : "World: day"}, {"action_label", night ? "Seek Daylight" : "Call forth the Night"},
             {"enabled", blocker.empty()}, {"disabled_label", blocker.empty() ? std::string{} : blocker},
             {"description", std::string("Does what Thestus does, from here: the world turns to night or back to day, with its lighting and its world layers, and the game saves it. "
@@ -469,7 +470,7 @@ void Core::handle_event(const nlohmann::json& event) {
     if (id == "charged_attacks") { settings_->set_charged_without_stone(event.at("value").get<std::string>() == "always"); if (combat_) combat_->set_hold_cheat(settings_->charged_without_stone()); save_settings_or_log(); return; }
     if (id == "world_time") {
         if (!combat_) throw std::runtime_error("Combat is unavailable");
-        last_message_ = combat_->set_world_time(!combat_->world_night()); ++model_revision_; return;
+        last_message_ = combat_->set_world_time(!combat_->world_night()); ++model_revision_; return;   // world_night() reads live; the cache is for the row
     }
     if (id == "enemy_difficulty") { settings_->set_enemy_difficulty(event.at("value").get<std::string>()); if (combat_) combat_->set_enemy_difficulty(settings_->enemy_difficulty()); save_settings_or_log(); return; }
     if (id == "next_attack") { settings_->set_next_attack(event.at("value").get<std::string>()); if (combat_) combat_->set_chain(settings_->next_attack()); save_settings_or_log(); return; }

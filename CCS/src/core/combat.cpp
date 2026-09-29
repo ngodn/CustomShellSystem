@@ -1198,6 +1198,13 @@ std::string Combat::world_time_blocker() {
     } catch (const std::exception& e) { return std::string("Unavailable: ") + e.what(); }
     return {};
 }
+const Combat::WorldTime& Combat::world_time(uint64_t now) {
+    if (world_time_at_ && now - world_time_at_ < 1000) return world_time_;
+    world_time_at_ = now;
+    world_time_.blocker = world_time_blocker();
+    world_time_.night = world_time_.blocker.empty() && world_night();
+    return world_time_;
+}
 bool Combat::world_night() {
     auto* pawn = pawn_.get(); if (!pawn) return false;
     try {
@@ -1237,6 +1244,7 @@ std::string Combat::set_world_time(bool night) {
             set.set(L"InDataLayerAsset", load(asset)); set.set(L"InState", state); set.set(L"bInIsRecursive", false); set.run();
         }
     }
+    world_time_at_ = 0;   // the row shows the new state at once
     log(std::string("CCS world time set to ") + (night ? "night" : "day") + " from the Settings tab");
     return night ? "Night falls. Enemies that spawn from now on are night-strong unless Enemy difficulty says otherwise." : "Day returns.";
 }

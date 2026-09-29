@@ -45,6 +45,11 @@ public:
     // DL_Day and DL_Night world layers switch. "" when the world can change, else why not.
     std::string world_time_blocker();
     bool world_night();
+    // What the Settings row shows, read at most once a second: the menu rebuilds its model on every
+    // event (a held direction repeats every 90 ms) and the state behind it takes reflected calls.
+    struct WorldTime { std::string blocker; bool night{}; };
+    const WorldTime& world_time(uint64_t now);
+    WorldTime world_time_{}; uint64_t world_time_at_{};
     std::string set_world_time(bool night);   // returns what happened, for the page's status line
     // Hold attacks are an upgrade in this game (GE_Unlock_Attack_Hold_Light/Heavy grant the
     // Character.Unlocked.HoldAttack tags). Without the tag the game's own charge check fails at
