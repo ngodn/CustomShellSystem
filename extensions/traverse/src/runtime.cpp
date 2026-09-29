@@ -141,10 +141,10 @@ std::optional<Json> Extension::destination_transform(const Json& owner) {
 
 Json Extension::zone_of(const Json& owner, const Json& read_zone) {
     if (is_object(read_zone)) return read_zone;
-    // A landing area answers GetZone; a teleport handler carries MyZoneData, or its
+    // A landing area is a SpartaPlayerStart and carries its zone as the native ZoneData
+    // property (what its GetZone returns); a teleport handler carries MyZoneData, or its
     // linked handler does; a landing area's beacon handler carries DestinationZoneData.
-    try { auto r = host_.request({{"op", "call"}, {"target", owner}, {"function", "GetZone"}}); if (r.is_object() && is_object(r.value("ZoneData", Json()))) return r["ZoneData"]; } catch (...) {}
-    for (const char* name : {"MyZoneData", "DestinationZoneData"}) {
+    for (const char* name : {"ZoneData", "MyZoneData", "DestinationZoneData"}) {
         try { auto z = host_.get(owner, name); if (is_object(z)) return z; } catch (...) {}
     }
     try { auto link = host_.get(owner, "LoadedLinkHandler"); if (is_object(link)) { auto z = host_.get(link, "MyZoneData"); if (is_object(z)) return z; } } catch (...) {}
@@ -170,7 +170,10 @@ bool Extension::teleport_to(const Json& owner) {
     if (in_dungeon()) { report("Traverse cannot leave a dungeon. Use the dungeon's own exit first."); return false; }
     auto dest = destination_transform(owner);
     if (!dest) { report("Could not read that point's traverse location."); return false; }
-    if (!is_object((*dest)["zone"])) { report("That point has no zone data, so traverse skipped it."); return false; }
+    if (!is_object((*dest)["zone"])) {
+        std::string cls = "?"; try { auto d = host_.request({{"op", "describe"}, {"target", owner}}); if (d.is_object()) cls = d.value("class", cls); } catch (...) {}
+        report("No zone data on " + hovered_name_ + " (" + cls + "), so traverse skipped it."); return false;
+    }
 
     hide_dialog();
     try { host_.call(ui_handler_, "HandleGameMenu", {{"SubTabIndex", 0}, {"AllowClose", true}}); } catch (...) {}
