@@ -162,8 +162,11 @@ void Core::save_settings_or_log() {
 }
 void Core::flush_settings() {
     if (!settings_dirty_) return;
-    settings_dirty_ = false;
-    if (!settings_->save()) { last_message_ = "Settings could not be saved"; ++model_revision_; }
+    // Clean only once the file is written: a locked or briefly unavailable file (an antivirus scan,
+    // a sync client) is tried again a second later, and again on stop.
+    if (settings_->save()) { settings_dirty_ = false; return; }
+    settings_flush_at_ = runtime::now_ms() + 1000;
+    if (last_message_ != "Settings could not be saved") { last_message_ = "Settings could not be saved"; ++model_revision_; }
 }
 // A preset names moves by catalog id; older or hand-written files may only carry the montage
 // path, which resolves through the catalogs. Every slot is set (the preset is the whole state),
