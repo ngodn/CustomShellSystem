@@ -215,6 +215,27 @@ Alpha.4, 29 September 2026: recovery cancel and move payloads (exports in `work/
 - `notify_layout` resolved the hit-check classes after reading their fields, so `slot_state` was
   always null and `unarmed_montage` never saw a punch as unarmed; fixed by ordering.
 
+Alpha.4 additions, 29 September 2026 (exports in `work/difficulty/`):
+- Enemy difficulty. Night strength lives in `BP_Spawner`: `CheckForNightMode` (narrative tag
+  `World.TimeOfDay.Night`) adds `GE_DamageMultiplier` (BaseDamage x2, infinite) and
+  `GE_EffectMaxHealth_Multiplier` (MaxHealth x2, instant) to `AdditionalGameplayEffects`, then
+  `HandleNewGamePlus` always adds `GE_NGP_DamageMultiplier` and `GE_NGP_HealthMultiplier`; all go
+  through the native `BP_ApplyGameplayEffectToSelf`. The CCS hook service only fires on native
+  functions (UE4SS `RegisterPreHook`), so the override hooks that function, installed only while
+  the setting is not Follow Thestus: "day" empties the night pair's class on non-player
+  components, "night" applies the pair before the NG+ damage effect on an enemy whose
+  `GetGameplayEffectCount(GE_DamageMultiplier)` is 0. Live: 15 pairs added, 0 failures.
+- World time. Thestus's actor is not loaded away from him, so CCS repeats his
+  `SetupLightingChange`: `BPFL_Player` Add/RemoveNarrativeTag (saved), `GESFunctions`
+  BroadcastEventNoData `GlobalEvent_TriggerNight`/`_TriggerDay` (every `BP_SpartaWeatherZone`
+  relights on these) and `GlobalEvent_TimeOfDayChanged`, and `DataLayerManager`
+  SetDataLayerRuntimeState DL_Day/DL_Night with his states (night: 0/2, day: 1/0). His own
+  low-priority weather preset (5.0, under the zones' 2000) is skipped. Refused outside
+  L_Core_World_01, in a boss fight, and before `IsThestusUnlocked`.
+- Release pass: two reviewers, host suites (normal and sanitized). Fixed: the catalog generator
+  now emits `ability_class` (a test regenerated the catalog without it); a failed settings write
+  is retried instead of dropped; the world time row reads its state at most once a second.
+
 Still to verify live: an enemy move with "Move's own" feel turning with the stick during the
 wind-up; whether the enemy's own translation warp overshoots on long lunges (if it does, add
 "SpartaMotionWarping_Translation" back to the drop list, or gate it per slot).
