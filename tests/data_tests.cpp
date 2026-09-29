@@ -258,8 +258,8 @@ int main() {
             atomic_json(catalog_file,duplicate_id,false); rejects([&]{Catalog::load(catalog_dir);});
             auto unknown=layered; unknown["outfits"][0]["variants"][0]["items"][1]["slot"]="elbow";
             atomic_json(catalog_file,unknown,false); rejects([&]{Catalog::load(catalog_dir);});
-            auto far=layered; far["outfits"][0]["variants"][0]["items"][1]["order"]=1000;
-            atomic_json(catalog_file,far,false); rejects([&]{Catalog::load(catalog_dir);});
+            auto far_order=layered; far_order["outfits"][0]["variants"][0]["items"][1]["order"]=1000;
+            atomic_json(catalog_file,far_order,false); rejects([&]{Catalog::load(catalog_dir);});
             auto bad_section=layered; bad_section["outfits"][0]["variants"][0]["items"][1]["hides"]["sections"]={128};
             atomic_json(catalog_file,bad_section,false); rejects([&]{Catalog::load(catalog_dir);});
             auto empty=layered; empty["outfits"][0]["variants"][0]["items"]=Json::array();
