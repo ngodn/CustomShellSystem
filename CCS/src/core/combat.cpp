@@ -89,7 +89,7 @@ void Combat::set_tuning(SlotId slot, const SlotTuning& tuning) {
     if (!valid_tuning(tuning) || s.tuning == tuning) return;
     if (tuning.hit_damage != "weapon") restore_payload(s);   // back to the replacement's own payload at once
     if (tuning.weapon != "move" && shown_montage_.get() && shown_montage_.get() == s.montage.get()) restore_weapon();
-    if (tuning.armor != s.tuning.armor || tuning.steer != s.tuning.steer || tuning.feel != s.tuning.feel) release_overlays(s);   // the overlay's rows depend on all three
+    if (tuning.armor != s.tuning.armor || tuning.steer != s.tuning.steer || tuning.feel != s.tuning.feel || tuning.hit_damage != s.tuning.hit_damage) release_overlays(s);   // the overlay's rows depend on all four
     if (std::abs(tuning.speed - s.tuning.speed) > 1e-9) { release_transplants(s); release_carries(s); release_overlays(s); }   // every copy's charge window is sized by the speed
     s.tuning = tuning;
 }
@@ -139,6 +139,8 @@ void Combat::release(Slot& slot) {
     if (auto* copy = slot.play.get(); copy && copy != slot.montage.get()) drop_referenced(world_.get(), copy);
     slot.play = {}; slot.play_kinds = 0; slot.unarmed = false;
     if (slot.show_rooted) { if (auto* mesh = slot.show_mesh.get()) drop_referenced(world_.get(), mesh); slot.show_rooted = false; }
+    if (slot.ability_rooted) { if (auto* cls = slot.ability_class.get()) drop_referenced(world_.get(), cls); slot.ability_rooted = false; }
+    slot.ability_class = {}; slot.move_payload = {}; slot.payload_gap = false;
     slot.montage = {}; slot.show_mesh = {}; slot.was_ready = false;   // a deliberate release is not a loss
 }
 // ---- hit payload: every hit-check notify inside a montage owns its payload object (multiplier,
@@ -164,13 +166,119 @@ const Combat::NotifyLayout& Combat::notify_layout() const {
     l.link = row ? row->GetPropertyByNameInChain(L"LinkValue") : nullptr;
     l.duration = row ? row->GetPropertyByNameInChain(L"duration") : nullptr;   // reflected in lowercase; a state's window length
     l.rate_scale = montage_class->GetPropertyByNameInChain(L"RateScale");    // the montage's own play-rate multiplier
-    l.slot_state = l.hit_state ? static_cast<UClass*>(l.hit_state)->GetPropertyByNameInChain(L"WeaponSlot") : nullptr;     // FGameplayTag: which weapon the hit uses
-    l.slot_notify = l.hit_notify ? static_cast<UClass*>(l.hit_notify)->GetPropertyByNameInChain(L"WeaponSlot") : nullptr;
     if (!l.notify || !l.state || !l.link || !l.notify->IsA<FObjectProperty>() || !l.state->IsA<FObjectProperty>()) throw std::runtime_error("FAnimNotifyEvent layout changed");
+    l.end_link = row->GetPropertyByNameInChain(L"EndLink");
+    if (l.end_link && l.end_link->IsA<FStructProperty>()) l.end_value = static_cast<FStructProperty*>(l.end_link)->GetStruct().Get()->GetPropertyByNameInChain(L"LinkValue");
+    // The hit classes first, then their fields (which weapon slot swings, which payload applies).
     l.hit_state = find_cached(L"/Script/Sparta.SpartaAnimNotifyState_HitCheck");
     l.hit_notify = find_cached(L"/Script/Sparta.SpartaAnimNotify_HitCheck");
+    if (auto* c = static_cast<UClass*>(l.hit_state)) { l.slot_state = c->GetPropertyByNameInChain(L"WeaponSlot"); l.payload_state = c->GetPropertyByNameInChain(L"DamagePayload"); }
+    if (auto* c = static_cast<UClass*>(l.hit_notify)) { l.slot_notify = c->GetPropertyByNameInChain(L"WeaponSlot"); l.payload_notify = c->GetPropertyByNameInChain(L"DamagePayload"); }
     layout_ = l;
     return layout_;
+}
+// ---- copies own what they play. A fresh instance of `source`'s class inside `outer`, with the
+// source's reflected values; a blueprint's ubergraph frame belongs to its instance and is never
+// copied (the new object gets its own at construction).
+UObject* Combat::copy_object(UObject* source, UObject* outer) {
+    auto* cls = source->GetClassPrivate();
+    if (!cls) throw std::runtime_error("Object has no class");
+    auto* copy = construct_class(cls, outer);
+    auto* src = reinterpret_cast<std::byte*>(source); auto* dst = reinterpret_cast<std::byte*>(copy);
+    static const FName frame(L"UberGraphFrame", FNAME_Add);
+    for (UStruct* type = cls; type; type = type->GetSuperStruct()) {
+        if (narrow(type->GetNamePrivate().ToString()) == "Object") break;
+        for (auto* p : type->ForEachProperty()) {
+            if (p->GetArrayDim() != 1 || p->GetOffset_Internal() < 0 || p->GetFName() == frame) continue;
+            p->CopyCompleteValue(dst + p->GetOffset_Internal(), src + p->GetOffset_Internal());
+        }
+    }
+    return copy;
+}
+namespace {
+bool is_cancel_window(UObject* object) {
+    return object && object->GetClassPrivate() && narrow(object->GetClassPrivate()->GetNamePrivate().ToString()).find("InterruptWithMovement") != std::string::npos;
+}
+}
+int Combat::adopt_cancel_rows(UObject* copy) {
+    if (!copy) return 0;
+    const auto& l = notify_layout();
+    FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(copy) + l.notifies->GetOffset_Internal());
+    int adopted = 0;
+    for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
+        UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + l.state->GetOffset_Internal(), sizeof(object));
+        if (!is_cancel_window(object) || object->GetOuterPrivate() == copy) continue;
+        auto* own = copy_object(object, copy);
+        std::memcpy(rows.GetRawPtr(i) + l.state->GetOffset_Internal(), &own, sizeof(own));
+        ++adopted;
+    }
+    return adopted;
+}
+// Steer's movement cancel reuses a window the copy already has when one reaches into the recovery:
+// the controller clears its check when any window ends, so two overlapping windows would switch
+// the check off early. The window grows to [from, to], never back over an earlier window.
+bool Combat::extend_cancel(UObject* copy, float from, float to) {
+    const auto& l = notify_layout();
+    if (!l.end_link || !l.end_value) return false;
+    FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(copy) + l.notifies->GetOffset_Internal());
+    const int end_value = l.end_link->GetOffset_Internal() + l.end_value->GetOffset_Internal();
+    int best = -1; float best_end = -1.f, earlier_end = 0.f;
+    for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
+        UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + l.state->GetOffset_Internal(), sizeof(object));
+        if (!is_cancel_window(object)) continue;
+        float start{}, end{}; std::memcpy(&start, rows.GetRawPtr(i) + l.link->GetOffset_Internal(), 4); std::memcpy(&end, rows.GetRawPtr(i) + end_value, 4);
+        if (!std::isfinite(start) || !std::isfinite(end)) continue;
+        if (end >= from && end > best_end) { best = i; best_end = end; }
+        else if (end < from) earlier_end = std::max(earlier_end, end);
+    }
+    if (best < 0) return false;
+    auto* b = rows.GetRawPtr(best);
+    float start{}; std::memcpy(&start, b + l.link->GetOffset_Internal(), 4);
+    start = std::max(std::min(start, from), earlier_end + 0.01f);
+    const float end = std::max(to, start + 0.05f), length = end - start;
+    std::memcpy(b + l.link->GetOffset_Internal(), &start, 4); std::memcpy(b + end_value, &end, 4);
+    if (l.duration) std::memcpy(b + l.duration->GetOffset_Internal(), &length, 4);
+    return true;
+}
+bool Combat::payload_gaps(UObject* montage) const {
+    if (!montage) return false;
+    const auto& l = notify_layout();
+    auto* hit_state = static_cast<UClass*>(l.hit_state); auto* hit_notify = static_cast<UClass*>(l.hit_notify);
+    FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(montage) + l.notifies->GetOffset_Internal());
+    for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
+        for (auto* field : {l.notify, l.state}) {
+            UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + field->GetOffset_Internal(), sizeof(object));
+            if (!object) continue;
+            FProperty* payload = hit_state && object->IsA(hit_state) ? l.payload_state : hit_notify && object->IsA(hit_notify) ? l.payload_notify : nullptr;
+            if (!payload) continue;
+            UObject* value{}; std::memcpy(&value, reinterpret_cast<std::byte*>(object) + payload->GetOffset_Internal(), sizeof(value));
+            if (!value) return true;
+        }
+    }
+    return false;
+}
+int Combat::fill_payloads(UObject* copy, UObject* payload) {
+    if (!copy || !payload) return 0;
+    const auto& l = notify_layout();
+    auto* hit_state = static_cast<UClass*>(l.hit_state); auto* hit_notify = static_cast<UClass*>(l.hit_notify);
+    FScriptArrayHelper rows(static_cast<FArrayProperty*>(l.notifies), reinterpret_cast<std::byte*>(copy) + l.notifies->GetOffset_Internal());
+    int filled = 0;
+    for (int i = 0; i < std::min(rows.Num(), 256); ++i) {
+        for (auto* field : {l.notify, l.state}) {
+            UObject* object{}; std::memcpy(&object, rows.GetRawPtr(i) + field->GetOffset_Internal(), sizeof(object));
+            if (!object) continue;
+            FProperty* slot = hit_state && object->IsA(hit_state) ? l.payload_state : hit_notify && object->IsA(hit_notify) ? l.payload_notify : nullptr;
+            if (!slot) continue;
+            UObject* value{}; std::memcpy(&value, reinterpret_cast<std::byte*>(object) + slot->GetOffset_Internal(), sizeof(value));
+            if (value) continue;   // a window with its own payload keeps it
+            // The hit object is shared with the montage it came from; the copy gets its own.
+            auto* own = object->GetOuterPrivate() == copy ? object : copy_object(object, copy);
+            std::memcpy(reinterpret_cast<std::byte*>(own) + slot->GetOffset_Internal(), &payload, sizeof(payload));
+            std::memcpy(rows.GetRawPtr(i) + field->GetOffset_Internal(), &own, sizeof(own));
+            ++filled;
+        }
+    }
+    return filled;
 }
 std::vector<UObject*> Combat::hit_payloads(UObject* montage) const {
     std::vector<UObject*> out;
@@ -188,12 +296,14 @@ std::vector<UObject*> Combat::hit_payloads(UObject* montage) const {
     }
     return out;
 }
-void Combat::apply_weapon_payload(Slot& s, UObject* original, UObject* replacement) {
+void Combat::apply_weapon_payload(Slot& s, UObject* original, UObject* replacement, UObject* ability) {
     if (s.payload_source.get() == original) return;   // already carrying this weapon's payload
     restore_payload(s);
+    // The weapon's payload: on its montage's hit windows, or (most player montages) on the attack
+    // ability that plays it.
     const auto sources = hit_payloads(original);
-    if (sources.empty()) return;
-    auto* from = sources.front();
+    auto* from = !sources.empty() ? sources.front() : ability ? object_of(ability, L"AbilityHitPayload") : nullptr;
+    if (!from) return;
     for (auto* to : hit_payloads(replacement)) {
         if (to == from) continue;
         PayloadBackup backup; backup.payload.capture(to);
@@ -264,6 +374,7 @@ UObject* Combat::transplant(Slot& s, UObject* original, UObject* replacement) {
     if (s.feel.size() >= 4) { auto& old = s.feel.front(); if (auto* c = old.clone.get()) drop_referenced(world_.get(), c); s.feel.erase(s.feel.begin()); }
     auto* clone = build_transplant(original, replacement);
     try { stretch_hold_rows(clone, s.tuning.speed); } catch (const std::exception& e) { log(std::string("CCS hold window stretch failed: ") + e.what()); }
+    adopt_cancel_rows(clone);
     Transplant t; t.original.capture(original); t.clone.capture(clone);
     keep_referenced(world_.get(), clone);
     s.feel.push_back(std::move(t));
@@ -519,6 +630,7 @@ UObject* Combat::carry_windows(Slot& s, UObject* original, UObject* replacement,
     for (auto& t : s.carries) if (t.original.get() == original) { if (auto* clone = t.clone.get()) return clone; }
     if (s.carries.size() >= 4) { auto& old = s.carries.front(); if (auto* c = old.clone.get()) drop_referenced(world_.get(), c); s.carries.erase(s.carries.begin()); }
     auto* clone = build_carry(original, replacement, kinds, s.tuning.speed);
+    adopt_cancel_rows(clone);
     Transplant t; t.original.capture(original); t.clone.capture(clone);
     keep_referenced(world_.get(), clone);
     s.carries.push_back(std::move(t));
@@ -716,35 +828,39 @@ float Combat::last_hit_end(UObject* montage) const {
     }
     return best;
 }
-UObject* Combat::build_overlay(UObject* source, bool armor, bool steer) {
-    if (!donor_ready()) throw std::runtime_error("player-feel rows not loaded yet");   // never loads from the hook
+UObject* Combat::build_overlay(UObject* source, bool armor, bool steer, UObject* payload) {
+    if ((armor || steer) && !donor_ready()) throw std::runtime_error("player-feel rows not loaded yet");   // never loads from the hook
     const float len = read<float>(source, L"SequenceLength");
     if (!(len > 0.05f)) throw std::runtime_error("Montage length unusable");
     const float last = std::max(0.02f, len - 0.01f);
     // Steering ends where the last hit does; the movement cancel starts there. A move without a
     // hit window steers to the end and keeps its recovery (nothing marks where it starts).
     const float hits_end = steer ? last_hit_end(source) : -1.f;
-    const bool cancel = steer && hits_end > 0.05f && hits_end < last - 0.1f;
-    std::vector<int> rows; std::vector<std::pair<float, float>> spans; std::vector<const char*> names;
-    if (armor) { rows.push_back(donor_armor_); spans.push_back({0.f, last}); names.push_back("armor"); }
-    if (steer) { rows.push_back(donor_turn_); spans.push_back({0.f, cancel ? hits_end : last}); names.push_back("turn"); }
-    if (cancel) { rows.push_back(donor_cancel_); spans.push_back({hits_end + 0.02f, last}); names.push_back("cancel"); }
+    bool cancel = steer && hits_end > 0.05f && hits_end < last - 0.1f;
     auto* clone = clone_montage(source);
     std::string report;
-    append_rows(clone, donor_.get(), rows, [&](int k, float& start, float& end) {
-        start = spans[size_t(k)].first; end = spans[size_t(k)].second;
-        report += std::string(report.empty() ? "" : ", ") + names[size_t(k)] + " " + std::to_string(start).substr(0, 4) + " to " + std::to_string(end).substr(0, 4) + " s";
+    auto note = [&](const char* what, float start, float end) { report += std::string(report.empty() ? "" : ", ") + what + " " + std::to_string(start).substr(0, 4) + " to " + std::to_string(end).substr(0, 4) + " s"; };
+    if (cancel && extend_cancel(clone, hits_end + 0.02f, last)) { note("cancel (own window, extended)", hits_end + 0.02f, last); cancel = false; }
+    std::vector<int> rows; std::vector<std::pair<float, float>> spans; std::vector<const char*> names;
+    if (armor) { rows.push_back(donor_armor_); spans.push_back({0.f, last}); names.push_back("armor"); }
+    if (steer) { rows.push_back(donor_turn_); spans.push_back({0.f, hits_end > 0.05f && hits_end < last - 0.1f ? hits_end : last}); names.push_back("turn"); }
+    if (cancel) { rows.push_back(donor_cancel_); spans.push_back({hits_end + 0.02f, last}); names.push_back("cancel"); }
+    if (!rows.empty()) append_rows(clone, donor_.get(), rows, [&](int k, float& start, float& end) {
+        start = spans[size_t(k)].first; end = spans[size_t(k)].second; note(names[size_t(k)], start, end);
     });
-    log("CCS player feel added: " + narrow(source->GetNamePrivate().ToString()) + ": " + report);
+    if (payload) { const int filled = fill_payloads(clone, payload); if (filled) report += std::string(report.empty() ? "" : ", ") + "move payload on " + std::to_string(filled) + " hit window(s)"; }
+    adopt_cancel_rows(clone);   // the donor's window and any copied one now stop this copy
+    log("CCS player feel added: " + narrow(source->GetNamePrivate().ToString()) + ": " + (report.empty() ? std::string("nothing to add") : report));
     return clone;
 }
-UObject* Combat::overlaid(Slot& s, UObject* source, bool armor, bool steer) {
-    for (auto& t : s.overlays) if (t.original.get() == source) { if (auto* clone = t.clone.get()) return clone; }
+UObject* Combat::overlaid(Slot& s, UObject* source, bool armor, bool steer, UObject* payload) {
+    const unsigned flags = (armor ? 1u : 0u) | (steer ? 2u : 0u) | (payload ? 4u : 0u);
+    for (auto& t : s.overlays) if (t.original.get() == source && t.flags == flags) { if (auto* clone = t.clone.get()) return clone; }
     if (s.overlays.size() >= 8) { auto& old = s.overlays.front(); if (auto* c = old.clone.get()) drop_referenced(world_.get(), c); s.overlays.erase(s.overlays.begin()); }
-    auto* clone = build_overlay(source, armor, steer);
+    auto* clone = build_overlay(source, armor, steer, payload);
     // A source that is the montage itself (not a carry or transplant of ours) brings its own hold rows unstretched.
     if (source == s.montage.get() || source == s.play.get()) { try { stretch_hold_rows(clone, s.tuning.speed); } catch (const std::exception& e) { log(std::string("CCS hold window stretch failed: ") + e.what()); } }
-    Transplant t; t.original.capture(source); t.clone.capture(clone);
+    Transplant t; t.original.capture(source); t.clone.capture(clone); t.flags = flags;
     keep_referenced(world_.get(), clone);
     s.overlays.push_back(std::move(t));
     return clone;
@@ -929,6 +1045,7 @@ void Combat::load_pending(const PlayerContext& player) {
             if (foreign) {
                 auto* cleaned = clone_montage(montage);
                 const auto dropped = strip_ai_notifies(cleaned);
+                adopt_cancel_rows(cleaned);   // the enemy's own movement-cancel windows now cut this copy
                 keep_referenced(player.world, cleaned);
                 s.play.capture(cleaned);
                 std::string list; for (const auto& d : dropped) list += (list.empty() ? "" : ", ") + d;
@@ -936,6 +1053,21 @@ void Combat::load_pending(const PlayerContext& player) {
             }
             try { s.play_kinds = row_kinds(s.play.get() ? s.play.get() : montage); } catch (...) { s.play_kinds = 0; }
             try { s.unarmed = s.show_mesh_path.empty() && unarmed_montage(montage); } catch (...) { s.unarmed = false; }
+            // A player move's own attack ability carries its hit payload (poise, break, reaction);
+            // the hook puts it on the hit windows that have none. Loaded here, never in the hook.
+            if (move && !move->ability_class.empty()) {
+                try {
+                    auto* cls = load(move->ability_class);
+                    const auto dot = move->ability_class.rfind('.');
+                    const auto cdo_path = move->ability_class.substr(0, dot) + ".Default__" + move->ability_class.substr(dot + 1);
+                    auto* cdo = dot == std::string::npos ? nullptr : find_optional(wide(cdo_path).c_str());
+                    auto* payload = cdo ? object_of(cdo, L"AbilityHitPayload") : nullptr;
+                    if (!payload) throw std::runtime_error("no AbilityHitPayload on " + cdo_path);
+                    if (!keep_referenced(player.world, cls)) throw std::runtime_error("no world to hold the ability class");
+                    s.ability_rooted = true; s.ability_class.capture(cls); s.move_payload.capture(payload);
+                    s.payload_gap = payload_gaps(montage);
+                } catch (const std::exception& e) { log("CCS move payload unavailable for " + s.move_id + ": " + e.what() + "; its hits use the slot weapon's payload"); }
+            }
             if (!s.show_mesh_path.empty()) {
                 try {
                     auto* mesh = load(s.show_mesh_path);
@@ -1027,7 +1159,7 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         if (had_world) {
             log("CCS world changed; reloading the slots");
             montage_facts_.clear();
-            for (auto& s : slots_) { s.rooted = s.show_rooted = false; s.feel.clear(); s.carries.clear(); s.overlays.clear(); s.was_ready = false; if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.play = {}; s.play_kinds = 0; s.show_mesh = {}; s.pending = true; } }
+            for (auto& s : slots_) { s.rooted = s.show_rooted = s.ability_rooted = false; s.ability_class = {}; s.move_payload = {}; s.payload_gap = false; s.feel.clear(); s.carries.clear(); s.overlays.clear(); s.was_ready = false; if (!s.move_id.empty() && !s.path.empty()) { s.montage = {}; s.play = {}; s.play_kinds = 0; s.show_mesh = {}; s.pending = true; } }
         }
     }
     for (auto& s : slots_) {   // a loaded montage that stops answering: say why once, and load it again
@@ -1197,16 +1329,20 @@ void Combat::observe(void* frame_ptr) {
                 }
             }
             if (s.tuning.hit_damage == "weapon") {
-                try { apply_weapon_payload(s, original, replacement); }
+                try { apply_weapon_payload(s, original, replacement, ability); }
                 catch (const std::exception& e) { ++failures_; if (s.error.empty()) { s.error = std::string("Hit payload copy failed: ") + e.what(); log("CCS " + s.error); } }
             }
         }
         const char* how = pointer == replacement ? "swapped" : (s.tuning.feel == "game" ? "swapped, game feel" : "swapped, windows carried");
         // The player-feel overlay: hyper armor over the whole swing, and with "Move's own" feel
         // the weapon's steering and movement cancel ("Game's" feel already carries the weapon's).
-        const bool armor = s.tuning.armor == "full", steer = s.tuning.steer == "full" && s.tuning.feel != "game";
-        if ((armor || steer) && donor_ready()) {   // the donor loads from the tick; a swing before that plays without the overlay
-            try { pointer = overlaid(s, pointer, armor, steer); }
+        // and, for a player move with "Damage: Move's own", its own ability payload on hit windows
+        // that carry none (the playing ability's payload would otherwise hit with the slot weapon's).
+        const bool donor = donor_ready();   // the donor loads from the tick; a swing before that plays without armor or steering
+        const bool armor = donor && s.tuning.armor == "full", steer = donor && s.tuning.steer == "full" && s.tuning.feel != "game";
+        auto* move_payload = s.tuning.feel != "game" && s.tuning.hit_damage == "move" && s.payload_gap ? s.move_payload.get() : nullptr;
+        if (armor || steer || move_payload) {
+            try { pointer = overlaid(s, pointer, armor, steer, move_payload); }
             catch (const std::exception& e) { ++failures_; if (!s.overlay_warned) { s.overlay_warned = true; log("CCS player feel unavailable for " + s.move_id + ": " + e.what()); } }
         }
         // Speed on a copy of ours goes into the montage's own RateScale, which multiplies whatever

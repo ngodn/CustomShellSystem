@@ -186,7 +186,8 @@
       "evidence": {
         "ability_line": 5,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Axatana_B_TransformAndCut_A_Shared_Attacks_Axeatana_Axe_B_Cut_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/Axatana/Axe/GA_Player_Attack_Axatana_Axe_B1.GA_Player_Attack_Axatana_Axe_B1_C"
     },
     {
       "id": "GA_Player_Attack_Axatana_Axe_B1_Hold_C",
@@ -372,7 +373,8 @@
       "evidence": {
         "ability_line": 6,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Axatana_B_A_Shared_Attacks_Axeatana_Axe_B_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/Axatana/Axe/GA_Player_Attack_Axatana_Axe_B1_Hold.GA_Player_Attack_Axatana_Axe_B1_Hold_C"
     },
     {
       "id": "GA_Player_Attack_Axatana_Axe_B2_C",
@@ -521,7 +523,8 @@
       "evidence": {
         "ability_line": 7,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Axatana_B_TransformAndCut_A_Shared_Attacks_Axeatana_Axe_BB_Cut_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/Axatana/Axe/GA_Player_Attack_Axatana_Axe_B2.GA_Player_Attack_Axatana_Axe_B2_C"
     },
     {
       "id": "GA_Player_Attack_Axatana_Axe_B2_Hold_C",
@@ -686,7 +689,8 @@
       "evidence": {
         "ability_line": 8,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Axatana_B_A_Shared_Attacks_Axeatana_Axe_BB_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/Axatana/Axe/GA_Player_Attack_Axatana_Axe_B2_Hold.GA_Player_Attack_Axatana_Axe_B2_Hold_C"
     },
     {
       "id": "GA_Player_Attack_Axatana_Axe_B3_C",
@@ -835,7 +839,8 @@
       "evidence": {
         "ability_line": 9,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Axatana_B_TransformAndCut_A_Shared_Attacks_Axeatana_Axe_BBB_Cut_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/Axatana/Axe/GA_Player_Attack_Axatana_Axe_B3.GA_Player_Attack_Axatana_Axe_B3_C"
     },
     {
       "id": "GA_Player_Attack_Axatana_Axe_B3_Hold_C",
@@ -1036,7 +1041,8 @@
       "evidence": {
         "ability_line": 10,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Axatana_B_A_Shared_Attacks_Axeatana_Axe_BBB_Hold_03_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/Axatana/Axe/GA_Player_Attack_Axatana_Axe_B3_Hold.GA_Player_Attack_Axatana_Axe_B3_Hold_C"
     },
     {
       "id": "GA_Player_Attack_AxeDagger_A1_C",
@@ -1196,7 +1202,8 @@
       "evidence": {
         "ability_line": 11,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Humans_Player_Animations_HammerChisel_AM_Shells_AxeDagger_3Hit_A.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/AxeDagger/GA_Player_Attack_AxeDagger_A1.GA_Player_Attack_AxeDagger_A1_C"
     },
     {
       "id": "GA_Player_Attack_AxeDagger_A1_Hold_C",
@@ -1412,7 +1419,8 @@
       "evidence": {
         "ability_line": 13,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_AxeDagger_HoldAttacks_A_Shared_Attacks_AxeDagger_Hold_A_02_MontageFull.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/AxeDagger/GA_Player_Attack_AxeDagger_A1_Hold.GA_Player_Attack_AxeDagger_A1_Hold_C"
     },
     {
       "id": "GA_Player_Attack_AxeDagger_A2_C",
@@ -1577,7 +1585,8 @@
       "evidence": {
         "ability_line": 14,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Humans_Player_Animations_HammerChisel_AM_Shells_AxeDagger_3Hit_aA.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/AxeDagger/GA_Player_Attack_AxeDagger_A2.GA_Player_Attack_AxeDagger_A2_C"
     },
     {
       "id": "GA_Player_Attack_AxeDagger_A2_Hold_C",
@@ -1785,7 +1794,8 @@
       "evidence": {
         "ability_line": 16,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_AxeDagger_HoldAttacks_A_Shared_Attacks_AxeDagger_Hold_AA_02_MontageCut.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/AxeDagger/GA_Player_Attack_AxeDagger_A2_Hold.GA_Player_Attack_AxeDagger_A2_Hold_C"
     },
     {
       "id": "GA_Player_Attack_AxeDagger_A3_C",
@@ -1940,7 +1950,8 @@
       "evidence": {
         "ability_line": 17,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Humans_Player_Animations_HammerChisel_AM_Shells_AxeDagger_3Hit_aaA.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/AxeDagger/GA_Player_Attack_AxeDagger_A3.GA_Player_Attack_AxeDagger_A3_C"
     },
     {
       "id": "GA_Player_Attack_AxeDagger_B1_C",
@@ -2092,7 +2103,8 @@
       "evidence": {
         "ability_line": 19,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Humans_Player_Animations_HammerChisel_A_Shells_Attacks_AxeDagger_B_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/AxeDagger/GA_Player_Attack_AxeDagger_B1.GA_Player_Attack_AxeDagger_B1_C"
     },
     {
       "id": "GA_Player_Attack_AxeDagger_B1_Hold_C",
@@ -2293,7 +2305,8 @@
       "evidence": {
         "ability_line": 20,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_AxeDagger_HoldAttacks_AM_Shells_Attacks_AxeDagger_Hold_B.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/AxeDagger/GA_Player_Attack_AxeDagger_B1_Hold.GA_Player_Attack_AxeDagger_B1_Hold_C"
     },
     {
       "id": "GA_Player_Attack_AxeDagger_B2_C",
@@ -2445,7 +2458,8 @@
       "evidence": {
         "ability_line": 21,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Humans_Player_Animations_HammerChisel_A_MS1_Player_Hammer_bB_Montage_02.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/AxeDagger/GA_Player_Attack_AxeDagger_B2.GA_Player_Attack_AxeDagger_B2_C"
     },
     {
       "id": "GA_Player_Attack_AxeDagger_B2_Hold_C",
@@ -2609,7 +2623,8 @@
       "evidence": {
         "ability_line": 22,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_AxeDagger_HoldAttacks_AM_Shells_Attacks_AxeDagger_Hold_BB.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/AxeDagger/GA_Player_Attack_AxeDagger_B2_Hold.GA_Player_Attack_AxeDagger_B2_Hold_C"
     },
     {
       "id": "GA_Player_Attack_AxeDagger_B3_C",
@@ -2765,7 +2780,8 @@
       "evidence": {
         "ability_line": 23,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Humans_Player_Animations_HammerChisel_A_MS1_Player_Hammer_bbB_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/AxeDagger/GA_Player_Attack_AxeDagger_B3.GA_Player_Attack_AxeDagger_B3_C"
     },
     {
       "id": "GA_Player_Attack_BattleAxe_A1_C",
@@ -2892,7 +2908,8 @@
       "evidence": {
         "ability_line": 24,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BattleAxe_Temp_A_Shared_Attacks_BattleAxe_A_04_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BattleAxe/GA_Player_Attack_BattleAxe_A1.GA_Player_Attack_BattleAxe_A1_C"
     },
     {
       "id": "GA_Player_Attack_BattleAxe_A1_Hold_C",
@@ -3099,7 +3116,8 @@
       "evidence": {
         "ability_line": 25,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BattleAxe_Temp_A_Shared_Attacks_BattleAxe_A_Hold_04_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BattleAxe/GA_Player_Attack_BattleAxe_A1_Hold.GA_Player_Attack_BattleAxe_A1_Hold_C"
     },
     {
       "id": "GA_Player_Attack_BattleAxe_A2_C",
@@ -3232,7 +3250,8 @@
       "evidence": {
         "ability_line": 26,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BattleAxe_Temp_A_Shared_Attacks_BattleAxe_AA_01_Cut_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BattleAxe/GA_Player_Attack_BattleAxe_A2.GA_Player_Attack_BattleAxe_A2_C"
     },
     {
       "id": "GA_Player_Attack_BattleAxe_A2_Hold_C",
@@ -3429,7 +3448,8 @@
       "evidence": {
         "ability_line": 27,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BattleAxe_Temp_A_Shared_Attacks_BattleAxe_AA_01_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BattleAxe/GA_Player_Attack_BattleAxe_A2_Hold.GA_Player_Attack_BattleAxe_A2_Hold_C"
     },
     {
       "id": "GA_Player_Attack_BattleAxe_A3_C",
@@ -3578,7 +3598,8 @@
       "evidence": {
         "ability_line": 28,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BattleAxe_Temp_A_Shared_Attacks_BattleAxe_AAA_02_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BattleAxe/GA_Player_Attack_BattleAxe_A3.GA_Player_Attack_BattleAxe_A3_C"
     },
     {
       "id": "GA_Player_Attack_BattleAxe_A3_Hold_C",
@@ -3775,7 +3796,8 @@
       "evidence": {
         "ability_line": 29,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BattleAxe_Temp_A_Shared_Attacks_BattleAxe_AAA_01_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BattleAxe/GA_Player_Attack_BattleAxe_A3_Hold.GA_Player_Attack_BattleAxe_A3_Hold_C"
     },
     {
       "id": "GA_Player_Attack_BattleAxe_A_Finisher_C",
@@ -3938,7 +3960,8 @@
       "evidence": {
         "ability_line": 30,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BattleAxe_Temp_A_Shared_Attacks_BattleAxe_AAA_Finisher_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BattleAxe/GA_Player_Attack_BattleAxe_A_Finisher.GA_Player_Attack_BattleAxe_A_Finisher_C"
     },
     {
       "id": "GA_Player_Attack_BattleAxe_B1_C",
@@ -4101,7 +4124,8 @@
       "evidence": {
         "ability_line": 31,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BattleAxe_Temp_B_A_Shared_Attacks_BattleAxe_B_01_Cut_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BattleAxe/GA_Player_Attack_BattleAxe_B1.GA_Player_Attack_BattleAxe_B1_C"
     },
     {
       "id": "GA_Player_Attack_BattleAxe_B1_Hold_C",
@@ -4317,7 +4341,8 @@
       "evidence": {
         "ability_line": 32,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BattleAxe_Temp_B_A_Shared_Attacks_BattleAxe_B_Hold_01_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BattleAxe/GA_Player_Attack_BattleAxe_B1_Hold.GA_Player_Attack_BattleAxe_B1_Hold_C"
     },
     {
       "id": "GA_Player_Attack_BattleAxe_B2_C",
@@ -4476,7 +4501,8 @@
       "evidence": {
         "ability_line": 33,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BattleAxe_Temp_B_A_Shared_Attacks_BattleAxe_BB_03_Cut_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BattleAxe/GA_Player_Attack_BattleAxe_B2.GA_Player_Attack_BattleAxe_B2_C"
     },
     {
       "id": "GA_Player_Attack_BattleAxe_B2_Hold_C",
@@ -4692,7 +4718,8 @@
       "evidence": {
         "ability_line": 34,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BattleAxe_Temp_B_A_Shared_Attacks_BattleAxe_BB_Hold_03_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BattleAxe/GA_Player_Attack_BattleAxe_B2_Hold.GA_Player_Attack_BattleAxe_B2_Hold_C"
     },
     {
       "id": "GA_Player_Attack_BattleAxe_B3_C",
@@ -4847,7 +4874,8 @@
       "evidence": {
         "ability_line": 35,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BattleAxe_Temp_B_A_Shared_Attacks_BattleAxe_BBB_01_Cut_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BattleAxe/GA_Player_Attack_BattleAxe_B3.GA_Player_Attack_BattleAxe_B3_C"
     },
     {
       "id": "GA_Player_Attack_BattleAxe_B3_Hold_C",
@@ -5061,7 +5089,8 @@
       "evidence": {
         "ability_line": 36,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BattleAxe_Temp_B_A_Shared_Attacks_BattleAxe_BBB_Hold_01_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BattleAxe/GA_Player_Attack_BattleAxe_B3_Hold.GA_Player_Attack_BattleAxe_B3_Hold_C"
     },
     {
       "id": "GA_Player_Attack_BattleAxe_B_Finisher_C",
@@ -5225,7 +5254,8 @@
       "evidence": {
         "ability_line": 37,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BattleAxe_Temp_B_A_Shared_Attacks_BattleAxe_BBB_Finisher_01_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BattleAxe/GA_Player_Attack_BattleAxe_B_Finisher.GA_Player_Attack_BattleAxe_B_Finisher_C"
     },
     {
       "id": "GA_Player_Attack_BlackNeedle_A1_Hold_C",
@@ -5452,7 +5482,8 @@
       "evidence": {
         "ability_line": 38,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BlackNeedle_HoldV2_A_Shared_Attacks_BlackNeedle_Hold_A_02_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BlackNeedle/GA_Player_Attack_BlackNeedle_A1_Hold.GA_Player_Attack_BlackNeedle_A1_Hold_C"
     },
     {
       "id": "GA_Player_Attack_BlackNeedle_A2_Hold_C",
@@ -5669,7 +5700,8 @@
       "evidence": {
         "ability_line": 39,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BlackNeedle_HoldV2_A_Shared_Attacks_BlackNeedle_Hold_AA_02_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BlackNeedle/GA_Player_Attack_BlackNeedle_A2_Hold.GA_Player_Attack_BlackNeedle_A2_Hold_C"
     },
     {
       "id": "GA_Player_Attack_BlackNeedle_A3_Hold_C",
@@ -5876,7 +5908,8 @@
       "evidence": {
         "ability_line": 40,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BlackNeedle_HoldV2_A_Shared_Attacks_BlackNeedle_Hold_AAA_02_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BlackNeedle/GA_Player_Attack_BlackNeedle_A3_Hold.GA_Player_Attack_BlackNeedle_A3_Hold_C"
     },
     {
       "id": "GA_Player_Attack_BlackNeedle_A_Finisher_C",
@@ -6069,7 +6102,8 @@
       "evidence": {
         "ability_line": 41,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BlackNeedle_HoldV2_A_Shared_Attacks_BlackNeedle_AAA_CUT_Finisher_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BlackNeedle/GA_Player_Attack_BlackNeedle_A_Finisher.GA_Player_Attack_BlackNeedle_A_Finisher_C"
     },
     {
       "id": "GA_Player_Attack_BlackNeedle_B1_Hold_C",
@@ -6254,7 +6288,8 @@
       "evidence": {
         "ability_line": 42,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BlackNeedle_HoldV2_A_Shared_Attacks_BlackNeedle_Hold_B_03_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BlackNeedle/GA_Player_Attack_BlackNeedle_B1_Hold.GA_Player_Attack_BlackNeedle_B1_Hold_C"
     },
     {
       "id": "GA_Player_Attack_BlackNeedle_B2_Hold_C",
@@ -6439,7 +6474,8 @@
       "evidence": {
         "ability_line": 43,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BlackNeedle_HoldV2_A_Shared_Attacks_BlackNeedle_Hold_BB_03_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BlackNeedle/GA_Player_Attack_BlackNeedle_B2_Hold.GA_Player_Attack_BlackNeedle_B2_Hold_C"
     },
     {
       "id": "GA_Player_Attack_BlackNeedle_B3_Hold_C",
@@ -6668,7 +6704,8 @@
       "evidence": {
         "ability_line": 44,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BlackNeedle_HoldV2_A_Shared_Attacks_BlackNeedle_Hold_BBB_03_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BlackNeedle/GA_Player_Attack_BlackNeedle_B3_Hold.GA_Player_Attack_BlackNeedle_B3_Hold_C"
     },
     {
       "id": "GA_Player_Attack_BlackNeedle_B_Finisher_C",
@@ -6815,7 +6852,8 @@
       "evidence": {
         "ability_line": 45,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BlackNeedle_HoldV2_A_Shared_Attacks_BlackNeedle_BBB_CUT_Finisher_Montage2.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BlackNeedle/GA_Player_Attack_BlackNeedle_B_Finisher.GA_Player_Attack_BlackNeedle_B_Finisher_C"
     },
     {
       "id": "GA_Player_Attack_ClockworkScythe_A1_C",
@@ -6991,7 +7029,8 @@
       "evidence": {
         "ability_line": 46,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Scythe_Hold_V2_A_Shared_Attacks_Scythe_A_02_V2_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/ClockworkScythe/GA_Player_Attack_ClockworkScythe_A1.GA_Player_Attack_ClockworkScythe_A1_C"
     },
     {
       "id": "GA_Player_Attack_ClockworkScythe_A1_Hold_C",
@@ -7275,7 +7314,8 @@
       "evidence": {
         "ability_line": 47,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Scythe_Hold_V2_A_Shared_Attacks_Scythe_A_02_Hold_V2_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/ClockworkScythe/GA_Player_Attack_ClockworkScythe_A1_Hold.GA_Player_Attack_ClockworkScythe_A1_Hold_C"
     },
     {
       "id": "GA_Player_Attack_ClockworkScythe_A2_C",
@@ -7451,7 +7491,8 @@
       "evidence": {
         "ability_line": 48,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Scythe_Hold_V2_A_Shared_Attacks_Scythe_AA_02_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/ClockworkScythe/GA_Player_Attack_ClockworkScythe_A2.GA_Player_Attack_ClockworkScythe_A2_C"
     },
     {
       "id": "GA_Player_Attack_ClockworkScythe_A2_Hold_C",
@@ -7749,7 +7790,8 @@
       "evidence": {
         "ability_line": 49,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Scythe_Hold_V2_A_Shared_Attacks_Scythe_AA_Hold_V2_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/ClockworkScythe/GA_Player_Attack_ClockworkScythe_A2_Hold.GA_Player_Attack_ClockworkScythe_A2_Hold_C"
     },
     {
       "id": "GA_Player_Attack_ClockworkScythe_A3_C",
@@ -7925,7 +7967,8 @@
       "evidence": {
         "ability_line": 50,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Scythe_Hold_V2_A_Shared_Attacks_Scythe_AAA_03_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/ClockworkScythe/GA_Player_Attack_ClockworkScythe_A3.GA_Player_Attack_ClockworkScythe_A3_C"
     },
     {
       "id": "GA_Player_Attack_ClockworkScythe_A3_Hold_C",
@@ -8212,7 +8255,8 @@
       "evidence": {
         "ability_line": 52,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Scythe_Hold_V2_A_Shared_Attacks_Scythe_AAA_03_Hold_60fps_V2_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/ClockworkScythe/GA_Player_Attack_ClockworkScythe_A3_Hold.GA_Player_Attack_ClockworkScythe_A3_Hold_C"
     },
     {
       "id": "GA_Player_Attack_ClockworkScythe_B1_C",
@@ -8392,7 +8436,8 @@
       "evidence": {
         "ability_line": 53,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Scythe_Hold_V2_A_Shared_Attacks_Scythe_B_02_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/ClockworkScythe/GA_Player_Attack_ClockworkScythe_B1.GA_Player_Attack_ClockworkScythe_B1_C"
     },
     {
       "id": "GA_Player_Attack_ClockworkScythe_B1_Hold_C",
@@ -8686,7 +8731,8 @@
       "evidence": {
         "ability_line": 54,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Scythe_Hold_V2_A_Shared_Attacks_Scythe_B_02_Hold_V2_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/ClockworkScythe/GA_Player_Attack_ClockworkScythe_B1_Hold.GA_Player_Attack_ClockworkScythe_B1_Hold_C"
     },
     {
       "id": "GA_Player_Attack_ClockworkScythe_B2_C",
@@ -8877,7 +8923,8 @@
       "evidence": {
         "ability_line": 55,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Scythe_Hold_V2_A_Shared_Attacks_Scythe_BB_03_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/ClockworkScythe/GA_Player_Attack_ClockworkScythe_B2.GA_Player_Attack_ClockworkScythe_B2_C"
     },
     {
       "id": "GA_Player_Attack_ClockworkScythe_B2_Hold_C",
@@ -9156,7 +9203,8 @@
       "evidence": {
         "ability_line": 56,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Scythe_Hold_V2_A_Shared_Attacks_Scythe_BB_03_Hold_02_V2_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/ClockworkScythe/GA_Player_Attack_ClockworkScythe_B2_Hold.GA_Player_Attack_ClockworkScythe_B2_Hold_C"
     },
     {
       "id": "GA_Player_Attack_ClockworkScythe_B3_C",
@@ -9342,7 +9390,8 @@
       "evidence": {
         "ability_line": 57,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Scythe_Hold_V2_A_Shared_Attacks_Scythe_BBB_10_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/ClockworkScythe/GA_Player_Attack_ClockworkScythe_B3.GA_Player_Attack_ClockworkScythe_B3_C"
     },
     {
       "id": "GA_Player_Attack_ClockworkScythe_B3_Hold_C",
@@ -9630,7 +9679,8 @@
       "evidence": {
         "ability_line": 59,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Scythe_Hold_V2_A_Shared_Attacks_Scythe_BBB_10_Hold_V2_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/ClockworkScythe/GA_Player_Attack_ClockworkScythe_B3_Hold.GA_Player_Attack_ClockworkScythe_B3_Hold_C"
     },
     {
       "id": "GA_Player_Attack_HadernSword_A1_Hold_C",
@@ -9789,7 +9839,8 @@
       "evidence": {
         "ability_line": 69,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HadernSword_A_Shared_HadernSword_A_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HadernsSword/GA_Player_Attack_HadernSword_A1_Hold.GA_Player_Attack_HadernSword_A1_Hold_C"
     },
     {
       "id": "GA_Player_Attack_HadernSword_A2_Hold_C",
@@ -9948,7 +9999,8 @@
       "evidence": {
         "ability_line": 70,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HadernSword_A_Shared_HadernSword_AA_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HadernsSword/GA_Player_Attack_HadernSword_A2_Hold.GA_Player_Attack_HadernSword_A2_Hold_C"
     },
     {
       "id": "GA_Player_Attack_HadernSword_A3_Hold_C",
@@ -10111,7 +10163,8 @@
       "evidence": {
         "ability_line": 71,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HadernSword_A_Shared_HadernSword_AAA_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HadernsSword/GA_Player_Attack_HadernSword_A3_Hold.GA_Player_Attack_HadernSword_A3_Hold_C"
     },
     {
       "id": "GA_Player_Attack_HadernsSword_B1_Hold_C",
@@ -10286,7 +10339,8 @@
       "evidence": {
         "ability_line": 72,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HadernSword_A_Shared_HadernSword_B_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HadernsSword/GA_Player_Attack_HadernsSword_B1_Hold.GA_Player_Attack_HadernsSword_B1_Hold_C"
     },
     {
       "id": "GA_Player_Attack_HadernsSword_B2_Hold_C",
@@ -10461,7 +10515,8 @@
       "evidence": {
         "ability_line": 73,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HadernSword_A_Shared_HadernSword_BB_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HadernsSword/GA_Player_Attack_HadernsSword_B2_Hold.GA_Player_Attack_HadernsSword_B2_Hold_C"
     },
     {
       "id": "GA_Player_Attack_HadernsSword_B3_Hold_C",
@@ -10654,7 +10709,8 @@
       "evidence": {
         "ability_line": 74,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HadernSword_A_Shared_HadernSword_BBB_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HadernsSword/GA_Player_Attack_HadernsSword_B3_Hold.GA_Player_Attack_HadernsSword_B3_Hold_C"
     },
     {
       "id": "GA_Player_Attack_HeavyHammer_A1_C",
@@ -10803,7 +10859,8 @@
       "evidence": {
         "ability_line": 75,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HeavyHammer_A_Shared_HeavyHammer_Overhead_01_Cut_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HeavyHammer/GA_Player_Attack_HeavyHammer_A1.GA_Player_Attack_HeavyHammer_A1_C"
     },
     {
       "id": "GA_Player_Attack_HeavyHammer_A1_Hold_C",
@@ -10980,7 +11037,8 @@
       "evidence": {
         "ability_line": 76,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HeavyHammer_A_Shared_HeavyHammer_Overhead_01_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HeavyHammer/GA_Player_Attack_HeavyHammer_A1_Hold.GA_Player_Attack_HeavyHammer_A1_Hold_C"
     },
     {
       "id": "GA_Player_Attack_HeavyHammer_A2_C",
@@ -11129,7 +11187,8 @@
       "evidence": {
         "ability_line": 77,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HeavyHammer_A_Shared_HeavyHammer_Overhead_02_Cut_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HeavyHammer/GA_Player_Attack_HeavyHammer_A2.GA_Player_Attack_HeavyHammer_A2_C"
     },
     {
       "id": "GA_Player_Attack_HeavyHammer_A2_Hold_C",
@@ -11311,7 +11370,8 @@
       "evidence": {
         "ability_line": 78,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HeavyHammer_A_Shared_HeavyHammer_Overhead_02_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HeavyHammer/GA_Player_Attack_HeavyHammer_A2_Hold.GA_Player_Attack_HeavyHammer_A2_Hold_C"
     },
     {
       "id": "GA_Player_Attack_HeavyHammer_A3_C",
@@ -11460,7 +11520,8 @@
       "evidence": {
         "ability_line": 79,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HeavyHammer_A_Shared_HeavyHammer_Overhead_03_Cut_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HeavyHammer/GA_Player_Attack_HeavyHammer_A3.GA_Player_Attack_HeavyHammer_A3_C"
     },
     {
       "id": "GA_Player_Attack_HeavyHammer_A3_Hold_C",
@@ -11637,7 +11698,8 @@
       "evidence": {
         "ability_line": 80,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HeavyHammer_A_Shared_HeavyHammer_Overhead_03_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HeavyHammer/GA_Player_Attack_HeavyHammer_A3_Hold.GA_Player_Attack_HeavyHammer_A3_Hold_C"
     },
     {
       "id": "GA_Player_Attack_HeavyHammer_A_Finisher_C",
@@ -11856,7 +11918,8 @@
       "evidence": {
         "ability_line": 81,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HeavyHammer_A_Shared_HeavyHammer_Overhead_03_Finisher_Cut_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HeavyHammer/GA_Player_Attack_HeavyHammer_A_Finisher.GA_Player_Attack_HeavyHammer_A_Finisher_C"
     },
     {
       "id": "GA_Player_Attack_HeavyHammer_B1_C",
@@ -12010,7 +12073,8 @@
       "evidence": {
         "ability_line": 82,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HeavyHammer_A_Shared_Attacks_HeavyHammer_B_Cut_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HeavyHammer/GA_Player_Attack_HeavyHammer_B1.GA_Player_Attack_HeavyHammer_B1_C"
     },
     {
       "id": "GA_Player_Attack_HeavyHammer_B1_Hold_C",
@@ -12229,7 +12293,8 @@
       "evidence": {
         "ability_line": 83,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HeavyHammer_A_Shared_Attacks_HeavyHammer_B_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HeavyHammer/GA_Player_Attack_HeavyHammer_B1_Hold.GA_Player_Attack_HeavyHammer_B1_Hold_C"
     },
     {
       "id": "GA_Player_Attack_HeavyHammer_B2_C",
@@ -12381,7 +12446,8 @@
       "evidence": {
         "ability_line": 84,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HeavyHammer_A_Shared_Attacks_HeavyHammer_BB_Cut_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HeavyHammer/GA_Player_Attack_HeavyHammer_B2.GA_Player_Attack_HeavyHammer_B2_C"
     },
     {
       "id": "GA_Player_Attack_HeavyHammer_B2_Hold_C",
@@ -12627,7 +12693,8 @@
       "evidence": {
         "ability_line": 85,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HeavyHammer_A_Shared_Attacks_HeavyHammer_BB_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HeavyHammer/GA_Player_Attack_HeavyHammer_B2_Hold.GA_Player_Attack_HeavyHammer_B2_Hold_C"
     },
     {
       "id": "GA_Player_Attack_HeavyHammer_B3_C",
@@ -12784,7 +12851,8 @@
       "evidence": {
         "ability_line": 86,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HeavyHammer_A_Shared_Attacks_HeavyHammer_BBB_Cut_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HeavyHammer/GA_Player_Attack_HeavyHammer_B3.GA_Player_Attack_HeavyHammer_B3_C"
     },
     {
       "id": "GA_Player_Attack_HeavyHammer_B3_Hold_C",
@@ -13031,7 +13099,8 @@
       "evidence": {
         "ability_line": 87,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HeavyHammer_A_Shared_Attacks_HeavyHammer_BBB_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HeavyHammer/GA_Player_Attack_HeavyHammer_B3_Hold.GA_Player_Attack_HeavyHammer_B3_Hold_C"
     },
     {
       "id": "GA_Player_Attack_HeavyHammer_B_Finisher_C",
@@ -13229,7 +13298,8 @@
       "evidence": {
         "ability_line": 88,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HeavyHammer_A_Shared_Attacks_HeavyHammer_BBB_Finisher_Cut_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HeavyHammer/GA_Player_Attack_HeavyHammer_B_Finisher.GA_Player_Attack_HeavyHammer_B_Finisher_C"
     },
     {
       "id": "GA_Player_Attack_Katanas_A1_C",
@@ -13363,7 +13433,8 @@
       "evidence": {
         "ability_line": 92,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Axatana_A_A_Shared_Attacks_Axeatana_A_02_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/Axatana/Katanas/GA_Player_Attack_Katanas_A1.GA_Player_Attack_Katanas_A1_C"
     },
     {
       "id": "GA_Player_Attack_Katanas_A1_Hold_C",
@@ -13615,7 +13686,8 @@
       "evidence": {
         "ability_line": 93,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Axatana_A_Hold_A_Shared_Attacks_Axeatana_A_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/Axatana/Katanas/GA_Player_Attack_Katanas_A1_Hold.GA_Player_Attack_Katanas_A1_Hold_C"
     },
     {
       "id": "GA_Player_Attack_Katanas_A2_C",
@@ -13742,7 +13814,8 @@
       "evidence": {
         "ability_line": 95,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Axatana_A_A_Shared_Attacks_Axeatana_AA_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/Axatana/Katanas/GA_Player_Attack_Katanas_A2.GA_Player_Attack_Katanas_A2_C"
     },
     {
       "id": "GA_Player_Attack_Katanas_A2_Hold_C",
@@ -14001,7 +14074,8 @@
       "evidence": {
         "ability_line": 96,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Axatana_A_Hold_A_Shared_Attacks_Axeatana_AA_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/Axatana/Katanas/GA_Player_Attack_Katanas_A2_Hold.GA_Player_Attack_Katanas_A2_Hold_C"
     },
     {
       "id": "GA_Player_Attack_Katanas_A3_C",
@@ -14150,7 +14224,8 @@
       "evidence": {
         "ability_line": 98,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Axatana_A_A_Shared_Attacks_Axeatana_AAA_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/Axatana/Katanas/GA_Player_Attack_Katanas_A3.GA_Player_Attack_Katanas_A3_C"
     },
     {
       "id": "GA_Player_Attack_Katanas_A3_Hold_C",
@@ -14410,7 +14485,8 @@
       "evidence": {
         "ability_line": 99,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_Axatana_A_Hold_A_Shared_Attacks_Axeatana_AAA_Hold_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/Axatana/Katanas/GA_Player_Attack_Katanas_A3_Hold.GA_Player_Attack_Katanas_A3_Hold_C"
     },
     {
       "id": "GA_Player_Attack_MartyrsBlade_A1_C",
@@ -14576,7 +14652,8 @@
       "evidence": {
         "ability_line": 106,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_MartyrsBlade_A_MS1_Player_MartyrsBlade_Attack_A_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/MartyrsBlade/GA_Player_Attack_MartyrsBlade_A1.GA_Player_Attack_MartyrsBlade_A1_C"
     },
     {
       "id": "GA_Player_Attack_MartyrsBlade_A1_Hold_C",
@@ -14740,7 +14817,8 @@
       "evidence": {
         "ability_line": 107,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_MartyrsBlade_A_Shared_MartyrsBlade_HoldAttacks_A_Blast_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/MartyrsBlade/GA_Player_Attack_MartyrsBlade_A1_Hold.GA_Player_Attack_MartyrsBlade_A1_Hold_C"
     },
     {
       "id": "GA_Player_Attack_MartyrsBlade_A2_C",
@@ -14911,7 +14989,8 @@
       "evidence": {
         "ability_line": 108,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_MartyrsBlade_A_MS1_Player_MartyrsBlade_Attack_AA_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/MartyrsBlade/GA_Player_Attack_MartyrsBlade_A2.GA_Player_Attack_MartyrsBlade_A2_C"
     },
     {
       "id": "GA_Player_Attack_MartyrsBlade_A2_Hold_C",
@@ -15063,7 +15142,8 @@
       "evidence": {
         "ability_line": 109,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_MartyrsBlade_A_Shared_MartyrsBlade_HoldAttacks_AA_Blast_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/MartyrsBlade/GA_Player_Attack_MartyrsBlade_A2_Hold.GA_Player_Attack_MartyrsBlade_A2_Hold_C"
     },
     {
       "id": "GA_Player_Attack_MartyrsBlade_A3_C",
@@ -15224,7 +15304,8 @@
       "evidence": {
         "ability_line": 110,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_MartyrsBlade_A_MS1_Player_MartyrsBlade_Attack_AAA_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/MartyrsBlade/GA_Player_Attack_MartyrsBlade_A3.GA_Player_Attack_MartyrsBlade_A3_C"
     },
     {
       "id": "GA_Player_Attack_MartyrsBlade_A_Finisher_C",
@@ -15397,7 +15478,8 @@
       "evidence": {
         "ability_line": 111,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_MartyrsBlade_A_Shared_Attacks_MartyrsBlade_AAA_Finisher_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/MartyrsBlade/GA_Player_Attack_MartyrsBlade_A_Finisher.GA_Player_Attack_MartyrsBlade_A_Finisher_C"
     },
     {
       "id": "GA_Player_Attack_MartyrsBlade_B1_C",
@@ -15556,7 +15638,8 @@
       "evidence": {
         "ability_line": 112,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Humans_Player_Animations_MartyrsBlade_AM_Shells_MartyrsBlade_B1.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/MartyrsBlade/GA_Player_Attack_MartyrsBlade_B1.GA_Player_Attack_MartyrsBlade_B1_C"
     },
     {
       "id": "GA_Player_Attack_MartyrsBlade_B1_Hold_C",
@@ -15725,7 +15808,8 @@
       "evidence": {
         "ability_line": 113,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_MartyrsBlade_AM_Shell_Attacks_MartyrsBlade_Hold_B.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/MartyrsBlade/GA_Player_Attack_MartyrsBlade_B1_Hold.GA_Player_Attack_MartyrsBlade_B1_Hold_C"
     },
     {
       "id": "GA_Player_Attack_MartyrsBlade_B2_C",
@@ -15884,7 +15968,8 @@
       "evidence": {
         "ability_line": 114,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Humans_Player_Animations_MartyrsBlade_AM_Shells_MartyrsBlade_B2.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/MartyrsBlade/GA_Player_Attack_MartyrsBlade_B2.GA_Player_Attack_MartyrsBlade_B2_C"
     },
     {
       "id": "GA_Player_Attack_MartyrsBlade_B3_C",
@@ -16043,7 +16128,8 @@
       "evidence": {
         "ability_line": 115,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Humans_Player_Animations_MartyrsBlade_AM_Shells_MartyrsBlade_B3.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/MartyrsBlade/GA_Player_Attack_MartyrsBlade_B3.GA_Player_Attack_MartyrsBlade_B3_C"
     },
     {
       "id": "GA_Player_Attack_MartyrsBlade_B_Finisher_C",
@@ -16188,7 +16274,8 @@
       "evidence": {
         "ability_line": 117,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_MartyrsBlade_A_Shared_Attacks_MartyrsBlade_BBB_Finisher_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/MartyrsBlade/GA_Player_Attack_MartyrsBlade_B_Finisher.GA_Player_Attack_MartyrsBlade_B_Finisher_C"
     },
     {
       "id": "GA_Player_Attack_Smert_Kick_B1_C",
@@ -16329,7 +16416,8 @@
       "evidence": {
         "ability_line": 119,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells_Smert_Animation_Attacks_Combos_A_Smert_Attacks_Kick_B_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Characters/Player/Smert/Abilities/GA_Player_Attack_Smert_Kick_B1.GA_Player_Attack_Smert_Kick_B1_C"
     },
     {
       "id": "GA_Player_Attack_Smert_Kick_B2_C",
@@ -16470,7 +16558,8 @@
       "evidence": {
         "ability_line": 120,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells_Smert_Animation_Attacks_Combos_A_Smert_Attacks_Kick_BB_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Characters/Player/Smert/Abilities/GA_Player_Attack_Smert_Kick_B2.GA_Player_Attack_Smert_Kick_B2_C"
     },
     {
       "id": "GA_Player_Attack_Smert_Kick_B3_C",
@@ -16611,7 +16700,8 @@
       "evidence": {
         "ability_line": 121,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells_Smert_Animation_Attacks_Combos_A_Smert_Attacks_Kick_BBB_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Characters/Player/Smert/Abilities/GA_Player_Attack_Smert_Kick_B3.GA_Player_Attack_Smert_Kick_B3_C"
     },
     {
       "id": "GA_Player_Attack_Smert_Punch_A1_C",
@@ -16744,7 +16834,8 @@
       "evidence": {
         "ability_line": 122,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells_Smert_Animation_Attacks_Combos_A_Smert_Attacks_Punch_A_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Characters/Player/Smert/Abilities/GA_Player_Attack_Smert_Punch_A1.GA_Player_Attack_Smert_Punch_A1_C"
     },
     {
       "id": "GA_Player_Attack_Smert_Punch_A2_C",
@@ -16877,7 +16968,8 @@
       "evidence": {
         "ability_line": 123,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells_Smert_Animation_Attacks_Combos_A_Smert_Attacks_Punch_AA_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Characters/Player/Smert/Abilities/GA_Player_Attack_Smert_Punch_A2.GA_Player_Attack_Smert_Punch_A2_C"
     },
     {
       "id": "GA_Player_Attack_Smert_Punch_A3_C",
@@ -17090,7 +17182,8 @@
       "evidence": {
         "ability_line": 124,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells_Smert_Animation_Attacks_Combos_A_Smert_Attacks_Punch_AAA_02_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Characters/Player/Smert/Abilities/GA_Player_Attack_Smert_Punch_A3.GA_Player_Attack_Smert_Punch_A3_C"
     },
     {
       "id": "GA_Player_BlackNeedle_A1_C",
@@ -17224,7 +17317,8 @@
       "evidence": {
         "ability_line": 128,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BlackNeedle_HoldV2_A_Shared_Attacks_BlackNeedle_A_CUT_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BlackNeedle/GA_Player_BlackNeedle_A1.GA_Player_BlackNeedle_A1_C"
     },
     {
       "id": "GA_Player_BlackNeedle_A2_C",
@@ -17358,7 +17452,8 @@
       "evidence": {
         "ability_line": 129,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BlackNeedle_HoldV2_A_Shared_Attacks_BlackNeedle_AA_CUT_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BlackNeedle/GA_Player_BlackNeedle_A2.GA_Player_BlackNeedle_A2_C"
     },
     {
       "id": "GA_Player_BlackNeedle_A3_C",
@@ -17492,7 +17587,8 @@
       "evidence": {
         "ability_line": 130,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BlackNeedle_HoldV2_A_Shared_Attacks_BlackNeedle_AAA_CUT_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BlackNeedle/GA_Player_BlackNeedle_A3.GA_Player_BlackNeedle_A3_C"
     },
     {
       "id": "GA_Player_BlackNeedle_B1_C",
@@ -17623,7 +17719,8 @@
       "evidence": {
         "ability_line": 131,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BlackNeedle_HoldV2_A_Shared_Attacks_BlackNeedle_B_CUT_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BlackNeedle/GA_Player_BlackNeedle_B1.GA_Player_BlackNeedle_B1_C"
     },
     {
       "id": "GA_Player_BlackNeedle_B2_C",
@@ -17754,7 +17851,8 @@
       "evidence": {
         "ability_line": 132,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BlackNeedle_HoldV2_A_Shared_Attacks_BlackNeedle_BB_CUT_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BlackNeedle/GA_Player_BlackNeedle_B2.GA_Player_BlackNeedle_B2_C"
     },
     {
       "id": "GA_Player_BlackNeedle_B3_C",
@@ -17878,7 +17976,8 @@
       "evidence": {
         "ability_line": 133,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_BlackNeedle_HoldV2_A_Shared_Attacks_BlackNeedle_BBB_CUT_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BlackNeedle/GA_Player_BlackNeedle_B3.GA_Player_BlackNeedle_B3_C"
     },
     {
       "id": "GA_Player_HadernsSword_A1_C",
@@ -18033,7 +18132,8 @@
       "evidence": {
         "ability_line": 135,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HadernSword_A_Shared_HadernSword_A_03_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HadernsSword/GA_Player_HadernsSword_A1.GA_Player_HadernsSword_A1_C"
     },
     {
       "id": "GA_Player_HadernsSword_A2_C",
@@ -18188,7 +18288,8 @@
       "evidence": {
         "ability_line": 136,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HadernSword_A_Shared_HadernSword_AA_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HadernsSword/GA_Player_HadernsSword_A2.GA_Player_HadernsSword_A2_C"
     },
     {
       "id": "GA_Player_HadernsSword_A3_C",
@@ -18348,7 +18449,8 @@
       "evidence": {
         "ability_line": 137,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HadernSword_A_Shared_HadernSword_AAA_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HadernsSword/GA_Player_HadernsSword_A3.GA_Player_HadernsSword_A3_C"
     },
     {
       "id": "GA_Player_HadernsSword_A_Finisher_C",
@@ -18526,7 +18628,8 @@
       "evidence": {
         "ability_line": 138,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HadernSword_A_Shared_HadernSword_AAA_Finisher_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HadernsSword/GA_Player_HadernsSword_A_Finisher.GA_Player_HadernsSword_A_Finisher_C"
     },
     {
       "id": "GA_Player_HadernsSword_B1_C",
@@ -18683,7 +18786,8 @@
       "evidence": {
         "ability_line": 139,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HadernSword_A_Shared_HadernSword_B_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HadernsSword/GA_Player_HadernsSword_B1.GA_Player_HadernsSword_B1_C"
     },
     {
       "id": "GA_Player_HadernsSword_B2_C",
@@ -18850,7 +18954,8 @@
       "evidence": {
         "ability_line": 140,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HadernSword_A_Shared_Attacks_HadernSword_BB_02_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HadernsSword/GA_Player_HadernsSword_B2.GA_Player_HadernsSword_B2_C"
     },
     {
       "id": "GA_Player_HadernsSword_B3_C",
@@ -19012,7 +19117,8 @@
       "evidence": {
         "ability_line": 141,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HadernSword_A_Shared_HadernSword_BBB_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HadernsSword/GA_Player_HadernsSword_B3.GA_Player_HadernsSword_B3_C"
     },
     {
       "id": "GA_Player_HadernsSword_B_Finisher_C",
@@ -19167,7 +19273,8 @@
       "evidence": {
         "ability_line": 142,
         "montage_export": "export/MortalShell2_Content_Sparta_Characters_Shells__Shared_Animation_Attacks_HadernSword_A_Shared_HadernSword_BBB_Finisher_Montage.uasset.json"
-      }
+      },
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HadernsSword/GA_Player_HadernsSword_B_Finisher.GA_Player_HadernsSword_B_Finisher_C"
     }
   ],
   "tarstone_stats": [

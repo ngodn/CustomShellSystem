@@ -78,6 +78,7 @@ struct MoveDefinition {
     std::string source_name;       // e.g. "HadernsSword", "CultistSpearLady"
     MoveOrigin origin{MoveOrigin::PlayerWeapon};
     std::string ability_path;
+    std::string ability_class;     // loadable class path of the move's own attack ability (player moves), for its hit payload
     std::string montage_path;
     std::string description;
     double damage_multiplier{1.0};

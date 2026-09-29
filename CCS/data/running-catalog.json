@@ -12,7 +12,8 @@
       "slots": [
         "SH"
       ],
-      "description": "Axatana (axe): the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+      "description": "Axatana (axe): the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots.",
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/Axatana/Axe/GA_Player_Attack_Katanas_RunningAttack_Axe.GA_Player_Attack_Katanas_RunningAttack_Axe_C"
     },
     {
       "id": "GA_Player_Attack_Katanas_RunningAttack_C",
@@ -24,7 +25,8 @@
       "slots": [
         "SL"
       ],
-      "description": "Axatana (katanas): the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+      "description": "Axatana (katanas): the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots.",
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/Axatana/Katanas/GA_Player_Attack_Katanas_RunningAttack.GA_Player_Attack_Katanas_RunningAttack_C"
     },
     {
       "id": "GA_Running_Attack_AxeDagger_A_C",
@@ -36,7 +38,8 @@
       "slots": [
         "SL"
       ],
-      "description": "Axe & Dagger: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+      "description": "Axe & Dagger: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots.",
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/AxeDagger/GA_Running_Attack_AxeDagger_A.GA_Running_Attack_AxeDagger_A_C"
     },
     {
       "id": "GA_Running_Attack_AxeDagger_B_C",
@@ -48,7 +51,8 @@
       "slots": [
         "SH"
       ],
-      "description": "Axe & Dagger: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+      "description": "Axe & Dagger: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots.",
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/AxeDagger/GA_Running_Attack_AxeDagger_B.GA_Running_Attack_AxeDagger_B_C"
     },
     {
       "id": "GA_Running_Attack_B_BattleAxe_C",
@@ -60,7 +64,8 @@
       "slots": [
         "SH"
       ],
-      "description": "Veteran's Battle Axe: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+      "description": "Veteran's Battle Axe: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots.",
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BattleAxe/GA_Running_Attack_B_BattleAxe.GA_Running_Attack_B_BattleAxe_C"
     },
     {
       "id": "GA_Running_Attack_BattleAxe_C",
@@ -72,7 +77,8 @@
       "slots": [
         "SL"
       ],
-      "description": "Veteran's Battle Axe: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+      "description": "Veteran's Battle Axe: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots.",
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BattleAxe/GA_Running_Attack_BattleAxe.GA_Running_Attack_BattleAxe_C"
     },
     {
       "id": "GA_Running_Attack_BlackNeedle_C",
@@ -84,7 +90,8 @@
       "slots": [
         "SL"
       ],
-      "description": "Black Needle: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+      "description": "Black Needle: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots.",
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BlackNeedle/GA_Running_Attack_BlackNeedle.GA_Running_Attack_BlackNeedle_C"
     },
     {
       "id": "GA_Running_Attack_BlackNeedle_B_C",
@@ -96,7 +103,8 @@
       "slots": [
         "SH"
       ],
-      "description": "Black Needle: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+      "description": "Black Needle: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots.",
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/BlackNeedle/GA_Running_Attack_BlackNeedle_B.GA_Running_Attack_BlackNeedle_B_C"
     },
     {
       "id": "GA_Running_Attack_ClockworkScythe_C",
@@ -108,7 +116,8 @@
       "slots": [
         "SL"
       ],
-      "description": "Clockwork Scythe: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+      "description": "Clockwork Scythe: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots.",
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/ClockworkScythe/GA_Running_Attack_ClockworkScythe.GA_Running_Attack_ClockworkScythe_C"
     },
     {
       "id": "GA_Running_Attack_ClockworkScythe_B_C",
@@ -120,7 +129,8 @@
       "slots": [
         "SH"
       ],
-      "description": "Clockwork Scythe: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+      "description": "Clockwork Scythe: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots.",
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/ClockworkScythe/GA_Running_Attack_ClockworkScythe_B.GA_Running_Attack_ClockworkScythe_B_C"
     },
     {
       "id": "GA_Player_HadernsSword_RunningAttack_C",
@@ -132,7 +142,8 @@
       "slots": [
         "SL"
       ],
-      "description": "The Iconoclast: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+      "description": "The Iconoclast: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots.",
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HadernsSword/GA_Player_HadernsSword_RunningAttack.GA_Player_HadernsSword_RunningAttack_C"
     },
     {
       "id": "GA_Player_HadernsSword_RunningAttack_B_C",
@@ -144,7 +155,8 @@
       "slots": [
         "SH"
       ],
-      "description": "The Iconoclast: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+      "description": "The Iconoclast: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots.",
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HadernsSword/GA_Player_HadernsSword_RunningAttack_B.GA_Player_HadernsSword_RunningAttack_B_C"
     },
     {
       "id": "GA_Running_Attack_HeavyHammer_C",
@@ -156,7 +168,8 @@
       "slots": [
         "SL"
       ],
-      "description": "Obsidian Hammer: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+      "description": "Obsidian Hammer: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots.",
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HeavyHammer/GA_Running_Attack_HeavyHammer.GA_Running_Attack_HeavyHammer_C"
     },
     {
       "id": "GA_Running_Attack_HeavyHammer_B_C",
@@ -168,7 +181,8 @@
       "slots": [
         "SH"
       ],
-      "description": "Obsidian Hammer: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+      "description": "Obsidian Hammer: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots.",
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/HeavyHammer/GA_Running_Attack_HeavyHammer_B.GA_Running_Attack_HeavyHammer_B_C"
     },
     {
       "id": "GA_Running_Attack_MartyrsBlade_C",
@@ -180,7 +194,8 @@
       "slots": [
         "SL"
       ],
-      "description": "Great Martyr's Blade: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+      "description": "Great Martyr's Blade: the attack that plays when you press light while sprinting. Its montage carries the run-in, so it fits the sprint slots.",
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/MartyrsBlade/GA_Running_Attack_MartyrsBlade.GA_Running_Attack_MartyrsBlade_C"
     },
     {
       "id": "GA_Running_Attack_MartyrsBlade_B_C",
@@ -192,7 +207,8 @@
       "slots": [
         "SH"
       ],
-      "description": "Great Martyr's Blade: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots."
+      "description": "Great Martyr's Blade: the attack that plays when you press heavy while sprinting. Its montage carries the run-in, so it fits the sprint slots.",
+      "ability_class": "/Game/Sparta/Core/Player/Ability/Weapons/MartyrsBlade/GA_Running_Attack_MartyrsBlade_B.GA_Running_Attack_MartyrsBlade_B_C"
     }
   ]
 }

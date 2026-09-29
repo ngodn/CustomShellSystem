@@ -68,7 +68,7 @@ private:
     struct PayloadBackup { engine::ObjectHandle payload; std::vector<std::pair<engine::FProperty*, std::vector<std::byte>>> values; };
     // "Game" feel: a runtime clone of the slot's own montage (its notifies, sections and settings)
     // whose animation track holds the move's animation, keyed by the original it was cloned from.
-    struct Transplant { engine::ObjectHandle original, clone; };
+    struct Transplant { engine::ObjectHandle original, clone; unsigned flags{}; };   // flags: what an overlay copy was built with
     struct Slot {
         std::string move_id, path, error; engine::ObjectHandle montage; bool rooted{}, pending{}; uint64_t hits{};
         engine::ObjectHandle play;                     // what "Move's own" plays: a cleaned clone for enemy montages, the montage itself otherwise
@@ -77,12 +77,15 @@ private:
         SlotTuning tuning;
         std::vector<Transplant> feel; bool feel_warned{}; bool was_ready{};
         std::vector<Transplant> carries; bool carry_warned{};   // "Move's own" copies that carry the original's hold and turn windows
-        std::vector<Transplant> overlays; bool overlay_warned{};   // "Armor"/"Steer" copies of whatever the slot plays, keyed by that montage
+        std::vector<Transplant> overlays; bool overlay_warned{};   // "Armor"/"Steer"/payload copies of whatever the slot plays, keyed by that montage and flags
+        // A player move's own attack ability: its hit payload stands in on hit windows that carry
+        // none (most player montages leave the payload to the ability that plays them).
+        engine::ObjectHandle ability_class, move_payload; bool ability_rooted{}, payload_gap{};
         std::string show_mesh_path; engine::ObjectHandle show_mesh; bool show_rooted{};   // the move's weapon mesh, loaded with the montage
         engine::ObjectHandle payload_source; std::vector<PayloadBackup> backups;          // original payload copied onto the replacement
     };
     // The reflected layout of a montage's notify rows, resolved once: no property lookup per swing.
-    struct NotifyLayout { engine::UObject* montage_class{}; engine::FProperty* notifies{}, *notify{}, *state{}, *link{}, *duration{}, *rate_scale{}, *slot_state{}, *slot_notify{}; engine::UObject* hit_state{}, *hit_notify{}; };
+    struct NotifyLayout { engine::UObject* montage_class{}; engine::FProperty* notifies{}, *notify{}, *state{}, *link{}, *duration{}, *rate_scale{}, *slot_state{}, *slot_notify{}, *payload_state{}, *payload_notify{}, *end_link{}, *end_value{}; engine::UObject* hit_state{}, *hit_notify{}; };
     mutable NotifyLayout layout_{};
     const NotifyLayout& notify_layout() const;
     // What the hook needs to know about a montage the game plays, learned the first time it is
@@ -122,13 +125,23 @@ private:
     // Whole move" adds the weapon's turn window up to the last hit and the movement cancel after it.
     bool ensure_donor();
     bool donor_ready() const { return donor_.get() && donor_armor_ >= 0 && donor_turn_ >= 0 && donor_cancel_ >= 0; }
-    engine::UObject* build_overlay(engine::UObject* source, bool armor, bool steer);
-    engine::UObject* overlaid(Slot& slot, engine::UObject* source, bool armor, bool steer);
+    engine::UObject* build_overlay(engine::UObject* source, bool armor, bool steer, engine::UObject* payload);
+    engine::UObject* overlaid(Slot& slot, engine::UObject* source, bool armor, bool steer, engine::UObject* payload);
+    // Copies of ours must own the notifies whose behaviour depends on the montage that owns them.
+    // The engine hands a notify state its outer as the "animation" (AnimInstance NotifyBegin), and
+    // the movement-cancel window registers that asset with the player controller, which stops it
+    // on stick input or a guard press. A copied window still owned by its source montage made the
+    // controller stop a montage that was not playing.
+    engine::UObject* copy_object(engine::UObject* source, engine::UObject* outer);
+    int adopt_cancel_rows(engine::UObject* copy);
+    bool extend_cancel(engine::UObject* copy, float from, float to);   // stretch an existing cancel window over [from, to]
+    bool payload_gaps(engine::UObject* montage) const;                 // a hit window carries no payload of its own
+    int fill_payloads(engine::UObject* copy, engine::UObject* payload); // give those windows the move's payload
     void release_overlays(Slot& slot);
     float last_hit_end(engine::UObject* montage) const;
     engine::ObjectHandle donor_; int donor_armor_{-1}, donor_turn_{-1}, donor_cancel_{-1}; bool donor_failed_{};
     void note_recent(engine::UObject* cls, int slot, const char* what);   // the last few player attacks, for status.json
-    void apply_weapon_payload(Slot& slot, engine::UObject* original, engine::UObject* replacement);
+    void apply_weapon_payload(Slot& slot, engine::UObject* original, engine::UObject* replacement, engine::UObject* ability);
     void restore_payload(Slot& slot);
     void show_weapon(engine::UObject* mesh, engine::UObject* montage, uint64_t now);
     void restore_weapon();

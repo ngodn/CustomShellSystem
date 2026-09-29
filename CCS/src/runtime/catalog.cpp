@@ -20,6 +20,7 @@ bool Catalog::load(const std::filesystem::path& path) {
             move.display_name = row.at("display_name").get<std::string>();
             move.source_name = row.at("source_name").get<std::string>();
             move.ability_path = row.at("ability").get<std::string>();
+            move.ability_class = row.value("ability_class", std::string{});
             move.montage_path = row.at("montage").get<std::string>();
             move.skeleton = row.at("skeleton").get<std::string>();
             move.description = "Extracted metadata. Runtime compatibility has not been verified.";
@@ -162,6 +163,7 @@ bool Catalog::load_running(const std::filesystem::path& path) {
             move.display_name = row.at("display_name").get<std::string>();
             move.source_name = row.at("source_name").get<std::string>();
             move.ability_path = row.value("ability", std::string{});
+            move.ability_class = row.value("ability_class", std::string{});
             move.montage_path = row.at("montage").get<std::string>();
             move.skeleton = row.at("skeleton").get<std::string>();
             move.description = row.value("description", std::string{});
