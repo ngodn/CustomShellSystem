@@ -245,6 +245,22 @@ struct Core {
                     (file.contains("reason")?" ("+file.at("reason").get<std::string>()+")":"")).c_str());
             for(const auto& error:result.diagnostics["errors"])
                 host.log(("CSS package folder error: "+error.at("path").get<std::string>()+" ("+error.at("reason").get<std::string>()+")").c_str());
+            for(const auto& mod:result.replacements) {
+                std::string folders;
+                for(const auto& folder:mod.folders) folders+=(folders.empty()?"":", ")+folder;
+                host.log(("CSS replacement mod: "+mod.stem+" ("+std::to_string(mod.matched)+" of "+std::to_string(mod.packages)+
+                          " packages in a character folder) -> "+folders).c_str());
+            }
+            for(const auto& mod:result.replacements) if(!mod.conflicts.empty()) {
+                std::string assets;
+                for(const auto& asset:mod.conflicts) assets+=(assets.empty()?"":", ")+asset;
+                host.log(("CSS warning: "+mod.stem+" overrides a shared asset CSS depends on: "+assets+
+                          ". If looks fail to apply or animate wrongly, remove that container.").c_str());
+            }
+            for(const auto& error:result.diagnostics.value("replacement_errors",Json::array()))
+                host.log(("CSS replacement scan skipped "+error.at("path").get<std::string>()+" ("+error.at("reason").get<std::string>()+")").c_str());
+            if(const auto& targets=result.diagnostics.value("replacement_targets",Json{}); targets.is_string())
+                host.log(("CSS replacement table is "+targets.get<std::string>()+"; Use Non-CSS Mod lists nothing").c_str());
             return result;
         } catch(const std::exception& e) { host.log((std::string("CSS catalog failed: ")+e.what()).c_str()); throw; }
     }
@@ -724,7 +740,19 @@ struct Core {
                 host.log(("Official shell appearances: "+std::to_string(originals.variants.size())+
                           (skipped.empty()?std::string{}:", skipped "+std::to_string(skipped.size()))).c_str());
                 for(const auto& entry:skipped) host.log(("Official shell skipped: "+entry).c_str());
+                auto saved_applicable=[&] {
+                    const auto it=state.selections.find(appearance.shell);
+                    return it!=state.selections.end() && catalog.find(it->second.outfit,it->second.variant) &&
+                           catalog.compatible(it->second.outfit,appearance.shell);
+                };
+                const bool applicable_before=saved_applicable();
                 catalog.outfits.push_back(std::move(originals));
+                // Replacement mods over an official shell can only be listed once its mesh is known.
+                rebuild_replacement_outfits(catalog);
+                // A saved official-shell or replacement-mod look for this shell only became
+                // applicable now, after the shell-change reconcile already ran, so ask for one
+                // more pass the way an explicit enable does. Nothing changes for other looks.
+                if(!applicable_before && saved_applicable()) last_shell.clear();
                 inventory.refresh();ui_refresh=true;
                 original_shells_attempts=original_shells_max_attempts;
             } catch(const std::exception& error) {

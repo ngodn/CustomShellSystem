@@ -84,7 +84,7 @@ def install(game: Path) -> None:
     copy_verified(ROOT / 'build/windows/main.dll', mod / 'dlls/main.dll')
     copy_verified(ROOT / 'assets/inventory-logo-v1.png', mod / 'assets/inventory-logo-v1.png')
     (mod / 'catalog').mkdir(parents=True, exist_ok=True)
-    for source in (ROOT / 'packaging/catalog').glob('*.css.json'):
+    for source in (ROOT / 'packaging/catalog').glob('*.json'):
         copy_verified(source, mod / 'catalog' / source.name)
     # The loader's host ABI (2 since 1.0.0-beta.5: write_file). `reload` refuses a core swap
     # once the loader sources differ from this record, because a loader change needs the
@@ -132,7 +132,7 @@ def main() -> None:
             raise RuntimeError('The installed loader no longer matches its ABI contract')
         if any(sha(ROOT / name) != digest for name, digest in contract['sources'].items()):
             raise RuntimeError('Loader source or ABI changed. Install that update with the game closed.')
-        for source in (ROOT / 'packaging/catalog').glob('*.css.json'):
+        for source in (ROOT / 'packaging/catalog').glob('*.json'):
             copy_verified(source, mod / 'catalog' / source.name)
         for source in (ROOT / 'assets').glob('*.png'):
             destination = mod / 'assets' / source.name

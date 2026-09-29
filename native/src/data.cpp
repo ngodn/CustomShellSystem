@@ -1,6 +1,7 @@
 #include <cmath>
 #include "data.hpp"
 #include "packages.hpp"
+#include "replacements.hpp"
 #include <algorithm>
 #include <chrono>
 #include <fstream>
@@ -184,7 +185,7 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
         for (const auto& item : j.at("outfits")) {
             Outfit outfit{item.at("id"), item.at("name"), item.value("author", ""),
                           item.value("description", ""), item.value("category", "Shell"), {}, {}, false, {}, {}, {}, {}, {}};
-            if (!valid_id(outfit.id) || outfit.id==original_shells_id || !ids.insert(outfit.id).second) throw std::runtime_error("Invalid, reserved or duplicate outfit id");
+            if (!valid_id(outfit.id) || outfit.id==original_shells_id || mod_outfit(outfit.id) || !ids.insert(outfit.id).second) throw std::runtime_error("Invalid, reserved or duplicate outfit id");
             if (outfit.name.empty() || outfit.name.size() > 256 || outfit.description.size() > 4096)
                 throw std::runtime_error("Invalid outfit text");
             outfit.shells = item.at("shells").get<std::vector<std::string>>();
@@ -374,6 +375,10 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
         for(const auto& file:result.diagnostics["files"]) if(file["status"]==status) ++count;
         result.diagnostics[status]=count;
     }
+    // 1.0.0-beta.6: a pak the scan ignored may still replace a character the game draws. The
+    // table beside the catalog documents maps its package ids to character folders. Nothing
+    // else depends on it, so a missing or broken table costs only the Use Non-CSS Mod row.
+    if(!paks.empty()) discover_replacements(result,directory/"replacement-targets.json");
     return result;
 }
 std::string Catalog::empty_message() const {
@@ -390,7 +395,7 @@ std::vector<const Outfit*> Catalog::display_order(const std::string& equipped,co
     result.reserve(outfits.size());
     // Preserve catalog order within each group and include every outfit once.
     for(int rank=0;rank<3;++rank) for(const auto& outfit:outfits) {
-        if(outfit.id==original_shells_id || npc_outfit(outfit.id)) continue; // Their dedicated SHELL rows stay under Appearance.
+        if(appearance_row_outfit(outfit.id)) continue; // Their dedicated SHELL rows stay under Appearance.
         const int group=outfit.id==equipped?0:favorites.contains(outfit.id)?1:2;
         if(group==rank) result.push_back(&outfit);
     }

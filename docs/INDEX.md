@@ -59,6 +59,7 @@ Local changes are grouped in the [2026-09-20 commit checkpoint](development/chec
 
 - [MISC shell items](misc-shell-items.md) lists the worn shell's own items (Gragu's Revered Heart, Eredrim's Diapason) with per-item visibility rules, including Always Shown (1.0.0-beta.5).
 - [Use NPC / Enemy](npc-appearances.md) wears any game enemy, person or Harbinger form built on the player's skeleton; the roster ships as an editable catalog file (1.0.0-beta.5).
+- [Use Non-CSS Mod](replacement-mods.md) lists installed replacement mods (containers without CSS metadata over a shell, enemy or NPC) and wears their look; how CSS recognizes one from its `.utoc` and the shipped folder table (1.0.0-beta.6).
 - [Native Inventory CSS](inventory-ui-development.md) is the current interface in development. Four-page navigation, native display retention, mouse controls and startup have been checked locally. It replaces the standalone N wardrobe. Older preview and camera findings below are historical.
 
 - [Color customization](colors.md) documents per-part palettes/sliders, self-contained dye resources, exact Original reset, and the verified game-specific mipmap adapter.

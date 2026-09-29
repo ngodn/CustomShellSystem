@@ -42,7 +42,9 @@ Settings and updates
 CSS creates state/state.json on first initialization with clean defaults.
 It creates runtime/ acknowledgements and caches package artwork/color resources
 as needed. catalog/npc-appearances.css.json is the Use NPC / Enemy roster; it is
-ordinary JSON you may edit, and the rest of catalog/ is optional.
+ordinary JSON you may edit. catalog/replacement-targets.json is the folder table
+Use Non-CSS Mod reads installed replacement mods against; keep it as shipped.
+The rest of catalog/ is optional.
 CSS starts with no selected outfit. Select one in the wardrobe to enable it.
 A previous valid state is kept as state/state.json.bak after settings change.
 

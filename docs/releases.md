@@ -17,7 +17,7 @@ python3 tools/css_release.py verify dist/releases/MSII-CSS-v0.3.2.zip
 ```
 
 The script builds both Release DLLs from that checkout and uses an explicit
-seven-file payload allowlist plus generated release metadata. It never copies
+explicit payload allowlist (loader, core, README, notices, the two catalog files and the interface image) plus generated release metadata. It never copies
 from the installed mod. The only runtime interface image needed is inventory-logo-v1.png;
 old outfit seals and developer catalogs are excluded. One loader and one core
 ship, with core.json pointing to that core. No state, backups, requests, cache,

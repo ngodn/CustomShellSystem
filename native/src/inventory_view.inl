@@ -462,8 +462,10 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     if(section_==0) {
         const auto ordered=catalog.display_order(worn?worn->id:"",state.favorites);
         const int row_before=row_;
-        for(size_t i=0;i<ordered.size();++i) if(ordered[i]->id==focused_outfit) row_=int(i)+4;
-        const int total=int(ordered.size())+4;
+        // Five fixed Appearance rows come before the Custom Shells list.
+        constexpr int appearance_rows=5;
+        for(size_t i=0;i<ordered.size();++i) if(ordered[i]->id==focused_outfit) row_=int(i)+appearance_rows;
+        const int total=int(ordered.size())+appearance_rows;
         row_=std::clamp(row_,0,total-1);
         section("Appearance");
         const Json harbinger{{"action","harbinger_mirror"},{"value",!state.harbinger_mirror}};
@@ -503,6 +505,23 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         row_look.badge=npc_worn;
         row(3,"Use NPC / Enemy",npc_count?wear_npc(npc_index):Json{},npc_count?wear_npc((npc_index+npc_count-1)%npc_count):Json{},
             npc_count?wear_npc(npc_worn?(npc_index+1)%npc_count:0):Json{},npc_count?Json{{"action","ui_browse_npc"}}:Json{});
+        // Replacement mods (1.0.0-beta.6): containers without CSS metadata that swap a character
+        // the game draws, listed by file name so their look is one row away. Same flat walk.
+        std::vector<NpcChoice> mods;
+        for(const auto& outfit:catalog.outfits) if(mod_outfit(outfit.id))
+            for(size_t i=0;i<outfit.variants.size();++i) mods.push_back({&outfit,i});
+        size_t mod_index=0; bool mod_worn=false;
+        for(size_t i=0;i<mods.size();++i)
+            if(worn==mods[i].outfit && mods[i].outfit->variants[mods[i].variant].id==selection->second.variant) { mod_index=i; mod_worn=true; }
+        auto wear_mod=[&](size_t i) {
+            const auto& choice=mods[i];
+            return catalog.compatible(choice.outfit->id,appearance.shell)
+                ?Json{{"action","select"},{"outfit",choice.outfit->id},{"variant",choice.outfit->variants[choice.variant].id}}:Json{};
+        };
+        const auto mod_count=mods.size();
+        row_look.badge=mod_worn;
+        row(4,"Use Non-CSS Mod",mod_count?wear_mod(mod_index):Json{},mod_count?wear_mod((mod_index+mod_count-1)%mod_count):Json{},
+            mod_count?wear_mod(mod_worn?(mod_index+1)%mod_count:0):Json{},mod_count?Json{{"action","ui_browse_mods"}}:Json{});
         // Favorites first under their own header, the way the game groups shells.
         bool in_favorites=false, headed=false;
         for(size_t p=0;p<ordered.size();++p) {
@@ -518,7 +537,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             const bool compatible=catalog.compatible(outfit.id,appearance.shell);
             auto wear=[&](size_t index) { return compatible?Json{{"action","select"},{"outfit",outfit.id},{"variant",outfit.variants[index].id}}:Json{}; };
             row_look.icon=thumbnail(outfit); row_look.badge=chosen; row_look.enabled=compatible;
-            row(int(p)+4,outfit.name,wear(v),wear((v+outfit.variants.size()-1)%outfit.variants.size()),wear((v+1)%outfit.variants.size()),browse_shells,{{"action","favorite"},{"outfit",outfit.id}});
+            row(int(p)+appearance_rows,outfit.name,wear(v),wear((v+outfit.variants.size()-1)%outfit.variants.size()),wear((v+1)%outfit.variants.size()),browse_shells,{{"action","favorite"},{"outfit",outfit.id}});
         }
         if(ordered.empty()) list_note(catalog.empty_message());
         (void)row_before;
@@ -552,6 +571,54 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 action_button("accept","Wear",rows_[3].accept,3,!rows_[3].accept.is_null());
                 action_button("secondary","Search characters...",rows_[3].secondary,4);
             }
+        } else if(row_==4) {
+            detail("Use Non-CSS Mod",mod_worn?mods[mod_index].outfit->variants[mods[mod_index].variant].name:"Appearance only",
+                "Wear the look of a replacement mod installed beside the game's containers: one that swaps a shell, enemy or NPC "
+                "the game draws, without a CSS package. Your current shell keeps its abilities and progress; colors and parts stay "
+                "as the mod's author made them.");
+            // A container over a shared asset (the human skeleton, the player's animation graphs,
+            // the shell base classes) can break every look: named here, never blocked.
+            for(const auto& mod:catalog.replacements) if(!mod.conflicts.empty()) {
+                std::string assets;
+                for(const auto& asset:mod.conflicts) assets+=(assets.empty()?"":", ")+asset.substr(asset.rfind('/')+1);
+                note("Warning: "+mod_display_name(mod.stem)+" overrides "+assets+", which CSS looks depend on. If looks fail to apply or animate wrongly, remove that mod.");
+            }
+            if(mods.empty()) {
+                const auto targets=catalog.diagnostics.value("replacement_targets",Json{});
+                if(targets.is_string()) note("The folder table catalog/replacement-targets.json is "+targets.get<std::string>()+", so replacement mods cannot be recognized.");
+                else note("No replacement mods found. CSS lists containers under Content/Paks that change a shell, enemy or NPC folder; CSS packages have their own rows.");
+            } else {
+                for(const auto& outfit:catalog.outfits) if(mod_outfit(outfit.id)) {
+                    divider(outfit.name);
+                    std::vector<Choice> choices;
+                    for(size_t i=0;i<mods.size();++i) if(mods[i].outfit==&outfit)
+                        choices.push_back({outfit.id+"/"+outfit.variants[mods[i].variant].id,outfit.variants[mods[i].variant].name,wear_mod(i)});
+                    choice_rows(choices,mod_worn?mods[mod_index].outfit->id+"/"+mods[mod_index].outfit->variants[mods[mod_index].variant].id:"");
+                }
+                // The shell being worn is drawn by the game itself, so a mod over it is already on.
+                if(originals && appearance.shell.starts_with("CharacterId.Player.Shell.")) {
+                    auto tag=appearance.shell.substr(appearance.shell.rfind('.')+1);
+                    std::transform(tag.begin(),tag.end(),tag.begin(),[](unsigned char c) { return char(c>='A' && c<='Z'?c+('a'-'A'):c); });
+                    for(const auto& variant:originals->variants) if(variant.id==tag)
+                        if(const auto* folder=replacement_folder(catalog.replacement_folders,variant.mesh))
+                            for(const auto& mod:catalog.replacements)
+                                if(std::binary_search(mod.folders.begin(),mod.folders.end(),*folder))
+                                    note(mod_display_name(mod.stem)+" changes "+variant.name+", the shell you are wearing, so the game already shows it.");
+                }
+                // Two containers over one character: the engine keeps whichever mounted last.
+                std::string shared;
+                for(size_t a=0;a<catalog.replacements.size() && shared.empty();++a)
+                    for(size_t b=a+1;b<catalog.replacements.size() && shared.empty();++b)
+                        for(const auto& folder:catalog.replacements[a].folders)
+                            if(std::binary_search(catalog.replacements[b].folders.begin(),catalog.replacements[b].folders.end(),folder)) {
+                                shared=mod_display_name(catalog.replacements[a].stem)+" and "+mod_display_name(catalog.replacements[b].stem);
+                                break;
+                            }
+                if(!shared.empty()) note(shared+" change the same character. The game shows whichever it loaded last.");
+                direction_hint(true,"Choose a mod");
+                action_button("accept","Wear",rows_[4].accept,3,!rows_[4].accept.is_null());
+                action_button("secondary","Search mods...",rows_[4].secondary,4);
+            }
         } else if(row_==2) {
             detail("Use Original Shell",original_worn?originals->variants[original_index].name:"Appearance only",
                 "Wear an official shell's appearance. Your current shell keeps its abilities and progress.");
@@ -564,7 +631,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 action_button("accept","Wear",rows_[2].accept,3,!rows_[2].accept.is_null());
             }
         } else {
-            const auto& outfit=*ordered[row_-4];
+            const auto& outfit=*ordered[row_-appearance_rows];
             detail_texture=thumbnail(outfit);
             detail(outfit.name,"By "+outfit.author,outfit.description.empty()?"Choose an outfit variant. Appearance changes keep your current shell's abilities.":outfit.description);
             const auto& selected=rows_[row_];
@@ -616,6 +683,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         } else if(worn->controls_for(selection->second.variant).controls.empty()) {
             row_=0;
             placement(0,Json{});
+            if(mod_outfit(worn->id)) note("This look comes from "+worn->name+", a replacement mod. Its author sets the colors and parts; CSS can only place it.");
         } else {
             const auto& options=worn->controls_for(selection->second.variant); const auto& custom=selection->second.custom;
             auto values=control_values(options,custom);
@@ -1034,6 +1102,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         if(has_variant) body+=" Saved per outfit variant in profiles.";
         else body="Wear an outfit to use its custom animations. The CSS feminine walk is also available here.";
         detail(titles[row_],has_variant?worn->name:"Movement",body);
+        if(has_variant && mod_outfit(worn->id)) note("Replacement mods bring no CSS animations. Default and the CSS feminine idle and walk still apply to this look.");
         std::vector<Choice> choices;
         for(const auto& item:menu.items) choices.push_back({item.id,item.name,item.available?choose(slot,item.id):Json{}});
         choice_rows(choices,current.id);
@@ -1303,7 +1372,7 @@ Json InventoryUI::dispatch(Json action,const State& state) {
     if(name=="ui_browse_shells" && catalog_) {
         Json opts=Json::array();
         for(const auto& o:catalog_->outfits) {
-            if(o.id==original_shells_id || npc_outfit(o.id)) continue;
+            if(appearance_row_outfit(o.id)) continue;
             opts.push_back({{"id",o.id},{"label",o.name+" ("+o.author+")"}});
         }
         native_options_.reset(opts);
@@ -1323,6 +1392,17 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         native_picker_=true;
         native_picker_title_="Browse NPCs & Enemies";
         native_picker_kind_="npc";
+        native_search_query_.clear(); dirty_=true;
+        return {};
+    }
+    if(name=="ui_browse_mods" && catalog_) {
+        Json opts=Json::array();
+        for(const auto& o:catalog_->outfits) if(mod_outfit(o.id))
+            for(const auto& v:o.variants) opts.push_back({{"id",o.id+"/"+v.id},{"label",v.name+" ("+o.name+")"}});
+        native_options_.reset(opts);
+        native_picker_=true;
+        native_picker_title_="Browse Replacement Mods";
+        native_picker_kind_="npc";   // the same outfit/variant id shape as the NPC picker
         native_search_query_.clear(); dirty_=true;
         return {};
     }

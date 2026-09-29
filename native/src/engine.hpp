@@ -10,6 +10,7 @@
 #include <vector>
 #include <deque>
 #include "data.hpp"
+#include "replacements.hpp"
 #include "body_geometry.hpp"
 #include "inventory_motion.hpp"
 #include "inventory_backdrop.hpp"

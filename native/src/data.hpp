@@ -17,6 +17,14 @@ inline constexpr const char* original_shells_id = "css.original_shells";
 // instead of listing under Custom Shells.
 inline constexpr const char* npc_outfit_prefix = "css.npc.";
 inline bool npc_outfit(const std::string& id) { return id.starts_with(npc_outfit_prefix); }
+// 1.0.0-beta.6: outfits CSS builds itself from installed replacement mods (containers without
+// CSS metadata that swap a shell, enemy or NPC the game draws). One SHELL row, "Use Non-CSS
+// Mod". The prefix is reserved: no catalog document may claim it. See replacements.hpp.
+inline constexpr const char* mod_outfit_prefix = "css.mod.";
+inline bool mod_outfit(const std::string& id) { return id.starts_with(mod_outfit_prefix); }
+// A row of the shared Appearance rows (Use Original Shell, Use NPC / Enemy, Use Non-CSS Mod)
+// rather than a line under Custom Shells or a Browse shells result.
+inline bool appearance_row_outfit(const std::string& id) { return id==original_shells_id || npc_outfit(id) || mod_outfit(id); }
 using Json = nlohmann::json;
 namespace fs = std::filesystem;
 inline std::string path_utf8(const fs::path& path) {
@@ -93,9 +101,20 @@ struct Outfit {
         return controls;
     }
 };
+// One installed container without CSS metadata whose packages sit in a character folder CSS
+// can wear from. The scan records it; rebuild_replacement_outfits turns it into a css.mod.* outfit.
+struct ReplacementMod {
+    std::string stem;                   // container file name without extension, e.g. ProximaFitShape_P
+    fs::path pak;
+    std::vector<std::string> folders;   // matched folder keys of the table, sorted
+    std::vector<std::string> conflicts; // shared assets it overrides that CSS depends on (names), sorted
+    size_t packages = 0, matched = 0;   // export bundles in the container, and how many were in a listed folder
+};
 struct Catalog {
     std::vector<Outfit> outfits;
     Json diagnostics = Json::object();
+    std::vector<ReplacementMod> replacements;
+    std::vector<std::string> replacement_folders;   // the table's folder keys, for mapping a look's mesh to its folder
     static Catalog load(const fs::path&,const fs::path& paks={},const fs::path& cache={});
     std::string empty_message() const;
     const Variant* find(const std::string& outfit, const std::string& variant) const;
