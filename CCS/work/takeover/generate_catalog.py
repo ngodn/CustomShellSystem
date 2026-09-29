@@ -38,13 +38,29 @@ def collect_bindings(selectors: dict, abilities: dict) -> tuple[dict[str, set[st
     return bindings, sorted(unresolved)
 
 
+def ability_classes(listing: Path):
+    """Loadable class path per ability name: the exported ability list gives packages under
+    /Game/Sparta/Core/Player/Ability/; Smert's attacks live under /Game/Sparta/Core/Characters/Player/Smert/Abilities/."""
+    packages = {Path(line).stem: "/Game/Sparta/Core/Player/Ability/" + line.strip().removesuffix(".uasset")
+                for line in listing.read_text().splitlines() if line.strip()}
+    def resolve(ability: str) -> str:
+        name = ability.removesuffix("_C")
+        package = packages.get(name)
+        if not package and name.startswith("GA_Player_Attack_Smert_"):
+            package = "/Game/Sparta/Core/Characters/Player/Smert/Abilities/" + name
+        return f"{package}.{name}_C" if package else ""
+    return resolve
+
+
 def generate() -> dict:
     sources = {
         "abilities": ROOT / "work/movesets/abilities.jsonl",
         "selectors": ROOT / "work/movesets/selectors.json",
         "montages": ROOT / "work/movesets/montages.jsonl",
         "items": ROOT / "work/damage-pipeline/other_classes.txt",
+        "ability_packages": ROOT / "work/movesets/list-player-abilities.txt",
     }
+    ability_class = ability_classes(sources["ability_packages"])
     abilities = {r["class"]: (i, r) for i, line in enumerate(sources["abilities"].read_text().splitlines(), 1)
                  for r in [json.loads(line)]}
     montages = {r["path"]: r for line in sources["montages"].read_text().splitlines() for r in [json.loads(line)]}
@@ -72,6 +88,7 @@ def generate() -> dict:
             "windows": row.get("windows", {}), "play_rate": row.get("play_rate"),
             "runtime_verified": False,
             "evidence": {"ability_line": line, "montage_export": montage["source_json"]},
+            "ability_class": ability_class(ability),
         })
     items = []
     current = None

@@ -18,6 +18,10 @@
       "path": "work/damage-pipeline/other_classes.txt",
       "sha256": "9475696d153549c4dfa959db10c23cebe592e5a1d052b82704e082543b0f0b8d"
     },
+    "ability_packages": {
+      "path": "work/movesets/list-player-abilities.txt",
+      "sha256": "1eb4df9dcf04ed445de1039da595f1d7b11835f94523671538a39a46a4933f27"
+    },
     "ID_Melee_HeavyAttackFinisher_Critical": {
       "path": "work/damage-pipeline/export/MortalShell2_Content_Sparta_Core_Tarstones_Melee_ID_Melee_HeavyAttackFinisher_Critical.uasset.json",
       "sha256": "cccb297b21001b27a5b3c093406c119c400093a1329f6a6f9bb548e77b6a19cb"
