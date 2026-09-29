@@ -60,6 +60,12 @@ private:
     bool hotkey_pressed(const std::vector<std::string>& keys,size_t slot);
     void hotkey();
     bool game_menu_open() const;
+    // Recovery for a Player Menu that reads as dead: the game's UI.Input.Block.All tag left on
+    // the player disables every menu listener. Stripped when it has sat there for two seconds
+    // with the Player Menu open (a screen transition never keeps it that long).
+    int strip_input_block(const std::string& tag,bool& present);
+    void watch_input_block(uint64_t now);
+    uint64_t input_block_since_=0, input_block_checked_=0; int input_block_recoveries_=0;
     void publish_status();
 };
 }

@@ -14,6 +14,12 @@ evidence behind each line is in `integration-tests.md` and `performance.md`.
   zone cannot be read. Each case says why in the CSSX tab.
 - The CSSX tab keeps its place when CCS is installed as well: the Player Menu
   can hold Inventory, Tarstones, Map, CSS, CCS and CSSX, and CSSX stays last.
+- A Player Menu that stops taking input recovers on its own: when the game's
+  UI.Input.Block.All tag has sat on the player for two seconds with the menu
+  open, CSSX strips it and logs a warning (a Nexus report of a menu that needed
+  Alt+F4 on first use; cause not yet known, the log will say).
+- The CSSX page always has a way out: if Enhanced Input never answers, the
+  game's default menu keys apply after 1.5 s (Escape or B closes).
 
 ## CSSX 1.2.0
 

@@ -243,6 +243,18 @@ bool Menu::typing() const {
     // The search field and the text editor take the keyboard; menu keys yield to them.
     return has_focus(search_input_.Get()) || has_focus(name_input_.Get());
 }
+void Menu::fallback_bindings(uint64_t now) {
+    static const std::vector<std::pair<std::string,std::vector<std::string>>> defaults={
+        {"up",{"Up","W","Gamepad_DPad_Up","Gamepad_LeftStick_Up"}},{"down",{"Down","S","Gamepad_DPad_Down","Gamepad_LeftStick_Down"}},
+        {"left",{"Left","A","Gamepad_DPad_Left","Gamepad_LeftStick_Left"}},{"right",{"Right","D","Gamepad_DPad_Right","Gamepad_LeftStick_Right"}},
+        {"previous_section",{"Q","Gamepad_LeftShoulder"}},{"next_section",{"E","Gamepad_RightShoulder"}},
+        {"accept",{"Enter","SpaceBar","Gamepad_FaceButton_Bottom"}},{"secondary",{"F","Gamepad_FaceButton_Left"}},
+        {"close",{"Escape","BackSpace","Gamepad_FaceButton_Right"}}};
+    bindings_.clear();
+    for(const auto& [action,keys]:defaults) { Binding b; b.action=action; b.keys=keys; b.down=true; b.repeat=now+400; bindings_.push_back(std::move(b)); }
+    bindings_fallback_=true; ++bindings_generation_; dirty_=true;
+    if(deps_.log) deps_.log("Menu input mappings did not answer in 1.5 s; the game's default menu keys apply (Escape or B closes)");
+}
 void Menu::poll_input(const PlayerContext& player,uint64_t now,bool typing) {
     auto* pc=player.pc; if(!pc) return;
     // Each key test is a reflected call; only the keys of the device in use are tested
@@ -339,6 +351,10 @@ void Menu::poll_mouse(const PlayerContext& player) {
         act(hit.action); return;   // act() may rebuild the page, so return at once
     }
 }
+bool Menu::player_menu_open() const {
+    auto* main=main_.Get(); if(!main) return false;
+    try { return bool_of(main,L"bOpen"); } catch(...) { return false; }
+}
 void Menu::tick(const PlayerContext& player,double) {
     const auto now=GetTickCount64();
     // Attached to a menu instance that went away (travel, new controller): forget it.
@@ -361,7 +377,7 @@ void Menu::tick(const PlayerContext& player,double) {
     Call selected(switcher,L"GetActiveWidget",1); selected.run();
     active_=selected.get<UObject*>()==page_.Get();
     if(active_ && !was_active_) {
-        bindings_ready_=false; bind_retry_=0;
+        bindings_ready_=false; bind_retry_=0; bind_started_=now; bindings_fallback_=false;
         try { bind_inputs(); ++bindings_generation_; } catch(const std::exception& e) { if(deps_.log) deps_.log(std::string("Menu input binding failed: ")+e.what()); }
         for(auto& b:bindings_) { b.down=true; b.repeat=now+400; }
         mouse_was_down_=left_was_down_=true; dirty_=true; enter_=true; error_.clear(); confirm_=nullptr; picker_=false; drag_slider_=-1;
@@ -386,6 +402,9 @@ void Menu::tick(const PlayerContext& player,double) {
             for(auto& b:bindings_) { b.down=true; b.repeat=now+400; }
             if(bindings_ready_) dirty_=true;
         } catch(...) {}
+        // The page must never be a room without a door: if the game's mappings have not
+        // answered after 1.5 s, the game's default menu keys apply until they do.
+        if(!bindings_ready_ && !bindings_fallback_ && now-bind_started_>1500) fallback_bindings(now);
     }
     if(now>=layout_check_) {
         layout_check_=now+500;

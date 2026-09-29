@@ -6,6 +6,8 @@ Hey everyone. A small host update that ships together with Traverse 1.0.1. If yo
 [list]
 [*][b]Three mod tabs in the Player Menu.[/b] With CSS, CCS and CSSX all installed the menu holds Inventory, Tarstones, Map, CSS, CCS and CSSX, and CSSX stays the last tab whichever mod attached first. Before, a sixth tab could confuse where CSSX thought its own page was.[/*]
 [*]CSSX re-checks its tab and page pairing every time it opens, so a tab added after CSSX attached never opens the wrong page.[/*]
+[*][b]A menu that stops taking input recovers on its own.[/b] If the Player Menu sits dead for two seconds with the game's input block still on the player, CSSX lifts it and notes it in CSSX.log. If you ever had to Alt+F4 out of the menu, this is for you; please still send the log so the cause gets found.[/*]
+[*]The CSSX page always has a way out. If the game's key mappings never answer, the default menu keys apply: Escape or B closes, Enter or A confirms, arrows and the d-pad move.[/*]
 [/list]
 
 [size=4][b]Traverse 1.0.1[/b][/size]

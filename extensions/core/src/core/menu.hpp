@@ -40,6 +40,7 @@ public:
     // it is present, otherwise straight after the native tabs (Inventory, Tarstones,
     // Map). is_open() means the CSSX page is the active tab of an open Player Menu.
     bool is_open() const { return active_; }
+    bool player_menu_open() const;             // the game's Player Menu is open (any tab), one cached flag read
     bool attached() const { return page_.Get()!=nullptr; }
     // Ask the game to open its Player Menu and select the CSSX tab. Returns
     // false with a reason when the menu cannot be opened right now.
@@ -86,7 +87,8 @@ private:
     // ---- input
     struct Binding { std::string action; std::vector<std::string> keys; bool down=false; uint64_t repeat=0; WeakObject input_action; };
     std::vector<Binding> bindings_;
-    bool bindings_ready_=false; uint64_t bind_retry_=0;
+    bool bindings_ready_=false; uint64_t bind_retry_=0, bind_started_=0; bool bindings_fallback_=false;
+    void fallback_bindings(uint64_t now);   // the game's own default menu keys, when Enhanced Input never answers
     // Bumped whenever the bindings are re-read, so every cached glyph is redrawn with the real keys.
     uint64_t bindings_generation_=0, strip_glyph_generation_=~0ull;
     bool gamepad_=false;

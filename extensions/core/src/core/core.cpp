@@ -88,6 +88,41 @@ void Core::hotkey() {
     if(menu_->open(player_,&reason)) log("info","Hotkey: opening the Player Menu on the CSSX tab");
     else log("info","Hotkey ignored: "+reason);
 }
+int Core::strip_input_block(const std::string& tag,bool& present) {
+    auto* tags=find(L"/Script/GameplayTags.Default__BlueprintGameplayTagLibrary");
+    auto* abilities=find(L"/Script/GameplayAbilities.Default__AbilitySystemBlueprintLibrary");
+    auto* tag_struct=find(L"/Script/GameplayTags.GameplayTag");
+    const FName name(wide(tag).c_str());
+    int removed=0; present=false;
+    for(int i=0;i<64;++i) {
+        Call has(player_.pawn,L"HasMatchingGameplayTag",2); auto* p=has.param(L"TagToCheck");
+        member(has.data(p),p->GetElementSize(),tag_struct,L"TagName",name); has.run();
+        present=has.get<bool>(); if(!present) break;
+        Call make(tags,L"MakeGameplayTagContainerFromTag",2); auto* single=make.param(L"SingleTag");
+        member(make.data(single),single->GetElementSize(),tag_struct,L"TagName",name); make.run();
+        Call remove(abilities,L"RemoveLooseGameplayTags",4);
+        remove.set(L"Actor",player_.pawn); remove.copy(L"GameplayTags",make,L"ReturnValue"); remove.set(L"bShouldReplicate",false); remove.run();
+        if(!remove.get<bool>()) break;
+        ++removed;
+    }
+    return removed;
+}
+void Core::watch_input_block(uint64_t now) {
+    if(now<input_block_checked_) return; input_block_checked_=now+500;
+    if(!player_.pawn || !menu_ || !menu_->player_menu_open()) { input_block_since_=0; return; }
+    try {
+        auto* tag_struct=find(L"/Script/GameplayTags.GameplayTag");
+        Call has(player_.pawn,L"HasMatchingGameplayTag",2); auto* p=has.param(L"TagToCheck");
+        member(has.data(p),p->GetElementSize(),tag_struct,L"TagName",FName(L"UI.Input.Block.All")); has.run();
+        if(!has.get<bool>()) { input_block_since_=0; return; }
+        if(!input_block_since_) { input_block_since_=now; return; }
+        if(now-input_block_since_<2000) return;
+        bool present=false; const int removed=strip_input_block("UI.Input.Block.All",present);
+        ++input_block_recoveries_; input_block_since_=0;
+        log("warning","Player Menu input was blocked for 2 s (UI.Input.Block.All left on the player); removed "+std::to_string(removed)+(present?", still present":""),
+            {{"recoveries",input_block_recoveries_},{"cssx_page",menu_->is_open()}});
+    } catch(const std::exception& e) { input_block_since_=0; log("warning",std::string("Input block watch failed: ")+e.what()); }
+}
 bool Core::game_menu_open() const {
     try {
         if(!player_.pc) return false;
@@ -163,7 +198,7 @@ void Core::tick(void* engine,float delta) {
         if(host_.size>=sizeof(CssxLoaderHost) && host_.take_hotkey && host_.take_hotkey(host_.hotkey_context)>0) { pressed=true; hotkey_down_[0]=true; }
         if(pressed) hotkey();
     }
-    { Phase p(phase_menu_); menu_->tick(player_,delta); }
+    { Phase p(phase_menu_); menu_->tick(player_,delta); watch_input_block(now); }
     if(!quiet_ && now>=status_after_) { status_after_=now+5000; publish_status(); }
 }
 Json Core::frame_stats(double seconds) const {
@@ -273,22 +308,7 @@ Json Core::dev_request(const Json& request) {
         // transition left it behind (every menu listener reads as disabled while it is set).
         if(!player_.pawn) throw std::runtime_error("No player pawn");
         const auto tag=request.value("tag",std::string("UI.Input.Block.All"));
-        auto* tags=find(L"/Script/GameplayTags.Default__BlueprintGameplayTagLibrary");
-        auto* abilities=find(L"/Script/GameplayAbilities.Default__AbilitySystemBlueprintLibrary");
-        auto* tag_struct=find(L"/Script/GameplayTags.GameplayTag");
-        const FName name(wide(tag).c_str());
-        int removed=0; bool present=false;
-        for(int i=0;i<64;++i) {
-            Call has(player_.pawn,L"HasMatchingGameplayTag",2); auto* p=has.param(L"TagToCheck");
-            member(has.data(p),p->GetElementSize(),tag_struct,L"TagName",name); has.run();
-            present=has.get<bool>(); if(!present) break;
-            Call make(tags,L"MakeGameplayTagContainerFromTag",2); auto* single=make.param(L"SingleTag");
-            member(make.data(single),single->GetElementSize(),tag_struct,L"TagName",name); make.run();
-            Call remove(abilities,L"RemoveLooseGameplayTags",4);
-            remove.set(L"Actor",player_.pawn); remove.copy(L"GameplayTags",make,L"ReturnValue"); remove.set(L"bShouldReplicate",false); remove.run();
-            if(!remove.get<bool>()) break;
-            ++removed;
-        }
+        bool present=false; const int removed=strip_input_block(tag,present);
         log("warning","input.unblock: removed "+std::to_string(removed)+" x "+tag+(present?" (still present)":""));
         return {{"tag",tag},{"removed",removed},{"present",present}};
     }
