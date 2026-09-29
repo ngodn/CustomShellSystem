@@ -101,3 +101,6 @@ Thumbs.db
 !/CCS/work/takeover/attack_report.py
 /CCS/build/
 /CCS/dist/
+
+# Blueprint exports pulled for research next to an extension; derived data, regenerated with the GameDump tool
+/extensions/*/work/export*/
