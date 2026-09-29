@@ -48,6 +48,13 @@ public:
     // Where a carried chain window ends: "hit" after the replacement's first hit (the game's own
     // chaining) or "move" after its last hit (the whole move plays before the next attack).
     void set_chain(const std::string& mode);
+    // Enemy difficulty against Thestus's day and night: "game", "night" or "day". Spawners give a
+    // spawned enemy the night pair (GE_DamageMultiplier, GE_EffectMaxHealth_Multiplier) when the
+    // world has World.TimeOfDay.Night, then always New Game+'s GE_NGP_DamageMultiplier, all through
+    // the native BP_ApplyGameplayEffectToSelf. A second pre-hook on that function, installed only
+    // while the setting is not "game", empties the night pair's class ("day") or applies the pair
+    // before the New Game+ effect on an enemy that lacks it ("night").
+    void set_enemy_difficulty(const std::string& mode) { difficulty_ = mode == "night" || mode == "day" ? mode : std::string("game"); }
     bool hold_cheat() const { return hold_cheat_; }
     // Static mesh of a move source's weapon (player weapons and the enemy weapons with a static mesh), or empty.
     static std::string weapon_mesh_path(const std::string& source);
@@ -185,6 +192,16 @@ private:
     bool hold_unlocked_[2]{}; bool hold_check_warned_{}, hold_check_logged_{};
     struct EffectHandle { int32_t handle{-1}; bool passed{}; uint8_t pad[3]{}; };   // FActiveGameplayEffectHandle, 8 bytes
     bool hold_cheat_{}, hold_cheat_warned_{};
+    std::string difficulty_{"game"};
+    uint64_t effect_token_{}, effect_retry_after_{}, difficulty_added_{}, difficulty_removed_{};
+    engine::ObjectHandle effect_function_, night_damage_, night_health_, ngp_damage_;
+    engine::FProperty* effect_class_param_{};
+    bool injecting_{};   // CCS's own applications pass through the same hook
+    std::string difficulty_error_;
+    static void effect_callback(void* user, void* object, void* frame, void* result) noexcept;
+    void observe_effect(engine::UObject* asc, void* frame);
+    void ensure_effect_hook();
+    void remove_effect_hook();
     std::string chain_{"hit"};
     EffectHandle hold_grant_[2]{}; engine::ObjectHandle hold_grant_asc_, hold_effect_world_;
     void sync_hold_cheat(const engine::PlayerContext& player);

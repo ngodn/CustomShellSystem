@@ -111,6 +111,7 @@ Core::Core(const CcsLoaderContext* loader) {
         combat_->set_enabled(settings_->enabled());
         combat_->set_hold_cheat(settings_->charged_without_stone());
         combat_->set_chain(settings_->next_attack());
+        combat_->set_enemy_difficulty(settings_->enemy_difficulty());
         apply_slots_from_settings();
     } else log("Loader offers no native hook host; combat disabled");
     Menu::Deps deps;
@@ -391,6 +392,12 @@ nlohmann::json Core::model() const {
         {"description", "When you press the next attack while a swapped move is still playing. After the first hit: the press is kept and the next attack starts right after the move's first hit, the way your own combos chain. "
             "After the whole move: the press is kept until the move's last hit has landed, so long enemy combos play out before the chain continues. Applies to moves with Feel set to Move's own; Game's already chains like your weapon."},
         {"enabled", combat_ != nullptr}});
+    settings.push_back({{"type", "choice"}, {"id", "enemy_difficulty"}, {"label", "Enemy difficulty"}, {"value", settings_->enemy_difficulty()},
+        {"options", Json::array({{{"id", "game"}, {"label", "Follow Thestus"}}, {{"id", "night"}, {"label", "Always night"}}, {{"id", "day"}, {"label", "Always day (cheat)"}}})},
+        {"description", "Thestus's night doubles the health and damage of every enemy that spawns. Follow Thestus: the game decides. "
+            "Always night: enemies are that strong in daylight too, and day keeps its light and its world. Always day (cheat): enemies keep their day strength at night, and night keeps its light and its world. "
+            "It applies to enemies as they spawn; the ones already standing change after you rest at a beacon or reload."},
+        {"enabled", combat_ != nullptr}});
     settings.push_back({{"type", "slider"}, {"id", "ui_scale"}, {"label", "Menu scale"}, {"value", settings_->ui_scale()}, {"min", 0.75}, {"max", 1.5}, {"step", 0.05}, {"unit", "x"},
         {"description", "Size of this page relative to the game's menus."}});
     settings.push_back({{"type", "button"}, {"id", "reset"}, {"label", "Reset all slots"}, {"action_label", "Reset"}, {"enabled", combat_ != nullptr && combat_->assigned() > 0},
@@ -451,6 +458,7 @@ void Core::handle_event(const nlohmann::json& event) {
     }
     if (id == "enabled") { settings_->set_enabled(event.at("value").get<bool>()); if (combat_) combat_->set_enabled(settings_->enabled()); save_settings_or_log(); return; }
     if (id == "charged_attacks") { settings_->set_charged_without_stone(event.at("value").get<std::string>() == "always"); if (combat_) combat_->set_hold_cheat(settings_->charged_without_stone()); save_settings_or_log(); return; }
+    if (id == "enemy_difficulty") { settings_->set_enemy_difficulty(event.at("value").get<std::string>()); if (combat_) combat_->set_enemy_difficulty(settings_->enemy_difficulty()); save_settings_or_log(); return; }
     if (id == "next_attack") { settings_->set_next_attack(event.at("value").get<std::string>()); if (combat_) combat_->set_chain(settings_->next_attack()); save_settings_or_log(); return; }
     if (id == "ui_scale") { settings_->set_ui_scale(event.at("value").get<double>()); save_settings_or_log(); return; }
     if (id == "reset") { if (combat_) for (unsigned i = 0; i < slot_count; ++i) combat_->set_slot(SlotId(i), ""); save_settings_or_log(); return; }

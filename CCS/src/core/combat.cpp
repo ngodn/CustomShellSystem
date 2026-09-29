@@ -1104,6 +1104,73 @@ void Combat::ensure_hook() {
     if (!token_) { inputs_ = {}; function_ = {}; throw std::runtime_error("Native montage pre-hook registration rejected"); }
     log("CCS combat hook installed");
 }
+void Combat::ensure_effect_hook() {
+    if (effect_token_) return;
+    static const char* paths[] = {"/Game/Sparta/Core/GameplayEffects/GE_DamageMultiplier.GE_DamageMultiplier_C",
+                                  "/Game/Sparta/Core/GameplayEffects/GE_EffectMaxHealth_Multiplier.GE_EffectMaxHealth_Multiplier_C",
+                                  "/Game/Sparta/Core/GameplayEffects/GE_NGP_DamageMultiplier.GE_NGP_DamageMultiplier_C"};
+    UObject* classes[3]{};
+    for (int i = 0; i < 3; ++i) { classes[i] = load(paths[i]); if (!classes[i]) throw std::runtime_error(std::string("missing ") + paths[i]); keep_referenced(world_.get(), classes[i]); }
+    auto* cdo = find(L"/Script/GameplayAbilities.Default__AbilitySystemComponent");
+    Call signature(cdo, L"BP_ApplyGameplayEffectToSelf", 4);
+    auto* function = signature.function();
+    if (!function->HasAnyFunctionFlags(FUNC_Native)) throw std::runtime_error("BP_ApplyGameplayEffectToSelf is not native");
+    auto* param = signature.param(L"GameplayEffectClass");
+    if (!param || !param->IsA<FObjectProperty>() || param->GetElementSize() != sizeof(UObject*) || param->HasAnyPropertyFlags(CPF_OutParm | CPF_ReturnParm)
+        || param->GetOffset_Internal() < 0 || param->GetOffset_Internal() + param->GetElementSize() > function->GetParmsSize())
+        throw std::runtime_error("BP_ApplyGameplayEffectToSelf parameter layout changed");
+    night_damage_ = {}; night_damage_.capture(classes[0]); night_health_ = {}; night_health_.capture(classes[1]); ngp_damage_ = {}; ngp_damage_.capture(classes[2]);
+    effect_class_param_ = param;
+    effect_function_ = {}; effect_function_.capture(function);
+    effect_token_ = deps_.hooks->add_native_pre(deps_.hooks->context, function, effect_callback, this);
+    if (!effect_token_) { effect_class_param_ = nullptr; effect_function_ = {}; throw std::runtime_error("Effect pre-hook registration rejected"); }
+    log("CCS enemy difficulty hook installed (" + difficulty_ + ")");
+}
+void Combat::remove_effect_hook() {
+    if (!effect_token_) return;
+    if (!deps_.hooks->remove(deps_.hooks->context, effect_token_)) return;   // deferred: retried next tick
+    effect_token_ = 0; effect_class_param_ = nullptr; effect_function_ = {};
+    log("CCS enemy difficulty hook removed");
+}
+void Combat::effect_callback(void* user, void* object, void* frame, void*) noexcept {
+    auto* self = static_cast<Combat*>(user);
+    try { self->observe_effect(static_cast<UObject*>(object), frame); }
+    catch (...) { ++self->failures_; }
+}
+void Combat::observe_effect(UObject* asc, void* frame_ptr) {
+    if (injecting_ || difficulty_ == "game" || !effect_class_param_ || !asc || asc == asc_.get()) return;   // the player's own effects are never touched
+    auto* frame = static_cast<FFrame*>(frame_ptr);
+    auto* locals = frame ? frame->Locals() : nullptr;
+    if (!locals || frame->Node() != effect_function_.get()) return;
+    auto* slot = static_cast<std::byte*>(static_cast<void*>(locals)) + effect_class_param_->GetOffset_Internal();
+    UObject* cls{}; std::memcpy(&cls, slot, sizeof(cls));
+    if (!cls) return;
+    if (difficulty_ == "day") {
+        if (cls != night_damage_.get() && cls != night_health_.get()) return;
+        UObject* none = nullptr; std::memcpy(slot, &none, sizeof(none));   // the engine applies nothing for an empty class
+        ++difficulty_removed_;
+        return;
+    }
+    // "night": the spawner applies New Game+ right after the night pair. An enemy reaching it
+    // without the night damage effect spawned in daylight; it gets the pair now, in the game's order.
+    if (cls != ngp_damage_.get()) return;
+    auto* damage = night_damage_.get(); auto* health = night_health_.get();
+    if (!damage || !health) return;
+    Call count(asc, L"GetGameplayEffectCount", 4);
+    count.set(L"SourceGameplayEffect", damage); count.set(L"OptionalInstigatorFilterComponent", static_cast<UObject*>(nullptr)); count.set(L"bEnforceOnGoingCheck", true);
+    count.run();
+    if (count.get<int32_t>() > 0) return;
+    injecting_ = true;
+    struct Reset { bool& flag; ~Reset() { flag = false; } } reset{injecting_};
+    for (auto* effect : {damage, health}) {
+        Call context(asc, L"MakeEffectContext", 1); context.run();
+        Call apply(asc, L"BP_ApplyGameplayEffectToSelf", 4);
+        apply.set(L"GameplayEffectClass", effect); apply.set(L"Level", 0.0f);
+        apply.copy(L"EffectContext", context, L"ReturnValue");
+        apply.run();
+    }
+    ++difficulty_added_;
+}
 void Combat::remove_hook() {
     active_ = false;
     if (!token_) return;
@@ -1114,7 +1181,8 @@ void Combat::remove_hook() {
 bool Combat::stop() {
     enabled_ = false; active_ = false;
     remove_hook();
-    if (token_) return false;
+    remove_effect_hook();
+    if (token_ || effect_token_) return false;
     restore_weapon();
     for (auto& s : slots_) release(s);
     hold_cheat_ = false; sync_hold_cheat(PlayerContext{});   // a core going away takes its granted unlocks with it
@@ -1156,6 +1224,7 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         const bool had_world = world_.ptr != nullptr;
         world_ = {}; world_.capture(player.world);
         donor_ = {}; donor_armor_ = donor_turn_ = donor_cancel_ = -1; donor_failed_ = false;   // the donor rows live in the old world's references
+        if (effect_token_) { for (auto* c : {night_damage_.get(), night_health_.get(), ngp_damage_.get()}) if (c) keep_referenced(player.world, c); }
         if (had_world) {
             log("CCS world changed; reloading the slots");
             montage_facts_.clear();
@@ -1167,6 +1236,13 @@ void Combat::tick(const PlayerContext& player, uint64_t now) {
         if (s.was_ready && !ready) { log("CCS slot lost its montage: " + s.move_id + ": " + s.montage.why_dead()); s.rooted = false; release_transplants(s); release_carries(s); release_overlays(s); s.pending = !s.path.empty(); }   // every cached copy was built from the lost montage
         s.was_ready = ready;
     }
+    // The difficulty hook exists only while the setting overrides the game and a player is in a world.
+    if (enabled_ && difficulty_ != "game" && player.pawn && player.world) {
+        if (!effect_token_ && now >= effect_retry_after_) {
+            try { ensure_effect_hook(); difficulty_error_.clear(); }
+            catch (const std::exception& e) { if (difficulty_error_ != e.what()) log(std::string("CCS enemy difficulty hook failed: ") + e.what()); difficulty_error_ = e.what(); effect_retry_after_ = now + 5000; }
+        }
+    } else if (effect_token_) remove_effect_hook();
     bool tuned = false; for (const auto& s : slots_) if (std::abs(s.tuning.speed - 1.0) > 1e-6) tuned = true;
     const bool wanted = enabled_ && (assigned() > 0 || tuned);
     if (wanted) {
@@ -1393,6 +1469,7 @@ nlohmann::json Combat::status() const {
     return {{"enabled", enabled_}, {"active", active_}, {"hooked", token_ != 0}, {"seen", seen_}, {"swapped", swapped_},
         {"skipped", skipped_}, {"failures", failures_}, {"wrong_frame", wrong_frame_}, {"maximum_callback_us", maximum_us_}, {"recent", recent_},
         {"hold_unlocked", {{"light", hold_unlocked_[0]}, {"heavy", hold_unlocked_[1]}, {"cheat", hold_cheat_}, {"granted", hold_grant_asc_.alive()}}},
+        {"enemy_difficulty", {{"mode", difficulty_}, {"hooked", effect_token_ != 0}, {"night_pairs_added", difficulty_added_}, {"night_effects_removed", difficulty_removed_}, {"error", difficulty_error_}}},
         {"cached_classes", class_slots_.size()}, {"error", error_}, {"slots", std::move(slots)}, {"host", std::move(host)}};
 }
 }

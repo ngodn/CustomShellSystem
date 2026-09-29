@@ -21,6 +21,9 @@ public:
     void set_charged_without_stone(bool val) { charged_without_stone_ = val; }
     // Where a swapped move's chain window ends: "hit" (after the first hit, the game's own way) or "move" (after the last hit).
     const std::string& next_attack() const { return next_attack_; }
+    // Enemy difficulty: "game" follows Thestus's day or night; "night" and "day" hold one of them.
+    const std::string& enemy_difficulty() const { return enemy_difficulty_; }
+    void set_enemy_difficulty(std::string val) { enemy_difficulty_ = val == "night" || val == "day" ? std::move(val) : std::string("game"); }
     void set_next_attack(std::string val) { next_attack_ = val == "move" ? "move" : "hit"; }
 
     const std::string& startup_preset() const { return startup_preset_; }
@@ -57,6 +60,7 @@ private:
     bool enabled_{false};
     bool charged_without_stone_{false};
     std::string next_attack_{"hit"};
+    std::string enemy_difficulty_{"game"};
     std::string startup_preset_{"default"};
     bool preserve_weapon_mesh_{true};
     bool show_hud_notification_{true};

@@ -40,6 +40,7 @@ nlohmann::json Settings::to_json() const {
         {"enabled", enabled_},
         {"charged_attacks_without_tarstone", charged_without_stone_},
         {"next_attack", next_attack_},
+        {"enemy_difficulty", enemy_difficulty_},
         {"startup_preset", startup_preset_},
         {"preserve_weapon_mesh", preserve_weapon_mesh_},
         {"show_hud_notification", show_hud_notification_},
@@ -108,6 +109,8 @@ void Settings::from_json(const nlohmann::json& j) {
     candidate.charged_without_stone_ = j.value("charged_attacks_without_tarstone", charged_without_stone_);
     if (j.contains("next_attack") && !j["next_attack"].is_string()) throw std::runtime_error("Invalid next_attack value");
     candidate.set_next_attack(j.value("next_attack", next_attack_));
+    if (j.contains("enemy_difficulty") && !j["enemy_difficulty"].is_string()) throw std::runtime_error("Invalid enemy_difficulty value");
+    candidate.set_enemy_difficulty(j.value("enemy_difficulty", enemy_difficulty_));
     candidate.startup_preset_ = j.value("startup_preset", startup_preset_);
     candidate.preserve_weapon_mesh_ = j.value("preserve_weapon_mesh", preserve_weapon_mesh_);
     candidate.show_hud_notification_ = j.value("show_hud_notification", show_hud_notification_);
