@@ -183,6 +183,38 @@ speed change drops the slot's transplant, carry and overlay caches. Not covered:
 montage played without any copy of ours (armor and steer off, no carry), which still uses the
 rate parameter and loses its speed on release, as before alpha.3.
 
+Alpha.4, 29 September 2026: recovery cancel and move payloads (exports in `work/recovery-cancel/`).
+
+- Nexus reports (justinsemail96, Spyrosagr): after a swapped move, walk and guard were locked
+  until idle; dodge and attack still cut it. Mechanism, from `BP_PlayerController`: the movement
+  cancel window (`ANS_InterruptWithMovement`) calls `CheckInterruptMontageWithMovement(true,
+  Animation)`, which adds that animation to `InterruptWithMovementMontageSources` and starts a
+  10 ms timer; `InterruptMontageWithMovement` stops every listed montage (`Montage_Stop`) on move
+  input above 0.1, `State.CanInterruptMontages` or falling. Guard: `GA_Action_ActiveBlock_Hold`
+  sends `Event.InterruptMontage`, the controller's wait fires `InterruptMontage` on the same
+  list; `GA_ActiveBlock` is blocked by `State.Attack`, which the attack ability owns until its
+  montage ends. The engine passes the notify object's OUTER as `Animation`
+  (`AnimInstance.cpp`: `NotifyBegin(SkelMeshComp, Cast<UAnimSequenceBase>(NotifyStateClass->
+  GetOuter()), ...)`). Every CCS copy (cleaned enemy copy, transplant, carry, overlay) keeps
+  notify objects owned by its source (and `clone_montage` itself is outered to its source), so
+  the controller listed and stopped a montage that was not playing. The Steer cancel row from
+  the Martyr's Blade donor was broken the same way. Fix: `adopt_cancel_rows` gives every cancel
+  row in a copy a fresh notify object outered to the copy (`copy_object`, UberGraphFrame never
+  copied); Steer extends an existing cancel window reaching into the recovery (`extend_cancel`)
+  instead of stacking a second one, since the controller clears its timer when any window ends.
+- Nexus report (gabrielium): Hammer or heavy-sword moves on a sword slot did not stagger. Most
+  player hit windows carry no `DamagePayload` (Heavy Hammer 6 of 34, Martyr's Blade 2 of 21,
+  Smert 0 of 18; enemies 221 of 229), so the hit used the playing ability's
+  `AbilityHitPayload`: the sword's 20 poise instead of the hammer's 120 plus shield break. The
+  catalogs now carry `ability_class` per player move (`work/recovery-cancel/add_ability_class.py`);
+  slot load reads the move ability CDO's `AbilityHitPayload`, and with "Damage: Move's own" the
+  overlay copy gives payload-less hit rows their own hit object carrying it (`fill_payloads`).
+  "Weapon's own" falls back to the playing ability's payload when the original's windows have
+  none. Assumed, to verify live: a hit row's payload wins over the ability's (the game authors
+  per-hit payloads on some rows, which only makes sense if it does).
+- `notify_layout` resolved the hit-check classes after reading their fields, so `slot_state` was
+  always null and `unarmed_montage` never saw a punch as unarmed; fixed by ordering.
+
 Still to verify live: an enemy move with "Move's own" feel turning with the stick during the
 wind-up; whether the enemy's own translation warp overshoots on long lunges (if it does, add
 "SpartaMotionWarping_Translation" back to the drop list, or gate it per slot).
