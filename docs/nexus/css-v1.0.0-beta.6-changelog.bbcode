@@ -8,17 +8,17 @@ Smaller release, one big thing: CSS now sees the replacement mods you already ha
 
 [size=4][b]New[/b][/size]
 [list]
-[*][b]Use Non-CSS Mod.[/b] A fifth row on the Shell tab, under Use NPC / Enemy. CSS looks through Content/Paks for regular replacement mods, the ones that swap a shell, enemy or NPC without being a CSS package, and lists them by name. Pick one and your current shell wears that look, the same way Use NPC / Enemy works. Your shell keeps its abilities and progress. Left / Right walk through every look, the details window groups them per mod, F opens Search. Weapon mods, effect mods and the like don't show up, they don't change a character.[/*]
-[*][b]It knows what's already on.[/b] If a mod replaces the very shell you're wearing, the row tells you the game already shows it. If two mods fight over the same character, it names both, since the game only keeps one.[/*]
-[*][b]Conflict warning, not a block.[/b] Some mods replace things every CSS look depends on: the human skeleton, the player's animation graphs, the shell base classes. CSS can't stop those and won't try, it's your mod folder. It just tells you, in the row's details and in CSS.log, so when a look refuses to apply or animates weirdly you know which container to pull.[/*]
-[*][b]Customize and Locomotion say what a replacement look supports.[/b] Ground height on Customize, Default plus the CSS feminine idle and walk on Locomotion. The mod's author already picked the colors and parts, so there's nothing for CSS to dye. Misc and profiles work exactly as before.[/*]
+[*][b]Use Non-CSS Mod.[/b] A fifth row on the Shell tab, under Use NPC / Enemy. CSS looks through Content/Paks for regular replacement mods, the ones that swap a shell, enemy or NPC without being a CSS package, and lists them by name. Pick one and your current shell wears that look, the same way Use NPC / Enemy works. Your shell keeps its abilities and progress. Left / Right walk through every look, the details window groups them per mod, F opens Search. Weapon mods, effect mods and the like don't show up, they don't change a character.
+[*][b]It knows what's already on.[/b] If a mod replaces the very shell you're wearing, the row tells you the game already shows it. If two mods fight over the same character, it names both, since the game only keeps one.
+[*][b]Conflict warning, not a block.[/b] Some mods replace things every CSS look depends on: the human skeleton, the player's animation graphs, the shell base classes. CSS can't stop those and won't try, it's your mod folder. It just tells you, in the row's details and in CSS.log, so when a look refuses to apply or animates weirdly you know which container to pull.
+[*][b]Customize and Locomotion say what a replacement look supports.[/b] Ground height on Customize, Default plus the CSS feminine idle and walk on Locomotion. The mod's author already picked the colors and parts, so there's nothing for CSS to dye. Misc and profiles work exactly as before.
 [/list]
 
 [size=4][b]Under the hood[/b][/size]
 [list]
-[*]A replacement mod's container only names its packages by a hash, so CSS ships a small table (catalog/replacement-targets.json, 150 KB) of every game package under the 51 character folders it can wear from. Recognizing a mod means reading a few KB of its .utoc and looking the ids up. No decompression, no engine calls, nothing per frame. The scan runs once at startup and on rescan.[/*]
-[*]Only patch containers count (the ones ending in _P), because that's the engine's own rule for what overrides base content. So the game's own paks never get mistaken for mods, and CSS doesn't hardcode any game file names.[/*]
-[*]A saved replacement look over an official shell now re-applies on its own once the shell list has loaded after a restart.[/*]
+[*]A replacement mod's container only names its packages by a hash, so CSS ships a small table (catalog/replacement-targets.json, 150 KB) of every game package under the 51 character folders it can wear from. Recognizing a mod means reading a few KB of its .utoc and looking the ids up. No decompression, no engine calls, nothing per frame. The scan runs once at startup and on rescan.
+[*]Only patch containers count (the ones ending in _P), because that's the engine's own rule for what overrides base content. So the game's own paks never get mistaken for mods, and CSS doesn't hardcode any game file names.
+[*]A saved replacement look over an official shell now re-applies on its own once the shell list has loaded after a restart.
 [/list]
 
 [size=4][b]A word on CSS mods vs replacement mods[/b][/size]
@@ -26,10 +26,10 @@ CSS was never meant to be the one true way to mod Mortal Shell II. It's here to 
 
 [size=4][b]For modders[/b][/size]
 [list]
-[*]Nothing to change on your side. If your container ends in _P and replaces a shell, enemy or NPC at its original path, CSS lists it automatically, named after the container file. Give the file a readable name, that's what players will see (ProximaFitShape_P shows up as "ProximaFitShape").[/*]
-[*]A retexture counts the same as a mesh swap: anything under a character's folder puts that character's looks on the list.[/*]
-[*]If your mod also replaces shared assets (SKEL_Human_Skeleton, the player's ABP or blend spaces, the shell base blueprints), players will see a warning naming your container. Not a block, just information, but worth knowing.[/*]
-[*]Want dyes, parts, motion presets or custom animations for your mod? That's what a CSS package adds on top. Docs: css-packages.md and replacement-mods.md in the repo.[/*]
+[*]Nothing to change on your side. If your container ends in _P and replaces a shell, enemy or NPC at its original path, CSS lists it automatically, named after the container file. Give the file a readable name, that's what players will see (ProximaFitShape_P shows up as "ProximaFitShape").
+[*]A retexture counts the same as a mesh swap: anything under a character's folder puts that character's looks on the list.
+[*]If your mod also replaces shared assets (SKEL_Human_Skeleton, the player's ABP or blend spaces, the shell base blueprints), players will see a warning naming your container. Not a block, just information, but worth knowing.
+[*]Want dyes, parts, motion presets or custom animations for your mod? That's what a CSS package adds on top. Docs: css-packages.md and replacement-mods.md in the repo.
 [/list]
 
 [size=4][b]Reporting problems[/b][/size]
@@ -44,7 +44,7 @@ Honestly, thank you for the support, the reports, the requests and the patience 
 
 A special thanks to everyone who already did:
 [list]
-[*][DONATOR NAMES][/*]
+[*][DONATOR NAMES]
 [/list]
 
 [b]Updating from beta.5:[/b]
