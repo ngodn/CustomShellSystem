@@ -1,8 +1,30 @@
-[b]CSSX 1.2.1[/b]
+[b]CSSX 1.2.1[/b] (2026-09-29)
 
-[size=4][b]Fixes[/b][/size]
+Hey everyone. A small host update that ships together with Traverse 1.0.1. If you run CCS as well, this is the one to grab.
+
+[size=4][b]What's fixed[/b][/size]
 [list]
-[*]The CSSX tab keeps its place with CCS installed as well. The Player Menu can now hold Inventory, Tarstones, Map, CSS, CCS and CSSX, with CSSX last whichever mod attached first.[/*]
+[*][b]Three mod tabs in the Player Menu.[/b] With CSS, CCS and CSSX all installed the menu holds Inventory, Tarstones, Map, CSS, CCS and CSSX, and CSSX stays the last tab whichever mod attached first. Before, a sixth tab could confuse where CSSX thought its own page was.[/*]
+[*]CSSX re-checks its tab and page pairing every time it opens, so a tab added after CSSX attached never opens the wrong page.[/*]
 [/list]
 
-Traverse 1.0.1 ships alongside and needs this version. Install: extract into [font=Courier New]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/[/font] so it lands in [font=Courier New]Mods/CSSX/[/font], overwriting the previous version. Your settings are kept.
+[size=4][b]Traverse 1.0.1[/b][/size]
+Ships alongside as its own download and needs this host version. Its changelog is on the Traverse page; the short version: a traverse now tells the game which zone you are arriving in, the way the game's own beacons do, which fixes a save corruption a traverse could set up.
+
+[size=4][b]When something breaks[/b][/size]
+Send the logs with your comment, or PM them with a screenshot:
+[code]MortalShell2/Binaries/Win64/ue4ss/UE4SS.log
+MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/CSSX.log[/code]
+
+[size=4][b]Thank you[/b][/size]
+The support, the bug reports, the requests, it's what keeps me going on this. If you want to show some love, an endorse and a vote on the mod page go a long way, and if you feel like chipping in you can buy me a pack of cigarettes on [url=https://ko-fi.com/maplestar86]Ko-fi[/url] or [url=https://www.nexusmods.com/Core/Libs/Common/Widgets/PayPalPopUp?user=168682108]PayPal[/url]. Zero pressure, CSSX stays free no matter what.
+
+And a big thank you to the people who already did:
+[list]
+[*][DONATOR NAMES]
+[/list]
+
+[b]Updating from 1.2.0:[/b]
+Close the game, extract the ZIP into [b]MortalShell2/Binaries/Win64/ue4ss/Mods/[/b] so it lands in [b]Mods/CSSX/[/b] and overwrite. Your settings and extensions are kept.
+
+[url=https://github.com/ngodn/CustomShellSystem/releases/tag/cssx-v1.2.1]Download CSSX 1.2.1[/url]

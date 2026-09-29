@@ -1,11 +1,35 @@
-[b]CSSX Traverse 1.0.1[/b]
+[b]CSSX Traverse 1.0.1[/b] (2026-09-29)
 
-[size=4][b]Fixes[/b][/size]
+Hey everyone. This one fixes something nasty I ran into myself, so please update.
+
+[size=4][b]What's fixed[/b][/size]
 [list]
-[*]A traverse now tells the game which zone you are arriving in, the way the game's own beacons and gates do. Before, the world stayed in the zone you left: enemies spawned wrong, and a beacon trip taken from that state could corrupt the save so it crashed on every load.[/*]
+[*][b]A traverse now tells the game which zone you arrive in[/b], the way the game's own beacons and gates do. Before, the world stayed in the zone you left: enemies spawned wrong there, and a beacon trip taken from that state could corrupt the save so it crashed on every load. If that happened to you, load one of the game's own backups (WorldState_Backup_*.sav next to your save) from before the traverse.[/*]
 [*]Traverse waits until a previous traverse has fully arrived before it fires again.[/*]
 [*]Traverse refuses to fire from inside a dungeon. Leave through the dungeon's own exit first.[/*]
-[*]A point whose zone cannot be read is skipped, with a note in the CSSX tab, instead of fired blind.[/*]
+[*]A point whose zone cannot be read is skipped, and the CSSX tab names it, instead of being fired blind.[/*]
 [/list]
 
-Requires CSSX 1.2.1 or newer. Install: extract into [font=Courier New]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/extensions/[/font], overwriting the previous version.
+[size=4][b]Nerd corner[/b][/size]
+[list]
+[*]The game's streaming teleport takes an optional zone data asset. Its teleport ability broadcasts "zone changed, reason: player teleported" only when that asset is there, and spawners, ambience and the save's landing area follow that broadcast. 1.0.0 passed nothing. 1.0.1 reads the landing area's own zone, or the gate's, exactly where the game's travel code reads it.[/*]
+[/list]
+
+[size=4][b]When something breaks[/b][/size]
+Send the logs with your comment, or PM them with a screenshot:
+[code]MortalShell2/Binaries/Win64/ue4ss/UE4SS.log
+MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/CSSX.log
+MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/logs/eins0fx.traverse/current.jsonl[/code]
+
+[size=4][b]Thank you[/b][/size]
+The support, the bug reports, the requests, it's what keeps me going on this. If you want to show some love, an endorse and a vote on the mod page go a long way, and if you feel like chipping in you can buy me a pack of cigarettes on [url=https://ko-fi.com/maplestar86]Ko-fi[/url] or [url=https://www.nexusmods.com/Core/Libs/Common/Widgets/PayPalPopUp?user=168682108]PayPal[/url]. Zero pressure, Traverse stays free no matter what.
+
+And a big thank you to the people who already did:
+[list]
+[*][DONATOR NAMES]
+[/list]
+
+[b]Updating from 1.0.0:[/b]
+Requires CSSX 1.2.1. Close the game, extract the ZIP into [b]MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/extensions/[/b] and overwrite. Your Traverse settings are kept.
+
+[url=https://github.com/ngodn/CustomShellSystem/releases/tag/cssx-v1.2.1]Download CSSX Traverse 1.0.1[/url]
