@@ -1629,6 +1629,7 @@ void InventoryUI::camera_start() {
     }
     zoom_=frame_=pan_=0; motion_.reset(); drag_pan_=drag_rotate_=false; mouse_left_=mouse_right_=false;
     backdrop_start();
+    preview_lights_start();
 }
 void InventoryUI::camera_tick_restore() {
     if(auto* pc=camera_tick_controller_.Get()) {
@@ -1640,6 +1641,7 @@ void InventoryUI::camera_tick_restore() {
     camera_tick_controller_.Reset();
 }
 void InventoryUI::camera_stop() {
+    preview_lights_stop();
     light_stop();
     backdrop_stop();
     camera_restore_state();
@@ -1748,6 +1750,10 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         auto* handler=inventory_object(current,L"User Interface Handler Component");
         auto* current_main=inventory_object(inventory_object(handler,L"WBP_Menu_Game"),L"WBP_Menu_Main");
         if(current!=controller_.Get() || current_main!=main_.Get()) detach();
+        else if(active_ && inventory_object(handler,L"ActiveDisplayMenu")!=display_.Get()) {
+            camera_stop();
+            camera_start();
+        }
     }
     if(!main_.Get()) {
         if(now<discover_after_) return {}; discover_after_=now+500;

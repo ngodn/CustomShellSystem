@@ -221,6 +221,10 @@ class InventoryUI {
     InventoryLightOrbit light_orbit_;
     LightVector light_location_before_{}, light_rotation_before_{};
     bool light_edit_=false;
+    struct PreviewLight { WeakObject component; bool translucency_before=false; };
+    std::vector<PreviewLight> preview_lights_;
+    void preview_lights_start();
+    void preview_lights_stop();
     bool light_available() const;
     void light_start();
     void light_toggle();

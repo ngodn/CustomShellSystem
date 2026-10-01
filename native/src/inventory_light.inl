@@ -1,3 +1,40 @@
+void InventoryUI::preview_lights_start() {
+    preview_lights_stop();
+    for(auto* name:{L"RectLight_Left",L"RectLight_AxeLight",L"SpotLight_Fill",L"SpotLight_Rim"}) {
+        auto* component=inventory_object(display_.Get(),name);
+        if(!component || component->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject|RF_ArchetypeObject))) continue;
+        auto* property=component->GetPropertyByNameInChain(L"bAffectTranslucentLighting");
+        if(!property || !property->IsA<FBoolProperty>() ||
+           !component->GetFunctionByNameInChain(L"SetAffectTranslucentLighting")) continue;
+        if(std::any_of(preview_lights_.begin(),preview_lights_.end(),
+            [component](const auto& light){return light.component.Get()==component;})) continue;
+        PreviewLight light;
+        light.component=component;
+        light.translucency_before=static_cast<FBoolProperty*>(property)->GetPropertyValueInContainer(component);
+        preview_lights_.push_back(light);
+    }
+    try {
+        for(auto& light:preview_lights_) if(auto* component=light.component.Get())
+            invoke(component,L"SetAffectTranslucentLighting",L"bNewValue",true);
+    } catch(...) {
+        preview_lights_stop();
+        throw;
+    }
+}
+void InventoryUI::preview_lights_stop() {
+    std::exception_ptr failure;
+    for(auto& light:preview_lights_) {
+        try {
+            if(auto* component=light.component.Get())
+                invoke(component,L"SetAffectTranslucentLighting",L"bNewValue",light.translucency_before);
+            light.component.Reset();
+        } catch(...) {
+            if(!failure) failure=std::current_exception();
+        }
+    }
+    std::erase_if(preview_lights_,[](const auto& light){return !light.component.Get();});
+    if(failure) std::rethrow_exception(failure);
+}
 // Transforms belong to one preview instance, never a shared light template.
 bool InventoryUI::light_available() const {
     if(!active_ || closing_ || native_picker_ || !confirm_action_.is_null() ||

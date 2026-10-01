@@ -6,6 +6,7 @@
 #include <array>
 #include <cctype>
 #include <cstring>
+#include <exception>
 #include <iomanip>
 #include <limits>
 #include <sstream>

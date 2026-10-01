@@ -6,7 +6,7 @@ The user authorizes necessary CSS improvements discovered during Unholy Genessa
 work, with clear scope and separate commits, for a later **v1.0.0-beta.7** release
 alongside upcoming CSS features. Do not publish or bump the release prematurely.
 
-Queued after the current garment fitting pass: enable translucent lighting on
+Implemented, built and awaiting live validation: enable translucent lighting on
 CSS's character-preview lights while CSS owns the preview, and restore every
 previous flag on close, preview replacement and teardown. Four native preview
 lights currently report `bAffectTranslucentLighting=false`. A reversible in-game
@@ -19,6 +19,24 @@ Evidence and screenshots: Unholy Genessa's `work/light1` and
 `CSS-Mod-Authoring/eins0fx-collections/CSS_UnholyGenessa_eins0fx_P`.
 CSSX provided development diagnostics only and is not a dependency for the fix
 or the character mod. Preserve concurrent UI/performance changes when implementing.
+
+Implementation records the original flag on each live preview light using weak
+object handles. Entry enables the four lights, and close, native-tab exit,
+preview replacement and teardown restore their captured values. No per-frame
+light setter or world-light modification is added. Unsupported components are
+skipped. Failed restorations retain valid handles for a later retry.
+
+Validation: the Windows C++23 `css_core` Release build passes. Existing portable
+`css_inventory_light`, `css_inventory_motion` and `css_inventory_backdrop` tests
+pass (3/3). These test the existing orbit/camera math, not the new reflected
+light lifecycle. The build retains an unrelated unused-variable warning in
+`extension_data.cpp`.
+
+Before beta.7 release, install with the next coordinated game restart and verify
+entry/exit, original true and false flags, native-tab changes, preview replacement,
+world teardown, orbit/reset controls and translucent-material readability. Measure
+preview performance; enabling translucent light contribution can add GPU work.
+The installed DLL and release version remain unchanged until that validation.
 
 ## Earlier work
 
