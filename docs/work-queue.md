@@ -1,5 +1,27 @@
 # Current work queue
 
+## October 1: preview lighting for beta.7
+
+The user authorizes necessary CSS improvements discovered during Unholy Genessa
+work, with clear scope and separate commits, for a later **v1.0.0-beta.7** release
+alongside upcoming CSS features. Do not publish or bump the release prematurely.
+
+Queued after the current garment fitting pass: enable translucent lighting on
+CSS's character-preview lights while CSS owns the preview, and restore every
+previous flag on close, preview replacement and teardown. Four native preview
+lights currently report `bAffectTranslucentLighting=false`. A reversible in-game
+comparison illuminated the otherwise dark pale bodice, veil and upper skirt.
+All four flags were restored and independently read back. Wings and world
+lighting still require separate work; this does not solve garment deformation.
+
+Evidence and screenshots: Unholy Genessa's `work/light1` and
+`authoring/live-trial-notes.md` under
+`CSS-Mod-Authoring/eins0fx-collections/CSS_UnholyGenessa_eins0fx_P`.
+CSSX provided development diagnostics only and is not a dependency for the fix
+or the character mod. Preserve concurrent UI/performance changes when implementing.
+
+## Earlier work
+
 2026-09-27 final scope correction: deliver **Black Pearl + Prototype Planet Diving Suit + Skin Suit + Vacation Bikini + Casual Knitwear + Midsummer Alice + War Aegis**. User confirmed Prototype, not 6th. Fit Prototype first, then follow this list. Holiday and unlisted outfits are out of this delivery. Retain Original plus five garment palettes, fitting, customization and physics requirements. Prototype tail must have physics and independent persisted Show/Hide control. Current bind-pose candidate and remaining defects are in `development/eve-outfit-goal.md`.
 
 2026-09-27 latest user priority: **skip Holiday Reveler** because its investigation is consuming too much time and tokens. Work on **Planet Diving 6th, then Skin Suit, then the remaining outfits**. Holiday experiments are parked, not accepted or awaiting more automatic tests. Keep the complete fitting, physics and customization requirements for the active outfits.
