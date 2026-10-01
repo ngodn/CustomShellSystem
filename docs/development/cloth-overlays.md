@@ -1,7 +1,8 @@
 # Cloth overlays for beta.7
 
-Status: control adapter and global-effect precedence implemented and built.
-Candidate installation and live acceptance are next. The isolated
+Status: control adapter and global-effect precedence implemented, built and
+installed as the private `css_core-cloth1.dll` trial, source `9bdf39b`.
+Live acceptance remains pending. The isolated
 branch is `feature/cloth-overlays` at `work/cloth-core`. Overlay controls are
 committed as `ebbb667`; merge `f058b40` includes the other agent's reviewed
 socket-fit work, `b4d2d62`, in the combined candidate. Main remains at `b4d2d62`.
