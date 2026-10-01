@@ -2,9 +2,9 @@
 
 Status: initial control adapter implemented and built, not installed. Native
 global-effect arbitration and live acceptance remain incomplete. The isolated
-branch is `feature/cloth-overlays` at `work/cloth-core`, based on `0b243bb`.
-The other agent's reviewed socket-fit work is committed separately as `b4d2d62`
-and must be retained in the combined beta.7 candidate.
+branch is `feature/cloth-overlays` at `work/cloth-core`. Overlay controls are
+committed as `ebbb667`; merge `f058b40` includes the other agent's reviewed
+socket-fit work, `b4d2d62`, in the combined candidate. Main remains at `b4d2d62`.
 
 Unholy Genessa now separates opaque metal from translucent fabric on the same
 six cloth surfaces. This avoids independent simulations drifting apart. Both
@@ -106,6 +106,24 @@ recover through the same path, while foreign replacements are left alone.
 Final source review and a Windows rebuild cover these corrections; live checks
 remain pending. These MIDs use Unreal's transient-package outer in a game world,
 so CSS retains explicit roots rather than relying on component ownership for GC.
+
+The combined candidate at `f058b40` passes all 14 host test executables and the
+Windows developer build (both exit 0). Logs are `build-host-combined.log`,
+`build/host/Testing/Temporary/LastTest.log` and `build-win-combined.log` in this
+worktree. This candidate has not been installed or released.
+
+## Native effect evidence to follow up
+
+The retained `work/blood-dodge-investigation/effect-state.json` in the main CSS
+workspace records one observed state with ActiveOverlayMaterial and
+PermanentOverlayMaterial null. This is historical evidence for one state, not
+proof that all normal shells have no global overlay. The extracted
+`BPC_VFXComponent` bytecode's `InitPermanetOverlayMaterial` injects a valid
+permanent material at priority 0. The recorded Harros dash defaults use
+`DashOverlay` at priority 69; SetupOverlay and RemoveOverlay call the native
+VFX blueprint helpers. Establish how permanent and temporary states appear on
+the component before choosing the arbitration condition. Do not treat every
+nonnull global material as a temporary effect.
 
 ## Validation still needed
 
