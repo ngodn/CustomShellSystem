@@ -5,7 +5,9 @@ installed as the private `css_core-cloth1.dll` trial, source `9bdf39b`.
 Initial user visual acceptance and the first native-effect check pass. The isolated
 branch is `feature/cloth-overlays` at `work/cloth-core`. Overlay controls are
 committed as `ebbb667`; merge `f058b40` includes the other agent's reviewed
-socket-fit work, `b4d2d62`, in the combined candidate. Main remains at `b4d2d62`.
+socket-fit work, `b4d2d62`, in the combined candidate. The normal `nextgen100`
+checkout was fast-forwarded to `eca8c43` after the native-effect and production
+build checks. The feature is now visible there; beta.7 is not published yet.
 
 Unholy Genessa now separates opaque metal from translucent fabric on the same
 six cloth surfaces. This avoids independent simulations drifting apart. Both
