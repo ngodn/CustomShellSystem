@@ -1,0 +1,25 @@
+{
+  "source_revision": "8c7e070f8843f8ea17ff6dd47ac2db8cd80ac69f",
+  "implementation_revision": "9bdf39b",
+  "configuration": "Release",
+  "inventory_dev": false,
+  "transition_tests": false,
+  "build_exit_code": 0,
+  "installed": false,
+  "runtime_tested": false,
+  "logs": {
+    "build-prod-config.log": "0a1ca69bdd1b6cdae96374ead0c23b9d425185111558b68a5bf0a69ca21bdac4",
+    "build-prod.log": "cfc8ba719565af69e916631b363499c7f7fc139489d330b33e6bec51d1fabe47"
+  },
+  "files": {
+    "css_core.dll": {
+      "sha256": "d161389a1ad41a8073ab4044ba813f05ceb303be87e485523fea1f219b7ec53a",
+      "bytes": 3475456
+    },
+    "main.dll": {
+      "sha256": "f1229de3ffe17837abbe1ff50a33ee48cc081e4bc5660a50873316f956ef34f5",
+      "bytes": 247808
+    }
+  },
+  "warning": "One pre-existing switch-enum warning in retained UE4SS USMapGenerator source. No local-code warnings reported."
+}

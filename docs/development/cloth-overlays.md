@@ -2,7 +2,7 @@
 
 Status: control adapter and global-effect precedence implemented, built and
 installed as the private `css_core-cloth1.dll` trial, source `9bdf39b`.
-Live acceptance remains pending. The isolated
+Initial user visual acceptance and the first native-effect check pass. The isolated
 branch is `feature/cloth-overlays` at `work/cloth-core`. Overlay controls are
 committed as `ebbb667`; merge `f058b40` includes the other agent's reviewed
 socket-fit work, `b4d2d62`, in the combined candidate. Main remains at `b4d2d62`.
@@ -11,8 +11,22 @@ Unholy Genessa now separates opaque metal from translucent fabric on the same
 six cloth surfaces. This avoids independent simulations drifting apart. Both
 skin variants have the fabric materials saved as per-slot mesh overlays. The
 mod's `authoring/layered-variant-check.json` and `work/layerpack1` contain the
-source and cooked evidence. These assets still need CSS integration and live
-acceptance before release.
+source and cooked evidence. The combined trial is installed. Remaining gameplay
+and customization checks are tracked in the mod's `authoring/release-status.md`.
+
+October 2 runtime check: on SK_EveL in the Genessa shell, native
+InjectOverlayMaterial changes the component global overlay and all six owned
+fabric slots to the Harros dash material. Native RemoveOverlayMaterial restores
+the exact six retained MIDs and original null global/effect state. Before,
+during and after screenshots were inspected. Camera movement prevents an
+image-difference comparison; readback confirms exact pointer restoration.
+See the mod's `authoring/live-overlay-check.json` and `work/live4/effect2`.
+This is one controlled temporary effect, not coverage of every native effect.
+
+The same source also builds with CSS_INVENTORY_DEV and CSS_TRANSITION_TESTS
+disabled. `cloth-production-build.json` records hashes and configuration.
+This production binary has not been installed or tested in game yet. The sole
+compile warning is in the retained upstream UE4SS USMapGenerator switch.
 
 ## Required CSS behavior
 
