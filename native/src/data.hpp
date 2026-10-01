@@ -9,6 +9,7 @@
 #include <nlohmann/json.hpp>
 #include "controls.hpp"
 #include "animations.hpp"
+#include "socket_fit.hpp"
 
 namespace css {
 inline constexpr const char* original_shells_id = "css.original_shells";
@@ -46,7 +47,14 @@ struct AttachmentCollision {
     bool active() const { return clearance > 0 && max_push > 0; }
     bool operator==(const AttachmentCollision&) const = default;
 };
-struct AttachmentOffset { std::array<double,3> location{}, rotation{}; AttachmentCollision collision; bool operator==(const AttachmentOffset&) const = default; };   // socket space, cm and degrees
+struct AttachmentOffset {
+    std::array<double,3> location{}, rotation{};   // socket space, cm and degrees
+    AttachmentCollision collision;
+    // beta.7: the worn shell's socket adjustment swapped for the look's (socket_fit.hpp).
+    // Set at wear time from the two shells' character data, never read from a manifest.
+    std::optional<SocketRebase> rebase;
+    bool operator==(const AttachmentOffset&) const = default;
+};
 // 1.0: a variant is a set of items rather than a single mesh. Exactly one sits in the
 // `body` slot and replaces the character mesh, which is what every package published so
 // far does, and the rest are accessories posed by the body. A manifest that names one
@@ -85,6 +93,10 @@ struct Variant {
     std::vector<Item> items;
     double ground_offset_cm=0;
     AnimationSet animations;
+    // beta.7: the shell whose body this look is sized like (a CharacterId tag). Stowed gear
+    // takes that shell's socket adjustments instead of the worn shell's. Empty: the
+    // outfit's fit_shell, then its first listed shell (fit_shell_for).
+    std::string fit_shell;
 };
 struct Outfit {
     std::string id, name, author, description, category;
@@ -96,11 +108,21 @@ struct Outfit {
     fs::path resources;
     std::vector<Template> templates;
     AnimationSet animations;
+    std::string fit_shell;   // beta.7: see Variant::fit_shell
     const ControlSet& controls_for(const std::string& variant) const {
         for(const auto& v:variants) if(v.id==variant && v.controls) return *v.controls;
         return controls;
     }
 };
+// beta.7: the shell a look's stowed gear is fitted to. A package names it or gets its first
+// listed shell; the official shells and replacement mods carry their own. NPC and enemy looks
+// are not sized like any shell, so they keep the worn shell's placement.
+inline std::string fit_shell_for(const Outfit& outfit,const Variant& variant) {
+    if(!variant.fit_shell.empty()) return variant.fit_shell;
+    if(!outfit.fit_shell.empty()) return outfit.fit_shell;
+    if(appearance_row_outfit(outfit.id) || outfit.shells.empty()) return {};
+    return outfit.shells.front();
+}
 // One installed container without CSS metadata whose packages sit in a character folder CSS
 // can wear from. The scan records it; rebuild_replacement_outfits turns it into a css.mod.* outfit.
 struct ReplacementMod {

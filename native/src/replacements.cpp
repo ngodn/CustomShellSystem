@@ -221,6 +221,7 @@ void rebuild_replacement_outfits(Catalog& catalog) {
             if(*look.folder!=folder || !variant_ids.insert(look.variant->id).second) continue;
             Variant variant;
             variant.id=look.variant->id; variant.name=look.variant->name; variant.mesh=look.variant->mesh;
+            variant.fit_shell=look.variant->fit_shell;   // the mod redraws that shell, so its gear fits the same way
             variant.items.push_back(Item{variant.id,variant.name,variant.mesh,ItemSlot::Body,0,{},{}});
             outfit.variants.push_back(std::move(variant));
         }

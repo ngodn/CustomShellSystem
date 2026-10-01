@@ -130,10 +130,16 @@ static std::vector<WeakObject> actor_mesh_components(UObject* actor) {
 // the render, even when the actor flag does not reach a nested mesh) and hide the owner actor
 // (keeps its collision down so nothing draws underneath). Show reverses both. Falls back to the
 // single enumerated component if the actor exposes no component list.
+static bool actor_mesh_root(UObject* comp) {
+    auto* cls=comp?comp->GetClassPrivate():nullptr;
+    return cls && narrow(cls->GetName()).find("Mesh")!=std::string::npos;
+}
 static void set_item_hidden(UObject* comp, UObject* owner, bool hide) {
     bool any=false;
     if(owner) for(auto& c:actor_mesh_components(owner)) { if(auto* m=c.Get()) { try { set_component_hidden(m,hide); any=true; } catch(...) {} } }
-    if(!any) { try { set_component_hidden(comp,hide); } catch(...) {} }
+    // The root too, even when the meshes were reached: a bare scene root (Gragu's helmet) is what
+    // the per-frame check reads back, and it would otherwise look visible and be re-hidden every frame.
+    if(!any || !actor_mesh_root(comp)) { try { set_component_hidden(comp,hide); } catch(...) {} }
     try { if(owner) hide_game_object(owner,hide); } catch(...) {}
 }
 
@@ -223,14 +229,22 @@ void MiscVisibility::enumerate(const std::vector<UObject*>& containers, UObject*
             auto* child=child_weak.Get();
             if(!child) continue;
             std::string cc; if(auto* cls=child->GetClassPrivate()) cc=narrow(cls->GetName());
-            if(cc.find("Mesh")==std::string::npos) continue;
+            const bool mesh=cc.find("Mesh")!=std::string::npos;
+            // Gragu's helmet attaches by a bare scene root, not a mesh; it is the one non-mesh
+            // root let through, matched by its owner below.
+            if(!mesh && cc!="SceneComponent") continue;
             UObject* owner=nullptr;
             try { Call oc(child,L"GetOwner",1); oc.run(); owner=oc.get<UObject*>(); } catch(...) { continue; }
             if(!owner || owner==pawn) continue;
             std::string category; bool shell_item=false;
             std::string owner_class; if(auto* cls=owner->GetClassPrivate()) owner_class=narrow(cls->GetName());
+            const bool helmet=owner_class=="BP_Gragu_Helmet_C";
+            if(!mesh && !helmet) continue;
             if(auto it=slots.find(owner); it!=slots.end()) { category=it->second.category; shell_item=it->second.shell_item; }   // authoritative
             else category=misc_category(narrow(attach_socket(child).ToString()),owner_class);   // a non-weapon accessory (flower crown, cape): fall back to the socket
+            // A shell's own headwear rides the Head bone, which the socket rule never treats as
+            // gear. It is a separate actor like the heart, so it is that shell's item (Gragu).
+            if(category.empty() && helmet) { category="accessories"; shell_item=true; }
             if(category.empty()) continue;
             std::string key=misc_lower(owner_class);
             if(key.ends_with("_c")) key.resize(key.size()-2);
@@ -288,6 +302,7 @@ void MiscVisibility::evaluate(const std::map<std::string,MiscRule>& rules, bool 
 static MiscShellItem misc_shell_item_info(const std::string& key) {
     static const MiscShellItem known[]={
         {"wp_alienheart","Revered Heart","Gragu's heart, carried on the belt and eaten to restore health. Hidden, it still heals."},
+        {"bp_gragu_helmet","Helmet","Gragu's helmet, worn over whatever head the look has."},
         {"wp_eredrim_diapason","Diapason","Eredrim's bell, hung on the body until his ability rings it."},
         {"wp_eredrim_diapason_obsidian","Diapason","Eredrim's bell, hung on the body until his ability rings it."},
         {"wp_genessa_catalyst","Catalyst","Genessa's incense burner, stowed on the body until her ability uses it."},
@@ -431,9 +446,45 @@ bool Appearance::misc_layout_changed() {
     return changed;
 }
 
+// Gragu's Player Menu character spawns his helmet as its own actor and never destroys it: each
+// menu build (often two per open) leaves the previous one behind, unattached on the preview stage,
+// owned by a menu character that is already destroyed or gone. Under Gragu's own head that is
+// invisible; under any other look it is a helmet stuck in the menu that no MISC rule can reach.
+// Only ownerless, unattached instances qualify. Another live actor's helmet is not ours.
+static void sweep_orphan_helmets(UObject* pawn) {
+    auto* helmet=find_optional(L"/Game/Sparta/Core/Characters/Player/Gragu/BP_Gragu_Helmet.BP_Gragu_Helmet_C");
+    if(!helmet || !pawn) return;   // never loaded: nobody has worn Gragu, so there is nothing to sweep
+    Call all(find(L"/Script/Engine.Default__GameplayStatics"),L"GetAllActorsOfClass",3);
+    all.set(L"WorldContextObject",pawn); all.set(L"ActorClass",helmet); all.run();
+    auto* property=all.param(L"OutActors");
+    if(!property->IsA<FArrayProperty>()) return;
+    auto* array=static_cast<FArrayProperty*>(property);
+    if(!array->GetInner()->IsA<FObjectProperty>() || array->GetInner()->GetElementSize()!=sizeof(UObject*)) return;
+    FScriptArrayHelper values(array,all.data(property));
+    if(values.Num()<0 || values.Num()>256) return;
+    std::vector<WeakObject> orphans;
+    for(int i=0;i<values.Num();++i) {
+        UObject* actor{}; std::memcpy(&actor,values.GetRawPtr(i),sizeof(actor));
+        if(!actor || actor->GetClassPrivate()!=helmet) continue;
+        if(WeakObject(read<UObject*>(actor,L"Owner")).Get()) continue;
+        Call parent(actor,L"GetAttachParentActor",1); parent.run();
+        if(!parent.get<UObject*>()) orphans.emplace_back(actor);
+    }
+    for(auto& weak:orphans) if(auto* actor=weak.Get()) { Call destroy(actor,L"K2_DestroyActor",0); destroy.run(); }
+}
 void Appearance::sync_misc() {   // on a layout change: rebuild candidate lists
     auto* pawn=observed_pawn_.Get();
     if(!pawn) { misc_.restore(); menu_misc_.restore(); return; }
+    // While the menu is up (the only place a left-behind helmet shows) and once as it closes. The
+    // menu rebuilds its character more than once per open, so a single sweep at open misses some.
+    {
+        auto* display=menu_character(pawn);
+        if(display!=menu_sweep_character_.Get() || (!display && menu_sweep_open_)) {
+            try { sweep_orphan_helmets(pawn); } catch(...) {}
+        }
+        menu_sweep_character_=display;
+        menu_sweep_open_=display!=nullptr;
+    }
     // With no rule set nothing is enforced, but the world list still feeds the MISC tab's
     // shell item rows, so the worn shell's items appear before any rule exists.
     if(misc_rules_.empty()) { misc_.restore(); menu_misc_.restore(); misc_.enumerate({read<UObject*>(pawn,L"Mesh"), attachments_.proxy()}, pawn); return; }

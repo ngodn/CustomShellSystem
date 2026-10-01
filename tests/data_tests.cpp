@@ -326,6 +326,26 @@ int main() {
             expect(!ignored.collision.active(), "A collision block with no clearance should be ignored");
             expect(ignored.location[2] == 2.9645, "The fixed offset should survive an ignored collision block");
         }
+        {   // beta.7: stowed gear follows the shell the look is sized like. A package that says
+            // nothing gets its first listed shell; a variant can override its outfit.
+            const auto plain = Catalog::load(catalog_dir);
+            const auto& outfit = plain.outfits.front();
+            expect(fit_shell_for(outfit, outfit.variants.front()) == "CharacterId.Player.Shell.Genessa", "Fit shell must default to the first listed shell");
+            auto fitted = catalog;
+            fitted["outfits"][0]["fit_shell"] = "CharacterId.Player.Shell.Harros";
+            fitted["outfits"][0]["variants"].push_back({{"id", "b"}, {"name", "B"}, {"mesh", "/Game/CSS/Mesh.Mesh"}, {"fit_shell", "CharacterId.Player.Shell.Gragu"}});
+            atomic_json(catalog_file, fitted, false);
+            const auto with_fit = Catalog::load(catalog_dir);
+            const auto& o = with_fit.outfits.front();
+            expect(fit_shell_for(o, *with_fit.find("test", "a")) == "CharacterId.Player.Shell.Harros", "Outfit fit shell lost");
+            expect(fit_shell_for(o, *with_fit.find("test", "b")) == "CharacterId.Player.Shell.Gragu", "Variant fit shell must win");
+            fitted["outfits"][0]["fit_shell"] = "Not a tag!";
+            atomic_json(catalog_file, fitted, false);
+            rejects([&] { Catalog::load(catalog_dir); });
+            // NPC and enemy looks are sized like no shell: they keep the worn shell's placement.
+            Outfit npc; npc.id = "css.npc.enemies"; npc.shells = {"CharacterId.Player.Shell.Genessa"};
+            expect(fit_shell_for(npc, Variant{}).empty(), "An NPC look must not take a shell's fit");
+        }
         atomic_json(catalog_file,catalog,false);
         expect(loaded.compatible("test", "CharacterId.Player.Shell.Genessa"), "Compatible shell rejected");
         expect(!loaded.compatible("test", "CharacterId.Player.Shell.KnightLady"), "Wrong shell accepted");

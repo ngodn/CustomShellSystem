@@ -222,14 +222,19 @@ bool AttachmentOffsets::push_for(UObject* component,UObject* child,const Attachm
     out=to_local(socket_basis,{direction[0]*push,direction[1]*push,direction[2]*push});
     return true;
 }
+// The game stows at the worn shell's adjustment, but an item it never re-stowed across a shell
+// swap (the seal) can still sit at the previous shell's, which may already be the look's.
+// Such an item is already where this body wants it.
+static void rebase_stow(const SocketRebase& rebase,std::array<double,3>& location,std::array<double,3>& rotation) {
+    if(close_to(location,rebase.to.translation,.05) && close_to(rotation,socket_rotator(socket_matrix(rebase.to.rotation)),.05)) return;
+    socket_rebase(rebase,location,rotation);
+}
 void AttachmentOffsets::apply(UObject* component,Tracked& item,const AttachmentOffset& offset,bool live) {
     auto* child=item.child.Get(); if(!child) return;
     auto current_location=relative_location(child),current_rotation=relative_rotation(child);
     // Tell a re-stow apart from CSS's own correction: anything other than what CSS last
     // wrote is a new base the game chose, and the correction restarts from there.
-    if(!item.owned || !close_to(current_location,item.applied,.01)) {
-        item.location=current_location; item.rotation=current_rotation;
-    }
+    item.pose.observe(current_location,current_rotation);
     std::array<double,3> extra{};
     if(live && offset.collision.active()) {
         Call socket_rotation(component,L"GetSocketRotation",2); socket_rotation.set(L"InSocketName",item.socket); socket_rotation.run();
@@ -238,7 +243,14 @@ void AttachmentOffsets::apply(UObject* component,Tracked& item,const AttachmentO
         // The prop is already sitting at last frame's correction, so the measurement
         // includes it; carrying it forward is what makes this settle instead of oscillate.
         if(push_for(component,child,offset,socket_basis,extra,&item)) {
-            for(int i=0;i<3;++i) extra[i]+=current_location[i]-item.location[i]-offset.location[i];
+            // Last frame's push is whatever CSS itself added on top of its own base. On the
+            // first frame of a stow CSS has added nothing yet, and the gap to the rebased
+            // base is the rebase, not a push, so it must not be carried (or it cancels it).
+            if(item.pose.owned) {
+                std::array<double,3> rebased=item.pose.location,rebased_rotation=item.pose.rotation;
+                if(offset.rebase) rebase_stow(*offset.rebase,rebased,rebased_rotation);
+                for(int i=0;i<3;++i) extra[i]+=current_location[i]-rebased[i]-offset.location[i];
+            }
             double extra_len = std::sqrt(extra[0]*extra[0] + extra[1]*extra[1] + extra[2]*extra[2]);
             if(extra_len > offset.collision.max_push && extra_len > 1e-4) {
                 double scale = offset.collision.max_push / extra_len;
@@ -246,14 +258,18 @@ void AttachmentOffsets::apply(UObject* component,Tracked& item,const AttachmentO
             }
         } else extra={};
     }
+    // The game stowed it at the worn shell's adjustment; move it to the look's first, so the
+    // fixed offset and the collision push both work from where this body wants it.
+    std::array<double,3> base_location=item.pose.location,base_rotation=item.pose.rotation;
+    if(offset.rebase) rebase_stow(*offset.rebase,base_location,base_rotation);
     std::array<double,3> target_location{},target_rotation{};
     for(int i=0;i<3;++i) {
-        target_location[i]=item.location[i]+offset.location[i]+extra[i];
-        target_rotation[i]=item.rotation[i]+offset.rotation[i];
+        target_location[i]=base_location[i]+offset.location[i]+extra[i];
+        target_rotation[i]=base_rotation[i]+offset.rotation[i];
     }
-    if(item.owned && close_to(current_location,target_location,.05) && close_to(current_rotation,target_rotation,.01)) return;
+    if(item.pose.owned && close_to(current_location,target_location,.05) && close_to(current_rotation,target_rotation,.01)) return;
     set_relative(child,target_location,target_rotation);
-    item.applied=target_location; item.owned=true;
+    item.pose.record(target_location,target_rotation);
 }
 static std::map<std::string,AttachmentOffset> default_attachment_offsets() {
     std::map<std::string,AttachmentOffset> d;
@@ -321,7 +337,8 @@ static std::map<std::string,AttachmentOffset> default_attachment_offsets() {
 
     return d;
 }
-void AttachmentOffsets::configure(const std::map<std::string,AttachmentOffset>& offsets, bool include_defaults) {
+void AttachmentOffsets::configure(const std::map<std::string,AttachmentOffset>& offsets, bool include_defaults,
+                                  const std::map<std::string,SocketRebase>& rebases) {
     // The MISC "keep default position" switch drops the built-in servos: with no defaults and no
     // per-variant offsets, offsets_ ends empty, update() no-ops and release() returns every tracked
     // prop to its native game transform.
@@ -329,17 +346,23 @@ void AttachmentOffsets::configure(const std::map<std::string,AttachmentOffset>& 
     for(const auto& [socket, offset] : offsets) {
         combined[socket] = offset;
     }
+    // A socket the game adjusts but CSS has no servo for still gets an entry, so update()
+    // tracks the item and the rebase reaches it.
+    for(const auto& [socket, rebase] : rebases) combined[socket].rebase = rebase;
     if(offsets_ == combined) return;
     release();
     offsets_ = std::move(combined);
 }
 bool AttachmentOffsets::collides() const {
-    for(const auto& [socket,offset]:offsets_) if(offset.collision.active()) return true;
+    for(const auto& [socket,offset]:offsets_) if(offset.collision.active() || offset.rebase) return true;
     return false;
 }
 void AttachmentOffsets::release() {
-    for(auto& item:tracked_) if(auto* child=item.child.Get();child && item.owned) {
-        try { if(attach_socket(child)==item.socket) set_relative(child,item.location,item.rotation); } catch(...) {}
+    for(auto& item:tracked_) if(auto* child=item.child.Get();child && item.pose.owned) {
+        try {
+            if(attach_socket(child)==item.socket && item.pose.owns(relative_location(child),relative_rotation(child)))
+                set_relative(child,item.pose.location,item.pose.rotation);
+        } catch(...) {}
     }
     tracked_.clear(); poses_.clear(); offsets_.clear();
 }
@@ -365,7 +388,7 @@ void AttachmentOffsets::update(UObject* component) {
         auto tracked=std::find_if(tracked_.begin(),tracked_.end(),[&](const auto& item){return item.child.Get()==child;});
         if(tracked==tracked_.end()) {
             if(tracked_.size()>=64) throw std::runtime_error("Too many corrected attachments");
-            tracked_.push_back({weak,socket,std::move(key),relative_location(child),relative_rotation(child),{},false,-1,0,-1,{}});
+            tracked_.push_back({weak,socket,std::move(key),{},-1,0,-1,{}});
             tracked=std::prev(tracked_.end());
         }
         apply(component,*tracked,entry->second,true);
@@ -377,7 +400,7 @@ Json AttachmentOffsets::diagnostics() const {
     for(const auto& [socket,offset]:offsets_)
         sockets.push_back({{"socket",socket},{"clearance",offset.collision.clearance},{"active",offset.collision.active()}});
     Json tracked=Json::array();
-    for(const auto& item:tracked_) tracked.push_back({{"socket",item.socket_key},{"owned",item.owned},{"base",item.location},
+    for(const auto& item:tracked_) tracked.push_back({{"socket",item.socket_key},{"owned",item.pose.owned},{"base",item.pose.location},
                                                      {"distance",item.distance},{"distance_root",item.distance_root},{"push",item.push},{"body",item.body}});
     return {{"distance_to_body",last_distance_},{"push",last_push_},
             {"configured",std::move(sockets)},{"tracked",std::move(tracked)}};
@@ -389,11 +412,12 @@ void AttachmentOffsets::push(UObject* component) {
     for(auto& item:tracked_) {
         auto* child=item.child.Get(); if(!child) continue;
         const auto entry=offsets_.find(item.socket_key);
-        if(entry==offsets_.end() || !entry->second.collision.active()) continue;
+        // A rebased socket rides this pass too, so a re-stow never shows a frame at the worn shell's spot.
+        if(entry==offsets_.end() || (!entry->second.collision.active() && !entry->second.rebase)) continue;
         // Some animations borrow a stowed item: a parry reaches for the seal and the game
         // re-attaches it to a hand until the move ends. While it is somewhere else it is
         // not ours to correct, and the discovery pass only reruns four times a second.
-        if(attach_socket(child)!=item.socket) { item.owned=false; continue; }
+        if(attach_socket(child)!=item.socket) { item.pose.owned=false; continue; }
         apply(component,item,entry->second,true);
     }
 }
@@ -419,7 +443,143 @@ Json AttachmentOffsets::tune(double lift,double clearance,double max_push) {
 }
 Json Appearance::seal_diagnostics() const { return offsets_.diagnostics(); }
 #endif
+// beta.7: CD_<Shell>'s SocketAdjustmentData, socket name to transform. Character data is a
+// cooked asset that never changes while the game runs, so each table is read once.
+using SocketAdjustments=std::map<std::string,SocketTransform>;
+static std::map<std::string,SocketAdjustments>& socket_adjustment_cache() {
+    static std::map<std::string,SocketAdjustments> cache;
+    return cache;
+}
+static std::map<std::string,SocketTransform> socket_adjustments(UObject* character_data) {
+    auto& cache=socket_adjustment_cache();
+    const auto key=narrow(character_data->GetPathName());
+    if(auto hit=cache.find(key);hit!=cache.end()) return hit->second;
+    std::map<std::string,SocketTransform> result;
+    auto* list=character_data->GetPropertyByNameInChain(L"TypeSpecificData");
+    if(!list || !list->IsA<FArrayProperty>()) throw std::runtime_error("Character data has no type-specific list");
+    auto* array=static_cast<FArrayProperty*>(list);
+    if(!array->GetInner()->IsA<FObjectProperty>() || array->GetInner()->GetElementSize()!=sizeof(UObject*))
+        throw std::runtime_error("Character data list layout mismatch");
+    FScriptArrayHelper entries(array,reinterpret_cast<std::byte*>(character_data)+list->GetOffset_Internal());
+    if(entries.Num()<0 || entries.Num()>64) throw std::runtime_error("Character data list exceeds bound");
+    auto* table_class=static_cast<UClass*>(find(L"/Script/Sparta.SocketAdjustmentData"));
+    for(int i=0;i<entries.Num();++i) {
+        UObject* entry{}; std::memcpy(&entry,entries.GetRawPtr(i),sizeof(entry));
+        if(!entry || !entry->IsA(table_class)) continue;
+        auto* p=entry->GetPropertyByNameInChain(L"SocketAdjustments");
+        if(!p || !p->IsA<FMapProperty>()) throw std::runtime_error("Socket adjustments are not a map");
+        auto* map_property=static_cast<FMapProperty*>(p);
+        auto* key_property=map_property->GetKeyProp(); auto* value_property=map_property->GetValueProp();
+        if(!key_property || !key_property->IsA<FNameProperty>() || !value_property || !value_property->IsA<FStructProperty>())
+            throw std::runtime_error("Socket adjustment map layout mismatch");
+        // FTransform's members by name, so a padding or alignment change fails here, not silently.
+        auto* transform=static_cast<FStructProperty*>(value_property)->GetStruct().Get();
+        FProperty* rotation_field{}; FProperty* translation_field{};
+        for(auto* member:transform->ForEachProperty()) {
+            const auto name=member->GetName();
+            if(name==L"Rotation") rotation_field=member;
+            else if(name==L"Translation") translation_field=member;
+        }
+        if(!rotation_field || rotation_field->GetElementSize()!=4*sizeof(double) ||
+           !translation_field || translation_field->GetElementSize()!=3*sizeof(double))
+            throw std::runtime_error("Socket adjustment transform layout mismatch");
+        const auto& layout=map_property->GetMapLayout();
+        if(layout.ValueOffset<key_property->GetSize() || layout.SetLayout.Size<=0 || layout.SetLayout.Size>65536 ||
+           layout.ValueOffset>layout.SetLayout.Size-value_property->GetSize())
+            throw std::runtime_error("Socket adjustment map layout is unsupported");
+        auto* values=reinterpret_cast<FScriptMap*>(reinterpret_cast<std::byte*>(entry)+p->GetOffset_Internal());
+        const int end=values->GetMaxIndex();
+        if(end<0 || end>512) throw std::runtime_error("Socket adjustment map exceeds bound");
+        for(int n=0;n<end;++n) {
+            if(!values->IsValidIndex(n)) continue;
+            auto* pair=static_cast<std::byte*>(values->GetData(n,layout));
+            const auto socket=narrow(reinterpret_cast<const FName*>(pair)->ToString());
+            const auto* value=pair+layout.ValueOffset;
+            SocketTransform adjustment;
+            std::memcpy(adjustment.rotation.data(),value+rotation_field->GetOffset_Internal(),sizeof(adjustment.rotation));
+            std::memcpy(adjustment.translation.data(),value+translation_field->GetOffset_Internal(),sizeof(adjustment.translation));
+            for(double v:adjustment.rotation) if(!std::isfinite(v)) throw std::runtime_error("Socket adjustment is not finite");
+            for(double v:adjustment.translation) if(!std::isfinite(v) || std::abs(v)>500) throw std::runtime_error("Socket adjustment is out of range");
+            result[socket]=adjustment;
+        }
+    }
+    cache.emplace(key,result);
+    return result;
+}
+// A pawn without character data (none of the player's, but a mod could add one) just gets no fit.
+static UObject* worn_character_data(UObject* component) {
+    if(!component) return nullptr;
+    Call owner(component,L"GetOwner",1); owner.run();
+    auto* pawn=owner.get<UObject*>();
+    auto* p=pawn?optional_field(pawn,L"CharacterData"):nullptr;
+    if(!p || !p->IsA<FObjectProperty>() || p->GetElementSize()!=sizeof(UObject*)) return nullptr;
+    UObject* data{}; std::memcpy(&data,reinterpret_cast<const std::byte*>(pawn)+p->GetOffset_Internal(),sizeof(data));
+    return data;
+}
+// Which rebases the worn body needs: none unless the look names a fit shell CSS can find and
+// that shell is not the one being worn. Every failure ends in "no rebase", which is the game's
+// own placement, and is reported rather than thrown, so a missing table never blocks a look.
+void Appearance::refit_attachments() {
+    std::map<std::string,SocketRebase> rebases;
+    fit_error_.clear(); fit_stale_=false;
+    try {
+        auto* component=active()?component_.Get():nullptr;
+        auto* worn=worn_character_data(component);
+        fit_worn_data_=worn;
+        if(worn && !fit_shell_.empty()) {
+            // The worn shell is always known, which covers a Harbinger form the shell list lacks.
+            const auto worn_path=narrow(worn->GetPathName());
+            shell_data_[original_character_id(worn)]=worn_path;
+            const auto known=shell_data_.find(fit_shell_);
+            if(known==shell_data_.end()) fit_error_="no character data known for "+fit_shell_;
+            else if(known->second!=worn_path) {
+                const auto from=socket_adjustments(worn);
+                SocketAdjustments to;
+                auto& cache=socket_adjustment_cache();
+                if(auto hit=cache.find(known->second);hit!=cache.end()) to=hit->second;
+                else {
+                    const WeakObject live_component(component);
+                    AssetLoadRoots loading;
+                    loading.keep(worn);
+                    auto* look=load(known->second); loading.keep(look);
+                    if(!look) throw std::runtime_error("Fit shell character data did not load");
+                    if(live_component.Get()!=component || component_.Get()!=component || !active() ||
+                       fit_worn_data_.Get()!=worn || worn_character_data(component)!=worn) {
+                        fit_stale_=true;
+                        throw std::runtime_error("Worn shell changed during socket fit load");
+                    }
+                    to=socket_adjustments(look);
+                }
+                std::set<std::string> sockets;
+                for(const auto& [socket,_]:from) sockets.insert(socket);
+                for(const auto& [socket,_]:to) sockets.insert(socket);
+                for(const auto& socket:sockets) {
+                    if(!stowed_fit_socket(socket)) continue;
+                    SocketRebase rebase;
+                    if(auto it=from.find(socket);it!=from.end()) rebase.from=it->second;
+                    if(auto it=to.find(socket);it!=to.end()) rebase.to=it->second;
+                    if(rebase.from!=rebase.to) rebases.emplace(socket,rebase);
+                }
+            }
+        }
+    } catch(const std::exception& error) { rebases.clear(); fit_error_=error.what(); }
+    fit_rebased_=rebases.size();
+    offsets_.configure(fit_offsets_,fit_defaults_,rebases);
+}
+void Appearance::set_attachment_offsets(const std::map<std::string,AttachmentOffset>& offsets,bool include_defaults,const std::string& fit_shell) {
+    fit_offsets_=offsets; fit_defaults_=include_defaults;
+    // Default (game) in MISC means the game's own placement, so it skips the rebase as well.
+    fit_shell_=include_defaults?fit_shell:std::string{};
+    refit_attachments();
+}
+void Appearance::set_shell_data(const std::map<std::string,std::string>& data) {
+    if(data==shell_data_) return;
+    shell_data_=data; fit_stale_=true;
+}
 void Appearance::sync_attachments() {
+    // The shell list can arrive after the saved look went on, and a shell swap changes the
+    // worn table without a new wear, so both re-run the fit here at the 4 Hz pass.
+    if(active() && (fit_stale_ || worn_character_data(component_.Get())!=fit_worn_data_.Get())) refit_attachments();
     attachments_.update(active()?component_.Get():nullptr,original_);
     offsets_.update(active()?component_.Get():nullptr);
     auto* menu=menu_component_.Get();

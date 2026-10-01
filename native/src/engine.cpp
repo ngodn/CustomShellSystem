@@ -1240,6 +1240,7 @@ bool Appearance::restore() {
     restore_dynamics();
     restore_rig();
     offsets_.release();
+    fit_offsets_.clear(); fit_shell_.clear(); fit_error_.clear(); fit_worn_data_=nullptr; fit_rebased_=0; fit_stale_=false;
     attachments_.release();
     items_.release();
     current_items_.clear(); current_items_identity_.clear();

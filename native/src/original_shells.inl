@@ -55,7 +55,15 @@ static FScriptArrayHelper original_array(UObject* object,const wchar_t* name,FAr
 // so going through it made the whole list vanish for anyone without every shell (1.0.0-beta.5).
 // One bad entry is skipped and reported, not fatal: a shell mod that adds an entry the game
 // itself cannot resolve should not take the official ones down with it.
-Outfit discover_original_shells(std::vector<std::string>& skipped) {
+// beta.7: a shell's character data is where its socket adjustments live. Read the CharacterId
+// it declares, so a look can name its fit shell by tag and CSS can find the table.
+static std::string original_character_id(UObject* data) {
+    auto* p=field(data,L"CharacterId",sizeof(FName));
+    const auto tag=narrow(reinterpret_cast<const FName*>(reinterpret_cast<const std::byte*>(data)+p->GetOffset_Internal())->ToString());
+    if(!valid_id(tag) || tag=="None") throw std::runtime_error("Shell character data has no CharacterId");
+    return tag;
+}
+Outfit discover_original_shells(std::vector<std::string>& skipped,std::map<std::string,std::string>& character_data) {
     auto* settings=find(L"/Script/Sparta.Default__SpartaGameSettings");
     auto* library=find(L"/Script/Engine.Default__KismetSystemLibrary");
     FArrayProperty* names_property{};FArrayProperty* classes_property{};
@@ -103,6 +111,13 @@ Outfit discover_original_shells(std::vector<std::string>& skipped) {
             original_property(mesh,L"SoftObjectReference",shell,L"DefaultMesh");mesh.run();
             Variant variant;variant.mesh=original_string(mesh);
             if(!valid_asset(variant.mesh)) throw std::runtime_error("Default shell mesh is unavailable");
+            // Optional: without it the look still wears, its gear just keeps the worn shell's fit.
+            try {
+                if(auto* data=read<UObject*>(shell,L"CharacterData")) {
+                    variant.fit_shell=original_character_id(data);
+                    character_data[variant.fit_shell]=narrow(data->GetPathName());
+                }
+            } catch(const std::exception& error) { skipped.push_back(label+" socket fit: "+error.what()); }
             auto id=narrow(definition->GetClassPrivate()->GetName());
             constexpr std::string_view prefix="ID_Shell_";
             if(!id.starts_with(prefix) || !id.ends_with("_C")) throw std::runtime_error("Unexpected shell item id: "+id);
