@@ -22,10 +22,12 @@ struct ColorSwatch {
     ControlValue color;
     bool reset=false;
 };
+enum class MaterialSurface { Base, Overlay };
 struct ControlBinding {
     int slot = 0;
     std::string parameter;
     int association = 2, layer = -1;
+    MaterialSurface surface = MaterialSurface::Base;
 };
 // 0.4: every control says which half of the character it belongs to and what kind of
 // material it is, so the menu can group them the same way in every package and a group

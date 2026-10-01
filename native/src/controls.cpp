@@ -555,6 +555,9 @@ ControlSet ControlSet::parse(const Json& j) {
         for(const auto& b:c.value("bindings",Json::array())) {
             ControlBinding binding; binding.slot=b.at("slot"); binding.parameter=b.at("parameter");
             slot(binding.slot); parameter(binding.parameter);
+            const auto surface=b.value("surface",std::string("base"));
+            if(surface!="base" && surface!="overlay") throw std::runtime_error("Invalid binding surface");
+            binding.surface=surface=="overlay"?MaterialSurface::Overlay:MaterialSurface::Base;
             auto association=b.value("association",std::string("global"));
             if(association!="global" && association!="layer" && association!="blend") throw std::runtime_error("Invalid parameter association");
             binding.association=association=="layer"?0:association=="blend"?1:2;

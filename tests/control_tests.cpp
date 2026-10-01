@@ -11,6 +11,23 @@ template<class F> void rejects(F action) { bool rejected=false; try { action(); 
 int main() {
     try {
         {
+            auto recipe=Json::parse(R"({"schema":1,"controls":[{"id":"fabric","name":"Fabric","kind":"color","default":[1,1,1,1],
+                "bindings":[{"slot":12,"parameter":"FabricColor"}]}]})");
+            expect(ControlSet::parse(recipe).controls[0].bindings[0].surface==MaterialSurface::Base,
+                   "Existing material bindings must keep targeting the base");
+            auto& binding=recipe["controls"][0]["bindings"][0];
+            binding["surface"]="overlay"; binding["association"]="layer"; binding["layer"]=2;
+            auto parsed=ControlSet::parse(recipe).controls[0].bindings[0];
+            expect(parsed.surface==MaterialSurface::Overlay && parsed.association==0 && parsed.layer==2,
+                   "Overlay selection must not replace material parameter layer addressing");
+            binding["surface"]="base";
+            expect(ControlSet::parse(recipe).controls[0].bindings[0].surface==MaterialSurface::Base,"Explicit base binding rejected");
+            for(const auto& bad:{Json("fabric"),Json(""),Json(1),Json(nullptr)}) {
+                binding["surface"]=bad;
+                rejects([&]{ControlSet::parse(recipe);});
+            }
+        }
+        {
             // Physics presets: the built-ins follow what the manifest declares (region bones,
             // the hair solver), not the words in a part's id; a package adds its own after them.
             auto recipe=Json::parse(R"({"schema":1,"controls":[

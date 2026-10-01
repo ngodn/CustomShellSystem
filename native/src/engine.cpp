@@ -526,6 +526,7 @@ static void restore_materials(UObject* component,const std::vector<std::string>&
         if((i<actual.size()?actual[i].Get():nullptr)!=(i<loaded.size()?loaded[i].Get():nullptr))
             throw std::runtime_error("Original material read-back failed");
 }
+#include "overlay_controls.inl"
 static Json material_snapshot(UObject* component,UObject* mesh) {
     Json result={{"overrides",Json::array()},{"defaults",Json::array()},{"effective",Json::array()}};
     auto* overrides=component->GetPropertyByNameInChain(L"OverrideMaterials");
@@ -614,6 +615,7 @@ UObject* Appearance::player(void* engine) {
     return pawn;
 }
 void Appearance::restore_menu() {
+    menu_overlay_controls_.release();
     restore_menu_physics();
     menu_misc_.restore();   // show any accessories MISC hid on the wardrobe preview
     menu_attachments_.release();
@@ -645,6 +647,7 @@ void Appearance::restore_menu() {
 void Appearance::sync_menu() {
     auto* source=component_.Get();
     if(!source || source!=observed_component_.Get() || mesh_asset(source)!=applied_.Get()) { restore_menu(); return; }
+    overlay_controls_.sync();
     Call owner(source,L"GetOwner",1); owner.run();
     auto* player=owner.get<UObject*>();
     auto* display=menu_character(player);
@@ -672,6 +675,7 @@ void Appearance::sync_menu() {
         if(i<previous.Num()) std::memcpy(&current,previous.GetRawPtr(i),sizeof(current));
         if(current!=value) material(target,i,value);
     }
+    menu_overlay_controls_.share(target,desired,overlay_controls_);
     push_morphs(target);
     sync_menu_physics(target);
     if(!current_items_.empty()) menu_items_.update(target,current_items_identity_,current_items_);
@@ -706,6 +710,9 @@ void Appearance::remember_materials() {
     }
 }
 void Appearance::detach_residual_controls() {
+    if(auto* component=component_.Get();component && mesh_asset(component)!=applied_.Get()) {
+        menu_overlay_controls_.release(); overlay_controls_.detach();
+    }
     if(control_mids_.empty()) return;
     auto* component=component_.Get();
     if(!component || !applied_.Get() || mesh_asset(component)==applied_.Get()) return;
@@ -1235,6 +1242,7 @@ void Appearance::set_ground_offset(double offset) {
         throw std::runtime_error("World mesh height read-back failed");
 }
 bool Appearance::restore() {
+    menu_overlay_controls_.release(); overlay_controls_.release();
     restore_ground_offset();
     restore_springs();
     restore_dynamics();
@@ -2011,6 +2019,7 @@ void Appearance::sync_body_geometry(UObject* component) {
 }
 
 void Appearance::reset_controls() {
+    menu_overlay_controls_.release(); overlay_controls_.release();
     show_hidden_sections();
     restore_springs();
     restore_dynamics();
@@ -2415,7 +2424,8 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 auto* texture=load(control.options[index].texture); roots.keep(texture);
                 if(!texture) throw std::runtime_error("Choice texture is missing: "+control.options[index].texture);
                 for(const auto& binding:control.bindings) {
-                    auto* mid=mid_for(binding.slot);
+                    auto* mid=binding.surface==MaterialSurface::Overlay?
+                        overlay_controls_.mid_for(component,applied_.Get(),binding.slot):mid_for(binding.slot);
                     auto parameter=FName(wide(binding.parameter).c_str(),FNAME_Add);
                     Call set(mid,L"SetTextureParameterValueByInfo",2);
                     auto* p=set.param(L"ParameterInfo"); auto* info=find(L"/Script/Engine.MaterialParameterInfo");
@@ -2430,7 +2440,8 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 continue;
             }
             for(const auto& binding:control.bindings) {
-                auto* mid=mid_for(binding.slot);
+                auto* mid=binding.surface==MaterialSurface::Overlay?
+                    overlay_controls_.mid_for(component,applied_.Get(),binding.slot):mid_for(binding.slot);
                 auto color=active?values.at(control.id):control.value;
                 auto parameter=FName(wide(binding.parameter).c_str(),FNAME_Add);
                 // Explicit layer associations use the engine's reflected FMaterialParameterInfo.

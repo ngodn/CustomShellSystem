@@ -58,6 +58,21 @@ public:
     ~AssetLoadRoots() noexcept { release(); }
 };
 class Appearance;
+class OverlayControls {
+    struct Entry { WeakObject original, mid; bool detached=false; };
+    WeakObject component_, mesh_;
+    std::map<int,Entry> entries_;
+    int original_count_=0;
+    AssetLoadRoots roots_;
+    void attach(RC::Unreal::UObject*,RC::Unreal::UObject*);
+    void bind(int,RC::Unreal::UObject*);
+public:
+    RC::Unreal::UObject* mid_for(RC::Unreal::UObject*,RC::Unreal::UObject*,int);
+    void share(RC::Unreal::UObject*,RC::Unreal::UObject*,const OverlayControls&);
+    void sync();
+    void detach();
+    void release();
+};
 // CSS's own reflected access to the live game (player/get/set/call/find). This is not an
 // extension host; the shell-revive recovery and CSS's dev probes use it to read and drive the
 // engine through JSON ops. It keeps a handle table so a caller can hold an object across calls.
@@ -516,6 +531,7 @@ class Appearance {
     void clear_driven_morphs();
     void push_morphs(RC::Unreal::UObject* component);
     std::map<int,WeakObject> control_mids_;
+    OverlayControls overlay_controls_, menu_overlay_controls_;
     std::map<std::string,WeakObject> dye_targets_, dye_textures_;
     // Colour masks decoded from the worn outfit's PNGs, keyed outfit/file. Decoding is the
     // slow part of a dye (222 ms for Skin Suit), and every pawn swap (beacon respawn, sever,
