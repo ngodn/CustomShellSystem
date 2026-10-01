@@ -1,7 +1,7 @@
 # Cloth overlays for beta.7
 
-Status: initial control adapter implemented and built, not installed. Native
-global-effect arbitration and live acceptance remain incomplete. The isolated
+Status: control adapter and global-effect precedence implemented and built.
+Candidate installation and live acceptance are next. The isolated
 branch is `feature/cloth-overlays` at `work/cloth-core`. Overlay controls are
 committed as `ebbb667`; merge `f058b40` includes the other agent's reviewed
 socket-fit work, `b4d2d62`, in the combined candidate. Main remains at `b4d2d62`.
@@ -126,6 +126,36 @@ the component before choosing the arbitration condition. Do not treat every
 nonnull global material as a temporary effect.
 
 ## Validation still needed
+
+October 2 follow-up: the live Gragu/Genessa baseline has no component global
+overlay, no per-slot overrides, no permanent VFX overlay and priority -1.
+176 samples during the requested dodge interval saw no global overlay. A separate
+controlled test called the game's InjectOverlayMaterial with its Harros dash
+material at priority 69. Both the component global and VFX active material then
+matched that material. RemoveOverlayMaterial restored all six captured fields
+exactly. Evidence is UnholyGenessa `work/overlaylive1/native-effect-probe.json`.
+This confirms the API transition, not natural dodge coverage on every shell.
+
+The adapter now forwards an explicit component global overlay to each slot it
+owns. This honors permanent overrides too, without guessing duration from a
+nonnull pointer. While such an override is active, it replaces the fabric draw
+on those sections; the fabric instance and chosen parameters remain retained.
+Clearing the override restores fabric. Asset-level defaults are not treated as
+component effect requests. Foreign per-slot writes remain untouched.
+
+All authored overlay slots are prepared before the Original/unchanged-values
+early returns, so behavior does not depend on choosing a palette. The existing
+game-thread tick checks active overlays every frame, with no loads, allocations
+or weak-handle reassignment for unchanged slots. Pointer transitions share one
+render refresh. Preview maintenance remains at its existing interval. The
+maintenance frame-profile phase includes the fast overlay pass.
+
+The Windows build with this behavior passes. Python recipe validation now
+matches C++ surface selection: 18 tests run, 17 pass and the private-recipe
+fixture test is skipped because those generated files are absent here.
+Two-axis source review caught the missing Original path before installation;
+the correction was reviewed. Live effect recovery and frame cost still need
+testing on the actual combined candidate.
 
 Catalog tests must cover legacy defaults, explicit base/overlay bindings and
 invalid selectors. Runtime checks must cover Original, all palettes, custom

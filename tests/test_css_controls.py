@@ -9,6 +9,18 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
 from css_controls import validate,embed,verify_resources,lint_convention
 
 class ControlTests(unittest.TestCase):
+    def test_material_surface_selector(self):
+        recipe=dict(schema=1,controls=[dict(id='fabric',name='Fabric',kind='color',default=[1,1,1,1],
+                    bindings=[dict(slot=12,parameter='FabricColor')])])
+        validate(recipe)
+        binding=recipe['controls'][0]['bindings'][0]
+        for surface in ('base','overlay'):
+            binding.update(surface=surface,association='layer',layer=2)
+            validate(recipe)
+        for surface in ('fabric','',None,1,True,[],{}):
+            binding['surface']=surface
+            with self.subTest(surface=surface),self.assertRaises(ValueError):validate(recipe)
+
     def test_authored_swatches(self):
         control=dict(id='skin',name='Skin',kind='color',default=[1,1,1,1],
                      swatches=[dict(name='Default',color=[.8,.7,.6,1],reset=True),

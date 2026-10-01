@@ -116,6 +116,16 @@ struct Core {
     std::optional<bool> test_cursor_pending;
 #endif
     std::string maintenance_error;
+    std::string overlay_error;
+    uint64_t overlay_retry_after=0;
+    void sync_overlays_safely(uint64_t now) {
+        if(!state.enabled || apply_pending || now<overlay_retry_after) return;
+        try { appearance.sync_overlay_effects(); overlay_error.clear(); }
+        catch(const std::exception& error) {
+            if(overlay_error!=error.what()) {overlay_error=error.what();host.log(("Cloth overlay deferred: "+overlay_error).c_str());}
+            overlay_retry_after=now+1000;
+        }
+    }
     bool was_transition_=false;   // previous tick's teleport/gate/traversal state, for edge detection
     std::string attachment_error;
     uint64_t attachments_after=0;
@@ -655,7 +665,7 @@ struct Core {
 #ifdef CSS_INVENTORY_DEV
         sample_motion(now);
 #endif
-        measured(FrameProfile::maintenance,[&] { maintain(now); });
+        measured(FrameProfile::maintenance,[&] { sync_overlays_safely(now); maintain(now); });
         measured(FrameProfile::attachments,[&] { sync_attachments_safely(now); });
         measured(FrameProfile::seals,[&] { sync_seals_safely(now); });
         measured(FrameProfile::walk,[&] { sync_walk_safely(now); });
@@ -1017,6 +1027,7 @@ struct Core {
         status["socket_fit"]=appearance.fit_diagnostics();
         status["recovery_pending"]=recovery.pending();
         status["maintenance_error"]=maintenance_error;
+        status["overlay_error"]=overlay_error;
         status["inventory"] = inventory.diagnostics();
         status["inventory_failed"] = inventory_failed;
         status["walk_mod_active"] = appearance.walk.walk_mod_active();

@@ -59,14 +59,16 @@ public:
 };
 class Appearance;
 class OverlayControls {
-    struct Entry { WeakObject original, mid; bool detached=false; };
+    struct Entry { WeakObject original, mid, bound; bool detached=false; };
     WeakObject component_, mesh_;
     std::map<int,Entry> entries_;
     int original_count_=0;
+    bool prepared_=false;
     AssetLoadRoots roots_;
     void attach(RC::Unreal::UObject*,RC::Unreal::UObject*);
-    void bind(int,RC::Unreal::UObject*);
+    bool bind(int,RC::Unreal::UObject*,bool refresh=true);
 public:
+    void prepare(RC::Unreal::UObject*,RC::Unreal::UObject*);
     RC::Unreal::UObject* mid_for(RC::Unreal::UObject*,RC::Unreal::UObject*,int);
     void share(RC::Unreal::UObject*,RC::Unreal::UObject*,const OverlayControls&);
     void sync();
@@ -613,6 +615,7 @@ public:
     bool ready_to_apply() const;
     std::string ready_to_apply_reason() const;
     void sync_menu();
+    void sync_overlay_effects();
     void sync_attachments();
     void sync_seals();   // every frame, unlike sync_attachments: a stride is faster than 4 Hz
     // MISC visibility. `set_misc_rules` copies the player's choices in; `sync_misc` re-hides

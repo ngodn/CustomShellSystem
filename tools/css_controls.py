@@ -291,6 +291,7 @@ def validate(recipe:dict) -> set[str]:
         for b in bindings:
             if type(b['slot']) is not int: raise ValueError('Material slot must be an integer')
             number(b['slot'],0,127);parameter(b['parameter'])
+            if b.get('surface','base') not in ('base','overlay'): raise ValueError('Invalid material surface')
             a=b.get('association','global');index=b.get('layer',-1)
             if a not in ('global','layer','blend') or type(index) is not int or (index!=-1 if a=='global' else not 0<=index<=63): raise ValueError('Invalid parameter association')
             used.add(c['id'])

@@ -644,6 +644,9 @@ void Appearance::restore_menu() {
         set_mesh(target,mesh); restore_materials(target,materials,live_materials);
     }
 }
+void Appearance::sync_overlay_effects() {
+    if(component_.Get()==observed_component_.Get()) overlay_controls_.sync();
+}
 void Appearance::sync_menu() {
     auto* source=component_.Get();
     if(!source || source!=observed_component_.Get() || mesh_asset(source)!=applied_.Get()) { restore_menu(); return; }
@@ -2093,6 +2096,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
     // Original keeps authored materials, but garment visibility still needs its defaults.
     // Reconcile all controls together so a switch cannot expose another garment's mask.
     try {
+        overlay_controls_.prepare(component,applied_.Get());
         toggle_hidden_=hidden_control_sections(options,values);
         reconcile_sections();
     } catch(...) { reset_controls(); throw; }

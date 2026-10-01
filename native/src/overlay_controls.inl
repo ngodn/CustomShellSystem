@@ -26,7 +26,7 @@ static UObject* overlay_at(FScriptArrayHelper& slots,int index) {
     if(index>=0 && index<slots.Num()) std::memcpy(&value,slots.GetRawPtr(index),sizeof(value));
     return value;
 }
-static UObject* authored_overlay(UObject* mesh,int index) {
+static std::vector<UObject*> authored_overlays(UObject* mesh) {
     Call defaults(mesh,L"GetMaterials",1); defaults.run();
     auto* p=defaults.param(L"ReturnValue");
     if(!p->IsA<FArrayProperty>()) throw std::runtime_error("Default material slots are unavailable");
@@ -35,11 +35,11 @@ static UObject* authored_overlay(UObject* mesh,int index) {
     if(overlay->GetOffset_Internal()<0 || overlay->GetOffset_Internal()+sizeof(UObject*)>size_t(a->GetInner()->GetElementSize()))
         throw std::runtime_error("Default overlay layout mismatch");
     FScriptArrayHelper slots(a,defaults.data(p));
-    if(slots.Num()<0 || slots.Num()>128 || index<0 || index>=slots.Num())
-        throw std::runtime_error("Overlay slot is absent on this appearance");
-    UObject* value{};
-    std::memcpy(&value,slots.GetRawPtr(index)+overlay->GetOffset_Internal(),sizeof(value));
-    return value;
+    if(slots.Num()<0 || slots.Num()>128) throw std::runtime_error("Overlay slot count exceeds limit");
+    std::vector<UObject*> values(slots.Num());
+    for(int i=0;i<slots.Num();++i)
+        std::memcpy(&values[i],slots.GetRawPtr(i)+overlay->GetOffset_Internal(),sizeof(UObject*));
+    return values;
 }
 static void refresh_overlay_slots(UObject* component) {
     // Both calls complete on the game thread before deferred scene-proxy updates.
@@ -60,15 +60,28 @@ void OverlayControls::attach(UObject* component,UObject* mesh) {
     original_count_=overlay_slots(component).Num();
     component_=component; mesh_=mesh;
 }
-void OverlayControls::bind(int index,UObject* mid) {
+bool OverlayControls::bind(int index,UObject* value,bool refresh) {
     auto* component=component_.Get();
     if(!component || mesh_asset(component)!=mesh_.Get()) throw std::runtime_error("Overlay appearance changed");
     auto slots=overlay_slots(component);
-    if(overlay_at(slots,index)==mid) return;
     if(index<0 || index>=128) throw std::runtime_error("Overlay slot exceeds limit");
+    auto& entry=entries_.at(index);
+    if(overlay_at(slots,index)==value) {
+        if(entry.bound.Get()!=value) entry.bound=value;
+        return false;
+    }
     if(slots.Num()<=index) resize_overlay_slots(component,index+1);
-    std::memcpy(slots.GetRawPtr(index),&mid,sizeof(mid));
-    refresh_overlay_slots(component);
+    std::memcpy(slots.GetRawPtr(index),&value,sizeof(value));
+    entry.bound=value;
+    if(refresh) refresh_overlay_slots(component);
+    return true;
+}
+void OverlayControls::prepare(UObject* component,UObject* mesh) {
+    attach(component,mesh);
+    if(prepared_) return;
+    const auto defaults=authored_overlays(mesh);
+    for(size_t i=0;i<defaults.size();++i) if(defaults[i]) mid_for(component,mesh,int(i));
+    prepared_=true;
 }
 UObject* OverlayControls::mid_for(UObject* component,UObject* mesh,int index) {
     attach(component,mesh);
@@ -77,16 +90,19 @@ UObject* OverlayControls::mid_for(UObject* component,UObject* mesh,int index) {
         auto* mid=found->second.mid.Get();
         auto* actual=overlay_at(slots,index);
         if(!mid) throw std::runtime_error("Overlay control material expired");
-        if(actual!=mid) {
+        if(actual!=found->second.bound.Get() || !actual) {
             if(actual!=found->second.original.Get() && !(found->second.detached && !actual))
                 throw std::runtime_error("Overlay control no longer owns this slot");
-            bind(index,mid);
         }
+        auto* effect=read<UObject*>(component,L"OverlayMaterial");
+        bind(index,effect?effect:mid);
         found->second.detached=false;
         return mid;
     }
     // Validate the authored slot even if a component override already exists.
-    auto* parent=authored_overlay(mesh,index);
+    const auto defaults=authored_overlays(mesh);
+    if(index<0 || size_t(index)>=defaults.size()) throw std::runtime_error("Overlay slot is absent on this appearance");
+    auto* parent=defaults[index];
     auto* original=overlay_at(slots,index);
     if(original) parent=original;
     if(!parent || dynamic_material(parent)) throw std::runtime_error("Wait for the temporary overlay effect before coloring");
@@ -96,8 +112,9 @@ UObject* OverlayControls::mid_for(UObject* component,UObject* mesh,int index) {
     auto* mid=make.get<UObject*>();
     if(!mid) throw std::runtime_error("Could not create the overlay control material");
     roots_.keep(mid);
-    entries_.emplace(index,Entry{WeakObject(original),WeakObject(mid)});
-    bind(index,mid);
+    entries_.emplace(index,Entry{WeakObject(original),WeakObject(mid),{}});
+    auto* effect=read<UObject*>(component,L"OverlayMaterial");
+    bind(index,effect?effect:mid);
     return mid;
 }
 void OverlayControls::share(UObject* component,UObject* mesh,const OverlayControls& source) {
@@ -113,15 +130,16 @@ void OverlayControls::share(UObject* component,UObject* mesh,const OverlayContro
         auto slots=overlay_slots(component);
         auto* actual=overlay_at(slots,index);
         if(auto old=entries_.find(index);old!=entries_.end()) {
-            if(actual!=old->second.mid.Get()) continue;   // preserve a foreign effect without blocking other preview work
-            if(actual==mid) continue;
+            if(!actual || actual!=old->second.bound.Get()) continue;
+            if(old->second.mid.Get()==mid) continue;
             roots_.keep(mid); old->second.mid=mid;
         } else {
             if(dynamic_material(actual)) continue;
             roots_.keep(actual); roots_.keep(mid);
-            entries_.emplace(index,Entry{WeakObject(actual),WeakObject(mid)});
+            entries_.emplace(index,Entry{WeakObject(actual),WeakObject(mid),{}});
         }
-        bind(index,mid);
+        auto* effect=read<UObject*>(component,L"OverlayMaterial");
+        bind(index,effect?effect:mid);
     }
 }
 void OverlayControls::sync() {
@@ -130,25 +148,32 @@ void OverlayControls::sync() {
     if(!component) { release(); return; }
     if(mesh_asset(component)!=mesh_.Get()) { detach(); return; }
     auto slots=overlay_slots(component);
+    // Explicit component overlays are game requests, whether temporary or
+    // permanent. Null falls back to this outfit's fabric, not another asset's
+    // defaults. The component array retains the forwarded effect for GC.
+    auto* effect=read<UObject*>(component,L"OverlayMaterial");
+    bool changed=false;
     for(auto& [index,entry]:entries_) {
         auto* actual=overlay_at(slots,index);
         auto* mid=entry.mid.Get();
         // A reset can return our slot to its captured original. Rebind only that
         // known state; another mod's or the game's replacement remains untouched.
-        if(mid && actual!=mid && (actual==entry.original.Get() || (entry.detached && !actual))) {
-            bind(index,mid);
+        if(mid && ((actual && actual==entry.bound.Get()) || actual==entry.original.Get() || (entry.detached && !actual))) {
+            changed=bind(index,effect?effect:mid,false) || changed;
             entry.detached=false;
         }
     }
+    if(changed) refresh_overlay_slots(component);
 }
 void OverlayControls::detach() {
     if(auto* component=component_.Get();component && !entries_.empty()) {
         auto slots=overlay_slots(component);
         bool changed=false;
         for(auto& [index,entry]:entries_) {
-            auto* mid=entry.mid.Get();
-            if(!mid || overlay_at(slots,index)!=mid) continue;
+            auto* bound=entry.bound.Get();
+            if(!bound || overlay_at(slots,index)!=bound) continue;
             entry.detached=true;
+            entry.bound.Reset();
             auto* original=mesh_asset(component)==mesh_.Get()?entry.original.Get():nullptr;
             std::memcpy(slots.GetRawPtr(index),&original,sizeof(original)); changed=true;
         }
@@ -162,5 +187,5 @@ void OverlayControls::detach() {
 }
 void OverlayControls::release() {
     detach();
-    entries_.clear(); roots_.release(); component_.Reset(); mesh_.Reset(); original_count_=0;
+    entries_.clear(); roots_.release(); component_.Reset(); mesh_.Reset(); original_count_=0; prepared_=false;
 }
