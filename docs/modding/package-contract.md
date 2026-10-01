@@ -59,6 +59,19 @@ Players can override it per variant with Customize > Placement > Ground height
 (1.0.0-beta.5); the declared value is where that setting starts and what its
 reset returns to.
 
+An optional `fit_shell` (on the outfit, or on a variant to override it) names
+the shell whose body the look is sized like, as a CharacterId tag such as
+`CharacterId.Player.Shell.Genessa`. Each shell's character data tunes where its
+stowed weapons, sidearm and seal hang on that shell's body. With MISC > Gear
+position on Auto (the default), CSS hangs them by the fit shell's table instead
+of the worn shell's, so a Genessa-sized look worn on Sariel or Gragu keeps its
+gear against the body. Without the field, the outfit's first listed shell is
+used. Use Original Shell looks fit their own shell, and replacement mods fit the
+shell they redraw. NPC and enemy looks keep the worn shell's placement. A fit
+shell CSS cannot find in the game's shell list leaves the game's placement in
+place. Older CSS builds ignore the field. See
+[socket fit](../development/socket-fit.md).
+
 The converter records original/tool hashes, relocated paths, export identities and round-trip checks in `conversion.json`. `runtime_tested: false` means exactly that. In-game testing is recorded separately; an offline build does not mark itself gameplay-tested.
 
 The offline verifier hashes the full `.ucas`. Runtime discovery checks the smaller metadata, thumbnail, resources and `.utoc`, and checks the bulk companion's name and size. It deliberately avoids hashing large bulk files on the game thread.

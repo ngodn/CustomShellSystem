@@ -184,7 +184,7 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
         if (j.at("schema") != 1 || !j.at("outfits").is_array()) throw std::runtime_error("Unsupported catalog schema");
         for (const auto& item : j.at("outfits")) {
             Outfit outfit{item.at("id"), item.at("name"), item.value("author", ""),
-                          item.value("description", ""), item.value("category", "Shell"), {}, {}, false, {}, {}, {}, {}, {}};
+                          item.value("description", ""), item.value("category", "Shell"), {}, {}, false, {}, {}, {}, {}, {}, {}};
             if (!valid_id(outfit.id) || outfit.id==original_shells_id || mod_outfit(outfit.id) || !ids.insert(outfit.id).second) throw std::runtime_error("Invalid, reserved or duplicate outfit id");
             if (outfit.name.empty() || outfit.name.size() > 256 || outfit.description.size() > 4096)
                 throw std::runtime_error("Invalid outfit text");
@@ -203,6 +203,8 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
             }
             if (outfit.shells.empty()) throw std::runtime_error("Outfit needs compatible shell tags");
             for (const auto& shell : outfit.shells) if (!valid_id(shell)) throw std::runtime_error("Invalid shell tag");
+            outfit.fit_shell = item.value("fit_shell", std::string{});
+            if (!outfit.fit_shell.empty() && !valid_id(outfit.fit_shell)) throw std::runtime_error("Invalid fit shell tag");
             if(item.contains("templates")) {
                 const auto& t = item.at("templates");
                 if(!t.is_object()) throw std::runtime_error("Invalid outfit templates");
@@ -236,13 +238,15 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
             }
             std::set<std::string> variants;
             for (const auto& v : item.at("variants")) {
-                Variant variant{v.at("id"), v.at("name"), v.value("mesh",std::string{}), {}, {}, {}, {}, 0, {}};
+                Variant variant{v.at("id"), v.at("name"), v.value("mesh",std::string{}), {}, {}, {}, {}, 0, {}, {}};
                 if(v.contains("ground_offset_cm")) {
                     if(!v.at("ground_offset_cm").is_number()) throw std::runtime_error("Invalid ground offset");
                     variant.ground_offset_cm=v.at("ground_offset_cm").get<double>();
                     if(!std::isfinite(variant.ground_offset_cm) || std::abs(variant.ground_offset_cm)>10)
                         throw std::runtime_error("Ground offset outside range");
                 }
+                variant.fit_shell=v.value("fit_shell",std::string{});
+                if(!variant.fit_shell.empty() && !valid_id(variant.fit_shell)) throw std::runtime_error("Invalid fit shell tag");
                 if(has_customize(v)) variant.controls=ControlSet::parse(customize_block(v));
                 if(v.contains("animations")) variant.animations=AnimationSet::parse(v.at("animations"));
                 if (!valid_id(variant.id) || !variants.insert(variant.id).second ||

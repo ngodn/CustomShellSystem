@@ -26,7 +26,7 @@
 
 namespace css {
 fs::path engine_content_directory();
-Outfit discover_original_shells(std::vector<std::string>& skipped);
+Outfit discover_original_shells(std::vector<std::string>& skipped,std::map<std::string,std::string>& character_data);
 // UE4SS's serial-allocation fallback uses a legacy soft-reference layout.
 // Initialize new serials through a reflected frame before constructing a weak handle.
 class WeakObject : public RC::Unreal::FWeakObjectPtr {
@@ -316,8 +316,7 @@ class AttachmentOffsets {
     // CSS last wrote, so a re-stow can be told apart from CSS's own live push.
     struct Tracked {
         WeakObject child; RC::Unreal::FName socket; std::string socket_key;   // socket_key = narrow(socket), the offsets_ map key, cached so push() never allocates
-        std::array<double,3> location{}, rotation{}, applied{};
-        bool owned=false;
+        StowedPose pose;
         double distance=-1, push=0, distance_root=-1;   // last measurement, for the seal diagnostics (root: what NAME_None alone would read)
         std::string body;             // which body it was measured against
     };
@@ -330,7 +329,8 @@ class AttachmentOffsets {
                   const double socket_basis[3][3],std::array<double,3>& out,Tracked* item=nullptr);
     void apply(RC::Unreal::UObject* component,Tracked& item,const AttachmentOffset& offset,bool live);
 public:
-    void configure(const std::map<std::string,AttachmentOffset>& offsets, bool include_defaults=true);
+    void configure(const std::map<std::string,AttachmentOffset>& offsets, bool include_defaults=true,
+                   const std::map<std::string,SocketRebase>& rebases={});
     void update(RC::Unreal::UObject* component);        // 4 Hz: find and track stowed children
     void push(RC::Unreal::UObject* component);          // every frame: keep them out of the moving body
     void release();
@@ -565,6 +565,8 @@ class Appearance {
     uint64_t misc_signature_ = 0;                  // what misc_layout_changed() last saw attached
     bool misc_rules_changed_ = false;
     WeakObject menu_display_mesh_;
+    WeakObject menu_sweep_character_;   // the menu character the last orphan-helmet sweep saw
+    bool menu_sweep_open_=false;
     // The wardrobe previews a second component, so everything CSS puts on the body has to
     // be put on that one too: its accessories, its hidden sections and its shapes. Keeping
     // a separate WornItems for the preview matches how attachments already work.
@@ -574,6 +576,15 @@ class Appearance {
     std::set<int> menu_hidden_sections_;
     void reconcile_sections();
     AttachmentOffsets offsets_;
+    // beta.7 socket fit: what the last wear asked for, kept so the fit can be redone when the
+    // shell list arrives or the worn shell changes (refit_attachments, attachment_follower.inl).
+    std::map<std::string,AttachmentOffset> fit_offsets_;
+    bool fit_defaults_=true, fit_stale_=false;
+    std::string fit_shell_, fit_error_;
+    std::map<std::string,std::string> shell_data_;   // CharacterId -> its character data asset
+    WeakObject fit_worn_data_;
+    size_t fit_rebased_=0;
+    void refit_attachments();
     std::map<std::string, std::array<double, 3>> formula_offsets_;
     void restore_menu();
     void remember_materials();
@@ -627,7 +638,12 @@ public:
     Json seal_diagnostics() const;
     Json tune_seals(double lift,double clearance,double max_push) { return offsets_.tune(lift,clearance,max_push); }
 #endif
-    void set_attachment_offsets(const std::map<std::string,AttachmentOffset>& offsets, bool include_defaults=true) { offsets_.configure(offsets, include_defaults); }
+    void set_attachment_offsets(const std::map<std::string,AttachmentOffset>& offsets, bool include_defaults=true,
+                                const std::string& fit_shell={});
+    void set_shell_data(const std::map<std::string,std::string>& data);   // CharacterId -> character data path
+    Json fit_diagnostics() const {
+        return {{"fit_shell",fit_shell_},{"rebased_sockets",fit_rebased_},{"error",fit_error_},{"known_shells",shell_data_.size()}};
+    }
     // Put the variant's accessories on the body and hide what they cover. Safe to call
     // repeatedly: it rebuilds only when the outfit or variant changes.
     void sync_items(const Outfit&,const std::string& variant);

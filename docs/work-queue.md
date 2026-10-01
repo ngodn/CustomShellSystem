@@ -1,5 +1,31 @@
 # Current work queue
 
+## October 2: review and commit the CSS work
+
+The user requested review and commits for the other agent's CSS changes, with
+C++23/UE 5.6.1 compatibility, regression coverage and performance checks.
+Socket-fit and Gragu helmet changes were reviewed separately against standards
+and their specification. Corrections cover repeated stows, transform ownership,
+component replacement, held-socket exclusion and cleanup of owned helmets.
+See [review and release gates](development/socket-fit-review.md).
+The cloth-overlay implementation remains isolated in `work/cloth-core`.
+Beta.7 packaging, installation and live frame-time validation are still pending.
+
+## October 1: stowed gear fits the worn look, for beta.7
+
+From a Nexus report (Sariel wearing Genessa: gun off her back, axe high).
+Implemented and built, awaiting live validation: stowed weapons, sidearm and
+seal take the look's shell socket adjustments instead of the worn shell's.
+MISC "Sidearm position" is renamed **Gear position** ("Auto (fit the look)" /
+"Default (game)"), because it has covered all stowed gear for a while and now
+does more. Packages may name a `fit_shell`; otherwise their first listed shell
+is used. Held (in-hand) weapons are not moved; their cause is still open.
+Gragu's helmet is now a MISC shell item (own row, and follows Accessories &
+Shell Tools); it rides the Head bone, which the socket rule skipped. The game
+leaks one helmet per Player Menu build (ownerless, on the preview stage); CSS
+now removes those, see [MISC shell items](misc-shell-items.md#gragus-helmet-beta7).
+Details, data and test plan: [socket fit](development/socket-fit.md).
+
 ## October 1: preview lighting for beta.7
 
 The user authorizes necessary CSS improvements discovered during Unholy Genessa

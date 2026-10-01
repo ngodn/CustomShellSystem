@@ -1157,9 +1157,9 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         }
         section("Position");
         const Json kda{{"action","keep_default_attachments"},{"value",!state.keep_default_attachments}};
-        const char* kda_label=state.keep_default_attachments?"Default (game)":"Auto (avoid clipping)";
+        const char* kda_label=state.keep_default_attachments?"Default (game)":"Auto (fit the look)";
         if(state.keep_default_attachments) row_look.value="Game position";   // Auto is the default
-        row(position_row,"Sidearm position",kda,kda,kda);
+        row(position_row,"Gear position",kda,kda,kda);
         if(row_<position_row) {
             const bool category_row=row_<4;
             const std::string key=category_row?defs[row_].key:"item:"+shell_items[size_t(row_-4)].key;
@@ -1176,11 +1176,12 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             choice_rows(modes,current.mode);
             direction_hint(true,"Choose visibility");
         } else {
-            detail("Sidearm position",kda_label,
-                   "Auto moves your holstered sidearm and gear out from a larger custom shell so they "
-                   "do not clip through it. Default leaves them where the game puts them.");
+            detail("Gear position",kda_label,
+                   "Auto hangs your stowed weapons, sidearm and seal where they fit the look you wear, "
+                   "the way the game fits them to that shell's own body, and keeps them out of a larger "
+                   "body. Default leaves them where your shell puts them.");
             choice_rows({
-                {"auto","Auto (avoid clipping)",{{"action","keep_default_attachments"},{"value",false}}},
+                {"auto","Auto (fit the look)",{{"action","keep_default_attachments"},{"value",false}}},
                 {"default","Default (game)",{{"action","keep_default_attachments"},{"value",true}}},
             },state.keep_default_attachments?"default":"auto");
             direction_hint(true,"Choose position");

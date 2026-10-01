@@ -410,8 +410,8 @@ struct Core {
             if(state.keep_default_attachments!=value) { state.keep_default_attachments=value; dirty=true; }
             if(!appearance.shell.empty()) { last_shell.clear(); apply_pending=true; }
             ui_refresh = true;
-            report(value ? "Sidearm keeps the game's default position."
-                         : "Sidearm is held off the body to avoid clipping.");
+            report(value ? "Stowed gear keeps the game's position."
+                         : "Stowed gear fits this look's body and stays clear of it.");
         }
         // MISC visibility. A category's mode cycles with left/right or is set outright from the
         // mode list. It mutates state.misc_rules, hands the new rules to the appearance so the
@@ -731,7 +731,10 @@ struct Core {
             ++original_shells_attempts;
             std::vector<std::string> skipped;
             try {
-                auto originals=discover_original_shells(skipped);
+                std::map<std::string,std::string> character_data;
+                auto originals=discover_original_shells(skipped,character_data);
+                appearance.set_shell_data(character_data);
+                catalog.diagnostics["shell_character_data"]=character_data.size();
                 catalog.diagnostics["original_shells"]=originals.variants.size();
                 catalog.diagnostics["original_shells_skipped"]=skipped;
                 auto& choices=catalog.diagnostics["original_shell_choices"];choices=Json::array();
@@ -907,12 +910,15 @@ struct Core {
                         laps+=std::string(laps.empty()?"":", ")+name+" "+std::to_string(int(std::chrono::duration<double,std::milli>(at-lap_from).count()+0.5));
                         lap_from=at;
                     };
-                    if (state.keep_default_attachments) appearance.set_attachment_offsets({}, false);
-                    else appearance.set_attachment_offsets(variant->attachments);
+                    std::string fit_shell;
+                    for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit) fit_shell=fit_shell_for(outfit,*variant);
                     if (appearance.apply(engine, variant->mesh, variant->materials)) {
                         lap("apply");
                         laps+=" (load "+std::to_string(int(appearance.apply_load_ms+0.5))+", swap "+std::to_string(int(appearance.apply_swap_ms+0.5))+")";
                         try {
+                            // apply() may restore a retired pawn, including its attachment state.
+                            if (state.keep_default_attachments) appearance.set_attachment_offsets({}, false);
+                            else appearance.set_attachment_offsets(variant->attachments, true, fit_shell);
                             appearance.set_ground_offset(requested.custom.ground_offset_cm.value_or(variant->ground_offset_cm));
                             lap("ground");
                             for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit) {
@@ -1008,6 +1014,7 @@ struct Core {
                     {"apply_ms", last_apply_ms}, {"pid", GetCurrentProcessId()}};
         status["worn_items"]=appearance.worn_item_count();
         status["misc"]=appearance.misc_diagnostics();
+        status["socket_fit"]=appearance.fit_diagnostics();
         status["recovery_pending"]=recovery.pending();
         status["maintenance_error"]=maintenance_error;
         status["inventory"] = inventory.diagnostics();

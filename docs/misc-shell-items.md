@@ -29,3 +29,25 @@ Necrophage, Lazlo and the Harbinger forms spawn none).
 
 Verified live on Genessa: the Catalyst shows on Always Shown, hides on Always Hidden,
 and follows the Accessories rule on the default.
+
+## Gragu's helmet (beta.7)
+
+`BP_Gragu_Helmet` is a separate actor attached to the `Head` bone by a bare scene
+root, so the socket rule (body bones are never gear) and the mesh-only child
+filter both skipped it. MISC now lets that one non-mesh root through, matched by
+its owner class, and lists it under Gragu's items as **Helmet**; it also follows
+Accessories & Shell Tools. The root is hidden along with the meshes, so the
+per-frame check reads it back as hidden.
+
+The game leaks it: every Player Menu build spawns a helmet for the preview
+character and never destroys it when that character goes, leaving it ownerless
+and unattached on the preview stage (14 found after one session). Under Gragu's
+own head it is invisible; under any other look it shows as a helmet stuck in
+every Player Menu tab, which no MISC rule could reach because it is no longer on
+the character. `sweep_orphan_helmets` (misc_visibility.inl) destroys helmets
+with no owner and no attach parent whenever the menu character changes. The
+worn and menu helmets had both in the earlier live check. The October 2 review
+tightened cleanup to require no live owner, protecting helmets belonging to
+other actors too. It runs when the display character changes and once on menu
+close, rather than on every periodic visibility refresh. The non-mesh exception
+matches `BP_Gragu_Helmet_C` exactly. These tightened rules still need a live check.
