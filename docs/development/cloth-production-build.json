@@ -5,7 +5,7 @@
   "inventory_dev": false,
   "transition_tests": false,
   "build_exit_code": 0,
-  "installed": false,
+  "installed": true,
   "runtime_tested": false,
   "logs": {
     "build-prod-config.log": "0a1ca69bdd1b6cdae96374ead0c23b9d425185111558b68a5bf0a69ca21bdac4",
@@ -21,5 +21,7 @@
       "bytes": 247808
     }
   },
-  "warning": "One pre-existing switch-enum warning in retained UE4SS USMapGenerator source. No local-code warnings reported."
+  "warning": "One pre-existing switch-enum warning in retained UE4SS USMapGenerator source. No local-code warnings reported.",
+  "installed_name": "css_core-cloth-prod1.dll",
+  "installation_receipt": "CSS-Mod-Authoring/eins0fx-collections/CSS_UnholyGenessa_eins0fx_P/authoring/production-install-check.json"
 }

@@ -27,7 +27,8 @@ This is one controlled temporary effect, not coverage of every native effect.
 
 The same source also builds with CSS_INVENTORY_DEV and CSS_TRANSITION_TESTS
 disabled. `cloth-production-build.json` records hashes and configuration.
-This production binary has not been installed or tested in game yet. The sole
+The production core is now installed as `css_core-cloth-prod1.dll`, with its
+verified ZIP hash and saved settings preserved. Restart validation is pending. The sole
 compile warning is in the retained upstream UE4SS USMapGenerator switch.
 
 ## Private production trial checkpoint
