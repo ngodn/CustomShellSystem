@@ -1,3 +1,16 @@
+### CSS 1.0.0-beta.7
+
+### Added
+
+- Separate controls for per-slot fabric overlays and their base materials.
+
+### Fixed
+
+- Restore customized fabric overlays after temporary native game effects.
+- Light translucent materials in the CSS preview.
+- Fit stowed gear using the selected appearance's socket adjustments.
+- Handle Gragu's helmet when switching appearances.
+
 ### CSS 1.0.0-beta.6
 
 ### Added
