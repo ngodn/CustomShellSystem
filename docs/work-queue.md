@@ -8,8 +8,11 @@ Socket-fit and Gragu helmet changes were reviewed separately against standards
 and their specification. Corrections cover repeated stows, transform ownership,
 component replacement, held-socket exclusion and cleanup of owned helmets.
 See [review and release gates](development/socket-fit-review.md).
-The cloth-overlay implementation remains isolated in `work/cloth-core`.
-Beta.7 packaging, installation and live frame-time validation are still pending.
+The reviewed cloth-overlay implementation is now merged into the normal
+`nextgen100` checkout through `eca8c43`. The linked authoring worktree remains
+at `work/cloth-core`. A private production-core patch ZIP is prepared under
+`dist/unholygenessa-v0.1.0-trial.4`; restart testing is pending. Public beta.7
+packaging and live frame-time validation remain pending.
 
 ## October 1: stowed gear fits the worn look, for beta.7
 

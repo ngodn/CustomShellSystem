@@ -30,6 +30,21 @@ disabled. `cloth-production-build.json` records hashes and configuration.
 This production binary has not been installed or tested in game yet. The sole
 compile warning is in the retained upstream UE4SS USMapGenerator switch.
 
+## Private production trial checkpoint
+
+October 2: the accepted Unholy Genessa containers and a matching production
+core patch are archived in `dist/unholygenessa-v0.1.0-trial.4`. This patch is
+for the existing local installation. It is not a complete public CSS release.
+The compiled core has developer inventory and transition probes disabled;
+its hash matches `cloth-production-build.json`.
+
+Genessa's preview palettes/toggles and both skins' shape/glow parameter
+readbacks now pass. The mod's `authoring/live-preview-controls-check.json`
+records the scope and restoration. Four native menu cycles did not reproduce
+the prior 49 ms inventory-phase stall. Native calls made from development
+commands produced long total-core samples; those do not establish an ordinary
+input performance regression. Stable gameplay still needs separate timing.
+
 ## Required CSS behavior
 
 - Allow a material control binding to select the base or overlay surface.
