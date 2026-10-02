@@ -11,9 +11,12 @@ repair. The new candidate preserves every other retained export/bulk payload
 and all six outfits' customization, and keeps Eve Default Idle plus seven CSS
 idles. Seven unselected experimental idle packages are removed.
 
-The v1.3.0 ZIP is verified but not installed or released. SHA-256:
+The v1.3.0 ZIP is verified and installed, with public release pending. SHA-256:
 `8ff28249d26e4507f34ab01e5139a231cd8e9499fd9038bc6c40cef1a8be49b2`.
-The game is open and a close-game request is pending. CSS beta.8 remains installed.
+After the user confirmed shutdown, the exact ZIP was installed with matching
+hashes and unchanged saved profiles. The authoring project records the backup
+in `authoring/animation-update-install-check.json`. The user has been asked to
+launch the game and select Eve. CSS beta.8 remains installed.
 No new CSS runtime change is needed: missing saved animation choices already
 fall back to Default and remain visible as unavailable in the selector.
 
