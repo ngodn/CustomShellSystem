@@ -126,7 +126,7 @@ menu, the saved look and the apply path all follow from that.
 | `color` | three channels | a dye layer | the default when `kind` is absent |
 | `intensity` | one number | a named material scalar | a strength, like eye glow |
 | `scalar` | one number | a named material scalar | anything else, like gloss or roughness |
-| `toggle` | on or off | material sections | needs `sections`, takes no `min`/`max`/`step` |
+| `toggle` | on or off | section visibility or material scalar | needs `sections`, `bindings`, or both; takes no `min`/`max`/`step` |
 | `choice` | which option | a texture parameter | needs `options` and a binding, takes no `min`/`max`/`step` |
 | `spring` | two/three numbers | the mesh's own spring bones | Bounce Hz, Settle %, optional Travel cm and explicit axis filters |
 | `dynamics` | three numbers | post-process AnimDynamics chain roots | Stiffness, Damping, Gravity; experimental integration |
@@ -141,6 +141,30 @@ it drives them directly:
 {"id": "hood", "name": "Hood", "kind": "toggle", "role": "piece",
  "default": [1, 0, 0, 1], "sections": [2, 3]}
 ```
+
+The next CSS build after beta.7 also accepts material toggles and up to 64
+controls per variant. Beta.7 has a 32-control limit and requires toggle
+sections; packages using these additions require a newer CSS build.
+
+A material toggle writes exactly 0 or 1 to a scalar parameter. This can hide
+sheer fabric without hiding the metal underneath the same mesh section:
+
+```json
+{"id": "fabric_visible", "name": "Sheer fabric", "kind": "toggle", "role": "piece",
+ "default": [1, 0, 0, 1],
+ "bindings": [{"slot": 12, "surface": "overlay", "parameter": "FabricVisible"}]}
+```
+
+The shader must use that parameter to multiply fabric opacity. Use a separate
+parameter for an opacity slider so toggling visibility preserves its chosen
+value. The shader's authored defaults must match the declared control defaults.
+Original/reset restores the authored material. Setting opacity to zero does
+not remove the draw or disable cloth simulation. Native overlay effects still
+take precedence and the retained fabric settings return afterward.
+
+Material toggles may also declare sections, but `occludes_sections` requires
+nonempty `sections`. Empty section arrays and controls without any destination
+are invalid. Existing section-only toggles retain their behavior.
 
 `sections` and `occludes_sections` contain global mesh material-slot indices, not
 render-section indices. UE can split one material into several render sections or

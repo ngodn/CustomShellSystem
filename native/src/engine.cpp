@@ -2297,7 +2297,7 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
             bool active=values.contains(control.id),previous=last_values_.contains(control.id);
             if(!active) continue;
             if(active && previous && values.at(control.id)==last_values_.at(control.id)) continue;
-            if(control.kind==ControlKind::Toggle) continue;
+            if(control.kind==ControlKind::Toggle && control.bindings.empty()) continue;
             // 1.0: a shape drives a morph target the package cooked into its own mesh.
             // Stock shells carry none and never will, which is checked here rather than
             // left to silently do nothing: every stock mesh reads back zero morph targets.

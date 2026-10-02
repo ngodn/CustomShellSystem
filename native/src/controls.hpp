@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <optional>
@@ -9,6 +10,7 @@
 #include <nlohmann/json.hpp>
 
 namespace css {
+inline constexpr std::size_t max_customization_controls = 64;
 using ControlValue = std::array<float,4>;
 // A physics preset: the first three channels of a spring, rig or AnimDynamics part.
 // Built-ins come from CSS (physics_presets.cpp); a package adds its own per control.
@@ -39,7 +41,7 @@ enum class ControlGroup { Outfit, Body };
 // Color has three channels; motion controls have two or three solver channels.
 //   Intensity  a named material scalar the author means as a strength, like eye glow
 //   Scalar     any other named material scalar, like gloss or roughness
-//   Toggle     material sections shown or hidden, 0 or 1
+//   Toggle     section visibility or a material scalar switch, 0 or 1
 //   Choice     one of a few textures the package ships, chosen by index
 //   Spring     live secondary motion: how fast a part moves and how fast it settles
 //   Shape      a morph target the package cooked into its own mesh

@@ -131,7 +131,7 @@ def scalar(control) -> bool:
 
 def validate(recipe:dict) -> set[str]:
     if not isinstance(recipe,dict) or recipe.get('schema')!=1: raise ValueError('Unsupported customize schema')
-    controls=recipe.get('controls');bounded_array(controls,32)
+    controls=recipe.get('controls');bounded_array(controls,64)
     by_id={};used=set();files=set();dynamics_roots=set();rig_owner=False;body_owners=set()
     for c in controls:
         identifier(c['id'])
@@ -146,15 +146,16 @@ def validate(recipe:dict) -> set[str]:
             if not isinstance(c.get('combat_reactive',False),bool):
                 raise ValueError('combat_reactive must be true or false')
         if kind_of(c)=='toggle':
-            sections=c.get('sections');bounded_array(sections,128)
-            if not sections: raise ValueError('A toggle control needs the sections it hides')
+            sections=c.get('sections',[]);bounded_array(sections,128)
+            if 'sections' in c and not sections: raise ValueError('Toggle sections must not be empty')
+            if not sections and not c.get('bindings'): raise ValueError('A toggle control needs sections or material bindings')
             for index in sections:
                 if type(index) is not int: raise ValueError('Material section must be an integer')
                 number(index,0,127)
             used.add(c['id'])
         elif 'sections' in c: raise ValueError('Only a toggle control hides material sections')
         if 'occludes_sections' in c:
-            if kind_of(c)!='toggle': raise ValueError('Only a toggle control occludes material sections')
+            if kind_of(c)!='toggle' or not c.get('sections'): raise ValueError('Only a section toggle occludes material sections')
             covered=c['occludes_sections'];bounded_array(covered,128)
             if not covered: raise ValueError('Occluded sections must not be empty')
             for index in covered:

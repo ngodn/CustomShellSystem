@@ -273,7 +273,7 @@ ControlSet ControlSet::parse(const Json& j) {
     for(const auto& c:j.at("controls")) {
         Control control;
         control.id=c.at("id"); control.name=c.at("name");
-        if(!valid_id(control.id) || out.find(control.id) || control.name.empty() || control.name.size()>96 || out.controls.size()>=32)
+        if(!valid_id(control.id) || out.find(control.id) || control.name.empty() || control.name.size()>96 || out.controls.size()>=max_customization_controls)
             throw std::runtime_error("Invalid control identity");
         // `type` is what packages before 0.4 wrote, `kind` is the convention's name and
         // wins when both are present. A `type` of "scalar" predates the split between a
@@ -340,9 +340,10 @@ ControlSet ControlSet::parse(const Json& j) {
                 if(!index.is_number_integer() || index<0 || index>127) throw std::runtime_error("Invalid toggle section index");
                 control.sections.push_back(index.get<int>());
             }
-        } else if(control.kind==ControlKind::Toggle) throw std::runtime_error("A toggle control needs the sections it hides");
+        }
         if(c.contains("occludes_sections")) {
-            if(control.kind!=ControlKind::Toggle) throw std::runtime_error("Only a toggle control occludes material sections");
+            if(control.kind!=ControlKind::Toggle || control.sections.empty())
+                throw std::runtime_error("Only a section toggle occludes material sections");
             const auto& sections=c.at("occludes_sections");
             if(!sections.is_array() || sections.empty() || sections.size()>128) throw std::runtime_error("Invalid occluded sections");
             std::set<int> seen;
@@ -567,6 +568,8 @@ ControlSet ControlSet::parse(const Json& j) {
             if(control.bindings.size()>=128) throw std::runtime_error("Too many linked material bindings");
             control.bindings.push_back(binding);
         }
+        if(control.kind==ControlKind::Toggle && control.sections.empty() && control.bindings.empty())
+            throw std::runtime_error("A toggle control needs sections or material bindings");
         // A package's own physics presets, in the control's channel units. They join CSS's
         // built-ins in the part's Preset selector, so their ids must not reuse one.
         if(c.contains("presets")) {
@@ -632,8 +635,7 @@ ControlSet ControlSet::parse(const Json& j) {
         }
         if(c.kind==ControlKind::Dynamics) for(const auto& root:c.nodes)
             if(!dynamics_roots.insert(root).second) throw std::runtime_error("Dynamics chain roots must have one control owner");
-        // A toggle drives sections directly, so it needs no parameter to write into.
-        // A choice does need one, and its bindings are checked with everything else.
+        // A section toggle needs no material parameter. Material toggles use bindings.
         bool used=c.kind==ControlKind::Rig || !c.bindings.empty() || !c.sections.empty() || !c.nodes.empty() || !c.morph.empty();
         for(const auto& s:out.surfaces) used|=s.layers.contains(c.id);
         if(!used) throw std::runtime_error("Control has nothing to drive");
@@ -662,7 +664,7 @@ Customization Customization::parse(const Json& j) {
     result.palette=j.value("palette",std::string("original"));
     if(!valid_id(result.palette)) throw std::runtime_error("Invalid saved palette");
     auto values=j.value("values",Json::object());
-    if(!values.is_object() || values.size()>32) throw std::runtime_error("Invalid saved setting count");
+    if(!values.is_object() || values.size()>max_customization_controls) throw std::runtime_error("Invalid saved setting count");
     for(const auto& [id,v]:values.items()) {
         if(!valid_id(id)) throw std::runtime_error("Invalid saved control");
         result.values[id]=value(v,true);

@@ -11,6 +11,47 @@ template<class F> void rejects(F action) { bool rejected=false; try { action(); 
 int main() {
     try {
         {
+            auto recipe=Json::parse(R"({"schema":1,"controls":[
+                {"id":"fabric_visible","name":"Sheer fabric","kind":"toggle","default":[1,0,0,1],
+                 "bindings":[{"slot":12,"surface":"overlay","parameter":"FabricVisible"}]},
+                {"id":"fabric_opacity","name":"Fabric opacity","kind":"opacity","default":[1,0,0,1],
+                 "bindings":[{"slot":12,"surface":"overlay","parameter":"FabricOpacityScale"}]}],
+                "palettes":[{"id":"mist","name":"Mist","values":{"fabric_opacity":[0.4,0,0,1]}}]})");
+            const auto model=ControlSet::parse(recipe);
+            Customization custom; custom.values["fabric_visible"]={0,0,0,1};
+            custom.values["fabric_opacity"]={.25f,0,0,1};
+            expect(hidden_control_sections(model,control_values(model,custom)).empty(),
+                   "Material visibility must not hide the base mesh section");
+            expect(Customization::parse(custom.json())==custom,"Material toggle must persist");
+            const auto selected=choose_palette(model,custom,"mist");
+            const auto values=control_values(model,selected);
+            expect(values.at("fabric_visible")[0]==0 && values.at("fabric_opacity")[0]==.4f,
+                   "A palette opacity change must preserve the independent fabric switch");
+            expect(control_values(model,choose_palette(model,selected,"original")).empty(),
+                   "Original must restore authored visibility and opacity");
+            auto invalid=recipe; invalid["controls"][0]["default"][0]=.5;
+            rejects([&]{ControlSet::parse(invalid);});
+            invalid=recipe; invalid["controls"][0]["occludes_sections"]=Json::array({0});
+            rejects([&]{ControlSet::parse(invalid);});
+            invalid=recipe; invalid["controls"][0]["bindings"]=Json::array();
+            rejects([&]{ControlSet::parse(invalid);});
+            auto many=Json{{"schema",1},{"controls",Json::array()}};
+            Customization saved;
+            for(size_t i=0;i<max_customization_controls;++i) {
+                auto item=recipe["controls"][0];
+                const auto id="part_"+std::to_string(i);
+                item["id"]=id; item["bindings"][0]["slot"]=i;
+                many["controls"].push_back(item); saved.values[id]={0,0,0,1};
+            }
+            expect(ControlSet::parse(many).controls.size()==64,"64 controls must be supported");
+            expect(Customization::parse(saved.json())==saved,"All 64 control values must persist");
+            saved.values["overflow"]={0,0,0,1};
+            rejects([&]{Customization::parse(saved.json());});
+            auto extra=recipe["controls"][0]; extra["id"]="overflow";
+            many["controls"].push_back(extra);
+            rejects([&]{ControlSet::parse(many);});
+        }
+        {
             auto recipe=Json::parse(R"({"schema":1,"controls":[{"id":"fabric","name":"Fabric","kind":"color","default":[1,1,1,1],
                 "bindings":[{"slot":12,"parameter":"FabricColor"}]}]})");
             expect(ControlSet::parse(recipe).controls[0].bindings[0].surface==MaterialSurface::Base,

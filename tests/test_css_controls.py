@@ -9,6 +9,23 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
 from css_controls import validate,embed,verify_resources,lint_convention
 
 class ControlTests(unittest.TestCase):
+    def test_material_toggle_and_control_capacity(self):
+        control=dict(id='fabric_visible',name='Sheer fabric',kind='toggle',default=[1,0,0,1],
+                     bindings=[dict(slot=12,surface='overlay',parameter='FabricVisible')])
+        recipe=dict(schema=1,controls=[control])
+        validate(recipe)
+        for change in ({'bindings':[]},{'default':[.5,0,0,1]},
+                       {'sections':[]},{'occludes_sections':[0]}):
+            bad=copy.deepcopy(recipe);bad['controls'][0].update(change)
+            with self.subTest(change=change),self.assertRaises(ValueError):validate(bad)
+        many=dict(schema=1,controls=[])
+        for i in range(64):
+            item=copy.deepcopy(control);item['id']=f'part_{i}';item['bindings'][0]['slot']=i
+            many['controls'].append(item)
+        validate(many)
+        extra=copy.deepcopy(control);extra['id']='overflow';many['controls'].append(extra)
+        with self.assertRaises(ValueError):validate(many)
+
     def test_material_surface_selector(self):
         recipe=dict(schema=1,controls=[dict(id='fabric',name='Fabric',kind='color',default=[1,1,1,1],
                     bindings=[dict(slot=12,parameter='FabricColor')])])
