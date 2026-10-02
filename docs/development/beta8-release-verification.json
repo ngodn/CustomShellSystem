@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0-beta.8",
+  "source_commit": "86c365ac5654abd57f88f30448bb5e5cc2809fb6",
+  "archive": "/home/eins0fx/development/mods/msII/CustomShellSystem/dist/v1.0.0-beta.8/MSII-CSS-v1.0.0-beta.8.zip",
+  "archive_sha256": "7c75331d6247f6750afc513077a517989dfcf82e334e8268df07e31cb0226075",
+  "files": {
+    "README.txt": "4eda81d64aea8fcf3e1681f441ce570a5a4ac206ed386b3d482b84e8b43b4521",
+    "THIRD_PARTY_NOTICES.txt": "ec8a4e0ba06da38ae05ada28483b84c925e10be8117479ddfe5f31e0d7f0a2fd",
+    "assets/inventory-logo-v1.png": "307ed61f67c9834b968ef4ea9d6d6558f67c0cb7f5897678251a378387f0023e",
+    "catalog/npc-appearances.css.json": "46ff7bb81705c571714bd97ba89598cf281ce8db197812a1f943f69e113c4983",
+    "catalog/replacement-targets.json": "0302878627c6e99e38a0a901bb3137b532963aefc22defe5a59720e8474b9544",
+    "core.json": "a3ae5b77e12a6c406927e9c9ef0ad97511c23db84aceabd1bfaf5e6941887ff4",
+    "cores/css_core-1.0.0-beta.8.dll": "6ee528ae96fb01ef0d8df44e3381c3b3be21e3e416f886653d8da5bb789ecc7b",
+    "dlls/main.dll": "cac70c7e761835ce7cb340b517401d575c0cff5057779b9331459cec3a08b871",
+    "enabled.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "installed": true,
+  "release_ready": true,
+  "release_authorized": true,
+  "publicly_published": false,
+  "user_acceptance": "User: genessa all good, please do dist/v0.2.0 release; also please css beta 8 also.",
+  "native_suites_passed": 14,
+  "release_tool_tests_passed": 8,
+  "genessa_startup_checks_passed": 54,
+  "production_cold_start_verified": true,
+  "scope": "Exact installed production ZIP, fresh DLL mapping and world application, user acceptance. No claim of exhaustive gameplay coverage or zero performance cost."
+}
