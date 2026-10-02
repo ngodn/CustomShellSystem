@@ -92,10 +92,15 @@ UObject* WalkOverride::custom_blendspace(size_t index,UObject* skeleton) {
         throw std::runtime_error("Custom movement option is incomplete");
     if(custom_skeleton_.Get()!=skeleton) {custom_blends_={};custom_skeleton_=skeleton;}
     if(auto* cached=custom_blends_[index].Get()) return cached;
+    const auto compatible=[&](UObject* animation) {
+        auto* source=read<UObject*>(animation,L"Skeleton");
+        return source && (source==skeleton || compatible_animation_skeletons(
+            narrow(source->GetPathName()),narrow(skeleton->GetPathName())));
+    };
     auto* asset=load(custom_paths_[index]);
     if(!asset || asset->GetClassPrivate()!=find(L"/Script/Engine.BlendSpace") ||
-       read<UObject*>(asset,L"Skeleton")!=skeleton)
-        throw std::runtime_error("Custom movement requires a 2D BlendSpace on this mesh's skeleton");
+       !compatible(asset))
+        throw std::runtime_error("Custom movement requires a 2D BlendSpace on a compatible skeleton");
     auto bounded=[](FProperty* p,int32_t size) {
         return p && p->GetArrayDim()==1 && p->GetOffset_Internal()>=0 && p->GetElementSize()>0 &&
                p->GetOffset_Internal()<=size-p->GetElementSize();
@@ -133,7 +138,7 @@ UObject* WalkOverride::custom_blendspace(size_t index,UObject* skeleton) {
         auto* sequence=static_cast<FObjectProperty*>(animation)->GetObjectPropertyValue(sample+animation->GetOffset_Internal());
         float play_rate{};std::memcpy(&play_rate,sample+rate->GetOffset_Internal(),sizeof(play_rate));
         if(!sequence || !sequence->IsA(static_cast<UClass*>(find(L"/Script/Engine.AnimSequence"))) ||
-           read<UObject*>(sequence,L"Skeleton")!=skeleton || read<uint8_t>(sequence,L"AdditiveAnimType")!=0 ||
+           !compatible(sequence) || read<uint8_t>(sequence,L"AdditiveAnimType")!=0 ||
            !std::isfinite(play_rate) || play_rate<=0)
             throw std::runtime_error("Custom movement has an incompatible, additive or invalid-rate sample");
         auto* root_motion=sequence->GetPropertyByNameInChain(L"bEnableRootMotion");

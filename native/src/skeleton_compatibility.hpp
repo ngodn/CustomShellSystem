@@ -2,6 +2,14 @@
 #include <string_view>
 
 namespace css {
+inline bool compatible_animation_skeletons(std::string_view source, std::string_view target) {
+    // Only this directed remap has been audited for the appended wing bones.
+    // See docs/development/genessa-wing-rig.md.
+    constexpr std::string_view base = "/Game/CSS/Shared/SKEL_Base.SKEL_Base";
+    constexpr std::string_view wings = "/Game/CSS/UnholyGenessa/SKEL_Wings2.SKEL_Wings2";
+    return (!source.empty() && source == target) || (source == base && target == wings);
+}
+
 // Different skeleton objects are permitted only for the audited human, CSS
 // base, V44 B2 and Genessa wing references, including the short-path copy. See
 // docs/development/{b2-reference-binding,short-rig-paths,genessa-wing-rig}.md.

@@ -51,3 +51,30 @@ ctest --test-dir build/release-host -R '^css_skeleton_compatibility$' --output-o
 The focused skeleton, animation catalog and animation runtime tests all pass
 after the change. The Windows Release development core builds successfully.
 Installation and game acceptance are pending.
+
+## First live load and movement follow-up
+
+The `0cae679` development core was installed after a normal shutdown. A fresh
+process maps that DLL and loads SK_EveW3 with ABP_Wings2. The user confirms the
+appearance works. Evidence is in the mod's `authoring/wing-css-live-check.json`
+and `wing-css-install-check.json`.
+
+Custom movement then reports `Custom movement requires a 2D BlendSpace on this
+mesh's skeleton`. `WalkOverride::custom_blendspace` separately required pointer
+identity for the BlendSpace skeleton and every sample sequence skeleton. Those
+assets intentionally retain SKEL_Base; changing only the appearance gate did
+not cover locomotion.
+
+Allow the specific directed SKEL_Base-to-SKEL_Wings2 animation remap in both
+validation sites. Wings2 already lists SKEL_Base as compatible, and the native
+remapping/pose audit preserves the original bones. Same-skeleton playback keeps
+its existing behavior. Do not extend the appearance allowlist wholesale to
+animation playback: other cross-skeleton combinations and the reverse wing
+remap remain rejected. BlendSpace class, axes, bounded samples, additive mode,
+root motion and rate checks remain intact. This validation is cached per gait
+and invalidated when the target skeleton changes.
+
+The new directed-animation regression fails under the old identity policy and
+passes with this exception. The focused animation catalog/runtime regressions
+also pass. The second DLL still needs installation and actual custom gait
+playback verification; the first live appearance check does not prove that.

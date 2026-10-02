@@ -47,5 +47,15 @@ int main() {
     check(!compatible_standard_skeletons(standard, standard), "Identical skeleton treated as a remap");
     check(!compatible_standard_skeletons(wings, wings), "Identical wing skeleton treated as a remap");
     check(!compatible_standard_skeletons("", ""), "Missing skeletons accepted");
+    check(css::compatible_animation_skeletons(standard, standard), "Same-rig movement rejected");
+    check(css::compatible_animation_skeletons(wings, wings), "Same wing-rig movement rejected");
+    check(css::compatible_animation_skeletons(standard, wings), "Audited base movement rejected on wings");
+    check(!css::compatible_animation_skeletons(wings, standard), "Unaudited reverse movement remap accepted");
+    for (const auto& other : std::vector<std::string>{"", human, base, b2, wings + "_Invalid",
+                                  "/Game/Other/SKEL_Base.SKEL_Base"}) {
+        check(!css::compatible_animation_skeletons(other, wings), "Unaudited animation source accepted");
+        check(!css::compatible_animation_skeletons(standard, other), "Unaudited animation target accepted");
+    }
+    check(!css::compatible_animation_skeletons("", ""), "Missing animation skeletons accepted");
     std::cout << "Skeleton allowlist and lookalike rejection passed\n";
 }
