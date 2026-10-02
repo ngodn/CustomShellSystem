@@ -3,8 +3,8 @@
 
 namespace css {
 // Different skeleton objects are permitted only for the audited human, CSS
-// base and V44 B2 references, including the audited short-path copy. See
-// docs/development/b2-reference-binding.md and short-rig-paths.md.
+// base, V44 B2 and Genessa wing references, including the short-path copy. See
+// docs/development/{b2-reference-binding,short-rig-paths,genessa-wing-rig}.md.
 // This allowlist is not a structural validator for arbitrary mod rigs.
 inline bool compatible_standard_skeletons(std::string_view before, std::string_view target) {
     constexpr std::string_view human =
@@ -14,8 +14,9 @@ inline bool compatible_standard_skeletons(std::string_view before, std::string_v
     constexpr std::string_view b2 =
         "/Game/CSSAuthoring/DiagnosticReferences/SKEL_B2GameReferenceMetadata_V2.SKEL_B2GameReferenceMetadata_V2";
     constexpr std::string_view standard = "/Game/CSS/Shared/SKEL_Base.SKEL_Base";
+    constexpr std::string_view wings = "/Game/CSS/UnholyGenessa/SKEL_Wings2.SKEL_Wings2";
     const auto audited = [&](std::string_view path) {
-        return path == human || path == base || path == b2 || path == standard;
+        return path == human || path == base || path == b2 || path == standard || path == wings;
     };
     return before != target && audited(before) && audited(target);
 }
