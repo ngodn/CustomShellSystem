@@ -4,7 +4,7 @@ The authoring work is in the existing `CSS_SeduXtress_eins0fx` directory:
 `authoring/animation-update.md`, `authoring/animation-update-check.json`, and
 `tools/{audit,build,check,install}_animation_update.py`.
 
-The latest installed Eve package matches the accepted v1.2.0-ANIMTEST release.
+The installed Eve package before this update matched the accepted v1.2.0-ANIMTEST release.
 Its 19 movement animations have the same incorrect virtual-bone mappings fixed
 in Genessa. Their original and repaired export hashes match Genessa's verified
 repair. The new candidate preserves every other retained export/bulk payload
