@@ -1,3 +1,13 @@
+### CSS 1.0.0-beta.8
+
+### Added
+
+- Material visibility toggles, allowing supported outfits to hide sheer fabric independently of solid details.
+- Support for up to 64 customization controls per variant, increased from 32.
+
+Existing outfits retain their section visibility controls. Fabric visibility and
+opacity require support from the outfit's materials and customization recipe.
+
 ### CSS 1.0.0-beta.7
 
 ### Added

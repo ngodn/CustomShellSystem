@@ -142,7 +142,7 @@ it drives them directly:
  "default": [1, 0, 0, 1], "sections": [2, 3]}
 ```
 
-The next CSS build after beta.7 also accepts material toggles and up to 64
+CSS beta.8 also accepts material toggles and up to 64
 controls per variant. Beta.7 has a 32-control limit and requires toggle
 sections; packages using these additions require a newer CSS build.
 
