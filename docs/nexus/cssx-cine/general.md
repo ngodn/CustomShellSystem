@@ -15,4 +15,8 @@
 
 Use `short-description.txt` for the short description and `description.bbcode.txt` in View
 source for the full description. Upload `MSII-CINE-v1.0.0.zip` from
-`extensions/core/dist/cssx-cine-v1.0.0/`.
+`extensions/core/dist/cine-v1.0.0/`.
+
+Media: `docs/media/cine-v1.0.0/` (header and menu screenshots, linked from the BBCode on
+`main`). Video: replace `YOUTUBE_ID` in the description with the video id when the user
+sends the link.

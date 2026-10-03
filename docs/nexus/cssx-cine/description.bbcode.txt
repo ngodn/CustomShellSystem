@@ -1,3 +1,5 @@
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/cine-v1.0.0/cine-header.jpg[/img][/center]
+
 CINE is a cinematic camera for CSSX. It flies the camera and walks your character, so you can record showcase videos of your shells and outfits with your own recorder (OBS, ShadowPlay, Steam recording, anything).
 
 [size=4][b]Features[/b][/size]
@@ -11,6 +13,8 @@ CINE is a cinematic camera for CSSX. It flies the camera and walks your characte
 [*][b]Shareable presets.[/b] Presets are plain .cine.json files in the presets folder. Copy one, change it and reload, or share it with others.
 [/list]
 
+[center][youtube]YOUTUBE_ID[/youtube][/center]
+
 [size=4][b]How to use it[/b][/size]
 [list=1]
 [*]Open CSSX (F6 or the CSSX tab in the Player Menu) and go to CINE.
@@ -20,6 +24,8 @@ CINE is a cinematic camera for CSSX. It flies the camera and walks your characte
 [/list]
 
 Keys in Cine World: [b]F8[/b] roll a take, [b]F9[/b] cancel a take or leave Cine World, [b]F10[/b] change the frame guide, [b]F7[/b] save the final shot. The countdown before each take (0 to 10 s) gives you time to start recording; trim it from the video afterwards.
+
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/cine-v1.0.0/cine-menu-world.jpg[/img][/center]
 
 [size=4][b]Install[/b][/size]
 [list=1]
@@ -44,6 +50,9 @@ Keys in Cine World: [b]F8[/b] roll a take, [b]F9[/b] cancel a take or leave Cine
         `-- turntable.cine.json[/code]
 
 Do not add another folder level around the extension.
+
+[center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/cine-v1.0.0/cine-menu-shot.jpg[/img]
+[img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/docs/media/cine-v1.0.0/cine-menu-route.jpg[/img][/center]
 
 [size=4][b]Behavior and limits[/b][/size]
 CINE does not record video itself; use your own recorder. Hotkeys are keyboard only, because the D-pad uses items in Mortal Shell II. A take is cancelled and everything is put back when a menu opens, the world changes (loading screen, travel, death) or you press F9. Walk takes need open ground along the route; CINE follows the path you recorded and does not plan around enemies.
