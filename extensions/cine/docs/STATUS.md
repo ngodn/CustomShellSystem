@@ -27,6 +27,8 @@ Read this first after any break. Design: `DESIGN.md` (same folder).
 | `c3ad159` | `cssx.py --cine` staging, `cssx_release.py` CINE package, notes |
 | next | **Redesign (user rejected CSSX knowing CSS):** neutral service bus. CSSX `service.list` / `service.call`, `include/cssx/service.h`, `src/runtime/services.cpp` + 49 bus checks + header-copy check; `css.customize` op removed from CSSX core. CSS publishes `css.customize` via its own `cssx_services()` export (`native/src/cssx_service.h`, `docs/services.md`). CINE calls `service.call`. Decision D15 rewritten. |
 
+| `242b592` | Live test 1: Enter failed ("player is not fully loaded"). `class_default` takes a class name, not a path; fixed, mock hardened to match the bridge. Live-probed every read-only call CINE makes at resolve: all good. Traverse "No zone data on The Marrow Keep" is older (since 1.0.1, 28 Sept), not this branch. |
+
 ## Rule learned
 
 CSSX core must never know any mod by name. Mods talk through the service bus (D15).
