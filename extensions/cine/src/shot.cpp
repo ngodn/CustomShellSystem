@@ -32,7 +32,7 @@ double Route::length() const {
     return total;
 }
 
-Route build_route(const std::vector<Sample>& samples, const std::optional<FinalShot>& final_shot) {
+Route extract_route(const std::vector<Sample>& samples) {
     std::vector<size_t> moving;
     for (size_t i = 0; i < samples.size(); ++i) if (samples[i].speed > walking_cm_s) moving.push_back(i);
     if (moving.size() < 3) throw std::invalid_argument("The recording has no walk in it");
@@ -54,37 +54,51 @@ Route build_route(const std::vector<Sample>& samples, const std::optional<FinalS
     if (flat_distance(samples[best_last].position, route.points.back()) > 30) route.points.push_back(samples[best_last].position);
     if (route.points.size() < 2 || route.length() < 300) throw std::invalid_argument("The recorded walk is too short (walk at least 3 m)");
 
-    if (final_shot) {
-        // Branch where she is already heading roughly toward the final spot with room to curve
-        // in: 2-5 m ahead of it along the final facing, under 70 degrees of turn.
-        const Vec3 goal = final_shot->position;
-        const double gh = final_shot->yaw * deg;
-        std::optional<size_t> branch;
-        for (size_t i = 1; i < route.points.size(); ++i) {
-            const Vec3 d = goal - route.points[i];
-            const double ahead = d.x * std::cos(gh) + d.y * std::sin(gh);
-            const double turn = std::abs(wrap_degrees(final_shot->yaw - heading(route.points[i - 1], route.points[i])));
-            if (ahead >= 200 && ahead <= 500 && turn < 70) branch = i;
-        }
-        if (!branch) throw std::invalid_argument("The final shot spot is not reachable smoothly from this route; "
-                                                 "end the recorded walk closer to it, walking toward it");
-        const Vec3 p0 = route.points[*branch];
-        const double h0 = heading(route.points[*branch - 1], p0) * deg;
-        route.points.resize(*branch + 1);
-        const double span = flat_distance(p0, goal) * 0.4;
-        const Vec3 c1{p0.x + span * std::cos(h0), p0.y + span * std::sin(h0), 0};
-        const Vec3 c2{goal.x - span * std::cos(gh), goal.y - span * std::sin(gh), 0};
-        const int n = std::max(4, int(flat_distance(p0, goal) / 45.0));
-        for (int k = 1; k <= n; ++k) {
-            const double u = double(k) / n, a = (1 - u) * (1 - u) * (1 - u), b = 3 * (1 - u) * (1 - u) * u, c = 3 * (1 - u) * u * u, e = u * u * u;
-            route.points.push_back({a * p0.x + b * c1.x + c * c2.x + e * goal.x,
-                                    a * p0.y + b * c1.y + c * c2.y + e * goal.y,
-                                    p0.z + (goal.z - p0.z) * u});
-        }
-    }
-    route.start = route.points.front();
-    route.start_yaw = heading(route.points[0], route.points[1]);   // start facing the path
+    set_start(route);
     return route;
+}
+
+Route branch_into_final(Route route, const FinalShot& final_shot) {
+    if (route.points.size() < 2) throw std::invalid_argument("Record a route before setting a final shot");
+    // Branch where she is already heading roughly toward the final spot with room to curve
+    // in: 2-5 m ahead of it along the final facing, under 70 degrees of turn.
+    const Vec3 goal = final_shot.position;
+    const double gh = final_shot.yaw * deg;
+    std::optional<size_t> branch;
+    for (size_t i = 1; i < route.points.size(); ++i) {
+        const Vec3 d = goal - route.points[i];
+        const double ahead = d.x * std::cos(gh) + d.y * std::sin(gh);
+        const double turn = std::abs(wrap_degrees(final_shot.yaw - heading(route.points[i - 1], route.points[i])));
+        if (ahead >= 200 && ahead <= 500 && turn < 70) branch = i;
+    }
+    if (!branch) throw std::invalid_argument("The final shot spot is not reachable smoothly from this route; "
+                                             "end the recorded walk closer to it, walking toward it");
+    const Vec3 p0 = route.points[*branch];
+    const double h0 = heading(route.points[*branch - 1], p0) * deg;
+    route.points.resize(*branch + 1);
+    const double span = flat_distance(p0, goal) * 0.4;
+    const Vec3 c1{p0.x + span * std::cos(h0), p0.y + span * std::sin(h0), 0};
+    const Vec3 c2{goal.x - span * std::cos(gh), goal.y - span * std::sin(gh), 0};
+    const int n = std::max(4, int(flat_distance(p0, goal) / 45.0));
+    for (int k = 1; k <= n; ++k) {
+        const double u = double(k) / n, a = (1 - u) * (1 - u) * (1 - u), b = 3 * (1 - u) * (1 - u) * u, c = 3 * (1 - u) * u * u, e = u * u * u;
+        route.points.push_back({a * p0.x + b * c1.x + c * c2.x + e * goal.x,
+                                a * p0.y + b * c1.y + c * c2.y + e * goal.y,
+                                p0.z + (goal.z - p0.z) * u});
+    }
+    set_start(route);
+    return route;
+}
+
+Route build_route(const std::vector<Sample>& samples, const std::optional<FinalShot>& final_shot) {
+    auto route = extract_route(samples);
+    return final_shot ? branch_into_final(std::move(route), *final_shot) : route;
+}
+
+void set_start(Route& route) {
+    if (route.points.size() < 2) return;
+    route.start = route.points.front();
+    route.start_yaw = heading(route.points[0], route.points[1]);
 }
 
 Track::Track(const Route& route) : points_(route.points) {

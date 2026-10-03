@@ -1,0 +1,22 @@
+{
+  "schema": 2,
+  "api": 3,
+  "id": "eins0fx.cine",
+  "title": "CINE",
+  "author": "_eins0fx",
+  "version": "1.0.0",
+  "description": "Cinematic camera for showcases: record a walk, frame your last shot, roll a preset take and capture it with your own recorder. Animates CSS palettes and outfit pieces on the way.",
+  "kind": "native",
+  "entry": "cine.dll",
+  "menu": "menu.json",
+  "files": [
+    "README.txt",
+    "presets/fashion-walk-360.cine.json",
+    "presets/pose-glide-3.cine.json",
+    "presets/pose-glide-5.cine.json",
+    "presets/pose-glide-7.cine.json",
+    "presets/pose-glide-10.cine.json",
+    "presets/turntable.cine.json",
+    "presets/photo-orbit.cine.json"
+  ]
+}

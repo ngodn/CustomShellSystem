@@ -18,10 +18,10 @@ const char* kind_name(ShotKind);
 // the walking time; for Glide and Turntable, a fraction of the duration.
 struct PresetKey { std::string anchor; double fraction = 0; double azimuth = 0, distance = 300, height = 0, aim = 0, fov = 40; };
 
-// One look step: a palette and per-control values (one array per control, channels 0..2
-// are applied), at a fraction of the walk (Walk) or duration (others). Controls a worn outfit
+// One look step: a palette and per-control values (one number, or 1-3 channels; colour
+// controls take three as a swatch), at a fraction of the walk (Walk) or duration (others). Controls a worn outfit
 // does not have are skipped, not errors, so one preset serves many outfits.
-struct LookStep { double fraction = 0; std::string palette; std::map<std::string, std::array<double, 3>> controls; };
+struct LookStep { double fraction = 0; std::string palette; std::map<std::string, std::vector<double>> controls; };   // 1-3 channels as given
 
 struct PhotoShot { std::string name; double azimuth = 0, distance = 300, height = 0, aim = 0, fov = 40; };
 

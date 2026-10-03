@@ -1,0 +1,54 @@
+{
+  "schema": 2,
+  "sections": [
+    {
+      "id": "cine",
+      "title": "Cine World",
+      "description": "Enter Cine World, frame the shot, start your recorder, then roll a take. F8 rolls, F9 cancels or leaves, F10 cycles the frame guide, F7 saves the current view as the final shot.",
+      "controls": [
+        {"id": "status", "type": "label", "label": "Status", "description": "What CINE is doing now."},
+        {"id": "enter", "type": "button", "label": "Enter Cine World", "description": "Closes the menu and hides the game HUD. Nothing else changes until you roll a take.", "disabled_label": "Already in Cine World"},
+        {"id": "take", "type": "button", "label": "Roll a take", "description": "Closes the menu and starts the selected preset after the countdown. Same as F8 in Cine World.", "disabled_label": "Enter Cine World first"},
+        {"id": "exit", "type": "button", "label": "Leave Cine World", "description": "Ends any take and restores the HUD, the camera and the walk settings. Same as F9.", "disabled_label": "Not in Cine World"},
+        {"id": "countdown", "type": "slider", "label": "Countdown", "value": 3, "min": 0, "max": 10, "step": 1, "unit": "s", "description": "Seconds between rolling and action, to start your recorder. The countdown is shown small in a corner; trim it from the video."}
+      ]
+    },
+    {
+      "id": "shot",
+      "title": "Shot",
+      "description": "Presets are JSON files in this extension's presets folder. Copy one, edit it and use Reload presets.",
+      "controls": [
+        {"id": "preset", "type": "choice", "label": "Preset", "value": "fashion-walk-360", "options": [{"id": "fashion-walk-360", "label": "Fashion Walk 360"}], "description": "The camera recipe for the take."},
+        {"id": "preset_info", "type": "label", "label": "About this preset", "description": "The preset's own description."},
+        {"id": "zoom", "type": "slider", "label": "Distance", "value": 1, "min": 0.5, "max": 2, "step": 0.05, "unit": "x", "description": "Moves every camera closer or further."},
+        {"id": "height", "type": "slider", "label": "Height", "value": 0, "min": -150, "max": 150, "step": 5, "unit": "cm", "description": "Raises or lowers every camera and its aim together."},
+        {"id": "fov_scale", "type": "slider", "label": "Field of view", "value": 1, "min": 0.5, "max": 2, "step": 0.05, "unit": "x", "description": "Wider or tighter lens. Portrait (9:16) recordings usually want about 1.25x."},
+        {"id": "guide", "type": "radio", "label": "Frame guide", "value": "off", "options": [{"id": "off", "label": "Off"}, {"id": "16:9", "label": "16:9"}, {"id": "9:16", "label": "9:16"}, {"id": "1:1", "label": "1:1"}, {"id": "2.39:1", "label": "2.39:1"}], "description": "Darkens everything outside the chosen frame while you set up. Hidden during takes, so it never ends up in a recording."},
+        {"id": "walls", "type": "toggle", "label": "Ease in at walls", "value": true, "description": "Checks the camera path before the take and moves the camera closer where a wall would block it, instead of jumping to her other side."},
+        {"id": "reload", "type": "button", "label": "Reload presets", "description": "Reads the presets folder again. Broken files are skipped and named in the CSSX log."}
+      ]
+    },
+    {
+      "id": "route",
+      "title": "Route",
+      "description": "Walk shots follow a route you walk once. The final shot is the game camera's view where the walk should end.",
+      "controls": [
+        {"id": "route_info", "type": "label", "label": "Route", "description": "The saved route."},
+        {"id": "record", "type": "button", "label": "Record route", "description": "Closes the menu. Walk the route, then stand still for 3 seconds. F9 cancels.", "disabled_label": "Recording now"},
+        {"id": "final_info", "type": "label", "label": "Final shot", "description": "The saved last shot."},
+        {"id": "capture", "type": "button", "label": "Use the current view as final shot", "description": "Closes the menu and saves the game camera's view 1.5 seconds later. Stand her where the walk should end and frame it with the game camera first. F7 does the same in Cine World."},
+        {"id": "clear_route", "type": "button", "label": "Clear route", "disabled_label": "No route", "confirm": "Delete the saved route?"},
+        {"id": "clear_final", "type": "button", "label": "Clear final shot", "disabled_label": "No final shot"}
+      ]
+    },
+    {
+      "id": "look",
+      "title": "Look",
+      "description": "Needs Custom Shell System 1.0.0-beta.9 or newer. Your own customization is saved before the take and put back after it.",
+      "controls": [
+        {"id": "look", "type": "radio", "label": "Look track", "value": "preset", "options": [{"id": "off", "label": "Off"}, {"id": "preset", "label": "From the preset"}, {"id": "palettes", "label": "Cycle palettes"}], "description": "From the preset: the preset's own palette and outfit-piece steps. Cycle palettes: every palette of the worn outfit in turn, then your own look."},
+        {"id": "look_info", "type": "label", "label": "This take", "description": "What the look track will do."}
+      ]
+    }
+  ]
+}

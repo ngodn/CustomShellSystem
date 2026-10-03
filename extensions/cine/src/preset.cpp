@@ -112,12 +112,12 @@ Preset Preset::parse(const Json& j) {
                 if (!s.at("controls").is_object() || s.at("controls").size() > 64) throw std::invalid_argument("'controls' must map up to 64 parts");
                 for (const auto& [id, value] : s.at("controls").items()) {
                     if (id.empty() || id.size() > 64) throw std::invalid_argument("Invalid control id in a look step");
-                    std::array<double, 3> v{0, 0, 0};
-                    if (value.is_number()) v[0] = value.get<double>();
+                    std::vector<double> v;
+                    if (value.is_number()) v.push_back(value.get<double>());
                     else if (value.is_array() && !value.empty() && value.size() <= 4) {
                         for (size_t i = 0; i < 3 && i < value.size(); ++i) {
                             if (!value[i].is_number()) throw std::invalid_argument("Control values must be numbers");
-                            v[i] = value[i].get<double>();
+                            v.push_back(value[i].get<double>());
                         }
                     } else throw std::invalid_argument("A control value must be a number or 1-4 numbers");
                     for (double x : v) if (!std::isfinite(x)) throw std::invalid_argument("Control values must be finite");

@@ -38,10 +38,16 @@ struct Route {
 };
 
 // From recorded samples: keep the longest walking run (setup nudges before it and steps
-// after it are not the route), decimate, and when a final shot is given branch into it with
-// a cubic curve that arrives already facing the final direction (no turn on the spot).
-// Throws std::invalid_argument when the samples hold no usable walk.
+// after it are not the route) and decimate it. Throws std::invalid_argument when the samples
+// hold no walk of at least 3 m.
+Route extract_route(const std::vector<Sample>& samples);
+// Branch into the final shot with a cubic curve that arrives already facing the final
+// direction (no turn on the spot). Throws when the spot is not reachable smoothly.
+Route branch_into_final(Route route, const FinalShot& final_shot);
+// extract_route, then branch_into_final when a final shot is given.
 Route build_route(const std::vector<Sample>& samples, const std::optional<FinalShot>& final_shot);
+// The start pose from the route's first segment (she starts facing down the path).
+void set_start(Route& route);
 
 // Arc-length access to a route, with a projection that searches near its last match.
 class Track {
