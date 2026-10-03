@@ -205,3 +205,14 @@ Reason: the user reported "all unlocks not working"; the cause was that any
 changed amount counted as an unapplied edit, and while one is pending every
 action button is disabled. Disabled controls now also carry the reason
 (model `disabled` map) instead of a bare "Unavailable".
+
+## D15. CSS looks change in process, not through files (2026-10-03)
+
+CSS exports `css_customize_v1` from its core DLL and CSSX resolves it per
+call (the core hot-swaps). It only runs on the game thread and refuses while
+CSS's own tick is on the stack, so a CSSX hook fired from CSS can never
+re-enter it. Changes made with `persist:false` are applied but not saved for
+30 minutes, which is how CINE cycles palettes mid-take without touching the
+player's saved look; it restores the snapshot with `persist:true` at the end.
+Reason: `request.json` is polled at 250 ms and saves every change, which is
+too slow and too sticky for a look track.

@@ -101,6 +101,22 @@ def traverse_files(build: Path) -> tuple[str, dict[str, bytes]]:
     return manifest['version'], files
 
 
+def cine_files(build: Path) -> tuple[str, dict[str, bytes]]:
+    # CINE carries its own version like Traverse and needs CSS 1.0.0-beta.9+ for its look track.
+    src = REPO / 'extensions/cine'
+    manifest = json.loads((src / 'extension.json').read_text())
+    manifest['entry'] = 'cine.dll'
+    base = manifest['id'] + '/'
+    files = {
+        base + 'extension.json': (json.dumps(manifest, indent=2) + '\n').encode(),
+        base + 'cine.dll': (build / 'cine.dll').read_bytes(),
+        base + 'menu.json': (src / 'menu.json').read_bytes(),
+    }
+    for name in manifest.get('files', []):
+        files[base + name] = (src / name).read_bytes()
+    return manifest['version'], files
+
+
 def write_zip(target: Path, files: dict[str, bytes], meta: dict, stamp) -> None:
     if target.exists():
         raise FileExistsError(target)
@@ -195,9 +211,18 @@ def build(tag: str, output: Path) -> list[Path]:
             else:
                 write_zip(tv, tfiles, dict(common, version=tvers, product='CSSX Traverse', requires='CSSX ' + version,
                                            manifest_name='eins0fx.traverse/release.json'), stamp)
+            civers, cifiles = cine_files(out)
+            cidir = output / f'cssx-cine-v{civers}'
+            cidir.mkdir(parents=True, exist_ok=True)
+            ci = cidir / f'MSII-CINE-v{civers}.zip'
+            if ci.exists():
+                print(f'CINE v{civers} is already released at {ci}; left unchanged (bump extensions/cine/extension.json to ship a new build)')
+            else:
+                write_zip(ci, cifiles, dict(common, version=civers, product='CSSX CINE', requires='CSSX ' + version,
+                                           manifest_name='eins0fx.cine/release.json'), stamp)
             for name, built in (('main.dll', version), ('cssx_core.dll', version), ('cheat_menu.dll', cmvers)):
                 shutil.copy2(out / name, fwdir / f'{name}.{built}.built')
-            return [fw, cm, pf, tv]
+            return [fw, cm, pf, tv, ci]
         finally:
             subprocess.run(['git', 'worktree', 'remove', '--force', str(tree)], cwd=REPO, check=False, capture_output=True)
 

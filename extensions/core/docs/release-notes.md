@@ -3,6 +3,18 @@
 Draft, updated with every release candidate. Player-facing wording; the
 evidence behind each line is in `integration-tests.md` and `performance.md`.
 
+## CSSX 1.3.0 and CINE 1.0.0 (unreleased)
+
+- New extension, CINE: a cinematic camera for showcase videos. Enter Cine World
+  from the CSSX tab, record the walk you want, frame the last shot and press F8.
+  CINE flies the camera along a preset (fashion walk 360, pose glides of 3, 5, 7
+  and 10 seconds, turntable, photo orbit), walks her at a real walking pace, and
+  can cycle CSS palettes on the way. Record it with your own recorder.
+- Presets are plain `.cine.json` files in the CINE folder; drop in your own or
+  share them.
+- Extensions can read and change the CSS look through the new `css.customize`
+  bridge op (needs CSS 1.0.0-beta.9 or newer).
+
 ## CSSX 1.2.1 and Traverse 1.0.1
 
 - Traverse passes the destination's zone to the game's streaming teleport, the way
