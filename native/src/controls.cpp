@@ -831,4 +831,41 @@ std::map<std::string,ControlValue> control_values(const ControlSet& options,cons
     }
     return result;
 }
+Customization apply_customize(const ControlSet& options, Customization custom, const nlohmann::json& command) {
+    const auto action=command.at("action").get<std::string>();
+    if(action=="palette") custom=choose_palette(options,custom,command.at("palette").get<std::string>());
+    else if(action=="control" || action=="reset_control" || action=="color" || action=="reset_color") {
+        const bool clearing=action=="reset_control" || action=="reset_color";
+        auto id=command.at("control").get<std::string>();
+        auto* control=options.find(id);
+        if(!control) throw std::runtime_error("Unknown part");
+        if(clearing) custom.values.erase(id);
+        else {
+            // Read the value before the group tint, or the tint would be folded
+            // into the override and then applied to it a second time.
+            auto untinted=custom; untinted.tints.clear();
+            auto values=control_values(options,untinted);
+            auto value=values.contains(id)?values.at(id):control->value;
+            if(command.contains("rgb")) {
+                // A whole colour at once, which is what picking a swatch is.
+                const auto& rgb=command.at("rgb");
+                if(control->scalar || !rgb.is_array() || rgb.size()!=3) throw std::runtime_error("Invalid colour value");
+                for(int i=0;i<3;++i)
+                    value[i]=std::clamp(rgb[i].get<float>(),control->minimum,control->maximum);
+            } else {
+                int channel=command.value("channel",0);
+                const auto slider=control_channel(*control,channel);
+                if(command.contains("value")) value[channel]=command.at("value").get<float>();
+                else value[channel]=std::clamp(value[channel]+command.at("delta").get<float>()*slider.step,slider.minimum,slider.maximum);
+            }
+            custom.values[id]=value;
+        }
+    }
+    else throw std::runtime_error("Unknown customization action");
+    control_values(options,custom);   // the request path validated here too
+    return custom;
+}
+Customization restore_customization(const ControlSet& options, const nlohmann::json& snapshot) {
+    return compatible_values(options,Customization::parse(snapshot));
+}
 }

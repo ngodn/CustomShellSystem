@@ -6,7 +6,9 @@
 #include "player_recovery.hpp"
 #include "startup.hpp"
 #include <windows.h>
+#include <atomic>
 #include <chrono>
+#include <string_view>
 #include <optional>
 #include <imgui.h>
 #include <UE4SSProgram.hpp>
@@ -109,6 +111,10 @@ struct Core {
     char search[128]{}, preset_name[96]{};
     double last_apply_ms = 0;
     std::optional<Customization> pending_custom;
+    // Customize export (css_customize_v1): set by the tick wrapper so a CSSX extension calling
+    // in from a hook while CSS is mid-tick is refused instead of re-entering an apply.
+    bool in_tick = false;
+    DWORD game_thread = 0;
     bool custom_only = false, refresh_custom = true;
     uint64_t save_after = 0, last_player_revision = 0, maintenance_after = 0, maintenance_next = 0;
     Recovery recovery;
@@ -290,6 +296,53 @@ struct Core {
         }
         if (state.enabled && !catalog.outfits.empty()) message = "Your saved appearance is ready. Open Inventory and choose CSS.";
     }
+    // The customize export: what a CSSX extension may read and change, through the same
+    // apply_customize path as the CSS page. "describe" reports the worn outfit; "apply" runs a
+    // list of commands on a copy, validates it, then commits like a control request does, so
+    // CSS's own apply pass picks it up. persist=false keeps a transient look (a CINE take)
+    // out of the saved state; the caller restores with persist=true. Never writes `message`,
+    // which the UE4SS ImGui thread reads.
+    Json customize_api(const Json& command) {
+        const auto action=command.at("action").get<std::string>();
+        auto selected=state.selections.find(appearance.shell);
+        if(selected==state.selections.end()) throw std::runtime_error("No CSS appearance is worn");
+        const Outfit* outfit=nullptr;
+        for(const auto& o:catalog.outfits) if(o.id==selected->second.outfit) outfit=&o;
+        if(!outfit) throw std::runtime_error("The selected outfit is missing");
+        const auto& options=outfit->controls_for(selected->second.variant);
+        auto result=[&](const Customization& custom){
+            return Json{{"shell",appearance.shell},{"outfit",selected->second.outfit},{"variant",selected->second.variant},
+                        {"palette",custom.palette},{"customize",custom.json()}};
+        };
+        if(action=="describe") {
+            auto out=result(selected->second.custom);
+            Json palettes=Json::array();
+            for(const auto& palette:options.palettes) palettes.push_back({{"id",palette.id},{"name",palette.name}});
+            Json controls=Json::array();
+            for(const auto& control:options.controls)
+                controls.push_back({{"id",control.id},{"name",control.name},{"kind",control_kind_name(control.kind)},
+                                    {"group",control_group_name(control.group)},{"role",control.role},{"scalar",control.scalar}});
+            out["palettes"]=std::move(palettes); out["controls"]=std::move(controls);
+            return out;
+        }
+        if(action!="apply") throw std::runtime_error("Unknown customize action");
+        const auto& commands=command.at("commands");
+        if(!commands.is_array() || commands.empty() || commands.size()>256) throw std::runtime_error("apply needs 1 to 256 commands");
+        auto custom=selected->second.custom;
+        for(const auto& step:commands) {
+            if(!step.is_object()) throw std::runtime_error("Invalid customize command");
+            if(step.value("action",std::string{})=="restore") custom=restore_customization(options,step.at("customize"));
+            else custom=apply_customize(options,custom,step);
+        }
+        control_values(options,custom);   // whole result valid, or nothing is committed
+        selected->second.custom=custom;
+        pending_custom=custom; custom_only=true; refresh_custom=true;
+        apply_pending=true; ui_refresh=true;
+        const auto now=GetTickCount64();
+        if(command.value("persist",true)) save_after=now+600;
+        else save_after=std::max(save_after,now+30*60*1000);   // a transient look; the restore saves
+        return result(custom);
+    }
     void report(std::string text) {
         if (message == text) return;
         message = std::move(text); host.log(message.c_str());
@@ -468,7 +521,6 @@ struct Core {
                 action=="tint" || action=="reset_tint" ||
                 action=="template" || action=="physics_preset" ||
                 action=="ground_offset" || action=="reset_ground_offset") {
-            const bool clearing=action=="reset_control" || action=="reset_color";
             auto selected=state.selections.find(appearance.shell);
             if(selected==state.selections.end()) throw std::runtime_error("Wear an appearance before changing it.");
             const Outfit* outfit=nullptr;
@@ -476,7 +528,7 @@ struct Core {
             if(!outfit) throw std::runtime_error("The selected outfit is missing.");
             const auto& options=outfit->controls_for(selected->second.variant);
             auto custom=selected->second.custom;
-            if(action=="palette") custom=choose_palette(options,custom,command.at("palette").get<std::string>());
+            if(action=="palette") custom=apply_customize(options,custom,command);
             else if(action=="template") {
                 auto template_id=command.at("template").get<std::string>();
                 const Template* tmpl=nullptr;
@@ -565,32 +617,7 @@ struct Core {
                     if(tint.neutral()) custom.tints.erase(group); else custom.tints[group]=tint;
                 }
             }
-            else {
-                auto id=command.at("control").get<std::string>();
-                auto* control=options.find(id);
-                if(!control) throw std::runtime_error("Unknown part");
-                if(clearing) custom.values.erase(id);
-                else {
-                    // Read the value before the group tint, or the tint would be folded
-                    // into the override and then applied to it a second time.
-                    auto untinted=custom; untinted.tints.clear();
-                    auto values=control_values(options,untinted);
-                    auto value=values.contains(id)?values.at(id):control->value;
-                    if(command.contains("rgb")) {
-                        // A whole colour at once, which is what picking a swatch is.
-                        const auto& rgb=command.at("rgb");
-                        if(control->scalar || !rgb.is_array() || rgb.size()!=3) throw std::runtime_error("Invalid colour value");
-                        for(int i=0;i<3;++i)
-                            value[i]=std::clamp(rgb[i].get<float>(),control->minimum,control->maximum);
-                    } else {
-                    int channel=command.value("channel",0);
-                    const auto slider=control_channel(*control,channel);
-                    if(command.contains("value")) value[channel]=command.at("value").get<float>();
-                    else value[channel]=std::clamp(value[channel]+command.at("delta").get<float>()*slider.step,slider.minimum,slider.maximum);
-                    }
-                    custom.values[id]=value;
-                }
-            }
+            else custom=apply_customize(options,custom,command);   // control, reset_control, color, reset_color
             control_values(options,custom);
             selected->second.custom=custom;
             pending_custom=std::move(custom); custom_only=true; refresh_custom=command.value("refresh",true);
@@ -1072,6 +1099,7 @@ struct Core {
 };
 }
 namespace {
+std::atomic<css::Core*> live_core{nullptr};   // the one live core, for css_customize_v1
 void* create(const CssHost* host) noexcept {
     if (!host || (host->abi != 1 && host->abi != css_host_abi)) return nullptr;
     // Host ABI 2: JSON writes leave the game thread. The pointer targets the loader, which
@@ -1084,7 +1112,7 @@ void* create(const CssHost* host) noexcept {
         };
         host->log("Host ABI 2: state and runtime files are written off the game thread");
     } else host->log("Host ABI 1: files are written on the game thread (restart the game to use the new loader)");
-    try { return new css::Core(*host); }
+    try { auto* core = new css::Core(*host); live_core.store(core); return core; }
     catch (const std::exception& error) { host->log(error.what()); return nullptr; }
 }
 void tick(void* ptr, void* engine, float delta) noexcept {
@@ -1093,6 +1121,8 @@ void tick(void* ptr, void* engine, float delta) noexcept {
     if(core.frame_profile.active()) core.frame_profile.begin(delta);
     bool failed=false;
 #endif
+    core.game_thread = GetCurrentThreadId();
+    struct InTick { bool& flag; explicit InTick(bool& f):flag(f){flag=true;} ~InTick(){flag=false;} } in_tick(core.in_tick);
     try { core.tick(engine, delta); }
     catch (const std::exception& error) {
 #ifdef CSS_INVENTORY_DEV
@@ -1127,6 +1157,7 @@ bool stop(void* ptr) noexcept {
     catch (const std::exception& error) { core.report(error.what()); return false; }
 }
 void destroy(void* ptr) noexcept {
+    if (live_core.load() == ptr) live_core.store(nullptr);   // before the core goes away
     css::async_file_writer = nullptr;   // the next core decides again from its own host
     delete static_cast<css::Core*>(ptr);
 }
@@ -1134,3 +1165,24 @@ const CssCore api{css_abi, create, tick, render, stop, destroy};
 }
 extern "C" __declspec(dllexport) const CssCore* css_get_api() noexcept { return &api; }
 extern "C" __declspec(dllexport) const CssCore* css_get_api2() noexcept { return &api; }   // this core understands host ABI 2
+// Customize export, version 1 (CSS 1.0.0-beta.9). For in-process callers such as the CSSX
+// core's css.customize op. Game thread only, never during CSS's own tick. Returns 1 and sends
+// the result JSON to `sink`, or 0 and sends {"error": "..."}. The pointer to this function
+// must not be kept: the core hot-swaps, so callers resolve it again for every call.
+extern "C" __declspec(dllexport) uint32_t css_customize_abi() noexcept { return css_customize_abi_version; }
+extern "C" __declspec(dllexport) int css_customize_v1(const char* request, size_t size, CssCustomizeSink sink, void* context) noexcept {
+    if (!sink) return 0;
+    auto reply = [&](const css::Json& value) { const auto text = value.dump(); sink(context, text.data(), text.size()); };
+    try {
+        auto* core = live_core.load();
+        if (!core) throw std::runtime_error("CSS is not running");
+        if (core->in_tick) throw std::runtime_error("CSS is busy; call again from your own tick");
+        if (core->game_thread && core->game_thread != GetCurrentThreadId()) throw std::runtime_error("css_customize_v1 must be called on the game thread");
+        if (!request || size == 0 || size > (1u << 20)) throw std::runtime_error("Invalid customize request");
+        reply(core->customize_api(css::Json::parse(std::string_view(request, size))));
+        return 1;
+    } catch (const std::exception& error) {
+        try { reply({{"error", error.what()}}); } catch (...) {}
+        return 0;
+    } catch (...) { return 0; }
+}

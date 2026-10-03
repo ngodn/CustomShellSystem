@@ -194,6 +194,14 @@ std::map<std::string,ControlValue> control_values(const ControlSet&, const Custo
 std::set<int> hidden_control_sections(const ControlSet&, const std::map<std::string,ControlValue>&);
 Customization compatible_values(const ControlSet&, const Customization&);
 Customization choose_palette(const ControlSet&, const Customization&, const std::string& palette);
+// The palette and per-part changes of a CSS request (palette, control, reset_control, color,
+// reset_color). Core::request and the customize export both go through here, so a change made
+// from the CSS page and one made by a CSSX extension cannot drift apart. Throws on a bad
+// command; validates the result like the request path did.
+Customization apply_customize(const ControlSet&, Customization, const nlohmann::json& command);
+// A customization snapshot put back onto an outfit: parsed with Customization::parse, then
+// only values, tints and offsets this outfit accepts are kept (compatible_values).
+Customization restore_customization(const ControlSet&, const nlohmann::json& snapshot);
 bool dye_resource(const std::string&);
 float srgb_linear(float);
 }

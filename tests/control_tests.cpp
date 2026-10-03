@@ -876,6 +876,53 @@ int main() {
                 rejects([&]{Customization::parse(snapshot);});
             }
         }
+        {
+            // apply_customize / restore_customization: the shared path behind Core::request and
+            // the customize export used by CSSX extensions (CINE look track).
+            auto recipe=Json::parse(R"({"schema":1,"controls":[
+                {"id":"coat","name":"Coat","kind":"toggle","default":[1,0,0,1],
+                 "bindings":[{"slot":3,"surface":"overlay","parameter":"CoatVisible"}]},
+                {"id":"veil","name":"Veil","kind":"opacity","default":[1,0,0,1],
+                 "bindings":[{"slot":4,"surface":"overlay","parameter":"VeilOpacity"}]},
+                {"id":"cloth","name":"Cloth","kind":"color","default":[1,1,1,1],
+                 "bindings":[{"slot":5,"parameter":"ClothColor"}]}],
+                "palettes":[{"id":"crimson","name":"Crimson","values":{"cloth":[0.6,0.1,0.2,1]}}]})");
+            const auto model=ControlSet::parse(recipe);
+            Customization user; user.values["coat"]={0,0,0,1}; user.values["veil"]={.5f,0,0,1};
+            // A palette only clears the controls it sets; the user's coat and veil survive.
+            auto red=apply_customize(model,user,{{"action","palette"},{"palette","crimson"}});
+            expect(red.palette=="crimson" && red.values.at("coat")[0]==0 && red.values.at("veil")[0]==.5f,
+                   "A palette must keep the values it does not set");
+            // Original clears every value: the reset players see, which callers must avoid mid-shot.
+            expect(apply_customize(model,user,{{"action","palette"},{"palette","original"}}).values.empty(),
+                   "Original must clear all custom values");
+            rejects([&]{apply_customize(model,user,{{"action","palette"},{"palette","missing"}});});
+            // One channel per command; a whole array is not a value.
+            auto shown=apply_customize(model,user,{{"action","control"},{"control","coat"},{"channel",0},{"value",1.0}});
+            expect(shown.values.at("coat")[0]==1 && shown.values.at("veil")[0]==.5f,"A control change must touch only its control");
+            rejects([&]{apply_customize(model,user,{{"action","control"},{"control","coat"},{"value",Json::array({1,0,0,1})}});});
+            rejects([&]{apply_customize(model,user,{{"action","control"},{"control","coat"},{"channel",0},{"value",0.5}});});   // fractional toggle
+            rejects([&]{apply_customize(model,user,{{"action","control"},{"control","nope"},{"channel",0},{"value",1.0}});});
+            rejects([&]{apply_customize(model,user,{{"action","control"},{"control","coat"},{"channel",7},{"value",1.0}});});
+            // A swatch sets three channels at once and clamps; scalars refuse it.
+            auto white=apply_customize(model,user,{{"action","control"},{"control","cloth"},{"rgb",Json::array({1.0,1.0,1.0})}});
+            expect(white.values.at("cloth")[0]==1 && white.values.at("cloth")[3]==1,"A swatch must set the colour and keep alpha");
+            rejects([&]{apply_customize(model,user,{{"action","control"},{"control","veil"},{"rgb",Json::array({1,1,1})}});});
+            rejects([&]{apply_customize(model,user,{{"action","control"},{"control","cloth"},{"rgb",Json::array({1,1})}});});
+            // Reset and the 0.4 alias names behave like the request path.
+            expect(!apply_customize(model,user,{{"action","reset_control"},{"control","coat"}}).values.contains("coat"),
+                   "reset_control must drop the override");
+            expect(!apply_customize(model,user,{{"action","reset_color"},{"control","veil"}}).values.contains("veil"),
+                   "reset_color must stay an alias of reset_control");
+            rejects([&]{apply_customize(model,user,{{"action","tint"},{"group","outfit"}});});
+            // Restoring a snapshot gives back the exact look, minus parts this outfit lacks.
+            auto snapshot=red.json();
+            expect(restore_customization(model,snapshot)==red,"A snapshot must restore the same customization");
+            snapshot["values"]["gone"]=Json::array({1,0,0,1});
+            expect(!restore_customization(model,snapshot).values.contains("gone"),"Unknown parts must be dropped on restore");
+            // The input is never modified (callers keep their snapshot).
+            expect(user.values.at("coat")[0]==0 && user.palette=="original","apply_customize must not mutate its input");
+        }
         std::cout<<checks<<" control behavior checks passed\n";
     } catch(const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }
 }
