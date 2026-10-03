@@ -423,9 +423,13 @@ static bool is_compatible_skeleton(UObject* before_mesh, UObject* target_mesh) {
     return compatible_standard_skeletons(narrow(before_skel->GetPathName()),
                                          narrow(target_skel->GetPathName()));
 }
+#include "mesh_animation_layers.inl"
 static void set_mesh(UObject* component, UObject* mesh) {
+    if (mesh_asset(component) == mesh) return;
+    mesh_animation_layers::Snapshot layers(component);
     Call call(component, L"SetSkeletalMeshAsset", 1); call.set(L"NewMesh", mesh); call.run();
     if (mesh_asset(component) != mesh) throw std::runtime_error("Mesh read-back did not confirm replacement");
+    layers.restore(component);
 }
 static FScriptArrayHelper overrides(UObject* component) {
     auto* p=component->GetPropertyByNameInChain(L"OverrideMaterials");
