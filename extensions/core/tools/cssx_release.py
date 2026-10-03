@@ -167,14 +167,22 @@ def git(*args: str, cwd: Path = REPO) -> str:
     return subprocess.run(['git', *args], cwd=cwd, check=True, capture_output=True, text=True).stdout.strip()
 
 
-def build(tag: str, output: Path) -> list[Path]:
+def build(tag: str, output: Path, here: bool = False) -> list[Path]:
     version = (ROOT / 'VERSION').read_text().strip()
     if not re.fullmatch(r'\d+\.\d+\.\d+', version):
         raise ValueError('VERSION must be X.Y.Z')
     commit = git('rev-list', '-n', '1', tag)
+    if here:
+        # Build in this checkout, like tools/css_release.py: it must sit exactly on the tag and be
+        # clean, so the archive matches the tag without a second working tree.
+        if git('rev-parse', 'HEAD') != commit:
+            raise ValueError(f'--here needs the checkout on {tag}')
+        if git('status', '--porcelain', '--untracked-files=normal'):
+            raise ValueError('--here needs a clean checkout')
     with tempfile.TemporaryDirectory(prefix='cssx-tag-') as temporary:
-        tree = Path(temporary) / 'src'
-        subprocess.run(['git', 'worktree', 'add', '--detach', str(tree), commit], cwd=REPO, check=True, capture_output=True)
+        tree = REPO if here else Path(temporary) / 'src'
+        if not here:
+            subprocess.run(['git', 'worktree', 'add', '--detach', str(tree), commit], cwd=REPO, check=True, capture_output=True)
         try:
             core = tree / 'extensions/core'
             if (core / 'VERSION').read_text().strip() != version:
@@ -224,17 +232,19 @@ def build(tag: str, output: Path) -> list[Path]:
                 shutil.copy2(out / name, fwdir / f'{name}.{built}.built')
             return [fw, cm, pf, tv, ci]
         finally:
-            subprocess.run(['git', 'worktree', 'remove', '--force', str(tree)], cwd=REPO, check=False, capture_output=True)
+            if not here:
+                subprocess.run(['git', 'worktree', 'remove', '--force', str(tree)], cwd=REPO, check=False, capture_output=True)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest='cmd', required=True)
     b = sub.add_parser('build'); b.add_argument('--tag', required=True); b.add_argument('--output', type=Path, default=ROOT / 'dist')
+    b.add_argument('--here', action='store_true', help='build in this checkout (clean, on the tag) instead of a temporary worktree')
     v = sub.add_parser('verify'); v.add_argument('archives', nargs='+', type=Path)
     args = parser.parse_args()
     if args.cmd == 'build':
-        for path in build(args.tag, args.output):
+        for path in build(args.tag, args.output, args.here):
             print(path, digest(path.read_bytes()))
     else:
         for path in args.archives:

@@ -1,0 +1,55 @@
+CINE is a cinematic camera for CSSX. It flies the camera and walks your character, so you can record showcase videos of your shells and outfits with your own recorder (OBS, ShadowPlay, Steam recording, anything).
+
+[size=4][b]Features[/b][/size]
+[list]
+[*][b]Seven presets.[/b] Fashion Walk 360 walks your recorded route while the camera circles her once and settles on your own final framing. Pose Glide 3, 5, 7 and 10 s give an idle pose one smooth arc. Turntable makes a slow full circle. Photo Orbit holds a set of standard angles for stills.
+[*][b]Your route, your last shot.[/b] Walk the path you want once and CINE records it. Frame the ending with the normal game camera and save it.
+[*][b]A real walk.[/b] On walk takes she moves at a walking pace with the walking animation, eases in from standing and slows before she stops.
+[*][b]Look track.[/b] With CSS installed, CINE can cycle your outfit's palettes during the shot. Afterwards your own look comes back exactly as it was and is saved.
+[*][b]Clean frames.[/b] The game HUD is hidden in Cine World, and nothing from CINE is drawn while a take runs. Optional frame guides for 16:9, 9:16, 1:1 and 2.39:1 help you frame before you roll.
+[*][b]Ease in at walls.[/b] Before a take, CINE checks the camera path and moves the camera closer where it would go through a wall.
+[*][b]Shareable presets.[/b] Presets are plain .cine.json files in the presets folder. Copy one, change it and reload, or share it with others.
+[/list]
+
+[size=4][b]How to use it[/b][/size]
+[list=1]
+[*]Open CSSX (F6 or the CSSX tab in the Player Menu) and go to CINE.
+[*]For a walk: Route > Record route. Walk your path at a normal pace, then stand still for 3 seconds.
+[*]Stand her where the walk should end, frame her with the game camera, then press F7 (or Route > Use the current view as final shot).
+[*]Pick a preset, press Enter Cine World, start your recorder and press F8.
+[/list]
+
+Keys in Cine World: [b]F8[/b] roll a take, [b]F9[/b] cancel a take or leave Cine World, [b]F10[/b] change the frame guide, [b]F7[/b] save the final shot. The countdown before each take (0 to 10 s) gives you time to start recording; trim it from the video afterwards.
+
+[size=4][b]Install[/b][/size]
+[list=1]
+[*]Install CSSX 1.3.0 or newer (in ue4ss/Mods/CSSX/).
+[*]For the look track, install CSS 1.0.0-beta.9 or newer. Without it the camera works and the look track is off.
+[*]Close the game and extract the [b]eins0fx.cine[/b] folder into [b]ue4ss/Mods/CSSX/extensions/[/b].
+[/list]
+
+[code]Sparta/MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/extensions/
+`-- eins0fx.cine/
+    |-- README.txt
+    |-- cine.dll
+    |-- extension.json
+    |-- menu.json
+    `-- presets/
+        |-- fashion-walk-360.cine.json
+        |-- photo-orbit.cine.json
+        |-- pose-glide-3.cine.json
+        |-- pose-glide-5.cine.json
+        |-- pose-glide-7.cine.json
+        |-- pose-glide-10.cine.json
+        `-- turntable.cine.json[/code]
+
+Do not add another folder level around the extension.
+
+[size=4][b]Behavior and limits[/b][/size]
+CINE does not record video itself; use your own recorder. Hotkeys are keyboard only, because the D-pad uses items in Mortal Shell II. A take is cancelled and everything is put back when a menu opens, the world changes (loading screen, travel, death) or you press F9. Walk takes need open ground along the route; CINE follows the path you recorded and does not plan around enemies.
+
+[size=4][b]Source[/b][/size]
+CINE is open source in the [url=https://github.com/ngodn/CustomShellSystem/tree/main/extensions/cine]CustomShellSystem repository[/url]. The preset format is documented there.
+
+[size=4][b]Credits[/b][/size]
+CINE by _eins0fx. Thanks to the UE4SS contributors.

@@ -3,7 +3,7 @@
 Draft, updated with every release candidate. Player-facing wording; the
 evidence behind each line is in `integration-tests.md` and `performance.md`.
 
-## CSSX 1.3.0 and CINE 1.0.0 (unreleased)
+## CSSX 1.3.0 and CINE 1.0.0
 
 - New extension, CINE: a cinematic camera for showcase videos. Enter Cine World
   from the CSSX tab, record the walk you want, frame the last shot and press F8.

@@ -1,0 +1,16 @@
+[b]CSSX CINE 1.0.0[/b] (2026-10-03)
+
+Hey everyone. First release of CINE, a cinematic camera for showing off your shells and outfits.
+
+[list]
+[*]Seven presets: Fashion Walk 360, Pose Glide 3, 5, 7 and 10 s, Turntable and Photo Orbit.[/*]
+[*]Record your own walking route and frame your own last shot.[/*]
+[*]A real walking pace on walk takes, not the scripted jog.[/*]
+[*]A look track that cycles your CSS palettes during the shot and puts your own look back afterwards.[/*]
+[*]Frame guides for 16:9, 9:16, 1:1 and 2.39:1.[/*]
+[*]Presets are plain JSON files you can copy, edit and share.[/*]
+[/list]
+
+Requires CSSX 1.3.0. The look track also needs CSS 1.0.0-beta.9.
+
+[url=https://github.com/ngodn/CustomShellSystem/releases/tag/cssx-v1.3.0]Download CINE 1.0.0[/url]

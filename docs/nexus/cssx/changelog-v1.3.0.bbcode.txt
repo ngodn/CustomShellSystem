@@ -1,0 +1,32 @@
+[b]CSSX 1.3.0[/b] (2026-10-03)
+
+Hey everyone. This update brings a new extension, CINE, plus a way for mods to talk to each other.
+
+[size=4][b]What's new[/b][/size]
+[list]
+[*][b]CINE, a cinematic camera for showcase videos.[/b] Record the walk you want, frame the last shot, pick a preset and press F8. The camera flies the shot and she walks at a real walking pace. Record it with your own recorder. It's a separate download with its own page.[/*]
+[*][b]Mods can offer services to CSSX extensions.[/b] A native mod exports one function, and extensions find and call it. Neither side needs the other installed. CINE uses this to change CSS looks during a take. CSSX itself doesn't know about any particular mod.[/*]
+[/list]
+
+[size=4][b]Nerd corner[/b][/size]
+[list]
+[*]Two new bridge ops: [b]service.list[/b] and [b]service.call {service, version, request}[/b]. Providers export [b]cssx_services()[/b], and the contract is a small C header (include/cssx/service.h) that providers copy. CSSX asks the provider for its table before every call, so a mod that hot-swaps its DLL is never called stale. Details are in docs/abi.md.[/*]
+[/list]
+
+[size=4][b]When something breaks[/b][/size]
+Send the logs with your comment, or PM them with a screenshot:
+[code]MortalShell2/Binaries/Win64/ue4ss/UE4SS.log
+MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/CSSX.log[/code]
+
+[size=4][b]Thank you[/b][/size]
+The support, the bug reports, the requests, it's what keeps me going on this. If you want to show some love, an endorse and a vote on the mod page go a long way, and if you feel like chipping in you can buy me a pack of cigarettes on [url=https://ko-fi.com/maplestar86]Ko-fi[/url] or [url=https://www.nexusmods.com/Core/Libs/Common/Widgets/PayPalPopUp?user=168682108]PayPal[/url]. Zero pressure, CSSX stays free no matter what.
+
+And a big thank you to the people who already did:
+[list]
+[*][DONATOR NAMES]
+[/list]
+
+[b]Updating from 1.2.1:[/b]
+Close the game, extract the ZIP into [b]MortalShell2/Binaries/Win64/ue4ss/Mods/[/b] so it lands in [b]Mods/CSSX/[/b] and overwrite. Your settings and extensions are kept. Cheat Menu 1.1.1 and Traverse 1.0.1 work unchanged.
+
+[url=https://github.com/ngodn/CustomShellSystem/releases/tag/cssx-v1.3.0]Download CSSX 1.3.0[/url]
