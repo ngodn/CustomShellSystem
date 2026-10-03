@@ -4,7 +4,7 @@ Hey everyone. This update brings a new extension, CINE, plus a way for mods to t
 
 [size=4][b]What's new[/b][/size]
 [list]
-[*][b]CINE, a cinematic camera for showcase videos.[/b] Record the walk you want, frame the last shot, pick a preset and press F8. The camera flies the shot and she walks at a real walking pace. Record it with your own recorder. It's a separate download with its own page.[/*]
+[*][b]CINE[/b], a new extension for making showcase videos. Record a walk, frame your last shot, pick a camera preset and press F8, then record it with your own recorder. It's a separate download with its own page.[/*]
 [*][b]Mods can offer services to CSSX extensions.[/b] A native mod exports one function, and extensions find and call it. Neither side needs the other installed. CINE uses this to change CSS looks during a take. CSSX itself doesn't know about any particular mod.[/*]
 [/list]
 

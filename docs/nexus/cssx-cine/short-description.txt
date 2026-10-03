@@ -1,1 +1,1 @@
-A cinematic camera for showcase videos: record your walk, frame your last shot, pick a preset and press F8. Real walking pace, frame guides, shareable presets, and CSS palette animation.
+A CSSX extension for showcase videos. Record your walk, frame your last shot, pick a camera preset and press F8, then record it with your own recorder. With CSS it can also flip through your palettes during the shot.

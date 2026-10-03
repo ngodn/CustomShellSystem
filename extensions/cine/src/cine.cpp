@@ -141,14 +141,17 @@ int Extension::render(const CssxFrame* f) {
 void Extension::tick(double seconds) {
     if (stopped_) return;
     try {
-        if (mode_ == Mode::Idle && !capture_pending_) return;   // free outside Cine World
+        if (mode_ == Mode::Idle && !capture_pending_ && look_restore_.is_null()) return;   // free outside Cine World
         const double dt = std::isfinite(seconds) ? std::clamp(seconds, 0.0, 1.0) : 0.0;
-        // A loading screen, death or travel tears the world down: every handle is dead.
+        // A loading screen, death or travel tears the world down: every handle is dead. The CSS
+        // look is not a world object, so a look the take changed is still put back (retried).
         if (mode_ != Mode::Idle && mode_ != Mode::RecordWait && frame_.valid && frame_.world != world_) {
+            if (take_ && !take_->snapshot.is_null() && take_->step_next > 0) queue_look_restore(take_->snapshot);
             rig_.forget(); guides_.forget(); take_.reset(); samples_.clear(); mode_ = Mode::Idle; start_pending_ = false;
             report("The world changed (loading, travel or death); CINE stopped and the game camera is back.");
             return;
         }
+        if (!look_restore_.is_null()) retry_look_restore(dt);
         if (take_ && frame_.valid && frame_.pawn != take_->pawn && (mode_ == Mode::Running || mode_ == Mode::Countdown)) {
             finish_take("The player character changed; the take was cancelled.", true); return;
         }
@@ -230,6 +233,11 @@ void Extension::exit_world(const std::string& why) {
 void Extension::start_take() {
     if (mode_ != Mode::Armed) return;
     if (!current_preset()) throw std::runtime_error("No preset is available");
+    // A look from the last take still waiting to go back would become the new "own look".
+    if (!look_restore_.is_null()) {
+        if (!restore_look(look_restore_)) throw std::runtime_error("Still putting your look back from the last take; try again in a moment");
+        look_restore_ = nullptr;
+    }
     take_ = std::make_unique<Take>();
     take_->world = frame_.world; take_->pawn = frame_.pawn;
     mode_ = Mode::Preparing;
@@ -297,6 +305,7 @@ void Extension::prepare() {
                 }
                 std::sort(t.steps.begin(), t.steps.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
                 t.look = !t.steps.empty();
+                if (!t.look && settings_.look == "preset") t.note = "Look track off: this preset has no look steps.";
             } catch (const std::exception& e) { t.look = false; t.note = std::string("Look track off: ") + e.what() + "."; report(t.note); }
         }
         if (p.kind == ShotKind::Walk) rig_.place_player(t.route->start, t.route->start_yaw);
@@ -445,14 +454,34 @@ void Extension::run() {
     if (t.clock >= tl.total) finish_take("Take finished.", false);
 }
 
+// Put the player's own look back and let CSS save it (persist=true). False when CSS refused.
+bool Extension::restore_look(const Json& snapshot) {
+    try { rig_.css({{"action", "apply"}, {"persist", true}, {"commands", Json::array({{{"action", "restore"}, {"customize", snapshot}}})}}); return true; }
+    catch (const std::exception& e) { look_restore_error_ = e.what(); return false; }
+}
+
+void Extension::queue_look_restore(const Json& snapshot) {
+    look_restore_ = snapshot; look_restore_wait_ = 0; look_restore_left_ = look_restore_window;
+}
+
+void Extension::retry_look_restore(double dt) {
+    look_restore_wait_ -= dt; look_restore_left_ -= dt;
+    if (look_restore_wait_ > 0) return;
+    look_restore_wait_ = 1.0;
+    if (restore_look(look_restore_)) { look_restore_ = nullptr; report("Your own look is back."); return; }
+    if (look_restore_left_ <= 0) {
+        look_restore_ = nullptr;
+        report("Could not put your look back (" + look_restore_error_ + "). Pick your palette again on the CSS page.", true);
+    }
+}
+
 void Extension::finish_take(const std::string& why, bool failed) {
     if (!take_) return;
     std::vector<std::string> failures;
     try { failures = rig_.restore_take(); } catch (const std::exception& e) { failures.push_back(e.what()); }
     if (!take_->snapshot.is_null() && take_->step_next > 0) {
         // Put the modder's own look back and let CSS save it (persist=true).
-        try { rig_.css({{"action", "apply"}, {"persist", true}, {"commands", Json::array({{{"action", "restore"}, {"customize", take_->snapshot}}})}}); }
-        catch (const std::exception& e) { failures.push_back(std::string("look: ") + e.what()); }
+        if (!restore_look(take_->snapshot)) queue_look_restore(take_->snapshot);   // CSS busy or between looks: retried each second
     }
     const std::string note = take_->note;
     take_.reset();
@@ -572,6 +601,7 @@ Json Extension::status() const {
 bool Extension::stop() {
     if (stopped_) return true;
     try { exit_world("CINE stopped."); } catch (...) {}
+    if (!look_restore_.is_null() && restore_look(look_restore_)) look_restore_ = nullptr;   // last chance before unload
     stopped_ = true;
     return true;   // never hold the DLL: everything owned was attempted
 }

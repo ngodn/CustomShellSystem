@@ -32,6 +32,7 @@ struct Host {
     Json keys = Json::object();
     std::vector<Json> css_applies;
     bool css_present = true;
+    int css_refuse_restores = 0;   // the next N restore applies fail like CSS between looks
     size_t requests = 0;
     CssxHost api{CSSX_ABI, sizeof(CssxHost), this, request};
     static int request(void* context, const char* value, CssxSink sink, void* output) {
@@ -62,6 +63,9 @@ struct Host {
                 return {{"palette", "original"}, {"customize", {{"palette", "original"}, {"values", {{"coat", {1, 0, 0, 1}}}}}},
                         {"palettes", Json::array({{{"id", "original"}}, {{"id", "crimson"}}, {{"id", "midnight"}}})},
                         {"controls", Json::array({{{"id", "coat"}, {"kind", "toggle"}}, {{"id", "cloth"}, {"kind", "color"}}})}};
+            if (css_refuse_restores > 0 && r.value("commands", Json::array()).size() && r["commands"][0].value("action", std::string()) == "restore") {
+                --css_refuse_restores; throw std::runtime_error("No CSS appearance is worn");
+            }
             css_applies.push_back(r);
             return {{"palette", "x"}};
         }
@@ -148,6 +152,7 @@ int main(int argc, char** argv) {
         {   // Idle costs nothing; menu binds; broken preset files are skipped, not fatal.
             Rig r(dir);
             cssx::validate_model(cssx::bind_menu(definition, r.ext->model()));
+            expect(r.ext->model()["values"]["look"] == "off", "the look track is off until asked for");
             expect(r.ext->model()["values"]["status"].get<std::string>().find("skipped") != std::string::npos, "a broken preset is reported");
             r.step();
             const auto before = r.host.requests;
@@ -271,6 +276,51 @@ int main(int argc, char** argv) {
             r.steps(20);
             expect(r.host.requests == before, "after a world change CINE is idle");
             expect(r.status().find("world changed") != std::string::npos, "the user is told why");
+        }
+        {   // World change mid-take with the palette track: the look still goes back, retried until CSS takes it.
+            Rig r(dir);
+            r.step();
+            r.ext->event({{"id", "preset"}, {"value", "pose-glide-10"}});
+            r.ext->event({{"id", "look"}, {"value", "palettes"}});
+            r.ext->event({{"id", "countdown"}, {"value", 0}});
+            r.ext->event({{"id", "enter"}});
+            r.press("F8"); r.steps(40);
+            bool changed = false;
+            for (const auto& a : r.host.css_applies) if (a["commands"][0]["action"] == "palette") changed = true;
+            expect(changed, "a palette was shown before the world changed");
+            r.host.css_refuse_restores = 3;
+            r.world = 2; r.steps(60);
+            bool restored = false;
+            for (const auto& a : r.host.css_applies) if (a.value("persist", false) && a["commands"][0]["action"] == "restore") restored = true;
+            expect(restored && r.host.css_refuse_restores == 0, "the own look is put back once CSS accepts it");
+            expect(r.status().find("look is back") != std::string::npos, "the user is told: " + r.status());
+            const auto before = r.host.requests;
+            r.steps(20);
+            expect(r.host.requests == before, "idle again after the restore");
+        }
+        {   // "From the preset" on a preset without look steps says so instead of doing nothing.
+            Rig r(dir);
+            r.step();
+            r.ext->event({{"id", "preset"}, {"value", "pose-glide-3"}});
+            r.ext->event({{"id", "look"}, {"value", "preset"}});
+            r.ext->event({{"id", "countdown"}, {"value", 0}});
+            r.ext->event({{"id", "enter"}});
+            r.press("F8"); r.steps(6);
+            expect(r.status().find("no look steps") != std::string::npos, "no-steps preset is explained: " + r.status());
+            expect(r.host.css_applies.empty(), "and the look is not touched");
+        }
+        {   // A restore that fails at the end of a take is retried, and blocks a new look snapshot until done.
+            Rig r(dir);
+            r.step();
+            r.ext->event({{"id", "preset"}, {"value", "pose-glide-3"}});
+            r.ext->event({{"id", "look"}, {"value", "palettes"}});
+            r.ext->event({{"id", "countdown"}, {"value", 0}});
+            r.ext->event({{"id", "enter"}});
+            r.host.css_refuse_restores = 2;
+            r.press("F8"); r.steps(45);
+            bool restored = false;
+            for (const auto& a : r.host.css_applies) if (a.value("persist", false) && a["commands"][0]["action"] == "restore") restored = true;
+            expect(restored, "the end-of-take restore went through on a retry");
         }
         {   // stop() mid-take restores everything including the HUD; CSS missing keeps the camera working.
             Rig r(dir);

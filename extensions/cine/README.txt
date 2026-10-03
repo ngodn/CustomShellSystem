@@ -1,4 +1,4 @@
-CINE 1.0.0 for CSSX
+CINE 1.0.1 for CSSX
 ===================
 
 Cinematic camera for showcases. CINE moves the camera and the character; you record with

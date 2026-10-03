@@ -38,7 +38,7 @@ private:
     struct Settings {
         std::string preset = "fashion-walk-360";
         double zoom = 1.0, height = 0.0, fov_scale = 1.0, countdown = 3.0;
-        std::string guide = "off", look = "preset";
+        std::string guide = "off", look = "off";   // the look track only runs when asked for
         bool walls = true;
     };
     // One take, built while Preparing and played while Running.
@@ -78,6 +78,9 @@ private:
     void poll_keys();
     void report(const std::string& message, bool error = false);
     std::string with_note(const std::string& message) const;
+    bool restore_look(const Json& snapshot);
+    void queue_look_restore(const Json& snapshot);
+    void retry_look_restore(double dt);
 
     // Take helpers.
     Vec3 her_position() const { return frame_.position; }
@@ -105,6 +108,10 @@ private:
     std::vector<bool> keys_previous_;
     std::string status_ = "Ready", error_;
     bool stopped_ = false;
+    // A take's look the restore could not put back yet (world change, CSS busy): retried once a
+    // second for up to two minutes, in any mode.
+    static constexpr double look_restore_window = 120.0;
+    Json look_restore_; double look_restore_wait_ = 0, look_restore_left_ = 0; std::string look_restore_error_;
 };
 
 } // namespace cine

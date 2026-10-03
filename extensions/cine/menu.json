@@ -46,7 +46,7 @@
       "title": "Look",
       "description": "Needs Custom Shell System 1.0.0-beta.9 or newer. Your own customization is saved before the take and put back after it.",
       "controls": [
-        {"id": "look", "type": "radio", "label": "Look track", "value": "preset", "options": [{"id": "off", "label": "Off"}, {"id": "preset", "label": "From the preset"}, {"id": "palettes", "label": "Cycle palettes"}], "description": "From the preset: the preset's own palette and outfit-piece steps. Cycle palettes: every palette of the worn outfit in turn, then your own look."},
+        {"id": "look", "type": "radio", "label": "Look track", "value": "off", "options": [{"id": "off", "label": "Off"}, {"id": "palettes", "label": "Cycle palettes"}, {"id": "preset", "label": "From the preset"}], "description": "Cycle palettes: every palette of the worn outfit in turn, then your own look. From the preset: look steps written in a preset file; the shipped presets have none."},
         {"id": "look_info", "type": "label", "label": "This take", "description": "What the look track will do."}
       ]
     }

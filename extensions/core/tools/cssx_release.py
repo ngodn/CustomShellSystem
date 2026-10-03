@@ -220,7 +220,7 @@ def build(tag: str, output: Path, here: bool = False) -> list[Path]:
                 write_zip(tv, tfiles, dict(common, version=tvers, product='CSSX Traverse', requires='CSSX ' + version,
                                            manifest_name='eins0fx.traverse/release.json'), stamp)
             civers, cifiles = cine_files(out)
-            cidir = output / f'cssx-cine-v{civers}'
+            cidir = output / f'cine-v{civers}'
             cidir.mkdir(parents=True, exist_ok=True)
             ci = cidir / f'MSII-CINE-v{civers}.zip'
             if ci.exists():
