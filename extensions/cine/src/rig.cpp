@@ -11,7 +11,8 @@ namespace {
 constexpr int latent_uuid = 7301;
 constexpr const char* speed_tag = "Movement.Speed.CinematicWalk";
 constexpr const char* hud_class = "/Game/Sparta/UI/Player/WBP_Player_HUD.WBP_Player_HUD_C";
-constexpr const char* player_library = "/Game/Sparta/Core/Player/BPFL_Player.BPFL_Player_C";
+constexpr const char* player_library = "/Game/Sparta/Core/Player/BPFL_Player.BPFL_Player_C";   // load takes the path
+constexpr const char* player_library_class = "BPFL_Player_C";                                     // class_default takes the class name
 constexpr int visibility_hidden = 2;
 
 Json vec(Vec3 v) { return {{"X", v.x}, {"Y", v.y}, {"Z", v.z}}; }
@@ -48,9 +49,11 @@ void Rig::resolve() {
     widgets_ = cdo("/Script/UMG.Default__WidgetBlueprintLibrary");
     camera_class_ = host_.request({{"op", "load"}, {"path", "/Script/Engine.CameraActor"}});
     host_.request({{"op", "load"}, {"path", player_library}});
-    player_lib_ = host_.request({{"op", "class_default"}, {"class", player_library}});
-    for (const auto* h : {&movement_, &mesh_, &camera_manager_, &camera_class_, &player_lib_})
-        if (!is_handle(*h)) { forget(); throw std::runtime_error("The player is not fully loaded yet"); }
+    player_lib_ = host_.request({{"op", "class_default"}, {"class", player_library_class}});
+    const std::pair<const Json*, const char*> parts[]{{&movement_, "movement"}, {&mesh_, "mesh"}, {&camera_manager_, "camera manager"},
+                                                      {&camera_class_, "CameraActor class"}, {&player_lib_, "BPFL_Player"}};
+    for (const auto& [h, what] : parts)
+        if (!is_handle(*h)) { forget(); throw std::runtime_error(std::string("The player is not fully loaded yet (no ") + what + ")"); }
 }
 
 void Rig::forget() {

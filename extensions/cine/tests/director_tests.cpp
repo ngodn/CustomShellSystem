@@ -47,7 +47,9 @@ struct Host {
         if (op == "log" || op == "invalidate" || op == "menu.close") return nullptr;
         if (op == "extension.info") return {{"directory", dir.string()}, {"id", "eins0fx.cine"}};
         if (op == "player") return {{"pawn", object(1)}, {"controller", object(2)}};
-        if (op == "find" || op == "load" || op == "class_default") return object(next++);
+        if (op == "find" || op == "load") return object(next++);
+        // Like the real bridge: class_default resolves a class name, never an asset path.
+        if (op == "class_default") { const auto c = j.at("class").get<std::string>(); return c.find('/') == std::string::npos && c.size() <= 96 ? object(next++) : Json(nullptr); }
         if (op == "valid") return !destroyed.contains(id_of(j.at("target")));
         if (op == "input.keys") { Json r = Json::object(); for (const auto& k : j.at("keys")) r[k.get<std::string>()] = keys.value(k.get<std::string>(), false); return r; }
         if (op == "get") return object(next++);
