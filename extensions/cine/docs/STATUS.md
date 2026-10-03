@@ -4,9 +4,10 @@ Read this first after any break. Design: `DESIGN.md` (same folder).
 
 ## Where the work is
 
-- Worktree `CustomShellSystem/work/cine`, branch `feature/cine` (from `0089a27`).
-- The main checkout `CustomShellSystem/` (branch `main`) is never edited for CINE.
+- The main checkout `CustomShellSystem/`, branch `feature/cine` (from `0089a27`).
+- No git worktrees for this project (the user's rule). Check the branch before editing.
 - Nothing is pushed or merged. The user decides when.
+- Build dirs: `build/cine-host`, `build/cine-win`, `build/cine-cssx-host`, `build/cine-cssx-win`.
 
 ## Baseline (before any change)
 
@@ -20,12 +21,12 @@ Read this first after any break. Design: `DESIGN.md` (same folder).
 | --- | --- |
 | `a3392ba` | CSS: `apply_customize` / `restore_customization` shared by the request path; exports `css_customize_v1` / `css_customize_abi`; 25 new unit checks; CSS 14/14 |
 | `3381ef0` | CSSX: `css.customize` host op (per-call module lookup, hot-swap safe), ABI doc; CSSX 4/4, 0 warnings |
+| `93289ef` | CINE: `shot` (route, orbit curve, wall profile) and `preset` (format, validation, timeline) sources |
 
 ## In progress
 
-- CINE extension sources under `extensions/cine/src`: `shot` (route, orbit curve, wall profile),
-  `preset` (format, validation, timeline) written; still to write: rig, director, look,
-  guides, extension/menu, main, presets, CMake wiring, tests.
+- CINE extension: still to write rig, director, look, guides, extension/menu, main,
+  presets, CMake wiring, tests.
 
 ## Next
 
