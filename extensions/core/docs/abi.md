@@ -45,6 +45,19 @@ Host: `menu.status` → `{menu_open, game_menu_open}`; `menu.close`;
 `frame.brief` → `{hz, median_ms, frames, core_mean_us, core_max_us, core_p99_us}` (last ten seconds);
 `input.focus`.
 
+CSS (CSSX 1.3.0, needs CSS 1.0.0-beta.9 or newer): `css.customize {request}` forwards
+`request` to the live CSS core's `css_customize_v1` and returns its reply.
+`{"action":"describe"}` → `{shell, outfit, variant, palette, customize, palettes:[{id,name}],
+controls:[{id,name,kind,group,role,scalar}]}`. `{"action":"apply","commands":[...],
+"persist":bool}` applies 1-256 commands atomically (`palette {palette}`, `control
+{control, channel, value | rgb | delta}`, `reset_control {control}`, `restore {customize}`)
+and returns the new `{palette, customize, ...}`; CSS applies it on its next pass.
+`persist:false` keeps a transient look out of CSS's saved state (restore with `true`).
+Choosing the `original` palette clears every custom value, as on the CSS page. Errors:
+"CSS is not installed", "CSS is installed but not running yet", "CSS is too old for
+css.customize ...", "CSS is busy ..." (called during CSS's own tick, e.g. from a hook),
+"No CSS appearance is worn", and CSS's validation messages. Game thread only, like every op.
+
 Hooks: `hooks.status`, `hooks.add {target,pawn,controller,function,mode,
 value|after, seal}`, `hooks.remove {id}`, `hooks.clear`. A Blueprint-function
 rule installs one global script-function interception for as long as any such

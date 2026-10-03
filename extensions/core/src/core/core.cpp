@@ -76,9 +76,50 @@ Json Core::service(const Json& request) {
     if(op=="menu.status") return {{"menu_open",menu_ && menu_->is_open()},{"game_menu_open",game_menu_open()}};
     if(op=="menu.close") { if(menu_) menu_->close(); return true; }
     if(op=="frame.brief") return perf_brief();   // {hz, median_ms, core_mean_us, ...} over the last ten seconds
+    if(op=="css.customize") return css_customize(request.at("request"));
     if(op=="input.focus") { DWORD pid=0; const auto window=GetForegroundWindow(); if(window) GetWindowThreadProcessId(window,&pid); return window && pid==GetCurrentProcessId(); }
     if(!engine_) throw std::runtime_error("Game thread is not initialized");
     return bridge_->request(player_,request);
+}
+Json Core::css_customize(const Json& request) {
+    using Abi=uint32_t(*)() noexcept;
+    using Sink=void(*)(void*,const char*,size_t) noexcept;
+    using Customize=int(*)(const char*,size_t,Sink,void*) noexcept;
+    // Still the same module? A hot-swapped CSS core unloads the old DLL; a reused handle
+    // would report a different path.
+    auto current=[&]{
+        if(!css_module_) return false;
+        wchar_t path[MAX_PATH*4]{};
+        return GetModuleFileNameW(static_cast<HMODULE>(css_module_),path,MAX_PATH*4) && css_module_path_==path;
+    };
+    if(!current()) {
+        css_module_=nullptr; css_module_path_.clear();
+        HMODULE modules[1024]; DWORD needed=0;
+        if(EnumProcessModules(GetCurrentProcess(),modules,sizeof modules,&needed)) {
+            const auto count=std::min<size_t>(needed/sizeof(HMODULE),1024);
+            for(size_t i=0;i<count && !css_module_;++i) {
+                wchar_t path[MAX_PATH*4]{};
+                if(!GetModuleFileNameW(modules[i],path,MAX_PATH*4)) continue;
+                const auto name=lower(path_utf8(fs::path(path).filename()));
+                const auto folder=lower(path_utf8(fs::path(path).parent_path()));
+                if(name.starts_with("css_core") && folder.ends_with("customshellsystem/cores")) { css_module_=modules[i]; css_module_path_=path; }
+            }
+        }
+    }
+    if(!css_module_) throw std::runtime_error(css_present_?"CSS is installed but not running yet":"CSS is not installed");
+    const auto module=static_cast<HMODULE>(css_module_);
+    const auto abi=reinterpret_cast<Abi>(reinterpret_cast<void*>(GetProcAddress(module,"css_customize_abi")));
+    const auto call=reinterpret_cast<Customize>(reinterpret_cast<void*>(GetProcAddress(module,"css_customize_v1")));
+    if(!abi || !call || abi()<1) throw std::runtime_error("CSS is too old for css.customize (needs CSS 1.0.0-beta.9 or newer)");
+    const auto text=request.dump();
+    std::string reply;
+    const int ok=call(text.data(),text.size(),[](void* out,const char* data,size_t size) noexcept {
+        try { static_cast<std::string*>(out)->assign(data,size); } catch(...) {}
+    },&reply);
+    auto result=reply.empty()?Json(nullptr):Json::parse(reply,nullptr,false);
+    if(result.is_discarded()) throw std::runtime_error("CSS returned an unreadable reply");
+    if(!ok) throw std::runtime_error(result.is_object()?result.value("error",std::string("CSS refused the change")):std::string("CSS refused the change"));
+    return result;
 }
 void Core::hotkey() {
     // On the CSSX page: close the Player Menu. Elsewhere: open it on the CSSX
