@@ -29,7 +29,7 @@ Read this first after any break. Design: `DESIGN.md` (same folder).
 
 | `242b592` | Live test 1: Enter failed ("player is not fully loaded"). `class_default` takes a class name, not a path; fixed, mock hardened to match the bridge. Live-probed every read-only call CINE makes at resolve: all good. Traverse "No zone data on The Marrow Keep" is older (since 1.0.1, 28 Sept), not this branch. |
 
-| 1.0.1 | Look track defaults to Off (shipped presets have no look steps; "From the preset" now says so). The look is restored after a world change or a refused end-of-take restore: retried 1/s for 120 s, new takes wait for it. 51 director checks. Released as tag `cine-v1.0.1`. |
+| fixes before release | Look track defaults to Off (shipped presets have no look steps; "From the preset" now says so). The look is restored after a world change or a refused end-of-take restore: retried 1/s for 120 s, new takes wait for it. 51 director checks. Still CINE 1.0.0 (never released before); released as tag `cine-v1.0.0`. |
 
 ## Rule learned
 

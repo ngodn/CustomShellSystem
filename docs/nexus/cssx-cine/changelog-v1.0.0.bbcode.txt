@@ -1,6 +1,6 @@
-[b]CSSX CINE 1.0.1[/b] (2026-10-03)
+[b]CSSX CINE 1.0.0[/b] (2026-10-03)
 
-Hey everyone. First release of CINE on Nexus. It's a CSSX extension for making showcase videos of your character. You record it with your own recorder, CINE handles the camera.
+Hey everyone. First release of CINE. It's a CSSX extension for making showcase videos of your character. You record it with your own recorder, CINE handles the camera.
 
 [list]
 [*]7 presets: Fashion Walk 360, Pose Glide 3 / 5 / 7 / 10 s, Turntable and Photo Orbit.[/*]
@@ -14,4 +14,4 @@ Hey everyone. First release of CINE on Nexus. It's a CSSX extension for making s
 
 Needs CSSX 1.3.0. The palette part also needs CSS 1.0.0-beta.9.
 
-[url=https://github.com/ngodn/CustomShellSystem/releases/tag/cine-v1.0.1]Download CINE 1.0.1[/url]
+[url=https://github.com/ngodn/CustomShellSystem/releases/tag/cine-v1.0.0]Download CINE 1.0.0[/url]

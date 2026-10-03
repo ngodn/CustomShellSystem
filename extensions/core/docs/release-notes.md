@@ -3,14 +3,6 @@
 Draft, updated with every release candidate. Player-facing wording; the
 evidence behind each line is in `integration-tests.md` and `performance.md`.
 
-## CINE 1.0.1
-
-- The look track starts on Off; Cycle palettes turns it on. The shipped presets have no
-  look steps of their own, so "From the preset" says so on screen instead of doing nothing.
-- Your own look goes back even when a take is cut off by a loading screen, travel or
-  death: CINE retries once a second for up to two minutes until CSS takes it, and a new
-  take waits for that first.
-
 ## CSSX 1.3.0 and CINE 1.0.0
 
 - New extension, CINE: a cinematic camera for showcase videos. Enter Cine World
@@ -20,6 +12,9 @@ evidence behind each line is in `integration-tests.md` and `performance.md`.
   can cycle CSS palettes on the way. Record it with your own recorder.
 - Presets are plain `.cine.json` files in the CINE folder; drop in your own or
   share them.
+- CINE's look track starts on Off; Cycle palettes turns it on. Your own look goes back
+  after every take, also when a loading screen, travel or death cuts one off (retried
+  until CSS takes it).
 - Mods can offer services to CSSX extensions without depending on CSSX: a native
   mod exports one function, and extensions find and call it with `service.list` and
   `service.call`. CINE uses CSS's look service this way; CSSX itself knows no mod.

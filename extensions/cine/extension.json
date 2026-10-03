@@ -4,7 +4,7 @@
   "id": "eins0fx.cine",
   "title": "CINE",
   "author": "_eins0fx",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "description": "Cinematic camera for showcases: record a walk, frame your last shot, roll a preset take and capture it with your own recorder. With CSS installed it can cycle your palettes during the shot.",
   "kind": "native",
   "entry": "cine.dll",
