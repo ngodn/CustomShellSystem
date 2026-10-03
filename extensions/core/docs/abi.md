@@ -45,18 +45,18 @@ Host: `menu.status` → `{menu_open, game_menu_open}`; `menu.close`;
 `frame.brief` → `{hz, median_ms, frames, core_mean_us, core_max_us, core_p99_us}` (last ten seconds);
 `input.focus`.
 
-CSS (CSSX 1.3.0, needs CSS 1.0.0-beta.9 or newer): `css.customize {request}` forwards
-`request` to the live CSS core's `css_customize_v1` and returns its reply.
-`{"action":"describe"}` → `{shell, outfit, variant, palette, customize, palettes:[{id,name}],
-controls:[{id,name,kind,group,role,scalar}]}`. `{"action":"apply","commands":[...],
-"persist":bool}` applies 1-256 commands atomically (`palette {palette}`, `control
-{control, channel, value | rgb | delta}`, `reset_control {control}`, `restore {customize}`)
-and returns the new `{palette, customize, ...}`; CSS applies it on its next pass.
-`persist:false` keeps a transient look out of CSS's saved state (restore with `true`).
-Choosing the `original` palette clears every custom value, as on the CSS page. Errors:
-"CSS is not installed", "CSS is installed but not running yet", "CSS is too old for
-css.customize ...", "CSS is busy ..." (called during CSS's own tick, e.g. from a hook),
-"No CSS appearance is worn", and CSS's validation messages. Game thread only, like every op.
+Services (CSSX 1.3.0): `service.list` → `[{name, version, description, module}]`;
+`service.call {service, version, request}` → the provider's reply. Any native module in
+the game process can offer services by exporting `cssx_services()` (contract and rules in
+`include/cssx/service.h`); CSSX knows no service or provider names. `version` is the
+oldest format the caller understands (0 accepts any). Errors: "No service named X is
+loaded", "X is version N; this caller needs M or newer", "Invalid service name", the
+provider's own refusal text, and "X sent no reply / a reply that is not JSON / a reply
+larger than 4 MiB". CSSX asks the provider for its table before every call, so a module
+that hot-swaps or withdraws its table is never called stale; a missing service is
+rescanned at most once a second. Calls run on the game thread, like every op; extensions
+should treat a service as optional and keep working without it. The services a mod
+offers are documented by that mod (CSS: `docs/services.md` in the CSS repository).
 
 Hooks: `hooks.status`, `hooks.add {target,pawn,controller,function,mode,
 value|after, seal}`, `hooks.remove {id}`, `hooks.clear`. A Blueprint-function

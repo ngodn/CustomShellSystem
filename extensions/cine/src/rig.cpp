@@ -1,6 +1,7 @@
 #include "rig.hpp"
 #include <cmath>
 #include <numbers>
+#include <string_view>
 #include <stdexcept>
 
 namespace cine {
@@ -174,7 +175,17 @@ FinalShot Rig::capture_final(Vec3 her, double her_yaw) {
     return f;
 }
 
-Json Rig::css(const Json& request) { return host_.request({{"op", "css.customize"}, {"request", request}}); }
+// CSS's look service, through the CSSX service bus. CINE works without it: the caller turns
+// the look track off with the reason below.
+Json Rig::css(const Json& request) {
+    try { return host_.request({{"op", "service.call"}, {"service", "css.customize"}, {"version", 1}, {"request", request}}); }
+    catch (const std::exception& e) {
+        const std::string_view why = e.what();
+        if (why.starts_with("No service named")) throw std::runtime_error("CSS 1.0.0-beta.9 or newer is not running");
+        if (why.find("service.call") != std::string_view::npos) throw std::runtime_error("the look track needs CSSX 1.3.0 or newer");
+        throw;
+    }
+}
 
 bool Rig::key_down(const std::vector<std::string>& keys, std::vector<bool>& out) {
     out.assign(keys.size(), false);

@@ -52,8 +52,9 @@ struct Host {
         if (op == "input.keys") { Json r = Json::object(); for (const auto& k : j.at("keys")) r[k.get<std::string>()] = keys.value(k.get<std::string>(), false); return r; }
         if (op == "get") return object(next++);
         if (op == "set") return true;
-        if (op == "css.customize") {
-            if (!css_present) throw std::runtime_error("CSS is not installed");
+        if (op == "service.call") {
+            if (j.at("service") != "css.customize" || j.value("version", 0) != 1) throw std::runtime_error("unexpected service call");
+            if (!css_present) throw std::runtime_error("No service named css.customize is loaded");
             const auto& r = j.at("request");
             if (r.at("action") == "describe")
                 return {{"palette", "original"}, {"customize", {{"palette", "original"}, {"values", {{"coat", {1, 0, 0, 1}}}}}},
@@ -280,6 +281,7 @@ int main(int argc, char** argv) {
             r.press("F8"); r.steps(6);
             expect(!r.host.cameras.empty(), "the camera works without CSS");
             expect(r.host.css_applies.empty(), "no look changes without CSS");
+            expect(r.status().find("CSS 1.0.0-beta.9") != std::string::npos || r.error().find("CSS 1.0.0-beta.9") != std::string::npos, "the missing look service is explained: " + r.status());
             expect(r.ext->stop(), "stop succeeds");
             expect(r.host.cameras.empty() && r.host.view == 1 && r.host.hud_visibility == 4, "stop restores everything");
         }

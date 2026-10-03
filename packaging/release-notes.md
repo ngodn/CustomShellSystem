@@ -2,7 +2,7 @@
 
 ### Added
 
-- Other CSSX mods can read and change the current look through CSSX (`css.customize`): palettes, toggles, colours and sliders, either saved or just for the moment. CINE uses it to animate your outfit during a take and put your own look back afterwards.
+- Other mods can read and change the current look through CSS's `css.customize` service: palettes, toggles, colours and sliders, either saved or just for the moment. CINE uses it to animate your outfit during a take and put your own look back afterwards. CSS works the same with or without CSSX.
 
 ### CSS 1.0.0-beta.8
 

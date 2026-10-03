@@ -27,8 +27,4 @@ struct CssCore {
     void (*destroy)(void*) noexcept;
 };
 using CssGetApi = const CssCore* (*)() noexcept;   // exported as css_get_api (host abi 1) and css_get_api2 (host abi 2)
-// Customize export (core DLL symbols css_customize_abi / css_customize_v1), for in-process
-// callers such as the CSSX css.customize op. See core.cpp for the contract.
-inline constexpr uint32_t css_customize_abi_version = 1;
-using CssCustomizeSink = void (*)(void* context, const char* data, size_t size) noexcept;
 

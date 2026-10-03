@@ -24,20 +24,31 @@ Read this first after any break. Design: `DESIGN.md` (same folder).
 | `93289ef` | CINE: `shot` (route, orbit curve, wall profile) and `preset` (format, validation, timeline) sources |
 | `218de14` | CINE: shipped presets, head/capsule reference, CMake wiring, 392 logic checks |
 | `d954a1c` | CINE: rig, director, guides, menu, ABI 3 entry, 42 mock-host director checks (caught and fixed the record-from-outside bug) |
-| next | `cssx.py --cine` staging, `cssx_release.py` CINE package, unreleased notes, decision D15 |
+| `c3ad159` | `cssx.py --cine` staging, `cssx_release.py` CINE package, notes |
+| next | **Redesign (user rejected CSSX knowing CSS):** neutral service bus. CSSX `service.list` / `service.call`, `include/cssx/service.h`, `src/runtime/services.cpp` + 49 bus checks + header-copy check; `css.customize` op removed from CSSX core. CSS publishes `css.customize` via its own `cssx_services()` export (`native/src/cssx_service.h`, `docs/services.md`). CINE calls `service.call`. Decision D15 rewritten. |
 
-## Regression (2026-10-03, on `feature/cine`)
+## Rule learned
 
-- CSS host 14/14 (`build/cine-host`). CSS Windows build: only the 2 baseline warnings;
-  `css_core.dll` exports `css_customize_abi` and `css_customize_v1`.
-- CSSX host 6/6 incl. `cssx_cine` and `cssx_cine_director` (`build/cine-cssx-host`).
-  CSSX Windows build 0 warnings, `cine.dll` built (`build/cine-cssx-win`).
-- Release packaging dry run: the CINE zip verifies (manifest, hashes, PE check).
+CSSX core must never know any mod by name. Mods talk through the service bus (D15).
+Earlier rows mentioning `css_customize_v1` and the `css.customize` op are superseded.
+
+## Regression (2026-10-03, after the redesign)
+
+- CSS host 14/14 (`build/cine-host`); Windows build no new warnings; `css_core.dll`
+  exports `css_get_api`, `css_get_api2`, `cssx_services`.
+- CSSX host 7/7 incl. `cssx_services`, `cssx_cine`, `cssx_cine_director`
+  (`build/cine-cssx-host`); Windows build 0 warnings (`build/cine-cssx-win`).
+
+## Game install state
+
+- CSS: the beta.9 build with the OLD exports is installed (backup of the previous CSS
+  folder: `backups/1791026653460406353`). Needs reinstall with the service build.
+- CSSX: rolled back to 1.2.1 (loader `cc71868b`, core `9221b2d8`), CINE removed.
 
 ## Next
 
-1. Live test with the user. Ask before installing anything: CSS core (beta.9 build),
-   CSSX core + loader, and CINE via `cssx.py stage --cine`.
+1. Live test with the user. Ask before installing anything, game closed: `tools/css.py
+   install` (service build), then `extensions/core/tools/cssx.py stage --cine`.
 2. Live checks: Enter/leave restores HUD and camera; record a route; capture a final
    shot; fashion walk with the palette track; each glide; menu-open cancel; loading
    screen mid-take; frame stats in Cine World idle vs. mid-take.

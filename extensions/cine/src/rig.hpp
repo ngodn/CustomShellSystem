@@ -48,7 +48,7 @@ public:
     Vec3 head_position();
     // The game camera relative to her, for "use current view as final shot".
     FinalShot capture_final(Vec3 her_position, double her_yaw);
-    Json css(const Json& request);                       // css.customize (throws CSS's error)
+    Json css(const Json& request);                       // service css.customize v1 (throws why not)
     bool key_down(const std::vector<std::string>& keys, std::vector<bool>& out);
 
     // Restore: take-level changes (cameras, view, walk) or everything including the HUD.

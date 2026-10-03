@@ -1,4 +1,5 @@
 #include "api.hpp"
+#include "cssx_service.h"
 #include "data.hpp"
 #include "physics_presets.hpp"
 #include "engine.hpp"
@@ -111,8 +112,8 @@ struct Core {
     char search[128]{}, preset_name[96]{};
     double last_apply_ms = 0;
     std::optional<Customization> pending_custom;
-    // Customize export (css_customize_v1): set by the tick wrapper so a CSSX extension calling
-    // in from a hook while CSS is mid-tick is refused instead of re-entering an apply.
+    // css.customize service: set by the tick wrapper so a caller reaching in from a hook while
+    // CSS is mid-tick is refused instead of re-entering an apply.
     bool in_tick = false;
     DWORD game_thread = 0;
     bool custom_only = false, refresh_custom = true;
@@ -1099,7 +1100,7 @@ struct Core {
 };
 }
 namespace {
-std::atomic<css::Core*> live_core{nullptr};   // the one live core, for css_customize_v1
+std::atomic<css::Core*> live_core{nullptr};   // the one live core, for the css.customize service
 void* create(const CssHost* host) noexcept {
     if (!host || (host->abi != 1 && host->abi != css_host_abi)) return nullptr;
     // Host ABI 2: JSON writes leave the game thread. The pointer targets the loader, which
@@ -1165,19 +1166,20 @@ const CssCore api{css_abi, create, tick, render, stop, destroy};
 }
 extern "C" __declspec(dllexport) const CssCore* css_get_api() noexcept { return &api; }
 extern "C" __declspec(dllexport) const CssCore* css_get_api2() noexcept { return &api; }   // this core understands host ABI 2
-// Customize export, version 1 (CSS 1.0.0-beta.9). For in-process callers such as the CSSX
-// core's css.customize op. Game thread only, never during CSS's own tick. Returns 1 and sends
-// the result JSON to `sink`, or 0 and sends {"error": "..."}. The pointer to this function
-// must not be kept: the core hot-swaps, so callers resolve it again for every call.
-extern "C" __declspec(dllexport) uint32_t css_customize_abi() noexcept { return css_customize_abi_version; }
-extern "C" __declspec(dllexport) int css_customize_v1(const char* request, size_t size, CssCustomizeSink sink, void* context) noexcept {
+// Services for other mods (CSS 1.0.0-beta.9), published with the neutral CSSX service
+// contract (cssx_service.h). CSS never calls out; whoever looks for the export finds it.
+// css.customize v1: read and change the current look. Game thread only, never during CSS's
+// own tick. The table is withdrawn (NULL) whenever no core is live, so a copy of this DLL
+// left behind by a hot swap answers "nothing here" and the new copy is found instead.
+namespace {
+int customize_service(void*, const char* request, size_t size, CssxServiceSink sink, void* context) noexcept {
     if (!sink) return 0;
     auto reply = [&](const css::Json& value) { const auto text = value.dump(); sink(context, text.data(), text.size()); };
     try {
         auto* core = live_core.load();
         if (!core) throw std::runtime_error("CSS is not running");
         if (core->in_tick) throw std::runtime_error("CSS is busy; call again from your own tick");
-        if (core->game_thread && core->game_thread != GetCurrentThreadId()) throw std::runtime_error("css_customize_v1 must be called on the game thread");
+        if (core->game_thread && core->game_thread != GetCurrentThreadId()) throw std::runtime_error("css.customize must be called on the game thread");
         if (!request || size == 0 || size > (1u << 20)) throw std::runtime_error("Invalid customize request");
         reply(core->customize_api(css::Json::parse(std::string_view(request, size))));
         return 1;
@@ -1186,3 +1188,9 @@ extern "C" __declspec(dllexport) int css_customize_v1(const char* request, size_
         return 0;
     } catch (...) { return 0; }
 }
+constexpr CssxService services[]{
+    {"css.customize", 1, "Read and change the current CSS look: palettes, toggles, colours, sliders", customize_service, nullptr},
+};
+constexpr CssxServiceTable service_table{CSSX_SERVICE_ABI, sizeof(CssxServiceTable), uint32_t(std::size(services)), services};
+}
+extern "C" __declspec(dllexport) const CssxServiceTable* cssx_services() noexcept { return live_core.load() ? &service_table : nullptr; }

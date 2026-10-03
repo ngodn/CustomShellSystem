@@ -12,7 +12,8 @@ int64_t qpc() { LARGE_INTEGER v; QueryPerformanceCounter(&v); return v.QuadPart;
 struct Phase { FrameRing<4096>& ring; int64_t start; Phase(FrameRing<4096>& r):ring(r),start(qpc()) {} ~Phase() { ring.push(qpc()-start); } };
 std::string lower(std::string s) { for(auto& c:s) c=char(std::tolower((unsigned char)c)); return s; }
 }
-Core::Core(const CssxLoaderHost& host):host_(host),root_(host.root),mods_root_(host.mods_root),storage_(root_) {
+Core::Core(const CssxLoaderHost& host):host_(host),root_(host.root),mods_root_(host.mods_root),storage_(root_),
+    services_(scan_service_providers,service_provider_alive,[this](const std::string& level,const std::string& message,const Json& fields){ log(level,message,fields); }) {
     std::string note;
     settings_=Settings::load(root_/"settings.json",&note);
     if(!note.empty()) log("info",note);
@@ -71,55 +72,39 @@ void Core::start_runtime() {
 }
 Json Core::service(const Json& request) {
     const auto op=request.at("op").get<std::string>();
-    struct Count { std::pair<uint64_t,uint64_t>& slot; uint64_t start; ~Count() { ++slot.first; slot.second+=monotonic_us()-start; } } count{op_stats_[op+(request.contains("function")?":"+request["function"].get<std::string>():request.contains("property")?":"+request["property"].get<std::string>():"")],monotonic_us()};
+    struct Count { std::pair<uint64_t,uint64_t>& slot; uint64_t start; ~Count() { ++slot.first; slot.second+=monotonic_us()-start; } } count{op_stats_[op+(request.contains("function")?":"+request["function"].get<std::string>():request.contains("service")&&request["service"].is_string()?":"+request["service"].get<std::string>():request.contains("property")?":"+request["property"].get<std::string>():"")],monotonic_us()};
     if(op=="log") { log(request.value("level",std::string("info")),request.at("message").get<std::string>(),request.value("fields",Json::object())); return nullptr; }
     if(op=="menu.status") return {{"menu_open",menu_ && menu_->is_open()},{"game_menu_open",game_menu_open()}};
     if(op=="menu.close") { if(menu_) menu_->close(); return true; }
     if(op=="frame.brief") return perf_brief();   // {hz, median_ms, core_mean_us, ...} over the last ten seconds
-    if(op=="css.customize") return css_customize(request.at("request"));
+    if(op=="service.list") return services_.list(monotonic_us()/1e6);
+    if(op=="service.call") return services_.call(request.at("service").get<std::string>(),request.value("version",0u),request.value("request",Json::object()),monotonic_us()/1e6);
     if(op=="input.focus") { DWORD pid=0; const auto window=GetForegroundWindow(); if(window) GetWindowThreadProcessId(window,&pid); return window && pid==GetCurrentProcessId(); }
     if(!engine_) throw std::runtime_error("Game thread is not initialized");
     return bridge_->request(player_,request);
 }
-Json Core::css_customize(const Json& request) {
-    using Abi=uint32_t(*)() noexcept;
-    using Sink=void(*)(void*,const char*,size_t) noexcept;
-    using Customize=int(*)(const char*,size_t,Sink,void*) noexcept;
-    // Still the same module? A hot-swapped CSS core unloads the old DLL; a reused handle
-    // would report a different path.
-    auto current=[&]{
-        if(!css_module_) return false;
+std::vector<ServiceProvider> Core::scan_service_providers() {
+    std::vector<ServiceProvider> found;
+    std::vector<HMODULE> modules(1024); DWORD needed=0;
+    if(!EnumProcessModules(GetCurrentProcess(),modules.data(),DWORD(modules.size()*sizeof(HMODULE)),&needed)) return found;
+    if(needed>modules.size()*sizeof(HMODULE)) { modules.resize(needed/sizeof(HMODULE)+64); if(!EnumProcessModules(GetCurrentProcess(),modules.data(),DWORD(modules.size()*sizeof(HMODULE)),&needed)) return found; }
+    const auto count=std::min<size_t>(needed/sizeof(HMODULE),modules.size());
+    for(size_t i=0;i<count;++i) {
+        const auto get=reinterpret_cast<CssxServicesFn>(reinterpret_cast<void*>(GetProcAddress(modules[i],CSSX_SERVICES_EXPORT)));
+        if(!get) continue;
         wchar_t path[MAX_PATH*4]{};
-        return GetModuleFileNameW(static_cast<HMODULE>(css_module_),path,MAX_PATH*4) && css_module_path_==path;
-    };
-    if(!current()) {
-        css_module_=nullptr; css_module_path_.clear();
-        HMODULE modules[1024]; DWORD needed=0;
-        if(EnumProcessModules(GetCurrentProcess(),modules,sizeof modules,&needed)) {
-            const auto count=std::min<size_t>(needed/sizeof(HMODULE),1024);
-            for(size_t i=0;i<count && !css_module_;++i) {
-                wchar_t path[MAX_PATH*4]{};
-                if(!GetModuleFileNameW(modules[i],path,MAX_PATH*4)) continue;
-                const auto name=lower(path_utf8(fs::path(path).filename()));
-                const auto folder=lower(path_utf8(fs::path(path).parent_path()));
-                if(name.starts_with("css_core") && folder.ends_with("customshellsystem/cores")) { css_module_=modules[i]; css_module_path_=path; }
-            }
-        }
+        if(!GetModuleFileNameW(modules[i],path,MAX_PATH*4)) continue;
+        found.push_back({modules[i],path_utf8(fs::path(path)),get});
     }
-    if(!css_module_) throw std::runtime_error(css_present_?"CSS is installed but not running yet":"CSS is not installed");
-    const auto module=static_cast<HMODULE>(css_module_);
-    const auto abi=reinterpret_cast<Abi>(reinterpret_cast<void*>(GetProcAddress(module,"css_customize_abi")));
-    const auto call=reinterpret_cast<Customize>(reinterpret_cast<void*>(GetProcAddress(module,"css_customize_v1")));
-    if(!abi || !call || abi()<1) throw std::runtime_error("CSS is too old for css.customize (needs CSS 1.0.0-beta.9 or newer)");
-    const auto text=request.dump();
-    std::string reply;
-    const int ok=call(text.data(),text.size(),[](void* out,const char* data,size_t size) noexcept {
-        try { static_cast<std::string*>(out)->assign(data,size); } catch(...) {}
-    },&reply);
-    auto result=reply.empty()?Json(nullptr):Json::parse(reply,nullptr,false);
-    if(result.is_discarded()) throw std::runtime_error("CSS returned an unreadable reply");
-    if(!ok) throw std::runtime_error(result.is_object()?result.value("error",std::string("CSS refused the change")):std::string("CSS refused the change"));
-    return result;
+    return found;
+}
+// Same module still mapped at that handle? A hot-swapped provider unloads its old DLL; a reused
+// handle would report a different path or a different export address.
+bool Core::service_provider_alive(const ServiceProvider& provider) {
+    const auto module=static_cast<HMODULE>(provider.handle);
+    wchar_t path[MAX_PATH*4]{};
+    if(!GetModuleFileNameW(module,path,MAX_PATH*4) || path_utf8(fs::path(path))!=provider.module) return false;
+    return reinterpret_cast<void*>(GetProcAddress(module,CSSX_SERVICES_EXPORT))==reinterpret_cast<void*>(provider.get);
 }
 void Core::hotkey() {
     // On the CSSX page: close the Player Menu. Elsewhere: open it on the CSSX

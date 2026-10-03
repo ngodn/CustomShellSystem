@@ -206,13 +206,16 @@ changed amount counted as an unapplied edit, and while one is pending every
 action button is disabled. Disabled controls now also carry the reason
 (model `disabled` map) instead of a bare "Unavailable".
 
-## D15. CSS looks change in process, not through files (2026-10-03)
+## D15. Mods talk through a neutral service bus (2026-10-03)
 
-CSS exports `css_customize_v1` from its core DLL and CSSX resolves it per
-call (the core hot-swaps). It only runs on the game thread and refuses while
-CSS's own tick is on the stack, so a CSSX hook fired from CSS can never
-re-enter it. Changes made with `persist:false` are applied but not saved for
-30 minutes, which is how CINE cycles palettes mid-take without touching the
-player's saved look; it restores the snapshot with `persist:true` at the end.
-Reason: `request.json` is polled at 250 ms and saves every change, which is
-too slow and too sticky for a look track.
+CSSX core knows no other mod. Any native module can offer JSON services by
+exporting `cssx_services()` (include/cssx/service.h); CSSX finds providers by
+scanning loaded modules for that export and extensions call them with
+`service.call`. Providers copy the header and never call CSSX, so neither side
+depends on the other at build or run time. CSSX asks for the provider's table
+before every call and checks the module is still mapped at the same path, so a
+hot-swapped DLL is never called stale; a provider returns NULL to withdraw.
+Misses rescan at most once a second; hits never scan.
+Reason: the first CINE build put a CSS-specific `css.customize` op in the CSSX
+core, which tied the platform to one mod. The user rejected that; this is the
+replacement. CSS's first service is `css.customize` (docs/services.md in CSS).

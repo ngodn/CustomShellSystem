@@ -107,6 +107,10 @@ const Preset* Extension::current_preset() const {
     return it == presets_.end() ? nullptr : &it->second;
 }
 
+std::string Extension::with_note(const std::string& message) const {
+    return take_ && !take_->note.empty() ? message + "  " + take_->note : message;
+}
+
 void Extension::report(const std::string& message, bool error) {
     if (error) error_ = message; else { status_ = message; error_.clear(); }
     try { host_.log(message, error ? "warning" : "info"); host_.invalidate(); } catch (...) {}
@@ -165,7 +169,7 @@ void Extension::tick(double seconds) {
             case Mode::Preparing: prepare(); break;
             case Mode::Countdown:
                 take_->countdown -= dt;
-                if (take_->countdown <= 0) { take_->clock = 0; mode_ = Mode::Running; report("Rolling."); }
+                if (take_->countdown <= 0) { take_->clock = 0; mode_ = Mode::Running; report(with_note("Rolling.")); }
                 break;
             case Mode::Running: take_->clock += dt; run(); break;
             default: break;
@@ -293,7 +297,7 @@ void Extension::prepare() {
                 }
                 std::sort(t.steps.begin(), t.steps.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
                 t.look = !t.steps.empty();
-            } catch (const std::exception& e) { t.look = false; report(std::string("Look track off: ") + e.what()); }
+            } catch (const std::exception& e) { t.look = false; t.note = std::string("Look track off: ") + e.what() + "."; report(t.note); }
         }
         if (p.kind == ShotKind::Walk) rig_.place_player(t.route->start, t.route->start_yaw);
         t.wall_raw.clear(); t.wall_next = 0;
@@ -346,7 +350,7 @@ void Extension::prepare() {
     rig_.view(t.dolly, 0.0);
     t.countdown = settings_.countdown;
     mode_ = Mode::Countdown;
-    report(settings_.countdown > 0 ? "Get ready: start your recorder." : "Rolling.");
+    report(with_note(settings_.countdown > 0 ? "Get ready: start your recorder." : "Rolling."));
 }
 
 void Extension::steer(double dt) {
@@ -417,7 +421,7 @@ void Extension::run() {
     if (t.walking) steer(frame_.seconds > 0 ? std::max(frame_.seconds, 0.05) : 0.1);
     while (t.look && t.step_next < t.steps.size() && t.clock >= t.steps[t.step_next].first) {
         try { rig_.css(t.steps[t.step_next].second); }
-        catch (const std::exception& e) { t.look = false; report(std::string("Look track stopped: ") + e.what()); }
+        catch (const std::exception& e) { t.look = false; t.note = std::string("Look track stopped: ") + e.what() + "."; report(t.note); }
         ++t.step_next;
     }
     if (walk && final_) {
@@ -450,11 +454,12 @@ void Extension::finish_take(const std::string& why, bool failed) {
         try { rig_.css({{"action", "apply"}, {"persist", true}, {"commands", Json::array({{{"action", "restore"}, {"customize", take_->snapshot}}})}}); }
         catch (const std::exception& e) { failures.push_back(std::string("look: ") + e.what()); }
     }
+    const std::string note = take_->note;
     take_.reset();
     mode_ = Mode::Armed;
     keys_previous_.clear();
     if (!failures.empty()) report(why + " Could not restore: " + failures.front(), true);
-    else report(why, failed);
+    else report(note.empty() ? why : why + "  " + note, failed);
 }
 
 // ---------------------------------------------------------------- route and final shot

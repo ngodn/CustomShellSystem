@@ -13,6 +13,7 @@
 #include "settings.hpp"
 #include "storage.hpp"
 #include "writer.hpp"
+#include "services.hpp"
 #include "frame_stats.hpp"
 #include <memory>
 #include <map>
@@ -55,12 +56,11 @@ private:
     Json perf_brief() const;        // one-line cost summary for the menu
     // Services for the runtime
     Json service(const Json& request);
-    // css.customize: forwards to the live CSS core's css_customize_v1 (CSS 1.0.0-beta.9+).
-    // The CSS core hot-swaps, so the module is re-validated and the export re-resolved
-    // on every call; only the module handle and path are cached.
-    Json css_customize(const Json& request);
-    void* css_module_=nullptr;
-    std::wstring css_module_path_;
+    // Service bus (service.list / service.call): modules exporting cssx_services(), found by
+    // scanning loaded modules. No provider or service name is known to the core.
+    ServiceBus services_;
+    static std::vector<ServiceProvider> scan_service_providers();
+    static bool service_provider_alive(const ServiceProvider&);
     Json dev_request(const Json& request);
     void log(const std::string& level,const std::string& message,const Json& fields=Json::object());
     bool hotkey_pressed(const std::vector<std::string>& keys,size_t slot);

@@ -6,7 +6,7 @@ records a walking route, captures the modder's own final framing, and can animat
 (palettes and outfit pieces) during the shot while keeping every other customization value.
 
 Branch: `feature/cine`. Targets CSSX 1.3.0 (extension ABI 3, menu schema 2) and CSS
-1.0.0-beta.9 (new optional customize export). Everything in this document was proven live on
+1.0.0-beta.9 (optional: its `css.customize` service). Everything in this document was proven live on
 2026-10-02/03 with the external rig in `work/cinematic-20261002/` before it became a design.
 
 ## Goals and rules
@@ -33,17 +33,20 @@ Branch: `feature/cine`. Targets CSSX 1.3.0 (extension ABI 3, menu schema 2) and 
   customize, palettes, controls) and `apply` (`commands` list: palette, control,
   reset_control, restore; applied to a copy, validated, then committed the way
   `Core::request` commits a control change, so CSS's normal apply pass picks it up).
-- Export `css_customize_v1(json, size, sink, ctx)` and `css_customize_abi()` from the core
-  DLL. Refuses when no core is live, when called during CSS's own tick (re-entrancy from a
-  CSSX hook), or off the game thread. Never writes `message` (read by the ImGui thread).
+- Publish `css.customize` v1 through the neutral CSSX service contract: the core DLL
+  exports `cssx_services()` (own copy of the header, `native/src/cssx_service.h`) and
+  withdraws the table while no core is live. Refuses when called during CSS's own tick
+  (re-entrancy from a hook) or off the game thread. Never writes `message` (read by the
+  ImGui thread). Documented in `docs/services.md`.
 
-### CSSX: `css.customize` host op (extensions/core/)
+### CSSX: generic service bus (extensions/core/)
 
-- In `Core::service` beside `menu.status`. Finds the CSS core module per call
-  (`EnumProcessModules`, path under `Mods/CustomShellSystem/cores/`), re-resolves the export
-  every call because the CSS core hot-swaps, forwards `request`, returns its JSON.
-- Errors: "CSS is not installed", "CSS is too old for CINE looks (needs 1.0.0-beta.9)",
-  plus CSS's own refusal text. Documented in `docs/abi.md`; CSSX 1.3.0.
+- Revised 2026-10-03: the first build had a CSS-specific `css.customize` op in the CSSX
+  core. The user rejected it (CSSX must not know any mod); see decision D15.
+- `service.list` / `service.call {service, version, request}`. Providers are any loaded
+  module exporting `cssx_services()`; the bus (`src/runtime/services.cpp`, host-tested)
+  validates tables, re-reads them before each call, rescans at most once a second on a
+  miss. Documented in `docs/abi.md`.
 
 ### CINE extension (extensions/cine/)
 
@@ -54,7 +57,7 @@ Branch: `feature/cine`. Targets CSSX 1.3.0 (extension ABI 3, menu schema 2) and 
 | `src/director.cpp` | State machine: Idle, Preparing, Countdown, Running, Restoring |
 | `src/rig.cpp` | Engine side: cameras, view target, HUD, walk, steering, restore |
 | `src/shot.hpp/.cpp` | Pure maths: route, orbit keys, Catmull-Rom, wall profile, lead |
-| `src/look.cpp` | CSS look track through `css.customize` |
+| `src/look.cpp` | CSS look track through `service.call` to `css.customize` |
 | `src/preset.cpp` | Preset files (`presets/*.cine.json`), validation |
 | `src/guides.cpp` | HUD layers: frame guide (16:9, 9:16, 1:1, 2.39:1), countdown |
 
@@ -83,7 +86,7 @@ Cheat Menu.
   waypoints ahead, control rotation steered to the velocity, start facing the path, ease
   in from 70 cm/s, slow over the last 2 m.
 - **Look track**: steps of (time, palette, control overrides) applied as one atomic
-  `css.customize` apply each. The modder's snapshot is taken on Enter and restored on every
+  `css.customize` apply each (through `service.call`). The modder's snapshot is taken on Enter and restored on every
   exit path. The Original palette is never used mid-shot (it clears every value); the
   modder's own look is rebuilt from the snapshot instead.
 

@@ -31,7 +31,7 @@ option(CSSX_DEV "Developer build: extra probes in the core" OFF)
 # ---- portable runtime pieces (compile on Linux for tests and on Windows) ----
 add_library(cssx_runtime STATIC
   src/runtime/common.cpp src/runtime/manifest.cpp src/runtime/storage.cpp
-  src/runtime/settings.cpp src/runtime/extensions.cpp src/runtime/writer.cpp)
+  src/runtime/settings.cpp src/runtime/extensions.cpp src/runtime/writer.cpp src/runtime/services.cpp)
 target_include_directories(cssx_runtime PUBLIC include src/runtime src/shared "${CSSX_VENDOR}" "${CMAKE_CURRENT_BINARY_DIR}/generated")
 set_target_properties(cssx_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
@@ -87,6 +87,9 @@ if(NOT WIN32)
   add_executable(cssx_runtime_tests tests/runtime_tests.cpp)
   target_link_libraries(cssx_runtime_tests PRIVATE cssx_runtime)
   add_test(NAME cssx_runtime COMMAND cssx_runtime_tests)
+  add_executable(cssx_service_tests tests/service_tests.cpp)
+  target_link_libraries(cssx_service_tests PRIVATE cssx_runtime)
+  add_test(NAME cssx_services COMMAND cssx_service_tests)
   add_executable(cssx_cheat_tests tests/cheat_menu_tests.cpp)
   target_link_libraries(cssx_cheat_tests PRIVATE cssx_cheat_logic cssx_runtime)
   add_test(NAME cssx_cheat_menu COMMAND cssx_cheat_tests ${CSSX_CHEAT_MENU}/menu.json)

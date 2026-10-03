@@ -12,8 +12,9 @@ evidence behind each line is in `integration-tests.md` and `performance.md`.
   can cycle CSS palettes on the way. Record it with your own recorder.
 - Presets are plain `.cine.json` files in the CINE folder; drop in your own or
   share them.
-- Extensions can read and change the CSS look through the new `css.customize`
-  bridge op (needs CSS 1.0.0-beta.9 or newer).
+- Mods can offer services to CSSX extensions without depending on CSSX: a native
+  mod exports one function, and extensions find and call it with `service.list` and
+  `service.call`. CINE uses CSS's look service this way; CSSX itself knows no mod.
 
 ## CSSX 1.2.1 and Traverse 1.0.1
 

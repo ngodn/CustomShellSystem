@@ -57,6 +57,7 @@ private:
         bool walking = false, arrived = false; size_t target = 0; double speed = 0, speed_applied = -1, stalled_at = -1;
         bool cut_wide = false, cut_close = false; int photo = -1;
         uint32_t world = 0; uint64_t pawn = 0; int prepare_step = 0;
+        std::string note;   // why part of the take is off (look track), shown with every take status
     };
 
     // Settings, presets, persistence.
@@ -76,6 +77,7 @@ private:
     void capture_final_now();
     void poll_keys();
     void report(const std::string& message, bool error = false);
+    std::string with_note(const std::string& message) const;
 
     // Take helpers.
     Vec3 her_position() const { return frame_.position; }
