@@ -58,6 +58,13 @@ Preset Preset::parse(const Json& j) {
     p.zoom = number(j, "zoom", p.zoom, 0.3, 3);
     p.fov_scale = number(j, "fov_scale", p.fov_scale, 0.3, 3);
     p.hold = number(j, "hold", p.hold, 0.5, 30);
+    p.reference = p.kind == ShotKind::Walk ? Preset::Reference::Capsule : Preset::Reference::Head;
+    if (j.contains("reference")) {
+        const auto r = text(j, "reference", 16, true);
+        if (r == "capsule") p.reference = Preset::Reference::Capsule;
+        else if (r == "head") p.reference = Preset::Reference::Head;
+        else throw std::invalid_argument("'reference' must be capsule or head");
+    }
 
     if (p.kind == ShotKind::Photo) {
         if (!j.contains("photos") || !j.at("photos").is_array() || j.at("photos").empty() || j.at("photos").size() > 32)

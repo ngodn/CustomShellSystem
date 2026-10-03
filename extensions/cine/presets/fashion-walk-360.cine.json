@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "id": "fashion-walk-360",
+  "name": "Fashion Walk 360",
+  "description": "She walks your recorded route while the camera circles her once: front, right side, behind, left side, front again, then settles on your own final framing.",
+  "kind": "walk",
+  "intro": 4.5,
+  "tail": 16,
+  "max_seconds": 49,
+  "lead": 0.8,
+  "zoom": 1.12,
+  "keys": [
+    {
+      "at": "start",
+      "azimuth": 25,
+      "distance": 410,
+      "height": -45,
+      "aim": 5,
+      "fov": 42
+    },
+    {
+      "at": "walk",
+      "azimuth": 30,
+      "distance": 330,
+      "height": -28,
+      "aim": 8,
+      "fov": 44
+    },
+    {
+      "at": 0.18,
+      "azimuth": 90,
+      "distance": 360,
+      "height": -5,
+      "aim": 10,
+      "fov": 42
+    },
+    {
+      "at": 0.38,
+      "azimuth": 175,
+      "distance": 360,
+      "height": 25,
+      "aim": 30,
+      "fov": 42
+    },
+    {
+      "at": 0.55,
+      "azimuth": 270,
+      "distance": 350,
+      "height": -10,
+      "aim": 10,
+      "fov": 40
+    },
+    {
+      "at": 0.72,
+      "azimuth": 320,
+      "distance": 260,
+      "height": 15,
+      "aim": 40,
+      "fov": 36
+    },
+    {
+      "at": 0.88,
+      "azimuth": 360,
+      "distance": 150,
+      "height": 55,
+      "aim": 58,
+      "fov": 30
+    }
+  ],
+  "reference": "capsule"
+}

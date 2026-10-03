@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "id": "turntable",
+  "name": "Turntable",
+  "description": "A slow full circle around her at full-body distance, for outfit showcases.",
+  "kind": "turntable",
+  "duration": 12,
+  "keys": [
+    {
+      "at": 0,
+      "azimuth": 0,
+      "distance": 380,
+      "height": -40,
+      "aim": -55,
+      "fov": 42
+    },
+    {
+      "at": 0.25,
+      "azimuth": 90,
+      "distance": 380,
+      "height": -40,
+      "aim": -55,
+      "fov": 42
+    },
+    {
+      "at": 0.5,
+      "azimuth": 180,
+      "distance": 380,
+      "height": -40,
+      "aim": -55,
+      "fov": 42
+    },
+    {
+      "at": 0.75,
+      "azimuth": 270,
+      "distance": 380,
+      "height": -40,
+      "aim": -55,
+      "fov": 42
+    },
+    {
+      "at": 1,
+      "azimuth": 360,
+      "distance": 380,
+      "height": -40,
+      "aim": -55,
+      "fov": 42
+    }
+  ],
+  "reference": "head"
+}

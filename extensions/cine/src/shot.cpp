@@ -52,7 +52,7 @@ Route build_route(const std::vector<Sample>& samples, const std::optional<FinalS
     for (size_t i = best_first; i <= best_last; ++i)
         if (flat_distance(samples[i].position, route.points.back()) >= decimate_cm) route.points.push_back(samples[i].position);
     if (flat_distance(samples[best_last].position, route.points.back()) > 30) route.points.push_back(samples[best_last].position);
-    if (route.points.size() < 2) throw std::invalid_argument("The recorded walk is too short (walk at least 3 m)");
+    if (route.points.size() < 2 || route.length() < 300) throw std::invalid_argument("The recorded walk is too short (walk at least 3 m)");
 
     if (final_shot) {
         // Branch where she is already heading roughly toward the final spot with room to curve

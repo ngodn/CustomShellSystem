@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "id": "photo-orbit",
+  "name": "Photo Orbit",
+  "description": "Holds the camera on a set of standard angles, one at a time, so you can take stills with your own tool.",
+  "kind": "photo",
+  "hold": 2.5,
+  "photos": [
+    {
+      "name": "Front right",
+      "azimuth": 35,
+      "distance": 360,
+      "height": -60,
+      "aim": -65,
+      "fov": 44
+    },
+    {
+      "name": "Front left",
+      "azimuth": 325,
+      "distance": 360,
+      "height": -60,
+      "aim": -65,
+      "fov": 44
+    },
+    {
+      "name": "Low hero",
+      "azimuth": 330,
+      "distance": 300,
+      "height": -120,
+      "aim": -55,
+      "fov": 48
+    },
+    {
+      "name": "Portrait",
+      "azimuth": 20,
+      "distance": 130,
+      "height": 0,
+      "aim": -5,
+      "fov": 30
+    },
+    {
+      "name": "Right profile",
+      "azimuth": 90,
+      "distance": 320,
+      "height": -50,
+      "aim": -55,
+      "fov": 44
+    },
+    {
+      "name": "Wide",
+      "azimuth": 0,
+      "distance": 550,
+      "height": -30,
+      "aim": -65,
+      "fov": 42
+    },
+    {
+      "name": "High front",
+      "azimuth": 15,
+      "distance": 300,
+      "height": 70,
+      "aim": -55,
+      "fov": 44
+    }
+  ],
+  "reference": "head"
+}

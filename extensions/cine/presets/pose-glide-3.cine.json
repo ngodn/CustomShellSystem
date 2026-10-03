@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "id": "pose-glide-3",
+  "name": "Pose Glide 3 s",
+  "description": "For an idle pose: one smooth arc from high behind her left shoulder round to a medium-wide view from her front-left, measured from her head so it fits standing, seated and kneeling poses. Longer versions start wider and higher.",
+  "kind": "glide",
+  "duration": 3,
+  "keys": [
+    {
+      "at": 0,
+      "azimuth": 255,
+      "distance": 230,
+      "height": 60,
+      "aim": -40,
+      "fov": 42
+    },
+    {
+      "at": 1,
+      "azimuth": 300,
+      "distance": 330,
+      "height": -10,
+      "aim": -35,
+      "fov": 42
+    }
+  ],
+  "reference": "head"
+}

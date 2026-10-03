@@ -65,6 +65,21 @@ add_library(teleport SHARED
 target_include_directories(teleport PRIVATE include "${CSSX_VENDOR}")
 set_target_properties(teleport PROPERTIES PREFIX "" POSITION_INDEPENDENT_CODE ON)
 
+# ---- CINE extension (cinematic camera; sibling source tree at extensions/cine) ----
+# Logic (pure maths, presets, director over the bridge) in a static library tested off-game
+# with a mock host, the Cheat Menu pattern; main.cpp is only the ABI table.
+set(CSSX_CINE "${CSSX_REPO}/extensions/cine")
+file(GLOB cssx_cine_sources CONFIGURE_DEPENDS "${CSSX_CINE}/src/*.cpp")
+list(FILTER cssx_cine_sources EXCLUDE REGEX "/main\\.cpp$")
+add_library(cssx_cine_logic STATIC ${cssx_cine_sources})
+target_include_directories(cssx_cine_logic PUBLIC include "${CSSX_CINE}/src" "${CSSX_VENDOR}")
+set_target_properties(cssx_cine_logic PROPERTIES POSITION_INDEPENDENT_CODE ON)
+if(EXISTS "${CSSX_CINE}/src/main.cpp")
+  add_library(cine SHARED "${CSSX_CINE}/src/main.cpp")
+  target_link_libraries(cine PRIVATE cssx_cine_logic)
+  set_target_properties(cine PROPERTIES PREFIX "")
+endif()
+
 # ---- tests (host) ----
 if(NOT WIN32)
   enable_testing()
@@ -85,6 +100,9 @@ if(NOT WIN32)
   add_test(NAME cssx_extension_lifecycle COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/lifecycle_check.py
     $<TARGET_FILE:cssx_runtime_shared> $<TARGET_FILE:cssx_fixture_1> $<TARGET_FILE:cssx_fixture_2> $<TARGET_FILE:cssx_fixture_3> $<TARGET_FILE:cssx_fixture_4>
     ${CMAKE_CURRENT_SOURCE_DIR}/examples)
+  add_executable(cssx_cine_tests ${CSSX_CINE}/tests/cine_tests.cpp)
+  target_link_libraries(cssx_cine_tests PRIVATE cssx_cine_logic)
+  add_test(NAME cssx_cine COMMAND cssx_cine_tests ${CSSX_CINE})
   add_test(NAME cssx_tools COMMAND ${Python3_EXECUTABLE} -m unittest discover -s ${CMAKE_CURRENT_SOURCE_DIR}/tests -p "test_*.py")
   return()
 endif()

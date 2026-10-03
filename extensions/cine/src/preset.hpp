@@ -36,6 +36,9 @@ struct Preset {
     double zoom = 1.0;           // distance multiplier
     double fov_scale = 1.0;      // FOV multiplier (portrait screens want more)
     double hold = 1.5;           // Photo: seconds each still is held
+    // Heights and aims are measured from her capsule centre (walks: the route height) or from
+    // her head bone (poses: a seated or kneeling head sits a metre lower than a standing one).
+    enum class Reference { Capsule, Head } reference = Reference::Head;
     std::vector<PresetKey> keys;
     std::vector<PhotoShot> photos;
     std::vector<LookStep> look;  // optional
