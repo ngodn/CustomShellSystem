@@ -82,8 +82,19 @@ The author closed the game and the correction is installed as
 `css_core-astral-trial-0fc2402d7e98fa15.dll`. Selector, core and 12 protected
 file hashes passed verification. The previous core/selector backup and receipt
 are in `work/genessa-doubles/runtime-trial2`. Shared assets were not replaced.
-The next step is a normal launch, the three-cycle cleanup regression, then
-arming the trial if it passes. The corrected core is not yet live-verified.
+The corrected core was confirmed in the next process's module mappings and
+loader acknowledgement (Windows PID 380). The cleanup regression passes all
+three cycles with the original owned skeletal components preserved; evidence
+is `runtime-trial2/cleanup-regression-after.jsonl`. The trial was then explicitly
+armed, recorded in `runtime-trial2/armed.json`.
+
+The author confirmed Faithful doubles match Unholy Genessa. The first 50-second
+capture has 95 status samples, four Faithful actor identities, up to three active
+custom visual groups, and 10 successful preparations followed by 10 cleanups.
+No error or fallback was reported. This validates the initial Faithful trial,
+not all customization, frame cost, combat contacts or Stray behavior. Evidence:
+`runtime-trial2/faithful-capture1.jsonl`. Stray testing is requested and a separate
+bounded capture is in progress. No movement or camera input was sent.
 
 Destruction semantics were checked against the local UE 5.6.1
 `ActorComponent.cpp` (DestroyComponent and K2_DestroyComponent) and
