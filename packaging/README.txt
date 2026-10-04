@@ -27,6 +27,7 @@ Inventory / CSS / Tarstones / Map: LB/RB or Q/E.
 SHELL / CUSTOMIZE / LOCOMOTION / PROFILE: LT/RT or Z/X.
 Browse: D-pad Up/Down or W/S. Choose: D-pad Left/Right or A/D.
 A or Space confirms. X or F performs the displayed secondary action.
+When naming a new profile, Enter saves it while the name field is focused.
 Select/View or C performs the displayed contextual action, including favorites.
 Y or I toggles Lighting. View controls lock while you move the light.
 B or Esc goes back/closes. Follow each page's displayed hints.
@@ -56,20 +57,10 @@ The standalone N menu is replaced by Inventory > CSS.
 Reset CSS preferences only with the game closed by moving state/ to a backup.
 The CSS wardrobe does not modify the game's save files. Extensions may do so.
 
-Alpha status and known limitations
-This is CSS 1.0.0-alpha.2, a technology preview, not the final 1.0.0 release.
-Eve Black Pearl is a separate sample package. Its movement and idle options are opt-in.
-Eve walk, jog and sprint include the corrected leg trajectories accepted in
-live gameplay review on 2026-09-21.
-Custom idle animation and automatic in-hand weapon hiding are supported natively
-via CSS post-process animation layers.
-Broad weapon, combat and travel testing remains in progress.
-Beacon teleport playback is not included yet. Missing custom animation options
-fall back to the game; the UI rows only display authored options. The modder
-kit and authoring tutorial are still being prepared.
+Beta status
+This is a prerelease of CSS 1.0.0. Outfit packages are separate downloads.
+Animation, fabric and other customization options depend on the installed outfit.
+Missing custom animation options fall back to the game.
 
-Use normal game restarts when updating DLLs or outfit containers. Animation
-DLL hot reload previously crashed the game and is not part of this alpha workflow.
-CSSX is not included. Keep it disabled for this preview while its reported
-performance regression remains under investigation.
-
+Use normal game restarts when updating DLLs or outfit containers.
+CSSX is optional and distributed separately. CSS works without it.

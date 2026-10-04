@@ -7,7 +7,8 @@ logs show successful restores but do not retain the failed state. A candidate
 now recognizes the current shell definition's default mesh as well as CSS's
 captured original, covering delayed resets after the transition edge. Host
 regression and production build pass. The candidate was installed with the game
-closed and its hash verified; live recurrence testing is pending.
+closed and its hash verified. The author tested it, reported "ok seems fixed",
+and authorized beta.10. The live log confirms a delayed stock reset was recovered.
 See [evidence and limits](development/intermittent-gate-appearance.md).
 Genessa gameplay clipping remains queued below.
 

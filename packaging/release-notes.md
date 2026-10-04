@@ -1,3 +1,18 @@
+### CSS 1.0.0-beta.10
+
+### Added
+
+- Hide the Heart of Vatra belt accessory through MISC.
+
+### Fixed
+
+- Restore saved outfits after delayed mesh resets from gates and launchpads.
+- Restore sidearm aiming after traversal and other game-driven mesh changes.
+- Keep selected idle, walk, jog and sprint animations when carrying an outfit into Harbinger form.
+- Allow appearance changes while persistent shell traversal listeners are active.
+- Save a new profile with Enter while typing its name. Explain invalid names and full profile storage.
+- Clear stale status labels when reopening CSS so they no longer overlap SHELL rows.
+
 ### CSS 1.0.0-beta.9
 
 ### Added

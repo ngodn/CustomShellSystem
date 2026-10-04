@@ -64,3 +64,12 @@ Installed with the game closed: `css_core-beta9-gate-default-1f522f0859f2fa26.dl
 SHA-256: `1f522f0859f2fa267acba3b939c23b9fa88ab43b1dc35bbbc5b49174e8f946c7`.
 The selector and copied DLL were verified. The previous core and selector backup
 remain available; no package or saved appearance settings were changed.
+
+## Author acceptance
+
+The author relaunched the installed candidate and reported "ok seems fixed" on
+October 4, then authorized beta.10. The loader reports the expected candidate.
+The new log also captures a late stock reset: after recovery at tick 513673887,
+another reconciliation at 513674055 sees `SK_Sester_Genessa_V6` and restores
+Unholy Genessa at 513674146. This confirms late mesh recovery in that session.
+It does not establish every gate, weapon, revive source or performance case.
