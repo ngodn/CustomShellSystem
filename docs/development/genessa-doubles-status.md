@@ -4,6 +4,11 @@ Session 3, October 4, 2026. Branch `feature/genessa-doubles`.
 
 ## Current state
 
+Release packaging: two separate ZIPs, CSS runtime and shared assets. The user
+confirmed this on October 4. See the goal for install paths and compatibility
+notes. Do not combine them into a single runtime ZIP or bundle shared assets
+again with each outfit.
+
 Beta.10 is preserved. No production appearance changes for doubles are installed
 or implemented yet. Static tracing identifies both summon families. A completed
 180-second read-only capture contains 367 samples: five Faithful actor

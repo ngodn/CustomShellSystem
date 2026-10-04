@@ -12,6 +12,14 @@ materials, rather than an update to each outfit. Individual outfit changes are
 conditional on evidence that the runtime and companions cannot handle an asset.
 No outfit update or installed material replacement has been made for this work.
 
+Release packaging correction, October 4: the user wants **two separate ZIPs**,
+one for the CSS runtime and one for the cooked shared assets. Runtime stays in
+`Binaries/Win64/ue4ss/Mods/CustomShellSystem/`; shared assets go in
+`Content/Paks/~mods/`, relative to `MortalShell2/`. This supersedes the earlier
+proposal to include both in one ZIP. The shared package name and version are
+not finalized. Record compatibility and update requirements in the install
+notes. Individual outfits should not duplicate the shared package.
+
 Read back Eve v1.4.0's six meshes and Commander White v0.0.6-dev's
 `SK_CommanderC4` from their release containers, alongside the game's global and
 base containers. Resolve each material's entire parent chain rather than

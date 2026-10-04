@@ -72,8 +72,13 @@ trace its actual material/cue setup in cooked assets before implementation.
    White material support, including their hair cutouts, current colors and
    modular garment surfaces. Share companions between compatible material
    families where possible; do not assume one companion supports unrelated
-   graphs. Keep each release ZIP and its BBCode
-   changelog together in the agreed version directory.
+   graphs. Release two separate ZIPs, as requested on October 4: one for the
+   CSS runtime and one for CSS shared assets. Runtime files install under
+   `MortalShell2/Binaries/Win64/ue4ss/Mods/CustomShellSystem/`; the cooked shared
+   package installs under `MortalShell2/Content/Paks/~mods/`. Document the
+   compatible shared-assets version and whether an update requires replacing
+   it. Keep each release ZIP and its BBCode changelog together in the agreed
+   version directory. `CSS_SharedAssets_P` is a provisional package name.
 
 ## Existing pending work
 
