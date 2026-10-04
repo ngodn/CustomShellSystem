@@ -1,0 +1,35 @@
+[b]CSSX Traverse 1.0.2[/b] (2026-10-05)
+
+Hey everyone. Two fixes for the "ask before traversing" dialog, both reported by Kantiger. Thanks for the clear steps.
+
+[size=4][b]What's fixed[/b][/size]
+[list]
+[*][b]Confirming with Space no longer drops a pin on the map.[/b] The map underneath now ignores your keys while the dialog is open, so Space, Enter, E and Escape only talk to the dialog.[/*]
+[*][b]You can click Traverse and Cancel with the mouse.[/b][/*]
+[*]Hovering an option selects it, so the confirm key always acts on the option that is lit.[/*]
+[/list]
+
+[size=4][b]Nerd corner[/b][/size]
+[list]
+[*]The dialog was meant to switch off the menu's input listeners while it is open, but the check that picks which ones to switch off was wrong, so it never switched any off. The map's pin listener takes the same confirm input as the dialog, which is where the pin came from.[/*]
+[*]The mouse clicks did land on the buttons, nothing was reading them. Traverse now reads each button's own state: hovered means selected, clicked means confirmed.[/*]
+[/list]
+
+[size=4][b]When something breaks[/b][/size]
+Send the logs with your comment, or PM them with a screenshot:
+[code]MortalShell2/Binaries/Win64/ue4ss/UE4SS.log
+MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/CSSX.log
+MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/logs/eins0fx.traverse/current.jsonl[/code]
+
+[size=4][b]Thank you[/b][/size]
+The support, the bug reports, the requests, it's what keeps me going on this. If you want to show some love, an endorse and a vote on the mod page go a long way, and if you feel like chipping in you can buy me a pack of cigarettes on [url=https://ko-fi.com/maplestar86]Ko-fi[/url] or [url=https://www.nexusmods.com/Core/Libs/Common/Widgets/PayPalPopUp?user=168682108]PayPal[/url]. Zero pressure, Traverse stays free no matter what.
+
+And a big thank you to the people who already did:
+[list]
+[*][DONATOR NAMES]
+[/list]
+
+[b]Updating from 1.0.1:[/b]
+Requires CSSX 1.2.1 or newer. Close the game, extract the ZIP into [b]MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/extensions/[/b] and overwrite. Your Traverse settings are kept.
+
+[url=https://github.com/ngodn/CustomShellSystem/releases/tag/traverse-v1.0.2]Download CSSX Traverse 1.0.2[/url]

@@ -3,6 +3,13 @@
 Draft, updated with every release candidate. Player-facing wording; the
 evidence behind each line is in `integration-tests.md` and `performance.md`.
 
+## Traverse 1.0.2
+
+- Confirming the "ask before traversing" dialog with Space no longer places a map pin: the
+  map and menu underneath ignore input while the dialog is open.
+- The dialog's Traverse and Cancel options take mouse clicks, and hovering an option
+  selects it, so the confirm key acts on the option that is lit.
+
 ## CSSX 1.3.0 and CINE 1.0.0
 
 - New extension, CINE: a cinematic camera for showcase videos. Enter Cine World

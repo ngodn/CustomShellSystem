@@ -88,7 +88,7 @@ with `MyZoneData` / `DestinationZoneData` as fallbacks, and refuses to fire with
 a 6 s cooldown after a fire plus the meteor phase, and `BPC_TeleportManager.bIsInDungeon`
 (dungeons leave through `BroadcastLeaveDungeonByTeleport`, not the plain teleport).
 
-## Unreleased (after 1.0.1), 5 October 2026: confirmation dialog input
+## 1.0.2, 5 October 2026: confirmation dialog input
 
 Two Nexus reports (Kantiger, 4 October), both reproduced by reading the game's blueprints
 (`work/export-dialog/`, CUE4Parse + `kismet_dump.py`) and pinned in `tests/dialog_tests.cpp`.
@@ -112,4 +112,6 @@ Two Nexus reports (Kantiger, 4 October), both reproduced by reading the game's b
 
 Tests: `cssx_traverse` (mock host with the map listeners and the option buttons). The same
 test built against the 1.0.1 sources fails on "every bound listener is frozen under the dialog".
-Not yet live-tested in game.
+Live-tested by the user on 5 October (keys, Escape, mouse click and hover, pin on the bare map
+afterwards): "yes it works". Version is 1.0.2 in `extension.json`; changelog in
+`docs/nexus/cssx-traverse/changelog-v1.0.2.bbcode.txt`. Not tagged, zipped or pushed yet.
