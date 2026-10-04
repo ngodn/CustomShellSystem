@@ -55,7 +55,35 @@ The receipt and previous selector/core backup are in
 `work/genessa-doubles/runtime-trial1`. Independent readback verified the selector,
 core, all three new package files and all 12 protected files. The existing loader,
 UE4SS, saved state and legacy shared package hashes are unchanged. No game launch
-or input was sent. The trial remains disarmed on boot and is not live-verified.
+or input was sent. The trial remains disarmed on boot.
+
+Live preflight on PID 1895747 confirmed the new core, gameplay Genessa and
+Unholy Genessa's SK_EveW3. The reported default Faithful appearance was expected:
+`trial_enabled` was false. Source capture, adapter selection/loading, 25-slot
+binding/rollback, and an unattached body-texture copy/fade check in both forms
+passed. Logs are in `runtime-trial1/live-preflight.jsonl`.
+
+The hidden visual probe failed during cleanup, twice. An isolated temporary
+component proved that Kismet `IsValid` returns false after `K2_DestroyComponent`
+while the UE4SS-backed weak handle still resolves it. Player-owned skeletal
+components contain only the original player mesh afterward. The old release
+check wrongly required the weak handle itself to stop resolving immediately.
+The candidate now uses Unreal's validity result before touching the component
+and after destruction. This check runs only during release. No global weak-pointer
+behavior changed. The live regression is
+`tools/diagnostics/genessa-doubles/check-visual-cleanup.py`; its pre-fix failure
+is saved in `runtime-trial1/cleanup-regression-before.jsonl`. A rebuilt core and
+normal restart are required to run its three cleanup cycles before arming.
+The trial is still disabled; no custom summon rendering is verified.
+Both Windows builds pass with the correction. The development core SHA-256 is
+`0fc2402d7e98fa156871608a0ea63b558c7369b4d979670128ee357b494cb5b5`;
+shipping is `8b98d9da182bae1450b0219727a8a0f1fa1d35630b1d65f337153bb13af695fe`.
+Installation is pending the requested normal game close. Shared assets need no
+replacement for this core-only correction.
+
+Destruction semantics were checked against the local UE 5.6.1
+`ActorComponent.cpp` (DestroyComponent and K2_DestroyComponent) and
+[Epic's component destruction reference](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/UActorComponent/K2_DestroyComponent).
 
 ABI clarification: `core.json` uses core-table ABI 1 (`css_abi`), while the
 loader provides host ABI 2 (`css_host_abi`) through `css_get_api2`. CSSX's

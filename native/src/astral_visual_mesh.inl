@@ -1,6 +1,11 @@
 // Included after the source capture and post-process setting accessors.
 namespace {
 uint8_t astral_required_tick(UObject* component);
+bool astral_visual_valid(UObject* component) {
+    if(!component) return false;
+    Call valid(find(L"/Script/Engine.Default__KismetSystemLibrary"),L"IsValid",2);
+    valid.set(L"Object",component);valid.run();return valid.get<bool>();
+}
 void astral_visual_flag(UObject* object,const wchar_t* name,bool value) {
     auto* property=optional_field(object,name);
     if(!property || !property->IsA<FBoolProperty>() || property->GetArrayDim()!=1 ||
@@ -196,11 +201,13 @@ void AstralVisualMesh::show(bool enabled) {
 }
 bool AstralVisualMesh::release() noexcept {
     try {
-        if(auto* visual=component_.Get()) {
+        if(auto* visual=component_.Get();astral_visual_valid(visual)) {
             if(astral_binding_owner(visual)!=owner_.Get()) return false;
             astral_visual_visibility(visual,false);
             Call destroy(visual,L"K2_DestroyComponent",1);destroy.set(L"Object",owner_.Get());destroy.run();
-            if(component_.Get()) return false;
+            // The shipped weak-pointer bridge can still resolve a component
+            // that Unreal has marked as garbage, until GC removes its entry.
+            if(astral_visual_valid(component_.Get())) return false;
         }
     } catch(...) { return false; }
     component_=WeakObject{};owner_=WeakObject{};parent_=WeakObject{};
