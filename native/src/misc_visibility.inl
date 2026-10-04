@@ -11,12 +11,6 @@
 // ACTOR, never the body (which is the parent, never a child) and never a pawn-owned component.
 // Proven live before this code existed; see investigation/2026-09-23.
 
-// Lowercase helper.
-static std::string misc_lower(std::string s) {
-    for(char& c:s) c=char(std::tolower(static_cast<unsigned char>(c)));
-    return s;
-}
-
 // MISC's own direct-children enumeration. Unlike the shared attached_children (which throws
 // above 128 children), this tolerates any count: a fully dressed custom body can have hundreds
 // of attached components, and MISC must never abort the whole pass over one crowded mesh.
@@ -35,41 +29,6 @@ static std::vector<WeakObject> misc_children(UObject* component, int* raw_count=
     result.reserve(n);
     for(int i=0;i<n;++i) { UObject* child{}; std::memcpy(&child,values.GetRawPtr(i),sizeof(child)); result.emplace_back(child); }
     return result;
-}
-
-// A socket that belongs to the skeleton itself or to a held weapon (hand/prop), as opposed to a
-// named attachment socket a shell hangs gear on. Items on these are never treated as accessories;
-// a held weapon on Socket_Prop_R is classified separately as a drawn weapon.
-static bool misc_body_socket(const std::string& sl) {
-    if(sl.empty()||sl=="none"||sl=="root") return true;
-    for(const char* k:{"hand","prop","foot","ball_","spine","pelvis","head","neck","clavicle",
-                       "upperarm","lowerarm","arm_","thigh","calf","hips","finger","thumb","index",
-                       "middle","ring","pinky","wrist","elbow","knee","ankle","toe","chest","breast",
-                       "butt","cheek","eye","jaw","tongue","ear","hair","tail"})
-        if(sl.find(k)!=std::string::npos) return true;
-    return false;
-}
-// Category of an item resting on a socket, or "" for anything MISC must not touch. Generic across
-// shells: seals and stowed weapons are matched by socket, and anything else on a named (non-body,
-// non-hand) socket is a shell ornament or tool. Body/hand sockets and audio/VFX never classify.
-static std::string misc_category(const std::string& socket, const std::string& owner_class) {
-    const std::string sl=misc_lower(socket), ol=misc_lower(owner_class);
-    auto in=[](const std::string& h,const char* n){ return h.find(n)!=std::string::npos; };
-    // Seal first: its socket also contains "prop" and "stowed".
-    if(in(sl,"seal")||in(ol,"seal")) return "seal";
-    if(in(sl,"stowed")) {   // an item holstered on the body
-        if(in(ol,"nailshotgun")||in(ol,"ballistazooka")||in(ol,"crossbow")||in(ol,"machinegun")
-           ||in(ol,"parasite")||in(ol,"ballista")||in(ol,"shotgun")
-           ||in(sl,"nailshotgun")||in(sl,"ballistazooka")||in(sl,"crossbow")||in(sl,"machinegun")||in(sl,"parasite"))
-            return "sidearm";
-        if(in(sl,"shellitem")||in(ol,"pouch")||in(ol,"relic")||in(ol,"charm")||in(ol,"totem")||in(ol,"idol"))
-            return "accessories";
-        return "stowed_weapons";   // remaining stowed items are holstered melee weapons
-    }
-    // Any other item on a named, non-body socket is a shell ornament or usable shell tool
-    // (Eredrim's Diapason, Tiel's dagger charm, a flower crown, a cape, a pouch...).
-    if(!misc_body_socket(sl)) return "accessories";
-    return "";
 }
 
 // Category of a weapon actor by its class alone (used for the drawn, in-hand weapon, which has
@@ -137,7 +96,7 @@ static bool actor_mesh_root(UObject* comp) {
 static void set_item_hidden(UObject* comp, UObject* owner, bool hide) {
     bool any=false;
     if(owner) for(auto& c:actor_mesh_components(owner)) { if(auto* m=c.Get()) { try { set_component_hidden(m,hide); any=true; } catch(...) {} } }
-    // The root too, even when the meshes were reached: a bare scene root (Gragu's helmet) is what
+    // The root too, even when the meshes were reached: a bare scene root (helmet or quest heart) is what
     // the per-frame check reads back, and it would otherwise look visible and be re-hidden every frame.
     if(!any || !actor_mesh_root(comp)) { try { set_component_hidden(comp,hide); } catch(...) {} }
     try { if(owner) hide_game_object(owner,hide); } catch(...) {}
@@ -230,21 +189,17 @@ void MiscVisibility::enumerate(const std::vector<UObject*>& containers, UObject*
             if(!child) continue;
             std::string cc; if(auto* cls=child->GetClassPrivate()) cc=narrow(cls->GetName());
             const bool mesh=cc.find("Mesh")!=std::string::npos;
-            // Gragu's helmet attaches by a bare scene root, not a mesh; it is the one non-mesh
-            // root let through, matched by its owner below.
+            // Known accessories can attach by a scene root with nested meshes.
             if(!mesh && cc!="SceneComponent") continue;
             UObject* owner=nullptr;
             try { Call oc(child,L"GetOwner",1); oc.run(); owner=oc.get<UObject*>(); } catch(...) { continue; }
             if(!owner || owner==pawn) continue;
             std::string category; bool shell_item=false;
             std::string owner_class; if(auto* cls=owner->GetClassPrivate()) owner_class=narrow(cls->GetName());
-            const bool helmet=owner_class=="BP_Gragu_Helmet_C";
-            if(!mesh && !helmet) continue;
+            if(!misc_attachment_component(cc,owner_class)) continue;
             if(auto it=slots.find(owner); it!=slots.end()) { category=it->second.category; shell_item=it->second.shell_item; }   // authoritative
             else category=misc_category(narrow(attach_socket(child).ToString()),owner_class);   // a non-weapon accessory (flower crown, cape): fall back to the socket
-            // A shell's own headwear rides the Head bone, which the socket rule never treats as
-            // gear. It is a separate actor like the heart, so it is that shell's item (Gragu).
-            if(category.empty() && helmet) { category="accessories"; shell_item=true; }
+            if(misc_known_scene_accessory(owner_class)) shell_item=true;
             if(category.empty()) continue;
             std::string key=misc_lower(owner_class);
             if(key.ends_with("_c")) key.resize(key.size()-2);
@@ -302,6 +257,7 @@ void MiscVisibility::evaluate(const std::map<std::string,MiscRule>& rules, bool 
 static MiscShellItem misc_shell_item_info(const std::string& key) {
     static const MiscShellItem known[]={
         {"wp_alienheart","Revered Heart","Gragu's heart, carried on the belt and eaten to restore health. Hidden, it still heals."},
+        {"bp_attachable_item_heart","Heart of Vatra","The quest heart carried on the belt. Hiding it keeps it in your inventory."},
         {"bp_gragu_helmet","Helmet","Gragu's helmet, worn over whatever head the look has."},
         {"wp_eredrim_diapason","Diapason","Eredrim's bell, hung on the body until his ability rings it."},
         {"wp_eredrim_diapason_obsidian","Diapason","Eredrim's bell, hung on the body until his ability rings it."},

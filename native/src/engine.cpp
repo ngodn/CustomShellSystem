@@ -4,6 +4,7 @@
 #include "physics_presets.hpp"
 #include "skeleton_compatibility.hpp"
 #include "recovery.hpp"
+#include "misc_attachment.hpp"
 #include <array>
 #include <cctype>
 #include <cstring>

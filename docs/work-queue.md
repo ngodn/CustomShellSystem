@@ -1,5 +1,14 @@
 # Current work queue
 
+## October 4: Heart of Vatra belt accessory
+
+The reporter's NG+ quest heart is missed by MISC because its actor attaches
+through a plain scene root. Added exact actor recognition and a separate
+**Heart of Vatra** accessory row, avoiding its misleading seal socket and
+keeping Revered Heart independent. The regression fails before the fix and
+passes after; the production build passes. Live NG+ hide/show acceptance is
+pending. See [Vatra visibility findings](development/vatra-heart-visibility.md).
+
 ## October 4: selected animations after revival
 
 The author reports losing Eve Default Idle after death/Harbinger revival, and
