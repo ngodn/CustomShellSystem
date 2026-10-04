@@ -7,6 +7,7 @@
 #include <atomic>
 #include <fstream>
 #include <set>
+#include <span>
 #include <vector>
 #include <deque>
 #include "data.hpp"
@@ -62,6 +63,27 @@ public:
     ~AssetLoadRoots() noexcept { release(); }
 };
 class Appearance;
+struct AstralMaterialInput {
+    RC::Unreal::UObject* source=nullptr;
+    RC::Unreal::UObject* companion=nullptr;
+};
+// Prepared privately before any component binding. The caller must resolve
+// compatible companion shaders and detach bindings before releasing this set.
+class AstralMaterials {
+    struct Copy { WeakObject instance; int32_t opacity_index=-1; };
+    WeakObject owner_, native_mid_;
+    std::vector<Copy> copies_;
+    std::vector<size_t> slots_;
+    AssetLoadRoots retained_;
+    std::optional<float> opacity_;
+public:
+    void prepare(RC::Unreal::UObject* owner,RC::Unreal::UObject* native_mid,
+                 std::span<const AstralMaterialInput> inputs,bool corrupted);
+    bool sync_opacity();
+    RC::Unreal::UObject* material(size_t index) const;
+    size_t size() const { return slots_.size(); }
+    void release() noexcept;
+};
 class OverlayControls {
     struct Entry { WeakObject original, mid, bound; bool detached=false; };
     WeakObject component_, mesh_;
@@ -86,6 +108,7 @@ class EngineBridge {
 #ifdef CSS_INVENTORY_DEV
     AstralLifecycle astral_lifecycle_;
     Json observe_astral(void* engine);
+    Json probe_astral_materials(void* engine,const Json& request);
 #endif
     std::map<uint64_t,WeakObject> objects_;
     std::map<std::string,WeakObject> defaults_;

@@ -65,6 +65,55 @@ cached-active Stray, late initialization, hidden/disabled actors, changed
 component/MID, object-array serial reuse, ownership/travel changes, duplicate
 and oversized snapshots, and full-capacity replacement.
 
+## C++ private material owner
+
+`AstralMaterials` prepares private MIDs, copies source uniform parameters and
+then writes the form/fade controls. Identical source/companion pairs share one
+MID within a double; different doubles own independent sets. The caller must
+resolve compatible companion shaders and detach component bindings before
+release. This class does not choose adapters, bind meshes or register hooks.
+
+The development bridge operation `astral.materials.probe` exercises that exact
+C++ class. It is built but not installed or live-verified. Supply live bridge
+handles obtained in the same session, never saved handles from another run:
+
+```json
+{
+  "op": "astral.materials.probe",
+  "owner": {"$object": 1},
+  "native_parent": {"$object": 2},
+  "inputs": [{
+    "source": {"$object": 3},
+    "companion": {"$object": 4},
+    "scalars": ["GlowStrength"],
+    "vectors": [],
+    "textures": []
+  }]
+}
+```
+
+These handle numbers are placeholders. `owner` is a live world-context actor;
+`native_parent` is the non-dynamic native summon material. Each source is a
+currently applied material; its companion is a non-dynamic compatible private
+parent or instance. Parameter names must come from the material inventory or
+reflected parameter arrays. A getter returning zero for an unknown name does
+not prove a parameter exists. Provide at least one independently identified
+parameter across 1..16 pairs, at most 64 names of each type per pair.
+
+The operation writes only newly created, unattached MIDs. It creates its own
+native-opacity driver, prepares both forms, compares requested scalar/vector/
+texture values, checks sharing by source/companion identity, initial controls,
+full/half/unchanged/zero/clamped fade values, failed preparation, reprepare
+rejection, explicit release and the final keep-alive object count. It does not
+change the real native MID or any mesh binding. Include a repeated input pair
+to exercise slot sharing. It runs synchronously once and must not be polled.
+
+A successful result would prove runtime copying and ownership for the supplied
+inputs. It would not prove shader compatibility, rendered ghost effects,
+gameplay integration, actor cleanup across travel, or frame cost. Shipping
+builds exclude the probe. The earlier Lua copy test does not validate this C++
+owner or its cached scalar-index calls.
+
 ## Offline garment fade experiment
 
 Use the exact UE 5.6.1 Linux editor and its bundled Python. This experiment

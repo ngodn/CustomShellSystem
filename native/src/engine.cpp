@@ -445,6 +445,7 @@ static FScriptArrayHelper overrides(UObject* component) {
 static bool dynamic_material(UObject* value) {
     return value && value->IsA(static_cast<UClass*>(find(L"/Script/Engine.MaterialInstanceDynamic")));
 }
+#include "astral_materials.inl"
 static bool material_has_overrides(UObject* value) {
     // Read the reflected arrays, including parameter kinds added by newer
     // builds. Only unwrap instances with no parameter or profile overrides.

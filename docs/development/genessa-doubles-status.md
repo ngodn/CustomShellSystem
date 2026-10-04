@@ -28,6 +28,29 @@ host CTest cases pass. Development and shipping Windows DLLs build successfully;
 the latter excludes the observer. Live validation of this C++ observer remains
 pending; the earlier Lua capture is the behavioral reference.
 
+`AstralMaterials` now provides private uniform copies and native-opacity
+synchronization, without any component assignment or summon hook. Matching
+source/companion pairs share one instance per owner. Scalar indices belong to
+their own MIDs and are captured after uniform copying; unchanged opacity skips
+all setters. Weak owner/native handles gate access, retained material inputs
+protect preparation, and explicit release drops the private set.
+
+The development-only `astral.materials.probe` checks the actual owner using an
+unattached opacity driver, leaving native actors and player materials alone.
+Its source documents copy/readback, fade endpoints and clamping, repeated slots,
+rejected preparation and keep-alive cleanup checks. Neither this probe nor the
+owner has been live-verified. Adapter selection, binding, appearance transfer,
+pooling integration and production shared-asset packaging remain unfinished.
+
+Validation for this material-owner change: `css_core` built successfully in
+`build/windows` (development) and `build/release-windows` (shipping), with no
+reported compiler warnings. Reconfigured and built `build/release-host`; all
+17 registered CTest cases passed. Those portable tests do not execute reflected
+material calls. The signatures were checked against the game's `Engine.hpp`
+dump and UE 5.6.1 `MaterialInstanceDynamic.cpp`. The scalar-index constraint is
+also documented by [Epic](https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UMaterialInstanceDynamic/SetScalarParameterByIndex).
+No DLL, package or settings were installed by this change.
+
 Material composition is still unresolved. The native ghost shader lacks
 configurable mask textures. Replacing every material with it loses hair,
 fabric and wing coverage. Retaining the original materials with a global ghost

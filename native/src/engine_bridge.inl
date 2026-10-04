@@ -217,6 +217,7 @@ void EngineBridge::encode(FProperty* p,void* data,const Json& value,unsigned dep
 }
 #ifdef CSS_INVENTORY_DEV
 #include "astral_observer.inl"
+#include "astral_materials_probe.inl"
 #endif
 Json EngineBridge::request(void* engine,Appearance& appearance,const Json& request) {
     const auto op=request.at("op").get<std::string>();
@@ -228,6 +229,7 @@ Json EngineBridge::request(void* engine,Appearance& appearance,const Json& reque
     }
 #ifdef CSS_INVENTORY_DEV
     if(op=="astral.observe") return observe_astral(engine);
+    if(op=="astral.materials.probe") return probe_astral_materials(engine,request);
     if(op=="astral.clear") { astral_lifecycle_.clear(); return true; }
     // Startup probes need a world context before a playable character exists.
     if(op=="engine") return handle(static_cast<UObject*>(engine));
