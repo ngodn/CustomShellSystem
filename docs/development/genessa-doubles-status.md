@@ -78,8 +78,12 @@ The trial is still disabled; no custom summon rendering is verified.
 Both Windows builds pass with the correction. The development core SHA-256 is
 `0fc2402d7e98fa156871608a0ea63b558c7369b4d979670128ee357b494cb5b5`;
 shipping is `8b98d9da182bae1450b0219727a8a0f1fa1d35630b1d65f337153bb13af695fe`.
-Installation is pending the requested normal game close. Shared assets need no
-replacement for this core-only correction.
+The author closed the game and the correction is installed as
+`css_core-astral-trial-0fc2402d7e98fa15.dll`. Selector, core and 12 protected
+file hashes passed verification. The previous core/selector backup and receipt
+are in `work/genessa-doubles/runtime-trial2`. Shared assets were not replaced.
+The next step is a normal launch, the three-cycle cleanup regression, then
+arming the trial if it passes. The corrected core is not yet live-verified.
 
 Destruction semantics were checked against the local UE 5.6.1
 `ActorComponent.cpp` (DestroyComponent and K2_DestroyComponent) and

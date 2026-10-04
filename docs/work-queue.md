@@ -1,5 +1,17 @@
 # Current work queue
 
+## October 5: reduce restarts during native development
+
+The author renewed the request to use hot reload instead of restarting for
+every change. Preserve the active doubles priority. Existing `tools/css.py reload`
+can replace the CSS core, but the September 20 animation-worker crash remains
+unresolved in [the reload investigation](development/dll-reload.md). Validate
+cleanup and animation-worker lifetimes before using it for routine core swaps.
+The current doubles cleanup correction was installed with the game closed.
+Trial enable/disable and existing runtime settings can be changed live without
+replacing the DLL. Loader/UE4SS and mounted cooked-asset changes still require
+a restart in the current supported workflow.
+
 ## October 5: Eve asset-load report, after the doubles work
 
 Didodiodi reports `Asset could not load: /Game/CSS/EveTest/` in the bottom-right
