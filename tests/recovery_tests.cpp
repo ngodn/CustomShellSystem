@@ -4,6 +4,26 @@
 using css::Recovery;
 void check(bool value,const char* message) { if(!value) throw std::runtime_error(message); }
 int main() {
+    // A gate can restore its shell definition after the completion edge, while
+    // CSS still remembers a different mesh from an earlier appearance switch.
+    constexpr auto outfit="/Game/CSS/UnholyGenessa/SK_EveW3.SK_EveW3";
+    constexpr auto captured="/Game/Characters/PreviousShell.PreviousShell";
+    constexpr auto current_default="/Game/Characters/CurrentShell.CurrentShell";
+    Recovery delayed;
+    delayed.observe(true,true,true,false,false); // completion edge, outfit still present
+    check(!delayed.pending(),"Healthy gate completion scheduled a needless apply");
+    delayed.observe(true,true,true,false,
+        css::is_stock_mesh_reset(current_default,outfit,captured,current_default));
+    check(delayed.due(250),"Late gate reset to current shell default left original appearance visible");
+    delayed.clear();
+    for(const auto mesh:{outfit,"/Game/OtherMod/Replacement.Replacement",""}) {
+        delayed.observe(true,true,true,false,
+            css::is_stock_mesh_reset(mesh,outfit,captured,current_default));
+        check(!delayed.pending(),"Outfit, missing mesh or unknown mod replacement was reclaimed");
+    }
+    check(css::is_stock_mesh_reset(captured,outfit,captured,""),"Captured stock recovery regressed");
+    check(!css::is_stock_mesh_reset(current_default,"",captured,current_default),"Unowned component was reclaimed");
+    check(!css::is_stock_mesh_reset(current_default,outfit,captured,""),"Unresolved default was guessed");
     for(const auto name:{"GA_Traversal_ShellThrow_C", "GA_Traversal_ShellThrow_High_C",
                          "GA_Traversal_ShellThrow_Long_C", "GA_Traversal_BoneGate_Far_C"})
         check(css::is_mesh_switch_traversal(name),"Active traversal action was not guarded");

@@ -871,7 +871,7 @@ struct Core {
                     apply_pending=true;
                     host.log(("Reconciling saved appearance after player/mesh transition: shell "+
                               (appearance.shell.empty()?std::string("<none>"):appearance.shell)+
-                              ", saved "+(state.selections.contains(reconcile_key)
+                              ", mesh "+appearance.current_mesh+", saved "+(state.selections.contains(reconcile_key)
                                   ? state.selections.at(reconcile_key).outfit+"/"+state.selections.at(reconcile_key).variant
                                   : std::string("<nothing for this shell>"))).c_str());
                 } else if(reason!=blocked_reason) {

@@ -1,5 +1,16 @@
 # Current work queue
 
+## October 4: intermittent original-shell appearance after gates
+
+The author clarified that the outfit reverts to the original shell. Captured
+logs show successful restores but do not retain the failed state. A candidate
+now recognizes the current shell definition's default mesh as well as CSS's
+captured original, covering delayed resets after the transition edge. Host
+regression and production build pass. The candidate was installed with the game
+closed and its hash verified; live recurrence testing is pending.
+See [evidence and limits](development/intermittent-gate-appearance.md).
+Genessa gameplay clipping remains queued below.
+
 ## October 4: profile input conflict, then Genessa gameplay clipping
 
 Priority 1: the author reproduced the profile issue. The Save prompt advertises
@@ -8,8 +19,8 @@ suppresses the save binding. Earlier validation messages did not fix this.
 Use Enter for keyboard save, including with the field focused, and preserve
 mouse/controller saving. The corrected candidate was installed and the author
 confirmed that saving works. Separate mouse/controller acceptance is not implied.
-A subsequently reported row-label overlap is repaired in source for the next
-build: menu invalidation now hides retained row status labels before clearing
+A subsequently reported row-label overlap was repaired and installed:
+menu invalidation now hides retained row status labels before clearing
 the cache, preventing MISC "When in use" from leaking into SHELL.
 
 Priority 2: Unholy Genessa's metallic/glowing outfit parts fit in Inventory/CSS

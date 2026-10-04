@@ -4,6 +4,11 @@
 #include <string_view>
 
 namespace css {
+inline bool is_stock_mesh_reset(std::string_view current, std::string_view applied,
+                               std::string_view captured, std::string_view definition) {
+    return !current.empty() && !applied.empty() && current!=applied &&
+           (current==captured || current==definition);
+}
 inline bool is_mesh_switch_traversal(std::string_view ability) {
     // GA_ShellTraversal* are persistent detach/recall listeners, including at new game.
     // Their ActiveCount stays nonzero outside traversal and must not block recovery.

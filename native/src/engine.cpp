@@ -750,6 +750,7 @@ bool Appearance::materials_match() const {
 }
 static bool is_quest_or_teleport_active(UObject* pc);
 static bool is_traversal_ability_active(UObject* pawn);
+static std::string player_default_mesh(UObject* pawn,std::string_view shell);
 
 bool Appearance::repair_materials_needed() const {
     auto* component=component_.Get();
@@ -810,6 +811,12 @@ Json Appearance::transition_state(void* engine) {
     auto* pawn=player(engine);
     Json result={{"player_ready",pawn!=nullptr},{"mesh",current_mesh},{"shell",shell}};
     if(!pawn) return result;
+    result["captured_original_mesh"]=original_;
+    result["applied_mesh"]=applied_.Get()?narrow(applied_.Get()->GetPathName()):std::string{};
+    result["appearance_active"]=active();
+    result["shell_default_mesh"]=player_default_mesh(pawn,shell);
+    result["mesh_repair_needed"]=repair_mesh_needed();
+    result["apply_blocked_reason"]=ready_to_apply_reason();
     auto* pc=read<UObject*>(pawn,L"Controller");
     result["controller_ready"]=pc && read<UObject*>(pc,L"Pawn")==pawn;
     if(!pc) return result;
@@ -1024,16 +1031,38 @@ static bool is_traversal_ability_active(UObject* pawn) {
     return false;
 }
 
+static std::string player_default_mesh(UObject* pawn,std::string_view shell) {
+    if(!pawn) return {};
+    const wchar_t* field_name=nullptr;
+    if(shell.starts_with("CharacterId.Player.Shell.")) field_name=L"ShellClass";
+    else if(shell.starts_with("CharacterId.Player.Darkform.")) field_name=L"DarkformClass";
+    else return {};
+    auto* object=read<UObject*>(pawn,field_name);
+    if(!object || !object->IsA(static_cast<UClass*>(find(L"/Script/CoreUObject.Class")))) return {};
+    auto* type=static_cast<UClass*>(object);
+    if(!type->IsChildOf(static_cast<UClass*>(find(L"/Script/Sparta.SpartaPlayerCharacter")))) return {};
+    auto* defaults=type->GetClassDefaultObject().Get();
+    if(!defaults || !defaults->HasAnyFlags(RF_ClassDefaultObject) || defaults->GetClassPrivate()!=type) return {};
+    // The cooked GetDefaultMeshSoftReference returns this property. Read the
+    // soft path without loading an asset or invoking a gameplay shell switch.
+    Call path(find(L"/Script/Engine.Default__KismetSystemLibrary"),L"Conv_SoftObjectReferenceToString",2);
+    original_property(path,L"SoftObjectReference",defaults,L"DefaultMesh");path.run();
+    auto value=original_string(path);
+    return valid_asset(value)?value:std::string{};
+}
 bool Appearance::repair_mesh_needed() const {
     auto* component=component_.Get();
     if(!component || component!=observed_component_.Get()) return false;
     // Cheapest test first: nearly always our own mesh is on, and nothing else matters.
     auto* mesh=mesh_asset(component);
-    if(!mesh || mesh==applied_.Get()) return false;
-    // Only reclaim the stock mesh captured for this component. An unfamiliar
-    // replacement can belong to another mod or an unfinished transformation.
-    if(narrow(mesh->GetPathName())!=original_) return false;
-    return !is_quest_or_teleport_active(observed_controller_.Get()) && !is_traversal_ability_active(observed_pawn_.Get());
+    auto* applied=applied_.Get();
+    if(!mesh || !applied || mesh==applied) return false;
+    if(is_quest_or_teleport_active(observed_controller_.Get()) || is_traversal_ability_active(observed_pawn_.Get())) return false;
+    const auto current=narrow(mesh->GetPathName());
+    // A gate returns to the current shell definition, which need not match
+    // the original CSS captured before earlier shell/Harbinger changes.
+    const auto definition=current==original_?std::string{}:player_default_mesh(observed_pawn_.Get(),shell);
+    return is_stock_mesh_reset(current,narrow(applied->GetPathName()),original_,definition);
 }
 std::string Appearance::ready_to_apply_reason() const {
     auto* pawn=observed_pawn_.Get(); auto* component=observed_component_.Get(); auto* pc=observed_controller_.Get();
@@ -1137,7 +1166,8 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     retained_.take(loading_roots);
     if (before == target && applied_materials_==materials && materials_match()) return true;
     if (before == target && applied_materials_==materials && reuse_materials()) return true;
-    const bool returning_to_outfit=applied_.Get()==target && applied_materials_==materials && repair_mesh_needed();
+    const bool returning_to_outfit=applied_.Get()==target && applied_materials_==materials &&
+        narrow(before->GetPathName())==original_ && repair_mesh_needed();
     if (!returning_to_outfit && (component_.Get() != component || before != applied_.Get())) {
         auto materials=material_paths(component);
         attachments_.release();
