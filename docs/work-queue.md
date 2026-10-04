@@ -8,7 +8,10 @@ blue/red ghost effects and ability behavior. Initial dump inspection found
 spawn, cache/reuse, ghost-material and fade interfaces. Full cooked-graph tracing
 and live verification remain. The requested updated goal is recorded in
 [Genessa doubles](development/genessa-doubles-goal.md). The existing gameplay
-clipping investigation remains pending; no runtime clone changes are made yet.
+clipping investigation remains pending. Eve v1.4.0 and Commander White
+v0.0.6-dev material support are also required, including their distinct hair
+graphs, current colors and modular parts. Material experiments and lifecycle
+observation are in development; no appearance transfer is installed yet.
 
 ## October 4: intermittent original-shell appearance after gates
 

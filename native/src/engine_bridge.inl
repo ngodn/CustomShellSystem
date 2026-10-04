@@ -215,6 +215,9 @@ void EngineBridge::encode(FProperty* p,void* data,const Json& value,unsigned dep
     }
     throw std::runtime_error("CSSX cannot write this reflected property type");
 }
+#ifdef CSS_INVENTORY_DEV
+#include "astral_observer.inl"
+#endif
 Json EngineBridge::request(void* engine,Appearance& appearance,const Json& request) {
     const auto op=request.at("op").get<std::string>();
     if(op=="valid") {
@@ -224,6 +227,8 @@ Json EngineBridge::request(void* engine,Appearance& appearance,const Json& reque
         return found!=objects_.end() && found->second.Get()!=nullptr;
     }
 #ifdef CSS_INVENTORY_DEV
+    if(op=="astral.observe") return observe_astral(engine);
+    if(op=="astral.clear") { astral_lifecycle_.clear(); return true; }
     // Startup probes need a world context before a playable character exists.
     if(op=="engine") return handle(static_cast<UObject*>(engine));
 #endif

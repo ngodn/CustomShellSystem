@@ -24,6 +24,9 @@
 #include <memory>
 #include <Unreal/UObject.hpp>
 #include <Unreal/FWeakObjectPtr.hpp>
+#ifdef CSS_INVENTORY_DEV
+#include "astral_lifecycle.hpp"
+#endif
 
 namespace css {
 fs::path engine_content_directory();
@@ -80,6 +83,10 @@ public:
 // extension host; the shell-revive recovery and CSS's dev probes use it to read and drive the
 // engine through JSON ops. It keeps a handle table so a caller can hold an object across calls.
 class EngineBridge {
+#ifdef CSS_INVENTORY_DEV
+    AstralLifecycle astral_lifecycle_;
+    Json observe_astral(void* engine);
+#endif
     std::map<uint64_t,WeakObject> objects_;
     std::map<std::string,WeakObject> defaults_;
     uint64_t next_=1;

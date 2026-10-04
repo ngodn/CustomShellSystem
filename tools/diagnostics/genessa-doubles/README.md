@@ -38,6 +38,33 @@ probe directory; the combined file copies their contents for analysis.
 
 Research and limitations: [index](../../../docs/development/genessa-doubles-index.md).
 
+## C++ lifecycle observer
+
+Development builds with `CSS_INVENTORY_DEV` accept engine bridge requests
+`{"op":"astral.observe"}` and `{"op":"astral.clear"}`. These are development
+operations, not a public CSSX feature. The observer is not in the installed
+beta.10 DLL and has not been live-tested. Do not send requests expecting it to
+exist there or hot-reload a replacement while the game is running.
+
+`astral.observe` reads the player's owned `AllCharacters` array, bounded to 32,
+checks component and actor ownership, and reports current flags, native opacity
+and observed lifecycle changes. The registry stores object index/serial pairs,
+not actor pointers or strong references. Missing actors, owner/world/spawner
+changes, invalid snapshots and explicit clear discard prior tracking. An active
+double with a replaced mesh component or native MID produces a rebound event.
+Cached-but-enabled Stray doubles remain eligible.
+
+Calls are on demand only. There is no timer, automatic appearance apply, fade
+write or hook. Transitions between samples can be missed, including a complete
+pooled reuse, so this observer is not a substitute for an activation hook.
+An activation counter measures observed activations, not every summon in play.
+
+Portable tests: build `css_astral_lifecycle_tests` and run CTest's
+`css_astral_lifecycle`. They cover pooled reuse, both live gameplay tags,
+cached-active Stray, late initialization, hidden/disabled actors, changed
+component/MID, object-array serial reuse, ownership/travel changes, duplicate
+and oversized snapshots, and full-capacity replacement.
+
 ## Offline garment fade experiment
 
 Use the exact UE 5.6.1 Linux editor and its bundled Python. This experiment

@@ -1,6 +1,6 @@
 # Genessa doubles status
 
-Session 2, October 4, 2026. Branch `feature/genessa-doubles`.
+Session 3, October 4, 2026. Branch `feature/genessa-doubles`.
 
 ## Current state
 
@@ -13,6 +13,15 @@ Use the player's owned spawner and verified actor ownership for discovery.
 Keep native ability, targeting, collision and lifetime logic intact. Each
 double needs independent appearance state and visual settings driven by its
 own animation. Player MIDs must not be mutated by the double's fade.
+
+A bounded lifecycle tracker and an on-demand C++ observer are now implemented.
+The observer is compiled only with `CSS_INVENTORY_DEV`, through engine bridge
+operations `astral.observe` and `astral.clear`. It has no tick or spawn hook,
+does not change appearances, and is not installed. Portable lifecycle checks,
+including AddressSanitizer/UndefinedBehaviorSanitizer, pass. All 17 available
+host CTest cases pass. Development and shipping Windows DLLs build successfully;
+the latter excludes the observer. Live validation of this C++ observer remains
+pending; the earlier Lua capture is the behavioral reference.
 
 Material composition is still unresolved. The native ghost shader lacks
 configurable mask textures. Replacing every material with it loses hair,
@@ -57,6 +66,7 @@ exact versions, source paths, known limitations and readback evidence.
 | Private garment fade graphs | Vulkan fade test passed, visual equivalence not established | Both zero renders equal removed; full and half differ; source hashes unchanged |
 | Eve and Commander White hair | Companions authored; card render pending | Seven-mesh audit, two distinct graphs, eight hair instances |
 | Faithful reuse | One live reuse verified | Same actor 2147330429: cached/disabled -> uncached/enabled -> cached/disabled |
+| Bounded lifecycle tracking | Portable tests and development Windows build passed; C++ live check pending | `astral_lifecycle.hpp`, `astral_observer.inl`, `astral_lifecycle_tests.cpp` |
 | Stray lifecycle and cleanup | Partial live evidence | Primary is cached=true and enabled=true while opacity changes; secondary not sampled |
 | Performance and regressions | Pending implementation | No new core installed |
 
@@ -140,8 +150,8 @@ Main-drive available space increased from 12,246,016,000 to 45,349,818,368
 bytes during the cleanup (the final `df -h` reports 43G). uv retained about
 16G after pruning. Zen's `ue.ddc` and `ue4.ddc` namespaces were dropped using
 its management tool; three project records, the CAS and installed binaries
-were retained, and the temporary server was shut down. Only the existing
-offline render is still running, using its separate file cache.
+were retained, and the temporary server was shut down. The offline render used
+its separate file cache during cleanup and has since finished.
 
 Backup cleanup removed 7.67 GiB of generated package thumbnails/dye masks
 and 18 redundant staging sets totaling 3.32 GiB. Every removed staging
