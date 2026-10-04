@@ -4,13 +4,22 @@ Session 4, October 5, 2026. Branch `feature/genessa-doubles`.
 
 ## Current state
 
+Native body ghost parents now compile and pass 26 HDR fixture captures across
+Faithful and Stray. The checks cover native alpha-channel behavior, the exact
+clip boundary, opaque-versus-masked handling, tint, animation and zero/partial
+fade. These parents use albedo detail under ghost shading; native reflection,
+blood/frost and death displacement are not reproduced. Full-character fidelity,
+effective permutation selection and Windows cooking remain pending. Both
+authoring and rendering exited zero, and the comparison image was inspected.
+See [material support](genessa-doubles-materials.md). No installation changed.
+
 Genessa's eye/smoke reconstruction passes 3,096 shader arithmetic and UV cases.
 All four private parents compile in UE 5.6.1. Forty HDR captures on SK_EveW3's
 authored eye/smoke sections pass both forms' tint, color/intensity, independent
 animated clocks, partial fade and exact zero-fade checks. Protected hashes are
 unchanged and the isolated editor exited zero. Face occlusion, DX12 and live
-integration remain unverified; body and other native eye families still need
-adapters. See the October 5 section in material support.
+integration remain unverified; body integration and Commander White's native
+eye family still need work. See the October 5 sections in material support.
 
 The lit-surface experiment completed but is unsuitable for shipping. Run 6
 captured 156 EXRs across seven material families and both forms. All 14 groups

@@ -5,6 +5,44 @@ October 4, 2026. Offline experiments, not installed runtime support.
 The user requires Unholy Genessa, Eve and Commander White. Companion materials
 belong to CSS. Outfit authoring sources and released containers stay unchanged.
 
+## Native body companions, October 5
+
+`create-native-body-materials.py` adds opaque-source and masked-source ghost
+parents. Both use the original non-VT albedo as the detail factor
+`0.5 * (1 + saturate(albedo))`. The masked parent preserves the native alpha
+calculation, including the replicated-alpha channel dot and the strict
+less-than clip comparison. The clip threshold is a CSS parameter so runtime
+can supply the source's effective override. The texture parameter retains its
+exact native name, including the two spaces in `BaseColorMap  non VT`.
+
+These are ghost adaptations, not copies of the complete native Uber shader.
+Source environment reflection boost, rim lighting, blood/frost and death
+displacement are omitted. The audited Eve/CW inventory has BaseColorAdjust
+disabled. The recorded switch requirements do not authorize unrelated native
+permutations. Preserve unsupported-appearance fallback until the material
+catalog and complete appearance checks are in place.
+
+Creation run 1 failed on a nonexistent vector-parameter RGBA output. Run 2
+explicitly appends RGB and A and succeeds. Render run 1 compiles both parents
+without errors and captures 26 HDR images. `check-native-body-renders.py`
+passes for both forms: blue/red tint, animation, partial/zero fade, native clip
+boundary, red-versus-alpha selector equivalence, empty zero-channel coverage,
+and zero-alpha cutouts. The opaque parent correctly ignores texture alpha.
+The comparison image was visually inspected. The fixtures use known white RGB
+with zero/full alpha; they do not establish full-character texture fidelity.
+
+Receipts: `material-outfits1/native-body-materials.json` and
+`native-body-renders-1/{captures.json,hdr-check.json,comparison.png}` on the
+secondary-drive stage. Protected sources are unchanged. No game installation
+changed. Windows cooking, live binding, body customization and Commander
+White's separate eye refraction remain pending.
+
+Run `body-create` then `body-render` through `run-material-test.sh`, with unused
+log names. Rendering uses the existing isolated stage and its diagnostic
+`CSS_ASTRAL_SERIAL_RHI=1` setting. The creator and renderer refuse to overwrite
+their output. Host checking uses Python 3.14, NumPy and OpenEXR; material
+authoring uses UE 5.6.1's bundled Python 3.11.
+
 ## Genessa eye and smoke reconstruction, October 5
 
 `native-eye-response.hlsl` reconstructs the two shipped eye materials before
@@ -313,7 +351,8 @@ The refraction shader saturates its `Opacity` scalar for ordinary output alpha.
 This alone does not prove that setting opacity to zero removes all rendering:
 reflection/emissive color and the separate distortion path still need tracing.
 Do not drop Commander White's eye layers based only on their zero opacity.
-Genessa's two eye shaders are extracted but their expressions remain untraced.
+Genessa's two eye expressions were subsequently reconstructed and checked as
+recorded above. Commander White's refraction/distortion path is still pending.
 
 No game files, outfit assets or installed runtime were changed by this audit.
 
