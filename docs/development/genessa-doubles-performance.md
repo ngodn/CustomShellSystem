@@ -39,3 +39,48 @@ warns about the general copy operation. The exact local UE 5.6.1 source shows
 our existing `bQuickParametersOnly=true` path calls `CopyMaterialUniformParameters`.
 Switching to `CopyInterpParameters` without measuring could lose inherited
 parameters, so no material-copy replacement is justified yet.
+
+Trial7 isolates the repeated cost to component registration. The saved
+`runtime-trial7/creation-timings.json` records 31 preparations and removals,
+zero active groups, zero errors and zero pose rebinds. Registration totals
+2617.4453 ms over 31 calls (84.43 ms mean, 96.5529 ms maximum); material
+creation totals 22.948 ms (0.74 ms mean, 0.9638 ms maximum). Adapter setup
+has a 109.339 ms initial maximum but settles to 1.3918 ms on the latest call.
+Its initial maximum does not explain the repeated registration hitch.
+
+Next isolate registration's cloth allocation, post-process initialization and
+render/physics setup using hidden private components. Keep the source mesh,
+player, camera and current appearance untouched; remove each test component.
+The installed UE 5.6.1 source calls InitAnim and RecreateClothingActors from
+USkeletalMeshComponent::OnRegister. Disabling cloth simulation alone does not
+skip clothing actor allocation, which has a separate bAllowClothActors flag.
+
+The hidden-component comparison is saved in
+`runtime-trial7/registration-isolation.json` and its request log. With cloth
+allocation off, request roundtrips were 239-255 ms; with it on, 324-348 ms.
+Post-process enablement did not produce a similar difference. These roundtrips
+include request dispatch and polling; the direct registration timer above is
+the engine-duration measurement. All eight diagnostic components were destroyed
+and the player's owned component list returned to its original value.
+
+The author explicitly rejected removing cloth simulation from doubles. The
+candidate retains full cloth on native cached doubles instead. On deactivation,
+it hides the owned visuals, stops their ticks, restores native rendering and
+material bindings, and releases the copied MIDs. Reuse requires the same live
+actor/component/mesh identities, captured structure and settings, and valid pose
+sources. Each activation makes fresh materials and resets dynamics/cloth before
+resuming. Entries expire after 30 seconds and are discarded on context changes,
+removal from the native spawner, disabled options or incompatible state. It
+does not extend native actor lifetime. First-time registration and reconstruction
+on pose-source changes still allocate cloth; this is not a cold-spawn fix.
+
+The review also found that transient source unavailability could suppress all
+future preparation. A missing source now retries after one second; a rejected
+source can retry on a later activation after the same cooldown. Failed material
+restoration retains its records and originals until cleanup succeeds.
+
+Host tests cover cache identity/expiry and the source retry decision. They do
+not execute Unreal cloth, park/resume or destruction. Measure actual cache hits,
+registration counts, active and cached counts, idle tick cost, menu/customization
+changes, Default controls, and both forms in game before release. The candidate
+has not yet been installed or accepted.

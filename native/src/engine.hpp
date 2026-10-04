@@ -184,6 +184,7 @@ public:
     bool intact() const;
     bool pose_source_intact() const;
     void show(bool enabled);
+    void set_paused(bool paused,const AstralPhysicsSource& physics);
     bool release() noexcept;
     ~AstralVisualMesh() noexcept { release(); }
 };

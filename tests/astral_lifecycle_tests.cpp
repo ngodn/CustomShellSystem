@@ -32,6 +32,13 @@ int main() {
             "Appearance settings enabled an unknown summon kind");
     }
     auto changes=sample(faithful);
+    check(astral_source_refresh_due(false,false,false,0,0),"Initial source capture was skipped");
+    check(!astral_source_refresh_due(true,true,false,1000,1000),"Stable source was rebuilt on idle polls");
+    check(!astral_source_refresh_due(false,false,false,999,1000),"Unavailable source ignored retry cooldown");
+    check(astral_source_refresh_due(false,false,false,1000,1000),"Transient source loss could not recover without an appearance revision");
+    check(!astral_source_refresh_due(true,false,false,1000,1000),"Rejected source retried continuously without a summon");
+    check(astral_source_refresh_due(true,false,true,1000,1000),"New summon could not retry a failed source");
+    check(!astral_source_refresh_due(true,false,true,999,1000),"Repeated failed summons ignored retry cooldown");
     check(changes.accepted && events(changes,AstralEventKind::discovered)==1 &&
         events(changes,AstralEventKind::activated)==1,"First enabled summon did not activate");
     check(registry.entries()[0].activation==1,"First activation generation wrong");
@@ -43,6 +50,27 @@ int main() {
     check(sample(faithful).count==0,"Pooled double repeatedly deactivated");
     faithful.cached=false; faithful.enabled=true;
     check(events(sample(faithful),AstralEventKind::activated)==1,"Reused double lost activation");
+    {
+        const auto previous=faithful;
+        auto current=faithful;current.cached=true;current.enabled=false;
+        check(astral_cached_visual_matches(previous,current,100,101),"Native cached double cannot retain its visual");
+        current.cached=false;current.enabled=true;current.native_mid={90,1};
+        check(astral_cached_visual_matches(previous,current,100,101),"Fresh fade MID prevented safe component reuse");
+        check(!astral_cached_visual_matches(previous,current,100,99),"Clock rollback kept cached visual");
+        check(!astral_cached_visual_matches(previous,current,100,30100),"Expired cached visual remained eligible");
+        for(int field=0;field<6;++field) {
+            auto changed=current;
+            if(field==0) ++changed.actor.serial;
+            if(field==1) ++changed.owner.serial;
+            if(field==2) ++changed.component.serial;
+            if(field==3) ++changed.mesh.serial;
+            if(field==4) changed.kind=AstralKind::stray_primary;
+            if(field==5) changed.initialized=false;
+            check(!astral_cached_visual_matches(previous,changed,100,101),"Replaced native identity inherited cached visual");
+        }
+        current.enabled=false;
+        check(!astral_cached_visual_matches(previous,current,100,101),"Uncached inactive actor retained a visual");
+    }
     check(registry.entries()[0].activation==2,"Reused double inherited old activation generation");
     // A per-frame fade pass sees disabled/hidden, then pooling ends before
     // the next 50 ms discovery snapshot. The next snapshot is active again.

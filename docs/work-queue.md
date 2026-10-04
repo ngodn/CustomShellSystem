@@ -1,5 +1,34 @@
 # Current work queue
 
+## October 5: release-wide performance and regression review
+
+The author requests a broader CSS C++/UE 5.6.1 review, performance checks and
+regression coverage before beta.11. Finish the measured summon-creation hitch
+first, then run the applicable full suite and review lifecycle, profile/UI,
+appearance recovery and extension compatibility. State what was tested and any
+remaining gaps; do not promise zero bugs or frame drops in every game state.
+Release FAQ must explain current CSS customization copying and distinguish
+native copied attacks reflecting CCS from universal CCS settings inheritance.
+
+Full cloth physics is mandatory for doubles. The author rejected removing it
+after the hidden-component timing comparison. The current candidate retains
+stopped visuals only on the same native cached double, with identity/settings
+checks, fresh materials per activation and bounded expiry. Live cache hit rate,
+cloth continuity and regression checks remain pending; do not claim the measured
+hitch is fixed from host tests alone. See the doubles performance investigation.
+
+## October 5: beta.11 release media and FAQ
+
+The author requests two GIFs, each below 8 MB, from
+`/home/eins0fx/Videos/screenrecording-2026-10-05_07-07-35.mp4`:
+Faithful 00:03-00:06 and Stray 00:23-00:26. Combine the six October 5
+screenshots (07-02-28, 07-01-34, 07-00-17, 06-46-27, 06-41-34, 06-39-18)
+from `/home/eins0fx/Pictures/` into one image with no captions inside it.
+Place the compatibility description below the image in BBCode and add a short
+FAQ. Confirmed outfit tests cover Unholy Genessa, Eve and Commander White;
+do not imply all authored or third-party CSS outfits are verified. Continue
+the repeated-summon timing investigation before finalizing beta.11.
+
 ## October 5: doubles trial6 acceptance
 
 The author subsequently confirms some NPC/enemy appearances work only partially

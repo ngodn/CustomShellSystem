@@ -160,6 +160,8 @@ bool AstralMaterialBindings::restore() noexcept {
         if(same_mesh && !superseded && entry.global_cleared) astral_global_overlay(component,entry.original_overlay.Get());
         if(changed) refresh_overlay_slots(component);
     } catch(...) { restored=false; }
-    entries_.clear();owner_=WeakObject{};retained_.release();
+    // Failed group cleanup retains this owner for retry. Its private components
+    // may also fail destruction, so keep their original materials alive.
+    if(restored) { entries_.clear();owner_=WeakObject{};retained_.release(); }
     return restored;
 }

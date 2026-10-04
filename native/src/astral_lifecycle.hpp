@@ -44,6 +44,22 @@ enum class AstralEventKind { discovered, activated, deactivated, rebound, remove
 struct AstralEvent { AstralIdentity actor; AstralEventKind kind; uint64_t activation; };
 struct AstralEntry { AstralObservation observed; uint64_t activation=0; };
 
+inline bool astral_source_refresh_due(bool attempted,bool available,bool activated,
+                                     uint64_t now,uint64_t retry_at) {
+    return now>=retry_at && (!attempted || (!available && activated));
+}
+
+inline bool astral_cached_visual_matches(const AstralObservation& previous,
+                                        const AstralObservation& current,
+                                        uint64_t parked_at,uint64_t now) {
+    return now>=parked_at && now-parked_at<30000 &&
+        previous.actor.valid() && previous.owner.valid() && previous.component.valid() && previous.mesh.valid() &&
+        previous.actor==current.actor && previous.owner==current.owner &&
+        previous.component==current.component && previous.mesh==current.mesh &&
+        previous.kind==current.kind && current.kind!=AstralKind::unknown && current.initialized &&
+        (current.cached || current.active());
+}
+
 // Snapshots must be complete and taken on the game thread. Identities include
 // the UE weak serial, so recycling an object-array slot cannot inherit state.
 class AstralLifecycle {

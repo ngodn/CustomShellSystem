@@ -252,6 +252,20 @@ void AstralVisualMesh::show(bool enabled) {
     if(!intact()) throw std::runtime_error("Astral visual source changed before visibility update");
     astral_visual_visibility(component_.Get(),enabled && source_visible_);
 }
+void AstralVisualMesh::set_paused(bool paused,const AstralPhysicsSource& physics) {
+    if(!intact()) throw std::runtime_error("Astral visual changed before pause update");
+    auto* visual=component_.Get();
+    astral_visual_visibility(visual,false);
+    if(!paused) {
+        if(!leader_pose_) astral_visual_physics(visual,physics);
+        Call reset(visual,L"ForceClothNextUpdateTeleportAndReset",0);reset.run();
+    }
+    const bool enabled=!paused && !leader_pose_;
+    // UE also unregisters the component's cloth tick when disabling its tick.
+    Call tick(visual,L"SetComponentTickEnabled",1);tick.set(L"bEnabled",enabled);tick.run();
+    Call state(visual,L"IsComponentTickEnabled",1);state.run();
+    if(state.get<bool>()!=enabled) throw std::runtime_error("Astral visual pause read-back failed");
+}
 bool AstralVisualMesh::release() noexcept {
     try {
         if(auto* visual=component_.Get();astral_object_valid(visual)) {
