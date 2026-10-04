@@ -55,6 +55,13 @@ installer is `tools/shared-assets/install-trial.py`; it refuses a running game,
 backs up the selector/core, checks state/loader/UE4SS/legacy shared hashes, and
 installs the new package alongside the old one. The trial stays disarmed on boot.
 
+Restart dependency rechecked across three goal turns: PID 1809430 remains a
+running GameThread process, the original selector is unchanged, and no trial
+deployment receipt exists. The close-game question is still pending. Both builds
+are terminal and passed, including the pooling correction in `9d85da1`; there is
+no compiler/cooker job to wait on. The next useful integration step needs the
+normal close/restart. Do not quit the player's game or hot-reload this trial.
+
 Next: install after confirmed normal close, verify the new core/package hashes,
 then ask for Genessa equipped in the world. Run source/adapter and hidden visual
 checks before arming the trial. Verify Faithful and both Stray doubles, skin/body
@@ -279,9 +286,9 @@ exact versions, source paths, known limitations and readback evidence.
 | Native effect materials | Static and Faithful live verified | All nine clone slots share its private native summon MID |
 | Native fade | Static and sampled live values verified | Faithful spans 0..1, Stray primary .388..1; no CSS writes |
 | Clone animation/physics | Faithful live baseline | ABP_Shell_Genessa; cloth/rigid body disabled; clone physics override |
-| Appearance and customization transfer | Not implemented | No runtime patch |
+| Appearance and customization transfer | Implemented, not installed or live verified | `astral_doubles.inl`, `astral_source.inl`, `astral_visual_mesh.inl` |
 | Private material uniform copy | Live test passed for five families | live-material-copy-03.log; inherited textures included, player material values and bindings unchanged |
-| Material masks, opacity and native fade composition | Open | Native shader has no texture parameters |
+| Material masks, opacity and native fade composition | Offline companion checks pass; live composition pending | `material-pack4/material-check.json`; runtime adapter selection; native MID fade source |
 | Private garment fade graphs | Vulkan fade test passed, visual equivalence not established | Both zero renders equal removed; full and half differ; source hashes unchanged |
 | Eve and Commander White hair | Eight flat-card fade checks passed; full hairstyle/ghost integration pending | `hair-renders-all_backdrop/pixel-check.json`; two distinct parent graphs |
 | Hair coverage composed with native ghost | 16 HDR fixture groups passed; full-character integration pending | `ghost-hair-renders-exr1/hdr-check.json`; source-alpha product, time, fade and both tints |
@@ -289,7 +296,7 @@ exact versions, source paths, known limitations and readback evidence.
 | Faithful reuse | One live reuse verified | Same actor 2147330429: cached/disabled -> uncached/enabled -> cached/disabled |
 | Bounded lifecycle tracking | Portable tests and development Windows build passed; C++ live check pending | `astral_lifecycle.hpp`, `astral_observer.inl`, `astral_lifecycle_tests.cpp` |
 | Stray lifecycle and cleanup | Partial live evidence | Primary is cached=true and enabled=true while opacity changes; secondary not sampled |
-| Performance and regressions | Pending implementation | No new core installed |
+| Performance and regressions | Instrumentation ready; live checks pending | Separate Astral frame-profile phase; no new core installed |
 
 ## Next steps
 
@@ -298,14 +305,18 @@ October 4. Both are required validation targets, including their hair coverage
 and customization. Inspect released material families and stage private copies;
 do not edit either outfit's authoring sources or current packages for this test.
 
-1. Use the captured material families to establish composition. Both diagnostic
-   runs completed and restored the previous callback. Full Stray secondary and
-   cleanup coverage remain for a later test.
-2. Establish a material composition method with visual evidence, preserving
-   masks and full fade. Inspect existing source materials and native effects;
-   do not assume a MID can change a compiled shader graph.
-3. Implement per-double ownership, appearance and visual-physics state in the
-   C++23 runtime, then test both forms and every required appearance source.
+1. After normal game close, run `tools/shared-assets/install-trial.py` with
+   `material-pack4` and a new receipt directory. It checks the process again and
+   preserves the old core, settings, loader, UE4SS and legacy Eve shared package.
+2. After relaunch with actual Genessa equipped, verify the selected DLL and
+   shared package, then run the source/adapter and hidden visual checks. Arm
+   `astral_trial` only after those checks pass. No player input automation is needed.
+3. Test Faithful and both Stray doubles with the current appearance and unsaved
+   edits, then pooling, transitions and cleanup. Use live evidence to resolve
+   remaining body-offset, material-fidelity and accessory limitations.
+4. Verify Eve, Commander White and representative original/NPC/non-CSS looks,
+   then measure resource cost and run aiming/locomotion/profile/gate regressions.
+   Release packaging remains pending full acceptance and an agreed version.
 
 Unholy Genessa's world-only garment clipping remains a separate queued task.
 
