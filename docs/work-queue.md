@@ -10,6 +10,12 @@ are in [pose ownership](development/genessa-doubles-pose.md). Form switching and
 both Default/Use CSS selectors were accepted, but Stray visual acceptance is
 withdrawn. Development/shipping builds and 18 host tests pass; live retest remains.
 
+Trial5 is installed and the author accepts both Stray shapes and Eve in both
+forms. A world-only UG capture matches 520 bone positions; the earlier mixed
+menu/form sequence still contains initial-pose discrepancies to investigate.
+Original-shell testing exposed Driver1 and null-slot material admission gaps.
+These remain part of the active doubles work, with details in its status doc.
+
 ## October 5: Genessa form utility for doubles testing
 
 The author accepted both Faithful Doubles appearance choices, but deliberately

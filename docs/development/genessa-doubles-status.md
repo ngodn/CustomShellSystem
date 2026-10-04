@@ -29,6 +29,40 @@ saved settings and legacy Eve shared assets remain unchanged. The trial starts
 disarmed and must be explicitly enabled after relaunch. Live verification remains
 pending; no claim that the Stray shape is fixed in-game yet.
 
+Trial5 live update: process 2085265 maps the installed candidate, and explicit
+request `1791153418157456717` enabled it (`live-enable.json`). The author reports
+both Stray doubles now have correct legs/feet and subsequently accepts Eve Black
+Pearl in both forms. They also supplied a screenshot showing a matching original
+shell under the red Stray effect. This is acceptance of those visible cases,
+not all sources, transitions or customization combinations.
+
+The same-thread `poses-menu-state1.jsonl` capture contains 65 world samples of
+UG Eve-skin Stray primary, with 520 bone comparisons and maximum position error
+7.28e-12 cm. Native and visual tick flags are enabled in `tick-check3.jsonl`.
+The earlier mixed capture `stray-poses1.jsonl` includes large discrepancies and
+stalled initial poses during the broader test sequence; it did not record menu
+state. Do not discard these or attribute them conclusively to menu pause.
+`pose-analysis1.json` records both captures separately. Pose-leader rebinding was
+observed twice. Secondary Stray has user visual acceptance but no matched-bone
+sample yet. Further transition/first-pose verification remains open.
+
+Read-only `eve-check1.jsonl` caught the author's original-shell tests instead
+of the earlier Eve test. Thorn and KnightLady produced matching private meshes.
+Gragu and Solomon request unsupported `Gragu/Art/Mesh/Driver1`; Harros has null
+material slots 6/7, Necrophage slot 5 and Eredrim slots 5/6, causing adapter
+admission to fail. This needs material/section investigation, not blanket
+original-shell support claims or name-based exclusions. The independent
+`original-shell-audit1` readback is being prepared. No player appearance or
+camera was changed by these probes.
+
+The author also confirms Sariel and Proxima original-shell appearances work,
+while Lazlo does not. They accept the current supported-appearance limitation
+and request clear MISC help text. Both doubles controls now explain that Use CSS
+copies supported appearances/customization with the ghost effect, unsupported
+appearances use the original Genessa double, and Default always uses the original.
+This help-text edit is not installed yet. Do not turn these individual results
+into a claim that every original shell, NPC or non-CSS replacement works.
+
 The runtime now selects shared ghost materials from the source's actual parent
 chain, graph StateId, static switches, blend mode, mask threshold and culling.
 It binds native noise textures and copied source textures after uniform copying.
