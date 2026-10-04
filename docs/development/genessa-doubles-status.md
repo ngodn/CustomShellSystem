@@ -63,6 +63,22 @@ appearances use the original Genessa double, and Default always uses the origina
 This help-text edit is not installed yet. Do not turn these individual results
 into a claim that every original shell, NPC or non-CSS replacement works.
 
+Commander White: the author confirms hair, clothes and ghost effects look correct
+in both forms on trial5. Post-test status has 34 prepared and 34 removed groups,
+zero active groups/fallbacks and empty Astral, maintenance and overlay errors.
+Eight pose-source rebuilds occurred. This establishes group bookkeeping cleanup,
+not total engine allocation recovery. `post-test-readback.jsonl` verifies the
+current KnightLady original-shell source and all six adapter slots without
+changing its appearance.
+
+`profile-observation1` has 814 frame samples over 15 seconds with zero active
+doubles. Treat it only as idle coordinator cost; it does not measure summon
+creation, active visual evaluation or GPU cost. The unsupported original-shell
+audit independently confirms the null material slots on Harros, Necrophage and
+Eredrim belong only to disabled LOD0 sections. Gragu's Driver1 slot is also
+disabled. This explains the overly strict admission, but does not authorize
+skipping arbitrary null slots without checking their render sections.
+
 The runtime now selects shared ghost materials from the source's actual parent
 chain, graph StateId, static switches, blend mode, mask threshold and culling.
 It binds native noise textures and copied source textures after uniform copying.
