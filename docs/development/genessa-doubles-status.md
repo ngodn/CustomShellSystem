@@ -69,6 +69,22 @@ rejected preparation and keep-alive cleanup checks. Neither this probe nor the
 owner has been live-verified. Adapter selection, binding, appearance transfer,
 pooling integration and production shared-asset packaging remain unfinished.
 
+`AstralMaterialBindings` now binds a prepared private set to up to 16 components
+owned by one actor (128 base/overlay references total). It validates all inputs
+and retains rollback references before writes, rejects missing authored overlay
+companions, clears the transient global effect only after per-slot bindings,
+and checks readback. Restore touches only slots still owned by that set; it
+preserves native replacements and clears its own leftovers if the mesh changed.
+No mesh/pose, collision, ability or player settings are changed by this class.
+It is not called automatically yet.
+
+The new development operation `astral.bindings.probe` creates one hidden,
+unregistered diagnostic component and checks duplicate rejection, binding,
+restoration, native material takeover, overlay takeover and retained-object
+cleanup. The probe compiles but has not run in game. Both development and
+shipping DLLs build after this addition; all 17 existing host tests pass.
+Those host tests do not exercise Unreal binding calls. No build was installed.
+
 The offline material inheritance resolver now distinguishes 102 interfaces in
 the seven-mesh Eve/Commander White inventory. Native Uber contributes 67 masked
 and 24 opaque interfaces, so a root-only adapter lookup is insufficient. Seven

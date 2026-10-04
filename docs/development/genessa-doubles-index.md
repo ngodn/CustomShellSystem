@@ -64,6 +64,7 @@ Paths under `work/` are local diagnostic evidence, not distributable game assets
 
 | Artifact | Finding |
 | --- | --- |
+| `native/src/astral_material_bindings.inl`, `astral_bindings_probe.inl` | Prepared material binding and conditional restoration, including native takeover and mesh change. Both Windows builds pass. An on-demand unregistered-component probe is compiled; runtime behavior is not yet verified or installed. |
 | `native-eye-response.hlsl`, `check-native-eye-response.py`, `render-native-eye-materials.py`, `check-native-eye-renders.py` under diagnostic tools | 3,096 arithmetic/UV cases, four compiled parents and 40 HDR captures of authored eye/smoke sections pass. No face occlusion, DX12 or runtime claim. Evidence: `native-eye-response2/result.json` under work and `native-eye-renders-1/hdr-check.json` in the material stage. |
 | [Native shader reconstruction](genessa-doubles-shaders.md) | Shared shader extraction and SM6 disassembly; 8,462 arithmetic cases, UE VULKAN_SM5 compilation and ten sphere images passed. Native image equivalence and outfit integration remain pending. |
 | `native/src/astral_lifecycle.hpp`, `tests/astral_lifecycle_tests.cpp` | Bounded identity/serial tracker; pooled reuse, cached-active Stray, ownership changes, invalid snapshots and cleanup tested on host, including sanitizers. |

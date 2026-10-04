@@ -67,6 +67,25 @@ and oversized snapshots, and full-capacity replacement.
 
 ## C++ private material owner
 
+The separate development operation `astral.bindings.probe` accepts `owner`,
+`mesh` and `material` bridge handles from the current session. It creates a
+hidden skeletal component with deferred registration and no collision/tick,
+then exercises the runtime `AstralMaterialBindings` implementation. The mesh
+must have 1..64 slots. No existing component is changed and no capture is made.
+The probe checks duplicate input rejection before writes, restored materials
+and overlays, native reinitialization taking a slot back, a separate per-slot
+overlay replacement, and retained-object cleanup. It destroys the diagnostic
+component afterward. This operation is compiled but not yet live-tested.
+
+The binder itself accepts at most 16 components from one actor, with at most
+128 base/overlay bindings. The caller supplies compatible private MIDs, restores
+bindings before releasing them or swapping meshes, and handles a false cleanup
+result. It neither chooses shaders nor changes mesh, pose, collision or gameplay.
+Call its readback check at binding/lifecycle boundaries, not as a substitute for
+cheap opacity synchronization every frame. A null overlay would fall back to
+authored fabric or a mesh-wide overlay, so missing required companions are
+rejected before the first write.
+
 `AstralMaterials` prepares private MIDs, copies source uniform parameters and
 then writes the form/fade controls. Identical source/companion pairs share one
 MID within a double; different doubles own independent sets. The caller must

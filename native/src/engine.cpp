@@ -534,6 +534,7 @@ static void restore_materials(UObject* component,const std::vector<std::string>&
             throw std::runtime_error("Original material read-back failed");
 }
 #include "overlay_controls.inl"
+#include "astral_material_bindings.inl"
 static Json material_snapshot(UObject* component,UObject* mesh) {
     Json result={{"overrides",Json::array()},{"defaults",Json::array()},{"effective",Json::array()}};
     auto* overrides=component->GetPropertyByNameInChain(L"OverrideMaterials");

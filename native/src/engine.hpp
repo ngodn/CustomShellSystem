@@ -82,6 +82,32 @@ public:
     size_t size() const { return slots_.size(); }
     void release() noexcept;
 };
+struct AstralMaterialBinding {
+    RC::Unreal::UObject* component=nullptr;
+    RC::Unreal::UObject* mesh=nullptr;
+    std::vector<RC::Unreal::UObject*> materials, overlays;
+};
+// One owner per double. Restore bindings before releasing its private MIDs or
+// replacing its mesh. Native reinitialization can supersede individual slots.
+class AstralMaterialBindings {
+    struct Entry {
+        WeakObject component, mesh, original_overlay;
+        std::vector<WeakObject> originals, original_overlays, materials, overlays;
+        size_t material_writes=0, overlay_writes=0;
+        bool global_cleared=false;
+    };
+    WeakObject owner_;
+    std::vector<Entry> entries_;
+    AssetLoadRoots retained_;
+public:
+    AstralMaterialBindings() = default;
+    AstralMaterialBindings(const AstralMaterialBindings&) = delete;
+    AstralMaterialBindings& operator=(const AstralMaterialBindings&) = delete;
+    void bind(RC::Unreal::UObject* owner,std::span<const AstralMaterialBinding> inputs);
+    bool intact() const;
+    bool restore() noexcept;
+    ~AstralMaterialBindings() noexcept { restore(); }
+};
 struct SpringSettings {
     double stiffness=0, damping=0, max_displacement=0, error_reset=0;
     bool limit=false;
@@ -142,6 +168,7 @@ class EngineBridge {
     Json observe_astral(void* engine);
     Json observe_astral_source(Appearance& appearance);
     Json probe_astral_materials(void* engine,const Json& request);
+    Json probe_astral_bindings(void* engine,const Json& request);
 #endif
     std::map<uint64_t,WeakObject> objects_;
     std::map<std::string,WeakObject> defaults_;
