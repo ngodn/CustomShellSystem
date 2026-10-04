@@ -7,8 +7,30 @@ the new core was installed as `css_core-astral-trial-9d501a3b6345ea12.dll`.
 SHA-256: `9d501a3b6345ea1260403a77937b9ce954827a5cebb08285831a2423f4bd7969`.
 `work/genessa-doubles/runtime-trial6/deployment.json` records the prior core
 backup, selector/hash verification and all 15 unchanged protected files.
-Shared assets, loader, UE4SS and saved settings were not replaced. Live load
-and help-text layout still need checking; explicitly arm the trial after launch.
+Shared assets, loader, UE4SS and saved settings were not replaced.
+
+Trial6 live verification: PID 2152123 maps that exact candidate and its installed
+hash matches the receipt. The trial was explicitly enabled after launch. The
+author confirms shape and movement remain correct when opening/closing CSS with
+a double present and then attacking. This answers the menu-transition visual
+check; it is not a separate confirmation of help-text wrapping.
+
+The read-only `runtime-trial6/poses1` capture finished normally: 128 samples,
+121 with active doubles. It includes Proxima, Scarlet and Ballboy selections.
+`position-comparison.json` retains native/visual component-space differences,
+including up to 48.13 cm in a stable published world context. These measurements
+do not establish a visible defect or its cause: post-process deformation and
+evaluation timing have not been separated. The author reports normal motion.
+Do not discard these differences or claim exact pose equality across appearances.
+
+`runtime-trial6/post-menu-status.json` records 17 prepared and 17 removed groups,
+zero active groups, and one pose-source rebuild. Hilga is the selected appearance
+at that snapshot and its cloth-driver material has no ghost adapter. This is an
+unsupported-source admission result, not evidence that all NPCs are supported.
+The process was still present when the installed hash was checked after the
+closure message. No DLL, package, setting or gameplay input was changed.
+Active-summon performance, remaining regression checks and release preparation
+remain outstanding.
 
 Session 4, October 5, 2026. Branch `feature/genessa-doubles`.
 

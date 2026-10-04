@@ -1,5 +1,16 @@
 # Current work queue
 
+## October 5: doubles trial6 acceptance
+
+Commander White is accepted in both forms, following Unholy Genessa and Eve.
+The author also accepts shape and movement through the CSS menu transition.
+Trial6 is installed and its loaded core hash is verified. It includes the MISC
+explanation of supported appearances and original-double fallback. Sariel and
+Proxima work; the author accepts unsupported appearances such as Lazlo falling
+back. Preserve the diagnostic pose differences for investigation without treating
+them as a user-visible failure. Active-summon performance and remaining regression
+checks are still open. See the latest doubles status for evidence and scope.
+
 ## October 5: distorted Stray doubles across outfits
 
 The author confirms all copies and all CSS outfits show broken shape and missing
