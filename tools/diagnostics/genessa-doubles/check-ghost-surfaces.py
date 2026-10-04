@@ -1,4 +1,4 @@
-"""Check lit source plus ghost against separately rendered terms and edit controls."""
+"""Check ghost composition against separately rendered terms and edit controls."""
 import argparse
 import hashlib
 import json
@@ -13,6 +13,10 @@ def main():
     args = parser.parse_args()
     root = args.directory.resolve()
     manifest = json.loads((root / "captures.json").read_text())
+    composition = manifest.get("composition", "lit_add")
+    if composition not in ("lit_add", "native_filter"):
+        raise ValueError("Unknown composition")
+    filtered = composition == "native_filter"
     if not (manifest["float_capture"] and manifest["source_files_unchanged"]
             and manifest["compilation"]["passed"]):
         raise ValueError("Expected successful HDR captures with unchanged sources")
@@ -60,9 +64,13 @@ def main():
         background = images["removed"]
         if np.any(background):
             raise ValueError("Fixture requires a black backdrop")
-        expected = images["surface_only"] + images["ghost_only"]
-        difference = np.abs(images["combined"] - expected)
-        # Three half-float render targets incur independent rounding.
+        expected = (images["surface_only"] * images["ghost_only"] * 100. if filtered
+                    else images["surface_only"] + images["ghost_only"])
+        observed = images["combined"] * images["coverage"] if filtered else images["combined"]
+        difference = np.abs(observed - expected)
+        # Each half-float render target incurs independent rounding. The
+        # product identity assumes a single contributing layer, or constant
+        # source detail across overlapping layers, as in these cloth fixtures.
         sum_matches = bool(np.all(difference <= 2e-6 + .003 * np.abs(expected)))
         holes = images["coverage"].max(axis=2) == 0
         compared = {state for state in ("combined", "surface_only", "ghost_only", "palette_red", "palette_blue", "glow") if state in images}
@@ -72,7 +80,7 @@ def main():
         tint = bool(color[2] > color[1] > color[0] if form == "faithful"
                     else color[0] > 3 * max(color[1:]))
         checks = {
-            "source_plus_ghost": sum_matches,
+            "filtered_product" if filtered else "source_plus_ghost": sum_matches,
             "coverage_not_clamped_to_one": bool(images["coverage"].max() > 1.),
             "source_visible": bool(images["surface_only"].max() > 1e-5),
             "combined_visible": bool(images["combined"].max() > 1e-5),
@@ -88,10 +96,14 @@ def main():
         if "glow" in images:
             authored_delta = images["surface_glow"] - images["surface_only"]
             combined_delta = images["glow"] - images["combined"]
+            expected_delta = authored_delta * images["ghost_only"] * 100. if filtered else authored_delta
+            observed_delta = combined_delta * images["coverage"] if filtered else combined_delta
+            rounding = (images["glow"] + images["combined"] + images["surface_glow"] + images["surface_only"])
+            if filtered:
+                rounding = ((images["glow"] + images["combined"]) * images["coverage"] +
+                            (images["surface_glow"] + images["surface_only"]) * images["ghost_only"] * 100.)
             checks["authored_glow_response_matches"] = bool(np.all(
-                np.abs(combined_delta - authored_delta) <= 2e-6 + .003 * (
-                    np.abs(images["glow"]) + np.abs(images["combined"]) +
-                    np.abs(images["surface_glow"]) + np.abs(images["surface_only"]))))
+                np.abs(observed_delta - expected_delta) <= 2e-6 + .003 * np.abs(rounding)))
             # The cloth-only pass masks out the glowing metal. It must match
             # that authored response, not invent glow merely because a dormant
             # parameter still exists in the duplicated graph.
@@ -102,16 +114,22 @@ def main():
             checks["fabric_opacity_reduces_surface"] = bool(
                 0 < images["fabric_half"].sum() < images["combined"].sum())
         combined_color = images["combined"].mean(axis=(0, 1))
-        apparent_tint = bool(combined_color[2] > combined_color[0] and combined_color[1] > combined_color[0]
-                            if form == "faithful" else combined_color[0] > 3 * max(combined_color[1:]))
+        tint_states = ("combined", "palette_red", "palette_blue", "glow") if filtered else ("combined",)
+        appearance_tints = {}
+        for state in tint_states:
+            if state in images:
+                rgb = images[state].mean(axis=(0, 1))
+                appearance_tints[state] = bool(rgb[2] > rgb[0] and rgb[1] > rgb[0]
+                    if form == "faithful" else rgb[0] > 3 * max(rgb[1:]))
+        apparent_tint = all(appearance_tints.values())
         results.append({"source": source, "form": form, "passed": all(checks.values()),
-            "checks": checks, "maximum_sum_error": float(difference.max()),
+            "checks": checks, "maximum_composition_error": float(difference.max()),
             "hole_pixels": int(np.count_nonzero(holes)), "leaked_pixels": leaks,
             "mean_ghost_rgb": color.tolist(), "mean_combined_rgb": combined_color.tolist(),
-            "apparent_native_tint": apparent_tint})
+            "apparent_native_tint": apparent_tint, "tint_by_state": appearance_tints})
     passed = all(row["passed"] for row in results)
     tint_preserved = all(row["apparent_native_tint"] for row in results)
-    result = {"passed": passed and tint_preserved, "composition_checks_passed": passed,
+    result = {"passed": passed and tint_preserved, "composition_checks_passed": passed, "composition": composition,
               "native_tint_check_passed": tint_preserved, "materials": results, "scope": manifest["scope"],
               "versions": {"OpenEXR": OpenEXR.__version__, "numpy": np.__version__}}
     with (root / "hdr-check.json").open("x") as stream:

@@ -9,10 +9,19 @@ captured 156 EXRs across seven material families and both forms. All 14 groups
 pass composition, coverage, controls and fade checks. Native tint fails for
 all seven Stray groups and Commander White's Faithful hair: source lighting
 overpowers the ghost emission. Original source hashes are unchanged. The
-editor exited zero and its tool session is terminal. The next experiment will
-filter source detail through the native ghost color rather than add a fully
-lit source surface. This needs rendered validation and does not establish
-support for body/eye shaders. See [material support](genessa-doubles-materials.md).
+editor exited zero and its tool session is terminal.
+
+The subsequent `native_filter` experiment also completed with exit zero.
+`ghost-surface-renders-filtered1` contains 156 EXRs and passes all 14 groups,
+including tint checks on the baseline, red/blue palettes and authored glow.
+This candidate filters base-color and emission detail through the native ghost
+color while retaining original coverage. It uses the native unlit treatment,
+so it does not retain the source's lit PBR appearance. The diagnostic comparison
+image confirms blue/red rather than the lit experiment's white/brown surfaces.
+Full characters, body/eye adapters, material-detail fidelity under this ghost
+treatment, DX12 and live integration remain open. All isolated editors are
+terminal; there is no active render to wait on. See
+[material support](genessa-doubles-materials.md).
 
 Release packaging: two separate ZIPs, CSS runtime and shared assets. The user
 confirmed this on October 4. See the goal for install paths and compatibility

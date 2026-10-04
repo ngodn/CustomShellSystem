@@ -1,10 +1,11 @@
-"""Preserve authored surface inputs while adding native ghost emission and fade.
+"""Compare lit addition and native-filtered source detail in private ghost graphs.
 
 Private authoring experiment. Native body/eye adapters and runtime assignment
 are separate work; this script never edits the source materials.
 """
 import hashlib
 import json
+import os
 from pathlib import Path
 import sys
 import unreal
@@ -17,8 +18,12 @@ ROOT = Path(unreal.Paths.project_dir()).resolve()
 LIB = unreal.EditorAssetLibrary
 EDIT = unreal.MaterialEditingLibrary
 MP = unreal.MaterialProperty
-TARGET = "/Game/CSS/UnholyGenessa/AstralSurface1/Parents/"
-REPORT = ROOT / "ghost-surfaces.json"
+composition = os.environ.get("CSS_ASTRAL_COMPOSITION", "lit_add")
+if composition not in ("lit_add", "native_filter"):
+    raise ValueError("Unknown ghost composition")
+filtered = composition == "native_filter"
+TARGET = "/Game/CSS/UnholyGenessa/" + ("AstralFiltered1" if filtered else "AstralSurface1") + "/Parents/"
+REPORT = ROOT / ("ghost-filtered.json" if filtered else "ghost-surfaces.json")
 if REPORT.exists() or LIB.does_directory_exist(TARGET):
     raise FileExistsError("Ghost surface experiment already exists")
 version = unreal.SystemLibrary.get_engine_version()
@@ -91,10 +96,36 @@ for source in parents:
     if coverage is not None:
         wire(coverage, alpha, "A", pin)
     wire(ghost_alpha, alpha, "B")
-    emission = node(material, "Add", const_a=0.)
-    if original_emission is not None:
-        wire(original_emission, emission, "A", emission_pin)
-    wire(color, emission, "B")
+    if filtered:
+        # The native effect is unlit. Limit source chromatic contrast to 2:1;
+        # the rendered comparison checks the resulting blue/red identity.
+        inputs = []
+        for name in ("Base", "Emission"):
+            entry = unreal.CustomInput()
+            entry.set_editor_property("input_name", name)
+            inputs.append(entry)
+        detail = node(material, "Custom", inputs=inputs,
+            output_type=unreal.CustomMaterialOutputType.CMOT_FLOAT3,
+            code="float3 e = max(Emission, 0.0);\n"
+                 "float peak = max(e.r, max(e.g, e.b));\n"
+                 "return 0.5 * (1.0 + saturate(Base) + peak + e);")
+        base, base_pin = preserved["MP_BASE_COLOR"]
+        if base is None:
+            raise RuntimeError(f"Filtered adapter requires an authored base color: {source}")
+        wire(base, detail, "Base", base_pin)
+        if original_emission is None:
+            original_emission = node(material, "Constant3Vector", constant=unreal.LinearColor(0., 0., 0., 1.))
+            emission_pin = ""
+        wire(original_emission, detail, "Emission", emission_pin)
+        emission = node(material, "Multiply")
+        wire(detail, emission, "A")
+        wire(color, emission, "B")
+        material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    else:
+        emission = node(material, "Add", const_a=0.)
+        if original_emission is not None:
+            wire(original_emission, emission, "A", emission_pin)
+        wire(color, emission, "B")
     for expression, property_ in ((emission, MP.MP_EMISSIVE_COLOR), (alpha, MP.MP_OPACITY)):
         if not EDIT.connect_material_property(expression, "", property_):
             raise RuntimeError(f"Could not set {property_}")
@@ -123,6 +154,7 @@ for source in parents:
                  "vector_parameters": [str(n) for n in EDIT.get_vector_parameter_names(material)]})
 check_sources()
 REPORT.write_text(json.dumps({"materials": rows, "protected": protected,
+    "composition": composition,
     "source_files_unchanged": True, "engine": version,
-    "scope": "Original lit surface and emission plus native ghost emission, with source coverage times native fade. Rendered palette, body and eye adapters, runtime binding, performance and DX12 remain pending."}, indent=2) + "\n")
+    "scope": "Private source-detail composition experiment with source coverage times native fade. Native-filter mode uses unlit ghost shading, not original PBR lighting. Body and eye adapters, runtime binding, performance and DX12 remain pending."}, indent=2) + "\n")
 unreal.log("CSS_ASTRAL_SURFACES_CREATED")

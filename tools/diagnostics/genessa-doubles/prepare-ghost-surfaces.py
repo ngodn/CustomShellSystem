@@ -24,7 +24,13 @@ LIB = unreal.EditorAssetLibrary
 EDIT = unreal.MaterialEditingLibrary
 MP = unreal.MaterialProperty
 PREFIX = "/Game/CSS/UnholyGenessa/AstralGhostSurface_" + run + "/"
-report = json.loads((ROOT / "ghost-surfaces.json").read_text())
+composition = os.environ.get("CSS_ASTRAL_COMPOSITION", "lit_add")
+if composition not in ("lit_add", "native_filter"):
+    raise ValueError("Unknown ghost composition")
+filtered = composition == "native_filter"
+report = json.loads((ROOT / ("ghost-filtered.json" if filtered else "ghost-surfaces.json")).read_text())
+if report.get("composition", "lit_add") != composition:
+    raise ValueError("Composition report mismatch")
 targets = {row["source"]: row["target"] for row in report["materials"]}
 protected = {**report["protected"], **json.loads((ROOT / "render-sources.json").read_text())}
 sources = [row["source"] for row in report["materials"] if "/UnholyGenessa/" in row["source"]]
@@ -68,10 +74,11 @@ for index, path in enumerate(sources):
     combined = duplicate(targets[parent_path], f"CombinedParent{index}")
     surface = duplicate(targets[parent_path], f"SurfaceParent{index}")
     addition = EDIT.get_material_property_input_node(surface, MP.MP_EMISSIVE_COLOR)
-    if not isinstance(addition, unreal.MaterialExpressionAdd):
-        raise RuntimeError("Expected surface emission plus native ghost emission")
-    zero = node(surface, "Constant", r=0.)
-    wire(zero, addition, "B")
+    expected_node = unreal.MaterialExpressionMultiply if filtered else unreal.MaterialExpressionAdd
+    if not isinstance(addition, expected_node):
+        raise RuntimeError("Unexpected composition output")
+    neutral = node(surface, "Constant", r=1. if filtered else 0.)
+    wire(neutral, addition, "B")
     ghost = duplicate(coverage_targets[parent_path], f"GhostParent{index}")
     reference = duplicate(coverage_targets[parent_path], f"CoverageParent{index}")
     white = node(reference, "Constant3Vector", constant=unreal.LinearColor(100., 100., 100., 1.))
@@ -114,7 +121,7 @@ for interface in interfaces:
     if not LIB.save_loaded_asset(interface, only_if_is_dirty=False):
         raise RuntimeError(f"Could not save fixture {interface.get_path_name()}")
 check_sources()
-receipt = {"protected": protected, "source_files_unchanged": True,
+receipt = {"protected": protected, "source_files_unchanged": True, "composition": composition,
     "backdrop": backdrop_material.get_path_name(),
     "interfaces": [m.get_path_name() for m in interfaces],
     "cards": [{"source": path, "family": {role: m.get_path_name() for role, m in family.items()},

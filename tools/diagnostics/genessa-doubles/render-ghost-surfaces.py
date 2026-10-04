@@ -1,4 +1,4 @@
-"""Render lit source plus native ghost, with separate terms for comparison.
+"""Render source detail and native ghost, with separate terms for comparison.
 
 Uses HDR readback, cube faces, and the authored garment for vertex-masked cloth.
 These fixtures do not establish full-character sorting, DX12 behavior or
@@ -203,10 +203,11 @@ for index, (path, family, vectors, scalars) in enumerate(cards):
             unreal.log(f"CSS_GHOST_SURFACE_END index={index} form={form} state={state}")
 check_sources()
 (OUT / "captures.json").write_text(json.dumps({"images": rows, "compilation": compiled,
+    "composition": fixture.get("composition", "lit_add"),
     "source_files_unchanged": True,
     "float_capture": float_capture, "resolution": resolution,
     "serial_rhi_requested": os.environ.get("CSS_ASTRAL_SERIAL_RHI", "0") == "1",
     "fabric_slots": fabric_slots,
-    "scope": "Vulkan lit surface and native ghost composition on cube faces and authored cloth sections. Not full character, DX12, runtime binding or performance evidence."
+    "scope": "Vulkan source-detail and native ghost composition on cube faces and authored cloth sections. Native-filter mode is unlit. Not full character, DX12, runtime binding or performance evidence."
 }, indent=2) + "\n")
 unreal.log("CSS_GHOST_SURFACE_CAPTURED")

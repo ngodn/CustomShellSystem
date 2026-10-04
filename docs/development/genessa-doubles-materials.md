@@ -70,6 +70,72 @@ used the diagnostic-only `CSS_ASTRAL_SERIAL_RHI=1` switch (`-norhithread`) and
 completed with exit zero. One successful run does not establish the cause of
 the stall or a general driver fix. No game or desktop setting was changed.
 
+## Native-filtered source detail candidate
+
+After rejecting lit addition, the private `native_filter` variant uses the
+original base-color and emissive graphs to modulate reconstructed native ghost
+RGB. Its opacity is still original coverage times native alpha. For nonnegative
+source emission `E`, its detail factor is:
+
+```text
+factor = 0.5 * (1 + saturate(base_color) + max(E.r, E.g, E.b) + E)
+emission = native_ghost_rgb * factor
+```
+
+White with zero emission leaves native RGB unchanged. Black has half its
+brightness. The source color and glow can still change the result, with a
+maximum 2:1 channel ratio in this factor. That bound is not a proof of native
+hue equivalence at every ramp value. The check evaluates mean tint for the
+tested baseline, red/blue palettes and glow states, not every possible pixel
+or user setting. The native noise, fade and timing kernel is unchanged.
+
+Creation (`filtered-create1`) and fixture preparation (`filtered-prepare1`)
+both exited zero. Render `filtered-render1`, using the diagnostic serial-RHI
+flag, exited zero and captured 156 EXRs under
+`material-outfits1/ghost-surface-renders-filtered1`. All 14 groups pass both
+composition and tint checks. Original sources and the native kernel retain
+their protected hashes. No installed files changed.
+
+For the product check, the independent captures contain `G*a`, `F*a`, and
+`100*a`; the checker compares `(G*F*a)*(100*a)` with `(G*a)*(F*a)*100`, allowing
+half-float rounding. This avoids dividing by almost-zero coverage. It is valid
+for the single surface fixtures and constant-detail overlapping cloth here,
+not arbitrary overlapping surfaces with different detail factors. The glow
+check applies the same relation to the independently rendered source change.
+Visibility, holes, partial fade, zero versus removed, fabric visibility and
+fabric half-opacity also pass.
+
+`comparison.png` in that directory was visually inspected. It uses identical
+exposure and display mapping for the ghost-only reference, rejected lit sum
+and filtered candidate, showing metal, authored cloth and Commander White
+hair in both forms. Its "native" column is the reconstructed ghost-only
+fixture, not an image of the running game's original double. The filtered
+images retain blue/red where the lit images become white or brown.
+
+This is a candidate, not a complete adapter. Unlit shading intentionally does
+not reproduce the original lit roughness, metallic, specular or normal response.
+Required full-character detail/customization fidelity still needs evaluation;
+the stored graph connections do not establish that response. Native body and
+eye families, actual hair geometry, arbitrary overlapping surfaces, DX12,
+runtime ownership and performance remain pending.
+
+Reproduce in the existing isolated stage, using an unused fixture label:
+
+```sh
+CSS_ASTRAL_COMPOSITION=native_filter CSS_ASTRAL_SURFACE_RUN=filtered2 \
+  bash tools/diagnostics/genessa-doubles/run-material-test.sh \
+  "$engine" "$stage" surface-prepare filtered-prepare2
+CSS_ASTRAL_SERIAL_RHI=1 CSS_ASTRAL_SURFACE_RUN=filtered2 \
+  bash tools/diagnostics/genessa-doubles/run-material-test.sh \
+  "$engine" "$stage" surface-render filtered-render2
+python3 tools/diagnostics/genessa-doubles/check-ghost-surfaces.py \
+  "$stage/ghost-surface-renders-filtered2"
+```
+
+The existing seven parents are recorded in `ghost-filtered.json`. On a new
+staged project, create them first with `CSS_ASTRAL_COMPOSITION=native_filter`
+and runner mode `surface-create`. Creation refuses to overwrite them.
+
 ## Released asset audit
 
 ### Effective inheritance audit
