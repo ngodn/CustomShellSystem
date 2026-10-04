@@ -60,6 +60,16 @@ private:
     size_t count_=0;
 public:
     std::span<const AstralEntry> entries() const { return {entries_.data(),count_}; }
+    bool deactivate(AstralIdentity actor) {
+        // The fade pass can see pooling between two discovery snapshots.
+        // Preserve that edge so immediate reuse starts a fresh activation.
+        for(size_t i=0;i<count_;++i) if(entries_[i].observed.actor==actor) {
+            const bool active=entries_[i].observed.active();
+            entries_[i].observed.enabled=false;
+            return active;
+        }
+        return false;
+    }
     Changes clear() {
         Changes changes;
         for(const auto& entry:entries()) changes.add(entry,AstralEventKind::removed);

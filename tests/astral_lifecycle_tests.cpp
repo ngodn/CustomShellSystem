@@ -35,6 +35,15 @@ int main() {
     faithful.cached=false; faithful.enabled=true;
     check(events(sample(faithful),AstralEventKind::activated)==1,"Reused double lost activation");
     check(registry.entries()[0].activation==2,"Reused double inherited old activation generation");
+    // A per-frame fade pass sees disabled/hidden, then pooling ends before
+    // the next 50 ms discovery snapshot. The next snapshot is active again.
+    check(registry.deactivate(faithful.actor),"Between-snapshot pooling was ignored");
+    check(!registry.deactivate(faithful.actor),"Repeated pooling created another edge");
+    check(events(sample(faithful),AstralEventKind::activated)==1 && registry.entries()[0].activation==3,
+        "Fast reuse retained the previous activation or fallback latch");
+    check(!registry.deactivate({faithful.actor.index,faithful.actor.serial+1}),
+        "Foreign actor serial deactivated the current double");
+    check(sample(faithful).count==0,"Foreign deactivation restarted a stable double");
 
     auto stray=faithful;
     stray.actor={8,1}; stray.component={9,1}; stray.kind=AstralKind::stray_primary; stray.cached=true;

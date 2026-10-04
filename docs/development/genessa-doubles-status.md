@@ -25,6 +25,13 @@ every frame. Development builds start disarmed; `astral_trial` explicitly enable
 the coordinator for live checks. `astral.adapters.probe` only selects/loads assets.
 Frame profiling now includes a separate Astral phase.
 
+The coordinator now records a pooling edge seen by its per-frame fade pass in
+the lifecycle registry. Without that handoff, a double reused before the next
+50 ms discovery snapshot could retain its old activation and fallback latch.
+The regression covers immediate reuse, repeated deactivation and a recycled
+object index with a different serial. The lifecycle test and both Windows builds
+pass after the correction. This still needs actual pooled-summon verification.
+
 Both Windows runtime builds pass, and all 18 host tests pass. Catalog generation
 reproduces the checked-in definitions exactly. These are compile/policy checks,
 not proof of reflected calls, rendering, combat contacts, cleanup or live cost.

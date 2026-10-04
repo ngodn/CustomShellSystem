@@ -53,22 +53,23 @@ struct AstralVisualGroup {
         if(material_index!=materials.size()) throw std::runtime_error("Astral material slot plan differs from captured appearance");
         bindings.bind(actor,pending);
     }
-    bool sync(uint64_t now) {
+    enum class Sync { kept, inactive, failed };
+    Sync sync(uint64_t now) {
         auto* actor=astral_resolve(observed.actor);
         auto* component=astral_resolve(observed.component);
         if(!actor || !component || !astral_bool(component,L"bInitialized") ||
-           !astral_bool(component,L"bCharacterEnabled") || astral_bool(actor,L"bHidden") ||
-           astral_object(component,L"MID_Astral")!=astral_resolve(observed.native_mid) ||
-           astral_object(component,L"MySkeletalMesh")!=astral_resolve(observed.mesh)) return false;
-        if(!materials.sync_opacity()) return false;
+           !astral_bool(component,L"bCharacterEnabled") || astral_bool(actor,L"bHidden")) return Sync::inactive;
+        if(astral_object(component,L"MID_Astral")!=astral_resolve(observed.native_mid) ||
+           astral_object(component,L"MySkeletalMesh")!=astral_resolve(observed.mesh)) return Sync::failed;
+        if(!materials.sync_opacity()) return Sync::failed;
         if(!visible && now>prepared_at) {
-            if(!bindings.intact()) return false;
-            for(const auto& visual:visuals) if(!visual->intact()) return false;
+            if(!bindings.intact()) return Sync::failed;
+            for(const auto& visual:visuals) if(!visual->intact()) return Sync::failed;
             native.acquire(astral_resolve(observed.mesh));
             for(const auto& visual:visuals) visual->show(true);
             visible=true;
         }
-        return true;
+        return Sync::kept;
     }
     bool intact() const {
         if(!bindings.intact() || (visible && !native.intact())) return false;
@@ -150,11 +151,12 @@ struct AstralDoubles::Impl {
         // Fade updates touch only active private MIDs; discovery is bounded to
         // the player's own spawner and runs at 20 Hz.
         for(auto it=groups.begin();it!=groups.end();) {
-            bool valid=false;
-            try { valid=(*it)->sync(now); }
+            auto result=AstralVisualGroup::Sync::failed;
+            try { result=(*it)->sync(now); }
             catch(const std::exception& problem) { error=problem.what(); }
-            if(!valid) {
-                record_failure((*it)->observed.actor,(*it)->activation);
+            if(result!=AstralVisualGroup::Sync::kept) {
+                if(result==AstralVisualGroup::Sync::inactive) lifecycle.deactivate((*it)->observed.actor);
+                else record_failure((*it)->observed.actor,(*it)->activation);
                 if(!(*it)->release()) throw std::runtime_error("Astral inactive visual cleanup is incomplete");
                 it=groups.erase(it);++removed;
             } else ++it;
