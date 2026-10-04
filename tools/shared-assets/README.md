@@ -40,3 +40,53 @@ rendering or collision. They do not prove live tick ordering, attacks, weapon
 grips, cloth collision, speed-driven wing transitions, cooked Windows behavior,
 resource cost, or runtime cleanup. No game package or installed runtime is
 changed by these commands.
+
+## Shared ghost materials
+
+The verified diagnostic graphs are inputs, not shipped outfit overrides.
+`prepare-shared-materials.py` checks their protected-source hashes and links
+them into a separate shared editor stage. `create-shared-materials.py` copies
+twelve parents to `/Game/CSS/SharedAssets/Astral/Materials`, replaces texture
+parameter defaults with shared neutral placeholders and checks package
+dependencies. Literal/unrecognized textures are rejected rather than removed.
+The manifest records which parameters need original game noise textures and
+which need the current source material's texture values. Opacity defaults to
+zero until the runtime binds them.
+
+All parents support skeletal, morph and cloth rendering. The body adapters
+also serve clothing slots, so their cloth permutations are required even if
+the initial fixture used a rigid sphere. `create-shared-variants.py` adds an
+instance with the opposite two-sided setting for each parent. Runtime must
+select the matching cooked variant; changing a flag on a MID is insufficient.
+
+```bash
+python3 tools/shared-assets/prepare-shared-materials.py CANDIDATE_STAGE SHARED_STAGE
+bash tools/shared-assets/run-pose-check.sh ENGINE SHARED_STAGE materials materials1
+bash tools/shared-assets/run-pose-check.sh ENGINE SHARED_STAGE variants variants1
+```
+
+Copy only `Content/CSS/SharedAssets` into a separate Blueprint-only Windows
+cook project. Its runtime parent classes belong to Engine; do not include the
+editor module. Cook through `cook-shared-inner.sh` with the project's UE 5.6.1
+Windows cooker and patched Wine environment. The rootless container needs
+`--user 0` to write the host-owned project/output bind mounts. The engine stays
+read-only. The script exits rather than reusing an existing prefix or cook log.
+
+```bash
+python3 tools/shared-assets/pack-shared.py COOKED_PROJECT GAME NEW_PACK_STAGE --retoc RETOC
+```
+
+That tool stages only 28 shared assets, verifies the IoStore container and
+checks byte-identical export payloads after conversion back to legacy assets.
+Run AssetReadback with its generated `packages.txt` and `--shader-maps`, then:
+
+```bash
+python3 tools/shared-assets/check-cooked-materials.py \
+  PACK/assets.json STAGE/shared-materials.json STAGE/shared-material-variants.json PACK/material-check.json
+```
+
+The checker verifies both Windows targets, skin/cloth shader variants,
+refraction shaders, default opacity, texture binding names, both culling modes,
+and absence of outfit/preview/editor-module imports. The pose checker takes
+the single pose entry from the same readback separately. These checks do not
+replace in-game appearance, animation or lifecycle testing.

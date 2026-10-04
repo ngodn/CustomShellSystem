@@ -5,6 +5,14 @@ Read this before resuming work. [Goal](genessa-doubles-goal.md) defines completi
 
 ## Established findings
 
+- Shared material packaging is complete through independent Windows shader
+  readback in `material-pack3`. See current status before repeating shader work.
+  Twelve parents plus twelve opposite-culling instances cover the tested
+  families. Runtime selection must use effective two-sided/clip/static-switch
+  values, bind original textures after uniform copy, and reject unsupported
+  permutations. Selection and the automatic double coordinator are not yet
+  implemented. No assets or runtime for doubles are installed.
+
 - Commander White's eye refraction remains active at zero surface opacity.
   Its companion scales the IOR offset by native ghost coverage so zero fade
   removes distortion too. The native reflection rotations sum three offsets;

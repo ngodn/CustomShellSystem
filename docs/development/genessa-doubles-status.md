@@ -4,6 +4,35 @@ Session 4, October 5, 2026. Branch `feature/genessa-doubles`.
 
 ## Current state
 
+The shared-assets candidate is now Windows-cooked and packaged, not installed.
+`material-pack3` on the secondary drive contains the pose template, twelve
+ghost parents, twelve opposite-culling instances and three neutral textures.
+All 28 export payloads round-trip byte-identically. Independent readback passes
+both SM5/SM6 targets, cloth/skin variants, eye distortion, texture/default-fade
+contracts and package references. `material-cook3` exited zero with no cooker
+errors or warnings. Earlier `material-pack1` is rejected because five new
+parents lacked cloth variants; `material-pack2` lacks the culling alternatives.
+Use only pack3 for the next integration step.
+
+The manifests are `visuals1/shared-materials.json` and
+`shared-material-variants.json`. Runtime must bind native T_noise_0017,
+T_noise_0082 for eye smoke, source textures, effective clip thresholds and
+the live reflection-boost scalar. `AstralMaterials` supports explicit texture
+and scalar bindings after copying source uniforms, with roots and readback.
+Both Windows runtime builds pass without warnings and all 17 host tests pass.
+Adapter selection and the automatic double coordinator are still absent.
+No live verification or installation has occurred. The latest user explicitly
+authorized installation once ready and said the game is closed; recheck before
+writing installed files. The EveTest report remains queued in `work-queue.md`.
+
+Commander White's native eye refraction now passes 524 DXIL arithmetic cases
+and 14 Vulkan captures. Zero surface opacity still refracts, but zero native
+ghost fade removes it completely. The diagnostic comparison was inspected.
+That family is included in the shared package; full faces and live doubles
+remain unverified.
+
+The paragraphs below record earlier milestones and their original scope.
+
 Native body ghost parents now compile and pass 26 HDR fixture captures across
 Faithful and Stray. The checks cover native alpha-channel behavior, the exact
 clip boundary, opaque-versus-masked handling, tint, animation and zero/partial
