@@ -19,6 +19,15 @@ directories. It is an offline read-only diagnostic, not a package writer.
 Requests must have unique shader-map hashes. The extractor does not reconstruct
 material graphs or support arbitrary shader types.
 
+October 5: clothdriver's shader group occurs in both pakchunk0 and pakchunk3.
+The extractor now accepts multiple group owners only after comparing every
+stored byte; different copies still fail. Each output records all group owners.
+The four clothdriver pixel shaders (SM5/SM6) extracted successfully and both SM6
+shaders disassembled. Re-extracting the original eight summon shaders preserves
+every UE-record and DXBC hash. Evidence: `clothdriver-pixel-shaders4` and
+`native-pixel-shaders-owner-regression` under `work/genessa-doubles`.
+This changes only the offline reader, not the installed runtime or packages.
+
 The native Faithful parent and Corrupted instance produced four shader maps
 (SM5 and SM6 for each), containing eight distinct base-pass pixel shaders. All
 16 extracted files match the SHA-256 values in their manifest. Microsoft's DXC

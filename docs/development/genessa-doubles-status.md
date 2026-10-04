@@ -144,6 +144,18 @@ loader, UE4SS, saved state and both shared packages. The previous selector/core
 and deployment receipt are in `work/genessa-doubles/runtime-trial3`. No shared
 assets were replaced. The new core has not been loaded or armed yet.
 
+The next live process (Linux PID 1935942, Windows PID 368) maps the installed
+8ed06a core and its loader acknowledgment agrees. The three hidden-visual
+cleanup cycles pass with owned skeletal components preserved. Binding rollback
+also passes destruction-before-restore, native reinitialization, overlay
+replacement and retained-object restoration across 25 slots. Source/adapter
+preflight passed and the trial is enabled. Evidence: runtime-trial3's
+`cleanup-regression.jsonl`, `preflight.jsonl` and `armed.json`.
+The author confirms Faithful Default and Use CSS both work. Its 50-second
+capture has 98 status samples, observes both modes, and ends with 12 prepared,
+12 removed, zero fallbacks and no cleanup error. Stray selector testing is
+still pending; the earlier Stray visual acceptance predates this new core.
+
 More Beaute's two installed meshes were independently decoded into
 `work/genessa-doubles/morebeaute-audit1/meshes.json`. Both assign clothdriver to
 material slots 4 and 6, whose render sections are statically disabled. The

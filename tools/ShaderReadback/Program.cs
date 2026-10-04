@@ -60,9 +60,14 @@ foreach (var chunk in reader.TocResource.ChunkIds.Where(chunk => chunk.ChunkType
                 throw new InvalidDataException("Shader group size invalid or exceeds 128 MiB");
             var groupId = library.ShaderGroupIoHashes[shader.ShaderGroupIndex];
             var owners = readers.Where(candidate => candidate.TryResolve(groupId, out _)).ToArray();
-            if (owners.Length != 1) throw new InvalidDataException("Shader group missing or ambiguous");
+            if (owners.Length == 0) throw new InvalidDataException(
+                $"Shader group {groupId} for map {request.Hash}, resource {resourceIndex} has {owners.Length} owners: " +
+                string.Join(", ", owners.Select(owner => owner.Name)));
             var stored = owners[0].Read(groupId);
             if (stored.Length != group.CompressedSize) throw new InvalidDataException("Shader group stored size mismatch");
+            foreach (var duplicate in owners.Skip(1))
+                if (!stored.AsSpan().SequenceEqual(duplicate.Read(groupId)))
+                    throw new InvalidDataException($"Conflicting shader group {groupId}: {owners[0].Name} and {duplicate.Name}");
             var decoded = group.CompressedSize == group.UncompressedSize ? stored :
                 Compression.Decompress(stored, checked((int)group.UncompressedSize), CompressionMethod.Oodle);
             var members = library.ShaderIndices.AsSpan(checked((int)group.ShaderIndicesOffset), checked((int)group.NumShaders));
@@ -81,6 +86,7 @@ foreach (var chunk in reader.TocResource.ChunkIds.Where(chunk => chunk.ChunkType
                 package=request.Package, platform=request.Platform, map_hash=request.Hash,
                 resource_index=resourceIndex, shader_index=shaderIndex, shader_hash=library.ShaderHashes[shaderIndex].ToString(),
                 library=reader.Name, library_chunk=chunk.ToString(), group_chunk=groupId.ToString(),
+                group_owners=owners.Select(owner => owner.Name).ToArray(),
                 group_index=shader.ShaderGroupIndex, group_offset=start, group_end=end,
                 uecode=filename + ".uecode", uecode_sha256=Convert.ToHexString(SHA256.HashData(code)),
                 container=filename + ".dxbc", container_offset=offset, container_bytes=dxbc.Length,
