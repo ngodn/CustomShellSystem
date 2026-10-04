@@ -5,6 +5,45 @@ October 4, 2026. Offline experiments, not installed runtime support.
 The user requires Unholy Genessa, Eve and Commander White. Companion materials
 belong to CSS. Outfit authoring sources and released containers stay unchanged.
 
+## Lit surface composition experiment
+
+`create-ghost-surfaces.py` created seven additional private parents in
+`material-outfits1`, under `AstralSurface1`. They retain the original base
+color, metallic, specular, roughness, normal, ambient occlusion and world-position
+offset connections. Original emission is added to the reconstructed native
+ghost emission; coverage multiplies the native fade as in the earlier coverage
+experiment. All seven source parents use Default Lit. The script rejects other
+shading models except Unlit rather than changing their behavior implicitly.
+
+The copies use translucent surface forward shading. This keeps per-pixel
+lighting available for the retained surface inputs, as described in
+[Epic's lit translucency documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/lit-translucency-in-unreal-engine?application_version=5.6).
+It still needs visual and performance validation. Keeping graph connections
+does not prove that an opaque source and translucent companion look identical.
+The native ghost contribution also intentionally changes the final color.
+
+Creation completed with exit zero on UE 5.6.1; the source hashes and retained
+connections passed their checks. `ghost-surfaces.json` records the seven
+parents, original emission nodes and available color/glow parameters. No
+source material or installed outfit was changed.
+
+The first render attempt (`surface-render1`) spent several minutes repeatedly
+compiling intermediate duplicated graphs before any captures. It was stopped
+deliberately, not reported as a shader failure or completed test. SIGTERM did
+not finish the commandlet, so its editor and owned workers were killed; the
+wrapper returned 137. No image acceptance result exists for that run.
+
+`prepare-ghost-surfaces.py` now builds and saves the final comparison fixtures
+under NullRHI before `render-ghost-surfaces.py` loads them. Preparation run 2
+completed with exit zero, producing 57 interfaces for seven families. This
+avoids editing and recompiling every intermediate graph during the render run.
+The fixtures compare the lit source-only term, ghost-only term and their sum;
+palette edits, authored glow, animation, half fade, zero fade and removed
+geometry are separate states. `check-ghost-surfaces.py` reads half-float EXRs,
+checks file hashes and requires complete groups. Full characters, DX12, body
+and eye adaptation, live ownership and summon performance are outside this
+fixture's scope.
+
 ## Released asset audit
 
 ### Effective inheritance audit
