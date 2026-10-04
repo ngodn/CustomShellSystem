@@ -42,6 +42,16 @@ rejected preparation and keep-alive cleanup checks. Neither this probe nor the
 owner has been live-verified. Adapter selection, binding, appearance transfer,
 pooling integration and production shared-asset packaging remain unfinished.
 
+The offline material inheritance resolver now distinguishes 102 interfaces in
+the seven-mesh Eve/Commander White inventory. Native Uber contributes 67 masked
+and 24 opaque interfaces, so a root-only adapter lookup is insufficient. Seven
+inheritance tests pass. Five additional native surface/eye SM6 pixel shaders
+were extracted and disassembled, including a masked shader's alpha/channel/
+strength discard calculation. Native eye composition, texture-register mapping
+and rendered surface companions are still pending. The detailed evidence and
+commands are in [material support](genessa-doubles-materials.md). This audit
+does not establish runtime or visual compatibility.
+
 Validation for this material-owner change: `css_core` built successfully in
 `build/windows` (development) and `build/release-windows` (shipping), with no
 reported compiler warnings. Reconfigured and built `build/release-host`; all

@@ -7,6 +7,97 @@ belong to CSS. Outfit authoring sources and released containers stay unchanged.
 
 ## Released asset audit
 
+### Effective inheritance audit
+
+`tools/diagnostics/genessa-doubles/resolve-material-state.py` resolves the cooked
+root defaults and enabled instance overrides. Stored values with disabled
+override flags do not change inheritance. The resolver preserves explicit zero
+and false values and parameter association/index, and records each value's
+source. It rejects missing defaults, conflicting readbacks and parent cycles.
+Material-layer structures are retained, not flattened. Live MID overrides still
+need copying at summon time.
+
+The current seven-mesh Eve/Commander White inventory resolves 102 distinct
+interfaces and 240 material/overlay references:
+
+| Family | Effective mode | Interfaces | Slot references |
+| --- | --- | ---: | ---: |
+| Native `M_Uber` | Opaque | 24 | 86 |
+| Native `M_Uber` | Masked | 67 | 133 |
+| Native `M_refraction_01` | Translucent | 3 | 3 |
+| Eve hair | Translucent | 2 | 12 |
+| Commander White hair | Translucent | 6 | 6 |
+
+Both native Uber groups use `Opacity from Color Map=true`,
+`Use Opacity Dither=false`, and `USE VIRTUAL TEXTURES=false`; `USE OPACITY`
+distinguishes the groups. These switches describe this inventory, not all
+native appearances. Do not select an opaque companion by root name alone.
+
+Reproduce from the existing readbacks, choosing a new output filename:
+
+```sh
+python3 tools/diagnostics/genessa-doubles/resolve-material-state.py \
+  work/genessa-doubles/eve-cw-inventory.json \
+  work/genessa-doubles/effective-materials-01.json \
+  work/genessa-doubles/eve-cw-materials.json \
+  work/genessa-doubles/eve-cw-parents.json \
+  work/genessa-doubles/eve-cw-roots.json
+python3 tests/astral_material_state_test.py
+```
+
+All seven inheritance tests pass. They cover disabled base overrides, omitted
+constructor values, false static overrides, zero values, layer identity,
+shading-model inheritance, the translucent enum alias and invalid ancestry or
+default counts. They do not test rendering or runtime reflection.
+
+UE 5.6.1 source references: `Material.cpp:SetInitialValues`,
+`MaterialShared.cpp:FMaterialInstanceBasePropertyOverrides`,
+`MaterialInstance.cpp:UpdateOverridableBaseProperties`, and
+`MaterialTypes.h:EMaterialParameterType`. The material's clip default is
+0.3333; the override struct's constructor uses 0.333333. The resolver preserves
+that distinction. `MSM_FromMaterialExpression` does not replace an inherited
+instance shading model. `BLEND_TranslucentGreyTransmittance` aliases Translucent.
+
+### Native surface shader extraction
+
+Five additional SM6 base-pass pixel shaders were extracted successfully and
+disassembled with DXC. The extraction selects `TGPUSkinVertexFactoryDefault`
+and `TBasePassPSFNoLightMapPolicy` from the full readbacks. The selected JSON
+files are extraction inputs, not complete shader-map representations.
+
+| Material | Map hash | Resource |
+| --- | --- | ---: |
+| Eve `MI_ShellKeeper_Hair_01` (masked Uber) | `B0E0C59654BAAF957577C5C003F6827A6912E6AA` | 184 |
+| Native `MI_ShellKeeper_Body_03` (opaque Uber) | `B5F422B6BCDF7BD56CBC9686FE62EC52C87BF82D` | 109 |
+| `M_refraction_01` | `2CF1A2C5FF20EC86B9FBCE98AEA8D1AC7F06C2A3` | 6 |
+| `M_Genessa_Eyes` | `376BF936FA4BD614F125AF91C1D196D4DA98589D` | 6 |
+| `M_Genessa_Eyes_Smoke` | `4AE4A640F38D9B7CDAC4A36B69E91638D9AB59FC` | 10 |
+
+Local evidence: `work/genessa-doubles/surface-shader-maps.json`,
+`opaque-shader-maps.json`, `surface-bytecode1/manifest.json` and
+`opaque-bytecode1/manifest.json`. The manifests retain container provenance and
+SHA-256 hashes; adjacent `.dxbc.ll` files contain disassembly. Commander White's
+`MI_Layer_00` has no own shader map, so the opaque extraction uses its native
+parent rather than treating an absent map as unsupported rendering.
+
+In the masked shader, SSA `%259` is sampled alpha. `%621` takes its replicated
+RGBA dot product with `OpacityMask_Channel`, `%624` multiplies by
+`Opacity Strength`, and `%625` subtracts the compiled clip threshold. `%626`
+discards when negative. Preshader fields at float offsets 20 and 24 map directly
+to numeric parameters 15 and 14 through opcode bytes `03 0f 00` and
+`03 0e 00`. Both one-hot channel choices in this inventory therefore use alpha,
+not the selected RGB texture channel. Final texture-register mapping and a
+rendered companion comparison still need verification. The opaque sample has
+no discard instruction.
+
+The refraction shader saturates its `Opacity` scalar for ordinary output alpha.
+This alone does not prove that setting opacity to zero removes all rendering:
+reflection/emissive color and the separate distortion path still need tracing.
+Do not drop Commander White's eye layers based only on their zero opacity.
+Genessa's two eye shaders are extracted but their expressions remain untraced.
+
+No game files, outfit assets or installed runtime were changed by this audit.
+
 The intended delivery is CSS runtime code plus CSS-owned cooked companion
 materials, rather than an update to each outfit. Individual outfit changes are
 conditional on evidence that the runtime and companions cannot handle an asset.

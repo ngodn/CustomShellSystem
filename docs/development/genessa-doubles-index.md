@@ -28,6 +28,11 @@ Read this before resuming work. [Goal](genessa-doubles-goal.md) defines completi
 - `K2_CopyMaterialInstanceParameters(source, true)` is the reflected route to
   uniform hierarchy copying. It clears destination values first. Copy before
   setting clone fade controls, and do not use the slow default-false path.
+- Native `M_Uber` appears in both opaque and masked variants in the released
+  Eve/Commander White meshes. Select companions using effective enabled
+  overrides and static switches, not the root name or stored disabled values.
+  The offline resolver and seven tests document this distinction; see material
+  support for the five extracted surface/eye shaders and remaining gaps.
 
 ## Dead ends and probe corrections
 
