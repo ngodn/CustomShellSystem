@@ -96,6 +96,27 @@ This rules out preceding exports as a necessary condition, not GPU contention
 or a driver issue. No test editor remains running. Run labels and per-state
 begin/end logs now make future comparisons distinguishable.
 
+An opaque backdrop was then added as a changed capture condition. The index-3
+`hair-backdrop.log` run completed with exit zero and passed all five states.
+The full `hair-all-backdrop.log` batch wrote all 40 images and a complete
+manifest. All eight groups passed: zero equals removed, half differs from both
+endpoints, and full equals original in RGB. Compilation and source-hash checks
+also passed. These are dim flat-card captures; Eve full and Commander White
+half were visually inspected. Full hairstyles and masks under the bright
+native ghost effect still require validation.
+
+The full batch's shell wrapper exited 127 even though UE logged successful
+capture and normal shutdown. Its console identifies `h: command not found` at
+the runner's last line. The runner was edited to add `native-render` while Bash
+was waiting for its child, shifting the remaining script text. This was a
+diagnostic orchestration error, not an image or shader failure. Do not edit a
+running shell script. The later native render used the finished runner and
+exited zero. No render process remains running.
+
+The backdrop result is consistent with an empty-capture issue, but does not
+establish the driver cause. Preserve the failed runs and use the tested backdrop
+condition for further controlled comparisons.
+
 ## Local evidence
 
 The runtime copy boundary now has live evidence. This game's header dump exposes

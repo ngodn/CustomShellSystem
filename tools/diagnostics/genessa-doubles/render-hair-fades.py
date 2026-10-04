@@ -17,6 +17,9 @@ if run and not re.fullmatch(r"[a-zA-Z0-9_]{1,32}", run):
     raise ValueError("CSS_ASTRAL_HAIR_RUN must use 1..32 letters, digits or underscores")
 if run:
     suffix += "-" + run
+background = os.environ.get("CSS_ASTRAL_HAIR_BACKGROUND", "0")
+if background not in ("0", "1"):
+    raise ValueError("CSS_ASTRAL_HAIR_BACKGROUND must be 0 or 1")
 opacities = {"original": 1., "full": 1., "half": .5, "zero": 0., "removed": 0.}
 states = os.environ.get("CSS_ASTRAL_HAIR_STATES", ",".join(opacities)).split(",")
 if not states or len(states) != len(set(states)) or any(state not in opacities for state in states):
@@ -71,6 +74,17 @@ for index, path in enumerate(sources):
     cards.append((path, original, faded))
     interfaces.extend((original, faded))
 
+backdrop_material = None
+if background == "1":
+    backdrop_material = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+        "M_Backdrop", fixture, unreal.Material, unreal.MaterialFactoryNew())
+    assert backdrop_material
+    backdrop_material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    color = EDIT.create_material_expression(backdrop_material, unreal.MaterialExpressionConstant3Vector)
+    color.set_editor_property("constant", unreal.LinearColor(.04, .04, .04, 1.))
+    assert EDIT.connect_material_property(color, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    EDIT.recompile_material(backdrop_material)
+    interfaces.append(backdrop_material)
 compiled = json.loads(unreal.UGMaterialLibrary.finish_materials(interfaces))
 assert compiled["passed"], compiled
 world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
@@ -97,12 +111,22 @@ target = unreal.RenderingLibrary.create_render_target2d(world, 512, 512,
 capture.set_editor_property("texture_target", target)
 plane = unreal.load_asset("/Engine/BasicShapes/Plane")
 assert plane
+backdrop = None
+if backdrop_material:
+    backdrop = unreal.EditorLevelLibrary.spawn_actor_from_class(
+        unreal.StaticMeshActor, unreal.Vector(0, 0, -1))
+    backdrop.set_actor_scale3d(unreal.Vector(10, 10, 1))
+    backdrop_component = backdrop.get_component_by_class(unreal.StaticMeshComponent)
+    backdrop_component.set_static_mesh(plane)
+    backdrop_component.set_material(0, backdrop_material)
 rows = []
 for index, (path, original, faded) in enumerate(cards):
     actor = unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.StaticMeshActor, unreal.Vector())
     component = actor.get_component_by_class(unreal.StaticMeshComponent)
     component.set_static_mesh(plane)
     capture.show_only_actor_components(actor)
+    if backdrop:
+        capture.show_only_actor_components(backdrop)
     for state in states:
         opacity = opacities[state]
         unreal.log(f"CSS_ASTRAL_HAIR_BEGIN source={path} state={state}")
@@ -126,6 +150,7 @@ check_sources()
 (OUT / "captures.json").write_text(json.dumps({
     "images": rows, "compilation": compiled, "source_files_unchanged": True,
     "requested_states": states, "selection": selection, "run": run,
+    "opaque_backdrop": background == "1",
     "scope": "Flat-card Vulkan hair coverage test only. Not full hairstyles, native ghost shading or DX12."
 }, indent=2) + "\n")
 unreal.log("CSS_ASTRAL_HAIR_CAPTURED")
