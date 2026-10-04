@@ -36,6 +36,11 @@ Read this before resuming work. [Goal](genessa-doubles-goal.md) defines completi
 
 ## Dead ends and probe corrections
 
+- Native material `TextureIndex` uses `CachedExpressionData.ReferencedTextures`.
+  The top-level texture list has a different order in this Uber root. Resolve
+  named parameters through live overrides first. The verified masked shader
+  samples `BaseColorMap  non VT` alpha, including that name's two spaces.
+
 - Adding full lit source shading to native ghost emission loses blue/red tint.
   Run 6 passed all composition checks but failed tint for every Stray family
   and Commander White Faithful hair. Do not ship that additive composition.
@@ -62,6 +67,7 @@ Paths under `work/` are local diagnostic evidence, not distributable game assets
 | `native/src/astral_source.inl`, `astral_source_probe.inl` | Live body/modular-component capture with current material sources, morphs, hidden sections and supported post-process settings. Both Windows configurations compile; runtime readback and summon application remain pending. |
 | `tools/diagnostics/genessa-doubles/copy-materials.lua`, `work/genessa-doubles/live-material-copy-03.log` | Five live families copied into unattached private MIDs; scalar/vector values and ten inherited skin textures matched, and copy edits left player sources unchanged. |
 | [Material support](genessa-doubles-materials.md) | Eve v1.4.0 and Commander White v0.0.6-dev family audit, separate hair companions, garment fade evidence and remaining gaps. |
+| `tools/diagnostics/genessa-doubles/read-material-bindings.py`, `tests/astral_shader_bindings_test.py` | Hash-checked DX12 resource-table decoder maps 13 material textures across five native shaders; binary round trip and seven corruption/boundary tests pass. Reports: `opaque-bindings1.json`, `surface-bindings1.json` under local work. |
 | `tools/diagnostics/genessa-doubles/create-ghost-surfaces.py`, `prepare-ghost-surfaces.py`, `render-ghost-surfaces.py`, `check-ghost-surfaces.py` | Rejected lit addition; native-filtered candidate passes 14 HDR groups and tested tint/control/fade checks. Source PBR treatment, full characters, body/eyes and runtime remain open. |
 | `work/genessa-doubles/packages.txt`, `assets.json` | Seventeen ability, actor and spawner packages decoded with AssetReadback. |
 | `work/genessa-doubles/effect-packages.txt`, `effects.json` | Native summon parents, fade cue and VFX component. |

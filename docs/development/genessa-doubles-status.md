@@ -1,6 +1,6 @@
 # Genessa doubles status
 
-Session 3, October 4, 2026. Branch `feature/genessa-doubles`.
+Session 4, October 5, 2026. Branch `feature/genessa-doubles`.
 
 ## Current state
 
@@ -66,8 +66,12 @@ the seven-mesh Eve/Commander White inventory. Native Uber contributes 67 masked
 and 24 opaque interfaces, so a root-only adapter lookup is insufficient. Seven
 inheritance tests pass. Five additional native surface/eye SM6 pixel shaders
 were extracted and disassembled, including a masked shader's alpha/channel/
-strength discard calculation. Native eye composition, texture-register mapping
-and rendered surface companions are still pending. The detailed evidence and
+strength discard calculation. The resource-table decoder now resolves 13
+material texture bindings across those five shaders and confirms that the
+masked variant samples base-color alpha. Seven binary-parser tests pass.
+Literal textures use the cached expression list, whose ordering differs from
+the export's top-level referenced textures. Native body/eye composition and
+rendered companions remain pending. The detailed evidence and
 commands are in [material support](genessa-doubles-materials.md). This audit
 does not establish runtime or visual compatibility.
 

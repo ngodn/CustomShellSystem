@@ -191,6 +191,47 @@ instance shading model. `BLEND_TranslucentGreyTransmittance` aliases Translucent
 
 ### Native surface shader extraction
 
+October 5: texture registers are now resolved from each shader's serialized
+`FShaderResourceTable`, matched by layout hash to the material uniform
+expression set. `read-material-bindings.py` verifies extraction/container
+hashes, bounds, token offsets, active buffer bits and a byte-identical header
+round trip. All five extracted SM6 shaders parsed successfully, yielding 13
+material texture bindings. Seven parser tests cover a known binding, a
+single-byte register change, truncated headers, negative counts, malformed
+streams, inactive buffers and wrong container boundaries.
+
+| Shader | Material buffer | Confirmed material texture registers |
+| --- | --- | --- |
+| Opaque ShellKeeper body | 2 | t4 `NormalMap non VT`, t5 literal index 25, t6 `BaseColorMap  non VT`, t7 `BRM non VT`, t8 literal cube index 10 |
+| Masked Eve eye mesh | 3 | Same t4-t7, t8 literal index 23, t9 literal cube index 10 |
+| Native eye refraction | 4 | t19 `ReflectionMap` (cube) |
+| Genessa eyes | 1 | No material texture bindings in this shader |
+| Genessa eye smoke | 2 | t3 literal texture index 1 |
+
+The masked shader's `%4` handle is t6. Its `%253` annotation feeds sample
+`%255`, whose alpha is `%259`. This closes the earlier identity gap: the
+discard calculation uses the actual `BaseColorMap  non VT` alpha. Preserve
+the parameter's two spaces when matching or copying values.
+
+Texture indices resolve through `CachedExpressionData.ReferencedTextures`,
+not the material export's top-level `ReferencedTextures` list. They differ
+in this native root. The cached Uber list resolves literal 25 to `T_Sphere_A`,
+23 to `/Engine/MaterialTemplates/Textures/T_Noise01`, and 10 to the cube render
+target `RT_MetallicReflectionBoost`. The top-level list would misidentify
+index 10 as a 2D blood texture. Named parameters still use effective live
+overrides before that fallback; this table is not a replacement for copying
+the currently bound textures.
+
+Exact UE 5.6.1 source references: `RHIResources.h:788` (serialization),
+`RHIDefinitions.h:716` (8/16/8-bit token layout),
+`ShaderCompilerCommon.cpp:51` (offset table),
+`MaterialUniformExpressions.cpp:473` (texture/sampler member order),
+`MaterialUniformExpressions.h:431` and `MaterialInterface.cpp:360` (cached
+texture lookup). Raw reports are `work/genessa-doubles/opaque-bindings1.json`
+and `surface-bindings1.json`. The script handles standard 2D/cube groups only
+and rejects unsupported texture layouts. This establishes binding identities,
+not a complete body/eye graph or rendered equivalence.
+
 Five additional SM6 base-pass pixel shaders were extracted successfully and
 disassembled with DXC. The extraction selects `TGPUSkinVertexFactoryDefault`
 and `TBasePassPSFNoLightMapPolicy` from the full readbacks. The selected JSON
@@ -217,8 +258,9 @@ RGBA dot product with `OpacityMask_Channel`, `%624` multiplies by
 discards when negative. Preshader fields at float offsets 20 and 24 map directly
 to numeric parameters 15 and 14 through opcode bytes `03 0f 00` and
 `03 0e 00`. Both one-hot channel choices in this inventory therefore use alpha,
-not the selected RGB texture channel. Final texture-register mapping and a
-rendered companion comparison still need verification. The opaque sample has
+not the selected RGB texture channel. The October 5 binding trace above now
+identifies this as the base-color texture; a rendered companion comparison
+still needs verification. The opaque sample has
 no discard instruction.
 
 The refraction shader saturates its `Opacity` scalar for ordinary output alpha.
