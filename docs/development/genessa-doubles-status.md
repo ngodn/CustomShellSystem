@@ -20,6 +20,26 @@ fabric and wing coverage. Retaining the original materials with a global ghost
 overlay also needs proof for coverage and full fade-out. No architecture has
 yet passed those requirements.
 
+An isolated garment-fade experiment now exists under
+`/mnt/eins0fxE/CSS-work/genessa-doubles/material-prototype1`. The first
+NullRHI authoring run completed on UE 5.6.1 CL44394996, creating five private
+parents while verifying unchanged source hashes. The ten-image Vulkan render
+completed with exit zero. In both views zero-opacity garments are pixel-identical
+to removed garments; half opacity differs from full opacity. Full opacity also
+differs from the original, so this is not proof of visual equivalence.
+
+Eve and Commander White's released meshes resolve to four material families.
+Separate hair companions were authored successfully, preserving their distinct
+AO wiring and specular defaults. The first flat-card hair render stalled during
+Vulkan image readback after three complete card sets and was stopped. The bounded
+single-card retry (`hair-index3.log`) also stopped with timeout exit 124, after
+original/full/half images and an empty zero-opacity output. No test editor
+remains running. The user was asked to close the game temporarily to compare
+without GPU contention; that cause is not yet established. Do not claim a
+passed hair batch from these partial images.
+[Material findings](genessa-doubles-materials.md) record the
+exact versions, source paths, known limitations and readback evidence.
+
 ## Evidence
 
 | Capability | Status | Evidence |
@@ -33,11 +53,18 @@ yet passed those requirements.
 | Clone animation/physics | Faithful live baseline | ABP_Shell_Genessa; cloth/rigid body disabled; clone physics override |
 | Appearance and customization transfer | Not implemented | No runtime patch |
 | Material masks, opacity and native fade composition | Open | Native shader has no texture parameters |
+| Private garment fade graphs | Vulkan fade test passed, visual equivalence not established | Both zero renders equal removed; full and half differ; source hashes unchanged |
+| Eve and Commander White hair | Companions authored; card render pending | Seven-mesh audit, two distinct graphs, eight hair instances |
 | Faithful reuse | One live reuse verified | Same actor 2147330429: cached/disabled -> uncached/enabled -> cached/disabled |
 | Stray lifecycle and cleanup | Partial live evidence | Primary is cached=true and enabled=true while opacity changes; secondary not sampled |
 | Performance and regressions | Pending implementation | No new core installed |
 
 ## Next steps
+
+The user explicitly added Commander White material support alongside Eve on
+October 4. Both are required validation targets, including their hair coverage
+and customization. Inspect released material families and stage private copies;
+do not edit either outfit's authoring sources or current packages for this test.
 
 1. Use the captured material families to establish composition. Both diagnostic
    runs completed and restored the previous callback. Full Stray secondary and
@@ -81,3 +108,44 @@ The next material experiment must preserve the actual source masks and
 parameters, and drive full disappearance from the native clone opacity. A
 CSS-owned companion shader/adapter is a candidate; no shader implementation
 or visual compatibility is claimed yet.
+
+## Isolated fade test
+
+The diagnostic scripts stage Mat1, Mat10, Mat12 and Fabric02 material sources.
+They duplicate the graphs and multiply original coverage by a clamped
+`CSS_AstralOpacity`, default zero. The masked parent's original threshold is
+retained through a Step expression. All copied graphs use translucent surface
+lighting for continuous fade. This is a compiled-material change, not a MID
+property trick. Native ghost shading, body and eyes are not adapted yet.
+
+The render script uses the existing authoring module and SK_EveW3 through
+read-only links, with writable copies only in the secondary-drive stage.
+It compares original/full/half/zero/removed garments from front and back,
+freezes emission phase and cloth, and records shader compilation results,
+slot coverage and source hashes. Test instances use a private subdirectory of
+the UnholyGenessa namespace to satisfy the existing compilation helper's
+path check. They are not production assets.
+
+The first render was started with `NoZenLocalFallback`, which misses the
+installed engine's `Compressed.ddp`. It is doing a cold global-shader build.
+The reusable runner now uses the exact-version `InstalledNoZenLocalFallback`
+graph, which includes that read-only cache, and `UE_LocalDataCachePath` for its
+writable stage cache. The original cold render has finished. Do not repeat it
+without a changed hypothesis or render configuration.
+
+The user subsequently authorized pip/npm cache cleanup, conservative uv
+pruning, Zen DDC cleanup and safe backup cleanup. These are now complete.
+Main-drive available space increased from 12,246,016,000 to 45,349,818,368
+bytes during the cleanup (the final `df -h` reports 43G). uv retained about
+16G after pruning. Zen's `ue.ddc` and `ue4.ddc` namespaces were dropped using
+its management tool; three project records, the CAS and installed binaries
+were retained, and the temporary server was shut down. Only the existing
+offline render is still running, using its separate file cache.
+
+Backup cleanup removed 7.67 GiB of generated package thumbnails/dye masks
+and 18 redundant staging sets totaling 3.32 GiB. Every removed staging
+trio was SHA-256 matched against a complete retained rollback trio before
+deletion. Unique staging sets, all retired rollback package files, settings
+and release archives remain. Backups now account for about 20G. Receipts are
+under `work/cleanup/20261004/`. Keep generated shader files on the secondary
+drive for this experiment.

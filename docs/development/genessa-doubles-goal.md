@@ -67,8 +67,12 @@ trace its actual material/cue setup in cooked assets before implementation.
    ranged behavior where supported, effect cleanup and repeated summons.
    Regress player appearance, aiming, locomotion, profiles and gate recovery.
    Measure frame cost and resource cleanup rather than promising zero impact.
-   Start with Unholy Genessa, then test Eve and representative original-shell,
-   NPC/enemy and non-CSS appearances. Keep each release ZIP and its BBCode
+   Start with Unholy Genessa, then test Eve, Commander White and representative
+   original-shell, NPC/enemy and non-CSS appearances. Include Eve and Commander
+   White material support, including their hair cutouts, current colors and
+   modular garment surfaces. Share companions between compatible material
+   families where possible; do not assume one companion supports unrelated
+   graphs. Keep each release ZIP and its BBCode
    changelog together in the agreed version directory.
 
 ## Existing pending work

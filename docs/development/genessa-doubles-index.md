@@ -39,6 +39,7 @@ Paths under `work/` are local diagnostic evidence, not distributable game assets
 
 | Artifact | Finding |
 | --- | --- |
+| [Material support](genessa-doubles-materials.md) | Eve v1.4.0 and Commander White v0.0.6-dev family audit, separate hair companions, garment fade evidence and remaining gaps. |
 | `work/genessa-doubles/packages.txt`, `assets.json` | Seventeen ability, actor and spawner packages decoded with AssetReadback. |
 | `work/genessa-doubles/effect-packages.txt`, `effects.json` | Native summon parents, fade cue and VFX component. |
 | `work/genessa-doubles/ActivateAstralAI.json` | Bytecode ordering: activation at 510, completion broadcast at 569; no-event branch broadcasts at 642. |
@@ -53,6 +54,10 @@ Paths under `work/` are local diagnostic evidence, not distributable game assets
 | `work/genessa-doubles/live-source-materials-02.log` | Same read with vector overrides included; completed and callback restored. |
 | `work/genessa-doubles/surface-packages.txt`, `surfaces.json`, `material-capabilities.json` | Eight actual player material parents and native summon shader parameter capabilities. |
 | `work/genessa-doubles/ghost-adapter-packages.txt`, `ghost-adapter.json` | Native generic ghost component and Uber ghost function metadata; not the Astral summon path. |
+| `tools/diagnostics/genessa-doubles/stage-materials.py`, `create-fade-materials.py` | Isolated copies of five garment and two hair parent graphs with original coverage multiplied by a fade scalar. No production changes. |
+| `tools/diagnostics/genessa-doubles/run-material-test.sh`, `render-fade-materials.py` | Read-only source sandbox; garment disappearance passed the original/full/half/zero/removed comparison. |
+| `tools/diagnostics/genessa-doubles/render-hair-fades.py`, `check-fade-renders.py` | Eight hair material card fixtures and actual pixel checks for fade endpoints and intermediate states. |
+| `tools/diagnostics/genessa-doubles/material-inventory.py`, `work/genessa-doubles/eve-cw-inventory.json` | Seven released meshes, 112 resolved material interfaces, effective instance properties retained for adapter planning. |
 | [Cloth overlay investigation](cloth-overlays.md) | Exact UE 5.6.1 per-slot overlay behavior and existing CSS effect arbitration. |
 
 ## External reference
