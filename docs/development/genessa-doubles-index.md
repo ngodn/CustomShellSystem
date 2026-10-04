@@ -5,6 +5,14 @@ Read this before resuming work. [Goal](genessa-doubles-goal.md) defines completi
 
 ## Established findings
 
+- Commander White's eye refraction remains active at zero surface opacity.
+  Its companion scales the IOR offset by native ghost coverage so zero fade
+  removes distortion too. The native reflection rotations sum three offsets;
+  the third axis is the unnormalized `(1,0,1)`, not a conventional Euler Z axis.
+  `refraction-response1/result.json` passes 524 arithmetic cases; the material
+  stage's `native-refraction-renders-1/hdr-check.json` passes 14 Vulkan captures.
+  Full faces, Windows rendering and in-game doubles remain unverified.
+
 - Keep the native double's main mesh and AnimInstance. Cross-skeleton mesh
   assignment clears that instance in UE 5.6.1, even without force-reinit.
   The shared Copy Pose template passes isolated moving-pose checks on the

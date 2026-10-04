@@ -11,8 +11,10 @@ using CUE4Parse.UE4.Versions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-if (args.Length != 3 || Directory.Exists(args[2]) || File.Exists(args[2]))
-    throw new ArgumentException("ShaderReadback CONTAINERS SHADER_MAP_JSON NEW_DIRECTORY");
+if (args.Length is < 3 or > 4 || Directory.Exists(args[2]) || File.Exists(args[2]) ||
+    (args.Length == 4 && args[3] != "--distortion"))
+    throw new ArgumentException("ShaderReadback CONTAINERS SHADER_MAP_JSON NEW_DIRECTORY [--distortion]");
+bool distortion = args.Length == 4;
 var requests = new List<(string Package, string Platform, string Hash, int[] Indices)>();
 foreach (var package in JObject.Parse(File.ReadAllText(args[1])).Properties())
 foreach (var export in (JArray)package.Value)
@@ -24,9 +26,10 @@ foreach (var resource in export["LoadedMaterialResources"] as JArray ?? new JArr
     var shaders = (content["Shaders"] as JArray ?? new JArray()).Concat(
         (content["OrderedMeshShaderMaps"] as JArray ?? new JArray()).SelectMany(mesh => (JArray)mesh["Shaders"]!));
     var indices = shaders.Where(shader => shader["Target"]?.Value<string>("Frequency") == "SF_Pixel" &&
-            (shader.Value<string>("Type") ?? "").StartsWith("TBasePassPS", StringComparison.Ordinal))
+            (distortion ? shader.Value<string>("Type") == "FDistortionMeshPS" :
+             (shader.Value<string>("Type") ?? "").StartsWith("TBasePassPS", StringComparison.Ordinal)))
         .Select(shader => shader.Value<int>("ResourceIndex")).Distinct().Order().ToArray();
-    if (indices.Length == 0 || indices.Any(index => index < 0)) throw new InvalidDataException("No base-pass pixel shaders");
+    if (indices.Length == 0 || indices.Any(index => index < 0)) throw new InvalidDataException("No matching pixel shaders");
     requests.Add((package.Name, map.Value<string>("ShaderPlatform")!, hash, indices));
 }
 if (requests.Count == 0) throw new InvalidDataException("No material shader requests");
@@ -88,7 +91,7 @@ foreach (var chunk in reader.TocResource.ChunkIds.Where(chunk => chunk.ChunkType
 }
 if (found.Count != requests.Count) throw new InvalidDataException($"Located {found.Count} of {requests.Count} shader maps");
 File.WriteAllText(Path.Combine(args[2], "manifest.json"), new JObject {
-    ["scope"]="Base-pass pixel shader bytecode extracted from native shared libraries. No material reconstruction or runtime change.",
+    ["scope"]=(distortion ? "Distortion" : "Base-pass") + " pixel shader bytecode extracted from native shared libraries. No material reconstruction or runtime change.",
     ["shaders"]=rows
 }.ToString(Formatting.Indented) + "\n");
 Console.WriteLine($"Extracted {rows.Count} pixel shaders from {found.Count} maps");

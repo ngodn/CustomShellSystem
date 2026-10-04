@@ -48,7 +48,8 @@ def evaluate(path, seeds, outputs):
                     [f32(a * b) for a, b in zip(operands[:3], operands[3:])])
             if m[1] == "binary":
                 return {35: max, 36: min}[op](*operands)
-            return f32({6: abs, 7: saturate, 21: lambda x: 2 ** x, 22: lambda x: x - math.floor(x),
+            return f32({6: abs, 7: saturate, 12: math.cos, 13: math.sin,
+                        21: lambda x: 2 ** x, 22: lambda x: x - math.floor(x),
                         23: lambda x: math.log2(x) if x > 0 else -math.inf,
                         24: math.sqrt}[op](operands[0]))
         raise ValueError(f"Unsupported required instruction: {token} {line}")

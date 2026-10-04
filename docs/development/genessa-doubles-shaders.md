@@ -172,3 +172,33 @@ Primary references: [Microsoft DXIL specification](https://github.com/microsoft/
 [CUE4Parse material reader](https://github.com/FabianFG/CUE4Parse/blob/master/CUE4Parse/UE4/Assets/Exports/Material/UMaterialInterface.cs).
 Exact engine extraction behavior is in RenderCore's `ShaderCodeArchive.h`
 (`GetShaderUncompressedSize`) and `ShaderCodeArchive.cpp` (Oodle group decode).
+
+## Native eye refraction
+
+`ShaderReadback --distortion` extracts `FDistortionMeshPS`, alongside the
+existing default base-pass selection. The native eye map is
+`2CF1A2C5FF20EC86B9FBCE98AEA8D1AC7F06C2A3`, distortion resource 22.
+Its IOR offset is independent of surface opacity. The companion multiplies
+that offset by native ghost coverage, with neutral IOR 1 at zero fade.
+
+`native-refraction-response.hlsl` preserves the extracted Fresnel response
+and reflection-coordinate rotations, including the unnormalized third axis.
+The scalar scene multiplier comes from `MPC_LightScenario`'s
+`Reflection Boost Intensity`; its default 1 is not a runtime constant.
+The companion exposes `CSS_AstralReflectionBoost` for that value and retains
+the source `ReflectionMap`, angle, pivot, opacity and IOR parameter names.
+Lit roughness/specular shading is intentionally replaced by the unlit ghost.
+
+Evidence in `work/genessa-doubles/refraction-response1/result.json`: 524
+cases compared with the extracted DXIL, maximum absolute error 7.20e-7,
+plus successful SM6 compilation. The shared DXIL evaluator now supports
+sine/cosine; the previous 3,096 eye/smoke cases still pass in
+`native-eye-response-regression3/result.json`.
+
+The secondary-drive material stage contains 14 HDR captures under
+`native-refraction-renders-1`. Both forms pass zero-opacity distortion,
+neutral-IOR removal, exact zero-fade/removal equality, intermediate fade,
+reflection-intensity independence and positive-opacity ghost tint checks.
+Each zero-opacity full capture distorts 367 pixels over a patterned backdrop.
+The renderer exited zero. These sphere fixtures do not establish full-face
+occlusion, original/native image equivalence, DX12 or game behavior.
