@@ -43,9 +43,13 @@ Seven coverage-composed ghost parents now exist in the isolated stage. Both
 112-image hair runs completed, but the combined ghost coverage checks failed:
 several Commander White layers were blank, and the dim LDR fixture did not
 provide enough testable holes. Manual exposure did not change those results.
-Readback confirms original alpha wiring is preserved. Effective GPU sampling
-and the bounds/view-dependent response need inspection before claiming support.
-These are CSS-owned experiments, not changes to any outfit or installed build.
+Readback confirms original alpha wiring is preserved. A subsequent EXR test
+resolves the blank-layer observation: the native Vulkan color-reading path
+quantizes through 8-bit FColor, while RGBA16F EXR export preserves the values.
+All eight hair materials now pass linear coverage-product, color, animation and
+fade checks in both forms (16 groups). These are CSS-owned experiments, not
+changes to any outfit or installed build. Complete hairstyles, palette
+composition, body/eyes, DX12 and runtime integration remain pending.
 
 An isolated garment-fade experiment now exists under
 `/mnt/eins0fxE/CSS-work/genessa-doubles/material-prototype1`. The first
@@ -93,6 +97,7 @@ exact versions, source paths, known limitations and readback evidence.
 | Material masks, opacity and native fade composition | Open | Native shader has no texture parameters |
 | Private garment fade graphs | Vulkan fade test passed, visual equivalence not established | Both zero renders equal removed; full and half differ; source hashes unchanged |
 | Eve and Commander White hair | Eight flat-card fade checks passed; full hairstyle/ghost integration pending | `hair-renders-all_backdrop/pixel-check.json`; two distinct parent graphs |
+| Hair coverage composed with native ghost | 16 HDR fixture groups passed; full-character integration pending | `ghost-hair-renders-exr1/hdr-check.json`; source-alpha product, time, fade and both tints |
 | Native effect reconstruction | Arithmetic, UE compilation and sphere fade/time checks passed | `native-response-check2`, `native-ghost-compiled.json`, `native-ghost-renders/pixel-check.json`; no native image comparison yet |
 | Faithful reuse | One live reuse verified | Same actor 2147330429: cached/disabled -> uncached/enabled -> cached/disabled |
 | Bounded lifecycle tracking | Portable tests and development Windows build passed; C++ live check pending | `astral_lifecycle.hpp`, `astral_observer.inl`, `astral_lifecycle_tests.cpp` |

@@ -171,9 +171,16 @@ source opacity. `ghost-hair` captures eight Eve/Commander White texture sets
 on a cube with nonzero bounds. `CSS_ASTRAL_GHOST_HAIR_RUN` selects a new output
 and fixture suffix. Run `check-ghost-hair.py STAGE/ghost-hair-renders-SUFFIX`;
 it requires fade/time/tint behavior and visible holes that remain empty. The
-current combined tests fail, so these parents are not production adapters.
+initial LDR combined tests fail, so those captures alone cannot establish support.
 `coverage-inspect` writes the original and companion opacity input wiring
 without saving assets. See the material findings for failed-test details.
+
+Set `CSS_ASTRAL_GHOST_HAIR_FLOAT=1` with a new run suffix for RGBA16F EXR captures
+of single-sided faces. This avoids UE 5.6.1 Vulkan's 8-bit conversion inside
+`ReadLinearColorPixels`; do not substitute `read_render_target_raw` for the EXR
+export. Run `check-ghost-hair-hdr.py STAGE/ghost-hair-renders-SUFFIX` with OpenEXR
+3.4.15 and NumPy 2.5.3. The completed EXR run passes 16 groups, including the
+linear source-alpha product. Full-character and runtime tests are still required.
 
 Set `CSS_ASTRAL_HAIR_INDEX` to 0..7 to isolate one card per editor process;
 its output and fixture names receive that index. Use a new stage for a repeated

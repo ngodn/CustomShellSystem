@@ -20,6 +20,10 @@ if not re.fullmatch(r"[a-zA-Z0-9_]{1,32}", run):
     raise ValueError("Invalid ghost hair run label")
 OUT = ROOT / ("ghost-hair-renders-" + run)
 OUT.mkdir(exist_ok=False)
+float_capture = os.environ.get("CSS_ASTRAL_GHOST_HAIR_FLOAT", "0")
+if float_capture not in ("0", "1"):
+    raise ValueError("CSS_ASTRAL_GHOST_HAIR_FLOAT must be 0 or 1")
+float_capture = float_capture == "1"
 LIB = unreal.EditorAssetLibrary
 EDIT = unreal.MaterialEditingLibrary
 MP = unreal.MaterialProperty
@@ -71,10 +75,15 @@ for index, path in enumerate(sources):
             raise RuntimeError("Could not create coverage reference")
         reference.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
         EDIT.recompile_material(reference)
-        ghost = LIB.load_asset(targets[parent_path])
+        ghost = duplicate(targets[parent_path], f"GhostParent{index}")
         if not isinstance(ghost, unreal.Material):
             raise TypeError(targets[parent_path])
         parents[parent_path] = (reference, ghost)
+        if float_capture:
+            for material in (reference, ghost):
+                material.set_editor_property("two_sided", False)
+                material.set_editor_property("translucency_pass", unreal.MaterialTranslucencyPass.MTP_BEFORE_DOF)
+                EDIT.recompile_material(material)
         interfaces.extend((reference, ghost))
     reference_mi = duplicate(path, f"Coverage{index}")
     ghost_mi = duplicate(path, f"Ghost{index}")
@@ -85,7 +94,10 @@ for index, path in enumerate(sources):
     interfaces.extend((reference_mi, ghost_mi))
 
 native = json.loads((ROOT / "native-ghost-material.json").read_text())
-uncut = LIB.load_asset(native["material"])
+uncut = duplicate(native["material"], "UncutParent")
+if float_capture:
+    uncut.set_editor_property("two_sided", False)
+    EDIT.recompile_material(uncut)
 backdrop_material = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
     "Backdrop", PREFIX, unreal.Material, unreal.MaterialFactoryNew())
 if backdrop_material is None:
@@ -107,7 +119,8 @@ camera.set_actor_rotation(unreal.Rotator(pitch=-90), False)
 capture = camera.get_component_by_class(unreal.SceneCaptureComponent2D)
 capture.set_editor_property("capture_every_frame", False)
 capture.set_editor_property("capture_on_movement", False)
-capture.set_editor_property("capture_source", unreal.SceneCaptureSource.SCS_FINAL_COLOR_LDR)
+capture.set_editor_property("capture_source", unreal.SceneCaptureSource.SCS_SCENE_COLOR_HDR
+                            if float_capture else unreal.SceneCaptureSource.SCS_FINAL_COLOR_LDR)
 capture.set_editor_property("primitive_render_mode", unreal.SceneCapturePrimitiveRenderMode.PRM_USE_SHOW_ONLY_LIST)
 capture.set_editor_property("fov_angle", 35.)
 settings = capture.get_editor_property("post_process_settings")
@@ -118,8 +131,10 @@ settings.set_editor_property("auto_exposure_apply_physical_camera_exposure", Fal
 settings.set_editor_property("override_auto_exposure_bias", True)
 settings.set_editor_property("auto_exposure_bias", 0.)
 capture.set_editor_property("post_process_settings", settings)
-target = unreal.RenderingLibrary.create_render_target2d(world, 512, 512,
-    unreal.TextureRenderTargetFormat.RTF_RGBA8, unreal.LinearColor(0., 0., 0., 1.))
+resolution = 128 if float_capture else 512
+target = unreal.RenderingLibrary.create_render_target2d(world, resolution, resolution,
+    unreal.TextureRenderTargetFormat.RTF_RGBA16F if float_capture else unreal.TextureRenderTargetFormat.RTF_RGBA8,
+    unreal.LinearColor(0., 0., 0., 1.))
 capture.set_editor_property("texture_target", target)
 cube = LIB.load_asset("/Engine/BasicShapes/Cube")
 actor = unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.StaticMeshActor, unreal.Vector())
@@ -150,7 +165,9 @@ for index, (path, reference, ghost) in enumerate(cards):
             for _ in range(8):
                 capture.capture_scene()
                 unreal.UGMaterialLibrary.flush_rendering()
-            name = f"{index:02}-{form}-{state}.png"
+            name = f"{index:02}-{form}-{state}" + (".exr" if float_capture else ".png")
+            # UE 5.6.1 Vulkan's ReadLinearColorPixels rounds through FColor.
+            # EXR from RTF_RGBA16F instead uses ReadFloat16Pixels without that conversion.
             unreal.RenderingLibrary.export_render_target(world, target, str(OUT), name)
             image = OUT / name
             if not image.is_file() or image.stat().st_size == 0:
@@ -162,6 +179,7 @@ for index, (path, reference, ghost) in enumerate(cards):
 check_sources()
 (OUT / "captures.json").write_text(json.dumps({"images": rows, "compilation": compiled,
     "source_files_unchanged": True,
+    "float_capture": float_capture, "resolution": resolution,
     "scope": "Vulkan hair texture coverage with reconstructed ghost shading. Cube fixture, not full hairstyle, source tint composition, DX12 or runtime support."
 }, indent=2) + "\n")
 unreal.log("CSS_GHOST_HAIR_CAPTURED")

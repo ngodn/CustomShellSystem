@@ -203,3 +203,39 @@ Receipts are in `material-outfits1/ghost-coverage.json`,
 `ghost-hair-renders/captures.json`, `ghost-hair-renders/pixel-check.json`,
 `ghost-hair-renders-manual/captures.json` and its `pixel-check.json` on the
 secondary-drive stage. No live-game process was contacted.
+
+## HDR coverage verification
+
+The follow-up resolved the blank-layer observation in the test, without
+changing either hair graph. UE 5.6.1 Vulkan's `RHIReadSurfaceData` overload for
+`TArray<FLinearColor>` first reads `FColor` and then converts that 8-bit result
+back to linear color (`VulkanRenderTarget.cpp`, lines 233-243). Consequently
+`RenderingLibrary.read_render_target_raw(normalize=False)` does not preserve
+HDR precision on this path, even with a 32-bit float render target. The first
+float attempt, `ghost-hair-float1`, completed but its samples were quantized and
+clamped. They are not suitable for checking the linear coverage product.
+
+`RTF_RGBA16F` plus `export_render_target(... .exr)` instead reaches
+`ImageUtils.cpp:GetRenderTargetImage`'s `RGBA16F` branch, which calls
+`ReadFloat16Pixels` without those conversions. The completed `ghost-hair-exr1`
+run uses that path, SceneColor HDR, a black backdrop and single-sided cube
+faces. All source hashes are unchanged. Exit code is zero.
+
+`check-ghost-hair-hdr.py` passes all 16 groups (eight materials, both forms).
+It checks the actual linear relation:
+
+`combined ghost RGB = uncut ghost RGB * source coverage`
+
+Source coverage comes from a separate render of the untouched opacity graph
+with white emissive 100. The check allows half-float rounding (0.3% relative
+plus 0.000002 absolute), rejects nonfinite pixels and clamped reference captures,
+verifies color ordering, two animation times, partial fade and exact zero/removal
+equality. CW layers with zero-coverage holes have no ghost pixels in those holes.
+Other layers have continuous alpha in the tested region; the product comparison
+verifies their attenuation without pretending they contain fully empty holes.
+
+Receipts: `material-outfits1/ghost-hair-renders-exr1/captures.json` and
+`hdr-check.json`. The test uses Python 3.14.7, OpenEXR 3.4.15 and NumPy 2.5.3;
+the [OpenEXR Python API](https://openexr.com/en/latest/python.html) documents
+the channel-array readback. This establishes coverage composition for these
+textures, not full hairstyles, source palette composition, DX12 or live doubles.
