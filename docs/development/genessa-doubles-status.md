@@ -4,6 +4,14 @@ Session 4, October 5, 2026. Branch `feature/genessa-doubles`.
 
 ## Current state
 
+Genessa's eye/smoke reconstruction passes 3,096 shader arithmetic and UV cases.
+All four private parents compile in UE 5.6.1. Forty HDR captures on SK_EveW3's
+authored eye/smoke sections pass both forms' tint, color/intensity, independent
+animated clocks, partial fade and exact zero-fade checks. Protected hashes are
+unchanged and the isolated editor exited zero. Face occlusion, DX12 and live
+integration remain unverified; body and other native eye families still need
+adapters. See the October 5 section in material support.
+
 The lit-surface experiment completed but is unsuitable for shipping. Run 6
 captured 156 EXRs across seven material families and both forms. All 14 groups
 pass composition, coverage, controls and fade checks. Native tint fails for
@@ -18,7 +26,7 @@ This candidate filters base-color and emission detail through the native ghost
 color while retaining original coverage. It uses the native unlit treatment,
 so it does not retain the source's lit PBR appearance. The diagnostic comparison
 image confirms blue/red rather than the lit experiment's white/brown surfaces.
-Full characters, body/eye adapters, material-detail fidelity under this ghost
+Full characters, remaining body/eye adapters, material-detail fidelity under this ghost
 treatment, DX12 and live integration remain open. All isolated editors are
 terminal; there is no active render to wait on. See
 [material support](genessa-doubles-materials.md).
@@ -70,8 +78,9 @@ strength discard calculation. The resource-table decoder now resolves 13
 material texture bindings across those five shaders and confirms that the
 masked variant samples base-color alpha. Seven binary-parser tests pass.
 Literal textures use the cached expression list, whose ordering differs from
-the export's top-level referenced textures. Native body/eye composition and
-rendered companions remain pending. The detailed evidence and
+the export's top-level referenced textures. Native body and other eye-family
+composition remain pending; Genessa's two eye shaders now have rendered
+companions in isolated fixtures. The detailed evidence and
 commands are in [material support](genessa-doubles-materials.md). This audit
 does not establish runtime or visual compatibility.
 

@@ -5,6 +5,10 @@ Read this before resuming work. [Goal](genessa-doubles-goal.md) defines completi
 
 ## Established findings
 
+- Genessa eye smoke uses vertex red for coverage and green for phase. Literal
+  texture index 1 resolves to T_noise_0082 in the cached texture list, not
+  T_noise_0109 in the export's differently ordered top-level texture list.
+
 - Faithful uses `AstralCopy`. Stray uses `AstralClonePrimary` and
   `AstralCloneSecondary`. Use the player's owned `BPC_AstralAISpawner`, not a
   world-wide actor scan.
@@ -60,6 +64,7 @@ Paths under `work/` are local diagnostic evidence, not distributable game assets
 
 | Artifact | Finding |
 | --- | --- |
+| `native-eye-response.hlsl`, `check-native-eye-response.py`, `render-native-eye-materials.py`, `check-native-eye-renders.py` under diagnostic tools | 3,096 arithmetic/UV cases, four compiled parents and 40 HDR captures of authored eye/smoke sections pass. No face occlusion, DX12 or runtime claim. Evidence: `native-eye-response2/result.json` under work and `native-eye-renders-1/hdr-check.json` in the material stage. |
 | [Native shader reconstruction](genessa-doubles-shaders.md) | Shared shader extraction and SM6 disassembly; 8,462 arithmetic cases, UE VULKAN_SM5 compilation and ten sphere images passed. Native image equivalence and outfit integration remain pending. |
 | `native/src/astral_lifecycle.hpp`, `tests/astral_lifecycle_tests.cpp` | Bounded identity/serial tracker; pooled reuse, cached-active Stray, ownership changes, invalid snapshots and cleanup tested on host, including sanitizers. |
 | `native/src/astral_observer.inl` | Development-only `astral.observe` bridge operation reads the owned spawner; no tick, appearance writes or actor retention. Compiles for Windows; not installed or live-tested. |

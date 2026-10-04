@@ -5,6 +5,52 @@ October 4, 2026. Offline experiments, not installed runtime support.
 The user requires Unholy Genessa, Eve and Commander White. Companion materials
 belong to CSS. Outfit authoring sources and released containers stay unchanged.
 
+## Genessa eye and smoke reconstruction, October 5
+
+`native-eye-response.hlsl` reconstructs the two shipped eye materials before
+the engine's fog/output stages. The opaque/unlit eye surface uses facing raised
+to `Fresnel Power`, `Color`, `Intensity` and eye adaptation. The translucent
+smoke uses UV0, vertex red for coverage and vertex green for noise phase. Three
+red-channel samples are desaturated and raised to a UV-dependent exponent.
+Scrolling uses the native period and speed.
+
+Smoke literal texture index 1 addresses **T_noise_0082** in
+`CachedExpressionData.ReferencedTextures`, not T_noise_0109 in the differently
+ordered top-level list. Extraction receipt:
+`work/genessa-doubles/eye-noise1/export-results.json`. The preview imports its
+512-square PNG with sRGB and wrap addressing. Production must reference the
+game's original texture and compressed mip chain. Samples use
+`View.MaterialTextureMipBias`, confirmed by the native DXIL and UE 5.6.1
+`HLSLMaterialTranslator.cpp` lines 7818-7823.
+
+`check-native-eye-response.py` evaluates the required DXIL instructions from
+hash-checked eye/smoke shaders independently of the HLSL reconstruction.
+`work/genessa-doubles/native-eye-response2/result.json` passes 3,096 arithmetic
+and scrolling-UV cases, including boundaries and negative time. Maximum
+absolute error is 0.000005; DXC compilation also passes. Native shader hashes:
+
+- Eye `376BF936FA4BD614F125AF91C1D196D4DA98589D-6`:
+  `7318e1e8da3dc7bc5b489a7ec304e5ea`.
+- Smoke `4AE4A640F38D9B7CDAC4A36B69E91638D9AB59FC-10`:
+  `9f2fbcea9ceb66e8b7682e7b4c3a0a0a`.
+
+All four private parents in `AstralEyes1` compile in UE 5.6.1 VULKAN_SM5 with
+ready shader maps and no material errors (`native-eye-compiled.json`). The
+`eye-render1` process exits zero and captures 40 HDR EXRs on SK_EveW3's actual
+eye/smoke sections. `check-native-eye-renders.py` passes four kind/form groups:
+native tint, custom color/intensity response, independently animated clocks,
+partial fade, exact empty zero fade and smoke opacity zero. The comparison
+image was visually inspected. This omits face occlusion and does not prove
+native rendered equivalence, DX12 or live integration. Commander White's
+different eye/refraction materials remain separate work.
+
+Receipts and images are under
+`/mnt/eins0fxE/CSS-work/genessa-doubles/material-outfits1/`, including
+`native-eye-renders-1/hdr-check.json`. Protected sources remain unchanged.
+Head placement and section visibility use the
+[UE 5.6 skinned-component API](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/SkinnedMeshComponent?application_version=5.6).
+No installed outfit or game state changed.
+
 ## Lit surface composition experiment
 
 `create-ghost-surfaces.py` created seven additional private parents in
