@@ -1,5 +1,21 @@
 # Current work queue
 
+## October 5: Eve asset-load report, after the doubles work
+
+Didodiodi reports `Asset could not load: /Game/CSS/EveTest/` in the bottom-right
+UI (Nexus, October 5 at 12:13 AM). CSS/Eve versions and the full failing asset
+name are not yet known. The author asks whether this is hardcoded and requests
+a fix after the active doubles work. Initial exact-string search finds no
+`/Game/CSS/EveTest/` path in `native/src` or `packaging`; historical Eve authoring
+tools do use that namespace. This does not establish the failing path's origin
+or imply the installed Eve package is complete. Trace the reported load through
+the released catalog, saved settings/profile, ZIP contents and mounted assets
+before changing any paths. Do not rename valid cooked dependencies simply
+because their namespace contains `Test`.
+
+The author confirmed the game is closed and authorized installing the doubles
+trial later, once ready. Preserve beta.10 and verify the installed hashes.
+
 ## October 4: Genessa doubles inherit CSS appearance
 
 After accepting beta.10, the author requested Faithful and Stray doubles that
