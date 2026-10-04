@@ -123,6 +123,35 @@ of all eight current hair instances. Results go in `hair-renders/`. Each graph
 keeps its original AO wiring, specular default, texture parameters and alpha.
 Source hashes must match the authoring receipts before copying. Graph creation
 and flat-card rendering do not establish full hairstyle or in-game support.
+
+For a bounded retry, `CSS_ASTRAL_HAIR_INDEX=0..7` selects one card.
+`CSS_ASTRAL_HAIR_RUN` accepts a unique alphanumeric/underscore label up to 32
+characters. `CSS_ASTRAL_HAIR_STATES` accepts a unique comma-separated subset
+or order of `original,full,half,zero,removed`. Each capture logs BEGIN/END.
+The index-3 zero-first retry stalled too. Do not repeat it without a changed
+hypothesis or renderer configuration.
+
+## Native shader arithmetic
+
+`AssetReadback ... --shader-maps` includes the material shader maps.
+`ShaderReadback CONTAINERS SHADER_MAP_JSON NEW_DIRECTORY` extracts their
+base-pass pixel shader records and DXBC containers from shared IoStore
+libraries. It requires unique map hashes and never changes the input assets.
+See [the shader investigation](../../../docs/development/genessa-doubles-shaders.md)
+for exact packages, extraction provenance and limitations.
+
+After disassembling the SM6 containers with official DXC:
+
+```sh
+python3 tools/diagnostics/genessa-doubles/check-native-ghost-response.py \
+  work/genessa-doubles/native-pixel-shaders \
+  work/genessa-doubles/native-response-check-new \
+  --dxc reference/microsoft-dxc-1.9.2609/bin/dxc
+```
+
+The output directory must be new. The check compiles the response as C++23,
+compares it with the shipped DXIL arithmetic and compiles the full HLSL with
+DXC. It does not render, install materials or contact the game.
 Set `CSS_ASTRAL_HAIR_INDEX` to 0..7 to isolate one card per editor process;
 its output and fixture names receive that index. Use a new stage for a repeated
 index. A Vulkan readback stall occurred in the first multi-card run; preserve

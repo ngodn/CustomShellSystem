@@ -29,6 +29,13 @@ fabric and wing coverage. Retaining the original materials with a global ghost
 overlay also needs proof for coverage and full fade-out. No architecture has
 yet passed those requirements.
 
+The native shared shader libraries have now been decoded. Four SM6 pixel
+shaders disassemble successfully. A diagnostic HLSL reconstruction of the
+blue/red color response and shape-dependent dissolve passes 8,462 comparisons
+against the extracted instructions and compiles as `ps_6_6`. This moves native
+composition beyond parameter inspection, but UE input wiring and rendered
+equivalence remain unverified. See [shader evidence](genessa-doubles-shaders.md).
+
 An isolated garment-fade experiment now exists under
 `/mnt/eins0fxE/CSS-work/genessa-doubles/material-prototype1`. The first
 NullRHI authoring run completed on UE 5.6.1 CL44394996, creating five private
@@ -46,6 +53,10 @@ original/full/half images and an empty zero-opacity output. No test editor
 remains running. The user was asked to close the game temporarily to compare
 without GPU contention; that cause is not yet established. Do not claim a
 passed hair batch from these partial images.
+An alternate-order retry (`hair-zero-first.log`) started with zero opacity and
+also timed out with exit 124, leaving an empty first PNG. Thus the stall does
+not require earlier captures in that process. It still does not establish the
+cause. No test editor remains running; do not repeat the same configuration.
 [Material findings](genessa-doubles-materials.md) record the
 exact versions, source paths, known limitations and readback evidence.
 
