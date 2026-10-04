@@ -232,7 +232,7 @@ Json EngineBridge::request(void* engine,Appearance& appearance,const Json& reque
         return found!=objects_.end() && found->second.Get()!=nullptr;
     }
 #ifdef CSS_INVENTORY_DEV
-    if(op=="astral.observe") return observe_astral(engine);
+    if(op=="astral.observe") return observe_astral(engine,request.value("poses",false));
     if(op=="astral.source") { appearance.player(engine); return observe_astral_source(appearance); }
     if(op=="astral.adapters.probe") return probe_astral_adapters(engine,appearance);
     if(op=="astral.materials.probe") return probe_astral_materials(engine,request);

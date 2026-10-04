@@ -1,5 +1,39 @@
 # Double pose ownership
 
+## Stray attack leader mismatch, October 5
+
+The author reports missing feet and distorted Stray doubles on every copy and
+every CSS outfit. The form utility and Default/Use CSS selectors work; visual
+acceptance for Stray is withdrawn until this defect is retested.
+
+`GA_AstralGenessa_CopyAnyAttack.CopyAnims` makes the native clone mesh follow
+the player mesh through SetLeaderPoseComponent. UnCopyAnims clears that leader.
+The clone retains its original skeleton and bone ordering. In UE 5.6.1,
+CopyPoseFromMesh builds BoneMapToSource for its source component, but PreUpdate
+reads that component's leader transforms when a leader exists. Evaluate then
+uses the original map against the leader's different bone ordering.
+
+Independent cooked reference-skeleton exports in
+`work/genessa-doubles/stray-pose1` show native clone foot_l at index 79 and foot_r
+at 70. Those indices in the UG player mesh are index_03_l and ring_02_l.
+The live capture `runtime-trial4/stray-shape2.jsonl` shows compressed visual leg
+positions with unit scale and no hidden leg bones. Those older bone samples
+span separate requests, so they are not a same-frame pose-equivalence test.
+
+The candidate resolves the native mesh's effective pose leader and sets the
+private Copy Pose node's explicit source immediately after registration, before
+its first tick. Spatial attachment stays on the native clone. When the native
+ability changes leaders, CSS replaces only its private visual components and
+keeps the existing ghost MIDs. It never writes an already-ticking animation
+node or changes the game's CopyAnims/UnCopyAnims behavior. Source chains are
+bounded, weakly referenced and cycle-checked. Source and target skeletons must
+pass the existing compatibility check.
+
+Development and shipping Windows builds pass. All 18 portable tests pass but
+do not execute this reflected binding. New opt-in `astral.observe` `poses:true`
+diagnostics capture native and private bone transforms in one game-thread
+request. Live pose, leader transitions, flicker and performance remain unverified.
+
 Do not replace the native double's main skeletal mesh with an outfit using a
 different skeleton. UE 5.6.1 `SkeletalMeshComponent.cpp`, `InitAnim` at line 1115,
 clears the current AnimInstance when its skeleton differs from the new mesh.

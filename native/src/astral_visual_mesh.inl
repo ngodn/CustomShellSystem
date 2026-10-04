@@ -1,6 +1,36 @@
 // Included after the source capture and post-process setting accessors.
 namespace {
 uint8_t astral_required_tick(UObject* component);
+UObject* astral_pose_source(UObject* component) {
+    std::array<UObject*,8> visited{};
+    auto* type=static_cast<UClass*>(find(L"/Script/Engine.SkeletalMeshComponent"));
+    for(size_t depth=0;component && depth<visited.size();++depth) {
+        if(WeakObject(component).Get()!=component || !component->IsA(type) ||
+           std::find(visited.begin(),visited.begin()+depth,component)!=visited.begin()+depth)
+            throw std::runtime_error("Invalid Astral pose leader chain");
+        visited[depth]=component;
+        auto* leader=astral_leader(component);
+        if(!leader) return component;
+        component=leader;
+    }
+    throw std::runtime_error("Astral pose leader chain exceeds bound");
+}
+void astral_set_initial_pose_source(UObject* instance,UObject* source) {
+    // Called immediately after registration, before this new component's first
+    // tick. InitAnim's registration refresh is synchronous (no tick function).
+    // Never rewrite the node on a visual that has already ticked.
+    auto view=AstralStructView::object(instance).child(L"AnimGraphNode_CopyPoseFromMesh");
+    if(view.type->GetPathName()!=L"/Script/AnimGraphRuntime.AnimNode_CopyPoseFromMesh")
+        throw std::runtime_error("Astral copy node type differs from shared template");
+    auto* field=view.property(L"SourceMeshComponent");
+    if(!field->IsA<FWeakObjectProperty>() || field->GetElementSize()!=sizeof(FWeakObjectPtr))
+        throw std::runtime_error("Astral copy source property differs from shared template");
+    const WeakObject weak(source);
+    auto* address=const_cast<std::byte*>(view.data)+field->GetOffset_Internal();
+    std::memcpy(address,static_cast<const FWeakObjectPtr*>(&weak),sizeof(FWeakObjectPtr));
+    FWeakObjectPtr readback;std::memcpy(&readback,address,sizeof(readback));
+    if(readback.Get()!=source) throw std::runtime_error("Astral copy source read-back failed");
+}
 void astral_visual_flag(UObject* object,const wchar_t* name,bool value) {
     auto* property=optional_field(object,name);
     if(!property || !property->IsA<FBoolProperty>() || property->GetArrayDim()!=1 ||
@@ -99,6 +129,10 @@ void AstralVisualMesh::prepare(UObject* parent,const AstralComponentSource& sour
     retained_.take(roots);
     source_visible_=source.visible && !source.hidden_in_game;
     leader_pose_=source.leader_pose;
+    auto* pose_source=leader_pose_?parent:astral_pose_source(parent);
+    if(!is_compatible_skeleton(mesh_asset(pose_source),mesh))
+        throw std::runtime_error("Astral effective pose skeleton pair is not audited");
+    pose_source_=pose_source;pose_source_mesh_=mesh_asset(pose_source);
     try {
         Call transform(find(L"/Script/Engine.Default__KismetMathLibrary"),L"MakeTransform",4);
         transform.set(L"Location",relative.location);transform.set(L"Rotation",relative.rotation);
@@ -144,8 +178,17 @@ void AstralVisualMesh::prepare(UObject* parent,const AstralComponentSource& sour
         }
         Call prerequisite(visual,L"AddTickPrerequisiteComponent",1);
         prerequisite.set(L"PrerequisiteComponent",parent);prerequisite.run();
+        if(pose_source!=parent) {
+            Call source_tick(visual,L"AddTickPrerequisiteComponent",1);
+            source_tick.set(L"PrerequisiteComponent",pose_source);source_tick.run();
+        }
         Call finish(owner,L"FinishAddComponent",3);
         finish.set(L"Component",visual);finish.set(L"bManualAttachment",true);copy_transform(finish);finish.run();
+        if(!leader_pose_) {
+            auto* instance=astral_anim_instance(visual);
+            if(!instance) throw std::runtime_error("Astral visual has no copy-pose instance");
+            astral_set_initial_pose_source(instance,pose_source);
+        }
         if(leader_pose_) {
             Call tick(visual,L"SetComponentTickEnabled",1);tick.set(L"bEnabled",false);tick.run();
         }
@@ -190,6 +233,12 @@ bool AstralVisualMesh::intact() const {
         (leader_pose_?astral_leader(visual)==parent:
             visual_instance && visual_instance->GetClassPrivate()==pose_class_.Get());
 }
+bool AstralVisualMesh::pose_source_intact() const {
+    auto* parent=parent_.Get();auto* source=pose_source_.Get();
+    if(!parent || !source || !pose_source_mesh_.Get()) return false;
+    return (leader_pose_?parent:astral_pose_source(parent))==source &&
+        mesh_asset(source)==pose_source_mesh_.Get();
+}
 void AstralVisualMesh::show(bool enabled) {
     if(!intact()) throw std::runtime_error("Astral visual source changed before visibility update");
     astral_visual_visibility(component_.Get(),enabled && source_visible_);
@@ -207,5 +256,6 @@ bool AstralVisualMesh::release() noexcept {
     } catch(...) { return false; }
     component_=WeakObject{};owner_=WeakObject{};parent_=WeakObject{};
     parent_mesh_=WeakObject{};parent_instance_=WeakObject{};mesh_=WeakObject{};pose_class_=WeakObject{};
+    pose_source_=WeakObject{};pose_source_mesh_=WeakObject{};
     source_visible_=leader_pose_=false;retained_.release();return true;
 }

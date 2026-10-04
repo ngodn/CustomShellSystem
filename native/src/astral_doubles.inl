@@ -7,7 +7,7 @@ struct AstralVisualGroup {
     std::vector<std::unique_ptr<AstralVisualMesh>> visuals;
     AstralMaterialBindings bindings;
     AstralNativeRenderLease native;
-    bool visible=false;
+    bool visible=false, native_hidden=false;
 
     bool release() noexcept {
         // Restore bindings while their components are still alive.
@@ -16,7 +16,7 @@ struct AstralVisualGroup {
         // if a component refuses destruction, leaving the failed group for retry.
         for(auto it=visuals.rbegin();it!=visuals.rend();++it) result=(*it)->release() && result;
         result=native.restore() && result;
-        if(result) { visuals.clear();materials.release();visible=false; }
+        if(result) { visuals.clear();materials.release();visible=native_hidden=false; }
         return result;
     }
     ~AstralVisualGroup() { release(); }
@@ -30,6 +30,12 @@ struct AstralVisualGroup {
         if(!actor || !parent || !mid || source.components.empty())
             throw std::runtime_error("Astral double expired before visual preparation");
         materials.prepare(actor,mid,adapters.inputs(),observed.kind!=AstralKind::faithful);
+        prepare_visuals(source,pose);
+    }
+    void prepare_visuals(const AstralAppearanceSource& source,UObject* pose) {
+        auto* actor=astral_resolve(observed.actor);
+        auto* parent=astral_resolve(observed.mesh);
+        if(!actor || !parent) throw std::runtime_error("Astral double expired before pose preparation");
         std::vector<AstralMaterialBinding> pending;
         size_t material_index=0;
         for(size_t i=0;i<source.components.size();++i) {
@@ -53,7 +59,17 @@ struct AstralVisualGroup {
         if(material_index!=materials.size()) throw std::runtime_error("Astral material slot plan differs from captured appearance");
         bindings.bind(actor,pending);
     }
-    enum class Sync { kept, inactive, failed };
+    void rebind_pose(const AstralAppearanceSource& source,UObject* pose,uint64_t now) {
+        if(!bindings.restore()) throw std::runtime_error("Astral pose binding cleanup is incomplete");
+        bool clean=true;
+        for(auto it=visuals.rbegin();it!=visuals.rend();++it) clean=(*it)->release() && clean;
+        if(!clean) throw std::runtime_error("Astral pose visual cleanup is incomplete");
+        visuals.clear();visible=false;prepared_at=now;
+        // The native ability changed its pose leader, not its material state.
+        // Keep the existing MIDs and fade binding while replacing private poses.
+        prepare_visuals(source,pose);
+    }
+    enum class Sync { kept, inactive, rebound, failed };
     Sync sync(uint64_t now) {
         auto* actor=astral_resolve(observed.actor);
         auto* component=astral_resolve(observed.component);
@@ -61,11 +77,12 @@ struct AstralVisualGroup {
            !astral_bool(component,L"bCharacterEnabled") || astral_bool(actor,L"bHidden")) return Sync::inactive;
         if(astral_object(component,L"MID_Astral")!=astral_resolve(observed.native_mid) ||
            astral_object(component,L"MySkeletalMesh")!=astral_resolve(observed.mesh)) return Sync::failed;
+        for(const auto& visual:visuals) if(!visual->pose_source_intact()) return Sync::rebound;
         if(!materials.sync_opacity()) return Sync::failed;
         if(!visible && now>prepared_at) {
             if(!bindings.intact()) return Sync::failed;
             for(const auto& visual:visuals) if(!visual->intact()) return Sync::failed;
-            native.acquire(astral_resolve(observed.mesh));
+            if(!native_hidden) { native.acquire(astral_resolve(observed.mesh));native_hidden=true; }
             for(const auto& visual:visuals) visual->show(true);
             visible=true;
         }
@@ -92,7 +109,7 @@ struct AstralDoubles::Impl {
     uint64_t next_poll=0, player_revision=0, appearance_revision=0;
     bool source_attempted=false;
     std::string error;
-    size_t prepared=0, removed=0;
+    size_t prepared=0, removed=0, pose_rebinds=0;
 
     void record_failure(AstralIdentity actor,uint64_t activation) {
         if(std::none_of(failed.begin(),failed.end(),[&](const auto& value) {
@@ -158,6 +175,16 @@ struct AstralDoubles::Impl {
             auto result=AstralVisualGroup::Sync::failed;
             try { result=(*it)->sync(now); }
             catch(const std::exception& problem) { error=problem.what(); }
+            if(result==AstralVisualGroup::Sync::rebound) {
+                try {
+                    if(!source || !pose.Get()) throw std::runtime_error("Astral pose source is unavailable");
+                    (*it)->rebind_pose(*source,pose.Get(),now);
+                    ++pose_rebinds;
+                    result=AstralVisualGroup::Sync::kept;
+                } catch(const std::exception& problem) {
+                    error=problem.what();result=AstralVisualGroup::Sync::failed;
+                }
+            }
             if(result!=AstralVisualGroup::Sync::kept) {
                 if(result==AstralVisualGroup::Sync::inactive) lifecycle.deactivate((*it)->observed.actor);
                 else record_failure((*it)->observed.actor,(*it)->activation);
@@ -237,6 +264,7 @@ void AstralDoubles::update(void* engine,Appearance& appearance,bool enabled,cons
 bool AstralDoubles::clear() noexcept { return impl_->clear(); }
 Json AstralDoubles::diagnostics() const {
     return {{"active",impl_->groups.size()},{"prepared",impl_->prepared},{"removed",impl_->removed},
+        {"pose_rebinds",impl_->pose_rebinds},
         {"source_ready",impl_->source!=nullptr && impl_->pose.Get()!=nullptr},
         {"fallbacks",impl_->failed.size()},{"error",impl_->error}};
 }

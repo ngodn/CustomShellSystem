@@ -1,5 +1,15 @@
 # Current work queue
 
+## October 5: distorted Stray doubles across outfits
+
+The author confirms all copies and all CSS outfits show broken shape and missing
+feet. Fix this within the active doubles task before broader acceptance. The
+native attack changes its pose leader to the player; Copy Pose uses native clone
+bone indices against that different mesh. Evidence and the uninstalled candidate
+are in [pose ownership](development/genessa-doubles-pose.md). Form switching and
+both Default/Use CSS selectors were accepted, but Stray visual acceptance is
+withdrawn. Development/shipping builds and 18 host tests pass; live retest remains.
+
 ## October 5: Genessa form utility for doubles testing
 
 The author accepted both Faithful Doubles appearance choices, but deliberately

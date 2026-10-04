@@ -170,6 +170,7 @@ struct AstralVisualTransform {
 // materials before showing it and owns native visibility/tick restoration.
 class AstralVisualMesh {
     WeakObject owner_, parent_, parent_mesh_, parent_instance_, component_, mesh_, pose_class_;
+    WeakObject pose_source_, pose_source_mesh_;
     AssetLoadRoots retained_;
     bool source_visible_=false;
     bool leader_pose_=false;
@@ -181,6 +182,7 @@ public:
                  RC::Unreal::UObject* pose_class,const AstralVisualTransform& relative);
     RC::Unreal::UObject* component() const { return component_.Get(); }
     bool intact() const;
+    bool pose_source_intact() const;
     void show(bool enabled);
     bool release() noexcept;
     ~AstralVisualMesh() noexcept { release(); }
@@ -233,7 +235,7 @@ public:
 class EngineBridge {
 #ifdef CSS_INVENTORY_DEV
     AstralLifecycle astral_lifecycle_;
-    Json observe_astral(void* engine);
+    Json observe_astral(void* engine,bool poses=false);
     Json observe_astral_source(Appearance& appearance);
     Json probe_astral_adapters(void* engine,Appearance& appearance);
     Json probe_astral_materials(void* engine,const Json& request);

@@ -4,6 +4,22 @@ Session 4, October 5, 2026. Branch `feature/genessa-doubles`.
 
 ## Current state
 
+Latest October 5 update: trial4 is loaded and was explicitly armed after launch
+(`runtime-trial4/live-enable.json`). The author accepted Genessa Form switching
+and both Stray Default/Use CSS controls, then reported broken shape and missing
+feet on all Stray copies and all CSS outfits. Stray visual acceptance is therefore
+withdrawn. The native attack switches its mesh's pose leader to the player;
+Copy Pose uses clone bone indices against the player's different bone ordering.
+See [pose evidence and correction](genessa-doubles-pose.md).
+
+The correction is built in both Windows configurations and staged in
+`work/genessa-doubles/runtime-trial5`, development core SHA-256
+`bb321e43da4eac9ed0dd5f03ec1d3f5d4ebc66f65cc7e1b78458744c63905285`.
+It is not installed or live verified. All 18 existing host tests pass. The same
+stage includes material-pack5's verified 30-asset shared package with the new
+constant-color companion. Await normal game closure before installation;
+neither safe core hot reload nor mounted-package replacement is supported.
+
 The runtime now selects shared ghost materials from the source's actual parent
 chain, graph StateId, static switches, blend mode, mask threshold and culling.
 It binds native noise textures and copied source textures after uniform copying.
