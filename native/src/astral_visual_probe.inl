@@ -13,6 +13,7 @@ Json EngineBridge::probe_astral_visual(void* engine,Appearance& appearance,const
     const auto original_visible=astral_source_flag(parent,L"bVisible");
     const auto original_hidden=astral_source_flag(parent,L"bHiddenInGame");
     const auto original_tick=read<uint8_t>(parent,L"VisibilityBasedAnimTickOption");
+    const auto original_optimized=astral_source_flag(parent,L"bEnableUpdateRateOptimizations");
     Call collision(parent,L"GetCollisionEnabled",1);collision.run();
     const auto original_collision=collision.get<uint8_t>();
     auto parent_unchanged=[&] {
@@ -21,6 +22,7 @@ Json EngineBridge::probe_astral_visual(void* engine,Appearance& appearance,const
             astral_source_flag(parent,L"bVisible")==original_visible &&
             astral_source_flag(parent,L"bHiddenInGame")==original_hidden &&
             read<uint8_t>(parent,L"VisibilityBasedAnimTickOption")==original_tick &&
+            astral_source_flag(parent,L"bEnableUpdateRateOptimizations")==original_optimized &&
             get.get<uint8_t>()==original_collision;
     };
     AstralVisualMesh visual;
@@ -29,6 +31,12 @@ Json EngineBridge::probe_astral_visual(void* engine,Appearance& appearance,const
     if(!component || !visual.intact() || astral_source_flag(component,L"bVisible") || !parent_unchanged())
         throw std::runtime_error("Visual probe changed its parent or exposed the component");
     visual.show(false);
+    AstralNativeRenderLease native;
+    native.acquire(parent);
+    if(!native.intact() || !visual.intact())
+        throw std::runtime_error("Visual probe native render lease failed");
+    if(!native.restore() || native.intact() || !parent_unchanged() || !native.restore())
+        throw std::runtime_error("Visual probe native render restoration failed");
     const auto morphs=source->components.front().morphs.size();
     const auto lods=source->components.front().hidden_by_lod.size();
     if(!visual.release() || visual.component() || visual.intact() || !parent_unchanged())
@@ -37,7 +45,7 @@ Json EngineBridge::probe_astral_visual(void* engine,Appearance& appearance,const
     source.reset();
     if(keep_alive::entries.size()!=retained_before)
         throw std::runtime_error("Visual probe retained objects did not return to baseline");
-    return {{"passed",true},{"morphs",morphs},{"lods",lods},{"parent_preserved",true},
+    return {{"passed",true},{"morphs",morphs},{"lods",lods},{"parent_preserved",true},{"native_render_restored",true},
         {"retained_objects_restored",true},{"rendered",false},
         {"scope","Synchronous hidden visual construction and cleanup. No summon, animation-frame or rendering validation."}};
 }

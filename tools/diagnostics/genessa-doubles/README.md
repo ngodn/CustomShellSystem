@@ -73,8 +73,9 @@ settled Genessa appearance, creates one hidden collision-free visual using
 that source body, verifies registration, morphs, hidden sections and supported
 post-process settings, then destroys it synchronously. It checks the parent's
 mesh, AnimInstance, visibility, tick policy and collision remain unchanged and
-the retained-object count returns to baseline. It never shows the component,
-hides the parent, or records animation frames. It is compiled but not installed
+the retained-object count returns to baseline. It also acquires and restores
+the native render lease synchronously, with no animation frame between writes.
+It never shows the visual or records animation frames. It is compiled but not installed
 or live-tested. The shared pose template must first be cooked and available.
 
 `AstralVisualMesh` is the runtime primitive exercised by that probe. The
@@ -82,8 +83,11 @@ coordinator must validate pose compatibility, compute the visual's relative
 transform, bind private ghost MIDs before showing it, and own native visibility
 and tick restoration. Its full `intact` check is for lifecycle boundaries, not
 a requirement to repeat all reflected reads each frame. Modular followers,
-native visibility ownership, summon hooks and the material catalog are not
-connected by this class.
+summon hooks and the material catalog are not connected by this class.
+`AstralNativeRenderLease` separately hides native rendering while retaining
+bone evaluation, and conditionally restores the visibility, update-rate and
+tick-policy values it changed. It does not enable a stopped component or
+alter the actor's visibility, collision, animation or gameplay activation.
 
 The separate development operation `astral.bindings.probe` accepts `owner`,
 `mesh` and `material` bridge handles from the current session. It creates a

@@ -162,6 +162,20 @@ public:
     bool release() noexcept;
     ~AstralVisualMesh() noexcept { release(); }
 };
+class AstralNativeRenderLease {
+    WeakObject component_, owner_, mesh_, instance_;
+    bool visible_=false, optimized_=false;
+    uint8_t tick_=0, required_tick_=0;
+    bool visibility_written_=false, optimization_written_=false, tick_written_=false;
+public:
+    AstralNativeRenderLease() = default;
+    AstralNativeRenderLease(const AstralNativeRenderLease&) = delete;
+    AstralNativeRenderLease& operator=(const AstralNativeRenderLease&) = delete;
+    void acquire(RC::Unreal::UObject* component);
+    bool intact() const;
+    bool restore() noexcept;
+    ~AstralNativeRenderLease() noexcept { restore(); }
+};
 class OverlayControls {
     struct Entry { WeakObject original, mid, bound; bool detached=false; };
     WeakObject component_, mesh_;
