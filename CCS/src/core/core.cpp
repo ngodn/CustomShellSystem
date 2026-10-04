@@ -307,7 +307,9 @@ nlohmann::json Core::model() const {
         const auto id = combat_ ? combat_->slot_move(slot) : std::string{};
         const bool ranged_slot = slot_role(i) == Role::Ranged;
         std::string hint;
-        if (combat_ && !id.empty()) {
+        const bool skipped = combat_ && skippable(slot) && combat_->tuning(slot).step == "skip";
+        if (skipped) hint = "Skipped. The press that would start this step starts the next step that plays.";
+        else if (combat_ && !id.empty()) {
             const auto& err = combat_->slot_error(slot);
             const bool hold_slot = slot == SlotId::LC || slot == SlotId::HC;
             const bool locked = hold_slot && !combat_->hold_unlocked(slot == SlotId::HC);
@@ -328,21 +330,31 @@ nlohmann::json Core::model() const {
         // Short values (the row shows about twenty characters beside the arrows); the reasons go
         // in the description the window shows while the row is focused. An empty slot only has speed.
         Json settings_rows = Json::array();
-        settings_rows.push_back({{"type", "choice"}, {"id", sid + ".speed"}, {"label", "Speed"}, {"value", speed_id}, {"options", speed_options},
+        if (skippable(slot)) {
+            const char* first = slot == SlotId::L2 || slot == SlotId::L3 ? "L1" : "H1";
+            settings_rows.push_back({{"type", "choice"}, {"id", sid + ".step"}, {"label", "Combo step"}, {"value", tune.step},
+                {"options", Json::array({{{"id", "play"}, {"label", "Play"}}, {{"id", "skip"}, {"label", "Skip"}}})},
+                {"description", std::string("Play: this step is part of your combo. Skip: the combo goes past it, so the press that would start it starts the next step that plays, or ")
+                    + first + " again. Skipping the third step also skips a finisher Tarstone's attack, which takes its place. "
+                    "To let a long move on " + first + " play out, skip both later steps and set Next attack in Settings to After the whole move."}});
+        }
+        // A skipped step shows only its step row: nothing else on it applies.
+        const bool assigned = !id.empty() && !skipped;
+        if (!skipped) settings_rows.push_back({{"type", "choice"}, {"id", sid + ".speed"}, {"label", "Speed"}, {"value", speed_id}, {"options", speed_options},
             {"description", "How fast this slot plays. 1x is the game's speed."}});
-        if (!id.empty()) {
+        if (assigned) {
             settings_rows.push_back({{"type", "choice"}, {"id", sid + ".feel"}, {"label", "Feel"}, {"value", tune.feel},
                 {"options", Json::array({{{"id", "game"}, {"label", "Game's"}}, {{"id", "move"}, {"label", "Move's own"}}})},
                 {"description", "Game's: your weapon's attack for this slot, with this animation fitted into it. Movement lock, combo timing, sounds and hit numbers stay the game's. "
                     "Move's own: the animation plays as its owner plays it, with its own hit windows and timing. Charged attacks still work either way."}});
         }
-        if (!id.empty() && tune.feel == "move") {
+        if (assigned && tune.feel == "move") {
             settings_rows.push_back({{"type", "choice"}, {"id", sid + ".hit_damage"}, {"label", "Damage"}, {"value", tune.hit_damage},
                 {"options", Json::array({{{"id", "move"}, {"label", "Move's own"}}, {{"id", "weapon"}, {"label", "Weapon's own"}}})},
                 {"description", "Move's own: the hit numbers that come with this animation (damage multiplier, poise damage, stagger). "
                     "Weapon's own: your weapon's numbers for this slot, on this animation's timing. Base damage is always your weapon's."}});
         }
-        if (!id.empty()) {
+        if (assigned) {
             settings_rows.push_back({{"type", "choice"}, {"id", sid + ".weapon"}, {"label", "Visual"}, {"value", tune.weapon},
                 {"options", Json::array({{{"id", "inventory"}, {"label", "My weapon"}}, {{"id", "move"}, {"label", "Move's weapon"}}})},
                 {"description", std::string("My weapon: you keep holding your own weapon. Move's weapon: the weapon this move belongs to appears in your hand for the swing, then yours comes back. Hits always use your weapon.")
@@ -352,15 +364,15 @@ nlohmann::json Core::model() const {
                 {"description", "Hyper armor: the game's hyper armor covers the whole move. Hits still hurt but do not stagger you out of it. Attacks that break hyper armor still do. "
                     "Move's own: a hit interrupts this move wherever it would interrupt its owner. Most of your own attacks have no hyper armor, so any hit cancels them."}});
         }
-        if (!id.empty() && tune.feel == "move") {
+        if (assigned && tune.feel == "move") {
             settings_rows.push_back({{"type", "choice"}, {"id", sid + ".steer"}, {"label", "Steer"}, {"value", tune.steer},
                 {"options", Json::array({{{"id", "full"}, {"label", "Whole move"}}, {{"id", "move"}, {"label", "Move's own"}}})},
                 {"description", "Whole move: the stick or your lock-on turns you through the whole move at your weapon's turn rate, and after the last hit pushing the stick cancels the recovery, like your own attacks. "
                     "Move's own: only the turn windows the move brings, and its recovery plays out."}});
         }
         customize.push_back({{"type", "choice"}, {"id", sid}, {"label", slot_to_string(slot)}, {"tile", tile_labels[i]}, {"name", slot_titles[i] + 4}, {"hidden", ranged_slot && !sidearm_slot_enabled},
-            {"value", id}, {"icon", id.empty() ? weapon_icon(current_weapon_) : move_icon(id)}, {"hint", hint}, {"settings", settings_rows},
-            {"settings_key", speed_id + "/" + tune.hit_damage + "/" + tune.weapon + "/" + tune.armor + "/" + tune.steer + (mesh_ready ? "/m" : combat_ && combat_->slot_unarmed(slot) ? "/u" : "")}, {"enabled", combat_ != nullptr && catalog_error_.empty()}});
+            {"value", id}, {"icon", id.empty() ? weapon_icon(current_weapon_) : move_icon(id)}, {"hint", hint}, {"settings", settings_rows}, {"skipped", skipped},
+            {"settings_key", tune.step + "/" + speed_id + "/" + tune.hit_damage + "/" + tune.weapon + "/" + tune.armor + "/" + tune.steer + (mesh_ready ? "/m" : combat_ && combat_->slot_unarmed(slot) ? "/u" : "")}, {"enabled", combat_ != nullptr && catalog_error_.empty()}});
     }
     sections.push_back({{"id", "customize"}, {"title", "Customize"}, {"kind", "slots"}, {"candidates", std::move(candidates)}, {"controls", std::move(customize)}});
     // ---- Presets
@@ -444,7 +456,7 @@ nlohmann::json Core::model() const {
 void Core::handle_event(const nlohmann::json& event) {
     const auto id = event.at("id").get<std::string>();
     last_message_.clear(); ++model_revision_;
-    if (id.starts_with("slot.") && id.find('.', 5) != std::string::npos) {   // slot.<S>.<speed|feel|hit_damage|weapon|armor|steer>
+    if (id.starts_with("slot.") && id.find('.', 5) != std::string::npos) {   // slot.<S>.<step|speed|feel|hit_damage|weapon|armor|steer>
         const auto second = id.find('.', 5);
         const auto slot = string_to_slot(id.substr(5, second - 5)); const auto key = id.substr(second + 1);
         if (!slot || !combat_) throw std::runtime_error("Unknown slot");
@@ -457,6 +469,7 @@ void Core::handle_event(const nlohmann::json& event) {
             else if (key == "weapon") tune.weapon = value;
             else if (key == "armor") tune.armor = value;
             else if (key == "steer") tune.steer = value;
+            else if (key == "step" && skippable(*slot)) tune.step = value;
             else throw std::runtime_error("Unknown slot setting");
         } catch (const std::logic_error&) { throw std::runtime_error("Invalid slot setting value"); }
         if (!valid_tuning(tune)) throw std::runtime_error("Invalid slot setting value");

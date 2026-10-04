@@ -2,6 +2,7 @@
 #include "settings.hpp"
 #include "common.hpp"
 #include "catalog.hpp"
+#include "combo_skip.hpp"
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
@@ -60,6 +61,33 @@ int main(int argc, char** argv) {
         try { settings.from_json({{"enabled", true}, {"damage_scale", -1.0}}); } catch (...) {}
         check(settings.to_json() == before, "invalid settings partially applied");
         check(settings.save() && settings.load(), "settings roundtrip failed");
+        // Combo step skip: saved with the slot tuning in settings and presets, older files play every step.
+        {
+            auto skip = ccs::SlotTuning{}; skip.step = "skip";
+            check(ccs::valid_tuning(skip), "skip step rejected");
+            auto wrong = skip; wrong.step = "maybe";
+            check(!ccs::valid_tuning(wrong), "unknown step accepted");
+            settings.set_tuning(size_t(ccs::SlotId::H2), skip);
+            check(settings.save() && settings.load() && settings.tuning()[size_t(ccs::SlotId::H2)].step == "skip", "skip step lost in settings");
+            check(settings.tuning()[size_t(ccs::SlotId::H3)].step == "play", "unset step is not play");
+            auto stepped = preset; stepped.slots[size_t(ccs::SlotId::L3)].tuning.step = "skip";
+            const auto round = Storage::json_to_preset(Storage::preset_to_json(stepped));
+            check(round && round->slots[size_t(ccs::SlotId::L3)].tuning.step == "skip", "skip step lost in presets");
+            auto old = Storage::preset_to_json(stepped); old["light_chain"]["L3"].erase("step");
+            check(Storage::json_to_preset(old)->slots[size_t(ccs::SlotId::L3)].tuning.step == "play", "older preset does not play every step");
+            check(ccs::skippable(ccs::SlotId::H3) && !ccs::skippable(ccs::SlotId::H1) && !ccs::skippable(ccs::SlotId::HF), "wrong skippable slots");
+            using ccs::runtime::combo_skip_target;
+            auto all = [](int) { return true; };
+            check(combo_skip_target(1, 3, {false, false, false}, all) == -1, "a playing step was redirected");
+            check(combo_skip_target(1, 3, {false, true, false}, all) == 2, "H2 skip did not go to H3");
+            check(combo_skip_target(2, 3, {false, false, true}, all) == 0, "H3 skip did not wrap to H1");
+            check(combo_skip_target(1, 3, {false, true, true}, all) == 0, "H2+H3 skip did not wrap to H1");
+            check(combo_skip_target(0, 3, {true, true, true}, all) == -1, "the first step skipped");
+            check(combo_skip_target(1, 2, {false, true, false}, all) == 0, "two-step chain did not wrap");
+            check(combo_skip_target(1, 4, {false, true, false}, all) == 2, "four-step list went wrong");
+            check(combo_skip_target(1, 3, {false, true, false}, [](int i) { return i != 2; }) == 0, "an empty position was chosen");
+            check(combo_skip_target(5, 3, {false, true, true}, all) == -1 && combo_skip_target(1, 0, {false, true, true}, all) == -1, "out of range accepted");
+        }
         ccs::runtime::Catalog catalog;
         check(catalog.load(argv[2]), "generated catalog rejected");
         const auto snapshot = json::parse(ccs::runtime::read_file_text(argv[2]));

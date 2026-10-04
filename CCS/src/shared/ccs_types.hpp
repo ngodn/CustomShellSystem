@@ -118,12 +118,15 @@ struct SlotTuning {
     std::string weapon{"inventory"};   // "inventory": the equipped weapon stays visible; "move": the move's own weapon shows
     std::string armor{"full"};         // "full" (default): the game's hyper armor over the whole swing (cheat); "move": only the hyper armor the montage authors
     std::string steer{"full"};         // "full" (default): the stick turns you through the whole move and cancels the recovery; "move": only the move's own windows
+    std::string step{"play"};          // L2 L3 H2 H3: "play" (default) or "skip", the combo goes past this step to the next one that plays
     bool operator==(const SlotTuning&) const = default;
 };
 inline bool valid_tuning(const SlotTuning& t) {
     return t.speed >= 0.5 && t.speed <= 4.0 && (t.feel == "game" || t.feel == "move") && (t.hit_damage == "move" || t.hit_damage == "weapon") && (t.weapon == "inventory" || t.weapon == "move")
-        && (t.armor == "move" || t.armor == "full") && (t.steer == "move" || t.steer == "full");
+        && (t.armor == "move" || t.armor == "full") && (t.steer == "move" || t.steer == "full") && (t.step == "play" || t.step == "skip");
 }
+// The combo steps a player may skip: the second and third of each chain. The first press always plays.
+inline bool skippable(SlotId slot) { return slot == SlotId::L2 || slot == SlotId::L3 || slot == SlotId::H2 || slot == SlotId::H3; }
 
 struct SlotBinding {
     SlotId slot{SlotId::L1};

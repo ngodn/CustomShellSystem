@@ -1105,9 +1105,9 @@ void Menu::build_slots(const Json& section, bool& deferred) {
             if (auto* inner = object_of(widget, L"InnerHighlight")) visibility(inner, hidden);
             tile.selected = selected;
         }
-        // A slot on the weapon's own attack shows the equipped weapon's icon, dimmed.
-        const bool vanilla = c.value("value", std::string{}).empty();
-        if (tile.dimmed != int(vanilla)) { if (auto* image = object_of(widget, L"LazyIcon")) invoke(image, L"SetRenderOpacity", L"InOpacity", vanilla ? .45f : 1.f); tile.dimmed = vanilla; }
+        // A slot on the weapon's own attack shows the equipped weapon's icon, dimmed; a skipped combo step fainter still.
+        const int dim = c.value("skipped", false) ? 2 : c.value("value", std::string{}).empty() ? 1 : 0;
+        if (tile.dimmed != dim) { if (auto* image = object_of(widget, L"LazyIcon")) invoke(image, L"SetRenderOpacity", L"InOpacity", dim == 2 ? .15f : dim == 1 ? .45f : 1.f); tile.dimmed = dim; }
         bind(tile.hit, {{"action", "slot"}, {"index", int(i)}}, held_);
     }
     // ---- the candidate list for the active slot: a search field, then the matches grouped

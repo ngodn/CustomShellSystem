@@ -216,6 +216,21 @@ private:
     void ensure_effect_hook();
     void remove_effect_hook();
     std::string chain_{"hit"};
+    // Combo steps set to Skip (L2 L3 H2 H3). The attack selectors (GA_Player_AttackSelectorBase)
+    // activate ComboAttackList[CurrentComboCount] through the native TryActivateAbilityByClass,
+    // then increment the count or reset it after the last position. A pre-hook on that call,
+    // installed only while a step is skipped, reads the calling selector from the caller's frame
+    // and, when the requested position is skipped, asks for the next position that plays and sets
+    // the count to it, so the selector's own increment or reset continues the chain from there.
+    uint64_t skip_token_{}, skip_retry_after_{}, skip_redirects_{};
+    engine::ObjectHandle skip_function_, selector_class_, counter_class_;
+    engine::FProperty* skip_class_param_{}, *combo_list_{}, *combo_counter_{}, *combo_count_{};
+    std::string skip_error_;
+    bool skip_wanted() const;
+    static void skip_callback(void* user, void* object, void* frame, void* result) noexcept;
+    void observe_activation(engine::UObject* asc, void* frame);
+    void ensure_skip_hook();
+    void remove_skip_hook();
     EffectHandle hold_grant_[2]{}; engine::ObjectHandle hold_grant_asc_, hold_effect_world_;
     void sync_hold_cheat(const engine::PlayerContext& player);
     bool pawn_humanoid_{};
