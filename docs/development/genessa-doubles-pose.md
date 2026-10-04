@@ -81,5 +81,27 @@ Both Windows configurations compile. The 17 portable regression tests pass,
 but do not execute reflection against the game. The development-only
 `astral.visual.probe` is prepared for that check once the shared asset is cooked
 and mounted. It is not installed or live-verified. The automatic double
-coordinator, native visibility/tick lease, material adapter selection and
-modular follower handling are still pending.
+coordinator, material adapter selection and modular follower handling are
+still pending. `AstralNativeRenderLease` now owns the native component's
+render visibility, always-refresh-bones policy and update-rate flag. It
+conditionally restores its own writes and does not activate disabled pooled
+components. The synchronous hidden probe also exercises acquisition and
+restoration, but has not run in-game yet.
+
+## Windows cook
+
+`work/genessa-doubles/pose-cook1` records a Windows cook using UE 5.6.1
+CL 44394996 in the existing rootless Wine image. The process exited zero;
+the cooker reports zero errors and warnings. The first two attempts could
+not mount the secondary-drive stage because this daemon replaces `/mnt`
+inside its private namespace. Neither attempt started the cooker. The actual
+run used a separate CSS work directory, with the engine read-only. It did
+not modify Unholy Genessa's authoring project or packages.
+
+`/mnt/eins0fxE/CSS-work/genessa-doubles/pose-pack1` contains only the cooked
+shared pose asset converted to IoStore, its Retoc verification and an
+independent AssetReadback decode. The `.uexp` export payload is byte-identical
+after container round trip. Four cooked exports retain the attached-parent,
+curve and custom-attribute settings, with no target skeleton or reference to
+the authoring module. This is an incomplete shared-assets trial, without
+ghost materials, and is not installed or a release artifact.
