@@ -96,6 +96,15 @@ not all customization, frame cost, combat contacts or Stray behavior. Evidence:
 `runtime-trial2/faithful-capture1.jsonl`. Stray testing is requested and a separate
 bounded capture is in progress. No movement or camera input was sent.
 
+During the next capture the author also selected Eve Prototype, Commander White,
+More Beaute Genessa, then Unholy Genessa. The native log records those switches.
+More Beaute rejects its `clothdriver` source material at
+`/Game/Sparta/Characters/Enemies/Brigands/HordeShieldBrigand/Art/Mesh/clothdriver.clothdriver`.
+Returning to Unholy clears that source failure and prepares visuals again.
+This is a real compatibility gap within the requested broader appearance scope;
+inspect whether that slot is rendered and its shader graph before choosing an
+adapter or excluding it. Do not treat native fallback as full support.
+
 Destruction semantics were checked against the local UE 5.6.1
 `ActorComponent.cpp` (DestroyComponent and K2_DestroyComponent) and
 [Epic's component destruction reference](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/UActorComponent/K2_DestroyComponent).
