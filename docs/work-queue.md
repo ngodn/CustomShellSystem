@@ -1,5 +1,30 @@
 # Current work queue
 
+## Queued for beta.12 consideration: Eve stopping transition
+
+questman reports beta.10 with Eve selected in all locomotion slots: starting
+movement looks natural, but stopping briefly shows the jog/run-start back-foot
+lift. The author previously described the transitions as unfinished and now
+asks whether this is a quick fix or should wait for beta.12. Keep beta.11's
+full-cloth doubles validation first; no locomotion change is installed for this
+report.
+
+Initial code review: `animation_gait` selects Jog whenever speed exceeds 20 and
+both walking/sprinting flags are false. `WalkOverride::update` immediately
+selects that gait's custom blendspace. Releasing a movement mode while velocity
+is still decaying could therefore briefly select Jog before Idle. This is a
+hypothesis, not a reproduced cause or evidence that the user's install is wrong.
+Capture speed, both flags, selected gait and blendspace through stopping; inspect
+playback phase reset and the native stop transition before changing thresholds
+or holding a previous gait. Check walk/jog/sprint stops, sudden reversal, slow
+controller input, sidearm aiming, attacks, mixed Default/custom slots and native
+locomotion. Avoid masking the pop by introducing foot sliding or delayed idle.
+
+Epic's [animation sync guidance](https://dev.epicgames.com/documentation/unreal-engine/animation-sync-groups-in-unreal-engine)
+describes how unsynchronized foot phases can make gait blending unnatural.
+Verify any selected API or graph change against local UE 5.6.1 source/assets;
+the current online landing page defaults to a newer engine version.
+
 ## October 5: release-wide performance and regression review
 
 The author requests a broader CSS C++/UE 5.6.1 review, performance checks and
