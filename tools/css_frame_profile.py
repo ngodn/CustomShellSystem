@@ -22,7 +22,11 @@ def summarize(report):
         raise ValueError('CSS threw during capture; inspect the saved raw report')
     columns = {key: [row[key] for row in rows] for key in ('interval_ms', 'engine_ms', 'core_ms')}
     phases = report['phases']
-    if phases != ['recovery', 'cssx_tick', 'hud_prepare', 'cssx_render', 'inventory']:
+    layouts = (
+        ['recovery', 'cssx_tick', 'hud_prepare', 'cssx_render', 'inventory'],
+        ['recovery', 'inventory', 'maintenance', 'attachments', 'seals', 'walk', 'misc', 'reconcile', 'astral'],
+    )
+    if phases not in layouts:
         raise ValueError('Unexpected phase layout')
     for row in rows:
         if len(row['phase_ms']) != len(phases):
@@ -41,7 +45,7 @@ def summarize(report):
         metrics[name] = {'mean': statistics.fmean(values), 'p50': statistics.median(values),
                          'p95': ordered[math.ceil(.95*len(ordered))-1], 'max': max(values)}
     return {'frames': len(rows), 'stop_reason': report['stop_reason'],
-            'cssx_loaded': report['cssx_loaded'],
+            'cssx_loaded': report.get('cssx_loaded'),
             'engine_tick_rate_hz': 1000 / metrics['interval_ms']['mean'],
             'metrics': metrics,
             'scope': 'Engine tick cadence and measured CSS phases. Not GPU or display presentation timing. '
@@ -77,9 +81,20 @@ def main():
         state_sha = sha(state)
         atomic(MOD/'request.json', {'id': rid, 'action': 'frame_profile', 'seconds': args.seconds})
         deadline = time.monotonic() + args.seconds + 15
+        statuses = []
         while time.monotonic() < deadline:
             if processes() != pids or json.loads(loader_path.read_text())['core'] != loader['core']:
                 raise RuntimeError('Game or core changed during capture')
+            try:
+                status_path = MOD/'runtime/status.json'
+                status = json.loads(status_path.read_text())
+                statuses.append({'captured_ns': time.time_ns(),
+                    'status_mtime_ns': status_path.stat().st_mtime_ns,
+                    'applied': status.get('applied'), 'shell': status.get('shell'),
+                    'menu_open': status.get('inventory', {}).get('menu_open'),
+                    'astral': status.get('astral')})
+            except (FileNotFoundError, json.JSONDecodeError):
+                pass
             try:
                 report = json.loads((MOD/'runtime/frame-profile.json').read_text())
                 if report.get('id') == rid:
@@ -90,7 +105,9 @@ def main():
         else:
             raise TimeoutError('No frame-profile result from the developer core')
         result = {'core': loader['core'], 'core_sha256': sha(installed), 'pids': pids,
-                  'state_unchanged': state_sha == sha(state), 'raw': report}
+                  'state_unchanged': state_sha == sha(state), 'raw': report,
+                  'status_samples': statuses,
+                  'status_scope': 'Asynchronously published context, not per-frame active-double counts.'}
     output.parent.mkdir(parents=True, exist_ok=True)
     # Keep measured evidence even when validation fails.
     output.write_text(json.dumps(result, indent=2) + '\n')
