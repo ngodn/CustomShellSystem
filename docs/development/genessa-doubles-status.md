@@ -162,9 +162,8 @@ The new, uninstalled candidate implements one-time requests: Default (game)
 cancels a pending request; Faithful/Stray waits for the menu to close and a safe
 idle, then sends one native ability request. It does not persist a forced form
 or save it into profiles. Player changes, death, disable and timeout cancel it.
-The native event path is still awaiting live verification. Both Windows builds
-compile; the existing 18 host suites remain green, but do not exercise this new
-reflected gameplay action.
+Both Windows builds compile; the existing 18 host suites remain green, but do
+not exercise this new reflected gameplay action.
 
 Form research is in `work/genessa-doubles/form-control1`. Cooked
 GA_ShellSeveredBase listens for Event.Shell.Severed and handles aiming, severed
@@ -172,9 +171,16 @@ state, effects, mesh activation and attached actors. BPFL_Player ForceReviveShel
 routes Event.Shell.Revive.Force through the native revival ability. Calling only
 ActivateDarkform would omit part of that sequence; RemoveShell would clear
 abilities and saved shell state. Neither shortcut is used. Live reflection
-confirms both proposed event-call signatures and the current controller's
-Genessa/CorruptedGenessa definitions. No form switch has been invoked yet.
-The user has been asked to leave the menu for a bounded native transition test.
+confirms both event-call signatures and the current controller's
+Genessa/CorruptedGenessa definitions. With the author standing in the world,
+a bounded native-event smoke test switched Faithful to Stray, then back to
+Faithful through silent native revival. The pawn and equipped shell/darkform
+definitions were preserved; the post-test status has no Astral or maintenance
+error. Evidence: `live-roundtrip1.jsonl` and `live-roundtrip1-result.json` in
+form-control1. This proves the event route, not the new menu queue or all
+gameplay effects. Native revival may restore health under the game's rules.
+The new core `css_core-astral-trial-9a81ca0a6114b0c8.dll` is staged under
+runtime-trial4, not installed. Installation is waiting for the game to close.
 
 More Beaute's two installed meshes were independently decoded into
 `work/genessa-doubles/morebeaute-audit1/meshes.json`. Both assign clothdriver to
