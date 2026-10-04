@@ -5,13 +5,14 @@ using css::Recovery;
 void check(bool value,const char* message) { if(!value) throw std::runtime_error(message); }
 int main() {
     for(const auto name:{"GA_Traversal_ShellThrow_C", "GA_Traversal_ShellThrow_High_C",
-                         "GA_Traversal_ShellThrow_Long_C", "GA_Traversal_BoneGate_Far_C",
-                         "GA_ShellTraversalBase_C", "GA_ShellTraversal_Genessa_C",
+                         "GA_Traversal_ShellThrow_Long_C", "GA_Traversal_BoneGate_Far_C"})
+        check(css::is_mesh_switch_traversal(name),"Active traversal action was not guarded");
+    // Live new-game capture: StrongOne remains active while the player is standing.
+    // Its base waits for detach/recall events; ActiveCount does not mean a jump is running.
+    for(const auto name:{"GA_ShellTraversalBase_C", "GA_ShellTraversal_Genessa_C",
                          "GA_ShellTraversal_Default_C", "GA_ShellTraversal_CorruptedGenessa_C",
-                         "GA_ShellTraversal_StrongOne_C"})
-        check(css::is_mesh_switch_traversal(name),"Mesh-switch traversal was not guarded");
-    for(const auto name:{"GA_Player_Aim_C", "GA_Player_Attack_C", "GA_ShellTraversalUnrelated_C", ""})
-        check(!css::is_mesh_switch_traversal(name),"Unrelated ability blocked recovery");
+                         "GA_ShellTraversal_StrongOne_C", "GA_Player_Aim_C", "GA_Player_Attack_C", ""})
+        check(!css::is_mesh_switch_traversal(name),"Persistent shell listener blocked appearance changes");
     Recovery r;
     // New player arrives before its mesh, then an effect prevents applying.
     r.observe(true,true,true,true,false);

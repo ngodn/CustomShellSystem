@@ -72,15 +72,20 @@ The check runs inside existing 150 ms maintenance, with no new hooks or Lua
 runtime dependency. Healthy aim returns after the default-layer lookup. Weapons
 without a supported override are remembered by weak instance/weapon/default
 identities. Failures use the existing one-second maintenance backoff.
-Traversal and ordinary appearance-readiness guards defer mutation. The traversal
-guard now includes `GA_ShellTraversalBase` and its authored subclasses, which
-were missing from the old `GA_Traversal_` prefix check.
+Traversal and ordinary appearance-readiness guards defer mutation. The initial
+candidate also blocked `GA_ShellTraversalBase` and its authored subclasses. That
+was incorrect: these are persistent detach/recall listeners, not active jump
+actions. A live new-game capture found `GA_ShellTraversal_StrongOne` active while
+standing and CSS refusing all appearance changes. The guard again admits only
+the original `GA_Traversal_` action family. See
+[the regression repair](harbinger-start-regression.md).
 
 Validation so far:
 
 - C++23 production build passes with developer and transition-test flags off.
 - Animation, animation-runtime, recovery, skeleton and socket-fit host suites
-  pass, including the new traversal-family regression cases.
+  pass. The original traversal-family expectations were incorrect and are
+  replaced by listener-exclusion cases based on the live capture.
 - `tools/diagnostics/sidearm-transition/audit_traversal.py` audits the extracted
   transition call sequence and seven sidearm definitions. This is static
   evidence, not an in-game traversal test.

@@ -1,5 +1,14 @@
 # Current work queue
 
+## October 4: new-game Harbinger regression
+
+Live capture identified my broadened traversal guard as the cause of blocked
+SHELL changes. `GA_ShellTraversal_StrongOne` is a persistent event listener with
+ActiveCount 1 at rest. Removed that family from the blocking predicate while
+retaining actual jump-action guards and the aiming repair. Five relevant host
+suites pass. Restart/live acceptance is pending. See
+[the regression repair](development/harbinger-start-regression.md).
+
 ## October 4: profile save validation report
 
 Markuzkiller reports an invalid-slot error with only one visible row, probably
@@ -36,8 +45,9 @@ resets from CSS recovery, then repair the responsible path without replaying
 weapon equip or carrying transient locomotion layers into normal gameplay.
 Evidence goes in `work/sidearm-traversal/`. The user requested offline inspection
 instead of searching for a gate. Cooked controller bytecode exposes the missing
-layer preservation, and the traversal guard also missed `GA_ShellTraversal`
-abilities. The follow-up is built and installed as a test core, with 5/5 host
+layer preservation. The initial broadening of the traversal guard to persistent
+`GA_ShellTraversal` listeners was incorrect and is superseded by the regression
+repair above. The follow-up is built as a test core, with 5/5 host
 suites passing. Live acceptance is pending; the public ZIP is unchanged. See
 [sidearm transition findings](development/sidearm-mesh-transition.md#october-4-forced-harbinger-transitions).
 

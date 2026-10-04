@@ -5,8 +5,9 @@
 
 namespace css {
 inline bool is_mesh_switch_traversal(std::string_view ability) {
-    return ability.starts_with("GA_Traversal_") || ability.starts_with("GA_ShellTraversal_") ||
-           ability=="GA_ShellTraversalBase_C";
+    // GA_ShellTraversal* are persistent detach/recall listeners, including at new game.
+    // Their ActiveCount stays nonzero outside traversal and must not block recovery.
+    return ability.starts_with("GA_Traversal_");
 }
 // Time comes from the monotonic host clock, independent of world pause/travel.
 class Recovery {
