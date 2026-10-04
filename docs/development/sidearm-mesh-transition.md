@@ -34,3 +34,59 @@ The logic covers both applying a custom appearance and restoring the original. A
 - The accepted live capture passed the same check that rejected the old build: vanilla Genessa retained `ABPL_Aim_MachineGun` with the machine gun equipped. The loader identified the tested production DLL, SHA-256 `d028cec65b4e3d0c481e05ef14b2525a786fa8bac392a0484e488778805aa335`.
 
 The diagnostic Lua snapshot is on-demand and read-only. It is excluded from the shipped runtime. It ran through the existing MS2AttackProbe file trigger; the original `RepairPrologue.lua` was restored after the accepted capture. Do not repeat the soft-class-array Lua trial: the process exited during that attempt, before the repair call logged. Production handles reflected layer nodes in C++ instead.
+
+## October 4: forced Harbinger transitions
+
+The reporter says short/long jump gates and air-current jumps still break aim.
+The user requested investigation from the game dump because locating a gate is
+inconvenient. This follow-up uses the CL93241 cooked Blueprint bytecode and SDK
+dump; it has not yet been reproduced locally in a gate.
+
+`work/sidearm-traversal/` contains AssetReadback JSON and extraction lists:
+
+- `GA_Traversal_BoneGate_Far` and `GA_ShellTraversalBase` call the controller's
+  `SwitchToDarkFormMesh` and `SwitchToShellMesh` functions.
+- High and long shell throws inherit `GA_Traversal_ShellThrow`.
+- `BP_PlayerController.SwitchCharacterMesh` calls `SaveAnimationInstanceState`,
+  then `SetSkinnedAssetAndUpdate`, then `LoadAnimationInstanceState`. It does not
+  call `LinkAnimClassLayers` or `ApplyAnimationLayers`.
+- The SDK's `FCSAnimationInstanceState` contains only `ActiveMontage`. There is
+  no linked-layer map in that saved state.
+- All seven shipped sidearm definitions name one `OnEquip_AnimationLayers`
+  class derived from `ABPL_Aim_Default`: Ballistazooka, Crossbow, CursedChild,
+  MachineGun, NailShotgun, ParasiteGun and Trebuchaxe.
+
+This exposes a gap in the previous repair: a game-owned mesh swap can discard
+the weapon layer before CSS takes its snapshot. Preserving that later snapshot
+only preserves the already-default aiming graph.
+
+The follow-up reads the currently equipped sidearm definition when the live
+graph has returned to `ABPL_Aim_Default`. It links only the weapon's derived
+aim class, then checks that the desired instance exists and the default is gone.
+An existing non-default aim layer is left alone. No equip events, abilities,
+ammunition, attachment transforms or traversal locomotion layers are replayed.
+Soft references are copied through reflected parameters, not legacy layouts.
+Weak identities are rechecked after loading before any write.
+
+The check runs inside existing 150 ms maintenance, with no new hooks or Lua
+runtime dependency. Healthy aim returns after the default-layer lookup. Weapons
+without a supported override are remembered by weak instance/weapon/default
+identities. Failures use the existing one-second maintenance backoff.
+Traversal and ordinary appearance-readiness guards defer mutation. The traversal
+guard now includes `GA_ShellTraversalBase` and its authored subclasses, which
+were missing from the old `GA_Traversal_` prefix check.
+
+Validation so far:
+
+- C++23 production build passes with developer and transition-test flags off.
+- Animation, animation-runtime, recovery, skeleton and socket-fit host suites
+  pass, including the new traversal-family regression cases.
+- `tools/diagnostics/sidearm-transition/audit_traversal.py` audits the extracted
+  transition call sequence and seven sidearm definitions. This is static
+  evidence, not an in-game traversal test.
+- Candidate installation/hash and previous selector are recorded in
+  `work/sidearm-traversal/install.json` and `install-before/`.
+- Public ZIP unchanged. Live acceptance remains pending, including repeated
+  short/long gates, air currents, cancellation and a subsequent weapon change.
+- The original diagnostic entry was restored when switching to offline work;
+  no capture loop or game control automation is running.

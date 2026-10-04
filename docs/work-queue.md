@@ -1,5 +1,19 @@
 # Current work queue
 
+## October 4: sidearm aim after forced Harbinger traversal
+
+Follow-up to the beta.9 appearance-swap fix: the reporter says short/long jump
+gates and air-current jumps break aiming again after forcing Harbinger form.
+Capture the equipped aiming layer before and after traversal, distinguish game
+resets from CSS recovery, then repair the responsible path without replaying
+weapon equip or carrying transient locomotion layers into normal gameplay.
+Evidence goes in `work/sidearm-traversal/`. The user requested offline inspection
+instead of searching for a gate. Cooked controller bytecode exposes the missing
+layer preservation, and the traversal guard also missed `GA_ShellTraversal`
+abilities. The follow-up is built and installed as a test core, with 5/5 host
+suites passing. Live acceptance is pending; the public ZIP is unchanged. See
+[sidearm transition findings](development/sidearm-mesh-transition.md#october-4-forced-harbinger-transitions).
+
 ## October 2: review and commit the CSS work
 
 The user requested review and commits for the other agent's CSS changes, with

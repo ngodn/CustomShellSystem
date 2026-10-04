@@ -1,8 +1,13 @@
 #pragma once
 #include <algorithm>
 #include <cstdint>
+#include <string_view>
 
 namespace css {
+inline bool is_mesh_switch_traversal(std::string_view ability) {
+    return ability.starts_with("GA_Traversal_") || ability.starts_with("GA_ShellTraversal_") ||
+           ability=="GA_ShellTraversalBase_C";
+}
 // Time comes from the monotonic host clock, independent of world pause/travel.
 class Recovery {
     bool pending_ = false;

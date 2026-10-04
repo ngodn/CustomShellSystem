@@ -734,6 +734,15 @@ struct Core {
                     } catch(...) {}
                 }
                 was_transition_=transition_now;
+                if(!transition_now && !apply_pending && now>=maintenance_after) {
+                    try {
+                        if(appearance.repair_equipped_aim())
+                            host.log("Restored equipped sidearm aiming layer after animation reset");
+                    } catch(const std::exception& error) {
+                        maintenance_after=now+1000;
+                        host.log(error.what());
+                    }
+                }
             }
             if(state.enabled && !apply_pending) sync_menu_safely();
         }

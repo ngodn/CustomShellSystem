@@ -590,6 +590,7 @@ class Appearance {
     std::map<std::string, std::array<double, 3>> formula_offsets_;
     void restore_menu();
     void remember_materials();
+    WeakObject aim_checked_instance_, aim_checked_weapon_, aim_checked_default_;
     bool materials_match() const;
     bool reuse_materials();
     void detach_residual_controls();
@@ -611,6 +612,7 @@ public:
     bool repair_materials_needed() const;
     bool customization_reset() const;        // a transition reset CSS's applied customization in place
     bool transition_active() const;   // a teleport/gate/traversal is currently in progress
+    bool repair_equipped_aim();
     bool repair_mesh_needed() const;
     bool ready_to_apply() const;
     std::string ready_to_apply_reason() const;

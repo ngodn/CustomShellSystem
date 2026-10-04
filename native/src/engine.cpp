@@ -3,6 +3,7 @@
 #include "startup.hpp"
 #include "physics_presets.hpp"
 #include "skeleton_compatibility.hpp"
+#include "recovery.hpp"
 #include <array>
 #include <cctype>
 #include <cstring>
@@ -1013,7 +1014,7 @@ static bool is_traversal_ability_active(UObject* pawn) {
             auto* ability = *reinterpret_cast<UObject* const*>(spec_ptr + ab_off);
             if(ability && ability->GetClassPrivate()) {
                 std::string ab_name = narrow(ability->GetClassPrivate()->GetName());
-                if(ab_name.rfind("GA_Traversal_", 0) == 0) {
+                if(is_mesh_switch_traversal(ab_name)) {
                     return true;
                 }
             }
@@ -1089,6 +1090,7 @@ std::string Appearance::ready_to_apply_reason() const {
 bool Appearance::ready_to_apply() const {
     return ready_to_apply_reason().empty();
 }
+#include "equipped_aim_recovery.inl"
 bool Appearance::active() const { auto* c=component_.Get(); return c && c==observed_component_.Get() && applied_.Get() && mesh_asset(c)==applied_.Get(); }
 #ifdef CSS_INVENTORY_DEV
 #endif
