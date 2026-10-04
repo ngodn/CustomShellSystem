@@ -179,8 +179,14 @@ definitions were preserved; the post-test status has no Astral or maintenance
 error. Evidence: `live-roundtrip1.jsonl` and `live-roundtrip1-result.json` in
 form-control1. This proves the event route, not the new menu queue or all
 gameplay effects. Native revival may restore health under the game's rules.
-The new core `css_core-astral-trial-9a81ca0a6114b0c8.dll` is staged under
-runtime-trial4, not installed. Installation is waiting for the game to close.
+The author closed the game and the new core
+`css_core-astral-trial-9a81ca0a6114b0c8.dll` is installed. Its full hash is
+`9a81ca0a6114b0c86b2bf71ec2a236c0a8c3794d4d52a92c95dccd2316588614`.
+The selector/core readback and all 15 protected-file hashes pass. Backup and
+receipt are in runtime-trial4. The explicit development trial enable request
+is queued for the next launch in `queued-enable.json`; it is not yet acknowledged
+live. No form change is queued. Next verify the new MISC row and its one-time
+switch/cancel behavior, then finish Stray doubles Default/Use CSS acceptance.
 
 More Beaute's two installed meshes were independently decoded into
 `work/genessa-doubles/morebeaute-audit1/meshes.json`. Both assign clothdriver to
