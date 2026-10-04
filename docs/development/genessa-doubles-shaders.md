@@ -64,8 +64,11 @@ is doubled. A time phase feeds offsets of +225 in Y and -90 in Z. Three red
 channel noise samples are blended with weights `saturate(abs(normal.x/z)*3-1)`.
 Their result distorts a second three-sample projection of the blue channel.
 Both forms use the same noise arithmetic. There are six noise samples per pixel.
-The exact View time field behind register 163.z still needs binding verification;
-the diagnostic accepts time explicitly and does not guess an engine offset.
+The exact-version UE shader debug layout identifies `View_GameTime` at byte
+2616, matching native register 163.z. It also identifies
+`View_InvDeviceZToWorldZTransform` at byte 1248, matching native register 78.
+`work/genessa-doubles/native-ue-bindings.json` records the shader path, SHA-256
+and offsets. The UE graph uses Time and DepthFade nodes, not raw buffer access.
 
 Facing and noise feed a four-segment scalar ramp. The forms have different
 color-ramp thresholds and RGB constants, followed by division by the exposure
@@ -113,18 +116,55 @@ and 135 boundary combinations, including both fade endpoints. Maximum absolute
 error was `4.174804679735189e-08`, below the declared tolerance. The full HLSL,
 including the noise projection, also compiles as `ps_6_6` with warnings as errors.
 
-This establishes scalar arithmetic agreement, not a rendered match. Texture
+This establishes scalar arithmetic agreement, not a native-render match. Texture
 sampling, mip derivatives, normals, camera/view bindings, local and pre-skinned
 coordinate wiring, exposure, fog and scene-depth conversion still require UE
 integration and image comparison. The numerical test supplies those inputs.
-It does not test the GPU or game runtime. The six-sample noise implementation
-has compilation evidence only.
+It does not test the GPU or game runtime. Separate UE evidence follows below.
 
-Next: wire these calculations into an isolated UE material with the original
-noise texture and verify both forms against the native effect. Then combine
+Next: verify both forms against the native effect and combine
 with each source material's real cutout/opacity and current customization.
 Do not bypass Eve/Commander White hair coverage or switch production outfits
 to these diagnostic shaders without that comparison.
+
+## UE graph and first renders
+
+`create-native-ghost-material.py` creates one unlit translucent parent and
+Faithful/Stray instances in the isolated `material-outfits1` stage. The namespace
+is `/Game/CSS/UnholyGenessa/AstralNative1/` solely because the existing compilation
+helper restricts inputs to that namespace. It is not an outfit source update.
+The graph connects world-to-local position, local bounds, interpolated
+pre-skinned position/bounds, vertex normal, camera vector, Time, PixelDepth,
+EyeAdaptation and a five-unit DepthFade. A fixed-time control allows comparisons
+without advancing the noise phase between captures.
+
+The source noise is `/Game/Sparta/FX/Textures/Noises/BnW/T_noise_0017`.
+MeshExport decoded its cooked 256x256 BC1 top mip to PNG. The preview imports
+that PNG into a private texture; this does not preserve the native mip chain
+or compression. SRGB and wrapping follow the original texture's engine defaults.
+Final runtime materials should resolve the original game texture, not replace
+it with this preview export.
+
+`native-create3.log` completed with exit zero. The first two attempts exposed
+editor API details: TransformPosition's default input and VertexInterpolator's
+`VS` input differ; `SetMaterialInstanceScalarParameterValue` always returns
+false in this exact engine implementation, even after writing. The corrected
+script verifies explicit stored overrides instead. Only failed private outputs
+were removed. No source packages were deleted or overwritten.
+
+`native-compile1.log` completed with exit zero. `native-ghost-compiled.json`
+reports ready shader maps and no errors for all three interfaces on
+**VULKAN_SM5**. This is separate from the standalone SM6 arithmetic compilation
+and is not a Windows DX12 cook. Protected source hashes were checked again
+after compilation; the binding receipt records their unchanged state.
+
+`native-render1.log` completed with exit zero and ten sphere captures. Both
+forms pass `check-native-ghost-renders.py`: expected blue/red channel ordering,
+different images at times 0 and 1, visible intermediate fade, and zero opacity
+pixel-identical to removal. The Faithful full render was visually inspected and
+shows the flowing noise pattern. There is no side-by-side original-native
+material render yet. These images do not establish outfit cutouts, customization,
+skeleton/animation, DX12 behavior, performance or live lifecycle correctness.
 
 Primary references: [Microsoft DXIL specification](https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst),
 [DXC container layout](https://github.com/microsoft/DirectXShaderCompiler/blob/main/include/dxc/DxilContainer/DxilContainer.h),

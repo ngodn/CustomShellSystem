@@ -33,8 +33,11 @@ The native shared shader libraries have now been decoded. Four SM6 pixel
 shaders disassemble successfully. A diagnostic HLSL reconstruction of the
 blue/red color response and shape-dependent dissolve passes 8,462 comparisons
 against the extracted instructions and compiles as `ps_6_6`. This moves native
-composition beyond parameter inspection, but UE input wiring and rendered
-equivalence remain unverified. See [shader evidence](genessa-doubles-shaders.md).
+composition beyond parameter inspection. Its UE graph now compiles on
+VULKAN_SM5 and passes a ten-image sphere test for both forms, time variation
+and disappearance. The GameTime binding is verified from generated UE layout.
+Native-versus-copy visual equivalence and outfit composition remain unverified.
+See [shader evidence](genessa-doubles-shaders.md).
 
 An isolated garment-fade experiment now exists under
 `/mnt/eins0fxE/CSS-work/genessa-doubles/material-prototype1`. The first
@@ -57,6 +60,12 @@ An alternate-order retry (`hair-zero-first.log`) started with zero opacity and
 also timed out with exit 124, leaving an empty first PNG. Thus the stall does
 not require earlier captures in that process. It still does not establish the
 cause. No test editor remains running; do not repeat the same configuration.
+A changed setup with an opaque backdrop completed the index-3 and full eight-card
+tests. All eight hair materials pass the fade pixel checks, including full
+opacity equal to the original in these dim captures. Full hairstyle and native
+ghost integration remain pending. The full batch had a wrapper exit 127 caused
+by editing the running shell script; UE completed all captures successfully.
+The material findings document the distinction and evidence.
 [Material findings](genessa-doubles-materials.md) record the
 exact versions, source paths, known limitations and readback evidence.
 
@@ -75,7 +84,8 @@ exact versions, source paths, known limitations and readback evidence.
 | Private material uniform copy | Live test passed for five families | live-material-copy-03.log; inherited textures included, player material values and bindings unchanged |
 | Material masks, opacity and native fade composition | Open | Native shader has no texture parameters |
 | Private garment fade graphs | Vulkan fade test passed, visual equivalence not established | Both zero renders equal removed; full and half differ; source hashes unchanged |
-| Eve and Commander White hair | Companions authored; card render pending | Seven-mesh audit, two distinct graphs, eight hair instances |
+| Eve and Commander White hair | Eight flat-card fade checks passed; full hairstyle/ghost integration pending | `hair-renders-all_backdrop/pixel-check.json`; two distinct parent graphs |
+| Native effect reconstruction | Arithmetic, UE compilation and sphere fade/time checks passed | `native-response-check2`, `native-ghost-compiled.json`, `native-ghost-renders/pixel-check.json`; no native image comparison yet |
 | Faithful reuse | One live reuse verified | Same actor 2147330429: cached/disabled -> uncached/enabled -> cached/disabled |
 | Bounded lifecycle tracking | Portable tests and development Windows build passed; C++ live check pending | `astral_lifecycle.hpp`, `astral_observer.inl`, `astral_lifecycle_tests.cpp` |
 | Stray lifecycle and cleanup | Partial live evidence | Primary is cached=true and enabled=true while opacity changes; secondary not sampled |

@@ -45,7 +45,7 @@ Paths under `work/` are local diagnostic evidence, not distributable game assets
 
 | Artifact | Finding |
 | --- | --- |
-| [Native shader reconstruction](genessa-doubles-shaders.md) | Shared shader extraction and SM6 disassembly; blue/red response and dissolve match 8,462 numerical cases. UE material wiring and rendered equivalence remain pending. |
+| [Native shader reconstruction](genessa-doubles-shaders.md) | Shared shader extraction and SM6 disassembly; 8,462 arithmetic cases, UE VULKAN_SM5 compilation and ten sphere images passed. Native image equivalence and outfit integration remain pending. |
 | `native/src/astral_lifecycle.hpp`, `tests/astral_lifecycle_tests.cpp` | Bounded identity/serial tracker; pooled reuse, cached-active Stray, ownership changes, invalid snapshots and cleanup tested on host, including sanitizers. |
 | `native/src/astral_observer.inl` | Development-only `astral.observe` bridge operation reads the owned spawner; no tick, appearance writes or actor retention. Compiles for Windows; not installed or live-tested. |
 | `tools/diagnostics/genessa-doubles/copy-materials.lua`, `work/genessa-doubles/live-material-copy-03.log` | Five live families copied into unattached private MIDs; scalar/vector values and ten inherited skin textures matched, and copy edits left player sources unchanged. |
@@ -67,6 +67,7 @@ Paths under `work/` are local diagnostic evidence, not distributable game assets
 | `tools/diagnostics/genessa-doubles/stage-materials.py`, `create-fade-materials.py` | Isolated copies of five garment and two hair parent graphs with original coverage multiplied by a fade scalar. No production changes. |
 | `tools/diagnostics/genessa-doubles/run-material-test.sh`, `render-fade-materials.py` | Read-only source sandbox; garment disappearance passed the original/full/half/zero/removed comparison. |
 | `tools/diagnostics/genessa-doubles/render-hair-fades.py`, `check-fade-renders.py` | Eight hair material card fixtures and actual pixel checks for fade endpoints and intermediate states. |
+| `material-outfits1/hair-renders-all_backdrop/pixel-check.json` on the secondary drive | All eight groups pass with backdrop; full matches original, zero matches removal. Dim captures do not establish bright ghost cutout quality. |
 | `tools/diagnostics/genessa-doubles/material-inventory.py`, `work/genessa-doubles/eve-cw-inventory.json` | Seven released meshes, 112 resolved material interfaces, effective instance properties retained for adapter planning. |
 | [Cloth overlay investigation](cloth-overlays.md) | Exact UE 5.6.1 per-slot overlay behavior and existing CSS effect arbitration. |
 

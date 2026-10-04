@@ -130,6 +130,10 @@ characters. `CSS_ASTRAL_HAIR_STATES` accepts a unique comma-separated subset
 or order of `original,full,half,zero,removed`. Each capture logs BEGIN/END.
 The index-3 zero-first retry stalled too. Do not repeat it without a changed
 hypothesis or renderer configuration.
+`CSS_ASTRAL_HAIR_BACKGROUND=1` adds opaque background geometry. This changed
+condition completed all eight card comparisons. Use a new run label. Never
+edit the shell runner while it is executing; Bash may resume at an offset in
+the changed file after the child exits.
 
 ## Native shader arithmetic
 
@@ -152,6 +156,16 @@ python3 tools/diagnostics/genessa-doubles/check-native-ghost-response.py \
 The output directory must be new. The check compiles the response as C++23,
 compares it with the shipped DXIL arithmetic and compiles the full HLSL with
 DXC. It does not render, install materials or contact the game.
+
+Runner mode `native-create` creates the isolated UE graph; it requires
+`CSS_ASTRAL_NOISE_PNG` pointing to the offline export of `T_noise_0017`.
+`native-compile` checks shader maps and writes shader debug output without
+image readback. `native-render` captures both forms on a sphere at two times
+and three fade values, plus actual removal. All outputs must be new.
+Run `check-native-ghost-renders.py STAGE/native-ghost-renders` for pixel checks.
+These captures establish graph behavior only, not native-render equivalence or
+complete outfit support. The preview noise import does not preserve native mips.
+
 Set `CSS_ASTRAL_HAIR_INDEX` to 0..7 to isolate one card per editor process;
 its output and fixture names receive that index. Use a new stage for a repeated
 index. A Vulkan readback stall occurred in the first multi-card run; preserve
