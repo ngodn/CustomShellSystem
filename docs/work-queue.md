@@ -2,6 +2,11 @@
 
 ## October 5: doubles trial6 acceptance
 
+The author subsequently confirms some NPC/enemy appearances work only partially
+and explicitly defers their compatibility fixes. These are follow-up work, not
+a blocker for the current release. MISC and release notes must distinguish
+partial visual/animation compatibility from complete original-double fallback.
+
 Commander White is accepted in both forms, following Unholy Genessa and Eve.
 The author also accepts shape and movement through the CSS menu transition.
 Trial6 is installed and its loaded core hash is verified. It includes the MISC

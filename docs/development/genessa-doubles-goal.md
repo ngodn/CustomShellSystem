@@ -16,6 +16,12 @@ supported cases from the completion requirements.
 Research entry point: [index](genessa-doubles-index.md). Current evidence and
 next steps: [status](genessa-doubles-status.md).
 
+October 5 scope clarification: the author tested NPC/enemy appearances and
+accepts that some work fully while others have visual or animation differences.
+Further NPC/enemy compatibility repairs are deferred and do not block this
+release. Explain partial support in MISC and release notes. Preserve the original
+double fallback where CSS cannot construct a supported visual.
+
 ## Initial evidence
 
 The game's local CXXHeaderDump declares:

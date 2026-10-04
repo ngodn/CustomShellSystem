@@ -1214,8 +1214,9 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             const char* kind=faithful?"faithful":"stray";
             const bool use_css=faithful?state.doubles.faithful_css:state.doubles.stray_css;
             detail(faithful?"Faithful Doubles":"Stray Doubles",use_css?"Use CSS":"Default",
-                "Use CSS copies your current appearance and customization when supported, keeping the ghost effect. "
-                "Unsupported appearances use the original Genessa double. Default always uses the original double.");
+                "Use CSS copies supported appearances and customization with the ghost effect. "
+                "NPC/enemy looks may have visual or animation issues. "
+                "Unsupported looks and Default use the original Genessa double.");
             choice_rows({
                 {"default","Default",{{"action","doubles_mode"},{"kind",kind},{"mode","default"}}},
                 {"css","Use CSS",{{"action","doubles_mode"},{"kind",kind},{"mode","css"}}},
