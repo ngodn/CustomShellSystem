@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import unreal
 
 
@@ -11,6 +12,15 @@ selection = os.environ.get("CSS_ASTRAL_HAIR_INDEX")
 if selection is not None and (not selection.isdecimal() or not 0 <= int(selection) < 8):
     raise ValueError("CSS_ASTRAL_HAIR_INDEX must be 0..7")
 suffix = "" if selection is None else "-" + selection
+run = os.environ.get("CSS_ASTRAL_HAIR_RUN", "")
+if run and not re.fullmatch(r"[a-zA-Z0-9_]{1,32}", run):
+    raise ValueError("CSS_ASTRAL_HAIR_RUN must use 1..32 letters, digits or underscores")
+if run:
+    suffix += "-" + run
+opacities = {"original": 1., "full": 1., "half": .5, "zero": 0., "removed": 0.}
+states = os.environ.get("CSS_ASTRAL_HAIR_STATES", ",".join(opacities)).split(",")
+if not states or len(states) != len(set(states)) or any(state not in opacities for state in states):
+    raise ValueError("CSS_ASTRAL_HAIR_STATES must contain unique original,full,half,zero,removed states")
 OUT = ROOT / ("hair-renders" + suffix)
 OUT.mkdir(exist_ok=False)
 LIB = unreal.EditorAssetLibrary
@@ -93,7 +103,9 @@ for index, (path, original, faded) in enumerate(cards):
     component = actor.get_component_by_class(unreal.StaticMeshComponent)
     component.set_static_mesh(plane)
     capture.show_only_actor_components(actor)
-    for state, opacity in (("original", 1.), ("full", 1.), ("half", .5), ("zero", 0.), ("removed", 0.)):
+    for state in states:
+        opacity = opacities[state]
+        unreal.log(f"CSS_ASTRAL_HAIR_BEGIN source={path} state={state}")
         dynamic = component.create_dynamic_material_instance(0, original if state == "original" else faded)
         dynamic.set_scalar_parameter_value("CSS_AstralOpacity", opacity)
         component.set_visibility(state != "removed", False)
@@ -107,11 +119,13 @@ for index, (path, original, faded) in enumerate(cards):
         assert image.is_file() and image.stat().st_size
         rows.append({"source": path, "state": state, "image": name,
                      "sha256": hashlib.sha256(image.read_bytes()).hexdigest()})
+        unreal.log(f"CSS_ASTRAL_HAIR_END source={path} state={state}")
     capture.clear_show_only_components()
     unreal.EditorLevelLibrary.destroy_actor(actor)
 check_sources()
 (OUT / "captures.json").write_text(json.dumps({
     "images": rows, "compilation": compiled, "source_files_unchanged": True,
+    "requested_states": states, "selection": selection, "run": run,
     "scope": "Flat-card Vulkan hair coverage test only. Not full hairstyles, native ghost shading or DX12."
 }, indent=2) + "\n")
 unreal.log("CSS_ASTRAL_HAIR_CAPTURED")

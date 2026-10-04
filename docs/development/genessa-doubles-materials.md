@@ -87,6 +87,15 @@ written, and the test process is gone. The user was asked to close the game for
 a comparison. Do not silently restart a hung editor or treat partial captures
 as a completed visual test.
 
+The subsequent `hair-zero-first.log` run used index 3 with
+`CSS_ASTRAL_HAIR_RUN=zero_first` and
+`CSS_ASTRAL_HAIR_STATES=zero,removed,original,full,half`. Shader compilation
+finished, then the first zero-opacity export stalled. The bounded process
+exited 124 and left a zero-byte `00-zero.png`, with no captures report.
+This rules out preceding exports as a necessary condition, not GPU contention
+or a driver issue. No test editor remains running. Run labels and per-state
+begin/end logs now make future comparisons distinguishable.
+
 ## Local evidence
 
 The runtime copy boundary now has live evidence. This game's header dump exposes
