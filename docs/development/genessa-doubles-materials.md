@@ -89,6 +89,28 @@ as a completed visual test.
 
 ## Local evidence
 
+The runtime copy boundary now has live evidence. This game's header dump exposes
+`K2_CopyMaterialInstanceParameters(Source, bQuickParametersOnly)`, although
+`CopyMaterialUniformParameters` itself is not reflected. Exact UE 5.6.1 source
+routes the `true` flag to `CopyMaterialUniformParametersInternal`. That walks the
+hierarchy from the root through successive overrides and clears the destination
+first. Set ghost/fade-specific values after copying. `CopyInterpParameters`
+alone does not include inherited defaults. Static switches are not copied by
+the uniform path and still require a compatible compiled companion.
+
+`live-material-copy-03.log` checks five current player material families using
+unattached transient MIDs: native Uber skin, Mat10 trim, Fabric02 silk, Mat12
+metal and native eye smoke. All tested explicit scalar/vector values matched.
+The skin source had no direct texture overrides, but its ten inherited texture
+references became ten explicit overrides on the copy and matched the source's
+effective values. Each copy's first scalar was changed, and the original value
+and component binding remained unchanged. The callback was restored afterward.
+
+This proves the tested copy semantics on the live game. It does not prove all
+parameter associations, shader compatibility, double lifecycle, performance or
+complete ghost composition. The first copy capture tested three skin instances;
+the second widened coverage to five families; the third added inherited textures.
+
 - `work/genessa-doubles/eve-cw-{meshes,materials,parents,roots}.json`: cooked readback.
 - `work/genessa-doubles/eve-cw-inventory.json`: complete resolved parent chains and properties.
 - `/mnt/eins0fxE/CSS-work/genessa-doubles/material-prototype1/fade-renders/`: garment images and compilation results.
@@ -106,3 +128,6 @@ API references: [MaterialEditingLibrary](https://dev.epicgames.com/documentation
 Local exact-version evidence: `BaseEngine.ini` sections `NoZenLocalFallback` and
 `InstalledNoZenLocalFallback`, `UnixPlatformMisc.cpp` lines 289-308, and
 `MaterialExpressions.cpp`'s `UMaterialExpressionStep::Compile`.
+The copy path is in `MaterialInstanceDynamic.cpp` lines 459-474 and
+`MaterialInstance.cpp` starting at line 5503; game declarations are in
+`ue4ss/CXXHeaderDump/Engine.hpp` lines 20718-20721.

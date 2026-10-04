@@ -52,6 +52,7 @@ exact versions, source paths, known limitations and readback evidence.
 | Native fade | Static and sampled live values verified | Faithful spans 0..1, Stray primary .388..1; no CSS writes |
 | Clone animation/physics | Faithful live baseline | ABP_Shell_Genessa; cloth/rigid body disabled; clone physics override |
 | Appearance and customization transfer | Not implemented | No runtime patch |
+| Private material uniform copy | Live test passed for five families | live-material-copy-03.log; inherited textures included, player material values and bindings unchanged |
 | Material masks, opacity and native fade composition | Open | Native shader has no texture parameters |
 | Private garment fade graphs | Vulkan fade test passed, visual equivalence not established | Both zero renders equal removed; full and half differ; source hashes unchanged |
 | Eve and Commander White hair | Companions authored; card render pending | Seven-mesh audit, two distinct graphs, eight hair instances |

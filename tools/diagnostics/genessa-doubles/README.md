@@ -18,6 +18,14 @@ Use `--mode materials` for current player base/overlay parent chains and scalar,
 vector and texture overrides. This includes transient customization MIDs.
 It is not a complete material graph dump or proof of visual equivalence.
 
+`--mode copy-materials --seconds 1` creates unattached transient MIDs for up to
+eight distinct current material families. It copies uniform parameters, checks
+explicit scalar/vector/texture values and inherited textures, then changes a
+scalar on each copy and verifies the source and component binding are unchanged.
+Copies are never assigned to a mesh or rooted and can be collected normally.
+This mode writes only the new transient instances, unlike the read-only modes.
+It runs once and does not measure frame cost or prove shader compatibility.
+
 The wrapper temporarily replaces `Scripts/RepairPrologue.lua` with the
 read-only callback and restores the previous bytes on completion, error,
 Ctrl+C or SIGTERM. It refuses to overwrite a concurrent callback edit.

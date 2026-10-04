@@ -15,13 +15,16 @@ def main():
     parser.add_argument("probe", type=Path)
     parser.add_argument("output", type=Path)
     parser.add_argument("--seconds", type=int, default=1)
-    parser.add_argument("--mode", choices=("actors", "materials"), default="actors")
+    parser.add_argument("--mode", choices=("actors", "materials", "copy-materials"), default="actors")
     args = parser.parse_args()
     if not 1 <= args.seconds <= 180:
         parser.error("seconds must be 1..180")
     script = args.probe / "Scripts/RepairPrologue.lua"
     request = args.probe / "request.txt"
-    source = "capture.lua" if args.mode == "actors" else "source-materials.lua"
+    source = {"actors": "capture.lua", "materials": "source-materials.lua",
+              "copy-materials": "copy-materials.lua"}[args.mode]
+    if args.mode == "copy-materials" and args.seconds != 1:
+        parser.error("Unattached material-copy checks run once; use --seconds 1")
     payload = Path(__file__).with_name(source).read_bytes()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     def interrupted(signum, frame):
@@ -50,6 +53,8 @@ def main():
                     time.sleep(.1)
                 else:
                     raise TimeoutError("No probe response; capture stopped")
+                if args.mode == "copy-materials":
+                    break
                 time.sleep(.25)
         finally:
             if request.exists() and request.read_text().strip() == rid:

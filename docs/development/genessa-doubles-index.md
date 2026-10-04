@@ -22,6 +22,9 @@ Read this before resuming work. [Goal](genessa-doubles-goal.md) defines completi
   replace this combat pose with the player's selected idle or leader pose.
 - Live Stray primary can have `bIsCached=true` and `bCharacterEnabled=true`
   while fading. Do not use the cache flag alone as a visual eligibility test.
+- `K2_CopyMaterialInstanceParameters(source, true)` is the reflected route to
+  uniform hierarchy copying. It clears destination values first. Copy before
+  setting clone fade controls, and do not use the slow default-false path.
 
 ## Dead ends and probe corrections
 
@@ -39,6 +42,7 @@ Paths under `work/` are local diagnostic evidence, not distributable game assets
 
 | Artifact | Finding |
 | --- | --- |
+| `tools/diagnostics/genessa-doubles/copy-materials.lua`, `work/genessa-doubles/live-material-copy-03.log` | Five live families copied into unattached private MIDs; scalar/vector values and ten inherited skin textures matched, and copy edits left player sources unchanged. |
 | [Material support](genessa-doubles-materials.md) | Eve v1.4.0 and Commander White v0.0.6-dev family audit, separate hair companions, garment fade evidence and remaining gaps. |
 | `work/genessa-doubles/packages.txt`, `assets.json` | Seventeen ability, actor and spawner packages decoded with AssetReadback. |
 | `work/genessa-doubles/effect-packages.txt`, `effects.json` | Native summon parents, fade cue and VFX component. |
