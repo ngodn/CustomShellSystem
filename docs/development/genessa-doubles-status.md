@@ -47,27 +47,28 @@ contains 28 Eve skeleton/animation assets, not these ghost materials; keep it in
 The source manifests remain `visuals1/shared-materials.json` and
 `shared-material-variants.json`. No recook was needed for the container rename.
 
-Installation is pending. Although the author previously said the game was closed,
-the pre-install check found Linux PID 1809430 running. The installed selector is
-still `css_core-beta9-gate-default-1f522f0859f2fa26.dll`. A close-game question is
-pending; no game input, package replacement or core switch was sent. The prepared
-installer is `tools/shared-assets/install-trial.py`; it refuses a running game,
-backs up the selector/core, checks state/loader/UE4SS/legacy shared hashes, and
-installs the new package alongside the old one. The trial stays disarmed on boot.
+The author confirmed closure again and the process check returned no game PIDs.
+The passive trial is now installed. The selected core is
+`css_core-astral-trial-7ae89dcae8e2d680.dll`, SHA-256
+`7ae89dcae8e2d68087c6cb86c8ba02b1bca6984b49df854b95331e5d0f836a23`.
+The receipt and previous selector/core backup are in
+`work/genessa-doubles/runtime-trial1`. Independent readback verified the selector,
+core, all three new package files and all 12 protected files. The existing loader,
+UE4SS, saved state and legacy shared package hashes are unchanged. No game launch
+or input was sent. The trial remains disarmed on boot and is not live-verified.
 
-Restart dependency rechecked across three goal turns: PID 1809430 remains a
-running GameThread process, the original selector is unchanged, and no trial
-deployment receipt exists. The close-game question is still pending. Both builds
-are terminal and passed, including the pooling correction in `9d85da1`; there is
-no compiler/cooker job to wait on. The next useful integration step needs the
-normal close/restart. Do not quit the player's game or hot-reload this trial.
+ABI clarification: `core.json` uses core-table ABI 1 (`css_abi`), while the
+loader provides host ABI 2 (`css_host_abi`) through `css_get_api2`. CSSX's
+extension interface separately uses `CSSX_ABI 2`. The installed CSS log already
+records host ABI 2 background writes. This deployment did not replace the loader
+or downgrade any of these interfaces.
 
-Next: install after confirmed normal close, verify the new core/package hashes,
-then ask for Genessa equipped in the world. Run source/adapter and hidden visual
-checks before arming the trial. Verify Faithful and both Stray doubles, skin/body
-controls, hair/fabric/wing rendering, attack grips, pooling and cleanup. Profile
-active summons, then exercise the existing aiming/locomotion/gate/profile checks.
-Keep the goal active and both releases unmodified. EveTest remains queued.
+Next: ask for actual gameplay shell Genessa equipped in the world, with Unholy
+Genessa selected. Verify the loaded core, then run source/adapter and hidden
+visual checks before arming the trial. Verify Faithful and both Stray doubles,
+skin/body controls, hair/fabric/wing rendering, attack grips, pooling and cleanup.
+Profile active summons, then exercise existing aiming/locomotion/gate/profile
+checks. Both releases remain unmodified. EveTest remains queued.
 
 Commander White's native eye refraction now passes 524 DXIL arithmetic cases
 and 14 Vulkan captures. Zero surface opacity still refracts, but zero native

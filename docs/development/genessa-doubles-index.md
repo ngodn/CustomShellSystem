@@ -8,8 +8,9 @@ Read this before resuming work. [Goal](genessa-doubles-goal.md) defines completi
 - Shared materials and the first automatic runtime coordinator are implemented
   and built. Current `material-pack4` uses `CSS_AstralSharedAssets_P` to avoid
   colliding with the installed legacy Eve shared package. The selector passes
-  102 cooked material configurations and the 18 host suites pass. Installation
-  and live acceptance are pending; read [status](genessa-doubles-status.md).
+  102 cooked material configurations and the 18 host suites pass. The passive
+  trial is installed with verified hashes and starts disarmed. Live acceptance
+  is pending; read [status](genessa-doubles-status.md).
 
 - Commander White's eye refraction remains active at zero surface opacity.
   Its companion scales the IOR offset by native ghost coverage so zero fade
