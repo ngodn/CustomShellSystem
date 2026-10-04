@@ -39,6 +39,14 @@ and disappearance. The GameTime binding is verified from generated UE layout.
 Native-versus-copy visual equivalence and outfit composition remain unverified.
 See [shader evidence](genessa-doubles-shaders.md).
 
+Seven coverage-composed ghost parents now exist in the isolated stage. Both
+112-image hair runs completed, but the combined ghost coverage checks failed:
+several Commander White layers were blank, and the dim LDR fixture did not
+provide enough testable holes. Manual exposure did not change those results.
+Readback confirms original alpha wiring is preserved. Effective GPU sampling
+and the bounds/view-dependent response need inspection before claiming support.
+These are CSS-owned experiments, not changes to any outfit or installed build.
+
 An isolated garment-fade experiment now exists under
 `/mnt/eins0fxE/CSS-work/genessa-doubles/material-prototype1`. The first
 NullRHI authoring run completed on UE 5.6.1 CL44394996, creating five private

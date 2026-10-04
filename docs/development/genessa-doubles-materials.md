@@ -7,6 +7,11 @@ belong to CSS. Outfit authoring sources and released containers stay unchanged.
 
 ## Released asset audit
 
+The intended delivery is CSS runtime code plus CSS-owned cooked companion
+materials, rather than an update to each outfit. Individual outfit changes are
+conditional on evidence that the runtime and companions cannot handle an asset.
+No outfit update or installed material replacement has been made for this work.
+
 Read back Eve v1.4.0's six meshes and Commander White v0.0.6-dev's
 `SK_CommanderC4` from their release containers, alongside the game's global and
 base containers. Resolve each material's entire parent chain rather than
@@ -161,3 +166,40 @@ Local exact-version evidence: `BaseEngine.ini` sections `NoZenLocalFallback` and
 The copy path is in `MaterialInstanceDynamic.cpp` lines 459-474 and
 `MaterialInstance.cpp` starting at line 5503; game declarations are in
 `ue4ss/CXXHeaderDump/Engine.hpp` lines 20718-20721.
+
+## Combined ghost coverage experiment
+
+`coverage-create1` exited zero and created seven private parents under
+`/Game/CSS/UnholyGenessa/AstralCoverage1/Parents`. This namespace satisfies the
+existing editor helper's restriction; it is not an Unholy Genessa release
+change. The shared `native_ghost_graph.py` builds the same reconstructed native
+response used in the standalone test. Original opacity or thresholded coverage
+multiplies native ghost alpha. Source color/lighting composition is not included.
+All protected source hashes remained unchanged.
+
+`ghost-hair1` completed 112 captures with exit zero: eight hair instances, both
+forms, source-alpha reference, uncut ghost, two times, half fade, zero and removal.
+The independent checker **failed**. Eve and CW layer 31 show animated colors and
+fade, but CW layers 29, 30, 32, 35 and 36 have blank combined ghost captures.
+There are too few detectable uncovered pixels for a useful cutout assertion.
+Zero matches removal in all groups; that alone does not establish support.
+
+`ghost-hair-manual1` repeated with manual exposure and physical camera exposure
+disabled. It also exited zero; the reported pixel results are unchanged. The
+reference images are bright while the ghost images are extremely dim. Do not
+treat this as a fixed exposure issue or a passed shader integration.
+The setting follows [Epic's exposure documentation](https://dev.epicgames.com/documentation/unreal-engine/auto-exposure-in-unreal-engine)
+and UE 5.6.1 `Scene.h`'s exposure fields.
+
+`coverage-inspect1` exited zero. `ghost-coverage-wiring.json` confirms both hair
+parents originally use BaseColorMap alpha, and the companion Multiply inputs
+still read output A. This excludes an accidental RGB connection at that edge;
+it does not establish the effective GPU texture bindings or fragment values.
+Next, inspect those values or change the fixture to distinguish sampling,
+bounds/view-dependent ghost response and capture precision. Do not repeat the
+same LDR setup or weaken the checker to label blank hair successful.
+
+Receipts are in `material-outfits1/ghost-coverage.json`,
+`ghost-hair-renders/captures.json`, `ghost-hair-renders/pixel-check.json`,
+`ghost-hair-renders-manual/captures.json` and its `pixel-check.json` on the
+secondary-drive stage. No live-game process was contacted.

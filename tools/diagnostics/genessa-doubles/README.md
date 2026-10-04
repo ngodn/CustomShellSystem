@@ -166,6 +166,15 @@ Run `check-native-ghost-renders.py STAGE/native-ghost-renders` for pixel checks.
 These captures establish graph behavior only, not native-render equivalence or
 complete outfit support. The preview noise import does not preserve native mips.
 
+`coverage-create` builds private parents combining that ghost response with
+source opacity. `ghost-hair` captures eight Eve/Commander White texture sets
+on a cube with nonzero bounds. `CSS_ASTRAL_GHOST_HAIR_RUN` selects a new output
+and fixture suffix. Run `check-ghost-hair.py STAGE/ghost-hair-renders-SUFFIX`;
+it requires fade/time/tint behavior and visible holes that remain empty. The
+current combined tests fail, so these parents are not production adapters.
+`coverage-inspect` writes the original and companion opacity input wiring
+without saving assets. See the material findings for failed-test details.
+
 Set `CSS_ASTRAL_HAIR_INDEX` to 0..7 to isolate one card per editor process;
 its output and fixture names receive that index. Use a new stage for a repeated
 index. A Vulkan readback stall occurred in the first multi-card run; preserve
