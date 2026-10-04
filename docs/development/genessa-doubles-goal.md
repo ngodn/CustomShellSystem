@@ -6,6 +6,16 @@ Make Genessa's summoned doubles inherit the player's current CSS appearance,
 starting with Unholy Genessa, while preserving the game's Faithful and Stray
 ghost presentation and ability behavior.
 
+Support all appearance sources selected through CSS: CSS outfits, non-CSS
+replacements, NPC/enemy appearances, and other original shells. The actual
+gameplay shell must be Genessa; changing another shell's appearance does not
+grant Genessa's abilities. Include unsaved customization. Use an original-double
+fallback for unsupported assets, but do not use that fallback to exclude the
+supported cases from the completion requirements.
+
+Research entry point: [index](genessa-doubles-index.md). Current evidence and
+next steps: [status](genessa-doubles-status.md).
+
 ## Initial evidence
 
 The game's local CXXHeaderDump declares:
@@ -29,7 +39,7 @@ trace its actual material/cue setup in cooked assets before implementation.
 1. Trace both Faithful and Stray abilities through their cooked spawn,
    initialization, attack, fade and reuse paths. Identify the player's own
    doubles precisely, without changing unrelated ghosts, NPCs or summons.
-2. Copy the currently applied CSS outfit and customization: body/skin variant,
+2. Copy the currently applied appearance and customization: body/skin variant,
    morphs, visible modular parts, palette/material settings, sheer-fabric
    visibility/opacity, wings, glow and supported visual physics. Use current
    effective appearance, including unsaved edits, rather than only a saved
@@ -45,7 +55,7 @@ trace its actual material/cue setup in cooked assets before implementation.
    rig/cloth/wing behavior to its own pose. Do not copy the player's live pose or
    force a player idle over the double's combat animation.
 5. Implement reusable appearance support in CSS's C++23/UE 5.6.1 runtime where
-   appropriate. Change the Unholy Genessa package only if evidence shows an
+   appropriate. Change individual outfit packages only if evidence shows an
    asset change is needed. Preserve the accepted beta.10 release and commit new
    work by context for a later release.
 6. Keep ownership and cleanup scoped to each double. Handle multiple doubles,
@@ -57,6 +67,9 @@ trace its actual material/cue setup in cooked assets before implementation.
    ranged behavior where supported, effect cleanup and repeated summons.
    Regress player appearance, aiming, locomotion, profiles and gate recovery.
    Measure frame cost and resource cleanup rather than promising zero impact.
+   Start with Unholy Genessa, then test Eve and representative original-shell,
+   NPC/enemy and non-CSS appearances. Keep each release ZIP and its BBCode
+   changelog together in the agreed version directory.
 
 ## Existing pending work
 
