@@ -540,7 +540,7 @@ Runtime fact extraction: LoadedMoves now preserves separate selector/attack inst
 
 Lifetime foundation: [object identity](object-identity-runtime.md) now requires positive serials, initializes them through a dedicated uncached engine conversion, guards cached UFunctions as well as owners, and keeps Call parameter pointers in an instance-owned fixed array. Probe callbacks use only warm object fields and existing serials, with skipped identities counted. Initial grant capture now runs one grant per tick. The initializer's two parameter sizes were checked through a read-only live description; the revised initializer/cache/GC behavior and coverage of newly created execution instances remain unverified until native deployment.
 
-## Combo step skip (alpha.4, 2026-10-04)
+## Combo step skip (alpha.5, 2026-10-04)
 
 Requested by crimsonmoon93 on Nexus: a long custom H1 kept being cut by H2 when spamming Heavy.
 L2, L3, H2 and H3 get a per-slot `step` tuning ("play" default, "skip"), saved in settings and
