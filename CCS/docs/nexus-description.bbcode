@@ -10,13 +10,14 @@ I built Custom Combat System to let you choose the animation each attack of your
 [list]
 [*]Thirteen slots: light L1 L2 L3, light finisher LF, charged light LC, the same five for heavy, and the sprint attacks S+L and S+H.[/*]
 [*]Candidates for every slot: all player weapons' moves, the enemy attacks that use the player's skeleton (so they play on your body), and any new attack animation the running game lists after a patch.[/*]
-[*]Six settings per slot on the right panel. Speed, 0.5x to 4x. Feel: the game's timing or the move's own. Damage: the move's hit numbers or your weapon's. Visual: keep your weapon in hand or show the move's own weapon for the swing; on a punch or a kick it hides yours. Armor: the move's own hyper armor, or the game's hyper armor over the whole move. Steer: the stick turns you through the whole move and cancels the recovery after the last hit, or only the turn windows the move brings.[/*]
+[*]Six settings per slot on the right panel. Speed, 0.5x to 4x. Feel: the game's timing or the move's own. Damage: the move's hit numbers or your weapon's. Visual: keep your weapon in hand or show the move's own weapon for the swing; on a punch or a kick it hides yours. Armor: the move's own hyper armor, or the game's hyper armor over the whole move. Steer: the stick turns you through the whole move and cancels the recovery after the last hit, or only the turn windows the move brings. L2, L3, H2 and H3 add Combo step: play the step or skip it.[/*]
 [*]Armor and Steer are on by default. Both bend the game's rules, so the Armor value is marked as a cheat. Set either to Move's own for the game's own behaviour.[/*]
 [*]Presets: save, load and delete your sets. They are plain JSON files you can share.[/*]
 [*]Search and filter the candidate list by typing.[/*]
 [*]A master switch that puts every attack back to the weapon's own animation at once.[/*]
 [*]Day and night from the Settings tab: switch the world without visiting Thestus, and choose whether enemies follow his night strength, always have it, or never do.[/*]
 [*]Combos chain the way the game's do: a press during a swapped move is kept and the next step follows the hit. The Settings tab decides whether that is the first hit or the last one of a long move.[/*]
+[*]Skip a combo step: set L2, L3, H2 or H3 to Skip and the combo goes past it, so a long move on H1 can be your whole heavy chain.[/*]
 [/list]
 
 [center][img]https://raw.githubusercontent.com/ngodn/CustomShellSystem/main/CCS/docs/media/v1.0.0-alpha.2/ccs-slot-armor.png[/img][/center]
@@ -94,9 +95,11 @@ The footer of the page always shows the keys for the device you are using.
 
 In Mortal Shell II a charged light attack exists only with the Acolyte's Stone equipped, and a charged heavy attack only with the Unwieldy Stone. The game sets that rule, not the mod: without the stone a long press does the normal attack, and the CCS page tells you which stone the LC or HC slot is waiting for. If you want the slots without the stones, set [b]Charged attacks[/b] to [b]Always (cheat)[/b] in the Settings tab. The charge still costs Resolve.
 
-[size=4][b]Next attack[/b][/size]
+[size=4][b]Next attack and skipped steps[/b][/size]
 
 Your own combos buffer the next press and fire it right after the hit. Swapped moves with Feel set to Move's own do the same. [b]Next attack[/b] in the Settings tab picks where the buffered press fires: after the move's first hit, like your weapon, or after its last hit, so a long enemy combo plays out before the chain continues.
+
+Each of L2, L3, H2 and H3 also has [b]Combo step[/b]: Play or Skip. A skipped step drops out of the chain, and the press that would start it starts the next step that plays, or the first one again. Skip H2 and H3 and set Next attack to After the whole move, and a long combo on H1 plays out on every press of Heavy. Skipping the third step also skips a finisher Tarstone's attack, which takes its place.
 
 [size=4][b]Day, night and enemy difficulty[/b][/size]
 

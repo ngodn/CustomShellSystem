@@ -539,3 +539,19 @@ Attack instancing evidence: all 15 current Scythe attack defaults report Instanc
 Runtime fact extraction: LoadedMoves now preserves separate selector/attack instancing policies, optional hold flags and direct asset tags, plus dynamic tags from the particular ASC grant. Missing values remain unknown. Containers are bounded to 64 direct tags and 1,024 bytes per name, sorted/deduplicated, and rechecked with candidate/grant identity before publication. No facts assign a slot or eligibility. Native execution and timing of this extension remain pending.
 
 Lifetime foundation: [object identity](object-identity-runtime.md) now requires positive serials, initializes them through a dedicated uncached engine conversion, guards cached UFunctions as well as owners, and keeps Call parameter pointers in an instance-owned fixed array. Probe callbacks use only warm object fields and existing serials, with skipped identities counted. Initial grant capture now runs one grant per tick. The initializer's two parameter sizes were checked through a read-only live description; the revised initializer/cache/GC behavior and coverage of newly created execution instances remain unverified until native deployment.
+
+## Combo step skip (alpha.4, 2026-10-04)
+
+Requested by crimsonmoon93 on Nexus: a long custom H1 kept being cut by H2 when spamming Heavy.
+L2, L3, H2 and H3 get a per-slot `step` tuning ("play" default, "skip"), saved in settings and
+presets; older files read as "play". The selectors (`GA_Player_AttackSelectorBase::TryActivateComboAttack`,
+decoded in `work/combo-skip/`) activate `ComboAttackList[CurrentComboCount]` through the native
+`AbilitySystemComponent::TryActivateAbilityByClass`, then reset the count at the last position or
+increment it; the `_Hold` selectors (normal-first charge) and the normal selectors of hold-first
+weapons (the tap cut) decrement first. A pre-hook on that call, installed only while a step is
+skipped, reads the selector from the hook frame's PreviousFrame (UE4SS builds a fresh frame for a
+blueprint-called native and chains the caller), and for a skipped position writes the next playing
+position's class into the parameter and sets the count to it, so the selector's own increment or
+reset continues from there. The pure rule is `runtime/combo_skip.hpp`, host-tested. Live-checked by
+the user: H1 to H3 with H2 skipped, H1 looping with both skipped, charge-first weapons. A skipped
+third step also skips a finisher Tarstone's attack (ModifyComboList puts it at position 2).
