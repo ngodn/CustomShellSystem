@@ -141,6 +141,27 @@ struct AstralAppearanceSource {
     std::vector<AstralComponentSource> components;
     AssetLoadRoots retained;
 };
+struct AstralVisualTransform {
+    std::array<double,3> location{}, rotation{}, scale{1,1,1};
+};
+// An owned, initially hidden component. The double coordinator binds ghost
+// materials before showing it and owns native visibility/tick restoration.
+class AstralVisualMesh {
+    WeakObject owner_, parent_, parent_mesh_, parent_instance_, component_, mesh_, pose_class_;
+    AssetLoadRoots retained_;
+    bool source_visible_=false;
+public:
+    AstralVisualMesh() = default;
+    AstralVisualMesh(const AstralVisualMesh&) = delete;
+    AstralVisualMesh& operator=(const AstralVisualMesh&) = delete;
+    void prepare(RC::Unreal::UObject* parent,const AstralComponentSource& source,
+                 RC::Unreal::UObject* pose_class,const AstralVisualTransform& relative);
+    RC::Unreal::UObject* component() const { return component_.Get(); }
+    bool intact() const;
+    void show(bool enabled);
+    bool release() noexcept;
+    ~AstralVisualMesh() noexcept { release(); }
+};
 class OverlayControls {
     struct Entry { WeakObject original, mid, bound; bool detached=false; };
     WeakObject component_, mesh_;
@@ -169,6 +190,7 @@ class EngineBridge {
     Json observe_astral_source(Appearance& appearance);
     Json probe_astral_materials(void* engine,const Json& request);
     Json probe_astral_bindings(void* engine,const Json& request);
+    Json probe_astral_visual(void* engine,Appearance& appearance,const Json& request);
 #endif
     std::map<uint64_t,WeakObject> objects_;
     std::map<std::string,WeakObject> defaults_;

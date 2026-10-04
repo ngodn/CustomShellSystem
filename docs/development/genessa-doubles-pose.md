@@ -67,3 +67,19 @@ grips, captured body/physics controls, clone velocity-driven wing rates,
 actual cloth collision, modular parts, pooled cleanup, Windows cook and
 runtime integration. These commandlets use manually ordered components in an
 editor world; they do not measure game FPS or validate ability behavior.
+
+## Runtime visual owner
+
+`native/src/astral_visual_mesh.inl` creates an owned skeletal component with
+deferred registration, hidden rendering and no collision. It attaches before
+registration, selects the shared pose template, applies morphs/hidden sections
+and copies supported per-instance physics controls. It never changes the native
+parent's mesh, animation, visibility or tick policy. Destruction removes only
+the owned component; material bindings must be released before that step.
+
+Both Windows configurations compile. The 17 portable regression tests pass,
+but do not execute reflection against the game. The development-only
+`astral.visual.probe` is prepared for that check once the shared asset is cooked
+and mounted. It is not installed or live-verified. The automatic double
+coordinator, native visibility/tick lease, material adapter selection and
+modular follower handling are still pending.

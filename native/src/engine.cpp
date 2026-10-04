@@ -2068,6 +2068,7 @@ void Appearance::sync_body_geometry(UObject* component) {
 }
 
 #include "astral_source.inl"
+#include "astral_visual_mesh.inl"
 void Appearance::reset_controls() {
     menu_overlay_controls_.release(); overlay_controls_.release();
     show_hidden_sections();

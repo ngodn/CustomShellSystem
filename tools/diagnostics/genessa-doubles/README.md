@@ -67,6 +67,24 @@ and oversized snapshots, and full-capacity replacement.
 
 ## C++ private material owner
 
+`astral.visual.probe` accepts a `parent` skeletal-component handle and
+`pose_class` for the cooked shared `ABP_CopyPose_C`. It captures the currently
+settled Genessa appearance, creates one hidden collision-free visual using
+that source body, verifies registration, morphs, hidden sections and supported
+post-process settings, then destroys it synchronously. It checks the parent's
+mesh, AnimInstance, visibility, tick policy and collision remain unchanged and
+the retained-object count returns to baseline. It never shows the component,
+hides the parent, or records animation frames. It is compiled but not installed
+or live-tested. The shared pose template must first be cooked and available.
+
+`AstralVisualMesh` is the runtime primitive exercised by that probe. The
+coordinator must validate pose compatibility, compute the visual's relative
+transform, bind private ghost MIDs before showing it, and own native visibility
+and tick restoration. Its full `intact` check is for lifecycle boundaries, not
+a requirement to repeat all reflected reads each frame. Modular followers,
+native visibility ownership, summon hooks and the material catalog are not
+connected by this class.
+
 The separate development operation `astral.bindings.probe` accepts `owner`,
 `mesh` and `material` bridge handles from the current session. It creates a
 hidden skeletal component with deferred registration and no collision/tick,
