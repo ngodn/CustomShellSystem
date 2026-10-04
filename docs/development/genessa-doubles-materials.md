@@ -44,6 +44,32 @@ checks file hashes and requires complete groups. Full characters, DX12, body
 and eye adaptation, live ownership and summon performance are outside this
 fixture's scope.
 
+Completed run 6 (`ghost-surface-renders-6`) contains 156 EXRs. All 14 groups
+pass the composition and control checks, including palette edits, authored
+glow response, animated effects, partial fade and zero matching removed
+geometry. Fabric visibility and half-opacity checks also pass. The final
+tint test fails all seven Stray groups and Commander White's Faithful hair.
+The additive lit composition is rejected for production. This test is not a
+native-render equivalence check, and preserved input connections alone were
+insufficient evidence of the required visual result.
+
+The fabric fixture uses the authored garment and its actual vertex masks.
+The engine cube's white vertex colors mask out the cloth pass, so the earlier
+run 2 gave two empty fabric groups. Run 3 stopped on a missing garment asset;
+read-only source symlinks and a SHA-256 receipt now supply its dependencies.
+Run 4 rendered successfully. Its cloth-glow expectation was wrong: the cloth
+pass excludes the glowing metal. Run 6 compares glow changes against a separate
+authored source-glow render, including the legitimate zero cloth response.
+
+Run 5 stalled waiting for GPU completion. Its isolated editor backtrace is
+`surface-render5-backtrace.txt`: the render thread waits in Vulkan submission,
+the game thread waits for a render fence, and the RHI thread is idle. Shader
+compilation had finished. After TERM failed to finish, the editor was killed;
+that run returned 137 and its incomplete captures are not accepted. Run 6
+used the diagnostic-only `CSS_ASTRAL_SERIAL_RHI=1` switch (`-norhithread`) and
+completed with exit zero. One successful run does not establish the cause of
+the stall or a general driver fix. No game or desktop setting was changed.
+
 ## Released asset audit
 
 ### Effective inheritance audit

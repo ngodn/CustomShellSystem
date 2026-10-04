@@ -40,6 +40,12 @@ else
     [[ "$mode" != surface-render ]] || script=render-ghost-surfaces.py
     command+=(-RenderOffscreen -vulkan -AllowCommandletRendering -corelimit=8
         -run=pythonscript "-script=$tools/$script")
+    if [[ ${CSS_ASTRAL_SERIAL_RHI:-0} == 1 ]]; then
+        command+=(-norhithread)
+    elif [[ ${CSS_ASTRAL_SERIAL_RHI:-0} != 0 ]]; then
+        echo 'CSS_ASTRAL_SERIAL_RHI must be 0 or 1.' >&2
+        exit 2
+    fi
 fi
 # Source symlinks remain read-only even though the experiment is writable.
 bwrap --unshare-net --ro-bind / / --dev-bind /dev /dev --proc /proc \

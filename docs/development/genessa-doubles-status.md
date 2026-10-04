@@ -4,15 +4,15 @@ Session 3, October 4, 2026. Branch `feature/genessa-doubles`.
 
 ## Current state
 
-An isolated lit-surface experiment now preserves authored surface connections
-and adds the native ghost emission, with source coverage times native alpha.
-Seven parents were created successfully with original files unchanged. Final
-fixtures for seven families were prepared under NullRHI. `surface-render2` is
-currently compiling those fixtures; there is no completed capture or acceptance
-result yet. Tool session `5900` owns the active run (editor PID `1294954` at the
-last check). Revalidate that handle before waiting or taking another action.
-Do not restart merely because compilation has no new log lines. Details are in
-the lit-surface section of [material support](genessa-doubles-materials.md).
+The lit-surface experiment completed but is unsuitable for shipping. Run 6
+captured 156 EXRs across seven material families and both forms. All 14 groups
+pass composition, coverage, controls and fade checks. Native tint fails for
+all seven Stray groups and Commander White's Faithful hair: source lighting
+overpowers the ghost emission. Original source hashes are unchanged. The
+editor exited zero and its tool session is terminal. The next experiment will
+filter source detail through the native ghost color rather than add a fully
+lit source surface. This needs rendered validation and does not establish
+support for body/eye shaders. See [material support](genessa-doubles-materials.md).
 
 Release packaging: two separate ZIPs, CSS runtime and shared assets. The user
 confirmed this on October 4. See the goal for install paths and compatibility
