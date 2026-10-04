@@ -58,6 +58,14 @@ bool valid_id(const std::string& s) {
                (c >= '0' && c <= '9') || c == '.' || c == '_' || c == '-';
     }) && s != "." && s != "..";
 }
+void save_profile_snapshot(State& state,const std::string& name) {
+    if(name.empty()) throw std::runtime_error("Enter a profile name, for example profile.1.");
+    if(name.size()>96) throw std::runtime_error("Profile names must be 96 characters or fewer.");
+    if(!valid_id(name)) throw std::runtime_error("Use A-Z, 0-9, periods, underscores or hyphens; no spaces.");
+    if(state.presets.size()>=64 && !state.presets.contains(name))
+        throw std::runtime_error("All 64 profiles are used. Replace or delete a saved profile.");
+    state.presets[name]=Preset{state.selections,state.walk_animation,state.animation_choices,state.misc_rules};
+}
 bool valid_asset(const std::string& s) {
     if (!s.starts_with("/Game/") || s.size() > 1024 || s.find("..") != s.npos) return false;
     auto dot = s.rfind('.');

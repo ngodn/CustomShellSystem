@@ -205,6 +205,7 @@ struct State {
     Json json() const;
 };
 State load_state(const fs::path&, bool* recovered = nullptr);
+void save_profile_snapshot(State&,const std::string& name);
 std::string appearance_selection_key(const State&,const Catalog&,const std::string& shell);
 bool set_animation_choice(State&,const Catalog&,const std::string& shell,
     const std::string& outfit,const std::string& variant,AnimationSlot,const std::string& choice);

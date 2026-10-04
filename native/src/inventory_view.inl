@@ -1208,7 +1208,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             // Only rewrite the field when what it should suggest changed, never under typing.
             if(input.value!=suggested && !has_focus(input.extra.Get())) { text_value(input.extra.Get(),suggested); input.value=suggested; }
         }
-        note("Letters, numbers, periods, underscores or hyphens");
+        note("Up to 96 characters: A-Z, 0-9, periods, underscores or hyphens. No spaces. Example: Eve_BlackPearl");
         if(!row_) action_button("accept","Save profile",{{"action","ui_save_profile"}},3);
         else {
             action_button("accept","Load profile",rows_[row_].accept,3);

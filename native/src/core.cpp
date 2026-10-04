@@ -407,8 +407,8 @@ struct Core {
         }
         else if (action == "save_look" || action == "save_profile") {
             auto name = command.at("name").get<std::string>();
-            if (!valid_id(name) || (state.presets.size() >= 64 && !state.presets.contains(name))) throw std::runtime_error("Invalid profile slot");
-            state.presets[name] = Preset{state.selections, state.walk_animation, state.animation_choices, state.misc_rules}; dirty = true; ui_refresh = true; report("Current character profile saved to " + name);
+            save_profile_snapshot(state,name);
+            dirty = true; ui_refresh = true; report("Current character profile saved to " + name);
         }
         else if (action == "load_look" || action == "load_profile") {
             auto name = command.at("name").get<std::string>();

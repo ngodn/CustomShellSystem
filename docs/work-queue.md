@@ -1,5 +1,14 @@
 # Current work queue
 
+## October 4: profile save validation report
+
+Markuzkiller reports an invalid-slot error with only one visible row, probably
+on beta.7 or beta.8. Both reject spaces in names and share a generic validation
+error. Added specific save errors and a clearer input hint; host save/round-trip
+and capacity regressions pass. A failure with a valid name is not reproduced.
+Await the reporter's exact name or valid-name retry before attributing this to
+a storage bug. See [profile save findings](development/profile-save-report.md).
+
 ## October 4: Heart of Vatra belt accessory
 
 The reporter's NG+ quest heart is missed by MISC because its actor attaches
