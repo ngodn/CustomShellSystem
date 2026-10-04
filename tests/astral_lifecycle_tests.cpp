@@ -22,6 +22,15 @@ int main() {
         check(!astral_shell(tag),"Appearance or unrelated shell granted doubles eligibility");
     check(astral_kind("AstralCloneSecondary")==AstralKind::stray_secondary,"Secondary not supported");
     check(astral_kind("AstralCopyOther")==AstralKind::unknown,"Unknown summon accepted");
+    for(bool faithful_css:{false,true}) for(bool stray_css:{false,true}) {
+        check(astral_kind_enabled(AstralKind::faithful,faithful_css,stray_css)==faithful_css,
+            "Faithful appearance choice follows the Stray setting");
+        for(auto kind:{AstralKind::stray_primary,AstralKind::stray_secondary})
+            check(astral_kind_enabled(kind,faithful_css,stray_css)==stray_css,
+                "Stray appearance choice did not cover both summon kinds independently");
+        check(!astral_kind_enabled(AstralKind::unknown,faithful_css,stray_css),
+            "Appearance settings enabled an unknown summon kind");
+    }
     auto changes=sample(faithful);
     check(changes.accepted && events(changes,AstralEventKind::discovered)==1 &&
         events(changes,AstralEventKind::activated)==1,"First enabled summon did not activate");

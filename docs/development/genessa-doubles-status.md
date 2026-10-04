@@ -120,9 +120,32 @@ behavior above. Group release restores material bindings before destroying
 visuals, then restores the native render lease. The hidden visual probe now
 destroys a diagnostic pose parent before restoring its lease, and the binding
 probe tests destruction while bindings are still owned. These additions are
-building; their engine-dependent regressions and another Stray form transition
+compiled in both Windows builds; their engine-dependent regressions and another Stray form transition
 must pass live before claiming the lifecycle repair. The prior trial remains
 installed and enabled, with the user-visible result accepted but this defect open.
+
+The requested MISC selectors are built: Faithful Doubles and Stray Doubles each
+offer Default or Use CSS, only when the gameplay shell is Genessa. Both start
+on Use CSS, preserving the accepted trial behavior. Choices persist separately
+in state and new profiles; profiles saved before this feature leave them alone.
+Default releases that kind's custom visuals and leaves the game's doubles in
+place. The Stray option covers both primary and secondary doubles. Mouse,
+keyboard and controller use the existing MISC choice controls. No new style,
+layout or input bindings were introduced. Live UI checks remain pending.
+All 18 host suites and both Windows builds pass. Tests cover the four independent
+choice combinations, unknown summon kinds, saved-state/profile round trips,
+old profiles and malformed option values. Development candidate SHA-256:
+`8ed06a16005d4ca6268d9eb2e8af49969d427154e445486def31d5eaa6a7e0aa`.
+Shipping candidate: `3bb94c1173b7f84c2f17f94f1ecb69e51177c196edd996655cefe0dc7732a317`.
+These candidates are not installed. The running game still uses runtime-trial2.
+
+More Beaute's two installed meshes were independently decoded into
+`work/genessa-doubles/morebeaute-audit1/meshes.json`. Both assign clothdriver to
+material slots 4 and 6, whose render sections are statically disabled. The
+reflected IsMaterialSectionShown query used by source capture only checks the
+component's hidden-material flags, not RenderSection.bDisabled. A safe generic
+way to account for disabled sections is still needed. Do not add a material-name
+exception or claim this outfit is supported yet.
 
 Destruction semantics were checked against the local UE 5.6.1
 `ActorComponent.cpp` (DestroyComponent and K2_DestroyComponent) and
@@ -134,9 +157,10 @@ extension interface separately uses `CSSX_ABI 2`. The installed CSS log already
 records host ABI 2 background writes. This deployment did not replace the loader
 or downgrade any of these interfaces.
 
-Next: ask for actual gameplay shell Genessa equipped in the world, with Unholy
-Genessa selected. Verify the loaded core, then run source/adapter and hidden
-visual checks before arming the trial. Verify Faithful and both Stray doubles,
+Next: install the prepared core after the game closes, verify the loaded core,
+then run the extended binding and hidden visual checks before arming the trial.
+Check both MISC selectors, persistence and native/CSS restoration independently.
+Verify Faithful and both Stray doubles,
 skin/body controls, hair/fabric/wing rendering, attack grips, pooling and cleanup.
 Profile active summons, then exercise existing aiming/locomotion/gate/profile
 checks. Both releases remain unmodified. EveTest remains queued.

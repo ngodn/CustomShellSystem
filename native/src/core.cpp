@@ -423,6 +423,7 @@ struct Core {
             if(state.walk_animation!=preset.walk_animation) { state.walk_animation=preset.walk_animation; dirty=true; }
             if(state.animation_choices!=preset.animation_choices) { state.animation_choices=preset.animation_choices; dirty=true; }
             if(!preset.misc_rules.empty() && state.misc_rules!=preset.misc_rules) { state.misc_rules=preset.misc_rules; appearance.set_misc_rules(state.misc_rules); dirty=true; }
+            if(preset.doubles && state.doubles!=*preset.doubles) { state.doubles=*preset.doubles; dirty=true; }
             ui_refresh = true; report("Profile loaded: " + name);
         }
         else if(action=="delete_look" || action=="delete_profile") {
@@ -484,6 +485,16 @@ struct Core {
         // MISC visibility. A category's mode cycles with left/right or is set outright from the
         // mode list. It mutates state.misc_rules, hands the new rules to the appearance so the
         // world and menu passes pick them up, and persists.
+        else if(action=="doubles_mode") {
+            if(!astral_shell(appearance.shell)) throw std::runtime_error("Doubles require Genessa as the gameplay shell");
+            const auto kind=command.at("kind").get<std::string>();
+            const auto mode=command.at("mode").get<std::string>();
+            if((kind!="faithful" && kind!="stray") || (mode!="default" && mode!="css"))
+                throw std::runtime_error("Invalid doubles appearance choice");
+            auto& choice=kind=="faithful"?state.doubles.faithful_css:state.doubles.stray_css;
+            if(choice!=(mode=="css")) { choice=mode=="css";dirty=true; }
+            ui_refresh=true;
+        }
         else if (action == "misc_mode" || action == "misc_reset") {
             static const char* modes[]={"default","hidden","in_use","shown"};   // shown: item rows only
             auto valid_category=[](const std::string& c){ if(css::misc_item_rule_key(c)) return true; for(const auto* k:css::misc_categories()) if(c==k) return true; return false; };
@@ -715,7 +726,7 @@ struct Core {
 #ifdef CSS_INVENTORY_DEV
             enabled=enabled && astral_trial_enabled;
 #endif
-            astral.update(engine,appearance,enabled,now);
+            astral.update(engine,appearance,enabled,state.doubles,now);
         });
     }
     void maintain(uint64_t now) {
@@ -1067,6 +1078,7 @@ struct Core {
         status["maintenance_error"]=maintenance_error;
         status["overlay_error"]=overlay_error;
         status["astral"]=astral.diagnostics();
+        status["astral"]["modes"]=state.doubles.json();
 #ifdef CSS_INVENTORY_DEV
         status["astral"]["trial_enabled"]=astral_trial_enabled;
 #endif

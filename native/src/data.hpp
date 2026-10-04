@@ -174,12 +174,19 @@ inline bool misc_item_rule_key(const std::string& key) {
     for(size_t i=5;i<key.size();++i) { const char c=key[i]; if(!((c>='a'&&c<='z')||(c>='0'&&c<='9')||c=='_')) return false; }
     return true;
 }
+struct DoublesOptions {
+    bool faithful_css=true, stray_css=true;
+    bool operator==(const DoublesOptions&) const = default;
+    Json json() const;
+    static DoublesOptions parse(const Json&);
+};
 // 0.4: a template keeps the animation settings with the outfit selections.
 struct Preset {
     std::map<std::string, Selection> selections;
     std::string walk_animation = "normal";
     AnimationChoices animation_choices;
     std::map<std::string, MiscRule> misc_rules;
+    std::optional<DoublesOptions> doubles;
 };
 bool valid_walk_animation(const std::string&);
 // 1.0.0-beta: Profile is the full character snapshot across all systems
@@ -198,6 +205,7 @@ struct State {
     std::map<std::string, Customization> remembered_custom;
     std::set<std::string> favorites;
     std::map<std::string, MiscRule> misc_rules;   // global MISC visibility, applied to any shell
+    DoublesOptions doubles;
     std::map<std::string, Preset> presets;
     std::map<std::string, Profile>& profiles() { return presets; }
     const std::map<std::string, Profile>& profiles() const { return presets; }

@@ -12,6 +12,10 @@ struct AstralIdentity {
     bool operator==(const AstralIdentity&) const = default;
 };
 enum class AstralKind { unknown, faithful, stray_primary, stray_secondary };
+inline bool astral_kind_enabled(AstralKind kind,bool faithful,bool stray) {
+    if(kind==AstralKind::faithful) return faithful;
+    return (kind==AstralKind::stray_primary || kind==AstralKind::stray_secondary) && stray;
+}
 inline AstralKind astral_kind(std::string_view id) {
     if(id=="AstralCopy") return AstralKind::faithful;
     if(id=="AstralClonePrimary") return AstralKind::stray_primary;

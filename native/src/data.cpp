@@ -64,7 +64,7 @@ void save_profile_snapshot(State& state,const std::string& name) {
     if(!valid_id(name)) throw std::runtime_error("Use A-Z, 0-9, periods, underscores or hyphens; no spaces.");
     if(state.presets.size()>=64 && !state.presets.contains(name))
         throw std::runtime_error("All 64 profiles are used. Replace or delete a saved profile.");
-    state.presets[name]=Preset{state.selections,state.walk_animation,state.animation_choices,state.misc_rules};
+    state.presets[name]=Preset{state.selections,state.walk_animation,state.animation_choices,state.misc_rules,state.doubles};
 }
 bool valid_asset(const std::string& s) {
     if (!s.starts_with("/Game/") || s.size() > 1024 || s.find("..") != s.npos) return false;
@@ -550,6 +550,16 @@ static Json misc_rules_json(const std::map<std::string,MiscRule>& rules) {
     for(const auto& [cat,rule]:rules) out[cat]=rule.json();
     return out;
 }
+Json DoublesOptions::json() const {
+    return {{"faithful",faithful_css?"css":"default"},{"stray",stray_css?"css":"default"}};
+}
+DoublesOptions DoublesOptions::parse(const Json& j) {
+    DoublesOptions result;
+    if(!j.is_object()) return result;
+    if(j.contains("faithful")) result.faithful_css=j.at("faithful")=="css";
+    if(j.contains("stray")) result.stray_css=j.at("stray")=="css";
+    return result;
+}
 static Preset parse_preset(const Json& j) {
     Preset result;
     // 0.4 templates are {"selections":{...},"walk_animation":...}; older ones are the bare selection map.
@@ -563,6 +573,7 @@ static Preset parse_preset(const Json& j) {
         // "run_animation" and then a jog/sprint pair, and neither had its stride
         // matched. Whatever a template holds, it loads as normal.
         result.misc_rules=parse_misc_rules(j.value("misc_rules",Json::object()));
+        if(j.contains("doubles")) result.doubles=DoublesOptions::parse(j.at("doubles"));
     } else result.selections=parse_selections(j);
     return result;
 }
@@ -621,6 +632,7 @@ State State::parse(const Json& j) {
     result.favorites = j.value("favorites", std::set<std::string>{});
     for (const auto& id : result.favorites) if (!valid_id(id)) throw std::runtime_error("Invalid favorite");
     result.misc_rules = parse_misc_rules(j.value("misc_rules", Json::object()));
+    result.doubles = DoublesOptions::parse(j.value("doubles",Json::object()));
     const auto presets_key = j.contains("profiles") ? "profiles" : "presets";
     if (j.contains(presets_key)) for (const auto& [key, values] : j.at(presets_key).items()) {
         if (!valid_id(key) || result.presets.size() >= 64) throw std::runtime_error("Invalid profile");
@@ -637,7 +649,10 @@ Json State::json() const {
     Json presets_json = Json::object();
     Json remembered = Json::object();
     for(const auto& [id,custom]:remembered_custom) remembered[id]=custom.json();
-    for (const auto& [name, preset] : presets) presets_json[name] = {{"selections", selections_json(preset.selections)}, {"walk_animation", preset.walk_animation}, {"animation_choices",preset.animation_choices.json()}, {"misc_rules", misc_rules_json(preset.misc_rules)}};
+    for (const auto& [name, preset] : presets) {
+        presets_json[name] = {{"selections", selections_json(preset.selections)}, {"walk_animation", preset.walk_animation}, {"animation_choices",preset.animation_choices.json()}, {"misc_rules", misc_rules_json(preset.misc_rules)}};
+        if(preset.doubles) presets_json[name]["doubles"]=preset.doubles->json();
+    }
     return {{"schema", 1}, {"enabled", enabled}, {"auto_apply", auto_apply},
             {"invert_orbit_x", invert_orbit_x}, {"invert_orbit_y", invert_orbit_y}, {"walk_animation", walk_animation},
             {"harbinger_mirror", harbinger_mirror}, {"last_living_shell", last_living_shell},
@@ -645,6 +660,6 @@ Json State::json() const {
             {"darkform_mirror_cleaned", darkform_mirror_cleaned},
             {"animation_choices",animation_choices.json()},
             {"selections", selections_json(selections)}, {"favorites", favorites}, {"presets", presets_json}, {"remembered_custom",remembered},
-            {"misc_rules", misc_rules_json(misc_rules)}};
+            {"misc_rules", misc_rules_json(misc_rules)}, {"doubles",doubles.json()}};
 }
 }

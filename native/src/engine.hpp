@@ -205,7 +205,7 @@ class AstralDoubles {
 public:
     AstralDoubles();
     ~AstralDoubles();
-    void update(void* engine,Appearance& appearance,bool enabled,uint64_t now);
+    void update(void* engine,Appearance& appearance,bool enabled,const DoublesOptions& options,uint64_t now);
     bool clear() noexcept;
     Json diagnostics() const;
 };

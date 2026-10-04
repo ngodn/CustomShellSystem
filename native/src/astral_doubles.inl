@@ -143,14 +143,18 @@ struct AstralDoubles::Impl {
             astral_retain(retained,value);pose=value;
         }
     }
-    void update(void* engine,Appearance& appearance,bool enabled,uint64_t now) {
-        if(!enabled || !astral_shell(appearance.shell)) {
+    void update(void* engine,Appearance& appearance,bool enabled,const DoublesOptions& options,uint64_t now) {
+        if(!enabled || !astral_shell(appearance.shell) || (!options.faithful_css && !options.stray_css)) {
             if(!clear()) throw std::runtime_error("Astral cleanup is incomplete");
             return;
         }
         // Fade updates touch only active private MIDs; discovery is bounded to
         // the player's own spawner and runs at 20 Hz.
         for(auto it=groups.begin();it!=groups.end();) {
+            if(!astral_kind_enabled((*it)->observed.kind,options.faithful_css,options.stray_css)) {
+                if(!(*it)->release()) throw std::runtime_error("Astral default-mode cleanup is incomplete");
+                it=groups.erase(it);++removed;continue;
+            }
             auto result=AstralVisualGroup::Sync::failed;
             try { result=(*it)->sync(now); }
             catch(const std::exception& problem) { error=problem.what(); }
@@ -197,7 +201,7 @@ struct AstralDoubles::Impl {
         }
         if(!source || !pose.Get()) return;
         for(const auto& entry:entries) {
-            if(!entry.observed.active() ||
+            if(!entry.observed.active() || !astral_kind_enabled(entry.observed.kind,options.faithful_css,options.stray_css) ||
                std::any_of(groups.begin(),groups.end(),[&](const auto& group){return group->observed.actor==entry.observed.actor;}) ||
                std::any_of(failed.begin(),failed.end(),[&](const auto& value){return value.actor==entry.observed.actor && value.activation==entry.activation;})) continue;
             // Source visibility and physics flags may change without a CSS
@@ -224,8 +228,8 @@ struct AstralDoubles::Impl {
 };
 AstralDoubles::AstralDoubles():impl_(std::make_unique<Impl>()) {}
 AstralDoubles::~AstralDoubles() { clear(); }
-void AstralDoubles::update(void* engine,Appearance& appearance,bool enabled,uint64_t now) {
-    try { impl_->update(engine,appearance,enabled,now); }
+void AstralDoubles::update(void* engine,Appearance& appearance,bool enabled,const DoublesOptions& options,uint64_t now) {
+    try { impl_->update(engine,appearance,enabled,options,now); }
     catch(const std::exception& problem) {
         impl_->error=problem.what();impl_->release_groups();impl_->next_poll=now+1000;
     }

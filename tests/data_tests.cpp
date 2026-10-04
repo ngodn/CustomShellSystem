@@ -71,6 +71,24 @@ int main() {
             auto shown=with_item.json(); shown["misc_rules"]["item:wp_alienheart"]={{"mode","shown"}}; shown["misc_rules"]["seal"]={{"mode","shown"}};
             auto kept=State::parse(shown);
             expect(kept.misc_rules.at("item:wp_alienheart").mode=="shown" && kept.misc_rules.at("seal").mode=="default","Always Shown must be an item-only mode");
+            for(bool faithful:{false,true}) for(bool stray:{false,true}) {
+                State choices;
+                choices.doubles={faithful,stray};
+                save_profile_snapshot(choices,"doubles");
+                auto saved=State::parse(choices.json());
+                expect(saved.doubles==choices.doubles,"Independent doubles choices were not saved");
+                expect(saved.presets.at("doubles").doubles==choices.doubles,"Profile lost doubles choices");
+                auto legacy=choices.json();
+                legacy.erase("doubles");
+                legacy["presets"]["doubles"].erase("doubles");
+                auto migrated=State::parse(legacy);
+                expect(migrated.doubles==DoublesOptions{},"Old state lost the default CSS doubles behavior");
+                expect(!migrated.presets.at("doubles").doubles,"Old profile invented doubles preferences");
+                expect(!migrated.json()["presets"]["doubles"].contains("doubles"),
+                    "Saving an old profile invented doubles preferences");
+            }
+            expect(DoublesOptions::parse(Json{{"faithful","invalid"},{"stray",17}})==DoublesOptions{false,false},
+                "Invalid doubles modes must fall back to native appearance");
             GroundOffset resumed;
             expect(resumed.set(-99,-3,-96)==-99,"Resumed offset stacked on itself");
             expect(resumed.restore(-99)==-96,"Resumed offset did not restore the authored height");

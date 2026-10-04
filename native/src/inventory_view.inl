@@ -1113,8 +1113,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             note(current.id=="original"?"Installed walk mod: "+name:"This choice takes priority over "+name+".");
         }
     } else if(section_==3) {
-        // MISC visibility: one row per item category, each cycling a visibility mode. Nothing
-        // here touches the body mesh; the runtime hides only the item actors (misc_visibility.inl).
+        // Item visibility, gear position and Genessa's double appearance choices.
         struct MiscDef { const char* key,*title,*detail; };
         static const MiscDef defs[]={
             {"seal","Seals","Your seal, worn on the waist and forearm. Hide it for a cleaner look, or only while you are actually using it."},
@@ -1133,7 +1132,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         // own rule that beats the Accessories rule. Listed live from what is on the body now.
         const auto shell_items=appearance.misc_shell_items();
         const int position_row=4+int(shell_items.size());
-        row_=std::clamp(row_,0,position_row);
+        const bool has_doubles=astral_shell(appearance.shell);
+        row_=std::clamp(row_,0,position_row+(has_doubles?2:0));
         auto mode_word=[&](const MiscRule& rule) {
             if(rule.mode=="hidden") row_look.value="Hidden";
             else if(rule.mode=="in_use") row_look.value="When in use";
@@ -1160,6 +1160,16 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const char* kda_label=state.keep_default_attachments?"Default (game)":"Auto (fit the look)";
         if(state.keep_default_attachments) row_look.value="Game position";   // Auto is the default
         row(position_row,"Gear position",kda,kda,kda);
+        if(has_doubles) {
+            section("Doubles");
+            for(int i=0;i<2;++i) {
+                const bool use_css=i==0?state.doubles.faithful_css:state.doubles.stray_css;
+                const Json toggle{{"action","doubles_mode"},{"kind",i==0?"faithful":"stray"},
+                    {"mode",use_css?"default":"css"}};
+                row_look.value=use_css?"Use CSS":"Default";
+                row(position_row+1+i,i==0?"Faithful Doubles":"Stray Doubles",toggle,toggle,toggle);
+            }
+        }
         if(row_<position_row) {
             const bool category_row=row_<4;
             const std::string key=category_row?defs[row_].key:"item:"+shell_items[size_t(row_-4)].key;
@@ -1175,7 +1185,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             if(!category_row) modes.push_back({"shown","Always Shown",{{"action","misc_mode"},{"category",key},{"mode","shown"}}});
             choice_rows(modes,current.mode);
             direction_hint(true,"Choose visibility");
-        } else {
+        } else if(row_==position_row) {
             detail("Gear position",kda_label,
                    "Auto hangs your stowed weapons, sidearm and seal where they fit the look you wear, "
                    "the way the game fits them to that shell's own body, and keeps them out of a larger "
@@ -1185,6 +1195,17 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 {"default","Default (game)",{{"action","keep_default_attachments"},{"value",true}}},
             },state.keep_default_attachments?"default":"auto");
             direction_hint(true,"Choose position");
+        } else {
+            const bool faithful=row_==position_row+1;
+            const char* kind=faithful?"faithful":"stray";
+            const bool use_css=faithful?state.doubles.faithful_css:state.doubles.stray_css;
+            detail(faithful?"Faithful Doubles":"Stray Doubles",use_css?"Use CSS":"Default",
+                "Default keeps the game's original Genessa double. Use CSS matches your current appearance and customization, with the game's ghost effect.");
+            choice_rows({
+                {"default","Default",{{"action","doubles_mode"},{"kind",kind},{"mode","default"}}},
+                {"css","Use CSS",{{"action","doubles_mode"},{"kind",kind},{"mode","css"}}},
+            },use_css?"css":"default");
+            direction_hint(true,"Choose doubles appearance");
         }
     } else {
         std::vector<std::string> names; for(const auto& [name,_]:state.presets) names.push_back(name);
