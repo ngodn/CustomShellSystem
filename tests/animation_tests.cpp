@@ -63,6 +63,53 @@ int main() {
         const auto file=dir/"eve.css.json";
         auto load=[&](const Json& value) { atomic_json(file,{{"schema",1},{"outfits",{value}}},false);return Catalog::load(dir); };
         const auto catalog=load(outfit);
+        {
+            auto mirrored_catalog=catalog;
+            mirrored_catalog.outfits[0].same_skeleton=true;
+            State revived;
+            const std::string living="CharacterId.Player.Shell.Genessa";
+            const std::string harbinger="CharacterId.Player.Darkform.Genessa";
+            revived.last_living_shell=living;
+            revived.selections[living]={"eve","pearl",{}};
+            set_animation_choice(revived,mirrored_catalog,living,"eve","pearl",AnimationSlot::Idle,"relaxed");
+            for(auto slot:{AnimationSlot::Walk,AnimationSlot::Jog,AnimationSlot::Sprint})
+                set_animation_choice(revived,mirrored_catalog,living,"eve","pearl",slot,"eve");
+            const auto saved=revived.json();
+            for(const auto& tag:{living,harbinger,living,harbinger}) {
+                const auto key=appearance_selection_key(revived,mirrored_catalog,tag);
+                expect(key==living,"Revival lost the mirrored animation selection");
+                const auto& picked=revived.selections.at(key);
+                for(auto slot:{AnimationSlot::Idle,AnimationSlot::Walk,AnimationSlot::Jog,AnimationSlot::Sprint}) {
+                    const auto choice=revived.animation_choices.get(picked.outfit,picked.variant,slot);
+                    expect(!resolve_animation(mirrored_catalog.animation_options(picked.outfit,picked.variant,slot),slot,choice).asset.empty(),
+                           "Revival lost an idle or movement clip");
+                }
+            }
+            expect(revived.json()==saved && !revived.selections.contains(harbinger),"Mirroring polluted the Harbinger save slot");
+            expect(set_animation_choice(revived,mirrored_catalog,harbinger,"eve","pearl",AnimationSlot::Idle,"original"),
+                   "Could not change the mirrored idle while severed");
+            expect(revived.animation_choices.get("eve","pearl",AnimationSlot::Idle)=="original" &&
+                   revived.animation_choices.get("eve","pearl",AnimationSlot::Sprint)=="eve",
+                   "Mirrored Default changed another animation slot");
+            set_animation_choice(revived,mirrored_catalog,harbinger,"eve","pearl",AnimationSlot::Walk,feminine_animation_id);
+            expect(use_feminine_animation(revived,appearance_selection_key(revived,mirrored_catalog,harbinger),AnimationSlot::Walk),
+                   "Built-in feminine movement ignored the mirrored choice");
+            revived.selections[harbinger]={"eve","other",{}};
+            expect(appearance_selection_key(revived,mirrored_catalog,harbinger)==living,"Own saved look overrode enabled mirroring");
+            revived.harbinger_mirror=false;
+            expect(appearance_selection_key(revived,mirrored_catalog,harbinger)==harbinger,"Disabled mirroring borrowed the living selection");
+            expect(revived.selections.at(appearance_selection_key(revived,mirrored_catalog,harbinger)).variant=="other",
+                   "Harbinger own variant was overwritten");
+            revived.harbinger_mirror=true;
+            revived.last_living_shell.clear();
+            expect(appearance_selection_key(revived,mirrored_catalog,"CharacterId.Player.Darkform.CorruptedGenessa")==living,
+                   "Reload while severed lost the inferred shell");
+            auto restarted=State::parse(saved);
+            expect(appearance_selection_key(restarted,mirrored_catalog,harbinger)==living,"Saved mirror source was lost after restart");
+            expect(appearance_selection_key(revived,catalog,harbinger)==harbinger,"Incompatible outfit was mirrored");
+            revived.selections[living].outfit="uninstalled";
+            expect(appearance_selection_key(revived,mirrored_catalog,harbinger)==harbinger,"Missing outfit was mirrored");
+        }
         expect(catalog.animation_options("eve","pearl",AnimationSlot::Idle).size()==3,"Outfit animations not inherited");
         expect(catalog.animation_options("eve","other",AnimationSlot::Idle).empty(),"Empty variant slot did not disable inheritance");
         expect(catalog.animation_options("eve","other",AnimationSlot::Walk)[0].id=="eve","Unmentioned variant slot did not inherit");

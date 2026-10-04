@@ -1,5 +1,14 @@
 # Current work queue
 
+## October 4: selected animations after revival
+
+The author reports losing Eve Default Idle after death/Harbinger revival, and
+asks to cover walk, jog and sprint too. A host regression confirmed that the
+outfit was mirrored from the living shell while animation lookup used the
+Harbinger's independent slot. Both now share the same resolver. Production build
+and 5/5 relevant host suites pass; the combined candidate is installed for live
+review. See [revival animation findings](development/harbinger-animation-recovery.md).
+
 ## October 4: sidearm aim after forced Harbinger traversal
 
 Follow-up to the beta.9 appearance-swap fix: the reporter says short/long jump

@@ -431,7 +431,7 @@ bool Catalog::compatible(const std::string& outfit, const std::string& shell) co
 }
 bool set_animation_choice(State& state,const Catalog& catalog,const std::string& shell,
     const std::string& outfit,const std::string& variant,AnimationSlot slot,const std::string& choice) {
-    const auto selected=state.selections.find(shell);
+    const auto selected=state.selections.find(appearance_selection_key(state,catalog,shell));
     if(selected==state.selections.end() || selected->second.outfit!=outfit || selected->second.variant!=variant ||
         !catalog.find(outfit,variant) || !catalog.compatible(outfit,shell))
         throw std::runtime_error("Wear this outfit variant before changing its animations");
@@ -450,6 +450,23 @@ bool set_animation_choice(State& state,const Catalog& catalog,const std::string&
     state.animation_choices=std::move(next);
     return true;
 }
+std::string appearance_selection_key(const State& state,const Catalog& catalog,const std::string& shell) {
+    constexpr std::string_view darkform="CharacterId.Player.Darkform.";
+    if(!state.harbinger_mirror || !shell.starts_with(darkform)) return shell;
+    const auto mirrors=[&](const std::string& key) {
+        const auto it=state.selections.find(key);
+        return it!=state.selections.end() && catalog.compatible(it->second.outfit,shell);
+    };
+    if(!state.last_living_shell.empty() && mirrors(state.last_living_shell)) return state.last_living_shell;
+    // A save loaded while severed may have no observed living shell yet.
+    const auto name=shell.substr(darkform.size());
+    for(const auto& candidate:{name,name.starts_with("Corrupted")?name.substr(9):std::string{}}) {
+        if(candidate.empty()) continue;
+        const auto inferred="CharacterId.Player.Shell."+candidate;
+        if(mirrors(inferred)) return inferred;
+    }
+    return shell;
+}
 bool use_feminine_animation(const State& state,const std::string& shell,AnimationSlot slot) {
     if(slot!=AnimationSlot::Idle && slot!=AnimationSlot::Walk) return false;
     const auto selected=state.selections.find(shell);
@@ -462,7 +479,7 @@ bool use_feminine_animation(const State& state,const std::string& shell,Animatio
 }
 bool set_legacy_walk_choice(State& state,const Catalog& catalog,const std::string& shell,const std::string& value) {
     if(!valid_walk_animation(value)) throw std::runtime_error("Unknown animation choice");
-    const auto selected=state.selections.find(shell);
+    const auto selected=state.selections.find(appearance_selection_key(state,catalog,shell));
     if(selected==state.selections.end()) {
         const bool changed=state.walk_animation!=value;
         state.walk_animation=value;

@@ -207,7 +207,8 @@ struct Core {
             appearance.walk.walk_mod_active(root.parent_path());
             std::array<std::string,3> movement;
             ResolvedAnimation custom_idle;
-            const auto selected=state.selections.find(appearance.shell);
+            const auto selection_key=appearance_selection_key(state,catalog,appearance.shell);
+            const auto selected=state.selections.find(selection_key);
             if(state.enabled && appearance.active() && !apply_pending && !restore_pending && selected!=state.selections.end()) {
                 const auto& selection=selected->second;
                 if(applied_id==selection.outfit+"/"+selection.variant) {
@@ -220,8 +221,8 @@ struct Core {
                         state.animation_choices.get(selection.outfit,selection.variant,AnimationSlot::Idle));
                 }
             }
-            appearance.sync_walk(use_feminine_animation(state,appearance.shell,AnimationSlot::Idle),
-                                 use_feminine_animation(state,appearance.shell,AnimationSlot::Walk),movement,
+            appearance.sync_walk(use_feminine_animation(state,selection_key,AnimationSlot::Idle),
+                                 use_feminine_animation(state,selection_key,AnimationSlot::Walk),movement,
                                  custom_idle.asset,custom_idle.hide_weapons);
             walk_error.clear();
         }
@@ -843,24 +844,7 @@ struct Core {
             }
             if(last_living_shell.empty()) last_living_shell=state.last_living_shell;
             auto outfit_key=[&](const std::string& tag)->std::string {
-                if(state.harbinger_mirror && tag.starts_with(DARKFORM_PREFIX)) {
-                    auto mirrors=[&](const std::string& key) {
-                        auto it=state.selections.find(key);
-                        return it!=state.selections.end() && catalog.compatible(it->second.outfit,tag);
-                    };
-                    if(!last_living_shell.empty() && mirrors(last_living_shell)) return last_living_shell;
-                    // No shell seen yet: the Darkform's own name is usually the shell's, sometimes
-                    // with "Corrupted" in front (Darkform.CorruptedGenessa is Shell.Genessa).
-                    if(tag.size() > std::string_view(DARKFORM_PREFIX).size()) {
-                        std::string name = tag.substr(std::string_view(DARKFORM_PREFIX).size()+1);
-                        for(const auto& candidate:{name, name.starts_with("Corrupted")?name.substr(9):std::string{}}) {
-                            if(candidate.empty()) continue;
-                            const std::string inferred = std::string(SHELL_PREFIX) + "." + candidate;
-                            if(mirrors(inferred)) return inferred;
-                        }
-                    }
-                }
-                return tag;
+                return appearance_selection_key(state,catalog,tag);
             };
             const bool changed=appearance.shell!=last_shell || appearance.pawn_name!=last_pawn || appearance.player_revision!=last_player_revision;
             if(changed) {
