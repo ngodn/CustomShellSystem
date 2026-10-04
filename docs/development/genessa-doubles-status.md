@@ -1,5 +1,15 @@
 # Genessa doubles status
 
+Latest installation: trial6 contains the accepted trial5 runtime plus the
+MISC supported-appearance/fallback explanation, committed as `b7057b1`.
+After the author confirmed closure and the process check returned no game PIDs,
+the new core was installed as `css_core-astral-trial-9d501a3b6345ea12.dll`.
+SHA-256: `9d501a3b6345ea1260403a77937b9ce954827a5cebb08285831a2423f4bd7969`.
+`work/genessa-doubles/runtime-trial6/deployment.json` records the prior core
+backup, selector/hash verification and all 15 unchanged protected files.
+Shared assets, loader, UE4SS and saved settings were not replaced. Live load
+and help-text layout still need checking; explicitly arm the trial after launch.
+
 Session 4, October 5, 2026. Branch `feature/genessa-doubles`.
 
 ## Current state
