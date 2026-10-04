@@ -137,7 +137,12 @@ choice combinations, unknown summon kinds, saved-state/profile round trips,
 old profiles and malformed option values. Development candidate SHA-256:
 `8ed06a16005d4ca6268d9eb2e8af49969d427154e445486def31d5eaa6a7e0aa`.
 Shipping candidate: `3bb94c1173b7f84c2f17f94f1ecb69e51177c196edd996655cefe0dc7732a317`.
-These candidates are not installed. The running game still uses runtime-trial2.
+The author closed the game and authorized installation. The development candidate
+is now installed as `css_core-astral-trial-8ed06a16005d4ca6.dll`. Independent
+readback verified the selector, core hash and 15 protected files, including the
+loader, UE4SS, saved state and both shared packages. The previous selector/core
+and deployment receipt are in `work/genessa-doubles/runtime-trial3`. No shared
+assets were replaced. The new core has not been loaded or armed yet.
 
 More Beaute's two installed meshes were independently decoded into
 `work/genessa-doubles/morebeaute-audit1/meshes.json`. Both assign clothdriver to
@@ -157,8 +162,8 @@ extension interface separately uses `CSSX_ABI 2`. The installed CSS log already
 records host ABI 2 background writes. This deployment did not replace the loader
 or downgrade any of these interfaces.
 
-Next: install the prepared core after the game closes, verify the loaded core,
-then run the extended binding and hidden visual checks before arming the trial.
+Next: after the author launches the game, verify the loaded core, then run the
+extended binding and hidden visual checks before arming the trial.
 Check both MISC selectors, persistence and native/CSS restoration independently.
 Verify Faithful and both Stray doubles,
 skin/body controls, hair/fabric/wing rendering, attack grips, pooling and cleanup.
