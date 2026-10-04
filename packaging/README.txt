@@ -7,6 +7,8 @@ Installation
 3. Extract the CustomShellSystem folder into:
    MortalShell2/Binaries/Win64/ue4ss/Mods/
 4. Install CSS outfit packages separately under MortalShell2/Content/Paks/~mods/.
+   For customized Genessa doubles, also install the separate CSS Astral Shared
+   Assets download for this CSS version into that ~mods folder.
 5. Launch the game, enter the game world, open Inventory, and select CSS.
 
 This archive contains the wardrobe runtime only. It does not include UE4SS,
@@ -38,6 +40,17 @@ Equipped outfits appear before favorites, followed by the remaining outfits.
 
 Appearance changes retain your current gameplay shell and abilities.
 No weapon, seal or shell unlocks are required for supported cosmetic outfits.
+
+Genessa doubles
+When your gameplay shell is Genessa, MISC offers independent Faithful Doubles
+and Stray Doubles choices. Use CSS copies supported current customization with
+the ghost effect; Default keeps the original double. Profiles save both choices.
+Genessa Form switches once after closing the menu, then the game controls later
+death/revival/travel transitions. It is not a permanent form lock.
+NPC/enemy compatibility is partial and may have visual or animation issues.
+Unsupported appearances or missing shared assets retain the original double.
+Keep the older CSS_SharedAssets_P Eve package if installed. The new package is
+CSS_AstralSharedAssets_P and does not replace it. Existing outfit ZIPs stay valid.
 
 Settings and updates
 CSS creates state/state.json on first initialization with clean defaults.
