@@ -1,5 +1,19 @@
 # Current work queue
 
+## October 4: profile input conflict, then Genessa gameplay clipping
+
+Priority 1: the author reproduced the profile issue. The Save prompt advertises
+Space, which inserts a space while the name field has focus; the typing guard
+suppresses the save binding. Earlier validation messages did not fix this.
+Use Enter for keyboard save, including with the field focused, and preserve
+mouse/controller saving. Verify the real focused-field interaction.
+
+Priority 2: Unholy Genessa's metallic/glowing outfit parts fit in Inventory/CSS
+but clip in gameplay. Compare identical morph settings, component poses, weights,
+physics and update order between preview and world before changing mesh fitting.
+The author supplied paired screenshots at glute size 1.00. Preserve current
+settings and accepted assets; finish the profile interaction first.
+
 ## October 4: new-game Harbinger regression
 
 Live capture identified my broadened traversal guard as the cause of blocked

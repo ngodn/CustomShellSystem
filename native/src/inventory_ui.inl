@@ -59,6 +59,7 @@ void inventory_order(UObject* panel,const std::vector<UObject*>& desired) {
 #endif
 #include "inventory_light.inl"
 void InventoryUI::detach() {
+    profile_save_shortcut_={};
     camera_tick_restore();
 #ifdef CSS_INVENTORY_DEV
     cinema_stop(); capture_duration_=0;

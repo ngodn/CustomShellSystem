@@ -1,4 +1,5 @@
 #include "data.hpp"
+#include "profile_input.hpp"
 #include <iostream>
 #include <stdexcept>
 
@@ -14,6 +15,15 @@ static void rejected(css::State& state,const std::string& name,const std::string
     check(state.json()==before,"Rejected profile save changed state");
 }
 int main() {
+    check(css::ProfileSaveShortcut::key=="Enter","Save prompt uses a text-inserting key");
+    css::ProfileSaveShortcut shortcut;
+    check(!shortcut.update(true,false),"Entering the profile tab submitted a save");
+    check(shortcut.update(true,true),"Enter did not submit while editing the name");
+    check(!shortcut.update(true,true),"Held Enter submitted repeatedly");
+    check(!shortcut.update(false,true),"Background or other page submitted a profile");
+    check(!shortcut.update(true,true),"Held Enter saved on returning to the page");
+    shortcut.update(true,false);
+    check(shortcut.update(true,true),"Second Enter press was ignored");
     css::State state;
     rejected(state,"","Enter a profile name, for example profile.1.");
     for(const auto name:{"Eve Black Pearl"," profile.1","profile.1 ","../profile",".","..","Eve/1","Eve:1"})

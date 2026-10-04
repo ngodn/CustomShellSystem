@@ -1,5 +1,33 @@
 # Profile save report
 
+## Confirmed input conflict
+
+The author reproduced a concrete cause after the first candidate: the UI
+advertises Space to save, but Space inserts a character while the profile name
+field has keyboard focus. The typing guard then suppresses the save binding.
+The earlier validation-message change did not address this interaction.
+
+The new-profile Save prompt now shows Enter on keyboard. A foreground-only,
+edge-triggered shortcut reads Enter while the field has focus and also after
+Slate commits it. Holding Enter or returning to the page with Enter held does
+not repeatedly save. The handler is restricted to New profile with no modal or
+picker open. Mouse saving stays on the existing button path, and mapped
+controller confirmation is admitted while the name field is focused. Other
+keyboard bindings remain suppressed while typing.
+
+Epic documents Enter as a text commit action:
+[OnTextCommitted](https://dev.epicgames.com/documentation/en-us/unreal-engine/BlueprintAPI/WidgetEvent/OnTextCommitted_EditableText).
+The game dump confirms `UEditableText.OnTextCommitted`. This repair uses the
+existing native polling model rather than installing a global delegate hook.
+
+Host tests cover the Enter prompt key, single press, held-key suppression,
+background/page gating, re-entry and a second press. Production compilation and
+live focused-field keyboard/controller acceptance are recorded separately under
+`work/profile-input-fix/`. The Genessa gameplay clipping report is queued after
+this input repair in `docs/work-queue.md`.
+
+## Initial report and validation-only candidate
+
 October 4, 2026. Markuzkiller reports an "Invalid preset slot" message and only
 one visible row. The author believes the installed version is beta.7 or beta.8;
 the exact version, entered name and reporter logs are not yet available.

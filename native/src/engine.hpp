@@ -17,6 +17,7 @@
 #include "inventory_light.hpp"
 #include "inventory_keys.hpp"
 #include "inventory_light_keys.hpp"
+#include "profile_input.hpp"
 #include "ground_offset.hpp"
 #include "animation_override.hpp"
 #include "extension_search.hpp"   // OptionSearch, reused by CSS's own native outfit search
@@ -136,6 +137,7 @@ class InventoryUI {
                     float minimum=0, maximum=1, step=0; };
     struct Binding { std::string action; std::vector<std::string> keys; bool down=false; uint64_t repeat=0; WeakObject input_action; };
     std::vector<Hit> hits_;
+    ProfileSaveShortcut profile_save_shortcut_;
     bool mouse_was_down_=false, left_was_down_=false;
     int drag_slider_=-1;          // index into sliders_ while a bar is being dragged
     // ---- beta.5 native page (inventory_native.inl) ----

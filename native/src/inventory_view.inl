@@ -373,16 +373,16 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     auto step_action=[](Json action,int delta) { action["delta"]=delta; action.erase("value"); action.erase("refresh"); return action; };
     // An empty binding is a click-only action: it shows the left mouse button, and is left
     // out on a controller, which has nothing to press for it.
-    auto action_button=[&](const std::string& binding,const std::string& label,Json action,uint8_t icon,bool enabled=true) {
+    auto action_button=[&](const std::string& binding,const std::string& label,Json action,uint8_t icon,bool enabled=true,uint8_t keyboard=255) {
         if(!panel_open || (binding.empty() && gamepad_)) return;
         auto& item=native_take(actions_,NativeKind::action);
         native_text(item.text_block.Get(),item.text,label);
-        const auto glyph=binding+"/"+std::to_string(icon);
+        const auto glyph=binding+"/"+std::to_string(icon)+"/"+std::to_string(keyboard);
         if(item.glyph!=glyph) {
             auto* prompt=item.extra.Get();
             native_visibility(prompt,shown_passive);
             if(binding.empty()) native_glyph(prompt,"",45,0);   // 0: LeftMouseButton
-            else native_glyph(prompt,binding,icon);
+            else native_glyph(prompt,binding,icon,keyboard);
             native_visibility(item.cells.front().Get(),collapsed);
             item.glyph=glyph;
         }
@@ -421,7 +421,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     std::string hint_vertical, hint_horizontal;
 
     auto direction_hint=[&](bool horizontal,const std::string& label) { (horizontal?hint_horizontal:hint_vertical)=label; };
-    auto keyboard_icon=[](const char* key)->uint8_t {
+    auto keyboard_icon=[](std::string_view key)->uint8_t {
         for(const auto& [name,value]:inventory_keyboard_icons) if(std::string_view(name)==key) return uint8_t(value);
         return 255;
     };
@@ -1209,7 +1209,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             if(input.value!=suggested && !has_focus(input.extra.Get())) { text_value(input.extra.Get(),suggested); input.value=suggested; }
         }
         note("Up to 96 characters: A-Z, 0-9, periods, underscores or hyphens. No spaces. Example: Eve_BlackPearl");
-        if(!row_) action_button("accept","Save profile",{{"action","ui_save_profile"}},3);
+        if(!row_) action_button(gamepad_?"accept":"profile_save","Save profile",{{"action","ui_save_profile"}},3,true,
+                                gamepad_?255:keyboard_icon(ProfileSaveShortcut::key));
         else {
             action_button("accept","Load profile",rows_[row_].accept,3);
             action_button("secondary","Replace with current character",{{"action","ui_confirm"},{"title","Overwrite profile"},{"message","Overwrite profile '"+selected+"' with your current character snapshot?"},{"target",rows_[row_].secondary}},4);
@@ -1742,7 +1743,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
 #ifdef CSS_INVENTORY_DEV
     cinema_update(focused);
 #endif
-    if(!enabled_) return {};
+    if(!enabled_) { profile_save_shortcut_={}; return {}; }
     catalog_=&catalog; appearance_=&appearance;
     auto now=GetTickCount64();
     if(main_.Get() && now>=discover_after_) {
@@ -1784,7 +1785,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
 #ifdef CSS_INVENTORY_DEV
     if(!active_ || !focused) capture_duration_=0;
 #endif
-    if(!active_) return {};
+    if(!active_) { profile_save_shortcut_={}; return {}; }
     if(now>=layout_check_) {
         layout_check_=now+500;
         Call geometry(switcher,L"GetCachedGeometry",1); geometry.run();
@@ -1816,7 +1817,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     native_reveal_pending();
     if(dirty_) build(catalog,state,appearance);
     animate(GetTickCount64());
-    if(!active_ || closing_) return {};
+    if(!active_ || closing_) { profile_save_shortcut_={}; return {}; }
     // Scripted filming continues without desktop focus; input still requires it.
 #ifdef CSS_INVENTORY_DEV
     if(capture_duration_) {
@@ -1828,7 +1829,14 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         if(t>=1.) capture_duration_=0;
     }
 #endif
+    const bool new_profile=section_==4 && row_==0 && name_input_.Get() &&
+        !native_picker_ && confirm_action_.is_null() && physics_modal_control_.empty();
+    // Slate consumes text-field keys before PlayerController input sees them.
+    // Enter submits without inserting text; edge tracking prevents held-key saves.
+    const bool submit_profile=profile_save_shortcut_.update(focused && new_profile,
+        (GetAsyncKeyState(VK_RETURN)&0x8000)!=0);
     if(!focused) { motion_.reset(); drag_pan_=drag_rotate_=false; return {}; }
+    if(submit_profile) return dispatch({{"action","ui_save_profile"}},state);
     bool typing=false;
     if(auto* input=name_input_.Get()) { Call focus(input,L"HasKeyboardFocus",1); focus.run(); typing=focus.get<bool>(); }
     if(native_picker_) if(auto* search=native_search_input_.Get()) { Call focus(search,L"HasKeyboardFocus",1); focus.run(); typing=typing || focus.get<bool>(); }
@@ -1850,6 +1858,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         bool down=false,allowed=false;
         for(const auto& key:binding.keys) if(inventory_key(controller_.Get(),key)) {
             down=true;if((native_picker_ || !physics_modal_control_.empty()) && (key.starts_with("Gamepad_") || key=="Escape")) allowed=true;
+            if(new_profile && binding.action=="accept" && key.starts_with("Gamepad_")) allowed=true;
         }
         const bool repeat=binding.action=="up" || binding.action=="down";
         const bool trigger=allowed && down && (!binding.down || (repeat && now>=binding.repeat));
@@ -1858,6 +1867,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         else if(!allowed) binding.repeat=now+360;
         binding.down=down;
         if(trigger) {
+            if(new_profile && binding.action=="accept") return dispatch({{"action","ui_save_profile"}},state);
             if(native_picker_) {
                 if(binding.action=="up") { native_options_.move(-1); build_native_picker_results(); return {}; }
                 if(binding.action=="down") { native_options_.move(1); build_native_picker_results(); return {}; }
