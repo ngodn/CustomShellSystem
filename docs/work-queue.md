@@ -6,7 +6,11 @@ Priority 1: the author reproduced the profile issue. The Save prompt advertises
 Space, which inserts a space while the name field has focus; the typing guard
 suppresses the save binding. Earlier validation messages did not fix this.
 Use Enter for keyboard save, including with the field focused, and preserve
-mouse/controller saving. Verify the real focused-field interaction.
+mouse/controller saving. The corrected candidate was installed and the author
+confirmed that saving works. Separate mouse/controller acceptance is not implied.
+A subsequently reported row-label overlap is repaired in source for the next
+build: menu invalidation now hides retained row status labels before clearing
+the cache, preventing MISC "When in use" from leaking into SHELL.
 
 Priority 2: Unholy Genessa's metallic/glowing outfit parts fit in Inventory/CSS
 but clip in gameplay. Compare identical morph settings, component poses, weights,

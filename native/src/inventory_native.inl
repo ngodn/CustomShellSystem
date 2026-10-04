@@ -528,6 +528,10 @@ void InventoryUI::native_invalidate() {
         for(auto& cell:stack->cells) {
             cell.shown=-1;
             for(auto& item:cell.kinds) {
+                // Row status labels survive Construct. Match their visibility to the
+                // cleared cache so a reused single-line row cannot keep a MISC value.
+                if(item.kind==NativeKind::row)
+                    if(auto* value=item.value_block.Get()) native_visibility(value,collapsed);
                 item.text.clear(); item.value.clear(); item.glyph.clear();
                 item.selected=item.badge=item.shown=item.enabled=item.icon_shown=-1;
                 item.icon=nullptr; item.chip={-1,-1,-1,-1}; item.fill=-2.f; item.name_width=-1.f;

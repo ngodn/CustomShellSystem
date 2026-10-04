@@ -26,6 +26,11 @@ live focused-field keyboard/controller acceptance are recorded separately under
 `work/profile-input-fix/`. The Genessa gameplay clipping report is queued after
 this input repair in `docs/work-queue.md`.
 
+The candidate `css_core-beta9-profile-input-20992cfe8c3c16d3.dll` was installed
+and hash-verified. The author confirmed "ok it works, thanks" after the
+focused-field Enter test. This confirms keyboard saving; it does not separately
+verify controller input.
+
 ## Initial report and validation-only candidate
 
 October 4, 2026. Markuzkiller reports an "Invalid preset slot" message and only
