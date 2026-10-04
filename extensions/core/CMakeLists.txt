@@ -103,6 +103,11 @@ if(NOT WIN32)
   add_test(NAME cssx_extension_lifecycle COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/lifecycle_check.py
     $<TARGET_FILE:cssx_runtime_shared> $<TARGET_FILE:cssx_fixture_1> $<TARGET_FILE:cssx_fixture_2> $<TARGET_FILE:cssx_fixture_3> $<TARGET_FILE:cssx_fixture_4>
     ${CMAKE_CURRENT_SOURCE_DIR}/examples)
+  add_executable(cssx_traverse_tests ${CSSX_TRAVERSE}/tests/dialog_tests.cpp
+    ${CSSX_TRAVERSE}/src/teleport.cpp ${CSSX_TRAVERSE}/src/runtime.cpp
+    ${CSSX_TRAVERSE}/src/overlay.cpp ${CSSX_TRAVERSE}/src/meteor.cpp)
+  target_include_directories(cssx_traverse_tests PRIVATE include ${CSSX_TRAVERSE}/src ${CSSX_VENDOR})
+  add_test(NAME cssx_traverse COMMAND cssx_traverse_tests)
   add_executable(cssx_cine_tests ${CSSX_CINE}/tests/cine_tests.cpp)
   target_link_libraries(cssx_cine_tests PRIVATE cssx_cine_logic)
   add_test(NAME cssx_cine COMMAND cssx_cine_tests ${CSSX_CINE})

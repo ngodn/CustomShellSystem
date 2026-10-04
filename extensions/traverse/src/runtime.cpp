@@ -19,6 +19,8 @@ namespace teleport {
 
 namespace {
 bool is_object(const Json& j) { return j.is_object() && j.contains("$object"); }
+// ENavigableState, the game's WBP_Navigable state (overlay.cpp).
+constexpr int kOptionHighlighted = 1, kOptionSelected = 2, kOptionConfirmed = 3;
 }
 
 void Extension::invalidate_handles() {
@@ -257,15 +259,23 @@ void Extension::scan(const CssxFrame* frame) {
         const bool nav = left || right;
         if (nav && !nav_latch_) {
             const int want = left ? 0 : 1;
-            if (want != last_option_index_) { last_option_index_ = want; highlight_option(want); }
+            if (want != last_option_index_) select_option(want);
         }
         nav_latch_ = nav;
-        if (edge({"Enter", "E", "SpaceBar", "Gamepad_FaceButton_Bottom"}, press_latch_)) {
-            confirming_ = false; hide_dialog();
-            if (last_option_index_ == 0) teleport_to(confirm_owner_); else report("Traverse cancelled.");
-            return;
+        // Mouse (see overlay.cpp): a clicked option is in state 3 and decides; an option
+        // the pointer moved onto is in state 1 or 2 and becomes the selection, so the
+        // confirm keys always act on the one that is lit.
+        const int states[2] = {option_state(opt_primary_), option_state(opt_secondary_)};
+        for (int i = 0; i < 2; ++i) if (states[i] == kOptionConfirmed) { decide(i); return; }
+        const int other = last_option_index_ == 0 ? 1 : 0;
+        if (states[other] == kOptionHighlighted || states[other] == kOptionSelected) {
+            // Its own hover already lit it; only the previous selection needs clearing.
+            const Json& previous = last_option_index_ == 0 ? opt_primary_ : opt_secondary_;
+            try { if (is_object(previous)) host_.call(previous, "TriggerNullState"); } catch (...) {}
+            last_option_index_ = other;
         }
-        if (edge({"Escape", "BackSpace", "Gamepad_FaceButton_Right"}, cancel_latch_)) { confirming_ = false; hide_dialog(); report("Traverse cancelled."); }
+        if (edge({"Enter", "E", "SpaceBar", "Gamepad_FaceButton_Bottom"}, press_latch_)) { decide(last_option_index_); return; }
+        if (edge({"Escape", "BackSpace", "Gamepad_FaceButton_Right"}, cancel_latch_)) decide(1);
         return;
     }
 
@@ -303,6 +313,7 @@ void Extension::scan(const CssxFrame* frame) {
         confirming_ = true;
         last_option_index_ = 0;
         confirm_scans_ = 0;
+        nav_latch_ = true;   // a pan key still held from the map must be released before it moves the selection
         hide_prompt();
         cancel_latch_ = true;
         show_dialog(name);

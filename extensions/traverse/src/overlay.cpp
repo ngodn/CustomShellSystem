@@ -107,8 +107,18 @@ constexpr int KBM_BACK = 11, CTRL_BACK = 5;         // "Back" / "Close" glyph
 // set its title and options, show it over the map, and disable its own input
 // listener so we drive Traverse/Cancel with our own key reads (its result is a
 // delegate an extension cannot receive). Selection is the button's native
-// highlight state, driven by highlight_option(), and each option carries the
+// highlight state, driven by select_option(), and each option carries the
 // input glyph so the controls read at a glance.
+//
+// The mouse works through the options themselves. Each is a WBP_Navigable of type 2
+// with bSelectOnHover: hovering one runs its own MouseHover (NavigableState 2,
+// highlight on) and a click runs HandleNavigableInput -> TriggerConfirmedState
+// (NavigableState 3). The dialog only hears those through BP_HB_Options, which the
+// game binds in CommitNavigation after its OnMenuOpen flow. That flow also takes the
+// player's input mode, the HUD layer and the game-menu block state, and gives them
+// back on close, which would tear down the menu we sit on; so it is never run and
+// scan() reads the two states instead (read from the game's blueprints, see
+// work/export-dialog).
 void Extension::show_dialog(const std::string& name) {
     hide_dialog();
     if (!ensure_prompt_refs()) return;   // uses widget_lib_ / prompt_class_
@@ -133,22 +143,27 @@ void Extension::show_dialog(const std::string& name) {
         // disable its listener so it does not also try (and fail) to handle input.
         try { host_.call(my_dialog_, "DisableInputListener"); } catch (...) {}
         try { host_.call(my_dialog_, "HandleDescription", {{"Valid", false}}); } catch (...) {}
-        // Make the whole dialog non-hit-testable (ESlateVisibility::HitTestInvisible)
-        // so the mouse can no longer hover the options and fight our selection: with
-        // this off, the only highlight is the one highlight_option() sets.
-        try { host_.set(my_dialog_, "Visibility", 3); } catch (...) {}
         // Cache the option buttons and put the input glyph beside each label.
         try { opt_primary_ = host_.get(my_dialog_, "PrimaryOption"); } catch (...) {}
         try { opt_secondary_ = host_.get(my_dialog_, "SecondaryOption"); } catch (...) {}
+        // The options' buttons drop hover and click while the player carries the
+        // UI.Input.Block.All tag unless IgnoreBlockAll is set; the game sets it in
+        // CommitNavigation, which we do not run.
+        for (const Json* option : {&opt_primary_, &opt_secondary_}) {
+            try { auto button = host_.get(*option, "WBP_NavigationButton"); if (is_object(button)) host_.set(button, "IgnoreBlockAll", true); }
+            catch (...) {}
+        }
         add_option_glyph(opt_primary_, "Traverse", KBM_CONFIRM, CTRL_CONFIRM);
         add_option_glyph(opt_secondary_, "Cancel", KBM_BACK, CTRL_BACK);
         // Own the context: while the dialog is up, deactivate every input listener
-        // that is currently live, not just the map's own ones. The menu's tab-nav
-        // listener (WBP_IL_GameplayMenu) sits above the map and, left active, would
-        // read dpad-left as "open the Map tab" underneath the confirmation. We
-        // disable each active listener and restore exactly those on close. Our own
-        // Traverse/Cancel reads are raw key polls, so freezing listeners never blocks
-        // them.
+        // that is currently live, not just the map's own ones. The map's tracker
+        // listener (WBP_IL_MapTracker) takes the menu's confirm input (Space, A) and
+        // the left mouse button to place or remove a pin, its back listener closes the
+        // menu, and the menu's tab-nav listener (WBP_IL_GameplayMenu) sits above the
+        // map and would read dpad-left as "open the Map tab" underneath the
+        // confirmation. We disable each bound listener and restore exactly those on
+        // close. Our own Traverse/Cancel reads are raw key polls, so freezing
+        // listeners never blocks them.
         frozen_listeners_ = Json::array();
         bool swept = false;
         try {
@@ -161,10 +176,12 @@ void Extension::show_dialog(const std::string& name) {
                     swept = true;
                     for (const auto& l : found) {
                         if (!is_object(l)) continue;
+                        // bEnabled is the listener's bound state (SetEnabledState writes it and
+                        // binds or unbinds). IsEnabled() also folds in the UI.Input.Block.All
+                        // tag, so it can read false for a listener that is still bound.
                         try {
-                            auto en = host_.call(l, "IsEnabled");
-                            const bool active = en.is_object() && en.value("ReturnValue", false);
-                            if (active) { host_.call(l, "SetEnabledState", {{"bEnabled", false}}); frozen_listeners_.push_back(l); }
+                            const auto bound = host_.get(l, "bEnabled");
+                            if (bound.is_boolean() && bound.get<bool>()) { host_.call(l, "SetEnabledState", {{"bEnabled", false}}); frozen_listeners_.push_back(l); }
                         } catch (...) {}
                     }
                 }
@@ -179,7 +196,7 @@ void Extension::show_dialog(const std::string& name) {
                 } catch (...) {}
             }
         }
-        highlight_option(0);   // start with Traverse selected
+        select_option(0);   // start with Traverse selected
     } catch (...) {}
 }
 
@@ -216,12 +233,30 @@ void Extension::add_option_glyph(const Json& option, const std::string& label, i
 
 // Exactly one option is highlighted: the native highlight state (a backing glow on
 // the button) shows on the selection and is cleared on the other, so there is never
-// a stale second highlight.
-void Extension::highlight_option(int index) {
+// a stale second highlight. The other option goes through TriggerNullState, which
+// also resets its NavigableState to 0: an option the mouse selected stays in state 2
+// until then, and in that state it ignores a new hover and would read as hovered again.
+void Extension::select_option(int index) {
     const Json& sel = index == 0 ? opt_primary_ : opt_secondary_;
     const Json& other = index == 0 ? opt_secondary_ : opt_primary_;
-    try { if (is_object(other)) host_.call(other, "OnNullState"); } catch (...) {}
+    try { if (is_object(other)) host_.call(other, "TriggerNullState"); } catch (...) {}
     try { if (is_object(sel)) host_.call(sel, "OnHighlightedState"); } catch (...) {}
+    last_option_index_ = index;
+}
+
+// ENavigableState of an option: 0 null, 1 highlighted, 2 selected (the mouse is or was
+// on it), 3 confirmed (it was clicked). 0 when it cannot be read.
+int Extension::option_state(const Json& option) {
+    if (!is_object(option)) return 0;
+    try { const auto state = host_.get(option, "NavigableState"); return state.is_number_integer() ? state.get<int>() : 0; }
+    catch (...) { return 0; }
+}
+
+void Extension::decide(int index) {
+    confirming_ = false;
+    hide_dialog();
+    if (index == 0) teleport_to(confirm_owner_);
+    else report("Traverse cancelled.");
 }
 
 void Extension::hide_dialog() {

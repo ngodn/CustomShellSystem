@@ -87,3 +87,29 @@ valid; without it the world stays in the old zone (spawners, ambience, the save'
 with `MyZoneData` / `DestinationZoneData` as fallbacks, and refuses to fire without one. Guards:
 a 6 s cooldown after a fire plus the meteor phase, and `BPC_TeleportManager.bIsInDungeon`
 (dungeons leave through `BroadcastLeaveDungeonByTeleport`, not the plain teleport).
+
+## Unreleased (after 1.0.1), 5 October 2026: confirmation dialog input
+
+Two Nexus reports (Kantiger, 4 October), both reproduced by reading the game's blueprints
+(`work/export-dialog/`, CUE4Parse + `kismet_dump.py`) and pinned in `tests/dialog_tests.cpp`.
+
+- **Space on the dialog also placed a map pin.** The dialog is meant to freeze every bound
+  `WBP_InputListener` while it is up. The sweep asked `IsEnabled` through `host_.call`, which
+  unwraps `ReturnValue` to a bare bool, and then tested `en.is_object()`, so it never froze
+  anything (since 3ffaa38). The map's `WBP_IL_MapTracker` takes `IA_Menu_Confirm_Primary_Press`
+  (Space, gamepad A) and `IA_Menu_Mouse_Left` and places or removes a tracker; it was live
+  under the dialog. Same hole: E switched the menu tab, Escape closed the whole menu. The
+  sweep now reads the listener's `bEnabled` property (its bound state).
+- **Mouse clicks did nothing.** The options are `WBP_Navigable` type 2 with `bSelectOnHover`:
+  hover sets `NavigableState` 2, a click sets 3 and broadcasts to `BP_HB_Options`, which the
+  game binds only in `CommitNavigation` after its `OnMenuOpen` flow. That flow takes the input
+  mode, HUD layer and game-menu block state and gives them back on close, so we never run it.
+  `scan()` now reads both states: 3 decides, 1 or 2 on the other option moves the selection
+  there (and `TriggerNullState` clears the old one, which also makes it hoverable again).
+  `IgnoreBlockAll` is set on the two navigation buttons, as `CommitNavigation` would.
+- The dead `Visibility = 3` property write on the dialog is gone (it never reached Slate, and
+  the dialog has to take the mouse now).
+
+Tests: `cssx_traverse` (mock host with the map listeners and the option buttons). The same
+test built against the 1.0.1 sources fails on "every bound listener is frozen under the dialog".
+Not yet live-tested in game.

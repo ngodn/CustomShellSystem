@@ -59,13 +59,16 @@ private:
     bool edge(const std::vector<std::string>& keys, bool& latch);
 
     // confirmation via the game's own dialog widget (WBP_ConfirmationPrompt_Default),
-    // created, shown over the map and driven by our own key reads.
+    // created, shown over the map and driven by our own key reads plus the options' own
+    // mouse state (the game's WBP_Navigable: hover selects, a click confirms).
     bool confirming_ = false;
     Json confirm_owner_;
     int last_option_index_ = 0;           // dialog's selected option (0 = Traverse, 1 = Cancel)
     bool nav_latch_ = false;              // left/right navigation edge state
     int confirm_scans_ = 0;               // scans the dialog has been open (auto-cancel guard)
-    void highlight_option(int index);     // drive the selected option's native highlight state
+    void select_option(int index);        // highlight this option, clear the other one's state
+    int option_state(const Json& option); // the option's ENavigableState (see overlay.cpp)
+    void decide(int index);               // close the dialog and act: 0 = traverse, 1 = cancel
     Json dialog_class_;                   // WBP_ConfirmationPrompt_Default class
     Json my_dialog_;                      // active confirmation dialog, or null
     Json opt_primary_, opt_secondary_;    // the two WBP_ButtonPrompt options (Traverse / Cancel)
