@@ -31,6 +31,13 @@ struct Core {
     Appearance appearance;
     AstralDoubles astral;
     std::string astral_error;
+    struct GenessaFormRequest {
+        std::string target;
+        Json pawn;
+        uint64_t expires=0, next_check=0;
+        bool sent=false;
+    };
+    std::optional<GenessaFormRequest> genessa_form_request;
     InventoryUI inventory;
     EngineBridge engine_bridge;
     CssxHost recovery_host{CSSX_ABI,sizeof(CssxHost),this,engine_request,nullptr};
@@ -485,6 +492,22 @@ struct Core {
         // MISC visibility. A category's mode cycles with left/right or is set outright from the
         // mode list. It mutates state.misc_rules, hands the new rules to the appearance so the
         // world and menu passes pick them up, and persists.
+        else if(action=="genessa_form") {
+            const auto mode=command.at("mode").get<std::string>();
+            if(mode!="default" && mode!="faithful" && mode!="stray")
+                throw std::runtime_error("Invalid Genessa form");
+            if(mode=="default") {
+                genessa_form_request.reset();
+                report("Genessa form follows the game.");
+            } else {
+                const auto player=engine_bridge.request(current_engine,appearance,{{"op","player"}});
+                if(!state.enabled || !astral_shell(player.at("shell").get<std::string>()) || player.at("pawn").is_null())
+                    throw std::runtime_error("Form switching requires Genessa as the gameplay shell");
+                genessa_form_request=GenessaFormRequest{mode,player.at("pawn"),GetTickCount64()+120000};
+                report("Close the menu to switch Genessa's form once.");
+            }
+            ui_refresh=true;
+        }
         else if(action=="doubles_mode") {
             if(!astral_shell(appearance.shell)) throw std::runtime_error("Doubles require Genessa as the gameplay shell");
             const auto kind=command.at("kind").get<std::string>();
@@ -715,7 +738,7 @@ struct Core {
 #ifdef CSS_INVENTORY_DEV
         sample_motion(now);
 #endif
-        measured(FrameProfile::maintenance,[&] { sync_overlays_safely(now); maintain(now); });
+        measured(FrameProfile::maintenance,[&] { sync_overlays_safely(now); maintain(now); sync_genessa_form(now); });
         measured(FrameProfile::attachments,[&] { sync_attachments_safely(now); });
         measured(FrameProfile::seals,[&] { sync_seals_safely(now); });
         measured(FrameProfile::walk,[&] { sync_walk_safely(now); });
@@ -728,6 +751,51 @@ struct Core {
 #endif
             astral.update(engine,appearance,enabled,state.doubles,now);
         });
+    }
+    void sync_genessa_form(uint64_t now) {
+        if(!genessa_form_request || now<genessa_form_request->next_check) return;
+        try {
+            auto& pending=*genessa_form_request;
+            pending.next_check=now+100;
+            if(!state.enabled || now>=pending.expires)
+                throw std::runtime_error("Genessa form switch cancelled or timed out");
+            auto query=[&](const Json& value){return engine_bridge.request(current_engine,appearance,value);};
+            const auto player=query({{"op","player"}});
+            const auto shell=player.at("shell").get<std::string>();
+            if(player.at("pawn")!=pending.pawn || !astral_shell(shell))
+                throw std::runtime_error("Genessa form switch cancelled: player changed");
+            const bool stray=shell=="CharacterId.Player.Darkform.CorruptedGenessa";
+            if(stray==(pending.target=="stray")) {
+                genessa_form_request.reset();ui_refresh=true;
+                report(stray?"Genessa is Stray. Later transitions follow the game.":
+                    "Genessa is Faithful. Later transitions follow the game.");
+                return;
+            }
+            if(pending.sent) return;
+            const auto controller=player.at("controller");
+            auto call=[&](const Json& target,const char* function,const Json& args=Json::object()) {
+                return query({{"op","call"},{"target",target},{"function",function},{"args",args}});
+            };
+            if(call(controller,"IsInGameMenu").at("ReturnValue").get<bool>()) return;
+            const auto health=query({{"op","get"},{"target",pending.pawn},{"property","HealthComponent"}});
+            if(health.is_null() || call(health,"IsDeadOrDying").at("ReturnValue").get<bool>())
+                throw std::runtime_error("Genessa form switch cancelled: player is not alive");
+            if(!appearance.ready_to_apply()) return;
+            // Send once through the native ability path. Never retry a gameplay event.
+            pending.sent=true;pending.expires=now+15000;
+            if(pending.target=="stray") {
+                const auto library=query({{"op","find"},{"path","/Script/GameplayAbilities.Default__AbilitySystemBlueprintLibrary"}});
+                call(library,"SendGameplayEventToActor",{{"Actor",pending.pawn},
+                    {"EventTag",{{"TagName","Event.Shell.Severed"}}},
+                    {"Payload",{{"EventTag",{{"TagName","Event.Shell.Severed"}}},
+                        {"Instigator",pending.pawn},{"Target",pending.pawn}}}});
+            } else {
+                const auto library=query({{"op","find"},{"path","/Game/Sparta/Core/Player/BPFL_Player.Default__BPFL_Player_C"}});
+                call(library,"ForceReviveShell",{{"Silent",true},{"__WorldContext",pending.pawn}});
+            }
+        } catch(const std::exception& error) {
+            genessa_form_request.reset();ui_refresh=true;report(error.what());
+        }
     }
     void maintain(uint64_t now) {
         // Cosmetic maintenance (material-reset repair + menu-preview sync) are recovery

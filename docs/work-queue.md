@@ -1,5 +1,20 @@
 # Current work queue
 
+## October 5: Genessa form utility for doubles testing
+
+The author accepted both Faithful Doubles appearance choices, but deliberately
+dying to reach Stray makes the remaining test difficult. They request a MISC
+Genessa Form row with Auto / Default (game), Faithful and Stray. Asked to choose
+between a persistent lock and a one-time switch, the author delegated the
+decision. Recommended behavior: switch once, show the observed current form,
+then let the game handle subsequent death, revival and travel. Do not introduce
+a per-frame form lock or save this gameplay action into appearance profiles.
+Inspect and use the native state transition, not a mesh/tag overwrite. Initial
+controller bytecode contains ActivateDarkform and ActivateShell; RemoveShell
+also clears abilities and saved shell state, so it is not a safe shortcut.
+Continue this supporting task within the active doubles work. Existing Default /
+Use CSS controls remain independent. Stray selector acceptance is still pending.
+
 ## October 5: reduce restarts during native development
 
 The author renewed the request to use hot reload instead of restarting for

@@ -1133,7 +1133,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const auto shell_items=appearance.misc_shell_items();
         const int position_row=4+int(shell_items.size());
         const bool has_doubles=astral_shell(appearance.shell);
-        row_=std::clamp(row_,0,position_row+(has_doubles?2:0));
+        row_=std::clamp(row_,0,position_row+(has_doubles?3:0));
         auto mode_word=[&](const MiscRule& rule) {
             if(rule.mode=="hidden") row_look.value="Hidden";
             else if(rule.mode=="in_use") row_look.value="When in use";
@@ -1169,6 +1169,10 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 row_look.value=use_css?"Use CSS":"Default";
                 row(position_row+1+i,i==0?"Faithful Doubles":"Stray Doubles",toggle,toggle,toggle);
             }
+            const bool stray=appearance.shell=="CharacterId.Player.Darkform.CorruptedGenessa";
+            row_look.value=stray?"Stray":"Faithful";
+            const Json switch_form{{"action","genessa_form"},{"mode",stray?"faithful":"stray"}};
+            row(position_row+3,"Genessa Form",switch_form,switch_form,switch_form);
         }
         if(row_<position_row) {
             const bool category_row=row_<4;
@@ -1195,6 +1199,16 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 {"default","Default (game)",{{"action","keep_default_attachments"},{"value",true}}},
             },state.keep_default_attachments?"default":"auto");
             direction_hint(true,"Choose position");
+        } else if(row_==position_row+3) {
+            const bool stray=appearance.shell=="CharacterId.Player.Darkform.CorruptedGenessa";
+            detail("Genessa Form",stray?"Current: Stray":"Current: Faithful",
+                "Switch once after closing the menu. Later death, revival and travel follow the game. Default cancels a pending switch.");
+            choice_rows({
+                {"default","Default (game)",{{"action","genessa_form"},{"mode","default"}}},
+                {"faithful","Faithful",{{"action","genessa_form"},{"mode","faithful"}}},
+                {"stray","Stray",{{"action","genessa_form"},{"mode","stray"}}},
+            },stray?"stray":"faithful");
+            direction_hint(true,"Choose current form");
         } else {
             const bool faithful=row_==position_row+1;
             const char* kind=faithful?"faithful":"stray";

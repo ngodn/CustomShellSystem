@@ -142,7 +142,7 @@ is now installed as `css_core-astral-trial-8ed06a16005d4ca6.dll`. Independent
 readback verified the selector, core hash and 15 protected files, including the
 loader, UE4SS, saved state and both shared packages. The previous selector/core
 and deployment receipt are in `work/genessa-doubles/runtime-trial3`. No shared
-assets were replaced. The new core has not been loaded or armed yet.
+assets were replaced. At installation it had not yet been loaded or armed.
 
 The next live process (Linux PID 1935942, Windows PID 368) maps the installed
 8ed06a core and its loader acknowledgment agrees. The three hidden-visual
@@ -155,6 +155,26 @@ The author confirms Faithful Default and Use CSS both work. Its 50-second
 capture has 98 status samples, observes both modes, and ends with 12 prepared,
 12 removed, zero fallbacks and no cleanup error. Stray selector testing is
 still pending; the earlier Stray visual acceptance predates this new core.
+
+The author found deliberate death inconvenient for Stray testing and requested
+a Genessa Form utility. They delegated whether to lock the form or switch once.
+The new, uninstalled candidate implements one-time requests: Default (game)
+cancels a pending request; Faithful/Stray waits for the menu to close and a safe
+idle, then sends one native ability request. It does not persist a forced form
+or save it into profiles. Player changes, death, disable and timeout cancel it.
+The native event path is still awaiting live verification. Both Windows builds
+compile; the existing 18 host suites remain green, but do not exercise this new
+reflected gameplay action.
+
+Form research is in `work/genessa-doubles/form-control1`. Cooked
+GA_ShellSeveredBase listens for Event.Shell.Severed and handles aiming, severed
+state, effects, mesh activation and attached actors. BPFL_Player ForceReviveShell
+routes Event.Shell.Revive.Force through the native revival ability. Calling only
+ActivateDarkform would omit part of that sequence; RemoveShell would clear
+abilities and saved shell state. Neither shortcut is used. Live reflection
+confirms both proposed event-call signatures and the current controller's
+Genessa/CorruptedGenessa definitions. No form switch has been invoked yet.
+The user has been asked to leave the menu for a bounded native transition test.
 
 More Beaute's two installed meshes were independently decoded into
 `work/genessa-doubles/morebeaute-audit1/meshes.json`. Both assign clothdriver to
