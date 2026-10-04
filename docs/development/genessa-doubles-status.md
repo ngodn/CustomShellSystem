@@ -1,5 +1,12 @@
 # Genessa doubles status
 
+Release check: beta.11 is agreed, with separate runtime/shared-assets ZIPs.
+Repeated Faithful summons revealed 16 Astral frames above 10 ms in a 30-second
+capture, maximum 181 ms, with no form/menu change. Release preparation is held
+for [targeted creation timings](genessa-doubles-performance.md). NPC/enemy
+compatibility improvements are explicitly deferred by the author; they are
+not the reason for this hold.
+
 Latest installation: trial6 contains the accepted trial5 runtime plus the
 MISC supported-appearance/fallback explanation, committed as `b7057b1`.
 After the author confirmed closure and the process check returned no game PIDs,

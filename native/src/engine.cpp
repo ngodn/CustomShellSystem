@@ -8,6 +8,7 @@
 #include "astral_adapter.hpp"
 #include <array>
 #include <cctype>
+#include <chrono>
 #include <cstring>
 #include <exception>
 #include <iomanip>
@@ -446,6 +447,7 @@ static FScriptArrayHelper overrides(UObject* component) {
 static bool dynamic_material(UObject* value) {
     return value && value->IsA(static_cast<UClass*>(find(L"/Script/Engine.MaterialInstanceDynamic")));
 }
+#include "astral_timing.inl"
 #include "astral_materials.inl"
 #include "astral_material_adapters.inl"
 static bool material_has_overrides(UObject* value) {

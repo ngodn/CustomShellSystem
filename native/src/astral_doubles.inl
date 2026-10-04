@@ -10,6 +10,9 @@ struct AstralVisualGroup {
     bool visible=false, native_hidden=false;
 
     bool release() noexcept {
+#ifdef CSS_INVENTORY_DEV
+        AstralTiming timing(AstralPhase::release);
+#endif
         // Restore bindings while their components are still alive.
         bool result=bindings.restore();
         // Destroy children before their pose parent. Restore native visibility even
@@ -263,8 +266,12 @@ void AstralDoubles::update(void* engine,Appearance& appearance,bool enabled,cons
 }
 bool AstralDoubles::clear() noexcept { return impl_->clear(); }
 Json AstralDoubles::diagnostics() const {
-    return {{"active",impl_->groups.size()},{"prepared",impl_->prepared},{"removed",impl_->removed},
+    Json result={{"active",impl_->groups.size()},{"prepared",impl_->prepared},{"removed",impl_->removed},
         {"pose_rebinds",impl_->pose_rebinds},
         {"source_ready",impl_->source!=nullptr && impl_->pose.Get()!=nullptr},
         {"fallbacks",impl_->failed.size()},{"error",impl_->error}};
+#ifdef CSS_INVENTORY_DEV
+    result["creation_timing"]=astral_timing_report();
+#endif
+    return result;
 }

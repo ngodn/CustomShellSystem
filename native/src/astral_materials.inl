@@ -20,6 +20,9 @@ void astral_retain(AssetLoadRoots& roots,UObject* object) {
 }
 void AstralMaterials::prepare(UObject* owner,UObject* native_mid,
                              std::span<const AstralMaterialInput> inputs,bool corrupted) {
+#ifdef CSS_INVENTORY_DEV
+    AstralTiming timing(AstralPhase::materials);
+#endif
     if(!copies_.empty()) throw std::runtime_error("Detach and release the previous Astral materials first");
     if(!owner || WeakObject(owner).Get()!=owner || !native_mid ||
        WeakObject(native_mid).Get()!=native_mid || !dynamic_material(native_mid) ||

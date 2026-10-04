@@ -79,6 +79,9 @@ AstralPhysicsSource astral_source_physics(UObject* component) {
 }
 }
 std::unique_ptr<AstralAppearanceSource> Appearance::astral_source() const {
+#ifdef CSS_INVENTORY_DEV
+    AstralTiming timing(AstralPhase::source);
+#endif
     auto* pawn=observed_pawn_.Get();
     auto* body=observed_component_.Get();
     if(!pawn || !body || read<UObject*>(pawn,L"Mesh")!=body ||

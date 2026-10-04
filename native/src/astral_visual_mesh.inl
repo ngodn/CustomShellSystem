@@ -91,6 +91,9 @@ void astral_visual_physics(UObject* component,const AstralPhysicsSource& source)
 
 void AstralVisualMesh::prepare(UObject* parent,const AstralComponentSource& source,
                                UObject* pose_class,const AstralVisualTransform& relative) {
+#ifdef CSS_INVENTORY_DEV
+    AstralTiming timing(AstralPhase::visual);
+#endif
     if(component_.ObjectIndex>=0) throw std::runtime_error("Release the previous Astral visual first");
     auto* mesh=source.mesh.Get();
     auto* component_type=static_cast<UClass*>(find(L"/Script/Engine.SkeletalMeshComponent"));
@@ -183,7 +186,13 @@ void AstralVisualMesh::prepare(UObject* parent,const AstralComponentSource& sour
             source_tick.set(L"PrerequisiteComponent",pose_source);source_tick.run();
         }
         Call finish(owner,L"FinishAddComponent",3);
-        finish.set(L"Component",visual);finish.set(L"bManualAttachment",true);copy_transform(finish);finish.run();
+        finish.set(L"Component",visual);finish.set(L"bManualAttachment",true);copy_transform(finish);
+        {
+#ifdef CSS_INVENTORY_DEV
+            AstralTiming registration(AstralPhase::registration);
+#endif
+            finish.run();
+        }
         if(!leader_pose_) {
             auto* instance=astral_anim_instance(visual);
             if(!instance) throw std::runtime_error("Astral visual has no copy-pose instance");

@@ -115,6 +115,9 @@ void astral_inherit_material(AstralMaterialState& state,UObject* instance,Astral
 }
 
 void AstralMaterialAdapters::prepare(UObject* owner,std::span<UObject* const> sources) {
+#ifdef CSS_INVENTORY_DEV
+    AstralTiming timing(AstralPhase::adapters);
+#endif
     if(!inputs_.empty()) throw std::runtime_error("Release prior Astral adapters first");
     if(!owner || WeakObject(owner).Get()!=owner || sources.empty() || sources.size()>128)
         throw std::runtime_error("Invalid Astral adapter source set");
