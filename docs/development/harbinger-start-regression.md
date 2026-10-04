@@ -37,6 +37,10 @@ Evidence is under `work/harbinger-start-regression/`: original status/settings,
 read-only capture, build logs and candidate installation record. The diagnostic
 capture finished normally and did not issue gameplay input or alter abilities.
 
-Live acceptance after a normal restart remains required: select an outfit in
-the starting Harbinger, change to another, restore Default, then verify saved
-appearance recovery. The public ZIP remains unchanged.
+The corrected candidate `css_core-beta9-harbinger-e10ebb46170741fc.dll` was
+installed after the game closed and its SHA-256 verified. The author then
+confirmed "ok it works now" after being asked to select and switch outfits in
+Harbinger form. This accepts the reported SHELL-switching regression repair.
+Default restoration, saved recovery across another restart and the other pending
+fixes are not independently confirmed by that reply. The public ZIP remains
+unchanged.

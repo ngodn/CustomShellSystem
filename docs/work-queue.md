@@ -6,7 +6,9 @@ Live capture identified my broadened traversal guard as the cause of blocked
 SHELL changes. `GA_ShellTraversal_StrongOne` is a persistent event listener with
 ActiveCount 1 at rest. Removed that family from the blocking predicate while
 retaining actual jump-action guards and the aiming repair. Five relevant host
-suites pass. Restart/live acceptance is pending. See
+suites pass. The corrected build is installed, and the author confirmed the
+Harbinger SHELL-switching fix works in-game. Other pending fixes still need their
+own live checks. See
 [the regression repair](development/harbinger-start-regression.md).
 
 ## October 4: profile save validation report
