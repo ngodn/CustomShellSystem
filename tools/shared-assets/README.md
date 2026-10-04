@@ -1,5 +1,20 @@
 # Shared asset authoring
 
+## Release ZIP
+
+`packaging/astral-shared-assets.json` pins the accepted containers and their
+independent validation receipts. From a clean CSS version tag, run:
+
+```bash
+python3 tools/shared-assets/release.py build AUDITED_PACK --output dist/VERSION
+python3 tools/shared-assets/release.py verify dist/VERSION/CSS-AstralSharedAssets-vVERSION.zip
+```
+
+The shared ZIP contains only its three containers, README and checksum manifest.
+It does not bundle an outfit, the legacy Eve shared package or personal data.
+Copy the matching BBCode from `packaging/astral-shared-changelog.bbcode` beside
+the ZIP. Build the separate runtime with `tools/css_release.py` at the same tag.
+
 This UE 5.6.1 editor-only module creates `/Game/CSS/SharedAssets/Astral/ABP_CopyPose`.
 The generated animation template has no target skeleton and uses the engine's
 Copy Pose From Mesh node. It reads its attached parent, including curves and

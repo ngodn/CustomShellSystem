@@ -1,0 +1,14 @@
+{
+  "container": "CSS_AstralSharedAssets_P",
+  "files": {
+    "CSS_AstralSharedAssets_P.pak": "75e7144577253917f6da7312ef5e585b12fb728226a22b0938323751a6b555cd",
+    "CSS_AstralSharedAssets_P.ucas": "640f79a45d75de5cefbd36434a2bc461a48fc2c4c4a680d08b9a05c6deb1c442",
+    "CSS_AstralSharedAssets_P.utoc": "43929d81fe4f331e0071610d4e039eb5cbcc5a504c90727e70b6024a75f61464"
+  },
+  "asset_count": 30,
+  "evidence": {
+    "roundtrip.json": "7206c18611e3a853eb6009b284417ea0a5d90cb3609784cbb154260ee5e395fc",
+    "material-check.json": "d01e4eadd3c5691d49d229edb685a4b3c18d84c3ef587c75f0e7f268a9532151",
+    "pose-check.json": "32cdc33f2af77cfc89618badc727938a110729bbd6d04835f1960dd9fde1fb97"
+  }
+}

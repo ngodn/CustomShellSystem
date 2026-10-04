@@ -109,6 +109,9 @@ def build(args: argparse.Namespace) -> Path:
                 'ue4ss_header_revision': UE4SS_RUNTIME['header_revision'],
                 'ue4ss_import_library_sha256': digest(args.import_library.read_bytes()),
                 'files': {p: digest(data) for p, data in sorted(files.items())}}
+    shared = json.loads((ROOT / 'packaging/astral-shared-assets.json').read_text())
+    manifest['shared_assets'] = {'version': version, 'container': shared['container'],
+        'required_for': 'customized_genessa_doubles', 'files': shared['files']}
     files['release.json'] = (json.dumps(manifest, indent=2) + '\n').encode()
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
