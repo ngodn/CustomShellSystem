@@ -114,6 +114,37 @@ gameplay integration, actor cleanup across travel, or frame cost. Shipping
 builds exclude the probe. The earlier Lua copy test does not validate this C++
 owner or its cached scalar-index calls.
 
+## Live appearance source
+
+Development bridge request `{"op":"astral.source"}` reports the source data
+that will feed double preparation. It is built but not installed or live-tested.
+It resolves the player without changing their appearance, requires Genessa's
+actual gameplay tag, and returns `unavailable` for a missing player or a mesh
+reset that CSS has not yet repaired.
+
+The capture covers the body plus at most 15 CSS-owned modular components.
+Each row includes its mesh and current material sources, fabric overlays,
+visibility, relative transform, hidden material slots at each LOD, explicit
+nonzero morph weights and supported post-process configuration. CSS-managed
+base materials and fabric use retained customization MIDs rather than temporary
+gameplay effect bindings. Other sources use current component bindings. The
+material handles preserve access to unsaved uniforms but do not freeze them.
+Do not retain the result as a saved profile or queue it across game frames.
+
+The capture retains assets while reading and releases those references before
+returning the diagnostic result. It does not load assets, scan the world, copy
+combat animation state or write any component settings. It is intended for an
+appearance change or summon boundary, not per-frame polling. `GetMorphTarget`
+reads the component's explicit morph curve map in UE 5.6.1; this does not freeze
+animation-driven facial expressions. Physics entries are configuration values,
+not copied simulation positions or velocities.
+
+Use source readbacks with unsaved body-size edits, hidden parts, fabric opacity,
+palette/glow edits and each required outfit. Compare every returned material
+and setting against the player's actual state. Once double preparation is
+connected, verify the destination separately. A successful source capture is
+not proof that a summon inherits the appearance or keeps its own motion.
+
 ## Offline garment fade experiment
 
 Use the exact UE 5.6.1 Linux editor and its bundled Python. This experiment

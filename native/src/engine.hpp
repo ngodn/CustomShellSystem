@@ -25,9 +25,7 @@
 #include <memory>
 #include <Unreal/UObject.hpp>
 #include <Unreal/FWeakObjectPtr.hpp>
-#ifdef CSS_INVENTORY_DEV
 #include "astral_lifecycle.hpp"
-#endif
 
 namespace css {
 fs::path engine_content_directory();
@@ -84,6 +82,39 @@ public:
     size_t size() const { return slots_.size(); }
     void release() noexcept;
 };
+struct SpringSettings {
+    double stiffness=0, damping=0, max_displacement=0, error_reset=0;
+    bool limit=false;
+    std::array<bool,3> translate{}, rotate{};
+    bool operator==(const SpringSettings&) const = default;
+};
+struct AstralPhysicsSource {
+    WeakObject animation_class;
+    bool post_process_disabled=false, cloth_disabled=false, rigid_body_disabled=false;
+    std::map<std::string,SpringSettings> springs;
+    std::map<std::string,DynamicsSettings> dynamics;
+    std::optional<RigSettings> rig;
+    std::optional<BodyRigSettings> body_rig;
+    std::optional<BodyGeometry> geometry;
+};
+struct AstralComponentSource {
+    std::string item;
+    bool visible=true, hidden_in_game=false;
+    WeakObject component, mesh;
+    std::vector<WeakObject> materials, overlays;
+    std::vector<std::set<int>> hidden_by_lod;
+    std::map<std::string,float> morphs;
+    std::array<double,3> location{}, rotation{}, scale{};
+    AstralPhysicsSource physics;
+};
+// Values are captured on the game thread immediately before preparing a double.
+// Material handles refer to current uniforms, not an immutable saved profile.
+struct AstralAppearanceSource {
+    WeakObject pawn;
+    uint64_t player_revision=0;
+    std::vector<AstralComponentSource> components;
+    AssetLoadRoots retained;
+};
 class OverlayControls {
     struct Entry { WeakObject original, mid, bound; bool detached=false; };
     WeakObject component_, mesh_;
@@ -96,6 +127,7 @@ class OverlayControls {
 public:
     void prepare(RC::Unreal::UObject*,RC::Unreal::UObject*);
     RC::Unreal::UObject* mid_for(RC::Unreal::UObject*,RC::Unreal::UObject*,int);
+    RC::Unreal::UObject* appearance_material(RC::Unreal::UObject*,int) const;
     void share(RC::Unreal::UObject*,RC::Unreal::UObject*,const OverlayControls&);
     void sync();
     void detach();
@@ -108,6 +140,7 @@ class EngineBridge {
 #ifdef CSS_INVENTORY_DEV
     AstralLifecycle astral_lifecycle_;
     Json observe_astral(void* engine);
+    Json observe_astral_source(Appearance& appearance);
     Json probe_astral_materials(void* engine,const Json& request);
 #endif
     std::map<uint64_t,WeakObject> objects_;
@@ -397,6 +430,7 @@ public:
     void release();
     int count() const { return int(worn_.size()); }
     std::vector<std::string> ids() const;
+    std::vector<std::pair<std::string,WeakObject>> components() const;
     void sync_morph(const std::string& morph, float weight);
     void sync_morphs(const std::map<std::string, float>& driven_morphs);
 };
@@ -524,11 +558,7 @@ class Appearance {
     std::set<int> toggle_hidden_, item_hidden_, applied_hidden_;
     // Spring: every field CSS may write on a node, remembered on first touch and keyed by
     // bone, so dropping the control puts the author's own motion back with no mesh reload.
-    struct SpringOriginal {
-        double stiffness=0, damping=0, max_displacement=0, error_reset=0;
-        bool limit=false; std::array<bool,3> translate{}, rotate{};
-        bool operator==(const SpringOriginal&) const = default;
-    };
+    using SpringOriginal=SpringSettings;
     std::map<std::string,SpringOriginal> spring_originals_;
     WeakObject spring_instance_;
     std::map<std::string,DynamicsSettings> dynamics_originals_;
@@ -636,6 +666,7 @@ public:
     std::map<std::string,double> customize_ms;     // last customize(): time per step, for the apply log line
     Json material_debug;
     RC::Unreal::UObject* player(void* engine);
+    std::unique_ptr<AstralAppearanceSource> astral_source() const;
     bool apply(void* engine, const std::string& mesh_path, const std::map<int,std::string>& materials = {});
     bool restore();
     void release_caches() { mask_cache_.clear(); mask_roots_.release(); mask_cache_outfit_.clear(); }

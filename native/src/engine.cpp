@@ -1685,6 +1685,12 @@ std::vector<std::string> WornItems::ids() const {
     for(const auto& worn:worn_) result.push_back(worn.id);
     return result;
 }
+std::vector<std::pair<std::string,WeakObject>> WornItems::components() const {
+    std::vector<std::pair<std::string,WeakObject>> result;
+    result.reserve(worn_.size());
+    for(const auto& worn:worn_) result.emplace_back(worn.id,worn.component);
+    return result;
+}
 void WornItems::sync_morph(const std::string& morph, float weight) {
     auto name=FName(wide(morph).c_str(),FNAME_Add);
     for(auto& worn:worn_) {
@@ -2060,6 +2066,7 @@ void Appearance::sync_body_geometry(UObject* component) {
     body_geometry_applied_=value; body_geometry_morphs_=values;
 }
 
+#include "astral_source.inl"
 void Appearance::reset_controls() {
     menu_overlay_controls_.release(); overlay_controls_.release();
     show_hidden_sections();

@@ -51,6 +51,32 @@ dump and UE 5.6.1 `MaterialInstanceDynamic.cpp`. The scalar-index constraint is
 also documented by [Epic](https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/UMaterialInstanceDynamic/SetScalarParameterByIndex).
 No DLL, package or settings were installed by this change.
 
+`Appearance::astral_source()` now captures the live visual inputs for later
+double preparation. It requires the actual Faithful/Stray gameplay tag and a
+matching observed player component. It refuses a transitional vanilla mesh
+while CSS still intends to restore a custom appearance. The capture includes
+the body and CSS-owned modular components, retained material/overlay handles,
+per-LOD hidden material slots, explicitly set nonzero morph weights, component
+visibility/transforms, and supported post-process spring/dynamics/rig/body
+geometry settings. No player locomotion, combat pose, weapon attachments,
+collision configuration or ability state is copied.
+
+For the managed body, material sources come from CSS's retained expected
+overrides and mesh defaults; authored fabric MIDs take priority over transient
+gameplay overlays. Their current uniform values include unsaved edits. These
+are live handles, not immutable parameter snapshots, so capture and private
+material preparation must happen together on the game thread. Other sources
+and modular components use their currently bound materials. Arbitrary foreign
+accessory components are not enumerated or claimed supported by this capture.
+
+The development operation `astral.source` serializes this capture and verifies
+that its scoped retained-object count returns to baseline. Development and
+shipping Windows builds both completed successfully after adding the capture
+and probe. It is not installed, has not been live-verified, and is not yet wired
+to summon preparation. Reading source settings alone does not prove that a
+double reproduces them. Existing portable tests do not cover these reflection
+calls.
+
 Material composition is still unresolved. The native ghost shader lacks
 configurable mask textures. Replacing every material with it loses hair,
 fabric and wing coverage. Retaining the original materials with a global ghost

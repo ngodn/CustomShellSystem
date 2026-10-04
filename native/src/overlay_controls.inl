@@ -165,6 +165,14 @@ void OverlayControls::sync() {
     }
     if(changed) refresh_overlay_slots(component);
 }
+UObject* OverlayControls::appearance_material(UObject* component,int index) const {
+    if(component_.Get()!=component || !component || mesh_asset(component)!=mesh_.Get()) return nullptr;
+    const auto found=entries_.find(index);
+    if(found==entries_.end()) return nullptr;
+    auto* material=found->second.mid.Get();
+    if(!material) throw std::runtime_error("Authored overlay material expired during copy");
+    return material;
+}
 void OverlayControls::detach() {
     if(auto* component=component_.Get();component && !entries_.empty()) {
         auto slots=overlay_slots(component);
