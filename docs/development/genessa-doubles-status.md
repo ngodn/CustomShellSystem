@@ -20,6 +20,15 @@ stage includes material-pack5's verified 30-asset shared package with the new
 constant-color companion. Await normal game closure before installation;
 neither safe core hot reload nor mounted-package replacement is supported.
 
+The author then closed the game and requested installation. The process check
+confirmed closure. Trial5 is now installed as
+`css_core-astral-trial-bb321e43da4eac9e.dll`, together with material-pack5.
+`runtime-trial5/deployment.json` records verified core/package hashes, the prior
+selector/core/package backup and all 12 protected-file hashes. Loader, UE4SS,
+saved settings and legacy Eve shared assets remain unchanged. The trial starts
+disarmed and must be explicitly enabled after relaunch. Live verification remains
+pending; no claim that the Stray shape is fixed in-game yet.
+
 The runtime now selects shared ghost materials from the source's actual parent
 chain, graph StateId, static switches, blend mode, mask threshold and culling.
 It binds native noise textures and copied source textures after uniform copying.
