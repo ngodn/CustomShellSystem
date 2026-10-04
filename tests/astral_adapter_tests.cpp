@@ -77,7 +77,7 @@ int main(int argc,char** argv) {
         }
         ++checked;
     }
-    check(checked==11,"Material catalog coverage changed without updating acceptance");
+    check(checked==12,"Material catalog coverage changed without updating acceptance");
     std::cout<<"Astral adapter policy passed for "<<checked<<" source graphs\n";
     if(argc==2) {
         std::ifstream input(argv[1]);

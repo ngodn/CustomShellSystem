@@ -15,8 +15,11 @@ data = json.loads(args.readback.read_text())
 manifest = json.loads(args.manifest.read_text())
 variants = json.loads(args.variants.read_text())["materials"]
 expected = {row["material"].split(".")[0]: row for row in manifest["materials"]}
-if len(expected) != 12 or len(variants) != 12 or {row["parent"].split(".")[0] for row in variants} != set(expected):
-    raise ValueError("Expected twelve audited companion parents and their culling variants")
+if (len(expected) < 12 or len(expected) != len(manifest["materials"])
+        or len(variants) != len(expected)
+        or len({row["variant"] for row in variants}) != len(expected)
+        or {row["parent"].split(".")[0] for row in variants} != set(expected)):
+    raise ValueError("Expected unique audited companion parents and their culling variants")
 rows = []
 prefix = "/Game/CSS/SharedAssets/Astral/"
 
@@ -73,6 +76,12 @@ for package, spec in expected.items():
         if not properties.get(flag, False):
             raise ValueError(f"Missing mesh usage {flag}: {package}")
     cached = material["CachedExpressionData"]
+    if spec["name"] == "M_ClothDriver":
+        vectors = dict(zip((row["Name"] for row in cached["RuntimeEntries[1]"]["ParameterInfoSet"]),
+                           cached["VectorValues"], strict=True))
+        if set(vectors) != {"Param"} or any(abs(vectors["Param"][channel] - value) > 1.e-6
+                for channel, value in zip("RGBA", (.54, .1567, 0., 0.), strict=True)):
+            raise ValueError("Cloth driver source color contract changed")
     scalar_infos = cached["RuntimeEntries"]["ParameterInfoSet"]
     scalars = dict(zip((row["Name"] for row in scalar_infos), cached["ScalarValues"], strict=True))
     if scalars["CSS_AstralOpacity"] != 0 or scalars["CSS_AstralUseFixedTime"] != 0:

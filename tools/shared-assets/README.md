@@ -93,6 +93,23 @@ replace in-game appearance, animation or lifecycle testing.
 
 ## Runtime trial
 
+### Constant-color material extension
+
+`add-clothdriver-material.py` adds the independently audited native clothdriver
+parent used by More Beaute. It checks the decoded source revision, preserves
+all existing shared assets and creates one parent plus its opposite-culling
+instance. Put the independent AssetReadback result in `clothdriver-source.json`
+inside a copied shared stage, then run the `clothdriver` mode of
+`run-pose-check.sh`. The new parent uses the source `Param` vector directly;
+no synthetic color texture or render target is needed.
+
+After cooking that stage, pass both `--manifest STAGE/shared-materials.json`
+and `--variants STAGE/shared-material-variants.json` to `pack-shared.py`.
+The exact expected asset set then comes from those manifests (30 assets for
+this extension). Without the flags, the original 28-asset check remains.
+Regenerate the runtime catalog with the same manifest. Cook/readback checks
+establish package and shader coverage, not live outfit fidelity.
+
 The current container name is `CSS_AstralSharedAssets_P`. `CSS_SharedAssets_P`
 is already used by an older Eve skeleton/animation package on the test machine.
 Do not rename the output files alone: `pack-shared.py` uses the new basename

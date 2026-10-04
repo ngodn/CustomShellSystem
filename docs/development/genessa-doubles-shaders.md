@@ -3,6 +3,23 @@
 October 4, 2026. Research on `feature/genessa-doubles`. Nothing in this document
 claims installed support or a completed material adapter.
 
+## Constant-color companion, October 5
+
+`add-clothdriver-material.py` now authors the audited clothdriver graph used by
+More Beaute as a shared ghost companion. It copies the `Param` color uniform
+and retains native ghost noise/fade, with an opposite-culling instance. This
+avoids exempting disabled render sections from material admission by name.
+
+The isolated `visuals-clothdriver1` stage preserves all 28 previous shared asset
+hashes. `material-cook4` completes the Windows cook with zero errors/warnings.
+`material-pack5` has 30 exports, byte-identical export-payload roundtrip, 26
+independently checked SM5/SM6 companion materials and the unchanged pose graph.
+The generated runtime catalog contains 12 distinct source roots. Regenerating
+the previous 11-root catalog remains byte-identical. The 18 host tests pass.
+
+This candidate is staged, not installed. More Beaute's live uniform transfer
+and visual fidelity still need testing. No authored outfit asset was changed.
+
 ## What changed
 
 The native summon shader code is available in the game's shared IoStore shader

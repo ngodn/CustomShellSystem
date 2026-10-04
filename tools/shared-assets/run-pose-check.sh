@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ $# != 4 ]]; then
-    echo 'Usage: run-pose-check.sh ENGINE_DIRECTORY STAGE_DIRECTORY pose|physics|materials|variants LOG_NAME' >&2
+    echo 'Usage: run-pose-check.sh ENGINE_DIRECTORY STAGE_DIRECTORY pose|physics|materials|variants|clothdriver LOG_NAME' >&2
     exit 2
 fi
 engine=$(realpath "$1")
@@ -16,7 +16,8 @@ case "$mode" in
     physics) script=check-copy-pose-physics.py ;;
     materials) script=create-shared-materials.py ;;
     variants) script=create-shared-variants.py ;;
-    *) echo 'Expected pose, physics, materials or variants' >&2; exit 2 ;;
+    clothdriver) script=add-clothdriver-material.py ;;
+    *) echo 'Expected pose, physics, materials, variants or clothdriver' >&2; exit 2 ;;
 esac
 exec 9>"$stage/pose-test.lock"
 flock -n 9 || { echo 'A pose check is already running.' >&2; exit 2; }
