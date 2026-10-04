@@ -10,11 +10,11 @@ struct AstralVisualGroup {
     bool visible=false;
 
     bool release() noexcept {
+        // Restore bindings while their components are still alive.
+        bool result=bindings.restore();
         // Destroy children before their pose parent. Restore native visibility even
         // if a component refuses destruction, leaving the failed group for retry.
-        bool result=true;
         for(auto it=visuals.rbegin();it!=visuals.rend();++it) result=(*it)->release() && result;
-        result=bindings.restore() && result;
         result=native.restore() && result;
         if(result) { visuals.clear();materials.release();visible=false; }
         return result;

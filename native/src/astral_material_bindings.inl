@@ -1,5 +1,10 @@
 // Included after material and per-slot overlay accessors.
 namespace {
+bool astral_object_valid(UObject* object) {
+    if(!object) return false;
+    Call valid(find(L"/Script/Engine.Default__KismetSystemLibrary"),L"IsValid",2);
+    valid.set(L"Object",object);valid.run();return valid.get<bool>();
+}
 UObject* astral_binding_owner(UObject* component) {
     Call owner(component,L"GetOwner",1);owner.run();return owner.get<UObject*>();
 }
@@ -115,7 +120,7 @@ bool AstralMaterialBindings::restore() noexcept {
     bool restored=true;
     for(auto& entry:entries_) try {
         auto* component=entry.component.Get();
-        if(!component) continue;
+        if(!astral_object_valid(component)) continue;
         if(!owner_.Get() || astral_binding_owner(component)!=owner_.Get())
             continue;
         const bool same_mesh=mesh_asset(component)==entry.mesh.Get();

@@ -105,6 +105,25 @@ This is a real compatibility gap within the requested broader appearance scope;
 inspect whether that slot is rendered and its shader graph before choosing an
 adapter or excluding it. Do not treat native fallback as full support.
 
+The author confirmed Stray appearance, red effect and attacks look correct.
+`runtime-trial2/stray-capture2.jsonl` records an active `AstralClonePrimary` and
+one prepared custom group (total 35). During a subsequent rebound/form change,
+cleanup reported `Astral rebound cleanup is incomplete` followed by
+`Astral appearance-change cleanup is incomplete`; the group was eventually
+released (35 removed). This is not a clean lifecycle pass. No secondary Stray
+actor was captured in this run.
+
+Inspection found two cleanup paths still relying on weak-pointer validity:
+material rollback and the native render lease. Both now use Unreal's `IsValid`
+before touching their component, matching the demonstrated destroyed-object
+behavior above. Group release restores material bindings before destroying
+visuals, then restores the native render lease. The hidden visual probe now
+destroys a diagnostic pose parent before restoring its lease, and the binding
+probe tests destruction while bindings are still owned. These additions are
+building; their engine-dependent regressions and another Stray form transition
+must pass live before claiming the lifecycle repair. The prior trial remains
+installed and enabled, with the user-visible result accepted but this defect open.
+
 Destruction semantics were checked against the local UE 5.6.1
 `ActorComponent.cpp` (DestroyComponent and K2_DestroyComponent) and
 [Epic's component destruction reference](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/UActorComponent/K2_DestroyComponent).

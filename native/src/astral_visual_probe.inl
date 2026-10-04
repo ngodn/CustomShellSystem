@@ -42,10 +42,19 @@ Json EngineBridge::probe_astral_visual(void* engine,Appearance& appearance,const
     if(!visual.release() || visual.component() || visual.intact() || !parent_unchanged())
         throw std::runtime_error("Visual probe cleanup or parent preservation failed");
     if(!visual.release()) throw std::runtime_error("Visual probe repeat cleanup failed");
+    // Form changes can destroy the native pose source before its lease is
+    // restored. Use our own hidden component to exercise that ordering.
+    AstralVisualMesh expiring_parent;
+    expiring_parent.prepare(parent,source->components.front(),pose_class,AstralVisualTransform{});
+    AstralNativeRenderLease expired_native;
+    expired_native.acquire(expiring_parent.component());
+    if(!expiring_parent.release() || !expired_native.restore() || !expired_native.restore() || !parent_unchanged())
+        throw std::runtime_error("Visual probe destroyed-parent cleanup failed");
     source.reset();
     if(keep_alive::entries.size()!=retained_before)
         throw std::runtime_error("Visual probe retained objects did not return to baseline");
     return {{"passed",true},{"morphs",morphs},{"lods",lods},{"parent_preserved",true},{"native_render_restored",true},
+        {"destroyed_parent_restored",true},
         {"retained_objects_restored",true},{"rendered",false},
         {"scope","Synchronous hidden visual construction and cleanup. No summon, animation-frame or rendering validation."}};
 }

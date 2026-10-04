@@ -89,12 +89,16 @@ Json EngineBridge::probe_astral_bindings(void* engine,const Json& request) {
     if(bindings.intact()) throw std::runtime_error("Binding probe missed per-slot overlay replacement");
     if(!bindings.restore() || overlay_at(overlays,0)!=parent)
         throw std::runtime_error("Binding probe overwrote another overlay writer");
+    bindings.bind(owner,{&binding,1});
     if(!temporary.destroy()) throw std::runtime_error("Binding probe component cleanup failed");
+    if(!bindings.restore() || !bindings.restore())
+        throw std::runtime_error("Binding probe destroyed-component restoration failed");
     roots.release();
     if(keep_alive::entries.size()!=retained_before)
         throw std::runtime_error("Binding probe retained objects did not return to baseline");
     return {{"passed",true},{"slots",count},{"duplicate_input_rejected",true},
         {"native_reinitialization_preserved",true},{"overlay_replacement_preserved",true},
+        {"destroyed_component_restored",true},
         {"retained_objects_restored",true},{"existing_components_changed",false},
         {"scope","Binding and restoration on one unregistered diagnostic component. No summon rendering or ability validation."}};
 }

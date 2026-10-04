@@ -56,7 +56,7 @@ bool AstralNativeRenderLease::intact() const {
 }
 bool AstralNativeRenderLease::restore() noexcept {
     try {
-        if(auto* component=component_.Get()) {
+        if(auto* component=component_.Get();astral_object_valid(component)) {
             if(astral_binding_owner(component)!=owner_.Get()) return false;
             // The flags belong to the component, including across a native
             // mesh reset. Restore only values still equal to our writes.

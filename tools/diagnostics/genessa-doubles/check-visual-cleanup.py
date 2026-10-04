@@ -27,7 +27,7 @@ def main():
         pose = probe.send('load', path='/Game/CSS/SharedAssets/Astral/ABP_CopyPose.ABP_CopyPose_C')
         for _ in range(3):
             result = probe.send('astral.visual.probe', parent=parent, pose_class=pose)
-            if not result.get('passed'):
+            if not result.get('passed') or not result.get('destroyed_parent_restored'):
                 raise RuntimeError(result)
         after = probe.call(owner, 'K2_GetComponentsByClass', ComponentClass=component_class)
         if before != after:
