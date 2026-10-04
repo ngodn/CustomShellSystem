@@ -34,6 +34,17 @@ do not execute this reflected binding. New opt-in `astral.observe` `poses:true`
 diagnostics capture native and private bone transforms in one game-thread
 request. Live pose, leader transitions, flicker and performance remain unverified.
 
+Trial5 update: the author accepts both Stray shapes, and the world-only capture
+matches 520 sampled bone positions. Earlier mixed menu/form captures still have
+large discrepancies without enough contemporaneous context to explain them.
+Use `tools/diagnostics/genessa-doubles/capture-live-poses.py OUTPUT --seconds 60`
+for the next check. It brackets each same-thread pose query with current status,
+records menu/source changes and stops if the game process changes. Status is
+published asynchronously, so even matching snapshots are not proof that a pose
+was sampled in an unpaused world. Preserve mismatches for investigation.
+The tool's CLI and no-running-game guard pass; its new context recorder has not
+yet been exercised live. No gameplay actions or appearance changes are sent.
+
 Do not replace the native double's main skeletal mesh with an outfit using a
 different skeleton. UE 5.6.1 `SkeletalMeshComponent.cpp`, `InitAnim` at line 1115,
 clears the current AnimInstance when its skeleton differs from the new mesh.
