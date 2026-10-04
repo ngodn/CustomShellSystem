@@ -5,6 +5,22 @@ October 4, 2026. Offline experiments, not installed runtime support.
 The user requires Unholy Genessa, Eve and Commander White. Companion materials
 belong to CSS. Outfit authoring sources and released containers stay unchanged.
 
+## Runtime texture and scalar inputs, October 5
+
+`AstralMaterialInput` accepts explicit texture and scalar bindings in addition
+to the source/companion pair. Preparation retains textures before allocating
+MIDs, rejects duplicate names, invalid objects, nonfinite values and attempts
+to replace the owned fade/form/time controls. Overrides are applied after the
+quick uniform copy and read back. Deduplication includes these bindings, so
+two otherwise identical slots cannot share a MID when their inputs differ.
+
+This supports native noise textures, the effective body clip threshold and
+scene reflection intensity without shipping preview PNGs or relying on fixed
+scene defaults. It does not select adapters or read those scene values yet.
+Development and shipping Windows builds pass without warnings; the 17 host
+tests pass. Reflected calls reuse existing CSS texture getter/setter paths,
+but this new preparation path has not run in game.
+
 ## Native body companions, October 5
 
 `create-native-body-materials.py` adds opaque-source and masked-source ghost

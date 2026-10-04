@@ -26,6 +26,7 @@ void AstralMaterials::prepare(UObject* owner,UObject* native_mid,
        inputs.empty() || inputs.size()>128)
         throw std::runtime_error("Invalid Astral material preparation");
     auto* interface_class=static_cast<UClass*>(find(L"/Script/Engine.MaterialInterface"));
+    auto* texture_class=static_cast<UClass*>(find(L"/Script/Engine.Texture"));
     AssetLoadRoots roots;
     // Protect all inputs before the first allocation. A failure leaves no
     // component bound to a partial result and destroys this local root scope.
@@ -36,6 +37,28 @@ void AstralMaterials::prepare(UObject* owner,UObject* native_mid,
            dynamic_material(input.companion))
             throw std::runtime_error("Invalid Astral source or companion material");
         astral_retain(roots,input.source);astral_retain(roots,input.companion);
+        if(input.textures.size()>16 || input.scalars.size()>16)
+            throw std::runtime_error("Astral material controls exceed bound");
+        for(size_t i=0;i<input.textures.size();++i) {
+            const auto& texture=input.textures[i];
+            if(texture.parameter.empty() || texture.parameter.size()>128 ||
+               texture.parameter.find(L'\0')!=std::wstring::npos || !texture.texture ||
+               WeakObject(texture.texture).Get()!=texture.texture || !texture.texture->IsA(texture_class))
+                throw std::runtime_error("Invalid Astral texture binding");
+            for(size_t j=0;j<i;++j) if(input.textures[j].parameter==texture.parameter)
+                throw std::runtime_error("Duplicate Astral texture binding");
+            astral_retain(roots,texture.texture);
+        }
+        for(size_t i=0;i<input.scalars.size();++i) {
+            const auto& scalar=input.scalars[i];
+            if(scalar.parameter.empty() || scalar.parameter.size()>128 ||
+               scalar.parameter.find(L'\0')!=std::wstring::npos || !std::isfinite(scalar.value) ||
+               scalar.parameter==L"CSS_AstralOpacity" || scalar.parameter==L"CSS_AstralCorrupted" ||
+               scalar.parameter==L"CSS_AstralUseFixedTime" || scalar.parameter==L"CSS_AstralFixedTime")
+                throw std::runtime_error("Invalid Astral scalar binding");
+            for(size_t j=0;j<i;++j) if(input.scalars[j].parameter==scalar.parameter)
+                throw std::runtime_error("Duplicate Astral scalar binding");
+        }
     }
     const WeakObject owner_guard(owner),native_guard(native_mid);
     const float opacity=astral_opacity(native_mid);
@@ -47,7 +70,8 @@ void AstralMaterials::prepare(UObject* owner,UObject* native_mid,
     auto* library=find(L"/Script/Engine.Default__KismetMaterialLibrary");
     for(const auto& input:inputs) {
         const auto existing=std::find_if(unique.begin(),unique.end(),[&](const auto& value) {
-            return value.source==input.source && value.companion==input.companion;
+            return value.source==input.source && value.companion==input.companion &&
+                   value.textures==input.textures && value.scalars==input.scalars;
         });
         if(existing!=unique.end()) {
             slots.push_back(size_t(existing-unique.begin()));
@@ -66,6 +90,22 @@ void AstralMaterials::prepare(UObject* owner,UObject* native_mid,
         Call transfer(copy,L"K2_CopyMaterialInstanceParameters",2);
         transfer.set(L"Source",input.source);transfer.set(L"bQuickParametersOnly",true);transfer.run();
         // Copy clears destination overrides. Native controls must be written afterward.
+        for(const auto& texture:input.textures) {
+            const FName name(texture.parameter.c_str(),FNAME_Add);
+            Call set(copy,L"SetTextureParameterValue",2);
+            set.set(L"ParameterName",name);set.set(L"Value",texture.texture);set.run();
+            Call get(copy,L"K2_GetTextureParameterValue",2);
+            get.set(L"ParameterName",name);get.run();
+            if(get.get<UObject*>()!=texture.texture)
+                throw std::runtime_error("Astral texture binding readback failed");
+        }
+        for(const auto& scalar:input.scalars) {
+            astral_scalar(copy,scalar.parameter.c_str(),scalar.value);
+            Call get(copy,L"K2_GetScalarParameterValue",2);
+            get.set(L"ParameterName",FName(scalar.parameter.c_str(),FNAME_Add));get.run();
+            if(get.get<float>()!=scalar.value)
+                throw std::runtime_error("Astral scalar binding readback failed");
+        }
         astral_scalar(copy,L"CSS_AstralCorrupted",corrupted?1.f:0.f);
         astral_scalar(copy,L"CSS_AstralUseFixedTime",0.f);
         Call initialize(copy,L"InitializeScalarParameterAndGetIndex",4);

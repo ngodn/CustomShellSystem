@@ -28,7 +28,7 @@ Json EngineBridge::probe_astral_materials(void* engine,const Json& request) {
            dynamic_material(companion)) throw std::runtime_error("Invalid probe material pair");
         astral_retain(roots,source);astral_retain(roots,companion);
         const auto slot=inputs.size();
-        inputs.push_back({source,companion});
+        inputs.push_back({source,companion,{}, {}});
         for(const auto& [key,getter]:std::array<std::pair<const char*,const wchar_t*>,3>{{
             {"scalars",L"K2_GetScalarParameterValue"}, {"vectors",L"K2_GetVectorParameterValue"},
             {"textures",L"K2_GetTextureParameterValue"}}}) {

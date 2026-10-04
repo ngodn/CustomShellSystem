@@ -61,9 +61,21 @@ public:
     ~AssetLoadRoots() noexcept { release(); }
 };
 class Appearance;
+struct AstralTextureInput {
+    std::wstring parameter;
+    RC::Unreal::UObject* texture=nullptr;
+    bool operator==(const AstralTextureInput&) const = default;
+};
+struct AstralScalarInput {
+    std::wstring parameter;
+    float value=0.f;
+    bool operator==(const AstralScalarInput&) const = default;
+};
 struct AstralMaterialInput {
     RC::Unreal::UObject* source=nullptr;
     RC::Unreal::UObject* companion=nullptr;
+    std::vector<AstralTextureInput> textures;
+    std::vector<AstralScalarInput> scalars;
 };
 // Prepared privately before any component binding. The caller must resolve
 // compatible companion shaders and detach bindings before releasing this set.
