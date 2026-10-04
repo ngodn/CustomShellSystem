@@ -5,6 +5,12 @@ Read this before resuming work. [Goal](genessa-doubles-goal.md) defines completi
 
 ## Established findings
 
+- Keep the native double's main mesh and AnimInstance. Cross-skeleton mesh
+  assignment clears that instance in UE 5.6.1, even without force-reinit.
+  The shared Copy Pose template passes isolated moving-pose checks on the
+  outfit skeletons; its wing post-process also runs. See [pose ownership](genessa-doubles-pose.md)
+  for evidence and the remaining left-finger/weapon-grip check.
+
 - Genessa eye smoke uses vertex red for coverage and green for phase. Literal
   texture index 1 resolves to T_noise_0082 in the cached texture list, not
   T_noise_0109 in the export's differently ordered top-level texture list.

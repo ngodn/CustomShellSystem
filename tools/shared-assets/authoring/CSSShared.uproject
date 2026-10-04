@@ -1,0 +1,12 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.6",
+  "Modules": [{"Name": "CSSSharedAuthoring", "Type": "Editor", "LoadingPhase": "Default"}],
+  "Plugins": [
+    {"Name": "PythonScriptPlugin", "Enabled": true},
+    {"Name": "EditorScriptingUtilities", "Enabled": true},
+    {"Name": "ControlRig", "Enabled": true},
+    {"Name": "ChaosClothAsset", "Enabled": true},
+    {"Name": "AndroidFileServer", "Enabled": false}
+  ]
+}
