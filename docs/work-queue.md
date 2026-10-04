@@ -1,5 +1,15 @@
 # Current work queue
 
+## October 4: Genessa doubles inherit CSS appearance
+
+After accepting beta.10, the author requested Faithful and Stray doubles that
+match the current customized Unholy Genessa appearance while retaining native
+blue/red ghost effects and ability behavior. Initial dump inspection found
+spawn, cache/reuse, ghost-material and fade interfaces. Full cooked-graph tracing
+and live verification remain. The requested updated goal is recorded in
+[Genessa doubles](development/genessa-doubles-goal.md). The existing gameplay
+clipping investigation remains pending; no runtime clone changes are made yet.
+
 ## October 4: intermittent original-shell appearance after gates
 
 The author clarified that the outfit reverts to the original shell. Captured
