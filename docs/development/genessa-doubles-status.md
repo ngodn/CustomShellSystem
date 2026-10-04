@@ -4,26 +4,56 @@ Session 4, October 5, 2026. Branch `feature/genessa-doubles`.
 
 ## Current state
 
-The shared-assets candidate is now Windows-cooked and packaged, not installed.
-`material-pack3` on the secondary drive contains the pose template, twelve
-ghost parents, twelve opposite-culling instances and three neutral textures.
-All 28 export payloads round-trip byte-identically. Independent readback passes
-both SM5/SM6 targets, cloth/skin variants, eye distortion, texture/default-fade
-contracts and package references. `material-cook3` exited zero with no cooker
-errors or warnings. Earlier `material-pack1` is rejected because five new
-parents lacked cloth variants; `material-pack2` lacks the culling alternatives.
-Use only pack3 for the next integration step.
+The runtime now selects shared ghost materials from the source's actual parent
+chain, graph StateId, static switches, blend mode, mask threshold and culling.
+It binds native noise textures and copied source textures after uniform copying.
+The policy accepts all 102 independently decoded Eve/Commander White material
+configurations; unsupported graph revisions/permutations retain the native double.
+The native Uber layer is checked by its path and StateId. Its unreflected Tree
+layout is bounded against UE 5.6.1's header and the game dump (0x28 bytes), and
+only empty array counts/root are read. No tree allocation is dereferenced.
 
-The manifests are `visuals1/shared-materials.json` and
-`shared-material-variants.json`. Runtime must bind native T_noise_0017,
-T_noise_0082 for eye smoke, source textures, effective clip thresholds and
-the live reflection-boost scalar. `AstralMaterials` supports explicit texture
-and scalar bindings after copying source uniforms, with roots and readback.
-Both Windows runtime builds pass without warnings and all 17 host tests pass.
-Adapter selection and the automatic double coordinator are still absent.
-No live verification or installation has occurred. The latest user explicitly
-authorized installation once ready and said the game is closed; recheck before
-writing installed files. The EveTest report remains queued in `work-queue.md`.
+`AstralDoubles` now connects the bounded player-owned spawner reader to private
+materials, a CopyPose visual body and leader-pose modular followers. It copies
+current morphs, hidden sections, overlays and supported post-process inputs.
+The native combat mesh, animation instance, weapons and collision stay in place.
+Discovery runs at 20 Hz; active fades follow the original MID each frame.
+Appearance revisions, reuse, changed native instances, disable and cleanup are
+handled. Source visibility/physics are recaptured on activation, including after
+leaving Inventory. Failed activations use the original double without retrying
+every frame. Development builds start disarmed; `astral_trial` explicitly enables
+the coordinator for live checks. `astral.adapters.probe` only selects/loads assets.
+Frame profiling now includes a separate Astral phase.
+
+Both Windows runtime builds pass, and all 18 host tests pass. Catalog generation
+reproduces the checked-in definitions exactly. These are compile/policy checks,
+not proof of reflected calls, rendering, combat contacts, cleanup or live cost.
+Body companions currently reproduce albedo and coverage, not the original Uber
+PBR/blood treatment. Body offsets and foreign accessory layouts still need live
+comparison. Broad native VT/NPC support remains a fallback, not full parity.
+
+The current asset candidate is `/mnt/eins0fxE/CSS-work/genessa-doubles/material-pack4`.
+It packages the same 28 verified exports as pack3, using the distinct container
+name `CSS_AstralSharedAssets_P` (ID 422281afa3183dc6). Independent shader and pose
+readbacks pass again. The installed legacy `CSS_SharedAssets_P` from September 24
+contains 28 Eve skeleton/animation assets, not these ghost materials; keep it intact.
+The source manifests remain `visuals1/shared-materials.json` and
+`shared-material-variants.json`. No recook was needed for the container rename.
+
+Installation is pending. Although the author previously said the game was closed,
+the pre-install check found Linux PID 1809430 running. The installed selector is
+still `css_core-beta9-gate-default-1f522f0859f2fa26.dll`. A close-game question is
+pending; no game input, package replacement or core switch was sent. The prepared
+installer is `tools/shared-assets/install-trial.py`; it refuses a running game,
+backs up the selector/core, checks state/loader/UE4SS/legacy shared hashes, and
+installs the new package alongside the old one. The trial stays disarmed on boot.
+
+Next: install after confirmed normal close, verify the new core/package hashes,
+then ask for Genessa equipped in the world. Run source/adapter and hidden visual
+checks before arming the trial. Verify Faithful and both Stray doubles, skin/body
+controls, hair/fabric/wing rendering, attack grips, pooling and cleanup. Profile
+active summons, then exercise the existing aiming/locomotion/gate/profile checks.
+Keep the goal active and both releases unmodified. EveTest remains queued.
 
 Commander White's native eye refraction now passes 524 DXIL arithmetic cases
 and 14 Vulkan captures. Zero surface opacity still refracts, but zero native

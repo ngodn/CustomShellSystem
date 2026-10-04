@@ -1,5 +1,6 @@
 // Included after the source capture and post-process setting accessors.
 namespace {
+uint8_t astral_required_tick(UObject* component);
 void astral_visual_flag(UObject* object,const wchar_t* name,bool value) {
     auto* property=optional_field(object,name);
     if(!property || !property->IsA<FBoolProperty>() || property->GetArrayDim()!=1 ||
@@ -97,6 +98,7 @@ void AstralVisualMesh::prepare(UObject* parent,const AstralComponentSource& sour
     mesh_=mesh;pose_class_=pose_class;
     retained_.take(roots);
     source_visible_=source.visible && !source.hidden_in_game;
+    leader_pose_=source.leader_pose;
     try {
         Call transform(find(L"/Script/Engine.Default__KismetMathLibrary"),L"MakeTransform",4);
         transform.set(L"Location",relative.location);transform.set(L"Rotation",relative.rotation);
@@ -114,6 +116,8 @@ void AstralVisualMesh::prepare(UObject* parent,const AstralComponentSource& sour
         if(!visual) throw std::runtime_error("Astral visual creation failed");
         component_=visual;
         astral_visual_visibility(visual,false);
+        write_field(visual,L"VisibilityBasedAnimTickOption",astral_required_tick(visual));
+        astral_visual_flag(visual,L"bEnableUpdateRateOptimizations",false);
         Call collision(visual,L"SetCollisionEnabled",1);collision.set(L"NewType",uint8_t{0});collision.run();
         Call asset(visual,L"SetSkeletalMeshAsset",1);asset.set(L"NewMesh",mesh);asset.run();
         Call post(visual,L"SetOverridePostProcessAnimBP",2);
@@ -131,11 +135,20 @@ void AstralVisualMesh::prepare(UObject* parent,const AstralComponentSource& sour
         attach.set(L"LocationRule",uint8_t{0});attach.set(L"RotationRule",uint8_t{0});attach.set(L"ScaleRule",uint8_t{0});
         attach.set(L"bWeldSimulatedBodies",false);attach.run();
         if(!attach.get<bool>()) throw std::runtime_error("Astral visual attachment failed");
-        Call animation(visual,L"SetAnimInstanceClass",1);animation.set(L"NewClass",pose_class);animation.run();
+        if(leader_pose_) {
+            Call leader(visual,L"SetLeaderPoseComponent",3);
+            leader.set(L"NewLeaderBoneComponent",parent);leader.set(L"bForceUpdate",true);
+            leader.set(L"bInFollowerShouldTickPose",false);leader.run();
+        } else {
+            Call animation(visual,L"SetAnimInstanceClass",1);animation.set(L"NewClass",pose_class);animation.run();
+        }
         Call prerequisite(visual,L"AddTickPrerequisiteComponent",1);
         prerequisite.set(L"PrerequisiteComponent",parent);prerequisite.run();
         Call finish(owner,L"FinishAddComponent",3);
         finish.set(L"Component",visual);finish.set(L"bManualAttachment",true);copy_transform(finish);finish.run();
+        if(leader_pose_) {
+            Call tick(visual,L"SetComponentTickEnabled",1);tick.set(L"bEnabled",false);tick.run();
+        }
         if(!intact()) throw std::runtime_error("Astral visual registration or source read-back failed");
         Call lods(visual,L"GetNumLODs",1);lods.run();
         if(lods.get<int32_t>()!=int32_t(source.hidden_by_lod.size()))
@@ -156,7 +169,7 @@ void AstralVisualMesh::prepare(UObject* parent,const AstralComponentSource& sour
             get.set(L"MorphTargetName",FName(wide(name).c_str(),FNAME_Add));get.run();
             if(get.get<float>()!=weight) throw std::runtime_error("Astral visual morph read-back failed");
         }
-        astral_visual_physics(visual,source.physics);
+        if(!leader_pose_) astral_visual_physics(visual,source.physics);
         Call reset_cloth(visual,L"ForceClothNextUpdateTeleportAndReset",0);reset_cloth.run();
         Call collision_state(visual,L"GetCollisionEnabled",1);collision_state.run();
         if(collision_state.get<uint8_t>()!=0 || astral_source_flag(visual,L"bVisible") ||
@@ -170,11 +183,12 @@ bool AstralVisualMesh::intact() const {
     auto* parent=parent_.Get();auto* visual=component_.Get();auto* owner=owner_.Get();
     if(!parent || !visual || !owner || !mesh_.Get() || !pose_class_.Get() ||
        !parent_mesh_.Get() || !parent_instance_.Get()) return false;
-    auto* visual_instance=astral_anim_instance(visual);
+    auto* visual_instance=leader_pose_?nullptr:astral_anim_instance(visual);
     return astral_binding_owner(parent)==owner && astral_binding_owner(visual)==owner &&
         mesh_asset(parent)==parent_mesh_.Get() && astral_anim_instance(parent)==parent_instance_.Get() &&
         mesh_asset(visual)==mesh_.Get() && read<UObject*>(visual,L"AttachParent")==parent &&
-        visual_instance && visual_instance->GetClassPrivate()==pose_class_.Get();
+        (leader_pose_?astral_leader(visual)==parent:
+            visual_instance && visual_instance->GetClassPrivate()==pose_class_.Get());
 }
 void AstralVisualMesh::show(bool enabled) {
     if(!intact()) throw std::runtime_error("Astral visual source changed before visibility update");
@@ -191,5 +205,5 @@ bool AstralVisualMesh::release() noexcept {
     } catch(...) { return false; }
     component_=WeakObject{};owner_=WeakObject{};parent_=WeakObject{};
     parent_mesh_=WeakObject{};parent_instance_=WeakObject{};mesh_=WeakObject{};pose_class_=WeakObject{};
-    source_visible_=false;retained_.release();return true;
+    source_visible_=leader_pose_=false;retained_.release();return true;
 }

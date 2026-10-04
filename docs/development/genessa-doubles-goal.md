@@ -78,7 +78,8 @@ trace its actual material/cue setup in cooked assets before implementation.
    package installs under `MortalShell2/Content/Paks/~mods/`. Document the
    compatible shared-assets version and whether an update requires replacing
    it. Keep each release ZIP and its BBCode changelog together in the agreed
-   version directory. `CSS_SharedAssets_P` is a provisional package name.
+   version directory. `CSS_AstralSharedAssets_P` avoids the existing legacy Eve package named
+   `CSS_SharedAssets_P`; keep that older package intact during this trial.
 
 ## Existing pending work
 

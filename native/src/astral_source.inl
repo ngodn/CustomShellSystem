@@ -7,6 +7,11 @@ bool astral_source_flag(UObject* object,const wchar_t* name) {
         throw std::runtime_error("Astral source flag layout mismatch");
     return static_cast<FBoolProperty*>(property)->GetPropertyValueInContainer(object);
 }
+UObject* astral_leader(UObject* component) {
+    auto* property=field(component,L"LeaderPoseComponent",sizeof(FWeakObjectPtr));
+    if(!property->IsA<FWeakObjectProperty>()) throw std::runtime_error("Astral leader property mismatch");
+    return read<FWeakObjectPtr>(component,L"LeaderPoseComponent").Get();
+}
 std::vector<UObject*> astral_mesh_materials(UObject* mesh) {
     Call get(mesh,L"GetMaterials",1);get.run();
     auto* property=get.param(L"ReturnValue");
@@ -83,7 +88,7 @@ std::unique_ptr<AstralAppearanceSource> Appearance::astral_source() const {
     // Do not turn that transient vanilla mesh into the requested custom look.
     if(component_.Get()==body && applied_.Get() && !managed) return {};
     auto source=std::make_unique<AstralAppearanceSource>();
-    source->pawn=pawn;source->player_revision=player_revision;
+    source->pawn=pawn;source->player_revision=player_revision;source->appearance_revision=appearance_revision;
     const auto items=managed?items_.components():std::vector<std::pair<std::string,WeakObject>>{};
     if(items.size()>15) throw std::runtime_error("Astral source item count exceeds bound");
     auto capture=[&](UObject* component,const std::string& item,bool primary) {
@@ -96,6 +101,12 @@ std::unique_ptr<AstralAppearanceSource> Appearance::astral_source() const {
         astral_retain(source->retained,mesh);
         AstralComponentSource row;
         row.item=item;row.component=component;row.mesh=mesh;
+        auto* leader=astral_leader(component);
+        if(primary && leader) throw std::runtime_error("Astral source body uses an external pose leader");
+        if(!primary && (leader!=body || read<UObject*>(component,L"AttachParent")!=body ||
+           read<FName>(component,L"AttachSocketName")!=FName(L"None")))
+            throw std::runtime_error("Astral item does not follow the captured body");
+        row.leader_pose=!primary;
         row.visible=astral_source_flag(component,L"bVisible");
         row.hidden_in_game=astral_source_flag(component,L"bHiddenInGame");
         row.location=read<std::array<double,3>>(component,L"RelativeLocation");
@@ -153,7 +164,8 @@ std::unique_ptr<AstralAppearanceSource> Appearance::astral_source() const {
     capture(body,"",true);
     for(const auto& [item,component]:items) capture(component.Get(),item,false);
     if(source->pawn.Get()!=pawn || observed_pawn_.Get()!=pawn || observed_component_.Get()!=body ||
-       read<UObject*>(pawn,L"Mesh")!=body || source->player_revision!=player_revision)
+       read<UObject*>(pawn,L"Mesh")!=body || source->player_revision!=player_revision ||
+       source->appearance_revision!=appearance_revision)
         throw std::runtime_error("Astral player changed while capturing");
     return source;
 }

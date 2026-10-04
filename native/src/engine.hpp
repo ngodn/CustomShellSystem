@@ -76,6 +76,15 @@ struct AstralMaterialInput {
     RC::Unreal::UObject* companion=nullptr;
     std::vector<AstralTextureInput> textures;
     std::vector<AstralScalarInput> scalars;
+    std::vector<std::wstring> required_source_textures;
+};
+class AstralMaterialAdapters {
+    std::vector<AstralMaterialInput> inputs_;
+    AssetLoadRoots retained_;
+public:
+    void prepare(RC::Unreal::UObject* owner,std::span<RC::Unreal::UObject* const> sources);
+    std::span<const AstralMaterialInput> inputs() const { return inputs_; }
+    void release() noexcept { inputs_.clear(); retained_.release(); }
 };
 // Prepared privately before any component binding. The caller must resolve
 // compatible companion shaders and detach bindings before releasing this set.
@@ -138,6 +147,7 @@ struct AstralPhysicsSource {
 struct AstralComponentSource {
     std::string item;
     bool visible=true, hidden_in_game=false;
+    bool leader_pose=false;
     WeakObject component, mesh;
     std::vector<WeakObject> materials, overlays;
     std::vector<std::set<int>> hidden_by_lod;
@@ -149,7 +159,7 @@ struct AstralComponentSource {
 // Material handles refer to current uniforms, not an immutable saved profile.
 struct AstralAppearanceSource {
     WeakObject pawn;
-    uint64_t player_revision=0;
+    uint64_t player_revision=0, appearance_revision=0;
     std::vector<AstralComponentSource> components;
     AssetLoadRoots retained;
 };
@@ -162,6 +172,7 @@ class AstralVisualMesh {
     WeakObject owner_, parent_, parent_mesh_, parent_instance_, component_, mesh_, pose_class_;
     AssetLoadRoots retained_;
     bool source_visible_=false;
+    bool leader_pose_=false;
 public:
     AstralVisualMesh() = default;
     AstralVisualMesh(const AstralVisualMesh&) = delete;
@@ -187,6 +198,16 @@ public:
     bool intact() const;
     bool restore() noexcept;
     ~AstralNativeRenderLease() noexcept { restore(); }
+};
+class AstralDoubles {
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
+public:
+    AstralDoubles();
+    ~AstralDoubles();
+    void update(void* engine,Appearance& appearance,bool enabled,uint64_t now);
+    bool clear() noexcept;
+    Json diagnostics() const;
 };
 class OverlayControls {
     struct Entry { WeakObject original, mid, bound; bool detached=false; };
@@ -214,6 +235,7 @@ class EngineBridge {
     AstralLifecycle astral_lifecycle_;
     Json observe_astral(void* engine);
     Json observe_astral_source(Appearance& appearance);
+    Json probe_astral_adapters(void* engine,Appearance& appearance);
     Json probe_astral_materials(void* engine,const Json& request);
     Json probe_astral_bindings(void* engine,const Json& request);
     Json probe_astral_visual(void* engine,Appearance& appearance,const Json& request);
@@ -737,6 +759,7 @@ class Appearance {
 public:
     std::string shell, pawn_name, current_mesh;
     uint64_t player_revision = 0;
+    uint64_t appearance_revision = 0;
     double apply_load_ms = 0, apply_swap_ms = 0;   // last apply(): time in asset loads, time in the mesh swap
     std::map<std::string,double> customize_ms;     // last customize(): time per step, for the apply log line
     Json material_debug;

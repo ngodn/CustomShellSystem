@@ -90,3 +90,31 @@ refraction shaders, default opacity, texture binding names, both culling modes,
 and absence of outfit/preview/editor-module imports. The pose checker takes
 the single pose entry from the same readback separately. These checks do not
 replace in-game appearance, animation or lifecycle testing.
+
+## Runtime trial
+
+The current container name is `CSS_AstralSharedAssets_P`. `CSS_SharedAssets_P`
+is already used by an older Eve skeleton/animation package on the test machine.
+Do not rename the output files alone: `pack-shared.py` uses the new basename
+when creating the container, giving it a distinct internal ID.
+
+Generate `native/src/astral_material_catalog.inl` with
+`generate-adapter-catalog.py MANIFEST VARIANTS NEW_OUTPUT READBACK...` using the
+independently decoded original source roots. It pins graph StateIds and static
+defaults, not outfit IDs. Runtime reads effective instance overrides before
+choosing a companion. Unknown graphs/permutations fall back to the native double.
+
+`install-trial.py PACK NEW_RECEIPT_DIRECTORY` requires a closed game and the
+checked developer build. It backs up the selected core and selector, installs
+only the separate new shared package and unique core DLL, and preserves settings,
+loader, UE4SS and the old Eve package. It does not quit or launch the game.
+Development builds remain disarmed until the ordinary CSS request protocol sends
+`{"action":"astral_trial","enabled":true}`. Send false to remove the owned visuals.
+The `astral.adapters.probe` engine request selects/loads companions without
+binding materials or creating components. Follow it with the existing hidden
+visual/material probes before enabling the full coordinator.
+
+The visual body uses Copy Pose; modular items use the source body's leader-pose
+arrangement. This follows [Epic's modular character guidance](https://dev.epicgames.com/documentation/unreal-engine/working-with-modular-characters-in-unreal-engine),
+with exact call layouts checked against the local UE 5.6.1 source and game dump.
+Live pose order, appearance fidelity and measured cost remain acceptance checks.

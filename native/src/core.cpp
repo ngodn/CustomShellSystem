@@ -29,6 +29,8 @@ struct Core {
     uint64_t original_shells_retry_after=0;
     State state;
     Appearance appearance;
+    AstralDoubles astral;
+    std::string astral_error;
     InventoryUI inventory;
     EngineBridge engine_bridge;
     CssxHost recovery_host{CSSX_ABI,sizeof(CssxHost),this,engine_request,nullptr};
@@ -50,6 +52,7 @@ struct Core {
     Json inventory_command;
 #ifdef CSS_INVENTORY_DEV
     FrameProfile frame_profile;
+    bool astral_trial_enabled=false;
     void publish_frame_profile() {
         Json rows=Json::array();
         for(const auto& row:frame_profile.rows())
@@ -57,7 +60,7 @@ struct Core {
                 {"core_ms",row.core_ms},{"phase_ms",row.phase_ms},{"failed",row.failed}});
         write_runtime_json(root/"runtime/frame-profile.json",{{"id",frame_profile.id()},
             {"stop_reason",frame_profile.reason()},
-            {"phases",{"recovery","inventory","maintenance","attachments","seals","walk","misc","reconcile"}},
+            {"phases",{"recovery","inventory","maintenance","attachments","seals","walk","misc","reconcile","astral"}},
             {"rows",rows}});
     }
     Json probe_command;
@@ -632,7 +635,14 @@ struct Core {
             if (!catalog.find(outfit, variant)) throw std::runtime_error("Outfit or variant is not installed");
             selected_outfit = outfit; selected_variant = variant; apply_pending = true;
             pending_custom.reset(); custom_only=false;
-        } else if (action != "status") throw std::runtime_error("Unknown CSS command");
+        }
+#ifdef CSS_INVENTORY_DEV
+        else if(action=="astral_trial") {
+            astral_trial_enabled=command.at("enabled").get<bool>();
+            if(!astral_trial_enabled && !astral.clear()) throw std::runtime_error("Astral trial cleanup is incomplete");
+        }
+#endif
+        else if (action != "status") throw std::runtime_error("Unknown CSS command");
     }
     void tick(void* engine, float delta) {
         current_engine=engine;
@@ -700,6 +710,13 @@ struct Core {
         measured(FrameProfile::walk,[&] { sync_walk_safely(now); });
         if(state.enabled) measured(FrameProfile::misc,[&] { sync_misc_safely(now); });
         measured(FrameProfile::reconcile,[&] { reconcile(engine,now); });
+        measured(FrameProfile::astral,[&] {
+            bool enabled=state.enabled && !apply_pending && !restore_pending;
+#ifdef CSS_INVENTORY_DEV
+            enabled=enabled && astral_trial_enabled;
+#endif
+            astral.update(engine,appearance,enabled,now);
+        });
     }
     void maintain(uint64_t now) {
         // Cosmetic maintenance (material-reset repair + menu-preview sync) are recovery
@@ -1049,6 +1066,15 @@ struct Core {
         status["recovery_pending"]=recovery.pending();
         status["maintenance_error"]=maintenance_error;
         status["overlay_error"]=overlay_error;
+        status["astral"]=astral.diagnostics();
+#ifdef CSS_INVENTORY_DEV
+        status["astral"]["trial_enabled"]=astral_trial_enabled;
+#endif
+        const auto astral_problem=status["astral"].at("error").get<std::string>();
+        if(astral_problem!=astral_error) {
+            astral_error=astral_problem;
+            if(!astral_error.empty()) host.log(("Genessa doubles kept native appearance: "+astral_error).c_str());
+        }
         status["inventory"] = inventory.diagnostics();
         status["inventory_failed"] = inventory_failed;
         status["walk_mod_active"] = appearance.walk.walk_mod_active();
@@ -1141,6 +1167,7 @@ void render(void* ptr) noexcept {
 bool stop(void* ptr) noexcept {
     auto& core = *static_cast<css::Core*>(ptr);
     try {
+        if(!core.astral.clear()) throw std::runtime_error("Genessa double visuals could not be released");
         core.inventory.detach();
         core.appearance.walk.release();
         core.appearance.restore_misc();

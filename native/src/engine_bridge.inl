@@ -220,6 +220,7 @@ void EngineBridge::encode(FProperty* p,void* data,const Json& value,unsigned dep
 #include "astral_materials_probe.inl"
 #include "astral_bindings_probe.inl"
 #include "astral_source_probe.inl"
+#include "astral_adapters_probe.inl"
 #include "astral_visual_probe.inl"
 #endif
 Json EngineBridge::request(void* engine,Appearance& appearance,const Json& request) {
@@ -233,6 +234,7 @@ Json EngineBridge::request(void* engine,Appearance& appearance,const Json& reque
 #ifdef CSS_INVENTORY_DEV
     if(op=="astral.observe") return observe_astral(engine);
     if(op=="astral.source") { appearance.player(engine); return observe_astral_source(appearance); }
+    if(op=="astral.adapters.probe") return probe_astral_adapters(engine,appearance);
     if(op=="astral.materials.probe") return probe_astral_materials(engine,request);
     if(op=="astral.bindings.probe") return probe_astral_bindings(engine,request);
     if(op=="astral.visual.probe") return probe_astral_visual(engine,appearance,request);

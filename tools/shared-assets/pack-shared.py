@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 import shutil
 import sys
@@ -14,7 +15,10 @@ parser.add_argument("cooked_project", type=Path)
 parser.add_argument("game", type=Path)
 parser.add_argument("output", type=Path)
 parser.add_argument("--retoc", type=Path, required=True)
+parser.add_argument("--name", default="CSS_AstralSharedAssets_P")
 args = parser.parse_args()
+if not re.fullmatch(r"CSS_[A-Za-z0-9_]+_P", args.name):
+    parser.error("Container name must be a CSS_ filename ending in _P")
 source = (args.cooked_project / "Content/CSS/SharedAssets").resolve(strict=True)
 output = args.output.resolve()
 if source == output or source in output.parents:
@@ -29,11 +33,11 @@ output.mkdir(parents=True, exist_ok=False)
 legacy = output / "legacy"
 shutil.copytree(source, legacy / "MortalShell2/Content/CSS/SharedAssets")
 converter = Converter(args.retoc, DEFAULT_REPAK, output)
-utoc = output / "CSS_SharedAssets_P.utoc"
+utoc = output / (args.name + ".utoc")
 converter.run(converter.retoc, "to-zen", "--version", "UE5_6", legacy, utoc)
 converter.run(converter.retoc, "verify", utoc)
 converter.base_containers(args.game.resolve(strict=True), output / "containers")
-for path in output.glob("CSS_SharedAssets_P.*"):
+for path in output.glob(args.name + ".*"):
     (output / "containers" / path.name).symlink_to(path)
 converter.run(converter.retoc, "to-legacy", output / "containers", output / "readback",
               "--filter", "MortalShell2/Content/CSS/SharedAssets", "--no-shaders",
@@ -46,7 +50,7 @@ for path in legacy.rglob("*"):
     if path.read_bytes() != (output / "readback" / relative).read_bytes():
         raise ValueError(f"Export payload changed: {relative}")
     receipts.append({"path": str(relative), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()})
-(output / "roundtrip.json").write_text(json.dumps({"passed": True, "exports": receipts,
+(output / "roundtrip.json").write_text(json.dumps({"passed": True, "container": args.name, "exports": receipts,
     "installed": False}, indent=2) + "\n")
 package_names = ["/Game/CSS/SharedAssets/" + str(p.relative_to(source).with_suffix("")) for p in packages]
 (output / "packages.txt").write_text("\n".join(sorted(package_names)) + "\n")

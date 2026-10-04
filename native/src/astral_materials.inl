@@ -37,8 +37,11 @@ void AstralMaterials::prepare(UObject* owner,UObject* native_mid,
            dynamic_material(input.companion))
             throw std::runtime_error("Invalid Astral source or companion material");
         astral_retain(roots,input.source);astral_retain(roots,input.companion);
-        if(input.textures.size()>16 || input.scalars.size()>16)
+        if(input.textures.size()>16 || input.scalars.size()>16 || input.required_source_textures.size()>16)
             throw std::runtime_error("Astral material controls exceed bound");
+        for(const auto& name:input.required_source_textures)
+            if(name.empty() || name.size()>128 || name.find(L'\0')!=std::wstring::npos || name.starts_with(L"CSS_"))
+                throw std::runtime_error("Invalid required Astral source texture");
         for(size_t i=0;i<input.textures.size();++i) {
             const auto& texture=input.textures[i];
             if(texture.parameter.empty() || texture.parameter.size()>128 ||
@@ -71,7 +74,8 @@ void AstralMaterials::prepare(UObject* owner,UObject* native_mid,
     for(const auto& input:inputs) {
         const auto existing=std::find_if(unique.begin(),unique.end(),[&](const auto& value) {
             return value.source==input.source && value.companion==input.companion &&
-                   value.textures==input.textures && value.scalars==input.scalars;
+                   value.textures==input.textures && value.scalars==input.scalars &&
+                   value.required_source_textures==input.required_source_textures;
         });
         if(existing!=unique.end()) {
             slots.push_back(size_t(existing-unique.begin()));
@@ -89,6 +93,14 @@ void AstralMaterials::prepare(UObject* owner,UObject* native_mid,
         astral_retain(roots,copy);
         Call transfer(copy,L"K2_CopyMaterialInstanceParameters",2);
         transfer.set(L"Source",input.source);transfer.set(L"bQuickParametersOnly",true);transfer.run();
+        for(const auto& name:input.required_source_textures) {
+            Call get(copy,L"K2_GetTextureParameterValue",2);
+            get.set(L"ParameterName",FName(name.c_str(),FNAME_Add));get.run();
+            auto* texture=get.get<UObject*>();
+            if(!texture || WeakObject(texture).Get()!=texture || !texture->IsA(texture_class) ||
+               texture->GetPathName().starts_with(L"/Game/CSS/SharedAssets/"))
+                throw std::runtime_error("Astral source texture was not copied: "+narrow(name));
+        }
         // Copy clears destination overrides. Native controls must be written afterward.
         for(const auto& texture:input.textures) {
             const FName name(texture.parameter.c_str(),FNAME_Add);

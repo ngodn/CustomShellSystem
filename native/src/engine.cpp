@@ -5,6 +5,7 @@
 #include "skeleton_compatibility.hpp"
 #include "recovery.hpp"
 #include "misc_attachment.hpp"
+#include "astral_adapter.hpp"
 #include <array>
 #include <cctype>
 #include <cstring>
@@ -446,6 +447,7 @@ static bool dynamic_material(UObject* value) {
     return value && value->IsA(static_cast<UClass*>(find(L"/Script/Engine.MaterialInstanceDynamic")));
 }
 #include "astral_materials.inl"
+#include "astral_material_adapters.inl"
 static bool material_has_overrides(UObject* value) {
     // Read the reflected arrays, including parameter kinds added by newer
     // builds. Only unwrap instances with no parameter or profile overrides.
@@ -1140,6 +1142,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     auto* before = mesh_asset(component);
     if (!before) return false;
     if (component_.Get() && component_.Get() != component && !restore()) return false;
+    ++appearance_revision;
     WeakObject live_component(component), live_pawn(pawn), previous_mesh(before);
     AssetLoadRoots loading_roots;
     const auto load_started=std::chrono::steady_clock::now();
@@ -1284,6 +1287,7 @@ void Appearance::set_ground_offset(double offset) {
         throw std::runtime_error("World mesh height read-back failed");
 }
 bool Appearance::restore() {
+    ++appearance_revision;
     menu_overlay_controls_.release(); overlay_controls_.release();
     restore_ground_offset();
     restore_springs();
@@ -2070,6 +2074,8 @@ void Appearance::sync_body_geometry(UObject* component) {
 #include "astral_source.inl"
 #include "astral_visual_mesh.inl"
 #include "astral_native_render.inl"
+#include "astral_snapshot.inl"
+#include "astral_doubles.inl"
 void Appearance::reset_controls() {
     menu_overlay_controls_.release(); overlay_controls_.release();
     show_hidden_sections();
@@ -2124,6 +2130,7 @@ void Appearance::prepare_deformation_materials() {
     }
 }
 void Appearance::customize(const Outfit& outfit,const std::string& variant,const Customization& custom) {
+    ++appearance_revision;
     customize_ms.clear();
     auto step_from=std::chrono::steady_clock::now();
     auto step=[&](const char* name) {
