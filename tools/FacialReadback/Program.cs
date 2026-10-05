@@ -9,12 +9,14 @@ using CUE4Parse.UE4.Versions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-if (args.Length != 5)
-    throw new ArgumentException("FacialReadback CONTAINERS MAPPINGS STAGING_REPORT FACIAL_SHAPES OUTPUT");
+if (args.Length != 5 && args.Length != 6)
+    throw new ArgumentException("FacialReadback CONTAINERS MAPPINGS STAGING_REPORT FACIAL_SHAPES OUTPUT [VERTEX_MAPS]");
 if (File.Exists(args[4])) throw new IOException("Output already exists");
 var staging = JObject.Parse(File.ReadAllText(args[2]));
 var shapes = JObject.Parse(File.ReadAllText(args[3]));
 if (staging.Value<bool>("complete") != true) throw new InvalidDataException("Incomplete staging");
+var vertexMaps = args.Length == 6 ? JObject.Parse(File.ReadAllText(args[5])) : null;
+if (vertexMaps != null && vertexMaps.Value<bool>("complete") != true) throw new InvalidDataException("Incomplete vertex maps");
 var expected = shapes["morph_targets"]!.Select(item => item.Value<string>("name")!).ToHashSet(StringComparer.Ordinal);
 if (expected.Count != 99) throw new InvalidDataException("Expected the audited 99 Eve facial shapes");
 using var provider = new DefaultFileProvider(args[0], SearchOption.TopDirectoryOnly,
@@ -86,6 +88,10 @@ foreach (var item in staging["results"]!) {
             if (count == 0) throw new InvalidDataException("Facial morph has no decoded GPU deltas: " + name);
             morphRows.Add(new JObject { ["name"] = name, ["deltas"] = count });
         }
+        if (vertexMaps != null) {
+            var map = vertexMaps["maps"]!.Single(m => m.Value<string>("mesh")!.Split('.')[0] == item.Value<string>("target"));
+            row["source_delta_comparison"] = FacialError(target, newMorphs, shapes, map);
+        }
         row["lods"] = lodRows; row["morphs"] = morphRows; row["preserved_morphs"] = oldMorphs.Count;
         row["passed"] = true;
     } catch (Exception error) {row["passed"] = false; row["error"] = error.ToString();}
@@ -94,7 +100,10 @@ foreach (var item in staging["results"]!) {
 }
 bool passed = rows.Count == 6 && rows.All(row => row.Value<bool>("passed"));
 var report = new JObject { ["passed"] = passed, ["results"] = rows,
-    ["scope"] = "Independent cooked base geometry, bindings, existing body/hand deltas, and facial GPU delta validity. Facial source-delta error and live execution are separate checks." };
+    ["source_deltas_checked"] = vertexMaps != null,
+    ["shapes_sha256"] = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(args[3]))).ToLowerInvariant(),
+    ["vertex_maps_sha256"] = vertexMaps == null ? null : Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(args[5]))).ToLowerInvariant(),
+    ["scope"] = "Independent cooked geometry, bindings, existing body/hand deltas and facial GPU data. Optional source comparison covers every rendered vertex and all expressions. Live execution is separate." };
 using (var output = new StreamWriter(new FileStream(args[4], FileMode.CreateNew, FileAccess.Write)))
     output.Write(report.ToString(Formatting.Indented));
 return passed ? 0 : 1;
@@ -109,4 +118,72 @@ static string Digest(object? value) {
     using (var text = new StreamWriter(stream))
     using (var json = new JsonTextWriter(text)) JsonSerializer.CreateDefault().Serialize(json, value);
     return Convert.ToHexString(sha.Hash!);
+}
+
+static JObject FacialError(USkeletalMesh mesh, Dictionary<string, UMorphTarget> morphs, JObject shapes, JToken map) {
+    if (mesh.LODModels!.Length != 1) throw new InvalidDataException("Source map requires the audited single LOD");
+    var lod = mesh.LODModels[0];
+    var indices = map["source_vertices"]!.Values<int>().ToArray();
+    if (indices.Length != lod.NumVertices || indices.Any(index => index < 0)) throw new InvalidDataException("Invalid render-to-source map");
+    var points = shapes["body_points"]!.Select(p => new System.Numerics.Vector3((float)p[0]!, (float)p[1]!, (float)p[2]!)).ToArray();
+    float pointError = 0;
+    for (int i = 0; i < indices.Length; ++i) if (indices[i] < points.Length) {
+        var p = lod.VertexBufferGPUSkin.VertsFloat[i].Pos;
+        pointError = Math.Max(pointError, System.Numerics.Vector3.Distance(points[indices[i]], new(p.X,p.Y,p.Z)));
+    }
+    if (pointError > .0002f) throw new InvalidDataException("Source map does not match cooked body positions: " + pointError);
+    float threshold = map.Value<float>("threshold_cm");
+    float precision = lod.MorphTargetVertexInfoBuffers!.PositionPrecision;
+    if (!float.IsFinite(threshold) || threshold < 0 || threshold > .015001f || !float.IsFinite(precision) || precision <= 0 || precision > .004001f)
+        throw new InvalidDataException("Unexpected morph filtering or compression precision");
+    float retainedLimit = (float)(Math.Sqrt(3) * precision / 2) + .0002f;
+    var source = new Dictionary<string, System.Numerics.Vector3[]>();
+    var errors = new Dictionary<string, float>();
+    var shapeRows = new JArray();
+    foreach (var shape in shapes["morph_targets"]!) {
+        var name = shape.Value<string>("name")!;
+        var wanted = new System.Numerics.Vector3[points.Length];
+        foreach (var d in shape["deltas"]!) wanted[(int)d[0]!] = new((float)d[1]!, (float)d[2]!, (float)d[3]!);
+        source[name] = wanted;
+        var actual = new System.Numerics.Vector3[indices.Length];
+        var present = new bool[indices.Length];
+        foreach (var delta in morphs[name].MorphLODModels[0].Vertices) {
+            actual[delta.SourceIdx] = new(delta.PositionDelta.X,delta.PositionDelta.Y,delta.PositionDelta.Z);
+            present[delta.SourceIdx] = true;
+        }
+        float retained = 0, omitted = 0;
+        for (int i = 0; i < indices.Length; ++i) {
+            var expected = indices[i] < wanted.Length ? wanted[indices[i]] : default;
+            float error = System.Numerics.Vector3.Distance(expected, actual[i]);
+            if (present[i]) retained = Math.Max(retained, error); else omitted = Math.Max(omitted, error);
+        }
+        if (retained > retainedLimit || omitted > threshold + .0002f)
+            throw new InvalidDataException($"{name}: retained error {retained} (limit {retainedLimit}), omitted {omitted} (threshold {threshold})");
+        errors[name] = Math.Max(retained, omitted);
+        shapeRows.Add(new JObject { ["name"] = name, ["max_retained_error_cm"] = retained, ["max_omitted_delta_cm"] = omitted });
+    }
+    var expressionRows = new JArray();
+    foreach (var pose in shapes["expressions"]!) {
+        var actual = new System.Numerics.Vector3[indices.Length];
+        var wanted = new System.Numerics.Vector3[points.Length];
+        float bound = 0;
+        foreach (var entry in (JObject)pose["weights"]!) {
+            float weight = (float)entry.Value!;
+            bound += Math.Abs(weight) * errors[entry.Key];
+            var offsets = source[entry.Key];
+            for (int i = 0; i < wanted.Length; ++i) wanted[i] += offsets[i] * weight;
+            foreach (var d in morphs[entry.Key].MorphLODModels[0].Vertices)
+                actual[d.SourceIdx] += new System.Numerics.Vector3(d.PositionDelta.X,d.PositionDelta.Y,d.PositionDelta.Z) * weight;
+        }
+        float maximum = 0;
+        for (int i = 0; i < indices.Length; ++i) {
+            var expected = indices[i] < wanted.Length ? wanted[indices[i]] : default;
+            maximum = Math.Max(maximum, System.Numerics.Vector3.Distance(actual[i], expected));
+        }
+        if (maximum > bound + .0002f) throw new InvalidDataException("Combined expression exceeds measured shape error bound");
+        expressionRows.Add(new JObject { ["name"] = pose["name"], ["max_deformation_error_cm"] = maximum, ["weighted_shape_error_bound_cm"] = bound });
+    }
+    return new JObject { ["passed"] = true, ["render_vertices"] = indices.Length, ["max_source_position_error_cm"] = pointError,
+        ["retained_delta_limit_cm"] = retainedLimit, ["filtered_delta_limit_cm"] = threshold + .0002f,
+        ["shapes"] = shapeRows, ["expressions"] = expressionRows };
 }

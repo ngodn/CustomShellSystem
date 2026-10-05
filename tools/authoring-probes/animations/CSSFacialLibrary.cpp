@@ -10,6 +10,35 @@
 #include "Rendering/SkeletalMeshModel.h"
 #include "Rendering/SkeletalMeshLODModel.h"
 
+FString UCSSFacialLibrary::ExpressionVertexMap(USkeletalMesh* Candidate)
+{
+    if (!IsRunningCommandlet() || !Candidate ||
+        !Candidate->GetPathName().StartsWith(TEXT("/Game/CSS/Locomotion/Faces/SK_Face_")))
+        return TEXT("ERROR: expected shared facial candidate in a commandlet");
+    FAssetCompilingManager::Get().FinishAllCompilation();
+    const FSkeletalMeshModel* Model=Candidate->GetImportedModel();
+    const auto* Info=Candidate->GetLODInfo(0);
+    if (!Model || Model->LODModels.Num()!=1 || !Info || !Candidate->GetMeshDescription(0))
+        return TEXT("ERROR: missing source LOD or build settings");
+    const auto& LOD=Model->LODModels[0];
+    if (LOD.MeshToImportVertexMap.Num()!=LOD.NumVertices || LOD.NumVertices>2000000)
+        return TEXT("ERROR: incomplete or oversized source vertex map");
+    TArray<TSharedPtr<FJsonValue>> Map;
+    Map.Reserve(LOD.MeshToImportVertexMap.Num());
+    for (const int32 Index:LOD.MeshToImportVertexMap) {
+        if (!Candidate->GetMeshDescription(0)->Vertices().IsValid(FVertexID(Index)))
+            return TEXT("ERROR: invalid source vertex index");
+        Map.Add(MakeShared<FJsonValueNumber>(Index));
+    }
+    auto Root=MakeShared<FJsonObject>();
+    Root->SetStringField(TEXT("mesh"),Candidate->GetPathName());
+    Root->SetNumberField(TEXT("threshold_cm"),Info->BuildSettings.MorphThresholdPosition);
+    Root->SetArrayField(TEXT("source_vertices"),MoveTemp(Map));
+    FString Text;
+    FJsonSerializer::Serialize(Root,TJsonWriterFactory<>::Create(&Text));
+    return Text;
+}
+
 FString UCSSFacialLibrary::AddExpressionShapes(USkeletalMesh* Mesh, const FString& InputFile)
 {
     if (!IsRunningCommandlet() || !Mesh ||

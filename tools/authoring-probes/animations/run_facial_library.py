@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[3]
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("work", type=Path)
-    parser.add_argument("--mode", choices=("create", "verify", "cook"), required=True)
+    parser.add_argument("--mode", choices=("create", "verify", "cook", "map"), required=True)
     args = parser.parse_args()
     work = args.work.resolve()
     if not work.is_relative_to(ROOT / "work/cine-animation-port"):
@@ -34,7 +34,8 @@ def main():
         listing.write_text("\n".join(row["target"] for row in report["results"]) + "\n")
         command += ["-run=CSSCookAssets", "-Cook", "-WindowsRoot=C:/CSS", "-List=" + str(listing), "-Output=" + str(work / "cooked")]
     else:
-        command += ["-run=pythonscript", "-script=" + str(Path(__file__).with_name("stage_facial_library.py"))]
+        script = "export_facial_vertex_maps.py" if args.mode == "map" else "stage_facial_library.py"
+        command += ["-run=pythonscript", "-script=" + str(Path(__file__).with_name(script))]
     command += ["-abslog=" + str(work / (args.mode + "-engine.log"))]
     environment = os.environ.copy()
     environment["CSS_ANIM_WORK"] = str(work)

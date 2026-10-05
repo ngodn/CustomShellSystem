@@ -11,6 +11,7 @@ from mathutils import Vector
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--export',type=Path,required=True)
 parser.add_argument('--output',type=Path,required=True)
+parser.add_argument('--view',choices=('front','three-quarter','profile'),default='front')
 args=parser.parse_args(sys.argv[sys.argv.index('--')+1:])
 args.output.mkdir(parents=True,exist_ok=False)
 report=json.loads((args.export/'report.json').read_text())
@@ -47,7 +48,8 @@ camera.type='ORTHO';camera.ortho_scale=.32
 obj=bpy.data.objects.new('Face review',camera)
 scene.collection.objects.link(obj);scene.camera=obj
 center=Vector((0,-.01,1.57))
-obj.location=center+Vector((.08,-2,.05))
+offset={'front':(.08,-2,.05),'three-quarter':(1.3,-1.5,.05),'profile':(2,0,.05)}[args.view]
+obj.location=center+Vector(offset)
 obj.rotation_euler=(center-obj.location).to_track_quat('-Z','Y').to_euler()
 records=[]
 for i,pose in enumerate([dict(name='Reset',weights={}),*data['expressions']]):
@@ -59,7 +61,7 @@ for i,pose in enumerate([dict(name='Reset',weights={}),*data['expressions']]):
     filename=f'{i:02d}-{pose["name"]}.png'
     scene.render.filepath=str(args.output/filename)
     bpy.ops.render.render(write_still=True)
-    records.append(dict(name=pose['name'],file=filename))
+    records.append(dict(name=pose['name'],file=filename,view=args.view))
 if hashlib.sha256(source.read_bytes()).hexdigest()!=report['sources'][str(source)]:
     raise ValueError('Source blend changed')
 (args.output/'index.json').write_text(json.dumps(records,indent=2)+'\n')

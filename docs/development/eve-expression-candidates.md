@@ -185,6 +185,56 @@ additional patch is `work/cine-animation-port/cine-expression-integration.patch`
 with the immediate pre-edit files in `cine-before-expressions/`. Keep those
 changes separate from the other session's camera/showreel work when committing.
 
+## Cooked deformation error and side views, 2026-10-06
+
+The independent reader now checks source-to-cooked facial deltas on every
+render vertex of all six meshes, rather than reporting compression precision
+as if it were measured error. A read-only commandlet exports each verified
+candidate's render-to-source vertex map. The decoder verifies that map against
+the cooked base positions before comparing the 99 facial shapes. It also sums
+the decoded shapes using each of the 21 source expressions' signed weights
+and measures the resulting deformation error. No source facial weights were
+baked into the neutral base.
+
+Results are identical across the six outfits:
+
+- Mapped base-position difference: zero.
+- Maximum retained shape-delta error: 0.0034344653 cm (0.0343 mm).
+- Maximum omitted source delta: 0.015001682 cm, within the existing 0.015 cm
+  build threshold plus the established 0.0002 cm reconstruction tolerance.
+- Largest combined expression deformation error: 0.021667294 cm (0.217 mm),
+  in Kiss. Every expression remains inside its weighted per-shape error bound.
+
+Evidence: `work/cine-animation-port/facial-vertex-map-v1/vertex-maps.json`
+and `cooked-delta-comparison.json`, using the combined 68-package candidate.
+All six source asset hashes remain unchanged. The map follows the imported
+vertex correspondence documented by Epic in
+[FSkeletalMeshLODModel](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/FSkeletalMeshLODModel?application_version=5.6)
+and checked against the local UE 5.6.1 header. This is geometry validation;
+material appearance and game execution remain separate.
+
+All 21 expressions plus Reset were rendered and inspected from profile and
+three-quarter views. Contact sheets are `facial-profile-contact.jpg` and
+`facial-quarter-contact.jpg`; full renders are in `facial-review-profile-v1/`
+and `facial-review-quarter-v1/`. Kiss's lip silhouette, Surprised/Sob's open
+mouth and Tease-ya's closed lids received additional individual inspection.
+No obvious tearing or teeth breaking through the lips was visible in these
+solid-material views. This does not establish every in-game camera/lighting
+condition or animated facial contact.
+
+The .NET reader builds with SDK 10.0.401 and zero warnings/errors. On this
+machine `mise exec dotnet@10.0.401 -- dotnet` currently selects a separate
+9.0.317 root. Invoke the existing binary at
+`/home/eins0fx/.local/share/mise/installs/dotnet/10.0.401/dotnet` explicitly;
+its `--version` returns 10.0.401. No SDK or machine configuration was changed.
+
+The negative control changed one index in a separate copy of the exported map.
+The independent reader rejected that mesh with a source-position mismatch;
+the other five still passed. `negative-comparison.json` records the expected
+failure. Neither the valid map nor any source/cooked asset was changed.
+`run_facial_library.py --mode map` reproduces the read-only map export into
+a fresh workspace beside `shared-faces-v1`.
+
 The implementation follows the pinned local UE 5.6.1
 `SkeletalMeshAttributes.h` morph attributes and mesh-description build path.
 See also Epic's [morph target API](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/UMorphTarget?application_version=5.6)

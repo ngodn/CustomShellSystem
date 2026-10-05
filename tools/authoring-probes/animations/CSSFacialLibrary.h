@@ -15,4 +15,8 @@ public:
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString VerifyExpressionShapes(class USkeletalMesh* Source, class USkeletalMesh* Candidate,
         const FString& InputFile);
+
+    /** Export render-to-source indices for independent cooked-delta comparison. */
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static FString ExpressionVertexMap(class USkeletalMesh* Candidate);
 };

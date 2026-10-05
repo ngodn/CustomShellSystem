@@ -383,3 +383,13 @@ profiles, body/movement/physics and CINE restoration. Facial source-to-cooked
 delta error, side contacts and costs still need evidence. Continue the unresolved
 source mappings and full-clip acceptance work; this checkpoint does not complete
 the goal.
+
+Further offline facial evidence, 2026-10-06: all six combined-package meshes
+now pass an independent source-to-cooked comparison of every facial delta and
+all 21 weighted expressions. Maximum combined deformation difference is
+0.217 mm (Kiss); mapped base positions match exactly. Profile and three-quarter
+renders of all 21 expressions plus Reset were inspected, with no obvious
+facial tearing in those views. Source hashes remain unchanged. See
+`docs/development/eve-expression-candidates.md` for bounds and artifacts.
+No candidate was installed and the game is closed at the latest process check.
+Live expression/performance validation and the rest of the full goal remain open.
