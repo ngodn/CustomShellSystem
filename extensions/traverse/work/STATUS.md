@@ -114,4 +114,6 @@ Tests: `cssx_traverse` (mock host with the map listeners and the option buttons)
 test built against the 1.0.1 sources fails on "every bound listener is frozen under the dialog".
 Live-tested by the user on 5 October (keys, Escape, mouse click and hover, pin on the bare map
 afterwards): "yes it works". Version is 1.0.2 in `extension.json`; changelog in
-`docs/nexus/cssx-traverse/changelog-v1.0.2.bbcode.txt`. Not tagged, zipped or pushed yet.
+`docs/nexus/cssx-traverse/changelog-v1.0.2.bbcode.txt`. Released from tag `traverse-v1.0.2` (`4aa2647`): zip in
+`extensions/core/dist/cssx-traverse-v1.0.2/`, `main` and `nextgen100` fast-forwarded and pushed
+with the tag on 5 October. Nexus upload is the user's.
