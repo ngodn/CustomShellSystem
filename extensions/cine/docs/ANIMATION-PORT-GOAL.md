@@ -354,3 +354,32 @@ pass against the actual facial catalog. Runtime activation and menu controls are
 still pending, so no expression has been applied to the game.
 The Windows core builds successfully. It is not installed; the last process check
 found the game closed and the previously installed performance trial unchanged.
+
+## Facial activation and CINE checkpoint, 2026-10-06
+
+Implemented revision-bound facial mesh activation, independent facial morph
+ownership/rollback, CSS's searchable expression picker and Reset all handling.
+CINE now has an expression catalog and a take-owned expression helper, with menu
+integration, pre-take acknowledgement, cleanup retries and restoration tests.
+Default As set in CSS adds no expression service calls. Look-changing takes must
+use that default until cross-look expression ownership is supported.
+
+Both Windows DLLs build; all 22 CSS host suites and four CINE suites pass.
+CINE has 34 expression client checks and 231 director checks. The actual facial
+catalog passes 75 checks. The combined shared candidate at
+`work/cine-animation-port/shared-v1/pack-with-faces-v1` passes all 68 package
+roundtrips and independent facial decoding on all six Eve meshes. The trio is
+315.6 MiB. It is not installed or live-accepted. The installed performance-only
+trial and pending Black Hole playback question remain unchanged.
+
+Commit only owned native/helper/tooling changes. CINE's mixed integration delta
+is saved in `work/cine-animation-port/cine-expression-integration.patch`; its
+pre-edit copies are in `cine-before-expressions/`. The earlier performance
+integration patch remains separate. Do not discard the other session's edits.
+
+Next: live-check the existing performance trial, then install a backed-up facial
+candidate when appropriate and validate all six variants, expression reset,
+profiles, body/movement/physics and CINE restoration. Facial source-to-cooked
+delta error, side contacts and costs still need evidence. Continue the unresolved
+source mappings and full-clip acceptance work; this checkpoint does not complete
+the goal.

@@ -1,4 +1,4 @@
-"""Package an audited animation-only cook for private verification, without installing it."""
+"""Package audited animations, adapters and optional facial meshes without installing them."""
 import argparse
 import hashlib
 import json
@@ -28,6 +28,7 @@ def main():
     parser.add_argument('--adapter-cook', help='Successful adapter cook label from run_performance_layers.py')
     parser.add_argument('--adapter-evaluation', help='Successful nine-mesh evaluated-pose label')
     parser.add_argument('--adapter-bindings', type=Path, help='Independent cooked/source comparison receipt')
+    parser.add_argument('--faces', type=Path, help='Verified facial workspace from prepare_facial_catalog.py')
     args = parser.parse_args()
     work = args.work.resolve(strict=True)
     if json.loads((work / 'cook-exit.json').read_text())['exit_code'] != 0:
@@ -95,6 +96,45 @@ def main():
             if len(candidates) != 1:
                 raise ValueError('Adapter source revision is absent or ambiguous')
         library['adapters'] = adapters
+    face_packages = set()
+    face_evidence = {}
+    face_work = None
+    if args.faces:
+        face_work = args.faces.resolve(strict=True)
+        evidence_path = face_work / 'facial-catalog-evidence.json'
+        rig_path = face_work / 'facial-rig.json'
+        evidence = json.loads(evidence_path.read_text())
+        if evidence.get('passed') is not True or digest(rig_path) != evidence['rig_sha256']:
+            raise ValueError('Facial catalog differs from its verified evidence')
+        face_evidence = dict(evidence['protected'])
+        face_evidence[str(evidence_path)] = digest(evidence_path)
+        face_evidence[str(rig_path)] = digest(rig_path)
+        if any(digest(Path(path)) != checksum for path, checksum in face_evidence.items()):
+            raise ValueError('Facial verification inputs changed')
+        if json.loads((face_work / 'cook-exit.json').read_text())['exit_code'] != 0:
+            raise ValueError('Facial cook failed')
+        rig = json.loads(rig_path.read_text())
+        readback = json.loads((face_work / 'cooked-readback-v1.json').read_text())
+        if readback.get('passed') is not True or len(rig['adapters']) != 6:
+            raise ValueError('Expected six verified Eve facial bindings')
+        expected_pairs = {(entry['source_mesh'].split('.')[0], entry['target_mesh'].split('.')[0])
+                          for entry in rig['adapters']}
+        if expected_pairs != {(row['source'], row['target']) for row in readback['results'] if row['passed']}:
+            raise ValueError('Facial catalog and cooked readback disagree')
+        for entry in rig['adapters']:
+            candidates = [path for path in dependency_files if path.suffix == '.utoc' and
+                          dependency_hashes[str(path)] == entry['source_toc_sha256'] and
+                          path.with_suffix('.ucas').stat().st_size == entry['source_bulk_bytes']]
+            if len(candidates) != 1:
+                raise ValueError('Facial source revision is absent or ambiguous')
+            package = entry['target_mesh'].split('.')[0]
+            if not package.startswith('/Game/CSS/Locomotion/Faces/'):
+                raise ValueError('Facial mesh is outside the shared namespace')
+            face_packages.add(package)
+        if len(face_packages) != 6 or face_packages.intersection(packages):
+            raise ValueError('Duplicate facial mesh package')
+        library['faces'] = [rig]
+        packages += sorted(face_packages)
     out = work / args.output_name
     out.mkdir(exist_ok=False)
     converter = Converter(ROOT / 'build/retoc-css-target/release/retoc', DEFAULT_REPAK, out)
@@ -106,13 +146,18 @@ def main():
             raise ValueError(f'Unexpected package: {package}')
         relative = package.removeprefix('/Game/')
         for suffix in ('.uasset', '.uexp'):
-            cook_root = (args.adapter_cook + '-cooked') if package in adapter_packages else 'cooked'
-            source = work / cook_root / 'CSSAuthoring/Content' / (relative + suffix)
+            cook_root = (work / (args.adapter_cook + '-cooked')) if package in adapter_packages else work / 'cooked'
+            if package in face_packages:
+                cook_root = face_work / 'cooked'
+            source = cook_root / 'CSSAuthoring/Content' / (relative + suffix)
+            if package in face_packages and face_evidence.get(str(source)) != digest(source):
+                raise ValueError('Facial payload has not passed independent readback: ' + package)
             destination = stage / 'MortalShell2/Content' / (relative + suffix)
             windows_destination('C:/CSS', str(destination.relative_to(stage)))
             if suffix == '.uasset':
                 info = asset_info(source.read_bytes())
-                expected_class = 'AnimBlueprintGeneratedClass' if package in adapter_packages else 'AnimSequence'
+                expected_class = ('SkeletalMesh' if package in face_packages else
+                                  'AnimBlueprintGeneratedClass' if package in adapter_packages else 'AnimSequence')
                 if info['package'] != package or not any(e['class'] == expected_class for e in info['exports']):
                     raise ValueError(f'Not the expected cooked animation asset: {package}')
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -153,8 +198,11 @@ def main():
         raise ValueError('Manifest did not round-trip exactly')
     if any(digest(Path(path)) != checksum for path, checksum in dependency_hashes.items()):
         raise ValueError('Dependency changed during verification')
+    if any(digest(Path(path)) != checksum for path, checksum in face_evidence.items()):
+        raise ValueError('Facial evidence changed during packaging')
     report = dict(passed=True, packages=len(packages), exact_export_payloads=len(packages),
                   adapters=sorted(adapter_packages), adapter_evaluation=args.adapter_evaluation,
+                  facial_meshes=sorted(face_packages), facial_evidence=face_evidence,
                   dependencies=dependency_hashes,
                   required_skeleton='/Game/CSS/Shared/SKEL_Base.SKEL_Base',
                   files={path.name: digest(path) for path in trio.iterdir()},

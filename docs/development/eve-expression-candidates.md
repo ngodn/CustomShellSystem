@@ -131,6 +131,60 @@ This binary is not installed. The last process check still found the game closed
 Source Neutral has seven nonzero weights. Keep it distinct from Reset, which
 must restore the preceding face state while leaving body/hand morphs alone.
 
+## Runtime and combined package checkpoint, 2026-10-06
+
+CSS now plans an expression against the exact outfit revision and variant. It
+loads the derived mesh only for a supported selection, validates its skeleton and
+declared facial shapes, and retains it through the existing appearance lifetime.
+A failed facial asset falls back to the original mesh; that failure is cached
+until catalog reload. The saved expression ID survives the fallback.
+
+Facial morph ownership is separate from body/hand morphs. The runtime captures
+the original values before writing, rolls back partial failures, and restores
+only weights it still owns. A changed or expired mesh is never written through
+the old binding. Unchanged weights skip reflected engine calls. Preview and
+world components have separate ownership; outfit components do not receive the
+facial shape list. Choosing Original face restores the original outfit mesh.
+
+CSS Customize has a searchable Facial Expression picker for supported outfits.
+Original face clears the selection; Neutral is the authored nonzero pose.
+Palette changes preserve expressions. Reset all customization now explicitly
+clears the expression together with the other customization, and still asks
+for confirmation. Profiles use the existing optional stable-ID persistence.
+
+The neutral `css.customize` v1 service exposes `expressions`, facial state in
+`describe`, and an `expression` command inside `apply`. CINE's expression helper
+uses that service. Its menu offers As set in CSS, Original face and supported
+expressions. It applies a temporary selection before camera preparation,
+waits for CSS to acknowledge it, then restores the previous expression on end
+or cancellation. Restoration merges with the current customization rather
+than overwriting body/material edits. A changed shell/outfit/variant or a later
+expression writer is left alone. Busy cleanup retries outside the take; unload
+waits for that cleanup. Look-changing takes require As set in CSS for now.
+
+Validation at this checkpoint:
+
+- Both Windows DLLs build. All 22 CSS host suites and four CINE suites pass.
+- The actual facial catalog passes 75 checks, including rollback, signed weights,
+  unchanged-write avoidance, saved selection and Reset all.
+- CINE passes 34 expression client checks and 231 director checks, covering
+  ordinary completion, F9, menu opening, travel, shutdown and failed asset load.
+- `shared-v1/pack-with-faces-v1` contains 68 packages: 57 sequences, five playback
+  adapters and six facial meshes. All 68 export payloads round-trip exactly.
+  Its separate independent facial decoder passes all six meshes again.
+  The trio is approximately 315.6 MiB, excluding installed outfit dependencies.
+
+The installer has not run for this candidate. The prior performance-only trial
+remains installed. Live facial rendering, side contacts, restoration, interaction
+with the playback adapters and cold/warm costs remain unverified. Expressions
+currently target only the six audited Eve variants. Genessa and Commander White
+retain their ordinary faces; their body-animation support is separate.
+
+CINE integration touches files already edited by another session. The exact
+additional patch is `work/cine-animation-port/cine-expression-integration.patch`,
+with the immediate pre-edit files in `cine-before-expressions/`. Keep those
+changes separate from the other session's camera/showreel work when committing.
+
 The implementation follows the pinned local UE 5.6.1
 `SkeletalMeshAttributes.h` morph attributes and mesh-description build path.
 See also Epic's [morph target API](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/UMorphTarget?application_version=5.6)
