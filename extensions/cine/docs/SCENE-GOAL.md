@@ -99,20 +99,35 @@ when the user says so:
 - [x] 1. Live probe session with the user (script `extensions/cine/work/probe/`), results written
       into `SCENE-RESEARCH.md` ("Live probe results"). Only the buffer passes are untested
       (they need the bridge's new interface-argument support, built on this branch).
-- [ ] 2. Asset pak: materials authored and cooked, pak built, renders in game
-      - 5 Oct: pipeline proven offline. `extensions/cine/assets/`: `author.sh STAGE` (Linux editor,
-        stage on /mnt/eins0fxE/CSS-work/cine-assets/), `cook.sh STAGE COOK` (Wine container; COOK
-        must be under /home, e.g. `extensions/cine/work/export-cook/<run>`; about 8 min),
-        `pack.py COOK OUT` (retoc trio `CSSX_CINE_eins0fx_P`). Run a1: cook exit 0, 7 packages,
-        decoded: flags and parameters as authored. NOT yet seen in game.
-      - Still to add before the final cook: an `Invert` scalar on every material (outgoing layers
-        show where the wipe has NOT passed), then gamma/gain defaults from the live look.
-- [ ] 3. Clean scene: code, host tests
-      - 5 Oct: `src/scene.{hpp,cpp}` written and compiling (not wired into the director, no
-        tests yet). Probe script ready: `extensions/cine/work/probe/probe.py all`.
-- [ ] 4. Breakdown: code, host tests
-- [ ] 5. Action takes: code, host tests, presets
-- [ ] 6. Menu, settings, README, presets wired; regression (CSSX suite, Windows build)
+- [x] 2. Asset pak: materials authored and cooked, pak built, renders in game
+      - Pipeline in `extensions/cine/assets/`: `author.sh STAGE` (Linux editor, stage on
+        /mnt/eins0fxE/CSS-work/cine-assets/), `cook.sh STAGE COOK` (Wine container; COOK must be
+        under /home; about 8 min), `pack.py COOK OUT` (retoc trio `CSSX_CINE_eins0fx_P`),
+        `install.py PACK [--remove]`.
+      - Run a2 is the current build (Invert/Hold/Show/Ambient switches). Wire, clay, x-ray and
+        solid were seen in game with a1. The released trio sits in `assets/pak/` beside
+        `pack.json` (hashes committed, binaries git-ignored); the release tool ships it.
+- [x] 3. Clean scene: code, host tests
+      - `src/scene.{hpp,cpp}`. Player protection only when no target is kept (a kept target
+        is a real fight). Lock-on is dropped before its target is hidden
+        (`TargetSpecificCharacter(null)`, verified live 5 Oct).
+- [x] 4. Breakdown: code, host tests
+      - `src/breakdown.{hpp,cpp}`, `src/layers.hpp`, `src/callouts.{hpp,cpp}`. Labels: sockets
+        sampled at 10 Hz relative to her, the lens measured against the engine's projection at
+        10 Hz, and ONE host call a frame (`GetPlayerViewPoint`); own projection is within about
+        1 px of the engine's (verified live 5 Oct, 2560x1440, scale 1.33).
+- [x] 5. Action takes: code, host tests, presets (`fight-duel`, `fight-hero`, `fight-shoulder`)
+- [x] 6. Menu, settings, README, presets wired; regression (CSSX suite 8/8, CSS suite 18/18,
+      Windows build without warnings in CINE and CSSX)
+      - Director tests use a modelled world (`tests/director_tests.cpp`, `Host::populate`) and
+        compare every value before and after: 131 checks. Pure tests: 680 checks.
+      - CSS: `css.customize describe` lists `nodes` for physics controls (additive; lands in
+        the CSS release after 1.0.0-beta.11, CSS VERSION not touched here).
+      - CSSX 1.3.1: bridge interface arguments and `"echo": false` (decision D16).
 - [ ] 7. Installed and tested in game with the user; fixes
-- [ ] 8. Nexus description, changelog, release notes, STATUS; version 1.1.0
+      - To check live: frame passes (first time on screen; Post vs Pre, Gain/Gamma), wipes with
+        the a2 switches, label positions on the HUD, health bar and lock marker hidden in a
+        fight take, slow motion feel, clean scene with real spawners.
+- [ ] 8. Nexus description, changelog, STATUS; version 1.1.0 (manifest, README and release
+      notes are done)
 - [ ] 9. Release only when the user says so

@@ -201,3 +201,22 @@ and motion (spring bones), especially chest and glutes, when the worn outfit is 
 
 `/home` was at 97% during this research. The three export folders total about 130 MB and can
 be deleted and regenerated.
+
+## Live probe results, second pass (5 Oct, evening; `probe.py labels cleanup fight unlock`)
+
+- `PlayerController.GetPlayerViewPoint` returns `Location` and `Rotation` in one call (the
+  camera cache, so it is right during view blends too).
+- `WidgetLayoutLibrary.ProjectWorldLocationToWidgetPosition` answers in widget units: centre
+  (960, 540) on a 2560x1440 viewport with scale 1.333. CINE's own projection, with the lens
+  measured from two engine-projected points, was within 0.4 to 1.2 px of the engine's for
+  head, pelvis, hand_r and foot_l.
+- `RemoveActiveGameplayEffectBySourceEffect(GameplayEffect, InstigatorAbilitySystemComponent,
+  StacksToRemove=-1)` removes an effect without its handle (`State.Undetectable` 0, 1, 0).
+- `LockOnComponent.TargetSpecificCharacter(Target=null)` drops the lock (`LockedTarget` null
+  right after); the `ToggleTargetLock` fallback was not needed.
+- A locked enemy has `"Enemy Health Widget"` (a widget component, `IsVisible` true) and
+  `BPC_LockOnTarget.WBP_LockOnIndicator` (visibility 4). Hiding both raised no error; how it
+  looks was not captured (the game window was not on screen).
+- `HealthComponent.GetHealthNormalized` / `IsDeadOrDying` work on the player and an enemy;
+  `GetGlobalCameraShakeScale` is 1.0; `ActiveCameraActor` is null outside a take.
+
