@@ -3,6 +3,7 @@
 // strict and bounded: a broken preset is refused with a message naming the field, it never
 // reaches the camera.
 #include "layers.hpp"
+#include "sequence.hpp"
 #include "shot.hpp"
 #include <map>
 #include <nlohmann/json.hpp>
@@ -12,7 +13,7 @@
 namespace cine {
 using Json = nlohmann::json;
 
-enum class ShotKind { Walk, Glide, Turntable, Photo, Action };
+enum class ShotKind { Walk, Glide, Turntable, Photo, Action, Sequence };
 const char* kind_name(ShotKind);
 
 // A camera key as written in a preset. For Walk, `at` is "start", "walk" or a fraction of
@@ -77,6 +78,7 @@ struct Preset {
     std::vector<LookStep> look;  // optional
     std::vector<BreakdownStep> breakdown;   // optional, any kind
     ActionShot action;           // Action only
+    Sequence sequence;           // Sequence only: shots and looks on a tempo grid
     bool look_ends_on_own = true;   // rebuild the modder's own look for the final shot
     static Preset parse(const Json&);
 };

@@ -32,7 +32,7 @@ void camera_fields(const Json& j, double& az, double& dist, double& height, doub
 }
 
 const char* kind_name(ShotKind k) {
-    switch (k) { case ShotKind::Walk: return "walk"; case ShotKind::Glide: return "glide"; case ShotKind::Turntable: return "turntable"; case ShotKind::Action: return "action"; default: return "photo"; }
+    switch (k) { case ShotKind::Walk: return "walk"; case ShotKind::Glide: return "glide"; case ShotKind::Turntable: return "turntable"; case ShotKind::Action: return "action"; case ShotKind::Sequence: return "sequence"; default: return "photo"; }
 }
 
 Preset Preset::parse(const Json& j) {
@@ -50,7 +50,8 @@ Preset Preset::parse(const Json& j) {
     else if (kind == "turntable") p.kind = ShotKind::Turntable;
     else if (kind == "photo") p.kind = ShotKind::Photo;
     else if (kind == "action") p.kind = ShotKind::Action;
-    else throw std::invalid_argument("'kind' must be walk, glide, turntable, photo or action");
+    else if (kind == "sequence") p.kind = ShotKind::Sequence;
+    else throw std::invalid_argument("'kind' must be walk, glide, turntable, photo, action or sequence");
     p.intro = number(j, "intro", p.intro, 0.5, 20);
     p.duration = number(j, "duration", p.duration, 1, 120);
     p.tail = number(j, "tail", p.tail, 3, 60);
@@ -76,6 +77,8 @@ Preset Preset::parse(const Json& j) {
             camera_fields(s, shot.azimuth, shot.distance, shot.height, shot.aim, shot.fov);
             p.photos.push_back(std::move(shot));
         }
+    } else if (p.kind == ShotKind::Sequence) {
+        p.sequence = Sequence::parse(j);
     } else if (p.kind == ShotKind::Action) {
         const Json a = j.value("action", Json::object());
         if (!a.is_object()) throw std::invalid_argument("'action' must be an object");
@@ -181,7 +184,12 @@ Preset Preset::parse(const Json& j) {
         for (const auto& s : breakdown.at("steps")) {
             if (!s.is_object() || !s.contains("layers")) throw std::invalid_argument("Each breakdown step needs 'layers'");
             BreakdownStep step;
-            step.fraction = number(s, "at", 0, 0, 1);
+            // A sequence counts in bars like its shots do; every other kind in fractions of the take.
+            if (p.kind == ShotKind::Sequence) {
+                const double at = p.sequence.tempo.seconds(number(s, "at", 1, 0, 2000));
+                if (at < 0 || at >= p.sequence.total) throw std::invalid_argument("A breakdown step is outside the sequence");
+                step.fraction = at / p.sequence.total;
+            } else step.fraction = number(s, "at", 0, 0, 1);
             if (step.fraction <= previous) throw std::invalid_argument("Breakdown steps must be in time order");
             previous = step.fraction;
             step.layers = layers_from(s.at("layers"));
@@ -206,6 +214,11 @@ Timeline make_timeline(const Preset& p, double route_length_cm, double walk_spee
     }
     if (p.kind == ShotKind::Action) {
         tl.total = p.max_seconds;   // or until the player ends it, or the target is down
+        reveals();
+        return tl;
+    }
+    if (p.kind == ShotKind::Sequence) {
+        tl.total = p.sequence.total;
         reveals();
         return tl;
     }

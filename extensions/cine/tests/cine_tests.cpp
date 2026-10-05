@@ -367,6 +367,72 @@ static void labels() {
     expect(fit_signature({"A name with no plus signs that is far too long for the frame it is asked to fit in"}, 100, 1.0).size() == 1, "a line that cannot break is kept whole");
 }
 
+static void sequence() {
+    // The grid of the reference track: 124 BPM, bar 1 at 0.87 s, the drop on bar 10.
+    Tempo tempo{124, 0.87, 4};
+    expect(near(tempo.bar_seconds(), 1.93548, 1e-4) && near(tempo.seconds(1), 0.87, 1e-12), "a bar at 124 BPM, bar 1 at the offset");
+    expect(near(tempo.seconds(10), 18.289, 2e-3) && near(tempo.seconds(42), 80.225, 2e-3), "bar 10 is the drop, bar 42 the end");
+    expect(near(tempo.bar(tempo.seconds(17.25)), 17.25, 1e-9) && near(tempo.seconds(10.25) - tempo.seconds(10), 60.0 / 124, 1e-9), "a quarter bar is one beat");
+
+    for (const Ease e : {Ease::Linear, Ease::In, Ease::Out, Ease::InOut, Ease::Whip}) {
+        expect(near(ease(e, 0), 0, 1e-12) && near(ease(e, 1), 1, 1e-12) && near(ease(e, -3), 0, 1e-12) && near(ease(e, 7), 1, 1e-12), "an ease runs 0 to 1 and clamps");
+        double last = 0;
+        for (int i = 1; i <= 100; ++i) { const double v = ease(e, i / 100.0); expect(v >= last - 1e-12, "an ease never goes backwards"); last = v; }
+    }
+    expect(ease(Ease::Whip, 0.15) < 0.02 && ease(Ease::Whip, 0.85) > 0.98 && near(ease(Ease::Whip, 0.5), 0.5, 1e-9), "a whip does its move in the middle");
+
+    const Json base = {{"schema", 1}, {"id", "reel"}, {"name", "Reel"}, {"kind", "sequence"}, {"tempo", {{"bpm", 120}, {"offset", 1.0}}}, {"end", 5},
+        {"shots", Json::array({
+            {{"at", 1}, {"from", {{"azimuth", 0}, {"distance", 400}, {"height", 10}, {"aim", 0}, {"fov", 40}}}, {"to", {{"azimuth", 90}}}, {"ease", "linear"}},
+            {{"at", 2}, {"flow", true}, {"to", {{"azimuth", 270}, {"distance", 200}}}, {"ease", "whip"}},
+            {{"at", 3}, {"from", {{"azimuth", 180}, {"distance", 120}, {"height", 60}, {"aim", 60}, {"fov", 28}, {"roll", 12}}}, {"fstop", 2.0}}})},
+        {"looks", Json::array({
+            {{"at", 2}, {"outfit", "a.outfit"}, {"variant", "one"}},
+            {{"at", 2.5}, {"palette", "ember"}, {"controls", {{"glow", 8}, {"tint", {1, 0.5, 0}}}}},
+            {{"at", 3}, {"outfit", "b.outfit"}, {"variant", "two"}, {"flash", 0.3}},
+            {{"at", 4}, {"outfit", "a.outfit"}, {"variant", "one"}}})},
+        {"breakdown", {{"steps", Json::array({{{"at", 3.5}, {"layers", {"depth"}}}, {{"at", 4.5}, {"layers", Json::array()}}})}}}};
+    const auto p = Preset::parse(base);
+    const auto& s = p.sequence;
+    // 120 BPM: a bar is 2 s. Bars 1, 2, 3 at 1, 3, 5 s; the end, bar 5, at 9 s.
+    expect(p.kind == ShotKind::Sequence && near(s.total, 9, 1e-9) && s.shots.size() == 3, "a sequence parses onto its grid");
+    expect(near(s.shots[0].at, 1, 1e-9) && near(s.shots[0].length, 2, 1e-9) && near(s.shots[2].at, 5, 1e-9) && near(s.shots[2].length, 4, 1e-9), "a shot runs to the next one, the last to the end");
+    expect(s.shots[0].cut && !s.shots[1].cut && s.shots[2].cut, "the first shot is a cut, a flow is not");
+    expect(near(s.shots[1].from.azimuth, 90, 1e-9) && near(s.shots[1].from.distance, 400, 1e-9) && near(s.shots[1].to.distance, 200, 1e-9) && near(s.shots[1].to.fov, 40, 1e-9),
+           "a flow starts where the last shot ended and keeps what it does not change");
+    expect(near(s.shots[2].to.roll, 12, 1e-9) && near(s.shots[2].to.distance, 120, 1e-9) && near(s.shots[2].fstop, 2, 1e-9), "a cut with only 'from' holds that pose");
+    expect(near(make_timeline(p, 0, 184).total, 9, 1e-9), "the take is as long as the sequence");
+    expect(shot_at(s, 0) == 0 && shot_at(s, 2.99) == 0 && shot_at(s, 3) == 1 && shot_at(s, 8.9) == 2, "the shot playing is the last one that started");
+    expect(near(pose_at(s, 2).azimuth, 45, 1e-9) && near(pose_at(s, 0.2).azimuth, 0, 1e-9), "a linear shot is halfway at half time, and waits at its start before it");
+    expect(near(pose_at(s, 4).azimuth, 180, 1e-6) && near(pose_at(s, 4).distance, 300, 1e-6), "a whip is halfway in the middle");
+    expect(near(pose_at(s, 4.999).azimuth, 270, 0.01) && near(pose_at(s, 5).azimuth, 180, 1e-9) && near(pose_at(s, 5).roll, 12, 1e-9), "a cut jumps to its own pose");
+    expect(s.looks.size() == 4 && near(s.looks[0].at, 3, 1e-9) && s.looks[0].flash > 0 && s.looks[1].flash == 0 && near(s.looks[2].flash, 0.3, 1e-9), "a wear gets a flash, a palette change does not");
+    expect(s.looks[1].controls.at("tint").size() == 3 && near(s.looks[1].controls.at("glow")[0], 8, 1e-9), "controls take one number or up to three");
+    const auto wardrobe = s.wardrobe();
+    expect(wardrobe.size() == 2 && wardrobe[0].first == "a.outfit" && wardrobe[1].second == "two", "the wardrobe lists each look once, in first-use order");
+    const auto tl = make_timeline(p, 0, 184);
+    expect(tl.breakdown.size() == 2 && near(tl.breakdown[0].at, 6, 1e-9) && near(tl.breakdown[1].at, 8, 1e-9), "breakdown steps of a sequence are in bars");
+
+    // Flash: two frames in, held until released, a quarter second out.
+    expect(flash_alpha(0.9, 1, -1) == 0 && near(flash_alpha(1.05, 1, -1), 1, 1e-9) && near(flash_alpha(9, 1, -1), 1, 1e-9), "a flash comes in fast and holds until released");
+    expect(near(flash_alpha(1.5, 1, 1.5), 1, 1e-9) && flash_alpha(1.61, 1, 1.5) < 0.6 && flash_alpha(1.8, 1, 1.5) == 0, "and lets go in about a quarter second");
+
+    auto bad = [&](const char* what, auto&& change) { Json j = base; change(j); rejects([&] { Preset::parse(j); }, what); };
+    bad("no tempo", [](Json& j) { j.erase("tempo"); });
+    bad("no end", [](Json& j) { j.erase("end"); });
+    bad("no shots", [](Json& j) { j["shots"] = Json::array(); });
+    bad("shots out of order", [](Json& j) { j["shots"][1]["at"] = 1; });
+    bad("a shot after the end", [](Json& j) { j["shots"][2]["at"] = 6; });
+    bad("a flow with from", [](Json& j) { j["shots"][1]["from"] = {{"azimuth", 3}}; });
+    bad("a cut with no pose", [](Json& j) { j["shots"][2].erase("from"); });
+    bad("a bad ease", [](Json& j) { j["shots"][0]["ease"] = "bounce"; });
+    bad("an outfit without a variant", [](Json& j) { j["looks"][0].erase("variant"); });
+    bad("an empty look step", [](Json& j) { j["looks"][1] = {{"at", 2.5}}; });
+    bad("looks out of order", [](Json& j) { j["looks"][1]["at"] = 1; });
+    bad("a breakdown step outside the take", [](Json& j) { j["breakdown"]["steps"][1]["at"] = 9; });
+    bad("too fast a tempo", [](Json& j) { j["tempo"]["bpm"] = 900; });
+}
+
 static void shipped(const fs::path& root) {
     size_t count = 0;
     for (const auto& entry : fs::directory_iterator(root / "presets")) {
@@ -402,7 +468,7 @@ static void shipped(const fs::path& root) {
 int main(int argc, char** argv) {
     try {
         geometry(); routes(); tracks(); curves(); walls(); presets();
-        layers(); action(); action_presets(); labels();
+        layers(); action(); action_presets(); labels(); sequence();
         if (argc > 1) shipped(fs::path(argv[1]));
         std::cout << checks << " CINE checks passed\n";
         return 0;

@@ -140,7 +140,20 @@ CSS's animation code meanwhile, and commit only my own files (never `git add -A`
 
 ## Checklist
 
-- [ ] 1. Sequence kind: preset format, pure timeline maths, unit tests
+- [x] 1. Sequence kind: preset format, pure timeline maths, unit tests
+      - `src/sequence.{hpp,cpp}`: `Tempo` (times in bars, counted from 1), `SeqShot` (cut or
+        flow, from/to `SeqPose` with roll, ease incl. whip, fstop), `SeqLook` (outfit +
+        variant, palette, controls, flash), `Sequence::parse`, `wardrobe()`, `shot_at`,
+        `pose_at`, `flash_alpha`. Preset `"kind": "sequence"` with `tempo`, `end`, `shots`,
+        `looks`; breakdown steps of a sequence are in bars. Tests in `cine_tests.cpp`
+        (`sequence()`), 1314 checks.
+      - NEXT (item 2): the director. Decided: the take clock of a sequence runs on frames
+        (render), so a cut lands within a frame of its beat, and the camera is placed at once
+        on a cut and driven per tick in between, like the dolly. Prepare order: save her look,
+        wear every look of `wardrobe()` once, end on the look the breakdown belongs to, build
+        the breakdown, wear the opening look, roll. All breakdown steps must sit in one span
+        without a wear (pieces and locked materials belong to one look). The flash is a
+        full-frame HUD layer on the screen root.
 - [ ] 2. Rig: camera roll; director: sequence takes (cuts, flows, whips)
 - [ ] 3. CSS service: `wear` and the list of wearable outfits; CINE look steps with outfits
       - 5 Oct: service side DONE (`outfits`, `wear`, `describe.busy`; commit 5602759), staged
