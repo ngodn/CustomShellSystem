@@ -38,6 +38,48 @@ int main(int argc,char** argv) {
         expect(parsed.entries[0].slot==AnimationSlot::Idle && parsed.entries[0].hide_weapons,"Idle contract lost");
         expect(!parsed.entries[1].slot && parsed.entries[1].playback==AnimationPlayback::Once,"Performance forced into idle");
         expect(parsed.entries[0].aliases[0].asset=="/Game/CSS/Eve/Anim/AN_I2_Idle.AN_I2_Idle","Legacy alias lacks exact asset");
+        const std::string base="/Game/CSS/Shared/SKEL_Base.SKEL_Base";
+        const std::string wings="/Game/CSS/UnholyGenessa/SKEL_Wings2.SKEL_Wings2";
+        const auto bundled=AnimationSet::parse(Json::parse(R"({"idle":[
+          {"id":"eve","name":"Same display name","clip":"/Game/CSS/Eve/Anim/AN_I2_Idle.AN_I2_Idle","hide_weapons":true}
+        ]})")).slots.at(AnimationSlot::Idle);
+        const std::vector<AnimationLibrary> libraries{parsed};
+        const auto resolve=[&](const std::string& choice,const std::vector<AnimationOption>& options,const std::string& target) {
+            return resolve_library_animation(libraries,AnimationSlot::Idle,choice,options,target);
+        };
+        auto match=resolve("eve",bundled,base);
+        expect(match.entry && match.entry->id=="css.eve.idle","Audited old ID did not resolve to shared identity");
+        expect(match.candidates.size()==2 && !match.candidates[0].bundled && match.candidates[1].bundled,
+               "Shared preference or bundled fallback order lost");
+        expect(match.candidates[1].asset==bundled[0].clip && match.candidates[1].declared_skeleton.empty(),
+               "Bundled fallback invented a skeleton declaration");
+        expect(resolve("css.eve.idle",bundled,base).candidates.size()==2,"Canonical choice lost old bundled fallback");
+        expect(resolve("css.eve.idle",{},base).candidates.size()==1,"Shared-only installation needs an outfit alias");
+        expect(resolve("eve",{},base).entry==nullptr,"Legacy ID matched without its exact bundled asset");
+        auto specialized=bundled;specialized[0].clip="/Game/CSS/UnholyGenessa/AN_Wings.AN_Wings";
+        expect(!resolve("eve",specialized,wings).entry,"Unaliased wing animation was replaced by name or ID");
+        specialized=bundled;specialized[0].hide_weapons=false;
+        expect(!resolve("eve",specialized,base).entry,"Alias silently changed weapon visibility");
+        specialized=bundled;specialized[0].id="css.eve.idle";
+        expect(!resolve("css.eve.idle",specialized,base).entry,"Shared identity took over an unaliased outfit choice");
+        auto alternatives=libraries;
+        alternatives[0].entries[0].assets.push_back({"/Game/CSS/Locomotion/Wings/AN_Idle.AN_Idle",wings});
+        match=resolve_library_animation(alternatives,AnimationSlot::Idle,"eve",bundled,wings);
+        expect(match.candidates.size()==3 && match.candidates[0].declared_skeleton==wings &&
+               match.candidates[1].declared_skeleton==base && match.candidates[2].bundled,
+               "Exact wing rig did not precede directed base compatibility and fallback");
+        match=resolve("css.eve.idle",{},"/Game/Unknown/Skeleton.Skeleton");
+        expect(match.entry && match.candidates.empty(),"Unsupported rig accepted shared asset");
+        expect(resolve("eve",bundled,"/Game/Unknown/Skeleton.Skeleton").candidates.size()==1,
+               "Unsupported shared rig discarded the outfit's fallback before runtime validation");
+        for(const char* choice:{"original","css.feminine","","missing","css.eve.dance"})
+            expect(!resolve(choice,bundled,base).entry,"Default or one-shot performance resolved as a shared idle");
+        expect(!resolve_library_animation({},AnimationSlot::Idle,"eve",bundled,base).entry &&
+               resolve_animation(bundled,AnimationSlot::Idle,"eve").asset==bundled[0].clip,
+               "Removing shared library lost old bundled resolution");
+        auto ambiguous=libraries;ambiguous.push_back(parsed);
+        expect(!resolve_library_animation(ambiguous,AnimationSlot::Idle,"eve",bundled,base).entry,
+               "Ambiguous direct resolver input chose a library by order");
         for(const auto& mutate:std::vector<std::function<void(Json&)>>{
             [](Json& j){j["id"]="original";},
             [](Json& j){j["entries"][0]["id"]="css.feminine";},

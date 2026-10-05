@@ -1,5 +1,6 @@
 #include "animation_library.hpp"
 #include "data.hpp"
+#include "skeleton_compatibility.hpp"
 #include <algorithm>
 #include <set>
 #include <stdexcept>
@@ -97,5 +98,44 @@ AnimationLibrary AnimationLibrary::parse(const Json& value) {
         library.entries.push_back(std::move(animation));
     }
     return library;
+}
+AnimationLibraryMatch resolve_library_animation(const std::vector<AnimationLibrary>& libraries,
+    AnimationSlot requested_slot,const std::string& choice,const std::vector<AnimationOption>& bundled,
+    const std::string& target_skeleton,const std::string& weapon) {
+    if(choice.empty() || choice=="original" || choice==feminine_animation_id) return {};
+    const auto legacy=resolve_animation(bundled,requested_slot,choice,weapon);
+    const auto aliases=[&](const LibraryAnimation& entry,const LegacyAnimationAlias& alias,
+                          const ResolvedAnimation& option) {
+        return option.option && alias.slot==requested_slot && alias.id==option.option->id &&
+               alias.asset==option.asset && option.hide_weapons==entry.hide_weapons;
+    };
+    const LibraryAnimation* found=nullptr;
+    for(const auto& library:libraries) for(const auto& entry:library.entries) {
+        if(entry.slot!=requested_slot) continue;
+        const bool matched_alias=std::any_of(entry.aliases.begin(),entry.aliases.end(),
+            [&](const auto& alias){return aliases(entry,alias,legacy);});
+        // An existing unaliased option owns its saved ID, even if another pack
+        // declares that same string as a canonical library ID.
+        if(!matched_alias && (entry.id!=choice || legacy.option)) continue;
+        if(found) return {};
+        found=&entry;
+    }
+    if(!found) return {};
+    AnimationLibraryMatch result{found,{}};
+    std::set<std::string> paths;
+    auto append=[&](const std::string& path,const std::string& skeleton,bool bundled_asset) {
+        if(paths.insert(path).second) result.candidates.push_back({path,skeleton,bundled_asset});
+    };
+    // Prefer an exact target rig over an audited compatible base alternative.
+    for(bool exact:{true,false}) for(const auto& alternative:found->assets) {
+        if((alternative.skeleton==target_skeleton)==exact &&
+           compatible_animation_skeletons(alternative.skeleton,target_skeleton))
+            append(alternative.asset,alternative.skeleton,false);
+    }
+    for(const auto& alias:found->aliases) {
+        const auto option=resolve_animation(bundled,requested_slot,alias.id,weapon);
+        if(aliases(*found,alias,option)) append(option.asset,{},true);
+    }
+    return result;
 }
 }

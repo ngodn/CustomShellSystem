@@ -24,4 +24,19 @@ struct AnimationLibrary {
     std::vector<LibraryAnimation> entries;
     static AnimationLibrary parse(const nlohmann::json&);
 };
+struct AnimationAssetCandidate {
+    std::string asset;
+    // Empty for bundled fallbacks; their actual skeleton must be read after loading.
+    std::string declared_skeleton;
+    bool bundled = false;
+};
+struct AnimationLibraryMatch {
+    const LibraryAnimation* entry = nullptr;
+    std::vector<AnimationAssetCandidate> candidates;
+};
+// Metadata resolution at selection/catalog change, not per frame. The caller must
+// validate loaded types/skeletons and cache failures before starting playback.
+AnimationLibraryMatch resolve_library_animation(const std::vector<AnimationLibrary>&,
+    AnimationSlot,const std::string& choice,const std::vector<AnimationOption>& bundled,
+    const std::string& target_skeleton,const std::string& weapon_tag = {});
 }

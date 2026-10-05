@@ -87,3 +87,24 @@ The package check uses real V8B paks with deliberately synthetic companion
 files. It exercises metadata discovery, two conflicting packages, an invalid
 asset path and a corrupt table checksum alongside an existing outfit. It is
 not a cooked-asset or game-load test.
+
+## Candidate resolution
+
+`resolve_library_animation` produces ordered candidates from a canonical ID
+or an audited legacy selection. Exact skeleton alternatives come first, then
+the existing directed Base-to-Wings2 compatibility rule, then exact bundled
+fallbacks. It compares the old slot, ID, asset path and weapon-hiding behavior.
+It never substitutes an unaliased wing clip or matches a display name. A
+canonical ID colliding with an unaliased outfit option also leaves that outfit
+option alone. Default, Feminine and unknown choices do not acquire shared
+overrides.
+
+The result is metadata, not a loaded animation. A known entry can have no
+compatible candidates and must then be shown as unavailable. A bundled
+candidate has no invented skeleton declaration: the engine must read and
+validate its actual skeleton after loading. Shared candidates also require
+their declared skeleton and actual asset type to match. The caller must try
+candidates once per selection/catalog generation, retain safe object handles,
+cache failures and restore Default if none load. This caller is not wired yet.
+The returned entry pointer is valid only while the supplying library vector
+remains unchanged. Catalog reload must invalidate consumers before replacing it.

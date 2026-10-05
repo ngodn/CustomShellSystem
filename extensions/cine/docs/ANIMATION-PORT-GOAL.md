@@ -173,3 +173,13 @@ when the game's gait flags clear before speed reaches Idle. Portable tests
 build pass. No DLL was installed. The reported jog pop, cycle phase and full
 transition matrix still require live verification. Details and remaining cases
 are in `docs/development/eve-stopping-transition.md`.
+
+Shared-library discovery is implemented as a separate CSS.Package kind, with
+strict metadata validation and no fake outfit. Conflicting installed library
+identities and aliases reject all involved libraries independently of outfits.
+The metadata resolver orders exact-rig, audited compatible-rig and exact bundled
+fallback candidates while preserving specialized outfit choices. The Windows
+build and discovery regression checks pass. CSS menu/playback wiring, loaded
+asset validation/failure caching, CINE service integration, facial support and
+the actual shared cook remain unfinished. See
+`docs/development/shared-animation-catalog.md` for the implemented boundary.
