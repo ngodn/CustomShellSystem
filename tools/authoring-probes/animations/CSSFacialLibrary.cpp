@@ -94,7 +94,8 @@ FString UCSSFacialLibrary::VerifyExpressionShapes(USkeletalMesh* Source, USkelet
     const FString& InputFile)
 {
     if (!IsRunningCommandlet() || !Source || !Candidate || Source==Candidate ||
-        !Candidate->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/SK_Face_")))
+        (!Candidate->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/SK_Face_")) &&
+         !Candidate->GetPathName().StartsWith(TEXT("/Game/CSS/Locomotion/Faces/SK_Face_"))))
         return TEXT("ERROR: invalid comparison assets");
     FAssetCompilingManager::Get().FinishAllCompilation();
     const FMeshDescription *Before=Source->GetMeshDescription(0), *After=Candidate->GetMeshDescription(0);

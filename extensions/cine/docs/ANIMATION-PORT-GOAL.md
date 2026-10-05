@@ -323,3 +323,25 @@ all-clip full-motion review and live performance measurement, facial cook/runtim
 and controls, DumbDumb/IrisOut's unknown source tracks, and final distributions.
 All 22 frontal facial previews have now been inspected; this does not establish
 side-view contacts or cooked facial playback.
+
+## Facial shared assets checkpoint, 2026-10-06
+
+Continued offline while the installed performance trial awaits the user's check.
+All six Eve facial candidates are copied into `/Game/CSS/Locomotion/Faces/`,
+fresh-load verified and cooked for Windows. An independent CUE4Parse readback
+passes all six: original render geometry, skinning, bindings and the 22 existing
+body/hand morphs are unchanged; the 99 added facial shapes decode with valid GPU
+deltas. The private diagnostic container is not installed. Existing outfit
+containers are unchanged. See `docs/development/eve-expression-candidates.md`
+for evidence and the precise limits of these checks.
+
+Added optional facial-rig metadata to the shared animation catalog, with signed
+weights, exact outfit revision/mesh matching, case-insensitive morph-name
+collision rejection, and order-independent catalog conflict checks. The generated
+real catalog has 21 expressions and six bindings. All 22 CSS host suites pass;
+40 facial checks also pass against the generated catalog.
+
+Next implement owned expression activation and restoration, persisted selections,
+and CSS/CINE controls. Keep the installed performance trial stable until its live
+result arrives. No facial expression has been installed or accepted in game.
+The other unfinished animation and delivery work above remains in scope.

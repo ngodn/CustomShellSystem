@@ -63,6 +63,59 @@ cooked data, runtime ownership/restoration, CINE controls and performance
 remain to check.
 No expression menu or released outfit update is installed yet.
 
+## Shared facial cook and catalog, 2026-10-06
+
+Six copies now live under `/Game/CSS/Locomotion/Faces/SK_Face_*` in the
+authoring project. `stage_facial_library.py` copied only the previously verified
+candidates. A fresh process verified geometry, morphs and bindings before the
+Windows cook. The original outfit assets and installed containers remain
+unchanged. `run_facial_library.py` uses the existing restricted commandlet runner;
+the readonly verifier accepts the shared namespace, while the mutation helper
+still accepts only the isolated AnimLab namespace.
+
+The cook contains about 311 MiB of skeletal-mesh payloads. The private
+`CSS_FacialReadbackProbe_P` container is under the ignored workspace and is not
+mounted in the game. Do not distribute or install this diagnostic container.
+
+`tools/FacialReadback` independently decodes the cooked GPU morph buffers using
+the pinned CUE4Parse checkout and .NET 10.0.401. All six comparisons passed:
+
+- Reference skeleton, materials, skeleton/physics/post-process bindings and
+  sockets match the installed Eve package.
+- Render positions, normals, UVs, skin weights, indices, sections and bone lists
+  match. Cloth index mappings match; the reader does not decode every cloth buffer.
+- All 22 existing body/hand morph delta arrays match exactly after decoding.
+- All 99 added facial morphs have nonempty, finite GPU deltas with unique valid
+  render-vertex indices. Each mesh has 121 morphs in total.
+
+The cooked position precision is approximately 0.004 cm. This value is not a
+measured source-to-cooked error bound. The added facial delta validity check does
+not independently compare every delta with the Blender interchange. Editor
+source comparisons and cooked GPU checks cover different parts of the pipeline.
+
+Evidence: `work/cine-animation-port/shared-faces-v1/` contains the create/verify
+reports, successful cook receipt, private container receipt,
+`cooked-readback-v1.json`, and `facial-catalog-evidence.json`.
+The catalog generator produces `facial-rig.json`: 21 expressions, 99 morph names,
+and six adapters tied to the exact installed Eve container revision.
+
+CSS's animation-library parser now accepts an optional `faces` list. Each rig
+declares stable expression IDs, signed weights and exact source-to-derived mesh
+bindings. Parsing rejects ambiguous FName casing, non-finite or out-of-range
+weights, unknown shapes and conflicting adapters. Library conflicts are rejected
+regardless of discovery order. Resolving a different outfit/revision or removing
+the pack produces no facial adapter. Old catalogs do not need a `faces` field.
+
+The weight builder clears the rig's other facial shapes on expression changes;
+it never adds body or hand controls to that facial list. Reset remains a separate
+runtime ownership operation, not the source Neutral expression.
+
+Validation: 22 CSS host suites pass; the real facial catalog passes 40 parser,
+compatibility and discovery checks. The decoder builds with zero warnings.
+Runtime mesh activation, saved expression selection, CSS/CINE controls and
+ownership/restoration are still unfinished. The installed performance trial has
+not been replaced by this offline work.
+
 Source Neutral has seven nonzero weights. Keep it distinct from Reset, which
 must restore the preceding face state while leaving body/hand morphs alone.
 
