@@ -16,6 +16,7 @@ input_path=WORK/'facial-shapes.json'
 expression_names={shape['name'] for shape in json.loads(input_path.read_text())['morph_targets']}
 records=[]
 protected={}
+(WORK/'ue-verification.json').write_text(json.dumps(dict(complete=False,results=[]),indent=2)+'\n')
 for source_path in sources:
     target_path='/Game/CSS/AnimLab/SK_Face_'+source_path.rsplit('/',1)[-1].removeprefix('SK_')
     for package in (source_path,target_path):
@@ -25,6 +26,11 @@ for source_path in sources:
     target=unreal.load_asset(target_path)
     if not source or not target:
         raise ValueError('Missing comparison asset')
+    if not records:
+        if not unreal.CSSFacialLibrary.add_expression_shapes(source,str(input_path)).startswith('ERROR:'):
+            raise ValueError('Importer accepted a protected source')
+        if not unreal.CSSFacialLibrary.add_expression_shapes(target,str(input_path)).startswith('ERROR:'):
+            raise ValueError('Importer accepted duplicate expression shapes')
     result=unreal.CSSFacialLibrary.verify_expression_shapes(source,target,str(input_path))
     if not result.startswith('PASS:'):
         raise ValueError(f'{target_path}: {result}')

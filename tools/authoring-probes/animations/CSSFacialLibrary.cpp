@@ -124,6 +124,11 @@ FString UCSSFacialLibrary::VerifyExpressionShapes(USkeletalMesh* Source, USkelet
     if (!Model || Model->LODModels.Num()!=1) return TEXT("ERROR: unexpected built LODs");
     const auto& LOD=Model->LODModels[0];
     double MaxError=0;
+    double MaxOmittedDelta=0;
+    const auto* LODInfo=Candidate->GetLODInfo(0);
+    if (!LODInfo || !FMath::IsFinite(LODInfo->BuildSettings.MorphThresholdPosition) ||
+        LODInfo->BuildSettings.MorphThresholdPosition<0 || LODInfo->BuildSettings.MorphThresholdPosition>.015001f)
+        return TEXT("ERROR: unexpected morph filtering threshold");
     int32 Compared=0;
     for (const auto& Value:*Shapes) {
         const TSharedPtr<FJsonObject>* Shape=nullptr;
@@ -154,13 +159,23 @@ FString UCSSFacialLibrary::VerifyExpressionShapes(USkeletalMesh* Source, USkelet
         int32 Count=0;
         const FMorphTargetDelta* Built=Morph->GetMorphTargetDelta(0,Count);
         if (!Built || Count==0) return TEXT("ERROR: built morph empty");
+        TMap<int32,FVector3f> BuiltPositions;
         for (int32 I=0;I<Count;++I) {
             if (!LOD.MeshToImportVertexMap.IsValidIndex(Built[I].SourceIdx)) return TEXT("ERROR: built morph index invalid");
             const int32 Point=LOD.MeshToImportVertexMap[Built[I].SourceIdx];
             MaxError=FMath::Max(MaxError,static_cast<double>(FVector3f::Distance(Built[I].PositionDelta,Expected.FindRef(Point))));
+            BuiltPositions.Add(Built[I].SourceIdx,Built[I].PositionDelta);
             ++Compared;
         }
+        for (int32 I=0;I<LOD.MeshToImportVertexMap.Num();++I)
+            if (!BuiltPositions.Contains(I))
+                MaxOmittedDelta=FMath::Max(MaxOmittedDelta,static_cast<double>(Expected.FindRef(LOD.MeshToImportVertexMap[I]).Size()));
     }
     if (MaxError>.0002) return FString::Printf(TEXT("ERROR: facial delta error %.9f cm"),MaxError);
-    return FString::Printf(TEXT("PASS: %d shapes, %d built deltas, maximum error %.9f cm"),Shapes->Num(),Compared,MaxError);
+    // UE filters small deltas using the source mesh's build setting. Check omitted
+    // vertices too, allowing only that threshold plus float reconstruction error.
+    if (MaxOmittedDelta>LODInfo->BuildSettings.MorphThresholdPosition+.0002)
+        return FString::Printf(TEXT("ERROR: omitted facial delta %.9f cm exceeds build threshold"),MaxOmittedDelta);
+    return FString::Printf(TEXT("PASS: %d shapes, %d built deltas, retained error %.9f cm, filtered maximum %.9f cm (threshold %.9f)"),
+        Shapes->Num(),Compared,MaxError,MaxOmittedDelta,LODInfo->BuildSettings.MorphThresholdPosition);
 }

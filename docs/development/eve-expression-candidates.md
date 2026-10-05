@@ -30,9 +30,13 @@ Six candidates are saved:
 | SK_ACloth3 | ACloth3 | 22 retained + 99 facial |
 
 Fresh-process readback checks all six. Base vertex positions and existing morph
-attributes match exactly; built facial deltas match the interchange within
-0.000096 cm. Material slots, bone bindings, skeletons, physics assets and
-post-process graphs remain equal to each original. Verification hashes both
+attributes match exactly; retained built facial deltas match the interchange
+within 0.000096 cm. The expanded check also covers omitted vertices: Unreal's
+unchanged `MorphThresholdPosition` of 0.015 cm filters small deltas. The largest
+omission measured on each candidate was 0.015002 cm, within that threshold
+plus float reconstruction error. Do not describe the retained-delta error as
+the error across all vertices. Material slots, bone bindings, skeletons, physics
+assets and post-process graphs remain equal to each original. Verification hashes both
 source and candidate files before/after and saves nothing.
 
 Evidence under `work/cine-animation-port/`:
@@ -42,6 +46,8 @@ Evidence under `work/cine-animation-port/`:
 - `facial-export-v1/ue-verification.json`: six saved meshes and readback checks.
 - `facial-review-v1/`: 22 Blender head renders, including Reset and all 21 poses.
 - `facial-authoring-build.log`, `facial-verify-build.log`: successful UE builds.
+- `facial-verify-v3.log`: expanded coverage, including filtered vertices and
+  rejection of original assets and duplicate expression additions.
 
 The initial all-six import process was terminated after saving five candidates;
 the sixth completed in a separate process. The subsequent fresh-process
