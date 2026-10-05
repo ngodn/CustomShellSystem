@@ -316,6 +316,40 @@ struct Core {
     // which the UE4SS ImGui thread reads.
     Json customize_api(const Json& command) {
         const auto action=command.at("action").get<std::string>();
+        // What the worn shell can wear, and wearing one of them: these two need no look to be
+        // worn yet. "wear" goes through the same pending selection as the CSS page's own
+        // choice, so the apply pass validates, loads and reports it the same way. With
+        // "customize" (a snapshot from "describe") the look lands exactly as it was saved;
+        // without it the outfit's remembered customization is used, like on the page.
+        if(action=="outfits") {
+            if(appearance.shell.empty()) throw std::runtime_error("No player shell yet");
+            Json list=Json::array();
+            for(const auto& o:catalog.outfits) {
+                if(!catalog.compatible(o.id,appearance.shell)) continue;
+                Json variants=Json::array();
+                for(const auto& v:o.variants) variants.push_back({{"id",v.id},{"name",v.name}});
+                list.push_back({{"id",o.id},{"name",o.name},{"variants",std::move(variants)}});
+            }
+            return {{"shell",appearance.shell},{"outfits",std::move(list)}};
+        }
+        if(action=="wear") {
+            if(appearance.shell.empty()) throw std::runtime_error("No player shell yet");
+            const auto outfit=command.at("outfit").get<std::string>();
+            const auto variant=command.at("variant").get<std::string>();
+            if(!catalog.find(outfit,variant)) throw std::runtime_error("Outfit or variant is not installed");
+            if(!catalog.compatible(outfit,appearance.shell)) throw std::runtime_error("This outfit does not support the current shell: "+appearance.shell);
+            std::optional<Customization> custom;
+            if(command.contains("customize")) {
+                for(const auto& o:catalog.outfits) if(o.id==outfit) custom=restore_customization(o.controls_for(variant),command.at("customize"));
+            }
+            selected_outfit=outfit; selected_variant=variant;
+            pending_custom=std::move(custom); custom_only=false;
+            apply_pending=true; ui_refresh=true;
+            const auto now=GetTickCount64();
+            if(command.value("persist",true)) save_after=now+600;
+            else save_after=std::max(save_after,now+30*60*1000);   // a transient look; the caller's last wear saves
+            return {{"shell",appearance.shell},{"outfit",outfit},{"variant",variant},{"busy",true}};
+        }
         auto selected=state.selections.find(appearance.shell);
         if(selected==state.selections.end()) throw std::runtime_error("No CSS appearance is worn");
         const Outfit* outfit=nullptr;
@@ -323,8 +357,9 @@ struct Core {
         if(!outfit) throw std::runtime_error("The selected outfit is missing");
         const auto& options=outfit->controls_for(selected->second.variant);
         auto result=[&](const Customization& custom){
+            // "busy": a wear or a change is still on its way to the model.
             return Json{{"shell",appearance.shell},{"outfit",selected->second.outfit},{"variant",selected->second.variant},
-                        {"palette",custom.palette},{"customize",custom.json()}};
+                        {"palette",custom.palette},{"customize",custom.json()},{"busy",apply_pending}};
         };
         if(action=="describe") {
             auto out=result(selected->second.custom);

@@ -12,10 +12,18 @@ Read and change the current look. Game thread only; refused while CSS's own tick
 running (for example from a hook CSS triggered), with "CSS is busy; call again from your
 own tick".
 
-- `{"action":"describe"}` → `{shell, outfit, variant, palette, customize,
+- `{"action":"describe"}` → `{shell, outfit, variant, palette, customize, busy,
   palettes:[{id,name}], controls:[{id,name,kind,group,role,scalar,nodes?}]}`. `nodes` is
   there for physics controls only (since 1.0.0-beta.10): the spring bones, or the dynamics
   chain root bones, that the control drives.
+- `{"action":"outfits"}` → `{shell, outfits:[{id, name, variants:[{id,name}]}]}`: what the
+  worn shell can wear (builds after 1.0.0-beta.11).
+- `{"action":"wear","outfit":id,"variant":id,"customize":{...}?,"persist":bool}` wears an
+  outfit through the same path as a choice on the CSS page and returns `{shell, outfit,
+  variant, busy:true}`. With `customize` (a snapshot from `describe`) the look lands exactly
+  as saved; without it CSS uses what it remembers for that outfit. It lands over the next
+  ticks: `describe` reports `busy:true` until then, and the old outfit until it has landed
+  (builds after 1.0.0-beta.11).
 - `{"action":"apply","commands":[...],"persist":bool}` applies 1-256 commands atomically
   and returns the new `{palette, customize, ...}`; CSS puts it on the model on its next
   pass. Commands: `palette {palette}`, `control {control, channel, value | rgb | delta}`,
