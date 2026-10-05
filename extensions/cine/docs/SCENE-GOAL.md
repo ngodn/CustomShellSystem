@@ -45,6 +45,16 @@ when the user says so:
 5. Host tests (mock host) cover enter/restore paths, interrupted takes, world change, missing
    pieces; full CSSX suite green; Windows build 0 warnings.
 
+## Added by the user on 5 Oct (during the probe)
+
+- Breakdown layer for CSS customization physics / motion (spring bones; chest and glutes
+  first) when the outfit is a CSS one.
+- Callouts: an arrow and a text label naming each component shown. Plan: CSSX HUD layers
+  (text + thin rotated image lines via `set_angle` / `set_pivot`), label slots on the screen
+  margins, leader to the component's projected point
+  (`WidgetLayoutLibrary.ProjectWorldLocationToWidgetPosition`, a few calls per frame only while
+  labels show, at most 6 callouts), plus a caption naming the current layer.
+
 ## CSSX core changes on this branch (neutral, no mod names)
 
 - Bridge: `TScriptInterface` arguments from an object handle (needed for

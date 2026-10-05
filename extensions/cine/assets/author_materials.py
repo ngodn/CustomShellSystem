@@ -4,7 +4,10 @@ Run through author.sh (UnrealEditor-Cmd -run=pythonscript). Refuses to overwrite
 empty Content folder. Everything depends only on /Engine and on MPC_Cine, so the cooked pak
 carries no game asset.
 
-One wipe drives every material. MPC_Cine holds WipeT0/WipeDur/WipeFrom/WipeTo (+ soft edge and
+One wipe drives every material. Three per-instance switches place a layer in a transition:
+Invert = 1 shows where the wipe has NOT passed (an outgoing layer shares the incoming one's
+edge), Hold = 1 ignores the wipe (a layer that stays while others change), Show = 0 hides the
+layer outright (one call shows or hides hundreds of bone shapes that share an instance). MPC_Cine holds WipeT0/WipeDur/WipeFrom/WipeTo (+ soft edge and
 line width). Each material computes the wipe position from the game clock itself, so a wipe
 animates on the GPU with no per-frame call from the mod: CINE writes the four numbers once.
 With the defaults (From = To = 1) everything is fully revealed.
@@ -127,7 +130,11 @@ class Graph:
         # No line while nothing or everything is revealed.
         moving = self.mul(self.saturate(self.mul(position, self.const(1000.0))),
                           self.saturate(self.mul(self.one_minus(position), self.const(1000.0))))
-        return revealed, self.mul(band, moving)
+        # Invert = 1: outgoing, visible where the wipe has not passed. Hold = 1: not part of this
+        # wipe. Show = 0: hidden.
+        swept = self.lerp(revealed, self.one_minus(revealed), self.scalar("Invert", 0.0))
+        shown = self.mul(self.max(swept, self.scalar("Hold", 0.0)), self.scalar("Show", 1.0))
+        return shown, self.mul(band, moving)
 
 
 def new_material(name):
@@ -196,7 +203,10 @@ m.set_editor_property("two_sided", True)
 mesh_usage(m)
 g = Graph(m)
 revealed, _ = g.wipe(mpc)
-out(g.rgb(g.vector("BaseColor", 0.42, 0.42, 0.42)), "", MP.MP_BASE_COLOR)
+clay = g.rgb(g.vector("BaseColor", 0.42, 0.42, 0.42))
+out(clay, "", MP.MP_BASE_COLOR)
+# A little self-light, or clay is black in a night scene.
+out(g.mul(clay, g.scalar("Ambient", 0.0)), "", MP.MP_EMISSIVE_COLOR)
 out(g.scalar("Roughness", 0.65), "", MP.MP_ROUGHNESS)
 out(g.scalar("Specular", 0.35), "", MP.MP_SPECULAR)
 out(g.const(0.0), "", MP.MP_METALLIC)
