@@ -39,12 +39,26 @@ AnimationSlot slot(const Json& value) {
 }
 }
 AnimationLibrary AnimationLibrary::parse(const Json& value) {
-    fields(value,{"id","name","author","version","entries","adapters"});
+    fields(value,{"id","name","author","version","entries","adapters","faces"});
     AnimationLibrary library;
     library.id=identity(value);
     library.name=text(value,"name",96);
     library.author=text(value,"author",96);
     library.version=text(value,"version",32);
+    if(value.contains("faces")) {
+        const auto& faces=value.at("faces");
+        if(!faces.is_array() || faces.size()>16) throw std::runtime_error("Invalid facial rig list");
+        std::set<std::string> ids;
+        std::set<std::tuple<std::string,std::string,std::string>> sources;
+        for(const auto& item:faces) {
+            auto rig=FacialRig::parse(item);
+            if(!ids.insert(rig.id).second) throw std::runtime_error("Duplicate facial rig");
+            for(const auto& adapter:rig.adapters)
+                if(!sources.emplace(adapter.source_outfit,adapter.source_toc_sha256,adapter.source_mesh).second)
+                    throw std::runtime_error("Conflicting facial mesh adapters");
+            library.faces.push_back(std::move(rig));
+        }
+    }
     if(value.contains("adapters")) {
         const auto& adapters=value.at("adapters");
         if(!adapters.is_array() || adapters.size()>32)

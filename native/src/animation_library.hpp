@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include "animations.hpp"
+#include "facial_library.hpp"
 
 namespace css {
 struct AnimationContainerRevision {
@@ -33,6 +34,7 @@ struct AnimationLibrary {
     std::string id, name, author, version;
     std::vector<LibraryAnimation> entries;
     std::vector<PerformanceAdapter> adapters;
+    std::vector<FacialRig> faces;
     static AnimationLibrary parse(const nlohmann::json&);
 };
 const PerformanceAdapter* resolve_performance_adapter(const std::vector<AnimationLibrary>&,

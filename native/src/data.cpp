@@ -392,6 +392,8 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
     // Ambiguous libraries are rejected together, regardless of pak scan order.
     std::map<std::string,size_t> library_ids,animation_ids;
     std::map<std::tuple<AnimationSlot,std::string,std::string>,size_t> animation_aliases;
+    std::map<std::string,size_t> facial_rigs;
+    std::map<std::tuple<std::string,std::string,std::string>,size_t> facial_adapters;
     std::set<size_t> conflicting_libraries;
     auto unique_library_claim=[&](auto& claims,const auto& key,size_t index) {
         const auto [found,inserted]=claims.emplace(key,index);
@@ -400,6 +402,12 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
     for(size_t i=0;i<result.animation_libraries.size();++i) {
         const auto& library=result.animation_libraries[i];
         unique_library_claim(library_ids,library.id,i);
+        for(const auto& rig:library.faces) {
+            unique_library_claim(facial_rigs,rig.id,i);
+            for(const auto& adapter:rig.adapters)
+                unique_library_claim(facial_adapters,std::make_tuple(adapter.source_outfit,
+                    adapter.source_toc_sha256,adapter.source_mesh),i);
+        }
         for(const auto& entry:library.entries) {
             unique_library_claim(animation_ids,entry.id,i);
             for(const auto& alias:entry.aliases)
@@ -408,10 +416,10 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
     }
     for(auto it=conflicting_libraries.rbegin();it!=conflicting_libraries.rend();++it) {
         const auto& source=animation_library_sources[*it];
-        if(source.empty()) throw std::runtime_error("Conflicting animation library identities or legacy aliases");
+        if(source.empty()) throw std::runtime_error("Conflicting animation library identities, aliases or facial rigs");
         for(auto& file:result.diagnostics["files"]) if(file["path"]==path_utf8(source)) {
             file["status"]="rejected";
-            file["reason"]="Conflicting animation library identities or legacy aliases";
+            file["reason"]="Conflicting animation library identities, aliases or facial rigs";
         }
         result.animation_libraries.erase(result.animation_libraries.begin()+static_cast<std::ptrdiff_t>(*it));
     }
