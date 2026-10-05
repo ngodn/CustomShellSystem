@@ -1,0 +1,10 @@
+[b]CSSX 1.3.1[/b] (DATE)
+
+Small one, for extension authors mostly. CINE 1.1.0 needs it.
+
+[list]
+[*]Extensions can pass an object where a game function expects an interface.[/*]
+[*]Extensions can write a large struct property without CSSX reading the whole thing back.[/*]
+[/list]
+
+[url=https://github.com/ngodn/CustomShellSystem/releases/tag/cssx-v1.3.1]Download CSSX 1.3.1[/url]

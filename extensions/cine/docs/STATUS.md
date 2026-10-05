@@ -2,7 +2,22 @@
 
 Read this first after any break. Design: `DESIGN.md` (same folder).
 
-## Where the work is
+## CINE 1.1.0 (in progress, 5 Oct 2026)
+
+Branch `feature/cine-scene` (from main `1832bf8`). Clean scene, fight takes and breakdown
+are written, wired and host-tested; versions are CINE 1.1.0 and CSSX 1.3.1. The goal,
+decisions and checklist are in `SCENE-GOAL.md`, the verified game facts in
+`SCENE-RESEARCH.md`. Open: the live test with the user (checklist item 7), then the final
+Nexus texts (drafts are in `docs/nexus/cssx-cine/` and `docs/nexus/cssx/`).
+
+- Installed in the game for that test (5 Oct, 19:13): pak a2, `cssx_core-1.3.1-dev`,
+  CINE 1.1.0, and a CSS dev core from this branch. The previous CSS core pointer
+  (`css_core-1.0.0-beta.11.dll`) is backed up in `extensions/cine/work/export-backup/`;
+  to go back, write that name into `Mods/CustomShellSystem/core.json` with the game closed.
+- Live drivers: `extensions/cine/work/probe/probe.py` (engine facts) and
+  `extensions/cine/work/live/drive.py` (roll takes, screenshots, cost).
+
+## Where the work was (1.0.0)
 
 - The main checkout `CustomShellSystem/`, branch `feature/cine` (from `0089a27`).
 - No git worktrees for this project (the user's rule). Check the branch before editing.

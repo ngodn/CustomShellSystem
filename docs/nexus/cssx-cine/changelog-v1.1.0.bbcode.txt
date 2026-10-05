@@ -1,0 +1,18 @@
+[b]CSSX CINE 1.1.0[/b] (DATE)
+
+Hey everyone. Three new things for your scenes in this one.
+
+[list]
+[*][b]Clean scene[/b]: hide enemies, or enemies and NPCs, while you're in Cine World, without pausing the world. No more clearing a camp before a take. They're frozen and can't be hit, new ones don't spawn, and everyone comes back as they were when you leave. Bosses are left alone.[/*]
+[*][b]Fight takes[/b]: three new presets (Fight: Duel, Fight: Hero Orbit, Fight: Over the Shoulder) film a fight you play yourself. The camera frames you and your lock-on target, a kill plays in slow motion, and a parry or a hit pushes the camera in.[/*]
+[*][b]Keep my lock-on target[/b]: with clean scene on, everyone goes except the enemy you're locked on to, for a clean one on one.[/*]
+[*][b]Breakdown[/b]: show any take in layers like a VFX breakdown reel: clay, wireframe, skeleton, virtual / IK / spring bones, sockets, physics bodies, the movement capsule, and frame passes (base colour, normals, depth). Layers wipe in one after another, with labels and arrows.[/*]
+[*]New preset [b]Breakdown Turntable[/b], and a built-in reel that works on every other preset.[/*]
+[*]CSS outfits with physics get their spring bones (chest, glutes and so on) marked and labelled in the breakdown.[/*]
+[/list]
+
+New install step: CINE now comes with a small asset pak. Put the [b]CSSX_CINE_eins0fx_P[/b] folder into [b]MortalShell2/Content/Paks/~mods/[/b].
+
+Needs CSSX 1.3.1. The palette part still needs CSS 1.0.0-beta.9 or newer.
+
+[url=https://github.com/ngodn/CustomShellSystem/releases/tag/cine-v1.1.0]Download CINE 1.1.0[/url]
