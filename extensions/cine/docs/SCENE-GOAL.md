@@ -74,11 +74,20 @@ when the user says so:
 
 ## Checklist (update as you go; newest notes at the bottom of each item)
 
-- [ ] 0. Goal file, research file, branch committed
+- [x] 0. Goal file, research file, branch committed
 - [ ] 1. Live probe session with the user (script `extensions/cine/work/probe/`), results written
       into `SCENE-RESEARCH.md`
 - [ ] 2. Asset pak: materials authored and cooked, pak built, renders in game
+      - 5 Oct: pipeline proven offline. `extensions/cine/assets/`: `author.sh STAGE` (Linux editor,
+        stage on /mnt/eins0fxE/CSS-work/cine-assets/), `cook.sh STAGE COOK` (Wine container; COOK
+        must be under /home, e.g. `extensions/cine/work/export-cook/<run>`; about 8 min),
+        `pack.py COOK OUT` (retoc trio `CSSX_CINE_eins0fx_P`). Run a1: cook exit 0, 7 packages,
+        decoded: flags and parameters as authored. NOT yet seen in game.
+      - Still to add before the final cook: an `Invert` scalar on every material (outgoing layers
+        show where the wipe has NOT passed), then gamma/gain defaults from the live look.
 - [ ] 3. Clean scene: code, host tests
+      - 5 Oct: `src/scene.{hpp,cpp}` written and compiling (not wired into the director, no
+        tests yet). Probe script ready: `extensions/cine/work/probe/probe.py all`.
 - [ ] 4. Breakdown: code, host tests
 - [ ] 5. Action takes: code, host tests, presets
 - [ ] 6. Menu, settings, README, presets wired; regression (CSSX suite, Windows build)
