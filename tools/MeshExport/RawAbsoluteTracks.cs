@@ -25,8 +25,12 @@ internal static class RawAbsoluteTracks
         var map = animation.GetTrackMap();
         var rawNames = skeleton.ReferenceSkeleton.FinalRefBoneInfo.Select(b => b.Name.Text).ToArray();
         var names = rawNames.Concat(skeleton.VirtualBones.Select(b => b.VirtualBoneName.Text)).ToArray();
-        var reference = skeleton.AnimRetargetSources.TryGetValue(animation.RetargetSource, out var authored)
-            ? authored.ReferencePose : skeleton.ReferenceSkeleton.FinalRefBonePose;
+        // Match UE 5.6.1 UAnimSequence::GetRetargetTransforms, including the
+        // sequence-owned reference used by imported clips with virtual bones.
+        var reference = animation.RetargetSource.IsNone && animation.RetargetSourceAssetReferencePose is { Length: > 0 }
+            ? animation.RetargetSourceAssetReferencePose
+            : skeleton.AnimRetargetSources.TryGetValue(animation.RetargetSource, out var authored)
+                ? authored.ReferencePose : skeleton.ReferenceSkeleton.FinalRefBonePose;
         var sampleCount = checked((int)header.NumSamples);
         if (sampleCount < 1 || sampleCount > 100000 || map.Length != header.NumTracks || map.Length == 0 ||
             names.Length > 4096 || names.Distinct(StringComparer.OrdinalIgnoreCase).Count() != names.Length ||
@@ -45,12 +49,14 @@ internal static class RawAbsoluteTracks
         var selectedNames = map.Select(t => names[t.BoneTreeIndex]).ToArray();
         var frames = new List<object>();
         double maxNormError = 0;
-        foreach (int sample in Enumerable.Range(0, 5).Select(i => (sampleCount - 1) * i / 4).Distinct())
+        var wrapOptimized = header.GetIsWrapOptimized();
+        var logicalSamples = sampleCount + (wrapOptimized ? 1 : 0);
+        foreach (int sample in Enumerable.Range(0, 5).Select(i => (logicalSamples - 1) * i / 4).Distinct())
         {
             var transforms = new List<object>();
             for (int i = 0; i < map.Length; i++)
             {
-                var t = atoms[i * sampleCount + sample];
+                var t = atoms[i * sampleCount + (sample == sampleCount ? 0 : sample)];
                 float[] values = [t.Rotation.X, t.Rotation.Y, t.Rotation.Z, t.Rotation.W,
                     t.Translation.X, t.Translation.Y, t.Translation.Z, t.Scale3D.X, t.Scale3D.Y, t.Scale3D.Z];
                 if (values.Any(v => !float.IsFinite(v))) throw new InvalidOperationException("Non-finite absolute transform");
@@ -67,7 +73,8 @@ internal static class RawAbsoluteTracks
         }
         if (maxNormError >= .001) throw new InvalidOperationException("Non-unit absolute rotations");
         File.WriteAllText(Path.Combine(directory, "absolute-tracks.json"), JsonConvert.SerializeObject(new {
-            schema = 1, asset = animation.GetPathName(), sampleCount, sampleRate = header.SampleRate,
+            schema = 2, asset = animation.GetPathName(), sampleCount, logicalSamples, wrapOptimized,
+            sampleRate = header.SampleRate,
             retargetSource = animation.RetargetSource.Text, referencePose = reference,
             rawBoneCount = rawNames.Length, trackCount = map.Length,
             virtualTrackCount = map.Count(t => t.BoneTreeIndex >= rawNames.Length), maxNormError, frames,

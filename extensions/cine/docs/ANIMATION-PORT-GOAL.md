@@ -219,3 +219,12 @@ The two unresolved dances and the remaining full goal stay active.
 Fresh-process reload checks passed for all 57 shared sequences, preserving every
 authored transform and native timing. The recording trial core is confirmed
 loaded in CSS.log. Cooking was not started while the user launched for recording.
+
+Resumed 2026-10-06: all 57 sequences now cook successfully into a private shared
+trio (7,012,825 bytes). Independent readback and 273 sampled raw/cooked pose
+comparisons pass, including nine virtual tracks and explicit ACL wrap endpoints.
+The diagnostic reader was corrected to honor sequence-owned reference poses.
+The pack still requires Shared/SKEL_Base; this check used installed Eve 1.4.0.
+Nothing was installed. See `docs/development/shared-animation-cook.md` for
+limits, dependencies and evidence. One-shot/pose playback, facial runtime,
+the two unresolved dances and live review remain active work.
