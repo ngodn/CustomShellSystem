@@ -3,6 +3,22 @@
 Draft, updated with every release candidate. Player-facing wording; the
 evidence behind each line is in `integration-tests.md` and `performance.md`.
 
+## CSSX 1.3.1 and CINE 1.1.0
+
+- CINE, clean scene: hide enemies, or enemies and NPCs, while you are in Cine World,
+  without pausing the world. Hidden characters are frozen and untouchable, new ones do
+  not spawn, and everyone comes back as they were on leaving. Bosses are left alone.
+  "Keep my lock-on target" leaves one enemy in for a fight.
+- CINE, fight takes: three "Fight" presets film a fight you play. The camera frames you
+  and your lock-on target, a kill plays in slow motion, a parry or a hit pushes the
+  camera in, and the take ends when the target is down.
+- CINE, breakdown: any take can be shown in layers like a VFX breakdown reel (clay,
+  wireframe, skeleton, virtual, IK and spring bones, sockets, physics bodies, the
+  movement capsule, and frame passes such as base colour, normals and depth), with
+  labels and arrows. CINE now ships a small asset pak for this.
+- CSSX: extensions can pass an object where a function expects an interface (CINE's
+  frame passes use it), and can write a large struct property without reading it back.
+
 ## Traverse 1.0.2
 
 - Confirming the "ask before traversing" dialog with Space no longer places a map pin: the

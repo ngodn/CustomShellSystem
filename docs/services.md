@@ -13,7 +13,9 @@ running (for example from a hook CSS triggered), with "CSS is busy; call again f
 own tick".
 
 - `{"action":"describe"}` → `{shell, outfit, variant, palette, customize,
-  palettes:[{id,name}], controls:[{id,name,kind,group,role,scalar}]}`.
+  palettes:[{id,name}], controls:[{id,name,kind,group,role,scalar,nodes?}]}`. `nodes` is
+  there for physics controls only (since 1.0.0-beta.10): the spring bones, or the dynamics
+  chain root bones, that the control drives.
 - `{"action":"apply","commands":[...],"persist":bool}` applies 1-256 commands atomically
   and returns the new `{palette, customize, ...}`; CSS puts it on the model on its next
   pass. Commands: `palette {palette}`, `control {control, channel, value | rgb | delta}`,

@@ -4,19 +4,23 @@
   "id": "eins0fx.cine",
   "title": "CINE",
   "author": "_eins0fx",
-  "version": "1.0.0",
-  "description": "Cinematic camera for showcases: record a walk, frame your last shot, roll a preset take and capture it with your own recorder. With CSS installed it can cycle your palettes during the shot.",
+  "version": "1.1.0",
+  "description": "Cinematic camera for showcases: walk, pose and fight takes from presets, a clean scene without enemies or NPCs, and a VFX-style breakdown of the picture in layers. You record with your own recorder. With CSS installed it can cycle your palettes during the shot.",
   "kind": "native",
   "entry": "cine.dll",
   "menu": "menu.json",
   "files": [
     "README.txt",
+    "presets/breakdown-turntable.cine.json",
     "presets/fashion-walk-360.cine.json",
+    "presets/fight-duel.cine.json",
+    "presets/fight-hero.cine.json",
+    "presets/fight-shoulder.cine.json",
+    "presets/photo-orbit.cine.json",
+    "presets/pose-glide-10.cine.json",
     "presets/pose-glide-3.cine.json",
     "presets/pose-glide-5.cine.json",
     "presets/pose-glide-7.cine.json",
-    "presets/pose-glide-10.cine.json",
-    "presets/turntable.cine.json",
-    "presets/photo-orbit.cine.json"
+    "presets/turntable.cine.json"
   ]
 }

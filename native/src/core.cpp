@@ -331,9 +331,12 @@ struct Core {
             Json palettes=Json::array();
             for(const auto& palette:options.palettes) palettes.push_back({{"id",palette.id},{"name",palette.name}});
             Json controls=Json::array();
-            for(const auto& control:options.controls)
+            for(const auto& control:options.controls) {
                 controls.push_back({{"id",control.id},{"name",control.name},{"kind",control_kind_name(control.kind)},
                                     {"group",control_group_name(control.group)},{"role",control.role},{"scalar",control.scalar}});
+                // The bones a physics control drives (spring bones, dynamics chain roots).
+                if(!control.nodes.empty()) controls.back()["nodes"]=control.nodes;
+            }
             out["palettes"]=std::move(palettes); out["controls"]=std::move(controls);
             return out;
         }

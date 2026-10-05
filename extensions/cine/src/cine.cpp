@@ -257,6 +257,7 @@ void Extension::enter() {
     rig_.hide_hud();
     keys_previous_.clear();
     mode_ = Mode::Armed;
+    pak_missing_ = !rig_.asset_present("/Game/CSSX/CINE/MPC_Cine.MPC_Cine");
     apply_scene();
     try { host_.request({{"op", "menu.close"}}); } catch (...) {}
     report("In Cine World. Frame your shot, then press F8 to roll. F9 leaves.");
@@ -797,6 +798,8 @@ Json Extension::model() const {
     std::string breakdown = settings_.breakdown == "off" ? "Breakdown off"
                           : settings_.breakdown == "reel" ? "Final image, clay, wireframe, skeleton, bones, collision, frame passes, final image"
                           : (p && !p->breakdown.empty() ? "Uses this preset's breakdown steps" : "This preset has no breakdown steps");
+    if (pak_missing_ && settings_.breakdown != "off")
+        breakdown = "CINE's asset pak is not installed (see the README): only physics bodies and the capsule can show.";
     const bool recording = mode_ == Mode::Recording || mode_ == Mode::RecordWait;
     const bool in_world = recording ? record_return_ == Mode::Armed : mode_ != Mode::Idle;
     const bool busy = mode_ == Mode::Preparing || mode_ == Mode::Countdown || mode_ == Mode::Running;

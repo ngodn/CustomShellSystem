@@ -1,0 +1,18 @@
+{
+  "container": "CSSX_CINE_eins0fx_P",
+  "packages": [
+    "/Game/CSSX/CINE/MPC_Cine",
+    "/Game/CSSX/CINE/Materials/M_Cine_Clay",
+    "/Game/CSSX/CINE/Materials/M_Cine_Solid",
+    "/Game/CSSX/CINE/Materials/M_Cine_Wire",
+    "/Game/CSSX/CINE/Materials/M_Cine_XRay",
+    "/Game/CSSX/CINE/Materials/PP_Cine_Buffer_Post",
+    "/Game/CSSX/CINE/Materials/PP_Cine_Buffer_Pre"
+  ],
+  "files": {
+    "CSSX_CINE_eins0fx_P.pak": "75e7144577253917f6da7312ef5e585b12fb728226a22b0938323751a6b555cd",
+    "CSSX_CINE_eins0fx_P.ucas": "3295b82dba9b6a3eaa7cc5d41f52513a522ef9725806dbc12caa74995ec0185b",
+    "CSSX_CINE_eins0fx_P.utoc": "79ce26a69007f0326f4bb38709e1a2b27d0951e69af9a34aafdb18d462c7aabe"
+  },
+  "installed": false
+}

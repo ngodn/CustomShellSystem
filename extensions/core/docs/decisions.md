@@ -206,6 +206,18 @@ changed amount counted as an unapplied edit, and while one is pending every
 action button is disabled. Disabled controls now also carry the reason
 (model `disabled` map) instead of a bare "Unavailable".
 
+## D16. Interface arguments and write-only sets in the bridge (2026-10-05)
+
+The bridge encodes an object handle into an `FInterfaceProperty` (the object, plus the
+interface pointer at the offset its class records for a native implementation, null for a
+Blueprint one, as the engine stores it), decodes one back to its object, and
+`set` takes `"echo": false` to skip reading the value back.
+Reason: CINE's breakdown puts a post-process material on its camera with
+`AddOrUpdateBlendable`, whose argument is a `TScriptInterface`; and writing a few fields
+of `PostProcessSettings` failed afterwards on the echo of a struct with more than 256
+fields. Both are general engine cases, not CINE ones, so they belong in the bridge. An
+object that does not implement the interface is refused with an error.
+
 ## D15. Mods talk through a neutral service bus (2026-10-03)
 
 CSSX core knows no other mod. Any native module can offer JSON services by

@@ -288,6 +288,9 @@ void Rig::hide_target_ui(const Json& enemy) {
 Vec3 Rig::socket_location(const Json& component, const std::string& socket) {
     return vec3(call(component, "GetSocketLocation", {{"InSocketName", socket.empty() ? std::string("None") : socket}}));
 }
+bool Rig::asset_present(const std::string& path) const {
+    try { return is_handle(host_.request({{"op", "load"}, {"path", path}})); } catch (...) { return false; }
+}
 bool Rig::view_point(Vec3& location, Rotator& rotation) {
     const auto reply = host_.request({{"op", "call"}, {"target", controller_}, {"function", "GetPlayerViewPoint"}, {"args", Json::object()}});
     if (!reply.is_object() || !reply.contains("Location") || !reply.contains("Rotation")) return false;

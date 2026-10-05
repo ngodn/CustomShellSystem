@@ -624,7 +624,140 @@ def step_pak():
     note('pak', 'restored', True)
 
 
-STEPS = {'ctx': step_ctx, 'census': step_census, 'pause': step_pause, 'hide': step_hide, 'ge': step_ge,
+def step_labels():
+    """One call for the camera pose, and whether CINE's own projection agrees with the engine's."""
+    controller = ctx['controller']
+    pov = call(controller, 'GetPlayerViewPoint')
+    note('labels', 'view_point', pov)
+    loc, rot = vec(pov['Location']), pov['Rotation']
+    sp, cp = math.sin(math.radians(rot['Pitch'])), math.cos(math.radians(rot['Pitch']))
+    sy, cy = math.sin(math.radians(rot['Yaw'])), math.cos(math.radians(rot['Yaw']))
+    sr, cr = math.sin(math.radians(rot['Roll'])), math.cos(math.radians(rot['Roll']))
+    fwd = (cp * cy, cp * sy, sp)
+    right = (sr * sp * cy - cr * sy, sr * sp * sy + cr * cy, -sr * cp)
+    up = (-(cr * sp * cy + sr * sy), cy * sr - cr * sp * sy, cr * cp)
+    layout = find('/Script/UMG.Default__WidgetLayoutLibrary')
+
+    def engine(point):
+        reply = call(layout, 'ProjectWorldLocationToWidgetPosition',
+                     {'PlayerController': controller, 'WorldLocation': dict(zip('XYZ', point)), 'bPlayerViewportRelative': False})
+        return reply.get('ReturnValue'), reply.get('ScreenPosition')
+
+    def along(depth, r, u):
+        return tuple(loc[i] + fwd[i] * depth + right[i] * r + up[i] * u for i in range(3))
+
+    ok0, centre = engine(along(1000, 0, 0))
+    ok1, offset = engine(along(1000, 100, 60))
+    note('labels', 'centre', centre)
+    note('labels', 'offset', offset)
+    kx, ky = (offset['X'] - centre['X']) / 0.10, (centre['Y'] - offset['Y']) / 0.06
+    note('labels', 'lens', {'kx': kx, 'ky': ky})
+    note('labels', 'viewport_size', ret(call(layout, 'GetViewportSize', {'WorldContextObject': ctx['pawn']})))
+    note('labels', 'viewport_scale', ret(call(layout, 'GetViewportScale', {'WorldContextObject': ctx['pawn']})))
+    worst = 0.0
+    for socket in ('head', 'pelvis', 'hand_r', 'foot_l'):
+        world = vec(ret(call(ctx['mesh'], 'GetSocketLocation', {'InSocketName': socket})))
+        ok, screen = engine(world)
+        d = tuple(world[i] - loc[i] for i in range(3))
+        depth = sum(d[i] * fwd[i] for i in range(3))
+        mine = (centre['X'] + kx * sum(d[i] * right[i] for i in range(3)) / depth,
+                centre['Y'] - ky * sum(d[i] * up[i] for i in range(3)) / depth)
+        error = math.dist(mine, (screen['X'], screen['Y'])) if ok else None
+        worst = max(worst, error or 0)
+        note('labels', socket, {'engine': screen, 'mine': mine, 'error_px': error, 'in_front': ok})
+    note('labels', 'worst_error_px', worst)
+    try:
+        note('labels', 'frame', cssx.request(cssx.GAME, {'op': 'status'}, 10).get('result'))
+    except Exception as error:
+        note('labels', 'frame', str(error))
+
+
+def step_cleanup():
+    """After a world change the effect handles are gone: remove the player's protection by class."""
+    asc = ctx['asc']
+    cls = load('/Game/Sparta/Core/Effects/GE_Undetectable.GE_Undetectable_C')
+    before = tag_count(asc, 'State.Undetectable')
+    handle = ret(call(asc, 'BP_ApplyGameplayEffectToSelf', {'GameplayEffectClass': cls, 'Level': 0.0, 'EffectContext': {}}))
+    during = tag_count(asc, 'State.Undetectable')
+    removed = None
+    try:
+        removed = call(asc, 'RemoveActiveGameplayEffectBySourceEffect',
+                       {'GameplayEffect': cls, 'InstigatorAbilitySystemComponent': asc, 'StacksToRemove': -1})
+    finally:
+        after = tag_count(asc, 'State.Undetectable')
+        if after != before:
+            call(asc, 'RemoveActiveGameplayEffect', {'Handle': handle, 'StacksToRemove': -1})
+    note('cleanup', 'tag_before_during_after', [before, during, after])
+    note('cleanup', 'reply', removed)
+    note('cleanup', 'tag_final', tag_count(asc, 'State.Undetectable'))
+
+
+def step_fight():
+    """What a fight take reads on every tick."""
+    pawn = ctx['pawn']
+    health = get(pawn, 'HealthComponent')
+    note('fight', 'player_health', ret(call(health, 'GetHealthNormalized')))
+    note('fight', 'player_dead', ret(call(health, 'IsDeadOrDying')))
+    manager = get(ctx['controller'], 'PlayerCameraManager')
+    note('fight', 'shake_scale', ret(call(manager, 'GetGlobalCameraShakeScale')))
+    note('fight', 'active_camera_actor', get(manager, 'ActiveCameraActor'))
+    for tag in ('State.Parry', 'State.CustomCamera', 'State.InCutscene'):
+        note('fight', tag, tag_count(ctx['asc'], tag))
+    settings = ret(call(ctx['world'], 'K2_GetWorldSettings'))
+    note('fight', 'cinematic_time', get(settings, 'CinematicTimeDilation'))
+    lock = get(pawn, 'LockOnComponent')
+    target = get(lock, 'LockedTarget') if is_obj(lock) else None
+    note('fight', 'locked', is_obj(target))
+    if is_obj(target):
+        enemy_health = get(target, 'HealthComponent')
+        note('fight', 'target_health', ret(call(enemy_health, 'GetHealthNormalized')))
+        note('fight', 'target_dead', ret(call(enemy_health, 'IsDeadOrDying')))
+
+
+def step_unlock():
+    """Needs a lock-on. Hides the target's health bar and marker for a moment, then drops the lock."""
+    lock = get(ctx['pawn'], 'LockOnComponent')
+    target = get(lock, 'LockedTarget')
+    if not is_obj(target):
+        note('unlock', 'skipped', 'no lock-on target')
+        return
+    grab('unlock-0-before')
+    bar = get(target, 'Enemy Health Widget')
+    note('unlock', 'health_bar', is_obj(bar))
+    bar_visible = None
+    if is_obj(bar):
+        bar_visible = ret(call(bar, 'IsVisible'))
+        note('unlock', 'health_bar_visible', bar_visible)
+        call(bar, 'SetVisibility', {'bNewVisibility': False, 'bPropagateToChildren': True})
+    marker = get(target, 'BPC_LockOnTarget')
+    widget = get(marker, 'WBP_LockOnIndicator') if is_obj(marker) else None
+    note('unlock', 'indicator', is_obj(widget))
+    widget_before = None
+    if is_obj(widget):
+        widget_before = ret(call(widget, 'GetVisibility'))
+        note('unlock', 'indicator_visibility', widget_before)
+        call(widget, 'SetVisibility', {'InVisibility': 2})
+    time.sleep(0.8)
+    grab('unlock-1-ui-hidden')
+    if is_obj(bar) and bar_visible:
+        call(bar, 'SetVisibility', {'bNewVisibility': True, 'bPropagateToChildren': True})
+    if is_obj(widget):
+        call(widget, 'SetVisibility', {'InVisibility': widget_before})
+    time.sleep(0.5)
+    grab('unlock-2-ui-back')
+    try:
+        call(lock, 'TargetSpecificCharacter', {'Target': None})
+        note('unlock', 'after_target_null', get(lock, 'LockedTarget'))
+    except Exception as error:
+        note('unlock', 'target_null_error', str(error))
+    if is_obj(get(lock, 'LockedTarget')):
+        note('unlock', 'toggle', call(lock, 'ToggleTargetLock', {'TargetingTag': {'TagName': 'None'}}))
+        note('unlock', 'after_toggle', get(lock, 'LockedTarget'))
+    time.sleep(0.6)
+    grab('unlock-3-released')
+
+
+STEPS = {'labels': step_labels, 'cleanup': step_cleanup, 'fight': step_fight, 'unlock': step_unlock, 'ctx': step_ctx, 'census': step_census, 'pause': step_pause, 'hide': step_hide, 'ge': step_ge,
          'trigger': step_trigger, 'lockon': step_lockon, 'camera': step_camera, 'time': step_time,
          'shapes': step_shapes, 'skeleton': step_skeleton, 'clay': step_clay, 'wire': step_wire, 'pak': step_pak}
 

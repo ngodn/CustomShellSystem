@@ -126,6 +126,7 @@ private:
     Lens lens_;
     double label_age_ = 0;       // seconds since the last sample, for easing between two
     bool labels_live_ = false;
+    bool pak_missing_ = false;   // read once on entering Cine World, for the menu
     void sample_labels();
     double tick_dt_ = 0.1;
     Settings settings_;

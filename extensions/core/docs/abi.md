@@ -45,6 +45,11 @@ Host: `menu.status` → `{menu_open, game_menu_open}`; `menu.close`;
 `frame.brief` → `{hz, median_ms, frames, core_mean_us, core_max_us, core_p99_us}` (last ten seconds);
 `input.focus`.
 
+Since CSSX 1.3.1: an object handle is accepted where a function or property expects an
+interface (refused with "Object does not implement the interface" when it does not), an
+interface value reads back as its object, and `set` takes `"echo": false` to skip
+reading the property back (for structs too large to return).
+
 Services (CSSX 1.3.0): `service.list` → `[{name, version, description, module}]`;
 `service.call {service, version, request}` → the provider's reply. Any native module in
 the game process can offer services by exporting `cssx_services()` (contract and rules in

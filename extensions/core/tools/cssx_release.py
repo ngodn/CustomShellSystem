@@ -114,6 +114,18 @@ def cine_files(build: Path) -> tuple[str, dict[str, bytes]]:
     }
     for name in manifest.get('files', []):
         files[base + name] = (src / name).read_bytes()
+    # The breakdown materials: a cooked pak the player puts under Content/Paks/~mods/.
+    # Paks are not kept in git. assets/pak/pack.json records the hashes of the released
+    # trio; the files themselves sit beside it (build: assets/author.sh, cook.sh, pack.py).
+    pak = src / 'assets/pak'
+    record = json.loads((pak / 'pack.json').read_text())
+    for name, expected in record['files'].items():
+        if not (pak / name).is_file():
+            raise FileNotFoundError(f'{pak / name} is missing; build the pak (extensions/cine/assets) and copy the trio there')
+        data = (pak / name).read_bytes()
+        if digest(data) != expected:
+            raise ValueError(f'{name} does not match assets/pak/pack.json; rebuild the pak or update the record')
+        files[f"{record['container']}/{name}"] = data
     return manifest['version'], files
 
 

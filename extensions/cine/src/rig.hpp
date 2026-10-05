@@ -69,7 +69,8 @@ public:
     // Callouts: a component's socket in the world, and a world point on screen (HUD pixels).
     Vec3 socket_location(const Json& component, const std::string& socket);
     bool project(Vec3 world, double& x, double& y);     // the engine's own projection: for measuring the lens
-    bool view_point(Vec3& location, Rotator& rotation); // where the picture is taken from this frame: one call
+    bool view_point(Vec3& location, Rotator& rotation);
+    bool asset_present(const std::string& path) const;  // one load; false when the package is not mounted // where the picture is taken from this frame: one call
     bool key_down(const std::vector<std::string>& keys, std::vector<bool>& out);
 
     // Restore: take-level changes (cameras, view, walk) or everything including the HUD.
