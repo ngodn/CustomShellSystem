@@ -527,9 +527,93 @@ def step_wire():
     note('wire', 'restored', True)
 
 
+def step_pak():
+    """CINE's own cooked materials (needs the CSSX_CINE_eins0fx_P pak installed)."""
+    root = '/Game/CSSX/CINE/'
+    mpc = load(root + 'MPC_Cine.MPC_Cine')
+    mats = {k: load(root + f'Materials/{v}.{v}') for k, v in {'wire': 'M_Cine_Wire', 'clay': 'M_Cine_Clay', 'xray': 'M_Cine_XRay',
+                                                             'solid': 'M_Cine_Solid', 'post': 'PP_Cine_Buffer_Post', 'pre': 'PP_Cine_Buffer_Pre'}.items()}
+    note('pak', 'loaded', sorted(mats))
+    mesh = ctx['mesh']
+
+    def mid(parent):
+        return ret(call(ctx['materials'], 'CreateDynamicMaterialInstance',
+                        {'WorldContextObject': ctx['world'], 'Parent': parent, 'OptionalName': 'None', 'CreationFlags': 0}))
+
+    def collection(name, value):
+        call(ctx['materials'], 'SetScalarParameterValue',
+             {'WorldContextObject': ctx['world'], 'Collection': mpc, 'ParameterName': name, 'ParameterValue': float(value)})
+
+    def wipe(start, end, seconds):
+        now = ret(call(ctx['statics'], 'GetTimeSeconds', {'WorldContextObject': ctx['world']}))
+        for name, value in (('WipeFrom', start), ('WipeTo', end), ('WipeDur', seconds), ('WipeT0', now)):
+            collection(name, value)
+
+    overlay_before = get(mesh, 'OverlayMaterial')
+    made = []
+    camera = None
+    try:
+        wipe(1, 1, 0.01)
+        # Wireframe and clay as overlays on the shaded mesh, then mid-wipe.
+        call(mesh, 'SetOverlayMaterial', {'NewOverlayMaterial': mid(mats['wire'])})
+        time.sleep(0.8); note('pak', 'wire_overlay', grab('pak-1-wire-overlay'))
+        call(mesh, 'SetOverlayMaterial', {'NewOverlayMaterial': mid(mats['clay'])})
+        time.sleep(0.8); note('pak', 'clay_overlay', grab('pak-2-clay-overlay'))
+        wipe(0, 1, 4.0); time.sleep(2.0); note('pak', 'clay_mid_wipe', grab('pak-3-clay-mid-wipe'))
+        time.sleep(2.5)
+        call(mesh, 'SetOverlayMaterial', {'NewOverlayMaterial': overlay_before})
+        wipe(1, 1, 0.01)
+        # See-through and solid shapes on bones.
+        for bone, key, colour in (('head', 'xray', (1.0, 0.8, 0.05)), ('hand_l', 'solid', (0.1, 1.0, 0.3))):
+            shape = add_component('/Script/Engine.StaticMeshComponent'); made.append(shape)
+            call(shape, 'SetCollisionEnabled', {'NewType': 0})
+            call(shape, 'SetStaticMesh', {'NewMesh': load('/Engine/BasicShapes/Sphere.Sphere')})
+            instance = mid(mats[key])
+            call(instance, 'SetVectorParameterValue', {'ParameterName': 'Color', 'Value': {'R': colour[0], 'G': colour[1], 'B': colour[2], 'A': 1.0}})
+            call(shape, 'SetMaterial', {'ElementIndex': 0, 'Material': instance})
+            call(shape, 'SetCastShadow', {'NewCastShadow': False})
+            attach(shape, bone)
+            call(shape, 'SetRelativeScale3D', {'NewScale3D': {'X': 0.12, 'Y': 0.12, 'Z': 0.12}})
+        time.sleep(0.8); note('pak', 'shapes', grab('pak-4-xray-solid'))
+        # Buffer passes through our own camera, both blend locations.
+        camera, component, _ = spawn_camera()
+        view(camera); time.sleep(0.8)
+        for key in ('post', 'pre'):
+            instance = mid(mats[key])
+            call(component, 'AddOrUpdateBlendable', {'InBlendableObject': instance, 'InWeight': 1.0})
+            for layer in ('W_BaseColor', 'W_Normal', 'W_Depth', 'W_Roughness') + (('W_Lighting',) if key == 'pre' else ()):
+                call(instance, 'SetScalarParameterValue', {'ParameterName': layer, 'Value': 1.0})
+                time.sleep(0.7); note('pak', f'{key}_{layer}', grab(f'pak-5-{key}-{layer}'))
+                call(instance, 'SetScalarParameterValue', {'ParameterName': layer, 'Value': 0.0})
+            call(instance, 'SetScalarParameterValue', {'ParameterName': 'W_BaseColor', 'Value': 1.0})
+            wipe(0, 1, 3.0); time.sleep(1.5); note('pak', f'{key}_mid_wipe', grab(f'pak-6-{key}-mid-wipe'))
+            time.sleep(1.8)
+            wipe(1, 1, 0.01)
+            call(component, 'RemoveBlendable', {'InBlendableObject': instance})
+    finally:
+        try:
+            call(mesh, 'SetOverlayMaterial', {'NewOverlayMaterial': overlay_before})
+        except Exception as error:
+            print(f'  overlay restore failed: {error}')
+        for name, value in (('WipeFrom', 1), ('WipeTo', 1), ('WipeDur', 1), ('WipeT0', 0)):
+            try:
+                collection(name, value)
+            except Exception:
+                pass
+        if camera is not None:
+            view(ctx['pawn'])
+            call(camera, 'K2_DestroyActor')
+        for component_made in made:
+            try:
+                call(component_made, 'K2_DestroyComponent', {'Object': component_made})
+            except Exception as error:
+                print(f'  destroy failed: {error}')
+    note('pak', 'restored', True)
+
+
 STEPS = {'ctx': step_ctx, 'census': step_census, 'pause': step_pause, 'hide': step_hide, 'ge': step_ge,
          'trigger': step_trigger, 'lockon': step_lockon, 'camera': step_camera, 'time': step_time,
-         'shapes': step_shapes, 'skeleton': step_skeleton, 'clay': step_clay, 'wire': step_wire}
+         'shapes': step_shapes, 'skeleton': step_skeleton, 'clay': step_clay, 'wire': step_wire, 'pak': step_pak}
 
 
 def main():
