@@ -1,6 +1,7 @@
 // CINE logic tests: shot maths, presets and the shipped preset files. Run with the
 // extension directory as argv[1] (CMake passes it).
 #include "callouts.hpp"
+#include "guides.hpp"
 #include "layers.hpp"
 #include "preset.hpp"
 #include "shot.hpp"
@@ -310,26 +311,60 @@ static void labels() {
     expect(!project(camera, b, Lens{}, {500, 300, 100}, x, y) && !measure_lens(100, 100, 100, 100).ok, "no labels without a measured lens");
 
     // Layout: labels go to the side their target is on, in the order of their targets.
-    std::vector<CalloutTarget> targets{{"Skeleton, 392 bones", 1200, 600, true}, {"Mesh wireframe", 1250, 300, true}, {"Movement capsule", 1400, 800, true},
+    const Rect screen{0, 0, 1920, 1080};
+    std::vector<CalloutTarget> targets{{"Skeleton, 392 bones", 900, 450, true}, {"Mesh wireframe", 940, 225, true}, {"Movement capsule", 1050, 600, true},
                                        {"Behind the camera", 0, 0, false}, {"Off screen", 9000, 100, true}};
-    const auto placed = layout_callouts(2560, 1440, targets);
+    const auto placed = layout_callouts(screen, targets);
     expect(placed.size() == 3, "only visible, on-screen targets get a label");
     for (const auto& p : placed) {
-        const bool left = targets[p.target].x < 1280;
-        expect(left ? p.label_x < 400 : p.label_x > 1700, "a label sits at the edge on its target's side");
+        const bool left = targets[p.target].x < 960;
+        expect(left ? p.label_x < 300 : p.label_x > 1300, "a label sits at the edge on its target's side");
         expect(near(p.to_x, targets[p.target].x, 1e-9) && near(p.to_y, targets[p.target].y, 1e-9), "its leader ends on the target");
-        expect(left ? p.from_x > p.label_x : p.from_x < p.label_x, "and starts at the label's inner edge");
+        expect(p.on_left == left && near(p.from_x, left ? p.label_x + p.width : p.label_x, 1e-9) && p.from_y > p.label_y + callout_line,
+               "and leaves the inner end of the shelf under the label");
+        expect(p.label_x >= 0 && p.label_x + p.width <= 1920, "the whole label is on screen");
     }
     expect(placed[0].target == 1 && placed[1].target == 0 && placed[0].label_y < placed[1].label_y, "a column runs top to bottom like its targets, so leaders do not cross");
     std::vector<CalloutTarget> many;
-    for (int i = 0; i < 12; ++i) many.push_back({"Label " + std::to_string(i), 600.0 + i * 10, 200.0 + i * 60, true});
-    const auto capped = layout_callouts(2560, 1440, many);
+    for (int i = 0; i < 12; ++i) many.push_back({"Label " + std::to_string(i), 450.0 + i * 8, 150.0 + i * 45, true});
+    const auto capped = layout_callouts(screen, many);
     size_t on_left = 0;
-    for (const auto& p : capped) if (p.label_x < 1280) ++on_left;
+    for (const auto& p : capped) if (p.on_left) ++on_left;
     expect(capped.size() == max_callouts && on_left == max_callouts / 2, "at most six labels, three a side");
     for (size_t i = 0; i < capped.size(); ++i) for (size_t j = i + 1; j < capped.size(); ++j)
-        if ((capped[i].label_x < 1280) == (capped[j].label_x < 1280)) expect(std::abs(capped[i].label_y - capped[j].label_y) >= callout_line, "labels in a column never overlap");
-    expect(layout_callouts(0, 0, targets).empty(), "no layout without a viewport");
+        if (capped[i].on_left == capped[j].on_left) expect(std::abs(capped[i].label_y - capped[j].label_y) >= callout_line, "labels in a column never overlap");
+    expect(layout_callouts(Rect{}, targets).empty(), "no layout without a frame");
+    expect(readout("Spring bones: chest, 12") == "SPRING BONES: CHEST, 12", "labels read as upper-case readouts");
+
+    // Every frame guide: all of it stays inside the opening, whatever its shape.
+    const std::vector<std::string> signature{"_eins0fx", "Custom Shell System (CSS) + Extensions (CSSX) CINE + Unreal Engine 5", "github.com/ngodn/CustomShellSystem"};
+    for (const Guide guide : {Guide::Off, Guide::Wide, Guide::Tall, Guide::Square, Guide::Scope}) {
+        const Rect frame = guide_opening(1920, 1080, guide_aspect(guide));
+        const std::string name = guide_id(guide);
+        const double scale = frame_scale(frame);
+        expect(scale >= 0.62 && scale <= 1.0, "sizes scale within bounds: " + name);
+        std::vector<CalloutTarget> inside;
+        for (int i = 0; i < 8; ++i)
+            inside.push_back({"Physics bodies, 22 on the outfit's own skeleton", frame.x + frame.w * (0.2 + 0.08 * i), frame.y + frame.h * (0.2 + 0.07 * i), true});
+        inside.push_back({"Outside the frame", frame.x - 40, frame.y + frame.h / 2, true});
+        const auto in_frame = layout_callouts(frame, inside);
+        expect(!in_frame.empty() && in_frame.size() <= max_callouts, "labels are placed in frame " + name);
+        for (const auto& p : in_frame) {
+            expect(p.target != inside.size() - 1, "a target outside the frame gets no label: " + name);
+            expect(p.label_x >= frame.x && p.label_x + p.width <= frame.x + frame.w + 1e-9 && p.label_y >= frame.y && p.label_y + callout_line * scale <= frame.y + frame.h,
+                   "a label stays inside frame " + name);
+        }
+        const double room = frame.w * 0.91 - 14 * scale;
+        const auto fitted = fit_signature(signature, room, scale);
+        expect(fitted.size() >= 3 && fitted.size() <= max_signature_lines && fitted[0] == "_eins0fx" && fitted.back() == "github.com/ngodn/CustomShellSystem",
+               "the signature keeps its lines in frame " + name);
+        std::string joined;
+        for (size_t i = 1; i + 1 < fitted.size(); ++i) joined += (i > 1 ? " " : "") + fitted[i];
+        expect(joined == signature[1], "a long signature line breaks before its plus signs and loses nothing: " + name);
+        for (size_t i = 1; i < fitted.size(); ++i) expect((0.53 + 0.07) * 14 * scale * double(fitted[i].size()) <= room + 1e-9, "every signature line fits frame " + name + ": " + fitted[i]);
+    }
+    expect(fit_signature(signature, 1700, 1.0).size() == 3, "on a wide frame the signature is three lines");
+    expect(fit_signature({"A name with no plus signs that is far too long for the frame it is asked to fit in"}, 100, 1.0).size() == 1, "a line that cannot break is kept whole");
 }
 
 static void shipped(const fs::path& root) {

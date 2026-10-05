@@ -324,7 +324,7 @@ void Breakdown::build(const Work& work) {
         const double length = std::sqrt(b.local.x * b.local.x + b.local.y * b.local.y + b.local.z * b.local.z);
         const Vec3 direction = b.local * (1.0 / length);
         // The engine cone is 100 tall along Z with a base radius of 50, centred on its origin.
-        const double radius = std::clamp(length * 0.055, 0.3, 1.25);
+        const double radius = std::clamp(length * 0.035, 0.25, 0.7);
         mesh_piece(Layer::Skeleton, path_cone, b.parent, direction * (length / 2), z_to(direction), {radius / 50, radius / 50, length / 100});
     } else if (work.kind == Work::Joint) {
         const auto& b = bones_[work.index];

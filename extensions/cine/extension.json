@@ -11,6 +11,9 @@
   "menu": "menu.json",
   "files": [
     "README.txt",
+    "signature.txt",
+    "fonts/OFL.txt",
+    "fonts/Rajdhani-SemiBold.ttf",
     "presets/breakdown-turntable.cine.json",
     "presets/fashion-walk-360.cine.json",
     "presets/fight-duel.cine.json",

@@ -355,7 +355,7 @@ struct Rig {
     std::unique_ptr<cine::Extension> ext;
     CssxFrame frame{};
     uint32_t world = 1;
-    bool menu = false;
+    bool menu = false, camera_in_frame = true;
     explicit Rig(const fs::path& dir) { host.dir = dir; ext = std::make_unique<cine::Extension>(&host.api); }
     void step(double dt = 0.1) {
         const auto before = host.pos;
@@ -365,6 +365,8 @@ struct Rig {
         frame.in_menu = menu ? 1 : 0; frame.player_x = host.pos.x; frame.player_y = host.pos.y; frame.player_z = host.pos.z; frame.player_yaw = host.yaw;
         frame.velocity_x = (host.pos.x - before.x) / dt; frame.velocity_y = (host.pos.y - before.y) / dt; frame.velocity_z = 0;
         frame.viewport_w = 2560; frame.viewport_h = 1440; frame.pawn = 1; frame.controller = 2;
+        if (camera_in_frame) { frame.camera_x = host.pos.x - 400; frame.camera_y = host.pos.y; frame.camera_z = host.pos.z + 20; frame.camera_pitch = frame.camera_roll = 0; frame.camera_yaw = 0; }
+        else frame.size = offsetof(CssxFrame, camera_x);   // a CSSX from before the frame carried the camera
         ext->render(&frame);
         ext->tick(dt);
     }
@@ -740,10 +742,16 @@ int main(int argc, char** argv) {
             until(start + 9);     // clay + wireframe at 6.4 s
             expect(has(parent_of(h.prop(Host::PlayerMesh, "OverlayMaterial")), "M_Cine_Wire") && has(parent_of(h.prop(h.hair, "OverlayMaterial")), "M_Cine_Wire"), "wireframe is the overlay on every part");
             expect(h.projections > 0 && h.view_points > 0, "labels follow their components");
-            {   // The labels cost one host call a frame, whatever their number.
-                const auto calls = h.requests;
+            {   // Drawing the labels asks the host nothing: the camera comes with the frame.
+                auto calls = h.requests;
                 for (int i = 0; i < 20; ++i) r.ext->render(&r.frame);
-                expect(h.requests - calls == 20, "a frame of labels is one host call: " + std::to_string(h.requests - calls) + " for 20 frames");
+                expect(h.requests == calls, "a frame of labels is no host call: " + std::to_string(h.requests - calls) + " for 20 frames");
+                // On an older CSSX the frame has no camera: one call a frame, whatever the number of labels.
+                r.camera_in_frame = false; r.step();
+                calls = h.requests;
+                for (int i = 0; i < 20; ++i) r.ext->render(&r.frame);
+                expect(h.requests - calls == 20, "without the camera in the frame it is one call a frame: " + std::to_string(h.requests - calls));
+                r.camera_in_frame = true;
             }
             until(start + 13.5);  // clay + skeleton at 10.8 s
             expect(has(parent_of(h.prop(Host::PlayerMesh, "_materials")[0]), "M_Cine_Clay") && h.prop(Host::PlayerMesh, "OverlayMaterial").is_null(),

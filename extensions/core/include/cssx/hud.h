@@ -30,10 +30,14 @@ typedef struct CssxFrame {
     double player_x, player_y, player_z;        /* world position, cm */
     double player_yaw;            /* degrees */
     double velocity_x, velocity_y, velocity_z;  /* cm/s */
-    double viewport_w, viewport_h;               /* logical pixels */
+    double viewport_w, viewport_h;               /* HUD units: pixels divided by the viewport's DPI scale */
     uint64_t pawn;                /* $object id of the player pawn, for request() */
     uint64_t controller;          /* $object id of the player controller */
+    /* CSSX 1.3.1+. Read only when `size` covers them: CSSX_FRAME_HAS_CAMERA(frame). */
+    double camera_x, camera_y, camera_z;         /* where the picture is taken from, cm */
+    double camera_pitch, camera_roll;            /* degrees; the yaw is camera_yaw above */
 } CssxFrame;
+#define CSSX_FRAME_HAS_CAMERA(frame) ((frame)->size >= offsetof(CssxFrame, camera_roll) + sizeof(double))
 
 typedef struct CssxHudApi {
     uint32_t abi;

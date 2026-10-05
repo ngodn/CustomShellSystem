@@ -41,8 +41,9 @@ void Guides::build() {
     count_ = hud_->text(context_, root);
     for (auto b : bars_) if (b) hud_->set_color(context_, b, 0, 0, 0, 0.62f);
     for (auto b : border_) if (b) hud_->set_color(context_, b, 1, 1, 1, 0.55f);
-    if (help_) { hud_->set_font(context_, help_, 15); hud_->set_color(context_, help_, 1, 1, 1, 0.85f); }
-    if (count_) { hud_->set_font(context_, count_, 22); hud_->set_color(context_, count_, 1, 1, 1, 0.75f); }
+    auto face = [&](CssxLayer text, double size, int spacing) { if (face_) face_->apply(text, size, spacing); else hud_->set_font(context_, text, float(size)); };
+    if (help_) { face(help_, 16, 90); hud_->set_color(context_, help_, 0.90f, 0.98f, 1, 0.9f); }
+    if (count_) { face(count_, 24, 120); hud_->set_color(context_, count_, 0.90f, 0.98f, 1, 0.8f); }
     built_ = true; shown_ = true;
     help_text_.clear(); count_text_.clear();
 }
@@ -64,6 +65,7 @@ void Guides::update(const CssxFrame& frame, const Overlay& o) {
     if (frame.world_generation != world_) { forget(); world_ = frame.world_generation; }
     if (!o.visible) { hide(); return; }
     if (!frame.world_ready) return;
+    if (built_ && ++checked_ >= 60) { checked_ = 0; if (bars_[0] && !hud_->layer_object(context_, bars_[0])) forget(); }
     build();
     if (!built_) return;
     show(true);

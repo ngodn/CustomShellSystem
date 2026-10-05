@@ -1,4 +1,5 @@
 #include "bridge.hpp"
+#include <cstring>
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -9,6 +10,7 @@
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/FFrame.hpp>
 #include <Unreal/FProperty.hpp>
+#include <Unreal/FMemory.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
@@ -195,6 +197,32 @@ Json Bridge::decode(FProperty* p,void* data,unsigned depth) {
     }
     throw std::runtime_error("Unsupported reflected property type");
 }
+namespace {
+// TArray in a shipping build: data, count, capacity, on the heap allocator's plain
+// FMemory::Realloc, which UE4SS forwards to the engine's allocator (the array helper's own
+// grow path is not exported by the pinned runtime). Elements are relocatable by contract.
+struct RawArray { void* data; int32_t num; int32_t max; };
+static_assert(sizeof(RawArray)==16);
+constexpr int32_t max_resized_elements=4096;
+void resize_array(FArrayProperty* a,void* data,int32_t want) {
+    auto* inner=a->GetInner();
+    const auto size=size_t(inner?inner->GetElementSize():0);
+    if(a->GetElementSize()!=sizeof(RawArray) || size==0) throw std::runtime_error("Array layout mismatch");
+    if(want<0 || want>max_resized_elements) throw std::runtime_error("Array resize is limited to 4096 elements");
+    auto& raw=*static_cast<RawArray*>(data);
+    if(raw.num<0 || raw.max<raw.num || raw.num>max_resized_elements*16 || (raw.max && !raw.data)) throw std::runtime_error("Not a valid array");
+    auto at=[&](int32_t i){ return static_cast<std::byte*>(raw.data)+size*size_t(i); };
+    for(int32_t i=want;i<raw.num;++i) inner->DestroyValue(at(i));
+    if(want<raw.num) raw.num=want;
+    if(want>raw.max) {
+        void* grown=FMemory::Realloc(raw.data,size*size_t(want));
+        if(!grown) throw std::runtime_error("Out of memory growing an array");
+        raw.data=grown; raw.max=want;
+    }
+    for(int32_t i=raw.num;i<want;++i) { std::memset(at(i),0,size); inner->InitializeValue(at(i)); }
+    raw.num=want;
+}
+}
 void Bridge::encode(FProperty* p,void* data,const Json& value,unsigned depth) {
     if(depth>12 || p->GetArrayDim()!=1) throw std::runtime_error("Unsupported property shape");
     if(value.is_object() && value.contains("$table_field")) {
@@ -283,12 +311,16 @@ void Bridge::encode(FProperty* p,void* data,const Json& value,unsigned depth) {
         p->CopyCompleteValue(data,convert.data(result));return;
     }
     if(p->IsA<FArrayProperty>()) {
-        // Element-wise write into the existing array without changing its length
-        // (growing needs the allocator's ResizeAllocation, which the pinned UE4SS
-        // import library does not export). Same count only.
+        // Element-wise write into the existing array. Its length changes only when the
+        // request asks for it ("resize": true): a caller that sends a shorter list by
+        // mistake must not truncate game data.
         if(!value.is_array()) throw std::runtime_error("Array input required");
-        auto* a=static_cast<FArrayProperty*>(p);FScriptArrayHelper array(a,data);
-        if(int(value.size())!=array.Num()) throw std::runtime_error("Array length is fixed; write the same number of elements");
+        auto* a=static_cast<FArrayProperty*>(p);
+        if(int(value.size())!=FScriptArrayHelper(a,data).Num()) {
+            if(!resize_arrays_) throw std::runtime_error("Array length is fixed; write the same number of elements, or pass \"resize\": true");
+            resize_array(a,data,int32_t(value.size()));
+        }
+        FScriptArrayHelper array(a,data);
         for(size_t i=0;i<value.size();++i) encode(a->GetInner(),array.GetRawPtr(static_cast<int32>(i)),value[i],depth+1);
         return;
     }
@@ -429,7 +461,12 @@ Json Bridge::request(const PlayerContext& player,const Json& request) {
                 if(result.dump().size()>1024*1024) throw std::runtime_error("Property result exceeds 1 MiB");
                 p->CopyCompleteValue(data,next.data());return result;
             }
-            encode(p,data,request.at("value"),0);
+            {
+                // In place, so only here may arrays inside the value change length.
+                struct Resize { bool& flag; ~Resize(){ flag=false; } } scope{resize_arrays_};
+                resize_arrays_=request.value("resize",false);
+                encode(p,data,request.at("value"),0);
+            }
             // The echo decodes the whole property. A struct too large to decode (more than
             // 256 fields, e.g. FPostProcessSettings) would fail here after the write already
             // happened in place; "echo": false skips it.

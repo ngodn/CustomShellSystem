@@ -3,6 +3,11 @@
 #include <cmath>
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/FString.hpp>
+#include <Unreal/FMemory.hpp>
+#include <Unreal/Property/FArrayProperty.hpp>
+#include <Unreal/Property/FObjectProperty.hpp>
+#include <cstring>
+#include <algorithm>
 
 namespace cssx {
 using namespace engine;
@@ -25,13 +30,56 @@ UObject* first_canvas(UObject* widget,int depth) {
 }
 // FGameViewportWidgetSlot: full-screen anchors, no offsets, removed with its world.
 struct ViewportSlot { Anchors anchors{{0,0},{1,1}}; Margin offsets{0,0,0,0}; Vec2 alignment{0,0}; int32_t z_order=0; uint8_t auto_remove=1; uint8_t padding[3]{}; };
+// A widget added to the viewport on its own is held by nothing the collector follows (the
+// viewport keeps weak pointers), and UE 5.6 roots only what the engine's own AddToRoot lists.
+// So the screen canvas is listed in the game instance's ReferencedObjects, the array
+// UGameInstance::RegisterReferencedObject fills and the collector walks as a plain property.
+// TArray<TObjectPtr<UObject>> in a shipping build: data, count, capacity, on FMemory::Realloc.
+// Safe from the game thread while reachability runs in one pass (the 5.6 default).
+struct ObjectArray { UObject** data; int32_t num; int32_t max; };
+static_assert(sizeof(ObjectArray)==16);
+ObjectArray& referenced_objects(UObject* instance) {
+    auto* property=instance->GetPropertyByNameInChain(L"ReferencedObjects");
+    if(!property || !property->IsA<FArrayProperty>() || property->GetElementSize()!=sizeof(ObjectArray)) throw std::runtime_error("the game instance has no ReferencedObjects array");
+    auto* inner=static_cast<FArrayProperty*>(property)->GetInner();
+    if(!inner || !inner->IsA<FObjectProperty>() || inner->GetElementSize()!=sizeof(UObject*)) throw std::runtime_error("ReferencedObjects layout mismatch");
+    auto& a=*reinterpret_cast<ObjectArray*>(reinterpret_cast<std::byte*>(instance)+property->GetOffset_Internal());
+    if(a.num<0 || a.max<a.num || a.num>65536 || (a.max && !a.data)) throw std::runtime_error("ReferencedObjects is not a valid array");
+    return a;
+}
+void keep_alive(UObject* instance,UObject* object) {
+    Call cvar(find_cached(L"/Script/Engine.Default__KismetSystemLibrary"),L"GetConsoleVariableIntValue",2);
+    cvar.set(L"VariableName",FString(L"gc.AllowIncrementalReachability")); cvar.run();
+    if(cvar.get<int32_t>()!=0) throw std::runtime_error("incremental reachability is on");
+    auto& a=referenced_objects(instance);
+    for(int32_t i=0;i<a.num;++i) if(a.data[i]==object) return;
+    if(a.num==a.max) {
+        const int32_t grown=std::max(16,a.max*2);
+        auto* data=static_cast<UObject**>(FMemory::Realloc(a.data,size_t(grown)*sizeof(UObject*)));
+        if(!data) throw std::runtime_error("out of memory");
+        a.data=data; a.max=grown;
+    }
+    a.data[a.num++]=object;
+}
+void let_go(UObject* instance,UObject* object) noexcept {
+    try {
+        auto& a=referenced_objects(instance);
+        for(int32_t i=a.num-1;i>=0;--i) if(a.data[i]==object) {
+            std::memmove(a.data+i,a.data+i+1,size_t(a.num-i-1)*sizeof(UObject*));
+            --a.num; break;
+        }
+    } catch(...) {}
+}
 HudService* g_hud=nullptr;
 }
 HudService::HudService() { g_hud=this; }
 HudService::~HudService() { if(g_hud==this) g_hud=nullptr; }
 void HudService::drop_scene() {
-    if(auto* screen=screen_.Get()) { try { invoke(screen,L"RemoveFromParent"); } catch(...) {} }
-    layers_.clear(); overlay_.Reset(); screen_.Reset(); screen_failed_=false; tree_.Reset(); hud_.Reset();
+    if(auto* screen=screen_.Get()) {
+        try { invoke(screen,L"RemoveFromParent"); } catch(...) {}
+        if(auto* keeper=screen_keeper_.Get()) let_go(keeper,screen);
+    }
+    layers_.clear(); overlay_.Reset(); screen_.Reset(); screen_keeper_.Reset(); screen_failed_=false; tree_.Reset(); hud_.Reset();
 }
 HudService::Layer* HudService::find_layer(uint64_t id) {
     auto it=layers_.find(id); if(it==layers_.end()) return nullptr;
@@ -51,11 +99,14 @@ UObject* HudService::screen_canvas() {
         get.set(L"Class",find(L"/Script/UMG.GameViewportSubsystem")); get.run();
         UObject* subsystem=get.get<UObject*>();
         if(!subsystem) throw std::runtime_error("the viewport subsystem is missing");
+        UObject* instance=object_of(world_.Get(),L"OwningGameInstance");
+        if(!instance) throw std::runtime_error("no game instance");
         UObject* canvas=construct(L"/Script/UMG.CanvasPanel",tree);
+        keep_alive(instance,canvas);   // before anything else: nothing holds it until then
+        screen_=canvas; screen_keeper_=instance;
         invoke(canvas,L"SetVisibility",L"InVisibility",VIS_HITTEST_INVISIBLE);
         Call add(subsystem,L"AddWidget",3); add.set(L"Widget",canvas); add.set(L"Slot",ViewportSlot{}); add.run();
-        if(!add.get<bool>()) throw std::runtime_error("the viewport refused the widget");
-        screen_=canvas;
+        if(!add.get<bool>()) { let_go(instance,canvas); screen_.Reset(); screen_keeper_.Reset(); throw std::runtime_error("the viewport refused the widget"); }
         return canvas;
     } catch(const std::exception& e) {
         screen_failed_=true;   // callers fall back to the HUD root
@@ -75,7 +126,7 @@ void HudService::release() {
 void HudService::update(const PlayerContext& player,bool in_menu,CssxFrame& frame) {
     frame=CssxFrame{}; frame.abi=CSSX_ABI; frame.size=sizeof(CssxFrame); frame.world_generation=generation_;
     try {
-        pc_=player.pc;
+        pc_=player.pc; world_=player.world;
         // The live HUD comes from the controller's UI handler component: one
         // property read per frame, no object-array search.
         // Re-verify it (two reads plus a reflected IsInViewport) at 4 Hz, or at once when the
@@ -147,7 +198,10 @@ void HudService::update(const PlayerContext& player,bool in_menu,CssxFrame& fram
         if(player.pc) {
             if(UObject* manager=object_of(player.pc,L"PlayerCameraManager")) {
                 Call cam(manager,L"GetCameraRotation",1); cam.run();
-                frame.camera_yaw=normalize_deg(cam.get<FRotatorD>().yaw);
+                const auto rotation=cam.get<FRotatorD>();
+                frame.camera_yaw=normalize_deg(rotation.yaw); frame.camera_pitch=rotation.pitch; frame.camera_roll=rotation.roll;
+                Call at(manager,L"GetCameraLocation",1); at.run();
+                const auto location=at.get<FVectorD>(); frame.camera_x=location.x; frame.camera_y=location.y; frame.camera_z=location.z;
             }
         }
         if(player.world && (now>=viewport_after_ || viewport_w_<=0)) {
@@ -155,7 +209,13 @@ void HudService::update(const PlayerContext& player,bool in_menu,CssxFrame& fram
             viewport_after_=now+500;
             Call vp(find_cached(L"/Script/UMG.Default__WidgetLayoutLibrary"),L"GetViewportSize",2);
             vp.set(L"WorldContextObject",player.world); vp.run();
-            const auto size=vp.get<Vec2>(); viewport_w_=size.x; viewport_h_=size.y;
+            const auto size=vp.get<Vec2>();
+            // GetViewportSize is in pixels; canvas slots are in pixels divided by the DPI scale.
+            Call dpi(find_cached(L"/Script/UMG.Default__WidgetLayoutLibrary"),L"GetViewportScale",2);
+            dpi.set(L"WorldContextObject",player.world); dpi.run();
+            const float scale=dpi.get<float>();
+            const double unit=scale>0.01f?double(scale):1.0;
+            viewport_w_=size.x/unit; viewport_h_=size.y/unit;
         }
         if(player.world) { frame.viewport_w=viewport_w_; frame.viewport_h=viewport_h_; }
         frame.world_ready=(overlay_.Get() && player.pawn)?1:0;

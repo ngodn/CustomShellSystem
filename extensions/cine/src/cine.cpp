@@ -33,8 +33,9 @@ double clampd(double v, double lo, double hi) { return std::isfinite(v) ? std::c
 
 Extension::Extension(const CssxHost* host) : host_(host), rig_(host_), scene_(host_), breakdown_(host_), breakdown_opponent_(host_) {
     // Passive start (ABI contract): read files and state, change nothing in the game.
-    guides_.attach(host_.hud(), host_.context());
-    callouts_.attach(host_.hud(), host_.context());
+    typeface_.attach(&host_, host_.hud(), host_.context());
+    guides_.attach(host_.hud(), host_.context(), &typeface_);
+    callouts_.attach(host_.hud(), host_.context(), &typeface_);
     load_presets();
     load_state();
 }
@@ -84,6 +85,7 @@ void Extension::load_state() {
         if (s.contains("breakdown") && s["breakdown"].is_string() && std::count(breakdown_ids.begin(), breakdown_ids.end(), s["breakdown"].get<std::string>())) settings_.breakdown = s["breakdown"];
         if (s.contains("labels") && s["labels"].is_boolean()) settings_.labels = s["labels"];
         if (s.contains("breakdown_target") && s["breakdown_target"].is_boolean()) settings_.breakdown_target = s["breakdown_target"];
+        if (s.contains("signature") && s["signature"].is_boolean()) settings_.signature = s["signature"];
     }
     try {
         const auto r = state.value("route", Json());
@@ -108,7 +110,7 @@ void Extension::save_state() const {
     Json value{{"settings", {{"preset", settings_.preset}, {"zoom", settings_.zoom}, {"height", settings_.height}, {"fov_scale", settings_.fov_scale},
                              {"countdown", settings_.countdown}, {"guide", settings_.guide}, {"look", settings_.look}, {"walls", settings_.walls},
                              {"scene", settings_.scene}, {"keep_target", settings_.keep_target}, {"breakdown", settings_.breakdown},
-                             {"labels", settings_.labels}, {"breakdown_target", settings_.breakdown_target}}}};
+                             {"labels", settings_.labels}, {"breakdown_target", settings_.breakdown_target}, {"signature", settings_.signature}}}};
     if (route_) { Json pts = Json::array(); for (const auto& p : route_->points) pts.push_back(vec_json(p)); value["route"] = std::move(pts); }
     if (final_) value["final"] = {{"position", vec_json(final_->position)}, {"yaw", final_->yaw}, {"camera", vec_json(final_->camera)},
                                   {"pitch", final_->pitch}, {"camera_yaw", final_->camera_yaw}, {"fov", final_->fov}};
@@ -138,6 +140,8 @@ int Extension::render(const CssxFrame* f) {
     frame_.position = {f->player_x, f->player_y, f->player_z};
     frame_.velocity = {f->velocity_x, f->velocity_y, f->velocity_z};
     frame_.yaw = f->player_yaw; frame_.seconds = f->seconds;
+    frame_.has_camera = CSSX_FRAME_HAS_CAMERA(f);
+    if (frame_.has_camera) { frame_.camera = {f->camera_x, f->camera_y, f->camera_z}; frame_.camera_rotation = {f->camera_pitch, f->camera_yaw, f->camera_roll}; }
     if (mode_ == Mode::Idle || mode_ == Mode::RecordWait) { guides_.hide(); callouts_.hide(); return 1; }
     Overlay o;
     o.visible = true;
@@ -149,14 +153,19 @@ int Extension::render(const CssxFrame* f) {
     if (mode_ == Mode::Running || mode_ == Mode::Preparing) o.visible = false;   // nothing of CINE in the recording
     if (frame_.in_menu) o.visible = false;                                       // nor over a menu
     guides_.update(*f, o);
-    // Breakdown labels are part of the picture, so they stay on during the take. One host call
-    // a frame: where the camera is. The rest is the tick's samples and plain maths.
+    // Breakdown labels are part of the picture, so they stay on during the take. The camera
+    // pose comes with the frame (one host call on an older CSSX); the rest is the tick's
+    // samples and plain maths.
+    // All of it is laid out inside the chosen frame guide's opening, so it survives the crop.
+    const bool signing = mode_ == Mode::Running && settings_.signature && !signature_.empty() && !frame_.in_menu;
+    const Rect opening = guide_opening(f->viewport_w, f->viewport_h, guide_aspect(guide_from(settings_.guide)));
+    static const std::vector<std::string> unsigned_take;
     if (mode_ == Mode::Running && labels_live_ && lens_.ok && !frame_.in_menu) {
         label_age_ += frame_.seconds;
         callout_targets_.clear();
         try {
-            Vec3 camera; Rotator rotation;
-            if (rig_.view_point(camera, rotation)) {
+            Vec3 camera = frame_.camera; Rotator rotation = frame_.camera_rotation;
+            if (frame_.has_camera || rig_.view_point(camera, rotation)) {
                 const auto basis = view_basis(rotation);
                 const double ease = std::clamp(label_age_ / 0.1, 0.0, 1.0);
                 for (const auto& label : labels_) {
@@ -167,7 +176,10 @@ int Extension::render(const CssxFrame* f) {
                 }
             }
         } catch (...) { callout_targets_.clear(); }
-        callouts_.update(*f, callout_targets_, breakdown_.caption());
+        callouts_.update(*f, opening, callout_targets_, breakdown_.caption(), signing ? signature_ : unsigned_take);
+    } else if (signing) {
+        callout_targets_.clear();
+        callouts_.update(*f, opening, callout_targets_, std::string(), signature_);
     } else callouts_.hide();
     return 1;
 }
@@ -184,7 +196,7 @@ void Extension::tick(double seconds) {
         if (mode_ != Mode::Idle && mode_ != Mode::RecordWait && frame_.valid && frame_.world != world_) {
             if (take_ && !take_->snapshot.is_null() && take_->step_next > 0) queue_look_restore(take_->snapshot);
             labels_live_ = false; labels_.clear(); lens_ = {};
-            rig_.forget(); guides_.forget(); callouts_.forget(); scene_.forget(); breakdown_.forget(); breakdown_opponent_.forget();
+            rig_.forget(); guides_.forget(); callouts_.forget(); typeface_.forget(); scene_.forget(); breakdown_.forget(); breakdown_opponent_.forget();
             take_.reset(); samples_.clear(); mode_ = Mode::Idle; start_pending_ = false;
             report("The world changed (loading, travel or death); CINE stopped and the game camera is back.");
             return;
@@ -259,6 +271,7 @@ void Extension::enter() {
     keys_previous_.clear();
     mode_ = Mode::Armed;
     pak_missing_ = !rig_.asset_present("/Game/CSSX/CINE/MPC_Cine.MPC_Cine");
+    load_signature();
     apply_scene();
     try { host_.request({{"op", "menu.close"}}); } catch (...) {}
     report("In Cine World. Frame your shot, then press F8 to roll. F9 leaves.");
@@ -524,6 +537,21 @@ void Extension::sample_labels() {
         }
         labels_live_ = true;
     } catch (...) { labels_live_ = false; }
+}
+
+// signature.txt in the extension folder: the first line is the name, the rest small print.
+// Read on entering Cine World, so an edit shows without a restart.
+void Extension::load_signature() {
+    signature_.clear();
+    try {
+        const auto info = host_.request({{"op", "extension.info"}});
+        std::ifstream in(fs::path(info.at("directory").get<std::string>()) / "signature.txt");
+        for (std::string line; signature_.size() < max_signature_lines && std::getline(in, line);) {
+            while (!line.empty() && (line.back() == '\r' || line.back() == ' ' || line.back() == '\t')) line.pop_back();
+            if (line.size() > 120) line.resize(120);
+            if (!line.empty()) signature_.push_back(std::move(line));
+        }
+    } catch (...) { signature_.clear(); }
 }
 
 void Extension::apply_scene() {
@@ -824,7 +852,8 @@ Json Extension::model() const {
                         {"fov_scale", settings_.fov_scale}, {"countdown", settings_.countdown}, {"guide", settings_.guide},
                         {"walls", settings_.walls}, {"look", settings_.look}, {"look_info", look}, {"route_info", route}, {"final_info", final_shot},
                         {"scene", settings_.scene}, {"keep_target", settings_.keep_target}, {"scene_info", scene},
-                        {"breakdown", settings_.breakdown}, {"labels", settings_.labels}, {"breakdown_target", settings_.breakdown_target}, {"breakdown_info", breakdown}}},
+                        {"breakdown", settings_.breakdown}, {"labels", settings_.labels}, {"breakdown_target", settings_.breakdown_target}, {"breakdown_info", breakdown},
+                        {"signature", settings_.signature}}},
             {"options", {{"preset", options}}},
             {"enabled", enabled}, {"disabled", disabled}, {"status", summary}, {"error", error_}};
 }
@@ -867,6 +896,7 @@ void Extension::event(const Json& e) {
         else if (id == "breakdown") { const auto v = e.at("value").get<std::string>(); if (!std::count(breakdown_ids.begin(), breakdown_ids.end(), v)) throw std::runtime_error("Unknown breakdown mode"); settings_.breakdown = v; save_state(); }
         else if (id == "labels") { settings_.labels = e.at("value").get<bool>(); save_state(); }
         else if (id == "breakdown_target") { settings_.breakdown_target = e.at("value").get<bool>(); save_state(); }
+        else if (id == "signature") { settings_.signature = e.at("value").get<bool>(); save_state(); }
         else throw std::runtime_error("Unknown control: " + id);
         host_.invalidate();
     } catch (const std::exception& ex) {

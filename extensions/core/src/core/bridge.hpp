@@ -40,5 +40,6 @@ private:
     uint64_t next_=1, sweep_=0;
     Json decode(engine::FProperty*,void*,unsigned);
     void encode(engine::FProperty*,void*,const Json&,unsigned);
+    bool resize_arrays_=false;   // this request may change array lengths ("resize": true)
 };
 }

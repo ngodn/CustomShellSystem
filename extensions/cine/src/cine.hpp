@@ -33,6 +33,7 @@ public:
         bool valid = false, ready = false, in_menu = false;
         uint32_t world = 0; uint64_t pawn = 0, controller = 0;
         Vec3 position, velocity; double yaw = 0; double seconds = 0;
+        bool has_camera = false; Vec3 camera; Rotator camera_rotation;   // from CSSX 1.3.1 on
     };
     void feed_frame(const FrameData& f) { frame_ = f; }
 
@@ -48,6 +49,7 @@ private:
         std::string breakdown = "off";    // breakdown track: off | preset | reel
         bool labels = true;               // callouts and caption during a breakdown
         bool breakdown_target = false;    // also break down the lock-on target
+        bool signature = false;           // the signature block (signature.txt) during takes
     };
     // One take, built while Preparing and played while Running.
     struct Take {
@@ -116,6 +118,7 @@ private:
     Guides guides_;
     Scene scene_;
     Breakdown breakdown_, breakdown_opponent_;
+    Typeface typeface_;   // the label font, shared by the guides and the callouts
     Callouts callouts_;
     // Breakdown labels. Sampled on the tick: where each labelled component is relative to
     // her, and how the lens maps onto the HUD. Drawn every frame from that with one host call
@@ -127,6 +130,8 @@ private:
     double label_age_ = 0;       // seconds since the last sample, for easing between two
     bool labels_live_ = false;
     bool pak_missing_ = false;   // read once on entering Cine World, for the menu
+    std::vector<std::string> signature_;   // lines of signature.txt, read on entering Cine World
+    void load_signature();
     void sample_labels();
     double tick_dt_ = 0.1;
     Settings settings_;

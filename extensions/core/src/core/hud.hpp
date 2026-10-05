@@ -23,6 +23,7 @@ class HudService {
     std::map<std::wstring,engine::WeakObject> textures_;
     engine::WeakObject hud_,tree_,overlay_;
     engine::WeakObject screen_;                       // canvas added to the viewport on first use (CSSX_LAYER_SCREEN)
+    engine::WeakObject world_,screen_keeper_;         // the world of this frame; the game instance listing the canvas
     bool screen_failed_=false;                        // one attempt per scene
     engine::WeakObject pc_;
     uint64_t next_layer_=1;
