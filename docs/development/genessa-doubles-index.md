@@ -3,6 +3,14 @@
 Read this before resuming work. [Goal](genessa-doubles-goal.md) defines completion;
 [status](genessa-doubles-status.md) records what is currently proven.
 
+## Release checkpoint, October 5
+
+Trial8 is visually accepted in Faithful and Stray, with full cloth physics.
+The author approved beta.11 with the remaining cloth-construction hitch noted;
+further optimization and Eve stop transitions are queued for beta.12. The current
+shared container is material-pack5. Read the latest status/performance sections
+before interpreting the historical implementation checkpoints below.
+
 ## Established findings
 
 - Shared materials and the first automatic runtime coordinator are implemented

@@ -1,5 +1,15 @@
 # Current work queue
 
+## Beta.11 release decision and beta.12 cloth follow-up
+
+The author accepts both forms on trial8 and explicitly requests finishing
+beta.11 with the remaining full-cloth creation hitch documented. Keep full cloth.
+Faithful cached reuse is verified; fresh construction still costs about 80-100 ms
+on this machine. Investigate a bounded CSS-owned visual pool across native clone
+lifetimes for beta.12, without changing ability lifetime or gameplay. Verify
+pose-source rebinding, cloth reset, hidden tick cost, material refresh, context
+cleanup and memory bounds before replacing the same-actor cache.
+
 ## Queued for beta.12 consideration: Eve stopping transition
 
 questman reports beta.10 with Eve selected in all locomotion slots: starting
@@ -38,9 +48,10 @@ native copied attacks reflecting CCS from universal CCS settings inheritance.
 Full cloth physics is mandatory for doubles. The author rejected removing it
 after the hidden-component timing comparison. The current candidate retains
 stopped visuals only on the same native cached double, with identity/settings
-checks, fresh materials per activation and bounded expiry. Live cache hit rate,
-cloth continuity and regression checks remain pending; do not claim the measured
-hitch is fixed from host tests alone. See the doubles performance investigation.
+checks, fresh materials per activation and bounded expiry. Faithful cache reuse
+and both forms' cloth continuity now pass live checks; fresh construction still
+hitches. The author defers further optimization to beta.12.
+See the doubles performance investigation for scope and remaining coverage.
 
 ## October 5: beta.11 release media and FAQ
 

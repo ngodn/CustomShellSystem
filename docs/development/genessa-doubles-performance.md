@@ -83,4 +83,48 @@ Host tests cover cache identity/expiry and the source retry decision. They do
 not execute Unreal cloth, park/resume or destruction. Measure actual cache hits,
 registration counts, active and cached counts, idle tick cost, menu/customization
 changes, Default controls, and both forms in game before release. The candidate
-has not yet been installed or accepted.
+was initially uninstalled when that review ran.
+
+Trial8 is now installed and loaded as
+`f1334ef040e4a4609ce63b7bacfa941ef6844f5a1b771662dc981ac989970c3b`.
+Both Windows builds and the 18 host tests pass. The installed selector, loaded
+process mapping and hash match; all 15 protected files remain unchanged.
+
+The Faithful capture `runtime-trial8/reuse-performance1.json` spans 1,284 frames
+and 30 seconds, with CSS closed and the same Unholy Genessa Eve appearance.
+Five visual groups were constructed overall; reuse ultimately reached 24.
+The capture began at three constructed groups and records two registration
+spikes, 84.83 and 86.29 ms, in its first 1.3 seconds. Construction then stays at
+five. The fixed final 20-second window has 895 frames: Astral mean 0.1576 ms,
+p95 0.2701 ms and maximum 4.395 ms. The complete capture mean is 0.3081 ms,
+including initial construction. Saved settings are unchanged.
+
+After activity ceased, all five groups expired: prepared=removed=5, active=0,
+cached=0, reused=24, error empty. This proves bookkeeping cleanup for that run,
+not total engine or GPU memory reclamation. The author accepts Faithful cloth
+and movement, then Stray cloth, legs and attacks on this candidate. First-use
+cloth allocation remains expensive; do not describe the result as hitch-free
+or as a whole-game FPS guarantee.
+
+
+The Stray-form capture `runtime-trial8/stray-performance1.json` contains 1,265
+frames over 30 seconds. Astral mean is 0.2353 ms, p95 0.2024 ms and maximum
+97.1213 ms, with two frames above 10 ms (90.0336 and 97.1213 ms). Settings
+remain unchanged. Asynchronous counters start at prepared=9/removed=5 and end
+at prepared=15/removed=13, while reuse stays at 24. Actor kinds were not captured
+per frame; Faithful actors can coexist with Stray, so not every construction
+can be attributed to a Stray clone. A later read-only trace caught only one
+surviving AstralCopy, not an active Stray clone lifecycle.
+
+The cooked `GA_AstralClones_Action` RemovePrimaryClone/RemoveSecondaryClone paths
+call the spawner's RemoveAstralAI, which removes its registry entries and calls
+K2_DestroyActor. `GA_AstralGenessa_CopyAnyAttack::OnFadeOutCompleted` also removes its
+actor. The cache cannot retain a component owned by a destroyed actor. Keeping
+CSS visuals independently across clone lifetimes would require a separate pool,
+validated pose-source rebinding and explicit context/expiry cleanup. No actor
+lifetime or component ownership changes were attempted during this test.
+
+Release decision: the author accepts beta.11 with the cloth-creation hitch
+documented and explicitly defers further optimization to beta.12. Keep full
+cloth physics. The authored visuals pass the user's check; there is no claim
+of zero bugs, zero FPS loss, or exhaustive travel/death/hardware coverage.

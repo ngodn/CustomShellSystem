@@ -1,13 +1,24 @@
 # Genessa doubles status
 
-Release check: beta.11 is agreed, with separate runtime/shared-assets ZIPs.
-Repeated Faithful summons revealed 16 Astral frames above 10 ms in a 30-second
-capture, maximum 181 ms, with no form/menu change. Release preparation is held
-for [targeted creation timings](genessa-doubles-performance.md). NPC/enemy
-compatibility improvements are explicitly deferred by the author; they are
-not the reason for this hold.
+Release decision, October 5: the author accepts beta.11 with the remaining
+full-cloth creation hitch documented. Further cloth optimization is deferred to
+beta.12, together with the Eve stopping-transition investigation. Both forms'
+cloth, legs and attacks passed the author's trial8 visual check. NPC/enemy
+compatibility improvements are also explicitly deferred.
 
-Latest installation: trial6 contains the accepted trial5 runtime plus the
+Latest installed/loaded candidate: trial8, built from `3989c48`, core SHA-256
+`f1334ef040e4a4609ce63b7bacfa941ef6844f5a1b771662dc981ac989970c3b`.
+Both Windows configurations and all 18 host tests pass; release-tool tests pass
+12 cases. The selector, process mapping and hash agree, and all 15 protected
+files stayed unchanged. Full cloth is retained. Faithful achieved 24 reuses from
+five initial constructions; all five later expired with no bookkeeping error.
+The Stray-form run still includes a 97 ms construction spike. See
+[measured scope and limitations](genessa-doubles-performance.md).
+
+Separate runtime/shared-assets ZIPs and BBCode are the agreed deliverables.
+Earlier checkpoints below are historical and do not supersede this one.
+
+Earlier installation: trial6 contains the accepted trial5 runtime plus the
 MISC supported-appearance/fallback explanation, committed as `b7057b1`.
 After the author confirmed closure and the process check returned no game PIDs,
 the new core was installed as `css_core-astral-trial-9d501a3b6345ea12.dll`.
