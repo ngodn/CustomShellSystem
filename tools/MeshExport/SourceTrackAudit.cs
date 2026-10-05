@@ -10,23 +10,26 @@ internal static class SourceTrackAudit
     public static void Export(UAnimSequence animation, string directory)
     {
         if (animation.CompressedDataStructure is not FUECompressedAnimData data ||
-            data.KeyEncodingFormat != AnimationKeyFormat.AKF_PerTrackCompression)
-            throw new ArgumentException("Track audit supports per-track compression only");
+            data.KeyEncodingFormat is not (AnimationKeyFormat.AKF_PerTrackCompression or AnimationKeyFormat.AKF_VariableKeyLerp))
+            throw new ArgumentException("Track audit supports per-track or variable-key compression only");
         if (animation.Skeleton == null || !animation.Skeleton.TryLoad<USkeleton>(out var skeleton))
             throw new InvalidDataException("Source skeleton could not be loaded");
         var map = animation.GetTrackMap();
         var bones = skeleton.ReferenceSkeleton.FinalRefBoneInfo;
-        if (data.CompressedTrackOffsets.Length != map.Length * 2)
+        bool variableKeys = data.KeyEncodingFormat == AnimationKeyFormat.AKF_VariableKeyLerp;
+        if (data.CompressedTrackOffsets.Length != map.Length * (variableKeys ? 4 : 2))
             throw new InvalidDataException("Compressed offsets do not match the track map");
         // The normal converter iterates skeleton bones and omits out-of-range tracks.
         // Invoke its pinned decoder by track index for inspection, without inventing bones.
-        var decode = typeof(AnimConverter).GetMethod("ReadPerTrackData", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new MissingMethodException("Pinned CUE4Parse per-track decoder changed");
+        var decode = typeof(AnimConverter).GetMethod(variableKeys ? "ReadKeyLerpData" : "ReadPerTrackData",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new MissingMethodException("Pinned CUE4Parse animation decoder changed");
         using var reader = new FByteArchive("TrackAudit", data.CompressedByteStream);
         var tracks = new List<object>();
         for (int i = 0; i < map.Length; ++i) {
             var track = new CAnimTrack();
-            decode.Invoke(null, new object[] { reader, animation, track, i });
+            decode.Invoke(null, variableKeys ? new object[] { reader, animation, track, i, true }
+                                            : new object[] { reader, animation, track, i });
             var boneIndex = map[i].BoneTreeIndex;
             tracks.Add(new {
                 trackIndex = i, boneIndex,

@@ -14,8 +14,13 @@ if (File.Exists(args[3])) throw new IOException("Output already exists");
 var packages = File.ReadAllLines(args[2]).Where(p => !string.IsNullOrWhiteSpace(p)).ToArray();
 if (packages.Length == 0 || packages.Distinct(StringComparer.OrdinalIgnoreCase).Count() != packages.Length)
     throw new ArgumentException("Expected a nonempty list of unique packages");
+var sourceGame = Environment.GetEnvironmentVariable("CSS_SOURCE_GAME") switch {
+    null or "" or "GAME_UE5_6" => EGame.GAME_UE5_6,
+    "GAME_StellarBlade" => EGame.GAME_StellarBlade,
+    var unsupported => throw new ArgumentException($"Unsupported source game: {unsupported}")
+};
 using var provider = new DefaultFileProvider(args[0], SearchOption.TopDirectoryOnly,
-    new VersionContainer(EGame.GAME_UE5_6), StringComparer.OrdinalIgnoreCase);
+    new VersionContainer(sourceGame), StringComparer.OrdinalIgnoreCase);
 provider.MappingsContainer = new FileUsmapTypeMappingsProvider(args[1]);
 provider.ReadScriptData = true;
 provider.ReadShaderMaps = readShaderMaps;

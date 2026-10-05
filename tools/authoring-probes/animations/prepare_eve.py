@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 from review_source_tracks import sample, vector, rotation
+from sample_timeline import timeline
 
 
 def main():
@@ -19,6 +20,8 @@ def main():
     parser.add_argument('--clip-map', type=Path, help='Short output labels mapped to decoded source directory names')
     parser.add_argument('--revision', default='')
     parser.add_argument('--source-yaw', type=int, choices=(0, 90), default=0)
+    parser.add_argument('--sample-rate', type=int, choices=(30, 60),
+                        help='Optional resampling rate; otherwise preserve the verified source rate')
     parser.add_argument('--allow-positive-scale', action='store_true',
                         help='Preserve positive animated scale for offline retarget candidates')
     args = parser.parse_args()
@@ -59,7 +62,7 @@ def main():
         data = json.loads(path.read_text())
         hashes[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
         assert data['interpolation'] == 'Linear' and data['rateScale'] == 1
-        assert abs((data['frameCount']-1)/30-data['duration']) < 1e-6
+        clock = timeline(data['frameCount'], data['duration'], args.sample_rate)
         selected = [i for i, b in enumerate(data['bones']) if b['name'] in names]
         assert len(selected) == 54
         mapping = {old: new for new, old in enumerate(selected)}
@@ -79,7 +82,8 @@ def main():
             if not bone['animated']:
                 continue
             keys = []
-            for frame in range(data['frameCount']):
+            for output_frame in range(clock.frames):
+                frame = clock.source_frame(output_frame)
                 keys.append({field: sample(bone, channel, times, fallback, frame, data['frameCount']).tolist()
                              for field, channel, times, fallback in [
                                  ('translation', 'translations', 'translationTimes', 'Translation'),
@@ -94,8 +98,8 @@ def main():
         if reference is None:
             reference = bones
         assert reference == bones
-        clips[label] = dict(name=label, source=data['asset'], frames=data['frameCount'],
-                            duration=data['duration'], fps=30, tracks=tracks)
+        clips[label] = dict(name=label, source=data['asset'], frames=clock.frames,
+                            duration=data['duration'], fps=clock.fps, tracks=tracks)
     args.output.mkdir(parents=True)
     mesh = dict(schema=1, mesh_package='/Game/CSS/AnimLab/SK_'+prefix+'EveSource',
                 skeleton_package='/Game/CSS/AnimLab/SKEL_'+prefix+'EveSource', bones=reference,

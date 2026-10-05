@@ -1,5 +1,33 @@
 # Current work queue
 
+## October 5: shared locomotion pack and questman's follow-up
+
+Active animation work is defined in
+[the CSS/CINE port goal](../extensions/cine/docs/ANIMATION-PORT-GOAL.md).
+Preserve native source sample rates; the user's 60 fps remark was a question,
+not a requirement to upsample every clip. Complete the current source inventory
+and retargeting work before starting the related stop-transition investigation.
+
+The user explicitly asks to include questman's Eve stopping-pop report when
+convenient. Carry the evidence and regression cases from the older queue entry
+below into this animation work. Fix the brief jog/back-foot lift during stopping
+after reproducing its actual state/phase cause. Do not call the reporter's setup
+incorrect or treat a higher sample rate as a fix.
+
+Separate follow-ups after the shared animation pack:
+
+
+- Investigate an optional face/body rim light, including world versus preview
+  scope, performance and restoring the original lighting on disable/switch.
+- Investigate an optional body oil material control with outfit compatibility,
+  saved-setting support and clean restoration.
+- Investigate HIT2 DE Scyther body tint not affecting the face and the requested
+  lighter skin option. Inspect its existing face/skin controls and original
+  materials before choosing a CSS runtime or outfit-package fix. Preserve
+  XTGMods attribution and the existing default appearance.
+
+These are queued requests, not implemented features or release promises.
+
 ## Beta.11 release decision and beta.12 cloth follow-up
 
 The author accepts both forms on trial8 and explicitly requests finishing

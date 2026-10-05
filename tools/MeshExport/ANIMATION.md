@@ -9,7 +9,7 @@ or reproduce the complete gameplay AnimGraph.
 Set `CSS_SOURCE_GAME=GAME_StellarBlade` and `CSS_SOURCE_TRACKS=1` to read an
 explicit `AnimSequence` from the user's installed Stellar Blade base containers
 with its retail mappings. The default game remains `GAME_UE5_6`; other game
-names are rejected. This mode accepts non-additive UE per-track compression and
+names are rejected. This mode accepts non-additive UE per-track and variable-key compression and
 rejects ACL data, which has its own diagnostic modes below.
 
 `source-tracks.json` preserves decoded local quaternion, translation and scale
@@ -41,6 +41,25 @@ review, not a skinned Eve render or evidence of gameplay compatibility.
 
 The first eight source clips and the unchanged Mortal Shell H2 ACL regression
 are documented in [the animation investigation](../../docs/development/eve-animation-sources.md).
+
+`prepare_eve.py --sample-rate 60` prepares endpoint-inclusive 60 Hz candidates.
+Native 60 Hz timelines keep their sample indices; 30 Hz timelines retain every
+original sample and add interpolated samples between them. Durations must match
+a 30 or 60 Hz timeline within float32 rounding. Other rates and downsampling fail
+for separate review. Without an override, preparation preserves the source rate,
+including the existing scripts' 30 Hz inputs.
+`retarget_eve.py` imports and evaluates using the prepared clip's actual rate.
+The established normalized shortest-arc quaternion interpolation matches
+`AnimEncoding_PerTrackCompression.cpp:528-538` in the local UE 5.6.1 source.
+
+Run the timing/interpolation checks with:
+
+```sh
+python3 -m unittest discover -s tools/authoring-probes/animations -p test_sample_timeline.py -v
+```
+
+The new library's source inventory and decoder limits are recorded in
+[the shared animation investigation](../../docs/development/shared-animation-library.md).
 
 Set `CSS_ANIMATION_POSES=1` to export up to five exact native-decoded ACL samples
 in `animation-poses.json`. Schema 2 includes all raw source bones and the authored

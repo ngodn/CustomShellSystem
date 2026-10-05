@@ -33,12 +33,12 @@ def create(name, kind, factory):
     return asset, True
 
 
-def snapshot(animation, mesh, frame):
+def snapshot(animation, mesh, frame, fps):
     options = unreal.AnimPoseEvaluationOptions()
     options.set_editor_property('evaluation_type', unreal.AnimDataEvalType.RAW)
     options.set_editor_property('should_retarget', True)
     options.set_editor_property('optional_skeletal_mesh', mesh)
-    pose = unreal.AnimPoseExtensions.get_anim_pose_at_time(animation, frame/30, options)
+    pose = unreal.AnimPoseExtensions.get_anim_pose_at_time(animation, frame/fps, options)
     assert unreal.AnimPoseExtensions.is_valid(pose)
     names = [str(n) for n in unreal.AnimPoseExtensions.get_bone_names(pose)]
     transforms = []
@@ -117,6 +117,9 @@ for label, filename in batch:
     assert re.fullmatch(r'[A-Za-z][A-Za-z0-9]{0,15}', label)
     assert re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,80}', filename)
     data = json.loads((WORK/(filename+'.json')).read_text())
+    fps = data['fps']
+    assert fps in (30, 60)
+    assert abs((data['frames']-1)/fps-data['duration']) <= max(1e-6, data['duration']*1.2e-7)
     factory = unreal.AnimSequenceFactory()
     factory.set_editor_property('target_skeleton', source.get_editor_property('skeleton'))
     factory.set_editor_property('preview_skeletal_mesh', source)
@@ -125,7 +128,7 @@ for label, filename in batch:
         edit = animation.get_editor_property('controller')
         edit.open_bracket('Eve source keys at original sample times', False)
         try:
-            edit.set_frame_rate(unreal.FrameRate(30, 1), False)
+            edit.set_frame_rate(unreal.FrameRate(fps, 1), False)
             edit.set_number_of_frames(unreal.FrameNumber(data['frames']-1), False)
             for track in data['tracks']:
                 assert edit.add_bone_curve(track['name'], False)
@@ -142,8 +145,8 @@ for label, filename in batch:
     assert candidate.get_path_name().startswith(PACKAGE+'/')
     outputs.append(candidate.get_path_name())
     for frame in sorted({0, data['frames']//4, data['frames']//2, 3*data['frames']//4, data['frames']-1}):
-        write(f'{label.lower()}-{frame}.json', snapshot(candidate, target, frame))
-    write(label.lower()+'-motion.json', dict(fps=30, frames=[snapshot(candidate, target, f) for f in range(data['frames'])]))
+        write(f'{label.lower()}-{frame}.json', snapshot(candidate, target, frame, fps))
+    write(label.lower()+'-motion.json', dict(fps=fps, frames=[snapshot(candidate, target, f, fps) for f in range(data['frames'])]))
     assert unreal.EditorAssetLibrary.save_loaded_asset(candidate, False)
 
 assert all(hashlib.sha256(Path(p).read_bytes()).hexdigest() == h for p, h in hashes.items())

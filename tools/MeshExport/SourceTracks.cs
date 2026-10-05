@@ -11,8 +11,8 @@ internal static class SourceTracks
         if (animation.AdditiveAnimType != EAdditiveAnimationType.AAT_None)
             throw new ArgumentException("Source tracks require a non-additive sequence");
         if (animation.CompressedDataStructure is not FUECompressedAnimData data ||
-            data.KeyEncodingFormat != AnimationKeyFormat.AKF_PerTrackCompression)
-            throw new ArgumentException("Source tracks currently support UE per-track compression only");
+            data.KeyEncodingFormat is not (AnimationKeyFormat.AKF_PerTrackCompression or AnimationKeyFormat.AKF_VariableKeyLerp))
+            throw new ArgumentException("Source tracks support UE per-track or variable-key compression only");
         if (animation.NumFrames < 2 || animation.NumFrames > 100000 ||
             !float.IsFinite(animation.SequenceLength) || animation.SequenceLength <= 0 ||
             !float.IsFinite(animation.RateScale) || animation.RateScale <= 0)
