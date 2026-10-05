@@ -2,6 +2,7 @@
 // CINE extension: menu, settings, route recording, final-shot capture and the take director.
 // All callbacks arrive on the game thread from CSSX. Outside Cine World tick() and render()
 // return at once; inside, the director issues a handful of cached bridge calls per tick.
+#include "audio.hpp"
 #include "breakdown.hpp"
 #include "callouts.hpp"
 #include "guides.hpp"
@@ -11,6 +12,8 @@
 #include "shot.hpp"
 #include <cssx/client.hpp>
 #include <map>
+#include <chrono>
+#include <deque>
 #include <memory>
 #include <optional>
 #include <string>
@@ -70,6 +73,24 @@ private:
         // Breakdown track.
         std::vector<Timeline::Reveal> reveals; size_t reveal_next = 0; LayerSet layers = 0; double build_wait = 0;
         Json look_before;   // her CSS look when a breakdown that changes materials started, for a repaint
+        // Sequence take: the clock runs on frames so a cut lands within a frame of its beat.
+        double seq_clock = 0;
+        bool wall_clock = false;       // music is playing: the clock is real time since the first frame
+        std::chrono::steady_clock::time_point rolled_at{};
+        size_t shot_index = static_cast<size_t>(-1);   // the shot whose start has been applied
+        bool seq_looks = false, wore = false, dof_on = false;
+        Json own_look;                 // describe() before the take: outfit, variant, customize
+        Json look_now;                 // describe() of what she wears now, for control ids
+        size_t look_next = 0;
+        enum class Wear { Idle, FlashIn, Waiting } wearing = Wear::Idle;
+        double flash_from = -1, flash_release = -1, wear_sent_at = 0;
+        int wear_poll = 0;
+        // What to do before the take rolls: wear each look once, build the breakdown on the
+        // look it belongs to, end on the opening look.
+        struct Prep { bool build = false; std::string outfit, variant; bool own = false; };
+        std::deque<Prep> prep;
+        bool prep_sent = false, build_started = false;
+        double prep_wait = 0;
         // Action take: who she fights, smoothed positions, the fight's state, the beats.
         Json opponent; bool had_opponent = false, opponent_down = false, opponent_seen = false;
         double opponent_down_at = -1, opponent_health = -1, player_health = -1;
@@ -94,6 +115,15 @@ private:
     void run();
     void finish_take(const std::string& why, bool failed);
     void begin_countdown();
+    void begin_breakdown();
+    void prepare_looks();
+    void sequence_frame(const CssxFrame& frame);
+    void sequence_tick();
+    struct SeqView { Vec3 camera; Rotator rotation; double fov = 40, focus = 300; };
+    SeqView sequence_view(const SeqPose& pose) const;
+    Json wear_request(const std::string& outfit, const std::string& variant, bool own, bool persist) const;
+    bool worn(const Json& described, const std::string& outfit, const std::string& variant) const;
+    void apply_look(const SeqLook& look);
     void action_tick(double dt);
     void fire(Beat::On what);
     void apply_scene();
@@ -119,6 +149,8 @@ private:
     Guides guides_;
     Scene scene_;
     Breakdown breakdown_, breakdown_opponent_;
+    Audio audio_;
+    void roll();   // the take's first frame: clocks to zero, music on
     Typeface typeface_;   // the label font, shared by the guides and the callouts
     Callouts callouts_;
     // Breakdown labels. Sampled on the tick: where each labelled component is relative to
@@ -131,6 +163,11 @@ private:
     double label_age_ = 0;       // seconds since the last sample, for easing between two
     bool labels_live_ = false;
     bool pak_missing_ = false;   // read once on entering Cine World, for the menu
+    CssxFrame last_frame_{};     // the newest frame, for drawing outside render()
+    // Her own look while a sequence has her in others, kept until CSS confirms she wears it
+    // again. A take that starts before then must not mistake a borrowed look for hers.
+    Json own_look_owed_;
+    double own_look_check_ = 0;
     std::vector<std::string> signature_;   // lines of signature.txt, read on entering Cine World
     void load_signature();
     void sample_labels();

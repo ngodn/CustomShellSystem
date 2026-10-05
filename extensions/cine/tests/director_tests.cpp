@@ -34,6 +34,11 @@ struct Host {
     std::vector<Json> css_applies;
     bool css_present = true;
     int css_refuse_restores = 0;   // the next N restore applies fail like CSS between looks
+    // What she wears, for the wear action: a wear lands a couple of describes later.
+    std::string css_outfit = "own.outfit", css_variant = "base", css_wanted_outfit, css_wanted_variant;
+    int css_landing = 0;
+    std::vector<Json> css_wears;
+    size_t camera_places = 0;
     size_t requests = 0;
 
     // ---- A small modelled world, off for the older tests. Objects carry real properties, so
@@ -310,8 +315,17 @@ struct Host {
             if (j.at("service") != "css.customize" || j.value("version", 0) != 1) throw std::runtime_error("unexpected service call");
             if (!css_present) throw std::runtime_error("No service named css.customize is loaded");
             const auto& r = j.at("request");
+            if (r.at("action") == "wear") {
+                css_wears.push_back(r);
+                css_wanted_outfit = r.at("outfit"); css_wanted_variant = r.at("variant"); css_landing = 2;
+                return {{"outfit", css_wanted_outfit}, {"variant", css_wanted_variant}, {"busy", true}};
+            }
+            if (r.at("action") == "describe") {
+                if (css_landing > 0 && --css_landing == 0) { css_outfit = css_wanted_outfit; css_variant = css_wanted_variant; }
+            }
             if (r.at("action") == "describe")
-                return {{"palette", "original"}, {"customize", {{"palette", "original"}, {"values", {{"coat", {1, 0, 0, 1}}}}}},
+                return {{"shell", "shell"}, {"outfit", css_outfit}, {"variant", css_variant}, {"busy", css_landing > 0},
+                        {"palette", "original"}, {"customize", {{"palette", "original"}, {"values", {{"coat", {1, 0, 0, 1}}}}}},
                         {"palettes", Json::array({{{"id", "original"}}, {{"id", "crimson"}}, {{"id", "midnight"}}})},
                         {"controls", Json::array({{{"id", "coat"}, {"kind", "toggle"}}, {{"id", "cloth"}, {"kind", "color"}}})}};
             if (css_refuse_restores > 0 && r.value("commands", Json::array()).size() && r["commands"][0].value("action", std::string()) == "restore") {
@@ -338,7 +352,7 @@ struct Host {
             return {{"ReturnValue", object(id)}};
         }
         if (fn == "FinishSpawningActor" || fn == "K2_AttachToActor" || fn == "K2_SetRelativeLocationAndRotation") return {{"ReturnValue", true}};
-        if (fn == "K2_SetActorLocationAndRotation") { if (target == 1) { pos = cine::Vec3{a["NewLocation"]["X"], a["NewLocation"]["Y"], a["NewLocation"]["Z"]}; ++place_player; } return {{"ReturnValue", true}}; }
+        if (fn == "K2_SetActorLocationAndRotation") { if (cameras.contains(target)) ++camera_places; if (target == 1) { pos = cine::Vec3{a["NewLocation"]["X"], a["NewLocation"]["Y"], a["NewLocation"]["Z"]}; ++place_player; } return {{"ReturnValue", true}}; }
         if (fn == "MoveComponentTo") { if (fail_move) throw std::runtime_error("ProcessEvent failed"); ++move_component; return Json::object(); }
         if (fn == "SetViewTargetWithBlend") { view = id_of(a.at("NewViewTarget")); return Json::object(); }
         if (fn == "GetAllWidgetsOfClass") return {{"FoundWidgets", Json::array({object(50)})}};
@@ -954,6 +968,87 @@ int main(int argc, char** argv) {
             h.prop(Host::PlayerHealth, "_health") = 1.0;
             const auto left = unrestored(before, h.snapshot());
             expect(left.empty(), "and nothing is left behind: " + left);
+        }
+        {   // A sequence take: shots on a beat grid, looks worn under a flash, her own look back at the end.
+            Rig r(dir); r.host.populate(); auto& h = r.host;
+            h.css_present = true;
+            std::ofstream(dir / "presets" / "test-seq.cine.json") << Json{
+                {"schema", 1}, {"id", "test-seq"}, {"name", "Test sequence"}, {"kind", "sequence"}, {"reference", "capsule"},
+                {"tempo", {{"bpm", 120}, {"offset", 0.5}}}, {"end", 4},
+                {"shots", Json::array({
+                    {{"at", 1}, {"from", {{"azimuth", 0}, {"distance", 400}, {"height", 20}, {"aim", 10}, {"fov", 40}}}, {"to", {{"azimuth", 40}}}},
+                    {{"at", 2}, {"flow", true}, {"to", {{"azimuth", 220}}}, {"ease", "whip"}},
+                    {{"at", 2.5}, {"from", {{"azimuth", 180}, {"distance", 120}, {"height", 60}, {"aim", 60}, {"fov", 28}, {"roll", 10}}}},
+                    {{"at", 3.25}, {"from", {{"azimuth", 90}, {"distance", 500}, {"fov", 50}, {"roll", 0}}}, {"to", {{"distance", 300}}}}})},
+                {"looks", Json::array({
+                    {{"at", 1.5}, {"outfit", "a.outfit"}, {"variant", "one"}},
+                    {{"at", 2}, {"palette", "crimson"}},
+                    {{"at", 3}, {"outfit", "b.outfit"}, {"variant", "two"}}})}}.dump(2);
+            r.ext->event({{"id", "reload"}});
+            r.step();
+            const auto before = h.snapshot();
+            r.ext->event({{"id", "preset"}, {"value", "test-seq"}});
+            r.ext->event({{"id", "countdown"}, {"value", 0}});
+            r.ext->event({{"id", "enter"}});
+            r.press("F8");
+            for (int i = 0; i < 120 && !has(r.status(), "Rolling"); ++i) r.step();
+            expect(has(r.status(), "Rolling"), "the sequence rolls after its looks are prepared: " + r.status());
+            // Before the camera rolls every look was worn once, and she is back in her own.
+            expect(h.css_wears.size() == 3 && h.css_wears[0].at("outfit") == "a.outfit" && h.css_wears[1].at("outfit") == "b.outfit"
+                   && h.css_wears[2].at("outfit") == "own.outfit" && h.css_wears[2].contains("customize") && h.css_wears[2].value("persist", true) == false,
+                   "each look is worn once while the take prepares, ending on the opening look: " + std::to_string(h.css_wears.size()));
+            expect(h.css_outfit == "own.outfit", "she opens in her own look");
+            const auto placed = h.camera_places;
+            const auto applies = h.css_applies.size();
+            // 120 BPM, bar 1 at 0.5 s: bars 1.5, 2, 2.5, 3, 3.25 are at 1.5, 2.5, 3.5, 4.5, 5.0 s; the end at 6.5 s.
+            r.steps(22);   // about 2.0 s in: past the first wear
+            expect(h.css_wears.size() == 4 && h.css_wears[3].at("outfit") == "a.outfit" && h.css_outfit == "a.outfit", "the first look is worn on its beat");
+            expect(h.camera_places == placed, "no cut yet: the first two shots are one flowing move");
+            r.steps(7);    // about 2.9 s: the palette step at 2.5 s
+            expect(h.css_applies.size() == applies + 1 && h.css_applies.back()["commands"][0].value("palette", std::string()) == "crimson", "a palette step is applied on its beat");
+            r.steps(10);   // about 3.9 s: the cut at 3.5 s
+            expect(h.camera_places == placed + 1, "a cut places the camera at once");
+            r.steps(14);   // about 5.3 s: the second wear (4.5 s) and the second cut (5.0 s)
+            expect(h.css_wears.size() == 5 && h.css_outfit == "b.outfit" && h.camera_places == placed + 2, "the second look and the second cut land");
+            expect(h.move_component > 30, "between cuts the camera is driven every tick");
+            r.steps(20);
+            expect(h.cameras.empty() && h.view == 1 && has(r.status(), "Take finished"), "the sequence ends on its last bar: " + r.status());
+            expect(h.css_wears.size() == 6 && h.css_wears.back().at("outfit") == "own.outfit" && h.css_wears.back().value("persist", false) && h.css_wears.back().contains("customize"),
+                   "her own outfit and customization go back and are saved");
+            const auto left = unrestored(before, h.snapshot());
+            expect(left.empty(), "and the world is as it was: " + left);
+            // Cancelled in the middle of a look: still her own look afterwards.
+            h.css_wears.clear();
+            r.press("F8");
+            for (int i = 0; i < 120 && !has(r.status(), "Rolling"); ++i) r.step();
+            r.steps(24);
+            r.press("F9");
+            expect(!h.css_wears.empty() && h.css_wears.back().at("outfit") == "own.outfit" && h.css_wears.back().value("persist", false),
+                   "a cancelled sequence puts her own look back too: " + std::to_string(h.css_wears.size()) + " wears, last " + (h.css_wears.empty() ? std::string("none") : h.css_wears.back().dump()) + ", status " + r.status());
+        }
+        {   // A sequence without CSS still plays its camera; one that changes outfit under a breakdown is refused.
+            Rig r(dir); r.host.populate(); auto& h = r.host;
+            h.css_present = false;
+            r.step();
+            r.ext->event({{"id", "preset"}, {"value", "test-seq"}});
+            r.ext->event({{"id", "countdown"}, {"value", 0}});
+            r.ext->event({{"id", "enter"}});
+            r.press("F8");
+            for (int i = 0; i < 60 && !has(r.status(), "Rolling"); ++i) r.step();
+            expect(has(r.status(), "Looks off") && h.css_wears.empty(), "without CSS the looks are off and said so: " + r.status());
+            r.steps(70);
+            expect(h.cameras.empty() && has(r.status(), "Take finished"), "the camera still plays the whole sequence");
+            auto j = Json::parse(std::ifstream(dir / "presets" / "test-seq.cine.json"));
+            j["id"] = "test-seq-bad";
+            j["breakdown"] = {{"steps", Json::array({{{"at", 1.25}, {"layers", {"clay"}}}, {{"at", 3.5}, {"layers", Json::array()}}})}};
+            std::ofstream(dir / "presets" / "test-seq-bad.cine.json") << j.dump(2);
+            h.css_present = true;
+            r.ext->event({{"id", "reload"}});
+            r.ext->event({{"id", "preset"}, {"value", "test-seq-bad"}});
+            r.ext->event({{"id", "breakdown"}, {"value", "preset"}});
+            r.press("F8");
+            r.steps(4);
+            expect(has(r.error(), "changes outfit during its breakdown") && h.cameras.empty(), "an outfit change under breakdown layers is refused before anything moves: " + r.error());
         }
         {   // Bad menu input is refused with the error kept for the menu.
             Rig r(dir);

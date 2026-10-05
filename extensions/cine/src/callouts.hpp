@@ -71,6 +71,8 @@ public:
                 const std::string& caption, const std::vector<std::string>& signature);
     void hide();
     void forget();   // the world changed: the host dropped our layers
+    // A white full-screen flash, 0 (off) to 1. Sits above everything else CINE draws.
+    void flash(const CssxFrame& frame_data, double alpha);
 private:
     struct Slot { CssxLayer text = 0, bar = 0, shelf = 0, leader = 0, head[2]{}; std::string shown; int side = -1; };
     void build();
@@ -88,6 +90,8 @@ private:
     Slot slots_[max_callouts];
     CssxLayer caption_ = 0, caption_bar_ = 0, caption_accent_ = 0;
     CssxLayer sign_[max_signature_lines]{}, sign_accent_ = 0;
+    CssxLayer flash_ = 0;
+    double flash_alpha_ = -1;
     std::string caption_shown_, caption_text_;
     std::vector<std::string> sign_source_, sign_fitted_;
     double sign_width_ = -1, sign_scale_ = 0;

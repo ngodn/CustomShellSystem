@@ -176,6 +176,14 @@ Preset Preset::parse(const Json& j) {
             p.look.push_back(std::move(step));
         }
     }
+    if (j.contains("audio")) {
+        // A file inside the extension folder, never a path out of it.
+        const auto file = text(j, "audio", 160, true);
+        const bool wav = file.ends_with(".wav"), mp3 = file.ends_with(".mp3");
+        if ((!wav && !mp3) || file.find("..") != std::string::npos || file.find(':') != std::string::npos || file.front() == '/' || file.front() == '\\')
+            throw std::invalid_argument("'audio' must be a .wav or .mp3 file inside the CINE folder");
+        p.audio = file;
+    }
     if (j.contains("breakdown")) {
         const auto& breakdown = j.at("breakdown");
         if (!breakdown.is_object() || !breakdown.contains("steps") || !breakdown.at("steps").is_array() || breakdown.at("steps").size() > 32)

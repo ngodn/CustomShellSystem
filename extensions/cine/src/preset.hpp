@@ -79,6 +79,7 @@ struct Preset {
     std::vector<BreakdownStep> breakdown;   // optional, any kind
     ActionShot action;           // Action only
     Sequence sequence;           // Sequence only: shots and looks on a tempo grid
+    std::string audio;           // optional: a .wav or .mp3 in the extension folder, played from the take's first frame
     bool look_ends_on_own = true;   // rebuild the modder's own look for the final shot
     static Preset parse(const Json&);
 };
