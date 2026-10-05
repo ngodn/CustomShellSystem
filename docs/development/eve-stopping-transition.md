@@ -1,6 +1,6 @@
 # Eve stopping transition
 
-October 6, 2026. Candidate correction, built but not installed or accepted.
+October 6, 2026. Candidate correction installed for the user to test before recording.
 Part of the [shared animation goal](../../extensions/cine/docs/ANIMATION-PORT-GOAL.md).
 
 Questman reports a brief jog/back-foot lift when stopping with Eve locomotion
@@ -50,3 +50,13 @@ controller input, aim/attack interruption, revival/travel and native movement.
 Measure frame times and preserve Eve, Unholy Genessa and Commander White's
 post-process/physics behavior. If a phase or native-stop issue remains, fix
 that separately before claiming the report resolved.
+
+Recording trial installed after the user closed the game on October 6. The core
+SHA-256 is `9b983b7441557c1791e81bdc537f8120609bb1cba4f76534091a35a03530b74f`.
+The previous selector and DLL are backed up in
+`work/cine-animation-port/recording-trial/`; `deployment.json` records the install.
+The four animation/skeleton suites passed immediately before installation, and
+the Windows core was current. Loader, outfits, CINE and saved settings were
+unchanged. The installed loader matches beta.11 release metadata and host ABI 2;
+its older loader-contract DLL checksum is stale. Live stopping acceptance is
+still pending. The separate shared animation assets have not been installed.

@@ -207,3 +207,11 @@ DumbDumb/Iris Out investigation: both clips declare skeleton GUID
 skeleton. The supplied 200/801/camera Blender rigs do not identify the seven
 extra indices. Preserve their full track audits; do not invent names or silently
 omit those tracks. Matching author skeleton/source data remains unresolved.
+
+Recording-priority update: the user requested early deployment of the stopping
+fix. Installed CSS core `9b983b7441557c17` after confirming the game was closed,
+with previous DLL/selector backed up and saved settings unchanged. Live visual
+acceptance is pending. No new shared animation assets are installed. All 57
+resolved sequences have now been duplicated into `/Game/CSS/Locomotion/Eve/`
+with exact authored-key comparisons; fresh reload and cook checks are next.
+The two unresolved dances and the remaining full goal stay active.
