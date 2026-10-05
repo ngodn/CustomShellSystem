@@ -52,7 +52,7 @@ for entry in bindings:
     if not result:
         raise ValueError('Empty evaluation result: ' + entry['mesh'])
     result = json.loads(result)
-    if len(result['cases']) != 7:
+    if len(result['cases']) != 9:
         raise ValueError('Incomplete evaluation cases')
     results.append(result)
     report.write_text(json.dumps(dict(complete=False, results=results), indent=2) + '\n')

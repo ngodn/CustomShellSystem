@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[3]
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('work', type=Path)
-    parser.add_argument('--mode', choices=('create', 'verify', 'evaluate'), required=True)
+    parser.add_argument('--mode', choices=('create', 'verify', 'evaluate', 'cook'), required=True)
     parser.add_argument('--label', required=True)
     parser.add_argument('--mesh', help='One audited mesh for an isolated evaluation')
     args = parser.parse_args()
@@ -40,9 +40,24 @@ def main():
         bindings += ['--ro-bind', source, source, '--ro-bind', source, destination]
     position = command.index('--')
     command[position:position] = bindings
-    script = 'evaluate_performance_layers.py' if args.mode == 'evaluate' else 'stage_performance_layers.py'
-    command += ['-run=pythonscript', '-script=' + str(Path(__file__).with_name(script)),
-                '-abslog=' + str(work / (args.label + '-engine.log'))]
+    if args.mode == 'cook':
+        output = work / (args.label + '-cooked')
+        if output.exists():
+            raise FileExistsError(output)
+        packages = ['/Game/CSS/Locomotion/Adapters/ABP_' + name
+                    for name in ('Eve', 'EveBikini', 'EveKnit', 'Genessa', 'CommanderWhite')]
+        for package in packages:
+            if not (content.parent / (package.removeprefix('/Game/') + '.uasset')).is_file():
+                raise ValueError('Missing adapter: ' + package)
+        listing = work / (args.label + '-cook.txt')
+        with listing.open('x') as file:
+            file.write('\n'.join(packages) + '\n')
+        command += ['-run=CSSCookAssets', '-Cook', '-WindowsRoot=C:/CSS',
+                    '-List=' + str(listing), '-Output=' + str(output)]
+    else:
+        script = 'evaluate_performance_layers.py' if args.mode == 'evaluate' else 'stage_performance_layers.py'
+        command += ['-run=pythonscript', '-script=' + str(Path(__file__).with_name(script))]
+    command += ['-abslog=' + str(work / (args.label + '-engine.log'))]
     environment = os.environ.copy()
     environment['CSS_ANIM_WORK'] = str(work)
     environment['CSS_PERFORMANCE_MODE'] = args.mode

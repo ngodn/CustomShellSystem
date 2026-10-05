@@ -63,8 +63,8 @@ FString UCSSPerformanceLibrary::EvaluatePerformanceLayer(USkeletalMesh* Mesh, UA
     auto* Sequence = FindFProperty<FObjectPropertyBase>(Instance->GetClass(), TEXT("CSSPerformanceSequence"));
     auto* Enabled = FindFProperty<FBoolProperty>(Instance->GetClass(), TEXT("CSSPerformanceEnabled"));
     auto* Time = FindFProperty<FFloatProperty>(Instance->GetClass(), TEXT("CSSPerformanceTime"));
-    auto* BlendOut = FindFProperty<FFloatProperty>(Instance->GetClass(), TEXT("CSSPerformanceBlendOut"));
-    if (!Sequence || !Enabled || !Time || !BlendOut) return Fail(TEXT("Missing performance controls"));
+    auto* Weight = FindFProperty<FFloatProperty>(Instance->GetClass(), TEXT("CSSPerformanceWeight"));
+    if (!Sequence || !Enabled || !Time || !Weight) return Fail(TEXT("Missing performance controls"));
     const auto& Reference = Mesh->GetRefSkeleton();
     TSet<int32> BodyBones;
     for (const TCHAR* Name : {TEXT("root"), TEXT("pelvis"), TEXT("spine_01"), TEXT("spine_02"), TEXT("spine_03"),
@@ -76,34 +76,40 @@ FString UCSSPerformanceLibrary::EvaluatePerformanceLayer(USkeletalMesh* Mesh, UA
         if (Bone == INDEX_NONE) return Fail(TEXT("Missing audited body bone"));
         BodyBones.Add(Bone);
     }
-    struct FCase { const TCHAR* Name; bool Enabled, HasClip; float Fraction, ExitBlend; };
+    struct FCase { const TCHAR* Name; bool Enabled, HasClip; float Fraction, Weight; bool Moving = false; };
     const FCase Cases[] {
-        {TEXT("inactive"), false, false, 0.f, .18f},
-        {TEXT("active_start"), true, true, 0.f, .18f},
-        {TEXT("active_seek"), true, true, .37f, .18f},
-        {TEXT("held_end"), true, true, 1.f, .18f},
-        {TEXT("stopped"), false, true, 1.f, .18f},
-        {TEXT("null_clip_guard"), true, false, .5f, 0.f},
-        {TEXT("restored"), false, false, 0.f, 0.f}
+        {TEXT("inactive"), false, false, 0.f, 0.f},
+        {TEXT("active_start"), true, true, 0.f, 1.f},
+        {TEXT("active_seek"), true, true, .37f, 1.f},
+        {TEXT("held_end"), true, true, 1.f, 1.f},
+        {TEXT("stopped"), false, true, 1.f, 0.f},
+        {TEXT("null_clip_guard"), true, false, .5f, 1.f},
+        {TEXT("restored"), false, false, 0.f, 0.f},
+        {TEXT("zero_weight"), true, true, .37f, 0.f},
+        {TEXT("full_clip"), true, true, 0.f, 1.f, true}
     };
     TArray<TSharedPtr<FJsonValue>> Results;
     for (const auto& Test : Cases)
     {
-        const bool Active = Test.Enabled && Test.HasClip;
+        const bool Active = Test.Enabled && Test.HasClip && Test.Weight > 0.f;
         const float ClipTime = Test.Fraction * PerformanceClip->GetPlayLength();
         Sequence->SetObjectPropertyValue_InContainer(Instance, Test.HasClip ? PerformanceClip : nullptr);
         Time->SetPropertyValue_InContainer(Instance, ClipTime);
-        BlendOut->SetPropertyValue_InContainer(Instance, Test.ExitBlend);
+        Weight->SetPropertyValue_InContainer(Instance, Test.Weight);
         Enabled->SetPropertyValue_InContainer(Instance, Test.Enabled);
         Original->SetAnimation(Active ? PerformanceClip : BaseClip);
         Original->Stop();
         double BodyPosition = 0, BodyAngle = 0, AllPosition = 0, AllAngle = 0;
         FString WorstBody, WorstAll;
         constexpr float Delta = 1.f / 60.f;
-        for (int32 Frame = 0; Frame < 180; ++Frame)
+        const int32 Frames = Test.Moving ? FMath::CeilToInt(PerformanceClip->GetPlayLength() / Delta) + 1 : 180;
+        for (int32 Frame = 0; Frame < Frames; ++Frame)
         {
-            Original->SetPosition(Active ? ClipTime : BaseClip->GetPlayLength() * .63f, false);
-            Candidate->SetPosition(BaseClip->GetPlayLength() * .63f, false);
+            const float PerformanceTime = Test.Moving ? FMath::Min(Frame * Delta, PerformanceClip->GetPlayLength()) : ClipTime;
+            const float BaseTime = Test.Moving ? FMath::Fmod(Frame * Delta, BaseClip->GetPlayLength()) : BaseClip->GetPlayLength() * .63f;
+            Time->SetPropertyValue_InContainer(Instance, PerformanceTime);
+            Original->SetPosition(Active ? PerformanceTime : BaseTime, false);
+            Candidate->SetPosition(BaseTime, false);
             for (auto* Component : {Original, Candidate})
             {
                 Component->TickAnimation(Delta, true);
@@ -118,7 +124,7 @@ FString UCSSPerformanceLibrary::EvaluatePerformanceLayer(USkeletalMesh* Mesh, UA
                 if (A[Bone].ContainsNaN() || B[Bone].ContainsNaN() || !B[Bone].GetRotation().IsNormalized())
                     return Fail(TEXT("Invalid evaluated transform"));
                 // Compare after the transition and initial secondary-motion settling.
-                if (Frame < 150) continue;
+                if (!Test.Moving && Frame < 150) continue;
                 const double Position = FVector::Distance(A[Bone].GetTranslation(), B[Bone].GetTranslation());
                 const double Angle = A[Bone].GetRotation().AngularDistance(B[Bone].GetRotation());
                 if (Position > AllPosition) { AllPosition = Position; WorstAll = Reference.GetBoneName(Bone).ToString(); }
@@ -130,6 +136,8 @@ FString UCSSPerformanceLibrary::EvaluatePerformanceLayer(USkeletalMesh* Mesh, UA
         }
         auto Result = MakeShared<FJsonObject>();
         Result->SetStringField(TEXT("case"), Test.Name);
+        Result->SetNumberField(TEXT("frames"), Frames);
+        Result->SetBoolField(TEXT("moving"), Test.Moving);
         Result->SetNumberField(TEXT("time"), ClipTime);
         Result->SetNumberField(TEXT("body_position_cm"), BodyPosition);
         Result->SetNumberField(TEXT("body_angle_rad"), BodyAngle);

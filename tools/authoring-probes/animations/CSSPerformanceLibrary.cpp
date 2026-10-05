@@ -4,6 +4,7 @@
 #include "Animation/AnimSequence.h"
 #include "AnimGraphNode_BlendListByBool.h"
 #include "AnimGraphNode_SequenceEvaluator.h"
+#include "AnimGraphNode_TwoWayBlend.h"
 #include "AssetToolsModule.h"
 #include "EdGraphSchema_K2.h"
 #include "IAssetTools.h"
@@ -93,7 +94,7 @@ UAnimBlueprint* UCSSPerformanceLibrary::CreatePerformanceLayer(UAnimBlueprint* S
     if (!FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CSSPerformanceSequence"), SequenceType) ||
         !FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CSSPerformanceEnabled"), BoolType, TEXT("false")) ||
         !FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CSSPerformanceTime"), FloatType, TEXT("0.0")) ||
-        !FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CSSPerformanceBlendOut"), FloatType, TEXT("0.18")))
+        !FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CSSPerformanceWeight"), FloatType, TEXT("0.0")))
         return Fail(TEXT("Cannot add performance controls"));
     UEdGraph* Graph = nullptr;
     for (auto Candidate : Blueprint->FunctionGraphs)
@@ -121,18 +122,14 @@ UAnimBlueprint* UCSSPerformanceLibrary::CreatePerformanceLayer(UAnimBlueprint* S
     for (auto& Pin : Evaluator->ShowPinForProperties)
         if (Pin.PropertyName == TEXT("Sequence") || Pin.PropertyName == TEXT("ExplicitTime")) Pin.bShowPin = true;
     Evaluator->ReconstructNode();
-    auto* Blend = Add<UAnimGraphNode_BlendListByBool>(Graph);
-    if (!NodeSetting(FAnimNode_BlendListBase::StaticStruct(), &Blend->Node,
-                     TEXT("ChildUpateMode"), TEXT("ResetChildOnActivate")))
+    auto* Weighted = Add<UAnimGraphNode_TwoWayBlend>(Graph);
+    if (!NodeSetting(FAnimNode_TwoWayBlend::StaticStruct(), &Weighted->BlendNode,
+                     TEXT("bResetChildOnActivation"), TEXT("true")))
         return Fail(TEXT("Cannot configure activation"));
-    auto* Enter = Blend->FindPin(TEXT("BlendTime_0"));
-    auto* Exit = Blend->FindPin(TEXT("BlendTime_1"));
-    if (!Enter || !Exit) return Fail(TEXT("Missing transition pins"));
-    Enter->DefaultValue = TEXT("0.18");
     auto* Sequence = Read(Graph, TEXT("CSSPerformanceSequence"));
     auto* Enabled = Read(Graph, TEXT("CSSPerformanceEnabled"));
     auto* Time = Read(Graph, TEXT("CSSPerformanceTime"));
-    auto* BlendOut = Read(Graph, TEXT("CSSPerformanceBlendOut"));
+    auto* Weight = Read(Graph, TEXT("CSSPerformanceWeight"));
     auto Call = [&](UClass* Owner, FName Name) {
         auto* Node = Add<UK2Node_CallFunction>(Graph);
         Node->SetFromFunction(Owner->FindFunctionByName(Name));
@@ -143,17 +140,20 @@ UAnimBlueprint* UCSSPerformanceLibrary::CreatePerformanceLayer(UAnimBlueprint* S
     // avoids running UObject validity checks on an animation worker.
     auto* Valid = Call(UKismetMathLibrary::StaticClass(), TEXT("NotEqual_ObjectObject"));
     auto* Both = Call(UKismetMathLibrary::StaticClass(), TEXT("BooleanAND"));
+    auto* Guard = Call(UKismetMathLibrary::StaticClass(), TEXT("SelectFloat"));
+    Guard->FindPin(TEXT("B"))->DefaultValue = TEXT("0.0");
     IdleOutput->BreakLinkTo(Destination);
     if (!Link(Graph, Sequence->FindPin(TEXT("CSSPerformanceSequence")), Evaluator->FindPin(TEXT("Sequence"))) ||
         !Link(Graph, Time->FindPin(TEXT("CSSPerformanceTime")), Evaluator->FindPin(TEXT("ExplicitTime"))) ||
         !Link(Graph, Sequence->FindPin(TEXT("CSSPerformanceSequence")), Valid->FindPin(TEXT("A"))) ||
         !Link(Graph, Enabled->FindPin(TEXT("CSSPerformanceEnabled")), Both->FindPin(TEXT("A"))) ||
         !Link(Graph, Valid->FindPin(TEXT("ReturnValue")), Both->FindPin(TEXT("B"))) ||
-        !Link(Graph, Both->FindPin(TEXT("ReturnValue")), Blend->FindPin(TEXT("bActiveValue"))) ||
-        !Link(Graph, BlendOut->FindPin(TEXT("CSSPerformanceBlendOut")), Exit) ||
-        !Link(Graph, Evaluator->FindPin(TEXT("Pose")), Blend->FindPin(TEXT("BlendPose_0"))) ||
-        !Link(Graph, IdleOutput, Blend->FindPin(TEXT("BlendPose_1"))) ||
-        !Link(Graph, Blend->FindPin(TEXT("Pose")), Destination))
+        !Link(Graph, Both->FindPin(TEXT("ReturnValue")), Guard->FindPin(TEXT("bPickA"))) ||
+        !Link(Graph, Weight->FindPin(TEXT("CSSPerformanceWeight")), Guard->FindPin(TEXT("A"))) ||
+        !Link(Graph, Guard->FindPin(TEXT("ReturnValue")), Weighted->FindPin(TEXT("Alpha"))) ||
+        !Link(Graph, IdleOutput, Weighted->FindPin(TEXT("A"))) ||
+        !Link(Graph, Evaluator->FindPin(TEXT("Pose")), Weighted->FindPin(TEXT("B"))) ||
+        !Link(Graph, Weighted->FindPin(TEXT("Pose")), Destination))
         return Fail(TEXT("Cannot connect performance branch"));
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     FCompilerResultsLog Results;
@@ -195,7 +195,7 @@ FString UCSSPerformanceLibrary::VerifyPerformanceLayer(UAnimBlueprint* Source, U
         UEdGraph* Copy = nullptr;
         for (auto Candidate : Layer->FunctionGraphs)
             if (Candidate->GetFName() == Original->GetFName()) Copy = Candidate.Get();
-        if (!Copy || Copy->Nodes.Num() != Original->Nodes.Num() + (Original->GetFName() == TEXT("AnimGraph") ? 8 : 0))
+        if (!Copy || Copy->Nodes.Num() != Original->Nodes.Num() + (Original->GetFName() == TEXT("AnimGraph") ? 9 : 0))
             return TEXT("ERROR: unexpected graph layout");
         for (auto OriginalNode : Original->Nodes)
         {
@@ -219,10 +219,10 @@ FString UCSSPerformanceLibrary::VerifyPerformanceLayer(UAnimBlueprint* Source, U
     auto* Enabled = FindFProperty<FBoolProperty>(Layer->GeneratedClass.Get(), TEXT("CSSPerformanceEnabled"));
     auto* Sequence = FindFProperty<FObjectPropertyBase>(Layer->GeneratedClass.Get(), TEXT("CSSPerformanceSequence"));
     auto* Time = FindFProperty<FFloatProperty>(Layer->GeneratedClass.Get(), TEXT("CSSPerformanceTime"));
-    auto* BlendOut = FindFProperty<FFloatProperty>(Layer->GeneratedClass.Get(), TEXT("CSSPerformanceBlendOut"));
+    auto* Weight = FindFProperty<FFloatProperty>(Layer->GeneratedClass.Get(), TEXT("CSSPerformanceWeight"));
     if (!Enabled || Enabled->GetPropertyValue_InContainer(After) || !Sequence ||
         Sequence->GetObjectPropertyValue_InContainer(After) || !Time || Time->GetPropertyValue_InContainer(After) != 0.f ||
-        !BlendOut || !FMath::IsNearlyEqual(BlendOut->GetPropertyValue_InContainer(After), .18f))
+        !Weight || Weight->GetPropertyValue_InContainer(After) != 0.f)
         return TEXT("ERROR: invalid inactive defaults");
     return FString::Printf(TEXT("PASS: %d existing CSS controls, %d original graph nodes, matching skeleton, inactive defaults"), Controls, Nodes);
 }

@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 import shutil
 import sys
 
@@ -21,8 +22,12 @@ def digest(path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('work', type=Path)
-    parser.add_argument('--dependency', type=Path, required=True,
-                        help='Verified outfit trio supplying Shared/SKEL_Base')
+    parser.add_argument('--dependency', type=Path, required=True, action='append',
+                        help='Verified outfit trio supplying declared dependencies; repeat for additional outfits')
+    parser.add_argument('--output-name', default='pack')
+    parser.add_argument('--adapter-cook', help='Successful adapter cook label from run_performance_layers.py')
+    parser.add_argument('--adapter-evaluation', help='Successful nine-mesh evaluated-pose label')
+    parser.add_argument('--adapter-bindings', type=Path, help='Independent cooked/source comparison receipt')
     args = parser.parse_args()
     work = args.work.resolve(strict=True)
     if json.loads((work / 'cook-exit.json').read_text())['exit_code'] != 0:
@@ -37,12 +42,60 @@ def main():
     verified = {entry['asset'].split('.')[0] for entry in verification['results']}
     if len(packages) != len(set(packages)) or set(packages) != expected or expected != verified:
         raise ValueError('Cook, catalog and fresh readback disagree')
-    dependency = args.dependency.resolve(strict=True)
-    if dependency.suffix != '.utoc':
-        raise ValueError('Dependency must be a .utoc with .ucas companion')
-    dependency_files = [dependency, dependency.with_suffix('.ucas')]
+    for value in (args.output_name, args.adapter_cook, args.adapter_evaluation):
+        if value is not None and not re.fullmatch(r'[a-z0-9-]{1,48}', value):
+            raise ValueError('Expected a short work label')
+    if len({bool(args.adapter_cook), bool(args.adapter_evaluation), bool(args.adapter_bindings)}) != 1:
+        raise ValueError('Adapter cook, evaluation and binding readback are required together')
+    adapter_packages = set()
+    if args.adapter_cook:
+        if json.loads((work / (args.adapter_cook + '-exit.json')).read_text())['exit_code'] != 0:
+            raise ValueError('Adapter cook did not succeed')
+        evaluated = json.loads((work / (args.adapter_evaluation + '-result.json')).read_text())
+        if evaluated.get('complete') is not True or evaluated.get('body_passed') is not True or len(evaluated['results']) != 9:
+            raise ValueError('Nine-mesh adapter evaluation did not pass')
+        if any(not any(case['case'] == 'full_clip' and case['body_passed'] for case in row['cases'])
+               for row in evaluated['results']):
+            raise ValueError('Full moving-clip comparison is required on every mesh')
+        adapter_packages = {'/Game/CSS/Locomotion/Adapters/ABP_' + name
+                            for name in ('Eve', 'EveBikini', 'EveKnit', 'Genessa', 'CommanderWhite')}
+        if set((work / (args.adapter_cook + '-cook.txt')).read_text().splitlines()) != adapter_packages:
+            raise ValueError('Unexpected cooked adapter set')
+        if {row['layer'].split('.')[0] for row in evaluated['results']} != adapter_packages:
+            raise ValueError('Evaluated adapter set differs from cook')
+        for package in adapter_packages:
+            relative = '/Content/' + package.removeprefix('/Game/') + '.uasset'
+            inputs = [(path, checksum) for path, checksum in evaluated['protected'].items() if path.endswith(relative)]
+            if len(inputs) != 1 or digest(Path(inputs[0][0])) != inputs[0][1]:
+                raise ValueError('Evaluated editor graph has changed: ' + package)
+        packages += sorted(adapter_packages)
+    dependency_files = []
+    for path in args.dependency:
+        dependency = path.resolve(strict=True)
+        if dependency.suffix != '.utoc':
+            raise ValueError('Dependency must be a .utoc with .ucas companion')
+        dependency_files += [dependency, dependency.with_suffix('.ucas')]
+    if len({path.name for path in dependency_files}) != len(dependency_files):
+        raise ValueError('Dependencies have duplicate container filenames')
     dependency_hashes = {str(path): digest(path) for path in dependency_files}
-    out = work / 'pack'
+    if args.adapter_bindings:
+        bindings = json.loads(args.adapter_bindings.read_text())
+        if bindings.get('passed') is not True or bindings.get('contract') != 'explicit-weight-v1':
+            raise ValueError('Cooked adapter comparison did not pass')
+        for path, checksum in bindings['evidence'].items():
+            if digest(Path(path)) != checksum:
+                raise ValueError('Adapter comparison evidence changed: ' + path)
+        adapters = bindings['adapters']
+        if len(adapters) != 5 or {entry['target_class'].split('.')[0] for entry in adapters} != adapter_packages:
+            raise ValueError('Adapter metadata differs from the cooked set')
+        for entry in adapters:
+            candidates = [path for path in dependency_files if path.suffix == '.utoc' and
+                          dependency_hashes[str(path)] == entry['source_toc_sha256'] and
+                          path.with_suffix('.ucas').stat().st_size == entry['source_bulk_bytes']]
+            if len(candidates) != 1:
+                raise ValueError('Adapter source revision is absent or ambiguous')
+        library['adapters'] = adapters
+    out = work / args.output_name
     out.mkdir(exist_ok=False)
     converter = Converter(ROOT / 'build/retoc-css-target/release/retoc', DEFAULT_REPAK, out)
     stage = out / 'stage'
@@ -53,13 +106,15 @@ def main():
             raise ValueError(f'Unexpected package: {package}')
         relative = package.removeprefix('/Game/')
         for suffix in ('.uasset', '.uexp'):
-            source = work / 'cooked/CSSAuthoring/Content' / (relative + suffix)
+            cook_root = (args.adapter_cook + '-cooked') if package in adapter_packages else 'cooked'
+            source = work / cook_root / 'CSSAuthoring/Content' / (relative + suffix)
             destination = stage / 'MortalShell2/Content' / (relative + suffix)
             windows_destination('C:/CSS', str(destination.relative_to(stage)))
             if suffix == '.uasset':
                 info = asset_info(source.read_bytes())
-                if info['package'] != package or not any(e['class'] == 'AnimSequence' for e in info['exports']):
-                    raise ValueError(f'Not the expected cooked sequence: {package}')
+                expected_class = 'AnimBlueprintGeneratedClass' if package in adapter_packages else 'AnimSequence'
+                if info['package'] != package or not any(e['class'] == expected_class for e in info['exports']):
+                    raise ValueError(f'Not the expected cooked animation asset: {package}')
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, destination)
             payloads[str(destination.relative_to(stage))] = digest(source)
@@ -99,6 +154,7 @@ def main():
     if any(digest(Path(path)) != checksum for path, checksum in dependency_hashes.items()):
         raise ValueError('Dependency changed during verification')
     report = dict(passed=True, packages=len(packages), exact_export_payloads=len(packages),
+                  adapters=sorted(adapter_packages), adapter_evaluation=args.adapter_evaluation,
                   dependencies=dependency_hashes,
                   required_skeleton='/Game/CSS/Shared/SKEL_Base.SKEL_Base',
                   files={path.name: digest(path) for path in trio.iterdir()},

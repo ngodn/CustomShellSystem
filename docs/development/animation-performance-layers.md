@@ -1,6 +1,7 @@
 # Explicit-time performance layers
 
-2026-10-06. Editor candidates only. Not cooked, integrated or installed.
+2026-10-06. Cooked private candidates with a native binding service. Not installed
+or accepted in game; CSS/CINE user controls remain unfinished.
 
 Five isolated post-process blueprints compile without Blueprint warnings and
 pass fresh-process contract checks. Their original skeleton, CSS control
@@ -25,7 +26,7 @@ secondary-motion chain. It adds four reflected controls:
 - `CSSPerformanceSequence`: AnimSequence, null by default.
 - `CSSPerformanceEnabled`: false by default.
 - `CSSPerformanceTime`: explicit seconds, zero by default.
-- `CSSPerformanceBlendOut`: 0.18 seconds by default; runtime may request immediate interruption.
+- `CSSPerformanceWeight`: explicit blend alpha, zero by default.
 
 A SequenceEvaluator samples explicit time without advancing its own clock,
 extracting root motion or running notifies. Runtime must supply the clock,
@@ -35,6 +36,13 @@ node's internal accumulator or evaluated bone buffers. See Epic's
 and the installed 5.6.1 `AnimNode_SequenceEvaluator.h`.
 
 The branch requires both Enabled and a non-null reflected sequence reference.
+The explicit weight drives a Two Way Blend. A thread-safe SelectFloat chooses
+zero weight when the branch is disabled or its sequence is null. The original
+idle output connects once to the base pose input; it is not fanned out to
+multiple pose consumers. An earlier draft with two consumers failed the
+zero-weight body comparison and was rejected before cooking or installation.
+The smooth entry/exit weight comes from the same clock as sequence time, so
+a second Unreal blend timer cannot outlive the retained sequence.
 The initial IsValid graph call failed the strict compile because it was not
 marked thread-safe. The accepted graph uses KismetMathLibrary's pointer
 comparison, so threaded animation remains enabled. Runtime must still validate
@@ -46,11 +54,15 @@ CSS default values and original pin defaults, then checks the new inactive
 defaults and matching target skeleton. This is a structural check, not evidence
 of equivalent evaluated physics.
 
-Evidence under `work/cine-animation-port/shared-v1/`:
+Current evidence under `work/cine-animation-port/shared-v1/`:
 
-- `performance-layers.json`, `performance-layers-verify.json`
-- `performance-stage4-console.log`, `performance-stage4-exit.json`
-- `performance-verify2-console.log`, `performance-verify2-exit.json`
+- `performance-weight-stage2-result.json`: five warning-free graph compiles.
+- `performance-motion-eval1-result.json` and `performance-motion-eval1-exit.json`:
+  81 evaluated cases and successful commandlet exit.
+- `performance-weight-cook1-exit.json`: successful Windows-target adapter cook.
+- `performance-adapter-bindings.json`: independent cooked/source comparison.
+- `pack-with-adapters-v2/verification.json`: 62 exact export round trips,
+  consisting of 57 sequences and five adapters, with verified binding metadata.
 - `authoring-source-links.json` records the read-only commandlet source locations.
 
 The authoring source graphs and all five outputs retain their recorded hashes.
@@ -70,15 +82,24 @@ python3 tools/authoring-probes/animations/run_performance_layers.py \
   work/cine-animation-port/shared-v1 --mode verify --label performance-next-check
 ```
 
-Offline evaluation, 2026-10-06: `performance-all-eval1-result.json` and its
-exit receipt confirm seven cases on each of the nine audited meshes (63 total).
-Inactive, active start, explicit seek, held endpoint, stop, null sequence and
-restoration all match the original graph on the 19 checked body bones within
-0.01 cm / 0.001 radians. Every raw bone remains finite and normalized. The
-comparison runs compressed poses and post-process graphs at 60 Hz, with the
-last 30 of 180 frames used after settling. It does not exercise the world's
-cloth solver, live movement, gameplay interruptions or a moving clip's full
-duration. Those remain acceptance work.
+Offline evaluation now covers nine cases on each of nine meshes (81 total):
+inactive, active start, explicit seek, held endpoint, stop, null sequence,
+restoration, zero weight and the full Black Hole clip. Static comparisons use
+the last 30 of 180 frames. Full motion compares all 1,201 poses at 60 Hz on each
+mesh, 10,809 poses total. The 19 checked body bones remain within 0.01 cm /
+0.001 radians; every raw bone remains finite and normalized. This does not
+exercise the world's cloth solver, gameplay interruptions, live frame costs,
+or every clip's visual quality. Those remain acceptance work.
+
+`verify_cooked_performance_layers.py` compares independent CUE4Parse readback
+of the packaged adapters against the installed source graphs. Existing CSS
+defaults and original node settings match, including rig classes, transferred
+bones and input defaults. It allows only the inserted pose connection and
+compiler-generated input-name GUID changes. Runtime field types, inactive
+defaults, skeletons and blend connections are also checked. Runtime binding
+metadata records each source outfit's verified container-table SHA-256 and
+bulk size. This is compatibility evidence, not a cryptographic guarantee that
+another installed pak cannot override the same asset path.
 
 `CSSPerformanceEvaluation.cpp` and `evaluate_performance_layers.py` reproduce
 this with `run_performance_layers.py --mode evaluate`. Input meshes, source
@@ -90,19 +111,18 @@ timing, pause, seek, rate and stop behavior. It consumes game time, retains the
 last pose during a 0.18-second exit blend and rejects nonfinite/out-of-range
 requests before changing state. Its tests include partitioned ticks, two-key
 photo poses, endpoint seeks, repeated stop, pause cleanup and rate changes.
-The engine service still needs to provide ownership, a world-time delta,
-binding validation and restoration; the clock alone does not play a clip.
+The native service candidate now provides ownership, a world-time delta,
+verified source-graph binding and transient restoration. CSS/CINE controls and
+live acceptance are not complete.
+See `performance-service.md` for the current boundary.
 
 Before deployment:
 
-1. Extend the passing held-pose checks to full moving clips. Check live cloth,
-   footwear and Genessa wings.
-2. Bind the runtime only to verified source graph versions. A matching skeleton
-   or source asset path alone cannot establish that an adapter preserves a newer
-   outfit's physics graph.
-3. Add owned playback and restoration through the shared CSS/CINE service.
-   Preserve original override class and CSS controls; handle reinit, unload,
-   death, travel, appearance changes and gameplay interruption.
-4. Cook adapters with their declared original outfit dependencies. Existing
-   outfit containers must remain untouched.
-5. Verify packaged load, measure cold/warm costs, and obtain live acceptance.
+1. Check live cloth, footwear, hands and Genessa wings throughout moving clips.
+2. Accept source-graph binding/restoration in game, including native aiming
+   layers and the selected idle's phase when the original graph is recreated.
+3. Finish CSS/CINE controls and interruption tests for unload, death, travel,
+   appearance changes and gameplay input.
+4. Check dependency closure with each outfit alone. Current private validation
+   mounts all three outfit packages, and does not prove standalone closure.
+5. Measure cold/warm costs and obtain live acceptance.

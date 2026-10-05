@@ -60,5 +60,5 @@ for name, path in sources.items():
     print('PERFORMANCE_LAYER', MODE, name, verification, flush=True)
 if any(digest(Path(path)) != sha for path, sha in protected.items()):
     raise ValueError('An original post-process asset changed')
-report.write_text(json.dumps(dict(complete=True, results=results, protected=protected,
+report.write_text(json.dumps(dict(complete=True, contract='explicit-weight-v1', results=results, protected=protected,
                                  scope='Editor compilation and inactive defaults only. Runtime integration and physics acceptance remain pending.'), indent=2) + '\n')
