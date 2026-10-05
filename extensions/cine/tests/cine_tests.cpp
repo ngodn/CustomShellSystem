@@ -444,6 +444,25 @@ static void shipped(const fs::path& root) {
             const auto tl = make_timeline(p, 4000, 184);
             OrbitCurve curve(tl.keys);
             expect(tl.total <= p.max_seconds + 1e-9, "shipped walk fits its cap");
+        } else if (p.kind == ShotKind::Sequence) {
+            const auto tl = make_timeline(p, 0, 184);
+            const auto& seq = p.sequence;
+            expect(near(tl.total, seq.total, 1e-9) && seq.total > 10 && !seq.shots.empty() && seq.shots.front().at < 2.0, "a shipped sequence has shots from its start: " + p.id);
+            // Every camera pose along it keeps off her and inside sane lens values.
+            for (double t = 0; t < seq.total; t += 0.05) {
+                const auto pose = pose_at(seq, t);
+                expect(pose.distance >= 60 && pose.fov >= 20 && pose.fov <= 60 && std::abs(pose.roll) <= 15, "a shipped sequence keeps its camera sane at " + std::to_string(t) + " s: " + p.id);
+            }
+            // No shot shorter than a beat's third: nothing flickers.
+            for (const auto& shot : seq.shots) expect(shot.length >= 60.0 / seq.tempo.bpm / 3, "a shipped sequence has no flicker cut: " + p.id);
+            // No outfit change while breakdown layers are up (the director refuses that).
+            double first = -1, last = -1;
+            for (const auto& r : tl.breakdown) { if (r.layers && first < 0) first = r.at; if (first >= 0) last = r.at; }
+            for (const auto& look : seq.looks) if (!look.outfit.empty() && first >= 0) expect(look.at <= first - 0.5 || look.at >= last + 0.5, "a shipped sequence changes no outfit under its breakdown: " + p.id);
+            if (!tl.breakdown.empty()) expect(tl.breakdown.back().layers == 0, "a shipped sequence's breakdown ends on the final image: " + p.id);
+            // Wears leave room for the flash that covers them.
+            double previous = -10;
+            for (const auto& look : seq.looks) if (!look.outfit.empty()) { expect(look.at - previous >= 1.2, "wears are at least 1.2 s apart: " + p.id); previous = look.at; }
         } else if (p.kind == ShotKind::Action) {
             const auto tl = make_timeline(p, 0, 184);
             expect(near(tl.total, p.max_seconds, 1e-9) && tl.keys.empty(), "shipped action preset runs to its cap: " + p.id);
@@ -462,7 +481,7 @@ static void shipped(const fs::path& root) {
         }
         ++count;
     }
-    expect(count >= 11, "all shipped presets were checked");
+    expect(count >= 12, "all shipped presets were checked");
 }
 
 int main(int argc, char** argv) {

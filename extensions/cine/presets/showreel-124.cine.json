@@ -1,0 +1,1138 @@
+{
+ "schema": 1,
+ "id": "showreel-124",
+ "name": "Showreel 124",
+ "description": "An 80 second showcase cut to a 124 BPM track: one unbroken opening move that lands on three looks, a solo phrase for Unholy Genessa, Commander White and Eve, a breakdown circle, a fast chorus and a locked ending. Needs those three outfits and CSS. Set Breakdown track to From the preset. Put your own track at audio/showreel.wav in the CINE folder to hear it while you record.",
+ "kind": "sequence",
+ "reference": "capsule",
+ "tempo": {
+  "bpm": 124,
+  "offset": 0.87,
+  "beats_per_bar": 4
+ },
+ "end": 42,
+ "audio": "audio/showreel.wav",
+ "shots": [
+  {
+   "at": 1,
+   "from": {
+    "azimuth": 205,
+    "distance": 900,
+    "height": 170,
+    "aim": 10,
+    "fov": 32,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 172,
+    "distance": 760,
+    "height": 120,
+    "aim": 10,
+    "fov": 32,
+    "roll": 0
+   }
+  },
+  {
+   "at": 3,
+   "flow": true,
+   "to": {
+    "azimuth": 22,
+    "distance": 108,
+    "height": 61,
+    "aim": 61,
+    "fov": 30,
+    "roll": 0
+   },
+   "ease": "whip"
+  },
+  {
+   "at": 3.5,
+   "flow": true,
+   "to": {
+    "azimuth": -24,
+    "distance": 100,
+    "height": 61,
+    "aim": 61,
+    "fov": 30,
+    "roll": 0
+   },
+   "ease": "out"
+  },
+  {
+   "at": 5,
+   "flow": true,
+   "to": {
+    "azimuth": 150,
+    "distance": 430,
+    "height": -45,
+    "aim": 0,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "whip"
+  },
+  {
+   "at": 5.5,
+   "flow": true,
+   "to": {
+    "azimuth": 82,
+    "distance": 255,
+    "height": -62,
+    "aim": 12,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "out"
+  },
+  {
+   "at": 7,
+   "flow": true,
+   "to": {
+    "azimuth": 0,
+    "distance": 540,
+    "height": 20,
+    "aim": 5,
+    "fov": 38,
+    "roll": 0
+   },
+   "ease": "whip"
+  },
+  {
+   "at": 7.5,
+   "flow": true,
+   "to": {
+    "azimuth": 0,
+    "distance": 300,
+    "height": 36,
+    "aim": 32,
+    "fov": 36,
+    "roll": 0
+   },
+   "ease": "linear"
+  },
+  {
+   "at": 9,
+   "flow": true,
+   "to": {
+    "azimuth": 0,
+    "distance": 96,
+    "height": 61,
+    "aim": 61,
+    "fov": 28,
+    "roll": 0
+   },
+   "ease": "in"
+  },
+  {
+   "at": 10,
+   "from": {
+    "azimuth": 16,
+    "distance": 100,
+    "height": 60,
+    "aim": 61,
+    "fov": 30,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": -12,
+    "distance": 96,
+    "height": 60,
+    "aim": 61,
+    "fov": 30,
+    "roll": 0
+   },
+   "ease": "out"
+  },
+  {
+   "at": 11,
+   "from": {
+    "azimuth": 36,
+    "distance": 520,
+    "height": 10,
+    "aim": 5,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 18,
+    "distance": 430,
+    "height": 10,
+    "aim": 5,
+    "fov": 40,
+    "roll": 0
+   }
+  },
+  {
+   "at": 12,
+   "from": {
+    "azimuth": -32,
+    "distance": 86,
+    "height": 30,
+    "aim": 34,
+    "fov": 32,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 30,
+    "distance": 82,
+    "height": 28,
+    "aim": 34,
+    "fov": 32,
+    "roll": 0
+   },
+   "ease": "linear"
+  },
+  {
+   "at": 13,
+   "from": {
+    "azimuth": 205,
+    "distance": 300,
+    "height": 22,
+    "aim": 10,
+    "fov": 38,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 118,
+    "distance": 290,
+    "height": 22,
+    "aim": 12,
+    "fov": 38,
+    "roll": 0
+   }
+  },
+  {
+   "at": 14,
+   "from": {
+    "azimuth": -22,
+    "distance": 245,
+    "height": -72,
+    "aim": 20,
+    "fov": 40,
+    "roll": -6
+   },
+   "to": {
+    "azimuth": 12,
+    "distance": 235,
+    "height": -70,
+    "aim": 22,
+    "fov": 40,
+    "roll": -3
+   }
+  },
+  {
+   "at": 15,
+   "from": {
+    "azimuth": 22,
+    "distance": 100,
+    "height": 61,
+    "aim": 61,
+    "fov": 30,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 38,
+    "distance": 90,
+    "height": 61,
+    "aim": 61,
+    "fov": 30,
+    "roll": 0
+   },
+   "ease": "out"
+  },
+  {
+   "at": 16,
+   "from": {
+    "azimuth": 158,
+    "distance": 112,
+    "height": -8,
+    "aim": -8,
+    "fov": 34,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 204,
+    "distance": 108,
+    "height": -10,
+    "aim": -8,
+    "fov": 34,
+    "roll": 0
+   },
+   "ease": "linear"
+  },
+  {
+   "at": 17,
+   "from": {
+    "azimuth": 92,
+    "distance": 480,
+    "height": 10,
+    "aim": 5,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 28,
+    "distance": 440,
+    "height": 10,
+    "aim": 5,
+    "fov": 40,
+    "roll": 0
+   }
+  },
+  {
+   "at": 18,
+   "from": {
+    "azimuth": 0,
+    "distance": 460,
+    "height": 10,
+    "aim": 5,
+    "fov": 38,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 0,
+    "distance": 380,
+    "height": 14,
+    "aim": 8,
+    "fov": 38,
+    "roll": 0
+   }
+  },
+  {
+   "at": 19,
+   "from": {
+    "azimuth": 92,
+    "distance": 152,
+    "height": 30,
+    "aim": 30,
+    "fov": 34,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 58,
+    "distance": 146,
+    "height": 30,
+    "aim": 30,
+    "fov": 34,
+    "roll": 0
+   },
+   "ease": "linear"
+  },
+  {
+   "at": 20,
+   "from": {
+    "azimuth": 170,
+    "distance": 205,
+    "height": -62,
+    "aim": 0,
+    "fov": 40,
+    "roll": 6
+   },
+   "to": {
+    "azimuth": 202,
+    "distance": 198,
+    "height": -60,
+    "aim": 2,
+    "fov": 40,
+    "roll": 3
+   }
+  },
+  {
+   "at": 21,
+   "from": {
+    "azimuth": -16,
+    "distance": 96,
+    "height": 61,
+    "aim": 61,
+    "fov": 30,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 16,
+    "distance": 94,
+    "height": 61,
+    "aim": 61,
+    "fov": 30,
+    "roll": 0
+   },
+   "ease": "linear"
+  },
+  {
+   "at": 22,
+   "from": {
+    "azimuth": 30,
+    "distance": 400,
+    "height": 10,
+    "aim": 5,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 120,
+    "distance": 400,
+    "height": 10,
+    "aim": 5,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "linear"
+  },
+  {
+   "at": 24,
+   "flow": true,
+   "to": {
+    "azimuth": 210,
+    "distance": 390,
+    "height": 14,
+    "aim": 6,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "linear"
+  },
+  {
+   "at": 26,
+   "flow": true,
+   "to": {
+    "azimuth": 300,
+    "distance": 380,
+    "height": 12,
+    "aim": 6,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "linear"
+  },
+  {
+   "at": 28,
+   "flow": true,
+   "to": {
+    "azimuth": 392,
+    "distance": 340,
+    "height": 12,
+    "aim": 8,
+    "fov": 40,
+    "roll": 0
+   },
+   "ease": "out"
+  },
+  {
+   "at": 30,
+   "from": {
+    "azimuth": 0,
+    "distance": 480,
+    "height": 10,
+    "aim": 5,
+    "fov": 38,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 0,
+    "distance": 430,
+    "height": 12,
+    "aim": 6,
+    "fov": 38,
+    "roll": 0
+   }
+  },
+  {
+   "at": 30.5,
+   "from": {
+    "azimuth": 30,
+    "distance": 108,
+    "height": 61,
+    "aim": 61,
+    "fov": 30,
+    "roll": 8
+   },
+   "to": {
+    "azimuth": 18,
+    "distance": 102,
+    "height": 61,
+    "aim": 61,
+    "fov": 30,
+    "roll": 5
+   },
+   "ease": "linear"
+  },
+  {
+   "at": 31,
+   "from": {
+    "azimuth": -42,
+    "distance": 420,
+    "height": -52,
+    "aim": 10,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": -20,
+    "distance": 400,
+    "height": -50,
+    "aim": 10,
+    "fov": 40,
+    "roll": 0
+   }
+  },
+  {
+   "at": 31.5,
+   "from": {
+    "azimuth": 152,
+    "distance": 118,
+    "height": 0,
+    "aim": 0,
+    "fov": 34,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 176,
+    "distance": 114,
+    "height": 0,
+    "aim": 0,
+    "fov": 34,
+    "roll": 0
+   },
+   "ease": "linear"
+  },
+  {
+   "at": 32,
+   "from": {
+    "azimuth": 62,
+    "distance": 300,
+    "height": 22,
+    "aim": 20,
+    "fov": 38,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 22,
+    "distance": 290,
+    "height": 22,
+    "aim": 20,
+    "fov": 38,
+    "roll": 0
+   }
+  },
+  {
+   "at": 32.5,
+   "from": {
+    "azimuth": -28,
+    "distance": 104,
+    "height": 61,
+    "aim": 61,
+    "fov": 30,
+    "roll": -8
+   },
+   "to": {
+    "azimuth": -12,
+    "distance": 98,
+    "height": 61,
+    "aim": 61,
+    "fov": 30,
+    "roll": -5
+   },
+   "ease": "linear"
+  },
+  {
+   "at": 33,
+   "from": {
+    "azimuth": 182,
+    "distance": 450,
+    "height": 12,
+    "aim": 6,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 150,
+    "distance": 430,
+    "height": 12,
+    "aim": 6,
+    "fov": 40,
+    "roll": 0
+   }
+  },
+  {
+   "at": 33.5,
+   "from": {
+    "azimuth": 102,
+    "distance": 140,
+    "height": 30,
+    "aim": 30,
+    "fov": 34,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 80,
+    "distance": 134,
+    "height": 30,
+    "aim": 30,
+    "fov": 34,
+    "roll": 0
+   },
+   "ease": "linear"
+  },
+  {
+   "at": 34,
+   "from": {
+    "azimuth": -60,
+    "distance": 330,
+    "height": -40,
+    "aim": 12,
+    "fov": 40,
+    "roll": 5
+   },
+   "to": {
+    "azimuth": -24,
+    "distance": 320,
+    "height": -38,
+    "aim": 12,
+    "fov": 40,
+    "roll": 2
+   }
+  },
+  {
+   "at": 34.5,
+   "from": {
+    "azimuth": 12,
+    "distance": 98,
+    "height": 61,
+    "aim": 61,
+    "fov": 30,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": -10,
+    "distance": 94,
+    "height": 61,
+    "aim": 61,
+    "fov": 30,
+    "roll": 0
+   },
+   "ease": "linear"
+  },
+  {
+   "at": 35,
+   "from": {
+    "azimuth": 0,
+    "distance": 500,
+    "height": 10,
+    "aim": 5,
+    "fov": 38,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 40,
+    "distance": 470,
+    "height": 10,
+    "aim": 5,
+    "fov": 38,
+    "roll": 0
+   }
+  },
+  {
+   "at": 35.5,
+   "from": {
+    "azimuth": 200,
+    "distance": 120,
+    "height": -6,
+    "aim": -6,
+    "fov": 34,
+    "roll": -6
+   },
+   "to": {
+    "azimuth": 170,
+    "distance": 116,
+    "height": -6,
+    "aim": -6,
+    "fov": 34,
+    "roll": -3
+   },
+   "ease": "linear"
+  },
+  {
+   "at": 36,
+   "from": {
+    "azimuth": 120,
+    "distance": 360,
+    "height": 24,
+    "aim": 14,
+    "fov": 38,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 70,
+    "distance": 340,
+    "height": 24,
+    "aim": 14,
+    "fov": 38,
+    "roll": 0
+   }
+  },
+  {
+   "at": 36.5,
+   "from": {
+    "azimuth": -20,
+    "distance": 100,
+    "height": 61,
+    "aim": 61,
+    "fov": 30,
+    "roll": 8
+   },
+   "to": {
+    "azimuth": 0,
+    "distance": 96,
+    "height": 61,
+    "aim": 61,
+    "fov": 30,
+    "roll": 4
+   },
+   "ease": "linear"
+  },
+  {
+   "at": 37,
+   "from": {
+    "azimuth": -90,
+    "distance": 440,
+    "height": -30,
+    "aim": 8,
+    "fov": 40,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": -50,
+    "distance": 420,
+    "height": -28,
+    "aim": 8,
+    "fov": 40,
+    "roll": 0
+   }
+  },
+  {
+   "at": 37.5,
+   "from": {
+    "azimuth": 40,
+    "distance": 150,
+    "height": 32,
+    "aim": 32,
+    "fov": 34,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 20,
+    "distance": 144,
+    "height": 32,
+    "aim": 32,
+    "fov": 34,
+    "roll": 0
+   },
+   "ease": "linear"
+  },
+  {
+   "at": 38,
+   "from": {
+    "azimuth": 200,
+    "distance": 380,
+    "height": 30,
+    "aim": 15,
+    "fov": 38,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 20,
+    "distance": 420,
+    "height": 22,
+    "aim": 10,
+    "fov": 38,
+    "roll": 0
+   }
+  },
+  {
+   "at": 40,
+   "from": {
+    "azimuth": 0,
+    "distance": 560,
+    "height": 10,
+    "aim": 5,
+    "fov": 36,
+    "roll": 0
+   },
+   "to": {
+    "azimuth": 0,
+    "distance": 520,
+    "height": 10,
+    "aim": 5,
+    "fov": 36,
+    "roll": 0
+   },
+   "ease": "out"
+  }
+ ],
+ "looks": [
+  {
+   "at": 3.25,
+   "outfit": "eins0fx.unholygenessa",
+   "variant": "eve",
+   "palette": "moon"
+  },
+  {
+   "at": 5.25,
+   "outfit": "eins0fx.commanderwhite",
+   "variant": "original",
+   "palette": "crimson"
+  },
+  {
+   "at": 7.25,
+   "outfit": "eins0fx.seduxtress",
+   "variant": "black_pearl",
+   "palette": "moonstone"
+  },
+  {
+   "at": 10,
+   "outfit": "eins0fx.unholygenessa",
+   "variant": "eve",
+   "palette": "mist",
+   "controls": {
+    "outfit_glow": 4.4,
+    "toggle_wings": 1,
+    "toggle_veil": 1,
+    "toggle_hood": 1
+   }
+  },
+  {
+   "at": 10.5,
+   "controls": {
+    "outfit_glow": 8
+   }
+  },
+  {
+   "at": 11,
+   "palette": "ember"
+  },
+  {
+   "at": 11.5,
+   "controls": {
+    "toggle_veil": 0,
+    "toggle_hood": 0
+   }
+  },
+  {
+   "at": 12,
+   "palette": "gold",
+   "controls": {
+    "outfit_glow": 2
+   }
+  },
+  {
+   "at": 12.5,
+   "controls": {
+    "toggle_wings": 0,
+    "outfit_glow": 8
+   }
+  },
+  {
+   "at": 13,
+   "palette": "tar",
+   "controls": {
+    "toggle_wings": 1
+   }
+  },
+  {
+   "at": 13.5,
+   "palette": "moon",
+   "controls": {
+    "toggle_veil": 1,
+    "toggle_hood": 1,
+    "outfit_glow": 4.4
+   }
+  },
+  {
+   "at": 14,
+   "outfit": "eins0fx.commanderwhite",
+   "variant": "original",
+   "palette": "crimson",
+   "controls": {
+    "coat": 1,
+    "glove_left": 1,
+    "glove_right": 1,
+    "collar": 1,
+    "skirt": 1,
+    "belt": 1
+   }
+  },
+  {
+   "at": 14.5,
+   "controls": {
+    "coat": 0
+   }
+  },
+  {
+   "at": 15,
+   "palette": "midnight"
+  },
+  {
+   "at": 15.5,
+   "controls": {
+    "glove_left": 0,
+    "glove_right": 0,
+    "collar": 0
+   }
+  },
+  {
+   "at": 16,
+   "palette": "emerald",
+   "controls": {
+    "belt": 0
+   }
+  },
+  {
+   "at": 16.5,
+   "controls": {
+    "skirt": 0
+   }
+  },
+  {
+   "at": 17,
+   "palette": "amethyst",
+   "controls": {
+    "skirt": 1,
+    "belt": 1
+   }
+  },
+  {
+   "at": 17.5,
+   "palette": "obsidian",
+   "controls": {
+    "coat": 1,
+    "glove_left": 1,
+    "glove_right": 1,
+    "collar": 1
+   }
+  },
+  {
+   "at": 18,
+   "outfit": "eins0fx.seduxtress",
+   "variant": "black_pearl",
+   "palette": "garnet"
+  },
+  {
+   "at": 19,
+   "outfit": "eins0fx.seduxtress",
+   "variant": "skin_suit",
+   "palette": "abyssal_blue"
+  },
+  {
+   "at": 20,
+   "outfit": "eins0fx.seduxtress",
+   "variant": "bikini",
+   "palette": "sunset"
+  },
+  {
+   "at": 21,
+   "outfit": "eins0fx.seduxtress",
+   "variant": "midsummer_alice",
+   "palette": "eidos_rose"
+  },
+  {
+   "at": 22,
+   "outfit": "eins0fx.unholygenessa",
+   "variant": "eve",
+   "palette": "moon"
+  },
+  {
+   "at": 30,
+   "outfit": "eins0fx.commanderwhite",
+   "variant": "original",
+   "palette": "midnight"
+  },
+  {
+   "at": 30.5,
+   "palette": "crimson"
+  },
+  {
+   "at": 31,
+   "outfit": "eins0fx.seduxtress",
+   "variant": "skin_suit",
+   "palette": "lunar_pearl"
+  },
+  {
+   "at": 31.5,
+   "palette": "crimson_eclipse"
+  },
+  {
+   "at": 32,
+   "outfit": "eins0fx.unholygenessa",
+   "variant": "genessa",
+   "palette": "gold"
+  },
+  {
+   "at": 32.5,
+   "palette": "ember",
+   "controls": {
+    "outfit_glow": 8
+   }
+  },
+  {
+   "at": 33,
+   "outfit": "eins0fx.seduxtress",
+   "variant": "bikini",
+   "palette": "oasis"
+  },
+  {
+   "at": 33.5,
+   "palette": "orchid"
+  },
+  {
+   "at": 34,
+   "outfit": "eins0fx.commanderwhite",
+   "variant": "original",
+   "palette": "emerald",
+   "controls": {
+    "coat": 0
+   }
+  },
+  {
+   "at": 34.5,
+   "palette": "amethyst",
+   "controls": {
+    "coat": 1
+   }
+  },
+  {
+   "at": 35,
+   "outfit": "eins0fx.seduxtress",
+   "variant": "prototype",
+   "palette": "xion_ember"
+  },
+  {
+   "at": 35.5,
+   "palette": "stargazer"
+  },
+  {
+   "at": 36,
+   "outfit": "eins0fx.unholygenessa",
+   "variant": "eve",
+   "palette": "tar",
+   "controls": {
+    "toggle_wings": 0
+   }
+  },
+  {
+   "at": 36.5,
+   "palette": "mist",
+   "controls": {
+    "toggle_wings": 1
+   }
+  },
+  {
+   "at": 37,
+   "outfit": "eins0fx.seduxtress",
+   "variant": "casual_sweater",
+   "palette": "desert_rose"
+  },
+  {
+   "at": 37.5,
+   "palette": "lily_lavender"
+  },
+  {
+   "at": 38,
+   "outfit": "eins0fx.unholygenessa",
+   "variant": "eve",
+   "palette": "moon",
+   "controls": {
+    "outfit_glow": 4.4
+   }
+  },
+  {
+   "at": 39,
+   "palette": "gold"
+  },
+  {
+   "at": 40,
+   "palette": "moon",
+   "controls": {
+    "outfit_glow": 8
+   }
+  }
+ ],
+ "breakdown": {
+  "steps": [
+   {
+    "at": 22.5,
+    "layers": [
+     "clay"
+    ],
+    "wipe": 0.7
+   },
+   {
+    "at": 23.25,
+    "layers": [
+     "clay",
+     "wireframe"
+    ],
+    "wipe": 0.7
+   },
+   {
+    "at": 24.25,
+    "layers": [
+     "clay",
+     "skeleton"
+    ],
+    "wipe": 0.7
+   },
+   {
+    "at": 25.25,
+    "layers": [
+     "clay",
+     "skeleton",
+     "virtual_bones",
+     "ik_bones"
+    ],
+    "wipe": 0.6
+   },
+   {
+    "at": 26.25,
+    "layers": [
+     "clay",
+     "skeleton",
+     "springs"
+    ],
+    "wipe": 0.6
+   },
+   {
+    "at": 27.25,
+    "layers": [
+     "collision",
+     "capsule"
+    ],
+    "wipe": 0.6
+   },
+   {
+    "at": 28,
+    "layers": [
+     "base_color"
+    ],
+    "wipe": 0.7
+   },
+   {
+    "at": 28.5,
+    "layers": [
+     "normals"
+    ],
+    "wipe": 0.6
+   },
+   {
+    "at": 29,
+    "layers": [
+     "depth"
+    ],
+    "wipe": 0.6
+   },
+   {
+    "at": 29.5,
+    "layers": [],
+    "wipe": 0.7
+   }
+  ]
+ }
+}
