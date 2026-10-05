@@ -349,13 +349,16 @@ def step_camera():
                 note('camera', name, value.get('class') if is_obj(value) else value)
             except Exception as error:
                 note('camera', name, f'error: {error}')
-        target = ret(call(manager, 'GetViewTarget'))
-        note('camera', 'view_target', target.get('class') if is_obj(target) else target)
         grab('camera-1-ours')
         put(component, 'PostProcessBlendWeight', 1.0)
-        put(component, 'PostProcessSettings', {'bOverride_DepthOfFieldFstop': True, 'DepthOfFieldFstop': 1.2,
-                                               'bOverride_DepthOfFieldFocalDistance': True, 'DepthOfFieldFocalDistance': distance,
-                                               'bOverride_DepthOfFieldSensorWidth': True, 'DepthOfFieldSensorWidth': 120.0})
+        try:
+            put(component, 'PostProcessSettings', {'bOverride_DepthOfFieldFstop': True, 'DepthOfFieldFstop': 1.2,
+                                                   'bOverride_DepthOfFieldFocalDistance': True, 'DepthOfFieldFocalDistance': distance,
+                                                   'bOverride_DepthOfFieldSensorWidth': True, 'DepthOfFieldSensorWidth': 120.0})
+            note('camera', 'dof_set', 'ok')
+        except RuntimeError as error:
+            # The bridge writes the fields, then fails echoing a struct of more than 256 fields.
+            note('camera', 'dof_set', f'written, echo failed: {error}')
         time.sleep(1.0)
         grab('camera-2-dof')
         for key, path in {'sobel': '/Game/Sparta/Core/Player/Ability/Materials/M_PP_Sobel.M_PP_Sobel',
@@ -530,11 +533,16 @@ def step_wire():
 def step_pak():
     """CINE's own cooked materials (needs the CSSX_CINE_eins0fx_P pak installed)."""
     root = '/Game/CSSX/CINE/'
-    mpc = load(root + 'MPC_Cine.MPC_Cine')
-    mats = {k: load(root + f'Materials/{v}.{v}') for k, v in {'wire': 'M_Cine_Wire', 'clay': 'M_Cine_Clay', 'xray': 'M_Cine_XRay',
-                                                             'solid': 'M_Cine_Solid', 'post': 'PP_Cine_Buffer_Post', 'pre': 'PP_Cine_Buffer_Pre'}.items()}
-    note('pak', 'loaded', sorted(mats))
+    names = {'wire': 'M_Cine_Wire', 'clay': 'M_Cine_Clay', 'xray': 'M_Cine_XRay', 'solid': 'M_Cine_Solid',
+             'post': 'PP_Cine_Buffer_Post', 'pre': 'PP_Cine_Buffer_Pre'}
     mesh = ctx['mesh']
+
+    class Mats(dict):
+        # Nothing references a freshly loaded asset, so the engine may collect it between two
+        # requests: load again right before each use.
+        def __getitem__(self, key):
+            return load(root + f'Materials/{names[key]}.{names[key]}')
+    mats = Mats()
 
     def mid(parent):
         return ret(call(ctx['materials'], 'CreateDynamicMaterialInstance',
@@ -542,7 +550,8 @@ def step_pak():
 
     def collection(name, value):
         call(ctx['materials'], 'SetScalarParameterValue',
-             {'WorldContextObject': ctx['world'], 'Collection': mpc, 'ParameterName': name, 'ParameterValue': float(value)})
+             {'WorldContextObject': ctx['world'], 'Collection': load(root + 'MPC_Cine.MPC_Cine'), 'ParameterName': name,
+              'ParameterValue': float(value)})
 
     def wipe(start, end, seconds):
         now = ret(call(ctx['statics'], 'GetTimeSeconds', {'WorldContextObject': ctx['world']}))
@@ -580,7 +589,11 @@ def step_pak():
         view(camera); time.sleep(0.8)
         for key in ('post', 'pre'):
             instance = mid(mats[key])
-            call(component, 'AddOrUpdateBlendable', {'InBlendableObject': instance, 'InWeight': 1.0})
+            try:
+                call(component, 'AddOrUpdateBlendable', {'InBlendableObject': instance, 'InWeight': 1.0})
+            except RuntimeError as error:
+                note('pak', f'{key}_blendable', f'needs the newer CSSX core: {error}')
+                continue
             for layer in ('W_BaseColor', 'W_Normal', 'W_Depth', 'W_Roughness') + (('W_Lighting',) if key == 'pre' else ()):
                 call(instance, 'SetScalarParameterValue', {'ParameterName': layer, 'Value': 1.0})
                 time.sleep(0.7); note('pak', f'{key}_{layer}', grab(f'pak-5-{key}-{layer}'))

@@ -141,6 +141,62 @@ INFERRED (live tests)
   asset). `UDynamicMeshComponent` wireframe pass. Wireframe on Nanite environment meshes
   (`SetForceDisableNanite`). G-buffer reads after TSR. A Wine-cooked material rendering in game.
 
+## Live probe results (5 October 2026, user's game, Unholy Genessa CSS outfit)
+
+Script: `extensions/cine/work/probe/probe.py`; results and screenshots in
+`extensions/cine/work/export-probe/` (ignored). All of this is now VERIFIED LIVE.
+
+Clean scene
+- `Pause()` / `Resume()`: before {bPauseAnims false, mesh tick, move tick, brain running} ->
+  paused {true, false, false, false}, moved 0 cm in 2.5 s -> resumed back to the before values.
+- Hide (actor + attached weapon actor `WP_*`) then collision off while paused: Z drift 0.00 cm;
+  the enemy and its health bar disappear. The LOCK-ON DOT STAYS if that enemy was locked, so
+  clean scene must release the lock when it hides the locked enemy.
+- Effects by class through the bridge: `BP_ApplyGameplayEffectToSelf` / `...ToTarget` return
+  `{Handle, bPassedFiltersAndWasExecuted}`; tags `GameplayEffect.Immunity.Damage`,
+  `State.Undetectable`, `AI.State.Invisible` go 0 -> 1 -> 0; `RemoveActiveGameplayEffect` true.
+- Spawn trigger actor collision toggles true -> false -> true. Census in one area: 14 AI
+  characters, 0 NPCs, 1 trigger, 70 spawners, 60 proximity spawners. Spawners have `UnitProxy`.
+- Capsule radius 35, half height 96.
+
+Action takes
+- `LockOnComponent.LockedTarget` readable. `"Get Tracking Location"` returned the actor
+  location for this enemy (use the mesh socket for chest/head when a higher aim is wanted).
+- CINE's CameraActor wins: `CSCameraState_CameraActor` Priority 255; `ActiveCameraActor` is ours
+  after `SetViewTargetWithBlend`. `GetViewTarget` is not reflected on the manager.
+- `WorldSettings.CinematicTimeDilation` (class `SpartaWorldSettings`): rate 1.007 -> 0.300 with
+  `GetGlobalTimeDilation` still 1.0; back to 1.0 after.
+- Depth of field on our camera works (`PostProcessSettings` partial set). The bridge writes the
+  fields and then fails the echo with "Struct field exceeds bounds" (struct has more than 256
+  fields): treat that message as success on CSSX 1.3.0; newer cores take `"echo": false`.
+- NOT POSSIBLE on CSSX 1.3.0: `AddOrUpdateBlendable` ("Cannot write this reflected property
+  type": the bridge had no TScriptInterface support). Added to the bridge on this branch
+  (interface arguments from an object handle); buffer passes need that core.
+
+Breakdown
+- Shape components render in this shipping build: capsule on `head` (cyan, thickness 1.5), box
+  on `hand_r`, the pawn's own capsule unhidden. `AddComponentByClass` + `K2_AttachToComponent`
+  (SnapToTarget) + `K2_DestroyComponent` all work from outside a blueprint.
+- StaticMeshComponent on a bone with `/Engine/BasicShapes/Cone` and the game's
+  `Mat_TranslucentColor_NDT` MID: renders through the body.
+- CINE's own pak mounts and all six materials load. `M_Cine_Wire` as overlay: renders (whole
+  mesh in cyan wireframe over the shading). `M_Cine_Clay` overlay and its wipe: render.
+  `M_Cine_XRay` (through the body) and `M_Cine_Solid` on BasicShapes spheres: render.
+  So a Wine-cooked material renders correctly in game.
+- Clay with the game's `M_BaseTestMat` on all 25 slots: works. Clay is dark in a night scene:
+  give CINE's clay a small emissive "ambient" parameter.
+- `bForceWireframe` + `r.SkeletalMesh.UseCachedMDCs 0`: NO wireframe. Dropped.
+- Skeleton on this CSS outfit: 392 bones; 7 virtual bones (`VB virtual_bones`, `VB hand_r`,
+  `VB hand_l`, `VB hand_l_relative_hand_r`, `VB hand_r_relative_hand_l`, `VB lowerarm_r`,
+  `VB lowerarm_l`); 7 IK bones. Physics asset `/Game/CSS/UnholyGenessa/PA_Body` (22 bodies) read
+  through `GetSkinnedAsset().PhysicsAsset.SkeletalBodySetups[].AggGeom`. One skeletal mesh
+  component (`CharacterMesh0`) on the pawn.
+- A freshly loaded asset can be garbage collected between two ticks ("Object handle expired"):
+  load and use in the same tick, or reload on demand; never cache a bare loaded-asset handle.
+
+User request added during the probe (5 Oct): a breakdown layer for CSS customization physics
+and motion (spring bones), especially chest and glutes, when the worn outfit is a CSS one.
+
 ## Disk
 
 `/home` was at 97% during this research. The three export folders total about 130 MB and can

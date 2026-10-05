@@ -36,12 +36,23 @@ when the user says so:
    health bars and lock-on marker hidden; the game's own finisher cameras respected.
 3. **Breakdown takes.** A breakdown track usable on any take that steps through layers:
    final, clay, wireframe, skeleton, virtual bones, IK bones, collision bodies, capsule,
-   sockets, outline, depth, base colour, normals, roughness, with wipes. Works on the player and
+   sockets, outline, depth, base colour, normals, roughness, with wipes. Plus a layer for CSS
+   customization physics and motion (spring bones, chest and glutes first) when the outfit is a
+   CSS one (user request, 5 Oct). Works on the player and
    on enemies in view. Ships ALL AT ONCE, including CINE's own small asset pak for wireframe,
    G-buffer passes and wipes (user's decision; no two-step release).
 4. Presets for the new kinds, menu controls, README, Nexus description and changelog updated.
 5. Host tests (mock host) cover enter/restore paths, interrupted takes, world change, missing
    pieces; full CSSX suite green; Windows build 0 warnings.
+
+## CSSX core changes on this branch (neutral, no mod names)
+
+- Bridge: `TScriptInterface` arguments from an object handle (needed for
+  `AddOrUpdateBlendable`), interface values decode to the object.
+- Bridge: `set` takes `"echo": false` (a struct of more than 256 fields failed its echo after
+  the write). CINE tolerates the old failure text on CSSX 1.3.0.
+- These need a CSSX release (1.3.1) alongside CINE 1.1.0; without it CINE skips buffer passes
+  and says why.
 
 ## Decisions already made by the user
 
@@ -75,8 +86,9 @@ when the user says so:
 ## Checklist (update as you go; newest notes at the bottom of each item)
 
 - [x] 0. Goal file, research file, branch committed
-- [ ] 1. Live probe session with the user (script `extensions/cine/work/probe/`), results written
-      into `SCENE-RESEARCH.md`
+- [x] 1. Live probe session with the user (script `extensions/cine/work/probe/`), results written
+      into `SCENE-RESEARCH.md` ("Live probe results"). Only the buffer passes are untested
+      (they need the bridge's new interface-argument support, built on this branch).
 - [ ] 2. Asset pak: materials authored and cooked, pak built, renders in game
       - 5 Oct: pipeline proven offline. `extensions/cine/assets/`: `author.sh STAGE` (Linux editor,
         stage on /mnt/eins0fxE/CSS-work/cine-assets/), `cook.sh STAGE COOK` (Wine container; COOK

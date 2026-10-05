@@ -154,6 +154,7 @@ Json Bridge::decode(FProperty* p,void* data,unsigned depth) {
         return number->GetSignedIntPropertyValue(data);
     }
     if(p->IsA<FObjectProperty>()) return handle(static_cast<FObjectProperty*>(p)->GetObjectPropertyValue(data));
+    if(p->IsA<FInterfaceProperty>() && p->GetElementSize()==sizeof(FScriptInterface)) return handle(static_cast<FScriptInterface*>(data)->ObjectPointer);
     if(p->IsA<FNameProperty>()) return narrow(static_cast<FName*>(data)->ToString());
     if(p->IsA<FStrProperty>()) {
         const auto& chars=static_cast<FString*>(data)->GetCharArray();
@@ -244,6 +245,27 @@ void Bridge::encode(FProperty* p,void* data,const Json& value,unsigned depth) {
         if(object && !object->IsA(property->GetPropertyClass().Get())) throw std::runtime_error("Object class does not match the property");
         if(p->GetElementSize()!=sizeof(object)) throw std::runtime_error("Object property size mismatch");
         p->CopyCompleteValue(data,&object);return;
+    }
+    if(p->IsA<FInterfaceProperty>()) {
+        // TScriptInterface from an object handle. The interface pointer is the object plus the
+        // offset its class records for a native implementation, and null for a Blueprint one,
+        // which is what the engine itself stores.
+        if(p->GetElementSize()!=sizeof(FScriptInterface)) throw std::runtime_error("Interface property size mismatch");
+        FScriptInterface next{};
+        if(auto* object=resolve(value)) {
+            auto* wanted=static_cast<FInterfaceProperty*>(p)->GetInterfaceClass().Get();
+            bool found=false;
+            for(auto* type=object->GetClassPrivate();type && !found;type=type->GetSuperClass()) {
+                for(auto& implemented:type->GetInterfaces()) {
+                    if(!implemented.Class || !wanted || !implemented.Class->IsChildOf(wanted)) continue;
+                    next.ObjectPointer=object;
+                    next.InterfacePointer=implemented.bImplementedByK2?nullptr:reinterpret_cast<std::byte*>(object)+implemented.PointerOffset;
+                    found=true;break;
+                }
+            }
+            if(!found) throw std::runtime_error("Object does not implement the interface");
+        }
+        p->CopyCompleteValue(data,&next);return;
     }
     if(p->IsA<FNameProperty>()) {auto text=wide(value.get<std::string>());FName name(text.c_str());p->CopyCompleteValue(data,&name);return;}
     if(p->IsA<FStrProperty>()) {auto text=wide(value.get<std::string>());FString s(text.c_str());p->CopyCompleteValue(data,&s);return;}
@@ -408,6 +430,10 @@ Json Bridge::request(const PlayerContext& player,const Json& request) {
                 p->CopyCompleteValue(data,next.data());return result;
             }
             encode(p,data,request.at("value"),0);
+            // The echo decodes the whole property. A struct too large to decode (more than
+            // 256 fields, e.g. FPostProcessSettings) would fail here after the write already
+            // happened in place; "echo": false skips it.
+            if(!request.value("echo",true)) return true;
             const auto result=decode(p,data,0);
             if(result.dump().size()>1024*1024) throw std::runtime_error("Property result exceeds 1 MiB");
             return result;
