@@ -5,6 +5,7 @@
 #include "engine.hpp"
 #include "recovery.hpp"
 #include "player_recovery.hpp"
+#include "performance_request.hpp"
 #include "startup.hpp"
 #include <windows.h>
 #include <atomic>
@@ -118,6 +119,7 @@ struct Core {
     std::string idle_override;
     uint64_t animation_catalog_generation=1;
     uint64_t shared_animation_revision=0;
+    PendingPerformance pending_performance;
     std::string last_living_shell;   // most recent CharacterId.Player.Shell.* worn, for Harbinger carry-over.
     bool dirty = false, apply_pending = false, restore_pending = false, rescan_pending = false, forget_current = false;
     bool favorites_only = false;
@@ -331,12 +333,32 @@ struct Core {
         }
         if (state.enabled && !catalog.outfits.empty()) message = "Your saved appearance is ready. Open Inventory and choose CSS.";
     }
-    // The customize export: what a CSSX extension may read and change, through the same
-    // apply_customize path as the CSS page. "describe" reports the worn outfit; "apply" runs a
-    // list of commands on a copy, validates it, then commits like a control request does, so
-    // CSS's own apply pass picks it up. persist=false keeps a transient look (a CINE take)
-    // out of the saved state; the caller restores with persist=true. Never writes `message`,
-    // which the UE4SS ImGui thread reads.
+    PerformanceContext performance_context() const {
+        const auto selected=state.selections.find(appearance.shell);
+        return {appearance.player_revision,appearance.appearance_revision,animation_catalog_generation,
+            selected==state.selections.end()?"":selected->second.outfit,
+            selected==state.selections.end()?"":selected->second.variant};
+    }
+    void start_pending_performance(uint64_t now) {
+        if(!pending_performance.active()) return;
+        try {
+            if(!state.enabled || apply_pending || restore_pending || !appearance.active())
+                throw std::runtime_error("Performance canceled because the appearance changed");
+            const auto context=performance_context();
+            const auto ready=pending_performance.poll(context,now,appearance.performance_waiting_for_menu());
+            if(ready==PendingPerformance::State::Changed)
+                throw std::runtime_error("Performance canceled because the player or library changed");
+            if(ready==PendingPerformance::State::Expired)
+                throw std::runtime_error("Performance canceled because gameplay did not resume");
+            if(ready!=PendingPerformance::State::Ready) return;
+            const auto id=pending_performance.id();
+            pending_performance.clear();
+            appearance.start_performance(catalog,context.outfit,id,1.,0.);
+            report("Performance started. Move or open the menu to stop.");
+        } catch(...) {pending_performance.clear();throw;}
+    }
+    // CSSX uses the same validation and apply pass as the CSS page. Transient
+    // requests stay out of saved state and never write the ImGui-owned message.
     Json customize_api(const Json& command) {
         const auto action=command.at("action").get<std::string>();
         if(action=="performances") {
@@ -344,7 +366,7 @@ struct Core {
             Json entries=Json::array();
             const auto selected=state.selections.find(appearance.shell);
             const auto unavailable=selected==state.selections.end()?"No CSS appearance is worn":
-                appearance.performance_unavailable(catalog,selected->second.outfit);
+                appearance.performance_unsupported(catalog,selected->second.outfit);
             for(const auto& library:catalog.animation_libraries) for(const auto& entry:library.entries) {
                 if(entry.slot && entry.slot!=AnimationSlot::Idle) continue;
                 const auto resolved=resolve_library_performance(catalog.animation_libraries,entry.id,skeleton);
@@ -352,12 +374,14 @@ struct Core {
                 const char* playback=entry.playback==AnimationPlayback::Loop?"loop":
                     entry.playback==AnimationPlayback::Pose?"pose":"once";
                 entries.push_back({{"id",entry.id},{"name",entry.name},{"category",entry.category},
+                    {"library",library.id},{"library_name",library.name},
                     {"playback",playback},{"available",reason.empty()},{"reason",reason}});
             }
             return {{"entries",std::move(entries)},{"current",appearance.performance.status()}};
         }
         if(action=="performance") {
             if(command.at("op")=="start") {
+                if(pending_performance.active()) throw std::runtime_error("A menu performance is waiting to start");
                 if(!state.enabled || !appearance.active() || apply_pending || restore_pending)
                     throw std::runtime_error("Wait for the CSS appearance to finish applying");
                 const auto selected=state.selections.find(appearance.shell);
@@ -498,6 +522,20 @@ struct Core {
         // appearance state, for working out what the engine is really doing.
         if (action=="css_probe") {probe_command=command;return;}
 #endif
+        if(action=="play_performance") {
+            if(!state.enabled || !appearance.active() || apply_pending || restore_pending)
+                throw std::runtime_error("Wait for the CSS appearance to finish applying");
+            const auto context=performance_context();
+            const auto id=command.at("id").get<std::string>();
+            const auto match=resolve_library_performance(catalog.animation_libraries,id,appearance.animation_skeleton());
+            if(!match.entry || match.candidates.empty()) throw std::runtime_error("This performance is unavailable for the current outfit");
+            if(const auto why=appearance.performance_unsupported(catalog,context.outfit);!why.empty())
+                throw std::runtime_error(why);
+            pending_performance.begin(id,context,GetTickCount64());
+            try {inventory.close();} catch(...) {pending_performance.clear();throw;}
+            report("Starting performance after the menu closes.");
+            return;
+        }
         if (action == "export_mappings") {
             RC::OutTheShade::generate_usmap(); report("Exported runtime mappings for asset tooling.");
         }
@@ -845,6 +883,7 @@ struct Core {
         measured(FrameProfile::seals,[&] { sync_seals_safely(now); });
         measured(FrameProfile::walk,[&] {
             try {
+                start_pending_performance(now);
                 if(appearance.performance.active() && (!state.enabled || apply_pending || restore_pending))
                     appearance.performance.interrupt("Appearance is changing");
                 appearance.tick_performance();
@@ -1365,6 +1404,7 @@ void render(void* ptr) noexcept {
 bool stop(void* ptr) noexcept {
     auto& core = *static_cast<css::Core*>(ptr);
     try {
+        core.pending_performance.clear();
         if(!core.astral.clear()) throw std::runtime_error("Genessa double visuals could not be released");
         core.inventory.detach();
         core.appearance.performance.interrupt("CSS stopped");

@@ -132,14 +132,28 @@ std::string PerformancePlayer::unavailable(UObject* pawn,const Catalog& catalog,
     const auto blocked=performance_gameplay_block(pawn);
     if(!blocked.empty()) return blocked;
     auto* component=read<UObject*>(pawn,L"Mesh");
+    Call disabled(component,L"GetDisablePostProcessBlueprint",1);disabled.run();
+    if(disabled.get<bool>()) return "The outfit post-process layer is disabled";
+    return unsupported(pawn,catalog,outfit);
+}
+bool PerformancePlayer::waiting_for_menu(UObject* pawn) {
+    auto* controller=pawn?read<UObject*>(pawn,L"Controller"):nullptr;
+    if(!controller) throw std::runtime_error("Player controller is unavailable");
+    for(const auto* name:{L"IsMoveInputIgnored",L"IsLookInputIgnored",L"IsInGameMenu"}) {
+        Call blocked(controller,name,1);blocked.run();
+        if(blocked.get<bool>()) return true;
+    }
+    return false;
+}
+std::string PerformancePlayer::unsupported(UObject* pawn,const Catalog& catalog,const std::string& outfit) {
+    if(!pawn) return "Player is unavailable";
+    auto* component=read<UObject*>(pawn,L"Mesh");
+    if(!component) return "Player mesh is unavailable";
     auto* post=component?read<UObject*>(component,L"PostProcessAnimInstance"):nullptr;
     if(!performance_layer_class(post)) {
         if(!performance_adapter(component,catalog,outfit)) return "This outfit version has no verified performance adapter";
-        Call disabled(component,L"GetDisablePostProcessBlueprint",1);disabled.run();
-        return disabled.get<bool>()?"The outfit post-process layer is disabled":"";
+        return {};
     }
-    Call disabled(component,L"GetDisablePostProcessBlueprint",1);disabled.run();
-    if(disabled.get<bool>()) return "The outfit post-process layer is disabled";
     PerformanceFields fields(post);
     if(fields.on() || fields.clip() || fields.alpha()!=0.f) return "The performance layer is already in use";
     return {};

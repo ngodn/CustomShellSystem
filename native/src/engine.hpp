@@ -79,6 +79,8 @@ class PerformancePlayer {
 public:
     bool active() const { return session_.active(); }
     static std::string unavailable(RC::Unreal::UObject* pawn,const Catalog&,const std::string& outfit);
+    static std::string unsupported(RC::Unreal::UObject* pawn,const Catalog&,const std::string& outfit);
+    static bool waiting_for_menu(RC::Unreal::UObject* pawn);
     Json start(RC::Unreal::UObject* pawn,const Catalog&,const std::string& outfit,
                const std::string& id,double rate,double position);
     Json command(const Json&);
@@ -889,6 +891,10 @@ public:
     std::string performance_unavailable(const Catalog& catalog,const std::string& outfit) const {
         return PerformancePlayer::unavailable(observed_pawn_.Get(),catalog,outfit);
     }
+    std::string performance_unsupported(const Catalog& catalog,const std::string& outfit) const {
+        return PerformancePlayer::unsupported(observed_pawn_.Get(),catalog,outfit);
+    }
+    bool performance_waiting_for_menu() const { return PerformancePlayer::waiting_for_menu(observed_pawn_.Get()); }
     Json start_performance(const Catalog& catalog,const std::string& outfit,const std::string& id,double rate,double position) {
         if(performance.active()) throw std::runtime_error("Stop the current performance first");
         if(const auto why=performance_unavailable(catalog,outfit);!why.empty()) throw std::runtime_error(why);

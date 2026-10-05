@@ -430,7 +430,9 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     if(native_picker_) {
         // Search, inline in the details window: the query, then up to eight matches a page.
         detail(native_picker_title_.empty()?"Browse":native_picker_title_,"Search by name or keyword",
-               "Type to narrow the list. Up / Down to move, then Select.");
+               native_picker_kind_=="performance"?
+               "Choose a performance, then Play. The menu closes before it starts. Move or reopen the menu to stop."
+               :"Type to narrow the list. Up / Down to move, then Select.");
         auto& input=native_take(panel_head_,NativeKind::input);
         native_search_input_=input.extra;
         if(input.value!=native_search_query_) {
@@ -441,7 +443,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         // The field and the count stay above the results while they scroll.
         auto& count=native_take(panel_head_,NativeKind::paragraph);
         native_text(count.text_block.Get(),count.text,
-            search.matches.empty()?"No matches. Try fewer or shorter words."
+            search.options.empty() && native_picker_kind_=="performance"?"This library has no performances compatible with the current outfit."
+            :search.matches.empty()?"No matches. Try fewer or shorter words."
             :search.matches.size()==search.options.size()?std::to_string(search.options.size())+" options"
             :std::to_string(search.matches.size())+" of "+std::to_string(search.options.size())+" match");
         // Every match in one scrolling list, bounded so a huge catalog stays a few widgets.
@@ -455,7 +458,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             if(i==search.selected) panel_focus=item.widget.Get();
             bind(item.hit,{{"action","ui_pick_row"},{"row",i}});
         }
-        action_button("accept","Select",{{"action","ui_pick_apply"}},3);
+        action_button("accept",native_picker_kind_=="performance"?"Play":"Select",{{"action","ui_pick_apply"}},3);
         action_button("close","Back",{{"action","ui_pick_cancel"}},5);
         panel_open=false;
     }
@@ -1072,7 +1075,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         constexpr const char* titles[]={"Idle animation","Walk animation","Jog animation","Sprint animation","Beacon teleport animation"};
         const bool has_variant=worn && catalog.find(worn->id,selection->second.variant);
         const std::string outfit=has_variant?worn->id:"",variant=has_variant?selection->second.variant:"";
-        row_=std::clamp(row_,0,4);
+        row_=std::clamp(row_,0,5);
         std::vector<AnimationMenu> menus;
         const auto target_skeleton=catalog.animation_libraries.empty()?std::string{}:appearance.animation_skeleton();
         for(const auto slot:slots) {
@@ -1103,6 +1106,19 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             if(i==4) section("Travel");
             row(i,titles[i],next,previous,next);
         }
+        section("Performance");
+        const Json browse={{"action","ui_browse_performances"}};
+        const auto performance_reason=has_variant && !catalog.animation_libraries.empty()?
+            appearance.performance_unsupported(catalog,outfit):std::string("No supported library or outfit");
+        row(5,"Dances & Photo Poses",performance_reason.empty()?browse:Json{});
+        if(row_==5) {
+            detail("Dances & Photo Poses",has_variant?worn->name:"Performance",
+                "Play a shared animation in the world. Your saved idle, walk, jog and sprint choices stay as they are. Move or open the menu to stop.");
+            if(catalog.animation_libraries.empty()) note("Install CSS Locomotion Shared Assets to add performances.");
+            else if(!has_variant) note("Wear a supported CSS outfit first.");
+            else if(!performance_reason.empty()) note(performance_reason);
+            else action_button("accept","Browse performances",browse,3);
+        } else {
         const auto slot=slots[row_];const auto& menu=menus[row_];
         const auto& current=menu.items[menu.selected];
         const auto& options=catalog.animation_options(outfit,variant,slot);
@@ -1126,6 +1142,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         if(slot==AnimationSlot::Walk && appearance.walk.walk_mod_active()) {
             const auto name=appearance.walk.walk_mod_name();
             note(current.id=="original"?"Installed walk mod: "+name:"This choice takes priority over "+name+".");
+        }
         }
     } else if(section_==3) {
         // Item visibility, gear position and Genessa's double appearance choices.
@@ -1460,6 +1477,33 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         native_search_query_.clear(); dirty_=true;
         return {};
     }
+    if(name=="ui_browse_performances" && catalog_ && appearance_) {
+        const auto selected=state.selections.find(appearance_->shell);
+        if(selected==state.selections.end()) return {};
+        if(const auto why=appearance_->performance_unsupported(*catalog_,selected->second.outfit);!why.empty())
+            {dirty_=true;return {};}
+        const auto& libraries=catalog_->animation_libraries;
+        if(libraries.empty()) return {};
+        auto requested=action.value("library",std::string{});
+        Json opts=Json::array();
+        if(requested.empty() && libraries.size()>1) {
+            for(const auto& library:libraries) opts.push_back({{"id",library.id},{"label",library.name}});
+            native_picker_kind_="performance_library";native_picker_title_="Animation libraries";
+        } else {
+            if(requested.empty()) requested=libraries.front().id;
+            const auto skeleton=appearance_->animation_skeleton();
+            for(const auto& library:libraries) if(library.id==requested) for(const auto& entry:library.entries) {
+                if(entry.slot && entry.slot!=AnimationSlot::Idle) continue;
+                const auto match=resolve_library_performance(libraries,entry.id,skeleton);
+                if(match.candidates.empty()) continue;
+                const auto label=entry.name+" ("+entry.category+")";
+                opts.push_back({{"id",entry.id},{"label",label}});
+            }
+            native_picker_kind_="performance";native_picker_title_="Dances & Photo Poses";
+        }
+        native_options_.reset(opts);native_picker_=true;native_picker_target_.clear();
+        native_search_query_.clear();dirty_=true;return {};
+    }
     if(name=="ui_browse_templates" && catalog_ && appearance_) {
         auto sel=state.selections.find(appearance_->shell);
         const Outfit* worn_outfit=nullptr;
@@ -1523,7 +1567,11 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         const auto val=native_options_.value();
         if(val.is_null()) return {};
         native_picker_=false; dirty_=true;
-        if(native_picker_kind_=="outfit") {
+        if(native_picker_kind_=="performance_library") {
+            return dispatch({{"action","ui_browse_performances"},{"library",val}},state);
+        } else if(native_picker_kind_=="performance") {
+            return {{"action","play_performance"},{"id",val}};
+        } else if(native_picker_kind_=="outfit") {
             const std::string outfit_id=val.get<std::string>();
             std::string variant_id;
             if(catalog_) for(const auto& o:catalog_->outfits) if(o.id==outfit_id && !o.variants.empty()) { variant_id=o.variants.front().id; break; }

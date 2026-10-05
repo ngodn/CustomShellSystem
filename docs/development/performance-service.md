@@ -2,7 +2,8 @@
 
 2026-10-06. Native candidate, not installed or accepted in game. This is an
 addition to `css.customize` v1 through the existing CSSX service bus. It does
-not add CSS behavior to CSSX core or edit the other session's CINE controller.
+not add CSS behavior to CSSX core. CINE integration is being added in the actual
+checkout while preserving the other session's controller changes.
 
 The backend can bind a verified adapter for an installed outfit revision. The
 shared catalog names the source outfit, class, skeleton, container-table SHA-256
@@ -30,7 +31,10 @@ Use an ID returned by `performances`. The example selects Black Hole. Start
 returns the new token, ID, phase, seconds, duration, rate, pause state and blend
 weight. A stale token cannot stop, seek or change the next take. An active take
 must be stopped before another starts. The list includes shared sequences and
-idles, excludes movement BlendSpaces, and reports current availability.
+idles, excludes movement BlendSpaces, and reports outfit compatibility. Each
+entry includes its library ID and name for bounded, grouped browsing. Current
+gameplay readiness is checked separately at Start; an open menu must not make
+all the browser's entries look permanently unsupported.
 
 The service validates a canonical catalog identity, the declared and actual
 skeleton, AnimSequence type, non-additive data and disabled root-motion
@@ -44,8 +48,42 @@ The world must be grounded, stationary, outside menus/travel/traversal, and
 free of an active montage or sidearm use. Movement, binding/form changes,
 menus, gameplay interruptions, appearance changes, catalog reload or core stop
 end the take. These guards are implemented but still need live acceptance,
-including all death/revival and traversal cases. UI start-after-menu-close and
-CINE take lifecycle wiring remain unfinished.
+including all death/revival and traversal cases.
+
+## CSS browser
+
+Locomotion now includes Dances & Photo Poses, separate from saved idle and gait
+choices. It reuses the searchable keyboard/controller picker. Multiple libraries
+get a library selector first, keeping each list within the existing search bound.
+Missing packs and incompatible outfits have explicit messages.
+
+Play closes the native player menu, waits at least 200 ms and requires gameplay
+input to resume. The request expires after five seconds. Player, appearance,
+catalog generation, outfit or variant changes cancel it before playback. A
+queued menu request cannot compete with a direct CINE Start. Core stop clears
+the queue. The pending-selection regression suite has 43 session/resolver checks;
+all 21 CSS host suites and the Windows core build pass.
+
+## CINE candidate
+
+CINE uses the same catalog through the existing service bus. Refresh animations
+reads compatibility explicitly; take start checks it again. Library/clip, speed
+and start time persist, but ownership tokens do not. Off adds no service calls
+to ordinary takes. CSS missing or an unavailable saved clip stays visible and
+does not prevent choosing Off.
+
+Playback starts when the take rolls. Completion, F9, menu opening, travel,
+shutdown and failed setup stop only CINE's owned animation. Gameplay interruption
+ends the camera take with a reason. A normal once-only clip can finish before
+the camera take. Failed cleanup retains ownership for retry. Another owner's
+token is never stopped. Mock-host tests cover these paths, not live engine state.
+
+Full-body performances currently require stationary presets and no look track
+or sequence look steps. Route walking, combat and outfit changes would otherwise
+fight the pose owner. These combinations are rejected with a reason, not silently
+skipped. Existing takes with Performance Off retain their behavior. CINE's music
+and camera clocks are independent of animation speed. Live timing, physics and
+restoration acceptance remain required before release.
 
 ## Clock and graph
 
@@ -96,8 +134,8 @@ suspended and resume on release or gameplay interruption.
 
 1. Accept binding/restoration live, particularly native aiming layers, physics,
    and any idle phase discontinuity when the original graph is recreated.
-2. Add CSS browsing/start/stop and CINE controls using this same service. Handle
-   menu dismissal, take cancellation and unavailable assets consistently.
+2. Accept CSS browsing/start-after-menu-close and CINE controls in game, including
+   keyboard/controller navigation, unavailable assets and cancellation.
 3. Test full motion, cloth, contact, gameplay interruption, repeated sessions,
    cold/warm costs and source-graph restoration in the game.
 

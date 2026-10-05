@@ -1,4 +1,5 @@
 #include "performance_session.hpp"
+#include "performance_request.hpp"
 #include <iostream>
 
 using namespace css;
@@ -89,6 +90,26 @@ int main() {
         rejects([&]{AnimationLibrary::parse(document);});
         document=original;document["adapters"].push_back(document["adapters"][0]);
         rejects([&]{AnimationLibrary::parse(document);});
+        PendingPerformance pending;
+        const PerformanceContext context{1,2,3,"outfit","variant"};
+        using Pending=PendingPerformance::State;
+        expect(pending.poll(context,0,false)==Pending::Empty,"Empty selection queued a take");
+        pending.begin("css.dance",context,1000);
+        expect(pending.poll(context,1100,false)==Pending::Waiting,"Menu close debounce was skipped");
+        expect(pending.poll(context,1500,true)==Pending::Waiting,"Performance started inside menu");
+        expect(pending.poll(context,1500,false)==Pending::Ready,"Closed menu did not release selection");
+        expect(pending.poll(context,6000,true)==Pending::Expired,"Stuck menu retained a delayed take");
+        for(int field=0;field<5;++field) {
+            auto changed=context;
+            if(field==0) ++changed.player;
+            if(field==1) ++changed.appearance;
+            if(field==2) ++changed.catalog;
+            if(field==3) changed.outfit="another";
+            if(field==4) changed.variant="another";
+            expect(pending.poll(changed,1500,false)==Pending::Changed,"Stale selection crossed a context change");
+        }
+        pending.clear();
+        expect(!pending.active() && pending.poll(context,1600,false)==Pending::Empty,"Canceled selection started later");
         std::cout<<checks<<" performance session/resolver checks passed\n";
         return 0;
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
