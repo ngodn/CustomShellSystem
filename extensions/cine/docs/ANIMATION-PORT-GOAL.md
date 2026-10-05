@@ -36,6 +36,7 @@ promise that every outfit has a compatible face rig.
 - Where an old outfit bundles a verified equivalent clip, show one menu choice. Prefer the compatible shared asset when installed and loadable; otherwise use the compatible bundled asset. Match by explicit stable identity and audited legacy aliases, not display-name similarity, archive load order or arbitrary substring matches.
 - Shared-pack absence, removal, corruption, an incompatible skeleton or a failed asset load must not invalidate an old outfit's entire catalog. Preserve the saved choice, use its valid bundled fallback when one exists, and otherwise show an unavailable state with safe Default behavior. Do not retry a known failure or load the same asset every frame.
 - Outfit-specific animation variants, including extra-bone or wing-driving versions, must retain their required behavior. They are not interchangeable merely because the ordinary body motion or menu name matches. Resolve an appropriate adapter/version or keep that outfit's specialized asset. Test Unholy Genessa's wing movement explicitly.
+- Explicit user reminder on October 6: inspect the actual released and installed skeleton, mesh reference pose, virtual-bone mapping and post-process animation contracts for **all six Eve variants, Unholy Genessa and Commander White**. Record a compatibility table with asset paths, hashes and evidence. Test the shared library on each, preserving wing, hair, cloth, body physics, footwear and hand behavior. Do not infer compatibility from common body-bone names, an older skeleton-ownership note or one successful outfit. Use a verified adapter or specialized fallback when their rigs differ; keep legacy assets unchanged.
 - Adding or removing the shared pack must preserve profiles, existing IDs, default idle, walk/jog/sprint selections and outfit-level/variant-level overrides. Do not edit or delete old outfit containers to remove duplicate bytes; CSS resolves the playable choice.
 - Cache catalog merging and compatibility decisions outside the frame loop, retain asset references safely while playing, and invalidate them correctly on outfit changes, world changes and catalog reloads.
 - Test old outfit alone, shared pack plus old outfit, shared pack plus several outfits, shared pack removed after saving, malformed catalog, missing asset, duplicate identity with conflicting definitions, and incompatible/specialized skeleton cases. Both CSS and CINE must behave consistently.
@@ -146,3 +147,15 @@ has seven nonzero curves, so offer it separately from restoring the outfit's
 previous face state. Preserve body controls and hand correctives when switching
 or clearing expressions. Evidence is recorded in
 `docs/development/shared-animation-library.md` and the private facial audit.
+
+The Blender source examples now have three additional private candidates,
+preserving evaluated NLA timing and constraints: 200 at 25 Hz, 801 at 60 Hz,
+and the retimed camera-scene body performance at 60 Hz. All 1,963 target frames
+pass saved/repeated raw-pose comparison. A source-import finalization repair
+also preserves the native compression sample rate. Fresh-process sampling
+checks pass on those candidates and the earlier L2/L3 batches, covering 98
+saved source/target assets. These checks do not establish visual acceptance.
+The 801 source has a long final hold, and the camera-scene skinned review needs
+to account for its large root translation and numeric reconstruction error.
+No new assets are cooked or installed; shared runtime integration, facial
+support and the stopping-transition correction remain unfinished.

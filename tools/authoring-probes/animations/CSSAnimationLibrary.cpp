@@ -25,6 +25,17 @@
 #include "Serialization/JsonWriter.h"
 #include "UObject/UnrealType.h"
 
+bool UCSSAnimationLibrary::FinalizeSourceImport(UAnimSequence* Animation)
+{
+    if (!IsRunningCommandlet() || !Animation || !Animation->GetSkeleton() ||
+        !Animation->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/AN_"))) return false;
+    const IAnimationDataModel* Model = Animation->GetDataModel();
+    if (!Model || Model->GetNumberOfKeys() < 2 || !Model->GetFrameRate().IsValid()) return false;
+    // Populated also updates the platform compression rate from the source model.
+    Animation->GetController().NotifyPopulated();
+    return Animation->GetSamplingFrameRate() == Model->GetFrameRate();
+}
+
 static bool CSSBlendPath(const FString& Path)
 {
     return Path.StartsWith(TEXT("/Game/CSS/AnimLab/BS_")) ||

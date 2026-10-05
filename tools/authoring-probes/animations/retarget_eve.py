@@ -120,7 +120,7 @@ for label, filename in batch:
     assert re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,80}', filename)
     data = json.loads((WORK/(filename+'.json')).read_text())
     fps = data['fps']
-    assert fps in (30, 60)
+    assert fps in (25, 30, 60)
     assert abs((data['frames']-1)/fps-data['duration']) <= max(1e-6, data['duration']*1.2e-7)
     factory = unreal.AnimSequenceFactory()
     factory.set_editor_property('target_skeleton', source.get_editor_property('skeleton'))
@@ -130,6 +130,11 @@ for label, filename in batch:
         edit = animation.get_editor_property('controller')
         edit.open_bracket('Eve source keys at original sample times', False)
         try:
+            if fps == 25:
+                # The empty factory model starts at 30 Hz. Convert through a common
+                # multiple before adding keys; UE rejects a direct 30-to-25 change.
+                edit.set_number_of_frames(unreal.FrameNumber(30), False)
+                edit.set_frame_rate(unreal.FrameRate(150, 1), False)
             edit.set_frame_rate(unreal.FrameRate(fps, 1), False)
             edit.set_number_of_frames(unreal.FrameNumber(data['frames']-1), False)
             for track in data['tracks']:
@@ -139,6 +144,7 @@ for label, filename in batch:
                                                 [unreal.Quat(*k['rotation']) for k in keys],
                                                 [unreal.Vector(*k['scale']) for k in keys], False)
         finally:
+            assert unreal.CSSAnimationLibrary.finalize_source_import(animation)
             edit.close_bracket(False)
         assert unreal.EditorAssetLibrary.save_loaded_asset(animation, False)
     candidate = unreal.CSSAnimationLibrary.retarget_clip(source, target, animation, retarget, PACKAGE+'/RT_'+tag+label)

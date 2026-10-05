@@ -29,10 +29,15 @@ parser.add_argument('--camera-scale', type=float, default=2.45,
                     help='Orthographic height in metres, for airborne or extended poses')
 parser.add_argument('--camera-height', type=float, default=.95,
                     help='Camera target height in metres')
+parser.add_argument('--follow-pelvis', action='store_true',
+                    help='Follow translation for long root-motion clips without changing their poses')
+parser.add_argument('--position-tolerance-cm', type=float, default=.001,
+                    help='Explicit matrix reconstruction tolerance for this diagnostic render')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert args.stride > 0
 assert math.isfinite(args.camera_scale) and args.camera_scale > 0
 assert math.isfinite(args.camera_height)
+assert math.isfinite(args.position_tolerance_cm) and 0 < args.position_tolerance_cm <= .01
 assert args.output.resolve().is_relative_to(ROOT) and not args.output.exists()
 args.output.mkdir()
 blend = MOD/'work/CSS_SeduXtress_HeelSupportsV45C.blend'
@@ -122,6 +127,7 @@ direction = {'three-quarter': (4, -2.5, .5), 'front': (1, -5, .35),
              'back': (-1, 5, .35), 'side': (5, 0, .35)}[args.view]
 view.location = center + Vector(direction)
 view.rotation_euler = (center-view.location).to_track_quat('-Z', 'Y').to_euler()
+first_pelvis = None
 
 for output_frame, frame in enumerate(range(0, len(motion['frames']), args.stride)):
     morphs = motion['frames'][frame].get('morphs', {}) if args.pose == 'final' else {}
@@ -147,6 +153,11 @@ for output_frame, frame in enumerate(range(0, len(motion['frames']), args.stride
                                    Vector([t['Scale3D'][k] for k in 'XYZ']))
         world.append(world[bone['parent']] @ local if bone['parent'] >= 0 else local)
         wanted.append(inverse @ world[-1] @ bind_inverse[index] @ basis @ rest[index])
+    if args.follow_pelvis:
+        pelvis = inverse @ world[indices['pelvis']].translation
+        if first_pelvis is None:
+            first_pelvis = Vector((0, 0, pelvis.z))
+        view.location = center + Vector(direction) + pelvis - first_pelvis
     # Explicit desired parent matrices avoid updating the entire scene per bone.
     for index, bone in enumerate(pose_bones):
         parent = indices[bone.parent.name] if bone.parent else None
@@ -159,7 +170,7 @@ for output_frame, frame in enumerate(range(0, len(motion['frames']), args.stride
         position_error = max(position_error, (actual.translation-world[index].translation).length)
         angle = actual.to_quaternion().rotation_difference(world[index].to_quaternion()).angle
         angle_error = max(angle_error, min(angle, abs(2*math.pi-angle)))
-    assert position_error < .001 and angle_error < .001, (frame, position_error, angle_error)
+    assert position_error < args.position_tolerance_cm and angle_error < .001, (frame, position_error, angle_error)
     graph = bpy.context.evaluated_depsgraph_get()
     evaluated = body.evaluated_get(graph)
     mesh = bpy.data.meshes.new_from_object(evaluated, preserve_all_data_layers=True, depsgraph=graph)
@@ -190,6 +201,7 @@ assert hashlib.sha256(blend.read_bytes()).hexdigest() == blend_hash
     motion_sha256=hashlib.sha256(args.motion.read_bytes()).hexdigest(),
     fps=motion['fps']/args.stride, parts=parts, shapes=shapes, errors=errors, view=args.view,
     camera_scale=args.camera_scale, camera_height=args.camera_height,
+    follow_pelvis=args.follow_pelvis, position_tolerance_cm=args.position_tolerance_cm,
     covered_body_faces_removed=expected_removed, pose=args.pose, measure_only=args.measure_only,
     wardrobe='Heels and stockings shown; flat feet hidden; heeled stocking feet and footwear lining shown.',
     scope=('UE compressed upstream pose before secondary motion and hand morphs, stationary owner. '

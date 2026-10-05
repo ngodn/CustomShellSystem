@@ -9,6 +9,13 @@ from sample_timeline import timeline
 
 
 class TimelineTests(unittest.TestCase):
+    def test_native_25_preserves_authoring_example_timing(self):
+        clock = timeline(10, .36)
+        self.assertEqual((clock.frames, clock.fps), (10, 25))
+        self.assertEqual([clock.source_frame(i) for i in range(10)], list(range(10)))
+        with self.assertRaises(ValueError):
+            timeline(10, .36, 60)
+
     def test_30_to_60_preserves_every_source_sample_and_both_endpoints(self):
         clock = timeline(381, 12.666667, 60)
         self.assertEqual(clock.frames, 761)

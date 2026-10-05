@@ -9,6 +9,10 @@ class UCSSAnimationLibrary : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 public:
+    /** Finalize a private imported source before closing its controller bracket. */
+    UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
+    static bool FinalizeSourceImport(class UAnimSequence* Animation);
+
     /** Rotate a closed bone-only loop by whole keys, preserving its fitted binding. */
     UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
     static class UAnimSequence* ShiftLoop(class UAnimSequence* Source,

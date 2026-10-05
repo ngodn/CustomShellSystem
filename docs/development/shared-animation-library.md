@@ -223,6 +223,79 @@ No new asset has been cooked or installed, and no CSS/CINE runtime integration
 has been implemented by this task yet. Questman's stopping-transition report is
 now part of the animation goal; the lighting/oil/Scyther requests remain queued.
 
+## Evaluated Blender examples and import finalization
+
+The three Blender examples now have private retarget candidates. Sampling uses
+the evaluated scene, including NLA timing, object transforms and IK constraints,
+with embedded scripts disabled and original file hashes unchanged:
+
+| Source | Private revision | Samples | Rate | Duration |
+| --- | --- | --- | --- | --- |
+| `200.blend`, Armature | L4S | 10 | 25 Hz | 0.36 s |
+| `801.blend`, Armature | L4D | 1,132 | 60 Hz | 18.85 s |
+| `CameraBone.blend`, Eve rig | L4C | 821 | 60 Hz | 13.666667 s |
+
+The camera example retimes 820 action intervals into 410 scene intervals at
+30 Hz. Sampling it at 60 Hz preserves every source key at the intended speed.
+The 801 example uses its active action through frame 1131, excluding the scene's
+unused tail through frame 2000. Its forearm and leg constraints are evaluated.
+The complete source skeletons remain in the audits, including signed corrective
+scales. Only the verified body/finger hierarchy enters the current retarget
+candidate. Do not mistake this for completed facial or prop animation support.
+
+`sample_blender_scene.py` derives parent-local transforms after the measured
+source-to-UE Y reflection. It requires the inspected centimetre scene units,
+rejects nonfinite transforms, singular scale and unrepresentable shear, and
+retains signed nonzero scale. A Blender fixture verifies NLA half-speed timing,
+constraint evaluation, fractional frames, object/world binding, parent-local
+motion and unchanged source bytes. Fifteen Python timing/hierarchy tests pass,
+including rejection of resampling that would change the 25 Hz endpoint.
+
+The first 25 Hz import exposed a separate UE authoring bug: changing the data
+model rate did not update the AnimSequence platform compression rate. UE tried
+to compress a 0.36-second sequence at its factory 30 Hz setting and asserted on
+a fractional sample count. This was an offline editor failure, not a game crash.
+The importer now calls an editor-only `FinalizeSourceImport` bridge before
+closing its edit bracket. It emits the native `NotifyPopulated` notification
+and verifies the platform rate matches the data model. The bridge only accepts
+private `/Game/CSS/AnimLab/AN_` sources in a commandlet.
+
+Evidence: UE 5.6.1 `AnimSequence.cpp`, `OnModelModified(Populated)` sets
+`PlatformTargetFrameRate`; `IAnimationDataController::NotifyPopulated` is native
+and not exposed to Python. Epic documents the notification in
+[IAnimationDataController](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/IAnimationDataController?application_version=5.6).
+The empty populated factory model also requires a common-multiple rate bridge
+before receiving its 25 Hz keys. This does not resample authored keys.
+
+After rebuilding the editor module, all three imports and fresh-process raw
+pose comparisons pass: 1,963 frames, each compared over 388 target bones, with
+zero saved/repeated position or quaternion difference. Protected target mesh
+and skeleton hashes match. Readback receipts are under
+`work/cine-animation-port/retarget-l4s`, `retarget-l4d` and `retarget-l4c`.
+Separate fresh-process sampling checks confirm both saved source and target
+have the expected sample count, duration and first-frame interval for all
+three examples. Skinned reviews are separate from these numeric checks.
+These remain uncooked, uninstalled candidates.
+
+The 200 example is a short right-arm gesture. In 801, all varying action
+channels end by frame 200; the remainder of its 1131-frame action range holds
+the final pose. Keep this distinction in the acceptance/catalog record rather
+than presenting the entire duration as continuous motion. Its 189-frame
+diagnostic preview preserves the source timing at 10 fps; the asset stays 60 Hz.
+
+The camera-scene body performance travels about ten metres. All 821 skinned
+frames were measured after the initial renderer stopped at its 0.001 cm
+reconstruction bound. The maximum measured position error is 0.0013692 cm,
+with zero measured angular error. An explicit 0.002 cm diagnostic tolerance
+allows its preview; the default bound remains unchanged for other clips.
+The renderer can follow pelvis translation without changing the animation.
+Skinned samples show the airborne crouch/jump and final curled pose; full
+contact, garment and runtime acceptance remain open. Evidence:
+`l4c-measure-v2/report.json`, `l4c-render-v3` and `l4d-render/report.json`.
+
+The same sampling-clock check also passes the previous L2/L3 batches: 98
+saved source/target assets in total across L2, L3A, L3L, L4S, L4D and L4C.
+
 ## Next checks
 
 Resolve the two extended-skeleton sources, inspect the remaining support assets,

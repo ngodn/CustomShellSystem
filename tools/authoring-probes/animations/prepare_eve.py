@@ -41,7 +41,7 @@ def main():
     parser.add_argument('--clip-map', type=Path, help='Short output labels mapped to decoded source directory names')
     parser.add_argument('--revision', default='')
     parser.add_argument('--source-yaw', type=int, choices=(0, 90), default=0)
-    parser.add_argument('--sample-rate', type=int, choices=(30, 60),
+    parser.add_argument('--sample-rate', type=int, choices=(25, 30, 60),
                         help='Optional resampling rate; otherwise preserve the verified source rate')
     parser.add_argument('--allow-positive-scale', action='store_true',
                         help='Preserve positive animated scale for offline retarget candidates')
