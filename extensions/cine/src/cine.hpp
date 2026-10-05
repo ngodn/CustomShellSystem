@@ -82,9 +82,12 @@ private:
         Json own_look;                 // describe() before the take: outfit, variant, customize
         Json look_now;                 // describe() of what she wears now, for control ids
         size_t look_next = 0;
-        enum class Wear { Idle, FlashIn, Waiting } wearing = Wear::Idle;
-        double flash_from = -1, flash_release = -1, wear_sent_at = 0;
-        int wear_poll = 0;
+        // An outfit change: the picture wipes into a frame pass, she changes under it, and it
+        // wipes back on the beat.
+        enum class Wear { Idle, Covering, Waiting } wearing = Wear::Idle;
+        double cover_from = -1, wear_sent_at = 0, transition_until = -1;
+        bool covered = false;
+        int wear_poll = 0, transitions = 0;
         // What to do before the take rolls: wear each look once, build the breakdown on the
         // look it belongs to, end on the opening look.
         struct Prep { bool build = false; std::string outfit, variant; bool own = false; };

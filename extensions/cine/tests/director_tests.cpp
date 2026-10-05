@@ -986,7 +986,7 @@ int main(int argc, char** argv) {
             const auto left = unrestored(before, h.snapshot());
             expect(left.empty(), "and nothing is left behind: " + left);
         }
-        {   // A sequence take: shots on a beat grid, looks worn under a flash, her own look back at the end.
+        {   // A sequence take: shots on a beat grid, looks worn under a frame-pass transition, her own look back at the end.
             Rig r(dir); r.host.populate(); auto& h = r.host;
             h.css_present = true;
             std::ofstream(dir / "presets" / "test-seq.cine.json") << Json{
@@ -1020,6 +1020,8 @@ int main(int argc, char** argv) {
             // 120 BPM, bar 1 at 0.5 s: bars 1.5, 2, 2.5, 3, 3.25 are at 1.5, 2.5, 3.5, 4.5, 5.0 s; the end at 6.5 s.
             r.steps(22);   // about 2.0 s in: past the first wear
             expect(h.css_wears.size() == 4 && h.css_wears[3].at("outfit") == "a.outfit" && h.css_outfit == "a.outfit", "the first look is worn on its beat");
+            expect(h.mpc.contains("WipeT0") && h.param_count("PP_Cine_Buffer_Post", "W_Depth", 1.0) == 1, "the outfit change was covered by a wipe into the depth pass");
+            expect(h.projections == 0, "and a covering pass draws no breakdown labels");
             expect(h.camera_places == placed, "no cut yet: the first two shots are one flowing move");
             r.steps(7);    // about 2.9 s: the palette step at 2.5 s
             expect(h.css_applies.size() == applies + 1 && h.css_applies.back()["commands"][0].value("palette", std::string()) == "crimson", "a palette step is applied on its beat");

@@ -10,8 +10,9 @@
 // A shot moves the camera from one pose to another around her (azimuth, distance, height,
 // aim height, field of view, roll) with an ease. It starts on a cut (the camera is placed at
 // once) or flows on from where the shot before it ended, which is how a long unbroken move
-// and its whips are written. A look step changes what she wears or how it is set up; one
-// that changes the outfit goes under a flash, because wearing an outfit is not instant.
+// and its whips are written. A look step changes what she wears or how it is set up. One
+// that changes the outfit is covered by a transition (the director wipes the picture into a
+// frame pass and back), because wearing an outfit is not instant.
 #include <map>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -50,7 +51,6 @@ struct SeqLook {
     double at = 0;               // seconds
     std::string outfit, variant, palette;
     std::map<std::string, std::vector<double>> controls;   // 1 to 3 channels each
-    double flash = 0;            // seconds of flash hold at least; wears always get one
 };
 
 struct Sequence {
@@ -69,8 +69,5 @@ struct Sequence {
 size_t shot_at(const Sequence& s, double t);
 // The camera pose `t` seconds into the take.
 SeqPose pose_at(const Sequence& s, double t);
-// How dark the flash is at `t` given a flash that started at `from` and may let go at
-// `release` (negative: still held). Two frames in, about a quarter second out.
-double flash_alpha(double t, double from, double release);
 
 } // namespace cine

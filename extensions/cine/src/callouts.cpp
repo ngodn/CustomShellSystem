@@ -185,9 +185,6 @@ void Callouts::build() {
         paint(sign_[i], i == 0 ? ink : faint);
         if (face_) face_->justify(sign_[i], 0);
     }
-    flash_ = hud_->image(context_, root);
-    if (flash_) hud_->set_visible(context_, flash_, 0);
-    flash_alpha_ = -1;
     caption_shown_.clear(); sign_source_.clear(); sign_fitted_.clear(); sign_width_ = -1;
     scale_ = 0;   // fonts are set on the first update, for the frame it brings
     built_ = true; visible_ = true;
@@ -233,26 +230,10 @@ void Callouts::hide() {
 void Callouts::forget() {
     built_ = visible_ = false;
     for (auto& s : slots_) s = Slot{};
-    caption_ = caption_bar_ = caption_accent_ = sign_accent_ = flash_ = 0;
-    flash_alpha_ = -1;
+    caption_ = caption_bar_ = caption_accent_ = sign_accent_ = 0;
     for (auto& l : sign_) l = 0;
     caption_shown_.clear(); caption_text_.clear(); sign_source_.clear(); sign_fitted_.clear();
     sign_width_ = -1; scale_ = 0; sign_scale_ = 0;
-}
-
-void Callouts::flash(const CssxFrame& frame_data, double alpha) {
-    if (!hud_) return;
-    if (frame_data.world_generation != world_) { forget(); world_ = frame_data.world_generation; }
-    alpha = std::clamp(alpha, 0.0, 1.0);
-    if (alpha <= 0 && (!built_ || flash_alpha_ <= 0)) return;   // nothing showing, nothing to build
-    if (!frame_data.world_ready) return;
-    build();
-    if (!built_ || !flash_ || std::abs(alpha - flash_alpha_) < 0.004) return;
-    flash_alpha_ = alpha;
-    if (alpha <= 0) { hud_->set_visible(context_, flash_, 0); return; }
-    hud_->set_color(context_, flash_, 1, 1, 1, float(alpha));
-    hud_->set_rect(context_, flash_, 0, 0, float(frame_data.viewport_w), float(frame_data.viewport_h), 0, 0, z_order + 6);
-    hud_->set_visible(context_, flash_, 1);
 }
 
 void Callouts::update(const CssxFrame& frame_data, const Rect& frame, const std::vector<CalloutTarget>& targets,

@@ -391,6 +391,9 @@ void Extension::prepare() {
                 for (const auto& [outfit, variant] : p.sequence.wardrobe()) { Take::Prep w; w.outfit = outfit; w.variant = variant; t.prep.push_back(w); }
                 if (t.layers) t.prep.push_back(at_time(first));
             }
+            // Outfit changes are covered by a frame pass, so the passes are built even when the
+            // breakdown track itself is off.
+            if (t.seq_looks && !p.sequence.wardrobe().empty()) t.layers |= bit(Layer::Depth) | bit(Layer::Normals);
             if (t.layers) { Take::Prep build; build.build = true; t.prep.push_back(build); }
             if (t.seq_looks) {
                 Take::Prep opening; opening.own = true;
@@ -607,7 +610,8 @@ void Extension::apply_look(const SeqLook& look) {
     if (!payload.is_null()) rig_.css(payload);
 }
 
-// Every frame of a sequence take: the clock, cuts on their beat, look steps, the flash.
+// Every frame of a sequence take: the clock, cuts on their beat, look steps and the
+// transitions that cover an outfit change.
 // Never throws; a failing look step turns the looks off for the rest of the take.
 void Extension::sequence_frame(const CssxFrame& f) {
     auto& t = *take_;
@@ -634,40 +638,59 @@ void Extension::sequence_frame(const CssxFrame& f) {
     } catch (...) {}
     if (t.seq_looks) {
         try {
-            constexpr double wear_lead = 0.32;   // the flash starts this long before the beat; the look shows on it
+            // An outfit change rides the beat: the picture wipes into a frame pass over one
+            // beat, holds the pass for a beat while she changes under it, and wipes back over
+            // one beat starting on the step's own beat. Where changes come every bar the two
+            // wipes take half a beat each.
+            const double beat = 60.0 / seq.tempo.bpm;
+            auto timing = [&](size_t index) {
+                double gap = 1e9;
+                for (size_t i = index; i-- > 0;) if (!seq.looks[i].outfit.empty()) { gap = seq.looks[index].at - seq.looks[i].at; break; }
+                struct { double wipe, hold; } out{gap < 6 * beat ? beat / 2 : beat, std::max(beat, 0.45)};
+                return out;
+            };
             while (t.wearing == Take::Wear::Idle && t.look_next < seq.looks.size()) {
                 const auto& look = seq.looks[t.look_next];
                 if (!look.outfit.empty()) {
-                    if (now < look.at - wear_lead) break;
-                    t.flash_from = now; t.flash_release = -1; t.wearing = Take::Wear::FlashIn;
+                    const auto [wipe, hold] = timing(t.look_next);
+                    if (now < look.at - hold - wipe) break;
+                    const Layer pass = t.transitions % 2 ? Layer::Normals : Layer::Depth;
+                    t.covered = breakdown_.shown() == 0 && breakdown_.has_pass(pass);   // never over a running breakdown step
+                    if (t.covered) breakdown_.show(bit(pass), wipe);
+                    ++t.transitions;
+                    t.cover_from = now; t.wearing = Take::Wear::Covering;
                 } else {
                     if (now < look.at) break;
                     apply_look(look);
                     ++t.look_next;
                 }
             }
-            if (t.wearing == Take::Wear::FlashIn && now >= t.flash_from + 0.06) {
+            if (t.wearing == Take::Wear::Covering) {
                 const auto& look = seq.looks[t.look_next];
-                rig_.css(wear_request(look.outfit, look.variant, false, false));
-                t.wore = true; t.wearing = Take::Wear::Waiting; t.wear_sent_at = now; t.wear_poll = 0;
+                // Asked for once the picture is covered: the beat of hold is what it has to land in.
+                if (now >= look.at - timing(t.look_next).hold) {
+                    rig_.css(wear_request(look.outfit, look.variant, false, false));
+                    t.wore = true; t.wearing = Take::Wear::Waiting; t.wear_sent_at = now; t.wear_poll = 0;
+                }
             } else if (t.wearing == Take::Wear::Waiting && ++t.wear_poll % 3 == 0) {
                 const auto& look = seq.looks[t.look_next];
                 const auto described = rig_.css({{"action", "describe"}});
                 const bool landed = worn(described, look.outfit, look.variant);
                 if (landed) t.look_now = described;
-                // Let go on the beat once she has changed, or after three seconds whatever happened.
-                if ((landed && now >= look.at && now >= t.flash_from + look.flash) || now > t.wear_sent_at + 3.0) {
+                // Back to the picture on the beat once she has changed, or after three seconds whatever happened.
+                if ((landed && now >= look.at) || now > t.wear_sent_at + 3.0) {
                     if (landed) apply_look(look);
-                    t.flash_release = now; t.wearing = Take::Wear::Idle; ++t.look_next;
+                    const double wipe = timing(t.look_next).wipe;
+                    if (t.covered) { breakdown_.show(0, wipe); t.transition_until = now + wipe + 0.05; }
+                    t.covered = false; t.wearing = Take::Wear::Idle; ++t.look_next;
                 }
             }
         } catch (const std::exception& e) {
             t.seq_looks = false; t.wearing = Take::Wear::Idle;
-            if (t.flash_release < 0 && t.flash_from >= 0) t.flash_release = now;
+            if (t.covered) { breakdown_.show(0, 0.2); t.covered = false; }
             t.note = std::string("Looks stopped: ") + e.what() + ".";
         }
     }
-    callouts_.flash(f, t.flash_from >= 0 ? flash_alpha(now, t.flash_from, t.flash_release) : 0.0);
 }
 
 // 10 Hz: the camera is sent toward where it should be a moment from now, like the dolly. A
@@ -746,7 +769,9 @@ std::vector<std::string> Extension::spring_bones() {
 // 10 Hz while a breakdown shows: where each labelled component sits relative to her, and a
 // fresh measure of the lens (the field of view changes along a shot).
 void Extension::sample_labels() {
-    const bool wanted = settings_.labels && breakdown_.active() && breakdown_.shown() != 0;
+    // A pass that covers an outfit change is a transition, not a breakdown step: no labels.
+    const bool transition = take_ && (take_->wearing != Take::Wear::Idle || take_->seq_clock < take_->transition_until);
+    const bool wanted = settings_.labels && breakdown_.active() && breakdown_.shown() != 0 && !transition;
     if (!wanted) { labels_live_ = false; labels_.clear(); return; }
     try {
         const auto& callouts = breakdown_.callouts();
@@ -1008,7 +1033,6 @@ void Extension::finish_take(const std::string& why, bool failed) {
         try { for (auto& f : b->end()) failures.push_back(std::move(f)); } catch (const std::exception& e) { failures.push_back(e.what()); }
     }
     callouts_.hide(); labels_live_ = false; labels_.clear(); lens_ = {};
-    callouts_.flash(last_frame_, 0);
     audio_.stop();
     std::string repainted;
     const bool wore = take_->wore && take_->own_look.is_object();

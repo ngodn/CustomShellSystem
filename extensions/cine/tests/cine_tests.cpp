@@ -389,7 +389,7 @@ static void sequence() {
         {"looks", Json::array({
             {{"at", 2}, {"outfit", "a.outfit"}, {"variant", "one"}},
             {{"at", 2.5}, {"palette", "ember"}, {"controls", {{"glow", 8}, {"tint", {1, 0.5, 0}}}}},
-            {{"at", 3}, {"outfit", "b.outfit"}, {"variant", "two"}, {"flash", 0.3}},
+            {{"at", 3}, {"outfit", "b.outfit"}, {"variant", "two"}},
             {{"at", 4}, {"outfit", "a.outfit"}, {"variant", "one"}}})},
         {"breakdown", {{"steps", Json::array({{{"at", 3.5}, {"layers", {"depth"}}}, {{"at", 4.5}, {"layers", Json::array()}}})}}}};
     const auto p = Preset::parse(base);
@@ -406,16 +406,12 @@ static void sequence() {
     expect(near(pose_at(s, 2).azimuth, 45, 1e-9) && near(pose_at(s, 0.2).azimuth, 0, 1e-9), "a linear shot is halfway at half time, and waits at its start before it");
     expect(near(pose_at(s, 4).azimuth, 180, 1e-6) && near(pose_at(s, 4).distance, 300, 1e-6), "a whip is halfway in the middle");
     expect(near(pose_at(s, 4.999).azimuth, 270, 0.01) && near(pose_at(s, 5).azimuth, 180, 1e-9) && near(pose_at(s, 5).roll, 12, 1e-9), "a cut jumps to its own pose");
-    expect(s.looks.size() == 4 && near(s.looks[0].at, 3, 1e-9) && s.looks[0].flash > 0 && s.looks[1].flash == 0 && near(s.looks[2].flash, 0.3, 1e-9), "a wear gets a flash, a palette change does not");
+    expect(s.looks.size() == 4 && near(s.looks[0].at, 3, 1e-9) && s.looks[0].outfit == "a.outfit" && s.looks[1].outfit.empty() && s.looks[1].palette == "ember", "look steps parse onto the grid");
     expect(s.looks[1].controls.at("tint").size() == 3 && near(s.looks[1].controls.at("glow")[0], 8, 1e-9), "controls take one number or up to three");
     const auto wardrobe = s.wardrobe();
     expect(wardrobe.size() == 2 && wardrobe[0].first == "a.outfit" && wardrobe[1].second == "two", "the wardrobe lists each look once, in first-use order");
     const auto tl = make_timeline(p, 0, 184);
     expect(tl.breakdown.size() == 2 && near(tl.breakdown[0].at, 6, 1e-9) && near(tl.breakdown[1].at, 8, 1e-9), "breakdown steps of a sequence are in bars");
-
-    // Flash: two frames in, held until released, a quarter second out.
-    expect(flash_alpha(0.9, 1, -1) == 0 && near(flash_alpha(1.05, 1, -1), 1, 1e-9) && near(flash_alpha(9, 1, -1), 1, 1e-9), "a flash comes in fast and holds until released");
-    expect(near(flash_alpha(1.5, 1, 1.5), 1, 1e-9) && flash_alpha(1.61, 1, 1.5) < 0.6 && flash_alpha(1.8, 1, 1.5) == 0, "and lets go in about a quarter second");
 
     auto bad = [&](const char* what, auto&& change) { Json j = base; change(j); rejects([&] { Preset::parse(j); }, what); };
     bad("no tempo", [](Json& j) { j.erase("tempo"); });
@@ -460,9 +456,9 @@ static void shipped(const fs::path& root) {
             for (const auto& r : tl.breakdown) { if (r.layers && first < 0) first = r.at; if (first >= 0) last = r.at; }
             for (const auto& look : seq.looks) if (!look.outfit.empty() && first >= 0) expect(look.at <= first - 0.5 || look.at >= last + 0.5, "a shipped sequence changes no outfit under its breakdown: " + p.id);
             if (!tl.breakdown.empty()) expect(tl.breakdown.back().layers == 0, "a shipped sequence's breakdown ends on the final image: " + p.id);
-            // Wears leave room for the flash that covers them.
+            // Wears leave room for the transition that covers them: a beat in, a beat held.
             double previous = -10;
-            for (const auto& look : seq.looks) if (!look.outfit.empty()) { expect(look.at - previous >= 1.2, "wears are at least 1.2 s apart: " + p.id); previous = look.at; }
+            for (const auto& look : seq.looks) if (!look.outfit.empty()) { expect(look.at - previous >= 3 * 60.0 / seq.tempo.bpm, "wears are at least three beats apart: " + p.id); previous = look.at; }
         } else if (p.kind == ShotKind::Action) {
             const auto tl = make_timeline(p, 0, 184);
             expect(near(tl.total, p.max_seconds, 1e-9) && tl.keys.empty(), "shipped action preset runs to its cap: " + p.id);

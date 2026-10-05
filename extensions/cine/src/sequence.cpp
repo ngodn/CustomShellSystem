@@ -6,7 +6,6 @@
 namespace cine {
 namespace {
 constexpr size_t max_shots = 256, max_looks = 512;
-constexpr double flash_in = 0.05, flash_out = 0.22;
 
 double number(const Json& j, const char* key, double fallback, double lo, double hi) {
     if (!j.contains(key)) return fallback;
@@ -111,7 +110,6 @@ Sequence Sequence::parse(const Json& j) {
             look.variant = text(item, "variant", 96);
             if (look.outfit.empty() != look.variant.empty()) throw std::invalid_argument("A look step names 'outfit' and 'variant' together");
             look.palette = text(item, "palette", 96);
-            look.flash = number(item, "flash", look.outfit.empty() ? 0 : 0.12, 0, 2);
             if (item.contains("controls")) {
                 if (!item.at("controls").is_object() || item.at("controls").size() > 64) throw std::invalid_argument("'controls' must be an object of up to 64 controls");
                 for (const auto& [id, value] : item.at("controls").items()) {
@@ -152,13 +150,6 @@ SeqPose pose_at(const Sequence& s, double t) {
     const double u = shot.length > 1e-6 ? ease(shot.ease, (t - shot.at) / shot.length) : 1.0;
     return {lerp(shot.from.azimuth, shot.to.azimuth, u), lerp(shot.from.distance, shot.to.distance, u), lerp(shot.from.height, shot.to.height, u),
             lerp(shot.from.aim, shot.to.aim, u), lerp(shot.from.fov, shot.to.fov, u), lerp(shot.from.roll, shot.to.roll, u)};
-}
-
-double flash_alpha(double t, double from, double release) {
-    if (t < from) return 0;
-    const double rise = std::min(1.0, (t - from) / flash_in);
-    if (release < 0 || t < release) return rise;
-    return std::max(0.0, std::min(rise, 1.0 - (t - release) / flash_out));
 }
 
 } // namespace cine

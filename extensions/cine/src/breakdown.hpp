@@ -42,6 +42,8 @@ public:
     // Go to this set of layers with a left-to-right wipe of `wipe_seconds` (0 cuts).
     void show(LayerSet layers, double wipe_seconds);
     LayerSet shown() const { return shown_; }
+    // True when this frame layer was asked for and its pass is on the camera.
+    bool has_pass(Layer layer) const { return active_ && frame_passes_ && (needed_ & bit(layer)); }
     // Put everything back over the next ticks (normal end of a take)...
     void finish();
     // ...or right now (cancel, stop). Returns what could not be restored.
