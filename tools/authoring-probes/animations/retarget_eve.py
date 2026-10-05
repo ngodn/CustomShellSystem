@@ -64,7 +64,9 @@ if (WORK/'protected.json').exists():
 write('protected.json', hashes)
 write('target-bind.json', json.loads(unreal.CSSRetargetLibrary.inspect_mesh_bind_pose(target)))
 source_bind = json.loads(unreal.CSSRetargetLibrary.inspect_mesh_bind_pose(source))
-assert len(source_bind) == 54
+prepared_bones = json.loads((WORK/'source.mesh.json').read_text())['bones']
+assert [(b['name'], b['parent']) for b in source_bind] == [
+    (b['name'], b['parent']) for b in prepared_bones]
 write('source-bind.json', source_bind)
 
 chains = [('Spine', 'Bip001-Spine', 'Bip001-Spine2', 'spine_01', 'spine_05'),
@@ -150,5 +152,5 @@ for label, filename in batch:
     assert unreal.EditorAssetLibrary.save_loaded_asset(candidate, False)
 
 assert all(hashlib.sha256(Path(p).read_bytes()).hexdigest() == h for p, h in hashes.items())
-write('retarget-result.json', dict(passed=True, source_bones=54, chains=len(chains), assets=outputs,
+write('retarget-result.json', dict(passed=True, source_bones=len(source_bind), chains=len(chains), assets=outputs,
                                  protected=hashes, scope='Isolated IK retarget candidates. Skinned review and gameplay validation remain required.'))

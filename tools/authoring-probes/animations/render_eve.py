@@ -25,13 +25,19 @@ parser.add_argument('--measure-only', action='store_true', help='Evaluate mesh c
 parser.add_argument('--pose', choices=('final', 'upstream'), default='final',
                     help='Compare the final pose with the recorded input before secondary motion.')
 parser.add_argument('--view', choices=('three-quarter', 'front', 'back', 'side'), default='three-quarter')
+parser.add_argument('--camera-scale', type=float, default=2.45,
+                    help='Orthographic height in metres, for airborne or extended poses')
+parser.add_argument('--camera-height', type=float, default=.95,
+                    help='Camera target height in metres')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert args.stride > 0
+assert math.isfinite(args.camera_scale) and args.camera_scale > 0
+assert math.isfinite(args.camera_height)
 assert args.output.resolve().is_relative_to(ROOT) and not args.output.exists()
 args.output.mkdir()
 blend = MOD/'work/CSS_SeduXtress_HeelSupportsV45C.blend'
 blend_hash = hashlib.sha256(blend.read_bytes()).hexdigest()
-bpy.ops.wm.open_mainfile(filepath=str(blend))
+bpy.ops.wm.open_mainfile(filepath=str(blend), use_scripts=False)
 rig = bpy.data.objects['SKEL_CSS_Base']
 bones, bind = read_bones(MOD/rig['CSS_bind_pose'])
 expected = json.loads(args.bind.read_text())
@@ -107,11 +113,11 @@ scene.render.resolution_y = 1000
 scene.render.resolution_percentage = 100
 camera = bpy.data.cameras.new('Review camera')
 camera.type = 'ORTHO'
-camera.ortho_scale = 2.45
+camera.ortho_scale = args.camera_scale
 view = bpy.data.objects.new('Review camera', camera)
 scene.collection.objects.link(view)
 scene.camera = view
-center = Vector((0, 0, .95))
+center = Vector((0, 0, args.camera_height))
 direction = {'three-quarter': (4, -2.5, .5), 'front': (1, -5, .35),
              'back': (-1, 5, .35), 'side': (5, 0, .35)}[args.view]
 view.location = center + Vector(direction)
@@ -183,6 +189,7 @@ assert hashlib.sha256(blend.read_bytes()).hexdigest() == blend_hash
     blend=str(blend), blend_sha256=blend_hash, motion=str(args.motion),
     motion_sha256=hashlib.sha256(args.motion.read_bytes()).hexdigest(),
     fps=motion['fps']/args.stride, parts=parts, shapes=shapes, errors=errors, view=args.view,
+    camera_scale=args.camera_scale, camera_height=args.camera_height,
     covered_body_faces_removed=expected_removed, pose=args.pose, measure_only=args.measure_only,
     wardrobe='Heels and stockings shown; flat feet hidden; heeled stocking feet and footwear lining shown.',
     scope=('UE compressed upstream pose before secondary motion and hand morphs, stationary owner. '

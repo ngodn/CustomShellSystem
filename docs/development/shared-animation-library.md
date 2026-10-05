@@ -156,6 +156,38 @@ that the full Eve action uses the scene's current playback timing without
 checking its source. Both actions remain inventoried, not ported or accepted.
 Receipt: `work/cine-animation-port/blender-inspection/camera-bone.json`.
 
+The Adam and Lily catwalks now have separate offline candidates (`retarget-l3a`
+and `retarget-l3l`). Their rest poses are not replaced by Eve's. Adam's extra
+`Base` ancestor is retained, including its source keys, giving 55 source bones;
+Lily uses 54. The preparation tool requires explicit ancestor inclusion rather
+than flattening an omitted parent. It rejects missing joints, duplicate names
+and invalid/cyclic parent ordering. Four new hierarchy checks and the ten
+timing/interpolation checks pass. Repreparing the original Eve fixture produces
+byte-identical source mesh, sampled clip and batch configuration.
+
+Fresh UE processes verify all 454 Adam frames and 200 Lily frames, with zero
+saved/repeated position or quaternion difference and unchanged protected
+target assets. These checks validate repeatability, not the artistic result.
+Full-motion skinned renders are the next review step. Their source archives
+and the previously released outfits remain unchanged.
+
+The first 31-pose skinned gallery is rendered and reviewed at the final source
+sample of each photo pose. Most silhouettes are coherent, but this single-view
+gallery does not establish hand contacts or garment acceptance. The fixed
+camera crops the airborne Somersault and WeDidIt poses. Measured contact height
+also varies among grounded poses (for example Natarajasana is +10.95 cm), while
+the airborne poses reach +99.20 and +72.36 cm. Do not flatten every pose to the
+floor. Compare source support, footwear and root motion before correction.
+Evidence: `photo-pose-gallery-labels.json`, `photo-pose-render/report.json` and
+`photo-pose-contact-sheet.jpg` in the private work directory.
+
+The review renderer now accepts explicit camera height and orthographic scale.
+Wider rerenders of both airborne poses show the complete body and preserve
+their original root height (`photo-airborne-render`). The raised thigh in
+WeDidIt shows a stocking/body intersection in this raw-pose preview. Keep it
+open for garment and final-component review; successful pose comparison does
+not resolve it. The renderer explicitly disables embedded Blender scripts.
+
 Facial source metadata uses 99 distinct curve names. The retained Eve Body in
 `CSS_SeduXtress_HeelSupportsV45C.blend` has 97 exact shape-name matches. The other
 two are capitalization differences (`Jaw_Left`/`jaw_left` and
