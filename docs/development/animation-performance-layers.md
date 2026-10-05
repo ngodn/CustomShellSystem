@@ -70,10 +70,33 @@ python3 tools/authoring-probes/animations/run_performance_layers.py \
   work/cine-animation-port/shared-v1 --mode verify --label performance-next-check
 ```
 
+Offline evaluation, 2026-10-06: `performance-all-eval1-result.json` and its
+exit receipt confirm seven cases on each of the nine audited meshes (63 total).
+Inactive, active start, explicit seek, held endpoint, stop, null sequence and
+restoration all match the original graph on the 19 checked body bones within
+0.01 cm / 0.001 radians. Every raw bone remains finite and normalized. The
+comparison runs compressed poses and post-process graphs at 60 Hz, with the
+last 30 of 180 frames used after settling. It does not exercise the world's
+cloth solver, live movement, gameplay interruptions or a moving clip's full
+duration. Those remain acceptance work.
+
+`CSSPerformanceEvaluation.cpp` and `evaluate_performance_layers.py` reproduce
+this with `run_performance_layers.py --mode evaluate`. Input meshes, source
+graphs, layer graphs and both clips are hash-checked after evaluation; none
+are saved. `--mesh` limits a diagnostic run to one audited mesh.
+
+The portable `PerformanceClock` now supplies explicit loop, once and pose-hold
+timing, pause, seek, rate and stop behavior. It consumes game time, retains the
+last pose during a 0.18-second exit blend and rejects nonfinite/out-of-range
+requests before changing state. Its tests include partitioned ticks, two-key
+photo poses, endpoint seeks, repeated stop, pause cleanup and rate changes.
+The engine service still needs to provide ownership, a world-time delta,
+binding validation and restoration; the clock alone does not play a clip.
+
 Before deployment:
 
-1. Compare active, held, disabled and null-clip evaluation against the original
-   graphs on all nine current meshes. Check physics, footwear and Genessa wings.
+1. Extend the passing held-pose checks to full moving clips. Check live cloth,
+   footwear and Genessa wings.
 2. Bind the runtime only to verified source graph versions. A matching skeleton
    or source asset path alone cannot establish that an adapter preserves a newer
    outfit's physics graph.

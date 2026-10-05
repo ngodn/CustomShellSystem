@@ -12,8 +12,9 @@ ROOT = Path(__file__).resolve().parents[3]
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('work', type=Path)
-    parser.add_argument('--mode', choices=('create', 'verify'), required=True)
+    parser.add_argument('--mode', choices=('create', 'verify', 'evaluate'), required=True)
     parser.add_argument('--label', required=True)
+    parser.add_argument('--mesh', help='One audited mesh for an isolated evaluation')
     args = parser.parse_args()
     if not re.fullmatch(r'[a-z0-9-]{1,48}', args.label):
         raise ValueError('Use a short log label')
@@ -39,12 +40,19 @@ def main():
         bindings += ['--ro-bind', source, source, '--ro-bind', source, destination]
     position = command.index('--')
     command[position:position] = bindings
-    command += ['-run=pythonscript', '-script=' + str(Path(__file__).with_name('stage_performance_layers.py')),
+    script = 'evaluate_performance_layers.py' if args.mode == 'evaluate' else 'stage_performance_layers.py'
+    command += ['-run=pythonscript', '-script=' + str(Path(__file__).with_name(script)),
                 '-abslog=' + str(work / (args.label + '-engine.log'))]
     environment = os.environ.copy()
     environment['CSS_ANIM_WORK'] = str(work)
     environment['CSS_PERFORMANCE_MODE'] = args.mode
     environment['CSS_PERFORMANCE_REPORT'] = args.label + '-result.json'
+    if args.mesh:
+        if args.mode != 'evaluate':
+            raise ValueError('Mesh selection is only available for evaluation')
+        environment['CSS_PERFORMANCE_MESH'] = args.mesh
+    else:
+        environment.pop('CSS_PERFORMANCE_MESH', None)
     with (work / (args.label + '-command.json')).open('x') as file:
         json.dump(command, file, indent=2)
     with (work / (args.label + '-console.log')).open('x') as log:

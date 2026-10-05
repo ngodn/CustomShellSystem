@@ -15,4 +15,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString VerifyPerformanceLayer(class UAnimBlueprint* Source, class UAnimBlueprint* Layer);
+
+    /** Compare local poses through original and explicit-time post-process graphs. */
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static FString EvaluatePerformanceLayer(class USkeletalMesh* Mesh, class UAnimBlueprint* Source,
+        class UAnimBlueprint* Layer, class UAnimSequence* BaseClip, class UAnimSequence* PerformanceClip);
 };

@@ -235,3 +235,10 @@ White. Original controls, nodes, pin defaults and skeletons are preserved.
 They are separate editor assets, not installed or runtime-integrated. Next
 verify active/held/disabled evaluated poses, then add owned CSS/CINE playback
 and restoration. See `docs/development/animation-performance-layers.md`.
+
+All nine meshes passed seven offline component/post-process evaluation cases
+each (63 cases). This verifies held body poses and inactive restoration, not
+world cloth simulation or live acceptance. Sources retain their input hashes.
+The explicit-time clock passes 36 checks; all 20 host CTest suites pass.
+Runtime binding/ownership, full moving clips and CSS/CINE controls are next.
+No additional assets or DLLs have been installed.
