@@ -120,6 +120,9 @@ animation data is unchanged. Source hashes are checked after rendering.
 No game files were changed for this review. The installed performance trial's
 core selector, core hash, CINE entry and shared container hashes still match
 `live-performance-1/deployment.json`; the game was closed at the final check.
-The facial candidate remains uninstalled. Remaining work includes
+The facial candidate was still uninstalled at that review check. It has since
+been installed as the combined private trial; see
+[the expression installation record](eve-expression-candidates.md#combined-private-trial-installation-2026-10-06).
+Remaining work includes
 native-speed playback, all-outfit contacts/physics, live CSS/CINE
 restoration and performance, two unresolved source rigs, and distributions.

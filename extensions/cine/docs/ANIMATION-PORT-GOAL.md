@@ -415,3 +415,15 @@ pass, including equal endpoint poses with unequal velocity, quaternion sign
 equivalence and invalid snapshot rejection. Native-speed and live checks remain
 open. The game is closed, and the installed trial's DLL selectors, DLL hashes and
 shared containers still match its deployment receipt. No installation changed.
+
+Combined-trial checkpoint, 2026-10-06: installed the verified facial/body shared
+pack and matching CSS/CINE DLLs while the game was closed. The new installer
+requires the exact previous trial and passes five filesystem failure/rollback
+tests. All 83 real-pack catalog checks passed before installation. Independent
+post-install verification confirms selectors, DLLs, containers, saved state and
+the retained old pack. Receipt: `work/cine-animation-port/live-facial-1/deployment.json`.
+Core is `css_core-facial-6b9cf837e4c2239c.dll`, CINE is
+`cine-facial-bb2d36a5ca792bbf.dll`. The current user check is Smile then Original
+on Eve Black Pearl; the earlier performance-only prompt is superseded.
+Live body/facial playback, other variants, contacts, restoration and performance
+remain unverified. No goal requirement or unresolved source clip was removed.

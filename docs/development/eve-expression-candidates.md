@@ -174,8 +174,8 @@ Validation at this checkpoint:
   Its separate independent facial decoder passes all six meshes again.
   The trio is approximately 315.6 MiB, excluding installed outfit dependencies.
 
-The installer has not run for this candidate. The prior performance-only trial
-remains installed. Live facial rendering, side contacts, restoration, interaction
+At this checkpoint the installer had not run. The combined candidate was installed
+later, as recorded below. Live facial rendering, side contacts, restoration, interaction
 with the playback adapters and cold/warm costs remain unverified. Expressions
 currently target only the six audited Eve variants. Genessa and Commander White
 retain their ordinary faces; their body-animation support is separate.
@@ -184,6 +184,38 @@ CINE integration touches files already edited by another session. The exact
 additional patch is `work/cine-animation-port/cine-expression-integration.patch`,
 with the immediate pre-edit files in `cine-before-expressions/`. Keep those
 changes separate from the other session's camera/showreel work when committing.
+
+## Combined private trial installation, 2026-10-06
+
+The combined candidate is now installed with the game closed. The current Windows
+builds were checked for pending build work; both were current. The packaged
+catalog passed its 83 animation-library checks immediately before installation.
+`update_performance_trial.py` verifies the previous trial's selectors, menu, DLLs
+and containers before changing anything. It also checks the 68-package readback,
+six independent facial readbacks, all 99 shapes and 21 expression comparisons per
+mesh, outfit dependencies and protected source evidence.
+
+The installer stages the new files, retains the old DLLs and moves the old shared
+pack outside the mounted Paks directory. Five filesystem tests passed: successful
+replacement and backup, running-game/changed-file refusal, rollback after a
+selector write, rollback between asset moves, and deferred rollback if the game
+opens during installation. Rollback never attempts a live DLL replacement.
+
+Installed files:
+
+- CSS core: `css_core-facial-6b9cf837e4c2239c.dll`.
+- CINE entry: `cine-facial-bb2d36a5ca792bbf.dll`.
+- Shared assets: the verified trio from `shared-v1/pack-with-faces-v1`.
+- Receipt and independent post-install check:
+  `work/cine-animation-port/live-facial-1/{deployment,post-install-check}.json`.
+- Previous trial: `work/cine-animation-port/live-performance-1/deployment.json`.
+
+The independent post-install check confirmed both DLL hashes/selectors, all
+three containers, the retained asset rollback, loader and saved CSS/CSSX state.
+No outfit container, saved appearance, game input or recording was changed by
+installation. The game remained closed. This is a private trial, not a release
+or live acceptance. The current user check is Eve Black Pearl's Smile followed
+by Original in CSS Customize; it supersedes the performance-only trial prompt.
 
 ## Cooked deformation error and side views, 2026-10-06
 
