@@ -128,6 +128,29 @@ when the user says so:
       - To check live: frame passes (first time on screen; Post vs Pre, Gain/Gamma), wipes with
         the a2 switches, label positions on the HUD, health bar and lock marker hidden in a
         fight take, slow motion feel, clean scene with real spawners.
+      - 5 Oct, 21:30 to 22:25, live with the user (driver `work/live/drive.py`, screenshots in
+        `work/export-live/`). SEEN WORKING: clean scene (4 enemies hidden and restored, none in
+        view); breakdown turntable start to finish; wipes; clay on every part; wireframe;
+        skeleton, virtual, IK, socket and spring markers; physics bodies and capsule; frame
+        passes base colour and depth; labels, arrows, caption, signature in the tech font;
+        labels cost about 18 microseconds a frame.
+      - Found and fixed live: (1) CSSX drew its layers inside the game HUD, which CINE hides,
+        so no CINE HUD layer ever showed in Cine World, 1.0.0 included: screen-level root
+        (D17), kept alive through GameInstance.ReferencedObjects. (2) Viewport size was in
+        pixels, HUD units are pixels / DPI scale: labels off screen. (3) Bones too fat, helper
+        bones as spikes: slim cones, no stick over 70 cm, bones over clay. (4) Clay too dark:
+        ambient 0.22. (5) Clay and wireframe missed hair, crown, weapons: every skinned and
+        static mesh part of the pawn and its attached actors. (6) THE BAD ONE: a take ended
+        with clay left in her slots (masked out: she rendered as a ghost). The user was angry,
+        rightly. Fixed with a locker component that holds her own materials for the take, an
+        end-of-take check, slots cleared instead of left with clay, and a CSS repaint when
+        flagged. Verified live: materials identical before and after a take.
+      - Still to see in game: 9:16 and the other guides with labels; a3 pak (bone rim
+        shading, built, in `work/export-pack/a3`, NOT installed: needs the game closed);
+        fight takes (the user has to play); clean scene with enemies in view; normals pass.
+      - Hot reload trick used all evening: stage with `--core-only`, then copy the staged
+        core to a new file name and point `Mods/CSSX/core.json` at it; the loader swaps and
+        every extension reloads. Never do it while a take is running.
 - [ ] 8. Nexus description, changelog, STATUS; version 1.1.0 (manifest, README and release
       notes are done)
 - [ ] 9. Release only when the user says so
