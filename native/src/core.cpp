@@ -113,6 +113,9 @@ struct Core {
     uintmax_t request_size = 0;
     bool status_dirty = true;
     std::string selected_outfit, selected_variant;
+    // An idle a CSSX extension asked for while it films (css.customize "idle"). It replaces
+    // the saved choice of whatever look is worn, is never saved, and is cleared by the caller.
+    std::string idle_override;
     std::string last_living_shell;   // most recent CharacterId.Player.Shell.* worn, for Harbinger carry-over.
     bool dirty = false, apply_pending = false, restore_pending = false, rescan_pending = false, forget_current = false;
     bool favorites_only = false;
@@ -226,9 +229,12 @@ struct Core {
                     for(size_t i=0;i<movement.size();++i)
                         movement[i]=resolve_animation(catalog.animation_options(selection.outfit,selection.variant,slots[i]),slots[i],
                             state.animation_choices.get(selection.outfit,selection.variant,slots[i])).asset;
-                    custom_idle=resolve_animation(catalog.animation_options(selection.outfit,selection.variant,AnimationSlot::Idle),
-                        AnimationSlot::Idle,
-                        state.animation_choices.get(selection.outfit,selection.variant,AnimationSlot::Idle));
+                    const auto& idles=catalog.animation_options(selection.outfit,selection.variant,AnimationSlot::Idle);
+                    // The override only where this look has that idle; otherwise its own choice stands.
+                    const bool overridden=!idle_override.empty() &&
+                        std::any_of(idles.begin(),idles.end(),[&](const auto& option){return option.id==idle_override;});
+                    custom_idle=resolve_animation(idles,AnimationSlot::Idle,
+                        overridden?idle_override:state.animation_choices.get(selection.outfit,selection.variant,AnimationSlot::Idle));
                 }
             }
             appearance.sync_walk(use_feminine_animation(state,selection_key,AnimationSlot::Idle),
@@ -332,6 +338,13 @@ struct Core {
             }
             return {{"shell",appearance.shell},{"outfits",std::move(list)}};
         }
+        if(action=="idle") {
+            // One idle for every look the caller wears from here on; "" gives each look its own back.
+            const auto value=command.value("value",std::string{});
+            if(value.size()>96) throw std::runtime_error("Invalid idle");
+            idle_override=value; walk_after=0;
+            return {{"idle",idle_override}};
+        }
         if(action=="wear") {
             if(appearance.shell.empty()) throw std::runtime_error("No player shell yet");
             const auto outfit=command.at("outfit").get<std::string>();
@@ -373,6 +386,10 @@ struct Core {
                 if(!control.nodes.empty()) controls.back()["nodes"]=control.nodes;
             }
             out["palettes"]=std::move(palettes); out["controls"]=std::move(controls);
+            Json idles=Json::array();
+            for(const auto& option:catalog.animation_options(selected->second.outfit,selected->second.variant,AnimationSlot::Idle))
+                idles.push_back({{"id",option.id},{"name",option.name}});
+            out["idles"]=std::move(idles); out["idle_override"]=idle_override;
             return out;
         }
         if(action!="apply") throw std::runtime_error("Unknown customize action");

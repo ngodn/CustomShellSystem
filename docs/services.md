@@ -24,6 +24,10 @@ own tick".
   as saved; without it CSS uses what it remembers for that outfit. It lands over the next
   ticks: `describe` reports `busy:true` until then, and the old outfit until it has landed
   (builds after 1.0.0-beta.11).
+- `{"action":"idle","value":id}` plays that idle on every look worn from then on, where
+  the look has it (`describe` lists a look's `idles:[{id,name}]`). It is never saved and
+  changes nobody's own choice; `"value":""` ends it. For an extension that films several
+  looks in a row and needs one continuous pose (builds after 1.0.0-beta.11).
 - `{"action":"apply","commands":[...],"persist":bool}` applies 1-256 commands atomically
   and returns the new `{palette, customize, ...}`; CSS puts it on the model on its next
   pass. Commands: `palette {palette}`, `control {control, channel, value | rgb | delta}`,
