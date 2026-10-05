@@ -1,3 +1,22 @@
+### CSS 1.0.0-beta.11
+
+### Added
+
+- Let Genessa's Faithful and Stray doubles copy supported current appearances and customization, keeping their ghost effects.
+- Choose Default or Use CSS independently for both doubles in MISC, with profile persistence.
+- Switch Genessa Form once between Faithful and Stray; later transitions follow the game.
+
+### Changed
+
+- Reuse cloth visuals on cached Faithful doubles. Fresh cloth-heavy doubles can still briefly hitch; further optimization is planned for beta.12.
+
+### Upgrading
+
+Install the separate Astral Shared Assets download for customized doubles.
+Keep the older CSS_SharedAssets_P Eve package and your CSS state folder.
+Unholy Genessa, Eve and Commander White are tested. Other appearances have
+partial support; unsupported looks keep the original double.
+
 ### CSS 1.0.0-beta.10
 
 ### Added

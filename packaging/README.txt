@@ -51,6 +51,8 @@ NPC/enemy compatibility is partial and may have visual or animation issues.
 Unsupported appearances or missing shared assets retain the original double.
 Keep the older CSS_SharedAssets_P Eve package if installed. The new package is
 CSS_AstralSharedAssets_P and does not replace it. Existing outfit ZIPs stay valid.
+Full cloth physics stays enabled. Fresh cloth-heavy doubles can briefly hitch;
+cached Faithful doubles reuse their cloth. Further optimization is planned.
 
 Settings and updates
 CSS creates state/state.json on first initialization with clean defaults.
