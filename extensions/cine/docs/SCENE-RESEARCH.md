@@ -132,8 +132,9 @@ Needs CINE's own small cooked pak
 - A flat material that also works on morph-target meshes.
 - Cook route exists (Windows editor under Wine, inline shaders:
   `tools/shared-assets/cook-shared-inner.sh`, `CSS_UnholyGenessa_eins0fx_P/tools/cook-materials.sh`).
-  Suggested trio `CSSX_Cine_eins0fx_P` under `~mods/`, assets under
-  `/Game/CSS/CSSX_Cine_eins0fx_P/`. CSSX extension zips carry no pak today.
+  Container trio `CSSX_CINE_eins0fx_P` under `~mods/`, assets under `/Game/CSSX/CINE/`
+  (user's rule: a CSSX extension's assets live under `/Game/CSSX/<EXTENSION>/`, never under
+  `/Game/CSS/`, which belongs to CSS packages). CSSX extension zips carry no pak today.
 
 INFERRED (live tests)
 - `SkinnedMeshComponent.bForceWireframe` + `r.SkeletalMesh.UseCachedMDCs 0` (wireframe with no

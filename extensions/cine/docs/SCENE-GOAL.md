@@ -66,7 +66,8 @@ when the user says so:
   physics bodies and capsule, meshes on bones for skeleton / VB / IK / sockets), material swaps
   for clay and wireframe, post-process blendables on CINE's camera for passes and wipes. Zero
   per-frame work except one parameter write while a wipe animates.
-- Asset pak `CSSX_Cine_eins0fx_P` (`~mods/`), assets under `/Game/CSS/CSSX_Cine_eins0fx_P/`:
+- Asset pak `CSSX_CINE_eins0fx_P` (`~mods/`), assets under `/Game/CSSX/CINE/` (user's rule:
+  CSSX extension assets go under `/Game/CSSX/<EXTENSION>/`, never `/Game/CSS/`):
   wireframe overlay material, flat clay material (skeletal + cloth + morph usage), G-buffer
   viewer post-process with mode and wipe parameters. CINE works without the pak: those layers
   are skipped and the status line says why.
