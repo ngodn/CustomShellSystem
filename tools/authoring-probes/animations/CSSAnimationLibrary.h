@@ -9,6 +9,10 @@ class UCSSAnimationLibrary : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 public:
+    /** Compare every authored key before publishing a renamed sequence. */
+    UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
+    static FString CompareSequenceData(class UAnimSequence* Source, class UAnimSequence* Copy);
+
     /** Finalize a private imported source before closing its controller bracket. */
     UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
     static bool FinalizeSourceImport(class UAnimSequence* Animation);

@@ -215,3 +215,7 @@ acceptance is pending. No new shared animation assets are installed. All 57
 resolved sequences have now been duplicated into `/Game/CSS/Locomotion/Eve/`
 with exact authored-key comparisons; fresh reload and cook checks are next.
 The two unresolved dances and the remaining full goal stay active.
+
+Fresh-process reload checks passed for all 57 shared sequences, preserving every
+authored transform and native timing. The recording trial core is confirmed
+loaded in CSS.log. Cooking was not started while the user launched for recording.

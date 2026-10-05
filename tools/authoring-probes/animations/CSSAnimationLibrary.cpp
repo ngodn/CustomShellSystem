@@ -25,6 +25,46 @@
 #include "Serialization/JsonWriter.h"
 #include "UObject/UnrealType.h"
 
+FString UCSSAnimationLibrary::CompareSequenceData(UAnimSequence* Source, UAnimSequence* Copy)
+{
+    if (!IsRunningCommandlet() || !Source || !Copy || Source == Copy ||
+        !Source->GetSkeleton() || Source->GetSkeleton() != Copy->GetSkeleton() ||
+        !Copy->GetPathName().StartsWith(TEXT("/Game/CSS/Locomotion/")))
+        return TEXT("ERROR: invalid comparison assets");
+    const auto* A = Source->GetDataModel();
+    const auto* B = Copy->GetDataModel();
+    if (!A || !B || A->GetFrameRate() != B->GetFrameRate() ||
+        A->GetNumberOfKeys() != B->GetNumberOfKeys() || A->GetPlayLength() != B->GetPlayLength() ||
+        Source->GetSamplingFrameRate() != Copy->GetSamplingFrameRate() ||
+        Source->RateScale != Copy->RateScale || Source->AdditiveAnimType != Copy->AdditiveAnimType ||
+        Source->bEnableRootMotion != Copy->bEnableRootMotion ||
+        Source->bForceRootLock != Copy->bForceRootLock || Source->RootMotionRootLock != Copy->RootMotionRootLock ||
+        !Source->Notifies.IsEmpty() || !Copy->Notifies.IsEmpty())
+        return TEXT("ERROR: timing or playback settings differ");
+    // These candidates are bone-only. Curved performances need their own comparison.
+    if (A->GetNumberOfFloatCurves() || B->GetNumberOfFloatCurves() ||
+        !A->GetTransformCurves().IsEmpty() || !B->GetTransformCurves().IsEmpty() ||
+        !A->GetAttributes().IsEmpty() || !B->GetAttributes().IsEmpty())
+        return TEXT("ERROR: curve or attribute data requires explicit verification");
+    TArray<FName> ANames, BNames;
+    A->GetBoneTrackNames(ANames);
+    B->GetBoneTrackNames(BNames);
+    if (ANames.IsEmpty() || ANames != BNames) return TEXT("ERROR: bone track names differ");
+    int64 Keys = 0;
+    for (FName Name : ANames)
+    {
+        TArray<FTransform> AT, BT;
+        A->GetBoneTrackTransforms(Name, AT);
+        B->GetBoneTrackTransforms(Name, BT);
+        if (AT.Num() != BT.Num()) return TEXT("ERROR: track key counts differ");
+        for (int32 I = 0; I < AT.Num(); ++I)
+            if (!AT[I].Equals(BT[I], 0.0))
+                return FString::Printf(TEXT("ERROR: changed key %s:%d"), *Name.ToString(), I);
+        Keys += AT.Num();
+    }
+    return FString::Printf(TEXT("PASS: %d tracks, %lld keys, exact authored transforms"), ANames.Num(), Keys);
+}
+
 bool UCSSAnimationLibrary::FinalizeSourceImport(UAnimSequence* Animation)
 {
     if (!IsRunningCommandlet() || !Animation || !Animation->GetSkeleton() ||

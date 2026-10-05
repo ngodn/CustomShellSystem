@@ -60,3 +60,6 @@ the Windows core was current. Loader, outfits, CINE and saved settings were
 unchanged. The installed loader matches beta.11 release metadata and host ABI 2;
 its older loader-contract DLL checksum is stale. Live stopping acceptance is
 still pending. The separate shared animation assets have not been installed.
+
+The subsequent game launch logged activation of that exact DLL at timestamp
+`631667917`. This confirms loading, not visual acceptance of every transition.
