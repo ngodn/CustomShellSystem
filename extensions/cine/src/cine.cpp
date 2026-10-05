@@ -148,18 +148,22 @@ int Extension::render(const CssxFrame* f) {
     if (mode_ == Mode::Countdown && take_) o.countdown = "CINE  " + std::to_string(int(std::ceil(std::max(0.0, take_->countdown))));
     if (mode_ == Mode::Running || mode_ == Mode::Preparing) o.visible = false;   // nothing of CINE in the recording
     guides_.update(*f, o);
-    // Breakdown callouts are part of the picture, so they stay on during the take. Each one is
-    // two bridge calls a frame (where its component is, where that lands on screen), for at
-    // most six of them, and only while a breakdown shows something.
-    if (mode_ == Mode::Running && settings_.labels && breakdown_.active() && breakdown_.shown() != 0) {
+    // Breakdown labels are part of the picture, so they stay on during the take. One host call
+    // a frame: where the camera is. The rest is the tick's samples and plain maths.
+    if (mode_ == Mode::Running && labels_live_ && lens_.ok) {
+        label_age_ += frame_.seconds;
         callout_targets_.clear();
         try {
-            for (const auto& c : breakdown_.callouts()) {
-                if (callout_targets_.size() >= max_callouts) break;
-                CalloutTarget target;
-                target.text = c.text;
-                target.visible = rig_.project(rig_.socket_location(c.component, c.socket), target.x, target.y);
-                callout_targets_.push_back(std::move(target));
+            Vec3 camera; Rotator rotation;
+            if (rig_.view_point(camera, rotation)) {
+                const auto basis = view_basis(rotation);
+                const double ease = std::clamp(label_age_ / 0.1, 0.0, 1.0);
+                for (const auto& label : labels_) {
+                    CalloutTarget target;
+                    target.text = label.text;
+                    target.visible = project(camera, basis, lens_, frame_.position + label.before + (label.now - label.before) * ease, target.x, target.y);
+                    callout_targets_.push_back(std::move(target));
+                }
             }
         } catch (...) { callout_targets_.clear(); }
         callouts_.update(*f, callout_targets_, breakdown_.caption());
@@ -178,6 +182,7 @@ void Extension::tick(double seconds) {
         // look is not a world object, so a look the take changed is still put back (retried).
         if (mode_ != Mode::Idle && mode_ != Mode::RecordWait && frame_.valid && frame_.world != world_) {
             if (take_ && !take_->snapshot.is_null() && take_->step_next > 0) queue_look_restore(take_->snapshot);
+            labels_live_ = false; labels_.clear(); lens_ = {};
             rig_.forget(); guides_.forget(); callouts_.forget(); scene_.forget(); breakdown_.forget(); breakdown_opponent_.forget();
             take_.reset(); samples_.clear(); mode_ = Mode::Idle; start_pending_ = false;
             report("The world changed (loading, travel or death); CINE stopped and the game camera is back.");
@@ -491,6 +496,34 @@ std::vector<std::string> Extension::spring_bones() {
     return bones;
 }
 
+// 10 Hz while a breakdown shows: where each labelled component sits relative to her, and a
+// fresh measure of the lens (the field of view changes along a shot).
+void Extension::sample_labels() {
+    const bool wanted = settings_.labels && breakdown_.active() && breakdown_.shown() != 0;
+    if (!wanted) { labels_live_ = false; labels_.clear(); return; }
+    try {
+        const auto& callouts = breakdown_.callouts();
+        const size_t count = std::min(callouts.size(), max_callouts);
+        std::vector<Label> next(count);
+        for (size_t i = 0; i < count; ++i) {
+            next[i].text = callouts[i].text;
+            next[i].now = rig_.socket_location(callouts[i].component, callouts[i].socket) - frame_.position;
+            // The same label as last time eases from where it was drawn; a new one starts in place.
+            const bool same = i < labels_.size() && labels_[i].text == next[i].text;
+            next[i].before = same ? labels_[i].now : next[i].now;
+        }
+        labels_ = std::move(next);
+        label_age_ = 0;
+        Vec3 camera; Rotator rotation;
+        double cx = 0, cy = 0, ox = 0, oy = 0;
+        if (rig_.view_point(camera, rotation)) {
+            const auto basis = view_basis(rotation);
+            if (rig_.project(lens_point(camera, basis, false), cx, cy) && rig_.project(lens_point(camera, basis, true), ox, oy)) lens_ = measure_lens(cx, cy, ox, oy);
+        }
+        labels_live_ = true;
+    } catch (...) { labels_live_ = false; }
+}
+
 void Extension::apply_scene() {
     const auto mode = settings_.scene == "enemies" ? Scene::Mode::Enemies : settings_.scene == "everyone" ? Scene::Mode::Everyone : Scene::Mode::Off;
     scene_.want(mode, settings_.keep_target);
@@ -553,7 +586,8 @@ void Extension::action_tick(double dt) {
     const double want = t.clock < t.slow_until ? a.slowmo : 1.0;
     t.scale += (want - t.scale) * 0.55;
     if (std::abs(t.scale - want) < 0.02) t.scale = want;
-    if (std::abs(t.scale - t.scale_applied) > 0.015) { rig_.time_scale(t.scale); t.scale_applied = t.scale; }
+    // Written in steps while it eases, and always once it has arrived (so it ends on exactly 1).
+    if (t.scale != t.scale_applied && (std::abs(t.scale - t.scale_applied) > 0.015 || t.scale == want)) { rig_.time_scale(t.scale); t.scale_applied = t.scale; }
     t.punch += ((t.clock < t.punch_until ? 1.0 : 0.0) - t.punch) * 0.35;
     t.azimuth = wrap_degrees(t.azimuth + a.orbit_speed * dt);
     ActionFrame f{a.framing, t.azimuth, a.distance, a.distance_max, a.margin, a.height, a.aim, a.fov, t.punch};
@@ -643,6 +677,7 @@ void Extension::run() {
         breakdown_.show(r.layers, r.wipe);
         if (breakdown_opponent_.active()) breakdown_opponent_.show(r.layers & ~frame_layers, r.wipe);
     }
+    if (!t.reveals.empty()) sample_labels();
     if (t.preset.kind == ShotKind::Action) {
         action_tick(tick_dt_);
         if (!take_) return;   // the take ended inside the step
@@ -701,7 +736,7 @@ void Extension::finish_take(const std::string& why, bool failed) {
     for (Breakdown* b : {&breakdown_, &breakdown_opponent_}) {
         try { for (auto& f : b->end()) failures.push_back(std::move(f)); } catch (const std::exception& e) { failures.push_back(e.what()); }
     }
-    callouts_.hide();
+    callouts_.hide(); labels_live_ = false; labels_.clear(); lens_ = {};
     try { for (auto& f : rig_.restore_take()) failures.push_back(std::move(f)); } catch (const std::exception& e) { failures.push_back(e.what()); }
     if (!take_->snapshot.is_null() && take_->step_next > 0) {
         // Put the modder's own look back and let CSS save it (persist=true).

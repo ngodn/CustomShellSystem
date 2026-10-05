@@ -46,8 +46,8 @@
       "title": "Clean scene",
       "description": "Takes the people around you out of the picture while you are in Cine World. The world keeps running: time, weather, effects and your own character are untouched. Everyone comes back exactly as they were when you leave.",
       "controls": [
-        {"id": "scene", "type": "radio", "label": "Hide", "value": "off", "options": [{"id": "off", "label": "Nobody"}, {"id": "enemies", "label": "Enemies"}, {"id": "everyone", "label": "Enemies and NPCs"}], "description": "Hidden characters are frozen, cannot be hit and cannot hurt you, and new ones do not spawn while this is on. Bosses are left alone. You cannot be hurt while it is on."},
-        {"id": "keep_target", "type": "toggle", "label": "Keep my lock-on target", "value": false, "description": "Leaves the enemy you are locked on to in the scene, so you can film a fight with just that one.", "disabled_label": "Turn Hide on first"},
+        {"id": "scene", "type": "radio", "label": "Hide", "value": "off", "options": [{"id": "off", "label": "Nobody"}, {"id": "enemies", "label": "Enemies"}, {"id": "everyone", "label": "Enemies and NPCs"}], "description": "Hidden characters are frozen, cannot be hit and cannot hurt you, and new ones do not spawn while this is on. Bosses are left alone. With nobody kept you also cannot be hurt or noticed while it is on."},
+        {"id": "keep_target", "type": "toggle", "label": "Keep my lock-on target", "value": false, "description": "Leaves the enemy you are locked on to in the scene, so you can film a fight with just that one. The fight is real: it can see you and hurt you.", "disabled_label": "Turn Hide on first"},
         {"id": "scene_info", "type": "label", "label": "Now", "description": "What clean scene is doing."}
       ]
     },

@@ -62,7 +62,7 @@ private:
         bool did_pause = false, did_collision = false, did_hit = false, did_vox = false, did_foley = false, did_cloth = false;
         Json invisible, immune;                          // active effect handles, null when not applied
     };
-    struct Toggled { Json actor; bool prior = false; };
+    struct Toggled { Json actor; bool prior = false; bool solid = false; };   // solid: a projectile's collision was on
 
     bool resolve(const Json& pawn, const Json& controller);
     std::string refusal();                           // empty when clean scene may run
@@ -83,6 +83,7 @@ private:
     const cssx::Client& host_;
     Mode wanted_ = Mode::Off, applied_ = Mode::Off;
     bool keep_target_ = false, restoring_ = false, resolved_ = false, player_cleanup_ = false;
+    bool protect_tried_ = false;                     // one attempt per entry, not one per tick
     uint64_t kept_ = 0;                              // the exempt lock-on target's handle id
     double poll_in_ = 0, spawn_poll_in_ = 0;
     Json pawn_, controller_, statics_, player_asc_;

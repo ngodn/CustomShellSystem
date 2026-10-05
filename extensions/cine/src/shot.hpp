@@ -23,6 +23,19 @@ Rotator look_at(Vec3 from, Vec3 to);
 // Relative offset in her frame -> world, for a frame turned `yaw` degrees at `base`.
 Vec3 to_world(Vec3 base, double yaw, Vec3 relative);
 
+// The camera's axes in the world for a view rotation (the rows of the engine's FRotationMatrix).
+struct ViewBasis { Vec3 forward, right, up; };
+ViewBasis view_basis(Rotator rotation);
+// How a direction from the camera lands on the HUD. It is measured, not assumed: the engine
+// projects two known points (straight ahead, and a little right and up of that) and the lens
+// is what maps one onto the other. Field-of-view axis, DPI scale and letterboxing all drop out.
+struct Lens { double cx = 0, cy = 0, kx = 0, ky = 0; bool ok = false; };
+constexpr double lens_right = 0.10, lens_up = 0.06;   // the second point's offset per unit of depth
+Vec3 lens_point(Vec3 camera, const ViewBasis& basis, bool offset);
+Lens measure_lens(double centre_x, double centre_y, double offset_x, double offset_y);
+// False when the point is behind the camera or the lens is not measured.
+bool project(Vec3 camera, const ViewBasis& basis, const Lens& lens, Vec3 world, double& x, double& y);
+
 // One 10 Hz sample of the player's own walk while recording a route.
 struct Sample { double t = 0; Vec3 position; double yaw = 0; double speed = 0; };
 

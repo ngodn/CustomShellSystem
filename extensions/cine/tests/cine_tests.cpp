@@ -1,5 +1,6 @@
 // CINE logic tests: shot maths, presets and the shipped preset files. Run with the
 // extension directory as argv[1] (CMake passes it).
+#include "callouts.hpp"
 #include "layers.hpp"
 #include "preset.hpp"
 #include "shot.hpp"
@@ -276,6 +277,61 @@ static void action_presets() {
     bad_reel(Json::array({{{"at", 0.5}, {"layers", {"clay"}}, {"wipe", 99}}}));
 }
 
+static void labels() {
+    // The camera's axes: level and facing +X, right is +Y and up is +Z; yaw 90 faces +Y.
+    auto b = view_basis({0, 0, 0});
+    expect(near(b.forward.x, 1, 1e-12) && near(b.right.y, 1, 1e-12) && near(b.up.z, 1, 1e-12), "level axes");
+    b = view_basis({0, 90, 0});
+    expect(near(b.forward.y, 1, 1e-12) && near(b.right.x, -1, 1e-12), "yaw turns forward and right together");
+    b = view_basis({-30, 40, 0});
+    const auto fwd = look_at({0, 0, 0}, b.forward);
+    expect(near(fwd.pitch, -30, 1e-9) && near(fwd.yaw, 40, 1e-9), "forward agrees with look_at");
+    auto dot = [](Vec3 a, Vec3 c) { return a.x * c.x + a.y * c.y + a.z * c.z; };
+    expect(near(dot(b.forward, b.right), 0, 1e-12) && near(dot(b.forward, b.up), 0, 1e-12) && near(dot(b.right, b.up), 0, 1e-12), "the axes are square");
+    // A stand-in for the engine: an 80 degree lens on a 2560x1440 HUD that is scaled and letterboxed.
+    const Vec3 camera{120, -40, 210};
+    const double k = 1100 / std::tan(40 * std::numbers::pi / 180), cx = 1280, cy = 742;
+    auto engine = [&](Vec3 p, double& x, double& y) {
+        const Vec3 d = p - camera;
+        x = cx + k * dot(d, b.right) / dot(d, b.forward); y = cy - k * dot(d, b.up) / dot(d, b.forward);
+    };
+    double x0, y0, x1, y1;
+    engine(lens_point(camera, b, false), x0, y0); engine(lens_point(camera, b, true), x1, y1);
+    const auto lens = measure_lens(x0, y0, x1, y1);
+    expect(lens.ok && near(lens.cx, cx, 1e-6) && near(lens.kx, k, 1e-6) && near(lens.ky, k, 1e-6), "two engine points measure the lens");
+    for (const Vec3 p : {Vec3{500, 300, 100}, Vec3{900, -200, 400}, Vec3{300, 100, 230}}) {
+        if (dot(p - camera, b.forward) <= 10) continue;
+        double ex, ey, x, y;
+        engine(p, ex, ey);
+        expect(project(camera, b, lens, p, x, y) && near(x, ex, 1e-6) && near(y, ey, 1e-6), "own projection matches the engine's");
+    }
+    double x, y;
+    expect(!project(camera, b, lens, camera - b.forward * 200, x, y), "a point behind the camera is not drawn");
+    expect(!project(camera, b, Lens{}, {500, 300, 100}, x, y) && !measure_lens(100, 100, 100, 100).ok, "no labels without a measured lens");
+
+    // Layout: labels go to the side their target is on, in the order of their targets.
+    std::vector<CalloutTarget> targets{{"Skeleton, 392 bones", 1200, 600, true}, {"Mesh wireframe", 1250, 300, true}, {"Movement capsule", 1400, 800, true},
+                                       {"Behind the camera", 0, 0, false}, {"Off screen", 9000, 100, true}};
+    const auto placed = layout_callouts(2560, 1440, targets);
+    expect(placed.size() == 3, "only visible, on-screen targets get a label");
+    for (const auto& p : placed) {
+        const bool left = targets[p.target].x < 1280;
+        expect(left ? p.label_x < 400 : p.label_x > 1700, "a label sits at the edge on its target's side");
+        expect(near(p.to_x, targets[p.target].x, 1e-9) && near(p.to_y, targets[p.target].y, 1e-9), "its leader ends on the target");
+        expect(left ? p.from_x > p.label_x : p.from_x < p.label_x, "and starts at the label's inner edge");
+    }
+    expect(placed[0].target == 1 && placed[1].target == 0 && placed[0].label_y < placed[1].label_y, "a column runs top to bottom like its targets, so leaders do not cross");
+    std::vector<CalloutTarget> many;
+    for (int i = 0; i < 12; ++i) many.push_back({"Label " + std::to_string(i), 600.0 + i * 10, 200.0 + i * 60, true});
+    const auto capped = layout_callouts(2560, 1440, many);
+    size_t on_left = 0;
+    for (const auto& p : capped) if (p.label_x < 1280) ++on_left;
+    expect(capped.size() == max_callouts && on_left == max_callouts / 2, "at most six labels, three a side");
+    for (size_t i = 0; i < capped.size(); ++i) for (size_t j = i + 1; j < capped.size(); ++j)
+        if ((capped[i].label_x < 1280) == (capped[j].label_x < 1280)) expect(std::abs(capped[i].label_y - capped[j].label_y) >= callout_line, "labels in a column never overlap");
+    expect(layout_callouts(0, 0, targets).empty(), "no layout without a viewport");
+}
+
 static void shipped(const fs::path& root) {
     size_t count = 0;
     for (const auto& entry : fs::directory_iterator(root / "presets")) {
@@ -311,7 +367,7 @@ static void shipped(const fs::path& root) {
 int main(int argc, char** argv) {
     try {
         geometry(); routes(); tracks(); curves(); walls(); presets();
-        layers(); action(); action_presets();
+        layers(); action(); action_presets(); labels();
         if (argc > 1) shipped(fs::path(argv[1]));
         std::cout << checks << " CINE checks passed\n";
         return 0;

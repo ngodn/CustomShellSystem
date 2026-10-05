@@ -117,7 +117,16 @@ private:
     Scene scene_;
     Breakdown breakdown_, breakdown_opponent_;
     Callouts callouts_;
+    // Breakdown labels. Sampled on the tick: where each labelled component is relative to
+    // her, and how the lens maps onto the HUD. Drawn every frame from that with one host call
+    // (where the camera is now) and the frame's own player position.
+    struct Label { std::string text; Vec3 before, now; };
+    std::vector<Label> labels_;
     std::vector<CalloutTarget> callout_targets_;
+    Lens lens_;
+    double label_age_ = 0;       // seconds since the last sample, for easing between two
+    bool labels_live_ = false;
+    void sample_labels();
     double tick_dt_ = 0.1;
     Settings settings_;
     std::map<std::string, Preset> presets_;

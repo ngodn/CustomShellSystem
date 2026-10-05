@@ -206,6 +206,41 @@ bool WallProfile::tight() const {
     return std::any_of(scale_.begin(), scale_.end(), [](double v) { return v < 0.999; });
 }
 
+ViewBasis view_basis(Rotator r) {
+    const double k = std::numbers::pi / 180;
+    const double sp = std::sin(r.pitch * k), cp = std::cos(r.pitch * k), sy = std::sin(r.yaw * k), cy = std::cos(r.yaw * k);
+    const double sr = std::sin(r.roll * k), cr = std::cos(r.roll * k);
+    return {{cp * cy, cp * sy, sp},
+            {sr * sp * cy - cr * sy, sr * sp * sy + cr * cy, -sr * cp},
+            {-(cr * sp * cy + sr * sy), cy * sr - cr * sp * sy, cr * cp}};
+}
+
+Vec3 lens_point(Vec3 camera, const ViewBasis& b, bool offset) {
+    const double depth = 1000;
+    Vec3 p = camera + b.forward * depth;
+    if (offset) p = p + b.right * (lens_right * depth) + b.up * (lens_up * depth);
+    return p;
+}
+
+Lens measure_lens(double centre_x, double centre_y, double offset_x, double offset_y) {
+    Lens lens{centre_x, centre_y, (offset_x - centre_x) / lens_right, (centre_y - offset_y) / lens_up, false};
+    // A real lens moves the point by a visible amount on both axes; anything else is a failed read.
+    lens.ok = std::isfinite(lens.cx) && std::isfinite(lens.cy) && std::isfinite(lens.kx) && std::isfinite(lens.ky)
+              && std::abs(lens.kx) > 10 && std::abs(lens.ky) > 10;
+    return lens;
+}
+
+bool project(Vec3 camera, const ViewBasis& b, const Lens& lens, Vec3 world, double& x, double& y) {
+    if (!lens.ok) return false;
+    const Vec3 d = world - camera;
+    auto dot = [](Vec3 a, Vec3 c) { return a.x * c.x + a.y * c.y + a.z * c.z; };
+    const double depth = dot(d, b.forward);
+    if (!(depth > 10)) return false;
+    x = lens.cx + lens.kx * dot(d, b.right) / depth;
+    y = lens.cy - lens.ky * dot(d, b.up) / depth;
+    return std::isfinite(x) && std::isfinite(y);
+}
+
 ActionView action_view(const ActionFrame& f, Vec3 subject, const Vec3* target) {
     const double punch = std::clamp(f.punch, 0.0, 1.0);
     const double tighten = 1.0 - 0.28 * punch;

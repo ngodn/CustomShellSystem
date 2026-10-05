@@ -52,6 +52,7 @@ std::vector<Json> Scene::actors_of(const Json& cls) {
 
 void Scene::want(Mode mode, bool keep_target) {
     wanted_ = mode;
+    if (keep_target != keep_target_) protect_tried_ = false;
     keep_target_ = keep_target;
     if (!keep_target) kept_ = 0;
     poll_in_ = 0;   // act on the next tick, not half a second later
@@ -78,8 +79,10 @@ bool Scene::resolve(const Json& pawn, const Json& controller) {
 
 // ---------------------------------------------------------------- the player
 
+// With a kept target the fight is real: she can be seen and hurt. Otherwise nothing that is
+// still around (a boss asleep in its arena, a trap, a fall) may touch her while she poses.
 void Scene::protect_player() {
-    if (!is_handle(player_asc_)) return;
+    if (!is_handle(player_asc_) || !player_effects_.empty()) return;
     for (const Json* effect : {&ge_invulnerable_, &ge_fall_, &ge_undetectable_}) {
         if (!is_handle(*effect)) continue;
         try {
@@ -143,7 +146,10 @@ void Scene::open_spawning(std::vector<std::string>* failures) {
         map.clear();
     };
     each(proxies_, "spawner", [&](Toggled& t) { if (!t.prior) call(t.actor, "SetActorHiddenInGame", {{"bNewHidden", false}}); });
-    each(projectiles_, "projectile", [&](Toggled& t) { if (!t.prior) call(t.actor, "SetActorHiddenInGame", {{"bNewHidden", false}}); });
+    each(projectiles_, "projectile", [&](Toggled& t) {
+        if (!t.prior) call(t.actor, "SetActorHiddenInGame", {{"bNewHidden", false}});
+        if (t.solid) call(t.actor, "SetActorEnableCollision", {{"bNewActorEnableCollision", true}});
+    });
     // Last: a trigger the player now stands in fires its overlap again. A spawner whose enemy
     // is alive refuses to spawn twice (the game's own CanSpawnEnemy).
     each(triggers_, "spawn trigger", [&](Toggled& t) { if (t.prior) call(t.actor, "SetActorEnableCollision", {{"bNewActorEnableCollision", true}}); });
@@ -351,7 +357,7 @@ void Scene::tick(double seconds, const Json& pawn, const Json& controller) {
             if (characters_.empty()) {
                 open_spawning(nullptr);
                 release_player(nullptr);
-                applied_ = Mode::Off; restoring_ = false; kept_ = 0;
+                applied_ = Mode::Off; restoring_ = false; kept_ = 0; protect_tried_ = false;
                 say("Scene restored.");
             }
             return;
@@ -361,14 +367,13 @@ void Scene::tick(double seconds, const Json& pawn, const Json& controller) {
             if (poll_in_ > 0) return;
             poll_in_ = 1.0;   // while refused, look again once a second
             if (auto reason = refusal(); !reason.empty()) { say(std::move(reason)); return; }
-            protect_player();
             // Projectiles already in the air: once, they expire on their own.
             for (const auto& actor : actors_of(class_projectile_)) {
                 try {
-                    const bool prior = truthy(host_.get(actor, "bHidden"));
+                    const bool prior = truthy(host_.get(actor, "bHidden")), solid = truthy(call(actor, "GetActorEnableCollision"));
                     if (!prior) call(actor, "SetActorHiddenInGame", {{"bNewHidden", true}});
-                    call(actor, "SetActorEnableCollision", {{"bNewActorEnableCollision", false}});
-                    projectiles_[id_of(actor)] = {actor, prior};
+                    if (solid) call(actor, "SetActorEnableCollision", {{"bNewActorEnableCollision", false}});
+                    projectiles_[id_of(actor)] = {actor, prior, solid};
                 } catch (...) {}
             }
             applied_ = wanted_;
@@ -387,6 +392,8 @@ void Scene::tick(double seconds, const Json& pawn, const Json& controller) {
             poll_in_ = 0;
         }
 
+        if (keep_target_) { if (!player_effects_.empty()) release_player(nullptr); }
+        else if (player_effects_.empty() && !protect_tried_) { protect_tried_ = true; protect_player(); }
         spawn_poll_in_ -= seconds;
         if (spawn_poll_in_ <= 0) { spawn_poll_in_ = spawn_poll_seconds; close_spawning(); }
         poll_in_ -= seconds;
@@ -406,7 +413,7 @@ std::vector<std::string> Scene::restore() {
     open_spawning(&failures);
     release_player(&failures);
     const bool was_clean = applied_ != Mode::Off;
-    applied_ = Mode::Off; wanted_ = Mode::Off; restoring_ = false; kept_ = 0;
+    applied_ = Mode::Off; wanted_ = Mode::Off; restoring_ = false; kept_ = 0; protect_tried_ = false;
     if (was_clean) say(failures.empty() ? "Scene restored." : "Scene restored, with problems: " + failures.front());
     return failures;
 }
@@ -415,7 +422,7 @@ void Scene::forget() {
     player_cleanup_ = player_cleanup_ || !player_effects_.empty();
     player_effects_.clear();
     characters_.clear(); triggers_.clear(); proxies_.clear(); projectiles_.clear(); queue_.clear();
-    resolved_ = false; restoring_ = false; kept_ = 0;
+    resolved_ = false; restoring_ = false; kept_ = 0; protect_tried_ = false;
     applied_ = Mode::Off; wanted_ = Mode::Off;
     pawn_ = controller_ = statics_ = player_asc_ = nullptr;
 }

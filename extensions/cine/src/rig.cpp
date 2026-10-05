@@ -66,7 +66,7 @@ void Rig::resolve() {
 
 void Rig::forget() {
     world_ = world_settings_ = lock_ = asc_ = layout_ = Json();
-    hidden_components_.clear(); hidden_widgets_.clear();
+    hidden_components_.clear(); hidden_widgets_.clear(); parts_.clear();
     time_scaled_ = shake_set_ = false;
     pawn_ = controller_ = movement_ = mesh_ = camera_manager_ = Json();
     statics_ = kismet_ = ai_ = widgets_ = player_lib_ = camera_class_ = Json();
@@ -131,7 +131,7 @@ void Rig::place_camera(const Json& camera, Vec3 position, Rotator rotation) {
 
 void Rig::move_camera(const Json& camera, Vec3 position, Rotator rotation, double over_time) {
     call(kismet_, "MoveComponentTo",
-         {{"Component", host_.get(camera, "RootComponent")}, {"TargetRelativeLocation", vec(position)}, {"TargetRelativeRotation", rot(rotation)},
+         {{"Component", part(camera, "RootComponent")}, {"TargetRelativeLocation", vec(position)}, {"TargetRelativeRotation", rot(rotation)},
           {"bEaseOut", false}, {"bEaseIn", false}, {"OverTime", over_time}, {"bForceShortestRotationPath", true}, {"MoveAction", 0},
           {"LatentInfo", {{"Linkage", -1}, {"UUID", latent_uuid}, {"ExecutionFunction", "None"}, {"CallbackTarget", camera}}}});
 }
@@ -203,6 +203,14 @@ Json Rig::css(const Json& request) {
 
 // ---------------------------------------------------------------- action takes and callouts
 
+Json Rig::part(const Json& actor, const char* property) {
+    if (!is_handle(actor)) return Json();
+    const auto key = std::make_pair(actor["$object"].get<uint64_t>(), std::string(property));
+    if (const auto it = parts_.find(key); it != parts_.end()) return it->second;
+    auto found = host_.get(actor, property);
+    if (is_handle(found) && parts_.size() < 64) parts_[key] = found;
+    return found;
+}
 Json Rig::locked_target() {
     if (!is_handle(lock_)) return Json();
     const auto target = host_.get(lock_, "LockedTarget");
@@ -211,7 +219,7 @@ Json Rig::locked_target() {
 Vec3 Rig::actor_location(const Json& actor) { return vec3(call(actor, "K2_GetActorLocation", Json::object())); }
 double Rig::health_fraction(const Json& actor) {
     try {
-        const auto health = host_.get(actor, "HealthComponent");
+        const auto health = part(actor, "HealthComponent");
         if (!is_handle(health)) return -1;
         const auto value = call(health, "GetHealthNormalized", Json::object());
         return value.is_number() ? value.get<double>() : -1;
@@ -219,11 +227,10 @@ double Rig::health_fraction(const Json& actor) {
 }
 bool Rig::dead(const Json& actor) {
     try {
-        if (!host_.request({{"op", "valid"}, {"target", actor}}).get<bool>()) return true;   // gone is as good as dead
-        const auto health = host_.get(actor, "HealthComponent");
+        const auto health = part(actor, "HealthComponent");
         const auto value = is_handle(health) ? call(health, "IsDeadOrDying", Json::object()) : Json(false);
         return value.is_boolean() && value.get<bool>();
-    } catch (...) { return true; }
+    } catch (...) { return true; }   // gone is as good as dead
 }
 int Rig::tag_count(const char* tag) {
     if (!is_handle(asc_)) return 0;
@@ -281,6 +288,14 @@ void Rig::hide_target_ui(const Json& enemy) {
 Vec3 Rig::socket_location(const Json& component, const std::string& socket) {
     return vec3(call(component, "GetSocketLocation", {{"InSocketName", socket.empty() ? std::string("None") : socket}}));
 }
+bool Rig::view_point(Vec3& location, Rotator& rotation) {
+    const auto reply = host_.request({{"op", "call"}, {"target", controller_}, {"function", "GetPlayerViewPoint"}, {"args", Json::object()}});
+    if (!reply.is_object() || !reply.contains("Location") || !reply.contains("Rotation")) return false;
+    location = vec3(reply["Location"]);
+    const auto& r = reply["Rotation"];
+    rotation = {r.value("Pitch", 0.0), r.value("Yaw", 0.0), r.value("Roll", 0.0)};
+    return true;
+}
 bool Rig::project(Vec3 world, double& x, double& y) {
     if (!is_handle(layout_)) return false;
     const auto reply = host_.request({{"op", "call"}, {"target", layout_}, {"function", "ProjectWorldLocationToWidgetPosition"},
@@ -324,7 +339,7 @@ std::vector<std::string> Rig::restore_take() {
     for (const auto& [widget, visibility] : hidden_widgets_) step("lock-on marker", [&] {
         if (host_.request({{"op", "valid"}, {"target", widget}}).get<bool>()) call(widget, "SetVisibility", {{"InVisibility", visibility}});
     });
-    hidden_components_.clear(); hidden_widgets_.clear();
+    hidden_components_.clear(); hidden_widgets_.clear(); parts_.clear();
     if (view_changed_) step("view", [&] { view_player(); });
     for (const auto& camera : cameras_) step("camera", [&] {
         if (host_.request({{"op", "valid"}, {"target", camera}}).get<bool>()) call(camera, "K2_DestroyActor", Json::object());

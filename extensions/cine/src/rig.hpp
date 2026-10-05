@@ -4,6 +4,7 @@
 // Game thread only (CSSX calls tick/render/event there).
 #include "shot.hpp"
 #include <cssx/client.hpp>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -67,7 +68,8 @@ public:
 
     // Callouts: a component's socket in the world, and a world point on screen (HUD pixels).
     Vec3 socket_location(const Json& component, const std::string& socket);
-    bool project(Vec3 world, double& x, double& y);
+    bool project(Vec3 world, double& x, double& y);     // the engine's own projection: for measuring the lens
+    bool view_point(Vec3& location, Rotator& rotation); // where the picture is taken from this frame: one call
     bool key_down(const std::vector<std::string>& keys, std::vector<bool>& out);
 
     // Restore: take-level changes (cameras, view, walk) or everything including the HUD.
@@ -87,6 +89,9 @@ private:
     Json statics_, kismet_, ai_, widgets_, player_lib_, camera_class_;
     Json world_, world_settings_, lock_, asc_, layout_;
     std::vector<std::pair<Json, bool>> hidden_components_;   // enemy health bars: prior visibility
+    // Looked up once per take instead of on every tick: an actor's sub-object by property name.
+    Json part(const Json& actor, const char* property);
+    std::map<std::pair<uint64_t, std::string>, Json> parts_;
     std::vector<std::pair<Json, int>> hidden_widgets_;       // lock-on markers: prior visibility
     bool time_scaled_ = false, shake_set_ = false;
     double shake_before_ = 1.0;
