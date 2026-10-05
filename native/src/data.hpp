@@ -9,6 +9,7 @@
 #include <nlohmann/json.hpp>
 #include "controls.hpp"
 #include "animations.hpp"
+#include "animation_library.hpp"
 #include "socket_fit.hpp"
 
 namespace css {
@@ -134,6 +135,7 @@ struct ReplacementMod {
 };
 struct Catalog {
     std::vector<Outfit> outfits;
+    std::vector<AnimationLibrary> animation_libraries;
     Json diagnostics = Json::object();
     std::vector<ReplacementMod> replacements;
     std::vector<std::string> replacement_folders;   // the table's folder keys, for mapping a look's mesh to its folder

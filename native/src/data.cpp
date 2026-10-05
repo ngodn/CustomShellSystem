@@ -6,6 +6,7 @@
 #include <chrono>
 #include <fstream>
 #include <stdexcept>
+#include <tuple>
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -167,6 +168,7 @@ State load_state(const fs::path& file, bool* recovered) {
 }
 Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::path& cache) {
     Catalog result;
+    std::vector<fs::path> animation_library_sources;
     std::set<std::string> ids;
     std::vector<fs::path> files;
     if (fs::exists(directory)) {
@@ -189,6 +191,17 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
         };
         try {
         const auto& j = document.catalog;
+        if(j.contains("animation_library")) {
+            if(j.size()!=2 || j.at("schema")!=1)
+                throw std::runtime_error("Unsupported animation library catalog schema");
+            auto library=AnimationLibrary::parse(j.at("animation_library"));
+            if(result.animation_libraries.size()>=16)
+                throw std::runtime_error("Catalog exceeds 16 animation libraries");
+            result.animation_libraries.push_back(std::move(library));
+            animation_library_sources.push_back(document.source);
+            if(!document.source.empty()) package_status("loaded");
+            continue;
+        }
         if (j.at("schema") != 1 || !j.at("outfits").is_array()) throw std::runtime_error("Unsupported catalog schema");
         for (const auto& item : j.at("outfits")) {
             Outfit outfit{item.at("id"), item.at("name"), item.value("author", ""),
@@ -371,6 +384,32 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
             result.outfits.resize(previous_size); ids=previous_ids;
             package_status("rejected",error.what());
         }
+    }
+    // Ambiguous libraries are rejected together, regardless of pak scan order.
+    std::map<std::string,size_t> library_ids,animation_ids;
+    std::map<std::tuple<AnimationSlot,std::string,std::string>,size_t> animation_aliases;
+    std::set<size_t> conflicting_libraries;
+    auto unique_library_claim=[&](auto& claims,const auto& key,size_t index) {
+        const auto [found,inserted]=claims.emplace(key,index);
+        if(!inserted) { conflicting_libraries.insert(found->second); conflicting_libraries.insert(index); }
+    };
+    for(size_t i=0;i<result.animation_libraries.size();++i) {
+        const auto& library=result.animation_libraries[i];
+        unique_library_claim(library_ids,library.id,i);
+        for(const auto& entry:library.entries) {
+            unique_library_claim(animation_ids,entry.id,i);
+            for(const auto& alias:entry.aliases)
+                unique_library_claim(animation_aliases,std::make_tuple(alias.slot,alias.id,alias.asset),i);
+        }
+    }
+    for(auto it=conflicting_libraries.rbegin();it!=conflicting_libraries.rend();++it) {
+        const auto& source=animation_library_sources[*it];
+        if(source.empty()) throw std::runtime_error("Conflicting animation library identities or legacy aliases");
+        for(auto& file:result.diagnostics["files"]) if(file["path"]==path_utf8(source)) {
+            file["status"]="rejected";
+            file["reason"]="Conflicting animation library identities or legacy aliases";
+        }
+        result.animation_libraries.erase(result.animation_libraries.begin()+static_cast<std::ptrdiff_t>(*it));
     }
     std::set<std::string> local_recipes;
     // Optional local recipes make material authoring testable without remounting containers.

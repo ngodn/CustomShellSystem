@@ -195,6 +195,22 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
                         throw std::runtime_error("CSS container table checksum mismatch");
                 }
             }
+            const auto kind=manifest.value("kind",std::string("outfit"));
+            if(kind=="animation_library") {
+                const auto& catalog=manifest.at("catalog");
+                if(catalog.size()!=2 || catalog.at("schema")!=1)
+                    throw std::runtime_error("Unsupported animation library catalog schema");
+                const auto library=AnimationLibrary::parse(catalog.at("animation_library"));
+                if(library.id!=id || library.name!=manifest.at("name").get<std::string>() ||
+                   library.author!=manifest.at("author").get<std::string>() ||
+                   library.version!=manifest.at("version").get<std::string>())
+                    throw std::runtime_error("Animation library package identity mismatch");
+                if(manifest.contains("thumbnail") || manifest.contains("resources"))
+                    throw std::runtime_error("Animation libraries cannot carry outfit resources");
+                result.push_back({catalog,{},path});
+                continue;
+            }
+            if(kind!="outfit") throw std::runtime_error("Unsupported CSS package kind");
             const auto& outfits=manifest.at("catalog").at("outfits");
             if(!outfits.is_array() || outfits.size()!=1 || outfits[0].at("id")!=id ||
                outfits[0].at("name")!=manifest.at("name") || outfits[0].at("author")!=manifest.at("author") ||
