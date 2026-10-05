@@ -60,6 +60,36 @@ A look change takes the place of the video's change of member, hidden in a whip 
 | 26 to 33 | 49.4 to 64.9 | Chorus: wides of 6 to 8 beats, singles of 2 beats, a look change on every phrase and palette changes on bars. |
 | 34 to 41 | 64.9 to 80.2 | Fastest intercut (looks and palettes every bar or half bar, dutch low angles), one long 12-beat orbit, then a locked symmetric wide with the signature for the last 2 bars. |
 
+## The three looks (read from the installed packages' manifests, 5 Oct)
+
+The user: "for each unholy genessa, eve, cw, u learn that whole outfit and customization first
+so u know what to do for the scene", and CSS may be changed for it ("if needs to update CSS
+please go ahead").
+
+All three wear on the Genessa shell (Commander White on nothing else). All three carry the same
+eight idles, set with CSS's `animation_choice`: `eve` (default), `eve_idle_702` seated recline,
+`703` kneeling bow, `704` low lean, `705` deep kneeling bow, `706` reclining, `708` forward fold,
+`713` side kneel. Another agent is porting one more idle (the user, same evening).
+All three have the six figure shapes (`shape_FBMBodyTone`, `shape_PBMBreastsSize`,
+`shape_PBMGlutesSize`, `shape_PBMHipSize`, `shape_PBMThighsTone`, `shape_PBMWaistWidth`, 0 to 1)
+and motion controls (`chest_motion`, `glute_motion`, `thigh_motion`, `belly_motion`; hair too
+on Commander White and Eve).
+
+| Look | Outfit id, variants | Palettes | What to show |
+| --- | --- | --- | --- |
+| Unholy Genessa | `eins0fx.unholygenessa`: `eve` (Eve skin), `genessa` (Genessa skin) | mist, ember, tar, gold, moon | Pieces: `toggle_bodice`, `toggle_skirt`, `toggle_wings`, `toggle_veil`, `toggle_hood`, `toggle_crown`, `fabric_visible`. Glow: `outfit_glow` (0 to 8, default 4.4), `outfit_glow_fill`, `outfit_glow_color`, `eye_glow`, `eye_mist`. `fabric_opacity` (sheer, 0 to 1). Colours: fabric, veins, edge, crown, hood, eye_color. |
+| Commander White | `eins0fx.commanderwhite` (0.0.6-dev): `original` | crimson, midnight, emerald, amethyst, obsidian | Fifteen modular pieces: `coat`, `top`, `skirt`, `leotard`, `lace`, `collar`, `belt`, `glove_left`, `glove_right`, `boot_left`, `boot_right`, `hair_band`, `ornament_left`, `ornament_right`, `outfit_visible`. Colours: `uniform_fabric`, `ruffle_fabric`. Hair motion. |
+| Eve | `eins0fx.seduxtress` (1.4.0): `black_pearl`, `prototype`, `skin_suit`, `bikini`, `casual_sweater`, `midsummer_alice` | five or six per variant (black_pearl: moonstone, garnet, abyss, jade, obsidian, rose_quartz) | Six whole outfits to cut between, each with its own pieces (suit, stockings, heels, tail, ribbons, glasses...) and colours; skin and hair colour. |
+
+What that suggests for the scene: Unholy Genessa is the glow and sheer-fabric look (pulse
+`outfit_glow` on the beat, sweep `fabric_opacity`, drop wings / veil / hood / crown on half
+bars); Commander White is the modular one (pieces come off and on with the beat); Eve is the
+wardrobe (a new variant on each bar of her phrase). The customization run uses the figure
+shapes and palettes on one look. Idles change on phrase boundaries, hidden by a cut.
+
+Summary with every control: `work/export-ref/outfits/SUMMARY.md` (git-ignored; rebuild with
+`build/repak/release/repak unpack <pak>` and read `manifest.json`).
+
 ## What CINE needs for it
 
 1. **Sequence takes** (`"kind": "sequence"`): a list of shots on a tempo grid (`bpm`, `offset`,
