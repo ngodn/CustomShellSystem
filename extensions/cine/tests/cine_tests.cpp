@@ -1,5 +1,6 @@
 // CINE logic tests: shot maths, presets and the shipped preset files. Run with the
 // extension directory as argv[1] (CMake passes it).
+#include "layers.hpp"
 #include "preset.hpp"
 #include "shot.hpp"
 #include <cmath>
@@ -161,6 +162,120 @@ static void presets() {
     rejects([&] { Preset::parse(glide); }, "'walk' anchor outside a walk preset");
 }
 
+// Rotate +Z by a unit quaternion (x, y, z, w).
+static Vec3 rotate_z(Quat q) {
+    return {2 * (q.x * q.z + q.w * q.y), 2 * (q.y * q.z - q.w * q.x), 1 - 2 * (q.x * q.x + q.y * q.y)};
+}
+// Horizontal angle, in degrees, between the camera's aim direction and a point.
+static double off_axis(const ActionView& v, Vec3 point) {
+    return std::abs(wrap_degrees(heading(v.camera, point) - heading(v.camera, v.aim)));
+}
+
+static void layers() {
+    expect(layers_from(Json::array({"clay", "wireframe"})) == (bit(Layer::Clay) | bit(Layer::Wireframe)), "layer names parse");
+    expect(layers_from(Json::array()) == 0, "an empty list is the final image");
+    rejects([] { layers_from(Json::array({"wirefram"})); }, "a misspelt layer");
+    rejects([] { layers_from(Json("clay")); }, "layers that are not a list");
+    for (unsigned i = 0; i < static_cast<unsigned>(Layer::Count); ++i) {
+        const auto l = static_cast<Layer>(i);
+        expect(layer_from(layer_id(l)) == l && std::string(layer_label(l)).size() > 2, std::string("layer round-trips: ") + layer_id(l));
+    }
+    expect((frame_layers & bone_layers) == 0, "a layer is a frame pass or a bone layer, not both");
+
+    expect(classify_bone("VB hand_r", {}) == BoneKind::Virtual, "VB prefix is a virtual bone");
+    expect(classify_bone("ik_foot_l", {}) == BoneKind::Ik && classify_bone("IK_Hand_Root", {}) == BoneKind::Ik, "ik_ prefix, any case");
+    expect(classify_bone("brust001", {}) == BoneKind::Spring && classify_bone("Butt002", {}) == BoneKind::Spring && classify_bone("belly", {}) == BoneKind::Spring, "usual spring names");
+    expect(classify_bone("spine_03", {}) == BoneKind::Regular && classify_bone("thigh_twist_02_l", {}) == BoneKind::Regular, "ordinary bones");
+    // When the outfit names its spring bones, only those count.
+    expect(classify_bone("thigh_twist_02_l", {"Thigh_Twist_02_L"}) == BoneKind::Spring, "outfit list wins, any case");
+    expect(classify_bone("brust001", {"skirt_01"}) == BoneKind::Regular, "a name outside the outfit's list is ordinary");
+    expect(spring_group("brust001") == "chest" && spring_group("breast_l") == "chest" && spring_group("butt002") == "glutes" && spring_group("glute_r") == "glutes"
+           && spring_group("belly") == "belly" && spring_group("skirt_01").empty(), "spring groups");
+
+    for (const Vec3 d : {Vec3{0, 0, 1}, Vec3{1, 0, 0}, Vec3{0, -3, 0}, Vec3{1, 2, 3}, Vec3{-4, 1, -2}, Vec3{0, 0, -1}, Vec3{1e-3, 0, -1}}) {
+        const double n = std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
+        const Quat q = z_to(d);
+        const Vec3 z = rotate_z(q);
+        expect(near(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w, 1, 1e-9), "z_to gives a unit quaternion");
+        expect(near(z.x, d.x / n, 1e-6) && near(z.y, d.y / n, 1e-6) && near(z.z, d.z / n, 1e-6), "z_to turns +Z onto the direction");
+    }
+    const Quat none = z_to({0, 0, 0});
+    expect(none.w == 1 && none.x == 0, "no direction: no rotation");
+}
+
+static void action() {
+    ActionFrame f;   // duel, azimuth 70, fov 38
+    const Vec3 her{0, 0, 100};
+    // Fighters from arm's length to far apart, on several headings: both stay inside the frame.
+    for (double separation : {120.0, 300.0, 600.0, 900.0}) {
+        for (double bearing : {0.0, 45.0, 135.0, -90.0}) {
+            const double b = bearing * 3.14159265358979 / 180;
+            const Vec3 foe{std::cos(b) * separation, std::sin(b) * separation, 100};
+            for (double azimuth : {70.0, 90.0, 20.0, -110.0}) {
+                f.azimuth = azimuth;
+                const auto v = action_view(f, her, &foe);
+                const double half = v.fov / 2;
+                const double d = flat_distance(v.camera, {(her.x + foe.x) / 2, (her.y + foe.y) / 2, 0});
+                expect(d >= f.distance - 1e-6 && d <= f.distance_max + 1e-6, "duel distance stays in its range");
+                if (d < f.distance_max - 1) expect(off_axis(v, her) < half && off_axis(v, foe) < half, "both fighters are inside the field of view");
+                expect(near(v.focus, std::sqrt(d * d + (f.height - f.aim) * (f.height - f.aim)), 1e-6), "focus is the distance to the aim point");
+            }
+        }
+    }
+    f.azimuth = 70;
+    const Vec3 near_foe{300, 0, 100}, far_foe{900, 0, 100};
+    expect(flat_distance(action_view(f, her, &far_foe).camera, {450, 0, 0}) > flat_distance(action_view(f, her, &near_foe).camera, {150, 0, 0}),
+           "the camera backs off as they separate");
+    // The angle is held against the duel axis: turn the pair and the camera turns with it.
+    const Vec3 turned{0, 300, 100};
+    const auto a = action_view(f, her, &near_foe), b = action_view(f, her, &turned);
+    expect(near(wrap_degrees(heading({150, 0, 0}, a.camera) - 0), 70, 1e-6) && near(wrap_degrees(heading({0, 150, 0}, b.camera) - 90), 70, 1e-6), "azimuth is measured from the duel axis");
+    // No target, or on the same spot: falls back to following her.
+    const auto alone = action_view(f, her, nullptr);
+    expect(near(flat_distance(alone.camera, her), f.distance, 1e-6) && near(alone.aim.z, her.z + f.aim, 1e-9), "no target: follow framing");
+    const Vec3 same{5, 0, 100};
+    expect(near(flat_distance(action_view(f, her, &same).camera, her), f.distance, 1e-6), "overlapping fighters: follow framing");
+    // Punch-in tightens distance and field of view, and never past the limits.
+    ActionFrame punch = f; punch.punch = 1; ActionFrame over = f; over.punch = 9;
+    expect(action_view(punch, her, nullptr).fov < alone.fov && flat_distance(action_view(punch, her, nullptr).camera, her) < f.distance, "a punch-in tightens");
+    expect(near(action_view(over, her, nullptr).fov, action_view(punch, her, nullptr).fov, 1e-9), "punch is clamped to 1");
+    // Shoulder: behind her (away from the target), looking past her at it.
+    ActionFrame shoulder = f; shoulder.framing = Framing::Shoulder;
+    const auto s = action_view(shoulder, her, &near_foe);
+    expect(s.camera.x < 0 && s.aim.x > 100, "shoulder camera sits behind her and aims toward the target");
+    ActionFrame other = shoulder; other.azimuth = -70;
+    expect(s.camera.y * action_view(other, her, &near_foe).camera.y < 0, "the azimuth's sign picks the shoulder");
+}
+
+static void action_presets() {
+    const Json base = {{"schema", 1}, {"id", "duel"}, {"name", "Duel"}, {"kind", "action"}, {"max_seconds", 40}};
+    const auto p = Preset::parse(base);
+    expect(p.kind == ShotKind::Action && p.action.framing == Framing::Duel && p.keys.empty(), "an action preset needs no keys");
+    expect(near(make_timeline(p, 0, 184).total, 40, 1e-9), "an action take runs to max_seconds");
+    Json full = base;
+    full["action"] = {{"framing", "shoulder"}, {"azimuth", -60}, {"orbit_speed", 0}, {"distance", 300}, {"distance_max", 800}, {"fstop", 2.0},
+                      {"game_cameras", "override"}, {"beats", Json::array({{{"on", "kill"}, {"do", "slowmo"}}, {{"on", "parry"}, {"do", "punch"}, {"cooldown", 4}}})}};
+    const auto q = Preset::parse(full);
+    expect(q.action.framing == Framing::Shoulder && !q.action.respect_game_cameras && q.action.beats.size() == 2
+           && q.action.beats[0].on == Beat::On::Kill && q.action.beats[1].what == Beat::Do::Punch && near(q.action.beats[1].cooldown, 4, 1e-9), "action fields parse");
+    auto bad = [&](const char* key, Json value) { Json j = full; j["action"][key] = std::move(value); rejects([&] { Preset::parse(j); }, std::string("action.") + key); };
+    bad("framing", "orbit"); bad("distance", 10); bad("distance_max", 200); bad("slowmo", 0); bad("game_cameras", "ignore");
+    bad("beats", Json::array({{{"on", "dodge"}, {"do", "punch"}}})); bad("beats", Json::array({{{"on", "hit"}, {"do", "cut"}}}));
+
+    // A breakdown track works on any kind and is a fraction of the whole take.
+    Json reel = base;
+    reel["breakdown"] = {{"steps", Json::array({{{"at", 0.1}, {"layers", {"clay"}}}, {{"at", 0.5}, {"layers", {"clay", "wireframe"}}, {"wipe", 0}}, {{"at", 0.9}, {"layers", Json::array()}}})}};
+    const auto r = Preset::parse(reel);
+    const auto tl = make_timeline(r, 0, 184);
+    expect(tl.breakdown.size() == 3 && near(tl.breakdown[0].at, 4, 1e-9) && near(tl.breakdown[1].at, 20, 1e-9) && tl.breakdown[1].wipe == 0
+           && tl.breakdown[1].layers == (bit(Layer::Clay) | bit(Layer::Wireframe)) && tl.breakdown[2].layers == 0, "breakdown steps land on the timeline");
+    auto bad_reel = [&](Json steps) { Json j = base; j["breakdown"] = {{"steps", std::move(steps)}}; rejects([&] { Preset::parse(j); }, "a bad breakdown track"); };
+    bad_reel(Json::array({{{"at", 0.5}, {"layers", {"clay"}}}, {{"at", 0.4}, {"layers", {"clay"}}}}));   // out of order
+    bad_reel(Json::array({{{"at", 0.5}, {"layers", {"cla"}}}}));
+    bad_reel(Json::array({{{"at", 0.5}}}));
+    bad_reel(Json::array({{{"at", 0.5}, {"layers", {"clay"}}, {"wipe", 99}}}));
+}
+
 static void shipped(const fs::path& root) {
     size_t count = 0;
     for (const auto& entry : fs::directory_iterator(root / "presets")) {
@@ -183,6 +298,7 @@ static void shipped(const fs::path& root) {
 int main(int argc, char** argv) {
     try {
         geometry(); routes(); tracks(); curves(); walls(); presets();
+        layers(); action(); action_presets();
         if (argc > 1) shipped(fs::path(argv[1]));
         std::cout << checks << " CINE checks passed\n";
         return 0;

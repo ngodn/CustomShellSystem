@@ -32,7 +32,7 @@ void camera_fields(const Json& j, double& az, double& dist, double& height, doub
 }
 
 const char* kind_name(ShotKind k) {
-    switch (k) { case ShotKind::Walk: return "walk"; case ShotKind::Glide: return "glide"; case ShotKind::Turntable: return "turntable"; default: return "photo"; }
+    switch (k) { case ShotKind::Walk: return "walk"; case ShotKind::Glide: return "glide"; case ShotKind::Turntable: return "turntable"; case ShotKind::Action: return "action"; default: return "photo"; }
 }
 
 Preset Preset::parse(const Json& j) {
@@ -49,7 +49,8 @@ Preset Preset::parse(const Json& j) {
     else if (kind == "glide") p.kind = ShotKind::Glide;
     else if (kind == "turntable") p.kind = ShotKind::Turntable;
     else if (kind == "photo") p.kind = ShotKind::Photo;
-    else throw std::invalid_argument("'kind' must be walk, glide, turntable or photo");
+    else if (kind == "action") p.kind = ShotKind::Action;
+    else throw std::invalid_argument("'kind' must be walk, glide, turntable, photo or action");
     p.intro = number(j, "intro", p.intro, 0.5, 20);
     p.duration = number(j, "duration", p.duration, 1, 120);
     p.tail = number(j, "tail", p.tail, 3, 60);
@@ -74,6 +75,50 @@ Preset Preset::parse(const Json& j) {
             PhotoShot shot; shot.name = text(s, "name", 64, true);
             camera_fields(s, shot.azimuth, shot.distance, shot.height, shot.aim, shot.fov);
             p.photos.push_back(std::move(shot));
+        }
+    } else if (p.kind == ShotKind::Action) {
+        const Json a = j.value("action", Json::object());
+        if (!a.is_object()) throw std::invalid_argument("'action' must be an object");
+        auto& shot = p.action;
+        const auto framing = a.contains("framing") ? text(a, "framing", 16, true) : std::string("duel");
+        if (framing == "follow") shot.framing = Framing::Follow;
+        else if (framing == "duel") shot.framing = Framing::Duel;
+        else if (framing == "shoulder") shot.framing = Framing::Shoulder;
+        else throw std::invalid_argument("'framing' must be follow, duel or shoulder");
+        shot.azimuth = number(a, "azimuth", shot.azimuth, -360, 360);
+        shot.orbit_speed = number(a, "orbit_speed", shot.orbit_speed, -90, 90);
+        shot.distance = number(a, "distance", shot.distance, 80, 3000);
+        shot.distance_max = number(a, "distance_max", std::max(shot.distance_max, shot.distance), shot.distance, 5000);
+        shot.margin = number(a, "margin", shot.margin, 0, 1000);
+        shot.height = number(a, "height", shot.height, -300, 800);
+        shot.aim = number(a, "aim", shot.aim, -300, 300);
+        shot.fov = number(a, "fov", shot.fov, 5, 120);
+        shot.smooth = number(a, "smooth", shot.smooth, 0, 3);
+        shot.shake = number(a, "shake", shot.shake, -1, 2);
+        shot.fstop = number(a, "fstop", shot.fstop, 0, 32);
+        shot.slowmo = number(a, "slowmo", shot.slowmo, 0.05, 1);
+        shot.slowmo_hold = number(a, "slowmo_hold", shot.slowmo_hold, 0.1, 5);
+        shot.tail = number(a, "tail", shot.tail, 0, 30);
+        if (a.contains("game_cameras")) {
+            const auto mode = text(a, "game_cameras", 16, true);
+            if (mode == "respect") shot.respect_game_cameras = true;
+            else if (mode == "override") shot.respect_game_cameras = false;
+            else throw std::invalid_argument("'game_cameras' must be respect or override");
+        }
+        if (a.contains("beats")) {
+            if (!a.at("beats").is_array() || a.at("beats").size() > 8) throw std::invalid_argument("'beats' must list up to 8 beats");
+            for (const auto& b : a.at("beats")) {
+                if (!b.is_object()) throw std::invalid_argument("Each beat must be an object");
+                Beat beat;
+                const auto on = text(b, "on", 16, true), what = text(b, "do", 16, true);
+                if (on == "hit") beat.on = Beat::On::Hit; else if (on == "hurt") beat.on = Beat::On::Hurt;
+                else if (on == "parry") beat.on = Beat::On::Parry; else if (on == "kill") beat.on = Beat::On::Kill;
+                else throw std::invalid_argument("A beat's 'on' must be hit, hurt, parry or kill");
+                if (what == "slowmo") beat.what = Beat::Do::Slowmo; else if (what == "punch") beat.what = Beat::Do::Punch;
+                else throw std::invalid_argument("A beat's 'do' must be slowmo or punch");
+                beat.cooldown = number(b, "cooldown", beat.cooldown, 0.2, 60);
+                shot.beats.push_back(beat);
+            }
         }
     } else {
         if (!j.contains("keys") || !j.at("keys").is_array() || j.at("keys").size() < 2 || j.at("keys").size() > 32)
@@ -128,6 +173,22 @@ Preset Preset::parse(const Json& j) {
             p.look.push_back(std::move(step));
         }
     }
+    if (j.contains("breakdown")) {
+        const auto& breakdown = j.at("breakdown");
+        if (!breakdown.is_object() || !breakdown.contains("steps") || !breakdown.at("steps").is_array() || breakdown.at("steps").size() > 32)
+            throw std::invalid_argument("'breakdown.steps' must list up to 32 steps");
+        double previous = -1;
+        for (const auto& s : breakdown.at("steps")) {
+            if (!s.is_object() || !s.contains("layers")) throw std::invalid_argument("Each breakdown step needs 'layers'");
+            BreakdownStep step;
+            step.fraction = number(s, "at", 0, 0, 1);
+            if (step.fraction <= previous) throw std::invalid_argument("Breakdown steps must be in time order");
+            previous = step.fraction;
+            step.layers = layers_from(s.at("layers"));
+            step.wipe = number(s, "wipe", step.wipe, 0, 10);
+            p.breakdown.push_back(step);
+        }
+    }
     return p;
 }
 
@@ -136,8 +197,16 @@ Timeline make_timeline(const Preset& p, double route_length_cm, double walk_spee
     auto key = [&](const PresetKey& k, double t) {
         return OrbitKey{t, k.azimuth, k.distance * p.zoom, k.height, k.aim, k.fov * p.fov_scale};
     };
+    // Breakdown steps are fractions of the whole take, whatever kind it is.
+    auto reveals = [&] { for (const auto& s : p.breakdown) tl.breakdown.push_back({s.fraction * tl.total, s.layers, s.wipe}); };
     if (p.kind == ShotKind::Photo) {
         tl.total = double(p.photos.size()) * p.hold;
+        reveals();
+        return tl;
+    }
+    if (p.kind == ShotKind::Action) {
+        tl.total = p.max_seconds;   // or until the player ends it, or the target is down
+        reveals();
         return tl;
     }
     if (p.kind == ShotKind::Walk) {
@@ -171,6 +240,7 @@ Timeline make_timeline(const Preset& p, double route_length_cm, double walk_spee
         if (p.look_ends_on_own && !p.look.empty()) tl.look.push_back({p.duration * 0.92, nullptr, true});
     }
     std::sort(tl.look.begin(), tl.look.end(), [](const auto& a, const auto& b) { return a.at < b.at; });
+    reveals();
     return tl;
 }
 

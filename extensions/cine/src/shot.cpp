@@ -206,4 +206,40 @@ bool WallProfile::tight() const {
     return std::any_of(scale_.begin(), scale_.end(), [](double v) { return v < 0.999; });
 }
 
+ActionView action_view(const ActionFrame& f, Vec3 subject, const Vec3* target) {
+    const double punch = std::clamp(f.punch, 0.0, 1.0);
+    const double tighten = 1.0 - 0.28 * punch;
+    ActionView view;
+    view.fov = f.fov * (1.0 - 0.12 * punch);
+    Vec3 axis;
+    double separation = 0;
+    if (target) { axis = {target->x - subject.x, target->y - subject.y, 0}; separation = std::hypot(axis.x, axis.y); }
+    if (f.framing == Framing::Follow || !target || separation < 20) {
+        const double a = f.azimuth * std::numbers::pi / 180, d = f.distance * tighten;
+        view.camera = {subject.x + std::cos(a) * d, subject.y + std::sin(a) * d, subject.z + f.height};
+        view.aim = {subject.x, subject.y, subject.z + f.aim};
+    } else if (f.framing == Framing::Duel) {
+        const Vec3 middle{subject.x + axis.x / 2, subject.y + axis.y / 2, (subject.z + target->z) / 2};
+        const double phi = f.azimuth * std::numbers::pi / 180, half = separation / 2;
+        // Far enough that both fighters, plus the margin, fit across the field of view, plus
+        // however much of the pair lies along the view direction.
+        const double fit = (half * std::abs(std::sin(phi)) + f.margin) / std::tan(view.fov * std::numbers::pi / 360) + half * std::abs(std::cos(phi));
+        const double d = std::clamp(std::max(f.distance, fit), f.distance, std::max(f.distance, f.distance_max)) * tighten;
+        const double a = std::atan2(axis.y, axis.x) + phi;
+        view.camera = {middle.x + std::cos(a) * d, middle.y + std::sin(a) * d, middle.z + f.height};
+        view.aim = {middle.x, middle.y, middle.z + f.aim};
+    } else {
+        // Behind her shoulder; the sign of the azimuth picks which one.
+        const Vec3 forward{axis.x / separation, axis.y / separation, 0};
+        const double side = f.azimuth >= 0 ? 1.0 : -1.0;
+        const Vec3 right{-forward.y * side, forward.x * side, 0};
+        const double back = f.distance * tighten * 0.55, across = f.distance * 0.22;
+        view.camera = {subject.x - forward.x * back + right.x * across, subject.y - forward.y * back + right.y * across, subject.z + f.height};
+        view.aim = {subject.x + axis.x * 0.7, subject.y + axis.y * 0.7, subject.z + (target->z - subject.z) * 0.7 + f.aim};
+    }
+    const Vec3 to{view.aim.x - view.camera.x, view.aim.y - view.camera.y, view.aim.z - view.camera.z};
+    view.focus = std::sqrt(to.x * to.x + to.y * to.y + to.z * to.z);
+    return view;
+}
+
 } // namespace cine

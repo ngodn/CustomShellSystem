@@ -94,6 +94,22 @@ private:
     std::vector<double> scale_;
 };
 
+// ---- action takes: framing live action from where the fighters are now.
+enum class Framing { Follow, Duel, Shoulder };
+struct ActionFrame {
+    Framing framing = Framing::Duel;
+    double azimuth = 70;        // degrees, see ActionShot
+    double distance = 420, distance_max = 1100, margin = 150;
+    double height = 35, aim = 10, fov = 38;
+    double punch = 0;           // 0..1: a punch-in tightens distance and field of view
+};
+struct ActionView { Vec3 camera, aim; double fov = 40; double focus = 400; };
+// Follow circles her at a world azimuth. Duel sits off the line between the two fighters and
+// backs off just enough to hold both inside the field of view. Shoulder sits behind her
+// shoulder looking past her at the target. Duel and Shoulder fall back to Follow without a
+// target, or when the two stand on the same spot.
+ActionView action_view(const ActionFrame& frame, Vec3 subject, const Vec3* target);
+
 // Exponential smoothing that never leaps after a slow frame: dt is clamped first.
 inline double smooth_factor(double dt, double tau, double max_dt = 0.12) {
     if (tau <= 0) return 1.0;

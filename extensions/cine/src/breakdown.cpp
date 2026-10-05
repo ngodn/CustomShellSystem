@@ -101,8 +101,9 @@ Quat z_to(Vec3 d) {
     const double length = std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
     if (!(length > 1e-9)) return {};
     d = d * (1.0 / length);
-    // Shortest arc from (0,0,1): axis = z x d, w = 1 + z.d. Straight down has no unique axis.
-    if (d.z < -0.999999) return {1, 0, 0, 0};
+    // Shortest arc from (0,0,1): axis = z x d, w = 1 + z.d. Exactly straight down has no unique
+    // axis; any horizontal one is a half turn.
+    if (1 + d.z < 1e-12) return {1, 0, 0, 0};
     Quat q{-d.y, d.x, 0, 1 + d.z};
     const double n = std::sqrt(q.x * q.x + q.y * q.y + q.w * q.w);
     return {q.x / n, q.y / n, 0, q.w / n};
