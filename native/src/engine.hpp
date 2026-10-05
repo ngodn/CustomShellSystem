@@ -71,6 +71,8 @@ class PerformancePlayer {
     std::string reason_;
     float original_time_=0.f;
     std::function<void()> restore_layer_;
+    std::function<void(double,double)> sample_face_;
+    std::function<void()> restore_face_;
     struct Hidden { WeakObject object; bool actor=false; };
     std::vector<Hidden> hidden_;
     bool intact() const;
@@ -83,7 +85,8 @@ public:
     static std::string unsupported(RC::Unreal::UObject* pawn,const Catalog&,const std::string& outfit);
     static bool waiting_for_menu(RC::Unreal::UObject* pawn);
     Json start(RC::Unreal::UObject* pawn,const Catalog&,const std::string& outfit,
-               const std::string& id,double rate,double position);
+               const std::string& id,double rate,double position,double facial_duration=0.,
+               std::function<void(double,double)> sample_face={},std::function<void()> restore_face={});
     Json command(const Json&);
     Json status() const;
     void tick(RC::Unreal::UObject* pawn);
@@ -743,6 +746,8 @@ class Appearance {
         OwnedMorphs weights;
     };
     FacialBinding facial_world_, facial_preview_;
+    FacialBinding facial_motion_binding_;
+    std::optional<FacialPerformancePose> facial_motion_;
     std::map<std::string,float> facial_weights_;
     std::map<std::string,std::string> facial_failures_;
     std::string facial_requested_, facial_applied_, facial_reason_;
@@ -750,6 +755,9 @@ class Appearance {
     void write_facial_binding(FacialBinding&,RC::Unreal::UObject*,const std::map<std::string,float>&);
     void push_facial_morphs(RC::Unreal::UObject*);
     void restore_expression();
+    void begin_facial_performance(const FacialPerformance&);
+    void sample_facial_performance(double seconds,double weight);
+    void restore_facial_performance();
     int lod_count();
     void show_hidden_sections();
     void restore_springs();
@@ -837,6 +845,9 @@ public:
                const FacialPlan& facial = {});
     void set_expression(const FacialPlan&);
     Json expression_status() const;
+    void retain_expression_mesh(AssetLoadRoots& roots) const {
+        if(auto* mesh=applied_.Get()) roots.keep(mesh);
+    }
     void clear_facial_failures() { facial_failures_.clear(); }
     bool restore();
     void release_caches() { mask_cache_.clear(); mask_roots_.release(); mask_cache_outfit_.clear(); }
@@ -912,11 +923,8 @@ public:
         return PerformancePlayer::unsupported(observed_pawn_.Get(),catalog,outfit);
     }
     bool performance_waiting_for_menu() const { return PerformancePlayer::waiting_for_menu(observed_pawn_.Get()); }
-    Json start_performance(const Catalog& catalog,const std::string& outfit,const std::string& id,double rate,double position) {
-        if(performance.active()) throw std::runtime_error("Stop the current performance first");
-        if(const auto why=performance_unavailable(catalog,outfit);!why.empty()) throw std::runtime_error(why);
-        return performance.start(observed_pawn_.Get(),catalog,outfit,id,rate,position);
-    }
+    Json start_performance(const Catalog&,const std::string& outfit,const std::string& id,
+                           double rate,double position,const FacialPerformance* face=nullptr);
     Json transition_state(void* engine);
 #ifdef CSS_INVENTORY_DEV
 #endif

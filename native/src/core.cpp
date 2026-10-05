@@ -120,6 +120,8 @@ struct Core {
     uint64_t animation_catalog_generation=1;
     uint64_t shared_animation_revision=0;
     PendingPerformance pending_performance;
+    bool restore_performance_face=false;
+    AssetLoadRoots performance_face_mesh_roots;
     std::string last_living_shell;   // most recent CharacterId.Player.Shell.* worn, for Harbinger carry-over.
     bool dirty = false, apply_pending = false, restore_pending = false, rescan_pending = false, forget_current = false;
     bool favorites_only = false;
@@ -339,6 +341,52 @@ struct Core {
             selected==state.selections.end()?"":selected->second.outfit,
             selected==state.selections.end()?"":selected->second.variant};
     }
+    void finish_performance_face() {
+        if(!restore_performance_face || appearance.performance.active()) return;
+        restore_performance_face=false;
+        if(state.enabled && !restore_pending) {
+            // Reconcile the current selection, never a saved copy from before a
+            // later outfit/expression change or gameplay transition.
+            apply_pending=true;custom_only=false;
+        }
+    }
+    Json start_performance(const std::string& id,double rate,double position) {
+        const auto selected=state.selections.find(appearance.shell);
+        if(selected==state.selections.end()) throw std::runtime_error("No CSS appearance is worn");
+        const auto& selection=selected->second;
+        const auto match=catalog.facial_match(selection.outfit,selection.variant);
+        const auto* face=match.rig?match.rig->find_performance(id):nullptr;
+        if(!face) return appearance.start_performance(catalog,selection.outfit,id,rate,position);
+        if(appearance.performance.active()) throw std::runtime_error("Stop the current performance first");
+        if(const auto reason=appearance.performance_unavailable(catalog,selection.outfit);!reason.empty())
+            throw std::runtime_error(reason);
+        const auto* variant=catalog.find(selection.outfit,selection.variant);
+        if(!variant) throw std::runtime_error("Performance outfit is no longer available");
+        const auto plan=plan_performance_expression(match,variant->mesh,selection.custom.expression,id);
+        if(plan.weights.empty()) throw std::runtime_error("The selected facial expression is unavailable");
+        try {
+            if(appearance.current_mesh!=plan.mesh) {
+                performance_face_mesh_roots.release();
+                appearance.retain_expression_mesh(performance_face_mesh_roots);
+                restore_performance_face=true;
+                if(!appearance.apply(current_engine,variant->mesh,variant->materials,plan))
+                    throw std::runtime_error("Wait for the appearance to become ready");
+                if(appearance.current_mesh!=plan.mesh)
+                    throw std::runtime_error("The performance facial mesh could not load");
+                for(const auto& outfit:catalog.outfits) if(outfit.id==selection.outfit) {
+                    if(state.keep_default_attachments) appearance.set_attachment_offsets({},false);
+                    else appearance.set_attachment_offsets(variant->attachments,true,fit_shell_for(outfit,*variant));
+                    appearance.set_ground_offset(selection.custom.ground_offset_cm.value_or(variant->ground_offset_cm));
+                    appearance.sync_items(outfit,selection.variant);
+                    appearance.customize(outfit,selection.variant,selection.custom);
+                }
+                appearance.set_expression(plan);
+                sync_menu_safely();
+                walk_after=0;
+            }
+            return appearance.start_performance(catalog,selection.outfit,id,rate,position,face);
+        } catch(...) {finish_performance_face();throw;}
+    }
     void start_pending_performance(uint64_t now) {
         if(!pending_performance.active()) return;
         try {
@@ -353,7 +401,7 @@ struct Core {
             if(ready!=PendingPerformance::State::Ready) return;
             const auto id=pending_performance.id();
             pending_performance.clear();
-            appearance.start_performance(catalog,context.outfit,id,1.,0.);
+            start_performance(id,1.,0.);
             report("Performance started. Move or open the menu to stop.");
         } catch(...) {pending_performance.clear();throw;}
     }
@@ -394,7 +442,7 @@ struct Core {
                     throw std::runtime_error("Wait for the CSS appearance to finish applying");
                 const auto selected=state.selections.find(appearance.shell);
                 if(selected==state.selections.end()) throw std::runtime_error("No CSS appearance is worn");
-                return appearance.start_performance(catalog,selected->second.outfit,command.at("id").get<std::string>(),
+                return start_performance(command.at("id").get<std::string>(),
                     command.value("rate",1.),command.value("seconds",0.));
             }
             return appearance.performance.command(command);
@@ -912,10 +960,13 @@ struct Core {
                 appearance.performance.interrupt(error.what());
                 report(std::string("Performance stopped: ")+error.what());
             }
+            finish_performance_face();
         });
         measured(FrameProfile::walk,[&] { sync_walk_safely(now); });
         if(state.enabled) measured(FrameProfile::misc,[&] { sync_misc_safely(now); });
         measured(FrameProfile::reconcile,[&] { reconcile(engine,now); });
+        if(!restore_performance_face && !apply_pending && !restore_pending && !appearance.performance.active())
+            performance_face_mesh_roots.release();
         measured(FrameProfile::astral,[&] {
             bool enabled=state.enabled && !apply_pending && !restore_pending;
 #ifdef CSS_INVENTORY_DEV

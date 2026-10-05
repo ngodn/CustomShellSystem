@@ -1,6 +1,7 @@
 #pragma once
 #include <nlohmann/json.hpp>
 #include <cstddef>
+#include <map>
 #include <span>
 #include <string>
 #include <vector>
@@ -24,5 +25,13 @@ struct FacialPerformance {
     // Zero weight restores the baseline exactly; endpoint extrapolation is constant.
     void sample(double seconds, double weight, std::span<const float> baseline,
                 std::span<float> output) const;
+};
+class FacialPerformancePose {
+    FacialPerformance performance_;
+    std::map<std::string,float> baseline_, values_;
+    std::vector<float> curve_baseline_, curve_values_;
+public:
+    FacialPerformancePose(const FacialPerformance&,const std::map<std::string,float>& baseline);
+    const std::map<std::string,float>& sample(double seconds,double weight);
 };
 }

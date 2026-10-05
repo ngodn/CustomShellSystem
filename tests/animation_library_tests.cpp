@@ -174,7 +174,8 @@ int main(int argc,char** argv) {
             expect(packages.diagnostics.at("rejected")==4,"Bad library packages were not reported independently");
             expect(packages.diagnostics.at("loaded")==1,"Valid packaged library did not load");
         }
-        if(argc==3 && (std::string_view(argv[1])=="--audited-pack" || std::string_view(argv[1])=="--audited-facial-pack")) {
+        if(argc==3 && (std::string_view(argv[1])=="--audited-pack" || std::string_view(argv[1])=="--audited-facial-pack" ||
+                       std::string_view(argv[1])=="--audited-face-motion-pack")) {
             const auto packages=Catalog::load(root,argv[2],root/"audit-cache");
             expect(packages.animation_libraries.size()==1,"Audited pack did not load as one library");
             const auto& audited=packages.animation_libraries[0];
@@ -188,7 +189,7 @@ int main(int argc,char** argv) {
                 expect(resolved && resolved->target_class==adapter.target_class,"Packaged adapter does not resolve");
             }
             expect(packages.diagnostics.at("rejected")==0,"Audited package set contains rejected metadata");
-            if(std::string_view(argv[1])=="--audited-facial-pack") {
+            if(std::string_view(argv[1])!="--audited-pack") {
                 expect(audited.faces.size()==1 && audited.faces.front().expressions.size()==21 &&
                        audited.faces.front().adapters.size()==6,"Combined pack lost facial metadata");
                 size_t matched=0;
@@ -200,6 +201,14 @@ int main(int argc,char** argv) {
                     ++matched;
                 }
                 expect(matched==6,"Combined pack did not resolve all six Eve faces");
+                if(std::string_view(argv[1])=="--audited-face-motion-pack") {
+                    const auto& rig=audited.faces.front();
+                    const auto* performance=rig.find_performance("css.eve.dance.comecloser");
+                    expect(rig.morphs.size()==105 && rig.performances.size()==1,
+                           "Facial performance catalog dimensions differ");
+                    expect(performance && performance->curves.size()==15 && performance->key_count()==987,
+                           "Packaged Come Closer lost its original facial curves");
+                }
             }
         }
         fs::remove_all(root);

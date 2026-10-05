@@ -35,6 +35,8 @@ struct FacialPlan {
     std::map<std::string,float> weights;
 };
 FacialPlan plan_expression(FacialMatch,const std::string& source_mesh,const std::string& expression);
+FacialPlan plan_performance_expression(FacialMatch,const std::string& source_mesh,
+                                      const std::string& expression,const std::string& clip);
 FacialMatch resolve_facial_rig(const std::vector<FacialRig>&, const std::string& outfit,
     const std::string& toc_sha256, uint64_t bulk_bytes, const std::string& source_mesh);
 }

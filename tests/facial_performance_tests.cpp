@@ -80,6 +80,21 @@ int main(int argc,char** argv) {
         clock.stop(true);
         performance.sample(clock.position(),clock.weight(),baseline,output);
         expect(output==baseline,"Immediate interruption retained a facial override");
+        const std::map<std::string,float> expression={{"jaw_open",.2f},{"squint_left",-.1f},{"unused",.8f}};
+        FacialPerformancePose pose(performance,expression);
+        expect(pose.sample(0.,0.)==expression,"Face entry changed the selected expression at zero weight");
+        auto blended=pose.sample(.75,.5);
+        expect(near(blended.at("unused"),.4) && near(blended.at("jaw_open"),(.2+1.116883)/2),
+               "Unanimated expression shapes did not fade with the performance");
+        const auto& fully=pose.sample(.75,1.);
+        expect(fully.at("unused")==0 && near(fully.at("jaw_open"),1.116883),
+               "Static expression contaminated the authored facial performance");
+        const auto prior=fully;
+        rejects([&]{pose.sample(0.,2.);});
+        expect(fully==prior,"Invalid face pose sampling partially changed its values");
+        expect(pose.sample(1.,0.)==expression,"Face exit did not restore its complete expression baseline");
+        rejects([&]{FacialPerformancePose missing(performance,{{"jaw_open",0.f}});});
+        rejects([&]{FacialPerformancePose invalid(performance,{{"jaw_open",5.f},{"squint_left",0.f}});});
         auto invalid=[&](auto edit) {auto value=document;edit(value);rejects([&]{FacialPerformance::parse(value,morphs);});};
         invalid([](auto& j){j["clip"]="original";});
         invalid([](auto& j){j["duration"]=true;});

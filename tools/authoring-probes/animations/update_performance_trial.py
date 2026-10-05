@@ -23,7 +23,7 @@ def check_hashes(files):
             raise RuntimeError('File changed: ' + str(path))
 
 
-def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report):
+def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report, keep_cine=False):
     require_closed()
     old = json.loads((previous / 'deployment.json').read_text())
     verified = json.loads((pack / 'verification.json').read_text())
@@ -37,9 +37,15 @@ def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report):
             or deltas.get('source_deltas_checked') is not True
             or {r['target'] for r in deltas['results']} != expected_faces):
         raise ValueError('Expected the complete verified facial package and source comparison')
+    expected_morphs = {m['name'] for m in faces['results'][0]['morphs']}
+    if not 1 <= len(expected_morphs) <= 128 or any(
+            len(r['morphs']) != len(expected_morphs) or {m['name'] for m in r['morphs']} != expected_morphs
+            for r in faces['results']):
+        raise ValueError('Cooked facial shape sets differ')
     for row in deltas['results']:
         comparison = row['source_delta_comparison']
-        if (comparison.get('passed') is not True or len(comparison['shapes']) != 99
+        if (comparison.get('passed') is not True or len(comparison['shapes']) != len(expected_morphs)
+                or {m['name'] for m in comparison['shapes']} != expected_morphs
                 or len(comparison['expressions']) != 21):
             raise ValueError('Incomplete facial delta comparison')
     files = verified['files']
@@ -69,6 +75,8 @@ def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report):
     check_hashes(protected)
     if sha(cine / 'menu.json') != sha(previous / 'cine-menu.json'):
         raise ValueError('Installed CINE menu differs from the previous trial')
+    if keep_cine:
+        cine_dll, menu = cine / old['cine'], cine / 'menu.json'
     selectors = {str(p): sha(p) for p in
                  (mod / 'core.json', cine / 'extension.json', cine / 'menu.json')}
     inputs = {str(pack / NAME / name): digest for name, digest in files.items()}
@@ -83,9 +91,14 @@ def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report):
     protected[str(mod / 'dlls/main.dll')] = sha(mod / 'dlls/main.dll')
     core_hash, cine_hash = sha(core), sha(cine_dll)
     core_name, cine_name = 'css_core-facial-' + core_hash[:16] + '.dll', 'cine-facial-' + cine_hash[:16] + '.dll'
+    if keep_cine:
+        cine_name = old['cine']
     stage = game / 'Content' / (NAME + '-facial-stage-' + core_hash[:16])
     rollback = game / 'Content' / (NAME + '-rollback-' + core_hash[:16])
-    for path in (receipt, stage, rollback, mod / 'cores' / core_name, cine / cine_name):
+    candidates = [receipt, stage, rollback, mod / 'cores' / core_name]
+    if not keep_cine:
+        candidates.append(cine / cine_name)
+    for path in candidates:
         if path.exists():
             raise FileExistsError('Inspect existing candidate or receipt before retrying: ' + str(path))
     require_closed()
@@ -103,7 +116,8 @@ def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report):
         copy_verified(cine_dll, receipt / cine_name)
         copy_verified(menu, receipt / 'cine-menu.json')
         copy_verified(receipt / core_name, mod / 'cores' / core_name)
-        copy_verified(receipt / cine_name, cine / cine_name)
+        if not keep_cine:
+            copy_verified(receipt / cine_name, cine / cine_name)
         check_hashes(inputs)
         check_hashes(protected)
         check_hashes(selectors)
@@ -115,9 +129,10 @@ def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report):
         new_moved = True
         require_closed()
         metadata_changed = True
-        copy_verified(receipt / 'cine-menu.json', cine / 'menu.json')
-        require_closed()
-        atomic(cine / 'extension.json', {**extension, 'entry': cine_name})
+        if not keep_cine:
+            copy_verified(receipt / 'cine-menu.json', cine / 'menu.json')
+            require_closed()
+            atomic(cine / 'extension.json', {**extension, 'entry': cine_name})
         require_closed()
         atomic(mod / 'core.json', {**selector, 'file': core_name})
         unchanged = {p: digest for p, digest in protected.items() if not Path(p).is_relative_to(target)}
@@ -132,6 +147,7 @@ def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report):
             'cine': cine_name, 'cine_sha256': cine_hash, 'previous_cine': extension,
             'assets': files, 'asset_directory': str(target), 'asset_rollback_directory': str(rollback),
             'previous_receipt': str(previous), 'protected_hashes': unchanged, 'inputs': inputs,
+            'cine_unchanged': keep_cine,
             'note': 'Private facial/body trial. No game launch, reload, input or recording.'})
     except Exception as error:
         if processes():
@@ -143,6 +159,8 @@ def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report):
             for name, destination in (('core.json', mod / 'core.json'),
                                       ('cine-extension.json', cine / 'extension.json'),
                                       ('cine-menu.json', cine / 'menu.json')):
+                if keep_cine and name != 'core.json':
+                    continue
                 copy_verified(backup / name, destination)
         if new_moved:
             target.rename(stage)
@@ -151,7 +169,8 @@ def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report):
         if stage.exists():
             shutil.rmtree(stage)
         (mod / 'cores' / core_name).unlink(missing_ok=True)
-        (cine / cine_name).unlink(missing_ok=True)
+        if not keep_cine:
+            (cine / cine_name).unlink(missing_ok=True)
         atomic(receipt / 'install-error.json', {'error': str(error), 'rolled_back': True})
         raise
     return receipt / 'deployment.json'
@@ -161,11 +180,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('previous', 'pack', 'receipt', 'delta_report'):
         parser.add_argument(name, type=Path)
+    parser.add_argument('--keep-cine', action='store_true', help='Keep the installed CINE DLL and menu unchanged')
     args = parser.parse_args()
     result = update(GAME, args.previous.resolve(strict=True), args.pack.resolve(strict=True),
                     args.receipt.resolve(), ROOT / 'build/windows/css_core.dll',
                     ROOT / 'build/cine-cssx-win/cine.dll', ROOT / 'extensions/cine/menu.json',
-                    args.delta_report.resolve(strict=True))
+                    args.delta_report.resolve(strict=True), keep_cine=args.keep_cine)
     print(result)
 
 

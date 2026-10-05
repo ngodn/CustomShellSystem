@@ -141,4 +141,14 @@ FacialPlan plan_expression(FacialMatch match,const std::string& source,const std
     result.weights=match.rig->weights(expression);
     return result;
 }
+FacialPlan plan_performance_expression(FacialMatch match,const std::string& source,
+    const std::string& expression,const std::string& clip) {
+    auto result=plan_expression(match,source,expression);
+    if(!expression.empty() || !match.rig || !match.adapter || match.adapter->source_mesh!=source ||
+       !match.rig->find_performance(clip)) return result;
+    result.mesh=match.adapter->target_mesh;
+    result.skeleton=match.adapter->skeleton;
+    for(const auto& name:match.rig->morphs) result.weights.emplace(name,0.f);
+    return result;
+}
 }

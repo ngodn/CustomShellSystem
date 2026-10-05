@@ -1,8 +1,9 @@
 # Facial motion inside supplied performances
 
 Private authoring checkpoint, 2026-10-06. The installed combined trial supports
-the 21 static Eve expressions. It does not yet reproduce these performance
-curves alongside the body animation.
+the 21 static Eve expressions and source-timed Come Closer facial playback.
+The runtime and packaged data pass offline checks. Live facial playback,
+restoration and timing still need acceptance.
 
 ## Source evidence
 
@@ -50,7 +51,7 @@ The resulting 105-shape candidate preserves the original body points, all 99
 previous facial shapes and all 21 expression definitions exactly. Its body-fit
 difference is zero; the existing body/hand corrective comparison remains
 0.0000775943 cm. Source hashes remain unchanged. This is a derived JSON export,
-not a recooked or installed update.
+with the subsequent cook and installation recorded below.
 
 The six revised UE candidates have since passed a fresh-process editor
 comparison. They use separate `SK_Face_Performance_*` names, each with 105
@@ -65,8 +66,8 @@ bindings and the 22 original body/hand morphs match. All 105 facial shapes pass
 the mapped source-delta comparison, including the extra six. Evidence is in
 `shared-faces-v2/cooked-readback-v1.json`, with a separate private probe
 container and source vertex maps. The revision-bound `facial-rig.json` includes
-the 21 static expressions and the exact Come Closer keys. No candidate has been
-installed; animated live comparisons remain pending.
+the 21 static expressions and the exact Come Closer keys. The combined candidate
+is installed; animated live comparisons remain pending.
 
 All 195 diagnostic facial samples across the full 19.333334 seconds were
 rendered at 10 samples per second and inspected through ten sheets. Early
@@ -77,7 +78,7 @@ materials or runtime blending. Source keys are not resampled by this review.
 The renderer explicitly allows signed and above-one values and verifies that
 Blender did not clamp a requested weight.
 
-## Remaining work
+## Runtime and installation
 
 The native catalog now accepts optional per-rig `performances`, keyed by the
 body clip's canonical ID. Each performance declares its duration and named
@@ -90,7 +91,8 @@ plus reusable baseline/output buffers. It preserves signed values and values
 above one, uses constant endpoint extrapolation, and allocates nothing on a
 valid sampling call. Zero blend weight returns the baseline exactly. Tests
 cover shared pause, seek, speed, looping, fade and immediate interruption.
-This is data-layer support, not an installed runtime facial player.
+The installed runtime supplies that clock to the facial sampler from the same
+body pose update used by CSS and CINE.
 
 `prepare_performance_curves.py --clip <canonical-id>` emits the native entry
 alongside the complete preserved source metadata. It requires every named
@@ -104,12 +106,35 @@ curves and 987 original keys. The comparison tolerance is 0.0000002 in morph
 weight. All 23 portable CSS suites and the Windows core build pass. Evidence:
 `facial-performance-native-v1/comecloser.json`.
 
-Runtime integration must account for Original face using the original outfit
-mesh, which lacks these facial shapes. A performance needs a temporary derived
-mesh without changing saved expression selection. Restore the previous mesh
-and expression on completion, cancellation, failed startup or outfit change.
-Use Appearance's existing morph owner so static expressions and performance
-curves cannot overwrite each other independently.
+Original face uses the original outfit mesh, which lacks these facial shapes.
+Starting a supported performance temporarily applies the verified derived
+mesh through Appearance and retains the previous mesh against collection.
+The saved expression remains unchanged. Completion, cancellation and failed
+startup schedule ordinary appearance reconciliation, using the current
+selection in case an outfit, expression or gameplay transition occurred.
+
+The facial performance captures the live expression weights as its baseline.
+Static world-face writes pause during playback; menu preview writes remain
+independent. Entry and exit use the body's blend weight. Shapes absent from
+the performance fade out so a previously selected expression cannot distort
+the authored face. Cleanup restores only weights still owned by this player.
+The morph owner skips unchanged values, and sampling reuses its buffers.
+The loaded body duration must match the facial duration before playback starts.
+
+The Windows core builds and all 23 host suites pass. Actual data checks pass:
+88 facial-catalog checks, 5,177 source-curve comparisons and assertions, and
+85 packaged-catalog checks. The latter resolve 57 sequences, five post-process
+adapters, all three source outfit revisions and all six derived Eve faces.
+Eight installer tests cover rollback, closed-game races, shape-set validation
+and preserving the installed CINE files.
+
+`shared-v1/pack-with-face-motion-v1/` contains the 68-package candidate and
+independent readback from that complete pack. It was installed with the game
+closed. `live-face-motion-1/deployment.json` records the files and rollback;
+`post-install-check.json` independently confirms all 25 checked installed or
+protected files and both DLL selectors. CSS core SHA-256:
+`7962d601cb9efb123f90b212c081a7d551ea987a923f1b3b16be9053bdda6210`.
+The installed CINE DLL/menu, saved settings and source outfits were preserved.
 
 Epic's [UE 5.6 animation-curve documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/animation-curves-in-unreal-engine?application_version=5.6)
 also describes driving morph targets directly from animation curves with
@@ -121,19 +146,19 @@ therefore need explicit coordination even if curves are baked into sequences.
 The native sampler is independently validated; the final engine write path
 still needs live timing and restoration evidence.
 
+## Remaining work
+
 - Trace the missing controls to their source morphs or driver graph. Keep
   their original names and curves until the mapping is measured.
 - Evaluate facial shape animation in the supplied Blender examples, using
   their actual active action/NLA state. The 200 inspection includes a
   Bezier `jaw_open` action over frames 1-10. The 801 file contains several
   facial actions, so their presence alone does not establish which one plays.
-- Extend derived facial meshes, catalog validation and cooked readback to
-  cover accepted extra shapes. Do not overwrite the installed static trial
-  while its live acceptance is pending.
-- Bind performance facial evaluation to the same body playback clock,
-  including pause, seek, speed, fades, interruption and restoration of a
-  user's selected expression. Avoid two independent writers fighting over
-  the same morphs. Validate both CSS and CINE.
+- Extend derived facial meshes and cooked readback if further source controls
+  can be resolved.
+- Validate installed playback in CSS and CINE, including pause, seek, speed,
+  fades, interruption, outfit changes and restoration of Original face or a
+  selected expression. Measure live frame cost.
 - Check source-to-cooked and live playback before claiming these facial
   performances are supported.
 

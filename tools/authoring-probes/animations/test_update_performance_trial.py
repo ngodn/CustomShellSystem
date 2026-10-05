@@ -56,10 +56,11 @@ class TrialUpdateTests(unittest.TestCase):
         self.write(self.pack / 'verification.json', {'passed': True, 'exact_export_payloads': 68,
             'facial_meshes': faces, 'files': new_files, 'dependencies': {}, 'facial_evidence': {}})
         self.write(self.pack / 'facial-independent-readback.json',
-                   {'passed': True, 'results': [{'target': f} for f in faces]})
+                   {'passed': True, 'results': [{'target': f, 'morphs': [{'name':str(i)} for i in range(105)]}
+                                               for f in faces]})
         self.write(self.delta, {'passed': True, 'source_deltas_checked': True,
             'results': [{'target': f, 'source_delta_comparison': {'passed': True,
-                         'shapes': [None] * 99, 'expressions': [None] * 21}} for f in faces]})
+                         'shapes': [{'name':str(i)} for i in range(105)], 'expressions': [None] * 21}} for f in faces]})
         self.original = self.game_files()
 
     @staticmethod
@@ -70,9 +71,34 @@ class TrialUpdateTests(unittest.TestCase):
     def game_files(self):
         return {str(p.relative_to(self.game)): p.read_bytes() for p in self.game.rglob('*') if p.is_file()}
 
-    def run_update(self):
+    def run_update(self, keep_cine=False):
         return installer.update(self.game, self.previous, self.pack, self.receipt,
-                                self.core, self.cine_dll, self.menu, self.delta)
+                                self.core, self.cine_dll, self.menu, self.delta, keep_cine=keep_cine)
+
+    def test_keep_cine_updates_only_css_and_assets(self):
+        before={str(p):p.read_bytes() for p in self.cine.rglob('*') if p.is_file()}
+        report=json.loads(self.run_update(keep_cine=True).read_text())
+        self.assertTrue(report['cine_unchanged'])
+        self.assertEqual(report['cine'], 'old-cine.dll')
+        self.assertEqual(before,{str(p):p.read_bytes() for p in self.cine.rglob('*') if p.is_file()})
+
+    def test_keep_cine_failure_never_removes_existing_extension(self):
+        original_atomic=installer.atomic
+        def fail_after_write(path,value):
+            original_atomic(path,value)
+            if path==self.mod/'core.json':
+                raise OSError('simulated selector failure')
+        with patch.object(installer,'atomic',side_effect=fail_after_write),self.assertRaises(OSError):
+            self.run_update(keep_cine=True)
+        self.assertEqual(self.game_files(),self.original)
+
+    def test_mismatched_morph_names_are_rejected_before_writes(self):
+        data=json.loads(self.delta.read_text())
+        data['results'][0]['source_delta_comparison']['shapes'][0]['name']='different'
+        self.write(self.delta,data)
+        with self.assertRaises(ValueError):
+            self.run_update()
+        self.assertEqual(self.game_files(),self.original)
 
     def test_update_preserves_original_binaries_settings_and_asset_rollback(self):
         report = json.loads(self.run_update().read_text())

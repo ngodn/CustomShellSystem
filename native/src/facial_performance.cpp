@@ -80,4 +80,20 @@ void FacialPerformance::sample(double seconds,double weight,std::span<const floa
         output[i]=weight==0. ? baseline[i] :
             static_cast<float>(std::lerp(double(baseline[i]),double(evaluate(curves[i],seconds)),weight));
 }
+FacialPerformancePose::FacialPerformancePose(const FacialPerformance& performance,
+    const std::map<std::string,float>& baseline):performance_(performance),baseline_(baseline),values_(baseline) {
+    if(baseline.empty() || baseline.size()>128 || std::any_of(baseline.begin(),baseline.end(),
+        [](const auto& pair){return pair.first.empty() || !std::isfinite(pair.second) || std::abs(pair.second)>4.f;}))
+        throw std::invalid_argument("Invalid facial performance baseline");
+    for(const auto& curve:performance_.curves) curve_baseline_.push_back(baseline_.at(curve.morph));
+    curve_values_.resize(curve_baseline_.size());
+}
+const std::map<std::string,float>& FacialPerformancePose::sample(double seconds,double weight) {
+    performance_.sample(seconds,weight,curve_baseline_,curve_values_);
+    // Shapes absent from this clip fade to zero, rather than retaining part of
+    // the selected static expression throughout the authored performance.
+    for(auto& [name,value]:values_) value=static_cast<float>(double(baseline_.at(name))*(1.-weight));
+    for(size_t i=0;i<performance_.curves.size();++i) values_.at(performance_.curves[i].morph)=curve_values_[i];
+    return values_;
+}
 }

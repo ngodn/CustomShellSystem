@@ -13,7 +13,8 @@ public:
     void forget() {baseline_.clear();written_.clear();}
     template<class Read,class Write> void restore(Read read,Write write) {
         for(auto it=written_.begin();it!=written_.end();) {
-            if(read(it->first)==it->second) write(it->first,baseline_.at(it->first));
+            if(read(it->first)==it->second && baseline_.at(it->first)!=it->second)
+                write(it->first,baseline_.at(it->first));
             it=written_.erase(it);
         }
         baseline_.clear();
@@ -36,8 +37,10 @@ public:
         }
         try {
             for(const auto& [name,weight]:values) {
+                if(const auto prior=written_.find(name);prior!=written_.end() && prior->second==weight) continue;
                 auto [entry,inserted]=written_.try_emplace(name,read(name));
                 const auto previous=entry->second;
+                if(previous==weight) continue;
                 entry->second=weight;
                 try {write(name,weight);}
                 catch(...) {

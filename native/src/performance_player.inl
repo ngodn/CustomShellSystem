@@ -238,6 +238,7 @@ void PerformancePlayer::write_pose() {
     fields.set_time(static_cast<float>(session_.clock().position()));
     fields.set_weight(static_cast<float>(session_.clock().weight()));
     fields.enable(session_.active());
+    if(sample_face_) sample_face_(session_.clock().position(),session_.clock().weight());
 }
 void PerformancePlayer::release() {
     // Clear only our sequence. A replacement instance or a later owner is untouched.
@@ -249,6 +250,8 @@ void PerformancePlayer::release() {
             fields.set_time(original_time_);
         }
     }
+    if(restore_face_) {restore_face_();restore_face_={};}
+    sample_face_={};
     for(auto it=hidden_.begin();it!=hidden_.end();) {
         if(auto* object=it->object.Get();object && performance_flag(object,it->actor?L"bHidden":L"bHiddenInGame"))
             hide_game_object(object,false);
@@ -263,7 +266,8 @@ void PerformancePlayer::interrupt(const std::string& reason) {
     session_.interrupt();reason_=reason;release();
 }
 Json PerformancePlayer::start(UObject* pawn,const Catalog& catalog,const std::string& outfit,
-                              const std::string& id,double rate,double position) {
+                              const std::string& id,double rate,double position,double facial_duration,
+                              std::function<void(double,double)> sample_face,std::function<void()> restore_face) {
     if(session_.active()) throw std::runtime_error("Stop the current performance first");
     release();
     if(const auto why=unavailable(pawn,catalog,outfit);!why.empty()) throw std::runtime_error(why);
@@ -297,6 +301,9 @@ Json PerformancePlayer::start(UObject* pawn,const Catalog& catalog,const std::st
                 throw std::runtime_error("Loaded performance skeleton differs from its declaration");
             if(const auto why=unavailable(pawn,catalog,outfit);!why.empty()) throw std::runtime_error(why);
             Call length(sequence,L"GetPlayLength",1);length.run();
+            if(facial_duration && (!std::isfinite(facial_duration) ||
+                std::abs(facial_duration-double(length.get<float>()))>1.e-4))
+                throw std::runtime_error("Facial and body performance durations differ");
             PerformanceSession next=session_;
             next.begin(id,match.entry->playback,length.get<float>(),rate,position);
             bind_layer(pawn,catalog,outfit);
@@ -308,6 +315,7 @@ Json PerformancePlayer::start(UObject* pawn,const Catalog& catalog,const std::st
             pawn_=pawn;component_=component;mesh_=mesh;post_=post;
             animation_=read<UObject*>(component,L"AnimScriptInstance");sequence_=sequence;character_=character;
             retained_.take(roots);session_=std::move(next);reason_.clear();
+            sample_face_=std::move(sample_face);restore_face_=std::move(restore_face);
             fields.set_clip(sequence);
             if(match.entry->hide_weapons) {
                 for(const auto& child_weak:attached_children(component)) {
@@ -329,7 +337,7 @@ Json PerformancePlayer::start(UObject* pawn,const Catalog& catalog,const std::st
     throw std::runtime_error(failure.empty()?"Performance could not load":failure);
 }
 void PerformancePlayer::tick(UObject* pawn) {
-    if(!session_.active()) { if(post_.Get() || !hidden_.empty() || restore_layer_) release();return; }
+    if(!session_.active()) { if(post_.Get() || !hidden_.empty() || restore_layer_ || restore_face_) release();return; }
     if(pawn!=pawn_.Get() || !intact()) {interrupt("Player or animation binding changed");return;}
     if(const auto why=performance_gameplay_block(pawn);!why.empty()) {interrupt(why);return;}
     Call disabled(component_.Get(),L"GetDisablePostProcessBlueprint",1);disabled.run();

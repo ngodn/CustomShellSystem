@@ -40,6 +40,18 @@ int main(int argc,char** argv) {
         animated["performances"]={performance};
         expect(FacialRig::parse(animated).find_performance("css.pose")->key_count()==2,
                "Facial rig lost its performance keys");
+        const auto motion_rig=FacialRig::parse(animated);
+        const FacialMatch motion_match{&motion_rig,&motion_rig.adapters.front()};
+        const auto original_motion=plan_performance_expression(motion_match,source,"","css.pose");
+        expect(original_motion.mesh==target && original_motion.expression.empty() &&
+               original_motion.weights.size()==3 && original_motion.weights.at("Jaw_Left")==0.f,
+               "Original face could not acquire temporary performance shapes without changing its selection");
+        expect(plan_performance_expression(motion_match,source,"","css.missing").mesh==source,
+               "A body-only clip acquired a temporary facial mesh");
+        expect(plan_performance_expression({},source,"","css.pose").mesh==source,
+               "Missing facial support changed the body mesh");
+        expect(plan_performance_expression(motion_match,source,"css.face.eve.wink","css.pose").weights==
+               motion_rig.weights("css.face.eve.wink"),"Performance replaced the selected expression baseline");
         animated["performances"].push_back(performance);
         rejects([&]{FacialRig::parse(animated);});
         const auto neutral=rig.weights("css.face.eve.neutral");
@@ -174,6 +186,9 @@ int main(int argc,char** argv) {
         const auto reads_before=reads,writes_before=writes;
         owned.apply(first,read,write);
         expect(reads==reads_before && writes==writes_before,"Unchanged expression repeated engine calls");
+        owned.apply({{"eye",.9f},{"jaw",0.f}},read,write);
+        expect(writes==writes_before+1 && reads==reads_before+2,
+               "A changing facial shape also read or rewrote unchanged shapes");
         owned.apply({{"eye",0.f},{"jaw",-.07f}},read,write);
         owned.restore(read,write);
         expect(live==baseline,"Reset lost the face state from before the first expression");
@@ -207,6 +222,17 @@ int main(int argc,char** argv) {
         expect(live==baseline,"Changed facial shape set lost its original baseline");
         rejects([&]{owned.apply({{"jaw",std::numeric_limits<float>::quiet_NaN()}},read,write);});
         expect(live==baseline,"Invalid expression partially changed the face");
+        OwnedMorphs expression_owner,performance_owner;
+        live=baseline;
+        expression_owner.apply(first,read,write);
+        performance_owner.apply({{"eye",.6f},{"jaw",.7f}},read,write);
+        live.at("jaw")=.9f;
+        performance_owner.restore(read,write);
+        expect(live.at("eye")==1.f && live.at("jaw")==.9f && live.at("chest")==.8f,
+               "Performance cleanup lost the prior expression, a later writer or body settings");
+        expression_owner.restore(read,write);
+        expect(live.at("eye")==baseline.at("eye") && live.at("jaw")==.9f,
+               "Expression cleanup overwrote the later facial owner");
         fs::remove_all(root);
         std::cout<<checks<<" facial catalog and compatibility checks passed\n";
         return 0;
