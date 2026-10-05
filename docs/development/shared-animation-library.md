@@ -298,6 +298,12 @@ saved source/target assets in total across L2, L3A, L3L, L4S, L4D and L4C.
 
 ## Next checks
 
+Update, 2026-10-06: the eighteen retargeted moving clips now have complete
+sampled silhouette reviews; see [motion review](shared-animation-motion-review.md).
+Named facial curves in four dances need additional work beyond the static
+expression trial; see [performance facial curves](performance-facial-curves.md).
+These findings do not replace the outstanding native-speed and live checks.
+
 Resolve the two extended-skeleton sources, inspect the remaining support assets,
 and build full-motion retarget candidates at their appropriate rates. Preserve previous released idle
 IDs, implement shared catalog fallback without changing outfit containers, and

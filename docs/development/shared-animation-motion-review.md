@@ -126,3 +126,40 @@ been installed as the combined private trial; see
 Remaining work includes
 native-speed playback, all-outfit contacts/physics, live CSS/CINE
 restoration and performance, two unresolved source rigs, and distributions.
+
+## Remaining five moving clips, 2026-10-06
+
+All 555 rendered samples from the other five moving candidates were inspected
+through thirty timestamped sheets. The camera follows pelvis translation without
+altering the motion. This completes the sampled silhouette review of the eighteen
+currently retargeted moving clips, not native-speed or gameplay acceptance.
+
+| Clip | Samples | Observations |
+| --- | --- | --- |
+| Adam Catwalk | 152 | Standing weight shifts, short steps and pivots, then a return toward the opening stance. Limbs remain coherent in these views. Lowest measured shoe contact is -1.965 cm. |
+| Lily Catwalk | 67 | Raised-hand gestures, turns and a small hop around 2.0-2.2 seconds, then a return toward the opening gesture. Measured contact spans -2.645 to +11.478 cm. |
+| ATOOL Gesture 200 | 10 | A short right-arm lift over 0.36 seconds. All source samples were rendered. It is not a complete repeating idle. |
+| ATOOL Performance 801 | 189 | Opening gestures, a leg lift and turn, followed by a held pose after about 3.3 seconds. The hold matches the previously inspected source action, whose varying channels end at frame 200. Preserve the full 18.85-second source duration. |
+| After Brute Battle | 137 | Falls, crouches, jumps and rotations, ending curled forward. This scene body track needs its source staging: it travels roughly ten metres, and the rendered reference-plane range is -30.992 to +474.923 cm. Do not classify those scene heights as ordinary walking contact or flatten the airborne motion. |
+
+The first After Brute Battle render stopped at frame 216 with a reconstruction
+difference of 0.001051 cm, above the default 0.001 cm bound. Blender returned zero
+despite the Python assertion; the absent report exposed the incomplete run.
+The replacement command uses `--python-exit-code 1` and requires the report as
+well as a successful process exit. Its explicit 0.003 cm diagnostic tolerance
+does not modify motion data. The completed sampled run measured a maximum
+0.001221 cm position difference and zero angular difference. The earlier
+all-frame measurement in `l4c-measure-v2` remains the stricter complete numeric
+record; this render supplies the missing visual coverage.
+
+Evidence under `work/cine-animation-port/`:
+
+- `remaining-motion-review-v1/`: Adam, Lily, 200 and 801 renders and reports,
+  plus the retained incomplete After Brute Battle attempt.
+- `remaining-motion-sheets-v1/`: inspected sheets and summaries for those four.
+- `remaining-camerabody-review-v2/`, `remaining-camerabody-sheets-v2/`: completed
+  After Brute Battle review, with the command/exit receipt alongside.
+
+These diagnostic views exclude gameplay IK, cloth and secondary motion. Native
+speed, closer hand/garment checks and source-scene contact remain outstanding.
+No installed game files changed during this review.

@@ -18,6 +18,8 @@ ROOT = Path(__file__).resolve().parents[3]
 MOD = ROOT.parent / 'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx'
 sys.path.insert(0, str(MOD / 'tools'))
 from export_seduxtress_eve import fitted_mesh, TO_UE, LEFT_HAND_CORRECTIVES
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from prepare_performance_curves import prepare
 
 
 def digest(path):
@@ -30,11 +32,14 @@ def main():
     parser.add_argument('--source', type=Path, required=True)
     parser.add_argument('--baseline', type=Path, required=True)
     parser.add_argument('--expressions', type=Path, required=True)
+    parser.add_argument('--performance', type=Path, action='append', default=[],
+                        help='Decoded AnimSequence metadata with named facial curves')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
     if args.output.exists():
         raise ValueError('Use a new output directory')
-    sources = {str(p.resolve()): digest(p) for p in (args.source, args.baseline, args.expressions)}
+    sources = {str(p.resolve()): digest(p) for p in
+               (args.source, args.baseline, args.expressions, *args.performance)}
     records = json.loads(args.expressions.read_text())
     poses = []
     names = set()
@@ -67,6 +72,15 @@ def main():
         if key.name.casefold() in folded:
             raise ValueError('Ambiguous case-insensitive shape name')
         folded[key.name.casefold()] = key.name
+    performances = []
+    for path in args.performance:
+        performance = prepare(json.loads(path.read_text()), list(folded.values()))
+        if performance['missing_shapes']:
+            raise ValueError(f'{path}: missing shapes {performance["missing_shapes"]}')
+        if not performance['curves']:
+            raise ValueError(f'{path}: no facial curves')
+        names.update(curve['CurveName'] for curve in performance['curves'])
+        performances.append(performance)
     mapping = {name: folded[name.casefold()] for name in sorted(names)}
     if len(set(mapping.values())) != len(mapping):
         raise ValueError('Expression names alias the same shape')
@@ -120,12 +134,17 @@ def main():
             raise ValueError('An input changed during facial export')
     args.output.mkdir(parents=True)
     payload = dict(schema=1, body_points=points.tolist(), morph_targets=shapes, expressions=poses)
+    if performances:
+        payload['performances'] = performances
     target = args.output / 'facial-shapes.json'
     target.write_text(json.dumps(payload, separators=(',', ':'), allow_nan=False) + '\n')
     report = dict(sources=sources, blender=bpy.app.version_string, body_points=len(points),
                   shapes=len(shapes), expressions=len(poses), mapping=mapping, baked_values=baked,
                   max_body_difference_cm=error, max_retained_morph_difference_cm=retained_error,
                   output_sha256=digest(target), installed=False)
+    if performances:
+        report['performances'] = [dict(asset=p['asset'], duration_seconds=p['duration_seconds'],
+                                      curves=len(p['curves'])) for p in performances]
     (args.output / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
     print(f'FACIAL_EXPORT_PASS: {len(shapes)} shapes, {len(poses)} expressions')
 
