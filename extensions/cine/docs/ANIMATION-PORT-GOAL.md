@@ -193,3 +193,17 @@ shared playback. All 19 portable CTest suites, 65 packaged-library checks and
 the Windows core build pass. No DLL was installed. Live restoration/performance,
 one-shot controls, CINE integration, facial support and shared cooking remain
 unfinished. DumbDumb and Iris Out still need seven source bone mappings.
+
+Facial asset progress, 2026-10-06: all six current Eve meshes now have separate
+editor candidates with 99 expression shapes added to their existing 22 morphs.
+Fresh-process readback passes on all six, preserving base geometry, old morph
+attributes, skeleton, materials, physics and post-process bindings. All 21 poses
+and Reset have Blender review renders. Nothing is installed or cooked. Facial
+runtime/UI/CINE support and full deformation/performance review remain open.
+See `docs/development/eve-expression-candidates.md` for exact evidence.
+
+DumbDumb/Iris Out investigation: both clips declare skeleton GUID
+`64ACCBA8-42A4F5D4-E692FAA9-08A5F607`, different from the supplied authoring
+skeleton. The supplied 200/801/camera Blender rigs do not identify the seven
+extra indices. Preserve their full track audits; do not invent names or silently
+omit those tracks. Matching author skeleton/source data remains unresolved.
