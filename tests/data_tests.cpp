@@ -50,10 +50,14 @@ int main() {
             {
                 FileWriter writer;
                 writer.post(file,"two",true);
-                writer.post(file,"three",true);   // supersedes "two": one write, not two
+                writer.post(file,"three",true);   // coalesces only if "two" is still queued
             }
             expect(contents(file)=="three","Writer lost the last write");
-            expect(contents(dir/"nested"/"state.json.bak")=="one","Backup is not the content the write replaced");
+            const auto backup=contents(dir/"nested"/"state.json.bak");
+            expect(backup=="one" || backup=="two","Backup is not the content the write replaced");
+            { FileWriter writer; writer.post(file,"four",true); }
+            expect(contents(file)=="four" && contents(dir/"nested"/"state.json.bak")=="three",
+                   "Drained write did not back up its committed predecessor");
             expect(!std::filesystem::exists(dir/"nested"/"state.json.tmp"),"Writer left its temp file");
             std::filesystem::remove_all(dir);
             State severed; severed.last_living_shell="CharacterId.Player.Shell.Genessa";
