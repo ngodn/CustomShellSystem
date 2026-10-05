@@ -106,9 +106,25 @@ Summary with every control: `work/export-ref/outfits/SUMMARY.md` (git-ignored; r
 5. The user's own look is saved before the take and put back after it, as the look track
    already does.
 
-Open, to decide from what the game does: how long a `wear` takes and whether it hitches (if it
-does, look changes go only on cuts and whips, never mid-shot); whether a breakdown survives an
-outfit change (clay and wireframe are per mesh part: they must be re-applied after a `wear`).
+Measured live (5 Oct, 22:37, CSS dev core with `wear`): a look lands 0.2 to 0.5 s after the
+call, and CSS's apply is one long frame on the game thread: 125 to 450 ms the first time a
+look is worn, 12 to 190 ms after that. So:
+
+- a look change is never mid-shot. It sits under a **flash** (the video marks its phrase
+  boundaries with a few-frame flash too): a full-frame HUD layer fades in over two frames,
+  `wear` is called, the flash holds until `describe` says the look has landed, then fades out.
+  The frozen frame is under the flash.
+- the take wears each look once while it prepares (first-time cost out of the recording).
+- the user's own look goes back with one `wear` carrying the `customize` snapshot,
+  `persist: true` (verified: customize identical afterwards).
+
+Still open: whether a breakdown survives an outfit change (clay and wireframe are per mesh
+part and the locker holds the old look's materials: a breakdown must end before a `wear` and
+begin again after it, or look changes and material layers must not share a phrase).
+
+The other agent's animation library (`ANIMATION-PORT-GOAL.md`, same checkout, same evening)
+is reworking CSS's animation catalog. Idle changes in the scene wait for that; do not touch
+CSS's animation code meanwhile, and commit only my own files (never `git add -A`).
 
 ## Done so far (this evening, on `feature/cine-scene`)
 
@@ -127,6 +143,8 @@ outfit change (clay and wireframe are per mesh part: they must be re-applied aft
 - [ ] 1. Sequence kind: preset format, pure timeline maths, unit tests
 - [ ] 2. Rig: camera roll; director: sequence takes (cuts, flows, whips)
 - [ ] 3. CSS service: `wear` and the list of wearable outfits; CINE look steps with outfits
+      - 5 Oct: service side DONE (`outfits`, `wear`, `describe.busy`; commit 5602759), staged
+        as a CSS dev core and timed live. CINE side (look steps, flash) not started.
 - [ ] 4. Bar-timed breakdown and look steps; breakdown re-applied after an outfit change
 - [ ] 5. The showreel preset itself, timed to the grid above; host tests
 - [ ] 6. Live: wear latency, the whole take with the user, timing against the track
