@@ -1015,14 +1015,15 @@ int main(int argc, char** argv) {
                    && h.css_wears[2].at("outfit") == "own.outfit" && h.css_wears[2].contains("customize") && h.css_wears[2].value("persist", true) == false,
                    "each look is worn once while the take prepares, ending on the opening look: " + std::to_string(h.css_wears.size()));
             expect(h.css_outfit == "own.outfit", "she opens in her own look");
+            r.step();      // the first frame: the camera is put on its planned opening pose
             const auto placed = h.camera_places;
             const auto applies = h.css_applies.size();
             // 120 BPM, bar 1 at 0.5 s: bars 1.5, 2, 2.5, 3, 3.25 are at 1.5, 2.5, 3.5, 4.5, 5.0 s; the end at 6.5 s.
-            r.steps(22);   // about 2.0 s in: past the first wear
+            r.steps(21);   // about 2.0 s in: past the first wear
             expect(h.css_wears.size() == 4 && h.css_wears[3].at("outfit") == "a.outfit" && h.css_outfit == "a.outfit", "the first look is worn on its beat");
-            expect(h.mpc.contains("WipeT0") && h.param_count("PP_Cine_Buffer_Post", "W_Depth", 1.0) == 1, "the outfit change was covered by a wipe into the depth pass");
+            expect(h.mpc.contains("WipeT0") && h.param_count("PP_Cine_Buffer_Post", "W_Normal", 1.0) == 1, "the outfit change was covered by a wipe into the normals pass");
             expect(h.projections == 0, "and a covering pass draws no breakdown labels");
-            expect(h.camera_places == placed, "no cut yet: the first two shots are one flowing move");
+            expect(h.camera_places == placed, "no cut yet: the first two shots are one flowing move (" + std::to_string(h.camera_places - placed) + " placements)");
             r.steps(7);    // about 2.9 s: the palette step at 2.5 s
             expect(h.css_applies.size() == applies + 1 && h.css_applies.back()["commands"][0].value("palette", std::string()) == "crimson", "a palette step is applied on its beat");
             r.steps(10);   // about 3.9 s: the cut at 3.5 s
@@ -1044,6 +1045,19 @@ int main(int argc, char** argv) {
             r.press("F9");
             expect(!h.css_wears.empty() && h.css_wears.back().at("outfit") == "own.outfit" && h.css_wears.back().value("persist", false),
                    "a cancelled sequence puts her own look back too: " + std::to_string(h.css_wears.size()) + " wears, last " + (h.css_wears.empty() ? std::string("none") : h.css_wears.back().dump()) + ", status " + r.status());
+        }
+        {   // Walls all around at 150 cm: every shot is planned closer, and the take still plays and ends clean.
+            Rig r(dir); r.host.populate(); auto& h = r.host;
+            h.css_present = true; h.hit_walls = true;
+            r.step();
+            r.ext->event({{"id", "preset"}, {"value", "test-seq"}});
+            r.ext->event({{"id", "countdown"}, {"value", 0}});
+            r.ext->event({{"id", "enter"}});
+            r.press("F8");
+            for (int i = 0; i < 160 && !has(r.status(), "Rolling"); ++i) r.step();
+            expect(has(r.status(), "Rolling"), "a walled-in sequence still rolls: " + r.status());
+            r.steps(75);
+            expect(h.cameras.empty() && has(r.status(), "Take finished"), "and finishes: " + r.status());
         }
         {   // A sequence without CSS still plays its camera; one that changes outfit under a breakdown is refused.
             Rig r(dir); r.host.populate(); auto& h = r.host;

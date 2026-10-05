@@ -413,6 +413,20 @@ static void sequence() {
     const auto tl = make_timeline(p, 0, 184);
     expect(tl.breakdown.size() == 2 && near(tl.breakdown[0].at, 6, 1e-9) && near(tl.breakdown[1].at, 8, 1e-9), "breakdown steps of a sequence are in bars");
 
+    // The plan against the world: stay put when clear, turn only for clearly more room, come closer otherwise.
+    expect(choose_plan({1.0}).turn == 0 && near(choose_plan({1.0}).scale, 1, 1e-12), "an open shot is left as written");
+    expect(choose_plan({0.99, 0.2, 0.2}).turn == 0, "nearly clear counts as clear");
+    const auto turned = choose_plan({0.3, 0.95, 0.9, 1.0});
+    expect(turned.turn == plan_turns[1] && near(turned.scale, 0.95, 1e-12), "a blocked shot turns to the nearest clearly freer side");
+    expect(choose_plan({0.6, 0.65, 0.66}).turn == 0 && near(choose_plan({0.6, 0.65, 0.66}).scale, 0.6, 1e-12), "a little more room is not worth a turn: it comes closer instead");
+    expect(near(choose_plan({0.05, 0.1}).scale, 0.25, 1e-12), "a shot is never squeezed below a quarter of its distance");
+    std::vector<ShotPlan> plan(s.shots.size());
+    plan[0] = {35, 0.5}; plan[1] = {35, 1.0}; plan[2] = {-70, 0.8};
+    expect(near(planned_pose(s, plan, 1).azimuth, 35, 1e-9) && near(planned_pose(s, plan, 1).distance, 200, 1e-9), "a planned shot is turned and scaled as a whole");
+    expect(near(planned_pose(s, plan, 3).distance, 400 * 0.5, 1e-6) && near(planned_pose(s, plan, 4.999).distance, 200 * 1.0, 0.5), "a flow eases from the last shot's scale to its own: no jump");
+    expect(near(planned_pose(s, plan, 5).azimuth, 180 - 70, 1e-9) && near(planned_pose(s, plan, 5).distance, 120 * 0.8, 1e-9), "a cut takes its own plan at once");
+    expect(near(planned_pose(s, {}, 2).azimuth, pose_at(s, 2).azimuth, 1e-12), "without a plan the pose is as written");
+
     auto bad = [&](const char* what, auto&& change) { Json j = base; change(j); rejects([&] { Preset::parse(j); }, what); };
     bad("no tempo", [](Json& j) { j.erase("tempo"); });
     bad("no end", [](Json& j) { j.erase("end"); });

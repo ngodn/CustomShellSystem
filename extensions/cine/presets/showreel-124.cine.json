@@ -12,6 +12,7 @@
  },
  "end": 42,
  "audio": "audio/showreel.wav",
+ "idle": "eve",
  "shots": [
   {
    "at": 1,

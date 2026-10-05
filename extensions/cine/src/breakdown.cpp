@@ -489,6 +489,13 @@ void Breakdown::verify_restored() {
     }
 }
 
+void Breakdown::depth_range(double cm) {
+    cm = std::clamp(cm, 150.0, 20000.0);
+    if (!frame_passes_ || (depth_range_ > 0 && std::abs(cm - depth_range_) < depth_range_ * 0.12)) return;
+    depth_range_ = cm;
+    for (auto& pass : pass_) { try { set_param(pass, "DepthRange", cm); } catch (...) {} }
+}
+
 void Breakdown::show(LayerSet set, double wipe_seconds) {
     if (!active_) return;
     try {
@@ -710,7 +717,7 @@ void Breakdown::forget() {
     for (auto& mid : mids_) mid = nullptr;
     clay_ = wire_ = pass_[0] = pass_[1] = capsule_colour_before_ = nullptr;
     skins_.clear();
-    locker_ = nullptr; locked_ = 0; repaint_ = false;
+    locker_ = nullptr; locked_ = 0; repaint_ = false; depth_range_ = 0;
     pass_now_ = 0;
     spring_names_.clear(); bones_.clear(); sockets_.clear(); bodies_.clear();
     queue_.clear(); pieces_.clear(); teardown_.clear(); callouts_.clear();

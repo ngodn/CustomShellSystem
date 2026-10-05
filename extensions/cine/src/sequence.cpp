@@ -138,6 +138,36 @@ std::vector<std::pair<std::string, std::string>> Sequence::wardrobe() const {
     return out;
 }
 
+ShotPlan choose_plan(const std::vector<double>& clear_by_turn) {
+    ShotPlan plan;
+    if (clear_by_turn.empty()) return plan;
+    size_t best = 0;
+    // Staying put wins unless another side is clearly freer: a tenth of the way more per step
+    // of turning, so the camera keeps the angle the preset asked for when it can.
+    for (size_t i = 1; i < clear_by_turn.size() && i < std::size(plan_turns); ++i)
+        if (clear_by_turn[i] > clear_by_turn[best] + 0.10 + 0.03 * double(i)) best = i;
+    if (clear_by_turn[0] >= 0.98) best = 0;
+    plan.turn = plan_turns[best];
+    plan.scale = std::clamp(clear_by_turn[best], 0.25, 1.0);
+    return plan;
+}
+
+SeqPose planned_pose(const Sequence& s, const std::vector<ShotPlan>& plan, double t) {
+    SeqPose pose = pose_at(s, t);
+    if (plan.size() != s.shots.size() || s.shots.empty()) return pose;
+    const size_t index = shot_at(s, t);
+    const auto& shot = s.shots[index];
+    double scale = plan[index].scale;
+    if (!shot.cut && index > 0) {
+        // Flowing on: from the scale the last shot ended on to this shot's own.
+        const double u = shot.length > 1e-6 ? ease(shot.ease, (t - shot.at) / shot.length) : 1.0;
+        scale = plan[index - 1].scale + (plan[index].scale - plan[index - 1].scale) * u;
+    }
+    pose.azimuth += plan[index].turn;
+    pose.distance *= scale;
+    return pose;
+}
+
 size_t shot_at(const Sequence& s, double t) {
     size_t index = 0;
     for (size_t i = 0; i < s.shots.size(); ++i) { if (s.shots[i].at <= t) index = i; else break; }

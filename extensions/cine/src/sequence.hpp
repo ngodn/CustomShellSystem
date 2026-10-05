@@ -65,6 +65,21 @@ struct Sequence {
     std::vector<std::pair<std::string, std::string>> wardrobe() const;
 };
 
+// What the world allows each shot, found by tracing before the take rolls. A shot is turned
+// as a whole to a clearer side (`turn`, degrees added to its azimuths) and brought closer as a
+// whole (`scale` on its distances), so it keeps its shape. Shots that flow into each other
+// share one turn, or the unbroken move would break.
+struct ShotPlan { double turn = 0, scale = 1; };
+// The angles a blocked shot may be turned by, nearest first.
+inline constexpr double plan_turns[] = {0, 35, -35, 70, -70, 120, -120, 180};
+// From the clear fraction of each candidate turn (1 = the whole camera line is free, 0.3 =
+// something stands at 30 percent of the way): the turn to use and the scale that clears it.
+// A turn is only worth it when it clears clearly more than staying put.
+ShotPlan choose_plan(const std::vector<double>& clear_by_turn);
+// The pose `t` seconds into the take with the plan applied. Within a chain of flowing shots
+// the scale eases from one shot's value to the next, so the camera never jumps.
+SeqPose planned_pose(const Sequence& s, const std::vector<ShotPlan>& plan, double t);
+
 // The shot playing at `t` seconds (the last one that has started); 0 before the first.
 size_t shot_at(const Sequence& s, double t);
 // The camera pose `t` seconds into the take.

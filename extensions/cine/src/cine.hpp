@@ -87,6 +87,13 @@ private:
         enum class Wear { Idle, Covering, Waiting } wearing = Wear::Idle;
         double cover_from = -1, wear_sent_at = 0, transition_until = -1;
         bool covered = false;
+        double wall_scale = 1.0;       // 1, or less while something stands between the camera and her
+        // The plan against the world, made before the take rolls: a turn and a scale per shot.
+        std::vector<ShotPlan> plan;
+        std::vector<std::vector<double>> clear;   // per shot, per candidate turn: how much of the camera line is free
+        std::vector<double> chain_clear;
+        size_t plan_chain = 0, plan_turn = 0, plan_shot = 0, plan_sample = 0;
+        bool idle_set = false;         // CSS was asked for one idle across the take's looks
         int wear_poll = 0, transitions = 0;
         // What to do before the take rolls: wear each look once, build the breakdown on the
         // look it belongs to, end on the opening look.
@@ -120,6 +127,7 @@ private:
     void begin_countdown();
     void begin_breakdown();
     void prepare_looks();
+    bool plan_surroundings();   // true when done; a slice of traces per tick
     void sequence_frame(const CssxFrame& frame);
     void sequence_tick();
     struct SeqView { Vec3 camera; Rotator rotation; double fov = 40, focus = 300; };

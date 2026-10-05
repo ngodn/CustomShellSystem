@@ -80,6 +80,7 @@ struct Preset {
     ActionShot action;           // Action only
     Sequence sequence;           // Sequence only: shots and looks on a tempo grid
     std::string audio;           // optional: a .wav or .mp3 in the extension folder, played from the take's first frame
+    std::string idle;            // optional: the idle every look plays during the take (a CSS idle id)
     bool look_ends_on_own = true;   // rebuild the modder's own look for the final shot
     static Preset parse(const Json&);
 };

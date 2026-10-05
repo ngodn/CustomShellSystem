@@ -197,6 +197,7 @@ void Extension::tick(double seconds) {
         // look is not a world object, so a look the take changed is still put back (retried).
         if (mode_ != Mode::Idle && mode_ != Mode::RecordWait && frame_.valid && frame_.world != world_) {
             if (take_ && !take_->snapshot.is_null() && take_->step_next > 0) queue_look_restore(take_->snapshot);
+            if (take_ && take_->idle_set) { try { rig_.css({{"action", "idle"}, {"value", ""}}); } catch (...) {} }
             if (take_ && take_->wore && take_->own_look.is_object()) { own_look_owed_ = take_->own_look; own_look_check_ = 0.5; queue_look_restore(take_->own_look); }
             labels_live_ = false; labels_.clear(); lens_ = {};
             audio_.stop();
@@ -356,6 +357,11 @@ void Extension::prepare() {
             t.base_yaw = frame_.yaw;
         }
         const bool sequence = p.kind == ShotKind::Sequence;
+        if (!p.idle.empty() && !t.idle_set) {
+            // One idle on every look the take wears, so her pose does not snap between them.
+            // CSS keeps it out of the saved choices; finish_take ends it.
+            try { rig_.css({{"action", "idle"}, {"value", p.idle}}); t.idle_set = true; } catch (...) {}
+        }
         if (p.kind != ShotKind::Photo && p.kind != ShotKind::Action && !sequence) t.curve = std::make_unique<OrbitCurve>(t.timeline.keys);
         // Breakdown track: the preset's own steps, or the built-in reel.
         if (settings_.breakdown == "preset") t.reveals = t.timeline.breakdown;
@@ -393,7 +399,7 @@ void Extension::prepare() {
             }
             // Outfit changes are covered by a frame pass, so the passes are built even when the
             // breakdown track itself is off.
-            if (t.seq_looks && !p.sequence.wardrobe().empty()) t.layers |= bit(Layer::Depth) | bit(Layer::Normals);
+            if (t.seq_looks && !p.sequence.wardrobe().empty()) t.layers |= bit(Layer::Normals) | bit(Layer::BaseColor);
             if (t.layers) { Take::Prep build; build.build = true; t.prep.push_back(build); }
             if (t.seq_looks) {
                 Take::Prep opening; opening.own = true;
@@ -462,6 +468,7 @@ void Extension::prepare() {
         begin_countdown();
         return;
     }
+    if (t.prepare_step == 6) { if (plan_surroundings()) t.prepare_step = 5; return; }
     if (t.prepare_step == 5) { prepare_looks(); return; }
     // Cameras, gait, view, then the countdown.
     if (t.preset.kind == ShotKind::Sequence) {
@@ -471,7 +478,9 @@ void Extension::prepare() {
         t.yaw_f = frame_.yaw; t.vel_f = {};
         t.ctl_yaw = frame_.yaw;
         rig_.view(t.dolly, 0.0);
-        t.prepare_step = 5;
+        t.plan.assign(t.preset.sequence.shots.size(), ShotPlan{});
+        t.prepare_step = settings_.walls ? 6 : 5;
+        if (settings_.walls) report("Checking the surroundings for every shot...");
         return;
     }
     if (t.preset.kind == ShotKind::Action) {
@@ -552,6 +561,55 @@ bool Extension::worn(const Json& d, const std::string& outfit, const std::string
     return d.is_object() && d.value("outfit", std::string()) == outfit && d.value("variant", std::string()) == variant && !d.value("busy", false);
 }
 
+// Before a sequence rolls: every shot is traced against the world, from her to where its
+// camera would be, at five moments of the shot and for each angle it could be turned to. A
+// run of shots that flow into each other is judged as one and turned as one. The result is a
+// turn and a scale per shot (choose_plan), so a shot near a wall keeps its shape on a clearer
+// side or closer in, instead of flying into the wall. A slice of traces per tick.
+bool Extension::plan_surroundings() {
+    auto& t = *take_;
+    const auto& seq = t.preset.sequence;
+    const size_t shots = seq.shots.size(), turns = std::size(plan_turns);
+    constexpr size_t traces_a_tick = 60;
+    constexpr int samples = 5;
+    if (t.clear.size() != shots) { t.clear.assign(shots, std::vector<double>(turns, 1.0)); t.plan_chain = t.plan_turn = t.plan_shot = t.plan_sample = 0; t.chain_clear.clear(); }
+    size_t budget = traces_a_tick;
+    while (t.plan_chain < shots) {
+        size_t chain_end = t.plan_chain + 1;
+        while (chain_end < shots && !seq.shots[chain_end].cut) ++chain_end;
+        while (t.plan_turn < turns) {
+            if (t.plan_shot < t.plan_chain) t.plan_shot = t.plan_chain;
+            for (; t.plan_shot < chain_end; ++t.plan_shot, t.plan_sample = 0) {
+                const auto& shot = seq.shots[t.plan_shot];
+                for (; t.plan_sample < size_t(samples); ++t.plan_sample) {
+                    if (budget == 0) return false;   // the rest on the next tick
+                    --budget;
+                    SeqPose pose = pose_at(seq, shot.at + shot.length * 0.999 * double(t.plan_sample) / double(samples - 1));
+                    pose.azimuth += plan_turns[t.plan_turn];
+                    const auto view = sequence_view(pose);
+                    const Vec3 aim = to_world(t.base, t.base_yaw, {0, 0, pose.aim + settings_.height});
+                    double hit = 0, free = 1.0;
+                    try { if (rig_.trace(aim, view.camera, &hit) && hit < view.focus - 5) free = std::clamp((hit - 25) / view.focus, 0.0, 1.0); } catch (...) {}
+                    auto& worst = t.clear[t.plan_shot][t.plan_turn];
+                    worst = std::min(worst, free);
+                }
+            }
+            double chain = 1.0;
+            for (size_t i = t.plan_chain; i < chain_end; ++i) chain = std::min(chain, t.clear[i][t.plan_turn]);
+            t.chain_clear.push_back(chain);
+            t.plan_shot = t.plan_chain;
+            ++t.plan_turn;
+            if (t.chain_clear.size() == 1 && chain >= 0.98) break;   // open as written: no need to look elsewhere
+        }
+        const ShotPlan chosen = choose_plan(t.chain_clear);
+        const size_t turn = size_t(std::find(std::begin(plan_turns), std::end(plan_turns), chosen.turn) - std::begin(plan_turns));
+        for (size_t i = t.plan_chain; i < chain_end; ++i) t.plan[i] = {chosen.turn, std::clamp(t.clear[i][std::min(turn, turns - 1)], 0.25, 1.0)};
+        t.chain_clear.clear();
+        t.plan_chain = chain_end; t.plan_turn = 0; t.plan_shot = chain_end; t.plan_sample = 0;
+    }
+    return true;
+}
+
 // Before a sequence rolls: every look is worn once (its first-time loading stays out of the
 // recording), the breakdown is built on the look it belongs to, and she ends on the opening
 // look. One step per tick; a look that will not land within eight seconds is given up on.
@@ -590,7 +648,7 @@ void Extension::prepare_looks() {
 
 Extension::SeqView Extension::sequence_view(const SeqPose& pose) const {
     const auto& t = *take_;
-    const double a = pose.azimuth * std::numbers::pi / 180, distance = pose.distance * t.preset.zoom;
+    const double a = pose.azimuth * std::numbers::pi / 180, distance = std::max(55.0, pose.distance * t.preset.zoom * t.wall_scale);
     SeqView view;
     view.camera = to_world(t.base, t.base_yaw, {distance * std::cos(a), distance * std::sin(a), pose.height + settings_.height});
     const Vec3 aim = to_world(t.base, t.base_yaw, {0, 0, pose.aim + settings_.height});
@@ -627,12 +685,14 @@ void Extension::sequence_frame(const CssxFrame& f) {
             const auto& shot = seq.shots[index];
             if (shot.cut && !first) {
                 // Placed at once, and the running move is retargeted so it cannot pull back.
-                const auto view = sequence_view(pose_at(seq, now));
+                t.wall_scale = 1.0;   // the plan already cleared this shot; the live check starts afresh
+                const auto view = sequence_view(planned_pose(seq, t.plan, now));
+                breakdown_.depth_range(view.focus * 2.4);
                 rig_.place_camera(t.dolly, view.camera, view.rotation);
                 rig_.move_camera(t.dolly, view.camera, view.rotation, 0.001);
                 rig_.set_fov(t.dolly, view.fov); t.fov_applied = view.fov;
             }
-            if (shot.fstop > 0) { rig_.depth_of_field(t.dolly, shot.fstop, sequence_view(shot.from).focus); t.dof_on = true; }
+            if (shot.fstop > 0) { rig_.depth_of_field(t.dolly, shot.fstop, sequence_view(planned_pose(seq, t.plan, now)).focus); t.dof_on = true; }
             else if (t.dof_on) { rig_.depth_of_field(t.dolly, 32, 1000); t.dof_on = false; }   // deep focus again
         }
     } catch (...) {}
@@ -654,7 +714,7 @@ void Extension::sequence_frame(const CssxFrame& f) {
                 if (!look.outfit.empty()) {
                     const auto [wipe, hold] = timing(t.look_next);
                     if (now < look.at - hold - wipe) break;
-                    const Layer pass = t.transitions % 2 ? Layer::Normals : Layer::Depth;
+                    const Layer pass = t.transitions % 2 ? Layer::BaseColor : Layer::Normals;
                     t.covered = breakdown_.shown() == 0 && breakdown_.has_pass(pass);   // never over a running breakdown step
                     if (t.covered) breakdown_.show(bit(pass), wipe);
                     ++t.transitions;
@@ -703,7 +763,19 @@ void Extension::sequence_tick() {
     double ahead = now + 0.13;
     if (index + 1 < seq.shots.size() && seq.shots[index + 1].cut) ahead = std::min(ahead, seq.shots[index + 1].at - 0.004);
     ahead = std::min(ahead, seq.total);
-    const auto view = sequence_view(pose_at(seq, std::max(now, ahead)));
+    const auto pose = planned_pose(seq, t.plan, std::max(now, ahead));
+    if (settings_.walls) {
+        // The plan covered the world as it stood. One trace a tick covers what moved since:
+        // something in the way pulls the camera in at once; it eases back when the way is clear.
+        const double keep = t.wall_scale;
+        t.wall_scale = 1.0;
+        const auto full = sequence_view(pose);
+        const Vec3 aim = to_world(t.base, t.base_yaw, {0, 0, pose.aim + settings_.height});
+        double hit = 0;
+        const double limit = rig_.trace(aim, full.camera, &hit) && hit < full.focus - 5 ? std::clamp((hit - 25) / full.focus, 0.2, 1.0) : 1.0;
+        t.wall_scale = std::min(limit, keep + 0.06);
+    }
+    const auto view = sequence_view(pose);
     rig_.move_camera(t.dolly, view.camera, view.rotation, std::max(0.02, ahead - now));
     if (std::abs(view.fov - t.fov_applied) > 0.1) { rig_.set_fov(t.dolly, view.fov); t.fov_applied = view.fov; }
 }
@@ -714,6 +786,14 @@ void Extension::roll() {
     auto& t = *take_;
     t.clock = 0; t.seq_clock = 0;
     mode_ = Mode::Running;
+    if (t.preset.kind == ShotKind::Sequence) {
+        try {
+            const auto view = sequence_view(planned_pose(t.preset.sequence, t.plan, 0));
+            rig_.place_camera(t.dolly, view.camera, view.rotation);
+            rig_.set_fov(t.dolly, view.fov); t.fov_applied = view.fov;
+            breakdown_.depth_range(view.focus * 2.4);
+        } catch (...) {}
+    }
     if (!t.preset.audio.empty()) {
         std::string why;
         try {
@@ -1034,6 +1114,7 @@ void Extension::finish_take(const std::string& why, bool failed) {
     }
     callouts_.hide(); labels_live_ = false; labels_.clear(); lens_ = {};
     audio_.stop();
+    if (take_->idle_set) { try { rig_.css({{"action", "idle"}, {"value", ""}}); } catch (...) {} }
     std::string repainted;
     const bool wore = take_->wore && take_->own_look.is_object();
     if (wore) {

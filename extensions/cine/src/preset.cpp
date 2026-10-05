@@ -176,6 +176,7 @@ Preset Preset::parse(const Json& j) {
             p.look.push_back(std::move(step));
         }
     }
+    if (j.contains("idle")) p.idle = text(j, "idle", 96, true);
     if (j.contains("audio")) {
         // A file inside the extension folder, never a path out of it.
         const auto file = text(j, "audio", 160, true);

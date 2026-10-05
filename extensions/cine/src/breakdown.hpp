@@ -42,6 +42,9 @@ public:
     // Go to this set of layers with a left-to-right wipe of `wipe_seconds` (0 cuts).
     void show(LayerSet layers, double wipe_seconds);
     LayerSet shown() const { return shown_; }
+    // How far the depth pass reaches, in cm: white at the lens, black at this distance. Set
+    // from the shot (a close-up at 3000 cm of range is a white screen).
+    void depth_range(double cm);
     // True when this frame layer was asked for and its pass is on the camera.
     bool has_pass(Layer layer) const { return active_ && frame_passes_ && (needed_ & bit(layer)); }
     // Put everything back over the next ticks (normal end of a take)...
@@ -105,6 +108,7 @@ private:
     Json locker_;
     int locked_ = 0;
     bool repaint_ = false;                 // something of hers could not be put back as it was
+    double depth_range_ = 0;
     void keep(const Json& material);
     void read_skin(Skin& skin);
     void verify_restored();
