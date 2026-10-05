@@ -35,6 +35,7 @@
 
 namespace css {
 using namespace RC::Unreal;
+namespace { bool mesh_has_morph(UObject*,const std::string&); }
 static std::string slider_text(float value,bool scalar) {
     if(!scalar) return std::to_string(int(std::lround(value*100)));
     std::ostringstream text; text<<std::fixed<<std::setprecision(2)<<value; return text.str();
@@ -627,6 +628,7 @@ UObject* Appearance::player(void* engine) {
     return pawn;
 }
 void Appearance::restore_menu() {
+    restore_facial_binding(facial_preview_);
     menu_overlay_controls_.release();
     restore_menu_physics();
     menu_misc_.restore();   // show any accessories MISC hid on the wardrobe preview
@@ -1131,11 +1133,13 @@ bool Appearance::active() const { auto* c=component_.Get(); return c && c==obser
 #ifdef CSS_INVENTORY_DEV
 #endif
 void Appearance::timed_set_mesh(UObject* component, UObject* mesh) {
+    if(component==component_.Get() && mesh_asset(component)!=mesh) restore_expression();
     const auto started=std::chrono::steady_clock::now();
     set_mesh(component,mesh);
     apply_swap_ms+=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count();
 }
-bool Appearance::apply(void* engine, const std::string& mesh_path, const std::map<int,std::string>& materials) {
+bool Appearance::apply(void* engine, const std::string& mesh_path, const std::map<int,std::string>& materials,
+                       const FacialPlan& facial) {
     if(!ready_to_apply()) return false;
     auto* pawn = player(engine);
     if (!pawn) return false;
@@ -1148,7 +1152,23 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     WeakObject live_component(component), live_pawn(pawn), previous_mesh(before);
     AssetLoadRoots loading_roots;
     const auto load_started=std::chrono::steady_clock::now();
-    auto* target = load(mesh_path); loading_roots.keep(target);
+    UObject* target=nullptr;
+    if(facial.source_mesh==mesh_path && facial.mesh!=mesh_path && !facial.weights.empty() &&
+       !facial_failures_.contains(facial.mesh)) {
+        try {
+            AssetLoadRoots face_roots;
+            auto* candidate=load(facial.mesh); face_roots.keep(candidate);
+            if(!candidate->IsA(static_cast<UClass*>(find(L"/Script/Engine.SkeletalMesh"))))
+                throw std::runtime_error("Facial asset is not a skeletal mesh");
+            auto* skeleton=read<UObject*>(candidate,L"Skeleton");
+            if(!skeleton || narrow(skeleton->GetPathName())!=facial.skeleton)
+                throw std::runtime_error("Facial asset has a different skeleton");
+            for(const auto& [name,weight]:facial.weights)
+                if(!mesh_has_morph(candidate,name)) throw std::runtime_error("Facial asset is missing a required shape");
+            target=candidate; loading_roots.take(face_roots);
+        } catch(const std::exception& error) {facial_failures_.emplace(facial.mesh,error.what());}
+    }
+    if(!target) {target=load(mesh_path);loading_roots.keep(target);}
     WeakObject live_target(target);
     std::map<int,WeakObject> loaded_materials;
     for(const auto& [slot,path]:materials) {
@@ -1167,6 +1187,7 @@ bool Appearance::apply(void* engine, const std::string& mesh_path, const std::ma
     if (!target->IsA(type)) throw std::runtime_error("Selected asset is not a skeletal mesh");
     if (!is_compatible_skeleton(before, target))
         throw std::runtime_error("Different skeleton: appearance change refused");
+    if(before!=target && performance.active()) performance.interrupt("Appearance changed");
     // From here the look is going on (or is already on): its assets stay rooted until the
     // outfit changes or CSS restores, so a pawn swap never reloads them from disk.
     if(applied_.Get()!=target) retained_.release();
@@ -1290,6 +1311,7 @@ void Appearance::set_ground_offset(double offset) {
 }
 bool Appearance::restore() {
     ++appearance_revision;
+    restore_expression();
     menu_overlay_controls_.release(); overlay_controls_.release();
     restore_ground_offset();
     restore_springs();
@@ -1679,6 +1701,7 @@ std::map<std::string,SpringNode> spring_nodes(UObject* anim) {
 }
 #include "engine_dynamics.inl"
 }
+#include "facial_runtime.inl"
 void WornItems::release() {
     for(auto& worn:worn_) if(auto* component=worn.component.Get()) {
         Call owner(component,L"GetOwner",1); owner.run();
@@ -1832,6 +1855,7 @@ void Appearance::push_morphs(UObject* component) {
     }
     items_.sync_morphs(driven_morphs_);
     menu_items_.sync_morphs(driven_morphs_);
+    push_facial_morphs(component);
 }
 void Appearance::reconcile_sections() {
     auto* component=component_.Get();

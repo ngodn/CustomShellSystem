@@ -838,7 +838,8 @@ std::map<std::string,ControlValue> control_values(const ControlSet& options,cons
 }
 Customization apply_customize(const ControlSet& options, Customization custom, const nlohmann::json& command) {
     const auto action=command.at("action").get<std::string>();
-    if(action=="palette") custom=choose_palette(options,custom,command.at("palette").get<std::string>());
+    if(action=="reset_customization") custom=Customization{};
+    else if(action=="palette") custom=choose_palette(options,custom,command.at("palette").get<std::string>());
     else if(action=="control" || action=="reset_control" || action=="color" || action=="reset_color") {
         const bool clearing=action=="reset_control" || action=="reset_color";
         auto id=command.at("control").get<std::string>();

@@ -108,4 +108,20 @@ FacialMatch resolve_facial_rig(const std::vector<FacialRig>& rigs,const std::str
     }
     return result;
 }
+FacialPlan plan_expression(FacialMatch match,const std::string& source,const std::string& expression) {
+    FacialPlan result{source,source,{},expression,{}, {}};
+    if(expression.empty()) return result;
+    if(!match.rig || !match.adapter || match.adapter->source_mesh!=source) {
+        result.reason="No compatible facial library for this outfit version";
+        return result;
+    }
+    if(!match.rig->find(expression)) {
+        result.reason="The saved facial expression is unavailable";
+        return result;
+    }
+    result.mesh=match.adapter->target_mesh;
+    result.skeleton=match.adapter->skeleton;
+    result.weights=match.rig->weights(expression);
+    return result;
+}
 }

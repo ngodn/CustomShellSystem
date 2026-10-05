@@ -27,6 +27,11 @@ struct FacialMatch {
     const FacialRig* rig = nullptr;
     const FacialMeshAdapter* adapter = nullptr;
 };
+struct FacialPlan {
+    std::string source_mesh, mesh, skeleton, expression, reason;
+    std::map<std::string,float> weights;
+};
+FacialPlan plan_expression(FacialMatch,const std::string& source_mesh,const std::string& expression);
 FacialMatch resolve_facial_rig(const std::vector<FacialRig>&, const std::string& outfit,
     const std::string& toc_sha256, uint64_t bulk_bytes, const std::string& source_mesh);
 }

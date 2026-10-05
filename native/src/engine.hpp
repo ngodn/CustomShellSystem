@@ -11,6 +11,7 @@
 #include <vector>
 #include <deque>
 #include "data.hpp"
+#include "owned_morphs.hpp"
 #include "replacements.hpp"
 #include "body_geometry.hpp"
 #include "inventory_motion.hpp"
@@ -737,6 +738,18 @@ class Appearance {
     // ClearMorphTargets is a bigger hammer than this deserves. The weights are kept
     // because the wardrobe preview is a second component that needs the same ones.
     std::map<std::string,float> driven_morphs_;
+    struct FacialBinding {
+        WeakObject component, mesh;
+        OwnedMorphs weights;
+    };
+    FacialBinding facial_world_, facial_preview_;
+    std::map<std::string,float> facial_weights_;
+    std::map<std::string,std::string> facial_failures_;
+    std::string facial_requested_, facial_applied_, facial_reason_;
+    void restore_facial_binding(FacialBinding&);
+    void write_facial_binding(FacialBinding&,RC::Unreal::UObject*,const std::map<std::string,float>&);
+    void push_facial_morphs(RC::Unreal::UObject*);
+    void restore_expression();
     int lod_count();
     void show_hidden_sections();
     void restore_springs();
@@ -820,7 +833,11 @@ public:
     Json material_debug;
     RC::Unreal::UObject* player(void* engine);
     std::unique_ptr<AstralAppearanceSource> astral_source() const;
-    bool apply(void* engine, const std::string& mesh_path, const std::map<int,std::string>& materials = {});
+    bool apply(void* engine, const std::string& mesh_path, const std::map<int,std::string>& materials = {},
+               const FacialPlan& facial = {});
+    void set_expression(const FacialPlan&);
+    Json expression_status() const;
+    void clear_facial_failures() { facial_failures_.clear(); }
     bool restore();
     void release_caches() { mask_cache_.clear(); mask_roots_.release(); mask_cache_outfit_.clear(); }
     void set_ground_offset(double offset);

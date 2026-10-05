@@ -1,4 +1,5 @@
 #include "data.hpp"
+#include "owned_morphs.hpp"
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -51,6 +52,14 @@ int main(int argc,char** argv) {
         expect(!resolve("css.eve",hash,1235,source).rig,"Mismatched bulk data acquired old face");
         expect(!resolve("css.other",hash,1234,source).rig,"Different outfit acquired Eve face");
         expect(!resolve("css.eve",hash,1234,target).rig,"Facial adapter recursively replaced itself");
+        const auto face=plan_expression(resolve("css.eve",hash,1234,source),source,"css.face.eve.wink");
+        expect(face.mesh==target && face.weights==wink && face.reason.empty(),"Resolved expression plan lost its shapes");
+        const auto reset=plan_expression(resolve("css.eve",hash,1234,source),source,"");
+        expect(reset.mesh==source && reset.weights.empty(),"Original face still requested a derived mesh");
+        const auto missing=plan_expression({},source,"css.face.eve.wink");
+        expect(missing.mesh==source && missing.weights.empty() && !missing.reason.empty(),"Missing pack did not fall back to original");
+        const auto unknown=plan_expression(resolve("css.eve",hash,1234,source),source,"css.face.unknown");
+        expect(unknown.mesh==source && unknown.weights.empty(),"Unknown saved expression selected a facial mesh");
         rigs.clear();
         expect(!resolve("css.eve",hash,1234,source).rig,"Removed pack retained facial compatibility");
         rigs={rig,rig};
@@ -114,6 +123,8 @@ int main(int argc,char** argv) {
         expect(compatible_values({},saved).expression==saved.expression,"Missing expression library erased a saved selection");
         expect(restore_customization({},saved.json()).expression==saved.expression,"Snapshot restore lost optional expression");
         expect(choose_palette({},saved,"original").expression==saved.expression,"Palette reset erased facial selection");
+        expect(apply_customize({},saved,{{"action","reset_customization"}}).json()==Customization{}.json(),
+               "Reset all retained facial or other customization");
         for(const auto invalid_id:{"original","off","../wink","Wink now"})
             rejects([&]{Customization::parse({{"expression",invalid_id}});});
         rejects([&]{Customization::parse({{"expression",std::string(97,'a')}});});
@@ -131,6 +142,51 @@ int main(int argc,char** argv) {
             expect(std::count_if(source_neutral.begin(),source_neutral.end(),[](const auto& pair){return pair.second!=0;})==7,
                    "Source Neutral lost its seven authored weights");
         }
+        OwnedMorphs owned;
+        std::map<std::string,float> live={{"eye",.2f},{"jaw",-.1f},{"chest",.8f}};
+        const auto baseline=live;
+        int writes=0,reads=0;
+        auto read=[&](const auto& name){++reads;return live.at(name);};
+        auto write=[&](const auto& name,float weight){++writes;live.at(name)=weight;};
+        const std::map<std::string,float> first={{"eye",1.f},{"jaw",0.f}};
+        owned.apply(first,read,write);
+        expect(live.at("chest")==.8f && live.at("eye")==1.f,"Facial weights altered body settings");
+        const auto reads_before=reads,writes_before=writes;
+        owned.apply(first,read,write);
+        expect(reads==reads_before && writes==writes_before,"Unchanged expression repeated engine calls");
+        owned.apply({{"eye",0.f},{"jaw",-.07f}},read,write);
+        owned.restore(read,write);
+        expect(live==baseline,"Reset lost the face state from before the first expression");
+        owned.apply(first,read,write);live["eye"]=.7f;
+        owned.restore(read,write);
+        expect(live.at("eye")==.7f && live.at("jaw")==-.1f,"Reset overwrote a later writer");
+        live=baseline;
+        for(const bool fail_after_write:{false,true}) {
+            owned.apply(first,read,write);
+            bool failed=false;
+            auto flaky=[&](const auto& name,float weight) {
+                if(!failed && name=="jaw") {
+                    failed=true;if(fail_after_write) write(name,weight);
+                    throw std::runtime_error("Simulated setter failure");
+                }
+                write(name,weight);
+            };
+            rejects([&]{owned.apply({{"eye",0.f},{"jaw",.4f}},read,flaky);});
+            expect(live==baseline,"Failed expression switch did not roll back both facial shapes");
+        }
+        bool clamped=false;
+        auto clamp_once=[&](const auto& name,float weight){
+            if(!clamped) {clamped=true;write(name,.6f);} else write(name,weight);
+        };
+        rejects([&]{owned.apply(first,read,clamp_once);});
+        expect(live==baseline,"Failed read-back left the setter's unexpected value behind");
+        owned.apply(first,read,write);
+        owned.apply({{"jaw",.5f}},read,write);
+        expect(live.at("eye")==.2f,"A removed facial shape kept its previous override");
+        owned.restore(read,write);
+        expect(live==baseline,"Changed facial shape set lost its original baseline");
+        rejects([&]{owned.apply({{"jaw",std::numeric_limits<float>::quiet_NaN()}},read,write);});
+        expect(live==baseline,"Invalid expression partially changed the face");
         fs::remove_all(root);
         std::cout<<checks<<" facial catalog and compatibility checks passed\n";
         return 0;

@@ -359,6 +359,14 @@ struct Core {
     }
     // CSSX uses the same validation and apply pass as the CSS page. Transient
     // requests stay out of saved state and never write the ImGui-owned message.
+    Customization select_expression(Customization custom,const std::string& outfit,
+                                     const std::string& variant,const std::string& id) const {
+        const auto match=catalog.facial_match(outfit,variant);
+        if(!id.empty() && (!match.rig || !match.rig->find(id)))
+            throw std::runtime_error("This expression is not supported by the selected outfit version");
+        custom.expression=id;
+        return custom;
+    }
     Json customize_api(const Json& command) {
         const auto action=command.at("action").get<std::string>();
         if(action=="performances") {
@@ -438,6 +446,14 @@ struct Core {
         for(const auto& o:catalog.outfits) if(o.id==selected->second.outfit) outfit=&o;
         if(!outfit) throw std::runtime_error("The selected outfit is missing");
         const auto& options=outfit->controls_for(selected->second.variant);
+        if(action=="expressions") {
+            Json entries=Json::array();
+            const auto match=catalog.facial_match(outfit->id,selected->second.variant);
+            if(match.rig) for(const auto& expression:match.rig->expressions)
+                entries.push_back({{"id",expression.id},{"name",expression.name}});
+            return {{"entries",std::move(entries)},{"selected",selected->second.custom.expression},
+                    {"current",appearance.expression_status()},{"busy",apply_pending}};
+        }
         auto result=[&](const Customization& custom){
             // "busy": a wear or a change is still on its way to the model.
             return Json{{"shell",appearance.shell},{"outfit",selected->second.outfit},{"variant",selected->second.variant},
@@ -459,6 +475,7 @@ struct Core {
             for(const auto& option:catalog.animation_options(selected->second.outfit,selected->second.variant,AnimationSlot::Idle))
                 idles.push_back({{"id",option.id},{"name",option.name}});
             out["idles"]=std::move(idles); out["idle_override"]=idle_override;
+            out["expression"]=appearance.expression_status();
             return out;
         }
         if(action!="apply") throw std::runtime_error("Unknown customize action");
@@ -468,6 +485,8 @@ struct Core {
         for(const auto& step:commands) {
             if(!step.is_object()) throw std::runtime_error("Invalid customize command");
             if(step.value("action",std::string{})=="restore") custom=restore_customization(options,step.at("customize"));
+            else if(step.value("action",std::string{})=="expression")
+                custom=select_expression(custom,outfit->id,selected->second.variant,step.at("expression").get<std::string>());
             else custom=apply_customize(options,custom,step);
         }
         control_values(options,custom);   // whole result valid, or nothing is committed
@@ -693,11 +712,11 @@ struct Core {
         // 1.0 renamed "color"/"reset_color" to "control"/"reset_control", since a control
         // can now be a switch, a texture or a spring. The old names still work: scripts and
         // bindings written against 0.4 keep running.
-        else if(action=="palette" || action=="control" || action=="reset_control" ||
+        else if(action=="palette" || action=="reset_customization" || action=="control" || action=="reset_control" ||
                 action=="color" || action=="reset_color" ||
                 action=="tint" || action=="reset_tint" ||
                 action=="template" || action=="physics_preset" ||
-                action=="ground_offset" || action=="reset_ground_offset") {
+                action=="ground_offset" || action=="reset_ground_offset" || action=="expression") {
             auto selected=state.selections.find(appearance.shell);
             if(selected==state.selections.end()) throw std::runtime_error("Wear an appearance before changing it.");
             const Outfit* outfit=nullptr;
@@ -705,7 +724,9 @@ struct Core {
             if(!outfit) throw std::runtime_error("The selected outfit is missing.");
             const auto& options=outfit->controls_for(selected->second.variant);
             auto custom=selected->second.custom;
-            if(action=="palette") custom=apply_customize(options,custom,command);
+            if(action=="palette" || action=="reset_customization") custom=apply_customize(options,custom,command);
+            else if(action=="expression") custom=select_expression(custom,outfit->id,selected->second.variant,
+                                                                   command.at("expression").get<std::string>());
             else if(action=="template") {
                 auto template_id=command.at("template").get<std::string>();
                 const Template* tmpl=nullptr;
@@ -837,7 +858,7 @@ struct Core {
                 if(candidate!=package_root) {
                     auto resolved=load_catalog(candidate);
                     appearance.performance.interrupt("Animation catalog changed");
-                    appearance.clear_shared_animations();++animation_catalog_generation;
+                    appearance.clear_shared_animations();appearance.clear_facial_failures();++animation_catalog_generation;
                     package_root=std::move(candidate); catalog=std::move(resolved); ui_refresh=true;
                     original_shells_attempts=0; original_shells_retry_after=0;
                     message=wardrobe_startup_message(catalog.outfits.size());
@@ -1018,7 +1039,7 @@ struct Core {
             rescan_pending = false;
             auto updated = load_catalog(package_root);
             appearance.performance.interrupt("Animation catalog changed");
-            appearance.clear_shared_animations();++animation_catalog_generation;
+            appearance.clear_shared_animations();appearance.clear_facial_failures();++animation_catalog_generation;
             catalog = std::move(updated);
             original_shells_attempts=0; original_shells_retry_after=0;
             ui_refresh=true;
@@ -1193,7 +1214,9 @@ struct Core {
                     };
                     std::string fit_shell;
                     for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit) fit_shell=fit_shell_for(outfit,*variant);
-                    if (appearance.apply(engine, variant->mesh, variant->materials)) {
+                    const auto face=plan_expression(catalog.facial_match(requested.outfit,requested.variant),
+                                                     variant->mesh,requested.custom.expression);
+                    if (appearance.apply(engine, variant->mesh, variant->materials,face)) {
                         lap("apply");
                         laps+=" (load "+std::to_string(int(appearance.apply_load_ms+0.5))+", swap "+std::to_string(int(appearance.apply_swap_ms+0.5))+")";
                         try {
@@ -1208,6 +1231,7 @@ struct Core {
                                 appearance.sync_items(outfit,requested.variant);
                                 lap("items");
                                 appearance.customize(outfit,requested.variant,requested.custom);
+                                appearance.set_expression(face);
                                 lap("customize");
                                 laps+=" (";
                                 for(const auto& [name,ms]:appearance.customize_ms) if(ms>=0.5) laps+=name+" "+std::to_string(int(ms+0.5))+" ";
@@ -1246,7 +1270,10 @@ struct Core {
                             state.enabled = true; dirty = true; ui_refresh = !custom_only || refresh_custom;
                             applied_id = requested.outfit + "/" + requested.variant;
                             host.log(("Appearance verified: " + applied_id + " in " + std::to_string(int(last_apply_ms+0.5)) + " ms: " + laps).c_str());
-                            report(custom_only?"Settings updated.":"Wearing " + variant->name + ".");
+                            const auto expression=appearance.expression_status();
+                            if(!requested.custom.expression.empty() && expression.at("applied").get<std::string>().empty())
+                                report("Using the original face: "+expression.at("reason").get<std::string>()+".");
+                            else report(custom_only?"Settings updated.":"Wearing " + variant->name + ".");
                             custom_only=false;
                         }
                     } else { recovery.failed(now); report("No playable character mesh is ready."); }

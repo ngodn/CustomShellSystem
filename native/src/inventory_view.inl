@@ -735,7 +735,10 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             }
             // The last row is CSS's own Ground height, after the package's parts.
             const int ground_row=int(entries.size());
-            row_=std::clamp(row_,0,ground_row);
+            const auto face=catalog.facial_match(worn->id,selection->second.variant);
+            const bool has_face=face.rig || !custom.expression.empty();
+            const int face_row=ground_row+1;
+            row_=std::clamp(row_,0,has_face?face_row:ground_row);
             auto swatch_of=[&](const Control& c) {
                 auto v=values.contains(c.id)?values.at(c.id):c.value;
                 if(c.kind==ControlKind::Glow) { const float t=std::clamp(v[0]/std::max(c.maximum,.001f),0.f,1.f); return Color{1.f*t+.15f,0.85f*t+.08f,0.3f*t+.03f,1}; }
@@ -755,7 +758,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             const Json browse_templates{{"action","ui_browse_templates"}};
             row(0,cur_tmpl.name,palette_action(0),tmpl_step(-1),tmpl_step(1),browse_templates);
             // Reset all asks first, from the prompt and from its key alike.
-            const Json confirm_reset_all{{"action","ui_confirm"},{"title","Reset all customization"},{"message","Reset every change on this outfit back to the author's defaults?"},{"target",palette_action(0)}};
+            const Json confirm_reset_all{{"action","ui_confirm"},{"title","Reset all customization"},{"message","Reset every change on this outfit back to the author's defaults?"},{"target",{{"action","reset_customization"}}}};
             std::vector<Color> chips(entries.size());
             for(size_t i=1;i<entries.size();++i) {
                 const auto& entry=entries[i];
@@ -841,8 +844,20 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
                 row(int(i),c.name,accept,minus,plus,secondary,tertiary);
             }
             placement(ground_row,confirm_reset_all);
+            if(has_face) {
+                section("Face");
+                const auto* expression=face.rig?face.rig->find(custom.expression):nullptr;
+                row_look.value=custom.expression.empty()?"Original":expression?expression->name:"Unavailable";
+                row(face_row,"Facial Expression",{{"action","ui_browse_expressions"}});
+            }
             const auto& entry=entries[std::min(row_,ground_row-1)];
-            if(row_==ground_row) {
+            if(has_face && row_==face_row) {
+                detail("Facial Expression",worn->name,"Choose an expression for this outfit. Original restores its original face. Saved in profiles.");
+                const auto status=appearance.expression_status();
+                if(!status.value("reason",std::string{}).empty()) note(status.at("reason").get<std::string>());
+                action_button("accept","Choose expression",{{"action","ui_browse_expressions"}},3);
+                action_button("secondary","Restore original face",{{"action","expression"},{"expression",""}},4,!custom.expression.empty());
+            } else if(row_==ground_row) {
                 // placement() drew the details window
             } else if(row_==0) {
                 detail("Templates & Presets",worn->name,"Choose an author combination, material palette, body archetype or physics preset. Left / Right cycles them.");
@@ -1477,6 +1492,17 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         native_search_query_.clear(); dirty_=true;
         return {};
     }
+    if(name=="ui_browse_expressions" && catalog_ && appearance_) {
+        const auto selected=state.selections.find(appearance_->shell);
+        if(selected==state.selections.end()) return {};
+        const auto face=catalog_->facial_match(selected->second.outfit,selected->second.variant);
+        Json choices=Json::array({{{"id",""},{"label","Original face"}}});
+        if(face.rig) for(const auto& expression:face.rig->expressions)
+            choices.push_back({{"id",expression.id},{"label",expression.name}});
+        native_options_.reset(choices);native_picker_=true;
+        native_picker_kind_="expression";native_picker_title_="Facial Expressions";
+        native_search_query_.clear();dirty_=true;return {};
+    }
     if(name=="ui_browse_performances" && catalog_ && appearance_) {
         const auto selected=state.selections.find(appearance_->shell);
         if(selected==state.selections.end()) return {};
@@ -1571,6 +1597,8 @@ Json InventoryUI::dispatch(Json action,const State& state) {
             return dispatch({{"action","ui_browse_performances"},{"library",val}},state);
         } else if(native_picker_kind_=="performance") {
             return {{"action","play_performance"},{"id",val}};
+        } else if(native_picker_kind_=="expression") {
+            return {{"action","expression"},{"expression",val}};
         } else if(native_picker_kind_=="outfit") {
             const std::string outfit_id=val.get<std::string>();
             std::string variant_id;
