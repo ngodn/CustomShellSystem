@@ -73,10 +73,13 @@ AnimationSet AnimationSet::parse(const Json& value) {
     }
     return result;
 }
+bool animation_choice_matches(const AnimationOption& option,const std::string& choice) {
+    return option.id==choice || std::find(option.saved_aliases.begin(),option.saved_aliases.end(),choice)!=option.saved_aliases.end();
+}
 ResolvedAnimation resolve_animation(const std::vector<AnimationOption>& options,AnimationSlot slot,
     const std::string& choice,const std::string& weapon) {
     if(choice.empty() || choice=="original") return {};
-    const auto found=std::find_if(options.begin(),options.end(),[&](const auto& o){return o.id==choice;});
+    const auto found=std::find_if(options.begin(),options.end(),[&](const auto& o){return animation_choice_matches(o,choice);});
     if(found==options.end()) return {};
     std::string path;
     if(slot==AnimationSlot::Idle) {
@@ -95,6 +98,8 @@ AnimationMenu animation_menu(const std::vector<AnimationOption>& options,Animati
     for(const auto& option:options) menu.items.push_back({option.id,option.name});
     const std::string choice=saved?*saved:(slot==AnimationSlot::Walk || slot==AnimationSlot::Idle) && legacy_feminine?feminine_animation_id:"original";
     for(size_t i=0;i<menu.items.size();++i) if(menu.items[i].id==choice) {menu.selected=i;return menu;}
+    for(const auto& option:options) if(animation_choice_matches(option,choice))
+        for(size_t i=0;i<menu.items.size();++i) if(menu.items[i].id==option.id) {menu.selected=i;return menu;}
     menu.selected=menu.items.size();
     menu.items.push_back({choice,"Unavailable (using Default)",false});
     return menu;

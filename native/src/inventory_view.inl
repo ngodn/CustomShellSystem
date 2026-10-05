@@ -1074,8 +1074,23 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const std::string outfit=has_variant?worn->id:"",variant=has_variant?selection->second.variant:"";
         row_=std::clamp(row_,0,4);
         std::vector<AnimationMenu> menus;
-        for(const auto slot:slots) menus.push_back(animation_menu(catalog.animation_options(outfit,variant,slot),slot,
-            has_variant?state.animation_choices.find(outfit,variant,slot):nullptr,state.walk_animation=="feminine"));
+        const auto target_skeleton=catalog.animation_libraries.empty()?std::string{}:appearance.animation_skeleton();
+        for(const auto slot:slots) {
+            const auto& options=catalog.animation_options(outfit,variant,slot);
+            auto menu=animation_menu(options,slot,
+                has_variant?state.animation_choices.find(outfit,variant,slot):nullptr,state.walk_animation=="feminine");
+            for(auto& item:menu.items) {
+                const auto option=std::find_if(options.begin(),options.end(),[&](const auto& value){return value.id==item.id;});
+                if(option==options.end() || option->library_identity.empty()) continue;
+                const auto match=resolve_library_animation(catalog.animation_libraries,slot,item.id,
+                    catalog.bundled_animation_options(outfit,variant,slot),target_skeleton);
+                const auto loaded=appearance.shared_animation_available(slot,item.id);
+                if((match.entry && match.candidates.empty()) || (loaded && !*loaded)) {
+                    item.available=false;item.name+=" (Unavailable)";
+                }
+            }
+            menus.push_back(std::move(menu));
+        }
         auto choose=[&](AnimationSlot slot,const std::string& id)->Json {
             if(has_variant) return {{"action","animation_choice"},{"outfit",outfit},{"variant",variant},{"slot",animation_slot_name(slot)},{"value",id}};
             if(slot==AnimationSlot::Walk) return {{"action","walk_animation"},{"value",id==feminine_animation_id?"feminine":"normal"}};
@@ -1102,7 +1117,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         if(has_variant) body+=" Saved per outfit variant in profiles.";
         else body="Wear an outfit to use its custom animations. The CSS feminine walk is also available here.";
         detail(titles[row_],has_variant?worn->name:"Movement",body);
-        if(has_variant && mod_outfit(worn->id)) note("Replacement mods bring no CSS animations. Default and the CSS feminine idle and walk still apply to this look.");
+        if(has_variant && mod_outfit(worn->id)) note("Shared animations require a compatible rig. Default and the CSS feminine idle and walk remain available.");
         std::vector<Choice> choices;
         for(const auto& item:menu.items) choices.push_back({item.id,item.name,item.available?choose(slot,item.id):Json{}});
         choice_rows(choices,current.id);

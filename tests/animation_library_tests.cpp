@@ -80,6 +80,23 @@ int main(int argc,char** argv) {
         auto ambiguous=libraries;ambiguous.push_back(parsed);
         expect(!resolve_library_animation(ambiguous,AnimationSlot::Idle,"eve",bundled,base).entry,
                "Ambiguous direct resolver input chose a library by order");
+        const auto merged=merge_library_animation_options(libraries,AnimationSlot::Idle,bundled);
+        expect(merged.size()==1 && merged[0].id=="eve" && merged[0].library_identity=="css.eve.idle",
+               "Shared pack duplicated an audited bundled idle or changed its persisted ID");
+        expect(merged[0].clip==bundled[0].clip,"Menu merge destroyed bundled fallback metadata");
+        const std::string canonical="css.eve.idle";
+        const auto menu=animation_menu(merged,AnimationSlot::Idle,&canonical,false);
+        expect(menu.items[menu.selected].id=="eve" && menu.items[menu.selected].available,
+               "Canonical selection did not select its deduplicated menu row");
+        expect(resolve_animation(merged,AnimationSlot::Idle,canonical).asset==bundled[0].clip,
+               "Merged canonical alias lost its retained outfit option");
+        const auto shared_only=merge_library_animation_options(libraries,AnimationSlot::Idle,{});
+        expect(shared_only.size()==1 && shared_only[0].id==canonical,"Shared-only outfit has no idle choice");
+        expect(merge_library_animation_options(libraries,AnimationSlot::Walk,{}).empty(),"Idle leaked into a movement slot");
+        specialized=bundled;specialized[0].clip="/Game/CSS/UnholyGenessa/AN_Wings.AN_Wings";
+        const auto specialized_menu=merge_library_animation_options(libraries,AnimationSlot::Idle,specialized);
+        expect(specialized_menu.size()==2 && specialized_menu[0].clip==specialized[0].clip &&
+               specialized_menu[0].library_identity.empty(),"Menu merge replaced a specialized wing clip");
         for(const auto& mutate:std::vector<std::function<void(Json&)>>{
             [](Json& j){j["id"]="original";},
             [](Json& j){j["entries"][0]["id"]="css.feminine";},
@@ -118,7 +135,30 @@ int main(int argc,char** argv) {
         const Json outfit={{"id","existing"},{"name","Existing"},{"shells",{"CharacterId.Player.Shell.Genessa"}},
                            {"variants",{{{"id","default"},{"name","Default"},{"mesh","/Game/CSS/Old/SK_Body.SK_Body"}}}}};
         atomic_json(root/"outfit.css.json",{{"schema",1},{"outfits",{outfit}}},false);
-        expect(Catalog::load(root).outfits.size()==1,"Library displaced an old outfit");
+        const auto combined=Catalog::load(root);
+        expect(combined.outfits.size()==1,"Library displaced an old outfit");
+        expect(combined.animation_options("existing","default",AnimationSlot::Idle).size()==1,
+               "Catalog did not expose shared idle to a valid outfit");
+        expect(combined.bundled_animation_options("existing","default",AnimationSlot::Idle).empty(),
+               "Shared cache polluted bundled asset metadata");
+        expect(combined.animation_options("existing","missing",AnimationSlot::Idle).empty(),
+               "Missing outfit variant acquired shared options");
+        const auto* cached=combined.animation_options("existing","default",AnimationSlot::Idle).data();
+        expect(cached==combined.animation_options("existing","default",AnimationSlot::Idle).data(),
+               "Unchanged merged catalog was rebuilt");
+        auto aliased=combined;
+        aliased.outfits[0].animations.slots[AnimationSlot::Idle]=bundled;
+        aliased.animation_option_cache.clear();
+        State saved;
+        saved.selections["CharacterId.Player.Shell.Genessa"].outfit="existing";
+        saved.selections["CharacterId.Player.Shell.Genessa"].variant="default";
+        set_animation_choice(saved,aliased,"CharacterId.Player.Shell.Genessa","existing","default",AnimationSlot::Idle,canonical);
+        expect(saved.animation_choices.get("existing","default",AnimationSlot::Idle)=="eve",
+               "Selecting shared alias did not preserve the outfit's fallback ID");
+        aliased.animation_libraries.clear();aliased.animation_option_cache.clear();
+        expect(resolve_animation(aliased.animation_options("existing","default",AnimationSlot::Idle),AnimationSlot::Idle,
+               saved.animation_choices.get("existing","default",AnimationSlot::Idle)).asset==bundled[0].clip,
+               "Removing shared pack after saving lost the bundled idle");
         atomic_json(root/"duplicate.css.json",{{"schema",1},{"animation_library",library}},false);
         rejects([&]{Catalog::load(root);});
         fs::remove(root/"duplicate.css.json");

@@ -6,6 +6,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <tuple>
 #include <nlohmann/json.hpp>
 #include "controls.hpp"
 #include "animations.hpp"
@@ -136,6 +137,7 @@ struct ReplacementMod {
 struct Catalog {
     std::vector<Outfit> outfits;
     std::vector<AnimationLibrary> animation_libraries;
+    mutable std::map<std::tuple<std::string,std::string,AnimationSlot>,std::vector<AnimationOption>> animation_option_cache;
     Json diagnostics = Json::object();
     std::vector<ReplacementMod> replacements;
     std::vector<std::string> replacement_folders;   // the table's folder keys, for mapping a look's mesh to its folder
@@ -145,6 +147,8 @@ struct Catalog {
     bool compatible(const std::string& outfit, const std::string& shell) const;
     std::vector<const Outfit*> display_order(const std::string& equipped,const std::set<std::string>& favorites) const;
     const std::vector<AnimationOption>& animation_options(const std::string& outfit,
+        const std::string& variant,AnimationSlot) const;
+    const std::vector<AnimationOption>& bundled_animation_options(const std::string& outfit,
         const std::string& variant,AnimationSlot) const;
 };
 struct Selection { std::string outfit, variant; Customization custom; };

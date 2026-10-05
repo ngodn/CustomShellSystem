@@ -19,7 +19,11 @@ struct AnimationOption {
     std::string clip, blend_space, depart, arrive;
     std::map<std::string,std::string> by_weapon;
     bool hide_weapons = false;
+    // Resolved catalog metadata, never accepted from an outfit manifest.
+    std::string library_identity;
+    std::vector<std::string> saved_aliases;
 };
+bool animation_choice_matches(const AnimationOption&,const std::string&);
 struct AnimationSet {
     // A present empty slot explicitly disables inherited outfit options.
     std::map<AnimationSlot,std::vector<AnimationOption>> slots;

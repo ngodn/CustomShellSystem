@@ -99,6 +99,39 @@ AnimationLibrary AnimationLibrary::parse(const Json& value) {
     }
     return library;
 }
+std::vector<AnimationOption> merge_library_animation_options(const std::vector<AnimationLibrary>& libraries,
+    AnimationSlot slot,const std::vector<AnimationOption>& bundled) {
+    auto result=bundled;
+    for(const auto& library:libraries) for(const auto& entry:library.entries) {
+        if(entry.slot!=slot) continue;
+        std::vector<size_t> matches;
+        for(size_t i=0;i<result.size();++i) {
+            const auto old=resolve_animation(bundled,slot,result[i].id);
+            if(old.option && old.hide_weapons==entry.hide_weapons &&
+               std::any_of(entry.aliases.begin(),entry.aliases.end(),[&](const auto& alias) {
+                   return alias.slot==slot && alias.id==old.option->id && alias.asset==old.asset;
+               })) matches.push_back(i);
+        }
+        if(matches.empty()) {
+            // A specialized outfit option owns a colliding ID until explicitly aliased.
+            if(std::any_of(result.begin(),result.end(),[&](const auto& option){return animation_choice_matches(option,entry.id);})) continue;
+            AnimationOption option;
+            option.id=entry.id;option.name=entry.name;option.library_identity=entry.id;
+            option.hide_weapons=entry.hide_weapons;
+            // The engine resolver chooses and validates an asset before playback.
+            if(slot==AnimationSlot::Idle) option.clip=entry.assets.front().asset;
+            else option.blend_space=entry.assets.front().asset;
+            result.push_back(std::move(option));
+        } else {
+            auto& primary=result[matches.front()];
+            primary.library_identity=entry.id;
+            if(primary.id!=entry.id) primary.saved_aliases.push_back(entry.id);
+            for(size_t i=1;i<matches.size();++i) primary.saved_aliases.push_back(result[matches[i]].id);
+            for(size_t i=matches.size();i>1;--i) result.erase(result.begin()+static_cast<std::ptrdiff_t>(matches[i-1]));
+        }
+    }
+    return result;
+}
 AnimationLibraryMatch resolve_library_animation(const std::vector<AnimationLibrary>& libraries,
     AnimationSlot requested_slot,const std::string& choice,const std::vector<AnimationOption>& bundled,
     const std::string& target_skeleton,const std::string& weapon) {

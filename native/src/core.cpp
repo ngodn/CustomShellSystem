@@ -116,6 +116,8 @@ struct Core {
     // An idle a CSSX extension asked for while it films (css.customize "idle"). It replaces
     // the saved choice of whatever look is worn, is never saved, and is cleared by the caller.
     std::string idle_override;
+    uint64_t animation_catalog_generation=1;
+    uint64_t shared_animation_revision=0;
     std::string last_living_shell;   // most recent CharacterId.Player.Shell.* worn, for Harbinger carry-over.
     bool dirty = false, apply_pending = false, restore_pending = false, rescan_pending = false, forget_current = false;
     bool favorites_only = false;
@@ -222,20 +224,35 @@ struct Core {
             ResolvedAnimation custom_idle;
             const auto selection_key=appearance_selection_key(state,catalog,appearance.shell);
             const auto selected=state.selections.find(selection_key);
+            bool selected_animations=false;
             if(state.enabled && appearance.active() && !apply_pending && !restore_pending && selected!=state.selections.end()) {
                 const auto& selection=selected->second;
                 if(applied_id==selection.outfit+"/"+selection.variant) {
+                    selected_animations=true;
                     constexpr AnimationSlot slots[]={AnimationSlot::Walk,AnimationSlot::Jog,AnimationSlot::Sprint};
-                    for(size_t i=0;i<movement.size();++i)
+                    for(size_t i=0;i<movement.size();++i) {
+                        const auto choice=state.animation_choices.get(selection.outfit,selection.variant,slots[i]);
                         movement[i]=resolve_animation(catalog.animation_options(selection.outfit,selection.variant,slots[i]),slots[i],
-                            state.animation_choices.get(selection.outfit,selection.variant,slots[i])).asset;
+                            choice).asset;
+                        const auto shared=appearance.resolve_shared_animation(catalog,animation_catalog_generation,
+                            selection.outfit,selection.variant,slots[i],choice);
+                        if(shared.matched) movement[i]=shared.asset;
+                    }
                     const auto& idles=catalog.animation_options(selection.outfit,selection.variant,AnimationSlot::Idle);
                     // The override only where this look has that idle; otherwise its own choice stands.
                     const bool overridden=!idle_override.empty() &&
-                        std::any_of(idles.begin(),idles.end(),[&](const auto& option){return option.id==idle_override;});
-                    custom_idle=resolve_animation(idles,AnimationSlot::Idle,
-                        overridden?idle_override:state.animation_choices.get(selection.outfit,selection.variant,AnimationSlot::Idle));
+                        std::any_of(idles.begin(),idles.end(),[&](const auto& option){return animation_choice_matches(option,idle_override);});
+                    const auto choice=overridden?idle_override:state.animation_choices.get(selection.outfit,selection.variant,AnimationSlot::Idle);
+                    custom_idle=resolve_animation(idles,AnimationSlot::Idle,choice);
+                    const auto shared=appearance.resolve_shared_animation(catalog,animation_catalog_generation,
+                        selection.outfit,selection.variant,AnimationSlot::Idle,choice);
+                    if(shared.matched) { custom_idle.asset=shared.asset;custom_idle.hide_weapons=shared.hide_weapons; }
                 }
+            }
+            if(!selected_animations) appearance.clear_shared_animations();
+            if(shared_animation_revision!=appearance.shared_animation_revision()) {
+                shared_animation_revision=appearance.shared_animation_revision();
+                ui_refresh=true;status_dirty=true;
             }
             appearance.sync_walk(use_feminine_animation(state,selection_key,AnimationSlot::Idle),
                                  use_feminine_animation(state,selection_key,AnimationSlot::Walk),movement,
@@ -753,6 +770,7 @@ struct Core {
                 host.log(("CSS engine outfit folder: "+std::string(path.begin(),path.end())).c_str());
                 if(candidate!=package_root) {
                     auto resolved=load_catalog(candidate);
+                    appearance.clear_shared_animations();++animation_catalog_generation;
                     package_root=std::move(candidate); catalog=std::move(resolved); ui_refresh=true;
                     original_shells_attempts=0; original_shells_retry_after=0;
                     message=wardrobe_startup_message(catalog.outfits.size());
@@ -921,6 +939,7 @@ struct Core {
         if (rescan_pending) {
             rescan_pending = false;
             auto updated = load_catalog(package_root);
+            appearance.clear_shared_animations();++animation_catalog_generation;
             catalog = std::move(updated);
             original_shells_attempts=0; original_shells_retry_after=0;
             ui_refresh=true;
@@ -949,6 +968,7 @@ struct Core {
                 };
                 const bool applicable_before=saved_applicable();
                 catalog.outfits.push_back(std::move(originals));
+                catalog.animation_option_cache.clear();
                 // Replacement mods over an official shell can only be listed once its mesh is known.
                 rebuild_replacement_outfits(catalog);
                 // A saved official-shell or replacement-mod look for this shell only became
@@ -1215,6 +1235,7 @@ struct Core {
         status["walk_mod_active"] = appearance.walk.walk_mod_active();
         status["walk_mod_name"] = appearance.walk.walk_mod_name();
         status["animation"]={{"engaged",appearance.walk.engaged()},{"gait",appearance.walk.reason()},{"error",walk_error}};
+        status["animation"]["shared"]=appearance.shared_animation_status();
         if(auto selected=state.selections.find(appearance.shell);selected!=state.selections.end()) status["customize"]=selected->second.custom.json();
         // The catalog report and the material snapshot are the bulk of the file and change only
         // on a rescan or an apply: compared in place, copied only when they differ.
@@ -1305,6 +1326,7 @@ bool stop(void* ptr) noexcept {
         if(!core.astral.clear()) throw std::runtime_error("Genessa double visuals could not be released");
         core.inventory.detach();
         core.appearance.walk.release();
+        core.appearance.clear_shared_animations();
         core.appearance.restore_misc();
         core.appearance.restore(); core.appearance.release_caches(); if (core.dirty) core.save();
         core.last_pawn.clear(); core.apply_pending = core.state.enabled;

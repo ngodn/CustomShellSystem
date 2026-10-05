@@ -459,6 +459,14 @@ const Variant* Catalog::find(const std::string& outfit, const std::string& varia
 }
 const std::vector<AnimationOption>& Catalog::animation_options(const std::string& outfit,
     const std::string& variant,AnimationSlot slot) const {
+    const auto& bundled=bundled_animation_options(outfit,variant,slot);
+    if(animation_libraries.empty() || !find(outfit,variant)) return bundled;
+    const auto key=std::make_tuple(outfit,variant,slot);
+    if(const auto found=animation_option_cache.find(key);found!=animation_option_cache.end()) return found->second;
+    return animation_option_cache.emplace(key,merge_library_animation_options(animation_libraries,slot,bundled)).first->second;
+}
+const std::vector<AnimationOption>& Catalog::bundled_animation_options(const std::string& outfit,
+    const std::string& variant,AnimationSlot slot) const {
     static const std::vector<AnimationOption> empty;
     for(const auto& o:outfits) if(o.id==outfit) {
         for(const auto& v:o.variants) if(v.id==variant) {
@@ -486,12 +494,14 @@ bool set_animation_choice(State& state,const Catalog& catalog,const std::string&
     animation_slot_name(slot);
     const auto& options=catalog.animation_options(outfit,variant,slot);
     if(choice!="original" && !((slot==AnimationSlot::Walk || slot==AnimationSlot::Idle) && choice==feminine_animation_id) &&
-        std::none_of(options.begin(),options.end(),[&](const auto& option){return option.id==choice;}))
+        std::none_of(options.begin(),options.end(),[&](const auto& option){return animation_choice_matches(option,choice);}))
         throw std::runtime_error("Animation choice is unavailable for this outfit");
+    const auto matched=std::find_if(options.begin(),options.end(),[&](const auto& option){return animation_choice_matches(option,choice);});
+    const auto& stored=matched==options.end()?choice:matched->id;
     const auto* before=state.animation_choices.find(outfit,variant,slot);
-    if(before && *before==choice) return false;
+    if(before && *before==stored) return false;
     auto next=state.animation_choices;
-    next.outfits[outfit][variant][slot]=choice;
+    next.outfits[outfit][variant][slot]=stored;
     // Use the same bounds as loading, so choosing an option cannot create an unreadable save.
     next=AnimationChoices::parse(next.json());
     state.animation_choices=std::move(next);

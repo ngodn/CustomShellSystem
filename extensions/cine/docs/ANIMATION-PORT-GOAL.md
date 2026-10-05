@@ -183,3 +183,13 @@ build and discovery regression checks pass. CSS menu/playback wiring, loaded
 asset validation/failure caching, CINE service integration, facial support and
 the actual shared cook remain unfinished. See
 `docs/development/shared-animation-catalog.md` for the implemented boundary.
+
+
+2026-10-06 runtime/menu checkpoint: CSS now merges shared idle and movement
+choices into valid outfit variants, preserving audited bundled IDs when saving.
+Menus are cached; loaded assets are validated and retained; failed loads are
+cached until selection or owning objects change. Missing player meshes defer
+shared playback. All 19 portable CTest suites, 65 packaged-library checks and
+the Windows core build pass. No DLL was installed. Live restoration/performance,
+one-shot controls, CINE integration, facial support and shared cooking remain
+unfinished. DumbDumb and Iris Out still need seven source bone mappings.

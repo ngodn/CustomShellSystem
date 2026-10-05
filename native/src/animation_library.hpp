@@ -24,6 +24,8 @@ struct AnimationLibrary {
     std::vector<LibraryAnimation> entries;
     static AnimationLibrary parse(const nlohmann::json&);
 };
+std::vector<AnimationOption> merge_library_animation_options(const std::vector<AnimationLibrary>&,
+    AnimationSlot,const std::vector<AnimationOption>& bundled);
 struct AnimationAssetCandidate {
     std::string asset;
     // Empty for bundled fallbacks; their actual skeleton must be read after loading.

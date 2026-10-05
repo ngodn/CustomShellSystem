@@ -87,17 +87,13 @@ void WalkOverride::preload_assets() {
 void WalkOverride::unroot_assets() {
     rooted_assets_.release(); custom_idle_asset_.Reset();
 }
-UObject* WalkOverride::custom_blendspace(size_t index,UObject* skeleton) {
-    if(index>=custom_paths_.size() || custom_paths_[index].empty() || !skeleton)
-        throw std::runtime_error("Custom movement option is incomplete");
-    if(custom_skeleton_.Get()!=skeleton) {custom_blends_={};custom_skeleton_=skeleton;}
-    if(auto* cached=custom_blends_[index].Get()) return cached;
+namespace {
+void validate_movement_blendspace(UObject* asset,UObject* skeleton) {
     const auto compatible=[&](UObject* animation) {
         auto* source=read<UObject*>(animation,L"Skeleton");
         return source && (source==skeleton || compatible_animation_skeletons(
             narrow(source->GetPathName()),narrow(skeleton->GetPathName())));
     };
-    auto* asset=load(custom_paths_[index]);
     if(!asset || asset->GetClassPrivate()!=find(L"/Script/Engine.BlendSpace") ||
        !compatible(asset))
         throw std::runtime_error("Custom movement requires a 2D BlendSpace on a compatible skeleton");
@@ -146,7 +142,119 @@ UObject* WalkOverride::custom_blendspace(size_t index,UObject* skeleton) {
            static_cast<FBoolProperty*>(root_motion)->GetPropertyValueInContainer(sequence))
             throw std::runtime_error("Custom movement samples must be in-place without root motion");
     }
+}
+}
+UObject* WalkOverride::custom_blendspace(size_t index,UObject* skeleton) {
+    if(index>=custom_paths_.size() || custom_paths_[index].empty() || !skeleton)
+        throw std::runtime_error("Custom movement option is incomplete");
+    if(custom_skeleton_.Get()!=skeleton) {custom_blends_={};custom_skeleton_=skeleton;}
+    if(auto* cached=custom_blends_[index].Get()) return cached;
+    auto* asset=load(custom_paths_[index]);
+    validate_movement_blendspace(asset,skeleton);
     custom_blends_[index]=asset;return asset;
+}
+void SharedAnimationResolver::clear() {
+    for(auto& slot:slots_) {
+        if(slot.result.matched) ++revision_;
+        slot.checked=false; slot.result={}; slot.roots.release();
+        slot.pawn.Reset();slot.body.Reset();slot.skeleton.Reset();slot.post.Reset();slot.asset.Reset();
+        slot.outfit.clear();slot.variant.clear();slot.choice.clear();slot.generation=0;
+    }
+}
+std::optional<bool> SharedAnimationResolver::available(AnimationSlot requested,const std::string& choice) const {
+    const auto index=static_cast<size_t>(requested);
+    if(index>=slots_.size()) return {};
+    const auto& slot=slots_[index];
+    if(!slot.checked || !slot.result.matched || slot.choice!=choice) return {};
+    return !slot.result.asset.empty();
+}
+std::string Appearance::animation_skeleton() const {
+    auto* pawn=observed_pawn_.Get();
+    auto* component=pawn?read<UObject*>(pawn,L"Mesh"):nullptr;
+    auto* body=component?mesh_asset(component):nullptr;
+    auto* skeleton=body?read<UObject*>(body,L"Skeleton"):nullptr;
+    return skeleton?narrow(skeleton->GetPathName()):std::string{};
+}
+Json SharedAnimationResolver::status() const {
+    Json result=Json::object();
+    for(size_t i=0;i<slots_.size();++i) {
+        const auto& slot=slots_[i];
+        if(slot.checked && slot.result.matched)
+            result[animation_slot_name(static_cast<AnimationSlot>(i))]={{"choice",slot.choice},
+                {"asset",slot.result.asset},{"available",!slot.result.asset.empty()},{"reason",slot.result.reason}};
+    }
+    return result;
+}
+SharedAnimationResult SharedAnimationResolver::resolve(UObject* pawn,const Catalog& catalog,uint64_t generation,
+    const std::string& outfit,const std::string& variant,AnimationSlot slot,const std::string& choice) {
+    const auto index=static_cast<size_t>(slot);
+    if(index>=slots_.size()) return {};
+    auto& cache=slots_[index];
+    if(!pawn || catalog.animation_libraries.empty()) {
+        if(cache.checked) clear();
+        return {};
+    }
+    auto* component=read<UObject*>(pawn,L"Mesh");
+    auto* body=component?mesh_asset(component):nullptr;
+    auto* skeleton=body?read<UObject*>(body,L"Skeleton"):nullptr;
+    auto* post=component && slot==AnimationSlot::Idle?read<UObject*>(component,L"PostProcessAnimInstance"):nullptr;
+    if(!body || !skeleton) {
+        const auto pending=resolve_library_animation(catalog.animation_libraries,slot,choice,
+            catalog.bundled_animation_options(outfit,variant,slot),{});
+        return {pending.entry!=nullptr,false,{},"Player mesh is not ready"};
+    }
+    if(cache.checked && cache.generation==generation && cache.outfit==outfit && cache.variant==variant &&
+       cache.choice==choice && cache.pawn.Get()==pawn && cache.body.Get()==body && cache.skeleton.Get()==skeleton &&
+       cache.post.Get()==post &&
+       (cache.result.asset.empty() || cache.asset.Get())) return cache.result;
+    if(cache.result.matched) ++revision_;
+    cache.checked=false;cache.result={};cache.roots.release();cache.asset.Reset();
+    cache.generation=generation;cache.outfit=outfit;cache.variant=variant;cache.choice=choice;
+    cache.pawn=pawn;cache.body=body;cache.skeleton=skeleton;cache.post=post;
+    const auto& bundled=catalog.bundled_animation_options(outfit,variant,slot);
+    const auto match=resolve_library_animation(catalog.animation_libraries,slot,choice,bundled,narrow(skeleton->GetPathName()));
+    if(!match.entry) { cache.checked=true;return cache.result; }
+    cache.result.matched=true;
+    if(slot==AnimationSlot::Idle && (!post || !has_field(post,L"CSSIdleEnabled",sizeof(bool)) ||
+                                   !has_field(post,L"CSSIdleSequence",sizeof(UObject*)))) {
+        cache.result.reason="This outfit has no active CSS idle layer";
+        cache.checked=true;++revision_;return cache.result;
+    }
+    auto still_current=[&] {
+        if(cache.pawn.Get()!=pawn || cache.body.Get()!=body || cache.skeleton.Get()!=skeleton) return false;
+        auto* current=read<UObject*>(pawn,L"Mesh");
+        return current && mesh_asset(current)==body && read<UObject*>(body,L"Skeleton")==skeleton &&
+               (slot!=AnimationSlot::Idle || (cache.post.Get()==post && read<UObject*>(current,L"PostProcessAnimInstance")==post));
+    };
+    for(const auto& candidate:match.candidates) {
+        try {
+            auto* asset=load(candidate.asset);
+            if(!still_current()) { cache.result={true,false,{},"Player changed while loading animation"};return cache.result; }
+            AssetLoadRoots retained;
+            retained.keep(asset);
+            auto* expected=static_cast<UClass*>(find(slot==AnimationSlot::Idle?L"/Script/Engine.AnimSequence":L"/Script/Engine.BlendSpace"));
+            if(!asset || !asset->IsA(expected)) throw std::runtime_error("Shared animation has the wrong asset type");
+            auto* source=read<UObject*>(asset,L"Skeleton");
+            if(!source || !compatible_animation_skeletons(narrow(source->GetPathName()),narrow(skeleton->GetPathName())) ||
+               (!candidate.declared_skeleton.empty() && candidate.declared_skeleton!=narrow(source->GetPathName())))
+                throw std::runtime_error("Shared animation skeleton does not match its target or declaration");
+            if(slot==AnimationSlot::Idle) {
+                if(read<uint8_t>(asset,L"AdditiveAnimType")!=0)
+                    throw std::runtime_error("Shared idle cannot use additive animation data");
+            } else validate_movement_blendspace(asset,skeleton);
+            if(!still_current()) { cache.result={true,false,{},"Player changed while validating animation"};return cache.result; }
+            cache.roots.take(retained);cache.asset=asset;
+            cache.result={true,match.entry->hide_weapons,candidate.asset,{}};
+            cache.checked=true;++revision_;
+            return cache.result;
+        } catch(const std::exception& error) {
+            cache.result.reason=error.what();
+            if(!still_current()) return cache.result;
+        }
+    }
+    if(cache.result.reason.empty()) cache.result.reason="No compatible shared or bundled animation";
+    cache.checked=true;++revision_;
+    return cache.result;
 }
 void WalkOverride::hook_speed() {
     if(hook_) return;

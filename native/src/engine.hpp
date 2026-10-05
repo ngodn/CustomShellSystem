@@ -61,6 +61,29 @@ public:
     ~AssetLoadRoots() noexcept { release(); }
 };
 class Appearance;
+struct SharedAnimationResult {
+    bool matched=false, hide_weapons=false;
+    std::string asset, reason;
+};
+class SharedAnimationResolver {
+    struct Cached {
+        uint64_t generation=0;
+        std::string outfit, variant, choice;
+        WeakObject pawn, body, skeleton, post, asset;
+        bool checked=false;
+        SharedAnimationResult result;
+        AssetLoadRoots roots;
+    };
+    std::array<Cached,4> slots_;
+    uint64_t revision_=0;
+public:
+    SharedAnimationResult resolve(RC::Unreal::UObject* pawn,const Catalog&,uint64_t generation,
+        const std::string& outfit,const std::string& variant,AnimationSlot,const std::string& choice);
+    void clear();
+    Json status() const;
+    uint64_t revision() const { return revision_; }
+    std::optional<bool> available(AnimationSlot,const std::string& choice) const;
+};
 struct AstralTextureInput {
     std::wstring parameter;
     RC::Unreal::UObject* texture=nullptr;
@@ -643,6 +666,7 @@ class Appearance {
     void restore_ground_offset();
     void timed_set_mesh(RC::Unreal::UObject* component, RC::Unreal::UObject* mesh);
     WeakObject observed_pawn_, observed_component_, observed_controller_;
+    SharedAnimationResolver shared_animations_;
     // player()'s string cache: rebuilt only when the tag, pawn or mesh changes.
     uint64_t shell_tag_ = 0;
     std::string shell_text_, pawn_text_, mesh_text_;
@@ -819,6 +843,17 @@ public:
     void sync_items(const Outfit&,const std::string& variant);
     int worn_item_count() const { return items_.count(); }
     WalkOverride walk;
+    SharedAnimationResult resolve_shared_animation(const Catalog& catalog,uint64_t generation,
+        const std::string& outfit,const std::string& variant,AnimationSlot slot,const std::string& choice) {
+        return shared_animations_.resolve(observed_pawn_.Get(),catalog,generation,outfit,variant,slot,choice);
+    }
+    void clear_shared_animations() { shared_animations_.clear(); }
+    Json shared_animation_status() const { return shared_animations_.status(); }
+    uint64_t shared_animation_revision() const { return shared_animations_.revision(); }
+    std::string animation_skeleton() const;
+    std::optional<bool> shared_animation_available(AnimationSlot slot,const std::string& choice) const {
+        return shared_animations_.available(slot,choice);
+    }
     void sync_walk(bool idle_feminine,bool walk_feminine,const std::array<std::string,3>& custom_paths,
                    const std::string& custom_idle_clip={},bool hide_weapons=false) {
         walk.update(observed_pawn_.Get(),idle_feminine,walk_feminine,custom_paths,custom_idle_clip,hide_weapons);
