@@ -206,6 +206,19 @@ changed amount counted as an unapplied edit, and while one is pending every
 action button is disabled. Disabled controls now also carry the reason
 (model `disabled` map) instead of a bare "Unavailable".
 
+## D17. A HUD root on the screen, beside the game's HUD (2026-10-05)
+
+`CSSX_LAYER_SCREEN` as a layer's parent puts it in a canvas CSSX adds to the game viewport
+(`GameViewportSubsystem.AddWidget`), not inside the game's `WBP_Player_HUD` like the default
+root. Same coordinates, same lifetime (the canvas lives in the HUD's widget tree and is
+dropped with the scene), created on first use. An older CSSX returns 0 for it and callers
+fall back to parent 0.
+Reason: an extension that hides the game HUD (CINE in Cine World) hid its own layers with
+it, so CINE's frame guides, help line and countdown never drew there. The default root
+stays inside the game HUD on purpose: a compass or minimap should vanish with it.
+`set_rect` also sends only the slot values that changed (five reflected calls per layer per
+frame became none for a still layer), which is what makes per-frame labels affordable.
+
 ## D16. Interface arguments and write-only sets in the bridge (2026-10-05)
 
 The bridge encodes an object handle into an `FInterfaceProperty` (the object, plus the

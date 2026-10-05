@@ -16,8 +16,12 @@ evidence behind each line is in `integration-tests.md` and `performance.md`.
   wireframe, skeleton, virtual, IK and spring bones, sockets, physics bodies, the
   movement capsule, and frame passes such as base colour, normals and depth), with
   labels and arrows. CINE now ships a small asset pak for this.
+- CINE's frame guides, help line and countdown show in Cine World. They were drawn inside
+  the game's HUD, which CINE hides there; CSSX now offers extensions a layer root on the
+  screen itself.
 - CSSX: extensions can pass an object where a function expects an interface (CINE's
   frame passes use it), and can write a large struct property without reading it back.
+- CSSX: HUD layers send the game only the position and size values that changed.
 
 ## Traverse 1.0.2
 
