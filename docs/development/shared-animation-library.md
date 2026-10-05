@@ -303,3 +303,23 @@ and build full-motion retarget candidates at their appropriate rates. Preserve p
 IDs, implement shared catalog fallback without changing outfit containers, and
 validate CSS and CINE against the same resolved catalog. Track visual and live
 acceptance separately from successful decode/import.
+
+
+## DumbDumb / Iris Out source-page audit, 2026-10-06
+
+The [DumbDumb page](https://www.nexusmods.com/stellarblade/mods/2545)
+and [Iris Out page](https://www.nexusmods.com/stellarblade/mods/2587)
+identify MikeAlicespade as uploader and credit motion to Pronxy-迫奈熏.
+Both pages currently prohibit cross-game conversion and uploads elsewhere;
+modification and asset reuse require permission. These are not cleared public
+release inputs. Asked the user whether separate permission already exists.
+No author was contacted and no upload was made. This changes the permission
+audit from unknown to restricted unless the user has a separate grant; it does
+not make the unresolved animations completed or remove them from the goal.
+
+Iris Out v1.1.0.0's changelog adds eye animation. Its description says it was
+built on Better Jiggle Mod v1.2 and uses ATOOL 5.7 or later. It credits its
+expression changes to MikeAlicespade. This is a new dependency lead for the
+seven unknown indices, not proof that those indices are jiggle or eye bones.
+Inspect that exact source basis if available before assigning any names.
+The supplied ATOOL jiggle patch alone is Lua and did not resolve the mapping.
