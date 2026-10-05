@@ -16,7 +16,12 @@ constexpr const char* path_sphere = "/Engine/BasicShapes/Sphere.Sphere";
 constexpr size_t max_bones = 1200;      // the game's widest skeleton is 1199 bones
 constexpr size_t max_sockets = 128;
 constexpr size_t max_bodies = 160;
-constexpr size_t max_skins = 24;
+constexpr size_t max_skins = 40;
+constexpr size_t max_worn_actors = 12;
+// A stick longer than any limb is an offset to a helper bone (camera, prop, interaction
+// points), not anatomy: drawn it is a spike across the picture.
+constexpr double max_stick_cm = 70;
+constexpr double clay_ambient = 0.22;   // clay stays readable in a dark scene
 constexpr int keep_relative = 0, snap_to_target = 2, no_collision = 0;
 
 struct LayerInfo { const char* id; const char* label; Vec3 colour; };
@@ -210,14 +215,30 @@ void Breakdown::begin(const Json& pawn, const Json& camera, LayerSet needed, std
                 }
             }
         }
-        // Her skinned parts: the body, then whatever else the character wears as its own component.
+        // Everything she is made of: the body, then hair, garments and accessories (their own
+        // skinned or static mesh components), then what is attached as its own actor (weapons,
+        // seals). Skinned and static meshes only: a widget component is a mesh component too.
         skins_.push_back({mesh_, Json(), {}});
         if (needed_ & (bit(Layer::Clay) | bit(Layer::Wireframe))) {
             try {
-                const auto cls = load("/Script/Engine.SkinnedMeshComponent");
-                const auto parts = is_handle(cls) ? call(pawn_, "K2_GetComponentsByClass", {{"ComponentClass", cls}}) : Json();
-                if (parts.is_array()) for (const auto& part : parts)
-                    if (is_handle(part) && id_of(part) != id_of(mesh_) && skins_.size() < max_skins) skins_.push_back({part, Json(), {}});
+                std::vector<Json> owners{pawn_};
+                const auto attached = host_.request({{"op", "call"}, {"target", pawn_}, {"function", "GetAttachedActors"},
+                                                     {"args", {{"bResetArray", true}, {"bRecursivelyIncludeAttachedActors", true}}}});
+                const auto list = attached.is_object() ? attached.value("OutActors", Json::array()) : Json::array();
+                if (list.is_array()) for (const auto& actor : list) if (is_handle(actor) && owners.size() <= max_worn_actors) owners.push_back(actor);
+                for (const char* path : {"/Script/Engine.SkinnedMeshComponent", "/Script/Engine.StaticMeshComponent"}) {
+                    const auto cls = load(path);
+                    if (!is_handle(cls)) continue;
+                    for (const auto& owner : owners) {
+                        Json parts;
+                        try { parts = call(owner, "K2_GetComponentsByClass", {{"ComponentClass", cls}}); } catch (...) { continue; }
+                        if (!parts.is_array()) continue;
+                        for (const auto& part : parts) {
+                            if (!is_handle(part) || skins_.size() >= max_skins) continue;
+                            if (std::none_of(skins_.begin(), skins_.end(), [&](const Skin& s) { return id_of(s.component) == id_of(part); })) skins_.push_back({part, Json(), {}});
+                        }
+                    }
+                }
             } catch (...) {}   // the body alone still works
         }
         for (auto& skin : skins_) { try { skin.overlay_before = host_.get(skin.component, "OverlayMaterial"); } catch (...) { skin.overlay_before = nullptr; } }
@@ -272,7 +293,8 @@ void Breakdown::plan() {
         const double length = std::sqrt(b.local.x * b.local.x + b.local.y * b.local.y + b.local.z * b.local.z);
         // A stick from the parent to this bone. Virtual and IK bones hang off the root, far from
         // what they describe, so they get a marker instead of a stick.
-        if ((needed_ & bit(Layer::Skeleton)) && !b.parent.empty() && length > 0.5 && body_bone(b.kind) && body_bone(kind_of(b.parent))) queue_.push_back({Work::Stick, i});
+        if ((needed_ & bit(Layer::Skeleton)) && !b.parent.empty() && length > 0.5 && length <= max_stick_cm && body_bone(b.kind) && body_bone(kind_of(b.parent)))
+            queue_.push_back({Work::Stick, i});
         if (((needed_ & bit(Layer::VirtualBones)) && b.kind == BoneKind::Virtual) || ((needed_ & bit(Layer::IkBones)) && b.kind == BoneKind::Ik)
             || ((needed_ & bit(Layer::Springs)) && b.kind == BoneKind::Spring)) queue_.push_back({Work::Joint, i});
     }
@@ -302,7 +324,7 @@ void Breakdown::build(const Work& work) {
         const double length = std::sqrt(b.local.x * b.local.x + b.local.y * b.local.y + b.local.z * b.local.z);
         const Vec3 direction = b.local * (1.0 / length);
         // The engine cone is 100 tall along Z with a base radius of 50, centred on its origin.
-        const double radius = std::clamp(length * 0.09, 0.35, 2.2);
+        const double radius = std::clamp(length * 0.055, 0.3, 1.25);
         mesh_piece(Layer::Skeleton, path_cone, b.parent, direction * (length / 2), z_to(direction), {radius / 50, radius / 50, length / 100});
     } else if (work.kind == Work::Joint) {
         const auto& b = bones_[work.index];
@@ -426,7 +448,7 @@ void Breakdown::show(LayerSet set, double wipe_seconds) {
             if (!wiping) set_overlay(nullptr);
         }
         if (incoming & clay) {
-            if (!is_handle(clay_)) { clay_ = instance("M_Cine_Clay", info[static_cast<size_t>(Layer::Clay)].colour, -1); set_param(clay_, "Ambient", 0.06); }
+            if (!is_handle(clay_)) { clay_ = instance("M_Cine_Clay", info[static_cast<size_t>(Layer::Clay)].colour, -1); set_param(clay_, "Ambient", clay_ambient); }
             if (wiping && !overlay_taken) { place(clay_, true, false); set_overlay(&clay_); }
             else { set_param(clay_, "Show", 1); set_param(clay_, "Invert", 0); set_param(clay_, "Hold", 1); apply_clay(true); }
         } else if (outgoing & clay) {

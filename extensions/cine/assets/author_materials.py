@@ -224,7 +224,11 @@ mesh_usage(m)
 g = Graph(m)
 revealed, _ = g.wipe(mpc)
 color = g.vector("Color", 1.0, 0.85, 0.1)
-out(g.mul(g.rgb(color), g.scalar("Glow", 1.0)), "", MP.MP_EMISSIVE_COLOR)
+# Unlit, but not flat: surfaces turning away from the camera darken toward Rim, so a bone reads
+# as a solid shape and overlapping bones stay apart.
+facing = g.n(unreal.MaterialExpressionFresnel, exponent=1.5, base_reflect_fraction=0.0)
+shade = g.lerp(g.const(1.0), g.scalar("Rim", 0.28), facing)
+out(g.mul(g.mul(g.rgb(color), g.scalar("Glow", 1.0)), shade), "", MP.MP_EMISSIVE_COLOR)
 out(g.mul(g.scalar("Opacity", 0.85), revealed), "", MP.MP_OPACITY)
 created["materials"]["xray"] = finish(m)
 

@@ -55,16 +55,19 @@ std::vector<CalloutPlace> layout_callouts(double w, double h, const std::vector<
 
 void Callouts::build() {
     if (!hud_ || built_) return;
+    // On the screen itself, like the frame guides: the game's HUD widget is hidden during a take.
+    CssxLayer root = CSSX_LAYER_SCREEN;
+    caption_bar_ = hud_->image(context_, root);
+    if (!caption_bar_) { root = 0; caption_bar_ = hud_->image(context_, root); }
     for (auto& s : slots_) {
-        s.leader = hud_->image(context_, 0);
-        for (auto& head : s.head) head = hud_->image(context_, 0);
-        s.text = hud_->text(context_, 0);
+        s.leader = hud_->image(context_, root);
+        for (auto& head : s.head) head = hud_->image(context_, root);
+        s.text = hud_->text(context_, root);
         for (CssxLayer l : {s.leader, s.head[0], s.head[1]}) if (l) { hud_->set_color(context_, l, 1, 1, 1, 0.9f); hud_->set_pivot(context_, l, 0, 0.5f); hud_->set_visible(context_, l, 0); }
         if (s.text) { hud_->set_font(context_, s.text, float(callout_font)); hud_->set_color(context_, s.text, 1, 1, 1, 0.96f); hud_->set_visible(context_, s.text, 0); }
         s.shown.clear();
     }
-    caption_bar_ = hud_->image(context_, 0);
-    caption_ = hud_->text(context_, 0);
+    caption_ = hud_->text(context_, root);
     if (caption_bar_) { hud_->set_color(context_, caption_bar_, 0, 0, 0, 0.55f); hud_->set_visible(context_, caption_bar_, 0); }
     if (caption_) { hud_->set_font(context_, caption_, 22); hud_->set_color(context_, caption_, 1, 1, 1, 0.97f); hud_->set_visible(context_, caption_, 0); }
     caption_shown_.clear();
@@ -104,7 +107,9 @@ void Callouts::update(const CssxFrame& frame, const std::vector<CalloutTarget>& 
     if (!built_) return;
     visible_ = true;
     const double w = frame.viewport_w, h = frame.viewport_h;
-    const auto places = layout_callouts(w, h, targets);
+    auto places = layout_callouts(w, h, targets);
+    // Half-pixel steps: sub-pixel jitter in a still shot sends nothing to the HUD.
+    for (auto& p : places) { p.to_x = std::round(p.to_x * 2) / 2; p.to_y = std::round(p.to_y * 2) / 2; }
     for (size_t i = 0; i < max_callouts; ++i) {
         auto& s = slots_[i];
         if (i >= places.size()) { for (CssxLayer l : {s.text, s.leader, s.head[0], s.head[1]}) if (l) hud_->set_visible(context_, l, 0); continue; }

@@ -48,6 +48,7 @@ struct Host {
     double game_time = 0, slowest = 1.0;
     int effect_handles = 0;
     uint64_t hair = 0;                    // a second skinned part on the pawn, with an overlay of its own
+    uint64_t crown = 0;                   // a static mesh accessory on the pawn
     const std::vector<std::pair<std::string, std::string>> bones{
         {"root", "None"}, {"pelvis", "root"}, {"spine_01", "pelvis"}, {"spine_02", "spine_01"}, {"spine_03", "spine_02"}, {"head", "spine_03"},
         {"thigh_r", "pelvis"}, {"VB hand_r", "root"}, {"ik_hand_r", "root"}, {"ik_foot_r", "root"}, {"Brust_L", "spine_03"}, {"Butt_R", "pelvis"}, {"skirt_01", "pelvis"}};
@@ -79,6 +80,7 @@ struct Host {
         things[CameraManager] = {"camera_manager", {{"_shake", 1.0}}};
         things[PlayerHealth] = {"health", {{"_health", 1.0}, {"_dead", false}}};
         hair = make("mesh", {{"OverlayMaterial", object(make("material"))}, {"_materials", Json::array({object(make("material")), object(make("material"))})}});
+        crown = make("mesh", {{"OverlayMaterial", nullptr}, {"_materials", Json::array({object(make("material"))})}});
     }
     uint64_t add_character(const char* team, cine::Vec3 at = {300, 0, 100}) {
         Json props{{"bHidden", false}, {"Team", {{"TagName", team}}}, {"_collision", true}, {"_boss", nullptr}, {"_pos", vec(at)}};
@@ -150,7 +152,11 @@ struct Host {
         Thing& t = it->second;
         auto flag = [&](const char* name) -> Json& { return t.props[name]; };
         auto drop = [](Json& list, auto&& match) { for (size_t i = list.size(); i-- > 0;) if (match(list[i])) list.erase(i); };
-        if (fn == "K2_GetComponentsByClass") return ret(t.kind == "pawn" ? Json::array({object(PlayerMesh), object(hair)}) : Json::array({t.props.at("Mesh")}));
+        if (fn == "K2_GetComponentsByClass") {
+            const bool skinned = things.at(id_of(a.at("ComponentClass"))).kind.ends_with("SkinnedMeshComponent");
+            if (t.kind == "pawn") return ret(skinned ? Json::array({object(PlayerMesh), object(hair)}) : Json::array({object(crown)}));
+            return ret(skinned && t.props.contains("Mesh") ? Json::array({t.props.at("Mesh")}) : Json::array());
+        }
         if (fn == "GetAttachedActors") { out = Json{{"OutActors", t.props.contains("_weapon") ? Json::array({t.props["_weapon"]}) : Json::array()}}; return true; }
         if (fn == "K2_GetActorLocation" && t.props.contains("_pos")) return ret(t.props["_pos"]);
         if (fn == "IsDeadOrDying") return ret(flag("_dead"));
@@ -728,7 +734,8 @@ int main(int argc, char** argv) {
             expect(camera_component().props["_blendables"].size() == 2, "the two frame passes sit on CINE's camera");
             until(start + 5);     // clay came in at 2.4 s with a 1.4 s wipe
             expect(has(parent_of(h.prop(Host::PlayerMesh, "_materials")[0]), "M_Cine_Clay"), "clay is on her mesh");
-            expect(has(parent_of(h.prop(h.hair, "_materials")[1]), "M_Cine_Clay"), "and on her other skinned parts (hair, garments)");
+            expect(has(parent_of(h.prop(h.hair, "_materials")[1]), "M_Cine_Clay") && has(parent_of(h.prop(h.crown, "_materials")[0]), "M_Cine_Clay"),
+                   "and on her other parts (hair, garments, static accessories)");
             expect(h.mpc.value("WipeTo", 0.0) == 1.0 && h.mpc.contains("WipeT0"), "the wipe is driven by numbers written once");
             until(start + 9);     // clay + wireframe at 6.4 s
             expect(has(parent_of(h.prop(Host::PlayerMesh, "OverlayMaterial")), "M_Cine_Wire") && has(parent_of(h.prop(h.hair, "OverlayMaterial")), "M_Cine_Wire"), "wireframe is the overlay on every part");
@@ -738,13 +745,15 @@ int main(int argc, char** argv) {
                 for (int i = 0; i < 20; ++i) r.ext->render(&r.frame);
                 expect(h.requests - calls == 20, "a frame of labels is one host call: " + std::to_string(h.requests - calls) + " for 20 frames");
             }
-            until(start + 13.5);  // wireframe + skeleton at 10.8 s
-            expect(h.prop(Host::PlayerMesh, "_materials") == originals, "clay is off: her own materials are back");
+            until(start + 13.5);  // clay + skeleton at 10.8 s
+            expect(has(parent_of(h.prop(Host::PlayerMesh, "_materials")[0]), "M_Cine_Clay") && h.prop(Host::PlayerMesh, "OverlayMaterial").is_null(),
+                   "the skeleton shows over clay, wireframe gone");
             expect(h.param_count("M_Cine_XRay", "Show", 1.0) == 1, "the skeleton layer is the one bone layer showing");
             until(start + 25);    // collision + capsule at 22.8 s
             size_t shapes = 0;
             for (const auto id : h.components) if (h.prop(id, "_hidden") == false) ++shapes;
             expect(shapes == 3 && h.prop(Host::PlayerCapsule, "bHiddenInGame") == false, "physics bodies and the capsule show");
+            expect(h.prop(Host::PlayerMesh, "_materials") == originals, "clay is off: her own materials are back");
             expect(h.prop(Host::PlayerMesh, "OverlayMaterial").is_null() && parent_of(h.prop(h.hair, "OverlayMaterial")).empty() && !h.prop(h.hair, "OverlayMaterial").is_null(),
                    "wireframe is off again, and a part that had its own overlay has it back");
             until(start + 29.5);  // base colour at 26.8 s

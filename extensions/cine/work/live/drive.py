@@ -35,8 +35,12 @@ def model():
     return req({'op': 'model', 'extension': CINE})
 
 
+def controls():
+    return {c['id']: c for section in model().get('sections', []) for c in section.get('controls', [])}
+
+
 def values():
-    return model()['values']
+    return {key: c.get('value') for key, c in controls().items()}
 
 
 def event(control, value=None):
@@ -56,8 +60,8 @@ def grab(name):
             print(f'  (no screenshot {name}: game window not on screen)')
             return
         (x, y), (w, h) = game[0]['at'], game[0]['size']
-        path = OUT / f'{STAMP}-{name}.png'
-        subprocess.run(['grim', '-g', f'{x},{y} {w}x{h}', str(path)], check=True)
+        path = OUT / f'{STAMP}-{name}.jpg'
+        subprocess.run(['grim', '-t', 'jpeg', '-q', '85', '-g', f'{x},{y} {w}x{h}', str(path)], check=True)
         print(f'  screenshot: {path.name}')
     except Exception as error:
         print(f'  (no screenshot {name}: {error})')
@@ -80,7 +84,7 @@ def show(*keys):
 
 
 def enter():
-    if model().get('enabled', {}).get('enter', True):   # the Enter button is off once inside
+    if controls().get('enter', {}).get('enabled', True):   # the Enter button is off once inside
         event('enter')
         time.sleep(0.6)
 
@@ -93,17 +97,19 @@ def roll(preset, breakdown='off', shots_every=2.0, label='take'):
     before = cost()
     began = time.monotonic()
     event('take')
-    last, n, rolling = '', 0, False
+    last, rolling, rolled_at, next_shot = '', False, 0.0, 0.0
     while time.monotonic() - began < 140:
         time.sleep(0.25)
         status = values().get('status', '')
         if status != last:
             print(f'  {time.monotonic() - began:5.1f}s  {status}')
             last = status
-        rolling = rolling or 'Rolling' in status
-        if rolling and time.monotonic() - began >= n * shots_every:
-            grab(f'{label}-{n:02d}')
-            n += 1
+        if not rolling and 'Rolling' in status:
+            rolling, rolled_at = True, time.monotonic()
+        if rolling and time.monotonic() - rolled_at >= next_shot:   # named by seconds into the take
+            at = time.monotonic() - rolled_at
+            grab(f'{label}-t{at:05.1f}')
+            next_shot = at + shots_every
         if rolling and ('finished' in status or 'ended' in status or 'cancel' in status or 'stopped' in status or 'Could not' in status):
             break
     after = cost()
@@ -117,7 +123,20 @@ def roll(preset, breakdown='off', shots_every=2.0, label='take'):
 def main():
     args = sys.argv[1:] or ['state']
     what = args[0]
-    if what == 'state':
+    if what == 'wait':   # until the save is loaded: a real shell, not the main menu character
+        deadline = time.monotonic() + 3600
+        while time.monotonic() < deadline:
+            try:
+                p = cssx.request(cssx.GAME, {'op': 'engine', 'request': {'op': 'player'}}, 8).get('result') or {}
+                if p.get('shell') not in (None, 'None') and 'MainMenu' not in json.dumps(p.get('pawn', {})):
+                    time.sleep(6)   # let the load-in finish
+                    print('in the world as', p.get('shell'))
+                    return
+            except Exception:
+                pass
+            time.sleep(4)
+        print('timeout waiting for the world')
+    elif what == 'state':
         print(json.dumps(req({'op': 'status'}), indent=1)[:600])
         print(json.dumps(values(), indent=1))
     elif what == 'scene':

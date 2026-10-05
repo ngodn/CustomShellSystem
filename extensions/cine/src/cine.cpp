@@ -147,10 +147,11 @@ int Extension::render(const CssxFrame* f) {
     else if (mode_ == Mode::Recording) o.help = "CINE   recording your route: walk it, then stand still for 3 s (F9 stops)";
     if (mode_ == Mode::Countdown && take_) o.countdown = "CINE  " + std::to_string(int(std::ceil(std::max(0.0, take_->countdown))));
     if (mode_ == Mode::Running || mode_ == Mode::Preparing) o.visible = false;   // nothing of CINE in the recording
+    if (frame_.in_menu) o.visible = false;                                       // nor over a menu
     guides_.update(*f, o);
     // Breakdown labels are part of the picture, so they stay on during the take. One host call
     // a frame: where the camera is. The rest is the tick's samples and plain maths.
-    if (mode_ == Mode::Running && labels_live_ && lens_.ok) {
+    if (mode_ == Mode::Running && labels_live_ && lens_.ok && !frame_.in_menu) {
         label_age_ += frame_.seconds;
         callout_targets_.clear();
         try {
@@ -468,9 +469,9 @@ std::vector<Timeline::Reveal> Extension::reel(double total) const {
     const std::pair<double, std::pair<LayerSet, double>> steps[]{
         {0.07, {clay, 1.2}},
         {0.17, {clay | wire, 1.2}},
-        {0.29, {bones, 1.2}},
-        {0.40, {bones | bit(Layer::VirtualBones) | bit(Layer::IkBones), 0.9}},
-        {0.50, {bones | bit(Layer::Springs), 0.9}},
+        {0.29, {clay | bones, 1.2}},
+        {0.40, {clay | bones | bit(Layer::VirtualBones) | bit(Layer::IkBones), 0.9}},
+        {0.50, {clay | bones | bit(Layer::Springs), 0.9}},
         {0.60, {bit(Layer::Collision) | bit(Layer::Capsule), 0.8}},
         {0.70, {bit(Layer::BaseColor), 1.2}},
         {0.78, {bit(Layer::Normals), 1.0}},

@@ -15,11 +15,15 @@ class HudService {
         engine::WeakObject widget, slot;
         uint8_t kind=0; uintptr_t owner=0;
         float tx=1e30f,ty=1e30f,sx=1e30f,sy=1e30f,px=1e30f,py=1e30f,angle=1e30f,opacity=1e30f;
+        float rx=1e30f,ry=1e30f,rw=1e30f,rh=1e30f,rax=1e30f,ray=1e30f;   // last rect sent to the slot
+        int32_t rz=INT32_MIN; bool anchored=false;
         int8_t visible=-1;
     };
     std::map<uint64_t,Layer> layers_;
     std::map<std::wstring,engine::WeakObject> textures_;
     engine::WeakObject hud_,tree_,overlay_;
+    engine::WeakObject screen_;                       // canvas added to the viewport on first use (CSSX_LAYER_SCREEN)
+    bool screen_failed_=false;                        // one attempt per scene
     engine::WeakObject pc_;
     uint64_t next_layer_=1;
     uint32_t generation_=0;
@@ -35,6 +39,7 @@ class HudService {
     void drop_scene();
     Layer* find_layer(uint64_t id);
     engine::UObject* parent_canvas(uint64_t parent);
+    engine::UObject* screen_canvas();
 public:
     HudService();
     ~HudService();

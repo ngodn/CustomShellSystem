@@ -23,18 +23,49 @@ UObject* first_canvas(UObject* widget,int depth) {
     }
     return nullptr;
 }
+// FGameViewportWidgetSlot: full-screen anchors, no offsets, removed with its world.
+struct ViewportSlot { Anchors anchors{{0,0},{1,1}}; Margin offsets{0,0,0,0}; Vec2 alignment{0,0}; int32_t z_order=0; uint8_t auto_remove=1; uint8_t padding[3]{}; };
 HudService* g_hud=nullptr;
 }
 HudService::HudService() { g_hud=this; }
 HudService::~HudService() { if(g_hud==this) g_hud=nullptr; }
-void HudService::drop_scene() { layers_.clear(); overlay_.Reset(); tree_.Reset(); hud_.Reset(); }
+void HudService::drop_scene() {
+    if(auto* screen=screen_.Get()) { try { invoke(screen,L"RemoveFromParent"); } catch(...) {} }
+    layers_.clear(); overlay_.Reset(); screen_.Reset(); screen_failed_=false; tree_.Reset(); hud_.Reset();
+}
 HudService::Layer* HudService::find_layer(uint64_t id) {
     auto it=layers_.find(id); if(it==layers_.end()) return nullptr;
     if(!it->second.widget.Get()) { layers_.erase(it); return nullptr; }
     return &it->second;
 }
+// A canvas of our own in the game viewport, beside the game's HUD widget rather than inside
+// it: its layers keep drawing when a mod (or the game) hides that HUD. It lives in the HUD's
+// widget tree like the overlay, so it has the same world and lifetime, and the viewport
+// applies the same DPI scale, so both roots share one coordinate space.
+UObject* HudService::screen_canvas() {
+    if(auto* existing=screen_.Get()) return existing;
+    UObject* tree=tree_.Get();
+    if(!tree || screen_failed_) return nullptr;
+    try {
+        Call get(find_cached(L"/Script/Engine.Default__SubsystemBlueprintLibrary"),L"GetEngineSubsystem",2);
+        get.set(L"Class",find(L"/Script/UMG.GameViewportSubsystem")); get.run();
+        UObject* subsystem=get.get<UObject*>();
+        if(!subsystem) throw std::runtime_error("the viewport subsystem is missing");
+        UObject* canvas=construct(L"/Script/UMG.CanvasPanel",tree);
+        invoke(canvas,L"SetVisibility",L"InVisibility",VIS_HITTEST_INVISIBLE);
+        Call add(subsystem,L"AddWidget",3); add.set(L"Widget",canvas); add.set(L"Slot",ViewportSlot{}); add.run();
+        if(!add.get<bool>()) throw std::runtime_error("the viewport refused the widget");
+        screen_=canvas;
+        return canvas;
+    } catch(const std::exception& e) {
+        screen_failed_=true;   // callers fall back to the HUD root
+        if(log_) log_(std::string("HUD screen root unavailable: ")+e.what());
+        return nullptr;
+    }
+}
 UObject* HudService::parent_canvas(uint64_t parent) {
     if(parent==0) return overlay_.Get();
+    if(parent==CSSX_LAYER_SCREEN) return screen_canvas();
     auto* layer=find_layer(parent); return layer?layer->widget.Get():nullptr;
 }
 void HudService::release() {
@@ -183,11 +214,13 @@ void HudService::set_brush(uint64_t id,uint64_t texture) {
 }
 void HudService::set_rect(uint64_t id,float x,float y,float w,float h,float ax,float ay,int32_t z) {
     auto* layer=find_layer(id); UObject* slot=layer?layer->slot.Get():nullptr; if(!slot) return;
-    invoke(slot,L"SetAnchors",L"InAnchors",Anchors{{0,0},{0,0}});
-    invoke(slot,L"SetAlignment",L"InAlignment",Vec2{ax,ay});
-    invoke(slot,L"SetPosition",L"InPosition",Vec2{x,y});
-    invoke(slot,L"SetSize",L"InSize",Vec2{w,h});
-    invoke(slot,L"SetZOrder",L"InZOrder",z);
+    // Only what changed goes to the slot: a layer that moves every frame costs one or two
+    // calls, and one that stands still costs none.
+    if(!layer->anchored) { invoke(slot,L"SetAnchors",L"InAnchors",Anchors{{0,0},{0,0}}); layer->anchored=true; }
+    if(std::abs(layer->rax-ax)>1e-4f || std::abs(layer->ray-ay)>1e-4f) { invoke(slot,L"SetAlignment",L"InAlignment",Vec2{ax,ay}); layer->rax=ax; layer->ray=ay; }
+    if(std::abs(layer->rx-x)>1e-3f || std::abs(layer->ry-y)>1e-3f) { invoke(slot,L"SetPosition",L"InPosition",Vec2{x,y}); layer->rx=x; layer->ry=y; }
+    if(std::abs(layer->rw-w)>1e-3f || std::abs(layer->rh-h)>1e-3f) { invoke(slot,L"SetSize",L"InSize",Vec2{w,h}); layer->rw=w; layer->rh=h; }
+    if(layer->rz!=z) { invoke(slot,L"SetZOrder",L"InZOrder",z); layer->rz=z; }
 }
 void HudService::set_translation(uint64_t id,float x,float y) {
     auto* layer=find_layer(id); if(!layer) return;
@@ -236,6 +269,7 @@ void HudService::set_clip(uint64_t id,int32_t clip) { auto* layer=find_layer(id)
 void HudService::set_anchor(uint64_t id,float minx,float miny,float maxx,float maxy) {
     auto* layer=find_layer(id); UObject* slot=layer?layer->slot.Get():nullptr; if(!slot) return;
     invoke(slot,L"SetAnchors",L"InAnchors",Anchors{{minx,miny},{maxx,maxy}});
+    layer->anchored=false;   // the next set_rect puts the top-left anchors back, as it always has
 }
 void HudService::minimap_unsupported() { if(!minimap_warned_ && log_) { minimap_warned_=true; log_("hud.minimap_update is not available in standalone CSSX; the call is ignored"); } }
 Json HudService::diagnostics() const { return {{"layers",layers_.size()},{"textures",textures_.size()},{"generation",generation_},{"overlay",overlay_.Get()!=nullptr}}; }

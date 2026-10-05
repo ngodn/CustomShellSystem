@@ -4,7 +4,7 @@
   "name": "Breakdown Turntable",
   "kind": "turntable",
   "duration": 40,
-  "description": "Two slow circles around her while the picture is taken apart layer by layer: clay, wireframe, skeleton, virtual and IK bones, spring bones, collision, then the frame passes, and back to the final image. Set Breakdown track to From the preset.",
+  "description": "Two slow circles around her while the picture is taken apart layer by layer: clay, wireframe, skeleton, virtual and IK bones, spring bones, physics bodies, then the frame passes, and back to the final image. Set Breakdown track to From the preset.",
   "keys": [
     {
       "at": 0.0,
@@ -100,7 +100,7 @@
       {
         "at": 0.27,
         "layers": [
-          "wireframe",
+          "clay",
           "skeleton"
         ],
         "wipe": 1.4
@@ -108,6 +108,7 @@
       {
         "at": 0.37,
         "layers": [
+          "clay",
           "skeleton",
           "virtual_bones",
           "ik_bones",
@@ -118,6 +119,7 @@
       {
         "at": 0.47,
         "layers": [
+          "clay",
           "skeleton",
           "springs"
         ],

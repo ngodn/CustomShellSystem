@@ -1,5 +1,6 @@
 #include "guides.hpp"
 #include <algorithm>
+#include <iterator>
 
 namespace cine {
 namespace {
@@ -29,10 +30,15 @@ Rect guide_opening(double vw, double vh, double aspect) {
 
 void Guides::build() {
     if (!hud_ || built_) return;
-    for (auto& b : bars_) b = hud_->image(context_, 0);
-    for (auto& b : border_) b = hud_->image(context_, 0);
-    help_ = hud_->text(context_, 0);
-    count_ = hud_->text(context_, 0);
+    // On the screen itself: CINE hides the game's HUD widget in Cine World, and layers inside
+    // it would go with it. An older CSSX has no screen root; then the HUD root it is.
+    CssxLayer root = CSSX_LAYER_SCREEN;
+    bars_[0] = hud_->image(context_, root);
+    if (!bars_[0]) { root = 0; bars_[0] = hud_->image(context_, root); }
+    for (size_t i = 1; i < std::size(bars_); ++i) bars_[i] = hud_->image(context_, root);
+    for (auto& b : border_) b = hud_->image(context_, root);
+    help_ = hud_->text(context_, root);
+    count_ = hud_->text(context_, root);
     for (auto b : bars_) if (b) hud_->set_color(context_, b, 0, 0, 0, 0.62f);
     for (auto b : border_) if (b) hud_->set_color(context_, b, 1, 1, 1, 0.55f);
     if (help_) { hud_->set_font(context_, help_, 15); hud_->set_color(context_, help_, 1, 1, 1, 0.85f); }

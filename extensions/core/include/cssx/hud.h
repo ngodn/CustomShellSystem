@@ -14,6 +14,10 @@ extern "C" {
 #endif
 
 typedef uint64_t CssxLayer;   /* opaque; 0 means invalid. Parent 0 = HUD root. */
+/* Parent for layers that sit on the screen itself, not inside the game's HUD widget, so they
+ * still draw while the game HUD is hidden (CSSX 1.3.1+). Same coordinates as the HUD root.
+ * An older CSSX returns 0 for it: fall back to parent 0. */
+#define CSSX_LAYER_SCREEN ((CssxLayer)0xFFFFFFFFFFFFFFFFull)
 
 typedef struct CssxFrame {
     uint32_t abi;
