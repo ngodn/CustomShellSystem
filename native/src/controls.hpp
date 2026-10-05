@@ -184,6 +184,8 @@ struct Customization {
     std::map<std::string,ColorTint> tints;   // keyed by group name: "outfit" or "body"
     // The player's Ground height, in cm (-10..10). Unset: the variant's ground_offset_cm.
     std::optional<double> ground_offset_cm;
+    // Stable optional-library identity. Empty restores the outfit's original face.
+    std::string expression;
     static Customization parse(const nlohmann::json&);
     nlohmann::json json() const;
     bool operator==(const Customization&) const = default;

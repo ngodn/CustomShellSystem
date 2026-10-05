@@ -663,6 +663,10 @@ Customization Customization::parse(const Json& j) {
     if(!j.is_object()) throw std::runtime_error("Invalid saved settings");
     result.palette=j.value("palette",std::string("original"));
     if(!valid_id(result.palette)) throw std::runtime_error("Invalid saved palette");
+    result.expression=j.value("expression",std::string{});
+    if(!result.expression.empty() && (result.expression.size()>96 || !valid_id(result.expression) ||
+        result.expression=="original" || result.expression=="off"))
+        throw std::runtime_error("Invalid saved facial expression");
     auto values=j.value("values",Json::object());
     if(!values.is_object() || values.size()>max_customization_controls) throw std::runtime_error("Invalid saved setting count");
     for(const auto& [id,v]:values.items()) {
@@ -698,6 +702,7 @@ Json Customization::json() const {
         out["tints"]=std::move(saved);
     }
     if(ground_offset_cm) out["ground_offset_cm"]=*ground_offset_cm;
+    if(!expression.empty()) out["expression"]=expression;
     return out;
 }
 Customization compatible_values(const ControlSet& options,const Customization& source) {
@@ -714,6 +719,7 @@ Customization compatible_values(const ControlSet& options,const Customization& s
                        [&](const auto& c){return !c.scalar && control_group_name(c.group)==group;}))
             result.tints[group]=tint;
     result.ground_offset_cm=source.ground_offset_cm;   // a placement, not tied to any part
+    result.expression=source.expression;
     return result;
 }
 const char* control_kind_name(ControlKind kind) {
@@ -737,10 +743,9 @@ SpringTuning spring_tuning(float frequency,float damping_ratio) {
     return {w*w,2*double(damping_ratio)*w};
 }
 const char* control_group_name(ControlGroup group) { return group==ControlGroup::Body?"body":"outfit"; }
-// A palette is a look, not a reset. It takes over the parts it sets and the tint of the
-// groups those parts are in, and leaves everything else alone, so a custom skin survives
-// changing the dress. `original` is the exception: it means no dye at all, and nothing
-// may survive it. See docs/control-convention.md, rule 1.
+// Named palettes replace their declared parts and those groups' tints. Original
+// restores all authored part values, tint and placement. Expression selection
+// survives both. See docs/control-convention.md, rule 1.
 Customization choose_palette(const ControlSet& options,const Customization& current,const std::string& palette) {
     Customization result=current;
     result.palette=palette;

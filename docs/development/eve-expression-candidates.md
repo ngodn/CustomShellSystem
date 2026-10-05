@@ -116,6 +116,18 @@ Runtime mesh activation, saved expression selection, CSS/CINE controls and
 ownership/restoration are still unfinished. The installed performance trial has
 not been replaced by this offline work.
 
+The next data-layer step is implemented: optional `Customization.expression`
+stores a stable expression ID in ordinary settings and profile snapshots. Empty
+is the original face and is omitted from serialized old/default settings.
+Palette changes preserve expression selection. A missing library preserves the
+saved identity while `Catalog::facial_match` returns no adapter; an unrecognized
+variant cannot borrow another variant's facial mesh. The selection/profile
+regressions bring the real-catalog facial checks to 56, with all 22 host suites
+still passing. This stores intent only; runtime activation and UI remain next.
+The Windows CSS core also builds successfully. Its existing unused `row` warning
+in `extension_data.cpp` remains; the expression changes introduced no new warning.
+This binary is not installed. The last process check still found the game closed.
+
 Source Neutral has seven nonzero weights. Keep it distinct from Reset, which
 must restore the preceding face state while leaving body/hand morphs alone.
 

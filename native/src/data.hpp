@@ -146,6 +146,7 @@ struct Catalog {
     static Catalog load(const fs::path&,const fs::path& paks={},const fs::path& cache={});
     std::string empty_message() const;
     const Variant* find(const std::string& outfit, const std::string& variant) const;
+    FacialMatch facial_match(const std::string& outfit,const std::string& variant) const;
     bool compatible(const std::string& outfit, const std::string& shell) const;
     std::vector<const Outfit*> display_order(const std::string& equipped,const std::set<std::string>& favorites) const;
     const std::vector<AnimationOption>& animation_options(const std::string& outfit,

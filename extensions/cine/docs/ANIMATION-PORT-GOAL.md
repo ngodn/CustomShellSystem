@@ -345,3 +345,12 @@ Next implement owned expression activation and restoration, persisted selections
 and CSS/CINE controls. Keep the installed performance trial stable until its live
 result arrives. No facial expression has been installed or accepted in game.
 The other unfinished animation and delivery work above remains in scope.
+
+Also added optional `Customization.expression` persistence and catalog lookup by
+the actual outfit variant and verified container revision. Old/default settings
+are unchanged; profile snapshots retain the selected ID through missing-pack
+fallback, and palette changes preserve it. All 22 host suites pass; 56 checks
+pass against the actual facial catalog. Runtime activation and menu controls are
+still pending, so no expression has been applied to the game.
+The Windows core builds successfully. It is not installed; the last process check
+found the game closed and the previously installed performance trial unchanged.

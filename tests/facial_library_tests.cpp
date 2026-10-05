@@ -95,6 +95,34 @@ int main(int argc,char** argv) {
         rejects([&]{Catalog::load(root);});
         fs::remove(root/"second.css.json");
         expect(Catalog::load(root).animation_libraries.size()==1,"Removing conflicting library did not recover discovery");
+        const Json outfit={{"id","css.eve"},{"name","Eve"},{"shells",{"CharacterId.Player.Shell.Genessa"}},
+            {"variants",{{{"id","one"},{"name","One"},{"mesh",source}},
+                         {{"id","two"},{"name","Two"},{"mesh","/Game/CSS/Eve/SK_Other.SK_Other"}}}}};
+        atomic_json(root/"outfit.css.json",{{"schema",1},{"outfits",{outfit}}},false);
+        auto catalog=Catalog::load(root);
+        expect(!catalog.facial_match("css.eve","one").rig,"Authoring-only outfit acquired installed revision");
+        catalog.outfit_revisions["css.eve"]={hash,1234};
+        expect(catalog.facial_match("css.eve","one").adapter->target_mesh==target,"Variant face resolution failed");
+        expect(!catalog.facial_match("css.eve","two").rig,"Unmapped variant acquired another variant's face");
+        expect(!catalog.facial_match("css.eve","missing").rig,"Missing variant acquired facial compatibility");
+        Customization saved;
+        saved.expression="css.face.eve.wink";
+        saved.ground_offset_cm=2.; saved.values["chest"]={.6f,0,0,1};
+        expect(Customization::parse(saved.json())==saved,"Expression serialization changed body settings");
+        expect(Customization::parse(Json::object()).expression.empty(),"Old settings gained a facial override");
+        expect(!Customization{}.json().contains("expression"),"Default settings gained unnecessary facial data");
+        expect(compatible_values({},saved).expression==saved.expression,"Missing expression library erased a saved selection");
+        expect(restore_customization({},saved.json()).expression==saved.expression,"Snapshot restore lost optional expression");
+        expect(choose_palette({},saved,"original").expression==saved.expression,"Palette reset erased facial selection");
+        for(const auto invalid_id:{"original","off","../wink","Wink now"})
+            rejects([&]{Customization::parse({{"expression",invalid_id}});});
+        rejects([&]{Customization::parse({{"expression",std::string(97,'a')}});});
+        State state;
+        state.selections["CharacterId.Player.Shell.Genessa"]={"css.eve","one",saved};
+        save_profile_snapshot(state,"face.1");
+        const auto restored=State::parse(state.json());
+        expect(restored.presets.at("face.1").selections.at("CharacterId.Player.Shell.Genessa").custom==saved,
+               "Profile roundtrip lost the face or body settings");
         if(argc==2) {
             const auto actual=FacialRig::parse(read_json(argv[1]));
             expect(actual.morphs.size()==99 && actual.expressions.size()==21 && actual.adapters.size()==6,

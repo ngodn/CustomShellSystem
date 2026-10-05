@@ -469,6 +469,20 @@ const Variant* Catalog::find(const std::string& outfit, const std::string& varia
         for (const auto& v : o.variants) if (v.id == variant) return &v;
     return nullptr;
 }
+FacialMatch Catalog::facial_match(const std::string& outfit,const std::string& variant) const {
+    const auto* selected=find(outfit,variant);
+    const auto revision=outfit_revisions.find(outfit);
+    if(!selected || revision==outfit_revisions.end()) return {};
+    FacialMatch result;
+    for(const auto& library:animation_libraries) {
+        const auto match=resolve_facial_rig(library.faces,outfit,revision->second.toc_sha256,
+                                           revision->second.bulk_bytes,selected->mesh);
+        if(!match.rig) continue;
+        if(result.rig) throw std::runtime_error("Conflicting facial mesh adapters");
+        result=match;
+    }
+    return result;
+}
 const std::vector<AnimationOption>& Catalog::animation_options(const std::string& outfit,
     const std::string& variant,AnimationSlot slot) const {
     const auto& bundled=bundled_animation_options(outfit,variant,slot);
