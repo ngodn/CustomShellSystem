@@ -760,8 +760,8 @@ int main(int argc, char** argv) {
             int waited = 0;
             for (; waited < 60 && !has(r.status(), "Rolling"); ++waited) { const auto c = h.requests; r.step(); worst = std::max(worst, h.requests - c); }
             expect(has(r.status(), "Rolling"), "the take rolls once the layers are built: " + r.status());
-            expect(h.components_made == 20, "9 bone sticks, 5 markers, 2 sockets, 3 physics shapes and the material locker are built, got " + std::to_string(h.components_made));
-            expect(h.materials_locked == 7, "her six slot materials and the hair's own overlay are held for the take, got " + std::to_string(h.materials_locked));
+            expect(h.components_made == 19, "9 bone sticks, 5 markers, 2 sockets and 3 physics shapes are built, got " + std::to_string(h.components_made));
+
             expect(worst <= 200, "building never spends more than a bounded slice per tick: " + std::to_string(worst));
             expect(has(r.status(), "Look track off"), "the look track steps aside for a breakdown");
             expect(h.css_applies.empty(), "and no look is applied");
@@ -772,6 +772,7 @@ int main(int argc, char** argv) {
             expect(camera_component().props["_blendables"].size() == 2, "the two frame passes sit on CINE's camera");
             until(start + 5);     // clay came in at 2.4 s with a 1.4 s wipe
             expect(has(parent_of(h.prop(Host::PlayerMesh, "_materials")[0]), "M_Cine_Clay"), "clay is on her mesh");
+            expect(h.materials_locked >= 7, "her six slot materials and the hair's own overlay are held while clay is on, got " + std::to_string(h.materials_locked));
             expect(has(parent_of(h.prop(h.hair, "_materials")[1]), "M_Cine_Clay") && has(parent_of(h.prop(h.crown, "_materials")[0]), "M_Cine_Clay"),
                    "and on her other parts (hair, garments, static accessories)");
             expect(h.mpc.value("WipeTo", 0.0) == 1.0 && h.mpc.contains("WipeT0"), "the wipe is driven by numbers written once");
@@ -887,6 +888,22 @@ int main(int argc, char** argv) {
             expect(repainted, "CSS is asked to paint her look again");
             expect(has(r.status(), "repainted"), "and the status says so: " + r.status());
         }
+        {   // Her materials are replaced between preparing and the clay step (a look worn again makes new
+            // instances): what goes back is what was there when the clay came, not what was there earlier.
+            Rig r(dir); r.host.populate(); auto& h = r.host;
+            r.step();
+            r.ext->event({{"id", "preset"}, {"value", "pose-glide-10"}});
+            r.ext->event({{"id", "breakdown"}, {"value", "reel"}});
+            r.ext->event({{"id", "countdown"}, {"value", 0}});
+            r.ext->event({{"id", "enter"}});
+            r.press("F8");
+            for (int i = 0; i < 80 && !has(r.status(), "Rolling"); ++i) r.step();
+            const Json fresh = Json::array({object(h.make("material")), object(h.make("material")), object(h.make("material"))});
+            h.prop(Host::PlayerMesh, "_materials") = fresh;   // before the clay step at 0.7 s
+            r.steps(125);
+            expect(h.prop(Host::PlayerMesh, "_materials") == fresh, "the materials she had when the clay came are the ones put back");
+            expect(!has(r.status(), "repainted"), "and nothing needed repainting: " + r.status());
+        }
         {   // The lock-on target can be broken down with her.
             Rig r(dir); r.host.populate(); auto& h = r.host;
             const auto foe = h.add_character("Team.Hostile.Undead");
@@ -901,7 +918,7 @@ int main(int argc, char** argv) {
             r.ext->event({{"id", "enter"}});
             r.press("F8");
             for (int i = 0; i < 80 && !has(r.status(), "Rolling"); ++i) r.step();
-            expect(h.components_made == 2 * 18, "both characters get their pieces: " + std::to_string(h.components_made));
+            expect(h.components_made == 2 * 17, "both characters get their pieces: " + std::to_string(h.components_made));
             r.steps(25);
             expect(h.things.at(id_of(h.prop(h.part(foe, "Mesh"), "_materials")[0])).kind == "mid", "the target is in clay too");
             expect(h.projections == 0, "no labels when they are off");

@@ -246,7 +246,6 @@ void Breakdown::begin(const Json& pawn, const Json& camera, LayerSet needed, std
             for (auto& skin : skins_) {
                 try { skin.overlay_before = host_.get(skin.component, "OverlayMaterial"); } catch (...) { skin.overlay_before = nullptr; }
                 if (ours(skin.overlay_before)) { skin.overlay_before = nullptr; repaint_ = true; }   // left by a take that did not end cleanly
-                keep(skin.overlay_before);
             }
         }
         if (needed_ & (bone_layers | bit(Layer::Collision))) {
@@ -295,8 +294,6 @@ void Breakdown::plan() {
         return BoneKind::Regular;
     };
     auto body_bone = [](BoneKind k) { return k == BoneKind::Regular || k == BoneKind::Spring; };
-    // Her materials first: read and locked before any layer can replace them.
-    if (needed_ & bit(Layer::Clay)) for (size_t i = 0; i < skins_.size(); ++i) queue_.push_back({Work::Skin, i});
     for (size_t i = 0; i < bones_.size(); ++i) {
         const auto& b = bones_[i];
         const double length = std::sqrt(b.local.x * b.local.x + b.local.y * b.local.y + b.local.z * b.local.z);
@@ -389,6 +386,15 @@ void Breakdown::build(const Work& work) {
 // ---------------------------------------------------------------- showing layers
 
 void Breakdown::set_overlay(const Json* material) {
+    // Taking the overlay slot: what each part has there now is what goes back later.
+    if (material && !overlay_ours_) {
+        for (auto& skin : skins_) {
+            try {
+                auto now = host_.get(skin.component, "OverlayMaterial");
+                if (!ours(now)) { skin.overlay_before = is_handle(now) ? now : Json(); keep(skin.overlay_before); }
+            } catch (...) {}
+        }
+    }
     for (auto& skin : skins_) {
         try { call(skin.component, "SetOverlayMaterial", {{"NewOverlayMaterial", material ? *material : skin.overlay_before}}); } catch (...) {}
     }
@@ -435,8 +441,11 @@ void Breakdown::read_skin(Skin& skin) {
 void Breakdown::apply_clay(bool on) {
     if (on == clay_slots_) return;
     if (on) {
+        // Read now, not while the take prepared: the wardrobe mod makes new material
+        // instances each time a look is worn, and putting back older ones leaves it with
+        // materials it does not know (it then refuses every further change, 5 Oct).
         for (auto& skin : skins_) {
-            if (!skin.read) { try { read_skin(skin); } catch (...) { continue; } }
+            try { read_skin(skin); } catch (...) { skin.slots_before.clear(); continue; }
             for (int i = 0; i < int(skin.slots_before.size()); ++i) {
                 try { call(skin.component, "SetMaterial", {{"ElementIndex", i}, {"Material", clay_}}); } catch (...) {}
             }
