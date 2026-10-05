@@ -139,6 +139,12 @@ AnimationLibrary AnimationLibrary::parse(const Json& value) {
         }
         library.entries.push_back(std::move(animation));
     }
+    for(const auto& rig:library.faces) for(const auto& performance:rig.performances) {
+        const auto entry=std::find_if(library.entries.begin(),library.entries.end(),
+            [&](const auto& animation){return animation.id==performance.clip;});
+        if(entry==library.entries.end() || (entry->slot && *entry->slot!=AnimationSlot::Idle))
+            throw std::runtime_error("Facial performance must reference a body sequence in its library");
+    }
     return library;
 }
 const PerformanceAdapter* resolve_performance_adapter(const std::vector<AnimationLibrary>& libraries,

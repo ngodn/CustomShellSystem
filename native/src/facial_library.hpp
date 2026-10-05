@@ -1,4 +1,5 @@
 #pragma once
+#include "facial_performance.hpp"
 #include <nlohmann/json.hpp>
 #include <cstdint>
 #include <map>
@@ -19,8 +20,10 @@ struct FacialRig {
     std::vector<std::string> morphs;
     std::vector<FacialExpression> expressions;
     std::vector<FacialMeshAdapter> adapters;
+    std::vector<FacialPerformance> performances;
     static FacialRig parse(const nlohmann::json&);
     const FacialExpression* find(const std::string&) const;
+    const FacialPerformance* find_performance(const std::string&) const;
     std::map<std::string,float> weights(const std::string&) const;
 };
 struct FacialMatch {

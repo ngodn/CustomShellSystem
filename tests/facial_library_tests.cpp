@@ -33,6 +33,15 @@ int main(int argc,char** argv) {
                 {"skeleton",skeleton},{"source_toc_sha256",hash},{"source_bulk_bytes",uint64_t{1234}}}}}
         };
         auto rig=FacialRig::parse(document);
+        expect(rig.performances.empty() && !rig.find_performance("css.pose"),"Old facial rig acquired performance curves");
+        auto animated=document;
+        const Json performance={{"clip","css.pose"},{"duration",1.},
+            {"curves",{{{"morph","eye_close"},{"keys",{{0.,0.},{1.,1.}}}}}}};
+        animated["performances"]={performance};
+        expect(FacialRig::parse(animated).find_performance("css.pose")->key_count()==2,
+               "Facial rig lost its performance keys");
+        animated["performances"].push_back(performance);
+        rejects([&]{FacialRig::parse(animated);});
         const auto neutral=rig.weights("css.face.eve.neutral");
         expect(neutral.size()==3 && std::abs(neutral.at("Jaw_Left")+.07407111f)<1e-7f,
                "Signed source weights were clamped or lost");
@@ -88,6 +97,16 @@ int main(int argc,char** argv) {
         expect(AnimationLibrary::parse(library).faces.empty(),"Old libraries now require faces");
         library["faces"]={document};
         expect(AnimationLibrary::parse(library).faces[0].expressions.size()==2,"Shared catalog lost expressions");
+        auto animated_library=library;
+        animated_library["faces"][0]["performances"]={performance};
+        expect(AnimationLibrary::parse(animated_library).faces[0].find_performance("css.pose")!=nullptr,
+               "Facial performance could not bind its library's body sequence");
+        animated_library["faces"][0]["performances"][0]["clip"]="css.missing";
+        rejects([&]{AnimationLibrary::parse(animated_library);});
+        animated_library["faces"][0]["performances"][0]["clip"]="css.pose";
+        animated_library["entries"][0]["slot"]="walk";
+        animated_library["entries"][0]["playback"]="loop";
+        rejects([&]{AnimationLibrary::parse(animated_library);});
         library["faces"].push_back(document);
         rejects([&]{AnimationLibrary::parse(library);});
         library["faces"][1]["id"]="css.face.other";
@@ -134,9 +153,10 @@ int main(int argc,char** argv) {
         const auto restored=State::parse(state.json());
         expect(restored.presets.at("face.1").selections.at("CharacterId.Player.Shell.Genessa").custom==saved,
                "Profile roundtrip lost the face or body settings");
-        if(argc==2) {
+        if(argc==2 || argc==3) {
             const auto actual=FacialRig::parse(read_json(argv[1]));
-            expect(actual.morphs.size()==99 && actual.expressions.size()==21 && actual.adapters.size()==6,
+            const auto expected_morphs=argc==3?std::stoul(argv[2]):99;
+            expect(actual.morphs.size()==expected_morphs && actual.expressions.size()==21 && actual.adapters.size()==6,
                    "Audited Eve facial catalog dimensions differ");
             const auto source_neutral=actual.weights("css.eve.face.neutral");
             expect(std::count_if(source_neutral.begin(),source_neutral.end(),[](const auto& pair){return pair.second!=0;})==7,

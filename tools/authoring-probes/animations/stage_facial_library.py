@@ -12,8 +12,11 @@ CONTENT = ROOT / "CSS-eins0fx-collections/tools/CSSAuthoring/Content"
 MODE = os.environ.get("CSS_FACE_STAGE_MODE", "create")
 if MODE not in ("create", "verify") or not WORK.is_relative_to(ROOT / "CustomShellSystem/work/cine-animation-port"):
     raise ValueError("Expected the private animation workspace")
-INPUT = WORK.parent / "facial-export-v1/facial-shapes.json"
-AUDIT = json.loads((WORK.parent / "facial-export-v1/ue-verification.json").read_text())
+INPUT_WORK = Path(os.environ.get("CSS_FACE_INPUT_WORK", str(WORK.parent / "facial-export-v1"))).resolve(strict=True)
+if not INPUT_WORK.is_relative_to(ROOT / "CustomShellSystem/work/cine-animation-port"):
+    raise ValueError("Use a verified export in the private animation workspace")
+INPUT = INPUT_WORK / "facial-shapes.json"
+AUDIT = json.loads((INPUT_WORK / "ue-verification.json").read_text())
 if not AUDIT.get("complete") or len(AUDIT["results"]) != 6:
     raise ValueError("Six verified facial candidates are required")
 
@@ -63,7 +66,7 @@ for item in AUDIT["results"]:
                 raise ValueError("Shared facial binding differs: " + field)
     old = {str(m.get_name()) for m in original.get_editor_property("morph_targets")}
     actual = {str(m.get_name()) for m in target.get_editor_property("morph_targets")}
-    if actual != old | names or len(actual) != 121:
+    if actual != old | names or len(actual) != item["total_morphs"]:
         raise ValueError("Shared facial morph set differs")
     if MODE == "create" and not unreal.EditorAssetLibrary.save_loaded_asset(target, False):
         raise ValueError("Could not save shared facial mesh")

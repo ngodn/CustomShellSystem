@@ -17,8 +17,12 @@ var shapes = JObject.Parse(File.ReadAllText(args[3]));
 if (staging.Value<bool>("complete") != true) throw new InvalidDataException("Incomplete staging");
 var vertexMaps = args.Length == 6 ? JObject.Parse(File.ReadAllText(args[5])) : null;
 if (vertexMaps != null && vertexMaps.Value<bool>("complete") != true) throw new InvalidDataException("Incomplete vertex maps");
-var expected = shapes["morph_targets"]!.Select(item => item.Value<string>("name")!).ToHashSet(StringComparer.Ordinal);
-if (expected.Count != 99) throw new InvalidDataException("Expected the audited 99 Eve facial shapes");
+var shapeNames = shapes["morph_targets"]!.Select(item => item.Value<string>("name")!).ToArray();
+var expected = shapeNames.ToHashSet(StringComparer.Ordinal);
+if (shapeNames.Length is < 1 or > 128 || expected.Count != shapeNames.Length ||
+    shapeNames.Any(string.IsNullOrWhiteSpace) ||
+    shapeNames.Distinct(StringComparer.OrdinalIgnoreCase).Count() != shapeNames.Length)
+    throw new InvalidDataException("Expected a bounded, unique set of audited facial shapes");
 using var provider = new DefaultFileProvider(args[0], SearchOption.TopDirectoryOnly,
     new VersionContainer(EGame.GAME_UE5_6), StringComparer.OrdinalIgnoreCase);
 provider.MappingsContainer = new FileUsmapTypeMappingsProvider(args[1]);

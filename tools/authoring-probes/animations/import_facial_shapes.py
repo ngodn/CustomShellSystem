@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 
 import unreal
@@ -12,6 +13,10 @@ CONTENT = ROOT/'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 if not WORK.is_relative_to(ROOT/'CustomShellSystem/work/cine-animation-port'):
     raise ValueError('Use the animation work directory')
 INPUT = WORK/'facial-shapes.json'
+revision = os.environ.get('CSS_FACE_REVISION', '')
+if revision and not re.fullmatch(r'[A-Za-z0-9]{1,24}', revision):
+    raise ValueError('Invalid facial candidate revision')
+prefix = '/Game/CSS/AnimLab/SK_Face_' + (revision + '_' if revision else '')
 sources = ['/Game/CSS/SeduXtress/SK_BlackPearl2',
            *[f'/Game/CSS/EveTest/SK_{name}' for name in ['PFit14','SFit16','BFit1','KCloth4','ACloth3']]]
 selected=os.environ.get('CSS_FACE_SOURCE')
@@ -31,12 +36,13 @@ def digest(path):
 
 
 protected = {str(disk_path(path)): digest(disk_path(path)) for path in sources}
+protected[str(INPUT)] = digest(INPUT)
 results = []
 report_path=WORK/('ue-import-'+(selected or 'all')+'.json')
 report_path.write_text(json.dumps(dict(protected=protected,results=[],complete=False),indent=2)+'\n')
 try:
     for source_path in sources:
-        target_path = '/Game/CSS/AnimLab/SK_Face_'+source_path.rsplit('/',1)[-1].removeprefix('SK_')
+        target_path = prefix+source_path.rsplit('/',1)[-1].removeprefix('SK_')
         if unreal.EditorAssetLibrary.does_asset_exist(target_path):
             raise ValueError(f'Candidate already exists: {target_path}')
         source = unreal.load_asset(source_path)

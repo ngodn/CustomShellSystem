@@ -10,16 +10,19 @@ WORK = Path(os.environ["CSS_ANIM_WORK"]).resolve(strict=True)
 CONTENT = ROOT.parent / "CSS-eins0fx-collections/tools/CSSAuthoring/Content"
 if not WORK.is_relative_to(ROOT / "work/cine-animation-port"):
     raise ValueError("Use the private animation workspace")
-evidence_path = WORK.parent / "shared-faces-v1/facial-catalog-evidence.json"
-evidence = json.loads(evidence_path.read_text())
-staging = json.loads((WORK.parent / "shared-faces-v1/facial-stage-verify.json").read_text())
+STAGING = Path(os.environ.get("CSS_FACE_MAP_WORK", str(WORK.parent / "shared-faces-v1"))).resolve(strict=True)
+if not STAGING.is_relative_to(ROOT / "work/cine-animation-port"):
+    raise ValueError("Use a verified staging workspace")
+staging = json.loads((STAGING / "facial-stage-verify.json").read_text())
+if not staging.get("complete") or len(staging["results"]) != 6:
+    raise ValueError("Expected six freshly verified shared meshes")
 maps = []
 protected = {}
 for row in staging["results"]:
     package = row["target"]
     source = CONTENT / (package.removeprefix("/Game/") + ".uasset")
     digest = hashlib.sha256(source.read_bytes()).hexdigest()
-    if evidence["protected"].get(str(source)) != digest:
+    if staging["protected"].get(str(source)) != digest:
         raise ValueError("Facial candidate changed since verification: " + package)
     protected[str(source)] = digest
     mesh = unreal.load_asset(package)

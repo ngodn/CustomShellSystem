@@ -35,7 +35,7 @@ std::string folded(std::string name) {
 }
 }
 FacialRig FacialRig::parse(const Json& value) {
-    fields(value,{"id","morphs","expressions","adapters"});
+    fields(value,{"id","morphs","expressions","adapters","performances"});
     FacialRig rig; rig.id=identity(value,"id");
     const auto& morphs=value.at("morphs");
     if(!morphs.is_array() || morphs.empty() || morphs.size()>128) throw std::runtime_error("Invalid facial morph count");
@@ -65,6 +65,19 @@ FacialRig FacialRig::parse(const Json& value) {
         }
         rig.expressions.push_back(std::move(expression));
     }
+    if(value.contains("performances")) {
+        const auto& performances=value.at("performances");
+        if(!performances.is_array() || performances.size()>64)
+            throw std::runtime_error("Invalid facial performance count");
+        std::set<std::string> clips;
+        size_t keys=0;
+        for(const auto& item:performances) {
+            auto performance=FacialPerformance::parse(item,rig.morphs);
+            if(!clips.insert(performance.clip).second || (keys+=performance.key_count())>262144)
+                throw std::runtime_error("Duplicate facial performance or excessive rig key count");
+            rig.performances.push_back(std::move(performance));
+        }
+    }
     const auto& adapters=value.at("adapters");
     if(!adapters.is_array() || adapters.empty() || adapters.size()>32) throw std::runtime_error("Invalid facial adapter count");
     std::set<std::tuple<std::string,std::string,std::string>> sources;
@@ -88,6 +101,10 @@ FacialRig FacialRig::parse(const Json& value) {
 const FacialExpression* FacialRig::find(const std::string& id) const {
     const auto it=std::find_if(expressions.begin(),expressions.end(),[&](const auto& e){return e.id==id;});
     return it==expressions.end()?nullptr:&*it;
+}
+const FacialPerformance* FacialRig::find_performance(const std::string& id) const {
+    const auto it=std::find_if(performances.begin(),performances.end(),[&](const auto& p){return p.clip==id;});
+    return it==performances.end()?nullptr:&*it;
 }
 std::map<std::string,float> FacialRig::weights(const std::string& id) const {
     const auto* expression=find(id);

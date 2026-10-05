@@ -36,7 +36,7 @@ alter the source. `prepare_performance_curves.py` preserves every named key,
 time, value, tangent, flag and extrapolation setting. It rejects mismatched or
 duplicate names, nonfinite data, unordered/out-of-range times and interpolation
 it does not support. Its diagnostic evaluator uses the original linear
-intervals and constant endpoint extrapolation. Six focused tests cover this
+intervals and constant endpoint extrapolation. Nine focused tests cover this
 contract, including immutability and signed/above-one values.
 
 ## Come Closer authoring candidate
@@ -52,6 +52,22 @@ difference is zero; the existing body/hand corrective comparison remains
 0.0000775943 cm. Source hashes remain unchanged. This is a derived JSON export,
 not a recooked or installed update.
 
+The six revised UE candidates have since passed a fresh-process editor
+comparison. They use separate `SK_Face_Performance_*` names, each with 105
+facial shapes plus the 22 preserved body/hand shapes. Geometry, bone bindings,
+materials, physics and post-process bindings passed the existing verifier.
+The protected source files and facial interchange hash are unchanged. Reports:
+`facial-performance-export-v2/ue-import-all.json` and `ue-verification.json`.
+The same six candidates were staged under
+`/Game/CSS/Locomotion/Faces/SK_Face_Performance_*` and cooked successfully.
+Independent cooked readback passes for all six: source geometry, skin weights,
+bindings and the 22 original body/hand morphs match. All 105 facial shapes pass
+the mapped source-delta comparison, including the extra six. Evidence is in
+`shared-faces-v2/cooked-readback-v1.json`, with a separate private probe
+container and source vertex maps. The revision-bound `facial-rig.json` includes
+the 21 static expressions and the exact Come Closer keys. No candidate has been
+installed; animated live comparisons remain pending.
+
 All 195 diagnostic facial samples across the full 19.333334 seconds were
 rendered at 10 samples per second and inspected through ten sheets. Early
 sections are largely neutral; the more visible mouth/tongue and squint motion
@@ -62,6 +78,48 @@ The renderer explicitly allows signed and above-one values and verifies that
 Blender did not clamp a requested weight.
 
 ## Remaining work
+
+The native catalog now accepts optional per-rig `performances`, keyed by the
+body clip's canonical ID. Each performance declares its duration and named
+linear curves as `[seconds, value]` pairs. Parsing rejects missing body clips,
+movement blend spaces, unknown shapes, duplicate curves, malformed keys and
+excessive counts. Old facial catalogs need no changes.
+
+The native sampler takes the existing body clock's position and blend weight,
+plus reusable baseline/output buffers. It preserves signed values and values
+above one, uses constant endpoint extrapolation, and allocates nothing on a
+valid sampling call. Zero blend weight returns the baseline exactly. Tests
+cover shared pause, seek, speed, looping, fade and immediate interruption.
+This is data-layer support, not an installed runtime facial player.
+
+`prepare_performance_curves.py --clip <canonical-id>` emits the native entry
+alongside the complete preserved source metadata. It requires every named
+shape, respects case-insensitive Unreal names while emitting the declared
+shape spelling, enforces runtime bounds and leaves the source keys unchanged.
+The generated Come Closer entry exactly matches the native test corpus.
+
+The real Come Closer corpus compares all source key times and interval
+midpoints against the independent Python evaluator: 320 sample times, 15
+curves and 987 original keys. The comparison tolerance is 0.0000002 in morph
+weight. All 23 portable CSS suites and the Windows core build pass. Evidence:
+`facial-performance-native-v1/comecloser.json`.
+
+Runtime integration must account for Original face using the original outfit
+mesh, which lacks these facial shapes. A performance needs a temporary derived
+mesh without changing saved expression selection. Restore the previous mesh
+and expression on completion, cancellation, failed startup or outfit change.
+Use Appearance's existing morph owner so static expressions and performance
+curves cannot overwrite each other independently.
+
+Epic's [UE 5.6 animation-curve documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/animation-curves-in-unreal-engine?application_version=5.6)
+also describes driving morph targets directly from animation curves with
+matching names and morph-target flags. That path needs an ownership check
+before adoption here: in the installed 5.6.1 engine source,
+`SkeletalMeshComponent.cpp` applies animation curves first and then
+`UpdateMorphTargetOverrideCurves()`. Existing static expression overrides
+therefore need explicit coordination even if curves are baked into sequences.
+The native sampler is independently validated; the final engine write path
+still needs live timing and restoration evidence.
 
 - Trace the missing controls to their source morphs or driver graph. Keep
   their original names and curves until the mapping is measured.

@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+from prepare_performance_curves import native_performance
 
 ROOT = Path(__file__).resolve().parents[3]
 LABELS = {
@@ -23,12 +24,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("work", type=Path)
     parser.add_argument("--readback", type=Path, required=True)
+    parser.add_argument("--shapes", type=Path, help="Verified facial interchange for this cook")
+    parser.add_argument("--performance", action="append", default=[], type=Path,
+                        help="Prepared source curves with a canonical native performance entry")
     args = parser.parse_args()
     work = args.work.resolve(strict=True)
     if not work.is_relative_to(ROOT / "work/cine-animation-port"):
         raise ValueError("Use the private animation workspace")
     paths = [work / "probe/receipt.json", work / "facial-stage-verify.json", args.readback.resolve(strict=True),
-             work.parent / "facial-export-v1/facial-shapes.json"]
+             (args.shapes or work.parent / "facial-export-v1/facial-shapes.json").resolve(strict=True)]
     receipt, staging, readback, shapes = [json.loads(path.read_text()) for path in paths]
     if not staging.get("complete") or not readback.get("passed") or len(readback["results"]) != 6:
         raise ValueError("Fresh editor and cooked readback must pass")
@@ -46,8 +50,10 @@ def main():
     if pairs != {(row["source"], row["target"]) for row in readback["results"]}:
         raise ValueError("Editor and cooked mesh sets differ")
     morphs = sorted(item["name"] for item in shapes["morph_targets"])
-    if len(morphs) != 99 or len(set(morphs)) != 99:
+    if not 1 <= len(morphs) <= 128 or len({name.casefold() for name in morphs}) != len(morphs):
         raise ValueError("Unexpected facial morph names")
+    if readback.get("shapes_sha256") != digest(paths[3]):
+        raise ValueError("Cooked readback used a different facial interchange")
     expressions = []
     found = set()
     for entry in shapes["expressions"]:
@@ -72,6 +78,27 @@ def main():
             "target_mesh": reference(row["target"]), "skeleton": skeleton[len("Skeleton'"):-1],
             "source_toc_sha256": checksum, "source_bulk_bytes": source.with_suffix(".ucas").stat().st_size})
     rig = {"id": "css.eve.face", "morphs": morphs, "expressions": expressions, "adapters": adapters}
+    performances = []
+    identities = set()
+    for curve_path in args.performance:
+        curve_path = curve_path.resolve(strict=True)
+        prepared = json.loads(curve_path.read_text())
+        entry = prepared["performance"]
+        inputs = prepared["inputs"]
+        if inputs.get(str(paths[3])) != digest(paths[3]):
+            raise ValueError("Performance uses a different facial shape set")
+        sources = [Path(path) for path in inputs if Path(path) != paths[3]]
+        if len(sources) != 1 or any(digest(Path(path)) != sha for path, sha in inputs.items()):
+            raise ValueError("Performance source evidence changed")
+        if (native_performance(json.loads(sources[0].read_text()), morphs, entry["clip"]) != entry or
+                entry["clip"] in identities):
+            raise ValueError("Changed or duplicate facial performance")
+        identities.add(entry["clip"])
+        performances.append(entry)
+        protected.update(inputs)
+        protected[str(curve_path)] = digest(curve_path)
+    if performances:
+        rig["performances"] = performances
     with (work / "facial-rig.json").open("x") as file:
         json.dump(rig, file, indent=2, allow_nan=False)
         file.write("\n")

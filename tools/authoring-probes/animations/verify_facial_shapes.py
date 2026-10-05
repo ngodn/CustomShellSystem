@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import unreal
 
@@ -13,12 +14,16 @@ CONTENT=ROOT/'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 sources=['/Game/CSS/SeduXtress/SK_BlackPearl2',
          *[f'/Game/CSS/EveTest/SK_{name}' for name in ['PFit14','SFit16','BFit1','KCloth4','ACloth3']]]
 input_path=WORK/'facial-shapes.json'
+revision=os.environ.get('CSS_FACE_REVISION', '')
+if revision and not re.fullmatch(r'[A-Za-z0-9]{1,24}', revision):
+    raise ValueError('Invalid facial candidate revision')
+prefix='/Game/CSS/AnimLab/SK_Face_' + (revision+'_' if revision else '')
 expression_names={shape['name'] for shape in json.loads(input_path.read_text())['morph_targets']}
 records=[]
-protected={}
+protected={str(input_path):hashlib.sha256(input_path.read_bytes()).hexdigest()}
 (WORK/'ue-verification.json').write_text(json.dumps(dict(complete=False,results=[]),indent=2)+'\n')
 for source_path in sources:
-    target_path='/Game/CSS/AnimLab/SK_Face_'+source_path.rsplit('/',1)[-1].removeprefix('SK_')
+    target_path=prefix+source_path.rsplit('/',1)[-1].removeprefix('SK_')
     for package in (source_path,target_path):
         file=CONTENT/(package.removeprefix('/Game/')+'.uasset')
         protected[str(file)]=hashlib.sha256(file.read_bytes()).hexdigest()

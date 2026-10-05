@@ -1,7 +1,7 @@
 import copy
 import unittest
 
-from prepare_performance_curves import evaluate, prepare
+from prepare_performance_curves import evaluate, prepare, native_performance
 
 
 def fixture():
@@ -18,6 +18,35 @@ def fixture():
 
 
 class PerformanceCurveTests(unittest.TestCase):
+    def test_native_catalog_keeps_every_source_key_and_uses_declared_shape_casing(self):
+        source = fixture()
+        before = copy.deepcopy(source)
+        result = native_performance(source, ['Squint_Left'], 'css.eve.comecloser')
+        self.assertEqual(result, dict(clip='css.eve.comecloser', duration=2,
+            curves=[dict(morph='Squint_Left', keys=[[0, -0.13211426], [.75, 1.116883], [2, .3]])]))
+        self.assertEqual(source, before)
+
+    def test_native_catalog_rejects_missing_ambiguous_or_unsupported_shapes(self):
+        for names in ([], ['squint'], ['squint_left', 'Squint_Left'], ['squint_left', 'bad name']):
+            with self.subTest(names=names), self.assertRaises(ValueError):
+                native_performance(fixture(), names, 'css.clip')
+        for clip in ('original', 'off', '.', '..', 'css clip', 'a' * 97, None):
+            with self.subTest(clip=clip), self.assertRaises(ValueError):
+                native_performance(fixture(), ['squint_left'], clip)
+
+    def test_native_catalog_rejects_invalid_weights_and_key_limits(self):
+        for weight in (4.01, True):
+            source = fixture()
+            source['CompressedCurveData']['FloatCurves'][0]['FloatCurve']['Keys'][0]['Value'] = weight
+            with self.subTest(weight=weight), self.assertRaises(ValueError):
+                native_performance(source, ['squint_left'], 'css.clip')
+        source = fixture()
+        data = source['CompressedCurveData']['FloatCurves'][0]['FloatCurve']
+        key = data['Keys'][0]
+        data['Keys'] = [dict(key, Time=i/10000.) for i in range(16385)]
+        with self.assertRaises(ValueError):
+            native_performance(source, ['squint_left'], 'css.clip')
+
     def test_evaluation_keeps_key_values_linear_intervals_and_constant_extrapolation(self):
         curve = prepare(fixture(), ['squint_left'])['curves'][0]
         for seconds, expected in ((-1, -0.13211426), (0, -0.13211426),
