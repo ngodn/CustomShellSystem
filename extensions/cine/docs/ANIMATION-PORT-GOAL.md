@@ -137,3 +137,12 @@ The user subsequently clarified that 60 fps was a question about the proper appr
 Full ATOOL main/k2/k3 readback is complete: two identical static support sequences, with differences in Blueprint support packages. Blender/FBX example actions are inventoried but not yet accepted. The user now includes all 31 referenced photo poses and feasible support for the 21 facial expressions. All 52 base-game packages load and all 31 photo poses pass strict bone-track decode. The retained Eve authoring body matches all 99 facial curve names (two differ only in capitalization), but its current export filters out the face set, so released-mesh checks remain necessary.
 
 No new animation has been cooked or installed. This task has not changed CSS runtime or CINE code; the other session's CINE edits remain separate. Shared-pack compatibility and facial controls are still requirements, not implemented features.
+
+Released Eve v1.4.0 inspection confirms all six variants have 22 body/hand
+morphs and no matching facial morphs. Facial support therefore requires derived
+Eve mesh assets as well as CSS/CINE controls. All 21 source expressions are
+constant curve poses; preserve their signed weights. The source Neutral pose
+has seven nonzero curves, so offer it separately from restoring the outfit's
+previous face state. Preserve body controls and hand correctives when switching
+or clearing expressions. Evidence is recorded in
+`docs/development/shared-animation-library.md` and the private facial audit.

@@ -8,6 +8,14 @@ Preserve native source sample rates; the user's 60 fps remark was a question,
 not a requirement to upsample every clip. Complete the current source inventory
 and retargeting work before starting the related stop-transition investigation.
 
+The user corrected the photo-pose answer: include feasible facial-expression
+support too. Keep the 31 photo poses and investigate all 21 referenced facial
+expressions for CSS and CINE. Exact Eve v1.4.0 readback confirms the six released
+meshes lack these facial morphs, although the retained authoring body contains
+matching shapes. Plan derived face-capable assets and explicit compatibility,
+with Neutral separate from Reset. Continue the current body-animation batch
+first; facial controls are not implemented yet.
+
 The user explicitly asks to include questman's Eve stopping-pop report when
 convenient. Carry the evidence and regression cases from the older queue entry
 below into this animation work. Fix the brief jog/back-foot lift during stopping

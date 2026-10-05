@@ -138,6 +138,24 @@ ranges from -5.110 to +8.913 cm relative to the reference floor. Inspect support
 feet and source root motion before grounding; do not flatten intentional lifts.
 This candidate is not accepted for release yet.
 
+The L2 batch now contains 13 decoded Eve performances and all 31 photo poses,
+preserving their native sample rates. UE 5.6.1 imports and retargets all 44.
+Fresh-process verification checks 3,410 frames for both saved playback and
+repeated conversion (88 comparisons), with zero position/quaternion difference
+and unchanged protected mesh/skeleton hashes. Receipts are
+`work/cine-animation-port/retarget-l2/retarget-result.json` and
+`readback-result.json`. These are offline candidates, still awaiting contact,
+deformation, loop/hold and live review.
+
+The remaining `CameraBone.blend` support example is now inspected with embedded
+scripts disabled and its source hash unchanged. It contains a two-bone camera
+rig and a 201-bone Eve rig. `c2` animates the camera over frames 0-410; the Eve
+action `MV_SD20_AfterBruteBattle_QTE_Main_Eve_A` spans 0-820 and has 617 varying
+curves. The scene is 30 fps. Do not classify the file as camera-only or assume
+that the full Eve action uses the scene's current playback timing without
+checking its source. Both actions remain inventoried, not ported or accepted.
+Receipt: `work/cine-animation-port/blender-inspection/camera-bone.json`.
+
 Facial source metadata uses 99 distinct curve names. The retained Eve Body in
 `CSS_SeduXtress_HeelSupportsV45C.blend` has 97 exact shape-name matches. The other
 two are capitalization differences (`Jaw_Left`/`jaw_left` and
@@ -149,6 +167,25 @@ meshes before deciding which outfit updates are needed. Name matches are only
 an initial compatibility check, not proof that every expression deforms well.
 Any new facial export must preserve topology, fitting, existing morphs and
 default appearance, with explicit neutral/reset and unsupported-face behavior.
+
+The exact Eve v1.4.0 release readback now confirms this limitation in all six
+variant meshes. Each contains 22 morph targets (six body controls and sixteen
+hand correctives), with zero matches to the 99 facial curve names. The source
+containers match the retained release audit. A CSS-only expression selector
+would therefore do nothing on these released meshes. Support needs derived
+Eve assets with the facial shapes retained, plus CSS/CINE runtime controls.
+Keep old releases functional and show an unsupported state for missing shapes.
+Evidence: `work/cine-animation-port/eve-release-meshes.json` and
+`facial-release-audit.json`.
+
+All 21 source expressions have constant curve values across their duration.
+Their values range from -0.07407111 to 1.0; do not clamp authored negative
+weights to zero. The source `PT_Netural_EVE` has seven nonzero curves, so it is
+a named expression, not a reset instruction. Reset must restore the face state
+that preceded this feature. On expression changes, clear the previous owned
+expression channels before applying the next one, without clearing body or
+hand morphs. Name compatibility still requires deformation review, including
+eyelids, lashes, lips, teeth and tongue.
 
 No new asset has been cooked or installed, and no CSS/CINE runtime integration
 has been implemented by this task yet. Questman's stopping-transition report is
