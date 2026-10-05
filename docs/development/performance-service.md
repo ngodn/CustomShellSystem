@@ -1,6 +1,6 @@
 # Shared performance service candidate
 
-2026-10-06. Native candidate, not installed or accepted in game. This is an
+2026-10-06. Private candidate installed; live acceptance pending. This is an
 addition to `css.customize` v1 through the existing CSSX service bus. It does
 not add CSS behavior to CSSX core. CINE integration is being added in the actual
 checkout while preserving the other session's controller changes.
@@ -10,7 +10,11 @@ shared catalog names the source outfit, class, skeleton, container-table SHA-256
 and bulk size. Package discovery records the verified source revision once;
 selection resolves that record without filesystem work in the frame loop.
 Loose catalogs, mismatched releases and conflicting adapters are unavailable.
-This path is compiled but has not been installed or tested in game.
+Receipt: `work/cine-animation-port/live-performance-1/deployment.json`. The
+installed CSS core is `8fe5a0909c5a0833`; both runtime selectors, DLLs and CINE's
+menu were backed up. The shared pack and three source outfits passed 75 package
+checks. Source outfit packages, UE4SS, the permanent loader and saved states
+remained unchanged. No launch, live reload or input was sent.
 
 ## Requests
 

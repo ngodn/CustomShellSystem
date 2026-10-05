@@ -53,10 +53,14 @@ The initial all-six import process was terminated after saving five candidates;
 the sixth completed in a separate process. The subsequent fresh-process
 verification succeeded for all six. Import progress is now persisted per mesh.
 
-Reset, Angry, Kiss and Wink renders were inspected and show distinct expected
-deformations. The render is a solid-material geometry review, not game lighting
-or cooked playback acceptance. Other poses, teeth/eyelid contacts, cooked data,
-runtime ownership/restoration, CINE controls and performance remain to check.
+All 22 frontal renders were inspected, including Reset and all 21 expressions.
+The poses show distinct brow, cheek, lip and eyelid changes without obvious
+mesh tearing in these views. Tease-ya and Zzz close both lids; Wink and Kiss
+close opposite lids. Smile and Happy remain distinct, with teeth showing in
+Happy. These observations are a solid-material geometry review, not game
+lighting or cooked playback acceptance. Side-view teeth/eyelid contacts,
+cooked data, runtime ownership/restoration, CINE controls and performance
+remain to check.
 No expression menu or released outfit update is installed yet.
 
 Source Neutral has seven nonzero weights. Keep it distinct from Reset, which

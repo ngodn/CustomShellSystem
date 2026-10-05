@@ -275,3 +275,51 @@ the two unresolved dances, complete visual review and release preparation are
 still outstanding. The other session's CINE edits are preserved. Nothing new
 has been installed during this resumed work. See `performance-service.md` and
 `animation-performance-layers.md` for the exact implementation boundary.
+
+## CSS/CINE performance trial, 2026-10-06
+
+CSS now has Locomotion > Dances & Photo Poses. Its searchable picker groups
+libraries, distinguishes unsupported outfits and queues playback only after the
+native menu closes. The queue expires after five seconds and rejects any player,
+appearance, outfit, variant or catalog change. This is committed as `83c1302`.
+The native service lists library identities and separates browser compatibility
+from the gameplay readiness check at Start.
+
+CINE's catalog/owned-session client and its regression tests are committed as
+`c62e769`. The actual controller/menu integration is implemented and tested in
+the working tree. Those four files also contain the other session's uncommitted
+work, so they have not been indiscriminately staged. Their pre-integration
+copies are under `work/cine-animation-port/cine-before-performance/`; the exact
+new delta is `work/cine-animation-port/cine-performance-integration.patch`.
+Preserve both contributors' work when committing the integration.
+
+CINE exposes Refresh animations, Library, Animation, speed and start time.
+Playback begins at Roll and ends with the take. Natural animation completion
+does not cut a longer camera take. F9, menu opening, travel, gameplay interruption,
+setup failure and shutdown clean up ownership. A stale take cannot stop another
+owner. Off preserves ordinary takes without per-tick service calls. Stationary
+presets are required; route walking, combat and look-changing tracks are rejected
+explicitly while a full-body performance is selected.
+
+Validation: 21 CSS host suites pass, including 43 session/resolver checks.
+All three CINE suites pass, including 29 performance-client checks and 206
+director checks. Both Windows DLLs build. The actual shared pack plus the three
+installed outfit packages passes 75 catalog/adapter checks; all source package
+hashes and the 62-package roundtrip remain valid.
+
+Installed a private trial with the game closed, using
+`tools/authoring-probes/animations/install_performance_trial.py`.
+Receipt and backups: `work/cine-animation-port/live-performance-1/`.
+CSS core: `css_core-performance-8fe5a0909c5a0833.dll`.
+The 57-sequence/five-adapter shared pack and CINE DLL/menu are installed.
+Permanent loaders, UE4SS, saved state and all authored outfit packages remain
+unchanged. No game launch, hot reload, movement, camera or recording input was
+sent. The game was still closed at the last process check.
+
+Asked the user to launch with Eve, Unholy Genessa or Commander White and choose
+Black Hole in CSS's new browser. Await that live result. Do not label the trial
+accepted or release-ready. Still required: gameplay/physics/restoration checks,
+all-clip full-motion review and live performance measurement, facial cook/runtime
+and controls, DumbDumb/IrisOut's unknown source tracks, and final distributions.
+All 22 frontal facial previews have now been inspected; this does not establish
+side-view contacts or cooked facial playback.
