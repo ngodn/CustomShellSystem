@@ -457,6 +457,9 @@ void Extension::prepare() {
     t.ctl_yaw = t.route ? t.route->start_yaw : frame_.yaw;
     rig_.view(t.dolly, 0.0);
     if (t.layers) {
+        // Clay and wireframe change her materials. If the take cannot put one back exactly,
+        // the wardrobe mod paints her again from this.
+        if (t.layers & (bit(Layer::Clay) | bit(Layer::Wireframe))) { try { t.look_before = rig_.css({{"action", "describe"}}).at("customize"); } catch (...) { t.look_before = nullptr; } }
         breakdown_.begin(rig_.pawn(), rig_.camera_component(t.dolly), t.layers, spring_bones());
         if (settings_.breakdown_target) {
             const auto other = is_handle(t.opponent) ? t.opponent : rig_.locked_target();
@@ -767,12 +770,21 @@ void Extension::finish_take(const std::string& why, bool failed) {
         try { for (auto& f : b->end()) failures.push_back(std::move(f)); } catch (const std::exception& e) { failures.push_back(e.what()); }
     }
     callouts_.hide(); labels_live_ = false; labels_.clear(); lens_ = {};
+    std::string repainted;
+    if (breakdown_.needs_repaint()) {
+        // One of her materials could not be put back as it was (its slot was cleared instead).
+        if (!take_->look_before.is_null()) {
+            if (!restore_look(take_->look_before)) queue_look_restore(take_->look_before);
+            repainted = "Her look was repainted after the breakdown.";
+        } else repainted = "A material could not be put back after the breakdown; wear the outfit again to refresh it.";
+    }
     try { for (auto& f : rig_.restore_take()) failures.push_back(std::move(f)); } catch (const std::exception& e) { failures.push_back(e.what()); }
     if (!take_->snapshot.is_null() && take_->step_next > 0) {
         // Put the modder's own look back and let CSS save it (persist=true).
         if (!restore_look(take_->snapshot)) queue_look_restore(take_->snapshot);   // CSS busy or between looks: retried each second
     }
-    const std::string note = take_->note;
+    std::string note = take_->note;
+    if (!repainted.empty()) note = note.empty() ? repainted : note + "  " + repainted;
     take_.reset();
     mode_ = Mode::Armed;
     keys_previous_.clear();

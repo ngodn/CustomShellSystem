@@ -69,6 +69,7 @@ private:
         uint32_t world = 0; uint64_t pawn = 0; int prepare_step = 0;
         // Breakdown track.
         std::vector<Timeline::Reveal> reveals; size_t reveal_next = 0; LayerSet layers = 0; double build_wait = 0;
+        Json look_before;   // her CSS look when a breakdown that changes materials started, for a repaint
         // Action take: who she fights, smoothed positions, the fight's state, the beats.
         Json opponent; bool had_opponent = false, opponent_down = false, opponent_seen = false;
         double opponent_down_at = -1, opponent_health = -1, player_health = -1;

@@ -180,6 +180,7 @@ Json Breakdown::add_component(const Json& cls, const Json& xf) {
 void Breakdown::begin(const Json& pawn, const Json& camera, LayerSet needed, std::vector<std::string> spring_bones) {
     if (active_) end();
     forget();
+    repaint_ = false;
     if (!is_handle(pawn) || needed == 0) return;
     try {
         pawn_ = pawn; camera_ = camera; needed_ = needed; spring_names_ = std::move(spring_bones);
@@ -241,7 +242,13 @@ void Breakdown::begin(const Json& pawn, const Json& camera, LayerSet needed, std
                 }
             } catch (...) {}   // the body alone still works
         }
-        for (auto& skin : skins_) { try { skin.overlay_before = host_.get(skin.component, "OverlayMaterial"); } catch (...) { skin.overlay_before = nullptr; } }
+        if (needed_ & (bit(Layer::Clay) | bit(Layer::Wireframe))) {
+            for (auto& skin : skins_) {
+                try { skin.overlay_before = host_.get(skin.component, "OverlayMaterial"); } catch (...) { skin.overlay_before = nullptr; }
+                if (ours(skin.overlay_before)) { skin.overlay_before = nullptr; repaint_ = true; }   // left by a take that did not end cleanly
+                keep(skin.overlay_before);
+            }
+        }
         if (needed_ & (bone_layers | bit(Layer::Collision))) {
             const auto count = call(mesh_, "GetNumBones");
             bones_expected_ = count.is_number() ? std::min<size_t>(count.get<size_t>(), max_bones) : 0;
@@ -288,6 +295,8 @@ void Breakdown::plan() {
         return BoneKind::Regular;
     };
     auto body_bone = [](BoneKind k) { return k == BoneKind::Regular || k == BoneKind::Spring; };
+    // Her materials first: read and locked before any layer can replace them.
+    if (needed_ & bit(Layer::Clay)) for (size_t i = 0; i < skins_.size(); ++i) queue_.push_back({Work::Skin, i});
     for (size_t i = 0; i < bones_.size(); ++i) {
         const auto& b = bones_[i];
         const double length = std::sqrt(b.local.x * b.local.x + b.local.y * b.local.y + b.local.z * b.local.z);
@@ -319,6 +328,7 @@ void Breakdown::build(const Work& work) {
         host_.request({{"op", "call"}, {"target", component}, {"function", "K2_SetRelativeTransform"},
                        {"args", {{"NewTransform", xf}, {"bSweep", false}, {"bTeleport", true}}}});
     };
+    if (work.kind == Work::Skin) { read_skin(skins_[work.index]); return; }
     if (work.kind == Work::Stick) {
         const auto& b = bones_[work.index];
         const double length = std::sqrt(b.local.x * b.local.x + b.local.y * b.local.y + b.local.z * b.local.z);
@@ -378,39 +388,95 @@ void Breakdown::build(const Work& work) {
 
 // ---------------------------------------------------------------- showing layers
 
-void Breakdown::set_overlay(const Json* ours) {
+void Breakdown::set_overlay(const Json* material) {
     for (auto& skin : skins_) {
-        try { call(skin.component, "SetOverlayMaterial", {{"NewOverlayMaterial", ours ? *ours : skin.overlay_before}}); } catch (...) {}
+        try { call(skin.component, "SetOverlayMaterial", {{"NewOverlayMaterial", material ? *material : skin.overlay_before}}); } catch (...) {}
     }
-    overlay_ours_ = ours != nullptr;
+    overlay_ours_ = material != nullptr;
 }
 
-// Clay on every slot of her mesh, or her own materials back. Only slots that still hold the
-// clay are restored: if the outfit repainted a slot meanwhile, that newer material stays.
+// One of CINE's own materials (an instance of M_Cine_* or PP_Cine_*), by its name.
+bool Breakdown::ours(const Json& material) {
+    return is_handle(material) && material.value("name", std::string()).find("_Cine_") != std::string::npos;
+}
+
+void Breakdown::keep(const Json& material) {
+    if (!is_handle(material) || locked_ >= 2048) return;
+    try {
+        if (!is_handle(locker_)) {
+            locker_ = add_component(class_mesh_, transform({}, {}, {1, 1, 1}));
+            call(locker_, "SetHiddenInGame", {{"NewHidden", true}, {"bPropagateToChildren", false}});
+        }
+        call(locker_, "SetMaterial", {{"ElementIndex", locked_}, {"Material", material}});
+        ++locked_;
+    } catch (...) {}   // unlocked is how it was before; the end-of-take check still covers her
+}
+
+// A part's own slot materials, read once while the take prepares and locked.
+void Breakdown::read_skin(Skin& skin) {
+    skin.slots_before.clear();
+    const auto count = call(skin.component, "GetNumMaterials");
+    const int slots = count.is_number() ? std::clamp(count.get<int>(), 0, 64) : 0;
+    for (int i = 0; i < slots; ++i) {
+        Json material = call(skin.component, "GetMaterial", {{"ElementIndex", i}});
+        // CINE's own clay in a slot is what a take that did not end cleanly left behind: there
+        // is no original to go back to. The slot is cleared at the end and her look repainted.
+        if (ours(material)) { material = nullptr; repaint_ = true; }
+        keep(material);
+        skin.slots_before.push_back(std::move(material));
+    }
+    skin.read = true;
+}
+
+// Clay on every slot of every part, or her own materials back. Only slots that still hold
+// the clay are restored: if the outfit repainted a slot meanwhile, that newer material stays.
+// A slot whose own material cannot be set again is cleared (the mesh's default shows, never
+// an invisible clay) and flagged for a repaint.
 void Breakdown::apply_clay(bool on) {
     if (on == clay_slots_) return;
     if (on) {
         for (auto& skin : skins_) {
-            try {
-                const auto count = call(skin.component, "GetNumMaterials");
-                const int slots = count.is_number() ? std::clamp(count.get<int>(), 0, 64) : 0;
-                skin.slots_before.clear();
-                for (int i = 0; i < slots; ++i) skin.slots_before.push_back(call(skin.component, "GetMaterial", {{"ElementIndex", i}}));
-                for (int i = 0; i < slots; ++i) call(skin.component, "SetMaterial", {{"ElementIndex", i}, {"Material", clay_}});
-            } catch (...) {}   // a part that went away mid-take: the others still change
+            if (!skin.read) { try { read_skin(skin); } catch (...) { continue; } }
+            for (int i = 0; i < int(skin.slots_before.size()); ++i) {
+                try { call(skin.component, "SetMaterial", {{"ElementIndex", i}, {"Material", clay_}}); } catch (...) {}
+            }
         }
         clay_slots_ = true;
     } else {
         for (auto& skin : skins_) {
             for (int i = 0; i < int(skin.slots_before.size()); ++i) {
                 try {
-                    if (id_of(call(skin.component, "GetMaterial", {{"ElementIndex", i}})) == id_of(clay_))
-                        call(skin.component, "SetMaterial", {{"ElementIndex", i}, {"Material", skin.slots_before[size_t(i)]}});
-                } catch (...) {}
+                    if (id_of(call(skin.component, "GetMaterial", {{"ElementIndex", i}})) != id_of(clay_)) continue;
+                } catch (...) { continue; }   // the part is gone
+                const auto& original = skin.slots_before[size_t(i)];
+                bool back = false;
+                if (is_handle(original)) { try { call(skin.component, "SetMaterial", {{"ElementIndex", i}, {"Material", original}}); back = true; } catch (...) {} }
+                if (!back) {
+                    repaint_ = true;
+                    try { call(skin.component, "SetMaterial", {{"ElementIndex", i}, {"Material", nullptr}}); } catch (...) {}
+                }
             }
-            skin.slots_before.clear();
         }
         clay_slots_ = false;
+    }
+}
+
+// The last word of a take: nothing of CINE's may be left on her, whatever happened before.
+void Breakdown::verify_restored() {
+    for (auto& skin : skins_) {
+        if (!valid(skin.component)) continue;
+        try {
+            if (ours(host_.get(skin.component, "OverlayMaterial"))) {
+                call(skin.component, "SetOverlayMaterial", {{"NewOverlayMaterial", skin.overlay_before}});
+            }
+        } catch (...) {}
+        for (int i = 0; i < int(skin.slots_before.size()); ++i) {
+            try {
+                if (!ours(call(skin.component, "GetMaterial", {{"ElementIndex", i}}))) continue;
+                repaint_ = true;
+                call(skin.component, "SetMaterial", {{"ElementIndex", i}, {"Material", nullptr}});
+            } catch (...) {}
+        }
     }
 }
 
@@ -515,7 +581,7 @@ void Breakdown::tick() {
         }
         if (!active_) return;
         if (reading_) read_skeleton();
-        while (!reading_ && !queue_.empty() && spend(queue_.front().kind == Work::Body ? 24 : 8)) {
+        while (!reading_ && !queue_.empty() && spend(queue_.front().kind == Work::Skin ? 56 : queue_.front().kind == Work::Body ? 24 : 8)) {
             const Work work = queue_.front(); queue_.pop_front();
             try { build(work); } catch (const std::exception& e) { add_note(std::string("a piece could not be built: ") + e.what()); }
         }
@@ -601,6 +667,8 @@ std::vector<std::string> Breakdown::end() {
         step("clay", [&] { apply_clay(false); });
         step("overlay", [&] { if (overlay_ours_ || is_handle(wire_) || is_handle(clay_)) set_overlay(nullptr); });
     }
+    verify_restored();
+    if (is_handle(locker_)) teardown_.push_back(locker_);   // her materials are back in their slots, which hold them now
     if (frame_passes_ && valid(camera_))
         for (auto& pass : pass_) if (is_handle(pass)) step("frame pass", [&] { call(camera_, "RemoveBlendable", {{"InBlendableObject", pass}}); });
     if (capsule_touched_ && valid(capsule_)) {
@@ -618,8 +686,10 @@ std::vector<std::string> Breakdown::end() {
         teardown_.push_back(std::move(piece.component));
     }
     auto pending = std::move(teardown_);
+    const bool repaint = repaint_;
     forget();
     teardown_ = std::move(pending);
+    repaint_ = repaint;   // read by the caller after end()
     return failures;
 }
 
@@ -631,6 +701,7 @@ void Breakdown::forget() {
     for (auto& mid : mids_) mid = nullptr;
     clay_ = wire_ = pass_[0] = pass_[1] = capsule_colour_before_ = nullptr;
     skins_.clear();
+    locker_ = nullptr; locked_ = 0; repaint_ = false;
     pass_now_ = 0;
     spring_names_.clear(); bones_.clear(); sockets_.clear(); bodies_.clear();
     queue_.clear(); pieces_.clear(); teardown_.clear(); callouts_.clear();

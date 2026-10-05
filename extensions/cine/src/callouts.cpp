@@ -17,8 +17,10 @@ constexpr Rgba faint{0.78f, 0.90f, 0.96f, 0.80f};   // signature small print
 constexpr Rgba trace{0.80f, 0.95f, 1.0f, 0.85f};    // leaders and shelves
 constexpr Rgba accent{0.20f, 0.88f, 1.0f, 0.95f};   // accent bars
 bool is_handle(const Json& j) { return j.is_object() && j.contains("$object"); }
-// Width of upper-case letter-spaced text in this face, a little generous.
-double text_width(size_t characters, double font, int spacing) { return (0.53 + spacing / 1000.0) * font * double(characters); }
+// Width of upper-case letter-spaced text in this face, a little generous. A font size is in
+// points: one em is 4/3 of it in HUD units (measured in game: 51 characters at size 20 and
+// spacing 150 ran 880 units).
+double text_width(size_t characters, double font, int spacing) { return (0.52 + spacing / 1000.0) * font * (4.0 / 3.0) * double(characters); }
 }
 
 double frame_scale(const Rect& frame) { return std::clamp(frame.w / 1500.0, 0.62, 1.0); }
@@ -285,11 +287,11 @@ void Callouts::update(const CssxFrame& frame_data, const Rect& frame, const std:
             caption_text_ = "BREAKDOWN  //  " + readout(caption);
             if (caption_) hud_->set_text(context_, caption_, caption_text_.data(), caption_text_.size());
         }
-        const double height = 40 * scale, y = frame.y + frame.h * 0.07;
+        const double height = 42 * scale, y = frame.y + frame.h * 0.07;
         const double width = std::min(text_width(caption_text_.size(), caption_font * scale, caption_spacing) + 34 * scale, frame.w * (1 - 2 * margin));
         box(caption_bar_, left, y, width, height, z_order);
         box(caption_accent_, left, y, 4 * scale, height, z_order + 1);
-        box(caption_, left + 16 * scale, y + 7 * scale, width - 20 * scale, 28 * scale, z_order + 1);
+        box(caption_, left + 16 * scale, y + 6 * scale, width - 20 * scale, 32 * scale, z_order + 1);
     }
 
     // Signature: bottom left of the frame, the name large, the rest small print under it.
@@ -302,7 +304,7 @@ void Callouts::update(const CssxFrame& frame_data, const Rect& frame, const std:
             for (size_t i = 0; i < max_signature_lines; ++i)
                 if (sign_[i] && i < sign_fitted_.size()) hud_->set_text(context_, sign_[i], sign_fitted_[i].data(), sign_fitted_[i].size());
         }
-        const double name_height = 38 * scale, small_height = 21 * scale;
+        const double name_height = 48 * scale, small_height = 25 * scale;
         const double total = name_height + small_height * double(sign_fitted_.size() > 0 ? sign_fitted_.size() - 1 : 0);
         double y = frame.y + frame.h * 0.945 - total;
         box(sign_accent_, left, y + 3 * scale, 4 * scale, total - 4 * scale, z_order);

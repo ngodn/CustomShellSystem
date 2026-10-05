@@ -50,6 +50,9 @@ public:
     bool busy() const { return active_ || !teardown_.empty(); }
 
     const std::string& note() const { return note_; }          // layers skipped, and why
+    // After end(): true when one of her materials could not be put back exactly (the slot was
+    // cleared instead). Whoever painted her (the wardrobe mod) should paint her again.
+    bool needs_repaint() const { return repaint_; }
     const std::vector<Callout>& callouts() const { return callouts_; }
     std::string caption() const;                               // "Wireframe + Skeleton"
 
@@ -58,7 +61,7 @@ public:
 private:
     struct Piece { Json component; LayerSet layer = 0; };      // one attached component
     struct Bone { std::string name, parent; BoneKind kind = BoneKind::Regular; Vec3 local; };
-    struct Work { enum Kind { Stick, Joint, Socket, Body } kind = Stick; size_t index = 0; };
+    struct Work { enum Kind { Stick, Joint, Socket, Body, Skin } kind = Stick; size_t index = 0; };
 
     void resolve_assets();
     void read_skeleton();          // a slice of bones per tick
@@ -70,7 +73,7 @@ private:
     void set_param(const Json& mid, const char* name, double value);
     void wipe_numbers(double from, double to, double seconds);
     void apply_clay(bool on);      // slot materials <-> her own, on every skinned part
-    void set_overlay(const Json* ours);   // our material on every skinned part, or null: each part's own back
+    void set_overlay(const Json* material);   // our material on every part, or null: each part's own back
     void settle();                 // a transition ended: outgoing layers off, switches reset
     void refresh_callouts();
     void add_note(const std::string& text);
@@ -91,8 +94,19 @@ private:
     int pass_now_ = 0;                     // which pass instance shows the current frame layer
     // Every skinned part of the character (body, hair, garments, accessories): clay and
     // wireframe go on all of them. The body mesh is first.
-    struct Skin { Json component, overlay_before; std::vector<Json> slots_before; };
+    struct Skin { Json component, overlay_before; std::vector<Json> slots_before; bool read = false; };
     std::vector<Skin> skins_;
+    // Her own materials are held here for the whole take. While clay sits in a slot nothing
+    // else may reference the material it replaced (an outfit's dynamic instance), and a
+    // garbage collection would take it: the take would end with nothing to put back. The
+    // locker is a hidden component of ours whose material list keeps every one of them alive.
+    Json locker_;
+    int locked_ = 0;
+    bool repaint_ = false;                 // something of hers could not be put back as it was
+    void keep(const Json& material);
+    void read_skin(Skin& skin);
+    void verify_restored();
+    static bool ours(const Json& material);
     bool clay_slots_ = false, overlay_ours_ = false, capsule_touched_ = false, capsule_hidden_before_ = true;
     Json capsule_colour_before_;
     std::vector<std::string> spring_names_;

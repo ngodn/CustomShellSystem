@@ -361,7 +361,7 @@ static void labels() {
         std::string joined;
         for (size_t i = 1; i + 1 < fitted.size(); ++i) joined += (i > 1 ? " " : "") + fitted[i];
         expect(joined == signature[1], "a long signature line breaks before its plus signs and loses nothing: " + name);
-        for (size_t i = 1; i < fitted.size(); ++i) expect((0.53 + 0.07) * 14 * scale * double(fitted[i].size()) <= room + 1e-9, "every signature line fits frame " + name + ": " + fitted[i]);
+        for (size_t i = 1; i < fitted.size(); ++i) expect((0.52 + 0.07) * 14 * scale * (4.0 / 3.0) * double(fitted[i].size()) <= room + 1e-9, "every signature line fits frame " + name + ": " + fitted[i]);
     }
     expect(fit_signature(signature, 1700, 1.0).size() == 3, "on a wide frame the signature is three lines");
     expect(fit_signature({"A name with no plus signs that is far too long for the frame it is asked to fit in"}, 100, 1.0).size() == 1, "a line that cannot break is kept whole");

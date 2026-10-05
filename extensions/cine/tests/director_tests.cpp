@@ -43,7 +43,7 @@ struct Host {
     std::map<uint64_t, Thing> things;
     std::map<std::string, uint64_t> paths;
     std::set<uint64_t> components;        // attached breakdown pieces alive now
-    size_t components_made = 0, projections = 0, view_points = 0, pauses = 0, lock_releases = 0;
+    size_t components_made = 0, projections = 0, view_points = 0, pauses = 0, lock_releases = 0, materials_locked = 0;
     Json mpc = Json::object();            // MPC_Cine scalars as last written
     double game_time = 0, slowest = 1.0;
     int effect_handles = 0;
@@ -213,9 +213,18 @@ struct Host {
         if (fn == "GetAllSocketNames") return ret(Json::array({"Socket_Target", "weapon_r"}));
         if (fn == "GetSkinnedAsset") return ret(flag("_asset"));
         if (fn == "GetNumMaterials") return ret(flag("_materials").size());
-        if (fn == "GetMaterial") return ret(flag("_materials").at(a.at("ElementIndex").get<size_t>()));
-        if (fn == "SetMaterial") { if (t.kind == "mesh") flag("_materials").at(a.at("ElementIndex").get<size_t>()) = a.at("Material"); return done(); }
-        if (fn == "SetOverlayMaterial") { flag("OverlayMaterial") = a.at("NewOverlayMaterial"); return done(); }
+        if (fn == "GetMaterial") {
+            if (t.kind == "component") { const auto& held = flag("_held"); const auto i = a.at("ElementIndex").get<size_t>(); return ret(held.is_array() && i < held.size() ? named(held[i]) : Json(nullptr)); }
+            return ret(named(flag("_materials").at(a.at("ElementIndex").get<size_t>())));
+        }
+        if (fn == "SetMaterial") {   // stored as bare handles, like the engine stores pointers
+            const auto i = a.at("ElementIndex").get<size_t>();
+            const Json bare = id_of(a.at("Material")) ? object(id_of(a.at("Material"))) : Json(nullptr);
+            if (t.kind == "mesh") flag("_materials").at(i) = bare;
+            else if (t.kind == "component") { auto& held = flag("_held"); if (!held.is_array()) held = Json::array(); while (held.size() <= i) held.push_back(nullptr); held[i] = bare; if (!bare.is_null() && things.at(id_of(bare)).kind != "mid") ++materials_locked; }
+            return done();
+        }
+        if (fn == "SetOverlayMaterial") { flag("OverlayMaterial") = id_of(a.at("NewOverlayMaterial")) ? object(id_of(a.at("NewOverlayMaterial"))) : Json(nullptr); return done(); }
         if (fn == "AddComponentByClass") {
             const auto id = make("component", {{"_class", a.at("Class")}, {"_hidden", true}, {"_socket", ""}});
             components.insert(id); ++components_made;
@@ -235,6 +244,18 @@ struct Host {
                                   "SetSphereRadius", "SetBoxExtent", "SetLineThickness"})
             if (fn == quiet) return done();
         return false;
+    }
+    // A material handle the way the bridge returns it: with the object's name.
+    Json named(const Json& material) const {
+        const auto it = things.find(id_of(material));
+        if (it == things.end()) return material;
+        Json out = object(it->first);
+        if (it->second.kind == "mid") {
+            const auto parent = things.find(id_of(it->second.props.at("_parent")));
+            const std::string path = parent == things.end() ? std::string() : parent->second.kind;
+            out["name"] = "MaterialInstanceDynamic /Engine/Transient.MID_" + path.substr(path.find_last_of('.') + 1) + "_" + std::to_string(it->first);
+        } else out["name"] = "MaterialInstanceConstant /Game/Outfit/MI_Original_" + std::to_string(it->first);
+        return out;
     }
     size_t param_count(const char* kind_parent, const char* name, double value) {   // instances of a material with this switch at this value
         size_t n = 0;
@@ -272,7 +293,7 @@ struct Host {
             if (name == "ActiveCameraActor") return cameras.contains(view) ? object(view) : Json(nullptr);
             if (const auto it = things.find(id); it != things.end()) {
                 if (!it->second.props.contains(name)) throw std::runtime_error("No property " + name + " on " + it->second.kind);
-                return it->second.props[name];
+                return name == "OverlayMaterial" ? named(it->second.props[name]) : it->second.props[name];
             }
         }
         if (op == "get") return object(next++);
@@ -725,7 +746,8 @@ int main(int argc, char** argv) {
             int waited = 0;
             for (; waited < 60 && !has(r.status(), "Rolling"); ++waited) { const auto c = h.requests; r.step(); worst = std::max(worst, h.requests - c); }
             expect(has(r.status(), "Rolling"), "the take rolls once the layers are built: " + r.status());
-            expect(h.components_made == 19, "9 bone sticks, 5 markers, 2 sockets and 3 physics shapes are built, got " + std::to_string(h.components_made));
+            expect(h.components_made == 20, "9 bone sticks, 5 markers, 2 sockets, 3 physics shapes and the material locker are built, got " + std::to_string(h.components_made));
+            expect(h.materials_locked == 7, "her six slot materials and the hair's own overlay are held for the take, got " + std::to_string(h.materials_locked));
             expect(worst <= 200, "building never spends more than a bounded slice per tick: " + std::to_string(worst));
             expect(has(r.status(), "Look track off"), "the look track steps aside for a breakdown");
             expect(h.css_applies.empty(), "and no look is applied");
@@ -828,6 +850,29 @@ int main(int argc, char** argv) {
             left = unrestored(before, h.snapshot());
             expect(left.empty() && h.components.empty(), "the rest of the reel ran and was put back: " + left);
         }
+        {   // A take that did not end cleanly left CINE's clay in a slot: the next take clears it and CSS repaints her.
+            Rig r(dir); r.host.populate(); auto& h = r.host;
+            h.css_present = true;
+            r.step();
+            const auto stale = h.make("mid", {{"_parent", h.by_path("/Game/CSSX/CINE/Materials/M_Cine_Clay.M_Cine_Clay")}, {"_params", Json::object()}});
+            h.prop(Host::PlayerMesh, "_materials")[1] = object(stale);
+            const auto before = h.prop(Host::PlayerMesh, "_materials");
+            r.ext->event({{"id", "preset"}, {"value", "pose-glide-10"}});
+            r.ext->event({{"id", "breakdown"}, {"value", "reel"}});
+            r.ext->event({{"id", "countdown"}, {"value", 0}});
+            r.ext->event({{"id", "enter"}});
+            r.press("F8");
+            for (int i = 0; i < 80 && !has(r.status(), "Rolling"); ++i) r.step();
+            r.steps(125);
+            const auto& after = h.prop(Host::PlayerMesh, "_materials");
+            expect(after[0] == before[0] && after[2] == before[2], "her own materials are back");
+            expect(after[1].is_null(), "the leftover clay is gone from its slot, not put back");
+            bool repainted = false;
+            for (const auto& applied : h.css_applies)
+                if (applied.value("persist", false) && applied.value("commands", Json::array()).size() == 1 && applied["commands"][0].value("action", std::string()) == "restore") repainted = true;
+            expect(repainted, "CSS is asked to paint her look again");
+            expect(has(r.status(), "repainted"), "and the status says so: " + r.status());
+        }
         {   // The lock-on target can be broken down with her.
             Rig r(dir); r.host.populate(); auto& h = r.host;
             const auto foe = h.add_character("Team.Hostile.Undead");
@@ -842,7 +887,7 @@ int main(int argc, char** argv) {
             r.ext->event({{"id", "enter"}});
             r.press("F8");
             for (int i = 0; i < 80 && !has(r.status(), "Rolling"); ++i) r.step();
-            expect(h.components_made == 2 * 17, "both characters get their pieces: " + std::to_string(h.components_made));
+            expect(h.components_made == 2 * 18, "both characters get their pieces: " + std::to_string(h.components_made));
             r.steps(25);
             expect(h.things.at(id_of(h.prop(h.part(foe, "Mesh"), "_materials")[0])).kind == "mid", "the target is in clay too");
             expect(h.projections == 0, "no labels when they are off");
