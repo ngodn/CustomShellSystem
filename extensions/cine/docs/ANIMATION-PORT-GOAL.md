@@ -159,3 +159,17 @@ The 801 source has a long final hold, and the camera-scene skinned review needs
 to account for its large root translation and numeric reconstruction error.
 No new assets are cooked or installed; shared runtime integration, facial
 support and the stopping-transition correction remain unfinished.
+
+2026-10-06: installed-package verification now covers all nine mesh bindings
+across Eve 1.4.0, Unholy Genessa 0.2.0 and Commander White 0.0.6-dev. Their
+386-bone base references and nine virtual-bone definitions match exactly;
+Genessa adds four wing bones. Every current post-process graph exposes the
+CSS idle contract. See `docs/development/animation-library-rig-compatibility.md`.
+This is static compatibility evidence, not acceptance of all new clips.
+
+The stopping candidate now retains Walk/Sprint during verified deceleration
+when the game's gait flags clear before speed reaches Idle. Portable tests
+(80 runtime checks and the animation/skeleton suites) and the Windows core
+build pass. No DLL was installed. The reported jog pop, cycle phase and full
+transition matrix still require live verification. Details and remaining cases
+are in `docs/development/eve-stopping-transition.md`.
