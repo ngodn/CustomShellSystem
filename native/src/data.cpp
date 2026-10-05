@@ -178,7 +178,7 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
     }
     std::sort(files.begin(), files.end());
     auto documents=package_catalogs(paks,cache,&result.diagnostics);
-    for(const auto& path:files) documents.push_back({read_json(path),path.parent_path(),{}});
+    for(const auto& path:files) documents.push_back({read_json(path),path.parent_path(),{}, {}});
     for (const auto& document : documents) {
         const auto previous_size=result.outfits.size();
         const auto previous_ids=ids;
@@ -376,7 +376,11 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
             result.outfits.push_back(std::move(outfit));
             if (result.outfits.size() > 4096) throw std::runtime_error("Catalog exceeds 4096 outfits");
         }
-        if(!document.source.empty()) package_status("loaded");
+        if(!document.source.empty()) {
+            for(size_t index=previous_size;index<result.outfits.size();++index)
+                result.outfit_revisions.emplace(result.outfits[index].id,document.revision);
+            package_status("loaded");
+        }
         } catch(const std::exception& error) {
             // Loose authoring catalogs remain strict. Installed packages fail
             // independently and retain a filename and reason in diagnostics.

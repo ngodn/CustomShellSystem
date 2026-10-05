@@ -339,6 +339,34 @@ struct Core {
     // which the UE4SS ImGui thread reads.
     Json customize_api(const Json& command) {
         const auto action=command.at("action").get<std::string>();
+        if(action=="performances") {
+            const auto skeleton=appearance.animation_skeleton();
+            Json entries=Json::array();
+            const auto selected=state.selections.find(appearance.shell);
+            const auto unavailable=selected==state.selections.end()?"No CSS appearance is worn":
+                appearance.performance_unavailable(catalog,selected->second.outfit);
+            for(const auto& library:catalog.animation_libraries) for(const auto& entry:library.entries) {
+                if(entry.slot && entry.slot!=AnimationSlot::Idle) continue;
+                const auto resolved=resolve_library_performance(catalog.animation_libraries,entry.id,skeleton);
+                const auto reason=resolved.candidates.empty()?"No compatible performance skeleton":unavailable;
+                const char* playback=entry.playback==AnimationPlayback::Loop?"loop":
+                    entry.playback==AnimationPlayback::Pose?"pose":"once";
+                entries.push_back({{"id",entry.id},{"name",entry.name},{"category",entry.category},
+                    {"playback",playback},{"available",reason.empty()},{"reason",reason}});
+            }
+            return {{"entries",std::move(entries)},{"current",appearance.performance.status()}};
+        }
+        if(action=="performance") {
+            if(command.at("op")=="start") {
+                if(!state.enabled || !appearance.active() || apply_pending || restore_pending)
+                    throw std::runtime_error("Wait for the CSS appearance to finish applying");
+                const auto selected=state.selections.find(appearance.shell);
+                if(selected==state.selections.end()) throw std::runtime_error("No CSS appearance is worn");
+                return appearance.start_performance(catalog,selected->second.outfit,command.at("id").get<std::string>(),
+                    command.value("rate",1.),command.value("seconds",0.));
+            }
+            return appearance.performance.command(command);
+        }
         // What the worn shell can wear, and wearing one of them: these two need no look to be
         // worn yet. "wear" goes through the same pending selection as the CSS page's own
         // choice, so the apply pass validates, loads and reports it the same way. With
@@ -770,6 +798,7 @@ struct Core {
                 host.log(("CSS engine outfit folder: "+std::string(path.begin(),path.end())).c_str());
                 if(candidate!=package_root) {
                     auto resolved=load_catalog(candidate);
+                    appearance.performance.interrupt("Animation catalog changed");
                     appearance.clear_shared_animations();++animation_catalog_generation;
                     package_root=std::move(candidate); catalog=std::move(resolved); ui_refresh=true;
                     original_shells_attempts=0; original_shells_retry_after=0;
@@ -814,6 +843,16 @@ struct Core {
         measured(FrameProfile::maintenance,[&] { sync_overlays_safely(now); maintain(now); sync_genessa_form(now); });
         measured(FrameProfile::attachments,[&] { sync_attachments_safely(now); });
         measured(FrameProfile::seals,[&] { sync_seals_safely(now); });
+        measured(FrameProfile::walk,[&] {
+            try {
+                if(appearance.performance.active() && (!state.enabled || apply_pending || restore_pending))
+                    appearance.performance.interrupt("Appearance is changing");
+                appearance.tick_performance();
+            } catch(const std::exception& error) {
+                appearance.performance.interrupt(error.what());
+                report(std::string("Performance stopped: ")+error.what());
+            }
+        });
         measured(FrameProfile::walk,[&] { sync_walk_safely(now); });
         if(state.enabled) measured(FrameProfile::misc,[&] { sync_misc_safely(now); });
         measured(FrameProfile::reconcile,[&] { reconcile(engine,now); });
@@ -939,6 +978,7 @@ struct Core {
         if (rescan_pending) {
             rescan_pending = false;
             auto updated = load_catalog(package_root);
+            appearance.performance.interrupt("Animation catalog changed");
             appearance.clear_shared_animations();++animation_catalog_generation;
             catalog = std::move(updated);
             original_shells_attempts=0; original_shells_retry_after=0;
@@ -1304,6 +1344,8 @@ void tick(void* ptr, void* engine, float delta) noexcept {
 #ifdef CSS_INVENTORY_DEV
         failed=true;
 #endif
+        try { core.appearance.performance.interrupt("CSS tick failed"); }
+        catch(const std::exception& cleanup) {core.host.log(("Performance cleanup pending: "+std::string(cleanup.what())).c_str());}
         core.recovery.failed(GetTickCount64());
         core.apply_pending = false; core.pending_custom.reset(); core.custom_only=false;
         core.selected_outfit.clear(); core.selected_variant.clear();
@@ -1325,6 +1367,7 @@ bool stop(void* ptr) noexcept {
     try {
         if(!core.astral.clear()) throw std::runtime_error("Genessa double visuals could not be released");
         core.inventory.detach();
+        core.appearance.performance.interrupt("CSS stopped");
         core.appearance.walk.release();
         core.appearance.clear_shared_animations();
         core.appearance.restore_misc();

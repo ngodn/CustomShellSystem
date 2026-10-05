@@ -39,12 +39,40 @@ AnimationSlot slot(const Json& value) {
 }
 }
 AnimationLibrary AnimationLibrary::parse(const Json& value) {
-    fields(value,{"id","name","author","version","entries"});
+    fields(value,{"id","name","author","version","entries","adapters"});
     AnimationLibrary library;
     library.id=identity(value);
     library.name=text(value,"name",96);
     library.author=text(value,"author",96);
     library.version=text(value,"version",32);
+    if(value.contains("adapters")) {
+        const auto& adapters=value.at("adapters");
+        if(!adapters.is_array() || adapters.size()>32)
+            throw std::runtime_error("Invalid performance adapter list");
+        std::set<std::tuple<std::string,std::string,std::string>> sources;
+        for(const auto& item:adapters) {
+            fields(item,{"source_outfit","source_class","target_class","skeleton","source_toc_sha256","source_bulk_bytes"});
+            PerformanceAdapter adapter;
+            adapter.source_outfit=text(item,"source_outfit",96);
+            adapter.source_class=asset(item,"source_class");
+            adapter.target_class=asset(item,"target_class");
+            adapter.skeleton=asset(item,"skeleton");
+            adapter.source_revision.toc_sha256=text(item,"source_toc_sha256",64);
+            if(!item.at("source_bulk_bytes").is_number_unsigned())
+                throw std::runtime_error("Invalid adapter source bulk size");
+            adapter.source_revision.bulk_bytes=item.at("source_bulk_bytes").get<uint64_t>();
+            const auto& hash=adapter.source_revision.toc_sha256;
+            if(!valid_id(adapter.source_outfit) || hash.size()!=64 ||
+               !std::all_of(hash.begin(),hash.end(),[](char c){return (c>='0' && c<='9') || (c>='a' && c<='f');}) ||
+               !adapter.source_revision.bulk_bytes ||
+               !adapter.source_class.ends_with("_C") || !adapter.target_class.ends_with("_C") ||
+               !adapter.target_class.starts_with("/Game/CSS/Locomotion/Adapters/") ||
+               adapter.source_class==adapter.target_class ||
+               !sources.emplace(adapter.source_outfit,hash,adapter.source_class).second)
+                throw std::runtime_error("Invalid or duplicate performance adapter");
+            library.adapters.push_back(std::move(adapter));
+        }
+    }
     const auto& entries=value.at("entries");
     if(!entries.is_array() || entries.empty() || entries.size()>256)
         throw std::runtime_error("Animation library needs 1 to 256 entries");
@@ -98,6 +126,37 @@ AnimationLibrary AnimationLibrary::parse(const Json& value) {
         library.entries.push_back(std::move(animation));
     }
     return library;
+}
+const PerformanceAdapter* resolve_performance_adapter(const std::vector<AnimationLibrary>& libraries,
+    const std::string& outfit,const AnimationContainerRevision& revision,
+    const std::string& source_class,const std::string& skeleton) {
+    if(revision.toc_sha256.empty() || !revision.bulk_bytes) return nullptr;
+    const PerformanceAdapter* result=nullptr;
+    for(const auto& library:libraries) for(const auto& adapter:library.adapters) {
+        if(adapter.source_outfit!=outfit || adapter.source_revision!=revision ||
+           adapter.source_class!=source_class || adapter.skeleton!=skeleton) continue;
+        if(result) throw std::runtime_error("Conflicting performance adapters");
+        result=&adapter;
+    }
+    return result;
+}
+AnimationLibraryMatch resolve_library_performance(const std::vector<AnimationLibrary>& libraries,
+    const std::string& choice,const std::string& target_skeleton) {
+    AnimationLibraryMatch result;
+    for(const auto& library:libraries) for(const auto& entry:library.entries) {
+        if(entry.id!=choice) continue;
+        if(result.entry) throw std::runtime_error("Ambiguous performance identity");
+        if(entry.slot && entry.slot!=AnimationSlot::Idle)
+            throw std::runtime_error("Movement blendspaces cannot play as performances");
+        result.entry=&entry;
+    }
+    if(!result.entry) return result;
+    for(bool exact:{true,false}) for(const auto& alternative:result.entry->assets) {
+        if((alternative.skeleton==target_skeleton)==exact &&
+           compatible_animation_skeletons(alternative.skeleton,target_skeleton))
+            result.candidates.push_back({alternative.asset,alternative.skeleton,false});
+    }
+    return result;
 }
 std::vector<AnimationOption> merge_library_animation_options(const std::vector<AnimationLibrary>& libraries,
     AnimationSlot slot,const std::vector<AnimationOption>& bundled) {

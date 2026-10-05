@@ -137,6 +137,8 @@ struct ReplacementMod {
 struct Catalog {
     std::vector<Outfit> outfits;
     std::vector<AnimationLibrary> animation_libraries;
+    // Filled only after the package scanner verifies its companion table and bulk size.
+    std::map<std::string,AnimationContainerRevision> outfit_revisions;
     mutable std::map<std::tuple<std::string,std::string,AnimationSlot>,std::vector<AnimationOption>> animation_option_cache;
     Json diagnostics = Json::object();
     std::vector<ReplacementMod> replacements;

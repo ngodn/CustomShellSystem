@@ -32,6 +32,9 @@ int main(int argc,char** argv) {
         fs::create_directories(root/"catalog");
         auto catalog=Catalog::load(root/"catalog",root/"paks",root/"cache");
         if(catalog.outfits.size()!=1 || catalog.outfits[0].thumbnail.empty()) throw std::runtime_error("Catalog ignored package thumbnail");
+        if(packages[0].revision.toc_sha256.size()!=64 || !packages[0].revision.bulk_bytes ||
+           catalog.outfit_revisions.at(catalog.outfits[0].id)!=packages[0].revision)
+            throw std::runtime_error("Validated source container identity was lost");
         auto cached=packages[0].artwork/"thumbnail.png";
         auto timestamp=fs::last_write_time(cached);
         package_catalogs(root/"paks",root/"cache");

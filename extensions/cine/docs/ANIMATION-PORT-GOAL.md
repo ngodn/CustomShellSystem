@@ -242,3 +242,36 @@ world cloth simulation or live acceptance. Sources retain their input hashes.
 The explicit-time clock passes 36 checks; all 20 host CTest suites pass.
 Runtime binding/ownership, full moving clips and CSS/CINE controls are next.
 No additional assets or DLLs have been installed.
+
+Latest checkpoint, 2026-10-06: the explicit-weight adapter revision passes
+81 cases across all nine meshes. The full Black Hole clip compares 1,201 poses
+per mesh at 60 Hz (10,809 total); earlier two-consumer pose wiring was rejected
+after its zero-weight test failed. All original source files retain their hashes.
+The five adapters cooked successfully. Independent cooked readback confirms
+their existing CSS defaults, rig settings, transferred bones and pose links
+match the installed source graphs. `pack-with-adapters-v2` contains 57 sequences
+and five adapters, with 62 byte-exact export round trips and version-bound
+adapter metadata. Its dependency check currently mounts all three outfits.
+
+The native `css.customize` service now stages canonical-ID playback, loop/once/
+hold, explicit time and blend weight, pause/seek/rate/stop and transient tokens.
+It binds only a verified source outfit revision, copies CSS/physics settings,
+preserves native animation-layer assignments and registers rollback before the
+post-process setter. It restores the original graph on release. No main graph
+replacement, shared asset mutation or bone-buffer/accumulator writes are used.
+This is a compiled candidate, not live-accepted code. Recreated idle phase,
+world cloth, interruption, cold/warm costs and dependency closure need checks.
+
+Windows core builds successfully. All 21 host CTest suites pass, including 45
+clock checks and 32 session/resolver checks. Synthetic package discovery passes
+66 checks; the actual combined pack plus Eve, Genessa and Commander White passes
+75 checks, including all five source-revision resolutions. Fixed a pre-existing
+FileWriter test that incorrectly assumed one worker scheduling order; production
+writer code was unchanged, and the test passed 20 repeated runs.
+
+Next finish CSS browsing/start-after-menu-close and CINE take controls using the
+shared service, then a backed-up live candidate. Facial runtime/cook/controls,
+the two unresolved dances, complete visual review and release preparation are
+still outstanding. The other session's CINE edits are preserved. Nothing new
+has been installed during this resumed work. See `performance-service.md` and
+`animation-performance-layers.md` for the exact implementation boundary.

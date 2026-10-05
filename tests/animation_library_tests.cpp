@@ -168,10 +168,26 @@ int main(int argc,char** argv) {
         if(argc==2) {
             const auto packages=Catalog::load(root,argv[1],root/"cache");
             expect(packages.outfits.size()==1,"Packaged library displaced existing outfit");
+            expect(packages.outfit_revisions.empty(),"Loose outfit acquired verified package identity");
             expect(packages.animation_libraries.size()==1 && packages.animation_libraries[0].id=="test.valid",
                    "Malformed or conflicting packaged libraries were accepted");
             expect(packages.diagnostics.at("rejected")==4,"Bad library packages were not reported independently");
             expect(packages.diagnostics.at("loaded")==1,"Valid packaged library did not load");
+        }
+        if(argc==3 && std::string_view(argv[1])=="--audited-pack") {
+            const auto packages=Catalog::load(root,argv[2],root/"audit-cache");
+            expect(packages.animation_libraries.size()==1,"Audited pack did not load as one library");
+            const auto& audited=packages.animation_libraries[0];
+            expect(audited.entries.size()==57 && audited.adapters.size()==5,"Audited animation set changed");
+            expect(packages.outfit_revisions.size()==3,"Source outfits lack verified revisions");
+            for(const auto& adapter:audited.adapters) {
+                const auto found=packages.outfit_revisions.find(adapter.source_outfit);
+                expect(found!=packages.outfit_revisions.end(),"Adapter source outfit was not discovered");
+                const auto* resolved=resolve_performance_adapter(packages.animation_libraries,adapter.source_outfit,
+                    found->second,adapter.source_class,adapter.skeleton);
+                expect(resolved && resolved->target_class==adapter.target_class,"Packaged adapter does not resolve");
+            }
+            expect(packages.diagnostics.at("rejected")==0,"Audited package set contains rejected metadata");
         }
         fs::remove_all(root);
         std::cout<<checks<<" animation library checks passed\n";

@@ -78,6 +78,25 @@ int main() {
         expect(a.phase()==PerformancePhase::Holding,"Starting at photo endpoint did not hold");
         a.begin(AnimationPlayback::Loop,1.,1.,1.);
         expect(near(a.position(),0.) && a.enabled(),"Starting a loop at its endpoint did not wrap");
+        expect(near(a.weight(),0.),"New take did not start at zero weight");
+        a.advance(.09);
+        expect(near(a.weight(),.5),"Entry easing midpoint is incorrect");
+        a.pause(true);a.advance(1.);
+        expect(near(a.weight(),.5),"Pause advanced entry blend");
+        a.stop();
+        expect(near(a.weight(),.5),"Stopping during entry jumped the weight");
+        a.advance(.09);
+        expect(near(a.weight(),.25),"Exit did not ease from the captured entry weight");
+        a.advance(.1);
+        expect(!a.active() && near(a.weight(),0.),"Exit left a nonzero blend weight");
+        a.begin(AnimationPlayback::Pose,1./30.);a.advance(1./30.);
+        expect(a.weight()>0. && a.weight()<1.,"Short photo pose skipped the entry blend");
+        a.advance(.2);
+        expect(near(a.weight(),1.) && a.phase()==PerformancePhase::Holding,"Held photo pose never completed its entry blend");
+        a.begin(AnimationPlayback::Once,1.);b.begin(AnimationPlayback::Once,1.);
+        for(int i=0;i<65;++i) a.advance(1./60.);
+        b.advance(65./60.);
+        expect(near(a.weight(),b.weight()) && a.weight()>0.,"Exit weight depends on tick partition");
         std::cout<<checks<<" performance clock checks passed\n";
         return 0;
     } catch(const std::exception& error) { std::cerr<<error.what()<<'\n'; return 1; }

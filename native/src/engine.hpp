@@ -26,6 +26,7 @@
 #include <Unreal/UObject.hpp>
 #include <Unreal/FWeakObjectPtr.hpp>
 #include "astral_lifecycle.hpp"
+#include "performance_session.hpp"
 
 namespace css {
 fs::path engine_content_directory();
@@ -61,6 +62,30 @@ public:
     ~AssetLoadRoots() noexcept { release(); }
 };
 class Appearance;
+class PerformancePlayer {
+    PerformanceSession session_;
+    WeakObject pawn_, component_, mesh_, post_, animation_, sequence_;
+    AssetLoadRoots retained_;
+    RC::Unreal::FName character_;
+    std::string reason_;
+    float original_time_=0.f;
+    std::function<void()> restore_layer_;
+    struct Hidden { WeakObject object; bool actor=false; };
+    std::vector<Hidden> hidden_;
+    bool intact() const;
+    void write_pose();
+    void release();
+    void bind_layer(RC::Unreal::UObject* pawn,const Catalog&,const std::string& outfit);
+public:
+    bool active() const { return session_.active(); }
+    static std::string unavailable(RC::Unreal::UObject* pawn,const Catalog&,const std::string& outfit);
+    Json start(RC::Unreal::UObject* pawn,const Catalog&,const std::string& outfit,
+               const std::string& id,double rate,double position);
+    Json command(const Json&);
+    Json status() const;
+    void tick(RC::Unreal::UObject* pawn);
+    void interrupt(const std::string& reason);
+};
 struct SharedAnimationResult {
     bool matched=false, hide_weapons=false;
     std::string asset, reason;
@@ -843,6 +868,7 @@ public:
     void sync_items(const Outfit&,const std::string& variant);
     int worn_item_count() const { return items_.count(); }
     WalkOverride walk;
+    PerformancePlayer performance;
     SharedAnimationResult resolve_shared_animation(const Catalog& catalog,uint64_t generation,
         const std::string& outfit,const std::string& variant,AnimationSlot slot,const std::string& choice) {
         return shared_animations_.resolve(observed_pawn_.Get(),catalog,generation,outfit,variant,slot,choice);
@@ -856,7 +882,17 @@ public:
     }
     void sync_walk(bool idle_feminine,bool walk_feminine,const std::array<std::string,3>& custom_paths,
                    const std::string& custom_idle_clip={},bool hide_weapons=false) {
-        walk.update(observed_pawn_.Get(),idle_feminine,walk_feminine,custom_paths,custom_idle_clip,hide_weapons);
+        if(!performance.active())
+            walk.update(observed_pawn_.Get(),idle_feminine,walk_feminine,custom_paths,custom_idle_clip,hide_weapons);
+    }
+    void tick_performance() { performance.tick(observed_pawn_.Get()); }
+    std::string performance_unavailable(const Catalog& catalog,const std::string& outfit) const {
+        return PerformancePlayer::unavailable(observed_pawn_.Get(),catalog,outfit);
+    }
+    Json start_performance(const Catalog& catalog,const std::string& outfit,const std::string& id,double rate,double position) {
+        if(performance.active()) throw std::runtime_error("Stop the current performance first");
+        if(const auto why=performance_unavailable(catalog,outfit);!why.empty()) throw std::runtime_error(why);
+        return performance.start(observed_pawn_.Get(),catalog,outfit,id,rate,position);
     }
     Json transition_state(void* engine);
 #ifdef CSS_INVENTORY_DEV

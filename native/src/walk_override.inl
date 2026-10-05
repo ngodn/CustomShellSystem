@@ -408,21 +408,27 @@ static bool is_component_hidden_in_game(UObject* obj) {
 // cosmetic idle need to yield, so the game's aim pose holds. A main weapon held at idle must NOT
 // disable the idle: a shell that carries its weapon (Eve, and others) would otherwise never play
 // its custom idle at all. The in-hand weapon's own WeaponSlot tag says which slot it belongs to.
-static bool sidearm_in_hand(UObject* pawn) {
+static bool sidearm_in_hand(UObject* pawn,bool strict=false) {
     if(!pawn) return false;
     try {
         auto* weapons=read<UObject*>(pawn,L"WeaponsComponent");
-        if(!weapons) return false;
+        if(!weapons) {
+            if(strict) throw std::runtime_error("Player weapon state is unavailable");
+            return false;
+        }
         Call in_hand(weapons,L"GetWeaponInHand",1); in_hand.run();
         auto* weapon=in_hand.get<UObject*>();
         if(!weapon) return false;
         auto* slot=weapon->GetPropertyByNameInChain(L"WeaponSlot");   // FGameplayTag; its FName is the first member
-        if(!slot || slot->GetElementSize()<int(sizeof(FName))) return false;
+        if(!slot || slot->GetElementSize()<int(sizeof(FName))) {
+            if(strict) throw std::runtime_error("In-hand weapon slot is unavailable");
+            return false;
+        }
         FName tag{}; std::memcpy(&tag,reinterpret_cast<std::byte*>(weapon)+slot->GetOffset_Internal(),sizeof(FName));
         std::string name=narrow(tag.ToString());
         for(char& c:name) c=char(std::tolower(static_cast<unsigned char>(c)));
         return name.find("sidearm")!=std::string::npos;
-    } catch(...) { return false; }
+    } catch(...) { if(strict) throw;return false; }
 }
 void WalkOverride::set_weapon_hidden(UObject* pawn,bool hide) {
     if(!pawn) return;

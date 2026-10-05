@@ -2589,6 +2589,8 @@ bool Appearance::transition_active() const {
     return is_quest_or_teleport_active(observed_controller_.Get()) || is_traversal_ability_active(observed_pawn_.Get());
 }
 
+#include "performance_player.inl"
+
 }
 
 #include "inventory_ui.inl"

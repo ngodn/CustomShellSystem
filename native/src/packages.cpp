@@ -179,6 +179,7 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
                manifest.at("game")!="MortalShell2" || manifest.at("engine")!="5.6") throw std::runtime_error("Unsupported CSS package format");
             auto id=manifest.at("id").get<std::string>();
             if(!valid_id(id) || name!=std::string(prefix)+id+"/manifest.json") throw std::runtime_error("CSS package identity mismatch");
+            AnimationContainerRevision revision;
             for(auto suffix:{".utoc",".ucas"}) {
                 auto companion=path; companion.replace_extension(suffix);
                 if(!fs::is_regular_file(companion)) throw std::runtime_error(std::string("CSS package companion is missing: ")+suffix);
@@ -193,7 +194,9 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
                     std::ifstream toc(companion,std::ios::binary);
                     if(expected.at("sha256")!=hex(hash(read(toc,0,static_cast<size_t>(size),size),true)))
                         throw std::runtime_error("CSS container table checksum mismatch");
+                    revision.toc_sha256=expected.at("sha256").get<std::string>();
                 }
+                else revision.bulk_bytes=fs::file_size(companion);
             }
             const auto kind=manifest.value("kind",std::string("outfit"));
             if(kind=="animation_library") {
@@ -207,7 +210,7 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
                     throw std::runtime_error("Animation library package identity mismatch");
                 if(manifest.contains("thumbnail") || manifest.contains("resources"))
                     throw std::runtime_error("Animation libraries cannot carry outfit resources");
-                result.push_back({catalog,{},path});
+                result.push_back({catalog,{},path,revision});
                 continue;
             }
             if(kind!="outfit") throw std::runtime_error("Unsupported CSS package kind");
@@ -282,7 +285,7 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
                     fs::rename(temp,path);
                 }
             }
-            result.push_back({manifest.at("catalog"),directory,path});
+            result.push_back({manifest.at("catalog"),directory,path,revision});
         }
         if(result.size()>begin) { record["status"]="validated"; record.erase("reason"); }
         } catch(const std::exception& error) {
