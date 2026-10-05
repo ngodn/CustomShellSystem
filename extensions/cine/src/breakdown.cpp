@@ -16,6 +16,7 @@ constexpr const char* path_sphere = "/Engine/BasicShapes/Sphere.Sphere";
 constexpr size_t max_bones = 1200;      // the game's widest skeleton is 1199 bones
 constexpr size_t max_sockets = 128;
 constexpr size_t max_bodies = 160;
+constexpr size_t max_skins = 24;
 constexpr int keep_relative = 0, snap_to_target = 2, no_collision = 0;
 
 struct LayerInfo { const char* id; const char* label; Vec3 colour; };
@@ -209,7 +210,17 @@ void Breakdown::begin(const Json& pawn, const Json& camera, LayerSet needed, std
                 }
             }
         }
-        try { overlay_before_ = host_.get(mesh_, "OverlayMaterial"); } catch (...) { overlay_before_ = nullptr; }
+        // Her skinned parts: the body, then whatever else the character wears as its own component.
+        skins_.push_back({mesh_, Json(), {}});
+        if (needed_ & (bit(Layer::Clay) | bit(Layer::Wireframe))) {
+            try {
+                const auto cls = load("/Script/Engine.SkinnedMeshComponent");
+                const auto parts = is_handle(cls) ? call(pawn_, "K2_GetComponentsByClass", {{"ComponentClass", cls}}) : Json();
+                if (parts.is_array()) for (const auto& part : parts)
+                    if (is_handle(part) && id_of(part) != id_of(mesh_) && skins_.size() < max_skins) skins_.push_back({part, Json(), {}});
+            } catch (...) {}   // the body alone still works
+        }
+        for (auto& skin : skins_) { try { skin.overlay_before = host_.get(skin.component, "OverlayMaterial"); } catch (...) { skin.overlay_before = nullptr; } }
         if (needed_ & (bone_layers | bit(Layer::Collision))) {
             const auto count = call(mesh_, "GetNumBones");
             bones_expected_ = count.is_number() ? std::min<size_t>(count.get<size_t>(), max_bones) : 0;
@@ -345,9 +356,11 @@ void Breakdown::build(const Work& work) {
 
 // ---------------------------------------------------------------- showing layers
 
-void Breakdown::set_overlay(const Json& material_or_null) {
-    call(mesh_, "SetOverlayMaterial", {{"NewOverlayMaterial", material_or_null}});
-    overlay_ours_ = is_handle(material_or_null) && id_of(material_or_null) != id_of(overlay_before_);
+void Breakdown::set_overlay(const Json* ours) {
+    for (auto& skin : skins_) {
+        try { call(skin.component, "SetOverlayMaterial", {{"NewOverlayMaterial", ours ? *ours : skin.overlay_before}}); } catch (...) {}
+    }
+    overlay_ours_ = ours != nullptr;
 }
 
 // Clay on every slot of her mesh, or her own materials back. Only slots that still hold the
@@ -355,19 +368,26 @@ void Breakdown::set_overlay(const Json& material_or_null) {
 void Breakdown::apply_clay(bool on) {
     if (on == clay_slots_) return;
     if (on) {
-        const auto count = call(mesh_, "GetNumMaterials");
-        const int slots = count.is_number() ? std::clamp(count.get<int>(), 0, 256) : 0;
-        slots_before_.clear();
-        for (int i = 0; i < slots; ++i) slots_before_.push_back(call(mesh_, "GetMaterial", {{"ElementIndex", i}}));
-        for (int i = 0; i < slots; ++i) call(mesh_, "SetMaterial", {{"ElementIndex", i}, {"Material", clay_}});
+        for (auto& skin : skins_) {
+            try {
+                const auto count = call(skin.component, "GetNumMaterials");
+                const int slots = count.is_number() ? std::clamp(count.get<int>(), 0, 64) : 0;
+                skin.slots_before.clear();
+                for (int i = 0; i < slots; ++i) skin.slots_before.push_back(call(skin.component, "GetMaterial", {{"ElementIndex", i}}));
+                for (int i = 0; i < slots; ++i) call(skin.component, "SetMaterial", {{"ElementIndex", i}, {"Material", clay_}});
+            } catch (...) {}   // a part that went away mid-take: the others still change
+        }
         clay_slots_ = true;
     } else {
-        for (int i = 0; i < int(slots_before_.size()); ++i) {
-            try {
-                if (id_of(call(mesh_, "GetMaterial", {{"ElementIndex", i}})) == id_of(clay_)) call(mesh_, "SetMaterial", {{"ElementIndex", i}, {"Material", slots_before_[size_t(i)]}});
-            } catch (...) {}
+        for (auto& skin : skins_) {
+            for (int i = 0; i < int(skin.slots_before.size()); ++i) {
+                try {
+                    if (id_of(call(skin.component, "GetMaterial", {{"ElementIndex", i}})) == id_of(clay_))
+                        call(skin.component, "SetMaterial", {{"ElementIndex", i}, {"Material", skin.slots_before[size_t(i)]}});
+                } catch (...) {}
+            }
+            skin.slots_before.clear();
         }
-        slots_before_.clear();
         clay_slots_ = false;
     }
 }
@@ -400,18 +420,18 @@ void Breakdown::show(LayerSet set, double wipe_seconds) {
         if ((incoming | staying) & wire) {
             if (!is_handle(wire_)) wire_ = instance("M_Cine_Wire", info[static_cast<size_t>(Layer::Wireframe)].colour, -1);
             place(wire_, incoming & wire, false);
-            if (incoming & wire) set_overlay(wire_);
+            if (incoming & wire) set_overlay(&wire_);
         } else if (outgoing & wire) {
             place(wire_, false, true);
-            if (!wiping) set_overlay(overlay_before_);
+            if (!wiping) set_overlay(nullptr);
         }
         if (incoming & clay) {
             if (!is_handle(clay_)) { clay_ = instance("M_Cine_Clay", info[static_cast<size_t>(Layer::Clay)].colour, -1); set_param(clay_, "Ambient", 0.06); }
-            if (wiping && !overlay_taken) { place(clay_, true, false); set_overlay(clay_); }
+            if (wiping && !overlay_taken) { place(clay_, true, false); set_overlay(&clay_); }
             else { set_param(clay_, "Show", 1); set_param(clay_, "Invert", 0); set_param(clay_, "Hold", 1); apply_clay(true); }
         } else if (outgoing & clay) {
             apply_clay(false);
-            if (wiping && !overlay_taken) { place(clay_, false, true); set_overlay(clay_); }
+            if (wiping && !overlay_taken) { place(clay_, false, true); set_overlay(&clay_); }
         } else if (staying & clay) set_param(clay_, "Hold", 1);
 
         // Frame passes: one at a time, on two instances so the outgoing pass and the incoming
@@ -453,8 +473,8 @@ void Breakdown::settle() {
         else if (leaving_ & bit(l)) { set_param(mid, "Show", 0); set_param(mid, "Invert", 0); }
     }
     if ((shown_ & clay) && !clay_slots_) { set_param(clay_, "Hold", 1); set_param(clay_, "Invert", 0); apply_clay(true); }
-    if (shown_ & wire) { set_overlay(wire_); set_param(wire_, "Invert", 0); set_param(wire_, "Hold", 0); }
-    else if (overlay_ours_ || (leaving_ & (wire | clay))) set_overlay(overlay_before_);
+    if (shown_ & wire) { set_overlay(&wire_); set_param(wire_, "Invert", 0); set_param(wire_, "Hold", 0); }
+    else if (overlay_ours_ || (leaving_ & (wire | clay))) set_overlay(nullptr);
     if (frame_passes_) {
         set_param(pass_[1 - pass_now_], "Show", 0);
         if (first_frame_layer(shown_)) { set_param(pass_[pass_now_], "Invert", 0); set_param(pass_[pass_now_], "Hold", 0); }
@@ -557,7 +577,7 @@ std::vector<std::string> Breakdown::end() {
     const bool mesh_alive = valid(mesh_);
     if (mesh_alive) {
         step("clay", [&] { apply_clay(false); });
-        step("overlay", [&] { if (overlay_ours_ || is_handle(wire_) || is_handle(clay_)) set_overlay(overlay_before_); });
+        step("overlay", [&] { if (overlay_ours_ || is_handle(wire_) || is_handle(clay_)) set_overlay(nullptr); });
     }
     if (frame_passes_ && valid(camera_))
         for (auto& pass : pass_) if (is_handle(pass)) step("frame pass", [&] { call(camera_, "RemoveBlendable", {{"InBlendableObject", pass}}); });
@@ -587,9 +607,10 @@ void Breakdown::forget() {
     pawn_ = mesh_ = capsule_ = camera_ = statics_ = kismet_materials_ = nullptr;
     class_mesh_ = class_capsule_ = class_sphere_ = class_box_ = nullptr;
     for (auto& mid : mids_) mid = nullptr;
-    clay_ = wire_ = pass_[0] = pass_[1] = overlay_before_ = capsule_colour_before_ = nullptr;
+    clay_ = wire_ = pass_[0] = pass_[1] = capsule_colour_before_ = nullptr;
+    skins_.clear();
     pass_now_ = 0;
-    slots_before_.clear(); spring_names_.clear(); bones_.clear(); sockets_.clear(); bodies_.clear();
+    spring_names_.clear(); bones_.clear(); sockets_.clear(); bodies_.clear();
     queue_.clear(); pieces_.clear(); teardown_.clear(); callouts_.clear();
     bones_expected_ = 0;
     clay_slots_ = overlay_ours_ = capsule_touched_ = false; capsule_hidden_before_ = true;
