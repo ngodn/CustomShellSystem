@@ -138,6 +138,41 @@ CSS's animation code meanwhile, and commit only my own files (never `git add -A`
 - Seen in game at 22:14: labels, caption, signature and font all draw. Not yet seen: 9:16 and
   the other guides in game; the a3 pak (bone rim shading), which needs one game restart.
 
+## State at the end of 5 Oct (23:20)
+
+BUILT, host-tested and run live three times (`work/live/reel.py showreel-124 preset` rolls it
+and proves her look and materials are as before; the last two runs: "RESTORED"):
+
+- `src/sequence.{hpp,cpp}`: tempo grid, shots (cut / flow, eases, roll, fstop), look steps,
+  `ShotPlan` / `choose_plan` / `planned_pose`.
+- Director (`cine.cpp`): `prepare_looks` (every look worn once, breakdown built on its look,
+  opening look), `plan_surroundings` (every shot traced at five moments for eight angles; a
+  chain of flows is judged and turned as one), `sequence_frame` (frame clock, cuts on their
+  beat, look steps, transitions), `sequence_tick` (camera per tick plus one live trace),
+  `roll` (music, real-time clock while it plays), own look put back in `finish_take` and
+  remembered in `own_look_owed_` until CSS confirms it.
+- Outfit changes ride the beat under a frame-pass wipe (normals, base colour in turn): one
+  beat in, one beat held, one beat out starting on the step's beat; half-beat wipes when
+  changes come every bar. The user rejected the first version, a white flash ("ugly"), and
+  asked for "smooth transition that also follows the beat" using our frame effects.
+- `src/audio.{hpp,cpp}`: `"audio": "audio/x.wav"` in a preset plays through winmm. The
+  reference track's first 81 s sit ONLY in the game's CINE folder (`audio/showreel.wav`);
+  never commit or ship it.
+- CSS service additions (dev core staged): `outfits`, `wear`, `describe.busy`, `idle`
+  (one transient idle across looks; preset field `"idle"`, the showreel uses `eve`).
+- `presets/showreel-124.cine.json`: 42 shots, 43 look steps (19 wears), breakdown on bars
+  22.5 to 29.5. It was generated from a Python table in the session, then edited; the JSON
+  is the source now.
+
+Lessons that cost a broken character each (both fixed, both in `SCENE-GOAL.md` notes too):
+the breakdown must read her materials when clay comes, not while preparing (CSS makes new
+instances per wear and blocks every change when it finds foreign ones); and a take must not
+capture "her own look" while a restore is still landing.
+
+The user's judgement of the latest run (transitions, music sync, camera in the open spot,
+idle) is the next input. Likely tuning: shot framing per look, which pieces and palettes
+change when, transition lengths.
+
 ## Checklist
 
 - [x] 1. Sequence kind: preset format, pure timeline maths, unit tests
@@ -154,11 +189,14 @@ CSS's animation code meanwhile, and commit only my own files (never `git add -A`
         the breakdown, wear the opening look, roll. All breakdown steps must sit in one span
         without a wear (pieces and locked materials belong to one look). The flash is a
         full-frame HUD layer on the screen root.
-- [ ] 2. Rig: camera roll; director: sequence takes (cuts, flows, whips)
-- [ ] 3. CSS service: `wear` and the list of wearable outfits; CINE look steps with outfits
+- [x] 2. Rig: camera roll; director: sequence takes (cuts, flows, whips)
+- [x] 3. CSS service: `wear` and the list of wearable outfits; CINE look steps with outfits
       - 5 Oct: service side DONE (`outfits`, `wear`, `describe.busy`; commit 5602759), staged
         as a CSS dev core and timed live. CINE side (look steps, flash) not started.
-- [ ] 4. Bar-timed breakdown and look steps; breakdown re-applied after an outfit change
-- [ ] 5. The showreel preset itself, timed to the grid above; host tests
-- [ ] 6. Live: wear latency, the whole take with the user, timing against the track
+- [x] 4. Bar-timed breakdown and look steps (the breakdown belongs to one look; a preset that
+      changes outfit under it is refused)
+- [x] 5. The showreel preset itself, timed to the grid above; host tests (161 director checks,
+      3009 pure checks)
+- [ ] 6. Live: wear latency (done), the whole take with the user (three runs done), their
+      verdict and tuning (open)
 - [ ] 7. Docs: README (sequence format), Nexus texts
