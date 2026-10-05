@@ -403,3 +403,15 @@ unconditional looping. See `docs/development/shared-animation-motion-review.md`
 for measured bounds and the exact remaining review scope. No runtime or asset
 installation changed. Better Jiggle's available local ZIPs contain scripts, not
 the missing skeleton assets, so the two extended-skeleton dances remain open.
+
+The sampled silhouette pass now covers every rendered sample of all thirteen
+moving L2 clips. Remaining contact, prop/support and secondary-motion questions
+are recorded per clip in the motion-review document. A new read-only endpoint
+audit measures all thirteen clips and preserves their hashes. Large endpoint
+orientation gaps confirm several dances need one-shot playback. Catwalk matches
+its endpoint pose closely but still has a 49.913 cm/s local translation velocity
+gap, so it is not accepted as a seamless loop. Four diagnostic regression tests
+pass, including equal endpoint poses with unequal velocity, quaternion sign
+equivalence and invalid snapshot rejection. Native-speed and live checks remain
+open. The game is closed, and the installed trial's DLL selectors, DLL hashes and
+shared containers still match its deployment receipt. No installation changed.

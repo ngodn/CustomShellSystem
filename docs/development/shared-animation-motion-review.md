@@ -52,10 +52,46 @@ ATOOL Performances 5 and 8 move through wide overhead swings. Their first
 renders crop parts of the body. Wider 4-metre camera rerenders were inspected
 through all five sheets. The large lifts are associated with those whole-body
 motions, not isolated foot spikes. Prop/support context, close deformation and
-native-speed review remain open. Performance 4 and the initial intervals of
-Performances 1, 2, 3 and 6 also received a first sheet review; do not count their
-remaining sheets as inspected. Other clips have generated evidence, not completed
-visual acceptance.
+native-speed review remain open.
+
+The remaining timestamped sheets have now been inspected. Every rendered sample
+for all thirteen moving clips has a sheet review, with the wider views used for
+Performances 5 and 8. This completes the sampled silhouette pass, not native-speed
+or gameplay acceptance.
+
+| Clip | Observed motion and follow-up |
+| --- | --- |
+| Bass Down Low | Standing dance, arm gestures and a turn into a rear-facing pose with hands behind the lower back. The end differs substantially from the start. Keep one-shot playback; inspect hand/back contact closely. |
+| Eve Catwalk | Cross-steps, hand-on-hip presentation and front/back pivots, with repeated phrases. Looks coherent at sampled intervals. Endpoint velocity still needs a loop transition; this is not ordinary walk locomotion. |
+| Come Closer | Standing dance with arm gestures, pivots and heel lifts. The final interval settles into a different pose. The lowest heel position is -5.870 cm at 16.5 seconds; retain this as a contact follow-up. |
+| Jang Won Young Spin | Turn with lifted/crossed leg and a rear-facing finish. No gross limb discontinuity visible in the sampled view. Keep one-shot playback. |
+| Performance 1 | Arms held overhead with small body sway. Support/prop context remains unverified. |
+| Performances 2 and 3 | Different opening gestures lead into a raised-arm presentation, followed by lowering the arm and returning to standing. Similar middle/end motion is not evidence that the complete clips are duplicates. |
+| Performance 4 | Airborne bent-leg gesture. Last sample returns near the reference floor, while the opening has a -15.136 cm intersection. Source/contact comparison remains required. |
+| Performances 5 and 8 | Whole-body overhead swings, reviewed with the wider framing described above. Preserve the lifts; support and prop context remain open. |
+| Performances 6 and 7 | Opening bow/hand gestures, pivot into a held presentation, then return to standing. Similar held sections have different entry motion. Raw ponytail poses extend sideways during the turn; live secondary motion remains unverified. |
+
+No gross detached or stretched limb was visible in these sampled views. Small
+hand intersections, footwear contact and hair/garment behavior still require the
+closer source comparisons and game checks. The images have no visible floor;
+their captions measure geometry against the reference plane.
+
+## Endpoint audit
+
+`audit_motion_seam.py` reads the unchanged raw snapshots, compares first/last local
+transforms and measures one-sided translational velocities at both ends. It
+retains a per-bone report and source hash. It rejects invalid snapshots, mismatched
+bone order, zero quaternions and nonfinite transforms. Quaternion sign changes
+are treated as the same orientation. This is a diagnostic, not an automatic
+loop classifier, and does not measure angular velocity or world-space contact.
+
+The largest orientation gap among the twenty recorded principal body bones is
+157.522 degrees for Bass Down Low, 102.182 for Black Hole, 100.213 for Come Closer
+and 109.237 for Jang Won Young Spin. Those raw endpoints are not seamless loops.
+Catwalk's corresponding orientation gap is only 0.086 degrees, but its largest
+local translation velocity gap is 49.913 cm/s. A matching endpoint pose alone
+therefore cannot establish a smooth Catwalk loop. The audit changes no playback
+mode or source data. All thirteen moving clips have reports.
 
 ## Reproducible evidence
 
@@ -70,6 +106,10 @@ Under `work/cine-animation-port/`:
   source-11 assets 004 and 007, Performances 5 and 8.
 - `blackhole-source-review-v2/contact-source-check.json`: original source foot
   and toe heights around the hop, with the immutable source-track hash.
+- `l2-seam-audit-v1/`: per-bone endpoint reports for all thirteen moving clips
+  and their summary. An initial broad input selection also audited photo000,
+  then correctly rejected photo001's short static timeline. The completed batch
+  explicitly selects moving clips; static photo poses are not loop candidates.
 
 The source-joint review tool previously recorded only eight seconds and looped
 shorter clips unconditionally. It now plays each complete source once, then holds
@@ -80,6 +120,6 @@ animation data is unchanged. Source hashes are checked after rendering.
 No game files were changed for this review. The installed performance trial's
 core selector, core hash, CINE entry and shared container hashes still match
 `live-performance-1/deployment.json`; the game was closed at the final check.
-The facial candidate remains uninstalled. Remaining work includes the other
-sheet reviews, native-speed playback, all-outfit contacts/physics, live CSS/CINE
+The facial candidate remains uninstalled. Remaining work includes
+native-speed playback, all-outfit contacts/physics, live CSS/CINE
 restoration and performance, two unresolved source rigs, and distributions.
