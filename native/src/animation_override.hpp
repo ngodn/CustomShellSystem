@@ -13,6 +13,25 @@ inline AnimationGait animation_gait(double speed,std::optional<bool> walking,std
     if(sprinting.value_or(speed>=700.)) return AnimationGait::Sprint;
     return AnimationGait::Jog;
 }
+class AnimationGaitSelector {
+    AnimationGait previous_=AnimationGait::None;
+    double previous_speed_=0;
+public:
+    void reset() { previous_=AnimationGait::None; previous_speed_=0; }
+    AnimationGait update(double speed,std::optional<bool> walking,std::optional<bool> sprinting,
+                         bool require_flags,std::optional<bool> has_acceleration) {
+        auto gait=animation_gait(speed,walking,sprinting,require_flags);
+        // Releasing walk/sprint can clear both flags before braking finishes.
+        // Keep that cycle through deceleration instead of starting a jog cycle.
+        if(require_flags && gait==AnimationGait::Jog && has_acceleration==false &&
+           walking==false && sprinting==false && speed<=previous_speed_ &&
+           (previous_==AnimationGait::Walk || previous_==AnimationGait::Sprint))
+            gait=previous_;
+        previous_=gait;
+        previous_speed_=std::isfinite(speed) && speed>=0?speed:0;
+        return gait;
+    }
+};
 // Keep the original pair across CSS-to-CSS changes. A different writer's pair
 // becomes the new baseline if CSS takes ownership again.
 template<class Object,class Equal=std::equal_to<Object>>

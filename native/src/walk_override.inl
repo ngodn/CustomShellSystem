@@ -409,6 +409,7 @@ void WalkOverride::release() {
     custom_paths_={};custom_blends_={};custom_skeleton_.Reset();
     custom_idle_clip_.clear(); hide_weapons_=false;
     idle_ticks_=off_ticks_=slide_ticks_=0; slide_until_=0; last_heal_=0;
+    gait_selector_.reset();
 }
 void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     const std::array<std::string,3>& custom_paths,
@@ -428,6 +429,7 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
         pawn_=pawn; anim_.Reset(); movement_.Reset(); speed_->movement=nullptr;
     }
     if(custom_paths_!=custom_paths || custom_idle_clip_!=custom_idle_clip || hide_weapons_!=hide_weapons) {
+        gait_selector_.reset();
         push_off();
         if(custom_idle_engaged_) {
             if(auto* post=custom_idle_post_.Get()) {
@@ -449,6 +451,7 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     Call instance(mesh,L"GetAnimInstance",1);instance.run();
     auto* anim=instance.get<UObject*>();
     if(anim_.Get()!=anim) {
+        gait_selector_.reset();
         push_off();
         if(!anim || !has_field(anim,L"UseActiveBlendspace",sizeof(bool)) || !has_field(anim,L"ActiveBlendSpace",sizeof(UObject*)))
             throw std::runtime_error("Player animation instance has no blendspace override");
@@ -484,7 +487,7 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     double speed=0; bool speed_known=false;
     std::array<double,3> velocity{};
     if(movement) { velocity=read<std::array<double,3>>(movement,L"Velocity"); speed=std::hypot(velocity[0],velocity[1]); speed_known=std::isfinite(speed); }
-    std::optional<bool> walking,sprint_requested;
+    std::optional<bool> walking,sprint_requested,has_acceleration;
     // These flags belong to this player's current linked layer. Never find the
     // first global walk ability, which could belong to another actor.
     if(auto* cls=find_optional(L"/Game/Sparta/Characters/Humans/Player/Animations/ABPL_Locomotion_MotionMatching.ABPL_Locomotion_MotionMatching_C")) {
@@ -492,10 +495,12 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
         layer.set(L"InClass",cls);layer.set(L"bCheckForChildClass",false);layer.run();
         if(auto* linked=layer.get<UObject*>();linked && has_field(linked,L"IsWalking",sizeof(bool)) && has_field(linked,L"IsSprinting",sizeof(bool))) {
             walking=read<bool>(linked,L"IsWalking");sprint_requested=read<bool>(linked,L"IsSprinting");
+            if(has_field(linked,L"HasAcceleration",sizeof(bool)))
+                has_acceleration=read<bool>(linked,L"HasAcceleration");
         }
     }
     if(!speed_known) {release();return;}
-    const auto gait=animation_gait(speed,walking,sprint_requested,custom);
+    const auto gait=gait_selector_.update(speed,walking,sprint_requested,custom,has_acceleration);
     if(gait==AnimationGait::None) {release();return;}
     const bool walk_now=gait==AnimationGait::Walk;
     const bool sprinting=gait==AnimationGait::Sprint;

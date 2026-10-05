@@ -544,6 +544,7 @@ class WalkOverride {
     };
     using BlendLease=AnimationOverrideLease<WeakObject,SameWeakObject>;
     BlendLease blend_lease_;
+    AnimationGaitSelector gait_selector_;
     AssetLoadRoots original_blend_root_;
     WeakObject pawn_, anim_, movement_, walk_bs_, active_;
     std::array<std::string,3> custom_paths_;

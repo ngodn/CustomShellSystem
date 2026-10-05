@@ -61,6 +61,37 @@ int main() {
         expect(animation_gait(-1,false,false,true)==AnimationGait::None &&
                animation_gait(std::numeric_limits<double>::quiet_NaN(),false,false,true)==AnimationGait::None,
                "Invalid velocity used for animation selection");
+        AnimationGaitSelector gait;
+        for(const auto moving:{AnimationGait::Walk,AnimationGait::Sprint}) {
+            gait.reset();
+            const bool walk=moving==AnimationGait::Walk;
+            const double full=walk?184.:800.;
+            expect(gait.update(full,walk,!walk,true,true)==moving,"Initial requested gait lost");
+            for(double speed:{full*.9,full*.5,25.})
+                expect(gait.update(speed,false,false,true,false)==moving,"Braking inserted a jog cycle");
+            expect(gait.update(20,false,false,true,false)==AnimationGait::Idle,"Braking delayed idle");
+            expect(gait.update(30,false,false,true,true)==AnimationGait::Jog,"New jog inherited prior gait");
+        }
+        gait.reset();
+        gait.update(800,false,true,true,true);
+        expect(gait.update(650,false,false,true,true)==AnimationGait::Jog,"Sprint release with movement input held sprint");
+        gait.update(700,false,true,true,true);
+        expect(gait.update(680,false,false,true,false)==AnimationGait::Sprint,"Sprint stop not retained");
+        expect(gait.update(300,true,false,true,true)==AnimationGait::Walk,"Explicit walking ignored during braking");
+        expect(gait.update(250,false,false,true,true)==AnimationGait::Jog,"Reversal or partial input ignored");
+        for(const auto acceleration:{std::optional<bool>{},std::optional<bool>{true}}) {
+            gait.reset();gait.update(800,false,true,true,true);
+            expect(gait.update(600,false,false,true,acceleration)==AnimationGait::Jog,"Unproven braking held gait");
+        }
+        gait.reset();gait.update(800,false,true,true,true);
+        expect(gait.update(810,false,false,true,false)==AnimationGait::Jog,"Increasing speed treated as braking");
+        gait.reset();gait.update(184,true,false,true,true);gait.reset();
+        expect(gait.update(100,false,false,true,false)==AnimationGait::Jog,"Reset kept previous actor's gait");
+        gait.update(184,true,false,true,true);
+        expect(gait.update(100,{},false,true,false)==AnimationGait::None,"Missing required flag retained gait");
+        expect(gait.update(90,false,false,true,false)==AnimationGait::Jog,"Invalid state kept braking history");
+        gait.update(184,true,false,true,true);
+        expect(gait.update(100,false,false,false,false)==AnimationGait::Jog,"Legacy selection acquired custom braking");
         std::cout<<checks<<" animation runtime checks passed\n";
     } catch(const std::exception& e) {std::cerr<<e.what()<<'\n';return 1;}
 }
