@@ -228,3 +228,10 @@ The pack still requires Shared/SKEL_Base; this check used installed Eve 1.4.0.
 Nothing was installed. See `docs/development/shared-animation-cook.md` for
 limits, dependencies and evidence. One-shot/pose playback, facial runtime,
 the two unresolved dances and live review remain active work.
+
+Five explicit-time performance adapters now compile and pass fresh-process
+structure/default checks: Eve, Eve bikini, Eve knitwear, Genessa and Commander
+White. Original controls, nodes, pin defaults and skeletons are preserved.
+They are separate editor assets, not installed or runtime-integrated. Next
+verify active/held/disabled evaluated poses, then add owned CSS/CINE playback
+and restoration. See `docs/development/animation-performance-layers.md`.
