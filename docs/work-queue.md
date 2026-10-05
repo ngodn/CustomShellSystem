@@ -126,6 +126,11 @@ a restart in the current supported workflow.
 
 ## October 5: Eve asset-load report, after the doubles work
 
+Follow-up: the actual Eve v1.3.0/v1.4.0 ZIPs pass isolated catalog-export and
+public-import checks. The reporter's cause remains unconfirmed without the full
+path, versions and logs. See [audit results](development/evetest-load-report.md).
+The author requested a reply only; do not add this to the BBCode changelog.
+
 Didodiodi reports `Asset could not load: /Game/CSS/EveTest/` in the bottom-right
 UI (Nexus, October 5 at 12:13 AM). CSS/Eve versions and the full failing asset
 name are not yet known. The author asks whether this is hardcoded and requests
