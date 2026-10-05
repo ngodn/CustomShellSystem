@@ -2,9 +2,12 @@
 // CINE extension: menu, settings, route recording, final-shot capture and the take director.
 // All callbacks arrive on the game thread from CSSX. Outside Cine World tick() and render()
 // return at once; inside, the director issues a handful of cached bridge calls per tick.
+#include "breakdown.hpp"
+#include "callouts.hpp"
 #include "guides.hpp"
 #include "preset.hpp"
 #include "rig.hpp"
+#include "scene.hpp"
 #include "shot.hpp"
 #include <cssx/client.hpp>
 #include <map>
@@ -28,7 +31,7 @@ public:
     // For tests: the director without a frame stream.
     struct FrameData {
         bool valid = false, ready = false, in_menu = false;
-        uint32_t world = 0; uint64_t pawn = 0;
+        uint32_t world = 0; uint64_t pawn = 0, controller = 0;
         Vec3 position, velocity; double yaw = 0; double seconds = 0;
     };
     void feed_frame(const FrameData& f) { frame_ = f; }
@@ -40,6 +43,11 @@ private:
         double zoom = 1.0, height = 0.0, fov_scale = 1.0, countdown = 3.0;
         std::string guide = "off", look = "off";   // the look track only runs when asked for
         bool walls = true;
+        std::string scene = "off";        // clean scene: off | enemies | everyone
+        bool keep_target = false;         // clean scene leaves the lock-on target in
+        std::string breakdown = "off";    // breakdown track: off | preset | reel
+        bool labels = true;               // callouts and caption during a breakdown
+        bool breakdown_target = false;    // also break down the lock-on target
     };
     // One take, built while Preparing and played while Running.
     struct Take {
@@ -57,6 +65,15 @@ private:
         bool walking = false, arrived = false; size_t target = 0; double speed = 0, speed_applied = -1, stalled_at = -1;
         bool cut_wide = false, cut_close = false; int photo = -1;
         uint32_t world = 0; uint64_t pawn = 0; int prepare_step = 0;
+        // Breakdown track.
+        std::vector<Timeline::Reveal> reveals; size_t reveal_next = 0; LayerSet layers = 0; double build_wait = 0;
+        // Action take: who she fights, smoothed positions, the fight's state, the beats.
+        Json opponent; bool had_opponent = false, opponent_down = false, opponent_seen = false;
+        double opponent_down_at = -1, opponent_health = -1, player_health = -1;
+        Vec3 subject_f, opponent_f;
+        double azimuth = 0, punch = 0, punch_until = -1, slow_until = -1, scale = 1, scale_applied = 1, focus_applied = -1, reassert_at = 0;
+        int parry_count = 0, poll = 0;
+        std::vector<double> beat_ready;   // per beat: when it may fire again
         std::string note;   // why part of the take is off (look track), shown with every take status
     };
 
@@ -73,6 +90,12 @@ private:
     void prepare();
     void run();
     void finish_take(const std::string& why, bool failed);
+    void begin_countdown();
+    void action_tick(double dt);
+    void fire(Beat::On what);
+    void apply_scene();
+    std::vector<Timeline::Reveal> reel(double total) const;
+    std::vector<std::string> spring_bones();
     void record_tick();
     void capture_final_now();
     void poll_keys();
@@ -91,6 +114,11 @@ private:
     cssx::Client host_;
     Rig rig_;
     Guides guides_;
+    Scene scene_;
+    Breakdown breakdown_, breakdown_opponent_;
+    Callouts callouts_;
+    std::vector<CalloutTarget> callout_targets_;
+    double tick_dt_ = 0.1;
     Settings settings_;
     std::map<std::string, Preset> presets_;
     std::vector<std::string> preset_problems_;

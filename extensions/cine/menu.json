@@ -42,6 +42,27 @@
       ]
     },
     {
+      "id": "scene",
+      "title": "Clean scene",
+      "description": "Takes the people around you out of the picture while you are in Cine World. The world keeps running: time, weather, effects and your own character are untouched. Everyone comes back exactly as they were when you leave.",
+      "controls": [
+        {"id": "scene", "type": "radio", "label": "Hide", "value": "off", "options": [{"id": "off", "label": "Nobody"}, {"id": "enemies", "label": "Enemies"}, {"id": "everyone", "label": "Enemies and NPCs"}], "description": "Hidden characters are frozen, cannot be hit and cannot hurt you, and new ones do not spawn while this is on. Bosses are left alone. You cannot be hurt while it is on."},
+        {"id": "keep_target", "type": "toggle", "label": "Keep my lock-on target", "value": false, "description": "Leaves the enemy you are locked on to in the scene, so you can film a fight with just that one.", "disabled_label": "Turn Hide on first"},
+        {"id": "scene_info", "type": "label", "label": "Now", "description": "What clean scene is doing."}
+      ]
+    },
+    {
+      "id": "breakdown",
+      "title": "Breakdown",
+      "description": "Shows the take in layers like a VFX breakdown reel: clay, wireframe, skeleton, bones, collision and the frame passes, wiped in one after another. Works on any preset. Needs CINE's asset pak installed.",
+      "controls": [
+        {"id": "breakdown", "type": "radio", "label": "Breakdown track", "value": "off", "options": [{"id": "off", "label": "Off"}, {"id": "reel", "label": "Built-in reel"}, {"id": "preset", "label": "From the preset"}], "description": "Built-in reel: runs through every layer over the length of the take and ends on the final image. From the preset: breakdown steps written in the preset file."},
+        {"id": "labels", "type": "toggle", "label": "Labels and arrows", "value": true, "description": "Names what each layer shows, with an arrow to it, and a caption with the layers on screen.", "disabled_label": "Turn the breakdown on first"},
+        {"id": "breakdown_target", "type": "toggle", "label": "Include my lock-on target", "value": false, "description": "Also breaks down the enemy you are locked on to when the take starts.", "disabled_label": "Turn the breakdown on first"},
+        {"id": "breakdown_info", "type": "label", "label": "This take", "description": "What the breakdown track will do."}
+      ]
+    },
+    {
       "id": "look",
       "title": "Look",
       "description": "Needs Custom Shell System 1.0.0-beta.9 or newer. Your own customization is saved before the take and put back after it.",

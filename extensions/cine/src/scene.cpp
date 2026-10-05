@@ -151,6 +151,19 @@ void Scene::open_spawning(std::vector<std::string>* failures) {
 
 // ---------------------------------------------------------------- one character
 
+// The lock-on marker outlives a hidden enemy, so the lock is dropped before its target goes.
+// TargetSpecificCharacter(null) is the game's own "no target"; the toggle is the fallback.
+void Scene::release_lock(uint64_t id) {
+    try {
+        const auto lock = host_.get(pawn_, "LockOnComponent");
+        if (!is_handle(lock)) return;
+        auto locked = [&] { const auto t = host_.get(lock, "LockedTarget"); return is_handle(t) && id_of(t) == id; };
+        if (!locked()) return;
+        try { call(lock, "TargetSpecificCharacter", {{"Target", nullptr}}); } catch (...) {}
+        if (locked()) call(lock, "ToggleTargetLock", {{"TargetingTag", {{"TagName", "None"}}}});
+    } catch (...) {}
+}
+
 void Scene::take(const Json& actor) {
     const auto id = id_of(actor);
     if (!id || characters_.contains(id) || !valid(actor)) return;
@@ -172,6 +185,7 @@ void Scene::take(const Json& actor) {
     try { const auto health = host_.get(actor, "HealthComponent"); fresh.corpse = is_handle(health) && truthy(call(health, "IsDeadOrDying")); } catch (...) {}
     // Tracked from here: whatever fails below, restore still undoes what was done.
     auto& c = characters_[id] = std::move(fresh);
+    release_lock(id);
     auto hide = [&] {
         for (auto& [part, prior] : c.visibility) if (!prior) { try { call(part, "SetActorHiddenInGame", {{"bNewHidden", true}}); } catch (...) {} }
     };

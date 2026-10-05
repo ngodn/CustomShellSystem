@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "id": "fight-duel",
+  "name": "Fight: Duel",
+  "kind": "action",
+  "max_seconds": 90,
+  "description": "Lock on to an enemy first. The camera frames both of you from the side and drifts around the fight, backing off when you move apart. A kill plays in slow motion and a parry pushes the camera in. Ends when the target is down, at F9, or after 90 seconds.",
+  "action": {
+    "framing": "duel",
+    "azimuth": 80,
+    "orbit_speed": 5,
+    "distance": 430,
+    "distance_max": 1100,
+    "margin": 150,
+    "height": 30,
+    "aim": 10,
+    "fov": 38,
+    "smooth": 0.45,
+    "shake": 0.5,
+    "slowmo": 0.35,
+    "slowmo_hold": 0.8,
+    "tail": 3.5,
+    "game_cameras": "respect",
+    "beats": [
+      {
+        "on": "kill",
+        "do": "slowmo",
+        "cooldown": 2
+      },
+      {
+        "on": "parry",
+        "do": "punch",
+        "cooldown": 2
+      },
+      {
+        "on": "hit",
+        "do": "punch",
+        "cooldown": 4
+      }
+    ]
+  }
+}

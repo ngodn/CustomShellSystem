@@ -20,15 +20,21 @@ const std::vector<std::string> hotkeys{"F7", "F8", "F9", "F10"};
 enum Hotkey { CaptureKey, TakeKey, CancelKey, GuideKey };
 const std::vector<std::string> guide_ids{"off", "16:9", "9:16", "1:1", "2.39:1"};
 const char* help_line = "CINE   F8 take   F9 cancel / exit   F10 frame guide   F7 use this view as final shot";
+const std::vector<std::string> scene_ids{"off", "enemies", "everyone"};
+const std::vector<std::string> breakdown_ids{"off", "preset", "reel"};
+constexpr double build_timeout = 30.0;     // seconds a breakdown may take to build before the take rolls without the rest
+bool is_handle(const Json& j) { return j.is_object() && j.contains("$object"); }
+Json handle(uint64_t id) { return id ? Json{{"$object", id}} : Json(); }
 
 Json vec_json(Vec3 v) { return Json::array({v.x, v.y, v.z}); }
 Vec3 json_vec(const Json& j) { return {j.at(0).get<double>(), j.at(1).get<double>(), j.at(2).get<double>()}; }
 double clampd(double v, double lo, double hi) { return std::isfinite(v) ? std::clamp(v, lo, hi) : lo; }
 }
 
-Extension::Extension(const CssxHost* host) : host_(host), rig_(host_) {
+Extension::Extension(const CssxHost* host) : host_(host), rig_(host_), scene_(host_), breakdown_(host_), breakdown_opponent_(host_) {
     // Passive start (ABI contract): read files and state, change nothing in the game.
     guides_.attach(host_.hud(), host_.context());
+    callouts_.attach(host_.hud(), host_.context());
     load_presets();
     load_state();
 }
@@ -73,6 +79,11 @@ void Extension::load_state() {
         if (s.contains("guide") && s["guide"].is_string() && std::count(guide_ids.begin(), guide_ids.end(), s["guide"].get<std::string>())) settings_.guide = s["guide"];
         if (s.contains("look") && s["look"].is_string()) { const auto l = s["look"].get<std::string>(); if (l == "off" || l == "preset" || l == "palettes") settings_.look = l; }
         if (s.contains("walls") && s["walls"].is_boolean()) settings_.walls = s["walls"];
+        if (s.contains("scene") && s["scene"].is_string() && std::count(scene_ids.begin(), scene_ids.end(), s["scene"].get<std::string>())) settings_.scene = s["scene"];
+        if (s.contains("keep_target") && s["keep_target"].is_boolean()) settings_.keep_target = s["keep_target"];
+        if (s.contains("breakdown") && s["breakdown"].is_string() && std::count(breakdown_ids.begin(), breakdown_ids.end(), s["breakdown"].get<std::string>())) settings_.breakdown = s["breakdown"];
+        if (s.contains("labels") && s["labels"].is_boolean()) settings_.labels = s["labels"];
+        if (s.contains("breakdown_target") && s["breakdown_target"].is_boolean()) settings_.breakdown_target = s["breakdown_target"];
     }
     try {
         const auto r = state.value("route", Json());
@@ -95,7 +106,9 @@ void Extension::load_state() {
 
 void Extension::save_state() const {
     Json value{{"settings", {{"preset", settings_.preset}, {"zoom", settings_.zoom}, {"height", settings_.height}, {"fov_scale", settings_.fov_scale},
-                             {"countdown", settings_.countdown}, {"guide", settings_.guide}, {"look", settings_.look}, {"walls", settings_.walls}}}};
+                             {"countdown", settings_.countdown}, {"guide", settings_.guide}, {"look", settings_.look}, {"walls", settings_.walls},
+                             {"scene", settings_.scene}, {"keep_target", settings_.keep_target}, {"breakdown", settings_.breakdown},
+                             {"labels", settings_.labels}, {"breakdown_target", settings_.breakdown_target}}}};
     if (route_) { Json pts = Json::array(); for (const auto& p : route_->points) pts.push_back(vec_json(p)); value["route"] = std::move(pts); }
     if (final_) value["final"] = {{"position", vec_json(final_->position)}, {"yaw", final_->yaw}, {"camera", vec_json(final_->camera)},
                                   {"pitch", final_->pitch}, {"camera_yaw", final_->camera_yaw}, {"fov", final_->fov}};
@@ -121,11 +134,11 @@ void Extension::report(const std::string& message, bool error) {
 int Extension::render(const CssxFrame* f) {
     if (stopped_ || !f) return 1;
     frame_.valid = true; frame_.ready = f->world_ready != 0; frame_.in_menu = f->in_menu != 0;
-    frame_.world = f->world_generation; frame_.pawn = f->pawn;
+    frame_.world = f->world_generation; frame_.pawn = f->pawn; frame_.controller = f->controller;
     frame_.position = {f->player_x, f->player_y, f->player_z};
     frame_.velocity = {f->velocity_x, f->velocity_y, f->velocity_z};
     frame_.yaw = f->player_yaw; frame_.seconds = f->seconds;
-    if (mode_ == Mode::Idle || mode_ == Mode::RecordWait) { guides_.hide(); return 1; }
+    if (mode_ == Mode::Idle || mode_ == Mode::RecordWait) { guides_.hide(); callouts_.hide(); return 1; }
     Overlay o;
     o.visible = true;
     const bool framing = mode_ == Mode::Armed || mode_ == Mode::Recording;
@@ -135,23 +148,46 @@ int Extension::render(const CssxFrame* f) {
     if (mode_ == Mode::Countdown && take_) o.countdown = "CINE  " + std::to_string(int(std::ceil(std::max(0.0, take_->countdown))));
     if (mode_ == Mode::Running || mode_ == Mode::Preparing) o.visible = false;   // nothing of CINE in the recording
     guides_.update(*f, o);
+    // Breakdown callouts are part of the picture, so they stay on during the take. Each one is
+    // two bridge calls a frame (where its component is, where that lands on screen), for at
+    // most six of them, and only while a breakdown shows something.
+    if (mode_ == Mode::Running && settings_.labels && breakdown_.active() && breakdown_.shown() != 0) {
+        callout_targets_.clear();
+        try {
+            for (const auto& c : breakdown_.callouts()) {
+                if (callout_targets_.size() >= max_callouts) break;
+                CalloutTarget target;
+                target.text = c.text;
+                target.visible = rig_.project(rig_.socket_location(c.component, c.socket), target.x, target.y);
+                callout_targets_.push_back(std::move(target));
+            }
+        } catch (...) { callout_targets_.clear(); }
+        callouts_.update(*f, callout_targets_, breakdown_.caption());
+    } else callouts_.hide();
     return 1;
 }
 
 void Extension::tick(double seconds) {
     if (stopped_) return;
     try {
-        if (mode_ == Mode::Idle && !capture_pending_ && look_restore_.is_null()) return;   // free outside Cine World
+        if (mode_ == Mode::Idle && !capture_pending_ && look_restore_.is_null() && !scene_.pending() && !breakdown_.busy() && !breakdown_opponent_.busy())
+            return;   // free outside Cine World
         const double dt = std::isfinite(seconds) ? std::clamp(seconds, 0.0, 1.0) : 0.0;
+        tick_dt_ = dt;
         // A loading screen, death or travel tears the world down: every handle is dead. The CSS
         // look is not a world object, so a look the take changed is still put back (retried).
         if (mode_ != Mode::Idle && mode_ != Mode::RecordWait && frame_.valid && frame_.world != world_) {
             if (take_ && !take_->snapshot.is_null() && take_->step_next > 0) queue_look_restore(take_->snapshot);
-            rig_.forget(); guides_.forget(); take_.reset(); samples_.clear(); mode_ = Mode::Idle; start_pending_ = false;
+            rig_.forget(); guides_.forget(); callouts_.forget(); scene_.forget(); breakdown_.forget(); breakdown_opponent_.forget();
+            take_.reset(); samples_.clear(); mode_ = Mode::Idle; start_pending_ = false;
             report("The world changed (loading, travel or death); CINE stopped and the game camera is back.");
             return;
         }
         if (!look_restore_.is_null()) retry_look_restore(dt);
+        // Clean scene and breakdown teardown keep their own pace, whatever the mode.
+        if (frame_.valid && scene_.pending()) scene_.tick(dt, handle(frame_.pawn), handle(frame_.controller));
+        if (breakdown_.busy()) breakdown_.tick();
+        if (breakdown_opponent_.busy()) breakdown_opponent_.tick();
         if (take_ && frame_.valid && frame_.pawn != take_->pawn && (mode_ == Mode::Running || mode_ == Mode::Countdown)) {
             finish_take("The player character changed; the take was cancelled.", true); return;
         }
@@ -216,6 +252,7 @@ void Extension::enter() {
     rig_.hide_hud();
     keys_previous_.clear();
     mode_ = Mode::Armed;
+    apply_scene();
     try { host_.request({{"op", "menu.close"}}); } catch (...) {}
     report("In Cine World. Frame your shot, then press F8 to roll. F9 leaves.");
 }
@@ -224,7 +261,8 @@ void Extension::exit_world(const std::string& why) {
     if (take_) finish_take(why, false);
     std::vector<std::string> failures;
     try { failures = rig_.restore_all(); } catch (const std::exception& e) { failures.push_back(e.what()); }
-    guides_.hide();
+    try { for (auto& f : scene_.restore()) failures.push_back(std::move(f)); } catch (const std::exception& e) { failures.push_back(e.what()); }
+    guides_.hide(); callouts_.hide();
     mode_ = Mode::Idle; start_pending_ = false; capture_pending_ = false; samples_.clear();
     if (failures.empty()) report(why);
     else report(why + " Some settings could not be restored: " + failures.front(), true);
@@ -276,15 +314,28 @@ void Extension::prepare() {
             t.track = std::make_unique<Track>(*t.route);
             t.timeline = make_timeline(p, t.route->length(), walk_cm_s);
             t.base = t.route->start; t.base_yaw = t.route->start_yaw;
+        } else if (p.kind == ShotKind::Action) {
+            auto& a = p.action;
+            a.distance *= p.zoom; a.distance_max *= p.zoom; a.fov *= p.fov_scale;
+            a.height += settings_.height; a.aim += settings_.height;
+            t.timeline = make_timeline(p, 0, walk_cm_s);
+            t.base = her_position(); t.base_yaw = frame_.yaw;
         } else {
             t.timeline = make_timeline(p, 0, walk_cm_s);
             t.from_head = p.reference == Preset::Reference::Head;
             t.base = t.from_head ? rig_.head_position() : her_position();
             t.base_yaw = frame_.yaw;
         }
-        if (p.kind != ShotKind::Photo) t.curve = std::make_unique<OrbitCurve>(t.timeline.keys);
+        if (p.kind != ShotKind::Photo && p.kind != ShotKind::Action) t.curve = std::make_unique<OrbitCurve>(t.timeline.keys);
+        // Breakdown track: the preset's own steps, or the built-in reel.
+        if (settings_.breakdown == "preset") t.reveals = t.timeline.breakdown;
+        else if (settings_.breakdown == "reel") t.reveals = reel(t.timeline.total);
+        for (const auto& r : t.reveals) t.layers |= r.layers;
+        if (settings_.breakdown == "preset" && t.reveals.empty()) t.note = "Breakdown off: this preset has no breakdown steps.";
+        // Clay takes her material slots; a palette change mid-take would fight it.
+        if (t.layers && settings_.look != "off") t.note = "Look track off while a breakdown runs.";
         // Look track: CSS answers describe, or the take runs without it and says why.
-        if (settings_.look != "off") {
+        if (settings_.look != "off" && !t.layers) {
             try {
                 const auto d = rig_.css({{"action", "describe"}});
                 t.snapshot = d.at("customize");
@@ -333,8 +384,36 @@ void Extension::prepare() {
         if (t.wall_next >= total) { t.walls = WallProfile(wall_step, t.wall_raw); t.prepare_step = 2; }
         return;
     }
+    if (t.prepare_step == 3) {
+        // The breakdown builds its pieces a slice per tick; roll when they are all there.
+        t.build_wait += tick_dt_;
+        const bool built = (!breakdown_.active() || breakdown_.ready()) && (!breakdown_opponent_.active() || breakdown_opponent_.ready());
+        if (!built && t.build_wait < build_timeout) return;
+        if (!breakdown_.note().empty()) t.note = t.note.empty() ? breakdown_.note() : t.note + "  " + breakdown_.note();
+        begin_countdown();
+        return;
+    }
     // Cameras, gait, view, then the countdown.
-    if (t.curve) {
+    if (t.preset.kind == ShotKind::Action) {
+        const auto& a = t.preset.action;
+        t.subject_f = her_position();
+        // Follow framing counts its angle from the world; start it from where she faces.
+        t.azimuth = a.framing == Framing::Follow ? frame_.yaw + a.azimuth : a.azimuth;
+        t.beat_ready.assign(a.beats.size(), 0.0);
+        t.opponent = rig_.locked_target();
+        Vec3 where; const Vec3* target = nullptr;
+        if (is_handle(t.opponent)) {
+            t.had_opponent = true;
+            try { where = rig_.actor_location(t.opponent); t.opponent_f = where; t.opponent_seen = true; target = &t.opponent_f; } catch (...) {}
+            rig_.hide_target_ui(t.opponent);
+        }
+        ActionFrame f{a.framing, t.azimuth, a.distance, a.distance_max, a.margin, a.height, a.aim, a.fov, 0};
+        const auto view = action_view(f, t.subject_f, target);
+        t.dolly = rig_.spawn_camera(view.camera, look_at(view.camera, view.aim), view.fov);
+        t.fov_applied = view.fov;
+        if (a.shake >= 0) rig_.shake_scale(a.shake);
+        if (a.fstop > 0) { rig_.depth_of_field(t.dolly, a.fstop, view.focus); t.focus_applied = view.focus; }
+    } else if (t.curve) {
         const Pose pose = t.curve->pose(0, t.walls.at(0));
         const Vec3 cam = to_world(t.base, t.base_yaw, pose.offset);
         t.dolly = rig_.spawn_camera(cam, look_at(cam, to_world(t.base, t.base_yaw, pose.aim)), pose.fov);
@@ -357,9 +436,140 @@ void Extension::prepare() {
     t.yaw_f = frame_.yaw; t.vel_f = {};
     t.ctl_yaw = t.route ? t.route->start_yaw : frame_.yaw;
     rig_.view(t.dolly, 0.0);
-    t.countdown = settings_.countdown;
+    if (t.layers) {
+        breakdown_.begin(rig_.pawn(), rig_.camera_component(t.dolly), t.layers, spring_bones());
+        if (settings_.breakdown_target) {
+            const auto other = is_handle(t.opponent) ? t.opponent : rig_.locked_target();
+            // The frame passes cover the whole picture already; the second character gets the rest.
+            if (is_handle(other)) breakdown_opponent_.begin(other, Json(), t.layers & ~frame_layers, {});
+        }
+        t.prepare_step = 3;
+        report("Building the breakdown layers...");
+        return;
+    }
+    begin_countdown();
+}
+
+void Extension::begin_countdown() {
+    take_->countdown = settings_.countdown;
     mode_ = Mode::Countdown;
     report(with_note(settings_.countdown > 0 ? "Get ready: start your recorder." : "Rolling."));
+}
+
+// The built-in reel: the final image, then one layer after another, then the final image again.
+std::vector<Timeline::Reveal> Extension::reel(double total) const {
+    const LayerSet clay = bit(Layer::Clay), wire = bit(Layer::Wireframe), bones = bit(Layer::Skeleton);
+    const std::pair<double, std::pair<LayerSet, double>> steps[]{
+        {0.07, {clay, 1.2}},
+        {0.17, {clay | wire, 1.2}},
+        {0.29, {bones, 1.2}},
+        {0.40, {bones | bit(Layer::VirtualBones) | bit(Layer::IkBones), 0.9}},
+        {0.50, {bones | bit(Layer::Springs), 0.9}},
+        {0.60, {bit(Layer::Collision) | bit(Layer::Capsule), 0.8}},
+        {0.70, {bit(Layer::BaseColor), 1.2}},
+        {0.78, {bit(Layer::Normals), 1.0}},
+        {0.85, {bit(Layer::Depth), 1.0}},
+        {0.92, {0, 1.4}},
+    };
+    std::vector<Timeline::Reveal> out;
+    for (const auto& [fraction, step] : steps) out.push_back({fraction * total, step.first, std::min(step.second, total * 0.06)});
+    return out;
+}
+
+// The worn outfit's own spring bones, when its wardrobe mod says which they are. Empty means
+// "go by the usual names".
+std::vector<std::string> Extension::spring_bones() {
+    std::vector<std::string> bones;
+    try {
+        const auto described = rig_.css({{"action", "describe"}});
+        for (const auto& control : described.value("controls", Json::array())) {
+            const auto kind = control.value("kind", std::string());
+            if (kind != "spring" && kind != "dynamics" && kind != "rig") continue;
+            for (const auto& node : control.value("nodes", Json::array())) if (node.is_string() && bones.size() < 256) bones.push_back(node.get<std::string>());
+        }
+    } catch (...) {}
+    return bones;
+}
+
+void Extension::apply_scene() {
+    const auto mode = settings_.scene == "enemies" ? Scene::Mode::Enemies : settings_.scene == "everyone" ? Scene::Mode::Everyone : Scene::Mode::Off;
+    scene_.want(mode, settings_.keep_target);
+}
+
+void Extension::fire(Beat::On what) {
+    auto& t = *take_;
+    const auto& a = t.preset.action;
+    for (size_t i = 0; i < a.beats.size(); ++i) {
+        if (a.beats[i].on != what || t.clock < t.beat_ready[i]) continue;
+        t.beat_ready[i] = t.clock + a.beats[i].cooldown;
+        if (a.beats[i].what == Beat::Do::Slowmo) t.slow_until = t.clock + a.slowmo_hold;
+        else t.punch_until = t.clock + 1.1;
+    }
+}
+
+// One 10 Hz step of an action take: where the fighters are, how the fight is going, and where
+// the camera goes next. About six bridge calls.
+void Extension::action_tick(double dt) {
+    auto& t = *take_;
+    const auto& a = t.preset.action;
+    ++t.poll;
+    // A new lock-on target becomes the opponent.
+    if (t.poll % 5 == 1) {
+        const auto locked = rig_.locked_target();
+        if (is_handle(locked) && (!is_handle(t.opponent) || locked["$object"] != t.opponent["$object"])) {
+            t.opponent = locked; t.had_opponent = true; t.opponent_down = false; t.opponent_seen = false; t.opponent_health = -1; t.opponent_down_at = -1;
+            rig_.hide_target_ui(locked);
+        }
+    }
+    const double k = a.smooth > 0 ? smooth_factor(dt, a.smooth, 0.25) : 1.0;
+    t.subject_f = t.subject_f + (her_position() - t.subject_f) * k;
+    const Vec3* target = nullptr;
+    if (is_handle(t.opponent) && !t.opponent_down) {
+        try {
+            const Vec3 at = rig_.actor_location(t.opponent);
+            t.opponent_f = t.opponent_seen ? t.opponent_f + (at - t.opponent_f) * k : at;
+            t.opponent_seen = true;
+        } catch (...) { t.opponent_down = true; t.opponent_down_at = t.clock; }
+    }
+    if (t.opponent_seen) target = &t.opponent_f;   // after it falls the camera stays on the spot
+    // The fight, on alternate ticks.
+    if (t.poll % 2 == 0) {
+        if (is_handle(t.opponent) && !t.opponent_down) {
+            const double health = rig_.health_fraction(t.opponent);
+            if (t.opponent_health >= 0 && health >= 0 && health < t.opponent_health - 0.004) fire(Beat::On::Hit);
+            if (health >= 0) t.opponent_health = health;
+            if (rig_.dead(t.opponent)) { t.opponent_down = true; t.opponent_down_at = t.clock; fire(Beat::On::Kill); }
+        }
+    } else {
+        const double health = rig_.health_fraction(rig_.pawn());
+        if (t.player_health >= 0 && health >= 0 && health < t.player_health - 0.004) fire(Beat::On::Hurt);
+        if (health >= 0) t.player_health = health;
+        const int parry = rig_.tag_count("State.Parry");
+        if (parry > 0 && t.parry_count == 0) fire(Beat::On::Parry);
+        t.parry_count = parry;
+        if (health == 0) { finish_take("The take ended: she fell.", false); return; }
+    }
+    // Slow motion and the punch-in ease toward where they should be.
+    const double want = t.clock < t.slow_until ? a.slowmo : 1.0;
+    t.scale += (want - t.scale) * 0.55;
+    if (std::abs(t.scale - want) < 0.02) t.scale = want;
+    if (std::abs(t.scale - t.scale_applied) > 0.015) { rig_.time_scale(t.scale); t.scale_applied = t.scale; }
+    t.punch += ((t.clock < t.punch_until ? 1.0 : 0.0) - t.punch) * 0.35;
+    t.azimuth = wrap_degrees(t.azimuth + a.orbit_speed * dt);
+    ActionFrame f{a.framing, t.azimuth, a.distance, a.distance_max, a.margin, a.height, a.aim, a.fov, t.punch};
+    const auto view = action_view(f, t.subject_f, target);
+    // The game's own cameras (finishers, grabs): let them play, then take the view back.
+    if (!rig_.viewing(t.dolly)) {
+        const bool games = a.respect_game_cameras && rig_.tag_count("State.CustomCamera") > 0;
+        if (games) return;
+        if (t.clock >= t.reassert_at) { rig_.view(t.dolly, 0.35); t.reassert_at = t.clock + 1.0; }
+    }
+    // The engine interpolates the move on game time: scale it so it still lands in real time.
+    const double lead = std::max(0.25, a.smooth + 0.15);
+    rig_.move_camera(t.dolly, view.camera, look_at(view.camera, view.aim), (lead + 0.05) * t.scale);
+    if (std::abs(view.fov - t.fov_applied) > 0.15) { rig_.set_fov(t.dolly, view.fov); t.fov_applied = view.fov; }
+    if (a.fstop > 0 && std::abs(view.focus - t.focus_applied) > 12) { rig_.depth_of_field(t.dolly, a.fstop, view.focus); t.focus_applied = view.focus; }
+    if (t.had_opponent && t.opponent_down && t.clock >= t.opponent_down_at + a.tail) finish_take("Take finished: the target is down.", false);
 }
 
 void Extension::steer(double dt) {
@@ -428,6 +638,15 @@ void Extension::run() {
         t.walking = true;
     }
     if (t.walking) steer(frame_.seconds > 0 ? std::max(frame_.seconds, 0.05) : 0.1);
+    while (t.reveal_next < t.reveals.size() && t.clock >= t.reveals[t.reveal_next].at) {
+        const auto& r = t.reveals[t.reveal_next++];
+        breakdown_.show(r.layers, r.wipe);
+        if (breakdown_opponent_.active()) breakdown_opponent_.show(r.layers & ~frame_layers, r.wipe);
+    }
+    if (t.preset.kind == ShotKind::Action) {
+        action_tick(tick_dt_);
+        if (!take_) return;   // the take ended inside the step
+    }
     while (t.look && t.step_next < t.steps.size() && t.clock >= t.steps[t.step_next].first) {
         try { rig_.css(t.steps[t.step_next].second); }
         catch (const std::exception& e) { t.look = false; t.note = std::string("Look track stopped: ") + e.what() + "."; report(t.note); }
@@ -448,7 +667,7 @@ void Extension::run() {
             t.photo = idx;
             report("Photo " + std::to_string(idx + 1) + " of " + std::to_string(t.preset.photos.size()) + ": " + s.name);
         }
-    } else if (!walk || !final_ || t.clock < tl.arrive + 4.0) {
+    } else if (t.preset.kind != ShotKind::Action && (!walk || !final_ || t.clock < tl.arrive + 4.0)) {
         place_dolly(0.1, false);
     }
     if (t.clock >= tl.total) finish_take("Take finished.", false);
@@ -478,7 +697,12 @@ void Extension::retry_look_restore(double dt) {
 void Extension::finish_take(const std::string& why, bool failed) {
     if (!take_) return;
     std::vector<std::string> failures;
-    try { failures = rig_.restore_take(); } catch (const std::exception& e) { failures.push_back(e.what()); }
+    // Breakdown first: its frame passes sit on the take camera, which the rig destroys next.
+    for (Breakdown* b : {&breakdown_, &breakdown_opponent_}) {
+        try { for (auto& f : b->end()) failures.push_back(std::move(f)); } catch (const std::exception& e) { failures.push_back(e.what()); }
+    }
+    callouts_.hide();
+    try { for (auto& f : rig_.restore_take()) failures.push_back(std::move(f)); } catch (const std::exception& e) { failures.push_back(e.what()); }
     if (!take_->snapshot.is_null() && take_->step_next > 0) {
         // Put the modder's own look back and let CSS save it (persist=true).
         if (!restore_look(take_->snapshot)) queue_look_restore(take_->snapshot);   // CSS busy or between looks: retried each second
@@ -532,6 +756,12 @@ Json Extension::model() const {
     std::string final_shot = final_ ? "Final shot saved" : "No final shot (the walk ends on the last camera key)";
     std::string look = settings_.look == "off" ? "Look track off" : settings_.look == "palettes" ? "Cycles every palette, then your own look" :
                        (p && !p->look.empty() ? "Uses this preset's look steps" : "This preset has no look steps");
+    std::string scene = settings_.scene == "off" ? "Enemies and NPCs stay as they are."
+                      : !scene_.status().empty() && mode_ != Mode::Idle ? scene_.status()
+                      : settings_.scene == "enemies" ? "Enemies are hidden while you are in Cine World." : "Enemies and NPCs are hidden while you are in Cine World.";
+    std::string breakdown = settings_.breakdown == "off" ? "Breakdown off"
+                          : settings_.breakdown == "reel" ? "Final image, clay, wireframe, skeleton, bones, collision, frame passes, final image"
+                          : (p && !p->breakdown.empty() ? "Uses this preset's breakdown steps" : "This preset has no breakdown steps");
     const bool recording = mode_ == Mode::Recording || mode_ == Mode::RecordWait;
     const bool in_world = recording ? record_return_ == Mode::Armed : mode_ != Mode::Idle;
     const bool busy = mode_ == Mode::Preparing || mode_ == Mode::Countdown || mode_ == Mode::Running;
@@ -539,19 +769,23 @@ Json Extension::model() const {
     if (in_world) disabled["enter"] = "Already in Cine World";
     if (!in_world) { disabled["exit"] = "Not in Cine World"; disabled["take"] = "Enter Cine World first"; }
     if (p && p->kind == ShotKind::Walk && !route_) disabled["take"] = "Record a route first";
+    if (settings_.scene == "off") disabled["keep_target"] = "Turn clean scene on first";
+    if (settings_.breakdown == "off") { disabled["labels"] = "Turn the breakdown on first"; disabled["breakdown_target"] = "Turn the breakdown on first"; }
     if (recording && !in_world) disabled["enter"] = "Finish the recording first";
     if (recording) { disabled["record"] = "Recording now"; disabled["take"] = "Finish the recording first"; disabled["capture"] = "Finish the recording first"; }
     if (busy) { disabled["record"] = "A take is running"; disabled["capture"] = "A take is running"; disabled["take"] = "A take is running"; }
     if (!route_) disabled["clear_route"] = "No route";
     if (!final_) disabled["clear_final"] = "No final shot";
     Json enabled = Json::object();
-    for (const auto& id : {"enter", "exit", "take", "record", "capture", "clear_route", "clear_final"}) enabled[id] = !disabled.contains(id);
+    for (const auto& id : {"enter", "exit", "take", "record", "capture", "clear_route", "clear_final", "keep_target", "labels", "breakdown_target"}) enabled[id] = !disabled.contains(id);
     std::string summary = status_;
     if (!preset_problems_.empty()) summary += "  (" + std::to_string(preset_problems_.size()) + " preset file(s) skipped; see CSSX log)";
     return {{"values", {{"status", summary}, {"preset", presets_.empty() ? std::string("none") : settings_.preset},
                         {"preset_info", p ? p->description : std::string()}, {"zoom", settings_.zoom}, {"height", settings_.height},
                         {"fov_scale", settings_.fov_scale}, {"countdown", settings_.countdown}, {"guide", settings_.guide},
-                        {"walls", settings_.walls}, {"look", settings_.look}, {"look_info", look}, {"route_info", route}, {"final_info", final_shot}}},
+                        {"walls", settings_.walls}, {"look", settings_.look}, {"look_info", look}, {"route_info", route}, {"final_info", final_shot},
+                        {"scene", settings_.scene}, {"keep_target", settings_.keep_target}, {"scene_info", scene},
+                        {"breakdown", settings_.breakdown}, {"labels", settings_.labels}, {"breakdown_target", settings_.breakdown_target}, {"breakdown_info", breakdown}}},
             {"options", {{"preset", options}}},
             {"enabled", enabled}, {"disabled", disabled}, {"status", summary}, {"error", error_}};
 }
@@ -584,6 +818,16 @@ void Extension::event(const Json& e) {
         else if (id == "guide") { const auto v = e.at("value").get<std::string>(); if (!std::count(guide_ids.begin(), guide_ids.end(), v)) throw std::runtime_error("Unknown guide"); settings_.guide = v; save_state(); }
         else if (id == "walls") { settings_.walls = e.at("value").get<bool>(); save_state(); }
         else if (id == "look") { const auto v = e.at("value").get<std::string>(); if (v != "off" && v != "preset" && v != "palettes") throw std::runtime_error("Unknown look mode"); settings_.look = v; save_state(); }
+        else if (id == "scene") {
+            const auto v = e.at("value").get<std::string>();
+            if (!std::count(scene_ids.begin(), scene_ids.end(), v)) throw std::runtime_error("Unknown clean scene mode");
+            settings_.scene = v; save_state();
+            if (mode_ != Mode::Idle) apply_scene();   // live while in Cine World
+        }
+        else if (id == "keep_target") { settings_.keep_target = e.at("value").get<bool>(); save_state(); if (mode_ != Mode::Idle) apply_scene(); }
+        else if (id == "breakdown") { const auto v = e.at("value").get<std::string>(); if (!std::count(breakdown_ids.begin(), breakdown_ids.end(), v)) throw std::runtime_error("Unknown breakdown mode"); settings_.breakdown = v; save_state(); }
+        else if (id == "labels") { settings_.labels = e.at("value").get<bool>(); save_state(); }
+        else if (id == "breakdown_target") { settings_.breakdown_target = e.at("value").get<bool>(); save_state(); }
         else throw std::runtime_error("Unknown control: " + id);
         host_.invalidate();
     } catch (const std::exception& ex) {

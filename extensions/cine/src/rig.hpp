@@ -49,6 +49,25 @@ public:
     // The game camera relative to her, for "use current view as final shot".
     FinalShot capture_final(Vec3 her_position, double her_yaw);
     Json css(const Json& request);                       // service css.customize v1 (throws why not)
+
+    // Action takes: who she fights, how the fight is going, and the take's own time and lens.
+    Json locked_target();                                // the lock-on target actor, or null
+    Vec3 actor_location(const Json& actor);
+    double health_fraction(const Json& actor);           // 0..1, or -1 when unreadable
+    bool dead(const Json& actor);
+    int tag_count(const char* tag);                      // a gameplay tag on the player
+    // Slow motion through the world's cinematic time scale: it multiplies with the game's own
+    // time dilation (hit-stop, the Cheat Menu's game speed) instead of replacing it.
+    void time_scale(double scale);
+    void shake_scale(double scale);                      // the game's camera shake amount, restored after
+    void depth_of_field(const Json& camera, double fstop, double focus_cm);
+    bool viewing(const Json& camera);                    // is this camera the one on screen
+    void hide_target_ui(const Json& enemy);              // its health bar and lock-on marker
+    Json camera_component(const Json& camera);
+
+    // Callouts: a component's socket in the world, and a world point on screen (HUD pixels).
+    Vec3 socket_location(const Json& component, const std::string& socket);
+    bool project(Vec3 world, double& x, double& y);
     bool key_down(const std::vector<std::string>& keys, std::vector<bool>& out);
 
     // Restore: take-level changes (cameras, view, walk) or everything including the HUD.
@@ -66,6 +85,11 @@ private:
     const cssx::Client& host_;
     Json pawn_, controller_, movement_, mesh_, camera_manager_;
     Json statics_, kismet_, ai_, widgets_, player_lib_, camera_class_;
+    Json world_, world_settings_, lock_, asc_, layout_;
+    std::vector<std::pair<Json, bool>> hidden_components_;   // enemy health bars: prior visibility
+    std::vector<std::pair<Json, int>> hidden_widgets_;       // lock-on markers: prior visibility
+    bool time_scaled_ = false, shake_set_ = false;
+    double shake_before_ = 1.0;
     std::vector<Json> cameras_;
     std::vector<std::pair<Json, int>> hud_;
     bool hud_hidden_ = false, view_changed_ = false, speed_set_ = false, moving_ = false;

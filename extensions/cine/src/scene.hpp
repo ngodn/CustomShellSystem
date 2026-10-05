@@ -39,6 +39,8 @@ public:
     void forget();
 
     bool busy() const { return !queue_.empty() || restoring_; }
+    // Needs a tick even outside Cine World: the player's protection is still to be removed.
+    bool pending() const { return player_cleanup_ || applied_ != Mode::Off || wanted_ != Mode::Off; }
     bool clean() const { return applied_ != Mode::Off; }
     size_t hidden() const { return characters_.size(); }
     // One line for the menu: what is hidden, or why it is not on.
@@ -68,6 +70,7 @@ private:
     void release_player(std::vector<std::string>* failures);
     void poll();                                     // find newcomers, drop dead entries
     void take(const Json& actor);                    // one character out
+    void release_lock(uint64_t id);                  // drop the player's lock-on when it is on this character
     void put_back(Character& c, std::vector<std::string>* failures);
     void close_spawning();
     void open_spawning(std::vector<std::string>* failures);

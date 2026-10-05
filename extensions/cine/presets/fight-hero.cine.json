@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "id": "fight-hero",
+  "name": "Fight: Hero Orbit",
+  "kind": "action",
+  "max_seconds": 90,
+  "description": "The camera circles your character slowly and stays on her whatever she fights, so it also works without a lock-on target. A kill plays in slow motion. Ends at F9, when a locked target is down, or after 90 seconds.",
+  "action": {
+    "framing": "follow",
+    "azimuth": 160,
+    "orbit_speed": 9,
+    "distance": 390,
+    "height": 25,
+    "aim": 15,
+    "fov": 40,
+    "smooth": 0.4,
+    "shake": 0.5,
+    "slowmo": 0.35,
+    "slowmo_hold": 0.8,
+    "tail": 3.5,
+    "game_cameras": "respect",
+    "beats": [
+      {
+        "on": "kill",
+        "do": "slowmo",
+        "cooldown": 2
+      },
+      {
+        "on": "hurt",
+        "do": "punch",
+        "cooldown": 4
+      }
+    ]
+  }
+}

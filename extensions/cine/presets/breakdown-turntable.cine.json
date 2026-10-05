@@ -1,0 +1,162 @@
+{
+  "schema": 1,
+  "id": "breakdown-turntable",
+  "name": "Breakdown Turntable",
+  "kind": "turntable",
+  "duration": 40,
+  "description": "Two slow circles around her while the picture is taken apart layer by layer: clay, wireframe, skeleton, virtual and IK bones, spring bones, collision, then the frame passes, and back to the final image. Set Breakdown track to From the preset.",
+  "keys": [
+    {
+      "at": 0.0,
+      "azimuth": 0,
+      "distance": 380,
+      "height": -40,
+      "aim": -55,
+      "fov": 42
+    },
+    {
+      "at": 0.125,
+      "azimuth": 90,
+      "distance": 380,
+      "height": -40,
+      "aim": -55,
+      "fov": 42
+    },
+    {
+      "at": 0.25,
+      "azimuth": 180,
+      "distance": 380,
+      "height": -40,
+      "aim": -55,
+      "fov": 42
+    },
+    {
+      "at": 0.375,
+      "azimuth": 270,
+      "distance": 380,
+      "height": -40,
+      "aim": -55,
+      "fov": 42
+    },
+    {
+      "at": 0.5,
+      "azimuth": 360,
+      "distance": 380,
+      "height": -40,
+      "aim": -55,
+      "fov": 42
+    },
+    {
+      "at": 0.625,
+      "azimuth": 450,
+      "distance": 380,
+      "height": -40,
+      "aim": -55,
+      "fov": 42
+    },
+    {
+      "at": 0.75,
+      "azimuth": 540,
+      "distance": 380,
+      "height": -40,
+      "aim": -55,
+      "fov": 42
+    },
+    {
+      "at": 0.875,
+      "azimuth": 630,
+      "distance": 380,
+      "height": -40,
+      "aim": -55,
+      "fov": 42
+    },
+    {
+      "at": 1.0,
+      "azimuth": 720,
+      "distance": 380,
+      "height": -40,
+      "aim": -55,
+      "fov": 42
+    }
+  ],
+  "reference": "head",
+  "breakdown": {
+    "steps": [
+      {
+        "at": 0.06,
+        "layers": [
+          "clay"
+        ],
+        "wipe": 1.4
+      },
+      {
+        "at": 0.16,
+        "layers": [
+          "clay",
+          "wireframe"
+        ],
+        "wipe": 1.4
+      },
+      {
+        "at": 0.27,
+        "layers": [
+          "wireframe",
+          "skeleton"
+        ],
+        "wipe": 1.4
+      },
+      {
+        "at": 0.37,
+        "layers": [
+          "skeleton",
+          "virtual_bones",
+          "ik_bones",
+          "sockets"
+        ],
+        "wipe": 1.0
+      },
+      {
+        "at": 0.47,
+        "layers": [
+          "skeleton",
+          "springs"
+        ],
+        "wipe": 1.0
+      },
+      {
+        "at": 0.57,
+        "layers": [
+          "collision",
+          "capsule"
+        ],
+        "wipe": 1.0
+      },
+      {
+        "at": 0.67,
+        "layers": [
+          "base_color"
+        ],
+        "wipe": 1.4
+      },
+      {
+        "at": 0.75,
+        "layers": [
+          "normals"
+        ],
+        "wipe": 1.2
+      },
+      {
+        "at": 0.82,
+        "layers": [
+          "depth"
+        ],
+        "wipe": 1.2
+      },
+      {
+        "at": 0.92,
+        "layers": [],
+        "wipe": 1.6
+      }
+    ]
+  }
+}

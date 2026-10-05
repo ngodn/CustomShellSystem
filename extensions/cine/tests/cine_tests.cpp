@@ -287,12 +287,25 @@ static void shipped(const fs::path& root) {
             const auto tl = make_timeline(p, 4000, 184);
             OrbitCurve curve(tl.keys);
             expect(tl.total <= p.max_seconds + 1e-9, "shipped walk fits its cap");
+        } else if (p.kind == ShotKind::Action) {
+            const auto tl = make_timeline(p, 0, 184);
+            expect(near(tl.total, p.max_seconds, 1e-9) && tl.keys.empty(), "shipped action preset runs to its cap: " + p.id);
+            // The camera must sit off the fighters at every separation it can meet.
+            for (double apart : {0.0, 150.0, 600.0, 2500.0}) {
+                const Vec3 her{0, 0, 0}, foe{apart, 0, 0};
+                const ActionFrame f{p.action.framing, p.action.azimuth, p.action.distance, p.action.distance_max, p.action.margin, p.action.height, p.action.aim, p.action.fov, 0};
+                const auto view = action_view(f, her, &foe);
+                expect(std::hypot(view.camera.x, view.camera.y) > 60 && view.focus > 60 && std::isfinite(view.fov), "shipped action preset keeps its distance: " + p.id);
+            }
         } else if (p.kind != ShotKind::Photo) {
-            OrbitCurve curve(make_timeline(p, 0, 184).keys);
+            const auto tl = make_timeline(p, 0, 184);
+            OrbitCurve curve(tl.keys);
+            for (size_t i = 1; i < tl.breakdown.size(); ++i) expect(tl.breakdown[i].at > tl.breakdown[i - 1].at, "shipped breakdown steps are in order: " + p.id);
+            if (!tl.breakdown.empty()) expect(tl.breakdown.back().layers == 0, "a shipped breakdown ends on the final image: " + p.id);
         }
         ++count;
     }
-    expect(count >= 7, "all shipped presets were checked");
+    expect(count >= 11, "all shipped presets were checked");
 }
 
 int main(int argc, char** argv) {

@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "id": "fight-shoulder",
+  "name": "Fight: Over the Shoulder",
+  "kind": "action",
+  "max_seconds": 90,
+  "description": "Lock on to an enemy first. The camera sits behind her right shoulder and looks past her at the target, close and steady. A parry pushes in and a kill plays in slow motion. Ends when the target is down, at F9, or after 90 seconds.",
+  "action": {
+    "framing": "shoulder",
+    "azimuth": 60,
+    "orbit_speed": 0,
+    "distance": 330,
+    "height": 55,
+    "aim": 20,
+    "fov": 46,
+    "smooth": 0.3,
+    "shake": 0.6,
+    "slowmo": 0.4,
+    "slowmo_hold": 0.7,
+    "tail": 3,
+    "game_cameras": "respect",
+    "beats": [
+      {
+        "on": "kill",
+        "do": "slowmo",
+        "cooldown": 2
+      },
+      {
+        "on": "parry",
+        "do": "punch",
+        "cooldown": 2
+      }
+    ]
+  }
+}
