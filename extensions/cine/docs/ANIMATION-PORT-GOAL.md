@@ -393,3 +393,13 @@ facial tearing in those views. Source hashes remain unchanged. See
 `docs/development/eve-expression-candidates.md` for bounds and artifacts.
 No candidate was installed and the game is closed at the latest process check.
 Live expression/performance validation and the rest of the full goal remain open.
+
+Motion-review checkpoint, 2026-10-06: generated 1,075 skinned replay frames for
+all thirteen moving L2 clips and timestamped sheets with explicit endpoint gaps.
+Inspected every Black Hole sample and wider overhead-swing views for ATOOL
+Performances 5/8. Confirmed Black Hole's 15.7-second lift exists in the source;
+do not flatten it. Fixed the source-review tool's eight-second truncation and
+unconditional looping. See `docs/development/shared-animation-motion-review.md`
+for measured bounds and the exact remaining review scope. No runtime or asset
+installation changed. Better Jiggle's available local ZIPs contain scripts, not
+the missing skeleton assets, so the two extended-skeleton dances remain open.

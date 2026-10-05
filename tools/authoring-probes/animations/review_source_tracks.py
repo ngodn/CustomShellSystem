@@ -1,6 +1,8 @@
 """Plot decoded Eve source joints before retargeting. Python 3.14, NumPy, Matplotlib."""
 import argparse
+import hashlib
 import json
+import math
 from pathlib import Path
 
 import numpy as np
@@ -77,11 +79,19 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('work', type=Path)
     parser.add_argument('--video', action='store_true')
+    parser.add_argument('--fps', type=int, default=12,
+                        help='Diagnostic video rate; original clip durations are preserved')
     args = parser.parse_args()
+    if not 1 <= args.fps <= 60:
+        raise ValueError('Diagnostic video rate must be between 1 and 60')
     paths = sorted(args.work.glob('*/source-tracks.json'))
     if not paths or len(paths) > 8:
         raise ValueError('Expected one to eight source clips')
     clips = [(path.parent.name, json.loads(path.read_text())) for path in paths]
+    hashes = {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in paths}
+    if any(not math.isfinite(data['duration']) or data['duration'] <= 0 for _, data in clips):
+        raise ValueError('Expected positive finite clip durations')
+    duration = max(data['duration'] for _, data in clips)
     fig = plt.figure(figsize=(16, 9), facecolor='#16191d')
     panels = []
     evidence = []
@@ -117,7 +127,7 @@ def main():
 
     def draw(seconds):
         for data, selected, lines in panels:
-            positions = pose(data, selected, seconds % data['duration'])
+            positions = pose(data, selected, min(seconds, data['duration']))
             for line, i, parent in lines:
                 points = np.stack([positions[parent], positions[i]])
                 line.set_data_3d(points[:, 0], points[:, 1], points[:, 2])
@@ -125,12 +135,21 @@ def main():
     for t in (0, 1, 3, 5):
         draw(t); fig.savefig(args.work / f'joints-{t}.png', dpi=110)
     if args.video:
-        writer = FFMpegWriter(fps=12)
+        writer = FFMpegWriter(fps=args.fps)
         with writer.saving(fig, str(args.work/'source-motion.mp4'), dpi=90):
-            for frame in range(96):
-                draw(frame/12)  # Keep original clip timing, loop short cycles.
+            for frame in range(math.ceil(duration * args.fps) + 1):
+                draw(frame / args.fps)
                 writer.grab_frame()
+    if any(hashlib.sha256(Path(path).read_bytes()).hexdigest() != digest
+           for path, digest in hashes.items()):
+        raise ValueError('Source tracks changed during review')
     (args.work/'source-joints.json').write_text(json.dumps(evidence, indent=2)+'\n')
+    (args.work/'source-review.json').write_text(json.dumps(dict(
+        inputs=hashes, duration_seconds=duration, video_created=args.video,
+        diagnostic_hz=args.fps, video_frames=math.ceil(duration * args.fps) + 1 if args.video else 0,
+        playback='Play each source once at its original speed, then hold its final pose. '
+                 'No loop or eight-second truncation; the final video sample may add less than one interval.',
+        scope='Body-joint preview only, before retargeting or skinning.'), indent=2)+'\n')
 
 
 if __name__ == '__main__':

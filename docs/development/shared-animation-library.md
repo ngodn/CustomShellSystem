@@ -323,3 +323,13 @@ expression changes to MikeAlicespade. This is a new dependency lead for the
 seven unknown indices, not proof that those indices are jiggle or eye bones.
 Inspect that exact source basis if available before assigning any names.
 The supplied ATOOL jiggle patch alone is Lua and did not resolve the mapping.
+
+Dependency follow-up: the linked Better Jiggle page is Nexus mod 1570. Its
+unauthenticated page currently hides the description behind account content
+preferences. The three local v2.7.4 ZIPs in `~/Downloads/sbmods` contain no
+pak/IoStore, Unreal asset, FBX or Blender files. They do not provide the missing
+skeleton basis, and are not the specified v1.2. No extra bone names were inferred
+from this lead. DumbDumb and Iris Out remain unfinished.
+
+Full-duration L2 replay evidence and the source-preview truncation correction
+are recorded in [the motion review](shared-animation-motion-review.md).
