@@ -178,19 +178,29 @@ int main(int argc,char** argv) {
         }
         if(argc==3 && (std::string_view(argv[1])=="--audited-pack" || std::string_view(argv[1])=="--audited-facial-pack" ||
                        std::string_view(argv[1])=="--audited-face-motion-pack" ||
-                       std::string_view(argv[1])=="--audited-blender-face-pack")) {
+                       std::string_view(argv[1])=="--audited-blender-face-pack" ||
+                       std::string_view(argv[1])=="--audited-isolated-pack")) {
+            const bool isolated=std::string_view(argv[1])=="--audited-isolated-pack";
             const auto packages=Catalog::load(root,argv[2],root/"audit-cache");
             expect(packages.animation_libraries.size()==1,"Audited pack did not load as one library");
             const auto& audited=packages.animation_libraries[0];
             expect(audited.entries.size()==57 && audited.adapters.size()==5,"Audited animation set changed");
-            expect(packages.outfit_revisions.size()==3,"Source outfits lack verified revisions");
+            expect(packages.outfit_revisions.size()==(isolated?1:3),"Source outfits lack verified revisions");
+            size_t resolved_layers=0;
             for(const auto& adapter:audited.adapters) {
                 const auto found=packages.outfit_revisions.find(adapter.source_outfit);
+                if(isolated && found==packages.outfit_revisions.end()) {
+                    expect(!resolve_performance_adapter(packages.animation_libraries,adapter.source_outfit,
+                        {},adapter.source_class,adapter.skeleton),"Absent outfit gained an unverified adapter");
+                    continue;
+                }
                 expect(found!=packages.outfit_revisions.end(),"Adapter source outfit was not discovered");
                 const auto* resolved=resolve_performance_adapter(packages.animation_libraries,adapter.source_outfit,
                     found->second,adapter.source_class,adapter.skeleton);
                 expect(resolved && resolved->target_class==adapter.target_class,"Packaged adapter does not resolve");
+                ++resolved_layers;
             }
+            expect(resolved_layers>0,"Isolated outfit has no compatible performance layer");
             expect(packages.diagnostics.at("rejected")==0,"Audited package set contains rejected metadata");
             if(std::string_view(argv[1])!="--audited-pack") {
                 expect(audited.faces.size()==1 && audited.faces.front().expressions.size()==21 &&
@@ -203,8 +213,11 @@ int main(int argc,char** argv) {
                            "Facial adapter resolved to another variant's mesh");
                     ++matched;
                 }
-                expect(matched==6,"Combined pack did not resolve all six Eve faces");
-                const bool blender_face=std::string_view(argv[1])=="--audited-blender-face-pack";
+                size_t expected_faces=0;
+                for(const auto& adapter:audited.faces.front().adapters)
+                    if(packages.outfit_revisions.contains(adapter.source_outfit)) ++expected_faces;
+                expect(matched==expected_faces,"Combined pack did not resolve exactly the installed outfit's faces");
+                const bool blender_face=std::string_view(argv[1])=="--audited-blender-face-pack" || isolated;
                 if(std::string_view(argv[1])=="--audited-face-motion-pack" || blender_face) {
                     const auto& rig=audited.faces.front();
                     const auto* performance=rig.find_performance("css.eve.dance.comecloser");

@@ -1,7 +1,9 @@
 # Explicit-time performance layers
 
-2026-10-06. Cooked private candidates with a native binding service. Not installed
-or accepted in game; CSS/CINE user controls remain unfinished.
+2026-10-06. These adapters are included in the installed private trial with
+CSS/CINE controls. The initial offline evidence below does not establish live
+acceptance. See `performance-service.md` and `performance-facial-curves.md` for
+the runtime and current installation.
 
 Five isolated post-process blueprints compile without Blueprint warnings and
 pass fresh-process contract checks. Their original skeleton, CSS control
@@ -123,6 +125,6 @@ Before deployment:
    layers and the selected idle's phase when the original graph is recreated.
 3. Finish CSS/CINE controls and interruption tests for unload, death, travel,
    appearance changes and gameplay input.
-4. Check dependency closure with each outfit alone. Current private validation
-   mounts all three outfit packages, and does not prove standalone closure.
+4. Package and catalog checks now pass with each outfit alone; see
+   `shared-animation-cook.md`. Validate live behavior with the same isolation.
 5. Measure cold/warm costs and obtain live acceptance.
