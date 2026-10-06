@@ -83,6 +83,19 @@ if(EXISTS "${CSSX_CINE}/src/main.cpp")
   set_target_properties(cine PROPERTIES PREFIX "")
 endif()
 
+# ---- Perf Tuner extension (sibling source tree at extensions/perf-tuner) ----
+# Catalog, trial maths and the tuner over the bridge in a static library tested off-game
+# with a mock host; main.cpp is only the ABI table.
+set(CSSX_PERF_TUNER "${CSSX_REPO}/extensions/perf-tuner")
+file(GLOB cssx_perf_tuner_sources CONFIGURE_DEPENDS "${CSSX_PERF_TUNER}/src/*.cpp")
+list(FILTER cssx_perf_tuner_sources EXCLUDE REGEX "/main\\.cpp$")
+add_library(cssx_perf_tuner_logic STATIC ${cssx_perf_tuner_sources})
+target_include_directories(cssx_perf_tuner_logic PUBLIC include "${CSSX_PERF_TUNER}/src" "${CSSX_VENDOR}")
+set_target_properties(cssx_perf_tuner_logic PROPERTIES POSITION_INDEPENDENT_CODE ON)
+add_library(perf_tuner SHARED "${CSSX_PERF_TUNER}/src/main.cpp")
+target_link_libraries(perf_tuner PRIVATE cssx_perf_tuner_logic)
+set_target_properties(perf_tuner PROPERTIES PREFIX "")
+
 # ---- tests (host) ----
 if(NOT WIN32)
   enable_testing()
@@ -123,6 +136,9 @@ if(NOT WIN32)
   add_executable(cssx_cine_expression_tests ${CSSX_CINE}/tests/expression_tests.cpp)
   target_link_libraries(cssx_cine_expression_tests PRIVATE cssx_cine_logic)
   add_test(NAME cssx_cine_expression COMMAND cssx_cine_expression_tests)
+  add_executable(cssx_perf_tuner_tests ${CSSX_PERF_TUNER}/tests/tuner_tests.cpp)
+  target_link_libraries(cssx_perf_tuner_tests PRIVATE cssx_perf_tuner_logic)
+  add_test(NAME cssx_perf_tuner COMMAND cssx_perf_tuner_tests ${CSSX_PERF_TUNER})
   add_test(NAME cssx_tools COMMAND ${Python3_EXECUTABLE} -m unittest discover -s ${CMAKE_CURRENT_SOURCE_DIR}/tests -p "test_*.py")
   return()
 endif()

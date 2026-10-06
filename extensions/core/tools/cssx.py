@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build, stage and talk to standalone CSSX. Python 3.14, standard library.
 
-  cssx.py build [--dev]                 cross-build main.dll, cssx_core.dll, cheat_menu.dll, teleport.dll, cine.dll
-  cssx.py stage [--dev] [--cheat-menu] [--cine] [--core-only]  install into ue4ss/Mods/CSSX (backs up what it replaces)
+  cssx.py build [--dev]                 cross-build main.dll, cssx_core.dll, cheat_menu.dll, teleport.dll, cine.dll, perf_tuner.dll
+  cssx.py stage [--dev] [--cheat-menu] [--cine] [--perf-tuner] [--core-only]  install into ue4ss/Mods/CSSX (backs up what it replaces)
   cssx.py status                        print runtime/status.json and runtime/loader.json
   cssx.py request '{"op":"status"}'     dev channel request (needs Mods/CSSX/dev/enabled.txt)
                                         runtime ops name the extension with "extension", e.g. {"op":"model","extension":"eins0fx.cheat-menu"}
@@ -79,14 +79,14 @@ def build(dev: bool) -> Path:
     subprocess.run(['cmake', '-S', str(ROOT), '-B', str(out), '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release',
                     '-DCMAKE_TOOLCHAIN_FILE=' + str(REPO / 'native/toolchain-clang-cl.cmake'), f'-DCSSX_DEV={"ON" if dev else "OFF"}'], check=True)
     subprocess.run(['cmake', '--build', str(out), '-j', '8'], check=True)
-    for name in ('main.dll', 'cssx_core.dll', 'cheat_menu.dll', 'teleport.dll', 'cine.dll'):
+    for name in ('main.dll', 'cssx_core.dll', 'cheat_menu.dll', 'teleport.dll', 'cine.dll', 'perf_tuner.dll'):
         if not (out / name).is_file():
             raise RuntimeError(f'Build did not produce {name}')
     return out
 
 
 def stage(game: Path, dev: bool, cheat_menu: bool, core_only: bool = False, performance: bool = False, teleport: bool = False,
-          cine: bool = False) -> None:
+          cine: bool = False, perf_tuner: bool = False) -> None:
     ue4ss = game / 'Binaries/Win64/ue4ss'
     if sha(ue4ss / 'UE4SS.dll') != PIN['dll_sha256']:
         raise RuntimeError('Installed UE4SS differs from the pinned runtime; refusing to stage')
@@ -181,6 +181,21 @@ def stage(game: Path, dev: bool, cheat_menu: bool, core_only: bool = False, perf
                 old.unlink()
         manifest['entry'] = dll_name
         atomic(target / 'extension.json', manifest)
+    if perf_tuner:
+        src = REPO / 'extensions/perf-tuner'
+        manifest = json.loads((src / 'extension.json').read_text())
+        target = mod / 'extensions' / manifest['id']
+        target.mkdir(parents=True, exist_ok=True)
+        for name in manifest['files']:
+            copy_verified(src / name, target / name)
+        dll_name = f'perf_tuner-{sha(out / "perf_tuner.dll")[:12]}.dll'
+        if not (target / dll_name).exists():
+            copy_verified(out / 'perf_tuner.dll', target / dll_name)
+        for old in target.glob('perf_tuner-*.dll'):
+            if old.name != dll_name:
+                old.unlink()
+        manifest['entry'] = dll_name
+        atomic(target / 'extension.json', manifest)
     if performance:
         target = mod / 'extensions/cssx.performance'
         target.mkdir(parents=True, exist_ok=True)
@@ -231,6 +246,7 @@ def main() -> None:
     parser.add_argument('--performance', action='store_true', help='also stage the CSSX Performance extension')
     parser.add_argument('--teleport', action='store_true', help='also stage the CSSX Teleport extension')
     parser.add_argument('--cine', action='store_true', help='also stage the CINE extension')
+    parser.add_argument('--perf-tuner', action='store_true', help='also stage the Perf Tuner extension')
     parser.add_argument('--core-only', action='store_true', help='stage: keep the installed loader')
     parser.add_argument('--seconds', type=float, default=10)
     args = parser.parse_args()
@@ -238,7 +254,7 @@ def main() -> None:
     if args.action == 'build':
         print(build(args.dev))
     elif args.action == 'stage':
-        stage(args.game, args.dev, args.cheat_menu, args.core_only, args.performance, args.teleport, args.cine)
+        stage(args.game, args.dev, args.cheat_menu, args.core_only, args.performance, args.teleport, args.cine, args.perf_tuner)
     elif args.action == 'status':
         for name in ('loader', 'status'):
             path = mod / 'runtime' / f'{name}.json'

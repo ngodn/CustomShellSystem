@@ -22,6 +22,20 @@ evidence behind each line is in `integration-tests.md` and `performance.md`.
 - CSSX: extensions can pass an object where a function expects an interface (CINE's
   frame passes use it), and can write a large struct property without reading it back.
 - CSSX: HUD layers send the game only the position and size values that changed.
+- CSSX: `frame.brief` takes a window length (1 to 60 s) and reports mean, p95, p99, max and
+  hitches as well, so an extension can compare two windows of frame time.
+- New extension, Perf Tuner 1.0.0 (host-tested; its first run in the game is pending): more
+  frames per second with the same picture. A short catalog of engine tweaks that change
+  nothing visible, each measured off/on/off/on in your own scene before you trust it; a
+  bottleneck probe (GPU or CPU); a read-only check of settings in your own config and
+  launch that cost frames for nothing on your machine; a line-by-line verdict on any
+  Engine.ini tweak pack you installed; and a world audit that counts what in the loaded
+  level costs time without showing, with one reversible fix.
+- CSSX: the controller shortcut (L3+R3) is gone. Pressing both sticks during play could
+  open the Player Menu on the CSSX tab at the wrong moment and leave it stuck, with the
+  world no longer reacting to you. On a controller, open the Player Menu and switch to
+  the CSSX tab; the keyboard key (F6 by default) still works. An `open_gamepad` line in
+  an existing `settings.json` is ignored and removed on the next save.
 
 ## Traverse 1.0.2
 

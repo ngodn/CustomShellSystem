@@ -1,0 +1,16 @@
+{
+  "schema": 2,
+  "api": 3,
+  "id": "eins0fx.perf-tuner",
+  "title": "Perf Tuner",
+  "author": "_eins0fx",
+  "version": "1.0.0",
+  "description": "More frames per second with the same picture: measured tweaks, a bottleneck probe, and a plain-words check of your own settings.",
+  "kind": "native",
+  "entry": "perf_tuner.dll",
+  "files": [
+    "tweaks.json",
+    "README.txt",
+    "THIRD_PARTY_NOTICES.txt"
+  ]
+}

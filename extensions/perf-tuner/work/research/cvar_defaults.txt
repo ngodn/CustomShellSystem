@@ -1,0 +1,340 @@
+=== r.Lumen.DiffuseIndirect.AsyncCompute
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenDiffuseIndirect.cpp:155:	TEXT("r.Lumen.DiffuseIndirect.AsyncCompute"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenDiffuseIndirect.cpp-156-	1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenDiffuseIndirect.cpp-157-	TEXT("Whether to run Lumen diffuse indirect passes on the compute pipe if possible."),
+=== r.LumenScene.Lighting.AsyncCompute
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenSceneLighting.cpp:64:	TEXT("r.LumenScene.Lighting.AsyncCompute"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenSceneLighting.cpp-65-	1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenSceneLighting.cpp-66-	TEXT("Whether to run LumenSceneLighting on the compute pipe if possible."),
+=== r.Lumen.Reflections.AsyncCompute
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenReflections.cpp:277:	TEXT("r.Lumen.Reflections.AsyncCompute"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenReflections.cpp-278-	0,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenReflections.cpp-279-	TEXT("Whether to run Lumen reflection passes on the compute pipe if possible."),
+=== r.Lumen.ScreenProbeGather.AsyncCompute
+=== r.Lumen.HardwareRayTracing.AsyncCompute
+=== r.Lumen.AsyncCompute
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/Lumen.cpp:30:	TEXT("r.Lumen.AsyncCompute"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/Lumen.cpp-31-	1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/Lumen.cpp-32-	TEXT("Whether Lumen should use async compute if supported."),
+=== r.Shadow.Virtual.Cache.StaticSeparate
+=== r.Shadow.Virtual.Cache
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VirtualShadowMaps/VirtualShadowMapCacheManager.cpp:35:	TEXT("r.Shadow.Virtual.Cache"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VirtualShadowMaps/VirtualShadowMapCacheManager.cpp-36-	1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VirtualShadowMaps/VirtualShadowMapCacheManager.cpp-37-	TEXT("Turn on to enable caching"),
+=== r.Nanite.VSMMeshShaderRasterization
+=== r.Nanite.MeshShaderRasterization
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Nanite/NaniteCullRaster.cpp:116:	TEXT("r.Nanite.MeshShaderRasterization"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Nanite/NaniteCullRaster.cpp-117-	1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Nanite/NaniteCullRaster.cpp-118-	TEXT("If available, use mesh shaders for hardware rasterization."),
+=== r.Nanite.PrimeHZB
+=== r.RDG.AsyncCompute
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderGraphPrivate.cpp:213:	TEXT("r.RDG.AsyncCompute"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderGraphPrivate.cpp-214-	RDG_ASYNC_COMPUTE_ENABLED,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderGraphPrivate.cpp-215-	TEXT("Controls the async compute policy.\n")
+=== r.RDG.ParallelExecute
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderGraphPrivate.cpp:313:	TEXT("r.RDG.ParallelExecute"), GRDGParallelExecute,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderGraphPrivate.cpp-314-	TEXT("Whether to enable parallel execution of passes when supported.")
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderGraphPrivate.cpp-315-	TEXT(" 0: off")
+=== r.RDG.ParallelSetup
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderGraphPrivate.cpp:299:	TEXT("r.RDG.ParallelSetup"), GRDGParallelSetup,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderGraphPrivate.cpp-300-	TEXT("RDG will setup passes in parallel when prompted by calls to FRDGBuilder::FlushSetupQueue.")
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderGraphPrivate.cpp-301-	TEXT(" 0: pass setup is done synchronously in AddPass;")
+=== r.GTSyncType
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderingThread.cpp:2014:	TEXT("r.GTSyncType"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderingThread.cpp-2015-	0,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderingThread.cpp-2016-	TEXT("Determines how the game thread syncs with the render thread, RHI thread and GPU.\n")
+--
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/UnrealEngine.cpp:750:	static auto CVarGTSyncType = IConsoleManager::Get().FindConsoleVariable(TEXT("r.GTSyncType"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/UnrealEngine.cpp-751-	
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/UnrealEngine.cpp-752-	if (CVarGTSyncType->GetInt() == 2 && CVarVsync->GetInt() != 0)
+--
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/GameUserSettings.cpp:353:	static IConsoleVariable* SyncIntervalCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.GTSyncType"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/GameUserSettings.cpp-354-	if (ensure(SyncIntervalCVar))
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/GameUserSettings.cpp-355-	{
+--
+=== r.OneFrameThreadLag
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderingThread.cpp:2008:	TEXT("r.OneFrameThreadLag"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderingThread.cpp-2009-	1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderingThread.cpp-2010-	TEXT("Whether to allow the rendering thread to lag one frame behind the game thread (0: disabled, otherwise enabled)")
+=== D3D12.MaximumFrameLatency
+=== r.Streaming.Boost
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/TextureStreamingHelpers.cpp:80:	TEXT("r.Streaming.Boost"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/TextureStreamingHelpers.cpp-81-	1.0f,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/TextureStreamingHelpers.cpp-82-	TEXT("=1.0: normal\n")
+=== r.Streaming.PoolSize
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Apple/MetalRHI/Private/MetalRHI.cpp:586:		static const auto CVarStreamingTexturePoolSize = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.Streaming.PoolSize"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Apple/MetalRHI/Private/MetalRHI.cpp-587-		GTexturePoolSize = (int64)CVarStreamingTexturePoolSize->GetValueOnAnyThread() * 1024 * 1024;
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Apple/MetalRHI/Private/MetalRHI.cpp-588-
+--
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/VulkanRHI/Private/VulkanRHI.cpp:473:	static const auto CVarStreamingTexturePoolSize = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.Streaming.PoolSize"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/VulkanRHI/Private/VulkanRHI.cpp-474-	int32 StreamingPoolSizeValue = CVarStreamingTexturePoolSize->GetValueOnAnyThread();
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/VulkanRHI/Private/VulkanRHI.cpp-475-			
+--
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/OpenGLDrv/Private/OpenGLDevice.cpp:1334:	static const auto CVarStreamingTexturePoolSize = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.Streaming.PoolSize"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/OpenGLDrv/Private/OpenGLDevice.cpp-1335-	GTexturePoolSize = (int64)CVarStreamingTexturePoolSize->GetValueOnAnyThread() * 1024 * 1024;
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/OpenGLDrv/Private/OpenGLDevice.cpp-1336-
+--
+=== r.Streaming.FramesForFullUpdate
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/SceneRendering.cpp:5662:				static auto* Var = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.Streaming.FramesForFullUpdate"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/SceneRendering.cpp-5663-				int32 Value = Var->GetValueOnRenderThread();
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/SceneRendering.cpp-5664-				bool bHighlight = Value != 0;
+--
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/TextureStreamingHelpers.cpp:283:	TEXT("r.Streaming.FramesForFullUpdate"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/TextureStreamingHelpers.cpp-284-	5,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/TextureStreamingHelpers.cpp-285-	TEXT("Texture streaming is time sliced per frame. This values gives the number of frames to visit all textures."));
+=== r.Streaming.UsePerTextureBias
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/TextureStreamingHelpers.cpp:201:	TEXT("r.Streaming.UsePerTextureBias"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/TextureStreamingHelpers.cpp-202-	1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/TextureStreamingHelpers.cpp-203-	TEXT("If non-zero, each texture will be assigned a mip bias between 0 and MipBias as required to fit in budget."),
+=== r.Streaming.AmortizeCPUToGPUCopy
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/StreamingManagerTexture.cpp:1569:	TEXT("r.Streaming.AmortizeCPUToGPUCopy"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/StreamingManagerTexture.cpp-1570-	0,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/StreamingManagerTexture.cpp-1571-	TEXT("If set and r.Streaming.MaxNumTexturesToStreamPerFrame > 0, limit the number of 2D textures ")
+=== gc.TimeBetweenPurgingPendingKillObjects
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/UnrealEngine.cpp:1685:	TEXT("gc.TimeBetweenPurgingPendingKillObjects"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/UnrealEngine.cpp-1686-	GTimeBetweenPurgingPendingKillObjects,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/UnrealEngine.cpp-1687-	TEXT("Time in seconds (game time) we should wait between purging object references to objects that are pending kill."),
+=== gc.IncrementalBeginDestroyEnabled
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/CoreUObject/Private/UObject/GarbageCollection.cpp:225:	TEXT("gc.IncrementalBeginDestroyEnabled"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/CoreUObject/Private/UObject/GarbageCollection.cpp-226-	GIncrementalBeginDestroyEnabled,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/CoreUObject/Private/UObject/GarbageCollection.cpp-227-	TEXT("If true, the engine will destroy objects incrementally using time limit each frame"),
+=== gc.MultithreadedDestructionEnabled
+=== gc.AllowParallelGC
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/CoreUObject/Private/UObject/GarbageCollection.cpp:4543:	TEXT("gc.AllowParallelGC"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/CoreUObject/Private/UObject/GarbageCollection.cpp-4544-	GAllowParallelGC,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/CoreUObject/Private/UObject/GarbageCollection.cpp-4545-	TEXT("Used to control parallel GC."),
+=== gc.CreateGCClusters
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/CoreUObject/Private/UObject/UObjectClusters.cpp:28:	TEXT("gc.CreateGCClusters"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/CoreUObject/Private/UObject/UObjectClusters.cpp-29-	GCreateGCClusters,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/CoreUObject/Private/UObject/UObjectClusters.cpp-30-	TEXT("If true, the engine will attempt to create clusters of objects for better garbage collection performance."),
+=== gc.MinDesiredObjectsPerSubTask
+=== r.HZBOcclusion
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/SceneVisibility.cpp:121:	TEXT("r.HZBOcclusion"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/SceneVisibility.cpp-122-	GHZBOcclusion,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/SceneVisibility.cpp-123-	TEXT("Defines which occlusion system is used.\n")
+--
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/DeferredShadingRenderer.cpp:1131:		static const auto ICVarHZBOcc = IConsoleManager::Get().FindConsoleVariable(TEXT("r.HZBOcclusion"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/DeferredShadingRenderer.cpp-1132-		FamilyPipelineState.Set(&FFamilyPipelineState::bHZBOcclusion, ICVarHZBOcc->GetInt() != 0);	
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/DeferredShadingRenderer.cpp-1133-	}
+=== r.AllowOcclusionQueries
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/SceneVisibility.cpp:348:	TEXT("r.AllowOcclusionQueries"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/SceneVisibility.cpp-349-	GOcclusionCullEnabled,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/SceneVisibility.cpp-350-	TEXT("Enables hardware occlusion culling."),
+=== a.URO.Enable
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Components/SkinnedMeshComponent.cpp:71:	TEXT("a.URO.Enable"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Components/SkinnedMeshComponent.cpp-72-	1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Components/SkinnedMeshComponent.cpp-73-	TEXT("True to anim rate optimization."));
+=== r.VolumetricFog.TemporalReprojection
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VolumetricFog.cpp:82:	TEXT("r.VolumetricFog.TemporalReprojection"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VolumetricFog.cpp-83-	GVolumetricFogTemporalReprojection,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VolumetricFog.cpp-84-	TEXT("Whether to use temporal reprojection on volumetric fog."),
+=== r.Lumen.Reflections.RadianceCache
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenReflections.cpp:51:	TEXT("r.Lumen.Reflections.RadianceCache"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenReflections.cpp-52-	0,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenReflections.cpp-53-	TEXT("Whether to reuse Lumen's ScreenProbeGather Radiance Cache, when it is available.  When enabled, reflection rays from rough surfaces are shortened and distant lighting comes from interpolating from the Radiance Cache, speeding up traces."),
+=== r.MeshDrawCommands.ParallelPassSetup
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/MeshDrawCommands.cpp:23:	TEXT("r.MeshDrawCommands.ParallelPassSetup"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/MeshDrawCommands.cpp-24-	1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/MeshDrawCommands.cpp-25-	TEXT("Whether to setup mesh draw command pass in parallel."),
+=== r.ParallelBasePass
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/BasePassRendering.cpp:84:	TEXT("r.ParallelBasePass"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/BasePassRendering.cpp-85-	1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/BasePassRendering.cpp-86-	TEXT("Toggles parallel base pass rendering. Parallel rendering must be enabled for this to have an effect."),
+=== r.NGX.DLSS.DilateMotionVectors
+=== r.Shadow.Virtual.NonNanite.IncludeInCoarsePages
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VirtualShadowMaps/VirtualShadowMapArray.cpp:185:	TEXT("r.Shadow.Virtual.NonNanite.IncludeInCoarsePages"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VirtualShadowMaps/VirtualShadowMapArray.cpp-186-	1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VirtualShadowMaps/VirtualShadowMapArray.cpp-187-	TEXT("Include non-Nanite geometry in coarse pages.")
+=== r.RayTracing.Culling
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/RayTracing/RayTracingInstanceCulling.cpp:11:	TEXT("r.RayTracing.Culling"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/RayTracing/RayTracingInstanceCulling.cpp-12-	3,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/RayTracing/RayTracingInstanceCulling.cpp-13-	TEXT("Enable culling in ray tracing for objects that are behind the camera\n")
+=== r.RayTracing.Nanite.Mode
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Rendering/NaniteResources.cpp:147:	TEXT("r.RayTracing.Nanite.Mode"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Rendering/NaniteResources.cpp-148-	GNaniteRayTracingMode,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Rendering/NaniteResources.cpp-149-	TEXT("0 - fallback mesh (default);\n")
+=== r.Lumen.ScreenProbeGather.TemporalFilterProbes
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenScreenProbeGather.cpp:257:	TEXT("r.Lumen.ScreenProbeGather.TemporalFilterProbes"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenScreenProbeGather.cpp-258-	GLumenScreenProbeTemporalFilterProbes,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenScreenProbeGather.cpp-259-	TEXT("Whether to temporally filter probe traces to reduce noise."),
+=== r.Velocity.EnableVertexDeformation
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/PrimitiveSceneProxy.cpp:66:	TEXT("r.Velocity.EnableVertexDeformation"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/PrimitiveSceneProxy.cpp-67-	2,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/PrimitiveSceneProxy.cpp-68-	TEXT("Enables materials with World Position Offset and/or World Displacement to output velocities during velocity pass even when the actor has not moved. \n")
+=== r.SkinCache.Mode
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/GPUSkinCache.cpp:107:	TEXT("r.SkinCache.Mode"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/GPUSkinCache.cpp-108-	1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/GPUSkinCache.cpp-109-	TEXT("Whether or not to use the GPU compute skinning cache.\n")
+--
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/GPUSkinCache.cpp:221:	static FShaderPlatformCachedIniValue<int32> PerPlatformCVar(TEXT("r.SkinCache.Mode"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/GPUSkinCache.cpp-222-	return (PerPlatformCVar.Get(Platform) != 0);
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/GPUSkinCache.cpp-223-}
+=== r.Lumen.Reflections.ScreenSpaceReconstruction
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenReflections.cpp:195:	TEXT("r.Lumen.Reflections.ScreenSpaceReconstruction"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenReflections.cpp-196-	GLumenReflectionScreenSpaceReconstruction,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenReflections.cpp-197-	TEXT("Whether to use the screen space BRDF reweighting reconstruction"),
+=== r.VRS.Enable
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VariableRateShading/VariableRateShadingImageManager.cpp:58:	TEXT("r.VRS.Enable"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VariableRateShading/VariableRateShadingImageManager.cpp-59-	0,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VariableRateShading/VariableRateShadingImageManager.cpp-60-	TEXT("Enables hardware Variable Rate Shading and Shading Rate Image generation (8x8 or 16x16 tile size).")
+=== r.VRS.ContrastAdaptiveShading
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VariableRateShading/ContrastAdaptiveImageGenerator.cpp:35:	TEXT("r.VRS.ContrastAdaptiveShading"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VariableRateShading/ContrastAdaptiveImageGenerator.cpp-36-	0,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VariableRateShading/ContrastAdaptiveImageGenerator.cpp-37-	TEXT("Enables using Variable Rate Shading based on the luminance from the previous frame's post process output \n"),
+=== r.Nanite.Streaming.StreamingPoolSize
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Rendering/NaniteStreamingManager.cpp:55:	TEXT("r.Nanite.Streaming.StreamingPoolSize"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Rendering/NaniteStreamingManager.cpp-56-	GNaniteStreamingPoolSize,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Rendering/NaniteStreamingManager.cpp-57-	TEXT("Size of streaming pool in MB. Does not include memory used for root pages.")
+=== r.Nanite.Streaming.MaxPendingPages
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Rendering/NaniteStreamingManager.cpp:88:	TEXT("r.Nanite.Streaming.MaxPendingPages"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Rendering/NaniteStreamingManager.cpp-89-	GNaniteStreamingMaxPendingPages,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Rendering/NaniteStreamingManager.cpp-90-	TEXT("Maximum number of pages that can be pending for installation."),
+=== r.Nanite.Streaming.MaxPageInstallsPerFrame
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Rendering/NaniteStreamingManager.cpp:104:	TEXT("r.Nanite.Streaming.MaxPageInstallsPerFrame"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Rendering/NaniteStreamingManager.cpp-105-	GNaniteStreamingMaxPageInstallsPerFrame,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Rendering/NaniteStreamingManager.cpp-106-	TEXT("Maximum number of pages that can be installed per frame. Limiting this can limit the overhead of streaming."),
+=== r.PSOPrecaching
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/OpenGLDrv/Private/OpenGLShaders.cpp:288:	static const auto CVarPSOPrecaching = IConsoleManager::Get().FindConsoleVariable(TEXT("r.PSOPrecaching"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/OpenGLDrv/Private/OpenGLShaders.cpp-289-	return CVarPSOPrecaching && (CVarPSOPrecaching->GetInt() != 0);
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/OpenGLDrv/Private/OpenGLShaders.cpp-290-}
+--
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/VulkanRHI/Private/Android/VulkanAndroidPlatform.cpp:1967:	static const auto CVarPSOPrecaching = IConsoleManager::Get().FindConsoleVariable(TEXT("r.PSOPrecaching"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/VulkanRHI/Private/Android/VulkanAndroidPlatform.cpp-1968-	static const auto CVarVulkanPSOPrecaching = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Vulkan.AllowPSOPrecaching"));	
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/VulkanRHI/Private/Android/VulkanAndroidPlatform.cpp-1969-	if (CVarNumRemoteProgramCompileServices->GetInt() && CVarChunkedPSOCache->GetInt() && CVarPSOPrecaching->GetInt() && CVarVulkanPSOPrecaching->GetInt())
+--
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RHI/Private/PipelineStateCache.cpp:190:	TEXT("r.PSOPrecaching"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RHI/Private/PipelineStateCache.cpp-191-	GPSOPrecaching,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RHI/Private/PipelineStateCache.cpp-192-	TEXT("0 to Disable PSOs precaching\n")
+=== r.ShaderPipelineCache.BatchSize
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/ShaderPipelineCache.cpp:67:														   TEXT("r.ShaderPipelineCache.BatchSize"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/ShaderPipelineCache.cpp-68-														   50,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/ShaderPipelineCache.cpp-69-														   TEXT("Set the number of PipelineStateObjects to compile in a single batch operation when compiling takes priority. Defaults to a maximum of 50 per frame, due to async. file IO it is less in practice."),
+=== r.ShaderPipelineCache.BackgroundBatchSize
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/ShaderPipelineCache.cpp:61:														  TEXT("r.ShaderPipelineCache.BackgroundBatchSize"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/ShaderPipelineCache.cpp-62-														  1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/ShaderPipelineCache.cpp-63-														  TEXT("Set the number of PipelineStateObjects to compile in a single batch operation when compiling in the background. Defaults to a maximum of 1 per frame, due to async. file IO it is less in practice."),
+=== r.Lumen.ScreenProbeGather.RadianceCache
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenScreenProbeGather.cpp:314:	TEXT("r.Lumen.ScreenProbeGather.RadianceCache"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenScreenProbeGather.cpp-315-	GLumenRadianceCache,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenScreenProbeGather.cpp-316-	TEXT("Whether to enable the Persistent world space Radiance Cache"),
+=== r.LumenScene.SurfaceCache.AtlasSize
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenScene.cpp:69:	TEXT("r.LumenScene.SurfaceCache.AtlasSize"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenScene.cpp-70-	4096,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenScene.cpp-71-	TEXT("Surface cache card atlas size."),
+=== r.Lumen.TranslucencyVolume.Enable
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenTranslucencyVolumeLighting.cpp:30:	TEXT("r.Lumen.TranslucencyVolume.Enable"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenTranslucencyVolumeLighting.cpp-31-	1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenTranslucencyVolumeLighting.cpp-32-	TEXT(""),
+=== r.Lumen.ScreenProbeGather.ShortRangeAO
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenScreenProbeGather.cpp:291:	TEXT("r.Lumen.ScreenProbeGather.ShortRangeAO"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenScreenProbeGather.cpp-292-	GLumenShortRangeAmbientOcclusion,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenScreenProbeGather.cpp-293-	TEXT("Whether to compute a short range, full resolution AO to add high frequency occlusion (contact shadows) which Screen Probes lack due to downsampling."),
+=== r.Lumen.HardwareRayTracing.LightingMode
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenHardwareRayTracingCommon.cpp:35:	TEXT("r.Lumen.HardwareRayTracing.LightingMode"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenHardwareRayTracingCommon.cpp-36-	0,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenHardwareRayTracingCommon.cpp-37-	TEXT("Determines the ray hit lighting mode:\n")
+=== r.Lumen.HardwareRayTracing.ShaderExecutionReordering
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenHardwareRayTracingCommon.cpp:98:	TEXT("r.Lumen.HardwareRayTracing.ShaderExecutionReordering"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenHardwareRayTracingCommon.cpp-99-	true,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenHardwareRayTracingCommon.cpp-100-	TEXT("When true, use Shader Execution Reordering (SER) to improve coherence of material evaluation. This may improve performance for scenes with many materials. This has no effect if the hardware does not support SER."),
+=== r.RayTracing.Geometry.SkeletalMeshes
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/RayTracing/RayTracing.cpp:105:	static const auto RayTracingSkeletalMeshesCVar = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.RayTracing.Geometry.SkeletalMeshes"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/RayTracing/RayTracing.cpp-106-	static const auto RayTracingLandscapeGrassCVar = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.RayTracing.Geometry.LandscapeGrass"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/RayTracing/RayTracing.cpp-107-
+--
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Rendering/NaniteResources.cpp:2931:	static const auto RayTracingSkeletalMeshesCVar = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.RayTracing.Geometry.SkeletalMeshes"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Rendering/NaniteResources.cpp-2932-
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Rendering/NaniteResources.cpp-2933-	if (RayTracingSkeletalMeshesCVar && RayTracingSkeletalMeshesCVar->GetValueOnRenderThread() <= 0)
+--
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/SkeletalMeshSceneProxy.cpp:37:	TEXT("r.RayTracing.Geometry.SkeletalMeshes"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/SkeletalMeshSceneProxy.cpp-38-	1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/SkeletalMeshSceneProxy.cpp-39-	TEXT("Include skeletal meshes in ray tracing effects (default = 1 (skeletal meshes enabled in ray tracing))"));
+=== r.RayTracing.Shadows
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/LightRendering.cpp:83:	TEXT("r.RayTracing.Shadows"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/LightRendering.cpp-84-	0,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/LightRendering.cpp-85-	TEXT("0: use traditional rasterized shadow map (default)\n")
+=== r.SkyLight.RealTimeReflectionCapture.TimeSlice
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/ReflectionEnvironmentRealTimeCapture.cpp:38:	TEXT("r.SkyLight.RealTimeReflectionCapture.TimeSlice"), 1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/ReflectionEnvironmentRealTimeCapture.cpp-39-	TEXT("When enabled, the real-time sky light capture and convolutions will by distributed over several frames to lower the per-frame cost."),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/ReflectionEnvironmentRealTimeCapture.cpp-40-	ECVF_RenderThreadSafe | ECVF_Scalability);
+=== r.DistanceFields.ParallelAtlasUpdate
+=== r.AOGlobalDistanceField.NumClipmaps
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/GlobalDistanceField.cpp:42:	TEXT("r.AOGlobalDistanceField.NumClipmaps"), 
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/GlobalDistanceField.cpp-43-	GAOGlobalDistanceFieldNumClipmaps,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/GlobalDistanceField.cpp-44-	TEXT("Num clipmaps in the global distance field.  Setting this to anything other than 4 is currently only supported by Lumen."),
+=== r.Lumen.DiffuseIndirect.Allow
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Landscape/Private/LandscapeCulling.cpp:158:		IConsoleVariable* DiffuseIndirectCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.DiffuseIndirect.Allow"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Landscape/Private/LandscapeCulling.cpp-159-		DiffuseIndirectInt = DiffuseIndirectCVar->AsVariableInt();
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Landscape/Private/LandscapeCulling.cpp-160-	}
+--
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenDiffuseIndirect.cpp:32:	TEXT("r.Lumen.DiffuseIndirect.Allow"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenDiffuseIndirect.cpp-33-	1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Lumen/LumenDiffuseIndirect.cpp-34-	TEXT("Whether to allow Lumen Global Illumination.  Lumen GI is enabled in the project settings, this cvar can only disable it."), 
+--
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Components/LightComponent.cpp:871:	static const auto CVarLumenAllowed = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.Lumen.DiffuseIndirect.Allow"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Components/LightComponent.cpp-872-
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Components/LightComponent.cpp-873-	const bool bLumenEnabled = CVarDynamicGIMethod->GetValueOnGameThread() == 1 &&
+=== r.Shadow.Virtual.SMRT.RayCountDirectional
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VirtualShadowMaps/VirtualShadowMapArray.cpp:469:	TEXT("r.Shadow.Virtual.SMRT.RayCountDirectional"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VirtualShadowMaps/VirtualShadowMapArray.cpp-470-	7,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VirtualShadowMaps/VirtualShadowMapArray.cpp-471-	TEXT("Ray count for shadow map tracing of directional lights. 0 = disabled."),
+=== r.Shadow.Virtual.ResolutionLodBiasDirectional
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VirtualShadowMaps/VirtualShadowMapCacheManager.cpp:755:					static const auto* CVarResolutionLodBiasDirectionalPtr = IConsoleManager::Get().FindTConsoleVariableDataFloat(TEXT("r.Shadow.Virtual.ResolutionLodBiasDirectional"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VirtualShadowMaps/VirtualShadowMapCacheManager.cpp-756-
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/VirtualShadowMaps/VirtualShadowMapCacheManager.cpp-757-					UE_LOG(LogRenderer, Warning, TEXT("Virtual Shadow Map Page Pool overflow (%d page allocations were not served), this will produce visual artifacts (missing shadow), increase the page pool limit or reduce resolution bias to avoid.\n")
+=== r.Shadow.Virtual.Clipmap.LastLevel
+=== r.ScreenPercentage.MinResolution
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/LegacyScreenPercentageDriver.cpp:49:	TEXT("r.ScreenPercentage.MinResolution"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/LegacyScreenPercentageDriver.cpp-50-	0.0f,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/LegacyScreenPercentageDriver.cpp-51-	TEXT("Controls the absolute minimum number of rendered pixel."),
+=== r.MotionBlur.TargetFPS
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/SceneView.cpp:261:	TEXT("r.MotionBlur.TargetFPS"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/SceneView.cpp-262-	-1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/SceneView.cpp-263-	TEXT("Allows to override the postprocess setting (target FPS for motion blur velocity length scaling).\n")
+=== r.BasePassWriteDepthEvenWithFullPrepass
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/RendererScene.cpp:158:	TEXT("r.BasePassWriteDepthEvenWithFullPrepass"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/RendererScene.cpp-159-	0,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/RendererScene.cpp-160-	TEXT("0 to allow a readonly base pass, which skips an MSAA depth resolve, and allows masked materials to get EarlyZ (writing to depth while doing clip() disables EarlyZ) (default)\n")
+=== r.EarlyZPass
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/SceneRendering.cpp:4919:	static auto EarlyZPassVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.EarlyZPass"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/SceneRendering.cpp-4920-	EarlyZPassVar->SetOnChangedCallback(FConsoleVariableDelegate::CreateStatic(&OnChangeCVarRequiringRecreateRenderState));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/SceneRendering.cpp-4921-
+--
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/RendererScene.cpp:137:	TEXT("r.EarlyZPass"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/RendererScene.cpp-138-	3,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/RendererScene.cpp-139-	TEXT("Whether to use a depth only pass to initialize Z culling for the base pass. Cannot be changed at runtime.\n")
+=== r.DepthOfFieldQuality
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/PostProcess/DiaphragmDOF.cpp:1473:	static const auto CVar = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.DepthOfFieldQuality"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/PostProcess/DiaphragmDOF.cpp-1474-	check(CVar);
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/PostProcess/DiaphragmDOF.cpp-1475-
+--
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/PostProcess/DiaphragmDOFUtils.cpp:51:	static const auto CVar = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.DepthOfFieldQuality"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/PostProcess/DiaphragmDOFUtils.cpp-52-	bool bDepthOfField = View.Family->EngineShowFlags.DepthOfField && CVar->GetValueOnRenderThread() > 0 && View.FinalPostProcessSettings.DepthOfFieldFocalDistance > 0;
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/PostProcess/DiaphragmDOFUtils.cpp-53-
+--
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/SceneView.cpp:2140:		static const auto DepthOfFieldQualityCVar = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.DepthOfFieldQuality"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/SceneView.cpp-2141-
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/SceneView.cpp-2142-		int Value = DepthOfFieldQualityCVar->GetValueOnGameThread();
+--
+=== r.Nanite.Culling.MinLOD
+=== r.Nanite.Tessellation
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderUtils.cpp:1338:	static const auto TessellationVar = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.Nanite.Tessellation"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderUtils.cpp-1339-	static const auto ProgrammableVar = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.Nanite.ProgrammableRaster"));
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderUtils.cpp-1340-	static const auto ComputeRasterVar = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("r.Nanite.ComputeRasterization"));
+--
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Nanite/NaniteCullRaster.cpp:98:	TEXT("r.Nanite.Tessellation"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Nanite/NaniteCullRaster.cpp-99-	1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Renderer/Private/Nanite/NaniteCullRaster.cpp-100-	TEXT("Whether to enable runtime tessellation."),
+=== r.Substrate
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderUtils.cpp:1844:	TEXT("r.Substrate"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderUtils.cpp-1845-	0,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/RenderCore/Private/RenderUtils.cpp-1846-	TEXT("Enable Substrate materials (Beta)."),
+=== r.Streaming.MipBias
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/TextureStreamingHelpers.cpp:191:	TEXT("r.Streaming.MipBias"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/TextureStreamingHelpers.cpp-192-	0.0f,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/TextureStreamingHelpers.cpp-193-	TEXT("0..x reduce texture quality for streaming by a floating point number.\n")
+=== r.TextureStreaming
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/TextureStreamingHelpers.cpp:105:	TEXT("r.TextureStreaming"),
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/TextureStreamingHelpers.cpp-106-	1,
+/home/eins0fx/development/mods/msII/CSS-eins0fx-collections/reference-tools/UnrealEngine-5.6.1-installed/Engine/Source/Runtime/Engine/Private/Streaming/TextureStreamingHelpers.cpp-107-	TEXT("Allows to define if texture streaming is enabled, can be changed at run time.\n")
+=== t.Streamline.Reflex.Enable

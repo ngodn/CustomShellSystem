@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "_about": "Perf Tuner catalog. Every entry is a change the picture does not show: no resolution, quality level, upscaler, frame cap, LOD or mip bias can appear here; the tuner refuses the file if one does. Engine defaults quoted are Unreal 5.6.1's, read from the engine source; the game's own values are from its cooked DefaultEngine.ini and DefaultScalability.ini. Edit with the game closed.",
+  "tweaks": [
+    {
+      "id": "texture_pool",
+      "title": "Texture pool",
+      "group": "Smoothness",
+      "side": "both",
+      "min_vram_mb": 7000,
+      "what": "Gives the texture streamer a pool sized to the card, a quarter of its memory between 800 and 3000 MB (2700 MB on a 12 GB card), instead of the 600 MB the game's High texture setting allows (800 at Ultra). Textures then stay resident at full detail instead of being dropped and re-streamed as you turn, which is what the mip pops and the small hitches on a turn are. The picture is the same or sharper, never worse. Offered on cards with 8 GB or more; the engine's own clamp to real memory stays in force, and a bigger pool set by you or the game is kept.",
+      "set": [
+        {
+          "cvar": "r.Streaming.PoolSize",
+          "value": 1500,
+          "from_vram": {
+            "fraction": 0.225,
+            "min": 800,
+            "max": 3000
+          }
+        }
+      ]
+    },
+    {
+      "id": "nanite_pool",
+      "title": "Nanite streaming pool",
+      "group": "Smoothness",
+      "side": "both",
+      "min_vram_mb": 7000,
+      "what": "Grows the memory Nanite keeps its geometry pages in from the 512 MB the game set ('decreasing VRAM' in its config) to a sixteenth of the card's memory, 512 to 1024 MB (768 MB on a 12 GB card). In dense areas the pages stop cycling in and out as you move, so fewer detail pops and less streaming work each frame. Geometry drawn is the same.",
+      "set": [
+        {
+          "cvar": "r.Nanite.Streaming.StreamingPoolSize",
+          "value": 768,
+          "from_vram": {
+            "fraction": 0.0625,
+            "min": 512,
+            "max": 1024
+          }
+        }
+      ]
+    },
+    {
+      "id": "stream_out_gc",
+      "title": "No forced purge on level unload",
+      "group": "Smoothness",
+      "side": "cpu",
+      "what": "When a streamed level unloads (the game's seamless dungeon loading does this), the engine by default forces a full garbage collection at once, which its own help text calls 'at the expense of a hitch'. Off, the memory is reclaimed by the next regular purge instead. Nothing on screen changes; the hitch at a dungeon boundary goes.",
+      "set": [
+        {
+          "cvar": "s.ForceGCAfterLevelStreamedOut",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "gc_pacing",
+      "title": "Garbage collection pacing",
+      "group": "Smoothness",
+      "side": "cpu",
+      "what": "Runs the engine's object purge every 120 seconds instead of every 61. Each purge is a short pause on the game thread; half as many of them. The pass itself takes a little longer because more has piled up, and nothing on screen changes. This spaces hitches out rather than raising the frame rate, so the measurement will read 'no change'.",
+      "set": [
+        {
+          "cvar": "gc.TimeBetweenPurgingPendingKillObjects",
+          "value": 120
+        }
+      ]
+    },
+    {
+      "id": "nanite_shadow_async",
+      "title": "Nanite shadows on the compute queue",
+      "group": "Worth measuring",
+      "side": "gpu",
+      "on": false,
+      "what": "Lets Nanite rasterize its shadow depths on the GPU's compute queue, overlapping other work, the way its main rasterization already does. Engine default is off. Same shadows, same geometry; whether it gains anything depends on the card and driver, so measure it. Measured on an RTX 3060 under Proton: no change (6 Oct 2026).",
+      "set": [
+        {
+          "cvar": "r.Nanite.AsyncRasterization.ShadowDepths",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "nanite_no_mesh_shaders",
+      "title": "Nanite without mesh shaders",
+      "group": "Worth measuring",
+      "side": "gpu",
+      "on": false,
+      "platform": [
+        "proton"
+      ],
+      "what": "Makes Nanite's hardware rasterizer use plain vertex shaders instead of mesh shaders. On Windows mesh shaders are the faster path; under Proton they go through VKD3D's mesh-shader translation, where NVIDIA has had both slowdowns and glitches. The picture is identical either way. Measure it; keep whichever is faster. Measured on an RTX 3060 under GE-Proton 11-7: 3.4% less frame time, consistent over both rounds (6 Oct 2026).",
+      "set": [
+        {
+          "cvar": "r.Nanite.MeshShaderRasterization",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "reflex_off",
+      "title": "Reflex off",
+      "group": "Worth measuring",
+      "side": "both",
+      "on": false,
+      "gpu": [
+        "nvidia"
+      ],
+      "what": "Turns NVIDIA Reflex off. Reflex trims input lag by holding the CPU back so the GPU never has a queue of frames waiting; that same hold can cost a few frames per second. Picture unchanged. Measure it: if you see no gain, leave Reflex on, the lower lag is worth more. Measured on an RTX 3060 under Proton: no change (6 Oct 2026), so Reflex stayed on.",
+      "set": [
+        {
+          "cvar": "t.Streamline.Reflex.Enable",
+          "value": 0
+        }
+      ]
+    }
+  ]
+}
