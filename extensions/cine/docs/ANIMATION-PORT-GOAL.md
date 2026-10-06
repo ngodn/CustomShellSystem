@@ -512,3 +512,12 @@ acceptance remain. The candidate is not installed. Verified duplicate v1
 payloads were replaced with references to identical v2 files, reclaiming
 1,084,314,122 bytes. See `shared-animation-author-head.md` for exact evidence
 and the remaining Cinderella, source-binding and outfit facial work.
+
+Cinderella continuation: the complete 8,381-sample body audition now exists
+in `retarget-cinderella-c1`. A fresh conversion matches all 3,251,828 authored
+transforms exactly. Source accounting preserves all 155 tracks, including four
+unidentified bindings. Sampled skinned review found 1.408/1.697 cm right-shoe
+penetration at the first/last poses, so this is not accepted or cataloged.
+Next is source-relative contact correction with non-leg motion preserved,
+then dense review, cooking and outfit checks. Do not count it in the existing
+62 catalog IDs or five Eve facial performances. All current jobs are terminal.

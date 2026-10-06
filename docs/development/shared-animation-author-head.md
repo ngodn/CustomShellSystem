@@ -40,8 +40,9 @@ are `smile`, `blink`, `lid_mid_closed_L`, `lid_mid_closed_R`, `iii`, `woo`, `eee
 
 Cinderella is an additional supplied animation at `/Game/Mods/HD-ATOOL_P/anim/972`,
 with 8,381 samples. Indices 3269-3272 still have unidentified bindings. It has
-been inventoried and decoded, but is not a retargeted or packaged body clip.
-Keep it in the unfinished count. The earlier library counts exclude it.
+been inventoried, decoded and initially retargeted as described below. It is
+not accepted or packaged. Keep it in the unfinished count. The earlier library
+counts exclude it.
 
 ## Transfer candidate
 
@@ -159,3 +160,29 @@ hash comparison, they were replaced with references to the retained v2 copies,
 removing 1,084,314,122 duplicate bytes. The receipt is
 `eve-face-jali3-trial-v1/duplicate-payload-cleanup.json`. Original archives,
 outfits, release packages and the accepted base candidate were preserved.
+
+## Cinderella body baseline
+
+`cinderella-body-v1/Cinderella/verification.json` accounts for all 155 decoded
+tracks without changing any key. The 54 required body/ancestor tracks are
+projected for an isolated audition; the other 101 remain in
+`preserved-tracks.json`, including unidentified indices 3269-3272. This does
+not claim the unresolved tracks are unnecessary or identify their bindings.
+
+`retarget-cinderella-c1` imports and retargets the complete 8,381-sample,
+139.66667-second sequence at 60 Hz. The existing source basis and retarget
+settings are unchanged. Full raw pose capture streams to compressed JSON to
+avoid keeping 8,381 complete poses in memory. Fresh-process comparison of the
+saved asset against a repeated conversion passes all 388 tracks and 3,251,828
+authored transforms exactly. Five reloaded pose samples also match exactly.
+Original target mesh and skeleton hashes remain unchanged.
+
+The five sampled skinned views show recognizable body poses, but contact is
+not accepted: the right shoe penetrates the ground by 1.408 cm at the start
+and 1.697 cm at the end. Intermediate elevated feet need comparison with the
+source trajectory before any correction; authored jumps must not be flattened.
+`review-status.json` records sample times, measurements and evidence hashes.
+Apply the established source-relative foot/contact workflow, preserve non-leg
+motion, then perform dense contact, cooking and outfit checks. Cinderella
+remains outside the playable catalog. All import, retarget, render and fresh
+verification processes finished successfully; none installed game files.
