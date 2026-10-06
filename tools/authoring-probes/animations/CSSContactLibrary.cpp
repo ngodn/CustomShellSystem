@@ -63,6 +63,15 @@ UAnimSequence* UCSSContactLibrary::BakeSoleContact(USkeletalMesh* Mesh,
     UAnimSequence* Source, const TArray<float>& LeftHeights, const TArray<float>& RightHeights,
     float SmoothingCm, const FString& OutputPackage, bool PreserveSourceKneePlane)
 {
+    return BakeContactWithKneeDirections(Mesh, Source, LeftHeights, RightHeights,
+        SmoothingCm, OutputPackage, PreserveSourceKneePlane, {}, {});
+}
+
+UAnimSequence* UCSSContactLibrary::BakeContactWithKneeDirections(USkeletalMesh* Mesh,
+    UAnimSequence* Source, const TArray<float>& LeftHeights, const TArray<float>& RightHeights,
+    float SmoothingCm, const FString& OutputPackage, bool PreserveSourceKneePlane,
+    const TArray<FVector>& LeftDirections, const TArray<FVector>& RightDirections)
+{
     auto Fail = [](const TCHAR* Message) -> UAnimSequence* {
         UE_LOG(LogTemp, Error, TEXT("CSS BakeSoleContact: %s"), Message);
         return nullptr;
@@ -82,6 +91,15 @@ UAnimSequence* UCSSContactLibrary::BakeSoleContact(USkeletalMesh* Mesh,
     const int32 Keys = Model->GetNumberOfKeys();
     if (Keys < 2 || Keys > 10000 || LeftHeights.Num() != Keys || RightHeights.Num() != Keys)
         return Fail(TEXT("Measurements do not cover every source key"));
+    for (const auto* Directions : {&LeftDirections, &RightDirections})
+    {
+        if (!Directions->IsEmpty() && Directions->Num() != Keys)
+            return Fail(TEXT("Knee directions do not cover every source key"));
+        for (const FVector& Direction : *Directions)
+            if (Direction.ContainsNaN() || (!Direction.IsZero() &&
+                !FMath::IsNearlyEqual(Direction.SizeSquared(), 1., .0001)))
+                return Fail(TEXT("Knee directions must be zero or finite unit vectors"));
+    }
     for (const auto* Heights : {&LeftHeights, &RightHeights})
         for (float Height : *Heights)
             if (!FMath::IsFinite(Height) || Height < -25.f || Height > 500.f)
@@ -124,11 +142,14 @@ UAnimSequence* UCSSContactLibrary::BakeSoleContact(USkeletalMesh* Mesh,
         if (!Pose.IsValid()) return Fail(TEXT("Invalid source pose"));
         for (int32 Side : {0, 3})
         {
+            const auto& Directions = Side == 0 ? LeftDirections : RightDirections;
+            const FVector Direction = Directions.IsEmpty() ? FVector::ZeroVector : Directions[Frame];
+            const bool HasDirection = !Direction.IsZero();
             const double Depth = -(Side == 0 ? LeftHeights[Frame] : RightHeights[Frame]);
             // C1 positive-part approximation avoids a derivative jump as the sole reaches the floor.
             const double Lift = Depth <= -SmoothingCm ? 0. : Depth >= SmoothingCm ? Depth :
                 FMath::Square(Depth + SmoothingCm) / (4. * SmoothingCm);
-            if (Lift == 0.) continue;
+            if (Lift == 0. && !HasDirection) continue;
             FTransform Hip = UAnimPoseExtensions::GetBonePose(Pose, Names[Side], EAnimPoseSpaces::World);
             FTransform Knee = UAnimPoseExtensions::GetBonePose(Pose, Names[Side + 1], EAnimPoseSpaces::World);
             FTransform Foot = UAnimPoseExtensions::GetBonePose(Pose, Names[Side + 2], EAnimPoseSpaces::World);
@@ -151,6 +172,13 @@ UAnimSequence* UCSSContactLibrary::BakeSoleContact(USkeletalMesh* Mesh,
                 const FVector SourceAxis = (Foot.GetTranslation() - Hip.GetTranslation()).GetSafeNormal();
                 Bend -= FVector::DotProduct(Bend, SourceAxis) * SourceAxis;
                 Bend -= FVector::DotProduct(Bend, Axis) * Axis;
+                Pole = Hip.GetTranslation() + Bend.GetSafeNormal() * Upper;
+            }
+            if (HasDirection)
+            {
+                Bend = Direction - FVector::DotProduct(Direction, Axis) * Axis;
+                if (Bend.SizeSquared() < .0001)
+                    return Fail(TEXT("Knee direction is parallel to the corrected leg"));
                 Pole = Hip.GetTranslation() + Bend.GetSafeNormal() * Upper;
             }
             if (Reach >= Upper + Lower || Reach <= FMath::Abs(Upper - Lower))

@@ -23,4 +23,12 @@ public:
         class UAnimSequence* Source, const TArray<float>& LeftHeights,
         const TArray<float>& RightHeights, float SmoothingCm, const FString& OutputPackage,
         bool PreserveSourceKneePlane = false);
+
+    /** Optional measured world-space knee directions; zero entries retain the source plane. */
+    UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
+    static class UAnimSequence* BakeContactWithKneeDirections(class USkeletalMesh* Mesh,
+        class UAnimSequence* Source, const TArray<float>& LeftHeights,
+        const TArray<float>& RightHeights, float SmoothingCm, const FString& OutputPackage,
+        bool PreserveSourceKneePlane, const TArray<FVector>& LeftDirections,
+        const TArray<FVector>& RightDirections);
 };

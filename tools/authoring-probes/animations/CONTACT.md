@@ -194,3 +194,34 @@ These are investigation references, not evidence that a new pole rule is
 correct for Iris Out. Compare the original straight-leg motion and contact
 before choosing any temporal pole stabilization; do not smooth the whole dance
 or change outfit weights to conceal a local issue.
+
+## Iris Out L5W local knee correction
+
+The native helper now accepts optional measured world-space knee directions.
+Each side is either empty or contains one finite unit vector (or zero for no
+override) per source key. A direction parallel to the leg is rejected. The
+old entry point, empty arrays and full zero arrays reproduce L5U exactly:
+388 tracks and 388,388 authored keys. This remains commandlet-only authoring;
+there is no per-frame runtime solver or outfit-weight change.
+
+The L5W recipe modifies only right thigh/calf/foot keys 58, 59, 75 and 76.
+Their original near-straight source knee planes oppose the stable bent-leg
+direction. Neighbouring measured thigh-local directions supply the correction.
+The 57/60 anchors differ by about 30.1 degrees; an initial 25.8-degree planner
+limit rejected them. The revised exploratory planner allows up to 45 degrees,
+recording that choice and the observed source variation. Acceptance limits
+for motion and contact were not relaxed.
+
+Fresh reconstruction matches all 388,388 saved keys. Every evaluated non-leg
+pose remains exactly equal to L5S. All 1,001 authored poses clear the floor
+within 0.000047 cm. Neither knee has a greater-than-90-degree pole reversal;
+peak right-knee displacement falls from L5U's 20.557 cm to 10.362 cm per frame.
+Reviewed side-view stills cover both repaired intervals. The full 16.667-second
+clip and 60 Hz timing remain intact. This is authored-pose evidence, not dense
+between-key contact, Windows playback, full physics or live acceptance.
+
+Evidence is in `work/cine-animation-port/retarget-l5w/`: `knee-directions.json`,
+`verify-result.json`, `regression-result.json`, `pose-preservation.json`,
+`knee-motion.json`, `irisout-perfoot-v1/report.json` and `knee-review.png`.
+L5V records the earlier two-key experiment separately. Neither trial is
+installed or bound to the runtime catalog.
