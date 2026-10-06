@@ -107,8 +107,8 @@ Iris Out and Spin. All 6,196 prepared facial keys retain their original source
 chain; Gesture 200 retains its previously verified Bezier conversion bound.
 Cinderella is not in this catalog because its body port is still pending.
 
-The candidate is not installed or merged into the combined shared pack.
-Complete performance review, combined packaging and live acceptance remain.
+The candidate is merged into the combined shared pack described below, but
+is not installed. Complete performance review and live acceptance remain.
 Commander White performance mapping and Unholy Genessa's rigid-mask feasibility
 remain separate work. The custom head does not establish mappings for them.
 
@@ -125,3 +125,37 @@ with `--head-audit` (the audit directory), `--body-samples` (the captured NPZ),
 fresh `--output`. Both scripts require Blender's `--` argument separator.
 Run `test_head_transfer_corners.py` in background Blender. The existing
 `run_facial_library.py` imports/inspects the export with `--revision Jali3V1`.
+
+## Combined candidate and motion previews
+
+`eve-face-jali3-trial-v2` replaces the six old Eve face exports while retaining
+the other 90 exports byte-for-byte. The catalog retains 62 body/movement IDs,
+31 photo poses, five outfit adapters and four native locomotion alternatives.
+Commander White's 74 shapes and eight expressions plus Neutral are unchanged.
+The pack remains separate from outfit releases and requires no runtime change.
+
+The first combined manifest failed the real CSS loader: pretty-printed JSON
+was 744,767 bytes, above the existing 256 KiB manifest limit. Compact JSON is
+167,999 bytes with exactly the same values. The packaging helper checks that
+limit before writing. The runtime limit was not raised. The rejected manifest
+remains a negative control. Actual combined and pack-only loading now pass
+1,131 and 1,119 checks; `host-catalog-validation.json` retains both failure and
+success outputs. Seven focused catalog tests protect existing curves, saved
+expressions, outfit revisions, distinct mesh bindings and body references.
+All three animation/facial host test suites pass.
+
+`author-head-source-v1/performance-motion-v1` contains full-duration 30 Hz
+facial comparison videos for DumbDumb, Iris Out and Spin, with 1,972, 500 and
+111 frames. Source is on the left; the fitted 115-shape interchange is on the
+right. FFprobe independently verifies every encoded frame count and rate.
+Iris Out's last visual sample is 16.633333 seconds, one sample before its
+16.666666-second endpoint. Its full curve data is unchanged. Thirty-six evenly
+spaced comparison frames were inspected: eyelids and mouth match closely,
+without visible collapse in those views. This is sampled visual inspection of
+full-length renders, not proof of every-frame smoothness or live acceptance.
+
+The rejected v1 stage/readback held 192 payload files identical to v2. After
+hash comparison, they were replaced with references to the retained v2 copies,
+removing 1,084,314,122 duplicate bytes. The receipt is
+`eve-face-jali3-trial-v1/duplicate-payload-cleanup.json`. Original archives,
+outfits, release packages and the accepted base candidate were preserved.

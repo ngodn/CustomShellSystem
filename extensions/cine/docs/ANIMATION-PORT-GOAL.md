@@ -494,3 +494,21 @@ acceptance remain pending. Cinderella adds one newly inventoried body clip
 retargeted or integrated. Keep it explicitly unfinished, outside prior counts.
 The optional head does not resolve the seven unidentified source bone indices.
 No excluded outfit work, game input or installation was performed.
+
+## October 7: recovered faces merged into the shared candidate
+
+`eve-face-jali3-trial-v2` keeps 62 body/movement IDs, 31 photo poses, five
+outfit adapters and four native locomotion choices. It replaces exactly six
+Eve facial exports and preserves the other 90 exports, including Commander
+White. Eve retains 21 expressions and now has five prepared performances.
+Actual combined/pack-only loader checks pass 1,131/1,119 assertions. The first
+candidate exceeded the manifest size limit due to indentation; compact JSON
+fixes packaging without changing CSS's limit or runtime. Seven preservation
+tests and three focused host suites pass.
+
+Full-duration facial comparison videos are encoded for DumbDumb, Iris Out and
+Spin; sampled source/target views look consistent. Complete visual and live
+acceptance remain. The candidate is not installed. Verified duplicate v1
+payloads were replaced with references to identical v2 files, reclaiming
+1,084,314,122 bytes. See `shared-animation-author-head.md` for exact evidence
+and the remaining Cinderella, source-binding and outfit facial work.

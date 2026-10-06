@@ -4,8 +4,9 @@ October 7 update: the user supplied the author's optional head. All nine
 missing facial controls are now decoded, and a derived Eve transfer passes
 six-outfit editor/cooked verification with five prepared facial performances.
 See [the author-head checkpoint](shared-animation-author-head.md). Combined
-packaging, live acceptance and the seven unresolved bone definitions remain
-unfinished. Historical source requests below are retained.
+packaging now passes real-loader checks. Live acceptance and the seven
+unresolved bone definitions remain unfinished. Historical source requests
+below are retained.
 
 The local DumbDumb and Iris Out sequences decode, but seven source definitions
 remain unidentified. The complete authoring rig is not reconstructed. Their
