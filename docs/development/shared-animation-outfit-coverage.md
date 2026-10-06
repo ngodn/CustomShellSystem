@@ -16,7 +16,7 @@ editor/cooked graph equivalence or playback acceptance.
 
 | Project | Package evidence | Animation work remaining |
 | --- | --- | --- |
-| GeneXXa / Nunexxa | Two v1.0.0 meshes; shared base reference and nine virtual-bone definitions match Eve exactly | New fixed-physics adapter passes 20 moving clips on both meshes; cooked comparison, runtime binding and live acceptance pending |
+| GeneXXa / Nunexxa | Two v1.0.0 meshes; shared base reference and nine virtual-bone definitions match Eve exactly | Fixed-physics adapter passes 20 moving clips on both meshes and independent cooked graph comparison; shared packaging and live acceptance pending |
 | Seductress | Six packaged variants: Midas, Argent, Noir, Violette, Regalia, Flora | Older 379-bone reference differs on 72 common bones; inspect retarget behavior and preserve BodyHairV42 graph |
 | Seductress v2.0.6 | Manifest lists 18 variants, but local build TOC hash and bulk size differ from that manifest | Locate a consistent original package before using it as a fixture; do not alter this build to make the audit pass |
 | Seductress Next-Gen Showcase | One packaged variant using the native human skeleton; mesh has no post-process graph | Native-human sequence and playback path needed |
@@ -82,6 +82,15 @@ poses at 60 Hz. Body and finger position differences are zero; all comparison
 cases pass. `genexxa-evaluate.json` contains the measurements and protected
 asset hashes. This validates preview-world evaluation, not gameplay cloth,
 native cancellation or performance cost.
+
+The isolated Windows cook now passes container verification and exact export
+round-trip. Independent readback matches the released GeneXXa graph's original
+nodes, defaults and skeleton, with one playback insertion at the local-to-component
+input. The five existing adapter comparisons also still pass. Deliberate bad
+inputs, changed spring settings, wrong skeleton, active defaults and disabled
+blend reset are rejected. The revision-bound catalog entry and receipts are in
+`expanded-outfit-inventory/genexxa-cooked-probe-v1/verified-binding.json`.
+This probe is not installed or included in the current shared trial package.
 
 Facial capability remains separate. Missing expression controls must not
 prevent compatible body animation playback.

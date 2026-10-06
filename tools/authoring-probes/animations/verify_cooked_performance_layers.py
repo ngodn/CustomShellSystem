@@ -54,10 +54,12 @@ def verify(source, adapter):
             continue
         candidate = dict(new[name])
         expected = dict(settings)
-        if candidate.get('Source') != expected.get('Source'):
-            require(candidate['Source']['LinkID'] == node_names.index(blend_name), 'Unexpected pose rewiring')
-            require(new[blend_name]['A'] == expected['Source'], 'Original idle is not the base pose')
-            candidate.pop('Source'); expected.pop('Source'); rewired.append(name)
+        for pin in ('Source', 'LocalPose'):
+            if candidate.get(pin) == expected.get(pin):
+                continue
+            require(candidate.get(pin) == {'LinkID': node_names.index(blend_name)}, 'Unexpected pose rewiring')
+            require(new[blend_name]['A'] == expected.get(pin), 'Original input is not the base pose')
+            candidate.pop(pin); expected.pop(pin); rewired.append((name, pin))
         if 'SourcePropertyNames' in expected:
             for a, b in zip(expected['SourcePropertyNames'], candidate['SourcePropertyNames'], strict=True):
                 normalize = lambda value: re.sub(r'_[A-F0-9]{32}$', '', value)
