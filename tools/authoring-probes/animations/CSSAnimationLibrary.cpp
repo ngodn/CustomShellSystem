@@ -19,6 +19,8 @@
 #include "AnimNode_ControlRig.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "ControlRig.h"
+#include "ControlRigObjectBinding.h"
+#include "UObject/UObjectHash.h"
 #include "Dom/JsonObject.h"
 #include "HAL/IConsoleManager.h"
 #include "PreviewScene.h"
@@ -338,9 +340,18 @@ UAnimSequence* UCSSAnimationLibrary::BindNativeHumanClip(UAnimSequence* Source,
         *FPackageName::GetLongPackageAssetName(OutputPackage));
     if (!Result || Result->GetDataModel() == Model) return nullptr;
     Result->SetFlags(RF_Public | RF_Standalone);
-    // Complete the duplicate's compression before SetSkeleton attempts to cancel
-    // it. Cancelling a pending DDC request can wait on this same game thread.
     Result->WaitOnExistingCompression(true);
+    // The duplicated editor FK rig keeps its old skeleton binding. Rebind only
+    // this private model; rebuilding keys would introduce an Euler round trip.
+    TArray<UControlRig*> Rigs;
+    auto* ModelObject = Result->GetDataModelInterface().GetObject();
+    ForEachObjectWithOuter(ModelObject, [&](UObject* Object) {
+        if (auto* Rig = Cast<UControlRig>(Object)) Rigs.Add(Rig);
+    }, true);
+    if (Rigs.Num() != 1 || !Rigs[0]->GetObjectBinding().IsValid() ||
+        Rigs[0]->GetObjectBinding()->GetBoundObject() != OriginalSkeleton) return nullptr;
+    Rigs[0]->SetObjectBinding(MakeShared<FControlRigObjectBinding>());
+    Rigs[0]->GetObjectBinding()->BindToObject(NativeSkeleton);
     Result->SetSkeleton(NativeSkeleton);
     Result->SetPreviewMesh(nullptr);
     Result->ClearRetargetSourceAsset();
@@ -464,7 +475,9 @@ UBlendSpace* UCSSAnimationLibrary::CreateMovementBlend(USkeletalMesh* Mesh,
 FString UCSSAnimationLibrary::InspectMovementBlend(UBlendSpace* Blend, const TArray<FVector>& Inputs)
 {
     if (!IsRunningCommandlet() || !Blend || Blend->GetClass() != UBlendSpace::StaticClass() ||
-        !CSSBlendPath(Blend->GetPathName()) || Inputs.IsEmpty() || Inputs.Num() > 2048)
+        (!CSSBlendPath(Blend->GetPathName()) &&
+         !Blend->GetPathName().StartsWith(TEXT("/Game/CSS/Locomotion/NativeHuman/"))) ||
+        Inputs.IsEmpty() || Inputs.Num() > 2048)
         return {};
     auto Report = MakeShared<FJsonObject>(); TArray<TSharedPtr<FJsonValue>> Queries;
     for (const auto& Input : Inputs)

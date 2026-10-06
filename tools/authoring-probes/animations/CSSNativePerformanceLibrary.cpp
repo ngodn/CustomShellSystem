@@ -2,13 +2,59 @@
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
 #include "Animation/AnimSequence.h"
+#include "Animation/BlendSpace.h"
+#include "Animation/Skeleton.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Dom/JsonObject.h"
 #include "Engine/SkeletalMesh.h"
+#include "Misc/PackageName.h"
 #include "PreviewScene.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 #include "UObject/UnrealType.h"
+
+UBlendSpace* UCSSNativePerformanceLibrary::BindNativeLocomotionBlend(UBlendSpace* Source,
+    const TArray<UAnimSequence*>& Replacements, USkeleton* NativeSkeleton, const FString& OutputPackage)
+{
+    if (!IsRunningCommandlet() || !Source || Source->GetClass() != UBlendSpace::StaticClass() ||
+        !Source->GetPathName().StartsWith(TEXT("/Game/CSS/Eve/Anim/BS_")) || !NativeSkeleton ||
+        NativeSkeleton->GetPathName() != TEXT("/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton") ||
+        !OutputPackage.StartsWith(TEXT("/Game/CSS/Locomotion/NativeHuman/")) ||
+        !FPackageName::IsValidLongPackageName(OutputPackage) ||
+        FPackageName::DoesPackageExist(OutputPackage) || FindPackage(nullptr, *OutputPackage)) return nullptr;
+    const auto& Before = Source->GetBlendSamples();
+    if (Before.IsEmpty() || Before.Num() > 128 || Replacements.Num() != Before.Num()) return nullptr;
+    for (int32 I = 0; I < Before.Num(); ++I)
+    {
+        const auto* Clip = Replacements[I];
+        if (!Before[I].Animation || !Clip || Clip->GetSkeleton() != NativeSkeleton ||
+            !Clip->GetPathName().StartsWith(TEXT("/Game/CSS/Locomotion/NativeHuman/")) ||
+            Clip->IsValidAdditive() || Clip->bEnableRootMotion || !Clip->Notifies.IsEmpty() ||
+            Clip->RateScale != Before[I].Animation->RateScale ||
+            Clip->GetSamplingFrameRate() != Before[I].Animation->GetSamplingFrameRate() ||
+            !FMath::IsNearlyEqual(Clip->GetPlayLength(), Before[I].Animation->GetPlayLength(), .000001f))
+            return nullptr;
+    }
+    auto* Property = FindFProperty<FArrayProperty>(UBlendSpace::StaticClass(), TEXT("SampleData"));
+    auto* Inner = Property ? CastField<FStructProperty>(Property->Inner) : nullptr;
+    if (!Inner || Inner->Struct != FBlendSample::StaticStruct()) return nullptr;
+    auto* Result = DuplicateObject<UBlendSpace>(Source, CreatePackage(*OutputPackage),
+        *FPackageName::GetLongPackageAssetName(OutputPackage));
+    Result->SetFlags(RF_Public | RF_Standalone);
+    Result->SetSkeleton(NativeSkeleton);
+    Result->SetPreviewMesh(nullptr);
+    auto* Samples = Property->ContainerPtrToValuePtr<TArray<FBlendSample>>(Result);
+    if (Samples->Num() != Before.Num()) return nullptr;
+    for (int32 I = 0; I < Samples->Num(); ++I) (*Samples)[I].Animation = Replacements[I];
+    Result->ValidateSampleData();
+    if (Samples->Num() != Before.Num()) return nullptr;
+    for (int32 I = 0; I < Samples->Num(); ++I)
+        if ((*Samples)[I].Animation != Replacements[I] ||
+            (*Samples)[I].SampleValue != Before[I].SampleValue ||
+            (*Samples)[I].RateScale != Before[I].RateScale) return nullptr;
+    Result->MarkPackageDirty();
+    return Result;
+}
 
 FString UCSSNativePerformanceLibrary::EvaluateMontageOwnership(USkeletalMesh* ReferenceMesh,
     UAnimSequence* Animation)

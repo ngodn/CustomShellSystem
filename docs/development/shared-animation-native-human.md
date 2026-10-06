@@ -232,3 +232,46 @@ Version-specific behavior above comes from the installed 5.6.1 source:
 and `AnimInstance.cpp`, `PlaySlotAnimationAsDynamicMontage_WithBlendSettings`
 and `Montage_PlayInternal`. The web documentation currently defaults to a
 newer engine version and does not establish this game's compatibility.
+
+## October 6: four native locomotion choices, asset checks passed
+
+The native Idle, Walk, Jog and Sprint candidates now have 20 retargeted
+sequences and four carriers under `/Game/CSS/Locomotion/NativeHuman/Studies/NL2`.
+The walk/jog/sprint carriers retain all 36 samples each; idle retains four.
+All 624 blend queries match the original Eve setup, including direction
+wrapping, clamped speed, weights and per-sample rates. Fresh-process readback
+passes all four carriers and all 754 sequence frames.
+
+The Windows cook and independent game-only package round-trip pass for 25
+packages (20 sequences, four carriers, one codec). Complete decoded motion
+passes all 754 frames and 1,208 tracks per frame. Maximum differences are
+0.001314966 cm position, 0.000178365 quaternion distance and 6.04e-8 scale,
+within the existing unchanged comparison limits. Dependency inspection finds
+only the owned animation assets, codec and canonical game skeleton. No outfit
+or diagnostic skeleton/mesh ships in this study. Protected inputs and the
+ordinary authoring skeleton placeholder remain unchanged.
+
+Evidence:
+
+- `native-locomotion-v4`: 20 sequences, exact binding checks, successful exit.
+- `native-locomotion-blends-v3`: four carriers, 624 matching blend queries.
+- `native-locomotion-readback-v1`: fresh reload and full raw captures.
+- `native-locomotion-cook-v1`: successful cook, `pack/verification.json`,
+  `decoded/decoded.json`, `full-motion-verification.json` and
+  `dependency-verification.json`.
+
+The first bind retained an editor FK Control Rig bound to the diagnostic
+skeleton. Rebuilding the model introduced a tiny Euler round-trip difference
+and was rejected. The accepted helper instead duplicates the model, gives its
+private FK rig a new binding to the final skeleton, and retains exact authored
+key checks. The failed attempts remain recorded; their assets are not used.
+The blend-script retries corrected Python editor-property access and explicit
+axis-value comparison, without changing the interpolation checks.
+
+Next: integrate the four choices with CSS selection/profile persistence and
+native idle playback, merge the accepted assets into the shared candidate,
+then check real-mesh contact, transitions, physics and live restoration.
+These are asset checks, not proof of finished native gameplay support. No game
+installation occurred. Full animation/facial work on the three requested
+outfits and the unresolved source mappings remain active; do not resume
+excluded rigs or expand native performance scope.
