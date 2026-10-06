@@ -198,8 +198,8 @@ Read-only face-source inspection is recorded in
 | Character | Retained source capability | Remaining work |
 | --- | --- | --- |
 | Six Eve outfits | Installed derived meshes contain 105 facial shapes | Live playback and face restoration on each outfit |
-| Unholy Genessa, Eve face | Retained Eve body has all 105 matching shape names | Verify fitted topology, derive facial assets and test restoration |
-| Unholy Genessa, Genessa face | Face and eyes have no shape keys; inspected rig has no deforming facial bones | Determine feasible expression support without distorting the mask |
+| Unholy Genessa, Eve skin | Same native Genessa mask as the Genessa-skin variant. The source body's 105 matching names are not mask controls; export filtering removes 18 entirely | Keep body playback independent. Facial support would need an authored mask rig or verified native controls, not the Eve expression binding |
+| Unholy Genessa, Genessa skin | Native face and eyes have no shape keys; inspected rig has no deforming facial bones | Preserve the mask. No verified expression binding currently exists |
 | Commander White | Body retains 322 DAZ/FACS shapes, with no exact Eve control-name matches | Character-specific facial mapping and verified derived assets |
 
 Matching names establish source availability only. They do not prove runtime

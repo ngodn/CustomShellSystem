@@ -2,6 +2,17 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
+Unholy facial audit correction: its Eve and Genessa choices are body skin
+variants sharing the native mask, not two different faces. The source's 105
+matching Eve shape names do not establish visible facial support. Repeating
+the original export filtering leaves 87 controls on body/head backing and
+removes 18 mouth controls entirely; the separate 1,303-vertex face and
+124-vertex eye objects have no shape keys. No derived mesh was imported or
+installed. Keep body playback independent and preserve the native mask;
+facial support needs actual mask controls rather than an Eve-face substitution.
+Evidence: `unholy-facial-v2/export-report.json` and the updated outfit coverage
+and acceptance matrix. L5X full renders continue on their existing process.
+
 Latest L5X continuation: localized corrections now pass fresh authored repeat,
 Windows cooking, the three-export package round-trip, full cooked-key comparison,
 and a 240 Hz neutral footwear scan. Across 15,769 DumbDumb and 4,001 Iris Out

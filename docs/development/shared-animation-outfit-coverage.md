@@ -33,6 +33,35 @@ eligible package was mounted separately with game containers, preventing one
 outfit's shared assets from masking another's. Original sources, packages and
 installed files were not modified.
 
+## Unholy Genessa facial capability correction
+
+The two Unholy variants are skin-material variants, not separate Eve and
+Genessa faces. The original project's `authoring/variant-binding-notes.md`
+records that they share geometry and differ in nine body material paths.
+`authoring/skin-transfer-notes.md` explicitly excludes the original Eve
+face/mouth geometry from the body export. Both retain the native Genessa mask.
+
+The fresh Blender 5.2.2 audit in `unholy-facial-v2/export-report.json` follows
+the original export's vertex mask, triangle filtering and point ordering.
+Of 105 matching source shape names, 18 have no deltas after filtering. The
+remaining 87 affect retained body/head-backing vertices, not the separate
+`UG_Face` or `UG_Eyes` objects. Those have 1,303 and 124 vertices respectively,
+and neither has shape keys. For example, `Jaw_Left` moves 3,279 retained
+`UG_genessa_Face` material vertices by up to 0.973 cm, but cannot articulate
+the separate mask. Adding these body shapes would not prove visible facial
+support and could deform the backing beneath a stationary mask.
+
+`export_unholy_facial_shapes.py` retains the complete source expression and
+performance definitions in diagnostic-only interchange, with absent controls
+explicitly listed. No candidate was imported, cooked, catalog-bound or installed.
+The original Blender file, template and export helper retain their recorded
+hashes. Previous name-only facial compatibility claims are superseded.
+
+Continue body playback on both skins independently of facial capability.
+Expression support requires an authored mask deformation rig or verified
+native facial controls; neither currently exists in the inspected source.
+Do not substitute the Eve face or guess mappings to make the capability pass.
+
 ## Native human path
 
 `work/cine-animation-port/native-human-compatibility/assets.json` independently
