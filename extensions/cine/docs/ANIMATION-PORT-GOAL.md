@@ -2,6 +2,18 @@
 
 Updated 2026-10-06. Protocol Echelon Proxima remains paused.
 
+## User correction: leave older Seductress alone
+
+The user explicitly stopped older Seductress work on October 6. Exclude its
+Midas/Argent/Noir/Violette/Regalia/Flora builds, v2.0.6 and Next-Gen Showcase
+from further outfit-specific work and release prerequisites. Do not resume
+their retargeting, adapters, cooking or integration from historical notes.
+The prepared S9 batch was not run or installed. Preserve earlier evidence.
+This exclusion does not apply to the requested Eve six-outfit mod at
+`CSS_SeduXtress_eins0fx`. Eve, Unholy Genessa, Commander White, other previously
+requested eligible outfits and compatible native-human playback remain in
+scope. This correction overrides broader collection wording below.
+
 ## Objective
 
 Port every unique character animation supplied under `extensions/cine/docs/reference/animation/`, including its `atool/` subfolder, into a reusable Mortal Shell II animation library using the established Stellar Blade to CSS retargeting workflow and Unreal Engine 5.6.1. Make the resulting animations available in both CSS's animation menu and CINE's scene controls, as confirmed by the user. Preserve each clip's recognizable performance, timing, body and finger motion, appropriate root movement and contact. Validate the cooked assets and live playback, preserve existing outfits and gameplay, and prepare an accepted distributable with installation notes, credits, BBCode notes and checksums together.

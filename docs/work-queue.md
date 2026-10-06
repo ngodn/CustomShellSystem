@@ -1,5 +1,16 @@
 # Current work queue
 
+## October 6 user correction: stop older Seductress work
+
+Leave the older Seductress projects alone. No further retargeting, cooking or
+integration for them; do not make them a release prerequisite. The S9 plan
+was prepared but no editor job was started and nothing was installed. Earlier
+evidence stays for reference, not as an instruction to continue that work.
+The requested Eve six-outfit project (`CSS_SeduXtress_eins0fx`) remains in scope,
+along with Unholy Genessa, Commander White and compatible native-human support.
+Resume the remaining shared animation integration, not the Seductress queue
+recorded below. The goal document records this explicit scope correction.
+
 ## October 5: shared locomotion pack and questman's follow-up
 
 Seductress S8 now also passes full raw/cooked comparison: 4,641 keys,

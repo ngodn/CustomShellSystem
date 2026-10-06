@@ -2,6 +2,11 @@
 
 October 6, 2026. This records inspected assets, not release acceptance.
 
+User correction, October 6: older Seductress projects are excluded from further
+work and release prerequisites. Their rows and evidence below are historical.
+The Eve six-outfit project `CSS_SeduXtress_eins0fx` is a separate requested
+target and remains included. The prepared S9 batch was not run or installed.
+
 Support includes the original eins0fx-authored CSS collection, excluding
 port-only mods, and compatible default-human-skeleton appearances from other
 authors. Neither an author name nor a CSS manifest should be a requirement for
