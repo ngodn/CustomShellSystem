@@ -58,8 +58,11 @@ assets unchanged and do not replace ordinary customization exports.
 JSON and also writes `absolute-tracks.bin` plus a checksummed layout manifest.
 The binary contains ten little-endian float32 components per track, ordered
 by frame, then track. Every source-key time is included; ACL wrap endpoints
-are restored explicitly. The existing two-million-transform allocation bound
-still applies. Ordinary exports do not load the optional native helper.
+are restored explicitly. The allocation is capped at four million transforms
+per source clock (160 MB of serialized components), allowing the complete 8,381-key, 388-track
+Cinderella study. Readers allow up to 4,096 additional transforms for a restored
+wrap endpoint. Frame, track, checksum and finite-value checks remain required.
+Ordinary exports do not load the optional native helper.
 
 For comparison with Unreal's linear playback, also set
 `CSS_ABSOLUTE_RUNTIME=1`. This uses `RuntimeAclSamples.cpp` and records rounding
@@ -87,7 +90,8 @@ keys, equivalent to `CSS_ABSOLUTE_SUBSTEPS=2` or `4`. Dense export requires the
 runtime mode and currently rejects wrap-optimized clips. It retains the original
 five source-clock JSON samples, while the binary manifest records the denser
 clock, original rate and substep count. The allocation bound scales with the
-explicit substeps, to at most eight million transforms. The two current dance
+explicit substeps, to at most sixteen million transforms (640 MB of serialized
+components). The two current dance
 studies retain bit-identical original-key transforms and five-sample JSON at
 two substeps. Dense sampling does not modify an animation or its playback rate.
 

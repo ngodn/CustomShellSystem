@@ -82,7 +82,7 @@ def load_cooked(path, bones, skeleton_path, inputs):
     substeps = manifest.get('substeps', 1)
     binary = path.with_name(manifest['file'])
     if (substeps not in (1, 2, 4) or not 1 <= frames <= 400001 or not 1 <= len(names) <= 4096 or
-            frames * len(names) > 2004096 * substeps or binary.stat().st_size != frames * len(names) * 40 or
+            frames * len(names) > 4004096 * substeps or binary.stat().st_size != frames * len(names) * 40 or
             binary.stat().st_size != manifest['bytes'] or sha(binary) != manifest['sha256'] or
             sample['schema'] != 2 or sample['asset'] != manifest['asset'] or
             sample['trackCount'] != len(names) or (substeps > 1 and sample['wrapOptimized']) or

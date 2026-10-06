@@ -290,6 +290,29 @@ current catalog counts remain 62 body/movement IDs and five Eve performances.
 
 C9 cook staging initially crashed in Unreal's animation thumbnail preview
 lookup (`USkeleton::FindCompatibleMesh` while setting compression). This is
-separate from the passing raw-pose tests. The follow-up staging recipe assigns
-the audited Black Pearl preview mesh explicitly. Preserve both attempt logs
-under `cinderella-c9-cook/`; cooking and readback must still pass.
+separate from the passing raw-pose tests. Assigning the audited Black Pearl preview mesh explicitly resolves staging.
+Both Windows cooks exit zero, and the isolated two-export package round-trips
+exactly. Full independent ACL readback passes all 8,381 samples and 388 tracks:
+maximum position error 0.015531 cm, quaternion distance 0.000708 and scale
+error 0.000000962, within the unchanged limits. Preserve both staging attempt
+logs under `cinderella-c9-cook/`. Between-key contact and wider acceptance
+remain pending.
+
+
+The C9 cooked 240 Hz contact scan contains 33,521 poses. It retains every
+60 Hz decoded key exactly, but material 20 reaches -0.458656 cm on the left
+(seven samples below -0.1 cm) and -0.099207 cm on the right. Original-key
+minima remain within 0.000429 cm. C9 therefore fails the existing dense contact
+criterion. C10 adds a measured upper-envelope clearance to the pelvis only,
+with at most 0.463657 cm additional lift and a predicted 0.005 cm floor margin.
+This prediction still requires a fresh bake and independent cooked recheck.
+
+The diagnostic ACL reader now permits four million transforms per source
+clock, retaining checked arithmetic, dimension and finite-value guards; dense
+sampling is still limited to four substeps. Python readers account for a
+possible restored wrap endpoint. This accommodates Cinderella's 3,251,828
+transforms without truncating the clip. Fourteen focused Python tests pass,
+and the .NET 10.0.401 build succeeds. Existing dependency warnings remain.
+Evidence: `cinderella-c9-cook/full-motion-verification.json`,
+`dense-source-key-verification.json`, `footwear-contact-summary.json` and
+`retarget-cinderella-c10/pelvis-clearance.json`.

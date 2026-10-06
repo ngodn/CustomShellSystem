@@ -63,6 +63,16 @@ class FullCookedMotionTests(unittest.TestCase):
             self.run_verify()
         self.assertFalse((self.root / 'result.json').exists())
 
+    def test_oversized_dimensions_are_rejected_before_mapping_binary(self):
+        path = self.root / 'absolute-tracks-full.json'
+        data = json.loads(path.read_text())
+        data.update(frames=100000, names=[f'bone_{i}' for i in range(41)])
+        path.write_text(json.dumps(data))
+        with patch.object(verify.np, 'memmap') as mapped:
+            with self.assertRaisesRegex(ValueError, 'dimensions'):
+                self.run_verify()
+            mapped.assert_not_called()
+
     def test_unsampled_nonfinite_key_is_rejected(self):
         self.values[1, 0, 4] = np.nan
         self.save_binary()

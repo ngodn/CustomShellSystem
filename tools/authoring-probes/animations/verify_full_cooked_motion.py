@@ -35,7 +35,7 @@ def main():
     frames = manifest['frames']
     binary = args.decoded / manifest['file']
     if (not names or len(names) != len(set(names)) or not 1 <= frames <= 100001 or
-            len(names) > 4096 or frames * len(names) > 2004096 or
+            len(names) > 4096 or frames * len(names) > 4004096 or
             binary.stat().st_size != frames * len(names) * 40 or
             binary.stat().st_size != manifest['bytes'] or sha(binary) != manifest['sha256']):
         raise ValueError('Invalid full-transform dimensions or checksum')

@@ -544,3 +544,10 @@ cook/readback, outfit adapters and gameplay remain pending. Twelve Cinderella
 facial curves (3,897 keys) are prepared exactly but not cataloged. Existing
 pack counts have not changed. No game files were installed. See the author-head
 investigation and `retarget-cinderella-c9/` for evidence and limitations.
+
+
+C9 Windows cooking, package round-trip and full independent ACL readback pass.
+The dense 240 Hz scan then finds seven left-shoe samples below -0.1 cm
+(worst -0.458656 cm), so C9 is not accepted. C10 is being baked with a measured
+pelvis-only clearance addition of at most 0.463657 cm. Preserve the unchanged
+joint rotations and error limits; verify the new cook before cataloging it.
