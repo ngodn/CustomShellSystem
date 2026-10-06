@@ -184,3 +184,44 @@ Next: evaluate visible footwear choices through their original controls,
 correct measured contacts without altering weights or performance, and inspect
 the full rendered motion. Cooked adapter validation, remaining clips, catalog
 integration and gameplay acceptance are still required.
+
+### Visible footwear and knee-plane correction
+
+The released six-outfit manifest and original BodyHairV42 graph now have direct
+readback under `seductress-footwear-controls/` and `retarget-seductress-s5/`.
+Heels change section visibility only. Neither original ControlRig output filter
+contains calf, foot or ball bones. The visible heel-mode sections are 20, 25,
+26 and 28; flat feet with stockings use 23, 24 and 27. All six variants share
+that contract. Skirt sections 32 and 33 remain separate garment concerns.
+
+S4 measured contact correction cleared visible footwear at authored keys, but
+introduced knee-plane flips in Come Closer. S5 derives the pole direction from
+the source hip-foot plane before projecting onto the corrected goal plane.
+The six 30 Hz trials pass fresh-process saved/repeated comparison across all
+388 tracks. Non-leg tracks remain exact and world foot XY/orientation remain
+preserved within measurement precision. The newly introduced greater-than-90
+degree knee-plane steps disappear; the original right-leg frame-24 step stays.
+This does not establish smoothness or visual acceptance.
+
+The 6,166-pose scan at twice the original key rate still finds interpolation
+penetration: worst visible-footwear values are -0.336 cm for Black Hole,
+-0.082 cm for Catwalk and -1.227 cm for Come Closer. These full-weight scans
+remain neutral, without morphs, cloth or post-process. The next S6 trial
+refines between-key contact at 60 Hz with the original playback speed, then
+checks saved playback at 120 Hz. It is not installed or catalog-bound.
+
+Evidence below `work/cine-animation-port/retarget-seductress-s5/`:
+`footwear-contract.json`, `result.json`, `verify-result.json`,
+`pose-preservation.json`, `dense-surface-contact.json`, and zero-exit build,
+create and verify receipts. S4 failures remain in their original work folder.
+
+S6 Come Closer Flat is now built and reopened successfully: 388 tracks and
+1,161 keys match the repeated bake exactly. The original 19.333334-second
+duration is unchanged. Its 2,321-pose 120 Hz scan reduces worst visible-footwear
+penetration to 0.412 cm. Authored keys clear within 0.000018 cm; the remaining
+error is between keys. Matched 60 Hz samples show no additional greater-than-
+90-degree knee-plane steps. Non-leg pose differences from resampling stay below
+0.001 per transform component, with the saved repeat itself exact. Knee travel
+increases, so these measurements are not visual acceptance. Continue correction
+and full-motion review. Evidence: `retarget-seductress-s6/{create-result,
+verify-result,dense-surface-contact,visible-contact-summary,pose-preservation}.json`.

@@ -12,7 +12,7 @@
 
 UAnimSequence* UCSSContactLibrary::BakeSoleContact(USkeletalMesh* Mesh,
     UAnimSequence* Source, const TArray<float>& LeftHeights, const TArray<float>& RightHeights,
-    float SmoothingCm, const FString& OutputPackage)
+    float SmoothingCm, const FString& OutputPackage, bool PreserveSourceKneePlane)
 {
     auto Fail = [](const TCHAR* Message) -> UAnimSequence* {
         UE_LOG(LogTemp, Error, TEXT("CSS BakeSoleContact: %s"), Message);
@@ -95,6 +95,15 @@ UAnimSequence* UCSSContactLibrary::BakeSoleContact(USkeletalMesh* Mesh,
             const double Reach = FVector::Distance(Hip.GetTranslation(), Goal);
             const FVector Axis = (Goal - Hip.GetTranslation()).GetSafeNormal();
             FVector Bend = Pole - Hip.GetTranslation();
+            if (PreserveSourceKneePlane)
+            {
+                // Moving the foot goal can cross a nearly straight knee. Measure
+                // its original plane before projecting onto the new goal axis.
+                const FVector SourceAxis = (Foot.GetTranslation() - Hip.GetTranslation()).GetSafeNormal();
+                Bend -= FVector::DotProduct(Bend, SourceAxis) * SourceAxis;
+                Bend -= FVector::DotProduct(Bend, Axis) * Axis;
+                Pole = Hip.GetTranslation() + Bend.GetSafeNormal() * Upper;
+            }
             if (Reach >= Upper + Lower || Reach <= FMath::Abs(Upper - Lower))
                 return Fail(TEXT("Unreachable foot goal"));
             if ((Bend - FVector::DotProduct(Bend, Axis) * Axis).SizeSquared() < 1.e-8)

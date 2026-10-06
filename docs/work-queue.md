@@ -2,6 +2,18 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
+Seductress contact update: all six S5 clips pass fresh saved/repeated readback
+and preserve non-leg tracks. The source-plane pole correction removes the
+knee flips introduced by S4. Full 60 Hz surface sampling still finds up to
+1.227 cm between-key footwear penetration in Come Closer, so contact is not
+accepted. Visible heel/flat sections are now audited against the original
+manifest and graph. S6 Come Closer Flat passes fresh readback at 60 Hz and
+retains the original duration. A 120 Hz surface scan reduces the worst dip to
+0.412 cm, with no new knee-plane flips at matched 60 Hz samples. Residual
+contact and increased knee travel still require correction and visual review
+before catalog/cook/live approval. See `retarget-seductress-s5/` and `-s6/`.
+No runtime, released outfit or game installation changed.
+
 Older Seductress continuation: three full direct-source retarget auditions now
 pass fresh saved/repeated readback, and S3 passes 162 adapter cases across all
 six meshes, including 38 finger bones and restoration. All 27 CSS controls and

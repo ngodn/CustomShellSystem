@@ -13,5 +13,6 @@ public:
     UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
     static class UAnimSequence* BakeSoleContact(class USkeletalMesh* Mesh,
         class UAnimSequence* Source, const TArray<float>& LeftHeights,
-        const TArray<float>& RightHeights, float SmoothingCm, const FString& OutputPackage);
+        const TArray<float>& RightHeights, float SmoothingCm, const FString& OutputPackage,
+        bool PreserveSourceKneePlane = false);
 };

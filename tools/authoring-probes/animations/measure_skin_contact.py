@@ -1,5 +1,6 @@
-"""Measure neutral cooked lower-leg surfaces against z=0 at every saved pose key."""
+"""Measure neutral cooked lower-leg surfaces against z=0 at every supplied pose."""
 import argparse
+import gzip
 import hashlib
 import json
 from pathlib import Path
@@ -84,7 +85,9 @@ def main():
     results = []
     for motion in args.motions:
         inputs[str(motion.resolve())] = sha(motion)
-        data = json.loads(motion.read_text())
+        opener = gzip.open if motion.suffix == '.gz' else open
+        with opener(motion, 'rt') as stream:
+            data = json.load(stream)
         snapshots = [f['pose']['Snapshot'] for f in data['frames']]
         order = snapshots[0]['BoneNames']
         if any(not s['bIsValid'] or s['BoneNames'] != order for s in snapshots):
@@ -100,7 +103,8 @@ def main():
                     ('scale', 'Scale3D', 'XYZ'))})
             tracks.append(dict(name=name, keys=keys))
         world = transforms(manifest['bones'], tracks, len(snapshots))
-        result = dict(motion=str(motion), frames=len(snapshots), fps=data['fps'], sides={})
+        result = dict(motion=str(motion), frames=len(snapshots), fps=data['fps'],
+                      sampling=data.get('sampling', 'Unspecified by capture'), sides={})
         for side, (ids, components, sections, error) in prepared.items():
             minima = np.full(len(snapshots), np.inf)
             worst_ids = np.zeros(len(snapshots), dtype=int)
@@ -135,7 +139,7 @@ def main():
         raise ValueError('Input changed during measurement')
     args.output.write_text(json.dumps(dict(complete=True, inputs=inputs, results=results,
         selection='Referenced vertices at bind Z <= 30 cm with at least 50% combined calf/foot/ball weight on one side. All their influences preserved; all material sections included.',
-        scope='Neutral cooked surface linear skinning at every exact saved key, floor Z=0 cm. No morphs, post-process, physics, cloth, material visibility or between-key samples. Diagnostic, not full contact or live acceptance.'
+        scope='Neutral cooked surface linear skinning at every supplied pose, floor Z=0 cm. Sampling is determined by the input capture. No morphs, post-process, physics, cloth simulation or material visibility filtering. Diagnostic, not full contact or live acceptance.'
     ), indent=2) + '\n')
 
 
