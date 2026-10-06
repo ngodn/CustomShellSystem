@@ -33,6 +33,8 @@ def main():
     parser.add_argument('--levels', nargs='+', type=float, default=[.25,.5,.75,1.0])
     parser.add_argument('--combined', action='store_true', help='Also evaluate all requested controls together')
     parser.add_argument('--combinations', type=Path, help='Explicit JSON list of labeled control combinations')
+    parser.add_argument('--tongue-fk', action='store_true',
+                        help='Sample tongue joint controls with source tongue IK disabled in memory')
     args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
     if args.output.exists() or bpy.context.preferences.filepaths.use_scripts_auto_execute:
         raise ValueError('Use a new output directory and --disable-autoexec')
@@ -109,7 +111,16 @@ def main():
         print('CW_FACE_SAMPLE', label, flush=True)
         return arrays
 
+    tongue_mode = None
+    if args.tongue_fk:
+        if 'MhaTongueIk' not in rig or not np.isfinite(float(rig['MhaTongueIk'])):
+            raise ValueError('Source lacks the audited tongue IK control')
+        tongue_mode = float(rig['MhaTongueIk'])
+        original_neutral = sample('original-neutral')
+        rig['MhaTongueIk'] = 0.0
     baseline = sample('neutral')
+    neutral_shift = ({name: float(np.linalg.norm(baseline[name]-original_neutral[name], axis=1).max())
+                      for name in baseline} if args.tongue_fk else {})
     summary = []
     for name in args.control:
         for level in args.levels:
@@ -138,6 +149,11 @@ def main():
         restored=sample('combined-restored')
         if any(np.max(np.abs(restored[p]-baseline[p]))>1e-5 for p in baseline):
             raise ValueError('Combined source restoration changed geometry')
+    if args.tongue_fk:
+        rig['MhaTongueIk'] = tongue_mode
+        restored = sample('original-neutral-restored')
+        if any(np.max(np.abs(restored[p]-original_neutral[p])) > 1e-5 for p in baseline):
+            raise ValueError('Original tongue mode did not restore geometry')
     if digest(source) != before:
         raise ValueError('Source file changed')
     if args.combinations and digest(args.combinations)!=plan_hash:
@@ -145,6 +161,8 @@ def main():
     report = dict(source=str(source), sha256=before, sources_unchanged=True,
                   blender=bpy.app.version_string, records=records, summary=summary,combinations=combinations,
                   combination_plan_sha256=plan_hash,
+                  tongue_fk=args.tongue_fk, original_tongue_ik=tongue_mode,
+                  tongue_mode_neutral_shift_cm=neutral_shift,
                   scope='Original source controls and evaluated geometry; fitted/runtime mapping unverified.')
     (args.output / 'report.json').write_text(json.dumps(report, indent=2, allow_nan=False) + '\n')
     print('CW_FACE_SAMPLING_COMPLETE', len(summary), flush=True)

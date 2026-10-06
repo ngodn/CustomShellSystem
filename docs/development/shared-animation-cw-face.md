@@ -104,3 +104,32 @@ catalog limit, so this is not a shippable representation. Retain the limit and
 investigate a joint representation or only the controls required by verified
 performance mappings. Evidence: `basis.json`, `basis.npz` and the rejected
 54-shape receipt. No runtime, cooked mesh or original source changed.
+
+## Tongue controls recovered from the source rig
+
+The four nearly inactive tongue-joint controls were being overridden by the
+source Rigify tongue IK mode. This was not missing tongue geometry. In the
+same in-memory source scene, `MhaTongueIk=1` limits their measured displacement
+to about 0.001 cm. With `MhaTongueIk=0`, the left/right, tip-bend and up controls
+move the tongue by 2.4954, 2.5080, 1.4567 and 2.6752 cm, respectively. The
+TongueOut shape remains active in both modes, at 2.3634 cm. The audit records
+the actual copy-transform and stretch constraints that implement the source
+chain. Blender's [IK documentation](https://docs.blender.org/manual/en/4.4/animation/constraints/tracking/ik_solver.html)
+explains the general constraint behavior; these values come from the local rig.
+
+`sample_cw_facial_controls.py --tongue-fk` disables only that source control in
+memory for sampling. It captures both neutral modes, restores the original
+mode and geometry, and verifies the source hash. The default sampling path
+retains the saved mode. Nine controls at four weights produce 36 deformed
+states and 48 recorded states including neutral/restoration checks. All pass.
+The IK/FK neutral position shift is 0.0002043 cm on the body and zero on the
+eyelashes and tear mesh; preserve that measured difference when preparing a
+fitted transfer instead of treating both neutral arrays as identical.
+
+Evidence: `cw-tongue-control-audit-v1` and `cw-tongue-fk-samples-v1`.
+Ten additional jaw-open combinations and their restoration checks pass in
+`cw-tongue-fk-combinations-v1`; its 20 front/quarter diagnostic renders are
+complete. The inspected left-tongue and tongue-out views show the expected
+different mouth geometry. This resolves source-control availability, not
+cross-character performance mapping or cooked/live acceptance. Original
+sources and the installed mod are unchanged.
