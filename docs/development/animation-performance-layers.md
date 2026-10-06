@@ -118,8 +118,12 @@ Choose a canonical ID with `--clip`, or evaluate every catalog entry whose
 playback policy is `once` with `--all-moving`. Both options require evaluate
 mode and can be combined with `--mesh`. Default selection remains Black Hole.
 The report separates `body_passed`, `fingers_passed` and combined `passed`.
-The full eighteen-clip run is in progress as `performance-fingers-all-v1`;
-partial receipts must not be counted as acceptance.
+The completed `performance-fingers-all-v1` run passes all eighteen moving clips
+on all nine meshes: 162 clip/mesh pairs, 1,458 cases and 87,255 full-motion poses
+at 60 Hz. Maximum body/finger rotation differences are 7.30005e-8 / 6.66401e-8
+radians; position and scale differences are zero. All protected input hashes
+match and the commandlet exits zero. This expands adapter-pose evidence only;
+it does not establish world cloth, contact, frame cost or live acceptance.
 
 `verify_cooked_performance_layers.py` compares independent CUE4Parse readback
 of the packaged adapters against the installed source graphs. Existing CSS

@@ -1,7 +1,8 @@
 # Facial motion inside supplied performances
 
 Private authoring checkpoint, 2026-10-06. The installed combined trial supports
-the 21 static Eve expressions and source-timed Come Closer facial playback.
+the 21 static Eve expressions and source-timed Come Closer and Gesture 200
+facial playback.
 The runtime and packaged data pass offline checks. Live facial playback,
 restoration and timing still need acceptance.
 
@@ -161,8 +162,7 @@ still needs live timing and restoration evidence.
 
 - Trace the missing controls to their source morphs or driver graph. Keep
   their original names and curves until the mapping is measured.
-- Install and live-check the Gesture 200 facial candidate below after the
-  current Come Closer trial. Its catalog is verified but not installed.
+- Live-check the installed Come Closer and Gesture 200 facial playback.
 - Extend derived facial meshes and cooked readback if further source controls
   can be resolved.
 - Validate installed playback in CSS and CINE, including pause, seek, speed,
@@ -227,4 +227,25 @@ including 1,001 comparisons of the native sampler against Gesture 200's source
 cubic within 0.0000101 weight. The cooked `.utoc` and `.ucas` are byte-identical
 to the previous independently decoded candidate; `facial-readback-reuse.json`
 records that comparison and the original readback hash. Only the `.pak` catalog
-changes. This candidate is not installed or live accepted.
+changes. It is now installed as described below; live acceptance is pending.
+
+
+## Catalog-only trial update
+
+`live-face-motion-2/deployment.json` records installation of Gesture 200's
+verified facial entry with the game closed. The update reused the identical
+`.utoc` and `.ucas` asset data; only the `.pak` catalog changed. The previous
+asset directory remains in the recorded rollback location.
+
+The installer now supports `--keep-core --keep-cine`. Twelve regression tests
+cover unchanged runtime files, rollback after failed asset promotion, rejected
+changed readback/bulk data and the existing game-opening race checks. A reused
+facial readback must retain its hash and both asset-container hashes must equal
+the installed trial. This is an asset update, not hot reload.
+
+The independent post-install check verifies 23 hashes, unchanged CSS/CINE
+selectors and the closed game. Source outfit packages and saved settings remain
+unchanged. The installed CSS core remains `7962d601cb9efb12`; CINE remains
+`bb2d36a5ca792bbf`. No game was launched and no input or recording was sent.
+Come Closer and Gesture 200 playback/restoration have been requested from the
+user; neither is yet live accepted.

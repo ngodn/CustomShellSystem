@@ -11,8 +11,9 @@ an older outfit release has previously worked in game.
 
 - Cooked samples: independent compressed-pose readback compared with the authored
   sequence, up to five samples per clip. This does not prove every frame or contact.
-- Adapter poses: the new body/finger batch is still running. Gesture 200 has a
-  separate completed nine-mesh pass; do not count partial batch results as passed.
+- Adapter poses: all eighteen moving clips pass on all nine meshes, including
+  38 finger bones, 1,458 cases and 87,255 full-motion poses at 60 Hz. This does
+  not establish the world cloth solver or contacts.
 - Sampled silhouettes: all eighteen moving clips have complete sampled reviews;
   close contacts, native-speed motion and live physics remain open.
 - Live acceptance: playback, interruption, restoration, cloth/wings, contacts and
@@ -20,7 +21,7 @@ an older outfit release has previously worked in game.
 
 Receipts beneath `work/cine-animation-port/shared-v1/`: `plan.json`,
 `catalog.json`, `cooked-samples-v3/motion-verification.json`,
-`performance-fingers-200-v1-result.json` and the running
+`performance-fingers-200-v1-result.json` and the completed
 `performance-fingers-all-v1-result.json`. Source means the audited pre-cook
 authoring asset; `plan.json` also retains the original source paths and rate
 metadata for new ports. Original archives are inventoried separately.
@@ -105,8 +106,9 @@ controls; the body table does not claim complete facial fidelity.
 ## Facial and runtime state
 
 The installed private trial has 21 static Eve expressions and Come Closer facial
-curves on six verified derived Eve meshes. Gesture 200 facial curves are packaged
-offline but not installed. Come Closer and Gesture 200 retain source timing and
+curves on six verified derived Eve meshes. Gesture 200 facial curves are now
+installed through the catalog-only revision recorded in
+`work/cine-animation-port/live-face-motion-2/deployment.json`. Come Closer and Gesture 200 retain source timing and
 signed curve values; neither has live acceptance yet. Unassigned facial actions
 in 801 are not treated as active animation.
 
