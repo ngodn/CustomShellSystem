@@ -2,6 +2,18 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
+CW blend diagnosis: exact independent left/right source pairs reproduce all
+nine failing bilateral poses with zero measured residual. The remaining error
+is interpolation, not interaction between eyelids. The optional not-a-knot
+cubic comparator reduces the wide-matrix failures from nine to three, maximum
+0.017902 cm, still above the unchanged 0.015 cm limit. Four mathematical basis
+checks pass. Evidence: `cw-expression-pair-diagnostic-v1/pair-additivity.json`
+and `cw-expression-blend-grid-v1/cubic-v5-result.json`. This has no native or
+runtime deployment. Further facial refinement remains open; continue the
+Seductress external-dependency cook and pack integration before another facial
+calibration pass. Report concrete milestones rather than an unmeasured overall
+percentage.
+
 Latest CW continuation: eight original expression controls are now sampled,
 visually reviewed and imported alongside jaw/blinks into the isolated CWE1
 trial (44 added shapes, 60 total morphs). Creation and fresh readback preserve

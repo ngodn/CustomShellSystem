@@ -61,6 +61,12 @@ not valid import targets.
    simultaneous biased expressions, which have not been validated. Missing
    grid cells fail instead of borrowing an unrelated sample. This is an
    experimental source comparator, not a runtime facial solver or native bake.
+   `--interpolation cubic` compares a not-a-knot cubic basis on the same samples;
+   linear remains the default. The cubic basis has continuous derivatives and
+   permits signed weights. It must not be exported into a runtime that clamps
+   those weights without a separate equivalence check. Independent source
+   comparisons still determine acceptance, including possible overshoot.
+   The boundary condition follows the [SciPy CubicSpline definition](https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.CubicSpline.html).
 
 ## Native preservation
 

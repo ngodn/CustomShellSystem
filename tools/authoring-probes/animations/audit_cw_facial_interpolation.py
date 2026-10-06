@@ -2,9 +2,47 @@
 import argparse
 import hashlib
 import json
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
+
+
+@lru_cache(maxsize=64)
+def spline_curvatures(axis):
+    """Not-a-knot cubic basis, with shared second derivatives at each knot."""
+    x = np.asarray(axis, dtype=float)
+    h = np.diff(x)
+    if len(x) < 4 or not np.isfinite(x).all() or np.any(h <= 0):
+        raise ValueError('Cubic interpolation needs four ordered finite knots')
+    n = len(x)
+    matrix, rhs = np.zeros((n, n)), np.zeros((n, n))
+    matrix[0, :3] = [-h[1], h[0] + h[1], -h[0]]
+    matrix[-1, -3:] = [-h[-1], h[-2] + h[-1], -h[-2]]
+    for i in range(1, n - 1):
+        left, right = h[i - 1:i + 1]
+        matrix[i, i - 1:i + 2] = [left, 2 * (left + right), right]
+        rhs[i, i - 1:i + 2] = [6 / left, -6 / left - 6 / right, 6 / right]
+    return np.linalg.solve(matrix, rhs)
+
+
+def interpolation_weights(axis, value, method):
+    if not np.isfinite(value) or not axis[0] <= value <= axis[-1]:
+        raise ValueError('Interpolation does not extrapolate')
+    high = min(int(np.searchsorted(axis, value, side='right')), len(axis) - 1)
+    low = high - 1
+    width = axis[high] - axis[low]
+    b = (value - axis[low]) / width
+    a = 1 - b
+    weights = np.zeros(len(axis))
+    weights[low], weights[high] = a, b
+    if method == 'cubic':
+        curvature = spline_curvatures(tuple(axis))
+        weights += width**2 / 6 * ((a**3 - a) * curvature[low] +
+                                  (b**3 - b) * curvature[high])
+    elif method != 'linear':
+        raise ValueError('Unknown interpolation method')
+    return list(zip(axis, weights))
 
 
 def digest(path):
@@ -18,6 +56,7 @@ def main():
     parser.add_argument('--reference-samples',type=Path,required=True)
     parser.add_argument('--corrective-samples',type=Path,help='Paired source control grids for a corrective trial')
     parser.add_argument('--blink-bias',type=Path,help='Audited expression-driven blink fractions for normalized grids')
+    parser.add_argument('--interpolation',choices=('linear','cubic'),default='linear')
     parser.add_argument('--max-error-cm',type=float,required=True)
     parser.add_argument('--output',type=Path,required=True)
     args=parser.parse_args()
@@ -72,10 +111,9 @@ def main():
     def delta(name,value):
         if name not in keys or not np.isfinite(value) or not 0<=value<=1:
             raise ValueError('Invalid interpolation control')
-        lower=min(int(value*4),3)
-        alpha=value*4-lower
-        return {p:keys[name][lower][p]*(1-alpha)+keys[name][lower+1][p]*alpha-neutral[p]
-                for p in neutral}
+        weights=interpolation_weights((0,.25,.5,.75,1),value,args.interpolation)
+        return {p:sum(weight*(keys[name][int(knot*4)][p]-neutral[p])
+                      for knot,weight in weights) for p in neutral}
 
     def normalized_pair(pair,values):
         point=list(values)
@@ -160,10 +198,7 @@ def main():
             brackets=[]
             for i,value in enumerate(strength):
                 axis=[0,*sorted({point[i] for point in grid})]
-                upper=min(int(np.searchsorted(axis,value,side='right')),len(axis)-1)
-                low,high=axis[upper-1:upper+1]
-                alpha=(value-low)/(high-low)
-                brackets.append([(low,1-alpha),(high,alpha)])
+                brackets.append(interpolation_weights(axis,value,args.interpolation))
             for a,weight_a in brackets[0]:
                 for b,weight_b in brackets[1]:
                     if not a or not b:
@@ -181,6 +216,7 @@ def main():
                 limit_cm=args.max_error_cm,records=records,protected=protected,
                 corrective_pairs=[dict(controls=pair,points=list(grid)) for pair,grid in correctives.items()],
                 blink_bias=blink_bias,
+                interpolation=args.interpolation,
                 scope='Source geometry at sampled intermediate control strengths and combinations. Cooked morph filtering and runtime playback are not included.')
     args.output.write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
     print('CW_FACE_INTERPOLATION',report['passed'],maximum,flush=True)
