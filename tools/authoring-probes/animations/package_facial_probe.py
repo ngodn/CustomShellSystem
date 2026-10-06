@@ -20,22 +20,30 @@ def digest(path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("work", type=Path)
+    parser.add_argument("--outfit", choices=("eve", "commander-white"), default="eve")
+    parser.add_argument("--output-directory", type=Path)
     args = parser.parse_args()
     work = args.work.resolve(strict=True)
     if not work.is_relative_to(ROOT / "work/cine-animation-port"):
         raise ValueError("Use the private animation workspace")
     report = json.loads((work / "facial-stage-verify.json").read_text())
-    if not report.get("complete") or len(report["results"]) != 6 or json.loads((work / "cook-exit.json").read_text())["exit_code"] != 0:
-        raise ValueError("Six fresh verified and cooked meshes are required")
+    expected_count = 6 if args.outfit == "eve" else 1
+    if (not report.get("complete") or len(report["results"]) != expected_count or
+            json.loads((work / "cook-exit.json").read_text())["exit_code"] != 0):
+        raise ValueError("Fresh verification and cooking of every selected mesh are required")
     inputs = dict(report["protected"])
     dependencies = json.loads((work.parent / "shared-v1/pack-with-adapters-v2/verification.json").read_text())["dependencies"]
-    dependencies = {path: checksum for path, checksum in dependencies.items() if "CSS_EveStellarBlade_" in Path(path).name}
+    prefix = "CSS_EveStellarBlade_" if args.outfit == "eve" else "CSS_CommanderWhite_"
+    dependencies = {path: checksum for path, checksum in dependencies.items() if Path(path).name.startswith(prefix)}
     if len(dependencies) != 2:
-        raise ValueError("Expected the audited Eve container pair")
+        raise ValueError("Expected the audited outfit container pair")
     inputs.update(dependencies)
     if any(digest(Path(path)) != checksum for path, checksum in inputs.items()):
         raise ValueError("A verified input changed")
-    output = work / "probe"
+    output = args.output_directory.resolve() if args.output_directory else work / "probe"
+    if not any(output.is_relative_to(parent) for parent in
+               (ROOT / "work/cine-animation-port", Path("/mnt/eins0fxE/CSS-authoring-scratch"))):
+        raise ValueError("Use private animation or secondary-drive scratch storage")
     output.mkdir(exist_ok=False)
     converter = Converter(ROOT / "build/retoc-css-target/release/retoc", DEFAULT_REPAK, output)
     stage = output / "stage"

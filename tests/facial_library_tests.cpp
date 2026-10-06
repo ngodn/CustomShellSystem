@@ -165,7 +165,31 @@ int main(int argc,char** argv) {
         const auto restored=State::parse(state.json());
         expect(restored.presets.at("face.1").selections.at("CharacterId.Player.Shell.Genessa").custom==saved,
                "Profile roundtrip lost the face or body settings");
-        if(argc==2 || argc==3) {
+        if(argc==3 && std::string_view(argv[1])=="--commander-white") {
+            const auto actual=FacialRig::parse(read_json(argv[2]));
+            expect(actual.id=="css.commanderwhite.face" && actual.morphs.size()==74 &&
+                   actual.expressions.size()==9 && actual.adapters.size()==1,
+                   "Audited Commander White facial catalog dimensions differ");
+            const auto& adapter=actual.adapters.front();
+            const std::vector<FacialRig> rigs={actual};
+            const auto stable=resolve_facial_rig(rigs,adapter.source_outfit,
+                adapter.source_toc_sha256,adapter.source_bulk_bytes,adapter.source_mesh);
+            expect(stable.rig && stable.adapter,"Audited Commander White adapter did not resolve");
+            for(const auto& expression:actual.expressions) {
+                const auto plan=plan_expression(stable,adapter.source_mesh,expression.id);
+                expect(plan.reason.empty() && plan.mesh==adapter.target_mesh && plan.weights.size()==74,
+                       "Commander White expression did not retain its verified mesh and morph set");
+                for(const auto& [_,weight]:plan.weights)
+                    expect(std::isfinite(weight) && weight>=0.f && weight<=1.f,
+                           "Commander White endpoint weight lost inverse storage scaling");
+            }
+            const auto neutral=actual.weights("css.commanderwhite.face.neutral");
+            expect(std::all_of(neutral.begin(),neutral.end(),[](const auto& v){return v.second==0.f;}),
+                   "Commander White Neutral must clear owned face morphs");
+            expect(!resolve_facial_rig(rigs,adapter.source_outfit,std::string(64,'0'),
+                   adapter.source_bulk_bytes,adapter.source_mesh).rig,
+                   "Unverified Commander White package revision accepted");
+        } else if(argc==2 || argc==3) {
             const auto actual=FacialRig::parse(read_json(argv[1]));
             const auto expected_morphs=argc==3?std::stoul(argv[2]):99;
             expect(actual.morphs.size()==expected_morphs && actual.expressions.size()==21 && actual.adapters.size()==6,

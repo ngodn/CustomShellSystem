@@ -249,6 +249,8 @@ int main(int argc,char** argv) {
                        std::string_view(argv[1])=="--audited-blender-face-pack" ||
                        std::string_view(argv[1])=="--audited-dance-pack" ||
                        std::string_view(argv[1])=="--audited-dance-isolated-pack" ||
+                       std::string_view(argv[1])=="--audited-cw-face-pack" ||
+                       std::string_view(argv[1])=="--audited-cw-face-only-pack" ||
                        std::string_view(argv[1])=="--audited-locomotion-pack" ||
                        std::string_view(argv[1])=="--audited-locomotion-only-pack" ||
                        std::string_view(argv[1])=="--audited-native-pack" ||
@@ -256,9 +258,12 @@ int main(int argc,char** argv) {
                        std::string_view(argv[1])=="--audited-expanded-pack" ||
                        std::string_view(argv[1])=="--audited-expanded-isolated-pack" ||
                        std::string_view(argv[1])=="--audited-isolated-pack")) {
-            const bool locomotion=std::string_view(argv[1])=="--audited-locomotion-pack" ||
+            const bool commander_face=std::string_view(argv[1])=="--audited-cw-face-pack" ||
+                                      std::string_view(argv[1])=="--audited-cw-face-only-pack";
+            const bool locomotion=commander_face || std::string_view(argv[1])=="--audited-locomotion-pack" ||
                                   std::string_view(argv[1])=="--audited-locomotion-only-pack";
-            const bool native_only=std::string_view(argv[1])=="--audited-native-only-pack" ||
+            const bool native_only=std::string_view(argv[1])=="--audited-cw-face-only-pack" ||
+                                   std::string_view(argv[1])=="--audited-native-only-pack" ||
                                    std::string_view(argv[1])=="--audited-locomotion-only-pack";
             const bool native_pack=(native_only && !locomotion) || std::string_view(argv[1])=="--audited-native-pack";
             const bool expanded=std::string_view(argv[1])=="--audited-expanded-pack" ||
@@ -332,8 +337,14 @@ int main(int argc,char** argv) {
             expect(native_only?resolved_layers==0:resolved_layers>0,"Unexpected outfit performance layer count");
             expect(packages.diagnostics.at("rejected")==0,"Audited package set contains rejected metadata");
             if(std::string_view(argv[1])!="--audited-pack") {
-                expect(audited.faces.size()==1 && audited.faces.front().expressions.size()==21 &&
+                expect(audited.faces.size()==(commander_face?2:1) && audited.faces.front().expressions.size()==21 &&
                        audited.faces.front().adapters.size()==6,"Combined pack lost facial metadata");
+                if(commander_face) {
+                    const auto& rig=audited.faces.back();
+                    expect(rig.id=="css.commanderwhite.face" && rig.expressions.size()==9 &&
+                           rig.morphs.size()==74 && rig.adapters.size()==1 && rig.performances.empty(),
+                           "Commander White lost its verified static expression contract");
+                }
                 size_t matched=0;
                 for(const auto& outfit:packages.outfits) for(const auto& variant:outfit.variants) {
                     const auto face=packages.facial_match(outfit.id,variant.id);
@@ -343,7 +354,7 @@ int main(int argc,char** argv) {
                     ++matched;
                 }
                 size_t expected_faces=0;
-                for(const auto& adapter:audited.faces.front().adapters)
+                for(const auto& rig:audited.faces) for(const auto& adapter:rig.adapters)
                     if(packages.outfit_revisions.contains(adapter.source_outfit)) ++expected_faces;
                 expect(matched==expected_faces,"Combined pack did not resolve exactly the installed outfit's faces");
                 const bool blender_face=std::string_view(argv[1])=="--audited-blender-face-pack" || isolated || expanded || dances;

@@ -78,6 +78,21 @@ acceptance are unfinished. Other evidence: `cw-expression-basis-holdout-v1`,
 `cw-expression-compact-v2` and `cw-expression-native-v4`. Eleven focused Python
 tests and the UE editor helper build pass. Nothing was installed.
 
+## October 7: Commander White face cooked and merged
+
+See `docs/development/shared-animation-cw-face.md`. E4 restores all 70 released
+material bindings after independent decoding caught 37 missing hair references
+in E3. Fresh staging, Windows cooking and complete cooked readback now pass:
+2,312,092 render vertices, original cloth/bindings and 16 existing morphs are
+preserved; 74 added shapes and eight expressions plus Neutral are verified.
+The six-face Eve decoder regression also passes.
+
+`cw-face-trial-v1` retains all 62 body/movement IDs and 95 earlier exports, adds
+one CW face (96 exports total), and passes 1,127 combined / 1,115 pack-only host
+catalog checks. It remains uninstalled. No runtime DLL change was required.
+Continue the unresolved facial/source work and complete live acceptance and
+delivery for the original scope. No excluded-rig work.
+
 ## Historical collection inventory, not release prerequisites
 
 Metadata was read from each actual PAK. TOC hashes and bulk sizes were compared

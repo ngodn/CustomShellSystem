@@ -27,8 +27,13 @@ using var provider = new DefaultFileProvider(args[0], SearchOption.TopDirectoryO
     new VersionContainer(EGame.GAME_UE5_6), StringComparer.OrdinalIgnoreCase);
 provider.MappingsContainer = new FileUsmapTypeMappingsProvider(args[1]);
 provider.Initialize(); provider.Mount();
+var expectedMeshes = staging.Value<int?>("expected_meshes") ?? 6;
+var items = staging["results"] as JArray ?? throw new InvalidDataException("Missing staged meshes");
+if (expectedMeshes is < 1 or > 16 || items.Count != expectedMeshes ||
+    items.Select(i => i.Value<string>("target")).Distinct(StringComparer.OrdinalIgnoreCase).Count() != expectedMeshes)
+    throw new InvalidDataException("Unexpected or duplicate staged meshes");
 var rows = new JArray();
-foreach (var item in staging["results"]!) {
+foreach (var item in items) {
     var row = new JObject { ["source"] = item["source"], ["target"] = item["target"] };
     try {
         var source = provider.LoadPackageObject<USkeletalMesh>(item.Value<string>("source")!);
@@ -40,7 +45,13 @@ foreach (var item in staging["results"]!) {
             row[field] = b;
         }
         Same(source.ReferenceSkeleton, target.ReferenceSkeleton, "Reference skeleton");
-        Same(source.SkeletalMaterials, target.SkeletalMaterials, "Material slots");
+        if (Digest(source.SkeletalMaterials) != Digest(target.SkeletalMaterials)) {
+            row["material_difference"] = new JObject {
+                ["source"] = JToken.FromObject(source.SkeletalMaterials),
+                ["target"] = JToken.FromObject(target.SkeletalMaterials)
+            };
+            throw new InvalidDataException("Material slots differ");
+        }
         Same(source.Sockets, target.Sockets, "Sockets");
         var oldLods = source.LODModels ?? throw new InvalidDataException("No source render LODs");
         var newLods = target.LODModels ?? throw new InvalidDataException("No facial render LODs");
@@ -65,7 +76,10 @@ foreach (var item in staging["results"]!) {
         source.PopulateMorphTargetVerticesData(); target.PopulateMorphTargetVerticesData();
         var oldMorphs = source.MorphTargets.Select(p => p.Load<UMorphTarget>() ?? throw new InvalidDataException("Missing source morph")).ToDictionary(m => m.Name, StringComparer.Ordinal);
         var newMorphs = target.MorphTargets.Select(p => p.Load<UMorphTarget>() ?? throw new InvalidDataException("Missing target morph")).ToDictionary(m => m.Name, StringComparer.Ordinal);
-        if (oldMorphs.Count != 22 || !newMorphs.Keys.ToHashSet().SetEquals(oldMorphs.Keys.Concat(expected)))
+        int expectedExisting = item.Value<int?>("expected_existing_morphs") ?? 22;
+        if (expectedExisting is < 0 or > 128 || oldMorphs.Count != expectedExisting ||
+            oldMorphs.Keys.Any(expected.Contains) ||
+            !newMorphs.Keys.ToHashSet().SetEquals(oldMorphs.Keys.Concat(expected)))
             throw new InvalidDataException("Cooked morph names differ from the audited set");
         foreach (var (name, oldMorph) in oldMorphs) {
             var current = newMorphs[name];
@@ -102,7 +116,7 @@ foreach (var item in staging["results"]!) {
     rows.Add(row);
     Console.WriteLine($"{item["target"]}: {row["passed"]}");
 }
-bool passed = rows.Count == 6 && rows.All(row => row.Value<bool>("passed"));
+bool passed = rows.Count == expectedMeshes && rows.All(row => row.Value<bool>("passed"));
 var report = new JObject { ["passed"] = passed, ["results"] = rows,
     ["source_deltas_checked"] = vertexMaps != null,
     ["shapes_sha256"] = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(args[3]))).ToLowerInvariant(),
@@ -130,11 +144,27 @@ static JObject FacialError(USkeletalMesh mesh, Dictionary<string, UMorphTarget> 
     var indices = map["source_vertices"]!.Values<int>().ToArray();
     if (indices.Length != lod.NumVertices || indices.Any(index => index < 0)) throw new InvalidDataException("Invalid render-to-source map");
     var points = shapes["body_points"]!.Select(p => new System.Numerics.Vector3((float)p[0]!, (float)p[1]!, (float)p[2]!)).ToArray();
+    int schema = shapes.Value<int?>("schema") ?? 1;
+    if (schema is not (1 or 2) || points.Length is < 1 or > 100000 ||
+        points.Any(p => !float.IsFinite(p.X) || !float.IsFinite(p.Y) || !float.IsFinite(p.Z)))
+        throw new InvalidDataException("Invalid facial point schema");
+    int[] pointIndices = schema == 2
+        ? (shapes["point_indices"] ?? throw new InvalidDataException("Missing sparse point indices")).Values<int>().ToArray()
+        : Enumerable.Range(0, points.Length).ToArray();
+    if (pointIndices.Length != points.Length || pointIndices.Any(i => i < 0 || i > 2000000) ||
+        pointIndices.Distinct().Count() != points.Length || (schema == 1 && shapes["point_indices"] != null))
+        throw new InvalidDataException("Invalid facial point correspondence");
+    var pointLookup = pointIndices.Select((sourceIndex, localIndex) => (sourceIndex, localIndex))
+        .ToDictionary(p => p.sourceIndex, p => p.localIndex);
+    var localIndices = indices.Select(i => pointLookup.GetValueOrDefault(i, -1)).ToArray();
     float pointError = 0;
-    for (int i = 0; i < indices.Length; ++i) if (indices[i] < points.Length) {
+    int mappedVertices = 0;
+    for (int i = 0; i < indices.Length; ++i) if (localIndices[i] >= 0) {
         var p = lod.VertexBufferGPUSkin.VertsFloat[i].Pos;
-        pointError = Math.Max(pointError, System.Numerics.Vector3.Distance(points[indices[i]], new(p.X,p.Y,p.Z)));
+        pointError = Math.Max(pointError, System.Numerics.Vector3.Distance(points[localIndices[i]], new(p.X,p.Y,p.Z)));
+        ++mappedVertices;
     }
+    if (mappedVertices == 0) throw new InvalidDataException("No facial points map to rendered vertices");
     if (pointError > .0002f) throw new InvalidDataException("Source map does not match cooked body positions: " + pointError);
     float threshold = map.Value<float>("threshold_cm");
     float precision = lod.MorphTargetVertexInfoBuffers!.PositionPrecision;
@@ -147,7 +177,17 @@ static JObject FacialError(USkeletalMesh mesh, Dictionary<string, UMorphTarget> 
     foreach (var shape in shapes["morph_targets"]!) {
         var name = shape.Value<string>("name")!;
         var wanted = new System.Numerics.Vector3[points.Length];
-        foreach (var d in shape["deltas"]!) wanted[(int)d[0]!] = new((float)d[1]!, (float)d[2]!, (float)d[3]!);
+        var seen = new HashSet<int>();
+        foreach (var d in shape["deltas"]!) {
+            if (d is not JArray values || values.Count != 4 || values[0].Type != JTokenType.Integer)
+                throw new InvalidDataException("Invalid source delta");
+            int index = (int)values[0];
+            var delta = new System.Numerics.Vector3((float)values[1], (float)values[2], (float)values[3]);
+            if (index < 0 || index >= wanted.Length || !seen.Add(index) ||
+                !float.IsFinite(delta.X) || !float.IsFinite(delta.Y) || !float.IsFinite(delta.Z))
+                throw new InvalidDataException("Invalid source delta index or value");
+            wanted[index] = delta;
+        }
         source[name] = wanted;
         var actual = new System.Numerics.Vector3[indices.Length];
         var present = new bool[indices.Length];
@@ -157,7 +197,7 @@ static JObject FacialError(USkeletalMesh mesh, Dictionary<string, UMorphTarget> 
         }
         float retained = 0, omitted = 0;
         for (int i = 0; i < indices.Length; ++i) {
-            var expected = indices[i] < wanted.Length ? wanted[indices[i]] : default;
+            var expected = localIndices[i] >= 0 ? wanted[localIndices[i]] : default;
             float error = System.Numerics.Vector3.Distance(expected, actual[i]);
             if (present[i]) retained = Math.Max(retained, error); else omitted = Math.Max(omitted, error);
         }
@@ -167,12 +207,16 @@ static JObject FacialError(USkeletalMesh mesh, Dictionary<string, UMorphTarget> 
         shapeRows.Add(new JObject { ["name"] = name, ["max_retained_error_cm"] = retained, ["max_omitted_delta_cm"] = omitted });
     }
     var expressionRows = new JArray();
-    foreach (var pose in shapes["expressions"]!) {
+    var expressions = shapes["expressions"] as JArray ?? throw new InvalidDataException("Missing expression definitions");
+    if (expressions.Count is < 1 or > 128) throw new InvalidDataException("Invalid expression count");
+    foreach (var pose in expressions) {
         var actual = new System.Numerics.Vector3[indices.Length];
         var wanted = new System.Numerics.Vector3[points.Length];
         float bound = 0;
         foreach (var entry in (JObject)pose["weights"]!) {
             float weight = (float)entry.Value!;
+            if (!float.IsFinite(weight) || Math.Abs(weight) > 1 || !errors.ContainsKey(entry.Key))
+                throw new InvalidDataException("Invalid expression weight or shape");
             bound += Math.Abs(weight) * errors[entry.Key];
             var offsets = source[entry.Key];
             for (int i = 0; i < wanted.Length; ++i) wanted[i] += offsets[i] * weight;
@@ -181,13 +225,13 @@ static JObject FacialError(USkeletalMesh mesh, Dictionary<string, UMorphTarget> 
         }
         float maximum = 0;
         for (int i = 0; i < indices.Length; ++i) {
-            var expected = indices[i] < wanted.Length ? wanted[indices[i]] : default;
+            var expected = localIndices[i] >= 0 ? wanted[localIndices[i]] : default;
             maximum = Math.Max(maximum, System.Numerics.Vector3.Distance(actual[i], expected));
         }
         if (maximum > bound + .0002f) throw new InvalidDataException("Combined expression exceeds measured shape error bound");
         expressionRows.Add(new JObject { ["name"] = pose["name"], ["max_deformation_error_cm"] = maximum, ["weighted_shape_error_bound_cm"] = bound });
     }
-    return new JObject { ["passed"] = true, ["render_vertices"] = indices.Length, ["max_source_position_error_cm"] = pointError,
+    return new JObject { ["passed"] = true, ["render_vertices"] = indices.Length, ["mapped_facial_vertices"] = mappedVertices, ["max_source_position_error_cm"] = pointError,
         ["retained_delta_limit_cm"] = retainedLimit, ["filtered_delta_limit_cm"] = threshold + .0002f,
         ["shapes"] = shapeRows, ["expressions"] = expressionRows };
 }

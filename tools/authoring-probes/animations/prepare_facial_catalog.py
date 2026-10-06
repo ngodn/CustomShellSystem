@@ -1,4 +1,4 @@
-"""Describe verified shared Eve faces without replacing the installed catalog."""
+"""Describe verified shared faces without replacing the installed catalog."""
 import argparse
 import hashlib
 import json
@@ -24,6 +24,7 @@ def digest(path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("work", type=Path)
+    parser.add_argument("--outfit", choices=("eve", "commander-white"), default="eve")
     parser.add_argument("--readback", type=Path, required=True)
     parser.add_argument("--shapes", type=Path, help="Verified facial interchange for this cook")
     parser.add_argument("--performance", action="append", default=[], type=Path,
@@ -32,6 +33,15 @@ def main():
                         help="Prepared evaluated Blender facial source")
     parser.add_argument("--output", type=Path, help="New metadata directory; reuse the verified cook")
     args = parser.parse_args()
+    is_eve = args.outfit == "eve"
+    mesh_count = 6 if is_eve else 1
+    rig_id = "css.eve.face" if is_eve else "css.commanderwhite.face"
+    outfit_id = "eins0fx.seduxtress" if is_eve else "eins0fx.commanderwhite"
+    container_name = "CSS_EveStellarBlade_eins0fx_P.utoc" if is_eve else "CSS_CommanderWhite_eins0fx_P.utoc"
+    labels = LABELS if is_eve else {name: name for name in
+        ("Neutral", "Afraid", "Angry", "Flirting", "Frown", "Shock", "Smile", "Open Smile", "Surprised")}
+    if not is_eve and (args.performance or args.blender_performance):
+        raise ValueError("Commander White performance mappings require separate source verification")
     work = args.work.resolve(strict=True)
     if not work.is_relative_to(ROOT / "work/cine-animation-port"):
         raise ValueError("Use the private animation workspace")
@@ -41,7 +51,7 @@ def main():
     paths = [work / "probe/receipt.json", work / "facial-stage-verify.json", args.readback.resolve(strict=True),
              (args.shapes or work.parent / "facial-export-v1/facial-shapes.json").resolve(strict=True)]
     receipt, staging, readback, shapes = [json.loads(path.read_text()) for path in paths]
-    if not staging.get("complete") or not readback.get("passed") or len(readback["results"]) != 6:
+    if not staging.get("complete") or not readback.get("passed") or len(readback["results"]) != mesh_count or not readback.get("source_deltas_checked"):
         raise ValueError("Fresh editor and cooked readback must pass")
     protected = {str(path): digest(path) for path in paths}
     for group in ("protected", "cooked", "containers"):
@@ -49,9 +59,9 @@ def main():
     if any(digest(Path(path)) != checksum for path, checksum in protected.items()):
         raise ValueError("Facial evidence or protected source changed")
     sources = [(Path(path), checksum) for path, checksum in receipt["protected"].items()
-               if Path(path).name == "CSS_EveStellarBlade_eins0fx_P.utoc"]
+               if Path(path).name == container_name]
     if len(sources) != 1:
-        raise ValueError("Expected exactly one verified Eve source revision")
+        raise ValueError("Expected exactly one verified outfit source revision")
     source, checksum = sources[0]
     pairs = {(row["source"], row["target"]) for row in staging["results"]}
     if pairs != {(row["source"], row["target"]) for row in readback["results"]}:
@@ -65,13 +75,13 @@ def main():
     found = set()
     for entry in shapes["expressions"]:
         name = entry["name"].removeprefix("PT_").removesuffix("_EVE")
-        if name not in LABELS or name in found:
+        if name not in labels or name in found:
             raise ValueError("Unknown or duplicate facial source")
         found.add(name)
-        label = LABELS[name]
+        label = labels[name]
         identity = label.lower().replace(" ", "-")
-        expressions.append({"id": "css.eve.face." + identity, "name": label, "weights": entry["weights"]})
-    if found != set(LABELS):
+        expressions.append({"id": rig_id + "." + identity, "name": label, "weights": entry["weights"]})
+    if found != set(labels):
         raise ValueError("Missing source expression")
     adapters = []
     for row in readback["results"]:
@@ -81,10 +91,10 @@ def main():
         if not skeleton.startswith("Skeleton'/Game/") or not skeleton.endswith("'"):
             raise ValueError("Unexpected cooked skeleton binding")
         reference = lambda path: path + "." + path.rsplit("/", 1)[-1]
-        adapters.append({"source_outfit": "eins0fx.seduxtress", "source_mesh": reference(row["source"]),
+        adapters.append({"source_outfit": outfit_id, "source_mesh": reference(row["source"]),
             "target_mesh": reference(row["target"]), "skeleton": skeleton[len("Skeleton'"):-1],
             "source_toc_sha256": checksum, "source_bulk_bytes": source.with_suffix(".ucas").stat().st_size})
-    rig = {"id": "css.eve.face", "morphs": morphs, "expressions": expressions, "adapters": adapters}
+    rig = {"id": rig_id, "morphs": morphs, "expressions": expressions, "adapters": adapters}
     performances = []
     identities = set()
     for curve_path in args.performance:
