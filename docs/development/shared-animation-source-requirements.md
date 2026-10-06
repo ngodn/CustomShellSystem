@@ -1,7 +1,8 @@
 # Missing source definitions
 
-The local DumbDumb and Iris Out sequences decode, but their source rig cannot
-be reconstructed from the supplied files. This blocks a complete faithful port.
+The local DumbDumb and Iris Out sequences decode, but seven source definitions
+remain unidentified. The complete authoring rig is not reconstructed. Their
+resolved body chains can now be auditioned independently, as recorded below.
 
 Both sequences reference
 `/Game/Art/Character/PC/CH_P_EVE_01/CH_P_EVE_01_Skeleton`, with recorded SkeletonGuid
@@ -38,8 +39,50 @@ No aliases, dropped tracks or replacement expressions have been introduced.
 
 The retained evidence is `work/cine-animation-port/unresolved-source-requirements.json`,
 which identifies both source audits, their hashes and every unresolved track's
-key counts. Public redistribution terms are a separate unresolved requirement;
-see [the source permission audit](shared-animation-source-permissions.md).
+key counts. The user confirmed source permission on October 6; see
+[the source permission record](shared-animation-source-permissions.md).
 
 The user has been asked whether matching source files or an author-provided
 link exist elsewhere. No author has been contacted on the user's behalf.
+
+## Resolved body audition, October 6
+
+The earlier all-or-nothing export rejection prevented evaluation of body tracks
+whose identities and ancestors were already available. The established CSS
+retargeter uses a closed set of 54 body/finger bones. Both dances supply all 54,
+and none requires an unidentified parent in the resolved reference skeleton.
+Retail and supplied authoring skeletons agree on all 54 names, indices and
+parents. Maximum reference-position difference is 0.000005001 cm; quaternion
+angle and scale differences are zero. This does not identify the extra bones.
+
+`project_resolved_body.py` creates an explicitly marked body audition. It checks
+metadata, track bindings, complete ancestry, key counts/times and finite valid
+transforms. It retains the other 104 tracks, including all seven unidentified
+tracks, in `preserved-tracks.json`. Every decoded key in all 158 tracks is
+accounted for without modification. The strict general source exporter remains
+unchanged. The prepared batch carries its audition status and preservation hashes.
+
+Evidence under `work/cine-animation-port/body-projection-v1` includes input
+hashes, two preservation receipts, `verification.json` and
+`source-prefix-check.json`. The implementation passes nine rejection/preservation
+tests; the existing four hierarchy and eleven sampling tests also pass.
+
+UE 5.6.1 generated `/Game/CSS/AnimLab/RT_L5P_DumbDumb` and
+`/Game/CSS/AnimLab/RT_L5P_IrisOut`. The former retains 3,943 keys over 65.7 seconds;
+the latter retains 1,001 keys over 16.666666 seconds. Both remain 60 Hz.
+`retarget-l5p/readback-result.json` compares all frames, each with 388 evaluated
+bones, against saved assets and a repeated conversion in a fresh process.
+Position and quaternion differences are zero. Sampling checks pass for both
+source and target assets. Protected outfit mesh and Skeleton hashes are unchanged.
+
+Five sparse skinned views per clip were generated using the existing Eve review
+renderer. The inspected DumbDumb frames 984/2952 and Iris Out frame 500 show
+recognizable whole-body poses without gross limb collapse. These are sparse
+offline views, not continuous-motion, contact, facial or gameplay acceptance.
+The first render launcher failed because `xvfb-run` was absent; direct background
+Blender succeeded, without switching the desktop or interacting with the game.
+
+The next work is full-motion/contact review, cooked readback and the actual
+Eve, Genessa and Commander White adapter checks for these two candidates.
+Facial mappings and unknown source definitions remain separately unfinished.
+No new candidate has been added to the public catalog or installed in the game.

@@ -78,12 +78,17 @@ def main():
     names.update(f'Bip001-{side}-Finger{digit}{joint}' for side in ('L', 'R')
                  for digit in range(5) for joint in ('', '1', '2'))
     assert len(names) == 54
-    reference, clips, hashes = None, {}, {}
+    reference, clips, hashes, auditions = None, {}, {}, {}
     assert len(set(args.clips)) == len(args.clips)
     for label in (sources[name] for name in args.clips):
         path = args.source/label/'source-tracks.json'
         data = json.loads(path.read_text())
         hashes[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
+        if data.get('auditionOnly'):
+            preserved = path.with_name('preserved-tracks.json')
+            hashes[str(preserved)] = hashlib.sha256(preserved.read_bytes()).hexdigest()
+            auditions[label] = dict(unresolved_indices=data['unresolvedSourceBoneIndices'],
+                                    preserved_tracks=str(preserved), scope=data['scope'])
         assert data['interpolation'] == 'Linear' and data['rateScale'] == 1
         clock = timeline(data['frameCount'], data['duration'], args.sample_rate)
         selected = select_bones(data['bones'], names, args.include_source_ancestors)
@@ -132,9 +137,12 @@ def main():
         (args.output/(name+'.json')).write_text(json.dumps(value, indent=2)+'\n')
     (args.output/'batch.json').write_text(json.dumps(
         [[name, sources[name]] for name in args.clips], indent=2)+'\n')
-    (args.output/'batch-config.json').write_text(json.dumps(dict(revision=args.revision,
+    config = dict(revision=args.revision,
         source_yaw_degrees=args.source_yaw, source_basis=basis.tolist(),
-        preserve_positive_scale=args.allow_positive_scale), indent=2)+'\n')
+        preserve_positive_scale=args.allow_positive_scale)
+    if auditions:
+        config['source_auditions'] = auditions
+    (args.output/'batch-config.json').write_text(json.dumps(config, indent=2)+'\n')
 
 
 if __name__ == '__main__':

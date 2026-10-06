@@ -2,6 +2,22 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
+October 6 continuation: the user confirmed source permission and requested
+continued work on DumbDumb and Iris Out. Investigate the seven additional tracks
+against the actual source mesh and playback mapping; retain their complete keys
+and do not invent bone identities. Source permission is no longer a pending user
+question. All six Eve outfits, both Unholy Genessa meshes and Commander White
+remain required compatibility cases. Black Pearl was the first requested live
+facial test, not a reduction of supported scope. Validate facial compatibility
+separately for each character, including any derived assets it needs.
+
+New offline progress: full-length DumbDumb and Iris Out body auditions are
+generated as L5P and pass fresh-process readback plus 60 Hz sampling checks.
+All 158 source tracks per clip are preserved across the body projection and
+its companion record. This does not identify the seven extra controls or
+finish facial animation. See [source requirements and audition evidence](development/shared-animation-source-requirements.md).
+Neither audition is installed or added to the shared release catalog yet.
+
 Current checkpoint, October 6: the combined private trial is installed with
 57 shared sequences, five outfit adapters, 21 Eve expressions and Come Closer
 facial playback. Gesture 200 facial data is also installed through a

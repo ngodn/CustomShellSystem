@@ -94,8 +94,8 @@ All source assets in the table are beneath `/Game/CSS/`.
 
 | Clip | Retained source | Blocker |
 | --- | --- | --- |
-| DumbDumb | source-05, `HD-ATOOL_P/anim/971` | Seven unidentified source bone indices; nine unresolved facial controls; public conversion permission not established |
-| Iris Out | source-06, `HD-ATOOL_P/anim/970` | Seven unidentified source bone indices; two unresolved facial controls; public conversion permission not established |
+| DumbDumb | source-05, `HD-ATOOL_P/anim/971` | Full-length resolved-body audition passes editor readback; seven extra source indices and nine facial controls remain unidentified; user confirmed permission on October 6 |
+| Iris Out | source-06, `HD-ATOOL_P/anim/970` | Full-length resolved-body audition passes editor readback; seven extra source indices and two facial controls remain unidentified; user confirmed permission on October 6 |
 
 Neither clip is silently discarded, approximated or counted among the 57 cooked
 sequences. See [source audit](shared-animation-library.md) and

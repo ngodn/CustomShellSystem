@@ -1,5 +1,12 @@
 # Shared animation source permissions
 
+## User confirmation, 2026-10-06
+
+The user confirmed they have permission and instructed us to continue the ports.
+Treat the project's permission question as answered by that confirmation. The
+public-page audit below remains a historical record, not an outstanding request
+for permission. No public upload has been requested by this confirmation.
+
 Checked 2026-10-06 against the public Nexus description pages, including their
 permissions and credits sections. This records the published statements, not a
 legal conclusion or clearance. No author was contacted, no login was used, and
