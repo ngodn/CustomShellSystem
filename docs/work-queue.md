@@ -35,8 +35,16 @@ the source feet remain at about 14.86/14.79 cm, while target feet are
 does not change either result. Source import agrees with independently decoded
 joint samples. Next inspect the IK retarget chain/goal handling and correct leg
 contact in a new candidate, preserving source timing and the existing audition.
-DumbDumb's full 1,972-frame diagnostic render completed; Iris Out rendering
-continues under the same job.
+DumbDumb's full 1,972-frame and Iris Out's 501-frame diagnostic renders completed.
+
+Contact repair continuation: changing FK rotation modes did not solve the
+problem. A world-preserving source-hierarchy experiment (L5Q) improved the worst
+shoe penetration only to -7.17 cm and failed the strict UE source-key comparison
+for DumbDumb. It remains experimental. Correctly initialized foot IK on the
+unchanged L5P source restores the problem-frame foot heights to 7.78/7.71 cm.
+Full L5R candidates and dense skinned measurements are now running. See
+[the source/contact investigation](development/shared-animation-source-requirements.md#leg-contact-investigation-october-6).
+No new installation or release acceptance yet.
 
 October 6 continuation: the user confirmed source permission and requested
 continued work on DumbDumb and Iris Out. Investigate the seven additional tracks

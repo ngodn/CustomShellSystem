@@ -86,3 +86,62 @@ The next work is full-motion/contact review, cooked readback and the actual
 Eve, Genessa and Commander White adapter checks for these two candidates.
 Facial mappings and unknown source definitions remain separately unfinished.
 No new candidate has been added to the public catalog or installed in the game.
+
+## Leg contact investigation, October 6
+
+The full L5P diagnostic renders completed for both clips (1,972 DumbDumb and
+501 Iris Out samples). These are review artifacts, not visual acceptance.
+At DumbDumb frame 3414, the shoe mesh reaches -14.306 cm. Raw UE readback
+confirms the source feet are near their ordinary ground height while the target
+feet separate vertically. Cooking and Blender are not the origin of the error.
+
+The actual source thighs are children of `Bip001-Spine`; the target thighs are
+children of `pelvis`. UE 5.6.1's `FChainEncoderFK::TransformCurrentChainTransforms`
+and `FChainDecoderFK::DecodePose` rebuild each chain relative to its mapped
+target parent. A source parent's animated contribution can therefore be lost
+when these parents represent different body joints. The default rig has no
+foot goals. Epic's [IK retargeting documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/ik-rig-animation-retargeting-in-unreal-engine?application_version=5.6)
+describes FK chain transfer and optional IK contact handling; the exact local
+5.6.1 implementation was checked before testing changes.
+
+`retarget-l5p/leg-modes.json` records isolated One-to-One and Match Scaled Chain
+trials. Neither fixes the ground penetration. These are retained failed
+candidates, not replacements for the installed library.
+
+`reparent_source_legs.py` derives an isolated source rig with the thighs under
+the pelvis, recalculating only their local reference transforms and animation
+keys. It retains all sampled world positions, rotations and scales numerically.
+Both complete source clips pass that check, with maximum position component
+error below 1.2e-13 cm. Six tests cover animated parent motion, nonuniform scale,
+unexpected hierarchy, missing keys, invalid scale and unknown/duplicate tracks.
+Original files stay unchanged; receipts are in `retarget-l5q`.
+
+L5Q imports and retargets successfully. The inspected frame-3414 skinned view
+reduces shoe penetration to -7.170 cm, so this is still not a finished repair.
+A fresh UE source comparison also rejects the initial 0.001 cm key threshold:
+the time-based evaluation measured 0.00659 cm at nominal keys and 0.392 cm at
+half-frames. The follow-up verifier uses the frame API at keys and records the
+worst bone and frame before reporting failure. The frame API gives the same
+DumbDumb error at right toe frame 1052; Iris Out passes the key check. No
+acceptance threshold has been relaxed, and this hierarchy conversion is not
+selected for the final clip pipeline.
+
+Explicit foot goals work with the original, unchanged L5P source. The first
+attempt exposed an authoring API trap: `UIKRetargetIKChainsController::SetSettings`
+calls `CopySettingsAtRuntime`, which copies only existing chain entries. Adding
+goal definitions to a rig does not populate an old empty IK operation through
+that setter. Rebuilding the isolated retargeter's default operation stack
+populates the chains; settings readback confirms both foot goals are active.
+
+Both L5P and L5Q `foot-ik-v3.json` reports now show the settings affect output.
+The chosen audition uses source foot height, with a static offset derived from
+the source versus fitted target bind heights, while retaining the ordinary
+retargeted horizontal position. At 56.9 seconds, target foot heights become
+7.775/7.711 cm and toe heights 2.192/0.802 cm. The unchanged source produces
+the same corrected positions as the hierarchy experiment without introducing
+another source interpolation stage. This is a sparse joint result, not yet a
+whole-clip shoe-contact or pose-quality pass.
+
+Full-length candidates `/Game/CSS/AnimLab/RT_L5R_DumbDumb` and
+`RT_L5R_IrisOut` are being generated from that L5P foot-IK configuration. Their
+export, hashes and subsequent skinned checks are under `retarget-l5r`.
