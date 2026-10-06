@@ -2,6 +2,14 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
+Current checkpoint, October 6: the combined private trial is installed with
+57 shared sequences, five outfit adapters, 21 Eve expressions and Come Closer
+facial playback. Gesture 200 facial data is verified in an offline package
+revision. The stopping-selector correction is also installed; visual gameplay
+acceptance is still pending. The historical planning notes below are not the
+current implementation status. Use the [per-clip acceptance table](development/shared-animation-acceptance.md)
+and its linked evidence before repeating work or claiming completion.
+
 Active animation work is defined in
 [the CSS/CINE port goal](../extensions/cine/docs/ANIMATION-PORT-GOAL.md).
 Preserve native source sample rates; the user's 60 fps remark was a question,

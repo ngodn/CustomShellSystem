@@ -61,5 +61,10 @@ unchanged. The installed loader matches beta.11 release metadata and host ABI 2;
 its older loader-contract DLL checksum is stale. Live stopping acceptance is
 still pending. The separate shared animation assets have not been installed.
 
+That recording-only installation is historical. The subsequent combined trial
+includes the shared body/facial assets and retains the stopping correction;
+see [the installed facial playback record](performance-facial-curves.md).
+There is still no matched gameplay acceptance for the stopping report.
+
 The subsequent game launch logged activation of that exact DLL at timestamp
 `631667917`. This confirms loading, not visual acceptance of every transition.
