@@ -267,7 +267,7 @@ def main():
                   compression_settings=sorted(compression_packages), compression_evidence=compression_evidence,
                   facial_meshes=sorted(face_packages), facial_evidence=face_evidence,
                   dependencies=dependency_hashes,
-                  required_skeleton='/Game/CSS/Shared/SKEL_Base.SKEL_Base',
+                  skeleton_validation='Pending independent per-clip decoded binding checks.',
                   files={path.name: digest(path) for path in trio.iterdir()},
                   scope='Private structural package check. Decoded motion and live playback remain pending.')
     (out / 'verification.json').write_text(json.dumps(report, indent=2) + '\n')

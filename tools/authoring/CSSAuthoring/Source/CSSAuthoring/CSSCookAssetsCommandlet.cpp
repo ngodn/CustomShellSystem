@@ -33,6 +33,8 @@
 #include "Misc/Paths.h"
 #include "Internationalization/Regex.h"
 #include "Misc/ScopeExit.h"
+#include "Misc/SecureHash.h"
+#include "Serialization/Archive.h"
 #include "UObject/GarbageCollection.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectArray.h"
@@ -60,6 +62,29 @@ static bool CSSPortablePackage(const FString& Package)
              Upper[3] >= '1' && Upper[3] <= '9')) return false;
     }
     return true;
+}
+
+static bool CSSExternalRigAssetMatches(const FString& Package, const FString& ExpectedHash)
+{
+    const FString Filename = FPackageName::LongPackageNameToFilename(Package, TEXT(".uasset"));
+    TUniquePtr<FArchive> Reader(IFileManager::Get().CreateFileReader(*Filename));
+    if (!Reader || Reader->TotalSize() <= 0 || Reader->TotalSize() > 1024ll * 1024 * 1024) return false;
+    int64 Remaining = Reader->TotalSize();
+    TArray<uint8> Buffer;
+    Buffer.SetNumUninitialized(64 * 1024);
+    FSHA1 Hasher;
+    while (Remaining > 0)
+    {
+        const int64 Count = FMath::Min<int64>(Remaining, Buffer.Num());
+        Reader->Serialize(Buffer.GetData(), Count);
+        if (Reader->IsError()) return false;
+        Hasher.Update(Buffer.GetData(), static_cast<uint32>(Count));
+        Remaining -= Count;
+    }
+    Hasher.Final();
+    FSHAHash Hash;
+    Hasher.GetHash(Hash.Hash);
+    return Hash.ToString().Equals(ExpectedHash, ESearchCase::IgnoreCase);
 }
 
 UCSSCookAssetsCommandlet::UCSSCookAssetsCommandlet()
@@ -127,6 +152,51 @@ int32 UCSSCookAssetsCommandlet::Main(const FString& Params)
     {
         UE_LOG(LogCSSCookAssets, Error, TEXT("Refusing an existing output path: %s"), *Output);
         return 1;
+    }
+    // Existing outfits supply skeletons and retarget source meshes, not this cook.
+    TMap<FName, FString> ExternalRigAssets;
+    FString ExternalPath;
+    if (FParse::Value(*Params, TEXT("ExternalRigAssets="), ExternalPath))
+    {
+        TArray<FString> Lines;
+        if (IFileManager::Get().FileSize(*ExternalPath) > 64 * 1024 ||
+            !FFileHelper::LoadFileToStringArray(Lines, *ExternalPath))
+        {
+            UE_LOG(LogCSSCookAssets, Error, TEXT("Cannot read external rig manifest: %s"), *ExternalPath);
+            return 1;
+        }
+        for (FString Line : Lines)
+        {
+            Line.TrimStartAndEndInline();
+            if (Line.IsEmpty() || Line.StartsWith(TEXT("#"))) continue;
+            TArray<FString> Fields;
+            Line.ParseIntoArrayWS(Fields);
+            bool ValidHash = Fields.Num() == 2 && Fields[0].Len() == 40;
+            if (ValidHash)
+                for (TCHAR C : Fields[0]) ValidHash &= FChar::IsHexDigit(C);
+            if (!ValidHash ||
+                !Fields[1].StartsWith(TEXT("/Game/CSSAuthoring/")) ||
+                !FPackageName::IsValidLongPackageName(Fields[1]) ||
+                ExternalRigAssets.Contains(FName(*Fields[1])) || ExternalRigAssets.Num() >= 64 ||
+                !CSSExternalRigAssetMatches(Fields[1], Fields[0]))
+            {
+                UE_LOG(LogCSSCookAssets, Error, TEXT("Invalid or changed external rig entry: %s"), *Line);
+                return 1;
+            }
+            const FString ObjectPath = Fields[1] + TEXT(".") + FPackageName::GetShortName(Fields[1]);
+            UObject* Asset = StaticLoadObject(UObject::StaticClass(), nullptr, *ObjectPath);
+            if (!Asset || (Asset->GetClass() != USkeleton::StaticClass() && Asset->GetClass() != USkeletalMesh::StaticClass()))
+            {
+                UE_LOG(LogCSSCookAssets, Error, TEXT("External dependency is not a skeleton or skeletal mesh: %s"), *Fields[1]);
+                return 1;
+            }
+            ExternalRigAssets.Add(FName(*Fields[1]), Fields[0]);
+        }
+        if (ExternalRigAssets.IsEmpty())
+        {
+            UE_LOG(LogCSSCookAssets, Error, TEXT("External rig manifest is empty."));
+            return 1;
+        }
     }
     TArray<FString> Validated;
     for (FString PackageName : PackageNames)
@@ -208,6 +278,7 @@ int32 UCSSCookAssetsCommandlet::Main(const FString& Params)
     TArray<FName> Pending;
     for (const FString& Package : Validated) Pending.Add(FName(*Package));
     TSet<FName> Visited;
+    TSet<FName> UsedExternalRigAssets;
     while (!Pending.IsEmpty())
     {
         const FName Current = Pending.Pop();
@@ -225,11 +296,21 @@ int32 UCSSCookAssetsCommandlet::Main(const FString& Params)
             if (!Path.StartsWith(TEXT("/Game/CSS/")) && !Path.StartsWith(TEXT("/Game/CSSAuthoring/"))) continue;
             if (!CSSPortablePackage(Path))
             {
+                if (ExternalRigAssets.Contains(Dependency))
+                {
+                    UsedExternalRigAssets.Add(Dependency);
+                    continue;
+                }
                 UE_LOG(LogCSSCookAssets, Error, TEXT("Unmigrated CSS dependency: %s -> %s"), *Current.ToString(), *Path);
                 return 1;
             }
             Pending.Add(Dependency);
         }
+    }
+    if (UsedExternalRigAssets.Num() != ExternalRigAssets.Num())
+    {
+        UE_LOG(LogCSSCookAssets, Error, TEXT("External rig manifest includes unused packages."));
+        return 1;
     }
 
     const int32 InitialErrors = GWarn->GetNumErrors();
@@ -321,6 +402,16 @@ int32 UCSSCookAssetsCommandlet::Main(const FString& Params)
         UE_LOG(LogCSSCookAssets, Error, TEXT("Cook validation failed: expected %d packages, found %d; new errors %d."),
             Validated.Num(), Files.Num(), GWarn->GetNumErrors() - InitialErrors);
         return 1;
+    }
+    for (const auto& Entry : ExternalRigAssets)
+    {
+        if (!CSSExternalRigAssetMatches(Entry.Key.ToString(), Entry.Value))
+        {
+            UE_LOG(LogCSSCookAssets, Error, TEXT("External rig asset changed during cook: %s"), *Entry.Key.ToString());
+            return 1;
+        }
+        UE_LOG(LogCSSCookAssets, Display, TEXT("External rig asset preserved, not emitted: %s SHA1=%s"),
+            *Entry.Key.ToString(), *Entry.Value);
     }
     UE_LOG(LogCSSCookAssets, Display, TEXT("Cook emitted %d packages. Binary inspection and Windows game testing are still required."), Files.Num());
     return 0;

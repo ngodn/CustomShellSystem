@@ -2,6 +2,21 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
+Seductress S8 cook integration now passes. `CSSCookAssets` accepts explicitly
+hashed external skeleton/retarget-mesh dependencies without recooking them.
+An isolated `/Game/CSS/Locomotion/Studies/S8/AN_ComeCloserFlat` candidate clears
+only its editor preview mesh, keeps the retarget source and original tracks,
+and owns its compression settings. Fresh comparison retains all 388 tracks
+and 4,641 keys. Windows animation/settings cooks, two-export container
+round-trip and full 240 Hz decoding pass. The private package is 1,645,446 bytes;
+41 protected authoring inputs and the released outfit containers are unchanged.
+See `s8-shared-cook-v3/acceptance-checkpoint.json`. The decoded skeleton resolves
+to the original legacy package. Next capture unretargeted raw poses, compare
+every cooked pose and contact, then integrate the broader adapter/clip set.
+This study is not installed or live-accepted. All jobs for this checkpoint are
+terminal; failed earlier runs are retained in `s8-external-cook-v1` and
+`s8-shared-cook-v1/v2`. Other outfit/native support and facial work remain open.
+
 CW blend diagnosis: exact independent left/right source pairs reproduce all
 nine failing bilateral poses with zero measured residual. The remaining error
 is interpolation, not interaction between eyelids. The optional not-a-knot

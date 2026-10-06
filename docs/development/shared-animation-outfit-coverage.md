@@ -389,5 +389,14 @@ Its compressed component execution also passes all six original outfit graphs,
 See `retarget-seductress-s8/{verify-result,visible-contact-summary,
 pose-preservation,adapter-evaluation}.json` and `bare-skin-motion/`.
 This covers one corrected flat-foot clip, not all clips or footwear modes.
-Windows cooking must account for the released legacy skeleton dependency;
-compression/contact, package size, full physics and live acceptance remain.
+Windows cooking now accounts for the released legacy skeleton and retarget
+source mesh through an explicit hashed external-rig manifest. The isolated
+S8 shared-path candidate preserves the original authored tracks, removes only
+its editor preview mesh and owns its compression settings. Fresh readback,
+both Windows cooks, two-export container round-trip and independent decoding
+of all 4,641 keys / 388 tracks pass. The private trio totals 1,645,446 bytes;
+41 protected authoring inputs and released outfit containers are unchanged.
+Evidence: `s8-shared-cook-v3/acceptance-checkpoint.json`. Full raw/cooked pose
+comparison, compressed contact, the broader clip set, full physics and live
+acceptance remain. This isolated study has not been installed or added to the
+playable shared catalog.
