@@ -353,3 +353,38 @@ Next: full C10 motion review, requested outfit adapters and facial integration.
 The combined release candidate still has 62 body/movement IDs, 31 photo poses
 and five Eve facial performances. Cinderella is not cataloged or installed;
 its 12 facial curves remain prepared separately. No excluded rigs were added.
+
+## Cinderella adapters and combined private candidate
+
+`cinderella-c10-adapters/cinderella-current-result.json` passes all nine requested
+meshes: six Eve outfits, both Unholy Genessa faces and Commander White. Each
+passes nine playback/restoration cases, including the complete compressed clip,
+with 38 finger bones checked. These 81 cases compare the actual component and
+post-process layer against its original graph. They do not validate world cloth
+simulation, contact for every outfit or live gameplay.
+
+`cinderella-combined-v1` links to secondary-drive scratch storage. It contains
+63 body/movement IDs, including the existing 31 photo poses, and 98 exports.
+All 62 previous entries and 96 previous export payloads are preserved. The new
+entry is `css.eve.dance.cinderella`, bound to the C10 study asset. Its 12 original
+facial curves and 3,897 keys are reproduced from source metadata and added to
+the verified Eve face, bringing Eve to six facial performances. The five outfit
+adapters, four native locomotion alternatives, two facial rigs and all previous
+expressions remain unchanged.
+
+The merged containers pass independent round-trip comparison. The compact
+manifest is 233,192 bytes, below the unchanged 256 KiB runtime limit. Host
+catalog checks pass 1,132 assertions with the requested outfits and 1,120 with
+the pack alone. The earlier five-performance candidate still passes 1,131.
+Reproduction: `package_cinderella_trial.py`; receipts: the candidate's
+`verification.json` and `host-catalog-validation.json`.
+
+The initial packaging preflight compared package names against object paths
+and rejected the adapter list before creating output. The corrected check
+requires all nine exact object paths. Both attempt logs remain under
+`cinderella-c10-cook/combined-pack*.log`.
+
+Nothing is installed. Full C10 video review is underway in
+`cinderella-c10-review/`; source/retarget comparison, secondary motion and live
+acceptance remain. This addition does not resolve the unidentified source-bone
+bindings or Commander White's remaining facial-performance mapping.

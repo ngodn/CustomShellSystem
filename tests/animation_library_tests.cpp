@@ -253,6 +253,8 @@ int main(int argc,char** argv) {
                        std::string_view(argv[1])=="--audited-cw-face-only-pack" ||
                        std::string_view(argv[1])=="--audited-jali3-face-pack" ||
                        std::string_view(argv[1])=="--audited-jali3-face-only-pack" ||
+                       std::string_view(argv[1])=="--audited-cinderella-pack" ||
+                       std::string_view(argv[1])=="--audited-cinderella-only-pack" ||
                        std::string_view(argv[1])=="--audited-locomotion-pack" ||
                        std::string_view(argv[1])=="--audited-locomotion-only-pack" ||
                        std::string_view(argv[1])=="--audited-native-pack" ||
@@ -260,13 +262,16 @@ int main(int argc,char** argv) {
                        std::string_view(argv[1])=="--audited-expanded-pack" ||
                        std::string_view(argv[1])=="--audited-expanded-isolated-pack" ||
                        std::string_view(argv[1])=="--audited-isolated-pack")) {
-            const bool author_face=std::string_view(argv[1])=="--audited-jali3-face-pack" ||
+            const bool cinderella=std::string_view(argv[1])=="--audited-cinderella-pack" ||
+                                  std::string_view(argv[1])=="--audited-cinderella-only-pack";
+            const bool author_face=cinderella || std::string_view(argv[1])=="--audited-jali3-face-pack" ||
                                    std::string_view(argv[1])=="--audited-jali3-face-only-pack";
             const bool commander_face=author_face || std::string_view(argv[1])=="--audited-cw-face-pack" ||
                                       std::string_view(argv[1])=="--audited-cw-face-only-pack";
             const bool locomotion=commander_face || std::string_view(argv[1])=="--audited-locomotion-pack" ||
                                   std::string_view(argv[1])=="--audited-locomotion-only-pack";
-            const bool native_only=std::string_view(argv[1])=="--audited-jali3-face-only-pack" ||
+            const bool native_only=std::string_view(argv[1])=="--audited-cinderella-only-pack" ||
+                                   std::string_view(argv[1])=="--audited-jali3-face-only-pack" ||
                                    std::string_view(argv[1])=="--audited-cw-face-only-pack" ||
                                    std::string_view(argv[1])=="--audited-native-only-pack" ||
                                    std::string_view(argv[1])=="--audited-locomotion-only-pack";
@@ -283,7 +288,14 @@ int main(int argc,char** argv) {
                 std::cerr<<packages.diagnostics.dump(2)<<'\n';
             expect(packages.animation_libraries.size()==1,"Audited pack did not load as one library");
             const auto& audited=packages.animation_libraries[0];
-            expect(audited.entries.size()==(locomotion?62:dances?59:57) && audited.adapters.size()==(expanded?6:5),"Audited animation set changed");
+            expect(audited.entries.size()==(cinderella?63:locomotion?62:dances?59:57) && audited.adapters.size()==(expanded?6:5),"Audited animation set changed");
+            if(cinderella) {
+                const auto match=resolve_library_performance(packages.animation_libraries,"css.eve.dance.cinderella",base);
+                expect(match.entry && match.entry->playback==AnimationPlayback::Once && match.entry->hide_weapons &&
+                       match.candidates.size()==1 && match.candidates[0].asset==
+                       "/Game/CSS/Locomotion/Studies/C10/AN_Cinderella.AN_Cinderella",
+                       "Cinderella lost its verified body asset or playback contract");
+            }
             if(dances) {
                 for(const auto* id:{"css.eve.dance.dumbdumb","css.eve.dance.irisout"}) {
                     const auto count=std::count_if(audited.entries.begin(),audited.entries.end(),[&](const auto& entry) {
@@ -369,7 +381,7 @@ int main(int argc,char** argv) {
                     const auto& rig=audited.faces.front();
                     const auto* performance=rig.find_performance("css.eve.dance.comecloser");
                     expect(rig.morphs.size()==(author_face?115:105) &&
-                           rig.performances.size()==(author_face?5:blender_face?2:1),
+                           rig.performances.size()==(cinderella?6:author_face?5:blender_face?2:1),
                            "Facial performance catalog dimensions differ");
                     if(author_face) {
                         struct Expected { const char* id; size_t curves,keys; double duration; };
@@ -383,8 +395,14 @@ int main(int argc,char** argv) {
                                    std::abs(added->duration-expected.duration)<1e-6,
                                    "Recovered performance lost source curves or duration");
                         }
-                        expect(!rig.find_performance("css.eve.dance.cinderella"),
-                               "Unretargeted Cinderella was exposed as a playable performance");
+                        const auto* added=rig.find_performance("css.eve.dance.cinderella");
+                        if(cinderella) {
+                            expect(added && added->curves.size()==12 && added->key_count()==3897 &&
+                                   std::abs(added->duration-139.66667)<1e-6,
+                                   "Cinderella lost its source facial curves or duration");
+                        } else {
+                            expect(!added,"Earlier pack unexpectedly exposed Cinderella");
+                        }
                     }
                     expect(performance && performance->curves.size()==15 && performance->key_count()==987,
                            "Packaged Come Closer lost its original facial curves");

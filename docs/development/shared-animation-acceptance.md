@@ -1,14 +1,15 @@
 # Shared animation acceptance
 
-October 7 update: `eve-face-jali3-trial-v2` combines the existing 62
+October 7 update: `cinderella-combined-v1` combines 63
 body/movement IDs with four native locomotion alternatives, six updated Eve
 faces and the verified Commander White face. It preserves all 31 photo poses
 and five outfit adapters. Eve now has 115 facial shapes, 21 expressions and
-five prepared facial performances. Actual combined and pack-only catalog
-checks pass 1,131 and 1,119 assertions. See the
+six prepared facial performances. Actual combined and pack-only catalog
+checks pass 1,132 and 1,120 assertions. See the
 [author-head evidence](shared-animation-author-head.md). This candidate is not
-installed or live-accepted. The newly supplied Cinderella clip is additional
-unfinished work and is excluded from these catalog counts. Historical
+installed or live-accepted. Cinderella passes full cooked-motion comparison
+and 81 adapter cases across the nine requested meshes; visual, secondary
+physics and live acceptance remain unfinished. Historical
 checkpoints below describe earlier candidates.
 
 Checkpoint: 2026-10-06. This is a private candidate, not release approval.
