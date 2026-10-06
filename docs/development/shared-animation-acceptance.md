@@ -168,20 +168,13 @@ controls; the body table does not claim complete facial fidelity.
 
 ### Required outfit coverage
 
-Black Pearl is a first live test case, not the compatibility boundary. Required
-coverage includes all original eins0fx-authored CSS mods, excluding port-only
-mods. All six Eve outfits, Unholy Genessa with either face, and Commander White
-are required examples, not the complete list. Other authors' CSS mods, non-CSS
-mods and native appearances using the default game human skeleton also need
-support where technically compatible. Inventory and record these additional
-rigs rather than treating the nine-mesh result as universal coverage.
-Each supported appearance needs playback, interruption and restoration checks;
-body adapter success alone does not establish facial or world-physics support.
-This is a completion requirement for both CSS and CINE. Keep every inventoried
-original outfit and variant visible in the matrix, including pending cases.
-A Black Pearl pass cannot close the collection-wide compatibility requirement.
-The [expanded collection and native-rig audit](shared-animation-outfit-coverage.md)
-records additional packages, differing references and runtime restrictions.
+Required custom-rig coverage is Eve (all six outfits), Unholy Genessa (both
+faces), and Commander White. Also cover representative compatible appearances
+using the default game human skeleton, including native, CSS and non-CSS.
+Older Seductress, GeneXXa/Nunexxa and other custom-rig projects are excluded by
+the user's October 6 correction. Do not make them release prerequisites.
+Each supported appearance needs playback, interruption and restoration checks
+in CSS and CINE. Body success does not establish facial or world-physics support.
 
 The two additional body auditions now also pass all nine meshes:
 `work/cine-animation-port/l5p-adapter-check/l5p-shared-all-result.json` records

@@ -2,18 +2,24 @@
 
 October 6, 2026. This records inspected assets, not release acceptance.
 
-User correction, October 6: older Seductress projects are excluded from further
-work and release prerequisites. Their rows and evidence below are historical.
-The Eve six-outfit project `CSS_SeduXtress_eins0fx` is a separate requested
-target and remains included. The prepared S9 batch was not run or installed.
+## Authoritative user scope correction, October 6
 
-Support includes the original eins0fx-authored CSS collection, excluding
-port-only mods, and compatible default-human-skeleton appearances from other
-authors. Neither an author name nor a CSS manifest should be a requirement for
-the eventual native-human playback path. The initial nine meshes are not the
-whole collection.
+Support exactly these authored outfits: **Eve (all six outfits), Unholy Genessa
+(both faces), and Commander White**. Also support appearances using the
+**default game human skeleton** where technically compatible, whether native,
+CSS or non-CSS. This does not authorize adapters for other custom rigs.
 
-## Additional collection inventory
+**Older Seductress, GeneXXa/Nunexxa and other unrelated custom-rig projects are
+out of scope.** Do not work on, integrate or make them release prerequisites.
+Do not use their unfinished evidence as a reason to delay this animation pack.
+The old Seductress project is not the requested Eve `CSS_SeduXtress_eins0fx`.
+Preserve existing evidence and source files; no further jobs or installation
+for those excluded projects. The prepared Seductress S9 batch was never run.
+This explicit correction overrides all earlier broad collection wording and
+historical next-step notes below. All requested clips, photo poses, feasible
+facial support, CSS/CINE integration and acceptance for the actual scope remain.
+
+## Historical collection inventory, not release prerequisites
 
 Metadata was read from each actual PAK. TOC hashes and bulk sizes were compared
 with its manifest. These checks do not claim complete bulk integrity,

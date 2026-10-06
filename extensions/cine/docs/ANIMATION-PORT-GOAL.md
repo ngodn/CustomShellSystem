@@ -2,17 +2,22 @@
 
 Updated 2026-10-06. Protocol Echelon Proxima remains paused.
 
-## User correction: leave older Seductress alone
+## Authoritative user scope correction, October 6
 
-The user explicitly stopped older Seductress work on October 6. Exclude its
-Midas/Argent/Noir/Violette/Regalia/Flora builds, v2.0.6 and Next-Gen Showcase
-from further outfit-specific work and release prerequisites. Do not resume
-their retargeting, adapters, cooking or integration from historical notes.
-The prepared S9 batch was not run or installed. Preserve earlier evidence.
-This exclusion does not apply to the requested Eve six-outfit mod at
-`CSS_SeduXtress_eins0fx`. Eve, Unholy Genessa, Commander White, other previously
-requested eligible outfits and compatible native-human playback remain in
-scope. This correction overrides broader collection wording below.
+Support exactly these authored outfits: **Eve (all six outfits), Unholy Genessa
+(both faces), and Commander White**. Also support appearances using the
+**default game human skeleton** where technically compatible, whether native,
+CSS or non-CSS. This does not authorize adapters for other custom rigs.
+
+**Older Seductress, GeneXXa/Nunexxa and other unrelated custom-rig projects are
+out of scope.** Do not work on, integrate or make them release prerequisites.
+Do not use their unfinished evidence as a reason to delay this animation pack.
+The old Seductress project is not the requested Eve `CSS_SeduXtress_eins0fx`.
+Preserve existing evidence and source files; no further jobs or installation
+for those excluded projects. The prepared Seductress S9 batch was never run.
+This explicit correction overrides all earlier broad collection wording and
+historical next-step notes below. All requested clips, photo poses, feasible
+facial support, CSS/CINE integration and acceptance for the actual scope remain.
 
 ## Objective
 
@@ -44,11 +49,11 @@ promise that every outfit has a compatible face rig.
 
 ### Required compatibility scope, clarified October 6
 
-- First-class support covers **all original eins0fx-authored CSS mods, excluding port-only mods**. Eve (all six outfits), Unholy Genessa (both face variants) and Commander White are required examples, not an exhaustive allowlist. Inventory the other original projects and their variants from project records; do not assume these three are the complete collection.
+- First-class custom-rig support covers Eve (all six outfits), Unholy Genessa (both face variants), and Commander White only. Other appearances are covered through compatible default-game-human-skeleton support, not new custom-rig adapters.
 - Also support other authors' CSS mods, non-CSS mods and native appearances that use the game's default human skeleton **where technically compatible**. A CSS outfit manifest or eins0fx author name must not be required solely to play a compatible body animation. Check actual skeleton hierarchy, reference pose, virtual bones, animation layers and required runtime bindings. Do not declare compatibility from the skeleton label alone.
 - Preserve each supported appearance's customization, proportions, hands, footwear, hair, cloth, wings and secondary motion. Add adapters where needed for custom skeletons and post-process graphs. Body playback and cancellation/restoration must work through both CSS and CINE without requiring old outfit packages to be rebuilt.
 - Facial expressions and facial tracks require a separate capability check for each actual face. Support them where feasible with verified character-specific mappings or derived assets. Do not disable otherwise compatible body playback because the face lacks expression controls, and do not apply guessed facial mappings to an unsupported face.
-- Maintain a compatibility matrix distinguishing verified, pending, unsupported and fallback behavior. Test the original eins0fx collection and representative default-human-skeleton appearances from other authors, both CSS and non-CSS. Describe unsupported cases clearly, keep native behavior safe, and preserve saved selections.
+- Maintain verified, pending, unsupported and fallback entries for the three requested outfits and representative compatible default-human appearances. Preserve saved selections.
 - Black Pearl is only one test case. Passing it, or even the existing nine-mesh test set, does not complete this broader compatibility requirement. Keep this scope active across sessions.
 
 - Publish new shared assets under `/Game/CSS/Locomotion/`, with stable IDs and a versioned catalog. Use subfolders for clip families where useful; asset paths and menu names must not be the identity used for saved selection.
@@ -137,7 +142,7 @@ later work.
 - Every supplied archive has an immutable inventory and every actual unique character clip has an accounted-for disposition.
 - All requested unique usable clips are ported in full; unresolved mappings or failed clips are explicitly incomplete, not counted as successful.
 - Both CSS and CINE can select and play the catalog with correct interruption and restoration.
-- Compatibility acceptance covers every original eins0fx CSS mod and its variants, excluding port-only mods. Eve Black Pearl, the six Eve outfits, Unholy Genessa and Commander White are test cases, not a closed support list. Record per-outfit results and unfinished work in the compatibility matrix before claiming this requirement complete.
+- Compatibility acceptance covers all six Eve outfits, both Unholy Genessa faces, Commander White, and representative default-game-human-skeleton appearances. Excluded projects are not release requirements.
 - Other authors' CSS mods, non-CSS mods and native appearances using the default game human skeleton are covered where technically compatible, without an author-name or CSS-manifest restriction. Record representative playback/restoration evidence and any specific unsupported cases. Missing facial controls must not block compatible body playback.
 - The separate `CSS_LocomotionSharedAssets_P` distribution supplies old and new clips under `/Game/CSS/Locomotion/`, with proven duplicate resolution, legacy saved-selection compatibility and missing-pack fallback. Old outfit packages remain byte-for-byte unchanged.
 - Per-clip source/cooked comparisons and full-motion visual checks pass; documented live tests cover playback, contacts and regressions.

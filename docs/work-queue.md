@@ -1,15 +1,23 @@
 # Current work queue
 
-## October 6 user correction: stop older Seductress work
+## Authoritative user scope correction, October 6
 
-Leave the older Seductress projects alone. No further retargeting, cooking or
-integration for them; do not make them a release prerequisite. The S9 plan
-was prepared but no editor job was started and nothing was installed. Earlier
-evidence stays for reference, not as an instruction to continue that work.
-The requested Eve six-outfit project (`CSS_SeduXtress_eins0fx`) remains in scope,
-along with Unholy Genessa, Commander White and compatible native-human support.
-Resume the remaining shared animation integration, not the Seductress queue
-recorded below. The goal document records this explicit scope correction.
+Support exactly these authored outfits: **Eve (all six outfits), Unholy Genessa
+(both faces), and Commander White**. Also support appearances using the
+**default game human skeleton** where technically compatible, whether native,
+CSS or non-CSS. This does not authorize adapters for other custom rigs.
+
+**Older Seductress, GeneXXa/Nunexxa and other unrelated custom-rig projects are
+out of scope.** Do not work on, integrate or make them release prerequisites.
+Do not use their unfinished evidence as a reason to delay this animation pack.
+The old Seductress project is not the requested Eve `CSS_SeduXtress_eins0fx`.
+Preserve existing evidence and source files; no further jobs or installation
+for those excluded projects. The prepared Seductress S9 batch was never run.
+This explicit correction overrides all earlier broad collection wording and
+historical next-step notes below. All requested clips, photo poses, feasible
+facial support, CSS/CINE integration and acceptance for the actual scope remain.
+
+Historical checkpoints below are evidence only. Excluded-project instructions are cancelled.
 
 ## October 5: shared locomotion pack and questman's follow-up
 
@@ -232,7 +240,7 @@ inputs (46 hashes for this addition), not only the generated graph. No new
 installation or gameplay acceptance. Other authored/native rigs and the
 DumbDumb/Iris Out contact work remain active requirements.
 
-October 6 scope correction: support all original eins0fx-authored CSS mods,
+Superseded scope interpretation (cancelled by the user): support all original eins0fx-authored CSS mods,
 excluding port-only mods, plus other authors' CSS mods, non-CSS mods and native
 appearances using the default game human skeleton where compatible. The current
 nine meshes are a test set, not the complete support list. Inventory the full
