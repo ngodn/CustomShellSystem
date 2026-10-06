@@ -150,9 +150,8 @@ still needs live timing and restoration evidence.
 
 - Trace the missing controls to their source morphs or driver graph. Keep
   their original names and curves until the mapping is measured.
-- Add the verified Gesture 200 facial candidate below to the next packaged
-  catalog, with source evidence checked by the catalog builder. It is not in
-  the currently installed trial.
+- Install and live-check the Gesture 200 facial candidate below after the
+  current Come Closer trial. Its catalog is verified but not installed.
 - Extend derived facial meshes and cooked readback if further source controls
   can be resolved.
 - Validate installed playback in CSS and CINE, including pause, seek, speed,
@@ -198,11 +197,23 @@ binding and retains the original controls in its audit. It converts the cubic
 to 275 linear keys using the second-derivative interpolation bound. Maximum
 calculated error is 0.00000998988 in morph weight; the analytic source curve
 differs from Blender's evaluated samples by at most 0.0000000949259. Four
-portable tests check the bound between keys, signed/above-one weights,
-rejection of unsupported bindings and source preservation. This is authoring
-evidence, not packaged or live acceptance.
+portable interpolation/binding tests check the bound between keys,
+signed/above-one weights, unsupported bindings and source preservation. A fifth
+test verifies the source hash chain and rejects edited curves, missing inputs
+and changed source files.
 
 Receipts: `blender-facial-inspection-v1/{200,801}.json`,
-`{200,801}-evaluated-controls.json` and `prepared-example200.json` under the
+`{200,801}-evaluated-controls.json` and `prepared-example200-v2.json` under the
 private animation work directory. The runtime trial installed above remains
 unchanged by this audit.
+
+The catalog builder recomputes Gesture 200 from the hashed source inspection,
+evaluation, body sample and facial shape set before including it. It can write
+a separate metadata revision without overwriting a verified cook. The resulting
+`facial-catalog-motion-v2/` adds Gesture 200 alongside Come Closer.
+`shared-v1/pack-with-face-motion-v2/` passes 1,087 actual package-loader checks,
+including 1,001 comparisons of the native sampler against Gesture 200's source
+cubic within 0.0000101 weight. The cooked `.utoc` and `.ucas` are byte-identical
+to the previous independently decoded candidate; `facial-readback-reuse.json`
+records that comparison and the original readback hash. Only the `.pak` catalog
+changes. This candidate is not installed or live accepted.

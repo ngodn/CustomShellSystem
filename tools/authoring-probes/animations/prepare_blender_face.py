@@ -118,10 +118,33 @@ def main():
     if any(path.read_bytes() != content for path,content in inputs.items()):
         raise ValueError('Input changed during conversion')
     result['inputs'] = {str(path):hashlib.sha256(content).hexdigest() for path,content in inputs.items()}
+    result['inspection'] = str(paths[0])
+    result['audit'] = str(paths[1])
     with args.output.open('x') as stream:
         json.dump(result,stream,indent=2,allow_nan=False)
         stream.write('\n')
     print(json.dumps({key:value for key,value in result.items() if key not in ('performance','inputs')}))
+
+
+def verified_performance(prepared, shape_path, shape_names):
+    """Recompute the native entry only after checking the complete source chain."""
+    inputs = prepared['inputs']
+    inspection_path,audit_path = Path(prepared['inspection']),Path(prepared['audit'])
+    inspection = json.loads(inspection_path.read_text())
+    audit = json.loads(audit_path.read_text())
+    expected = {str(shape_path),str(inspection_path),str(audit_path),audit['source'],audit['body']}
+    if set(inputs) != expected:
+        raise ValueError('Incomplete Blender performance source chain')
+    for filename,checksum in inputs.items():
+        with Path(filename).open('rb') as stream:
+            if hashlib.file_digest(stream,'sha256').hexdigest() != checksum:
+                raise ValueError('Blender performance source evidence changed')
+    if inputs[audit['source']] != audit['sha256'] or inputs[audit['body']] != audit['body_sha256']:
+        raise ValueError('Blender evaluation used different inputs')
+    result = prepare(inspection,audit,shape_names,prepared['performance']['clip'])
+    if any(result[key] != prepared[key] for key in ('performance','interpolation_error_bound','scene_comparison_error')):
+        raise ValueError('Prepared Blender performance differs from its source')
+    return result['performance']
 
 
 if __name__ == '__main__':

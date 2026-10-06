@@ -29,7 +29,10 @@ def main():
     parser.add_argument('--adapter-evaluation', help='Successful nine-mesh evaluated-pose label')
     parser.add_argument('--adapter-bindings', type=Path, help='Independent cooked/source comparison receipt')
     parser.add_argument('--faces', type=Path, help='Verified facial workspace from prepare_facial_catalog.py')
+    parser.add_argument('--face-catalog', type=Path, help='Verified metadata revision using the same facial cook')
     args = parser.parse_args()
+    if args.face_catalog and not args.faces:
+        raise ValueError('A facial catalog requires its verified cook workspace')
     work = args.work.resolve(strict=True)
     if json.loads((work / 'cook-exit.json').read_text())['exit_code'] != 0:
         raise ValueError('Cook did not exit successfully')
@@ -101,8 +104,9 @@ def main():
     face_work = None
     if args.faces:
         face_work = args.faces.resolve(strict=True)
-        evidence_path = face_work / 'facial-catalog-evidence.json'
-        rig_path = face_work / 'facial-rig.json'
+        catalog_work = args.face_catalog.resolve(strict=True) if args.face_catalog else face_work
+        evidence_path = catalog_work / 'facial-catalog-evidence.json'
+        rig_path = catalog_work / 'facial-rig.json'
         evidence = json.loads(evidence_path.read_text())
         if evidence.get('passed') is not True or digest(rig_path) != evidence['rig_sha256']:
             raise ValueError('Facial catalog differs from its verified evidence')

@@ -1,8 +1,12 @@
 import bisect
 import copy
+import hashlib
+import json
+from pathlib import Path
+import tempfile
 import unittest
 
-from prepare_blender_face import linearize, prepare
+from prepare_blender_face import linearize, prepare, verified_performance
 
 
 def fixture():
@@ -66,6 +70,36 @@ class BlenderFacePreparationTests(unittest.TestCase):
                 prepare(inspection,audit,['jaw_open'],'css.eve.performance.example200')
         with self.assertRaises(ValueError):
             prepare(*fixture(),[],'css.eve.performance.example200')
+
+    def test_source_chain_rejects_tampering_and_missing_inputs(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            source,body,shapes,inspection_path,audit_path=[root/name for name in
+                ('source.blend','body.json','shapes.json','inspection.json','audit.json')]
+            source.write_bytes(b'immutable source fixture')
+            body.write_text('{}')
+            shapes.write_text('{}')
+            digest=lambda path:hashlib.sha256(path.read_bytes()).hexdigest()
+            inspection,audit=fixture()
+            inspection.update(source=str(source),sha256=digest(source))
+            audit.update(source=str(source),sha256=digest(source),body=str(body),body_sha256=digest(body))
+            inspection_path.write_text(json.dumps(inspection))
+            audit_path.write_text(json.dumps(audit))
+            prepared=prepare(inspection,audit,['jaw_open'],'css.eve.performance.example200')
+            prepared.update(inspection=str(inspection_path),audit=str(audit_path),
+                inputs={str(p):digest(p) for p in (source,body,shapes,inspection_path,audit_path)})
+            self.assertEqual(verified_performance(prepared,shapes,['jaw_open']),prepared['performance'])
+            altered=copy.deepcopy(prepared)
+            altered['performance']['curves'][0]['keys'][1][1]+=.1
+            with self.assertRaises(ValueError):
+                verified_performance(altered,shapes,['jaw_open'])
+            altered=copy.deepcopy(prepared)
+            del altered['inputs'][str(body)]
+            with self.assertRaises(ValueError):
+                verified_performance(altered,shapes,['jaw_open'])
+            source.write_bytes(b'changed')
+            with self.assertRaises(ValueError):
+                verified_performance(prepared,shapes,['jaw_open'])
 
 
 if __name__ == '__main__':

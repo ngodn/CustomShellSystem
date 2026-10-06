@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 from prepare_performance_curves import native_performance
+from prepare_blender_face import verified_performance
 
 ROOT = Path(__file__).resolve().parents[3]
 LABELS = {
@@ -27,10 +28,16 @@ def main():
     parser.add_argument("--shapes", type=Path, help="Verified facial interchange for this cook")
     parser.add_argument("--performance", action="append", default=[], type=Path,
                         help="Prepared source curves with a canonical native performance entry")
+    parser.add_argument("--blender-performance", action="append", default=[], type=Path,
+                        help="Prepared evaluated Blender facial source")
+    parser.add_argument("--output", type=Path, help="New metadata directory; reuse the verified cook")
     args = parser.parse_args()
     work = args.work.resolve(strict=True)
     if not work.is_relative_to(ROOT / "work/cine-animation-port"):
         raise ValueError("Use the private animation workspace")
+    output = args.output.resolve() if args.output else work
+    if not output.is_relative_to(ROOT / "work/cine-animation-port"):
+        raise ValueError("Keep catalog metadata in the private animation workspace")
     paths = [work / "probe/receipt.json", work / "facial-stage-verify.json", args.readback.resolve(strict=True),
              (args.shapes or work.parent / "facial-export-v1/facial-shapes.json").resolve(strict=True)]
     receipt, staging, readback, shapes = [json.loads(path.read_text()) for path in paths]
@@ -97,16 +104,28 @@ def main():
         performances.append(entry)
         protected.update(inputs)
         protected[str(curve_path)] = digest(curve_path)
+    for curve_path in args.blender_performance:
+        curve_path = curve_path.resolve(strict=True)
+        prepared = json.loads(curve_path.read_text())
+        entry = verified_performance(prepared,paths[3],morphs)
+        if entry['clip'] in identities:
+            raise ValueError('Duplicate facial performance')
+        identities.add(entry['clip'])
+        performances.append(entry)
+        protected.update(prepared['inputs'])
+        protected[str(curve_path)] = digest(curve_path)
     if performances:
         rig["performances"] = performances
-    with (work / "facial-rig.json").open("x") as file:
+    if args.output:
+        output.mkdir(parents=True,exist_ok=False)
+    with (output / "facial-rig.json").open("x") as file:
         json.dump(rig, file, indent=2, allow_nan=False)
         file.write("\n")
-    with (work / "facial-catalog-evidence.json").open("x") as file:
-        json.dump({"passed": True, "protected": protected, "rig_sha256": digest(work / "facial-rig.json"),
+    with (output / "facial-catalog-evidence.json").open("x") as file:
+        json.dump({"passed": True, "protected": protected, "rig_sha256": digest(output / "facial-rig.json"),
             "installed": False, "scope": "Cooked, revision-bound catalog. Runtime activation remains pending."}, file, indent=2)
         file.write("\n")
-    print(work / "facial-rig.json")
+    print(output / "facial-rig.json")
 
 
 if __name__ == "__main__":

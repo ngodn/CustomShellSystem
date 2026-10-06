@@ -1,5 +1,7 @@
 #include "data.hpp"
+#include <array>
 #include <chrono>
+#include <cmath>
 #include <functional>
 #include <iostream>
 
@@ -175,7 +177,8 @@ int main(int argc,char** argv) {
             expect(packages.diagnostics.at("loaded")==1,"Valid packaged library did not load");
         }
         if(argc==3 && (std::string_view(argv[1])=="--audited-pack" || std::string_view(argv[1])=="--audited-facial-pack" ||
-                       std::string_view(argv[1])=="--audited-face-motion-pack")) {
+                       std::string_view(argv[1])=="--audited-face-motion-pack" ||
+                       std::string_view(argv[1])=="--audited-blender-face-pack")) {
             const auto packages=Catalog::load(root,argv[2],root/"audit-cache");
             expect(packages.animation_libraries.size()==1,"Audited pack did not load as one library");
             const auto& audited=packages.animation_libraries[0];
@@ -201,13 +204,26 @@ int main(int argc,char** argv) {
                     ++matched;
                 }
                 expect(matched==6,"Combined pack did not resolve all six Eve faces");
-                if(std::string_view(argv[1])=="--audited-face-motion-pack") {
+                const bool blender_face=std::string_view(argv[1])=="--audited-blender-face-pack";
+                if(std::string_view(argv[1])=="--audited-face-motion-pack" || blender_face) {
                     const auto& rig=audited.faces.front();
                     const auto* performance=rig.find_performance("css.eve.dance.comecloser");
-                    expect(rig.morphs.size()==105 && rig.performances.size()==1,
+                    expect(rig.morphs.size()==105 && rig.performances.size()==(blender_face?2:1),
                            "Facial performance catalog dimensions differ");
                     expect(performance && performance->curves.size()==15 && performance->key_count()==987,
                            "Packaged Come Closer lost its original facial curves");
+                    if(blender_face) {
+                        const auto* gesture=rig.find_performance("css.eve.performance.example200");
+                        expect(gesture && gesture->curves.size()==1 && gesture->key_count()==275 &&
+                               gesture->duration==.36,"Packaged Gesture 200 face differs from its source");
+                        const std::array<float,1> baseline={0.f};std::array<float,1> values{};
+                        for(int step=0;step<=1000;++step) {
+                            const double t=step/1000.;
+                            gesture->sample(.36*t,1.,baseline,values);
+                            expect(std::abs(values[0]-(3*t*t-2*t*t*t))<1.01e-5,
+                                   "Packaged Bezier conversion exceeds its error bound");
+                        }
+                    }
                 }
             }
         }
