@@ -256,3 +256,13 @@ rejections and knee metrics). C8's generic track setter failed rotation/scale
 preservation and is rejected. C9's three 41-frame review windows contain
 123 frames at 60 FPS; they are diagnostic cuts, not a full-motion review.
 Cooked readback, between-key contact, other outfits and gameplay remain open.
+
+
+C9's subsequent cooked 240 Hz scan found seven left-foot samples below -0.1 cm
+(worst -0.458656 cm), although original keys passed. C10 adds at most 0.463657 cm
+of measured clearance to the pelvis. Fresh reconstruction and full compressed
+readback pass; all 33,521 dense samples clear visible footwear by at least
+0.004484 cm. This demonstrates why original-key contact alone is insufficient.
+The earlier motion-window renders depict C9, not C10. Complete C10 visual,
+other-footwear and live acceptance remain pending. Evidence is under
+`retarget-cinderella-c10/` and `cinderella-c10-cook/`.

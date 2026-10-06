@@ -551,3 +551,16 @@ The dense 240 Hz scan then finds seven left-shoe samples below -0.1 cm
 (worst -0.458656 cm), so C9 is not accepted. C10 is being baked with a measured
 pelvis-only clearance addition of at most 0.463657 cm. Preserve the unchanged
 joint rotations and error limits; verify the new cook before cataloging it.
+
+
+Cinderella C10 now passes fresh reconstruction, Windows cooking, exact package
+round-trip and full independent compressed-motion checks. The 33,521-pose
+240 Hz diagnostic clears visible Black Pearl footwear on both sides (minimum
+0.004485/0.004487 cm); all original decoded keys remain exact. No timing or
+joint-rotation edits were added. Full-motion review, other requested outfit
+adapters, facial integration and live acceptance remain. Keep Cinderella out
+of accepted catalog counts until these pass. The earlier DumbDumb/Iris Out
+decoder outputs remain byte-identical. Rejected and duplicate generated captures
+were cleaned with receipts, reclaiming 507,747,617 bytes. Original sources,
+released outfits and current candidates remain intact. All current jobs are
+terminal; nothing was installed into the game.

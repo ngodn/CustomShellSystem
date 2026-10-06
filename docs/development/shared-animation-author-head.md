@@ -316,3 +316,40 @@ and the .NET 10.0.401 build succeeds. Existing dependency warnings remain.
 Evidence: `cinderella-c9-cook/full-motion-verification.json`,
 `dense-source-key-verification.json`, `footwear-contact-summary.json` and
 `retarget-cinderella-c10/pelvis-clearance.json`.
+
+
+## Cinderella C10 cooked contact passes
+
+C10 is saved, freshly reconstructed and cooked as an isolated study. The
+fresh-process repeat matches all 388 tracks and 3,251,828 authored transforms
+exactly. Both Windows cooks exit zero; the animation and its owned compression
+settings round-trip through the package unchanged. Complete independent ACL
+readback again passes the existing position, rotation and scale limits.
+
+The 240 Hz cooked scan covers 33,521 poses. Visible Black Pearl footwear stays
+above the floor: left minimum 0.004485 cm and right minimum 0.004487 cm, with no
+sample below -0.1 cm. Every original 60 Hz decoded key remains exactly equal
+in the dense export. This is neutral fitted-footwear evidence only. It does
+not establish other footwear, full-motion appearance, simulated cloth/hair or
+in-game acceptance. The underlying animation remains 60 Hz and 139.667 seconds;
+240 Hz is a diagnostic sampling rate, not a shipped animation or game FPS.
+
+Evidence: `retarget-cinderella-c10/` contains the clearance recipe and creation
+receipt. `cinderella-c10-cook/` contains the fresh bake/staging comparison,
+Windows cook exits, exact package verification, complete raw/cooked comparison,
+dense-source-key verification and footwear-contact summary. The inherited
+`settings` field in the creation receipt audits the unchanged original L5P
+retargeter; the bake actually uses the protected C7 limb-relative sequence.
+
+The enlarged decoder also reproduces the earlier DumbDumb and Iris Out
+binary transforms, sampled JSON and manifests byte for byte. Fourteen focused
+Python tests pass. Their duplicate regression exports now link to the retained
+originals. Rejected C3/C6 raw pose dumps were deleted after hashing and checking
+retained native assets, capture recipes and diagnostic reports. Combined space
+reclaimed is 507,747,617 bytes; see `cinderella-rejected-capture-cleanup.json`
+and `cinderella-c9-cook/decoder-regression-verification.json`.
+
+Next: full C10 motion review, requested outfit adapters and facial integration.
+The combined release candidate still has 62 body/movement IDs, 31 photo poses
+and five Eve facial performances. Cinderella is not cataloged or installed;
+its 12 facial curves remain prepared separately. No excluded rigs were added.
