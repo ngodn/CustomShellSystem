@@ -83,12 +83,13 @@ void WalkOverride::preload_assets() {
     };
     for(const auto& path:custom_paths_) warm(path);
     custom_idle_asset_=warm(custom_idle_clip_);
+    custom_idle_carrier_=warm(custom_idle_blend_);
 }
 void WalkOverride::unroot_assets() {
-    rooted_assets_.release(); custom_idle_asset_.Reset();
+    rooted_assets_.release(); custom_idle_asset_.Reset();custom_idle_carrier_.Reset();
 }
 namespace {
-void validate_movement_blendspace(UObject* asset,UObject* skeleton) {
+void validate_movement_blendspace(UObject* asset,UObject* skeleton,UObject* idle_sequence=nullptr) {
     const auto compatible=[&](UObject* animation) {
         auto* source=read<UObject*>(animation,L"Skeleton");
         return source && (source==skeleton || compatible_animation_skeletons(
@@ -137,6 +138,8 @@ void validate_movement_blendspace(UObject* asset,UObject* skeleton) {
            !compatible(sequence) || read<uint8_t>(sequence,L"AdditiveAnimType")!=0 ||
            !std::isfinite(play_rate) || play_rate<=0)
             throw std::runtime_error("Custom movement has an incompatible, additive or invalid-rate sample");
+        if(idle_sequence && (sequence!=idle_sequence || play_rate!=1.f))
+            throw std::runtime_error("Native idle carrier must contain only the selected idle at its original rate");
         auto* root_motion=sequence->GetPropertyByNameInChain(L"bEnableRootMotion");
         if(!root_motion || !root_motion->IsA<FBoolProperty>() ||
            static_cast<FBoolProperty*>(root_motion)->GetPropertyValueInContainer(sequence))
@@ -221,11 +224,8 @@ SharedAnimationResult SharedAnimationResolver::resolve(UObject* pawn,const Catal
     const auto match=resolve_library_animation(catalog.animation_libraries,slot,choice,bundled,narrow(skeleton->GetPathName()));
     if(!match.entry) { cache.checked=true;return cache.result; }
     cache.result.matched=true;
-    if(slot==AnimationSlot::Idle && (!post || !has_field(post,L"CSSIdleEnabled",sizeof(bool)) ||
-                                   !has_field(post,L"CSSIdleSequence",sizeof(UObject*)))) {
-        cache.result.reason="This outfit has no active CSS idle layer";
-        cache.checked=true;++revision_;return cache.result;
-    }
+    const bool idle_layer=post && has_field(post,L"CSSIdleEnabled",sizeof(bool)) &&
+                          has_field(post,L"CSSIdleSequence",sizeof(UObject*));
     auto still_current=[&] {
         if(cache.pawn.Get()!=pawn || cache.body.Get()!=body || cache.skeleton.Get()!=skeleton) return false;
         auto* current=read<UObject*>(pawn,L"Mesh");
@@ -244,13 +244,24 @@ SharedAnimationResult SharedAnimationResolver::resolve(UObject* pawn,const Catal
             if(!source || !compatible_animation_skeletons(narrow(source->GetPathName()),narrow(skeleton->GetPathName())) ||
                (!candidate.declared_skeleton.empty() && candidate.declared_skeleton!=narrow(source->GetPathName())))
                 throw std::runtime_error("Shared animation skeleton does not match its target or declaration");
+            std::string idle_carrier;
             if(slot==AnimationSlot::Idle) {
                 if(read<uint8_t>(asset,L"AdditiveAnimType")!=0)
                     throw std::runtime_error("Shared idle cannot use additive animation data");
+                if(!idle_layer) {
+                    if(candidate.idle_blend_space.empty() || narrow(skeleton->GetPathName())!=
+                       "/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton")
+                        throw std::runtime_error("This appearance has no compatible idle layer or native carrier");
+                    auto* carrier=load(candidate.idle_blend_space);
+                    retained.keep(carrier);
+                    if(!still_current()) { cache.result={true,false,{},"Player changed while loading idle carrier"};return cache.result; }
+                    validate_movement_blendspace(carrier,skeleton,asset);
+                    idle_carrier=candidate.idle_blend_space;
+                }
             } else validate_movement_blendspace(asset,skeleton);
             if(!still_current()) { cache.result={true,false,{},"Player changed while validating animation"};return cache.result; }
             cache.roots.take(retained);cache.asset=asset;
-            cache.result={true,match.entry->hide_weapons,candidate.asset,{}};
+            cache.result={true,match.entry->hide_weapons,candidate.asset,{},idle_carrier};
             cache.checked=true;++revision_;
             return cache.result;
         } catch(const std::exception& error) {
@@ -527,14 +538,14 @@ void WalkOverride::release() {
     pawn_.Reset(); anim_.Reset(); movement_.Reset(); walk_bs_.Reset(); speed_->movement=nullptr;
     unroot_assets();
     custom_paths_={};custom_blends_={};custom_skeleton_.Reset();
-    custom_idle_clip_.clear(); hide_weapons_=false;
+    custom_idle_clip_.clear();custom_idle_blend_.clear(); hide_weapons_=false;
     idle_ticks_=off_ticks_=slide_ticks_=0; slide_until_=0; last_heal_=0;
     gait_selector_.reset();
 }
 void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     const std::array<std::string,3>& custom_paths,
     const std::string& custom_idle_clip,
-    bool hide_weapons) {
+    bool hide_weapons,const std::string& idle_blend_space) {
     const auto now=GetTickCount64();
     speed_->thread=GetCurrentThreadId();
     const bool custom=std::any_of(custom_paths.begin(),custom_paths.end(),[](const auto& path){return !path.empty();});
@@ -548,7 +559,7 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
         release();
         pawn_=pawn; anim_.Reset(); movement_.Reset(); speed_->movement=nullptr;
     }
-    if(custom_paths_!=custom_paths || custom_idle_clip_!=custom_idle_clip || hide_weapons_!=hide_weapons) {
+    if(custom_paths_!=custom_paths || custom_idle_clip_!=custom_idle_clip || hide_weapons_!=hide_weapons || custom_idle_blend_!=idle_blend_space) {
         gait_selector_.reset();
         push_off();
         if(custom_idle_engaged_) {
@@ -563,6 +574,7 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
         unroot_assets();
         custom_paths_=custom_paths;
         custom_idle_clip_=custom_idle_clip;
+        custom_idle_blend_=idle_blend_space;
         hide_weapons_=hide_weapons;
         preload_assets();
     }
@@ -641,7 +653,16 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
             get_post.run();
             post=get_post.get<UObject*>();
         }
-        if(post && has_field(post,L"CSSIdleEnabled",sizeof(bool)) && has_field(post,L"CSSIdleSequence",sizeof(UObject*))) {
+        if(!custom_idle_blend_.empty()) {
+            want=custom_idle_carrier_.Get();
+            if(!want || !custom_idle_asset_.Get()) {release();return;}
+            reason="custom idle";
+            if(!custom_idle_engaged_) {
+                custom_idle_engaged_=true;
+                custom_idle_post_.Reset();
+                if(hide_weapons_) set_weapon_hidden(pawn,true);
+            }
+        } else if(post && has_field(post,L"CSSIdleEnabled",sizeof(bool)) && has_field(post,L"CSSIdleSequence",sizeof(UObject*))) {
             auto* clip=custom_idle_asset_.Get();
             if(!clip) { clip=load(custom_idle_clip_); custom_idle_asset_=clip; }
             if(clip) {

@@ -37,6 +37,27 @@ facial support, CSS/CINE integration and acceptance for the actual scope remain.
 
 Historical checkpoints below are evidence only. Excluded-project instructions are cancelled.
 
+## October 6: native locomotion runtime and combined candidate
+
+The four native choices now use shared catalog resolution and independent
+profile settings without requiring a wearable outfit manifest. Idle uses an
+explicit validated BlendSpace carrier when the native post-process graph has
+no CSS idle layer. Movement retains the existing blend ownership and gait
+selector. The native graph is not replaced. Missing-pack choices persist,
+Default remains selectable, and incompatible library entries are filtered.
+
+`native-locomotion-trial-v1` contains 62 stable body/movement identities, 95
+exports and four native alternatives. All 71 prior export payloads and five
+requested-outfit adapters remain unchanged. The package passes container and
+metadata readback; the combined catalog passes 1,125 checks and the pack alone
+passes 1,114. The five focused data, profile, animation, library and runtime
+tests pass. The Windows C++23 core builds. These checks do not establish
+real-mesh contact, live graph behavior, smooth transitions or physics.
+
+Nothing was installed. Continue native gameplay verification and the remaining
+facial/source work for Eve, Unholy Genessa and Commander White. The full goal
+and exclusions remain unchanged.
+
 ## October 6: four native locomotion choices, asset checks passed
 
 The native Idle, Walk, Jog and Sprint candidates now have 20 retargeted

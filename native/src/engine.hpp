@@ -97,6 +97,7 @@ public:
 struct SharedAnimationResult {
     bool matched=false, hide_weapons=false;
     std::string asset, reason;
+    std::string idle_blend_space{};
 };
 class SharedAnimationResolver {
     struct Cached {
@@ -624,14 +625,14 @@ class WalkOverride {
     fs::path mods_; bool mods_checked_=false, mod_active_=false; uint64_t mods_check_=0;
     bool genessa_active_=false, proxima_active_=false;
     std::string mod_name_;
-    std::string custom_idle_clip_;
+    std::string custom_idle_clip_, custom_idle_blend_;
     bool hide_weapons_=false;
     bool custom_idle_engaged_=false;
     WeakObject custom_idle_post_;
     // The selection's custom blendspaces and idle clip, loaded when the selection arrives (the
     // wear already loads a mesh, so the cost lands there) and rooted while it is active. Loaded
     // on the first step instead, an asset the engine had collected came back from disk mid-walk.
-    WeakObject custom_idle_asset_;
+    WeakObject custom_idle_asset_, custom_idle_carrier_;
     AssetLoadRoots rooted_assets_;
     void preload_assets();
     void unroot_assets();
@@ -661,7 +662,7 @@ public:
     void update(RC::Unreal::UObject* pawn,bool idle_feminine,bool walk_feminine,
                 const std::array<std::string,3>& custom_paths,
                 const std::string& custom_idle_clip={},
-                bool hide_weapons=false);
+                bool hide_weapons=false,const std::string& idle_blend_space={});
     void release();
 };
 // MISC visibility applier. Bounded: it hides only the OWNER ACTORS of accessories found as
@@ -914,9 +915,9 @@ public:
         return shared_animations_.available(slot,choice);
     }
     void sync_walk(bool idle_feminine,bool walk_feminine,const std::array<std::string,3>& custom_paths,
-                   const std::string& custom_idle_clip={},bool hide_weapons=false) {
+                   const std::string& custom_idle_clip={},bool hide_weapons=false,const std::string& idle_blend_space={}) {
         if(!performance.active())
-            walk.update(observed_pawn_.Get(),idle_feminine,walk_feminine,custom_paths,custom_idle_clip,hide_weapons);
+            walk.update(observed_pawn_.Get(),idle_feminine,walk_feminine,custom_paths,custom_idle_clip,hide_weapons,idle_blend_space);
     }
     void tick_performance() { performance.tick(observed_pawn_.Get()); }
     std::string performance_unavailable(const Catalog& catalog,const std::string& outfit) const {

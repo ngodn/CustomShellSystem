@@ -41,6 +41,73 @@ int main(int argc,char** argv) {
         expect(parsed.entries[0].slot==AnimationSlot::Idle && parsed.entries[0].hide_weapons,"Idle contract lost");
         expect(!parsed.entries[1].slot && parsed.entries[1].playback==AnimationPlayback::Once,"Performance forced into idle");
         expect(parsed.entries[0].aliases[0].asset=="/Game/CSS/Eve/Anim/AN_I2_Idle.AN_I2_Idle","Legacy alias lacks exact asset");
+        {
+            const std::string human="/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton";
+            auto native=library;
+            auto& entry=native["entries"][0];
+            const std::string carrier="/Game/CSS/Locomotion/NativeHuman/BS_Idle.BS_Idle";
+            entry["assets"].push_back({{"asset","/Game/CSS/Locomotion/NativeHuman/AN_Idle.AN_Idle"},
+                {"skeleton",human},{"idle_blend_space",carrier}});
+            for(const auto* gait:{"walk","jog","sprint"}) {
+                auto movement=native["entries"][0];
+                movement["id"]=std::string("css.eve.")+gait;
+                movement["slot"]=gait;movement["hide_weapons"]=false;movement.erase("aliases");
+                movement["assets"]=Json::array({{{"asset",std::string("/Game/CSS/Locomotion/NativeHuman/BS_")+gait+".BS_"+gait},
+                                                {"skeleton",human}}});
+                native["entries"].push_back(movement);
+            }
+            Catalog native_catalog;
+            native_catalog.animation_libraries={AnimationLibrary::parse(native)};
+            auto selected=resolve_library_animation(native_catalog.animation_libraries,AnimationSlot::Idle,"css.eve.idle",{},human);
+            expect(selected.candidates.size()==1 && selected.candidates[0].idle_blend_space==carrier,
+                   "Native idle lost its explicit carrier");
+            auto performance=resolve_library_performance(native_catalog.animation_libraries,"css.eve.idle",human);
+            expect(performance.candidates.size()==1 && performance.candidates[0].idle_blend_space.empty(),
+                   "Explicit performance borrowed a locomotion carrier");
+            State state;
+            const std::string shell="CharacterId.Player.Shell.Genessa";
+            expect(set_animation_choice(state,native_catalog,shell,"","",AnimationSlot::Idle,"css.eve.idle",human),
+                   "Native appearance could not select a shared idle");
+            expect(!set_animation_choice(state,native_catalog,shell,"","",AnimationSlot::Idle,"css.eve.idle",human),
+                   "Repeated native choice dirtied state");
+            expect(state.animation_choices.outfits.empty() && state.animation_choices.native.size()==1,
+                   "Native choice created a fake outfit");
+            for(auto slot:{AnimationSlot::Walk,AnimationSlot::Jog,AnimationSlot::Sprint})
+                expect(set_animation_choice(state,native_catalog,shell,"","",slot,
+                    std::string("css.eve.")+animation_slot_name(slot),human),"Native movement choice rejected");
+            expect(state.animation_choices.native.size()==4,"Native slot selections overwrote one another");
+            save_profile_snapshot(state,"native");
+            const auto restored=State::parse(state.json());
+            expect(restored.animation_choices==state.animation_choices &&
+                   restored.presets.at("native").animation_choices==state.animation_choices,
+                   "Native choice was lost from state or profile");
+            const auto before=state.json();
+            rejects([&]{set_animation_choice(state,native_catalog,shell,"","",AnimationSlot::Idle,"css.eve.dance",human);});
+            rejects([&]{set_animation_choice(state,native_catalog,shell,"","",AnimationSlot::Idle,"css.eve.idle","wrong");});
+            rejects([&]{set_animation_choice(state,native_catalog,shell,"","",AnimationSlot::Beacon,"original",human);});
+            rejects([&]{set_animation_choice(state,native_catalog,shell,"","",AnimationSlot::Jog,feminine_animation_id,human);});
+            expect(state.json()==before,"Rejected native choice changed state");
+            native_catalog.animation_libraries.clear();native_catalog.animation_option_cache.clear();
+            const auto* saved=state.animation_choices.find("","",AnimationSlot::Idle);
+            auto menu=animation_menu(native_catalog.animation_options("","",AnimationSlot::Idle),AnimationSlot::Idle,saved,false);
+            expect(saved && !menu.items[menu.selected].available && *saved=="css.eve.idle",
+                   "Removing the pack erased or hid the saved native choice");
+            expect(set_animation_choice(state,native_catalog,shell,"","",AnimationSlot::Idle,"original",human),
+                   "Missing native pack prevented selecting Default");
+            set_animation_choice(state,native_catalog,shell,"","",AnimationSlot::Idle,feminine_animation_id,human);
+            expect(use_feminine_animation(state,shell,AnimationSlot::Idle),"Native feminine idle was ignored");
+            expect(set_legacy_walk_choice(state,native_catalog,shell,"normal") &&
+                   !use_feminine_animation(state,shell,AnimationSlot::Idle),"Legacy Default left a native idle override");
+            auto invalid=native;
+            invalid["entries"][0]["assets"][1]["idle_blend_space"]="/Game/Elsewhere/BS_Idle.BS_Idle";
+            rejects([&]{AnimationLibrary::parse(invalid);});
+            invalid=native;invalid["entries"][0]["assets"][1]["skeleton"]="/Game/CSS/Shared/SKEL_Base.SKEL_Base";
+            rejects([&]{AnimationLibrary::parse(invalid);});
+            invalid=native;invalid["entries"][0]["slot"]="walk";invalid["entries"][0]["hide_weapons"]=false;
+            rejects([&]{AnimationLibrary::parse(invalid);});
+            rejects([&]{AnimationChoices::parse(Json::parse(R"({"$native":{"beacon":"original"}})"));});
+            rejects([&]{AnimationChoices::parse(Json::parse(R"({"$native":{"idle":12}})"));});
+        }
         const std::string base="/Game/CSS/Shared/SKEL_Base.SKEL_Base";
         const std::string wings="/Game/CSS/UnholyGenessa/SKEL_Wings2.SKEL_Wings2";
         const auto bundled=AnimationSet::parse(Json::parse(R"({"idle":[
@@ -182,24 +249,29 @@ int main(int argc,char** argv) {
                        std::string_view(argv[1])=="--audited-blender-face-pack" ||
                        std::string_view(argv[1])=="--audited-dance-pack" ||
                        std::string_view(argv[1])=="--audited-dance-isolated-pack" ||
+                       std::string_view(argv[1])=="--audited-locomotion-pack" ||
+                       std::string_view(argv[1])=="--audited-locomotion-only-pack" ||
                        std::string_view(argv[1])=="--audited-native-pack" ||
                        std::string_view(argv[1])=="--audited-native-only-pack" ||
                        std::string_view(argv[1])=="--audited-expanded-pack" ||
                        std::string_view(argv[1])=="--audited-expanded-isolated-pack" ||
                        std::string_view(argv[1])=="--audited-isolated-pack")) {
-            const bool native_only=std::string_view(argv[1])=="--audited-native-only-pack";
-            const bool native_pack=native_only || std::string_view(argv[1])=="--audited-native-pack";
+            const bool locomotion=std::string_view(argv[1])=="--audited-locomotion-pack" ||
+                                  std::string_view(argv[1])=="--audited-locomotion-only-pack";
+            const bool native_only=std::string_view(argv[1])=="--audited-native-only-pack" ||
+                                   std::string_view(argv[1])=="--audited-locomotion-only-pack";
+            const bool native_pack=(native_only && !locomotion) || std::string_view(argv[1])=="--audited-native-pack";
             const bool expanded=std::string_view(argv[1])=="--audited-expanded-pack" ||
                                 std::string_view(argv[1])=="--audited-expanded-isolated-pack";
             const bool isolated=std::string_view(argv[1])=="--audited-isolated-pack" ||
                                 std::string_view(argv[1])=="--audited-expanded-isolated-pack" ||
                                 std::string_view(argv[1])=="--audited-dance-isolated-pack";
-            const bool dances=native_pack || std::string_view(argv[1])=="--audited-dance-pack" ||
+            const bool dances=locomotion || native_pack || std::string_view(argv[1])=="--audited-dance-pack" ||
                               std::string_view(argv[1])=="--audited-dance-isolated-pack";
             const auto packages=Catalog::load(root,argv[2],root/"audit-cache");
             expect(packages.animation_libraries.size()==1,"Audited pack did not load as one library");
             const auto& audited=packages.animation_libraries[0];
-            expect(audited.entries.size()==(dances?59:57) && audited.adapters.size()==(expanded?6:5),"Audited animation set changed");
+            expect(audited.entries.size()==(locomotion?62:dances?59:57) && audited.adapters.size()==(expanded?6:5),"Audited animation set changed");
             if(dances) {
                 for(const auto* id:{"css.eve.dance.dumbdumb","css.eve.dance.irisout"}) {
                     const auto count=std::count_if(audited.entries.begin(),audited.entries.end(),[&](const auto& entry) {
@@ -209,6 +281,26 @@ int main(int argc,char** argv) {
                     });
                     expect(count==1,"Corrected dance lost its identity or playback contract");
                 }
+            }
+            if(locomotion) {
+                const std::string human="/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton";
+                size_t native_alternatives=0;
+                for(const auto& entry:audited.entries) for(const auto& asset:entry.assets)
+                    if(asset.skeleton==human) ++native_alternatives;
+                expect(native_alternatives==4,"Native scope expanded beyond four locomotion choices");
+                for(auto slot:{AnimationSlot::Idle,AnimationSlot::Walk,AnimationSlot::Jog,AnimationSlot::Sprint}) {
+                    const auto id=slot==AnimationSlot::Idle?std::string("css.eve.idle.default"):
+                                  std::string("css.eve.")+animation_slot_name(slot);
+                    const auto match=resolve_library_animation(packages.animation_libraries,slot,id,{},human);
+                    expect(match.entry && match.candidates.size()==1 && match.candidates[0].declared_skeleton==human,
+                           "Native locomotion cannot resolve without an outfit manifest");
+                    expect((slot==AnimationSlot::Idle)==!match.candidates[0].idle_blend_space.empty(),
+                           "Native carrier assigned to the wrong slot");
+                }
+                expect(resolve_library_performance(packages.animation_libraries,"css.eve.dance.blackhole",human).candidates.empty(),
+                       "Out-of-scope native dance remained in the candidate");
+                expect(resolve_library_performance(packages.animation_libraries,"css.eve.dance.blackhole",base).candidates.size()==1,
+                       "Limiting native scope removed the custom-rig dance");
             }
             if(native_pack) {
                 const std::string human="/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton";

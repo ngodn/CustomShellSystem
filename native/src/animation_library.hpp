@@ -16,6 +16,7 @@ struct PerformanceAdapter {
 enum class AnimationPlayback { Loop, Once, Pose };
 struct LibraryAnimationAsset {
     std::string asset, skeleton;
+    std::string idle_blend_space{};
 };
 struct LegacyAnimationAlias {
     AnimationSlot slot;
@@ -50,6 +51,7 @@ struct AnimationAssetCandidate {
     // Empty for bundled fallbacks; their actual skeleton must be read after loading.
     std::string declared_skeleton;
     bool bundled = false;
+    std::string idle_blend_space{};
 };
 struct AnimationLibraryMatch {
     const LibraryAnimation* entry = nullptr;

@@ -1092,11 +1092,21 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         const std::string outfit=has_variant?worn->id:"",variant=has_variant?selection->second.variant:"";
         row_=std::clamp(row_,0,5);
         std::vector<AnimationMenu> menus;
-        const auto target_skeleton=catalog.animation_libraries.empty()?std::string{}:appearance.animation_skeleton();
+        const auto target_skeleton=appearance.animation_skeleton();
+        const bool native_target=target_skeleton=="/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton";
+        const bool native_context=!has_variant && native_target;
+        const auto options_for=[&](AnimationSlot slot) {
+            auto options=catalog.animation_options(outfit,variant,slot);
+            if(!target_skeleton.empty()) std::erase_if(options,[&](const auto& option) {
+                return !option.library_identity.empty() && resolve_library_animation(catalog.animation_libraries,
+                    slot,option.id,catalog.bundled_animation_options(outfit,variant,slot),target_skeleton).candidates.empty();
+            });
+            return options;
+        };
         for(const auto slot:slots) {
-            const auto& options=catalog.animation_options(outfit,variant,slot);
+            const auto options=options_for(slot);
             auto menu=animation_menu(options,slot,
-                has_variant?state.animation_choices.find(outfit,variant,slot):nullptr,state.walk_animation=="feminine");
+                (has_variant || native_context)?state.animation_choices.find(outfit,variant,slot):nullptr,state.walk_animation=="feminine");
             for(auto& item:menu.items) {
                 const auto option=std::find_if(options.begin(),options.end(),[&](const auto& value){return value.id==item.id;});
                 if(option==options.end() || option->library_identity.empty()) continue;
@@ -1110,7 +1120,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             menus.push_back(std::move(menu));
         }
         auto choose=[&](AnimationSlot slot,const std::string& id)->Json {
-            if(has_variant) return {{"action","animation_choice"},{"outfit",outfit},{"variant",variant},{"slot",animation_slot_name(slot)},{"value",id}};
+            if(has_variant || (native_context && slot!=AnimationSlot::Beacon)) return {{"action","animation_choice"},{"outfit",outfit},{"variant",variant},{"slot",animation_slot_name(slot)},{"value",id}};
             if(slot==AnimationSlot::Walk) return {{"action","walk_animation"},{"value",id==feminine_animation_id?"feminine":"normal"}};
             return {};
         };
@@ -1135,7 +1145,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         } else {
         const auto slot=slots[row_];const auto& menu=menus[row_];
         const auto& current=menu.items[menu.selected];
-        const auto& options=catalog.animation_options(outfit,variant,slot);
+        const auto options=options_for(slot);
         std::string body;
         if(!current.available) body="This saved animation is unavailable. Default is used until the option returns or you choose another.";
         else if(current.id==feminine_animation_id)
@@ -1145,7 +1155,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         else if(slot==AnimationSlot::Beacon) body="Choose the kneeling and rising animations for beacon travel. Travel timing and controls stay the same.";
         else body="Choose this outfit's movement animation. Default keeps the game's animation or an installed movement mod.";
         if(has_variant) body+=" Saved per outfit variant in profiles.";
-        else body="Wear an outfit to use its custom animations. The CSS feminine walk is also available here.";
+        else if(native_context) body+=" Saved in profiles for native human appearances. Shared choices need CSS Locomotion Shared Assets.";
+        else body="Wear a compatible outfit to use custom animations. The CSS feminine walk is also available here.";
         detail(titles[row_],has_variant?worn->name:"Movement",body);
         if(has_variant && mod_outfit(worn->id)) note("Shared animations require a compatible rig. Default and the CSS feminine idle and walk remain available.");
         std::vector<Choice> choices;

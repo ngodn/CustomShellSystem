@@ -119,6 +119,16 @@ AnimationChoices AnimationChoices::parse(const Json& value) {
     AnimationChoices result;
     size_t variant_count=0;
     for(const auto& [outfit,variants]:value.items()) {
+        if(outfit=="$native") {
+            if(!variants.is_object() || variants.size()>4) throw std::runtime_error("Invalid native animation choices");
+            for(const auto& [key,id]:variants.items()) {
+                const auto slot=animation_slot_from_name(key);
+                if(!slot || *slot==AnimationSlot::Beacon || !id.is_string() || !valid_id(id.get<std::string>()))
+                    throw std::runtime_error("Invalid native animation choice");
+                result.native.emplace(*slot,id.get<std::string>());
+            }
+            continue;
+        }
         if(!valid_id(outfit) || !variants.is_object() || variants.size()>256)
             throw std::runtime_error("Invalid saved animation variants");
         auto& saved=result.outfits[outfit];
@@ -138,6 +148,7 @@ AnimationChoices AnimationChoices::parse(const Json& value) {
 }
 Json AnimationChoices::json() const {
     Json result=Json::object();
+    if(!native.empty()) for(const auto& [slot,id]:native) result["$native"][animation_slot_name(slot)]=id;
     for(const auto& [outfit,variants]:outfits) {
         auto& saved=result[outfit]=Json::object();
         for(const auto& [variant,choices]:variants) {
@@ -148,6 +159,10 @@ Json AnimationChoices::json() const {
     return result;
 }
 const std::string* AnimationChoices::find(const std::string& outfit,const std::string& variant,AnimationSlot slot) const {
+    if(outfit.empty() && variant.empty()) {
+        const auto found=native.find(slot);
+        return found==native.end()?nullptr:&found->second;
+    }
     const auto o=outfits.find(outfit); if(o==outfits.end()) return nullptr;
     const auto v=o->second.find(variant); if(v==o->second.end()) return nullptr;
     const auto s=v->second.find(slot); return s==v->second.end()?nullptr:&s->second;

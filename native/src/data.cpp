@@ -486,7 +486,7 @@ FacialMatch Catalog::facial_match(const std::string& outfit,const std::string& v
 const std::vector<AnimationOption>& Catalog::animation_options(const std::string& outfit,
     const std::string& variant,AnimationSlot slot) const {
     const auto& bundled=bundled_animation_options(outfit,variant,slot);
-    if(animation_libraries.empty() || !find(outfit,variant)) return bundled;
+    if(animation_libraries.empty() || (!(outfit.empty() && variant.empty()) && !find(outfit,variant))) return bundled;
     const auto key=std::make_tuple(outfit,variant,slot);
     if(const auto found=animation_option_cache.find(key);found!=animation_option_cache.end()) return found->second;
     return animation_option_cache.emplace(key,merge_library_animation_options(animation_libraries,slot,bundled)).first->second;
@@ -511,9 +511,19 @@ bool Catalog::compatible(const std::string& outfit, const std::string& shell) co
     return false;
 }
 bool set_animation_choice(State& state,const Catalog& catalog,const std::string& shell,
-    const std::string& outfit,const std::string& variant,AnimationSlot slot,const std::string& choice) {
+    const std::string& outfit,const std::string& variant,AnimationSlot slot,const std::string& choice,
+    const std::string& target_skeleton) {
     const auto selected=state.selections.find(appearance_selection_key(state,catalog,shell));
-    if(selected==state.selections.end() || selected->second.outfit!=outfit || selected->second.variant!=variant ||
+    const bool native=outfit.empty() && variant.empty();
+    if(native) {
+        if(target_skeleton!="/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton" ||
+           slot==AnimationSlot::Beacon || (selected!=state.selections.end() &&
+           catalog.find(selected->second.outfit,selected->second.variant)))
+            throw std::runtime_error("Native choices require a default-human appearance without an outfit selection");
+        if(choice!="original" && choice!=feminine_animation_id &&
+           resolve_library_animation(catalog.animation_libraries,slot,choice,{},target_skeleton).candidates.empty())
+            throw std::runtime_error("No compatible shared native animation");
+    } else if(selected==state.selections.end() || selected->second.outfit!=outfit || selected->second.variant!=variant ||
         !catalog.find(outfit,variant) || !catalog.compatible(outfit,shell))
         throw std::runtime_error("Wear this outfit variant before changing its animations");
     // Validate the enum and the declared option, not just arbitrary save IDs.
@@ -527,7 +537,8 @@ bool set_animation_choice(State& state,const Catalog& catalog,const std::string&
     const auto* before=state.animation_choices.find(outfit,variant,slot);
     if(before && *before==stored) return false;
     auto next=state.animation_choices;
-    next.outfits[outfit][variant][slot]=stored;
+    if(native) next.native[slot]=stored;
+    else next.outfits[outfit][variant][slot]=stored;
     // Use the same bounds as loading, so choosing an option cannot create an unreadable save.
     next=AnimationChoices::parse(next.json());
     state.animation_choices=std::move(next);
@@ -558,14 +569,20 @@ bool use_feminine_animation(const State& state,const std::string& shell,Animatio
         if(const auto* choice=state.animation_choices.find(selection.outfit,selection.variant,slot))
             return *choice==feminine_animation_id;
     }
+    if(selected==state.selections.end())
+        if(const auto* choice=state.animation_choices.find("","",slot)) return *choice==feminine_animation_id;
     return state.walk_animation=="feminine";
 }
 bool set_legacy_walk_choice(State& state,const Catalog& catalog,const std::string& shell,const std::string& value) {
     if(!valid_walk_animation(value)) throw std::runtime_error("Unknown animation choice");
     const auto selected=state.selections.find(appearance_selection_key(state,catalog,shell));
     if(selected==state.selections.end()) {
-        const bool changed=state.walk_animation!=value;
+        const bool changed=state.walk_animation!=value ||
+            state.animation_choices.native.contains(AnimationSlot::Idle) ||
+            state.animation_choices.native.contains(AnimationSlot::Walk);
         state.walk_animation=value;
+        state.animation_choices.native.erase(AnimationSlot::Idle);
+        state.animation_choices.native.erase(AnimationSlot::Walk);
         return changed;
     }
     // The old command changed both standing and walking. Keep that behavior,

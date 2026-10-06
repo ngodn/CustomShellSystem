@@ -118,11 +118,19 @@ AnimationLibrary AnimationLibrary::parse(const Json& value) {
             throw std::runtime_error("Invalid shared animation asset alternatives");
         std::set<std::string> skeletons;
         for(const auto& item:assets) {
-            fields(item,{"asset","skeleton"});
+            fields(item,{"asset","skeleton","idle_blend_space"});
             LibraryAnimationAsset alternative{asset(item,"asset"),asset(item,"skeleton")};
             if(!alternative.asset.starts_with("/Game/CSS/Locomotion/") ||
                !skeletons.insert(alternative.skeleton).second)
                 throw std::runtime_error("Shared assets need unique skeleton alternatives under /Game/CSS/Locomotion/");
+            if(item.contains("idle_blend_space")) {
+                alternative.idle_blend_space=asset(item,"idle_blend_space");
+                if(animation.slot!=AnimationSlot::Idle || animation.playback!=AnimationPlayback::Loop ||
+                   !alternative.idle_blend_space.starts_with("/Game/CSS/Locomotion/") ||
+                   alternative.idle_blend_space==alternative.asset ||
+                   alternative.skeleton!="/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton")
+                    throw std::runtime_error("Idle carrier requires a looping native-human idle");
+            }
             animation.assets.push_back(std::move(alternative));
         }
         if(entry.contains("aliases")) {
@@ -248,14 +256,14 @@ AnimationLibraryMatch resolve_library_animation(const std::vector<AnimationLibra
     if(!found) return {};
     AnimationLibraryMatch result{found,{}};
     std::set<std::string> paths;
-    auto append=[&](const std::string& path,const std::string& skeleton,bool bundled_asset) {
-        if(paths.insert(path).second) result.candidates.push_back({path,skeleton,bundled_asset});
+    auto append=[&](const std::string& path,const std::string& skeleton,bool bundled_asset,const std::string& carrier={}) {
+        if(paths.insert(path).second) result.candidates.push_back({path,skeleton,bundled_asset,carrier});
     };
     // Prefer an exact target rig over an audited compatible base alternative.
     for(bool exact:{true,false}) for(const auto& alternative:found->assets) {
         if((alternative.skeleton==target_skeleton)==exact &&
            compatible_animation_skeletons(alternative.skeleton,target_skeleton))
-            append(alternative.asset,alternative.skeleton,false);
+            append(alternative.asset,alternative.skeleton,false,alternative.idle_blend_space);
     }
     for(const auto& alias:found->aliases) {
         const auto option=resolve_animation(bundled,requested_slot,alias.id,weapon);

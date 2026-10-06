@@ -226,6 +226,7 @@ struct Core {
             appearance.walk.walk_mod_active(root.parent_path());
             std::array<std::string,3> movement;
             ResolvedAnimation custom_idle;
+            std::string idle_carrier;
             const auto selection_key=appearance_selection_key(state,catalog,appearance.shell);
             const auto selected=state.selections.find(selection_key);
             bool selected_animations=false;
@@ -250,8 +251,21 @@ struct Core {
                     custom_idle=resolve_animation(idles,AnimationSlot::Idle,choice);
                     const auto shared=appearance.resolve_shared_animation(catalog,animation_catalog_generation,
                         selection.outfit,selection.variant,AnimationSlot::Idle,choice);
-                    if(shared.matched) { custom_idle.asset=shared.asset;custom_idle.hide_weapons=shared.hide_weapons; }
+                    if(shared.matched) { custom_idle.asset=shared.asset;custom_idle.hide_weapons=shared.hide_weapons;idle_carrier=shared.idle_blend_space; }
                 }
+            }
+            if(!selected_animations && state.enabled && !apply_pending && !restore_pending &&
+               (selected==state.selections.end() || !catalog.find(selected->second.outfit,selected->second.variant))) {
+                selected_animations=true;
+                constexpr AnimationSlot slots[]={AnimationSlot::Walk,AnimationSlot::Jog,AnimationSlot::Sprint};
+                for(size_t i=0;i<movement.size();++i) {
+                    const auto shared=appearance.resolve_shared_animation(catalog,animation_catalog_generation,
+                        "","",slots[i],state.animation_choices.get("","",slots[i]));
+                    if(shared.matched) movement[i]=shared.asset;
+                }
+                const auto shared=appearance.resolve_shared_animation(catalog,animation_catalog_generation,
+                    "","",AnimationSlot::Idle,state.animation_choices.get("","",AnimationSlot::Idle));
+                if(shared.matched) {custom_idle.asset=shared.asset;custom_idle.hide_weapons=shared.hide_weapons;idle_carrier=shared.idle_blend_space;}
             }
             if(!selected_animations) appearance.clear_shared_animations();
             if(shared_animation_revision!=appearance.shared_animation_revision()) {
@@ -260,7 +274,7 @@ struct Core {
             }
             appearance.sync_walk(use_feminine_animation(state,selection_key,AnimationSlot::Idle),
                                  use_feminine_animation(state,selection_key,AnimationSlot::Walk),movement,
-                                 custom_idle.asset,custom_idle.hide_weapons);
+                                 custom_idle.asset,custom_idle.hide_weapons,idle_carrier);
             walk_error.clear();
         }
         catch(const std::exception& error) {
@@ -656,9 +670,9 @@ struct Core {
             const auto outfit=command.at("outfit").get<std::string>();
             const auto variant=command.at("variant").get<std::string>();
             const auto choice=command.at("value").get<std::string>();
-            if(set_animation_choice(state,catalog,appearance.shell,outfit,variant,*slot,choice)) dirty=true;
+            if(set_animation_choice(state,catalog,appearance.shell,outfit,variant,*slot,choice,appearance.animation_skeleton())) dirty=true;
             walk_after=0;ui_refresh=true;
-            report("Animation choice saved for this outfit.");
+            report(outfit.empty()?"Animation choice saved for native human appearances.":"Animation choice saved for this outfit.");
         }
         else if (action == "walk_animation") {
             auto value = command.at("value").get<std::string>();

@@ -56,6 +56,7 @@ struct AnimationChoices {
     using Slots = std::map<AnimationSlot,std::string>;
     using Variants = std::map<std::string,Slots>;
     std::map<std::string,Variants> outfits;
+    Slots native; // Shared choices when no catalog outfit is selected.
     static AnimationChoices parse(const nlohmann::json&);
     nlohmann::json json() const;
     const std::string* find(const std::string& outfit, const std::string& variant, AnimationSlot) const;
