@@ -257,3 +257,39 @@ target thighs are parented under pelvis. At frame 5238 the source left hip is
 longer. A derived hip-center motion reference is a hypothesis, not an accepted
 fix. Preserve the original source, compare all affected body motion explicitly
 and reject a correction that merely exchanges knee flips for foot penetration.
+
+
+## Cinderella C9 pelvis-clearance candidate
+
+C7 now has a complete raw capture and visible-footwear contact report.
+C9 retains C7's limb-relative knee motion and lifts only pelvis translation
+using the C8 measured clearance plan. The largest world-Z lift is 24.1723 cm;
+smoothing can add up to 5.0934 cm over the instantaneous requirement. This
+changes vertical body travel and still needs full-motion review.
+
+The generic C8 track setter failed rotation/scale preservation. The new
+`BakePelvisClearance` instead edits only sequencer translation channels and
+checks every authored transform. C9 fresh repeat and a zero-lift control pass
+exactly across 388 tracks and 3,251,828 transforms. Five reopened poses also
+match exactly. All 8,381 poses clear visible material 20 within 0.000004 cm.
+All nine evaluated virtual bones match their declared targets at every key.
+Seven invalid-input cases are rejected without modifying protected sources.
+
+At the former left-calf discontinuity (5240), the angular step is now
+14.8697 degrees, versus C2's 135.058 and C6's 154.527. The largest calf steps
+are 40.2996/37.7100 degrees left/right, close to the original source's
+40.2391/37.6599. These are measured comparisons, not a smoothness guarantee.
+Three 41-key motion windows were rendered and encoded at 60 FPS. Reviewed
+stills show no obvious knee collapse; the render omits simulated hair/cloth.
+No complete visual, cooked, adapter or live acceptance is claimed.
+
+Cinderella's facial preparation separately preserves all 12 named curves and
+3,897 keys exactly from the decoded source. Evidence is in
+`facial-cinderella-v1/verification.json`. It is not added to the pack yet;
+current catalog counts remain 62 body/movement IDs and five Eve performances.
+
+C9 cook staging initially crashed in Unreal's animation thumbnail preview
+lookup (`USkeleton::FindCompatibleMesh` while setting compression). This is
+separate from the passing raw-pose tests. The follow-up staging recipe assigns
+the audited Black Pearl preview mesh explicitly. Preserve both attempt logs
+under `cinderella-c9-cook/`; cooking and readback must still pass.

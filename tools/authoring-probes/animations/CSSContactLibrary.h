@@ -13,6 +13,11 @@ public:
     UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
     static FString ReadAuthoredTrack(class UAnimSequence* Source, FName Bone);
 
+    /** Lift an isolated pelvis in world Z without rewriting Euler rotation channels. */
+    UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
+    static class UAnimSequence* BakePelvisClearance(class UAnimSequence* Source,
+        const TArray<float>& Heights, const FString& OutputPackage);
+
     /** Reproduce UE 5.6's float-quaternion to Euler-channel import for diagnostics. */
     UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
     static FQuat SequencerRotationReference(FQuat Rotation);

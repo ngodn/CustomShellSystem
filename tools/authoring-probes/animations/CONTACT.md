@@ -4,7 +4,8 @@ This is an offline UE 5.6.1 diagnostic for the fitted Eve and older Seductress
 targets. It is not a runtime foot solver or proof of outfit compatibility.
 
 Build `CSSContactLibrary.h` and `.cpp` in the existing CSSAuthoring editor module
-with C++20 and an explicit `AnimationCore` dependency in `CSSAuthoring.Build.cs`.
+with C++20 and explicit `AnimationCore`, `MovieScene` and `MovieSceneTracks`
+dependencies in `CSSAuthoring.Build.cs`.
 Keep other sessions' authoring helpers intact when staging these two files.
 
 1. Export every raw source key using the target skeletal mesh. Preserve the
@@ -225,3 +226,33 @@ Evidence is in `work/cine-animation-port/retarget-l5w/`: `knee-directions.json`,
 `knee-motion.json`, `irisout-perfoot-v1/report.json` and `knee-review.png`.
 L5V records the earlier two-key experiment separately. Neither trial is
 installed or bound to the runtime catalog.
+
+## Pelvis clearance without rotation conversion
+
+`BakePelvisClearance` is a separate, commandlet-only path for an already
+retargeted clip. Supply one finite world-Z lift per key, between 0 and 50 cm,
+and a fresh AnimLab output package. It requires a unit-scale root with pelvis
+directly beneath it, a bone-only sequence and at most 10,000 keys.
+
+The helper duplicates the data model and changes only its three pelvis
+translation channels. It checks the sequencer frame clock first and sends the
+public population notification afterward. Unlike `SetBoneTrackKeys`, it does
+not convert the existing Euler rotation channels through float quaternions.
+Every authored rotation and scale, every non-pelvis transform, track coverage
+and timing must remain exact. This adds no runtime solver.
+
+Cinderella C9 uses C7's limb-relative retarget and measured visible Black Pearl
+footwear (material 20). A smoothed upper envelope supplies pelvis clearance;
+its largest lift is 24.1723 cm. All 8,381 authored poses clear that footwear
+within 0.000004 cm. Fresh reconstruction matches 3,251,828 authored transforms,
+and a zero-lift control preserves the source exactly. All nine evaluated
+virtual bones match their targets across the clip. Seven invalid-input cases
+are rejected; that negative commandlet exits 1 because it deliberately logs
+errors. The editor module builds successfully with UE 5.6.1.
+
+Evidence: `work/cine-animation-port/retarget-cinderella-c8/pelvis-clearance.json`
+and `retarget-cinderella-c9/` (fresh verification, contact, virtual bones,
+rejections and knee metrics). C8's generic track setter failed rotation/scale
+preservation and is rejected. C9's three 41-frame review windows contain
+123 frames at 60 FPS; they are diagnostic cuts, not a full-motion review.
+Cooked readback, between-key contact, other outfits and gameplay remain open.

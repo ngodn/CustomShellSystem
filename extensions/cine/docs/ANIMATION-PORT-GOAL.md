@@ -533,3 +533,14 @@ the existing knee repair guard. Full findings and paths are in
 `docs/development/shared-animation-author-head.md`. No game files were changed;
 all C2-C7 diagnostic jobs finished. Two byte-identical source-leg captures now
 reference the retained C2 capture, removing 11,233,280 duplicate bytes.
+
+
+Cinderella C9 continuation: a position-only pelvis clearance bake now preserves
+all joint rotations/scales and every non-pelvis authored transform. Exact fresh
+repeat, zero-lift preservation, full visible-footwear contact and all nine
+virtual-bone checks pass across 8,381 keys. The former 135-degree knee step is
+14.87 degrees. Review windows are rendered; full-motion review, independent
+cook/readback, outfit adapters and gameplay remain pending. Twelve Cinderella
+facial curves (3,897 keys) are prepared exactly but not cataloged. Existing
+pack counts have not changed. No game files were installed. See the author-head
+investigation and `retarget-cinderella-c9/` for evidence and limitations.

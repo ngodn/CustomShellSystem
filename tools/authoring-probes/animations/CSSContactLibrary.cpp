@@ -10,6 +10,122 @@
 #include "Serialization/JsonWriter.h"
 #include "TwoBoneIK.h"
 #include "UObject/Package.h"
+#include "UObject/UObjectHash.h"
+#include "Rigs/FKControlRig.h"
+#include "Sections/MovieSceneParameterSection.h"
+
+UAnimSequence* UCSSContactLibrary::BakePelvisClearance(UAnimSequence* Source,
+    const TArray<float>& Heights, const FString& OutputPackage)
+{
+    auto Fail = [](const TCHAR* Message) -> UAnimSequence* {
+        UE_LOG(LogTemp, Error, TEXT("CSS BakePelvisClearance: %s"), Message);
+        return nullptr;
+    };
+    if (!IsRunningCommandlet() || !Source || !Source->GetSkeleton() ||
+        Source->IsValidAdditive() || Source->RateScale != 1.f ||
+        !Source->Notifies.IsEmpty() || !Source->AuthoredSyncMarkers.IsEmpty() ||
+        !Source->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/RT_")) ||
+        !OutputPackage.StartsWith(TEXT("/Game/CSS/AnimLab/RT_")) || OutputPackage.Len() > 100 ||
+        !FPackageName::IsValidLongPackageName(OutputPackage) ||
+        FPackageName::DoesPackageExist(OutputPackage) || FindPackage(nullptr, *OutputPackage))
+        return Fail(TEXT("Invalid source, output or execution context"));
+    const auto* Original = Source->GetDataModel();
+    if (!Original || Original->GetNumberOfKeys() < 2 || Original->GetNumberOfKeys() > 10000 ||
+        Original->GetNumberOfKeys() != Heights.Num() || !Original->GetFrameRate().IsValid() ||
+        Original->GetNumberOfFloatCurves() ||
+        !Original->GetTransformCurves().IsEmpty() || !Original->GetAttributes().IsEmpty())
+        return Fail(TEXT("Expected a bone-only clip and one lift per key"));
+    for (float Height : Heights)
+        if (!FMath::IsFinite(Height) || Height < 0.f || Height > 50.f)
+            return Fail(TEXT("Invalid or excessive lift"));
+    const FReferenceSkeleton& Ref = Source->GetSkeleton()->GetReferenceSkeleton();
+    const int32 Root = Ref.FindBoneIndex(TEXT("root")), Pelvis = Ref.FindBoneIndex(TEXT("pelvis"));
+    if (Root == INDEX_NONE || Pelvis == INDEX_NONE || Ref.GetParentIndex(Root) != INDEX_NONE ||
+        Ref.GetParentIndex(Pelvis) != Root)
+        return Fail(TEXT("Expected pelvis directly under the animation root"));
+    TArray<FName> Names; Original->GetBoneTrackNames(Names);
+    if (!Names.Contains(TEXT("root")) || !Names.Contains(TEXT("pelvis")))
+        return Fail(TEXT("Missing root or pelvis track"));
+    TArray<FTransform> RootKeys, PelvisKeys;
+    Original->GetBoneTrackTransforms(TEXT("root"), RootKeys);
+    Original->GetBoneTrackTransforms(TEXT("pelvis"), PelvisKeys);
+    if (RootKeys.Num() != Heights.Num() || PelvisKeys.Num() != Heights.Num())
+        return Fail(TEXT("Incomplete root or pelvis keys"));
+    TArray<FVector3f> Positions;
+    for (int32 Key = 0; Key < Heights.Num(); ++Key)
+    {
+        if (RootKeys[Key].ContainsNaN() || PelvisKeys[Key].ContainsNaN() ||
+            !RootKeys[Key].GetRotation().IsNormalized() ||
+            !RootKeys[Key].GetScale3D().Equals(FVector::OneVector, .000001))
+            return Fail(TEXT("Root must have finite unit-scale transforms"));
+        const FVector3f Position(PelvisKeys[Key].GetTranslation() +
+            RootKeys[Key].InverseTransformVectorNoScale(FVector(0, 0, Heights[Key])));
+        if (Position.ContainsNaN()) return Fail(TEXT("Lift exceeds finite float position range"));
+        Positions.Add(Position);
+    }
+    auto* Result = DuplicateObject<UAnimSequence>(Source, CreatePackage(*OutputPackage),
+        *FPackageName::GetLongPackageAssetName(OutputPackage));
+    if (!Result || Result->GetDataModel() == Original) return Fail(TEXT("Could not isolate data model"));
+    Result->SetFlags(RF_Public | RF_Standalone);
+    const FName ControlName = UFKControlRig::GetControlName(TEXT("pelvis"), ERigElementType::Bone);
+    FTransformParameterNameAndCurves* PelvisCurves = nullptr;
+    int32 Matches = 0;
+    ForEachObjectWithOuter(Result->GetDataModelInterface().GetObject(), [&](UObject* Object) {
+        if (auto* Section = Cast<UMovieSceneParameterSection>(Object))
+            for (auto& Curves : Section->GetTransformParameterNamesAndCurves())
+                if (Curves.ParameterName == ControlName) { PelvisCurves = &Curves; ++Matches; }
+    }, true);
+    if (Matches != 1) return Fail(TEXT("Expected one sequencer pelvis parameter"));
+    // Check the model's frame clock before replacing its translation channels.
+    for (int32 Key = 0; Key < Heights.Num(); ++Key)
+        for (int32 Axis = 0; Axis < 3; ++Axis)
+        {
+            float Value = 0.f;
+            if (!PelvisCurves->Translation[Axis].Evaluate(FFrameTime(Key), Value) ||
+                !FMath::IsNearlyEqual(double(Value), PelvisKeys[Key].GetTranslation()[Axis], .000001))
+                return Fail(TEXT("Unexpected translation channel clock or values"));
+        }
+    auto& Edit = Result->GetController();
+    Edit.OpenBracket(FText::FromString(TEXT("Bake CSS pelvis clearance")), false);
+    ON_SCOPE_EXIT { Edit.CloseBracket(false); };
+    {
+        IAnimationDataModel::FEvaluationAndModificationLock Lock(*Result->GetDataModel());
+        TArray<FFrameNumber> Times;
+        for (int32 Key = 0; Key < Heights.Num(); ++Key) Times.Add(Key);
+        for (int32 Axis = 0; Axis < 3; ++Axis)
+        {
+            TArray<FMovieSceneFloatValue> Values;
+            for (const FVector3f& Position : Positions)
+            {
+                auto& Value = Values.AddDefaulted_GetRef();
+                Value.Value = Position[Axis]; Value.InterpMode = RCIM_Linear;
+            }
+            // SetBoneTrackKeys also rewrites Euler rotations, including near gimbal lock.
+            PelvisCurves->Translation[Axis].Reset();
+            PelvisCurves->Translation[Axis].SetKeysOnly(Times, Values);
+        }
+    }
+    Edit.NotifyPopulated();
+    const auto* Baked = Result->GetDataModel();
+    TArray<FName> BakedNames; Baked->GetBoneTrackNames(BakedNames);
+    if (Names != BakedNames || Original->GetNumberOfKeys() != Baked->GetNumberOfKeys() ||
+        Original->GetFrameRate() != Baked->GetFrameRate() || Original->GetPlayLength() != Baked->GetPlayLength())
+        return Fail(TEXT("Track coverage or timing changed"));
+    for (FName Name : Names)
+    {
+        TArray<FTransform> Before, After;
+        Original->GetBoneTrackTransforms(Name, Before); Baked->GetBoneTrackTransforms(Name, After);
+        if (Before.Num() != After.Num()) return Fail(TEXT("Track key count changed"));
+        for (int32 Key = 0; Key < Before.Num(); ++Key)
+            if (Name != TEXT("pelvis") ? !Before[Key].Equals(After[Key], 0.) :
+                (!Before[Key].GetRotation().Equals(After[Key].GetRotation(), 0.) ||
+                 !Before[Key].GetScale3D().Equals(After[Key].GetScale3D(), 0.) ||
+                 !After[Key].GetTranslation().Equals(FVector(Positions[Key]), .000001)))
+                return Fail(TEXT("Unexpected authored transform change"));
+    }
+    Result->MarkPackageDirty();
+    return Result;
+}
 
 FQuat UCSSContactLibrary::SequencerRotationReference(FQuat Rotation)
 {
