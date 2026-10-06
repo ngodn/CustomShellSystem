@@ -1,5 +1,20 @@
 # Current work queue
 
+## October 6: default-human reference audition
+
+The native 1,199-bone reference and nine virtual bones now match the game
+dump in a fresh editor check. UE strips six mirrored accessory scales during
+IK retargeting; the new opt-in preservation path restores those branches.
+The full Black Hole raw audition passes all 601 frames, with every other raw
+bone unchanged. See [native support evidence](development/shared-animation-native-human.md).
+Fresh precise-compression evaluation passes all 601 frames and 1,208 bones;
+the default Eve retarget retains all 233,188 authored keys exactly. Default
+compression failed the rotation limit; precise L5X settings pass without
+relaxing it. Results and exits are in `native-retarget-v1`. The saved native
+audition still needs the precise codec bound during staging and a Windows cook.
+Native runtime ownership, real meshes, cooking and live acceptance remain.
+Do not resume excluded custom rigs.
+
 ## October 6: requested-outfit dance integration
 
 The combined private trial now has 59 animations: the original 57 plus the

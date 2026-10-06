@@ -27,7 +27,8 @@ public:
     static class UAnimSequence* RetargetClip(class USkeletalMesh* SourceMesh,
         class USkeletalMesh* TargetMesh, class UAnimSequence* Source,
         class UIKRetargeter* Retargeter, const FString& OutputPackage,
-        bool PreserveUnmappedAttachments = true);
+        bool PreserveUnmappedAttachments = true,
+        bool PreserveScaledReferenceBranches = false);
 
     /** Evaluate compressed animation with the installed authoring post-process, without saving. */
     UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")

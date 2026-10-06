@@ -2,6 +2,11 @@
 
 October 6, 2026. This records inspected assets, not release acceptance.
 
+Default-human progress: the exact native reference now has a complete
+Black Hole retarget audition with its mirrored accessory scales preserved.
+See [native support evidence](shared-animation-native-human.md). This does not
+yet establish native runtime, visible-mesh or physics compatibility.
+
 ## Authoritative user scope correction, October 6
 
 Support exactly these authored outfits: **Eve (all six outfits), Unholy Genessa

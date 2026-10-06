@@ -136,7 +136,8 @@ UAnimSequence* UCSSAnimationLibrary::ShiftLoop(UAnimSequence* Source,
 
 UAnimSequence* UCSSAnimationLibrary::RetargetClip(USkeletalMesh* SourceMesh,
     USkeletalMesh* TargetMesh, UAnimSequence* Source, UIKRetargeter* Retargeter,
-    const FString& OutputPackage, bool PreserveUnmappedAttachments)
+    const FString& OutputPackage, bool PreserveUnmappedAttachments,
+    bool PreserveScaledReferenceBranches)
 {
     auto Fail = [](const TCHAR* Message) -> UAnimSequence* {
         UE_LOG(LogTemp, Error, TEXT("CSS RetargetClip: %s"), Message);
@@ -193,6 +194,27 @@ UAnimSequence* UCSSAnimationLibrary::RetargetClip(USkeletalMesh* SourceMesh,
             if (MappedAncestor && !MappedDescendant) Attachments.Add(Bone);
         }
     }
+    TSet<int32> ScaledReferenceBranches;
+    const auto& Reference = TargetMesh->GetRefSkeleton().GetRawRefBonePose();
+    if (PreserveScaledReferenceBranches)
+    {
+        if (!PreserveUnmappedAttachments)
+            return Fail(TEXT("Reference-scale preservation requires attachment preservation"));
+        // UE strips reference scales before retargeting. Restore complete locals
+        // below scaled, unmapped branches so a mirrored parent is not baked twice.
+        for (int32 Bone = 0; Bone < Reference.Num(); ++Bone)
+        {
+            const FVector Scale = Reference[Bone].GetScale3D();
+            const bool ScaledParent = ScaledReferenceBranches.Contains(TargetRig.ParentIndices[Bone]);
+            if (!ScaledParent && Scale.Equals(FVector::OneVector, 0.001)) continue;
+            if (!Attachments.Contains(Bone) || Reference[Bone].ContainsNaN() ||
+                !Reference[Bone].GetRotation().IsNormalized() ||
+                FMath::Abs(Scale.X) <= SMALL_NUMBER || FMath::Abs(Scale.Y) <= SMALL_NUMBER ||
+                FMath::Abs(Scale.Z) <= SMALL_NUMBER)
+                return Fail(TEXT("Scaled reference branch is animated, singular or invalid"));
+            ScaledReferenceBranches.Add(Bone);
+        }
+    }
     const int32 Frames = Source->GetNumberOfSampledKeys();
     TArray<FRawAnimSequenceTrack> Tracks;
     Tracks.SetNum(TargetRig.BoneNames.Num());
@@ -230,11 +252,15 @@ UAnimSequence* UCSSAnimationLibrary::RetargetClip(USkeletalMesh* SourceMesh,
         if (Local.Num() != Tracks.Num()) return Fail(TEXT("Unexpected target bone count"));
         for (const int32 Bone : Attachments)
             Local[Bone] = TargetRig.RetargetPoses.GetLocalRetargetPose()[Bone];
+        for (const int32 Bone : ScaledReferenceBranches)
+            Local[Bone] = Reference[Bone];
         for (int32 Bone = 0; Bone < Local.Num(); ++Bone)
         {
             const FTransform& Transform = Local[Bone];
+            const FVector ExpectedScale = ScaledReferenceBranches.Contains(Bone)
+                ? Reference[Bone].GetScale3D() : FVector::OneVector;
             if (Transform.ContainsNaN() || !Transform.GetRotation().IsNormalized() ||
-                !Transform.GetScale3D().Equals(FVector::OneVector, 0.001))
+                !Transform.GetScale3D().Equals(ExpectedScale, 0.001))
                 return Fail(TEXT("Invalid target transform or changed bone scale"));
             Tracks[Bone].PosKeys[Frame] = FVector3f(Transform.GetTranslation());
             Tracks[Bone].RotKeys[Frame] = FQuat4f(Transform.GetRotation());
