@@ -35,13 +35,18 @@ def animation_state(owner):
     return dict(action=data.action.name if data.action else None,
                 action_slot=data.action_slot.identifier if data.action_slot else None,
                 blend_type=data.action_blend_type, influence=data.action_influence,
-                use_nla=data.use_nla,
+                extrapolation=data.action_extrapolation, use_nla=data.use_nla,
                 nla=[dict(name=t.name, mute=t.mute, solo=t.is_solo,
                           strips=[dict(name=s.name, type=s.type,
                                        action=s.action.name if s.action else None,
+                                       action_slot=s.action_slot.identifier if s.action_slot else None,
                                        scene_range=[s.frame_start, s.frame_end],
                                        action_range=[s.action_frame_start, s.action_frame_end],
-                                       scale=s.scale, repeat=s.repeat, mute=s.mute)
+                                       scale=s.scale, repeat=s.repeat, mute=s.mute,
+                                       blend_type=s.blend_type, influence=s.influence,
+                                       extrapolation=s.extrapolation,
+                                       animated_influence=s.use_animated_influence,
+                                       animated_time=s.use_animated_time)
                                   for s in t.strips]) for t in data.nla_tracks],
                 drivers=[dict(path=d.data_path, index=d.array_index,
                               expression=d.driver.expression, valid=d.driver.is_valid,
@@ -85,8 +90,13 @@ report = dict(source=str(source), sha256=before, blender=bpy.app.version_string,
               scenes=[dict(name=s.name, frames=[s.frame_start, s.frame_end], fps=s.render.fps,
                            fps_base=s.render.fps_base, unit_scale=s.unit_settings.scale_length)
                       for s in bpy.data.scenes],
-              meshes=[dict(name=obj.name, shape_keys=[key.name for key in obj.data.shape_keys.key_blocks]
-                           if obj.data.shape_keys else [])
+              meshes=[dict(name=obj.name, animation=animation_state(obj),
+                           shape_keys=[key.name for key in obj.data.shape_keys.key_blocks]
+                           if obj.data.shape_keys else [],
+                           shape_animation=animation_state(obj.data.shape_keys)
+                           if obj.data.shape_keys else None,
+                           shape_values={key.name:key.value for key in obj.data.shape_keys.key_blocks}
+                           if obj.data.shape_keys else {})
                       for obj in bpy.data.objects if obj.type == 'MESH'],
               scope='Source metadata and keyframes only; no scripts, retargeting or visual acceptance.')
 args.output.parent.mkdir(parents=True, exist_ok=True)

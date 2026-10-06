@@ -150,10 +150,9 @@ still needs live timing and restoration evidence.
 
 - Trace the missing controls to their source morphs or driver graph. Keep
   their original names and curves until the mapping is measured.
-- Evaluate facial shape animation in the supplied Blender examples, using
-  their actual active action/NLA state. The 200 inspection includes a
-  Bezier `jaw_open` action over frames 1-10. The 801 file contains several
-  facial actions, so their presence alone does not establish which one plays.
+- Add the verified Gesture 200 facial candidate below to the next packaged
+  catalog, with source evidence checked by the catalog builder. It is not in
+  the currently installed trial.
 - Extend derived facial meshes and cooked readback if further source controls
   can be resolved.
 - Validate installed playback in CSS and CINE, including pause, seek, speed,
@@ -168,3 +167,42 @@ complete unchanged assembly's shape names; `facial-performance-export-v2/`
 contains the candidate, source hashes and exact baseline comparison;
 `facial-come-closer-review-v1/` and `facial-come-closer-sheets-v1/` contain the
 full sampled face review. Original outfit packages and game files are unchanged.
+
+## Supplied Blender facial actions
+
+Fresh Blender 5.2.2 inspection now records the mesh's shape-key animation
+binding, action slot and NLA settings. An action stored in a file is not
+necessarily assigned to the face. Blender documents these bindings in its
+[AnimData API](https://docs.blender.org/api/5.1/bpy.types.AnimData.html) and
+[action-slot design](https://developer.blender.org/docs/features/animation/animation_system/layered/).
+The actual checks use the installed 5.2.2 evaluator with embedded scripts
+disabled and source hashes unchanged.
+
+- `200.blend`: one active `k200` NLA strip, frames 1-10 at 25 Hz, matches
+  the existing 0.36-second body clip. It drives only `jaw_open`, from 0 to 1
+  with Bezier easing. All 169 shapes were evaluated at 19 times, including
+  half-frames; all other weights remain zero.
+- `801.blend`: no assigned face action, no NLA strips and no face drivers.
+  All 169 shapes remain zero across 2,263 evaluated times covering the full
+  18.85-second body clip. `ak1`, `k0`, `k1` and the TakeItem facial action are
+  unassigned library data. Do not invent a facial performance from them.
+
+`audit_blender_face.py` ties evaluation to the verified body sample's source
+hash, scene range and frame rate. A separate Blender fixture verifies NLA
+retiming, half-frame evaluation, signed weights, exclusion of an unassigned
+expression and source immutability.
+
+Gesture 200 has uniform time handles at frames 1, 4, 7 and 10, with values
+0, 0, 1 and 1. `prepare_blender_face.py` requires this supported kind of
+binding and retains the original controls in its audit. It converts the cubic
+to 275 linear keys using the second-derivative interpolation bound. Maximum
+calculated error is 0.00000998988 in morph weight; the analytic source curve
+differs from Blender's evaluated samples by at most 0.0000000949259. Four
+portable tests check the bound between keys, signed/above-one weights,
+rejection of unsupported bindings and source preservation. This is authoring
+evidence, not packaged or live acceptance.
+
+Receipts: `blender-facial-inspection-v1/{200,801}.json`,
+`{200,801}-evaluated-controls.json` and `prepared-example200.json` under the
+private animation work directory. The runtime trial installed above remains
+unchanged by this audit.
