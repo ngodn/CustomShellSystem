@@ -30,6 +30,17 @@ var basePoseMesh = Environment.GetEnvironmentVariable("CSS_BASE_POSE_MESH") swit
 };
 Directory.CreateDirectory(args[3]);
 File.WriteAllText(Path.Combine(args[3], "source-mesh.json"), JsonConvert.SerializeObject(mesh, Formatting.Indented));
+if (Environment.GetEnvironmentVariable("CSS_MORPH_AUDIT") is { Length: > 0 } morphAudit && morphAudit != "0") {
+    if (morphAudit != "1" || mesh is not USkeletalMesh morphMesh || args.Length != 4 || basePoseMesh ||
+        new[] { "CSS_SKIN_AUDIT", "CSS_AUDIT_ONLY", "CSS_SOURCE_TRACKS", "CSS_TRACK_AUDIT",
+            "CSS_ABSOLUTE_TRACKS", "CSS_ANIMATION_POSES", "CSS_ADDITIVE_POSE_DELTAS",
+            "CSS_TEXTURES_ONLY", "CSS_MATERIALS", "CSS_ABSOLUTE_FULL", "CSS_ABSOLUTE_RUNTIME",
+            "CSS_ABSOLUTE_SUBSTEPS", "CSS_ANIMATION_FULL_HAND" }
+            .Any(key => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key))))
+        throw new ArgumentException("CSS_MORPH_AUDIT=1 requires a separate skeletal mesh audit");
+    MorphAudit.Export(morphMesh, args[2], args[3]);
+    return;
+}
 var skinAudit = Environment.GetEnvironmentVariable("CSS_SKIN_AUDIT") switch {
     null or "" or "0" => false,
     "1" => true,

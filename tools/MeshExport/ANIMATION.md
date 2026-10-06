@@ -4,6 +4,21 @@ The tool targets .NET 10. The verified build used SDK 10.0.401 and the matching
 CUE4Parse native ACL decoder. These modes read source assets; they do not repair
 or reproduce the complete gameplay AnimGraph.
 
+## Cooked morph correspondence
+
+`CSS_MORPH_AUDIT=1` reads a separate skeletal mesh with one render LOD. It writes
+original render positions and primary UVs, triangle indices, and every morph's
+position/tangent deltas keyed by the original `SourceIdx`. The JSON manifest
+describes the little-endian layouts, sections, material references and hashes.
+The mode rejects duplicate names/indices, nonfinite values, invalid triangle
+indices, conflicting export modes and an existing audit. Source positions are
+Unreal centimetres, without axis conversion or welding.
+
+Use this mode when transferring source morphs. The current glTF conversion
+matches morph vertices by position, which is ambiguous at coincident seams.
+An audit preserves those distinct indices; it does not establish correspondence
+to another mesh or prove that its face supports the same controls.
+
 ## Neutral cooked skin diagnostics
 
 `CSS_SKIN_AUDIT=1` exports the highest conventional render LOD directly from
