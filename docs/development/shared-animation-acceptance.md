@@ -120,3 +120,10 @@ checks do not substitute for their live outfit/physics tests.
 Before release, complete the unresolved source work, native-speed/contact and
 live acceptance, source permission review, performance measurements and the
 separate asset/runtime distributions with credits, BBCode notes and checksums.
+
+The [source requirements](shared-animation-source-requirements.md) specify the
+missing rig data. The [permission audit](shared-animation-source-permissions.md)
+now covers all six additional source pages as well as DumbDumb and Iris Out.
+Their published terms prohibit cross-game conversion; any separate grant still
+needs to be established before public packaging. The installed files remain a
+private trial, with no public upload made.
