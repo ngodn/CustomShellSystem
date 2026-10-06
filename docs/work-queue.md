@@ -28,6 +28,16 @@ the repeat visualization uses an explicit 0.002 cm diagnostic limit, with
 original motion unchanged. Raw editor and compressed-animation checks keep
 their existing independent limits.
 
+Contact localization: `retarget-l5p/contact-comparison.json` now confirms the
+issue in raw UE retarget output, before gameplay or Blender. At 56.9 seconds,
+the source feet remain at about 14.86/14.79 cm, while target feet are
+-5.77/27.37 cm. Enabling/disabling translation retargeting in pose readback
+does not change either result. Source import agrees with independently decoded
+joint samples. Next inspect the IK retarget chain/goal handling and correct leg
+contact in a new candidate, preserving source timing and the existing audition.
+DumbDumb's full 1,972-frame diagnostic render completed; Iris Out rendering
+continues under the same job.
+
 October 6 continuation: the user confirmed source permission and requested
 continued work on DumbDumb and Iris Out. Investigate the seven additional tracks
 against the actual source mesh and playback mapping; retain their complete keys
