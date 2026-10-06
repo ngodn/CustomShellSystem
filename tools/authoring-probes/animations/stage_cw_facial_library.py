@@ -1,4 +1,4 @@
-"""UE 5.6.1: stage the verified compact Commander White expression mesh."""
+"""UE 5.6.1: stage a verified Commander White facial mesh."""
 import hashlib
 import json
 import os
@@ -17,6 +17,16 @@ AUDIT=BASE/'cw-expression-native-v4/verify-result.json'
 SOURCE='/Game/CSS/CommanderWhite/Dev/SK_CommanderC4'
 CANDIDATE='/Game/CSS/AnimLab/SK_Face_CWCompact/SK_Face_CWE3'
 TARGET='/Game/CSS/Locomotion/Faces/SK_Face_CWCompact/SK_Face_CWE4'
+REVISION=os.environ.get('CSS_CW_FACE_STAGE_REVISION','E4')
+if REVISION=='E6':
+    INPUT=BASE/'cw-performance-fitted-v1/facial-shapes.json'
+    AUDIT=BASE/'cw-performance-native-v1/verify-result.json'
+    SOURCE=TARGET
+    CANDIDATE='/Game/CSS/AnimLab/SK_Face_CWCompact/SK_Face_CWE5'
+    TARGET='/Game/CSS/Locomotion/Faces/SK_Face_CWCompact/SK_Face_CWE6'
+elif REVISION!='E4':
+    raise ValueError('Unknown CW facial staging revision')
+EXPECTED_MORPHS=149 if REVISION=='E6' else 90
 MATERIAL_AUDIT=BASE/'cw-expression-cook-v2/cooked-readback-v2.json'
 CONTENT=ROOT/'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 
@@ -75,7 +85,7 @@ for original in (source,candidate):
             raise ValueError('Facial staging changed '+field)
 actual={str(m.get_name()) for m in target.get_editor_property('morph_targets')}
 expected={str(m.get_name()) for m in candidate.get_editor_property('morph_targets')}
-if actual!=expected or len(actual)!=90:raise ValueError('Facial staging morph set differs')
+if actual!=expected or len(actual)!=EXPECTED_MORPHS:raise ValueError('Facial staging morph set differs')
 if MODE=='create' and not unreal.EditorAssetLibrary.save_loaded_asset(target,False):
     raise ValueError('Could not save staged face')
 if any(digest(Path(p))!=sha for p,sha in protected.items()):

@@ -197,3 +197,58 @@ preflight used a string where a Path was required and failed before creating
 output; the corrected package passes metadata readback and source hashes.
 No runtime DLL, original source or installed outfit changed. Live facial
 appearance and gameplay acceptance remain pending.
+
+## Expanded performance controls, preserving the current expressions
+
+The joint 115-shape study above is no longer the preferred representation.
+`cw-retained-basis-v1` keeps the 12 shapes actually used by the current catalog
+and eight blink samples. It adds 59 residual shapes for the 27 candidate face
+controls and nine recovered tongue controls. This makes 79 catalog controls,
+below the unchanged limit of 128. The original expression IDs, their weights
+and the existing jaw performance do not need to change. Unused calibration
+shapes remain in the mesh; this does not delete source geometry or morphs.
+
+`prepare_cw_performance_shapes.py` checks all 5,918 affected source points
+against the fitted assembly, including the recorded 547-point skirt insertion.
+Maximum correspondence error is 0.000019444 cm. All 144 isolated source poses
+reconstruct within 0.002996 cm after stored-float conversion and the existing
+0.015 cm morph filter. Original files still match their hashes.
+
+`cw-performance-holdout-v1` and `cw-tongue-holdout-v1` independently evaluate
+four intermediate strengths for all 36 controls. The interpolation check
+uses the actual retained-plus-residual weights, rather than fitting new
+weights to each holdout. All 144 cases pass the unchanged 0.015 cm comparison
+limit; maximum error is 0.009657 cm. Evidence:
+`cw-performance-fitted-v1/holdout-v2.json`. This does not validate semantic
+equivalence to another character or simultaneous control combinations.
+
+E5 appends the 59 controls to the existing E4 face. Native creation and fresh
+reload both pass in `cw-performance-native-v1`: all 90 existing morphs,
+799,989,630 bytes of non-added mesh-description data, 69 built sections,
+cloth and all 70 material bindings are retained. There are now 149 total
+mesh morphs. The 128-control catalog limit concerns exposed facial controls,
+not the number of stored mesh morphs.
+
+E6 stages the same result under `/Game/CSS/Locomotion/Faces/`. Creation and
+fresh readback pass in `cw-performance-shared-v1`. Set
+`CSS_CW_FACE_STAGE_REVISION=E6` with `stage_cw_facial_library.py`; its default
+E4 path is unchanged. No runtime DLL or installed game file changed. The
+five remaining CW performance mappings, combined/negative control behavior,
+catalog size and live acceptance remain unfinished.
+
+The Windows cook and independent container readback now also pass in
+`cw-performance-cook-v1`. The decoder compares E6 against the already verified
+E4 packaged face, preserving all 90 old cooked morphs, 2,312,092 render vertices,
+materials, skeleton/socket bindings and cloth data. All 59 added shapes pass
+the existing morph-filter and GPU precision bounds. The 36 full-strength
+residual-control combinations plus Neutral differ from their authored deltas
+by at most 0.002999 cm. These combinations check the added residuals only;
+the complete source-control interpolation evidence is the separate 144-pose
+holdout above. They are not yet mapped dance performances.
+
+The first cook preflight found sandbox-only material paths and stopped before
+cooking. Resolving those paths through the recorded read-only mounts restored
+host hash verification. Both receipts are retained. The final cook, package
+and readback jobs all exited successfully. Identical staging copies were
+replaced with verified hard links, reclaiming approximately 191 MiB without
+changing any package bytes; see `duplicate-stage-cleanup.json`.

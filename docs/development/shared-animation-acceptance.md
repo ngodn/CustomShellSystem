@@ -1,5 +1,12 @@
 # Shared animation acceptance
 
+CW's expanded performance face is now independently cooked and checked in
+`cw-performance-cook-v1`: 59 added shapes, all 90 prior mesh morphs preserved,
+and 144 source-control interpolation holdouts passing. This is preparation
+for the remaining five CW facial performances, not five completed mappings.
+The latest combined catalog is still `cw-jaw-trial-v1` below. Nothing from
+the expanded face study is installed or live-accepted.
+
 Latest facial addition: `cw-jaw-trial-v1` retains C11 and adds CW's jaw-only
 Gesture 200 facial performance. Its geometry matches 32 fresh source poses
 within 0.007691 cm, and native sampling/restoration and packaged loader checks
