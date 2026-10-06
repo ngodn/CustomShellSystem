@@ -16,8 +16,7 @@ linear ACL interpolation and an unretargeted UE reference. Maximum local
 translation error is 0.009512 cm and quaternion distance is 0.00217104 (below
 the existing 0.25-degree rotation limit). Evidence:
 `work/cine-animation-port/l5w-cook/decoded-runtime-v1/unretargeted-motion-verification.json`.
-This does not establish between-key/cooked contact, current-candidate adapter
-coverage or gameplay.
+The corrected nine-mesh adapter run subsequently passed; gameplay remains open.
 
 DumbDumb L5U's full comparison found a 0.00313772 quaternion distance at
 `ball_r`, frame 615, exceeding the unchanged 0.25-degree review limit. The
@@ -32,6 +31,30 @@ and `pack-with-settings2/verification.json`. The raw reference is independently
 captured from the original L5U study with retargeting disabled; fresh native
 comparison proves the precision copy's authored data is unchanged. This is
 compression evidence only, not dense contact or full outfit acceptance.
+
+Subsequent dense contact check: both corrected candidates pass nine-mesh adapter
+playback (162 cases, 44,496 full-clip poses). Cooked samples at 120 Hz preserve
+every original-key transform exactly but reveal between-key footwear dips.
+For neutral Black Pearl material 20, Iris Out reaches -0.18258/-0.27834 cm
+left/right and DumbDumb -0.42759/-0.42878 cm. Alternate hidden flat-foot sections
+are reported separately and are not evidence of visible footwear penetration.
+The cooked mesh's translation-retarget reconstruction matches 13 raw editor
+poses within 0.000020 cm across 379 bones. Evidence: `decoded-dense-v1` in both
+cook studies, `current-eve-skin-audit-v1`, and `dense-acl-regression.json`.
+
+L5X applies localized additional sole clearance, capped below 0.47 cm, with a
+two-key taper around the affected times. Fresh editor repeat passes all 388
+tracks and 1,529,884/388,388 DumbDumb/Iris Out keys. Only the six leg tracks are
+eligible for changes; native checks retain every other authored transform.
+Its Windows cook and three-export package round-trip now pass. Every cooked
+key passes the unchanged transform limits against a fresh unretargeted raw
+reference. The 240 Hz neutral footwear scan covers 15,769/4,001 poses, with
+worst left/right height -0.02991/-0.02948 cm for DumbDumb and
+-0.02831/-0.01662 cm for Iris Out. No footwear sample crosses -0.1 cm.
+The source-key cooked knee check introduces no flips. Updated adapters pass
+all nine meshes, 162 cases and 44,496 full-clip poses. Full fitted-mesh renders
+are running. Neither clip is installed or accepted;
+other footwear choices, proportions, post-process and live checks remain.
 
 The first full comparisons used nearest ACL sampling and retargeted contact
 captures. Those diagnostic failures are preserved, but cannot be read as
@@ -124,8 +147,8 @@ All source assets in the table are beneath `/Game/CSS/`.
 
 | Clip | Retained source | Blocker |
 | --- | --- | --- |
-| DumbDumb | source-05, `HD-ATOOL_P/anim/971` | L5U full-length contact trial passes exact readback/non-leg preservation; removes ten introduced knee flips and clears authored-key footwear within 0.000190 cm; dense/cooked/live checks, seven extra source indices and nine facial controls remain unfinished; user confirmed permission on October 6 |
-| Iris Out | source-06, `HD-ATOOL_P/anim/970` | L5U full-length trial passes exact readback/non-leg preservation; frame 76 retains 0.217425 cm right-foot penetration and frame 77 knee amplification; seven extra source indices and two facial controls remain unidentified; user confirmed permission on October 6 |
+| DumbDumb | source-05, `HD-ATOOL_P/anim/971` | L5X passes full cooked-key comparison, nine-mesh adapters and 240 Hz neutral Black Pearl footwear contact within 0.030 cm, with no new knee flips. Full-motion review and broader/live acceptance pending. Seven extra source indices and nine facial controls remain unfinished; user confirmed permission on October 6 |
+| Iris Out | source-06, `HD-ATOOL_P/anim/970` | L5X retains the local knee repair and passes full cooked-key comparison, nine-mesh adapters and 240 Hz neutral Black Pearl footwear contact within 0.029 cm, with no new knee flips. Full-motion review and broader/live acceptance pending. Seven extra source indices and two facial controls remain unidentified; user confirmed permission on October 6 |
 
 Neither clip is silently discarded, approximated or counted among the 57 cooked
 sequences. See [source audit](shared-animation-library.md) and

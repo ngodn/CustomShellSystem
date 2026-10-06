@@ -2,6 +2,22 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
+Latest L5X continuation: localized corrections now pass fresh authored repeat,
+Windows cooking, the three-export package round-trip, full cooked-key comparison,
+and a 240 Hz neutral footwear scan. Across 15,769 DumbDumb and 4,001 Iris Out
+poses, material 20 remains within 0.030 cm of the floor, with no samples below
+-0.1 cm. The matched cooked-key knee check adds no flips. Both clips retain
+their original duration and 60 Hz keys, with only six leg tracks eligible for
+changes. Evidence: `retarget-l5x`, `l5x-cook/footwear-contact-summary.json`,
+`l5x-cook/knee-motion.json`, and both full comparison reports beneath
+`l5x-cook/decoded-runtime-v1`. The nine-mesh adapter run passed all 162 cases
+and 44,496 full-clip poses in `l5x-adapter-v1`, with successful process exit.
+Full fitted-mesh renders are active under `l5x-cook` using
+hashed cooked-pose captures from `mesh-motion`. Poll their existing processes
+and inspect results before continuing; do not restart on stale log timing.
+This is not live acceptance or installation. Other footwear/proportions,
+remaining rigs, facial mappings, source definitions and release gates remain.
+
 Latest dense/contact continuation: the corrected L5W Iris Out and
 L5UPrecision2 DumbDumb pass all nine outfit meshes, 162 adapter cases and
 44,496 full-clip poses (`corrected-dances-adapter-v1`). Independent cooked ACL

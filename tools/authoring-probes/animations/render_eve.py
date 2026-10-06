@@ -244,6 +244,7 @@ assert hashlib.sha256(blend.read_bytes()).hexdigest() == blend_hash
 (args.output/'report.json').write_text(json.dumps(dict(
     blend=str(blend), blend_sha256=blend_hash, motion=str(args.motion),
     motion_sha256=hashlib.sha256(args.motion.read_bytes()).hexdigest(),
+    sampling=motion.get('sampling', 'Unspecified by capture'),
     fps=motion['fps']/args.stride, parts=parts, shapes=shapes, errors=errors, view=args.view,
     camera_scale=args.camera_scale, camera_height=args.camera_height,
     follow_pelvis=args.follow_pelvis, position_tolerance_cm=args.position_tolerance_cm,
@@ -255,6 +256,6 @@ assert hashlib.sha256(blend.read_bytes()).hexdigest() == blend_hash
     scope=('UE compressed upstream pose before secondary motion and hand morphs, stationary owner. '
            if args.pose == 'upstream' else
            'UE compressed component pose including secondary motion and hand morphs, stationary owner. '
-           if motion.get('compressed_source') else 'UE raw animation pose, no secondary motion. ') +
+           if motion.get('compressed_source') else 'Sampled animation pose, no secondary motion. ') +
           'Accepted fitted mesh and wardrobe section selection, solid materials. No gameplay validation.'
 ), indent=2)+'\n')
