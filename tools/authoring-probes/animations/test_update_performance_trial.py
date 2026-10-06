@@ -71,9 +71,71 @@ class TrialUpdateTests(unittest.TestCase):
     def game_files(self):
         return {str(p.relative_to(self.game)): p.read_bytes() for p in self.game.rglob('*') if p.is_file()}
 
-    def run_update(self, keep_cine=False):
+    def run_update(self, keep_cine=False, keep_core=False):
         return installer.update(self.game, self.previous, self.pack, self.receipt,
-                                self.core, self.cine_dll, self.menu, self.delta, keep_cine=keep_cine)
+                                self.core, self.cine_dll, self.menu, self.delta,
+                                keep_cine=keep_cine, keep_core=keep_core)
+
+    def reuse_facial_readback(self):
+        report = self.root / 'previous-face-readback.json'
+        (self.pack / 'facial-independent-readback.json').rename(report)
+        verified = json.loads((self.pack / 'verification.json').read_text())
+        identical = {}
+        for suffix in ('.utoc', '.ucas'):
+            name = installer.NAME + suffix
+            installer.copy_verified(self.target / name, self.pack / installer.NAME / name)
+            verified['files'][name] = installer.sha(self.target / name)
+            identical[name] = True
+        self.write(self.pack / 'verification.json', verified)
+        self.write(self.pack / 'facial-readback-reuse.json', {
+            'passed': True, 'source_readback': str(report),
+            'source_readback_sha256': installer.sha(report),
+            'identical_asset_containers': identical})
+        return report
+
+    def test_catalog_update_keeps_both_runtimes_and_reuses_identical_asset_readback(self):
+        self.reuse_facial_readback()
+        report = json.loads(self.run_update(keep_cine=True, keep_core=True).read_text())
+        self.assertTrue(report['core_unchanged'])
+        self.assertTrue(report['cine_unchanged'])
+        self.assertEqual(report['core'], 'old-core.dll')
+        for name, content in self.original.items():
+            if name.startswith('Binaries/'):
+                self.assertEqual((self.game / name).read_bytes(), content)
+        self.assertEqual({p.name for p in (self.mod / 'cores').iterdir()}, {'old-core.dll'})
+        self.assertEqual(installer.sha(self.target / (installer.NAME + '.pak')),
+                         report['assets'][installer.NAME + '.pak'])
+
+    def test_catalog_promotion_failure_preserves_existing_core_and_restores_assets(self):
+        self.reuse_facial_readback()
+        original_rename = Path.rename
+        def fail_stage(path, destination):
+            if '-facial-stage-' in path.name:
+                raise OSError('simulated catalog promotion failure')
+            return original_rename(path, destination)
+        with patch.object(Path, 'rename', fail_stage), self.assertRaises(OSError):
+            self.run_update(keep_cine=True, keep_core=True)
+        self.assertEqual(self.game_files(), self.original)
+
+    def test_changed_reused_readback_is_rejected_before_writes(self):
+        report = self.reuse_facial_readback()
+        self.write(report, {'passed': True, 'results': []})
+        with self.assertRaises(ValueError):
+            self.run_update(keep_cine=True, keep_core=True)
+        self.assertEqual(self.game_files(), self.original)
+        self.assertFalse(self.receipt.exists())
+
+    def test_changed_bulk_container_cannot_reuse_previous_facial_readback(self):
+        self.reuse_facial_readback()
+        name = installer.NAME + '.ucas'
+        self.write(self.pack / installer.NAME / name, 'changed bulk')
+        verified = json.loads((self.pack / 'verification.json').read_text())
+        verified['files'][name] = installer.sha(self.pack / installer.NAME / name)
+        self.write(self.pack / 'verification.json', verified)
+        with self.assertRaises(ValueError):
+            self.run_update(keep_cine=True, keep_core=True)
+        self.assertEqual(self.game_files(), self.original)
+        self.assertFalse(self.receipt.exists())
 
     def test_keep_cine_updates_only_css_and_assets(self):
         before={str(p):p.read_bytes() for p in self.cine.rglob('*') if p.is_file()}

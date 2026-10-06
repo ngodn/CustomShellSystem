@@ -23,11 +23,24 @@ def check_hashes(files):
             raise RuntimeError('File changed: ' + str(path))
 
 
-def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report, keep_cine=False):
+def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report,
+           keep_cine=False, keep_core=False):
     require_closed()
     old = json.loads((previous / 'deployment.json').read_text())
     verified = json.loads((pack / 'verification.json').read_text())
-    faces = json.loads((pack / 'facial-independent-readback.json').read_text())
+    face_report = pack / 'facial-independent-readback.json'
+    reuse_report = None
+    if not face_report.exists():
+        reuse_report = pack / 'facial-readback-reuse.json'
+        reuse = json.loads(reuse_report.read_text())
+        face_report = Path(reuse['source_readback']).resolve(strict=True)
+        containers = {NAME + suffix for suffix in ('.utoc', '.ucas')}
+        if (reuse.get('passed') is not True
+                or reuse.get('identical_asset_containers') != {name: True for name in containers}
+                or sha(face_report) != reuse.get('source_readback_sha256')
+                or any(verified['files'].get(name) != old['assets'].get(name) for name in containers)):
+            raise ValueError('Facial readback reuse requires unchanged installed asset containers')
+    faces = json.loads(face_report.read_text())
     deltas = json.loads(delta_report.read_text())
     expected_faces = set(verified.get('facial_meshes', []))
     if (verified.get('passed') is not True or verified.get('exact_export_payloads') != 68
@@ -77,14 +90,18 @@ def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report, ke
         raise ValueError('Installed CINE menu differs from the previous trial')
     if keep_cine:
         cine_dll, menu = cine / old['cine'], cine / 'menu.json'
+    if keep_core:
+        core = mod / 'cores' / old['core']
     selectors = {str(p): sha(p) for p in
                  (mod / 'core.json', cine / 'extension.json', cine / 'menu.json')}
     inputs = {str(pack / NAME / name): digest for name, digest in files.items()}
     inputs.update(verified['dependencies'])
     inputs.update(verified['facial_evidence'])
     for source in (core, cine_dll, menu, delta_report, previous / 'deployment.json',
-                   pack / 'verification.json', pack / 'facial-independent-readback.json'):
+                   pack / 'verification.json', face_report):
         inputs[str(source)] = sha(source)
+    if reuse_report:
+        inputs[str(reuse_report)] = sha(reuse_report)
     check_hashes(inputs)
     for directory in (mod / 'state', cine.parents[1] / 'state'):
         protected.update({str(p): sha(p) for p in directory.rglob('*') if p.is_file()})
@@ -93,9 +110,14 @@ def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report, ke
     core_name, cine_name = 'css_core-facial-' + core_hash[:16] + '.dll', 'cine-facial-' + cine_hash[:16] + '.dll'
     if keep_cine:
         cine_name = old['cine']
-    stage = game / 'Content' / (NAME + '-facial-stage-' + core_hash[:16])
-    rollback = game / 'Content' / (NAME + '-rollback-' + core_hash[:16])
-    candidates = [receipt, stage, rollback, mod / 'cores' / core_name]
+    if keep_core:
+        core_name = old['core']
+    revision = files[NAME + '.pak'][:16] if keep_core else core_hash[:16]
+    stage = game / 'Content' / (NAME + '-facial-stage-' + revision)
+    rollback = game / 'Content' / (NAME + '-rollback-' + revision)
+    candidates = [receipt, stage, rollback]
+    if not keep_core:
+        candidates.append(mod / 'cores' / core_name)
     if not keep_cine:
         candidates.append(cine / cine_name)
     for path in candidates:
@@ -115,7 +137,8 @@ def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report, ke
         copy_verified(core, receipt / core_name)
         copy_verified(cine_dll, receipt / cine_name)
         copy_verified(menu, receipt / 'cine-menu.json')
-        copy_verified(receipt / core_name, mod / 'cores' / core_name)
+        if not keep_core:
+            copy_verified(receipt / core_name, mod / 'cores' / core_name)
         if not keep_cine:
             copy_verified(receipt / cine_name, cine / cine_name)
         check_hashes(inputs)
@@ -134,7 +157,8 @@ def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report, ke
             require_closed()
             atomic(cine / 'extension.json', {**extension, 'entry': cine_name})
         require_closed()
-        atomic(mod / 'core.json', {**selector, 'file': core_name})
+        if not keep_core:
+            atomic(mod / 'core.json', {**selector, 'file': core_name})
         unchanged = {p: digest for p, digest in protected.items() if not Path(p).is_relative_to(target)}
         check_hashes(unchanged)
         check_hashes({str(target / name): digest for name, digest in files.items()})
@@ -148,6 +172,7 @@ def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report, ke
             'assets': files, 'asset_directory': str(target), 'asset_rollback_directory': str(rollback),
             'previous_receipt': str(previous), 'protected_hashes': unchanged, 'inputs': inputs,
             'cine_unchanged': keep_cine,
+            'core_unchanged': keep_core,
             'note': 'Private facial/body trial. No game launch, reload, input or recording.'})
     except Exception as error:
         if processes():
@@ -161,6 +186,8 @@ def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report, ke
                                       ('cine-menu.json', cine / 'menu.json')):
                 if keep_cine and name != 'core.json':
                     continue
+                if keep_core and name == 'core.json':
+                    continue
                 copy_verified(backup / name, destination)
         if new_moved:
             target.rename(stage)
@@ -168,7 +195,8 @@ def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report, ke
             rollback.rename(target)
         if stage.exists():
             shutil.rmtree(stage)
-        (mod / 'cores' / core_name).unlink(missing_ok=True)
+        if not keep_core:
+            (mod / 'cores' / core_name).unlink(missing_ok=True)
         if not keep_cine:
             (cine / cine_name).unlink(missing_ok=True)
         atomic(receipt / 'install-error.json', {'error': str(error), 'rolled_back': True})
@@ -181,11 +209,13 @@ def main():
     for name in ('previous', 'pack', 'receipt', 'delta_report'):
         parser.add_argument(name, type=Path)
     parser.add_argument('--keep-cine', action='store_true', help='Keep the installed CINE DLL and menu unchanged')
+    parser.add_argument('--keep-core', action='store_true', help='Keep the installed CSS core and selector unchanged')
     args = parser.parse_args()
     result = update(GAME, args.previous.resolve(strict=True), args.pack.resolve(strict=True),
                     args.receipt.resolve(), ROOT / 'build/windows/css_core.dll',
                     ROOT / 'build/cine-cssx-win/cine.dll', ROOT / 'extensions/cine/menu.json',
-                    args.delta_report.resolve(strict=True), keep_cine=args.keep_cine)
+                    args.delta_report.resolve(strict=True), keep_cine=args.keep_cine,
+                    keep_core=args.keep_core)
     print(result)
 
 
