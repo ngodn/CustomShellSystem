@@ -55,7 +55,7 @@ are unchanged. Neither E3 nor E4 has been installed in the game.
 ## Remaining work
 
 The full goal remains active. Commander White's facial performance mappings,
-the three unresolved Eve facial tracks, seven unknown source-bone mappings,
+seven unknown source-bone mappings,
 feasible Unholy Genessa facial coverage, final live checks across the three
 requested outfits, native locomotion acceptance and release delivery remain.
 No old Seductress, GeneXXa or native dance expansion is authorized.
@@ -64,3 +64,43 @@ Build tooling remains .NET 10.0.401, UE 5.6.1 C++/Python and host Python 3.14.
 The shared candidate can be reproduced with `package_cw_facial_trial.py` after
 the hashed cook/readback inputs pass. Runtime CSS and CINE continue to consume
 the same facial catalog. No runtime DLL changed in this checkpoint.
+
+## Additional performance controls sampled
+
+`work/cine-animation-port/cw-performance-controls-v1` samples 65 additional
+controls from the immutable source rig, covering brow, jaw, eyes, tongue and
+phoneme controls. Four levels per control produce 260 deformed states; neutral
+and restoration checks bring the total to 326 recorded states. All controls
+restore the sampled geometry exactly, and the source Blender hash is unchanged.
+
+57 controls affect the sampled geometry. Eight `facs_ctrl_EyeLook*` directional
+controls have no measured effect on these parts. Other joint/combined eye
+controls do deform them, so directional names alone are not reliable mappings.
+The four tongue controls produce only about 0.0011 cm of visible displacement
+in the sampled body, eyelashes and tear meshes and need closer source review.
+
+This is calibration only. It does not add expressions or prove cross-character
+performance equivalence. Mapping must also account for negative and overshoot
+source values; these samples only cover zero through one. The existing cooked
+eight expressions plus Neutral remain the accepted offline CW baseline.
+
+The newer Eve face work is recorded in `shared-animation-author-head.md`:
+the optional head recovered the missing controls, and the Cinderella combined
+candidate now contains six prepared Eve facial performances. Their live
+acceptance remains separate from this Commander White work.
+
+The front/quarter source review contains 32 images. Compared with the original
+Jali3 shape previews, its `smile` also closes the eyes; CW's `MouthSmile` does
+not. A direct name-based alias would lose that part of the expression. The four
+sampled phonemes show distinct lip shapes, but their combined behavior and
+cross-character strength still need measured mapping.
+
+An isolated-control compression study covers all 228 nonzero sample states and
+5,918 affected points. Keeping residual below 0.001 cm requires 83 basis shapes
+(measured maximum 0.000464 cm). Simulating the existing morph filter with bounded
+storage gains gives 0.002025 cm maximum residual. The initial 54-shape budget
+fails. Adding all 83 to the existing 74 would exceed the current 128-shape facial
+catalog limit, so this is not a shippable representation. Retain the limit and
+investigate a joint representation or only the controls required by verified
+performance mappings. Evidence: `basis.json`, `basis.npz` and the rejected
+54-shape receipt. No runtime, cooked mesh or original source changed.
