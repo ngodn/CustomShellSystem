@@ -179,13 +179,18 @@ int main(int argc,char** argv) {
         if(argc==3 && (std::string_view(argv[1])=="--audited-pack" || std::string_view(argv[1])=="--audited-facial-pack" ||
                        std::string_view(argv[1])=="--audited-face-motion-pack" ||
                        std::string_view(argv[1])=="--audited-blender-face-pack" ||
+                       std::string_view(argv[1])=="--audited-expanded-pack" ||
+                       std::string_view(argv[1])=="--audited-expanded-isolated-pack" ||
                        std::string_view(argv[1])=="--audited-isolated-pack")) {
-            const bool isolated=std::string_view(argv[1])=="--audited-isolated-pack";
+            const bool expanded=std::string_view(argv[1])=="--audited-expanded-pack" ||
+                                std::string_view(argv[1])=="--audited-expanded-isolated-pack";
+            const bool isolated=std::string_view(argv[1])=="--audited-isolated-pack" ||
+                                std::string_view(argv[1])=="--audited-expanded-isolated-pack";
             const auto packages=Catalog::load(root,argv[2],root/"audit-cache");
             expect(packages.animation_libraries.size()==1,"Audited pack did not load as one library");
             const auto& audited=packages.animation_libraries[0];
-            expect(audited.entries.size()==57 && audited.adapters.size()==5,"Audited animation set changed");
-            expect(packages.outfit_revisions.size()==(isolated?1:3),"Source outfits lack verified revisions");
+            expect(audited.entries.size()==57 && audited.adapters.size()==(expanded?6:5),"Audited animation set changed");
+            expect(packages.outfit_revisions.size()==(isolated?1:expanded?4:3),"Source outfits lack verified revisions");
             size_t resolved_layers=0;
             for(const auto& adapter:audited.adapters) {
                 const auto found=packages.outfit_revisions.find(adapter.source_outfit);
@@ -217,7 +222,7 @@ int main(int argc,char** argv) {
                 for(const auto& adapter:audited.faces.front().adapters)
                     if(packages.outfit_revisions.contains(adapter.source_outfit)) ++expected_faces;
                 expect(matched==expected_faces,"Combined pack did not resolve exactly the installed outfit's faces");
-                const bool blender_face=std::string_view(argv[1])=="--audited-blender-face-pack" || isolated;
+                const bool blender_face=std::string_view(argv[1])=="--audited-blender-face-pack" || isolated || expanded;
                 if(std::string_view(argv[1])=="--audited-face-motion-pack" || blender_face) {
                     const auto& rig=audited.faces.front();
                     const auto* performance=rig.find_performance("css.eve.dance.comecloser");

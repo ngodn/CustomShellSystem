@@ -24,6 +24,8 @@ def main():
     parser.add_argument('output',type=Path)
     parser.add_argument('--dotnet',type=Path,required=True)
     parser.add_argument('--mappings',type=Path,required=True)
+    parser.add_argument('--exporter',type=Path,
+                        default=ROOT/'tools/AssetReadback/bin/Release/net10.0/AssetReadback.dll')
     args=parser.parse_args()
     pack=args.pack.resolve(strict=True)
     output=args.output.resolve()
@@ -46,7 +48,7 @@ def main():
     report=output/'report.json'
     report.write_text(json.dumps(dict(complete=False,results=[]))+'\n')
     environment={key:value for key,value in os.environ.items() if not key.startswith('CSS_')}
-    exporter=ROOT/'tools/AssetReadback/bin/Release/net10.0/AssetReadback.dll'
+    exporter=args.exporter.resolve(strict=True)
     protected[str(exporter)]=digest(exporter)
     for filename,checksum in verified['dependencies'].items():
         dependency=Path(filename)
@@ -118,7 +120,10 @@ def main():
         results.append(row)
         report.write_text(json.dumps(dict(complete=False,results=results),indent=2)+'\n')
         print(json.dumps({key:value for key,value in row.items() if key!='mount'}),flush=True)
-    if len(results)!=3 or any(digest(path)!=checksum for path,checksum in protected.items()):
+    expected_outfits={Path(path).stem for path in verified['dependencies'] if Path(path).suffix=='.utoc'}
+    if (not expected_outfits or len(results)!=len(expected_outfits) or
+            {row['outfit'] for row in results}!=expected_outfits or
+            any(digest(path)!=checksum for path,checksum in protected.items())):
         raise ValueError('Incomplete outfit audit or changed protected input')
     if len({row['decoded_skeleton_sha256'] for row in results})!=1:
         raise ValueError('Outfits supply different shared skeletons; compare before acceptance')

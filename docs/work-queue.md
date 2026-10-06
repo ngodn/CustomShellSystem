@@ -2,6 +2,26 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
+October 6 requested showcase: generated offline vertical Black Hole body/finger
+bone and Come Closer facial videos in `work/cine-animation-port/reels-20261006`.
+User requested the Commander White CINE callout design, no Eve label, all
+component arrows visible together, and corrected signature punctuation. The
+renderers reuse CINE's Rajdhani font and layout constants; no CINE runtime or
+game state changed. The facial clip uses source seconds 14.0 to 19.333 at
+original speed. These renders are presentation artifacts, not new animation
+or outfit compatibility acceptance. The full shared-pack goal remains active.
+
+GeneXXa shared-pack integration now passes: the staged
+`shared-v1/pack-with-genexxa-v1` has six adapters, with all 68 older export
+payloads unchanged. Isolated dependency readback succeeds for Eve, Unholy
+Genessa, Commander White and GeneXXa. The host catalog resolves the combined
+set and each outfit alone, with no fabricated facial support. Seven evidence
+validation tests cover changed files, missing clips/meshes, failed restoration,
+finger failures and bind-mount identity. Packaging now protects all evaluated
+inputs (46 hashes for this addition), not only the generated graph. No new
+installation or gameplay acceptance. Other authored/native rigs and the
+DumbDumb/Iris Out contact work remain active requirements.
+
 October 6 scope correction: support all original eins0fx-authored CSS mods,
 excluding port-only mods, plus other authors' CSS mods, non-CSS mods and native
 appearances using the default game human skeleton where compatible. The current

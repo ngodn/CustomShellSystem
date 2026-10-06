@@ -16,7 +16,7 @@ editor/cooked graph equivalence or playback acceptance.
 
 | Project | Package evidence | Animation work remaining |
 | --- | --- | --- |
-| GeneXXa / Nunexxa | Two v1.0.0 meshes; shared base reference and nine virtual-bone definitions match Eve exactly | Fixed-physics adapter passes 20 moving clips on both meshes and independent cooked graph comparison; shared packaging and live acceptance pending |
+| GeneXXa / Nunexxa | Two v1.0.0 meshes; shared base reference and nine virtual-bone definitions match Eve exactly | Fixed-physics adapter passes 20 moving clips on both meshes and independent cooked graph comparison; shared packaging and isolated dependency/catalog checks pass; live acceptance pending |
 | Seductress | Six packaged variants: Midas, Argent, Noir, Violette, Regalia, Flora | Older 379-bone reference differs on 72 common bones; inspect retarget behavior and preserve BodyHairV42 graph |
 | Seductress v2.0.6 | Manifest lists 18 variants, but local build TOC hash and bulk size differ from that manifest | Locate a consistent original package before using it as a fixture; do not alter this build to make the audit pass |
 | Seductress Next-Gen Showcase | One packaged variant using the native human skeleton; mesh has no post-process graph | Native-human sequence and playback path needed |
@@ -90,7 +90,19 @@ input. The five existing adapter comparisons also still pass. Deliberate bad
 inputs, changed spring settings, wrong skeleton, active defaults and disabled
 blend reset are rejected. The revision-bound catalog entry and receipts are in
 `expanded-outfit-inventory/genexxa-cooked-probe-v1/verified-binding.json`.
-This probe is not installed or included in the current shared trial package.
+The staged `shared-v1/pack-with-genexxa-v1` now includes that binding and its
+adapter. All 68 pre-existing export payloads and all earlier catalog fields
+remain unchanged. The pack has 57 sequences, six body adapters and six facial
+meshes. Independent readback resolves it with each of the four outfit packages
+installed alone; all four supply the same decoded shared skeleton. Host catalog
+checks pass for the combined package set and each isolated outfit. Missing
+outfits do not acquire adapters; GeneXXa has body playback metadata without
+being incorrectly assigned an Eve facial adapter.
+
+Evidence: `previous-pack-comparison.json`, `host-catalog-validation.json` and
+`verification.json` in the staged pack; isolated decode results are in
+`isolated-dependencies-genexxa-v1/report.json`. This is not installed and has no
+new gameplay acceptance. The installed private trial still has five adapters.
 
 Facial capability remains separate. Missing expression controls must not
 prevent compatible body animation playback.

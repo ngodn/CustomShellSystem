@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / 'tools'))
 from css import GAME
 from css_convert import Converter, DEFAULT_REPAK, PACKAGE_ROOT, asset_info
 from css_paths import package_path, windows_destination
+from adapter_additions import load_addition
 
 
 def digest(path):
@@ -28,6 +29,8 @@ def main():
     parser.add_argument('--adapter-cook', help='Successful adapter cook label from run_performance_layers.py')
     parser.add_argument('--adapter-evaluation', help='Successful nine-mesh evaluated-pose label')
     parser.add_argument('--adapter-bindings', type=Path, help='Independent cooked/source comparison receipt')
+    parser.add_argument('--adapter-addition', type=Path, action='append', default=[],
+                        help='Additional adapter cook, graph and complete moving-clip evidence')
     parser.add_argument('--faces', type=Path, help='Verified facial workspace from prepare_facial_catalog.py')
     parser.add_argument('--face-catalog', type=Path, help='Verified metadata revision using the same facial cook')
     args = parser.parse_args()
@@ -52,6 +55,8 @@ def main():
     if len({bool(args.adapter_cook), bool(args.adapter_evaluation), bool(args.adapter_bindings)}) != 1:
         raise ValueError('Adapter cook, evaluation and binding readback are required together')
     adapter_packages = set()
+    additional_payloads = {}
+    additional_evidence = {}
     if args.adapter_cook:
         if json.loads((work / (args.adapter_cook + '-exit.json')).read_text())['exit_code'] != 0:
             raise ValueError('Adapter cook did not succeed')
@@ -92,13 +97,33 @@ def main():
         adapters = bindings['adapters']
         if len(adapters) != 5 or {entry['target_class'].split('.')[0] for entry in adapters} != adapter_packages:
             raise ValueError('Adapter metadata differs from the cooked set')
-        for entry in adapters:
+        library['adapters'] = adapters
+    for specification in args.adapter_addition:
+        additions, payloads, evidence = load_addition(specification,
+            {entry['id'] for entry in library['entries'] if entry['playback'] == 'once'})
+        if set(payloads).intersection(packages):
+            raise ValueError('Additional adapter duplicates a packaged asset')
+        existing = library.setdefault('adapters', [])
+        identities = {(row['source_outfit'], row['source_toc_sha256'], row['source_class']) for row in existing}
+        for row in additions:
+            identity = (row['source_outfit'], row['source_toc_sha256'], row['source_class'])
+            if identity in identities:
+                raise ValueError('Conflicting additional adapter binding')
+            identities.add(identity)
+        existing += additions
+        if len(existing) > 32:
+            raise ValueError('Adapter bindings exceed runtime catalog limit')
+        packages += sorted(payloads)
+        adapter_packages.update(payloads)
+        additional_payloads.update(payloads)
+        additional_evidence.update(evidence)
+    if library.get('adapters'):
+        for entry in library['adapters']:
             candidates = [path for path in dependency_files if path.suffix == '.utoc' and
                           dependency_hashes[str(path)] == entry['source_toc_sha256'] and
                           path.with_suffix('.ucas').stat().st_size == entry['source_bulk_bytes']]
             if len(candidates) != 1:
                 raise ValueError('Adapter source revision is absent or ambiguous')
-        library['adapters'] = adapters
     face_packages = set()
     face_evidence = {}
     face_work = None
@@ -150,10 +175,12 @@ def main():
             raise ValueError(f'Unexpected package: {package}')
         relative = package.removeprefix('/Game/')
         for suffix in ('.uasset', '.uexp'):
-            cook_root = (work / (args.adapter_cook + '-cooked')) if package in adapter_packages else work / 'cooked'
+            cook_root = (work / (args.adapter_cook + '-cooked')) if args.adapter_cook and package in adapter_packages else work / 'cooked'
             if package in face_packages:
                 cook_root = face_work / 'cooked'
             source = cook_root / 'CSSAuthoring/Content' / (relative + suffix)
+            if package in additional_payloads:
+                source = additional_payloads[package][suffix]
             if package in face_packages and face_evidence.get(str(source)) != digest(source):
                 raise ValueError('Facial payload has not passed independent readback: ' + package)
             destination = stage / 'MortalShell2/Content' / (relative + suffix)
@@ -204,8 +231,11 @@ def main():
         raise ValueError('Dependency changed during verification')
     if any(digest(Path(path)) != checksum for path, checksum in face_evidence.items()):
         raise ValueError('Facial evidence changed during packaging')
+    if any(digest(Path(path)) != checksum for path, checksum in additional_evidence.items()):
+        raise ValueError('Additional adapter evidence changed during packaging')
     report = dict(passed=True, packages=len(packages), exact_export_payloads=len(packages),
                   adapters=sorted(adapter_packages), adapter_evaluation=args.adapter_evaluation,
+                  additional_adapter_evidence=additional_evidence,
                   facial_meshes=sorted(face_packages), facial_evidence=face_evidence,
                   dependencies=dependency_hashes,
                   required_skeleton='/Game/CSS/Shared/SKEL_Base.SKEL_Base',
