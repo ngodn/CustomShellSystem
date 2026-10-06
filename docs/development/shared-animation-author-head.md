@@ -384,7 +384,41 @@ and rejected the adapter list before creating output. The corrected check
 requires all nine exact object paths. Both attempt logs remain under
 `cinderella-c10-cook/combined-pack*.log`.
 
-Nothing is installed. Full C10 video review is underway in
-`cinderella-c10-review/`; source/retarget comparison, secondary motion and live
-acceptance remain. This addition does not resolve the unidentified source-bone
-bindings or Commander White's remaining facial-performance mapping.
+Nothing is installed. This addition does not resolve the unidentified
+source-bone bindings or Commander White's remaining facial-performance mapping.
+
+## Full fitted render exposes knee contact failure
+
+`cinderella-c10-review/full-render/review.mp4` is complete: 4,191 frames at
+30 FPS, 900 by 1000, 139.7 seconds including the endpoint. The underlying
+animation is still 60 Hz. Encoding and reconstruction pass, with maximum pose
+position difference 0.000998 cm. Direct MP4 streaming retains one temporary PNG
+instead of thousands. The video is 18,199,295 bytes.
+
+The fitted render exposes a separate failure around source frame 3710
+(61.833 seconds): the kneeling body extends below the shoes. Shoes remain above
+the floor, but the visible body reaches -20.3765 cm, with 257 rendered samples
+below -0.1 cm. Representative stills show the bent knees below the feet.
+The old surface scan selected only calf/foot/ball vertices with bind Z at most
+30 cm, so its passing footwear result could not establish knee clearance.
+
+**C10 and `cinderella-combined-v1` are not accepted for installation.** Their
+structural, compression, adapter and catalog checks remain valid evidence, but
+whole-body contact fails. Source/retarget video comparison, secondary physics
+and live acceptance also remain incomplete. See `review-verification.json`,
+`contact-sheet.png` and `lowest-body.png` for the current finding.
+
+`measure_skin_contact.py --materials` now measures every referenced vertex in
+explicit material sections without the old height/limb filter. A regression
+fixture detects a knee-height triangle crossing the floor while excluding a
+hidden lower triangle, and rejects absent or repeated material selections.
+The default lower-leg path remains unchanged. A full 240 Hz C10 scan is running
+with visible body/clothing sections, excluding hair, hidden flat feet and
+covered-foot sections. Its command, console and exit receipts are under
+`cinderella-c10-cook/visible-contact*`.
+
+After the candidate's independent round-trip and host checks, 98 generated
+readback export files were checked again and hardlinked to their byte-identical
+staged payloads, releasing 544,972,800 allocated bytes. Headers, sources,
+installed packages and releases remain intact. Receipt:
+`cinderella-combined-v1/duplicate-readback-cleanup.json`.

@@ -5,6 +5,8 @@ import hashlib
 import json
 import math
 import sys
+import subprocess
+from contextlib import ExitStack
 from pathlib import Path
 
 import bpy
@@ -22,6 +24,7 @@ parser.add_argument('--motion', type=Path, required=True)
 parser.add_argument('--bind', type=Path, required=True)
 parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--stride', type=int, default=2)
+parser.add_argument('--video', action='store_true', help='Stream frames to MP4 instead of retaining PNG intermediates')
 parser.add_argument('--measure-only', action='store_true', help='Evaluate mesh contact without rendering images')
 parser.add_argument('--footwear-only', action='store_true',
                     help='Measure each foot without rebuilding the visible body; requires --measure-only')
@@ -38,6 +41,7 @@ parser.add_argument('--position-tolerance-cm', type=float, default=.001,
                     help='Explicit matrix reconstruction tolerance for this diagnostic render')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert args.stride > 0
+assert not (args.video and args.measure_only)
 assert not args.footwear_only or args.measure_only
 assert math.isfinite(args.camera_scale) and args.camera_scale > 0
 assert math.isfinite(args.camera_height)
@@ -157,89 +161,105 @@ for obj in footwear:
     assert all(sides.values()), obj.name
     foot_vertices[obj.name] = sides
 
-for output_frame, frame in enumerate(range(0, len(motion['frames']), args.stride)):
-    morphs = motion['frames'][frame].get('morphs', {}) if args.pose == 'final' else {}
-    assert set(morphs) <= set(EXPORT_SHAPES) | set(LEFT_HAND_CORRECTIVES), set(morphs)
-    for obj in objects:
-        if not obj.data.shape_keys:
-            continue
-        for key in obj.data.shape_keys.key_blocks:
-            if key.name in EXPORT_SHAPES or (obj.name == 'Eve Body' and key.name in LEFT_HAND_CORRECTIVES):
-                value = morphs.get(key.name, 0)
-                assert not value or not key.mute, key.name
-                key.value = value
-    snapshot = (motion['frames'][frame]['pose']['Snapshot'] if args.pose == 'final'
-                else motion['frames'][frame]['upstream'])
-    assert snapshot['bIsValid'] and snapshot['SkeletalMeshName'] == 'SK_BlackPearl2'
-    lookup = {n.lower(): t for n, t in zip(snapshot['BoneNames'], snapshot['LocalTransforms'], strict=True)}
-    assert len(lookup) == len(snapshot['BoneNames'])
-    world, wanted = [], []
-    for index, bone in enumerate(bones):
-        t = lookup[bone['name'].lower()]
-        local = Matrix.LocRotScale(Vector([t['Translation'][k] for k in 'XYZ']),
-                                   Quaternion([t['Rotation'][k] for k in 'WXYZ']),
-                                   Vector([t['Scale3D'][k] for k in 'XYZ']))
-        world.append(world[bone['parent']] @ local if bone['parent'] >= 0 else local)
-        wanted.append(inverse @ world[-1] @ bind_inverse[index] @ basis @ rest[index])
-    if args.follow_pelvis:
-        pelvis = inverse @ world[indices['pelvis']].translation
-        if first_pelvis is None:
-            first_pelvis = Vector((0, 0, pelvis.z))
-        view.location = center + Vector(direction) + pelvis - first_pelvis
-    # Explicit desired parent matrices avoid updating the entire scene per bone.
-    for index, bone in enumerate(pose_bones):
-        parent = indices[bone.parent.name] if bone.parent else None
-        kwargs = dict(parent_matrix=wanted[parent], parent_matrix_local=rest[parent]) if parent is not None else {}
-        bone.matrix_basis = bone.bone.convert_local_to_pose(wanted[index], rest[index], invert=True, **kwargs)
-    bpy.context.view_layer.update()
-    position_error = angle_error = 0
-    for index, bone in enumerate(pose_bones):
-        actual = basis @ bone.matrix @ rest_inverse[index] @ inverse @ bind[index]
-        position_error = max(position_error, (actual.translation-world[index].translation).length)
-        angle = actual.to_quaternion().rotation_difference(world[index].to_quaternion()).angle
-        angle_error = max(angle_error, min(angle, abs(2*math.pi-angle)))
-    assert position_error < args.position_tolerance_cm and angle_error < .001, (frame, position_error, angle_error)
-    graph = bpy.context.evaluated_depsgraph_get()
-    body_lowest = None
-    if not args.footwear_only:
-        evaluated = body.evaluated_get(graph)
-        mesh = bpy.data.meshes.new_from_object(evaluated, preserve_all_data_layers=True, depsgraph=graph)
-        bm = bmesh.new()
-        bm.from_mesh(mesh)
-        remove = [face for face in bm.faces if face.material_index in covered]
-        assert len(remove) == expected_removed
-        bmesh.ops.delete(bm, geom=remove, context='FACES_ONLY')
-        bm.to_mesh(mesh)
-        bm.free()
-        previous = filtered.data
-        filtered.data = mesh
-        bpy.data.meshes.remove(previous)
-        visible_vertices = {i for polygon in filtered.data.polygons for i in polygon.vertices}
-        body_lowest = min((filtered.matrix_world @ filtered.data.vertices[i].co).z for i in visible_vertices)
-    foot_lowest = {side: math.inf for side in ('l', 'r')}
-    contact_vertices = {}
-    for original in footwear:
-        evaluated = original.evaluated_get(graph)
-        assert len(evaluated.data.vertices) == len(original.data.vertices)
-        for side, vertices in foot_vertices[original.name].items():
-            height, index = min(((evaluated.matrix_world @ evaluated.data.vertices[i].co).z, i)
-                                for i in vertices)
-            if height < foot_lowest[side]:
-                foot_lowest[side] = height
-                contact_vertices[side] = dict(object=original.name, vertex=index,
-                    weights={original.vertex_groups[g.group].name: g.weight
-                             for g in original.data.vertices[index].groups if g.weight})
-    lowest = min(foot_lowest.values())
-    errors.append(dict(frame=frame, position_cm=position_error, angle_rad=angle_error,
-                       source_frame=motion['frames'][frame].get('source_frame', frame),
-                       footwear_lowest_cm=lowest*100,
-                       foot_lowest_cm={side: height*100 for side, height in foot_lowest.items()},
-                       foot_contact_vertices=contact_vertices,
-                       body_lowest_cm=None if body_lowest is None else body_lowest*100,
-                       contact_lowest_cm=None if body_lowest is None else min(lowest, body_lowest)*100))
-    if not args.measure_only:
-        scene.render.filepath = str(args.output/f'{output_frame:03d}.png')
-        bpy.ops.render.render(write_still=True)
+with ExitStack() as resources:
+    video = None
+    if args.video:
+        log = resources.enter_context((args.output/'encode.log').open('wb'))
+        video = resources.enter_context(subprocess.Popen([
+            'ffmpeg', '-hide_banner', '-loglevel', 'error', '-f', 'image2pipe',
+            '-framerate', str(motion['fps']/args.stride), '-vcodec', 'png', '-i', '-',
+            '-an', '-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-pix_fmt', 'yuv420p',
+            '-movflags', '+faststart', str(args.output/'review.mp4')],
+            stdin=subprocess.PIPE, stderr=log))
+    for output_frame, frame in enumerate(range(0, len(motion['frames']), args.stride)):
+        morphs = motion['frames'][frame].get('morphs', {}) if args.pose == 'final' else {}
+        assert set(morphs) <= set(EXPORT_SHAPES) | set(LEFT_HAND_CORRECTIVES), set(morphs)
+        for obj in objects:
+            if not obj.data.shape_keys:
+                continue
+            for key in obj.data.shape_keys.key_blocks:
+                if key.name in EXPORT_SHAPES or (obj.name == 'Eve Body' and key.name in LEFT_HAND_CORRECTIVES):
+                    value = morphs.get(key.name, 0)
+                    assert not value or not key.mute, key.name
+                    key.value = value
+        snapshot = (motion['frames'][frame]['pose']['Snapshot'] if args.pose == 'final'
+                    else motion['frames'][frame]['upstream'])
+        assert snapshot['bIsValid'] and snapshot['SkeletalMeshName'] == 'SK_BlackPearl2'
+        lookup = {n.lower(): t for n, t in zip(snapshot['BoneNames'], snapshot['LocalTransforms'], strict=True)}
+        assert len(lookup) == len(snapshot['BoneNames'])
+        world, wanted = [], []
+        for index, bone in enumerate(bones):
+            t = lookup[bone['name'].lower()]
+            local = Matrix.LocRotScale(Vector([t['Translation'][k] for k in 'XYZ']),
+                                       Quaternion([t['Rotation'][k] for k in 'WXYZ']),
+                                       Vector([t['Scale3D'][k] for k in 'XYZ']))
+            world.append(world[bone['parent']] @ local if bone['parent'] >= 0 else local)
+            wanted.append(inverse @ world[-1] @ bind_inverse[index] @ basis @ rest[index])
+        if args.follow_pelvis:
+            pelvis = inverse @ world[indices['pelvis']].translation
+            if first_pelvis is None:
+                first_pelvis = Vector((0, 0, pelvis.z))
+            view.location = center + Vector(direction) + pelvis - first_pelvis
+        # Explicit desired parent matrices avoid updating the entire scene per bone.
+        for index, bone in enumerate(pose_bones):
+            parent = indices[bone.parent.name] if bone.parent else None
+            kwargs = dict(parent_matrix=wanted[parent], parent_matrix_local=rest[parent]) if parent is not None else {}
+            bone.matrix_basis = bone.bone.convert_local_to_pose(wanted[index], rest[index], invert=True, **kwargs)
+        bpy.context.view_layer.update()
+        position_error = angle_error = 0
+        for index, bone in enumerate(pose_bones):
+            actual = basis @ bone.matrix @ rest_inverse[index] @ inverse @ bind[index]
+            position_error = max(position_error, (actual.translation-world[index].translation).length)
+            angle = actual.to_quaternion().rotation_difference(world[index].to_quaternion()).angle
+            angle_error = max(angle_error, min(angle, abs(2*math.pi-angle)))
+        assert position_error < args.position_tolerance_cm and angle_error < .001, (frame, position_error, angle_error)
+        graph = bpy.context.evaluated_depsgraph_get()
+        body_lowest = None
+        if not args.footwear_only:
+            evaluated = body.evaluated_get(graph)
+            mesh = bpy.data.meshes.new_from_object(evaluated, preserve_all_data_layers=True, depsgraph=graph)
+            bm = bmesh.new()
+            bm.from_mesh(mesh)
+            remove = [face for face in bm.faces if face.material_index in covered]
+            assert len(remove) == expected_removed
+            bmesh.ops.delete(bm, geom=remove, context='FACES_ONLY')
+            bm.to_mesh(mesh)
+            bm.free()
+            previous = filtered.data
+            filtered.data = mesh
+            bpy.data.meshes.remove(previous)
+            visible_vertices = {i for polygon in filtered.data.polygons for i in polygon.vertices}
+            body_lowest = min((filtered.matrix_world @ filtered.data.vertices[i].co).z for i in visible_vertices)
+        foot_lowest = {side: math.inf for side in ('l', 'r')}
+        contact_vertices = {}
+        for original in footwear:
+            evaluated = original.evaluated_get(graph)
+            assert len(evaluated.data.vertices) == len(original.data.vertices)
+            for side, vertices in foot_vertices[original.name].items():
+                height, index = min(((evaluated.matrix_world @ evaluated.data.vertices[i].co).z, i)
+                                    for i in vertices)
+                if height < foot_lowest[side]:
+                    foot_lowest[side] = height
+                    contact_vertices[side] = dict(object=original.name, vertex=index,
+                        weights={original.vertex_groups[g.group].name: g.weight
+                                 for g in original.data.vertices[index].groups if g.weight})
+        lowest = min(foot_lowest.values())
+        errors.append(dict(frame=frame, position_cm=position_error, angle_rad=angle_error,
+                           source_frame=motion['frames'][frame].get('source_frame', frame),
+                           footwear_lowest_cm=lowest*100,
+                           foot_lowest_cm={side: height*100 for side, height in foot_lowest.items()},
+                           foot_contact_vertices=contact_vertices,
+                           body_lowest_cm=None if body_lowest is None else body_lowest*100,
+                           contact_lowest_cm=None if body_lowest is None else min(lowest, body_lowest)*100))
+        if not args.measure_only:
+            scene.render.filepath = str(args.output/('frame.png' if args.video else f'{output_frame:03d}.png'))
+            bpy.ops.render.render(write_still=True)
+            if video:
+                video.stdin.write((args.output/'frame.png').read_bytes())
+    if video:
+        video.stdin.close()
+        if video.wait(timeout=30) != 0:
+            raise RuntimeError('Review encoding failed; inspect encode.log')
 assert hashlib.sha256(blend.read_bytes()).hexdigest() == blend_hash
 (args.output/'report.json').write_text(json.dumps(dict(
     blend=str(blend), blend_sha256=blend_hash, motion=str(args.motion),
@@ -249,7 +269,7 @@ assert hashlib.sha256(blend.read_bytes()).hexdigest() == blend_hash
     camera_scale=args.camera_scale, camera_height=args.camera_height,
     follow_pelvis=args.follow_pelvis, position_tolerance_cm=args.position_tolerance_cm,
     covered_body_faces_removed=expected_removed, pose=args.pose, measure_only=args.measure_only,
-    footwear_only=args.footwear_only,
+    footwear_only=args.footwear_only, video=args.video,
     foot_vertex_counts={name: {side: len(vertices) for side, vertices in sides.items()}
                         for name, sides in foot_vertices.items()},
     wardrobe='Heels and stockings shown; flat feet hidden; heeled stocking feet and footwear lining shown.',

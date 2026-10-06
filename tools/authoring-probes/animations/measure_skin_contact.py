@@ -1,4 +1,4 @@
-"""Measure neutral cooked lower-leg surfaces against z=0 at every supplied pose."""
+"""Measure neutral cooked lower legs or explicit material surfaces against z=0."""
 import argparse
 import gzip
 import hashlib
@@ -22,6 +22,8 @@ def main():
     parser.add_argument('output', type=Path)
     parser.add_argument('motions', type=Path, nargs='+')
     parser.add_argument('--cooked-skeleton', type=Path, help='Audited Skeleton readback for cooked binary motions')
+    parser.add_argument('--materials', type=int, nargs='+',
+                        help='Measure every referenced vertex in these material slots, without the lower-leg filter')
     args = parser.parse_args()
     if args.output.exists():
         raise FileExistsError(args.output)
@@ -48,14 +50,25 @@ def main():
     bind = transforms(manifest['bones'])
     selected = {}
     influences = vertices['influences']
-    for side in ('l', 'r'):
-        lower_leg = [names.index(name + '_' + side) for name in ('calf', 'foot', 'ball')]
-        weight = np.sum(np.where(np.isin(influences['bone'], lower_leg), influences['weight'], 0), axis=1)
-        selected[side] = np.flatnonzero(used & (weight >= .5) & (vertices['position'][:, 2] <= 30))
-        if not len(selected[side]):
-            raise ValueError('No lower-leg surface vertices')
-    if len(np.intersect1d(*selected.values())):
-        raise ValueError('Ambiguous left/right lower-leg vertices')
+    if args.materials is not None:
+        materials = set(args.materials)
+        available = {s['MaterialIndex'] for s in manifest['sections']}
+        if len(materials) != len(args.materials) or not materials <= available:
+            raise ValueError('Duplicate or absent material section')
+        selected['surface'] = np.unique(np.concatenate([
+            indices[s['FirstIndex']:s['FirstIndex'] + s['NumFaces'] * 3]
+            for s in manifest['sections'] if s['MaterialIndex'] in materials]))
+        if not len(selected['surface']):
+            raise ValueError('No referenced surface vertices')
+    else:
+        for side in ('l', 'r'):
+            lower_leg = [names.index(name + '_' + side) for name in ('calf', 'foot', 'ball')]
+            weight = np.sum(np.where(np.isin(influences['bone'], lower_leg), influences['weight'], 0), axis=1)
+            selected[side] = np.flatnonzero(used & (weight >= .5) & (vertices['position'][:, 2] <= 30))
+            if not len(selected[side]):
+                raise ValueError('No lower-leg surface vertices')
+        if len(np.intersect1d(*selected.values())):
+            raise ValueError('Ambiguous left/right lower-leg vertices')
     prepared = {}
     for side, ids in selected.items():
         subset = vertices[ids]
@@ -77,6 +90,8 @@ def main():
             raise ValueError(f'Bind reconstruction error: {error} cm')
         sections = {}
         for section in manifest['sections']:
+            if args.materials is not None and section['MaterialIndex'] not in materials:
+                continue
             start = section['FirstIndex']
             used_section = np.unique(indices[start:start + section['NumFaces'] * 3])
             rows = np.flatnonzero(np.isin(ids, used_section))
@@ -126,8 +141,11 @@ def main():
         print(motion.name, {s: r['min_z_cm'] for s, r in result['sides'].items()}, flush=True)
     if any(sha(Path(path)) != checksum for path, checksum in inputs.items()):
         raise ValueError('Input changed during measurement')
+    selection = ('Every referenced vertex in the explicit material sections, with all influences and no height or limb filter.'
+                 if args.materials is not None else
+                 'Referenced vertices at bind Z <= 30 cm with at least 50% combined calf/foot/ball weight on one side. All their influences preserved; all material sections included.')
     args.output.write_text(json.dumps(dict(complete=True, inputs=inputs, results=results,
-        selection='Referenced vertices at bind Z <= 30 cm with at least 50% combined calf/foot/ball weight on one side. All their influences preserved; all material sections included.',
+        selection=selection, materials=args.materials,
         scope='Neutral cooked surface linear skinning at every supplied pose, floor Z=0 cm. Sampling is determined by the input capture. No morphs, post-process, physics, cloth simulation or material visibility filtering. Diagnostic, not full contact or live acceptance.'
     ), indent=2) + '\n')
 

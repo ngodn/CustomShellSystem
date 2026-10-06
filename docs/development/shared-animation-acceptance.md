@@ -8,8 +8,10 @@ six prepared facial performances. Actual combined and pack-only catalog
 checks pass 1,132 and 1,120 assertions. See the
 [author-head evidence](shared-animation-author-head.md). This candidate is not
 installed or live-accepted. Cinderella passes full cooked-motion comparison
-and 81 adapter cases across the nine requested meshes; visual, secondary
-physics and live acceptance remain unfinished. Historical
+and 81 adapter cases across the nine requested meshes, but the full fitted
+render exposes knee penetration around 61.83 seconds. C10 and this combined
+candidate must not be installed until body contact is corrected. Secondary
+physics and live acceptance also remain unfinished. Historical
 checkpoints below describe earlier candidates.
 
 Checkpoint: 2026-10-06. This is a private candidate, not release approval.
