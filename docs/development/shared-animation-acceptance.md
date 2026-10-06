@@ -94,8 +94,8 @@ All source assets in the table are beneath `/Game/CSS/`.
 
 | Clip | Retained source | Blocker |
 | --- | --- | --- |
-| DumbDumb | source-05, `HD-ATOOL_P/anim/971` | Full-length resolved-body audition passes editor readback; seven extra source indices and nine facial controls remain unidentified; user confirmed permission on October 6 |
-| Iris Out | source-06, `HD-ATOOL_P/anim/970` | Full-length resolved-body audition passes editor readback; seven extra source indices and two facial controls remain unidentified; user confirmed permission on October 6 |
+| DumbDumb | source-05, `HD-ATOOL_P/anim/971` | L5U full-length contact trial passes exact readback/non-leg preservation; removes ten introduced knee flips and clears authored-key footwear within 0.000190 cm; dense/cooked/live checks, seven extra source indices and nine facial controls remain unfinished; user confirmed permission on October 6 |
+| Iris Out | source-06, `HD-ATOOL_P/anim/970` | L5U full-length trial passes exact readback/non-leg preservation; frame 76 retains 0.217425 cm right-foot penetration and frame 77 knee amplification; seven extra source indices and two facial controls remain unidentified; user confirmed permission on October 6 |
 
 Neither clip is silently discarded, approximated or counted among the 57 cooked
 sequences. See [source audit](shared-animation-library.md) and

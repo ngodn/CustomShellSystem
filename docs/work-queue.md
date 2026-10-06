@@ -17,6 +17,17 @@ the remaining footwear/clips and DumbDumb/Iris Out source-plane correction.
 Evidence: `retarget-seductress-s8/`, `CONTACT.md`, and the coverage matrix.
 No runtime, released outfit or game installation changed.
 
+DumbDumb/Iris Out contact continuation: isolated L5U repeats the native
+source-plane correction. Both full clips pass fresh authored readback and
+exact non-leg pose preservation. DumbDumb clears all 3,943 measured key poses
+within 0.000190 cm and removes all ten L5T-introduced knee flips. Iris Out still
+has -0.217425 cm right-foot contact at frame 76 and amplified knee motion at
+77; source-plane correction alone is insufficient there. Side-view comparison
+frames 72-81 and full knee metrics are saved. All jobs exited zero. Next check
+DumbDumb between-key/compressed contact and adapter playback; localize Iris's
+near-straight transition before another bake. Do not treat either clip as
+accepted or installed. See `retarget-l5u/` and CONTACT.md.
+
 Older Seductress continuation: three full direct-source retarget auditions now
 pass fresh saved/repeated readback, and S3 passes 162 adapter cases across all
 six meshes, including 38 finger bones and restoration. All 27 CSS controls and

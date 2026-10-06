@@ -1,5 +1,6 @@
 """Blender 5.2.2: replay UE animation samples on Eve's accepted fitted mesh."""
 import argparse
+import gzip
 import hashlib
 import json
 import math
@@ -105,7 +106,9 @@ rest = [b.bone.matrix_local.copy() for b in pose_bones]
 rest_inverse = [m.inverted() for m in rest]
 bind_inverse = [m.inverted() for m in bind]
 indices = {b['name']: i for i, b in enumerate(bones)}
-motion = json.loads(args.motion.read_text())
+opener = gzip.open if args.motion.suffix == '.gz' else open
+with opener(args.motion, 'rt') as stream:
+    motion = json.load(stream)
 errors = []
 
 scene.render.engine = 'BLENDER_WORKBENCH'

@@ -153,3 +153,44 @@ Resolve that with audited external package dependencies while preserving
 released paths and original packages, not by disabling the path guard or
 pretending this rig is the current Eve skeleton. Compressed editor-component
 passes do not replace the independent Windows cook and surface readback.
+
+
+## Full DumbDumb and Iris Out source-plane trial
+
+`bake_eve_source_plane_contact.py` creates and freshly verifies isolated L5U
+candidates from the immutable L5S measurements. It uses the same native
+source-plane option, saves no source edits, and streams gzip pose captures.
+`render_eve.py` accepts these captures as well as its existing plain JSON input.
+
+Both complete clips pass exact fresh repeat: DumbDumb has 3,943 keys and Iris
+Out 1,001, each with 388 tracks. All evaluated non-leg poses remain exactly
+identical to L5S. Full 60 Hz footwear measurements show:
+
+- DumbDumb: left minimum -0.0000664 cm and right -0.0001900 cm. L5T had
+  -0.3641 cm and -0.1223 cm. All ten knee-plane flips introduced by L5T are
+  absent in L5U (six left and four right).
+- Iris Out: right minimum -0.217425 cm at frame 76, essentially unchanged.
+  The three right knee-plane reversals at 58, 75 and 77 already occur in L5S.
+  At frame 77, correction increases the calf angular step from 32.842 to
+  49.276 degrees. Peak right-knee travel rises from 13.823 to 20.557 cm.
+  L5U does not add a new reversal, but amplifies this source transition.
+
+The side-view Iris comparison covers source frames 72 through 81. It is a
+short diagnostic window; both candidate clips retain their full lengths.
+`retarget-l5u/` contains fresh creation/verification, exact pose preservation,
+full knee metrics, per-foot measurements and `knee-comparison.png` (columns
+74 through 78, L5S above L5U). All associated jobs exited zero.
+DumbDumb still needs between-key contact, compressed/cooked validation,
+full-motion visual and adapter review. Iris Out additionally needs the
+straight-leg transition resolved. Neither candidate is installed or accepted.
+
+Epic's [UE 5.6 solver documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/ik-rig-solvers-in-unreal-engine?application_version=5.6)
+describes pole control and preferred bend angles; its
+[Two Bone IK reference](https://dev.epicgames.com/documentation/en-us/unreal-engine/animation-blueprint-two-bone-ik-in-unreal-engine?application_version=5.6)
+defines the joint target used to direct the bend.
+[SideFX's two-bone solver reference](https://www.sidefx.com/docs/houdini/nodes/vop/kinefx--twoboneik.html)
+also discusses using a bent reference pose for a hyperextended chain.
+These are investigation references, not evidence that a new pole rule is
+correct for Iris Out. Compare the original straight-leg motion and contact
+before choosing any temporal pole stabilization; do not smooth the whole dance
+or change outfit weights to conceal a local issue.
