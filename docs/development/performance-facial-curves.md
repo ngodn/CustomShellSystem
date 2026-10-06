@@ -25,6 +25,17 @@ evidence of an equivalent control. No aliases were guessed and no missing
 curve was discarded. DumbDumb and Iris Out also retain their separate unresolved
 seven-bone mapping problem.
 
+A separate readback of eight retail Eve face meshes also finds none of the
+nine unresolved names (case-insensitive exact comparison). This includes
+Face_001 (0 morphs), Face_002 (27), Face_003 (53), Face_Morph (33), Face_Jali
+(195), Face_Jali2 (142), Face_Jali3 (169) and Face_for_Title (53). It rules out
+simply taking those named shapes from these retail meshes. It does not prove
+that a similarly named shape is equivalent or resolve a custom source driver.
+`retail-face-source-v1/morph-name-audit.json` records all names, commands,
+readback hashes and the unchanged retail index/mappings. MeshExport completed
+each readback successfully; the earlier AssetReadback attempt in that directory
+failed while mounting the retail global container and supplied no evidence.
+
 A fresh retail skeleton readback in `retail-skeleton-audit-v2` still contains
 3,267 reference bones and no `VirtualBones` definitions. Its GUID is
 `2C8DEB63-499D8C56-DAA3AD80-AF949D71`; it does not identify the extra source
