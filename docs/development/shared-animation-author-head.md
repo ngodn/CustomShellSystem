@@ -186,3 +186,74 @@ Apply the established source-relative foot/contact workflow, preserve non-leg
 motion, then perform dense contact, cooking and outfit checks. Cinderella
 remains outside the playable catalog. All import, retarget, render and fresh
 verification processes finished successfully; none installed game files.
+
+## Cinderella contact investigation
+
+The C2 study reuses the earlier foot-local retarget configuration after checking
+that all 54 source reference bones and the target bind pose match. A fresh
+conversion again matches all 3,251,828 saved authored transforms. Measuring the
+neutral cooked lower-leg surfaces at all 8,381 keys finds penetration of
+8.225 cm on the left and 3.975 cm on the right. Sparse screenshots alone missed
+the worst frames.
+
+The C3 per-frame sole correction preserves every non-leg local pose, but is
+rejected. It reduces right-foot penetration to numerical noise and leaves
+1.496 cm on the left heel-support surface. More seriously, it increases the
+left calf's frame-1254 rotation step from 17.56 to 62.47 degrees. Neither C2
+nor C3 is accepted, cooked or installed.
+
+The C4 diagnostic retains full source and target leg trajectories in
+`retarget-cinderella-c4/knee-worlds.npz`. The existing short knee-reversal
+repair rejects two intervals because the neighboring bend directions disagree
+by more than its 45-degree guard. No C4 animation was created and the guard was
+not weakened. Source inspection also shows that the frame-1254 reversal exists
+in the supplied motion; contact correction amplifies it when the target leg
+changes from straight to bent. This needs a source-aware retarget correction,
+not blanket smoothing of the performance.
+
+Evidence is under `retarget-cinderella-c2` through `retarget-cinderella-c4`:
+`fresh-verification.json`, the two `contact.json` reports,
+`pose-preservation.json`, `knee-diagnostic.json` and `knee-comparison.json`.
+These are full-key offline measurements of the neutral fitted mesh. They do
+not establish outfit physics, body-morph or in-game acceptance.
+
+Follow-up inspection identifies a selection error in C3: its lift used the
+minimum across all alternate foot sections, including hidden flat-foot
+geometry. The actual Black Pearl footwear is material 20. At left frame 1253
+it is 3.000 cm above the floor, while the all-section minimum is -5.436 cm.
+At right frame 7478 it is 2.206 cm above the floor versus -3.901 cm across all
+sections. Correcting those hidden surfaces introduced unnecessary knee bends.
+Keep all-section measurements for diagnostics, but select the active footwear
+explicitly when deriving contact corrections. Alternate footwear needs its own
+visibility-aware review; a single all-section minimum does not represent it.
+
+The isolated C5 experiment copies source foot XYZ instead of Z only. It moves
+the feet by a median 14.16/13.66 cm left/right, increases straight left-leg keys
+from 2,305 to 3,180 and leaves sampled penetration. It is rejected. No original
+retargeter was changed. C6 instead starts from C2 and derives sole lifts only
+from material 20. That footwear passes all 8,381 authored keys, with minimum
+left/right heights of -0.0000214/-0.0000283 cm. Fresh conversion matches all
+3,251,828 authored transforms exactly; five saved/reloaded poses also match
+exactly. All non-leg evaluated local poses remain unchanged.
+
+C6 is still not motion-accepted. The left calf has a 154.53-degree step at
+frame 5240, versus 135.06 degrees in C2. The source knee changes bend direction
+near extension, whereas C2 is already bent about 70 degrees. Absolute source
+foot height combined with different limb proportions amplifies that reversal.
+The existing conservative local repair cannot resolve this safely.
+
+C7 tests Unreal's limb-length-relative foot goal with no absolute position
+blend or static foot offset. Across all keys its median knee-flexion error
+against the source falls to 0.145/0.141 degrees left/right, with maxima
+1.903/2.007 degrees. However, sampled visible footwear penetrates by up to
+24.17/15.54 cm, so C7 is also rejected as a playable candidate. Its compact
+`legs.json`, selected `sparse-motion.json`, `sparse-contact.json` and
+`comparison.json` retain the evidence without another full-pose dump.
+
+Next investigate source hip placement together with limb proportions rather
+than adding further sole lifts to C2. Source thighs are parented under Spine;
+target thighs are parented under pelvis. At frame 5238 the source left hip is
+89.58 cm high and the C2/C7 target hip is 80.25 cm, despite the target leg being
+longer. A derived hip-center motion reference is a hypothesis, not an accepted
+fix. Preserve the original source, compare all affected body motion explicitly
+and reject a correction that merely exchanges knee flips for foot penetration.

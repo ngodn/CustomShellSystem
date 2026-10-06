@@ -521,3 +521,15 @@ penetration at the first/last poses, so this is not accepted or cataloged.
 Next is source-relative contact correction with non-leg motion preserved,
 then dense review, cooking and outfit checks. Do not count it in the existing
 62 catalog IDs or five Eve facial performances. All current jobs are terminal.
+
+Cinderella contact follow-up: C6 passes visible Black Pearl shoe contact at
+all 8,381 authored keys and repeats all 3,251,828 transforms exactly, with
+non-leg local poses unchanged. It still has knee-direction discontinuities
+and is not accepted. C3 incorrectly drove correction from hidden alternate
+foot sections and is rejected. The C7 limb-relative diagnostic closely retains
+source knee flexion but penetrates the floor, so investigate hip placement
+together with leg proportions next. Do not stack more lifts onto C2 or relax
+the existing knee repair guard. Full findings and paths are in
+`docs/development/shared-animation-author-head.md`. No game files were changed;
+all C2-C7 diagnostic jobs finished. Two byte-identical source-leg captures now
+reference the retained C2 capture, removing 11,233,280 duplicate bytes.
