@@ -13,8 +13,9 @@ Install (game closed):
     release.json
 
 CSSX is a tab of the game's Player Menu (after CSS, before TARSTONES). Open
-it from the world with F6 on the keyboard or by pressing both thumbsticks on
-a controller, or open the Player Menu and switch tabs. Change the keys in Mods/CSSX/settings.json (Unreal key names).
+it from the world with F6 on the keyboard, or open the Player Menu and switch
+tabs (that is the way on a controller; there is no controller shortcut).
+Change the key in Mods/CSSX/settings.json (Unreal key names).
 Extensions install as folders under Mods/CSSX/extensions/. CSSX Cheat Menu is
 a separate download.
 

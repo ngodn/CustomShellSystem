@@ -23,7 +23,7 @@ Core::Core(const CssxLoaderHost& host):host_(host),root_(host.root),mods_root_(h
       engine::set_find_cache(!no_cache);
       if(!no_writer) { writer_.start(); storage_.set_writer(&writer_); }   // log appends never block the game thread
       log("info","Core switches",{{"writer_thread",!no_writer},{"find_cache",!no_cache}}); }
-    hotkey_down_.assign(2,true);   // require a release before the first open
+    hotkey_down_.assign(1,true);   // require a release before the first open
     bridge_=std::make_unique<Bridge>(host.hooks);
     hud_.set_logger([this](const std::string& m){ log("warning",m); });
     hud_.set_object_minter([this](UObject* o){ return bridge_->track(o); });
@@ -76,7 +76,8 @@ Json Core::service(const Json& request) {
     if(op=="log") { log(request.value("level",std::string("info")),request.at("message").get<std::string>(),request.value("fields",Json::object())); return nullptr; }
     if(op=="menu.status") return {{"menu_open",menu_ && menu_->is_open()},{"game_menu_open",game_menu_open()}};
     if(op=="menu.close") { if(menu_) menu_->close(); return true; }
-    if(op=="frame.brief") return perf_brief();   // {hz, median_ms, core_mean_us, ...} over the last ten seconds
+    // {hz, median_ms, core_mean_us, ...} over the last ten seconds, or over "seconds" (1 to 60).
+    if(op=="frame.brief") return perf_brief(std::clamp(request.value("seconds",10.0),1.0,60.0));
     if(op=="service.list") return services_.list(monotonic_us()/1e6);
     if(op=="service.call") return services_.call(request.at("service").get<std::string>(),request.value("version",0u),request.value("request",Json::object()),monotonic_us()/1e6);
     if(op=="input.focus") { DWORD pid=0; const auto window=GetForegroundWindow(); if(window) GetWindowThreadProcessId(window,&pid); return window && pid==GetCurrentProcessId(); }
@@ -219,7 +220,7 @@ void Core::tick(void* engine,float delta) {
     if(player_.pc && hotkey_accumulator_>=1.0/30) {
         hotkey_accumulator_=0;
         bool pressed=false;
-        try { const bool keyboard=hotkey_pressed(settings_.open_keyboard,0); const bool gamepad=hotkey_pressed(settings_.open_gamepad,1); pressed=keyboard || gamepad; } catch(...) {}
+        try { pressed=hotkey_pressed(settings_.open_keyboard,0); } catch(...) {}
         // Second keyboard path: UE4SS's raw key polling through the loader.
         if(host_.size>=sizeof(CssxLoaderHost) && host_.take_hotkey && host_.take_hotkey(host_.hotkey_context)>0) { pressed=true; hotkey_down_[0]=true; }
         if(pressed) hotkey();
@@ -283,17 +284,20 @@ Json Core::status() {
     return s;
 }
 void Core::publish_status() { try { writer_.replace(root_/"runtime/status.json",status().dump(2)+"\n"); } catch(...) {} }
-Json Core::perf_brief() const {
-    // Last ~10 s: engine frame time and the core's own share of it.
-    Json out={{"hz",0.0},{"median_ms",0.0},{"core_mean_us",0.0},{"core_max_us",0.0},{"core_p99_us",0.0},{"frames",0}};
+Json Core::perf_brief(double seconds) const {
+    // Last `seconds` (10 by default): engine frame time and the core's own share of it.
+    // mean/p95/p99/max/hitches since 1.3.1, for extensions that compare two windows.
+    Json out={{"hz",0.0},{"median_ms",0.0},{"mean_ms",0.0},{"p95_ms",0.0},{"p99_ms",0.0},{"max_ms",0.0},{"hitches",0},
+              {"core_mean_us",0.0},{"core_max_us",0.0},{"core_p99_us",0.0},{"frames",0},{"seconds",seconds}};
     const auto* ring=host_.frames; if(!ring || ring->frequency<=0) return out;
     auto all=newest_of(ring->intervals,ring->capacity,ring->head,ring->total,ring->capacity);
-    std::vector<int64_t> window; int64_t budget=int64_t(10*ring->frequency);
+    std::vector<int64_t> window; int64_t budget=int64_t(seconds*double(ring->frequency));
     for(auto it=all.rbegin();it!=all.rend() && budget>0;++it) { window.push_back(*it); budget-=*it; }
     const auto engine=summarize(window,ring->frequency);
     const auto core=phase_tick_.newest(window.size()); const auto cs=summarize(core,ring->frequency);
     long double sum=0; for(auto v:core) sum+=(long double)v;
     out["hz"]=engine.hz; out["median_ms"]=engine.median_ms; out["frames"]=engine.count;
+    out["mean_ms"]=engine.mean_ms; out["p95_ms"]=engine.p95_ms; out["p99_ms"]=engine.p99_ms; out["max_ms"]=engine.max_ms; out["hitches"]=engine.hitches;
     out["core_mean_us"]=core.empty()?0.0:double(sum)*1e6/double(ring->frequency)/double(core.size());
     out["core_max_us"]=cs.max_ms*1000; out["core_p99_us"]=cs.p99_ms*1000;
     return out;

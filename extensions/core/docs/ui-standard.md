@@ -84,8 +84,11 @@ its key does and plays the glyph's key flash; slider bars drag. The mouse
 wheel scrolls the lists natively and walks the picker results.
 
 Opening: the game's own Player Menu key, then bumper/Q/E to the CSSX tab; or
-the hotkey chord (`settings.json`, default F6 or L3+R3), sampled at 30 Hz only
-while a player controller exists. Pause, cursor, HUD and the menu input
+the keyboard hotkey (`settings.json`, default F6), sampled at 30 Hz only
+while a player controller exists. There is no controller chord: L3+R3 fired
+during the game's own stick presses and could leave the Player Menu stuck
+with the world no longer reacting to the player, so controller players open
+the menu from the Player Menu tab. Pause, cursor, HUD and the menu input
 context are the game's: CSSX never toggles them. Back on the library closes
 the Player Menu the way CSS does (`HandleGameMenu(0, true)`).
 

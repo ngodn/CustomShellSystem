@@ -75,8 +75,8 @@ weak handle, and only re-resolves when the handle dies.
   authorised. Stays open unless the user asks for that test.
 - **H5, per-frame framework work in the new design.** Must be shown ≈ 0 with
   the menu closed: one atomic flag read, one ring-buffer store, one zero-wait
-  change-notification check, and a 30 Hz two-key chord poll only when a player
-  controller exists.
+  change-notification check, and a 30 Hz keyboard hotkey poll only when a player
+  controller exists (the controller chord poll was removed with the chord).
 
 ## Method for the release comparison
 

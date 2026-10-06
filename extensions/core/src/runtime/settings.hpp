@@ -9,8 +9,10 @@ struct Settings {
     static constexpr int schema=1;
     // Unreal key names polled on the player controller. A chord fires when
     // every key is down and at least one was up on the previous sample.
+    // Keyboard only: a controller chord (L3+R3 once) collided with the game's
+    // own stick presses and could leave the Player Menu stuck, so controller
+    // players open the menu from the Player Menu tab instead.
     std::vector<std::string> open_keyboard{"F6"};
-    std::vector<std::string> open_gamepad{"Gamepad_LeftThumbstick","Gamepad_RightThumbstick"};
     double ui_scale=1.0;          // 0.75 .. 1.5, multiplies the 1080-reference layout
     bool pause_while_open=true;   // ask the game's UI handler to pause
     bool hide_hud_while_open=true;

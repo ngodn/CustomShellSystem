@@ -24,7 +24,6 @@ Json Settings::json() const {
     Json j=extra;
     j["schema"]=schema;
     j["open_keyboard"]=open_keyboard;
-    j["open_gamepad"]=open_gamepad;
     j["ui_scale"]=ui_scale;
     j["pause_while_open"]=pause_while_open;
     j["hide_hud_while_open"]=hide_hud_while_open;
@@ -36,7 +35,6 @@ Settings Settings::parse(const Json& j) {
     if(j.value("schema",0)!=schema) throw std::runtime_error("settings.json schema is not 1");
     Settings s;
     s.open_keyboard=keys(j,"open_keyboard",s.open_keyboard);
-    s.open_gamepad=keys(j,"open_gamepad",s.open_gamepad);
     if(j.contains("ui_scale")) {
         const double scale=j.at("ui_scale").get<double>();
         if(!(scale>=0.75 && scale<=1.5)) throw std::runtime_error("settings.ui_scale must be between 0.75 and 1.5");
@@ -46,6 +44,8 @@ Settings Settings::parse(const Json& j) {
     if(j.contains("hide_hud_while_open")) s.hide_hud_while_open=j.at("hide_hud_while_open").get<bool>();
     if(j.contains("show_extension_status")) s.show_extension_status=j.at("show_extension_status").get<bool>();
     for(auto it=j.begin();it!=j.end();++it) {
+        // open_gamepad is a retired key: an older file may still carry it. It is
+        // dropped, not round-tripped, so the next save removes it.
         static const char* known[]={"schema","open_keyboard","open_gamepad","ui_scale","pause_while_open","hide_hud_while_open","show_extension_status"};
         if(std::find(std::begin(known),std::end(known),it.key())==std::end(known)) s.extra[it.key()]=it.value();
     }

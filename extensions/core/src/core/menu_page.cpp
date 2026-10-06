@@ -866,8 +866,8 @@ void Menu::build_library(bool& deferred) {
             auto& picture=take(head_,Kind::picture);
             if(picture.icon!=art) { brush(picture.extra.Get(),art,true); picture.icon=art; }
         }
-        auto keys=[&](const std::vector<std::string>& list,bool pad){ std::string s; for(auto k:list) { if(pad) { if(k=="Gamepad_LeftThumbstick") k="L3"; else if(k=="Gamepad_RightThumbstick") k="R3"; else if(k.starts_with("Gamepad_")) k=k.substr(8); } s+=(s.empty()?"":" + ")+k; } return s; };
-        paragraph(panel_,"One menu for every extension. Open it with "+keys(deps_.settings->open_keyboard,false)+" on the keyboard or "+keys(deps_.settings->open_gamepad,true)+" on a controller, or switch to this tab in the Player Menu. Extensions install as folders under Mods/CSSX/extensions.",body);
+        auto keys=[&](const std::vector<std::string>& list){ std::string s; for(const auto& k:list) s+=(s.empty()?"":" + ")+k; return s; };
+        paragraph(panel_,"One menu for every extension. Open it with "+keys(deps_.settings->open_keyboard)+" on the keyboard, or switch to this tab in the Player Menu. Extensions install as folders under Mods/CSSX/extensions.",body);
         paragraph(panel_,perf_line(),muted);
         Json notice=deps_.notice?deps_.notice():Json::object();
         const auto note=notice.value("notice",std::string{});
@@ -919,13 +919,12 @@ void Menu::build_settings() {
     const auto& s=*deps_.settings;
     struct Row { std::string label,value,hint; };
     char scale[16]; std::snprintf(scale,sizeof scale,"%.0f%%",s.ui_scale*100);
-    auto shortname=[](std::string k){ if(k=="Gamepad_LeftThumbstick") return std::string("L3"); if(k=="Gamepad_RightThumbstick") return std::string("R3"); if(k.starts_with("Gamepad_")) k=k.substr(8); return k; };
-    std::string keys; for(const auto& k:s.open_keyboard) keys+=(keys.empty()?"":"+")+k; keys+="  /  "; std::string pad; for(const auto& k:s.open_gamepad) pad+=(pad.empty()?"":"+")+shortname(k);
+    std::string keys; for(const auto& k:s.open_keyboard) keys+=(keys.empty()?"":"+")+k;
     // The Player Menu owns pause, cursor and HUD, so only these remain.
     const std::vector<Row> rows={
         {"Menu scale",scale,"Size of this page relative to the game's menus. 75% to 150%. Left and Right change it in steps of 5%."},
         {"Extension status",s.show_extension_status?"On":"Off","Show each extension's one-line status in the library list, for example active cheats, instead of its author and version."},
-        {"Open keys",keys+pad,"Shortcut that opens the Player Menu on the CSSX tab. Edit open_keyboard and open_gamepad in Mods/CSSX/settings.json with the game closed (Unreal key names)."},
+        {"Open key",keys,"Keyboard shortcut that opens the Player Menu on the CSSX tab. Edit open_keyboard in Mods/CSSX/settings.json with the game closed (Unreal key names). On a controller, open the Player Menu and switch to this tab."},
         {"Performance",perf_line(true),perf_detail()}};
     settings_row_=std::clamp(settings_row_,0,int(rows.size())-1);
     UObject* selected_widget=nullptr;

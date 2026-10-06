@@ -53,7 +53,7 @@ private:
     FrameRing<4096> phase_tick_, phase_menu_, phase_hud_, phase_ext_;
     std::map<std::string,std::pair<uint64_t,uint64_t>> op_stats_;   // op -> (calls, microseconds)
     Json frame_stats(double seconds) const;
-    Json perf_brief() const;        // one-line cost summary for the menu
+    Json perf_brief(double seconds=10) const;   // one-line cost summary for the menu
     // Services for the runtime
     Json service(const Json& request);
     // Service bus (service.list / service.call): modules exporting cssx_services(), found by

@@ -42,7 +42,8 @@ shell}`; `valid {target}`; `find {path}`; `load {path}`; `class_default
 {target,property,key,expected,value}`; `input.keys {target,keys}`.
 
 Host: `menu.status` → `{menu_open, game_menu_open}`; `menu.close`;
-`frame.brief` → `{hz, median_ms, frames, core_mean_us, core_max_us, core_p99_us}` (last ten seconds);
+`frame.brief {seconds?}` → `{hz, median_ms, frames, core_mean_us, core_max_us, core_p99_us}` (last ten
+seconds; since 1.3.1 also `mean_ms, p95_ms, p99_ms, max_ms, hitches, seconds`, and `seconds` 1 to 60 picks the window);
 `input.focus`.
 
 Since CSSX 1.3.1: `CSSX_LAYER_SCREEN` as a layer parent puts the layer on the screen
@@ -112,6 +113,8 @@ developer path; players restart.
 
 ## Settings schema 1 (`settings.json`)
 
-`open_keyboard`, `open_gamepad` (1–4 Unreal key names each, chord),
+`open_keyboard` (1–4 Unreal key names, chord; `open_gamepad` is retired and
+dropped from an older file on save: the L3+R3 chord collided with the game's
+own stick presses),
 `ui_scale` (0.75–1.5), `pause_while_open`, `hide_hud_while_open`,
 `show_extension_status`. Unknown keys round-trip.

@@ -78,7 +78,9 @@ int main() {
     check(again.open_keyboard==std::vector<std::string>{"F6"} && note.starts_with("Recovered"),"backup recovery restores the previous valid file");
     rejects([&]{Settings::parse({{"schema",1},{"ui_scale",9}});},"ui scale bounds");
     rejects([&]{Settings::parse({{"schema",1},{"open_keyboard",Json::array({"F 1"})}});},"key name validation");
-    rejects([&]{Settings::parse({{"schema",1},{"open_gamepad",Json::array({"A","A"})}});},"duplicate keys rejected");
+    rejects([&]{Settings::parse({{"schema",1},{"open_keyboard",Json::array({"A","A"})}});},"duplicate keys rejected");
+    { const auto old=Settings::parse({{"schema",1},{"open_gamepad",Json::array({"Gamepad_LeftThumbstick","Gamepad_RightThumbstick"})}});
+      check(!old.extra.contains("open_gamepad") && !old.json().contains("open_gamepad"),"retired open_gamepad key is dropped, not round-tripped"); }
 
     // Frame statistics: synthetic 22 Hz with two hitches.
     FrameRing<64> ring;
