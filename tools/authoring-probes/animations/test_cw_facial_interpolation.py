@@ -40,6 +40,15 @@ class InterpolationTests(unittest.TestCase):
         self.assertEqual(interpolation_weights((0, .25, .5, .75, 1), .375, 'linear'),
                          [(0, 0), (.25, .5), (.5, .5), (.75, 0), (1, 0)])
 
+    def test_split_quadratic_preserves_half_strength_slope_change(self):
+        axis=(0,.25,.5,.75,1)
+        def source(x):
+            return x*x if x<=.5 else .25+3*(x-.5)**2
+        for value in np.linspace(0,1,101):
+            actual=sum(weight*source(knot) for knot,weight in
+                       interpolation_weights(axis,value,'split-quadratic'))
+            self.assertAlmostEqual(actual,source(value),places=12)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -16,10 +16,13 @@ if MODE not in ('create', 'verify'):
     raise ValueError('Unknown trial mode')
 SOURCE = '/Game/CSS/CommanderWhite/Dev/SK_CommanderC4'
 REVISION = os.environ.get('CSS_FACE_TRIAL_REVISION', 'J1')
-FIXTURES = {'J1': 'cw-facial-bake-v2', 'E1': 'cw-expression-bake-v1'}
+FIXTURES = {'J1': 'cw-facial-bake-v2', 'E1': 'cw-expression-bake-v1',
+            'E2': 'cw-expression-compact-v1', 'E3': 'cw-expression-compact-v2'}
 if REVISION not in FIXTURES:
     raise ValueError('Unknown CW facial trial revision')
 TARGET = '/Game/CSS/AnimLab/SK_Face_CW'+REVISION
+if REVISION in ('E2','E3'):
+    TARGET='/Game/CSS/AnimLab/SK_Face_CWCompact/SK_Face_CW'+REVISION
 INPUT = WORK.parent/FIXTURES[REVISION]/'facial-shapes.json'
 CONTENT = ROOT/'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 

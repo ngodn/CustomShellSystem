@@ -37,6 +37,42 @@ facial support, CSS/CINE integration and acceptance for the actual scope remain.
 
 Historical checkpoints below are evidence only. Excluded-project instructions are cancelled.
 
+## October 7: cleanup and Commander White facial checkpoint
+
+Removed 3,247 full-resolution PNG intermediates from three rejected L5P
+motion-review directories, totaling 1,985,384,005 bytes (1.85 GiB). Kept
+58 representative frames, source data, commands and reports. The hashed
+removal receipt is `work/cine-animation-port/cleanup-20261007-rejected-frames.json`.
+Original assets, accepted candidates, installed mods and release archives were
+not deleted. Large new facial trial assets and Unreal temporary save files
+now use `/mnt/eins0fxE/CSS-authoring-scratch/cw-face-e2` through explicit binds.
+Continue removing only inspected, obsolete intermediates as work proceeds.
+
+Commander White's 512 expression/blink calibration samples now fit 30
+corrective morphs, alongside 44 original control samples. These are 74 new
+morph shapes for eight expressions, not 74 expressions. Compression residual
+is below 0.001 cm. All 172 original comparisons and 204 fresh holdout checks
+pass the unchanged 0.015 cm source comparison limit. The latter peak is
+0.008444912 cm, including asymmetric blinks.
+
+Unreal's existing morph filter would remove small corrections. Scaling stored
+deltas and inversely scaling playback weights passes the filter simulation;
+the original build threshold remains unchanged. The E3 candidate imports and
+reloads with 90 total morphs, retaining the original 16 and the original
+geometry, binding and cloth data. `cw-expression-native-v4` has successful
+creation and fresh verification receipts. The prior v3 attempt failed during
+saving because the system drive was full and is not accepted.
+
+Fresh shared-path verification now passes for all 90 morphs, bindings and
+2,312,092 render-to-source vertex mappings (`cw-expression-map-v2`, exit 0).
+The first map check rejected this unchanged mesh solely because its diagnostic
+limit was two million vertices. The bounded limit is now four million, with
+exact map length and every source index still checked. Earlier failures remain
+recorded. Independent cooked readback, performance-curve integration and live
+acceptance are unfinished. Other evidence: `cw-expression-basis-holdout-v1`,
+`cw-expression-compact-v2` and `cw-expression-native-v4`. Eleven focused Python
+tests and the UE editor helper build pass. Nothing was installed.
+
 ## October 6: native locomotion runtime and combined candidate
 
 The four native choices now use shared catalog resolution and independent

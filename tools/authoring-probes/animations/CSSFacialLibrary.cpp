@@ -67,8 +67,11 @@ FString UCSSFacialLibrary::ExpressionVertexMap(USkeletalMesh* Candidate)
     if (!Model || Model->LODModels.Num()!=1 || !Info || !Candidate->GetMeshDescription(0))
         return TEXT("ERROR: missing source LOD or build settings");
     const auto& LOD=Model->LODModels[0];
-    if (LOD.MeshToImportVertexMap.Num()!=LOD.NumVertices || LOD.NumVertices>2000000)
-        return TEXT("ERROR: incomplete or oversized source vertex map");
+    // Commander White's preserved cloth mesh has 2,312,092 render vertices.
+    constexpr uint32 MaxMappedRenderVertices=4000000;
+    if (LOD.MeshToImportVertexMap.Num()!=LOD.NumVertices || LOD.NumVertices>MaxMappedRenderVertices)
+        return FString::Printf(TEXT("ERROR: source vertex map has %d entries for %u render vertices (limit %u)"),
+            LOD.MeshToImportVertexMap.Num(),LOD.NumVertices,MaxMappedRenderVertices);
     TArray<TSharedPtr<FJsonValue>> Map;
     Map.Reserve(LOD.MeshToImportVertexMap.Num());
     for (const int32 Index:LOD.MeshToImportVertexMap) {

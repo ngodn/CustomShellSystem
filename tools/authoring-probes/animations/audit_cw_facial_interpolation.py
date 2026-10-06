@@ -6,6 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
+from cw_facial_basis import compact_basis, filtered_shapes
 
 
 @lru_cache(maxsize=64)
@@ -36,7 +37,17 @@ def interpolation_weights(axis, value, method):
     a = 1 - b
     weights = np.zeros(len(axis))
     weights[low], weights[high] = a, b
-    if method == 'cubic':
+    if method == 'split-quadratic':
+        if tuple(axis) != (0, .25, .5, .75, 1):
+            raise ValueError('Split quadratic requires the audited quarter-strength grid')
+        # Source eyelash motion changes slope at half strength. A global
+        # cubic spreads that change across both sides of the blink.
+        indices = (0, 1, 2) if value <= .5 else (2, 3, 4)
+        weights.fill(0)
+        for i in indices:
+            weights[i] = np.prod([(value-axis[j])/(axis[i]-axis[j])
+                                  for j in indices if j != i])
+    elif method == 'cubic':
         curvature = spline_curvatures(tuple(axis))
         weights += width**2 / 6 * ((a**3 - a) * curvature[low] +
                                   (b**3 - b) * curvature[high])
@@ -55,11 +66,22 @@ def main():
     parser.add_argument('--baked-samples',type=Path,required=True)
     parser.add_argument('--reference-samples',type=Path,required=True)
     parser.add_argument('--corrective-samples',type=Path,help='Paired source control grids for a corrective trial')
+    parser.add_argument('--corrective-subdivisions',type=int,choices=(4,8),default=4)
     parser.add_argument('--blink-bias',type=Path,help='Audited expression-driven blink fractions for normalized grids')
-    parser.add_argument('--interpolation',choices=('linear','cubic'),default='linear')
+    parser.add_argument('--interpolation',choices=('linear','cubic','split-quadratic'),default='linear')
+    parser.add_argument('--basis-output',type=Path,help='New directory for a bounded corrective morph basis')
+    parser.add_argument('--basis-error-cm',type=float,default=.001)
+    parser.add_argument('--basis-max-shapes',type=int,default=84)
+    parser.add_argument('--morph-filter-cm',type=float,default=0)
+    parser.add_argument('--shape-gain',type=float,default=1)
     parser.add_argument('--max-error-cm',type=float,required=True)
     parser.add_argument('--output',type=Path,required=True)
     args=parser.parse_args()
+    if (not np.isfinite(args.morph_filter_cm) or args.morph_filter_cm<0 or
+            not np.isfinite(args.shape_gain) or not 1<=args.shape_gain<=32):
+        raise ValueError('Use a nonnegative finite morph threshold and a gain from 1 to 32')
+    if args.morph_filter_cm and not args.basis_output:
+        raise ValueError('Filtered comparison requires the compact correction basis')
     if args.output.exists() or not np.isfinite(args.max_error_cm) or args.max_error_cm<=0:
         raise ValueError('Use a new report and a finite positive error limit')
     protected={}
@@ -139,9 +161,10 @@ def main():
                 raise ValueError('Expected positive paired controls')
             actual_values=[row['controls'][n] for n in pair]
             normalized=normalized_pair(pair,actual_values)
-            point=tuple(round(value*4)/4 for value in normalized)
-            if any(value not in (.25,.5,.75,1) or abs(value-original)>1e-8 for value,original in zip(point,normalized)):
-                raise ValueError('Expected quarter-strength corrective grid coordinates')
+            divisions=args.corrective_subdivisions
+            point=tuple(round(value*divisions)/divisions for value in normalized)
+            if any(not 0<value<=1 or abs(value-original)>1e-8 for value,original in zip(point,normalized)):
+                raise ValueError('Corrective coordinates differ from the declared grid')
             grid=correctives.setdefault(pair,{})
             if point in grid:
                 raise ValueError('Duplicate corrective grid point')
@@ -152,6 +175,44 @@ def main():
             axes=[sorted({point[i] for point in grid}) for i in (0,1)]
             if any(axis[-1]!=1 for axis in axes) or set(grid)!={(a,b) for a in axes[0] for b in axes[1]}:
                 raise ValueError('Incomplete corrective grid')
+
+    compression=None
+    if args.basis_output:
+        if args.basis_output.exists() or not correctives:
+            raise ValueError('Use a new basis output and corrective samples')
+        rows=[(pair,point) for pair,grid in sorted(correctives.items()) for point in sorted(grid)]
+        indices={p:np.flatnonzero(np.any(np.stack([
+            np.linalg.norm(correctives[pair][point][p],axis=1)>1e-9
+            for pair,point in rows]),axis=0)) for p in neutral}
+        samples=np.stack([np.concatenate([correctives[pair][point][p][ids]
+            for p,ids in indices.items()]) for pair,point in rows])
+        basis,coefficients,error=compact_basis(samples,args.basis_error_cm,args.basis_max_shapes)
+        filtered,_=filtered_shapes(basis,args.morph_filter_cm,args.shape_gain)
+        reconstructed=(coefficients @ filtered.reshape((len(basis),-1))).reshape(samples.shape)
+        for row,(pair,point) in enumerate(rows):
+            offset=0
+            for p,ids in indices.items():
+                corrected=np.zeros_like(neutral[p])
+                corrected[ids]=reconstructed[row,offset:offset+len(ids)]
+                correctives[pair][point][p]=corrected
+                offset+=len(ids)
+        args.basis_output.mkdir(parents=True)
+        np.savez_compressed(args.basis_output/'basis.npz',basis=basis,coefficients=coefficients)
+        compression=dict(shapes=len(basis),samples=len(rows),max_error_cm=error,
+            limit_cm=args.basis_error_cm,points={p:ids.tolist() for p,ids in indices.items()},
+            rows=[dict(controls=pair,point=point) for pair,point in rows],
+            protected=protected,interpolation=args.interpolation,blink_bias=blink_bias)
+        (args.basis_output/'basis.json').write_text(json.dumps(compression,indent=2,allow_nan=False)+'\n')
+
+    if args.morph_filter_cm:
+        for name,poses in keys.items():
+            for i in range(1,len(poses)):
+                delta_points=np.concatenate([poses[i][p]-neutral[p] for p in neutral])
+                filtered,_=filtered_shapes(delta_points[None],args.morph_filter_cm,args.shape_gain)
+                offset=0
+                for p,base in neutral.items():
+                    poses[i][p]=base+filtered[0,offset:offset+len(base)]
+                    offset+=len(base)
 
     def compare(expected,actual):
         parts={}
@@ -217,6 +278,9 @@ def main():
                 corrective_pairs=[dict(controls=pair,points=list(grid)) for pair,grid in correctives.items()],
                 blink_bias=blink_bias,
                 interpolation=args.interpolation,
+                corrective_subdivisions=args.corrective_subdivisions,
+                compression=compression,
+                morph_filter_cm=args.morph_filter_cm,shape_gain=args.shape_gain,
                 scope='Source geometry at sampled intermediate control strengths and combinations. Cooked morph filtering and runtime playback are not included.')
     args.output.write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
     print('CW_FACE_INTERPOLATION',report['passed'],maximum,flush=True)
