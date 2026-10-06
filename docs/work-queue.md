@@ -2,13 +2,15 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
-Older Seductress continuation: an isolated BodyHairV42 performance adapter now
-passes creation and fresh reload with all 27 CSS controls and 31 original nodes
-retained. All six released mesh bind poses match their authoring assets and
-each other. They differ from current Eve at 50 local references, including
-large wrist offsets, so retargeting remains required before catalog activation.
-No existing package or game installation changed. See the older Seductress
-section of the outfit coverage matrix for receipts and remaining acceptance.
+Older Seductress continuation: three full direct-source retarget auditions now
+pass fresh saved/repeated readback, and S3 passes 162 adapter cases across all
+six meshes, including 38 finger bones and restoration. All 27 CSS controls and
+31 original graph nodes remain preserved. Cooked surface measurements still
+find foot/footwear penetration; separately, foot-weighted skirt sections have
+larger excursions. An independent matrix check confirms the measurement.
+Continue visible-footwear/contact correction and full-motion review before
+catalog activation. No released weights, package or game installation changed.
+See the older Seductress section of the outfit coverage matrix for receipts.
 
 October 6 requested showcase: generated offline vertical Black Hole body/finger
 bone and Come Closer facial videos in `work/cine-animation-port/reels-20261006`.

@@ -137,3 +137,50 @@ Epic's [IK retargeting documentation](https://dev.epicgames.com/documentation/en
 describes explicit retarget poses and exported target sequences. That is the
 appropriate next investigation here; the measured differences above are local
 asset evidence, not a claim derived from matching skeleton labels.
+
+### Direct Seductress motion auditions and cooked surface checks
+
+Black Hole (601 keys), Catwalk (361 keys) and Come Closer (581 keys) now have
+direct conversions from the decoded L2 source to the older Midas reference.
+S2 uses FK; S3 adds source-height foot IK with offsets derived from the actual
+source and target bind heights. Each retains the full original duration and
+nominal 30 Hz sampling. Fresh-process saved and repeated conversions match at
+every key, with zero position, quaternion and scale differences. The first S1
+probe failed at the endpoint because float-derived sample times exceeded the
+clip duration; subsequent probes use exact frame indices.
+
+S3 also passes the performance insertion checks on all six original meshes:
+18 clip/mesh pairs, 162 cases and 44,418 evaluated frames, including 18,498
+full-clip frames at 60 Hz. All 38 finger bones pass, as do inactive, seek,
+held-end, stop, missing-clip, restoration and zero-weight cases. These checks
+compare the adapter against the original graph. They do not approve the motion
+itself, customization extremes or world physics. The three isolated copies in
+`/Game/CSS/Locomotion/Studies/SeductressS3/` have no runtime catalog binding.
+
+A direct readback of the released Midas mesh preserves 1,777,508 vertices and
+all eight possible influences. Two exports have identical geometry and weight
+hashes. Neutral bind reconstruction passes; an independent Blender matrix
+evaluation agrees with the twelve reported lowest vertices within 0.000904 cm.
+The scan covers every exact source key and reports material sections separately.
+It includes hidden alternatives, without morphs or post-process evaluation.
+
+The S3 surface results still fail contact review. Worst flat-foot material
+heights are -4.39 cm (Black Hole), -7.57 cm (Catwalk) and -4.18 cm (Come Closer).
+Heel-foot material minima are -0.115, +1.740 and +0.239 cm respectively. Those
+are different footwear sections, not interchangeable acceptance results.
+Midas underskirt/overskirt sections have much larger excursions because they
+also carry foot weights. Keep their garment investigation separate from sole
+correction; no released weights have been edited.
+
+Evidence: `retarget-seductress-s2/verify-result.json` and
+`retarget-seductress-s3/{verify-result,adapter-evaluation,foot-height-comparison,
+surface-contact-comparison,skin-matrix-crosscheck}.json`, plus
+`retarget-seductress-s3/midas-skin-audit-v2/skin-audit.json` and its overwrite
+guard receipt. The per-material full-frame result is
+`retarget-seductress-s3/surface-contact-by-material.json`.
+All paths are below `work/cine-animation-port/`.
+
+Next: evaluate visible footwear choices through their original controls,
+correct measured contacts without altering weights or performance, and inspect
+the full rendered motion. Cooked adapter validation, remaining clips, catalog
+integration and gameplay acceptance are still required.
