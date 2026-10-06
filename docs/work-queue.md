@@ -2,6 +2,24 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
+L5X full previews are now terminal, both render and encoding exits zero.
+`l5x-cook/full-render-review.json` verifies complete videos: DumbDumb 1,972
+frames / 65.733333 s and Iris Out 501 frames / 16.7 s, both 30 FPS at original
+speed (including the final held frame). Maximum pose reconstruction errors
+are 0.001047 and 0.000938 cm. Both sampled review sheets were inspected with
+no obvious limb collapse. This remains neutral geometry without cloth
+simulation, not complete temporal or live acceptance. No render jobs remain.
+
+Commander White facial source recovered: `cw-facial-drivers-v1` includes the
+original DAZ/Rigify armature-data drivers, read with embedded scripts disabled.
+Jaw and blink combine joint movement with corrective shapes, so exporting only
+the retained B9 shape names would lose part of the expression. Next evaluate
+verified original controls and bake their combined deformation onto audited
+fitted correspondences. Source bytes are unchanged; no facial candidate is
+installed. DumbDumb L5X's complete 1,972-frame neutral preview is encoded at
+30 FPS (`l5x-cook/dumbdumb-full-review.mp4`); sampled visual review finds no
+obvious limb collapse. This does not establish temporal or gameplay acceptance.
+
 Unholy facial audit correction: its Eve and Genessa choices are body skin
 variants sharing the native mask, not two different faces. The source's 105
 matching Eve shape names do not establish visible facial support. Repeating

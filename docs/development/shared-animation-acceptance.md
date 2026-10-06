@@ -9,6 +9,14 @@ an older outfit release has previously worked in game.
 
 ## Evidence boundaries
 
+Both L5X full neutral fitted-mesh renders and their MP4 encodes have finished
+successfully. Independent video readback counts 1,972 DumbDumb frames and 501
+Iris Out frames at 30 FPS, at original speed with the final frame included.
+The 60 Hz animation assets are unchanged. Sampled review sheets show no obvious
+limb collapse; this does not establish complete temporal smoothness, simulated
+cloth behavior or gameplay acceptance. Evidence and hashes:
+`l5x-cook/full-render-review.json`. No render process remains active.
+
 Latest Iris Out candidate: L5W's local knee correction and authored contact
 pass. Its independently packaged Windows animation now passes comparison at
 all 1,001 source-key times across 388 tracks, including virtual bones, using
@@ -200,7 +208,7 @@ Read-only face-source inspection is recorded in
 | Six Eve outfits | Installed derived meshes contain 105 facial shapes | Live playback and face restoration on each outfit |
 | Unholy Genessa, Eve skin | Same native Genessa mask as the Genessa-skin variant. The source body's 105 matching names are not mask controls; export filtering removes 18 entirely | Keep body playback independent. Facial support would need an authored mask rig or verified native controls, not the Eve expression binding |
 | Unholy Genessa, Genessa skin | Native face and eyes have no shape keys; inspected rig has no deforming facial bones | Preserve the mask. No verified expression binding currently exists |
-| Commander White | Body retains 322 DAZ/FACS shapes, with no exact Eve control-name matches | Character-specific facial mapping and verified derived assets |
+| Commander White | Original DAZ/Rigify driver definitions recovered. Jaw/blink combine joint motion with corrective shapes; retained B9 shapes alone are incomplete | Bake verified original controls, validate fitted correspondence, then map expressions and derive assets |
 
 Matching names establish source availability only. They do not prove runtime
 vertex correspondence or equivalent expression strength. The original outfit

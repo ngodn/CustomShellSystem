@@ -62,6 +62,25 @@ Expression support requires an authored mask deformation rig or verified
 native facial controls; neither currently exists in the inspected source.
 Do not substitute the Eve face or guess mappings to make the capability pass.
 
+## Commander White facial driver recovery
+
+`cw-facial-drivers-v1` reads the preserved `cw-default-c1.blend` without
+executing embedded scripts or saving. Unlike the rebound CSS mesh, this source
+retains both the DAZ and Rigify facial driver definitions. The audit includes
+armature-data drivers, which the earlier source inspector did not capture.
+Both rigs route `facs_cbs_JawOpen_div2(fin)` from `facs_jnt_JawOpen(fin)`;
+the latter also drives the jaw joint. The left blink corrective similarly
+follows `facs_jnt_EyeBlinkLeft(fin)` while eyelid joints have their own drivers.
+
+This proves that simply exporting the similarly named corrective shapes would
+omit part of the original expression. Continue by evaluating each verified
+source control, baking the combined joint and corrective displacement, and
+checking correspondence against the fitted B9/current released mesh. Preserve
+the source and fitted body, eyelashes, eyes, mouth and existing customization.
+Do not treat a source control name or static dependency trace as expression
+acceptance. `source-drivers.json`, `jaw-blink-evidence.json`, the source hash
+and zero-exit command receipt record this finding. No derived face is installed.
+
 ## Native human path
 
 `work/cine-animation-port/native-human-compatibility/assets.json` independently
