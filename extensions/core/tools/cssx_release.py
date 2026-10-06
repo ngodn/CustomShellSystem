@@ -208,6 +208,13 @@ def export_tag(tag: str, tree: Path, repo: Path = REPO) -> str:
     return commit
 
 
+def pair_changelogs(repo: Path, version: str, cm_version: str) -> dict[str, bytes]:
+    return {
+        f'changelog-v{version}.bbcode.txt': (repo / f'docs/nexus/cssx/changelog-v{version}.bbcode.txt').read_bytes(),
+        f'cheat-menu-changelog-v{cm_version}.bbcode.txt': (repo / f'docs/nexus/cssx-cheat-menu/changelog-v{cm_version}.bbcode.txt').read_bytes(),
+    }
+
+
 def build_pair(tag: str, output: Path) -> list[Path]:
     # A tagged archive keeps other agents' unfinished changes out without a worktree.
     with tempfile.TemporaryDirectory(prefix='cssx-pair-') as temporary:
@@ -229,6 +236,7 @@ def build_pair(tag: str, output: Path) -> list[Path]:
         directory = output / f'cssx-v{version}'
         framework = directory / f'MSII-CSSX-v{version}.zip'
         cm_version, cm_files = cheat_files(out, tree)
+        changelogs = pair_changelogs(tree, version, cm_version)
         cheat = directory / f'CSSX-Cheat-Menu-v{cm_version}.zip'
         if framework.exists() or cheat.exists():
             raise FileExistsError('Release archives already exist; refusing to replace them')
@@ -238,6 +246,8 @@ def build_pair(tag: str, output: Path) -> list[Path]:
                                       manifest_name='eins0fx.cheat-menu/release.json'), stamp)
         for path in [framework, cheat]:
             verify(path)
+        for name, content in changelogs.items():
+            (directory / name).write_bytes(content)
         return [framework, cheat]
 
 

@@ -11,12 +11,19 @@ work/release-candidates-20261006T145021Z pass PE, file-set and hash verification
 they exclude the dev channel, state and logs. These are review candidates,
 not tagged releases. The owner confirms typing, Enter and Escape work in the
 installed build and requests local ZIPs for Nexus with the usual BBCode notes.
+The owner clarifies that both ZIPs and their BBCode files must be in the same
+release folder, and rejects the older verbose changelog template. Notes now
+contain only a short change list and Cheat Menu's CSSX requirement. The pair
+command copies both notes next to the ZIPs in dist/cssx-v1.3.1/ automatically;
+the matching-version/missing-note cases are tested.
 The release pair command builds just CSSX and Cheat Menu from an annotated
 tag exported with git archive, without a worktree or other unfinished changes.
 Its source-isolation test and all 11 host suites pass. BBCode changelogs and
 updated file-upload instructions are under docs/nexus/cssx/ and
-docs/nexus/cssx-cheat-menu/. Pending: commit/tag the release paths and build the
-final pair. No remote publication is requested. The installed test build remains Cheat
+docs/nexus/cssx-cheat-menu/. The release commit is c0d1f04; its first local pair
+passed archive verification. The corrected output layout is being rebuilt
+from updated local annotated tags before handoff. No remote publication is
+requested. The installed test build remains Cheat
 Menu 1.1.1 with the same number-field implementation; its manifest has not
 been relabelled 1.1.2 during release preparation.
 

@@ -160,6 +160,17 @@ class ReleaseVerify(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'annotated'):
             self.rel.export_tag('lightweight', self.temp / 'bad-tag', repo)
 
+    def test_pair_has_both_changelogs_for_the_requested_versions(self):
+        for product, version in [('cssx', '1.3.1'), ('cssx-cheat-menu', '1.1.2')]:
+            path = self.temp / f'docs/nexus/{product}/changelog-v{version}.bbcode.txt'
+            path.parent.mkdir(parents=True)
+            path.write_text(product + ' tagged notes')
+        notes = self.rel.pair_changelogs(self.temp, '1.3.1', '1.1.2')
+        self.assertEqual(notes, {'changelog-v1.3.1.bbcode.txt': b'cssx tagged notes',
+                                 'cheat-menu-changelog-v1.1.2.bbcode.txt': b'cssx-cheat-menu tagged notes'})
+        with self.assertRaises(FileNotFoundError):
+            self.rel.pair_changelogs(self.temp, '1.3.1', '1.1.3')
+
     def test_perf_tuner_package_contains_only_player_files(self):
         dll = bytearray(128)
         dll[:2] = b'MZ'
