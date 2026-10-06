@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Build the two CSSX release ZIPs from a clean tagged source tree.
+"""Build CSSX and extension release ZIPs from a clean tagged source tree.
 
   cssx_release.py build --tag v1.0.0-cssx [--output dist]
+  cssx_release.py pair --tag cssx-v1.3.1 [--output dist]
   cssx_release.py verify dist/MSII-CSSX-v1.0.0.zip dist/CSSX-Cheat-Menu-v1.0.0.zip
 
 The framework ZIP extracts to ue4ss/Mods/CSSX/. The Cheat Menu ZIP extracts
@@ -17,6 +18,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
 import zipfile
@@ -41,34 +43,34 @@ def validate_pe(data: bytes, name: str) -> None:
         raise ValueError(f'{name}: not an x64 DLL')
 
 
-def framework_files(version: str, build: Path) -> dict[str, bytes]:
+def framework_files(version: str, build: Path, root: Path = ROOT) -> dict[str, bytes]:
     core = f'cssx_core-{version}.dll'
     return {
         'CSSX/enabled.txt': b'',
         'CSSX/dlls/main.dll': (build / 'main.dll').read_bytes(),
         f'CSSX/core/{core}': (build / 'cssx_core.dll').read_bytes(),
         'CSSX/core.json': (json.dumps({'file': core}, indent=2) + '\n').encode(),
-        'CSSX/README.txt': (ROOT / 'packaging/README.txt').read_text().replace('@VERSION@', version).encode(),
-        'CSSX/THIRD_PARTY_NOTICES.txt': (ROOT / 'packaging/THIRD_PARTY_NOTICES.txt').read_bytes(),
-        'CSSX/assets/logo.png': (ROOT / 'assets/logo.png').read_bytes(),
-        'CSSX/assets/banner.png': (ROOT / 'assets/banner.png').read_bytes(),
+        'CSSX/README.txt': (root / 'packaging/README.txt').read_text().replace('@VERSION@', version).encode(),
+        'CSSX/THIRD_PARTY_NOTICES.txt': (root / 'packaging/THIRD_PARTY_NOTICES.txt').read_bytes(),
+        'CSSX/assets/logo.png': (root / 'assets/logo.png').read_bytes(),
+        'CSSX/assets/banner.png': (root / 'assets/banner.png').read_bytes(),
     }
 
 
-def cheat_files(build: Path) -> tuple[str, dict[str, bytes]]:
+def cheat_files(build: Path, repo: Path = REPO) -> tuple[str, dict[str, bytes]]:
     # The Cheat Menu carries its own version (extension.json), like Traverse; it is not
     # stamped with the CSSX framework version. Ships under extensions/.
-    manifest = json.loads((REPO / 'extensions/cheat-menu/extension.json').read_text())
+    manifest = json.loads((repo / 'extensions/cheat-menu/extension.json').read_text())
     manifest['entry'] = 'cheat_menu.dll'
     base = 'eins0fx.cheat-menu/'
     files = {
         base + 'extension.json': (json.dumps(manifest, indent=2) + '\n').encode(),
         base + 'cheat_menu.dll': (build / 'cheat_menu.dll').read_bytes(),
-        base + 'menu.json': (REPO / 'extensions/cheat-menu/menu.json').read_bytes(),
-        base + 'assets/banner-v1.png': (REPO / 'extensions/cheat-menu/assets/banner-v1.png').read_bytes(),
+        base + 'menu.json': (repo / 'extensions/cheat-menu/menu.json').read_bytes(),
+        base + 'assets/banner-v1.png': (repo / 'extensions/cheat-menu/assets/banner-v1.png').read_bytes(),
     }
     for name in manifest.get('files', []):
-        files[base + name] = (REPO / 'extensions/cheat-menu' / name).read_bytes()
+        files[base + name] = (repo / 'extensions/cheat-menu' / name).read_bytes()
     return manifest['version'], files
 
 
@@ -129,6 +131,20 @@ def cine_files(build: Path) -> tuple[str, dict[str, bytes]]:
     return manifest['version'], files
 
 
+def perf_tuner_files(build: Path, repo: Path = REPO) -> tuple[str, dict[str, bytes]]:
+    src = repo / 'extensions/perf-tuner'
+    manifest = json.loads((src / 'extension.json').read_text())
+    manifest['entry'] = 'perf_tuner.dll'
+    base = manifest['id'] + '/'
+    files = {
+        base + 'extension.json': (json.dumps(manifest, indent=2) + '\n').encode(),
+        base + 'perf_tuner.dll': (build / 'perf_tuner.dll').read_bytes(),
+    }
+    for name in manifest.get('files', []):
+        files[base + name] = (src / name).read_bytes()
+    return manifest['version'], files
+
+
 def write_zip(target: Path, files: dict[str, bytes], meta: dict, stamp) -> None:
     if target.exists():
         raise FileExistsError(target)
@@ -177,6 +193,52 @@ def verify(path: Path) -> dict:
 
 def git(*args: str, cwd: Path = REPO) -> str:
     return subprocess.run(['git', *args], cwd=cwd, check=True, capture_output=True, text=True).stdout.strip()
+
+
+def export_tag(tag: str, tree: Path, repo: Path = REPO) -> str:
+    commit = git('rev-parse', '--verify', tag + '^{commit}', cwd=repo)
+    if git('cat-file', '-t', tag, cwd=repo) != 'tag':
+        raise ValueError('Release source needs an annotated tag')
+    tree.mkdir(parents=True)
+    with tempfile.TemporaryFile() as archive:
+        subprocess.run(['git', 'archive', '--format=tar', commit], cwd=repo, stdout=archive, check=True)
+        archive.seek(0)
+        with tarfile.open(fileobj=archive) as source:
+            source.extractall(tree, filter='data')
+    return commit
+
+
+def build_pair(tag: str, output: Path) -> list[Path]:
+    # A tagged archive keeps other agents' unfinished changes out without a worktree.
+    with tempfile.TemporaryDirectory(prefix='cssx-pair-') as temporary:
+        tree = Path(temporary) / 'src'
+        commit = export_tag(tag, tree)
+        core = tree / 'extensions/core'
+        version = (core / 'VERSION').read_text().strip()
+        if not re.fullmatch(r'\d+\.\d+\.\d+', version):
+            raise ValueError('Tagged VERSION must be X.Y.Z')
+        out = Path(temporary) / 'build'
+        subprocess.run(['cmake', '-S', str(core), '-B', str(out), '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release',
+                        '-DCMAKE_TOOLCHAIN_FILE=' + str(REPO / 'native/toolchain-clang-cl.cmake'), '-DCSSX_DEV=OFF',
+                        '-DCSSX_VENDOR=' + str(REPO / 'native/vendor'), '-DCSSX_SDK=' + str(REPO / 'reference/ue4ss-sdk-d7e7826d'),
+                        '-DCSSX_UE4SS_IMPORT_LIBRARY=' + str(REPO / PIN['import_library'])], check=True)
+        subprocess.run(['cmake', '--build', str(out), '--target', 'main', 'cssx_core', 'cheat_menu', '-j', '8'], check=True)
+        stamp = time.gmtime(max(315532800, int(git('show', '-s', '--format=%ct', commit))))[:6]
+        common = {'source_commit': commit, 'tag': tag, 'extension_abi': 3, 'manifest_schema': 2, 'menu_schema': 2,
+                  'loader_core_abi': 1, 'ue4ss_revision': PIN['revision'], 'ue4ss_dll_sha256': PIN['dll_sha256']}
+        directory = output / f'cssx-v{version}'
+        framework = directory / f'MSII-CSSX-v{version}.zip'
+        cm_version, cm_files = cheat_files(out, tree)
+        cheat = directory / f'CSSX-Cheat-Menu-v{cm_version}.zip'
+        if framework.exists() or cheat.exists():
+            raise FileExistsError('Release archives already exist; refusing to replace them')
+        write_zip(framework, framework_files(version, out, core),
+                  dict(common, version=version, product='CSSX', manifest_name='CSSX/release.json'), stamp)
+        write_zip(cheat, cm_files, dict(common, version=cm_version, product='CSSX Cheat Menu', requires='CSSX ' + version,
+                                      manifest_name='eins0fx.cheat-menu/release.json'), stamp)
+        for path in [framework, cheat]:
+            verify(path)
+        return [framework, cheat]
 
 
 def build(tag: str, output: Path, here: bool = False) -> list[Path]:
@@ -242,7 +304,15 @@ def build(tag: str, output: Path, here: bool = False) -> list[Path]:
                                            manifest_name='eins0fx.cine/release.json'), stamp)
             for name, built in (('main.dll', version), ('cssx_core.dll', version), ('cheat_menu.dll', cmvers)):
                 shutil.copy2(out / name, fwdir / f'{name}.{built}.built')
-            return [fw, cm, pf, tv, ci]
+            ptvers, ptfiles = perf_tuner_files(out, tree)
+            ptdir = output / f'perf-tuner-v{ptvers}'
+            pt = ptdir / f'MSII-Perf-Tuner-v{ptvers}.zip'
+            if pt.exists():
+                print(f'Perf Tuner v{ptvers} is already released at {pt}; left unchanged (bump extensions/perf-tuner/extension.json to ship a new build)')
+            else:
+                write_zip(pt, ptfiles, dict(common, version=ptvers, product='CSSX Perf Tuner', requires='CSSX ' + version,
+                                           manifest_name='eins0fx.perf-tuner/release.json'), stamp)
+            return [fw, cm, pf, tv, ci, pt]
         finally:
             if not here:
                 subprocess.run(['git', 'worktree', 'remove', '--force', str(tree)], cwd=REPO, check=False, capture_output=True)
@@ -253,10 +323,15 @@ def main() -> None:
     sub = parser.add_subparsers(dest='cmd', required=True)
     b = sub.add_parser('build'); b.add_argument('--tag', required=True); b.add_argument('--output', type=Path, default=ROOT / 'dist')
     b.add_argument('--here', action='store_true', help='build in this checkout (clean, on the tag) instead of a temporary worktree')
+    pair = sub.add_parser('pair', help='build only CSSX and Cheat Menu from a tagged archive without a worktree')
+    pair.add_argument('--tag', required=True); pair.add_argument('--output', type=Path, default=ROOT / 'dist')
     v = sub.add_parser('verify'); v.add_argument('archives', nargs='+', type=Path)
     args = parser.parse_args()
     if args.cmd == 'build':
         for path in build(args.tag, args.output, args.here):
+            print(path, digest(path.read_bytes()))
+    elif args.cmd == 'pair':
+        for path in build_pair(args.tag, args.output):
             print(path, digest(path.read_bytes()))
     else:
         for path in args.archives:

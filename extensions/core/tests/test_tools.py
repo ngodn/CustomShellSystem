@@ -136,3 +136,58 @@ class ReleaseVerify(unittest.TestCase):
         path = self.make({'CSSX/dlls/main.dll': b'not a dll'})
         with self.assertRaises(ValueError):
             self.rel.verify(path)
+
+    def test_tag_export_excludes_uncommitted_files(self):
+        import subprocess
+        repo = self.temp / 'repo'
+        repo.mkdir()
+        def git(*args):
+            subprocess.run(['git', '-c', 'user.name=Release test', '-c', 'user.email=release-test@example.invalid',
+                            '-c', 'core.hooksPath=/dev/null', *args], cwd=repo, check=True, capture_output=True)
+        git('init')
+        (repo / 'README.txt').write_text('tagged text')
+        git('add', 'README.txt'); git('commit', '-m', 'Test release source')
+        git('tag', '-a', 'v1.0.0', '-m', 'Test release')
+        (repo / 'README.txt').write_text('unfinished changes')
+        (repo / 'scratch.txt').write_text('not for release')
+        tree = self.temp / 'tagged'
+        commit = self.rel.export_tag('v1.0.0', tree, repo)
+        self.assertEqual(len(commit), 40)
+        self.assertEqual((tree / 'README.txt').read_text(), 'tagged text')
+        self.assertFalse((tree / 'scratch.txt').exists())
+        self.assertEqual((repo / 'README.txt').read_text(), 'unfinished changes')
+        git('tag', 'lightweight')
+        with self.assertRaisesRegex(ValueError, 'annotated'):
+            self.rel.export_tag('lightweight', self.temp / 'bad-tag', repo)
+
+    def test_perf_tuner_package_contains_only_player_files(self):
+        dll = bytearray(128)
+        dll[:2] = b'MZ'
+        dll[60:64] = (64).to_bytes(4, 'little')
+        dll[64:70] = b'PE\0\0\x64\x86'
+        dll[86:88] = (0x2000).to_bytes(2, 'little')
+        (self.temp / 'perf_tuner.dll').write_bytes(dll)
+        version, files = self.rel.perf_tuner_files(self.temp)
+        base = 'eins0fx.perf-tuner/'
+        self.assertEqual(set(files), {base + name for name in (
+            'extension.json', 'perf_tuner.dll', 'tweaks.json', 'README.txt', 'THIRD_PARTY_NOTICES.txt')})
+        manifest = json.loads(files[base + 'extension.json'])
+        self.assertEqual(version, manifest['version'])
+        self.assertEqual(manifest['entry'], 'perf_tuner.dll')
+        self.assertEqual((manifest['schema'], manifest['api']), (2, 3))
+        path = self.temp / 'perf-tuner.zip'
+        self.rel.write_zip(path, files, {'product': 'CSSX Perf Tuner', 'version': version,
+                                      'manifest_name': base + 'release.json'}, (2026, 10, 6, 0, 0, 0))
+        self.assertEqual(self.rel.verify(path)['product'], 'CSSX Perf Tuner')
+        self.assertTrue(path.with_name(path.name + '.sha256').is_file())
+
+    def test_perf_tuner_reads_requested_source_tree(self):
+        src = self.temp / 'tagged/extensions/perf-tuner'
+        src.mkdir(parents=True)
+        (src / 'extension.json').write_text(json.dumps({
+            'id': 'eins0fx.perf-tuner', 'version': '9.8.7', 'files': ['README.txt']}))
+        (src / 'README.txt').write_text('Text from the tagged tree')
+        (self.temp / 'perf_tuner.dll').write_bytes(b'dll fixture')
+        version, files = self.rel.perf_tuner_files(self.temp, self.temp / 'tagged')
+        self.assertEqual(version, '9.8.7')
+        self.assertEqual(files['eins0fx.perf-tuner/README.txt'], b'Text from the tagged tree')

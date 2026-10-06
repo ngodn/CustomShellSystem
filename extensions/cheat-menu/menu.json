@@ -71,7 +71,7 @@
           "min": 1,
           "max": 9999,
           "step": 1,
-          "description": "Edit here, then use Settings > Apply settings."
+          "description": "Set how much health to restore, then choose Heal."
         },
         {
           "id": "heal",
@@ -87,7 +87,7 @@
           "min": 1,
           "max": 9999,
           "step": 1,
-          "description": "Edit here, then use Settings > Apply settings."
+          "description": "Set how much Resolve to add, then choose Add Resolve."
         },
         {
           "id": "resolve",
@@ -97,13 +97,13 @@
         },
         {
           "id": "damage_percent",
-          "type": "slider",
+          "type": "number",
           "label": "Health target (%)",
           "value": 50,
           "min": 1,
           "max": 99,
           "step": 1,
-          "description": "Edit here, then use Settings > Apply settings.",
+          "description": "Set the percentage, then choose Set health target.",
           "unit": "%"
         },
         {
@@ -163,24 +163,24 @@
       "controls": [
         {
           "id": "heal_percent",
-          "type": "slider",
+          "type": "number",
           "label": "Auto Heal strength (%)",
           "value": 100,
           "min": 1,
           "max": 100,
           "step": 1,
-          "description": "Edit here, then use Settings > Apply settings.",
+          "description": "How much health Auto Heal restores each time. Use Apply settings to change it.",
           "unit": "%"
         },
         {
           "id": "heal_interval",
-          "type": "slider",
+          "type": "number",
           "label": "Auto Heal interval (seconds)",
           "value": 1,
           "min": 0.25,
           "max": 5,
           "step": 0.25,
-          "description": "Edit here, then use Settings > Apply settings."
+          "description": "Seconds between Auto Heal pulses. Use Apply settings to change it."
         },
         {
           "id": "move_fast",
@@ -192,13 +192,13 @@
         },
         {
           "id": "move_multiplier",
-          "type": "slider",
+          "type": "number",
           "label": "Movement speed",
           "value": 2,
           "min": 1,
           "max": 5,
           "step": 0.25,
-          "description": "Edit here, then use Settings > Apply settings.",
+          "description": "Multiplies your walking, jogging and sprinting speed. Use Apply settings to change it.",
           "unit": "x"
         },
         {
@@ -206,17 +206,17 @@
           "type": "toggle",
           "label": "Game speed",
           "value": false,
-          "description": "Scales the whole game clock: player, enemies, cutscenes and elevators all at once, so it stays fair. This is separate from Movement multiplier, which only changes your own character. Edit here, then use Settings > Apply settings."
+          "description": "Changes the speed of the whole game, including enemies and cutscenes. Use Apply settings to change it."
         },
         {
           "id": "game_speed_scale",
-          "type": "slider",
+          "type": "number",
           "label": "Game speed",
           "value": 1,
           "min": 0,
           "max": 5,
           "step": 0.05,
-          "description": "1.0 is normal. Below 1 is slow motion, above 1 is faster, and 0 freezes the world clock. Edit here, then use Settings > Apply settings.",
+          "description": "1 is normal speed. Below 1 slows the game; above 1 speeds it up. 0 freezes it. Use Apply settings to change it.",
           "unit": "x"
         },
         {
@@ -227,7 +227,7 @@
           "min": 1,
           "max": 1000,
           "step": 1,
-          "description": "Edit here, then use Settings > Apply settings."
+          "description": "Set the target level, then choose Set Harbinger level."
         },
         {
           "id": "set_harbinger",
@@ -314,7 +314,7 @@
           "min": 1,
           "max": 100000,
           "step": 1,
-          "description": "Edit here, then use Settings > Apply settings."
+          "description": "Set how many to add, then choose a resource."
         },
         {
           "id": "grant_gold",
@@ -562,7 +562,7 @@
               "label": "Refresh the pickup list"
             }
           ],
-          "description": "Search by item name. Select the item, set an amount and apply settings before adding or removing it."
+          "description": "Choose an item by name, set its quantity, then add or remove it."
         },
         {
           "id": "pickup_amount",
@@ -572,7 +572,7 @@
           "min": 1,
           "max": 9999,
           "step": 1,
-          "description": "The quantity to add or remove. Edit here, then use Settings > Apply settings."
+          "description": "How many of the selected item to add or remove."
         },
         {
           "id": "add_pickup",
@@ -695,7 +695,7 @@
           "min": 1,
           "max": 3,
           "step": 1,
-          "description": "Edit the target level, then use Settings > Apply settings. Existing experience, durability and stacks are preserved."
+          "description": "Set the target level, then choose Set Tarstone levels. Keeps existing experience, durability and stacks."
         },
         {
           "id": "set_tarstone_level",

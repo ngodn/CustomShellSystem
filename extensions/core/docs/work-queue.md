@@ -2,6 +2,47 @@
 
 Newest first. Each entry says what is done, what evidence exists and what is next.
 
+2026-10-06 (local Nexus release): The owner requests CSSX 1.3.1 and Cheat Menu
+1.1.2. CSSX stays at 1.3.1; Cheat Menu's manifest and README now say 1.1.2.
+Player release notes are in docs/releases/cssx-1.3.1.md and
+docs/releases/cheat-menu-1.1.2.md. Release main/cssx_core/cheat_menu builds pass.
+Two uncommitted candidate ZIPs in ignored
+work/release-candidates-20261006T145021Z pass PE, file-set and hash verification;
+they exclude the dev channel, state and logs. These are review candidates,
+not tagged releases. The owner confirms typing, Enter and Escape work in the
+installed build and requests local ZIPs for Nexus with the usual BBCode notes.
+The release pair command builds just CSSX and Cheat Menu from an annotated
+tag exported with git archive, without a worktree or other unfinished changes.
+Its source-isolation test and all 11 host suites pass. BBCode changelogs and
+updated file-upload instructions are under docs/nexus/cssx/ and
+docs/nexus/cssx-cheat-menu/. Pending: commit/tag the release paths and build the
+final pair. No remote publication is requested. The installed test build remains Cheat
+Menu 1.1.1 with the same number-field implementation; its manifest has not
+been relabelled 1.1.2 during release preparation.
+
+2026-10-06 (number entry, awaiting live check): The owner wants typed quantities in
+Cheat Menu instead of numeric sliders or repeated arrow presses. CSSX's
+number control now uses its native text-field recipe with range/step validation,
+Enter and Set value commit, Escape cancel, and controller arrows. Cheat Menu
+uses number fields for all numeric settings. Quantity descriptions no longer
+send the player to Apply settings. All 11 host suites pass, including number
+parsing and the quantity event path with pending cheat edits preserved. Release
+and dev Windows builds of cssx_core and cheat_menu pass; git diff --check passes.
+Installed with the owner's approval at 2026-10-06 13:51 UTC while the game was
+closed: core cssx_core-1.3.1-dev-d5fe2c248dfe.dll and Cheat Menu
+cheat_menu-7b7721f71372.dll, plus menu.json and README. Copy hashes verified.
+Ten protected files, including the loader, saved settings and player graphics
+configs, stayed unchanged. Rollback files and install report are in ignored
+work/cheat-number-entry-20261006T135100Z. No resource or progression action ran.
+Next: check native input and rendered layout after the owner launches the game.
+
+UI gate review: existing game assets, typography, layout and accent retained;
+no new assets, decoration or animation. Clear action labels and validation errors
+are implemented. Enter, Escape, focus changes, mouse Set value, controller
+arrows, disabled state and viewport/scale behavior need a rendered click-through
+after installation. This is an offline-tested candidate, not a completed live
+UI acceptance pass. Native palette contrast and physical input remain unverified.
+
 2026-09-27 (v1.2.0, native page): The CSSX page is rebuilt on the game's own
 widget blueprints with a pooled widget model (`src/core/menu_page.cpp`, the
 CSS beta.5 recipe, no CSS dependency). Verified live through the dev channel

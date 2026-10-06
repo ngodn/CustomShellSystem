@@ -1,0 +1,31 @@
+[b]CSSX Cheat Menu 1.1.2[/b] (2026-10-06)
+
+Enter the amount you want directly, without clicking through hundreds of numbers.
+
+[size=4][b]Changed[/b][/size]
+[list]
+[*]Type amounts, levels, percentages and speed settings instead of dragging sliders or repeatedly pressing arrows.[/*]
+[*]Shorter instructions for numeric settings.[/*]
+[/list]
+
+[size=4][b]Fixed[/b][/size]
+[list]
+[*]Resource and item quantities no longer tell you to use Apply settings. Set the quantity, then choose the action. Running cheat settings still need Apply.[/*]
+[/list]
+
+[size=4][b]When something breaks[/b][/size]
+Send the logs with your comment, or PM them with a screenshot:
+[code]MortalShell2/Binaries/Win64/ue4ss/UE4SS.log
+MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/CSSX.log
+MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/logs/eins0fx.cheat-menu/current.jsonl[/code]
+
+[size=4][b]Thank you[/b][/size]
+The support, the bug reports, the requests, it's what keeps me going on this. If you want to show some love, an endorse and a vote on the mod page go a long way, and if you feel like chipping in you can buy me a pack of cigarettes on [url=https://ko-fi.com/maplestar86]Ko-fi[/url] or [url=https://www.nexusmods.com/Core/Libs/Common/Widgets/PayPalPopUp?user=168682108]PayPal[/url]. Zero pressure, Cheat Menu stays free no matter what.
+
+And a big thank you to the people who already did:
+[list]
+[*][DONATOR NAMES]
+[/list]
+
+[b]Updating from 1.1.1:[/b]
+Install [b]CSSX 1.3.1[/b] for number entry. Close the game and extract the eins0fx.cheat-menu folder into [b]MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/extensions/[/b]. Keep your saved settings in CSSX/state/.

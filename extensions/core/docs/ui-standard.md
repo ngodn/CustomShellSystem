@@ -32,7 +32,7 @@ The details window holds, per selected control:
 | Control | Editor in the window | Prompts |
 | --- | --- | --- |
 | toggle | options-menu selector row (`WBP_NB_Option`) "State < On >" | Turn on / Turn off (Confirm), A D Adjust |
-| number | selector row "Value < 12 >" | A D Adjust |
+| number | the game's resource frame with an editable number field; range shown below; controller also gets a selector row | Edit value, Enter or click Set value to commit, Esc cancels; controller arrows adjust |
 | slider | options-menu slider row (`WBP_NB_Option_Slider`), the bar draggable with the mouse, commits on release | A D Adjust |
 | choice | selector row cycling the options; more than eight options add a searchable inline picker (search field, match count, every match as a list row, E on the current one) | Browse and search options / Next option, A D Adjust |
 | radio | one list row per option, E on the chosen one | A D Adjust |
@@ -71,9 +71,9 @@ controller act.
 | Action | Library | Extension | Picker / dialog |
 | --- | --- | --- | --- |
 | Up/Down | move selection | move row | move result / focus |
-| Left/Right | | adjust number, slider, choice, radio, toggle | focus Confirm / Cancel |
+| Left/Right | | adjust number on controller, slider, choice, radio, toggle | focus Confirm / Cancel |
 | Bumpers | Library / Settings | previous/next section | ±8 results |
-| Confirm | open (the CSSX entry opens Settings) | activate button/toggle, browse, save text | select / confirm |
+| Confirm | open (the CSSX entry opens Settings) | activate button/toggle, browse, edit number, save text | select / confirm |
 | Secondary | | run the notice action | |
 | Back | close the Player Menu | library | cancel |
 
@@ -82,6 +82,22 @@ while a mouse button is down (never per frame otherwise); rows, tabs, arrows,
 prompts, picker rows and dialog options click; a click on a prompt does what
 its key does and plays the glyph's key flash; slider bars drag. The mouse
 wheel scrolls the lists natively and walks the picker results.
+
+Number fields select their contents on focus. Enter, the Set value prompt or
+leaving the field commits a valid number. Empty text, non-numeric text, values
+outside the range and unsupported steps show an error without changing the
+extension value. Escape restores that value. Events still carry JSON numbers;
+extensions do not parse text. Controller arrows remain available for small
+changes without a keyboard.
+
+### Number-entry direction (6 Oct 2026)
+
+Reference: the owner's screenshot in Pictures and the native text fields in
+CSS, CSSX and CCS. Keep the game resource frame, Crimson text, two-column
+layout and existing accent. The selected number is the focal point; one short
+range line explains the limits. No new assets or animation. Dials: ENERGY 1,
+RHYTHM 1, MOTION 1. Native widget reuse keeps entry consistent with search and
+avoids a separate visual style for exact quantities.
 
 Opening: the game's own Player Menu key, then bumper/Q/E to the CSSX tab; or
 the keyboard hotkey (`settings.json`, default F6), sampled at 30 Hz only

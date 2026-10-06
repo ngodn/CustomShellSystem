@@ -1,5 +1,6 @@
 #include "cheat_menu.hpp"
 #include "manifest.hpp"
+#include "controls.hpp"
 #include <iostream>
 #include <source_location>
 
@@ -240,6 +241,30 @@ template<class F> void rejects(F fn,const std::source_location where=std::source
 int main(int argc,char** argv) {
     if(argc!=2) return 2;
     const auto definition=cssx::read_json(cssx::utf8_path(argv[1]));
+    {
+        Host h;cheat::Menu m(&h.api);m.tick(.25);
+        const auto bound=cssx::bind_menu(definition,m.model());
+        cssx::validate_model(bound);
+        Json amount;
+        for(const auto& section:bound.at("sections")) for(const auto& control:section.at("controls")) {
+            check(control.at("type")!="slider","Cheat Menu still requires a numeric slider");
+            if(control.at("id")=="grant_amount") amount=control;
+        }
+        check(amount.at("type")=="number","Resource amount is not a number field");
+        const Json event={{"id","grant_amount"},{"value",cssx::entered_number(amount,"387")}};
+        cssx::validate_event(bound,event);m.event(event);
+        auto model=m.model();
+        check(model["values"]["grant_amount"]==387 && model["enabled"]["apply_settings"]==false,"Typed quantity became an unapplied edit");
+        check(model["enabled"]["grant_gold"]==true,"Typed quantity blocked the resource action");
+        check(h.count("S_AddGold")==0,"Setting a quantity granted resources");
+        for(const auto* invalid:{"", "387gold", "1.5", "100001", "nan"}) rejects([&]{cssx::entered_number(amount,invalid);});
+        check(m.model()["values"]["grant_amount"]==387,"Invalid entry changed the quantity");
+        m.event({{"id","god"},{"value",true}});
+        m.event({{"id","grant_amount"},{"value",cssx::entered_number(amount,"99999")}});
+        model=m.model();
+        check(model["enabled"]["apply_settings"]==true && model["values"]["god"]==true && h.damageable,"Setting a quantity applied or discarded a pending cheat");
+        check(model["confirmations"]["grant_gold"].get<std::string>().find("99999")!=std::string::npos,"Confirmation did not use the typed quantity");
+    }
     {
         // Shortcuts were removed (per-tick input polling was the menu's largest per-frame
         // cost). The menu must never poll input over the bridge, with or without cheats on,

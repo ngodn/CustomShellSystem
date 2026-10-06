@@ -12,7 +12,7 @@ Install (game closed):
     assets/logo.png, assets/banner.png, README.txt, THIRD_PARTY_NOTICES.txt,
     release.json
 
-CSSX is a tab of the game's Player Menu (after CSS, before TARSTONES). Open
+CSSX is a tab of the game's Player Menu. Open
 it from the world with F6 on the keyboard, or open the Player Menu and switch
 tabs (that is the way on a controller; there is no controller shortcut).
 Change the key in Mods/CSSX/settings.json (Unreal key names).

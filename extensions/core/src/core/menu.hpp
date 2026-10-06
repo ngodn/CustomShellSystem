@@ -79,6 +79,7 @@ private:
     // library_row_: 0 is the CSSX entry, i+1 the i-th extension.
     int library_row_=0, section_=0, row_=0, settings_row_=0;
     std::string error_, text_key_, text_draft_;
+    bool number_focused_=false;
     Json confirm_;                  // {"event":..., "message":...}
     bool picker_=false;
     OptionSearch options_;
@@ -111,7 +112,7 @@ private:
     std::vector<WeakObject> rooted_;
     size_t warm_texture_=0;
     // ---- the native page pool (menu_page.cpp)
-    enum class Kind : uint8_t { none, tab, header, row, option, slider, divider, action, input, paragraph, picture };
+    enum class Kind : uint8_t { none, tab, header, row, option, slider, divider, action, input, number_input, paragraph, picture };
     struct Item {
         Kind kind=Kind::none;
         WeakObject widget, hit, hit_left, hit_right, text_block, value_block, extra, extra2;
@@ -156,6 +157,9 @@ private:
     void forget();
     void bind_inputs();
     bool typing() const;
+    bool commit_number();
+    void cancel_number();
+    bool poll_number(const engine::PlayerContext& player);
     void poll_input(const engine::PlayerContext& player,uint64_t now,bool typing);
     void poll_mouse(const engine::PlayerContext& player);
     double along_bar(const SliderHit& slider,bool& inside) const;

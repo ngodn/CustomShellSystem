@@ -243,6 +243,37 @@ bool Menu::typing() const {
     // The search field and the text editor take the keyboard; menu keys yield to them.
     return has_focus(search_input_.Get()) || has_focus(name_input_.Get());
 }
+bool Menu::commit_number() {
+    const auto* control=current_control();
+    if(!control || control->at("type")!="number" || !interactive(*control) || !name_input_.Get()) return true;
+    number_focused_=false;
+    try {
+        const auto value=entered_number(*control,text_of(name_input_.Get(),256));
+        if(value!=control->at("value").get<double>()) send_event({{"id",control->at("id")},{"value",value}});
+        else error_.clear();
+        text_key_.clear(); dirty_=true;
+        return error_.empty();
+    } catch(const std::exception& e) { error_=e.what(); dirty_=true; return false; }
+}
+void Menu::cancel_number() {
+    const auto* control=current_control();
+    if(control && control->at("type")=="number" && name_input_.Get()) text_value(name_input_.Get(),display_value(*control));
+    invoke(find_cached(L"/Script/UMG.Default__WidgetBlueprintLibrary"),L"SetFocusToGameViewport");
+    number_focused_=false; error_.clear(); dirty_=true;
+    for(auto& binding:bindings_) if(binding.action=="close") binding.down=true;
+}
+bool Menu::poll_number(const PlayerContext& player) {
+    const auto* control=current_control();
+    if(picker_ || !confirm_.is_null() || !control || control->at("type")!="number" || !name_input_.Get()) { number_focused_=false; return false; }
+    const bool focused=has_focus(name_input_.Get());
+    if(number_focused_ && !focused) {
+        if(key_down(player.pc,"Escape")) { cancel_number(); return true; }
+        commit_number();
+    }
+    if(focused!=number_focused_) dirty_=true;
+    number_focused_=focused;
+    return false;
+}
 void Menu::fallback_bindings(uint64_t now) {
     static const std::vector<std::pair<std::string,std::vector<std::string>>> defaults={
         {"up",{"Up","W","Gamepad_DPad_Up","Gamepad_LeftStick_Up"}},{"down",{"Down","S","Gamepad_DPad_Down","Gamepad_LeftStick_Down"}},
@@ -371,6 +402,7 @@ void Menu::tick(const PlayerContext& player,double) {
     if(open_requested_ && now-open_requested_at_>3000) open_requested_=false;
     if(!menu_open) {
         active_=false; was_active_=false; transition_started_=0;
+        number_focused_=false;
         if(!frozen_listeners_.empty() || !dialog_shown_.empty()) { try { dialog_close(); } catch(...) {} }
         return;
     }
@@ -384,7 +416,7 @@ void Menu::tick(const PlayerContext& player,double) {
         refresh_library(true,now);
         invalidate_page();   // the reopened menu reconstructed every widget on the page
     }
-    if(!active_ && was_active_) { hits_.clear(); sliders_.clear(); transition_started_=0; }
+    if(!active_ && was_active_) { hits_.clear(); sliders_.clear(); transition_started_=0; number_focused_=false; }
     was_active_=active_;
     if(!active_) {
         // Nothing of the game's may stay borrowed while the page is not showing.
@@ -421,6 +453,8 @@ void Menu::tick(const PlayerContext& player,double) {
         catch(const std::exception& e) { error_=e.what(); }
     }
     try { typing_now=typing(); } catch(...) {}
+    bool number_cancelled=false;
+    try { number_cancelled=poll_number(player); } catch(const std::exception& e) { error_=e.what(); dirty_=true; }
     fit_panel();        // measures the previous build, which has laid out by now
     reveal_pending();
     if(dirty_) { try { build(); } catch(const std::exception& e) { if(deps_.log) deps_.log(std::string("Menu build failed: ")+e.what()); error_=e.what(); dirty_=false; } }
@@ -435,7 +469,7 @@ void Menu::tick(const PlayerContext& player,double) {
             if(std::abs(scroll)>.01f) { wheel_after_=now+100; options_.move(scroll<0?1:-1); dirty_=true; }
         } catch(...) {}
     }
-    try { poll_input(player,now,typing_now); poll_mouse(player); }
+    try { if(!number_cancelled) poll_input(player,now,typing_now); poll_mouse(player); }
     catch(const std::exception& e) { error_=e.what(); dirty_=true; }
 }
 // While the Player Menu is open on another tab the game is paused and the CSSX page is not
@@ -524,6 +558,7 @@ void Menu::key(const std::string& action) {
         return;
     }
     // Extension screen
+    if(action=="close" && number_focused_) { cancel_number(); return; }
     if(action=="close") { act({{"action","library"}}); return; }
     if(action=="secondary") { if(model_.is_object() && model_.contains("notice") && model_["notice"].is_object()) act({{"action","run"},{"id",model_["notice"].value("action",std::string{})}}); return; }
     if(action=="previous_section" || action=="next_section") { act({{"action","section_delta"},{"delta",action=="previous_section"?-1:1}}); return; }
@@ -533,6 +568,11 @@ void Menu::key(const std::string& action) {
 }
 void Menu::act(const Json& action) {
     const auto name=action.value("action",std::string{});
+    const bool leaving=name=="row" || name=="row_delta" || name=="section" || name=="section_delta" || name=="library" || name=="framework_tab" || name=="run" || name=="close";
+    if(leaving && number_focused_) {
+        if(!commit_number()) return;
+        invoke(find_cached(L"/Script/UMG.Default__WidgetBlueprintLibrary"),L"SetFocusToGameViewport");
+    }
     if(name!="value") error_.clear();
     if(name=="press") { key(action.value("binding",std::string{})); return; }
     if(name=="close") { close(); return; }
@@ -604,6 +644,14 @@ void Menu::act(const Json& action) {
     if(name=="row") { row_=std::clamp(action.at("row").get<int>(),0,std::max(0,rows-1)); dirty_=true; return; }
     const auto* c=current_control(); if(!c || !interactive(*c)) return;
     const auto type=c->at("type").get<std::string>();
+    if(type=="number" && (name=="number_submit" || name=="activate")) {
+        if(name=="number_submit" || has_focus(name_input_.Get())) {
+            if(commit_number()) invoke(find_cached(L"/Script/UMG.Default__WidgetBlueprintLibrary"),L"SetFocusToGameViewport");
+        } else if(name_input_.Get()) {
+            invoke(name_input_.Get(),L"SetKeyboardFocus"); number_focused_=true; dirty_=true;
+        }
+        return;
+    }
     if(type=="choice" && (name=="pick" || (name=="activate" && c->at("options").size()>8))) {
         options_.reset(c->at("options"),[](const std::string& text){
             const auto source=wide(text);

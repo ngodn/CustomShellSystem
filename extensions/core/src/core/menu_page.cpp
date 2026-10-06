@@ -212,7 +212,7 @@ void Menu::forget_page() {
     for(auto* stack:{&tab_items_,&list_,&head_,&panel_,&actions_,&footer_}) { stack->cells.clear(); stack->used=0; stack->box.Reset(); }
     design_.Reset(); left_root_.Reset(); right_root_.Reset(); list_scroll_.Reset(); strip_scroll_.Reset(); details_.Reset(); panel_scroll_.Reset(); panel_size_.Reset();
     status_text_.Reset(); title_text_.Reset(); subtitle_text_.Reset(); logo_image_.Reset(); strip_previous_.Reset(); strip_next_.Reset(); strip_previous_glyph_.Reset(); strip_next_glyph_.Reset();
-    input_prompt_.Reset(); search_input_.Reset(); name_input_.Reset();
+    input_prompt_.Reset(); search_input_.Reset(); name_input_.Reset(); number_focused_=false; text_key_.clear();
     design_w_=design_h_=design_scale_=0; shown_section_=revealed_row_=-1;
     panel_context_.clear(); panel_revealed_=nullptr; panel_fit_pending_=false; panel_max_=720.f; pending_reveals_={};
     detail_title_.clear(); detail_sub_.clear(); detail_body_="\x01"; status_shown_.clear(); title_shown_.clear(); subtitle_shown_.clear();
@@ -490,10 +490,17 @@ Menu::Item& Menu::take(Stack& stack,Kind kind) {
         item.hit=widget; item.extra=glyphs[0]; item.extra2=glyphs[1]; item.text_block=label;
         break;
     }
-    case Kind::input: {
+    case Kind::input: case Kind::number_input: {
         widget=construct(L"/Script/UMG.Overlay",tree); slot=add_child(box,widget);
         fill(add_child(widget,image_widget(tree,game_texture("T_UI_Resource_BG_02"))));
         auto* input=construct(L"/Script/UMG.EditableText",tree);
+        if(item.kind==Kind::number_input) {
+            for(const auto* name:{L"SelectAllTextWhenFocused",L"RevertTextOnEscape",L"ClearKeyboardFocusOnCommit"}) {
+                auto* property=input->GetPropertyByNameInChain(name);
+                if(!property || !property->IsA<FBoolProperty>()) throw std::runtime_error("Number input behavior property mismatch");
+                static_cast<FBoolProperty*>(property)->SetPropertyValueInContainer(input,true);
+            }
+        }
         Call current(input,L"GetFont",1); current.run();
         Call set(input,L"SetFont",1); set.copy(L"InFontInfo",current,L"ReturnValue");
         auto* font=set.param(L"InFontInfo"); auto* info=find_cached(L"/Script/SlateCore.SlateFontInfo");
@@ -570,7 +577,7 @@ void Menu::slot_padding(Kind kind,UObject* slot) {
     switch(kind) {
     case Kind::divider: padding(slot,Margin{30,24,30,6}); break;
     case Kind::action: padding(slot,Margin{40,4,20,4}); break;
-    case Kind::input: padding(slot,Margin{40,12,40,12}); break;
+    case Kind::input: case Kind::number_input: padding(slot,Margin{40,12,40,12}); break;
     case Kind::paragraph: padding(slot,Margin{40,10,40,10}); break;
     case Kind::picture: padding(slot,Margin{40,16,40,8}); break;
     default: break;   // rows, headers, options and sliders size themselves; tabs are styled at creation
@@ -1088,8 +1095,26 @@ void Menu::build_extension(bool& deferred) {
                 if(enabled) action_prompt("accept",on?"Turn off":"Turn on",{{"action","activate"}},glyph_accept);
                 horizontal=enabled;
             } else if(type=="number") {
-                option_row("Value",display_value(c)+c.value("unit",std::string{}),true,minus,plus,enabled);
-                horizontal=enabled;
+                const auto key="number/"+extension_id_+"/"+c.at("id").get<std::string>();
+                const bool changed=text_key_!=key;
+                if(changed) { text_key_=key; number_focused_=false; }
+                auto& input=take(head_,Kind::number_input);
+                name_input_=input.extra;
+                Call focus(input.extra.Get(),L"HasKeyboardFocus",1); focus.run();
+                const bool focused=focus.get<bool>();
+                if(changed && focused) invoke(find_cached(L"/Script/UMG.Default__WidgetBlueprintLibrary"),L"SetFocusToGameViewport");
+                if(input.text!="number") { call_text(input.extra.Get(),L"SetHintText",L"InHintText","Enter a number"); input.text="number"; }
+                const auto value=display_value(c);
+                if(changed || (!focused && input.value!=value)) { text_value(input.extra.Get(),value); input.value=value; }
+                invoke(input.extra.Get(),L"SetIsReadOnly",L"InbIsReadyOnly",!enabled);
+                auto endpoint=c; endpoint["value"]=c.at("min"); const auto low=display_value(endpoint);
+                endpoint["value"]=c.at("max");
+                paragraph(panel_,"Range: "+low+" to "+display_value(endpoint)+c.value("unit",std::string{})+". Enter sets the value; Esc cancels.",muted);
+                if(gamepad_) { option_row("Value",value+c.value("unit",std::string{}),true,minus,plus,enabled); horizontal=enabled; }
+                if(enabled) {
+                    if(!number_focused_ || gamepad_) action_prompt("accept",number_focused_?"Set value":"Edit value",{{"action","activate"}},glyph_accept);
+                    action_prompt("","Set value",{{"action","number_submit"}},glyph_accept);
+                }
             } else if(type=="slider") {
                 slider_row("Value",c,true,minus,plus);
                 horizontal=enabled;

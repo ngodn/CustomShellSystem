@@ -53,6 +53,21 @@ int main() {
     check(display_value(bound["sections"][0]["controls"][1])=="75","display value");
     check(adjusted_value(bound["sections"][0]["controls"][1],1)==76,"step adjust");
 
+    Json amount={{"type","number"},{"value",100},{"min",1},{"max",100000},{"step",1}};
+    check(entered_number(amount,"387")==387 && entered_number(amount,"  +99999  ")==99999,"exact numeric entry with surrounding whitespace");
+    check(entered_number(amount,"1")==1 && entered_number(amount,"100000")==100000,"numeric entry includes both endpoints");
+    for(const auto* text:{""," ","+","abc","387 gold","1,000","1 000","nan","inf","-inf","1e9999","0","-1","100001","1.5"})
+        rejects([&]{entered_number(amount,text);},"invalid amount entry rejected");
+    check(entered_number(amount,"1e3")==1000,"numeric exponent retains its exact value");
+    amount["min"]=.25;amount["max"]=5;amount["step"]=.25;
+    check(entered_number(amount,"1.25")==1.25,"fractional numeric entry supports declared steps");
+    rejects([&]{entered_number(amount,"1.1");},"fractional numeric entry rejects unsupported steps");
+    amount["min"]=0;amount["step"]=.05;
+    check(std::abs(entered_number(amount,"0.15")-.15)<1e-10,"numeric entry tolerates floating-point step rounding");
+    amount["min"]=-2;amount["max"]=2;amount["step"]=.5;
+    check(entered_number(amount,"-1.5")==-1.5,"numeric entry supports negative ranges");
+    rejects([&]{entered_number(amount,std::string(129,'1'));},"numeric entry bounds text length");
+
     // Storage in the standalone layout.
     Storage storage(root,LogPolicy{256,2});
     storage.log("ext.one","info","hello",{{"k",1}});

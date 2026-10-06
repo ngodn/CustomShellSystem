@@ -1,10 +1,37 @@
-[b]CSSX 1.3.1[/b] (DATE)
+[b]CSSX 1.3.1[/b] (2026-10-06)
 
-Small one, for extension authors mostly. CINE 1.1.0 needs it.
+Number entry for Cheat Menu and other extensions, plus a fix for the controller shortcut that could leave the menu stuck.
 
+[size=4][b]Added[/b][/size]
 [list]
 [*]Extensions can pass an object where a game function expects an interface.[/*]
 [*]Extensions can write a large struct property without CSSX reading the whole thing back.[/*]
+[*]Extensions can draw guides and prompts while the game's HUD is hidden.[/*]
+[*]Extensions can compare average frame time, slow frames and hitches over a chosen measurement window.[/*]
 [/list]
 
-[url=https://github.com/ngodn/CustomShellSystem/releases/tag/cssx-v1.3.1]Download CSSX 1.3.1[/url]
+[size=4][b]Changed[/b][/size]
+[list]
+[*]Type exact numbers in native text fields. Press Enter or click Set value. Escape cancels; controller arrows still work.[/*]
+[/list]
+
+[size=4][b]Fixed[/b][/size]
+[list]
+[*]Pressing both thumbsticks during play no longer opens the menu and leaves controls stuck. On controller, open the Player Menu and switch to CSSX. F6 still works on keyboard.[/*]
+[/list]
+
+[size=4][b]When something breaks[/b][/size]
+Send the logs with your comment, or PM them with a screenshot:
+[code]MortalShell2/Binaries/Win64/ue4ss/UE4SS.log
+MortalShell2/Binaries/Win64/ue4ss/Mods/CSSX/CSSX.log[/code]
+
+[size=4][b]Thank you[/b][/size]
+The support, the bug reports, the requests, it's what keeps me going on this. If you want to show some love, an endorse and a vote on the mod page go a long way, and if you feel like chipping in you can buy me a pack of cigarettes on [url=https://ko-fi.com/maplestar86]Ko-fi[/url] or [url=https://www.nexusmods.com/Core/Libs/Common/Widgets/PayPalPopUp?user=168682108]PayPal[/url]. Zero pressure, CSSX stays free no matter what.
+
+And a big thank you to the people who already did:
+[list]
+[*][DONATOR NAMES]
+[/list]
+
+[b]Updating from 1.3.0:[/b]
+Close the game and extract the CSSX folder into [b]MortalShell2/Binaries/Win64/ue4ss/Mods/[/b]. Keep your settings.json, state and extensions folders.
