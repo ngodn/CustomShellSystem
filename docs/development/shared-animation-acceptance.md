@@ -208,7 +208,7 @@ Read-only face-source inspection is recorded in
 | Six Eve outfits | Installed derived meshes contain 105 facial shapes | Live playback and face restoration on each outfit |
 | Unholy Genessa, Eve skin | Same native Genessa mask as the Genessa-skin variant. The source body's 105 matching names are not mask controls; export filtering removes 18 entirely | Keep body playback independent. Facial support would need an authored mask rig or verified native controls, not the Eve expression binding |
 | Unholy Genessa, Genessa skin | Native face and eyes have no shape keys; inspected rig has no deforming facial bones | Preserve the mask. No verified expression binding currently exists |
-| Commander White | Twelve evaluated jaw/blink shapes pass fitted correspondence, saved readback and base/cloth data preservation. Intermediate source samples pass within 0.010966 cm | Expand character-specific controls and expression mappings; verify cooking, facial playback, restoration and world physics. Trial is not installed |
+| Commander White | Eight source expressions plus jaw/blinks produce 44 shapes with saved readback and base/cloth preservation. Individual interpolation passes; combined-blink calibration still fails 9 of 172 cases at the declared limit | Refine combined control representation, map performances, then verify cooking, facial playback, restoration and world physics. Trial is not installed |
 
 Matching names establish source availability only. They do not prove runtime
 vertex correspondence or equivalent expression strength. The original outfit

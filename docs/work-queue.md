@@ -2,6 +2,27 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
+Latest CW continuation: eight original expression controls are now sampled,
+visually reviewed and imported alongside jaw/blinks into the isolated CWE1
+trial (44 added shapes, 60 total morphs). Creation and fresh readback preserve
+the complete base description, 69 built sections, cloth properties and existing
+bindings. `cw-expression-native-v1` has successful terminal receipts; nothing
+was cooked, catalog-bound or installed. Source single-control interpolation
+passes at all 44 tested intermediate strengths.
+
+Combined expressions and blinks require additional corrections. The source
+adds 0.1 blink for Flirting and 0.15 for Frown, then caps closure. Driver
+evidence and evaluated shape values establish this behavior. Normalizing the
+corrective grid by remaining closure fixes the earlier saturation error. A
+small eight-case check passes, but the wider 128-combination check still fails
+9 cases at the unchanged 0.015 cm limit, with maximum 0.025027 cm. Preserve
+`cw-expression-blend-grid-v1/grid-v5-result.json` and all earlier failures.
+Next inspect those strong-expression intermediate poses and refine the
+correction representation. The 256 calibration corrections cannot be shipped
+as individual morphs under the existing 128-shape limit; do not raise that
+limit or accept the smaller passing test merely to finish the trial. The
+correction study is Python/source geometry only, not native or runtime support.
+
 October 6 continuation: Commander White's original jaw and left/right blink
 controls now have an isolated, saved 12-shape trial. The source evaluation
 combines joint movement and corrective shapes. Fitted correspondence accounts

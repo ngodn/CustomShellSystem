@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -14,6 +15,7 @@ parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--source',type=Path,required=True)
 parser.add_argument('--samples',type=Path,required=True)
 parser.add_argument('--output',type=Path,required=True)
+parser.add_argument('--label',action='append',help='Sample label to render; repeat for an explicit review set')
 args=parser.parse_args(sys.argv[sys.argv.index('--')+1:])
 if args.output.exists() or bpy.context.preferences.filepaths.use_scripts_auto_execute:
     raise ValueError('Use a new output directory and --disable-autoexec')
@@ -58,9 +60,11 @@ camera=bpy.data.cameras.new('Facial audit camera');camera.type='ORTHO';camera.or
 view=bpy.data.objects.new('Facial audit camera',camera);scene.collection.objects.link(view);scene.camera=view
 center=Vector((0,-.01,1.645))
 args.output.mkdir(parents=True)
-labels=['neutral','facs_jnt_JawOpen-0.5','facs_jnt_JawOpen-1',
+labels=args.label or ['neutral','facs_jnt_JawOpen-0.5','facs_jnt_JawOpen-1',
         'facs_jnt_EyeBlinkLeft-0.5','facs_jnt_EyeBlinkLeft-1',
         'facs_jnt_EyeBlinkRight-0.5','facs_jnt_EyeBlinkRight-1']
+if any(not re.fullmatch(r'[A-Za-z0-9_-]+(?:\.[0-9]+)?',label) for label in labels):
+    raise ValueError('Invalid sample label')
 records=[]
 for label in labels:
     with np.load(args.samples/(label+'.npz')) as data:

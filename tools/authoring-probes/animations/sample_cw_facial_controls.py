@@ -6,6 +6,7 @@ These are source-space samples, not accepted fitted/runtime facial mappings.
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -31,6 +32,7 @@ def main():
     parser.add_argument('--control', action='append', required=True)
     parser.add_argument('--levels', nargs='+', type=float, default=[.25,.5,.75,1.0])
     parser.add_argument('--combined', action='store_true', help='Also evaluate all requested controls together')
+    parser.add_argument('--combinations', type=Path, help='Explicit JSON list of labeled control combinations')
     args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
     if args.output.exists() or bpy.context.preferences.filepaths.use_scripts_auto_execute:
         raise ValueError('Use a new output directory and --disable-autoexec')
@@ -51,6 +53,23 @@ def main():
         if not name.startswith('facs_') or name not in rig or abs(float(rig[name])) > 1e-6:
             raise ValueError(f'Unknown or active source control: {name}')
     original = {name: rig[name] for name in args.control}
+    plan=[]
+    plan_hash=digest(args.combinations) if args.combinations else None
+    if args.combinations:
+        plan=json.loads(args.combinations.read_text())
+        if not isinstance(plan,list) or not 1<=len(plan)<=512 or args.combined:
+            raise ValueError('Use one bounded combination plan or --combined')
+        labels=set()
+        for item in plan:
+            if (not isinstance(item,dict) or set(item)!={'label','controls'} or
+                not isinstance(item['label'],str) or not re.fullmatch(r'mix_[A-Za-z0-9_]+',item['label']) or
+                item['label'] in labels or not isinstance(item['controls'],dict) or not item['controls']):
+                raise ValueError('Invalid combination entry')
+            labels.add(item['label'])
+            for name,value in item['controls'].items():
+                if (name not in original or type(value) not in (int,float) or
+                    not np.isfinite(value) or not 0<=value<=1):
+                    raise ValueError('Invalid combination control')
     for obj in parts:
         obj.hide_set(False)
         obj.hide_viewport = False
@@ -107,12 +126,13 @@ def main():
             raise ValueError(f'{name}: source restoration changed geometry')
     combinations=[]
     if args.combined:
-        for level in args.levels:
-            for name in args.control:
-                rig[name]=level
-            label=f'combined-{level:g}'
-            sample(label)
-            combinations.append(dict(label=label,controls={name:level for name in args.control}))
+        plan=[dict(label=f'combined-{level:g}',controls={name:level for name in args.control}) for level in args.levels]
+    if plan:
+        for item in plan:
+            for name,value in original.items():
+                rig[name]=item['controls'].get(name,value)
+            sample(item['label'])
+            combinations.append(item)
         for name,value in original.items():
             rig[name]=value
         restored=sample('combined-restored')
@@ -120,8 +140,11 @@ def main():
             raise ValueError('Combined source restoration changed geometry')
     if digest(source) != before:
         raise ValueError('Source file changed')
+    if args.combinations and digest(args.combinations)!=plan_hash:
+        raise ValueError('Combination plan changed')
     report = dict(source=str(source), sha256=before, sources_unchanged=True,
                   blender=bpy.app.version_string, records=records, summary=summary,combinations=combinations,
+                  combination_plan_sha256=plan_hash,
                   scope='Original source controls and evaluated geometry; fitted/runtime mapping unverified.')
     (args.output / 'report.json').write_text(json.dumps(report, indent=2, allow_nan=False) + '\n')
     print('CW_FACE_SAMPLING_COMPLETE', len(summary), flush=True)

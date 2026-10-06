@@ -126,6 +126,52 @@ validate facial playback/restoration and full outfit behavior. No CW facial
 trial is catalog-bound, installed or accepted for release. Other characters'
 facial capability remains separate from body animation compatibility.
 
+### Eight source expressions and combined-blink study
+
+`cw-expression-sampling-v1` extends the original control evaluation with
+Afraid, Angry, Flirting, Frown, Shock, SmileFullFace, SmileOpenFullFace and
+Surprised. These are actual CW source controls, not assumed equivalents of
+Eve's 21 expressions. All return to neutral without changing the source file.
+`cw-expression-bake-v1` maps their quarter-strength samples to 5,201 affected
+points in the current assembly. Thirty-four front/quarter source views are
+complete, and the nine-panel front review was inspected. Individual expressions
+have distinct intended features with no obvious collapsed mouth or eyelids
+in those views. This is static source-geometry review, not world rendering.
+
+`/Game/CSS/AnimLab/SK_Face_CWE1` retains all 16 original morphs and adds 44
+shapes. Creation and fresh verification in `cw-expression-native-v1` pass
+667,587 built deltas with retained error 0.000089593 cm. The same 294,193,348
+base-description bytes, 69 built sections and one cloth asset still match the
+original through the preservation gate. Materials, bind pose, skeleton,
+physics and post-process bindings remain unchanged. The original asset and
+source/interchange hashes also remain unchanged.
+
+Independent intermediate samples expose a separate composition issue:
+adding an expression to a blink is not the original rig's combined pose.
+`cw-expression-interpolation-v1` records a 0.145608 cm maximum error without
+corrections. A single full-strength corrective per pair improves six of the
+eight tested combinations but still fails Frown and Flirting. The original
+driver `facs_ctrl_EyesBlink(rst):01` adds 0.1 times Flirting and 0.15 times
+Frown; evaluated blink shapes cap at 1. The records and immutable driver hash
+are in `cw-expression-correctives-v3/blink-bias.json` and the sample reports.
+
+Sampling correction grids against the remaining eyelid closure, instead of
+interpolating across the cap, brings that small test within 0.011880 cm.
+The wider `cw-expression-blend-grid-v1` then checks 44 individual samples and
+128 combined cases at independent eighth strengths. The latest quarter-grid
+calibration (`cw-expression-correctives-v5`) still fails 9 of 172 total cases
+against 0.015 cm, reaching 0.025027 cm on strong Afraid at intermediate blink.
+Earlier sparse and half-grid failures remain recorded. Do not describe the
+combined-blink work as finished based on the smaller passing test.
+
+The correction model remains an offline NumPy experiment. It is not included
+in CWE1, cooked assets, the catalog or runtime. Its 256 calibration corrections
+also exceed the existing 128-morph limit if exported individually. Further
+work must improve the failed combinations and represent the corrections within
+the intended runtime cost, with independently checked reconstruction. The
+eight-expression candidate itself remains an offline trial. Full performance
+mapping, cooking, runtime expression/restoration and world physics stay open.
+
 ## Native human path
 
 `work/cine-animation-port/native-human-compatibility/assets.json` independently

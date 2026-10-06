@@ -31,6 +31,11 @@ not valid import targets.
    repeated `--control` names from the verified original rig. Defaults sample
    quarter strengths; `--levels` accepts independent validation strengths.
    `--combined` additionally evaluates the requested controls together.
+   `--combinations` instead accepts up to 512 explicit `{label, controls}`
+   entries, with unique `mix_...` labels and bounded values for known controls.
+   The count limits source evaluations, not imported morphs. That separate
+   limit remains 128. The plan is hashed and all unmentioned controls reset
+   between combinations.
    Embedded scripts remain disabled, source files are hashed and never saved,
    and neutral restoration is checked after each control and combination.
 2. `bake_cw_facial_shapes.py` requires B9, the samples, the current assembly
@@ -40,13 +45,22 @@ not valid import targets.
 3. Run `trial_cw_facial_shapes.py` in the isolated editor with
    `CSS_FACE_TRIAL_MODE=create`, then `verify` in a fresh process. The current
    fixture is C4 to CWJ1; it is a jaw/blink experiment, not a general face map.
+   `CSS_FACE_TRIAL_REVISION=E1` selects the verified eight-expression export and
+   isolated CWE1 candidate. The default stays J1.
 4. `render_cw_facial_samples.py` produces front/quarter geometry reviews. Its
    Workbench view omits optical cornea/moisture polygons only from the neutral
    diagnostic scene, not the source or imported asset.
+   Repeated `--label` arguments select explicit additional source views.
 5. Run `audit_cw_facial_interpolation.py` against independent source samples
    with an explicit `--max-error-cm`. It measures individual interpolation and
    combined-control interaction separately. Source approximation and cooked
    morph filtering are different checks; do not combine their error claims.
+   Optional `--corrective-samples` measures paired source correction grids.
+   `--blink-bias` requires hashed driver evidence and an explicit per-expression
+   closure fraction. It normalizes each blink by remaining closure and rejects
+   simultaneous biased expressions, which have not been validated. Missing
+   grid cells fail instead of borrowing an unrelated sample. This is an
+   experimental source comparator, not a runtime facial solver or native bake.
 
 ## Native preservation
 
