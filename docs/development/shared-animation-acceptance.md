@@ -116,6 +116,8 @@ support where technically compatible. Inventory and record these additional
 rigs rather than treating the nine-mesh result as universal coverage.
 Each supported appearance needs playback, interruption and restoration checks;
 body adapter success alone does not establish facial or world-physics support.
+The [expanded collection and native-rig audit](shared-animation-outfit-coverage.md)
+records additional packages, differing references and runtime restrictions.
 
 The two additional body auditions now also pass all nine meshes:
 `work/cine-animation-port/l5p-adapter-check/l5p-shared-all-result.json` records
@@ -124,6 +126,15 @@ body and finger position differences are zero; maximum angular differences are
 7.31e-8 and 6.67e-8 radians. The shared authoring copies were independently
 verified against the source candidates. These two clips are not installed or
 counted in the 57 cooked sequences above.
+
+The isolated two-clip cook now passes export round-trip and independent ACL
+readback against raw editor poses: five samples per clip, 388 tracks including
+nine virtual tracks. Largest local translation error is 0.00737 cm; largest
+quaternion chord distance is 0.00125. Receipt:
+`work/cine-animation-port/l5p-cook/decoded-v2/motion-verification.json`.
+The initial decoder attempt used an obsolete binary and rejected the reference
+coverage; the current audited `exporter-v2` successfully decoded both clips.
+This is sampled compression evidence, not contact or full-motion acceptance.
 
 Read-only face-source inspection is recorded in
 `work/cine-animation-port/other-face-sources-v1/compatibility.json`:

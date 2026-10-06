@@ -10,6 +10,24 @@ original collection and verify actual rig/layer contracts. Facial compatibility
 is separate and must not prevent compatible body playback. This requirement is
 now recorded in both the repository goal and the active Codex goal attachment.
 
+Expanded implementation checkpoint: the GeneXXa fixed-physics graph now has an
+isolated performance adapter. Creation, fresh reload and all 20 moving clips
+on both GeneXXa/Nunexxa meshes pass (40 pairs, 360 cases, 29,278 poses). No new
+runtime integration or installation yet. The additional authored collection
+and native-human rig inventory is in
+[outfit coverage](development/shared-animation-outfit-coverage.md). Older
+Seductress references and native-human graphs require deliberate adapters or
+retargeting. A stale v2.0.6 local package is retained as unverified.
+
+DumbDumb and Iris Out now pass isolated Windows cook, export round-trip and
+independent compressed-pose samples. Full motion renders continue. Measurement
+found a -14.31 cm shoe height in DumbDumb at frame 3414; the source foot joint
+remains near its usual ground height there, so inspect retargeted leg contact
+before acceptance. The Blender reconstruction error peaks at 0.0010075 cm;
+the repeat visualization uses an explicit 0.002 cm diagnostic limit, with
+original motion unchanged. Raw editor and compressed-animation checks keep
+their existing independent limits.
+
 October 6 continuation: the user confirmed source permission and requested
 continued work on DumbDumb and Iris Out. Investigate the seven additional tracks
 against the actual source mesh and playback mapping; retain their complete keys

@@ -3,6 +3,7 @@
 #include "Animation/AnimBlueprintGeneratedClass.h"
 #include "Animation/AnimSequence.h"
 #include "AnimGraphNode_BlendListByBool.h"
+#include "AnimGraphNode_LinkedInputPose.h"
 #include "AnimGraphNode_SequenceEvaluator.h"
 #include "AnimGraphNode_TwoWayBlend.h"
 #include "AssetToolsModule.h"
@@ -70,7 +71,8 @@ UAnimBlueprint* UCSSPerformanceLibrary::CreatePerformanceLayer(UAnimBlueprint* S
         TEXT("/Game/CSS/EveTest/ABP_BikiniFeet2.ABP_BikiniFeet2"),
         TEXT("/Game/CSS/EveTest/ABP_KnitFeet1.ABP_KnitFeet1"),
         TEXT("/Game/CSS/UnholyGenessa/ABP_Wings2.ABP_Wings2"),
-        TEXT("/Game/CSS/CWTest/ABP_BodyHairB4.ABP_BodyHairB4")
+        TEXT("/Game/CSS/CWTest/ABP_BodyHairB4.ABP_BodyHairB4"),
+        TEXT("/Game/CSS/GeneXXa/ABP_Secondary.ABP_Secondary")
     };
     if (!IsRunningCommandlet() || !Source || !Sources.Contains(Source->GetPathName()) ||
         !Source->GeneratedClass || !Source->TargetSkeleton ||
@@ -78,9 +80,10 @@ UAnimBlueprint* UCSSPerformanceLibrary::CreatePerformanceLayer(UAnimBlueprint* S
         OutputPackage.Len() > 90 || !FPackageName::IsValidLongPackageName(OutputPackage) ||
         FPackageName::DoesPackageExist(OutputPackage) || FindPackage(nullptr, *OutputPackage))
         return Fail(TEXT("Invalid source or existing output"));
-    if (!FindFProperty<FBoolProperty>(Source->GeneratedClass.Get(), TEXT("CSSIdleEnabled")) ||
-        !FindFProperty<FObjectPropertyBase>(Source->GeneratedClass.Get(), TEXT("CSSIdleSequence")))
-        return Fail(TEXT("Source lacks the audited idle contract"));
+    const bool HasIdleFlag = FindFProperty<FBoolProperty>(Source->GeneratedClass.Get(), TEXT("CSSIdleEnabled")) != nullptr;
+    const bool HasIdleSequence = FindFProperty<FObjectPropertyBase>(Source->GeneratedClass.Get(), TEXT("CSSIdleSequence")) != nullptr;
+    if (HasIdleFlag != HasIdleSequence)
+        return Fail(TEXT("Source has an incomplete idle contract"));
     auto* Blueprint = Cast<UAnimBlueprint>(FAssetToolsModule::GetModule().Get().DuplicateAsset(
         FPackageName::GetLongPackageAssetName(OutputPackage),
         FPackageName::GetLongPackagePath(OutputPackage), Source));
@@ -100,20 +103,30 @@ UAnimBlueprint* UCSSPerformanceLibrary::CreatePerformanceLayer(UAnimBlueprint* S
     for (auto Candidate : Blueprint->FunctionGraphs)
         if (Candidate->GetFName() == TEXT("AnimGraph")) Graph = Candidate.Get();
     if (!Graph) return Fail(TEXT("Missing animation graph"));
-    UAnimGraphNode_BlendListByBool* Idle = nullptr;
+    UEdGraphPin* InputPose = nullptr;
     for (auto Node : Graph->Nodes)
     {
+        if (!HasIdleFlag)
+        {
+            if (auto* Input = Cast<UAnimGraphNode_LinkedInputPose>(Node))
+            {
+                if (InputPose) return Fail(TEXT("Ambiguous post-process input"));
+                InputPose = Input->FindPin(TEXT("Pose"));
+                if (!InputPose) return Fail(TEXT("Post-process input has no pose pin"));
+            }
+            continue;
+        }
         auto* Blend = Cast<UAnimGraphNode_BlendListByBool>(Node);
         auto* Active = Blend ? Blend->FindPin(TEXT("bActiveValue")) : nullptr;
         if (!Active || Active->LinkedTo.Num() != 1) continue;
         if (!ReadsIdleFlag(Active->LinkedTo[0]->GetOwningNode())) continue;
-        if (Idle) return Fail(TEXT("Ambiguous existing idle branch"));
-        Idle = Blend;
+        if (InputPose) return Fail(TEXT("Ambiguous existing idle branch"));
+        InputPose = Blend->FindPin(TEXT("Pose"));
+        if (!InputPose) return Fail(TEXT("Idle branch has no pose pin"));
     }
-    auto* IdleOutput = Idle ? Idle->FindPin(TEXT("Pose")) : nullptr;
-    if (!IdleOutput || IdleOutput->LinkedTo.Num() != 1)
-        return Fail(TEXT("Missing single idle-to-physics connection"));
-    auto* Destination = IdleOutput->LinkedTo[0];
+    if (!InputPose || InputPose->LinkedTo.Num() != 1)
+        return Fail(TEXT("Missing single input-to-physics connection"));
+    auto* Destination = InputPose->LinkedTo[0];
     auto* Evaluator = Add<UAnimGraphNode_SequenceEvaluator>(Graph);
     if (!NodeSetting(FAnimNode_SequenceEvaluator::StaticStruct(), &Evaluator->Node, TEXT("bShouldLoop"), TEXT("false")) ||
         !NodeSetting(FAnimNode_SequenceEvaluator::StaticStruct(), &Evaluator->Node, TEXT("bTeleportToExplicitTime"), TEXT("true")) ||
@@ -142,7 +155,7 @@ UAnimBlueprint* UCSSPerformanceLibrary::CreatePerformanceLayer(UAnimBlueprint* S
     auto* Both = Call(UKismetMathLibrary::StaticClass(), TEXT("BooleanAND"));
     auto* Guard = Call(UKismetMathLibrary::StaticClass(), TEXT("SelectFloat"));
     Guard->FindPin(TEXT("B"))->DefaultValue = TEXT("0.0");
-    IdleOutput->BreakLinkTo(Destination);
+    InputPose->BreakLinkTo(Destination);
     if (!Link(Graph, Sequence->FindPin(TEXT("CSSPerformanceSequence")), Evaluator->FindPin(TEXT("Sequence"))) ||
         !Link(Graph, Time->FindPin(TEXT("CSSPerformanceTime")), Evaluator->FindPin(TEXT("ExplicitTime"))) ||
         !Link(Graph, Sequence->FindPin(TEXT("CSSPerformanceSequence")), Valid->FindPin(TEXT("A"))) ||
@@ -151,7 +164,7 @@ UAnimBlueprint* UCSSPerformanceLibrary::CreatePerformanceLayer(UAnimBlueprint* S
         !Link(Graph, Both->FindPin(TEXT("ReturnValue")), Guard->FindPin(TEXT("bPickA"))) ||
         !Link(Graph, Weight->FindPin(TEXT("CSSPerformanceWeight")), Guard->FindPin(TEXT("A"))) ||
         !Link(Graph, Guard->FindPin(TEXT("ReturnValue")), Weighted->FindPin(TEXT("Alpha"))) ||
-        !Link(Graph, IdleOutput, Weighted->FindPin(TEXT("A"))) ||
+        !Link(Graph, InputPose, Weighted->FindPin(TEXT("A"))) ||
         !Link(Graph, Evaluator->FindPin(TEXT("Pose")), Weighted->FindPin(TEXT("B"))) ||
         !Link(Graph, Weighted->FindPin(TEXT("Pose")), Destination))
         return Fail(TEXT("Cannot connect performance branch"));
@@ -189,7 +202,8 @@ FString UCSSPerformanceLibrary::VerifyPerformanceLayer(UAnimBlueprint* Source, U
             return FString::Printf(TEXT("ERROR: changed control %s"), *It->GetName());
         ++Controls;
     }
-    if (Controls < 2) return TEXT("ERROR: missing source controls");
+    // Older authored graphs can have fixed physics nodes and no CSS variables.
+    // Their original nodes and defaults still need the comparisons below.
     for (auto Original : Source->FunctionGraphs)
     {
         UEdGraph* Copy = nullptr;
