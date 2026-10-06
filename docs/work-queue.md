@@ -52,7 +52,10 @@ unchanged L5P source restores the problem-frame foot heights to 7.78/7.71 cm.
 Both full L5R candidates are generated. The inspected problem-frame shoe depth
 is now -0.48 cm, from -14.31 cm. Fresh-process saved/repeated-pose verification
 passes both clips (4,944 frames, 388 bones, zero differences). Dense skinned
-measurements are running. See
+measurements completed but still find -4.317 cm in DumbDumb and -1.209 cm in
+Iris Out. A rotating local-offset trial improves these sparse cases but leaves
+-3.841 cm on DumbDumb's left foot. Per-foot contact measurement and a separate
+leg-IK diagnostic are underway; neither candidate is accepted. See
 [the source/contact investigation](development/shared-animation-source-requirements.md#leg-contact-investigation-october-6).
 No new installation or release acceptance yet.
 

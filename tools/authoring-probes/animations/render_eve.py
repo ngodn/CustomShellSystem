@@ -22,6 +22,8 @@ parser.add_argument('--bind', type=Path, required=True)
 parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--stride', type=int, default=2)
 parser.add_argument('--measure-only', action='store_true', help='Evaluate mesh contact without rendering images')
+parser.add_argument('--footwear-only', action='store_true',
+                    help='Measure each foot without rebuilding the visible body; requires --measure-only')
 parser.add_argument('--pose', choices=('final', 'upstream'), default='final',
                     help='Compare the final pose with the recorded input before secondary motion.')
 parser.add_argument('--view', choices=('three-quarter', 'front', 'back', 'side'), default='three-quarter')
@@ -35,6 +37,7 @@ parser.add_argument('--position-tolerance-cm', type=float, default=.001,
                     help='Explicit matrix reconstruction tolerance for this diagnostic render')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert args.stride > 0
+assert not args.footwear_only or args.measure_only
 assert math.isfinite(args.camera_scale) and args.camera_scale > 0
 assert math.isfinite(args.camera_height)
 assert math.isfinite(args.position_tolerance_cm) and 0 < args.position_tolerance_cm <= .01
@@ -128,6 +131,28 @@ direction = {'three-quarter': (4, -2.5, .5), 'front': (1, -5, .35),
 view.location = center + Vector(direction)
 view.rotation_euler = (center-view.location).to_track_quat('-Z', 'Y').to_euler()
 first_pelvis = None
+footwear = [bpy.data.objects[name] for name in
+            ('Eve Black Pearl - Footwear', 'Eve Black Pearl - Heel Supports')]
+foot_vertices = {}
+for obj in footwear:
+    groups = {}
+    for group in obj.vertex_groups:
+        bone = rig.data.bones.get(group.name)
+        while bone:
+            if bone.name in ('thigh_l', 'thigh_r'):
+                groups[group.index] = bone.name[-1]
+                break
+            bone = bone.parent
+    sides = {'l': [], 'r': []}
+    for vertex in obj.data.vertices:
+        weights = {side: sum(g.weight for g in vertex.groups
+                            if groups.get(g.group) == side) for side in sides}
+        side = max(weights, key=weights.get)
+        assert weights[side] > .5 and weights['r' if side == 'l' else 'l'] < .001, (
+            'Ambiguous footwear ownership', obj.name, vertex.index, weights)
+        sides[side].append(vertex.index)
+    assert all(sides.values()), obj.name
+    foot_vertices[obj.name] = sides
 
 for output_frame, frame in enumerate(range(0, len(motion['frames']), args.stride)):
     morphs = motion['frames'][frame].get('morphs', {}) if args.pose == 'final' else {}
@@ -172,26 +197,36 @@ for output_frame, frame in enumerate(range(0, len(motion['frames']), args.stride
         angle_error = max(angle_error, min(angle, abs(2*math.pi-angle)))
     assert position_error < args.position_tolerance_cm and angle_error < .001, (frame, position_error, angle_error)
     graph = bpy.context.evaluated_depsgraph_get()
-    evaluated = body.evaluated_get(graph)
-    mesh = bpy.data.meshes.new_from_object(evaluated, preserve_all_data_layers=True, depsgraph=graph)
-    bm = bmesh.new()
-    bm.from_mesh(mesh)
-    remove = [face for face in bm.faces if face.material_index in covered]
-    assert len(remove) == expected_removed
-    bmesh.ops.delete(bm, geom=remove, context='FACES_ONLY')
-    bm.to_mesh(mesh)
-    bm.free()
-    previous = filtered.data
-    filtered.data = mesh
-    bpy.data.meshes.remove(previous)
-    shoes = bpy.data.objects['Eve Black Pearl - Footwear'].evaluated_get(graph)
-    heel = bpy.data.objects['Eve Black Pearl - Heel Supports'].evaluated_get(graph)
-    lowest = min((o.matrix_world @ v.co).z for o in (shoes, heel) for v in o.data.vertices)
-    visible_vertices = {i for polygon in filtered.data.polygons for i in polygon.vertices}
-    body_lowest = min((filtered.matrix_world @ filtered.data.vertices[i].co).z for i in visible_vertices)
+    body_lowest = None
+    if not args.footwear_only:
+        evaluated = body.evaluated_get(graph)
+        mesh = bpy.data.meshes.new_from_object(evaluated, preserve_all_data_layers=True, depsgraph=graph)
+        bm = bmesh.new()
+        bm.from_mesh(mesh)
+        remove = [face for face in bm.faces if face.material_index in covered]
+        assert len(remove) == expected_removed
+        bmesh.ops.delete(bm, geom=remove, context='FACES_ONLY')
+        bm.to_mesh(mesh)
+        bm.free()
+        previous = filtered.data
+        filtered.data = mesh
+        bpy.data.meshes.remove(previous)
+        visible_vertices = {i for polygon in filtered.data.polygons for i in polygon.vertices}
+        body_lowest = min((filtered.matrix_world @ filtered.data.vertices[i].co).z for i in visible_vertices)
+    foot_lowest = {side: math.inf for side in ('l', 'r')}
+    for original in footwear:
+        evaluated = original.evaluated_get(graph)
+        assert len(evaluated.data.vertices) == len(original.data.vertices)
+        for side, vertices in foot_vertices[original.name].items():
+            foot_lowest[side] = min(foot_lowest[side], min(
+                (evaluated.matrix_world @ evaluated.data.vertices[i].co).z for i in vertices))
+    lowest = min(foot_lowest.values())
     errors.append(dict(frame=frame, position_cm=position_error, angle_rad=angle_error,
-                       footwear_lowest_cm=lowest*100, body_lowest_cm=body_lowest*100,
-                       contact_lowest_cm=min(lowest, body_lowest)*100))
+                       source_frame=motion['frames'][frame].get('source_frame', frame),
+                       footwear_lowest_cm=lowest*100,
+                       foot_lowest_cm={side: height*100 for side, height in foot_lowest.items()},
+                       body_lowest_cm=None if body_lowest is None else body_lowest*100,
+                       contact_lowest_cm=None if body_lowest is None else min(lowest, body_lowest)*100))
     if not args.measure_only:
         scene.render.filepath = str(args.output/f'{output_frame:03d}.png')
         bpy.ops.render.render(write_still=True)
@@ -203,6 +238,9 @@ assert hashlib.sha256(blend.read_bytes()).hexdigest() == blend_hash
     camera_scale=args.camera_scale, camera_height=args.camera_height,
     follow_pelvis=args.follow_pelvis, position_tolerance_cm=args.position_tolerance_cm,
     covered_body_faces_removed=expected_removed, pose=args.pose, measure_only=args.measure_only,
+    footwear_only=args.footwear_only,
+    foot_vertex_counts={name: {side: len(vertices) for side, vertices in sides.items()}
+                        for name, sides in foot_vertices.items()},
     wardrobe='Heels and stockings shown; flat feet hidden; heeled stocking feet and footwear lining shown.',
     scope=('UE compressed upstream pose before secondary motion and hand morphs, stationary owner. '
            if args.pose == 'upstream' else

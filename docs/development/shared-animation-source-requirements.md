@@ -150,4 +150,26 @@ The inspected skinned frame 3414 now has a lowest shoe vertex at -0.481 cm,
 compared with -14.306 cm before; frame zero is -0.152 cm. Fresh-process
 saved/repeated-pose verification passes all 4,944 frames with 388 evaluated
 bones and zero position/quaternion differences. Dense shoe/body measurements
-are still running. Cooking, adapter checks and live acceptance remain pending.
+completed: 1,972 DumbDumb samples still reach -4.317 cm at frame 3470; 501 Iris
+Out samples reach -1.209 cm at frame 486. L5R is not contact-accepted.
+
+The L5S trial rotates the bind-derived ankle offset with each foot instead of
+applying a fixed global vertical offset. Sparse skinned measurements improve
+Iris Out frame 486 to -0.373 cm, but DumbDumb frame 3470 still reaches -3.841 cm.
+Per-foot vertex ownership is measured from leg weights, including crossed-leg
+poses, rather than assigning feet by their current horizontal position. At
+frame 3470 the remaining depth is left -3.841 cm and right -0.395 cm. Original
+sources remain unchanged. A sole-contact correction needs separate leg goals;
+raising the entire character would hide this error and introduce hovering.
+Full L5S readback and per-key measurement are complete. Across all 4,944 keys,
+DumbDumb reaches -3.864 cm at left foot frame 3471; Iris Out reaches -1.617 cm
+at right foot frame 77. The sparse two-bone correction independently brings
+the three inspected DumbDumb frames to within 0.00003 cm of the floor while
+preserving root and upper-body pose. The frame-3470 render was inspected.
+
+`CSSContactLibrary` now builds against UE 5.6.1's `AnimationCore` in C++20.
+The first full bake rejected four almost-straight leg cases. A nearest-source
+knee-plane fallback handles that mathematical ambiguity without stretching the
+leg or choosing an arbitrary axis. The L5T retry is running; no full corrected
+clip is accepted yet. See [bake procedure](../../tools/authoring-probes/animations/CONTACT.md).
+Neither candidate is installed. Cooking, adapter checks and live acceptance remain pending.
