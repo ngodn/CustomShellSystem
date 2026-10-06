@@ -1,5 +1,24 @@
 # Adding audited performance adapters
 
+## Corrected dance trial for the requested outfits
+
+`package_corrected_dance_trial.py <new-private-workspace>` combines the existing
+57-sequence facial trial with the two full L5X body auditions. It requires
+fresh `l5x-adapter-v1/corrected-current-result.json` evidence from the current
+authoring module. It rejects changed inputs, duplicate payloads and adapters
+outside Eve, Unholy Genessa and Commander White. Staged payloads are hard links
+used read-only during packaging; hashes are rechecked afterward.
+
+The original entries remain unchanged. Both dances receive stable shared IDs,
+one-shot playback and the verified base skeleton binding. The receipt retains
+unresolved source/facial work and states that no installation or release
+acceptance occurred. Run `verify_animation_dependencies.py` against the result;
+it checks the compression settings as well as each isolated outfit's assets.
+The host test accepts `--audited-dance-pack <discovery-directory>` and
+`--audited-dance-isolated-pack <discovery-directory>` for this 59-entry trial.
+
+## Adapter evidence
+
 `package_shared_library.py --adapter-addition <descriptor.json>` adds a cooked
 adapter without replacing the existing verified adapter set. Repeat the flag
 for additional outfits. The descriptor requires these fields:

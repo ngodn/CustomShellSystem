@@ -75,8 +75,15 @@ def main():
         sequences={asset['asset'].split('.')[0] for entry in library['entries'] for asset in entry['assets']}
         adapter_packages={entry['target_class'].split('.')[0] for entry in adapters}
         face_packages={entry['target_mesh'].split('.')[0] for entry in faces}
-        required=sequences|adapter_packages|face_packages
-        filters={os.path.commonpath(sorted(sequences))}
+        compression_packages=set(verified.get('compression_settings',[]))
+        if any(not package.startswith('/Game/CSS/Locomotion/') or '..' in package
+               for package in compression_packages):
+            raise ValueError('Unexpected shared compression package')
+        required=sequences|adapter_packages|face_packages|compression_packages
+        # Distinct clip families may share only the library root with unrelated
+        # outfit faces and graphs. Extract their directories, not that root.
+        filters={package.rsplit('/',1)[0] for package in sequences}
+        filters.update(compression_packages)
         filters.update(adapter_packages)
         if face_packages:
             filters.add(os.path.commonpath(sorted(face_packages)))
@@ -112,7 +119,8 @@ def main():
             raise ValueError('Expected one shared skeleton per source outfit')
         skeleton_sha=hashlib.sha256(json.dumps(skeletons[0],sort_keys=True,separators=(',',':')).encode()).hexdigest()
         row=dict(outfit=dependency.stem,source_toc_sha256=checksum,sequences=len(sequences),
-                 adapters=len(adapters),faces=len(faces),decoded_packages=len(decoded),
+                 adapters=len(adapters),faces=len(faces),compression_settings=len(compression_packages),
+                 decoded_packages=len(decoded),
                  exported_payloads_unchanged=True,unresolved_header_imports=False,
                  properties_sha256=digest(work/'properties.json'),
                  decoded_skeleton_sha256=skeleton_sha,

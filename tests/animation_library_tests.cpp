@@ -1,4 +1,5 @@
 #include "data.hpp"
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cmath>
@@ -179,17 +180,32 @@ int main(int argc,char** argv) {
         if(argc==3 && (std::string_view(argv[1])=="--audited-pack" || std::string_view(argv[1])=="--audited-facial-pack" ||
                        std::string_view(argv[1])=="--audited-face-motion-pack" ||
                        std::string_view(argv[1])=="--audited-blender-face-pack" ||
+                       std::string_view(argv[1])=="--audited-dance-pack" ||
+                       std::string_view(argv[1])=="--audited-dance-isolated-pack" ||
                        std::string_view(argv[1])=="--audited-expanded-pack" ||
                        std::string_view(argv[1])=="--audited-expanded-isolated-pack" ||
                        std::string_view(argv[1])=="--audited-isolated-pack")) {
             const bool expanded=std::string_view(argv[1])=="--audited-expanded-pack" ||
                                 std::string_view(argv[1])=="--audited-expanded-isolated-pack";
             const bool isolated=std::string_view(argv[1])=="--audited-isolated-pack" ||
-                                std::string_view(argv[1])=="--audited-expanded-isolated-pack";
+                                std::string_view(argv[1])=="--audited-expanded-isolated-pack" ||
+                                std::string_view(argv[1])=="--audited-dance-isolated-pack";
+            const bool dances=std::string_view(argv[1])=="--audited-dance-pack" ||
+                              std::string_view(argv[1])=="--audited-dance-isolated-pack";
             const auto packages=Catalog::load(root,argv[2],root/"audit-cache");
             expect(packages.animation_libraries.size()==1,"Audited pack did not load as one library");
             const auto& audited=packages.animation_libraries[0];
-            expect(audited.entries.size()==57 && audited.adapters.size()==(expanded?6:5),"Audited animation set changed");
+            expect(audited.entries.size()==(dances?59:57) && audited.adapters.size()==(expanded?6:5),"Audited animation set changed");
+            if(dances) {
+                for(const auto* id:{"css.eve.dance.dumbdumb","css.eve.dance.irisout"}) {
+                    const auto count=std::count_if(audited.entries.begin(),audited.entries.end(),[&](const auto& entry) {
+                        return entry.id==id && entry.playback==AnimationPlayback::Once &&
+                               !entry.slot && entry.hide_weapons && entry.assets.size()==1 &&
+                               entry.assets.front().skeleton==base;
+                    });
+                    expect(count==1,"Corrected dance lost its identity or playback contract");
+                }
+            }
             expect(packages.outfit_revisions.size()==(isolated?1:expanded?4:3),"Source outfits lack verified revisions");
             size_t resolved_layers=0;
             for(const auto& adapter:audited.adapters) {
@@ -222,7 +238,7 @@ int main(int argc,char** argv) {
                 for(const auto& adapter:audited.faces.front().adapters)
                     if(packages.outfit_revisions.contains(adapter.source_outfit)) ++expected_faces;
                 expect(matched==expected_faces,"Combined pack did not resolve exactly the installed outfit's faces");
-                const bool blender_face=std::string_view(argv[1])=="--audited-blender-face-pack" || isolated || expanded;
+                const bool blender_face=std::string_view(argv[1])=="--audited-blender-face-pack" || isolated || expanded || dances;
                 if(std::string_view(argv[1])=="--audited-face-motion-pack" || blender_face) {
                     const auto& rig=audited.faces.front();
                     const auto* performance=rig.find_performance("css.eve.dance.comecloser");

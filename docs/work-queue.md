@@ -1,5 +1,27 @@
 # Current work queue
 
+## October 6: requested-outfit dance integration
+
+The combined private trial now has 59 animations: the original 57 plus the
+full L5X DumbDumb and Iris Out body auditions. All 68 prior cooked exports and
+57 existing catalog entries stay unchanged; five adapters cover only Eve,
+Unholy Genessa and Commander White. The two dances and their owned compression
+settings bring the package to 71 exports. No excluded outfit is included.
+
+Fresh current-module evaluation passes 18 mesh/clip pairs, 162 playback and
+restoration cases, with fingers checked. Packaging round-trip and independent
+readback with each of the three outfit mods alone pass. The host catalog passes
+1,090 combined checks and 1,088/1,080/1,080 isolated checks for Eve/Genessa/CW.
+Evidence: `l5x-adapter-v1/corrected-current-result.json`,
+`shared-dance-trial-v1/verification.json`, `shared-dance-isolated-v1/report.json`.
+The first packaging preflight correctly rejected evidence tied to the older
+authoring module; the fresh evaluation supplies the current evidence.
+
+This trial is not installed or release-accepted. Unknown source indices and
+remaining facial controls are retained as open items. Next implement the
+compatible default-human playback path, complete feasible facial support and
+live acceptance for the actual scope. Do not resume excluded custom rigs.
+
 ## Authoritative user scope correction, October 6
 
 Support exactly these authored outfits: **Eve (all six outfits), Unholy Genessa

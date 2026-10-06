@@ -2,10 +2,22 @@
 
 Checkpoint: 2026-10-06. This is a private candidate, not release approval.
 
-The catalog contains eight released idles, eighteen moving clips and thirty-one
-photo poses. DumbDumb and Iris Out remain additional unfinished clips. All live
-acceptance entries below are pending for this shared-pack revision, even where
-an older outfit release has previously worked in game.
+The latest private combined catalog contains eight released idles, twenty
+moving clips and thirty-one photo poses. DumbDumb and Iris Out's full L5X body
+auditions are now included, with unresolved source/facial mappings still open.
+The installed trial remains the older 57-sequence version. All live acceptance
+entries below are pending for this shared-pack revision, even where an older
+outfit release has previously worked in game.
+
+`shared-dance-trial-v1` preserves the earlier 57 entries and all 68 cooked
+exports exactly. Its 71 exports include two dances and their compression
+settings. Fresh current-module evaluation passes all 18 dance/mesh pairs and
+162 playback/restoration cases. Independent package readback resolves all 59
+sequences with Eve, Unholy Genessa or Commander White installed alone. Host
+catalog checks pass for both the combined and three isolated installations.
+Evidence: `l5x-adapter-v1/corrected-current-result.json`,
+`shared-dance-trial-v1/verification.json`, `shared-dance-isolated-v1/report.json`.
+No excluded outfit is included; this is not live or release acceptance.
 
 ## Evidence boundaries
 
