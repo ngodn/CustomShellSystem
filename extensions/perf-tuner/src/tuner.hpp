@@ -1,7 +1,7 @@
 #pragma once
 // Perf Tuner: more frames per second with the same picture. It applies the catalog's
 // tweaks through the game's console, measures each one fairly (off/on/off/on in the same
-// scene), finds where the frame time goes (GPU or CPU), and points out settings in the
+// scene), tests resolution sensitivity on request, and points out settings in the
 // player's own config that cost frames for nothing on this machine. Everything it sets it
 // reads first and puts back on stop.
 #include "audit.hpp"
@@ -72,6 +72,7 @@ private:
     std::vector<Finding> findings_;
     std::string status_, error_;
     Json player_ = Json::object();
+    Json kismet_;
     bool world_ready_ = false;
     double clock_ = 0, last_player_check_ = -1, last_findings_ = -1e9, last_brief_ = -1e9, last_invalidate_ = 0;
     Json brief_ = Json::object();
@@ -83,7 +84,7 @@ private:
     bool anim_fix_ = false;            // the player's choice
     int anim_fixed_ = 0;               // meshes changed in this world
     bool audit_wanted_ = false;        // run one when a world is up (the fix is on)
-    // Tune: one button that runs the audit, the probe, every switch that fits this machine,
+    // Tune: one button that runs the audit, every switch that fits this machine,
     // and the whole set at the end, keeping what wins. A queue of trial targets.
     bool tuning_ = false;
     std::vector<std::string> tune_queue_;

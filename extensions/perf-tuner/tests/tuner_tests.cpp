@@ -1,6 +1,7 @@
 // Perf Tuner tests against a mock CSSX host: the catalog's rules, the trial maths, and the
 // tuner's apply/measure/restore over the bridge. Run with the extension directory as argv[1].
 #include "tuner.hpp"
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -21,8 +22,12 @@ struct Host {
     Json state = Json::object();
     std::map<std::string, double> cvars;
     std::map<std::string, double> cost_ms;      // extra frame time per variable while it is at its catalog value, negative saves time
+    std::map<std::string, double> p99_cost_ms;
     std::map<std::string, double> catalog_value;
     std::map<std::string, double> refuse;       // variables this build refuses: they keep their value
+    std::map<std::string, double> throw_after_write;
+    std::map<uint64_t, Json> refuse_options;
+    unsigned find_calls = 0;
     double base_ms = 20.0, noise_ms = 0;
     bool player = true;
     std::vector<std::string> commands, logs;
@@ -57,7 +62,7 @@ struct Host {
         if (op == "output.write") { outputs[j.at("file").get<std::string>()] = j.at("text").get<std::string>(); return true; }
         if (op == "extension.info") return {{"directory", dir.string()}, {"id", "eins0fx.perf-tuner"}};
         if (op == "player") return player ? Json{{"pawn", object(1)}, {"controller", object(2)}} : Json{{"pawn", nullptr}};
-        if (op == "find") return object(50);
+        if (op == "find") { ++find_calls; return object(50); }
         if (op == "load") { const auto path = j.at("path").get<std::string>(); return object(path.ends_with("Character") ? 60 : path.ends_with("SkeletalMeshComponent") ? 61 : path.ends_with("LightComponent") ? 62 : path.ends_with("NiagaraComponent") ? 63 : 64); }
         if (op == "valid") return things.count(j.at("target").at("$object").get<uint64_t>()) || parts.count(j.at("target").at("$object").get<uint64_t>());
         if (op == "get" && world_model) {
@@ -71,10 +76,17 @@ struct Host {
         }
         if (op == "set" && world_model) {
             const auto id = j.at("target").at("$object").get<uint64_t>();
-            if (j.at("property") == "VisibilityBasedAnimTickOption") { parts.at(id).option = j.at("value"); return j.at("value"); }
+            if (j.at("property") == "VisibilityBasedAnimTickOption") {
+                if (!refuse_options.count(id) || refuse_options.at(id) != j.at("value")) parts.at(id).option = j.at("value");
+                return j.at("value");
+            }
             throw std::runtime_error("Unknown property");
         }
-        if (op == "frame.brief") { const double ms = frame_ms(); return {{"hz", 1000 / ms}, {"median_ms", ms}, {"mean_ms", ms}, {"p99_ms", ms * 1.5}, {"frames", 400}}; }
+        if (op == "frame.brief") {
+            const double ms = frame_ms(); double p99 = ms * 1.5;
+            for (const auto& [name, cost] : p99_cost_ms) if (cvars.count(name) && catalog_value.count(name) && cvars.at(name) == catalog_value.at(name)) p99 += cost;
+            return {{"hz", 1000 / ms}, {"median_ms", ms}, {"mean_ms", ms}, {"p99_ms", p99}, {"frames", 400}};
+        }
         if (op == "call") {
             const auto fn = j.at("function").get<std::string>();
             const auto& args = j.at("args");
@@ -103,6 +115,7 @@ struct Host {
                 const auto sp = c.find(' ');
                 const auto name = c.substr(0, sp); const double v = std::stod(c.substr(sp + 1));
                 if (!refuse.count(name)) cvars[name] = v;
+                if (throw_after_write.count(name) && throw_after_write.at(name) == v) throw std::runtime_error("reply failed after write");
                 return nullptr;
             }
             throw std::runtime_error("Unknown function " + fn);
@@ -140,6 +153,10 @@ int main(int argc, char** argv) {
             expect(bad(R"({"set":[{"cvar":"r.Nanite.MaxPixelsPerEdge","value":1.5}]})").find("Nanite") != std::string::npos, "Nanite detail is refused");
             expect(bad(R"({"set":[{"cvar":"r.Streaming.MipBias","value":1}]})").find("blurs") != std::string::npos, "mip bias is refused");
             expect(bad(R"({"set":[{"cvar":"r.NGX.DLSS.Quality","value":1}]})").find("upscaler") != std::string::npos, "upscaler choice is refused");
+            for (const auto* name : {"r.VolumetricFog.GridPixelSize", "r.Nanite.Tessellation", "r.Lumen.HardwareRayTracing", "r.NIS.Enable", "r.SecondaryScreenPercentage.GameViewport", "t.Streamline.DLSSG.Enable"}) {
+                Json j = catalog_json(); j["tweaks"][0]["set"] = Json::array({{{"cvar", name}, {"value", 0}}});
+                expect(!rejects([&] { Catalog::parse(j); }).empty(), std::string("catalog blocks picture control ") + name);
+            }
             expect(bad(R"({"picture":"lower"})").find("picture") != std::string::npos, "a picture-lowering tweak is refused");
             expect(bad(R"({"set":[{"cvar":"r.Beta","value":1}]})").find("already set") != std::string::npos, "two tweaks may not set the same variable");
             expect(bad(R"({"set":[{"cvar":"r.X","value":"1"}]})").find("numeric") != std::string::npos, "values are numbers");
@@ -168,6 +185,9 @@ int main(int argc, char** argv) {
             expect(r.verdict == "unclear" && !r.consistent, "overlapping rounds are unclear even with a good average");
             r = judge({}, {s(1)});
             expect(r.verdict == "unclear", "missing windows are unclear");
+            auto empty = s(18); empty.frames = 0;
+            expect(judge({s(20)}, {empty}).verdict == "unclear", "zero-frame samples cannot claim a gain");
+            expect(judge({s(20), s(20)}, {s(18)}).verdict == "unclear", "unbalanced trials cannot claim a gain");
             tuner::Trial trial;
             tuner::TrialPlan plan; plan.settle = 1; plan.measure = 4; plan.rounds = 2;
             trial.start(0, plan);
@@ -193,7 +213,7 @@ int main(int argc, char** argv) {
             tuner::Tuner t(&host.api);
             expect(t.catalog_problem().empty() && !t.enabled() && t.tweak_on("alpha") && !t.tweak_on("beta"), "fresh state: off, catalog defaults");
             auto m = t.model();
-            expect(m.at("sections").size() == 5, "menu: tuner, two groups, world, check");
+            expect(m.at("sections").size() == 6, "menu separates tuning from manual tests");
             expect(host.commands.empty(), "nothing is set while the tuner is off");
 
             t.event({{"id", "enable"}, {"value", true}});
@@ -226,6 +246,7 @@ int main(int argc, char** argv) {
             t.event({{"id", "probe"}});
             run(t, 25);
             expect(host.state.at("probe").at("verdict") == "fixed" && host.cvars["r.ScreenPercentage"] == 67, "a frame that ignores the pixel count does not scale with pixels, and the resolution is put back");
+            expect(host.state.at("probe").value("verified", false), "completed diagnostic records its verified resolution change");
 
             // A refused variable: the tweak is skipped and nothing half-applied stays.
             host.refuse["r.Beta.Two"] = 1;
@@ -240,6 +261,40 @@ int main(int argc, char** argv) {
             // Stop restores everything that was changed.
             t.stop();
             expect(host.cvars["r.Alpha"] == 0 && host.cvars["r.Gamma"] == 2 && t.applied().empty(), "stop puts every variable back");
+        }
+        // Originals must survive a cancelled on window and a refused restore.
+        {
+            Host host; host.dir = scratch / "restore"; write_catalog(host.dir, catalog_json());
+            host.cvars = {{"r.Alpha", 0}, {"r.Beta", 1}, {"r.Beta.Two", 1}, {"r.Gamma", 2}};
+            const auto originals = host.cvars;
+            tuner::Tuner t(&host.api);
+            t.event({{"id", "enable"}, {"value", true}});
+            t.event({{"id", "measure_target"}, {"value", "alpha"}});
+            t.event({{"id", "measure"}});
+            run(t, 17);
+            expect(t.applied().count("trial.alpha") && host.cvars["r.Alpha"] == 1, "measurement reaches its on window");
+            host.player = false; run(t, 2);
+            expect(host.cvars["r.Alpha"] == 0 && !t.applied().count("trial.alpha"), "world loss restores the on window's process-wide cvar");
+            host.player = true; run(t, 2);
+            t.event({{"id", "enable"}, {"value", false}});
+            expect(host.cvars == originals && t.applied().empty(), "off after cancelled measurement restores pre-tuner originals");
+
+            t.event({{"id", "enable"}, {"value", true}});
+            host.refuse["r.Alpha"] = 1;
+            expect(!t.stop() && t.applied().at("alpha")[0].before == 0, "refused restore blocks unload and retains the original");
+            host.refuse.clear(); host.player = false;
+            expect(t.stop() && host.cvars == originals, "unload retries restoration without a player world");
+            expect(host.find_calls == 1, "Kismet CDO is resolved once across apply, trials and restore");
+        }
+        {
+            Host host; host.dir = scratch / "rollback"; write_catalog(host.dir, catalog_json());
+            host.cvars = {{"r.Alpha", 0}, {"r.Beta", 1}, {"r.Beta.Two", 1}, {"r.Gamma", 2}};
+            tuner::Tuner t(&host.api);
+            t.event({{"id", "enable"}, {"value", true}});
+            host.throw_after_write["r.Beta"] = 2;
+            t.event({{"id", "tweak.beta"}, {"value", true}});
+            expect(host.cvars["r.Beta"] == 1 && host.cvars["r.Beta.Two"] == 1 && !t.applied().count("beta"), "failed reply after mutation rolls back the entire tweak");
+            t.stop();
         }
         // ---- the player's Engine.ini
         {
@@ -311,7 +366,10 @@ int main(int argc, char** argv) {
             expect(host.parts[21].option == 1 && host.parts[31].option == 0, "turning the fix off puts the meshes back as they were");
             t.event({{"id", "fix.anim"}, {"value", true}});
             expect(host.parts[21].option == 2, "and on again applies without a new audit");
-            t.stop();
+            host.refuse_options[21] = 1;
+            expect(!t.stop() && host.parts[21].option == 2, "refused mesh restore blocks unload");
+            host.refuse_options.clear();
+            expect(t.stop(), "mesh restore retries before unload");
             expect(host.parts[21].option == 1 && host.parts[31].option == 0 && host.cvars["r.Alpha"] == 0, "stop restores the meshes and the variables");
         }
         // ---- Tune: the one button
@@ -340,14 +398,79 @@ int main(int argc, char** argv) {
             expect(res.contains("when"), "tune finishes within its budget");
             expect(host.cvars["r.Beta"] == 2 && host.state.at("choices").at("beta") == true, "a switch that wins is kept and live");
             expect(host.cvars["r.Gamma"] == 2 && host.state.at("choices").at("gamma") == false, "a switch that loses is left off");
-            expect(host.state.at("anim_fix") == true && host.parts[21].option == 2 && host.parts[11].option == 0, "the world fix is kept when it wins, and the player is untouched");
+            expect(host.state.at("anim_fix") == false && host.parts[21].option == 1 && host.parts[11].option == 0, "automatic Tune leaves experimental animation changes off");
             const auto kept = res.value("kept", std::string());
-            expect(kept.find("Beta") != std::string::npos && kept.find("Animate only") != std::string::npos && res.value("dropped", std::string()).find("Gamma") != std::string::npos, "the summary names what was kept and dropped: " + kept);
+            expect(kept.find("Beta") != std::string::npos && res.value("dropped", std::string()).find("Gamma") != std::string::npos, "the summary names what was kept and dropped: " + kept);
             expect(res.value("whole_verdict", std::string()) == "gain" && res.value("whole_gain_pct", 0.0) > 10, "the kept set as a whole measures as a gain");
-            expect(res.value("probe", std::string()) == "fixed", "the probe ran too");
+            expect(!host.state.at("probe").contains("when") && std::none_of(host.commands.begin(), host.commands.end(), [](const std::string& c) { return c.starts_with("r.ScreenPercentage "); }), "Tune never runs the resolution diagnostic");
+            expect(host.state.at("results").at("all").at("off_median_ms") == 22, "the whole-set test leaves unselected animation options unchanged");
             expect(t.model().dump().find("Kept Beta") != std::string::npos, "the Tune row shows what it kept");
+            const auto tune_menu = t.model();
+            expect(tune_menu["sections"][0]["controls"][0]["hint"].get<std::string>().find("Kept Beta") != std::string::npos, "Tune results use the button hint rendered by CSSX");
+            bool visible_labels = true;
+            for (const auto& page : tune_menu["sections"]) for (const auto& control : page["controls"])
+                if (control["type"] == "label") visible_labels &= control.value("description", std::string()).find(control.value("value", std::string())) != std::string::npos;
+            expect(visible_labels, "frame rate and findings use label descriptions rendered by CSSX");
             t.stop();
             expect(host.cvars["r.Alpha"] == 0 && host.cvars["r.Beta"] == 1 && host.parts[21].option == 1, "stop puts everything back after a tune");
+        }
+        {
+            Host host; host.dir = scratch / "cancel"; write_catalog(host.dir, catalog_json());
+            host.cvars = {{"r.Alpha", 0}, {"r.Beta", 1}, {"r.Beta.Two", 1}, {"r.Gamma", 2}, {"r.ScreenPercentage", 67}};
+            const auto originals = host.cvars;
+            tuner::Tuner t(&host.api);
+            t.event({{"id", "probe"}}); run(t, 9);
+            expect(host.cvars["r.ScreenPercentage"] == 100, "explicit resolution diagnostic reaches its changed window");
+            const auto menu = t.model();
+            bool can_stop = false, has_confirmation = false;
+            for (const auto& section : menu.at("sections")) for (const auto& control : section.at("controls")) {
+                if (control.at("id") == "stop") can_stop = control.value("enabled", false);
+                if (control.at("id") == "probe") has_confirmation = control.contains("confirm");
+            }
+            expect(can_stop && has_confirmation, "diagnostic requires confirmation and keeps Stop available");
+            t.event({{"id", "stop"}});
+            expect(host.cvars == originals && !t.enabled() && t.applied().empty(), "Stop cancels the diagnostic and restores originals");
+            run(t, 30);
+            expect(!host.state.at("probe").contains("when"), "cancelled diagnostic publishes no new verdict");
+            t.event({{"id", "tune"}}); run(t, 2);
+            t.event({{"id", "stop"}}); run(t, 80);
+            expect(host.cvars == originals && !t.enabled(), "Stop cancels Tune without continuing its queue");
+            t.stop();
+        }
+        {
+            Host host; host.dir = scratch / "tail-regression";
+            Json cat = catalog_json(); cat["tweaks"][2]["on"] = false; write_catalog(host.dir, cat);
+            host.cvars = {{"r.Alpha", 0}, {"r.Beta", 1}, {"r.Beta.Two", 1}, {"r.Gamma", 2}};
+            host.catalog_value = {{"r.Alpha", 1}, {"r.Beta", 2}, {"r.Beta.Two", 0.5}, {"r.Gamma", 4}};
+            host.cost_ms = {{"r.Alpha", -2}, {"r.Beta", -1.5}, {"r.Gamma", 3}};
+            host.p99_cost_ms["r.Beta"] = 10;
+            host.world_model = true; host.things[1] = {"BP_Player_C", true, {}};
+            tuner::Tuner t(&host.api); t.event({{"id", "tune"}}); run(t, 220);
+            expect(host.state.at("results").at("beta").at("verdict") == "gain" && host.state.at("choices").at("beta") == false && host.cvars["r.Beta"] == 1, "Tune rejects a median gain that makes slow frames worse");
+            t.stop();
+        }
+        {
+            Host host; host.dir = scratch / "probe-refused"; write_catalog(host.dir, catalog_json());
+            host.state["probe"] = {{"verdict", "fixed"}, {"when", "old run"}, {"before_ms", 20}, {"after_ms", 20}};
+            host.cvars["r.ScreenPercentage"] = 67; host.refuse["r.ScreenPercentage"] = 67;
+            tuner::Tuner t(&host.api);
+            expect(t.model()["sections"][1]["controls"][0]["value"] == "Not measured yet", "unverified diagnostics from older builds are not displayed as evidence");
+            t.event({{"id", "probe"}}); run(t, 25);
+            expect(host.state["probe"].value("when", std::string()) == "old run" && !host.state["probe"].value("verified", false) && host.cvars["r.ScreenPercentage"] == 67, "a refused resolution change publishes no new verdict over the legacy state");
+            expect(t.applied().empty() && t.stop(), "refused diagnostic leaves no restoration debt");
+        }
+        {
+            Host host; host.dir = scratch / "combined-loss";
+            Json cat = catalog_json(); cat["tweaks"][2]["on"] = false; write_catalog(host.dir, cat);
+            host.cvars = {{"r.Alpha", 0}, {"r.Beta", 1}, {"r.Beta.Two", 1}, {"r.Gamma", 2}};
+            const auto originals = host.cvars;
+            host.catalog_value = {{"r.Alpha", 1}, {"r.Beta", 2}, {"r.Beta.Two", 0.5}, {"r.Gamma", 4}};
+            host.cost_ms = {{"r.Alpha", 3}, {"r.Beta", -1.5}, {"r.Gamma", 3}};
+            host.world_model = true; host.things[1] = {"BP_Player_C", true, {}};
+            tuner::Tuner t(&host.api); t.event({{"id", "tune"}}); run(t, 220);
+            expect(host.state.at("results").at("beta").at("verdict") == "gain" && host.state.at("tune").at("whole_verdict") == "loss", "the combined check can reject individually useful tweaks");
+            expect(!t.enabled() && host.cvars == originals && host.state.at("tune").at("rolled_back") == true && host.state.at("tune").at("kept") == "", "a slower combined set is disabled and originals restored");
+            t.stop();
         }
         // ---- fit rules
         {

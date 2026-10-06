@@ -100,9 +100,12 @@ NiagaraComponent, and per component `VisibilityBasedAnimTickOption`,
 `IsActive`. About 300 reflected calls a tick, so a level of a few thousand actors takes a
 few seconds with no hitch. The report goes to `world-audit-report.txt`.
 
-The one fix: meshes set to `AlwaysTickPoseAndRefreshBones` or `AlwaysTickPose` on actors
-other than the player are set to `OnlyTickMontagesWhenNotRendered`, the engine default
-(montages keep running unseen, so attacks and reactions off screen still happen). It is
+The experimental option: meshes set to `AlwaysTickPoseAndRefreshBones` or `AlwaysTickPose` on actors
+other than the player are set to `OnlyTickMontagesWhenNotRendered`.
+This is not the engine default: `SkeletalMeshComponent.cpp:435` and
+`SkinnedMeshComponent.cpp:448` initialize `AlwaysTickPoseAndRefreshBones`.
+Montages continue unseen, but ordinary pose updates stop. Gameplay and moving shadows
+can depend on those updates, so automatic Tune leaves this option alone. It is
 reversible, re-applied after an audit of each new world, and measurable like a tweak.
 Kept off by default until it has been played with; a game that relies on non-montage
 animation driving gameplay off screen would show it.
@@ -124,14 +127,48 @@ hidden resolution cut and a second limiter. Sources and the per-vendor table are
 ## Measurement limits
 
 Shipping build: `stat gpu`/`ProfileGPU` are compiled out; `stat unit` works on screen but
-cannot be read back. The tuner measures whole frame time from the loader ring. A tweak
-that moves GPU time in a CPU-bound scene reads "no change", and the probe says which side
-is the limit first. Hitch-spacing tweaks (GC) will always read "no change" in a 15 s window.
+cannot be read back. The tuner measures whole frame time from the loader ring.
+The separate resolution test measures pixel sensitivity, not CPU/GPU attribution.
+Tune never runs it. A short trial cannot reliably measure GC spacing or streaming hitches.
+
+## Menu direction (Codex takeover, 6 Oct)
+
+Native Player Menu page for players who want one Tune action. ENERGY 1,
+RHYTHM 1, MOTION 1. Uses the existing CSSX game widgets and their input bindings.
+
+- Tune comes first because it is the main task. Enabled and Frame rate remain beside it.
+- Manual Tests have their own tab so they do not compete with Tune.
+- Stop stays available during scans and measurements. It cancels and restores originals.
+- Labels name the action; descriptions explain the effect in a few sentences.
+- Technical cvars stay with individual tweaks, where they help a manual decision.
+- Results distinguish lower frame time from higher FPS; no automatic CPU/GPU verdict.
+- No new visual assets, colors, typography, animation or host layout changes.
+- CSSX displays label descriptions and button hints, and ignores their value fields.
+  The tuner includes readings and results in those rendered fields. Label descriptions
+  stay on one text line before wrapping; embedded newlines expose native rich-text tags.
+
+## Takeover safety changes
+
+- Saved originals survive failed writes, refused restores, world loss and unload retries.
+  Restore succeeds only after independent read-back. A failed stop blocks DLL unload.
+- Kismet's console CDO is cached. Its UE 5.6.1 implementation routes cvars through
+  `IConsoleManager` with a null world context (`KismetSystemLibrary.cpp:539`), so cleanup
+  can run after the pawn disappears. This still needs the new build's live check.
+- Resolution diagnostics verify the change before interpreting samples. Failed changes
+  produce no new verdict. Native menu confirmation explicitly describes the temporary change.
+- Tune rejects optional gains when p99 frame time worsens by more than 1.5%. It disables
+  the tuner and restores originals if the combined set loses or worsens p99 by that margin.
+  Samples without frames and unbalanced sample sets are inconclusive.
+- Scene scanning stops between actors when its native clock budget reaches 500 microseconds,
+  in addition to the reflected-call cap. One actor's work can exceed that budget.
+- The release packager includes only the manifest, DLL, catalog, README and notices.
+- The catalog now uses the Engine.ini picture classifier as well as its forbidden-name
+  rules. Fog detail, tessellation, ray tracing, NIS and secondary screen percentage are
+  covered by regression checks.
 
 ## Still to do (live)
 
-- First run in the game: catalog applies, read-back, Engine.ini verdicts on the user's real
-  file, the audit on a real level (class names, enum encoding), the fix on enemies in
-  combat, and the probe's GPU/CPU verdict against the known 52 to 35 fps resolution test.
-- Measure each "worth measuring" entry on the RTX 3060 under Proton and record the numbers
-  in `docs/findings.md`.
+Run the revised Tune flow end to end, inspect the page with keyboard/controller/mouse,
+verify Stop and unload restore live cvars, and measure extension cost during the scene scan.
+The experimental animation option needs combat and shadow checks before automatic use.
+Existing RTX 3060 findings are in `findings.md`; other platforms remain unmeasured.

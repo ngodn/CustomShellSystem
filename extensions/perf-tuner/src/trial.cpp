@@ -22,7 +22,8 @@ Json TrialResult::json() const {
 TrialResult judge(const std::vector<Sample>& off, const std::vector<Sample>& on) {
     TrialResult r;
     r.off = off; r.on = on;
-    if (off.empty() || on.empty()) { r.verdict = "unclear"; return r; }
+    const auto valid = [](const Sample& s) { return s.frames > 0 && std::isfinite(s.median_ms) && s.median_ms > 0 && std::isfinite(s.p99_ms) && s.p99_ms > 0; };
+    if (off.empty() || off.size() != on.size() || !std::all_of(off.begin(), off.end(), valid) || !std::all_of(on.begin(), on.end(), valid)) { r.verdict = "unclear"; return r; }
     std::vector<double> om, nm, op, np;
     for (const auto& s : off) { om.push_back(s.median_ms); op.push_back(s.p99_ms); }
     for (const auto& s : on) { nm.push_back(s.median_ms); np.push_back(s.p99_ms); }

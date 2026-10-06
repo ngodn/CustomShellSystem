@@ -5,7 +5,7 @@
   "title": "Perf Tuner",
   "author": "_eins0fx",
   "version": "1.0.0",
-  "description": "More frames per second with the same picture: measured tweaks, a bottleneck probe, and a plain-words check of your own settings.",
+  "description": "Tests performance tweaks for your machine and keeps measured gains. Tune preserves your graphics settings.",
   "kind": "native",
   "entry": "perf_tuner.dll",
   "files": [

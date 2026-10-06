@@ -1,4 +1,5 @@
 #include "catalog.hpp"
+#include "inifile.hpp"
 #include <algorithm>
 #include <cctype>
 #include <initializer_list>
@@ -21,14 +22,14 @@ bool valid_cvar_name(const std::string& name) {
 std::string forbidden_reason(const std::string& cvar) {
     const auto n = lower(cvar);
     if (starts(n, "sg.")) return "scalability groups are the game's own quality levels";
-    if (n == "r.screenpercentage" || starts(n, "r.screenpercentage.") || starts(n, "r.dynamicres.") || n == "r.setres" || n == "r.resolutionquality")
+    if (n.find("screenpercentage") != std::string::npos || starts(n, "r.dynamicres.") || n == "r.setres" || n == "r.resolutionquality")
         return "resolution and screen percentage are picture quality";
     if (n == "t.maxfps" || n == "r.vsync" || n == "rhi.syncinterval" || n == "r.vsynceditor" || n == "t.overridefps")
         return "frame caps and v-sync are the player's choice in video settings";
     if (n == "r.mipmaplodbias" || n == "r.streaming.mipbias") return "a mip bias blurs textures";
     if (n == "r.materialqualitylevel" || n == "r.detailmode" || n == "r.viewdistancescale" || n == "r.skeletalmeshlodbias" || n == "r.staticmeshlodbias")
         return "quality levels and LOD biases change what is drawn";
-    if (starts(n, "r.ngx.") || starts(n, "r.streamline.dlssg") || starts(n, "r.fidelityfx.")) return "the upscaler is the player's choice in video settings";
+    if (starts(n, "r.ngx.") || starts(n, "r.streamline.dlssg") || starts(n, "t.streamline.dlssg") || starts(n, "r.fidelityfx.")) return "the upscaler is the player's choice in video settings";
     if (n == "r.lumen.diffuseindirect.allow" || n == "r.lumen.reflections.allow" || n == "r.dynamicglobalilluminationmethod" || n == "r.reflectionmethod")
         return "turning lighting features off is a picture change";
     if (n == "r.shadow.virtual.enable" || n == "r.shadowquality" || n == "r.shadow.virtual.maxphysicalpages")
@@ -102,6 +103,7 @@ Catalog Catalog::parse(const Json& file) {
             one.cvar = s.value("cvar", std::string());
             if (!valid_cvar_name(one.cvar)) throw std::invalid_argument(where + "'" + one.cvar + "' is not a console variable name");
             if (const auto why = forbidden_reason(one.cvar); !why.empty()) throw std::invalid_argument(where + one.cvar + ": " + why);
+            if (picture_cvar(one.cvar)) throw std::invalid_argument(where + one.cvar + ": changes picture quality");
             if (!s.contains("value") || !s.at("value").is_number()) throw std::invalid_argument(where + one.cvar + " needs a numeric 'value'");
             one.value = s.at("value").get<double>();
             if (!std::isfinite(one.value)) throw std::invalid_argument(where + one.cvar + ": value must be finite");
@@ -110,7 +112,7 @@ Catalog Catalog::parse(const Json& file) {
                 if (!v.is_object() || !v.value("fraction", Json()).is_number() || !v.value("min", Json()).is_number() || !v.value("max", Json()).is_number())
                     throw std::invalid_argument(where + one.cvar + ": 'from_vram' needs numeric 'fraction', 'min' and 'max'");
                 one.vram_fraction = v.at("fraction").get<double>(); one.vram_min = v.at("min").get<double>(); one.vram_max = v.at("max").get<double>();
-                if (one.vram_fraction <= 0 || one.vram_min < 0 || one.vram_max < one.vram_min) throw std::invalid_argument(where + one.cvar + ": 'from_vram' values are out of order");
+                if (!std::isfinite(one.vram_fraction) || !std::isfinite(one.vram_min) || !std::isfinite(one.vram_max) || one.vram_fraction <= 0 || one.vram_min < 0 || one.vram_max < one.vram_min) throw std::invalid_argument(where + one.cvar + ": 'from_vram' values are out of order");
             }
             if (!cvars.insert(lower(one.cvar)).second) throw std::invalid_argument(where + one.cvar + " is already set by another tweak");
             t.set.push_back(std::move(one));

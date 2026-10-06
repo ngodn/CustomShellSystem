@@ -68,7 +68,7 @@ void Tuner::load_state() {
     if (s.value("enable", Json()).is_boolean()) enable_ = s["enable"].get<bool>();
     if (s.value("choices", Json()).is_object()) for (auto& [id, v] : s["choices"].items()) if (v.is_boolean() && catalog_.find(id)) choices_[id] = v.get<bool>();
     if (s.value("results", Json()).is_object()) for (auto& [id, v] : s["results"].items()) if (v.is_object()) results_[id] = v;
-    if (s.value("probe", Json()).is_object()) {
+    if (s.value("probe", Json()).is_object() && s["probe"].value("verified", false)) {
         probe_result_ = s["probe"];
         const auto v = probe_result_.value("verdict", std::string());   // names from the first build
         if (v == "gpu") probe_result_["verdict"] = "pixels"; else if (v == "cpu") probe_result_["verdict"] = "fixed";
@@ -118,9 +118,9 @@ std::vector<std::string> Tuner::active_ids() const {
 // ---- the console ----
 
 Json Tuner::kismet() {
-    auto h = host_.find("/Script/Engine.Default__KismetSystemLibrary");
-    if (!is_handle(h)) throw std::runtime_error("KismetSystemLibrary is missing");
-    return h;
+    if (!is_handle(kismet_)) kismet_ = host_.find("/Script/Engine.Default__KismetSystemLibrary");
+    if (!is_handle(kismet_)) throw std::runtime_error("KismetSystemLibrary is missing");
+    return kismet_;
 }
 
 bool Tuner::refresh_player() {
@@ -135,13 +135,13 @@ bool Tuner::refresh_player() {
 std::optional<double> Tuner::read_cvar(const std::string& name) {
     try {
         const auto v = host_.call(kismet(), "GetConsoleVariableFloatValue", {{"VariableName", name}});
-        if (v.is_number()) return v.get<double>();
+        if (v.is_number() && std::isfinite(v.get<double>())) return v.get<double>();
     } catch (...) {}
     return std::nullopt;
 }
 
 void Tuner::exec(const std::string& command) {
-    if (!world_ready_) throw std::runtime_error("No world to run a console command in yet");
+    // Kismet routes cvars through IConsoleManager even with a null world context.
     host_.call(kismet(), "ExecuteConsoleCommand", {{"WorldContextObject", player_}, {"Command", command}, {"SpecificPlayer", nullptr}});
 }
 
@@ -150,28 +150,33 @@ bool Tuner::apply(const Tweak& t, const std::string& key) {
     std::vector<Applied> done;
     bool ok = true;
     for (const auto& s : t.set) {
+        for (const auto& [owner, values] : applied_) {
+            if (owner == key) continue;
+            if (std::any_of(values.begin(), values.end(), [&](const Applied& a) { return a.cvar == s.cvar; })) return false;
+        }
+    }
+    for (const auto& s : t.set) {
         const double value = s.resolve(machine_.vram_mb);
         const auto before = read_cvar(s.cvar);
         if (!before) { ok = false; host_.log("Perf Tuner: " + s.cvar + " could not be read; skipped", "warning"); continue; }
         if (std::fabs(*before - value) < 1e-9) continue;   // already there: nothing to change, nothing to restore
         if (s.vram_fraction > 0 && *before > value) continue;   // the player or the game already gives it more: keep theirs
+        done.push_back({s.cvar, *before, value});
         try { exec(s.cvar + " " + console_number(value)); } catch (const std::exception& e) { ok = false; host_.log("Perf Tuner: " + s.cvar + ": " + e.what(), "warning"); continue; }
         const auto after = read_cvar(s.cvar);
         if (!after || std::fabs(*after - value) > 1e-6) {
             // The build refused it (a read-only or cheat-protected variable): put back what was there.
             ok = false;
-            try { exec(s.cvar + " " + console_number(*before)); } catch (...) {}
             host_.log("Perf Tuner: " + s.cvar + " did not take (" + (after ? console_number(*after) : "unreadable") + " instead of " + console_number(value) + "); this build keeps it", "warning");
             continue;
         }
-        done.push_back({s.cvar, *before, *after});
     }
+    applied_[key] = std::move(done);
     if (!ok) {
-        for (auto it = done.rbegin(); it != done.rend(); ++it) { try { exec(it->cvar + " " + console_number(it->before)); } catch (...) {} }
+        restore(key);
         if (std::find(unavailable_.begin(), unavailable_.end(), t.id) == unavailable_.end()) unavailable_.push_back(t.id);
         return false;
     }
-    applied_[key] = std::move(done);
     return true;
 }
 
@@ -179,11 +184,18 @@ void Tuner::restore(const std::string& key) {
     const auto it = applied_.find(key);
     if (it == applied_.end()) return;
     std::vector<std::string> failures;
+    std::vector<Applied> pending;
     for (auto a = it->second.rbegin(); a != it->second.rend(); ++a) {
-        try { exec(a->cvar + " " + console_number(a->before)); }
-        catch (const std::exception& e) { failures.push_back(a->cvar + ": " + e.what()); }
+        try {
+            const auto current = read_cvar(a->cvar);
+            if (!current || std::fabs(*current - a->before) > 1e-6) exec(a->cvar + " " + console_number(a->before));
+            const auto after = read_cvar(a->cvar);
+            if (!after || std::fabs(*after - a->before) > 1e-6) throw std::runtime_error("original value did not take");
+        }
+        catch (const std::exception& e) { pending.push_back(*a); failures.push_back(a->cvar + ": " + e.what()); }
     }
-    applied_.erase(it);
+    if (pending.empty()) applied_.erase(it);
+    else { std::reverse(pending.begin(), pending.end()); it->second = std::move(pending); }
     for (const auto& f : failures) host_.log("Perf Tuner: could not restore " + f, "warning");
 }
 
@@ -222,41 +234,52 @@ void Tuner::refresh_brief() {
 }
 
 void Tuner::start_trial(const std::string& target) {
-    if (trial_.running()) throw std::runtime_error("A measurement is already running.");
+    if (trial_.running() || audit_.running()) throw std::runtime_error("Wait for the current test to finish.");
     if (!world_ready_) throw std::runtime_error("Load into the world first.");
     if (target == "fix.anim" && (audit_.running() || audit_summary_.actors == 0)) throw std::runtime_error("Audit this world first.");
     if (target != "all" && target != "probe" && target != "fix.anim" && !catalog_.find(target)) throw std::runtime_error("Unknown tweak: " + target);
-    if (target == "all" && active_ids().empty()) throw std::runtime_error("No tweak is on; turn one on first.");
+    if (const auto* t = catalog_.find(target); t && !fit_reason(*t).empty()) throw std::runtime_error(fit_reason(*t));
+    if (target == "all" && active_ids().empty() && !anim_fix_) throw std::runtime_error("Enable a tweak first.");
     trial_target_ = target;
     TrialPlan plan;
     if (target == "probe") { plan.rounds = 1; plan.settle = 3; plan.measure = 5; }
     trial_.start(clock_, plan);
-    report(target == "probe" ? "Measuring where the frame time goes: 16 seconds, stand still." :
-           "Measuring " + (target == "all" ? std::string("the tweaks") : target == "fix.anim" ? std::string("'Animate only what is seen'") : "'" + catalog_.find(target)->title + "'") + ": about a minute, off and on twice. Keep playing or stand still, either is fine.");
+    report(target == "probe" ? "Resolution test: 16 seconds." : "Measuring " + (target == "all" ? std::string("enabled tweaks") : target == "fix.anim" ? std::string("offscreen animation") : catalog_.find(target)->title) + ".");
 }
 
 void Tuner::switch_trial(bool on) {
     if (trial_target_ == "probe") {
-        // The probe: render at 100 percent for one window. If the frame takes much longer the
-        // GPU is the limit; if it hardly changes, the CPU is. Picture-only, put back after.
         const std::string key = "probe";
         if (on) {
             const auto now = read_cvar("r.ScreenPercentage");
-            const double current = now && *now > 0 ? *now : 100;
+            if (!now || !std::isfinite(*now) || *now <= 0) throw std::runtime_error("Render resolution could not be read.");
+            const double current = *now;
             const double target = current < 95 ? 100 : 50;   // already native: go the other way
             probe_result_["from"] = current; probe_result_["to"] = target;
-            try { exec("r.ScreenPercentage " + console_number(target)); applied_[key] = {{"r.ScreenPercentage", current, target}}; } catch (...) {}
-        } else restore(key);
+            applied_[key] = {{"r.ScreenPercentage", current, target}};
+            exec("r.ScreenPercentage " + console_number(target));
+            const auto after = read_cvar("r.ScreenPercentage");
+            if (!after || std::fabs(*after - target) > 1e-6) throw std::runtime_error("The game kept its render resolution; the diagnostic cannot compare it.");
+        } else {
+            restore(key);
+            if (applied_.contains(key)) throw std::runtime_error("Render resolution could not be restored.");
+        }
         return;
     }
     if (trial_target_ == "fix.anim") { if (on) apply_anim_fix(); else restore_anim_fix(); return; }
+    if (trial_target_ == "all" && anim_fix_) { if (on) apply_anim_fix(); else restore_anim_fix(); }
     const std::vector<std::string> ids = trial_target_ == "all" ? active_ids() : std::vector<std::string>{trial_target_};
     for (const auto& id : ids) {
         const auto* t = catalog_.find(id);
         if (!t) continue;
         // While a trial runs, the live copy of the tweak is lifted and the trial owns it.
         restore(id);
-        if (on) apply(*t, "trial." + id); else restore("trial." + id);
+        if (on) {
+            if (applied_.contains(id) || !apply(*t, "trial." + id)) throw std::runtime_error("Could not apply the measured tweak.");
+        } else {
+            restore("trial." + id);
+            if (applied_.contains(id) || applied_.contains("trial." + id)) throw std::runtime_error("Could not restore the measured tweak.");
+        }
     }
 }
 
@@ -264,24 +287,31 @@ void Tuner::drive_trial() {
     if (!trial_.running()) return;
     if (!world_ready_) {   // the world went away mid-measurement: give up cleanly
         trial_.cancel();
-        for (const auto& k : std::vector<std::string>{"probe"}) applied_.erase(k);   // the world's variables are gone with it
-        std::vector<std::string> keys; for (const auto& [k, _] : applied_) if (k.starts_with("trial.")) keys.push_back(k);
-        for (const auto& k : keys) applied_.erase(k);
+        try { switch_trial(false); } catch (...) {}
         report("Measurement stopped: the world went away.");
         return;
     }
-    switch (trial_.advance(clock_)) {
-        case Trial::Step::Switch: switch_trial(trial_.change_on()); break;
-        case Trial::Step::Sample: trial_.record(sample(trial_.plan().measure)); break;
-        default: break;
+    try {
+        switch (trial_.advance(clock_)) {
+            case Trial::Step::Switch: switch_trial(trial_.change_on()); break;
+            case Trial::Step::Sample: trial_.record(sample(trial_.plan().measure)); break;
+            default: break;
+        }
+    } catch (const std::exception& e) {
+        trial_.cancel();
+        try { switch_trial(false); } catch (...) {}
+        if (tuning_) finish_tune(e.what());
+        else report(std::string("Measurement stopped: ") + e.what());
+        return;
     }
     if (trial_.running()) return;
     // Finished: put the live state back and keep the numbers.
     const auto r = trial_.result();
     if (trial_target_ == "probe") {
         restore("probe");
+        if (applied_.contains("probe")) { report("Resolution restore pending. Cleanup will retry."); return; }
         Json p = probe_result_;
-        p["when"] = today(); p["before_ms"] = r.off_median_ms; p["after_ms"] = r.on_median_ms;
+        p["when"] = today(); p["verified"] = true; p["before_ms"] = r.off_median_ms; p["after_ms"] = r.on_median_ms;
         const double from = p.value("from", 67.0), to = p.value("to", 100.0);
         const double pixels = (to * to) / (from * from);                     // how much more (or less) the GPU drew
         const double expected = r.off_median_ms * (pixels - 1);              // the frame time change if the GPU were the whole frame
@@ -296,9 +326,9 @@ void Tuner::drive_trial() {
         // What the probe can and cannot tell: more pixels cost more only in the passes that
         // run per pixel. Shadows, Lumen's scene lighting, ray tracing and the CPU side do not
         // scale with the resolution; a frame that ignores the pixel count lives there.
-        report(v == "pixels" ? "The frame scales with the pixels: " + fixed1(r.off_median_ms) + " ms became " + fixed1(r.on_median_ms) + " ms at " + console_number(to) + "% resolution. The resolution and the upscaler are the levers here; the GPU-side tweaks can help a little."
-             : v == "fixed" ? "The frame hardly moves with the resolution (" + fixed1(r.off_median_ms) + " to " + fixed1(r.on_median_ms) + " ms): its time is in work that is the same at any resolution, shadows (every shadow-casting light), Lumen's scene lighting, ray tracing, and the CPU and driver side. Resolution tweaks will not show; the Video settings for shadows and lighting, and CPU-side tweaks, are what moves it."
-             : v == "mixed" ? "Both: " + fixed1(r.off_median_ms) + " ms became " + fixed1(r.on_median_ms) + " ms at " + console_number(to) + "% resolution, part of the frame scales with the pixels and part does not." : "The probe did not get a clean reading; try again standing still.");
+        report(v == "pixels" ? "Frame time changes with resolution. Original value restored."
+             : v == "fixed" ? "Little change with resolution. Original value restored."
+             : v == "mixed" ? "Frame time partly changes with resolution. Original value restored." : "Resolution test inconclusive. Try again standing still.");
         try { host_.invalidate(); } catch (...) {}
         return;
     }
@@ -307,13 +337,10 @@ void Tuner::drive_trial() {
     results_[trial_target_] = j;
     save_state();
     apply_enabled();   // the live copies come back
-    if (trial_target_ == "fix.anim" && enable_ && anim_fix_) apply_anim_fix();
+    if ((trial_target_ == "fix.anim" || trial_target_ == "all") && enable_ && anim_fix_) apply_anim_fix();
     if (tuning_) { tune_decide(trial_target_, r); return; }
     const std::string what = trial_target_ == "all" ? "The tweaks together" : trial_target_ == "fix.anim" ? std::string("'Animate only what is seen'") : "'" + catalog_.find(trial_target_)->title + "'";
-    report(r.verdict == "gain" ? what + ": " + percent(r.gain_pct) + " frame time (" + fixed1(r.off_median_ms) + " to " + fixed1(r.on_median_ms) + " ms), consistent over both rounds."
-         : r.verdict == "loss" ? what + ": slower by " + percent(-r.gain_pct) + " (" + fixed1(r.off_median_ms) + " to " + fixed1(r.on_median_ms) + " ms). Turn it off."
-         : r.verdict == "same" ? what + ": no measurable change (" + fixed1(r.off_median_ms) + " vs " + fixed1(r.on_median_ms) + " ms)."
-         : what + ": the two rounds disagreed (" + percent(r.gain_pct) + "); the scene moved more than the tweak did. Try again standing still.");
+    report(what + ": " + result_line(trial_target_));
     try { host_.invalidate(); } catch (...) {}
 }
 
@@ -328,15 +355,13 @@ void Tuner::start_tune() {
     if (!enable_) { enable_ = true; apply_enabled(); }
     tune_queue_.clear(); tune_log_ = Json::array();
     tune_queue_.push_back("audit");
-    tune_queue_.push_back("probe");
     // Switches that start off are the ones to decide by measuring; the always-on group is
     // kept (hitch spacing and resident textures do not show in a 15 s window).
     for (const auto& t : catalog_.tweaks) if (!t.on && fit_reason(t).empty()) tune_queue_.push_back(t.id);
-    tune_queue_.push_back("fix.anim");   // skipped after the audit when there is nothing to fix
     tune_queue_.push_back("all");
     tune_total_ = tune_queue_.size();
     tuning_ = true;
-    report("Tuning: audit, probe, then every switch that fits this machine, off and on twice each. About " + std::to_string((tune_total_ - 2) + 1) + " minutes; keep playing or stand still.");
+    report("Tuning: checking the scene.");
 }
 
 void Tuner::drive_tune() {
@@ -351,7 +376,7 @@ void Tuner::drive_tune() {
             // Only worth a minute when the audit found meshes to change (the player's own do not count).
             if (audit_.fixable() < 2) { tune_log_.push_back({{"target", next}, {"title", "Animate only what is seen"}, {"verdict", "skipped"}, {"gain_pct", 0}, {"kept", false}}); return; }
         }
-        if (next == "all" && active_ids().empty()) { tune_log_.push_back({{"target", next}, {"title", "The kept set"}, {"verdict", "skipped"}, {"gain_pct", 0}, {"kept", false}}); return; }
+        if (next == "all" && active_ids().empty() && !anim_fix_) { tune_log_.push_back({{"target", next}, {"title", "The kept set"}, {"verdict", "skipped"}, {"gain_pct", 0}, {"kept", false}}); return; }
         start_trial(next);
     } catch (const std::exception& e) { finish_tune(e.what()); }
 }
@@ -360,38 +385,49 @@ void Tuner::tune_decide(const std::string& target, const TrialResult& r) {
     std::string title = target == "probe" ? "Where the time goes" : target == "all" ? "The kept set together" : target == "fix.anim" ? "Animate only what is seen" : catalog_.find(target) ? catalog_.find(target)->title : target;
     bool kept = false;
     if (target == "probe") { tune_log_.push_back({{"target", target}, {"title", title}, {"verdict", probe_result_.value("verdict", std::string())}, {"gain_pct", 0}, {"kept", false}}); return; }
-    if (target == "all") { tune_log_.push_back({{"target", target}, {"title", title}, {"verdict", r.verdict}, {"gain_pct", r.gain_pct}, {"kept", true}}); return; }
-    kept = r.verdict == "gain";
+    if (target == "all") {
+        const bool rollback = r.verdict == "loss" || r.hitch_gain_pct < -trial_threshold_pct;
+        if (rollback) {
+            enable_ = false;
+            restore_all(); restore_anim_fix();
+            for (auto& entry : tune_log_) entry["kept"] = false;
+            save_state();
+        }
+        tune_log_.push_back({{"target", target}, {"title", title}, {"verdict", r.verdict}, {"gain_pct", r.gain_pct}, {"kept", !rollback}, {"rolled_back", rollback}});
+        return;
+    }
+    kept = r.verdict == "gain" && r.hitch_gain_pct >= -trial_threshold_pct;
     if (target == "fix.anim") {
         anim_fix_ = kept;
         if (kept) apply_anim_fix(); else restore_anim_fix();
     } else {
         choices_[target] = kept;
-        if (kept) { if (const auto* t = catalog_.find(target)) apply(*t, target); } else restore(target);
+        if (kept) { if (const auto* t = catalog_.find(target)) kept = apply(*t, target); choices_[target] = kept; }
+        else restore(target);
     }
     save_state();
-    tune_log_.push_back({{"target", target}, {"title", title}, {"verdict", r.verdict}, {"gain_pct", r.gain_pct}, {"kept", kept}});
+    tune_log_.push_back({{"target", target}, {"title", title}, {"verdict", r.verdict}, {"gain_pct", r.gain_pct}, {"kept", kept}, {"tail_regression", r.hitch_gain_pct < -trial_threshold_pct}});
 }
 
 void Tuner::finish_tune(const std::string& why) {
     tuning_ = false; tune_queue_.clear();
     if (!why.empty()) { report("Tuning stopped: " + why + ". What was decided so far stays."); return; }
-    std::string kept, dropped; double whole = 0; std::string whole_verdict;
+    std::string kept, dropped; double whole = 0; std::string whole_verdict; bool rolled_back = false;
     for (const auto& e : tune_log_) {
         const auto t = e.value("target", std::string()), v = e.value("verdict", std::string());
         if (t == "probe") continue;
-        if (t == "all") { whole = e.value("gain_pct", 0.0); whole_verdict = v; continue; }
+        if (t == "all") { whole = e.value("gain_pct", 0.0); whole_verdict = v; rolled_back = e.value("rolled_back", false); continue; }
         if (v == "skipped") continue;
         if (e.value("kept", false)) kept += (kept.empty() ? "" : ", ") + e.value("title", std::string()) + " (" + percent(e.value("gain_pct", 0.0)) + ")";
         else dropped += (dropped.empty() ? "" : ", ") + e.value("title", std::string());
     }
-    tune_result_ = {{"when", today()}, {"kept", kept}, {"dropped", dropped}, {"whole_gain_pct", whole}, {"whole_verdict", whole_verdict}, {"log", tune_log_}, {"probe", probe_result_.value("verdict", std::string())}};
+    tune_result_ = {{"when", today()}, {"kept", kept}, {"dropped", dropped}, {"whole_gain_pct", whole}, {"whole_verdict", whole_verdict}, {"log", tune_log_}, {"rolled_back", rolled_back}};
     save_state();
-    std::string text = "Tuned. ";
-    text += kept.empty() ? "No switch measured a gain on this machine; the always-on set stays. " : "Kept: " + kept + ". ";
-    if (!dropped.empty()) text += "Off (no gain here): " + dropped + ". ";
-    if (!whole_verdict.empty() && whole_verdict != "unclear") text += "The whole set together: " + (whole_verdict == "same" ? std::string("no measurable change") : percent(whole) + " frame time") + ".";
-    report(text);
+    if (rolled_back) { report(applied_.empty() && audit_.anim_fix_count() == 0 ? "Slower set rejected. Original settings restored." : "Slower set rejected. Restore pending."); return; }
+    report(whole_verdict == "gain" ? "Tune complete: " + fixed1(whole) + "% lower frame time."
+         : whole_verdict == "loss" ? "Tune complete: combined set measured slower."
+         : whole_verdict == "same" ? "Tune complete: no combined gain measured."
+         : "Tune complete: combined result inconclusive.");
 }
 
 // ---- the world audit ----
@@ -414,8 +450,7 @@ void Tuner::drive_audit() {
     save_state();
     if (enable_ && anim_fix_) apply_anim_fix();
     const auto& a = audit_summary_;
-    report("World audited: " + std::to_string(a.actors) + " actors, " + std::to_string(a.ticking) + " ticking, " + std::to_string(a.skeletal_always) + " of " + std::to_string(a.skeletal) + " skeletal meshes animate off screen, "
-        + std::to_string(a.lights_shadow) + " shadow lights, " + std::to_string(a.niagara_active) + " live particle systems. Report: world-audit-report.txt.");
+    report("Scan done: " + std::to_string(a.actors) + " actors, " + std::to_string(a.lights_shadow) + " shadow lights.");
 }
 
 void Tuner::apply_anim_fix() {
@@ -425,7 +460,7 @@ void Tuner::apply_anim_fix() {
 
 void Tuner::restore_anim_fix() {
     audit_.restore_anim_fix();
-    anim_fixed_ = 0;
+    anim_fixed_ = audit_.anim_fix_count();
 }
 
 // ---- the player's Engine.ini ----
@@ -506,10 +541,10 @@ void Tuner::refresh_findings() {
     {
         std::string card = machine_.gpu_name.empty() ? "an unknown adapter" : machine_.gpu_name;
         if (machine_.vram_mb > 0) card += " with " + console_number(std::round(machine_.vram_mb / 1024)) + " GB";
-        add("machine", "This machine", (machine_.wine ? "Proton (Wine " + machine_.wine_version + "), " : std::string("Windows, ")) + card + (machine_.steam_deck ? ", Steam Deck" : "") + ". Tweaks that do not fit are shown greyed out with the reason.", "info");
+        add("machine", "This machine", (machine_.wine ? "Proton (Wine " + machine_.wine_version + "), " : std::string("Windows, ")) + card + (machine_.steam_deck ? ", Steam Deck" : "") + ". Unsupported tweaks are disabled.", "info");
     }
     if (machine_.wine) {
-        add("proton", "Proton", "DirectX 12 goes through VKD3D-Proton, so ray tracing, mesh shaders and async compute are translated, not native. Measure rather than assume: a thing that is faster on Windows can be slower here.", "info");
+        add("proton", "Proton", "DirectX 12 runs through VKD3D-Proton. Tune measures this setup; Windows results may differ.", "info");
         const auto cfg = env_value("VKD3D_CONFIG");
         if (!cfg.empty()) add("vkd3d", "VKD3D_CONFIG", "Set to '" + cfg + "' in the launch options.", "info");
         const auto rate = env_value("DXVK_FRAME_RATE");
@@ -521,29 +556,27 @@ void Tuner::refresh_findings() {
         size_t dead = 0, picture = 0, managed = 0;
         for (const auto& v : ini_verdicts_) { if (v.kind == "dead") ++dead; else if (v.kind == "picture") ++picture; else if (v.kind == "managed") ++managed; }
         std::string text = "Your Engine.ini has " + std::to_string(ini_verdicts_.size()) + " setting lines" + (ini_pack_.empty() ? "" : " (" + ini_pack_ + ")") + ": "
-            + std::to_string(dead) + " do nothing in this engine, " + std::to_string(picture) + " change the look, " + std::to_string(managed) + " are taken over by the tuner while it is on. The full list is in engine-ini-report.txt under Mods/CSSX/output/eins0fx.perf-tuner. The file itself is left alone.";
+            + std::to_string(dead) + " do nothing, " + std::to_string(picture) + " change the look, " + std::to_string(managed) + " managed tweaks. The file is unchanged.";
         add("ini", "Engine.ini", text, picture > 0 ? "warning" : "info");
     } else if (!ini_path_.empty()) add("ini", "Engine.ini", "Your Engine.ini has no console variable lines; nothing from the web is set there.", "info");
     if (world_ready_) {
         auto num = [&](const char* name) { return read_cvar(name); };
         if (const auto v = num("r.GPUCrashDebugging"); v && *v > 0)
-            add("gpucrash", "GPU crash debugging", "On. The driver keeps extra breadcrumbs every frame for crash reports; it costs frames. Turn it off in Video settings unless you are chasing a crash.", "warning");
+            add("gpucrash", "GPU crash debugging", "On. Adds work for crash reports. Leave it on if you are diagnosing a crash.", "warning");
         if (const auto v = num("r.Streamline.DLSSG.Enable"); v && *v > 0) {
-            const auto gpu = env_value("");   // no reliable GPU name through the console; the player knows the card
-            (void)gpu;
-            add("dlssg", "Frame generation", "DLSS frame generation is on in your config. It needs an RTX 40 or newer; on an older card the game loads the feature for nothing. If the Video settings show it as unsupported, set Frame Generation to Off there.", "warning");
+            add("dlssg", "Frame generation", "Enabled in the config. Check support in Video settings; the config alone does not prove it is running.", "info");
         }
         if (const auto v = num("t.Streamline.Reflex.Enable"); v && *v > 0)
-            add("reflex", "Reflex", "On. Reflex trims input lag by not letting the GPU queue up frames; that can cost a few frames per second. Measure it from here before deciding.", "info");
+            add("reflex", "Reflex", "On. Reduces input latency. Tune tests whether turning it off helps frame time on this machine.", "info");
         if (const auto v = num("r.RayTracing.Enable"); v && *v > 0)
-            add("hwrt", "Hardware ray tracing", "On: Lumen traces against the real geometry instead of its distance fields. Not automatically the slower choice: this game turned mesh distance fields off for software tracing, and on an RTX 3060 under Proton hardware tracing measured faster (28.6 vs 31 ms a frame, 6 Oct 2026). It is a picture choice, so the tuner leaves it to you; the Video settings have the switch.", "info");
+            add("hwrt", "Hardware ray tracing", "On. Tune leaves this picture setting unchanged. Compare it yourself in Video settings if needed.", "info");
         if (const auto v = num("r.Streaming.PoolSize"); v && *v > 0 && *v < 1500 && !applied_.contains("texture_pool"))
-            add("pool", "Texture pool", "The texture streaming pool is " + console_number(*v) + " MB. On a card with more memory a bigger pool keeps textures resident instead of streaming them back and forth; the 'Texture pool' tweak raises it.", "info");
+            add("pool", "Texture pool", console_number(*v) + " MB. The texture-pool tweak can raise this on supported cards.", "info");
         if (const auto pages = num("r.Shadow.Virtual.MaxPhysicalPages"); pages && *pages > 0 && *pages < 2048 && audit_summary_.lights_shadow >= 12)
-            add("vsm", "Shadow page pool", "The shadow page pool is " + console_number(*pages) + " pages and the audited area has " + std::to_string(audit_summary_.lights_shadow) + " shadow-casting lights. When the pool runs out, shadows go missing or flicker and the engine redraws pages every frame. Shadows at Ultra in the Video settings raises the pool to 2048 (about 256 MB of video memory); the tuner does not resize it itself, a live resize once crashed this GPU.", "info");
-        if (const auto v = num("r.VSync"); v && *v > 0) add("vsync", "V-sync", "On. The frame rate is tied to the display; fine for tearing, but it hides any gain above the refresh rate.", "info");
+            add("vsm", "Shadow page pool", console_number(*pages) + " pages; " + std::to_string(audit_summary_.lights_shadow) + " shadow lights in the last scan. This count alone does not prove the pool is full. Tune leaves it unchanged.", "info");
+        if (const auto v = num("r.VSync"); v && *v > 0) add("vsync", "V-sync", "On. Limits displayed frames to the refresh rate and can hide measured gains.", "info");
         if (const auto sp = num("r.ScreenPercentage"); sp && *sp > 0 && *sp < 100)
-            add("sp", "Render resolution", "The game renders at " + fixed1(*sp) + "% and the upscaler fills the rest. The tuner never changes this.", "info");
+            add("sp", "Render resolution", fixed1(*sp) + "%. Tune leaves this unchanged. Only the separate resolution test changes it temporarily.", "info");
     } else add("world", "No world", "Load into the world to read the game's settings.", "info");
     findings_ = std::move(f);
 }
@@ -557,49 +590,59 @@ std::string Tuner::result_line(const std::string& id) const {
     const auto verdict = r.value("verdict", std::string("unclear"));
     const auto when = r.value("when", std::string());
     const double gain = r.value("gain_pct", 0.0), off = r.value("off_median_ms", 0.0), on = r.value("on_median_ms", 0.0);
-    std::string line = verdict == "gain" ? "Measured " + percent(gain) + " frame time (" + fixed1(off) + " to " + fixed1(on) + " ms)"
-                     : verdict == "loss" ? "Measured slower by " + percent(-gain) + " (" + fixed1(off) + " to " + fixed1(on) + " ms)"
-                     : verdict == "same" ? "Measured: no change (" + fixed1(off) + " vs " + fixed1(on) + " ms)"
-                     : "Measured: unclear (" + percent(gain) + ", rounds disagreed)";
+    std::string line = verdict == "gain" ? fixed1(gain) + "% lower frame time (" + fixed1(off) + " to " + fixed1(on) + " ms)"
+                     : verdict == "loss" ? fixed1(-gain) + "% higher frame time (" + fixed1(off) + " to " + fixed1(on) + " ms)"
+                     : verdict == "same" ? "No measured gain (" + fixed1(off) + " vs " + fixed1(on) + " ms)"
+                     : "Inconclusive. Test again in the same spot.";
     return when.empty() ? line : line + ", " + when;
 }
 
 Json Tuner::sections() {
     Json out = Json::array();
-    const bool busy = trial_.running();
+    const bool busy = trial_.running() || tuning_ || audit_.running();
     // Tuner
     {
         Json controls = Json::array();
-        controls.push_back({{"id", "enable"}, {"type", "toggle"}, {"label", "Perf Tuner"}, {"value", enable_}, {"enabled", !busy && catalog_problem_.empty()},
-            {"description", "Apply the tweaks below. Each one is set through the game's console, read first and put back when the tuner is off or unloaded. The picture stays as your Video settings have it: the tuner never touches resolution, quality levels, the upscaler or the frame cap."}});
         std::string tuned = "Not tuned yet";
         if (tune_result_.is_object() && tune_result_.contains("when")) {
             const auto kept = tune_result_.value("kept", std::string());
-            tuned = (kept.empty() ? std::string("Nothing measured a gain; the always-on set stays") : "Kept " + kept) + ", " + tune_result_.value("when", std::string());
+            tuned = (tune_result_.value("rolled_back", false) ? std::string("Slower set rejected") : kept.empty() ? std::string("No extra gains. Current tweaks kept") : "Kept " + kept) + ", " + tune_result_.value("when", std::string());
         }
-        controls.push_back({{"id", "tune"}, {"type", "button"}, {"label", tuning_ ? "Tuning" : "Tune"}, {"value", tuned}, {"busy", tuning_}, {"enabled", !busy && !tuning_ && !audit_.running() && world_ready_ && catalog_problem_.empty()},
-            {"effect", "reversible"}, {"description", "The one button. Turns the tuner on, audits the area, finds where the frame time goes, then measures every switch that fits this machine off and on twice each and keeps the ones that win; the always-on set stays on. Ends by measuring the kept set as a whole. About eight minutes on a full catalog; keep playing or stand still. Everything it keeps is still a switch below, and Perf Tuner off puts it all back."}});
+        if (!world_ready_) tuned = "Load your save first";
+        else if (tuning_) tuned = audit_.running() ? "Checking scene" : "Testing " + std::to_string(tune_total_ - tune_queue_.size()) + "/" + std::to_string(tune_total_);
+        controls.push_back({{"id", "tune"}, {"type", "button"}, {"label", "Tune"}, {"value", tuned}, {"busy", tuning_}, {"enabled", !busy && world_ready_ && catalog_problem_.empty()},
+            {"effect", "reversible"}, {"description", "Tests tweaks for this machine and keeps measured gains. Your resolution and graphics settings stay as they are."},
+            {"hint", "Takes several minutes. Close the menu and stay in one area. Stop cancels and restores your settings."}});
+        controls.push_back({{"id", "enable"}, {"type", "toggle"}, {"label", "Enabled"}, {"value", enable_}, {"enabled", enable_ || (!busy && catalog_problem_.empty())},
+            {"description", "Use the selected tweaks. Off restores the values from before the tuner ran."}});
+        if (busy) controls.push_back({{"id", "stop"}, {"type", "button"}, {"label", tuning_ ? "Stop tuning" : trial_.running() ? "Stop test" : "Stop scan"}, {"enabled", true},
+            {"description", "Cancel the current work and turn the tuner off. Restores every value it changed."}});
         std::string fps = "Load into the world to read it";
         if (brief_.is_object() && brief_.value("frames", 0) > 0) {
             fps = fixed1(brief_.value("hz", 0.0)) + " fps, " + fixed1(brief_.value("median_ms", 0.0)) + " ms a frame, slowest 1%: " + fixed1(brief_.value("p99_ms", 0.0)) + " ms";
         }
         controls.push_back({{"id", "fps"}, {"type", "label"}, {"label", "Frame rate"}, {"value", fps}, {"description", "The last five seconds, from the loader's own frame clock."}});
+        out.push_back({{"id", "tuner"}, {"title", "Tune"}, {"controls", controls}});
+    }
+    {
+        Json controls = Json::array();
         std::string probe = "Not measured yet";
         if (probe_result_.is_object() && probe_result_.contains("verdict")) {
             const auto v = probe_result_.value("verdict", std::string());
             probe = (v == "pixels" ? "Scales with pixels" : v == "fixed" ? "Does not scale with pixels" : v == "mixed" ? "Partly" : "Unclear") + std::string(": ") + fixed1(probe_result_.value("before_ms", 0.0)) + " ms became " + fixed1(probe_result_.value("after_ms", 0.0)) + " ms at " + console_number(probe_result_.value("to", 100.0)) + "%, " + probe_result_.value("when", std::string());
         }
-        controls.push_back({{"id", "probe"}, {"type", "button"}, {"label", "Where does the time go?"}, {"value", probe}, {"busy", busy && trial_target_ == "probe"}, {"enabled", !busy && world_ready_},
-            {"effect", "reversible"}, {"description", "Sixteen seconds: five at your resolution, then five at native 100% (or 50% if you already run native), then back. If the frame gets much slower with more pixels, resolution and the upscaler are your levers. If it hardly moves, the time is in work that is the same at any resolution: shadows from every shadow-casting light, Lumen's scene lighting, ray tracing, and the CPU and driver side; then the shadow and lighting settings in the Video menu are what moves it, not resolution."}});
+        controls.push_back({{"id", "probe"}, {"type", "button"}, {"label", "Resolution test"}, {"value", probe}, {"busy", trial_.running() && trial_target_ == "probe"}, {"enabled", !busy && world_ready_},
+            {"effect", "reversible"}, {"description", "Checks whether frame time changes with render resolution. Cannot identify a CPU or GPU bottleneck. Tune never runs this test."},
+            {"hint", "16 seconds. Stand still."}, {"confirm", "Temporarily set render resolution to 100%, or 50% if already native? Your current value is restored afterward."}});
         Json options = Json::array({{{"id", "all"}, {"label", "All tweaks that are on"}}});
         for (const auto& t : catalog_.tweaks) options.push_back({{"id", t.id}, {"label", t.title}});
         options.push_back({{"id", "fix.anim"}, {"label", "Animate only what is seen (world fix)"}});
-        controls.push_back({{"id", "measure_target"}, {"type", "choice"}, {"label", "Measure"}, {"value", measure_target_}, {"options", options}, {"enabled", !busy},
-            {"description", "What the next measurement switches off and on."}});
-        controls.push_back({{"id", "measure"}, {"type", "button"}, {"label", busy && trial_target_ != "probe" ? "Measuring" : "Measure it"}, {"value", result_line(measure_target_)},
-            {"busy", busy && trial_target_ != "probe"}, {"enabled", !busy && world_ready_ && catalog_problem_.empty()}, {"effect", "reversible"},
-            {"description", "About a minute: off, on, off, on, fifteen seconds each (the first five of every window are not counted while the lighting and shadow caches settle). Same scene, back to back, so the scene's own drift cancels out; the second round shows whether the first was luck. A gain counts when both on windows beat both off windows by more than 1.5%."}});
-        out.push_back({{"id", "tuner"}, {"title", "Tuner"}, {"controls", controls}});
+        controls.push_back({{"id", "measure_target"}, {"type", "choice"}, {"label", "Test"}, {"value", measure_target_}, {"options", options}, {"enabled", !busy},
+            {"description", "Choose a tweak or test all enabled tweaks together."}});
+        controls.push_back({{"id", "measure"}, {"type", "button"}, {"label", "Run test"}, {"value", result_line(measure_target_)},
+            {"busy", trial_.running() && trial_target_ != "probe"}, {"enabled", !busy && world_ready_ && catalog_problem_.empty()}, {"effect", "reversible"},
+            {"description", "Compares off/on/off/on over one minute. Reports a gain only when both on rounds are faster and the average improves by at least 1.5%."}, {"hint", "Stay in one area. Moving scenes can make the result inconclusive."}});
+        out.push_back({{"id", "tests"}, {"title", "Tests"}, {"controls", controls}});
     }
     // Tweaks, by group
     if (!catalog_problem_.empty()) {
@@ -631,16 +674,15 @@ Json Tuner::sections() {
     {
         Json controls = Json::array();
         const auto& a = audit_summary_;
-        std::string summary = a.actors ? std::to_string(a.actors) + " actors, " + std::to_string(a.ticking) + " ticking; " + std::to_string(a.skeletal_always) + " of " + std::to_string(a.skeletal) + " skeletal meshes animate off screen ("
-            + std::to_string(a.skeletal_always_unseen) + " were unseen); " + std::to_string(a.lights_shadow) + " shadow lights (" + std::to_string(a.lights_shadow_movable) + " movable); " + std::to_string(a.niagara_active) + " of " + std::to_string(a.niagara) + " particle systems live. " + a.when
-            : "Not audited yet";
-        controls.push_back({{"id", "audit"}, {"type", "button"}, {"label", audit_.running() ? "Auditing, " + std::to_string(int(std::round(audit_.progress() * 100))) + "%" : "Audit this world"}, {"value", summary}, {"busy", audit_.running()}, {"enabled", !busy && !audit_.running() && world_ready_},
-            {"effect", "reversible"}, {"description", "Walks every actor in the loaded level in small batches (a few seconds, no hitch) and counts what costs time without showing: actors ticking every frame, skeletal meshes animating while nobody sees them, shadow-casting lights, live particle systems. Nothing is changed. The full breakdown by class is written to world-audit-report.txt under Mods/CSSX/output/eins0fx.perf-tuner."}});
+        std::string summary = a.actors ? std::to_string(a.actors) + " actors, " + std::to_string(a.lights_shadow) + " shadow lights, " + std::to_string(a.skeletal_always_unseen) + " unseen meshes animating" : "Not scanned yet";
+        controls.push_back({{"id", "audit"}, {"type", "button"}, {"label", "Scan scene"}, {"value", summary}, {"busy", audit_.running()}, {"enabled", !busy && world_ready_},
+            {"description", "Counts characters, animated props, lights and effects in batches. A scan alone changes nothing."}, {"hint", "Report: Mods/CSSX/output/eins0fx.perf-tuner/world-audit-report.txt"}});
         std::string hint = result_line("fix.anim");
         if (anim_fixed_) hint += " (" + std::to_string(anim_fixed_) + " meshes live)";
-        controls.push_back({{"id", "fix.anim"}, {"type", "toggle"}, {"label", "Animate only what is seen"}, {"value", anim_fix_}, {"enabled", !busy}, {"hint", hint}, {"unit", "CPU"},
-            {"description", "Skeletal meshes the game set to animate fully even when off screen are set to the engine's own default: animate when seen, and keep montages (attacks, reactions, hit stops) running when not. Your own character is never touched. Reversible; re-applied after a fresh audit of each new area. Measure it before trusting it: on a GPU-bound scene it will read 'no change'."}});
-        out.push_back({{"id", "world"}, {"title", "World"}, {"controls", controls}});
+        controls.push_back({{"id", "fix.anim"}, {"type", "toggle"}, {"label", "Offscreen animation"}, {"value", anim_fix_}, {"enabled", !busy}, {"hint", hint}, {"unit", "CPU"},
+            {"description", "Experimental: reduces animation work on other characters while unseen. Montages continue; ordinary pose updates stop. Your character is excluded. Tune does not enable this."},
+            {"confirm", "Change offscreen animation? This can affect gameplay and moving shadows. Turn it off if you see a problem."}});
+        out.push_back({{"id", "world"}, {"title", "Scene"}, {"controls", controls}});
     }
     // Your Engine.ini: the lines that matter, the rest in the report file
     if (!ini_verdicts_.empty()) {
@@ -652,14 +694,14 @@ Json Tuner::sections() {
             controls.push_back({{"id", "ini." + std::to_string(v.line.number)}, {"type", "label"}, {"label", v.line.name + " = " + v.line.value}, {"value", v.note}, {"severity", v.kind == "picture" ? "warning" : "info"}});
         }
         if (controls.empty()) controls.push_back({{"id", "ini.none"}, {"type", "label"}, {"label", "Lines"}, {"value", "Nothing in it changes the look or collides with the tuner."}});
-        out.push_back({{"id", "ini"}, {"title", "Your Engine.ini"}, {"description", (ini_pack_.empty() ? std::string("Lines found in ") : ini_pack_ + " found in ") + ini_path_ + ". Shown here: the lines that change the look and the ones the tuner takes over. Everything, including the lines that do nothing in this engine, is in engine-ini-report.txt under Mods/CSSX/output/eins0fx.perf-tuner."}, {"controls", controls}});
+        out.push_back({{"id", "ini"}, {"title", "Your Engine.ini"}, {"description", "Read-only. Shows picture changes and managed tweaks. Full report: Mods/CSSX/output/eins0fx.perf-tuner/engine-ini-report.txt"}, {"controls", controls}});
     }
     // The check
     {
         Json controls = Json::array();
         for (const auto& f : findings_) controls.push_back({{"id", "find." + f.id}, {"type", "label"}, {"label", f.title}, {"value", f.text}, {"severity", f.severity}});
         if (controls.empty()) controls.push_back({{"id", "find.none"}, {"type", "label"}, {"label", "Settings"}, {"value", "Nothing to point out."}});
-        out.push_back({{"id", "check"}, {"title", "Check"}, {"description", "Settings in your own config and launch that cost frames for nothing on this machine, or that the tuner wants you to know about. Nothing here is changed by the tuner."}, {"controls", controls}});
+        out.push_back({{"id", "check"}, {"title", "Settings"}, {"description", "Your machine and current settings. Read-only."}, {"controls", controls}});
     }
     return out;
 }
@@ -668,28 +710,42 @@ Json Tuner::model() {
     refresh_brief();
     refresh_findings();
     Json status = status_;
-    if (audit_.running()) status = "Auditing the world, " + std::to_string(int(std::round(audit_.progress() * 100))) + "%";
+    if (audit_.running()) status = "Scanning scene, " + std::to_string(int(std::round(audit_.progress() * 100))) + "%";
     if (trial_.running()) {
         const int pct = int(std::round(trial_.progress(clock_) * 100));
         const std::string what = trial_target_ == "probe" ? "the probe" : trial_target_ == "all" ? "the kept set" : trial_target_ == "fix.anim" ? "'Animate only what is seen'" : catalog_.find(trial_target_) ? "'" + catalog_.find(trial_target_)->title + "'" : trial_target_;
-        status = (trial_target_ == "probe" ? "Probing" : "Measuring " + what) + std::string(", ") + std::to_string(pct) + "%: " + (trial_target_ == "probe" ? (trial_.change_on() ? "more pixels" : "your resolution") : (trial_.change_on() ? "on" : "off"));
+        status = (trial_target_ == "probe" ? "Resolution test" : "Measuring " + what) + std::string(", ") + std::to_string(pct) + "%: " + (trial_target_ == "probe" ? (trial_.change_on() ? "test resolution" : "your resolution") : (trial_.change_on() ? "on" : "off"));
     }
     if (tuning_) status = "Tuning, step " + std::to_string(tune_total_ - tune_queue_.size()) + " of " + std::to_string(tune_total_) + ". " + status.get<std::string>();
-    return {{"schema", 2}, {"sections", sections()}, {"status", status}, {"error", error_}};
+    auto pages = sections();
+    // CSSX renders label descriptions and button hints, not their value fields.
+    for (auto& page : pages) for (auto& control : page["controls"]) {
+        const auto type = control.value("type", std::string());
+        const auto value = control.value("value", Json());
+        if (!value.is_string() || value.get_ref<const std::string&>().empty()) continue;
+        if (type == "label" || type == "button") {
+            const char* field = type == "label" ? "description" : "hint";
+            const auto explanation = control.value(field, std::string());
+            control[field] = value.get<std::string>() + (explanation.empty() ? std::string() : (type == "label" ? " " : "\n") + explanation);
+        }
+    }
+    return {{"schema", 2}, {"sections", std::move(pages)}, {"status", status}, {"error", error_}};
 }
 
 void Tuner::event(const Json& event) {
     error_.clear();
     try {
         const auto id = event.at("id").get<std::string>();
-        if (id == "enable") {
-            if (tuning_ && event.at("value").get<bool>() == false) { tuning_ = false; tune_queue_.clear(); trial_.cancel(); switch_trial(false); audit_.cancel(); }
-            else if (trial_.running()) throw std::runtime_error("Wait for the measurement to finish.");
-            if (!catalog_problem_.empty()) throw std::runtime_error("Fix tweaks.json first: " + catalog_problem_);
-            enable_ = event.at("value").get<bool>();
+        if (id == "enable" || id == "stop") {
+            const bool on = id == "enable" && event.at("value").get<bool>();
+            if (!on) { tuning_ = false; tune_queue_.clear(); trial_.cancel(); audit_.cancel(); }
+            else if (trial_.running() || tuning_) throw std::runtime_error("Wait for the current test to finish.");
+            if (on && !catalog_problem_.empty()) throw std::runtime_error("Fix tweaks.json first: " + catalog_problem_);
+            enable_ = on;
             if (enable_) { refresh_player(); apply_enabled(); if (anim_fix_) { if (audit_summary_.actors > 0 && !audit_.running()) apply_anim_fix(); else if (world_ready_ && !audit_.running()) { try { audit_.start(player_); } catch (...) {} } } }
-            else { restore_all(); restore_anim_fix(); audit_.cancel(); }
+            else { refresh_player(); restore_all(); restore_anim_fix(); audit_.cancel(); }
             save_state();
+            if (!enable_ && (!applied_.empty() || audit_.anim_fix_count() > 0)) throw std::runtime_error("Some original values could not be restored; cleanup will retry.");
             const auto n = applied_.size();
             report(enable_ ? (n ? "Perf Tuner on: " + std::to_string(n) + (n == 1 ? " tweak" : " tweaks") + " live." : world_ready_ ? "Perf Tuner on; no tweak took effect." : "Perf Tuner on; the tweaks apply once you are in the world.") : "Perf Tuner off; everything put back.");
             return;
@@ -743,6 +799,22 @@ void Tuner::tick(double seconds) {
         last_player_check_ = clock_;
         const bool was = world_ready_;
         refresh_player();
+        if (!trial_.running()) {
+            const bool cleanup_pending = !enable_ && (!applied_.empty() || audit_.anim_fix_count() > 0);
+            std::vector<std::string> pending;
+            for (const auto& [key, _] : applied_) {
+                const auto* t = catalog_.find(key);
+                if (!enable_ || key == "probe" || key.starts_with("trial.") || (t && (!tweak_on(key) || !fit_reason(*t).empty()))) pending.push_back(key);
+            }
+            for (const auto& key : pending) restore(key);
+            if (!enable_ || !anim_fix_) {
+                if (audit_.anim_fix_count() > 0) restore_anim_fix();
+            }
+            if (cleanup_pending && applied_.empty() && audit_.anim_fix_count() == 0) {
+                error_.clear();
+                report("Off. Original settings restored.");
+            }
+        }
         // Console variables belong to the process, not the world: what was set stays set
         // through a load, and what was read before stays the thing to restore. A new world
         // only needs whatever was waiting for one.
@@ -753,7 +825,7 @@ void Tuner::tick(double seconds) {
             anim_fixed_ = 0;
             if (enable_ && anim_fix_ && !audit_.running()) { try { audit_.start(player_); } catch (...) {} }
         }
-        if (was && !world_ready_) { audit_.cancel(); anim_fixed_ = 0; }
+        if (was && !world_ready_) { audit_.cancel(); restore_anim_fix(); }
     }
     drive_audit();
     drive_trial();
@@ -774,9 +846,11 @@ Json Tuner::status() const {
 bool Tuner::stop() {
     stopped_ = true;
     tuning_ = false; tune_queue_.clear();
-    if (trial_.running()) { trial_.cancel(); try { switch_trial(false); } catch (...) {} }
+    refresh_player();
+    trial_.cancel();
     audit_.cancel();
-    try { refresh_player(); restore_all(); restore_anim_fix(); } catch (...) {}
-    return true;
+    restore_all();
+    restore_anim_fix();
+    return applied_.empty() && audit_.anim_fix_count() == 0;
 }
 }

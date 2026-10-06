@@ -7,7 +7,7 @@ void* create(const CssxHost* host) noexcept {
     try { return new tuner::Tuner(host); } catch (...) { return nullptr; }
 }
 int tick(void* instance, double seconds) noexcept {
-    try { static_cast<tuner::Tuner*>(instance)->tick(seconds); return 1; } catch (...) { return 1; }
+    try { static_cast<tuner::Tuner*>(instance)->tick(seconds); return 1; } catch (...) { return 0; }
 }
 int model(void* instance, CssxSink sink, void* output) noexcept {
     try { const auto text = static_cast<tuner::Tuner*>(instance)->model().dump(); sink(output, text.data(), text.size()); return 1; }

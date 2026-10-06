@@ -1,7 +1,10 @@
 # Perf Tuner: handover
 
 Repository: `/home/eins0fx/development/mods/msII/CustomShellSystem`, branch `feature/cine-scene`.
-Everything below is uncommitted as of 2026-10-06. Another agent works in the same checkout
+The original work is committed in `30aab48` (CSSX) and `bbcf58f` (Perf Tuner).
+The owner requested a separate commit for the Codex takeover changes on 2026-10-06.
+CSSX 1.3.1 and Cheat Menu 1.1.2 are already committed and tagged locally.
+Another agent works in the same checkout
 (animation library port: `native/src/*`, `tests/animation_library_tests.cpp`,
 `tools/authoring-probes/animations/*`). Commit only the paths listed in section 7. No git
 worktrees, no `git stash`, no `git add -A`.
@@ -27,6 +30,8 @@ Hard constraints from the owner:
   (`sg.*`), the upscaler, frame caps, v-sync, mip/LOD biases, quality levels, Lumen/VSM
   feature switches, the VSM page pool, or Nanite detail. The catalog parser refuses these
   (`forbidden_reason()` in `src/catalog.cpp`); tests cover it.
+- Owner clarification during takeover: temporary resolution changes are allowed only in
+  a separately requested diagnostic. Automatic Tune must never run that diagnostic.
 - Never write the player's `Engine.ini` or `GameUserSettings.ini`. Read only.
 - Measure before trusting. Every tweak is read first, verified after writing, restored on
   stop or when turned off. A claim of gain needs the off/on/off/on trial to agree.
@@ -53,10 +58,11 @@ extensions/perf-tuner/
   src/audit.hpp/.cpp      world audit over reflection + the one world fix
   src/tuner.hpp/.cpp      the extension: apply/restore, trials, probe, tune queue, findings, menu model
   src/main.cpp            ABI table only
-  tests/tuner_tests.cpp   89 checks against a mock host (catalog, trial, bridge, ini, audit, tune, fit)
+  tests/tuner_tests.cpp   121 checks against a mock host (catalog, trial, bridge, ini, audit, tune, fit, cleanup)
   docs/DESIGN.md          evidence and rejected candidates
   docs/findings.md        numbers measured in the game
   docs/HANDOVER.md        this file
+  docs/work-queue.md      takeover status and remaining live checks
   work/live/check.py      dev-channel driver: model, event, library, report, frame
   work/live/stat.py       runs a console command; `stat unit` + engine screenshot
   work/research/          game inis exported from pakchunk0, UE 5.6.1 cvar defaults, the UET pack
@@ -79,6 +85,8 @@ cmake --build extensions/core/build/windows --target perf_tuner cssx_core -j8
 python3 extensions/core/tools/cssx.py build --dev
 
 # install into the game (ASK THE OWNER FIRST; the game may run for --core-only + extension)
+# This stages a newly built core too. For an extension-only update, copy only the extension
+# files and manifest, then reload through an identical copy of the installed core.
 python3 extensions/core/tools/cssx.py stage --dev --core-only --perf-tuner
 
 # make the running game reload extensions: copy the core to a -rNNNN name and point core.json at it
@@ -122,10 +130,11 @@ so it has no per-frame work of its own.
   so originals are kept across world changes (a bug here was fixed; test covers it).
 - Trial: off/on/off/on, 15 s windows (5 s settle + 10 s measured), verdict gain/same/loss/unclear
   with a 1.5 % threshold and the consistency rule (both on windows beat both off windows).
-- Probe: 100 % screen percentage for one window; verdict "scales with pixels" / "does not
-  scale with pixels" / mixed. (First wording said CPU-bound; wrong, corrected.)
-- Tune button: queue = audit, probe, every off-by-default switch that fits, the world fix
-  (if the audit found 2+ fixable meshes), then the kept set as a whole. Keeps what wins,
+- Manual resolution diagnostic: 100%, or 50% when already native, for one window.
+  Requested values are verified. Old unverified verdicts are ignored. It reports pixel
+  sensitivity, not a CPU/GPU bottleneck, and Tune never runs it.
+- Tune button: queue = audit, every off-by-default switch that fits, then the kept set
+  as a whole. Resolution diagnostics and experimental animation changes are manual only. Keeps what wins,
   turns the rest off, writes the summary to the row and to state.
 - World audit: `GetAllActorsOfClass` per family (Character, Pawn, SkeletalMeshActor, Light,
   NiagaraActor; the bridge caps arrays at 4096 so "all actors" is not possible), class from the
@@ -147,17 +156,56 @@ so it has no per-frame work of its own.
   audit/trial) for the frame-rate line, and on every event.
 
 ### 5.4 Measured in the game (RTX 3060 12 GB, i5-12400F, GE-Proton 11-7, DLSS Quality 66.6 %)
-See `docs/findings.md`. Summary: tavern area is GPU-limited (`stat unit`: GPU 30.7 ms, RHI
-thread 17.6 ms, game 8.6 ms) with work that does not scale with pixels (22 shadow lights on a
-512-page VSM pool, Lumen scene lighting). Hardware RT Lumen measured faster than software
+See `docs/findings.md`. Historical tavern measurements: `stat unit` GPU 30.7 ms, RHI
+thread 17.6 ms, game 8.6 ms. The old resolution probe lacked read-back verification;
+discard its pixel-sensitivity conclusions. Hardware RT Lumen measured faster than software
 (28.6 vs 31 ms). Always-on set: no measurable fps change, no hitch change in that scene.
-Nanite without mesh shaders: +3.4 % consistent. Reflex off and Nanite shadow async: no
-change. The game already animates NPCs only when seen. CSSX's own frame share: 0.1 ms.
+Nanite without mesh shaders: 3.4% lower frame time in that earlier scene. Reflex off and
+Nanite shadow async: no change. The game already limits unseen animation on NPCs.
+The Codex live pass found no optional gain and rejected the default set on p99 regression.
+
+### 5.5 Codex takeover, 6 Oct 2026
+
+- Main tab: Tune, Enabled, Frame rate, and an available Stop action during work.
+  Manual measurements are under Tests. Shortened tweak descriptions, findings, status
+  messages, manifest copy and README. Native CSSX widgets and input bindings are retained.
+- Tune never changes resolution. The separate Resolution test asks for confirmation,
+  verifies the requested value, and produces no verdict if the engine refuses it.
+- Experimental offscreen animation is no longer enabled by Tune. The previous claim
+  that option 2 was the engine default was wrong; UE 5.6.1 constructors initialize option 0.
+- Cleanup preserves originals across failed writes, world loss and refused restores.
+  Read-back verifies restoration. Failed cleanup blocks DLL unload for a later retry.
+  Kismet's CDO is cached, and cvar cleanup can use its null-world console path.
+- Optional gains with more than 1.5% p99 regression are rejected. A combined loss or
+  p99 regression disables the tuner and restores originals. Whole-set measurements
+  include a manually enabled animation option rather than leaving it outside the comparison.
+- Scene scans yield between actors after 500 microseconds when the host clock is available,
+  as well as respecting the call cap. One actor can still exceed that time budget.
+- Release packaging now includes a separate independently versioned Perf Tuner archive.
+  The file set and ZIP verification are tested. No release command, tag or upload was run.
+- Catalog validation reuses the Engine.ini picture classifier, closing gaps for fog detail,
+  Nanite tessellation, ray tracing, NIS, secondary screen percentage and DLSS-G.
+- Native CSSX ignores value fields on buttons and labels. Results now use button hints;
+  frame rate and findings use label descriptions. Single-line descriptions avoid exposing
+  the game's rich-text tags. Stored resolution verdicts without verified writes are ignored.
+- Verified: all 11 host suites pass, including 121 Perf Tuner checks; Windows release and
+  dev x64 DLL builds succeed. With the owner's approval, only Perf Tuner was installed.
+  The original core and loader binaries were retained, and the original core selector
+  was restored after reloading. No commit was made during that live pass.
+- Live Tune completed all five steps. No optional gain in this scene. The combined set
+  worsened p99 by 5.0%, so Tune disabled itself and restored the originals. Stop tuning
+  and Stop test also restored all 26 watched values independently. Resolution stayed
+  at 66.6%; no diagnostic or experimental animation ran. See findings.md for the numbers.
+- Tune, Tests, confirmation, readings and both Stop actions were inspected in rendered
+  screenshots, using dev-channel calls to the native key/action handlers. Physical
+  controller and mouse input remain untested. The tuner is left off after acceptance.
+- Both player config files stayed byte-identical. Own screenshots, intermediate DLLs,
+  temporary core copy and test reports were removed; pre-existing reports were restored.
 
 ## 6. Known gaps, risks, next steps
 
-- Not yet run: the Tune button end to end in the game (unit-tested on the mock world only).
-  Run it once in the world and check the summary row and that `Perf Tuner off` restores all.
+- Tune and restoration passed live on this machine. Physical controller/mouse checks,
+  combat/shadow testing of experimental animation and other-platform measurements remain.
 - Not measured on Windows, AMD, Intel or Steam Deck. The rules exist; the numbers do not.
 - SetBy priority: a cvar written from the console (`SetByConsole`) outranks the game's
   scalability until restart, so while `r.Streaming.PoolSize` is touched the Textures quality
@@ -170,13 +218,16 @@ change. The game already animates NPCs only when seen. CSSX's own frame share: 0
   GPU crash on this machine once (CINE, 6 Oct). The tuner only reports it.
 - Toggling `r.Lumen.HardwareRayTracing`, `r.RayTracing.Enable`, `r.Shadow.Virtual.Enable`,
   `r.Nanite.Tessellation` recreates render state (multi-frame hitch); never inside a trial window.
-- The probe sets `r.ScreenPercentage` for 5 s. With DLSS the game keeps 66.6 there; the
-  tuner restores exactly what it read.
+- The separately requested diagnostic sets `r.ScreenPercentage` for one window. If DLSS
+  or the engine keeps its own value, the diagnostic stops without a new verdict.
 - Hitch attribution is frame-level only (shipping build: `stat gpu`, `ProfileGPU`, CSV
   profiler compiled out; `stat unit` draws on screen and can be read from an engine
   screenshot, see `work/live/stat.py`).
-- Release packaging: `extensions/core/tools/cssx_release.py` has no Perf Tuner section yet
-  (follow the Traverse/CINE pattern). Version 1.0.0 is unreleased; keep the number until it
+- The live combined-set transition/cleanup capture included a 19.08 ms extension peak.
+  Idle tuner work averaged 0.013 ms per tick. This is not a zero-cost guarantee for cvar
+  changes; settling windows exclude transitions. See findings.md for scope and scan cost.
+- Release packaging is implemented in `extensions/core/tools/cssx_release.py`, but the
+  tagged release flow has not been run. Version 1.0.0 is unreleased; keep the number until it
   is on Nexus (owner's rule: unreleased stays the same version).
 - Nexus-facing text: changelog entries must lead with the fixed state and claim only what was
   tested (`extensions/core/docs/release-notes.md`, "CSSX 1.3.1 and CINE 1.1.0").
@@ -196,14 +247,16 @@ extensions/core/src/core/menu_page.cpp
 extensions/core/src/runtime/settings.cpp
 extensions/core/src/runtime/settings.hpp
 extensions/core/tests/runtime_tests.cpp
+extensions/core/tests/test_tools.py
 extensions/core/tools/cssx.py
+extensions/core/tools/cssx_release.py
 extensions/cheat-menu/README.txt
 extensions/perf-tuner/            (whole tree; .gitignore excludes work/research/ini, uet, tool binaries, docs/*.zip, docs/txt)
 ```
 
-Commit message ends with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`. Two
-commits are natural: "CSSX: remove the controller shortcut; frame.brief window and percentiles"
-and "Perf Tuner 1.0.0". Commit only when the owner asks.
+The original two commits already exist. The owner has now requested a separate commit
+for the remaining Perf Tuner takeover changes. Do not add an AI co-author line; the owner's later instruction
+in the previous session rejected it.
 
 ## 8. Working rules of this repository (owner's standing instructions)
 

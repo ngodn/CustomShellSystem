@@ -148,7 +148,12 @@ void Audit::examine(const Json& actor, int& calls) {
 bool Audit::step(int calls) {
     if (!running_) return true;
     int used = 0;
-    while (next_ < actors_.size() && used < calls) examine(actors_[next_++], used);
+    const auto started = host_.now_us();
+    while (next_ < actors_.size() && used < calls) {
+        examine(actors_[next_++], used);
+        const auto now = host_.now_us();
+        if (started && now >= started && now - started >= 500) break;
+    }
     if (next_ < actors_.size()) return false;
     running_ = false;
     char text[32] = ""; const std::time_t t = std::time(nullptr); std::tm tm{};
@@ -188,9 +193,10 @@ int Audit::apply_anim_fix(const Json& pawn) {
         if (id_of(part) == player) continue;
         try {
             if (host_.request({{"op", "valid"}, {"target", part}}) != true) continue;
-            // 2: OnlyTickMontagesWhenNotRendered, the engine default.
-            host_.set(part, "VisibilityBasedAnimTickOption", 2);
+            // 2: OnlyTickMontagesWhenNotRendered; ordinary unseen poses stop updating.
             anim_fixed_.emplace_back(part, before);
+            host_.set(part, "VisibilityBasedAnimTickOption", 2);
+            if (tick_option(host_.get(part, "VisibilityBasedAnimTickOption")) != 2) continue;
             ++n;
         } catch (...) {}
     }
@@ -199,14 +205,16 @@ int Audit::apply_anim_fix(const Json& pawn) {
 
 int Audit::restore_anim_fix() {
     int n = 0;
+    std::vector<std::pair<Json, Json>> pending;
     for (const auto& [part, before] : anim_fixed_) {
         try {
             if (host_.request({{"op", "valid"}, {"target", part}}) != true) continue;
             host_.set(part, "VisibilityBasedAnimTickOption", before);
+            if (tick_option(host_.get(part, "VisibilityBasedAnimTickOption")) != tick_option(before)) throw std::runtime_error("Animation tick option was not restored");
             ++n;
-        } catch (...) {}
+        } catch (...) { pending.emplace_back(part, before); }
     }
-    anim_fixed_.clear();
+    anim_fixed_ = std::move(pending);
     return n;
 }
 }
