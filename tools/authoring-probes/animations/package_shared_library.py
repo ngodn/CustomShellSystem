@@ -26,6 +26,7 @@ def main():
     parser.add_argument('--dependency', type=Path, required=True, action='append',
                         help='Verified outfit trio supplying declared dependencies; repeat for additional outfits')
     parser.add_argument('--output-name', default='pack')
+    parser.add_argument('--compression-cook', help='Separate verified cook label for owned bone-compression settings')
     parser.add_argument('--adapter-cook', help='Successful adapter cook label from run_performance_layers.py')
     parser.add_argument('--adapter-evaluation', help='Successful nine-mesh evaluated-pose label')
     parser.add_argument('--adapter-bindings', type=Path, help='Independent cooked/source comparison receipt')
@@ -49,9 +50,31 @@ def main():
     verified = {entry['asset'].split('.')[0] for entry in verification['results']}
     if len(packages) != len(set(packages)) or set(packages) != expected or expected != verified:
         raise ValueError('Cook, catalog and fresh readback disagree')
-    for value in (args.output_name, args.adapter_cook, args.adapter_evaluation):
+    for value in (args.output_name, args.adapter_cook, args.adapter_evaluation, args.compression_cook):
         if value is not None and not re.fullmatch(r'[a-z0-9-]{1,48}', value):
             raise ValueError('Expected a short work label')
+    compression_packages = set()
+    compression_evidence = {}
+    if args.compression_cook:
+        exit_path = work / (args.compression_cook + '-exit.json')
+        list_path = work / (args.compression_cook + '-cook.txt')
+        if json.loads(exit_path.read_text())['exit_code'] != 0:
+            raise ValueError('Compression-settings cook did not succeed')
+        rows = list_path.read_text().splitlines()
+        if not 1 <= len(rows) <= 16 or len(set(rows)) != len(rows) or set(rows).intersection(packages):
+            raise ValueError('Invalid compression-settings package list')
+        for package in rows:
+            package_path(package)
+            if not package.startswith('/Game/CSS/Locomotion/'):
+                raise ValueError('Compression settings must belong to the shared library')
+            suffix = '/Content/' + package.removeprefix('/Game/') + '.uasset'
+            matches = [(p, h) for p, h in verification['protected'].items() if p.endswith(suffix)]
+            if len(matches) != 1 or digest(Path(matches[0][0])) != matches[0][1]:
+                raise ValueError('Compression-settings authoring input is missing or changed')
+            compression_evidence.update(matches)
+        compression_packages.update(rows)
+        compression_evidence.update({str(p): digest(p) for p in (exit_path, list_path)})
+        packages += rows
     if len({bool(args.adapter_cook), bool(args.adapter_evaluation), bool(args.adapter_bindings)}) != 1:
         raise ValueError('Adapter cook, evaluation and binding readback are required together')
     adapter_packages = set()
@@ -178,6 +201,8 @@ def main():
             cook_root = (work / (args.adapter_cook + '-cooked')) if args.adapter_cook and package in adapter_packages else work / 'cooked'
             if package in face_packages:
                 cook_root = face_work / 'cooked'
+            if package in compression_packages:
+                cook_root = work / args.compression_cook
             source = cook_root / 'CSSAuthoring/Content' / (relative + suffix)
             if package in additional_payloads:
                 source = additional_payloads[package][suffix]
@@ -187,7 +212,8 @@ def main():
             windows_destination('C:/CSS', str(destination.relative_to(stage)))
             if suffix == '.uasset':
                 info = asset_info(source.read_bytes())
-                expected_class = ('SkeletalMesh' if package in face_packages else
+                expected_class = ('AnimBoneCompressionSettings' if package in compression_packages else
+                                  'SkeletalMesh' if package in face_packages else
                                   'AnimBlueprintGeneratedClass' if package in adapter_packages else 'AnimSequence')
                 if info['package'] != package or not any(e['class'] == expected_class for e in info['exports']):
                     raise ValueError(f'Not the expected cooked animation asset: {package}')
@@ -233,9 +259,12 @@ def main():
         raise ValueError('Facial evidence changed during packaging')
     if any(digest(Path(path)) != checksum for path, checksum in additional_evidence.items()):
         raise ValueError('Additional adapter evidence changed during packaging')
+    if any(digest(Path(path)) != checksum for path, checksum in compression_evidence.items()):
+        raise ValueError('Compression-settings evidence changed during packaging')
     report = dict(passed=True, packages=len(packages), exact_export_payloads=len(packages),
                   adapters=sorted(adapter_packages), adapter_evaluation=args.adapter_evaluation,
                   additional_adapter_evidence=additional_evidence,
+                  compression_settings=sorted(compression_packages), compression_evidence=compression_evidence,
                   facial_meshes=sorted(face_packages), facial_evidence=face_evidence,
                   dependencies=dependency_hashes,
                   required_skeleton='/Game/CSS/Shared/SKEL_Base.SKEL_Base',

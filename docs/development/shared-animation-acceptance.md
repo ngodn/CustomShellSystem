@@ -9,6 +9,36 @@ an older outfit release has previously worked in game.
 
 ## Evidence boundaries
 
+Latest Iris Out candidate: L5W's local knee correction and authored contact
+pass. Its independently packaged Windows animation now passes comparison at
+all 1,001 source-key times across 388 tracks, including virtual bones, using
+linear ACL interpolation and an unretargeted UE reference. Maximum local
+translation error is 0.009512 cm and quaternion distance is 0.00217104 (below
+the existing 0.25-degree rotation limit). Evidence:
+`work/cine-animation-port/l5w-cook/decoded-runtime-v1/unretargeted-motion-verification.json`.
+This does not establish between-key/cooked contact, current-candidate adapter
+coverage or gameplay.
+
+DumbDumb L5U's full comparison found a 0.00313772 quaternion distance at
+`ball_r`, frame 615, exceeding the unchanged 0.25-degree review limit. The
+L5UPrecision2 copy preserves all 1,529,884 authored keys and uses an owned ACL
+settings asset with threshold 0.001 cm instead of 0.01 cm. It now passes all
+3,943 key times across 388 tracks: maximum translation error 0.005594 cm,
+quaternion distance 0.000461133 and scale error 0.000000962. Its cooked animation
+grows from 981,617 to 1,280,027 bytes. The package includes its settings asset
+and passes exact export round-trip with all imports resolved. Evidence:
+`work/cine-animation-port/l5u-precision2-cook/decoded-runtime-v2/full-motion-verification.json`
+and `pack-with-settings2/verification.json`. The raw reference is independently
+captured from the original L5U study with retargeting disabled; fresh native
+comparison proves the precision copy's authored data is unchanged. This is
+compression evidence only, not dense contact or full outfit acceptance.
+
+The first full comparisons used nearest ACL sampling and retargeted contact
+captures. Those diagnostic failures are preserved, but cannot be read as
+runtime errors. The tools now record the ACL rounding policy and require an
+explicit unretargeted reference. Native data-model virtual tracks are also
+distinct from the evaluated virtual poses regenerated for cooking.
+
 - Cooked samples: independent compressed-pose readback compared with the authored
   sequence, up to five samples per clip. This does not prove every frame or contact.
 - Adapter poses: all eighteen moving clips pass on all nine meshes, including

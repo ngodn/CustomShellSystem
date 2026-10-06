@@ -2,6 +2,22 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
+Latest October 6 continuation: Iris Out L5W repairs only four right-leg keys
+at the two near-straight transitions. All 1,001 authored contact poses and
+fresh-repeat checks pass; the correction is committed as `758f5ac`. Windows
+cooking, package export round-trip and full 388-track compressed comparison
+also pass when sampled with Unreal's linear ACL policy against unretargeted
+raw poses. DumbDumb's L5UPrecision2 copy also passes all 3,943 key times after
+tightening its owned ACL codec threshold from 0.01 to 0.001 cm. Its animation
+is 1,280,027 bytes, plus a separately cooked settings asset included in the
+verified package. These are still offline candidates, not installed or accepted.
+The new full-key check exposed two diagnostic mismatches: CUE4Parse's nearest
+ACL sampling skips interpolation over stripped keys, and mesh-contact poses
+include retargeting. Both are now explicit in the comparison tools. Preserve
+the failed diagnostic reports. Continue dense/cooked contact, updated adapter playback,
+facial mappings, remaining source definitions, broader rig/native support and
+live/release acceptance. Older checkpoints below retain their original scope.
+
 Seductress contact update: S8 Come Closer Flat now passes exact fresh repeat
 for all 388 tracks and 4,641 keys. The 480 Hz scan reduces visible-footwear
 penetration to 0.02607 cm, with no new knee-plane flips at matched 240 Hz

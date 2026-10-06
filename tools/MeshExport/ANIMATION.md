@@ -26,6 +26,59 @@ ordinary exports retain both. The GLB writer uses four influences, so use the
 skin audit for complete weight analysis. These opt-in diagnostics leave source
 assets unchanged and do not replace ordinary customization exports.
 
+## Full cooked ACL comparisons
+
+`CSS_ABSOLUTE_TRACKS=1 CSS_ABSOLUTE_FULL=1` retains the normal five-sample
+JSON and also writes `absolute-tracks.bin` plus a checksummed layout manifest.
+The binary contains ten little-endian float32 components per track, ordered
+by frame, then track. Every source-key time is included; ACL wrap endpoints
+are restored explicitly. The existing two-million-transform allocation bound
+still applies. Ordinary exports do not load the optional native helper.
+
+For comparison with Unreal's linear playback, also set
+`CSS_ABSOLUTE_RUNTIME=1`. This uses `RuntimeAclSamples.cpp` and records rounding
+policy `none`. The older CUE4Parse reader uses `nearest`, which can snap to a
+retained key instead of interpolating across a stripped key. Do not interpret
+that difference as a defect in the cooked animation. UE 5.6.1's
+`ACLPlugin/Private/ACLDecompressionImpl.h:19` selects `none` for linear playback
+and `floor` for step playback; this helper is specifically the linear case.
+
+Build the optional Linux helper beside the diagnostic `MeshExport.dll`, from
+the repository root (replace `OUTPUT_DIRECTORY` with that directory):
+
+```sh
+c++ -std=c++11 -O2 -fPIC -shared tools/MeshExport/RuntimeAclSamples.cpp \
+  -Ireference/CUE4Parse/CUE4Parse-Natives/ACL/includes \
+  -Ireference/CUE4Parse/CUE4Parse-Natives/common \
+  -Ireference/CUE4Parse/CUE4Parse-Natives/ACL/external/acl/includes \
+  -Ireference/CUE4Parse/CUE4Parse-Natives/ACL/external/acl/external/rtm/includes \
+  -o OUTPUT_DIRECTORY/libCSSACLStudy.so
+```
+
+`decode_shared_cooked.py --all-frames --runtime-sampling` enables both modes.
+Use `capture_raw_cook_reference.py` inside the authoring commandlet to capture
+unretargeted raw poses, then `verify_full_cooked_motion.py` to compare them.
+Mesh-contact captures deliberately apply mesh retargeting and are rejected
+as compression references. Direct authored virtual-bone tracks also cannot
+replace evaluated virtual poses: Unreal regenerates them during cooking.
+
+The verifier cross-checks binary transforms against the JSON samples before
+checking every key. Its existing review limits remain 0.05 cm translation,
+0.25 degrees rotation and 0.001 scale. These checks do not establish dense
+between-key contact, outfit adapters, physics or live acceptance. Epic's
+[ACL documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/animation-compression-library-in-unreal-engine?application_version=5.6)
+describes compression thresholds as virtual-vertex errors, which are distinct
+from these local-transform review limits.
+
+When a sequence uses owned compression settings, cook those settings separately
+and pass `package_shared_library.py --compression-cook LABEL`. The commandlet
+accepts an owned standard ACL codec under `/Game/CSS/Locomotion/`; the packager
+requires its authoring hash in the verification receipt, a successful cook,
+the expected asset class and an exact export round-trip. Settings are package
+dependencies, not playable catalog entries. Use the matching
+`decode_shared_cooked.py --pack-name LABEL` when the package has a custom output
+label. Original codec assets and released outfit packages stay unchanged.
+
 ## Stellar Blade source keys
 
 Set `CSS_SOURCE_GAME=GAME_StellarBlade` and `CSS_SOURCE_TRACKS=1` to read an

@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using CUE4Parse.ACL;
 using CUE4Parse.UE4.Assets.Exports.Animation;
 using CUE4Parse.UE4.Assets.Exports.Animation.ACL;
@@ -13,8 +14,17 @@ internal static class RawAbsoluteTracks
     private static extern unsafe void nReadACLData(IntPtr tracks, FTransform* reference,
         FTrackToSkeletonMap* map, FTransform* output);
 
-    public static unsafe void Export(UAnimSequence animation, string directory)
+    [DllImport("CSSACLStudy")]
+    private static extern unsafe void nCSSReadACLData(IntPtr tracks, FTransform* reference,
+        FTrackToSkeletonMap* map, FTransform* output);
+
+    public static unsafe void Export(UAnimSequence animation, string directory, bool full = false)
     {
+        var runtimeSampling = Environment.GetEnvironmentVariable("CSS_ABSOLUTE_RUNTIME") switch {
+            null or "" or "0" => false,
+            "1" when full => true,
+            _ => throw new ArgumentException("CSS_ABSOLUTE_RUNTIME=1 requires the full sample export")
+        };
         if (animation.IsValidAdditive()) throw new ArgumentException("Absolute tracks reject additive sequences");
         if (animation.CompressedDataStructure is not FACLCompressedAnimData acl)
             throw new ArgumentException("Expected ACL-compressed animation");
@@ -44,7 +54,10 @@ internal static class RawAbsoluteTracks
         fixed (FTransform* referencePtr = reference)
         fixed (FTrackToSkeletonMap* mapPtr = map)
         fixed (FTransform* atomsPtr = atoms)
-            nReadACLData(tracks.Handle, referencePtr, mapPtr, atomsPtr);
+        {
+            if (runtimeSampling) nCSSReadACLData(tracks.Handle, referencePtr, mapPtr, atomsPtr);
+            else nReadACLData(tracks.Handle, referencePtr, mapPtr, atomsPtr);
+        }
         GC.KeepAlive(tracks);
         var selectedNames = map.Select(t => names[t.BoneTreeIndex]).ToArray();
         var frames = new List<object>();
@@ -72,6 +85,8 @@ internal static class RawAbsoluteTracks
                 BoneNames = selectedNames, LocalTransforms = transforms});
         }
         if (maxNormError >= .001) throw new InvalidOperationException("Non-unit absolute rotations");
+        if (full)
+            ExportFull(atoms, sampleCount, logicalSamples, selectedNames, directory, animation.GetPathName(), header.SampleRate, runtimeSampling);
         File.WriteAllText(Path.Combine(directory, "absolute-tracks.json"), JsonConvert.SerializeObject(new {
             schema = 2, asset = animation.GetPathName(), sampleCount, logicalSamples, wrapOptimized,
             sampleRate = header.SampleRate,
@@ -81,5 +96,39 @@ internal static class RawAbsoluteTracks
             scope = "Five native-decoded ACL samples of mapped tracks only, including animated virtual bones. Unmapped bones are omitted. Before retargeting, blending and game IK."
         }, Formatting.Indented));
         Console.WriteLine($"Decoded {frames.Count} absolute samples across {map.Length} tracks, including virtual bones");
+    }
+
+    private static void ExportFull(FTransform[] atoms, int sampleCount, int logicalSamples,
+        string[] names, string directory, string asset, float sampleRate, bool runtimeSampling)
+    {
+        var path = Path.Combine(directory, "absolute-tracks.bin");
+        double maxNormError = 0;
+        using (var writer = new BinaryWriter(File.Open(path, FileMode.CreateNew)))
+            for (int frame = 0; frame < logicalSamples; frame++)
+                for (int track = 0; track < names.Length; track++)
+                {
+                    var t = atoms[track * sampleCount + (frame == sampleCount ? 0 : frame)];
+                    ReadOnlySpan<float> values = [t.Rotation.X, t.Rotation.Y, t.Rotation.Z, t.Rotation.W,
+                        t.Translation.X, t.Translation.Y, t.Translation.Z, t.Scale3D.X, t.Scale3D.Y, t.Scale3D.Z];
+                    foreach (float value in values)
+                    {
+                        if (!float.IsFinite(value)) throw new InvalidOperationException("Non-finite absolute transform");
+                        writer.Write(value);
+                    }
+                    var q = t.Rotation;
+                    maxNormError = Math.Max(maxNormError, Math.Abs(Math.Sqrt(
+                        (double)q.X*q.X + (double)q.Y*q.Y + (double)q.Z*q.Z + (double)q.W*q.W) - 1));
+                }
+        if (maxNormError >= .001) throw new InvalidOperationException("Non-unit full absolute rotations");
+        using var stream = File.OpenRead(path);
+        File.WriteAllText(Path.Combine(directory, "absolute-tracks-full.json"), JsonConvert.SerializeObject(new {
+            schema = 1, asset, frames = logicalSamples, sampleRate, names, maxNormError,
+            roundingPolicy = runtimeSampling ? "none" : "nearest",
+            file = Path.GetFileName(path), bytes = stream.Length,
+            sha256 = Convert.ToHexStringLower(SHA256.HashData(stream)),
+            layout = "frame,track,component", componentType = "float32-le",
+            components = new[] {"qx", "qy", "qz", "qw", "tx", "ty", "tz", "sx", "sy", "sz"},
+            scope = "Every source-key time decoded with the stated rounding policy, with wrap endpoint restored. Mapped local tracks only, before retargeting, blending and game IK. No between-key evaluation."
+        }, Formatting.Indented));
     }
 }

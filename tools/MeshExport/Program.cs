@@ -35,6 +35,19 @@ var skinAudit = Environment.GetEnvironmentVariable("CSS_SKIN_AUDIT") switch {
     "1" => true,
     _ => throw new ArgumentException("CSS_SKIN_AUDIT must be 0 or 1")
 };
+var fullAbsolute = Environment.GetEnvironmentVariable("CSS_ABSOLUTE_FULL") switch {
+    null or "" or "0" => false,
+    "1" => true,
+    _ => throw new ArgumentException("CSS_ABSOLUTE_FULL must be 0 or 1")
+};
+if (fullAbsolute && (Environment.GetEnvironmentVariable("CSS_ABSOLUTE_TRACKS") != "1" ||
+    skinAudit || basePoseMesh || new[] { "CSS_TRACK_AUDIT", "CSS_SOURCE_TRACKS",
+        "CSS_ADDITIVE_POSE_DELTAS", "CSS_ANIMATION_POSES" }
+        .Any(key => Environment.GetEnvironmentVariable(key) == "1")))
+    throw new ArgumentException("Full absolute samples require the separate absolute-track export mode");
+if (Environment.GetEnvironmentVariable("CSS_ABSOLUTE_RUNTIME") is { Length: > 0 } runtimeMode &&
+    runtimeMode != "0" && (!fullAbsolute || runtimeMode != "1"))
+    throw new ArgumentException("CSS_ABSOLUTE_RUNTIME must be 0, or 1 with the full absolute export");
 if (skinAudit) {
     if (mesh is not USkeletalMesh skin) throw new ArgumentException("Skin audit requires a skeletal mesh");
     if (basePoseMesh || args.Length != 4 || new[] { "CSS_TRACK_AUDIT", "CSS_SOURCE_TRACKS",
@@ -63,7 +76,7 @@ if (Environment.GetEnvironmentVariable("CSS_ABSOLUTE_TRACKS") == "1") {
         Environment.GetEnvironmentVariable("CSS_ANIMATION_POSES") == "1")
         throw new ArgumentException("Choose one animation export mode");
     if (mesh is not UAnimSequence absolute) throw new ArgumentException("Track export requires an AnimSequence");
-    RawAbsoluteTracks.Export(absolute, args[3]);
+    RawAbsoluteTracks.Export(absolute, args[3], fullAbsolute);
     return;
 }
 if (Environment.GetEnvironmentVariable("CSS_ADDITIVE_POSE_DELTAS") == "1") {

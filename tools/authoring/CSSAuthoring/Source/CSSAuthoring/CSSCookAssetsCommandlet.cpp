@@ -14,6 +14,8 @@
 #include "Animation/AnimBlueprint.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimSequence.h"
+#include "Animation/AnimBoneCompressionSettings.h"
+#include "Animation/AnimBoneCompressionCodec.h"
 #include "Animation/BlendSpace.h"
 #include "ControlRigBlueprint.h"
 #include "ControlRig.h"
@@ -148,6 +150,14 @@ int32 UCSSCookAssetsCommandlet::Main(const FString& Params)
         UObject* Asset = StaticLoadObject(UObject::StaticClass(), nullptr, *ObjectPath);
         bool Allowed = Asset && (Asset->IsA<UTexture2D>() || Asset->IsA<USkeletalMesh>() ||
             Asset->IsA<USkeleton>() || Asset->IsA<UPhysicsAsset>());
+        if (UAnimBoneCompressionSettings* Settings = Cast<UAnimBoneCompressionSettings>(Asset))
+        {
+            Allowed = PackageName.StartsWith(TEXT("/Game/CSS/Locomotion/")) &&
+                Settings->Codecs.Num() == 1 && Settings->Codecs[0] &&
+                Settings->Codecs[0]->GetOuter() == Settings &&
+                Settings->Codecs[0]->GetClass()->GetPathName() ==
+                    TEXT("/Script/ACLPlugin.AnimBoneCompressionCodec_ACL");
+        }
         if (UAnimSequence* Sequence = Cast<UAnimSequence>(Asset))
         {
             Allowed = Sequence->GetSkeleton() && !Sequence->IsValidAdditive() &&
