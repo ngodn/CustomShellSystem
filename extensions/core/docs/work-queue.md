@@ -20,10 +20,13 @@ The release pair command builds just CSSX and Cheat Menu from an annotated
 tag exported with git archive, without a worktree or other unfinished changes.
 Its source-isolation test and all 11 host suites pass. BBCode changelogs and
 updated file-upload instructions are under docs/nexus/cssx/ and
-docs/nexus/cssx-cheat-menu/. The release commit is c0d1f04; its first local pair
-passed archive verification. The corrected output layout is being rebuilt
-from updated local annotated tags before handoff. No remote publication is
-requested. The installed test build remains Cheat
+docs/nexus/cssx-cheat-menu/. Final source is ad6c573, tagged locally as
+cssx-v1.3.1 and v1.1.2-cheat-menu. The two ZIPs, their checksums and both short
+BBCode notes are together in extensions/core/dist/cssx-v1.3.1/. Release builds,
+archive/PE/hash checks, tag provenance and exact tagged note bytes pass. The
+superseded candidate directory was removed. The report is in ignored
+work/cssx-1.3.1-release-verification.json. No remote publication occurred.
+The installed test build remains Cheat
 Menu 1.1.1 with the same number-field implementation; its manifest has not
 been relabelled 1.1.2 during release preparation.
 
