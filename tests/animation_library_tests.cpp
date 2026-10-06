@@ -244,7 +244,7 @@ int main(int argc,char** argv) {
             expect(packages.diagnostics.at("rejected")==4,"Bad library packages were not reported independently");
             expect(packages.diagnostics.at("loaded")==1,"Valid packaged library did not load");
         }
-        if((argc==3 || argc==4) && (std::string_view(argv[1])=="--audited-pack" || std::string_view(argv[1])=="--audited-facial-pack" ||
+        if((argc>=3 && argc<=5) && (std::string_view(argv[1])=="--audited-pack" || std::string_view(argv[1])=="--audited-facial-pack" ||
                        std::string_view(argv[1])=="--audited-face-motion-pack" ||
                        std::string_view(argv[1])=="--audited-blender-face-pack" ||
                        std::string_view(argv[1])=="--audited-dance-pack" ||
@@ -264,7 +264,7 @@ int main(int argc,char** argv) {
                        std::string_view(argv[1])=="--audited-isolated-pack")) {
             const bool cinderella=std::string_view(argv[1])=="--audited-cinderella-pack" ||
                                   std::string_view(argv[1])=="--audited-cinderella-only-pack";
-            expect(argc==3 || cinderella,"An expected study asset is only supported for Cinderella audits");
+            expect(argc==3 || cinderella,"Additional reference data is only supported for Cinderella audits");
             const bool author_face=cinderella || std::string_view(argv[1])=="--audited-jali3-face-pack" ||
                                    std::string_view(argv[1])=="--audited-jali3-face-only-pack";
             const bool commander_face=author_face || std::string_view(argv[1])=="--audited-cw-face-pack" ||
@@ -291,7 +291,7 @@ int main(int argc,char** argv) {
             const auto& audited=packages.animation_libraries[0];
             expect(audited.entries.size()==(cinderella?63:locomotion?62:dances?59:57) && audited.adapters.size()==(expanded?6:5),"Audited animation set changed");
             if(cinderella) {
-                const std::string_view expected_asset=argc==4?argv[3]:
+                const std::string_view expected_asset=argc>=4?argv[3]:
                     "/Game/CSS/Locomotion/Studies/C10/AN_Cinderella.AN_Cinderella";
                 const auto match=resolve_library_performance(packages.animation_libraries,"css.eve.dance.cinderella",base);
                 expect(match.entry && match.entry->playback==AnimationPlayback::Once && match.entry->hide_weapons &&
@@ -363,8 +363,24 @@ int main(int argc,char** argv) {
                 if(commander_face) {
                     const auto& rig=audited.faces.back();
                     expect(rig.id=="css.commanderwhite.face" && rig.expressions.size()==9 &&
-                           rig.morphs.size()==74 && rig.adapters.size()==1 && rig.performances.empty(),
+                           rig.morphs.size()==74 && rig.adapters.size()==1 && rig.performances.size()==(argc==5?1:0),
                            "Commander White lost its verified static expression contract");
+                    if(argc==5) {
+                        const auto reference=FacialPerformance::parse(read_json(argv[4]).at("performance"),rig.morphs);
+                        const auto* mapped=rig.find_performance(reference.clip);
+                        expect(reference.curves.size()==4 && mapped && mapped->duration==reference.duration &&
+                               mapped->curves.size()==4 && mapped->key_count()==reference.key_count(),
+                               "Packaged CW performance differs from its verified mapping");
+                        for(size_t i=0;i<reference.curves.size();++i) {
+                            const auto& expected=reference.curves[i];
+                            const auto& actual=mapped->curves[i];
+                            expect(actual.morph==expected.morph && actual.keys.size()==expected.keys.size(),
+                                   "Packaged CW curve identity or key count differs");
+                            for(size_t j=0;j<expected.keys.size();++j)
+                                expect(actual.keys[j].seconds==expected.keys[j].seconds && actual.keys[j].value==expected.keys[j].value,
+                                       "Packaged CW facial key changed");
+                        }
+                    }
                 }
                 size_t matched=0;
                 for(const auto& outfit:packages.outfits) for(const auto& variant:outfit.variants) {

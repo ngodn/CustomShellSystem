@@ -1,5 +1,12 @@
 # Shared animation acceptance
 
+Latest facial addition: `cw-jaw-trial-v1` retains C11 and adds CW's jaw-only
+Gesture 200 facial performance. Its geometry matches 32 fresh source poses
+within 0.007691 cm, and native sampling/restoration and packaged loader checks
+pass. All 98 cooked exports are unchanged. CW's other five facial performances
+remain unfinished; nothing in this candidate is installed or live-accepted.
+See [CW facial evidence](shared-animation-cw-face.md).
+
 October 7 update: `cinderella-combined-v2` combines 63
 body/movement IDs with four native locomotion alternatives, six updated Eve
 faces and the verified Commander White face. It preserves all 31 photo poses

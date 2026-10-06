@@ -4,6 +4,7 @@
 #include <cmath>
 #include <iostream>
 #include <limits>
+#include <string_view>
 
 using namespace css;
 namespace {
@@ -122,11 +123,25 @@ int main(int argc,char** argv) {
             auto curve=j["curves"][0];j["curves"]=Json::array();
             for(int i=0;i<129;++i) j["curves"].push_back(curve);
         });
-        if(argc==2) {
-            const auto actual=read_json(argv[1]);
+        const bool cw_jaw=argc==3 && std::string_view(argv[1])=="--cw-jaw";
+        if(argc==2 || cw_jaw) {
+            const auto actual=read_json(argv[cw_jaw?2:1]);
             const auto names=actual.at("morphs").get<std::vector<std::string>>();
             const auto clip=FacialPerformance::parse(actual.at("performance"),names);
-            expect(clip.curves.size()==15 && clip.key_count()==987,"Come Closer source curves changed");
+            if(cw_jaw) {
+                expect(clip.clip=="css.eve.performance.example200" && clip.duration==.36 &&
+                       clip.curves.size()==4 && clip.key_count()==260,"CW jaw mapping changed");
+                const std::map<std::string,float> selected={{"CSSF_jnt_JawOpen_Q1",.1f},
+                    {"CSSF_jnt_JawOpen_Q2",.2f},{"CSSF_jnt_JawOpen_Q3",.3f},
+                    {"CSSF_jnt_JawOpen_Q4",.4f},{"CSSF_ctrl_SmileFullFace_Q4",.05f}};
+                FacialPerformancePose mapped(clip,selected);
+                expect(mapped.sample(0.,0.)==selected,"CW mapping changed entry baseline");
+                expect(mapped.sample(.18,1.).at("CSSF_ctrl_SmileFullFace_Q4")==0,
+                       "CW static smile contaminated the jaw performance");
+                expect(mapped.sample(.36,0.)==selected,"CW jaw performance did not restore the selected expression");
+            } else {
+                expect(clip.curves.size()==15 && clip.key_count()==987,"Come Closer source curves changed");
+            }
             std::vector<float> zeros(clip.curves.size()),values(clip.curves.size());
             for(const auto& row:actual.at("samples")) {
                 clip.sample(row.at("seconds").get<double>(),1.,zeros,values);

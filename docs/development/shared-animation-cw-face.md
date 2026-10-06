@@ -159,3 +159,41 @@ source controls. Curve mapping, negative/overshoot values, combined tongue
 controls, fitted transfer, bounded catalog size, cooking and live behavior
 remain to be implemented and checked. The accepted cooked CW face still has
 eight expressions plus Neutral and no facial performances.
+
+## First mapped performance: ATOOL Gesture 200
+
+`cw-jaw-trial-v1` adds Commander White's first mapped facial performance using
+the four already cooked jaw shapes. Gesture 200 contains only `jaw_open`, so
+this does not omit any source curve. Its original 0.36-second timing and body
+clip remain unchanged. The other five facial performances remain unfinished
+for Commander White.
+
+`compile_facial_control.py` converts the measured cubic control interpolation
+to the runtime's linear curves. It splits at spline boundaries, bounds the
+interpolation error from the second derivative, and reduces keys using the
+actual morph displacement. Float32 conversion is included in the bound.
+Three tests cover a known cubic trajectory with reversals, constant motion
+and invalid inputs. Existing limits are unchanged.
+
+The 275 source keys become 65 keys for each of four morphs. Conversion from
+the cubic control model is bounded by 0.000498 cm. A separate Blender run
+evaluates 32 new source jaw poses. After the existing Unreal morph filter,
+the mapped geometry differs by at most 0.007691 cm, below the unchanged
+0.015 cm source-comparison limit. This is within-character geometry evidence;
+Commander White retains her own jaw shape and proportions.
+
+The private package changes only the catalog. All 98 cooked exports and every
+other catalog entry remain unchanged. Its manifest is 244,391 bytes, below
+the existing 256 KiB limit. Combined and pack-only loader checks pass 1,398
+and 1,386 assertions. Native facial checks pass 220 assertions, including all
+32 reference samples, entry blending, clearing the prior smile and restoring
+it afterward. The previous C11 pack still passes 1,133 checks, and the ordinary
+facial suite passes 56.
+
+Evidence: `cw-gesture200-curves-v2`, `cw-gesture200-source-v1`, and
+`cw-jaw-trial-v1/host-validation.json`. Reproduction uses
+`prepare_cw_jaw_performance.py` and `package_cw_jaw_trial.py`. The first package
+preflight used a string where a Path was required and failed before creating
+output; the corrected package passes metadata readback and source hashes.
+No runtime DLL, original source or installed outfit changed. Live facial
+appearance and gameplay acceptance remain pending.
