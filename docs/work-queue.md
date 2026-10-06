@@ -2,6 +2,21 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
+Seductress S8 now also passes full raw/cooked comparison: 4,641 keys,
+388 tracks, maximum position error 0.003582 cm. The independent 480 Hz
+cooked scan covers 9,281 poses; visible foot materials 23/24/27 have worst
+penetration 0.025908 cm, with no samples below -0.1 cm. Evidence lives in
+`s8-shared-cook-v3/{full-motion-comparison,cooked-visible-contact-summary}.json`.
+The BodyHairV42 playback adapter now passes Windows cook and independent
+comparison against the released outfit graph, including 23 serialized CSS
+defaults and the original secondary-motion nodes. The three legacy rig
+dependencies are explicitly hashed and left unchanged. See
+`seductress-adapter-cook-v2/probe/verified-binding.json`. This is structural
+physics preservation, not live physics acceptance. Remaining clips, footwear,
+catalog integration and live checks still prevent release; nothing installed.
+Both cook and package jobs finished successfully. Continue broader clip
+coverage before returning to the small CW facial interpolation residual.
+
 Seductress S8 cook integration now passes. `CSSCookAssets` accepts explicitly
 hashed external skeleton/retarget-mesh dependencies without recooking them.
 An isolated `/Game/CSS/Locomotion/Studies/S8/AN_ComeCloserFlat` candidate clears

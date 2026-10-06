@@ -396,7 +396,15 @@ its editor preview mesh and owns its compression settings. Fresh readback,
 both Windows cooks, two-export container round-trip and independent decoding
 of all 4,641 keys / 388 tracks pass. The private trio totals 1,645,446 bytes;
 41 protected authoring inputs and released outfit containers are unchanged.
-Evidence: `s8-shared-cook-v3/acceptance-checkpoint.json`. Full raw/cooked pose
-comparison, compressed contact, the broader clip set, full physics and live
-acceptance remain. This isolated study has not been installed or added to the
-playable shared catalog.
+Evidence: `s8-shared-cook-v3/acceptance-checkpoint.json`. Subsequent full
+raw/cooked comparison passes all 4,641 keys, maximum position error
+0.003582 cm. Independent 480 Hz cooked sampling passes visible-foot contact:
+worst penetration 0.025908 cm left and 0.017154 cm right. See
+`s8-shared-cook-v3/{full-motion-comparison,cooked-visible-contact-summary}.json`.
+The BodyHairV42 adapter also passes Windows cooking and independent comparison
+against the released outfit graph, preserving the original secondary-motion
+nodes and 23 serialized CSS defaults. Three legacy rig dependencies are hashed
+external boundaries, not recooked assets. Evidence:
+`seductress-adapter-cook-v2/probe/verified-binding.json`.
+The broader clip set, footwear, full physics and live acceptance remain.
+This isolated study has not been installed or added to the playable catalog.

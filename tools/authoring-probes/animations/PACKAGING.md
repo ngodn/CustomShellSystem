@@ -39,3 +39,18 @@ The current six-adapter fixture is also accepted by the host test executable's
 
 These checks establish package structure, catalog resolution and unchanged
 payloads. They do not replace live animation, physics or interruption checks.
+
+For legacy authoring dependencies, run `inspect_external_rig_assets.py` in
+UE 5.6.1 with `CSS_ANIM_WORK` pointing to a private animation workspace whose
+`cook.txt` lists the shared roots. It traverses package dependencies and writes
+`external.txt` for `CSSCookAssets -ExternalRigAssets=...`. Only existing
+CSSAuthoring skeletons and skeletal meshes become external boundaries, with
+hashes checked before and after traversal. Other dependencies remain subject
+to the cooker's normal path checks.
+
+`package_adapter_probe.py --help` describes the single-adapter comparison
+step. It requires a successful cook and fresh authored graph receipt, mounts
+the original outfit beside the probe, then independently decodes and compares
+the original and cooked graphs. Its `probe/verified-binding.json` is evidence
+for the descriptor's `bindings` field. Complete per-clip evaluation is still
+required separately; this probe cannot approve an adapter for all animations.
