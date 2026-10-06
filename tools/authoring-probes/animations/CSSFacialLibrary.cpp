@@ -6,9 +6,55 @@
 #include "Misc/FileHelper.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "Serialization/MemoryWriter.h"
+#include "UObject/UnrealType.h"
 #include "SkeletalMeshAttributes.h"
 #include "Rendering/SkeletalMeshModel.h"
 #include "Rendering/SkeletalMeshLODModel.h"
+
+namespace
+{
+bool ReadFacialPointMap(const TSharedPtr<FJsonObject>& Root, const FMeshDescription& Description,
+    TArray<int32>& PointMap, FString& Error)
+{
+    double Schema=0;
+    const TArray<TSharedPtr<FJsonValue>> *Points=nullptr, *Indices=nullptr;
+    bool DiagnosticOnly=false;
+    if (Root->HasField(TEXT("diagnostic_only")) &&
+        (!Root->HasTypedField<EJson::Boolean>(TEXT("diagnostic_only")) ||
+         !Root->TryGetBoolField(TEXT("diagnostic_only"),DiagnosticOnly))) return false;
+    if (DiagnosticOnly || !Root->HasTypedField<EJson::Number>(TEXT("schema")) ||
+        !Root->TryGetNumberField(TEXT("schema"),Schema) || (Schema!=1 && Schema!=2) ||
+        !Root->TryGetArrayField(TEXT("body_points"),Points) || Points->IsEmpty() || Points->Num()>100000)
+        return false;
+    if (Schema==2 && (!Root->TryGetArrayField(TEXT("point_indices"),Indices) || Indices->Num()!=Points->Num()))
+        return false;
+    if (Schema==1 && Root->HasField(TEXT("point_indices"))) return false;
+    const auto Positions=FSkeletalMeshConstAttributes(Description).GetVertexPositions();
+    TSet<int32> Seen;
+    PointMap.Reset(Points->Num());
+    for (int32 I=0;I<Points->Num();++I) {
+        double Index=I;
+        if (Indices && (!(*Indices)[I]->TryGetNumber(Index) || !FMath::IsFinite(Index) ||
+            Index<0 || Index>2000000 || Index!=FMath::FloorToDouble(Index))) return false;
+        const int32 Vertex=static_cast<int32>(Index);
+        if (Seen.Contains(Vertex) || !Description.Vertices().IsValid(FVertexID(Vertex))) return false;
+        const TArray<TSharedPtr<FJsonValue>>* Coordinates=nullptr;
+        if (!(*Points)[I]->TryGetArray(Coordinates) || Coordinates->Num()!=3) return false;
+        double V[3];
+        for (int32 J=0;J<3;++J)
+            if (!(*Coordinates)[J]->TryGetNumber(V[J]) || !FMath::IsFinite(V[J])) return false;
+        if (FVector3f::Distance(Positions[FVertexID(Vertex)],FVector3f(V[0],V[1],V[2]))>.0002f) {
+            Error=FString::Printf(TEXT("point %d (source %d): actual %s, expected %s"),I,Vertex,
+                *Positions[FVertexID(Vertex)].ToString(),*FVector3f(V[0],V[1],V[2]).ToString());
+            return false;
+        }
+        PointMap.Add(Vertex);
+        Seen.Add(Vertex);
+    }
+    return true;
+}
+}
 
 FString UCSSFacialLibrary::ExpressionVertexMap(USkeletalMesh* Candidate)
 {
@@ -51,16 +97,15 @@ FString UCSSFacialLibrary::AddExpressionShapes(USkeletalMesh* Mesh, const FStrin
     if (!FFileHelper::LoadFileToString(Text, *InputFile) || Text.Len() > 64*1024*1024 ||
         !FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text), Root) || !Root)
         return TEXT("ERROR: invalid facial interchange");
-    const TArray<TSharedPtr<FJsonValue>> *Points=nullptr, *Shapes=nullptr;
-    int32 Schema=0;
-    if (!Root->TryGetNumberField(TEXT("schema"), Schema) || Schema!=1 ||
-        !Root->TryGetArrayField(TEXT("body_points"), Points) || Points->IsEmpty() || Points->Num()>100000 ||
+    const TArray<TSharedPtr<FJsonValue>>* Shapes=nullptr;
+    TArray<int32> PointMap;
+    FString PointError;
+    if (!ReadFacialPointMap(Root,*Mesh->GetMeshDescription(0),PointMap,PointError) ||
         !Root->TryGetArrayField(TEXT("morph_targets"), Shapes) || Shapes->IsEmpty() || Shapes->Num()>128)
-        return TEXT("ERROR: invalid facial counts or schema");
+        return TEXT("ERROR: invalid facial schema, counts or point correspondence: ")+PointError;
     // Build a detached description first. Validation cannot partly alter the candidate.
     FMeshDescription Description=*Mesh->GetMeshDescription(0);
     FSkeletalMeshAttributes Attributes(Description);
-    const auto Positions=Attributes.GetVertexPositions();
     auto Numbers=[](const TSharedPtr<FJsonValue>& Value, int32 Count, TArray<double>& Out)
     {
         const TArray<TSharedPtr<FJsonValue>>* Values=nullptr;
@@ -74,11 +119,6 @@ FString UCSSFacialLibrary::AddExpressionShapes(USkeletalMesh* Mesh, const FStrin
         return true;
     };
     TArray<double> Values;
-    for (int32 Index=0; Index<Points->Num(); ++Index) {
-        if (!Description.Vertices().IsValid(FVertexID(Index)) || !Numbers((*Points)[Index],3,Values) ||
-            FVector3f::Distance(Positions[FVertexID(Index)],FVector3f(Values[0],Values[1],Values[2]))>.0002f)
-            return FString::Printf(TEXT("ERROR: body point order/fit differs at %d"),Index);
-    }
     const int32 PreviousCount=Mesh->GetMorphTargets().Num();
     TSet<FName> Names;
     for (const auto& Value:*Shapes) {
@@ -87,7 +127,7 @@ FString UCSSFacialLibrary::AddExpressionShapes(USkeletalMesh* Mesh, const FStrin
         FString Name;
         if (!Value->TryGetObject(Shape) || !(*Shape)->TryGetStringField(TEXT("name"),Name) ||
             Name.IsEmpty() || Name.Len()>64 || Names.Contains(FName(*Name)) || Mesh->FindMorphTarget(FName(*Name)) ||
-            !(*Shape)->TryGetArrayField(TEXT("deltas"),Deltas) || Deltas->IsEmpty() || Deltas->Num()>Points->Num())
+            !(*Shape)->TryGetArrayField(TEXT("deltas"),Deltas) || Deltas->IsEmpty() || Deltas->Num()>PointMap.Num())
             return TEXT("ERROR: invalid or existing expression shape");
         for (TCHAR Character:Name)
             if (!FChar::IsAlnum(Character) && Character!=TEXT('_')) return TEXT("ERROR: invalid shape name");
@@ -97,9 +137,9 @@ FString UCSSFacialLibrary::AddExpressionShapes(USkeletalMesh* Mesh, const FStrin
         auto MorphPositions=Attributes.GetVertexMorphPositionDelta(MorphName);
         TSet<int32> Seen;
         for (const auto& Delta:*Deltas) {
-            if (!Numbers(Delta,4,Values) || Values[0]<0 || Values[0]>=Points->Num() ||
+            if (!Numbers(Delta,4,Values) || Values[0]<0 || Values[0]>=PointMap.Num() ||
                 Values[0]!=FMath::FloorToDouble(Values[0])) return TEXT("ERROR: invalid morph index");
-            const int32 Index=static_cast<int32>(Values[0]);
+            const int32 Index=PointMap[static_cast<int32>(Values[0])];
             const FVector3f Position(Values[1],Values[2],Values[3]);
             if (Seen.Contains(Index) || Position.Size()>20) return TEXT("ERROR: duplicate or oversized face delta");
             Seen.Add(Index);
@@ -148,7 +188,10 @@ FString UCSSFacialLibrary::VerifyExpressionShapes(USkeletalMesh* Source, USkelet
         !FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text),Root) || !Root)
         return TEXT("ERROR: invalid comparison interchange");
     const TArray<TSharedPtr<FJsonValue>>* Shapes=nullptr;
-    if (!Root->TryGetArrayField(TEXT("morph_targets"),Shapes) || Shapes->IsEmpty() || Shapes->Num()>128)
+    TArray<int32> PointMap;
+    FString PointError;
+    if (!ReadFacialPointMap(Root,*After,PointMap,PointError) ||
+        !Root->TryGetArrayField(TEXT("morph_targets"),Shapes) || Shapes->IsEmpty() || Shapes->Num()>128)
         return TEXT("ERROR: invalid comparison shapes");
     const FSkeletalMeshModel* Model=Candidate->GetImportedModel();
     if (!Model || Model->LODModels.Num()!=1) return TEXT("ERROR: unexpected built LODs");
@@ -175,8 +218,8 @@ FString UCSSFacialLibrary::VerifyExpressionShapes(USkeletalMesh* Source, USkelet
             double V[4];
             for (int32 I=0;I<4;++I)
                 if (!(*Values)[I]->TryGetNumber(V[I]) || !FMath::IsFinite(V[I])) return TEXT("ERROR: invalid comparison number");
-            if (V[0]<0 || V[0]>100000 || V[0]!=FMath::FloorToDouble(V[0])) return TEXT("ERROR: invalid comparison vertex");
-            const int32 Index=static_cast<int32>(V[0]);
+            if (V[0]<0 || V[0]>=PointMap.Num() || V[0]!=FMath::FloorToDouble(V[0])) return TEXT("ERROR: invalid comparison vertex");
+            const int32 Index=PointMap[static_cast<int32>(V[0])];
             if (!After->Vertices().IsValid(FVertexID(Index)) || Expected.Contains(Index)) return TEXT("ERROR: invalid comparison point");
             Expected.Add(Index,FVector3f(V[1],V[2],V[3]));
         }
@@ -208,4 +251,78 @@ FString UCSSFacialLibrary::VerifyExpressionShapes(USkeletalMesh* Source, USkelet
         return FString::Printf(TEXT("ERROR: omitted facial delta %.9f cm exceeds build threshold"),MaxOmittedDelta);
     return FString::Printf(TEXT("PASS: %d shapes, %d built deltas, retained error %.9f cm, filtered maximum %.9f cm (threshold %.9f)"),
         Shapes->Num(),Compared,MaxError,MaxOmittedDelta,LODInfo->BuildSettings.MorphThresholdPosition);
+}
+
+FString UCSSFacialLibrary::VerifyExpressionPreservation(USkeletalMesh* Source, USkeletalMesh* Candidate)
+{
+    if (!IsRunningCommandlet() || !Source || !Candidate || Source==Candidate ||
+        !Candidate->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/SK_Face_")))
+        return TEXT("ERROR: expected isolated facial comparison");
+    FAssetCompilingManager::Get().FinishAllCompilation();
+    if (Source->GetLODNum()!=1 || Candidate->GetLODNum()!=1 ||
+        !Source->GetMeshDescription(0) || !Candidate->GetMeshDescription(0))
+        return TEXT("ERROR: expected one source-description LOD");
+
+    // Remove only the new morph attributes from copies. Every other serialized
+    // attribute, including skin weights, UVs, normals and topology, must match.
+    FMeshDescription Before=*Source->GetMeshDescription(0), After=*Candidate->GetMeshDescription(0);
+    FSkeletalMeshAttributes Original(Before), Derived(After);
+    const auto OriginalNames=Original.GetMorphTargetNames();
+    int32 Added=0;
+    for (const FName Name:Derived.GetMorphTargetNames()) {
+        if (!OriginalNames.Contains(Name)) {
+            if (!Derived.UnregisterMorphTargetAttribute(Name)) return TEXT("ERROR: could not isolate base attributes");
+            ++Added;
+        }
+    }
+    TArray<uint8> A, B;
+    FMemoryWriter WriterA(A,true), WriterB(B,true);
+    Before.Serialize(WriterA);
+    After.Serialize(WriterB);
+    if (WriterA.IsError() || WriterB.IsError() || A!=B)
+        return FString::Printf(TEXT("ERROR: non-expression mesh description differs (%d / %d bytes)"),A.Num(),B.Num());
+    const int32 DescriptionBytes=A.Num();
+    A.Empty(); B.Empty();
+
+    const FSkeletalMeshModel *Old=Source->GetImportedModel(), *Now=Candidate->GetImportedModel();
+    if (!Old || !Now || Old->LODModels.Num()!=1 || Now->LODModels.Num()!=1)
+        return TEXT("ERROR: missing built LOD");
+    const auto &OldLOD=Old->LODModels[0], &NewLOD=Now->LODModels[0];
+    if (OldLOD.Sections.Num()!=NewLOD.Sections.Num() || OldLOD.IndexBuffer!=NewLOD.IndexBuffer ||
+        OldLOD.MeshToImportVertexMap!=NewLOD.MeshToImportVertexMap ||
+        OldLOD.ActiveBoneIndices!=NewLOD.ActiveBoneIndices || OldLOD.RequiredBones!=NewLOD.RequiredBones)
+        return TEXT("ERROR: built topology or bone mapping changed");
+    int64 SectionBytes=0;
+    auto WriteSection=[](FArchive& Ar,FSkelMeshSection& Section) {
+        Ar << Section.MaterialIndex << Section.BaseIndex << Section.NumTriangles << Section.BaseVertexIndex;
+        Ar << Section.bRecomputeTangent << Section.RecomputeTangentsVertexMaskChannel;
+        Ar << Section.bCastShadow << Section.bVisibleInRayTracing << Section.bDisabled;
+        Ar << Section.BoneMap << Section.NumVertices << Section.MaxBoneInfluences << Section.bUse16BitBoneIndex;
+        Ar << Section.CorrespondClothAssetIndex << Section.ClothingData << Section.ClothMappingDataLODs;
+        Ar << Section.GenerateUpToLodIndex << Section.OriginalDataSectionIndex << Section.ChunkedParentSectionIndex;
+        Ar << Section.OverlappingVertices;
+        int32 Count=Section.SoftVertices.Num();
+        Ar << Count;
+        for (auto& Vertex:Section.SoftVertices) {
+            Ar << Vertex.Position << Vertex.TangentX << Vertex.TangentY << Vertex.TangentZ << Vertex.Color;
+            for (auto& UV:Vertex.UVs) Ar << UV;
+            for (auto& Bone:Vertex.InfluenceBones) Ar << Bone;
+            for (auto& Weight:Vertex.InfluenceWeights) Ar << Weight;
+        }
+    };
+    for (int32 I=0;I<OldLOD.Sections.Num();++I) {
+        auto OldSection=OldLOD.Sections[I], NewSection=NewLOD.Sections[I];
+        TArray<uint8> OldBytes, NewBytes;
+        FMemoryWriter OldWriter(OldBytes,true), NewWriter(NewBytes,true);
+        WriteSection(OldWriter,OldSection);
+        WriteSection(NewWriter,NewSection);
+        if (OldWriter.IsError() || NewWriter.IsError() || OldBytes!=NewBytes)
+            return FString::Printf(TEXT("ERROR: built section %d differs"),I);
+        SectionBytes+=OldBytes.Num();
+    }
+    const FProperty* Cloth=FindFProperty<FProperty>(USkeletalMesh::StaticClass(),USkeletalMesh::GetMeshClothingAssetsMemberName());
+    if (!Cloth || !Cloth->Identical_InContainer(Source,Candidate,0,PPF_DeepComparison))
+        return TEXT("ERROR: persistent clothing data differs");
+    return FString::Printf(TEXT("PASS: %d description bytes, %d sections (%lld bytes), %d cloth assets; %d added morphs excluded"),
+        DescriptionBytes,OldLOD.Sections.Num(),SectionBytes,Source->GetMeshClothingAssets().Num(),Added);
 }

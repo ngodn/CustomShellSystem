@@ -16,6 +16,10 @@ public:
     static FString VerifyExpressionShapes(class USkeletalMesh* Source, class USkeletalMesh* Candidate,
         const FString& InputFile);
 
+    /** Compare non-expression mesh data and persistent cloth properties after a facial rebuild. */
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static FString VerifyExpressionPreservation(class USkeletalMesh* Source, class USkeletalMesh* Candidate);
+
     /** Export render-to-source indices for independent cooked-delta comparison. */
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString ExpressionVertexMap(class USkeletalMesh* Candidate);

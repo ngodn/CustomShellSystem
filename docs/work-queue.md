@@ -2,6 +2,29 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
+October 6 continuation: Commander White's original jaw and left/right blink
+controls now have an isolated, saved 12-shape trial. The source evaluation
+combines joint movement and corrective shapes. Fitted correspondence accounts
+for the recorded 547-point skirt insertion and matches the current C4 assembly
+within 0.000007645 cm. Original sources and installed files remain unchanged.
+`cw-facial-native-v3` records creation and fresh readback, retaining all 16
+existing morphs. `cw-facial-preservation-v2` proves the remaining mesh description,
+69 built sections and stored cloth properties match. The same preservation
+check passes all six existing Eve facial meshes in
+`cw-facial-preservation-legacy-v1`. Eighteen strict schema rejection cases pass;
+the earlier JSON boolean coercion failure is fixed and its receipt retained.
+
+`cw-facial-interpolation-v1` evaluates independent eighth-weight source samples
+and combined jaw/blinks. Quarter-weight interpolation has maximum point error
+0.010966 cm against a declared 0.015 cm limit. Combined-control interaction is
+at most 0.000179 cm at the four tested strengths. This measures the source
+approximation, not cooked morph filtering or in-game facial motion. Next expand
+verified source controls and character-specific mappings, then cook and check
+runtime restoration/physics. Unknown source tracks, the older Seductress cook
+dependencies, native-human ownership, wider compatibility and full release
+acceptance remain open. See the updated coverage matrix and
+`tools/authoring-probes/animations/FACIAL.md`.
+
 L5X full previews are now terminal, both render and encoding exits zero.
 `l5x-cook/full-render-review.json` verifies complete videos: DumbDumb 1,972
 frames / 65.733333 s and Iris Out 501 frames / 16.7 s, both 30 FPS at original

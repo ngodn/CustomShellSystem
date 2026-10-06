@@ -81,6 +81,51 @@ Do not treat a source control name or static dependency trace as expression
 acceptance. `source-drivers.json`, `jaw-blink-evidence.json`, the source hash
 and zero-exit command receipt record this finding. No derived face is installed.
 
+### Evaluated jaw and blink trial
+
+`cw-facial-samples-v1` evaluates jaw open and left/right blink at 0.25, 0.5,
+0.75 and 1.0, including the body, eyelashes and tear surface. Each source
+control returns to neutral within 0.00001 cm. `cw-facial-bake-v2` checks the
+affected points against B9 and the actual C4 assembly. The recorded S7 skirt
+insertion shifts later points, including eyelashes, by 547. Every affected
+point matches the current assembly within 0.000007645 cm. The initial attempt
+without that offset was rejected by the native point check and never saved.
+
+The isolated `/Game/CSS/AnimLab/SK_Face_CWJ1` retains 16 original morphs and adds
+12 quarter-weight shapes. Creation and fresh reload pass in
+`cw-facial-native-v3`, including 76,484 built deltas, filtering bounded by the
+original 0.015 cm build threshold, and unchanged material, skeleton, physics
+and post-process bindings. Endpoint and half-strength front/quarter views were
+reviewed in `cw-facial-preview-v1`; this is not full-motion or gameplay review.
+
+`cw-facial-preservation-v2` also compares all non-expression mesh-description
+bytes (294,193,348), 69 built sections (382,233,853 comparison bytes), topology,
+bone maps and persistent properties of the one cloth asset. The new morph
+attributes are removed only from in-memory comparison copies. Everything else
+in those comparisons matches exactly. The same check passes all six existing
+Eve facial candidates, including their three cloth-bearing meshes, in
+`cw-facial-preservation-legacy-v1`. This proves stored-data preservation, not
+the behavior or cost of the live cloth solver.
+
+The strict parser rejects fractional/string/boolean/null schema values and
+non-boolean or enabled diagnostic-only flags. Nine negative cases pass on
+each schema, while valid saved assets still read back. Schema 1 remains the
+existing Eve format; schema 2 supplies explicit sparse source point indices.
+The earlier string-to-boolean coercion failure is retained in
+`cw-facial-strict-v1`, with its correction passing in `cw-facial-strict-v2`.
+
+`cw-facial-interpolation-v1` independently samples strengths 0.125, 0.375,
+0.625 and 0.875. Twelve individual and four combined evaluations stay within
+0.010966 cm of the quarter-weight linear approximation, below the declared
+0.015 cm source-approximation limit. Combined jaw/blink interaction is at most
+0.000179 cm at those strengths. This does not test all unequal combinations,
+cooked filtering, expression-to-control mappings or runtime blending.
+
+Next expand verified controls and expressions, cook the derived mesh, and
+validate facial playback/restoration and full outfit behavior. No CW facial
+trial is catalog-bound, installed or accepted for release. Other characters'
+facial capability remains separate from body animation compatibility.
+
 ## Native human path
 
 `work/cine-animation-port/native-human-compatibility/assets.json` independently

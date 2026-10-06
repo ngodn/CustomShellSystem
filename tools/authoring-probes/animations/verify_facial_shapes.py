@@ -39,6 +39,9 @@ for source_path in sources:
     result=unreal.CSSFacialLibrary.verify_expression_shapes(source,target,str(input_path))
     if not result.startswith('PASS:'):
         raise ValueError(f'{target_path}: {result}')
+    preservation=unreal.CSSFacialLibrary.verify_expression_preservation(source,target)
+    if not preservation.startswith('PASS:'):
+        raise ValueError(f'{target_path}: {preservation}')
     before=json.loads(unreal.CSSRetargetLibrary.inspect_mesh_bind_pose(source))
     if before!=json.loads(unreal.CSSRetargetLibrary.inspect_mesh_bind_pose(target)):
         raise ValueError('Bone binding changed')
@@ -49,7 +52,7 @@ for source_path in sources:
     actual={str(m.get_name()) for m in target.get_editor_property('morph_targets')}
     if actual!=old|expression_names:
         raise ValueError('Morph names changed')
-    records.append(dict(source=source_path,candidate=target_path,result=result,
+    records.append(dict(source=source_path,candidate=target_path,result=result,preservation=preservation,
                         preserved_morphs=len(old),total_morphs=len(actual)))
     (WORK/'ue-verification.json').write_text(json.dumps(dict(
         results=records,complete=False),indent=2)+'\n')
@@ -58,4 +61,4 @@ if any(hashlib.sha256(Path(path).read_bytes()).hexdigest()!=sha for path,sha in 
     raise ValueError('Readback modified an asset')
 (WORK/'ue-verification.json').write_text(json.dumps(dict(
     complete=True,results=records,protected=protected,installed=False,
-    scope='Fresh-process editor geometry, morph deltas and bindings. Cooked/live playback unverified.'),indent=2)+'\n')
+    scope='Fresh-process editor geometry, morphs, built sections, persistent cloth properties and bindings. Cooked/live playback unverified.'),indent=2)+'\n')
