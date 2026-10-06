@@ -72,7 +72,8 @@ UAnimBlueprint* UCSSPerformanceLibrary::CreatePerformanceLayer(UAnimBlueprint* S
         TEXT("/Game/CSS/EveTest/ABP_KnitFeet1.ABP_KnitFeet1"),
         TEXT("/Game/CSS/UnholyGenessa/ABP_Wings2.ABP_Wings2"),
         TEXT("/Game/CSS/CWTest/ABP_BodyHairB4.ABP_BodyHairB4"),
-        TEXT("/Game/CSS/GeneXXa/ABP_Secondary.ABP_Secondary")
+        TEXT("/Game/CSS/GeneXXa/ABP_Secondary.ABP_Secondary"),
+        TEXT("/Game/CSS/CSS_SeduXtress_eins0fx_P/ABP_SeduXtress_BodyHairV42.ABP_SeduXtress_BodyHairV42")
     };
     if (!IsRunningCommandlet() || !Source || !Sources.Contains(Source->GetPathName()) ||
         !Source->GeneratedClass || !Source->TargetSkeleton ||

@@ -2,6 +2,14 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
+Older Seductress continuation: an isolated BodyHairV42 performance adapter now
+passes creation and fresh reload with all 27 CSS controls and 31 original nodes
+retained. All six released mesh bind poses match their authoring assets and
+each other. They differ from current Eve at 50 local references, including
+large wrist offsets, so retargeting remains required before catalog activation.
+No existing package or game installation changed. See the older Seductress
+section of the outfit coverage matrix for receipts and remaining acceptance.
+
 October 6 requested showcase: generated offline vertical Black Hole body/finger
 bone and Come Closer facial videos in `work/cine-animation-port/reels-20261006`.
 User requested the Commander White CINE callout design, no Eve label, all

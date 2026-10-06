@@ -17,7 +17,7 @@ editor/cooked graph equivalence or playback acceptance.
 | Project | Package evidence | Animation work remaining |
 | --- | --- | --- |
 | GeneXXa / Nunexxa | Two v1.0.0 meshes; shared base reference and nine virtual-bone definitions match Eve exactly | Fixed-physics adapter passes 20 moving clips on both meshes and independent cooked graph comparison; shared packaging and isolated dependency/catalog checks pass; live acceptance pending |
-| Seductress | Six packaged variants: Midas, Argent, Noir, Violette, Regalia, Flora | Older 379-bone reference differs on 72 common bones; inspect retarget behavior and preserve BodyHairV42 graph |
+| Seductress | Six packaged variants: Midas, Argent, Noir, Violette, Regalia, Flora | BodyHairV42 adapter passes creation/reload; cooked mesh binds match authoring; distinct reference still needs animation conversion and playback checks |
 | Seductress v2.0.6 | Manifest lists 18 variants, but local build TOC hash and bulk size differ from that manifest | Locate a consistent original package before using it as a fixture; do not alter this build to make the audit pass |
 | Seductress Next-Gen Showcase | One packaged variant using the native human skeleton; mesh has no post-process graph | Native-human sequence and playback path needed |
 | Protocol Echelon Proxima | Authoring project exists; design goal remains paused | Preserve paused project; do not treat it as a released animation fixture |
@@ -106,3 +106,34 @@ new gameplay acceptance. The installed private trial still has five adapters.
 
 Facial capability remains separate. Missing expression controls must not
 prevent compatible body animation playback.
+
+## Older Seductress adapter and bind poses
+
+`stage_seductress_performance.py` creates an isolated `ABP_Seductress` adapter
+from the original BodyHairV42 graph. UE 5.6.1 creation and fresh-process reload
+both preserve all 27 CSS controls, 31 original graph nodes and the original
+skeleton. Playback defaults remain inactive. The six original meshes still
+reference their original graph; no source mesh, skeleton or released container
+was changed. This is not yet a catalog binding or installation.
+
+All six authoring meshes have identical 379-bone bind poses. Independent
+MeshExport readback from their released containers confirms every name,
+parent and local transform: maximum position difference is 0.00000361 cm,
+maximum quaternion distance is 0.0000000555, and scales match exactly.
+This distinguishes the actual mesh binding from the earlier skeleton-asset
+comparison. Against current Black Pearl's fitted mesh, 50 local references
+differ, with wrist translation differences around 17.73 cm and wrist rotations
+around 50.34 degrees. Names and parent relationships match. Simply marking
+these rigs compatible would not establish correct hand or foot motion.
+
+Evidence under `work/cine-animation-port/expanded-outfit-inventory/`:
+`seductress-create.json`, `seductress-verify.json`,
+`seductress-mesh-reference-comparison.json`, and
+`seductress-cooked-bind-verification.json`. Build, create and verify exit codes
+are zero. The adapter still needs independent cooked graph comparison, clips
+converted for this reference, full-motion checks and live acceptance.
+
+Epic's [IK retargeting documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/ik-rig-animation-retargeting-in-unreal-engine)
+describes explicit retarget poses and exported target sequences. That is the
+appropriate next investigation here; the measured differences above are local
+asset evidence, not a claim derived from matching skeleton labels.
