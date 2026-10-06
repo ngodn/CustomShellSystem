@@ -182,15 +182,19 @@ int main(int argc,char** argv) {
                        std::string_view(argv[1])=="--audited-blender-face-pack" ||
                        std::string_view(argv[1])=="--audited-dance-pack" ||
                        std::string_view(argv[1])=="--audited-dance-isolated-pack" ||
+                       std::string_view(argv[1])=="--audited-native-pack" ||
+                       std::string_view(argv[1])=="--audited-native-only-pack" ||
                        std::string_view(argv[1])=="--audited-expanded-pack" ||
                        std::string_view(argv[1])=="--audited-expanded-isolated-pack" ||
                        std::string_view(argv[1])=="--audited-isolated-pack")) {
+            const bool native_only=std::string_view(argv[1])=="--audited-native-only-pack";
+            const bool native_pack=native_only || std::string_view(argv[1])=="--audited-native-pack";
             const bool expanded=std::string_view(argv[1])=="--audited-expanded-pack" ||
                                 std::string_view(argv[1])=="--audited-expanded-isolated-pack";
             const bool isolated=std::string_view(argv[1])=="--audited-isolated-pack" ||
                                 std::string_view(argv[1])=="--audited-expanded-isolated-pack" ||
                                 std::string_view(argv[1])=="--audited-dance-isolated-pack";
-            const bool dances=std::string_view(argv[1])=="--audited-dance-pack" ||
+            const bool dances=native_pack || std::string_view(argv[1])=="--audited-dance-pack" ||
                               std::string_view(argv[1])=="--audited-dance-isolated-pack";
             const auto packages=Catalog::load(root,argv[2],root/"audit-cache");
             expect(packages.animation_libraries.size()==1,"Audited pack did not load as one library");
@@ -206,11 +210,23 @@ int main(int argc,char** argv) {
                     expect(count==1,"Corrected dance lost its identity or playback contract");
                 }
             }
-            expect(packages.outfit_revisions.size()==(isolated?1:expanded?4:3),"Source outfits lack verified revisions");
+            if(native_pack) {
+                const std::string human="/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton";
+                const auto native=resolve_library_performance(packages.animation_libraries,"css.eve.dance.blackhole",human);
+                expect(native.entry && native.candidates.size()==1 && native.candidates[0].declared_skeleton==human &&
+                    native.candidates[0].asset=="/Game/CSS/Locomotion/NativeHuman/Studies/NH2/AN_BlackHole.AN_BlackHole",
+                    "Native Black Hole did not resolve independently of an outfit");
+                const auto custom=resolve_library_performance(packages.animation_libraries,"css.eve.dance.blackhole",base);
+                expect(custom.entry && custom.candidates.size()==1 && custom.candidates[0].declared_skeleton==base,
+                    "Native candidate displaced the custom-rig performance");
+                expect(resolve_library_performance(packages.animation_libraries,"css.eve.dance.blackhole",
+                    "/Game/Unknown/Body.Body").candidates.empty(),"Native candidate opened an unsupported rig");
+            }
+            expect(packages.outfit_revisions.size()==(native_only?0:isolated?1:expanded?4:3),"Source outfits lack verified revisions");
             size_t resolved_layers=0;
             for(const auto& adapter:audited.adapters) {
                 const auto found=packages.outfit_revisions.find(adapter.source_outfit);
-                if(isolated && found==packages.outfit_revisions.end()) {
+                if((isolated || native_only) && found==packages.outfit_revisions.end()) {
                     expect(!resolve_performance_adapter(packages.animation_libraries,adapter.source_outfit,
                         {},adapter.source_class,adapter.skeleton),"Absent outfit gained an unverified adapter");
                     continue;
@@ -221,7 +237,7 @@ int main(int argc,char** argv) {
                 expect(resolved && resolved->target_class==adapter.target_class,"Packaged adapter does not resolve");
                 ++resolved_layers;
             }
-            expect(resolved_layers>0,"Isolated outfit has no compatible performance layer");
+            expect(native_only?resolved_layers==0:resolved_layers>0,"Unexpected outfit performance layer count");
             expect(packages.diagnostics.at("rejected")==0,"Audited package set contains rejected metadata");
             if(std::string_view(argv[1])!="--audited-pack") {
                 expect(audited.faces.size()==1 && audited.faces.front().expressions.size()==21 &&

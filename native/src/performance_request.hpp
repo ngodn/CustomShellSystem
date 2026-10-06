@@ -9,6 +9,7 @@ namespace css {
 struct PerformanceContext {
     uint64_t player=0, appearance=0, catalog=0;
     std::string outfit, variant;
+    std::string mesh;
     bool operator==(const PerformanceContext&) const = default;
 };
 class PendingPerformance {
@@ -20,7 +21,8 @@ private:
     uint64_t started_=0;
 public:
     void begin(std::string id,PerformanceContext context,uint64_t now) {
-        if(id.empty() || id.size()>96 || context.outfit.empty() || context.variant.empty())
+        if(id.empty() || id.size()>96 || context.outfit.empty()!=context.variant.empty() ||
+           (context.outfit.empty() && context.mesh.empty()))
             throw std::runtime_error("Invalid performance selection");
         id_=std::move(id);context_=std::move(context);started_=now;
     }

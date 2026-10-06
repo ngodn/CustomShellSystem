@@ -1123,14 +1123,13 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         }
         section("Performance");
         const Json browse={{"action","ui_browse_performances"}};
-        const auto performance_reason=has_variant && !catalog.animation_libraries.empty()?
-            appearance.performance_unsupported(catalog,outfit):std::string("No supported library or outfit");
+        const auto performance_reason=!catalog.animation_libraries.empty()?
+            appearance.performance_unsupported(catalog,outfit):std::string("No animation library installed");
         row(5,"Dances & Photo Poses",performance_reason.empty()?browse:Json{});
         if(row_==5) {
             detail("Dances & Photo Poses",has_variant?worn->name:"Performance",
                 "Play a shared animation in the world. Your saved idle, walk, jog and sprint choices stay as they are. Move or open the menu to stop.");
             if(catalog.animation_libraries.empty()) note("Install CSS Locomotion Shared Assets to add performances.");
-            else if(!has_variant) note("Wear a supported CSS outfit first.");
             else if(!performance_reason.empty()) note(performance_reason);
             else action_button("accept","Browse performances",browse,3);
         } else {
@@ -1505,8 +1504,8 @@ Json InventoryUI::dispatch(Json action,const State& state) {
     }
     if(name=="ui_browse_performances" && catalog_ && appearance_) {
         const auto selected=state.selections.find(appearance_->shell);
-        if(selected==state.selections.end()) return {};
-        if(const auto why=appearance_->performance_unsupported(*catalog_,selected->second.outfit);!why.empty())
+        const auto outfit=appearance_->active() && selected!=state.selections.end()?selected->second.outfit:"";
+        if(const auto why=appearance_->performance_unsupported(*catalog_,outfit);!why.empty())
             {dirty_=true;return {};}
         const auto& libraries=catalog_->animation_libraries;
         if(libraries.empty()) return {};

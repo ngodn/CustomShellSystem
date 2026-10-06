@@ -65,7 +65,8 @@ public:
 class Appearance;
 class PerformancePlayer {
     PerformanceSession session_;
-    WeakObject pawn_, component_, mesh_, post_, animation_, sequence_;
+    WeakObject pawn_, component_, mesh_, post_, animation_, sequence_, montage_;
+    bool native_montage_=false, montage_blending_out_=false;
     AssetLoadRoots retained_;
     RC::Unreal::FName character_;
     std::string reason_;
@@ -79,6 +80,7 @@ class PerformancePlayer {
     void write_pose();
     void release();
     void bind_layer(RC::Unreal::UObject* pawn,const Catalog&,const std::string& outfit);
+    void bind_native_montage();
 public:
     bool active() const { return session_.active(); }
     static std::string unavailable(RC::Unreal::UObject* pawn,const Catalog&,const std::string& outfit);
@@ -907,6 +909,7 @@ public:
     Json shared_animation_status() const { return shared_animations_.status(); }
     uint64_t shared_animation_revision() const { return shared_animations_.revision(); }
     std::string animation_skeleton() const;
+    std::string performance_mesh() const;
     std::optional<bool> shared_animation_available(AnimationSlot slot,const std::string& choice) const {
         return shared_animations_.available(slot,choice);
     }

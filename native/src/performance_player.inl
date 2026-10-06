@@ -43,7 +43,16 @@ bool performance_flag(UObject* object,const wchar_t* name) {
         throw std::runtime_error("Performance visibility/state property is unavailable");
     return static_cast<FBoolProperty*>(p)->GetPropertyValueInContainer(object);
 }
-std::string performance_gameplay_block(UObject* pawn) {
+bool performance_native_component(UObject* component) {
+    auto* mesh=component?mesh_asset(component):nullptr;
+    auto* skeleton=mesh?read<UObject*>(mesh,L"Skeleton"):nullptr;
+    auto* animation=component?read<UObject*>(component,L"AnimScriptInstance"):nullptr;
+    if(!skeleton || !animation || skeleton->GetPathName()!=
+        L"/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton") return false;
+    auto* player_class=find(L"/Game/Sparta/Characters/Humans/Player/Animations/ABP_Player.ABP_Player_C");
+    return player_class && animation->IsA(static_cast<UClass*>(player_class));
+}
+std::string performance_gameplay_block(UObject* pawn,UObject* owned_montage=nullptr) {
     if(!pawn) return "Player is unavailable";
     auto* controller=read<UObject*>(pawn,L"Controller");
     if(!controller || read<UObject*>(controller,L"Pawn")!=pawn) return "Player control changed";
@@ -67,7 +76,12 @@ std::string performance_gameplay_block(UObject* pawn) {
     auto* animation=component?read<UObject*>(component,L"AnimScriptInstance"):nullptr;
     if(!animation) return "Player animation is unavailable";
     Call montage(animation,L"GetCurrentActiveMontage",1);montage.run();
-    if(montage.get<UObject*>()) return "Gameplay montage is active";
+    if(auto* current=montage.get<UObject*>();current && current!=owned_montage)
+        return "Gameplay montage is active";
+    if(!owned_montage) {
+        Call playing(animation,L"IsAnyMontagePlaying",1);playing.run();
+        if(playing.get<bool>()) return "Wait for the gameplay montage to finish";
+    }
     if(sidearm_in_hand(pawn,true)) return "Sidearm is in use";
     return {};
 }
@@ -122,11 +136,47 @@ void performance_override(UObject* component,UObject* type) {
     Call set(component,L"SetOverridePostProcessAnimBP",2);
     set.set(L"InPostProcessAnimBlueprint",type);set.set(L"ReinitAnimInstances",true);set.run();
 }
+void performance_montage_blend(Call& call,const wchar_t* parameter) {
+    auto* outer=call.param(parameter);
+    if(!outer->IsA<FStructProperty>()) throw std::runtime_error("Montage blend settings are not a struct");
+    auto member=[](FProperty* parent,const wchar_t* name) {
+        auto* type=static_cast<FStructProperty*>(parent)->GetStruct().Get();
+        auto* p=type?optional_field(type,name):nullptr;
+        if(!p || p->GetArrayDim()!=1 || p->GetOffset_Internal()<0 || p->GetElementSize()<=0 ||
+           p->GetOffset_Internal()>parent->GetElementSize()-p->GetElementSize())
+            throw std::runtime_error("Montage blend layout is unsupported");
+        return p;
+    };
+    auto* blend=member(outer,L"Blend");
+    if(!blend->IsA<FStructProperty>()) throw std::runtime_error("Montage alpha blend is not a struct");
+    auto* data=static_cast<std::byte*>(call.data(outer))+blend->GetOffset_Internal();
+    auto* time=member(blend,L"BlendTime");
+    if(!time->IsA<FFloatProperty>() || time->GetElementSize()!=sizeof(float))
+        throw std::runtime_error("Montage blend time is unsupported");
+    const float duration=static_cast<float>(PerformanceClock::blend_seconds);
+    time->CopyCompleteValue(data+time->GetOffset_Internal(),&duration);
+    auto* option=member(blend,L"BlendOption");
+    auto* enumeration=option->IsA<FEnumProperty>()?static_cast<FEnumProperty*>(option)->GetEnum().Get():
+        option->IsA<FByteProperty>()?static_cast<FByteProperty*>(option)->GetEnum().Get():nullptr;
+    if(!enumeration || option->GetElementSize()!=1 || enumeration->NumEnums()>32)
+        throw std::runtime_error("Montage blend curve is unsupported");
+    for(int32_t i=0;i<enumeration->NumEnums();++i) {
+        const auto item=enumeration->GetEnumNameByIndex(i);
+        const auto name=item.Key.ToString();
+        if(name!=L"HermiteCubic" && name!=L"EAlphaBlendOption::HermiteCubic") continue;
+        if(item.Value<0 || item.Value>255) break;
+        const auto value=static_cast<uint8_t>(item.Value);
+        option->CopyCompleteValue(data+option->GetOffset_Internal(),&value);
+        return;
+    }
+    throw std::runtime_error("Montage has no smooth-step blend curve");
+}
 }
 std::string PerformancePlayer::unavailable(UObject* pawn,const Catalog& catalog,const std::string& outfit) {
     const auto blocked=performance_gameplay_block(pawn);
     if(!blocked.empty()) return blocked;
     auto* component=read<UObject*>(pawn,L"Mesh");
+    if(performance_native_component(component)) return {};
     Call disabled(component,L"GetDisablePostProcessBlueprint",1);disabled.run();
     if(disabled.get<bool>()) return "The outfit post-process layer is disabled";
     return unsupported(pawn,catalog,outfit);
@@ -144,6 +194,7 @@ std::string PerformancePlayer::unsupported(UObject* pawn,const Catalog& catalog,
     if(!pawn) return "Player is unavailable";
     auto* component=read<UObject*>(pawn,L"Mesh");
     if(!component) return "Player mesh is unavailable";
+    if(performance_native_component(component)) return {};
     auto* post=component?read<UObject*>(component,L"PostProcessAnimInstance"):nullptr;
     if(!performance_adapter(component,catalog,outfit,true)) {
         if(!performance_adapter(component,catalog,outfit)) return "This outfit version has no verified performance adapter";
@@ -220,15 +271,77 @@ void PerformancePlayer::bind_layer(UObject* pawn,const Catalog& catalog,const st
         release();throw;
     }
 }
+void PerformancePlayer::bind_native_montage() {
+    auto* animation=animation_.Get();auto* sequence=sequence_.Get();
+    if(!animation || !sequence || !native_montage_)
+        throw std::runtime_error("Native performance has no owner");
+    auto* notifies=sequence->GetPropertyByNameInChain(L"Notifies");
+    if(!notifies || !notifies->IsA<FArrayProperty>() || notifies->GetArrayDim()!=1 ||
+       notifies->GetOffset_Internal()<0 || notifies->GetElementSize()<=0 ||
+       notifies->GetOffset_Internal()>sequence->GetClassPrivate()->GetPropertiesSize()-notifies->GetElementSize())
+        throw std::runtime_error("Native performance notify layout is unavailable");
+    FScriptArrayHelper events(static_cast<FArrayProperty*>(notifies),
+        reinterpret_cast<std::byte*>(sequence)+notifies->GetOffset_Internal());
+    if(events.Num()!=0) throw std::runtime_error("Native performances cannot contain gameplay notifies");
+    Call create(find(L"/Script/Engine.Default__AnimMontage"),
+        L"CreateSlotAnimationAsDynamicMontage_WithBlendSettings",8);
+    create.set(L"Asset",sequence);
+    create.set(L"SlotNodeName",FName(L"DefaultSlot"));
+    performance_montage_blend(create,L"BlendInSettings");
+    performance_montage_blend(create,L"BlendOutSettings");
+    create.set(L"InPlayRate",1.f);create.set(L"LoopCount",int32_t{1});
+    create.set(L"InBlendOutTriggerTime",-1.f);create.run();
+    auto* montage=create.get<UObject*>();
+    if(!montage || !montage->IsA(static_cast<UClass*>(find(L"/Script/Engine.AnimMontage"))) ||
+       read<UObject*>(montage,L"Skeleton")!=read<UObject*>(sequence,L"Skeleton"))
+        throw std::runtime_error("Could not create the native performance montage");
+    montage_=montage;retained_.keep(montage);
+    auto* auto_out=field(montage,L"bEnableAutoBlendOut",sizeof(bool));
+    if(!auto_out->IsA<FBoolProperty>()) throw std::runtime_error("Montage automatic blend property changed");
+    static_cast<FBoolProperty*>(auto_out)->SetPropertyValueInContainer(montage,false);
+    // The shared clock supplies position. This transient montage owns only its
+    // blend and slot; it neither advances twice nor stops gameplay montages.
+    Call play(animation,L"Montage_Play",6);
+    play.set(L"MontageToPlay",montage);play.set(L"InPlayRate",0.f);
+    play.set(L"ReturnValueType",uint8_t{0});
+    play.set(L"InTimeToStartMontageAt",static_cast<float>(session_.clock().position()));
+    play.set(L"bStopAllMontages",false);play.run();
+    if(!std::isfinite(play.get<float>()) || play.get<float>()<=0.f)
+        throw std::runtime_error("Native performance montage did not start");
+}
 bool PerformancePlayer::intact() const {
     auto* pawn=pawn_.Get();auto* component=component_.Get();auto* post=post_.Get();
     auto* sequence=sequence_.Get();
-    return pawn && component && post && sequence && mesh_.Get() && animation_.Get() && read<UObject*>(pawn,L"Mesh")==component &&
+    const bool bound=pawn && component && sequence && mesh_.Get() && animation_.Get() && read<UObject*>(pawn,L"Mesh")==component &&
         mesh_asset(component)==mesh_.Get() && read<UObject*>(component,L"PostProcessAnimInstance")==post &&
         read<UObject*>(component,L"AnimScriptInstance")==animation_.Get() &&
-        read<FName>(pawn,L"CharacterId")==character_ && PerformanceFields(post).clip()==sequence;
+        read<FName>(pawn,L"CharacterId")==character_;
+    if(!bound) return false;
+    if(!native_montage_) return post && PerformanceFields(post).clip()==sequence;
+    auto* montage=montage_.Get();
+    if(!montage) return false;
+    if(montage_blending_out_) return true;
+    Call active(animation_.Get(),L"Montage_IsActive",2);
+    active.set(L"Montage",montage);active.run();
+    return active.get<bool>();
 }
 void PerformancePlayer::write_pose() {
+    if(native_montage_) {
+        auto* montage=montage_.Get();auto* animation=animation_.Get();
+        if(!montage || !animation) throw std::runtime_error("Native performance owner expired");
+        if(session_.clock().phase()==PerformancePhase::BlendingOut) {
+            if(!montage_blending_out_) {
+                Call stop(animation,L"Montage_Stop",2);
+                stop.set(L"InBlendOutTime",static_cast<float>(PerformanceClock::blend_seconds));
+                stop.set(L"Montage",montage);stop.run();montage_blending_out_=true;
+            }
+        } else {
+            Call position(animation,L"Montage_SetPosition",2);
+            position.set(L"Montage",montage);
+            position.set(L"NewPosition",static_cast<float>(session_.clock().position()));position.run();
+        }
+        return;
+    }
     PerformanceFields fields(post_.Get());
     fields.set_time(static_cast<float>(session_.clock().position()));
     fields.set_weight(static_cast<float>(session_.clock().weight()));
@@ -236,8 +349,16 @@ void PerformancePlayer::write_pose() {
     if(sample_face_) sample_face_(session_.clock().position(),session_.clock().weight());
 }
 void PerformancePlayer::release() {
+    const bool was_native=native_montage_;
+    if(native_montage_) {
+        if(auto* animation=animation_.Get();animation && montage_.Get()) {
+            Call stop(animation,L"Montage_Stop",2);
+            stop.set(L"InBlendOutTime",0.f);stop.set(L"Montage",montage_.Get());stop.run();
+        }
+        montage_.Reset();
+    }
     // Clear only our sequence. A replacement instance or a later owner is untouched.
-    if(auto* post=post_.Get();post && sequence_.Get()) {
+    if(auto* post=post_.Get();post && sequence_.Get() && !was_native) {
         PerformanceFields fields(post);
         if(fields.clip()==sequence_.Get()) {
             fields.set_weight(0.f);
@@ -254,6 +375,7 @@ void PerformancePlayer::release() {
     }
     if(restore_layer_) {restore_layer_();restore_layer_={};}
     retained_.release();
+    native_montage_=false;montage_blending_out_=false;
     pawn_.Reset();component_.Reset();mesh_.Reset();post_.Reset();animation_.Reset();sequence_.Reset();
     character_=FName{};
 }
@@ -275,6 +397,7 @@ Json PerformancePlayer::start(UObject* pawn,const Catalog& catalog,const std::st
     if(match.candidates.empty()) throw std::runtime_error("Performance has no compatible skeleton");
     WeakObject held_pawn(pawn),held_component(component),held_mesh(mesh);
     auto* post=read<UObject*>(component,L"PostProcessAnimInstance");WeakObject held_post(post);
+    auto* main=read<UObject*>(component,L"AnimScriptInstance");WeakObject held_main(main);
     const auto character=read<FName>(pawn,L"CharacterId");
     std::string failure;
     for(const auto& candidate:match.candidates) {
@@ -282,6 +405,7 @@ Json PerformancePlayer::start(UObject* pawn,const Catalog& catalog,const std::st
             AssetLoadRoots roots;
             auto* sequence=load(candidate.asset);roots.keep(sequence);
             if(held_pawn.Get()!=pawn || held_component.Get()!=component || held_mesh.Get()!=mesh || held_post.Get()!=post ||
+               !main || held_main.Get()!=main || read<UObject*>(component,L"AnimScriptInstance")!=main ||
                read<UObject*>(pawn,L"Mesh")!=component || mesh_asset(component)!=mesh ||
                read<UObject*>(component,L"PostProcessAnimInstance")!=post ||
                read<FName>(pawn,L"CharacterId")!=character)
@@ -301,17 +425,23 @@ Json PerformancePlayer::start(UObject* pawn,const Catalog& catalog,const std::st
                 throw std::runtime_error("Facial and body performance durations differ");
             PerformanceSession next=session_;
             next.begin(id,match.entry->playback,length.get<float>(),rate,position);
-            bind_layer(pawn,catalog,outfit);
-            post=read<UObject*>(component,L"PostProcessAnimInstance");
-            PerformanceFields fields(post);
-            original_time_=fields.seconds();
-            if(!std::isfinite(original_time_))
-                throw std::runtime_error("Invalid performance layer defaults");
+            const bool native=performance_native_component(component);
+            if(native && (facial_duration || sample_face || restore_face))
+                throw std::runtime_error("Native performance facial playback is not mapped");
+            if(!native) {
+                bind_layer(pawn,catalog,outfit);
+                post=read<UObject*>(component,L"PostProcessAnimInstance");
+                original_time_=PerformanceFields(post).seconds();
+                if(!std::isfinite(original_time_))
+                    throw std::runtime_error("Invalid performance layer defaults");
+            }
             pawn_=pawn;component_=component;mesh_=mesh;post_=post;
             animation_=read<UObject*>(component,L"AnimScriptInstance");sequence_=sequence;character_=character;
             retained_.take(roots);session_=std::move(next);reason_.clear();
             sample_face_=std::move(sample_face);restore_face_=std::move(restore_face);
-            fields.set_clip(sequence);
+            native_montage_=native;
+            if(native) bind_native_montage();
+            else PerformanceFields(post).set_clip(sequence);
             if(match.entry->hide_weapons) {
                 for(const auto& child_weak:attached_children(component)) {
                     auto* child=child_weak.Get();if(!child || !is_hand_weapon_socket(attach_socket(child))) continue;
@@ -332,11 +462,13 @@ Json PerformancePlayer::start(UObject* pawn,const Catalog& catalog,const std::st
     throw std::runtime_error(failure.empty()?"Performance could not load":failure);
 }
 void PerformancePlayer::tick(UObject* pawn) {
-    if(!session_.active()) { if(post_.Get() || !hidden_.empty() || restore_layer_ || restore_face_) release();return; }
+    if(!session_.active()) { if(post_.Get() || native_montage_ || !hidden_.empty() || restore_layer_ || restore_face_) release();return; }
     if(pawn!=pawn_.Get() || !intact()) {interrupt("Player or animation binding changed");return;}
-    if(const auto why=performance_gameplay_block(pawn);!why.empty()) {interrupt(why);return;}
-    Call disabled(component_.Get(),L"GetDisablePostProcessBlueprint",1);disabled.run();
-    if(disabled.get<bool>()) {interrupt("Post-process animation was disabled");return;}
+    if(const auto why=performance_gameplay_block(pawn,montage_.Get());!why.empty()) {interrupt(why);return;}
+    if(!native_montage_) {
+        Call disabled(component_.Get(),L"GetDisablePostProcessBlueprint",1);disabled.run();
+        if(disabled.get<bool>()) {interrupt("Post-process animation was disabled");return;}
+    }
     // EngineTick's delta is not world time. The same dilation used by character
     // components must drive explicit animation sampling.
     Call delta(find(L"/Script/Engine.Default__GameplayStatics"),L"GetWorldDeltaSeconds",2);

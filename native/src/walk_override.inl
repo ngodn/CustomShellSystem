@@ -175,6 +175,12 @@ std::string Appearance::animation_skeleton() const {
     auto* skeleton=body?read<UObject*>(body,L"Skeleton"):nullptr;
     return skeleton?narrow(skeleton->GetPathName()):std::string{};
 }
+std::string Appearance::performance_mesh() const {
+    auto* pawn=observed_pawn_.Get();
+    auto* component=pawn?read<UObject*>(pawn,L"Mesh"):nullptr;
+    auto* body=component?mesh_asset(component):nullptr;
+    return body?narrow(body->GetPathName()):std::string{};
+}
 Json SharedAnimationResolver::status() const {
     Json result=Json::object();
     for(size_t i=0;i<slots_.size();++i) {

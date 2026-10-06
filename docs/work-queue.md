@@ -19,6 +19,21 @@ facial support, CSS/CINE integration and acceptance for the actual scope remain.
 
 Historical checkpoints below are evidence only. Excluded-project instructions are cancelled.
 
+## October 6: native playback and catalog candidate
+
+The owned native montage route is implemented for CSS and CINE without a CSS
+outfit requirement. It preserves the player's native post-process graph and
+stops only its own montage. Thirteen isolated UE 5.6.1 lifecycle checks pass
+in `native-montage-v2`; the first fixture's missing event-dispatch cleanup is
+documented. Windows compilation and the focused host/CINE tests pass.
+
+`native-performance-trial-v1` adds the verified native Black Hole sequence to
+the same stable catalog entry, preserving all 71 existing exports and the five
+requested-outfit adapters. Combined and pack-only catalog checks pass 1,093
+and 1,082 assertions. No installation. Other native clips, real game-graph and
+visible-mesh physics checks, live acceptance, source accounting and remaining
+facial work are unfinished. See the [native support record](development/shared-animation-native-human.md).
+
 ## October 6: default-human reference audition
 
 The native 1,199-bone reference and nine virtual bones now match the game

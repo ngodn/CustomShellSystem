@@ -337,9 +337,9 @@ struct Core {
     }
     PerformanceContext performance_context() const {
         const auto selected=state.selections.find(appearance.shell);
+        const bool worn=appearance.active() && selected!=state.selections.end();
         return {appearance.player_revision,appearance.appearance_revision,animation_catalog_generation,
-            selected==state.selections.end()?"":selected->second.outfit,
-            selected==state.selections.end()?"":selected->second.variant};
+            worn?selected->second.outfit:"",worn?selected->second.variant:"",appearance.performance_mesh()};
     }
     void finish_performance_face() {
         if(!restore_performance_face || appearance.performance.active()) return;
@@ -352,7 +352,8 @@ struct Core {
     }
     Json start_performance(const std::string& id,double rate,double position) {
         const auto selected=state.selections.find(appearance.shell);
-        if(selected==state.selections.end()) throw std::runtime_error("No CSS appearance is worn");
+        if(!appearance.active() || selected==state.selections.end())
+            return appearance.start_performance(catalog,"",id,rate,position);
         const auto& selection=selected->second;
         const auto match=catalog.facial_match(selection.outfit,selection.variant);
         const auto* face=match.rig?match.rig->find_performance(id):nullptr;
@@ -390,7 +391,7 @@ struct Core {
     void start_pending_performance(uint64_t now) {
         if(!pending_performance.active()) return;
         try {
-            if(!state.enabled || apply_pending || restore_pending || !appearance.active())
+            if(!state.enabled || apply_pending || restore_pending)
                 throw std::runtime_error("Performance canceled because the appearance changed");
             const auto context=performance_context();
             const auto ready=pending_performance.poll(context,now,appearance.performance_waiting_for_menu());
@@ -421,8 +422,8 @@ struct Core {
             const auto skeleton=appearance.animation_skeleton();
             Json entries=Json::array();
             const auto selected=state.selections.find(appearance.shell);
-            const auto unavailable=selected==state.selections.end()?"No CSS appearance is worn":
-                appearance.performance_unsupported(catalog,selected->second.outfit);
+            const auto unavailable=appearance.performance_unsupported(catalog,
+                appearance.active() && selected!=state.selections.end()?selected->second.outfit:"");
             for(const auto& library:catalog.animation_libraries) for(const auto& entry:library.entries) {
                 if(entry.slot && entry.slot!=AnimationSlot::Idle) continue;
                 const auto resolved=resolve_library_performance(catalog.animation_libraries,entry.id,skeleton);
@@ -438,10 +439,8 @@ struct Core {
         if(action=="performance") {
             if(command.at("op")=="start") {
                 if(pending_performance.active()) throw std::runtime_error("A menu performance is waiting to start");
-                if(!state.enabled || !appearance.active() || apply_pending || restore_pending)
+                if(!state.enabled || apply_pending || restore_pending)
                     throw std::runtime_error("Wait for the CSS appearance to finish applying");
-                const auto selected=state.selections.find(appearance.shell);
-                if(selected==state.selections.end()) throw std::runtime_error("No CSS appearance is worn");
                 return start_performance(command.at("id").get<std::string>(),
                     command.value("rate",1.),command.value("seconds",0.));
             }
@@ -590,7 +589,7 @@ struct Core {
         if (action=="css_probe") {probe_command=command;return;}
 #endif
         if(action=="play_performance") {
-            if(!state.enabled || !appearance.active() || apply_pending || restore_pending)
+            if(!state.enabled || apply_pending || restore_pending)
                 throw std::runtime_error("Wait for the CSS appearance to finish applying");
             const auto context=performance_context();
             const auto id=command.at("id").get<std::string>();

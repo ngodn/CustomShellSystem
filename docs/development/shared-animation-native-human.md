@@ -147,6 +147,64 @@ native animation binding, playback ownership, interruption/restoration,
 actual skinned-mesh/physics checks and live acceptance. Missing facial
 controls must not prevent compatible body playback.
 
+## Owned native playback candidate, October 6
+
+The runtime now has a native route for the exact game human skeleton and a
+player animation instance derived from the game's `ABP_Player`. It creates a
+transient `DefaultSlot` montage, preserves the existing post-process graph,
+and uses the shared performance clock for sequence position. The owned
+montage has zero automatic play rate and automatic blend-out disabled;
+CSS requests a 0.18-second Hermite blend when stopping. Source clips with
+gameplay notifies, additive motion or root-motion extraction are rejected.
+
+CSS and CINE can request this route without a CSS outfit manifest. Pending
+menu playback records the actual mesh as well as the player, appearance and
+catalog revisions. A mesh change cancels that request. Existing custom-rig
+adapters still use their original performance fields and facial callbacks.
+The native route has no facial mapping yet and does not claim one.
+
+Only the owned montage is stopped. Existing gameplay montages block a new
+take; a competing montage interrupts the current take. Mesh, animation
+instance, post-process instance and gameplay character changes also interrupt
+it. Visibility restoration retains its retry state if cleanup fails after
+the owned montage was stopped. No source animation, game montage or native
+post-process class is edited.
+
+`native-montage-v2/result.json` passes 13 actual UE 5.6.1 lifecycle checks:
+creation, ownership, blend-in, zero-rate position, seeking, held endpoint,
+competition, stopping only the owned montage, cleanup, replay and blend-out.
+It also checks the reflected parameter names used by the runtime calls.
+Both diagnostic assets remain unchanged and the commandlet exits zero.
+This uses a plain preview animation instance and the three-vertex diagnostic
+mesh. It does not evaluate the game's slot graph, a visible outfit or cloth.
+
+The first fixture failed cleanup because `TickAnimation` alone does not run
+the component's bone refresh and queued animation-event dispatch. UE removes
+terminated montage instances in `UAnimInstance::DispatchQueuedAnimEvents`.
+The corrected fixture completes that component update; it does not manually
+delete montage instances or relax the cleanup assertion. The v1 failure is
+retained. Native blend weights remain engine-driven, while sequence time uses
+the CSS clock; pause during blending still needs explicit live review.
+
+`native-performance-trial-v1` contains 59 stable clip identities and 72 cooked
+exports. All 71 previous exports are unchanged. Only Black Hole currently has
+an additional native-human asset alternative. The five requested-outfit
+adapters, six Eve face meshes and existing facial metadata remain unchanged.
+The first metadata audit rejected a package-only skeleton path; the corrected
+metadata uses its full object path. That rejected manifest and test output
+are retained alongside the corrected package.
+
+The final host catalog checks pass 1,093 assertions with all three requested
+outfits and 1,082 with the shared pack alone. They verify native resolution
+without an outfit, preserve the custom-rig alternative and reject unknown
+skeletons. The performance clock/session/library tests and CINE performance
+consumer test pass. The Windows core builds successfully.
+
+This candidate is not installed. Remaining work includes the other native
+clip alternatives, actual game-graph and visible-mesh/physics review, live
+interruption/restoration and performance acceptance, plus the other facial
+and source-accounting work in the main goal. No excluded rigs were added.
+
 ## Sources
 
 Epic's [IK retargeting documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/ik-rig-animation-retargeting-in-unreal-engine)
