@@ -24,6 +24,8 @@ def main():
     parser.add_argument('--cooked-skeleton', type=Path, help='Audited Skeleton readback for cooked binary motions')
     parser.add_argument('--materials', type=int, nargs='+',
                         help='Measure every referenced vertex in these material slots, without the lower-leg filter')
+    parser.add_argument('--deduplicate', action='store_true',
+                        help='Evaluate identical position/influence records once, retaining every section membership')
     args = parser.parse_args()
     if args.output.exists():
         raise FileExistsError(args.output)
@@ -71,7 +73,12 @@ def main():
             raise ValueError('Ambiguous left/right lower-leg vertices')
     prepared = {}
     for side, ids in selected.items():
-        subset = vertices[ids]
+        all_ids = ids
+        if args.deduplicate:
+            subset, first, remap = np.unique(vertices[ids], return_index=True, return_inverse=True)
+            ids = ids[first]
+        else:
+            subset, remap = vertices[ids], np.arange(len(ids))
         inf = subset['influences']
         components = []
         reconstructed = np.zeros((len(ids), 3))
@@ -94,11 +101,11 @@ def main():
                 continue
             start = section['FirstIndex']
             used_section = np.unique(indices[start:start + section['NumFaces'] * 3])
-            rows = np.flatnonzero(np.isin(ids, used_section))
+            rows = np.unique(remap[np.isin(all_ids, used_section)])
             if len(rows):
                 key = str(section['MaterialIndex'])
                 sections[key] = np.union1d(sections.get(key, np.array([], dtype=int)), rows)
-        prepared[side] = (ids, components, sections, error)
+        prepared[side] = (ids, components, sections, error, len(all_ids))
     results = []
     for motion in args.motions:
         inputs[str(motion.resolve())] = sha(motion)
@@ -109,7 +116,7 @@ def main():
             world, data, frame_count = load_raw(motion, names, manifest)
         result = dict(motion=str(motion), frames=frame_count, fps=data['fps'],
                       sampling=data.get('sampling', 'Unspecified by capture'), sides={})
-        for side, (ids, components, sections, error) in prepared.items():
+        for side, (ids, components, sections, error, original_count) in prepared.items():
             minima = np.full(frame_count, np.inf)
             worst_ids = np.zeros(frame_count, dtype=int)
             section_minima = {key: np.full(frame_count, np.inf) for key in sections}
@@ -130,7 +137,7 @@ def main():
                 for key, rows in sections.items():
                     section_minima[key][start:end] = z[:, rows].min(axis=1)
             worst = int(np.argmin(minima))
-            result['sides'][side] = dict(vertices=len(ids), bind_error_cm=error,
+            result['sides'][side] = dict(vertices=original_count, evaluated_vertices=len(ids), bind_error_cm=error,
                 min_z_cm=float(minima[worst]), worst_frame=worst,
                 worst_time_seconds=worst / data['fps'], worst_vertex=int(worst_ids[worst]),
                 frames_below_minus_0_1_cm=int(np.count_nonzero(minima < -.1)),

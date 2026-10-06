@@ -2,7 +2,8 @@
 
 October 7 update: the user supplied the author's optional head. All nine
 missing facial controls are now decoded, and a derived Eve transfer passes
-six-outfit editor/cooked verification with five prepared facial performances.
+six-outfit editor/cooked verification with six prepared facial performances,
+including Cinderella.
 See [the author-head checkpoint](shared-animation-author-head.md). Combined
 packaging now passes real-loader checks. Live acceptance and the seven
 unresolved bone definitions remain unfinished. Historical source requests

@@ -12,7 +12,6 @@ from package_corrected_dance_trial import (
 from prepare_performance_curves import native_performance
 
 CLIP = 'css.eve.dance.cinderella'
-ASSET = '/Game/CSS/Locomotion/Studies/C10/AN_Cinderella.AN_Cinderella'
 MESHES = {
     '/Game/CSS/EveTest/SK_' + name
     for name in ('ACloth3', 'BFit1', 'KCloth4', 'PFit14', 'SFit16')
@@ -24,7 +23,10 @@ MESHES = {path + '.' + path.rsplit('/', 1)[1] for path in MESHES}
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('output', type=Path)
-    output = parser.parse_args().output.resolve()
+    parser.add_argument('--study', choices=('c10', 'c11'), default='c10')
+    args = parser.parse_args()
+    output = args.output.resolve()
+    asset = f'/Game/CSS/Locomotion/Studies/{args.study.upper()}/AN_Cinderella.AN_Cinderella'
     work = ROOT / 'work/cine-animation-port'
     if output.exists() or not any(output.is_relative_to(parent) for parent in
             (work, Path('/mnt/eins0fxE/CSS-authoring-scratch'))):
@@ -32,7 +34,8 @@ def main():
     if shutil.disk_usage(output.parent).free < 3 * 1024**3:
         raise ValueError('Need 3 GiB for packaging and readback')
     base = work / 'eve-face-jali3-trial-v2'
-    extra = work / 'cinderella-c10-cook/pack'
+    cook = work / f'cinderella-{args.study}-cook'
+    extra = cook / 'pack'
     protected, dependencies, payloads = {}, {}, {}
 
     def protect(path, expected=None):
@@ -71,15 +74,29 @@ def main():
                 protect(roundtrip)
                 payloads[relative] = source
 
-    motion_path = work / 'cinderella-c10-cook/full-motion-verification.json'
+    motion_path = cook / 'full-motion-verification.json'
     motion = read(motion_path)
     if (motion.get('complete') is not True or motion.get('passed') is not True or
-            motion['asset'] != ASSET or motion['frames'] != 8381 or motion['tracks'] != 388):
+            motion['asset'] != asset or motion['frames'] != 8381 or motion['tracks'] != 388):
         raise ValueError('Require full cooked motion verification')
     protect(motion_path)
     for path, checksum in motion['inputs'].items():
         protect(Path(path), checksum)
-    evaluation_path = work / 'cinderella-c10-adapters/cinderella-current-result.json'
+    if args.study == 'c11':
+        contact_path = cook / 'visible-contact-deduplicated.json'
+        contact = read(contact_path)
+        if (contact.get('complete') is not True or len(contact['results']) != 1 or
+                contact['materials'] != [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 25, 26, 28]):
+            raise ValueError('Require the complete visible-surface scan')
+        scan = contact['results'][0]
+        surface = scan['sides']['surface']
+        if (scan['frames'] != 33521 or scan['fps'] != 240 or surface['min_z_cm'] < 0 or
+                surface['frames_below_minus_0_1_cm'] != 0 or surface['bind_error_cm'] > .0001):
+            raise ValueError('Whole-body contact failed')
+        protect(contact_path)
+        for path, checksum in contact['inputs'].items():
+            protect(Path(path), checksum)
+    evaluation_path = work / f'cinderella-{args.study}-adapters/cinderella-current-result.json'
     evaluation = read(evaluation_path)
     if not all(evaluation.get(key) is True for key in ('complete', 'passed', 'body_passed', 'fingers_passed')):
         raise ValueError('Adapter evaluation failed')
@@ -95,7 +112,7 @@ def main():
     if len(rows) != 9 or {row['mesh'] for row in rows} != MESHES:
         raise ValueError('Require exactly the nine requested meshes')
     for row in rows:
-        if (row['performance'] != ASSET or row['finger_bones_checked'] != 38 or
+        if (row['performance'] != asset or row['finger_bones_checked'] != 38 or
                 len(row['cases']) != 9 or {case['case'] for case in row['cases']} != required_cases or
                 not all(case['body_passed'] and case['fingers_passed'] for case in row['cases'])):
             raise ValueError('Incomplete playback/restoration coverage')
@@ -127,7 +144,7 @@ def main():
     if performance != curves['performance']:
         raise ValueError('Prepared performance differs from original keys')
     library['entries'].append(dict(id=CLIP, name='Cinderella', category='dance', playback='once',
-        hide_weapons=True, assets=[dict(asset=ASSET, skeleton='/Game/CSS/Shared/SKEL_Base.SKEL_Base')]))
+        hide_weapons=True, assets=[dict(asset=asset, skeleton='/Game/CSS/Shared/SKEL_Base.SKEL_Base')]))
     face['performances'].append(performance)
     if len({entry['id'] for entry in library['entries']}) != 63:
         raise ValueError('Animation identity collision')
@@ -183,6 +200,7 @@ def main():
     report = dict(passed=True, entries=63, exports=98, unchanged_existing_entries=62,
         unchanged_existing_exports=96, adapters=5, native_candidates=4, facial_rigs=2,
         eve_performances=6, metadata_bytes=len(metadata.encode('utf-8')),
+        cinderella_study=args.study, visible_surface_contact_passed=args.study == 'c11',
         protected=protected, dependencies=dependencies, files={p.name: sha(p) for p in trio.iterdir()},
         installed=False, scope='Private candidate; visual, secondary physics and live acceptance remain.')
     (output / 'verification.json').write_text(json.dumps(report, indent=2) + '\n')

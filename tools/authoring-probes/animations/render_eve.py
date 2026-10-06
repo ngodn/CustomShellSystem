@@ -11,6 +11,7 @@ from pathlib import Path
 
 import bpy
 import bmesh
+import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -25,6 +26,7 @@ parser.add_argument('--bind', type=Path, required=True)
 parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--stride', type=int, default=2)
 parser.add_argument('--video', action='store_true', help='Stream frames to MP4 instead of retaining PNG intermediates')
+parser.add_argument('--floor', action='store_true', help='Show the diagnostic Z=0 contact plane')
 parser.add_argument('--measure-only', action='store_true', help='Evaluate mesh contact without rendering images')
 parser.add_argument('--footwear-only', action='store_true',
                     help='Measure each foot without rebuilding the visible body; requires --measure-only')
@@ -123,6 +125,9 @@ scene.display.shading.show_cavity = True
 scene.display.shading.background_type = 'WORLD'
 scene.world = bpy.data.worlds.new('Review background')
 scene.world.color = (.055, .055, .055)
+if args.floor:
+    bpy.ops.mesh.primitive_plane_add(size=20, location=(0, 0, 0))
+    bpy.context.object.color = (.14, .15, .16, 1)
 scene.render.resolution_x = 900
 scene.render.resolution_y = 1000
 scene.render.resolution_percentage = 100
@@ -161,6 +166,8 @@ for obj in footwear:
     assert all(sides.values()), obj.name
     foot_vertices[obj.name] = sides
 
+body_coordinates = None
+visible_vertices = None
 with ExitStack() as resources:
     video = None
     if args.video:
@@ -217,19 +224,28 @@ with ExitStack() as resources:
         body_lowest = None
         if not args.footwear_only:
             evaluated = body.evaluated_get(graph)
-            mesh = bpy.data.meshes.new_from_object(evaluated, preserve_all_data_layers=True, depsgraph=graph)
-            bm = bmesh.new()
-            bm.from_mesh(mesh)
-            remove = [face for face in bm.faces if face.material_index in covered]
-            assert len(remove) == expected_removed
-            bmesh.ops.delete(bm, geom=remove, context='FACES_ONLY')
-            bm.to_mesh(mesh)
-            bm.free()
-            previous = filtered.data
-            filtered.data = mesh
-            bpy.data.meshes.remove(previous)
-            visible_vertices = {i for polygon in filtered.data.polygons for i in polygon.vertices}
-            body_lowest = min((filtered.matrix_world @ filtered.data.vertices[i].co).z for i in visible_vertices)
+            if body_coordinates is None:
+                mesh = bpy.data.meshes.new_from_object(evaluated, preserve_all_data_layers=True, depsgraph=graph)
+                bm = bmesh.new()
+                bm.from_mesh(mesh)
+                remove = [face for face in bm.faces if face.material_index in covered]
+                assert len(remove) == expected_removed
+                bmesh.ops.delete(bm, geom=remove, context='FACES_ONLY')
+                bm.to_mesh(mesh)
+                bm.free()
+                previous = filtered.data
+                filtered.data = mesh
+                bpy.data.meshes.remove(previous)
+                visible_vertices = np.array(sorted({i for polygon in mesh.polygons for i in polygon.vertices}))
+                body_coordinates = np.empty(len(mesh.vertices) * 3, dtype=np.float32)
+            # Armature-only deformation preserves topology; keep the filtered
+            # mesh and update positions instead of rebuilding every face.
+            assert len(evaluated.data.vertices) == len(filtered.data.vertices)
+            evaluated.data.vertices.foreach_get('co', body_coordinates)
+            filtered.data.vertices.foreach_set('co', body_coordinates)
+            filtered.data.update()
+            z_axis = np.asarray(filtered.matrix_world[2], dtype=float)
+            body_lowest = float((body_coordinates.reshape(-1, 3)[visible_vertices] @ z_axis[:3] + z_axis[3]).min())
         foot_lowest = {side: math.inf for side in ('l', 'r')}
         contact_vertices = {}
         for original in footwear:
@@ -269,7 +285,7 @@ assert hashlib.sha256(blend.read_bytes()).hexdigest() == blend_hash
     camera_scale=args.camera_scale, camera_height=args.camera_height,
     follow_pelvis=args.follow_pelvis, position_tolerance_cm=args.position_tolerance_cm,
     covered_body_faces_removed=expected_removed, pose=args.pose, measure_only=args.measure_only,
-    footwear_only=args.footwear_only, video=args.video,
+    footwear_only=args.footwear_only, video=args.video, floor=args.floor,
     foot_vertex_counts={name: {side: len(vertices) for side, vertices in sides.items()}
                         for name, sides in foot_vertices.items()},
     wardrobe='Heels and stockings shown; flat feet hidden; heeled stocking feet and footwear lining shown.',

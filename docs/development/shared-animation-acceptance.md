@@ -1,17 +1,19 @@
 # Shared animation acceptance
 
-October 7 update: `cinderella-combined-v1` combines 63
+October 7 update: `cinderella-combined-v2` combines 63
 body/movement IDs with four native locomotion alternatives, six updated Eve
 faces and the verified Commander White face. It preserves all 31 photo poses
 and five outfit adapters. Eve now has 115 facial shapes, 21 expressions and
 six prepared facial performances. Actual combined and pack-only catalog
-checks pass 1,132 and 1,120 assertions. See the
+checks pass 1,133 and 1,121 assertions. See the
 [author-head evidence](shared-animation-author-head.md). This candidate is not
 installed or live-accepted. Cinderella passes full cooked-motion comparison
 and 81 adapter cases across the nine requested meshes, but the full fitted
-render exposes knee penetration around 61.83 seconds. C10 and this combined
-candidate must not be installed until body contact is corrected. Secondary
-physics and live acceptance also remain unfinished. Historical
+render exposed knee penetration around 61.83 seconds in C10. The C11 replacement
+passes the complete visible-surface scan at 240 Hz, including knees, with a
+minimum height of +0.009562 cm. The checked kneeling still now meets the floor.
+C11 full-video review is running; secondary physics and live acceptance remain
+unfinished. C10 remains rejected. Historical
 checkpoints below describe earlier candidates.
 
 Checkpoint: 2026-10-06. This is a private candidate, not release approval.

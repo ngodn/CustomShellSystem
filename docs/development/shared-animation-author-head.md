@@ -422,3 +422,56 @@ readback export files were checked again and hardlinked to their byte-identical
 staged payloads, releasing 544,972,800 allocated bytes. Headers, sources,
 installed packages and releases remain intact. Receipt:
 `cinderella-combined-v1/duplicate-readback-cleanup.json`.
+
+## C11 complete-surface clearance and replacement candidate
+
+The completed C10 scan confirms that footwear alone missed the kneeling
+contact failure. Across 22 visible body/clothing sections and 33,521 poses at
+240 Hz, stockings reached -20.581096 cm and 2,064 samples fell below -0.1 cm.
+Hair, covered feet and unused flat-foot sections are excluded explicitly.
+
+`plan_surface_clearance.py` derives a smooth upper bound from these complete
+surface measurements. C11 adds at most 20.591096 cm to the previous clearance,
+for a maximum total pelvis lift of 24.324032 cm. It changes pelvis translation
+only. Fresh native repetition preserves all rotations, scales and non-pelvis
+transforms across 3,251,828 authored transforms. Four focused plan tests pass,
+including between-key dips and endpoint bounds.
+
+Both Windows cooks and independent package readback pass. Complete comparison
+of all 8,381 source-key poses and 388 tracks remains within the unchanged
+limits: 0.015531 cm maximum position difference, 0.000707202 quaternion
+distance and 0.000000962 scale difference. All original keys are identical in
+the dense decoded capture. The final 240 Hz visible-surface scan has minimum
+height +0.009562 cm and no samples below the floor. This is neutral linear
+skinning evidence, without simulated cloth, post-process or body morphs.
+
+The scan now optionally evaluates identical position/influence records once,
+while retaining every material membership. This reduces 317,652 selected
+vertices to 59,932 evaluations. A duplicate-material fixture passes, and the
+complete C10 regression reproduces all 22 per-material height arrays and the
+overall height array exactly. No geometric approximation is introduced.
+
+The renderer caches unchanged filtered topology between poses. Three regression
+frames reproduce every decoded pixel and body-height measurement exactly.
+Its optional floor plane makes contact visible. C11's checked kneeling still
+at source frame 3710 places the knee on the floor, instead of below it. The
+full 4,191-frame review video is still rendering. Hair is unsimulated in this
+diagnostic; this image does not establish live physics behavior.
+
+All nine requested meshes pass the same 81 current-module adapter cases,
+including full-clip playback and restoration. `cinderella-combined-v2`
+replaces the private C10 candidate with C11. It retains 63 entries, 31 photo
+poses, 98 exports, five outfit adapters, four native locomotion alternatives
+and six Eve facial performances. All 62 baseline entries and 96 baseline
+exports are unchanged. The compact manifest stays below the unchanged 256 KiB
+limit. Actual catalog checks pass 1,133 assertions with requested outfits and
+1,121 with the pack alone. Both previous candidates still pass; deliberately
+expecting C10 against the C11 pack is correctly rejected.
+
+Evidence: `retarget-cinderella-c11`, `cinderella-c11-cook`,
+`cinderella-c11-adapters`, `cinderella-c11-review`, and
+`cinderella-combined-v2/host-catalog-validation.json`. The first C11 packaging
+attempt passed a dependency directory instead of its container file and was
+rejected; its corrected retry passes. Nothing was installed. Full-motion visual
+review, feasible remaining facial mapping, source definitions, live acceptance
+and release delivery remain active.

@@ -244,7 +244,7 @@ int main(int argc,char** argv) {
             expect(packages.diagnostics.at("rejected")==4,"Bad library packages were not reported independently");
             expect(packages.diagnostics.at("loaded")==1,"Valid packaged library did not load");
         }
-        if(argc==3 && (std::string_view(argv[1])=="--audited-pack" || std::string_view(argv[1])=="--audited-facial-pack" ||
+        if((argc==3 || argc==4) && (std::string_view(argv[1])=="--audited-pack" || std::string_view(argv[1])=="--audited-facial-pack" ||
                        std::string_view(argv[1])=="--audited-face-motion-pack" ||
                        std::string_view(argv[1])=="--audited-blender-face-pack" ||
                        std::string_view(argv[1])=="--audited-dance-pack" ||
@@ -264,6 +264,7 @@ int main(int argc,char** argv) {
                        std::string_view(argv[1])=="--audited-isolated-pack")) {
             const bool cinderella=std::string_view(argv[1])=="--audited-cinderella-pack" ||
                                   std::string_view(argv[1])=="--audited-cinderella-only-pack";
+            expect(argc==3 || cinderella,"An expected study asset is only supported for Cinderella audits");
             const bool author_face=cinderella || std::string_view(argv[1])=="--audited-jali3-face-pack" ||
                                    std::string_view(argv[1])=="--audited-jali3-face-only-pack";
             const bool commander_face=author_face || std::string_view(argv[1])=="--audited-cw-face-pack" ||
@@ -290,10 +291,11 @@ int main(int argc,char** argv) {
             const auto& audited=packages.animation_libraries[0];
             expect(audited.entries.size()==(cinderella?63:locomotion?62:dances?59:57) && audited.adapters.size()==(expanded?6:5),"Audited animation set changed");
             if(cinderella) {
+                const std::string_view expected_asset=argc==4?argv[3]:
+                    "/Game/CSS/Locomotion/Studies/C10/AN_Cinderella.AN_Cinderella";
                 const auto match=resolve_library_performance(packages.animation_libraries,"css.eve.dance.cinderella",base);
                 expect(match.entry && match.entry->playback==AnimationPlayback::Once && match.entry->hide_weapons &&
-                       match.candidates.size()==1 && match.candidates[0].asset==
-                       "/Game/CSS/Locomotion/Studies/C10/AN_Cinderella.AN_Cinderella",
+                       match.candidates.size()==1 && match.candidates[0].asset==expected_asset,
                        "Cinderella lost its verified body asset or playback contract");
             }
             if(dances) {
