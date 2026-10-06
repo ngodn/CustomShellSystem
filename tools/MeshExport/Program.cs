@@ -23,8 +23,28 @@ provider.ReadScriptData = true;
 provider.Initialize();
 provider.Mount();
 var mesh = provider.LoadPackageObject(args[2]);
+var basePoseMesh = Environment.GetEnvironmentVariable("CSS_BASE_POSE_MESH") switch {
+    null or "" or "0" => false,
+    "1" when mesh is USkeletalMesh => true,
+    _ => throw new ArgumentException("CSS_BASE_POSE_MESH=1 requires a skeletal mesh")
+};
 Directory.CreateDirectory(args[3]);
 File.WriteAllText(Path.Combine(args[3], "source-mesh.json"), JsonConvert.SerializeObject(mesh, Formatting.Indented));
+var skinAudit = Environment.GetEnvironmentVariable("CSS_SKIN_AUDIT") switch {
+    null or "" or "0" => false,
+    "1" => true,
+    _ => throw new ArgumentException("CSS_SKIN_AUDIT must be 0 or 1")
+};
+if (skinAudit) {
+    if (mesh is not USkeletalMesh skin) throw new ArgumentException("Skin audit requires a skeletal mesh");
+    if (basePoseMesh || args.Length != 4 || new[] { "CSS_TRACK_AUDIT", "CSS_SOURCE_TRACKS",
+        "CSS_ABSOLUTE_TRACKS", "CSS_ADDITIVE_POSE_DELTAS", "CSS_ANIMATION_POSES",
+        "CSS_AUDIT_ONLY", "CSS_TEXTURES_ONLY", "CSS_MATERIALS" }
+        .Any(key => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key))))
+        throw new ArgumentException("Run skin audit separately from other export modes");
+    SkinAudit.Export(skin, args[2], args[3]);
+    return;
+}
 if (Environment.GetEnvironmentVariable("CSS_TRACK_AUDIT") == "1") {
     if (mesh is not UAnimSequence auditSequence) throw new ArgumentException("Track audit requires an AnimSequence");
     SourceTrackAudit.Export(auditSequence, args[3]);
@@ -161,7 +181,14 @@ foreach (var path in args.Skip(4)) {
     File.WriteAllText(Path.Combine(args[3], Path.GetFileName(path)+".json"),JsonConvert.SerializeObject(exports,Formatting.Indented));
     foreach (var export in exports) if (export is CUE4Parse.UE4.Assets.Exports.Texture.UTexture) session.Add(export);
 }
-var results = await session.RunAsync(args[3], new ExportOptions(meshFormat: EMeshFormat.Gltf2));
+var results = await session.RunAsync(args[3], new ExportOptions(meshFormat: EMeshFormat.Gltf2,
+    exportMaterials: !basePoseMesh, exportMorphTargets: !basePoseMesh));
+File.WriteAllText(Path.Combine(args[3], "export-scope.json"), JsonConvert.SerializeObject(new {
+    source = args[2], base_pose_only = basePoseMesh,
+    materials = !basePoseMesh, morph_targets = !basePoseMesh,
+    scope = basePoseMesh ? "Neutral skinned geometry only; not a material, morph or customization export." :
+        "Standard mesh export with materials and morph targets."
+}, Formatting.Indented));
 File.WriteAllText(Path.Combine(args[3], "export-results.json"), JsonConvert.SerializeObject(results, Formatting.Indented));
 if (results.Any(result => !result.Success)) throw new InvalidOperationException("One or more mesh resources failed to export");
 Console.WriteLine($"Exported {results.Count} resources");

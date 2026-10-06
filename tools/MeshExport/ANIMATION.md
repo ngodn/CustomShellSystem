@@ -4,6 +4,28 @@ The tool targets .NET 10. The verified build used SDK 10.0.401 and the matching
 CUE4Parse native ACL decoder. These modes read source assets; they do not repair
 or reproduce the complete gameplay AnimGraph.
 
+## Neutral cooked skin diagnostics
+
+`CSS_SKIN_AUDIT=1` exports the highest conventional render LOD directly from
+the decoded mesh. `skin-audit.json` records its bones, material slots, sections,
+counts, binary layout and SHA-256 hashes. `skin-vertices.bin` retains every
+nonzero cooked influence, its integer weight and decoded floating-point weight;
+`skin-indices.bin` retains triangle indices. Coordinates stay in Unreal
+component space, in centimetres. No axis conversion, weight truncation or
+normalization is applied. Run this mode separately from other export modes and
+use a fresh output directory. An existing skin audit cannot be overwritten.
+
+This is neutral geometry, not the final visible character: morphs, material
+visibility, cloth, physics and post-process graphs are absent. In particular,
+do not treat skirt vertices weighted to the foot as shoe soles. The companion
+`tools/authoring-probes/animations/measure_skin_contact.py` keeps per-material
+measurements and checks bind reconstruction before evaluating saved pose keys.
+
+For a neutral GLB, use `CSS_BASE_POSE_MESH=1`. It skips morphs and materials;
+ordinary exports retain both. The GLB writer uses four influences, so use the
+skin audit for complete weight analysis. These opt-in diagnostics leave source
+assets unchanged and do not replace ordinary customization exports.
+
 ## Stellar Blade source keys
 
 Set `CSS_SOURCE_GAME=GAME_StellarBlade` and `CSS_SOURCE_TRACKS=1` to read an
