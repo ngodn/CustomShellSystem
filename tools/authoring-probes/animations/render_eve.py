@@ -214,17 +214,24 @@ for output_frame, frame in enumerate(range(0, len(motion['frames']), args.stride
         visible_vertices = {i for polygon in filtered.data.polygons for i in polygon.vertices}
         body_lowest = min((filtered.matrix_world @ filtered.data.vertices[i].co).z for i in visible_vertices)
     foot_lowest = {side: math.inf for side in ('l', 'r')}
+    contact_vertices = {}
     for original in footwear:
         evaluated = original.evaluated_get(graph)
         assert len(evaluated.data.vertices) == len(original.data.vertices)
         for side, vertices in foot_vertices[original.name].items():
-            foot_lowest[side] = min(foot_lowest[side], min(
-                (evaluated.matrix_world @ evaluated.data.vertices[i].co).z for i in vertices))
+            height, index = min(((evaluated.matrix_world @ evaluated.data.vertices[i].co).z, i)
+                                for i in vertices)
+            if height < foot_lowest[side]:
+                foot_lowest[side] = height
+                contact_vertices[side] = dict(object=original.name, vertex=index,
+                    weights={original.vertex_groups[g.group].name: g.weight
+                             for g in original.data.vertices[index].groups if g.weight})
     lowest = min(foot_lowest.values())
     errors.append(dict(frame=frame, position_cm=position_error, angle_rad=angle_error,
                        source_frame=motion['frames'][frame].get('source_frame', frame),
                        footwear_lowest_cm=lowest*100,
                        foot_lowest_cm={side: height*100 for side, height in foot_lowest.items()},
+                       foot_contact_vertices=contact_vertices,
                        body_lowest_cm=None if body_lowest is None else body_lowest*100,
                        contact_lowest_cm=None if body_lowest is None else min(lowest, body_lowest)*100))
     if not args.measure_only:

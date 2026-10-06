@@ -55,7 +55,11 @@ passes both clips (4,944 frames, 388 bones, zero differences). Dense skinned
 measurements completed but still find -4.317 cm in DumbDumb and -1.209 cm in
 Iris Out. A rotating local-offset trial improves these sparse cases but leaves
 -3.841 cm on DumbDumb's left foot. Per-foot contact measurement and a separate
-leg-IK diagnostic are underway; neither candidate is accepted. See
+leg-IK diagnostic led to L5T full candidates. Their fresh saved/repeated poses
+and non-leg preservation checks pass, but complete scans still find mixed-weight
+heel-support penetration (-0.364/-0.217 cm) and magnified knee direction changes.
+Neither candidate is accepted. Investigate source knee behavior and target
+proportions alongside contact, without changing released outfit weights. See
 [the source/contact investigation](development/shared-animation-source-requirements.md#leg-contact-investigation-october-6).
 No new installation or release acceptance yet.
 

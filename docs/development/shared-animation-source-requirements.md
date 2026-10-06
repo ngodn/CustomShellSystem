@@ -170,6 +170,25 @@ preserving root and upper-body pose. The frame-3470 render was inspected.
 `CSSContactLibrary` now builds against UE 5.6.1's `AnimationCore` in C++20.
 The first full bake rejected four almost-straight leg cases. A nearest-source
 knee-plane fallback handles that mathematical ambiguity without stretching the
-leg or choosing an arbitrary axis. The L5T retry is running; no full corrected
-clip is accepted yet. See [bake procedure](../../tools/authoring-probes/animations/CONTACT.md).
-Neither candidate is installed. Cooking, adapter checks and live acceptance remain pending.
+leg or choosing an arbitrary axis. The L5T retry succeeds for both full clips.
+Fresh-process saved and repeated bakes match all 4,944 frames and 388 evaluated
+bones exactly. A separate JSON comparison confirms every evaluated non-leg
+local pose is unchanged. See [bake procedure](../../tools/authoring-probes/animations/CONTACT.md).
+
+L5T is still not accepted. Its complete per-key contact scan finds -0.364 cm at
+DumbDumb frame 2856 and -0.217 cm at Iris Out frame 76. The latter contact is
+heel-support vertex 95, weighted 70.17% to `calf_r` and 29.83% to `foot_r`.
+Moving the ankle does not translate this mixed-weight sole vertex rigidly.
+Keep this as an animation/contact investigation; do not alter the released
+outfit weights to make the measurement pass.
+
+`retarget-l5t/pose-preservation.json` also records increased leg angular steps,
+so floor clearance alone is insufficient for acceptance. Iris Out's right calf
+step reaches 49.29 degrees at frame 77, versus 32.84 in L5S. The original
+decoded source's knee plane reverses at frames 75 and 77; L5S retains that
+direction change, and the extra bend required by the sole correction magnifies
+it. `knee-plane-comparison.json` compares the source and both candidates across
+frames 72 through 81. Investigate the source's final leg behavior, retargeted
+proportions and contact correction together before smoothing or changing the
+performance. Neither candidate is installed. Cooking, adapter checks, full
+visual motion review and live acceptance remain pending.
