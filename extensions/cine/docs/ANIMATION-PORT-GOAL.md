@@ -473,3 +473,24 @@ Core is `css_core-facial-6b9cf837e4c2239c.dll`, CINE is
 on Eve Black Pearl; the earlier performance-only prompt is superseded.
 Live body/facial playback, other variants, contacts, restoration and performance
 remain unverified. No goal requirement or unresolved source clip was removed.
+
+## October 7: optional author head received
+
+The user supplied `Jail3_Head` and `D_Cinderella_Main` under the reference
+animation directory. See `docs/development/shared-animation-author-head.md`
+for their hashes and current evidence. The optional head supplies all nine
+missing facial shapes for DumbDumb, Iris Out and Spin. The transfer candidate
+retains 105 existing Eve facial shapes and adds ten, including Cinderella's
+surprise control. All six Eve meshes pass import and fresh editor checks;
+shared staging, Windows cooking and complete six-mesh cooked readback pass.
+The verified face catalog retains 21 expressions and now prepares all five
+earlier performances. Complete facial performance review, combined packaging
+and live checks remain separate gates. This candidate is not installed.
+
+The three earlier facial performances now prepare without missing controls,
+retaining 2,616, 1,892 and 426 source keys respectively. Combined-pack and live
+acceptance remain pending. Cinderella adds one newly inventoried body clip
+(8,381 samples, 139.66667 seconds) and one facial performance. Its body is not
+retargeted or integrated. Keep it explicitly unfinished, outside prior counts.
+The optional head does not resolve the seven unidentified source bone indices.
+No excluded outfit work, game input or installation was performed.

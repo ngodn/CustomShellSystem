@@ -1,5 +1,12 @@
 # Facial motion inside supplied performances
 
+October 7: all nine missing facial source controls were recovered from the
+user-supplied optional author head. The new 115-shape Eve candidate passes
+six-outfit editor and cooked verification. Its verified face catalog has all
+five earlier performances. Combined packaging and live acceptance remain;
+the candidate is not installed. See
+[the author-head checkpoint](shared-animation-author-head.md).
+
 Private authoring checkpoint, 2026-10-06. The installed combined trial supports
 the 21 static Eve expressions and source-timed Come Closer and Gesture 200
 facial playback.
