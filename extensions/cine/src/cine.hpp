@@ -7,6 +7,8 @@
 #include "callouts.hpp"
 #include "guides.hpp"
 #include "preset.hpp"
+#include "performance.hpp"
+#include "expression.hpp"
 #include "rig.hpp"
 #include "scene.hpp"
 #include "shot.hpp"
@@ -53,10 +55,17 @@ private:
         bool labels = true;               // callouts and caption during a breakdown
         bool breakdown_target = false;    // also break down the lock-on target
         bool signature = false;           // the signature block (signature.txt) during takes
+        std::string picture = "sharp";    // render quality during a take: game | sharp | full
+        PerformanceChoice performance;
+        std::string expression = "unchanged";
     };
     // One take, built while Preparing and played while Running.
     struct Take {
         Preset preset; Timeline timeline;
+        PerformanceChoice performance;
+        std::string expression = "unchanged";
+        bool expression_started = false, expression_ready = false;
+        double expression_wait = 0, expression_poll = 0;
         std::unique_ptr<OrbitCurve> curve;
         std::optional<Route> route; std::unique_ptr<Track> track;
         Vec3 base; double base_yaw = 0; bool from_head = false;
@@ -86,8 +95,36 @@ private:
         // wipes back on the beat.
         enum class Wear { Idle, Covering, Waiting } wearing = Wear::Idle;
         double cover_from = -1, wear_sent_at = 0, transition_until = -1;
-        bool covered = false;
+        bool covered = false, adopted = false;   // adopted: the breakdown already follows the look that just landed
+        // What the breakdown track wants on screen now. A cover takes the picture over for
+        // the length of an outfit change and hands it back to this.
+        Timeline::Reveal desired; bool desired_dirty = false;
+        std::string title;             // the caption a look or breakdown step last set
+        std::vector<std::pair<double, std::string>> titles; size_t title_next = 0;   // look-track titles of a take that is not a sequence
+        Json opening;                  // her customization as the take opened, for a look step's "reset"
+        // A split that follows her body: three points of her centre line (pelvis, chest, head)
+        // relative to her position, sampled each tick and eased between, and where that line
+        // crosses the middle of the frame, as a fraction of its width.
+        bool follows = false, body_live = false;
+        bool fits = false;             // a shot fits a height into the frame: the lens ratio is kept measured
+        static constexpr size_t body_parts = 19;
+        Vec3 body_before[body_parts], body_now[body_parts];   // head, torso, arms, hands, legs, feet (see sample_body)
+        double body_age = 0, body_place = 0.5;
+        bool body_placed = false;
+        Json body_mesh;
+        // The parts of her body shots are framed on (Subject): where each is relative to her
+        // position, sampled each tick, eased between samples and smoothed, so the camera
+        // follows her without picking up every twitch of the idle.
+        static constexpr size_t tracks = static_cast<size_t>(Subject::Count);
+        bool track_used[tracks]{}, track_ok[tracks]{}, track_live = false;
+        Vec3 track_before[tracks], track_now[tracks], track_at[tracks];
+        double track_age = 0;
+        // tan(half the vertical angle of view) over tan(half the field of view the camera is
+        // set to): what a "fit" shot needs to turn a height into a lens. Measured from the
+        // game's own projection, since it depends on the window's shape; 16:9 until then.
+        double lens_ratio = 0.5625;
         double wall_scale = 1.0;       // 1, or less while something stands between the camera and her
+        double wall_target = 1.0;      // where the last trace wants it; the scale eases there frame by frame
         // The plan against the world, made before the take rolls: a turn and a scale per shot.
         std::vector<ShotPlan> plan;
         std::vector<std::vector<double>> clear;   // per shot, per candidate turn: how much of the camera line is free
@@ -97,9 +134,11 @@ private:
         int wear_poll = 0, transitions = 0;
         // What to do before the take rolls: wear each look once, build the breakdown on the
         // look it belongs to, end on the opening look.
-        struct Prep { bool build = false; std::string outfit, variant; bool own = false; };
+        struct Prep { bool build = false; std::string outfit, variant; bool own = false, begin = false; };
         std::deque<Prep> prep;
         bool prep_sent = false, build_started = false;
+        bool learning = false;         // the breakdown is reading the look just worn
+        bool many_looks = false;       // the breakdown was taught several looks and follows outfit changes
         double prep_wait = 0;
         // Action take: who she fights, smoothed positions, the fight's state, the beats.
         Json opponent; bool had_opponent = false, opponent_down = false, opponent_seen = false;
@@ -115,6 +154,7 @@ private:
     void load_presets();
     void load_state();
     void save_state() const;
+    std::string performance_conflict(const Preset&) const;
     const Preset* current_preset() const;
 
     // Modes.
@@ -131,7 +171,10 @@ private:
     void sequence_frame(const CssxFrame& frame);
     void sequence_tick();
     struct SeqView { Vec3 camera; Rotator rotation; double fov = 40, focus = 300; };
-    SeqView sequence_view(const SeqPose& pose) const;
+    SeqView sequence_view(const SeqPose& pose, Vec3 anchor, double time) const;
+    double coverage_at(double time, double distance, double fov) const;   // the height a "fit" shot shows at her, or 0
+    Vec3 anchor_at(double time) const;   // the point a sequence's shot is measured from at this moment
+    void sample_tracks(bool snap);
     Json wear_request(const std::string& outfit, const std::string& variant, bool own, bool persist) const;
     bool worn(const Json& described, const std::string& outfit, const std::string& variant) const;
     void apply_look(const SeqLook& look);
@@ -161,17 +204,24 @@ private:
     Scene scene_;
     Breakdown breakdown_, breakdown_opponent_;
     Audio audio_;
+    PerformanceCatalog performance_catalog_;
+    PerformanceTake performance_;
+    double performance_cleanup_wait_ = 0;
+    ExpressionCatalog expression_catalog_;
+    ExpressionTake expression_;
+    double expression_cleanup_wait_ = 0;
     void roll();   // the take's first frame: clocks to zero, music on
     Typeface typeface_;   // the label font, shared by the guides and the callouts
     Callouts callouts_;
     // Breakdown labels. Sampled on the tick: where each labelled component is relative to
     // her, and how the lens maps onto the HUD. Drawn every frame from that with one host call
     // (where the camera is now) and the frame's own player position.
-    struct Label { std::string text; Vec3 before, now; };
+    struct Label { std::string text; Vec3 before, now; bool pair = false; Vec3 other_before, other_now; };
     std::vector<Label> labels_;
     std::vector<CalloutTarget> callout_targets_;
     Lens lens_;
     double label_age_ = 0;       // seconds since the last sample, for easing between two
+    double viewport_h_ = 0;      // the viewport's height in HUD units, from the last frame
     bool labels_live_ = false;
     bool pak_missing_ = false;   // read once on entering Cine World, for the menu
     CssxFrame last_frame_{};     // the newest frame, for drawing outside render()
@@ -182,6 +232,7 @@ private:
     std::vector<std::string> signature_;   // lines of signature.txt, read on entering Cine World
     void load_signature();
     void sample_labels();
+    void sample_body();
     double tick_dt_ = 0.1;
     Settings settings_;
     std::map<std::string, Preset> presets_;

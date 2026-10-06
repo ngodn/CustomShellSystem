@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
+#include <unordered_set>
 
 namespace cine {
 namespace {
@@ -21,12 +22,19 @@ constexpr size_t max_worn_actors = 12;
 // A stick longer than any limb is an offset to a helper bone (camera, prop, interaction
 // points), not anatomy: drawn it is a spike across the picture.
 constexpr double max_stick_cm = 70;
-constexpr double clay_ambient = 0.22;   // clay stays readable in a dark scene
+constexpr double clay_ambient = 0.5;    // clay stays readable in a dark scene
+// Depth is white at the lens and black at its range; the curve keeps a gradient through
+// the scene behind her instead of a flat cutout on black.
+constexpr double depth_gamma = 2.2;
+constexpr double clay_overlay_push = 0.12;   // cm along the normal
+constexpr double bone_glow = 1.8;       // bone shapes read against a dark body
+constexpr double wire_glow = 3.0;       // thin lines need more than their colour to read at night
+constexpr size_t max_looks = 30;
 constexpr int keep_relative = 0, snap_to_target = 2, no_collision = 0;
 
 struct LayerInfo { const char* id; const char* label; Vec3 colour; };
 constexpr LayerInfo info[static_cast<size_t>(Layer::Count)] = {
-    {"clay", "Clay", {0.42, 0.42, 0.42}},
+    {"clay", "Clay", {0.5, 0.5, 0.5}},
     {"wireframe", "Wireframe", {0.05, 0.85, 1.0}},
     {"skeleton", "Skeleton", {1.0, 0.86, 0.25}},
     {"virtual_bones", "Virtual bones", {1.0, 0.25, 0.9}},
@@ -94,14 +102,23 @@ std::string spring_group(const std::string& bone) {
     if (n.starts_with("belly")) return "belly";
     return {};
 }
-BoneKind classify_bone(const std::string& name, const std::vector<std::string>& spring_bones) {
-    if (name.starts_with("VB ")) return BoneKind::Virtual;
+bool helper_bone(const std::string& name) {
     const auto n = lower(name);
+    for (const char* part : {"socket", "prop_", "weapon", "camera", "warp_", "center_of_mass", "interaction", "_twist", "corrective", "stowed", "inhand"})
+        if (n.find(part) != std::string::npos) return true;
+    // Mounts this game hangs on the player skeleton, and the outfit skeleton's spare chains.
+    for (const char* start : {"css_", "genessacloth", "bag", "wp_", "unreal", "heal_", "punch", "tiel_", "wraith_", "eredrim"})
+        if (n.starts_with(start)) return true;
+    return false;
+}
+BoneKind classify_bone(const std::string& name, const std::vector<std::string>& spring_bones) {
+    const auto n = lower(name);
+    if (n.starts_with("vb ")) return BoneKind::Virtual;
     if (n.starts_with("ik_")) return BoneKind::Ik;
-    if (spring_bones.empty() ? spring_by_name(name)
-                             : std::any_of(spring_bones.begin(), spring_bones.end(), [&](const std::string& s) { return lower(s) == n; }))
+    // The usual spring names always count; an outfit adds its own chains to them.
+    if (spring_by_name(name) || std::any_of(spring_bones.begin(), spring_bones.end(), [&](const std::string& s) { return lower(s) == n; }))
         return BoneKind::Spring;
-    return BoneKind::Regular;
+    return helper_bone(name) ? BoneKind::Helper : BoneKind::Regular;
 }
 Quat z_to(Vec3 d) {
     const double length = std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
@@ -159,14 +176,40 @@ Json Breakdown::instance(const char* key, Vec3 colour, double opacity) {
     if (opacity >= 0) set_param(mid, "Opacity", opacity);
     return mid;
 }
-// A bone layer's shared instance. Hidden until its layer is shown: the caller assigns it to a
-// component in the same tick, which is what keeps it alive.
-Json Breakdown::material(Layer layer) {
-    auto& mid = mids_[static_cast<size_t>(layer)];
-    if (is_handle(mid)) return mid;
-    mid = instance("M_Cine_XRay", info[static_cast<size_t>(layer)].colour, 0.9);
-    if (is_handle(mid) && !(shown_ & bit(layer))) set_param(mid, "Show", 0.0);
+// Our wireframe and clay instances. Nothing references one while it is off her (between two
+// steps of a long take), and a garbage collection would take it: the locker holds them too.
+const Json& Breakdown::wire_mid() {
+    if (is_handle(wire_) && valid(wire_)) return wire_;
+    wire_ = instance("M_Cine_Wire", info[static_cast<size_t>(Layer::Wireframe)].colour, -1);
+    set_param(wire_, "Glow", wire_glow);
+    keep(wire_);
+    return wire_;
+}
+const Json& Breakdown::clay_mid() {
+    if (is_handle(clay_) && valid(clay_)) return clay_;
+    clay_ = instance("M_Cine_Clay", info[static_cast<size_t>(Layer::Clay)].colour, -1);
+    set_param(clay_, "Ambient", clay_ambient);
+    // As an overlay clay is a second skin over her own: lifted a little further, her own
+    // surface cannot shadow it in speckles.
+    if (options_.overlay_only) set_param(clay_, "Push", clay_overlay_push);
+    keep(clay_);
+    return clay_;
+}
+
+// The shared instance of one group of bone shapes: a layer, and the set of looks that have
+// those bones. Hidden until its layer is shown on a look that has them: the caller assigns it
+// to a component in the same tick, which is what keeps it alive.
+Json Breakdown::material(Layer layer, uint32_t looks) {
+    for (const auto& g : groups_) if (g.layer == layer && g.looks == looks) return g.mid;
+    auto mid = instance("M_Cine_XRay", info[static_cast<size_t>(layer)].colour, 0.9);
+    if (!is_handle(mid)) return mid;
+    set_param(mid, "Glow", bone_glow);
+    if (!((shown_ & bit(layer)) && worn(looks))) set_param(mid, "Show", 0.0);
+    groups_.push_back({layer, looks, mid});
     return mid;
+}
+size_t Breakdown::bones_worn() const {
+    return size_t(std::count_if(bones_.begin(), bones_.end(), [&](const Bone& b) { return worn(b.looks); }));
 }
 Json Breakdown::add_component(const Json& cls, const Json& xf) {
     auto component = call(pawn_, "AddComponentByClass", {{"Class", cls}, {"bManualAttachment", true}, {"RelativeTransform", xf}, {"bDeferredFinish", false}});
@@ -177,13 +220,13 @@ Json Breakdown::add_component(const Json& cls, const Json& xf) {
 
 // ---------------------------------------------------------------- begin and build
 
-void Breakdown::begin(const Json& pawn, const Json& camera, LayerSet needed, std::vector<std::string> spring_bones) {
+void Breakdown::begin(const Json& pawn, const Json& camera, LayerSet needed, std::vector<std::string> spring_bones, Options options) {
     if (active_) end();
     forget();
     repaint_ = false;
     if (!is_handle(pawn) || needed == 0) return;
     try {
-        pawn_ = pawn; camera_ = camera; needed_ = needed; spring_names_ = std::move(spring_bones);
+        pawn_ = pawn; camera_ = camera; needed_ = needed; options_ = options;
         mesh_ = host_.get(pawn_, "Mesh");
         capsule_ = host_.get(pawn_, "CapsuleComponent");
         statics_ = host_.find("/Script/Engine.Default__GameplayStatics");
@@ -219,76 +262,136 @@ void Breakdown::begin(const Json& pawn, const Json& camera, LayerSet needed, std
         // Everything she is made of: the body, then hair, garments and accessories (their own
         // skinned or static mesh components), then what is attached as its own actor (weapons,
         // seals). Skinned and static meshes only: a widget component is a mesh component too.
-        skins_.push_back({mesh_, Json(), {}});
-        if (needed_ & (bit(Layer::Clay) | bit(Layer::Wireframe))) {
-            try {
-                std::vector<Json> owners{pawn_};
-                const auto attached = host_.request({{"op", "call"}, {"target", pawn_}, {"function", "GetAttachedActors"},
-                                                     {"args", {{"bResetArray", true}, {"bRecursivelyIncludeAttachedActors", true}}}});
-                const auto list = attached.is_object() ? attached.value("OutActors", Json::array()) : Json::array();
-                if (list.is_array()) for (const auto& actor : list) if (is_handle(actor) && owners.size() <= max_worn_actors) owners.push_back(actor);
-                for (const char* path : {"/Script/Engine.SkinnedMeshComponent", "/Script/Engine.StaticMeshComponent"}) {
-                    const auto cls = load(path);
-                    if (!is_handle(cls)) continue;
-                    for (const auto& owner : owners) {
-                        Json parts;
-                        try { parts = call(owner, "K2_GetComponentsByClass", {{"ComponentClass", cls}}); } catch (...) { continue; }
-                        if (!parts.is_array()) continue;
-                        for (const auto& part : parts) {
-                            if (!is_handle(part) || skins_.size() >= max_skins) continue;
-                            if (std::none_of(skins_.begin(), skins_.end(), [&](const Skin& s) { return id_of(s.component) == id_of(part); })) skins_.push_back({part, Json(), {}});
-                        }
-                    }
-                }
-            } catch (...) {}   // the body alone still works
-        }
+        find_skins();
         if (needed_ & (bit(Layer::Clay) | bit(Layer::Wireframe))) {
             for (auto& skin : skins_) {
                 try { skin.overlay_before = host_.get(skin.component, "OverlayMaterial"); } catch (...) { skin.overlay_before = nullptr; }
                 if (ours(skin.overlay_before)) { skin.overlay_before = nullptr; repaint_ = true; }   // left by a take that did not end cleanly
             }
         }
-        if (needed_ & (bone_layers | bit(Layer::Collision))) {
-            const auto count = call(mesh_, "GetNumBones");
-            bones_expected_ = count.is_number() ? std::min<size_t>(count.get<size_t>(), max_bones) : 0;
-            reading_ = bones_expected_ > 0;
-        }
         if (needed_ & bit(Layer::Sockets)) {
             const auto names = call(mesh_, "GetAllSocketNames");
             if (names.is_array()) for (const auto& n : names) if (n.is_string() && sockets_.size() < max_sockets) sockets_.push_back(n.get<std::string>());
         }
-        if (needed_ & bit(Layer::Collision)) {
-            Json asset;
-            try { asset = host_.get(mesh_, "PhysicsAssetOverride"); } catch (...) {}
-            if (!is_handle(asset)) { const auto skinned = call(mesh_, "GetSkinnedAsset"); if (is_handle(skinned)) asset = host_.get(skinned, "PhysicsAsset"); }
-            const auto setups = is_handle(asset) ? host_.get(asset, "SkeletalBodySetups") : Json();
-            if (setups.is_array()) for (const auto& s : setups) if (is_handle(s) && bodies_.size() < max_bodies) bodies_.push_back(s);
-            if (bodies_.empty()) add_note("This mesh has no physics bodies to show.");
-        }
         wipe_numbers(1, 1, 0.01);
-        if (!reading_) plan();
+        // One look: read it and build. Several: the director teaches each, then assembles.
+        if (!options_.looks) { learn("", spring_bones); if (!reading_) plan(); }
     } catch (const std::exception& e) {
         add_note(std::string("could not start: ") + e.what());
     }
 }
 
+// Every skinned and static mesh part she is made of now. A part already known keeps what was
+// read from it (its own overlay, its slot materials).
+void Breakdown::find_skins() {
+    std::vector<Skin> before = std::move(skins_);
+    skins_.clear();
+    auto add = [&](const Json& part) {
+        if (!is_handle(part) || skins_.size() >= max_skins) return;
+        if (std::any_of(skins_.begin(), skins_.end(), [&](const Skin& s) { return id_of(s.component) == id_of(part); })) return;
+        for (auto& old : before) if (id_of(old.component) == id_of(part)) { skins_.push_back(std::move(old)); return; }
+        Skin skin{part, Json(), {}};
+        if (overlay_ours_) {
+            // A new part while our overlay is on the others: its own goes back at the end.
+            try { auto now = host_.get(part, "OverlayMaterial"); if (is_handle(now) && !ours(now)) { skin.overlay_before = now; keep(now); } } catch (...) {}
+        }
+        skins_.push_back(std::move(skin));
+    };
+    add(mesh_);
+    if (!(needed_ & (bit(Layer::Clay) | bit(Layer::Wireframe)))) return;
+    // Our own pieces (bone shapes, the locker) are static meshes on her too.
+    std::unordered_set<uint64_t> mine{id_of(locker_)};
+    for (const auto& piece : pieces_) mine.insert(id_of(piece.component));
+    try {
+        std::vector<Json> owners{pawn_};
+        const auto attached = host_.request({{"op", "call"}, {"target", pawn_}, {"function", "GetAttachedActors"},
+                                             {"args", {{"bResetArray", true}, {"bRecursivelyIncludeAttachedActors", true}}}});
+        const auto list = attached.is_object() ? attached.value("OutActors", Json::array()) : Json::array();
+        if (list.is_array()) for (const auto& actor : list) if (is_handle(actor) && owners.size() <= max_worn_actors) owners.push_back(actor);
+        for (const char* path : {"/Script/Engine.SkinnedMeshComponent", "/Script/Engine.StaticMeshComponent"}) {
+            const auto cls = load(path);
+            if (!is_handle(cls)) continue;
+            for (const auto& owner : owners) {
+                Json parts;
+                try { parts = call(owner, "K2_GetComponentsByClass", {{"ComponentClass", cls}}); } catch (...) { continue; }
+                if (!parts.is_array()) continue;
+                for (const auto& part : parts) if (!mine.contains(id_of(part))) add(part);
+            }
+        }
+    } catch (...) {}   // the body alone still works
+}
+
+// The bones of the look she wears now. A bone seen on an earlier look only gets this look's
+// bit; a new one is read in full (parent and reference pose).
+void Breakdown::learn(const std::string& look, const std::vector<std::string>& spring_bones) {
+    if (!active_ || !(needed_ & (bone_layers | bit(Layer::Collision)))) return;
+    try {
+        auto it = std::find(looks_.begin(), looks_.end(), look);
+        if (it == looks_.end()) {
+            if (looks_.size() >= max_looks) { add_note("Too many looks for one breakdown; the later ones show the body's bones only."); return; }
+            looks_.push_back(look);
+            it = looks_.end() - 1;
+        }
+        look_now_ = size_t(it - looks_.begin());
+        all_looks_ = (uint32_t{1} << looks_.size()) - 1;
+        for (auto& b : bones_) b.looks &= ~(uint32_t{1} << look_now_);
+        // A bone any look calls a spring is one.
+        for (const auto& name : spring_bones)
+            if (spring_names_.size() < 512 && std::find(spring_names_.begin(), spring_names_.end(), name) == spring_names_.end()) spring_names_.push_back(name);
+        for (auto& b : bones_) b.kind = classify_bone(b.name, spring_names_);
+        const auto count = call(mesh_, "GetNumBones");
+        bones_expected_ = count.is_number() ? std::min<size_t>(count.get<size_t>(), max_bones) : 0;
+        read_index_ = 0;
+        reading_ = bones_expected_ > 0;
+    } catch (const std::exception& e) {
+        reading_ = false;
+        add_note(std::string("could not read a look's bones: ") + e.what());
+    }
+}
+
 void Breakdown::read_skeleton() {
-    while (bones_.size() < bones_expected_ && spend(3)) {
-        const int index = int(bones_.size());
-        Bone bone;
+    const uint32_t look = uint32_t{1} << look_now_;
+    while (read_index_ < bones_expected_ && budget_ >= 3) {
+        const int index = int(read_index_++);
         const auto name = call(mesh_, "GetBoneName", {{"BoneIndex", index}});
-        bone.name = name.is_string() ? name.get<std::string>() : std::string();
+        --budget_;
+        const std::string text = name.is_string() ? name.get<std::string>() : std::string();
+        const auto known = std::find_if(bones_.begin(), bones_.end(), [&](const Bone& b) { return b.name == text; });
+        if (known != bones_.end()) { known->looks |= look; continue; }
+        if (bones_.size() >= max_bones * 2) continue;
+        Bone bone;
+        bone.name = text; bone.looks = look;
         if (index > 0) { const auto parent = call(mesh_, "GetParentBone", {{"BoneName", bone.name}}); if (parent.is_string()) bone.parent = parent.get<std::string>(); }
         // Reference pose, relative to the parent: where this bone sits on its parent's stick.
         const auto pose = call(mesh_, "GetRefPoseTransform", {{"BoneIndex", index}});
+        budget_ -= 2;
         if (pose.is_object() && pose.contains("Translation")) { const auto& t = pose["Translation"]; bone.local = {t.value("X", 0.0), t.value("Y", 0.0), t.value("Z", 0.0)}; }
         bone.kind = classify_bone(bone.name, spring_names_);
         bones_.push_back(std::move(bone));
     }
-    if (bones_.size() >= bones_expected_) { reading_ = false; plan(); }
+    if (read_index_ >= bones_expected_) { reading_ = false; if (!options_.looks) plan(); }
+}
+
+void Breakdown::assemble() {
+    if (!active_ || assembled_) return;
+    reading_ = false;
+    plan();
 }
 
 void Breakdown::plan() {
+    assembled_ = true;
+    // The physics bodies of the mesh worn now: read here, not at begin(), because a take that
+    // tries on several looks first would hold setups of an asset that has been unloaded since.
+    if (needed_ & bit(Layer::Collision)) {
+        try {
+            Json asset;
+            try { asset = host_.get(mesh_, "PhysicsAssetOverride"); } catch (...) {}
+            if (!is_handle(asset)) { const auto skinned = call(mesh_, "GetSkinnedAsset"); if (is_handle(skinned)) asset = host_.get(skinned, "PhysicsAsset"); }
+            const auto setups = is_handle(asset) ? host_.get(asset, "SkeletalBodySetups") : Json();
+            if (setups.is_array()) for (const auto& setup : setups) if (is_handle(setup) && bodies_.size() < max_bodies) bodies_.push_back(setup);
+        } catch (...) {}
+        if (bodies_.empty()) add_note("This mesh has no physics bodies to show.");
+    }
     auto kind_of = [&](const std::string& name) {
         for (const auto& b : bones_) if (b.name == name) return b.kind;
         return BoneKind::Regular;
@@ -310,13 +413,17 @@ void Breakdown::plan() {
 }
 
 void Breakdown::build(const Work& work) {
-    auto mesh_piece = [&](Layer layer, const char* shape_path, const std::string& socket, Vec3 at, Quat rotation, Vec3 scale) {
+    auto looks_of = [&](const std::string& bone) {
+        for (const auto& b : bones_) if (b.name == bone) return b.looks;
+        return all_looks_;   // not a bone we read (a socket): taken as always there
+    };
+    auto mesh_piece = [&](Layer layer, const char* shape_path, const std::string& socket, Vec3 at, Quat rotation, Vec3 scale, uint32_t looks) {
         const auto shape = load(shape_path);
-        const auto mid = material(layer);
+        const auto mid = material(layer, looks);
         if (!is_handle(shape) || !is_handle(mid)) return;
         const auto xf = transform(at, rotation, scale);
         const auto component = add_component(class_mesh_, xf);
-        pieces_.push_back({component, bit(layer)});
+        pieces_.push_back({component, bit(layer), looks});
         call(component, "SetStaticMesh", {{"NewMesh", shape}});
         call(component, "SetMaterial", {{"ElementIndex", 0}, {"Material", mid}});
         call(component, "SetCastShadow", {{"NewCastShadow", false}});
@@ -332,14 +439,14 @@ void Breakdown::build(const Work& work) {
         const Vec3 direction = b.local * (1.0 / length);
         // The engine cone is 100 tall along Z with a base radius of 50, centred on its origin.
         const double radius = std::clamp(length * 0.035, 0.25, 0.7);
-        mesh_piece(Layer::Skeleton, path_cone, b.parent, direction * (length / 2), z_to(direction), {radius / 50, radius / 50, length / 100});
+        mesh_piece(Layer::Skeleton, path_cone, b.parent, direction * (length / 2), z_to(direction), {radius / 50, radius / 50, length / 100}, b.looks & looks_of(b.parent));
     } else if (work.kind == Work::Joint) {
         const auto& b = bones_[work.index];
         const Layer layer = b.kind == BoneKind::Virtual ? Layer::VirtualBones : b.kind == BoneKind::Ik ? Layer::IkBones : Layer::Springs;
         const double radius = b.kind == BoneKind::Spring ? 2.6 : 2.0;   // the engine sphere has radius 50
-        mesh_piece(layer, path_sphere, b.name, {}, {}, {radius / 50, radius / 50, radius / 50});
+        mesh_piece(layer, path_sphere, b.name, {}, {}, {radius / 50, radius / 50, radius / 50}, b.looks);
     } else if (work.kind == Work::Socket) {
-        mesh_piece(Layer::Sockets, path_sphere, sockets_[work.index], {}, {}, {0.024, 0.024, 0.024});
+        mesh_piece(Layer::Sockets, path_sphere, sockets_[work.index], {}, {}, {0.024, 0.024, 0.024}, all_looks_);
     } else {
         // One physics body: every primitive becomes the engine's own shape component on that bone.
         const auto& setup = bodies_[work.index];
@@ -350,7 +457,7 @@ void Breakdown::build(const Work& work) {
         auto shape = [&](const Json& cls, const Json& element, auto&& size) {
             if (!is_handle(cls)) return;
             const auto component = add_component(cls, transform({}, {}, {1, 1, 1}));
-            pieces_.push_back({component, bit(Layer::Collision)});
+            pieces_.push_back({component, bit(Layer::Collision), looks_of(bone.get<std::string>())});
             call(component, "K2_AttachToComponent", {{"Parent", mesh_}, {"SocketName", bone}, {"LocationRule", snap_to_target},
                                                      {"RotationRule", snap_to_target}, {"ScaleRule", keep_relative}, {"bWeldSimulatedBodies", false}});
             host_.request({{"op", "call"}, {"target", component}, {"function", "K2_SetRelativeLocationAndRotation"},
@@ -395,10 +502,71 @@ void Breakdown::set_overlay(const Json* material) {
             } catch (...) {}
         }
     }
+    const Json wanted = material ? *material : Json();   // a copy: `material` may be overlay_now_ itself
     for (auto& skin : skins_) {
-        try { call(skin.component, "SetOverlayMaterial", {{"NewOverlayMaterial", material ? *material : skin.overlay_before}}); } catch (...) {}
+        try { call(skin.component, "SetOverlayMaterial", {{"NewOverlayMaterial", material ? wanted : skin.overlay_before}}); } catch (...) {}
     }
     overlay_ours_ = material != nullptr;
+    overlay_now_ = wanted;
+}
+
+// The wardrobe mod is about to change her outfit: nothing of ours may be on her while it does.
+void Breakdown::suspend() {
+    if (!active_) return;
+    try {
+        if (transition_end_ >= 0) settle();
+        if (clay_slots_) { apply_clay(false); suspended_clay_ = true; }
+        if (overlay_ours_) { const Json mine = overlay_now_; set_overlay(nullptr); suspended_ = mine; }
+    } catch (const std::exception& e) {
+        add_note(std::string("could not step aside for an outfit change: ") + e.what());
+    }
+}
+
+void Breakdown::follow(double place) {
+    if (!active_ || !pak_ || shown_ == 0 || transition_end_ >= 0 || edge_ >= 1.0) return;
+    place = std::clamp(place, 0.05, 0.95);
+    if (std::abs(place - edge_) < 0.001) return;   // under three pixels on a 2560 wide frame
+    try {
+        const auto collection = load(path_collection);
+        if (!is_handle(collection)) return;
+        // From and To alike: the line stands there whatever the running clock says.
+        for (const char* name : {"WipeFrom", "WipeTo"})
+            call(kismet_materials_, "SetScalarParameterValue", {{"WorldContextObject", pawn_}, {"Collection", collection}, {"ParameterName", name}, {"ParameterValue", place}});
+        edge_ = place;
+    } catch (...) {}
+}
+
+void Breakdown::reskin() {
+    if (!active_ || !overlay_ours_) return;
+    try {
+        const size_t before = skins_.size();
+        const uint64_t last = skins_.empty() ? 0 : id_of(skins_.back().component);
+        find_skins();
+        if (skins_.size() == before && (skins_.empty() || id_of(skins_.back().component) == last)) return;   // the same parts
+        const Json mine = overlay_now_;
+        set_overlay(&mine);
+    } catch (...) {}
+}
+
+// She wears `look` now: her parts are new, and so is the set of bones she has.
+void Breakdown::adopt(const std::string& look) {
+    if (!active_) return;
+    try {
+        if (transition_end_ >= 0) settle();
+        const auto it = std::find(looks_.begin(), looks_.end(), look);
+        look_now_ = it == looks_.end() ? max_looks + 1 : size_t(it - looks_.begin());
+        find_skins();
+        if (is_handle(suspended_)) { const Json mine = suspended_; suspended_ = nullptr; set_overlay(&mine); }
+        else if (overlay_ours_) { const Json mine = overlay_now_; set_overlay(&mine); }
+        if (suspended_clay_) { suspended_clay_ = false; apply_clay(true); }
+        for (const auto& g : groups_) set_param(g.mid, "Show", (shown_ & bit(g.layer)) && worn(g.looks) ? 1.0 : 0.0);
+        if (shown_ & bit(Layer::Collision))
+            for (const auto& piece : pieces_)
+                if ((piece.layer & bit(Layer::Collision)) && piece.looks != all_looks_) { try { call(piece.component, "SetHiddenInGame", {{"NewHidden", !worn(piece.looks)}, {"bPropagateToChildren", false}}); } catch (...) {} }
+        refresh_callouts();
+    } catch (const std::exception& e) {
+        add_note(std::string("could not follow an outfit change: ") + e.what());
+    }
 }
 
 // One of CINE's own materials (an instance of M_Cine_* or PP_Cine_*), by its name.
@@ -496,11 +664,18 @@ void Breakdown::depth_range(double cm) {
     for (auto& pass : pass_) { try { set_param(pass, "DepthRange", cm); } catch (...) {} }
 }
 
-void Breakdown::show(LayerSet set, double wipe_seconds) {
+void Breakdown::show(LayerSet set, double wipe_seconds, double stop) {
     if (!active_) return;
     try {
         if (transition_end_ >= 0) settle();
         set &= needed_;
+        // One overlay slot: where clay may not go into her own slots, wireframe has it alone.
+        if (options_.overlay_only && (set & bit(Layer::Wireframe))) set &= ~bit(Layer::Clay);
+        stop = pak_ ? std::clamp(stop, 0.05, 1.0) : 1.0;
+        // A line that rests, or has to move from, part of the way: only the line moves and
+        // what is left of it changes at once. A whole frame to a whole frame is the classic
+        // wipe below, with the outgoing layers ahead of the line.
+        if (edge_ < 1.0 || (stop < 1.0 && set != 0)) { edge_show(set, wipe_seconds, stop); return; }
         const LayerSet incoming = set & ~shown_, outgoing = shown_ & ~set, staying = shown_ & set;
         if (!incoming && !outgoing) return;
         const bool wiping = pak_ && wipe_seconds > 0.01;
@@ -514,15 +689,15 @@ void Breakdown::show(LayerSet set, double wipe_seconds) {
             else if (out) { if (wiping) { set_param(mid, "Invert", 1); set_param(mid, "Hold", 0); } else set_param(mid, "Show", 0); }
             else set_param(mid, "Hold", 1);
         };
-        for (auto l : {Layer::Skeleton, Layer::VirtualBones, Layer::IkBones, Layer::Springs, Layer::Sockets})
-            if ((incoming | outgoing | staying) & bit(l)) place(mids_[static_cast<size_t>(l)], incoming & bit(l), outgoing & bit(l));
+        for (const auto& g : groups_)
+            if (((incoming | outgoing | staying) & bit(g.layer)) && worn(g.looks)) place(g.mid, incoming & bit(g.layer), outgoing & bit(g.layer));
 
         // Her mesh has one overlay slot. Wireframe always uses it; clay borrows it for its own
         // wipe when wireframe is not involved, and otherwise changes her slot materials at once.
         const LayerSet wire = bit(Layer::Wireframe), clay = bit(Layer::Clay);
         const bool overlay_taken = (incoming | outgoing | staying) & wire;
         if ((incoming | staying) & wire) {
-            if (!is_handle(wire_)) wire_ = instance("M_Cine_Wire", info[static_cast<size_t>(Layer::Wireframe)].colour, -1);
+            wire_mid();
             place(wire_, incoming & wire, false);
             if (incoming & wire) set_overlay(&wire_);
         } else if (outgoing & wire) {
@@ -530,8 +705,8 @@ void Breakdown::show(LayerSet set, double wipe_seconds) {
             if (!wiping) set_overlay(nullptr);
         }
         if (incoming & clay) {
-            if (!is_handle(clay_)) { clay_ = instance("M_Cine_Clay", info[static_cast<size_t>(Layer::Clay)].colour, -1); set_param(clay_, "Ambient", clay_ambient); }
-            if (wiping && !overlay_taken) { place(clay_, true, false); set_overlay(&clay_); }
+            clay_mid();
+            if (!overlay_taken && (wiping || options_.overlay_only)) { place(clay_, true, false); set_overlay(&clay_); }
             else { set_param(clay_, "Show", 1); set_param(clay_, "Invert", 0); set_param(clay_, "Hold", 1); apply_clay(true); }
         } else if (outgoing & clay) {
             apply_clay(false);
@@ -547,6 +722,7 @@ void Breakdown::show(LayerSet set, double wipe_seconds) {
                 if (want) {
                     for (auto l : {Layer::BaseColor, Layer::Normals, Layer::Roughness, Layer::Metallic, Layer::Depth, Layer::Occlusion})
                         set_param(pass_[next], pass_weight(l), l == *want ? 1.0 : 0.0);
+                    set_param(pass_[next], "Gamma", *want == Layer::Depth ? depth_gamma : 1.0);
                     place(pass_[next], true, false);
                 }
                 if (have) place(pass_[pass_now_], false, true);
@@ -566,18 +742,101 @@ void Breakdown::show(LayerSet set, double wipe_seconds) {
     }
 }
 
+// Only the line moves: from where it rests to `stop` (or back to the left edge when nothing
+// is to be shown). What is left of it becomes `set` at once; right of it is the final picture.
+void Breakdown::edge_show(LayerSet set, double wipe_seconds, double stop) {
+    const LayerSet before = shown_, wire = bit(Layer::Wireframe), clay = bit(Layer::Clay), shapes = bit(Layer::Collision) | bit(Layer::Capsule);
+    const bool leaving = set == 0;
+    if (leaving && before == 0) return;
+    const double from = before == 0 ? 0.0 : edge_, to = leaving ? 0.0 : stop;
+    if (set == before && std::abs(to - from) < 1e-4) return;
+    const double seconds = std::max(wipe_seconds, 0.01), now = game_time();
+    auto left = [&](const Json& mid) { set_param(mid, "Show", 1); set_param(mid, "Invert", 0); set_param(mid, "Hold", 0); };
+    if (!leaving && set != before) {
+        for (const auto& g : groups_) {
+            if ((set & bit(g.layer)) && worn(g.looks)) left(g.mid);
+            else if (before & bit(g.layer)) set_param(g.mid, "Show", 0);
+        }
+        if (set & wire) {
+            wire_mid();
+            left(wire_);
+            if (!overlay_ours_ || id_of(overlay_now_) != id_of(wire_)) set_overlay(&wire_);
+            // Clay under a wireframe sits in her slots, so it covers the whole frame.
+            if (set & clay) {
+                clay_mid();
+                set_param(clay_, "Show", 1); set_param(clay_, "Invert", 0); set_param(clay_, "Hold", 1);
+                apply_clay(true);
+            } else if (clay_slots_) apply_clay(false);
+        } else if (set & clay) {
+            clay_mid();
+            if (clay_slots_) apply_clay(false);
+            left(clay_);
+            if (!overlay_ours_ || id_of(overlay_now_) != id_of(clay_)) set_overlay(&clay_);
+        } else {
+            if (clay_slots_) apply_clay(false);
+            if (overlay_ours_) set_overlay(nullptr);
+        }
+        if (frame_passes_) {
+            const auto want = first_frame_layer(set);
+            set_param(pass_[1 - pass_now_], "Show", 0);
+            if (want) {
+                for (auto l : {Layer::BaseColor, Layer::Normals, Layer::Roughness, Layer::Metallic, Layer::Depth, Layer::Occlusion})
+                    set_param(pass_[pass_now_], pass_weight(l), l == *want ? 1.0 : 0.0);
+                set_param(pass_[pass_now_], "Gamma", *want == Layer::Depth ? depth_gamma : 1.0);
+                left(pass_[pass_now_]);
+            } else set_param(pass_[pass_now_], "Show", 0);
+        }
+    } else if (!leaving) {
+        // The same layers, a new place for the line. Clay in her slots cannot be split.
+        if (clay_slots_ && to < 1.0 && !(set & wire)) { apply_clay(false); left(clay_); set_overlay(&clay_); }
+    }
+    wipe_numbers(from, to, seconds);
+    shapes_pending_ = (before ^ set) & shapes;
+    shapes_flip_at_ = shapes_pending_ ? now + (leaving ? seconds / 2 : 0) : -1;
+    edge_mode_ = true;
+    edge_to_ = to;
+    leaving_ = leaving ? before : 0;
+    shown_ = set;
+    transition_end_ = now + seconds;
+    refresh_callouts();
+}
+
 // The wipe has passed: outgoing layers are off, and every switch is back to plain "shown".
 void Breakdown::settle() {
     transition_end_ = -1;
     const LayerSet wire = bit(Layer::Wireframe), clay = bit(Layer::Clay);
-    for (auto l : {Layer::Skeleton, Layer::VirtualBones, Layer::IkBones, Layer::Springs, Layer::Sockets}) {
-        const auto& mid = mids_[static_cast<size_t>(l)];
-        if (!is_handle(mid)) continue;
-        if (shown_ & bit(l)) { set_param(mid, "Invert", 0); set_param(mid, "Hold", 0); set_param(mid, "Show", 1); }
-        else if (leaving_ & bit(l)) { set_param(mid, "Show", 0); set_param(mid, "Invert", 0); }
+    if (edge_mode_) {
+        edge_mode_ = false;
+        if (edge_to_ <= 0.0) {
+            // The line went back to the left edge: nothing is shown.
+            for (const auto& g : groups_) if (leaving_ & bit(g.layer)) set_param(g.mid, "Show", 0);
+            if (clay_slots_) apply_clay(false);
+            if (overlay_ours_) set_overlay(nullptr);
+            if (frame_passes_) for (auto& pass : pass_) set_param(pass, "Show", 0);
+            leaving_ = 0;
+            edge_ = 1.0;
+            wipe_numbers(1, 1, 0.01);
+        } else if (edge_to_ >= 1.0) {
+            // The whole frame, as after any wipe: clay moves into her slots where it may.
+            edge_ = 1.0;
+            if ((shown_ & clay) && !(shown_ & wire) && !clay_slots_ && !options_.overlay_only) {
+                set_param(clay_, "Hold", 1);
+                apply_clay(true);
+                set_overlay(nullptr);
+            }
+            wipe_numbers(1, 1, 0.01);
+        } else edge_ = edge_to_;   // the line stays where it stopped
+        return;
     }
-    if ((shown_ & clay) && !clay_slots_) { set_param(clay_, "Hold", 1); set_param(clay_, "Invert", 0); apply_clay(true); }
+    for (const auto& g : groups_) {
+        if (shown_ & bit(g.layer)) { if (worn(g.looks)) { set_param(g.mid, "Invert", 0); set_param(g.mid, "Hold", 0); set_param(g.mid, "Show", 1); } }
+        else if (leaving_ & bit(g.layer)) { set_param(g.mid, "Show", 0); set_param(g.mid, "Invert", 0); }
+    }
+    const bool clay_overlay = options_.overlay_only && (shown_ & clay);
+    if (clay_overlay) { set_param(clay_, "Invert", 0); set_param(clay_, "Hold", 0); }
+    else if ((shown_ & clay) && !clay_slots_) { set_param(clay_, "Hold", 1); set_param(clay_, "Invert", 0); apply_clay(true); }
     if (shown_ & wire) { set_overlay(&wire_); set_param(wire_, "Invert", 0); set_param(wire_, "Hold", 0); }
+    else if (clay_overlay) { if (!overlay_ours_) set_overlay(&clay_); }
     else if (overlay_ours_ || (leaving_ & (wire | clay))) set_overlay(nullptr);
     if (frame_passes_) {
         set_param(pass_[1 - pass_now_], "Show", 0);
@@ -600,6 +859,12 @@ void Breakdown::tick() {
         while (!reading_ && !queue_.empty() && spend(queue_.front().kind == Work::Skin ? 56 : queue_.front().kind == Work::Body ? 24 : 8)) {
             const Work work = queue_.front(); queue_.pop_front();
             try { build(work); } catch (const std::exception& e) { add_note(std::string("a piece could not be built: ") + e.what()); }
+        }
+        // The wardrobe mod repaints her under a running breakdown (a palette, a piece): if that
+        // took our overlay off the body, it goes back on, over whatever is there now.
+        if (overlay_ours_ && ++watch_ >= 5) {
+            watch_ = 0;
+            try { if (!ours(host_.get(mesh_, "OverlayMaterial"))) { const Json mine = overlay_now_; overlay_ours_ = false; find_skins(); set_overlay(&mine); } } catch (...) {}
         }
         if (transition_end_ < 0 && shapes_flip_at_ < 0) return;
         const double now = game_time();
@@ -632,24 +897,29 @@ void Breakdown::tick() {
 void Breakdown::refresh_callouts() {
     callouts_.clear();
     auto bone_like = [&](std::initializer_list<const char*> wanted) -> std::string {
-        for (const char* want : wanted) for (const auto& b : bones_) if (lower(b.name) == want) return b.name;
+        for (const char* want : wanted) for (const auto& b : bones_) if (worn(b.looks) && lower(b.name) == want) return b.name;
         return bones_.empty() ? std::string(*wanted.begin()) : std::string();
     };
-    auto count = [&](BoneKind kind) { return std::count_if(bones_.begin(), bones_.end(), [&](const Bone& b) { return b.kind == kind; }); };
-    auto first = [&](BoneKind kind) -> std::string { for (const auto& b : bones_) if (b.kind == kind) return b.name; return {}; };
+    auto count = [&](BoneKind kind) { return std::count_if(bones_.begin(), bones_.end(), [&](const Bone& b) { return b.kind == kind && worn(b.looks); }); };
+    auto first = [&](BoneKind kind) -> std::string { for (const auto& b : bones_) if (b.kind == kind && worn(b.looks)) return b.name; return {}; };
     auto add = [&](std::string text, const Json& component, std::string socket) { if (is_handle(component)) callouts_.push_back({std::move(text), component, std::move(socket)}); };
     if (shown_ & bit(Layer::Wireframe)) add("Mesh wireframe", mesh_, bone_like({"head"}));
     else if (shown_ & bit(Layer::Clay)) add("Clay shading", mesh_, bone_like({"head"}));
-    if (shown_ & bit(Layer::Skeleton)) add("Skeleton, " + std::to_string(bones_.size()) + " bones", mesh_, bone_like({"spine_03", "spine_02", "pelvis"}));
-    if ((shown_ & bit(Layer::VirtualBones)) && count(BoneKind::Virtual)) add("Virtual bones, " + std::to_string(count(BoneKind::Virtual)), mesh_, first(BoneKind::Virtual));
+    if (shown_ & bit(Layer::Skeleton)) add("Skeleton, " + std::to_string(bones_worn()) + " bones", mesh_, bone_like({"spine_03", "spine_02", "pelvis"}));
+    if ((shown_ & bit(Layer::VirtualBones)) && count(BoneKind::Virtual)) add("Virtual bones, " + std::to_string(count(BoneKind::Virtual)), mesh_, bone_like({"vb hand_r", "vb hand_l"}).empty() ? first(BoneKind::Virtual) : bone_like({"vb hand_r", "vb hand_l"}));
     if ((shown_ & bit(Layer::IkBones)) && count(BoneKind::Ik)) add("IK bones, " + std::to_string(count(BoneKind::Ik)), mesh_, bone_like({"ik_hand_r", "ik_foot_r"}).empty() ? first(BoneKind::Ik) : bone_like({"ik_hand_r", "ik_foot_r"}));
     if (shown_ & bit(Layer::Springs)) {
         std::vector<std::string> seen;
         for (const auto& b : bones_) {
-            if (b.kind != BoneKind::Spring) continue;
+            if (b.kind != BoneKind::Spring || !worn(b.looks)) continue;
             auto group = spring_group(b.name);
             if (group.empty()) group = "outfit";
-            if (std::find(seen.begin(), seen.end(), group) != seen.end()) continue;
+            const auto known = std::find(seen.begin(), seen.end(), group);
+            if (known != seen.end()) {
+                // The second bone of the group (the other side of a pair).
+                for (auto& callout : callouts_) if (callout.text == "Spring bones: " + group && callout.other.empty()) callout.other = b.name;
+                continue;
+            }
             seen.push_back(group);
             add("Spring bones: " + group, mesh_, b.name);
         }
@@ -695,8 +965,7 @@ std::vector<std::string> Breakdown::end() {
     }
     if (pak_) step("wipe", [&] { wipe_numbers(1, 1, 0.01); });
     // The attached pieces go over the next ticks; hidden first so nothing lingers on screen.
-    for (auto l : {Layer::Skeleton, Layer::VirtualBones, Layer::IkBones, Layer::Springs, Layer::Sockets})
-        step("layer", [&] { set_param(mids_[static_cast<size_t>(l)], "Show", 0); });
+    for (const auto& g : groups_) step("layer", [&] { set_param(g.mid, "Show", 0); });
     for (auto& piece : pieces_) {
         if (piece.layer & bit(Layer::Collision)) { try { call(piece.component, "SetHiddenInGame", {{"NewHidden", true}, {"bPropagateToChildren", false}}); } catch (...) {} }
         teardown_.push_back(std::move(piece.component));
@@ -714,7 +983,10 @@ void Breakdown::forget() {
     needed_ = shown_ = leaving_ = shapes_pending_ = 0;
     pawn_ = mesh_ = capsule_ = camera_ = statics_ = kismet_materials_ = nullptr;
     class_mesh_ = class_capsule_ = class_sphere_ = class_box_ = nullptr;
-    for (auto& mid : mids_) mid = nullptr;
+    groups_.clear(); looks_.clear();
+    look_now_ = 0; all_looks_ = 1; options_ = {};
+    edge_mode_ = false; edge_ = edge_to_ = 1.0;
+    suspended_ = overlay_now_ = nullptr; suspended_clay_ = assembled_ = false; read_index_ = 0; watch_ = 0;
     clay_ = wire_ = pass_[0] = pass_[1] = capsule_colour_before_ = nullptr;
     skins_.clear();
     locker_ = nullptr; locked_ = 0; repaint_ = false; depth_range_ = 0;

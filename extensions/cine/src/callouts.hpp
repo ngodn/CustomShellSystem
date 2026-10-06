@@ -30,14 +30,17 @@ struct CalloutTarget { std::string text; double x = 0, y = 0; bool visible = fal
 // the leader from the shelf under the label to the target.
 struct CalloutPlace { size_t target = 0; bool on_left = true; double label_x = 0, label_y = 0, width = 0, from_x = 0, from_y = 0, to_x = 0, to_y = 0; };
 
-constexpr size_t max_callouts = 6, max_signature_lines = 6;
+constexpr size_t max_callouts = 8, max_signature_lines = 6;
 constexpr double callout_font = 18, callout_line = 26, callout_shelf = 3;
 // 1 for a frame as wide as a 16:9 screen, smaller for narrow frames (never below 0.62).
 double frame_scale(const Rect& frame);
 // Room a label needs at a scale (the HUD does not report text sizes): upper-case, letter-spaced.
 double label_width(const std::string& text, double scale = 1.0);
-// Pure: at most max_callouts placements for the visible targets inside the frame.
-std::vector<CalloutPlace> layout_callouts(const Rect& frame, const std::vector<CalloutTarget>& targets);
+// Pure: at most max_callouts placements for the visible targets inside the frame. `line_x` is
+// where a split breakdown's line stands (HUD units): the layers are left of it, so every
+// label goes to the left column in a fixed row, and a target right of the line gets no label
+// (one on the line itself, her spine or head, keeps its label). Past the frame: no split.
+std::vector<CalloutPlace> layout_callouts(const Rect& frame, const std::vector<CalloutTarget>& targets, double line_x = 1e12);
 // "Spring bones: chest" -> "SPRING BONES: CHEST" (ASCII; other bytes pass through).
 std::string readout(const std::string& text);
 // Signature lines fitted to a width: a line too long for it breaks before each " + ".
@@ -68,7 +71,7 @@ public:
     void attach(const CssxHudApi* hud, void* context, Typeface* face) { hud_ = hud; context_ = context; face_ = face; }
     // `frame` is where to lay out (see above). Empty caption and signature hide those parts.
     void update(const CssxFrame& frame_data, const Rect& frame, const std::vector<CalloutTarget>& targets,
-                const std::string& caption, const std::vector<std::string>& signature);
+                const std::string& caption, const std::vector<std::string>& signature, double line_x = 1e12);
     void hide();
     void forget();   // the world changed: the host dropped our layers
 private:

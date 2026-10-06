@@ -13,6 +13,7 @@
 // and its whips are written. A look step changes what she wears or how it is set up. One
 // that changes the outfit is covered by a transition (the director wipes the picture into a
 // frame pass and back), because wearing an outfit is not instant.
+#include <cstdint>
 #include <map>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -33,9 +34,16 @@ struct Tempo {
 // roll (a dutch tilt) in degrees.
 struct SeqPose { double azimuth = 0, distance = 300, height = 0, aim = 0, fov = 40, roll = 0; };
 
-enum class Ease { Linear, In, Out, InOut, Whip };
+enum class Ease { Linear, In, Out, InOut, Whip, Smooth };
+// What a shot is framed on. None measures its heights from her capsule centre, a fixed point.
+// The others measure them from a part of her body, which the camera then follows: a face shot
+// stays on her face whatever her height, her boots or her pose.
+// Body is the middle of her, halfway between her head and her feet.
+enum class Subject : uint8_t { None, Head, Neck, Chest, Pelvis, Knees, Body, Count };
 // 0..1 -> 0..1. Whip leaves slowly, crosses fast and settles slowly: most of the move
-// happens in the middle third.
+// happens in the middle third. Smooth is not a curve of its own shot: a run of flowing
+// "smooth" shots is one spline through their poses, so the camera glides through each pose
+// without stopping or turning a corner there (as a value of u it is linear).
 double ease(Ease e, double u);
 
 struct SeqShot {
@@ -44,13 +52,30 @@ struct SeqShot {
     SeqPose from, to;
     Ease ease = Ease::InOut;
     double fstop = 0;            // depth of field for this shot, 0 off
+    Subject track = Subject::None;   // "track": "head", "neck", "chest", "pelvis", "knees" or "body"
+    // "fit": how many centimetres of height the frame shows where she stands. The lens is then
+    // set from that and from how far the camera really is, so a whole-figure shot shows her
+    // from head to foot in any window shape, and still does when a wall brings the camera in.
+    // 0 leaves the pose's own field of view.
+    double fit = 0;
+    // "fixed": the side this shot is taken from is part of the shot. When something is in the
+    // way it may come closer, never swing round to another side.
+    bool fixed = false;
 };
 
 // One change of look. `outfit` empty leaves the outfit alone (palette and controls only).
 struct SeqLook {
     double at = 0;               // seconds
+    // palette: a palette id, or "original" for the outfit's own colours.
     std::string outfit, variant, palette;
     std::map<std::string, std::vector<double>> controls;   // 1 to 3 channels each
+    // What the caption says from this step on ("Palette  //  Ember"), so a change has a name.
+    // An empty title clears the caption. A step may be a title alone.
+    std::string title; bool titled = false;
+    bool cover = true;           // an outfit change: false leaves it uncovered (hide it in a whip)
+    std::string idle;            // a wardrobe idle to switch to (its id); put it on a cut, a pose change is not blended
+    bool reset = false;          // back to the customization the take opened with, before this step's own changes
+    std::map<std::string, std::string> physics;   // a motion control and the wardrobe's preset for it ("chest_motion": "natural")
 };
 
 struct Sequence {

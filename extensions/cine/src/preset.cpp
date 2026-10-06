@@ -145,7 +145,7 @@ Preset Preset::parse(const Json& j) {
     if (j.contains("look")) {
         const auto& look = j.at("look");
         if (!look.is_object() || !look.contains("steps") || !look.at("steps").is_array() || look.at("steps").size() > 32)
-            throw std::invalid_argument("'look.steps' must list up to 32 steps");
+            throw std::invalid_argument("'look.steps' must list up to 96 steps");
         p.look_ends_on_own = look.value("end_on_own", true);
         double previous = -1;
         for (const auto& s : look.at("steps")) {
@@ -156,6 +156,7 @@ Preset Preset::parse(const Json& j) {
             previous = step.fraction;
             step.palette = text(s, "palette", 64, false);
             if (step.palette == "original") throw std::invalid_argument("'original' would clear the modder's values mid-shot; use end_on_own");
+            if (s.contains("title")) { step.title = text(s, "title", 80, false); step.titled = true; }
             if (s.contains("controls")) {
                 if (!s.at("controls").is_object() || s.at("controls").size() > 64) throw std::invalid_argument("'controls' must map up to 64 parts");
                 for (const auto& [id, value] : s.at("controls").items()) {
@@ -172,11 +173,22 @@ Preset Preset::parse(const Json& j) {
                     step.controls[id] = v;
                 }
             }
-            if (step.palette.empty() && step.controls.empty()) throw std::invalid_argument("A look step needs a palette or controls");
+            if (s.contains("physics")) {
+                if (!s.at("physics").is_object() || s.at("physics").size() > 16) throw std::invalid_argument("'physics' must map up to 16 motion controls to a preset");
+                for (const auto& [id, value] : s.at("physics").items()) {
+                    if (!value.is_string() || value.get<std::string>().empty() || value.get<std::string>().size() > 48) throw std::invalid_argument("A physics preset is named by its id");
+                    step.physics[id] = value.get<std::string>();
+                }
+            }
+            if (step.palette.empty() && step.controls.empty() && !step.titled && step.physics.empty()) throw std::invalid_argument("A look step needs a palette, controls, physics or a title");
             p.look.push_back(std::move(step));
         }
     }
     if (j.contains("idle")) p.idle = text(j, "idle", 96, true);
+    if (j.contains("frame")) {
+        p.frame = text(j, "frame", 16, true);
+        if (p.frame != "16:9" && p.frame != "9:16" && p.frame != "1:1" && p.frame != "2.39:1") throw std::invalid_argument("'frame' must be 16:9, 9:16, 1:1 or 2.39:1");
+    }
     if (j.contains("audio")) {
         // A file inside the extension folder, never a path out of it.
         const auto file = text(j, "audio", 160, true);
@@ -187,8 +199,8 @@ Preset Preset::parse(const Json& j) {
     }
     if (j.contains("breakdown")) {
         const auto& breakdown = j.at("breakdown");
-        if (!breakdown.is_object() || !breakdown.contains("steps") || !breakdown.at("steps").is_array() || breakdown.at("steps").size() > 32)
-            throw std::invalid_argument("'breakdown.steps' must list up to 32 steps");
+        if (!breakdown.is_object() || !breakdown.contains("steps") || !breakdown.at("steps").is_array() || breakdown.at("steps").size() > 96)
+            throw std::invalid_argument("'breakdown.steps' must list up to 96 steps");
         double previous = -1;
         for (const auto& s : breakdown.at("steps")) {
             if (!s.is_object() || !s.contains("layers")) throw std::invalid_argument("Each breakdown step needs 'layers'");
@@ -203,7 +215,32 @@ Preset Preset::parse(const Json& j) {
             previous = step.fraction;
             step.layers = layers_from(s.at("layers"));
             step.wipe = number(s, "wipe", step.wipe, 0, 10);
+            // A sequence may give the wipe in beats instead, so it moves with the music.
+            if (s.contains("beats")) {
+                if (p.kind != ShotKind::Sequence) throw std::invalid_argument("'beats' is for sequence presets; use 'wipe' (seconds)");
+                step.wipe = number(s, "beats", 1, 0, 64) * 60.0 / p.sequence.tempo.bpm;
+            }
+            if (s.contains("split") && s.at("split").is_string()) {
+                if (s.at("split") != "body") throw std::invalid_argument("'split' is a place across the frame (0.05 to 1) or \"body\"");
+                step.follow = true; step.split = 0.5;
+                step.share = number(s, "share", 0.5, 0.1, 0.9);
+            } else step.split = number(s, "split", 1.0, 0.05, 1.0);
+            if (s.contains("title")) { step.title = text(s, "title", 80, false); step.titled = true; }
             p.breakdown.push_back(step);
+        }
+    }
+    if (p.kind == ShotKind::Sequence) {
+        p.cover = {bit(Layer::Clay) | bit(Layer::Skeleton) | bit(Layer::Springs)};
+        if (j.contains("cover")) {
+            if (!j.at("cover").is_array() || j.at("cover").empty() || j.at("cover").size() > 8) throw std::invalid_argument("'cover' must list 1 to 8 covers");
+            p.cover.clear();
+            for (const auto& item : j.at("cover")) {
+                // One layer by name, or a list of layers shown together.
+                const LayerSet set = item.is_string() ? layers_from(Json::array({item})) : layers_from(item);
+                if (set == 0 || (set & bit(Layer::Lighting))) throw std::invalid_argument("a cover needs at least one layer");
+                if ((set & bit(Layer::Clay)) && (set & bit(Layer::Wireframe))) throw std::invalid_argument("a cover takes clay or wireframe, not both");
+                p.cover.push_back(set);
+            }
         }
     }
     return p;
@@ -215,7 +252,7 @@ Timeline make_timeline(const Preset& p, double route_length_cm, double walk_spee
         return OrbitKey{t, k.azimuth, k.distance * p.zoom, k.height, k.aim, k.fov * p.fov_scale};
     };
     // Breakdown steps are fractions of the whole take, whatever kind it is.
-    auto reveals = [&] { for (const auto& s : p.breakdown) tl.breakdown.push_back({s.fraction * tl.total, s.layers, s.wipe}); };
+    auto reveals = [&] { for (const auto& s : p.breakdown) tl.breakdown.push_back({s.fraction * tl.total, s.layers, s.wipe, s.split, s.title, s.titled, s.follow, s.share}); };
     if (p.kind == ShotKind::Photo) {
         tl.total = double(p.photos.size()) * p.hold;
         reveals();

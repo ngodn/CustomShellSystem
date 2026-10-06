@@ -28,8 +28,13 @@ std::optional<Layer> layer_from(const std::string& id);
 // Preset form of a set: ["clay", "wireframe"]. Throws std::invalid_argument naming a bad id.
 LayerSet layers_from(const Json& array);
 
-// How a bone is drawn, decided from its name alone (pure, tested).
-enum class BoneKind { Regular, Virtual, Ik, Spring };
+// How a bone is drawn, decided from its name alone (pure, tested). A helper is not anatomy:
+// a socket, a prop or weapon mount, a twist or corrective bone, a camera or interaction
+// point, or a chain of the shared outfit skeleton (cloth, hair, wings, tail) that this outfit
+// did not name as its own. Helpers are counted but not drawn: drawn, they bury the body's
+// bones under a bush of spikes.
+enum class BoneKind { Regular, Virtual, Ik, Spring, Helper };
+bool helper_bone(const std::string& name);
 BoneKind classify_bone(const std::string& name, const std::vector<std::string>& spring_bones);
 // Default spring bones by name, for outfits that follow the usual naming (chest, glutes, belly).
 bool spring_by_name(const std::string& bone);

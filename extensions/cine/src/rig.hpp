@@ -76,6 +76,15 @@ public:
     // Restore: take-level changes (cameras, view, walk) or everything including the HUD.
     // Every step runs even when an earlier one fails; returns the failures.
     std::vector<std::string> restore_take();
+    // The picture for the length of a take. The game renders shadows for play: coarse on a
+    // moving character and from a small page pool, which shows as stair-stepped shadow edges
+    // and dotted skin in a close-up. Level 1 smooths the shadows, level 2 also renders at
+    // full resolution. Only values that are lower than the target are touched, each is
+    // read first, and restore_picture() puts every one back (it works across a world change:
+    // console variables belong to the process).
+    void picture(int level);
+    std::vector<std::string> restore_picture();
+    bool picture_raised() const { return !picture_saved_.empty(); }
     std::vector<std::string> restore_all();
     bool owns_take_changes() const;
     bool hud_hidden() const { return hud_hidden_; }
@@ -88,6 +97,7 @@ private:
     const cssx::Client& host_;
     Json pawn_, controller_, movement_, mesh_, camera_manager_;
     Json statics_, kismet_, ai_, widgets_, player_lib_, camera_class_;
+    std::vector<std::pair<std::string, double>> picture_saved_;   // console variables we raised, with the game's own values
     Json world_, world_settings_, lock_, asc_, layout_;
     std::vector<std::pair<Json, bool>> hidden_components_;   // enemy health bars: prior visibility
     // Looked up once per take instead of on every tick: an actor's sub-object by property name.

@@ -23,13 +23,19 @@ struct PresetKey { std::string anchor; double fraction = 0; double azimuth = 0, 
 // One look step: a palette and per-control values (one number, or 1-3 channels; colour
 // controls take three as a swatch), at a fraction of the walk (Walk) or duration (others). Controls a worn outfit
 // does not have are skipped, not errors, so one preset serves many outfits.
-struct LookStep { double fraction = 0; std::string palette; std::map<std::string, std::vector<double>> controls; };   // 1-3 channels as given
+// A step may also carry a title for the caption ("Palette  //  Crimson"), or be a title alone.
+struct LookStep { double fraction = 0; std::string palette; std::map<std::string, std::vector<double>> controls; std::string title; bool titled = false;
+                  std::map<std::string, std::string> physics; };   // controls: 1-3 channels as given; physics: a motion control and the wardrobe's preset for it
 
 struct PhotoShot { std::string name; double azimuth = 0, distance = 300, height = 0, aim = 0, fov = 40; };
 
 // One breakdown step: from this point of the take the frame shows exactly these layers,
 // reached by a left-to-right wipe of `wipe` seconds (0 cuts). An empty set is the final image.
-struct BreakdownStep { double fraction = 0; LayerSet layers = 0; double wipe = 1.2; };
+// `split` is where the wipe line comes to rest (a fraction of the frame's width): 1 is the
+// whole frame; less holds the layers left of the line and the final picture right of it.
+// `follow` ("split": "body") keeps the line on the middle of her body instead of a fixed place.
+// `share`, with follow: how much of her width the layers get (0.5 is her centre line).
+struct BreakdownStep { double fraction = 0; LayerSet layers = 0; double wipe = 1.2; double split = 1.0; std::string title; bool titled = false; bool follow = false; double share = 0.5; };
 
 // Something that happens in a fight, and what the camera does about it.
 struct Beat {
@@ -81,6 +87,10 @@ struct Preset {
     Sequence sequence;           // Sequence only: shots and looks on a tempo grid
     std::string audio;           // optional: a .wav or .mp3 in the extension folder, played from the take's first frame
     std::string idle;            // optional: the idle every look plays during the take (a CSS idle id)
+    std::string frame;           // optional: the frame the take is laid out for ("9:16"...), whatever guide is chosen
+    // Sequence: what takes the whole frame while she changes outfit, used in turn. The rig
+    // (clay with the bones in it) by default: the outfit changes under one clay figure.
+    std::vector<LayerSet> cover;
     bool look_ends_on_own = true;   // rebuild the modder's own look for the final shot
     static Preset parse(const Json&);
 };
@@ -94,7 +104,7 @@ struct Timeline {
     std::vector<OrbitKey> keys;
     struct Step { double at = 0; const LookStep* step = nullptr; bool own = false; };
     std::vector<Step> look;
-    struct Reveal { double at = 0; LayerSet layers = 0; double wipe = 0; };
+    struct Reveal { double at = 0; LayerSet layers = 0; double wipe = 0; double stop = 1.0; std::string title; bool titled = false; bool follow = false; double share = 0.5; };
     std::vector<Reveal> breakdown;
 };
 // Walk needs the route length; others ignore it. Throws std::invalid_argument when the

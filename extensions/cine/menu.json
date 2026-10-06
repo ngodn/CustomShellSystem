@@ -25,8 +25,32 @@
         {"id": "fov_scale", "type": "slider", "label": "Field of view", "value": 1, "min": 0.5, "max": 2, "step": 0.05, "unit": "x", "description": "Wider or tighter lens. Portrait (9:16) recordings usually want about 1.25x."},
         {"id": "guide", "type": "radio", "label": "Frame guide", "value": "off", "options": [{"id": "off", "label": "Off"}, {"id": "16:9", "label": "16:9"}, {"id": "9:16", "label": "9:16"}, {"id": "1:1", "label": "1:1"}, {"id": "2.39:1", "label": "2.39:1"}], "description": "Darkens everything outside the chosen frame while you set up. Hidden during takes, so it never ends up in a recording. Breakdown labels, the caption and the signature stay inside the chosen frame."},
         {"id": "signature", "type": "toggle", "label": "Signature", "value": false, "description": "Shows your signature block at the bottom left of the frame during takes. The text is signature.txt in the CINE folder: the first line is the name, the lines under it are small print. Edit it to your own."},
+        {"id": "picture", "type": "radio", "label": "Picture", "value": "sharp", "options": [{"id": "game", "label": "Game settings"}, {"id": "sharp", "label": "Sharp shadows"}, {"id": "full", "label": "Sharp shadows, full resolution"}], "description": "The game draws shadows for play: coarse on a moving character, which shows as blocky shadow edges and dotted skin in a close-up. For the length of a take CINE raises the shadow quality, and with the last choice also renders at full resolution (heavier). The game's own values go back when the take ends. Until the game is restarted, the graphics options for shadows and resolution may not take effect after a take that raised them."},
         {"id": "walls", "type": "toggle", "label": "Ease in at walls", "value": true, "description": "Checks the camera path before the take and moves the camera closer where a wall would block it, instead of jumping to her other side."},
         {"id": "reload", "type": "button", "label": "Reload presets", "description": "Reads the presets folder again. Broken files are skipped and named in the CSSX log."}
+      ]
+    },
+    {
+      "id": "performance_section",
+      "title": "Performance",
+      "description": "Play a dance or photo pose with a stationary camera preset. Needs CSS Locomotion Shared Assets and a supported outfit. Playback starts when the take rolls and stops when it ends. Movement, combat or opening a menu cancels playback.",
+      "controls": [
+        {"id": "performance_refresh", "type": "button", "label": "Refresh animations", "description": "Read the installed animation libraries and check the outfit you are wearing. Use this after changing outfits or installing a pack."},
+        {"id": "performance_library", "type": "choice", "label": "Library", "value": "none", "options": [{"id": "none", "label": "No installed library"}]},
+        {"id": "performance", "type": "choice", "label": "Animation", "value": "off", "options": [{"id": "off", "label": "Off (use locomotion)"}], "description": "Off keeps your selected locomotion. Performances keep their authored once, loop or held-pose behavior. F9 stops the take and restores locomotion."},
+        {"id": "performance_rate", "type": "slider", "label": "Animation speed", "value": 1, "min": 0.1, "max": 4, "step": 0.1, "unit": "x", "description": "Changes only the selected animation's playback rate. Camera timing, audio and game speed stay as set."},
+        {"id": "performance_start", "type": "number", "label": "Start at", "value": 0, "min": 0, "max": 86400, "step": 0.1, "unit": "s", "description": "Start at this point in the animation. A time beyond the selected clip is rejected before playback."},
+        {"id": "performance_info", "type": "label", "label": "Selected animation", "description": "Playback behavior or the reason the selected animation is unavailable."}
+      ]
+    },
+    {
+      "id": "expression_section",
+      "title": "Facial Expression",
+      "description": "Needs a supported outfit and CSS Locomotion Shared Assets. An expression applies before the camera starts and is restored after the take. For takes that change outfits or palettes, use As set in CSS.",
+      "controls": [
+        {"id": "expression_refresh", "type": "button", "label": "Refresh expressions", "description": "Check the expressions available for the outfit you are wearing."},
+        {"id": "expression", "type": "choice", "label": "Expression", "value": "unchanged", "options": [{"id": "unchanged", "label": "As set in CSS"}, {"id": "original", "label": "Original face"}], "description": "As set in CSS keeps your current face. Original face temporarily clears a selected expression. Other choices apply only for this take."},
+        {"id": "expression_info", "type": "label", "label": "Selected expression", "description": "Availability and restoration for the selected expression."}
       ]
     },
     {

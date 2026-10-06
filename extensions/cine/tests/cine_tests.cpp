@@ -187,10 +187,15 @@ static void layers() {
     expect(classify_bone("VB hand_r", {}) == BoneKind::Virtual, "VB prefix is a virtual bone");
     expect(classify_bone("ik_foot_l", {}) == BoneKind::Ik && classify_bone("IK_Hand_Root", {}) == BoneKind::Ik, "ik_ prefix, any case");
     expect(classify_bone("brust001", {}) == BoneKind::Spring && classify_bone("Butt002", {}) == BoneKind::Spring && classify_bone("belly", {}) == BoneKind::Spring, "usual spring names");
-    expect(classify_bone("spine_03", {}) == BoneKind::Regular && classify_bone("thigh_twist_02_l", {}) == BoneKind::Regular, "ordinary bones");
+    expect(classify_bone("spine_03", {}) == BoneKind::Regular && classify_bone("index_02_r", {}) == BoneKind::Regular && classify_bone("Foot_L", {}) == BoneKind::Regular, "ordinary bones");
+    for (const char* name : {"thigh_twist_02_l", "Socket_Prop_Stowed_01", "prop_r", "weapon_l", "camera_pivot", "calf_correctiveRoot_r", "CSS_Wing_02_L", "GenessaCloth_S_FL1",
+                             "center_of_mass", "Interaction", "bag1_L", "unrealHelmet1_M", "Punch", "Socket_Lute_Simple_InHand"})
+        expect(classify_bone(name, {}) == BoneKind::Helper, std::string("a mount, twist or spare chain is a helper, not anatomy: ") + name);
+    expect(classify_bone("CSS_Hair_Ponytail_03", {"css_hair_ponytail_03"}) == BoneKind::Spring, "a chain the outfit names as its own is a spring, not a helper");
+    expect(classify_bone("vb ik_ground_ref_l", {}) == BoneKind::Virtual, "the VB prefix in any case");
     // When the outfit names its spring bones, only those count.
     expect(classify_bone("thigh_twist_02_l", {"Thigh_Twist_02_L"}) == BoneKind::Spring, "outfit list wins, any case");
-    expect(classify_bone("brust001", {"skirt_01"}) == BoneKind::Regular, "a name outside the outfit's list is ordinary");
+    expect(classify_bone("brust001", {"skirt_01"}) == BoneKind::Spring && classify_bone("skirt_02", {"skirt_01"}) == BoneKind::Regular, "the usual names count beside an outfit's own list");
     expect(spring_group("brust001") == "chest" && spring_group("breast_l") == "chest" && spring_group("butt002") == "glutes" && spring_group("glute_r") == "glutes"
            && spring_group("belly") == "belly" && spring_group("skirt_01").empty(), "spring groups");
 
@@ -330,10 +335,26 @@ static void labels() {
     const auto capped = layout_callouts(screen, many);
     size_t on_left = 0;
     for (const auto& p : capped) if (p.on_left) ++on_left;
-    expect(capped.size() == max_callouts && on_left == max_callouts / 2, "at most six labels, three a side");
+    expect(capped.size() == max_callouts && on_left == max_callouts / 2, "labels are capped, half a side");
     for (size_t i = 0; i < capped.size(); ++i) for (size_t j = i + 1; j < capped.size(); ++j)
         if (capped[i].on_left == capped[j].on_left) expect(std::abs(capped[i].label_y - capped[j].label_y) >= callout_line, "labels in a column never overlap");
     expect(layout_callouts(Rect{}, targets).empty(), "no layout without a frame");
+    {   // A split breakdown: labels only for what is left of the line, all in the left column.
+        const auto half = layout_callouts(screen, targets, screen.x + screen.w / 2);
+        bool left_only = !half.empty();
+        for (const auto& place : half) left_only = left_only && place.on_left && place.to_x <= screen.x + screen.w / 2 + 1e-9;
+        size_t expected = 0;
+        for (const auto& t : targets) if (t.visible && t.x >= screen.x && t.x <= screen.x + screen.w * 0.53 && t.y >= screen.y && t.y <= screen.y + screen.h) ++expected;
+        expect(left_only && half.size() == std::min(expected, max_callouts), "a split labels only what is on the layers' side, and no arrow crosses the line: " + std::to_string(half.size()) + " of " + std::to_string(expected));
+        // A label keeps its row when another one goes: hide the first target and the rest stay put.
+        auto fewer = targets;
+        size_t hidden = fewer.size();
+        for (size_t i = 0; i < fewer.size(); ++i) if (fewer[i].visible) { fewer[i].visible = false; hidden = i; break; }
+        const auto after = layout_callouts(screen, fewer, screen.x + screen.w / 2);
+        bool steady = true;
+        for (const auto& now : after) for (const auto& was : half) if (now.target == was.target) steady = steady && near(now.label_y, was.label_y, 1e-9) && near(now.label_x, was.label_x, 1e-9);
+        expect(hidden < fewer.size() && after.size() + 1 == half.size() && steady, "in a split a label never moves when another one leaves");
+    }
     expect(readout("Spring bones: chest, 12") == "SPRING BONES: CHEST, 12", "labels read as upper-case readouts");
 
     // Every frame guide: all of it stays inside the opening, whatever its shape.
@@ -412,6 +433,17 @@ static void sequence() {
     expect(wardrobe.size() == 2 && wardrobe[0].first == "a.outfit" && wardrobe[1].second == "two", "the wardrobe lists each look once, in first-use order");
     const auto tl = make_timeline(p, 0, 184);
     expect(tl.breakdown.size() == 2 && near(tl.breakdown[0].at, 6, 1e-9) && near(tl.breakdown[1].at, 8, 1e-9), "breakdown steps of a sequence are in bars");
+    expect(tl.breakdown[0].stop == 1.0 && p.cover.size() == 1 && p.cover[0] == (bit(Layer::Clay) | bit(Layer::Skeleton) | bit(Layer::Springs)),
+           "a step takes the whole frame and outfit changes are covered by the rig unless the preset says otherwise");
+    {   // A split step, a wipe counted in beats, and the preset's own cover passes.
+        Json j = base;
+        j["breakdown"]["steps"][0] = {{"at", 3.5}, {"layers", {"clay", "skeleton"}}, {"split", 0.5}, {"beats", 2}};
+        j["cover"] = Json::array({"base_color", Json::array({"wireframe", "skeleton"})});
+        const auto q = Preset::parse(j);
+        const auto t = make_timeline(q, 0, 184);
+        expect(near(t.breakdown[0].stop, 0.5, 1e-9) && near(t.breakdown[0].wipe, 2 * 60.0 / q.sequence.tempo.bpm, 1e-9), "a split step rests at its line and its wipe is counted in beats");
+        expect(q.cover.size() == 2 && q.cover[0] == bit(Layer::BaseColor) && q.cover[1] == (bit(Layer::Wireframe) | bit(Layer::Skeleton)), "a preset names its own covers: one layer, or several together");
+    }
 
     // The plan against the world: stay put when clear, turn only for clearly more room, come closer otherwise.
     expect(choose_plan({1.0}).turn == 0 && near(choose_plan({1.0}).scale, 1, 1e-12), "an open shot is left as written");
@@ -433,6 +465,31 @@ static void sequence() {
     bad("no shots", [](Json& j) { j["shots"] = Json::array(); });
     bad("shots out of order", [](Json& j) { j["shots"][1]["at"] = 1; });
     bad("a shot after the end", [](Json& j) { j["shots"][2]["at"] = 6; });
+    {   // A chain of smooth flows is one spline: it passes through every pose and has no corner there.
+        Json j = base;
+        j["shots"] = Json::array({
+            {{"at", 1}, {"from", {{"azimuth", 0}, {"distance", 400}, {"height", 0}, {"aim", 0}, {"fov", 40}}}, {"to", {{"azimuth", 30}}}, {"ease", "smooth"}},
+            {{"at", 2}, {"flow", true}, {"to", {{"azimuth", 90}, {"height", 40}}}, {"ease", "smooth"}},
+            {{"at", 3}, {"flow", true}, {"to", {{"azimuth", 100}, {"height", -20}}}, {"ease", "smooth"}}});
+        const auto q = Preset::parse(j).sequence;
+        const double a1 = q.shots[1].at, a2 = q.shots[2].at, e = 1e-4;
+        expect(near(pose_at(q, a1).azimuth, 30, 1e-6) && near(pose_at(q, a2).azimuth, 90, 1e-6) && near(pose_at(q, a2).height, 40, 1e-6), "a smooth chain passes through its poses");
+        const double before = (pose_at(q, a2).height - pose_at(q, a2 - e).height) / e, after = (pose_at(q, a2 + e).height - pose_at(q, a2).height) / e;
+        const double v1 = (pose_at(q, a1).azimuth - pose_at(q, a1 - e).azimuth) / e, v2 = (pose_at(q, a1 + e).azimuth - pose_at(q, a1).azimuth) / e;
+        expect(near(before, after, 0.05 * (std::abs(before) + 1)) && near(v1, v2, 0.05 * (std::abs(v1) + 1)), "with the same speed either side of a pose: no stop, no corner");
+        expect(std::abs(v1) > 1, "and it does not stop there");
+    }
+    {   // A shot may be framed on a part of her body.
+        Json j = base;
+        j["shots"][0]["track"] = "head";
+        expect(Preset::parse(j).sequence.shots[0].track == Subject::Head && Preset::parse(base).sequence.shots[0].track == Subject::None, "a shot names the part of her it is framed on");
+    }
+    {   Json j = base; j["shots"][0]["track"] = "body"; j["shots"][0]["fit"] = 200;
+        const auto q = Preset::parse(j).sequence;
+        expect(q.shots[0].track == Subject::Body && near(q.shots[0].fit, 200, 1e-9), "a shot may fit a height of her into the frame");
+    }
+    bad("a fit too small to be a height", [](Json& j) { j["shots"][0]["fit"] = 3; });
+    bad("a part that cannot be tracked", [](Json& j) { j["shots"][0]["track"] = "elbow"; });
     bad("a flow with from", [](Json& j) { j["shots"][1]["from"] = {{"azimuth", 3}}; });
     bad("a cut with no pose", [](Json& j) { j["shots"][2].erase("from"); });
     bad("a bad ease", [](Json& j) { j["shots"][0]["ease"] = "bounce"; });
@@ -440,6 +497,17 @@ static void sequence() {
     bad("an empty look step", [](Json& j) { j["looks"][1] = {{"at", 2.5}}; });
     bad("looks out of order", [](Json& j) { j["looks"][1]["at"] = 1; });
     bad("a breakdown step outside the take", [](Json& j) { j["breakdown"]["steps"][1]["at"] = 9; });
+    {   // A split on her body may give the layers less than half of her.
+        Json j = base;
+        j["breakdown"]["steps"][0] = {{"at", 3.5}, {"layers", {"wireframe"}}, {"split", "body"}, {"share", 0.375}};
+        const auto t = make_timeline(Preset::parse(j), 0, 184);
+        expect(t.breakdown[0].follow && near(t.breakdown[0].share, 0.375, 1e-9), "a body split carries the share of her the layers get");
+    }
+    bad("a share that leaves one side nothing", [](Json& j) { j["breakdown"]["steps"][0] = {{"at", 3.5}, {"layers", {"wireframe"}}, {"split", "body"}, {"share", 0.99}}; });
+    bad("a split off the frame", [](Json& j) { j["breakdown"]["steps"][0]["split"] = 1.5; });
+    bad("a cover of clay and wireframe together", [](Json& j) { j["cover"] = Json::array({Json::array({"clay", "wireframe"})}); });
+    bad("a cover with an unknown layer", [](Json& j) { j["cover"] = {"fog"}; });
+    bad("an empty cover", [](Json& j) { j["cover"] = Json::array(); });
     bad("too fast a tempo", [](Json& j) { j["tempo"]["bpm"] = 900; });
 }
 
@@ -465,12 +533,15 @@ static void shipped(const fs::path& root) {
             }
             // No shot shorter than a beat's third: nothing flickers.
             for (const auto& shot : seq.shots) expect(shot.length >= 60.0 / seq.tempo.bpm / 3, "a shipped sequence has no flicker cut: " + p.id);
-            // No outfit change while breakdown layers are up (the director refuses that).
-            double first = -1, last = -1;
-            for (const auto& r : tl.breakdown) { if (r.layers && first < 0) first = r.at; if (first >= 0) last = r.at; }
-            for (const auto& look : seq.looks) if (!look.outfit.empty() && first >= 0) expect(look.at <= first - 0.5 || look.at >= last + 0.5, "a shipped sequence changes no outfit under its breakdown: " + p.id);
+            // The breakdown runs across the outfit changes, with clay in the overlay slot only:
+            // the one slot cannot hold clay and wireframe at once.
+            for (const auto& r : tl.breakdown) {
+                expect(!((r.layers & bit(Layer::Clay)) && (r.layers & bit(Layer::Wireframe))), "a shipped sequence never asks for clay and wireframe in one step: " + p.id);
+                expect(r.stop >= 0.2 && r.stop <= 1.0, "a shipped sequence's split leaves room on both sides: " + p.id);
+            }
+            expect(!p.cover.empty(), "a shipped sequence has a pass to cover its outfit changes: " + p.id);
             if (!tl.breakdown.empty()) expect(tl.breakdown.back().layers == 0, "a shipped sequence's breakdown ends on the final image: " + p.id);
-            // Wears leave room for the transition that covers them: a beat in, a beat held.
+            // Wears leave room for the transition that covers them: a quick sweep in, a beat held.
             double previous = -10;
             for (const auto& look : seq.looks) if (!look.outfit.empty()) { expect(look.at - previous >= 3 * 60.0 / seq.tempo.bpm, "wears are at least three beats apart: " + p.id); previous = look.at; }
         } else if (p.kind == ShotKind::Action) {

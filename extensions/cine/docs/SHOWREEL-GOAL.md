@@ -200,3 +200,87 @@ change when, transition lengths.
 - [ ] 6. Live: wear latency (done), the whole take with the user (three runs done), their
       verdict and tuning (open)
 - [ ] 7. Docs: README (sequence format), Nexus texts
+
+## 6 Oct, 00:00 to 01:20: what the user decided, and where it stands
+
+The user watched every run and corrected the cut several times. What holds now:
+
+- **No separate breakdown block, no normals or depth.** The frame is split for almost the whole
+  film (not the intro, not the outro): mesh and rig on the left, the finished look on the right.
+  "Why dont wireframe side by side is like almost whole video except intro and outro."
+- **The split sits on the middle of her body**, not of the screen (`"split": "body"`): the
+  director projects pelvis, chest and head each frame and moves the line there.
+- **Everything on the left the whole time** (wireframe, skeleton, spring bones, IK and virtual
+  bones) with the labels and arrows on throughout. Do not switch layers in and out on a
+  schedule: the user found every timed version repetitive or meaningless.
+- **Context.** Every change has a title ("Palette  //  Crimson", "Pieces  //  Coat off") and the
+  camera shows the thing that changes. Titles are short and plain: the user rejected "Under the
+  mesh" and "The rig" as AI wording; the section is titled "Rig".
+- **Commander White release film** (the user's release video for that mod): only the white
+  (`original`), obsidian and crimson palettes; no custom colours; figure sliders are never
+  touched ("muscles etc default size"); motion presets Natural on the chest and Soft on glutes,
+  thighs and belly; lace is toggled only in a neckline shot whose frame ends above the bust
+  line, top only from behind. Written by `tools/commander_white_film.py`, which also writes
+  the 9:16 twin (`"frame": "9:16"`, close shots further back).
+- **Walk version** (`commander-white-walk`, kind walk): needs the user's route and final shot.
+  Walk takes now carry titles, a body-following split and a look track beside a breakdown
+  without clay. Host-tested only.
+
+Built for it (all host-tested, 8 suites): breakdown across outfit changes (bone groups per set
+of looks, `learn` / `assemble` / `adopt`), split line that rests and follows, overlay-only clay,
+materials kept alive between uses, helper bones not drawn, covers as layer sets, look-step
+`title` / `cover` / `idle` / `reset` / `physics`, preset `frame`, fixed label rows in a split,
+take picture setting (shadow rays and dither; `work/live/quality_probe.py` is the evidence).
+
+Track facts for the second preset (`showreel-finale`, audio from 141.0 s of the reference with
+a 1.2 s fade in, `audio/showreel-finale.wav` in the game folder only): 124.000 BPM, no drift.
+The audible downbeats are 130 ms later than the grid used here (bar 1 at 1.000 s, not 0.87);
+the video's own cuts sit about three frames ahead of the beat, which is what 0.87 gives.
+From 141.0: bridge from +1.29 s, break at +14.84, drop at +16.77, full groove from +18.71,
+last phrase from +40.0, music stops dead at +47.64, silence from +50.
+
+**GPU crash, 01:10.** The game died with "GPU Crash dump Triggered" a minute into a take. No
+stack in CINE or CSS. The take picture setting then also raised the virtual shadow page pool
+(512 to 4096 pages, back at take end), on every take that night. That part is removed; only
+ray count and dither remain. Not proven to be the cause.
+
+Seen in game before the crash: the split on her body, titles, all layers left, rig cover for
+outfit changes, her look restored after every take. NOT seen yet (written after the last run
+that showed the current cut): the neckline shot for lace, the motion section, fixed label
+rows, the 9:16 twin, the walk preset, the reduced picture setting.
+
+Also that night: a probe script of mine started a take in the user's game by being imported
+(`reel.py` had no main guard). Fixed; never import a script that drives the game.
+
+## 6 Oct, 01:20 to 01:40: after the relaunch, verified in game
+
+Rolled the Commander White film five times (wide and 9:16) and read every frame of each.
+
+- **Camera.** The user: "camera movement masih banyak yang patah2, i want yang mulus, CINEMATIC
+  SENSUAL". Two causes found and fixed. (1) A sequence camera was steered from the 10 Hz tick
+  with engine moves, ten straight segments a second; it is now placed every frame
+  (`sequence_frame`), and a run of flowing shots with `"ease": "smooth"` is one Hermite
+  spline through its poses. (2) The live obstacle trace hit her own hand or sword and pulled
+  the camera to 20 percent of its distance at once (seen at 78.9 s: the camera 80 cm from her
+  in the outro). Hits within 75 cm of the aim point are now her own and ignored, and the
+  pull-in eases over about half a second instead of snapping.
+- **The film is shot as long glides**, not cuts: one slow move for the intro, one arc for the
+  palettes, one pass down her body for the pieces (each comes off as the camera reaches it),
+  half circles for dressing again and for the rig, one slow move in for the outro.
+- **Frame times of a whole take** (loader ring, 86 s, no screenshots): 47.8 fps, median
+  20.7 ms, p95 25.6, p99 28.2, worst 55 ms, 8 frames over twice the median. CINE's share:
+  core tick 0.70 ms a frame on average, of which the per-frame camera placement is 0.11 ms.
+- **Arrows.** IK and virtual bones are not shown: their markers float beside the body and a
+  label for them points at air. Three layers on the left: wireframe, skeleton, spring bones.
+  Labels sit in fixed rows; a spring label points at whichever bone of its pair is on the
+  layers' side; a target right of the line gets no label.
+- **Lace**: seen at 9:16 and wide, the frame ends above the bust line while it is off. The
+  camera aims at a height above her capsule, so when her idle bows her head the frame shows
+  more hair, never more chest. The top is not toggled at all.
+- **Motion section removed**: a title over a standing pose showed nothing moving. The presets
+  (chest natural, rest soft) are applied at the opening; the walk preset applies them too.
+- Low Lean replaced by a two-bar Seated Recline (user). In 9:16 it is shot from her feet.
+- No crash in six takes with the reduced picture setting.
+
+Still not rolled in this form: Showreel 124, Showreel Finale, Commander White Walk (needs the
+user's route).

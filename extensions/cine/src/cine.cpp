@@ -21,6 +21,20 @@ enum Hotkey { CaptureKey, TakeKey, CancelKey, GuideKey };
 const std::vector<std::string> guide_ids{"off", "16:9", "9:16", "1:1", "2.39:1"};
 const char* help_line = "CINE   F8 take   F9 cancel / exit   F10 frame guide   F7 use this view as final shot";
 const std::vector<std::string> scene_ids{"off", "enemies", "everyone"};
+const std::vector<std::string> picture_ids{"game", "sharp", "full"};
+constexpr double own_reach = 75;   // cm from the point the camera aims at: nearer hits are the character's own props
+// Her body as a handful of balls: a bone and about how far her flesh reaches from it, in cm.
+// Projected, they give the part of her that is in the picture and how wide it is there.
+namespace {
+struct BodyBall { const char* bone; double radius; };
+constexpr BodyBall body_shape[] = {
+    {"Head", 11}, {"neck_01", 7}, {"spine_04", 16}, {"spine_02", 14}, {"Pelvis", 17},
+    {"upperarm_l", 6}, {"upperarm_r", 6}, {"lowerarm_l", 5}, {"lowerarm_r", 5}, {"Hand_L", 6}, {"Hand_R", 6},
+    {"thigh_l", 9}, {"thigh_r", 9}, {"calf_l", 7}, {"calf_r", 7}, {"Foot_L", 7}, {"Foot_R", 7},
+    // Her ponytail swings well clear of her body: it is part of what is seen of her.
+    {"CSS_Hair_Ponytail_04", 6}, {"CSS_Hair_Ponytail_08", 6}};
+}
+
 const std::vector<std::string> breakdown_ids{"off", "preset", "reel"};
 constexpr double build_timeout = 30.0;     // seconds a breakdown may take to build before the take rolls without the rest
 bool is_handle(const Json& j) { return j.is_object() && j.contains("$object"); }
@@ -86,6 +100,15 @@ void Extension::load_state() {
         if (s.contains("labels") && s["labels"].is_boolean()) settings_.labels = s["labels"];
         if (s.contains("breakdown_target") && s["breakdown_target"].is_boolean()) settings_.breakdown_target = s["breakdown_target"];
         if (s.contains("signature") && s["signature"].is_boolean()) settings_.signature = s["signature"];
+        if (s.contains("picture") && s["picture"].is_string() && std::count(picture_ids.begin(), picture_ids.end(), s["picture"].get<std::string>())) settings_.picture = s["picture"];
+        if (s.contains("expression")) {
+            try { settings_.expression = expression_choice(s.at("expression")); }
+            catch (const std::exception& e) { host_.log(std::string("Saved expression ignored: ") + e.what(), "warning"); }
+        }
+        if (s.contains("performance")) {
+            try { settings_.performance = PerformanceChoice::parse(s.at("performance")); }
+            catch (const std::exception& e) { host_.log(std::string("Saved performance ignored: ") + e.what(), "warning"); }
+        }
     }
     try {
         const auto r = state.value("route", Json());
@@ -110,7 +133,8 @@ void Extension::save_state() const {
     Json value{{"settings", {{"preset", settings_.preset}, {"zoom", settings_.zoom}, {"height", settings_.height}, {"fov_scale", settings_.fov_scale},
                              {"countdown", settings_.countdown}, {"guide", settings_.guide}, {"look", settings_.look}, {"walls", settings_.walls},
                              {"scene", settings_.scene}, {"keep_target", settings_.keep_target}, {"breakdown", settings_.breakdown},
-                             {"labels", settings_.labels}, {"breakdown_target", settings_.breakdown_target}, {"signature", settings_.signature}}}};
+                             {"labels", settings_.labels}, {"breakdown_target", settings_.breakdown_target}, {"signature", settings_.signature},
+                             {"picture", settings_.picture}, {"performance", settings_.performance.json()}, {"expression", settings_.expression}}}};
     if (route_) { Json pts = Json::array(); for (const auto& p : route_->points) pts.push_back(vec_json(p)); value["route"] = std::move(pts); }
     if (final_) value["final"] = {{"position", vec_json(final_->position)}, {"yaw", final_->yaw}, {"camera", vec_json(final_->camera)},
                                   {"pitch", final_->pitch}, {"camera_yaw", final_->camera_yaw}, {"fov", final_->fov}};
@@ -157,12 +181,49 @@ int Extension::render(const CssxFrame* f) {
     // Breakdown labels are part of the picture, so they stay on during the take. The camera
     // pose comes with the frame (one host call on an older CSSX); the rest is the tick's
     // samples and plain maths.
+    viewport_h_ = f->viewport_h;
     if (mode_ == Mode::Running && take_ && take_->preset.kind == ShotKind::Sequence && !frame_.in_menu) sequence_frame(*f);
     // All of it is laid out inside the chosen frame guide's opening, so it survives the crop.
     const bool signing = mode_ == Mode::Running && settings_.signature && !signature_.empty() && !frame_.in_menu;
-    const Rect opening = guide_opening(f->viewport_w, f->viewport_h, guide_aspect(guide_from(settings_.guide)));
+    // A preset made for one frame (a 9:16 cut) is laid out in that frame whatever guide is chosen.
+    const bool own_frame = take_ && (mode_ == Mode::Running || mode_ == Mode::Countdown) && !take_->preset.frame.empty();
+    const Rect opening = guide_opening(f->viewport_w, f->viewport_h, guide_aspect(guide_from(own_frame ? take_->preset.frame : settings_.guide)));
     static const std::vector<std::string> unsigned_take;
-    if (mode_ == Mode::Running && labels_live_ && lens_.ok && !frame_.in_menu) {
+    if (mode_ == Mode::Running && take_ && take_->body_live && lens_.ok && frame_.has_camera && !frame_.in_menu) {
+        auto& t = *take_;
+        t.body_age += frame_.seconds;
+        const double ease = std::clamp(t.body_age / 0.1, 0.0, 1.0);
+        const auto basis = view_basis(frame_.camera_rotation);
+        // What of her is in the picture, and how wide: every part whose ball touches the frame's
+        // height, from its left edge to its right. The line goes at the layers' share of that
+        // width, so a raised arm, a turn or a pose on the ground moves it with her.
+        double left = 1e12, right = -1e12;
+        const Vec3 forward = basis.forward;
+        for (size_t i = 0; i < Take::body_parts; ++i) {
+            const Vec3 world = frame_.position + t.body_before[i] + (t.body_now[i] - t.body_before[i]) * ease;
+            double x = 0, y = 0;
+            if (!project(frame_.camera, basis, lens_, world, x, y)) continue;
+            const Vec3 d = world - frame_.camera;
+            const double depth = d.x * forward.x + d.y * forward.y + d.z * forward.z;
+            if (depth < 5) continue;
+            const double reach = body_shape[i].radius * lens_.kx / depth;
+            if (y + reach < opening.y || y - reach > opening.y + opening.h) continue;   // above or below the picture
+            left = std::min(left, x - reach); right = std::max(right, x + reach);
+        }
+        if (right > left && f->viewport_w > 1) {
+            const double share = t.desired.follow ? t.desired.share : 0.5;
+            const double target = std::clamp((left + (right - left) * share) / f->viewport_w, 0.08, 0.92);
+            // Eased: a hand entering the frame moves the line over a moment, not in one frame.
+            t.body_place = t.body_placed ? t.body_place + (target - t.body_place) * (1.0 - std::exp(-std::clamp(frame_.seconds, 0.0, 0.25) / 0.25)) : target;
+            t.body_placed = true;
+            if (t.desired.follow && t.wearing == Take::Wear::Idle && t.seq_clock >= t.transition_until) breakdown_.follow(t.body_place);
+        }
+    }
+    // An outfit change has the picture: its cover is a transition, not a breakdown step, and
+    // the labels go the frame it starts (the tick that samples them is up to 100 ms behind).
+    const bool covering = take_ && (take_->wearing != Take::Wear::Idle || take_->seq_clock < take_->transition_until);
+    const bool titled = mode_ == Mode::Running && take_ && settings_.labels && !take_->title.empty() && !frame_.in_menu;
+    if (mode_ == Mode::Running && labels_live_ && lens_.ok && !frame_.in_menu && !covering) {
         label_age_ += frame_.seconds;
         callout_targets_.clear();
         try {
@@ -174,14 +235,22 @@ int Extension::render(const CssxFrame* f) {
                     CalloutTarget target;
                     target.text = label.text;
                     target.visible = project(camera, basis, lens_, frame_.position + label.before + (label.now - label.before) * ease, target.x, target.y);
+                    if (label.pair) {
+                        // Of a left and right pair, the one further left: with a split that is the layers' side.
+                        double x = 0, y = 0;
+                        if (project(camera, basis, lens_, frame_.position + label.other_before + (label.other_now - label.other_before) * ease, x, y) && (!target.visible || x < target.x)) { target.x = x; target.y = y; target.visible = true; }
+                    }
                     callout_targets_.push_back(std::move(target));
                 }
             }
         } catch (...) { callout_targets_.clear(); }
-        callouts_.update(*f, opening, callout_targets_, breakdown_.caption(), signing ? signature_ : unsigned_take);
-    } else if (signing) {
+        // A split breakdown keeps its labels on the layers' side of the line.
+        const double line = breakdown_.edge() < 1.0 ? f->viewport_w * breakdown_.edge() : 1e12;
+        // The caption is the step's own title when it has one, else the layers on screen.
+        callouts_.update(*f, opening, callout_targets_, take_->title.empty() ? "Breakdown  //  " + breakdown_.caption() : take_->title, signing ? signature_ : unsigned_take, line);
+    } else if (signing || (titled && !covering)) {
         callout_targets_.clear();
-        callouts_.update(*f, opening, callout_targets_, std::string(), signature_);
+        callouts_.update(*f, opening, callout_targets_, titled && !covering ? take_->title : std::string(), signing ? signature_ : unsigned_take);
     } else callouts_.hide();
     return 1;
 }
@@ -189,18 +258,28 @@ int Extension::render(const CssxFrame* f) {
 void Extension::tick(double seconds) {
     if (stopped_) return;
     try {
-        if (mode_ == Mode::Idle && !capture_pending_ && look_restore_.is_null() && own_look_owed_.is_null() && !scene_.pending() && !breakdown_.busy() && !breakdown_opponent_.busy())
+        if (mode_ == Mode::Idle && !performance_.owned() && !expression_.owned() && !capture_pending_ && look_restore_.is_null() && own_look_owed_.is_null() && !scene_.pending() && !breakdown_.busy() && !breakdown_opponent_.busy())
             return;   // free outside Cine World
         const double dt = std::isfinite(seconds) ? std::clamp(seconds, 0.0, 1.0) : 0.0;
         tick_dt_ = dt;
+        if (mode_ != Mode::Running && performance_.owned() && (performance_cleanup_wait_ -= dt) <= 0) {
+            performance_cleanup_wait_ = .5;
+            try { performance_.stop([&](const Json& r) { return rig_.css(r); }); } catch (...) {}
+        }
+        if (!take_ && expression_.owned() && (expression_cleanup_wait_ -= dt) <= 0) {
+            expression_cleanup_wait_ = .5;
+            try { expression_.stop([&](const Json& r) { return rig_.css(r); }); } catch (...) {}
+        }
         // A loading screen, death or travel tears the world down: every handle is dead. The CSS
         // look is not a world object, so a look the take changed is still put back (retried).
         if (mode_ != Mode::Idle && mode_ != Mode::RecordWait && frame_.valid && frame_.world != world_) {
+            try { performance_.stop([&](const Json& r) { return rig_.css(r); }); } catch (...) {}
             if (take_ && !take_->snapshot.is_null() && take_->step_next > 0) queue_look_restore(take_->snapshot);
             if (take_ && take_->idle_set) { try { rig_.css({{"action", "idle"}, {"value", ""}}); } catch (...) {} }
             if (take_ && take_->wore && take_->own_look.is_object()) { own_look_owed_ = take_->own_look; own_look_check_ = 0.5; queue_look_restore(take_->own_look); }
             labels_live_ = false; labels_.clear(); lens_ = {};
             audio_.stop();
+            try { rig_.restore_picture(); } catch (...) {}   // console variables outlive the world
             rig_.forget(); guides_.forget(); callouts_.forget(); typeface_.forget(); scene_.forget(); breakdown_.forget(); breakdown_opponent_.forget();
             take_.reset(); samples_.clear(); mode_ = Mode::Idle; start_pending_ = false;
             report("The world changed (loading, travel or death); CINE stopped and the game camera is back.");
@@ -238,7 +317,11 @@ void Extension::tick(double seconds) {
                 take_->countdown -= dt;
                 if (take_->countdown <= 0) roll();
                 break;
-            case Mode::Running: take_->clock += dt; run(); break;
+            case Mode::Running:
+                if (const auto why = performance_.poll([&](const Json& r) { return rig_.css(r); }); !why.empty()) {
+                    finish_take("Performance interrupted: " + why, true); break;
+                }
+                take_->clock += dt; run(); break;
             default: break;
         }
     } catch (const std::exception& e) {
@@ -301,12 +384,28 @@ void Extension::exit_world(const std::string& why) {
 void Extension::start_take() {
     if (mode_ != Mode::Armed) return;
     if (!current_preset()) throw std::runtime_error("No preset is available");
+    if (performance_.owned()) throw std::runtime_error("Wait for the previous performance to stop");
+    if (settings_.performance.id != "off") {
+        if (const auto why = performance_conflict(*current_preset()); !why.empty()) throw std::runtime_error(why);
+        performance_catalog_.refresh([&](const Json& r) { return rig_.css(r); });
+        if (const auto why = performance_catalog_.unavailable(settings_.performance); !why.empty()) throw std::runtime_error(why);
+    }
+    if (expression_.owned()) throw std::runtime_error("Wait for the previous expression to be restored");
+    if (settings_.expression != "unchanged") {
+        const auto& preset = *current_preset();
+        if (settings_.look != "off" || (preset.kind == ShotKind::Sequence && !preset.sequence.looks.empty()))
+            throw std::runtime_error("Use As set in CSS for takes that change looks, or turn the look track off.");
+        expression_catalog_.refresh([&](const Json& r) { return rig_.css(r); });
+        if (const auto why = expression_catalog_.unavailable(settings_.expression); !why.empty()) throw std::runtime_error(why);
+    }
     // A look from the last take still waiting to go back would become the new "own look".
     if (!look_restore_.is_null()) {
         if (!restore_look(look_restore_)) throw std::runtime_error("Still putting your look back from the last take; try again in a moment");
         look_restore_ = nullptr;
     }
     take_ = std::make_unique<Take>();
+    take_->performance = settings_.performance;
+    take_->expression = settings_.expression;
     take_->world = frame_.world; take_->pawn = frame_.pawn;
     mode_ = Mode::Preparing;
     report("Preparing the take...");
@@ -316,7 +415,7 @@ Json Extension::look_payload(const LookStep& step, const Json& describe) const {
     Json commands = Json::array();
     std::map<std::string, std::string> kinds;
     for (const auto& c : describe.value("controls", Json::array())) kinds[c.value("id", std::string())] = c.value("kind", std::string());
-    bool palette_known = step.palette.empty();
+    bool palette_known = step.palette.empty() || step.palette == "original";   // the outfit's own colours: always there, not always listed
     for (const auto& p : describe.value("palettes", Json::array())) if (p.value("id", std::string()) == step.palette) palette_known = true;
     if (!step.palette.empty() && palette_known) commands.push_back({{"action", "palette"}, {"palette", step.palette}});
     for (const auto& [id, values] : step.controls) {
@@ -325,14 +424,29 @@ Json Extension::look_payload(const LookStep& step, const Json& describe) const {
         if (kind->second == "color" && values.size() == 3) commands.push_back({{"action", "control"}, {"control", id}, {"rgb", values}});
         else for (size_t ch = 0; ch < values.size(); ++ch) commands.push_back({{"action", "control"}, {"control", id}, {"channel", ch}, {"value", values[ch]}});
     }
+    for (const auto& [id, preset] : step.physics) if (kinds.contains(id)) commands.push_back({{"action", "physics_preset"}, {"control", id}, {"preset", preset}});
     if (commands.empty()) return Json();
     return {{"action", "apply"}, {"persist", false}, {"commands", std::move(commands)}};
 }
 
 void Extension::prepare() {
     auto& t = *take_;
+    if (!t.expression_ready) {
+        t.expression_wait += tick_dt_;
+        if (t.expression_wait > 5.) throw std::runtime_error("CSS did not finish applying the facial expression");
+        if (!t.expression_started) {
+            expression_.start([&](const Json& r) { return rig_.css(r); }, t.expression);
+            t.expression_started = true;
+        }
+        if ((t.expression_poll -= tick_dt_) > 0) return;
+        t.expression_poll = .1;
+        if (!expression_.ready([&](const Json& r) { return rig_.css(r); })) return;
+        t.expression_ready = true;
+    }
     if (t.prepare_step == 0) {
         if (!rig_.resolved()) rig_.resolve();
+        // Sharper shadows (and full resolution, when asked) for this take; restore_take puts the game's values back.
+        rig_.picture(settings_.picture == "full" ? 2 : settings_.picture == "sharp" ? 1 : 0);
         t.preset = *current_preset();
         auto& p = t.preset;
         p.zoom *= settings_.zoom; p.fov_scale *= settings_.fov_scale;
@@ -357,7 +471,7 @@ void Extension::prepare() {
             t.base_yaw = frame_.yaw;
         }
         const bool sequence = p.kind == ShotKind::Sequence;
-        if (!p.idle.empty() && !t.idle_set) {
+        if (t.performance.id == "off" && !p.idle.empty() && !t.idle_set) {
             // One idle on every look the take wears, so her pose does not snap between them.
             // CSS keeps it out of the saved choices; finish_take ends it.
             try { rig_.css({{"action", "idle"}, {"value", p.idle}}); t.idle_set = true; } catch (...) {}
@@ -366,16 +480,9 @@ void Extension::prepare() {
         // Breakdown track: the preset's own steps, or the built-in reel.
         if (settings_.breakdown == "preset") t.reveals = t.timeline.breakdown;
         else if (settings_.breakdown == "reel") t.reveals = reel(t.timeline.total);
-        for (const auto& r : t.reveals) t.layers |= r.layers;
+        for (const auto& r : t.reveals) { t.layers |= r.layers; t.follows = t.follows || r.follow; }
         if (settings_.breakdown == "preset" && t.reveals.empty()) t.note = "Breakdown off: this preset has no breakdown steps.";
         if (sequence) {
-            // A sequence wears its own looks. The breakdown's pieces and locked materials
-            // belong to one look, so no outfit may change while breakdown layers are up.
-            double first = -1, last = -1;
-            for (const auto& r : t.reveals) { if (r.layers && first < 0) first = r.at; if (first >= 0) last = r.at; }
-            for (const auto& look : p.sequence.looks)
-                if (!look.outfit.empty() && first >= 0 && look.at > first - 0.5 && look.at < last + 0.5)
-                    throw std::runtime_error("This preset changes outfit during its breakdown; move the breakdown steps or the look step");
             try {
                 const auto described = rig_.css({{"action", "describe"}});
                 if (!own_look_owed_.is_null()) t.own_look = own_look_owed_;   // the last take's restore has not landed yet
@@ -391,15 +498,15 @@ void Extension::prepare() {
                 t.own_look = nullptr; t.seq_looks = false;
                 if (!p.sequence.looks.empty()) t.note = std::string("Looks off: ") + e.what() + ".";
             }
-            if (t.seq_looks) {
-                // Who she is when the breakdown is built, and when the take opens.
-                auto at_time = [&](double when) { Take::Prep worn; worn.own = true; for (const auto& look : p.sequence.looks) if (!look.outfit.empty() && look.at <= when + 1e-6) { worn.own = false; worn.outfit = look.outfit; worn.variant = look.variant; } return worn; };
-                for (const auto& [outfit, variant] : p.sequence.wardrobe()) { Take::Prep w; w.outfit = outfit; w.variant = variant; t.prep.push_back(w); }
-                if (t.layers) t.prep.push_back(at_time(first));
-            }
             // Outfit changes are covered by a frame pass, so the passes are built even when the
             // breakdown track itself is off.
-            if (t.seq_looks && !p.sequence.wardrobe().empty()) t.layers |= bit(Layer::Normals) | bit(Layer::BaseColor);
+            if (t.seq_looks && !p.sequence.wardrobe().empty()) for (const LayerSet cover : p.cover) t.layers |= cover;
+            // A sequence wears its own looks, and the breakdown runs across all of them: it
+            // starts on her own look, is taught each look as the take tries it on, and builds
+            // its pieces once it knows them all.
+            t.many_looks = t.seq_looks && t.layers != 0;
+            if (t.many_looks) { Take::Prep begin; begin.begin = true; t.prep.push_back(begin); }
+            if (t.seq_looks) for (const auto& [outfit, variant] : p.sequence.wardrobe()) { Take::Prep w; w.outfit = outfit; w.variant = variant; t.prep.push_back(w); }
             if (t.layers) { Take::Prep build; build.build = true; t.prep.push_back(build); }
             if (t.seq_looks) {
                 Take::Prep opening; opening.own = true;
@@ -407,10 +514,12 @@ void Extension::prepare() {
                 t.prep.push_back(opening);
             }
         }
-        // Clay takes her material slots; a palette change mid-take would fight it.
-        if (!sequence && t.layers && settings_.look != "off") t.note = "Look track off while a breakdown runs.";
+        // Clay takes her material slots; a palette change mid-take would fight it. A breakdown
+        // without clay (wireframe, bones) only uses the overlay slot and shares the take.
+        const bool clay_track = (t.layers & bit(Layer::Clay)) != 0;
+        if (!sequence && clay_track && settings_.look != "off") t.note = "Look track off while a breakdown with clay runs.";
         // Look track: CSS answers describe, or the take runs without it and says why.
-        if (!sequence && settings_.look != "off" && !t.layers) {
+        if (!sequence && settings_.look != "off" && !clay_track) {
             try {
                 const auto d = rig_.css({{"action", "describe"}});
                 t.snapshot = d.at("customize");
@@ -424,7 +533,11 @@ void Extension::prepare() {
                 }
                 const double span = p.kind == ShotKind::Walk ? t.timeline.walk_time : t.timeline.total;
                 const double start = p.kind == ShotKind::Walk ? t.timeline.walk_start : 0;
-                if (steps) for (const auto& s : *steps) { auto pay = look_payload(s, d); if (!pay.is_null()) t.steps.emplace_back(start + s.fraction * span, std::move(pay)); }
+                if (steps) for (const auto& s : *steps) {
+                    auto pay = look_payload(s, d);
+                    if (!pay.is_null()) t.steps.emplace_back(start + s.fraction * span, std::move(pay));
+                    if (s.titled) t.titles.emplace_back(start + s.fraction * span, s.title);
+                }
                 if (!t.steps.empty() && p.look_ends_on_own) {
                     const double own_at = p.kind == ShotKind::Walk ? t.timeline.arrive - 2.0 : t.timeline.total * 0.92;
                     t.steps.emplace_back(own_at, Json{{"action", "apply"}, {"persist", false}, {"commands", Json::array({{{"action", "restore"}, {"customize", t.snapshot}}})}});
@@ -472,7 +585,9 @@ void Extension::prepare() {
     if (t.prepare_step == 5) { prepare_looks(); return; }
     // Cameras, gait, view, then the countdown.
     if (t.preset.kind == ShotKind::Sequence) {
-        const auto view = sequence_view(pose_at(t.preset.sequence, 0));
+        for (const auto& shot : t.preset.sequence.shots) { t.track_used[static_cast<size_t>(shot.track)] = true; t.fits = t.fits || shot.fit > 0; }
+        sample_tracks(true);   // where her head, hips and the rest are, before any shot is placed or planned
+        const auto view = sequence_view(pose_at(t.preset.sequence, 0), anchor_at(0), 0);
         t.dolly = rig_.spawn_camera(view.camera, view.rotation, view.fov);
         t.fov_applied = view.fov;
         t.yaw_f = frame_.yaw; t.vel_f = {};
@@ -539,8 +654,13 @@ void Extension::begin_breakdown() {
     // Clay and wireframe change her materials. If the take cannot put one back exactly,
     // the wardrobe mod paints her again from this.
     if (t.layers & (bit(Layer::Clay) | bit(Layer::Wireframe))) { try { t.look_before = rig_.css({{"action", "describe"}}).at("customize"); } catch (...) { t.look_before = nullptr; } }
+    if (t.many_looks) {
+        // Clay stays out of her material slots, so CSS can repaint her under the breakdown.
+        breakdown_.begin(rig_.pawn(), rig_.camera_component(t.dolly), t.layers, {}, {.looks = true, .overlay_only = true});
+        return;
+    }
     breakdown_.begin(rig_.pawn(), rig_.camera_component(t.dolly), t.layers, spring_bones());
-    if (settings_.breakdown_target) {
+    if (settings_.breakdown_target && t.preset.kind != ShotKind::Sequence) {
         const auto other = is_handle(t.opponent) ? t.opponent : rig_.locked_target();
         // The frame passes cover the whole picture already; the second character gets the rest.
         if (is_handle(other)) breakdown_opponent_.begin(other, Json(), t.layers & ~frame_layers, {});
@@ -584,12 +704,15 @@ bool Extension::plan_surroundings() {
                 for (; t.plan_sample < size_t(samples); ++t.plan_sample) {
                     if (budget == 0) return false;   // the rest on the next tick
                     --budget;
-                    SeqPose pose = pose_at(seq, shot.at + shot.length * 0.999 * double(t.plan_sample) / double(samples - 1));
+                    const double when = shot.at + shot.length * 0.999 * double(t.plan_sample) / double(samples - 1);
+                    SeqPose pose = pose_at(seq, when);
                     pose.azimuth += plan_turns[t.plan_turn];
-                    const auto view = sequence_view(pose);
-                    const Vec3 aim = to_world(t.base, t.base_yaw, {0, 0, pose.aim + settings_.height});
+                    const Vec3 anchor = anchor_at(when);
+                    const auto view = sequence_view(pose, anchor, when);
+                    const Vec3 aim = to_world(anchor, t.base_yaw, {0, 0, pose.aim + settings_.height});
                     double hit = 0, free = 1.0;
-                    try { if (rig_.trace(aim, view.camera, &hit) && hit < view.focus - 5) free = std::clamp((hit - 25) / view.focus, 0.0, 1.0); } catch (...) {}
+                    // A hit within arm's reach is her own: a hand, a sword at her hip. Not a wall.
+                    try { if (rig_.trace(aim, view.camera, &hit) && hit > own_reach && hit < view.focus - 5) free = std::clamp((hit - 25) / view.focus, 0.0, 1.0); } catch (...) {}
                     auto& worst = t.clear[t.plan_shot][t.plan_turn];
                     worst = std::min(worst, free);
                 }
@@ -600,6 +723,10 @@ bool Extension::plan_surroundings() {
             t.plan_shot = t.plan_chain;
             ++t.plan_turn;
             if (t.chain_clear.size() == 1 && chain >= 0.98) break;   // open as written: no need to look elsewhere
+            // A shot that must keep its side holds the whole chain there: only the distance may give.
+            bool fixed = false;
+            for (size_t i = t.plan_chain; i < chain_end; ++i) fixed = fixed || seq.shots[i].fixed;
+            if (fixed) break;
         }
         const ShotPlan chosen = choose_plan(t.chain_clear);
         const size_t turn = size_t(std::find(std::begin(plan_turns), std::end(plan_turns), chosen.turn) - std::begin(plan_turns));
@@ -616,9 +743,21 @@ bool Extension::plan_surroundings() {
 void Extension::prepare_looks() {
     auto& t = *take_;
     if (t.prep.empty()) { begin_countdown(); return; }
+    if (breakdown_.active() && !breakdown_.learned()) return;   // still reading the look she wears
     auto& step = t.prep.front();
+    auto key = [](const std::string& outfit, const std::string& variant) { return outfit + "/" + variant; };
+    if (step.begin) {
+        // Her own look opens the take unless a look step sits on its first beat: it is the first look taught.
+        begin_breakdown();
+        breakdown_.learn(key(t.own_look.value("outfit", std::string()), t.own_look.value("variant", std::string())), spring_bones());
+        t.prep.pop_front();
+        return;
+    }
     if (step.build) {
-        if (!t.build_started) { begin_breakdown(); t.build_started = true; t.build_wait = 0; report("Building the breakdown layers..."); return; }
+        if (!t.build_started) {
+            if (t.many_looks) breakdown_.assemble(); else begin_breakdown();
+            t.build_started = true; t.build_wait = 0; report("Building the breakdown layers..."); return;
+        }
         t.build_wait += tick_dt_;
         const bool built = (!breakdown_.active() || breakdown_.ready()) && (!breakdown_opponent_.active() || breakdown_opponent_.ready());
         if (!built && t.build_wait < build_timeout) return;
@@ -630,8 +769,19 @@ void Extension::prepare_looks() {
     const std::string variant = step.own ? t.own_look.value("variant", std::string()) : step.variant;
     try {
         const auto described = rig_.css({{"action", "describe"}});
-        if (worn(described, outfit, variant) && (t.prep_sent || !step.own)) { t.look_now = described; t.prep.pop_front(); t.prep_sent = false; return; }
-        if (worn(described, outfit, variant) && step.own && !t.wore) { t.look_now = described; t.prep.pop_front(); return; }   // still her own look, untouched
+        const bool landed = worn(described, outfit, variant) && (t.prep_sent || !step.own);
+        const bool untouched = worn(described, outfit, variant) && step.own && !t.wore;   // still her own look
+        if (landed || untouched) {
+            if (t.many_looks && breakdown_.active()) {
+                // Before the pieces exist the breakdown reads this look's bones (a few ticks);
+                // after, it only has to know which look she wears as the take opens.
+                if (t.build_started) breakdown_.adopt(key(outfit, variant));
+                else if (!t.learning) { breakdown_.learn(key(outfit, variant), spring_bones()); t.learning = true; return; }
+            }
+            t.learning = false;
+            t.look_now = described; t.prep.pop_front(); t.prep_sent = false;
+            return;
+        }
         if (!t.prep_sent) {
             rig_.css(wear_request(outfit, variant, step.own, false));
             t.prep_sent = true; t.prep_wait = 0; t.wore = true;
@@ -646,26 +796,119 @@ void Extension::prepare_looks() {
     if (t.prep_wait > 8) { t.note = "A look did not load in time: " + outfit + "."; t.prep.pop_front(); t.prep_sent = false; }
 }
 
-Extension::SeqView Extension::sequence_view(const SeqPose& pose) const {
+// The point a shot's heights and circle are measured from: her capsule centre as the take
+// began, or the part of her body the shot tracks. A shot that flows on from one framed on
+// another part carries the point across over its own length.
+Vec3 Extension::anchor_at(double time) const {
+    const auto& t = *take_;
+    const auto& seq = t.preset.sequence;
+    if (seq.shots.empty()) return t.base;
+    const size_t index = shot_at(seq, time);
+    const auto& shot = seq.shots[index];
+    auto of = [&](Subject track) {
+        const auto k = static_cast<size_t>(track);
+        return track == Subject::None || !t.track_ok[k] ? t.base : t.base + t.track_at[k];
+    };
+    if (!shot.cut && index > 0 && seq.shots[index - 1].track != shot.track && shot.length > 1e-6) {
+        const double u = std::clamp((time - shot.at) / shot.length, 0.0, 1.0), s = u * u * (3 - 2 * u);
+        const Vec3 from = of(seq.shots[index - 1].track), to = of(shot.track);
+        return from + (to - from) * s;
+    }
+    return of(shot.track);
+}
+
+// Where the tracked parts of her body are now. 10 Hz, and once before the shots are planned.
+void Extension::sample_tracks(bool snap) {
+    auto& t = *take_;
+    // Up to three bones a part, averaged with these weights (body: her head, and her two feet).
+    struct Part { const char* bone[3]; double weight[3]; };
+    static constexpr Part parts[Take::tracks] = {{{"", "", ""}, {0, 0, 0}}, {{"Head", "", ""}, {1, 0, 0}}, {{"neck_01", "", ""}, {1, 0, 0}}, {{"spine_04", "", ""}, {1, 0, 0}},
+                                                 {{"Pelvis", "", ""}, {1, 0, 0}}, {{"calf_l", "calf_r", ""}, {0.5, 0.5, 0}}, {{"Head", "Foot_L", "Foot_R"}, {0.5, 0.25, 0.25}}};
+    try {
+        if (!is_handle(t.body_mesh)) t.body_mesh = host_.get(rig_.pawn(), "Mesh");
+        if (!t.track_live) {
+            // A part this character does not have cannot be tracked: its shots fall back to the capsule.
+            std::vector<std::string> names;
+            const auto all = host_.call(t.body_mesh, "GetAllSocketNames");
+            if (all.is_array()) for (const auto& n : all) if (n.is_string()) { auto name = n.get<std::string>(); std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return char(std::tolower(c)); }); names.push_back(std::move(name)); }
+            for (size_t k = 1; k < Take::tracks; ++k) {
+                t.track_ok[k] = true;
+                for (const char* bone : parts[k].bone) {
+                    std::string want = bone;
+                    std::transform(want.begin(), want.end(), want.begin(), [](unsigned char c) { return char(std::tolower(c)); });
+                    if (!want.empty() && std::find(names.begin(), names.end(), want) == names.end()) t.track_ok[k] = false;
+                }
+                if (t.track_used[k] && !t.track_ok[k]) t.note = t.note.empty() ? "This character lacks a bone some shots are framed on; those use her centre." : t.note;
+            }
+        }
+        for (size_t k = 1; k < Take::tracks; ++k) {
+            if (!t.track_used[k] || !t.track_ok[k]) continue;
+            Vec3 now{};
+            for (size_t b = 0; b < 3; ++b) if (parts[k].bone[b][0]) now = now + rig_.socket_location(t.body_mesh, parts[k].bone[b]) * parts[k].weight[b];
+            now = now - frame_.position;
+            t.track_before[k] = t.track_live && !snap ? t.track_now[k] : now;
+            t.track_now[k] = now;
+            if (!t.track_live || snap) t.track_at[k] = now;
+        }
+        t.track_age = 0;
+        t.track_live = true;
+    } catch (...) {}
+}
+
+// The height of picture a shot shows where she stands, when it (or the shot it flows on from)
+// is a "fit" shot; 0 when the pose's own field of view stands. Between a fit shot and one
+// without, the height is carried across the flowing shot so the lens never jumps.
+double Extension::coverage_at(double time, double distance, double fov) const {
+    const auto& t = *take_;
+    const auto& seq = t.preset.sequence;
+    if (seq.shots.empty()) return 0;
+    const size_t index = shot_at(seq, time);
+    const auto& shot = seq.shots[index];
+    const bool flows = !shot.cut && index > 0;
+    const double before = flows ? seq.shots[index - 1].fit : shot.fit;
+    if (shot.fit <= 0 && before <= 0) return 0;
+    const double own = 2 * distance * t.lens_ratio * std::tan(fov * std::numbers::pi / 360);
+    const double here = shot.fit > 0 ? shot.fit : own;
+    if (!flows || before == shot.fit || shot.length <= 1e-6) return here;
+    const double u = std::clamp((time - shot.at) / shot.length, 0.0, 1.0), s = u * u * (3 - 2 * u);
+    const double was = before > 0 ? before : own;
+    return was + (here - was) * s;
+}
+
+Extension::SeqView Extension::sequence_view(const SeqPose& pose, Vec3 anchor, double time) const {
     const auto& t = *take_;
     const double a = pose.azimuth * std::numbers::pi / 180, distance = std::max(55.0, pose.distance * t.preset.zoom * t.wall_scale);
     SeqView view;
-    view.camera = to_world(t.base, t.base_yaw, {distance * std::cos(a), distance * std::sin(a), pose.height + settings_.height});
-    const Vec3 aim = to_world(t.base, t.base_yaw, {0, 0, pose.aim + settings_.height});
+    view.camera = to_world(anchor, t.base_yaw, {distance * std::cos(a), distance * std::sin(a), pose.height + settings_.height});
+    const Vec3 aim = to_world(anchor, t.base_yaw, {0, 0, pose.aim + settings_.height});
     view.rotation = look_at(view.camera, aim);
     view.rotation.roll = pose.roll;
     view.fov = std::clamp(pose.fov * t.preset.fov_scale, 5.0, 150.0);
     const Vec3 d = aim - view.camera;
     view.focus = std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
+    // A fit shot: the lens that shows that much height at this distance.
+    if (const double height = coverage_at(time, view.focus, view.fov); height > 0 && t.lens_ratio > 1e-6)
+        view.fov = std::clamp(2 * std::atan(height / (2 * view.focus * t.lens_ratio)) * 180 / std::numbers::pi, 8.0, 85.0);
     return view;
 }
 
 void Extension::apply_look(const SeqLook& look) {
     auto& t = *take_;
+    if (!look.idle.empty()) { rig_.css({{"action", "idle"}, {"value", look.idle}}); t.idle_set = true; }
+    if (look.reset && t.opening.is_object()) { rig_.css({{"action", "apply"}, {"persist", false}, {"commands", Json::array({{{"action", "restore"}, {"customize", t.opening}}})}}); t.wore = true; }
+    if (!look.physics.empty()) {
+        // Only the controls this outfit has: one preset serves many outfits.
+        Json commands = Json::array();
+        for (const auto& control : t.look_now.value("controls", Json::array())) {
+            const auto found = look.physics.find(control.value("id", std::string()));
+            if (found != look.physics.end()) commands.push_back({{"action", "physics_preset"}, {"control", found->first}, {"preset", found->second}});
+        }
+        if (!commands.empty()) { rig_.css({{"action", "apply"}, {"persist", false}, {"commands", std::move(commands)}}); t.wore = true; }
+    }
     if (look.palette.empty() && look.controls.empty()) return;
     LookStep step; step.palette = look.palette; step.controls = look.controls;
     const auto payload = look_payload(step, t.look_now);   // parts this outfit does not have are skipped
-    if (!payload.is_null()) rig_.css(payload);
+    if (!payload.is_null()) { rig_.css(payload); t.wore = true; }   // her own look goes back at the end
 }
 
 // Every frame of a sequence take: the clock, cuts on their beat, look steps and the
@@ -684,29 +927,49 @@ void Extension::sequence_frame(const CssxFrame& f) {
             t.shot_index = index;
             const auto& shot = seq.shots[index];
             if (shot.cut && !first) {
-                // Placed at once, and the running move is retargeted so it cannot pull back.
-                t.wall_scale = 1.0;   // the plan already cleared this shot; the live check starts afresh
-                const auto view = sequence_view(planned_pose(seq, t.plan, now));
-                breakdown_.depth_range(view.focus * 2.4);
-                rig_.place_camera(t.dolly, view.camera, view.rotation);
-                rig_.move_camera(t.dolly, view.camera, view.rotation, 0.001);
-                rig_.set_fov(t.dolly, view.fov); t.fov_applied = view.fov;
+                t.wall_scale = t.wall_target = 1.0;   // the plan already cleared this shot; the live check starts afresh
+                // A cut starts on her as she is now, not gliding over from where the last shot's subject was.
+                if (const auto k = static_cast<size_t>(shot.track); k && t.track_live && t.track_ok[k]) t.track_at[k] = t.track_now[k];
+                breakdown_.depth_range(std::max(sequence_view(planned_pose(seq, t.plan, now), anchor_at(now), now).focus * 6.0, 2500.0));
             }
-            if (shot.fstop > 0) { rig_.depth_of_field(t.dolly, shot.fstop, sequence_view(planned_pose(seq, t.plan, now)).focus); t.dof_on = true; }
-            else if (t.dof_on) { rig_.depth_of_field(t.dolly, 32, 1000); t.dof_on = false; }   // deep focus again
+            if (shot.fstop <= 0 && t.dof_on) { rig_.depth_of_field(t.dolly, 32, 1000); t.dof_on = false; t.focus_applied = -1; }   // deep focus again
+            else if (shot.fstop > 0) t.focus_applied = -1;   // a new shot: its aperture and focus are set below
+        }
+        // The camera is put exactly where the shot has it, every frame. Steering it from the
+        // tick (ten straight segments a second) showed as a stutter in every slow move.
+        // Something in the way brings the camera closer, and back out when it has gone, as a
+        // slow drift either way: a sudden pull-in reads as a jump cut.
+        const double dt = std::clamp(f.seconds, 0.0, 0.25);
+        t.wall_scale += (t.wall_target - t.wall_scale) * (1.0 - std::exp(-dt / 0.4));
+        // The tracked parts of her body: eased between the tick's samples, then smoothed.
+        if (t.track_live) {
+            t.track_age += dt;
+            const double ease = std::clamp(t.track_age / 0.1, 0.0, 1.0), follow = 1.0 - std::exp(-dt / 0.3);
+            for (size_t k = 1; k < Take::tracks; ++k) {
+                if (!t.track_used[k] || !t.track_ok[k]) continue;
+                const Vec3 target = t.track_before[k] + (t.track_now[k] - t.track_before[k]) * ease;
+                t.track_at[k] = t.track_at[k] + (target - t.track_at[k]) * follow;
+            }
+        }
+        const auto view = sequence_view(planned_pose(seq, t.plan, now), anchor_at(now), now);
+        rig_.place_camera(t.dolly, view.camera, view.rotation);
+        if (std::abs(view.fov - t.fov_applied) > 0.02) { rig_.set_fov(t.dolly, view.fov); t.fov_applied = view.fov; }
+        // A shot with an aperture keeps its focus on her as the camera comes closer or backs
+        // off: set again whenever the distance has moved by more than a hundredth. The focus
+        // sits a little short of the point the shot is framed on, on the surface facing the lens.
+        if (const auto& shot = seq.shots[t.shot_index]; shot.fstop > 0) {
+            const double focus = std::max(20.0, view.focus - 6.0);
+            if (t.focus_applied < 0 || std::abs(focus - t.focus_applied) > 0.01 * focus) { rig_.depth_of_field(t.dolly, shot.fstop, focus); t.focus_applied = focus; t.dof_on = true; }
         }
     } catch (...) {}
     if (t.seq_looks) {
         try {
-            // An outfit change rides the beat: the picture wipes into a frame pass over one
-            // beat, holds the pass for a beat while she changes under it, and wipes back over
-            // one beat starting on the step's own beat. Where changes come every bar the two
-            // wipes take half a beat each.
+            // An outfit change rides the beat: a quick sweep into a frame pass, the pass held
+            // for the beat she changes under, and a quick sweep back on the step's own beat.
+            // The pass is only there to hide the change, so it gets no more time than that.
             const double beat = 60.0 / seq.tempo.bpm;
-            auto timing = [&](size_t index) {
-                double gap = 1e9;
-                for (size_t i = index; i-- > 0;) if (!seq.looks[i].outfit.empty()) { gap = seq.looks[index].at - seq.looks[i].at; break; }
-                struct { double wipe, hold; } out{gap < 6 * beat ? beat / 2 : beat, std::max(beat, 0.45)};
+            auto timing = [&](size_t) {
+                struct { double wipe, hold; } out{beat / 4, std::max(beat, 0.45)};
                 return out;
             };
             while (t.wearing == Take::Wear::Idle && t.look_next < seq.looks.size()) {
@@ -714,14 +977,18 @@ void Extension::sequence_frame(const CssxFrame& f) {
                 if (!look.outfit.empty()) {
                     const auto [wipe, hold] = timing(t.look_next);
                     if (now < look.at - hold - wipe) break;
-                    const Layer pass = t.transitions % 2 ? Layer::BaseColor : Layer::Normals;
-                    t.covered = breakdown_.shown() == 0 && breakdown_.has_pass(pass);   // never over a running breakdown step
-                    if (t.covered) breakdown_.show(bit(pass), wipe);
+                    // The cover takes the whole frame, whatever the breakdown track had up: a
+                    // split line there sweeps on to the right edge and comes back afterwards.
+                    const auto& covers = t.preset.cover;
+                    const LayerSet cover = covers.empty() ? 0 : covers[size_t(t.transitions) % covers.size()];
+                    t.covered = look.cover && breakdown_.can_show(cover);
+                    if (t.covered) breakdown_.show(cover, wipe, 1.0);
                     ++t.transitions;
                     t.cover_from = now; t.wearing = Take::Wear::Covering;
                 } else {
                     if (now < look.at) break;
                     apply_look(look);
+                    if (look.titled) t.title = look.title;
                     ++t.look_next;
                 }
             }
@@ -729,70 +996,104 @@ void Extension::sequence_frame(const CssxFrame& f) {
                 const auto& look = seq.looks[t.look_next];
                 // Asked for once the picture is covered: the beat of hold is what it has to land in.
                 if (now >= look.at - timing(t.look_next).hold) {
+                    // Clay in her own slots would be in the wardrobe mod's way; an overlay is not.
+                    if (breakdown_.in_slots()) breakdown_.suspend();
                     rig_.css(wear_request(look.outfit, look.variant, false, false));
-                    t.wore = true; t.wearing = Take::Wear::Waiting; t.wear_sent_at = now; t.wear_poll = 0;
+                    t.wore = true; t.wearing = Take::Wear::Waiting; t.wear_sent_at = now; t.wear_poll = 0; t.adopted = false;
                 }
-            } else if (t.wearing == Take::Wear::Waiting && ++t.wear_poll % 3 == 0) {
+            } else if (t.wearing == Take::Wear::Waiting) {
                 const auto& look = seq.looks[t.look_next];
-                const auto described = rig_.css({{"action", "describe"}});
-                const bool landed = worn(described, look.outfit, look.variant);
-                if (landed) t.look_now = described;
+                // Every frame until she has changed: a part of the new outfit gets our overlay
+                // the frame it appears, so the cover never shows a piece of the finished look.
+                bool landed = t.adopted;
+                if (!landed) {
+                    breakdown_.reskin();
+                    const auto described = rig_.css({{"action", "describe"}});
+                    landed = worn(described, look.outfit, look.variant);
+                    if (landed) {
+                        t.look_now = described;
+                        breakdown_.adopt(look.outfit + "/" + look.variant);
+                        apply_look(look);
+                        t.adopted = true;
+                    }
+                }
                 // Back to the picture on the beat once she has changed, or after three seconds whatever happened.
                 if ((landed && now >= look.at) || now > t.wear_sent_at + 3.0) {
-                    if (landed) apply_look(look);
-                    const double wipe = timing(t.look_next).wipe;
-                    if (t.covered) { breakdown_.show(0, wipe); t.transition_until = now + wipe + 0.05; }
+                    if (!landed) breakdown_.adopt(look.outfit + "/" + look.variant);
+                    // Back to what the breakdown track wants now. A step that arrived under the
+                    // cover brings its own wipe: the track says how the picture comes back (a cut
+                    // on a hit, a sweep on a bar line).
+                    const double wipe = t.desired_dirty ? t.desired.wipe : timing(t.look_next).wipe;
+                    if (look.titled) t.title = look.title;
+                    if (t.desired_dirty && t.desired.titled) t.title = t.desired.title;
+                    if (t.covered) { breakdown_.show(t.desired.layers, wipe, t.desired.follow ? t.body_place : t.desired.stop); t.desired_dirty = false; t.transition_until = now + wipe + 0.05; }
                     t.covered = false; t.wearing = Take::Wear::Idle; ++t.look_next;
                 }
             }
         } catch (const std::exception& e) {
             t.seq_looks = false; t.wearing = Take::Wear::Idle;
-            if (t.covered) { breakdown_.show(0, 0.2); t.covered = false; }
+            breakdown_.adopt(t.look_now.is_object() ? t.look_now.value("outfit", std::string()) + "/" + t.look_now.value("variant", std::string()) : std::string());
+            if (t.covered) { breakdown_.show(t.desired.layers, 0.2, t.desired.stop); t.desired_dirty = false; t.covered = false; }
             t.note = std::string("Looks stopped: ") + e.what() + ".";
         }
     }
+    // Breakdown steps sit on beats: they land on their frame, not on the next tick. While an
+    // outfit change has the picture, a step only moves what the cover hands back to.
+    while (t.reveal_next < t.reveals.size() && now >= t.reveals[t.reveal_next].at) { t.desired = t.reveals[t.reveal_next++]; t.desired_dirty = true; }
+    if (t.desired_dirty && t.wearing == Take::Wear::Idle) {
+        t.desired_dirty = false;
+        if (t.desired.titled) t.title = t.desired.title;
+        breakdown_.show(t.desired.layers, t.desired.wipe, t.desired.follow ? t.body_place : t.desired.stop);
+        t.transition_until = std::max(t.transition_until, now + t.desired.wipe);   // the line follows her once it has arrived
+    }
 }
 
-// 10 Hz: the camera is sent toward where it should be a moment from now, like the dolly. A
-// cut ahead is never blended into: the move stops at the end of the shot it belongs to.
+// 10 Hz: the world may have moved since the plan was made. One trace a tick: something in the
+// way pulls the camera in at once; it eases back out when the way is clear. The camera itself
+// is placed every frame (sequence_frame).
 void Extension::sequence_tick() {
     auto& t = *take_;
+    if (!settings_.walls) return;
     const auto& seq = t.preset.sequence;
-    const double now = t.seq_clock;
-    const size_t index = shot_at(seq, now);
-    double ahead = now + 0.13;
-    if (index + 1 < seq.shots.size() && seq.shots[index + 1].cut) ahead = std::min(ahead, seq.shots[index + 1].at - 0.004);
-    ahead = std::min(ahead, seq.total);
-    const auto pose = planned_pose(seq, t.plan, std::max(now, ahead));
-    if (settings_.walls) {
-        // The plan covered the world as it stood. One trace a tick covers what moved since:
-        // something in the way pulls the camera in at once; it eases back when the way is clear.
-        const double keep = t.wall_scale;
-        t.wall_scale = 1.0;
-        const auto full = sequence_view(pose);
-        const Vec3 aim = to_world(t.base, t.base_yaw, {0, 0, pose.aim + settings_.height});
-        double hit = 0;
-        const double limit = rig_.trace(aim, full.camera, &hit) && hit < full.focus - 5 ? std::clamp((hit - 25) / full.focus, 0.2, 1.0) : 1.0;
-        t.wall_scale = std::min(limit, keep + 0.06);
-    }
-    const auto view = sequence_view(pose);
-    rig_.move_camera(t.dolly, view.camera, view.rotation, std::max(0.02, ahead - now));
-    if (std::abs(view.fov - t.fov_applied) > 0.1) { rig_.set_fov(t.dolly, view.fov); t.fov_applied = view.fov; }
+    const double when = std::min(t.seq_clock + 0.1, seq.total);
+    const auto pose = planned_pose(seq, t.plan, when);
+    const Vec3 anchor = anchor_at(when);
+    const double keep = t.wall_scale;
+    t.wall_scale = 1.0;
+    const auto full = sequence_view(pose, anchor, when);
+    t.wall_scale = keep;
+    const Vec3 aim = to_world(anchor, t.base_yaw, {0, 0, pose.aim + settings_.height});
+    double hit = 0;
+    // A hit within arm's reach is her own (a hand, a sword at her hip), not something in the way.
+    t.wall_target = rig_.trace(aim, full.camera, &hit) && hit > own_reach && hit < full.focus - 5 ? std::clamp((hit - 25) / full.focus, 0.35, 1.0) : 1.0;
 }
 
 // The take's first frame. Music starts here, and with music on the clock of a sequence is
 // real time from this instant: a long frame (an outfit landing) then costs picture, never sync.
 void Extension::roll() {
     auto& t = *take_;
+    performance_.start([&](const Json& r) { return rig_.css(r); }, t.performance);
     t.clock = 0; t.seq_clock = 0;
     mode_ = Mode::Running;
     if (t.preset.kind == ShotKind::Sequence) {
         try {
-            const auto view = sequence_view(planned_pose(t.preset.sequence, t.plan, 0));
+            sample_tracks(true);
+            const auto view = sequence_view(planned_pose(t.preset.sequence, t.plan, 0), anchor_at(0), 0);
             rig_.place_camera(t.dolly, view.camera, view.rotation);
             rig_.set_fov(t.dolly, view.fov); t.fov_applied = view.fov;
-            breakdown_.depth_range(view.focus * 2.4);
+            breakdown_.depth_range(std::max(view.focus * 6.0, 2500.0));
         } catch (...) {}
+    }
+    // A look step on the take's first instant is the opening look: she wears it already (the
+    // preparation ended on it), so only its palette, controls and title are left to apply.
+    if (t.preset.kind == ShotKind::Sequence && t.seq_looks) {
+        const auto& looks = t.preset.sequence.looks;
+        while (t.look_next < looks.size() && looks[t.look_next].at <= 1e-6) {
+            const auto& look = looks[t.look_next++];
+            try { apply_look(look); } catch (...) {}
+            if (look.titled) t.title = look.title;
+        }
+        try { t.opening = rig_.css({{"action", "describe"}}).at("customize"); } catch (...) { t.opening = nullptr; }
     }
     if (!t.preset.audio.empty()) {
         std::string why;
@@ -863,6 +1164,11 @@ void Extension::sample_labels() {
             // The same label as last time eases from where it was drawn; a new one starts in place.
             const bool same = i < labels_.size() && labels_[i].text == next[i].text;
             next[i].before = same ? labels_[i].now : next[i].now;
+            if (!callouts[i].other.empty()) {
+                next[i].pair = true;
+                next[i].other_now = rig_.socket_location(callouts[i].component, callouts[i].other) - frame_.position;
+                next[i].other_before = same && labels_[i].pair ? labels_[i].other_now : next[i].other_now;
+            }
         }
         labels_ = std::move(next);
         label_age_ = 0;
@@ -874,6 +1180,36 @@ void Extension::sample_labels() {
         }
         labels_live_ = true;
     } catch (...) { labels_live_ = false; }
+}
+
+// 10 Hz while a split follows her body: where the parts of her are, and the lens when the
+// labels are not measuring it already.
+void Extension::sample_body() {
+    static_assert(std::size(body_shape) == Take::body_parts, "one sample slot for each part of her body");
+    auto& t = *take_;
+    try {
+        if (!is_handle(t.body_mesh)) t.body_mesh = host_.get(rig_.pawn(), "Mesh");
+        for (size_t i = 0; i < Take::body_parts; ++i) {
+            const Vec3 now = rig_.socket_location(t.body_mesh, body_shape[i].bone) - frame_.position;
+            t.body_before[i] = t.body_live ? t.body_now[i] : now;
+            t.body_now[i] = now;
+        }
+        t.body_age = 0;
+        t.body_live = true;
+        if (!labels_live_) {
+            Vec3 camera; Rotator rotation;
+            double cx = 0, cy = 0, ox = 0, oy = 0;
+            if (rig_.view_point(camera, rotation)) {
+                const auto basis = view_basis(rotation);
+                if (rig_.project(lens_point(camera, basis, false), cx, cy) && rig_.project(lens_point(camera, basis, true), ox, oy)) lens_ = measure_lens(cx, cy, ox, oy);
+            }
+        }
+        // What the window's shape makes of the camera's field of view, for shots that fit a height.
+        if (lens_.ok && lens_.ky > 1 && viewport_h_ > 1 && t.fov_applied > 1) {
+            const double ratio = (viewport_h_ / 2 / lens_.ky) / std::tan(t.fov_applied * std::numbers::pi / 360);
+            if (ratio > 0.1 && ratio < 5) t.lens_ratio = ratio;
+        }
+    } catch (...) { t.body_live = false; }
 }
 
 // signature.txt in the extension folder: the first line is the name, the rest small print.
@@ -1040,13 +1376,21 @@ void Extension::run() {
     }
     if (t.walking) steer(frame_.seconds > 0 ? std::max(frame_.seconds, 0.05) : 0.1);
     const bool sequence = t.preset.kind == ShotKind::Sequence;
-    if (sequence) { t.clock = t.seq_clock; sequence_tick(); }   // the frame clock is the take's clock
-    while (t.reveal_next < t.reveals.size() && t.clock >= t.reveals[t.reveal_next].at) {
+    if (sequence) {
+        t.clock = t.seq_clock;   // the frame clock is the take's clock
+        if (std::any_of(std::begin(t.track_used) + 1, std::end(t.track_used), [](bool used) { return used; })) sample_tracks(false);
+        sequence_tick();
+    }
+    while (!sequence && t.title_next < t.titles.size() && t.clock >= t.titles[t.title_next].first) t.title = t.titles[t.title_next++].second;
+    while (!sequence && t.reveal_next < t.reveals.size() && t.clock >= t.reveals[t.reveal_next].at) {
         const auto& r = t.reveals[t.reveal_next++];
-        breakdown_.show(r.layers, r.wipe);
+        t.desired = r;   // a split that follows her body is moved from the frame callback
+        if (r.titled) t.title = r.title;
+        breakdown_.show(r.layers, r.wipe, r.follow ? t.body_place : r.stop);
         if (breakdown_opponent_.active()) breakdown_opponent_.show(r.layers & ~frame_layers, r.wipe);
     }
     if (!t.reveals.empty()) sample_labels();
+    if (t.follows || t.fits) sample_body();
     if (t.preset.kind == ShotKind::Action) {
         action_tick(tick_dt_);
         if (!take_) return;   // the take ended inside the step
@@ -1108,6 +1452,8 @@ void Extension::retry_look_restore(double dt) {
 void Extension::finish_take(const std::string& why, bool failed) {
     if (!take_) return;
     std::vector<std::string> failures;
+    try { performance_.stop([&](const Json& r) { return rig_.css(r); }); }
+    catch (const std::exception& e) { failures.push_back(std::string("animation: ") + e.what()); }
     // Breakdown first: its frame passes sit on the take camera, which the rig destroys next.
     for (Breakdown* b : {&breakdown_, &breakdown_opponent_}) {
         try { for (auto& f : b->end()) failures.push_back(std::move(f)); } catch (const std::exception& e) { failures.push_back(e.what()); }
@@ -1133,6 +1479,8 @@ void Extension::finish_take(const std::string& why, bool failed) {
         // Put the modder's own look back and let CSS save it (persist=true).
         if (!restore_look(take_->snapshot)) queue_look_restore(take_->snapshot);   // CSS busy or between looks: retried each second
     }
+    try { expression_.stop([&](const Json& r) { return rig_.css(r); }); }
+    catch (const std::exception& e) { failures.push_back(std::string("expression: ") + e.what()); }
     std::string note = take_->note;
     if (!repainted.empty()) note = note.empty() ? repainted : note + "  " + repainted;
     take_.reset();
@@ -1174,6 +1522,15 @@ void Extension::capture_final_now() {
 
 // ---------------------------------------------------------------- menu
 
+std::string Extension::performance_conflict(const Preset& p) const {
+    if (settings_.performance.id == "off") return {};
+    if (p.kind == ShotKind::Walk || p.kind == ShotKind::Action)
+        return "Choose a stationary camera preset for a performance, or set Performance to Off.";
+    if (settings_.look != "off" || (p.kind == ShotKind::Sequence && !p.sequence.looks.empty()))
+        return "Turn the look track off before playing a performance. Change the outfit between takes.";
+    return {};
+}
+
 Json Extension::model() const {
     Json options = Json::array();
     for (const auto& [id, p] : presets_) options.push_back({{"id", id}, {"label", p.name}});
@@ -1203,10 +1560,18 @@ Json Extension::model() const {
     if (recording && !in_world) disabled["enter"] = "Finish the recording first";
     if (recording) { disabled["record"] = "Recording now"; disabled["take"] = "Finish the recording first"; disabled["capture"] = "Finish the recording first"; }
     if (busy) { disabled["record"] = "A take is running"; disabled["capture"] = "A take is running"; disabled["take"] = "A take is running"; }
+    if (!busy && p && !performance_conflict(*p).empty()) disabled["take"] = performance_conflict(*p);
+    if (!busy && !performance_catalog_.unavailable(settings_.performance).empty()) disabled["take"] = performance_catalog_.unavailable(settings_.performance);
+    if (busy || recording) for (const auto* id : {"performance", "performance_library", "performance_rate", "performance_start", "performance_refresh"}) disabled[id] = "Wait for the take or route recording to finish";
+    if (busy || recording) for (const auto* id : {"expression", "expression_refresh"}) disabled[id] = "Wait for the take or route recording to finish";
+    if (!busy && !expression_catalog_.unavailable(settings_.expression).empty()) disabled["take"] = expression_catalog_.unavailable(settings_.expression);
+    if (!busy && settings_.expression != "unchanged" && (settings_.look != "off" || (p && p->kind == ShotKind::Sequence && !p->sequence.looks.empty())))
+        disabled["take"] = "Use As set in CSS for takes that change looks, or turn the look track off.";
     if (!route_) disabled["clear_route"] = "No route";
     if (!final_) disabled["clear_final"] = "No final shot";
     Json enabled = Json::object();
-    for (const auto& id : {"enter", "exit", "take", "record", "capture", "clear_route", "clear_final", "keep_target", "labels", "breakdown_target"}) enabled[id] = !disabled.contains(id);
+    for (const auto& id : {"enter", "exit", "take", "record", "capture", "clear_route", "clear_final", "keep_target", "labels", "breakdown_target",
+        "performance", "performance_library", "performance_rate", "performance_start", "performance_refresh", "expression", "expression_refresh"}) enabled[id] = !disabled.contains(id);
     std::string summary = status_;
     if (!preset_problems_.empty()) summary += "  (" + std::to_string(preset_problems_.size()) + " preset file(s) skipped; see CSSX log)";
     return {{"values", {{"status", summary}, {"preset", presets_.empty() ? std::string("none") : settings_.preset},
@@ -1215,8 +1580,13 @@ Json Extension::model() const {
                         {"walls", settings_.walls}, {"look", settings_.look}, {"look_info", look}, {"route_info", route}, {"final_info", final_shot},
                         {"scene", settings_.scene}, {"keep_target", settings_.keep_target}, {"scene_info", scene},
                         {"breakdown", settings_.breakdown}, {"labels", settings_.labels}, {"breakdown_target", settings_.breakdown_target}, {"breakdown_info", breakdown},
-                        {"signature", settings_.signature}}},
-            {"options", {{"preset", options}}},
+                        {"signature", settings_.signature}, {"picture", settings_.picture},
+                        {"performance", settings_.performance.id}, {"performance_library", performance_catalog_.library(settings_.performance)},
+                        {"performance_rate", settings_.performance.rate}, {"performance_start", settings_.performance.seconds},
+                        {"performance_info", performance_catalog_.description(settings_.performance)},
+                        {"expression", settings_.expression}, {"expression_info", expression_catalog_.description(settings_.expression)}}},
+            {"options", {{"expression", expression_catalog_.options(settings_.expression)}, {"preset", options}, {"performance", performance_catalog_.options(settings_.performance)},
+                         {"performance_library", performance_catalog_.libraries(settings_.performance)}}},
             {"enabled", enabled}, {"disabled", disabled}, {"status", summary}, {"error", error_}};
 }
 
@@ -1224,7 +1594,38 @@ void Extension::event(const Json& e) {
     const auto id = e.value("id", std::string());
     try {
         error_.clear();
-        if (id == "enter") enter();
+        if (id == "expression" || id == "expression_refresh") {
+            if (mode_ != Mode::Idle && mode_ != Mode::Armed) throw std::runtime_error("Wait for the take or route recording to finish");
+            if (id == "expression_refresh") expression_catalog_.refresh([&](const Json& r) { return rig_.css(r); });
+            else {
+                const auto choice = expression_choice(e.at("value"));
+                if (const auto why = expression_catalog_.unavailable(choice); !why.empty()) throw std::runtime_error(why);
+                settings_.expression = choice; save_state();
+            }
+        }
+        else if (id.starts_with("performance")) {
+            if (mode_ != Mode::Idle && mode_ != Mode::Armed) throw std::runtime_error("Wait for the take or route recording to finish");
+            auto next = settings_.performance;
+            if (id == "performance_refresh") performance_catalog_.refresh([&](const Json& r) { return rig_.css(r); });
+            else if (id == "performance") {
+                next.id = e.at("value").get<std::string>();
+                if (next.id != "off") {
+                    const auto* entry = performance_catalog_.find(next.id);
+                    if (!entry) throw std::runtime_error("Unknown performance. Refresh animations first.");
+                    next.library = entry->library;
+                }
+                next.seconds = 0;
+            } else if (id == "performance_library") {
+                const auto value = e.at("value").get<std::string>(); bool found = false;
+                for (const auto& o : performance_catalog_.libraries(next)) if (o.at("id") == value) found = true;
+                if (!found) throw std::runtime_error("Unknown animation library");
+                next.library = value; next.id = "off"; next.seconds = 0;
+            } else if (id == "performance_rate") next.rate = e.at("value").get<double>();
+            else if (id == "performance_start") next.seconds = e.at("value").get<double>();
+            else throw std::runtime_error("Unknown performance control");
+            settings_.performance = PerformanceChoice::parse(next.json()); save_state();
+        }
+        else if (id == "enter") enter();
         else if (id == "exit") exit_world("Left Cine World.");
         else if (id == "take") { if (mode_ != Mode::Armed) throw std::runtime_error("Enter Cine World first"); start_pending_ = true; host_.request({{"op", "menu.close"}}); report("Closing the menu; the take starts in a moment."); }
         else if (id == "record") {
@@ -1247,6 +1648,7 @@ void Extension::event(const Json& e) {
         else if (id == "countdown") { settings_.countdown = clampd(e.at("value").get<double>(), 0, 10); save_state(); }
         else if (id == "guide") { const auto v = e.at("value").get<std::string>(); if (!std::count(guide_ids.begin(), guide_ids.end(), v)) throw std::runtime_error("Unknown guide"); settings_.guide = v; save_state(); }
         else if (id == "walls") { settings_.walls = e.at("value").get<bool>(); save_state(); }
+        else if (id == "picture") { const auto v = e.at("value").get<std::string>(); if (!std::count(picture_ids.begin(), picture_ids.end(), v)) throw std::runtime_error("Unknown picture mode"); settings_.picture = v; save_state(); }
         else if (id == "look") { const auto v = e.at("value").get<std::string>(); if (v != "off" && v != "preset" && v != "palettes") throw std::runtime_error("Unknown look mode"); settings_.look = v; save_state(); }
         else if (id == "scene") {
             const auto v = e.at("value").get<std::string>();
@@ -1278,8 +1680,11 @@ bool Extension::stop() {
     try { exit_world("CINE stopped."); } catch (...) {}
     if (!look_restore_.is_null() && restore_look(look_restore_)) look_restore_ = nullptr;   // last chance before unload
     audio_.stop();
+    try { performance_.stop([&](const Json& r) { return rig_.css(r); }); } catch (...) {}
+    try { if (!expression_.stop([&](const Json& r) { return rig_.css(r); })) return false; }
+    catch (...) { return false; }
     stopped_ = true;
-    return true;   // never hold the DLL: everything owned was attempted
+    return true;
 }
 
 } // namespace cine

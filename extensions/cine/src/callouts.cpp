@@ -56,12 +56,40 @@ std::vector<std::string> fit_signature(const std::vector<std::string>& lines, do
     return out;
 }
 
-std::vector<CalloutPlace> layout_callouts(const Rect& frame, const std::vector<CalloutTarget>& targets) {
+std::vector<CalloutPlace> layout_callouts(const Rect& frame, const std::vector<CalloutTarget>& targets, double line_x) {
     std::vector<CalloutPlace> out;
     if (!(frame.w > 100) || !(frame.h > 100)) return out;
     const double scale = frame_scale(frame), line_height = callout_line * scale;
     const double right_edge = frame.x + frame.w, bottom_edge = frame.y + frame.h, centre = frame.x + frame.w / 2;
     // Each visible target goes to the column on its own side, so a leader never crosses her.
+    const bool split = line_x < right_edge - 1;
+    if (split) {
+        // A split holds the same layers for a long time. Each label keeps the row of its place
+        // in the list, shown or not, so nothing shuffles when a target leaves the frame or two
+        // targets pass each other: only the arrows move.
+        const size_t rows = std::min(targets.size(), max_callouts);
+        const double top = frame.y + frame.h * 0.24, bottom = frame.y + frame.h * 0.70;
+        const double step = rows > 1 ? std::min((bottom - top) / double(rows - 1), line_height * 3.2) : 0;
+        const double first = (top + bottom) / 2 - step * double(rows > 0 ? rows - 1 : 0) / 2;
+        for (size_t row = 0; row < rows; ++row) {
+            const auto& t = targets[row];
+            if (!t.visible || !std::isfinite(t.x) || !std::isfinite(t.y) || t.x < frame.x || t.y < frame.y || t.x > right_edge || t.y > bottom_edge) continue;
+            // Right of the line is the finished picture: there is nothing of this label to point
+            // at there. A target on the line itself (her spine, her head) stays.
+            if (t.x > line_x + frame.w * 0.03) continue;
+            CalloutPlace p;
+            p.target = row;
+            p.on_left = true;
+            p.width = std::min(label_width(t.text, scale), frame.w * 0.44);
+            p.label_x = frame.x + frame.w * margin;
+            p.label_y = first + step * double(row) - line_height / 2;
+            p.from_x = p.label_x + p.width;
+            p.from_y = p.label_y + line_height + callout_shelf * scale;
+            p.to_x = std::min(t.x, line_x); p.to_y = t.y;
+            out.push_back(p);
+        }
+        return out;
+    }
     std::vector<size_t> left, right;
     for (size_t i = 0; i < targets.size(); ++i) {
         const auto& t = targets[i];
@@ -237,7 +265,7 @@ void Callouts::forget() {
 }
 
 void Callouts::update(const CssxFrame& frame_data, const Rect& frame, const std::vector<CalloutTarget>& targets,
-                      const std::string& caption, const std::vector<std::string>& signature) {
+                      const std::string& caption, const std::vector<std::string>& signature, double line_x) {
     if (!hud_) return;
     if (frame_data.world_generation != world_) { forget(); world_ = frame_data.world_generation; }
     if (!frame_data.world_ready) return;
@@ -252,7 +280,7 @@ void Callouts::update(const CssxFrame& frame_data, const Rect& frame, const std:
     restyle(scale);
     const double line_height = callout_line * scale, left = frame.x + frame.w * margin;
 
-    auto places = layout_callouts(frame, targets);
+    auto places = layout_callouts(frame, targets, line_x);
     // Half-unit steps: sub-pixel jitter in a still shot sends nothing to the HUD.
     for (auto& p : places) { p.to_x = std::round(p.to_x * 2) / 2; p.to_y = std::round(p.to_y * 2) / 2; }
     for (size_t i = 0; i < max_callouts; ++i) {
@@ -284,7 +312,7 @@ void Callouts::update(const CssxFrame& frame_data, const Rect& frame, const std:
     else {
         if (caption != caption_shown_) {
             caption_shown_ = caption;
-            caption_text_ = "BREAKDOWN  //  " + readout(caption);
+            caption_text_ = readout(caption);
             if (caption_) hud_->set_text(context_, caption_, caption_text_.data(), caption_text_.size());
         }
         const double height = 42 * scale, y = frame.y + frame.h * 0.07;

@@ -1,0 +1,161 @@
+{
+  "schema": 1,
+  "id": "commander-white-walk",
+  "name": "Commander White Walk",
+  "description": "She walks your recorded route while the camera circles her once, split on the middle of her body: mesh and rig on one side, the finished look on the other. She starts and ends in the look she is wearing; on the way the palette goes to crimson and obsidian and a few pieces come off and go back on, each named by a title. Needs the Commander White outfit and CSS, a recorded route and a final shot. Set Look track and Breakdown track to From the preset.",
+  "kind": "walk",
+  "intro": 4.5,
+  "tail": 16,
+  "max_seconds": 49,
+  "lead": 0.8,
+  "zoom": 1.12,
+  "keys": [
+    {
+      "at": "start",
+      "azimuth": 25,
+      "distance": 410,
+      "height": -45,
+      "aim": 5,
+      "fov": 42
+    },
+    {
+      "at": "walk",
+      "azimuth": 30,
+      "distance": 330,
+      "height": -28,
+      "aim": 8,
+      "fov": 44
+    },
+    {
+      "at": 0.18,
+      "azimuth": 90,
+      "distance": 360,
+      "height": -5,
+      "aim": 10,
+      "fov": 42
+    },
+    {
+      "at": 0.38,
+      "azimuth": 175,
+      "distance": 360,
+      "height": 25,
+      "aim": 30,
+      "fov": 42
+    },
+    {
+      "at": 0.55,
+      "azimuth": 270,
+      "distance": 350,
+      "height": -10,
+      "aim": 10,
+      "fov": 40
+    },
+    {
+      "at": 0.72,
+      "azimuth": 320,
+      "distance": 260,
+      "height": 15,
+      "aim": 40,
+      "fov": 36
+    },
+    {
+      "at": 0.88,
+      "azimuth": 360,
+      "distance": 150,
+      "height": 55,
+      "aim": 58,
+      "fov": 30
+    }
+  ],
+  "reference": "capsule",
+  "look": {
+    "end_on_own": true,
+    "steps": [
+      {
+        "at": 0.01,
+        "physics": {
+          "chest_motion": "natural",
+          "glute_motion": "soft",
+          "thigh_motion": "soft",
+          "belly_motion": "soft",
+          "hair_motion": "natural"
+        }
+      },
+      {
+        "at": 0.05,
+        "controls": {
+          "coat": 0
+        },
+        "title": "Pieces  //  Coat off"
+      },
+      {
+        "at": 0.18,
+        "palette": "crimson",
+        "controls": {
+          "coat": 1
+        },
+        "title": "Palette  //  Crimson"
+      },
+      {
+        "at": 0.32,
+        "controls": {
+          "glove_left": 0,
+          "glove_right": 0
+        },
+        "title": "Pieces  //  Gloves off"
+      },
+      {
+        "at": 0.46,
+        "palette": "obsidian",
+        "controls": {
+          "glove_left": 1,
+          "glove_right": 1
+        },
+        "title": "Palette  //  Obsidian"
+      },
+      {
+        "at": 0.6,
+        "controls": {
+          "skirt": 0
+        },
+        "title": "Pieces  //  Skirt off"
+      },
+      {
+        "at": 0.74,
+        "controls": {
+          "skirt": 1
+        },
+        "title": "Pieces  //  Skirt on"
+      },
+      {
+        "at": 0.9,
+        "title": ""
+      }
+    ]
+  },
+  "breakdown": {
+    "steps": [
+      {
+        "at": 0.02,
+        "layers": [],
+        "wipe": 0,
+        "title": "Commander White"
+      },
+      {
+        "at": 0.1,
+        "layers": [
+          "wireframe",
+          "skeleton",
+          "springs"
+        ],
+        "split": "body", "share": 0.375,
+        "wipe": 1.0
+      },
+      {
+        "at": 0.8,
+        "layers": [],
+        "wipe": 1.0
+      }
+    ]
+  }
+}

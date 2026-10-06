@@ -33,6 +33,14 @@ struct Host {
     Json keys = Json::object();
     std::vector<Json> css_applies;
     bool css_present = true;
+    bool performance_supported = true, performance_active = false, performance_fail_start = false;
+    uint64_t performance_token = 0;
+    std::string performance_id, performance_reason;
+    int performance_starts = 0, performance_stops = 0;
+    Json performance_start;
+    std::string face = "", face_applied = "";
+    bool face_fail = false;
+    int face_busy = 0;
     int css_refuse_restores = 0;   // the next N restore applies fail like CSS between looks
     // What she wears, for the wear action: a wear lands a couple of describes later.
     std::string css_outfit = "own.outfit", css_variant = "base", css_wanted_outfit, css_wanted_variant;
@@ -50,6 +58,12 @@ struct Host {
     std::set<uint64_t> components;        // attached breakdown pieces alive now
     size_t components_made = 0, projections = 0, view_points = 0, pauses = 0, lock_releases = 0, materials_locked = 0;
     Json mpc = Json::object();            // MPC_Cine scalars as last written
+    // The render settings a take may raise, as this game ships them.
+    std::map<std::string, double> cvars{{"r.Shadow.Virtual.MaxPhysicalPages", 512}, {"r.Shadow.Virtual.ResolutionLodBiasDirectional", 0}, {"r.Shadow.Virtual.ResolutionLodBiasDirectionalMoving", 0.5},
+        {"r.Shadow.Virtual.ResolutionLodBiasLocal", 0}, {"r.Shadow.Virtual.ResolutionLodBiasLocalMoving", 2}, {"r.Shadow.Virtual.SMRT.RayCountDirectional", 4}, {"r.Shadow.Virtual.SMRT.SamplesPerRayDirectional", 2},
+        {"r.Shadow.Virtual.SMRT.RayCountLocal", 4}, {"r.Shadow.Virtual.SMRT.SamplesPerRayLocal", 16}, {"r.ScreenPercentage", 66.6},
+        {"r.Shadow.Virtual.SMRT.TexelDitherScaleDirectional", 2}, {"r.Shadow.Virtual.SMRT.TexelDitherScaleLocal", 2}};
+    size_t cvar_writes = 0;
     double game_time = 0, slowest = 1.0;
     int effect_handles = 0;
     uint64_t hair = 0;                    // a second skinned part on the pawn, with an overlay of its own
@@ -57,6 +71,12 @@ struct Host {
     const std::vector<std::pair<std::string, std::string>> bones{
         {"root", "None"}, {"pelvis", "root"}, {"spine_01", "pelvis"}, {"spine_02", "spine_01"}, {"spine_03", "spine_02"}, {"head", "spine_03"},
         {"thigh_r", "pelvis"}, {"VB hand_r", "root"}, {"ik_hand_r", "root"}, {"ik_foot_r", "root"}, {"Brust_L", "spine_03"}, {"Butt_R", "pelvis"}, {"skirt_01", "pelvis"}};
+    // The outfit "b.outfit" has a wing bone and no skirt bone: looks do not share every bone.
+    std::vector<std::pair<std::string, std::string>> bones_now() const {
+        auto list = bones;
+        if (css_outfit == "b.outfit") { list.pop_back(); list.push_back({"wing_01", "spine_03"}); }
+        return list;
+    }
     enum : uint64_t { Pawn = 1, Controller = 2, World = 3, WorldSettings = 4, Lock = 5, PlayerAsc = 6, PlayerMesh = 7, PlayerCapsule = 8, CameraManager = 9, PlayerHealth = 10 };
 
     uint64_t make(std::string kind, Json props = Json::object()) { const auto id = next++; things[id] = {std::move(kind), std::move(props)}; return id; }
@@ -111,6 +131,7 @@ struct Host {
             if (t.kind == "mid" || t.kind == "component" || t.kind == "camera" || t.kind == "camera_component" || t.kind == "root") continue;
             out[std::to_string(id) + " " + t.kind] = t.props;
         }
+        out["console variables"] = cvars;
         return out;
     }
     std::string actor_kind(uint64_t cls) const {
@@ -211,9 +232,9 @@ struct Host {
         if (fn == "GetVisibility" && t.props.contains("_visibility")) return ret(flag("_visibility"));
         if (fn == "SetVisibility" && t.props.contains("_visibility")) { flag("_visibility") = a.at("InVisibility"); return done(); }
         // The breakdown's side.
-        if (fn == "GetNumBones") return ret(bones.size());
-        if (fn == "GetBoneName") return ret(bones.at(a.at("BoneIndex").get<size_t>()).first);
-        if (fn == "GetParentBone") { for (const auto& [name, parent] : bones) if (name == a.at("BoneName").get<std::string>()) return ret(parent); return ret("None"); }
+        if (fn == "GetNumBones") return ret(bones_now().size());
+        if (fn == "GetBoneName") return ret(bones_now().at(a.at("BoneIndex").get<size_t>()).first);
+        if (fn == "GetParentBone") { for (const auto& [name, parent] : bones_now()) if (name == a.at("BoneName").get<std::string>()) return ret(parent); return ret("None"); }
         if (fn == "GetRefPoseTransform") return ret({{"Translation", {{"X", 0.0}, {"Y", 3.0}, {"Z", 12.0}}}});
         if (fn == "GetAllSocketNames") return ret(Json::array({"Socket_Target", "weapon_r"}));
         if (fn == "GetSkinnedAsset") return ret(flag("_asset"));
@@ -315,21 +336,44 @@ struct Host {
             if (j.at("service") != "css.customize" || j.value("version", 0) != 1) throw std::runtime_error("unexpected service call");
             if (!css_present) throw std::runtime_error("No service named css.customize is loaded");
             const auto& r = j.at("request");
+            if (r.at("action") == "expressions") return {{"entries", Json::array({{{"id", "css.face.happy"}, {"name", "Happy"}}})}};
+            if (r.at("action") == "performances") return {{"entries", Json::array({
+                {{"id", "css.eve.dance.blackhole"}, {"name", "Black Hole"}, {"library", "css.locomotion"}, {"library_name", "CSS Locomotion"},
+                 {"playback", "once"}, {"available", performance_supported}, {"reason", performance_supported ? "" : "Unsupported outfit"}}})}};
+            if (r.at("action") == "performance") {
+                const auto op = r.at("op");
+                if (op == "start") {
+                    if (performance_fail_start) throw std::runtime_error("Clip failed to load");
+                    if (!performance_supported || performance_active) throw std::runtime_error("Performance unavailable");
+                    performance_start = r; ++performance_starts; ++performance_token;
+                    performance_id = r.at("id"); performance_active = true; performance_reason.clear();
+                } else if (op == "stop") {
+                    if (r.at("token") != performance_token) throw std::runtime_error("Stale performance token");
+                    ++performance_stops; performance_active = false;
+                } else if (op != "status") throw std::runtime_error("Unknown performance operation");
+                return {{"token", performance_token}, {"id", performance_id}, {"active", performance_active}, {"reason", performance_reason}};
+            }
             if (r.at("action") == "wear") {
                 css_wears.push_back(r);
                 css_wanted_outfit = r.at("outfit"); css_wanted_variant = r.at("variant"); css_landing = 2;
                 return {{"outfit", css_wanted_outfit}, {"variant", css_wanted_variant}, {"busy", true}};
             }
             if (r.at("action") == "describe") {
+                if (face_busy > 0 && --face_busy == 0) face_applied = face_fail && !face.empty() ? "" : face;
                 if (css_landing > 0 && --css_landing == 0) { css_outfit = css_wanted_outfit; css_variant = css_wanted_variant; }
             }
             if (r.at("action") == "describe")
-                return {{"shell", "shell"}, {"outfit", css_outfit}, {"variant", css_variant}, {"busy", css_landing > 0},
-                        {"palette", "original"}, {"customize", {{"palette", "original"}, {"values", {{"coat", {1, 0, 0, 1}}}}}},
+                return {{"shell", "shell"}, {"outfit", css_outfit}, {"variant", css_variant}, {"busy", css_landing > 0 || face_busy > 0},
+                        {"palette", "original"}, {"expression", {{"applied", face_applied}, {"reason", face_fail && !face.empty() ? "Missing face" : ""}}},
+                        {"customize", {{"expression", face}, {"palette", "original"}, {"values", {{"coat", {1, 0, 0, 1}}}}}},
                         {"palettes", Json::array({{{"id", "original"}}, {{"id", "crimson"}}, {{"id", "midnight"}}})},
                         {"controls", Json::array({{{"id", "coat"}, {"kind", "toggle"}}, {{"id", "cloth"}, {"kind", "color"}}})}};
             if (css_refuse_restores > 0 && r.value("commands", Json::array()).size() && r["commands"][0].value("action", std::string()) == "restore") {
                 --css_refuse_restores; throw std::runtime_error("No CSS appearance is worn");
+            }
+            for (const auto& command : r.value("commands", Json::array())) {
+                if (command.value("action", std::string()) == "expression") { face = command.at("expression"); face_busy = 3; }
+                if (command.value("action", std::string()) == "restore") { face = command.at("customize").value("expression", std::string()); face_busy = 3; }
             }
             css_applies.push_back(r);
             return {{"palette", "x"}};
@@ -339,6 +383,17 @@ struct Host {
         const auto& a = j.value("args", Json::object());
         const uint64_t target = id_of(j.at("target"));
         if (destroyed.contains(target)) throw std::runtime_error("Object is no longer valid");
+        if (fn == "GetConsoleVariableFloatValue") {
+            const auto it = cvars.find(a.at("VariableName").get<std::string>());
+            if (it == cvars.end()) throw std::runtime_error("no such console variable");
+            return {{"ReturnValue", it->second}};
+        }
+        if (fn == "ExecuteConsoleCommand") {
+            const auto command = a.at("Command").get<std::string>();
+            const auto space = command.find(' ');
+            if (space != std::string::npos && cvars.contains(command.substr(0, space))) { cvars[command.substr(0, space)] = std::stod(command.substr(space + 1)); ++cvar_writes; }
+            return Json::object();
+        }
         if (model) { Json out; if (model_call(target, fn, a, out)) return out; }
         if (fn == "K2_GetActorLocation") return {{"ReturnValue", vec(pos)}};
         if (fn == "GetSocketLocation") return {{"ReturnValue", vec(pos + cine::Vec3{0, 0, 65})}};
@@ -429,6 +484,11 @@ fs::path temp_extension(const fs::path& shipped) {
     std::ofstream(dir / "presets" / "broken.cine.json") << "{\"schema\":1,\"id\":\"broken\"";
     return dir;
 }
+}
+
+static std::string parent_of_mid(Host& h, const Json& mid) {
+    const auto it = h.things.find(id_of(mid));
+    return it == h.things.end() || it->second.kind != "mid" ? std::string() : h.things.at(id_of(it->second.props.at("_parent"))).kind;
 }
 
 int main(int argc, char** argv) {
@@ -763,7 +823,7 @@ int main(int argc, char** argv) {
             expect(h.components_made == 19, "9 bone sticks, 5 markers, 2 sockets and 3 physics shapes are built, got " + std::to_string(h.components_made));
 
             expect(worst <= 200, "building never spends more than a bounded slice per tick: " + std::to_string(worst));
-            expect(has(r.status(), "Look track off"), "the look track steps aside for a breakdown");
+            expect(has(r.status(), "Look track off"), "the look track steps aside for a breakdown with clay");
             expect(h.css_applies.empty(), "and no look is applied");
             auto camera_component = [&]() -> Host::Thing& { for (auto& [id, t] : h.things) if (t.kind == "camera_component") return t; throw std::runtime_error("no camera component"); };
             auto parent_of = [&](const Json& mid) { const auto it = h.things.find(id_of(mid)); return it == h.things.end() || it->second.kind != "mid" ? std::string() : h.things.at(id_of(it->second.props.at("_parent"))).kind; };
@@ -1010,6 +1070,11 @@ int main(int argc, char** argv) {
             r.press("F8");
             for (int i = 0; i < 120 && !has(r.status(), "Rolling"); ++i) r.step();
             expect(has(r.status(), "Rolling"), "the sequence rolls after its looks are prepared: " + r.status());
+            // The picture is raised for the take: shadows only by default, and only where the game's value is lower.
+            expect(h.cvars["r.Shadow.Virtual.SMRT.RayCountLocal"] == 16 && h.cvars["r.Shadow.Virtual.SMRT.TexelDitherScaleLocal"] == 12
+                   && h.cvars["r.Shadow.Virtual.MaxPhysicalPages"] == 512 && h.cvars["r.Shadow.Virtual.ResolutionLodBiasLocalMoving"] == 2,
+                   "a take renders with smoother shadows, and nothing that resizes GPU memory is touched");
+            expect(h.cvars["r.Shadow.Virtual.SMRT.SamplesPerRayLocal"] == 16 && h.cvars["r.ScreenPercentage"] == 66.6, "a value already better than the target, and the resolution, are left alone");
             // Before the camera rolls every look was worn once, and she is back in her own.
             expect(h.css_wears.size() == 3 && h.css_wears[0].at("outfit") == "a.outfit" && h.css_wears[1].at("outfit") == "b.outfit"
                    && h.css_wears[2].at("outfit") == "own.outfit" && h.css_wears[2].contains("customize") && h.css_wears[2].value("persist", true) == false,
@@ -1021,16 +1086,18 @@ int main(int argc, char** argv) {
             // 120 BPM, bar 1 at 0.5 s: bars 1.5, 2, 2.5, 3, 3.25 are at 1.5, 2.5, 3.5, 4.5, 5.0 s; the end at 6.5 s.
             r.steps(21);   // about 2.0 s in: past the first wear
             expect(h.css_wears.size() == 4 && h.css_wears[3].at("outfit") == "a.outfit" && h.css_outfit == "a.outfit", "the first look is worn on its beat");
-            expect(h.mpc.contains("WipeT0") && h.param_count("PP_Cine_Buffer_Post", "W_Normal", 1.0) == 1, "the outfit change was covered by a wipe into the normals pass");
+            expect(h.mpc.contains("WipeT0") && h.param_count("M_Cine_Clay", "Ambient", 0.5) == 1 && h.param_count("M_Cine_XRay", "Show", 0.0) >= 1,
+                   "the outfit change was covered by the rig: a clay instance and the bone shapes were made for it");
+            expect(parent_of_mid(h, h.prop(Host::PlayerMesh, "OverlayMaterial")).empty(), "and the cover is off her again once she has changed");
             expect(h.projections == 0, "and a covering pass draws no breakdown labels");
-            expect(h.camera_places == placed, "no cut yet: the first two shots are one flowing move (" + std::to_string(h.camera_places - placed) + " placements)");
+            expect(h.camera_places - placed >= 20, "the camera is placed on every frame of the take: " + std::to_string(h.camera_places - placed));
             r.steps(7);    // about 2.9 s: the palette step at 2.5 s
             expect(h.css_applies.size() == applies + 1 && h.css_applies.back()["commands"][0].value("palette", std::string()) == "crimson", "a palette step is applied on its beat");
             r.steps(10);   // about 3.9 s: the cut at 3.5 s
-            expect(h.camera_places == placed + 1, "a cut places the camera at once");
+            expect(h.camera_places - placed >= 37, "and keeps being placed through a cut");
             r.steps(14);   // about 5.3 s: the second wear (4.5 s) and the second cut (5.0 s)
-            expect(h.css_wears.size() == 5 && h.css_outfit == "b.outfit" && h.camera_places == placed + 2, "the second look and the second cut land");
-            expect(h.move_component > 30, "between cuts the camera is driven every tick");
+            expect(h.css_wears.size() == 5 && h.css_outfit == "b.outfit" && h.camera_places - placed >= 50, "the second look and the second cut land");
+            expect(h.move_component == 0, "a sequence never hands its camera to an engine move: it would fight the per-frame placement");
             r.steps(20);
             expect(h.cameras.empty() && h.view == 1 && has(r.status(), "Take finished"), "the sequence ends on its last bar: " + r.status());
             expect(h.css_wears.size() == 6 && h.css_wears.back().at("outfit") == "own.outfit" && h.css_wears.back().value("persist", false) && h.css_wears.back().contains("customize"),
@@ -1050,16 +1117,28 @@ int main(int argc, char** argv) {
             Rig r(dir); r.host.populate(); auto& h = r.host;
             h.css_present = true; h.hit_walls = true;
             r.step();
+            const auto before_walls = h.snapshot();
+            r.ext->event({{"id", "picture"}, {"value", "full"}});
             r.ext->event({{"id", "preset"}, {"value", "test-seq"}});
             r.ext->event({{"id", "countdown"}, {"value", 0}});
             r.ext->event({{"id", "enter"}});
             r.press("F8");
             for (int i = 0; i < 160 && !has(r.status(), "Rolling"); ++i) r.step();
             expect(has(r.status(), "Rolling"), "a walled-in sequence still rolls: " + r.status());
+            expect(h.cvars["r.ScreenPercentage"] == 100 && h.cvars["r.Shadow.Virtual.SMRT.RayCountLocal"] == 16, "the full picture also renders at full resolution");
             r.steps(75);
             expect(h.cameras.empty() && has(r.status(), "Take finished"), "and finishes: " + r.status());
+            for (int i = 0; i < 30; ++i) r.step();
+            expect(h.cvars == before_walls.at("console variables").get<std::map<std::string, double>>(), "the game's own render settings are back after the take");
+            // With "game" nothing is touched at all.
+            const auto writes = h.cvar_writes;
+            r.ext->event({{"id", "picture"}, {"value", "game"}});
+            r.press("F8");
+            for (int i = 0; i < 160 && !has(r.status(), "Rolling"); ++i) r.step();
+            r.press("F9");
+            expect(h.cvar_writes == writes, "left on game settings, a take writes no render setting");
         }
-        {   // A sequence without CSS still plays its camera; one that changes outfit under a breakdown is refused.
+        {   // A sequence without CSS still plays its camera; with it, a breakdown runs across the outfit changes.
             Rig r(dir); r.host.populate(); auto& h = r.host;
             h.css_present = false;
             r.step();
@@ -1072,16 +1151,127 @@ int main(int argc, char** argv) {
             r.steps(70);
             expect(h.cameras.empty() && has(r.status(), "Take finished"), "the camera still plays the whole sequence");
             auto j = Json::parse(std::ifstream(dir / "presets" / "test-seq.cine.json"));
-            j["id"] = "test-seq-bad";
-            j["breakdown"] = {{"steps", Json::array({{{"at", 1.25}, {"layers", {"clay"}}}, {{"at", 3.5}, {"layers", Json::array()}}})}};
-            std::ofstream(dir / "presets" / "test-seq-bad.cine.json") << j.dump(2);
+            j["id"] = "test-seq-layers";
+            j["breakdown"] = {{"steps", Json::array({
+                {{"at", 1.25}, {"layers", {"clay", "skeleton"}}, {"split", 0.5}, {"beats", 1}},
+                {{"at", 2.25}, {"layers", {"wireframe", "skeleton"}}, {"split", 0.5}, {"wipe", 0}},
+                {{"at", 3.5}, {"layers", Json::array()}, {"beats", 1}}})}};
+            std::ofstream(dir / "presets" / "test-seq-layers.cine.json") << j.dump(2);
             h.css_present = true;
+            const auto before = h.snapshot();
+            const auto own_slot = h.prop(Host::PlayerMesh, "_materials")[0];
+            auto parent_of = [&](const Json& mid) { const auto it = h.things.find(id_of(mid)); return it == h.things.end() || it->second.kind != "mid" ? std::string() : h.things.at(id_of(it->second.props.at("_parent"))).kind; };
             r.ext->event({{"id", "reload"}});
-            r.ext->event({{"id", "preset"}, {"value", "test-seq-bad"}});
+            r.ext->event({{"id", "preset"}, {"value", "test-seq-layers"}});
             r.ext->event({{"id", "breakdown"}, {"value", "preset"}});
             r.press("F8");
-            r.steps(4);
-            expect(has(r.error(), "changes outfit during its breakdown") && h.cameras.empty(), "an outfit change under breakdown layers is refused before anything moves: " + r.error());
+            for (int i = 0; i < 200 && !has(r.status(), "Rolling"); ++i) r.step();
+            expect(has(r.status(), "Rolling") && r.error().empty(), "a sequence with a breakdown across outfit changes rolls: " + r.status() + r.error());
+            // Bones: own and a.outfit share all thirteen; b.outfit trades the skirt bone for a wing bone.
+            // Sticks need a bone and its parent, so three groups: every look, the skirt's two looks, the wing's one.
+            // The spring bones (for the cover) are a fourth: every look has them.
+            expect(h.param_count("M_Cine_XRay", "Show", 0.0) == 4, "bone shapes are grouped by the looks that have their bone: " + std::to_string(h.param_count("M_Cine_XRay", "Show", 0.0)));
+            // Bars at 120 BPM from 0.5 s: the first look lands on 1.5 s under its cover; the step at 1.0 s waits for it.
+            r.steps(24);   // about 2.3 s
+            expect(h.css_outfit == "a.outfit", "the first look is worn under the breakdown track");
+            expect(has(parent_of(h.prop(Host::PlayerMesh, "OverlayMaterial")), "M_Cine_Clay") && h.prop(Host::PlayerMesh, "_materials")[0] == own_slot,
+                   "clay rides the overlay slot and her own materials stay in theirs");
+            expect(std::abs(h.mpc.value("WipeTo", 0.0) - 0.5) < 1e-9, "the wipe line rests at the split: " + h.mpc.dump());
+            expect(h.param_count("M_Cine_XRay", "Show", 1.0) == 2, "this look's two bone groups show: " + std::to_string(h.param_count("M_Cine_XRay", "Show", 1.0)));
+            r.steps(9);    // about 3.2 s: the step at 3.0 s changes what is left of the line
+            expect(has(parent_of(h.prop(Host::PlayerMesh, "OverlayMaterial")), "M_Cine_Wire") && std::abs(h.mpc.value("WipeTo", 0.0) - 0.5) < 1e-9,
+                   "the next step swaps the layers left of the line and leaves the line where it is");
+            r.steps(9);    // about 4.1 s: the second outfit change has the picture
+            expect(has(parent_of(h.prop(Host::PlayerMesh, "OverlayMaterial")), "M_Cine_Clay") && h.mpc.value("WipeTo", 0.0) == 1.0, "the cover sweeps the line to the edge and clay has the whole frame for the change");
+            r.steps(9);    // about 5.0 s: b.outfit landed on 4.5 s and the track has the picture back
+            expect(h.css_outfit == "b.outfit" && has(parent_of(h.prop(Host::PlayerMesh, "OverlayMaterial")), "M_Cine_Wire") && std::abs(h.mpc.value("WipeTo", 0.0) - 0.5) < 1e-9,
+                   "after the change the split comes back, on the new look's parts");
+            expect(h.param_count("M_Cine_XRay", "Show", 1.0) == 2, "and the new look's bone groups show");
+            r.steps(25);
+            expect(h.cameras.empty() && has(r.status(), "Take finished"), "the take ends: " + r.status());
+            for (int i = 0; i < 30; ++i) r.step();
+            const auto left = unrestored(before, h.snapshot());
+            expect(left.empty(), "and the world is as it was: " + left);
+        }
+        {   // The animation browser and take director share canonical IDs and timing.
+            Rig r(dir); r.step();
+            r.ext->event({{"id", "performance_refresh"}});
+            r.ext->event({{"id", "performance"}, {"value", "css.eve.dance.blackhole"}});
+            r.ext->event({{"id", "performance_rate"}, {"value", .6}});
+            r.ext->event({{"id", "performance_start"}, {"value", 2.4}});
+            r.ext->event({{"id", "preset"}, {"value", "pose-glide-3"}});
+            r.ext->event({{"id", "countdown"}, {"value", 0}});
+            cssx::validate_model(cssx::bind_menu(definition, r.ext->model()));
+            expect(r.host.performance_starts == 0, "browsing must not start animation");
+            expect(!r.host.state.at("settings").at("performance").contains("token"), "saved state must not contain animation ownership");
+            r.ext->event({{"id", "enter"}}); r.press("F8");
+            for (int i = 0; i < 100 && !r.host.performance_active; ++i) r.step();
+            expect(r.host.performance_active && r.host.performance_starts == 1, "rolling must start one animation");
+            expect(r.host.performance_start.at("rate") == .6 && r.host.performance_start.at("seconds") == 2.4, "take must forward exact speed and seek");
+            r.steps(50);
+            expect(!r.host.performance_active && r.host.performance_stops == 1 && r.host.cameras.empty(), "take end must stop animation and restore camera");
+            expect(r.host.css_applies.empty(), "performance must not replace saved idle or customization");
+        }
+        for (int cause = 0; cause < 6; ++cause) {
+            Rig r(dir); r.step();
+            r.ext->event({{"id", "performance_refresh"}});
+            r.ext->event({{"id", "performance"}, {"value", "css.eve.dance.blackhole"}});
+            r.ext->event({{"id", "preset"}, {"value", "pose-glide-3"}});
+            r.ext->event({{"id", "countdown"}, {"value", 0}});
+            r.ext->event({{"id", "enter"}}); r.press("F8");
+            for (int i = 0; i < 100 && !r.host.performance_active; ++i) r.step();
+            expect(r.host.performance_active, "cancellation fixture never rolled");
+            if (cause == 0) r.press("F9");
+            if (cause == 1) { r.menu = true; r.step(); }
+            if (cause == 2) { ++r.world; r.step(); }
+            if (cause == 3) { r.host.performance_active = false; r.host.performance_reason = "Player moved"; r.step(); }
+            if (cause == 4) { ++r.host.performance_token; r.step(); }
+            if (cause == 5) r.ext->stop();
+            if (cause == 4) expect(r.host.performance_active && r.host.performance_stops == 0, "stale take must leave new owner's animation running");
+            else expect(!r.host.performance_active, "cancellation left owned animation running");
+            if (cause != 2) expect(r.host.cameras.empty() && r.host.view == 1, "animation cancellation must restore camera");
+            if (cause == 3) expect(has(r.error(), "Player moved"), "gameplay interruption must be explained");
+        }
+        {   // Unsupported outfits and failed asset loads never silently film the wrong pose.
+            Rig r(dir); r.step();
+            r.ext->event({{"id", "performance_refresh"}});
+            r.ext->event({{"id", "performance"}, {"value", "css.eve.dance.blackhole"}});
+            r.ext->event({{"id", "preset"}, {"value", "pose-glide-3"}});
+            r.ext->event({{"id", "countdown"}, {"value", 0}});
+            r.ext->event({{"id", "enter"}});
+            r.host.performance_supported = false; r.press("F8");
+            expect(r.host.performance_starts == 0 && r.host.cameras.empty() && has(r.error(), "Unsupported"), "compatibility must be refreshed before each take");
+            r.host.performance_supported = true; r.host.performance_fail_start = true; r.press("F8"); r.steps(50);
+            expect(r.host.performance_starts == 0 && r.host.cameras.empty() && has(r.error(), "failed to load"), "failed animation load must unwind the camera");
+            r.host.css_present = false; r.ext->event({{"id", "performance_refresh"}});
+            expect(r.ext->model()["values"]["performance"] == "css.eve.dance.blackhole", "missing CSS must retain saved identity");
+            cssx::validate_model(cssx::bind_menu(definition, r.ext->model()));
+            r.ext->event({{"id", "performance"}, {"value", "off"}});
+            expect(r.ext->model()["enabled"]["take"] == true, "missing optional CSS must not block normal takes");
+        }
+        for (int cause = 0; cause < 6; ++cause) {
+            Rig r(dir); r.step();
+            r.ext->event({{"id", "expression_refresh"}});
+            r.ext->event({{"id", "expression"}, {"value", "css.face.happy"}});
+            r.ext->event({{"id", "preset"}, {"value", "pose-glide-3"}});
+            r.ext->event({{"id", "countdown"}, {"value", 0}});
+            cssx::validate_model(cssx::bind_menu(definition, r.ext->model()));
+            expect(r.host.css_applies.empty(), "Expression browsing changed the face");
+            if (cause == 5) r.host.face_fail = true;
+            r.ext->event({{"id", "enter"}}); r.press("F8");
+            for (int i = 0; i < 100 && r.host.face_applied.empty() && !r.host.face_fail; ++i) r.step();
+            if (cause != 5) expect(r.host.face_applied == "css.face.happy", "Take did not apply selected face");
+            if (cause == 1) r.press("F9");
+            if (cause == 2) { r.menu = true; r.step(); }
+            if (cause == 3) { ++r.world; r.step(); }
+            if (cause == 4) {
+                bool stopped = false;
+                for (int i = 0; i < 10 && !stopped; ++i) stopped = r.ext->stop();
+                expect(stopped, "Shutdown did not finish restoring the expression");
+            } else r.steps(100);
+            expect(r.host.face.empty() && r.host.face_applied.empty(), "Take left its temporary face applied");
+            expect(r.host.css_applies.size() == 2, "Expression apply or cleanup was duplicated");
+            if (cause == 5) expect(has(r.error(), "Missing face"), "Failed face load did not stop the take");
         }
         {   // Bad menu input is refused with the error kept for the menu.
             Rig r(dir);

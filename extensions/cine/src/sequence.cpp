@@ -36,7 +36,8 @@ Ease ease_from(const std::string& name) {
     if (name == "in") return Ease::In;
     if (name == "out") return Ease::Out;
     if (name == "whip") return Ease::Whip;
-    throw std::invalid_argument("'ease' must be linear, in, out, in_out or whip");
+    if (name == "smooth") return Ease::Smooth;
+    throw std::invalid_argument("'ease' must be linear, in, out, in_out, whip or smooth");
 }
 double lerp(double a, double b, double u) { return a + (b - a) * u; }
 }
@@ -91,6 +92,16 @@ Sequence Sequence::parse(const Json& j) {
         shot.to = item.contains("to") ? pose(item.at("to"), shot.from, "to") : shot.from;
         shot.ease = ease_from(text(item, "ease", 16));
         shot.fstop = number(item, "fstop", 0, 0, 32);
+        if (item.contains("fixed")) { if (!item.at("fixed").is_boolean()) throw std::invalid_argument("'fixed' must be true or false"); shot.fixed = item.at("fixed").get<bool>(); }
+        shot.fit = number(item, "fit", 0, 0, 2000);
+        if (shot.fit > 0 && shot.fit < 20) throw std::invalid_argument("'fit' is a height in centimetres, 20 or more");
+        if (const auto part = text(item, "track", 16); !part.empty()) {
+            static constexpr const char* parts[] = {"", "head", "neck", "chest", "pelvis", "knees", "body"};
+            size_t found = 0;
+            for (size_t i = 1; i < std::size(parts); ++i) if (part == parts[i]) found = i;
+            if (!found) throw std::invalid_argument("'track' must be head, neck, chest, pelvis, knees or body");
+            shot.track = static_cast<Subject>(found);
+        }
         last = shot.to;
         s.shots.push_back(shot);
     }
@@ -121,7 +132,18 @@ Sequence Sequence::parse(const Json& j) {
                     look.controls[id] = std::move(channels);
                 }
             }
-            if (look.outfit.empty() && look.palette.empty() && look.controls.empty()) throw std::invalid_argument("A look step changes an outfit, a palette or controls");
+            if (item.contains("title")) { look.title = text(item, "title", 80); look.titled = true; }
+            if (item.contains("cover")) { if (!item.at("cover").is_boolean()) throw std::invalid_argument("A look step's 'cover' must be true or false"); look.cover = item.at("cover").get<bool>(); }
+            look.idle = text(item, "idle", 96);
+            if (item.contains("physics")) {
+                if (!item.at("physics").is_object() || item.at("physics").size() > 16) throw std::invalid_argument("'physics' must map up to 16 motion controls to a preset");
+                for (const auto& [id, value] : item.at("physics").items()) {
+                    if (!value.is_string() || value.get<std::string>().empty() || value.get<std::string>().size() > 48) throw std::invalid_argument("A physics preset is named by its id");
+                    look.physics[id] = value.get<std::string>();
+                }
+            }
+            if (item.contains("reset")) { if (!item.at("reset").is_boolean()) throw std::invalid_argument("A look step's 'reset' must be true or false"); look.reset = item.at("reset").get<bool>(); }
+            if (look.outfit.empty() && look.palette.empty() && look.controls.empty() && !look.titled && look.idle.empty() && !look.reset && look.physics.empty()) throw std::invalid_argument("A look step changes an outfit, a palette, controls, the idle or the title");
             s.looks.push_back(std::move(look));
         }
     }
@@ -176,7 +198,25 @@ size_t shot_at(const Sequence& s, double t) {
 
 SeqPose pose_at(const Sequence& s, double t) {
     if (s.shots.empty()) return {};
-    const auto& shot = s.shots[shot_at(s, t)];
+    const size_t index = shot_at(s, t);
+    const auto& shot = s.shots[index];
+    if (shot.ease == Ease::Smooth && shot.length > 1e-6) {
+        // One segment of a spline through the chain's poses (cubic Hermite, tangents from the
+        // neighbouring segments). Where the chain starts or ends the tangent is the segment's
+        // own, so the camera arrives from a cut already moving and leaves into one still moving.
+        const bool before = index > 0 && !shot.cut && s.shots[index - 1].ease == Ease::Smooth && s.shots[index - 1].length > 1e-6;
+        const bool after = index + 1 < s.shots.size() && !s.shots[index + 1].cut && s.shots[index + 1].ease == Ease::Smooth && s.shots[index + 1].length > 1e-6;
+        const double u = std::clamp((t - shot.at) / shot.length, 0.0, 1.0), u2 = u * u, u3 = u2 * u;
+        const double h00 = 2 * u3 - 3 * u2 + 1, h10 = u3 - 2 * u2 + u, h01 = -2 * u3 + 3 * u2, h11 = u3 - u2;
+        auto along = [&](double SeqPose::*field) {
+            const double p1 = shot.from.*field, p2 = shot.to.*field, own = p2 - p1;
+            const double m1 = before ? 0.5 * (own + (p1 - s.shots[index - 1].from.*field) * shot.length / s.shots[index - 1].length) : own;
+            const double m2 = after ? 0.5 * (own + (s.shots[index + 1].to.*field - p2) * shot.length / s.shots[index + 1].length) : own;
+            return h00 * p1 + h10 * m1 + h01 * p2 + h11 * m2;
+        };
+        return {along(&SeqPose::azimuth), std::max(20.0, along(&SeqPose::distance)), along(&SeqPose::height), along(&SeqPose::aim),
+                std::clamp(along(&SeqPose::fov), 5.0, 120.0), along(&SeqPose::roll)};
+    }
     const double u = shot.length > 1e-6 ? ease(shot.ease, (t - shot.at) / shot.length) : 1.0;
     return {lerp(shot.from.azimuth, shot.to.azimuth, u), lerp(shot.from.distance, shot.to.distance, u), lerp(shot.from.height, shot.to.height, u),
             lerp(shot.from.aim, shot.to.aim, u), lerp(shot.from.fov, shot.to.fov, u), lerp(shot.from.roll, shot.to.roll, u)};

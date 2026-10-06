@@ -1,3 +1,4 @@
+#include <cstdio>
 #include "rig.hpp"
 #include <algorithm>
 #include <cmath>
@@ -321,9 +322,70 @@ bool Rig::owns_take_changes() const {
         || !hidden_components_.empty() || !hidden_widgets_.empty();
 }
 
+namespace {
+// A console variable CINE raises for a take: the value for sharp shadows, the value for the
+// full picture (`leave` at a level leaves it alone), and whether lower is the better direction.
+struct PictureSetting { const char* name; double sharp, full; bool lower_is_better; };
+constexpr double leave = -1e9;
+// What a held close-up showed in this game (work/live/quality_probe.py, 6 Oct): the shadow of
+// hair and lace on skin is stair-stepped and dotted because the light's shadow map is too
+// coarse for a lens that close, at any resolution setting. What clears it is more shadow
+// rays with a wider texel dither, the engine's own answer to "insufficient shadow
+// resolution". Nothing here resizes a render target or the shadow page pool: a take that
+// raised the pool (512 to 4096 pages, back at its end) ended in a GPU crash the same night,
+// and the pool made no visible difference in the probe.
+constexpr PictureSetting picture_settings[] = {
+    {"r.Shadow.Virtual.SMRT.RayCountDirectional", 16, 16, false},
+    {"r.Shadow.Virtual.SMRT.SamplesPerRayDirectional", 8, 8, false},
+    {"r.Shadow.Virtual.SMRT.RayCountLocal", 16, 16, false},
+    {"r.Shadow.Virtual.SMRT.SamplesPerRayLocal", 8, 8, false},
+    {"r.Shadow.Virtual.SMRT.TexelDitherScaleDirectional", 12, 12, false},
+    {"r.Shadow.Virtual.SMRT.TexelDitherScaleLocal", 12, 12, false},
+    {"r.ScreenPercentage", leave, 100, false},
+};
+std::string console_number(double value) {
+    char text[32];
+    std::snprintf(text, sizeof text, "%.6g", value);
+    return text;
+}
+}
+
+void Rig::picture(int level) {
+    if (level <= 0 || !picture_saved_.empty()) return;
+    const auto kismet = cdo("/Script/Engine.Default__KismetSystemLibrary");
+    for (const auto& setting : picture_settings) {
+        const double target = level >= 2 ? setting.full : setting.sharp;
+        if (target == leave) continue;
+        try {
+            const auto now = call(kismet, "GetConsoleVariableFloatValue", {{"VariableName", setting.name}});
+            if (!now.is_number()) continue;
+            const double value = now.get<double>();
+            if (setting.lower_is_better ? value <= target : value >= target) continue;   // already as good or better
+            call(kismet, "ExecuteConsoleCommand", {{"WorldContextObject", pawn_}, {"Command", std::string(setting.name) + " " + console_number(target)}, {"SpecificPlayer", nullptr}});
+            picture_saved_.emplace_back(setting.name, value);
+        } catch (...) {}   // a variable this build does not have: the picture stays as the game renders it
+    }
+}
+
+std::vector<std::string> Rig::restore_picture() {
+    std::vector<std::string> failures;
+    if (picture_saved_.empty()) return failures;
+    Json kismet;
+    try { kismet = cdo("/Script/Engine.Default__KismetSystemLibrary"); } catch (const std::exception& e) { failures.push_back(std::string("picture: ") + e.what()); return failures; }
+    bool pawn_alive = false;
+    try { pawn_alive = pawn_.is_object() && host_.request({{"op", "valid"}, {"target", pawn_}}).get<bool>(); } catch (...) {}
+    for (const auto& [name, value] : picture_saved_) {
+        try { call(kismet, "ExecuteConsoleCommand", {{"WorldContextObject", pawn_alive ? pawn_ : Json(nullptr)}, {"Command", name + " " + console_number(value)}, {"SpecificPlayer", nullptr}}); }
+        catch (const std::exception& e) { failures.push_back("picture " + name + ": " + e.what()); }
+    }
+    picture_saved_.clear();
+    return failures;
+}
+
 std::vector<std::string> Rig::restore_take() {
     std::vector<std::string> failures;
     auto step = [&](const char* what, auto&& fn) { try { fn(); } catch (const std::exception& e) { failures.push_back(std::string(what) + ": " + e.what()); } };
+    for (auto& failure : restore_picture()) failures.push_back(std::move(failure));
     if (moving_) step("stop walking", [&] { stop_moving(); });
     if (speed_set_) step("speed limit", [&] { call(movement_, "RemoveMaxSpeedAdjustment", {{"ID", {{"TagName", speed_tag}}}}); speed_set_ = false; });
     if (force_walk_sets_ > 0) step("force walk", [&] {

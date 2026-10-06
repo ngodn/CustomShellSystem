@@ -1,6 +1,6 @@
 """Roll a CINE take in the running game and prove the character is as she was. Python 3.14.
 
-  reel.py PRESET [breakdown: off|preset|reel]
+  reel.py PRESET [breakdown: off|preset|reel] [seconds between screenshots] [extra,take,times]
 
 Snapshots her CSS look first, logs the take's status, takes a screenshot every 2.4 s when the
 game window is on screen (../export-live/reel-*.jpg), then waits for her look to match the
@@ -67,6 +67,32 @@ def grab(name):
         return False
 
 
+# The engine's own screenshot (with the HUD) works when the game window is on a hidden
+# workspace. Files land in the game's Saved folder; collect() moves them here afterwards.
+SHOTS = Path('/mnt/eins0fxE/SteamLibrary/steamapps/compatdata/2584270/pfx/drive_c/users/steamuser/AppData/Local/MortalShell2/Saved/Screenshots/Windows')
+asked = []
+
+
+def engine_shot(name):
+    try:
+        kismet = eng({'op': 'find', 'path': '/Script/Engine.Default__KismetSystemLibrary'})
+        call(kismet, 'ExecuteConsoleCommand', {'WorldContextObject': eng({'op': 'player'})['pawn'], 'Command': 'shot showui', 'SpecificPlayer': None})
+        asked.append(name)
+        return True
+    except Exception:
+        return False
+
+
+def collect(before):
+    time.sleep(1.5)
+    fresh = sorted(f for f in SHOTS.glob('ScreenShot*.png') if f.name not in before) if SHOTS.exists() else []
+    for name, f in zip(asked, fresh):
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(f), '-q:v', '3', str(OUT / f'reel-{name}.jpg')], check=False)
+    for f in fresh:
+        f.unlink()
+    return len(fresh)
+
+
 def slot_names():
     mesh = eng({'op': 'get', 'target': eng({'op': 'player'})['pawn'], 'property': 'Mesh'})
     names = []
@@ -83,8 +109,11 @@ def same_look(now, own):
 def main():
     preset = sys.argv[1] if len(sys.argv) > 1 else 'showreel-124'
     breakdown = sys.argv[2] if len(sys.argv) > 2 else 'preset'
+    every = float(sys.argv[3]) if len(sys.argv) > 3 else 2.4   # seconds between screenshots
+    extra = sorted(float(x) for x in sys.argv[4].split(',')) if len(sys.argv) > 4 else []   # more screenshots at these take times
     for old in OUT.glob('reel-t*.jpg'):
         old.unlink()
+    shots_before = {f.name for f in SHOTS.glob('ScreenShot*.png')} if SHOTS.exists() else set()
     own = css({'action': 'describe'})
     if own.get('busy'):
         raise SystemExit('CSS is busy before the take; not starting')
@@ -107,13 +136,17 @@ def main():
             rolled = time.monotonic()
         if rolled and time.monotonic() - rolled >= next_shot:
             at = time.monotonic() - rolled
-            shots += grab(f't{at:05.1f}')
-            next_shot = at + 2.4
+            shots += grab(f't{at:05.1f}') or engine_shot(f't{at:05.1f}')
+            next_shot = at + every
+        if rolled and extra and time.monotonic() - rolled >= extra[0]:
+            at = time.monotonic() - rolled
+            extra.pop(0)
+            shots += grab(f't{at:05.1f}') or engine_shot(f't{at:05.1f}')
         if rolled and any(word in status for word in ('finished', 'cancel', 'stopped', 'Could not')):
             break
         if error and not rolled:
             break
-    print('screenshots:', shots)
+    print('screenshots:', shots, '| from the engine:', collect(shots_before))
     now = own
     for _ in range(24):   # up to 12 s for her own look to land
         time.sleep(0.5)
@@ -145,4 +178,5 @@ def main():
     print('CSS blocked lines in its last 60:', blocked[-2:] if blocked else 'none')
 
 
-main()
+if __name__ == '__main__':
+    main()
