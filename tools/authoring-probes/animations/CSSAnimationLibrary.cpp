@@ -1,5 +1,6 @@
 #include "CSSAnimationLibrary.h"
 #include "Animation/AnimSequence.h"
+#include "Animation/Skeleton.h"
 #include "Animation/AnimData/IAnimationDataController.h"
 #include "Animation/AnimData/IAnimationDataModel.h"
 #include "AnimPose.h"
@@ -293,6 +294,89 @@ UAnimSequence* UCSSAnimationLibrary::RetargetClip(USkeletalMesh* SourceMesh,
             return Fail(TEXT("Could not write target bone keys"));
     }
     Edit.NotifyPopulated();
+    Result->MarkPackageDirty();
+    return Result;
+}
+
+UAnimSequence* UCSSAnimationLibrary::BindNativeHumanClip(UAnimSequence* Source,
+    USkeleton* NativeSkeleton, const FString& OutputPackage)
+{
+    if (!IsRunningCommandlet() || !Source || !Source->GetSkeleton() || !NativeSkeleton ||
+        !Source->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/")) ||
+        NativeSkeleton->GetPathName() != TEXT("/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton") ||
+        !OutputPackage.StartsWith(TEXT("/Game/CSS/Locomotion/NativeHuman/")) ||
+        !FPackageName::IsValidLongPackageName(OutputPackage) ||
+        FPackageName::DoesPackageExist(OutputPackage) || FindPackage(nullptr, *OutputPackage) ||
+        Source->IsValidAdditive() || !Source->Notifies.IsEmpty() || !Source->RetargetSource.IsNone())
+        return nullptr;
+    const USkeleton* OriginalSkeleton = Source->GetSkeleton();
+    const auto& A = OriginalSkeleton->GetReferenceSkeleton();
+    const auto& B = NativeSkeleton->GetReferenceSkeleton();
+    const auto& SourcePose = Source->GetRetargetTransforms();
+    if (A.GetRawBoneNum() != B.GetRawBoneNum() || A.GetNum() != B.GetNum() ||
+        SourcePose.Num() != B.GetNum()) return nullptr;
+    for (int32 Bone = 0; Bone < A.GetNum(); ++Bone)
+    {
+        if (A.GetBoneName(Bone) != B.GetBoneName(Bone) ||
+            A.GetParentIndex(Bone) != B.GetParentIndex(Bone) ||
+            !A.GetRefBonePose()[Bone].Equals(B.GetRefBonePose()[Bone], .00001) ||
+            !SourcePose[Bone].Equals(B.GetRefBonePose()[Bone], .00001) ||
+            (Bone < A.GetRawBoneNum() && OriginalSkeleton->GetBoneTranslationRetargetingMode(Bone) !=
+             NativeSkeleton->GetBoneTranslationRetargetingMode(Bone))) return nullptr;
+    }
+    const auto& AVirtual = OriginalSkeleton->GetVirtualBones();
+    const auto& BVirtual = NativeSkeleton->GetVirtualBones();
+    if (AVirtual.Num() != BVirtual.Num()) return nullptr;
+    for (int32 I = 0; I < AVirtual.Num(); ++I)
+        if (AVirtual[I].SourceBoneName != BVirtual[I].SourceBoneName ||
+            AVirtual[I].TargetBoneName != BVirtual[I].TargetBoneName ||
+            AVirtual[I].VirtualBoneName != BVirtual[I].VirtualBoneName) return nullptr;
+    const auto* Model = Source->GetDataModel();
+    if (!Model || Model->GetNumberOfKeys() < 2 || !Model->GetFloatCurves().IsEmpty() || !Model->GetTransformCurves().IsEmpty() ||
+        !Model->GetAttributes().IsEmpty()) return nullptr;
+    auto* Result = DuplicateObject<UAnimSequence>(Source, CreatePackage(*OutputPackage),
+        *FPackageName::GetLongPackageAssetName(OutputPackage));
+    if (!Result || Result->GetDataModel() == Model) return nullptr;
+    Result->SetFlags(RF_Public | RF_Standalone);
+    // Complete the duplicate's compression before SetSkeleton attempts to cancel
+    // it. Cancelling a pending DDC request can wait on this same game thread.
+    Result->WaitOnExistingCompression(true);
+    Result->SetSkeleton(NativeSkeleton);
+    Result->SetPreviewMesh(nullptr);
+    Result->ClearRetargetSourceAsset();
+    Result->UpdateRetargetSourceAssetData();
+    TArray<FName> Names;
+    Model->GetBoneTrackNames(Names);
+    const auto* Copy = Result->GetDataModel();
+    if (Copy->GetFrameRate() != Model->GetFrameRate() || Copy->GetNumberOfKeys() != Model->GetNumberOfKeys())
+    {
+        UE_LOG(LogTemp, Error, TEXT("Native reference copy changed timing"));
+        return nullptr;
+    }
+    TArray<FName> CopyNames;
+    Copy->GetBoneTrackNames(CopyNames);
+    if (Names.IsEmpty() || Names != CopyNames)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Native reference copy changed track names/order: %d -> %d"), Names.Num(), CopyNames.Num());
+        return nullptr;
+    }
+    for (FName Name : Names)
+    {
+        TArray<FTransform> Before, After;
+        Model->GetBoneTrackTransforms(Name, Before);
+        Copy->GetBoneTrackTransforms(Name, After);
+        if (Before.Num() != After.Num()) return nullptr;
+        for (int32 I = 0; I < Before.Num(); ++I)
+            if (Before[I].ContainsNaN() || After[I].ContainsNaN() ||
+                !Before[I].Equals(After[I], 0.0))
+            {
+                UE_LOG(LogTemp, Error, TEXT("Native reference copy changed key %s:%d, position=%g angle=%g scale=%g"),
+                    *Name.ToString(), I, FVector::Distance(Before[I].GetTranslation(), After[I].GetTranslation()),
+                    Before[I].GetRotation().AngularDistance(After[I].GetRotation()),
+                    FVector::Distance(Before[I].GetScale3D(), After[I].GetScale3D()));
+                return nullptr;
+            }
+    }
     Result->MarkPackageDirty();
     return Result;
 }

@@ -30,6 +30,11 @@ public:
         bool PreserveUnmappedAttachments = true,
         bool PreserveScaledReferenceBranches = false);
 
+    /** Copy an exact native-reference audition without its diagnostic mesh dependency. */
+    UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
+    static class UAnimSequence* BindNativeHumanClip(class UAnimSequence* Source,
+        class USkeleton* NativeSkeleton, const FString& OutputPackage);
+
     /** Evaluate compressed animation with the installed authoring post-process, without saving. */
     UFUNCTION(BlueprintCallable, Category = "CSS|Authoring")
     static FString EvaluateClip(class USkeletalMesh* Mesh, class UAnimSequence* Animation,

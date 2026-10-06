@@ -51,12 +51,73 @@ and 1,208 raw/virtual bones: maximum position error 0.00135491 cm, quaternion
 distance 0.000182005, exact scale preservation. The worst errors are on virtual
 hand/forearm bones. No acceptance threshold was relaxed. See
 `native-retarget-v1/precise-verification.json` and `precise-verify-exit.json`.
-The saved audition still has its original compression setting; its future
-staging step must bind the precise codec and validate the Windows cook.
+The original audition retains its original compression setting. The separate
+native binding below uses the precise codec and now passes the Windows cook.
 
 The default Eve retarget also matches its saved earlier result exactly:
 388 tracks, 233,188 authored keys. These checks prove the numerical change and
 that control, not compatibility of every clip or visible outfit.
+
+## Canonical native binding and Windows cook
+
+The normal authoring placeholder at the game's skeleton path has only 270
+bones. It cannot author the 1,199-bone native track map. A process-local
+`bwrap` mount supplies the verified diagnostic skeleton at the canonical game
+path while staging and cooking. The original placeholder remains unchanged,
+and the temporary skeleton is never packaged.
+
+`BindNativeHumanClip` accepts only matching bone names, indices, parents,
+reference poses, translation modes and virtual-bone definitions. It duplicates
+the animation data model without rewriting rotation keys, binds the canonical
+skeleton, and removes the diagnostic preview and retarget-source mesh. Every
+authored key remains exactly equal before and after binding.
+
+The first copy attempt stalled while `SetSkeleton` cancelled a pending DDC
+compression request. Its main-thread stack identifies
+`WaitOnExistingCompression(false)` and `FRequestOwnerShared::Cancel`.
+Waiting for the duplicate's compression to finish before changing its skeleton
+avoids that cancellation path. Intermediate attempts to reconstruct tracks
+through the animation data controller changed rotation keys and were rejected.
+The accepted path keeps exact key comparison, with no relaxed tolerance.
+
+The staged sequence is
+`/Game/CSS/Locomotion/NativeHuman/Studies/NH2/AN_BlackHole`. Its private package
+contains only that sequence and the existing L5X compression settings. The
+game containers alone resolve its skeleton dependency. Independent container
+round-trip and import inspection find no outfit or diagnostic-mesh dependency.
+
+The absolute-track decoder previously required embedded reference transforms
+for virtual bones. Native sequences use the skeleton's default reference
+instead. `RawAbsoluteTracks` now reconstructs those reference locals from
+the cooked raw hierarchy and declared virtual-bone source/target relationships,
+following UE 5.6.1 `FReferenceSkeleton::RebuildRefSkeleton`. Missing or invalid
+dependencies still fail explicitly. Existing sequence-owned references retain
+their previous path.
+
+The full independently decoded Windows clip passes all 601 frames, 1,208
+tracks and nine virtual tracks at the original 30 Hz. Maximum local errors:
+0.00135491 cm position, 0.000182005 quaternion distance, and 6.04e-8 scale.
+The unchanged thresholds are 0.05 cm, 0.25 degrees and 0.001 scale. Full
+DumbDumb and Iris Out decoder outputs are byte-identical to the earlier
+results, including their complete binary transforms.
+
+Evidence under `work/cine-animation-port/native-binding-v6/`:
+
+- `stage-result.json`, `stage-exit.json`: exact binding, protected inputs,
+  full raw capture and unchanged authoring placeholder.
+- `cook-command.json`, `cook-exit.json`: isolated native-reference Windows cook.
+- `pack/verification.json`, `dependency-verification.json`: container and
+  dependency checks against the game without outfit containers.
+- `decoded-runtime-v3/decoded.json`, `cooked-motion-verification.json`: complete
+  independent decoded-motion comparison.
+- `eve-decoder-regression/verification.json`: unchanged two-dance readback.
+
+`decoded-runtime` records the initial missing virtual-reference rejection;
+`decoded-runtime-v2` records missing copied decoder dependencies. Both are
+terminal failures, superseded by the successful v3 readback. The reusable
+staging and packaging scripts are `stage_native_human.py` and
+`package_native_human_study.py`. No game files were changed. Native playback
+ownership, visible-mesh physics and live acceptance remain unfinished.
 
 ## Native animation graph and playback ownership
 

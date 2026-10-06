@@ -10,6 +10,44 @@ using Newtonsoft.Json;
 // ConvertAnims omits when projecting onto the raw reference-bone array.
 internal static class RawAbsoluteTracks
 {
+    private static FTransform[] DefaultReference(USkeleton skeleton)
+    {
+        // Cooked skeletons serialize raw bones only. UE 5.6.1 rebuilds virtual
+        // reference locals in FReferenceSkeleton::RebuildRefSkeleton on load.
+        var info = skeleton.ReferenceSkeleton.FinalRefBoneInfo;
+        var raw = skeleton.ReferenceSkeleton.FinalRefBonePose;
+        if (raw.Length == 0 || raw.Length != info.Length || raw.Length + skeleton.VirtualBones.Length > 4096)
+            throw new InvalidOperationException("Invalid default reference dimensions");
+        var indices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var component = new FTransform[raw.Length];
+        for (int i = 0; i < raw.Length; ++i)
+        {
+            if (!indices.TryAdd(info[i].Name.Text, i) || raw[i].ContainsNaN() ||
+                !raw[i].Rotation.IsNormalized ||
+                (i == 0 ? info[i].ParentIndex != -1 : info[i].ParentIndex < 0 || info[i].ParentIndex >= i))
+                throw new InvalidOperationException("Invalid default reference hierarchy or transform");
+            component[i] = i == 0 ? raw[i] : raw[i] * component[info[i].ParentIndex];
+        }
+        var result = new List<FTransform>(raw);
+        var virtualTargets = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var bone in skeleton.VirtualBones)
+        {
+            // A virtual source has its target's component transform. Require
+            // declared, earlier sources and raw targets rather than guess indices.
+            bool sourceFound = indices.TryGetValue(bone.SourceBoneName.Text, out int source) ||
+                virtualTargets.TryGetValue(bone.SourceBoneName.Text, out source);
+            if (!sourceFound || !indices.TryGetValue(bone.TargetBoneName.Text, out int target) ||
+                indices.ContainsKey(bone.VirtualBoneName.Text) ||
+                !virtualTargets.TryAdd(bone.VirtualBoneName.Text, target))
+                throw new InvalidOperationException("Unsupported virtual reference dependency");
+            var local = component[target].GetRelativeTransform(component[source]);
+            if (local.ContainsNaN() || !local.Rotation.IsNormalized)
+                throw new InvalidOperationException("Invalid virtual reference transform");
+            result.Add(local);
+        }
+        return result.ToArray();
+    }
+
     [DllImport(ACLNative.LIB_NAME)]
     private static extern unsafe void nReadACLData(IntPtr tracks, FTransform* reference,
         FTrackToSkeletonMap* map, FTransform* output);
@@ -49,8 +87,8 @@ internal static class RawAbsoluteTracks
         // sequence-owned reference used by imported clips with virtual bones.
         var reference = animation.RetargetSource.IsNone && animation.RetargetSourceAssetReferencePose is { Length: > 0 }
             ? animation.RetargetSourceAssetReferencePose
-            : skeleton.AnimRetargetSources.TryGetValue(animation.RetargetSource, out var authored)
-                ? authored.ReferencePose : skeleton.ReferenceSkeleton.FinalRefBonePose;
+            : !animation.RetargetSource.IsNone && skeleton.AnimRetargetSources.TryGetValue(animation.RetargetSource, out var authored)
+                ? authored.ReferencePose : DefaultReference(skeleton);
         var sampleCount = checked((int)header.NumSamples);
         if (sampleCount < 1 || sampleCount > 100000 || map.Length != header.NumTracks || map.Length == 0 ||
             names.Length > 4096 || names.Distinct(StringComparer.OrdinalIgnoreCase).Count() != names.Length ||

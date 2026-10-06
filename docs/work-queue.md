@@ -1,5 +1,24 @@
 # Current work queue
 
+## Authoritative user scope correction, October 6
+
+Support exactly these authored outfits: **Eve (all six outfits), Unholy Genessa
+(both faces), and Commander White**. Also support appearances using the
+**default game human skeleton** where technically compatible, whether native,
+CSS or non-CSS. This does not authorize adapters for other custom rigs.
+
+**Older Seductress, GeneXXa/Nunexxa and other unrelated custom-rig projects are
+out of scope.** Do not work on, integrate or make them release prerequisites.
+Do not use their unfinished evidence as a reason to delay this animation pack.
+The old Seductress project is not the requested Eve `CSS_SeduXtress_eins0fx`.
+Preserve existing evidence and source files; no further jobs or installation
+for those excluded projects. The prepared Seductress S9 batch was never run.
+This explicit correction overrides all earlier broad collection wording and
+historical next-step notes below. All requested clips, photo poses, feasible
+facial support, CSS/CINE integration and acceptance for the actual scope remain.
+
+Historical checkpoints below are evidence only. Excluded-project instructions are cancelled.
+
 ## October 6: default-human reference audition
 
 The native 1,199-bone reference and nine virtual bones now match the game
@@ -11,8 +30,13 @@ Fresh precise-compression evaluation passes all 601 frames and 1,208 bones;
 the default Eve retarget retains all 233,188 authored keys exactly. Default
 compression failed the rotation limit; precise L5X settings pass without
 relaxing it. Results and exits are in `native-retarget-v1`. The saved native
-audition still needs the precise codec bound during staging and a Windows cook.
-Native runtime ownership, real meshes, cooking and live acceptance remain.
+audition now has a separate precise-codec native binding with a successful
+Windows cook. `native-binding-v6` passes full independent comparison of 601
+frames and 1,208 tracks, with only the game skeleton and owned codec as imports.
+The ordinary authoring skeleton placeholder stays unchanged. The decoder now
+reconstructs native virtual-bone reference locals; both complete Eve dance
+readbacks remain byte-identical. Native runtime ownership, real meshes and
+live acceptance remain.
 Do not resume excluded custom rigs.
 
 ## October 6: requested-outfit dance integration
@@ -36,25 +60,6 @@ This trial is not installed or release-accepted. Unknown source indices and
 remaining facial controls are retained as open items. Next implement the
 compatible default-human playback path, complete feasible facial support and
 live acceptance for the actual scope. Do not resume excluded custom rigs.
-
-## Authoritative user scope correction, October 6
-
-Support exactly these authored outfits: **Eve (all six outfits), Unholy Genessa
-(both faces), and Commander White**. Also support appearances using the
-**default game human skeleton** where technically compatible, whether native,
-CSS or non-CSS. This does not authorize adapters for other custom rigs.
-
-**Older Seductress, GeneXXa/Nunexxa and other unrelated custom-rig projects are
-out of scope.** Do not work on, integrate or make them release prerequisites.
-Do not use their unfinished evidence as a reason to delay this animation pack.
-The old Seductress project is not the requested Eve `CSS_SeduXtress_eins0fx`.
-Preserve existing evidence and source files; no further jobs or installation
-for those excluded projects. The prepared Seductress S9 batch was never run.
-This explicit correction overrides all earlier broad collection wording and
-historical next-step notes below. All requested clips, photo poses, feasible
-facial support, CSS/CINE integration and acceptance for the actual scope remain.
-
-Historical checkpoints below are evidence only. Excluded-project instructions are cancelled.
 
 ## October 5: shared locomotion pack and questman's follow-up
 
