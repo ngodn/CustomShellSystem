@@ -225,3 +225,30 @@ error is between keys. Matched 60 Hz samples show no additional greater-than-
 increases, so these measurements are not visual acceptance. Continue correction
 and full-motion review. Evidence: `retarget-seductress-s6/{create-result,
 verify-result,dense-surface-contact,visible-contact-summary,pose-preservation}.json`.
+
+S7 continues this same isolated flat-foot trial at 120 Hz. Fresh readback and
+repeat match all 900,548 authored bone keys. Its 4,641-pose 240 Hz scan reduces
+the worst dip to 0.1444 cm; exactly one sample per foot remains below -0.1 cm.
+No new knee-plane flips occur at matched 120 Hz samples. S6/S7 lower-body
+60 Hz renders and sampled sheets use the original cooked weights with bare
+leg/foot sections, without material masks or secondary motion. They support
+the deformation investigation but do not approve the whole outfit. All
+candidates remain uninstalled.
+
+The denser import exposed the engine's float Euler storage conversion.
+An independent native calculation exactly explains the worst observed rotation
+difference (0.002581 degrees). See `CONTACT.md` for the bounded import check and
+`retarget-seductress-s7/native-key-readback-audit.json` for engine source hashes.
+
+S8 Come Closer Flat now passes fresh comparison for 4,641 keys at 240 Hz,
+with original duration retained. All 9,281 poses in the 480 Hz scan remain
+within the 0.1 cm contact diagnostic limit: worst dip 0.02607 cm left and
+0.01731 cm right. Matched 240 Hz samples introduce no knee-plane flips.
+The neutral lower-body render and sampled sheet show no obvious new collapse.
+Its compressed component execution also passes all six original outfit graphs,
+54 cases and 15,606 poses, including 38 fingers and distinct-base restoration.
+See `retarget-seductress-s8/{verify-result,visible-contact-summary,
+pose-preservation,adapter-evaluation}.json` and `bare-skin-motion/`.
+This covers one corrected flat-foot clip, not all clips or footwear modes.
+Windows cooking must account for the released legacy skeleton dependency;
+compression/contact, package size, full physics and live acceptance remain.

@@ -7,8 +7,57 @@
 #include "Engine/SkeletalMesh.h"
 #include "Misc/PackageName.h"
 #include "Misc/ScopeExit.h"
+#include "Serialization/JsonWriter.h"
 #include "TwoBoneIK.h"
 #include "UObject/Package.h"
+
+FQuat UCSSContactLibrary::SequencerRotationReference(FQuat Rotation)
+{
+    const FVector3f Euler = FQuat4f(Rotation).Euler();
+    return FRotator::MakeFromEuler(FVector(Euler)).Quaternion();
+}
+
+FString UCSSContactLibrary::ReadAuthoredTrack(UAnimSequence* Source, FName Bone)
+{
+    if (!IsRunningCommandlet() || !Source || Bone.IsNone() ||
+        !Source->GetPathName().StartsWith(TEXT("/Game/CSS/AnimLab/"))) return {};
+    const auto* Model = Source->GetDataModel();
+    if (!Model || Model->GetNumberOfKeys() < 2 || Model->GetNumberOfKeys() > 10000) return {};
+    TArray<FName> Names;
+    Model->GetBoneTrackNames(Names);
+    if (!Names.Contains(Bone)) return {};
+    TArray<FTransform> Keys;
+    Model->GetBoneTrackTransforms(Bone, Keys);
+    FString Result;
+    const auto Writer = TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&Result);
+    Writer->WriteObjectStart();
+    Writer->WriteValue(TEXT("model"), Source->GetDataModelInterface().GetObject()->GetClass()->GetName());
+    Writer->WriteArrayStart(TEXT("keys"));
+    for (const auto& Key : Keys)
+    {
+        if (Key.ContainsNaN()) return {};
+        Writer->WriteObjectStart();
+        for (const auto& Pair : {TPair<FString, FVector>(TEXT("Translation"), Key.GetTranslation()),
+                                TPair<FString, FVector>(TEXT("Scale3D"), Key.GetScale3D())})
+        {
+            Writer->WriteObjectStart(Pair.Key);
+            Writer->WriteValue(TEXT("X"), Pair.Value.X);
+            Writer->WriteValue(TEXT("Y"), Pair.Value.Y);
+            Writer->WriteValue(TEXT("Z"), Pair.Value.Z);
+            Writer->WriteObjectEnd();
+        }
+        const FQuat Q = Key.GetRotation();
+        Writer->WriteObjectStart(TEXT("Rotation"));
+        Writer->WriteValue(TEXT("X"), Q.X); Writer->WriteValue(TEXT("Y"), Q.Y);
+        Writer->WriteValue(TEXT("Z"), Q.Z); Writer->WriteValue(TEXT("W"), Q.W);
+        Writer->WriteObjectEnd();
+        Writer->WriteObjectEnd();
+    }
+    Writer->WriteArrayEnd();
+    Writer->WriteObjectEnd();
+    Writer->Close();
+    return Result;
+}
 
 UAnimSequence* UCSSContactLibrary::BakeSoleContact(USkeletalMesh* Mesh,
     UAnimSequence* Source, const TArray<float>& LeftHeights, const TArray<float>& RightHeights,

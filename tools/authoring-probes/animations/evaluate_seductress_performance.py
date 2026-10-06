@@ -33,15 +33,24 @@ def disk(path):
     return CONTENT / (path.removeprefix('/Game/') + '.uasset')
 
 
-protected = dict(receipt['protected'])
+protected = dict(receipt.get('protected', receipt.get('inputs', {})))
+protected[str(WORK / 'verify-result.json')] = digest(WORK / 'verify-result.json')
 for path in (SOURCE, LAYER, *meshes):
     protected[str(disk(path))] = digest(disk(path))
 if any(digest(Path(path)) != checksum for path, checksum in protected.items()):
     raise ValueError('Verified input changed')
 clips = []
 for row in receipt['results']:
-    path = '/Game/CSS/AnimLab/RT_' + REVISION + '_' + row['name']
-    target = '/Game/CSS/Locomotion/Studies/Seductress' + REVISION + '/AN_' + row['name']
+    name = row.get('name', row.get('label'))
+    if not name or not re.fullmatch(r'[A-Za-z0-9_]+', name):
+        raise ValueError('Invalid audition name')
+    path = '/Game/CSS/AnimLab/RT_' + REVISION + '_' + name
+    if row.get('asset', path) != path:
+        raise ValueError('Audition revision does not match receipt')
+    if 'sha256' in row and digest(disk(path)) != row['sha256']:
+        raise ValueError('Verified audition changed')
+    protected[str(disk(path))] = digest(disk(path))
+    target = '/Game/CSS/Locomotion/Studies/Seductress' + REVISION + '/AN_' + name
     if disk(target).exists() or unreal.EditorAssetLibrary.does_asset_exist(target):
         raise FileExistsError(target)
     original = unreal.load_asset(path)
@@ -51,12 +60,25 @@ for row in receipt['results']:
     comparison = unreal.CSSAnimationLibrary.compare_sequence_data(original, clip)
     if not comparison.startswith('PASS:') or not unreal.EditorAssetLibrary.save_loaded_asset(clip, False):
         raise ValueError('Cannot preserve audition data: ' + comparison)
-    clips.append((row['name'], clip))
+    clips.append((name, clip))
     protected[str(disk(target))] = digest(disk(target))
+base_clip = None
+if len(clips) == 1:
+    # A distinct, verified base exposes failures to stop and restore playback.
+    base_receipt = WORK.parent / 'retarget-seductress-s3/adapter-evaluation.json'
+    baseline = json.loads(base_receipt.read_text())
+    base_path = '/Game/CSS/Locomotion/Studies/SeductressS3/AN_BlackHole'
+    if not baseline['complete'] or digest(disk(base_path)) != baseline['protected'][str(disk(base_path))]:
+        raise ValueError('Independent base animation is not verified')
+    protected[str(base_receipt)] = digest(base_receipt)
+    protected[str(disk(base_path))] = digest(disk(base_path))
+    base_clip = unreal.load_asset(base_path)
+    if not base_clip:
+        raise ValueError('Independent base animation is unavailable')
 source, layer = unreal.load_asset(SOURCE), unreal.load_asset(LAYER)
 results = []
 for index, (name, clip) in enumerate(clips):
-    base = clips[(index + 1) % len(clips)][1]
+    base = base_clip or clips[(index + 1) % len(clips)][1]
     for mesh_path in meshes:
         value = unreal.CSSPerformanceLibrary.evaluate_performance_layer(
             unreal.load_asset(mesh_path), source, layer, base, clip)

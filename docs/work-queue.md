@@ -2,16 +2,19 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
-Seductress contact update: all six S5 clips pass fresh saved/repeated readback
-and preserve non-leg tracks. The source-plane pole correction removes the
-knee flips introduced by S4. Full 60 Hz surface sampling still finds up to
-1.227 cm between-key footwear penetration in Come Closer, so contact is not
-accepted. Visible heel/flat sections are now audited against the original
-manifest and graph. S6 Come Closer Flat passes fresh readback at 60 Hz and
-retains the original duration. A 120 Hz surface scan reduces the worst dip to
-0.412 cm, with no new knee-plane flips at matched 60 Hz samples. Residual
-contact and increased knee travel still require correction and visual review
-before catalog/cook/live approval. See `retarget-seductress-s5/` and `-s6/`.
+Seductress contact update: S8 Come Closer Flat now passes exact fresh repeat
+for all 388 tracks and 4,641 keys. The 480 Hz scan reduces visible-footwear
+penetration to 0.02607 cm, with no new knee-plane flips at matched 240 Hz
+samples. A neutral 60 FPS lower-body render is saved and its sampled sheet
+reviewed. All six older outfit graphs pass 54 compressed component cases,
+15,606 poses and 38-finger checks, including distinct-base restoration.
+This is one flat-foot diagnostic candidate, not full compatibility acceptance.
+Stop increasing density for this clip: next verify Windows compression/contact
+and cost. The existing cook path rejects this rig's released legacy skeleton
+under `/Game/CSSAuthoring/`; support audited external dependencies without
+rewriting old outfit packages or removing the portable-path guard. Continue
+the remaining footwear/clips and DumbDumb/Iris Out source-plane correction.
+Evidence: `retarget-seductress-s8/`, `CONTACT.md`, and the coverage matrix.
 No runtime, released outfit or game installation changed.
 
 Older Seductress continuation: three full direct-source retarget auditions now
