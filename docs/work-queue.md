@@ -43,8 +43,9 @@ shoe penetration only to -7.17 cm and failed the strict UE source-key comparison
 for DumbDumb. It remains experimental. Correctly initialized foot IK on the
 unchanged L5P source restores the problem-frame foot heights to 7.78/7.71 cm.
 Both full L5R candidates are generated. The inspected problem-frame shoe depth
-is now -0.48 cm, from -14.31 cm. Dense skinned measurements and fresh-process
-saved/repeated-pose verification are running. See
+is now -0.48 cm, from -14.31 cm. Fresh-process saved/repeated-pose verification
+passes both clips (4,944 frames, 388 bones, zero differences). Dense skinned
+measurements are running. See
 [the source/contact investigation](development/shared-animation-source-requirements.md#leg-contact-investigation-october-6).
 No new installation or release acceptance yet.
 

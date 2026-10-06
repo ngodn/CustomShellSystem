@@ -147,5 +147,7 @@ Full-length candidates `/Game/CSS/AnimLab/RT_L5R_DumbDumb` and
 retaining 3,943 and 1,001 keys at 60 Hz. All seven protected input hashes are
 unchanged. Their export and subsequent checks are under `retarget-l5r`.
 The inspected skinned frame 3414 now has a lowest shoe vertex at -0.481 cm,
-compared with -14.306 cm before; frame zero is -0.152 cm. Dense shoe/body
-measurements and fresh saved/repeated-pose verification are still running.
+compared with -14.306 cm before; frame zero is -0.152 cm. Fresh-process
+saved/repeated-pose verification passes all 4,944 frames with 388 evaluated
+bones and zero position/quaternion differences. Dense shoe/body measurements
+are still running. Cooking, adapter checks and live acceptance remain pending.
