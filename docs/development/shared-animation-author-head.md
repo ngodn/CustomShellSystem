@@ -475,3 +475,18 @@ attempt passed a dependency directory instead of its container file and was
 rejected; its corrected retry passes. Nothing was installed. Full-motion visual
 review, feasible remaining facial mapping, source definitions, live acceptance
 and release delivery remain active.
+
+The C11 video subsequently completed and passes independent H.264 readback:
+4,191 frames at 30 FPS, 900 by 1000, 139.7 seconds, 17,806,641 bytes. SHA-256:
+`9b6742aeee46c2f509455c940f4f32de7e57198a1408ede4b1c58f00d0a49720`.
+Across every rendered pose, minimum body height is +0.107658 cm and footwear
++0.009044 cm. Maximum reconstructed pose difference is 0.000983 cm. The 28-pose
+review sheet and the kneeling spot view show no gross limb collapse or the
+previous knee penetration. Hair remains unsimulated, including during the
+forward bend. Representative stills do not establish complete temporal
+smoothness or live physics. See `cinderella-c11-review/review-verification.json`.
+
+After C11 independent readback and catalog checks, its 98 duplicate export
+payloads were hash-checked and hardlinked to the matching staged files,
+reclaiming 544,976,896 allocated bytes. Original sources and releases are intact.
+Receipt: `cinderella-combined-v2/duplicate-readback-cleanup.json`.

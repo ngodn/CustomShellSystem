@@ -12,8 +12,9 @@ and 81 adapter cases across the nine requested meshes, but the full fitted
 render exposed knee penetration around 61.83 seconds in C10. The C11 replacement
 passes the complete visible-surface scan at 240 Hz, including knees, with a
 minimum height of +0.009562 cm. The checked kneeling still now meets the floor.
-C11 full-video review is running; secondary physics and live acceptance remain
-unfinished. C10 remains rejected. Historical
+C11's full render and contact measurements pass, and 28 representative poses
+have been reviewed. Full temporal/source comparison, secondary physics and
+live acceptance remain unfinished. C10 remains rejected. Historical
 checkpoints below describe earlier candidates.
 
 Checkpoint: 2026-10-06. This is a private candidate, not release approval.

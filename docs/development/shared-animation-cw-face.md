@@ -133,3 +133,29 @@ complete. The inspected left-tongue and tongue-out views show the expected
 different mouth geometry. This resolves source-control availability, not
 cross-character performance mapping or cooked/live acceptance. Original
 sources and the installed mod are unchanged.
+
+## Required-control representation fits the existing limit
+
+A joint study of all 65 exploratory controls plus expressions still exceeds
+128 shapes at the existing 0.001 cm fitting target. Its failed result remains
+in `cw-unified-basis-v1`. The pack does not need unused phonemes or controls
+that measured no motion, so the next study selects 27 candidate controls for
+the supplied performances, together with the recovered nine tongue controls
+and existing expression/blink samples. This is a provisional source-control
+selection, not an accepted cross-character curve map.
+
+`cw-required-basis-v1` fits 700 source states at 5,918 affected points using
+115 basis shapes. Maximum fitting residual is 0.000452 cm. Simulation of the
+existing morph filter, using storage gains bounded at 32, gives 0.003636 cm.
+Projection of 204 separate expression/blink samples gives 0.002445 cm before
+filtering and 0.003333 cm after it; unrepresented points have zero error.
+All 914 input files still match their recorded hashes. The first launcher had
+an indentation error; its failure receipt is retained separately.
+
+These results establish that the sampled geometry can fit the current
+128-shape catalog limit. They do not validate runtime coefficients: the
+holdout coefficients are direct geometric projections, not interpolation of
+source controls. Curve mapping, negative/overshoot values, combined tongue
+controls, fitted transfer, bounded catalog size, cooking and live behavior
+remain to be implemented and checked. The accepted cooked CW face still has
+eight expressions plus Neutral and no facial performances.
