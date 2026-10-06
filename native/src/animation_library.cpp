@@ -160,6 +160,19 @@ const PerformanceAdapter* resolve_performance_adapter(const std::vector<Animatio
     }
     return result;
 }
+const PerformanceAdapter* resolve_performance_layer(const std::vector<AnimationLibrary>& libraries,
+    const std::string& outfit,const AnimationContainerRevision& revision,
+    const std::string& target_class,const std::string& skeleton) {
+    if(revision.toc_sha256.empty() || !revision.bulk_bytes) return nullptr;
+    const PerformanceAdapter* result=nullptr;
+    for(const auto& library:libraries) for(const auto& adapter:library.adapters) {
+        if(adapter.source_outfit!=outfit || adapter.source_revision!=revision ||
+           adapter.target_class!=target_class || adapter.skeleton!=skeleton) continue;
+        if(result) throw std::runtime_error("Conflicting performance layers");
+        result=&adapter;
+    }
+    return result;
+}
 AnimationLibraryMatch resolve_library_performance(const std::vector<AnimationLibrary>& libraries,
     const std::string& choice,const std::string& target_skeleton) {
     AnimationLibraryMatch result;

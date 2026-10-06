@@ -116,6 +116,9 @@ support where technically compatible. Inventory and record these additional
 rigs rather than treating the nine-mesh result as universal coverage.
 Each supported appearance needs playback, interruption and restoration checks;
 body adapter success alone does not establish facial or world-physics support.
+This is a completion requirement for both CSS and CINE. Keep every inventoried
+original outfit and variant visible in the matrix, including pending cases.
+A Black Pearl pass cannot close the collection-wide compatibility requirement.
 The [expanded collection and native-rig audit](shared-animation-outfit-coverage.md)
 records additional packages, differing references and runtime restrictions.
 

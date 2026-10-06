@@ -79,8 +79,23 @@ int main() {
         expect(!resolve(revision,"css.other",source,base),"Another outfit acquired the adapter");
         expect(!resolve(revision,"css.outfit",target,base),"Adapter recursively replaced itself");
         expect(!resolve(revision,"css.outfit",source,wings),"Different skeleton acquired adapter");
+        const auto bound=[&](const AnimationContainerRevision& rev,const std::string& outfit,
+                             const std::string& graph,const std::string& rig) {
+            return resolve_performance_layer(libraries,outfit,rev,graph,rig);
+        };
+        expect(bound(revision,"css.outfit",target,base)->source_class==source,
+               "Catalog-defined layer outside the original class list was rejected");
+        expect(!bound({},"css.outfit",target,base),"Unproven package acquired an active layer");
+        expect(!bound({std::string(64,'b'),1234},"css.outfit",target,base),"Stale layer revision was accepted");
+        expect(!bound({revision.toc_sha256,1235},"css.outfit",target,base),"Different bulk acquired active layer");
+        expect(!bound(revision,"css.other",target,base),"Another outfit acquired active layer");
+        expect(!bound(revision,"css.outfit",source,base),"Original graph was mistaken for a performance layer");
+        expect(!bound(revision,"css.outfit",target,wings),"Different rig acquired active layer");
+        expect(!bound(revision,"css.outfit","/Game/CSS/Locomotion/Adapters/ABP_Eve.ABP_Eve_C",base),
+               "An unlisted former hardcoded class was accepted");
         libraries.push_back(libraries[0]);
         rejects([&]{resolve(revision,"css.outfit",source,base);});
+        rejects([&]{bound(revision,"css.outfit",target,base);});
         const auto original=document;
         document["adapters"][0]["source_toc_sha256"]="short";
         rejects([&]{AnimationLibrary::parse(document);});

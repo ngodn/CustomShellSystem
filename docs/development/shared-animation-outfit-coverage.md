@@ -49,8 +49,10 @@ adapters that retain that processing.
 
 Current runtime restrictions still needing work:
 
-- `PerformancePlayer` resolves adapters through exact outfit container revisions
-  and requires existing CSS controls when transferring graph state.
+- `PerformancePlayer` resolves adapters through exact outfit container revisions.
+  Catalog-defined bound layers now replace the fixed five-class list. Audited
+  fixed-physics graphs may have zero CSS controls; graphs with controls still
+  require matching layouts in both directions before binding.
 - `Core::customize_api` and pending playback require an active CSS appearance
   and selection. Native/non-CSS appearances need an equivalent transient owner
   and restoration path.
@@ -58,8 +60,9 @@ Current runtime restrictions still needing work:
   base-to-wing mapping. Native human and older references need verified
   sequence alternatives or remapping.
 
-These restrictions remain active until their replacement is tested. The audit
-does not label unsupported cases as working or relax their checks.
+The catalog lookup and rejection tests pass, and the Windows C++23 core builds.
+This runtime change is not installed or live-accepted. The native/non-CSS
+ownership and retarget restrictions above remain unresolved.
 
 ## GeneXXa authoring extension
 

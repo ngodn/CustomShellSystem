@@ -10,6 +10,13 @@ original collection and verify actual rig/layer contracts. Facial compatibility
 is separate and must not prevent compatible body playback. This requirement is
 now recorded in both the repository goal and the active Codex goal attachment.
 
+Runtime continuation: bound performance layers now resolve from audited catalog
+entries instead of five hardcoded classes. Zero-control fixed-physics graphs
+are permitted with exact package/class/skeleton matching and bidirectional
+control-layout checks. Animation-library and performance-session host tests
+pass; the Windows C++23 core builds. Not installed or live-accepted. Generic
+native/non-CSS ownership and sequence compatibility remain required work.
+
 Expanded implementation checkpoint: the GeneXXa fixed-physics graph now has an
 isolated performance adapter. Creation, fresh reload and all 20 moving clips
 on both GeneXXa/Nunexxa meshes pass (40 pairs, 360 cases, 29,278 poses). No new

@@ -1,6 +1,6 @@
 # Stellar Blade animation library for CSS and CINE
 
-Updated 2026-10-05. This is a new task. Protocol Echelon Proxima remains paused.
+Updated 2026-10-06. Protocol Echelon Proxima remains paused.
 
 ## Objective
 
@@ -125,6 +125,8 @@ later work.
 - Every supplied archive has an immutable inventory and every actual unique character clip has an accounted-for disposition.
 - All requested unique usable clips are ported in full; unresolved mappings or failed clips are explicitly incomplete, not counted as successful.
 - Both CSS and CINE can select and play the catalog with correct interruption and restoration.
+- Compatibility acceptance covers every original eins0fx CSS mod and its variants, excluding port-only mods. Eve Black Pearl, the six Eve outfits, Unholy Genessa and Commander White are test cases, not a closed support list. Record per-outfit results and unfinished work in the compatibility matrix before claiming this requirement complete.
+- Other authors' CSS mods, non-CSS mods and native appearances using the default game human skeleton are covered where technically compatible, without an author-name or CSS-manifest restriction. Record representative playback/restoration evidence and any specific unsupported cases. Missing facial controls must not block compatible body playback.
 - The separate `CSS_LocomotionSharedAssets_P` distribution supplies old and new clips under `/Game/CSS/Locomotion/`, with proven duplicate resolution, legacy saved-selection compatibility and missing-pack fallback. Old outfit packages remain byte-for-byte unchanged.
 - Per-clip source/cooked comparisons and full-motion visual checks pass; documented live tests cover playback, contacts and regressions.
 - Every delivered shared animation preserves source timing and motion, with any resampling justified by measured benefit. Native 60 Hz sources are not accidentally imported at 30 Hz. Check interpolation, transitions, contacts and loop seams separately from runtime frame rate. Existing bundled outfit assets remain unchanged.

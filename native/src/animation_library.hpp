@@ -40,6 +40,9 @@ struct AnimationLibrary {
 const PerformanceAdapter* resolve_performance_adapter(const std::vector<AnimationLibrary>&,
     const std::string& outfit,const AnimationContainerRevision&,
     const std::string& source_class,const std::string& skeleton);
+const PerformanceAdapter* resolve_performance_layer(const std::vector<AnimationLibrary>&,
+    const std::string& outfit,const AnimationContainerRevision&,
+    const std::string& target_class,const std::string& skeleton);
 std::vector<AnimationOption> merge_library_animation_options(const std::vector<AnimationLibrary>&,
     AnimationSlot,const std::vector<AnimationOption>& bundled);
 struct AnimationAssetCandidate {

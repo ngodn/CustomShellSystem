@@ -71,22 +71,16 @@ std::string performance_gameplay_block(UObject* pawn) {
     if(sidearm_in_hand(pawn,true)) return "Sidearm is in use";
     return {};
 }
-bool performance_layer_class(UObject* post) {
-    if(!post) return false;
-    const auto path=narrow(post->GetClassPrivate()->GetPathName());
-    for(const auto* name:{"ABP_Eve","ABP_EveBikini","ABP_EveKnit","ABP_Genessa","ABP_CommanderWhite"}) {
-        if(path=="/Game/CSS/Locomotion/Adapters/"+std::string(name)+"."+name+"_C") return true;
-    }
-    return false;
-}
-const PerformanceAdapter* performance_adapter(UObject* component,const Catalog& catalog,const std::string& outfit) {
+const PerformanceAdapter* performance_adapter(UObject* component,const Catalog& catalog,
+    const std::string& outfit,bool bound_layer=false) {
     const auto revision=catalog.outfit_revisions.find(outfit);
     if(revision==catalog.outfit_revisions.end()) return nullptr;
     auto* post=read<UObject*>(component,L"PostProcessAnimInstance");
     auto* mesh=mesh_asset(component);
     auto* skeleton=mesh?read<UObject*>(mesh,L"Skeleton"):nullptr;
     if(!post || !skeleton) return nullptr;
-    return resolve_performance_adapter(catalog.animation_libraries,outfit,revision->second,
+    const auto resolve=bound_layer?resolve_performance_layer:resolve_performance_adapter;
+    return resolve(catalog.animation_libraries,outfit,revision->second,
         narrow(post->GetClassPrivate()->GetPathName()),narrow(skeleton->GetPathName()));
 }
 void performance_controls(UObject* source,UObject* target,bool copy) {
@@ -121,7 +115,8 @@ void performance_controls(UObject* source,UObject* target,bool copy) {
                 static_cast<FBoolProperty*>(property)->GetPropertyValue(from));
         } else destination->CopyCompleteValue(to,from);
     }
-    if(!count) throw std::runtime_error("Source graph exposes no CSS controls");
+    // Fixed-physics graphs can have no CSS controls. Binding validates the exact
+    // catalog revision/class pair and checks control layouts in both directions.
 }
 void performance_override(UObject* component,UObject* type) {
     Call set(component,L"SetOverridePostProcessAnimBP",2);
@@ -150,7 +145,7 @@ std::string PerformancePlayer::unsupported(UObject* pawn,const Catalog& catalog,
     auto* component=read<UObject*>(pawn,L"Mesh");
     if(!component) return "Player mesh is unavailable";
     auto* post=component?read<UObject*>(component,L"PostProcessAnimInstance"):nullptr;
-    if(!performance_layer_class(post)) {
+    if(!performance_adapter(component,catalog,outfit,true)) {
         if(!performance_adapter(component,catalog,outfit)) return "This outfit version has no verified performance adapter";
         return {};
     }
@@ -161,7 +156,7 @@ std::string PerformancePlayer::unsupported(UObject* pawn,const Catalog& catalog,
 void PerformancePlayer::bind_layer(UObject* pawn,const Catalog& catalog,const std::string& outfit) {
     auto* component=read<UObject*>(pawn,L"Mesh");
     auto* source=read<UObject*>(component,L"PostProcessAnimInstance");
-    if(performance_layer_class(source)) return;
+    if(performance_adapter(component,catalog,outfit,true)) return;
     const auto* adapter=performance_adapter(component,catalog,outfit);
     if(!adapter) throw std::runtime_error("No verified performance adapter");
     WeakObject held_component(component),held_mesh(mesh_asset(component)),held_source(source);
