@@ -30,6 +30,15 @@ promise that every outfit has a compatible face rig.
 
 ## Shared pack and older outfit compatibility
 
+### Required compatibility scope, clarified October 6
+
+- First-class support covers **all original eins0fx-authored CSS mods, excluding port-only mods**. Eve (all six outfits), Unholy Genessa (both face variants) and Commander White are required examples, not an exhaustive allowlist. Inventory the other original projects and their variants from project records; do not assume these three are the complete collection.
+- Also support other authors' CSS mods, non-CSS mods and native appearances that use the game's default human skeleton **where technically compatible**. A CSS outfit manifest or eins0fx author name must not be required solely to play a compatible body animation. Check actual skeleton hierarchy, reference pose, virtual bones, animation layers and required runtime bindings. Do not declare compatibility from the skeleton label alone.
+- Preserve each supported appearance's customization, proportions, hands, footwear, hair, cloth, wings and secondary motion. Add adapters where needed for custom skeletons and post-process graphs. Body playback and cancellation/restoration must work through both CSS and CINE without requiring old outfit packages to be rebuilt.
+- Facial expressions and facial tracks require a separate capability check for each actual face. Support them where feasible with verified character-specific mappings or derived assets. Do not disable otherwise compatible body playback because the face lacks expression controls, and do not apply guessed facial mappings to an unsupported face.
+- Maintain a compatibility matrix distinguishing verified, pending, unsupported and fallback behavior. Test the original eins0fx collection and representative default-human-skeleton appearances from other authors, both CSS and non-CSS. Describe unsupported cases clearly, keep native behavior safe, and preserve saved selections.
+- Black Pearl is only one test case. Passing it, or even the existing nine-mesh test set, does not complete this broader compatibility requirement. Keep this scope active across sessions.
+
 - Publish new shared assets under `/Game/CSS/Locomotion/`, with stable IDs and a versioned catalog. Use subfolders for clip families where useful; asset paths and menu names must not be the identity used for saved selection.
 - Include Eve Default Idle and the seven released CSS poses: Seated Recline, Kneeling Bow, Low Lean, Deep Kneeling Bow, Reclining, Forward Fold and Side Kneel. Preserve their existing saved IDs through explicit aliases where necessary. Previously removed experimental ESAP choices are not silently reintroduced just because old trials contain them. All actual unique clips in the newly supplied archive set remain in scope.
 - CSS must discover the shared catalog without representing it as a fake wearable outfit. Both CSS and CINE must consume the same resolved identities and compatibility information.

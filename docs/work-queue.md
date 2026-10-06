@@ -2,6 +2,14 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
+October 6 scope correction: support all original eins0fx-authored CSS mods,
+excluding port-only mods, plus other authors' CSS mods, non-CSS mods and native
+appearances using the default game human skeleton where compatible. The current
+nine meshes are a test set, not the complete support list. Inventory the full
+original collection and verify actual rig/layer contracts. Facial compatibility
+is separate and must not prevent compatible body playback. This requirement is
+now recorded in both the repository goal and the active Codex goal attachment.
+
 October 6 continuation: the user confirmed source permission and requested
 continued work on DumbDumb and Iris Out. Investigate the seven additional tracks
 against the actual source mesh and playback mapping; retain their complete keys
@@ -17,6 +25,17 @@ All 158 source tracks per clip are preserved across the body projection and
 its companion record. This does not identify the seven extra controls or
 finish facial animation. See [source requirements and audition evidence](development/shared-animation-source-requirements.md).
 Neither audition is installed or added to the shared release catalog yet.
+
+The new two-clip adapter run has now passed all nine meshes, 162 cases and
+44,496 full-motion poses. Separate facial source inspection confirms retained
+Eve shapes in Unholy Genessa's Eve-face source, different DAZ/FACS controls in
+Commander White, and no existing expression rig in Genessa's mask. Keep those
+character-specific facial tasks active. See the acceptance document's required
+outfit coverage table. The full DumbDumb render stopped at frame 1664 on a
+0.0010039 cm reconstruction error against its 0.001 cm diagnostic limit;
+a measurement-only run is checking the full error distribution before deciding
+whether a numerical reconstruction correction is needed. This does not change
+the animation data or count the unfinished render as accepted.
 
 Current checkpoint, October 6: the combined private trial is installed with
 57 shared sequences, five outfit adapters, 21 Eve expressions and Come Closer

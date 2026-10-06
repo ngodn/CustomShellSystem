@@ -105,6 +105,40 @@ controls; the body table does not claim complete facial fidelity.
 
 ## Facial and runtime state
 
+### Required outfit coverage
+
+Black Pearl is a first live test case, not the compatibility boundary. Required
+coverage includes all original eins0fx-authored CSS mods, excluding port-only
+mods. All six Eve outfits, Unholy Genessa with either face, and Commander White
+are required examples, not the complete list. Other authors' CSS mods, non-CSS
+mods and native appearances using the default game human skeleton also need
+support where technically compatible. Inventory and record these additional
+rigs rather than treating the nine-mesh result as universal coverage.
+Each supported appearance needs playback, interruption and restoration checks;
+body adapter success alone does not establish facial or world-physics support.
+
+The two additional body auditions now also pass all nine meshes:
+`work/cine-animation-port/l5p-adapter-check/l5p-shared-all-result.json` records
+18 clip/mesh pairs, 162 cases and 44,496 full-motion poses at 60 Hz. Maximum
+body and finger position differences are zero; maximum angular differences are
+7.31e-8 and 6.67e-8 radians. The shared authoring copies were independently
+verified against the source candidates. These two clips are not installed or
+counted in the 57 cooked sequences above.
+
+Read-only face-source inspection is recorded in
+`work/cine-animation-port/other-face-sources-v1/compatibility.json`:
+
+| Character | Retained source capability | Remaining work |
+| --- | --- | --- |
+| Six Eve outfits | Installed derived meshes contain 105 facial shapes | Live playback and face restoration on each outfit |
+| Unholy Genessa, Eve face | Retained Eve body has all 105 matching shape names | Verify fitted topology, derive facial assets and test restoration |
+| Unholy Genessa, Genessa face | Face and eyes have no shape keys; inspected rig has no deforming facial bones | Determine feasible expression support without distorting the mask |
+| Commander White | Body retains 322 DAZ/FACS shapes, with no exact Eve control-name matches | Character-specific facial mapping and verified derived assets |
+
+Matching names establish source availability only. They do not prove runtime
+vertex correspondence or equivalent expression strength. The original outfit
+sources remain unchanged.
+
 The installed private trial has 21 static Eve expressions and Come Closer facial
 curves on six verified derived Eve meshes. Gesture 200 facial curves are now
 installed through the catalog-only revision recorded in
@@ -118,12 +152,12 @@ Eve, Genessa and Commander White isolated-package checks pass; those dependency
 checks do not substitute for their live outfit/physics tests.
 
 Before release, complete the unresolved source work, native-speed/contact and
-live acceptance, source permission review, performance measurements and the
+live acceptance, performance measurements and the
 separate asset/runtime distributions with credits, BBCode notes and checksums.
 
 The [source requirements](shared-animation-source-requirements.md) specify the
 missing rig data. The [permission audit](shared-animation-source-permissions.md)
 now covers all six additional source pages as well as DumbDumb and Iris Out.
-Their published terms prohibit cross-game conversion; any separate grant still
-needs to be established before public packaging. The installed files remain a
-private trial, with no public upload made.
+The user confirmed permission on October 6; the public-page audit is historical,
+not an outstanding permission request. The installed files remain a private
+trial, with no public upload made.
