@@ -1,5 +1,23 @@
 # Current work queue
 
+## Latest user correction: four native locomotion choices only
+
+For appearances using the default game human skeleton, implement only
+**Eve Default Idle, Eve Walk, Eve Jog and Eve Sprint**, where technically
+compatible. This applies to native, CSS and non-CSS appearances using that
+skeleton. Validate their selection, smooth starting/stopping, restoration
+and gameplay compatibility.
+
+Do not expand native support to dances, photo poses, other idles or facial
+expressions. Native Black Hole and montage experiments are retained as
+historical evidence only; they are not release requirements or part of the
+requested native selection. No remaining native dance batch should run.
+
+The full requested animation library and feasible facial support remain in
+scope for **Eve's six outfits, Unholy Genessa and Commander White**. Old
+Seductress and GeneXXa remain excluded. This correction supersedes broader
+native-coverage requirements and historical next steps below.
+
 ## Authoritative user scope correction, October 6
 
 Support exactly these authored outfits: **Eve (all six outfits), Unholy Genessa
