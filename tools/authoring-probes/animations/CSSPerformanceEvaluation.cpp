@@ -67,6 +67,7 @@ FString UCSSPerformanceLibrary::EvaluatePerformanceLayer(USkeletalMesh* Mesh, UA
     if (!Sequence || !Enabled || !Time || !Weight) return Fail(TEXT("Missing performance controls"));
     const auto& Reference = Mesh->GetRefSkeleton();
     TSet<int32> BodyBones;
+    TSet<int32> FingerBones;
     for (const TCHAR* Name : {TEXT("root"), TEXT("pelvis"), TEXT("spine_01"), TEXT("spine_02"), TEXT("spine_03"),
         TEXT("neck_01"), TEXT("head"), TEXT("upperarm_l"), TEXT("lowerarm_l"), TEXT("hand_l"),
         TEXT("upperarm_r"), TEXT("lowerarm_r"), TEXT("hand_r"), TEXT("thigh_l"), TEXT("calf_l"), TEXT("foot_l"),
@@ -76,6 +77,14 @@ FString UCSSPerformanceLibrary::EvaluatePerformanceLayer(USkeletalMesh* Mesh, UA
         if (Bone == INDEX_NONE) return Fail(TEXT("Missing audited body bone"));
         BodyBones.Add(Bone);
     }
+    for (int32 Bone = 0; Bone < Reference.GetRawBoneNum(); ++Bone)
+    {
+        const FString Name = Reference.GetBoneName(Bone).ToString();
+        if (!Name.EndsWith(TEXT("_l")) && !Name.EndsWith(TEXT("_r"))) continue;
+        for (const TCHAR* Prefix : {TEXT("thumb_"), TEXT("index_"), TEXT("middle_"), TEXT("ring_"), TEXT("pinky_")})
+            if (Name.StartsWith(Prefix)) { FingerBones.Add(Bone); break; }
+    }
+    if (FingerBones.Num() != 38) return Fail(TEXT("Missing audited finger/metacarpal bones"));
     struct FCase { const TCHAR* Name; bool Enabled, HasClip; float Fraction, Weight; bool Moving = false; };
     const FCase Cases[] {
         {TEXT("inactive"), false, false, 0.f, 0.f},
@@ -99,8 +108,9 @@ FString UCSSPerformanceLibrary::EvaluatePerformanceLayer(USkeletalMesh* Mesh, UA
         Enabled->SetPropertyValue_InContainer(Instance, Test.Enabled);
         Original->SetAnimation(Active ? PerformanceClip : BaseClip);
         Original->Stop();
-        double BodyPosition = 0, BodyAngle = 0, AllPosition = 0, AllAngle = 0;
-        FString WorstBody, WorstAll;
+        double BodyPosition = 0, BodyAngle = 0, BodyScale = 0, AllPosition = 0, AllAngle = 0;
+        double FingerPosition = 0, FingerAngle = 0, FingerScale = 0;
+        FString WorstBody, WorstAll, WorstFinger;
         constexpr float Delta = 1.f / 60.f;
         const int32 Frames = Test.Moving ? FMath::CeilToInt(PerformanceClip->GetPlayLength() / Delta) + 1 : 180;
         for (int32 Frame = 0; Frame < Frames; ++Frame)
@@ -127,11 +137,19 @@ FString UCSSPerformanceLibrary::EvaluatePerformanceLayer(USkeletalMesh* Mesh, UA
                 if (!Test.Moving && Frame < 150) continue;
                 const double Position = FVector::Distance(A[Bone].GetTranslation(), B[Bone].GetTranslation());
                 const double Angle = A[Bone].GetRotation().AngularDistance(B[Bone].GetRotation());
+                const double Scale = FVector::Distance(A[Bone].GetScale3D(), B[Bone].GetScale3D());
                 if (Position > AllPosition) { AllPosition = Position; WorstAll = Reference.GetBoneName(Bone).ToString(); }
                 AllAngle = FMath::Max(AllAngle, Angle);
+                if (FingerBones.Contains(Bone))
+                {
+                    if (Position > FingerPosition) { FingerPosition = Position; WorstFinger = Reference.GetBoneName(Bone).ToString(); }
+                    FingerAngle = FMath::Max(FingerAngle, Angle);
+                    FingerScale = FMath::Max(FingerScale, Scale);
+                }
                 if (!BodyBones.Contains(Bone)) continue;
                 if (Position > BodyPosition) { BodyPosition = Position; WorstBody = Reference.GetBoneName(Bone).ToString(); }
                 BodyAngle = FMath::Max(BodyAngle, Angle);
+                BodyScale = FMath::Max(BodyScale, Scale);
             }
         }
         auto Result = MakeShared<FJsonObject>();
@@ -141,17 +159,25 @@ FString UCSSPerformanceLibrary::EvaluatePerformanceLayer(USkeletalMesh* Mesh, UA
         Result->SetNumberField(TEXT("time"), ClipTime);
         Result->SetNumberField(TEXT("body_position_cm"), BodyPosition);
         Result->SetNumberField(TEXT("body_angle_rad"), BodyAngle);
+        Result->SetNumberField(TEXT("body_scale_error"), BodyScale);
+        Result->SetNumberField(TEXT("finger_position_cm"), FingerPosition);
+        Result->SetNumberField(TEXT("finger_angle_rad"), FingerAngle);
+        Result->SetNumberField(TEXT("finger_scale_error"), FingerScale);
+        Result->SetStringField(TEXT("worst_finger"), WorstFinger);
+        Result->SetBoolField(TEXT("fingers_passed"), FingerPosition < .01 && FingerAngle < .001 && FingerScale < .001);
         Result->SetNumberField(TEXT("all_position_cm"), AllPosition);
         Result->SetNumberField(TEXT("all_angle_rad"), AllAngle);
         Result->SetStringField(TEXT("worst_body"), WorstBody);
         Result->SetStringField(TEXT("worst_all"), WorstAll);
-        Result->SetBoolField(TEXT("body_passed"), BodyPosition < .01 && BodyAngle < .001);
+        Result->SetBoolField(TEXT("body_passed"), BodyPosition < .01 && BodyAngle < .001 && BodyScale < .001);
         Results.Add(MakeShared<FJsonValueObject>(Result));
     }
     auto Report = MakeShared<FJsonObject>();
     Report->SetArrayField(TEXT("cases"), Results);
     Report->SetStringField(TEXT("mesh"), Mesh->GetPathName());
     Report->SetStringField(TEXT("layer"), Layer->GetPathName());
+    Report->SetStringField(TEXT("performance"), PerformanceClip->GetPathName());
+    Report->SetNumberField(TEXT("finger_bones_checked"), FingerBones.Num());
     Report->SetStringField(TEXT("scope"), TEXT("Compressed component and post-process pose evaluation at 60 Hz. No world cloth-solver or gameplay acceptance."));
     FString Text;
     return FJsonSerializer::Serialize(Report, TJsonWriterFactory<>::Create(&Text)) ? Text : FString();

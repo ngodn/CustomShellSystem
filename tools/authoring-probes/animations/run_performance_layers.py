@@ -15,6 +15,9 @@ def main():
     parser.add_argument('--mode', choices=('create', 'verify', 'evaluate', 'cook'), required=True)
     parser.add_argument('--label', required=True)
     parser.add_argument('--mesh', help='One audited mesh for an isolated evaluation')
+    clips = parser.add_mutually_exclusive_group()
+    clips.add_argument('--clip', help='Canonical performance ID from the shared catalog')
+    clips.add_argument('--all-moving', action='store_true', help='Evaluate every one-shot moving clip')
     args = parser.parse_args()
     if not re.fullmatch(r'[a-z0-9-]{1,48}', args.label):
         raise ValueError('Use a short log label')
@@ -68,6 +71,14 @@ def main():
         environment['CSS_PERFORMANCE_MESH'] = args.mesh
     else:
         environment.pop('CSS_PERFORMANCE_MESH', None)
+    if (args.clip or args.all_moving) and args.mode != 'evaluate':
+        raise ValueError('Clip selection is only available for evaluation')
+    environment.pop('CSS_PERFORMANCE_CLIP', None)
+    environment.pop('CSS_PERFORMANCE_ALL_MOVING', None)
+    if args.clip:
+        environment['CSS_PERFORMANCE_CLIP'] = args.clip
+    if args.all_moving:
+        environment['CSS_PERFORMANCE_ALL_MOVING'] = '1'
     with (work / (args.label + '-command.json')).open('x') as file:
         json.dump(command, file, indent=2)
     with (work / (args.label + '-console.log')).open('x') as log:

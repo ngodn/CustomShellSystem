@@ -93,6 +93,34 @@ mesh, 10,809 poses total. The 19 checked body bones remain within 0.01 cm /
 exercise the world's cloth solver, gameplay interruptions, live frame costs,
 or every clip's visual quality. Those remain acceptance work.
 
+## Finger comparison expansion
+
+The evaluator now directly compares the 38 finger and metacarpal bones on
+each outfit, in addition to the original 19 body bones. Position, rotation
+and scale are checked independently. Finger limits are 0.01 cm, 0.001 radians
+and 0.001 scale-vector distance; body scale now uses the same scale bound.
+Every raw bone still receives the finite-transform check.
+
+Gesture 200 passes all nine meshes and all nine cases, 81 cases total.
+Maximum body rotation difference is 5.96047e-8 radians; maximum finger rotation
+difference is 5.16192e-8 radians. Position and scale differences are zero.
+The helper compiled with UE 5.6.1, and the evaluation commandlet exited zero.
+These compare an adapter with the original outfit graph, not a retarget with
+the Stellar Blade source. They do not establish live cloth or visual acceptance.
+
+Receipts under `work/cine-animation-port/`:
+
+- `performance-fingers-build-exit.json`: compiled helper source hash and exit.
+- `shared-v1/performance-fingers-200-v1-result.json`: cases and protected hashes.
+- `shared-v1/performance-fingers-200-v1-exit.json`: commandlet completion.
+
+Choose a canonical ID with `--clip`, or evaluate every catalog entry whose
+playback policy is `once` with `--all-moving`. Both options require evaluate
+mode and can be combined with `--mesh`. Default selection remains Black Hole.
+The report separates `body_passed`, `fingers_passed` and combined `passed`.
+The full eighteen-clip run is in progress as `performance-fingers-all-v1`;
+partial receipts must not be counted as acceptance.
+
 `verify_cooked_performance_layers.py` compares independent CUE4Parse readback
 of the packaged adapters against the installed source graphs. Existing CSS
 defaults and original node settings match, including rig classes, transferred
