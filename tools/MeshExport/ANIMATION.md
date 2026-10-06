@@ -21,6 +21,17 @@ do not treat skirt vertices weighted to the foot as shoe soles. The companion
 `tools/authoring-probes/animations/measure_skin_contact.py` keeps per-material
 measurements and checks bind reconstruction before evaluating saved pose keys.
 
+For cooked ACL samples, pass `measure_skin_contact.py --cooked-skeleton FILE`
+with the corresponding Skeleton property readback and full-transform manifest.
+This path applies the mesh's translation retargeting before skinning. It supports
+the audited Animation, Skeleton and AnimationScaled modes, rejects hierarchy
+remapping and other modes, and preserves all influences. The math follows
+UE 5.6.1 `FAnimationRuntime::RetargetBoneTransform`. The current Eve comparison
+against 13 raw editor poses (379 bones each) agrees within 0.000020 cm position
+and 0.000000618 quaternion distance. Hidden flat-foot sections remain in the
+per-material results; they cannot be called visible shoe penetration without
+checking the outfit's active materials and post-process graph.
+
 For a neutral GLB, use `CSS_BASE_POSE_MESH=1`. It skips morphs and materials;
 ordinary exports retain both. The GLB writer uses four influences, so use the
 skin audit for complete weight analysis. These opt-in diagnostics leave source
@@ -56,6 +67,15 @@ c++ -std=c++11 -O2 -fPIC -shared tools/MeshExport/RuntimeAclSamples.cpp \
 ```
 
 `decode_shared_cooked.py --all-frames --runtime-sampling` enables both modes.
+Add `--substeps 2` or `--substeps 4` for native ACL evaluation between source
+keys, equivalent to `CSS_ABSOLUTE_SUBSTEPS=2` or `4`. Dense export requires the
+runtime mode and currently rejects wrap-optimized clips. It retains the original
+five source-clock JSON samples, while the binary manifest records the denser
+clock, original rate and substep count. The allocation bound scales with the
+explicit substeps, to at most eight million transforms. The two current dance
+studies retain bit-identical original-key transforms and five-sample JSON at
+two substeps. Dense sampling does not modify an animation or its playback rate.
+
 Use `capture_raw_cook_reference.py` inside the authoring commandlet to capture
 unretargeted raw poses, then `verify_full_cooked_motion.py` to compare them.
 Mesh-contact captures deliberately apply mesh retargeting and are rejected

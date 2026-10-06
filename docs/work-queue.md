@@ -2,6 +2,22 @@
 
 ## October 5: shared locomotion pack and questman's follow-up
 
+Latest dense/contact continuation: the corrected L5W Iris Out and
+L5UPrecision2 DumbDumb pass all nine outfit meshes, 162 adapter cases and
+44,496 full-clip poses (`corrected-dances-adapter-v1`). Independent cooked ACL
+sampling now covers 120 Hz, including between-key poses. All original-key
+transforms and five-sample JSON remain bit-identical to the verified 60 Hz
+decodes. Mesh translation retargeting agrees with raw UE poses within
+0.000020 cm. The neutral cooked Black Pearl footwear section (material 20)
+still dips between keys: Iris Out left/right -0.18258/-0.27834 cm, DumbDumb
+-0.42759/-0.42878 cm. At source keys these same surfaces are within 0.008 cm.
+Larger negative values belong to alternate flat/covered-foot sections, so keep
+them separate from the active heeled footwear. Continue a localized contact
+correction and verify its full motion, dense cook and adapters; neither dance
+is installed or release-accepted. Results: each study's `decoded-dense-v1`,
+`current-eve-skin-audit-v1`, and `dense-acl-regression.json`. Broader rigs,
+facial mappings, unresolved source controls and live/release acceptance remain.
+
 Latest October 6 continuation: Iris Out L5W repairs only four right-leg keys
 at the two near-straight transitions. All 1,001 authored contact poses and
 fresh-repeat checks pass; the correction is committed as `758f5ac`. Windows

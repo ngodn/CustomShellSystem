@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from reparent_source_legs import rotate, transforms
+from cooked_contact_pose import load_cooked
 
 
 def sha(path):
@@ -20,6 +21,7 @@ def main():
     parser.add_argument('skin', type=Path)
     parser.add_argument('output', type=Path)
     parser.add_argument('motions', type=Path, nargs='+')
+    parser.add_argument('--cooked-skeleton', type=Path, help='Audited Skeleton readback for cooked binary motions')
     args = parser.parse_args()
     if args.output.exists():
         raise FileExistsError(args.output)
@@ -85,32 +87,19 @@ def main():
     results = []
     for motion in args.motions:
         inputs[str(motion.resolve())] = sha(motion)
-        opener = gzip.open if motion.suffix == '.gz' else open
-        with opener(motion, 'rt') as stream:
-            data = json.load(stream)
-        snapshots = [f['pose']['Snapshot'] for f in data['frames']]
-        order = snapshots[0]['BoneNames']
-        if any(not s['bIsValid'] or s['BoneNames'] != order for s in snapshots):
-            raise ValueError('Invalid or inconsistent snapshots')
-        tracks = []
-        for name in names:
-            index = order.index(name)
-            keys = []
-            for snapshot in snapshots:
-                t = snapshot['LocalTransforms'][index]
-                keys.append({field: [t[unreal][c] for c in axes] for field, unreal, axes in (
-                    ('translation', 'Translation', 'XYZ'), ('rotation', 'Rotation', 'XYZW'),
-                    ('scale', 'Scale3D', 'XYZ'))})
-            tracks.append(dict(name=name, keys=keys))
-        world = transforms(manifest['bones'], tracks, len(snapshots))
-        result = dict(motion=str(motion), frames=len(snapshots), fps=data['fps'],
+        if args.cooked_skeleton:
+            world, data = load_cooked(motion, manifest['bones'], args.cooked_skeleton, inputs)
+            frame_count = data['frames']
+        else:
+            world, data, frame_count = load_raw(motion, names, manifest)
+        result = dict(motion=str(motion), frames=frame_count, fps=data['fps'],
                       sampling=data.get('sampling', 'Unspecified by capture'), sides={})
         for side, (ids, components, sections, error) in prepared.items():
-            minima = np.full(len(snapshots), np.inf)
-            worst_ids = np.zeros(len(snapshots), dtype=int)
-            section_minima = {key: np.full(len(snapshots), np.inf) for key in sections}
-            for start in range(0, len(snapshots), 64):
-                end = min(start + 64, len(snapshots))
+            minima = np.full(frame_count, np.inf)
+            worst_ids = np.zeros(frame_count, dtype=int)
+            section_minima = {key: np.full(frame_count, np.inf) for key in sections}
+            for start in range(0, frame_count, 64):
+                end = min(start + 64, frame_count)
                 z = np.zeros((end - start, len(ids)))
                 for bone, rows, local, weight in components:
                     p, q, scale = (x[start:end] for x in world[bone])
@@ -141,6 +130,28 @@ def main():
         selection='Referenced vertices at bind Z <= 30 cm with at least 50% combined calf/foot/ball weight on one side. All their influences preserved; all material sections included.',
         scope='Neutral cooked surface linear skinning at every supplied pose, floor Z=0 cm. Sampling is determined by the input capture. No morphs, post-process, physics, cloth simulation or material visibility filtering. Diagnostic, not full contact or live acceptance.'
     ), indent=2) + '\n')
+
+
+def load_raw(motion, names, manifest):
+    opener = gzip.open if motion.suffix == '.gz' else open
+    with opener(motion, 'rt') as stream:
+        data = json.load(stream)
+    snapshots = [f['pose']['Snapshot'] for f in data['frames']]
+    order = snapshots[0]['BoneNames']
+    if any(not s['bIsValid'] or s['BoneNames'] != order for s in snapshots):
+        raise ValueError('Invalid or inconsistent snapshots')
+    tracks = []
+    for name in names:
+        index = order.index(name)
+        keys = []
+        for snapshot in snapshots:
+            t = snapshot['LocalTransforms'][index]
+            keys.append({field: [t[unreal][c] for c in axes] for field, unreal, axes in (
+                ('translation', 'Translation', 'XYZ'), ('rotation', 'Rotation', 'XYZW'),
+                ('scale', 'Scale3D', 'XYZ'))})
+        tracks.append(dict(name=name, keys=keys))
+    world = transforms(manifest['bones'], tracks, len(snapshots))
+    return world, data, len(snapshots)
 
 
 if __name__ == '__main__':

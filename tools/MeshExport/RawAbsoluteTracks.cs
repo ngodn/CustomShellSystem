@@ -18,12 +18,22 @@ internal static class RawAbsoluteTracks
     private static extern unsafe void nCSSReadACLData(IntPtr tracks, FTransform* reference,
         FTrackToSkeletonMap* map, FTransform* output);
 
+    [DllImport("CSSACLStudy")]
+    private static extern unsafe void nCSSReadACLDataDense(IntPtr tracks, FTransform* reference,
+        FTrackToSkeletonMap* map, FTransform* output, uint substeps);
+
     public static unsafe void Export(UAnimSequence animation, string directory, bool full = false)
     {
         var runtimeSampling = Environment.GetEnvironmentVariable("CSS_ABSOLUTE_RUNTIME") switch {
             null or "" or "0" => false,
             "1" when full => true,
             _ => throw new ArgumentException("CSS_ABSOLUTE_RUNTIME=1 requires the full sample export")
+        };
+        var substeps = Environment.GetEnvironmentVariable("CSS_ABSOLUTE_SUBSTEPS") switch {
+            null or "" or "1" => 1,
+            "2" when runtimeSampling => 2,
+            "4" when runtimeSampling => 4,
+            _ => throw new ArgumentException("Substeps must be 1, or 2/4 with full runtime sampling")
         };
         if (animation.IsValidAdditive()) throw new ArgumentException("Absolute tracks reject additive sequences");
         if (animation.CompressedDataStructure is not FACLCompressedAnimData acl)
@@ -48,28 +58,32 @@ internal static class RawAbsoluteTracks
             map.Select(t => t.BoneTreeIndex).Distinct().Count() != map.Length ||
             !float.IsFinite(header.SampleRate) || header.SampleRate <= 0)
             throw new InvalidOperationException("Invalid absolute-track dimensions or reference coverage");
-        int count = checked(map.Length * sampleCount);
-        if (count > 2000000) throw new InvalidOperationException("Absolute-track diagnostic allocation limit exceeded");
+        var wrapOptimized = header.GetIsWrapOptimized();
+        if (substeps > 1 && wrapOptimized)
+            throw new ArgumentException("Dense sampling of wrap-optimized clips is not implemented");
+        int decodedSamples = checked((sampleCount - 1) * substeps + 1);
+        int count = checked(map.Length * decodedSamples);
+        if (count > 2000000 * substeps) throw new InvalidOperationException("Absolute-track diagnostic allocation limit exceeded");
         var atoms = new FTransform[count];
         fixed (FTransform* referencePtr = reference)
         fixed (FTrackToSkeletonMap* mapPtr = map)
         fixed (FTransform* atomsPtr = atoms)
         {
-            if (runtimeSampling) nCSSReadACLData(tracks.Handle, referencePtr, mapPtr, atomsPtr);
+            if (substeps > 1) nCSSReadACLDataDense(tracks.Handle, referencePtr, mapPtr, atomsPtr, (uint)substeps);
+            else if (runtimeSampling) nCSSReadACLData(tracks.Handle, referencePtr, mapPtr, atomsPtr);
             else nReadACLData(tracks.Handle, referencePtr, mapPtr, atomsPtr);
         }
         GC.KeepAlive(tracks);
         var selectedNames = map.Select(t => names[t.BoneTreeIndex]).ToArray();
         var frames = new List<object>();
         double maxNormError = 0;
-        var wrapOptimized = header.GetIsWrapOptimized();
         var logicalSamples = sampleCount + (wrapOptimized ? 1 : 0);
         foreach (int sample in Enumerable.Range(0, 5).Select(i => (logicalSamples - 1) * i / 4).Distinct())
         {
             var transforms = new List<object>();
             for (int i = 0; i < map.Length; i++)
             {
-                var t = atoms[i * sampleCount + (sample == sampleCount ? 0 : sample)];
+                var t = atoms[i * decodedSamples + (sample == sampleCount ? 0 : sample * substeps)];
                 float[] values = [t.Rotation.X, t.Rotation.Y, t.Rotation.Z, t.Rotation.W,
                     t.Translation.X, t.Translation.Y, t.Translation.Z, t.Scale3D.X, t.Scale3D.Y, t.Scale3D.Z];
                 if (values.Any(v => !float.IsFinite(v))) throw new InvalidOperationException("Non-finite absolute transform");
@@ -86,7 +100,8 @@ internal static class RawAbsoluteTracks
         }
         if (maxNormError >= .001) throw new InvalidOperationException("Non-unit absolute rotations");
         if (full)
-            ExportFull(atoms, sampleCount, logicalSamples, selectedNames, directory, animation.GetPathName(), header.SampleRate, runtimeSampling);
+            ExportFull(atoms, decodedSamples, decodedSamples + (wrapOptimized ? 1 : 0), selectedNames,
+                directory, animation.GetPathName(), header.SampleRate, runtimeSampling, substeps);
         File.WriteAllText(Path.Combine(directory, "absolute-tracks.json"), JsonConvert.SerializeObject(new {
             schema = 2, asset = animation.GetPathName(), sampleCount, logicalSamples, wrapOptimized,
             sampleRate = header.SampleRate,
@@ -99,7 +114,7 @@ internal static class RawAbsoluteTracks
     }
 
     private static void ExportFull(FTransform[] atoms, int sampleCount, int logicalSamples,
-        string[] names, string directory, string asset, float sampleRate, bool runtimeSampling)
+        string[] names, string directory, string asset, float sourceSampleRate, bool runtimeSampling, int substeps)
     {
         var path = Path.Combine(directory, "absolute-tracks.bin");
         double maxNormError = 0;
@@ -122,13 +137,16 @@ internal static class RawAbsoluteTracks
         if (maxNormError >= .001) throw new InvalidOperationException("Non-unit full absolute rotations");
         using var stream = File.OpenRead(path);
         File.WriteAllText(Path.Combine(directory, "absolute-tracks-full.json"), JsonConvert.SerializeObject(new {
-            schema = 1, asset, frames = logicalSamples, sampleRate, names, maxNormError,
+            schema = 1, asset, frames = logicalSamples, sampleRate = sourceSampleRate * substeps,
+            sourceSampleRate, substeps, names, maxNormError,
             roundingPolicy = runtimeSampling ? "none" : "nearest",
             file = Path.GetFileName(path), bytes = stream.Length,
             sha256 = Convert.ToHexStringLower(SHA256.HashData(stream)),
             layout = "frame,track,component", componentType = "float32-le",
             components = new[] {"qx", "qy", "qz", "qw", "tx", "ty", "tz", "sx", "sy", "sz"},
-            scope = "Every source-key time decoded with the stated rounding policy, with wrap endpoint restored. Mapped local tracks only, before retargeting, blending and game IK. No between-key evaluation."
+            scope = substeps == 1
+                ? "Every source-key time decoded with the stated rounding policy, with wrap endpoint restored. Mapped local tracks only, before retargeting, blending and game IK. No between-key evaluation."
+                : "Dense non-looping ACL evaluation at the stated sample clock. Mapped local tracks only, before retargeting, blending and game IK."
         }, Formatting.Indented));
     }
 }

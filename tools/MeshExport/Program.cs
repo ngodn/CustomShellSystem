@@ -48,6 +48,10 @@ if (fullAbsolute && (Environment.GetEnvironmentVariable("CSS_ABSOLUTE_TRACKS") !
 if (Environment.GetEnvironmentVariable("CSS_ABSOLUTE_RUNTIME") is { Length: > 0 } runtimeMode &&
     runtimeMode != "0" && (!fullAbsolute || runtimeMode != "1"))
     throw new ArgumentException("CSS_ABSOLUTE_RUNTIME must be 0, or 1 with the full absolute export");
+if (Environment.GetEnvironmentVariable("CSS_ABSOLUTE_SUBSTEPS") is { Length: > 0 } substeps &&
+    substeps != "1" && (!(substeps is "2" or "4") || !fullAbsolute ||
+        Environment.GetEnvironmentVariable("CSS_ABSOLUTE_RUNTIME") != "1"))
+    throw new ArgumentException("CSS_ABSOLUTE_SUBSTEPS must be 1, or 2/4 with full runtime sampling");
 if (skinAudit) {
     if (mesh is not USkeletalMesh skin) throw new ArgumentException("Skin audit requires a skeletal mesh");
     if (basePoseMesh || args.Length != 4 || new[] { "CSS_TRACK_AUDIT", "CSS_SOURCE_TRACKS",

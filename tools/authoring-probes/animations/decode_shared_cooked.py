@@ -17,11 +17,14 @@ def main():
     parser.add_argument('--pack-name', default='pack', help='Verified package output label within the workspace')
     parser.add_argument('--all-frames', action='store_true', help='Also write every ACL sample as compact binary transforms')
     parser.add_argument('--runtime-sampling', action='store_true', help='Use linear ACL interpolation, including stripped keys (requires the native study helper)')
+    parser.add_argument('--substeps', type=int, choices=(1, 2, 4), default=1, help='Dense non-looping runtime samples per source-key interval')
     args = parser.parse_args()
     if not re.fullmatch(r'[a-z0-9-]{1,48}', args.pack_name):
         parser.error('--pack-name must be a short workspace label')
     if args.runtime_sampling and not args.all_frames:
         parser.error('--runtime-sampling requires --all-frames')
+    if args.substeps != 1 and not args.runtime_sampling:
+        parser.error('--substeps requires --runtime-sampling')
     work = args.work.resolve(strict=True)
     output = args.output.resolve()
     output.mkdir(exist_ok=False)
@@ -31,6 +34,7 @@ def main():
         environment['CSS_ABSOLUTE_FULL'] = '1'
     if args.runtime_sampling:
         environment['CSS_ABSOLUTE_RUNTIME'] = '1'
+    environment['CSS_ABSOLUTE_SUBSTEPS'] = str(args.substeps)
     entries = json.loads((work / 'catalog.json').read_text())['animation_library']['entries']
     results = []
     report = output / 'decoded.json'
