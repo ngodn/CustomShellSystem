@@ -53,24 +53,63 @@ def main():
         for path, checksum in audit['protected'].items():
             if protected[str(protect(Path(path)))] != checksum:
                 raise ValueError('Audited input no longer matches: ' + path)
+    audits = {}
     for folder in (args.source, args.holdouts):
         audit = read(folder/'samples/report.json')
+        audits[folder] = audit
         if (read(folder/'exit.json')['exit_code'] != 0 or not audit.get('sources_unchanged') or
                 audit.get('eye_gaze_range', False) != plan.get('eye_gaze_range', True) or
                 audit.get('tongue_fk', False) != plan.get('tongue_fk', False) or
-                audit.get('signed_mouth_range', False) != plan.get('signed_mouth_range', False)):
+                audit.get('signed_mouth_range', False) != plan.get('signed_mouth_range', False) or
+                audit.get('performance_mouth_controls', False) != plan.get('performance_mouth_controls', False)):
             raise ValueError('Source sampling or restoration failed')
         if protected[str(protect(Path(audit['source'])))] != audit['sha256']:
             raise ValueError('Original CW source changed')
     parts = fit['parts']
 
-    def points(folder, label):
-        with np.load(protect(folder/'samples'/(label+'.npz'))) as data:
+    def points_at(path):
+        with np.load(protect(path)) as data:
             return np.concatenate([data[name] for name in parts])
+
+    def points(folder, label):
+        return points_at(folder/'samples'/(label+'.npz'))
 
     neutral = points(args.source, 'neutral')
     if np.max(np.abs(neutral-points(args.holdouts, 'neutral'))) > 1e-6:
         raise ValueError('Holdout neutral differs')
+    references = {}
+    mode_shift = 0.0
+    if plan.get('tongue_fk'):
+        for folder, audit in audits.items():
+            original = None
+            if audit.get('original_neutral_reference'):
+                candidate = Path(audit['original_neutral_reference'])
+                original = points_at(candidate)
+                if protected[str(candidate.resolve())] != audit['original_neutral_sha256']:
+                    raise ValueError('Original neutral reference changed')
+                references[folder] = str(candidate.resolve())
+            for batch in audit['batches']:
+                path = Path(batch['path'])
+                record = read(path)
+                if protected[str(path.resolve())] != batch['sha256'] or not record['sources_unchanged']:
+                    raise ValueError('Original neutral batch changed')
+                candidate = path.parent/'original-neutral.npz'
+                current = points_at(candidate)
+                if np.max(np.abs(current-points_at(path.parent/'original-neutral-restored.npz'))) > 1e-5:
+                    raise ValueError('Original tongue mode did not restore')
+                if original is not None and not np.array_equal(original, current):
+                    raise ValueError('Original neutral differs across batches')
+                original = current
+                references[folder] = str(candidate.resolve())
+            if original is None:
+                raise ValueError('Tongue bake needs a verified original-mode neutral batch')
+        original = points_at(Path(references[args.source]))
+        if not np.array_equal(original, points_at(Path(references[args.holdouts]))):
+            raise ValueError('Original holdout neutral differs')
+        mode_shift = float(np.linalg.norm(neutral-original, axis=1).max())
+        # Store deltas against the released face, including any temporary FK
+        # neutral shift, rather than silently treating that shift as zero.
+        neutral = original
     ids = []
     for part in parts:
         offset = bake['offsets'][part]
@@ -198,6 +237,9 @@ def main():
                   retained_basis=str(args.retained_basis) if args.retained_basis else None,
                   basis_method=args.basis_method, shape_prefix=args.shape_prefix,
                   independent_basis=args.independent_basis,
+                  neutral_reference=references.get(args.source),
+                  holdout_neutral_reference=references.get(args.holdouts),
+                  source_mode_neutral_shift_cm=mode_shift,
                   source_samples=len(samples), catalog_shapes=len(shapes), existing_projection_rank=int(rank),
                   fitted_correspondence_error_cm=correspondence,
                   basis_error_cm=error, training_error_cm=training_error, holdouts=cases,

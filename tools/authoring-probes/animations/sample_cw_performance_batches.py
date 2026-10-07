@@ -29,6 +29,9 @@ def main():
     plan_path, source = args.plan.resolve(strict=True), args.source.resolve(strict=True)
     protected = {str(path): digest(path) for path in (plan_path, source, Path(__file__).with_name('sample_cw_facial_controls.py'))}
     plan = json.loads(plan_path.read_text())
+    if plan.get('performance_mouth_controls'):
+        helper = Path(__file__).with_name('cw_performance_controls.py').resolve(strict=True)
+        protected[str(helper)] = digest(helper)
     if not plan.get('prepared') or plan['protected'].get(str(source)) != protected[str(source)]:
         raise ValueError('Plan does not identify the verified source')
     rows = plan[args.kind]
@@ -42,7 +45,23 @@ def main():
     started = time.monotonic()
     receipts = []
     neutral = None
+    original_neutral = None
     available = {}
+
+    def retain_original(path):
+        nonlocal original_neutral
+        path = path.resolve(strict=True)
+        checksum = digest(path)
+        if protected.setdefault(str(path), checksum) != checksum:
+            raise ValueError('Original-mode neutral changed during sampling')
+        with np.load(path) as data:
+            current = {name: data[name].copy() for name in data.files}
+        if original_neutral is None:
+            original_neutral = current
+            (samples/'original-neutral.npz').hardlink_to(path)
+        elif (set(original_neutral) != set(current) or
+              any(not np.array_equal(original_neutral[name], current[name]) for name in original_neutral)):
+            raise ValueError('Original-mode neutral differs across source batches')
 
     def identity(row):
         return json.dumps([row['seconds'], row['controls']], sort_keys=True, separators=(',', ':'), allow_nan=False)
@@ -59,11 +78,28 @@ def main():
                 prior['eye_gaze_range'] != plan.get('eye_gaze_range', False) or
                 prior['tongue_fk'] != plan.get('tongue_fk', False) or
                 prior.get('signed_mouth_range', False) != plan.get('signed_mouth_range', False) or
+                prior.get('performance_mouth_controls', False) != plan.get('performance_mouth_controls', False) or
+                (plan.get('performance_mouth_controls') and prior['protected'].get(str(helper)) != protected[str(helper)]) or
                 prior['protected'].get(str(Path(__file__).with_name('sample_cw_facial_controls.py'))) !=
                 protected[str(Path(__file__).with_name('sample_cw_facial_controls.py'))]):
             raise ValueError('Reuse requires matching verified source and sampler settings')
         for path in (report_path, prior_plan_path):
             protected[str(path)] = digest(path)
+        if plan.get('tongue_fk'):
+            if prior.get('original_neutral_reference'):
+                path = Path(prior['original_neutral_reference'])
+                if digest(path) != prior['original_neutral_sha256']:
+                    raise ValueError('Original-mode neutral changed')
+            else:
+                if not prior.get('batches'):
+                    raise ValueError('Reuse has no verified original-mode neutral')
+                first = prior['batches'][0]
+                report = Path(first['path'])
+                if digest(report) != first['sha256']:
+                    raise ValueError('Original-mode source batch changed')
+                protected[str(report)] = first['sha256']
+                path = report.parent/'original-neutral.npz'
+            retain_original(path)
         for row in prior_plan['samples']+prior_plan['holdouts']:
             file = folder/'samples'/(row['label']+'.npz')
             if file.exists():
@@ -103,6 +139,8 @@ def main():
             command.append('--tongue-fk')
         if plan.get('signed_mouth_range'):
             command.append('--signed-mouth-range')
+        if plan.get('performance_mouth_controls'):
+            command.append('--performance-mouth-controls')
         for control in controls:
             command += ['--control', control]
         (batch/'command.json').write_text(json.dumps(command, indent=2)+'\n')
@@ -118,7 +156,8 @@ def main():
                 report['combination_plan_sha256'] != digest(file) or
                 report['eye_gaze_range'] != plan.get('eye_gaze_range', False) or
                 report['tongue_fk'] != plan.get('tongue_fk', False) or
-                report.get('signed_mouth_range', False) != plan.get('signed_mouth_range', False)):
+                report.get('signed_mouth_range', False) != plan.get('signed_mouth_range', False) or
+                report.get('performance_mouth_controls', False) != plan.get('performance_mouth_controls', False)):
             raise ValueError('Source batch settings or inputs changed')
         records = {row['label']: row for row in report['records'] if row['label'].startswith('mix_')}
         if set(records) != {row['label'] for row in selected}:
@@ -129,6 +168,8 @@ def main():
             (samples/(row['label']+'.npz')).hardlink_to(batch/'samples'/(row['label']+'.npz'))
         with np.load(batch/'samples/neutral.npz') as data:
             current = {name: data[name].copy() for name in data.files}
+        if plan.get('tongue_fk'):
+            retain_original(batch/'samples/original-neutral.npz')
         if neutral is None:
             neutral = current
             (samples/'neutral.npz').hardlink_to(batch/'samples/neutral.npz')
@@ -141,8 +182,11 @@ def main():
     report = dict(source=str(source), sha256=protected[str(source)], sources_unchanged=True,
                   eye_gaze_range=plan.get('eye_gaze_range', False), tongue_fk=plan.get('tongue_fk', False),
                   signed_mouth_range=plan.get('signed_mouth_range', False),
+                  performance_mouth_controls=plan.get('performance_mouth_controls', False),
                   batches=receipts, protected=protected, poses=len(rows), omitted_bone_records=True,
                   reused=reused, newly_evaluated=len(pending),
+                  original_neutral_reference=str(samples/'original-neutral.npz') if original_neutral is not None else None,
+                  original_neutral_sha256=digest(samples/'original-neutral.npz') if original_neutral is not None else None,
                   scope='Complete requested source poses with neutral/restoration checks in every bounded batch.')
     (samples/'report.json').write_text(json.dumps(report, indent=2)+'\n')
     (output/'exit.json').write_text(json.dumps(dict(exit_code=0, seconds=time.monotonic()-started), indent=2)+'\n')

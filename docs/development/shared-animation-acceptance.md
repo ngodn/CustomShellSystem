@@ -1,5 +1,21 @@
 # Shared animation acceptance
 
+All six Commander White facial mappings are now prepared: Gesture 200, Spin,
+DumbDumb, Cinderella, Iris Out and Come Closer. The last two pass full sampled
+and independent intermediate geometry checks and native playback/restoration.
+Iris Out uses 39 active curves and 5,685 keys; Come Closer uses 38 curves and
+3,072 keys. Native checks pass 15,359 and 14,860 respectively. Final geometry
+errors remain below the unchanged 0.015 cm limit.
+
+Only Gesture 200 is packaged. Combine the other five shape bases while
+preserving the existing CW expressions and runtime limits, then cook and
+integrate. Full temporal/source review, all requested outfit/native live
+compatibility, unresolved source indices 3269..3275 and release remain open.
+Nothing new was installed. Source rigs and archives remain unchanged.
+See [the mapping and verification record](shared-animation-cw-face.md).
+
+Earlier checkpoints:
+
 CW Cinderella is the fourth prepared facial mapping. Its full 139.66667-second
 track maps twelve source channels. The final `cw-cinderella-curves-v3` export
 has 51 active curves, 61,727 keys and 2,547,961 bytes. It passes all 11,387

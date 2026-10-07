@@ -41,6 +41,8 @@ def main():
                         help='Bake horizontal eye motion within 45 degrees; restore source limits afterward')
     parser.add_argument('--signed-mouth-range', action='store_true',
                         help='Bake signed cheek and tongue-width actions; restore source limits afterward')
+    parser.add_argument('--performance-mouth-controls', action='store_true',
+                        help='Bake audited tongue-tip controls and signed facial motion in memory')
     parser.add_argument('--omit-bone-records', action='store_true',
                         help='Keep evaluated geometry and control records without repeating all bone matrices')
     args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
@@ -54,6 +56,13 @@ def main():
     parts = [bpy.data.objects[name] for name in (
         'Commander White 8.1 Mesh', 'Genesis 8.1 Female Eyelashes Mesh',
         'Genesis 8.1 Female Tear Mesh')]
+    performance = None
+    if args.performance_mouth_controls:
+        if not args.tongue_fk or not args.extended_levels or args.signed_mouth_range or args.eye_gaze_range:
+            raise ValueError('Performance mouth controls require extended FK sampling without other range overrides')
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from cw_performance_controls import PerformanceControls
+        performance = PerformanceControls(rig)
     if len(set(args.control)) != len(args.control):
         raise ValueError('Duplicate source control')
     if (len(set(args.levels))!=len(args.levels) or
@@ -193,6 +202,8 @@ def main():
                 obj.data.shape_keys.update_tag()
         if len(signed_shapes) != 5 or {row['name'] for row in signed_shapes} != expected_shapes:
             raise ValueError('Expected the audited body and tear mouth shapes')
+    if performance:
+        performance.expand_ranges(deform, parts)
     baseline = sample('neutral')
     neutral_shift = ({name: float(np.linalg.norm(baseline[name]-original_neutral[name], axis=1).max())
                       for name in baseline} if original_neutral is not None else {})
@@ -243,10 +254,14 @@ def main():
         keys = bpy.data.objects[row['object']].data.shape_keys
         keys.key_blocks[row['name']].slider_min = row['minimum']
         keys.update_tag()
+    if performance:
+        performance.restore()
     if original_neutral is not None:
         restored = sample('original-neutral-restored')
         if any(np.max(np.abs(restored[p]-original_neutral[p])) > 1e-5 for p in baseline):
             raise ValueError('Original source modes did not restore geometry')
+    if performance:
+        performance.remove_properties()
     if digest(source) != before:
         raise ValueError('Source file changed')
     if args.combinations and digest(args.combinations)!=plan_hash:
@@ -256,6 +271,8 @@ def main():
                   combination_plan_sha256=plan_hash,
                   omitted_bone_records=args.omit_bone_records,
                   signed_mouth_range=args.signed_mouth_range,
+                  performance_mouth_controls=args.performance_mouth_controls,
+                  performance_control_audit=performance.audit() if performance else None,
                   original_signed_ranges=signed_ranges, original_signed_shapes=signed_shapes,
                   extended_levels=args.extended_levels,
                   eye_gaze_range=args.eye_gaze_range, original_eye_limits=eye_limits,

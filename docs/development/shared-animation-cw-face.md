@@ -466,3 +466,103 @@ Full-motion, combined asset, live and release acceptance remain open.
 Removed 21,566,423 bytes of rejected first-fit Cinderella payloads, retaining
 its failure report, plans and all original samples. Receipt:
 `cw-cinderella-rejected-output-cleanup.json`. No other session's work was changed.
+
+## Iris Out: fifth prepared CW facial performance
+
+The reviewed replacement reduces the excessive tongue curl at 1.5 seconds,
+keeps the tongue extended, and reduces lower-lip movement. The six-pose trial
+and selected `mix_tongue_03` are recorded in `cw-irisout-tongue-v2`, including
+the source and review hashes. This is a cross-character action adaptation,
+not a claim that differently shaped faces have identical vertices.
+
+`prepare_cw_irisout_performance.py` maps all 23 source channels. The full
+`cw-irisout-source-v1` plan retains original key times and the 60 Hz grid.
+`cw-irisout-samples-v1` evaluates 1,419 poses; `cw-irisout-holdouts-v1` evaluates
+1,418 separate intermediate poses. Original rig settings and source files
+are restored and checked in every batch.
+
+The first fit correctly rejected a 0.000204233 cm neutral mismatch caused by
+temporarily disabling tongue IK. The fix uses the verified original-mode
+neutral for both fitted correspondence and sampled deltas. It includes that
+small mode shift in the deltas instead of loosening the 0.0002 cm check.
+The accepted `cw-irisout-basis-v2` has zero fitted correspondence error,
+20 preserved controls and 39 new shapes. Its training and intermediate
+errors are 0.003641258 and 0.009148127 cm.
+
+`cw-irisout-curves-v1` has 39 active curves, 5,685 keys and 236,541 bytes.
+Actual float-precision playback passes every evaluated pose, with maximum
+sample/intermediate errors of 0.003641258/0.008819266 cm under the unchanged
+0.015 cm limit. Native playback and restoration pass 15,359 checks at 382
+times. The existing jaw and facial compatibility checks pass 220 and 86.
+This is prepared data, not a cooked or installed performance.
+
+Fully reused source batches now retain a hashed original-mode neutral.
+The all-reuse regression reuses 1,419 poses with zero Blender batches and
+produces array-identical basis data and byte-identical fitted output.
+`cw-irisout-reuse-regression/verification.json` records that comparison.
+Removed only the duplicate regression basis and payload, 17,759,394 bytes,
+with receipt `cw-irisout-duplicate-cleanup.json`. Accepted output, source
+samples and failure reports remain.
+
+## Come Closer: reviewed source controls
+
+Come Closer needs independent tongue-tip rotation and extension, plus signed
+mouth actions. `cw_performance_controls.py` adds three temporary controls to
+the audited source tongue drivers and permits the measured signed/overshoot
+range in memory. The default sampler does not enable them. Existing driver
+targets, type, identity keys and expression are checked before changes;
+driver state, property ranges, shape ranges and neutral geometry are restored
+after sampling. The original blend is never saved.
+
+The driver type matters: the tip rotation uses `SUM`, while tongue scale uses
+a scripted expression. Blender documents these separately in its
+[Driver API](https://docs.blender.org/api/5.3/bpy.types.Driver.html).
+The original variables target armature data, not the similarly named rig
+object. An initial strict-target check rejected the wrong ID assumption;
+`cw-comecloser-controls-v5` is the successful implementation.
+
+The first reviewed wink was too open. The updated mapping retains native
+squint creases and adds the measured missing upper-lid closure. Calibration
+is in `cw-comecloser-controls-v3/eyelid-calibration.json`. Front views at
+16.7 and 18.2 seconds now show the intended squint/tongue action and left
+wink. Full temporal comparison remains separate.
+
+All 54 implementation snapshots match the reviewed prototype exactly, and
+its original-mode neutral matches the untouched source. The default sampler
+also matches four earlier snapshots; the signed Iris sampler matches all
+37 earlier snapshots. Evidence is in `cw-comecloser-controls-v5/regression.json`,
+`cw-sampler-default-regression-v2` and `cw-sampler-signed-regression-v4`.
+The full Come Closer mapping preserves all fifteen source channels, including
+negative values and small overshoots; it does not clamp them to zero or one.
+
+`cw-comecloser-source-v1` retains the full 19.333334-second track and all
+original source key times. Its 1,316 poses and 1,315 independently evaluated
+intermediates pass in `cw-comecloser-basis-v1`: 20 preserved controls plus
+38 new shapes, with maximum training/intermediate errors of
+0.002672234/0.006280341 cm.
+
+The accepted `cw-comecloser-curves-v1` has 38 active curves, 3,072 keys and
+130,960 bytes. Final float-precision source comparisons peak at
+0.002668794/0.006224979 cm, below the unchanged 0.015 cm limit. Native parsing,
+sampling and restoration pass 14,860 checks at 379 times. Existing jaw and
+compatibility fixtures pass 220 and 86. Eighteen CW tests and ten curve
+tests pass after these changes.
+
+All six CW facial mappings are prepared: Gesture 200, Spin, DumbDumb,
+Cinderella, Iris Out and Come Closer. Only Gesture 200 is currently packaged.
+The latest other five mappings use separate shape bases. Do not concatenate
+them beyond the runtime limits. The final combined representation must also
+preserve the eight expression presets and Neutral, then pass source, fitted,
+cooked and native checks. Full temporal review, in-game compatibility and
+release are unfinished. Nothing new was installed.
+
+The joint sizing probe samples 1,177 representative prepared poses from the
+five new performances. Both direct and retained-control fits exceed 108 new
+shapes at a 0.001 cm internal compression target. The third probe, projecting
+onto the retained controls first, uses 105 new shapes at 0.001977013 cm.
+That would expose 125 controls including the twenty retained shapes.
+Evidence: `probe-cw-all-performances-v3.{py,json,npz,log}`; failed v1/v2 logs
+remain. This only measures a possible representation against previously fitted
+poses. It has not passed all original source poses, intermediate poses, final
+curve/key limits, cooking or live playback. The final 0.015 cm source limit
+is unchanged. Do not package the probe as accepted geometry.

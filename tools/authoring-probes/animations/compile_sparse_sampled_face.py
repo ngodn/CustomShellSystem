@@ -170,17 +170,23 @@ def main():
                                        refine_geometry=args.refine_geometry)
     check_runtime_limits(curves)
 
-    def points(folder, label):
-        path = (folder/'samples'/(label+'.npz')).resolve(strict=True)
+    def points_at(path):
+        path = path.resolve(strict=True)
         if str(path) not in report['protected']:
             raise ValueError('Pose was not checked by the accepted source fit')
         with np.load(protect(path)) as data:
             return np.concatenate([data[name] for name in layout['parts']])
 
-    neutral = points(args.source, 'neutral')
+    def points(folder, label):
+        return points_at(folder/'samples'/(label+'.npz'))
+
+    neutral = (points_at(Path(report['neutral_reference'])) if report.get('neutral_reference')
+               else points(args.source, 'neutral'))
+    holdout_neutral = (points_at(Path(report['holdout_neutral_reference'])) if report.get('holdout_neutral_reference')
+                       else points(args.holdouts, 'neutral'))
     if (active.dtype.kind not in 'iu' or len(set(active.tolist())) != len(active) or
             active.min() < 0 or active.max() >= len(neutral) or len(active) != shapes.shape[1] or
-            not np.array_equal(neutral, points(args.holdouts, 'neutral'))):
+            not np.array_equal(neutral, holdout_neutral)):
         raise ValueError('Source topology or neutral differs')
     outside = np.ones(len(neutral), dtype=bool)
     outside[active] = False
