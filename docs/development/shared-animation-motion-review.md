@@ -1,5 +1,66 @@
 # Shared animation motion review
 
+## Full-frame continuation, October 7
+
+All eighteen original moving clips now have complete videos at their captured
+native rates, including every endpoint: 5,830 frames, 161.85 seconds including
+the final-frame holds, and 21,657,044 encoded bytes. The batch uses
+`run_full_motion_renders.py`, two renderer workers, streamed MP4 output and
+independent ffprobe frame-count/rate/duration checks. Rendering completion is
+not a claim that every second has been visually accepted.
+
+Evidence: `original-full-render-v1` and the separate `spin-full-render-v2` retry
+under `work/cine-animation-port/`. The original batch correctly reports failure
+because Spin stopped at frame 73, at 0.001012 cm reconstruction error against a
+0.001 cm diagnostic bound. Its complete measurement and rerender use the same
+explicit 0.003 cm bound already used for the scene clip. Spin's measured maximum
+is 0.001018 cm with zero angular difference. The original failed job remains.
+No source key or cooked-motion comparison bound changed. The maximum across
+all completed renders is 0.001369 cm.
+
+The all-key temporal scan exposed a Spin neck rotation that the earlier sparse
+silhouette review missed. At frame 66 the source and cooked lower-neck world
+rotations change by 170.955 and 170.957 degrees. The head remains continuous,
+with a maximum 14.492-degree step. The source neck roll and compensating head
+rotation are preserved numerically, but a close render of frames 64 through 67
+shows a pinched collar before the roll. Source fidelity alone does not make
+this deformation acceptable on the target's two-neck-bone chain.
+
+An offline correction in `spin-neck-correction-v1` redistributes neck twist
+between the chest and head while retaining the existing joint directions. It
+changes only the three local rotations `neck_01`, `neck_02` and `head` across
+111 frames. All local translations/scales are unchanged. The head and the rest
+of the body preserve their world transforms to numerical precision, apart from
+the neck and its six-bone tie branch, which follows the corrected attachment.
+Maximum preserved position error is 1.51e-13 cm. Neck world-rotation peaks fall
+to 34.163 and 23.748 degrees. The four-frame close comparison removes the visible
+pinch. Its complete 111-frame, 30 FPS replay also passes reconstruction and
+encoded-clock checks (`full-render-verification.json`). This is a prototype,
+not yet cooked, packaged, tested on all outfits or installed. Fresh engine
+verification and full visual acceptance remain required.
+
+The source comparison also checks After Brute Battle's largest local calf
+rotation. The source contains a fast turn at the same frame, but retargeting
+changes the joint distribution. The target's largest calf world step is 45.981
+degrees, compared with 52.512 in the source. This does not establish contact or
+skin quality. Evidence: `shared-contact-v1/source-temporal-comparison.json`.
+
+`shared-contact-v1/contact.json` measures all 6,945 original cooked key poses on
+the current Black Pearl footwear section with mesh translation retargeting.
+Neutral floor penetrations remain, including Bass Down Low (-5.266 cm), Black
+Hole (-3.739 cm), Come Closer (-6.301 cm) and Spin (-4.344 cm). These measurements
+exclude final post-process simulation and component placement. Black Pearl's
+released ground offset is -3 cm; the other five Eve variants use zero. Compare
+the complete gameplay pose and source support intent before changing contact.
+Do not flatten scene jumps or apply one outfit's component offset to every rig.
+
+The source and target use different neck-chain lengths. Epic documents chain
+mapping and retarget-pose alignment for that case; the specific twist defect
+above is established by our captures and close renders, not asserted by the
+documentation. [UE 5.6 IK retargeting](https://dev.epicgames.com/documentation/en-us/unreal-engine/ik-rig-animation-retargeting-in-unreal-engine?application_version=5.6).
+
+## Earlier sampled review
+
 Checkpoint: 2026-10-06. Private offline evidence, not release acceptance.
 
 The L2 batch now has 1,075 skinned replay images across its 13 moving clips.
