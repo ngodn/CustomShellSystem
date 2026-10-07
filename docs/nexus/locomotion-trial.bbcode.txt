@@ -3,6 +3,10 @@
 One animation library for CSS and CINE. Includes 8 idles, 31 photo poses,
 7 dances, 11 other performances, 3 catwalks, and Walk, Jog and Sprint.
 
+In CSS, use [b]Locomotion > Idle Animation[/b]. Search for a clip and select it.
+All 60 body sequences are idle choices. They play while standing in the world;
+movement and combat return control to gameplay. CINE keeps its scene controls.
+
 The full library targets Eve's six outfits, Unholy Genessa and Commander White.
 Compatible default game human skeleton appearances get Eve Default Idle,
 Walk, Jog and Sprint only. Facial expressions and performances are available
@@ -32,5 +36,7 @@ No. Full coverage targets the three outfits named above. Default game human
 skeleton support is limited to the four movement choices, where compatible.
 
 [b]Is this the final release?[/b]
-Not yet. This is the installed trial packaged for testing. See CREDITS.txt
+Not yet. Runtime hashes and installed/staged status are in candidate.json.
+The new automatic facial-idle integration still needs in-game verification.
+See CREDITS.txt
 for source credits and links.

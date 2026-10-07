@@ -6,7 +6,14 @@ Private trial, gameplay acceptance pending.
 
 Use with the matching animation-library CSS/CINE trial. CSS beta.11 alone
 does not provide this new library. The asset ZIP contains no runtime DLLs.
-The exact tested runtime hashes are recorded in candidate.json.
+The required runtime hashes and their installed/staged status are recorded
+in candidate.json. Staged does not mean accepted in game.
+
+USE
+In CSS, open Locomotion > Idle Animation. Search by name and select a result.
+All 60 body sequences are idle choices. They play while standing in the world;
+movement and combat return control to gameplay. Walk, Jog and Sprint have
+their own settings. CINE retains its scene playback controls.
 
 INSTALL
 Close the game. Copy the CSS_LocomotionSharedAssets_P folder into:
@@ -24,6 +31,9 @@ Facial support is separate from body animation support. Eve has 21 expression
 choices, Commander White has 9 including Neutral, and each has 6 facial
 performances. Unholy Genessa's rigid native mask has no expression controls
 in this pack. Outfit, animation and facial restoration still need live checks.
+The facial-idle runtime candidate connects matching facial tracks to Idle
+Animation. It uses the selected expression as the baseline and restores it
+when playback ends. This integration still needs in-game verification.
 
 Existing saved animation IDs are retained. CSS prefers a compatible shared
 entry and can use an audited bundled equivalent when the shared entry is
