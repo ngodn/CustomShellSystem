@@ -5,6 +5,28 @@ It is built, verified offline and **installed for a private trial, not accepted 
 This page describes the current candidate. Earlier checkpoints remain in Git
 history and the linked investigation records.
 
+## Loading-crash investigation, October 7
+
+The user reported two loading crashes after installing the facial-idle core,
+with Unholy Genessa (Eve Skin) and Iris Out saved. Both Unreal reports classify
+the failure as `GPUCrash`, 38 seconds after startup, with
+`DXGI_ERROR_DEVICE_REMOVED`. Matching kernel events report NVIDIA Xid 13 and
+graphics MMU faults. The captured CSS status still shows the native Genessa
+mesh, no applied custom appearance, no active animation and recovery pending.
+This is not evidence of save corruption or proof of which component caused
+the GPU fault. No Linux core or OOM event was found in the checked interval.
+
+Only the core selector was rolled back to the previous menu-fix DLL,
+`css_core-facial-2a13eb9757f8e973.dll`, for a same-save comparison. Settings and
+all 14 located save files were hashed before and after; they are unchanged.
+The user has been asked to load the same save. Comparison result is pending.
+The facial-idle candidate and ZIP must not be promoted while this is unresolved.
+
+Evidence, both Unreal crash folders (including bundled save backups), logs and
+the exact rollback are retained in
+`work/cine-animation-port/idle-facial-load-crash-1/`.
+This rollback supersedes the installed-core statements below.
+
 October 7 scope update: the user accepts remaining floor penetration for this
 release and explicitly deferred further contact correction. Keep all 63 entries,
 including After Brute Battle. The experimental `Scene1` leg correction is not
@@ -13,19 +35,30 @@ The four already verified `Contact3` dance corrections stay in the candidate.
 Remaining floor-contact findings are follow-up work, not release blockers.
 
 The same installed container bytes are packaged for private testing in
-`work/cine-animation-port/locomotion-distribution-trial-v1/`.
+`work/cine-animation-port/locomotion-distribution-trial-v2/`.
 The ZIP, README, credits, BBCode, candidate manifest and checksums are together.
-The ZIP is 215,485,107 bytes, SHA-256
-`0f963357f0650ecab85c9d8e2bb9266b8d393b5b0b1138023298d9907c1f2344`.
+The ZIP is 215,485,142 bytes, SHA-256
+`06d4977597e333878d88a119a44ed814a9c870b98ecf607f81e25be600f5a571`.
 Every archived file was read back and compared with its source hash. All 63
-entries remain included. Notes are committed at `c9303e8`; the runtime and
+entries remain included. Notes are committed at `6c55fdc`; the runtime and
 asset versions have not been promoted to a public release.
 
-Read-only startup inspection after the user's launch confirms that the current
-`a943a5be35cb1035` core activated and the shared package loaded. The fresh status
-has zero catalog rejections and no animation, maintenance or overlay error.
-No appearance or performance was active in that sample. This verifies startup,
-not animation playback, stopping, face restoration or performance acceptance.
+The previous menu-fix core, `2a13eb9757f8e973`, loaded Iris Out through the saved
+Idle Animation choice without reporting an animation error. That observation
+does not verify visual quality or facial synchronization.
+
+The current installed core is `0afef88b91d0d206`, from commit `0b2af48`.
+It adds automatic facial-track playback for compatible idle choices, with a
+shared body/face clock and gameplay interruption handling. The installed
+selector and DLL were read back and verified. CINE, shared assets and saved
+settings are unchanged. Receipt:
+`work/cine-animation-port/live-idle-facial-1/deployment.json`.
+Nine host suites pass, including 86 session/resolver checks. Its in-game
+facial synchronization, restoration and runtime cost remain unverified.
+
+The ZIP manifest records this same core hash with its staged status at the time
+of packaging. Subsequent installation does not establish live acceptance.
+See [Idle Animation integration](shared-animation-idle-menu.md).
 
 ## Current counts
 
@@ -225,7 +258,8 @@ The current 63-animation trial is installed, with receipt
 `live-combined-contact-1/deployment.json`. The game was confirmed closed before
 the backed-up transaction. Independent post-install hashing verifies the chosen
 core and all three shared container files; the rollback directory exists.
-The installed core is `css_core-facial-a943a5be35cb1035.dll`. CINE was preserved.
+The initial combined-pack installation used `css_core-facial-a943a5be35cb1035.dll`.
+It has since been superseded by the facial-idle core listed above. CINE was preserved.
 The earlier 57-animation trial remains recorded in `live-face-motion-2` and
 its assets are backed up. No game launch, input or gameplay acceptance is implied.
 The user has been asked to try CSS and CINE playback and cancellation.
@@ -259,7 +293,8 @@ Adding `--check-only` validates the candidate without installing it. It does
 not claim that the running game or installed selectors were checked. The actual
 installation checks those before writes and refuses an unexpected prior trial.
 This transaction has completed. Do not rerun it against the old previous
-receipt; any subsequent update must start from `live-combined-contact-1`.
+receipt. Subsequent core-only installs are recorded in `live-idle-menu-1` and
+`live-idle-facial-1`; the latter is the current deployment baseline.
 
 Remaining acceptance:
 

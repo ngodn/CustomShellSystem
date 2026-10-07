@@ -54,7 +54,10 @@ unchanged CINE one-shot behavior, interruption and expression-baseline sampling,
 frame-step equivalence at 30/60/144 FPS, token ownership and failure retry gates.
 Nine related test suites pass and the Windows Release core builds. Live facial
 sync, interruptions, physics continuity and performance remain unverified.
-The candidate is separate from the currently installed menu-fix build.
+This candidate is now installed as `css_core-facial-0afef88b91d0d206.dll`.
+The selector, DLL, unchanged assets and settings passed installation readback.
+Receipt: `work/cine-animation-port/live-idle-facial-1/deployment.json`.
+Live acceptance is still pending.
 
 The user rejected the added ESAP author credit in public-facing notes. It has
 been removed. Internal source evidence remains in the existing research files.
