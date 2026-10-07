@@ -1,0 +1,36 @@
+[b]CSS Locomotion Shared Assets, private trial[/b]
+
+One animation library for CSS and CINE. Includes 8 idles, 31 photo poses,
+7 dances, 11 other performances, 3 catwalks, and Walk, Jog and Sprint.
+
+The full library targets Eve's six outfits, Unholy Genessa and Commander White.
+Compatible default game human skeleton appearances get Eve Default Idle,
+Walk, Jog and Sprint only. Facial expressions and performances are available
+for Eve and Commander White; Unholy Genessa's rigid native mask is unsupported
+for expressions.
+
+[b]Installation[/b]
+Requires the matching CSS/CINE animation-library trial. Extract the
+CSS_LocomotionSharedAssets_P folder into MortalShell2/Content/Paks/~mods.
+Keep your existing outfit packages. CSS and CINE runtime updates are separate.
+
+[b]Known limitations[/b]
+Some animations intersect the floor. They remain available, with contact
+improvements deferred. Gameplay, restoration and performance checks are
+still pending for this trial.
+
+[b]FAQ[/b]
+[b]Do I need to replace my outfits?[/b]
+No. The animations come in a separate shared pack.
+
+[b]Will old saved animation choices disappear?[/b]
+Existing IDs are retained. Compatible bundled equivalents remain fallbacks
+when the shared version is unavailable. Shared-only animations require this pack.
+
+[b]Does this support every character?[/b]
+No. Full coverage targets the three outfits named above. Default game human
+skeleton support is limited to the four movement choices, where compatible.
+
+[b]Is this the final release?[/b]
+Not yet. This is the installed trial packaged for testing. See CREDITS.txt
+for source credits and links.
