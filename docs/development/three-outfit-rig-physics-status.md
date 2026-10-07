@@ -20,7 +20,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | --- | --- |
 | Nine-variant provenance | Installed hashes and 16 editable mesh identities pinned; all 790 migration paths have source candidates or alias recipes. Final Blender-to-cook recipe comparisons remain |
 | Mesh/weights/contacts | Fresh checks of all 16 editor-built meshes pass weight sums, section/bone/morph indices and finite-data checks. Deformation/contact checks and cooked comparison remain |
-| Unholy facial support | Both W3 candidates cook with 137 morphs; geometry and morph indices match independent readback within stored compression precision. All six cloth assets per variant match source data. Native SM6 base-pass UV3 checks pass. Remaining shader/material review, oral dependency packaging, CSS/CINE binding and game acceptance pending |
+| Unholy facial support | Both W3 candidates cook with 137 morphs; geometry and morph indices match independent readback within stored compression precision. All six cloth assets per variant match source data. Native SM6 base-pass UV3 checks pass. Oral assets and mesh bindings resolve without Eve mounted. Remaining shader/material review, CSS/CINE binding and game acceptance pending |
 | Shared organization | CSS parser accepts new and legacy roots with 23 host suites passing. All 790 unique installed packages have collision-free author-owned destinations; 172 catalog path references classified. First 32 assets renamed, reloaded without redirectors, cooked and decoded in isolation. Remaining migration and runtime compatibility pending; not installed |
 | Locomotion | 63-entry installed catalog captured; four native declarations, 59 missing; conversion and motion-quality review pending |
 | Gameplay regressions | Current interruption baseline accepted by user; candidate regression tests pending |
@@ -137,6 +137,14 @@ records unchanged neutral positions, primary UVs, triangle/morph indices and
 compression errors within the stored precision for all 137 controls per mesh.
 The backing and mouth expression checks also pass. Extra ornament/hood entries
 are tangent-only changes, not positional displacement; visual shading review
-remains required. The trial lacks its packaged oral material and is not ready
-to install. That material and its three textures are being moved into Genessa's
-author-owned `Faces/Mouth` folder to avoid an Eve installation dependency.
+remains required.
+
+The subsequent `work/face-cook3` trial includes the outfit-owned oral material
+and its three textures in Genessa's `Faces/Mouth` directory. With Eve absent
+from the decode mount, both mesh material bindings resolve and all four oral
+assets match original decoded fields after namespace changes. Material and
+texture payloads remain byte-identical, and all five direct game dependencies
+decode. A stale binding in cook2 was caught and corrected before this trial;
+the final verifier rejects that previous candidate. Remaining original W3
+dependencies still use legacy paths, pending the wider migration. The candidate
+has not been installed or accepted in the game.
