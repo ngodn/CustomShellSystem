@@ -35,6 +35,11 @@ def snapshot(asset):
         if raw.startswith('ERROR:'):
             raise ValueError(raw)
         result['source'] = json.loads(raw)
+    elif isinstance(asset, (unreal.AnimBlueprint, unreal.AnimBoneCompressionSettings)):
+        raw = unreal.CSSRigAuditLibrary.snapshot_asset_properties(asset)
+        if raw.startswith('ERROR:'):
+            raise ValueError(raw)
+        result['properties'] = json.loads(raw)
     else:
         raise ValueError('This trial only handles skeletons, sequences and blend spaces')
     return result
@@ -45,6 +50,8 @@ def references(asset):
     properties = []
     if isinstance(asset, (unreal.AnimSequence, unreal.BlendSpace)):
         properties.append('skeleton')
+    if isinstance(asset, unreal.AnimBlueprint):
+        properties.append('target_skeleton')
     if isinstance(asset, unreal.AnimSequence):
         properties += ['retarget_source_asset', 'bone_compression_settings', 'curve_compression_settings']
     for name in properties:
@@ -69,6 +76,18 @@ def mapped_references(value, mapping):
                 raise ValueError('Unexpected reference object: ' + value)
             target = mapping[package]
             return target + '.' + target.rsplit('/', 1)[1]
+    return value
+
+
+def normalized_properties(value, mapping):
+    if isinstance(value, dict):
+        return {normalized_properties(key, mapping): normalized_properties(item, mapping)
+                for key, item in value.items()}
+    if isinstance(value, list):
+        return [normalized_properties(item, mapping) for item in value]
+    if isinstance(value, str):
+        for new, old in sorted(mapping.items(), key=lambda pair: len(pair[0]), reverse=True):
+            value = value.replace(new, old)
     return value
 
 
@@ -173,14 +192,17 @@ def main():
     for entry in plan['assets']:
         old, new = entry['old_package'], entry['new_package']
         asset = loaded[old]
-        if asset.get_path_name().split('.')[0] != new or snapshot(asset) != before[old]:
+        current = snapshot(asset)
+        compared = normalized_properties(current, {new: old for old, new in mapping.items()}) if 'properties' in current else current
+        if asset.get_path_name().split('.')[0] != new or compared != before[old]:
+            (stage / 'snapshot-mismatch.json').write_text(json.dumps(dict(package=old, before=before[old], after=compared), indent=2)+'\n')
             raise ValueError('Unexpected source-data change: ' + old)
         if not unreal.EditorAssetLibrary.save_loaded_asset(asset, False):
             raise RuntimeError('Could not save ' + new)
         exact = mapped_references(before_refs[old], mapping)
         verify_references(asset, expected, exact)
         path = content / (new.removeprefix('/Game/') + '.uasset')
-        changed.append(dict(package=new, sha256=digest(path), snapshot=before[old], references=exact))
+        changed.append(dict(package=new, sha256=digest(path), snapshot=snapshot(asset), references=exact))
         print('CSS_NAMESPACE_SAVED', len(changed), len(plan['assets']), new, flush=True)
     if any(digest(Path(e['source_file'])) != e['source_sha256'] for e in plan['assets']):
         raise ValueError('An original source changed')

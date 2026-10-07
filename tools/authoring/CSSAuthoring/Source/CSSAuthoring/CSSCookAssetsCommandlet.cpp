@@ -87,6 +87,16 @@ static bool CSSExternalRigAssetMatches(const FString& Package, const FString& Ex
     return Hash.ToString().Equals(ExpectedHash, ESearchCase::IgnoreCase);
 }
 
+static bool CSSSharedLocomotionPackage(const FString& Package)
+{
+    if (Package.StartsWith(TEXT("/Game/CSS/Locomotion/"))) return true;
+    TArray<FString> Parts;
+    Package.ParseIntoArray(Parts, TEXT("/"), true);
+    // CSSPortablePackage has already validated the author and remaining names.
+    return Parts.Num() >= 6 && Parts[0] == TEXT("Game") && Parts[1] == TEXT("CSS") &&
+        Parts[3] == TEXT("Shared") && Parts[4] == TEXT("Locomotion");
+}
+
 UCSSCookAssetsCommandlet::UCSSCookAssetsCommandlet()
 {
     IsClient = false;
@@ -222,7 +232,7 @@ int32 UCSSCookAssetsCommandlet::Main(const FString& Params)
             Asset->IsA<USkeleton>() || Asset->IsA<UPhysicsAsset>());
         if (UAnimBoneCompressionSettings* Settings = Cast<UAnimBoneCompressionSettings>(Asset))
         {
-            Allowed = PackageName.StartsWith(TEXT("/Game/CSS/Locomotion/")) &&
+            Allowed = CSSSharedLocomotionPackage(PackageName) &&
                 Settings->Codecs.Num() == 1 && Settings->Codecs[0] &&
                 Settings->Codecs[0]->GetOuter() == Settings &&
                 Settings->Codecs[0]->GetClass()->GetPathName() ==

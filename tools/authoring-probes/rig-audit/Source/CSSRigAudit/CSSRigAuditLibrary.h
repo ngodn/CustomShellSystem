@@ -9,6 +9,9 @@ class UCSSRigAuditLibrary : public UBlueprintFunctionLibrary
     GENERATED_BODY()
 public:
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static FString SnapshotAssetProperties(class UObject* Asset);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString SnapshotAnimation(class UAnimSequence* Sequence);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")

@@ -102,7 +102,7 @@ def main():
     for file in candidate.iterdir():
         (mount/file.name).symlink_to(file.resolve())
     converter.run(converter.retoc, 'to-legacy', mount, args.output/'readback',
-                  '--version', 'UE5_6', '--no-parallel', '--no-shaders', '-f', '/CSS/eins0fx/Shared/')
+                  '--version', 'UE5_6', '--no-parallel', '--no-shaders', '-f', '/CSS/eins0fx/')
     for relative, digest in payloads.items():
         path = args.output/'readback'/relative
         if path.suffix == '.uasset':

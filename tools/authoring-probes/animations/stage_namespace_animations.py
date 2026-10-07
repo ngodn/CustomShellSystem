@@ -21,6 +21,7 @@ def main():
     parser.add_argument('--template', type=Path, required=True)
     parser.add_argument('--dependencies', type=Path, required=True)
     parser.add_argument('--native-reference-receipt', type=Path, required=True)
+    parser.add_argument('--include-playback', action='store_true')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     stage = args.output.resolve()
@@ -34,6 +35,8 @@ def main():
         selected = row['package'] == '/Game/CSS/Shared/SKEL_Base' or (
             '/Shared/Locomotion/' in row['destination'] and leaf.startswith(('AN_', 'BS_')) and
             not row['cooked_alias_recipe'])
+        selected = selected or (args.include_playback and
+            row['package'].startswith('/Game/CSS/Locomotion/') and leaf.startswith(('ABP_', 'ACS_')))
         if not selected:
             continue
         entry = row['selected']['identity']
@@ -45,7 +48,6 @@ def main():
                            source_file=str(path), source_sha256=entry['sha256']))
     if not assets or len({row['new_package'].casefold() for row in assets}) != len(assets):
         raise ValueError('No unique migration candidates')
-    stage.mkdir(parents=True)
     # Keep unrelated historical assets out of the registry. Rename loads
     # referring assets, so cloning the entire authoring tree is expensive.
     dependencies = json.loads(args.dependencies.read_text())
@@ -59,6 +61,9 @@ def main():
         raise ValueError('Native reference does not match its verified binding receipt')
     if native_package not in packages:
         raise ValueError('Native animation dependency is missing')
+    pinned = {row['package']: row['selected']['identity'] for row in inventory['assets']
+              if row['selected'] and not row['cooked_alias_recipe']}
+    stage.mkdir(parents=True)
     copied_inputs = []
     for package in sorted(packages):
         if not package.startswith('/Game/') or '..' in package.split('/') or '.' in package:
@@ -67,6 +72,10 @@ def main():
         original, copied = source/relative, stage/'Content'/relative
         if package == native_package:
             original = native_reference
+        elif package in pinned:
+            original = Path(pinned[package]['path']).resolve(strict=True)
+            if sha(original) != pinned[package]['sha256']:
+                raise ValueError('Pinned dependency changed: '+package)
         copied.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(['cp', '-a', '--reflink=always', str(original), str(copied)], check=True)
         if copied.is_symlink() or copied.stat().st_ino == original.stat().st_ino or sha(copied) != sha(original):
@@ -89,7 +98,10 @@ def main():
                 native_reference=dict(package=native_package, source=str(native_reference),
                     sha256=receipt['native_reference_sha256'], receipt=str(receipt_path),
                     receipt_sha256=sha(receipt_path)),
-                scope='Shared sequences, blend spaces and common skeleton. Playback blueprints, codec settings and historical aliases remain separate migration steps.')
+                scope='Shared sequences, blend spaces and common skeleton. '+
+                    ('Includes outfit-owned playback blueprints and shared codec settings. ' if args.include_playback else
+                     'Playback blueprints and codec settings remain separate migration steps. ')+
+                    'Historical aliases remain a separate migration step.')
     (stage/'input.json').write_text(json.dumps(plan, indent=2)+'\n')
     (stage/'recipe.py').write_bytes(Path(__file__).read_bytes())
     print(json.dumps(dict(stage=str(stage), assets=len(assets), refresh=len(refresh))))

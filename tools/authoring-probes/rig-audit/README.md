@@ -9,6 +9,20 @@ frame/key counts, sample rate, model GUID, curve/attribute counts and retarget
 reference transforms. `SnapshotSkeleton` records raw bones, parent indices,
 retarget modes, reference transforms, virtual definitions and sockets.
 
+`SnapshotAssetProperties` inspects animation blueprints and bone compression
+settings without saving them. It captures non-transient reflected fields on
+package-owned objects, including codec subobjects and class defaults, plus
+graph pin types, defaults and connections. Path normalization is explicit in
+the migration comparison. Cooked readback remains necessary because reflection
+does not capture every engine serializer's private data.
+
+The implementation uses the local 5.6.1 `UObjectHash.h` and `UnrealType.h`
+declarations. Epic's [package object enumeration](https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/UObject/GetObjectsWithPackage?application_version=5.5)
+and [property API](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/CoreUObject/FProperty)
+provide reference context; their current web versions are not the source of
+the pinned 5.6.1 signatures. `ExportTextItem_Direct` is intentional: the
+delta-export wrapper returns false for a property matching its default.
+
 `SnapshotMesh` waits for the requested mesh's compilation, then inspects render
 weight buffers, section/bone ranges, finite positions, morph indices and deltas.
 It does not edit or save the mesh. `audit_meshes.py` adds bindings/materials and
@@ -64,6 +78,9 @@ sequences/blend spaces and only their explicit dependencies. Its required
 native-reference receipt supplies the real game skeleton in the private tree;
 the main authoring project's smaller placeholder must not be used for this cook.
 `refresh_packages` limits retarget-reference refresh to the named legacy clips.
+`--include-playback` adds the five outfit adapters and three shared codec
+settings. Pinned dependencies can come from their respective outfit authoring
+roots; missing main-project copies are not a reason to create placeholders.
 
 `package_namespace_trial.py` checks source/reload receipts and container payload
 roundtrip. Run AssetReadback with `--animation-digests` on both the baseline and

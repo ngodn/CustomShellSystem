@@ -21,7 +21,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Nine-variant provenance | Installed hashes and 16 editable mesh identities pinned; all 790 migration paths have source candidates or alias recipes. Final Blender-to-cook recipe comparisons remain |
 | Mesh/weights/contacts | Fresh checks of all 16 editor-built meshes pass weight sums, section/bone/morph indices and finite-data checks. Deformation/contact checks and cooked comparison remain |
 | Unholy facial support | Both W3 candidates cook with 137 morphs and unchanged cloth data. Native/Astral SM6 UV3 checks pass. Oral assets resolve without Eve mounted. Two adapters, 21 presets and six facial performances are integrated into a private shared catalog; 163 facial and 182 packaged-library checks pass. SM5/material review and game acceptance remain |
-| Shared organization | CSS parser accepts new and legacy roots with 23 host suites passing. All 790 unique installed packages have author-owned destinations; 172 catalog references classified. An isolated 116-package animation batch passes reload/cook/readback. Ninety-six match installed decoded fields after path normalization; twenty Eve clips have a checked reference-pose refresh. Remaining migration and runtime compatibility pending; not installed |
+| Shared organization | CSS parser accepts shared and outfit-owned adapter paths with 23 host suites passing. All 790 packages have author-owned destinations; 172 catalog references classified. An isolated 124-package batch passes reload/cook/readback, with 547 imports resolved. One hundred four match installed decoded fields after path normalization; twenty Eve clips have a checked reference-pose refresh. Remaining migration and runtime compatibility pending; not installed |
 | Locomotion | 63-entry installed catalog captured; four native declarations, 59 missing; conversion and motion-quality review pending |
 | Gameplay regressions | Current interruption baseline accepted by user; candidate regression tests pending |
 | Performance | Current package sizes recorded; matched gameplay captures pending |
@@ -106,6 +106,47 @@ See `cleanup-rejected-native-placeholder.json`. Current candidates, original
 assets and installed files remain intact.
 
 ## Editable source audit
+
+### Outfit-owned playback adapters
+
+The initial ownership map grouped five playback adapters with shared locomotion.
+Inspection of their creation recipe shows they retain outfit-specific body,
+hair, wing and foot rig nodes. The revised `namespace-3` map assigns the three
+Eve adapters to `EveSB/Animations/Adapters/`, the Genessa adapter to
+`UnholyGenessa/Animations/Adapters/`, and the Commander White adapter to
+`CommanderWhite/Animations/Adapters/`. Counts are now Eve 308, Genessa 131,
+Commander White 171 and Shared 180. All 790 source-provider choices and 63
+public animation IDs remain unchanged; unknown character adapters now require
+an explicit owner rather than silently entering Shared.
+
+CSS accepts those author/project adapter paths while retaining old paths and
+exact source revision, source class and skeleton checks. The C++23 host build
+and all 23 test suites pass, including resolution for two author namespaces and
+rejection of malformed paths, missing class suffixes and mismatched revisions.
+This runtime change is not installed.
+
+`migration-editor7` extends the private batch to 124 assets. All 116 earlier
+snapshots are unchanged. Five blueprints and three compression settings pass
+reflected-property and graph-pin comparisons, then fresh reload without old
+redirectors. All 421 input files retain their hashes. The six rig dependencies
+missing from the main authoring tree use their pinned outfit-owned originals.
+
+The first expanded cook (`migration-cook5`) rejected the new codec paths because
+the authoring commandlet accepted only the legacy locomotion root. The isolated
+`namespace-cooker1` build adds author-first shared paths while retaining exact
+ACL codec type and ownership checks. The corrected `migration-cook6` passes
+Windows cook, payload roundtrip and all 547 imported references across 124
+packages with the explicitly pinned baseline dependencies mounted. Independent
+readback matches 104 installed packages exactly after namespace normalization,
+including all five adapters and three codec settings. The other 20 remain the
+documented Eve reference-pose corrections. All 107 candidate animation streams
+match the prior checked candidate byte-for-byte, preserving the applicability
+of its full-key motion evidence. See `comparison.json`, `import-check.json` and
+`motion-evidence-reuse.json` in that cook directory. This is still a mixed-owner
+test container; final split packaging, full dependency migration and live
+acceptance remain. Original authoring binaries and installed files were not replaced.
+The rejected cook's 3,250,659 bytes of cache/partial output were removed with
+logs retained; see `cleanup-rejected-codec-root.json`.
 
 The [current mesh/source report](../research/2026-10-08-editable-mesh-audit.md) records all nine outfit meshes plus seven active facial replacements. The read-only editor audit checked 11,608,800 render vertices and 1,220 morph entries without basic weight/index/nonfinite failures. It preserves the distinction between mesh bones and Skeleton helpers. Eye, cloth, material and post-process identities are recorded per mesh; visual behavior still needs validation.
 
