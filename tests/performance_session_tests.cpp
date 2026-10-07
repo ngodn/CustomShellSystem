@@ -1,11 +1,14 @@
 #include "performance_session.hpp"
 #include "performance_request.hpp"
+#include "animation_trace.hpp"
 #include <cmath>
 #include <iostream>
 
 using namespace css;
 namespace {
 int checks=0;
+size_t trace_lines=0;
+void trace_sink(const char*) noexcept { ++trace_lines; }
 void expect(bool ok,const char* message) { ++checks;if(!ok) throw std::runtime_error(message); }
 template<class F> void rejects(F action) {
     bool rejected=false;
@@ -15,6 +18,12 @@ template<class F> void rejects(F action) {
 }
 int main() {
     try {
+        AnimationTrace trace;
+        trace.write("disabled");
+        expect(trace_lines==0 && !trace,"Startup tracing is enabled by default");
+        trace.enable(trace_sink);
+        for(int i=0;i<10000;++i) trace.write("repeated asset failure");
+        expect(trace_lines==97 && !trace,"Repeated failures can flood the startup trace");
         PerformanceSession session;
         rejects([&]{session.stop(0);});
         const auto first=session.begin("css.dance",AnimationPlayback::Once,10.);

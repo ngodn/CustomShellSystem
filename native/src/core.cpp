@@ -191,6 +191,8 @@ struct Core {
     }
     std::string walk_error;
     AutomaticIdlePlayback automatic_idle;
+    AnimationTrace animation_trace;
+    bool traced_idle_engaged=false;
     uint64_t walk_after=0;
     uint64_t walk_updates=0;
     double walk_ms=0,walk_total_ms=0,walk_max_ms=0;
@@ -241,7 +243,7 @@ struct Core {
                         movement[i]=resolve_animation(catalog.animation_options(selection.outfit,selection.variant,slots[i]),slots[i],
                             choice).asset;
                         const auto shared=appearance.resolve_shared_animation(catalog,animation_catalog_generation,
-                            selection.outfit,selection.variant,slots[i],choice);
+                            selection.outfit,selection.variant,slots[i],choice,&animation_trace);
                         if(shared.matched) movement[i]=shared.asset;
                     }
                     const auto& idles=catalog.animation_options(selection.outfit,selection.variant,AnimationSlot::Idle);
@@ -251,7 +253,7 @@ struct Core {
                     const auto choice=overridden?idle_override:state.animation_choices.get(selection.outfit,selection.variant,AnimationSlot::Idle);
                     custom_idle=resolve_animation(idles,AnimationSlot::Idle,choice);
                     const auto shared=appearance.resolve_shared_animation(catalog,animation_catalog_generation,
-                        selection.outfit,selection.variant,AnimationSlot::Idle,choice);
+                        selection.outfit,selection.variant,AnimationSlot::Idle,choice,&animation_trace);
                     if(shared.matched) { custom_idle.asset=shared.asset;custom_idle.hide_weapons=shared.hide_weapons;idle_carrier=shared.idle_blend_space; }
                 }
             }
@@ -261,11 +263,11 @@ struct Core {
                 constexpr AnimationSlot slots[]={AnimationSlot::Walk,AnimationSlot::Jog,AnimationSlot::Sprint};
                 for(size_t i=0;i<movement.size();++i) {
                     const auto shared=appearance.resolve_shared_animation(catalog,animation_catalog_generation,
-                        "","",slots[i],state.animation_choices.get("","",slots[i]));
+                        "","",slots[i],state.animation_choices.get("","",slots[i]),&animation_trace);
                     if(shared.matched) movement[i]=shared.asset;
                 }
                 const auto shared=appearance.resolve_shared_animation(catalog,animation_catalog_generation,
-                    "","",AnimationSlot::Idle,state.animation_choices.get("","",AnimationSlot::Idle));
+                    "","",AnimationSlot::Idle,state.animation_choices.get("","",AnimationSlot::Idle),&animation_trace);
                 if(shared.matched) {custom_idle.asset=shared.asset;custom_idle.hide_weapons=shared.hide_weapons;idle_carrier=shared.idle_blend_space;}
             }
             if(!selected_animations) appearance.clear_shared_animations();
@@ -276,6 +278,10 @@ struct Core {
             appearance.sync_walk(use_feminine_animation(state,selection_key,AnimationSlot::Idle),
                                  use_feminine_animation(state,selection_key,AnimationSlot::Walk),movement,
                                  custom_idle.asset,custom_idle.hide_weapons,idle_carrier);
+            if(animation_trace && traced_idle_engaged!=appearance.walk.custom_idle_engaged()) {
+                traced_idle_engaged=appearance.walk.custom_idle_engaged();
+                animation_trace.write(std::string("body idle ")+(traced_idle_engaged?"active: ":"released: ")+custom_idle.asset);
+            }
             start_idle_face();
             walk_error.clear();
         }
@@ -340,6 +346,11 @@ struct Core {
         inventory.assets(root);
         bool recovered=false;
         state=load_state(root / "state/state.json", &recovered);
+        std::error_code trace_error;
+        if(fs::is_regular_file(root/"runtime/trace-idle-startup.enabled",trace_error)) {
+            animation_trace.enable(host.log);
+            animation_trace.write("Startup capture enabled; no settings or save files are changed by tracing");
+        }
         // The one-time Harbinger-slot cleanup ran in load if the flag was unset; persist it so it
         // never runs again (and the cleaned selections are written back).
         if(!state.darkform_mirror_cleaned) { state.darkform_mirror_cleaned=true; dirty=true; }
@@ -407,9 +418,11 @@ struct Core {
         try {
             // Menu, movement and combat are transient gates, not failed bindings.
             if(!appearance.performance_unavailable(catalog,selection.outfit).empty()) return;
+            if(animation_trace) animation_trace.write("facial idle begin: "+selection.outfit+"/"+selection.variant+" clip="+id);
             appearance.walk.release();
             const auto result=appearance.start_performance(catalog,selection.outfit,id,1.,0.,face,PerformanceUse::Idle);
             automatic_idle.begin(performance_context(),id,result.at("token").get<uint64_t>());
+            if(animation_trace) animation_trace.write("facial idle active: "+id);
         } catch(const std::exception& error) {
             automatic_idle.fail(performance_context(),id);
             host.log(("Idle facial playback unavailable; keeping body idle: "+std::string(error.what())).c_str());

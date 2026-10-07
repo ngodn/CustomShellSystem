@@ -195,7 +195,8 @@ Json SharedAnimationResolver::status() const {
     return result;
 }
 SharedAnimationResult SharedAnimationResolver::resolve(UObject* pawn,const Catalog& catalog,uint64_t generation,
-    const std::string& outfit,const std::string& variant,AnimationSlot slot,const std::string& choice) {
+    const std::string& outfit,const std::string& variant,AnimationSlot slot,const std::string& choice,
+    AnimationTrace* trace) {
     const auto index=static_cast<size_t>(slot);
     if(index>=slots_.size()) return {};
     auto& cache=slots_[index];
@@ -234,7 +235,9 @@ SharedAnimationResult SharedAnimationResolver::resolve(UObject* pawn,const Catal
     };
     for(const auto& candidate:match.candidates) {
         try {
+            if(trace && *trace) trace->write("load begin: "+outfit+"/"+variant+" choice="+choice+" asset="+candidate.asset);
             auto* asset=load(candidate.asset);
+            if(trace && *trace) trace->write("load returned: "+candidate.asset);
             if(!still_current()) { cache.result={true,false,{},"Player changed while loading animation"};return cache.result; }
             AssetLoadRoots retained;
             retained.keep(asset);
@@ -263,9 +266,11 @@ SharedAnimationResult SharedAnimationResolver::resolve(UObject* pawn,const Catal
             cache.roots.take(retained);cache.asset=asset;
             cache.result={true,match.entry->hide_weapons,candidate.asset,{},idle_carrier};
             cache.checked=true;++revision_;
+            if(trace && *trace) trace->write("resolved: "+choice+" skeleton="+narrow(skeleton->GetPathName()));
             return cache.result;
         } catch(const std::exception& error) {
             cache.result.reason=error.what();
+            if(trace && *trace) trace->write("resolve failed: "+choice+" reason="+cache.result.reason);
             if(!still_current()) return cache.result;
         }
     }

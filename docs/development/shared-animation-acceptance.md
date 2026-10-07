@@ -19,8 +19,46 @@ the GPU fault. No Linux core or OOM event was found in the checked interval.
 Only the core selector was rolled back to the previous menu-fix DLL,
 `css_core-facial-2a13eb9757f8e973.dll`, for a same-save comparison. Settings and
 all 14 located save files were hashed before and after; they are unchanged.
-The user has been asked to load the same save. Comparison result is pending.
+The previous core also crashed while loading the same save. Its crash report
+is `UECC-Windows-7005D94F4E0DB33FE99D14B38F3F4AE7_0000`. This comparison does
+not clear earlier CSS changes or establish save corruption.
 The facial-idle candidate and ZIP must not be promoted while this is unresolved.
+
+CSS was briefly disabled while the game was closed to prepare an isolation
+test. The user rejected that test, so its enable marker was restored before
+another launch. CSS is enabled. No CSS-disabled launch was performed.
+
+The next recovery attempt kept the previous core and outfit, changing only
+Unholy Genessa Eve Skin's saved idle from Iris Out to Eve Default Idle. The
+original CSS state was copied before this change; game saves were not edited.
+This launch passed the earlier loading failure: CSS applied Unholy Genessa,
+then recorded the user's changes to Eve Prototype and Black Pearl. The game
+remained running. This establishes a successful recovery attempt, not a
+confirmed root cause or a permanent Iris Out startup fix.
+
+The top-level GVAS records in all three crash copies parse and match. The
+save reader reports custom trailing data, so this is not complete save
+validation. The game changed WorldState_2 during the launches; the earlier
+unchanged-file statement concerns only our filesystem operations. All captured
+copies remain preserved. The current core and shared containers match their
+recorded hashes. Recovery receipts and logs are beside the crash evidence.
+
+The user confirmed recovery, but a fourth crash occurred in that same session
+after 633 seconds, 599 seconds in the level. CSS was still on the old menu
+core. The final status had Unholy Genessa Eve Skin applied, After Brute Battle
+idle engaged and the menu closed. Its report is
+`UECC-Windows-8B59676A4058FEC030E19EB7DA8A1D33_0000`. All four reports have the
+same active breadcrumb hash and Nanite scene-culling branch. This is evidence
+against treating Iris Out startup as the sole trigger; it does not identify
+the component responsible for the render failure. No save replacement, graphics
+setting change or further DLL installation followed this crash.
+
+An opt-in trace is being prepared around actual shared-animation loads, body
+idle activation and automatic facial start. The marker is
+`runtime/trace-idle-startup.enabled`, checked once when the core starts. Output
+uses `[DEBUG-idle-load]` and stops after 96 events plus one limit notice. Cache
+hits do not emit load events. This instrumentation is not a crash fix and must
+not be presented as one. The previously installed menu core remains selected.
 
 Evidence, both Unreal crash folders (including bundled save backups), logs and
 the exact rollback are retained in

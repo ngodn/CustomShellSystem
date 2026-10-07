@@ -28,6 +28,7 @@
 #include <Unreal/FWeakObjectPtr.hpp>
 #include "astral_lifecycle.hpp"
 #include "performance_session.hpp"
+#include "animation_trace.hpp"
 
 namespace css {
 fs::path engine_content_directory();
@@ -114,7 +115,8 @@ class SharedAnimationResolver {
     uint64_t revision_=0;
 public:
     SharedAnimationResult resolve(RC::Unreal::UObject* pawn,const Catalog&,uint64_t generation,
-        const std::string& outfit,const std::string& variant,AnimationSlot,const std::string& choice);
+        const std::string& outfit,const std::string& variant,AnimationSlot,const std::string& choice,
+        AnimationTrace* trace=nullptr);
     void clear();
     Json status() const;
     uint64_t revision() const { return revision_; }
@@ -909,8 +911,9 @@ public:
     WalkOverride walk;
     PerformancePlayer performance;
     SharedAnimationResult resolve_shared_animation(const Catalog& catalog,uint64_t generation,
-        const std::string& outfit,const std::string& variant,AnimationSlot slot,const std::string& choice) {
-        return shared_animations_.resolve(observed_pawn_.Get(),catalog,generation,outfit,variant,slot,choice);
+        const std::string& outfit,const std::string& variant,AnimationSlot slot,const std::string& choice,
+        AnimationTrace* trace=nullptr) {
+        return shared_animations_.resolve(observed_pawn_.Get(),catalog,generation,outfit,variant,slot,choice,trace);
     }
     void clear_shared_animations() { shared_animations_.clear(); }
     Json shared_animation_status() const { return shared_animations_.status(); }
