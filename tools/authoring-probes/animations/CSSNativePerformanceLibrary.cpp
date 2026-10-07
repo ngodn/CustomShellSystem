@@ -123,6 +123,30 @@ FString UCSSNativePerformanceLibrary::EvaluateMontageOwnership(USkeletalMesh* Re
     Instance->Montage_Stop(.18f, Owned);
     Tick();
     Check(TEXT("blend_out_cleaned"), !Instance->IsAnyMontagePlaying());
+    // The post-process setter retains the main instance pointer but destroys its
+    // montages. This was the facial-idle interruption regression.
+    Check(TEXT("handoff_gameplay_started"), Instance->Montage_Play(Other, 0.f,
+        EMontagePlayReturnType::MontageLength, 1.f, false) > 0.f);
+    Tick();
+    Component->SetOverridePostProcessAnimBP(nullptr, true);
+    Check(TEXT("old_restore_kept_pointer_but_lost_montage"),
+        Component->GetAnimInstance() == Instance && !Instance->Montage_IsActive(Other));
+    Instance->Montage_Play(Other, 0.f, EMontagePlayReturnType::MontageLength, 1.f, false);
+    Tick();
+    bool Restored = false;
+    auto TryRestore = [&]() {
+        if (Instance->IsAnyMontagePlaying()) return false;
+        Component->SetOverridePostProcessAnimBP(nullptr, true);
+        Restored = true;
+        return true;
+    };
+    Check(TEXT("deferred_restore_preserves_gameplay"), !TryRestore() &&
+        Instance->Montage_IsActive(Other) && FMath::IsNearlyEqual(Instance->Montage_GetPosition(Other), 1.f));
+    Instance->Montage_Stop(.5f, Other);
+    Check(TEXT("deferred_restore_preserves_blend_out"), !TryRestore() && !Restored);
+    Tick();Tick();Tick();
+    Check(TEXT("restore_after_gameplay_finished"), TryRestore() && Restored &&
+        Component->GetAnimInstance() == Instance && !Instance->IsAnyMontagePlaying());
     auto Signatures = MakeShared<FJsonObject>();
     for (const auto& Pair : {TPair<UClass*,FName>(UAnimMontage::StaticClass(), TEXT("CreateSlotAnimationAsDynamicMontage_WithBlendSettings")),
         {UAnimInstance::StaticClass(), TEXT("Montage_Play")}, {UAnimInstance::StaticClass(), TEXT("Montage_Stop")},

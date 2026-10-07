@@ -34,6 +34,6 @@ report['return_enum_byte'] = report['signatures']['Montage_Play']['ReturnValueTy
 report['protected_unchanged'] = all(sha(Path(p)) == checksum for p, checksum in protected.items())
 report['protected'] = protected
 (WORK / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
-assert report['passed'] and len(report['cases']) == 13 and all(report['cases'].values()), report
+assert report['passed'] and len(report['cases']) == 18 and all(report['cases'].values()), report
 assert report['signature_names_match'] and report['return_enum_byte'] and report['protected_unchanged'], report
-print('PASS: 13 native montage lifecycle cases and reflected parameter names.')
+print('PASS: 18 native montage lifecycle and post-process handoff cases and reflected parameter names.')

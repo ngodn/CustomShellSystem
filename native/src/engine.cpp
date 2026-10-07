@@ -586,6 +586,19 @@ static UObject* menu_character(UObject* player) {
     return character.get<UObject*>();
 }
 #include "attachment_follower.inl"
+static bool gameplay_input_blocked(UObject* pawn) {
+    Call get(pawn,L"GetSpartaInputComponent",1);get.run();
+    auto* input=get.get<UObject*>();
+    if(!input) return true;
+    auto* blocks=field(input,L"ActiveBlocks",sizeof(FScriptArray));
+    if(!blocks->IsA<FArrayProperty>() || blocks->GetArrayDim()!=1 ||
+       blocks->GetOffset_Internal()<0 ||
+       blocks->GetOffset_Internal()>input->GetClassPrivate()->GetPropertiesSize()-blocks->GetElementSize())
+        throw std::runtime_error("Gameplay input block layout is unavailable");
+    FScriptArrayHelper values(static_cast<FArrayProperty*>(blocks),
+        reinterpret_cast<std::byte*>(input)+blocks->GetOffset_Internal());
+    return values.Num()!=0;
+}
 #include "walk_override.inl"
 #include "misc_visibility.inl"
 UObject* Appearance::player(void* engine) {

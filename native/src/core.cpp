@@ -220,6 +220,7 @@ struct Core {
         ++misc_frames; misc_total_ms+=misc_ms; misc_max_ms=std::max(misc_max_ms,misc_ms);
     }
     void sync_walk_safely(uint64_t now) {
+        if(genessa_form_request) {appearance.walk.release();return;}
         if(now<walk_after) return;
         // Gait changes and montage release need to follow input promptly.
         // The existing game-thread tick drives this; no global event hook.
@@ -407,7 +408,8 @@ struct Core {
     }
     void start_idle_face() {
         if(!state.enabled || apply_pending || restore_pending || pending_performance.active() ||
-           appearance.performance.active() || !appearance.walk.custom_idle_engaged()) return;
+           genessa_form_request || appearance.performance.active() || appearance.performance.cleanup_pending() ||
+           !appearance.walk.custom_idle_engaged()) return;
         const auto selected=state.selections.find(appearance.shell);
         if(!appearance.active() || selected==state.selections.end()) return;
         const auto& selection=selected->second;
@@ -798,6 +800,9 @@ struct Core {
                 if(!state.enabled || !astral_shell(player.at("shell").get<std::string>()) || player.at("pawn").is_null())
                     throw std::runtime_error("Form switching requires Genessa as the gameplay shell");
                 genessa_form_request=GenessaFormRequest{mode,player.at("pawn"),GetTickCount64()+120000};
+                stop_automatic_idle("Genessa form switch requested");
+                if(appearance.performance.active()) appearance.performance.interrupt("Genessa form switch requested");
+                appearance.walk.release();
                 report("Close the menu to switch Genessa's form once.");
             }
             ui_refresh=true;
@@ -1094,6 +1099,7 @@ struct Core {
             if(health.is_null() || call(health,"IsDeadOrDying").at("ReturnValue").get<bool>())
                 throw std::runtime_error("Genessa form switch cancelled: player is not alive");
             if(!appearance.ready_to_apply()) return;
+            if(appearance.performance.cleanup_pending()) return;
             // Send once through the native ability path. Never retry a gameplay event.
             pending.sent=true;pending.expires=now+15000;
             if(pending.target=="stray") {

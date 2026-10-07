@@ -59,6 +59,7 @@ std::string performance_gameplay_block(UObject* pawn,UObject* owned_montage=null
     auto* controller=read<UObject*>(pawn,L"Controller");
     if(!controller || read<UObject*>(controller,L"Pawn")!=pawn) return "Player control changed";
     if(is_quest_or_teleport_active(controller) || is_traversal_ability_active(pawn)) return "Travel or traversal is active";
+    if(gameplay_input_blocked(pawn)) return "A gameplay action is blocking input";
     for(const auto* name:{L"IsMoveInputIgnored",L"IsLookInputIgnored",L"IsInGameMenu"}) {
         Call blocked(controller,name,1);blocked.run();
         if(blocked.get<bool>()) return "Close the player menu and return to gameplay";
@@ -223,7 +224,7 @@ void PerformancePlayer::bind_layer(UObject* pawn,const Catalog& catalog,const st
     if(performance_adapter(component,catalog,outfit,true)) return;
     const auto* adapter=performance_adapter(component,catalog,outfit);
     if(!adapter) throw std::runtime_error("No verified performance adapter");
-    WeakObject held_component(component),held_mesh(mesh_asset(component)),held_source(source);
+    WeakObject held_pawn(pawn),held_component(component),held_mesh(mesh_asset(component)),held_source(source);
     auto* original=read<UObject*>(component,L"OverridePostProcessAnimBP");
     WeakObject held_override(original);
     auto* main=read<UObject*>(component,L"AnimScriptInstance");WeakObject held_main(main);
@@ -246,30 +247,47 @@ void PerformancePlayer::bind_layer(UObject* pawn,const Catalog& catalog,const st
     if(initial.on() || initial.clip() || initial.seconds()!=0.f || initial.alpha()!=0.f)
         throw std::runtime_error("Performance adapter defaults are not inactive");
     auto physics=astral_source_physics(component);
+    if(const auto why=performance_gameplay_block(pawn);!why.empty()) throw std::runtime_error(why);
     auto layers=std::make_shared<mesh_animation_layers::Snapshot>(component);
     WeakObject held_target(target);
     // Register rollback before the reflected setter can replace the instance.
     retained_.take(roots);
-    restore_layer_=[held_component,held_mesh,held_source,held_override,held_target,physics,layers,
-                    restored_post=WeakObject{}]() mutable {
+    restore_layer_=[held_pawn,held_component,held_mesh,held_source,held_override,held_target,physics,
+                    restored_post=WeakObject{},restored_layers=std::shared_ptr<mesh_animation_layers::Snapshot>{}]() mutable {
         auto* body=held_component.Get();auto* expected=held_target.Get();
-        if(!body || !expected || mesh_asset(body)!=held_mesh.Get()) return;
+        if(!body || !expected || mesh_asset(body)!=held_mesh.Get()) return true;
         const bool replacing=read<UObject*>(body,L"OverridePostProcessAnimBP")==expected;
         if(!replacing && (!restored_post.Get() ||
             read<UObject*>(body,L"OverridePostProcessAnimBP")!=held_override.Get() ||
-            read<UObject*>(body,L"PostProcessAnimInstance")!=restored_post.Get())) return;
+            read<UObject*>(body,L"PostProcessAnimInstance")!=restored_post.Get())) return true;
         auto* source=held_source.Get();
         if(!source) throw std::runtime_error("Original performance controls expired");
         if(replacing) {
+            // This engine setter also reinitializes the main instance, even when
+            // its pointer is unchanged. Never run it over a native action.
+            auto* main=read<UObject*>(body,L"AnimScriptInstance");
+            if(main) {
+                Call playing(main,L"IsAnyMontagePlaying",1);playing.run();
+                if(playing.get<bool>()) return false;
+            }
+            if(auto* pawn=held_pawn.Get()) {
+                if(read<UObject*>(pawn,L"Mesh")!=body) return true;
+                if(!performance_gameplay_block(pawn).empty()) return false;
+            } else return true;
+            // Weapons and customization can change while restoration is deferred.
+            restored_layers=std::make_shared<mesh_animation_layers::Snapshot>(body);
+            auto* current=read<UObject*>(body,L"PostProcessAnimInstance");
+            performance_controls(current,source,true);
             performance_override(body,held_override.Get());
             restored_post=read<UObject*>(body,L"PostProcessAnimInstance");
         }
         auto* restored=read<UObject*>(body,L"PostProcessAnimInstance");
         if(!restored || restored->GetClassPrivate()!=source->GetClassPrivate())
             throw std::runtime_error("Original outfit graph did not restore");
-        layers->restore(body);
+        if(restored_layers) restored_layers->restore(body);
         performance_controls(source,restored,true);
         astral_visual_physics(body,physics);
+        return true;
     };
     try {
         performance_override(component,target);
@@ -386,7 +404,10 @@ void PerformancePlayer::release() {
             hide_game_object(object,false);
         it=hidden_.erase(it);
     }
-    if(restore_layer_) {restore_layer_();restore_layer_={};}
+    if(restore_layer_) {
+        if(!restore_layer_()) {restore_retry_after_=GetTickCount64()+100;return;}
+        restore_layer_={};restore_retry_after_=0;
+    }
     retained_.release();
     native_montage_=false;montage_blending_out_=false;
     pawn_.Reset();component_.Reset();mesh_.Reset();post_.Reset();animation_.Reset();sequence_.Reset();
@@ -401,6 +422,7 @@ Json PerformancePlayer::start(UObject* pawn,const Catalog& catalog,const std::st
                               PerformanceUse use) {
     if(session_.active()) throw std::runtime_error("Stop the current performance first");
     release();
+    if(restore_layer_) throw std::runtime_error("Wait for the gameplay action to finish");
     if(const auto why=unavailable(pawn,catalog,outfit);!why.empty()) throw std::runtime_error(why);
     auto* component=read<UObject*>(pawn,L"Mesh");auto* mesh=mesh_asset(component);
     auto* skeleton=mesh?read<UObject*>(mesh,L"Skeleton"):nullptr;
@@ -476,7 +498,11 @@ Json PerformancePlayer::start(UObject* pawn,const Catalog& catalog,const std::st
     throw std::runtime_error(failure.empty()?"Performance could not load":failure);
 }
 void PerformancePlayer::tick(UObject* pawn) {
-    if(!session_.active()) { if(post_.Get() || native_montage_ || !hidden_.empty() || restore_layer_ || restore_face_) release();return; }
+    if(!session_.active()) {
+        if(GetTickCount64()>=restore_retry_after_ &&
+           (post_.Get() || native_montage_ || !hidden_.empty() || restore_layer_ || restore_face_)) release();
+        return;
+    }
     if(pawn!=pawn_.Get() || !intact()) {interrupt("Player or animation binding changed");return;}
     if(const auto why=performance_gameplay_block(pawn,montage_.Get());!why.empty()) {interrupt(why);return;}
     if(!native_montage_) {

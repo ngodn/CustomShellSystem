@@ -611,6 +611,8 @@ void WalkOverride::update(UObject* pawn,bool idle_feminine,bool walk_feminine,
     }
     Call montage(anim,L"GetCurrentActiveMontage",1);montage.run();
     if(montage.get<UObject*>()) {release();return;}
+    Call playing(anim,L"IsAnyMontagePlaying",1);playing.run();
+    if(playing.get<bool>() || gameplay_input_blocked(pawn)) {release();return;}
     UObject* walk_bs=(walk_feminine || idle_feminine)?blendspace(walk_bs_,WALK_BLENDSPACE):nullptr;
     // Asset loads may collect objects. Revalidate ownership before dereferencing
     // any instance captured before the load.

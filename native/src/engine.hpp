@@ -72,7 +72,8 @@ class PerformancePlayer {
     RC::Unreal::FName character_;
     std::string reason_;
     float original_time_=0.f;
-    std::function<void()> restore_layer_;
+    std::function<bool()> restore_layer_;
+    uint64_t restore_retry_after_=0;
     std::function<void(double,double)> sample_face_;
     std::function<void()> restore_face_;
     struct Hidden { WeakObject object; bool actor=false; };
@@ -84,6 +85,7 @@ class PerformancePlayer {
     void bind_native_montage();
 public:
     bool active() const { return session_.active(); }
+    bool cleanup_pending() const { return !active() && bool(restore_layer_); }
     uint64_t token() const { return session_.token(); }
     static std::string unavailable(RC::Unreal::UObject* pawn,const Catalog&,const std::string& outfit);
     static std::string unsupported(RC::Unreal::UObject* pawn,const Catalog&,const std::string& outfit);
