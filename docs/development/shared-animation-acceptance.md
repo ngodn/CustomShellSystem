@@ -1,7 +1,7 @@
 # Shared animation acceptance
 
 Current private candidate: `work/cine-animation-port/shared-contact-trial-v1`.
-It is built and verified offline, **not installed or accepted for release**.
+It is built, verified offline and **installed for a private trial, not accepted for release**.
 This page describes the current candidate. Earlier checkpoints remain in Git
 history and the linked investigation records.
 
@@ -206,10 +206,14 @@ do not apply guessed Eve expressions to it.
 
 ## Installed state and remaining work
 
-The installed private trial is still the earlier 57-animation build recorded
-in `live-face-motion-2/deployment.json`. It includes Eve's 21 static expressions,
-Come Closer and Gesture 200 facial tracks. The new combined candidate has not
-been installed. A user question about availability for its trial is pending.
+The current 63-animation trial is installed, with receipt
+`live-combined-contact-1/deployment.json`. The game was confirmed closed before
+the backed-up transaction. Independent post-install hashing verifies the chosen
+core and all three shared container files; the rollback directory exists.
+The installed core is `css_core-facial-a943a5be35cb1035.dll`. CINE was preserved.
+The earlier 57-animation trial remains recorded in `live-face-motion-2` and
+its assets are backed up. No game launch, input or gameplay acceptance is implied.
+The user has been asked to try CSS and CINE playback and cancellation.
 
 The stopping-pop correction is installed but still needs the matched gameplay
 check in [the transition investigation](eve-stopping-transition.md).
@@ -225,7 +229,7 @@ path keeps the installed CINE extension and menu unchanged.
 The validator follows the hashed replacement reports back to the combined
 facial baseline, including the neck and contact revisions, and rejects changed reports.
 
-For the next authorized closed-game trial, run from the CSS checkout:
+Installation command used on October 7, from the CSS checkout:
 
 ```sh
 python3 tools/authoring-probes/animations/install_shared_animation_trial.py \
@@ -239,7 +243,8 @@ python3 tools/authoring-probes/animations/install_shared_animation_trial.py \
 Adding `--check-only` validates the candidate without installing it. It does
 not claim that the running game or installed selectors were checked. The actual
 installation checks those before writes and refuses an unexpected prior trial.
-No installation has been performed by this checkpoint.
+This transaction has completed. Do not rerun it against the old previous
+receipt; any subsequent update must start from `live-combined-contact-1`.
 
 Remaining acceptance:
 
