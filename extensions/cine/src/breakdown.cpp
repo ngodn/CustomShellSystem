@@ -43,6 +43,7 @@ constexpr LayerInfo info[static_cast<size_t>(Layer::Count)] = {
     {"sockets", "Sockets", {0.3, 0.75, 1.0}},
     {"collision", "Physics bodies", {0.0, 1.0, 1.0}},
     {"capsule", "Movement capsule", {1.0, 0.55, 0.65}},
+    {"no_body", "Body hidden", {0.2, 0.2, 0.2}},
     {"base_color", "Base colour", {}},
     {"normals", "Normals", {}},
     {"roughness", "Roughness", {}},
@@ -214,17 +215,72 @@ size_t Breakdown::bones_worn() const {
 Json Breakdown::add_component(const Json& cls, const Json& xf) {
     auto component = call(pawn_, "AddComponentByClass", {{"Class", cls}, {"bManualAttachment", true}, {"RelativeTransform", xf}, {"bDeferredFinish", false}});
     if (!is_handle(component)) throw std::runtime_error("could not create a component");
+    try { host_.set(component, "ComponentTags", Json::array({piece_tag})); } catch (...) {}
     call(component, "SetCollisionEnabled", {{"NewType", no_collision}});   // before it has any geometry
     return component;
 }
 
+// Her parts out of the picture (or back), leaving the bones, sockets and shapes attached to
+// them: hiding a component does not touch its children unless asked to.
+void Breakdown::hide_body(bool hide) {
+    for (const auto& skin : skins_) {
+        try { call(skin.component, "SetHiddenInGame", {{"NewHidden", hide}, {"bPropagateToChildren", false}}); } catch (...) {}
+    }
+    body_hidden_ = hide;
+}
+
+Json Breakdown::rig_parent() {
+    if (is_handle(proxy_) && valid(proxy_)) return proxy_;
+    const auto cls = load("/Script/Engine.SkeletalMeshComponent");
+    if (!is_handle(cls)) throw std::runtime_error("no skeletal mesh component class");
+    proxy_ = add_component(cls, transform({}, {}, {1, 1, 1}));
+    call(proxy_, "K2_AttachToComponent", {{"Parent", mesh_}, {"SocketName", ""}, {"LocationRule", snap_to_target},
+                                          {"RotationRule", snap_to_target}, {"ScaleRule", snap_to_target}, {"bWeldSimulatedBodies", false}});
+    try { call(proxy_, "SetVisibility", {{"bNewVisibility", false}, {"bPropagateToChildren", false}}); } catch (...) {}
+    try { call(proxy_, "SetCastShadow", {{"NewCastShadow", false}}); } catch (...) {}
+    refresh_rig_parent();
+    return proxy_;
+}
+
+void Breakdown::refresh_rig_parent() {
+    if (!is_handle(proxy_) || !valid(proxy_)) return;
+    // Her current mesh asset, so the follower has her bones and sockets, following her pose
+    // (spring, virtual and IK bones included: it copies the final pose) without a graph of its own.
+    // Through the getter: the property is SkinnedAsset on this engine's mesh class.
+    Json asset;
+    try { asset = call(mesh_, "GetSkeletalMeshAsset"); } catch (...) {}
+    if (!is_handle(asset)) throw std::runtime_error("her mesh has no skeletal mesh asset to follow");
+    call(proxy_, "SetSkeletalMeshAsset", {{"NewMesh", asset}});
+    call(proxy_, "SetLeaderPoseComponent", {{"NewLeaderBoneComponent", mesh_}, {"bForceUpdate", true}, {"bInFollowerShouldTickPose", false}});
+}
+
 // ---------------------------------------------------------------- begin and build
+
+void Breakdown::sweep_orphans(const Json& pawn) {
+    try {
+        const auto cls = load("/Script/Engine.ActorComponent");
+        if (!is_handle(cls)) return;
+        const auto found = call(pawn, "GetComponentsByTag", {{"ComponentClass", cls}, {"Tag", piece_tag}});
+        if (!found.is_array() || found.empty()) return;
+        for (const auto& c : found) { try { if (valid(c)) call(c, "K2_DestroyComponent", {{"Object", c}}); } catch (...) {} }
+        try { host_.log("Breakdown: removed " + std::to_string(found.size()) + " pieces left from an earlier session"); } catch (...) {}
+    } catch (...) {}
+}
+
+void Breakdown::flush() {
+    while (!teardown_.empty()) {
+        const Json component = std::move(teardown_.front()); teardown_.pop_front();
+        try { if (valid(component)) call(component, "K2_DestroyComponent", {{"Object", component}}); } catch (...) {}
+    }
+}
 
 void Breakdown::begin(const Json& pawn, const Json& camera, LayerSet needed, std::vector<std::string> spring_bones, Options options) {
     if (active_) end();
+    flush();
     forget();
     repaint_ = false;
     if (!is_handle(pawn) || needed == 0) return;
+    sweep_orphans(pawn);
     try {
         pawn_ = pawn; camera_ = camera; needed_ = needed; options_ = options;
         mesh_ = host_.get(pawn_, "Mesh");
@@ -237,8 +293,8 @@ void Breakdown::begin(const Json& pawn, const Json& camera, LayerSet needed, std
         active_ = true;
         pak_ = is_handle(load(path_collection));
         if (!pak_) {
-            if (needed_ & ~(bit(Layer::Collision) | bit(Layer::Capsule))) add_note("CINE's asset pak is not installed: only collision and capsule layers can show.");
-            needed_ &= bit(Layer::Collision) | bit(Layer::Capsule);
+            if (needed_ & ~(bit(Layer::Collision) | bit(Layer::Capsule) | bit(Layer::NoBody))) add_note("CINE's asset pak is not installed: only collision and capsule layers can show.");
+            needed_ &= bit(Layer::Collision) | bit(Layer::Capsule) | bit(Layer::NoBody);
         }
         if (needed_ & bit(Layer::Lighting)) { needed_ &= ~bit(Layer::Lighting); add_note("The lighting pass is not in this version."); }
         if (needed_ & frame_layers) {
@@ -427,7 +483,7 @@ void Breakdown::build(const Work& work) {
         call(component, "SetStaticMesh", {{"NewMesh", shape}});
         call(component, "SetMaterial", {{"ElementIndex", 0}, {"Material", mid}});
         call(component, "SetCastShadow", {{"NewCastShadow", false}});
-        call(component, "K2_AttachToComponent", {{"Parent", mesh_}, {"SocketName", socket}, {"LocationRule", keep_relative},
+        call(component, "K2_AttachToComponent", {{"Parent", rig_parent()}, {"SocketName", socket}, {"LocationRule", keep_relative},
                                                  {"RotationRule", keep_relative}, {"ScaleRule", keep_relative}, {"bWeldSimulatedBodies", false}});
         host_.request({{"op", "call"}, {"target", component}, {"function", "K2_SetRelativeTransform"},
                        {"args", {{"NewTransform", xf}, {"bSweep", false}, {"bTeleport", true}}}});
@@ -458,7 +514,7 @@ void Breakdown::build(const Work& work) {
             if (!is_handle(cls)) return;
             const auto component = add_component(cls, transform({}, {}, {1, 1, 1}));
             pieces_.push_back({component, bit(Layer::Collision), looks_of(bone.get<std::string>())});
-            call(component, "K2_AttachToComponent", {{"Parent", mesh_}, {"SocketName", bone}, {"LocationRule", snap_to_target},
+            call(component, "K2_AttachToComponent", {{"Parent", rig_parent()}, {"SocketName", bone}, {"LocationRule", snap_to_target},
                                                      {"RotationRule", snap_to_target}, {"ScaleRule", keep_relative}, {"bWeldSimulatedBodies", false}});
             host_.request({{"op", "call"}, {"target", component}, {"function", "K2_SetRelativeLocationAndRotation"},
                            {"args", {{"NewLocation", element.value("Center", Json{{"X", 0}, {"Y", 0}, {"Z", 0}})},
@@ -556,6 +612,8 @@ void Breakdown::adopt(const std::string& look) {
         const auto it = std::find(looks_.begin(), looks_.end(), look);
         look_now_ = it == looks_.end() ? max_looks + 1 : size_t(it - looks_.begin());
         find_skins();
+        refresh_rig_parent();   // her new outfit's mesh: the pieces' bones come from it
+        if (body_hidden_) hide_body(true);
         if (is_handle(suspended_)) { const Json mine = suspended_; suspended_ = nullptr; set_overlay(&mine); }
         else if (overlay_ours_) { const Json mine = overlay_now_; set_overlay(&mine); }
         if (suspended_clay_) { suspended_clay_ = false; apply_clay(true); }
@@ -680,7 +738,7 @@ void Breakdown::show(LayerSet set, double wipe_seconds, double stop) {
         if (!incoming && !outgoing) return;
         const bool wiping = pak_ && wipe_seconds > 0.01;
         wipe_numbers(wiping ? 0 : 1, 1, wiping ? wipe_seconds : 0.01);
-        const double now = wiping || ((incoming | outgoing) & (bit(Layer::Collision) | bit(Layer::Capsule))) ? game_time() : 0;
+        const double now = wiping || ((incoming | outgoing) & (bit(Layer::Collision) | bit(Layer::Capsule) | bit(Layer::NoBody))) ? game_time() : 0;
         // Where a layer stands in this transition: coming in behind the wipe, going out ahead
         // of it, or staying whatever the wipe does.
         auto place = [&](const Json& mid, bool in, bool out) {
@@ -730,7 +788,7 @@ void Breakdown::show(LayerSet set, double wipe_seconds, double stop) {
             } else if (want) set_param(pass_[pass_now_], "Hold", 1);
         }
         // Shape components cannot wipe: they change in the middle of it.
-        shapes_pending_ = (incoming | outgoing) & (bit(Layer::Collision) | bit(Layer::Capsule));
+        shapes_pending_ = (incoming | outgoing) & (bit(Layer::Collision) | bit(Layer::Capsule) | bit(Layer::NoBody));
         shapes_flip_at_ = shapes_pending_ ? now + (wiping ? wipe_seconds / 2 : 0) : -1;
         leaving_ = outgoing;
         shown_ = set;
@@ -874,6 +932,7 @@ void Breakdown::tick() {
                 const bool hide = !(shown_ & bit(Layer::Collision));
                 for (const auto& piece : pieces_) if (piece.layer & bit(Layer::Collision)) { try { call(piece.component, "SetHiddenInGame", {{"NewHidden", hide}, {"bPropagateToChildren", false}}); } catch (...) {} }
             }
+            if (shapes_pending_ & bit(Layer::NoBody)) hide_body(shown_ & bit(Layer::NoBody));
             if ((shapes_pending_ & bit(Layer::Capsule)) && is_handle(capsule_)) {
                 if (!capsule_touched_) {
                     capsule_touched_ = true;
@@ -906,25 +965,62 @@ void Breakdown::refresh_callouts() {
     if (shown_ & bit(Layer::Wireframe)) add("Mesh wireframe", mesh_, bone_like({"head"}));
     else if (shown_ & bit(Layer::Clay)) add("Clay shading", mesh_, bone_like({"head"}));
     if (shown_ & bit(Layer::Skeleton)) add("Skeleton, " + std::to_string(bones_worn()) + " bones", mesh_, bone_like({"spine_03", "spine_02", "pelvis"}));
-    if ((shown_ & bit(Layer::VirtualBones)) && count(BoneKind::Virtual)) add("Virtual bones, " + std::to_string(count(BoneKind::Virtual)), mesh_, bone_like({"vb hand_r", "vb hand_l"}).empty() ? first(BoneKind::Virtual) : bone_like({"vb hand_r", "vb hand_l"}));
-    if ((shown_ & bit(Layer::IkBones)) && count(BoneKind::Ik)) add("IK bones, " + std::to_string(count(BoneKind::Ik)), mesh_, bone_like({"ik_hand_r", "ik_foot_r"}).empty() ? first(BoneKind::Ik) : bone_like({"ik_hand_r", "ik_foot_r"}));
+    // Every bone of a kind this look has, spread over her: the first, then the ones furthest
+    // along the list (bones are listed head to toe, left before right).
+    auto spread = [&](auto&& keep) {
+        std::vector<std::string> all;
+        for (const auto& b : bones_) if (worn(b.looks) && keep(b)) all.push_back(b.name);
+        std::vector<std::string> out;
+        const size_t n = std::min(all.size(), max_arrows);
+        for (size_t k = 0; k < n; ++k) out.push_back(all[n == 1 ? 0 : k * (all.size() - 1) / (n - 1)]);
+        return out;
+    };
+    auto add_many = [&](std::string text, std::vector<std::string> places) {
+        if (places.empty() || !is_handle(mesh_)) return;
+        Callout c{std::move(text), mesh_, places.front(), {}};
+        c.more.assign(places.begin() + 1, places.end());
+        callouts_.push_back(std::move(c));
+    };
+    if ((shown_ & bit(Layer::VirtualBones)) && count(BoneKind::Virtual))
+        add_many("Virtual bones, " + std::to_string(count(BoneKind::Virtual)), spread([](const Bone& b) { return b.kind == BoneKind::Virtual; }));
+    if ((shown_ & bit(Layer::IkBones)) && count(BoneKind::Ik))
+        add_many("IK bones, " + std::to_string(count(BoneKind::Ik)), spread([](const Bone& b) { return b.kind == BoneKind::Ik; }));
     if (shown_ & bit(Layer::Springs)) {
-        std::vector<std::string> seen;
+        // One label per group (chest, glutes, belly...), an arrow to each chain of it: the
+        // chain's first bone, the one whose parent is not in the group.
+        std::vector<std::string> groups;
         for (const auto& b : bones_) {
             if (b.kind != BoneKind::Spring || !worn(b.looks)) continue;
-            auto group = spring_group(b.name);
-            if (group.empty()) group = "outfit";
-            const auto known = std::find(seen.begin(), seen.end(), group);
-            if (known != seen.end()) {
-                // The second bone of the group (the other side of a pair).
-                for (auto& callout : callouts_) if (callout.text == "Spring bones: " + group && callout.other.empty()) callout.other = b.name;
-                continue;
+            auto group = spring_group(b.name); if (group.empty()) group = "outfit";
+            if (std::find(groups.begin(), groups.end(), group) == groups.end()) groups.push_back(group);
+        }
+        for (const auto& group : groups) {
+            auto in_group = [&](const std::string& name) { for (const auto& b : bones_) if (b.name == name) { auto g = spring_group(b.name); return b.kind == BoneKind::Spring && (g.empty() ? std::string("outfit") : g) == group; } return false; };
+            std::vector<std::string> roots, rest;
+            for (const auto& b : bones_) {
+                if (b.kind != BoneKind::Spring || !worn(b.looks)) continue;
+                auto g = spring_group(b.name); if ((g.empty() ? std::string("outfit") : g) != group) continue;
+                (in_group(b.parent) ? rest : roots).push_back(b.name);
             }
-            seen.push_back(group);
-            add("Spring bones: " + group, mesh_, b.name);
+            std::vector<std::string> places(roots.begin(), roots.begin() + std::min(roots.size(), max_arrows));
+            for (size_t k = 0; places.size() < std::min<size_t>(2, roots.size() + rest.size()) && k < rest.size(); ++k) places.push_back(rest[k]);
+            add_many("Spring bones: " + group, places);
         }
     }
-    if ((shown_ & bit(Layer::Sockets)) && !sockets_.empty()) add("Sockets, " + std::to_string(sockets_.size()), mesh_, sockets_.front());
+    if ((shown_ & bit(Layer::Sockets)) && !sockets_.empty()) {
+        // Arrows to the sockets where things hang: her hands, her head, her back, else spread.
+        std::vector<std::string> places;
+        for (const auto& want : {std::vector<const char*>{"hand_r", "weapon_r", "r_hand", "righthand"}, std::vector<const char*>{"hand_l", "weapon_l", "l_hand", "lefthand"},
+                                 std::vector<const char*>{"head", "hat", "hair"}, std::vector<const char*>{"spine", "back", "pelvis", "hip"}}) {
+            for (const auto& socket : sockets_) {
+                const auto l = lower(socket);
+                if (std::any_of(want.begin(), want.end(), [&](const char* w) { return l.find(w) != std::string::npos; }) && std::find(places.begin(), places.end(), socket) == places.end()) { places.push_back(socket); break; }
+            }
+        }
+        for (size_t k = 0; places.size() < std::min(max_arrows, sockets_.size()) && k < sockets_.size(); k += std::max<size_t>(1, sockets_.size() / max_arrows))
+            if (std::find(places.begin(), places.end(), sockets_[k]) == places.end()) places.push_back(sockets_[k]);
+        add_many("Sockets, " + std::to_string(sockets_.size()), places);
+    }
     if ((shown_ & bit(Layer::Collision)) && !bodies_.empty()) add("Physics bodies, " + std::to_string(bodies_.size()), mesh_, bone_like({"thigh_r", "thigh_l", "pelvis"}));
     if (shown_ & bit(Layer::Capsule)) add("Movement capsule", capsule_, "");
 }
@@ -966,10 +1062,12 @@ std::vector<std::string> Breakdown::end() {
     if (pak_) step("wipe", [&] { wipe_numbers(1, 1, 0.01); });
     // The attached pieces go over the next ticks; hidden first so nothing lingers on screen.
     for (const auto& g : groups_) step("layer", [&] { set_param(g.mid, "Show", 0); });
+    if (body_hidden_) step("body", [&] { hide_body(false); });
     for (auto& piece : pieces_) {
         if (piece.layer & bit(Layer::Collision)) { try { call(piece.component, "SetHiddenInGame", {{"NewHidden", true}, {"bPropagateToChildren", false}}); } catch (...) {} }
         teardown_.push_back(std::move(piece.component));
     }
+    if (is_handle(proxy_)) teardown_.push_back(std::move(proxy_));   // after its pieces
     auto pending = std::move(teardown_);
     const bool repaint = repaint_;
     forget();
@@ -981,7 +1079,8 @@ std::vector<std::string> Breakdown::end() {
 void Breakdown::forget() {
     active_ = reading_ = pak_ = frame_passes_ = false;
     needed_ = shown_ = leaving_ = shapes_pending_ = 0;
-    pawn_ = mesh_ = capsule_ = camera_ = statics_ = kismet_materials_ = nullptr;
+    pawn_ = mesh_ = capsule_ = camera_ = statics_ = kismet_materials_ = proxy_ = nullptr;
+    body_hidden_ = false;
     class_mesh_ = class_capsule_ = class_sphere_ = class_box_ = nullptr;
     groups_.clear(); looks_.clear();
     look_now_ = 0; all_looks_ = 1; options_ = {};

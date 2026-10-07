@@ -83,8 +83,10 @@ Sequence Sequence::parse(const Json& j) {
         // A cut starts from its own pose (or holds one pose when only "to" or only "from" is
         // given); a flow starts where the shot before it ended.
         if (shot.cut) {
-            if (!item.contains("from") && !item.contains("to")) throw std::invalid_argument("A cut needs 'from' or 'to'");
-            shot.from = pose(item.contains("from") ? item.at("from") : item.at("to"), last, "from");
+            shot.view = item.value("view", false);
+            if (item.contains("view") && !item.at("view").is_boolean()) throw std::invalid_argument("'view' must be true or false");
+            if (!shot.view && !item.contains("from") && !item.contains("to")) throw std::invalid_argument("A cut needs 'from' or 'to', or 'view': true");
+            shot.from = shot.view && !item.contains("from") && !item.contains("to") ? last : pose(item.contains("from") ? item.at("from") : item.at("to"), last, "from");
         } else {
             if (item.contains("from")) throw std::invalid_argument("A flow shot starts where the last one ended: remove 'from'");
             shot.from = last;
@@ -119,7 +121,9 @@ Sequence Sequence::parse(const Json& j) {
             before = look.at;
             look.outfit = text(item, "outfit", 96);
             look.variant = text(item, "variant", 96);
-            if (look.outfit.empty() != look.variant.empty()) throw std::invalid_argument("A look step names 'outfit' and 'variant' together");
+            // "current" is the outfit she wears at F8, variant and all; every other outfit names its variant.
+            if (look.outfit == "current" && !look.variant.empty()) throw std::invalid_argument("A look step with the 'current' outfit names no 'variant'");
+            if (look.outfit != "current" && look.outfit.empty() != look.variant.empty()) throw std::invalid_argument("A look step names 'outfit' and 'variant' together");
             look.palette = text(item, "palette", 96);
             if (item.contains("controls")) {
                 if (!item.at("controls").is_object() || item.at("controls").size() > 64) throw std::invalid_argument("'controls' must be an object of up to 64 controls");
@@ -135,6 +139,10 @@ Sequence Sequence::parse(const Json& j) {
             if (item.contains("title")) { look.title = text(item, "title", 80); look.titled = true; }
             if (item.contains("cover")) { if (!item.at("cover").is_boolean()) throw std::invalid_argument("A look step's 'cover' must be true or false"); look.cover = item.at("cover").get<bool>(); }
             look.idle = text(item, "idle", 96);
+            for (const char* key : {"wipe", "hold"}) if (item.contains(key)) {
+                if (!item.at(key).is_number() || item.at(key).get<double>() < 0 || item.at(key).get<double>() > 5) throw std::invalid_argument(std::string("A look step's '") + key + "' is seconds, 0 to 5");
+                (key[0] == 'w' ? look.wipe : look.hold) = item.at(key).get<double>();
+            }
             if (item.contains("physics")) {
                 if (!item.at("physics").is_object() || item.at("physics").size() > 16) throw std::invalid_argument("'physics' must map up to 16 motion controls to a preset");
                 for (const auto& [id, value] : item.at("physics").items()) {
@@ -142,8 +150,12 @@ Sequence Sequence::parse(const Json& j) {
                     look.physics[id] = value.get<std::string>();
                 }
             }
+            if (item.contains("performance")) {
+                if (!item.at("performance").is_boolean()) throw std::invalid_argument("A look step's 'performance' is true (start the performance on this beat) or false (an outfit change that does not start it)");
+                look.restart = item.at("performance").get<bool>(); look.hold_performance = !look.restart;
+            }
             if (item.contains("reset")) { if (!item.at("reset").is_boolean()) throw std::invalid_argument("A look step's 'reset' must be true or false"); look.reset = item.at("reset").get<bool>(); }
-            if (look.outfit.empty() && look.palette.empty() && look.controls.empty() && !look.titled && look.idle.empty() && !look.reset && look.physics.empty()) throw std::invalid_argument("A look step changes an outfit, a palette, controls, the idle or the title");
+            if (look.outfit.empty() && look.palette.empty() && look.controls.empty() && !look.titled && look.idle.empty() && !look.reset && look.physics.empty() && !look.restart) throw std::invalid_argument("A look step changes an outfit, a palette, controls, the idle or the title, or starts the performance");
             s.looks.push_back(std::move(look));
         }
     }

@@ -235,10 +235,13 @@ int Extension::render(const CssxFrame* f) {
                     CalloutTarget target;
                     target.text = label.text;
                     target.visible = project(camera, basis, lens_, frame_.position + label.before + (label.now - label.before) * ease, target.x, target.y);
-                    if (label.pair) {
-                        // Of a left and right pair, the one further left: with a split that is the layers' side.
+                    // Every further place the label names gets its own arrow. With nothing of the
+                    // first place in view, the first further one in view leads.
+                    for (size_t k = 0; k < label.more_now.size(); ++k) {
                         double x = 0, y = 0;
-                        if (project(camera, basis, lens_, frame_.position + label.other_before + (label.other_now - label.other_before) * ease, x, y) && (!target.visible || x < target.x)) { target.x = x; target.y = y; target.visible = true; }
+                        if (!project(camera, basis, lens_, frame_.position + label.more_before[k] + (label.more_now[k] - label.more_before[k]) * ease, x, y)) continue;
+                        if (!target.visible) { target.x = x; target.y = y; target.visible = true; }
+                        else target.more.push_back({x, y});
                     }
                     callout_targets_.push_back(std::move(target));
                 }
@@ -319,8 +322,15 @@ void Extension::tick(double seconds) {
                 break;
             case Mode::Running:
                 if (const auto why = performance_.poll([&](const Json& r) { return rig_.css(r); }); !why.empty()) {
-                    finish_take("Performance interrupted: " + why, true); break;
+                    // In a sequence the wardrobe interrupts the dance for its own reasons (a
+                    // look step, the clay coming off her materials): the camera keeps rolling
+                    // and the dance is started again where it was.
+                    if (take_->preset.kind == ShotKind::Sequence) {
+                        auto& t = *take_;
+                        if (!t.performance_resume) { t.performance_resume = true; t.performance_retry = 0; t.performance_give_up = t.seq_clock + 6.0; report("Performance interrupted (" + why + "); starting it again where it was."); }
+                    } else { finish_take("Performance interrupted: " + why, true); break; }
                 }
+                if (take_->preset.kind == ShotKind::Sequence) resume_performance();
                 take_->clock += dt; run(); break;
             default: break;
         }
@@ -385,10 +395,22 @@ void Extension::start_take() {
     if (mode_ != Mode::Armed) return;
     if (!current_preset()) throw std::runtime_error("No preset is available");
     if (performance_.owned()) throw std::runtime_error("Wait for the previous performance to stop");
-    if (settings_.performance.id != "off") {
+    bool idle_taken = false;
+    if (const auto chosen = take_performance(*current_preset()); chosen.id != "off") {
         if (const auto why = performance_conflict(*current_preset()); !why.empty()) throw std::runtime_error(why);
+        // Her saved idle may itself be a dance on the same performance layer (CSS plays it as
+        // her idle). The preset's own idle replaces it for the take, which frees the layer;
+        // finish_take hands her saved idle back.
+        if (const auto& idle = current_preset()->idle; !idle.empty()) {
+            try { rig_.css({{"action", "idle"}, {"value", idle}}); idle_taken = true; } catch (...) {}
+        }
         performance_catalog_.refresh([&](const Json& r) { return rig_.css(r); });
-        if (const auto why = performance_catalog_.unavailable(settings_.performance); !why.empty()) throw std::runtime_error(why);
+        // "In use" is the layer still blending out of her idle dance: the roll starts the
+        // performance a moment later, and retries.
+        if (const auto why = performance_catalog_.unavailable(chosen); !why.empty() && why.find("in use") == std::string::npos) {
+            if (idle_taken) { try { rig_.css({{"action", "idle"}, {"value", ""}}); } catch (...) {} }
+            throw std::runtime_error(why);
+        }
     }
     if (expression_.owned()) throw std::runtime_error("Wait for the previous expression to be restored");
     if (settings_.expression != "unchanged") {
@@ -405,7 +427,12 @@ void Extension::start_take() {
     }
     take_ = std::make_unique<Take>();
     take_->performance = settings_.performance;
+    if (const auto* p = current_preset(); p && !p->performance.empty() && p->performance != "menu") {
+        take_->performance = PerformanceChoice{};
+        take_->performance.id = p->performance; take_->performance.rate = p->performance_rate;
+    }
     take_->expression = settings_.expression;
+    take_->idle_set = idle_taken;
     take_->world = frame_.world; take_->pawn = frame_.pawn;
     mode_ = Mode::Preparing;
     report("Preparing the take...");
@@ -449,6 +476,33 @@ void Extension::prepare() {
         rig_.picture(settings_.picture == "full" ? 2 : settings_.picture == "sharp" ? 1 : 0);
         t.preset = *current_preset();
         auto& p = t.preset;
+        // A "view" shot is the camera as the player framed it in Cine World: its place around
+        // her (in her own frame, so it follows her if the take is rolled elsewhere), height,
+        // tilt and lens, held. The camera looks at her axis; a framing off to one side keeps
+        // its height and tilt but centres her.
+        if (p.kind == ShotKind::Sequence && std::any_of(p.sequence.shots.begin(), p.sequence.shots.end(), [](const SeqShot& s) { return s.view; })) {
+            const auto view = rig_.capture_final(her_position(), frame_.yaw);
+            const double horizontal = std::max(60.0, std::hypot(view.camera.x, view.camera.y));
+            SeqPose pose;
+            pose.azimuth = std::atan2(view.camera.y, view.camera.x) * 180 / std::numbers::pi;
+            pose.distance = horizontal / std::max(0.05, p.zoom);
+            pose.height = view.camera.z - settings_.height;
+            pose.aim = view.camera.z + std::tan(view.pitch * std::numbers::pi / 180) * horizontal - settings_.height;
+            pose.fov = view.fov / std::max(0.05, p.fov_scale);
+            for (auto& shot : p.sequence.shots) if (shot.view) { shot.from = shot.to = pose; shot.track = Subject::None; shot.fit = 0; shot.fixed = true; shot.fstop = 0; }
+        }
+        // A look step may name "current": whatever she wears at F8, with the customization
+        // saved on it, so the player chooses that pass's outfit by wearing it before the take.
+        if (p.kind == ShotKind::Sequence) {
+            bool any = false;
+            for (const auto& look : p.sequence.looks) any = any || look.outfit == "current";
+            if (any) {
+                const auto d = rig_.css({{"action", "describe"}});
+                const auto outfit = d.value("outfit", std::string()), variant = d.value("variant", std::string());
+                if (outfit.empty()) throw std::runtime_error("A look step wants the outfit you wear now, and CSS has none on");
+                for (auto& look : p.sequence.looks) if (look.outfit == "current") { look.outfit = outfit; look.variant = variant; }
+            }
+        }
         p.zoom *= settings_.zoom; p.fov_scale *= settings_.fov_scale;
         for (auto& k : p.keys) { k.height += settings_.height; k.aim += settings_.height; }
         for (auto& s : p.photos) { s.height += settings_.height; s.aim += settings_.height; s.distance *= settings_.zoom; s.fov *= settings_.fov_scale; }
@@ -471,9 +525,11 @@ void Extension::prepare() {
             t.base_yaw = frame_.yaw;
         }
         const bool sequence = p.kind == ShotKind::Sequence;
-        if (t.performance.id == "off" && !p.idle.empty() && !t.idle_set) {
-            // One idle on every look the take wears, so her pose does not snap between them.
-            // CSS keeps it out of the saved choices; finish_take ends it.
+        if (!p.idle.empty() && !t.idle_set) {
+            // One idle on every look the take wears, so her pose does not snap between them,
+            // and what plays under a performance between its passes (a saved idle that is
+            // itself a dance would take the performance over). CSS keeps it out of the saved
+            // choices; finish_take ends it.
             try { rig_.css({{"action", "idle"}, {"value", p.idle}}); t.idle_set = true; } catch (...) {}
         }
         if (p.kind != ShotKind::Photo && p.kind != ShotKind::Action && !sequence) t.curve = std::make_unique<OrbitCurve>(t.timeline.keys);
@@ -655,8 +711,13 @@ void Extension::begin_breakdown() {
     // the wardrobe mod paints her again from this.
     if (t.layers & (bit(Layer::Clay) | bit(Layer::Wireframe))) { try { t.look_before = rig_.css({{"action", "describe"}}).at("customize"); } catch (...) { t.look_before = nullptr; } }
     if (t.many_looks) {
-        // Clay stays out of her material slots, so CSS can repaint her under the breakdown.
-        breakdown_.begin(rig_.pawn(), rig_.camera_component(t.dolly), t.layers, {}, {.looks = true, .overlay_only = true});
+        // Clay stays out of her material slots when a look step repaints her (a palette, a
+        // control, a reset): CSS must be free to paint under the breakdown. Outfit changes
+        // alone are fine: the breakdown lifts clay out of the slots for the wear and puts it
+        // back on the new look, so clay and wireframe can then share her (slots and overlay).
+        bool repaints = false;
+        for (const auto& look : t.preset.sequence.looks) repaints = repaints || !look.palette.empty() || !look.controls.empty() || look.reset;
+        breakdown_.begin(rig_.pawn(), rig_.camera_component(t.dolly), t.layers, {}, {.looks = true, .overlay_only = repaints});
         return;
     }
     breakdown_.begin(rig_.pawn(), rig_.camera_component(t.dolly), t.layers, spring_bones());
@@ -894,6 +955,15 @@ Extension::SeqView Extension::sequence_view(const SeqPose& pose, Vec3 anchor, do
 
 void Extension::apply_look(const SeqLook& look) {
     auto& t = *take_;
+    if (look.restart && t.performance.id != "off" && mode_ == Mode::Running) {
+        // A new pass on the look she already wears: the dance from the top, on this beat.
+        try { performance_.stop([&](const Json& r) { return rig_.css(r); }); } catch (...) {}
+        // The pass starts now whatever CSS says: if it is not ready (her materials just changed
+        // under the breakdown), the dance joins as soon as it is, at the point the music reached.
+        t.performance_at = t.seq_clock;
+        try { performance_.start([&](const Json& r) { return rig_.css(r); }, t.performance); t.performance_resume = false; }
+        catch (...) { t.performance_resume = true; t.performance_retry = t.seq_clock + 0.2; t.performance_give_up = t.seq_clock + 6.0; }
+    }
     if (!look.idle.empty()) { rig_.css({{"action", "idle"}, {"value", look.idle}}); t.idle_set = true; }
     if (look.reset && t.opening.is_object()) { rig_.css({{"action", "apply"}, {"persist", false}, {"commands", Json::array({{{"action", "restore"}, {"customize", t.opening}}})}}); t.wore = true; }
     if (!look.physics.empty()) {
@@ -968,8 +1038,9 @@ void Extension::sequence_frame(const CssxFrame& f) {
             // for the beat she changes under, and a quick sweep back on the step's own beat.
             // The pass is only there to hide the change, so it gets no more time than that.
             const double beat = 60.0 / seq.tempo.bpm;
-            auto timing = [&](size_t) {
+            auto timing = [&](size_t i) {
                 struct { double wipe, hold; } out{beat / 4, std::max(beat, 0.45)};
+                if (i < seq.looks.size()) { if (seq.looks[i].wipe > 0) out.wipe = seq.looks[i].wipe; if (seq.looks[i].hold > 0) out.hold = seq.looks[i].hold; }
                 return out;
             };
             while (t.wearing == Take::Wear::Idle && t.look_next < seq.looks.size()) {
@@ -998,6 +1069,9 @@ void Extension::sequence_frame(const CssxFrame& f) {
                 if (now >= look.at - timing(t.look_next).hold) {
                     // Clay in her own slots would be in the wardrobe mod's way; an overlay is not.
                     if (breakdown_.in_slots()) breakdown_.suspend();
+                    // The outfit change would end the performance anyway; ending it here, before
+                    // the wear goes out, keeps CSS from reporting it as an interruption.
+                    if (performance_.owned()) { try { performance_.stop([&](const Json& r) { return rig_.css(r); }); } catch (...) {} }
                     rig_.css(wear_request(look.outfit, look.variant, false, false));
                     t.wore = true; t.wearing = Take::Wear::Waiting; t.wear_sent_at = now; t.wear_poll = 0; t.adopted = false;
                 }
@@ -1028,6 +1102,12 @@ void Extension::sequence_frame(const CssxFrame& f) {
                     if (t.desired_dirty && t.desired.titled) t.title = t.desired.title;
                     if (t.covered) { breakdown_.show(t.desired.layers, wipe, t.desired.follow ? t.body_place : t.desired.stop); t.desired_dirty = false; t.transition_until = now + wipe + 0.05; }
                     t.covered = false; t.wearing = Take::Wear::Idle; ++t.look_next;
+                    // The new look dances from the top: this instant is the pass's first beat.
+                    if (t.performance.id != "off" && !performance_.owned() && !look.hold_performance && !look.restart) {
+                        t.performance_at = t.seq_clock;
+                        try { performance_.start([&](const Json& r) { return rig_.css(r); }, t.performance); t.performance_resume = false; }
+                        catch (...) { t.performance_resume = true; t.performance_retry = t.seq_clock + 0.2; t.performance_give_up = t.seq_clock + 6.0; }
+                    }
                 }
             }
         } catch (const std::exception& e) {
@@ -1043,8 +1123,11 @@ void Extension::sequence_frame(const CssxFrame& f) {
     if (t.desired_dirty && t.wearing == Take::Wear::Idle) {
         t.desired_dirty = false;
         if (t.desired.titled) t.title = t.desired.title;
-        breakdown_.show(t.desired.layers, t.desired.wipe, t.desired.follow ? t.body_place : t.desired.stop);
-        t.transition_until = std::max(t.transition_until, now + t.desired.wipe);   // the line follows her once it has arrived
+        // A step on the take's first instant is the opening state: it is there at once, not
+        // wiped in over the first beat with the finished look showing underneath.
+        const double wipe = t.desired.at <= 1e-6 && now < 0.5 ? 0.0 : t.desired.wipe;
+        breakdown_.show(t.desired.layers, wipe, t.desired.follow ? t.body_place : t.desired.stop);
+        t.transition_until = std::max(t.transition_until, now + wipe);   // the line follows her once it has arrived
     }
 }
 
@@ -1068,12 +1151,31 @@ void Extension::sequence_tick() {
     t.wall_target = rig_.trace(aim, full.camera, &hit) && hit > own_reach && hit < full.focus - 5 ? std::clamp((hit - 25) / full.focus, 0.35, 1.0) : 1.0;
 }
 
+// After the wardrobe interrupted the dance in a sequence: start it again at the point it
+// would have reached, once CSS is free again. Gives up quietly after a few seconds.
+void Extension::resume_performance() {
+    auto& t = *take_;
+    if (!t.performance_resume || performance_.owned() || t.wearing != Take::Wear::Idle) return;
+    if (t.seq_clock < t.performance_retry) return;
+    t.performance_retry = t.seq_clock + 0.3;
+    if (t.seq_clock > t.performance_give_up) { t.performance_resume = false; report("Performance not resumed; the camera take goes on without it.", true); return; }
+    PerformanceChoice choice = t.performance;
+    choice.seconds = std::max(0.0, t.seq_clock - t.performance_at);
+    try { performance_.start([&](const Json& r) { return rig_.css(r); }, choice); t.performance_resume = false; }
+    catch (...) {}
+}
+
 // The take's first frame. Music starts here, and with music on the clock of a sequence is
 // real time from this instant: a long frame (an outfit landing) then costs picture, never sync.
 void Extension::roll() {
     auto& t = *take_;
-    performance_.start([&](const Json& r) { return rig_.css(r); }, t.performance);
-    t.clock = 0; t.seq_clock = 0;
+    // A sequence rolls whatever CSS says: a refused start (the layer still blending out of her
+    // idle) joins a moment later, in time with the music. Other takes need it at once.
+    if (t.preset.kind == ShotKind::Sequence) {
+        try { performance_.start([&](const Json& r) { return rig_.css(r); }, t.performance); }
+        catch (...) { t.performance_resume = t.performance.id != "off"; t.performance_retry = 0.2; t.performance_give_up = 6.0; }
+    } else performance_.start([&](const Json& r) { return rig_.css(r); }, t.performance);
+    t.clock = 0; t.seq_clock = 0; t.performance_at = 0;
     mode_ = Mode::Running;
     if (t.preset.kind == ShotKind::Sequence) {
         try {
@@ -1152,7 +1254,7 @@ std::vector<std::string> Extension::spring_bones() {
 void Extension::sample_labels() {
     // A pass that covers an outfit change is a transition, not a breakdown step: no labels.
     const bool transition = take_ && (take_->wearing != Take::Wear::Idle || take_->seq_clock < take_->transition_until);
-    const bool wanted = settings_.labels && breakdown_.active() && breakdown_.shown() != 0 && !transition;
+    const bool wanted = settings_.labels && (!take_ || take_->desired.labels) && breakdown_.active() && breakdown_.shown() != 0 && !transition;
     if (!wanted) { labels_live_ = false; labels_.clear(); return; }
     try {
         const auto& callouts = breakdown_.callouts();
@@ -1164,10 +1266,9 @@ void Extension::sample_labels() {
             // The same label as last time eases from where it was drawn; a new one starts in place.
             const bool same = i < labels_.size() && labels_[i].text == next[i].text;
             next[i].before = same ? labels_[i].now : next[i].now;
-            if (!callouts[i].other.empty()) {
-                next[i].pair = true;
-                next[i].other_now = rig_.socket_location(callouts[i].component, callouts[i].other) - frame_.position;
-                next[i].other_before = same && labels_[i].pair ? labels_[i].other_now : next[i].other_now;
+            for (size_t k = 0; k < callouts[i].more.size(); ++k) {
+                next[i].more_now.push_back(rig_.socket_location(callouts[i].component, callouts[i].more[k]) - frame_.position);
+                next[i].more_before.push_back(same && k < labels_[i].more_now.size() ? labels_[i].more_now[k] : next[i].more_now.back());
             }
         }
         labels_ = std::move(next);
@@ -1522,11 +1623,20 @@ void Extension::capture_final_now() {
 
 // ---------------------------------------------------------------- menu
 
+// The performance a take of this preset plays: the preset's own, or the one chosen on the page.
+PerformanceChoice Extension::take_performance(const Preset& p) const {
+    if (p.performance.empty() || p.performance == "menu") return settings_.performance;
+    PerformanceChoice c; c.id = p.performance; c.rate = p.performance_rate;
+    return c;
+}
+
 std::string Extension::performance_conflict(const Preset& p) const {
-    if (settings_.performance.id == "off") return {};
+    if (take_performance(p).id == "off") return {};
     if (p.kind == ShotKind::Walk || p.kind == ShotKind::Action)
         return "Choose a stationary camera preset for a performance, or set Performance to Off.";
-    if (settings_.look != "off" || (p.kind == ShotKind::Sequence && !p.sequence.looks.empty()))
+    // A sequence's look steps stop the performance for the change and start it again on the
+    // new look; the older look track (palette steps on a glide) cannot, so it stays refused.
+    if (settings_.look != "off" && p.kind != ShotKind::Sequence)
         return "Turn the look track off before playing a performance. Change the outfit between takes.";
     return {};
 }
@@ -1678,6 +1788,8 @@ Json Extension::status() const {
 bool Extension::stop() {
     if (stopped_) return true;
     try { exit_world("CINE stopped."); } catch (...) {}
+    // The pieces go now: after this the extension may be unloaded and no tick drains the queue.
+    for (Breakdown* b : {&breakdown_, &breakdown_opponent_}) { try { b->flush(); } catch (...) {} }
     if (!look_restore_.is_null() && restore_look(look_restore_)) look_restore_ = nullptr;   // last chance before unload
     audio_.stop();
     try { performance_.stop([&](const Json& r) { return rig_.css(r); }); } catch (...) {}

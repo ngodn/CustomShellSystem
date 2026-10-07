@@ -34,9 +34,10 @@ namespace cine {
 using Json = nlohmann::json;
 
 // A label for something on screen: text, and the scene component (plus socket or bone) it points at.
-// `other` is a second place the same label may point at (the other bone of a left and right
-// pair): a split breakdown points at the one on the layers' side.
-struct Callout { std::string text; Json component; std::string socket; std::string other; };
+// `more` are further places the same label points at (both sides of a spring group, several
+// IK bones, the sockets at her hands and head): one arrow each, up to max_arrows in all.
+constexpr size_t max_arrows = 4;
+struct Callout { std::string text; Json component; std::string socket; std::vector<std::string> more; };
 
 class Breakdown {
 public:
@@ -92,6 +93,8 @@ public:
     void finish();
     // ...or right now (cancel, stop). Returns what could not be restored.
     std::vector<std::string> end();
+    // Remove every queued piece now, not over the next ticks: the extension is unloading.
+    void flush();
     void forget();                                 // world changed: handles are dead
     bool busy() const { return active_ || !teardown_.empty(); }
 
@@ -114,6 +117,19 @@ private:
     void plan();                   // skeleton read: queue the pieces
     void build(const Work& work);
     Json add_component(const Json& cls, const Json& transform);
+    // Every component CINE adds carries this tag, so a later take can find and remove
+    // pieces an earlier session left behind (a crash, an unload in the middle of a teardown).
+    static constexpr const char* piece_tag = "CINE_Breakdown";
+    void sweep_orphans(const Json& pawn);
+    // The one component the pieces hang from: a hidden skeletal mesh that follows her pose
+    // (leader pose), attached to her mesh as its only child of ours. Every piece attaches to
+    // its bones instead of hers, so the wardrobe mod, which walks her mesh's direct children
+    // every frame and refuses more than 128, sees one. Made on first use, re-pointed at her
+    // new mesh asset on every outfit change, destroyed after the pieces.
+    Json rig_parent();
+    void refresh_rig_parent();
+    void hide_body(bool hide);
+    bool body_hidden_ = false;
     Json material(Layer layer, uint32_t looks);   // the shared instance of a layer's bone group, created on first use
     void find_skins();
     const Json& wire_mid();        // the wireframe and clay instances, made on first use and kept alive
@@ -142,6 +158,7 @@ private:
     LayerSet needed_ = 0, shown_ = 0, leaving_ = 0;
     size_t budget_ = 0;
     Json pawn_, mesh_, capsule_, camera_, statics_, kismet_materials_;
+    Json proxy_;                      // the follower mesh the pieces hang from (rig_parent)
     Json class_mesh_, class_capsule_, class_sphere_, class_box_;
     struct Group { Layer layer; uint32_t looks; Json mid; };
     std::vector<Group> groups_;            // bone shapes share one instance per layer and set of looks

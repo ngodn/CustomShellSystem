@@ -185,6 +185,19 @@ Preset Preset::parse(const Json& j) {
         }
     }
     if (j.contains("idle")) p.idle = text(j, "idle", 96, true);
+    if (j.contains("performance")) {
+        const auto& perf = j.at("performance");
+        if (perf.is_string()) p.performance = text(j, "performance", 96, true);
+        else if (perf.is_object()) {
+            if (!perf.contains("id") || !perf.at("id").is_string()) throw std::invalid_argument("'performance' needs an 'id'");
+            p.performance = text(perf, "id", 96, true);
+            if (perf.contains("rate")) {
+                if (!perf.at("rate").is_number() || perf.at("rate").get<double>() < 0.1 || perf.at("rate").get<double>() > 4) throw std::invalid_argument("'performance' rate must be between 0.1 and 4");
+                p.performance_rate = perf.at("rate").get<double>();
+            }
+        } else throw std::invalid_argument("'performance' must be an id or an object with 'id' and 'rate'");
+        if (p.performance == "off") p.performance.clear();
+    }
     if (j.contains("frame")) {
         p.frame = text(j, "frame", 16, true);
         if (p.frame != "16:9" && p.frame != "9:16" && p.frame != "1:1" && p.frame != "2.39:1") throw std::invalid_argument("'frame' must be 16:9, 9:16, 1:1 or 2.39:1");
@@ -226,6 +239,7 @@ Preset Preset::parse(const Json& j) {
                 step.share = number(s, "share", 0.5, 0.1, 0.9);
             } else step.split = number(s, "split", 1.0, 0.05, 1.0);
             if (s.contains("title")) { step.title = text(s, "title", 80, false); step.titled = true; }
+            if (s.contains("labels")) { if (!s.at("labels").is_boolean()) throw std::invalid_argument("A breakdown step's 'labels' must be true or false"); step.labels = s.at("labels").get<bool>(); }
             p.breakdown.push_back(step);
         }
     }
@@ -252,7 +266,7 @@ Timeline make_timeline(const Preset& p, double route_length_cm, double walk_spee
         return OrbitKey{t, k.azimuth, k.distance * p.zoom, k.height, k.aim, k.fov * p.fov_scale};
     };
     // Breakdown steps are fractions of the whole take, whatever kind it is.
-    auto reveals = [&] { for (const auto& s : p.breakdown) tl.breakdown.push_back({s.fraction * tl.total, s.layers, s.wipe, s.split, s.title, s.titled, s.follow, s.share}); };
+    auto reveals = [&] { for (const auto& s : p.breakdown) tl.breakdown.push_back({s.fraction * tl.total, s.layers, s.wipe, s.split, s.title, s.titled, s.follow, s.share, s.labels}); };
     if (p.kind == ShotKind::Photo) {
         tl.total = double(p.photos.size()) * p.hold;
         reveals();

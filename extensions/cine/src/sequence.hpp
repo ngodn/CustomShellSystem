@@ -61,20 +61,33 @@ struct SeqShot {
     // "fixed": the side this shot is taken from is part of the shot. When something is in the
     // way it may come closer, never swing round to another side.
     bool fixed = false;
+    // "view": the camera as the player framed it in Cine World when the take started (its
+    // place around her, height, tilt and lens), held for this shot. Resolved at F8.
+    bool view = false;
 };
 
 // One change of look. `outfit` empty leaves the outfit alone (palette and controls only).
 struct SeqLook {
     double at = 0;               // seconds
-    // palette: a palette id, or "original" for the outfit's own colours.
+    // palette: a palette id, or "original" for the outfit's own colours. An outfit of "current"
+    // (no variant) is whatever she wears when the take starts, with the customization saved on it.
     std::string outfit, variant, palette;
     std::map<std::string, std::vector<double>> controls;   // 1 to 3 channels each
     // What the caption says from this step on ("Palette  //  Ember"), so a change has a name.
     // An empty title clears the caption. A step may be a title alone.
     std::string title; bool titled = false;
     bool cover = true;           // an outfit change: false leaves it uncovered (hide it in a whip)
+    // How the cover moves for this change: the sweep in and out, and how long the picture
+    // stays covered before the step's beat (the outfit lands under it). 0 = the tempo's
+    // default (a quarter beat and one beat). A slow sweep with a longer hold reads as a
+    // transition rather than a cut.
+    double wipe = 0, hold = 0;
     std::string idle;            // a wardrobe idle to switch to (its id); put it on a cut, a pose change is not blended
     bool reset = false;          // back to the customization the take opened with, before this step's own changes
+    // "performance": true starts the take's performance again from its first frame on this
+    // beat; false keeps an outfit change from starting it the moment the look lands (a later
+    // step will, after the change has been staged). Absent: an outfit change starts it on landing.
+    bool restart = false, hold_performance = false;
     std::map<std::string, std::string> physics;   // a motion control and the wardrobe's preset for it ("chest_motion": "natural")
 };
 

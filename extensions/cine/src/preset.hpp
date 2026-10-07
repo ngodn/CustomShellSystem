@@ -35,7 +35,8 @@ struct PhotoShot { std::string name; double azimuth = 0, distance = 300, height 
 // whole frame; less holds the layers left of the line and the final picture right of it.
 // `follow` ("split": "body") keeps the line on the middle of her body instead of a fixed place.
 // `share`, with follow: how much of her width the layers get (0.5 is her centre line).
-struct BreakdownStep { double fraction = 0; LayerSet layers = 0; double wipe = 1.2; double split = 1.0; std::string title; bool titled = false; bool follow = false; double share = 0.5; };
+struct BreakdownStep { double fraction = 0; LayerSet layers = 0; double wipe = 1.2; double split = 1.0; std::string title; bool titled = false; bool follow = false; double share = 0.5;
+                       bool labels = true; };   // "labels": false keeps the arrows off while this step shows
 
 // Something that happens in a fight, and what the camera does about it.
 struct Beat {
@@ -87,11 +88,17 @@ struct Preset {
     Sequence sequence;           // Sequence only: shots and looks on a tempo grid
     std::string audio;           // optional: a .wav or .mp3 in the extension folder, played from the take's first frame
     std::string idle;            // optional: the idle every look plays during the take (a CSS idle id)
+    // Optional: a performance (a CSS shared dance or pose id) the take plays from its first
+    // frame. In a sequence with look steps it is stopped for every outfit change and started
+    // again from its first frame the moment the new look is on, so each pass dances from
+    // the top. "menu" plays the performance chosen on the CINE page.
+    std::string performance; double performance_rate = 1.0;
     std::string frame;           // optional: the frame the take is laid out for ("9:16"...), whatever guide is chosen
     // Sequence: what takes the whole frame while she changes outfit, used in turn. The rig
     // (clay with the bones in it) by default: the outfit changes under one clay figure.
     std::vector<LayerSet> cover;
     bool look_ends_on_own = true;   // rebuild the modder's own look for the final shot
+
     static Preset parse(const Json&);
 };
 
@@ -104,7 +111,8 @@ struct Timeline {
     std::vector<OrbitKey> keys;
     struct Step { double at = 0; const LookStep* step = nullptr; bool own = false; };
     std::vector<Step> look;
-    struct Reveal { double at = 0; LayerSet layers = 0; double wipe = 0; double stop = 1.0; std::string title; bool titled = false; bool follow = false; double share = 0.5; };
+    struct Reveal { double at = 0; LayerSet layers = 0; double wipe = 0; double stop = 1.0; std::string title; bool titled = false; bool follow = false; double share = 0.5;
+                    bool labels = true; };
     std::vector<Reveal> breakdown;
 };
 // Walk needs the route length; others ignore it. Throws std::invalid_argument when the

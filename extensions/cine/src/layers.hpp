@@ -14,6 +14,7 @@ using Json = nlohmann::json;
 
 enum class Layer : uint8_t {
     Clay, Wireframe, Skeleton, VirtualBones, IkBones, Springs, Sockets, Collision, Capsule,
+    NoBody,      // her parts hidden: the bones, sockets and shapes stand on their own
     BaseColor, Normals, Roughness, Metallic, Depth, Occlusion, Lighting,
     Count
 };

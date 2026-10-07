@@ -25,10 +25,11 @@ struct Rect { double x = 0, y = 0, w = 0, h = 0; };
 
 // Where a callout points, in HUD units. `visible` is false when the target is behind the
 // camera: its label is dropped for that frame, as it is when the target is outside the frame.
-struct CalloutTarget { std::string text; double x = 0, y = 0; bool visible = false; };
+struct CalloutTarget { std::string text; double x = 0, y = 0; bool visible = false; std::vector<std::pair<double, double>> more; };   // `more`: further arrows from the same label
 // One placed callout: the label's box (top-left corner and width), which side it is on, and
 // the leader from the shelf under the label to the target.
-struct CalloutPlace { size_t target = 0; bool on_left = true; double label_x = 0, label_y = 0, width = 0, from_x = 0, from_y = 0, to_x = 0, to_y = 0; };
+struct CalloutPlace { size_t target = 0; bool on_left = true; double label_x = 0, label_y = 0, width = 0, from_x = 0, from_y = 0, to_x = 0, to_y = 0;
+                      std::vector<std::pair<double, double>> more_to; };   // the further arrows' tips, inside the frame (and left of a split line)
 
 constexpr size_t max_callouts = 8, max_signature_lines = 6;
 constexpr double callout_font = 18, callout_line = 26, callout_shelf = 3;
@@ -75,7 +76,8 @@ public:
     void hide();
     void forget();   // the world changed: the host dropped our layers
 private:
-    struct Slot { CssxLayer text = 0, bar = 0, shelf = 0, leader = 0, head[2]{}; std::string shown; int side = -1; };
+    static constexpr size_t extra_arrows = 3;   // beyond the first: four arrows a label
+    struct Slot { CssxLayer text = 0, bar = 0, shelf = 0, leader = 0, head[2]{}; CssxLayer more_leader[extra_arrows]{}, more_head[extra_arrows][2]{}; std::string shown; int side = -1; };
     void build();
     void restyle(double scale);
     void line(CssxLayer layer, double x0, double y0, double x1, double y1, float thickness, int z);

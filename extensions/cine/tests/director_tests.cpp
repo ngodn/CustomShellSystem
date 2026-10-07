@@ -34,6 +34,7 @@ struct Host {
     std::vector<Json> css_applies;
     bool css_present = true;
     bool performance_supported = true, performance_active = false, performance_fail_start = false;
+    int performance_refuse_starts = 0;   // the next N starts are refused like CSS while her appearance settles
     uint64_t performance_token = 0;
     std::string performance_id, performance_reason;
     int performance_starts = 0, performance_stops = 0;
@@ -251,6 +252,12 @@ struct Host {
             return done();
         }
         if (fn == "SetOverlayMaterial") { flag("OverlayMaterial") = id_of(a.at("NewOverlayMaterial")) ? object(id_of(a.at("NewOverlayMaterial"))) : Json(nullptr); return done(); }
+        if (fn == "GetSkeletalMeshAsset") return ret(object(by_path("/Game/Test/SK_Her").at("$object")));
+        if (fn == "GetComponentsByTag") {
+            Json list = Json::array();
+            for (const auto id : components) { const auto& p = things.at(id).props; if (p.contains("ComponentTags") && p.at("ComponentTags").is_array()) for (const auto& tag : p.at("ComponentTags")) if (tag == a.at("Tag")) list.push_back(object(id)); }
+            return ret(list);
+        }
         if (fn == "AddComponentByClass") {
             const auto id = make("component", {{"_class", a.at("Class")}, {"_hidden", true}, {"_socket", ""}});
             components.insert(id); ++components_made;
@@ -267,7 +274,7 @@ struct Host {
         if (fn == "RemoveBlendable") { drop(flag("_blendables"), [&](const Json& e) { return e == a.at("InBlendableObject"); }); return done(); }
         if (fn == "SetScalarParameterValue") { flag("_params")[a.at("ParameterName").get<std::string>()] = a.at("Value"); return done(); }
         for (const char* quiet : {"SetVectorParameterValue", "SetCollisionEnabled", "SetStaticMesh", "SetCastShadow", "K2_SetRelativeTransform", "SetCapsuleSize",
-                                  "SetSphereRadius", "SetBoxExtent", "SetLineThickness"})
+                                  "SetSphereRadius", "SetBoxExtent", "SetLineThickness", "SetSkeletalMeshAsset", "SetLeaderPoseComponent"})
             if (fn == quiet) return done();
         return false;
     }
@@ -339,11 +346,14 @@ struct Host {
             if (r.at("action") == "expressions") return {{"entries", Json::array({{{"id", "css.face.happy"}, {"name", "Happy"}}})}};
             if (r.at("action") == "performances") return {{"entries", Json::array({
                 {{"id", "css.eve.dance.blackhole"}, {"name", "Black Hole"}, {"library", "css.locomotion"}, {"library_name", "CSS Locomotion"},
+                 {"playback", "once"}, {"available", performance_supported}, {"reason", performance_supported ? "" : "Unsupported outfit"}},
+                {{"id", "css.eve.dance.irisout"}, {"name", "Iris Out"}, {"library", "css.locomotion"}, {"library_name", "CSS Locomotion"},
                  {"playback", "once"}, {"available", performance_supported}, {"reason", performance_supported ? "" : "Unsupported outfit"}}})}};
             if (r.at("action") == "performance") {
                 const auto op = r.at("op");
                 if (op == "start") {
                     if (performance_fail_start) throw std::runtime_error("Clip failed to load");
+                    if (performance_refuse_starts > 0) { --performance_refuse_starts; throw std::runtime_error("Wait for the appearance to become ready"); }
                     if (!performance_supported || performance_active) throw std::runtime_error("Performance unavailable");
                     performance_start = r; ++performance_starts; ++performance_token;
                     performance_id = r.at("id"); performance_active = true; performance_reason.clear();
@@ -820,7 +830,7 @@ int main(int argc, char** argv) {
             int waited = 0;
             for (; waited < 60 && !has(r.status(), "Rolling"); ++waited) { const auto c = h.requests; r.step(); worst = std::max(worst, h.requests - c); }
             expect(has(r.status(), "Rolling"), "the take rolls once the layers are built: " + r.status());
-            expect(h.components_made == 19, "9 bone sticks, 5 markers, 2 sockets and 3 physics shapes are built, got " + std::to_string(h.components_made));
+            expect(h.components_made == 20, "the follower, 9 bone sticks, 5 markers, 2 sockets and 3 physics shapes are built, got " + std::to_string(h.components_made));
 
             expect(worst <= 200, "building never spends more than a bounded slice per tick: " + std::to_string(worst));
             expect(has(r.status(), "Look track off"), "the look track steps aside for a breakdown with clay");
@@ -910,7 +920,7 @@ int main(int argc, char** argv) {
             r.press("F8");
             for (int i = 0; i < 60 && !has(r.status(), "Rolling"); ++i) r.step();
             expect(has(r.status(), "asset pak is not installed"), "the missing pak is named: " + r.status());
-            expect(h.components_made == 3, "only the physics shapes are built");
+            expect(h.components_made == 4, "only the follower and the physics shapes are built, got " + std::to_string(h.components_made));
             const double start = h.game_time;
             while (h.game_time < start + 6.6) r.step();   // collision + capsule at 60% of 10 s
             expect(h.prop(Host::PlayerCapsule, "bHiddenInGame") == false, "the capsule still shows without the pak");
@@ -978,7 +988,7 @@ int main(int argc, char** argv) {
             r.ext->event({{"id", "enter"}});
             r.press("F8");
             for (int i = 0; i < 80 && !has(r.status(), "Rolling"); ++i) r.step();
-            expect(h.components_made == 2 * 17, "both characters get their pieces: " + std::to_string(h.components_made));
+            expect(h.components_made == 2 * 18, "both characters get their follower and pieces: " + std::to_string(h.components_made));
             r.steps(25);
             expect(h.things.at(id_of(h.prop(h.part(foe, "Mesh"), "_materials")[0])).kind == "mid", "the target is in clay too");
             expect(h.projections == 0, "no labels when they are off");
@@ -1211,6 +1221,100 @@ int main(int argc, char** argv) {
             r.steps(50);
             expect(!r.host.performance_active && r.host.performance_stops == 1 && r.host.cameras.empty(), "take end must stop animation and restore camera");
             expect(r.host.css_applies.empty(), "performance must not replace saved idle or customization");
+        }
+        {   // A preset's own performance in a sequence with look steps: the dance starts at the
+            // roll, again on a restart step, and again on every new look once it is on; "current"
+            // is the outfit she wears at F8; a stop goes out before every wear.
+            Rig r(dir); r.host.populate(); auto& h = r.host;
+            h.css_present = true; h.css_outfit = "own.outfit"; h.css_variant = "base";
+            h.performance_refuse_starts = 1;   // her saved idle still holds the layer at the roll
+            std::ofstream(dir / "presets" / "test-dance.cine.json") << Json{
+                {"schema", 1}, {"id", "test-dance"}, {"name", "Test dance"}, {"kind", "sequence"}, {"reference", "capsule"},
+                {"tempo", {{"bpm", 120}, {"offset", 0}}}, {"end", 9}, {"performance", "css.eve.dance.irisout"},
+                {"shots", Json::array({{{"at", 1}, {"from", {{"azimuth", 0}, {"distance", 400}, {"height", 20}, {"aim", 10}, {"fov", 40}}}, {"to", {{"azimuth", 40}}}}})},
+                {"looks", Json::array({
+                    {{"at", 1}, {"outfit", "a.outfit"}, {"variant", "one"}, {"title", "Rig"}},
+                    {{"at", 3}, {"performance", true}, {"title", "Pass two"}},
+                    {{"at", 5}, {"outfit", "current"}, {"title", "Mine"}, {"wipe", 0.5}, {"hold", 1.0}},
+                    {{"at", 7}, {"outfit", "b.outfit"}, {"variant", "two"}, {"title", "Other"}}})}}.dump(2);
+            r.ext->event({{"id", "reload"}});
+            r.step();
+            r.ext->event({{"id", "preset"}, {"value", "test-dance"}});
+            r.ext->event({{"id", "countdown"}, {"value", 0}});
+            r.ext->event({{"id", "enter"}}); r.press("F8");
+            for (int i = 0; i < 200 && !h.performance_active; ++i) r.step();
+            expect(h.performance_active && h.performance_starts == 1 && h.performance_start.at("id") == "css.eve.dance.irisout", "the preset's performance starts at the roll, after a refusal: " + r.status());
+            expect(h.css_outfit == "a.outfit", "the opening look is worn before the roll");
+            h.performance_refuse_starts = 2;   // CSS is not ready for the pass's first two tries
+            r.steps(55);   // past the restart step at bar 3 (4 s) and its retries
+            expect(h.performance_starts == 2 && h.performance_stops >= 1, "a refused restart is tried again until CSS takes it: starts " + std::to_string(h.performance_starts));
+            expect(h.performance_start.value("seconds", 0.0) > 0.3, "and the dance joins at the point the music reached: " + std::to_string(h.performance_start.value("seconds", 0.0)));
+            r.steps(40);   // past the 'current' look at bar 5 (8 s): she is back in her own outfit
+            expect(h.css_outfit == "own.outfit" && h.css_variant == "base", "'current' wears what she had on at F8: " + h.css_outfit);
+            expect(h.performance_starts == 3, "the dance starts again once the look is on: starts " + std::to_string(h.performance_starts));
+            r.steps(40);   // past the last look at bar 7 (12 s)
+            expect(h.css_outfit == "b.outfit" && h.performance_starts == 4, "and again on the next look: starts " + std::to_string(h.performance_starts));
+            r.steps(60);
+            expect(!h.performance_active && h.cameras.empty(), "the take ends with the dance stopped: " + r.status());
+        }
+        {   // The film's layer order on one look: bones alone on a hidden body, then wireframe on
+            // clay, clay, the finished look. Nothing of the bones may survive into the look.
+            Rig r(dir); r.host.populate(); auto& h = r.host;
+            h.css_present = true;
+            auto j = Json::parse(std::ifstream(dir / "presets" / "test-seq.cine.json"));
+            j["id"] = "test-bones-first"; j["end"] = 7;
+            j["looks"] = Json::array({{{"at", 1}, {"outfit", "a.outfit"}, {"variant", "one"}}});
+            j["breakdown"] = {{"steps", Json::array({
+                {{"at", 1}, {"layers", {"no_body", "skeleton", "springs"}}, {"beats", 1}},
+                {{"at", 3}, {"layers", {"clay", "wireframe"}}, {"beats", 2}},
+                {{"at", 4}, {"layers", {"clay"}}, {"beats", 2}},
+                {{"at", 5}, {"layers", Json::array()}, {"beats", 2}}})}};
+            std::ofstream(dir / "presets" / "test-bones-first.cine.json") << j.dump(2);
+            r.ext->event({{"id", "reload"}}); r.step();
+            r.ext->event({{"id", "preset"}, {"value", "test-bones-first"}});
+            r.ext->event({{"id", "breakdown"}, {"value", "preset"}});
+            r.ext->event({{"id", "countdown"}, {"value", 0}});
+            r.ext->event({{"id", "enter"}}); r.press("F8");
+            for (int i = 0; i < 200 && !has(r.status(), "Rolling"); ++i) r.step();
+            expect(has(r.status(), "Rolling"), "the bones-first sequence rolls: " + r.status() + r.error());
+            r.steps(10);   // 1 s: the opening state, at once
+            expect(h.param_count("M_Cine_XRay", "Show", 1.0) >= 1 && h.prop(Host::PlayerMesh, "_hidden") == true, "bones show on a hidden body from the start");
+            r.steps(55);   // 6.5 s of take: the wire-on-clay step (bar 3, 4.5 s) has wiped in and settled
+            expect(h.prop(Host::PlayerMesh, "_hidden") == false, "her body is back for the wireframe");
+            expect(h.param_count("M_Cine_XRay", "Show", 1.0) == 0, "no bone group shows on the wireframe stage: " + std::to_string(h.param_count("M_Cine_XRay", "Show", 1.0)));
+            expect(has(parent_of_mid(h, h.prop(Host::PlayerMesh, "OverlayMaterial")), "M_Cine_Wire"), "the wireframe is on her");
+            r.steps(35);   // 10 s of take: the finished look (bar 5, 8.5 s) is on
+            expect(h.param_count("M_Cine_XRay", "Show", 1.0) == 0, "no bone group is left on the finished look: " + std::to_string(h.param_count("M_Cine_XRay", "Show", 1.0)));
+            expect(!has(parent_of_mid(h, h.prop(Host::PlayerMesh, "OverlayMaterial")), "M_Cine_"), "no CINE overlay is left on the finished look");
+            r.steps(40);
+            expect(has(r.status(), "Take finished"), "the take ends: " + r.status());
+        }
+        {   // Unloaded in the middle of a breakdown take: no piece stays on her. And a take sweeps
+            // up pieces an earlier session left (a crash, an unload mid-teardown).
+            Rig r(dir); r.host.populate(); auto& h = r.host;
+            h.css_present = true;
+            r.ext->event({{"id", "reload"}}); r.step();
+            r.ext->event({{"id", "preset"}, {"value", "test-bones-first"}});
+            r.ext->event({{"id", "breakdown"}, {"value", "preset"}});
+            r.ext->event({{"id", "countdown"}, {"value", 0}});
+            r.ext->event({{"id", "enter"}}); r.press("F8");
+            for (int i = 0; i < 200 && !has(r.status(), "Rolling"); ++i) r.step();
+            r.steps(10);
+            expect(!h.components.empty(), "the take built its pieces");
+            r.ext->stop();
+            expect(h.components.empty(), "stop removes every piece at once: " + std::to_string(h.components.size()) + " left");
+            // An earlier session's pieces: tagged, still on her.
+            const auto orphan = h.make("component", {{"_class", object(1)}, {"_hidden", true}, {"_socket", ""}, {"ComponentTags", Json::array({"CINE_Breakdown"})}});
+            h.components.insert(orphan);
+            Rig r2(dir); r2.host.populate(); r2.host.css_present = true;
+            r2.host.components = h.components; r2.host.things[orphan] = h.things.at(orphan);
+            r2.ext->event({{"id", "reload"}}); r2.step();
+            r2.ext->event({{"id", "preset"}, {"value", "test-bones-first"}});
+            r2.ext->event({{"id", "breakdown"}, {"value", "preset"}});
+            r2.ext->event({{"id", "countdown"}, {"value", 0}});
+            r2.ext->event({{"id", "enter"}}); r2.press("F8");
+            for (int i = 0; i < 200 && !has(r2.status(), "Rolling"); ++i) r2.step();
+            expect(r2.host.destroyed.contains(orphan), "a new take removes pieces an earlier session left");
         }
         for (int cause = 0; cause < 6; ++cause) {
             Rig r(dir); r.step();

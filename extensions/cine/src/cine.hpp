@@ -131,6 +131,10 @@ private:
         std::vector<double> chain_clear;
         size_t plan_chain = 0, plan_turn = 0, plan_shot = 0, plan_sample = 0;
         bool idle_set = false;         // CSS was asked for one idle across the take's looks
+        // The performance in a sequence: when it started on the take's clock, and whether it
+        // is to be started again where it was after the wardrobe interrupted it.
+        double performance_at = 0, performance_retry = 0, performance_give_up = 0;
+        bool performance_resume = false;
         int wear_poll = 0, transitions = 0;
         // What to do before the take rolls: wear each look once, build the breakdown on the
         // look it belongs to, end on the opening look.
@@ -155,6 +159,8 @@ private:
     void load_state();
     void save_state() const;
     std::string performance_conflict(const Preset&) const;
+    PerformanceChoice take_performance(const Preset&) const;
+    void resume_performance();
     const Preset* current_preset() const;
 
     // Modes.
@@ -216,7 +222,7 @@ private:
     // Breakdown labels. Sampled on the tick: where each labelled component is relative to
     // her, and how the lens maps onto the HUD. Drawn every frame from that with one host call
     // (where the camera is now) and the frame's own player position.
-    struct Label { std::string text; Vec3 before, now; bool pair = false; Vec3 other_before, other_now; };
+    struct Label { std::string text; Vec3 before, now; std::vector<Vec3> more_before, more_now; };
     std::vector<Label> labels_;
     std::vector<CalloutTarget> callout_targets_;
     Lens lens_;

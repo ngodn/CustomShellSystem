@@ -86,6 +86,9 @@ std::vector<CalloutPlace> layout_callouts(const Rect& frame, const std::vector<C
             p.from_x = p.label_x + p.width;
             p.from_y = p.label_y + line_height + callout_shelf * scale;
             p.to_x = std::min(t.x, line_x); p.to_y = t.y;
+            for (const auto& [x, y] : t.more)
+                if (std::isfinite(x) && std::isfinite(y) && x >= frame.x && y >= frame.y && x <= right_edge && y <= bottom_edge && x <= line_x + frame.w * 0.03 && p.more_to.size() < 3)
+                    p.more_to.push_back({std::min(x, line_x), y});
             out.push_back(p);
         }
         return out;
@@ -121,6 +124,9 @@ std::vector<CalloutPlace> layout_callouts(const Rect& frame, const std::vector<C
             p.from_x = on_left ? p.label_x + p.width : p.label_x;
             p.from_y = p.label_y + line_height + callout_shelf * scale;
             p.to_x = t.x; p.to_y = t.y;
+            for (const auto& [x, y] : t.more)
+                if (std::isfinite(x) && std::isfinite(y) && x >= frame.x && y >= frame.y && x <= right_edge && y <= bottom_edge && p.more_to.size() < 3)
+                    p.more_to.push_back({x, y});
             out.push_back(p);
         }
     };
@@ -194,6 +200,11 @@ void Callouts::build() {
         s.shelf = hud_->image(context_, root);
         s.leader = hud_->image(context_, root);
         for (auto& head : s.head) head = hud_->image(context_, root);
+        for (size_t k = 0; k < extra_arrows; ++k) {
+            s.more_leader[k] = hud_->image(context_, root);
+            for (auto& head : s.more_head[k]) head = hud_->image(context_, root);
+            for (CssxLayer l : {s.more_leader[k], s.more_head[k][0], s.more_head[k][1]}) { paint(l, trace); if (l) hud_->set_pivot(context_, l, 0, 0.5f); }
+        }
         s.text = hud_->text(context_, root);
         paint(s.bar, accent);
         for (CssxLayer l : {s.shelf, s.leader, s.head[0], s.head[1]}) { paint(l, trace); if (l) hud_->set_pivot(context_, l, 0, 0.5f); }
@@ -249,7 +260,10 @@ void Callouts::box(CssxLayer layer, double x, double y, double w, double h, int 
 
 void Callouts::hide() {
     if (!built_ || !visible_) return;
-    for (auto& s : slots_) for (CssxLayer l : {s.text, s.bar, s.shelf, s.leader, s.head[0], s.head[1]}) off(l);
+    for (auto& s : slots_) {
+        for (CssxLayer l : {s.text, s.bar, s.shelf, s.leader, s.head[0], s.head[1]}) off(l);
+        for (size_t k = 0; k < extra_arrows; ++k) for (CssxLayer l : {s.more_leader[k], s.more_head[k][0], s.more_head[k][1]}) off(l);
+    }
     for (CssxLayer l : {caption_, caption_bar_, caption_accent_, sign_accent_}) off(l);
     for (CssxLayer l : sign_) off(l);
     visible_ = false;
@@ -282,10 +296,17 @@ void Callouts::update(const CssxFrame& frame_data, const Rect& frame, const std:
 
     auto places = layout_callouts(frame, targets, line_x);
     // Half-unit steps: sub-pixel jitter in a still shot sends nothing to the HUD.
-    for (auto& p : places) { p.to_x = std::round(p.to_x * 2) / 2; p.to_y = std::round(p.to_y * 2) / 2; }
+    for (auto& p : places) {
+        p.to_x = std::round(p.to_x * 2) / 2; p.to_y = std::round(p.to_y * 2) / 2;
+        for (auto& [x, y] : p.more_to) { x = std::round(x * 2) / 2; y = std::round(y * 2) / 2; }
+    }
     for (size_t i = 0; i < max_callouts; ++i) {
         auto& s = slots_[i];
-        if (i >= places.size()) { for (CssxLayer l : {s.text, s.bar, s.shelf, s.leader, s.head[0], s.head[1]}) off(l); continue; }
+        if (i >= places.size()) {
+            for (CssxLayer l : {s.text, s.bar, s.shelf, s.leader, s.head[0], s.head[1]}) off(l);
+            for (size_t k = 0; k < extra_arrows; ++k) for (CssxLayer l : {s.more_leader[k], s.more_head[k][0], s.more_head[k][1]}) off(l);
+            continue;
+        }
         const auto& p = places[i];
         const auto& text = targets[p.target].text;
         if (s.text) {
@@ -298,12 +319,20 @@ void Callouts::update(const CssxFrame& frame_data, const Rect& frame, const std:
         // Accent bar at the label's outer end, shelf under it, leader from the shelf's inner end.
         box(s.bar, p.on_left ? p.label_x - 9 * scale : p.label_x + p.width + 6 * scale, p.label_y + 3 * scale, 3 * scale, line_height - 2 * scale, z_order);
         box(s.shelf, p.label_x, p.from_y - 0.75, p.width, 1.5, z_order);
-        line(s.leader, p.from_x, p.from_y, p.to_x, p.to_y, 1.5f, z_order);
         // Arrowhead: two short strokes back from the tip, 24 degrees either side of the leader.
-        const double angle = std::atan2(p.from_y - p.to_y, p.from_x - p.to_x), reach = 13 * scale;
-        for (int k = 0; k < 2; ++k) {
-            const double a = angle + (k ? 0.42 : -0.42);
-            line(s.head[k], p.to_x, p.to_y, p.to_x + std::cos(a) * reach, p.to_y + std::sin(a) * reach, 1.8f, z_order);
+        auto arrow = [&](CssxLayer leader, CssxLayer* heads, double to_x, double to_y) {
+            line(leader, p.from_x, p.from_y, to_x, to_y, 1.5f, z_order);
+            const double angle = std::atan2(p.from_y - to_y, p.from_x - to_x), reach = 13 * scale;
+            for (int k = 0; k < 2; ++k) {
+                const double a = angle + (k ? 0.42 : -0.42);
+                line(heads[k], to_x, to_y, to_x + std::cos(a) * reach, to_y + std::sin(a) * reach, 1.8f, z_order);
+            }
+        };
+        arrow(s.leader, s.head, p.to_x, p.to_y);
+        // The label's further arrows, from the same shelf end; unused ones are off.
+        for (size_t k = 0; k < extra_arrows; ++k) {
+            if (k < p.more_to.size()) arrow(s.more_leader[k], s.more_head[k], p.more_to[k].first, p.more_to[k].second);
+            else for (CssxLayer l : {s.more_leader[k], s.more_head[k][0], s.more_head[k][1]}) off(l);
         }
     }
 

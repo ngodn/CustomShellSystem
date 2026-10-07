@@ -332,6 +332,13 @@ static void labels() {
     expect(placed[0].target == 1 && placed[1].target == 0 && placed[0].label_y < placed[1].label_y, "a column runs top to bottom like its targets, so leaders do not cross");
     std::vector<CalloutTarget> many;
     for (int i = 0; i < 12; ++i) many.push_back({"Label " + std::to_string(i), 450.0 + i * 8, 150.0 + i * 45, true});
+    {   // A label naming several places gets an arrow to each that is in the frame, up to four in all.
+        std::vector<CalloutTarget> springs{{"Spring bones: chest", 900, 400, true, {{1020, 405}, {5000, 400}, {960, 600}}}};
+        const auto p = layout_callouts(screen, springs);
+        expect(p.size() == 1 && p[0].more_to.size() == 2, "further arrows inside the frame are kept, the one outside is dropped");
+        std::vector<CalloutTarget> crowd{{"IK bones, 7", 900, 400, true, {{910, 410}, {920, 420}, {930, 430}, {940, 440}, {950, 450}}}};
+        expect(layout_callouts(screen, crowd)[0].more_to.size() == 3, "no more than four arrows a label");
+    }
     const auto capped = layout_callouts(screen, many);
     size_t on_left = 0;
     for (const auto& p : capped) if (p.on_left) ++on_left;
@@ -533,10 +540,12 @@ static void shipped(const fs::path& root) {
             }
             // No shot shorter than a beat's third: nothing flickers.
             for (const auto& shot : seq.shots) expect(shot.length >= 60.0 / seq.tempo.bpm / 3, "a shipped sequence has no flicker cut: " + p.id);
-            // The breakdown runs across the outfit changes, with clay in the overlay slot only:
-            // the one slot cannot hold clay and wireframe at once.
+            // Where a look step repaints her, clay lives in the overlay slot only and cannot
+            // share it with wireframe; a sequence of outfit changes alone may use both.
+            bool repaints = false;
+            for (const auto& look : seq.looks) repaints = repaints || !look.palette.empty() || !look.controls.empty() || look.reset;
             for (const auto& r : tl.breakdown) {
-                expect(!((r.layers & bit(Layer::Clay)) && (r.layers & bit(Layer::Wireframe))), "a shipped sequence never asks for clay and wireframe in one step: " + p.id);
+                expect(!repaints || !((r.layers & bit(Layer::Clay)) && (r.layers & bit(Layer::Wireframe))), "a shipped sequence that repaints never asks for clay and wireframe in one step: " + p.id);
                 expect(r.stop >= 0.2 && r.stop <= 1.0, "a shipped sequence's split leaves room on both sides: " + p.id);
             }
             expect(!p.cover.empty(), "a shipped sequence has a pass to cover its outfit changes: " + p.id);
