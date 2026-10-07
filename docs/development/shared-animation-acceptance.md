@@ -1,5 +1,16 @@
 # Shared animation acceptance
 
+CW Spin now has a complete source-rig mapping and bounded playback curves in
+`cw-spin-source-v3`, `cw-spin-basis-v3` and `cw-spin-curves-v2`. All eleven
+source curves are mapped. The 401 poses and 400 independent intermediate
+poses pass the unchanged 0.015 cm geometry limit; maximum holdout difference
+is 0.005586 cm. This is a second prepared CW facial track, not a second
+packaged or live-accepted track. Gesture 200 remains the only CW performance
+in the combined candidate. Come Closer, DumbDumb, Iris Out and Cinderella
+still need their CW mappings. Spin also needs asset cooking and catalog
+integration. Its curve data exceeds the manifest limit, so use a separately
+bounded package resource rather than increasing that limit without review.
+
 CW's expanded performance face is now independently cooked and checked in
 `cw-performance-cook-v1`: 59 added shapes, all 90 prior mesh morphs preserved,
 and 144 source-control interpolation holdouts passing. This is preparation

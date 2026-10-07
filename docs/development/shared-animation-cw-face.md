@@ -252,3 +252,79 @@ host hash verification. Both receipts are retained. The final cook, package
 and readback jobs all exited successfully. Identical staging copies were
 replaced with verified hard links, reclaiming approximately 191 MiB without
 changing any package bytes; see `duplicate-stage-cleanup.json`.
+
+## Spin performance: signed gaze and combined controls
+
+The source head uses separate left, right, up and down eye shapes. Measured
+rotations of its moving eye surface reach 40 degrees horizontally, about
+18.382 degrees upward and 26.644 degrees downward. CW's original controls
+rotate about 30.023 and 19.996 degrees per unit. Her imported rig also has
+asymmetric eye constraints and intermediate driven properties limited to
+[-1, 1]. Increasing the visible control alone therefore does not produce the
+requested gaze. See `cw-eye-constraint-audit-v1` and `cw-signed-eyes-v1`.
+
+`sample_cw_facial_controls.py --eye-gaze-range` changes only those two
+horizontal eye constraints and eight intermediate eye-property ranges in
+memory, for the derived facial bake. It retains the eyelid constraints,
+restores the original settings and neutral geometry, and verifies the source
+file hash. No original Blender file is saved. The first range trial exposed
+the intermediate property clamp and remains rejected.
+
+`cw-gaze-range-v2` verifies 32 signed/extended isolated poses and 16 combined
+poses. The measured order is horizontal then vertical for both eyes.
+`cw_eye_mapping.py` uses the rotation of the actual blended source eye shape,
+then solves CW's controls for that gaze. It does not assume that a fraction
+of a morph is the same fraction of its full rotation angle. The imported
+Bezier identity drivers round tiny values near zero; the sampler records
+their deviation and rejects differences above 0.0001 control units. A later
+independent vertex check validates the actual resulting gaze as well.
+
+`prepare_cw_gaze_performance.py` maps all eleven curves of the complete
+3.6666667-second Spin performance. Blink uses CW's own bilateral blink;
+`woo` and `ooo` use her native UW and OW phonemes. They retain CW's lip
+proportions. The source head and five sampled CW frontal views were inspected;
+these neutral-material views are not game-material or temporal acceptance.
+
+The first 327-pose fit passed key poses but failed three intermediate checks,
+peaking at 0.063030 cm during a rapid eye turn. Adaptive sampling produced
+401 poses and 400 separately evaluated intermediate poses. The accepted
+source batches are `cw-spin-source-v3` and `cw-spin-holdout-v3`; both exited
+successfully with source restoration verified. Across both batches, 1,602
+eye checks give maximum rigid-fit error 0.000023325 cm and gaze-direction
+vector error 0.000020383. Evidence: `gaze-verification.json` in the source
+batch. The original sources remain unchanged.
+
+`cw-spin-basis-v3` retains the 20 existing expression/jaw/blink controls and
+adds 56 sampled correction shapes, for 76 exposed controls. These are morph
+shapes, not 56 extra expressions. All 5,911 affected points belong to the
+previously verified fitted transfer. Stored float32 deltas and the unchanged
+morph filter give maximum key-pose error 0.002101 cm and intermediate error
+0.005586 cm, below the existing 0.015 cm limit. The existing expressions and
+Gesture 200 do not need new weights. This representation can be appended to
+E4; it does not require exposing E6's 59 exploratory controls in the catalog.
+
+`compile_sampled_face.py` converts the sampled coefficients to runtime float
+precision and reduces them using the actual combined geometric displacement.
+It checks both original and rounded knot sets, including timestamp collisions.
+`cw-spin-curves-v2` has 76 curves and 205 keys per curve. Maximum conversion
+error is 0.000994 cm; the source holdout plus conversion bound is below
+0.006579 cm. Four gaze-math tests and three sampled-curve tests pass, including
+reflection/degeneracy rejection, signed rotations, cancelling controls,
+reversals and motion that cannot survive float timestamp conversion.
+The default sampler still matches four prior neutral/blink/restored snapshots
+exactly (`cw-sampler-default-regression-v1`). The existing facial-basis and
+interpolation test group passes all 15 tests; the curve-compiler group passes
+six tests. No runtime code changed in this checkpoint.
+
+The 657,779-byte performance exceeds the existing 256 KiB manifest limit.
+Next, add a bounded, hash-checked facial curve resource to the package loader
+and packaging tool, retaining inline-curve compatibility and shared CSS/CINE
+resolution. Do not silently raise the manifest limit. Cooking these new shapes,
+catalog integration and live acceptance are still pending. Gesture 200 is
+still the only packaged CW facial performance; Spin is the second prepared
+mapping. Come Closer, DumbDumb, Iris Out and Cinderella remain unmapped for CW.
+
+Removed 512 unused samples from the two failed partial batches, reclaiming
+144,078,677 bytes. Kept their logs, plans, neutral poses and endpoint evidence.
+The successful batches and all original assets remain intact. Receipt:
+`cw-spin-rejected-sample-cleanup.json`. No game installation occurred.

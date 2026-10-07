@@ -31,10 +31,14 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--control', action='append', required=True)
     parser.add_argument('--levels', nargs='+', type=float, default=[.25,.5,.75,1.0])
+    parser.add_argument('--extended-levels', action='store_true',
+                        help='Allow explicit signed/overshoot samples within [-4,4]')
     parser.add_argument('--combined', action='store_true', help='Also evaluate all requested controls together')
     parser.add_argument('--combinations', type=Path, help='Explicit JSON list of labeled control combinations')
     parser.add_argument('--tongue-fk', action='store_true',
                         help='Sample tongue joint controls with source tongue IK disabled in memory')
+    parser.add_argument('--eye-gaze-range', action='store_true',
+                        help='Bake horizontal eye motion within 45 degrees; restore source limits afterward')
     args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
     if args.output.exists() or bpy.context.preferences.filepaths.use_scripts_auto_execute:
         raise ValueError('Use a new output directory and --disable-autoexec')
@@ -49,8 +53,10 @@ def main():
     if len(set(args.control)) != len(args.control):
         raise ValueError('Duplicate source control')
     if (len(set(args.levels))!=len(args.levels) or
-        any(not np.isfinite(level) or not 0<level<=1 for level in args.levels)):
-        raise ValueError('Sample levels must be distinct finite values in (0,1]')
+        any(not np.isfinite(level) or level==0 or
+            not (-4<=level<=4 if args.extended_levels else 0<level<=1)
+            for level in args.levels)):
+        raise ValueError('Use distinct nonzero finite levels in the selected sampling range')
     for name in args.control:
         if not name.startswith('facs_') or name not in rig or abs(float(rig[name])) > 1e-6:
             raise ValueError(f'Unknown or active source control: {name}')
@@ -70,7 +76,8 @@ def main():
             labels.add(item['label'])
             for name,value in item['controls'].items():
                 if (name not in original or type(value) not in (int,float) or
-                    not np.isfinite(value) or not 0<=value<=1):
+                    not np.isfinite(value) or
+                    not (-4<=value<=4 if args.extended_levels else 0<=value<=1)):
                     raise ValueError('Invalid combination control')
     for obj in parts:
         obj.hide_set(False)
@@ -80,11 +87,24 @@ def main():
                 modifier.show_viewport = False
     args.output.mkdir(parents=True)
     records = []
+    eye_driver_error = 0.0
 
     def sample(label):
+        nonlocal eye_driver_error
         rig.update_tag()
         rig.data.update_tag()
         bpy.context.view_layer.update()
+        if args.eye_gaze_range:
+            for row in eye_ranges:
+                data = bpy.data.armatures[row['armature']]
+                control = row['property'][:-5]
+                difference = abs(float(data[row['property']]) - float(rig[control]))
+                eye_driver_error = max(eye_driver_error, difference)
+                # Imported Bezier identity drivers round values near zero.
+                # This bound is under 0.0031 degrees for the measured eye axes.
+                if difference > 1e-4:
+                    raise ValueError(f'Eye driver altered {control}: requested {rig[control]}, '
+                                     f'{data.name} returned {data[row["property"]]}')
         graph = bpy.context.evaluated_depsgraph_get()
         arrays, shapes = {}, {}
         for obj in parts:
@@ -112,19 +132,46 @@ def main():
         return arrays
 
     tongue_mode = None
+    eye_limits = []
+    eye_ranges = []
+    original_neutral = sample('original-neutral') if args.tongue_fk or args.eye_gaze_range else None
+    if args.eye_gaze_range:
+        for bone, expected in [('eye.L', (-40, 30)), ('eye.R', (-30, 40))]:
+            constraints = [c for c in rig.pose.bones[bone].constraints if c.type == 'LIMIT_ROTATION']
+            if len(constraints) != 1:
+                raise ValueError('Expected one audited eye limit: ' + bone)
+            constraint = constraints[0]
+            if (constraint.mute or constraint.influence != 1 or constraint.owner_space != 'LOCAL' or
+                    not constraint.use_limit_z or
+                    not np.allclose(np.degrees([constraint.min_z, constraint.max_z]), expected, atol=1e-5)):
+                raise ValueError('Eye limit no longer matches source audit: ' + bone)
+            eye_limits.append(dict(bone=bone, name=constraint.name,
+                                   min_z=float(constraint.min_z), max_z=float(constraint.max_z)))
+            constraint.min_z, constraint.max_z = np.radians([-45, 45])
+        for data in (rig.data, deform.data):
+            for side in ('Left', 'Right'):
+                for axis in ('Side-Side', 'Up-Down'):
+                    name = f'facs_ctrl_EyeLook{axis}{side}(fin)'
+                    ui = data.id_properties_ui(name)
+                    limits = ui.as_dict()
+                    if limits['min'] != -1 or limits['max'] != 1:
+                        raise ValueError('Unexpected intermediate eye driver range: ' + name)
+                    eye_ranges.append(dict(armature=data.name, property=name, limits=limits))
+                    ui.update(min=-1.5, max=1.5)
     if args.tongue_fk:
         if 'MhaTongueIk' not in rig or not np.isfinite(float(rig['MhaTongueIk'])):
             raise ValueError('Source lacks the audited tongue IK control')
         tongue_mode = float(rig['MhaTongueIk'])
-        original_neutral = sample('original-neutral')
         rig['MhaTongueIk'] = 0.0
     baseline = sample('neutral')
     neutral_shift = ({name: float(np.linalg.norm(baseline[name]-original_neutral[name], axis=1).max())
-                      for name in baseline} if args.tongue_fk else {})
+                      for name in baseline} if original_neutral is not None else {})
     summary = []
     for name in args.control:
         for level in args.levels:
             rig[name] = level
+            if float(rig[name])!=level:
+                raise ValueError('Source clamped the requested control: '+name)
             label = f'{name}-{level:g}'
             actual = sample(label)
             measured = {part: dict(max_delta_cm=float(np.linalg.norm(a-baseline[part], axis=1).max()),
@@ -142,6 +189,8 @@ def main():
         for item in plan:
             for name,value in original.items():
                 rig[name]=item['controls'].get(name,value)
+                if float(rig[name])!=item['controls'].get(name,value):
+                    raise ValueError('Source clamped a combined control: '+name)
             sample(item['label'])
             combinations.append(item)
         for name,value in original.items():
@@ -151,9 +200,15 @@ def main():
             raise ValueError('Combined source restoration changed geometry')
     if args.tongue_fk:
         rig['MhaTongueIk'] = tongue_mode
+    for row in eye_limits:
+        constraint = rig.pose.bones[row['bone']].constraints[row['name']]
+        constraint.min_z, constraint.max_z = row['min_z'], row['max_z']
+    for row in eye_ranges:
+        bpy.data.armatures[row['armature']].id_properties_ui(row['property']).update(**row['limits'])
+    if original_neutral is not None:
         restored = sample('original-neutral-restored')
         if any(np.max(np.abs(restored[p]-original_neutral[p])) > 1e-5 for p in baseline):
-            raise ValueError('Original tongue mode did not restore geometry')
+            raise ValueError('Original source modes did not restore geometry')
     if digest(source) != before:
         raise ValueError('Source file changed')
     if args.combinations and digest(args.combinations)!=plan_hash:
@@ -161,9 +216,13 @@ def main():
     report = dict(source=str(source), sha256=before, sources_unchanged=True,
                   blender=bpy.app.version_string, records=records, summary=summary,combinations=combinations,
                   combination_plan_sha256=plan_hash,
+                  extended_levels=args.extended_levels,
+                  eye_gaze_range=args.eye_gaze_range, original_eye_limits=eye_limits,
+                  original_eye_ranges=eye_ranges,
+                  max_eye_driver_error=eye_driver_error,
                   tongue_fk=args.tongue_fk, original_tongue_ik=tongue_mode,
                   tongue_mode_neutral_shift_cm=neutral_shift,
-                  scope='Original source controls and evaluated geometry; fitted/runtime mapping unverified.')
+                  scope='Evaluated CW source-rig geometry; reported temporary bake settings restored. Fitted/runtime mapping unverified.')
     (args.output / 'report.json').write_text(json.dumps(report, indent=2, allow_nan=False) + '\n')
     print('CW_FACE_SAMPLING_COMPLETE', len(summary), flush=True)
 
