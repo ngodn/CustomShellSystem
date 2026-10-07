@@ -1,4 +1,5 @@
 #include "data.hpp"
+#include "extension_search.hpp"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -126,6 +127,8 @@ int main(int argc,char** argv) {
         const auto resolve=[&](const std::string& choice,const std::vector<AnimationOption>& options,const std::string& target) {
             return resolve_library_animation(libraries,AnimationSlot::Idle,choice,options,target);
         };
+        expect(resolve("css.eve.dance",{},base).candidates.size()==1,
+               "Shared dance is missing from the CSS Idle Animation resolver");
         auto match=resolve("eve",bundled,base);
         expect(match.entry && match.entry->id=="css.eve.idle","Audited old ID did not resolve to shared identity");
         expect(match.candidates.size()==2 && !match.candidates[0].bundled && match.candidates[1].bundled,
@@ -151,8 +154,8 @@ int main(int argc,char** argv) {
         expect(match.entry && match.candidates.empty(),"Unsupported rig accepted shared asset");
         expect(resolve("eve",bundled,"/Game/Unknown/Skeleton.Skeleton").candidates.size()==1,
                "Unsupported shared rig discarded the outfit's fallback before runtime validation");
-        for(const char* choice:{"original","css.feminine","","missing","css.eve.dance"})
-            expect(!resolve(choice,bundled,base).entry,"Default or one-shot performance resolved as a shared idle");
+        for(const char* choice:{"original","css.feminine","","missing"})
+            expect(!resolve(choice,bundled,base).entry,"Default or unknown selection resolved as a shared idle");
         expect(!resolve_library_animation({},AnimationSlot::Idle,"eve",bundled,base).entry &&
                resolve_animation(bundled,AnimationSlot::Idle,"eve").asset==bundled[0].clip,
                "Removing shared library lost old bundled resolution");
@@ -160,7 +163,7 @@ int main(int argc,char** argv) {
         expect(!resolve_library_animation(ambiguous,AnimationSlot::Idle,"eve",bundled,base).entry,
                "Ambiguous direct resolver input chose a library by order");
         const auto merged=merge_library_animation_options(libraries,AnimationSlot::Idle,bundled);
-        expect(merged.size()==1 && merged[0].id=="eve" && merged[0].library_identity=="css.eve.idle",
+        expect(merged.size()==2 && merged[0].id=="eve" && merged[0].library_identity=="css.eve.idle",
                "Shared pack duplicated an audited bundled idle or changed its persisted ID");
         expect(merged[0].clip==bundled[0].clip,"Menu merge destroyed bundled fallback metadata");
         const std::string canonical="css.eve.idle";
@@ -170,11 +173,11 @@ int main(int argc,char** argv) {
         expect(resolve_animation(merged,AnimationSlot::Idle,canonical).asset==bundled[0].clip,
                "Merged canonical alias lost its retained outfit option");
         const auto shared_only=merge_library_animation_options(libraries,AnimationSlot::Idle,{});
-        expect(shared_only.size()==1 && shared_only[0].id==canonical,"Shared-only outfit has no idle choice");
+        expect(shared_only.size()==2 && shared_only[0].id==canonical,"Shared-only outfit has no idle choice");
         expect(merge_library_animation_options(libraries,AnimationSlot::Walk,{}).empty(),"Idle leaked into a movement slot");
         specialized=bundled;specialized[0].clip="/Game/CSS/UnholyGenessa/AN_Wings.AN_Wings";
         const auto specialized_menu=merge_library_animation_options(libraries,AnimationSlot::Idle,specialized);
-        expect(specialized_menu.size()==2 && specialized_menu[0].clip==specialized[0].clip &&
+        expect(specialized_menu.size()==3 && specialized_menu[0].clip==specialized[0].clip &&
                specialized_menu[0].library_identity.empty(),"Menu merge replaced a specialized wing clip");
         for(const auto& mutate:std::vector<std::function<void(Json&)>>{
             [](Json& j){j["id"]="original";},
@@ -216,7 +219,7 @@ int main(int argc,char** argv) {
         atomic_json(root/"outfit.css.json",{{"schema",1},{"outfits",{outfit}}},false);
         const auto combined=Catalog::load(root);
         expect(combined.outfits.size()==1,"Library displaced an old outfit");
-        expect(combined.animation_options("existing","default",AnimationSlot::Idle).size()==1,
+        expect(combined.animation_options("existing","default",AnimationSlot::Idle).size()==2,
                "Catalog did not expose shared idle to a valid outfit");
         expect(combined.bundled_animation_options("existing","default",AnimationSlot::Idle).empty(),
                "Shared cache polluted bundled asset metadata");
@@ -234,6 +237,13 @@ int main(int argc,char** argv) {
         set_animation_choice(saved,aliased,"CharacterId.Player.Shell.Genessa","existing","default",AnimationSlot::Idle,canonical);
         expect(saved.animation_choices.get("existing","default",AnimationSlot::Idle)=="eve",
                "Selecting shared alias did not preserve the outfit's fallback ID");
+        set_animation_choice(saved,aliased,"CharacterId.Player.Shell.Genessa","existing","default",AnimationSlot::Idle,"css.eve.dance");
+        const auto loaded_idle=State::parse(saved.json());
+        expect(loaded_idle.animation_choices.get("existing","default",AnimationSlot::Idle)=="css.eve.dance",
+               "Dance idle selection did not survive state serialization");
+        expect(resolve_library_performance(aliased.animation_libraries,"css.eve.dance",base).entry->playback==AnimationPlayback::Once,
+               "CSS idle selection changed CINE's authored playback mode");
+        set_animation_choice(saved,aliased,"CharacterId.Player.Shell.Genessa","existing","default",AnimationSlot::Idle,canonical);
         aliased.animation_libraries.clear();aliased.animation_option_cache.clear();
         expect(resolve_animation(aliased.animation_options("existing","default",AnimationSlot::Idle),AnimationSlot::Idle,
                saved.animation_choices.get("existing","default",AnimationSlot::Idle)).asset==bundled[0].clip,
@@ -300,6 +310,36 @@ int main(int argc,char** argv) {
             expect(packages.animation_libraries.size()==1,"Audited pack did not load as one library");
             const auto& audited=packages.animation_libraries[0];
             expect(audited.entries.size()==(cinderella?63:locomotion?62:dances?59:57) && audited.adapters.size()==(expanded?6:5),"Audited animation set changed");
+            const auto idle_options=merge_library_animation_options(packages.animation_libraries,AnimationSlot::Idle,{});
+            size_t body_sequences=0;
+            for(const auto& entry:audited.entries) {
+                if(entry.slot && entry.slot!=AnimationSlot::Idle) continue;
+                ++body_sequences;
+                expect(std::count_if(idle_options.begin(),idle_options.end(),[&](const auto& option){return option.id==entry.id;})==1,
+                       "Body sequence missing or duplicated under CSS Idle Animation");
+                for(const auto& skeleton:{base,wings}) {
+                    const auto idle=resolve_library_animation(packages.animation_libraries,AnimationSlot::Idle,entry.id,{},skeleton);
+                    const auto scene=resolve_library_performance(packages.animation_libraries,entry.id,skeleton);
+                    expect(idle.entry==scene.entry && !idle.candidates.empty() &&
+                           idle.candidates.front().asset==scene.candidates.front().asset,
+                           "CSS idle and CINE scene resolve different body clips");
+                }
+            }
+            expect(idle_options.size()==body_sequences && (!cinderella || body_sequences==60),
+                   "CSS Idle Animation does not contain the complete body library");
+            extensions::OptionSearch idle_search;
+            Json searchable=Json::array();
+            for(const auto& option:idle_options)
+                searchable.push_back({{"id",option.id},{"label",option.name}});
+            idle_search.reset(searchable);
+            idle_search.filter("BLACK hole");
+            expect(idle_search.matches.size()==1 && idle_search.value()=="css.eve.dance.blackhole",
+                   "Inline idle search does not find a dance by case-insensitive words");
+            idle_search.filter("no_such_animation_123");
+            expect(idle_search.matches.empty() && idle_search.value().is_null(),
+                   "Empty idle search results retain a selectable animation");
+            idle_search.filter("");
+            expect(idle_search.matches.size()==body_sequences,"Clearing idle search loses animation choices");
             if(cinderella) {
                 const std::string_view expected_asset=argc>=4?argv[3]:
                     "/Game/CSS/Locomotion/Studies/C10/AN_Cinderella.AN_Cinderella";

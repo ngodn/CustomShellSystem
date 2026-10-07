@@ -174,7 +174,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     // same press: carry each one's state over instead of seeing a fresh click.
     std::map<UObject*,bool> held;
     for(const auto& hit:hits_) if(auto* w=hit.widget.Get()) held[w]=hit.down;
-    hits_.clear(); rows_.clear(); sliders_.clear(); name_input_.Reset(); native_search_input_.Reset();
+    hits_.clear(); rows_.clear(); sliders_.clear(); name_input_.Reset(); native_search_input_.Reset(); idle_search_accept_=nullptr;
     for(auto* stack:{&tab_items_,&list_,&panel_head_,&panel_,&actions_,&footer_,&camera_bar_}) stack->used=0;
     native_budget_=native_budget_per_build;
     bool deferred=false;   // a long list stopped at the budget; build again next frame
@@ -430,9 +430,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     if(native_picker_) {
         // Search, inline in the details window: the query, then up to eight matches a page.
         detail(native_picker_title_.empty()?"Browse":native_picker_title_,"Search by name or keyword",
-               native_picker_kind_=="performance"?
-               "Choose a performance, then Play. The menu closes before it starts. Move or reopen the menu to stop."
-               :"Type to narrow the list. Up / Down to move, then Select.");
+               "Type to narrow the list. Up / Down to move, then Select.");
         auto& input=native_take(panel_head_,NativeKind::input);
         native_search_input_=input.extra;
         if(input.value!=native_search_query_) {
@@ -443,8 +441,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         // The field and the count stay above the results while they scroll.
         auto& count=native_take(panel_head_,NativeKind::paragraph);
         native_text(count.text_block.Get(),count.text,
-            search.options.empty() && native_picker_kind_=="performance"?"This library has no performances compatible with the current outfit."
-            :search.matches.empty()?"No matches. Try fewer or shorter words."
+            search.matches.empty()?"No matches. Try fewer or shorter words."
             :search.matches.size()==search.options.size()?std::to_string(search.options.size())+" options"
             :std::to_string(search.matches.size())+" of "+std::to_string(search.options.size())+" match");
         // Every match in one scrolling list, bounded so a huge catalog stays a few widgets.
@@ -458,7 +455,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             if(i==search.selected) panel_focus=item.widget.Get();
             bind(item.hit,{{"action","ui_pick_row"},{"row",i}});
         }
-        action_button("accept",native_picker_kind_=="performance"?"Play":"Select",{{"action","ui_pick_apply"}},3);
+        action_button("accept","Select",{{"action","ui_pick_apply"}},3);
         action_button("close","Back",{{"action","ui_pick_cancel"}},5);
         panel_open=false;
     }
@@ -1090,7 +1087,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         constexpr const char* titles[]={"Idle animation","Walk animation","Jog animation","Sprint animation","Beacon teleport animation"};
         const bool has_variant=worn && catalog.find(worn->id,selection->second.variant);
         const std::string outfit=has_variant?worn->id:"",variant=has_variant?selection->second.variant:"";
-        row_=std::clamp(row_,0,5);
+        row_=std::clamp(row_,0,4);
         std::vector<AnimationMenu> menus;
         const auto target_skeleton=appearance.animation_skeleton();
         const bool native_target=target_skeleton=="/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton";
@@ -1119,6 +1116,23 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             }
             menus.push_back(std::move(menu));
         }
+        Json idle_choices=Json::array();
+        for(const auto& item:menus[0].items)
+            idle_choices.push_back({{"id",item.id},{"label",item.name}});
+        if(idle_options_.options!=idle_choices) {
+            idle_options_.reset(idle_choices);
+            idle_options_.filter(idle_search_query_);
+        }
+        auto step_idle=[&](int direction) {
+            const auto& menu=menus[0];
+            auto index=menu.selected;
+            for(size_t n=0;n<menu.items.size();++n) {
+                index=direction>0?(index+1)%menu.items.size():(index+menu.items.size()-1)%menu.items.size();
+                if(menu.items[index].available && std::find(idle_options_.matches.begin(),idle_options_.matches.end(),index)!=idle_options_.matches.end())
+                    return menu.items[index].id;
+            }
+            return menu.items[menu.selected].id;
+        };
         auto choose=[&](AnimationSlot slot,const std::string& id)->Json {
             if(has_variant || (native_context && slot!=AnimationSlot::Beacon)) return {{"action","animation_choice"},{"outfit",outfit},{"variant",variant},{"slot",animation_slot_name(slot)},{"value",id}};
             if(slot==AnimationSlot::Walk) return {{"action","walk_animation"},{"value",id==feminine_animation_id?"feminine":"normal"}};
@@ -1127,22 +1141,10 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         section("Movement");
         for(int i=0;i<5;++i) {
             const auto& menu=menus[i];
-            const auto next=choose(slots[i],menu.step(1)),previous=choose(slots[i],menu.step(-1));
+            const auto next=choose(slots[i],i==0?step_idle(1):menu.step(1)),previous=choose(slots[i],i==0?step_idle(-1):menu.step(-1));
             if(i==4) section("Travel");
             row(i,titles[i],next,previous,next);
         }
-        section("Performance");
-        const Json browse={{"action","ui_browse_performances"}};
-        const auto performance_reason=!catalog.animation_libraries.empty()?
-            appearance.performance_unsupported(catalog,outfit):std::string("No animation library installed");
-        row(5,"Dances & Photo Poses",performance_reason.empty()?browse:Json{});
-        if(row_==5) {
-            detail("Dances & Photo Poses",has_variant?worn->name:"Performance",
-                "Play a shared animation in the world. Your saved idle, walk, jog and sprint choices stay as they are. Move or open the menu to stop.");
-            if(catalog.animation_libraries.empty()) note("Install CSS Locomotion Shared Assets to add performances.");
-            else if(!performance_reason.empty()) note(performance_reason);
-            else action_button("accept","Browse performances",browse,3);
-        } else {
         const auto slot=slots[row_];const auto& menu=menus[row_];
         const auto& current=menu.items[menu.selected];
         const auto options=options_for(slot);
@@ -1151,7 +1153,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         else if(current.id==feminine_animation_id)
             body=slot==AnimationSlot::Idle?"The Cultist Spear Lady's standing pose. Your walking choice stays separate."
                                          :"The Cultist Spear Lady's walk at its authored pace. Your standing pose stays separate.";
-        else if(slot==AnimationSlot::Idle) body="Choose a standing pose. Options can follow your weapon or hide it for a relaxed pose. Combat keeps its own animations.";
+        else if(slot==AnimationSlot::Idle) body="Choose an idle animation or pose. It plays while you stand still in the world. Moving or fighting restores gameplay animations.";
         else if(slot==AnimationSlot::Beacon) body="Choose the kneeling and rising animations for beacon travel. Travel timing and controls stay the same.";
         else body="Choose this outfit's movement animation. Default keeps the game's animation or an installed movement mod.";
         if(has_variant) body+=" Saved per outfit variant in profiles.";
@@ -1160,14 +1162,30 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         detail(titles[row_],has_variant?worn->name:"Movement",body);
         if(has_variant && mod_outfit(worn->id)) note("Shared animations require a compatible rig. Default and the CSS feminine idle and walk remain available.");
         std::vector<Choice> choices;
-        for(const auto& item:menu.items) choices.push_back({item.id,item.name,item.available?choose(slot,item.id):Json{}});
+        if(slot==AnimationSlot::Idle && panel_open) {
+            auto& input=native_take(panel_head_,NativeKind::input);
+            native_search_input_=input.extra;
+            if(input.value!=idle_search_query_) {
+                if(!has_focus(input.extra.Get())) text_value(input.extra.Get(),idle_search_query_);
+                input.value=idle_search_query_;
+            }
+            note("Search by name, then select an idle. Enter selects the first available match.");
+            for(const auto index:idle_options_.matches) {
+                const auto& item=menu.items[index];
+                const auto action=item.available?choose(slot,item.id):Json{};
+                choices.push_back({item.id,item.name,action});
+                if(idle_search_accept_.is_null() && !action.is_null()) idle_search_accept_=action;
+            }
+            if(choices.empty()) note("No matching animations. Clear the search to see all choices.");
+        } else {
+            for(const auto& item:menu.items) choices.push_back({item.id,item.name,item.available?choose(slot,item.id):Json{}});
+        }
         choice_rows(choices,current.id);
         direction_hint(true,"Choose an animation");
         if(has_variant && options.empty()) note("No custom animation supplied for this option.");
         if(slot==AnimationSlot::Walk && appearance.walk.walk_mod_active()) {
             const auto name=appearance.walk.walk_mod_name();
             note(current.id=="original"?"Installed walk mod: "+name:"This choice takes priority over "+name+".");
-        }
         }
     } else if(section_==3) {
         // Item visibility, gear position and Genessa's double appearance choices.
@@ -1513,33 +1531,6 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         native_picker_kind_="expression";native_picker_title_="Facial Expressions";
         native_search_query_.clear();dirty_=true;return {};
     }
-    if(name=="ui_browse_performances" && catalog_ && appearance_) {
-        const auto selected=state.selections.find(appearance_->shell);
-        const auto outfit=appearance_->active() && selected!=state.selections.end()?selected->second.outfit:"";
-        if(const auto why=appearance_->performance_unsupported(*catalog_,outfit);!why.empty())
-            {dirty_=true;return {};}
-        const auto& libraries=catalog_->animation_libraries;
-        if(libraries.empty()) return {};
-        auto requested=action.value("library",std::string{});
-        Json opts=Json::array();
-        if(requested.empty() && libraries.size()>1) {
-            for(const auto& library:libraries) opts.push_back({{"id",library.id},{"label",library.name}});
-            native_picker_kind_="performance_library";native_picker_title_="Animation libraries";
-        } else {
-            if(requested.empty()) requested=libraries.front().id;
-            const auto skeleton=appearance_->animation_skeleton();
-            for(const auto& library:libraries) if(library.id==requested) for(const auto& entry:library.entries) {
-                if(entry.slot && entry.slot!=AnimationSlot::Idle) continue;
-                const auto match=resolve_library_performance(libraries,entry.id,skeleton);
-                if(match.candidates.empty()) continue;
-                const auto label=entry.name+" ("+entry.category+")";
-                opts.push_back({{"id",entry.id},{"label",label}});
-            }
-            native_picker_kind_="performance";native_picker_title_="Dances & Photo Poses";
-        }
-        native_options_.reset(opts);native_picker_=true;native_picker_target_.clear();
-        native_search_query_.clear();dirty_=true;return {};
-    }
     if(name=="ui_browse_templates" && catalog_ && appearance_) {
         auto sel=state.selections.find(appearance_->shell);
         const Outfit* worn_outfit=nullptr;
@@ -1603,11 +1594,7 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         const auto val=native_options_.value();
         if(val.is_null()) return {};
         native_picker_=false; dirty_=true;
-        if(native_picker_kind_=="performance_library") {
-            return dispatch({{"action","ui_browse_performances"},{"library",val}},state);
-        } else if(native_picker_kind_=="performance") {
-            return {{"action","play_performance"},{"id",val}};
-        } else if(native_picker_kind_=="expression") {
+        if(native_picker_kind_=="expression") {
             return {{"action","expression"},{"expression",val}};
         } else if(native_picker_kind_=="outfit") {
             const std::string outfit_id=val.get<std::string>();
@@ -1935,13 +1922,16 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         const bool gamepad=read<uint8_t>(prompt,L"InputType")==1;
         if(gamepad!=gamepad_) { gamepad_=gamepad; dirty_=true; }
     }
+    const bool idle_search=section_==2 && row_==0 && !native_picker_ && native_search_input_.Get();
     bool editing_native=false;
-    if(native_picker_) if(auto* search=native_search_input_.Get()) {
+    if(native_picker_ || idle_search) if(auto* search=native_search_input_.Get()) {
         try {
             const auto query=inventory_text(search,256);
-            if(query!=native_search_query_) {
-                native_search_query_=query;
-                if(native_options_.filter(query)) build_native_picker_results();
+            auto& stored_query=idle_search?idle_search_query_:native_search_query_;
+            auto& options=idle_search?idle_options_:native_options_;
+            if(query!=stored_query) {
+                stored_query=query;
+                if(options.filter(query)) dirty_=true;
             }
         } catch(...) {}
         editing_native=true;
@@ -1955,7 +1945,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     native_reveal_pending();
     if(dirty_) build(catalog,state,appearance);
     animate(GetTickCount64());
-    if(!active_ || closing_) { profile_save_shortcut_={}; return {}; }
+    if(!active_ || closing_) { profile_save_shortcut_={}; idle_search_shortcut_={}; return {}; }
     // Scripted filming continues without desktop focus; input still requires it.
 #ifdef CSS_INVENTORY_DEV
     if(capture_duration_) {
@@ -1973,11 +1963,14 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     // Enter submits without inserting text; edge tracking prevents held-key saves.
     const bool submit_profile=profile_save_shortcut_.update(focused && new_profile,
         (GetAsyncKeyState(VK_RETURN)&0x8000)!=0);
-    if(!focused) { motion_.reset(); drag_pan_=drag_rotate_=false; return {}; }
+    if(!focused) { idle_search_shortcut_={}; motion_.reset(); drag_pan_=drag_rotate_=false; return {}; }
     if(submit_profile) return dispatch({{"action","ui_save_profile"}},state);
     bool typing=false;
     if(auto* input=name_input_.Get()) { Call focus(input,L"HasKeyboardFocus",1); focus.run(); typing=focus.get<bool>(); }
-    if(native_picker_) if(auto* search=native_search_input_.Get()) { Call focus(search,L"HasKeyboardFocus",1); focus.run(); typing=typing || focus.get<bool>(); }
+    if(native_picker_ || idle_search) if(auto* search=native_search_input_.Get()) { Call focus(search,L"HasKeyboardFocus",1); focus.run(); typing=typing || focus.get<bool>(); }
+    if(idle_search_shortcut_.update(focused && idle_search && typing,
+        (GetAsyncKeyState(VK_RETURN)&0x8000)!=0) && !idle_search_accept_.is_null())
+        return idle_search_accept_;
     bool character_controls=true;
     if(native_picker_ || !confirm_action_.is_null() || !physics_modal_control_.empty()) character_controls=false;
     if(!typing && character_controls) camera_update(elapsed,state.invert_orbit_x);
@@ -1995,7 +1988,7 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
     if(typing) for(auto& binding:bindings_) {
         bool down=false,allowed=false;
         for(const auto& key:binding.keys) if(inventory_key(controller_.Get(),key)) {
-            down=true;if((native_picker_ || !physics_modal_control_.empty()) && (key.starts_with("Gamepad_") || key=="Escape")) allowed=true;
+            down=true;if((native_picker_ || idle_search || !physics_modal_control_.empty()) && (key.starts_with("Gamepad_") || key=="Escape")) allowed=true;
             if(new_profile && binding.action=="accept" && key.starts_with("Gamepad_")) allowed=true;
         }
         const bool repeat=binding.action=="up" || binding.action=="down";
@@ -2006,6 +1999,10 @@ Json InventoryUI::poll(void* engine,const Catalog& catalog,const State& state,Ap
         binding.down=down;
         if(trigger) {
             if(new_profile && binding.action=="accept") return dispatch({{"action","ui_save_profile"}},state);
+            if(idle_search) {
+                if(binding.action=="accept" && !idle_search_accept_.is_null()) return idle_search_accept_;
+                if(binding.action=="close") return dispatch({{"action","ui_close"}},state);
+            }
             if(native_picker_) {
                 if(binding.action=="up") { native_options_.move(-1); build_native_picker_results(); return {}; }
                 if(binding.action=="down") { native_options_.move(1); build_native_picker_results(); return {}; }

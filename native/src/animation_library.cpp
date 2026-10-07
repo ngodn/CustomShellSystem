@@ -203,7 +203,9 @@ std::vector<AnimationOption> merge_library_animation_options(const std::vector<A
     AnimationSlot slot,const std::vector<AnimationOption>& bundled) {
     auto result=bundled;
     for(const auto& library:libraries) for(const auto& entry:library.entries) {
-        if(entry.slot!=slot) continue;
+        // CSS selects body sequences through Idle Animation. Keep the authored
+        // playback mode intact for CINE's explicit scene controls.
+        if(entry.slot.value_or(AnimationSlot::Idle)!=slot) continue;
         std::vector<size_t> matches;
         for(size_t i=0;i<result.size();++i) {
             const auto old=resolve_animation(bundled,slot,result[i].id);
@@ -244,7 +246,7 @@ AnimationLibraryMatch resolve_library_animation(const std::vector<AnimationLibra
     };
     const LibraryAnimation* found=nullptr;
     for(const auto& library:libraries) for(const auto& entry:library.entries) {
-        if(entry.slot!=requested_slot) continue;
+        if(entry.slot.value_or(AnimationSlot::Idle)!=requested_slot) continue;
         const bool matched_alias=std::any_of(entry.aliases.begin(),entry.aliases.end(),
             [&](const auto& alias){return aliases(entry,alias,legacy);});
         // An existing unaliased option owns its saved ID, even if another pack

@@ -336,6 +336,10 @@ class InventoryUI {
     std::string physics_modal_control_;
     int physics_modal_channel_=0;
     extensions::OptionSearch native_options_;
+    extensions::OptionSearch idle_options_;
+    std::string idle_search_query_;
+    Json idle_search_accept_;
+    ProfileSaveShortcut idle_search_shortcut_;
     WeakObject native_search_input_, native_search_results_, native_search_count_;
     std::string native_search_query_;
     uint64_t native_wheel_after_=0;
