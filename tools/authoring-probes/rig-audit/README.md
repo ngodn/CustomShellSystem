@@ -24,6 +24,21 @@ slots fail explicitly. It does not save or modify the mesh. The Genessa facial
 integration uses these snapshots to establish point and corner correspondence
 before editing private candidates.
 
+`SnapshotRenderSections` captures the built position/tangent/UV/color buffers,
+skin weights, section-local indices, cloth mappings and explicitly requested
+morph deltas. Local indices allow comparisons when earlier sections gain
+vertices. It currently requires one LOD. This is an editor-built-buffer audit,
+not evidence of cooked or in-game equivalence.
+
+`CompareMeshCloth` compares distinct meshes' clothing assets in array order.
+It checks every reflected asset property, including physical mesh data and
+instanced solver configurations, plus the non-reflected transition mappings
+and tether arrays. It reports mismatches by property, shared-object aliases
+and counts. A detached physical-data copy verifies that the comparison rejects
+a changed simulation vertex. Empty clothing arrays and unsupported types fail.
+The probe does not mutate or save either mesh. Matching original data is not
+evidence that the original simulation behaves correctly in every pose.
+
 Copy `Source/` into an isolated project with an editor module named
 `CSSRigAudit`, then build its `CSSRigAuditEditor` target against the local
 UE 5.6.1 installed engine. Enable PythonScriptPlugin and

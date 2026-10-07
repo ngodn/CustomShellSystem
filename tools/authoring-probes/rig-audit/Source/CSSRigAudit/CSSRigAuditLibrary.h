@@ -19,4 +19,11 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString SnapshotMeshSections(class USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static FString SnapshotRenderSections(class USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots,
+                                          const TArray<FName>& MorphNames);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static FString CompareMeshCloth(class USkeletalMesh* Source, class USkeletalMesh* Candidate);
 };
