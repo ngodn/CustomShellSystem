@@ -20,7 +20,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | --- | --- |
 | Nine-variant provenance | Installed hashes and 16 editable mesh identities pinned; all 790 migration paths have source candidates or alias recipes. Final Blender-to-cook recipe comparisons remain |
 | Mesh/weights/contacts | Fresh checks of all 16 editor-built meshes pass weight sums, section/bone/morph indices and finite-data checks. Deformation/contact checks and cooked comparison remain |
-| Unholy facial support | Both W3 candidates build with 137 morphs. Tangent-indexing defect corrected; 24 unchanged render sections match exactly and 115 mask controls verified with the original pruning threshold. Lip-seam UV3/shader compatibility, full cloth asset comparison, visual review, cooking and runtime acceptance pending |
+| Unholy facial support | Both W3 candidates cook with 137 morphs; geometry and morph indices match independent readback within stored compression precision. All six cloth assets per variant match source data. Native SM6 base-pass UV3 checks pass. Remaining shader/material review, oral dependency packaging, CSS/CINE binding and game acceptance pending |
 | Shared organization | CSS parser accepts new and legacy roots with 23 host suites passing. All 790 unique installed packages have collision-free author-owned destinations; 172 catalog path references classified. First 32 assets renamed, reloaded without redirectors, cooked and decoded in isolation. Remaining migration and runtime compatibility pending; not installed |
 | Locomotion | 63-entry installed catalog captured; four native declarations, 59 missing; conversion and motion-quality review pending |
 | Gameplay regressions | Current interruption baseline accepted by user; candidate regression tests pending |
@@ -130,3 +130,13 @@ render passes, SM5 or Astral shader behavior. SM5 extraction
 succeeded, but DXC cannot disassemble those containers. Material review and
 cooked/runtime acceptance remain open. The pixel extractor's previous outputs
 remain identical after adding explicit vertex extraction.
+
+Both candidate Windows cooks now pass independent geometry/morph readback and
+an IoStore export-payload roundtrip. Genessa `work/face-cook1/morph-verification.json`
+records unchanged neutral positions, primary UVs, triangle/morph indices and
+compression errors within the stored precision for all 137 controls per mesh.
+The backing and mouth expression checks also pass. Extra ornament/hood entries
+are tangent-only changes, not positional displacement; visual shading review
+remains required. The trial lacks its packaged oral material and is not ready
+to install. That material and its three textures are being moved into Genessa's
+author-owned `Faces/Mouth` folder to avoid an Eve installation dependency.
