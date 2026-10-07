@@ -19,7 +19,8 @@ struct PerformanceFields {
         auto* e=property(L"CSSPerformanceEnabled");
         auto* t=property(L"CSSPerformanceTime");
         auto* b=property(L"CSSPerformanceWeight");
-        if(!s->IsA<FObjectProperty>() || !e->IsA<FBoolProperty>() || !t->IsA<FFloatProperty>() || !b->IsA<FFloatProperty>())
+        if(!s->IsA<FObjectProperty>() || s->GetElementSize()!=sizeof(UObject*) ||
+           !e->IsA<FBoolProperty>() || !t->IsA<FFloatProperty>() || !b->IsA<FFloatProperty>())
             throw std::runtime_error("Performance layer property types differ");
         sequence=static_cast<FObjectProperty*>(s);enabled=static_cast<FBoolProperty*>(e);
         time=static_cast<FFloatProperty*>(t);weight=static_cast<FFloatProperty*>(b);
@@ -30,7 +31,8 @@ struct PerformanceFields {
     UObject* clip() const {return sequence->GetObjectPropertyValue(data(sequence));}
     bool on() const {return enabled->GetPropertyValue(data(enabled));}
     void enable(bool value) const {enabled->SetPropertyValue(data(enabled),value);}
-    void set_clip(UObject* value) const {sequence->SetObjectPropertyValue(data(sequence),value);}
+    // UE4SS's object setter wrapper is unavailable on the pinned UE 5.6 runtime.
+    void set_clip(UObject* value) const {sequence->CopyCompleteValue(data(sequence),&value);}
     float seconds() const {return time->GetPropertyValue(data(time));}
     float alpha() const {return weight->GetPropertyValue(data(weight));}
     void set_time(float value) const {time->SetPropertyValue(data(time),value);}

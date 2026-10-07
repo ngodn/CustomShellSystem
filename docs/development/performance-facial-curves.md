@@ -30,6 +30,17 @@ Engine references: [FName comparison semantics](https://cdn2.unrealengine.com/Re
 and [UAnimBlueprintGeneratedClass](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/UAnimBlueprintGeneratedClass).
 The local UE 5.6.1 header also declares `TargetSkeleton` as a runtime property.
 
+The subsequent live test reached clip assignment, proving that the earlier
+mesh/class validation barriers were passed. Read-only inspection confirms
+Eve Black Pearl now uses `SK_Face_Jali3V1_BlackPearl2`. Playback then failed
+because the pinned UE4SS runtime has no `SetObjectPropertyValue` virtual
+wrapper for this engine version. The same limitation was already handled in
+the reflected bridge. Performance sequence assignment now uses
+`CopyCompleteValue`, with object-property type, class and pointer-size checks.
+This covers both binding the sequence and clearing it during restoration.
+The replacement Windows build and nine focused host suites pass; installation
+and live acceptance are pending. Evidence: `idle-facial-failures-2`.
+
 October 7: all nine missing facial source controls were recovered from the
 user-supplied optional author head. The new 115-shape Eve candidate passes
 six-outfit editor and cooked verification. Its verified face catalog has all
