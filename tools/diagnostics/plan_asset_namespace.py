@@ -20,6 +20,11 @@ ROUTES = (
     ('Locomotion/Faces/SK_Face_Jali3V1_', 'EveSB/Faces/SK_Face_Jali3V1_', EVE),
     ('Locomotion/Faces/SK_Face_CWCompact/', 'CommanderWhite/Faces/', COMMANDER),
     ('Locomotion/Faces/Optical1/', 'CommanderWhite/Faces/Optical/', COMMANDER),
+    ('Locomotion/Adapters/ABP_Eve', 'EveSB/Animations/Adapters/ABP_Eve', EVE),
+    ('Locomotion/Adapters/ABP_EveBikini', 'EveSB/Animations/Adapters/ABP_EveBikini', EVE),
+    ('Locomotion/Adapters/ABP_EveKnit', 'EveSB/Animations/Adapters/ABP_EveKnit', EVE),
+    ('Locomotion/Adapters/ABP_Genessa', 'UnholyGenessa/Animations/Adapters/ABP_Genessa', GENESSA),
+    ('Locomotion/Adapters/ABP_CommanderWhite', 'CommanderWhite/Animations/Adapters/ABP_CommanderWhite', COMMANDER),
     ('Locomotion/', 'Shared/Locomotion/', SHARED),
     ('SharedAssets/Astral/', 'Shared/Astral/', SHARED),
     ('Eve/Anim/', 'Shared/Locomotion/EveLegacy/', SHARED),
@@ -42,6 +47,8 @@ def destination(package):
         if relative == old or (old.endswith(('/', '_')) and relative.startswith(old)):
             if old == 'Locomotion/' and relative.startswith('Locomotion/Faces/'):
                 raise ValueError(f'Facial asset needs an explicit character owner: {package}')
+            if old == 'Locomotion/' and relative.startswith('Locomotion/Adapters/'):
+                raise ValueError(f'Playback adapter needs an explicit character owner: {package}')
             return AUTHOR + new + relative[len(old):], owner
     # Older cooked relocation used Z padding. Retain slot/hash identity to avoid
     # merging materials or textures with the same basename but different data.

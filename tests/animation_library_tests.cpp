@@ -74,6 +74,23 @@ int main(int argc,char** argv) {
                    "Namespace migration changed legacy aliases");
             expect(migrated_libraries[0].adapters[0].target_class==prefix+"Adapters/ABP_Body.ABP_Body_C",
                    "Namespaced adapter was lost");
+            const auto owned="/Game/CSS/"+author+"/Character/Animations/Adapters/ABP_Body.ABP_Body_C";
+            migrated["adapters"][0]["target_class"]=owned;
+            const std::vector<AnimationLibrary> owned_libraries{AnimationLibrary::parse(migrated)};
+            const auto* adapter=resolve_performance_adapter(owned_libraries,"css.eve",
+                {std::string(64,'a'),uint64_t{1234}},"/Game/CSS/Eve/ABP_Body.ABP_Body_C",human);
+            expect(adapter && adapter->target_class==owned,"Outfit-owned playback adapter did not resolve");
+            expect(!resolve_performance_adapter(owned_libraries,"css.eve",
+                {std::string(64,'b'),uint64_t{1234}},"/Game/CSS/Eve/ABP_Body.ABP_Body_C",human),
+                "Namespaced playback adapter bypassed its source revision");
+            for(const char* bad:{"/Game/CSS/author.name/Character/Animations/Adapters/ABP_Body.ABP_Body_C",
+                    "/Game/CSS/eins0fx/Character/Animations/AdaptersExtra/ABP_Body.ABP_Body_C",
+                    "/Game/CSS/eins0fx/Character/Animations/ABP_Body.ABP_Body_C",
+                    "/Game/CSS/eins0fx/Character/Animations/Adapters/ABP_Body.ABP_Body"}) {
+                auto invalid=migrated;
+                invalid["adapters"][0]["target_class"]=bad;
+                rejects([&]{AnimationLibrary::parse(invalid);});
+            }
         }
         for(const char* bad:{"/Game/CSS//Shared/Locomotion/AN_Idle.AN_Idle",
                 "/Game/CSS/author.name/Shared/Locomotion/AN_Idle.AN_Idle",

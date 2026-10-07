@@ -43,4 +43,13 @@ inline bool facial_adapter_asset(std::string_view asset) {
     asset.remove_prefix(asset.find('/')+1);
     return asset.starts_with("Faces/") && asset.size()>6;
 }
+
+inline bool playback_adapter_asset(std::string_view asset) {
+    if(shared_locomotion_asset(asset,"Adapters/")) return true;
+    asset=authored_css_project_path(asset);
+    if(asset.empty()) return false;
+    asset.remove_prefix(asset.find('/')+1);
+    constexpr std::string_view folder="Animations/Adapters/";
+    return asset.starts_with(folder) && asset.size()>folder.size();
+}
 }

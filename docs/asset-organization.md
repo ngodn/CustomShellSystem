@@ -18,7 +18,9 @@ For the current eins0fx migration:
 
 Animation-library catalogs accept assets under
 `/Game/CSS/<author>/Shared/Locomotion/`, with performance adapter classes in
-its `Adapters/` directory. Character facial replacement meshes belong under
+its `Adapters/` directory for reusable adapters. Outfit-specific playback
+adapters belong under `/Game/CSS/<author>/<project>/Animations/Adapters/`.
+Character facial replacement meshes belong under
 `/Game/CSS/<author>/<project>/Faces/`. Exact skeleton alternatives and
 source-container revision checks still apply. A path passing validation is
 not proof that its asset loads or is compatible.
@@ -43,19 +45,21 @@ rename or assumed mount precedence. See the
 ## Initial migration map
 
 The audited installation has 820 export records representing 790 unique package
-paths. [The generated map](../work/three-outfit-rig-physics/namespace-2/asset-and-catalog-map.json)
+paths. [The generated map](../work/three-outfit-rig-physics/namespace-3/asset-and-catalog-map.json)
 assigns each package to one author-owned destination and one container:
 
 | Destination container | Unique packages |
 | --- | ---: |
-| `CSS_EveStellarBlade_eins0fx_P` | 305 |
-| `CSS_UnholyGenessa_eins0fx_P` | 130 |
-| `CSS_CommanderWhite_eins0fx_P` | 170 |
-| `CSS_SharedAssets_P` | 185 |
+| `CSS_EveStellarBlade_eins0fx_P` | 308 |
+| `CSS_UnholyGenessa_eins0fx_P` | 131 |
+| `CSS_CommanderWhite_eins0fx_P` | 171 |
+| `CSS_SharedAssets_P` | 180 |
 
 These counts describe the migration plan, not the final release. Dependency
 checks may identify unused assets to remove. Seven facial replacement meshes
 and Commander White's four optical materials move to their character owners.
+The five playback adapters also move to character owners: their graphs contain
+the outfit-specific physics and rig nodes, not only the reusable playback input.
 The common skeleton goes under `Shared/Skeletons`. Genessa's private wing
 extension stays under `UnholyGenessa/Skeletons`, as required by the goal's
 ownership rules. Commander White's padded
@@ -76,10 +80,10 @@ python3 tools/diagnostics/plan_asset_namespace.py \
   --baseline work/three-outfit-rig-physics/baseline-1/baseline.json \
   --conflicts work/three-outfit-rig-physics/baseline-1/legacy-track-conflicts.json \
   --catalog work/three-outfit-rig-physics/baseline-1/installed-locomotion-manifest.json \
-  --output work/three-outfit-rig-physics/namespace-2/asset-and-catalog-map.json
+  --output work/three-outfit-rig-physics/namespace-3/asset-and-catalog-map.json
 ```
 
-[Offline validation](../work/three-outfit-rig-physics/namespace-2/validation.json)
+[Original map validation](../work/three-outfit-rig-physics/namespace-2/validation.json)
 checked destination collisions, corrected provider selection and legacy aliases,
 plus rejection of unassigned facial owners, unknown paths and unverified provider
 conflicts. This plan does not rename editor assets, patch cooked packages or

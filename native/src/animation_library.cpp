@@ -81,7 +81,7 @@ AnimationLibrary AnimationLibrary::parse(const Json& value) {
                !std::all_of(hash.begin(),hash.end(),[](char c){return (c>='0' && c<='9') || (c>='a' && c<='f');}) ||
                !adapter.source_revision.bulk_bytes ||
                !adapter.source_class.ends_with("_C") || !adapter.target_class.ends_with("_C") ||
-               !shared_locomotion_asset(adapter.target_class,"Adapters/") ||
+               !playback_adapter_asset(adapter.target_class) ||
                adapter.source_class==adapter.target_class ||
                !sources.emplace(adapter.source_outfit,hash,adapter.source_class).second)
                 throw std::runtime_error("Invalid or duplicate performance adapter");
