@@ -12,6 +12,21 @@ selected; the current pack retains the previous `Precision1` scene asset.
 The four already verified `Contact3` dance corrections stay in the candidate.
 Remaining floor-contact findings are follow-up work, not release blockers.
 
+The same installed container bytes are packaged for private testing in
+`work/cine-animation-port/locomotion-distribution-trial-v1/`.
+The ZIP, README, credits, BBCode, candidate manifest and checksums are together.
+The ZIP is 215,485,107 bytes, SHA-256
+`0f963357f0650ecab85c9d8e2bb9266b8d393b5b0b1138023298d9907c1f2344`.
+Every archived file was read back and compared with its source hash. All 63
+entries remain included. Notes are committed at `c9303e8`; the runtime and
+asset versions have not been promoted to a public release.
+
+Read-only startup inspection after the user's launch confirms that the current
+`a943a5be35cb1035` core activated and the shared package loaded. The fresh status
+has zero catalog rejections and no animation, maintenance or overlay error.
+No appearance or performance was active in that sample. This verifies startup,
+not animation playback, stopping, face restoration or performance acceptance.
+
 ## Current counts
 
 | Content | Packaged | Acceptance still needed |
