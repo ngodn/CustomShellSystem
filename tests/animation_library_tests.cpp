@@ -51,6 +51,38 @@ int main(int argc,char** argv) {
         expect(parsed.entries[0].slot==AnimationSlot::Idle && parsed.entries[0].hide_weapons,"Idle contract lost");
         expect(!parsed.entries[1].slot && parsed.entries[1].playback==AnimationPlayback::Once,"Performance forced into idle");
         expect(parsed.entries[0].aliases[0].asset=="/Game/CSS/Eve/Anim/AN_I2_Idle.AN_I2_Idle","Legacy alias lacks exact asset");
+        for(const std::string author:{"eins0fx","another_author"}) {
+            auto migrated=library;
+            const auto prefix="/Game/CSS/"+author+"/Shared/Locomotion/";
+            const std::string human="/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton";
+            migrated["entries"][0]["assets"][0]={{"asset",prefix+"AN_Idle.AN_Idle"},
+                {"skeleton",human},{"idle_blend_space",prefix+"BS_Idle.BS_Idle"}};
+            migrated["adapters"]={{{"source_outfit","css.eve"},
+                {"source_class","/Game/CSS/Eve/ABP_Body.ABP_Body_C"},
+                {"target_class",prefix+"Adapters/ABP_Body.ABP_Body_C"},
+                {"skeleton",human},{"source_toc_sha256",std::string(64,'a')},
+                {"source_bulk_bytes",uint64_t{1234}}}};
+            const std::vector<AnimationLibrary> migrated_libraries{AnimationLibrary::parse(migrated)};
+            const auto selected=resolve_library_animation(migrated_libraries,AnimationSlot::Idle,
+                "css.eve.idle",{},human);
+            expect(selected.candidates.size()==1 && selected.candidates[0].asset==prefix+"AN_Idle.AN_Idle" &&
+                   selected.candidates[0].idle_blend_space==prefix+"BS_Idle.BS_Idle",
+                   "Namespaced native idle or carrier did not resolve");
+            const auto& aliases=migrated_libraries[0].entries[0].aliases;
+            expect(aliases.size()==1 && aliases[0].id==parsed.entries[0].aliases[0].id &&
+                   aliases[0].asset==parsed.entries[0].aliases[0].asset && aliases[0].slot==AnimationSlot::Idle,
+                   "Namespace migration changed legacy aliases");
+            expect(migrated_libraries[0].adapters[0].target_class==prefix+"Adapters/ABP_Body.ABP_Body_C",
+                   "Namespaced adapter was lost");
+        }
+        for(const char* bad:{"/Game/CSS//Shared/Locomotion/AN_Idle.AN_Idle",
+                "/Game/CSS/author.name/Shared/Locomotion/AN_Idle.AN_Idle",
+                "/Game/CSS/eins0fx/EveSB/Locomotion/AN_Idle.AN_Idle",
+                "/Game/CSS/eins0fx/Shared/LocomotionExtra/AN_Idle.AN_Idle"}) {
+            auto changed=library;
+            changed["entries"][0]["assets"][0]["asset"]=bad;
+            rejects([&]{AnimationLibrary::parse(changed);});
+        }
         {
             const std::string human="/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton";
             auto native=library;

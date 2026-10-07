@@ -33,6 +33,28 @@ int main(int argc,char** argv) {
                 {"skeleton",skeleton},{"source_toc_sha256",hash},{"source_bulk_bytes",uint64_t{1234}}}}}
         };
         auto rig=FacialRig::parse(document);
+        for(const std::string prefix:{"/Game/CSS/eins0fx/EveSB/Faces/",
+                "/Game/CSS/eins0fx/UnholyGenessa/Faces/",
+                "/Game/CSS/eins0fx/CommanderWhite/Faces/",
+                "/Game/CSS/another_author/Character/Faces/"}) {
+            auto migrated=document;
+            const auto mesh=prefix+"SK_Face.SK_Face";
+            migrated["adapters"][0]["target_mesh"]=mesh;
+            const std::vector<FacialRig> migrated_rigs{FacialRig::parse(migrated)};
+            const auto found=resolve_facial_rig(migrated_rigs,"css.eve",hash,1234,source);
+            expect(found.adapter && plan_expression(found,source,"css.face.eve.wink").mesh==mesh,
+                   "Author/project facial mesh did not resolve");
+            expect(!resolve_facial_rig(migrated_rigs,"css.eve",std::string(64,'b'),1234,source).rig,
+                   "Namespaced face bypassed revision validation");
+        }
+        for(const char* bad:{"/Game/CSS//EveSB/Faces/SK_Face.SK_Face",
+                "/Game/CSS/author.name/EveSB/Faces/SK_Face.SK_Face",
+                "/Game/CSS/eins0fx//Faces/SK_Face.SK_Face",
+                "/Game/CSS/eins0fx/EveSB/FacesExtra/SK_Face.SK_Face"}) {
+            auto changed=document;
+            changed["adapters"][0]["target_mesh"]=bad;
+            rejects([&]{FacialRig::parse(changed);});
+        }
         expect(rig.performances.empty() && !rig.find_performance("css.pose"),"Old facial rig acquired performance curves");
         auto animated=document;
         const Json performance={{"clip","css.pose"},{"duration",1.},

@@ -1,4 +1,5 @@
 #include "facial_library.hpp"
+#include "asset_namespace.hpp"
 #include "data.hpp"
 #include <algorithm>
 #include <cmath>
@@ -91,7 +92,7 @@ FacialRig FacialRig::parse(const Json& value) {
         adapter.source_bulk_bytes=item.at("source_bulk_bytes").get<uint64_t>();
         const auto& hash=adapter.source_toc_sha256;
         if(hash.size()!=64 || !std::all_of(hash.begin(),hash.end(),[](char c){return (c>='0' && c<='9') || (c>='a' && c<='f');}) ||
-            !adapter.source_bulk_bytes || !adapter.target_mesh.starts_with("/Game/CSS/Locomotion/Faces/") ||
+            !adapter.source_bulk_bytes || !facial_adapter_asset(adapter.target_mesh) ||
             adapter.target_mesh==adapter.source_mesh || !sources.emplace(adapter.source_outfit,hash,adapter.source_mesh).second)
             throw std::runtime_error("Invalid or duplicate facial mesh adapter");
         rig.adapters.push_back(std::move(adapter));

@@ -1,4 +1,5 @@
 #include "animation_library.hpp"
+#include "asset_namespace.hpp"
 #include "data.hpp"
 #include "skeleton_compatibility.hpp"
 #include <algorithm>
@@ -80,7 +81,7 @@ AnimationLibrary AnimationLibrary::parse(const Json& value) {
                !std::all_of(hash.begin(),hash.end(),[](char c){return (c>='0' && c<='9') || (c>='a' && c<='f');}) ||
                !adapter.source_revision.bulk_bytes ||
                !adapter.source_class.ends_with("_C") || !adapter.target_class.ends_with("_C") ||
-               !adapter.target_class.starts_with("/Game/CSS/Locomotion/Adapters/") ||
+               !shared_locomotion_asset(adapter.target_class,"Adapters/") ||
                adapter.source_class==adapter.target_class ||
                !sources.emplace(adapter.source_outfit,hash,adapter.source_class).second)
                 throw std::runtime_error("Invalid or duplicate performance adapter");
@@ -120,13 +121,13 @@ AnimationLibrary AnimationLibrary::parse(const Json& value) {
         for(const auto& item:assets) {
             fields(item,{"asset","skeleton","idle_blend_space"});
             LibraryAnimationAsset alternative{asset(item,"asset"),asset(item,"skeleton")};
-            if(!alternative.asset.starts_with("/Game/CSS/Locomotion/") ||
+            if(!shared_locomotion_asset(alternative.asset) ||
                !skeletons.insert(alternative.skeleton).second)
-                throw std::runtime_error("Shared assets need unique skeleton alternatives under /Game/CSS/Locomotion/");
+                throw std::runtime_error("Shared assets need unique skeleton alternatives under /Game/CSS/<author>/Shared/Locomotion/ or the legacy locomotion root");
             if(item.contains("idle_blend_space")) {
                 alternative.idle_blend_space=asset(item,"idle_blend_space");
                 if(animation.slot!=AnimationSlot::Idle || animation.playback!=AnimationPlayback::Loop ||
-                   !alternative.idle_blend_space.starts_with("/Game/CSS/Locomotion/") ||
+                   !shared_locomotion_asset(alternative.idle_blend_space) ||
                    alternative.idle_blend_space==alternative.asset ||
                    alternative.skeleton!="/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton")
                     throw std::runtime_error("Idle carrier requires a looping native-human idle");
