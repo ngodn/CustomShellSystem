@@ -3,6 +3,8 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using CUE4Parse.Compression;
 using CUE4Parse.FileProvider;
+using CUE4Parse.MappingsProvider.Usmap;
+using CUE4Parse.UE4.Assets.Exports.Material;
 using CUE4Parse.UE4.IO;
 using CUE4Parse.UE4.IO.Objects;
 using CUE4Parse.UE4.Readers;
@@ -11,43 +13,90 @@ using CUE4Parse.UE4.Versions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-if (args.Length is < 3 or > 4 || Directory.Exists(args[2]) || File.Exists(args[2]) ||
-    (args.Length == 4 && args[3] is not ("--distortion" or "--vertex")))
-    throw new ArgumentException("ShaderReadback CONTAINERS SHADER_MAP_JSON NEW_DIRECTORY [--distortion|--vertex]");
-bool distortion = args.Length == 4 && args[3] == "--distortion";
-bool vertex = args.Length == 4 && args[3] == "--vertex";
+if (args.Length is not (3 or 4 or 6) || Directory.Exists(args[2]) || File.Exists(args[2]) ||
+    (args.Length >= 4 && args[3] is not ("--distortion" or "--vertex" or "--all-vertex" or "--pixel")) ||
+    (args.Length == 6 && args[4] != "--inline-oodle"))
+    throw new ArgumentException("ShaderReadback CONTAINERS SHADER_MAP_JSON NEW_DIRECTORY [--distortion|--vertex|--all-vertex|--pixel] [--inline-oodle MAPPINGS]");
+bool inlineEnabled = args.Length == 6;
+bool distortion = args.Length >= 4 && args[3] == "--distortion";
+bool allVertex = args.Length >= 4 && args[3] == "--all-vertex";
+bool vertex = allVertex || (args.Length >= 4 && args[3] == "--vertex");
 string frequency = vertex ? "SF_Vertex" : "SF_Pixel";
-var requests = new List<(string Package, string Platform, string Hash, int[] Indices)>();
+var requests = new List<(string Package, string Platform, string Hash, int[] Indices, bool Inline)>();
 foreach (var package in JObject.Parse(File.ReadAllText(args[1])).Properties())
 foreach (var export in (JArray)package.Value)
 foreach (var resource in export["LoadedMaterialResources"] as JArray ?? new JArray()) {
     var map = resource["LoadedShaderMap"] ?? throw new InvalidDataException("Missing shader map");
-    var hash = map.Value<string>("ResourceHash") ?? throw new InvalidDataException("Expected shared shader code");
+    bool inline = map["Code"] is JObject;
+    if (inline && !inlineEnabled) throw new InvalidDataException("Inline shader code requires --inline-oodle MAPPINGS");
+    var hash = (inline ? map["Code"]!.Value<string>("ResourceHash") : map.Value<string>("ResourceHash")) ??
+        throw new InvalidDataException("Missing shader resource hash");
     if (hash.Length != 40 || !hash.All(Uri.IsHexDigit)) throw new InvalidDataException("Invalid shader-map hash");
     var content = map["Content"] ?? throw new InvalidDataException("Missing shader content");
     var shaders = (content["Shaders"] as JArray ?? new JArray()).Concat(
         (content["OrderedMeshShaderMaps"] as JArray ?? new JArray()).SelectMany(mesh => (JArray)mesh["Shaders"]!));
     var indices = shaders.Where(shader => shader["Target"]?.Value<string>("Frequency") == frequency &&
-            (distortion ? shader.Value<string>("Type") == "FDistortionMeshPS" :
-             (shader.Value<string>("Type") ?? "").StartsWith(vertex ? "TBasePassVS" : "TBasePassPS", StringComparison.Ordinal)))
+            (allVertex || (distortion ? shader.Value<string>("Type") == "FDistortionMeshPS" :
+             (shader.Value<string>("Type") ?? "").StartsWith(vertex ? "TBasePassVS" : "TBasePassPS", StringComparison.Ordinal))))
         .Select(shader => shader.Value<int>("ResourceIndex")).Distinct().Order().ToArray();
     if (indices.Length == 0 || indices.Any(index => index < 0)) throw new InvalidDataException("No matching shaders");
-    requests.Add((package.Name, map.Value<string>("ShaderPlatform")!, hash, indices));
+    requests.Add((package.Name, map.Value<string>("ShaderPlatform")!, hash, indices, inline));
 }
 if (requests.Count == 0) throw new InvalidDataException("No material shader requests");
 Directory.CreateDirectory(args[2]);
 using var provider = new DefaultFileProvider(args[0], SearchOption.TopDirectoryOnly,
     new VersionContainer(EGame.GAME_UE5_6), StringComparer.OrdinalIgnoreCase);
+if (inlineEnabled) {
+    provider.MappingsContainer = new FileUsmapTypeMappingsProvider(args[5]);
+    provider.ReadScriptData = true;
+    provider.ReadShaderMaps = true;
+}
 provider.Initialize(); provider.Mount();
 var readers = provider.MountedVfs.OfType<IoStoreReader>().ToArray();
 var found = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 var rows = new JArray();
+foreach (var request in requests.Where(request => request.Inline)) {
+    var maps = provider.LoadPackage(request.Package).GetExports().OfType<UMaterialInterface>()
+        .SelectMany(material => material.LoadedMaterialResources)
+        .Select(resource => resource.LoadedShaderMap?.Code)
+        .Where(code => code != null && code.ResourceHash.ToString().Equals(request.Hash, StringComparison.OrdinalIgnoreCase))
+        .ToArray();
+    if (maps.Length != 1 || !found.Add(request.Hash)) throw new InvalidDataException("Expected one matching inline shader map");
+    var map = maps[0]!;
+    if (map.ShaderHashes.Length != map.ShaderCodeResources.Length) throw new InvalidDataException("Inline shader hash count mismatch");
+    foreach (int resourceIndex in request.Indices) {
+        if (resourceIndex >= map.ShaderCodeResources.Length) throw new InvalidDataException("Inline resource index exceeds map");
+        var shader = map.ShaderCodeResources[resourceIndex];
+        var header = shader.Header;
+        var stored = shader.Code.Data;
+        if (header.Frequency.ToString() != frequency || shader.Code.Len != stored.Length ||
+            header.UncompressedSize <= 0 || header.UncompressedSize > 128 * 1024 * 1024 ||
+            stored.Length > header.UncompressedSize || header.ShaderCodeSize <= 0 ||
+            header.ShaderCodeSize > header.UncompressedSize)
+            throw new InvalidDataException("Invalid inline shader header");
+        var code = stored.Length == header.UncompressedSize ? stored :
+            Compression.Decompress(stored, header.UncompressedSize, CompressionMethod.Oodle);
+        var (offset, dxbc) = ExtractContainer(code[..header.ShaderCodeSize]);
+        var filename = request.Hash + "-" + resourceIndex;
+        WriteNew(Path.Combine(args[2], filename + ".uecode"), code);
+        WriteNew(Path.Combine(args[2], filename + ".dxbc"), dxbc);
+        rows.Add(JObject.FromObject(new {
+            package=request.Package, platform=request.Platform, map_hash=request.Hash,
+            resource_index=resourceIndex, shader_hash=map.ShaderHashes[resourceIndex].ToString(),
+            storage="inline", compression=stored.Length == header.UncompressedSize ? "None" : "Oodle",
+            stored_bytes=stored.Length, stored_sha256=Convert.ToHexString(SHA256.HashData(stored)),
+            uecode=filename + ".uecode", uecode_sha256=Convert.ToHexString(SHA256.HashData(code)),
+            container=filename + ".dxbc", container_offset=offset, container_bytes=dxbc.Length,
+            container_sha256=Convert.ToHexString(SHA256.HashData(dxbc))
+        }));
+    }
+}
 foreach (var reader in readers)
 foreach (var chunk in reader.TocResource.ChunkIds.Where(chunk => chunk.ChunkType == (byte)EIoChunkType5.ShaderCodeLibrary)) {
     using var archive = new FByteArchive(reader.Name, reader.Read(chunk), reader.Versions);
     if (new FShaderCodeArchive(archive).SerializedShaders is not FIoStoreShaderCodeArchive library)
         throw new InvalidDataException("Expected UE5 IoStore shader library");
-    foreach (var request in requests) {
+    foreach (var request in requests.Where(request => !request.Inline)) {
         var mapIndex = Array.FindIndex(library.ShaderMapHashes, hash => hash.ToString().Equals(request.Hash, StringComparison.OrdinalIgnoreCase));
         if (mapIndex < 0) continue;
         if (!found.Add(request.Hash)) throw new InvalidDataException("Shader-map hash occurs in multiple libraries");
@@ -99,7 +148,7 @@ foreach (var chunk in reader.TocResource.ChunkIds.Where(chunk => chunk.ChunkType
 }
 if (found.Count != requests.Count) throw new InvalidDataException($"Located {found.Count} of {requests.Count} shader maps");
 File.WriteAllText(Path.Combine(args[2], "manifest.json"), new JObject {
-    ["scope"]=(distortion ? "Distortion" : "Base-pass") + (vertex ? " vertex" : " pixel") + " shader bytecode extracted from native shared libraries. No material reconstruction or runtime change.",
+    ["scope"]=(allVertex ? "All" : distortion ? "Distortion" : "Base-pass") + (vertex ? " vertex" : " pixel") + " shader bytecode extracted from shared libraries or explicitly enabled inline Oodle code. No material reconstruction or runtime change.",
     ["shaders"]=rows
 }.ToString(Formatting.Indented) + "\n");
 Console.WriteLine($"Extracted {rows.Count} {(vertex ? "vertex" : "pixel")} shaders from {found.Count} maps");
