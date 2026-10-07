@@ -5,6 +5,7 @@
 #include <string>
 
 namespace css {
+enum class PerformanceUse { Scene, Idle };
 // A delayed stop from an earlier take must not stop a newer one.
 class PerformanceSession {
     PerformanceClock clock_;
@@ -19,12 +20,13 @@ public:
         if(!active() || token==0 || token!=token_)
             throw std::runtime_error("Performance session has ended or belongs to another take");
     }
-    uint64_t begin(const std::string& clip,AnimationPlayback mode,double duration,double rate=1.,double position=0.) {
+    uint64_t begin(const std::string& clip,AnimationPlayback mode,double duration,double rate=1.,double position=0.,
+                   PerformanceUse use=PerformanceUse::Scene) {
         if(active()) throw std::runtime_error("Stop the current performance first");
         if(clip.empty() || clip.size()>96 || token_==std::numeric_limits<uint64_t>::max())
             throw std::runtime_error("Invalid performance identity or exhausted session counter");
         auto next=clock_;
-        next.begin(mode,duration,rate,position);
+        next.begin(use==PerformanceUse::Idle?AnimationPlayback::Loop:mode,duration,rate,position);
         auto next_clip=clip;
         clock_=next;clip_=std::move(next_clip);
         return ++token_;

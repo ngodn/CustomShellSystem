@@ -384,7 +384,8 @@ void PerformancePlayer::interrupt(const std::string& reason) {
 }
 Json PerformancePlayer::start(UObject* pawn,const Catalog& catalog,const std::string& outfit,
                               const std::string& id,double rate,double position,double facial_duration,
-                              std::function<void(double,double)> sample_face,std::function<void()> restore_face) {
+                              std::function<void(double,double)> sample_face,std::function<void()> restore_face,
+                              PerformanceUse use) {
     if(session_.active()) throw std::runtime_error("Stop the current performance first");
     release();
     if(const auto why=unavailable(pawn,catalog,outfit);!why.empty()) throw std::runtime_error(why);
@@ -424,7 +425,7 @@ Json PerformancePlayer::start(UObject* pawn,const Catalog& catalog,const std::st
                 std::abs(facial_duration-double(length.get<float>()))>1.e-4))
                 throw std::runtime_error("Facial and body performance durations differ");
             PerformanceSession next=session_;
-            next.begin(id,match.entry->playback,length.get<float>(),rate,position);
+            next.begin(id,match.entry->playback,length.get<float>(),rate,position,use);
             const bool native=performance_native_component(component);
             if(native && (facial_duration || sample_face || restore_face))
                 throw std::runtime_error("Native performance facial playback is not mapped");

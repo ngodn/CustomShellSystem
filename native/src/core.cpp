@@ -190,6 +190,7 @@ struct Core {
         }
     }
     std::string walk_error;
+    AutomaticIdlePlayback automatic_idle;
     uint64_t walk_after=0;
     uint64_t walk_updates=0;
     double walk_ms=0,walk_total_ms=0,walk_max_ms=0;
@@ -275,6 +276,7 @@ struct Core {
             appearance.sync_walk(use_feminine_animation(state,selection_key,AnimationSlot::Idle),
                                  use_feminine_animation(state,selection_key,AnimationSlot::Walk),movement,
                                  custom_idle.asset,custom_idle.hide_weapons,idle_carrier);
+            start_idle_face();
             walk_error.clear();
         }
         catch(const std::exception& error) {
@@ -355,6 +357,64 @@ struct Core {
         return {appearance.player_revision,appearance.appearance_revision,animation_catalog_generation,
             worn?selected->second.outfit:"",worn?selected->second.variant:"",appearance.performance_mesh()};
     }
+    std::string idle_identity(const Selection& selection) const {
+        const auto& options=catalog.animation_options(selection.outfit,selection.variant,AnimationSlot::Idle);
+        auto choice=state.animation_choices.get(selection.outfit,selection.variant,AnimationSlot::Idle);
+        if(!idle_override.empty() && std::any_of(options.begin(),options.end(),[&](const auto& option) {
+            return animation_choice_matches(option,idle_override);
+        })) choice=idle_override;
+        const auto resolved=resolve_animation(options,AnimationSlot::Idle,choice);
+        return resolved.option ? (resolved.option->library_identity.empty()?resolved.option->id:
+                                  resolved.option->library_identity) : std::string{};
+    }
+    FacialPlan idle_face_plan(const Selection& selection,const Variant& variant) const {
+        return plan_performance_expression(catalog.facial_match(selection.outfit,selection.variant),
+            variant.mesh,selection.custom.expression,idle_identity(selection));
+    }
+    void reconcile_idle_face() {
+        if(!state.enabled || !appearance.active()) return;
+        const auto selected=state.selections.find(appearance.shell);
+        if(selected==state.selections.end()) return;
+        if(const auto* variant=catalog.find(selected->second.outfit,selected->second.variant);
+           variant && appearance.current_mesh!=idle_face_plan(selected->second,*variant).mesh) {
+            apply_pending=true;custom_only=false;
+        }
+    }
+    void stop_automatic_idle(const char* reason) {
+        if(automatic_idle.owns(appearance.performance.token())) appearance.performance.interrupt(reason);
+        automatic_idle.clear();
+    }
+    void check_automatic_idle() {
+        if(!automatic_idle.active()) return;
+        if(!appearance.performance.active() || !automatic_idle.owns(appearance.performance.token())) {
+            automatic_idle.clear();return;
+        }
+        const auto selected=state.selections.find(appearance.shell);
+        if(!state.enabled || apply_pending || restore_pending || selected==state.selections.end() ||
+           !automatic_idle.matches(performance_context(),idle_identity(selected->second)))
+            stop_automatic_idle("Idle selection or appearance changed");
+    }
+    void start_idle_face() {
+        if(!state.enabled || apply_pending || restore_pending || pending_performance.active() ||
+           appearance.performance.active() || !appearance.walk.custom_idle_engaged()) return;
+        const auto selected=state.selections.find(appearance.shell);
+        if(!appearance.active() || selected==state.selections.end()) return;
+        const auto& selection=selected->second;
+        const auto id=idle_identity(selection);
+        const auto match=catalog.facial_match(selection.outfit,selection.variant);
+        const auto* face=match.rig?match.rig->find_performance(id):nullptr;
+        if(!face || !automatic_idle.retry_allowed(performance_context(),id)) return;
+        try {
+            // Menu, movement and combat are transient gates, not failed bindings.
+            if(!appearance.performance_unavailable(catalog,selection.outfit).empty()) return;
+            appearance.walk.release();
+            const auto result=appearance.start_performance(catalog,selection.outfit,id,1.,0.,face,PerformanceUse::Idle);
+            automatic_idle.begin(performance_context(),id,result.at("token").get<uint64_t>());
+        } catch(const std::exception& error) {
+            automatic_idle.fail(performance_context(),id);
+            host.log(("Idle facial playback unavailable; keeping body idle: "+std::string(error.what())).c_str());
+        }
+    }
     void finish_performance_face() {
         if(!restore_performance_face || appearance.performance.active()) return;
         restore_performance_face=false;
@@ -365,6 +425,7 @@ struct Core {
         }
     }
     Json start_performance(const std::string& id,double rate,double position) {
+        stop_automatic_idle("CINE playback requested");
         const auto selected=state.selections.find(appearance.shell);
         if(!appearance.active() || selected==state.selections.end())
             return appearance.start_performance(catalog,"",id,rate,position);
@@ -481,6 +542,7 @@ struct Core {
             const auto value=command.value("value",std::string{});
             if(value.size()>96) throw std::runtime_error("Invalid idle");
             idle_override=value; walk_after=0;
+            reconcile_idle_face();
             return {{"idle",idle_override}};
         }
         if(action=="wear") {
@@ -671,6 +733,7 @@ struct Core {
             const auto variant=command.at("variant").get<std::string>();
             const auto choice=command.at("value").get<std::string>();
             if(set_animation_choice(state,catalog,appearance.shell,outfit,variant,*slot,choice,appearance.animation_skeleton())) dirty=true;
+            if(*slot==AnimationSlot::Idle) reconcile_idle_face();
             walk_after=0;ui_refresh=true;
             report(outfit.empty()?"Animation choice saved for native human appearances.":"Animation choice saved for this outfit.");
         }
@@ -965,6 +1028,7 @@ struct Core {
         measured(FrameProfile::seals,[&] { sync_seals_safely(now); });
         measured(FrameProfile::walk,[&] {
             try {
+                check_automatic_idle();
                 start_pending_performance(now);
                 if(appearance.performance.active() && (!state.enabled || apply_pending || restore_pending))
                     appearance.performance.interrupt("Appearance is changing");
@@ -1278,8 +1342,7 @@ struct Core {
                     };
                     std::string fit_shell;
                     for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit) fit_shell=fit_shell_for(outfit,*variant);
-                    const auto face=plan_expression(catalog.facial_match(requested.outfit,requested.variant),
-                                                     variant->mesh,requested.custom.expression);
+                    const auto face=idle_face_plan(requested,*variant);
                     if (appearance.apply(engine, variant->mesh, variant->materials,face)) {
                         lap("apply");
                         laps+=" (load "+std::to_string(int(appearance.apply_load_ms+0.5))+", swap "+std::to_string(int(appearance.apply_swap_ms+0.5))+")";

@@ -83,12 +83,14 @@ class PerformancePlayer {
     void bind_native_montage();
 public:
     bool active() const { return session_.active(); }
+    uint64_t token() const { return session_.token(); }
     static std::string unavailable(RC::Unreal::UObject* pawn,const Catalog&,const std::string& outfit);
     static std::string unsupported(RC::Unreal::UObject* pawn,const Catalog&,const std::string& outfit);
     static bool waiting_for_menu(RC::Unreal::UObject* pawn);
     Json start(RC::Unreal::UObject* pawn,const Catalog&,const std::string& outfit,
                const std::string& id,double rate,double position,double facial_duration=0.,
-               std::function<void(double,double)> sample_face={},std::function<void()> restore_face={});
+               std::function<void(double,double)> sample_face={},std::function<void()> restore_face={},
+               PerformanceUse use=PerformanceUse::Scene);
     Json command(const Json&);
     Json status() const;
     void tick(RC::Unreal::UObject* pawn);
@@ -932,7 +934,8 @@ public:
     }
     bool performance_waiting_for_menu() const { return PerformancePlayer::waiting_for_menu(observed_pawn_.Get()); }
     Json start_performance(const Catalog&,const std::string& outfit,const std::string& id,
-                           double rate,double position,const FacialPerformance* face=nullptr);
+                           double rate,double position,const FacialPerformance* face=nullptr,
+                           PerformanceUse use=PerformanceUse::Scene);
     Json transition_state(void* engine);
 #ifdef CSS_INVENTORY_DEV
 #endif

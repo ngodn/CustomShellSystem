@@ -98,16 +98,16 @@ void Appearance::restore_facial_performance() {
     facial_motion_.reset();
 }
 Json Appearance::start_performance(const Catalog& catalog,const std::string& outfit,
-    const std::string& id,double rate,double position,const FacialPerformance* face) {
+    const std::string& id,double rate,double position,const FacialPerformance* face,PerformanceUse use) {
     if(performance.active()) throw std::runtime_error("Stop the current performance first");
     if(const auto why=performance_unavailable(catalog,outfit);!why.empty()) throw std::runtime_error(why);
-    if(!face) return performance.start(observed_pawn_.Get(),catalog,outfit,id,rate,position);
+    if(!face) return performance.start(observed_pawn_.Get(),catalog,outfit,id,rate,position,0.,{},{},use);
     if(face->clip!=id) throw std::runtime_error("Facial performance identity differs from the body clip");
     performance.interrupt("Starting facial performance");
     begin_facial_performance(*face);
     try {
         return performance.start(observed_pawn_.Get(),catalog,outfit,id,rate,position,face->duration,
             [this](double seconds,double weight){sample_facial_performance(seconds,weight);},
-            [this]{restore_facial_performance();});
+            [this]{restore_facial_performance();},use);
     } catch(...) {restore_facial_performance();throw;}
 }
