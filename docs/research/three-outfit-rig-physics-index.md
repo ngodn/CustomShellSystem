@@ -11,6 +11,7 @@ The follow-up amendment explicitly adds implementation of facial-expression supp
 - [Goal and implementation status](../development/three-outfit-rig-physics-goal.md).
 - [Video observations and audio review](2026-10-08-rig-video-review.md).
 - [Actual outfit/source/game-dump inventory](2026-10-08-three-outfit-rig-baseline.md).
+- [Current editable mesh structure and migration sources](2026-10-08-editable-mesh-audit.md).
 - [UE 5.6 mechanisms and local 5.6.1 source evidence](2026-10-08-rig-physics-ue56.md).
 - [Local extraction, hashes, transcripts and frames](../../work/rig-physics-review-20261008).
 
@@ -25,6 +26,8 @@ The follow-up amendment explicitly adds implementation of facial-expression supp
 7. UE 5.6 has a simulation-morph path, but legacy skeletal cloth does not automatically expose those morph arrays. Identify the actual asset path.
 8. Historical audits are not fresh runtime acceptance. On October 8 the installed interruption-fix DLL hash was verified and the user confirmed attack, aim/fire, doubles and Genessa Form work with Iris Out.
 9. Canonical asset organization is now `/Game/CSS/<author>/<project>/...`, using `eins0fx` for these projects and `eins0fx/Shared` for reusable content. The goal defines migration requirements; existing paths are historical inputs.
+10. All 790 migration rows have editable candidates or historical alias recipes. Sixty-one animation paths are generated aliases, not missing original clips. Eve's two v1.4.0 hair instances must come from their receipt-pinned private project, not the older main-project copies.
+11. Fresh editor-buffer checks of nine outfit meshes and seven facial replacements found normalized weights, valid section/influence/morph indices and finite poses/deltas. This does not establish deformation or collision quality. Mesh raw-bone counts and Skeleton helper counts remain distinct.
 
 ## Tooling notes
 

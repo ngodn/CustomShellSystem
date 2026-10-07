@@ -1,6 +1,6 @@
 # UE 5.6.1 source animation audit
 
-This C++20 editor module exposes two commandlet-only snapshot helpers to Python.
+This C++20 editor module exposes commandlet-only snapshot helpers to Python.
 It is authoring tooling, not a CSS runtime module.
 
 `SnapshotAnimation` reads named source tracks through `IAnimationDataModel`,
@@ -8,6 +8,14 @@ hashing explicit transform components rather than struct padding. It records
 frame/key counts, sample rate, model GUID, curve/attribute counts and retarget
 reference transforms. `SnapshotSkeleton` records raw bones, parent indices,
 retarget modes, reference transforms, virtual definitions and sockets.
+
+`SnapshotMesh` waits for the requested mesh's compilation, then inspects render
+weight buffers, section/bone ranges, finite positions, morph indices and deltas.
+It does not edit or save the mesh. `audit_meshes.py` adds bindings/materials and
+source hashes. Set `CSS_RIG_AUDIT_STAGE` to a private output directory containing
+`input.json` with `meshes` entries (`package`, `source_file`, `sha256`). Mount
+authoring Content read-only and retain a private writable DDC. Results distinguish
+editor-built buffers from installed cooked data.
 
 Copy `Source/` into an isolated project with an editor module named
 `CSSRigAudit`, then build its `CSSRigAuditEditor` target against the local
