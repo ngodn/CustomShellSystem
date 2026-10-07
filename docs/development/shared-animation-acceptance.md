@@ -1,5 +1,22 @@
 # Shared animation acceptance
 
+CW Cinderella is the fourth prepared facial mapping. Its full 139.66667-second
+track maps twelve source channels. The final `cw-cinderella-curves-v3` export
+has 51 active curves, 61,727 keys and 2,547,961 bytes. It passes all 11,387
+sampled poses and 11,386 separately evaluated intermediate poses, with maximum
+errors of 0.009974 and 0.014629 cm under the unchanged 0.015 cm limit.
+Native playback/restoration passes 20,515 checks across 393 sample times.
+
+Only Gesture 200 is packaged. Spin, DumbDumb and Cinderella need a combined
+shape representation, cooking and catalog integration. Come Closer and Iris
+Out remain unfinished for CW. Iris Out's signed cheek/tongue controls now
+evaluate correctly in an isolated bake, but its first combined pose curls
+the tongue too high and is not accepted. Full temporal/source comparison,
+live compatibility and release remain open. Nothing new was installed.
+See [the mapping and verification record](shared-animation-cw-face.md).
+
+Earlier checkpoints:
+
 CW DumbDumb is the third prepared facial mapping, after Gesture 200 and Spin.
 All twelve source channels are adapted through measured or native CW controls.
 `cw-dumbdumb-curves-v2` fits the existing runtime limits: 122 active curves,

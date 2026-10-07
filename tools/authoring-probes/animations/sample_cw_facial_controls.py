@@ -39,6 +39,8 @@ def main():
                         help='Sample tongue joint controls with source tongue IK disabled in memory')
     parser.add_argument('--eye-gaze-range', action='store_true',
                         help='Bake horizontal eye motion within 45 degrees; restore source limits afterward')
+    parser.add_argument('--signed-mouth-range', action='store_true',
+                        help='Bake signed cheek and tongue-width actions; restore source limits afterward')
     parser.add_argument('--omit-bone-records', action='store_true',
                         help='Keep evaluated geometry and control records without repeating all bone matrices')
     args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
@@ -136,7 +138,8 @@ def main():
     tongue_mode = None
     eye_limits = []
     eye_ranges = []
-    original_neutral = sample('original-neutral') if args.tongue_fk or args.eye_gaze_range else None
+    original_neutral = sample('original-neutral') if (
+        args.tongue_fk or args.eye_gaze_range or args.signed_mouth_range) else None
     if args.eye_gaze_range:
         for bone, expected in [('eye.L', (-40, 30)), ('eye.R', (-30, 40))]:
             constraints = [c for c in rig.pose.bones[bone].constraints if c.type == 'LIMIT_ROTATION']
@@ -165,6 +168,31 @@ def main():
             raise ValueError('Source lacks the audited tongue IK control')
         tongue_mode = float(rig['MhaTongueIk'])
         rig['MhaTongueIk'] = 0.0
+    signed_ranges, signed_shapes = [], []
+    if args.signed_mouth_range:
+        for data in (rig.data, deform.data):
+            for name in ('facs_bs_CheekPuffLeft_div2(fin)', 'facs_bs_CheekPuffRight_div2(fin)',
+                         'facs_ctrl_CheekPuff(fin)', 'facs_bs_TongueNarrow(fin)'):
+                ui = data.id_properties_ui(name)
+                limits = ui.as_dict()
+                if limits['min'] != 0 or limits['max'] != 1:
+                    raise ValueError('Signed mouth source range changed: ' + name)
+                signed_ranges.append(dict(armature=data.name, name=name, limits=limits))
+                ui.update(min=-1, max=1)
+            data.update_tag()
+        expected_shapes = {'facs_bs_CheekPuffLeft_div2', 'facs_bs_CheekPuffRight_div2', 'facs_bs_TongueNarrow'}
+        for obj in parts:
+            if obj.data.shape_keys:
+                for key in obj.data.shape_keys.key_blocks:
+                    if key.name in expected_shapes:
+                        expected_minimum = -1 if obj.name == 'Genesis 8.1 Female Tear Mesh' else 0
+                        if key.slider_min != expected_minimum:
+                            raise ValueError('Signed mouth shape range changed: ' + key.name)
+                        signed_shapes.append(dict(object=obj.name, name=key.name, minimum=key.slider_min))
+                        key.slider_min = -1
+                obj.data.shape_keys.update_tag()
+        if len(signed_shapes) != 5 or {row['name'] for row in signed_shapes} != expected_shapes:
+            raise ValueError('Expected the audited body and tear mouth shapes')
     baseline = sample('neutral')
     neutral_shift = ({name: float(np.linalg.norm(baseline[name]-original_neutral[name], axis=1).max())
                       for name in baseline} if original_neutral is not None else {})
@@ -207,6 +235,14 @@ def main():
         constraint.min_z, constraint.max_z = row['min_z'], row['max_z']
     for row in eye_ranges:
         bpy.data.armatures[row['armature']].id_properties_ui(row['property']).update(**row['limits'])
+    for row in signed_ranges:
+        data = bpy.data.armatures[row['armature']]
+        data.id_properties_ui(row['name']).update(**row['limits'])
+        data.update_tag()
+    for row in signed_shapes:
+        keys = bpy.data.objects[row['object']].data.shape_keys
+        keys.key_blocks[row['name']].slider_min = row['minimum']
+        keys.update_tag()
     if original_neutral is not None:
         restored = sample('original-neutral-restored')
         if any(np.max(np.abs(restored[p]-original_neutral[p])) > 1e-5 for p in baseline):
@@ -219,6 +255,8 @@ def main():
                   blender=bpy.app.version_string, records=records, summary=summary,combinations=combinations,
                   combination_plan_sha256=plan_hash,
                   omitted_bone_records=args.omit_bone_records,
+                  signed_mouth_range=args.signed_mouth_range,
+                  original_signed_ranges=signed_ranges, original_signed_shapes=signed_shapes,
                   extended_levels=args.extended_levels,
                   eye_gaze_range=args.eye_gaze_range, original_eye_limits=eye_limits,
                   original_eye_ranges=eye_ranges,

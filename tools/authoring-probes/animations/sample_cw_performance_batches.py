@@ -32,7 +32,7 @@ def main():
     if not plan.get('prepared') or plan['protected'].get(str(source)) != protected[str(source)]:
         raise ValueError('Plan does not identify the verified source')
     rows = plan[args.kind]
-    if not 1 <= len(rows) <= 8192 or len({row['label'] for row in rows}) != len(rows):
+    if not 1 <= len(rows) <= 16384 or len({row['label'] for row in rows}) != len(rows):
         raise ValueError('Invalid bounded sample list')
     controls = sorted({name for row in rows for name in row['controls']})
     output = args.output.resolve()
@@ -58,6 +58,7 @@ def main():
                 prior_plan['clip'] != plan['clip'] or
                 prior['eye_gaze_range'] != plan.get('eye_gaze_range', False) or
                 prior['tongue_fk'] != plan.get('tongue_fk', False) or
+                prior.get('signed_mouth_range', False) != plan.get('signed_mouth_range', False) or
                 prior['protected'].get(str(Path(__file__).with_name('sample_cw_facial_controls.py'))) !=
                 protected[str(Path(__file__).with_name('sample_cw_facial_controls.py'))]):
             raise ValueError('Reuse requires matching verified source and sampler settings')
@@ -100,6 +101,8 @@ def main():
             command.append('--eye-gaze-range')
         if plan.get('tongue_fk'):
             command.append('--tongue-fk')
+        if plan.get('signed_mouth_range'):
+            command.append('--signed-mouth-range')
         for control in controls:
             command += ['--control', control]
         (batch/'command.json').write_text(json.dumps(command, indent=2)+'\n')
@@ -114,7 +117,8 @@ def main():
         if (not report['sources_unchanged'] or report['sha256'] != protected[str(source)] or
                 report['combination_plan_sha256'] != digest(file) or
                 report['eye_gaze_range'] != plan.get('eye_gaze_range', False) or
-                report['tongue_fk'] != plan.get('tongue_fk', False)):
+                report['tongue_fk'] != plan.get('tongue_fk', False) or
+                report.get('signed_mouth_range', False) != plan.get('signed_mouth_range', False)):
             raise ValueError('Source batch settings or inputs changed')
         records = {row['label']: row for row in report['records'] if row['label'].startswith('mix_')}
         if set(records) != {row['label'] for row in selected}:
@@ -136,6 +140,7 @@ def main():
         raise ValueError('Protected input changed during sampling')
     report = dict(source=str(source), sha256=protected[str(source)], sources_unchanged=True,
                   eye_gaze_range=plan.get('eye_gaze_range', False), tongue_fk=plan.get('tongue_fk', False),
+                  signed_mouth_range=plan.get('signed_mouth_range', False),
                   batches=receipts, protected=protected, poses=len(rows), omitted_bone_records=True,
                   reused=reused, newly_evaluated=len(pending),
                   scope='Complete requested source poses with neutral/restoration checks in every bounded batch.')

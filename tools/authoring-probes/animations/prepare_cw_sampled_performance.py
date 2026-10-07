@@ -21,6 +21,8 @@ def main():
                         help='Preserve a previously verified sampled basis, including its existing controls')
     parser.add_argument('--shape-prefix', default='CSSF_CW_Spin')
     parser.add_argument('--basis-method', choices=('svd', 'greedy'), default='svd')
+    parser.add_argument('--independent-basis', action='store_true',
+                        help='Preserve old controls but fit new motion without cancelling old-control weights')
     args = parser.parse_args()
     if args.output.exists():
         raise FileExistsError(args.output)
@@ -55,7 +57,8 @@ def main():
         audit = read(folder/'samples/report.json')
         if (read(folder/'exit.json')['exit_code'] != 0 or not audit.get('sources_unchanged') or
                 audit.get('eye_gaze_range', False) != plan.get('eye_gaze_range', True) or
-                audit.get('tongue_fk', False) != plan.get('tongue_fk', False)):
+                audit.get('tongue_fk', False) != plan.get('tongue_fk', False) or
+                audit.get('signed_mouth_range', False) != plan.get('signed_mouth_range', False)):
             raise ValueError('Source sampling or restoration failed')
         if protected[str(protect(Path(audit['source'])))] != audit['sha256']:
             raise ValueError('Original CW source changed')
@@ -140,8 +143,12 @@ def main():
     outside[active] = False
     samples = samples[:, active]
     previous = existing[:, active].reshape(len(names), -1)
-    old_weights, _, rank, _ = np.linalg.lstsq(previous.T, samples.reshape(len(samples), -1).T, rcond=.001)
-    old_weights = old_weights.T
+    if args.independent_basis:
+        old_weights = np.zeros((len(samples), len(names)))
+        rank = 0
+    else:
+        old_weights, _, rank, _ = np.linalg.lstsq(previous.T, samples.reshape(len(samples), -1).T, rcond=.001)
+        old_weights = old_weights.T
     if np.abs(old_weights).max() > 4:
         raise ValueError('Existing-shape projection exceeds the runtime coefficient bound')
     residual = samples-(old_weights@previous).reshape(samples.shape)
@@ -190,6 +197,7 @@ def main():
     report = dict(passed=passed, protected=protected, clip=plan['clip'], added_shapes=len(basis),
                   retained_basis=str(args.retained_basis) if args.retained_basis else None,
                   basis_method=args.basis_method, shape_prefix=args.shape_prefix,
+                  independent_basis=args.independent_basis,
                   source_samples=len(samples), catalog_shapes=len(shapes), existing_projection_rank=int(rank),
                   fitted_correspondence_error_cm=correspondence,
                   basis_error_cm=error, training_error_cm=training_error, holdouts=cases,

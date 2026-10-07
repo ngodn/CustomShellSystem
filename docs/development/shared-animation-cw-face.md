@@ -402,3 +402,67 @@ Removed only the rejected first-fit payload/basis and oversized first curve
 export, reclaiming 44,736,680 bytes. Their failure reports, plans and source
 samples remain. Receipt: `cw-dumbdumb-rejected-output-cleanup.json`.
 No new assets or runtime were installed.
+
+## Cinderella mapping and signed mouth preparation, October 7
+
+`prepare_cw_cinderella_performance.py` retains all twelve source channels and
+all 2,580 source key times over 139.66667 seconds. The author's `surprise`
+shape is exactly the sum of bilateral upper-lid opening, verified at every
+source vertex. It maps to CW's widened lids. `upLid_down_L` is a full left
+wink. The other actions use native jaw, brow and phoneme controls plus the
+previously measured smile/half-lid closure. Seven extreme combined poses
+were inspected; fourteen preflight snapshots match the full sampling exactly.
+
+The initial fit failed fifteen intermediate poses. Refinement reused 14,977
+completed poses through hard links and evaluated 7,796 additional poses.
+`cw-cinderella-samples-v3` and `cw-cinderella-holdouts-v3` complete successfully
+with source restoration checks. `cw-cinderella-basis-v2` retains the twenty
+original controls and adds 51 shapes, fitting the full performance separately
+from Spin/DumbDumb. Its sampled/intermediate errors are 0.003859/0.011810 cm.
+This separate basis is preparation for a combined representation, not permission
+to concatenate all prepared shapes beyond the runtime control limit.
+
+Independent scalar reduction alone either exceeded 65,536 keys or exceeded the
+conversion error budget. The optional geometry refinement restores the curve
+contributing most to each offending vertex. The first bounded export then
+failed two actual source intermediates. Restoring original keys on both sides
+of those intervals passes the full source comparison. Every refinement retains
+the existing key, resource and geometry limits; default compilation is unchanged.
+
+Accepted output: `cw-cinderella-curves-v3`, 51 active curves, 61,727 keys,
+2,547,961 bytes. Maximum error against 11,387 actual sampled poses is
+0.009973763 cm; against 11,386 separately evaluated intermediates it is
+0.014629129 cm, below 0.015 cm. All 20,515 native checks pass at 393 times,
+including extrema, worst source comparisons, clamping and expression restoration.
+The old jaw fixture passes 220 checks and facial compatibility passes 86.
+Eighteen CW tests and ten curve tests pass. The existing DumbDumb curve file
+recompiles byte-identically (`cw-sparse-refinement-regression.json`).
+
+Iris Out remains unfinished. Its negative cheek and tongue-width actions were
+clamped by intermediate property and shape ranges. The optional sampler flag
+`--signed-mouth-range` adjusts only those audited ranges in memory, tags their
+data blocks for evaluation, and restores them afterward. Existing drivers were
+already linear; no driver extrapolation change was needed. The default sampler
+matches all 37 prior snapshots exactly, and the enabled implementation matches
+all 37 signed prototype snapshots. Reports are in
+`cw-irisout-controls-default-regression` and `cw-irisout-controls-signed-v3`.
+The first implementation check rejected two tear-mesh ranges that were already
+signed; the successful replacement preserves those original ranges as well.
+
+`cw-irisout-preflight-v1` evaluates eleven combined source poses. Four front
+views were inspected. The tongue at 1.5 seconds curls too high compared with
+the source, so this mapping is not accepted. Refine its arch/tip extension
+before full sampling; do not count the prototype as a completed performance.
+`cw-irisout-mapping-v1/negative-control-findings.json` and the preflight visual
+review preserve the evidence. The original CW blend and supplied archives
+remain unchanged.
+
+Cinderella is prepared, not cooked or installed. CW now has four prepared
+mappings (Gesture 200, Spin, DumbDumb, Cinderella), with only Gesture 200
+packaged. Come Closer and Iris Out remain. Keep the original scope for Eve,
+Unholy Genessa, Commander White and the four native human locomotion choices.
+Full-motion, combined asset, live and release acceptance remain open.
+
+Removed 21,566,423 bytes of rejected first-fit Cinderella payloads, retaining
+its failure report, plans and all original samples. Receipt:
+`cw-cinderella-rejected-output-cleanup.json`. No other session's work was changed.
