@@ -168,6 +168,31 @@ been installed. A user question about availability for its trial is pending.
 The stopping-pop correction is installed but still needs the matched gameplay
 check in [the transition investigation](eve-stopping-transition.md).
 
+The combined candidate now has an installer using the existing backed-up
+replacement and rollback path. Its check-only run passed against the real
+99-export pack and core `a943a5be35cb1035e0bfc407cf7092cf4e292dd7042aad308ab43e2bf7568e78`.
+The old installer's 68-export facial check remains intact for older trials;
+the new validator checks the combined facial baseline, container hashes,
+dependencies, host loader results and full original-clip comparison reports.
+Twelve existing transaction tests and four combined-pack tests pass. The new
+path keeps the installed CINE extension and menu unchanged.
+
+For the next authorized closed-game trial, run from the CSS checkout:
+
+```sh
+python3 tools/authoring-probes/animations/install_shared_animation_trial.py \
+  work/cine-animation-port/live-face-motion-2 \
+  work/cine-animation-port/shared-precision-trial-v1 \
+  work/cine-animation-port/cw-combined-trial-v1/verification.json \
+  work/cine-animation-port/live-combined-precision-1 \
+  --core build/cine-win/css_core.dll
+```
+
+Adding `--check-only` validates the candidate without installing it. It does
+not claim that the running game or installed selectors were checked. The actual
+installation checks those before writes and refuses an unexpected prior trial.
+No installation has been performed by this checkpoint.
+
 Remaining acceptance:
 
 - Finish full temporal/source and contact review for the requested library.

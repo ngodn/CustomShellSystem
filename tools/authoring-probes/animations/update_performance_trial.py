@@ -23,10 +23,7 @@ def check_hashes(files):
             raise RuntimeError('File changed: ' + str(path))
 
 
-def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report,
-           keep_cine=False, keep_core=False):
-    require_closed()
-    old = json.loads((previous / 'deployment.json').read_text())
+def validate_facial_package(pack, old, delta_report):
     verified = json.loads((pack / 'verification.json').read_text())
     face_report = pack / 'facial-independent-readback.json'
     reuse_report = None
@@ -61,6 +58,19 @@ def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report,
                 or {m['name'] for m in comparison['shapes']} != expected_morphs
                 or len(comparison['expressions']) != 21):
             raise ValueError('Incomplete facial delta comparison')
+    evidence = dict(verified['facial_evidence'])
+    for source in (delta_report, pack / 'verification.json', face_report):
+        evidence[str(source)] = sha(source)
+    if reuse_report:
+        evidence[str(reuse_report)] = sha(reuse_report)
+    return verified, evidence
+
+
+def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report,
+           keep_cine=False, keep_core=False, validator=validate_facial_package):
+    require_closed()
+    old = json.loads((previous / 'deployment.json').read_text())
+    verified, package_evidence = validator(pack, old, delta_report)
     files = verified['files']
     if set(files) != {NAME + suffix for suffix in ('.pak', '.utoc', '.ucas')}:
         raise ValueError('Unexpected package files')
@@ -96,12 +106,9 @@ def update(game, previous, pack, receipt, core, cine_dll, menu, delta_report,
                  (mod / 'core.json', cine / 'extension.json', cine / 'menu.json')}
     inputs = {str(pack / NAME / name): digest for name, digest in files.items()}
     inputs.update(verified['dependencies'])
-    inputs.update(verified['facial_evidence'])
-    for source in (core, cine_dll, menu, delta_report, previous / 'deployment.json',
-                   pack / 'verification.json', face_report):
+    inputs.update(package_evidence)
+    for source in (core, cine_dll, menu, previous / 'deployment.json'):
         inputs[str(source)] = sha(source)
-    if reuse_report:
-        inputs[str(reuse_report)] = sha(reuse_report)
     check_hashes(inputs)
     for directory in (mod / 'state', cine.parents[1] / 'state'):
         protected.update({str(p): sha(p) for p in directory.rglob('*') if p.is_file()})
