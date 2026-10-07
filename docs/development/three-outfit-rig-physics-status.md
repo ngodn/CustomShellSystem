@@ -1,6 +1,6 @@
 # Three-outfit implementation status
 
-Updated 2026-10-08. [Goal](three-outfit-rig-physics-goal.md) is active. Previous interrupted goal turn read the objective but made no implementation progress; this turn establishes the installed baseline and migration evidence.
+Updated 2026-10-08. [Goal](three-outfit-rig-physics-goal.md) is active. Installed baseline, namespace parser support and the initial asset/reference migration map are recorded below.
 
 ## Verified baseline
 
@@ -21,13 +21,13 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Nine-variant provenance | Installed hashes pinned; final source recipes and active facial replacement provenance still being mapped |
 | Mesh/weights/contacts | Historical evidence located; fresh deformation checks pending |
 | Unholy facial support | Missing visible-face controls confirmed in prior source audit; implementation pending |
-| Shared organization | Current providers inventoried; author/project convention documented; CSS parser accepts new and legacy roots with 23 host suites passing. Asset migration and consolidation pending; not installed |
+| Shared organization | CSS parser accepts new and legacy roots with 23 host suites passing. All 790 unique installed packages have collision-free author-owned destinations; 172 catalog path references classified. Source migration, cook and consolidation pending; not installed |
 | Locomotion | 63-entry installed catalog captured; four native declarations, 59 missing; conversion and motion-quality review pending |
 | Gameplay regressions | Current interruption baseline accepted by user; candidate regression tests pending |
 | Performance | Current package sizes recorded; matched gameplay captures pending |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: map source/cooked ownership and author-namespaced destinations, then prepare coherent source/reference migration and the Genessa facial candidate. The nineteen stale mappings and per-entry native coverage are already recorded; do not repeat those investigations without changed inputs. Preserve existing gameplay while these assets are prepared.
+Next: finish editable-source provenance, then execute source/reference migration in isolated authoring copies and prepare the Genessa facial candidate. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs. Preserve existing gameplay while these assets are prepared.
 
 ## Namespace parser change
 
