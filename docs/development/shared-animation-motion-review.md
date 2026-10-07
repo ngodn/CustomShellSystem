@@ -354,3 +354,43 @@ Evidence under `work/cine-animation-port/`:
 These diagnostic views exclude gameplay IK, cloth and secondary motion. Native
 speed, closer hand/garment checks and source-scene contact remain outstanding.
 No installed game files changed during this review.
+
+
+## October 7: After Brute Battle repeat boundary
+
+The user reported a crash near the end when using this clip as a CSS idle.
+The captured session used the old menu core and body-only post-process idle,
+not automatic facial playback. The GPU report does not identify the cause.
+
+`work/cine-animation-port/after-brute-loop-audit-1/measure.py` measures all
+821 decoded keys and 388 local tracks of the installed Precision1 clip. All
+components are finite. Duration is 13.666667 seconds. Root remains stationary,
+but pelvis endpoints differ by 1,092.789831 cm and 130.418650 degrees. The
+largest adjacent pelvis step within the clip is 116.651365 cm. An independent
+raw UE reference gives an endpoint distance of 1,092.789942 cm, so the large
+travel is present before compression. This agrees with the earlier scene
+staging review and is not a new compression error.
+
+An immediate last-to-first repeat therefore has a large pose discontinuity.
+The runtime body-only path writes CSSIdleSequence/CSSIdleEnabled and delegates
+playback to the outfit graph. The current automatic facial path explicitly
+uses a looping clock. Neither static observation proves that a repeat happened
+at the GPU failure or that cloth caused it. These samples omit live bounds,
+solver output and rendering. Do not call this the crash fix or flatten the
+scene's authored trajectory.
+
+Next diagnostic priorities:
+
+1. Capture evaluated pose and component bounds immediately before and after a
+   real repeat on Unholy Genessa. A repeat-induced simulation failure predicts
+   a discontinuity followed by abnormal simulated transforms or bounds.
+2. If transforms stay valid across the boundary, compare entry, exit and
+   resource lifetime against the same render failure. The loading crashes
+   remain separate observations, not proof of a repeat failure.
+3. Preserve the full clip and its source timing while investigating a controlled
+   return between repeats. Any candidate needs actual cloth and GPU validation;
+   a clock unit test cannot prove the reported game crash is fixed.
+
+Evidence: `after-brute-loop-audit-1/{result,raw-cross-check}.json`. The command
+and measurements are read-only. No asset recook, installed runtime change or
+source-trajectory edit was made for this audit.

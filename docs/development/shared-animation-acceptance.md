@@ -50,20 +50,28 @@ idle engaged and the menu closed. Its report is
 `UECC-Windows-8B59676A4058FEC030E19EB7DA8A1D33_0000`. All four reports have the
 same active breadcrumb hash and Nanite scene-culling branch. This is evidence
 against treating Iris Out startup as the sole trigger; it does not identify
-the component responsible for the render failure. No save replacement, graphics
-setting change or further DLL installation followed this crash.
+the component responsible for the render failure. No save replacement or graphics
+setting change was made.
 
-An opt-in trace is being prepared around actual shared-animation loads, body
+An opt-in trace is installed around actual shared-animation loads, body
 idle activation and automatic facial start. The marker is
 `runtime/trace-idle-startup.enabled`, checked once when the core starts. Output
 uses `[DEBUG-idle-load]` and stops after 96 events plus one limit notice. Cache
 hits do not emit load events. This instrumentation is not a crash fix and must
-not be presented as one. The previously installed menu core remains selected.
+not be presented as one. The user requested automatic facial idles for testing,
+so commit `afc8462` was installed with the game verified closed. The selected
+core is `css_core-idle-trace-9fc1db24d44c0513.dll`, SHA-256
+`9fc1db24d44c05135e802e772184e65ee1e8d21972a0769b27511b3c0c8d29a7`.
+Receipt: `work/cine-animation-port/live-idle-facial-trace-1/deployment.json`.
+Only Unholy Genessa Eve Skin's saved idle changed from After Brute Battle to
+Eve Default Idle, backed up before changing it. The reported clip remains in
+the menu. Game saves, CINE and shared assets are unchanged by this install.
+Windows build and nine host suites passed; live facial acceptance is pending.
 
-Evidence, both Unreal crash folders (including bundled save backups), logs and
+Evidence, all four Unreal crash folders (including bundled save backups), logs and
 the exact rollback are retained in
 `work/cine-animation-port/idle-facial-load-crash-1/`.
-This rollback supersedes the installed-core statements below.
+The diagnostic installation above supersedes older installed-core statements below.
 
 October 7 scope update: the user accepts remaining floor penetration for this
 release and explicitly deferred further contact correction. Keep all 63 entries,
@@ -85,7 +93,7 @@ The previous menu-fix core, `2a13eb9757f8e973`, loaded Iris Out through the save
 Idle Animation choice without reporting an animation error. That observation
 does not verify visual quality or facial synchronization.
 
-The current installed core is `0afef88b91d0d206`, from commit `0b2af48`.
+The earlier facial core was `0afef88b91d0d206`, from commit `0b2af48`.
 It adds automatic facial-track playback for compatible idle choices, with a
 shared body/face clock and gameplay interruption handling. The installed
 selector and DLL were read back and verified. CINE, shared assets and saved
