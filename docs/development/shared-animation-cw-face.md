@@ -566,3 +566,84 @@ remain. This only measures a possible representation against previously fitted
 poses. It has not passed all original source poses, intermediate poses, final
 curve/key limits, cooking or live playback. The final 0.015 cm source limit
 is unchanged. Do not package the probe as accepted geometry.
+
+## Combined face cooked and packaged, October 7
+
+`cw-combined-basis-v2` fits all 19,584 evaluated source poses and checks all
+19,579 independent intermediate poses. It keeps the original expression/jaw
+controls used by the catalog and anchors Cinderella's 51 accepted shapes and
+coefficients. The other four performances add 65 shared shapes. This gives
+12 original controls plus 116 added shapes, exactly 128 exposed controls.
+
+All 90 original mesh morphs remain in the derived face. The eight previously
+retained blink calibration shapes remain on the mesh but are not exposed as
+unused catalog controls. Blink motion in the performances is included in the
+source fit. The existing eight expression IDs, Neutral and Gesture 200 remain
+unchanged. No original asset or released outfit package was modified.
+
+The first combined fit passed geometry at 126 controls, but its Cinderella
+curves could not fit the unchanged 65,536-key limit. The accepted fit preserves
+Cinderella's independent basis and produces byte-identical performance data.
+The first DumbDumb curve reduction failed the conversion bound after source
+interval restoration. A tighter 0.002 cm per-curve reduction passes without
+changing the final 0.015 cm source-geometry limit or any runtime bound.
+
+| Track | Active curves | Keys | Bytes | Source max cm | Intermediate max cm |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Spin | 128 | 2,649 | 112,199 | 0.009319 | 0.010059 |
+| DumbDumb | 128 | 38,666 | 1,603,173 | 0.009769 | 0.011798 |
+| Cinderella | 51 | 61,727 | 2,547,961 | 0.009974 | 0.014630 |
+| Iris Out | 128 | 5,971 | 251,794 | 0.009214 | 0.013246 |
+| Come Closer | 128 | 3,276 | 141,505 | 0.009095 | 0.010959 |
+
+Curve directories are `cw-combined-curves-v2/{spin,cinderella,irisout,comecloser}`
+and `cw-combined-curves-v3/dumbdumb`. Their native playback/restoration checks
+pass 50,498, 20,572, 51,530, 51,401 and 53,852 assertions respectively.
+Each run also passes the old 220-check jaw and 86-check compatibility fixtures.
+The six CW tracks total 112,549 keys, including Gesture 200. Eighteen basis
+and ten curve tests pass. `cw-combined-validation-v1` records these checks.
+
+`cw-combined-native-v2` creates isolated AnimLab face E7 from verified E4.
+It preserves all 90 prior morphs, 70 material slots, 69 render sections,
+the cloth asset, skeleton, bind pose, physics and post-process bindings.
+Fresh-process verification passes. `cw-combined-shared-v1` stages and verifies
+E8 under `/Game/CSS/Locomotion/Faces/SK_Face_CWCompact/`.
+
+`cw-combined-cook-v1` cooks Windows data and independently decodes it with
+FacialReadback. All 116 new morphs pass the stored-delta comparison; all 90
+previous morphs, topology, weights, materials, sockets and cloth remain equal
+to E4. The decoder checks 2,312,092 render vertices, including 29,440 mapped
+facial vertices. Source-position error is at most 0.000015693 cm. Editor and
+cooked proofs are separate from visual or live acceptance.
+
+Two authoring attempts were rejected before acceptance. The initial native
+creation used the shared namespace, which the append tool correctly refuses;
+the successful run uses AnimLab then stages it. The first probe-package
+attempt used editor-only material mount paths. All 70 protected inputs were
+resolved through the recorded read-only bind mappings and hash-checked before
+host packaging. Original failure logs and receipts remain.
+
+`cw-combined-trial-v1` points to secondary-drive storage. It replaces E4 with
+E8 in the verified jaw/C11 candidate and adds the five new CW performances.
+It preserves all 63 animation entries, five adapters, four native locomotion
+alternatives and six Eve facial performances. Of 98 cooked exports, 97 remain
+unchanged. External facial resources keep the manifest at 38,968 bytes.
+The resource round-trip reproduces the complete inline authoring catalog.
+
+The actual CSS loader passes 114,262 checks with the three source outfits and
+114,250 with the shared pack alone. The test compares every packaged CW key
+against the verified curve files and retains the existing outfit/native/Eve
+checks. Old inline and earlier external-resource catalogs still pass. The
+first test attempt hit the generic 1 MiB test-fixture reader; the dedicated
+performance-fixture reader uses the same 16 MiB bound as facial resources.
+No production parser or resource limit changed.
+
+Removed only the superseded first combined basis and its hard-linked fitted
+payload: 81,650,382 unique bytes. Original inputs, successful individual fits,
+accepted combined data and failure reports remain. Receipt:
+`cw-combined-rejected-cleanup-v1.json`.
+
+This completes combined CW fitting, cooking and private pack integration.
+Nothing was installed. Full source/temporal review, unresolved source indices
+3269..3275, all requested outfit/native live checks, CSS/CINE cancellation and
+restoration, performance acceptance and release remain unfinished.

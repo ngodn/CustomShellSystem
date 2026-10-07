@@ -1,5 +1,26 @@
 # Shared animation acceptance
 
+The combined Commander White face is now cooked and packaged in
+`work/cine-animation-port/cw-combined-trial-v1`. All six CW facial tracks are
+included alongside Eve's six, with the existing 63 body/movement entries,
+31 photo poses, five outfit adapters and four native locomotion alternatives.
+The pack still has 98 cooked exports. Only the CW facial mesh changed;
+the other 97 exports are preserved.
+
+The E8 face retains all 90 previous mesh morphs, material bindings, skin
+weights and cloth. Its 116 added shapes fit 128 exposed catalog controls.
+All five new tracks pass source/intermediate geometry and native playback
+checks. Cinderella's performance bytes are unchanged. Combined and pack-only
+loader checks pass 114,262 and 114,250 assertions, including every packaged
+CW facial key. The manifest is 38,968 bytes; runtime bounds were not raised.
+
+Nothing new is installed. Full temporal/source review, unresolved source
+indices 3269..3275, the requested outfit/native live matrix, CSS/CINE
+restoration and performance acceptance, and release packaging remain open.
+See [the combined face evidence](shared-animation-cw-face.md).
+
+Earlier checkpoints:
+
 All six Commander White facial mappings are now prepared: Gesture 200, Spin,
 DumbDumb, Cinderella, Iris Out and Come Closer. The last two pass full sampled
 and independent intermediate geometry checks and native playback/restoration.

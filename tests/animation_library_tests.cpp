@@ -3,8 +3,11 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <functional>
 #include <iostream>
+#include <unordered_set>
 
 using namespace css;
 namespace {
@@ -17,6 +20,12 @@ void rejects(const std::function<void()>& action) {
     bool rejected=false;
     try { action(); } catch(const std::exception&) { rejected=true; }
     expect(rejected,"Invalid animation library accepted");
+}
+Json read_performance_fixture(const fs::path& path) {
+    if(fs::file_size(path)>16*1024*1024) throw std::runtime_error("Performance fixture exceeds 16 MiB");
+    std::ifstream stream(path,std::ios::binary);
+    if(!stream) throw std::runtime_error("Cannot open performance fixture");
+    return Json::parse(stream);
 }
 }
 int main(int argc,char** argv) {
@@ -244,7 +253,7 @@ int main(int argc,char** argv) {
             expect(packages.diagnostics.at("rejected")==4,"Bad library packages were not reported independently");
             expect(packages.diagnostics.at("loaded")==1,"Valid packaged library did not load");
         }
-        if((argc>=3 && argc<=5) && (std::string_view(argv[1])=="--audited-pack" || std::string_view(argv[1])=="--audited-facial-pack" ||
+        if((argc>=3 && argc<=6) && (std::string_view(argv[1])=="--audited-pack" || std::string_view(argv[1])=="--audited-facial-pack" ||
                        std::string_view(argv[1])=="--audited-face-motion-pack" ||
                        std::string_view(argv[1])=="--audited-blender-face-pack" ||
                        std::string_view(argv[1])=="--audited-dance-pack" ||
@@ -265,6 +274,7 @@ int main(int argc,char** argv) {
             const bool cinderella=std::string_view(argv[1])=="--audited-cinderella-pack" ||
                                   std::string_view(argv[1])=="--audited-cinderella-only-pack";
             expect(argc==3 || cinderella,"Additional reference data is only supported for Cinderella audits");
+            const bool combined_cw=cinderella && argc==6;
             const bool author_face=cinderella || std::string_view(argv[1])=="--audited-jali3-face-pack" ||
                                    std::string_view(argv[1])=="--audited-jali3-face-only-pack";
             const bool commander_face=author_face || std::string_view(argv[1])=="--audited-cw-face-pack" ||
@@ -363,9 +373,10 @@ int main(int argc,char** argv) {
                 if(commander_face) {
                     const auto& rig=audited.faces.back();
                     expect(rig.id=="css.commanderwhite.face" && rig.expressions.size()==9 &&
-                           rig.morphs.size()==74 && rig.adapters.size()==1 && rig.performances.size()==(argc==5?1:0),
+                           rig.morphs.size()==(combined_cw?128:74) && rig.adapters.size()==1 &&
+                           rig.performances.size()==(combined_cw?6:argc>=5?1:0),
                            "Commander White lost its verified static expression contract");
-                    if(argc==5) {
+                    if(argc>=5) {
                         const auto reference=FacialPerformance::parse(read_json(argv[4]).at("performance"),rig.morphs);
                         const auto* mapped=rig.find_performance(reference.clip);
                         expect(reference.curves.size()==4 && mapped && mapped->duration==reference.duration &&
@@ -379,6 +390,32 @@ int main(int argc,char** argv) {
                             for(size_t j=0;j<expected.keys.size();++j)
                                 expect(actual.keys[j].seconds==expected.keys[j].seconds && actual.keys[j].value==expected.keys[j].value,
                                        "Packaged CW facial key changed");
+                        }
+                    }
+                    if(combined_cw) {
+                        const auto index=read_json(argv[5]);
+                        expect(index.is_object() && index.size()==5,"Expected five verified CW curve folders");
+                        expect(rig.adapters.front().target_mesh==
+                               "/Game/CSS/Locomotion/Faces/SK_Face_CWCompact/SK_Face_CWE8.SK_Face_CWE8",
+                               "Combined performances use the wrong CW face");
+                        std::unordered_set<std::string> clips;
+                        for(const auto& folder:index) {
+                            const auto reference=FacialPerformance::parse(
+                                read_performance_fixture(fs::path(folder.get<std::string>())/"performance.json"),rig.morphs);
+                            expect(clips.insert(reference.clip).second,"Repeated combined CW performance fixture");
+                            const auto* mapped=rig.find_performance(reference.clip);
+                            expect(mapped && mapped->duration==reference.duration &&
+                                   mapped->curves.size()==reference.curves.size() && mapped->key_count()==reference.key_count(),
+                                   "Combined CW performance differs from the verified source mapping");
+                            for(size_t i=0;i<reference.curves.size();++i) {
+                                const auto& expected=reference.curves[i];
+                                const auto& actual=mapped->curves[i];
+                                expect(actual.morph==expected.morph && actual.keys.size()==expected.keys.size(),
+                                       "Combined CW curve identity or key count differs");
+                                for(size_t j=0;j<expected.keys.size();++j)
+                                    expect(actual.keys[j].seconds==expected.keys[j].seconds && actual.keys[j].value==expected.keys[j].value,
+                                           "Combined CW facial key changed during packaging");
+                            }
                         }
                     }
                 }

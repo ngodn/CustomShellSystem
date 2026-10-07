@@ -16,6 +16,13 @@ CONTENT = ROOT/'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 SOURCE = '/Game/CSS/Locomotion/Faces/SK_Face_CWCompact/SK_Face_CWE4'
 TARGET = '/Game/CSS/AnimLab/SK_Face_CWCompact/SK_Face_CWE5'
 INPUT = BASE/'cw-performance-fitted-v1/facial-shapes.json'
+COMBINED = os.environ.get('CSS_FACE_COMBINED_BASIS')
+if COMBINED:
+    basis = Path(COMBINED).resolve(strict=True)
+    if not basis.is_relative_to(BASE):
+        raise ValueError('Combined basis must be inside the animation workspace')
+    INPUT = basis/'facial-shapes.json'
+    TARGET = '/Game/CSS/AnimLab/SK_Face_CWCompact/SK_Face_CWE7'
 
 
 def disk(package):
@@ -31,8 +38,16 @@ audit_path = BASE/'cw-expression-shared-v3/verify-result.json'
 audit = json.loads(audit_path.read_text())
 fitted_path = INPUT.with_name('report.json')
 fitted = json.loads(fitted_path.read_text())
+expected_added = fitted.get('added_shapes') if COMBINED else 59
+fit_verified = fitted.get('passed') if COMBINED else fitted.get('complete')
+if COMBINED and (not isinstance(expected_added, int) or not 1 <= expected_added <= 128 or
+        fitted.get('total_shapes', 129) > 128 or fitted.get('fitted_correspondence_error_cm', 1) > .0002 or
+        len(fitted.get('results', [])) != 5 or
+        any(not row.get('passed') or max(row['training_error_cm'], row['max_holdout_error_cm']) > .015
+            for row in fitted['results'])):
+    raise ValueError('Require a bounded combined fit for all five performances')
 if (not audit.get('complete') or audit['target'] != SOURCE or
-        not fitted.get('complete') or fitted.get('added_shapes') != 59 or
+        not fit_verified or fitted.get('added_shapes') != expected_added or
         digest(INPUT) != fitted['sha256'] or digest(disk(SOURCE)) != audit['target_sha256']):
     raise ValueError('Require the unchanged verified face and fitted controls')
 for mode in ('create','verify'):
@@ -55,7 +70,7 @@ if not isinstance(target,unreal.SkeletalMesh):
 before = {str(m.get_name()) for m in source.get_editor_property('morph_targets')}
 payload = json.loads(INPUT.read_text())
 added = {row['name'] for row in payload['morph_targets']}
-if len(before)!=90 or len(added)!=59 or before & added:
+if len(before)!=90 or len(added)!=expected_added or before & added:
     raise ValueError('Unexpected morph set')
 report = dict(complete=False,source=SOURCE,target=TARGET,mode=MODE,installed=False)
 report_path.write_text(json.dumps(report,indent=2)+'\n')

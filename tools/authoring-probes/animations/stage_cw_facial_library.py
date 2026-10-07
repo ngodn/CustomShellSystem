@@ -18,15 +18,30 @@ SOURCE='/Game/CSS/CommanderWhite/Dev/SK_CommanderC4'
 CANDIDATE='/Game/CSS/AnimLab/SK_Face_CWCompact/SK_Face_CWE3'
 TARGET='/Game/CSS/Locomotion/Faces/SK_Face_CWCompact/SK_Face_CWE4'
 REVISION=os.environ.get('CSS_CW_FACE_STAGE_REVISION','E4')
+EXPECTED_MORPHS=90
 if REVISION=='E6':
     INPUT=BASE/'cw-performance-fitted-v1/facial-shapes.json'
     AUDIT=BASE/'cw-performance-native-v1/verify-result.json'
     SOURCE=TARGET
     CANDIDATE='/Game/CSS/AnimLab/SK_Face_CWCompact/SK_Face_CWE5'
     TARGET='/Game/CSS/Locomotion/Faces/SK_Face_CWCompact/SK_Face_CWE6'
+    EXPECTED_MORPHS=149
+elif REVISION=='E8':
+    basis=Path(os.environ['CSS_FACE_COMBINED_BASIS']).resolve(strict=True)
+    native=Path(os.environ['CSS_FACE_COMBINED_NATIVE']).resolve(strict=True)
+    if not basis.is_relative_to(BASE) or not native.is_relative_to(BASE):
+        raise ValueError('Use verified combined animation workspaces')
+    fitted=json.loads((basis/'report.json').read_text())
+    if not fitted.get('passed') or not 1 <= fitted.get('total_shapes',129) <= 128:
+        raise ValueError('Combined face fit has not passed')
+    INPUT=basis/'facial-shapes.json'
+    AUDIT=native/'verify-result.json'
+    SOURCE=TARGET
+    CANDIDATE='/Game/CSS/AnimLab/SK_Face_CWCompact/SK_Face_CWE7'
+    TARGET='/Game/CSS/Locomotion/Faces/SK_Face_CWCompact/SK_Face_CWE8'
+    EXPECTED_MORPHS=90+fitted['added_shapes']
 elif REVISION!='E4':
     raise ValueError('Unknown CW facial staging revision')
-EXPECTED_MORPHS=149 if REVISION=='E6' else 90
 MATERIAL_AUDIT=BASE/'cw-expression-cook-v2/cooked-readback-v2.json'
 CONTENT=ROOT/'CSS-eins0fx-collections/tools/CSSAuthoring/Content'
 
