@@ -7,6 +7,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Dom/JsonObject.h"
 #include "Engine/SkeletalMesh.h"
+#include "HAL/PlatformMisc.h"
 #include "Misc/ScopeExit.h"
 #include "PreviewScene.h"
 #include "Serialization/JsonSerializer.h"
@@ -66,6 +67,17 @@ FString UCSSPerformanceLibrary::EvaluatePerformanceLayer(USkeletalMesh* Mesh, UA
     auto* Weight = FindFProperty<FFloatProperty>(Instance->GetClass(), TEXT("CSSPerformanceWeight"));
     if (!Sequence || !Enabled || !Time || !Weight) return Fail(TEXT("Missing performance controls"));
     const auto& Reference = Mesh->GetRefSkeleton();
+    const bool CaptureFeet = FPlatformMisc::GetEnvironmentVariable(TEXT("CSS_PERFORMANCE_CAPTURE_FEET")) == TEXT("1");
+    TArray<int32> ContactBones;
+    TArray<TSharedPtr<FJsonValue>> ContactNames, ContactFrames;
+    if (CaptureFeet)
+        for (const TCHAR* Name : {TEXT("calf_l"), TEXT("foot_l"), TEXT("calf_r"), TEXT("foot_r")})
+        {
+            const int32 Bone = Reference.FindBoneIndex(Name);
+            if (Bone == INDEX_NONE) return Fail(TEXT("Missing contact bone"));
+            ContactBones.Add(Bone);
+            ContactNames.Add(MakeShared<FJsonValueString>(Name));
+        }
     TSet<int32> BodyBones;
     TSet<int32> FingerBones;
     for (const TCHAR* Name : {TEXT("root"), TEXT("pelvis"), TEXT("spine_01"), TEXT("spine_02"), TEXT("spine_03"),
@@ -129,6 +141,29 @@ FString UCSSPerformanceLibrary::EvaluatePerformanceLayer(USkeletalMesh* Mesh, UA
             const auto A = Original->GetBoneSpaceTransformsView();
             const auto B = Candidate->GetBoneSpaceTransformsView();
             if (A.Num() != Reference.GetNum() || B.Num() != A.Num()) return Fail(TEXT("Incomplete evaluated pose"));
+            if (CaptureFeet && Test.Moving)
+            {
+                const auto& Components = Candidate->GetComponentSpaceTransforms();
+                if (Components.Num() != Reference.GetNum()) return Fail(TEXT("Incomplete contact pose"));
+                TArray<TSharedPtr<FJsonValue>> Transforms;
+                for (int32 Bone : ContactBones)
+                {
+                    const auto& Transform = Components[Bone];
+                    if (Transform.ContainsNaN() || !Transform.GetRotation().IsNormalized())
+                        return Fail(TEXT("Invalid contact pose"));
+                    const auto Q = Transform.GetRotation();
+                    const auto P = Transform.GetTranslation();
+                    const auto S = Transform.GetScale3D();
+                    TArray<TSharedPtr<FJsonValue>> Values;
+                    for (double Value : {Q.X, Q.Y, Q.Z, Q.W, P.X, P.Y, P.Z, S.X, S.Y, S.Z})
+                        Values.Add(MakeShared<FJsonValueNumber>(Value));
+                    Transforms.Add(MakeShared<FJsonValueArray>(Values));
+                }
+                auto Row = MakeShared<FJsonObject>();
+                Row->SetNumberField(TEXT("time"), PerformanceTime);
+                Row->SetArrayField(TEXT("transforms"), Transforms);
+                ContactFrames.Add(MakeShared<FJsonValueObject>(Row));
+            }
             for (int32 Bone = 0; Bone < Reference.GetRawBoneNum(); ++Bone)
             {
                 if (A[Bone].ContainsNaN() || B[Bone].ContainsNaN() || !B[Bone].GetRotation().IsNormalized())
@@ -178,6 +213,12 @@ FString UCSSPerformanceLibrary::EvaluatePerformanceLayer(USkeletalMesh* Mesh, UA
     Report->SetStringField(TEXT("layer"), Layer->GetPathName());
     Report->SetStringField(TEXT("performance"), PerformanceClip->GetPathName());
     Report->SetNumberField(TEXT("finger_bones_checked"), FingerBones.Num());
+    if (CaptureFeet)
+    {
+        Report->SetArrayField(TEXT("contact_bones"), ContactNames);
+        Report->SetArrayField(TEXT("contact_frames"), ContactFrames);
+        Report->SetStringField(TEXT("contact_space"), TEXT("component; qx,qy,qz,qw,tx,ty,tz,sx,sy,sz; identity placement"));
+    }
     Report->SetStringField(TEXT("scope"), TEXT("Compressed component and post-process pose evaluation at 60 Hz. No world cloth-solver or gameplay acceptance."));
     FString Text;
     return FJsonSerializer::Serialize(Report, TJsonWriterFactory<>::Create(&Text)) ? Text : FString();

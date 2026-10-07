@@ -1,5 +1,46 @@
 # Shared animation motion review
 
+## Final-layer contact check, October 7
+
+The four standing dances with substantial neutral penetration now have a
+60 Hz capture through Black Pearl's actual performance adapter. All 3,344
+evaluated frames retain the existing body/finger and restoration checks.
+The diagnostic records the four component-space calf/foot transforms that
+influence every vertex in the audited footwear material (25,152 referenced
+vertices). It then skins that surface independently from the captured pose.
+
+| Clip | Frames | Lowest sole Z (cm) | Time (s) |
+| --- | ---: | ---: | ---: |
+| Bass Down Low | 761 | -5.266 | 4.333 |
+| Black Hole | 1,201 | -3.885 | 4.217 |
+| Come Closer | 1,161 | -6.301 | 16.533 |
+| Jang Won Young Spin | 221 | -4.344 | 2.600 |
+
+The outfit's downstream post-process layer does not remove this penetration
+in the identity preview scene. At matching source-key times its surface differs
+from the previous independent neutral decode by at most 0.000365 cm in the first
+three dances and 0.004797 cm in the separately recooked Spin. Black Hole's new
+minimum occurs between the original 30 Hz samples. This does not establish the
+world floor or include the appearance's component offset, body customization,
+terrain or cloth simulation.
+
+Original source foot/toe samples at these times remain above the source reference
+plane. Spin has one lifted leg; the other three samples have both feet low.
+These are joint measurements, not source sole geometry. Preserve those support
+and lifted-leg distinctions when preparing a correction. The result narrows the
+next step to contact correction and a world comparison; repeating raw-versus-
+post-process captures for these same four candidates is unnecessary.
+
+Evidence: `work/cine-animation-port/shared-evaluated-contact-v1/` contains the
+four captures, build and editor receipts, `surfaces.json`,
+`neutral-comparison.json` and `source-support-samples.json`.
+`measure_evaluated_contact.py` checks the source mesh, skin hashes, transform
+space, full frame count and finite transforms. Four malformed-input checks
+reject wrong space, missing frames, another mesh and a nonfinite pose without
+writing an output. The helper builds with UE 5.6.1. Capture is opt-in through
+`CSS_PERFORMANCE_CAPTURE_FEET=1` and affects authoring diagnostics only.
+No animation, runtime DLL, installed package or saved player setting changed.
+
 ## Full-frame continuation, October 7
 
 All eighteen original moving clips now have complete videos at their captured
