@@ -73,6 +73,31 @@ class SharedTrialTests(unittest.TestCase):
         self.assertEqual(f.game_files(), f.original)
         self.assertFalse(f.receipt.exists())
 
+    def add_neck_revision(self):
+        f = self.fixture
+        original = json.loads((f.pack / 'verification.json').read_text())
+        parent = f.root / 'precision-verification.json'
+        f.write(parent, original)
+        revised = dict(original, unchanged_existing_exports=98, replacements={'spin': 'corrected'},
+                       added_auxiliary_exports=0, base_verification=str(parent),
+                       protected={str(parent): installer.sha(parent)})
+        f.write(f.pack / 'verification.json', revised)
+        return parent
+
+    def test_rotation_revision_reuses_the_verified_facial_baseline(self):
+        self.add_neck_revision()
+        report = json.loads(self.run_update().read_text())
+        self.assertTrue(report['installed'])
+        self.assertEqual(report['cine'], 'old-cine.dll')
+
+    def test_intermediate_provenance_change_is_rejected_before_game_writes(self):
+        parent = self.add_neck_revision()
+        self.fixture.write(parent, {'passed': True})
+        with self.assertRaises(ValueError):
+            self.run_update()
+        self.assertEqual(self.fixture.game_files(), self.fixture.original)
+        self.assertFalse(self.fixture.receipt.exists())
+
 
 if __name__ == '__main__':
     unittest.main()

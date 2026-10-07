@@ -1,6 +1,6 @@
 # Shared animation acceptance
 
-Current private candidate: `work/cine-animation-port/shared-precision-trial-v1`.
+Current private candidate: `work/cine-animation-port/shared-neck-trial-v1`.
 It is built and verified offline, **not installed or accepted for release**.
 This page describes the current candidate. Earlier checkpoints remain in Git
 history and the linked investigation records.
@@ -43,11 +43,26 @@ threshold of 0.001 cm. Fresh editor comparison confirms every authored key
 is unchanged. Both copies now pass, with maximum quaternion distances
 0.000219304 and 0.000298369. Their original assets and failed reports remain.
 
-The latest combined pack replaces only those two animation exports, adds the
+The preceding precision pack replaces only those two animation exports, adds the
 settings asset, and preserves the other 96 exports byte-for-byte. Both facial
 resources are unchanged. Stable IDs, adapters, profiles and native alternatives
 are retained. Independent container readback passes. Actual CSS combined and
 pack-only loader tests pass 114,262 and 114,250 checks.
+
+The current pack additionally replaces Spin with its verified neck correction.
+It preserves the other 98 exports byte-for-byte and reuses the existing owned
+compression setting. Entry/export counts remain 63/99. The same combined and
+standalone loader checks pass on this new pack. Both facial resources, all
+adapters and the native alternatives remain unchanged.
+
+Spin's neck roll pinched the target collar despite matching its source motion.
+The correction edits only `neck_01`, `neck_02` and `head` rotations. Two separate
+editor runs verify all 111 raw frames, with exactly unchanged translations,
+scales and other local rotations. Cooked comparison passes at every source key.
+All 371 joints outside the corrected neck/tie branch preserve their world poses
+within 0.000874 cm and 0.022862 degrees; the head differs by at most 0.000393 cm.
+The existing adapter evaluation passes 81 cases across all nine requested outfit
+meshes. These are offline comparisons, not cloth or live acceptance.
 
 Evidence under `work/cine-animation-port/`:
 
@@ -58,6 +73,9 @@ Evidence under `work/cine-animation-port/`:
   comparisons with report hashes.
 - `shared-precision-trial-v1/verification.json` and `host-validation.json`:
   combined pack preservation, round-trip and actual loader checks.
+- `spin-neck-ue-v1/`: saved/fresh editor checks, Windows cook, independent
+  decoding, full raw/cooked and world-pose comparisons, and nine-mesh adapter
+  evaluation. `shared-neck-trial-v1/` is the resulting combined candidate.
 
 DumbDumb, Iris Out and Cinderella have their own full cooked-key checks and
 contact studies, linked below. Source-key compression fidelity does not prove
@@ -68,6 +86,7 @@ between-key contact, simulated cloth, continuous visual smoothness or gameplay.
 The table lists the original 57 clips. Source assets are beneath `/Game/CSS/`.
 Black Hole and After Brute Battle retain those original authoring sources;
 the current catalog selects their verified `Studies/Precision1` copies.
+Spin now selects `Studies/Neck1/AN_JangWonYoungSpin`; its original source remains.
 
 | Clip | Stable ID | Authoring source | Cooked comparison | Live acceptance |
 | --- | --- | --- | --- | --- |
@@ -174,17 +193,19 @@ replacement and rollback path. Its check-only run passed against the real
 The old installer's 68-export facial check remains intact for older trials;
 the new validator checks the combined facial baseline, container hashes,
 dependencies, host loader results and full original-clip comparison reports.
-Twelve existing transaction tests and four combined-pack tests pass. The new
+Twelve existing transaction tests and six combined-pack tests pass. The new
 path keeps the installed CINE extension and menu unchanged.
+The validator follows the hashed replacement reports back to the combined
+facial baseline, including the new Spin revision, and rejects changed reports.
 
 For the next authorized closed-game trial, run from the CSS checkout:
 
 ```sh
 python3 tools/authoring-probes/animations/install_shared_animation_trial.py \
   work/cine-animation-port/live-face-motion-2 \
-  work/cine-animation-port/shared-precision-trial-v1 \
+  work/cine-animation-port/shared-neck-trial-v1 \
   work/cine-animation-port/cw-combined-trial-v1/verification.json \
-  work/cine-animation-port/live-combined-precision-1 \
+  work/cine-animation-port/live-combined-neck-1 \
   --core build/cine-win/css_core.dll
 ```
 

@@ -1,4 +1,4 @@
-"""Replace verified animation compression copies while preserving the shared catalog."""
+"""Replace verified animation copies while preserving the shared catalog."""
 import argparse
 import copy
 import errno
@@ -84,17 +84,23 @@ def main():
     if removed != set(replacements) or len(payloads) // 2 != baseline['exports'] - len(replacements):
         raise ValueError('Source payload set changed')
     unchanged = len(payloads) // 2
-    additions = set()
+    additions, reused_settings = set(), set()
     for header in sorted((precision / 'pack/stage').rglob('*.uasset')):
         info = asset_info(header.read_bytes())
-        if info['package'] not in replacements.values() and not any(
-                item['class'] == 'AnimBoneCompressionSettings' for item in info['exports']):
+        compression = any(item['class'] == 'AnimBoneCompressionSettings' for item in info['exports'])
+        if info['package'] not in replacements.values() and not compression:
             raise ValueError('Unexpected precision payload')
         additions.add(info['package'])
         for source in (header, header.with_suffix('.uexp')):
             key = source.relative_to(precision / 'pack/stage')
-            if key in payloads or (source.suffix == '.uexp' and sha(source) != sha(precision / 'pack/readback' / key)):
+            if source.suffix == '.uexp' and sha(source) != sha(precision / 'pack/readback' / key):
                 raise ValueError('Conflicting or unverified precision export')
+            if key in payloads:
+                if not compression or sha(source) != sha(payloads[key]):
+                    raise ValueError('Conflicting compression setting')
+                protect(source)
+                reused_settings.add(info['package'])
+                continue
             payloads[key] = protect(source)
     if not set(replacements.values()) < additions:
         raise ValueError('Missing sequence or owned compression settings')
@@ -131,7 +137,7 @@ def main():
             raise ValueError('Changed package identity: ' + str(key))
     manifest['containers'] = {suffix: dict(file=STEM + suffix, bytes=(trio / (STEM + suffix)).stat().st_size,
         sha256=sha(trio / (STEM + suffix))) for suffix in ('.utoc', '.ucas')}
-    # Copy the external face resources verbatim. Only the two body bindings and
+    # Copy the external face resources verbatim. Only the selected body bindings and
     # new container checksums differ from the input manifest.
     for source in (base / 'metadata').rglob('*'):
         if source.is_file():
@@ -151,9 +157,12 @@ def main():
             raise ValueError('Protected input changed: ' + path)
     result = dict(passed=True, entries=len(entries), exports=len(payloads) // 2,
                   unchanged_existing_exports=unchanged, replacements=replacements,
+                  base_verification=str((base / 'verification.json').resolve()),
+                  added_auxiliary_exports=len(payloads) // 2 - baseline['exports'],
+                  reused_compression_settings=sorted(reused_settings),
                   protected=protected, dependencies=baseline['dependencies'],
                   files={p.name: sha(p) for p in trio.iterdir()}, installed=False,
-                  scope='Compression-only private candidate. Full temporal and live acceptance remain pending.')
+                  scope='Private animation replacement candidate. Full temporal and live acceptance remain pending.')
     (output / 'verification.json').write_text(json.dumps(result, indent=2) + '\n')
     print('PRECISION_TRIAL', result['entries'], result['exports'], flush=True)
 

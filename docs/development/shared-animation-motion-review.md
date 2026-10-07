@@ -35,9 +35,9 @@ the neck and its six-bone tie branch, which follows the corrected attachment.
 Maximum preserved position error is 1.51e-13 cm. Neck world-rotation peaks fall
 to 34.163 and 23.748 degrees. The four-frame close comparison removes the visible
 pinch. Its complete 111-frame, 30 FPS replay also passes reconstruction and
-encoded-clock checks (`full-render-verification.json`). This is a prototype,
-not yet cooked, packaged, tested on all outfits or installed. Fresh engine
-verification and full visual acceptance remain required.
+encoded-clock checks (`full-render-verification.json`). The prototype was
+initially uncooked. The follow-up below records its saved and cooked verification;
+full visual and gameplay acceptance remain separate.
 
 The source comparison also checks After Brute Battle's largest local calf
 rotation. The source contains a fast turn at the same frame, but retargeting
@@ -58,6 +58,37 @@ The source and target use different neck-chain lengths. Epic documents chain
 mapping and retarget-pose alignment for that case; the specific twist defect
 above is established by our captures and close renders, not asserted by the
 documentation. [UE 5.6 IK retargeting](https://dev.epicgames.com/documentation/en-us/unreal-engine/ik-rig-animation-retargeting-in-unreal-engine?application_version=5.6).
+
+### Saved and cooked Spin correction
+
+`derive_neck_twist_correction.py` reproduces the prototype exactly, refuses an
+existing output directory and rejects scaled neck chains before writing output.
+`prepare_neck_twist_clip.py` creates only
+`/Game/CSS/Locomotion/Studies/Neck1/AN_JangWonYoungSpin`, preserving the original
+asset. It edits the three reviewed rotation tracks and reuses the owned
+`Studies/Precision1/ACS_Motion` compression setting.
+
+Creation and fresh editor readback compare all 111 frames. Translations, scales
+and other local rotations match exactly. Maximum corrected quaternion distance
+from the prototype is 2.843e-7. Both editor captures match each other exactly.
+The Windows cook and independent decoder pass; full cooked-key comparison has
+maximum translation error 0.000835 cm, quaternion distance 0.000173 and scale
+distance 9.611e-7, below the unchanged shared-library bounds.
+
+The cooked world-pose comparison checks 371 joints outside the corrected neck
+and attached tie branch. Maximum position difference from the original motion
+is 0.000874 cm; maximum orientation difference is 0.022862 degrees. The head's
+position difference is 0.000393 cm. The nine requested outfit meshes pass all
+81 existing adapter cases, including body/finger comparison and restoration.
+This does not validate simulated cloth or the user's gameplay state.
+
+Evidence is in `spin-neck-ue-v1`, including `derivation-checks.json`,
+`prepare-result.json`, `verify-result.json`, `comparisons/00.json`,
+`cooked-world-preservation.json` and `adapter-result.json`.
+`shared-neck-trial-v1` replaces only this animation in the combined pack,
+preserves the other 98 exports, and passes both host loader configurations.
+The original source, prior pack and failed-render evidence remain intact.
+The new pack is not installed.
 
 ## Earlier sampled review
 

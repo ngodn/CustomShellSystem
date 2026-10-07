@@ -12,20 +12,37 @@ def validate_shared_package(pack, old, baseline_path):
     verified = json.loads(verification.read_text())
     baseline_path = baseline_path.resolve(strict=True)
     baseline = json.loads(baseline_path.read_text())
-    if (verified.get('passed') is not True or verified.get('entries') != 63
-            or verified.get('exports') != 99 or verified.get('unchanged_existing_exports') != 96
-            or len(verified.get('replacements', {})) != 2
-            or verified.get('protected', {}).get(str(baseline_path)) != sha(baseline_path)
-            or baseline.get('passed') is not True or baseline.get('entries') != 63
+    if (baseline.get('passed') is not True or baseline.get('entries') != 63
             or baseline.get('exports') != 98 or baseline.get('adapters') != 5
             or baseline.get('eve_performances') != 6 or baseline.get('commander_performances') != 6
-            or baseline.get('commander_controls') != 128
-            or verified.get('dependencies') != baseline.get('dependencies')):
-        raise ValueError('Expected the audited combined facial candidate and its precision replacement')
+            or baseline.get('commander_controls') != 128):
+        raise ValueError('Expected the audited combined facial baseline')
+    evidence = {str(p): sha(p) for p in (verification, baseline_path)}
+    current, seen = verified, {verification.resolve()}
+    for _ in range(8):
+        parent_path = Path(current.get('base_verification', baseline_path)).resolve(strict=True)
+        if parent_path in seen or current.get('protected', {}).get(str(parent_path)) != sha(parent_path):
+            raise ValueError('Changed or cyclic animation replacement provenance')
+        parent = json.loads(parent_path.read_text())
+        count = len(current.get('replacements', {}))
+        extra = current.get('added_auxiliary_exports', 1)
+        if (current.get('passed') is not True or parent.get('passed') is not True
+                or current.get('entries') != 63 or parent.get('entries') != 63
+                or not 1 <= count <= 8 or type(extra) is not int or not 0 <= extra <= 8
+                or current.get('unchanged_existing_exports') != parent['exports'] - count
+                or current.get('exports') != parent['exports'] + extra
+                or current.get('dependencies') != baseline.get('dependencies')):
+            raise ValueError('Incomplete animation replacement proof')
+        evidence[str(parent_path)] = sha(parent_path)
+        if parent_path == baseline_path:
+            break
+        current = parent
+        seen.add(parent_path)
+    else:
+        raise ValueError('Animation replacement provenance exceeds eight revisions')
     files = verified.get('files', {})
     if set(files) != {NAME + suffix for suffix in ('.pak', '.utoc', '.ucas')}:
         raise ValueError('Incomplete shared container set')
-    evidence = {str(p): sha(p) for p in (verification, baseline_path)}
     host_path = pack / 'host-validation.json'
     host = json.loads(host_path.read_text())
     if (host.get('passed') is not True or len(host.get('results', [])) != 2
