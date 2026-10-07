@@ -17,6 +17,13 @@ source hashes. Set `CSS_RIG_AUDIT_STAGE` to a private output directory containin
 authoring Content read-only and retain a private writable DDC. Results distinguish
 editor-built buffers from installed cooked data.
 
+`SnapshotMeshSections` reads selected source material groups by slot name. It
+records global vertex/triangle/instance IDs, positions, raw skin weights,
+corner normals/colors/UV channels and source morph deltas. Missing or ambiguous
+slots fail explicitly. It does not save or modify the mesh. The Genessa facial
+integration uses these snapshots to establish point and corner correspondence
+before editing private candidates.
+
 Copy `Source/` into an isolated project with an editor module named
 `CSSRigAudit`, then build its `CSSRigAuditEditor` target against the local
 UE 5.6.1 installed engine. Enable PythonScriptPlugin and

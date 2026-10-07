@@ -20,7 +20,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | --- | --- |
 | Nine-variant provenance | Installed hashes and 16 editable mesh identities pinned; all 790 migration paths have source candidates or alias recipes. Final Blender-to-cook recipe comparisons remain |
 | Mesh/weights/contacts | Fresh checks of all 16 editor-built meshes pass weight sums, section/bone/morph indices and finite-data checks. Deformation/contact checks and cooked comparison remain |
-| Unholy facial support | Visible-mask candidate and synchronized head-backing controls prepared; 115 control names, Iris Out offline review and UV/weight-preserving patch exported. Both W3 integrations, materials, cooking and runtime acceptance pending |
+| Unholy facial support | Both W3 facial candidates now build and save in UE with 137 morphs, including the original 22 controls. Source correspondence verified; oral vertex splitting, full cloth/body equivalence, material review, cooking and runtime acceptance pending |
 | Shared organization | CSS parser accepts new and legacy roots with 23 host suites passing. All 790 unique installed packages have collision-free author-owned destinations; 172 catalog path references classified. First 32 assets renamed, reloaded without redirectors, cooked and decoded in isolation. Remaining migration and runtime compatibility pending; not installed |
 | Locomotion | 63-entry installed catalog captured; four native declarations, 59 missing; conversion and motion-quality review pending |
 | Gameplay regressions | Current interruption baseline accepted by user; candidate regression tests pending |
@@ -65,4 +65,25 @@ Character-specific implementation lives in the [Unholy Genessa authoring notes](
 
 The retained `face-articulation5`, `face-backing2` and `face-patch1` outputs cover 115 control names. The interchange preserves original face UVs, corner data and head weights. Sparse indices, finite geometry and neutral triangles pass structural checks. All six current facial performances have matching control names. Iris Out's 23 existing curves were rendered for 501 frames at 30 fps, with inspected neutral and expression samples. This is offline clay-head evidence, not an installed or fully validated face.
 
-Next facial step: verify the patch against both actual W3 mesh descriptions, integrate it without changing unrelated geometry/cloth/bones/morphs, supply the oral material, then cook and test CSS/CINE behavior. Original Genessa source hashes remain unchanged. Nothing was installed. Cleanup removed 17.9 MB of rejected intermediate files (logical size), with reports and useful visual evidence retained.
+The editor integration below follows this head-only candidate. Original Genessa source hashes remain unchanged. Nothing was installed. Initial cleanup removed 17.9 MB of rejected intermediate files (logical size), with reports and useful visual evidence retained.
+
+### W3 editor integration progress
+
+Both W3 source descriptions match the facial patch: 1,303 mask points and all
+face UVs/normals match exactly; 8,976 backing points map within 0.000007643 cm.
+Original polygon checks account for 68 alternate quad diagonals and four tiny
+exporter-omitted triangles. The backing retains its native triangulation.
+
+The outfit-owned C++20 module now builds private facial replacements under
+`/Game/CSS/eins0fx/UnholyGenessa/Faces/`. Both candidates add 115 expression
+controls and retain all 22 original morphs and their delta counts. Skeleton,
+physics-asset and post-process identities agree; weight and morph index checks
+pass. This does not yet prove complete cloth or body equivalence.
+
+Current evidence is Genessa `work/face-integration4`, whose editor exited 0.
+It has 172,151 render vertices per variant, compared with 160,794 originally.
+The oral section still has more render splits than its source points/corners
+justify. The source uses MikkTSpace tangent recomputation, so authored tangents
+alone do not resolve this. Next: inspect the final render basis, verify full
+source/render/cloth equivalence, review materials and expressions, then cook
+and wire CSS/CINE. Original assets and installed game files remain untouched.

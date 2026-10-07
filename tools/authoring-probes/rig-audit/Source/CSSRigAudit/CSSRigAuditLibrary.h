@@ -16,4 +16,7 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString SnapshotMesh(class USkeletalMesh* Mesh);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static FString SnapshotMeshSections(class USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots);
 };
