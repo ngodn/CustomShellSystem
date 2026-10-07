@@ -57,6 +57,7 @@ FString AuditIdleRepeat(USkeletalMesh* Mesh, UAnimBlueprint* Source, UAnimSequen
     TArray<TSharedPtr<FJsonValue>> Samples;
     float PreviousTime = -1.f;
     int32 Wraps = 0, ClothFrames = 0, InvalidFrame = INDEX_NONE;
+    const bool ResetAtWrap = FPlatformMisc::GetEnvironmentVariable(TEXT("CSS_IDLE_REPEAT_RESET")) == TEXT("1");
     for (int32 Frame = 0; Frame < Frames; ++Frame)
     {
         Component->SetPosition(FMath::Fmod(Frame * Delta, Base->GetPlayLength()), false);
@@ -67,6 +68,7 @@ FString AuditIdleRepeat(USkeletalMesh* Mesh, UAnimBlueprint* Source, UAnimSequen
         const bool Wrapped = PreviousTime >= 0.f && Time < PreviousTime;
         if (Wrapped) ++Wraps;
         PreviousTime = Time;
+        if (Wrapped && ResetAtWrap) Component->ForceClothNextUpdateTeleportAndReset();
         // This commandlet waits explicitly after dispatch; no tick-graph completion handle is needed.
         Component->TickClothing(Delta, Component->PrimaryComponentTick);
         Component->WaitForExistingParallelClothSimulation_GameThread();
@@ -115,6 +117,7 @@ FString AuditIdleRepeat(USkeletalMesh* Mesh, UAnimBlueprint* Source, UAnimSequen
     Report->SetNumberField(TEXT("wraps"), Wraps);
     Report->SetNumberField(TEXT("invalid_frame"), InvalidFrame);
     Report->SetBoolField(TEXT("looping"), Node->IsLooping());
+    Report->SetBoolField(TEXT("reset_cloth_at_wrap"), ResetAtWrap);
     Report->SetArrayField(TEXT("samples"), Samples);
     Report->SetStringField(TEXT("scope"), TEXT("Original outfit idle graph plus isolated cloth at 60 Hz; no game map, GPU rendering or live customization."));
     FString Text;

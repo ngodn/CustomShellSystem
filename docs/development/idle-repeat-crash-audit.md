@@ -38,3 +38,25 @@ customization or full gameplay animation graph. It cannot clear the reported
 GPU crash or establish the bounds jump as its cause. Next investigation needs
 to distinguish rendering behavior at the repeat from invalid simulation data
 in the actual runtime. Keep the complete clip and source motion intact.
+
+## October 7 cloth-reset comparison
+
+The same fixture now has an explicit diagnostic-only
+`CSS_IDLE_REPEAT_RESET=1` option. It calls the engine's
+`ForceClothNextUpdateTeleportAndReset` after detecting the sequence wrap,
+before dispatching cloth. The baseline remains the completed 60 Hz run above.
+No game or outfit assets are modified by this comparison.
+
+All 2,470 frames, six cloth sections and 3,420 particles remain finite with
+three repeats. Bounds at the repeats are 631.67, 633.09 and 631.87 cm,
+within 0.031 cm of the baseline. This rejects a reset at that fixture point
+as a remedy for the bounds spike. It does not identify the GPU crash cause
+or prove that a different reset timing would have the same result. No reset
+workaround was added to the runtime.
+
+Evidence: `work/cine-animation-port/idle-repeat-reset-1/comparison.json`,
+`result.json`, `command.json`, build and execution exit receipts. The fixture
+still uses NullRHI and cannot establish live rendering acceptance. UE 5.6.1
+source `SkeletalMeshComponentPhysics.cpp:3773` confirms that the reset call
+sets the next cloth teleport mode. [Epic's API documentation](https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Engine/USkeletalMeshComponent/ForceClothNextUpdateTeleportAndR-)
+describes the same operation; the local versioned source was used for the test.
