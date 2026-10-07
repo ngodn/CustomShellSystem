@@ -21,9 +21,3 @@ https://www.nexusmods.com/stellarblade/mods/2534
 The Spin page credits motion to Ponx_迫奈熏. DumbDumb, Iris Out and Cinderella
 credit Pronxy-迫奈熏. Cinderella also credits choreography to porushi.
 Spellings follow the source pages. No music is included in this pack.
-
-The seven previously released CSS poses derive from the supplied ESAP Beta
-3782 0.7 archive. Original source page:
-https://www.nexusmods.com/stellarblade/mods/3782
-The page currently does not expose its creator credit; that attribution still
-needs checking before these draft credits are used for a public release.
