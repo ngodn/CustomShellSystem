@@ -394,3 +394,35 @@ Next diagnostic priorities:
 Evidence: `after-brute-loop-audit-1/{result,raw-cross-check}.json`. The command
 and measurements are read-only. No asset recook, installed runtime change or
 source-trajectory edit was made for this audit.
+
+
+### Live normal-idle baseline and cloth reset detection
+
+A read-only probe on the new core captured 30 samples across 45.28 seconds,
+with Unholy Genessa Eve Skin using the bundled Eve Default Idle throughout.
+All bounds were finite; mesh sphere radius ranged from 155.6483 to 164.4483 cm.
+These are component bounds, not the pawn-wide bounds that include other
+components. The probe sent no animation, camera, movement or physics writes.
+It stopped after the bounded capture. Evidence: `after-brute-loop-audit-1/
+live-baseline.jsonl` and `live-baseline-summary.json`.
+
+Separate reflected reads report six cloth simulations, simulation not suspended,
+a 300 cm teleport-distance threshold and a zero rotation threshold. Evidence:
+`live-cloth-settings.json`. The snapshot is specific to the current component;
+it does not establish any failing-repeat state or prove simulation correctness.
+
+The local UE 5.6.1 source explains a gap to test:
+`Runtime/Engine/Private/SkeletalMeshComponentPhysics.cpp:3325`
+(`USkeletalMeshComponent::CheckClothTeleport`) reads `GetBoneMatrix(0)`, then
+passes that root transform to `CalculateClothingTeleport`. The helper compares
+root position and rotation against thresholds. After Brute Battle's decoded
+root is stationary while its pelvis travels. Therefore its pose discontinuity
+alone would not activate this root-motion detection on a stationary component.
+Other explicit reset callers or game behavior could still reset it, so this
+is a testable mechanism, not an observed failure or established crash cause.
+No teleport thresholds, cloth settings or installed DLLs were changed.
+
+Next capture should pair the chosen clip and repeat time with actual component
+bounds and evaluated bone motion. The existing low-frequency probe cannot rule
+out a single-frame failure. Facial acceptance is still pending on the separate
+user test; the current observed choice remains the normal Genessa idle.
