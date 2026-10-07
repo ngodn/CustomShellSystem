@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 
 import numpy as np
 
@@ -16,9 +17,16 @@ def main():
     parser.add_argument('--holdouts', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--retain-performance-controls', action='store_true')
+    parser.add_argument('--retained-basis', type=Path,
+                        help='Preserve a previously verified sampled basis, including its existing controls')
+    parser.add_argument('--shape-prefix', default='CSSF_CW_Spin')
+    parser.add_argument('--basis-method', choices=('svd', 'greedy'), default='svd')
     args = parser.parse_args()
     if args.output.exists():
         raise FileExistsError(args.output)
+    if (args.retained_basis and args.retain_performance_controls or
+            not re.fullmatch(r'[A-Za-z0-9_]{1,48}', args.shape_prefix)):
+        raise ValueError('Use one retained basis and a short shape-name prefix')
     protected = {}
 
     def protect(path):
@@ -46,7 +54,8 @@ def main():
     for folder in (args.source, args.holdouts):
         audit = read(folder/'samples/report.json')
         if (read(folder/'exit.json')['exit_code'] != 0 or not audit.get('sources_unchanged') or
-                not audit.get('eye_gaze_range') or audit.get('tongue_fk')):
+                audit.get('eye_gaze_range', False) != plan.get('eye_gaze_range', True) or
+                audit.get('tongue_fk', False) != plan.get('tongue_fk', False)):
             raise ValueError('Source sampling or restoration failed')
         if protected[str(protect(Path(audit['source'])))] != audit['sha256']:
             raise ValueError('Original CW source changed')
@@ -85,6 +94,36 @@ def main():
                     shape[source_index] = [x, -y, z]
     existing = existing.astype(np.float32).astype(float)
     existing[np.linalg.norm(existing, axis=2) <= .015] = 0
+    if args.retained_basis:
+        retained = read(args.retained_basis/'report.json')
+        fitted = read(args.retained_basis/'facial-shapes.json')
+        if not retained.get('passed') or retained['sha256'] != protected[str((args.retained_basis/'facial-shapes.json').resolve())]:
+            raise ValueError('Retained sampled shapes are not verified')
+        with np.load(protect(args.retained_basis/'basis.npz')) as data:
+            retained_names = data['names'].tolist()
+            retained_active = data['active'].copy()
+            retained_shapes = data['shapes'].copy()
+        if (retained_names[:len(names)] != names or len(set(retained_names)) != len(retained_names) or
+                len(retained_names) > 127 or retained_shapes.shape != (len(retained_names), len(retained_active), 3) or
+                retained_active.dtype.kind not in 'iu' or len(set(retained_active.tolist())) != len(retained_active) or
+                retained_active.min() < 0 or retained_active.max() >= len(neutral) or not np.isfinite(retained_shapes).all() or
+                not np.array_equal(existing[:, retained_active], retained_shapes[:len(names)]) or
+                fitted['point_indices'] != np.asarray(ids)[retained_active].tolist()):
+            raise ValueError('Retained sampled topology or original controls differ')
+        declared = {shape['name']: shape for shape in fitted['morph_targets']}
+        for name, shape in zip(retained_names[len(names):], retained_shapes[len(names):], strict=True):
+            restored = np.zeros_like(shape)
+            for point, x, y, z in declared[name]['deltas']:
+                restored[point] = [x, -y, z]
+            restored = restored.astype(np.float32)
+            restored[np.linalg.norm(restored, axis=1) <= .015] = 0
+            if not np.array_equal(restored, shape):
+                raise ValueError('Retained sampled data differs from its fitted shapes')
+        names = retained_names
+        existing = np.zeros((len(names), len(neutral), 3))
+        existing[:, retained_active] = retained_shapes
+    if any(name.startswith(args.shape_prefix+'_') for name in names):
+        raise ValueError('New shape prefix collides with retained shapes')
     samples = np.stack([points(args.source, row['label'])-neutral for row in plan['samples']])
     active = np.flatnonzero(np.any(np.abs(samples) > 1e-9, axis=(0, 2)) |
                             np.any(np.abs(existing) > 1e-9, axis=(0, 2)))
@@ -106,7 +145,7 @@ def main():
     if np.abs(old_weights).max() > 4:
         raise ValueError('Existing-shape projection exceeds the runtime coefficient bound')
     residual = samples-(old_weights@previous).reshape(samples.shape)
-    basis, weights, error = compact_basis(residual, .001, 128-len(names))
+    basis, weights, error = compact_basis(residual, .001, 128-len(names), method=args.basis_method)
     _, gains = filtered_shapes(basis, .015, 32)
     stored = (basis*gains[:, None, None]).astype(np.float32)
     if np.linalg.norm(stored, axis=2).max() > 20:
@@ -131,7 +170,7 @@ def main():
         cases.append(dict(seconds=seconds, error_cm=maximum))
     maximum = max(row['error_cm'] for row in cases)
     passed = maximum <= .015
-    new_names = [f'CSSF_CW_Spin_{i:03}' for i in range(len(basis))]
+    new_names = [f'{args.shape_prefix}_{i:03}' for i in range(len(basis))]
     fitted_shapes = []
     for name, shape in zip(new_names, stored*[1, -1, 1], strict=True):
         selected = np.flatnonzero(np.any(shape != 0, axis=1))
@@ -149,6 +188,8 @@ def main():
     output = args.output/'facial-shapes.json'
     output.write_text(encoded)
     report = dict(passed=passed, protected=protected, clip=plan['clip'], added_shapes=len(basis),
+                  retained_basis=str(args.retained_basis) if args.retained_basis else None,
+                  basis_method=args.basis_method, shape_prefix=args.shape_prefix,
                   source_samples=len(samples), catalog_shapes=len(shapes), existing_projection_rank=int(rank),
                   fitted_correspondence_error_cm=correspondence,
                   basis_error_cm=error, training_error_cm=training_error, holdouts=cases,

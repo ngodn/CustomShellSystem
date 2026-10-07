@@ -83,6 +83,8 @@ def main():
     times, values, bound = compile_samples(times, values, shapes)
     curves = [dict(morph=name, keys=np.stack((times, values[:, i]), axis=1).tolist())
               for i, name in enumerate(names) if np.any(values[:, i] != 0)]
+    if not curves or sum(len(curve['keys']) for curve in curves) > 65536:
+        raise ValueError('Compiled facial curves exceed native parser bounds')
     performance = dict(clip=report['clip'], duration=float(times[-1]), curves=curves)
     text = json.dumps(performance, separators=(',', ':'), allow_nan=False)+'\n'
     for path, checksum in before.items():

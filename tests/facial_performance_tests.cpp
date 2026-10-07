@@ -1,7 +1,9 @@
 #include "data.hpp"
 #include "performance_clock.hpp"
+#include <algorithm>
 #include <array>
 #include <cmath>
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <string_view>
@@ -19,6 +21,12 @@ template<class F> void rejects(F action) {
     expect(rejected,"Invalid facial performance was accepted");
 }
 bool near(float a,double b) {return std::abs(double(a)-b)<2.e-7;}
+Json read_sampled_fixture(const fs::path& path) {
+    if(fs::file_size(path)>16*1024*1024) throw std::runtime_error("Sampled fixture exceeds 16 MiB");
+    std::ifstream stream(path);
+    if(!stream) throw std::runtime_error("Cannot open sampled fixture");
+    return Json::parse(stream);
+}
 }
 int main(int argc,char** argv) {
     try {
@@ -124,8 +132,9 @@ int main(int argc,char** argv) {
             for(int i=0;i<129;++i) j["curves"].push_back(curve);
         });
         const bool cw_jaw=argc==3 && std::string_view(argv[1])=="--cw-jaw";
-        if(argc==2 || cw_jaw) {
-            const auto actual=read_json(argv[cw_jaw?2:1]);
+        const bool sampled=argc==3 && std::string_view(argv[1])=="--sampled";
+        if(argc==2 || cw_jaw || sampled) {
+            const auto actual=sampled?read_sampled_fixture(argv[2]):read_json(argv[cw_jaw?2:1]);
             const auto names=actual.at("morphs").get<std::vector<std::string>>();
             const auto clip=FacialPerformance::parse(actual.at("performance"),names);
             if(cw_jaw) {
@@ -139,6 +148,22 @@ int main(int argc,char** argv) {
                 expect(mapped.sample(.18,1.).at("CSSF_ctrl_SmileFullFace_Q4")==0,
                        "CW static smile contaminated the jaw performance");
                 expect(mapped.sample(.36,0.)==selected,"CW jaw performance did not restore the selected expression");
+            } else if(sampled) {
+                expect(clip.clip==actual.at("clip").get<std::string>() &&
+                       clip.key_count()==actual.at("key_count").get<size_t>(),
+                       "Sampled performance identity or keys differ");
+                std::map<std::string,float> selected;
+                for(size_t i=0;i<names.size();++i) selected.emplace(names[i],float(i%5)*.1f);
+                FacialPerformancePose mapped(clip,selected);
+                expect(mapped.sample(0.,0.)==selected,"Sampled performance changed its entry baseline");
+                const auto& full=mapped.sample(clip.duration*.5,1.);
+                for(const auto& name:names) {
+                    const bool used=std::any_of(clip.curves.begin(),clip.curves.end(),
+                        [&](const auto& curve){return curve.morph==name;});
+                    if(!used) expect(full.at(name)==0,"Unused static expression contaminated sampled motion");
+                }
+                expect(mapped.sample(clip.duration,0.)==selected,
+                       "Sampled performance did not restore the full expression baseline");
             } else {
                 expect(clip.curves.size()==15 && clip.key_count()==987,"Come Closer source curves changed");
             }

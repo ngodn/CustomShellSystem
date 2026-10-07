@@ -329,3 +329,76 @@ Removed 512 unused samples from the two failed partial batches, reclaiming
 144,078,677 bytes. Kept their logs, plans, neutral poses and endpoint evidence.
 The successful batches and all original assets remain intact. Receipt:
 `cw-spin-rejected-sample-cleanup.json`. No game installation occurred.
+
+## DumbDumb: full source mapping and bounded playback
+
+`prepare_cw_dumbdumb_performance.py` adapts all twelve channels of the complete
+65.7-second clip. Jaw, frown, smile and IY/UW/EE/OW use CW's native actions.
+The author's smile also closes the eyelids. Its measured displacement against
+the author's blink drives the corresponding CW eyelids, as do the separate
+half-lid actions. The weaker brow action uses a measured 0.425126 scale of
+the stronger brow action. These are character-specific action adaptations,
+not claims that different heads have identical geometry. Original meshes,
+archives and animation keys remain unchanged.
+
+The plan records the selected source vertices, fitted gains and residuals.
+It retains all 1,256 source key times. Eight distinct diagnostic poses were
+visually inspected, including smile, blink, one-sided lids, frown and phonemes.
+Evidence is in `cw-dumbdumb-preflight-v1/visual-review.json`; these views do
+not replace full-motion or game-material acceptance.
+
+`sample_cw_performance_batches.py` evaluates at most 512 poses per Blender
+process, checking source restoration and neutral geometry across every batch.
+The optional omission of repeated bone-matrix records leaves evaluated mesh
+geometry unchanged: seventeen preflight poses match the batched output
+array-exactly (`cw-dumbdumb-sampling-regression.json`). Refinement reuses only
+exact time/control matches with identical source, sampler and bake settings.
+The second source batch reused 4,417 poses and evaluated 644 new ones. Its
+intermediate batch reused 3,860 and evaluated 1,200 new ones. Hard links avoid
+duplicating those successful source samples.
+
+The first fit failed intermediate geometry checks at 0.044941 cm. Its refined
+replacement, `cw-dumbdumb-basis-v2`, passes 5,061 source poses and 5,060 separately
+evaluated intermediate poses. It preserves the twenty original controls and
+all fifty-six prepared Spin shapes, adding forty-nine correction shapes.
+The resulting 125 controls have maximum fitting errors of 0.001627 cm at
+source samples and 0.009588 cm at intermediates. The existing 0.015 cm limit
+is unchanged. The optional greedy basis method checks every point after
+each projection and independently verifies reconstruction; existing SVD
+behavior remains the default.
+
+The first shared-key curve export exceeded the native 65,536-key limit.
+It is rejected for playback despite passing its geometry-only check.
+`compile_sampled_face.py` now rejects that case before writing an accepted
+output. The separate `compile_sparse_sampled_face.py` reduces each control
+independently, checks combined geometric error, then compares the final
+float-precision playback against every original sampled and intermediate
+pose. Per-control tolerances are not treated as a combined error guarantee.
+Final acceptance still uses the same 0.015 cm source-geometry limit. Neither
+the native key bounds nor the facial-resource size bounds were increased.
+
+`cw-dumbdumb-curves-v2` contains 122 active curves, 58,555 keys and 2,410,645
+bytes. Maximum final errors against evaluated source geometry are 0.007841 cm
+at sampled poses and 0.010172 cm at intermediates. It remains under both
+runtime limits and the existing geometry limit. Its native fixture samples
+292 times, covering regular intervals, per-curve extrema, the worst geometric
+checks and endpoint clamping. All 35,978 native checks pass; the existing
+jaw fixture passes 220 and facial compatibility passes 86. The eighteen CW
+basis/mapping tests and seven shared/sparse curve tests pass. Recompiling Spin
+produces byte-identical performance data. Evidence includes `report.json`,
+`native-validation.json` and `implementation-validation.json` in the accepted
+curve folder, plus `cw-spin-curves-regression-v1/comparison.json`.
+
+DumbDumb is prepared, not cooked, integrated or live-accepted. Gesture 200
+remains the only packaged CW facial performance. Come Closer, Iris Out and
+Cinderella mappings remain unfinished. A joint-basis probe can represent the
+prepared Spin/DumbDumb geometry with 83 correction shapes, but that probe has
+not passed fitted transfer or independent source checks and is not accepted.
+Complete the remaining mappings before choosing the final combined shape
+representation and cooking it. Full source-motion and in-game comparison
+remain required for all prepared tracks.
+
+Removed only the rejected first-fit payload/basis and oversized first curve
+export, reclaiming 44,736,680 bytes. Their failure reports, plans and source
+samples remain. Receipt: `cw-dumbdumb-rejected-output-cleanup.json`.
+No new assets or runtime were installed.

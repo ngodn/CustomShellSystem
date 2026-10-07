@@ -39,6 +39,8 @@ def main():
                         help='Sample tongue joint controls with source tongue IK disabled in memory')
     parser.add_argument('--eye-gaze-range', action='store_true',
                         help='Bake horizontal eye motion within 45 degrees; restore source limits afterward')
+    parser.add_argument('--omit-bone-records', action='store_true',
+                        help='Keep evaluated geometry and control records without repeating all bone matrices')
     args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
     if args.output.exists() or bpy.context.preferences.filepaths.use_scripts_auto_execute:
         raise ValueError('Use a new output directory and --disable-autoexec')
@@ -124,8 +126,8 @@ def main():
             shapes[obj.name] = {k.name: float(k.value) for k in keys.key_blocks
                                if k.value != 0} if keys else {}
         np.savez_compressed(args.output / (label + '.npz'), **arrays)
-        bones = {b.name: [list(row) for row in deform.matrix_world @ b.matrix]
-                 for b in deform.pose.bones}
+        bones = {} if args.omit_bone_records else {
+            b.name: [list(row) for row in deform.matrix_world @ b.matrix] for b in deform.pose.bones}
         records.append(dict(label=label, controls={name: float(rig[name]) for name in args.control},
                             shapes=shapes, bones=bones))
         print('CW_FACE_SAMPLE', label, flush=True)
@@ -216,6 +218,7 @@ def main():
     report = dict(source=str(source), sha256=before, sources_unchanged=True,
                   blender=bpy.app.version_string, records=records, summary=summary,combinations=combinations,
                   combination_plan_sha256=plan_hash,
+                  omitted_bone_records=args.omit_bone_records,
                   extended_levels=args.extended_levels,
                   eye_gaze_range=args.eye_gaze_range, original_eye_limits=eye_limits,
                   original_eye_ranges=eye_ranges,

@@ -1,5 +1,20 @@
 # Shared animation acceptance
 
+CW DumbDumb is the third prepared facial mapping, after Gesture 200 and Spin.
+All twelve source channels are adapted through measured or native CW controls.
+`cw-dumbdumb-curves-v2` fits the existing runtime limits: 122 active curves,
+58,555 keys and 2,410,645 bytes. The final stored curves pass 5,061 original
+evaluated poses and 5,060 independent intermediate poses, with maximum errors
+of 0.007841 and 0.010172 cm under the unchanged 0.015 cm limit. Native sampling
+passes 35,978 assertions, including baseline restoration. See the
+[mapping, compression and source evidence](shared-animation-cw-face.md).
+Only Gesture 200 is packaged. Spin and DumbDumb still need cooking and catalog
+integration; Come Closer, Iris Out and Cinderella still need CW mappings.
+Full temporal visual comparison, live compatibility and release remain open.
+Nothing new is installed.
+
+Earlier checkpoints:
+
 Facial resource loading is now implemented and host-tested. The private
 `facial-resource-trial-v1` candidate preserves every entry and all 98 cooked
 exports from `cw-jaw-trial-v1`, with a 37,884-byte manifest and two separately
