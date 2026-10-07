@@ -265,6 +265,14 @@ libraries. It requires unique map hashes and never changes the input assets.
 See [the shader investigation](../../../docs/development/genessa-doubles-shaders.md)
 for exact packages, extraction provenance and limitations.
 
+`ShaderReadback --vertex` selects base-pass vertex shaders instead. This is
+useful when checking whether a material reads an edited mesh UV channel.
+The mode verifies vertex frequency in both the map and shared-library record.
+It cannot be combined with `--distortion`. Existing pixel extraction is
+unchanged. DXC disassembly covers SM6; SM5 extraction alone does not establish
+what its shader reads. Manual vertex fetching also needs buffer-index analysis,
+not just an input-signature check.
+
 After disassembling the SM6 containers with official DXC:
 
 ```sh
