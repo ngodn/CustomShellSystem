@@ -54,6 +54,26 @@ key counts. The user confirmed source permission on October 6; see
 The user has been asked whether matching source files or an author-provided
 link exist elsewhere. No author has been contacted on the user's behalf.
 
+### Optional-head and virtual-bone check, October 7
+
+The optional head resolves the missing facial controls, but does not identify
+source bone indices 3269 through 3275. Its exported GLB has 159 skin joints;
+all 159 names already occur in the inspected retail skeleton. It provides no
+additional joint names for these indices.
+
+Both `support-skeleton-audit/source-mesh.json` and
+`retail-skeleton-audit-v2/source-mesh.json` have 3,267 reference bones and no
+serialized `VirtualBones` property. Their Skeleton GUIDs differ from the
+animation's recorded GUID. The pinned CUE4Parse `USkeleton` reader handles
+`VirtualBones` explicitly, so the absent property cannot establish a hidden
+seven-bone suffix. Do not assign names from index proximity. Evidence is
+under `work/cine-animation-port/`, including the head GLB in
+`author-head-source-v1/head-export/`.
+
+All required body/finger chains remain resolved and the unknown tracks remain
+preserved. This check neither invalidates that body coverage nor completes the
+missing source-rig definitions.
+
 ## Resolved body audition, October 6
 
 The earlier all-or-nothing export rejection prevented evaluation of body tracks

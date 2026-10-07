@@ -20,8 +20,9 @@ options.set_editor_property('extract_root_motion', False)
 options.set_editor_property('incorporate_root_motion_into_pose', True)
 results = []
 for index, entry in enumerate(receipt['results']):
-    if not entry['asset'].startswith('/Game/CSS/Locomotion/Studies/') or not 2 <= entry['keys'] <= 10000:
-        raise ValueError('Expected an isolated study with bounded key count')
+    if (not entry['asset'].startswith('/Game/CSS/Locomotion/') or '..' in entry['asset'] or
+            not 2 <= entry['keys'] <= 10000):
+        raise ValueError('Expected a verified shared animation with bounded key count')
     clip = unreal.load_asset(entry['asset'])
     if not clip or abs(unreal.AnimationLibrary.get_sequence_length(clip) - entry['duration']) > .00001:
         raise ValueError('Missing or changed study animation')
@@ -50,6 +51,7 @@ for index, entry in enumerate(receipt['results']):
                       stream, separators=(',', ':'))
         stream.write(']}')
     results.append(dict(id=entry['id'], frames=entry['keys'], tracks=len(order), file=path.name))
+    print('RAW_COOK_REFERENCE', entry['id'], entry['keys'], flush=True)
 for path, expected in receipt['protected'].items():
     with Path(path).open('rb') as stream:
         if hashlib.file_digest(stream, 'sha256').hexdigest() != expected:
