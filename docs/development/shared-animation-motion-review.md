@@ -131,6 +131,64 @@ preserves the other 98 exports, and passes both host loader configurations.
 The original source, prior pack and failed-render evidence remain intact.
 The new pack is not installed.
 
+## Cooked standing-dance contact corrections
+
+The four measured standing dances now use isolated `Studies/Contact3` copies.
+Their durations and 30 Hz authored clocks are unchanged. The solver changes
+only the six thigh/calf/foot tracks. Its exact authored-data checks preserve
+every other track, including Spin's reviewed neck correction. Source assets and
+released outfit packages remain untouched.
+
+The first bake exposed an additional problem: nearly straight source legs have
+unstable geometric knee directions. Preserving those directions while bending
+the leg for clearance amplified between-key dips. `plan_dance_knee_support.py`
+uses neighboring bent poses as thigh-local direction anchors only below
+15 degrees of original knee flexion and only when clearance needs a lift.
+Its influence eases with flexion and lift depth. It rejects missing or conflicting
+anchors rather than guessing. The largest measured anchor separation is
+19.383 degrees, below the 45-degree rejection limit. Four focused tests cover
+airborne/bent preservation, straight-leg reversals, edge spans and rejection.
+
+The final pass uses measured 60 Hz post-process residuals, covering each key's
+adjacent half-frame extrema with a two-key taper. Maximum extra lift is
+0.882 cm. This changes the clearance envelope, not playback speed or sample rate.
+Fresh editor verification repeats all four bakes and compares every saved key
+exactly. Windows cooking and independent decoding pass the original comparison
+bounds: at most 0.000955 cm translation, 0.000220 quaternion distance and
+9.611e-7 scale distance.
+
+| Clip | Final decoded samples at 120 Hz | Lowest neutral footwear Z (cm) |
+| --- | ---: | ---: |
+| Bass Down Low | 1,521 | -0.038117 |
+| Black Hole | 2,401 | -0.002295 |
+| Come Closer | 2,321 | -0.041136 |
+| Jang Won Young Spin | 441 | -0.091558 |
+
+The measurement uses all influences of the actual Black Pearl footwear section
+and its mesh translation-retargeting rules. None of these 6,684 samples exceeds
+the existing 0.1 cm penetration reporting threshold. This does not establish
+continuous contact between samples or world placement on other outfits.
+
+All four clips also pass the existing 60 Hz compressed animation/post-process
+checks on all nine requested outfit meshes: 36 clip/mesh pairs and 324
+body/finger/restoration cases. These checks do not simulate world cloth.
+Selected close renders show coherent leg shapes at the reviewed former failure
+times. Spin's traveling poses needed a camera that follows horizontal pelvis
+motion; `render_skin_contact.py --follow-pelvis` changes only that camera.
+The selected still review is not a full temporal or live visual pass.
+
+Evidence: `dance-contact-v3/{prepare-result,verify-result,cooked-dense-contact,
+all-outfits}.json`, `comparisons/00.json` through `03.json`, and the per-clip
+review directories. The earlier two iterations and source measurements remain.
+`shared-contact-trial-v1` combines the four replacements while preserving the
+other 95 exports byte-for-byte. It still has 63 entries and 99 exports, passes
+both host loader configurations and installation preflight, and is not installed.
+
+Epic's [Two Bone IK documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/animation-blueprint-two-bone-ik-in-unreal-engine?application_version=5.6)
+describes the separate end-effector and joint-target roles. The need for this
+particular pole stabilization and clearance pass comes from our captured poses
+and measured surfaces, not from a general recommendation to modify every clip.
+
 ## Earlier sampled review
 
 Checkpoint: 2026-10-06. Private offline evidence, not release acceptance.

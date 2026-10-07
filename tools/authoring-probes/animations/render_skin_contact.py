@@ -21,6 +21,7 @@ parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--materials', default='3,23,24,27')
 parser.add_argument('--stride', type=int, default=4)
 parser.add_argument('--frames', help='Comma-separated capture indices for still review instead of a video')
+parser.add_argument('--follow-pelvis', action='store_true', help='Follow horizontal scene travel without changing the pose')
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 root = Path(__file__).resolve().parents[4]
 if not args.output.resolve().is_relative_to(root / 'CustomShellSystem/work') or args.output.exists():
@@ -136,6 +137,10 @@ if not args.frames:
         '-preset', 'fast', '-crf', '20', '-pix_fmt', 'yuv420p', str(args.output / 'contact-review.mp4')], stdin=subprocess.PIPE)
 try:
     for frame, original in enumerate(selected):
+        if args.follow_pelvis:
+            pelvis = next(i for i, bone in enumerate(audit['bones']) if bone['name'] == 'pelvis')
+            point = world[pelvis][0][frame] * (.01, -.01, .01)
+            camera.location = Vector((point[0] + 2.4, point[1] - 3.4, 1.05))
         positions = np.zeros((len(ids), 3))
         for bone, rows, local, weights in components:
             p, q, scale = (x[frame] for x in world[bone])
@@ -157,5 +162,5 @@ if any(sha(Path(path)) != digest for path, digest in inputs.items()):
     raise ValueError('Protected render input changed')
 (args.output / 'report.json').write_text(json.dumps(dict(complete=True, inputs=inputs,
     frames=selected, video_fps=fps if video else None, materials=sorted(materials), vertices=len(ids), faces=len(faces),
-    blender_version=bpy.app.version_string, bind_error_cm=bind_error,
+    blender_version=bpy.app.version_string, bind_error_cm=bind_error, follow_pelvis=args.follow_pelvis,
     scope='Neutral cooked linear skinning with every influence and rebuilt normals. Selected material surfaces only; no textures, morphs, cloth or post-process. Technical contact review, not full outfit or gameplay acceptance.'), indent=2) + '\n')

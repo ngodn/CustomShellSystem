@@ -1,6 +1,6 @@
 # Shared animation acceptance
 
-Current private candidate: `work/cine-animation-port/shared-neck-trial-v1`.
+Current private candidate: `work/cine-animation-port/shared-contact-trial-v1`.
 It is built and verified offline, **not installed or accepted for release**.
 This page describes the current candidate. Earlier checkpoints remain in Git
 history and the linked investigation records.
@@ -49,7 +49,7 @@ resources are unchanged. Stable IDs, adapters, profiles and native alternatives
 are retained. Independent container readback passes. Actual CSS combined and
 pack-only loader tests pass 114,262 and 114,250 checks.
 
-The current pack additionally replaces Spin with its verified neck correction.
+The preceding pack additionally replaces Spin with its verified neck correction.
 It preserves the other 98 exports byte-for-byte and reuses the existing owned
 compression setting. Entry/export counts remain 63/99. The same combined and
 standalone loader checks pass on this new pack. Both facial resources, all
@@ -64,6 +64,20 @@ within 0.000874 cm and 0.022862 degrees; the head differs by at most 0.000393 cm
 The existing adapter evaluation passes 81 cases across all nine requested outfit
 meshes. These are offline comparisons, not cloth or live acceptance.
 
+The current pack adds measured contact corrections for Bass Down Low, Black
+Hole, Come Closer and Spin. It preserves the other 95 exports byte-for-byte,
+including both facial resources, all adapters and native locomotion alternatives.
+The four dances retain their source clocks and all non-leg tracks, including
+Spin's neck correction. No outfit packages or original animation assets changed.
+
+Independent decoding covers 6,684 poses at 120 Hz. On Black Pearl's neutral
+footwear surface, the deepest reference-floor intersections are respectively
+0.0382, 0.0023, 0.0412 and 0.0916 cm. This is a sampled geometric measurement,
+not acceptance of gameplay placement, morphs or cloth. Full compressed animation
+and post-process evaluation passes all 324 existing body/finger/restoration cases
+for these four clips across the nine requested outfit meshes. Both host loader
+configurations and the candidate-only installation preflight pass.
+
 Evidence under `work/cine-animation-port/`:
 
 - `shared-full-motion-v1`: full original capture, decode and first comparison.
@@ -76,6 +90,12 @@ Evidence under `work/cine-animation-port/`:
 - `spin-neck-ue-v1/`: saved/fresh editor checks, Windows cook, independent
   decoding, full raw/cooked and world-pose comparisons, and nine-mesh adapter
   evaluation. `shared-neck-trial-v1/` is the resulting combined candidate.
+- `dance-contact-v3/`: fresh saved-data verification, Windows cook, independent
+  key and 120 Hz decoding, footwear measurements, selected close renders and
+  the 36 clip/mesh adapter evaluations. Earlier contact iterations remain in
+  `dance-contact-v1/` and `dance-contact-v2/`.
+- `shared-contact-trial-v1/`: current combined pack, preservation proof,
+  updated 57-clip comparison index, host tests and installation preflight.
 
 DumbDumb, Iris Out and Cinderella have their own full cooked-key checks and
 contact studies, linked below. Source-key compression fidelity does not prove
@@ -84,9 +104,9 @@ between-key contact, simulated cloth, continuous visual smoothness or gameplay.
 ## Per-clip state
 
 The table lists the original 57 clips. Source assets are beneath `/Game/CSS/`.
-Black Hole and After Brute Battle retain those original authoring sources;
-the current catalog selects their verified `Studies/Precision1` copies.
-Spin now selects `Studies/Neck1/AN_JangWonYoungSpin`; its original source remains.
+All original authoring sources remain. After Brute Battle uses its verified
+`Studies/Precision1` copy. Bass Down Low, Black Hole, Come Closer and Spin now
+use `Studies/Contact3` copies; Spin also retains its prior neck correction.
 
 | Clip | Stable ID | Authoring source | Cooked comparison | Live acceptance |
 | --- | --- | --- | --- | --- |
@@ -196,16 +216,16 @@ dependencies, host loader results and full original-clip comparison reports.
 Twelve existing transaction tests and six combined-pack tests pass. The new
 path keeps the installed CINE extension and menu unchanged.
 The validator follows the hashed replacement reports back to the combined
-facial baseline, including the new Spin revision, and rejects changed reports.
+facial baseline, including the neck and contact revisions, and rejects changed reports.
 
 For the next authorized closed-game trial, run from the CSS checkout:
 
 ```sh
 python3 tools/authoring-probes/animations/install_shared_animation_trial.py \
   work/cine-animation-port/live-face-motion-2 \
-  work/cine-animation-port/shared-neck-trial-v1 \
+  work/cine-animation-port/shared-contact-trial-v1 \
   work/cine-animation-port/cw-combined-trial-v1/verification.json \
-  work/cine-animation-port/live-combined-neck-1 \
+  work/cine-animation-port/live-combined-contact-1 \
   --core build/cine-win/css_core.dll
 ```
 

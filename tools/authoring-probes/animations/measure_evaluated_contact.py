@@ -15,6 +15,7 @@ def main():
     parser.add_argument('output', type=Path)
     parser.add_argument('reports', type=Path, nargs='+')
     parser.add_argument('--material', type=int, required=True)
+    parser.add_argument('--per-foot', action='store_true')
     args = parser.parse_args()
     if args.output.exists():
         raise FileExistsError(args.output)
@@ -49,6 +50,16 @@ def main():
     bones = skin['bones']
     bind = transforms(bones)
     parts = []
+    foot_rows = {}
+    if args.per_foot:
+        for side in ('l', 'r'):
+            allowed = [i for i, b in enumerate(bones) if b['name'] in (f'calf_{side}', f'foot_{side}')]
+            weights = np.sum(np.where(np.isin(inf['bone'], allowed), inf['weight'], 0), axis=1)
+            foot_rows[side] = np.flatnonzero(weights >= .9999)
+        if (not all(len(rows) for rows in foot_rows.values()) or
+                len(np.unique(np.concatenate(list(foot_rows.values())))) != len(selected) or
+                len(foot_rows['l']) + len(foot_rows['r']) != len(selected)):
+            raise ValueError('Per-foot measurement requires separate calf/foot-weighted surfaces')
     reconstructed = np.zeros((len(selected), 3))
     for bone in np.unique(inf['bone'][inf['weight'] > 0]):
         rows, slots = np.where((inf['bone'] == bone) & (inf['weight'] > 0))
@@ -87,6 +98,7 @@ def main():
                     np.max(np.abs(np.linalg.norm(values[:, :, :4], axis=2) - 1)) > .001):
                 raise ValueError('Invalid evaluated transforms or clock')
             minima = []
+            per_foot = {side: [] for side in foot_rows}
             for start in range(0, len(frames), 64):
                 batch = values[start:start + 64]
                 z = np.zeros((len(batch), len(selected)))
@@ -97,10 +109,13 @@ def main():
                                      1 - 2 * (x * x + y * y)), axis=1)
                     z[:, rows] += ((axis * t[:, 7:]) @ local.T + t[:, 6, None]) * weight
                 minima.extend(z.min(axis=1).tolist())
+                for side, rows in foot_rows.items():
+                    per_foot[side].extend(z[:, rows].min(axis=1).tolist())
             worst = int(np.argmin(minima))
             results.append(dict(id=result['id'], mesh=result['mesh'], frames=len(frames),
                                 min_z_cm=minima[worst], worst_time_seconds=float(times[worst]),
-                                times=times.tolist(), frame_min_z_cm=minima))
+                                times=times.tolist(), frame_min_z_cm=minima,
+                                per_foot_min_z_cm=per_foot))
     if not results or any(sha(Path(path)) != value for path, value in inputs.items()):
         raise ValueError('Missing results or changed inputs')
     args.output.write_text(json.dumps(dict(
