@@ -5,6 +5,13 @@ It is built and verified offline, **not installed or accepted for release**.
 This page describes the current candidate. Earlier checkpoints remain in Git
 history and the linked investigation records.
 
+October 7 scope update: the user accepts remaining floor penetration for this
+release and explicitly deferred further contact correction. Keep all 63 entries,
+including After Brute Battle. The experimental `Scene1` leg correction is not
+selected; the current pack retains the previous `Precision1` scene asset.
+The four already verified `Contact3` dance corrections stay in the candidate.
+Remaining floor-contact findings are follow-up work, not release blockers.
+
 ## Current counts
 
 | Content | Packaged | Acceptance still needed |
@@ -236,7 +243,8 @@ No installation has been performed by this checkpoint.
 
 Remaining acceptance:
 
-- Finish full temporal/source and contact review for the requested library.
+- Finish remaining temporal/source review for the requested library. Further
+  floor-contact correction is deferred by the user and must not delay this release.
 - Resolve seven added source bone definitions, indices 3269 through 3275.
   All 54 required body/finger chains are resolved; the other tracks remain
   preserved. The missing definitions are documented separately, not silently
