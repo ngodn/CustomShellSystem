@@ -3,6 +3,9 @@
 #include "Animation/AnimBlueprintGeneratedClass.h"
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimSingleNodeInstance.h"
+#include "Animation/AnimNode_SequencePlayer.h"
+#include "ClothingSystemRuntimeTypes.h"
+#include "HAL/IConsoleManager.h"
 #include "Animation/Skeleton.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Dom/JsonObject.h"
@@ -13,6 +16,111 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 #include "UObject/UnrealType.h"
+
+namespace
+{
+FString AuditIdleRepeat(USkeletalMesh* Mesh, UAnimBlueprint* Source, UAnimSequence* Base, UAnimSequence* Clip)
+{
+    FPreviewScene Scene(FPreviewScene::ConstructionValues().SetCreateDefaultLighting(false)
+        .SetCreatePhysicsScene(true).ShouldSimulatePhysics(true));
+    auto* Component = NewObject<USkeletalMeshComponent>();
+    Component->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+    Component->bWaitForParallelClothTask = false;
+    auto* Wait = IConsoleManager::Get().FindConsoleVariable(TEXT("p.ClothPhysics.WaitForParallelClothTask"));
+    if (!Wait) return {};
+    const int32 PreviousWait = Wait->GetInt();
+    Wait->Set(0, ECVF_SetByCode);
+    ON_SCOPE_EXIT {
+        Component->CompleteParallelAnimationEvaluation(true);
+        Component->WaitForExistingParallelClothSimulation_GameThread();
+        Scene.RemoveComponent(Component);
+        Component->DestroyComponent();
+        Wait->Set(PreviousWait, ECVF_SetByCode);
+    };
+    Component->SetSkeletalMesh(Mesh);
+    Component->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+    Component->SetOverridePostProcessAnimBP(TSubclassOf<UAnimInstance>(Source->GeneratedClass.Get()), true);
+    Scene.AddComponent(Component, FTransform::Identity);
+    Component->InitAnim(true);
+    Component->SetAnimation(Base);
+    Component->Stop();
+    auto* Instance = Component->GetPostProcessInstance();
+    auto* Sequence = Instance ? FindFProperty<FObjectPropertyBase>(Instance->GetClass(), TEXT("CSSIdleSequence")) : nullptr;
+    auto* Enabled = Instance ? FindFProperty<FBoolProperty>(Instance->GetClass(), TEXT("CSSIdleEnabled")) : nullptr;
+    auto* Player = Instance ? FindFProperty<FStructProperty>(Instance->GetClass(), TEXT("AnimGraphNode_SequencePlayer")) : nullptr;
+    if (!Sequence || !Enabled || !Player || Player->Struct != FAnimNode_SequencePlayer::StaticStruct()) return {};
+    auto* Node = Player->ContainerPtrToValuePtr<FAnimNode_SequencePlayer>(Instance);
+    Sequence->SetObjectPropertyValue_InContainer(Instance, Clip);
+    Enabled->SetPropertyValue_InContainer(Instance, true);
+    constexpr float Delta = 1.f / 60.f;
+    const int32 Frames = FMath::CeilToInt(Clip->GetPlayLength() / Delta) * 3 + 10;
+    TArray<TSharedPtr<FJsonValue>> Samples;
+    float PreviousTime = -1.f;
+    int32 Wraps = 0, ClothFrames = 0, InvalidFrame = INDEX_NONE;
+    for (int32 Frame = 0; Frame < Frames; ++Frame)
+    {
+        Component->SetPosition(FMath::Fmod(Frame * Delta, Base->GetPlayLength()), false);
+        Component->TickAnimation(Delta, true);
+        Component->RefreshBoneTransforms();
+        Component->CompleteParallelAnimationEvaluation(true);
+        const float Time = Node->GetAccumulatedTime();
+        const bool Wrapped = PreviousTime >= 0.f && Time < PreviousTime;
+        if (Wrapped) ++Wraps;
+        PreviousTime = Time;
+        // This commandlet waits explicitly after dispatch; no tick-graph completion handle is needed.
+        Component->TickClothing(Delta, Component->PrimaryComponentTick);
+        Component->WaitForExistingParallelClothSimulation_GameThread();
+        const auto& Cloth = Component->GetCurrentClothingData_AnyThread();
+        int32 Particles = 0;
+        double MaxParticleDistance = 0.;
+        bool Finite = FMath::IsFinite(Time);
+        for (const auto& Transform : Component->GetComponentSpaceTransforms())
+            Finite = Finite && !Transform.ContainsNaN();
+        for (const auto& Entry : Cloth)
+        {
+            Finite = Finite && !Entry.Value.Transform.ContainsNaN();
+            for (const auto& Position : Entry.Value.Positions)
+            {
+                ++Particles;
+                Finite = Finite && !Position.ContainsNaN();
+                if (Finite) MaxParticleDistance = FMath::Max(MaxParticleDistance,
+                    Entry.Value.Transform.TransformPosition(FVector(Position)).Size());
+            }
+            for (const auto& Normal : Entry.Value.Normals) Finite = Finite && !Normal.ContainsNaN();
+        }
+        if (Particles) ++ClothFrames;
+        Component->UpdateBounds();
+        const auto Bounds = Component->Bounds;
+        Finite = Finite && !Bounds.Origin.ContainsNaN() && !Bounds.BoxExtent.ContainsNaN() && FMath::IsFinite(Bounds.SphereRadius);
+        auto Row = MakeShared<FJsonObject>();
+        Row->SetNumberField(TEXT("frame"), Frame);
+        Row->SetBoolField(TEXT("finite"), Finite);
+        Row->SetBoolField(TEXT("wrapped"), Wrapped);
+        Row->SetNumberField(TEXT("cloths"), Cloth.Num());
+        Row->SetNumberField(TEXT("particles"), Particles);
+        if (Finite)
+        {
+            Row->SetNumberField(TEXT("clip_time"), Time);
+            Row->SetNumberField(TEXT("sphere_radius_cm"), Bounds.SphereRadius);
+            Row->SetNumberField(TEXT("max_particle_distance_cm"), MaxParticleDistance);
+        }
+        Samples.Add(MakeShared<FJsonValueObject>(Row));
+        if (!Finite) { InvalidFrame = Frame; break; }
+    }
+    auto Report = MakeShared<FJsonObject>();
+    Report->SetStringField(TEXT("mesh"), Mesh->GetPathName());
+    Report->SetStringField(TEXT("clip"), Clip->GetPathName());
+    Report->SetNumberField(TEXT("expected_frames"), Frames);
+    Report->SetNumberField(TEXT("cloth_frames"), ClothFrames);
+    Report->SetNumberField(TEXT("wraps"), Wraps);
+    Report->SetNumberField(TEXT("invalid_frame"), InvalidFrame);
+    Report->SetBoolField(TEXT("looping"), Node->IsLooping());
+    Report->SetArrayField(TEXT("samples"), Samples);
+    Report->SetStringField(TEXT("scope"), TEXT("Original outfit idle graph plus isolated cloth at 60 Hz; no game map, GPU rendering or live customization."));
+    FString Text;
+    return FJsonSerializer::Serialize(Report, TJsonWriterFactory<>::Create(&Text)) ? Text : FString();
+}
+}
 
 FString UCSSPerformanceLibrary::EvaluatePerformanceLayer(USkeletalMesh* Mesh, UAnimBlueprint* Source,
     UAnimBlueprint* Layer, UAnimSequence* BaseClip, UAnimSequence* PerformanceClip)
@@ -37,6 +145,8 @@ FString UCSSPerformanceLibrary::EvaluatePerformanceLayer(USkeletalMesh* Mesh, UA
         if (!Clip->IsCompressedDataValid()) return Fail(TEXT("Missing compressed clip data"));
     }
     FMemMark Memory(FMemStack::Get());
+    if (FPlatformMisc::GetEnvironmentVariable(TEXT("CSS_IDLE_REPEAT_AUDIT")) == TEXT("1"))
+        return AuditIdleRepeat(Mesh, Source, BaseClip, PerformanceClip);
     FPreviewScene Scene(FPreviewScene::ConstructionValues().SetCreateDefaultLighting(false));
     auto MakeComponent = [&](UAnimBlueprint* Blueprint) {
         auto* Component = NewObject<USkeletalMeshComponent>();

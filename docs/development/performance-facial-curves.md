@@ -18,8 +18,12 @@ the property type, size and bounds, then retains the existing skeleton check.
 Live reflection confirms an eight-byte `TargetSkeleton` object property.
 
 Automatic facial mesh failures now retain their specific diagnostic reason.
-The Windows core build and nine focused host suites pass. Installation and
-live facial playback/restoration acceptance remain pending. This correction
+The Windows core build and nine focused host suites pass. Installed at 17:28
+on October 7 with the game verified closed, commit `2725a1a`, core hash
+`08cbafa7056bb89a5b426bd4f1c70de3a8ce059d600c6aa573fdd725f8e7d1ab`.
+State and save hashes were unchanged by installation; CSS remains enabled.
+Receipt: `idle-facial-failures-1/installation/deployment.json`.
+Live facial playback/restoration acceptance remains pending. This correction
 does not establish a fix for the separately reported After Brute Battle crash.
 
 Engine references: [FName comparison semantics](https://cdn2.unrealengine.com/Resources/files/UE4_DevCon2014_Cpp_Utilties-640979660.pdf)
