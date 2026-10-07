@@ -16,7 +16,7 @@ SHARED = 'CSS_SharedAssets_P'
 # Most specific prefixes go first. Names inside a package are preserved.
 ROUTES = (
     ('Shared/SKEL_Base', 'Shared/Skeletons/SKEL_Base', SHARED),
-    ('UnholyGenessa/SKEL_Wings2', 'Shared/Skeletons/SKEL_Wings2', SHARED),
+    ('UnholyGenessa/SKEL_Wings2', 'UnholyGenessa/Skeletons/SKEL_Wings2', GENESSA),
     ('Locomotion/Faces/SK_Face_Jali3V1_', 'EveSB/Faces/SK_Face_Jali3V1_', EVE),
     ('Locomotion/Faces/SK_Face_CWCompact/', 'CommanderWhite/Faces/', COMMANDER),
     ('Locomotion/Faces/Optical1/', 'CommanderWhite/Faces/Optical/', COMMANDER),

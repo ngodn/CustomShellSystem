@@ -43,20 +43,22 @@ rename or assumed mount precedence. See the
 ## Initial migration map
 
 The audited installation has 820 export records representing 790 unique package
-paths. [The generated map](../work/three-outfit-rig-physics/namespace-1/asset-and-catalog-map.json)
+paths. [The generated map](../work/three-outfit-rig-physics/namespace-2/asset-and-catalog-map.json)
 assigns each package to one author-owned destination and one container:
 
 | Destination container | Unique packages |
 | --- | ---: |
 | `CSS_EveStellarBlade_eins0fx_P` | 305 |
-| `CSS_UnholyGenessa_eins0fx_P` | 129 |
+| `CSS_UnholyGenessa_eins0fx_P` | 130 |
 | `CSS_CommanderWhite_eins0fx_P` | 170 |
-| `CSS_SharedAssets_P` | 186 |
+| `CSS_SharedAssets_P` | 185 |
 
 These counts describe the migration plan, not the final release. Dependency
 checks may identify unused assets to remove. Seven facial replacement meshes
 and Commander White's four optical materials move to their character owners.
-Both custom skeletons go under `Shared/Skeletons`. Commander White's padded
+The common skeleton goes under `Shared/Skeletons`. Genessa's private wing
+extension stays under `UnholyGenessa/Skeletons`, as required by the goal's
+ownership rules. Commander White's padded
 legacy paths lose their padding but retain material slot or texture hash identity;
 equal basenames alone are not a reason to merge them.
 
@@ -74,10 +76,10 @@ python3 tools/diagnostics/plan_asset_namespace.py \
   --baseline work/three-outfit-rig-physics/baseline-1/baseline.json \
   --conflicts work/three-outfit-rig-physics/baseline-1/legacy-track-conflicts.json \
   --catalog work/three-outfit-rig-physics/baseline-1/installed-locomotion-manifest.json \
-  --output work/three-outfit-rig-physics/namespace-1/asset-and-catalog-map.json
+  --output work/three-outfit-rig-physics/namespace-2/asset-and-catalog-map.json
 ```
 
-[Offline validation](../work/three-outfit-rig-physics/namespace-1/validation.json)
+[Offline validation](../work/three-outfit-rig-physics/namespace-2/validation.json)
 checked destination collisions, corrected provider selection and legacy aliases,
 plus rejection of unassigned facial owners, unknown paths and unverified provider
 conflicts. This plan does not rename editor assets, patch cooked packages or
