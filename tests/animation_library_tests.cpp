@@ -286,6 +286,37 @@ int main(int argc,char** argv) {
         fs::remove(file);
         expect(Catalog::load(root).animation_libraries.empty() && Catalog::load(root).outfits.size()==1,
                "Removing library invalidated existing outfit");
+        if(argc==3 && std::string_view(argv[1])=="--audited-genessa-face-pack") {
+            const auto packages=Catalog::load(root,argv[2],root/"genessa-audit-cache");
+            if(packages.animation_libraries.size()!=1) std::cerr<<packages.diagnostics.dump(2)<<'\n';
+            expect(packages.animation_libraries.size()==1,"Genessa candidate must load as one shared library");
+            expect(packages.diagnostics.at("rejected")==0,"Genessa metadata was rejected");
+            const auto& audited=packages.animation_libraries.front();
+            expect(audited.entries.size()==63 && audited.faces.size()==3,"Combined catalog inventory changed");
+            expect(audited.faces[0].id=="css.eve.face" && audited.faces[0].performances.size()==6,
+                   "Eve facial tracks were lost");
+            expect(audited.faces[1].id=="css.commanderwhite.face" && audited.faces[1].morphs.size()==128 &&
+                   audited.faces[1].performances.size()==6,"Commander White facial tracks were lost");
+            const auto& genessa=audited.faces[2];
+            expect(genessa.id=="css.unholygenessa.face" && genessa.morphs.size()==115 &&
+                   genessa.expressions.size()==21 && genessa.adapters.size()==2 && genessa.performances.size()==6,
+                   "Genessa facial contract changed in packaging");
+            for(const auto& face:audited.faces) for(const auto& performance:face.performances) {
+                expect(std::any_of(audited.entries.begin(),audited.entries.end(),[&](const auto& entry){
+                    return entry.id==performance.clip;
+                }),"Facial performance lost its body clip");
+            }
+            const auto options=merge_library_animation_options(packages.animation_libraries,AnimationSlot::Idle,{});
+            expect(options.size()==60,"Facial integration changed the Idle Animation menu");
+            for(const auto& entry:audited.entries) {
+                if(entry.slot && entry.slot!=AnimationSlot::Idle) continue;
+                const auto idle=resolve_library_animation(packages.animation_libraries,AnimationSlot::Idle,entry.id,{},wings);
+                const auto scene=resolve_library_performance(packages.animation_libraries,entry.id,wings);
+                expect(idle.entry==scene.entry && !idle.candidates.empty() && !scene.candidates.empty() &&
+                       idle.candidates.front().asset==scene.candidates.front().asset,
+                       "CSS and CINE resolve different Genessa body motion");
+            }
+        }
         if(argc==2) {
             const auto packages=Catalog::load(root,argv[1],root/"cache");
             expect(packages.outfits.size()==1,"Packaged library displaced existing outfit");

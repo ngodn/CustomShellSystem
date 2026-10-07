@@ -20,7 +20,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | --- | --- |
 | Nine-variant provenance | Installed hashes and 16 editable mesh identities pinned; all 790 migration paths have source candidates or alias recipes. Final Blender-to-cook recipe comparisons remain |
 | Mesh/weights/contacts | Fresh checks of all 16 editor-built meshes pass weight sums, section/bone/morph indices and finite-data checks. Deformation/contact checks and cooked comparison remain |
-| Unholy facial support | Both W3 candidates cook with 137 morphs; geometry and morph indices match independent readback within stored compression precision. All six cloth assets per variant match source data. Native SM6 base-pass UV3 checks pass. Oral assets and mesh bindings resolve without Eve mounted. Remaining shader/material review, CSS/CINE binding and game acceptance pending |
+| Unholy facial support | Both W3 candidates cook with 137 morphs and unchanged cloth data. Native/Astral SM6 UV3 checks pass. Oral assets resolve without Eve mounted. Two adapters, 21 presets and six facial performances are integrated into a private shared catalog; 163 facial and 182 packaged-library checks pass. SM5/material review and game acceptance remain |
 | Shared organization | CSS parser accepts new and legacy roots with 23 host suites passing. All 790 unique installed packages have collision-free author-owned destinations; 172 catalog path references classified. First 32 assets renamed, reloaded without redirectors, cooked and decoded in isolation. Remaining migration and runtime compatibility pending; not installed |
 | Locomotion | 63-entry installed catalog captured; four native declarations, 59 missing; conversion and motion-quality review pending |
 | Gameplay regressions | Current interruption baseline accepted by user; candidate regression tests pending |
@@ -148,3 +148,39 @@ decode. A stale binding in cook2 was caught and corrected before this trial;
 the final verifier rejects that previous candidate. Remaining original W3
 dependencies still use legacy paths, pending the wider migration. The candidate
 has not been installed or accepted in the game.
+
+### Facial catalog and material checks
+
+Genessa `work/face-catalog1` binds both current W3 variants to their facial
+replacements using the original outfit's exact container revision. It provides
+115 controls, 21 presets and six existing facial performances. Performance keys,
+times and values are unchanged from the accepted source resource. The focused
+C++ check passes 163 assertions, including both adapters, all presets/clips,
+body-only fallback and rejection of a different outfit revision.
+
+`work/three-outfit-rig-physics/combined-facial-catalog1` adds that rig to the
+current shared metadata in a private PAK. Roundtrip readback preserves the entire
+previous catalog and its external facial resources. The 52,936-byte manifest
+contains 63 body entries and three facial rigs. The actual C++ package loader
+passes 182 checks, including the 60 Idle Animation options and matching CSS/CINE
+body resolution. All 23 host suites pass. Logs are in `genessa-catalog-host1`.
+This intermediate metadata trial retains legacy payload names; it is not the
+consolidated `CSS_SharedAssets_P` release or a completed namespace migration.
+
+Genessa `work/face-preset-review1` contains 22 front-view source-head renders,
+including the original. Review found no obvious collapsed eyes, sealed open-mouth
+presets or cheek breakthrough in these views. These are clay renders, not game
+material or whole-body acceptance.
+
+Shader readback now covers all native face vertex passes and the opaque Astral
+companion's inline code. The 24 native and four Astral GPU-skin/cloth SM6 variants
+use UV0 without UV3. The seven native and three Astral local/manual-fetch variants
+either fetch only UV0 or omit UV reads. Disassemblies and the exact reviewed
+indices are pinned in Genessa `face-astral-shader1/uv-review.json`. SM5 bytecode
+was extracted but is not disassembled by this DXC tool. Native extraction remains
+byte-identical for all 56 shader resources after adding inline support.
+
+No candidate has been installed. Remaining face checks include cooked material
+appearance, dynamic ornament/hood shading, CSS/CINE playback and interruption,
+both Genessa forms and doubles. Wider migration, physical deformation/contact
+work and the 59 missing native animation conversions remain active.

@@ -187,7 +187,39 @@ int main(int argc,char** argv) {
         const auto restored=State::parse(state.json());
         expect(restored.presets.at("face.1").selections.at("CharacterId.Player.Shell.Genessa").custom==saved,
                "Profile roundtrip lost the face or body settings");
-        if(argc==3 && std::string_view(argv[1])=="--commander-white") {
+        if(argc==3 && std::string_view(argv[1])=="--unholy-genessa") {
+            const auto actual=FacialRig::parse(read_json(argv[2]));
+            expect(actual.id=="css.unholygenessa.face" && actual.morphs.size()==115 &&
+                   actual.expressions.size()==21 && actual.adapters.size()==2 && actual.performances.size()==6,
+                   "Audited Genessa facial inventory differs");
+            const std::vector<FacialRig> rigs={actual};
+            for(const auto& adapter:actual.adapters) {
+                expect(adapter.source_outfit=="eins0fx.unholygenessa" &&
+                       adapter.skeleton=="/Game/CSS/UnholyGenessa/SKEL_Wings2.SKEL_Wings2",
+                       "Genessa facial adapter changed outfit or wing skeleton");
+                const auto match=resolve_facial_rig(rigs,adapter.source_outfit,
+                    adapter.source_toc_sha256,adapter.source_bulk_bytes,adapter.source_mesh);
+                expect(match.rig && match.adapter,"Genessa facial adapter did not resolve");
+                for(const auto& expression:actual.expressions) {
+                    const auto plan=plan_expression(match,adapter.source_mesh,expression.id);
+                    expect(plan.reason.empty() && plan.mesh==adapter.target_mesh && plan.weights.size()==115,
+                           "Genessa expression lost its replacement mesh or controls");
+                }
+                for(const auto& clip:actual.performances) {
+                    const auto plan=plan_performance_expression(match,adapter.source_mesh,"",clip.clip);
+                    expect(plan.reason.empty() && plan.mesh==adapter.target_mesh && plan.weights.size()==115,
+                           "Genessa facial clip did not select its replacement");
+                }
+                expect(plan_performance_expression(match,adapter.source_mesh,"","body.only").mesh==adapter.source_mesh,
+                       "A body-only Genessa clip acquired a facial replacement");
+                expect(!resolve_facial_rig(rigs,adapter.source_outfit,std::string(64,'0'),
+                    adapter.source_bulk_bytes,adapter.source_mesh).rig,
+                    "Genessa facial adapter accepted a different outfit revision");
+                expect(!resolve_facial_rig(rigs,adapter.source_outfit,adapter.source_toc_sha256,
+                    adapter.source_bulk_bytes+1,adapter.source_mesh).rig,
+                    "Genessa facial adapter accepted a different bulk file");
+            }
+        } else if(argc==3 && std::string_view(argv[1])=="--commander-white") {
             const auto actual=FacialRig::parse(read_json(argv[2]));
             expect(actual.id=="css.commanderwhite.face" && actual.morphs.size()==74 &&
                    actual.expressions.size()==9 && actual.adapters.size()==1,
