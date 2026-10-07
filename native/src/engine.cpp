@@ -1646,11 +1646,11 @@ bool mesh_has_morph(UObject* mesh, const std::string& name) {
     if(array->GetInner()->GetElementSize()!=sizeof(UObject*)) throw std::runtime_error("Mesh morph target array layout mismatch");
     FScriptArrayHelper targets(array,reinterpret_cast<std::byte*>(mesh)+array->GetOffset_Internal());
     if(targets.Num()<0 || targets.Num()>4096) throw std::runtime_error("Invalid morph target count");
-    const auto wanted=wide(name);
+    const FName wanted(wide(name).c_str(),FNAME_Find);
     for(int i=0;i<targets.Num();++i) {
         UObject* target=nullptr;
         std::memcpy(&target,targets.GetRawPtr(i),sizeof target);
-        if(target && target->GetName()==wanted) return true;
+        if(target && target->GetNamePrivate()==wanted) return true;
     }
     return false;
 }

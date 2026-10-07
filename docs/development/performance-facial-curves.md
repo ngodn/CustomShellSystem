@@ -1,5 +1,31 @@
 # Facial motion inside supplied performances
 
+## October 7 live Iris Out failure and runtime correction
+
+The installed 9fc diagnostic core played the body but failed facial startup on
+Eve Black Pearl and Commander White. Evidence and the replacement candidate
+are in `work/cine-animation-port/idle-facial-failures-1`.
+
+Eve's loaded facial mesh contains all 115 required shapes, but the live name
+`Blink` differs in display casing from the catalog's `blink`. The string
+comparison rejected that mesh. `mesh_has_morph` now compares Unreal FNames,
+matching the engine's morph lookup. This preserves validation for absent names.
+
+Commander White failed while reading `TargetSkeleton` from the generated
+animation class. That property belongs to the class object's metaclass, not
+the animation instance class it represents. The corrected reader validates
+the property type, size and bounds, then retains the existing skeleton check.
+Live reflection confirms an eight-byte `TargetSkeleton` object property.
+
+Automatic facial mesh failures now retain their specific diagnostic reason.
+The Windows core build and nine focused host suites pass. Installation and
+live facial playback/restoration acceptance remain pending. This correction
+does not establish a fix for the separately reported After Brute Battle crash.
+
+Engine references: [FName comparison semantics](https://cdn2.unrealengine.com/Resources/files/UE4_DevCon2014_Cpp_Utilties-640979660.pdf)
+and [UAnimBlueprintGeneratedClass](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/UAnimBlueprintGeneratedClass).
+The local UE 5.6.1 header also declares `TargetSkeleton` as a runtime property.
+
 October 7: all nine missing facial source controls were recovered from the
 user-supplied optional author head. The new 115-shape Eve candidate passes
 six-outfit editor and cooked verification. Its verified face catalog has all

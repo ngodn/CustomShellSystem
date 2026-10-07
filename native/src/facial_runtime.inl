@@ -55,7 +55,7 @@ void Appearance::set_expression(const FacialPlan& plan) {
     if(!supported) {
         restore_facial_binding(facial_preview_);restore_facial_binding(facial_world_);
         facial_weights_.clear();facial_applied_.clear();
-        if(!plan.expression.empty() && facial_reason_.empty()) {
+        if(!plan.weights.empty() && facial_reason_.empty()) {
             const auto error=facial_failures_.find(plan.mesh);
             facial_reason_=error==facial_failures_.end()?"Facial mesh is unavailable":error->second;
         }
@@ -73,7 +73,7 @@ void Appearance::begin_facial_performance(const FacialPerformance& face) {
     restore_facial_performance();
     auto* component=component_.Get();auto* mesh=applied_.Get();
     if(!active() || !mesh || facial_weights_.empty())
-        throw std::runtime_error("The performance facial mesh is unavailable");
+        throw std::runtime_error(facial_reason_.empty()?"The performance facial mesh is unavailable":facial_reason_);
     std::map<std::string,float> baseline;
     for(const auto& [name,value]:facial_weights_) {
         if(!mesh_has_morph(mesh,name)) throw std::runtime_error("The facial mesh is missing a performance shape");

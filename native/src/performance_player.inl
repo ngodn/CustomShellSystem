@@ -204,6 +204,17 @@ std::string PerformancePlayer::unsupported(UObject* pawn,const Catalog& catalog,
     if(fields.on() || fields.clip() || fields.alpha()!=0.f) return "The performance layer is already in use";
     return {};
 }
+static UObject* performance_class_skeleton(UObject* generated_class) {
+    // TargetSkeleton belongs to the class object, not to its animation instances.
+    auto* type=generated_class?generated_class->GetClassPrivate():nullptr;
+    auto* property=type?type->GetPropertyByNameInChain(L"TargetSkeleton"):nullptr;
+    if(!property || !property->IsA<FObjectProperty>() || property->GetArrayDim()!=1 ||
+       property->GetElementSize()!=sizeof(UObject*) || property->GetOffset_Internal()<0 ||
+       property->GetOffset_Internal()>type->GetPropertiesSize()-property->GetElementSize())
+        throw std::runtime_error("Animation class skeleton property layout mismatch");
+    return static_cast<FObjectProperty*>(property)->GetObjectPropertyValue(
+        reinterpret_cast<std::byte*>(generated_class)+property->GetOffset_Internal());
+}
 void PerformancePlayer::bind_layer(UObject* pawn,const Catalog& catalog,const std::string& outfit) {
     auto* component=read<UObject*>(pawn,L"Mesh");
     auto* source=read<UObject*>(component,L"PostProcessAnimInstance");
@@ -224,7 +235,7 @@ void PerformancePlayer::bind_layer(UObject* pawn,const Catalog& catalog,const st
         throw std::runtime_error("Outfit changed while loading the performance adapter");
     if(!target || !target->IsA(static_cast<UClass*>(find(L"/Script/Engine.AnimBlueprintGeneratedClass"))) ||
        narrow(target->GetPathName())!=adapter->target_class ||
-       read<UObject*>(target,L"TargetSkeleton")!=read<UObject*>(held_mesh.Get(),L"Skeleton"))
+       performance_class_skeleton(target)!=read<UObject*>(held_mesh.Get(),L"Skeleton"))
         throw std::runtime_error("Loaded performance adapter has a different class or skeleton");
     auto* defaults=static_cast<UClass*>(target)->GetClassDefaultObject().Get();
     performance_controls(source,defaults,false);
