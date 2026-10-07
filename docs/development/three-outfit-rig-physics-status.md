@@ -20,7 +20,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | --- | --- |
 | Nine-variant provenance | Installed hashes and 16 editable mesh identities pinned; all 790 migration paths have source candidates or alias recipes. Final Blender-to-cook recipe comparisons remain |
 | Mesh/weights/contacts | Fresh checks of all 16 editor-built meshes pass weight sums, section/bone/morph indices and finite-data checks. Deformation/contact checks and cooked comparison remain |
-| Unholy facial support | Both W3 facial candidates now build and save in UE with 137 morphs, including the original 22 controls. Source correspondence verified; oral vertex splitting, full cloth/body equivalence, material review, cooking and runtime acceptance pending |
+| Unholy facial support | Both W3 candidates build with 137 morphs. Tangent-indexing defect corrected; 24 unchanged render sections match exactly and 115 mask controls verified with the original pruning threshold. Lip-seam UV3/shader compatibility, full cloth asset comparison, visual review, cooking and runtime acceptance pending |
 | Shared organization | CSS parser accepts new and legacy roots with 23 host suites passing. All 790 unique installed packages have collision-free author-owned destinations; 172 catalog path references classified. First 32 assets renamed, reloaded without redirectors, cooked and decoded in isolation. Remaining migration and runtime compatibility pending; not installed |
 | Locomotion | 63-entry installed catalog captured; four native declarations, 59 missing; conversion and motion-quality review pending |
 | Gameplay regressions | Current interruption baseline accepted by user; candidate regression tests pending |
@@ -80,10 +80,53 @@ controls and retain all 22 original morphs and their delta counts. Skeleton,
 physics-asset and post-process identities agree; weight and morph index checks
 pass. This does not yet prove complete cloth or body equivalence.
 
-Current evidence is Genessa `work/face-integration4`, whose editor exited 0.
+Intermediate evidence is Genessa `work/face-integration4`, whose editor exited 0.
 It has 172,151 render vertices per variant, compared with 160,794 originally.
 The oral section still has more render splits than its source points/corners
 justify. The source uses MikkTSpace tangent recomputation, so authored tangents
 alone do not resolve this. Next: inspect the final render basis, verify full
 source/render/cloth equivalence, review materials and expressions, then cook
 and wire CSS/CINE. Original assets and installed game files remain untouched.
+
+The subsequent `face-integration6` resolves the excessive oral splitting by
+ordering mesh instances to match UE 5.6.1's tangent writer/reader indexing.
+Both variants now contain 162,939 render vertices, including 2,138 oral vertices
+and seven independently controlled lip duplicates. All 24 unchanged render
+sections match the originals exactly, including their cloth mappings and body
+morph deltas. All 115 mask controls pass correspondence checks subject to the
+original 0.015 cm pruning threshold; retained delta error is below 0.000047 cm.
+
+The lip duplicates use the mask's previously zero UV3 channel to prevent render
+welding. Native/Astral material use of this channel is still unverified. This is
+an explicit remaining acceptance gate, alongside full physical cloth-asset
+comparison, expression/material review, cooking and runtime integration. No
+candidate has been installed. The complete goal remains active.
+
+The next read-only check closes the physical cloth-data comparison for both W3
+candidates. `face-integration6/cloth-comparison.json` matches all six clothing
+assets per variant: reflected physical data/configuration, collision references,
+bone mappings, GUIDs, LOD settings, non-reflected tethers and transition arrays.
+The candidate owns separate clothing objects. A detached-copy negative check
+rejects an altered simulation vertex. `cloth-audit-exit3.json` records exit 0.
+The first two diagnostic attempts failed on an unavailable Python property and
+an incorrectly named probe morph; neither saved or installed assets.
+
+The probe rebuild also passes on UE 5.6.1. Its finite-data guards were exercised
+on the rebuilt mask/mouth with `jaw_open`. Cleanup compressed older render
+snapshots with hash-verified roundtrips and removed superseded private caches
+and candidate copies, reducing logical size by 1,215,207,053 bytes. The retained
+receipt is Genessa `work/face-cleanup3.json`.
+
+Native face shader evidence is in Genessa `work/face-material-audit1`. The
+readback pins `MI_Genessa_top`'s SM6 shader map
+`4C3FB7ABD0DFE5893189D38F886434F002E4A8FB`. Its four GPU-skin/cloth base-pass
+vertex permutations declare only UV0 (`ATTRIBUTE5.xy`); there is no UV3 input.
+Its two base-pass pixel variants use only `TEXCOORD0.xy` for material UVs.
+The fifth (local/manual-fetch) permutation fetches only UV0: SSA 327-333 indexes
+`NumTexcoords * (VertexOffset + VertexId) + min(0, NumTexcoords - 1)`, and writes
+that pair to `TEXCOORD0.xy`. `uv-review.json` pins all five disassemblies.
+This supports the seam tag for those permutations. It does not establish all
+render passes, SM5 or Astral shader behavior. SM5 extraction
+succeeded, but DXC cannot disassemble those containers. Material review and
+cooked/runtime acceptance remain open. The pixel extractor's previous outputs
+remain identical after adding explicit vertex extraction.
