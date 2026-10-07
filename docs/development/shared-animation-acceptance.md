@@ -1,5 +1,14 @@
 # Shared animation acceptance
 
+Facial resource loading is now implemented and host-tested. The private
+`facial-resource-trial-v1` candidate preserves every entry and all 98 cooked
+exports from `cw-jaw-trial-v1`, with a 37,884-byte manifest and two separately
+checked facial resources. Its combined and pack-only checks pass 1,398 and
+1,386 assertions. Old inline catalogs still pass. This removes the packaging
+size obstacle; it does not complete Spin cooking or the four remaining CW
+mappings. Nothing new is installed. See
+[the format and verification](facial-package-resources.md).
+
 CW Spin now has a complete source-rig mapping and bounded playback curves in
 `cw-spin-source-v3`, `cw-spin-basis-v3` and `cw-spin-curves-v2`. All eleven
 source curves are mapped. The 401 poses and 400 independent intermediate
@@ -8,8 +17,8 @@ is 0.005586 cm. This is a second prepared CW facial track, not a second
 packaged or live-accepted track. Gesture 200 remains the only CW performance
 in the combined candidate. Come Closer, DumbDumb, Iris Out and Cinderella
 still need their CW mappings. Spin also needs asset cooking and catalog
-integration. Its curve data exceeds the manifest limit, so use a separately
-bounded package resource rather than increasing that limit without review.
+integration. Its curve data exceeds the manifest limit and passes the new
+bounded resource loader as a parser fixture.
 
 CW's expanded performance face is now independently cooked and checked in
 `cw-performance-cook-v1`: 59 added shapes, all 90 prior mesh morphs preserved,

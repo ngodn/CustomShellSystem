@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / 'tools'))
 from css import GAME
 from css_convert import Converter, DEFAULT_REPAK, PACKAGE_ROOT, asset_info
 from css_paths import package_path, windows_destination
+from css_facial_resources import encode, externalize, resolve
 from adapter_additions import load_addition
 
 
@@ -34,6 +35,8 @@ def main():
                         help='Additional adapter cook, graph and complete moving-clip evidence')
     parser.add_argument('--faces', type=Path, help='Verified facial workspace from prepare_facial_catalog.py')
     parser.add_argument('--face-catalog', type=Path, help='Verified metadata revision using the same facial cook')
+    parser.add_argument('--external-facial-resources', action='store_true',
+                        help='Store facial performances in bounded, hashed package resources (requires an updated CSS runtime)')
     args = parser.parse_args()
     if args.face_catalog and not args.faces:
         raise ValueError('A facial catalog requires its verified cook workspace')
@@ -248,10 +251,19 @@ def main():
     metadata = out / 'metadata'
     path = metadata / PACKAGE_ROOT / library['id'] / 'manifest.json'
     path.parent.mkdir(parents=True)
-    path.write_text(json.dumps(manifest, indent=2) + '\n')
+    packed_manifest, resources = externalize(manifest) if args.external_facial_resources else (manifest, {})
+    serialized = encode(packed_manifest)
+    if len(serialized) > 256*1024:
+        raise ValueError('Manifest exceeds 256 KiB; use external facial resources with the updated runtime')
+    path.write_bytes(serialized)
+    for name, data in resources.items():
+        (path.parent / name).write_bytes(data)
     converter.run(DEFAULT_REPAK, 'pack', metadata, trio / (stem + '.pak'), '--version', 'V8B')
     converter.run(DEFAULT_REPAK, 'unpack', trio / (stem + '.pak'), '--output', out / 'metadata-readback')
-    if json.loads((out / 'metadata-readback' / PACKAGE_ROOT / library['id'] / 'manifest.json').read_text()) != manifest:
+    readback = out / 'metadata-readback' / PACKAGE_ROOT / library['id']
+    packed = json.loads((readback / 'manifest.json').read_text())
+    facial_data = {name: (readback / name).read_bytes() for name in resources}
+    if packed != packed_manifest or resolve(packed, facial_data) != manifest:
         raise ValueError('Manifest did not round-trip exactly')
     if any(digest(Path(path)) != checksum for path, checksum in dependency_hashes.items()):
         raise ValueError('Dependency changed during verification')
@@ -266,6 +278,7 @@ def main():
                   additional_adapter_evidence=additional_evidence,
                   compression_settings=sorted(compression_packages), compression_evidence=compression_evidence,
                   facial_meshes=sorted(face_packages), facial_evidence=face_evidence,
+                  facial_resources=packed_manifest.get('facial_resources', []), metadata_bytes=len(serialized),
                   dependencies=dependency_hashes,
                   skeleton_validation='Pending independent per-clip decoded binding checks.',
                   files={path.name: digest(path) for path in trio.iterdir()},

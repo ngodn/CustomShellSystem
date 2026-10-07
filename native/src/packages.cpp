@@ -2,6 +2,7 @@
 #include <array>
 #include <cstring>
 #include <fstream>
+#include <set>
 #include <span>
 #ifdef _WIN32
 #include <windows.h>
@@ -14,6 +15,11 @@ namespace css {
 namespace {
 using Bytes=std::vector<unsigned char>;
 constexpr std::string_view prefix="MortalShell2/Content/CSS/Packages/";
+constexpr size_t facial_resource_limit=16*1024*1024;
+bool facial_resource(std::string_view name) {
+    constexpr std::string_view suffix=".face.json";
+    return name.ends_with(suffix) && valid_id(std::string(name.substr(0,name.size()-suffix.size())));
+}
 struct Reader {
     std::span<const unsigned char> bytes;
     size_t cursor=0;
@@ -88,14 +94,17 @@ std::map<std::string,Bytes> contents(const fs::path& path) {
     }
     if(reader.cursor!=index.size()) throw std::runtime_error("Unexpected CSS pak index data");
     std::map<std::string,Bytes> result;
-    uint64_t total=0;
+    uint64_t total=0, facial_total=0;
     for(auto& [name,entry]:entries) {
         auto leaf=name.substr(name.rfind('/')+1);
-        if(!name.ends_with("/manifest.json") && !name.ends_with("/thumbnail.png") && !dye_resource(leaf)) continue;
+        const bool facial=facial_resource(leaf);
+        if(!name.ends_with("/manifest.json") && !name.ends_with("/thumbnail.png") && !dye_resource(leaf) && !facial) continue;
         total+=entry.size;
         if(total>260*1024*1024) throw std::runtime_error("CSS metadata resources exceed limit");
         if(name.ends_with("/thumbnail.png") && entry.size>4*1024*1024) throw std::runtime_error("CSS thumbnail exceeds limit");
         if(name.ends_with("/manifest.json") && entry.size>256*1024) throw std::runtime_error("CSS manifest exceeds limit");
+        if(facial && (entry.size>facial_resource_limit || (facial_total+=entry.size)>64*1024*1024))
+            throw std::runtime_error("CSS facial resources exceed limit");
         auto header=read(file,entry.offset,53,offset); Reader local{header};
         if(local.value<uint64_t>()!=0 || local.value<uint64_t>()!=entry.size || local.value<uint64_t>()!=entry.size || local.value<uint32_t>()!=0)
             throw std::runtime_error("CSS pak entry header mismatch");
@@ -106,6 +115,45 @@ std::map<std::string,Bytes> contents(const fs::path& path) {
         result.emplace(name,std::move(data));
     }
     return result;
+}
+void attach_facial_resources(Json& catalog,const Json& manifest,const std::map<std::string,Bytes>& entries,
+    const std::string& package_id) {
+    if(!manifest.contains("facial_resources")) return;
+    const auto& resources=manifest.at("facial_resources");
+    if(!resources.is_array() || resources.empty() || resources.size()>16)
+        throw std::runtime_error("Invalid facial resource list");
+    auto& faces=catalog.at("animation_library").at("faces");
+    if(!faces.is_array() || faces.empty() || faces.size()>16)
+        throw std::runtime_error("Facial resources require declared rigs");
+    std::set<std::string> seen;
+    for(const auto& resource:resources) {
+        if(!resource.is_object() || resource.size()!=4)
+            throw std::runtime_error("Invalid facial resource descriptor");
+        const auto rig=resource.at("rig").get<std::string>();
+        const auto file=resource.at("file").get<std::string>();
+        if(!valid_id(rig) || file!=rig+".face.json" || !seen.insert(rig).second ||
+           !resource.at("bytes").is_number_unsigned())
+            throw std::runtime_error("Invalid or duplicate facial resource identity");
+        auto target=faces.end();
+        for(auto it=faces.begin();it!=faces.end();++it) if(it->at("id")==rig) {
+            if(target!=faces.end()) throw std::runtime_error("Duplicate facial resource rig");
+            target=it;
+        }
+        if(target==faces.end() || target->contains("performances"))
+            throw std::runtime_error("Facial resource rig is missing or also contains inline performances");
+        const auto found=entries.find(std::string(prefix)+package_id+"/"+file);
+        if(found==entries.end()) throw std::runtime_error("Packaged facial resource is missing");
+        const auto& bytes=found->second;
+        if(bytes.empty() || bytes.size()>facial_resource_limit || resource.at("bytes")!=bytes.size() ||
+           resource.at("sha256")!=hex(hash(bytes,true)))
+            throw std::runtime_error("Facial resource checksum or size mismatch");
+        auto payload=Json::parse(bytes);
+        if(!payload.is_object() || payload.size()!=3 || !payload.at("schema").is_number_unsigned() ||
+           payload.at("schema")!=1 || payload.at("rig")!=rig ||
+           !payload.at("performances").is_array() || payload.at("performances").size()>64)
+            throw std::runtime_error("Unsupported facial resource payload");
+        (*target)["performances"]=std::move(payload.at("performances"));
+    }
 }
 }
 // A package's cache folder: the first 16 hex digits of its manifest hash. Short on purpose.
@@ -200,9 +248,10 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
             }
             const auto kind=manifest.value("kind",std::string("outfit"));
             if(kind=="animation_library") {
-                const auto& catalog=manifest.at("catalog");
+                auto catalog=manifest.at("catalog");
                 if(catalog.size()!=2 || catalog.at("schema")!=1)
                     throw std::runtime_error("Unsupported animation library catalog schema");
+                attach_facial_resources(catalog,manifest,entries,id);
                 const auto library=AnimationLibrary::parse(catalog.at("animation_library"));
                 if(library.id!=id || library.name!=manifest.at("name").get<std::string>() ||
                    library.author!=manifest.at("author").get<std::string>() ||
@@ -210,10 +259,11 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
                     throw std::runtime_error("Animation library package identity mismatch");
                 if(manifest.contains("thumbnail") || manifest.contains("resources"))
                     throw std::runtime_error("Animation libraries cannot carry outfit resources");
-                result.push_back({catalog,{},path,revision});
+                result.push_back({std::move(catalog),{},path,revision});
                 continue;
             }
             if(kind!="outfit") throw std::runtime_error("Unsupported CSS package kind");
+            if(manifest.contains("facial_resources")) throw std::runtime_error("Outfits cannot carry facial library resources");
             const auto& outfits=manifest.at("catalog").at("outfits");
             if(!outfits.is_array() || outfits.size()!=1 || outfits[0].at("id")!=id ||
                outfits[0].at("name")!=manifest.at("name") || outfits[0].at("author")!=manifest.at("author") ||

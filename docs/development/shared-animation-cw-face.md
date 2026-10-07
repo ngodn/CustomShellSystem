@@ -317,9 +317,10 @@ interpolation test group passes all 15 tests; the curve-compiler group passes
 six tests. No runtime code changed in this checkpoint.
 
 The 657,779-byte performance exceeds the existing 256 KiB manifest limit.
-Next, add a bounded, hash-checked facial curve resource to the package loader
-and packaging tool, retaining inline-curve compatibility and shared CSS/CINE
-resolution. Do not silently raise the manifest limit. Cooking these new shapes,
+The [facial resource loader](facial-package-resources.md) now accepts this
+full performance as a parser fixture while preserving the manifest limit.
+Inline-curve compatibility and shared CSS/CINE catalog resolution remain
+intact. The manifest limit is unchanged. Cooking these new shapes,
 catalog integration and live acceptance are still pending. Gesture 200 is
 still the only packaged CW facial performance; Spin is the second prepared
 mapping. Come Closer, DumbDumb, Iris Out and Cinderella remain unmapped for CW.
