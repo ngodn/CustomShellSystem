@@ -59,5 +59,21 @@ and run a fresh process with `CSS_NAMESPACE_VERIFY=1`. Cook and independently
 decode the result before accepting it. Source-data equality does not establish
 compressed byte identity, visual quality or game compatibility.
 
+For the expanded shared batch, `stage_namespace_animations.py` selects pinned
+sequences/blend spaces and only their explicit dependencies. Its required
+native-reference receipt supplies the real game skeleton in the private tree;
+the main authoring project's smaller placeholder must not be used for this cook.
+`refresh_packages` limits retarget-reference refresh to the named legacy clips.
+
+`package_namespace_trial.py` checks source/reload receipts and container payload
+roundtrip. Run AssetReadback with `--animation-digests` on both the baseline and
+candidate, then `compare_namespace_cook.py` to distinguish path changes from
+changed compressed bytes. Differences are reported, not silently accepted.
+`verify_namespace_motion.py` uses `CSS_NAMESPACE_STAGE` and `CSS_NAMESPACE_COOK`
+to compare every independently decoded Eve key with raw UE poses. It writes
+only to the staging project, so the cooked inputs can stay read-only. Its
+`eve-decoded` input comes from `decode_shared_cooked.py --all-frames
+--runtime-sampling` and the cook's explicit `catalog.json`.
+
 The first accepted offline trial is recorded in
 [`three-outfit-rig-physics-status.md`](../../../docs/development/three-outfit-rig-physics-status.md).

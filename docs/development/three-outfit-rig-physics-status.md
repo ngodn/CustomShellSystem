@@ -21,7 +21,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Nine-variant provenance | Installed hashes and 16 editable mesh identities pinned; all 790 migration paths have source candidates or alias recipes. Final Blender-to-cook recipe comparisons remain |
 | Mesh/weights/contacts | Fresh checks of all 16 editor-built meshes pass weight sums, section/bone/morph indices and finite-data checks. Deformation/contact checks and cooked comparison remain |
 | Unholy facial support | Both W3 candidates cook with 137 morphs and unchanged cloth data. Native/Astral SM6 UV3 checks pass. Oral assets resolve without Eve mounted. Two adapters, 21 presets and six facial performances are integrated into a private shared catalog; 163 facial and 182 packaged-library checks pass. SM5/material review and game acceptance remain |
-| Shared organization | CSS parser accepts new and legacy roots with 23 host suites passing. All 790 unique installed packages have collision-free author-owned destinations; 172 catalog path references classified. First 32 assets renamed, reloaded without redirectors, cooked and decoded in isolation. Remaining migration and runtime compatibility pending; not installed |
+| Shared organization | CSS parser accepts new and legacy roots with 23 host suites passing. All 790 unique installed packages have author-owned destinations; 172 catalog references classified. An isolated 116-package animation batch passes reload/cook/readback. Ninety-six match installed decoded fields after path normalization; twenty Eve clips have a checked reference-pose refresh. Remaining migration and runtime compatibility pending; not installed |
 | Locomotion | 63-entry installed catalog captured; four native declarations, 59 missing; conversion and motion-quality review pending |
 | Gameplay regressions | Current interruption baseline accepted by user; candidate regression tests pending |
 | Performance | Current package sizes recorded; matched gameplay captures pending |
@@ -50,6 +50,60 @@ The corrected 32-package cook passed an IoStore conversion/readback with identic
 Evidence: [editor trial](../../work/three-outfit-rig-physics/migration-editor3) (`migration.json`, `reload.json`, `retarget-validation.json`); [corrected cook](../../work/three-outfit-rig-physics/migration-cook2) (`comparison.json`, `pack/roundtrip.json`); [rejected cook](../../work/three-outfit-rig-physics/migration-cook1/comparison.json). Reusable probe: [migrate_namespace_trial.py](../../tools/authoring-probes/animations/migrate_namespace_trial.py) with the [editor audit module](../../tools/authoring-probes/rig-audit/README.md).
 
 This is an offline migration check, not a release or game acceptance. No installed DLL, outfit, pack, setting or save was changed. Exact runtime skeleton compatibility, Astral adapter paths/material identities, catalog dependencies and legacy outfit behavior still need coherent migration and verification.
+
+### Expanded shared-animation trial
+
+The expanded editor trial covers 116 packages: 107 animation sequences, eight
+blend spaces and the common skeleton. Source snapshots cover 8,568,856 keyed
+transforms. They survive rename/save/reload, and all 409 original dependency
+files retain their hashes. A private dependency subset avoids loading unrelated
+historical meshes during Unreal's referencer updates.
+
+The third Windows cook is **rejected**, despite passing its container roundtrip.
+Independent compressed-stream readback caught the main authoring project's
+native-human placeholder: 20 native sequences cooked with 182 mapped tracks
+instead of 1,208, and four native blend spaces acquired its wrong skeleton GUID.
+This establishes why source snapshots and a successful cook alone are inadequate.
+The installed packages were never replaced.
+
+The next staging run uses the exact native skeleton preserved by the earlier
+`native-binding-v6` receipt, SHA256
+`9497cd869c7e39c368091acc2c6ce6202ed1bff54383d2490415815712b69de0`.
+It replaces the placeholder only inside the private staging tree. Both the
+source receipt and copied reference are checked before use and on reload.
+
+Of 107 sequences in the rejected cook, 68 retain identical compressed bone and
+curve streams. Nineteen Eve movement sequences also have changed compressed
+bone streams alongside the documented retarget-reference refresh. Their raw
+keys remain unchanged, but full decoded motion comparison is still required.
+The earlier 32-package structural comparison did not check these stream bytes.
+
+Evidence: `migration-editor5/source-validation.json`,
+`migration-cook3/initial-differences.json`, both independent decoded reports in
+that cook directory, and the corrected reference in `migration-editor6/input.json`.
+
+The corrected `migration-editor6` / `migration-cook4` batch passes fresh reload,
+Windows cook and payload roundtrip. Ninety-six of 116 packages have identical
+decoded fields after namespace normalization, including all 20 native sequences
+and four native blend spaces. Eighty-eight of 107 animation streams are byte
+identical. The corrected native dependency exposes 1,199 raw bones and nine
+virtual bones; source snapshots now cover 9,342,460 keyed transforms.
+
+The remaining 20 packages are the Eve clips with the reference-pose refresh.
+All 754 source-key frames, comprising 292,552 mapped transforms, were decoded
+independently through native ACL and compared with raw Unreal local poses.
+Every clip passes the existing review limits (0.05 cm translation, 0.25-degree
+quaternion-distance equivalent, 0.001 scale). Measured maxima are 0.009725 cm,
+0.206 degrees and 0.00002659 scale. This covers all mapped virtual tracks as
+well as body tracks, but does not establish between-key blending or gameplay
+acceptance. See `migration-editor6/eve-motion-comparison.json` and
+`migration-cook4/comparison.json`.
+
+Rejected editor5/cook3 asset copies and caches were removed after preserving
+logs, decoded comparisons and a per-file cleanup receipt. The receipt records
+1,320,489,845 logical bytes; reflinks mean this is not a physical-space claim.
+See `cleanup-rejected-native-placeholder.json`. Current candidates, original
+assets and installed files remain intact.
 
 ## Editable source audit
 

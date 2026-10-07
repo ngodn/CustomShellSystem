@@ -1,0 +1,99 @@
+"""Stage pinned shared animations and explicit dependencies in private reflink copies."""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import shutil
+import subprocess
+
+ROOT = Path(__file__).resolve().parents[3]
+
+
+def sha(path):
+    with path.open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--inventory', type=Path, required=True)
+    parser.add_argument('--source-content', type=Path, required=True)
+    parser.add_argument('--template', type=Path, required=True)
+    parser.add_argument('--dependencies', type=Path, required=True)
+    parser.add_argument('--native-reference-receipt', type=Path, required=True)
+    parser.add_argument('--output', type=Path, required=True)
+    args = parser.parse_args()
+    stage = args.output.resolve()
+    if stage.exists() or not stage.is_relative_to(ROOT/'work/three-outfit-rig-physics'):
+        raise ValueError('Use a new private rig workspace')
+    source = args.source_content.resolve(strict=True)
+    inventory = json.loads(args.inventory.read_text())
+    assets = []
+    for row in inventory['assets']:
+        leaf = row['package'].rsplit('/', 1)[1]
+        selected = row['package'] == '/Game/CSS/Shared/SKEL_Base' or (
+            '/Shared/Locomotion/' in row['destination'] and leaf.startswith(('AN_', 'BS_')) and
+            not row['cooked_alias_recipe'])
+        if not selected:
+            continue
+        entry = row['selected']['identity']
+        path = Path(entry['path']).resolve(strict=True)
+        relative = Path(row['package'].removeprefix('/Game/')+'.uasset')
+        if path != source/relative or sha(path) != entry['sha256']:
+            raise ValueError('Selected source differs: '+str(path))
+        assets.append(dict(old_package=row['package'], new_package=row['destination'],
+                           source_file=str(path), source_sha256=entry['sha256']))
+    if not assets or len({row['new_package'].casefold() for row in assets}) != len(assets):
+        raise ValueError('No unique migration candidates')
+    stage.mkdir(parents=True)
+    # Keep unrelated historical assets out of the registry. Rename loads
+    # referring assets, so cloning the entire authoring tree is expensive.
+    dependencies = json.loads(args.dependencies.read_text())
+    packages = set(dependencies) | {row['old_package'] for row in assets}
+    native_package = '/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton'
+    receipt_path = args.native_reference_receipt.resolve(strict=True)
+    receipt = json.loads(receipt_path.read_text())
+    native_reference = receipt_path.parent/'game-reference/SKEL_Human_Skeleton.uasset'
+    if (not receipt.get('passed') or receipt.get('skeleton') != native_package or
+            sha(native_reference) != receipt['native_reference_sha256']):
+        raise ValueError('Native reference does not match its verified binding receipt')
+    if native_package not in packages:
+        raise ValueError('Native animation dependency is missing')
+    copied_inputs = []
+    for package in sorted(packages):
+        if not package.startswith('/Game/') or '..' in package.split('/') or '.' in package:
+            raise ValueError('Invalid dependency package: '+package)
+        relative = Path(package.removeprefix('/Game/')+'.uasset')
+        original, copied = source/relative, stage/'Content'/relative
+        if package == native_package:
+            original = native_reference
+        copied.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(['cp', '-a', '--reflink=always', str(original), str(copied)], check=True)
+        if copied.is_symlink() or copied.stat().st_ino == original.stat().st_ino or sha(copied) != sha(original):
+            raise ValueError('Dependency copy is not independent: '+package)
+        copied_inputs.append(dict(package=package, path=str(original), sha256=sha(original)))
+    (stage/'copied-inputs.json').write_text(json.dumps(copied_inputs, indent=2)+'\n')
+    for row in assets:
+        copied = stage/'Content'/(row['old_package'].removeprefix('/Game/')+'.uasset')
+        original = Path(row['source_file'])
+        if copied.is_symlink() or copied.stat().st_ino == original.stat().st_ino or sha(copied) != row['source_sha256']:
+            raise ValueError('Staging did not create a matching independent file')
+    shutil.copy2(args.template/'NamespaceTrial.uproject', stage/'NamespaceTrial.uproject')
+    (stage/'Binaries').symlink_to((args.template/'Binaries').resolve(), target_is_directory=True)
+    for name in ('tmp', 'user', 'cache', 'ddc'):
+        (stage/name).mkdir()
+    refresh = [row['old_package'] for row in assets
+               if row['old_package'].startswith('/Game/CSS/Eve/Anim/AN_')]
+    plan = dict(assets=assets, refresh_packages=refresh, inventory=str(args.inventory.resolve()),
+                inventory_sha256=sha(args.inventory),
+                native_reference=dict(package=native_package, source=str(native_reference),
+                    sha256=receipt['native_reference_sha256'], receipt=str(receipt_path),
+                    receipt_sha256=sha(receipt_path)),
+                scope='Shared sequences, blend spaces and common skeleton. Playback blueprints, codec settings and historical aliases remain separate migration steps.')
+    (stage/'input.json').write_text(json.dumps(plan, indent=2)+'\n')
+    (stage/'recipe.py').write_bytes(Path(__file__).read_bytes())
+    print(json.dumps(dict(stage=str(stage), assets=len(assets), refresh=len(refresh))))
+
+
+if __name__ == '__main__':
+    main()
