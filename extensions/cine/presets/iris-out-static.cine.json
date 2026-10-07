@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "id": "iris-out-static",
+  "name": "Iris Out Static",
+  "description": "The Iris Out dance four times, on one still camera, the view you framed in Cine World before F8: Eve, then the bones alone (on the instrumental), then Unholy Genessa, then Commander White. Each look is staged before she dances (wireframe, clay, then the look) and worn as saved in CSS; Eve is the outfit worn at F8. Needs CSS, the shared locomotion pack and the three outfits. Set Breakdown track to From the preset. Track: audio/iris-out-2-x4.wav in the CINE folder.",
+  "kind": "sequence",
+  "reference": "capsule",
+  "tempo": {"bpm": 136.0, "offset": 0.0, "beats_per_bar": 4},
+  "end": 51.7605,
+  "audio": "audio/iris-out-2-x4.wav",
+  "performance": "css.eve.dance.irisout",
+  "idle": "eve",
+  "cover": [["wireframe"]],
+  "shots": [
+    {"at": 1.0, "view": true}
+  ],
+  "looks": [
+    {"at": 1.0, "outfit": "current", "title": "Eve"},
+    {"at": 10.7846, "title": "Rig"},
+    {"at": 14.1053, "performance": true},
+    {"at": 24.7966, "outfit": "eins0fx.unholygenessa", "title": "Unholy Genessa", "wipe": 0.5, "hold": 1.1, "performance": false, "variant": "genessa"},
+    {"at": 27.2106, "performance": true},
+    {"at": 37.9019, "outfit": "eins0fx.commanderwhite", "title": "Commander White", "wipe": 0.5, "hold": 1.1, "performance": false, "variant": "original"},
+    {"at": 40.3159, "performance": true}
+  ],
+  "breakdown": {"steps": [
+    {"at": 10.7846, "layers": ["clay", "wireframe"], "beats": 2, "labels": false},
+    {"at": 13.1986, "layers": ["no_body", "skeleton", "virtual_bones", "ik_bones", "springs", "sockets"], "beats": 2},
+    {"at": 24.7966, "layers": ["clay", "wireframe"], "beats": 2, "labels": false},
+    {"at": 25.5106, "layers": ["clay"], "beats": 2, "labels": false},
+    {"at": 26.3039, "layers": [], "beats": 2},
+    {"at": 37.9019, "layers": ["clay", "wireframe"], "beats": 2, "labels": false},
+    {"at": 38.6159, "layers": ["clay"], "beats": 2, "labels": false},
+    {"at": 39.4092, "layers": [], "beats": 2}
+  ]}
+}

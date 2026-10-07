@@ -1,3 +1,4 @@
-_eins0fx
+CINE by _eins0fx
+Cinematic Expressive Camera for Showcase
 Custom Shell System (CSS) + Extensions (CSSX) CINE + Unreal Engine 5
 github.com/ngodn/CustomShellSystem

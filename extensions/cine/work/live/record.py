@@ -51,7 +51,11 @@ def main():
     c, error = r.controls()
     preset = sys.argv[1] if len(sys.argv) > 1 else c['preset']['value']
     status = c['status']['value']
-    if any(word in status for word in ('Rolling', 'Preparing', 'Building', 'Checking', 'Get ready', 'Closing')):
+    _, error = r.controls()
+    # The status line keeps its last report: a take that was cancelled still reads "Rolling."
+    # with the cancellation in the error line.
+    ended = any(word in (error or '') for word in ('cancel', 'stopped', 'finished', 'Could not'))
+    if not ended and any(word in status for word in ('Rolling', 'Preparing', 'Building', 'Checking', 'Get ready', 'Closing')):
         raise SystemExit('A take is already running.')
     own = r.css({'action': 'describe'})
     out = Path.home() / 'Videos' / f"{preset}-{time.strftime('%Y-%m-%d_%H-%M-%S')}.mp4"
@@ -67,6 +71,7 @@ def main():
             r.event('enter'); time.sleep(0.6)
         r.event('take')
         began, last, rolled = time.monotonic(), '', False
+        rolled_at, samples = None, []
         while time.monotonic() - began < 200:
             time.sleep(1.0)   # one question a second: the game is left alone while it is filmed
             c, error = r.controls()
@@ -74,7 +79,17 @@ def main():
             if status != last:
                 print(f'{time.monotonic() - began:6.1f}s  {status}' + (f'  ERROR {error}' if error else ''))
                 last = status
+            if not rolled and 'Rolling' in status:
+                rolled_at = time.monotonic()
             rolled = rolled or 'Rolling' in status
+            # The frame rate of the last second, by take time: which shots cost frames.
+            if rolled and rolled_at is not None:
+                try:
+                    b = r.req({'op': 'frame.stats', 'seconds': 1}).get('engine', {})
+                except Exception:
+                    b = {}
+                if b.get('count'):
+                    samples.append((round(time.monotonic() - rolled_at, 1), round(b.get('hz', 0), 1), round(b.get('p99_ms', 0), 1)))
             if rolled and any(word in status for word in ('finished', 'cancel', 'stopped', 'Could not')):
                 break
             if error and not rolled:
@@ -93,6 +108,11 @@ def main():
         if r.same_look(now, own):
             break
     print('her look restored:', r.same_look(now, own))
+    if samples:
+        print('fps by take second (t, fps, slowest 1% ms):')
+        print('  ' + '  '.join(f'{t:g}:{hz:g}' for t, hz, _ in samples))
+        low = [s for s in samples if s[1] < 45]
+        print(f'below 45 fps: {len(low)} of {len(samples)} seconds' + (f', lowest {min(low, key=lambda s: s[1])}' if low else ''))
     if back:
         if back[0]:
             subprocess.run(['hyprctl', 'dispatch', f'hl.dsp.focus({{ workspace = "{back[0]}" }})'], capture_output=True)

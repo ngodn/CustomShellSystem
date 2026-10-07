@@ -29,6 +29,14 @@
     "presets/pose-glide-7.cine.json",
     "presets/showreel-124.cine.json",
     "presets/showreel-finale.cine.json",
-    "presets/turntable.cine.json"
+    "presets/turntable.cine.json",
+    "presets/iris-out.cine.json",
+    "presets/iris-out-9x16.cine.json",
+    "presets/iris-out-2.cine.json",
+    "presets/iris-out-static.cine.json",
+    "presets/iris-out-static-1.cine.json",
+    "presets/iris-out-white-rig.cine.json",
+    "presets/iris-out-eve-rig.cine.json",
+    "presets/iris-out-unholy-rig.cine.json"
   ]
 }
