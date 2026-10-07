@@ -140,8 +140,10 @@ choosing a companion. Unknown graphs/permutations fall back to the native double
 checked developer build. It backs up the selected core and selector, installs
 only the separate new shared package and unique core DLL, and preserves settings,
 loader, UE4SS and the old Eve package. It does not quit or launch the game.
-Development builds remain disarmed until the ordinary CSS request protocol sends
-`{"action":"astral_trial","enabled":true}`. Send false to remove the owned visuals.
+Development builds now honor the saved MISC doubles choices at startup, just as
+release builds do. The diagnostic request `{"action":"astral_trial","enabled":false}`
+temporarily suspends owned doubles for an isolated check; send true to resume them.
+This override lasts only for that process and does not change saved choices.
 The `astral.adapters.probe` engine request selects/loads companions without
 binding materials or creating components. Follow it with the existing hidden
 visual/material probes before enabling the full coordinator.

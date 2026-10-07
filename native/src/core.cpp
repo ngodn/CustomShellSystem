@@ -60,7 +60,7 @@ struct Core {
     Json inventory_command;
 #ifdef CSS_INVENTORY_DEV
     FrameProfile frame_profile;
-    bool astral_trial_enabled=false;
+    bool astral_trial_enabled=true;
     void publish_frame_profile() {
         Json rows=Json::array();
         for(const auto& row:frame_profile.rows())
