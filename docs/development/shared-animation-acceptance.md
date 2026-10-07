@@ -1,9 +1,20 @@
 # Shared animation acceptance
 
-Current private candidate: `work/cine-animation-port/shared-contact-trial-v1`.
-It is built, verified offline and **installed for a private trial, not accepted for release**.
-This page describes the current candidate. Earlier checkpoints remain in Git
-history and the linked investigation records.
+Current private candidate: `/mnt/eins0fxE/CSS-authoring-scratch/cw-optical-trial-v1`.
+It is installed for private testing and **not accepted for release**.
+CSS core `45d2015ae1e118bd` has loaded in the game. Both doubles modes are saved
+as Use CSS, the diagnostic gate is enabled, and the source appearance is ready.
+Actual summons and CW eyes during Iris Out still need visual confirmation.
+
+The eye-material candidate preserves all 206 CW morphs and changes only three
+optical bindings. See [the optical audit](cw-facial-optical-regression.md).
+The separate After Brute Battle crash remains unresolved; a diagnostic cloth
+reset did not remove the measured repeat bounds spike. See
+[the repeat investigation](idle-repeat-crash-audit.md).
+
+Older installation and crash observations below are historical evidence,
+not descriptions of the current core or pack. The latest installation receipt
+is `work/cine-animation-port/cw-optical-fix-v4/installation/deployment.json`.
 
 ## Loading-crash investigation, October 7
 

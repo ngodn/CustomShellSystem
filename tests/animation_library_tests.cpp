@@ -263,7 +263,7 @@ int main(int argc,char** argv) {
             expect(packages.diagnostics.at("rejected")==4,"Bad library packages were not reported independently");
             expect(packages.diagnostics.at("loaded")==1,"Valid packaged library did not load");
         }
-        if((argc>=3 && argc<=6) && (std::string_view(argv[1])=="--audited-pack" || std::string_view(argv[1])=="--audited-facial-pack" ||
+        if((argc>=3 && argc<=7) && (std::string_view(argv[1])=="--audited-pack" || std::string_view(argv[1])=="--audited-facial-pack" ||
                        std::string_view(argv[1])=="--audited-face-motion-pack" ||
                        std::string_view(argv[1])=="--audited-blender-face-pack" ||
                        std::string_view(argv[1])=="--audited-dance-pack" ||
@@ -284,7 +284,9 @@ int main(int argc,char** argv) {
             const bool cinderella=std::string_view(argv[1])=="--audited-cinderella-pack" ||
                                   std::string_view(argv[1])=="--audited-cinderella-only-pack";
             expect(argc==3 || cinderella,"Additional reference data is only supported for Cinderella audits");
-            const bool combined_cw=cinderella && argc==6;
+            const bool combined_cw=cinderella && argc>=6;
+            const bool optical_cw=argc==7;
+            expect(!optical_cw || std::string_view(argv[6])=="--cw-optical-e9", "Unknown optical audit revision");
             const bool author_face=cinderella || std::string_view(argv[1])=="--audited-jali3-face-pack" ||
                                    std::string_view(argv[1])=="--audited-jali3-face-only-pack";
             const bool commander_face=author_face || std::string_view(argv[1])=="--audited-cw-face-pack" ||
@@ -435,8 +437,9 @@ int main(int argc,char** argv) {
                     if(combined_cw) {
                         const auto index=read_json(argv[5]);
                         expect(index.is_object() && index.size()==5,"Expected five verified CW curve folders");
-                        expect(rig.adapters.front().target_mesh==
-                               "/Game/CSS/Locomotion/Faces/SK_Face_CWCompact/SK_Face_CWE8.SK_Face_CWE8",
+                        expect(rig.adapters.front().target_mesh==(optical_cw?
+                               "/Game/CSS/Locomotion/Faces/SK_Face_CWCompact/SK_Face_CWE9.SK_Face_CWE9":
+                               "/Game/CSS/Locomotion/Faces/SK_Face_CWCompact/SK_Face_CWE8.SK_Face_CWE8"),
                                "Combined performances use the wrong CW face");
                         std::unordered_set<std::string> clips;
                         for(const auto& folder:index) {
