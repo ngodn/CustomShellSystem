@@ -45,7 +45,23 @@ foreach (var item in items) {
             row[field] = b;
         }
         Same(source.ReferenceSkeleton, target.ReferenceSkeleton, "Reference skeleton");
-        if (Digest(source.SkeletalMaterials) != Digest(target.SkeletalMaterials)) {
+        var sourceMaterials = JArray.FromObject(source.SkeletalMaterials);
+        var targetMaterials = JArray.FromObject(target.SkeletalMaterials);
+        if (item["material_replacements"] is JArray replacements) {
+            var slots = new HashSet<int>();
+            if (replacements.Count is < 1 or > 16 || sourceMaterials.Count != targetMaterials.Count)
+                throw new InvalidDataException("Invalid material replacement audit");
+            foreach (var replacement in replacements) {
+                var slot = replacement.Value<int>("slot");
+                if (slot < 0 || slot >= sourceMaterials.Count || !slots.Add(slot) ||
+                    sourceMaterials[slot]["Material"]?.Value<string>("ObjectPath")?.Split('.')[0] != replacement.Value<string>("source") ||
+                    targetMaterials[slot]["Material"]?.Value<string>("ObjectPath")?.Split('.')[0] != replacement.Value<string>("target"))
+                    throw new InvalidDataException("Unverified material replacement");
+                targetMaterials[slot]["Material"] = sourceMaterials[slot]["Material"]!.DeepClone();
+            }
+            row["verified_material_replacements"] = replacements.DeepClone();
+        }
+        if (!JToken.DeepEquals(sourceMaterials, targetMaterials)) {
             row["material_difference"] = new JObject {
                 ["source"] = JToken.FromObject(source.SkeletalMaterials),
                 ["target"] = JToken.FromObject(target.SkeletalMaterials)
@@ -77,9 +93,10 @@ foreach (var item in items) {
         var oldMorphs = source.MorphTargets.Select(p => p.Load<UMorphTarget>() ?? throw new InvalidDataException("Missing source morph")).ToDictionary(m => m.Name, StringComparer.Ordinal);
         var newMorphs = target.MorphTargets.Select(p => p.Load<UMorphTarget>() ?? throw new InvalidDataException("Missing target morph")).ToDictionary(m => m.Name, StringComparer.Ordinal);
         int expectedExisting = item.Value<int?>("expected_existing_morphs") ?? 22;
-        if (expectedExisting is < 0 or > 128 || oldMorphs.Count != expectedExisting ||
-            oldMorphs.Keys.Any(expected.Contains) ||
-            !newMorphs.Keys.ToHashSet().SetEquals(oldMorphs.Keys.Concat(expected)))
+        var preserveAll = item.Value<bool?>("preserve_all_morphs") ?? false;
+        if (expectedExisting is < 0 or > 256 || oldMorphs.Count != expectedExisting ||
+            (preserveAll ? !expected.IsSubsetOf(oldMorphs.Keys.ToHashSet()) : oldMorphs.Keys.Any(expected.Contains)) ||
+            !newMorphs.Keys.ToHashSet().SetEquals(preserveAll ? oldMorphs.Keys : oldMorphs.Keys.Concat(expected)))
             throw new InvalidDataException("Cooked morph names differ from the audited set");
         foreach (var (name, oldMorph) in oldMorphs) {
             var current = newMorphs[name];

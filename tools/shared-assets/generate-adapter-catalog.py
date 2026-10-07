@@ -8,6 +8,8 @@ parser.add_argument("manifest", type=Path)
 parser.add_argument("variants", type=Path)
 parser.add_argument("output", type=Path)
 parser.add_argument("readbacks", type=Path, nargs="+")
+parser.add_argument("--include-locomotion-optical", action="store_true",
+                    help="Include the independently read back CW facial optical root")
 args = parser.parse_args()
 if args.output.exists():
     raise FileExistsError(args.output)
@@ -21,11 +23,15 @@ for path in args.readbacks:
                     raise ValueError("Conflicting root readbacks")
                 roots[entry["Package"]] = root
 manifest = json.loads(args.manifest.read_text())["materials"]
+if args.include_locomotion_optical:
+    refraction = next(item for item in manifest if item["name"] == "M_EyeRefraction")
+    manifest.append({**refraction, "name": "M_LocomotionOptical"})
 variants = {entry["parent"]: entry for entry in json.loads(args.variants.read_text())["materials"]}
 native = {
     "M_Genessa_eye": ("/Game/Sparta/FX/VFX/Shells/Genessa/Eyes/Materials/M_Genessa_Eyes", "eye"),
     "M_Genessa_smoke": ("/Game/Sparta/FX/VFX/Shells/Genessa/Eyes/Materials/M_Genessa_Eyes_Smoke", "smoke"),
     "M_EyeRefraction": ("/Game/Sparta/MasterMaterials/Character_Materials/Eyes/Shared/M_refraction_01", "refraction"),
+    "M_LocomotionOptical": ("/Game/CSS/Locomotion/Faces/Optical1/M_Optical", "refraction"),
     "M_Uber_opaque": ("/Game/Sparta/MasterMaterials/Character_Materials/UberShaderV2/M_Uber", "uber"),
 }
 rows = []

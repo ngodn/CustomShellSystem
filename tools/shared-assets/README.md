@@ -133,7 +133,9 @@ when creating the container, giving it a distinct internal ID.
 Generate `native/src/astral_material_catalog.inl` with
 `generate-adapter-catalog.py MANIFEST VARIANTS NEW_OUTPUT READBACK...` using the
 independently decoded original source roots. It pins graph StateIds and static
-defaults, not outfit IDs. Runtime reads effective instance overrides before
+defaults, not outfit IDs. Include `--include-locomotion-optical` and the cooked
+CW facial optical readback when generating the current 13-root catalog.
+Runtime reads effective instance overrides before
 choosing a companion. Unknown graphs/permutations fall back to the native double.
 
 `install-trial.py PACK NEW_RECEIPT_DIRECTORY` requires a closed game and the

@@ -11,6 +11,44 @@
 #include "SkeletalMeshAttributes.h"
 #include "Rendering/SkeletalMeshModel.h"
 #include "Rendering/SkeletalMeshLODModel.h"
+#include "Materials/MaterialParameterCollection.h"
+
+FString UCSSFacialLibrary::SetOpticalCollectionIdentity(UMaterialParameterCollection* Collection,
+    const FString& Json)
+{
+    if (!IsRunningCommandlet() || !Collection ||
+        Collection->GetPathName()!=TEXT("/Game/Sparta/Lighting/Blueprints/Deprecated/MPC_LightScenario.MPC_LightScenario"))
+        return TEXT("ERROR: unexpected optical collection stand-in");
+    TSharedPtr<FJsonObject> Root;
+    if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Json),Root) || !Root.IsValid())
+        return TEXT("ERROR: invalid collection identity JSON");
+    FString Text;
+    FGuid State;
+    if (!Root->TryGetStringField(TEXT("StateId"),Text) || !FGuid::Parse(Text,State))
+        return TEXT("ERROR: invalid collection state identity");
+    auto Scalars=Collection->ScalarParameters;
+    auto Vectors=Collection->VectorParameters;
+    auto Assign=[&](const TCHAR* Field,auto& Parameters) {
+        const TArray<TSharedPtr<FJsonValue>>* Rows=nullptr;
+        if (!Root->TryGetArrayField(Field,Rows) || Rows->Num()!=Parameters.Num()) return false;
+        for (int32 I=0;I<Parameters.Num();++I) {
+            const TSharedPtr<FJsonObject>* Row=nullptr;
+            FString Name,Id;
+            if (!(*Rows)[I]->TryGetObject(Row) || !Row->IsValid() ||
+                !(*Row)->TryGetStringField(TEXT("ParameterName"),Name) ||
+                Name!=Parameters[I].ParameterName.ToString() ||
+                !(*Row)->TryGetStringField(TEXT("ID"),Id) || !FGuid::Parse(Id,Parameters[I].Id)) return false;
+        }
+        return true;
+    };
+    if (!Assign(TEXT("ScalarParameters"),Scalars) || !Assign(TEXT("VectorParameters"),Vectors))
+        return TEXT("ERROR: collection parameter identities differ");
+    Collection->ScalarParameters=MoveTemp(Scalars);
+    Collection->VectorParameters=MoveTemp(Vectors);
+    Collection->StateId=State;
+    Collection->MarkPackageDirty();
+    return TEXT("PASS: optical collection identity restored");
+}
 
 namespace
 {

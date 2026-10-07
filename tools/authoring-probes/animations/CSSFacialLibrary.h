@@ -23,4 +23,9 @@ public:
     /** Export render-to-source indices for independent cooked-delta comparison. */
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString ExpressionVertexMap(class USkeletalMesh* Candidate);
+
+    /** Restore the native collection identifiers on an editor-only optical stand-in. */
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static FString SetOpticalCollectionIdentity(class UMaterialParameterCollection* Collection,
+        const FString& Json);
 };
