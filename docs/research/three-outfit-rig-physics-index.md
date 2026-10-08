@@ -161,8 +161,12 @@ The [October 9 hair-surface study](2026-10-09-hair-surface-contact.md) distingui
 signed-nearest false alarms from confirmed fringe/face intersections using
 matching unsolved poses, winding, rays and diagnostic renders. Gait/head-turn
 captures preserve source hashes and non-hair input. A Commander White-only
-head-clearance trial improves two witnesses and preserves every ponytail pose,
-but remains private and unaccepted. Do not repeat the raw nearest-normal screen
+head-clearance trial improved two witnesses but introduced a short-strand
+flyaway intersection. The subsequent [separate-joint prototype](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md#original-strand-binding-and-separate-joint-prototype)
+uses the original short-strand pivots and weights. Its 1,446 head-turn/gait
+samples preserve the other six chains exactly and clear that regression.
+It remains private, with no production mesh or cooked change; the study
+records the remaining left-bang samples and required skeleton/cook checks. Do not repeat the raw nearest-normal screen
 as proof of penetration or modify all colliders from its maxima.
 
 - Which exact final source recipes reproduce all installed meshes and active facial adapters?

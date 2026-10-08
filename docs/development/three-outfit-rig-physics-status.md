@@ -38,6 +38,25 @@ matched gameplay cost still need live verification. Removing unused simulation
 does not prove a particular FPS improvement. See the
 [solver evidence](../research/2026-10-08-secondary-motion-ownership.md#october-9-hair-lifecycle-and-genessas-unused-solver).
 
+## Current Commander White hair prototype
+
+The original binding combines a long right strand and a separate short strand
+on one chain. The latest private trial restores two short-strand joints and
+redistributes only their existing hair weights. The prototype passes 1,446
+head-turn/gait samples, preserves the other six chains exactly, and clears the
+previously confirmed right-side flyaway regression. The original matched
+source-opacity witnesses also clear; the wider 21-frame screen finds no
+section/frame worse than production by that diagnostic. Three source-material
+renders are reviewed.
+
+This is offline evidence, not an installed repair. Two left-bang head-turn
+samples still need visibility review. The current JSON-only joint ordering is
+for analysis and cannot ship. Next author a CW-only raw-skeleton extension,
+verify normal/facial mesh data and virtual mappings, then check cooking,
+Astral/CINE compatibility, lifecycle and cost. The shared skeleton and installed
+outfit remain unchanged. Recipes, limits and rejected harness evidence are in
+the [CW hair study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md#original-strand-binding-and-separate-joint-prototype).
+
 ## Current form-switch regressions
 
 The Customize-only-Ground-Height defect came from inconsistent appearance
