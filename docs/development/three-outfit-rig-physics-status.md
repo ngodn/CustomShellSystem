@@ -243,6 +243,25 @@ source inputs, logs, crash evidence and final readback remain. The removed files
 total 2,370,243,733 logical bytes; observed free space increased by 399,605,760
 bytes because shared/reflinked storage is not the same as logical file size.
 
+### First isolated gait comparison
+
+`genessa-deformer-render1/motion-render-exit1.json` exits 0. The motion driver
+uses pinned migrated Eve idle/walk/jog/sprint sequences, both Genessa variants,
+neutral/Glute Size 1 and stock/trial graphs. Each run advances three seconds
+with full cloth and post-process disabled. All 64 final-pose images and 32 GPU
+readbacks complete with protected inputs unchanged. The 16 matched cases have
+identical sampled body poses, finite output and zero non-cloth position changes.
+The inspected walking and Genessa idle/jog/sprint rear captures show restored
+upper-panel coverage at Glute Size 1.
+
+Do not accept full motion equivalence from this run. Separate neutral cloth
+simulations differ by up to 9.044045 cm in the sprint comparison, despite
+identical body poses; the source of that difference remains unisolated.
+`motion1-validation.json` explicitly accepts only its sanity checks and marks
+cloth equivalence unaccepted. Compare both graphs against one held simulation
+state next, then check continuous material/contact behavior. The reference-pose
+and Windows cooked-data results above remain valid. Nothing was installed.
+
 All 18 normal/facial meshes now have per-section nonzero bone influence records.
 The 570-section check passes normalization, indices and source immutability;
 an independent W3 full-array comparison matches all 25 sections. All nine

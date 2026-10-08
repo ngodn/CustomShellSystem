@@ -68,6 +68,15 @@ is suspected, not proven. This is an offline cooker setting, not a game option.
 Cooked buffer checks and shader compilation do not replace packaged runtime,
 animated contact, shading and performance validation.
 
+`CSS_PANEL_MOTION=1 CSS_PANEL_ALL_SHAPES=1` runs idle/walk/jog/sprint through
+the existing isolated helper. Stage the four pinned `EveLegacy/AN_*` inputs
+with a `motion-inputs.json` source/destination hash map first. Each case runs
+three seconds at 60 Hz, samples pelvis/feet and captures its final pose.
+`check_cloth_motion_study.py` verifies finite GPU output and preservation of
+non-cloth positions. Separate neutral runs currently differ in some cloth
+sections, so it explicitly does not accept cloth equivalence. Use a held
+simulation state to isolate that difference before claiming an animated fix.
+
 `StepClothDeformerStudy` drives an isolated preview component at 60 Hz with its
 post-process graph disabled. It accepts only current Genessa facial meshes in
 a preview world, disables automatic ticks and waits for each cloth step. It

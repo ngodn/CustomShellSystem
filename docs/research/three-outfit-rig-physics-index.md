@@ -85,6 +85,15 @@ runtime integration and performance remain open.
 Do not repeat the rejected direct-morph-input trial or claim the entire
 rear-panel repair is complete from the reference-pose result.
 
+The first gait comparison completes 64 images and 32 GPU readbacks across both
+variants, four gaits, neutral/size-1 and stock/trial. Body poses match and
+non-cloth positions remain unchanged; inspected size-1 captures improve panel
+coverage. Separate neutral cloth runs differ substantially during sprint.
+`motion1-validation.json` accepts sanity checks only. The next comparison must
+hold one simulation state while changing the graph, rather than treating those
+separate simulations as identical. This result does not invalidate the static
+input/cook checks or establish a gameplay regression.
+
 The [hand target study](2026-10-08-hand-target-ownership.md) resolves pinned
 Eve/Genessa source graphs' 115 transform writers to 19 left-hand finger bones.
 Parent propagation stays within those bones on the cooked target hierarchies.
