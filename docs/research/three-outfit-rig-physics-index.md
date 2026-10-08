@@ -47,6 +47,14 @@ The follow-up amendment explicitly adds implementation of facial-expression supp
 
 ## Tooling notes
 
+The current Genessa rear-panel report is reproduced at Glute Size 1 and clears
+at 0 according to the user's matched setting test. `genessa-panel-world1`
+captures equal mesh/morph/visibility state but different cloth enablement in
+preview/world. The outfit's [rear-panel study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_UnholyGenessa_eins0fx_P/authoring/rear-panel-morph-notes.md)
+records fresh section readback and the incomplete physical-shape transfer.
+Do not repeat U51 pinning or the October 1 unsafe post-creation array mutation.
+The current linear fit still has a 0.7985 cm glute residual; no repair is installed.
+
 The [hand target study](2026-10-08-hand-target-ownership.md) resolves pinned
 Eve/Genessa source graphs' 115 transform writers to 19 left-hand finger bones.
 Parent propagation stays within those bones on the cooked target hierarchies.

@@ -64,6 +64,27 @@ core selector rather than silently overwriting it.
 
 ## Weighted-surface coverage
 
+### October 8: reproduced Genessa rear-panel shape mismatch
+
+The user confirmed that the current Genessa rear panels cover correctly in the
+world at Glute Size 0, but not at 1. Read-only matched captures found the same
+mesh, saved morph values and enabled skirt section in preview/world; cloth is
+disabled only in preview. Body-rig inputs also differ and remain a separate
+unresolved observation. `genessa-panel-world1` preserves the requests/results.
+
+Fresh UE 5.6.1 section readback of both facial meshes exits 0 with unchanged
+source hashes. `genessa-panel-morph1` and the outfit's `panel-morph-transfer1/2`
+identify direct render-morph suppression by cloth and test physical shape
+transfer without modifying installed assets. The two variants produce identical
+transfer arrays. The first linear fit leaves a 0.7985 cm maximum glute residual
+near the rear center, so it is not a completed repair. Preserve the previous
+rejected pinning and unsafe shared-mutation experiments. See
+[the current outfit study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_UnholyGenessa_eins0fx_P/authoring/rear-panel-morph-notes.md).
+
+Full cloth fitting, safe runtime ownership, matched motion/clearance and
+performance remain open. Trebuchaxe visibility is still queued, uninvestigated
+and not fixed. No current study changes have been installed.
+
 All 18 normal/facial meshes now have per-section nonzero bone influence records.
 The 570-section check passes normalization, indices and source immutability;
 an independent W3 full-array comparison matches all 25 sections. All nine
