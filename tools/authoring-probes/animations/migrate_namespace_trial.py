@@ -7,6 +7,8 @@ from pathlib import Path
 
 import unreal
 
+MESH_DIGEST_ARRAYS = False
+
 
 def digest(path):
     with path.open('rb') as stream:
@@ -49,6 +51,10 @@ def snapshot(asset):
             'source': lambda: unreal.CSSRigAuditLibrary.snapshot_mesh_sections(asset, []),
             'cloth_custom': lambda: unreal.CSSRigAuditLibrary.snapshot_cloth_custom_data(asset),
         }
+        if MESH_DIGEST_ARRAYS:
+            result['mesh_snapshot_format'] = 'array-blake3-v1'
+            probes['render'] = lambda: unreal.CSSRigAuditLibrary.snapshot_render_sections(asset, [], morphs, True)
+            probes['source'] = lambda: unreal.CSSRigAuditLibrary.snapshot_mesh_sections(asset, [], True)
         for name, probe in probes.items():
             raw = probe()
             if raw.startswith('ERROR:'):
@@ -172,11 +178,16 @@ def verify_references(asset, expected, exact=None):
 
 
 def main():
+    global MESH_DIGEST_ARRAYS
     stage = Path(os.environ['CSS_NAMESPACE_STAGE']).resolve(strict=True)
     content = Path(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir())).resolve()
     if content != stage / 'Content' or not unreal.SystemLibrary.get_engine_version().startswith('5.6.1-'):
         raise ValueError('Expected the isolated UE 5.6.1 staging project')
     plan = json.loads((stage / 'input.json').read_text())
+    mesh_format = plan.get('mesh_snapshot_format', 'json-v1')
+    if mesh_format not in ('json-v1', 'array-blake3-v1'):
+        raise ValueError('Unknown mesh snapshot format: ' + str(mesh_format))
+    MESH_DIGEST_ARRAYS = mesh_format == 'array-blake3-v1'
     if 'native_reference' in plan:
         native = plan['native_reference']
         native_path = content / (native['package'].removeprefix('/Game/') + '.uasset')

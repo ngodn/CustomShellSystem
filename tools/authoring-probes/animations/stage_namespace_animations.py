@@ -26,6 +26,8 @@ def main():
     parser.add_argument('--include-playback', action='store_true')
     parser.add_argument('--include-astral', action='store_true')
     parser.add_argument('--packages', type=Path, help='Explicit package list instead of animation selection')
+    parser.add_argument('--mesh-snapshot-format', choices=('json-v1', 'array-blake3-v1'), default='json-v1',
+                        help='Streaming array digests require the matching CSSRigAudit module')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     stage = args.output.resolve()
@@ -122,6 +124,7 @@ def main():
     refresh = [row['old_package'] for row in assets
                if row['old_package'].startswith('/Game/CSS/Eve/Anim/AN_')]
     plan = dict(assets=assets, refresh_packages=refresh, inventory=str(args.inventory.resolve()),
+                mesh_snapshot_format=args.mesh_snapshot_format,
                 inventory_sha256=sha(args.inventory),
                 native_reference=dict(package=native_package, source=str(native_reference),
                     sha256=receipt['native_reference_sha256'], receipt=str(receipt_path),

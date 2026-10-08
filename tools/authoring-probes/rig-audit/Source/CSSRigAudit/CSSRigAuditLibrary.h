@@ -21,11 +21,12 @@ public:
     static FString SnapshotMesh(class USkeletalMesh* Mesh);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
-    static FString SnapshotMeshSections(class USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots);
+    static FString SnapshotMeshSections(class USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots,
+                                        bool bDigestArrays = false);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString SnapshotRenderSections(class USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots,
-                                          const TArray<FName>& MorphNames);
+                                          const TArray<FName>& MorphNames, bool bDigestArrays = false);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString CompareMeshCloth(class USkeletalMesh* Source, class USkeletalMesh* Candidate);

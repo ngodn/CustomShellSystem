@@ -1,4 +1,5 @@
 #include "CSSRigAuditLibrary.h"
+#include "CSSJsonAuditArray.h"
 
 #include "Engine/SkeletalMesh.h"
 #include "MeshDescription.h"
@@ -16,7 +17,8 @@ TSharedPtr<FJsonValue> Numbers(std::initializer_list<double> Values)
 }
 }
 
-FString UCSSRigAuditLibrary::SnapshotMeshSections(USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots)
+FString UCSSRigAuditLibrary::SnapshotMeshSections(USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots,
+                                                bool bDigestArrays)
 {
     if (!IsRunningCommandlet() || !Mesh)
         return TEXT("ERROR: expected a commandlet mesh");
@@ -44,7 +46,7 @@ FString UCSSRigAuditLibrary::SnapshotMeshSections(USkeletalMesh* Mesh, const TAr
         if (!AllSlots && Found.Contains(Slot)) return TEXT("ERROR: ambiguous material slot");
         Found.Add(Slot);
         TSet<FVertexID> Used;
-        TArray<TSharedPtr<FJsonValue>> Faces;
+        FJsonAuditArray Faces(bDigestArrays);
         for (const FTriangleID Triangle : Description->GetPolygonGroupTriangles(Group))
         {
             TArray<TSharedPtr<FJsonValue>> Corners;
@@ -77,7 +79,7 @@ FString UCSSRigAuditLibrary::SnapshotMeshSections(USkeletalMesh* Mesh, const TAr
         }
         TArray<FVertexID> Ordered = Used.Array();
         Ordered.Sort([](FVertexID A, FVertexID B) { return A.GetValue() < B.GetValue(); });
-        TArray<TSharedPtr<FJsonValue>> Vertices;
+        FJsonAuditArray Vertices(bDigestArrays);
         for (const FVertexID Vertex : Ordered)
         {
             const FVector3f Position = Positions[Vertex];
@@ -102,7 +104,7 @@ FString UCSSRigAuditLibrary::SnapshotMeshSections(USkeletalMesh* Mesh, const TAr
         for (FName Name : Attributes.GetMorphTargetNames())
         {
             const auto Deltas = Attributes.GetVertexMorphPositionDelta(Name);
-            TArray<TSharedPtr<FJsonValue>> Values;
+            FJsonAuditArray Values(bDigestArrays);
             for (const FVertexID Vertex : Ordered)
             {
                 const FVector3f Delta = Deltas[Vertex];
@@ -111,14 +113,14 @@ FString UCSSRigAuditLibrary::SnapshotMeshSections(USkeletalMesh* Mesh, const TAr
             }
             auto Morph = MakeShared<FJsonObject>();
             Morph->SetStringField(TEXT("name"), Name.ToString());
-            Morph->SetArrayField(TEXT("deltas"), MoveTemp(Values));
+            Morph->SetField(TEXT("deltas"), Values.Finish());
             Morphs.Add(MakeShared<FJsonValueObject>(Morph));
         }
         auto Row = MakeShared<FJsonObject>();
         Row->SetNumberField(TEXT("polygon_group"), Group.GetValue());
         Row->SetStringField(TEXT("slot"), Slot.ToString());
-        Row->SetArrayField(TEXT("vertices"), MoveTemp(Vertices));
-        Row->SetArrayField(TEXT("triangles"), MoveTemp(Faces));
+        Row->SetField(TEXT("vertices"), Vertices.Finish());
+        Row->SetField(TEXT("triangles"), Faces.Finish());
         Row->SetArrayField(TEXT("morphs"), MoveTemp(Morphs));
         Groups.Add(MakeShared<FJsonValueObject>(Row));
     }

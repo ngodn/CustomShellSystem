@@ -39,6 +39,19 @@ The follow-up amendment explicitly adds implementation of facial-expression supp
 
 ## Tooling notes
 
+`eve-rig-editor2` passes migration and fresh reload of all 309 selected packages,
+with old staged paths absent and all 316 source inputs unchanged. Its 36 rig
+assets also pass the private Windows cook. Final assembly/readback remains.
+
+Commander White's initial migration stopped before renaming because the full
+render JSON exceeded UE's 2 GB FString writer limit. All 184 inputs stayed
+unchanged. The optional `array-blake3-v1` audit now hashes complete arrays a row
+at a time. Its full C4 audit and independent comparison against 75 detailed
+arrays pass. See `commander-rig-editor1/array-digest-probe`; do not remove mesh
+data or reduce audit coverage to address this serializer limit. The implementation
+uses UE 5.6.1's local `Hash/Blake3.h` and `Serialization/JsonWriter.h`, with the
+[archive interface documented by Epic](https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/FArchive).
+
 The local faster-whisper transcriber initially hit a PyAV `metadata_errors` API mismatch. Passing normalized PCM samples from extracted WAV files avoided that decoder path. Transcription completed for all four clips; versions are in `audio-transcripts.json`. After review, the task-local model and virtual environment were removed (582,088,872 logical bytes). All four source hashes were rechecked unchanged. Source videos, extracted evidence and the script remain; validation is recorded in `work/rig-physics-review-20261008/review-validation.json`.
 
 ## Open questions for implementation

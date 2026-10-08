@@ -1,4 +1,5 @@
 #include "CSSRigAuditLibrary.h"
+#include "CSSJsonAuditArray.h"
 
 #include "Animation/MorphTarget.h"
 #include "Engine/SkeletalMesh.h"
@@ -18,7 +19,7 @@ TSharedPtr<FJsonValue> Array(std::initializer_list<double> Numbers)
 }
 
 FString UCSSRigAuditLibrary::SnapshotRenderSections(USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots,
-                                                  const TArray<FName>& MorphNames)
+                                                  const TArray<FName>& MorphNames, bool bDigestArrays)
 {
     if (!IsRunningCommandlet() || !Mesh) return TEXT("ERROR: commandlet mesh required");
     const bool AllSlots = MaterialSlots.IsEmpty();
@@ -48,7 +49,7 @@ FString UCSSRigAuditLibrary::SnapshotRenderSections(USkeletalMesh* Mesh, const T
         Group->SetNumberField(TEXT("cloth_lod"), Section.ClothingData.AssetLodIndex);
         const uint32 End = Section.BaseVertexIndex+Section.NumVertices;
         if (End < Section.BaseVertexIndex || End > Lod.GetNumVertices()) return TEXT("ERROR: invalid vertex range");
-        FRows Vertices, Skin, Indices;
+        FJsonAuditArray Vertices(bDigestArrays), Skin(bDigestArrays), Indices(bDigestArrays);
         for (uint32 Index = Section.BaseVertexIndex; Index < End; ++Index)
         {
             const auto P = Buffers.PositionVertexBuffer.VertexPosition(Index);
@@ -92,13 +93,13 @@ FString UCSSRigAuditLibrary::SnapshotRenderSections(USkeletalMesh* Mesh, const T
             if (Vertex < Section.BaseVertexIndex || Vertex >= End) return TEXT("ERROR: triangle outside section");
             Indices.Add(MakeShared<FJsonValueNumber>(Vertex-Section.BaseVertexIndex));
         }
-        Group->SetArrayField(TEXT("vertices"), MoveTemp(Vertices));
-        Group->SetArrayField(TEXT("weights"), MoveTemp(Skin));
-        Group->SetArrayField(TEXT("indices"), MoveTemp(Indices));
+        Group->SetField(TEXT("vertices"), Vertices.Finish());
+        Group->SetField(TEXT("weights"), Skin.Finish());
+        Group->SetField(TEXT("indices"), Indices.Finish());
         FRows ClothLods;
         for (const auto& ClothLod : Section.ClothMappingDataLODs)
         {
-            FRows Mappings;
+            FJsonAuditArray Mappings(bDigestArrays);
             for (const auto& Entry : ClothLod)
             {
                 const auto P = Entry.PositionBaryCoordsAndDist;
@@ -110,7 +111,7 @@ FString UCSSRigAuditLibrary::SnapshotRenderSections(USkeletalMesh* Mesh, const T
                     double(Entry.SourceMeshVertIndices[0]), double(Entry.SourceMeshVertIndices[1]),
                     double(Entry.SourceMeshVertIndices[2]), double(Entry.SourceMeshVertIndices[3]), Entry.Weight}));
             }
-            ClothLods.Add(MakeShared<FJsonValueArray>(MoveTemp(Mappings)));
+            ClothLods.Add(Mappings.Finish());
         }
         Group->SetArrayField(TEXT("cloth_mappings"), MoveTemp(ClothLods));
         FRows Morphs;
@@ -118,7 +119,7 @@ FString UCSSRigAuditLibrary::SnapshotRenderSections(USkeletalMesh* Mesh, const T
         {
             const auto* Morph = Mesh->FindMorphTarget(Name);
             if (!Morph || !Morph->HasDataForLOD(0)) return TEXT("ERROR: requested morph unavailable");
-            FRows Deltas;
+            FJsonAuditArray Deltas(bDigestArrays);
             for (const auto& Delta : Morph->GetMorphLODModels()[0].Vertices)
             {
                 if (Delta.SourceIdx < Section.BaseVertexIndex || Delta.SourceIdx >= End) continue;
@@ -129,7 +130,7 @@ FString UCSSRigAuditLibrary::SnapshotRenderSections(USkeletalMesh* Mesh, const T
             }
             auto Shape = MakeShared<FJsonObject>();
             Shape->SetStringField(TEXT("name"), Name.ToString());
-            Shape->SetArrayField(TEXT("deltas"), MoveTemp(Deltas));
+            Shape->SetField(TEXT("deltas"), Deltas.Finish());
             Morphs.Add(MakeShared<FJsonValueObject>(Shape));
         }
         Group->SetArrayField(TEXT("morphs"), MoveTemp(Morphs));

@@ -113,7 +113,40 @@ necessarily reclaim their logical size.
 the original hash-pinned sources. It uses module2 and an independent reflink
 copy of the warm DDC. `space-check.json` records the preflight space estimate;
 `command.json`, `console.log` and the eventual `exit.json` record the retry.
-Fresh reload, cook and complete assembly remain required before acceptance.
+The retry and fresh-process reload both pass for all 309 selected packages.
+The reload ran with staged legacy paths removed from Content; all 316 original
+inputs remain hash-identical. `eve-rig-cook1` then saved all 36 rig packages for
+Windows with exit 0. Complete outfit assembly and independent cooked mesh
+comparison remain required before acceptance. Nothing has been installed.
+
+### Large Commander White mesh audit
+
+`commander-rig-editor1` contains 172 selected packages and 184 independent,
+hash-pinned inputs. Its first attempt failed before renaming: the render audit
+tried to serialize more than 2 GB through UE's FString memory writer. The
+184 originals and private staged files were rehashed unchanged afterward.
+This was an offline audit failure, not a game or outfit failure.
+
+`mesh-namespace-module3` adds opt-in `array-blake3-v1` snapshots. Large render
+and source arrays are hashed incrementally, one complete row at a time. The
+ordinary detailed snapshot remains available. Geometry, normals, tangents,
+UVs, colors, indices, weights, cloth mappings and morph deltas remain covered;
+there is no sampling or reduced mesh. Material-slot validation is unchanged.
+
+The C++20 UE 5.6.1 build and complete C4 source/render audit pass. An independent
+Python BLAKE3 implementation compared the exact UTF-8 arrays from the detailed
+snapshot: 39 render arrays containing 1,311,333 rows and 36 source arrays
+containing 209,281 rows match. The selected sections include cloth mappings;
+missing and duplicate slot requests still fail. Evidence is in
+`commander-rig-editor1/array-digest-probe/independent-comparison.json`.
+The migration retry explicitly selects the new snapshot format. Save/reload,
+cook and live acceptance are still pending.
+
+Completed Eve reload/cook caches and the obsolete failed Eve editor cache
+were removed with receipts, preserving candidates, original inputs and logs.
+Module3's rebuildable Intermediate directory was also removed after its build
+and audit passed; source and binary hashes were checked unchanged. These
+cleanups remove reproducible work data, not outfit or release content.
 
 `eve-mesh-comparison1/original-decoded.json` records independently decoded
 geometry, skin weights, cloth mappings and morph buffers for all 22 skeletal
