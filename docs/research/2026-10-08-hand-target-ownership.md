@@ -101,7 +101,30 @@ and the existing edge-crossing probe. Coplanar contacts and enclosed surfaces
 are excluded; render seams remain split. Public body morphs stay zero, with
 only finger motion replayed and no weapon or cloth simulation.
 
+## Current graph replay
+
+`genessa-current-hand1` executes the migrated character-owned `CR_Hand` source
+directly in UE 5.6.1 for all 453 nonsingular fixtures. Every evaluation reports
+valid output, finite transforms, unchanged translations/scales and no rotations
+outside the 19 intended finger bones. Compared with retained native output,
+the maximum angular difference is 0.00008483 degrees and the largest corrective
+curve difference is 0.000000865. The source UAsset's hash is unchanged.
+
+The editor exited 0, reporting seven warnings. It ran in a filesystem sandbox
+with only a fresh local evidence directory writable; attempted editor-config
+writes were refused. `command.json`, `exit.json`, `engine.log`, `report.json`
+and `retained-output-comparison.json` record the execution. The current recipe
+is the Unholy Genessa mod's `tools/probe_current_hand_graph.py`.
+
+`genessa-current-hand-skin1` passes those fresh outputs through the same W3
+deformation screen using `--native-report`. It reproduces the same two extra
+thumb triangles in the same single fixture; all other poses preserve the
+reference contact pairs. The overlap is therefore reproduced with the current
+editor graph, not attributable to stale retained hand outputs. It remains a
+small synthetic-overlay contact case, not a reproduced gameplay regression.
+
 No rig, mesh, package, installed setting or runtime DLL changed in this pass.
-The thumb case needs matched current-graph reproduction before a repair. Cooked
-literal identity, runtime scheduling, wrist/weapon grip and motion continuity
-remain unverified.
+Before a targeted correction, check the same input through the full component
+graph and confirm the actual visible surface. Do not turn this local thumb
+crease case into a whole-hand or skeleton redesign. Cooked execution, runtime
+scheduling, wrist/weapon grip and motion continuity remain unverified.

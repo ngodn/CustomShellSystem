@@ -61,6 +61,12 @@ This flags a small offline contact case for current-graph reproduction, not a
 proven gameplay regression or acceptance of the whole hand/weapon interaction.
 See the hand study for source hashes, images, exact scope and cleanup evidence.
 
+The current migrated hand graph has now been executed directly in UE 5.6.1 on
+all 453 nonsingular inputs. Valid finite outputs preserve translations, scales
+and all non-finger rotations. Fresh-output skin replay reproduces the same one
+thumb case, ruling out stale native-output fixtures. Full component/gameplay
+reproduction and visible severity still need checking before changing the mesh.
+
 `namespace-deployment1/validation.json` records the independent post-install
 check. The selected core is `css_core-namespace-7d0e24cf60df400c.dll`, SHA256
 `7d0e24cf60df400c562f44fa3195a5e201df69790c6cf2a665118405c2893908`.
