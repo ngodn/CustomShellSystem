@@ -1,6 +1,22 @@
 # Three-outfit implementation status
 
-Updated 2026-10-08. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial is installed. The user accepted the Genessa facial-playback and visibility correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
+Updated 2026-10-09. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
+
+## Current form-switch regressions
+
+The Customize-only-Ground-Height defect came from inconsistent appearance
+selection: rendering used the mirrored living Genessa outfit while menu and
+facial consumers read the independent, stale Stray selection. Commit `b1e1cbe`
+uses the existing mirrored-selection resolver consistently. All 24 host suites,
+153 animation checks and the Windows build pass. The core
+`css_core-form-selection-48690559fd075516.dll` is installed and hash-verified;
+packages and saved settings were preserved. Live confirmation is pending.
+
+The separate first Stray summon failure remains undiagnosed: the user sees the
+summon animation but no doubles, and a Faithful/Stray round trip restores it.
+A read-only ability/montage/clone capture is prepared. Do not claim that the
+selection fix also fixes summoning. See
+[the investigation](genessa-form-selection-regression.md).
 
 ## Live trial correction: facial playback and component visibility
 

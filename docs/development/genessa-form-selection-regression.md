@@ -37,7 +37,12 @@ Selection repair `b1e1cbe` passed 153 animation checks, all 24 host test targets
 and the Windows core build. The staged DLL is
 `genessa-form-first-stray1/css_core.dll`, SHA-256
 `48690559fd0755162174aace640204f686f199aa1a86d523c9848670ec39646d`.
-It has not been installed or confirmed in game.
+It was installed after the user closed the game, with no game process present
+at the final selector change. The selected core is
+`css_core-form-selection-48690559fd075516.dll`. Installed readback matches the
+staged hash. Protected settings/loader hashes and outfit package file metadata
+remain unchanged. `installed.json` and `preinstall/core.json` retain the receipt
+and previous selector. In-game confirmation is pending.
 
 The cooked `GA_AstralClones_Action` routes the `Activate` montage notify to
 `SpawnPrimaryClone`. The animation task uses
