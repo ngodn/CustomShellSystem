@@ -1,6 +1,6 @@
 # Three-outfit implementation status
 
-Updated 2026-10-08. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial is installed; live acceptance is pending. Earlier sections describing private candidates record their state before this deployment.
+Updated 2026-10-08. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial is installed. The user accepted the Genessa facial-playback and visibility correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
 
 ## Live trial correction: facial playback and component visibility
 
@@ -51,6 +51,15 @@ now resolves 115 transform writers to 19 left-hand bones, with propagation
 contained in that set and all 16 corrective morph names present on active
 Eve/Genessa meshes. Six checker tests pass. Cooked VM literal identity, live
 graph scheduling, actual contact and runtime cost remain unverified.
+
+The W3 hand skin now has a posed screen on both variants using 453 retained
+native-output fixtures each. 452 poses preserve the four reference seam pairs;
+one full-overlay running-attack input adds two local thumb crease crossings.
+The deliberately uncalibrated control produces 1,102 pairs. The identical
+normal/facial skin buffers rule out facial integration as a hand-geometry change.
+This flags a small offline contact case for current-graph reproduction, not a
+proven gameplay regression or acceptance of the whole hand/weapon interaction.
+See the hand study for source hashes, images, exact scope and cleanup evidence.
 
 `namespace-deployment1/validation.json` records the independent post-install
 check. The selected core is `css_core-namespace-7d0e24cf60df400c.dll`, SHA256
