@@ -17,6 +17,8 @@ def main():
     parser.add_argument('decoded', type=Path)
     parser.add_argument('raw', type=Path)
     parser.add_argument('output', type=Path)
+    parser.add_argument('--only', action='append', default=[], help='Explicit subset of clip IDs')
+    parser.add_argument('--raw-clock', choices=('nominal', 'acl_sample_index'), default='nominal')
     args = parser.parse_args()
     if args.output.exists():
         raise FileExistsError(args.output)
@@ -25,18 +27,22 @@ def main():
     if not decoded['complete'] or not raw_report['passed']:
         raise ValueError('Incomplete decoded or raw evidence')
     raw_by_id = {r['id']: Path(r['metadata']) for r in raw_report['clips']}
-    if len(raw_by_id) != len(raw_report['clips']) or set(raw_by_id) != {r['id'] for r in decoded['results']}:
+    entries = [(i, r) for i, r in enumerate(decoded['results']) if not args.only or r['id'] in args.only]
+    if (not entries or len({r['id'] for _, r in entries}) != len(entries) or
+            (args.only and set(args.only) != {r['id'] for _, r in entries}) or
+            len(raw_by_id) != len(raw_report['clips']) or set(raw_by_id) != {r['id'] for _, r in entries}):
         raise ValueError('Raw and cooked inventory differ')
     results, inputs = [], {}
     limits = dict(position_cm=.01, quaternion_distance=.001, scale=.00001)
-    for index, entry in enumerate(decoded['results']):
+    for index, entry in entries:
         directory = args.decoded/f'{index:02d}'
         manifest_path = directory/'absolute-tracks-full.json'
         cooked = json.loads(manifest_path.read_text())
         metadata = raw_by_id[entry['id']]
         raw = json.loads(metadata.read_text())
         frames, names = raw['frames'], raw['names']
-        if (raw['component_type'] != 'float64-le' or raw['should_retarget'] is not False or
+        if (raw.get('sample_clock', 'nominal') != args.raw_clock or
+                raw['component_type'] != 'float64-le' or raw['should_retarget'] is not False or
                 raw['layout'] != 'frame,bone,qx-qy-qz-qw-tx-ty-tz-sx-sy-sz' or
                 cooked['componentType'] != 'float32-le' or cooked['roundingPolicy'] != 'none' or
                 cooked['layout'] != 'frame,track,component' or cooked['frames'] != frames or
@@ -71,11 +77,13 @@ def main():
                 if value > maxima[key]:
                     maxima[key],worst[key] = value,dict(frame=int(start+frame),bone=names[bone])
         passed = all(maxima[key] < limit for key,limit in limits.items())
-        results.append(dict(id=entry['id'],frames=frames,bones=len(names),passed=passed,errors=maxima,worst=worst))
+        results.append(dict(id=entry['id'],frames=frames,bones=len(names),passed=passed,errors=maxima,worst=worst,
+            max_time_offset_seconds=raw.get('max_time_offset_seconds', 0.)))
         del a,b
     args.output.write_text(json.dumps(dict(passed=all(r['passed'] for r in results),clips=results,
-        limits=limits,inputs=inputs,rounding_policy='none',
-        scope='Every source-frame timestamp: cooked ACL runtime samples versus raw UE poses. Includes float-clock and compression differences; does not validate gameplay.'),indent=2)+'\n')
+        limits=limits,inputs=inputs,rounding_policy='none',raw_clock=args.raw_clock,
+        subset=bool(args.only),
+        scope='Every source-frame timestamp: cooked ACL runtime samples versus raw UE poses at the declared reference clock. A matched-clock result measures compression fidelity, not nominal-time equivalence or gameplay.'),indent=2)+'\n')
     if not all(r['passed'] for r in results):
         raise ValueError('Cooked key differences exceed bounds; see report')
 

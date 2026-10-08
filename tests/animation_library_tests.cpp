@@ -331,6 +331,56 @@ int main(int argc,char** argv) {
         fs::remove(file);
         expect(Catalog::load(root).animation_libraries.empty() && Catalog::load(root).outfits.size()==1,
                "Removing library invalidated existing outfit");
+        if(argc==3 && std::string_view(argv[1])=="--audited-complete-native-pack") {
+            const auto packages=Catalog::load(root,argv[2],root/"complete-native-cache");
+            expect(packages.animation_libraries.size()==1 && packages.diagnostics.at("rejected")==0,
+                   "Complete native library failed to load");
+            const auto& library=packages.animation_libraries.front();
+            const std::string human="/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton";
+            expect(library.entries.size()==63,"Complete native library lost entries");
+            size_t idle_count=0, carrier_count=0;
+            for(const auto& entry:library.entries) {
+                const auto slot=entry.slot.value_or(AnimationSlot::Idle);
+                const auto match=resolve_library_animation(packages.animation_libraries,slot,entry.id,{},human);
+                expect(match.entry==&entry && match.candidates.size()==1 && !match.candidates.front().bundled &&
+                       match.candidates.front().declared_skeleton==human &&
+                       match.candidates.front().asset.starts_with("/Game/CSS/eins0fx/Shared/Locomotion/NativeHuman/"),
+                       "Native selection did not resolve its single owned candidate");
+                const auto& carrier=match.candidates.front().idle_blend_space;
+                expect(!carrier.empty()==(entry.slot==AnimationSlot::Idle),
+                       "Native idle carrier missing or assigned to a non-looping choice");
+                if(!carrier.empty()) ++carrier_count;
+                if(slot==AnimationSlot::Idle) {
+                    ++idle_count;
+                    const auto cine=resolve_library_performance(packages.animation_libraries,entry.id,human);
+                    expect(cine.entry==&entry && cine.candidates.size()==1 &&
+                           cine.candidates.front().asset==match.candidates.front().asset,
+                           "CSS and CINE selected different native body assets");
+                }
+                expect(resolve_library_animation(packages.animation_libraries,slot,entry.id,{},
+                       "/Game/Unknown/Skeleton.Skeleton").candidates.empty(),
+                       "Native alternatives accepted an unknown skeleton");
+                for(const auto& alias:entry.aliases) {
+                    AnimationOption bundled;
+                    bundled.id=alias.id;
+                    bundled.name="Saved choice";
+                    bundled.hide_weapons=entry.hide_weapons;
+                    if(alias.slot==AnimationSlot::Idle) bundled.clip=alias.asset;
+                    else bundled.blend_space=alias.asset;
+                    const auto saved=resolve_library_animation(packages.animation_libraries,alias.slot,alias.id,
+                        {bundled},human);
+                    if(saved.entry!=&entry || saved.candidates.empty() ||
+                       saved.candidates.front().asset!=match.candidates.front().asset)
+                        std::cerr<<"Legacy native choice: "<<entry.id<<" / "<<alias.id<<" / "<<alias.asset<<'\n';
+                    expect(saved.entry==&entry && !saved.candidates.empty() &&
+                           saved.candidates.front().asset==match.candidates.front().asset,
+                           "Legacy saved choice failed to resolve the native alternative");
+                }
+            }
+            expect(idle_count==60 && carrier_count==8,"Native idle inventory changed");
+            const auto options=merge_library_animation_options(packages.animation_libraries,AnimationSlot::Idle,{});
+            expect(options.size()==60,"Native idle menu omitted or duplicated choices");
+        }
         if(argc==4 && std::string_view(argv[1])=="--audited-namespace-pack") {
             const auto packages=Catalog::load(root,argv[2],root/"namespace-audit-cache");
             if(packages.diagnostics.at("rejected")!=0) std::cerr<<packages.diagnostics.dump(2)<<'\n';

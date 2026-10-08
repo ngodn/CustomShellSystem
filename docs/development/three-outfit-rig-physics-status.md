@@ -10,17 +10,18 @@ shared-asset ZIP. The user chose the stable CSS milestone on October 8; this
 does not change the outstanding release gates. Inspection of the actual distribution folders finds none of these new
 outfit release versions packaged yet. The installed coordinated trial and
 accepted facial/action tests do not constitute upload-ready releases. The
-native library now has 59 newly authored candidates covering every previously
-unconverted entry. Full-batch fresh authored-key readback passes all 59 candidates; compressed
-pose comparison passes 58. Cinderella exceeds the 0.01 cm virtual-hand position
-bound at frame 7746 (0.0198305 cm). A separate 0.0001 codec trial still fails at
-0.0196853 cm; do not ship it or assume codec precision is the cause. The seven
-native idle carriers pass fresh reload and 1,092 interpolation queries. Windows
-cooking and game-only container readback pass all 67 new packages. Independent
-cooked runtime decoding confirms the same 58/59 strict pose result. A targeted
-clock-alignment probe reduces Cinderella's failing sample below 0.01 cm, but
-full-clip acceptance is still pending. Catalog integration, contact, performance,
-regression and release packaging remain open. See
+native library now has all 59 newly authored alternatives in a merged shared-pack
+candidate, preserving the original four native gaits. Fresh authored-key
+readback passes all 59. Nominal-time compressed comparison passes 58; Cinderella's
+0.0198305 cm virtual-hand difference is traced to ACL float-time sampling.
+Its complete 8,381-frame matched-clock comparison passes the unchanged 0.01 cm
+bound (maximum 0.00656854 cm). No motion or codec edit was needed. The rejected
+C12 precision trial is not selected. Seven new native idle carriers pass fresh
+reload and 1,092 interpolation queries. All 67 cooked inputs pass game-only
+container readback. The merged `shared-native-library1` contains 215 packages
+and passes 416 native catalog checks both alone and with the outfits, plus the
+existing 1,380 outfit catalog checks. It is not installed. Contact, performance,
+gameplay regression and release packaging remain open. See
 [native conversion evidence](shared-animation-native-human.md#october-8-conversion-batch).
 
 The first namespace trial loaded Genessa's new facial mesh, but the player retained
@@ -165,7 +166,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Mesh/weights/contacts | Fresh checks of all 16 editor-built meshes pass weight sums, section/bone/morph indices and finite-data checks. Deformation/contact checks and cooked comparison remain |
 | Unholy facial support | Both W3 candidates with 137 morphs and unchanged cloth data are installed for testing. Two adapters, 21 presets and six facial performances are integrated. Oral assets resolve without Eve mounted. Live face/eye/material/interruption acceptance remains |
 | Shared organization | Four coordinated packages installed, with 735 unique author-owned asset packages and 106 catalog references checked independently. Public IDs and legacy aliases retained; 1,380 native catalog checks and 28 dependency scenarios pass. Previous six packages retained outside the mount tree. Live CSS/CINE discovery and playback acceptance remain |
-| Locomotion | 63-entry installed catalog captured; four native declarations, 59 missing; conversion and motion-quality review pending |
+| Locomotion | Installed catalog has four native declarations; merged candidate has all 63, with authored/cooked and catalog checks complete. Visible contact, continuous motion and gameplay review pending |
 | Gameplay regressions | Current interruption baseline accepted by user; candidate regression tests pending |
 | Performance | Current package sizes recorded; matched gameplay captures pending |
 | Trebuchaxe report | Low priority, queued and unverified |

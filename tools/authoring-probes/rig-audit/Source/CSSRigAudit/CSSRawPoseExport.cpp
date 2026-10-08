@@ -7,7 +7,8 @@
 #include "Misc/Paths.h"
 #include "Serialization/JsonSerializer.h"
 
-FString UCSSRigAuditLibrary::ExportRawPoseKeys(UAnimSequence* Sequence, const FString& OutputFile)
+FString UCSSRigAuditLibrary::ExportRawPoseKeys(UAnimSequence* Sequence, const FString& OutputFile,
+    bool bMatchACLSampleClock)
 {
     FString File = FPaths::ConvertRelativePathToFull(OutputFile);
     FPaths::CollapseRelativeDirectories(File);
@@ -26,11 +27,23 @@ FString UCSSRigAuditLibrary::ExportRawPoseKeys(UAnimSequence* Sequence, const FS
     Options.EvaluationType = EAnimDataEvalType::Raw;
     Options.bShouldRetarget = false;
     TArray<FName> Names;
+    double MaxTimeOffset = 0;
     for (int32 Frame = 0; Frame < Keys; ++Frame)
     {
         FAnimPose Pose;
-        UAnimPoseExtensions::GetAnimPoseAtTime(Sequence,
-            static_cast<double>(Frame) * Rate.Denominator / Rate.Numerator, Options, Pose);
+        const double NominalTime = static_cast<double>(Frame) * Rate.Denominator / Rate.Numerator;
+        double Time = NominalTime;
+        if (bMatchACLSampleClock)
+        {
+            // ACL seeks in float seconds, then computes a float sample index.
+            const float SampleRate = static_cast<float>(Rate.AsDecimal());
+            const float FloatTime = static_cast<float>(NominalTime);
+            const float SampleIndex = FloatTime * SampleRate;
+            Time = FMath::Clamp(static_cast<double>(SampleIndex), 0., static_cast<double>(Keys - 1)) /
+                Rate.AsDecimal();
+        }
+        MaxTimeOffset = FMath::Max(MaxTimeOffset, FMath::Abs(Time - NominalTime));
+        UAnimPoseExtensions::GetAnimPoseAtTime(Sequence, Time, Options, Pose);
         if (!Pose.IsValid()) return TEXT("ERROR: invalid raw pose");
         TArray<FName> Current;
         UAnimPoseExtensions::GetBoneNames(Pose, Current);
@@ -61,6 +74,8 @@ FString UCSSRigAuditLibrary::ExportRawPoseKeys(UAnimSequence* Sequence, const FS
     Report->SetStringField(TEXT("component_type"), TEXT("float64-le"));
     Report->SetStringField(TEXT("layout"), TEXT("frame,bone,qx-qy-qz-qw-tx-ty-tz-sx-sy-sz"));
     Report->SetBoolField(TEXT("should_retarget"), false);
+    Report->SetStringField(TEXT("sample_clock"), bMatchACLSampleClock ? TEXT("acl_sample_index") : TEXT("nominal"));
+    Report->SetNumberField(TEXT("max_time_offset_seconds"), MaxTimeOffset);
     FString Result;
     if (!FJsonSerializer::Serialize(Report, TJsonWriterFactory<>::Create(&Result)))
         return TEXT("ERROR: cannot serialize raw export metadata");

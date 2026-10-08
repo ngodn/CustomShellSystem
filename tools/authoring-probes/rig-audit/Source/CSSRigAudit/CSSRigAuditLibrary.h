@@ -9,7 +9,8 @@ class UCSSRigAuditLibrary : public UBlueprintFunctionLibrary
     GENERATED_BODY()
 public:
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
-    static FString ExportRawPoseKeys(class UAnimSequence* Sequence, const FString& OutputFile);
+    static FString ExportRawPoseKeys(class UAnimSequence* Sequence, const FString& OutputFile,
+        bool bMatchACLSampleClock = false);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static class UBlendSpace* CloneConstantIdleCarrier(class UBlendSpace* Source,

@@ -94,7 +94,51 @@ strict failure visible until its disposition is recorded. The older cooked
 motion checker uses a separate 0.05 cm review limit; do not silently substitute
 that limit for the strict 0.01 cm comparison.
 
-Catalog integration, visible-pose review and gameplay acceptance remain pending.
+### Complete native candidate and shared merge
+
+`raw-clock1` now evaluates all 8,381 Cinderella frames at ACL's float sample-index
+clock. The independent cooked comparison passes the unchanged strict limits:
+maximum position difference 0.00656854 cm, quaternion distance 0.000871952 and
+scale difference 6.04e-8. Maximum time displacement is 8.1381 microseconds.
+See `native-library-cook1/clock-verification.json`. The nominal-time report is
+retained; it still records 0.01983049 cm and is not relabeled as a pass. This
+resolves the compression diagnosis without changing any authored motion or
+relaxing a limit. C11 is selected; C12 is not shipped.
+
+`native-library-catalog1` adds the 59 native alternatives and seven idle carriers.
+The original four native gaits and every existing custom-rig alternative, alias,
+playback rule and facial/adaptor definition remain unchanged. All 63 entries
+have one native body alternative. Native facial capability remains distinct;
+this body conversion does not create facial controls for the game's characters.
+
+`shared-native-library1` merges the candidates into `CSS_SharedAssets_P`:
+215 packages, comprising all 149 original packages and 66 additional sequences
+and carriers. The codec appears in both inputs with identical bytes and has one
+owner in the output. Container verification, game-only payload readback and
+packed metadata/resource readback pass. The full shared asset candidate is at
+`shared-native-library1/CSS_SharedAssets_P`; it is not installed or released.
+
+Host validation passes 416 checks with the pack alone, 416 with the three
+outfits, and the existing 1,380-check nine-variant namespace suite. Coverage
+includes all 63 native resolutions, 60 CSS/CINE idle choices, eight constant
+idle carriers, legacy saved aliases and rejection of unknown skeletons.
+The old four-native-entry pack correctly fails the new completeness test.
+The initial new test fixture omitted weapon-hiding metadata and used the idle
+field for movement aliases; it was corrected to construct actual bundled
+contracts. No runtime behavior changed to satisfy that fixture.
+
+The C++20 authoring helper builds in `native-compression-module3`. Its alternate
+sample clock is explicit in both exported metadata and the comparison command;
+ordinary exports retain nominal timing. No new core build or installation was
+needed for these asset/diagnostic changes.
+
+Cleanup removed 969,250,880 logical bytes from the obsolete nearest-key binary
+captures after checking every checksum. Recipes, metadata, reports and runtime
+captures remain. Receipt: `native-library-cook1/cleanup-nearest-keys.json`.
+
+Visible-pose/contact review, continuous playback and native gameplay acceptance
+remain pending, along with the rest of the three-outfit goal. These numerical
+and catalog checks do not establish those results.
 
 The C++ checker and carrier helper compile with UE 5.6.1/C++20 in
 `native-compression-module1`. The first two Python carrier attempts exposed a
