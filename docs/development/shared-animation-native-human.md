@@ -140,6 +140,14 @@ Visible-pose/contact review, continuous playback and native gameplay acceptance
 remain pending, along with the rest of the three-outfit goal. These numerical
 and catalog checks do not establish those results.
 
+October 9: the neutral-surface review now covers all 59 new clips on four native
+game meshes, 236 clip/mesh cases and 80,236 poses, plus twenty baseline gait
+sequences on each mesh. Twelve pilot surfaces were rendered and inspected.
+Black Hole and Iris Out show floor offsets comparable to the existing gait
+baseline before game IK. This is not live contact acceptance and does not
+justify changing animation height on its own. See
+[surface review and diagnostic corrections](native-animation-contact-review.md).
+
 October 9: `shared-cloth-native1` combines the native batch with the installed
 cloth correction's two shared graph assets. Its 217 packages preserve the 215
 existing shared/native payloads and update only Genessa's verified adapter

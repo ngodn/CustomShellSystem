@@ -81,8 +81,9 @@ def load_cooked(path, bones, skeleton_path, inputs):
     frames, names = manifest['frames'], manifest['names']
     substeps = manifest.get('substeps', 1)
     binary = path.with_name(manifest['file'])
+    expected_bytes = frames * len(names) * 40
     if (substeps not in (1, 2, 4) or not 1 <= frames <= 400001 or not 1 <= len(names) <= 4096 or
-            frames * len(names) > 4004096 * substeps or binary.stat().st_size != frames * len(names) * 40 or
+            expected_bytes > 1024**3 or binary.stat().st_size != expected_bytes or
             binary.stat().st_size != manifest['bytes'] or sha(binary) != manifest['sha256'] or
             sample['schema'] != 2 or sample['asset'] != manifest['asset'] or
             sample['trackCount'] != len(names) or (substeps > 1 and sample['wrapOptimized']) or
@@ -92,7 +93,9 @@ def load_cooked(path, bones, skeleton_path, inputs):
         raise ValueError('Invalid sample clock, dimensions or checksum')
     inputs[str(binary.resolve())] = manifest['sha256']
     values = np.memmap(binary, dtype='<f4', mode='r', shape=(frames, len(names), 10))
-    if (not np.isfinite(values).all() or np.any(values[:, :, 7:] <= 0) or
+    # The shared game skeleton includes mirrored accessory chains absent from
+    # this mesh. retarget_local checks scale on the mesh's complete bone subset.
+    if (not np.isfinite(values).all() or
             np.max(np.abs(np.linalg.norm(values[:, :, :4].astype(float), axis=2) - 1)) >= .001):
         raise ValueError('Invalid cooked transforms')
     for row in sample['frames']:
