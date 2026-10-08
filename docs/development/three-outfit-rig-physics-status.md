@@ -27,7 +27,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Performance | Current package sizes recorded; matched gameplay captures pending |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: complete Eve's hair/rig assembly, then Commander White and the remaining runtime/catalog consumers. Genessa's 101-package private assembly and the shared skeleton pass independent cooked comparison. Eve's 68 material instances and 204 textures are preserved; all 2,322 texture mip payloads compare exactly through independent container readback. Final facial integration, authoring recipe updates and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
+Next: complete Eve's rig/mesh assembly, then Commander White and the remaining runtime/catalog consumers. Genessa's 101-package private assembly and the shared skeleton pass independent cooked comparison. Eve's 273-package material group passes cooked comparison, including the hair shaders; all 2,322 texture mip payloads compare exactly through independent container readback. Final facial integration, authoring recipe updates and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
 
 ## Eve material and texture migration
 
@@ -39,6 +39,14 @@ import audit passes. Original source/container hashes remain unchanged.
 The writer's 68-instance regression check and truncated-bulk rejection pass.
 See [the material migration notes](outfit-material-namespace.md) for receipts
 and the supported resource layouts.
+
+`eve-hair-editor1` passes migration and fresh reload for the hair parent and its
+three texture dependencies. `eve-hair-cook1` uses the pinned v1.4.0 renderer
+settings. `eve-material-pack1` combines that parent with the preserved instances
+and textures: 273/273 decoded packages match, including shader maps; 405 texture
+export/bulk files are byte-identical, and 539 imports resolve. This is a private
+material subset, not a complete installable outfit. Its cook Wine prefix and
+byte-identical readback export/bulk copies were removed with cleanup receipts.
 
 The registry-only Eve dependency audit finds 309 selected packages (308 Eve
 plus the shared base skeleton) and a 316-package dependency closure. The hair

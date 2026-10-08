@@ -114,5 +114,21 @@ the same 136 header/export files for all 68 material instances. A truncated
 external mip payload is rejected before any output is written in
 `eve-texture-negative-check1`.
 
+`eve-hair-editor1` migrates the hair parent and its three texture dependencies,
+then passes a fresh reload without legacy redirectors. All five staged source
+inputs (including the native reference skeleton) remain unchanged.
+`eve-hair-cook1` cooks that group with the original v1.4.0 hair renderer settings.
+
+`verify_outfit_material_trial.py --textures` combines those cooked parent
+materials with the preserved texture and instance payloads. A cook-emitted
+texture dependency cannot overwrite its verified preserved provider.
+`eve-material-pack1` passes all **273** normalized package comparisons,
+including hair shader maps, all **405** texture export/bulk file comparisons
+and **539** resolved imports. Candidate checks mount no original outfit pack.
+
 This verifies cooked asset preservation, not rendered appearance or gameplay.
-The hair parent and remaining rig/mesh assembly still need their own checks.
+The full rig/mesh assembly remains. The completed cook's disposable Wine prefix
+was removed (1,084,763,593 logical bytes, `eve-hair-cook1/prefix-cleanup.json`).
+Byte-identical export/bulk readback copies were also removed after rechecking
+their retained stage files; `cleanup-eve-material-readback1.json` records them.
+Candidate containers, stage payloads, original inputs and reports remain.

@@ -3,7 +3,6 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 
@@ -37,6 +36,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--instances', type=Path, required=True)
     parser.add_argument('--cook', type=Path, required=True)
+    parser.add_argument('--textures', type=Path, help='Verified cooked texture relocation to preserve instead of recooking')
     parser.add_argument('--dotnet', type=Path, required=True)
     parser.add_argument('--mappings', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
@@ -66,11 +66,38 @@ def main():
             raise ValueError('Migrated instance changed: ' + relative)
         target = stage / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, target)
+        subprocess.run(['cp', '--reflink=auto', str(source), str(target)], check=True)
+    preserved_textures = set()
+    texture_evidence = []
+    if args.textures:
+        textures = args.textures.resolve(strict=True)
+        texture_check = read(textures / 'verification.json')
+        if not texture_check['passed'] or texture_check['textures'] < 1 or texture_check['mips'] < 1:
+            raise ValueError('Texture preservation must pass first')
+        texture_evidence.append(textures / 'verification.json')
+        for relative, digest in texture_check['payloads'].items():
+            source, target = textures / 'stage' / relative, stage / relative
+            if sha(source) != digest or target.exists():
+                raise ValueError('Changed or overlapping preserved texture: ' + relative)
+            if source.suffix == '.uasset':
+                info = asset_info(source.read_bytes())
+                if info['package'] not in expected or [e['class'] for e in info['exports']] != ['Texture2D']:
+                    raise ValueError('Unexpected preserved texture package')
+                preserved_textures.add(info['package'])
+            target.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(['cp', '--reflink=auto', str(source), str(target)], check=True)
+        if len(preserved_textures) != texture_check['textures']:
+            raise ValueError('Incomplete preserved texture inventory')
     cooked = cook / 'project/Saved/Cooked/Windows/CSSShared/Content'
     for header in cooked.rglob('*.uasset'):
         package = '/Game/' + str(header.relative_to(cooked).with_suffix(''))
         if package not in expected:
+            continue
+        if package in preserved_textures:
+            # A parent cook may emit its texture dependencies. Keep the already
+            # verified original mip payloads as the sole provider for those paths.
+            if [e['class'] for e in asset_info(header.read_bytes())['exports']] != ['Texture2D']:
+                raise ValueError('Cook conflicts with a preserved texture')
             continue
         for source in header.parent.glob(header.stem + '.*'):
             if source.suffix not in {'.uasset', '.uexp', '.ubulk'}:
@@ -79,7 +106,7 @@ def main():
             if target.exists():
                 raise ValueError('Recook would overwrite preserved instance: ' + str(target))
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, target)
+            subprocess.run(['cp', '--reflink=auto', str(source), str(target)], check=True)
     headers = {asset_info(p.read_bytes())['package'] for p in stage.rglob('*.uasset')}
     if headers != expected:
         raise ValueError('Material dependency inventory differs: ' + str(sorted(headers ^ expected)))
@@ -141,7 +168,8 @@ def main():
     (output / 'verification.json').write_text(json.dumps(dict(passed=True, packages=len(expected),
         payloads=payloads, files={toc.with_suffix(s).name: sha(toc.with_suffix(s)) for s in ('.pak', '.utoc', '.ucas')},
         evidence={str(p): sha(p) for p in [instances / 'verification.json', instances / 'original-decoded.json',
-                  instances / 'request.json', cook / 'exit.json', cook / 'sources.json']},
+                  instances / 'request.json', cook / 'exit.json', cook / 'sources.json', *texture_evidence]},
+        preserved_texture_packages=sorted(preserved_textures),
         installed=False, scope='Material subset only. Decoded fields and shader maps match after path normalization; '
                                'imports resolve without the original outfit mounted. Game acceptance remains.'), indent=2) + '\n')
     print(f'Verified {len(expected)} migrated material and texture packages')
