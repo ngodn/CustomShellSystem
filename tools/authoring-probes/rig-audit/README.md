@@ -3,6 +3,37 @@
 This C++20 editor module exposes commandlet-only snapshot helpers to Python.
 It is authoring tooling, not a CSS runtime module.
 
+## Hair surface checks
+
+`probe_hair_surfaces.py` runs in UE 5.6.1 using `CSS_HAIR_SURFACE_OUTPUT`.
+The output directory must contain `input.json`: `cases` supplies each mesh,
+rig, body/hair material slots and reflected rig controls. Optional `motions`
+contains an `axis` identifier and an `animation` package path. Without motions,
+the probe evaluates three synthetic 60-degree local head rotations. Animation
+inputs use compressed pose evaluation with the target skeletal mesh and
+retargeting enabled. Each case captures 241 samples at 60 Hz. All original
+assets are read-only, and their hashes are checked after evaluation.
+
+`measure_hair_surfaces.py` runs in Blender 5.2.2 with `--capture` and `--output`.
+It reconstructs linear skinning at seven selected frames per case, validates
+reference-pose reproduction and compares solved hair with the unsolved input at
+the same pose. The body must be identical between those states. A separate
+comparison against frame zero records changes across the motion. Report fields
+named `depth` are signed-nearest candidates, not accepted penetration depths:
+open or concave surfaces and transparent hair cards can invalidate that reading.
+
+`inspect_hair_witnesses.py` takes `--capture`, `--screen` and `--output` to inspect
+the worst added candidate per section and its baseline. It records nearest-face
+material/barycentrics, seven ray directions and solid-angle winding. Its controls
+check an enclosed tetrahedron, an outside point and nonidentity weighted
+skinning. Open body surfaces still require visual interpretation. Neither tool
+evaluates texture alpha, facial/body morphs, clothing or gameplay timing.
+Use `--solver` to select the worst same-frame solver change instead of the
+largest difference from frame zero.
+
+The probes use the production hair rig directly. They do not substitute for
+the full post-process graph, body springs, animation blending or in-game checks.
+
 `SnapshotDeformer` reads Deformer Graph nodes and shader text, including referenced
 function graphs. `CloneClothMorphStudy` duplicates only UE 5.6.1's
 `DG_LinearBlendSkin_Morph_Cloth_RecomputeNormals` into a fresh package under

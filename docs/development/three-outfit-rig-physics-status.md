@@ -531,7 +531,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Shared organization | Four coordinated packages installed. Updated combined audit resolves 855 packages; 422 native catalog and 1,386 outfit checks pass. Public IDs and legacy aliases retained; earlier 28 dependency scenarios pass. Clean/upgrade documentation and CINE live acceptance remain |
 | Locomotion | All 63 native alternatives installed, including carriers for 60 Idle Animation choices. Black Hole and Iris Out play and interrupt on the tested original human appearance. Remaining visible contact, continuous motion and CINE review pending |
 | Gameplay regressions | User accepts cross-character Iris Out interruption, first form-switch summon and Customize recovery. Full outfit/lifecycle matrix remains |
-| Hair | Three rigs pass 27 editor lifecycle cases (3,447 samples). Genessa unused-solver candidate passes 336 component samples and cooked/catalog checks; gameplay and measured cost remain |
+| Hair | Three rigs pass 27 editor lifecycle cases (3,447 samples). Genessa unused-solver candidate is installed; gameplay and measured cost remain. Eve/CW add 2,892 direct-rig head-turn/gait samples and matching surface controls. A private CW fringe-contact adjustment improves two witnesses but is not accepted or installed; see [study](../research/2026-10-09-hair-surface-contact.md) |
 | Performance | Current package sizes recorded; matched gameplay captures pending |
 | Trebuchaxe report | Low priority, queued and unverified |
 

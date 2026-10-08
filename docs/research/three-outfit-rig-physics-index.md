@@ -157,6 +157,14 @@ The local faster-whisper transcriber initially hit a PyAV `metadata_errors` API 
 
 ## Open questions for implementation
 
+The [October 9 hair-surface study](2026-10-09-hair-surface-contact.md) distinguishes
+signed-nearest false alarms from confirmed fringe/face intersections using
+matching unsolved poses, winding, rays and diagnostic renders. Gait/head-turn
+captures preserve source hashes and non-hair input. A Commander White-only
+head-clearance trial improves two witnesses and preserves every ponytail pose,
+but remains private and unaccepted. Do not repeat the raw nearest-normal screen
+as proof of penetration or modify all colliders from its maxima.
+
 - Which exact final source recipes reproduce all installed meshes and active facial adapters?
 - Which visible defects remain in the accepted current build, and which layer actually causes each?
 - Which region/solver owns each moving surface and receives resets in preview, gameplay and doubles?
