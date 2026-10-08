@@ -27,6 +27,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('shared', 'native', 'catalog', 'baseline', 'output'):
         parser.add_argument('--'+name, type=Path, required=True)
+    parser.add_argument('--cloth-trial', type=Path,
+                        help='Include the verified cloth graph and updated Genessa adapter revisions.')
     args = parser.parse_args()
     output = args.output.resolve()
     if output.exists() or not output.is_relative_to(ROOT/'work'):
@@ -91,6 +93,62 @@ def main():
                 if field in asset and asset[field].split('.')[0] not in packages:
                     raise ValueError('Native catalog reference missing from merged pack')
     candidate['catalog']['animation_library'] = library
+    cloth_packages = 0
+    if args.cloth_trial:
+        trial = args.cloth_trial.resolve(strict=True)
+        receipt = read(trial/'assembly.json')
+        for filename in ('assembly.json', 'mesh-upgrade.json', 'graph-verification.json'):
+            if read(trial/filename).get('passed') is not True:
+                raise ValueError('Cloth trial is not verified: '+filename)
+            protect(trial/filename)
+        for filename, digest in receipt['files'].items():
+            protect(trial/'pack'/filename, digest)
+        shared_name = 'CSS_SharedAssets_P'
+        original_payloads = read(args.shared/'verification.json')['payloads']
+        added = set()
+        for relative, digest in receipt['payloads'][shared_name].items():
+            path = Path(relative)
+            if path.is_absolute() or '..' in path.parts or path.suffix not in ('.uasset','.uexp','.ubulk'):
+                raise ValueError('Invalid cloth payload path')
+            source = trial/'stage'/shared_name/path
+            protect(source, digest)
+            if relative in payloads:
+                if payloads[relative] != digest:
+                    raise ValueError('Cloth trial changes an existing shared payload: '+relative)
+                continue
+            if source.suffix == '.uasset':
+                added.add(asset_info(source.read_bytes())['package'])
+            payloads[relative], sources[relative] = digest, source
+        if not set(original_payloads) <= set(receipt['payloads'][shared_name]):
+            raise ValueError('Cloth trial drops existing shared payloads')
+        expected = {'/Game/CSS/eins0fx/Shared/Deformers/'+name+'_ClothMorphBody' for name in ('DG','MDC')}
+        if added != expected:
+            raise ValueError('Unexpected cloth additions')
+        packages.update(added)
+        cloth_packages = len(added)
+        metadata, = (trial/'metadata'/shared_name).rglob('manifest.json')
+        protect(metadata)
+        manifest = read(metadata)
+        resources = {}
+        for resource in manifest['facial_resources']:
+            path = metadata.parent/resource['file']
+            protect(path)
+            resources[resource['file']] = path.read_bytes()
+        cloth = resolve(manifest, resources)
+        expected_manifest = copy.deepcopy(baseline)
+        expected_manifest['containers'] = cloth['containers']
+        genessa = trial/'pack/CSS_UnholyGenessa_eins0fx_P'
+        updates = 0
+        for target in (expected_manifest, candidate):
+            target_library = target['catalog']['animation_library']
+            for adapters in [target_library['adapters'], *[f['adapters'] for f in target_library['faces']]]:
+                for adapter in adapters:
+                    if adapter['source_outfit'] == 'eins0fx.unholygenessa':
+                        adapter['source_toc_sha256'] = sha(genessa.with_suffix('.utoc'))
+                        adapter['source_bulk_bytes'] = genessa.with_suffix('.ucas').stat().st_size
+                        updates += 1
+        if not updates or expected_manifest != cloth:
+            raise ValueError('Cloth metadata changed beyond the verified Genessa revisions')
     output.mkdir(parents=True)
     stage = output/'stage'
     for relative, source in sources.items():
@@ -138,7 +196,8 @@ def main():
     (output/'shared-inline.json').write_bytes(encode(candidate))
     (output/'packages.txt').write_text('\n'.join(sorted(packages))+'\n')
     (output/'verification.json').write_text(json.dumps(dict(passed=True, installed=False,
-        packages=len(packages), native_entries=63, added_packages=66, inputs=inputs,
+        packages=len(packages), native_entries=63, added_packages=66,
+        added_cloth_packages=cloth_packages, inputs=inputs,
         payloads=payloads, files={p.name:sha(p) for p in container.iterdir()},
         scope='Shared asset and catalog round trip. Original payloads and custom-rig/facial definitions preserved. Native gameplay and visual acceptance remain.'),indent=2)+'\n')
     print('Merged',len(packages),'shared packages; preserved existing assets and catalog fields')

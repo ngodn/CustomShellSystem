@@ -140,6 +140,17 @@ Visible-pose/contact review, continuous playback and native gameplay acceptance
 remain pending, along with the rest of the three-outfit goal. These numerical
 and catalog checks do not establish those results.
 
+October 9: `shared-cloth-native1` combines the native batch with the installed
+cloth correction's two shared graph assets. Its 217 packages preserve the 215
+existing shared/native payloads and update only Genessa's verified adapter
+container revisions in the catalog. All payload and metadata readbacks pass.
+Host checks pass 416 native cases both alone and with the current outfits, plus
+the 1,380 outfit catalog cases. The complete four-container dependency audit
+passes all 803 packages. The initial audit wrongly inferred Blueprint exports
+from package basenames; its failed report is retained. The corrected audit uses
+the existing verified references and actual animation catalog paths. No asset
+change was needed to pass it. This combined candidate is not installed.
+
 The C++ checker and carrier helper compile with UE 5.6.1/C++20 in
 `native-compression-module1`. The first two Python carrier attempts exposed a
 read-only Skeleton setter; the successful helper clones the existing native
