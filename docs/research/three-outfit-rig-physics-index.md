@@ -55,6 +55,16 @@ records fresh section readback and the incomplete physical-shape transfer.
 Do not repeat U51 pinning or the October 1 unsafe post-creation array mutation.
 The current linear fit still has a 0.7985 cm glute residual; no repair is installed.
 
+The first private Deformer Graph correction is rejected by actual GPU output.
+`genessa-deformer-render1` attempt 3 completes 24 Vulkan captures and eight
+vertex readbacks, reproducing size-1 exposure on both variants without improving
+it. In exact UE 5.6.1 source, cloth sections disable the morph vertex-buffer
+input before Optimus reads it, so adding the missing offset in graph math alone
+cannot work. The prior Windows cook succeeded but did not prove visible fit.
+See the [current evidence and next prototype](../development/three-outfit-rig-physics-status.md).
+Do not install `DG_ClothMorphStudy1` as a repair. The next prototype needs an
+independent morph-basis input, followed by Windows cook and in-game validation.
+
 The [hand target study](2026-10-08-hand-target-ownership.md) resolves pinned
 Eve/Genessa source graphs' 115 transform writers to 19 left-hand finger bones.
 Parent propagation stays within those bones on the cooked target hierarchies.

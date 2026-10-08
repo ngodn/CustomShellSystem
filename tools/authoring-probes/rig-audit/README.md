@@ -29,7 +29,9 @@ Its rotations and cloth displacements are synthetic. It checks loss of the
 direct morph contribution, not penetration, physical contact or shading.
 The private Windows cook and package evidence are in
 `work/three-outfit-rig-physics/genessa-deformer-{candidate,cook,pack}1`.
-This prototype still needs GPU execution, visible fit, lifecycle and cost checks.
+The first GPU comparison rejects this prototype: the cloth section does not
+receive the normal morph-buffer input. CPU math and shader compilation did not
+establish that its input was available. See `genessa-deformer-render1`.
 
 `StepClothDeformerStudy` drives an isolated preview component at 60 Hz with its
 post-process graph disabled. It accepts only current Genessa facial meshes in
@@ -45,7 +47,27 @@ CSSAuthoring modules, read-only current Genessa source assets, and the study
 graph. Its `CSS_PANEL_STAGE` directory must contain `sources.json` and an empty
 `captures` directory. The recorded `genessa-deformer-render1/command.json` uses
 offscreen Vulkan and permits writes only inside that trial. The initial render
-run is pending, so this script is not yet validated end to end.
+run stopped on a Python name collision, followed by an incorrect instance-name
+assertion. Attempt 3 completes all 24 captures and eight GPU readbacks. The
+small C++ setter avoids Python's `bSetMeshDeformer` property shadowing the native
+setter. Diagnostic materials are saved only inside the private trial to reuse
+compiled shaders on subsequent runs.
+
+Set `CSS_PANEL_READBACK=1` with the current module to request GPU output for
+stock/trial cases. `RequestClothDeformerReadback` uses UE's public editor readback
+API, captures no component references in its asynchronous callback, and writes
+finite LOD0 positions/normals/tangents atomically under `Saved/DeformerReadback`.
+The Python driver marks the component's render data dirty after queueing and
+keeps it alive until the result arrives. Existing capture/readback names are
+not overwritten.
+
+`check_cloth_deformer_readback.py` measures those output positions against the
+captured skirt morphs and reports body-colored pixels in a fixed rear-panel
+rectangle. Intended openings also contribute to those counts; compare matched
+cases rather than interpreting the count as a penetration measurement. Both
+variants reproduce the size-1 coverage failure, and the first graph trial has
+the same visible exposure as the stock graph. This is evidence against the
+candidate, not a fit pass.
 
 The recompute-normals graph requires cooked half-edge mesh data or retained CPU
 index/position buffers. UE 5.6.1 `OptimusDataInterfaceHalfEdge.cpp` validates

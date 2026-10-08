@@ -113,11 +113,30 @@ the disposable Wine prefix was removed (1,084,763,562 logical bytes).
 `genessa-deformer-cook1/cleanup.json` records the deletion; cook inputs,
 logs, shaders, cooked outputs and the verified trial package remain.
 
-The next offscreen Vulkan comparison is staged in `genessa-deformer-render1`.
-Its private C++ preview helper builds against UE 5.6.1; the render command was
-started and its first shader-cache compilation was still active at the last
-observation. No image or fit result exists yet. Poll the recorded tool session
-and process in `run-state.json` before starting another renderer.
+The offscreen Vulkan comparison in `genessa-deformer-render1` is complete.
+Attempt 3 exits 0 with 24 captures, eight finite GPU readbacks of 162,939
+vertices each, six active cloth surfaces and 3,420 simulation particles per
+case. All 158 protected source hashes remain unchanged. Earlier attempts
+stopped on a Python setter/property collision and a wrong instance-name
+assertion; their logs and two preliminary captures are retained.
+
+**Reject the first deformer candidate as a repair.** Both variants reproduce
+the size-1 panel exposure. The stock and trial rear views each contain 17,831
+body-colored pixels in the fixed diagnostic rectangle at size 1, versus 298
+at size 0. These include intentional openings and are comparative evidence,
+not a surface penetration metric. The expected retained skirt offset reaches
+1.7993 cm; actual trial-minus-stock skirt displacement reaches only 0.00534 cm
+on Eve and zero on Genessa. The slight differences are consistent with separate
+cloth runs. See `gpu-comparison.json`; static math and cook success were not
+proof that morph input reached the graph.
+
+Exact UE 5.6.1 source explains the missing input: `SkeletalRenderGPUSkin.cpp`
+sets `bSectionUsingMorph` false for cloth sections. `GetMorphVertexBuffer`
+then returns null, and Optimus's morph interface returns zero for that section.
+The next bounded prototype must supply the clothing morph basis independently
+of that disabled input. Investigate cooked vertex attributes with per-instance
+weights before making any runtime or installed-asset change. Keep simulation,
+collider-fit and body/post-process synchronization checks separate.
 
 Source inspection found an additional packaged-game requirement for this
 approach: `OptimusDataInterfaceHalfEdge.cpp` can generate missing half-edge

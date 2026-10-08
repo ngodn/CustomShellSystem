@@ -18,6 +18,12 @@ public:
     static FString StepClothDeformerStudy(class USkeletalMeshComponent* Component, bool Initialize, bool ResetCloth);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static bool RequestClothDeformerReadback(class USkeletalMeshComponent* Component, const FString& Label);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static bool SetClothStudyDeformer(class USkeletalMeshComponent* Component, class UMeshDeformer* Deformer);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString ExportRawPoseKeys(class UAnimSequence* Sequence, const FString& OutputFile,
         bool bMatchACLSampleClock = false);
 

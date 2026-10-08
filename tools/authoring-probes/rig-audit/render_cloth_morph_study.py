@@ -1,26 +1,31 @@
-import unreal,json,os,hashlib
+import unreal,json,os,hashlib,time
 from pathlib import Path
-p=Path(os.environ['CSS_PANEL_STAGE']); out=p/'captures'
+p=Path(os.environ['CSS_PANEL_STAGE'])
+readback=os.environ.get('CSS_PANEL_READBACK')=='1'
+suffix='-readback' if readback else ''
+out=p/('captures'+suffix)
+out.mkdir(exist_ok=True)
+assert not any(out.iterdir()),f'Refusing to overwrite captures: {out}'
 inputs=[Path(x) for x in json.loads((p/'sources.json').read_text())]
 protected={str(x):hashlib.sha256(x.read_bytes()).hexdigest() for x in inputs}
 world=unreal.UGMotionLibrary.create_preview_world()
 assert world
-for cmd in ['r.AllowOcclusionQueries 0','r.AntiAliasingMethod 0','r.BloomQuality 0','r.SkinCache.CompileShaders 1']:
+for cmd in ['r.AllowOcclusionQueries 0','r.AntiAliasingMethod 0','r.BloomQuality 0']:
  unreal.SystemLibrary.execute_console_command(world,cmd)
 
 def material(name,color):
+ existing=unreal.load_asset('/Game/CSS/UnholyGenessa/DeformerStudy/'+name) if unreal.EditorAssetLibrary.does_asset_exist('/Game/CSS/UnholyGenessa/DeformerStudy/'+name) else None
+ if existing:return existing
  m=unreal.AssetToolsHelpers.get_asset_tools().create_asset(name,'/Game/CSS/UnholyGenessa/DeformerStudy',unreal.Material,unreal.MaterialFactoryNew())
- m.set_editor_property('shading_model',unreal.MaterialShadingModel.MSM_UNLIT)
- m.set_editor_property('two_sided',True)
- m.set_editor_property('used_with_skeletal_mesh',True)
- m.set_editor_property('used_with_clothing',True)
  e=unreal.MaterialEditingLibrary.create_material_expression(m,unreal.MaterialExpressionConstant3Vector)
  e.set_editor_property('constant',unreal.LinearColor(*color))
  unreal.MaterialEditingLibrary.connect_material_property(e,'',unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+ m.set_editor_properties(dict(shading_model=unreal.MaterialShadingModel.MSM_UNLIT,two_sided=True,used_with_skeletal_mesh=True,used_with_clothing=True))
  unreal.MaterialEditingLibrary.recompile_material(m)
  return m
 body=material('M_Body',(.35,.12,.07,1));cloth=material('M_Cloth',(.08,.55,.25,1))
 assert json.loads(unreal.UGMaterialLibrary.finish_materials([body,cloth]))['passed']
+for diagnostic in [body,cloth]:assert unreal.EditorAssetLibrary.save_loaded_asset(diagnostic)
 camera=unreal.UGMotionLibrary.spawn_preview_actor(unreal.SceneCapture2D)
 cap=camera.get_component_by_class(unreal.SceneCaptureComponent2D)
 cap.set_editor_property('capture_every_frame',False);cap.set_editor_property('capture_on_movement',False)
@@ -45,7 +50,7 @@ try:
     actor=unreal.UGMotionLibrary.spawn_preview_actor(unreal.SkeletalMeshActor)
     comp=actor.get_component_by_class(unreal.SkeletalMeshComponent)
     comp.set_skeletal_mesh_asset(mesh);comp.set_forced_lod(1)
-    comp.set_mesh_deformer(graph)
+    assert unreal.CSSRigAuditLibrary.set_cloth_study_deformer(comp,graph)
     for i,slot in enumerate(slots):
      name=str(slot.get_editor_property('material_slot_name'))
      comp.set_material(i,cloth if name=='UG_Skirt' else body)
@@ -59,8 +64,16 @@ try:
      if state.startswith('ERROR:'):raise RuntimeError(state)
     state=json.loads(state)
     assert state['simulation_cloths']>0 and state['particles']>0,state
-    if graph:assert 'Optimus' in state['deformer_instance'],state
+    if graph:assert graph.get_name()+'_Instance_' in state['deformer_instance'],state
     cap.show_only_actor_components(actor)
+    geometry=None
+    if readback and graph:
+     label=f'{variant}-{size:g}-{mode}'
+     geometry=Path(unreal.Paths.project_saved_dir())/'DeformerReadback'/f'{label}.json'
+     assert unreal.CSSRigAuditLibrary.request_cloth_deformer_readback(comp,label),label
+     # The request is queued until the component sends fresh render data.
+     updated=unreal.CSSRigAuditLibrary.step_cloth_deformer_study(comp,False,False)
+     if updated.startswith('ERROR:'):raise RuntimeError(updated)
     for view,position in [('back',(-40,-300,100)),('side',(300,0,100))]:
      loc=unreal.Vector(*position)
      camera.set_actor_location_and_rotation(loc,unreal.MathLibrary.find_look_at_rotation(loc,unreal.Vector(0,0,95)),False,True)
@@ -70,9 +83,20 @@ try:
      unreal.RenderingLibrary.export_render_target(world,target,str(out),name)
      assert (out/name).is_file()
      rows.append(dict(variant=variant,glute=size,mode=mode,view=view,image=name,state=state))
+    if geometry:
+     deadline=time.monotonic()+30
+     while not geometry.is_file() and time.monotonic()<deadline:
+      unreal.UGMotionLibrary.refresh_preview_rendering()
+      cap.capture_scene()
+      unreal.UGMaterialLibrary.flush_rendering()
+      time.sleep(.02)
+     assert geometry.is_file(),f'GPU readback timed out: {geometry}'
+     data=json.loads(geometry.read_text())
+     assert data['passed'] and data['vertices']>0,data.keys()
+     for row in rows[-2:]:row['gpu_readback']=str(geometry)
     cap.clear_show_only_components();actor.destroy_actor()
-    (p/'progress.json').write_text(json.dumps(rows,indent=2))
+    (p/('progress'+suffix+'.json')).write_text(json.dumps(rows,indent=2))
 finally:
  unreal.UGMaterialLibrary.flush_rendering();unreal.UGMotionLibrary.end_preview_world()
  assert all(hashlib.sha256(Path(f).read_bytes()).hexdigest()==h for f,h in protected.items())
-(p/'result.json').write_text(json.dumps(dict(captures=rows,protected=protected,scope='Offscreen Vulkan reference-pose cloth with post-process disabled and flat diagnostic materials. No gameplay pose/material/performance acceptance.'),indent=2))
+(p/('result'+suffix+'.json')).write_text(json.dumps(dict(captures=rows,protected=protected,scope='Offscreen Vulkan reference-pose cloth with post-process disabled and flat diagnostic materials. No gameplay pose/material/performance acceptance.'),indent=2))
