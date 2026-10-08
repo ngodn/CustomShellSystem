@@ -169,6 +169,7 @@ int main(int argc,char** argv) {
         }
         const std::string base="/Game/CSS/Shared/SKEL_Base.SKEL_Base";
         const std::string wings="/Game/CSS/UnholyGenessa/SKEL_Wings2.SKEL_Wings2";
+        const std::string authored_wings="/Game/CSS/eins0fx/UnholyGenessa/Skeletons/SKEL_Wings2.SKEL_Wings2";
         const auto bundled=AnimationSet::parse(Json::parse(R"({"idle":[
           {"id":"eve","name":"Same display name","clip":"/Game/CSS/Eve/Anim/AN_I2_Idle.AN_I2_Idle","hide_weapons":true}
         ]})")).slots.at(AnimationSlot::Idle);
@@ -193,7 +194,7 @@ int main(int argc,char** argv) {
         const std::string migrated_idle="/Game/CSS/eins0fx/Shared/Locomotion/Eve/AN_Idle.AN_Idle";
         migrated_base_library["entries"][0]["assets"][0]={{"asset",migrated_idle},{"skeleton",authored_base}};
         const std::vector<AnimationLibrary> migrated_base_libraries{AnimationLibrary::parse(migrated_base_library)};
-        for (const auto& target : {base, authored_base, wings}) {
+        for (const auto& target : {base, authored_base, wings, authored_wings}) {
             for (const auto* choice : {"eve", "css.eve.idle"}) {
                 const auto migrated_match=resolve_library_animation(migrated_base_libraries,
                     AnimationSlot::Idle,choice,bundled,target);
@@ -205,6 +206,14 @@ int main(int argc,char** argv) {
                        "Migrated library lost saved choice, shared preference or bundled fallback");
             }
         }
+        auto wing_libraries=migrated_base_libraries;
+        const std::string legacy_wing_idle="/Game/CSS/UnholyGenessa/AN_Wings.AN_Wings";
+        wing_libraries[0].entries[0].assets.push_back({legacy_wing_idle,wings});
+        const auto wing_match=resolve_library_animation(wing_libraries,AnimationSlot::Idle,
+            "css.eve.idle",bundled,authored_wings);
+        expect(wing_match.candidates.size()==3 && wing_match.candidates[0].asset==legacy_wing_idle &&
+               wing_match.candidates[1].asset==migrated_idle && wing_match.candidates[2].bundled,
+               "Migrated wings lost target-specific priority or bundled fallback");
         expect(resolve("eve",{},base).entry==nullptr,"Legacy ID matched without its exact bundled asset");
         auto specialized=bundled;specialized[0].clip="/Game/CSS/UnholyGenessa/AN_Wings.AN_Wings";
         expect(!resolve("eve",specialized,wings).entry,"Unaliased wing animation was replaced by name or ID");

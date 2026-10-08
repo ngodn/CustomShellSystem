@@ -193,8 +193,10 @@ AnimationLibraryMatch resolve_library_performance(const std::vector<AnimationLib
         result.entry=&entry;
     }
     if(!result.entry) return result;
-    for(bool exact:{true,false}) for(const auto& alternative:result.entry->assets) {
-        if((alternative.skeleton==target_skeleton)==exact &&
+    for(int priority:{0,1,2}) for(const auto& alternative:result.entry->assets) {
+        const int rank=alternative.skeleton==target_skeleton ? 0 :
+            equivalent_animation_skeletons(alternative.skeleton,target_skeleton) ? 1 : 2;
+        if(rank==priority &&
            compatible_animation_skeletons(alternative.skeleton,target_skeleton))
             result.candidates.push_back({alternative.asset,alternative.skeleton,false});
     }
@@ -262,9 +264,11 @@ AnimationLibraryMatch resolve_library_animation(const std::vector<AnimationLibra
     auto append=[&](const std::string& path,const std::string& skeleton,bool bundled_asset,const std::string& carrier={}) {
         if(paths.insert(path).second) result.candidates.push_back({path,skeleton,bundled_asset,carrier});
     };
-    // Prefer an exact target rig over an audited compatible base alternative.
-    for(bool exact:{true,false}) for(const auto& alternative:found->assets) {
-        if((alternative.skeleton==target_skeleton)==exact &&
+    // A renamed copy of the target rig still precedes a compatible base rig.
+    for(int priority:{0,1,2}) for(const auto& alternative:found->assets) {
+        const int rank=alternative.skeleton==target_skeleton ? 0 :
+            equivalent_animation_skeletons(alternative.skeleton,target_skeleton) ? 1 : 2;
+        if(rank==priority &&
            compatible_animation_skeletons(alternative.skeleton,target_skeleton))
             append(alternative.asset,alternative.skeleton,false,alternative.idle_blend_space);
     }

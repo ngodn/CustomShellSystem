@@ -109,6 +109,16 @@ int main() {
         auto match=resolve_library_performance(libraries,"css.dance",wings);
         expect(match.entry && match.candidates.size()==2,"Audited skeleton alternatives were lost");
         expect(match.candidates.front().declared_skeleton==wings,"Base rig took precedence over exact rig");
+        const std::string authored_wings="/Game/CSS/eins0fx/UnholyGenessa/Skeletons/SKEL_Wings2.SKEL_Wings2";
+        auto renamed_match=resolve_library_performance(libraries,"css.dance",authored_wings);
+        expect(renamed_match.candidates.size()==2 && renamed_match.candidates.front().declared_skeleton==wings,
+               "Renaming the target let base playback override its wing animation");
+        auto migrated_libraries=libraries;
+        migrated_libraries[0].entries[0].assets.push_back({"/Game/CSS/eins0fx/Shared/Locomotion/AN_Wings.AN_Wings",authored_wings});
+        renamed_match=resolve_library_performance(migrated_libraries,"css.dance",authored_wings);
+        expect(renamed_match.candidates.size()==3 && renamed_match.candidates[0].declared_skeleton==authored_wings &&
+               renamed_match.candidates[1].declared_skeleton==wings && renamed_match.candidates[2].declared_skeleton==base,
+               "Exact, namespace-equivalent and compatible rig priorities changed");
         expect(resolve_library_performance(libraries,"css.dance",base).candidates.size()==1,
                "Wing-specific clip leaked onto base skeleton");
         expect(resolve_library_performance(libraries,"css.dance","/Game/Unknown.Unknown").candidates.empty(),

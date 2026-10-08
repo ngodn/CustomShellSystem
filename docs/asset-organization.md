@@ -36,7 +36,14 @@ paths as the same animation layout. It retains the existing directed base-to-
 Genessa-wing mapping. This covers legacy outfits consuming the migrated
 library and migrated base meshes consuming the legacy library. Other authors'
 similarly named skeletons are not added to that allowlist by folder naming.
-Genessa's new wing-skeleton path remains pending its own migration checks.
+Genessa's verified wing-skeleton alias is
+`/Game/CSS/eins0fx/UnholyGenessa/Skeletons/SKEL_Wings2.SKEL_Wings2`.
+Its cooked Skeleton fields match the legacy copy after path normalization.
+Both paths retain the directed base-to-wing animation compatibility rule;
+wing-only motion is still rejected on a base skeleton. For CSS and CINE,
+selection prefers an exact rig, then a verified namespace alias of that rig,
+then a compatible base alternative. This prevents migration from displacing
+a wing-specific clip merely because it still declares the old skeleton path.
 
 Legacy `/Game/CSS/Locomotion/` catalog paths remain accepted, including their
 existing `Adapters/` and `Faces/` directories. This preserves current packs

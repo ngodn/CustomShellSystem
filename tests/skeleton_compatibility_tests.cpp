@@ -12,6 +12,7 @@ int main() {
     const std::string standard = "/Game/CSS/Shared/SKEL_Base.SKEL_Base";
     const std::string wings = "/Game/CSS/UnholyGenessa/SKEL_Wings2.SKEL_Wings2";
     const std::string authored = "/Game/CSS/eins0fx/Shared/Skeletons/SKEL_Base.SKEL_Base";
+    const std::string authored_wings = "/Game/CSS/eins0fx/UnholyGenessa/Skeletons/SKEL_Wings2.SKEL_Wings2";
     auto check = [](bool value, const char* why) { if (!value) throw std::runtime_error(why); };
     check(compatible_standard_skeletons(human, base), "Audited human-to-base pair rejected");
     check(compatible_standard_skeletons(base, human), "Restoring human from base rejected");
@@ -64,19 +65,31 @@ int main() {
     }
     check(!compatible_standard_skeletons(authored, authored), "Identical authored rig treated as a remap");
     for (const auto& from : {standard, authored}) {
-        for (const auto& to : {standard, authored, wings})
+        for (const auto& to : {standard, authored, wings, authored_wings})
             check(css::compatible_animation_skeletons(from, to), "Verified base alias lost movement support");
-        check(!css::compatible_animation_skeletons(wings, from), "Wing-only movement accepted on base rig");
+        for (const auto& wing : {wings, authored_wings})
+            check(!css::compatible_animation_skeletons(wing, from), "Wing-only movement accepted on base rig");
     }
+    for (const auto& previous : {human, base, b2, standard, authored, wings}) {
+        check(compatible_standard_skeletons(previous, authored_wings), "Migrated wing appearance rejected");
+        check(compatible_standard_skeletons(authored_wings, previous), "Restoring from migrated wings rejected");
+    }
+    check(css::compatible_animation_skeletons(wings, authored_wings), "Legacy wing animation rejected on migrated wings");
+    check(css::compatible_animation_skeletons(authored_wings, wings), "Migrated wing animation rejected on legacy wings");
+    check(!compatible_standard_skeletons(authored_wings, authored_wings), "Identical migrated wings treated as remap");
     for (const auto& other : std::vector<std::string>{
             "", authored + "_Invalid", "/Game/CSS/another_author/Shared/Skeletons/SKEL_Base.SKEL_Base",
             "/Game/CSS/eins0fx/Shared/Skeletons/SKEL_Base.Other",
             "/Game/CSS/eins0fx/Shared/SkeletonsExtra/SKEL_Base.SKEL_Base",
-            "/Game/CSS/eins0fx/UnholyGenessa/Skeletons/SKEL_Wings2.SKEL_Wings2"}) {
+            authored_wings + "_Invalid",
+            "/Game/CSS/another_author/UnholyGenessa/Skeletons/SKEL_Wings2.SKEL_Wings2"}) {
         check(!compatible_standard_skeletons(other, authored), "Unaudited source accepted for renamed base");
         check(!compatible_standard_skeletons(authored, other), "Unaudited target accepted from renamed base");
         check(!css::compatible_animation_skeletons(other, authored), "Unaudited movement source accepted");
         check(!css::compatible_animation_skeletons(authored, other), "Unaudited movement target accepted");
+        check(!compatible_standard_skeletons(other, authored_wings), "Unaudited source accepted for migrated wings");
+        check(!css::compatible_animation_skeletons(other, authored_wings), "Unaudited movement source accepted for migrated wings");
+        check(!css::compatible_animation_skeletons(authored_wings, other), "Unaudited wing animation target accepted");
     }
     std::cout << "Skeleton allowlist and lookalike rejection passed\n";
 }

@@ -27,7 +27,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Performance | Current package sizes recorded; matched gameplay captures pending |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: update the verified wing-skeleton compatibility path, then migrate Eve and Commander White and the remaining runtime consumers. Genessa's 101-package private assembly and the shared skeleton pass independent cooked comparison. Final facial integration, authoring recipe updates and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
+Next: migrate Eve and Commander White and the remaining runtime/catalog consumers. Genessa's 101-package private assembly and the shared skeleton pass independent cooked comparison. Final facial integration, authoring recipe updates and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
 
 ## Genessa rig and mesh namespace migration
 
@@ -129,8 +129,7 @@ object alongside its legacy `/Game/CSS/Shared/SKEL_Base` identity. Evidence is
 the exact normalized Skeleton comparison in `migration-cook6/comparison.json`
 and the subsequent shared-pack payload check. The change preserves the existing
 directed base-to-Genessa-wing animation mapping and rejects its reverse.
-It does not infer compatibility from an author's folder name or add the still
-unverified migrated wing skeleton.
+It does not infer compatibility from an author's folder name.
 
 The C++23 host build and all 23 registered host suites pass. Added cases cover
 old and new base targets, legacy saved IDs and canonical IDs, shared preference,
@@ -138,6 +137,22 @@ bundled fallback, restoration to native shells and rejection of lookalike paths.
 These are resolver checks, not live validation of the full migration. No DLL or
 asset pack was installed. Astral consumer paths and remaining outfit migration
 are still pending.
+
+### Wing-skeleton namespace compatibility
+
+The cooked Genessa comparison now establishes the private wing alias under
+`/Game/CSS/eins0fx/UnholyGenessa/Skeletons/SKEL_Wings2`. CSS recognizes both old
+and new wing identities for appearance changes and playback. Base-to-wing
+playback remains directed: wing-only clips cannot target the base rig.
+
+Both CSS idle selection and CINE performance selection prefer an exact
+skeleton, then its verified namespace alias, then a compatible base alternative.
+This ordering preserves wing-specific clips across old/new catalog combinations.
+Tests cover those priorities, old saved IDs, shared preference, bundled fallback,
+native appearance restoration, reverse-remap rejection and unknown-author
+lookalikes. The C++23 host build and all 23 host suites pass. Build/test evidence
+is in `genessa-rig-pack2/host-*.json` and logs.
+No new DLL is installed; game acceptance remains separate.
 
 ## Storage and cleanup
 
