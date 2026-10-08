@@ -27,7 +27,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Performance | Current package sizes recorded; matched gameplay captures pending |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: cook and independently compare Genessa's 13 migrated rig/mesh/adapter packages, then assemble them with the 88 verified materials and shared skeleton. The 102-asset editor batch now passes rename/save/fresh reload. Eve and Commander White migration, runtime consumers, final facial integration and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
+Next: update the verified wing-skeleton compatibility path, then migrate Eve and Commander White and the remaining runtime consumers. Genessa's 101-package private assembly and the shared skeleton pass independent cooked comparison. Final facial integration, authoring recipe updates and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
 
 ## Genessa rig and mesh namespace migration
 
@@ -62,6 +62,35 @@ The rejected first trial's asset/cache copies were removed after preserving
 its input hashes, source snapshots, mismatch and logs. The cleanup receipt
 records 764,127,775 logical bytes, not a claim about physical free space.
 No installed pack, DLL, settings or saves changed.
+
+### Cooked Genessa assembly
+
+`genessa-rig-cook1` cooks the thirteen rig/mesh packages plus the common skeleton
+under the original outfit's renderer settings. `genessa-rig-pack2` combines
+those thirteen packages with the 88 verified material payloads. Its private
+101-package container mounts alongside `shared-namespace1`, with no original
+outfit or locomotion package in the candidate dependency mount.
+
+All 102 decoded packages (including the shared skeleton) match their original
+fields after explicit path normalization. The dependency audit resolves 260
+imports and 102 requested exports. The first assembly's catalog check incorrectly
+requested Blueprint asset names instead of their cooked `_C` exports; its reports
+remain in `genessa-rig-pack1`, and the corrected assembly passes. No asset change
+was needed for that verifier error.
+
+The independent `AssetReadback --mesh-digests` check also matches both W3 meshes'
+full bind skeleton, 160,794 render vertices each, positions/normals/UVs/skin
+weights, indices, colors, sections, cloth mappings and all 22 existing morphs'
+decoded deltas. This complements the reflected package comparison rather than
+inferring geometry equality from package metadata.
+
+Evidence: `genessa-rig-pack2/{verification,comparison,import-check,mesh-comparison}.json`.
+The .NET 10 reader build succeeds; its vulnerability-cache lookup reports NU1900
+because that cache is read-only. The cook exits zero. Duplicate first-assembly
+payloads were removed only after matching the accepted assembly; the cleanup
+receipt records 392,472,198 logical bytes. This candidate still uses the original
+W3 facial geometry, and is not a release or installed package. Final facial
+integration, runtime/catalog consumers and live validation remain.
 
 ## Genessa material namespace migration
 

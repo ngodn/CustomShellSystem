@@ -5,15 +5,17 @@ using CUE4Parse.MappingsProvider.Usmap;
 using CUE4Parse.UE4.Assets.Exports.Animation;
 using CUE4Parse.UE4.Assets.Exports.Animation.ACL;
 using CUE4Parse.UE4.Assets.Exports.Material;
+using CUE4Parse.UE4.Assets.Exports.SkeletalMesh;
 using CUE4Parse.UE4.Versions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Security.Cryptography;
 
-if (args.Length is not (4 or 5) || (args.Length == 5 && args[4] is not ("--shader-maps" or "--animation-digests")))
-    throw new ArgumentException("AssetReadback CONTAINERS MAPPINGS PACKAGE_LIST OUTPUT_JSON [--shader-maps|--animation-digests]");
+if (args.Length is not (4 or 5) || (args.Length == 5 && args[4] is not ("--shader-maps" or "--animation-digests" or "--mesh-digests")))
+    throw new ArgumentException("AssetReadback CONTAINERS MAPPINGS PACKAGE_LIST OUTPUT_JSON [--shader-maps|--animation-digests|--mesh-digests]");
 var readShaderMaps = args.Length == 5 && args[4] == "--shader-maps";
 var readAnimationDigests = args.Length == 5 && args[4] == "--animation-digests";
+var readMeshDigests = args.Length == 5 && args[4] == "--mesh-digests";
 if (File.Exists(args[3])) throw new IOException("Output already exists");
 var packages = File.ReadAllLines(args[2]).Where(p => !string.IsNullOrWhiteSpace(p)).ToArray();
 if (packages.Length == 0 || packages.Distinct(StringComparer.OrdinalIgnoreCase).Count() != packages.Length)
@@ -55,8 +57,61 @@ foreach (var path in packages) {
             curve_sha256=curves == null ? null : Convert.ToHexString(SHA256.HashData(curves))
         });
     }
+    if (readMeshDigests) {
+        if (!exports.Any(item => item is USkeletalMesh))
+            throw new InvalidDataException($"Expected a skeletal mesh: {path}");
+        for (int i = 0; i < exports.Length; ++i)
+            if (exports[i] is USkeletalMesh mesh)
+                decoded[i]["OfflineMeshDigest"] = MeshDigest(mesh);
+    }
     results.Add(path, decoded);
 }
 using var output = new StreamWriter(new FileStream(args[3], FileMode.CreateNew, FileAccess.Write));
 output.Write(results.ToString(Formatting.Indented));
 Console.WriteLine($"Decoded {results.Count} packages");
+
+static JObject MeshDigest(USkeletalMesh mesh) {
+    var lods = mesh.LODModels ?? throw new InvalidDataException("No render LODs");
+    if (lods.Length == 0) throw new InvalidDataException("No render LODs");
+    var rows = new JArray();
+    foreach (var lod in lods) {
+        if (lod.NumVertices <= 0 || lod.VertexBufferGPUSkin.VertsFloat.Length != lod.NumVertices ||
+            lod.Indices?.Buffer is not { Length: > 0 })
+            throw new InvalidDataException("Expected complete float render vertices and topology");
+        rows.Add(JObject.FromObject(new {
+            vertices = lod.NumVertices,
+            indices = lod.Indices.Buffer.Length,
+            // The library's summary converters omit full vertex payloads.
+            vertex_sha256 = Digest(lod.VertexBufferGPUSkin.VertsFloat.Select(v => new { v.Pos, v.Normal, v.Infs, v.UVs })),
+            index_sha256 = Digest(lod.Indices.Buffer),
+            colors_sha256 = Digest(lod.ColorVertexBuffer),
+            sections_sha256 = Digest(lod.Sections),
+            active_bones_sha256 = Digest(lod.ActiveBoneIndices),
+            required_bones_sha256 = Digest(lod.RequiredBones),
+            cloth_mapping_sha256 = Digest(lod.ClothVertexBuffer),
+            attributes_sha256 = Digest(lod.VertexAttributeBuffers)
+        }));
+    }
+    mesh.PopulateMorphTargetVerticesData();
+    var morphs = new JObject();
+    foreach (var reference in mesh.MorphTargets) {
+        var morph = reference.Load<UMorphTarget>() ?? throw new InvalidDataException("Missing morph");
+        if (morphs.ContainsKey(morph.Name)) throw new InvalidDataException("Duplicate morph name");
+        morphs.Add(morph.Name, JToken.FromObject(morph.MorphLODModels.Select(lod => new {
+            deltas = lod.Vertices.Length, sha256 = Digest(lod.Vertices)
+        })));
+    }
+    return new JObject {
+        ["reference_skeleton_sha256"] = Digest(mesh.ReferenceSkeleton),
+        ["lods"] = rows, ["morphs"] = morphs,
+        ["scope"] = "Decoded bind skeleton, render geometry, skin weights, cloth mappings and morph deltas; no simulation or gameplay execution."
+    };
+}
+
+static string Digest(object? value) {
+    using var hash = SHA256.Create();
+    using (var stream = new CryptoStream(Stream.Null, hash, CryptoStreamMode.Write))
+    using (var text = new StreamWriter(stream))
+    using (var json = new JsonTextWriter(text)) JsonSerializer.CreateDefault().Serialize(json, value);
+    return Convert.ToHexStringLower(hash.Hash!);
+}
