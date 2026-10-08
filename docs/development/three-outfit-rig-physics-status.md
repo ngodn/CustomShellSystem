@@ -77,9 +77,24 @@ The C++23 Windows core builds without new warnings and all 24 registered host
 tests pass. Its SHA-256 is
 `54bee458fb7cb1508ee8422db59d2ad45aba0f2778d6a132fe0b29dc27a30467`.
 These checks do not establish in-game correction or performance. The isolated
-Study5 graph/BasisStudy3 mesh authoring path is being prepared with matching
-variable names and a mesh-authored default deformer. Earlier Study4 assets and
-the accepted installed build remain unchanged.
+Study5 graph/BasisStudy3 meshes now pass authoring and fresh-editor reload with
+matching variable names and a mesh-authored default deformer. Earlier Study4
+assets and the accepted installed build remain unchanged.
+
+`genessa-deformer-render1/basis-runtime1` records both variants' unchanged rig,
+137 morphs, 26 sections and cloth data; the author/reload commands exit 0 and
+all pre-existing source assets keep their hashes. Module build18 exits 0.
+`genessa-deformer-cook4` reuses the verified Windows single-thread cook recipe;
+it exits 0 with unchanged inputs and successful SM5/SM6 kernel compilation.
+`genessa-deformer-pack3` passes six-package export roundtrip and independent
+readback: both default graph references, target collections, fifteen attribute
+buffers, five zero-default GPU variables and kernel-source equivalence pass.
+The independent mesh comparison rejects changes outside the stated additions.
+
+Next: integrate the candidate into the outfit/shared-pack assembly, validate
+actual materials and continuous contact, then live-check world/preview/doubles,
+lifecycle recovery and measured cost. The diagnostic pack is not an installable
+release. The installed baseline remains unchanged.
 
 ### October 8: reproduced Genessa rear-panel shape mismatch
 

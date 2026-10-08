@@ -26,10 +26,12 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static class USkeletalMesh* CloneClothBasisMeshStudy(class USkeletalMesh* Source, const FString& OutputPackage,
-        bool bAllShapes = false, class UMeshDeformerCollection* DeformerCollection = nullptr);
+        bool bAllShapes = false, class UMeshDeformerCollection* DeformerCollection = nullptr,
+        class UMeshDeformer* RuntimeDeformer = nullptr);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
-    static class UObject* CloneClothBasisGraphStudy(class UObject* Source, const FString& OutputPackage, bool bAllShapes = false);
+    static class UObject* CloneClothBasisGraphStudy(class UObject* Source, const FString& OutputPackage,
+        bool bAllShapes = false, bool bRuntimeBindings = false);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString ExportRawPoseKeys(class UAnimSequence* Sequence, const FString& OutputFile,

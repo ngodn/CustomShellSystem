@@ -1,7 +1,7 @@
 # Cloth morph deformer binding
 
-Status: runtime candidate built, not installed. Private graph/mesh integration
-and live validation remain pending.
+Status: runtime candidate built; private graph/mesh authoring, reload and Windows
+cook/readback pass. Not installed; live validation remains pending.
 
 An authored Optimus graph opts in by declaring zero-default Float variables
 named `CSS_Morph_<morph name>`. For example, `CSS_Morph_PBMGlutesSize` receives
@@ -41,3 +41,11 @@ including binding release, missing variables, instance replacement, invalid
 weights and failed-write retry. Those host tests do not execute Unreal
 reflection, cloth or shaders. World/preview/doubles, replacement recovery,
 materials, contact and performance still require the integrated candidate.
+
+Private asset evidence: `genessa-deformer-render1/basis-runtime1`,
+`genessa-deformer-cook4` and `genessa-deformer-pack3` under the rig study work
+directory. Both meshes retain all 137 morphs, 26 sections and original cloth
+data, with fifteen added vertex-attribute buffers and the authored graph and
+collection references. Cooked graph readback confirms five zero-default GPU
+variables, equivalent kernel source and SM5/SM6 compilation. The diagnostic pack
+includes comparison meshes and must not be installed as an outfit release.

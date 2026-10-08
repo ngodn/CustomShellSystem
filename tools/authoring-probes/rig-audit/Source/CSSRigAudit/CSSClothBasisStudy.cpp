@@ -19,7 +19,7 @@
 #include "UObject/UnrealType.h"
 
 USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Source, const FString& OutputPackage,
-    bool bAllShapes, UMeshDeformerCollection* DeformerCollection)
+    bool bAllShapes, UMeshDeformerCollection* DeformerCollection, UMeshDeformer* RuntimeDeformer)
 {
     const auto Fail = [](const TCHAR* Reason) -> USkeletalMesh*
     {
@@ -29,9 +29,12 @@ USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Sour
     if (!IsRunningCommandlet() || !IsInGameThread() || !Source ||
         !Source->GetPathName().StartsWith(TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/")) ||
         !OutputPackage.StartsWith(TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/")) ||
-        !OutputPackage.EndsWith(bAllShapes ? TEXT("_BasisStudy2") : TEXT("_BasisStudy1")) ||
+        !OutputPackage.EndsWith(RuntimeDeformer ? TEXT("_BasisStudy3") : bAllShapes ? TEXT("_BasisStudy2") : TEXT("_BasisStudy1")) ||
         (bAllShapes && (!DeformerCollection || !DeformerCollection->GetPathName().StartsWith(
-            TEXT("/Game/CSS/eins0fx/Shared/Deformers/MDC_ClothMorphStudy4.")))) ||
+            RuntimeDeformer ? TEXT("/Game/CSS/eins0fx/Shared/Deformers/MDC_ClothMorphStudy5.") :
+                TEXT("/Game/CSS/eins0fx/Shared/Deformers/MDC_ClothMorphStudy4.")))) ||
+        (RuntimeDeformer && (!bAllShapes || !RuntimeDeformer->GetPathName().StartsWith(
+            TEXT("/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphStudy5.")))) ||
         !FPackageName::IsValidLongPackageName(OutputPackage) ||
         FindPackage(nullptr, *OutputPackage) || FPackageName::DoesPackageExist(OutputPackage))
         return Fail(TEXT("invalid commandlet source or private destination"));
@@ -108,6 +111,7 @@ USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Sour
             Info.DataType = ESkeletalMeshVertexAttributeDataType::Float;
         }
     if (DeformerCollection) Mesh->SetTargetMeshDeformers(DeformerCollection);
+    if (RuntimeDeformer) Mesh->SetDefaultMeshDeformer(RuntimeDeformer);
     Mesh->Build();
     USkinnedAsset* Assets[]{Mesh};
     FSkinnedAssetCompilingManager::Get().FinishCompilation(Assets);
@@ -122,8 +126,11 @@ USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Sour
     return Mesh;
 }
 
-UObject* UCSSRigAuditLibrary::CloneClothBasisGraphStudy(UObject* Source, const FString& OutputPackage, bool bAllShapes)
+UObject* UCSSRigAuditLibrary::CloneClothBasisGraphStudy(UObject* Source, const FString& OutputPackage,
+    bool bAllShapes, bool bRuntimeBindings)
 {
+    if (bRuntimeBindings && (!bAllShapes || OutputPackage != TEXT("/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphStudy5")))
+        return nullptr;
     auto* Copy = Cast<UOptimusDeformer>(CloneClothMorphStudy(Source, OutputPackage));
     if (!Copy) return nullptr;
     const auto Fail = [](const TCHAR* Reason) -> UObject*
@@ -181,7 +188,8 @@ UObject* UCSSRigAuditLibrary::CloneClothBasisGraphStudy(UObject* Source, const F
                         !Connect(Node->FindPin(TEXT("Value")), *FString::Printf(TEXT("%s%c"), *PinPrefix, TEXT('X') + Axis)))
                         return Fail(TEXT("cannot bind vertex attribute value"));
                 }
-                const FName WeightName(*FString(Shape.Attribute).Append(TEXT("Weight")));
+                const FName WeightName(bRuntimeBindings ? *FString::Printf(TEXT("CSS_Morph_%s"), Shape.Morph) :
+                    *FString(Shape.Attribute).Append(TEXT("Weight")));
                 auto* Variable = Copy->AddVariable(FOptimusDataTypeRegistry::Get().FindType(*FDoubleProperty::StaticClass()), WeightName);
                 auto* ValueNode = Variable ? Graph->AddVariableGetNode(Variable, FVector2D(-900, (ShapeIndex * 4 + 3) * 200)) : nullptr;
                 if (!ValueNode || ValueNode->GetPins().Num() != 1 ||

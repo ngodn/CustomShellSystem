@@ -19,6 +19,7 @@ def main():
     parser.add_argument('--mesh-audit', type=Path, required=True)
     parser.add_argument('--morph-audit', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--runtime-bindings', action='store_true')
     args = parser.parse_args()
     inputs = {}
 
@@ -33,7 +34,8 @@ def main():
     for variant in ('Eve', 'Genessa'):
         package = f'/Game/CSS/eins0fx/UnholyGenessa/Faces/SK_{variant}W3_Face'
         original = copy.deepcopy(cooked[package])
-        candidate = json.loads(json.dumps(cooked[package + '_BasisStudy2']).replace('_BasisStudy2', ''))
+        suffix = '_BasisStudy3' if args.runtime_bindings else '_BasisStudy2'
+        candidate = json.loads(json.dumps(cooked[package + suffix]).replace(suffix, ''))
         base, = [e for e in original if e['Type'] == 'SkeletalMesh']
         mesh, = [e for e in candidate if e['Type'] == 'SkeletalMesh']
         source = load(args.morph_audit / f'SK_{variant}W3_Face.json')
@@ -86,9 +88,15 @@ def main():
         assert base['Properties']['LODInfo'][0]['VertexAttributes'] == []
         assert 'TargetMeshDeformers' not in base['Properties']
         collection = mesh['Properties'].pop('TargetMeshDeformers')
+        graph_number = '5' if args.runtime_bindings else '4'
         assert collection == {
-            'ObjectName': "MeshDeformerCollection'MDC_ClothMorphStudy4'",
-            'ObjectPath': '/Game/CSS/eins0fx/Shared/Deformers/MDC_ClothMorphStudy4.0'}
+            'ObjectName': f"MeshDeformerCollection'MDC_ClothMorphStudy{graph_number}'",
+            'ObjectPath': f'/Game/CSS/eins0fx/Shared/Deformers/MDC_ClothMorphStudy{graph_number}.0'}
+        if args.runtime_bindings:
+            assert 'DefaultMeshDeformer' not in base['Properties']
+            default_graph = mesh['Properties'].pop('DefaultMeshDeformer')
+            assert default_graph['ObjectName'] == "OptimusDeformer'DG_ClothMorphStudy5'"
+            assert default_graph['ObjectPath'].rsplit('.', 1)[0] == '/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphStudy5'
         lod['VertexAttributeBuffers'] = {}
         attributes['VertexAttributes'] = []
         for key in ('attributes_sha256', 'attribute_buffers', 'half_edge'):
@@ -100,7 +108,7 @@ def main():
         assert original == candidate, f'Unexpected cooked export change: {variant}'
         results.append(dict(variant=variant, exports=len(original), morphs=137, attributes=15,
                             vertices=offset, half_edge=half_edge, residual_max_cm=residuals))
-    report = dict(passed=True, variants=results, inputs=inputs,
+    report = dict(passed=True, variants=results, inputs=inputs, runtime_bindings=args.runtime_bindings,
                   scope='Cooked mesh preservation, attribute values and half-edge counts. '
                         'No shader execution, gameplay, collision or performance acceptance.')
     args.output.write_text(json.dumps(report, indent=2) + '\n')
