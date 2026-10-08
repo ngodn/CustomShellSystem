@@ -18,8 +18,9 @@ TSharedPtr<FJsonValue> Numbers(std::initializer_list<double> Values)
 
 FString UCSSRigAuditLibrary::SnapshotMeshSections(USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots)
 {
-    if (!IsRunningCommandlet() || !Mesh || MaterialSlots.IsEmpty())
-        return TEXT("ERROR: expected a commandlet mesh and material slots");
+    if (!IsRunningCommandlet() || !Mesh)
+        return TEXT("ERROR: expected a commandlet mesh");
+    const bool AllSlots = MaterialSlots.IsEmpty();
     USkinnedAsset* Assets[]{Mesh};
     FSkinnedAssetCompilingManager::Get().FinishCompilation(Assets);
     const FMeshDescription* Description = Mesh->GetMeshDescription(0);
@@ -39,8 +40,8 @@ FString UCSSRigAuditLibrary::SnapshotMeshSections(USkeletalMesh* Mesh, const TAr
     for (const FPolygonGroupID Group : Description->PolygonGroups().GetElementIDs())
     {
         const FName Slot = Slots[Group];
-        if (!Requested.Contains(Slot)) continue;
-        if (Found.Contains(Slot)) return TEXT("ERROR: ambiguous material slot");
+        if (!AllSlots && !Requested.Contains(Slot)) continue;
+        if (!AllSlots && Found.Contains(Slot)) return TEXT("ERROR: ambiguous material slot");
         Found.Add(Slot);
         TSet<FVertexID> Used;
         TArray<TSharedPtr<FJsonValue>> Faces;
@@ -121,7 +122,8 @@ FString UCSSRigAuditLibrary::SnapshotMeshSections(USkeletalMesh* Mesh, const TAr
         Row->SetArrayField(TEXT("morphs"), MoveTemp(Morphs));
         Groups.Add(MakeShared<FJsonValueObject>(Row));
     }
-    if (Found.Num() != Requested.Num()) return TEXT("ERROR: requested slot missing");
+    if (!AllSlots && Found.Num() != Requested.Num()) return TEXT("ERROR: requested slot missing");
+    if (Groups.IsEmpty()) return TEXT("ERROR: no source polygon groups");
     auto Root = MakeShared<FJsonObject>();
     Root->SetStringField(TEXT("mesh"), Mesh->GetPathName());
     Root->SetNumberField(TEXT("total_vertices"), Description->Vertices().Num());

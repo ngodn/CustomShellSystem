@@ -20,7 +20,8 @@ TSharedPtr<FJsonValue> Array(std::initializer_list<double> Numbers)
 FString UCSSRigAuditLibrary::SnapshotRenderSections(USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots,
                                                   const TArray<FName>& MorphNames)
 {
-    if (!IsRunningCommandlet() || !Mesh || MaterialSlots.IsEmpty()) return TEXT("ERROR: commandlet mesh and slots required");
+    if (!IsRunningCommandlet() || !Mesh) return TEXT("ERROR: commandlet mesh required");
+    const bool AllSlots = MaterialSlots.IsEmpty();
     USkinnedAsset* Assets[]{Mesh};
     FSkinnedAssetCompilingManager::Get().FinishCompilation(Assets);
     const auto* Render = Mesh->GetResourceForRendering();
@@ -37,7 +38,7 @@ FString UCSSRigAuditLibrary::SnapshotRenderSections(USkeletalMesh* Mesh, const T
     {
         if (!Mesh->GetMaterials().IsValidIndex(Section.MaterialIndex)) return TEXT("ERROR: material index out of range");
         const FName Slot = Mesh->GetMaterials()[Section.MaterialIndex].MaterialSlotName;
-        if (!Requested.Contains(Slot)) continue;
+        if (!AllSlots && !Requested.Contains(Slot)) continue;
         Found.Add(Slot);
         auto Group = MakeShared<FJsonObject>();
         Group->SetStringField(TEXT("slot"), Slot.ToString());
@@ -134,7 +135,8 @@ FString UCSSRigAuditLibrary::SnapshotRenderSections(USkeletalMesh* Mesh, const T
         Group->SetArrayField(TEXT("morphs"), MoveTemp(Morphs));
         Groups.Add(MakeShared<FJsonValueObject>(Group));
     }
-    if (Found.Num() != Requested.Num()) return TEXT("ERROR: requested slot missing");
+    if (!AllSlots && Found.Num() != Requested.Num()) return TEXT("ERROR: requested slot missing");
+    if (Groups.IsEmpty()) return TEXT("ERROR: no render sections");
     auto Root = MakeShared<FJsonObject>();
     Root->SetArrayField(TEXT("groups"), MoveTemp(Groups));
     FString Result;

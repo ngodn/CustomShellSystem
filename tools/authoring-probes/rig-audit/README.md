@@ -56,6 +56,20 @@ slots fail explicitly. It does not save or modify the mesh. The Genessa facial
 integration uses these snapshots to establish point and corner correspondence
 before editing private candidates.
 
+For a complete mesh snapshot, pass an empty slot array to enumerate every
+source polygon group. `SnapshotRenderSections` likewise accepts an empty array
+to enumerate every actual render section. Declared material tables can contain
+unused slots, so requesting the entire table as if it were a section list is
+incorrect. Named selection retains its strict missing/duplicate checks. The
+complete material table remains part of `SnapshotAssetProperties`.
+
+The Eve Planet Diving check in `eve-rig-editor1/section-selection-check.json`
+confirms 29 declared materials, 27 render sections and 29 source groups covering
+all 175,142 source triangles. Full enumeration equals explicit selection of the
+actual groups; missing/duplicate render requests and a missing source request
+still fail. The read-only cooked baseline records six meshes with unused
+material slots in `eve-mesh-comparison1/unused-material-slots.json`.
+
 `SnapshotRenderSections` captures the built position/tangent/UV/color buffers,
 skin weights, section-local indices, cloth mappings and explicitly requested
 morph deltas. Local indices allow comparisons when earlier sections gain

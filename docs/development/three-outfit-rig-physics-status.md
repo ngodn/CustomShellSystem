@@ -61,6 +61,37 @@ after checking terminal receipts and active processes. The cleanup receipt
 Accepted source/cooked candidates, original inputs and build modules remain.
 No pack or DLL from this goal has been installed.
 
+### Eve rig batch in progress
+
+`eve-rig-editor1` stages all 309 selected packages and 316 hash-pinned source
+dependencies in independent copies. The first audit stopped before renaming:
+it treated every declared material slot as a required render section. All
+316 original and staged files were rehashed unchanged after that failure.
+
+The cooked baseline confirms six meshes have unused material slots. The audit
+module now supports complete group/section enumeration with an empty slot
+selection, while keeping strict checks for named selections. Its targeted
+Planet Diving check passes: 29 declared materials, 27 render sections and 29
+source groups covering all 175,142 triangles. This fixes the verifier; it does
+not change outfit geometry or material slots.
+
+`mesh-namespace-module2/build-exit.json` records the successful C++20 build.
+The second migration attempt uses that module and runs the section-selection
+check before migration. Follow `eve-rig-editor1/command2.json`, `console2.log`
+and the eventual `exit.json` for its result. The initial failed exit remains
+in `attempt1-exit.json`. Fresh reload, cook and complete assembly are still
+required before accepting this rig migration.
+
+`eve-mesh-comparison1/original-decoded.json` records independently decoded
+geometry, skin weights, cloth mappings and morph buffers for all 22 skeletal
+mesh packages currently supplied by Eve and its shared facial replacements.
+The migrated counterpart has not yet been compared.
+
+Cleanup removed the superseded standalone Eve texture stage/container and
+rejected Genessa material cook1/pack1 payloads only after verifying the retained
+full Eve material stage and preserved rejection evidence. The per-file receipt
+is `cleanup-superseded-material-trials1.json` (2,344,561,871 logical bytes).
+
 ## Genessa rig and mesh namespace migration
 
 `genessa-rig-editor2` passes isolated UE 5.6.1 rename/save and fresh-process reload

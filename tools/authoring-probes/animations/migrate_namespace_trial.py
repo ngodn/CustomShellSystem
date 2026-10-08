@@ -41,17 +41,18 @@ def snapshot(asset):
         if raw.startswith('ERROR:'):
             raise ValueError(raw)
         result['mesh'] = json.loads(raw)
-        slots = [str(s.material_slot_name) for s in asset.get_editor_property('materials')]
         morphs = [m['name'] for m in result['mesh']['morphs']]
+        # Empty selection snapshots all actual groups. Declared materials can
+        # include unused slots; their table is preserved by the property audit.
         probes = {
-            'render': lambda: unreal.CSSRigAuditLibrary.snapshot_render_sections(asset, slots, morphs),
-            'source': lambda: unreal.CSSRigAuditLibrary.snapshot_mesh_sections(asset, slots),
+            'render': lambda: unreal.CSSRigAuditLibrary.snapshot_render_sections(asset, [], morphs),
+            'source': lambda: unreal.CSSRigAuditLibrary.snapshot_mesh_sections(asset, []),
             'cloth_custom': lambda: unreal.CSSRigAuditLibrary.snapshot_cloth_custom_data(asset),
         }
         for name, probe in probes.items():
             raw = probe()
             if raw.startswith('ERROR:'):
-                raise ValueError(raw)
+                raise ValueError(raw + ': ' + name + ': ' + asset.get_path_name())
             if name == 'source':
                 # This field identifies the asset, not its geometry. The
                 # migration checks the new object path separately.

@@ -132,3 +132,12 @@ was removed (1,084,763,593 logical bytes, `eve-hair-cook1/prefix-cleanup.json`).
 Byte-identical export/bulk readback copies were also removed after rechecking
 their retained stage files; `cleanup-eve-material-readback1.json` records them.
 Candidate containers, stage payloads, original inputs and reports remain.
+
+After the complete Eve material assembly passed, its byte-identical texture
+stage superseded `eve-texture-namespace2/stage`. That earlier texture-only stage
+and container were removed, together with rejected Genessa cook1/pack1 payloads.
+`cleanup-superseded-material-trials1.json` records each hash and the retained Eve
+payload location, totaling 2,344,561,871 logical bytes. Original extracted data,
+the full material assembly, texture mip comparisons and rejected shader
+differences remain. Reproducing the earlier standalone texture container now
+requires rerunning its recorded recipe.
