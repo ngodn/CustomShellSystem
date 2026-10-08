@@ -20,10 +20,16 @@ Commander White's short-strand repair now has a saved UE mesh/skeleton/rig
 candidate, rather than analysis-only added joints. Both normal/facial mesh
 data checks, fresh typed-default readback, post-process structural comparisons,
 723 gait samples and 60 fixed gait contact witnesses pass. Render-weight
-quantization differs slightly from the prototype and is documented. No new
-outfit is installed; cooking, full component/gameplay, lifecycle and performance
-checks remain. See [the saved-candidate evidence](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md#saved-ue-mesh-and-rig-candidate)
-and CW source commit `9a92d08`.
+quantization differs slightly from the prototype and is documented. Six
+original/candidate full-component pairs now pass, including resets, hair
+toggles, animation reinitialization, teleport and selected morph clearing.
+Windows cooking, six-package roundtrip and independent cooked mesh/rig checks
+also pass. All 2,548 changed cooked hair weights match the saved editor mesh;
+cloth data, materials and morph deltas retain their installed values. Cooked
+dependency materials are excluded. No new outfit is installed; cooked VM,
+normal/UV, Astral/CINE, gameplay and performance checks remain. See
+[the component and cooked evidence](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md#component-lifecycle-and-windows-cook)
+and CW source commits `9a92d08` and `0c99728`.
 
 ## Entry points
 

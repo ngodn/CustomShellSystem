@@ -69,9 +69,27 @@ Source non-target influences and other inspected sections retain their values.
 CW commit `9a92d08` records the recipes and evidence; six private asset hashes
 are in `hair-strand-assets1/candidate-hashes.json`.
 
+CW commit `0c99728` adds six full-component original/candidate pairs covering
+both meshes and three gaits. All 2,892 samples pass hair toggles, reset epochs,
+animation reinitialization, teleport and selected morph application/clear.
+Body state and non-hair transforms match within the stated numerical tolerance.
+Cloth is disabled only in this transient editor diagnostic, not in the assets.
+
+The Windows cook and six-package IoStore roundtrip now pass. Independent
+readback against installed C4/E9 preserves all material slots, 16/206 morph
+delta digests, cloth exports/mapping, original binds, sockets and virtual
+definitions. All cooked positions and triangle indices match. The 2,548
+changed hair vertices match the saved editor weights after explicit 8-bit to
+16-bit unit conversion; weights outside the two hair sections are unchanged.
+`hair-strand-pack1/semantic-check.json` records its precise coverage. Only the
+six new mesh/rig roots are packaged. Cooked dependency materials, including
+the optical material with shader warnings, are excluded in favor of installed
+materials. Completed cook caches and Wine prefix were removed with a receipt.
+
 This is offline evidence, not an installed repair. Two left-bang
-head-turn samples still need visibility review. Cooking, Astral/CINE
-compatibility, lifecycle and cost remain pending. The shared skeleton and
+head-turn samples still need visibility review. Cooked VM execution,
+normal/UV comparison, Astral/CINE integration, gameplay lifecycle and cost
+remain pending. The shared skeleton and
 installed outfit remain unchanged. Recipes, limits and rejected harness evidence are in
 the [CW hair study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md#original-strand-binding-and-separate-joint-prototype).
 
