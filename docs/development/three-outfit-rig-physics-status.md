@@ -2,6 +2,15 @@
 
 Updated 2026-10-09. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
 
+## Current shared-assets trial
+
+The combined `shared-cloth-native1` pack is installed and independently
+hash-verified. It adds 59 native animation alternatives, retains the four
+existing native gait choices and includes the accepted cloth correction.
+The form-selection core, three outfit packages and saved settings are
+unchanged. Native gameplay checks are pending; this is not an upload-ready
+release. See [installation evidence](shared-animation-native-human.md#october-9-combined-shared-trial-installed).
+
 ## Current form-switch regressions
 
 The Customize-only-Ground-Height defect came from inconsistent appearance

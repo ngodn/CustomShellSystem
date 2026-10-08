@@ -201,6 +201,48 @@ class NamespaceInstallTests(unittest.TestCase):
         with self.assertRaises(ValueError): self.install()
         self.assertFalse(self.transaction.exists())
 
+    def make_asset_only(self):
+        self.make_followup()
+        name = mod.NAMES[1]
+        self.plan['retained'][name] = self.plan['old'].pop(name)
+        del self.plan['new'][name]
+        self.plan['new_selector'] = self.old_selector.copy()
+        self.plan['core_source'] = str(self.runtime / 'cores/old.dll')
+        self.plan['core_sha256'] = mod.sha(Path(self.plan['core_source']))
+
+    def test_shared_assets_only_preserves_core_and_selector(self):
+        self.make_asset_only()
+        selector_before = (self.runtime / 'core.json').stat().st_mtime_ns
+        self.install()
+        self.assertEqual((self.runtime / 'core.json').stat().st_mtime_ns, selector_before)
+        self.assertEqual([p.name for p in (self.runtime / 'cores').iterdir()], ['old.dll'])
+        self.assertFalse((self.transaction / 'css_core.dll').exists())
+        mod.retained_unchanged(self.plan)
+        mod.restore(self.transaction, lambda: None)
+        self.baseline()
+        self.assertEqual((self.runtime / 'core.json').stat().st_mtime_ns, selector_before)
+
+    def test_shared_assets_only_partial_mount_rolls_back(self):
+        self.make_asset_only()
+        def fault(step):
+            if step == 'mounted:CSS_SharedAssets_P': raise OSError('injected failure')
+        with self.assertRaises(OSError): self.install(fault)
+        self.baseline()
+
+    def test_asset_only_mismatched_core_rejected_before_staging(self):
+        self.make_asset_only()
+        self.plan['core_sha256'] = '0' * 64
+        with self.assertRaises(ValueError): self.install()
+        self.assertFalse(self.transaction.exists())
+
+    def test_disk_estimate_accounts_for_both_new_core_copies(self):
+        files_bytes = sum(r['bytes'] for rows in self.plan['new'].values() for r in rows.values())
+        self.plan['stage_bytes'] = files_bytes + Path(self.plan['core_source']).stat().st_size
+        with patch.object(mod.shutil, 'disk_usage') as disk:
+            disk.return_value.free = self.plan['stage_bytes'] + 256 * 1024**2
+            with self.assertRaises(ValueError): self.install()
+        self.assertFalse(self.transaction.exists())
+
 
 if __name__ == '__main__':
     unittest.main()

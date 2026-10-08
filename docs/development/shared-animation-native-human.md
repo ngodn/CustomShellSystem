@@ -1,5 +1,28 @@
 # Default human animation playback
 
+## October 9: combined shared trial installed
+
+`shared-cloth-native1` is installed with 217 packages, 63 native alternatives
+(59 new plus four existing gait choices) and both accepted cloth-deformer
+assets. The current form-selection core, all three outfit packages and saved
+settings retain their hashes. This is an asset-only update, not a release.
+Native gameplay acceptance remains pending.
+
+Evidence: `work/three-outfit-rig-physics/shared-cloth-native1/installed.json`
+and `install-plan2.json`. The rollback transaction is
+`MortalShell2/Content/css-native-library-trial-20261009`.
+The installer and interrupted-swap rollback checks pass all 22 tests.
+
+The first attempt stopped before staging because game-drive free space fell
+to 55 MiB. One older locomotion rollback directory was copied to
+`backups/relocated-20261009`, hash-verified, then replaced at its original
+location by a symlink. At the user's request, its final location is
+`/run/media/eins0fx/theark/CSS/backups/relocated-20261009`; both old paths
+now link there. All three rollback files were hash-verified and preserved,
+freeing about 536 MiB on the game drive. The second installation and
+independent installed-file verification passed. The user subsequently
+uninstalled a game; a fresh disk check shows 78 GiB available on that drive.
+
 ## Current scope, October 8
 
 The [three-outfit rig goal](three-outfit-rig-physics-goal.md#follow-up-stage-locomotion-review-and-native-human-conversion)

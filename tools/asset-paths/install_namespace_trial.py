@@ -169,7 +169,8 @@ def restore(transaction, closed=check_closed):
         closed()
         backup.rename(target)
     closed()
-    atomic(runtime / 'core.json', plan['previous_selector'])
+    if selector != plan['previous_selector']:
+        atomic(runtime / 'core.json', plan['previous_selector'])
     mounts(game, mounted_set(plan, 'old'))
     atomic(transaction / 'result.json', {'installed': False, 'restored': True, 'live_verified': False})
 
@@ -182,12 +183,20 @@ def install(plan, transaction, closed=check_closed, checkpoint=lambda _: None):
         raise ValueError('Stage and rollback must be outside Paks on the game filesystem')
     if transaction.exists():
         raise FileExistsError(transaction)
-    if shutil.disk_usage(game / 'Content').free < plan['stage_bytes'] + 256 * 1024**2:
+    runtime = game / 'Binaries/Win64/ue4ss/Mods/CustomShellSystem'
+    change_core = plan['new_selector'] != plan['previous_selector']
+    core_source = Path(plan['core_source'])
+    check({str(core_source): plan['core_sha256']})
+    if not change_core:
+        check({str(runtime / 'cores' / plan['previous_selector']['file']): plan['core_sha256']})
+    package_bytes = sum(row['bytes'] for files in plan['new'].values() for row in files.values())
+    # A changed core has both a transaction copy and an installed copy.
+    required_bytes = max(plan['stage_bytes'], package_bytes + (2 * core_source.stat().st_size if change_core else 0))
+    if shutil.disk_usage(game / 'Content').free < required_bytes + 256 * 1024**2:
         raise ValueError('Insufficient space for independent candidate copies and reserve')
     mounts(game, mounted_set(plan, 'old'))
     protected_unchanged(plan)
     check(plan['evidence'])
-    runtime = game / 'Binaries/Win64/ue4ss/Mods/CustomShellSystem'
     if read(runtime / 'core.json') != plan['previous_selector']:
         raise ValueError('Core selector changed before staging')
     for name, hashes in plan['old'].items():
@@ -201,8 +210,9 @@ def install(plan, transaction, closed=check_closed, checkpoint=lambda _: None):
                 closed()
                 check({row['source']: row['sha256']})
                 copy_verified(Path(row['source']), transaction / 'candidate' / name / filename)
-        copy_verified(Path(plan['core_source']), transaction / 'css_core.dll')
-        check({str(transaction / 'css_core.dll'): plan['core_sha256']})
+        if change_core:
+            copy_verified(core_source, transaction / 'css_core.dll')
+            check({str(transaction / 'css_core.dll'): plan['core_sha256']})
         checkpoint('staged')
         protected_unchanged(plan)
         check(plan['evidence'])
@@ -222,12 +232,13 @@ def install(plan, transaction, closed=check_closed, checkpoint=lambda _: None):
             staged.rename(game / 'Content/Paks/~mods' / name)
             checkpoint('mounted:' + name)
         closed()
-        core_target = runtime / 'cores' / plan['new_selector']['file']
-        if core_target.exists():
-            raise FileExistsError('Candidate core appeared during staging: ' + str(core_target))
-        copy_verified(transaction / 'css_core.dll', core_target)
-        closed()
-        atomic(runtime / 'core.json', plan['new_selector'])
+        if change_core:
+            core_target = runtime / 'cores' / plan['new_selector']['file']
+            if core_target.exists():
+                raise FileExistsError('Candidate core appeared during staging: ' + str(core_target))
+            copy_verified(transaction / 'css_core.dll', core_target)
+            closed()
+            atomic(runtime / 'core.json', plan['new_selector'])
         checkpoint('selected')
         protected_unchanged(plan)
         mounts(game, mounted_set(plan, 'new'))
