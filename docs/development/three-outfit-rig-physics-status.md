@@ -49,12 +49,30 @@ source-opacity witnesses also clear; the wider 21-frame screen finds no
 section/frame worse than production by that diagnostic. Three source-material
 renders are reviewed.
 
-This is offline evidence, not an installed repair. Two left-bang head-turn
-samples still need visibility review. The current JSON-only joint ordering is
-for analysis and cannot ship. Next author a CW-only raw-skeleton extension,
-verify normal/facial mesh data and virtual mappings, then check cooking,
-Astral/CINE compatibility, lifecycle and cost. The shared skeleton and installed
-outfit remain unchanged. Recipes, limits and rejected harness evidence are in
+The next private candidate now exists as saved UE assets in CW's
+`work/hair-strand-assets1`: a CW-only skeleton with 388 raw bones and nine
+rebuilt virtual bones, both normal/facial meshes, and the extended hair rig.
+Both meshes retain geometry, material sections, cloth and their 16/206 morphs;
+936 source vertices per mesh receive the separate short-strand weights.
+Fresh reload preserves all 395 existing rig hierarchy entries, the original
+array prefixes and control defaults. Both post-process graphs pass a structural
+comparison permitting only the new skeleton/hair class, two extra hair output
+bones and one hidden contact input. The rebuilt mesh completes 723 compressed
+walk/jog/sprint samples without the hair solve changing non-hair bones.
+
+The rebuilt-mesh check also passes all 60 fixed contact witnesses over sampled
+gait poses. Maximum segment-length error is 0.0000048261 cm; other chains are
+numerically equivalent within 1e-10, not bitwise identical after skeleton
+remapping. Rendered quantization differs from the JSON prototype only in the two
+edited sections, including 87 head influences changing by one 8-bit step.
+Source non-target influences and other inspected sections retain their values.
+CW commit `9a92d08` records the recipes and evidence; six private asset hashes
+are in `hair-strand-assets1/candidate-hashes.json`.
+
+This is offline evidence, not an installed repair. Two left-bang
+head-turn samples still need visibility review. Cooking, Astral/CINE
+compatibility, lifecycle and cost remain pending. The shared skeleton and
+installed outfit remain unchanged. Recipes, limits and rejected harness evidence are in
 the [CW hair study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md#original-strand-binding-and-separate-joint-prototype).
 
 ## Current form-switch regressions

@@ -16,6 +16,15 @@ The October 8 goal amendment sets `CSS_SharedAssets_P` as the owner of reusable 
 
 The follow-up amendment explicitly adds implementation of facial-expression support for both Unholy Genessa variants. Its requirements and acceptance checks live in the goal's facial-support section; earlier wording about preserving facial support does not establish that this work is already complete.
 
+Commander White's short-strand repair now has a saved UE mesh/skeleton/rig
+candidate, rather than analysis-only added joints. Both normal/facial mesh
+data checks, fresh typed-default readback, post-process structural comparisons,
+723 gait samples and 60 fixed gait contact witnesses pass. Render-weight
+quantization differs slightly from the prototype and is documented. No new
+outfit is installed; cooking, full component/gameplay, lifecycle and performance
+checks remain. See [the saved-candidate evidence](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md#saved-ue-mesh-and-rig-candidate)
+and CW source commit `9a92d08`.
+
 ## Entry points
 
 - [Goal and implementation status](../development/three-outfit-rig-physics-goal.md).
