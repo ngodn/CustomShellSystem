@@ -4,11 +4,14 @@ p=Path(os.environ['CSS_PANEL_STAGE'])
 readback=os.environ.get('CSS_PANEL_READBACK')=='1'
 all_shapes=os.environ.get('CSS_PANEL_ALL_SHAPES')=='1'
 motion=os.environ.get('CSS_PANEL_MOTION')=='1'
+held=os.environ.get('CSS_PANEL_HELD')=='1'
 assert not motion or all_shapes
+assert not held or motion
 basis=all_shapes or os.environ.get('CSS_PANEL_BASIS')=='1'
 run=os.environ.get('CSS_PANEL_RUN','')
 assert not run or run.isdecimal()
 suffix=('-motion'+run if motion else '-shapes'+run if all_shapes else '-basis' if basis else '')+('-readback' if readback else '')
+if held:suffix='-held'+suffix
 out=p/('captures'+suffix)
 out.mkdir(exist_ok=True)
 assert not any(out.iterdir()),f'Refusing to overwrite captures: {out}'
@@ -79,17 +82,20 @@ try:
   for case in cases:
    size=case['weights'].get('PBMGlutesSize',0.)
    for mode,graph in modes:
-    actor=unreal.UGMotionLibrary.spawn_preview_actor(unreal.SkeletalMeshActor)
-    comp=actor.get_component_by_class(unreal.SkeletalMeshComponent)
-    comp.set_skeletal_mesh_asset(mesh);comp.set_forced_lod(1)
+    advance_case=not held or mode==modes[0][0]
+    if advance_case:
+     actor=unreal.UGMotionLibrary.spawn_preview_actor(unreal.SkeletalMeshActor)
+     comp=actor.get_component_by_class(unreal.SkeletalMeshComponent)
+     comp.set_skeletal_mesh_asset(mesh);comp.set_forced_lod(1)
     assert unreal.CSSRigAuditLibrary.set_cloth_study_deformer(comp,graph)
-    for i,slot in enumerate(slots):
-     name=str(slot.get_editor_property('material_slot_name'))
-     comp.set_material(i,cloth if name=='UG_Skirt' else body)
-     comp.show_material_section(i,-1,name in ['UG_Skirt','UG_Skin2'],0)
-    comp.set_editor_property('material_slots_overlay_material',[None]*len(slots))
-    bone_samples=[]
-    for frame in range(181 if motion else 91):
+    if advance_case:
+     for i,slot in enumerate(slots):
+      name=str(slot.get_editor_property('material_slot_name'))
+      comp.set_material(i,cloth if name=='UG_Skirt' else body)
+      comp.show_material_section(i,-1,name in ['UG_Skirt','UG_Skin2'],0)
+     comp.set_editor_property('material_slots_overlay_material',[None]*len(slots))
+     bone_samples=[]
+    for frame in range((181 if motion else 91) if advance_case else 0):
      for morph in shapes:comp.set_morph_target(morph,case['weights'].get(morph,0.),False)
      state=unreal.CSSRigAuditLibrary.step_cloth_deformer_study(comp,frame==0,frame==0,not case['cloth'])
      assert all(abs(comp.get_morph_target(m)-case['weights'].get(m,0.))<1e-6 for m in shapes)
@@ -101,10 +107,16 @@ try:
        bone_samples.append(dict(frame=frame,position=comp.get_position(),
                                 bones={name:bone_location(comp,name)
                                        for name in ('pelvis','foot_l','foot_r')}))
+    if held:
+     state=unreal.CSSRigAuditLibrary.step_cloth_deformer_study(comp,False,False,False,False)
+     if state.startswith('ERROR:'):raise RuntimeError(state)
     state=json.loads(state)
+    if held:
+     if advance_case:held_hash=state['cloth_state_sha1']
+     assert state['cloth_state_sha1']==held_hash and not state['advanced_simulation'],state
     assert state['simulation_cloths']>0 and state['particles']>0,state
     assert state['cloth_disabled'] == (not case['cloth']),state
-    if graph:assert graph.get_name()+'_Instance_' in state['deformer_instance'],state
+    if graph:assert state['deformer_instance'].split('.')[-1].startswith(graph.get_name()+'_Instance'),state
     if motion:
      assert len(bone_samples)==4 and any(sample['position']>0 for sample in bone_samples)
      state['motion_samples']=bone_samples
@@ -113,11 +125,13 @@ try:
     geometry=None
     if readback and graph:
      label=('Motion'+run+'-' if motion else 'Shapes'+run+'-' if all_shapes else 'Basis-' if basis else '')+f"{variant}-{case['name']}-{mode}"
+     if held:label='Held-'+label
      geometry=Path(unreal.Paths.project_saved_dir())/'DeformerReadback'/f'{label}.json'
      assert unreal.CSSRigAuditLibrary.request_cloth_deformer_readback(comp,label),label
      # The request is queued until the component sends fresh render data.
-     updated=unreal.CSSRigAuditLibrary.step_cloth_deformer_study(comp,False,False,not case['cloth'])
+     updated=unreal.CSSRigAuditLibrary.step_cloth_deformer_study(comp,False,False,not case['cloth'],not held)
      if updated.startswith('ERROR:'):raise RuntimeError(updated)
+     if held:assert json.loads(updated)['cloth_state_sha1']==held_hash
     for view,position in [('back',(-40,-300,100)),('side',(300,0,100))]:
      loc=unreal.Vector(*position)
      camera.set_actor_location_and_rotation(loc,unreal.MathLibrary.find_look_at_rotation(loc,unreal.Vector(0,0,95)),False,True)
@@ -138,7 +152,8 @@ try:
      data=json.loads(geometry.read_text())
      assert data['passed'] and data['vertices']>0,data.keys()
      for row in rows[-2:]:row['gpu_readback']=str(geometry)
-    cap.clear_show_only_components();actor.destroy_actor()
+    cap.clear_show_only_components()
+    if not held or mode==modes[-1][0]:actor.destroy_actor()
     (p/('progress'+suffix+'.json')).write_text(json.dumps(rows,indent=2))
 finally:
  unreal.UGMaterialLibrary.flush_rendering();unreal.UGMotionLibrary.end_preview_world()

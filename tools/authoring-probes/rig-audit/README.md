@@ -77,6 +77,16 @@ non-cloth positions. Separate neutral runs currently differ in some cloth
 sections, so it explicitly does not accept cloth equivalence. Use a held
 simulation state to isolate that difference before claiming an animated fix.
 
+`CSS_PANEL_HELD=1` holds one simulated state while comparing both graphs. It
+requires motion mode. `StepClothDeformerStudy(..., AdvanceSimulation=false)`
+updates graph weights and render data without advancing the pose or solver.
+Initialization/reset requests are rejected in this mode. A hash of the ordered
+cloth particle arrays and transforms must remain identical through graph changes
+and readback. `check_cloth_motion_study.py --held --run 2` requires exact neutral
+GPU equality, including normals/tangents, and checks the size-1 displacement
+bound. This passes for both variants and all four gaits. Continuous contact,
+real materials, runtime binding and gameplay cost remain separate checks.
+
 `StepClothDeformerStudy` drives an isolated preview component at 60 Hz with its
 post-process graph disabled. It accepts only current Genessa facial meshes in
 a preview world, disables automatic ticks and waits for each cloth step. It

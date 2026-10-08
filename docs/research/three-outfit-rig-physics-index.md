@@ -94,6 +94,15 @@ hold one simulation state while changing the graph, rather than treating those
 separate simulations as identical. This result does not invalidate the static
 input/cook checks or establish a gameplay regression.
 
+The held-state follow-up now resolves that discrepancy. `held-render-exit2.json`
+and `held-motion2-validation.json` cover both variants and four gaits at neutral
+and size 1. Cloth positions/normals/transforms hash identically for each pair.
+All neutral GPU positions, normals and tangents are exactly equal; size-1
+corrections stay within the source bound and leave non-cloth positions unchanged.
+The earlier large neutral differences came from separate simulation states.
+Proceed to default-deformer/runtime binding and actual material/contact/cost
+checks. Do not repeat the separate-run comparison or mark live acceptance done.
+
 The [hand target study](2026-10-08-hand-target-ownership.md) resolves pinned
 Eve/Genessa source graphs' 115 transform writers to 19 left-hand finger bones.
 Parent propagation stays within those bones on the cooked target hierarchies.

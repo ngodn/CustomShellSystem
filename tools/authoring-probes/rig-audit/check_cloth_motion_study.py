@@ -13,6 +13,7 @@ def main():
     parser.add_argument('--stage', type=Path, required=True)
     parser.add_argument('--mesh-audit', type=Path, required=True)
     parser.add_argument('--run', default='1')
+    parser.add_argument('--held', action='store_true')
     args = parser.parse_args()
     assert args.run.isdecimal()
     inputs = {}
@@ -22,7 +23,8 @@ def main():
         inputs[str(path)] = hashlib.sha256(raw).hexdigest()
         return json.loads(raw)
 
-    receipt = load(args.stage / f'result-motion{args.run}-readback.json')
+    prefix = 'held-' if args.held else ''
+    receipt = load(args.stage / f'result-{prefix}motion{args.run}-readback.json')
     audit = load(args.mesh_audit)
     assert len(receipt['captures']) == 64
     rows = []
@@ -43,6 +45,9 @@ def main():
                 assert set(pair) == {'stock', 'trial'}
                 samples = pair['trial']['state']['motion_samples']
                 assert samples == pair['stock']['state']['motion_samples'] and len(samples) == 4
+                if args.held:
+                    assert pair['stock']['state']['cloth_state_sha1'] == pair['trial']['state']['cloth_state_sha1']
+                    assert all(not r['state']['advanced_simulation'] for r in pair.values())
                 motion = max(math.dist(samples[0]['bones']['pelvis'], s['bones']['pelvis']) for s in samples)
                 assert motion > .01
                 values = {}
@@ -53,16 +58,28 @@ def main():
                 difference = values['trial'][:, :3] - values['stock'][:, :3]
                 outside = float(np.linalg.norm(difference[noncloth], axis=1).max())
                 assert outside == 0
+                maximum = float(np.linalg.norm(difference, axis=1).max())
+                if args.held:
+                    if shape == 'neutral':
+                        assert np.array_equal(values['stock'], values['trial'])
+                    else:
+                        # Original glute offset has magnitude <= 2.743002 cm; this
+                        # loose bound catches displaced/stale cloth, not contact.
+                        assert 0 < maximum < 3.0
                 rows.append(dict(variant=variant, case=f'{gait}-{shape}', pelvis_motion_cm=motion,
                                  noncloth_position_change_cm=outside,
-                                 render_position_change_max_cm=float(np.linalg.norm(difference, axis=1).max())))
+                                 render_position_change_max_cm=maximum))
     report = dict(sanity_checks_passed=True, cloth_equivalence_accepted=False, cases=rows,
                   captures=64, gpu_readbacks=32, inputs=inputs,
-                  scope='Three seconds of isolated single-node gait simulation per case; finite output, '
+                  matched_state_comparison_passed=args.held,
+                  scope=('Same simulated state for both graphs: neutral positions, normals and tangents are '
+                         'identical; glute displacement is bounded and noncloth positions are unchanged. '
+                         'No continuous contact, shading, gameplay or performance acceptance.' if args.held else
+                        'Three seconds of isolated single-node gait simulation per case; finite output, '
                         'matched sampled body poses and unchanged noncloth positions. Separate neutral cloth '
                         'runs differ substantially in some cases. Hold a single simulated state for the next '
-                        'graph comparison. No continuous collision, gameplay or performance acceptance.')
-    (args.stage / f'motion{args.run}-validation.json').write_text(json.dumps(report, indent=2) + '\n')
+                        'graph comparison. No continuous collision, gameplay or performance acceptance.'))
+    (args.stage / f'{prefix}motion{args.run}-validation.json').write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps({k: v for k, v in report.items() if k not in ('cases', 'inputs')}, indent=2))
 
 

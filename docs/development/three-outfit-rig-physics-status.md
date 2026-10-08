@@ -262,6 +262,39 @@ cloth equivalence unaccepted. Compare both graphs against one held simulation
 state next, then check continuous material/contact behavior. The reference-pose
 and Windows cooked-data results above remain valid. Nothing was installed.
 
+### Held-state gait comparison: neutral discrepancy isolated
+
+The follow-up reuses the same component and cloth output for both graphs.
+`StepClothDeformerStudy` can now refresh rendering without advancing animation,
+simulation or world time. It hashes each cloth's ordered particle positions,
+normals, LOD and both transforms. The driver checks that this hash remains equal
+before and after graph switching and readback; it does not disable cloth.
+
+`held-render-exit2.json` exits 0 with 64 images and 32 GPU readbacks.
+`held-motion2-validation.json` passes all 16 matched cases. All eight neutral
+cases have exactly identical positions, normals and tangents across the full
+mesh. All eight size-1 cases preserve non-cloth positions and produce maximum
+displacements from 2.596409 to 2.741694 cm, within the original glute offset's
+bound. This isolates the earlier neutral discrepancy to the separate simulation
+runs; it is not a graph-induced neutral deformation. Do not repeat that earlier
+comparison as a blocker.
+
+The first held attempt stopped on a diagnostic naming assumption: a newly
+created instance may end in `_Instance` without a numeric suffix. The private
+weight setter and instance assertion now accept that valid name. Module builds
+16 and 17 pass. The game runtime was not edited or installed by this change.
+
+Next, integrate authored default-deformer activation and morph-weight binding
+for world, preview and Astral copies, then validate actual materials, contact,
+lifecycle and measured cost. The shipped game's `CXXHeaderDump/Engine.hpp`
+contains `GetDefaultMeshDeformer`, `SetMeshDeformer`, `UnsetMeshDeformer` and
+`GetMeshDeformerInstance`. `CXXHeaderDump/OptimusCore.hpp` declares
+`SetFloatVariable(FName, double)`, so a reflected call must use a double value,
+despite its name. Exact 5.6.1 `USkinnedMeshComponent::GetActiveMeshDeformers`
+uses the mesh default unless the component explicitly overrides it. Preserve
+that ownership and avoid replacing another system's override. These API findings
+are integration evidence, not proof of live support for this private graph.
+
 All 18 normal/facial meshes now have per-section nonzero bone influence records.
 The 570-section check passes normalization, indices and source immutability;
 an independent W3 full-array comparison matches all 25 sections. All nine

@@ -10,6 +10,7 @@
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "Misc/SecureHash.h"
 #include "OptimusDeformerInstance.h"
 #include "Serialization/JsonSerializer.h"
 
@@ -81,12 +82,13 @@ bool UCSSRigAuditLibrary::RequestClothDeformerReadback(USkeletalMeshComponent* C
 }
 
 FString UCSSRigAuditLibrary::StepClothDeformerStudy(USkeletalMeshComponent* Component,
-    bool Initialize, bool ResetCloth, bool DisableCloth)
+    bool Initialize, bool ResetCloth, bool DisableCloth, bool AdvanceSimulation)
 {
     if (!IsRunningCommandlet() || !IsInGameThread() || !Component ||
         !Component->GetWorld() || !Component->GetWorld()->IsPreviewWorld() ||
         !Component->GetSkeletalMeshAsset() ||
-        !Component->GetSkeletalMeshAsset()->GetPathName().StartsWith(TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/")))
+        !Component->GetSkeletalMeshAsset()->GetPathName().StartsWith(TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/")) ||
+        (!AdvanceSimulation && (Initialize || ResetCloth)))
         return TEXT("ERROR: expected an isolated Genessa facial mesh preview");
 
     if (Initialize)
@@ -113,28 +115,31 @@ FString UCSSRigAuditLibrary::StepClothDeformerStudy(USkeletalMeshComponent* Comp
 
     auto* World = Component->GetWorld();
     constexpr float Step = 1.f / 60.f;
-    World->DeltaTimeSeconds = World->DeltaRealTimeSeconds = Step;
-    World->TimeSeconds += Step;
-    World->UnpausedTimeSeconds += Step;
-    World->RealTimeSeconds += Step;
-    Component->TickAnimation(Step, true);
+    if (AdvanceSimulation)
+    {
+        World->DeltaTimeSeconds = World->DeltaRealTimeSeconds = Step;
+        World->TimeSeconds += Step;
+        World->UnpausedTimeSeconds += Step;
+        World->RealTimeSeconds += Step;
+        Component->TickAnimation(Step, true);
+    }
     if (auto* Deformer = Cast<UOptimusDeformerInstance>(Component->GetMeshDeformerInstance());
-        Deformer && Deformer->GetName().StartsWith(TEXT("DG_ClothMorphStudy3_Instance_")))
+        Deformer && Deformer->GetName().StartsWith(TEXT("DG_ClothMorphStudy3_Instance")))
     {
         if (!Deformer->SetFloatVariable(TEXT("CSS_ClothGluteWeight"), Component->GetMorphTarget(TEXT("PBMGlutesSize"))))
             return TEXT("ERROR: basis study weight unavailable");
     }
     if (auto* Deformer = Cast<UOptimusDeformerInstance>(Component->GetMeshDeformerInstance());
-        Deformer && Deformer->GetName().StartsWith(TEXT("DG_ClothMorphStudy4_Instance_")))
+        Deformer && Deformer->GetName().StartsWith(TEXT("DG_ClothMorphStudy4_Instance")))
     {
         for (const auto& Shape : CSSClothBasisStudy::Shapes)
             if (!Deformer->SetFloatVariable(*FString(Shape.Attribute).Append(TEXT("Weight")), Component->GetMorphTarget(Shape.Morph)))
                 return TEXT("ERROR: shape basis study weight unavailable");
     }
-    Component->RefreshBoneTransforms();
+    if (AdvanceSimulation) Component->RefreshBoneTransforms();
     if (ResetCloth) Component->ForceClothNextUpdateTeleportAndReset();
     FActorComponentTickFunction Tick;
-    if (!Component->bDisableClothSimulation)
+    if (AdvanceSimulation && !Component->bDisableClothSimulation)
     {
         Component->TickClothing(Step, Tick);
         Component->WaitForExistingParallelClothSimulation_GameThread();
@@ -149,15 +154,43 @@ FString UCSSRigAuditLibrary::StepClothDeformerStudy(USkeletalMeshComponent* Comp
     Result->SetBoolField(TEXT("cloth_disabled"), Component->bDisableClothSimulation);
     Result->SetNumberField(TEXT("glute_morph_weight"), Component->GetMorphTarget(TEXT("PBMGlutesSize")));
     Result->SetNumberField(TEXT("simulation_cloths"), Component->GetClothingSimulation()->GetNumCloths());
+    FSHA1 ClothHash;
+    const auto& ClothData = Component->GetCurrentClothingData_AnyThread();
+    TArray<int32> ClothKeys;
+    ClothData.GetKeys(ClothKeys);
+    ClothKeys.Sort();
     int32 Particles = 0;
-    for (const auto& Item : Component->GetCurrentClothingData_AnyThread())
+    for (const int32 Key : ClothKeys)
     {
-        if (Item.Value.Positions.Num() != Item.Value.Normals.Num())
+        const auto& Item = ClothData.FindChecked(Key);
+        if (Item.Positions.Num() != Item.Normals.Num())
             return TEXT("ERROR: cloth position/normal count differs");
-        for (const auto& Position : Item.Value.Positions)
-            if (Position.ContainsNaN()) return TEXT("ERROR: nonfinite cloth position");
-        Particles += Item.Value.Positions.Num();
+        ClothHash.Update(reinterpret_cast<const uint8*>(&Key), sizeof(Key));
+        ClothHash.Update(reinterpret_cast<const uint8*>(&Item.LODIndex), sizeof(Item.LODIndex));
+        for (int32 Index = 0; Index != Item.Positions.Num(); ++Index)
+        {
+            const auto& Position = Item.Positions[Index];
+            const auto& Normal = Item.Normals[Index];
+            if (Position.ContainsNaN() || Normal.ContainsNaN()) return TEXT("ERROR: nonfinite cloth data");
+            const float Values[]{Position.X, Position.Y, Position.Z, Normal.X, Normal.Y, Normal.Z};
+            ClothHash.Update(reinterpret_cast<const uint8*>(Values), sizeof(Values));
+        }
+        for (const auto* Transform : {&Item.Transform, &Item.ComponentRelativeTransform})
+        {
+            if (Transform->ContainsNaN()) return TEXT("ERROR: nonfinite cloth transform");
+            const auto T = Transform->GetTranslation();
+            const auto R = Transform->GetRotation();
+            const auto S = Transform->GetScale3D();
+            const double Values[]{T.X, T.Y, T.Z, R.X, R.Y, R.Z, R.W, S.X, S.Y, S.Z};
+            ClothHash.Update(reinterpret_cast<const uint8*>(Values), sizeof(Values));
+        }
+        Particles += Item.Positions.Num();
     }
+    ClothHash.Final();
+    FSHAHash Hash;
+    ClothHash.GetHash(Hash.Hash);
+    Result->SetStringField(TEXT("cloth_state_sha1"), Hash.ToString());
+    Result->SetBoolField(TEXT("advanced_simulation"), AdvanceSimulation);
     Result->SetNumberField(TEXT("particles"), Particles);
     FString Text;
     if (!FJsonSerializer::Serialize(Result, TJsonWriterFactory<>::Create(&Text)))

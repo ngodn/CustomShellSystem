@@ -16,7 +16,7 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString StepClothDeformerStudy(class USkeletalMeshComponent* Component, bool Initialize, bool ResetCloth,
-        bool DisableCloth = false);
+        bool DisableCloth = false, bool AdvanceSimulation = true);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static bool RequestClothDeformerReadback(class USkeletalMeshComponent* Component, const FString& Label);
