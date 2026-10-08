@@ -27,7 +27,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Performance | Current package sizes recorded; matched gameplay captures pending |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: complete Eve's rig/mesh assembly, then Commander White and the remaining runtime/catalog consumers. Genessa's 101-package private assembly and the shared skeleton pass independent cooked comparison. Eve's 273-package material group passes cooked comparison, including the hair shaders; all 2,322 texture mip payloads compare exactly through independent container readback. Final facial integration, authoring recipe updates and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
+Next: migrate Commander White's materials and finish her assembly, then the remaining runtime/catalog consumers. Genessa's 101-package private assembly and the shared skeleton pass independent cooked comparison. Eve's complete 308-package outfit assembly passes with the shared skeleton, preserved secondary blueprint, hair shaders and all 22 original mesh buffers. Commander White's 172-package editor migration/reload, 12-package rig cook and both cooked mesh buffer comparisons pass; 80 instances, 78 textures and two parents still need their material migration. Final facial integration, authoring recipe updates and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
 
 ## Astral runtime namespace support
 
@@ -142,8 +142,10 @@ missing and duplicate slot requests still fail. Evidence is in
 The migration retry explicitly selects the new snapshot format. Its save and
 fresh reload now pass for all 172 selected packages, with legacy paths absent
 and all 184 original inputs unchanged. `commander-rig-cook1` passes its
-12-package Windows rig cook. Independent mesh readback, material migration
-and live acceptance remain.
+12-package Windows rig cook. `commander-mesh-comparison1/comparison.json`
+matches both C4/E9 meshes against the installed baseline, including reference
+poses, geometry, indices, colors, weights, cloth mappings and every morph.
+Material migration and live acceptance remain.
 
 Completed Eve reload/cook caches and the obsolete failed Eve editor cache
 were removed with receipts, preserving candidates, original inputs and logs.
@@ -181,6 +183,12 @@ because the system drive lacks space. Project work links preserve the usual
 receipt paths. Rejected pack1 stage/readback/container payloads were removed
 after retaining comparisons, hashes and source inputs. The first assembly's
 reports and mesh evidence remain; nothing has been installed.
+
+After the corrected Eve assembly passed, 509 duplicate readback payload files
+(1,953,661,365 logical bytes) were removed. Canonical stage/container payloads,
+readback headers, decoded comparisons and receipts remain. Completed Commander
+editor/cook DDCs were also removed. The cleanup receipts are stored beside
+their trials; logical sizes are not reported as physical space reclaimed.
 
 `eve-mesh-comparison1/original-decoded.json` records independently decoded
 geometry, skin weights, cloth mappings and morph buffers for all 22 skeletal
