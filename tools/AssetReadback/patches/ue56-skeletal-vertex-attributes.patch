@@ -1,0 +1,44 @@
+diff --git i/CUE4Parse/UE4/Assets/Exports/SkeletalMesh/FSkeletalMeshAttributeVertexBuffer.cs w/CUE4Parse/UE4/Assets/Exports/SkeletalMesh/FSkeletalMeshAttributeVertexBuffer.cs
+index 8634ec2..173bb1d 100644
+--- i/CUE4Parse/UE4/Assets/Exports/SkeletalMesh/FSkeletalMeshAttributeVertexBuffer.cs
++++ w/CUE4Parse/UE4/Assets/Exports/SkeletalMesh/FSkeletalMeshAttributeVertexBuffer.cs
+@@ -1,4 +1,5 @@
+ ﻿using CUE4Parse.UE4.Assets.Exports.Texture;
++using CUE4Parse.UE4.Exceptions;
+ using CUE4Parse.UE4.Readers;
+ 
+ namespace CUE4Parse.UE4.Assets.Exports.SkeletalMesh
+@@ -23,10 +24,16 @@ public enum ESkeletalMeshVertexAttributeDataType
+     public class FSkeletalMeshVertexAttributeData
+     {
+         public readonly int Stride;
++        public readonly byte[] Data;
+ 
+         public FSkeletalMeshVertexAttributeData(FArchive Ar)
+         {
+             Stride = Ar.Read<int>();
++            var elementSize = Ar.Read<int>();
++            var byteCount = Ar.Read<int>();
++            if (Stride <= 0 || elementSize != 1 || byteCount < 0 || byteCount % Stride != 0 || byteCount > Ar.Length - Ar.Position)
++                throw new ParserException(Ar, "Invalid skeletal vertex attribute bulk payload");
++            Data = Ar.ReadBytes(byteCount);
+         }
+     }
+ 
+@@ -43,6 +50,16 @@ public FSkeletalMeshAttributeVertexBuffer(FArchive Ar)
+             PixelFormat = (EPixelFormat) Ar.Read<int>();
+             ComponentStride = Ar.Read<int>();
+             ValueData = new FSkeletalMeshVertexAttributeData(Ar);
++            var expectedStride = PixelFormat switch
++            {
++                EPixelFormat.PF_R8 => 1,
++                EPixelFormat.PF_R16F => 2,
++                EPixelFormat.PF_R32_FLOAT => 4,
++                _ => 0
++            };
++            if (ComponentCount is < 1 or > 4 || expectedStride == 0 || ComponentStride != expectedStride ||
++                ValueData.Stride != ComponentStride * ComponentCount)
++                throw new ParserException(Ar, "Invalid skeletal vertex attribute format or stride");
+         }
+     }
+ }

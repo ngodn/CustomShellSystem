@@ -12,6 +12,12 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Security.Cryptography;
 
+if (args is ["--check-vertex-attributes"]) {
+    try { VertexAttributeReadbackCheck.Run(); }
+    catch (InvalidDataException error) { Console.Error.WriteLine(error.Message); Environment.ExitCode = 1; }
+    return;
+}
+
 if (args.Length is not (4 or 5) || (args.Length == 5 && args[4] is not ("--shader-maps" or "--animation-digests" or "--mesh-digests" or "--texture-digests")))
     throw new ArgumentException("AssetReadback CONTAINERS MAPPINGS PACKAGE_LIST OUTPUT_JSON [--shader-maps|--animation-digests|--mesh-digests|--texture-digests]");
 var readShaderMaps = args.Length == 5 && args[4] == "--shader-maps";
@@ -118,7 +124,19 @@ static JObject MeshDigest(USkeletalMesh mesh) {
             active_bones_sha256 = Digest(lod.ActiveBoneIndices),
             required_bones_sha256 = Digest(lod.RequiredBones),
             cloth_mapping_sha256 = Digest(lod.ClothVertexBuffer),
-            attributes_sha256 = Digest(lod.VertexAttributeBuffers)
+            attributes_sha256 = Digest(lod.VertexAttributeBuffers),
+            attribute_buffers = lod.VertexAttributeBuffers?.ToDictionary(p => p.Key.Text, p => new {
+                p.Value.ComponentCount, p.Value.ComponentStride, p.Value.PixelFormat,
+                p.Value.ValueData.Stride,
+                bytes = p.Value.ValueData.Data.Length,
+                vertices = p.Value.ValueData.Data.Length / p.Value.ValueData.Stride,
+                sha256 = Convert.ToHexStringLower(SHA256.HashData(p.Value.ValueData.Data))
+            }),
+            half_edge = lod.HalfEdgeBuffer is null ? null : new {
+                vertices = lod.HalfEdgeBuffer.VertexToEdgeData.Length,
+                edges = lod.HalfEdgeBuffer.EdgeToTwinEdgeData.Length,
+                sha256 = Digest(lod.HalfEdgeBuffer)
+            }
         }));
     }
     mesh.PopulateMorphTargetVerticesData();
