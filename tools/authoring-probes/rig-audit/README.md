@@ -31,6 +31,29 @@ The private Windows cook and package evidence are in
 `work/three-outfit-rig-physics/genessa-deformer-{candidate,cook,pack}1`.
 This prototype still needs GPU execution, visible fit, lifecycle and cost checks.
 
+`StepClothDeformerStudy` drives an isolated preview component at 60 Hz with its
+post-process graph disabled. It accepts only current Genessa facial meshes in
+a preview world, disables automatic ticks and waits for each cloth step. It
+reports the deformer instance and finite cloth particle count. This isolates
+reference-pose cloth/morph behavior; it does not reproduce game animation or
+body-spring behavior.
+
+`render_cloth_morph_study.py` compares legacy skinning, the stock deformer and
+the trial at glute weights 0 and 1 on both variants, using fixed rear/side views
+and flat diagnostic materials. It requires the private CSSRigAudit and existing
+CSSAuthoring modules, read-only current Genessa source assets, and the study
+graph. Its `CSS_PANEL_STAGE` directory must contain `sources.json` and an empty
+`captures` directory. The recorded `genessa-deformer-render1/command.json` uses
+offscreen Vulkan and permits writes only inside that trial. The initial render
+run is pending, so this script is not yet validated end to end.
+
+The recompute-normals graph requires cooked half-edge mesh data or retained CPU
+index/position buffers. UE 5.6.1 `OptimusDataInterfaceHalfEdge.cpp` validates
+this and recommends registering the graph in the mesh's `TargetMeshDeformers`.
+Editor on-demand buffer generation does not prove packaged compatibility.
+If accepted visually, recook private Genessa meshes with that dependency and
+verify their cooked buffers before installing this approach.
+
 `SnapshotAnimation` reads named source tracks through `IAnimationDataModel`,
 hashing explicit transform components rather than struct padding. It records
 frame/key counts, sample rate, model GUID, curve/attribute counts and retarget

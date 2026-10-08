@@ -113,6 +113,20 @@ the disposable Wine prefix was removed (1,084,763,562 logical bytes).
 `genessa-deformer-cook1/cleanup.json` records the deletion; cook inputs,
 logs, shaders, cooked outputs and the verified trial package remain.
 
+The next offscreen Vulkan comparison is staged in `genessa-deformer-render1`.
+Its private C++ preview helper builds against UE 5.6.1; the render command was
+started and its first shader-cache compilation was still active at the last
+observation. No image or fit result exists yet. Poll the recorded tool session
+and process in `run-state.json` before starting another renderer.
+
+Source inspection found an additional packaged-game requirement for this
+approach: `OptimusDataInterfaceHalfEdge.cpp` can generate missing half-edge
+buffers in editor, but rejects the deformer when cooked buffers and CPU
+index/position data are both unavailable. The migrated mesh snapshot declares
+no `TargetMeshDeformers`. An accepted trial therefore needs explicit mesh cook
+dependency/buffer validation, not only a shared graph package. This is recorded
+in `genessa-deformer-render1/packaging-requirement.json`.
+
 All 18 normal/facial meshes now have per-section nonzero bone influence records.
 The 570-section check passes normalization, indices and source immutability;
 an independent W3 full-array comparison matches all 25 sections. All nine

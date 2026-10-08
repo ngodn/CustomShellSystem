@@ -15,6 +15,9 @@ public:
     static class UObject* CloneClothMorphStudy(class UObject* Source, const FString& OutputPackage);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static FString StepClothDeformerStudy(class USkeletalMeshComponent* Component, bool Initialize, bool ResetCloth);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString ExportRawPoseKeys(class UAnimSequence* Sequence, const FString& OutputFile,
         bool bMatchACLSampleClock = false);
 
