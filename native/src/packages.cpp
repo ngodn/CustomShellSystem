@@ -1,4 +1,5 @@
 #include "packages.hpp"
+#include <algorithm>
 #include <array>
 #include <cstring>
 #include <fstream>
@@ -16,6 +17,39 @@ namespace {
 using Bytes=std::vector<unsigned char>;
 constexpr std::string_view prefix="MortalShell2/Content/CSS/Packages/";
 constexpr size_t facial_resource_limit=16*1024*1024;
+PackageCatalog package_document(const Json& manifest,Json catalog,fs::path artwork,
+                                const fs::path& source,AnimationContainerRevision revision) {
+    PackageCatalog result{std::move(catalog),std::move(artwork),source,std::move(revision),
+                          manifest.at("id").get<std::string>(),{}, {}};
+    if(manifest.contains("provides")) {
+        const auto& contracts=manifest.at("provides");
+        if(!contracts.is_array() || contracts.size()>32) throw std::runtime_error("Invalid package contracts");
+        for(const auto& item:contracts) {
+            const auto contract=item.get<std::string>();
+            if(!valid_id(contract) || !result.contracts.insert(contract).second)
+                throw std::runtime_error("Invalid or duplicate package contract");
+        }
+    }
+    if(manifest.contains("dependencies")) {
+        const auto& dependencies=manifest.at("dependencies");
+        if(!dependencies.is_array() || dependencies.size()>32) throw std::runtime_error("Invalid package dependencies");
+        std::set<std::pair<std::string,std::string>> identities;
+        for(const auto& item:dependencies) {
+            if(!item.is_object() || item.size()!=3 || !item.contains("id") ||
+               !item.contains("contract") || !item.contains("name"))
+                throw std::runtime_error("Invalid package dependency fields");
+            PackageDependency dependency{item.at("id").get<std::string>(),item.at("contract").get<std::string>(),
+                                         item.at("name").get<std::string>()};
+            if(!valid_id(dependency.id) || dependency.id==result.id || !valid_id(dependency.contract) ||
+               dependency.name.empty() || dependency.name.size()>96 ||
+               std::any_of(dependency.name.begin(),dependency.name.end(),[](unsigned char c){return c<32 || c==127;}) ||
+               !identities.emplace(dependency.id,dependency.contract).second)
+                throw std::runtime_error("Invalid or duplicate package dependency");
+            result.dependencies.push_back(std::move(dependency));
+        }
+    }
+    return result;
+}
 bool facial_resource(std::string_view name) {
     constexpr std::string_view suffix=".face.json";
     return name.ends_with(suffix) && valid_id(std::string(name.substr(0,name.size()-suffix.size())));
@@ -221,6 +255,9 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
         const auto begin=result.size();
         try {
         auto entries=contents(path);
+        if(std::count_if(entries.begin(),entries.end(),[](const auto& entry) {
+            return entry.first.ends_with("/manifest.json");
+        })>1) throw std::runtime_error("CSS package must contain one manifest");
         for(const auto& [name,bytes]:entries) if(name.ends_with("/manifest.json")) {
             auto manifest=Json::parse(bytes);
             if(manifest.at("format")!="CSS.Package" || manifest.at("format_version")!=1 ||
@@ -259,7 +296,7 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
                     throw std::runtime_error("Animation library package identity mismatch");
                 if(manifest.contains("thumbnail") || manifest.contains("resources"))
                     throw std::runtime_error("Animation libraries cannot carry outfit resources");
-                result.push_back({std::move(catalog),{},path,revision});
+                result.push_back(package_document(manifest,std::move(catalog),{},path,revision));
                 continue;
             }
             if(kind!="outfit") throw std::runtime_error("Unsupported CSS package kind");
@@ -335,7 +372,7 @@ std::vector<PackageCatalog> package_catalogs(const fs::path& paks,const fs::path
                     fs::rename(temp,path);
                 }
             }
-            result.push_back({manifest.at("catalog"),directory,path,revision});
+            result.push_back(package_document(manifest,manifest.at("catalog"),directory,path,revision));
         }
         if(result.size()>begin) { record["status"]="validated"; record.erase("reason"); }
         } catch(const std::exception& error) {

@@ -71,6 +71,38 @@ rename or assumed mount precedence. See the
 [active goal](development/three-outfit-rig-physics-goal.md) and
 [status](development/three-outfit-rig-physics-status.md).
 
+## Coordinated upgrade requirements
+
+The private migrated outfits require package `css.locomotion` to provide
+`eins0fx.shared.author_namespace.v1`. The consolidated `CSS_SharedAssets_P`
+declares this contract while retaining the library's public ID. The old
+locomotion pack does not provide it. Matching IDs alone therefore cannot make
+an old shared pack satisfy the new outfit's cooked dependencies.
+
+For a complete upgrade, replace the installed in-scope outfit trios with their
+matching migrated versions, replace the old `CSS_SharedAssets_P` trio, and retire
+the separate `CSS_LocomotionSharedAssets_P` and `CSS_AstralSharedAssets_P` trios.
+Keep CSS runtime and shared-assets delivery separate. Back up the existing set
+before replacement, preserve user state/profile files, and restart the game.
+The candidate installer and live migration are not yet accepted; these are
+requirements, not instructions to install the current private trial manually.
+
+The new runtime retains support for the unchanged old outfit/library set.
+Native metadata tests preserve its seven existing Eve/Commander White facial
+bindings. The complete migrated set resolves nine facial bindings, including
+both Genessa variants. Partial updates deliberately do not reuse facial or
+playback adapters from another container revision. Older outfits can retain
+their catalog entries and saved animation IDs with the new library, but that
+does not establish full playback or facial compatibility: update the matching
+outfit for its relocated adapter and face assets.
+
+Installing both library metadata PAKs creates conflicting public IDs. CSS rejects
+the ambiguous libraries and any new outfits requiring them, with a duplicate-pack
+diagnostic. Removing the required shared pack or leaving the older layout yields
+an install/update diagnostic. It does not silently try missing new skeletons or
+change saved selections to another outfit. Native dependency tests do not replace
+the pending clean-install, upgrade and live-game regression checks.
+
 ## Initial migration map
 
 The audited installation has 820 export records representing 790 unique package

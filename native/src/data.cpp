@@ -169,6 +169,7 @@ State load_state(const fs::path& file, bool* recovered) {
 Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::path& cache) {
     Catalog result;
     std::vector<fs::path> animation_library_sources;
+    std::map<std::string,fs::path> outfit_sources;
     std::set<std::string> ids;
     std::vector<fs::path> files;
     if (fs::exists(directory)) {
@@ -178,7 +179,7 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
     }
     std::sort(files.begin(), files.end());
     auto documents=package_catalogs(paks,cache,&result.diagnostics);
-    for(const auto& path:files) documents.push_back({read_json(path),path.parent_path(),{}, {}});
+    for(const auto& path:files) documents.push_back({read_json(path),path.parent_path(),{},{},{},{},{}});
     for (const auto& document : documents) {
         const auto previous_size=result.outfits.size();
         const auto previous_ids=ids;
@@ -377,8 +378,10 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
             if (result.outfits.size() > 4096) throw std::runtime_error("Catalog exceeds 4096 outfits");
         }
         if(!document.source.empty()) {
-            for(size_t index=previous_size;index<result.outfits.size();++index)
+            for(size_t index=previous_size;index<result.outfits.size();++index) {
                 result.outfit_revisions.emplace(result.outfits[index].id,document.revision);
+                outfit_sources.emplace(result.outfits[index].id,document.source);
+            }
             package_status("loaded");
         }
         } catch(const std::exception& error) {
@@ -422,6 +425,53 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
             file["reason"]="Conflicting animation library identities, aliases or facial rigs";
         }
         result.animation_libraries.erase(result.animation_libraries.begin()+static_cast<std::ptrdiff_t>(*it));
+        animation_library_sources.erase(animation_library_sources.begin()+static_cast<std::ptrdiff_t>(*it));
+    }
+    // Resolve after catalog validation and conflict rejection. A provider with
+    // readable metadata but an unusable catalog cannot satisfy a dependency.
+    std::map<std::string,size_t> package_records;
+    for(size_t i=0;i<result.diagnostics["files"].size();++i)
+        package_records.emplace(result.diagnostics["files"][i].at("path").get<std::string>(),i);
+    std::map<std::string,std::vector<const PackageCatalog*>> providers;
+    for(const auto& document:documents) if(!document.source.empty()) providers[document.id].push_back(&document);
+    auto loaded_package=[&](const fs::path& source) {
+        const auto record=package_records.find(path_utf8(source));
+        return record!=package_records.end() && result.diagnostics["files"][record->second]["status"]=="loaded";
+    };
+    bool changed=true;
+    while(changed) {
+        changed=false;
+        for(const auto& document:documents) {
+            if(document.source.empty() || !loaded_package(document.source)) continue;
+            for(const auto& dependency:document.dependencies) {
+                const auto found=providers.find(dependency.id);
+                std::string reason;
+                if(found==providers.end()) reason="Install "+dependency.name+" to use this package.";
+                else if(found->second.size()!=1) reason="Remove duplicate copies of "+dependency.name+" and restart the game.";
+                else if(!loaded_package(found->second.front()->source))
+                    reason="Repair "+dependency.name+" before using this package; its catalog could not load.";
+                else if(!found->second.front()->contracts.contains(dependency.contract))
+                    reason="Update "+dependency.name+" to the version required by this outfit.";
+                if(reason.empty()) continue;
+                auto& record=result.diagnostics["files"][package_records.at(path_utf8(document.source))];
+                record["status"]="rejected";
+                record["reason"]=reason;
+                record["dependency"]={{"id",dependency.id},{"contract",dependency.contract}};
+                changed=true;
+                break;
+            }
+        }
+    }
+    std::erase_if(result.outfits,[&](const auto& outfit) {
+        const auto source=outfit_sources.find(outfit.id);
+        if(source==outfit_sources.end() || loaded_package(source->second)) return false;
+        result.outfit_revisions.erase(outfit.id);
+        return true;
+    });
+    for(size_t i=result.animation_libraries.size();i>0;--i) {
+        const auto& source=animation_library_sources[i-1];
+        if(!source.empty() && !loaded_package(source))
+            result.animation_libraries.erase(result.animation_libraries.begin()+static_cast<std::ptrdiff_t>(i-1));
     }
     std::set<std::string> local_recipes;
     // Optional local recipes make material authoring testable without remounting containers.
@@ -445,6 +495,9 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
     return result;
 }
 std::string Catalog::empty_message() const {
+    if(diagnostics.contains("files")) for(const auto& file:diagnostics["files"])
+        if(file.value("status",std::string{})=="rejected" && file.contains("dependency"))
+            return file.at("reason").get<std::string>();
     if(diagnostics.value("rejected",size_t{})>0)
         return "CSS could not load the outfit packages. See CSS.log for filenames and reasons.";
     if(diagnostics.contains("errors") && !diagnostics["errors"].empty())

@@ -142,6 +142,8 @@ def main():
             raise ValueError('Installed metadata differs from the audited outfit')
         candidate = migrate(original)
         candidate['containers'] = descriptors(container)
+        candidate['dependencies'] = [dict(id='css.locomotion', contract='eins0fx.shared.author_namespace.v1',
+                                          name='CSS Shared Assets')]
         originals[original['id']] = original
         migrated[original['id']] = candidate
         revisions[original['id']] = candidate['containers']
@@ -185,6 +187,7 @@ def main():
             updated['source_bulk_bytes'] = revision['.ucas']['bytes']
             adapters[index] = updated
     candidate['containers'] = descriptors('CSS_SharedAssets_P')
+    candidate['provides'] = ['eins0fx.shared.author_namespace.v1']
     candidate['name'] = library['name'] = 'CSS Shared Assets'
     # Public IDs and facial curves remain unchanged; this is not a release version bump.
     manifest, resources = externalize(candidate)

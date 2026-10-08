@@ -27,7 +27,46 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Performance | Current package sizes recorded; matched gameplay captures pending |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: complete legacy-package upgrade/dependency handling and remaining runtime consumers. The four migrated catalogs now pass the native loader and selection audit, including facial adapter revision bindings. Private migration assemblies pass for all three outfits: Genessa's 107 packages with its new facial meshes and oral assets, Eve's 308 and Commander White's 171, each checked with the shared skeleton. Eve retains its compiled secondary graph and 22 original mesh buffers. Commander White retains both C4/E9 mesh buffers, original hair/body graphs, all 80 instances, 78 textures and two material parents. Authoring recipe updates, rig/physics work and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
+Next: review remaining runtime consumers and prepare the coordinated candidate upgrade. Dependency and partial-upgrade handling now passes 28 native scenarios. The four migrated catalogs pass the native loader and selection audit, including facial adapter revision bindings. Private migration assemblies pass for all three outfits: Genessa's 107 packages with its new facial meshes and oral assets, Eve's 308 and Commander White's 171, each checked with the shared skeleton. Eve retains its compiled secondary graph and 22 original mesh buffers. Commander White retains both C4/E9 mesh buffers, original hair/body graphs, all 80 instances, 78 textures and two material parents. Authoring recipe updates, rig/physics work and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
+
+## Dependency and partial-upgrade handling
+
+`catalog-namespace3` adds the declared shared dependency to each migrated outfit.
+The shared pack provides `eins0fx.shared.author_namespace.v1`, using its existing
+`css.locomotion` package identity. Asset payloads, paths, adapter revisions,
+customization recipes and facial curves are unchanged from `catalog-namespace2`.
+See [the package format](../css-packages.md#shared-asset-dependencies) and
+[upgrade requirements](../asset-organization.md#coordinated-upgrade-requirements).
+
+The runtime resolves these declarations after catalog validation and public-ID
+conflict rejection. Missing/wrong/duplicate/rejected providers reject their
+dependent catalogs with readable install/update/repair messages. Rejection
+propagates through dependent packages without hiding unrelated outfits. The
+scanner now rejects multiple manifests inside one PAK, matching the documented
+one-package identity. It performs no per-frame dependency work and does not
+rewrite saved state. The existing reconcile path retains a missing saved look
+so reinstalling its package can restore it.
+
+`dependency-upgrade2` passes 28 actual native-loader scenarios: malformed
+declarations, conflicting providers, chained requirements, complete cycles,
+compatible provider updates, missing/old/duplicate shared packs, the unchanged
+legacy installation, the complete migrated installation, and each partial
+outfit upgrade. The unchanged old set retains seven existing facial bindings;
+the migrated set resolves all nine. Mixed old outfits/new library do not acquire
+unverified facial replacements. Such a partial set is not claimed to have full
+playback/facial compatibility; the coordinated upgrade replaces the matching
+outfits as well as the shared packs.
+
+`dependency-runtime2` records a successful Windows C++23 core build, all 23 host
+suites and the 1,380 packaged catalog checks against `catalog-namespace3`.
+Its hash-verified `css_core.dll` is staged in that directory and is not installed.
+`dependency-parser1`, `dependency-upgrade1` and `dependency-runtime1` are earlier
+passing checkpoints; the second upgrade/runtime reports are authoritative.
+
+Cleanup replaced 136 byte-identical older catalog resources with links to the
+current candidate, preserving their original paths and hashes. The receipt
+`cleanup-catalog-resources1.json` records 82,617,888 logical bytes and observed
+free-space figures. Manifests, packed evidence and installed packages remain.
 
 ## Combined catalogs and final container identities
 

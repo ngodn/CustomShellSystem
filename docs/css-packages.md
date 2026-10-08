@@ -60,6 +60,51 @@ The manifest declares `format: CSS.Package`, `format_version: 1`, `game: MortalS
 
 The optional [color recipe](colors.md) and its checksummed `dye-*.png` resources are also embedded in this directory.
 
+### Shared asset dependencies
+
+The development runtime supports optional `provides` and `dependencies` fields
+on a package manifest. They describe a stable asset layout, independently of
+release version strings and changing container hashes. Existing manifests
+without these fields keep their current behavior.
+
+A shared pack can declare:
+
+```json
+"provides": ["eins0fx.shared.author_namespace.v1"]
+```
+
+An outfit using that layout declares:
+
+```json
+"dependencies": [{
+  "id": "css.locomotion",
+  "contract": "eins0fx.shared.author_namespace.v1",
+  "name": "CSS Shared Assets"
+}]
+```
+
+`id` identifies the provider's existing package ID, not its filename. `contract`
+identifies the compatible asset layout it promises. Keep that contract when
+adding compatible assets; change it when removing or incompatibly changing
+required assets. Another author uses their own IDs and contract names.
+`name` is the readable package name shown in missing/update diagnostics.
+Contracts use the normal 1-96 character CSS ID rules. Names contain 1-96 bytes
+without control characters. Each declaration list is limited to 32 entries;
+duplicate contracts, duplicate dependency pairs and self-dependencies are invalid.
+
+CSS resolves dependencies after catalog validation and conflict checks, during
+loading or rescan. Missing, incompatible, ambiguous or rejected providers make
+the dependent catalog unavailable with an installation/update diagnostic.
+Unrelated packages remain available. Rejection propagates through dependency
+chains; a complete mutually dependent set is permitted. A provider's readable
+manifest alone is insufficient if its catalog was rejected.
+
+This is a development feature and needs its matching CSS runtime. It does not
+verify every asset's implementation, install dependencies or make different
+skeletons compatible. Authors must validate the promised assets independently.
+The [namespace migration notes](asset-organization.md) describe the coordinated
+upgrade for the current three-outfit work.
+
 CSS scans packages on catalog load/rescan. It validates bounded pak index and entry hashes, manifest identity, the image hash, companion sizes and the small `.utoc` hash. The thumbnail is extracted to a rebuildable cache at `Mods/CustomShellSystem/cache/packages/<first 16 hex digits of the manifest hash>/thumbnail.png`, next to the package's dye masks. The folder name is short on purpose: a default Steam install already puts `cache/packages/` 125 characters deep, and Windows refuses paths past 259 characters. Keep dye mask names under 96 characters (the id rule) and the longest cached temp path stays at 242. Folders from the older `<id>/<manifest-hash>` layout are removed on the next scan. The package remains self-contained if that cache is deleted. Large `.ucas` hashing stays outside the game thread:
 
 ```sh
