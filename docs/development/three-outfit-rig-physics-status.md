@@ -76,16 +76,33 @@ source groups covering all 175,142 triangles. This fixes the verifier; it does
 not change outfit geometry or material slots.
 
 `mesh-namespace-module2/build-exit.json` records the successful C++20 build.
-The second migration attempt uses that module and runs the section-selection
-check before migration. Follow `eve-rig-editor1/command2.json`, `console2.log`
-and the eventual `exit.json` for its result. The initial failed exit remains
-in `attempt1-exit.json`. Fresh reload, cook and complete assembly are still
-required before accepting this rig migration.
+The second migration attempt passed the section-selection check, but ran out
+of disk space during rename/save. It was terminated after an ordinary termination
+request failed to stop it; `eve-rig-editor1/exit.json` records 137. This candidate
+is rejected. All 316 original authoring inputs were rehashed unchanged in
+`attempt2-source-check.json`; no candidate was installed.
+
+`cleanup-eve-enospc1.json` records removal of the rejected private Content,
+reproducible original-container extraction, and three completed cooks' DDCs.
+It preserves logs, hashes, decoded comparisons, source containers and accepted
+material candidates. The 5,735,123,231 logical bytes removed restored about
+3 GB of measured free space, from 2.5 GB to 5.6 GB. Reflinked copies do not
+necessarily reclaim their logical size.
+
+`eve-rig-editor2` restages the 309 selected packages and 316 dependencies from
+the original hash-pinned sources. It uses module2 and an independent reflink
+copy of the warm DDC. `space-check.json` records the preflight space estimate;
+`command.json`, `console.log` and the eventual `exit.json` record the retry.
+Fresh reload, cook and complete assembly remain required before acceptance.
 
 `eve-mesh-comparison1/original-decoded.json` records independently decoded
 geometry, skin weights, cloth mappings and morph buffers for all 22 skeletal
 mesh packages currently supplied by Eve and its shared facial replacements.
 The migrated counterpart has not yet been compared.
+
+`commander-rig-dependencies1` completed its read-only registry query with exit
+zero: 172 selected roots, including the shared base skeleton, and 184 packages
+in the dependency closure. Commander White's migration has not started.
 
 Cleanup removed the superseded standalone Eve texture stage/container and
 rejected Genessa material cook1/pack1 payloads only after verifying the retained
