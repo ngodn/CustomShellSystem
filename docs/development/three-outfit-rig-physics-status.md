@@ -33,6 +33,23 @@ Next: extend the isolated migration to the remaining dependencies and consumers,
 
 [Organization convention](../asset-organization.md) documents the author/project roots. The first supporting CSS change accepts shared animations/carriers/adapters under `/Game/CSS/<author>/Shared/Locomotion/` and character facial replacements under `/Game/CSS/<author>/<project>/Faces/`, retaining the legacy roots. Tests cover a second author, malformed namespace boundaries, native idle resolution and unchanged revision checks. The C++23 host build and all 23 host suites pass. This is catalog validation coverage, not migrated asset or live-game acceptance. No new DLL has been installed.
 
+### Base-skeleton namespace compatibility
+
+The runtime accepts the verified `/Game/CSS/eins0fx/Shared/Skeletons/SKEL_Base`
+object alongside its legacy `/Game/CSS/Shared/SKEL_Base` identity. Evidence is
+the exact normalized Skeleton comparison in `migration-cook6/comparison.json`
+and the subsequent shared-pack payload check. The change preserves the existing
+directed base-to-Genessa-wing animation mapping and rejects its reverse.
+It does not infer compatibility from an author's folder name or add the still
+unverified migrated wing skeleton.
+
+The C++23 host build and all 23 registered host suites pass. Added cases cover
+old and new base targets, legacy saved IDs and canonical IDs, shared preference,
+bundled fallback, restoration to native shells and rejection of lookalike paths.
+These are resolver checks, not live validation of the full migration. No DLL or
+asset pack was installed. Astral consumer paths and remaining outfit migration
+are still pending.
+
 ## Storage and cleanup
 
 Initial free space was approximately 12 GB on the system drive and 13 GB on the game drive. Decode mounts use symlinks. The namespace trial now has isolated editable copies and two small 32-package cooks. Eve reference dependencies were copied with Btrfs reflinks, not mutable hardlinks. Prior video research removed only its temporary model and Python environment; source videos and evidence remain intact.

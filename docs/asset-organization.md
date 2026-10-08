@@ -5,6 +5,12 @@ directory names use ASCII letters, digits and underscores. Each author owns a
 separate namespace; the folder convention does not require their display name
 or catalog ID to match the directory name.
 
+For example, another author can use `/Game/CSS/another_author/MyOutfit/`
+for their outfit and `/Game/CSS/another_author/Shared/Locomotion/` for their
+shared library. Use a stable author directory across releases. This convention
+does not make another author's skeleton compatible automatically; compatibility
+still needs asset evidence and explicit bindings.
+
 For the current eins0fx migration:
 
 | Content | Destination root | Container owner |
@@ -24,6 +30,13 @@ Character facial replacement meshes belong under
 `/Game/CSS/<author>/<project>/Faces/`. Exact skeleton alternatives and
 source-container revision checks still apply. A path passing validation is
 not proof that its asset loads or is compatible.
+
+The runtime now recognizes the verified old and new eins0fx base skeleton
+paths as the same animation layout. It retains the existing directed base-to-
+Genessa-wing mapping. This covers legacy outfits consuming the migrated
+library and migrated base meshes consuming the legacy library. Other authors'
+similarly named skeletons are not added to that allowlist by folder naming.
+Genessa's new wing-skeleton path remains pending its own migration checks.
 
 Legacy `/Game/CSS/Locomotion/` catalog paths remain accepted, including their
 existing `Adapters/` and `Faces/` directories. This preserves current packs

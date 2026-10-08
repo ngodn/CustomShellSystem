@@ -186,6 +186,25 @@ int main(int argc,char** argv) {
                "Bundled fallback invented a skeleton declaration");
         expect(resolve("css.eve.idle",bundled,base).candidates.size()==2,"Canonical choice lost old bundled fallback");
         expect(resolve("css.eve.idle",{},base).candidates.size()==1,"Shared-only installation needs an outfit alias");
+        const std::string authored_base="/Game/CSS/eins0fx/Shared/Skeletons/SKEL_Base.SKEL_Base";
+        expect(resolve("css.eve.idle",{},authored_base).candidates.size()==1,
+               "Legacy animation library rejected the migrated base skeleton");
+        auto migrated_base_library=library;
+        const std::string migrated_idle="/Game/CSS/eins0fx/Shared/Locomotion/Eve/AN_Idle.AN_Idle";
+        migrated_base_library["entries"][0]["assets"][0]={{"asset",migrated_idle},{"skeleton",authored_base}};
+        const std::vector<AnimationLibrary> migrated_base_libraries{AnimationLibrary::parse(migrated_base_library)};
+        for (const auto& target : {base, authored_base, wings}) {
+            for (const auto* choice : {"eve", "css.eve.idle"}) {
+                const auto migrated_match=resolve_library_animation(migrated_base_libraries,
+                    AnimationSlot::Idle,choice,bundled,target);
+                expect(migrated_match.entry && migrated_match.entry->id=="css.eve.idle" &&
+                       migrated_match.candidates.size()==2 &&
+                       migrated_match.candidates[0].asset==migrated_idle &&
+                       migrated_match.candidates[1].asset==bundled[0].clip &&
+                       migrated_match.candidates[1].bundled,
+                       "Migrated library lost saved choice, shared preference or bundled fallback");
+            }
+        }
         expect(resolve("eve",{},base).entry==nullptr,"Legacy ID matched without its exact bundled asset");
         auto specialized=bundled;specialized[0].clip="/Game/CSS/UnholyGenessa/AN_Wings.AN_Wings";
         expect(!resolve("eve",specialized,wings).entry,"Unaliased wing animation was replaced by name or ID");
