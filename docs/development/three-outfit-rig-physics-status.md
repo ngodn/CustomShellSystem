@@ -146,6 +146,51 @@ no `TargetMeshDeformers`. An accepted trial therefore needs explicit mesh cook
 dependency/buffer validation, not only a shared graph package. This is recorded
 in `genessa-deformer-render1/packaging-requirement.json`.
 
+### Independent cloth-basis prototype: rendered improvement, not installed
+
+The next private graph, `DG_ClothMorphStudy3`, reads the skirt's glute offsets
+from three scalar vertex attributes and a per-instance weight. Its additional
+input is gated by `ENABLE_DEFORMER_CLOTH && !ENABLE_DEFORMER_MORPHTARGET`.
+UE 5.6.1's cloth interface selects that permutation per render section from
+the actual cloth buffers. This avoids adding the glute morph twice to ordinary
+skinned sections, including vertices shared at material boundaries.
+
+The boundary probe found 329 shared source vertices, 176 with nonzero glute
+offsets (maximum 0.358853 cm). Display/imported skirt names were both
+`UG_Skirt`; a name mismatch was not the cause. No vertices were split and no
+engine code was changed. The prior ungated `Study2` graph was never rendered
+as a candidate or installed.
+
+`genessa-deformer-render1/basis-study2` records two private mesh copies with
+unchanged render geometry, UVs, colors, skin weights, cloth mappings and full
+cloth assets. Fresh-process `reload/result.json` extends the comparison to all
+morphs and the skeleton on both meshes. Original source files remain unchanged.
+The authoring and reload commands both exit 0. Build evidence is
+`deformer-study-module2/exit12.json`.
+
+The offscreen render command `basis-render-command1.json` exits 0 with all
+24 captures and eight GPU readbacks. `gpu-basis-comparison.json` reports:
+
+- Both variants restore up to 2.742668 cm of skirt displacement at Glute Size 1,
+  compared with the 2.743002 cm source target. The maximum per-vertex difference
+  from the expected offset is 0.014979 cm across separate cloth runs.
+- Every vertex outside the skirt has zero trial-minus-stock position difference
+  in the size-1 comparison, including the other cloth sections.
+- Neutral skirt differences remain below 0.001264 cm. Rear diagnostic exposure
+  changes from 17,831 body-colored pixels to 159 at size 1, versus 298 in both
+  neutral stock/trial captures. These are fixed-region comparative pixels,
+  including intentional openings, not a collision or penetration metric.
+
+The rear render was visually inspected and shows restored panel coverage.
+This is an isolated reference-pose **glute-only** result with full cloth
+simulation, not the final fix. Other shape controls/combinations, suspended
+cloth, animated poses, normals/materials, physical clearance and body-rig
+synchronization still need validation. Expand the proven input approach as
+required, declare the mesh's deformer collection, verify Windows cooked vertex
+attributes/half-edge buffers, then test the packaged game and doubles. Runtime
+weight binding and performance are not implemented or accepted by this study.
+The installed game build and user settings remain unchanged.
+
 All 18 normal/facial meshes now have per-section nonzero bone influence records.
 The 570-section check passes normalization, indices and source immutability;
 an independent W3 full-array comparison matches all 25 sections. All nine

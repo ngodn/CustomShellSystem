@@ -24,6 +24,12 @@ public:
     static bool SetClothStudyDeformer(class USkeletalMeshComponent* Component, class UMeshDeformer* Deformer);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static class USkeletalMesh* CloneClothBasisMeshStudy(class USkeletalMesh* Source, const FString& OutputPackage);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static class UObject* CloneClothBasisGraphStudy(class UObject* Source, const FString& OutputPackage);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString ExportRawPoseKeys(class UAnimSequence* Sequence, const FString& OutputFile,
         bool bMatchACLSampleClock = false);
 

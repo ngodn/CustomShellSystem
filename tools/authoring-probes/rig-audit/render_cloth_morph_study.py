@@ -2,7 +2,8 @@ import unreal,json,os,hashlib,time
 from pathlib import Path
 p=Path(os.environ['CSS_PANEL_STAGE'])
 readback=os.environ.get('CSS_PANEL_READBACK')=='1'
-suffix='-readback' if readback else ''
+basis=os.environ.get('CSS_PANEL_BASIS')=='1'
+suffix=('-basis' if basis else '')+('-readback' if readback else '')
 out=p/('captures'+suffix)
 out.mkdir(exist_ok=True)
 assert not any(out.iterdir()),f'Refusing to overwrite captures: {out}'
@@ -38,12 +39,12 @@ settings.set_editor_property('override_auto_exposure_apply_physical_camera_expos
 cap.set_editor_property('post_process_settings',settings)
 target=unreal.RenderingLibrary.create_render_target2d(world,512,512,unreal.TextureRenderTargetFormat.RTF_RGBA8,unreal.LinearColor(0,0,0,1))
 cap.set_editor_property('texture_target',target)
-trial=unreal.load_asset('/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphStudy1');assert trial
+trial=unreal.load_asset('/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphStudy'+('3' if basis else '1'));assert trial
 baseline=unreal.load_asset('/DeformerGraph/Deformers/DG_LinearBlendSkin_Morph_Cloth_RecomputeNormals');assert baseline
 rows=[]
 try:
  for variant in ['Eve','Genessa']:
-  mesh=unreal.load_asset('/Game/CSS/eins0fx/UnholyGenessa/Faces/SK_'+variant+'W3_Face');assert mesh
+  mesh=unreal.load_asset('/Game/CSS/eins0fx/UnholyGenessa/Faces/SK_'+variant+'W3_Face'+('_BasisStudy1' if basis else ''));assert mesh
   slots=list(mesh.get_editor_property('materials'))
   for size in [0.,1.]:
    for mode,graph in [('legacy',None),('stock',baseline),('trial',trial)]:
@@ -68,7 +69,7 @@ try:
     cap.show_only_actor_components(actor)
     geometry=None
     if readback and graph:
-     label=f'{variant}-{size:g}-{mode}'
+     label=('Basis-' if basis else '')+f'{variant}-{size:g}-{mode}'
      geometry=Path(unreal.Paths.project_saved_dir())/'DeformerReadback'/f'{label}.json'
      assert unreal.CSSRigAuditLibrary.request_cloth_deformer_readback(comp,label),label
      # The request is queued until the component sends fresh render data.

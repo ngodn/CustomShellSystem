@@ -9,6 +9,7 @@
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "OptimusDeformerInstance.h"
 #include "Serialization/JsonSerializer.h"
 
 bool UCSSRigAuditLibrary::SetClothStudyDeformer(USkeletalMeshComponent* Component, UMeshDeformer* Deformer)
@@ -115,6 +116,12 @@ FString UCSSRigAuditLibrary::StepClothDeformerStudy(USkeletalMeshComponent* Comp
     World->UnpausedTimeSeconds += Step;
     World->RealTimeSeconds += Step;
     Component->TickAnimation(Step, true);
+    if (auto* Deformer = Cast<UOptimusDeformerInstance>(Component->GetMeshDeformerInstance());
+        Deformer && Deformer->GetName().StartsWith(TEXT("DG_ClothMorphStudy3_Instance_")))
+    {
+        if (!Deformer->SetFloatVariable(TEXT("CSS_ClothGluteWeight"), Component->GetMorphTarget(TEXT("PBMGlutesSize"))))
+            return TEXT("ERROR: basis study weight unavailable");
+    }
     Component->RefreshBoneTransforms();
     if (ResetCloth) Component->ForceClothNextUpdateTeleportAndReset();
     FActorComponentTickFunction Tick;

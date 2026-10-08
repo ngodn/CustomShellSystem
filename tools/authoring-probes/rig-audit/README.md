@@ -33,6 +33,19 @@ The first GPU comparison rejects this prototype: the cloth section does not
 receive the normal morph-buffer input. CPU math and shader compilation did not
 establish that its input was available. See `genessa-deformer-render1`.
 
+`author_cloth_basis_study.py` creates private `_BasisStudy1` Genessa mesh copies
+and `DG_ClothMorphStudy3`. Three scalar attributes supply skirt glute offsets
+when the cloth permutation lacks morph-buffer input. Shared material-boundary
+vertices are protected by the per-section shader permutation, without splitting
+source topology. Existing mesh/rig, every morph, render arrays and full cloth
+assets are compared before saving. Set `CSS_PANEL_VERIFY_BASIS=1` for a fresh
+process readback without asset writes. Original source hashes are checked.
+`CSS_PANEL_BASIS=1 CSS_PANEL_READBACK=1` selects these copies in the render
+driver and writes separate basis captures/readbacks. The checker accepts
+`--basis` and reports skirt offsets, neutral changes, changes outside the skirt
+and comparative exposure pixels. This study is glute-only, editor-only and
+does not implement runtime binding or packaged mesh cook dependencies.
+
 `StepClothDeformerStudy` drives an isolated preview component at 60 Hz with its
 post-process graph disabled. It accepts only current Genessa facial meshes in
 a preview world, disables automatic ticks and waits for each cloth step. It

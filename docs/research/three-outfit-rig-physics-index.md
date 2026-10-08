@@ -65,6 +65,18 @@ See the [current evidence and next prototype](../development/three-outfit-rig-ph
 Do not install `DG_ClothMorphStudy1` as a repair. The next prototype needs an
 independent morph-basis input, followed by Windows cook and in-game validation.
 
+The independent-basis follow-up now has a positive GPU result.
+`genessa-deformer-render1/gpu-basis-comparison.json` shows the glute-only
+`DG_ClothMorphStudy3` restores the skirt offset on both variants with zero
+size-1 position change outside the skirt. It uses scalar vertex attributes
+and the engine's per-section cloth/morph permutations; it does not split the
+329 shared source vertices. Fresh reload checks preserve the existing rig,
+all morphs, render data and cloth. The private meshes/graph are not cooked for
+Windows or installed. Other morph controls, animated/full-physics behavior,
+mesh cook dependencies, runtime integration and performance remain open.
+Do not repeat the rejected direct-morph-input trial or claim the entire
+rear-panel repair is complete from the reference-pose result.
+
 The [hand target study](2026-10-08-hand-target-ownership.md) resolves pinned
 Eve/Genessa source graphs' 115 transform writers to 19 left-hand finger bones.
 Parent propagation stays within those bones on the cooked target hierarchies.
