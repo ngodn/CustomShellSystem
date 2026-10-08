@@ -96,6 +96,19 @@ int main() {
                    "Built-in feminine movement ignored the mirrored choice");
             revived.selections[harbinger]={"eve","other",{}};
             expect(appearance_selection_key(revived,mirrored_catalog,harbinger)==living,"Own saved look overrode enabled mirroring");
+            const std::string stray="CharacterId.Player.Darkform.CorruptedGenessa";
+            revived.selections[stray]={"css.npc.people","sk_hilga",{}};
+            auto& mirrored=revived.selections.at(appearance_selection_key(revived,mirrored_catalog,stray));
+            expect(mirrored.outfit=="eve" && mirrored.variant=="pearl",
+                   "Stray customization resolved stale NPC selection instead of worn outfit");
+            mirrored.custom.palette="changed-in-stray";
+            expect(revived.selections.at(living).custom.palette=="changed-in-stray" &&
+                   revived.selections.at(stray).outfit=="css.npc.people" &&
+                   revived.selections.at(stray).custom.palette!="changed-in-stray",
+                   "Editing mirrored customization overwrote the separate Stray selection");
+            revived.selections.erase(stray);
+            expect(revived.selections.at(appearance_selection_key(revived,mirrored_catalog,stray)).outfit=="eve",
+                   "Stray with no saved slot lost mirrored customization");
             revived.harbinger_mirror=false;
             expect(appearance_selection_key(revived,mirrored_catalog,harbinger)==harbinger,"Disabled mirroring borrowed the living selection");
             expect(revived.selections.at(appearance_selection_key(revived,mirrored_catalog,harbinger)).variant=="other",

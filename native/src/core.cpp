@@ -364,7 +364,7 @@ struct Core {
         if (state.enabled && !catalog.outfits.empty()) message = "Your saved appearance is ready. Open Inventory and choose CSS.";
     }
     PerformanceContext performance_context() const {
-        const auto selected=state.selections.find(appearance.shell);
+        const auto selected=state.selections.find(appearance_selection_key(state,catalog,appearance.shell));
         const bool worn=appearance.active() && selected!=state.selections.end();
         return {appearance.player_revision,appearance.appearance_revision,animation_catalog_generation,
             worn?selected->second.outfit:"",worn?selected->second.variant:"",appearance.performance_mesh()};
@@ -385,7 +385,7 @@ struct Core {
     }
     void reconcile_idle_face() {
         if(!state.enabled || !appearance.active()) return;
-        const auto selected=state.selections.find(appearance.shell);
+        const auto selected=state.selections.find(appearance_selection_key(state,catalog,appearance.shell));
         if(selected==state.selections.end()) return;
         if(const auto* variant=catalog.find(selected->second.outfit,selected->second.variant);
            variant && appearance.current_mesh!=idle_face_plan(selected->second,*variant).mesh) {
@@ -401,7 +401,7 @@ struct Core {
         if(!appearance.performance.active() || !automatic_idle.owns(appearance.performance.token())) {
             automatic_idle.clear();return;
         }
-        const auto selected=state.selections.find(appearance.shell);
+        const auto selected=state.selections.find(appearance_selection_key(state,catalog,appearance.shell));
         if(!state.enabled || apply_pending || restore_pending || selected==state.selections.end() ||
            !automatic_idle.matches(performance_context(),idle_identity(selected->second)))
             stop_automatic_idle("Idle selection or appearance changed");
@@ -410,7 +410,7 @@ struct Core {
         if(!state.enabled || apply_pending || restore_pending || pending_performance.active() ||
            genessa_form_request || appearance.performance.active() || appearance.performance.cleanup_pending() ||
            !appearance.walk.custom_idle_engaged()) return;
-        const auto selected=state.selections.find(appearance.shell);
+        const auto selected=state.selections.find(appearance_selection_key(state,catalog,appearance.shell));
         if(!appearance.active() || selected==state.selections.end()) return;
         const auto& selection=selected->second;
         const auto id=idle_identity(selection);
@@ -441,7 +441,7 @@ struct Core {
     }
     Json start_performance(const std::string& id,double rate,double position) {
         stop_automatic_idle("CINE playback requested");
-        const auto selected=state.selections.find(appearance.shell);
+        const auto selected=state.selections.find(appearance_selection_key(state,catalog,appearance.shell));
         if(!appearance.active() || selected==state.selections.end())
             return appearance.start_performance(catalog,"",id,rate,position);
         const auto& selection=selected->second;
@@ -511,7 +511,7 @@ struct Core {
         if(action=="performances") {
             const auto skeleton=appearance.animation_skeleton();
             Json entries=Json::array();
-            const auto selected=state.selections.find(appearance.shell);
+            const auto selected=state.selections.find(appearance_selection_key(state,catalog,appearance.shell));
             const auto unavailable=appearance.performance_unsupported(catalog,
                 appearance.active() && selected!=state.selections.end()?selected->second.outfit:"");
             for(const auto& library:catalog.animation_libraries) for(const auto& entry:library.entries) {
@@ -578,7 +578,7 @@ struct Core {
             else save_after=std::max(save_after,now+30*60*1000);   // a transient look; the caller's last wear saves
             return {{"shell",appearance.shell},{"outfit",outfit},{"variant",variant},{"busy",true}};
         }
-        auto selected=state.selections.find(appearance.shell);
+        auto selected=state.selections.find(appearance_selection_key(state,catalog,appearance.shell));
         if(selected==state.selections.end()) throw std::runtime_error("No CSS appearance is worn");
         const Outfit* outfit=nullptr;
         for(const auto& o:catalog.outfits) if(o.id==selected->second.outfit) outfit=&o;
@@ -859,7 +859,7 @@ struct Core {
                 action=="tint" || action=="reset_tint" ||
                 action=="template" || action=="physics_preset" ||
                 action=="ground_offset" || action=="reset_ground_offset" || action=="expression") {
-            auto selected=state.selections.find(appearance.shell);
+            auto selected=state.selections.find(appearance_selection_key(state,catalog,appearance.shell));
             if(selected==state.selections.end()) throw std::runtime_error("Wear an appearance before changing it.");
             const Outfit* outfit=nullptr;
             for(const auto& o:catalog.outfits) if(o.id==selected->second.outfit) outfit=&o;
@@ -1209,7 +1209,7 @@ struct Core {
                           (skipped.empty()?std::string{}:", skipped "+std::to_string(skipped.size()))).c_str());
                 for(const auto& entry:skipped) host.log(("Official shell skipped: "+entry).c_str());
                 auto saved_applicable=[&] {
-                    const auto it=state.selections.find(appearance.shell);
+                    const auto it=state.selections.find(appearance_selection_key(state,catalog,appearance.shell));
                     return it!=state.selections.end() && catalog.find(it->second.outfit,it->second.variant) &&
                            catalog.compatible(it->second.outfit,appearance.shell);
                 };
@@ -1488,7 +1488,7 @@ struct Core {
         status["walk_mod_name"] = appearance.walk.walk_mod_name();
         status["animation"]={{"engaged",appearance.walk.engaged()},{"gait",appearance.walk.reason()},{"error",walk_error}};
         status["animation"]["shared"]=appearance.shared_animation_status();
-        if(auto selected=state.selections.find(appearance.shell);selected!=state.selections.end()) status["customize"]=selected->second.custom.json();
+        if(auto selected=state.selections.find(appearance_selection_key(state,catalog,appearance.shell));selected!=state.selections.end()) status["customize"]=selected->second.custom.json();
         // The catalog report and the material snapshot are the bulk of the file and change only
         // on a rescan or an apply: compared in place, copied only when they differ.
         const bool bulk_changed=catalog.diagnostics!=published_catalog_ || appearance.material_debug!=published_materials_;

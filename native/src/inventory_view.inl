@@ -214,7 +214,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
     }
 
     // ---- shared pieces
-    auto selection=state.selections.find(appearance.shell);
+    auto selection=state.selections.find(appearance_selection_key(state,catalog,appearance.shell));
     const Outfit* worn=nullptr;
     if(selection!=state.selections.end()) for(const auto& outfit:catalog.outfits) if(outfit.id==selection->second.outfit) worn=&outfit;
     auto thumbnail=[&](const Outfit& outfit)->UObject* { return outfit.thumbnail.empty()?nullptr:import_texture(outfit.thumbnail.wstring()); };
@@ -1521,7 +1521,7 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         return {};
     }
     if(name=="ui_browse_expressions" && catalog_ && appearance_) {
-        const auto selected=state.selections.find(appearance_->shell);
+        const auto selected=state.selections.find(appearance_selection_key(state,*catalog_,appearance_->shell));
         if(selected==state.selections.end()) return {};
         const auto face=catalog_->facial_match(selected->second.outfit,selected->second.variant);
         Json choices=Json::array({{{"id",""},{"label","Original face"}}});
@@ -1532,7 +1532,7 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         native_search_query_.clear();dirty_=true;return {};
     }
     if(name=="ui_browse_templates" && catalog_ && appearance_) {
-        auto sel=state.selections.find(appearance_->shell);
+        auto sel=state.selections.find(appearance_selection_key(state,*catalog_,appearance_->shell));
         const Outfit* worn_outfit=nullptr;
         if(sel!=state.selections.end()) for(const auto& o:catalog_->outfits) if(o.id==sel->second.outfit) worn_outfit=&o;
         if(!worn_outfit) return {};
@@ -1561,7 +1561,7 @@ Json InventoryUI::dispatch(Json action,const State& state) {
         return {};
     }
     if(name=="ui_browse_choice" && catalog_ && appearance_) {
-        auto sel=state.selections.find(appearance_->shell);
+        auto sel=state.selections.find(appearance_selection_key(state,*catalog_,appearance_->shell));
         const Outfit* worn_outfit=nullptr;
         if(sel!=state.selections.end()) for(const auto& o:catalog_->outfits) if(o.id==sel->second.outfit) worn_outfit=&o;
         if(!worn_outfit) return {};
@@ -2123,7 +2123,7 @@ std::optional<Json> InventoryUI::press(const std::string& key,const State& state
         if(key=="close") return dispatch({{"action","ui_physics_modal_close"}},state);
         // Stops: the sliders, a Motion switch on a rig, then Reset part defaults.
         const Control* ctrl=nullptr; const Selection* worn_selection=nullptr; const Outfit* worn_outfit=nullptr;
-        if(catalog_ && appearance_) if(auto sel=state.selections.find(appearance_->shell);sel!=state.selections.end()) {
+        if(catalog_ && appearance_) if(auto sel=state.selections.find(appearance_selection_key(state,*catalog_,appearance_->shell));sel!=state.selections.end()) {
             worn_selection=&sel->second;
             for(const auto& o:catalog_->outfits) if(o.id==sel->second.outfit) worn_outfit=&o;
             if(worn_outfit) ctrl=worn_outfit->controls_for(sel->second.variant).find(physics_modal_control_);
