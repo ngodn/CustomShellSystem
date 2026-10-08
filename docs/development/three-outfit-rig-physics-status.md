@@ -64,7 +64,7 @@ core selector rather than silently overwriting it.
 
 ## Weighted-surface coverage
 
-### CSS binding for the cloth correction: built, not installed
+### CSS binding for the cloth correction: installed trial, live check pending
 
 The runtime candidate binds body-shape weights to opted-in graph variables named
 `CSS_Morph_<morph name>` on the player, preview, worn items and Astral visuals.
@@ -117,9 +117,23 @@ combination passes the 1,380 catalog checks. Eighteen installer tests cover
 initial migration, partial follow-up rollback, retained-file changes and guards.
 `genessa-cloth-assembly1/preinstall-validation.json` records these results.
 
-Next: install the verified follow-up, then validate actual materials and
-continuous contact, world/preview/doubles, lifecycle recovery and measured cost.
-Offline checks do not establish gameplay acceptance or a finished release.
+The follow-up was installed October 9 with the game process absent. All six
+replaced package files and the selected core were independently hash-verified.
+Eve/CW packages, saved CSS settings, CSSX/CINE files, loader and previous core
+remain unchanged. The selector now points to
+`css_core-cloth-morph-54bee458fb7cb150.dll`. The transaction and previous packages
+are outside Paks at `MortalShell2/Content/css-cloth-morph-trial-20261009`.
+`genessa-cloth-assembly1/installed.json` records the installed hashes.
+
+With the game closed, rollback is:
+`python3 tools/asset-paths/install_namespace_trial.py restore --transaction
+/mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/css-cloth-morph-trial-20261009`.
+It restores the previous selector and two packages, without overwriting profiles.
+
+The user has been asked to compare Glute Size 1 in CSS and world while walking.
+Actual materials and continuous contact, world/preview/doubles, lifecycle recovery
+and measured cost remain pending. Offline checks do not establish gameplay
+acceptance or a finished release.
 
 ### October 8: reproduced Genessa rear-panel shape mismatch
 

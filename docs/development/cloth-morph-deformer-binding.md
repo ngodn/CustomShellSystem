@@ -1,7 +1,8 @@
 # Cloth morph deformer binding
 
-Status: runtime and coordinated outfit/shared candidate built; authoring, reload,
-Windows cook and independent readback pass. Live validation remains pending.
+Status: runtime and coordinated outfit/shared trial installed October 9;
+authoring, reload, Windows cook and independent readback pass. Installed hashes
+are verified; live validation remains pending.
 
 An authored Optimus graph opts in by declaring zero-default Float variables
 named `CSS_Morph_<morph name>`. For example, `CSS_Morph_PBMGlutesSize` receives
