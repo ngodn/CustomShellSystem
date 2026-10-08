@@ -154,3 +154,30 @@ The visual body uses Copy Pose; modular items use the source body's leader-pose
 arrangement. This follows [Epic's modular character guidance](https://dev.epicgames.com/documentation/unreal-engine/working-with-modular-characters-in-unreal-engine),
 with exact call layouts checked against the local UE 5.6.1 source and game dump.
 Live pose order, appearance fidelity and measured cost remain acceptance checks.
+
+## Author-owned namespace trial
+
+The active rig goal migrates Astral to `/Game/CSS/eins0fx/Shared/Astral/` and
+consolidates it with locomotion in `CSS_SharedAssets_P`. This section supersedes
+the historical separate-container naming above for the new candidate only.
+
+`cook-namespace-trial.py` takes a verified editor migration, the existing Windows
+5.6.1 engine and workspace Docker wrapper, and a new private output directory.
+It verifies the source receipts, stages only the 30 Astral assets and cooks
+SM5/SM6 with inline shader code. Original inputs and the engine stay unchanged.
+The private Wine prefix may be removed after the container exits; retain cook
+logs, authored inputs and accepted payloads.
+
+`pack-shared.py`, `check-cooked-materials.py` and `check-cooked-pose.py` accept
+`--asset-root /Game/CSS/eins0fx/Shared/Astral`; their default still validates the
+legacy root. The material checker rejects external shader archives and accepts
+`--baseline ORIGINAL_READBACK` to compare every decoded field after namespace
+normalization. This does not establish live visual or lifecycle acceptance.
+
+`assemble-namespace-trial.py` combines the verified animation and Astral payloads
+according to the ownership plan. It excludes outfit-owned adapters and requires
+the exact shared inventory before roundtripping the resulting container. Its
+output has no release catalog yet and must not be installed as a finished pack.
+[Current evidence and remaining work](../../docs/development/three-outfit-rig-physics-status.md)
+include the 149-package trial, independent import audit and old/new material
+comparison.

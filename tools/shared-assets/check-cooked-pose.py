@@ -1,15 +1,19 @@
 """Validate independent AssetReadback output for the cooked shared pose template."""
 import argparse
 import json
+import re
 from pathlib import Path
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("readback", type=Path)
 parser.add_argument("report", type=Path)
+parser.add_argument("--asset-root", default="/Game/CSS/SharedAssets/Astral")
 args = parser.parse_args()
 if args.report.exists():
     raise FileExistsError(args.report)
-package = "/Game/CSS/SharedAssets/Astral/ABP_CopyPose"
+if not re.fullmatch(r"/Game/CSS/(?:SharedAssets|[A-Za-z0-9_]+/Shared)/Astral", args.asset_root):
+    parser.error("Expected a legacy or author-owned Astral root")
+package = args.asset_root + "/ABP_CopyPose"
 data = json.loads(args.readback.read_text())
 if set(data) != {package}:
     raise ValueError("Expected exactly the shared pose package")

@@ -35,13 +35,14 @@ def snapshot(asset):
         if raw.startswith('ERROR:'):
             raise ValueError(raw)
         result['source'] = json.loads(raw)
-    elif isinstance(asset, (unreal.AnimBlueprint, unreal.AnimBoneCompressionSettings)):
+    elif isinstance(asset, (unreal.AnimBlueprint, unreal.AnimBoneCompressionSettings,
+                            unreal.MaterialInterface, unreal.Texture)):
         raw = unreal.CSSRigAuditLibrary.snapshot_asset_properties(asset)
         if raw.startswith('ERROR:'):
             raise ValueError(raw)
         result['properties'] = json.loads(raw)
     else:
-        raise ValueError('This trial only handles skeletons, sequences and blend spaces')
+        raise ValueError('Unsupported migration asset class: ' + result['class'])
     return result
 
 

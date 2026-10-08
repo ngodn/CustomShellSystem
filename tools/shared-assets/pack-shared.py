@@ -18,10 +18,14 @@ parser.add_argument("--retoc", type=Path, required=True)
 parser.add_argument("--name", default="CSS_AstralSharedAssets_P")
 parser.add_argument("--manifest", type=Path)
 parser.add_argument("--variants", type=Path)
+parser.add_argument("--asset-root", default="/Game/CSS/SharedAssets/Astral")
 args = parser.parse_args()
 if not re.fullmatch(r"CSS_[A-Za-z0-9_]+_P", args.name):
     parser.error("Container name must be a CSS_ filename ending in _P")
-source = (args.cooked_project / "Content/CSS/SharedAssets").resolve(strict=True)
+if not re.fullmatch(r"/Game/CSS/(?:SharedAssets|[A-Za-z0-9_]+/Shared)/Astral", args.asset_root):
+    parser.error("Expected a legacy or author-owned Astral root")
+content_relative = Path(args.asset_root.removeprefix("/Game/"))
+source = (args.cooked_project / "Content" / content_relative).resolve(strict=True)
 output = args.output.resolve()
 if source == output or source in output.parents:
     parser.error("Output must be outside cooked source")
@@ -31,7 +35,7 @@ if not files or any(p.is_file() and p.suffix not in (".uasset", ".uexp", ".ubulk
 packages = list(source.rglob("*.uasset"))
 if bool(args.manifest) != bool(args.variants):
     parser.error("Supply both --manifest and --variants")
-package_names = ["/Game/CSS/SharedAssets/" + str(p.relative_to(source).with_suffix("")) for p in packages]
+package_names = [args.asset_root + "/" + str(p.relative_to(source).with_suffix("")) for p in packages]
 if args.manifest:
     manifest = json.loads(args.manifest.read_text())
     variants = json.loads(args.variants.read_text())["materials"]
@@ -42,7 +46,7 @@ if args.manifest:
             or {row["parent"].split(".")[0] for row in variants} != set(parents)):
         raise ValueError("Companion manifest has missing or duplicate parents/variants")
     expected = set(parents + alternates + [p.split(".")[0] for p in manifest["neutral_textures"]])
-    expected.add("/Game/CSS/SharedAssets/Astral/ABP_CopyPose")
+    expected.add(args.asset_root + "/ABP_CopyPose")
     if set(package_names) != expected:
         raise ValueError("Cooked packages differ from the companion manifests")
 elif len(packages) != 28:
@@ -51,7 +55,7 @@ if any(not p.with_suffix(".uexp").is_file() for p in packages):
     raise ValueError("Cooked package has no export payload")
 output.mkdir(parents=True, exist_ok=False)
 legacy = output / "legacy"
-shutil.copytree(source, legacy / "MortalShell2/Content/CSS/SharedAssets")
+shutil.copytree(source, legacy / "MortalShell2/Content" / content_relative)
 converter = Converter(args.retoc, DEFAULT_REPAK, output)
 utoc = output / (args.name + ".utoc")
 converter.run(converter.retoc, "to-zen", "--version", "UE5_6", legacy, utoc)
@@ -60,7 +64,7 @@ converter.base_containers(args.game.resolve(strict=True), output / "containers")
 for path in output.glob(args.name + ".*"):
     (output / "containers" / path.name).symlink_to(path)
 converter.run(converter.retoc, "to-legacy", output / "containers", output / "readback",
-              "--filter", "MortalShell2/Content/CSS/SharedAssets", "--no-shaders",
+              "--filter", str(Path("MortalShell2/Content") / content_relative), "--no-shaders",
               "--no-script-objects", "--version", "UE5_6")
 receipts = []
 for path in legacy.rglob("*"):

@@ -94,3 +94,18 @@ only to the staging project, so the cooked inputs can stay read-only. Its
 
 The first accepted offline trial is recorded in
 [`three-outfit-rig-physics-status.md`](../../../docs/development/three-outfit-rig-physics-status.md).
+
+`--include-astral` adds the shared ghost materials, culling instances, neutral
+textures and copy-pose graph. Inputs on another filesystem use independent
+copies; same-filesystem inputs require reflinks. Both paths verify source hashes
+and reject hardlinks. Material graphs/instances use reflected property snapshots;
+textures additionally hash every source mip. The current texture audit requires
+one populated block/layer and refuses unsupported source layouts.
+
+The source-mip access is checked against the installed 5.6.1
+`Engine/Texture.h` (`FTextureSource::GetMipData`) and
+[Epic's API reference](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/FTextureSource).
+The compiler's empty mutable-data cleanup is verified in local
+`AnimBlueprintCompiler.cpp`, `FAnimBlueprintCompilerContext::BuildDataArea`.
+Only an empty `AnimBlueprintGeneratedMutableData` directly owned by its generated
+animation class is excluded from the property snapshot.

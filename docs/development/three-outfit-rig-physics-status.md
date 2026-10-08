@@ -21,7 +21,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Nine-variant provenance | Installed hashes and 16 editable mesh identities pinned; all 790 migration paths have source candidates or alias recipes. Final Blender-to-cook recipe comparisons remain |
 | Mesh/weights/contacts | Fresh checks of all 16 editor-built meshes pass weight sums, section/bone/morph indices and finite-data checks. Deformation/contact checks and cooked comparison remain |
 | Unholy facial support | Both W3 candidates cook with 137 morphs and unchanged cloth data. Native/Astral SM6 UV3 checks pass. Oral assets resolve without Eve mounted. Two adapters, 21 presets and six facial performances are integrated into a private shared catalog; 163 facial and 182 packaged-library checks pass. SM5/material review and game acceptance remain |
-| Shared organization | CSS parser accepts shared and outfit-owned adapter paths with 23 host suites passing. All 790 source packages map to 729 distinct author-owned targets after verifying 61 identical animation copies; 172 original catalog references classified. A private catalog adds 22 missing legacy aliases, with all 99 bundled choices across nine variants checked. An isolated 124-package batch passes reload/cook/readback, with 547 imports resolved. One hundred four match installed decoded fields after path normalization; twenty Eve clips have a checked reference-pose refresh. Remaining migration and runtime compatibility pending; not installed |
+| Shared organization | CSS parser accepts shared and outfit-owned adapter paths with 23 host suites passing. All 790 source packages map to 729 distinct author-owned targets after verifying 61 identical animation copies; 172 original catalog references classified. A private catalog adds 22 missing legacy aliases, with all 99 bundled choices across nine variants checked. An isolated 154-asset batch passes editor reload. Its 149 shared assets are assembled in a private `CSS_SharedAssets_P`, with 517 imports resolved; the five outfit-owned adapters remain separate. One hundred four match installed decoded fields after path normalization; twenty Eve clips have a checked reference-pose refresh. Remaining migration and runtime compatibility pending; not installed |
 | Locomotion | 63-entry installed catalog captured; four native declarations, 59 missing; conversion and motion-quality review pending |
 | Gameplay regressions | Current interruption baseline accepted by user; candidate regression tests pending |
 | Performance | Current package sizes recorded; matched gameplay captures pending |
@@ -309,3 +309,47 @@ entries declare native-human alternatives; custom rigs still select their
 verified bundled blend spaces. Adding the migrated custom-rig shared alternatives
 and rebuilding consumers remains part of migration. This does not establish
 asset loading or live-game acceptance and is not installed.
+
+## Astral migration and shared payload assembly
+
+`migration-editor8` extends the private batch to 154 assets with the 30 Astral
+resources. Both save and fresh-process reload pass with legacy redirectors
+removed. All 451 protected inputs remain unchanged, and all 124 earlier asset
+snapshots/references match `migration-editor7`. Material expression properties,
+instance overrides and texture source mip hashes are included in the check.
+
+The first snapshot attempt found the empty generated mutable-data struct on
+`ABP_CopyPose` disappearing during recompilation. UE 5.6.1's
+`FAnimBlueprintCompilerContext::BuildDataArea` explicitly discards unused mutable
+data. The audit now omits only that named generated struct when it has no
+reflected fields; graph properties, pins and nonempty state remain checked.
+The rejected partial save was discarded and recopied from pinned inputs.
+
+`astral-namespace-cook1` was rejected: its Windows cook externalized shader code,
+which the asset-only pack did not carry. `astral-namespace-cook2` explicitly
+disables shared shader libraries, matching the accepted original cook settings.
+It passes Windows cook, the 30-payload IoStore roundtrip, all 26 material variants'
+SM5/SM6 skin/cloth/refraction/default/culling checks and the copy-pose template
+check. `material-equivalence.json` proves all 30 independently decoded exports
+match the installed Astral baseline after namespace normalization, including
+shader-map data. Legacy-root validation also passes; the rejected external-shader
+readback is still rejected by the updated checker. This is not live rendering.
+
+[The assembled shared trial](../../work/three-outfit-rig-physics/shared-namespace1)
+contains all 149 shared packages in `CSS_SharedAssets_P`: the 119 shared
+skeleton/locomotion/codec assets from the prior cook and the 30 migrated Astral
+assets. The five outfit-owned playback graphs are excluded. Every payload
+roundtrips unchanged, and all 517 package imports and 149 requested exports
+resolve against the explicitly mounted baseline dependencies. These are asset
+containers only, not an installable release: catalog/facial dependency hashes,
+runtime consumers, outfit migration and clean/upgrade/game acceptance remain.
+`namespace-4/runtime-consumers.json` records 41 literal legacy-reference lines
+across five CSS source files; dynamic consumers also require review.
+
+Cleanup removed the rejected Windows cook's generated output/cache and both
+disposable Wine prefixes after confirming the cooks had exited. Small receipts,
+logs, sources and decoded evidence remain; accepted cooked assets and the shared
+trial remain. See `cleanup-astral-namespace-cooks.json` and
+`astral-namespace-cook1/rejected.json` for logical byte counts and observed free
+space. Reflink logical sizes are not claimed as physical space reclaimed.
+Nothing from this goal has been installed.

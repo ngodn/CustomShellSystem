@@ -1,6 +1,8 @@
 """Check packaged companion shaders and dependency closure after an independent readback."""
 import argparse
+import hashlib
 import json
+import re
 from pathlib import Path
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -8,6 +10,9 @@ parser.add_argument("readback", type=Path)
 parser.add_argument("manifest", type=Path)
 parser.add_argument("variants", type=Path)
 parser.add_argument("report", type=Path)
+parser.add_argument("--asset-root", default="/Game/CSS/SharedAssets/Astral")
+parser.add_argument("--baseline", type=Path,
+                    help="Compare every decoded field with a legacy-root baseline after path normalization")
 args = parser.parse_args()
 if args.report.exists():
     raise FileExistsError(args.report)
@@ -21,7 +26,9 @@ if (len(expected) < 12 or len(expected) != len(manifest["materials"])
         or {row["parent"].split(".")[0] for row in variants} != set(expected)):
     raise ValueError("Expected unique audited companion parents and their culling variants")
 rows = []
-prefix = "/Game/CSS/SharedAssets/Astral/"
+if not re.fullmatch(r"/Game/CSS/(?:SharedAssets|[A-Za-z0-9_]+/Shared)/Astral", args.asset_root):
+    parser.error("Expected a legacy or author-owned Astral root")
+prefix = args.asset_root + "/"
 
 
 def check_references(value):
@@ -43,7 +50,7 @@ def shader_maps(material, refraction):
     for resource in material["LoadedMaterialResources"]:
         shader_map = resource["LoadedShaderMap"]
         platform = shader_map["ShaderPlatform"]
-        if platform in platforms or not shader_map["Code"]["ShaderHashes"]:
+        if platform in platforms or not shader_map.get("Code") or not shader_map["Code"]["ShaderHashes"]:
             raise ValueError("Missing or duplicate shader resource")
         meshes = shader_map["Content"]["OrderedMeshShaderMaps"]
         required = {"TGPUSkinVertexFactoryDefault", "TGPUSkinAPEXClothVertexFactoryDefault"}
@@ -123,6 +130,22 @@ all_expected |= {path.split(".")[0] for path in manifest["neutral_textures"]}
 all_expected.add(prefix + "ABP_CopyPose")
 if set(data) != all_expected:
     raise ValueError("Packaged asset set differs from manifest")
-args.report.write_text(json.dumps({"passed": True, "materials": rows,
+baseline = None
+if args.baseline:
+    def normalize(value):
+        if isinstance(value, dict):
+            return {normalize(key): normalize(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [normalize(item) for item in value]
+        if isinstance(value, str):
+            return value.replace(prefix, "/Game/CSS/SharedAssets/Astral/")
+        return value
+
+    if normalize(data) != json.loads(args.baseline.read_text()):
+        raise ValueError("Decoded baseline differs beyond Astral namespace changes")
+    baseline = {"path": str(args.baseline.resolve()), "packages_equal": len(data),
+                "sha256": hashlib.sha256(args.baseline.read_bytes()).hexdigest()}
+args.report.write_text(json.dumps({"passed": True, "materials": rows, "baseline": baseline,
+    "readback_sha256": hashlib.sha256(args.readback.read_bytes()).hexdigest(),
     "scope": "Packaged Windows shader maps, skin/cloth permutations, defaults and reference closure. No live game execution."}, indent=2) + "\n")
 print(f"Verified {len(rows)} Windows companion materials")

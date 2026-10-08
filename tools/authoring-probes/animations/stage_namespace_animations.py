@@ -1,4 +1,4 @@
-"""Stage pinned shared animations and explicit dependencies in private reflink copies."""
+"""Stage pinned shared assets and explicit dependencies in independent private copies."""
 import argparse
 import hashlib
 import json
@@ -22,6 +22,7 @@ def main():
     parser.add_argument('--dependencies', type=Path, required=True)
     parser.add_argument('--native-reference-receipt', type=Path, required=True)
     parser.add_argument('--include-playback', action='store_true')
+    parser.add_argument('--include-astral', action='store_true')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     stage = args.output.resolve()
@@ -37,12 +38,12 @@ def main():
             not row['cooked_alias_recipe'])
         selected = selected or (args.include_playback and
             row['package'].startswith('/Game/CSS/Locomotion/') and leaf.startswith(('ABP_', 'ACS_')))
+        selected = selected or (args.include_astral and row['package'].startswith('/Game/CSS/SharedAssets/Astral/'))
         if not selected:
             continue
         entry = row['selected']['identity']
         path = Path(entry['path']).resolve(strict=True)
-        relative = Path(row['package'].removeprefix('/Game/')+'.uasset')
-        if path != source/relative or sha(path) != entry['sha256']:
+        if sha(path) != entry['sha256']:
             raise ValueError('Selected source differs: '+str(path))
         assets.append(dict(old_package=row['package'], new_package=row['destination'],
                            source_file=str(path), source_sha256=entry['sha256']))
@@ -77,15 +78,19 @@ def main():
             if sha(original) != pinned[package]['sha256']:
                 raise ValueError('Pinned dependency changed: '+package)
         copied.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(['cp', '-a', '--reflink=always', str(original), str(copied)], check=True)
-        if copied.is_symlink() or copied.stat().st_ino == original.stat().st_ino or sha(copied) != sha(original):
+        same_device = original.stat().st_dev == copied.parent.stat().st_dev
+        subprocess.run(['cp', '-a', '--reflink=always' if same_device else '--reflink=auto',
+                        str(original), str(copied)], check=True)
+        same_inode = (copied.stat().st_dev, copied.stat().st_ino) == (original.stat().st_dev, original.stat().st_ino)
+        if copied.is_symlink() or same_inode or sha(copied) != sha(original):
             raise ValueError('Dependency copy is not independent: '+package)
         copied_inputs.append(dict(package=package, path=str(original), sha256=sha(original)))
     (stage/'copied-inputs.json').write_text(json.dumps(copied_inputs, indent=2)+'\n')
     for row in assets:
         copied = stage/'Content'/(row['old_package'].removeprefix('/Game/')+'.uasset')
         original = Path(row['source_file'])
-        if copied.is_symlink() or copied.stat().st_ino == original.stat().st_ino or sha(copied) != row['source_sha256']:
+        same_inode = (copied.stat().st_dev, copied.stat().st_ino) == (original.stat().st_dev, original.stat().st_ino)
+        if copied.is_symlink() or same_inode or sha(copied) != row['source_sha256']:
             raise ValueError('Staging did not create a matching independent file')
     shutil.copy2(args.template/'NamespaceTrial.uproject', stage/'NamespaceTrial.uproject')
     (stage/'Binaries').symlink_to((args.template/'Binaries').resolve(), target_is_directory=True)
@@ -101,6 +106,7 @@ def main():
                 scope='Shared sequences, blend spaces and common skeleton. '+
                     ('Includes outfit-owned playback blueprints and shared codec settings. ' if args.include_playback else
                      'Playback blueprints and codec settings remain separate migration steps. ')+
+                    ('Includes Astral graphs, instances and neutral textures. ' if args.include_astral else '')+
                     'Historical aliases remain a separate migration step.')
     (stage/'input.json').write_text(json.dumps(plan, indent=2)+'\n')
     (stage/'recipe.py').write_bytes(Path(__file__).read_bytes())

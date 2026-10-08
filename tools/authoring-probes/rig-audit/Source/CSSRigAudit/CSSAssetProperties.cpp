@@ -1,8 +1,12 @@
 #include "CSSRigAuditLibrary.h"
 #include "Animation/AnimBlueprint.h"
+#include "Animation/AnimBlueprintGeneratedClass.h"
 #include "Animation/AnimBoneCompressionSettings.h"
 #include "EdGraph/EdGraphNode.h"
 #include "EdGraph/EdGraphPin.h"
+#include "Engine/Texture.h"
+#include "Materials/MaterialInterface.h"
+#include "Misc/SecureHash.h"
 #include "Serialization/JsonSerializer.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectHash.h"
@@ -11,14 +15,21 @@
 FString UCSSRigAuditLibrary::SnapshotAssetProperties(UObject* Asset)
 {
     if (!IsRunningCommandlet() || !IsInGameThread() || !Asset ||
-        (!Asset->IsA<UAnimBlueprint>() && !Asset->IsA<UAnimBoneCompressionSettings>()))
-        return TEXT("ERROR: expected a commandlet animation blueprint or bone compression settings");
+        (!Asset->IsA<UAnimBlueprint>() && !Asset->IsA<UAnimBoneCompressionSettings>() &&
+         !Asset->IsA<UMaterialInterface>() && !Asset->IsA<UTexture>()))
+        return TEXT("ERROR: expected a commandlet animation blueprint, codec, material or texture");
     TArray<UObject*> Objects;
     GetObjectsWithPackage(Asset->GetOutermost(), Objects, true, RF_Transient);
     Objects.Sort([](const UObject& A, const UObject& B) { return A.GetPathName() < B.GetPathName(); });
     auto Root = MakeShared<FJsonObject>();
     for (UObject* Object : Objects)
     {
+        // Recompilation discards this generated struct when it has no fields
+        // (FAnimBlueprintCompilerContext::BuildDataArea). It stores no pose state.
+        const auto* Struct = Cast<UScriptStruct>(Object);
+        if (Struct && Cast<UAnimBlueprintGeneratedClass>(Struct->GetOuter()) &&
+            Struct->GetFName() == UAnimBlueprintGeneratedClass::GetMutablesStructName() &&
+            !TFieldIterator<FProperty>(Struct)) continue;
         auto Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("class"), Object->GetClass()->GetPathName());
         auto Properties = MakeShared<FJsonObject>();
@@ -36,6 +47,30 @@ FString UCSSRigAuditLibrary::SnapshotAssetProperties(UObject* Asset)
             Properties->SetArrayField(It->GetName(), MoveTemp(Values));
         }
         Row->SetObjectField(TEXT("properties"), Properties);
+        if (auto* Texture = Cast<UTexture>(Object))
+        {
+            // Reflected properties omit the source pixels stored in bulk data.
+            auto& Source = Texture->Source;
+            if (Source.GetNumBlocks() != 1 || Source.GetNumLayers() != 1 || !Source.HasPayloadData())
+                return TEXT("ERROR: texture audit requires one populated source block and layer");
+            auto Pixels = MakeShared<FJsonObject>();
+            Pixels->SetNumberField(TEXT("width"), Source.GetSizeX());
+            Pixels->SetNumberField(TEXT("height"), Source.GetSizeY());
+            Pixels->SetNumberField(TEXT("slices"), Source.GetNumSlices());
+            Pixels->SetNumberField(TEXT("format"), Source.GetFormat());
+            TArray<TSharedPtr<FJsonValue>> Mips;
+            for (int32 Mip = 0; Mip < Source.GetNumMips(); ++Mip)
+            {
+                TArray64<uint8> Data;
+                if (!Source.GetMipData(Data, Mip)) return TEXT("ERROR: cannot read texture source mip");
+                auto Value = MakeShared<FJsonObject>();
+                Value->SetStringField(TEXT("bytes"), LexToString(Data.Num()));
+                Value->SetStringField(TEXT("sha1"), FSHA1::HashBuffer(Data.GetData(), Data.Num()).ToString());
+                Mips.Add(MakeShared<FJsonValueObject>(Value));
+            }
+            Pixels->SetArrayField(TEXT("mips"), MoveTemp(Mips));
+            Row->SetObjectField(TEXT("source_pixels"), Pixels);
+        }
         if (const auto* Node = Cast<UEdGraphNode>(Object))
         {
             TArray<TSharedPtr<FJsonValue>> Pins;
