@@ -85,6 +85,34 @@ Full cloth fitting, safe runtime ownership, matched motion/clearance and
 performance remain open. Trebuchaxe visibility is still queued, uninvestigated
 and not fixed. No current study changes have been installed.
 
+The coincident-vertex check found no conflicting morph deltas above 0.1 cm
+within positions rounded to 0.001 cm, so a welded seam is not established as
+the transfer failure. Live read-only class discovery confirms OptimusCore and
+ComputeFramework are loaded. Exact UE 5.6.1 graph inspection shows the stock
+cloth blend discards the direct morph offset on fully simulated vertices.
+
+`genessa-deformer-candidate1` privately duplicates the stock morph/cloth graph,
+expands its functions and adds the skinned morph delta multiplied by cloth
+weight after position blending. Its normal/tangent recomputation kernel is
+unchanged. All protected engine graph hashes remain unchanged. C++20 module
+build, graph compile/save, 108 CPU float32 position cases across both W3 facial
+meshes, Windows SM5/SM6 shader compilation and the 673,422-byte cooked export
+roundtrip pass. Evidence is in `genessa-deformer-study1`,
+`genessa-deformer-cook1` and `genessa-deformer-pack1`.
+
+These position cases use synthetic rotations and cloth motion. This is not
+proof of rendered fit or collision response. A render offset can interact with
+already enlarged colliders; physical clearance, normals/eyes/materials, zero
+morph and disabled cloth, menu/world consistency, both variants, doubles and
+GPU/runtime cost still need acceptance. The game remains on the existing
+accepted build. No cloth assets, skeletons, gameplay inputs or settings were
+changed by this prototype.
+
+After the successful cook exited and its container was confirmed absent,
+the disposable Wine prefix was removed (1,084,763,562 logical bytes).
+`genessa-deformer-cook1/cleanup.json` records the deletion; cook inputs,
+logs, shaders, cooked outputs and the verified trial package remain.
+
 All 18 normal/facial meshes now have per-section nonzero bone influence records.
 The 570-section check passes normalization, indices and source immutability;
 an independent W3 full-array comparison matches all 25 sections. All nine

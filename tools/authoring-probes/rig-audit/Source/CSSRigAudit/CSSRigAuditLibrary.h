@@ -9,6 +9,12 @@ class UCSSRigAuditLibrary : public UBlueprintFunctionLibrary
     GENERATED_BODY()
 public:
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static FString SnapshotDeformer(class UObject* Asset);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static class UObject* CloneClothMorphStudy(class UObject* Source, const FString& OutputPackage);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString ExportRawPoseKeys(class UAnimSequence* Sequence, const FString& OutputFile,
         bool bMatchACLSampleClock = false);
 

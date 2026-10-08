@@ -3,6 +3,34 @@
 This C++20 editor module exposes commandlet-only snapshot helpers to Python.
 It is authoring tooling, not a CSS runtime module.
 
+`SnapshotDeformer` reads Deformer Graph nodes and shader text, including referenced
+function graphs. `CloneClothMorphStudy` duplicates only UE 5.6.1's
+`DG_LinearBlendSkin_Morph_Cloth_RecomputeNormals` into a fresh package under
+`/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphStudy...`. It expands the copied
+functions, retains the skinned morph offset during cloth blending, and leaves
+the normal/tangent reconstruction kernel unchanged. It does not save or bind
+the result. Invoke it through Python in an isolated commandlet, snapshot the
+result, and explicitly save that private asset with `EditorAssetLibrary`.
+Engine assets and installed packages must remain read-only.
+`author_cloth_morph_study.py` is the commandlet driver. Set `CSS_PANEL_STAGE` to
+the private writable output directory and `CSS_DEFORMER_CONTENT` to the engine's
+`Plugins/Animation/DeformerGraph/Content` directory. Start with an empty private
+Content tree and allow writes only inside that project/output, as in the
+recorded bubblewrap command. The fixed study destination must not already exist.
+
+The helper checks the source identity, output namespace, expected kernel text,
+writeback and graph compilation. Graph compilation alone is not GPU shader
+validation. UE 5.6.1's `ExpandCollapsedNodes` returns an empty array even after
+success, so the helper checks that the reference node was actually removed.
+
+`check_cloth_morph_study.py` compares baseline/candidate shader snapshots and
+tests position math against captured `UG_Skirt` render morphs and cloth weights.
+Its rotations and cloth displacements are synthetic. It checks loss of the
+direct morph contribution, not penetration, physical contact or shading.
+The private Windows cook and package evidence are in
+`work/three-outfit-rig-physics/genessa-deformer-{candidate,cook,pack}1`.
+This prototype still needs GPU execution, visible fit, lifecycle and cost checks.
+
 `SnapshotAnimation` reads named source tracks through `IAnimationDataModel`,
 hashing explicit transform components rather than struct padding. It records
 frame/key counts, sample rate, model GUID, curve/attribute counts and retarget
