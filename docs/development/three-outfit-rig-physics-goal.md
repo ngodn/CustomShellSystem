@@ -18,7 +18,7 @@ Paths below are relative to `/home/eins0fx/development/mods/msII`.
 | Unholy Genessa | Both released W3 mesh variants | `CSS-Mod-Authoring/eins0fx-collections/CSS_UnholyGenessa_eins0fx_P` |
 | Commander White | Released outfit plus its current shared-pack facial replacement | `CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P` |
 
-The differently named legacy `CSS_Seductress_eins0fx`, GeneXXa and Proxima are excluded. No new outfits or shoe redesigns. Preserve existing animation support for all three projects and working facial support on Eve and Commander White. **Implement facial-expression support for Unholy Genessa** as specified below; it must not be assumed complete from earlier compatibility notes. Review the existing locomotion library for necessary optimization, then convert its remaining unconverted animations for the default game human skeleton. This October 8 scope update supersedes the earlier native four-animation limit. It extends target compatibility for the existing library, not acquisition of additional source animations.
+The differently named legacy `CSS_Seductress_eins0fx`, GeneXXa and Proxima are excluded. The two additional Eve outfits specified below are queued for later work; no other new outfits or shoe redesigns are in scope. Preserve existing animation support for all three projects and working facial support on Eve and Commander White. **Implement facial-expression support for Unholy Genessa** as specified below; it must not be assumed complete from earlier compatibility notes. Review the existing locomotion library for necessary optimization, then convert its remaining unconverted animations for the default game human skeleton. This October 8 scope update supersedes the earlier native four-animation limit. It extends target compatibility for the existing library, not acquisition of additional source animations.
 
 Improve or fix CSS wherever necessary to support this goal, including runtime behavior, asset discovery/compatibility, customization, UI, persistence, playback, solver lifecycle and shared-pack integration. This supporting work is explicitly authorized within the goal; do not leave a required CSS change unfinished merely because the visible result belongs to an outfit. Keep changes tied to demonstrated requirements, preserve the established CSS design and commit them by context in the actual CSS repository. Explain which package a fix changes before installation.
 
@@ -163,6 +163,23 @@ The quality target is responsive, stable gameplay with high performance, no newl
 - Run meaningful targeted tests for changed logic and existing required checks. Exercise the regression matrix across affected outfits, shared assets and CSS/CINE consumers, including repeated switches and longer play where lifecycle/resource accumulation is relevant. Separate automated, static and in-game results; untested cases remain marked untested.
 - Investigate any reproducible new hitch, FPS loss, crash or functional regression before release. Fix it or revert the responsible change; disclose any unresolved tradeoff for explicit user acceptance. Preserve previously accepted behavior and recorded deferrals. Completion claims must state the tested coverage and remaining limits.
 
+## Queued follow-up: two additional Eve outfits
+
+**Status: requested, not implemented.** Continue the current Genessa cloth/body-shape repair and existing rig work first. This addition does not change their priority or the nine-variant repair baseline.
+
+Use the references in `CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/reference/new-eve-outfit`:
+
+- `Peony Better Cleavage-1851-v1-0-1755197848.rar`
+- `DOAXVV Slipstream CNS-3108-1-0-1778702686.zip`
+
+Add both outfits to the current Eve mod alongside its existing six outfits. Inspect the archives before deciding the final component breakdown or display names. Preserve the reference designs and keep original inputs unchanged.
+
+Each new outfit must have modular, individually removable garment components through CSS customization, allowing the outfit to be undressed, plus **five distinct template color palettes per outfit (ten total)**. Use the established customization and saved-profile behavior. Validate component combinations, palette application, body-shape fit, skin weights, collision, garment physics and animation/facial compatibility in both preview and gameplay. Apply the same performance and regression gates as the existing outfits.
+
+Keep outfit-specific meshes, materials, physics and palette definitions in the Eve mod under `/Game/CSS/eins0fx/EveSB/...`; put only genuinely reusable assets in `CSS_SharedAssets_P`. Make supporting CSS changes where needed while preserving existing controls and saved selections.
+
+**Acceptance:** both outfits are selectable, modular visibility and all ten palette templates work and persist, and fit/physics/gameplay checks are recorded. Track them separately from the nine existing repair variants. Release inclusion/version remains to be settled when this queued work is reached; do not silently change the coordinated release targets or report these outfits as completed.
+
 ## Low-priority follow-up: Trebuchaxe sidearm visibility
 
 **Status:** user-supplied report, not reproduced or diagnosed. Investigate and fix after the primary rig, facial and animation work; this does not change the current priority.
@@ -204,6 +221,6 @@ For rejected trials, retain the small recipe, parameters, failure reason and use
 
 Record deleted paths or groups, why they were safe to remove and measured space recovered in the work log. Cleanup must preserve reproducibility and the ability to recover the current working build.
 
-Completion requires all scoped variants accounted for, Unholy Genessa facial support accepted, agreed defects repaired or explicitly deferred, shared-pack organization accepted, locomotion review and remaining native-human conversions accounted for, regression results recorded, source-to-package provenance complete and a concise list of remaining limitations. Do not mark the goal complete from a Blender preview alone.
+Completion requires all scoped variants accounted for, the two queued Eve outfits and their ten palettes completed or explicitly deferred by the user, Unholy Genessa facial support accepted, agreed defects repaired or explicitly deferred, shared-pack organization accepted, locomotion review and remaining native-human conversions accounted for, regression results recorded, source-to-package provenance complete and a concise list of remaining limitations. Do not mark the goal complete from a Blender preview alone.
 
 **First implementation steps when activated:** verify the installed gameplay-interruption baseline, pin the nine-variant/current-facial manifest, then capture matched poses to prioritize the first demonstrated deformation defect.
