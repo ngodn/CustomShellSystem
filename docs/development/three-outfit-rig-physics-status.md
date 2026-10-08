@@ -27,7 +27,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Performance | Current package sizes recorded; matched gameplay captures pending |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: migrate Commander White's materials and finish her assembly, then the remaining runtime/catalog consumers. Genessa's 101-package private assembly and the shared skeleton pass independent cooked comparison. Eve's complete 308-package outfit assembly passes with the shared skeleton, preserved secondary blueprint, hair shaders and all 22 original mesh buffers. Commander White's 172-package editor migration/reload, 12-package rig cook and both cooked mesh buffer comparisons pass; 80 instances, 78 textures and two parents still need their material migration. Final facial integration, authoring recipe updates and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
+Next: finish the remaining runtime/catalog consumers and final Genessa facial integration. Private migration assemblies now pass for all three outfits: Genessa's 101 packages, Eve's 308 and Commander White's 171, each checked with the shared skeleton. Eve retains its compiled secondary graph and 22 original mesh buffers. Commander White retains both C4/E9 mesh buffers, original hair/body graphs, all 80 instances, 78 textures and two material parents. Authoring recipe updates, rig/physics work and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
 
 ## Astral runtime namespace support
 
@@ -145,7 +145,38 @@ and all 184 original inputs unchanged. `commander-rig-cook1` passes its
 12-package Windows rig cook. `commander-mesh-comparison1/comparison.json`
 matches both C4/E9 meshes against the installed baseline, including reference
 poses, geometry, indices, colors, weights, cloth mappings and every morph.
-Material migration and live acceptance remain.
+Material migration subsequently passed, as recorded below. Live acceptance remains.
+
+### Complete Commander White private assembly
+
+`commander-material-pack2` preserves all 160 material/texture packages, including
+929 texture mips and both compiled parents. All decoded fields/shader maps match
+and 428 imports resolve without the original outfit mounted. Its first trial
+revealed six numbered package FNames missed by raw-string relocation. The writer
+now retains FName indices/numbers while mapping their stored base names and
+rejects conflicting or unmapped siblings. Three Rust regressions and eight
+byte-identical files across the parent, texture and blueprint modes pass.
+See [material migration notes](outfit-material-namespace.md).
+
+`commander-rig-pack1` passed dependency checks but rejected two source-blueprint
+differences: `CW_BodyGeometryJson` had become `CSSBodyGeometryJson` in B2/B3.
+`commander-secondary-namespace1` instead preserves both released compiled
+blueprints, with all 13 decoded exports matching after namespace normalization.
+No property rename is accepted as a side effect of moving folders.
+
+`commander-rig-pack3` passes the complete 172-package comparison (171 outfit
+packages plus the shared base skeleton) and all 598 imports. Its two mesh
+payloads match the cook already independently compared against the original
+C4/E9 render, skin, cloth and morph buffers; `mesh-evidence.json` pins that chain.
+This is a private assembly, not an installed release or live physics test.
+
+Pack2 ran out of disk space during duplicate readback extraction. Its incomplete
+files and pack1's superseded stage were removed only after matching retained
+material/cook/blueprint inputs, recorded in `cleanup-commander-disk-full1.json`.
+The successful retry checked room for three payload copies before starting.
+Pack3's verified duplicate readback payloads were then removed, keeping its
+stage, container, headers and decoded evidence. Their 1,382,675,238 logical bytes
+are recorded in `commander-rig-pack3/readback-payload-cleanup.json`.
 
 Completed Eve reload/cook caches and the obsolete failed Eve editor cache
 were removed with receipts, preserving candidates, original inputs and logs.

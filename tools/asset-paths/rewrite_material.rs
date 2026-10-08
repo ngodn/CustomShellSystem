@@ -15,6 +15,7 @@ struct Request {
     mapping: BTreeMap<String, String>, jobs: Vec<Job>, report: PathBuf,
     #[serde(default)] textures: bool,
     #[serde(default)] animation_blueprints: bool,
+    #[serde(default)] material_parents: bool,
 }
 
 fn read(bytes: &[u8], expected_class: &str) -> Result<FLegacyPackageHeader> {
@@ -102,19 +103,55 @@ fn rename(value: &str, mapping: &BTreeMap<String, String>) -> String {
     value.to_owned()
 }
 
-fn relocate(header: &mut FLegacyPackageHeader, mapping: &BTreeMap<String, String>) {
+fn name_table_mapping(mapping: &BTreeMap<String, String>) -> Result<BTreeMap<String, String>> {
+    let mut names = mapping.clone();
+    for (old, new) in mapping {
+        // A package FName can store MI_Layer_29 as MI_Layer plus number 30.
+        // Keep every index and number intact, including references in .uexp.
+        let mut old_names = FPackageNameMap::create();
+        let mut new_names = FPackageNameMap::create();
+        let old_name = old_names.store(old);
+        let new_name = new_names.store(new);
+        ensure!(old_name.number == new_name.number, "Relocation changes a name number");
+        let old_base = old_names.copy_raw_names().remove(0);
+        let new_base = new_names.copy_raw_names().remove(0);
+        if let Some(previous) = names.insert(old_base.clone(), new_base.clone()) {
+            ensure!(previous == new_base, "Conflicting numbered-name relocation: {old_base}");
+        }
+    }
+    Ok(names)
+}
+
+fn relocate(header: &mut FLegacyPackageHeader, mapping: &BTreeMap<String, String>) -> Result<()> {
+    let names = name_table_mapping(mapping)?;
+    let original = header.name_map.clone();
     header.summary.package_name = rename(&header.summary.package_name, mapping);
     header.name_map = FPackageNameMap::create_from_names(
-        header.name_map.copy_raw_names().iter().map(|n| rename(n, mapping)).collect());
+        original.copy_raw_names().iter().map(|n| rename(n, &names)).collect());
+    for import in &header.imports {
+        for name in [import.class_package, import.class_name, import.object_name] {
+            let old = original.get(name)?;
+            ensure!(header.name_map.get(name)? == rename(&old, mapping),
+                    "Relocation changed an unmapped import name: {old}");
+        }
+    }
+    for export in &header.exports {
+        let old = original.get(export.object_name)?;
+        ensure!(header.name_map.get(export.object_name)? == rename(&old, mapping),
+                "Relocation changed an unmapped export name: {old}");
+    }
+    Ok(())
 }
 
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args_os().collect();
     ensure!(args.len() == 2, "Usage: rewrite_material request.json");
     let request: Request = serde_json::from_slice(&fs::read(&args[1])?)?;
-    ensure!(!(request.textures && request.animation_blueprints), "Select only one asset class");
+    ensure!(u8::from(request.textures) + u8::from(request.animation_blueprints) +
+            u8::from(request.material_parents) <= 1, "Select only one asset class");
     let expected_class = if request.textures { "Texture2D" }
         else if request.animation_blueprints { "AnimBlueprintGeneratedClass" }
+        else if request.material_parents { "Material" }
         else { "MaterialInstanceConstant" };
     ensure!(!request.report.exists(), "Report already exists");
     let inverse: BTreeMap<_, _> = request.mapping.iter().map(|(a,b)| (b.clone(),a.clone())).collect();
@@ -154,13 +191,13 @@ fn main() -> Result<()> {
         for export in &header.exports {
             ensure!((export.serial_offset + export.serial_size) as usize <= payload.len(), "Export exceeds payload");
         }
-        relocate(&mut header, &request.mapping);
+        relocate(&mut header, &request.mapping)?;
         let output = write(&header, None)?;
         let mut back = read(&output, expected_class)?;
         ensure!(back.summary.package_name == request.mapping[&old_package], "Package readback mismatch");
         let names = back.name_map.copy_raw_names();
         ensure!(!names.iter().any(|n| request.mapping.keys().any(|old| n == old || n.starts_with(&format!("{old}.")))), "Stale mapped reference");
-        relocate(&mut back, &inverse);
+        relocate(&mut back, &inverse)?;
         ensure!(write(&back, Some(input.len()))? == input, "Inverse relocation differs from original");
         reports.push(json!({"input":job.input,"output":job.output,"old":old_package,
             "package":header.summary.package_name,"old_header_bytes":input.len(),
@@ -183,7 +220,60 @@ fn main() -> Result<()> {
     }
     let report = if request.textures { json!({"passed":true,"textures":reports}) }
                  else if request.animation_blueprints { json!({"passed":true,"animation_blueprints":reports}) }
+                 else if request.material_parents { json!({"passed":true,"material_parents":reports}) }
                  else { json!({"passed":true,"materials":reports}) };
     fs::write(request.report, serde_json::to_vec_pretty(&report)?)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use retoc::legacy_asset::FObjectImport;
+
+    #[test]
+    fn numbered_package_import_keeps_index_number_and_roundtrips() -> Result<()> {
+        let old = "/Game/CSS/CommanderWhite/Materials/MI_Layer_29";
+        let new = "/Game/CSS/eins0fx/CommanderWhite/Materials/MI_Layer_29";
+        let mut header = FLegacyPackageHeader::default();
+        let class = header.name_map.store("Package");
+        let object = header.name_map.store(old);
+        assert_eq!(object.number, 30);
+        header.imports.push(FObjectImport { class_package: class, class_name: class,
+            object_name: object, ..Default::default() });
+        let original = header.name_map.copy_raw_names();
+        relocate(&mut header, &BTreeMap::from([(old.into(), new.into())]))?;
+        assert_eq!(header.name_map.get(object)?, new);
+        assert_eq!(header.imports[0].object_name.index, object.index);
+        assert_eq!(header.imports[0].object_name.number, object.number);
+        relocate(&mut header, &BTreeMap::from([(new.into(), old.into())]))?;
+        assert_eq!(header.name_map.copy_raw_names(), original);
+        Ok(())
+    }
+
+    #[test]
+    fn conflicting_or_unmapped_numbered_siblings_are_rejected() {
+        let old = "/Game/CSS/Old/MI_Layer_29";
+        let new = "/Game/CSS/New/MI_Layer_29";
+        let mapping = BTreeMap::from([(old.into(), new.into()),
+            ("/Game/CSS/Old/MI_Layer_30".into(), "/Game/CSS/Other/MI_Layer_30".into())]);
+        assert!(name_table_mapping(&mapping).is_err());
+        let mut header = FLegacyPackageHeader::default();
+        let class = header.name_map.store("Package");
+        let object = header.name_map.store("/Game/CSS/Old/MI_Layer_30");
+        header.imports.push(FObjectImport { class_package: class, class_name: class,
+            object_name: object, ..Default::default() });
+        assert!(relocate(&mut header, &BTreeMap::from([(old.into(), new.into())])).is_err());
+    }
+
+    #[test]
+    fn zero_padded_names_and_object_paths_keep_their_spelling() -> Result<()> {
+        let mapping = BTreeMap::from([
+            ("/Game/CSS/Old/MI_01".into(), "/Game/CSS/New/MI_01".into()),
+            ("/Game/CSS/Old/MI_1".into(), "/Game/CSS/New/MI_1".into())]);
+        let names = name_table_mapping(&mapping)?;
+        assert_eq!(rename("/Game/CSS/Old/MI_01.MI_01", &names), "/Game/CSS/New/MI_01.MI_01");
+        assert_eq!(rename("/Game/CSS/Old/MI_10", &names), "/Game/CSS/Old/MI_10");
+        Ok(())
+    }
 }

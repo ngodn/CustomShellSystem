@@ -22,6 +22,9 @@ def main():
     parser.add_argument('--baseline', type=Path, required=True)
     parser.add_argument('--plan', type=Path, required=True)
     parser.add_argument('--container', required=True)
+    parser.add_argument('--dependency-container', action='append', default=[],
+                        help='Additional pinned provider for outfit-owned assets currently shipped elsewhere')
+    parser.add_argument('--packages', type=Path, help='Explicit subset to extract, retaining the full path map')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     output = args.output.resolve()
@@ -32,7 +35,13 @@ def main():
     sources = [p for p in baseline['packages'] if p['container'] == args.container]
     if len(sources) != 1:
         raise ValueError('Expected one pinned source container')
-    sources = sources[0]['files']
+    providers = sources
+    for name in args.dependency_container:
+        matches = [p for p in baseline['packages'] if p['container'] == name]
+        if len(matches) != 1 or name in {p['container'] for p in providers}:
+            raise ValueError('Missing or duplicate dependency provider: ' + name)
+        providers.extend(matches)
+    sources = {p['container'] + ':' + suffix: row for p in providers for suffix, row in p['files'].items()}
     for row in sources.values():
         if sha(Path(row['path'])) != row['sha256']:
             raise ValueError('Baseline container changed: ' + row['path'])
@@ -47,6 +56,13 @@ def main():
             raise ValueError('Invalid outfit package path')
     # Inspect export classes after extraction, rather than trusting M_/MI_ names.
     packages = {a['old_package'] for a in selected}
+    if args.packages:
+        requested = json.loads(args.packages.read_text())
+        if (not isinstance(requested, list) or not requested or
+                any(not isinstance(p, str) for p in requested) or
+                len(requested) != len(set(requested)) or not set(requested) <= packages):
+            raise ValueError('Expected a nonempty unique subset of the outfit migration')
+        packages = set(requested)
     if not packages:
         raise ValueError('No outfit packages in migration plan')
     output.mkdir(parents=True)
@@ -58,8 +74,9 @@ def main():
         (mount / path.name).symlink_to(path)
     # Some outfit-owned adapters currently live in the shared library. Only
     # extract the packages this pinned outfit actually supplies.
-    supplied = {e['package'] for p in baseline['packages'] if p['container'] == args.container
-                for e in p['exports']}
+    supplied = {e['package'] for p in providers for e in p['exports']}
+    if args.packages and not packages <= supplied:
+        raise ValueError('Selected packages are missing from the pinned providers')
     filters = [arg for package in sorted(packages & supplied)
                for arg in ('-f', package.removeprefix('/Game/') + '.uasset')]
     converter.run(converter.retoc, 'to-legacy', mount, output / 'original',
@@ -67,7 +84,7 @@ def main():
     jobs, hashes, skipped = [], {}, []
     for path in sorted((output / 'original').rglob('*.uasset')):
         info = asset_info(path.read_bytes())
-        if info['package'] not in mapping:
+        if info['package'] not in packages:
             raise ValueError('Unexpected extracted package: ' + info['package'])
         if len(info['exports']) != 1 or info['exports'][0]['class'] != 'MaterialInstanceConstant':
             skipped.append(dict(package=info['package'], classes=[e['class'] for e in info['exports']]))

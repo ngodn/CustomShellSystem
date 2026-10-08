@@ -35,19 +35,29 @@ def normalize(value, mapping):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--instances', type=Path, required=True)
-    parser.add_argument('--cook', type=Path, required=True)
+    parents = parser.add_mutually_exclusive_group(required=True)
+    parents.add_argument('--cook', type=Path)
+    parents.add_argument('--parents', type=Path, help='Verified header relocation with preserved compiled material payloads')
     parser.add_argument('--textures', type=Path, help='Verified cooked texture relocation to preserve instead of recooking')
     parser.add_argument('--dotnet', type=Path, required=True)
     parser.add_argument('--mappings', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--work-root', type=Path, default=ROOT / 'work/three-outfit-rig-physics')
     args = parser.parse_args()
     output = args.output.resolve()
-    if output.exists() or not output.is_relative_to(ROOT / 'work/three-outfit-rig-physics'):
+    work_root = args.work_root.resolve()
+    if output.exists() or output == work_root or not output.is_relative_to(work_root):
         raise ValueError('Use a new private migration directory')
-    instances, cook = args.instances.resolve(strict=True), args.cook.resolve(strict=True)
-    instance_check, cook_check = read(instances / 'verification.json'), read(cook / 'exit.json')
-    if not instance_check['passed'] or cook_check != dict(returncode=0, sources_unchanged=True):
-        raise ValueError('Cook and instance migration must pass first')
+    instances = args.instances.resolve(strict=True)
+    cook = args.cook.resolve(strict=True) if args.cook else None
+    instance_check = read(instances / 'verification.json')
+    parent_evidence = []
+    if not instance_check['passed']:
+        raise ValueError('Instance migration must pass first')
+    if cook:
+        if read(cook / 'exit.json') != dict(returncode=0, sources_unchanged=True):
+            raise ValueError('Parent cook must pass first')
+        parent_evidence = [cook / 'exit.json', cook / 'sources.json']
     for row in instance_check['source_containers'].values():
         if sha(Path(row['path'])) != row['sha256']:
             raise ValueError('Pinned original container changed')
@@ -88,8 +98,30 @@ def main():
             subprocess.run(['cp', '--reflink=auto', str(source), str(target)], check=True)
         if len(preserved_textures) != texture_check['textures']:
             raise ValueError('Incomplete preserved texture inventory')
-    cooked = cook / 'project/Saved/Cooked/Windows/CSSShared/Content'
-    for header in cooked.rglob('*.uasset'):
+    if args.parents:
+        parent_stage = args.parents.resolve(strict=True)
+        receipt = parent_stage / 'verification.json'
+        proof = read(receipt)
+        if not proof['passed']:
+            raise ValueError('Parent preservation failed')
+        parent_evidence = [receipt]
+        for source, digest in proof['source_files'].items():
+            if sha(Path(source)) != digest:
+                raise ValueError('Parent source changed: ' + source)
+        for relative, digest in proof['payloads'].items():
+            if Path(relative).is_absolute() or '..' in Path(relative).parts:
+                raise ValueError('Invalid preserved parent payload path')
+            source, target = parent_stage / 'stage' / relative, stage / relative
+            if sha(source) != digest or target.exists():
+                raise ValueError('Changed or overlapping preserved parent')
+            if source.suffix == '.uasset':
+                info = asset_info(source.read_bytes())
+                if info['package'] not in expected or [e['class'] for e in info['exports']] != ['Material']:
+                    raise ValueError('Unexpected preserved parent class or package')
+            target.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(['cp', '--reflink=auto', str(source), str(target)], check=True)
+    cooked = cook / 'project/Saved/Cooked/Windows/CSSShared/Content' if cook else None
+    for header in cooked.rglob('*.uasset') if cooked else ():
         package = '/Game/' + str(header.relative_to(cooked).with_suffix(''))
         if package not in expected:
             continue
@@ -168,7 +200,7 @@ def main():
     (output / 'verification.json').write_text(json.dumps(dict(passed=True, packages=len(expected),
         payloads=payloads, files={toc.with_suffix(s).name: sha(toc.with_suffix(s)) for s in ('.pak', '.utoc', '.ucas')},
         evidence={str(p): sha(p) for p in [instances / 'verification.json', instances / 'original-decoded.json',
-                  instances / 'request.json', cook / 'exit.json', cook / 'sources.json', *texture_evidence]},
+                  instances / 'request.json', *parent_evidence, *texture_evidence]},
         preserved_texture_packages=sorted(preserved_textures),
         installed=False, scope='Material subset only. Decoded fields and shader maps match after path normalization; '
                                'imports resolve without the original outfit mounted. Game acceptance remains.'), indent=2) + '\n')

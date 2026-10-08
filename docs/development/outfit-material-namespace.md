@@ -164,3 +164,36 @@ payload location, totaling 2,344,561,871 logical bytes. Original extracted data,
 the full material assembly, texture mip comparisons and rejected shader
 differences remain. Reproducing the earlier standalone texture container now
 requires rerunning its recorded recipe.
+
+## Commander White material preservation
+
+`commander-material-pack2` passes all 160 normalized package comparisons and
+428 imported references with only the candidate and base game mounted. It
+contains 80 material instances, 78 textures and two parent materials. The
+texture comparison covers all 929 mip payloads. Both parents retain their
+original compiled export bytes and independently decoded shader maps.
+The optical parent and three optical instances are moved from the old
+locomotion container into Commander White's namespace and outfit ownership.
+
+The first combined trial exposed six stale parent imports from `MaterialX`
+instances. Their FNames store the package leaf as `MI_Layer` plus a separate
+number, so rewriting only complete raw strings missed `MI_Layer_29` and its
+siblings. `rewrite_material.rs` now derives the numbered-name bases through
+the pinned serializer, preserves all indices/numbers and verifies the resolved
+import/export names. Conflicting destinations or changes to unmapped numbered
+siblings fail before any output is written. Three Rust tests cover that case,
+inverse relocation and zero-padded names. The second instance trial preserves
+all 80 export payloads and passes unchanged/inverse header roundtrips.
+
+`migrate_outfit_instances.py` accepts explicit pinned dependency containers and
+a package subset while retaining the full reference map. The material verifier
+can use either a checked parent cook or reversible parent-header relocation.
+These are authoring tools; no runtime behavior or installed assets changed.
+
+The rejected material container and duplicate payloads were removed only after
+the corrected comparison passed. `cleanup-commander-rejected-material-pack1.json`
+retains hashes and replacement locations (2,961,117,938 logical bytes).
+Headers, decoded failures, inputs and recipes remain. The accepted material
+readback's duplicate export/bulk files were subsequently removed together with
+the rejected rig container; `cleanup-commander-assembly1.json` records those
+2,370,470,703 logical bytes. These totals are not physical free-space claims.
