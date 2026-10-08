@@ -18,6 +18,15 @@
 #include "UObject/Package.h"
 #include "UObject/UnrealType.h"
 
+bool UCSSRigAuditLibrary::CompileClothRuntimeGraph(UObject* Graph)
+{
+    auto* Deformer = Cast<UOptimusDeformer>(Graph);
+    if (!IsRunningCommandlet() || !IsInGameThread() || !Deformer ||
+        Deformer->GetPathName() != TEXT("/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphBody.DG_ClothMorphBody"))
+        return false;
+    return Deformer->Compile();
+}
+
 USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Source, const FString& OutputPackage,
     bool bAllShapes, UMeshDeformerCollection* DeformerCollection, UMeshDeformer* RuntimeDeformer)
 {
@@ -26,10 +35,14 @@ USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Sour
         UE_LOG(LogTemp, Error, TEXT("Cloth basis mesh study: %s"), Reason);
         return nullptr;
     };
-    if (!IsRunningCommandlet() || !IsInGameThread() || !Source ||
-        !Source->GetPathName().StartsWith(TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/")) ||
-        !OutputPackage.StartsWith(TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/")) ||
-        !OutputPackage.EndsWith(RuntimeDeformer ? TEXT("_BasisStudy3") : bAllShapes ? TEXT("_BasisStudy2") : TEXT("_BasisStudy1")) ||
+    const FString SourcePackage = Source ? Source->GetOutermost()->GetName() : FString();
+    const bool bSourceAllowed = SourcePackage == TEXT("/Game/CSS/eins0fx/UnholyGenessa/SK_EveW3") ||
+        SourcePackage == TEXT("/Game/CSS/eins0fx/UnholyGenessa/SK_GenessaW3") ||
+        SourcePackage == TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/SK_EveW3_Face") ||
+        SourcePackage == TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/SK_GenessaW3_Face");
+    const FString ExpectedOutput = SourcePackage + (RuntimeDeformer ? TEXT("_BasisStudy3") :
+        bAllShapes ? TEXT("_BasisStudy2") : TEXT("_BasisStudy1"));
+    if (!IsRunningCommandlet() || !IsInGameThread() || !Source || !bSourceAllowed || OutputPackage != ExpectedOutput ||
         (bAllShapes && (!DeformerCollection || !DeformerCollection->GetPathName().StartsWith(
             RuntimeDeformer ? TEXT("/Game/CSS/eins0fx/Shared/Deformers/MDC_ClothMorphStudy5.") :
                 TEXT("/Game/CSS/eins0fx/Shared/Deformers/MDC_ClothMorphStudy4.")))) ||

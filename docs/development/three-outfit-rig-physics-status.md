@@ -91,10 +91,35 @@ readback: both default graph references, target collections, fifteen attribute
 buffers, five zero-default GPU variables and kernel-source equivalence pass.
 The independent mesh comparison rejects changes outside the stated additions.
 
-Next: integrate the candidate into the outfit/shared-pack assembly, validate
-actual materials and continuous contact, then live-check world/preview/doubles,
-lifecycle recovery and measured cost. The diagnostic pack is not an installable
-release. The installed baseline remains unchanged.
+The October 9 follow-up covers all four production mesh paths, including the
+regular 22-morph meshes and the 137-morph facial replacements. Isolated authoring
+and fresh reload pass with the shared graph renamed to
+`/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphBody` and its matching collection.
+The normal-mesh authoring wrapper initially caught an unnecessary resave of the
+private Study5 graph. Its accepted bytes were restored from the verified cook,
+and the recipe now saves the graph only when it creates it. Original inputs
+remain unchanged. The final Windows cook exits 0 with unchanged inputs.
+
+`genessa-cloth-assembly1` contains the complete Genessa and shared packages.
+All 737 package import checks and 1,380 catalog checks pass. Independent cooked
+readback of all four meshes matches the installed baseline outside the declared
+attribute/default-graph additions and associated buffer metadata. Skinning,
+materials, existing morphs and cloth data remain unchanged. The canonical graph
+retains the tested kernel sources, five zero-default GPU weights and fifteen
+attributes; both kernels compile for SM5 and SM6. A deliberately incorrect
+variable is rejected by the verifier.
+
+The follow-up installer stages only Genessa, shared assets and the CSS core.
+Eve and Commander White remain pinned to the accepted installed files. Their
+candidate metadata contents match the baseline; repacking Eve changed archive
+bytes, so the installation retains the original archive. This exact package
+combination passes the 1,380 catalog checks. Eighteen installer tests cover
+initial migration, partial follow-up rollback, retained-file changes and guards.
+`genessa-cloth-assembly1/preinstall-validation.json` records these results.
+
+Next: install the verified follow-up, then validate actual materials and
+continuous contact, world/preview/doubles, lifecycle recovery and measured cost.
+Offline checks do not establish gameplay acceptance or a finished release.
 
 ### October 8: reproduced Genessa rear-panel shape mismatch
 

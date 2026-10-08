@@ -34,6 +34,9 @@ public:
         bool bAllShapes = false, bool bRuntimeBindings = false);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static bool CompileClothRuntimeGraph(class UObject* Graph);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString ExportRawPoseKeys(class UAnimSequence* Sequence, const FString& OutputFile,
         bool bMatchACLSampleClock = false);
 

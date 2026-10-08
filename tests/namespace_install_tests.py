@@ -3,6 +3,7 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+import shutil
 import unittest
 from unittest.mock import patch
 
@@ -160,6 +161,45 @@ class NamespaceInstallTests(unittest.TestCase):
         with self.assertRaises(FileExistsError): self.install(conflict)
         self.assertEqual((self.runtime / 'cores/new.dll').read_text(), 'another build')
         self.baseline()
+
+    def make_followup(self):
+        for name in mod.RETIRED:
+            shutil.rmtree(self.game / 'Content/Paks/~mods' / name)
+            del self.plan['old'][name]
+        self.plan['retained'] = {}
+        for name in (mod.NAMES[0], mod.NAMES[2]):
+            self.plan['retained'][name] = self.plan['old'].pop(name)
+            del self.plan['new'][name]
+
+    def test_followup_retains_unmodified_packages(self):
+        self.make_followup()
+        self.install()
+        mod.mounts(self.game, mod.NAMES)
+        mod.retained_unchanged(self.plan)
+        mod.restore(self.transaction, lambda: None)
+        mod.restore(self.transaction, lambda: None)
+        self.baseline()
+        mod.mounts(self.game, mod.NAMES)
+
+    def test_followup_partial_mount_rolls_back(self):
+        self.make_followup()
+        def fault(step):
+            if step == 'mounted:' + mod.NAMES[1]: raise OSError('injected failure')
+        with self.assertRaises(OSError): self.install(fault)
+        self.baseline()
+        mod.mounts(self.game, mod.NAMES)
+
+    def test_followup_changed_retained_package_rejected(self):
+        self.make_followup()
+        self.write(self.game / 'Content/Paks/~mods' / mod.NAMES[0] / (mod.NAMES[0] + '.pak'), 'changed')
+        with self.assertRaises(ValueError): self.install()
+        self.assertFalse(self.transaction.exists())
+
+    def test_followup_missing_package_rejected(self):
+        self.make_followup()
+        del self.plan['retained'][mod.NAMES[0]]
+        with self.assertRaises(ValueError): self.install()
+        self.assertFalse(self.transaction.exists())
 
 
 if __name__ == '__main__':

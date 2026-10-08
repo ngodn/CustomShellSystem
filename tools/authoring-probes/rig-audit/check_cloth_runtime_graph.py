@@ -11,15 +11,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('baseline', 'candidate', 'cook-log', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--canonical', action='store_true',
+                        help='Check the final shared graph instead of the private study.')
     args = parser.parse_args()
     paths = (args.baseline, args.candidate, args.cook_log)
     hashes = {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
     prefix = '/Game/CSS/eins0fx/Shared/Deformers/'
     before = json.loads(args.baseline.read_text())[prefix + 'DG_ClothMorphStudy4']
-    after = json.loads(args.candidate.read_text())[prefix + 'DG_ClothMorphStudy5']
-    rename = {'DG_ClothMorphStudy4': 'DG_ClothMorphStudy5'}
+    graph_name = 'DG_ClothMorphBody' if args.canonical else 'DG_ClothMorphStudy5'
+    after = json.loads(args.candidate.read_text())[prefix + graph_name]
+    rename = {'DG_ClothMorphStudy4': graph_name}
     rename.update({f'CSS_Cloth{s}Weight': f'CSS_Morph_{m}' for s, m in SHAPES.items()})
-    expected = set(rename.values()) - {'DG_ClothMorphStudy5'}
+    expected = set(rename.values()) - {graph_name}
     variables = [r['Properties'] for r in after if r['Type'] == 'OptimusVariableDescription']
     assert len(variables) == 5 and {v['VariableName'] for v in variables} == expected
     assert all(v['DataType']['TypeName'] == 'DoubleProperty' for v in variables)
@@ -49,7 +52,7 @@ def main():
     for kernel in ('LinearBlendSkin_Morph_Cloth_PositionOnly_OptimusNode_ComputeKernel_1',
                    'ComputeNormalsTangents_OptimusNode_CustomComputeKernel_0'):
         for platform in ('PCD3D_SM5', 'PCD3D_SM6'):
-            assert f'DG_ClothMorphStudy5_{kernel}: {platform} shader compilation success!' in log
+            assert f'{graph_name}_{kernel}: {platform} shader compilation success!' in log
     report = dict(passed=True, variables=sorted(expected), zero_defaults=True,
                   equivalent_kernel_sources=True, vertex_attributes=15, inputs=hashes,
                   scope='Cooked graph bindings and compilation. Runtime GPU execution remains pending.')

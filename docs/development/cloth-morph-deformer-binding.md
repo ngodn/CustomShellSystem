@@ -1,7 +1,7 @@
 # Cloth morph deformer binding
 
-Status: runtime candidate built; private graph/mesh authoring, reload and Windows
-cook/readback pass. Not installed; live validation remains pending.
+Status: runtime and coordinated outfit/shared candidate built; authoring, reload,
+Windows cook and independent readback pass. Live validation remains pending.
 
 An authored Optimus graph opts in by declaring zero-default Float variables
 named `CSS_Morph_<morph name>`. For example, `CSS_Morph_PBMGlutesSize` receives
@@ -49,3 +49,12 @@ data, with fifteen added vertex-attribute buffers and the authored graph and
 collection references. Cooked graph readback confirms five zero-default GPU
 variables, equivalent kernel source and SM5/SM6 compilation. The diagnostic pack
 includes comparison meshes and must not be installed as an outfit release.
+
+The final candidate is `genessa-cloth-assembly1`. It preserves all four existing
+Genessa mesh paths and assigns the shared `DG_ClothMorphBody` graph and
+`MDC_ClothMorphBody` collection under `/Game/CSS/eins0fx/Shared/Deformers/`.
+The two regular meshes retain 22 morphs each; the two facial replacements retain
+137 each. Independent cooked comparison permits only the documented graph and
+attribute additions. The runtime contract is unchanged by the graph rename.
+All 737 package import checks and 1,380 catalog checks pass. World rendering,
+contact and runtime cost still require this integrated candidate in the game.

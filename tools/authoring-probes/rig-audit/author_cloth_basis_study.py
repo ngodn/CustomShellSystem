@@ -10,8 +10,11 @@ import unreal
 p = Path(os.environ['CSS_PANEL_STAGE']).resolve(strict=True)
 all_shapes = os.environ.get('CSS_PANEL_ALL_SHAPES') == '1'
 runtime_bindings = os.environ.get('CSS_PANEL_RUNTIME_BINDS') == '1'
+normal_meshes = os.environ.get('CSS_PANEL_NORMAL_MESHES') == '1'
 assert not runtime_bindings or all_shapes
-out = p / ('basis-runtime1' if runtime_bindings else 'basis-study3' if all_shapes else 'basis-study2')
+assert not normal_meshes or runtime_bindings
+out = p / ('basis-runtime-normal1' if normal_meshes else 'basis-runtime1' if runtime_bindings else
+           'basis-study3' if all_shapes else 'basis-study2')
 out.mkdir(exist_ok=True)
 verify_only = os.environ.get('CSS_PANEL_VERIFY_BASIS') == '1'
 reports = out / 'reload' if verify_only else out
@@ -31,9 +34,11 @@ try:
     source = unreal.load_asset('/DeformerGraph/Deformers/DG_LinearBlendSkin_Morph_Cloth_RecomputeNormals')
     graph_number = '5' if runtime_bindings else '4' if all_shapes else '3'
     graph_path = '/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphStudy' + graph_number
-    if unreal.EditorAssetLibrary.does_asset_exist(graph_path):
+    graph_exists = unreal.EditorAssetLibrary.does_asset_exist(graph_path)
+    if graph_exists:
         graph = unreal.load_asset(graph_path)
-        previous = json.loads((out / 'graph.json').read_text())
+        graph_receipt = p / 'basis-runtime1/graph.json' if normal_meshes else out / 'graph.json'
+        previous = json.loads(graph_receipt.read_text())
         assert snapshot(unreal.CSSRigAuditLibrary.snapshot_deformer(graph)) == previous
     else:
         assert not verify_only, 'Missing saved graph'
@@ -41,7 +46,8 @@ try:
     assert graph, 'Cannot author basis graph'
     if not verify_only:
         (out / 'graph.json').write_text(json.dumps(snapshot(unreal.CSSRigAuditLibrary.snapshot_deformer(graph)), indent=2))
-        assert unreal.EditorAssetLibrary.save_loaded_asset(graph, False)
+        if not graph_exists:
+            assert unreal.EditorAssetLibrary.save_loaded_asset(graph, False)
     collection = None
     if all_shapes:
         collection_name = 'MDC_ClothMorphStudy' + graph_number
@@ -59,7 +65,8 @@ try:
             assert unreal.EditorAssetLibrary.save_loaded_asset(collection, False)
         assert [x.get_path_name() for x in collection.get_editor_property('mesh_deformers')] == [graph.get_path_name()]
     for variant in ('Eve', 'Genessa'):
-        package = f'/Game/CSS/eins0fx/UnholyGenessa/Faces/SK_{variant}W3_Face'
+        package = (f'/Game/CSS/eins0fx/UnholyGenessa/SK_{variant}W3' if normal_meshes else
+                   f'/Game/CSS/eins0fx/UnholyGenessa/Faces/SK_{variant}W3_Face')
         source_mesh = unreal.load_asset(package)
         source_state = snapshot(unreal.CSSRigAuditLibrary.snapshot_mesh(source_mesh))
         morphs = [m['name'] for m in source_state['morphs']]
@@ -90,5 +97,5 @@ finally:
 
 (reports / 'result.json').write_text(json.dumps(dict(
     graph=graph.get_path_name(), meshes=records, protected=protected,
-    scope='Glute-basis authoring and unchanged existing render/cloth data. GPU, cook and game checks pending.'
+    scope='Cloth-basis authoring and unchanged existing render/cloth data. GPU, cook and game checks pending.'
 ), indent=2))

@@ -110,9 +110,27 @@ def plan_upgrade(baseline, catalog, core_report, game=GAME):
 
 def protected_unchanged(plan):
     check(plan['protected'])
+    retained_unchanged(plan)
     for name, hashes in plan['protected_trees'].items():
         if directory_hashes(Path(name)) != hashes:
             raise ValueError('Protected state or CINE files changed: ' + name)
+
+
+def retained_unchanged(plan):
+    for name, hashes in plan.get('retained', {}).items():
+        package_matches(Path(plan['game']) / 'Content/Paks/~mods' / name, hashes)
+
+
+def validate_package_sets(plan):
+    old, new, retained = (set(plan.get(k, {})) for k in ('old', 'new', 'retained'))
+    initial = old == set(NAMES + RETIRED) and new == set(NAMES) and not retained
+    followup = bool(old) and old == new and not old & retained and old | retained == set(NAMES)
+    if not (initial or followup):
+        raise ValueError('Unexpected replacement or retained package set')
+
+
+def mounted_set(plan, phase):
+    return set(plan[phase]) | set(plan.get('retained', {}))
 
 
 def package_matches(directory, hashes):
@@ -125,13 +143,15 @@ def restore(transaction, closed=check_closed):
     closed()
     plan = read(transaction / 'plan.json')
     game = Path(plan['game'])
-    if transaction.parent.resolve() != (game / 'Content').resolve() or set(plan['old']) != set(NAMES + RETIRED):
+    validate_package_sets(plan)
+    if transaction.parent.resolve() != (game / 'Content').resolve():
         raise ValueError('Unexpected rollback location or package set')
     runtime = game / 'Binaries/Win64/ue4ss/Mods/CustomShellSystem'
     selector = read(runtime / 'core.json')
     if selector not in (plan['previous_selector'], plan['new_selector']):
         raise ValueError('Core selector changed since this transaction')
     check(plan['protected'])
+    retained_unchanged(plan)
     for name, hashes in plan['old'].items():
         target = game / 'Content/Paks/~mods' / name
         backup = transaction / 'backup' / name
@@ -150,12 +170,13 @@ def restore(transaction, closed=check_closed):
         backup.rename(target)
     closed()
     atomic(runtime / 'core.json', plan['previous_selector'])
-    mounts(game, plan['old'])
+    mounts(game, mounted_set(plan, 'old'))
     atomic(transaction / 'result.json', {'installed': False, 'restored': True, 'live_verified': False})
 
 
 def install(plan, transaction, closed=check_closed, checkpoint=lambda _: None):
     closed()
+    validate_package_sets(plan)
     game = Path(plan['game'])
     if transaction.parent.resolve() != (game / 'Content').resolve():
         raise ValueError('Stage and rollback must be outside Paks on the game filesystem')
@@ -163,7 +184,7 @@ def install(plan, transaction, closed=check_closed, checkpoint=lambda _: None):
         raise FileExistsError(transaction)
     if shutil.disk_usage(game / 'Content').free < plan['stage_bytes'] + 256 * 1024**2:
         raise ValueError('Insufficient space for independent candidate copies and reserve')
-    mounts(game, plan['old'])
+    mounts(game, mounted_set(plan, 'old'))
     protected_unchanged(plan)
     check(plan['evidence'])
     runtime = game / 'Binaries/Win64/ue4ss/Mods/CustomShellSystem'
@@ -185,7 +206,7 @@ def install(plan, transaction, closed=check_closed, checkpoint=lambda _: None):
         checkpoint('staged')
         protected_unchanged(plan)
         check(plan['evidence'])
-        mounts(game, plan['old'])
+        mounts(game, mounted_set(plan, 'old'))
         if read(runtime / 'core.json') != plan['previous_selector']:
             raise ValueError('Core selector changed during staging')
         for name, hashes in plan['old'].items():
@@ -209,7 +230,7 @@ def install(plan, transaction, closed=check_closed, checkpoint=lambda _: None):
         atomic(runtime / 'core.json', plan['new_selector'])
         checkpoint('selected')
         protected_unchanged(plan)
-        mounts(game, plan['new'])
+        mounts(game, mounted_set(plan, 'new'))
         closed()
         atomic(transaction / 'result.json', {'installed': True, 'live_verified': False,
                'core_sha256': plan['core_sha256'], 'note': 'Full-cloth and saved settings preserved. Normal restart required.'})
