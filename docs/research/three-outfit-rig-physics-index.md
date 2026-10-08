@@ -105,3 +105,10 @@ thumb crease overlap persists; it is not a demonstrated gameplay regression.
 The user accepted cross-character Iris Out faces/eyes and attack/aim interruption
 on the installed trial. Variant-specific, CINE and remaining gameplay checks stay
 open in the implementation status.
+
+
+`skin-influences1` completes actual weighted-surface coverage for all 18 meshes.
+All nine normal/facial region pairs agree. Genessa's hair rig has no identified
+skin/cloth weight consumer; her fitted trim does use body helpers. See the
+[weighted-surface findings](2026-10-08-secondary-motion-ownership.md#actual-weighted-surfaces)
+before changing those owners or collision settings.

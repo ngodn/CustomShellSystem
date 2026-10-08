@@ -6,7 +6,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "SkinnedAssetCompiler.h"
 
-FString UCSSRigAuditLibrary::SnapshotMesh(USkeletalMesh* Mesh)
+FString UCSSRigAuditLibrary::SnapshotMesh(USkeletalMesh* Mesh, bool bInfluenceCoverage)
 {
     if (!IsRunningCommandlet() || !Mesh) return TEXT("ERROR: expected a commandlet mesh");
     USkinnedAsset* Assets[]{Mesh};
@@ -70,6 +70,17 @@ FString UCSSRigAuditLibrary::SnapshotMesh(USkeletalMesh* Mesh)
             TArray<TSharedPtr<FJsonValue>> BoneMap;
             uint32 InvalidBones = 0, Unweighted = 0, NonFinite = 0;
             uint32 MinSum = MAX_uint32, MaxSum = 0, UsedMax = 0;
+            TArray<uint32> BoneVertices;
+            TArray<uint64> BoneWeightSums;
+            if (bInfluenceCoverage)
+            {
+                if (!Mesh->GetMaterials().IsValidIndex(Section.MaterialIndex))
+                    return TEXT("ERROR: invalid material index");
+                Part->SetStringField(TEXT("material_slot"),
+                    Mesh->GetMaterials()[Section.MaterialIndex].MaterialSlotName.ToString());
+                BoneVertices.Init(0, Section.BoneMap.Num());
+                BoneWeightSums.Init(0, Section.BoneMap.Num());
+            }
             for (const auto Bone : Section.BoneMap)
             {
                 if (Bone >= Reference.GetNum()) return TEXT("ERROR: invalid section bone map");
@@ -87,6 +98,11 @@ FString UCSSRigAuditLibrary::SnapshotMesh(USkeletalMesh* Mesh)
                     if (!Weight) continue;
                     const auto Bone = Weights.GetBoneIndex(Vertex, Influence);
                     if (Bone >= static_cast<uint32>(Section.BoneMap.Num())) ++InvalidBones;
+                    else if (bInfluenceCoverage)
+                    {
+                        ++BoneVertices[Bone];
+                        BoneWeightSums[Bone] += Weight;
+                    }
                     Sum += Weight;
                     ++Used;
                 }
@@ -103,6 +119,19 @@ FString UCSSRigAuditLibrary::SnapshotMesh(USkeletalMesh* Mesh)
             Part->SetNumberField(TEXT("min_weight_sum_u16"), Section.NumVertices ? MinSum : 0);
             Part->SetNumberField(TEXT("max_weight_sum_u16"), MaxSum);
             Part->SetNumberField(TEXT("max_used_influences"), UsedMax);
+            if (bInfluenceCoverage)
+            {
+                auto Coverage = MakeShared<FJsonObject>();
+                for (int32 Bone = 0; Bone < BoneVertices.Num(); ++Bone)
+                {
+                    if (!BoneVertices[Bone]) continue;
+                    auto Detail = MakeShared<FJsonObject>();
+                    Detail->SetNumberField(TEXT("nonzero_influences"), BoneVertices[Bone]);
+                    Detail->SetNumberField(TEXT("weight_sum_u16"), double(BoneWeightSums[Bone]));
+                    Coverage->SetObjectField(Reference.GetBoneName(Section.BoneMap[Bone]).ToString(), Detail);
+                }
+                Part->SetObjectField(TEXT("weighted_bones"), Coverage);
+            }
             Sections.Add(MakeShared<FJsonValueObject>(Part));
         }
         if (Visited != Weights.GetNumVertices()) return TEXT("ERROR: sections do not cover all vertices");

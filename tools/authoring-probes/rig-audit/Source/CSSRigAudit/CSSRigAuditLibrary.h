@@ -23,7 +23,7 @@ public:
     static FString SnapshotSkeleton(class USkeleton* Skeleton);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
-    static FString SnapshotMesh(class USkeletalMesh* Mesh);
+    static FString SnapshotMesh(class USkeletalMesh* Mesh, bool bInfluenceCoverage = false);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString SnapshotMeshSections(class USkeletalMesh* Mesh, const TArray<FName>& MaterialSlots,

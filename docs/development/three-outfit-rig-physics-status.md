@@ -42,6 +42,20 @@ Rollback order: with the game closed, restore the `previous_selector` from
 namespace transaction restore. That transaction intentionally rejects a later
 core selector rather than silently overwriting it.
 
+## Weighted-surface coverage
+
+All 18 normal/facial meshes now have per-section nonzero bone influence records.
+The 570-section check passes normalization, indices and source immutability;
+an independent W3 full-array comparison matches all 25 sections. All nine
+normal/facial region-summary pairs agree. Genessa's body helpers affect her
+fitted trim and clothing, while her hair rig has no identified skin/cloth weight
+consumer. Check execution/cost before removing that rig. This narrows subsequent
+contact work; it is not a dynamic fit or performance pass.
+
+See the [weighted-surface findings](../research/2026-10-08-secondary-motion-ownership.md#actual-weighted-surfaces)
+and `skin-influences1`. Completed hand-test caches were pruned with a receipt,
+removing 157,390,336 logical bytes while retaining source and evidence.
+
 ## Initial installed trial
 
 The [cooked solver inventory](../research/2026-10-08-secondary-motion-ownership.md)

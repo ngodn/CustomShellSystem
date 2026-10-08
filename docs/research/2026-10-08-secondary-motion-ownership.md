@@ -1,8 +1,9 @@
 # Cooked secondary-motion ownership
 
 This inventory describes the four coordinated trial containers. It does not
-accept visible motion, contact quality or frame cost. The active facial/visibility
-runtime correction still needs the user's in-game check.
+accept visible motion, contact quality or frame cost. The user has accepted the
+facial/visibility correction and cross-character Iris Out faces/eyes with
+attack/aim interruption. The full regression matrix remains open.
 
 ## Inputs and repeatable check
 
@@ -107,12 +108,55 @@ testing a contact repair.
 
 ## Next checks
 
-1. Accept the installed runtime correction through facial idle, visibility and
-   cross-outfit switches. Preserve native action interruption and doubles.
-2. Resolve hand-rig literal targets from the compiled graph or a pinned
-   source-to-cooked comparison; record live branch/input-update behavior.
+1. Extend the accepted facial/visibility and cross-outfit checks to both Genessa
+   body variants, CINE, form changes and doubles.
+2. Hand source targets and 42 full W3 editor-component samples are now recorded
+   in the hand study. Gameplay contact and scheduling remain separate checks.
 3. Record simulation space, anchor/weight coverage and reset behavior for the
    region owners above. Capture matched enabled/disabled motion before proposing
    a geometry, weight or collision change.
 4. Keep the full regression and performance matrix open. This structural audit
    does not replace those tests.
+
+
+## Actual weighted surfaces
+
+`skin-influences1` records all 18 normal/facial editor meshes, 570 render sections
+and 11,934,678 render vertices across those meshes. This total counts both versions
+of each character and is not a simultaneous gameplay vertex count. The UE probe
+exits 0; all weights are normalized, indices valid and source assets unchanged.
+The optional coverage output leaves the existing `SnapshotMesh` output unchanged.
+
+The independent full-array W3 check matches all 25 material sections. Each of
+the nine normal/facial pairs has identical body/hair/foot/wing region summaries.
+This tests actual nonzero influences, rather than assuming every bone in a
+section's bone map affects a vertex. Counts summed across bones are influence
+counts, not unique affected vertices. Ancestor coverage is labeled potential
+because it does not prove the rig's propagation behavior.
+
+| Region | Weighted surfaces | Consequence for further work |
+| --- | --- | --- |
+| Eve hair, all six outfits | Hair and ponytail material sections only | Check those surfaces against head/shoulder/clothing clearance |
+| Commander White hair, C4/E9 | Main hair, both bangs, flyhair and both tail sections | Preserve these six material groups and their weight gradients |
+| Genessa hair rig, all four meshes | No direct or descendant render influences; no named hair bones in any of the six cloth assets' used-bone lists | The existing hair rig has no identified skin/cloth consumer. Check live execution and cost before removing it |
+| Genessa body | Skin, harness, bodice trim, bodice and skirt | Fitted trim already has body-helper weights; missing weights alone do not explain a preview/world difference |
+| Genessa wings | Each wing bone maps to its corresponding wing section, each with cloth | Keep bone gait motion and cloth render transfer distinct |
+| Commander White body | Body plus fitted garments/accessories and simulated skirt | Cloth sections need simulation-transfer checks in addition to skin weights |
+| Eve body | Skin and the corresponding fitted costume, plus cloth ribbon/tail/knit sections where present | Preserve body-following weights when diagnosing cloth |
+
+`probe_skin_influences.py` runs against the isolated combined source project in
+`skin-influence-module1`. The report pins each UAsset and result hash.
+`tools/diagnostics/summarize_skin_influences.py` joins those captures with the
+cooked owner inventory; `regions.json` retains every section/bone result.
+`independent-validation.json` records the full-array cross-check and nine pair
+comparisons. Config-write warnings come from the read-only editor sandbox.
+Nothing was saved back to an asset or installed in the game.
+
+The apparent left/right difference in Eve/Genessa thigh contact frames is also
+consistent between their model helper records and rig arrays. Commander White
+uses its own matching arrays. Do not swap those names based on naming alone:
+opposing-surface contact and helper-parent frames are different roles.
+
+Cleanup removed 157,390,336 logical bytes of regenerable DDC from the three
+completed hand-component runs. Reports, source, recipes, outputs and binaries
+remain. See `cleanup-hand-component-cache1.json` for observed space changes.
