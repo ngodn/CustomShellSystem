@@ -114,3 +114,33 @@ recipes and captures retain their hashes. Immediate free space was unchanged,
 so this is not a measured disk-space recovery claim. The second trial's cache
 is retained for the next comparison. Receipt:
 `work/three-outfit-rig-physics/cleanup-hair-surface-cache1.json`.
+
+## Named-strand follow-up
+
+The sixth private named-strand candidate in Commander White's
+`work/hair-head-point6` adds head clearance only to outer-right and side-left
+points, allowing 12 degrees only at the outer-right first segment. Other
+angular limits and chains are unchanged. Earlier tip-only and endpoint trials
+are rejected, with their exact outcomes in the outfit's
+[head-clearance study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md).
+
+The sixth candidate clears the two sampled source-visible face intersections.
+Both original witness vertices themselves have zero opacity, so the opacity
+follow-up samples their six incident triangles instead. The baseline's 47 and
+75 newly inside sample instances fall to zero. This uses original Blender
+opacity with a conservative texel neighborhood; it is not a complete Unreal
+shader or visible-surface test.
+
+All 723 gait samples preserve the five other chains exactly (15,906 bone
+samples). Segment-length error stays below 0.000005 cm. A further 723 synthetic
+head-turn samples preserve those chains, with length error below 0.000068 cm.
+Three source-material renders and the full 21-frame section screen are complete.
+No outfit asset has been saved, cooked or installed from this experiment.
+
+One new regression candidate remains: six split flyhair vertices, representing
+two nearby positions, move from about 0.183 cm outside to 0.112 cm inside the
+body at the initial walk pose. Winding and ray checks confirm that geometric
+transition. A separated flyaway strand is also visible in the comparison.
+The affected surface's actual occlusion and continuous motion remain unverified.
+Do not describe this prototype as accepted or regression-free. The next check
+is source strand/weight and occlusion evidence, not another broad radius change.
