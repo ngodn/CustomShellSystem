@@ -160,3 +160,95 @@ opposing-surface contact and helper-parent frames are different roles.
 Cleanup removed 157,390,336 logical bytes of regenerable DDC from the three
 completed hand-component runs. Reports, source, recipes, outputs and binaries
 remain. See `cleanup-hand-component-cache1.json` for observed space changes.
+
+## October 9: hair lifecycle and Genessa's unused solver
+
+`hair-lifecycle2` exercises the three existing editor hair rigs directly in
+UE 5.6.1 CL44394996. All 27 cases and 3,447 samples pass: head motion at 30, 60
+and 120 fps, disabled input, re-enable, explicit reset, a 1,000 cm owner teleport
+with reset, a 200 ms hitch and repeated evaluation without an update-serial
+change. The original rig files retain their hashes.
+
+Each uninterrupted two-second case executes 240 fixed steps at every tested
+rate. Disabled cases execute zero steps and preserve every incoming hair pose.
+Reset, teleport, hitch and re-enable each produce the expected second reset.
+Repeated evaluation neither advances the step counter nor changes the result.
+Every non-hair bone retains its supplied transform on every sample: 350 for
+Eve/Genessa and 366 for Commander White. These are the rigs' own hierarchies,
+not mesh skeleton sizes. Output transforms remain finite.
+
+At matched timestamps, the largest 30-versus-120 fps hair-position difference
+is 0.02353 cm; the largest rotation difference is 0.11666 degrees. The
+60-versus-120 maxima are 0.00471 cm and 0.03782 degrees. These quantify this
+synthetic head turn only. They do not establish garment clearance or contact
+quality during gameplay.
+
+Direct editor execution medians at 60 fps are approximately 0.95 ms for Eve,
+0.94 ms for Genessa and 1.15 ms for Commander White; disabled cases measure
+about 0.02 ms. This includes the Python-to-RigVM call and was not captured in
+an isolated gameplay benchmark. Do not convert these values into an FPS gain.
+Raw sample timings, source hashes and the independent step-count/rate comparison
+are retained in `hair-lifecycle2/report.json` and `summary.json`.
+
+The first harness run used the C++ name `GetBoneKeys` as a Python method. UE's
+`RigHierarchy.h` exposes it under `ScriptName="GetBones"`; that run stopped
+before any cases and was rejected. The corrected harness uses `get_bones()`.
+The public [Control Rig scripting documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/control-rig-python-scripting-in-unreal-engine)
+is a general reference; the harness uses the locally verified 5.6.1 API.
+
+The live read-only `hair-live2` capture finds Genessa Eve-body facial mesh using
+`ABP_Genessa`, with the hair rig enabled and its node alpha at 1. The same rig's
+`TotalSteps` advances from 21,766 to 22,209, while `ResetCount` remains 4.
+Mesh and post-process instance remain stable and saved settings are unchanged.
+The sampled attachments use ordinary head/body/weapon/root sockets, with no
+named hair socket. This follows the four-mesh weight audit finding no hair
+render or cloth consumer. An earlier capture expired during an animation
+change and was rejected rather than combined with the stable samples.
+
+A Genessa-only private candidate disables the unused solver's `CSSEnabled`
+default in both the normal graph and facial adapter. Genessa's catalog has no
+hair-motion control. The initial in-memory comparison permits only that boolean
+change; body, hand, wing and facial properties are unchanged. Sources remain
+immutable. Candidate authoring lives in the Genessa mod's `work/hair-solver-idle1`.
+Fresh reload and the Windows-target cook pass. `hair-solver-component1` compares
+both graphs against all four normal/facial meshes in three supplied poses,
+including seven control/reinitialization frames for each hair-enable state.
+All 336 samples preserve non-hair bone transforms and the 16 corrective curves
+and their rendered morph weights exactly. All 24 comparisons change hair bones,
+so the enabled/disabled comparison does exercise the solver. This is not a
+continuous cloth or rendered-contact test.
+
+`hair-solver-pack3` preserves all 265 payload files except the two graphs'
+UAsset/export pairs. Independent cooked graph readback permits only the false
+`CSSEnabled` default (serialized as an omitted zero-valued bool) and the CDO's
+editor transaction flag. Every other decoded field, including graph bytecode,
+matches. The shared catalog updates one playback and two facial revision
+bindings to recognize the new Genessa container. Shared cooked payloads and
+facial tracks remain byte-identical. All 855 combined package checks, 422 native
+catalog checks, 1,386 outfit checks and 26 metadata-file readbacks pass.
+
+The first package comparison rejected the false-default omission and editor
+flag. Its four exact differences remain in `hair-solver-pack1/differences.json`.
+The second package used V11 metadata instead of the established V8B format and
+failed the outfit catalog check before installation. The final recipe uses V8B
+and refreshes all three revision bindings; it does not weaken catalog checks.
+Gameplay appearance and matched runtime performance remain unverified for this
+optimization. See the [outfit recipe](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_UnholyGenessa_eins0fx_P/authoring/inactive-hair-solver-notes.md).
+
+Installed after the checks with the game closed; all six package files were
+independently rehashed. The core, Eve/CW, profiles and CSSX/CINE files are
+unchanged. The outfit's `hair-solver-pack3/installed.json` records the receipt
+and rollback transaction. In-game confirmation is pending.
+
+The rejected first and second package stages/containers were removed after
+the third package passed and was installed. Their graph readbacks, differences,
+failure logs and metadata remain. Both removed stages were byte-identical to
+the retained third stage. This removes 1,005,428,968 logical bytes, but the
+immediate free-space counter did not change; no measured recovery is claimed.
+The outfit's `work/hair-solver-cleanup1.json` records each removed file/hash.
+
+Cleanup removed 1,199,552,670 logical bytes of task-local derived data from the
+completed weight audit and rejected first lifecycle harness. Reports and inputs
+retain their hashes. The immediate filesystem free-space counter did not change,
+so no measured space-recovery claim is made. Receipt:
+`cleanup-hair-audit-cache1.json`.

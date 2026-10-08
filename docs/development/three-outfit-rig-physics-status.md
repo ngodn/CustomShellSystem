@@ -4,12 +4,39 @@ Updated 2026-10-09. [Goal](three-outfit-rig-physics-goal.md) is active. The coor
 
 ## Current shared-assets trial
 
-The combined `shared-cloth-native1` pack is installed and independently
-hash-verified. It adds 59 native animation alternatives, retains the four
-existing native gait choices and includes the accepted cloth correction.
-The form-selection core, three outfit packages and saved settings are
-unchanged. Native gameplay checks are pending; this is not an upload-ready
-release. See [installation evidence](shared-animation-native-human.md#october-9-combined-shared-trial-installed).
+The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`
+are installed and independently hash-verified. The first pack loaded native
+sequences but lacked 52 automatic idle carriers, causing `Unavailable`.
+All 60 native Idle Animation choices now have carriers, alongside three gait
+choices. The user confirms Black Hole and Iris Out play and movement/attack
+interrupts normally on the tested original human appearance. This does not
+accept every native clip or CINE playback. All 24 host suites, 422 native catalog
+checks and 1,386 outfit checks pass. The combined 855-package dependency check
+passes. The three outfits, accepted cloth correction and saved settings retain
+their hashes. This is not an upload-ready release. See
+[installation and acceptance evidence](shared-animation-native-human.md#october-9-missing-native-idle-carriers-found-in-gameplay).
+
+## Current Genessa hair trial
+
+The Genessa-only graph change in outfit commit `4b49f08` disables an active
+hair solver with no render, cloth or observed attachment consumer. Both normal
+and facial graphs are covered. The shared metadata updates its three Genessa
+revision bindings; shared cooked assets are unchanged. Fresh reload, cook,
+336 paired component samples, 855 dependency checks, 422 native catalog checks,
+1,386 outfit checks and metadata readback pass.
+
+Installed with the game closed on October 9. Six package files were independently
+hash-verified; the current core `645effe0a1d0249d`, Eve, Commander White, profiles
+and CSSX/CINE files are preserved. Receipt and exact hashes:
+`CSS_UnholyGenessa_eins0fx_P/work/hair-solver-pack3/installed.json` in the outfit
+authoring repository. Rollback is outside the mount tree at
+`MortalShell2/Content/css-genessa-inactive-hair-trial-20261009` and uses the
+existing namespace installer's `restore --transaction` command.
+
+The user has been told this trial is ready to launch. Appearance, animation and
+matched gameplay cost still need live verification. Removing unused simulation
+does not prove a particular FPS improvement. See the
+[solver evidence](../research/2026-10-08-secondary-motion-ownership.md#october-9-hair-lifecycle-and-genessas-unused-solver).
 
 ## Current form-switch regressions
 
@@ -482,7 +509,7 @@ all its asset chunks matched the final full outfit. Original inputs, installed
 baseline, final stages, recipes and reports were retained. See
 `cleanup-coordinated-upgrade1.json`.
 
-## Verified baseline
+## Historical baseline before namespace migration
 
 - Installed core selector points to `css_core-idle-handoff-db5207d4722ca6af.dll`; its full SHA256 matches the previous deployment receipt.
 - User confirmed the current Iris Out gameplay-interruption test: attack, aim/fire, Genessa doubles and MISC Genessa Form work.
@@ -499,15 +526,21 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Workstream | Current state |
 | --- | --- |
 | Nine-variant provenance | Installed hashes and 16 editable mesh identities pinned; all 790 migration paths have source candidates or alias recipes. Final Blender-to-cook recipe comparisons remain |
-| Mesh/weights/contacts | Fresh checks of all 16 editor-built meshes pass weight sums, section/bone/morph indices and finite-data checks. Deformation/contact checks and cooked comparison remain |
-| Unholy facial support | Both W3 candidates with 137 morphs and unchanged cloth data are installed for testing. Two adapters, 21 presets and six facial performances are integrated. Oral assets resolve without Eve mounted. Live face/eye/material/interruption acceptance remains |
-| Shared organization | Four coordinated packages installed, with 735 unique author-owned asset packages and 106 catalog references checked independently. Public IDs and legacy aliases retained; 1,380 native catalog checks and 28 dependency scenarios pass. Previous six packages retained outside the mount tree. Live CSS/CINE discovery and playback acceptance remain |
-| Locomotion | Installed catalog has four native declarations; merged candidate has all 63, with authored/cooked and catalog checks complete. Visible contact, continuous motion and gameplay review pending |
-| Gameplay regressions | Current interruption baseline accepted by user; candidate regression tests pending |
+| Mesh/weights/contacts | All 18 current normal/facial meshes pass normalized-weight and influence-index checks. Genessa world rear-panel repair accepted on the tested appearance; menu clipping explicitly accepted for now. Continuous contact and both-variant coverage remain |
+| Unholy facial support | Two adapters, 21 presets and six facial performances integrated. User accepts Iris Out faces/eyes and attack/aim interruption while switching Eve, Genessa and Commander White. Exact variants unspecified; both Genessa variants and CINE still need explicit coverage |
+| Shared organization | Four coordinated packages installed. Updated combined audit resolves 855 packages; 422 native catalog and 1,386 outfit checks pass. Public IDs and legacy aliases retained; earlier 28 dependency scenarios pass. Clean/upgrade documentation and CINE live acceptance remain |
+| Locomotion | All 63 native alternatives installed, including carriers for 60 Idle Animation choices. Black Hole and Iris Out play and interrupt on the tested original human appearance. Remaining visible contact, continuous motion and CINE review pending |
+| Gameplay regressions | User accepts cross-character Iris Out interruption, first form-switch summon and Customize recovery. Full outfit/lifecycle matrix remains |
+| Hair | Three rigs pass 27 editor lifecycle cases (3,447 samples). Genessa unused-solver candidate passes 336 component samples and cooked/catalog checks; gameplay and measured cost remain |
 | Performance | Current package sizes recorded; matched gameplay captures pending |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: verify the installed trial in game while completing authoring recipe and solver ownership records. Dependency and partial-upgrade handling passes 28 native scenarios. The four migrated catalogs pass the native loader and selection audit, including facial adapter revision bindings. Assemblies pass for all three outfits: Genessa's 107 packages with its new facial meshes and oral assets, Eve's 308 and Commander White's 171, each checked with the shared skeleton. Eve retains its compiled secondary graph and 22 original mesh buffers. Commander White retains both C4/E9 mesh buffers, original hair/body graphs, all 80 instances, 78 textures and two material parents. Rig/physics work, remaining native conversions and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
+Next: validate the Genessa unused-hair-solver candidate in game, then continue
+continuous contact and matched performance checks. Native conversion authoring
+is complete; remaining native work is validation, not conversion. Preserve the
+accepted world cloth correction and current core. Package destinations, the
+nineteen stale mappings and per-entry native coverage are recorded; do not
+repeat those investigations without changed inputs.
 
 ## Runtime texture guard after migration
 

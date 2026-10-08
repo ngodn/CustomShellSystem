@@ -1,6 +1,16 @@
 # Three-outfit rig and physics research index
 
-Updated 2026-10-08. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
+Updated 2026-10-09. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
+
+Latest evidence: all 63 native alternatives and 60 idle carriers are installed.
+The user accepts Black Hole and Iris Out playback/interruption on the tested
+original human appearance. The three existing hair rigs pass 27 editor
+lifecycle cases; Genessa's unweighted hair solver was confirmed active in game.
+Its graph-default optimization and matching shared catalog are now installed,
+with live verification pending. Follow the
+[secondary-motion record](2026-10-08-secondary-motion-ownership.md#october-9-hair-lifecycle-and-genessas-unused-solver)
+for source, component, cook and catalog evidence. Earlier entries below record
+their original checkpoints, not the current installed state.
 
 The October 8 goal amendment sets `CSS_SharedAssets_P` as the owner of reusable skeleton, locomotion and Astral assets, keeps character-specific work in each outfit mod, and adds necessary locomotion optimization followed by the remaining default-human animation conversions. The goal's ownership and conversion sections supersede older pack-organization instructions and the previous four-animation native limit. Historical research notes remain evidence of their original checkpoints.
 

@@ -44,8 +44,14 @@ passes for 72 installed and protected files, including all three outfit packages
 the previous core, loader and saved settings. The selector points to
 `css_core-native-idles-645effe0a1d0249d.dll`. Receipt: `shared-cloth-native2/installed.json`;
 rollback: `MortalShell2/Content/css-native-idles-trial-20261009`.
-Native gameplay acceptance remains pending. This correction changes the CSS
-catalog parser and shared assets, not the outfit packages.
+The user confirms Black Hole and Iris Out play and movement/attack interrupts
+normally on the tested original human appearance. The exact shell was not named
+in that confirmation; the captured log separately records Iris Out activation
+and release on Proxima, followed by activation on Genessa Pale. Evidence:
+`shared-cloth-native2/user-acceptance.json` and `accepted-session-CSS.log`.
+Other native clips, target-specific facial support and CINE remain separate
+checks. This correction changes the CSS catalog parser and shared assets,
+not the outfit packages.
 
 ## October 9: combined shared trial installed
 
