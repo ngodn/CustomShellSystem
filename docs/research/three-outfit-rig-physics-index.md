@@ -46,6 +46,13 @@ The follow-up amendment explicitly adds implementation of facial-expression supp
 
 ## Tooling notes
 
+The [hand target study](2026-10-08-hand-target-ownership.md) resolves pinned
+Eve/Genessa source graphs' 115 transform writers to 19 left-hand finger bones.
+Parent propagation stays within those bones on the cooked target hierarchies.
+All 16 named corrective morphs exist on active normal/facial meshes. Six checker
+tests pass. This is source-target and cooked-consumer evidence, not decoded
+cooked VM literals or live grip/contact acceptance.
+
 The first live namespace trial exposed a retained Eve playback override on
 Genessa. `live-face-visibility1` pins the reflected player graph, Genessa's
 authored graph and the preview error. Commit `96b56eb` detaches owned playback

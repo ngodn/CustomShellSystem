@@ -44,8 +44,11 @@ now accounts for nine variants, 18 normal/facial mesh paths, ten graphs and eigh
 Control Rig assets. Five adapter comparisons pass, including input identities and
 defaults; fourteen negative/control tests cover the checker. All output-connected
 pose branches preserve bone-writer order. No overlapping named body/hair bone
-writers were found. Hand literal targets, live graph scheduling, actual
-contact and runtime cost remain unverified.
+writers were found. The [hand source study](../research/2026-10-08-hand-target-ownership.md)
+now resolves 115 transform writers to 19 left-hand bones, with propagation
+contained in that set and all 16 corrective morph names present on active
+Eve/Genessa meshes. Six checker tests pass. Cooked VM literal identity, live
+graph scheduling, actual contact and runtime cost remain unverified.
 
 `namespace-deployment1/validation.json` records the independent post-install
 check. The selected core is `css_core-namespace-7d0e24cf60df400c.dll`, SHA256
