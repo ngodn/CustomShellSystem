@@ -27,7 +27,41 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Performance | Current package sizes recorded; matched gameplay captures pending |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: migrate Genessa's remaining rig and mesh dependencies, then the Eve and Commander White assets and runtime consumers. Genessa's 88 material/texture packages now pass independent cooked comparison. Finish editable-source provenance and prepare the Genessa facial candidate. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs. Preserve existing gameplay while these assets are prepared.
+Next: cook and independently compare Genessa's 13 migrated rig/mesh/adapter packages, then assemble them with the 88 verified materials and shared skeleton. The 102-asset editor batch now passes rename/save/fresh reload. Eve and Commander White migration, runtime consumers, final facial integration and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
+
+## Genessa rig and mesh namespace migration
+
+`genessa-rig-editor2` passes isolated UE 5.6.1 rename/save and fresh-process reload
+for 101 Genessa packages plus the shared base skeleton. The dependency staging
+contains 152 hash-pinned original files, all unchanged after migration. No legacy
+redirector files remain in its Content tree.
+
+The thirteen non-material Genessa packages comprise four animation blueprints,
+three Control Rigs, three physics assets, the private wing skeleton and two W3
+meshes. The checks include mesh bind transforms, source/render geometry and
+weights, morphs, reflected cloth/configuration data, non-reflected tether arrays
+and cloth transition mappings. References follow the explicit migration map.
+
+Three Control Rigs needed narrowly scoped comparison exceptions for generated
+editor data: the graph's regenerated structure hash, empty modular-controller
+helpers named from the old outer path, and transient property-bag type names.
+Stored values and graph fields still compare. The retained mismatch reports
+show the differences; `rig-cache-comparison.json` also verifies that changed
+memory values and nonempty controller properties fail the comparison.
+See the [audit module notes](../../tools/authoring-probes/rig-audit/README.md)
+for the pinned engine-source basis of those exceptions.
+
+Evidence is under `work/three-outfit-rig-physics/`: `genessa-rig-dependencies1`,
+`genessa-rig-editor2/{migration,reload,source-validation}.json`, the successful
+`reload3-command.json` / `reload3-exit.json`, and the C++20 build receipt in
+`mesh-namespace-module1/build-current3-exit.json`. Earlier failed reload logs
+remain alongside the successful third check. This is editor-source evidence;
+cooked equivalence and gameplay acceptance remain pending.
+
+The rejected first trial's asset/cache copies were removed after preserving
+its input hashes, source snapshots, mismatch and logs. The cleanup receipt
+records 764,127,775 logical bytes, not a claim about physical free space.
+No installed pack, DLL, settings or saves changed.
 
 ## Genessa material namespace migration
 

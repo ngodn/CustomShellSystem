@@ -18,6 +18,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--inventory', type=Path, required=True)
     parser.add_argument('--source-content', type=Path, required=True)
+    parser.add_argument('--dependency-content', type=Path, action='append', default=[],
+                        help='Additional source roots for unpinned dependencies')
     parser.add_argument('--template', type=Path, required=True)
     parser.add_argument('--dependencies', type=Path, required=True)
     parser.add_argument('--native-reference-receipt', type=Path, required=True)
@@ -30,6 +32,7 @@ def main():
     if stage.exists() or not stage.is_relative_to(ROOT/'work/three-outfit-rig-physics'):
         raise ValueError('Use a new private rig workspace')
     source = args.source_content.resolve(strict=True)
+    dependency_roots = [source, *(p.resolve(strict=True) for p in args.dependency_content)]
     inventory = json.loads(args.inventory.read_text())
     requested = None
     if args.packages:
@@ -92,6 +95,11 @@ def main():
             original = Path(pinned[package]['path']).resolve(strict=True)
             if sha(original) != pinned[package]['sha256']:
                 raise ValueError('Pinned dependency changed: '+package)
+        else:
+            candidates = [root/relative for root in dependency_roots if (root/relative).is_file()]
+            if not candidates or len({sha(p) for p in candidates}) != 1:
+                raise ValueError('Missing or ambiguous unpinned dependency: '+package)
+            original = candidates[0]
         copied.parent.mkdir(parents=True, exist_ok=True)
         same_device = original.stat().st_dev == copied.parent.stat().st_dev
         subprocess.run(['cp', '-a', '--reflink=always' if same_device else '--reflink=auto',

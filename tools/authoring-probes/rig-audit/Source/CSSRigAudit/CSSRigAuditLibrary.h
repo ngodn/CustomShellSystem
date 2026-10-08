@@ -29,4 +29,7 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString CompareMeshCloth(class USkeletalMesh* Source, class USkeletalMesh* Candidate);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static FString SnapshotClothCustomData(class USkeletalMesh* Mesh);
 };

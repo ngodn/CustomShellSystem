@@ -5,7 +5,10 @@
 #include "EdGraph/EdGraphNode.h"
 #include "EdGraph/EdGraphPin.h"
 #include "Engine/Texture.h"
+#include "Engine/Blueprint.h"
+#include "Engine/SkeletalMesh.h"
 #include "Materials/MaterialInterface.h"
+#include "PhysicsEngine/PhysicsAsset.h"
 #include "Misc/SecureHash.h"
 #include "Serialization/JsonSerializer.h"
 #include "UObject/Package.h"
@@ -15,9 +18,10 @@
 FString UCSSRigAuditLibrary::SnapshotAssetProperties(UObject* Asset)
 {
     if (!IsRunningCommandlet() || !IsInGameThread() || !Asset ||
-        (!Asset->IsA<UAnimBlueprint>() && !Asset->IsA<UAnimBoneCompressionSettings>() &&
-         !Asset->IsA<UMaterialInterface>() && !Asset->IsA<UTexture>()))
-        return TEXT("ERROR: expected a commandlet animation blueprint, codec, material or texture");
+        (!Asset->IsA<UBlueprint>() && !Asset->IsA<UAnimBoneCompressionSettings>() &&
+         !Asset->IsA<UMaterialInterface>() && !Asset->IsA<UTexture>() &&
+         !Asset->IsA<USkeletalMesh>() && !Asset->IsA<UPhysicsAsset>()))
+        return TEXT("ERROR: expected a commandlet blueprint, codec, material, texture, mesh or physics asset");
     TArray<UObject*> Objects;
     GetObjectsWithPackage(Asset->GetOutermost(), Objects, true, RF_Transient);
     Objects.Sort([](const UObject& A, const UObject& B) { return A.GetPathName() < B.GetPathName(); });
@@ -36,6 +40,10 @@ FString UCSSRigAuditLibrary::SnapshotAssetProperties(UObject* Asset)
         for (TFieldIterator<FProperty> It(Object->GetClass()); It; ++It)
         {
             if (It->HasAnyPropertyFlags(CPF_Transient | CPF_Deprecated)) continue;
+            // URigVMGraph::PreSave regenerates this cache. The graph's nodes,
+            // pins, types and links are compared independently below.
+            if (It->GetFName() == TEXT("LastStructureHash") &&
+                It->GetOwnerStruct()->GetPathName() == TEXT("/Script/RigVMDeveloper.RigVMGraph")) continue;
             TArray<TSharedPtr<FJsonValue>> Values;
             for (int32 Index = 0; Index < It->ArrayDim; ++Index)
             {

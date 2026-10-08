@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 
 import unreal
@@ -35,8 +36,37 @@ def snapshot(asset):
         if raw.startswith('ERROR:'):
             raise ValueError(raw)
         result['source'] = json.loads(raw)
-    elif isinstance(asset, (unreal.AnimBlueprint, unreal.AnimBoneCompressionSettings,
-                            unreal.MaterialInterface, unreal.Texture)):
+    elif isinstance(asset, unreal.SkeletalMesh):
+        raw = unreal.CSSRigAuditLibrary.snapshot_mesh(asset)
+        if raw.startswith('ERROR:'):
+            raise ValueError(raw)
+        result['mesh'] = json.loads(raw)
+        slots = [str(s.material_slot_name) for s in asset.get_editor_property('materials')]
+        morphs = [m['name'] for m in result['mesh']['morphs']]
+        probes = {
+            'render': lambda: unreal.CSSRigAuditLibrary.snapshot_render_sections(asset, slots, morphs),
+            'source': lambda: unreal.CSSRigAuditLibrary.snapshot_mesh_sections(asset, slots),
+            'cloth_custom': lambda: unreal.CSSRigAuditLibrary.snapshot_cloth_custom_data(asset),
+        }
+        for name, probe in probes.items():
+            raw = probe()
+            if raw.startswith('ERROR:'):
+                raise ValueError(raw)
+            if name == 'source':
+                # This field identifies the asset, not its geometry. The
+                # migration checks the new object path separately.
+                prefix = '{"mesh":'+json.dumps(asset.get_path_name(), separators=(',', ':'))+','
+                if not raw.startswith(prefix):
+                    raise ValueError('Unexpected source snapshot identity')
+                raw = '{'+raw[len(prefix):]
+            result[name] = dict(utf8_bytes=len(raw.encode('utf-8')),
+                                sha256=hashlib.sha256(raw.encode('utf-8')).hexdigest())
+        raw = unreal.CSSRigAuditLibrary.snapshot_asset_properties(asset)
+        if raw.startswith('ERROR:'):
+            raise ValueError(raw)
+        result['properties'] = json.loads(raw)
+    elif isinstance(asset, (unreal.Blueprint, unreal.AnimBoneCompressionSettings,
+                            unreal.MaterialInterface, unreal.Texture, unreal.PhysicsAsset)):
         raw = unreal.CSSRigAuditLibrary.snapshot_asset_properties(asset)
         if raw.startswith('ERROR:'):
             raise ValueError(raw)
@@ -55,6 +85,8 @@ def references(asset):
         properties.append('target_skeleton')
     if isinstance(asset, unreal.AnimSequence):
         properties += ['retarget_source_asset', 'bone_compression_settings', 'curve_compression_settings']
+    if isinstance(asset, unreal.SkeletalMesh):
+        properties += ['skeleton', 'physics_asset', 'post_process_anim_blueprint']
     for name in properties:
         value = asset.get_editor_property(name)
         result[name] = value.get_path_name() if value else None
@@ -62,6 +94,12 @@ def references(asset):
         result['samples'] = [sample.get_editor_property('animation').get_path_name()
                              if sample.get_editor_property('animation') else None
                              for sample in asset.get_editor_property('sample_data')]
+    if isinstance(asset, unreal.SkeletalMesh):
+        result['materials'] = [
+            dict(slot=str(s.material_slot_name),
+                 material=s.material_interface.get_path_name() if s.material_interface else None,
+                 overlay=s.overlay_material_interface.get_path_name() if s.overlay_material_interface else None)
+            for s in asset.get_editor_property('materials')]
     return result
 
 
@@ -73,10 +111,11 @@ def mapped_references(value, mapping):
     if isinstance(value, str):
         package, separator, obj = value.partition('.')
         if package in mapping:
-            if not separator or obj != package.rsplit('/', 1)[1]:
+            leaf = package.rsplit('/', 1)[1]
+            if not separator or obj not in (leaf, leaf+'_C'):
                 raise ValueError('Unexpected reference object: ' + value)
             target = mapping[package]
-            return target + '.' + target.rsplit('/', 1)[1]
+            return target + '.' + target.rsplit('/', 1)[1] + obj[len(leaf):]
     return value
 
 
@@ -90,6 +129,30 @@ def normalized_properties(value, mapping):
         for new, old in sorted(mapping.items(), key=lambda pair: len(pair[0]), reverse=True):
             value = value.replace(new, old)
     return value
+
+
+def comparable_snapshot(value):
+    """Ignore generated rig identities while retaining their stored values."""
+    if value is None or 'properties' not in value:
+        return value
+    result = dict(value)
+    properties = {}
+    for path, row in value['properties'].items():
+        # FModularRigModel::GetController derives this empty helper's name
+        # from the outer path, but an existing helper keeps its old name.
+        if row == {'class': '/Script/ControlRig.ModularRigController', 'properties': {}}:
+            continue
+        if row.get('class') == '/Script/RigVM.RigVM':
+            row = dict(row)
+            fields = dict(row['properties'])
+            for name in ('DefaultWorkMemoryStorage', 'LiteralMemoryStorage'):
+                if name in fields:
+                    fields[name] = [re.sub(r'^\(Value=/Engine/Transient\.PropertyBag_[0-9a-f]+\(',
+                                          '(Value=GeneratedPropertyBag(', text) for text in fields[name]]
+            row['properties'] = fields
+        properties[path] = row
+    result['properties'] = properties
+    return result
 
 
 def verify_references(asset, expected, exact=None):
@@ -132,15 +195,20 @@ def main():
                for e in plan['assets']):
             raise ValueError('Remove staged legacy paths from Content before the reload check')
         report = json.loads(report_path.read_text())
+        mismatches = []
         for entry in report['assets']:
             package = entry['package']
             path = content / (package.removeprefix('/Game/') + '.uasset')
             if digest(path) != entry['sha256']:
                 raise ValueError('Saved candidate changed: ' + package)
             asset = unreal.load_asset(package)
-            if asset is None or snapshot(asset) != entry['snapshot']:
-                raise ValueError('Reloaded source data differs: ' + package)
+            current = snapshot(asset) if asset else None
+            if comparable_snapshot(current) != comparable_snapshot(entry['snapshot']):
+                mismatches.append(dict(package=package, before=entry['snapshot'], after=current))
             verify_references(asset, expected, entry.get('references'))
+        if mismatches:
+            (stage / 'reload-snapshot-mismatches.json').write_text(json.dumps(mismatches, indent=2)+'\n')
+            raise ValueError('Reloaded source data differs: ' + ', '.join(row['package'] for row in mismatches))
         if any(digest(Path(e['source_file'])) != e['source_sha256'] for e in plan['assets']):
             raise ValueError('Original input changed')
         (stage / 'reload.json').write_text(json.dumps(dict(passed=True, assets=len(report['assets']),
@@ -189,15 +257,15 @@ def main():
     (stage / 'retarget-refresh.json').write_text(json.dumps(refreshed, indent=2) + '\n')
     if not unreal.AssetToolsHelpers.get_asset_tools().rename_assets(renames):
         raise RuntimeError('Unreal asset rename failed; retain the staging log')
-    changed = []
+    changed, mismatches = [], []
     for entry in plan['assets']:
         old, new = entry['old_package'], entry['new_package']
         asset = loaded[old]
         current = snapshot(asset)
         compared = normalized_properties(current, {new: old for old, new in mapping.items()}) if 'properties' in current else current
-        if asset.get_path_name().split('.')[0] != new or compared != before[old]:
-            (stage / 'snapshot-mismatch.json').write_text(json.dumps(dict(package=old, before=before[old], after=compared), indent=2)+'\n')
-            raise ValueError('Unexpected source-data change: ' + old)
+        if asset.get_path_name().split('.')[0] != new or comparable_snapshot(compared) != comparable_snapshot(before[old]):
+            mismatches.append(dict(package=old, before=before[old], after=compared))
+            continue
         if not unreal.EditorAssetLibrary.save_loaded_asset(asset, False):
             raise RuntimeError('Could not save ' + new)
         exact = mapped_references(before_refs[old], mapping)
@@ -205,6 +273,9 @@ def main():
         path = content / (new.removeprefix('/Game/') + '.uasset')
         changed.append(dict(package=new, sha256=digest(path), snapshot=snapshot(asset), references=exact))
         print('CSS_NAMESPACE_SAVED', len(changed), len(plan['assets']), new, flush=True)
+    if mismatches:
+        (stage / 'snapshot-mismatches.json').write_text(json.dumps(mismatches, indent=2)+'\n')
+        raise ValueError('Unexpected source-data changes: ' + ', '.join(row['package'] for row in mismatches))
     if any(digest(Path(e['source_file'])) != e['source_sha256'] for e in plan['assets']):
         raise ValueError('An original source changed')
     report_path.write_text(json.dumps(dict(assets=changed, original_sources_unchanged=True,

@@ -9,12 +9,28 @@ frame/key counts, sample rate, model GUID, curve/attribute counts and retarget
 reference transforms. `SnapshotSkeleton` records raw bones, parent indices,
 retarget modes, reference transforms, virtual definitions and sockets.
 
-`SnapshotAssetProperties` inspects animation blueprints and bone compression
-settings without saving them. It captures non-transient reflected fields on
+`SnapshotAssetProperties` inspects blueprints, bone compression settings,
+materials, textures, skeletal meshes and physics assets without saving them.
+It captures non-transient reflected fields on
 package-owned objects, including codec subobjects and class defaults, plus
 graph pin types, defaults and connections. Path normalization is explicit in
 the migration comparison. Cooked readback remains necessary because reflection
 does not capture every engine serializer's private data.
+
+The comparison excludes only the `RigVMGraph.LastStructureHash` cache in
+addition to transient/deprecated fields and empty generated animation mutable
+structs. UE 5.6.1's `URigVMGraph::PreSave` recomputes that hash from nodes and
+pin type-registry hashes. Nodes, pins, types, links and defaults remain part
+of the comparison. The rejected first Genessa trial records the cache-only
+difference in `genessa-rig-editor1/snapshot-mismatch.json`.
+
+For cross-process rig comparison, the Python driver also omits empty
+`ModularRigController` helpers and normalizes the generated type name at the
+start of RigVM's two property-bag memory values. It retains every stored value,
+node and pin. UE's `FModularRigModel::GetController` builds the helper name from
+its outer path; `PropertyBag.cpp` generates the transient bag name from descriptor
+hashes. The original snapshots remain in the reports. These are source checks;
+independent cooked rig readback is still required.
 
 The implementation uses the local 5.6.1 `UObjectHash.h` and `UnrealType.h`
 declarations. Epic's [package object enumeration](https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/CoreUObject/UObject/GetObjectsWithPackage?application_version=5.5)
@@ -25,6 +41,8 @@ delta-export wrapper returns false for a property matching its default.
 
 `SnapshotMesh` waits for the requested mesh's compilation, then inspects render
 weight buffers, section/bone ranges, finite positions, morph indices and deltas.
+It also records every mesh reference bone's local translation, quaternion and
+scale, so a bind-transform change cannot pass as a namespace-only edit.
 It does not edit or save the mesh. `audit_meshes.py` adds bindings/materials and
 source hashes. Set `CSS_RIG_AUDIT_STAGE` to a private output directory containing
 `input.json` with `meshes` entries (`package`, `source_file`, `sha256`). Mount
@@ -52,6 +70,13 @@ and counts. A detached physical-data copy verifies that the comparison rejects
 a changed simulation vertex. Empty clothing arrays and unsupported types fail.
 The probe does not mutate or save either mesh. Matching original data is not
 evidence that the original simulation behaves correctly in every pose.
+
+`SnapshotClothCustomData` records each clothing asset's transition mappings and
+Euclidean/geodesic tether batches in array order. It serializes explicit fields,
+not struct padding, and rejects nonfinite data or unsupported clothing classes.
+The namespace migration combines this with reflected cloth/configuration
+properties and render/source geometry digests. An empty clothing array is valid
+for this snapshot because not every migrated mesh has cloth.
 
 Copy `Source/` into an isolated project with an editor module named
 `CSSRigAudit`, then build its `CSSRigAuditEditor` target against the local

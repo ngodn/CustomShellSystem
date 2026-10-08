@@ -24,6 +24,17 @@ FString UCSSRigAuditLibrary::SnapshotMesh(USkeletalMesh* Mesh)
         Bone->SetStringField(TEXT("name"), Reference.GetBoneName(Index).ToString());
         Bone->SetNumberField(TEXT("parent"), Reference.GetParentIndex(Index));
         Bone->SetBoolField(TEXT("finite_pose"), !Reference.GetRefBonePose()[Index].ContainsNaN());
+        const auto& Pose = Reference.GetRefBonePose()[Index];
+        const auto T = Pose.GetTranslation();
+        const auto Q = Pose.GetRotation();
+        const auto S = Pose.GetScale3D();
+        TArray<TSharedPtr<FJsonValue>> Transform;
+        for (double Value : {T.X, T.Y, T.Z, Q.X, Q.Y, Q.Z, Q.W, S.X, S.Y, S.Z})
+        {
+            if (!FMath::IsFinite(Value)) return TEXT("ERROR: nonfinite reference pose");
+            Transform.Add(MakeShared<FJsonValueNumber>(Value));
+        }
+        Bone->SetArrayField(TEXT("local_transform"), MoveTemp(Transform));
         Bones.Add(MakeShared<FJsonValueObject>(Bone));
     }
     Root->SetArrayField(TEXT("bones"), MoveTemp(Bones));
