@@ -59,9 +59,42 @@ quantization as the cause. Inspect long-clip evaluation time precision and raw
 versus compressed virtual-bone construction before another codec trial. Do not
 relax the acceptance bound or mark the whole batch passed. C12 remains rejected.
 
-The next packaging tool, `stage_native_library_catalog.py`, refuses to stage a
-catalog until the precision replacement passes. It is not executed successfully
-yet. Cook, catalog integration and visible/gameplay acceptance remain pending.
+The staging tool still refuses the rejected precision replacement. It needs to
+consume the resolved verification evidence before catalog integration. Do not
+ship C12 just because its codec setting is tighter.
+
+The Windows cook and independent game-only container round-trip now pass for
+all 67 new packages (59 sequences, seven carriers and the original codec).
+Evidence: `native-library-cook1/{exit.json,pack/verification.json}`. All protected
+inputs retain their hashes; this is a private study, not an installed pack.
+
+Fresh raw-pose exports cover all 20,059 source keys and 1,208 bones. Independent
+cooked ACL playback with runtime interpolation agrees with the editor result:
+58 of 59 pass the strict comparison. Cinderella still differs by 0.01983049 cm
+at the same virtual-hand sample. See `native-library-cook1/runtime-verification.json`
+and `native-library1/raw-keys1`. Quaternion and scale comparisons pass for all
+59. The decoder's old fixed transform-count guard rejected this long clip;
+it now checks actual buffer bytes against a 1 GiB limit before allocation.
+
+The first independent decode used nearest-key sampling and failed three clips.
+That is not the game's linear playback policy: it skips interpolation across
+stripped keys. `decoded-runtime` uses the existing runtime helper's `none`
+policy. The new comparator requires that policy and rejects the earlier
+`decoded-keys` capture instead of treating it as gameplay evidence.
+
+The targeted time probe explains much of Cinderella's discrepancy. At frame
+7746, nominal double time is 129.1 seconds, while ACL receives float time
+129.10000610351562. Matching that float clock reduces the position difference
+to 0.00642633 cm; matching the ACL sample-index arithmetic reduces it to
+0.00451787 cm. The raw evaluator accepts double time, whereas the installed
+5.6.1 `ACLDecompressionImpl.h` converts evaluation time to float. Evidence:
+`native-library1/time-probe1/result.json` and `probe_native_sample_time.py`.
+This is a targeted diagnostic, not a full-clip clock-aligned pass. Keep the
+strict failure visible until its disposition is recorded. The older cooked
+motion checker uses a separate 0.05 cm review limit; do not silently substitute
+that limit for the strict 0.01 cm comparison.
+
+Catalog integration, visible-pose review and gameplay acceptance remain pending.
 
 The C++ checker and carrier helper compile with UE 5.6.1/C++20 in
 `native-compression-module1`. The first two Python carrier attempts exposed a

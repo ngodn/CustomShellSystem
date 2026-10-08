@@ -101,8 +101,10 @@ internal static class RawAbsoluteTracks
             throw new ArgumentException("Dense sampling of wrap-optimized clips is not implemented");
         int decodedSamples = checked((sampleCount - 1) * substeps + 1);
         int count = checked(map.Length * decodedSamples);
-        // Full Cinderella is 8,381 keys by 388 tracks; retain a bounded allocation.
-        if (count > 4000000 * substeps) throw new InvalidOperationException("Absolute-track diagnostic allocation limit exceeded");
+        // Native Cinderella has 1,208 tracks. Bound actual buffer bytes rather
+        // than an outfit-specific frame/track count; previous dense exports fit too.
+        if (checked((long)count * sizeof(FTransform)) > 1024L * 1024 * 1024)
+            throw new InvalidOperationException("Absolute-track diagnostic buffer exceeds 1 GiB");
         var atoms = new FTransform[count];
         fixed (FTransform* referencePtr = reference)
         fixed (FTrackToSkeletonMap* mapPtr = map)

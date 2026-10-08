@@ -15,8 +15,13 @@ unconverted entry. Full-batch fresh authored-key readback passes all 59 candidat
 pose comparison passes 58. Cinderella exceeds the 0.01 cm virtual-hand position
 bound at frame 7746 (0.0198305 cm). A separate 0.0001 codec trial still fails at
 0.0196853 cm; do not ship it or assume codec precision is the cause. The seven
-native idle carriers pass fresh reload and 1,092 interpolation queries. Cook,
-catalog integration, contact, performance, regression and packaging remain open.
+native idle carriers pass fresh reload and 1,092 interpolation queries. Windows
+cooking and game-only container readback pass all 67 new packages. Independent
+cooked runtime decoding confirms the same 58/59 strict pose result. A targeted
+clock-alignment probe reduces Cinderella's failing sample below 0.01 cm, but
+full-clip acceptance is still pending. Catalog integration, contact, performance,
+regression and release packaging remain open. See
+[native conversion evidence](shared-animation-native-human.md#october-8-conversion-batch).
 
 The first namespace trial loaded Genessa's new facial mesh, but the player retained
 Eve's `ABP_Eve` performance override after changing outfits. Genessa's authored
