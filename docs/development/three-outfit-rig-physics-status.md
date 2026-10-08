@@ -27,7 +27,31 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Performance | Current package sizes recorded; matched gameplay captures pending |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: migrate Eve and Commander White and the remaining runtime/catalog consumers. Genessa's 101-package private assembly and the shared skeleton pass independent cooked comparison. Final facial integration, authoring recipe updates and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
+Next: complete Eve's hair/rig assembly, then Commander White and the remaining runtime/catalog consumers. Genessa's 101-package private assembly and the shared skeleton pass independent cooked comparison. Eve's 68 material instances and 204 textures are preserved; all 2,322 texture mip payloads compare exactly through independent container readback. Final facial integration, authoring recipe updates and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
+
+## Eve material and texture migration
+
+`eve-material-namespace1` preserves the 68 cooked material instances.
+`eve-texture-namespace2` relocates 204 Texture2D headers without recooking
+pixels. All 2,322 inline/streamed mip payloads and decoded texture settings
+match their pinned original container after path normalization; the candidate
+import audit passes. Original source/container hashes remain unchanged.
+The writer's 68-instance regression check and truncated-bulk rejection pass.
+See [the material migration notes](outfit-material-namespace.md) for receipts
+and the supported resource layouts.
+
+The registry-only Eve dependency audit finds 309 selected packages (308 Eve
+plus the shared base skeleton) and a 316-package dependency closure. The hair
+parent has three texture dependencies. `eve-rig-dependencies2` contains that
+read-only audit. The first registry attempt failed before starting Unreal
+because a new bind destination could not be created under a read-only mount;
+the second uses separate read-only child mounts and succeeds.
+
+Completed editor trials' disposable DDC/cache/tmp directories were removed
+after checking terminal receipts and active processes. The cleanup receipt
+`cleanup-completed-editor-caches1.json` records 1,631,853,482 logical bytes.
+Accepted source/cooked candidates, original inputs and build modules remain.
+No pack or DLL from this goal has been installed.
 
 ## Genessa rig and mesh namespace migration
 

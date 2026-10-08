@@ -83,3 +83,36 @@ The earlier `genessa-material-namespace1` attempt finished header relocation but
 its wrapper used an invalid log filename. Its duplicate payloads were removed
 only after matching the successful second attempt; its reports and cleanup
 receipt remain.
+
+## Eve texture preservation
+
+`eve-material-namespace1` preserves 68 cooked instances from the pinned Eve
+container. Its remaining material inventory is one authored hair parent and
+204 Texture2D packages. The new texture path avoids recooking those pixels.
+
+`migrate_outfit_textures.py` uses the existing extraction and namespace map,
+then independently reads the original and candidate IoStore containers with
+`AssetReadback --texture-digests`. It compares all decoded texture settings and
+hashes every mip, including streamed bulk payloads. Candidate imports resolve
+with only the base game and texture candidate mounted.
+
+The narrow Retoc header writer accepts the observed UE 5.6.1 Initial resource
+table with ordinary inline (`0x48`) or separate bulk (`0x10501`) payloads. These
+flags are defined in the pinned engine's `CoreUObject/Public/Serialization/BulkData.h`.
+Retoc's legacy/Zen converters retain the offsets within the payload streams;
+the inline reader consumes bytes at its saved stream position. Names may grow,
+but FName indices and export/bulk bytes remain unchanged. Unchanged and inverse
+header roundtrips must both match. Unknown resource versions, compressed or
+optional/memory-mapped layouts, cooked indices and invalid extents are rejected.
+
+`eve-texture-namespace2/verification.json` records **204 textures and 2,322 mip
+payloads** with identical metadata and mip hashes after path normalization.
+The first attempt rejected the resource tables without producing a candidate;
+its layout inspection remains in `eve-texture-namespace1/resources.json`.
+`eve-material-writer-regression1` also confirms the extended writer produces
+the same 136 header/export files for all 68 material instances. A truncated
+external mip payload is rejected before any output is written in
+`eve-texture-negative-check1`.
+
+This verifies cooked asset preservation, not rendered appearance or gameplay.
+The hair parent and remaining rig/mesh assembly still need their own checks.
