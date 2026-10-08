@@ -122,7 +122,26 @@ The migrated counterpart has not yet been compared.
 
 `commander-rig-dependencies1` completed its read-only registry query with exit
 zero: 172 selected roots, including the shared base skeleton, and 184 packages
-in the dependency closure. Commander White's migration has not started.
+in the dependency closure. File validation found the historical `PA_ClothC8`
+dependency of `SK_FullB9` absent from cw270. Its original cw7 authoring file is
+retained and hash-pinned in `commander-historical-dependency1/source.json`.
+The isolated registry check identifies it as `/Script/Engine.PhysicsAsset`
+with no package dependencies. It is an editor dependency, not a replacement
+for the released outfit's C13 physics asset.
+
+The registry probe now checks on-disk asset identities as well as dependency
+edges. Previously, a missing package could appear as an empty dependency list.
+`commander-dependency-negative1/verification.json` verifies that the real physics
+asset is recognized and a deliberately absent package is rejected with an
+explicit missing-package report. The
+[UE 5.6 registry API](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/AssetRegistry?application_version=5.6)
+documents the on-disk query used here.
+
+`commander-rig-editor1` now stages 172 selected packages and all 184 dependencies
+in independent, hash-checked copies. Its migration has not started.
+`commander-mesh-comparison1/original-decoded.json` independently records the
+released C4 and E9 mesh buffers, including weights, cloth and morphs; its
+readback exits zero. Candidate comparisons remain pending.
 
 Cleanup removed the superseded standalone Eve texture stage/container and
 rejected Genessa material cook1/pack1 payloads only after verifying the retained
