@@ -135,9 +135,11 @@ void performance_controls(UObject* source,UObject* target,bool copy) {
     // Fixed-physics graphs can have no CSS controls. Binding validates the exact
     // catalog revision/class pair and checks control layouts in both directions.
 }
-void performance_override(UObject* component,UObject* type) {
+void performance_override(UObject* component,UObject* type,bool reinitialize=true) {
     Call set(component,L"SetOverridePostProcessAnimBP",2);
-    set.set(L"InPostProcessAnimBlueprint",type);set.set(L"ReinitAnimInstances",true);set.run();
+    set.set(L"InPostProcessAnimBlueprint",type);set.set(L"ReinitAnimInstances",reinitialize);set.run();
+    if(read<UObject*>(component,L"OverridePostProcessAnimBP")!=type)
+        throw std::runtime_error("Performance override did not restore its owner");
 }
 void performance_montage_blend(Call& call,const wchar_t* parameter) {
     auto* outer=call.param(parameter);
@@ -253,15 +255,23 @@ void PerformancePlayer::bind_layer(UObject* pawn,const Catalog& catalog,const st
     // Register rollback before the reflected setter can replace the instance.
     retained_.take(roots);
     restore_layer_=[held_pawn,held_component,held_mesh,held_source,held_override,held_target,physics,
-                    restored_post=WeakObject{},restored_layers=std::shared_ptr<mesh_animation_layers::Snapshot>{}]() mutable {
+                    restored_post=WeakObject{},restored_layers=std::shared_ptr<mesh_animation_layers::Snapshot>{}](UObject* changing_mesh) mutable {
         auto* body=held_component.Get();auto* expected=held_target.Get();
-        if(!body || !expected || mesh_asset(body)!=held_mesh.Get()) return true;
+        if(!body || !expected) return true;
         const bool replacing=read<UObject*>(body,L"OverridePostProcessAnimBP")==expected;
+        if(changing_mesh==body && replacing) {
+            // The immediately following mesh setter initializes the new graph.
+            // Detach our override first without resetting the old main instance.
+            performance_override(body,held_override.Get(),false);
+            return true;
+        }
         if(!replacing && (!restored_post.Get() ||
             read<UObject*>(body,L"OverridePostProcessAnimBP")!=held_override.Get() ||
             read<UObject*>(body,L"PostProcessAnimInstance")!=restored_post.Get())) return true;
+        const bool same_mesh=mesh_asset(body)==held_mesh.Get();
+        if(!same_mesh && !replacing) return true;
         auto* source=held_source.Get();
-        if(!source) throw std::runtime_error("Original performance controls expired");
+        if(same_mesh && !source) throw std::runtime_error("Original performance controls expired");
         if(replacing) {
             // This engine setter also reinitializes the main instance, even when
             // its pointer is unchanged. Never run it over a native action.
@@ -277,9 +287,15 @@ void PerformancePlayer::bind_layer(UObject* pawn,const Catalog& catalog,const st
             // Weapons and customization can change while restoration is deferred.
             restored_layers=std::make_shared<mesh_animation_layers::Snapshot>(body);
             auto* current=read<UObject*>(body,L"PostProcessAnimInstance");
-            performance_controls(current,source,true);
+            if(same_mesh) performance_controls(current,source,true);
             performance_override(body,held_override.Get());
             restored_post=read<UObject*>(body,L"PostProcessAnimInstance");
+            if(!same_mesh) {
+                // A game-driven mesh swap can retain our component override too.
+                // Preserve its native layers, never copy the old outfit's rig inputs.
+                restored_layers->restore(body);
+                return true;
+            }
         }
         auto* restored=read<UObject*>(body,L"PostProcessAnimInstance");
         if(!restored || restored->GetClassPrivate()!=source->GetClassPrivate())
@@ -405,7 +421,7 @@ void PerformancePlayer::release() {
         it=hidden_.erase(it);
     }
     if(restore_layer_) {
-        if(!restore_layer_()) {restore_retry_after_=GetTickCount64()+100;return;}
+        if(!restore_layer_(nullptr)) {restore_retry_after_=GetTickCount64()+100;return;}
         restore_layer_={};restore_retry_after_=0;
     }
     retained_.release();
@@ -415,6 +431,14 @@ void PerformancePlayer::release() {
 }
 void PerformancePlayer::interrupt(const std::string& reason) {
     session_.interrupt();reason_=reason;release();
+}
+void PerformancePlayer::prepare_mesh_change(UObject* component) {
+    if(!component) return;
+    interrupt("Appearance mesh is changing");
+    if(restore_layer_ && restore_layer_(component)) {
+        restore_layer_={};restore_retry_after_=0;
+        release();
+    }
 }
 Json PerformancePlayer::start(UObject* pawn,const Catalog& catalog,const std::string& outfit,
                               const std::string& id,double rate,double position,double facial_duration,

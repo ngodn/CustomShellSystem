@@ -18,6 +18,16 @@ int main(int argc,char** argv) {
         std::ifstream model_file(argv[1]),fixture_file(argv[2]);
         const auto source=Json::parse(model_file),fixtures=Json::parse(fixture_file);
         const auto model=BodyGeometryModel::parse(source);
+        expect(BodyGeometryModel::parse(source)==model,"Identical adapter geometry rejected");
+        auto changed=model;
+        changed.helpers[0].contact_bone+="_other";
+        expect(changed!=model,"Another contact bone accepted by preview");
+        changed=model;changed.morphs[0]+="_other";
+        expect(changed!=model,"Another morph binding accepted by preview");
+        changed=model;changed.helpers[0].contact_scales[63]+=0.1;
+        expect(changed!=model,"Different corner contact geometry accepted by preview");
+        changed=model;changed.helpers[6].moment_quadratic[5][5]+=0.1;
+        expect(changed!=model,"Different rig inertia accepted by preview");
         expect(fixtures.at("cases").size()==128,"Expected all corners and interior cases");
         double max_vector=0,max_moment=0;
         for(const auto& fixture:fixtures.at("cases")) {

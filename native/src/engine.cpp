@@ -716,7 +716,6 @@ void Appearance::sync_menu() {
     }
     menu_overlay_controls_.share(target,desired,overlay_controls_);
     push_morphs(target);
-    sync_menu_physics(target);
     if(!current_items_.empty()) menu_items_.update(target,current_items_identity_,current_items_);
     // A section an item covers, or a toggle switched off, has to be hidden on the preview
     // too, or the wardrobe shows a part the body is not wearing.
@@ -737,6 +736,7 @@ void Appearance::sync_menu() {
         }
         it=menu_hidden_sections_.erase(it);
     }
+    sync_menu_physics(target);
     // MISC on the wardrobe preview is driven from sync_misc (which resolves the display
     // character itself), so it also works on a default shell where this function returns early.
 }
@@ -1157,6 +1157,7 @@ bool Appearance::active() const { auto* c=component_.Get(); return c && c==obser
 void Appearance::timed_set_mesh(UObject* component, UObject* mesh) {
     if(component==component_.Get() && mesh_asset(component)!=mesh) restore_expression();
     const auto started=std::chrono::steady_clock::now();
+    if(mesh_asset(component)!=mesh) performance.prepare_mesh_change(component);
     set_mesh(component,mesh);
     apply_swap_ms+=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count();
 }
@@ -1354,6 +1355,7 @@ bool Appearance::restore() {
         auto* original = load(original_);
         component=component_.Get();
         if(component && mesh_asset(component)==applied_.Get()) {
+            if(mesh_asset(component)!=original) performance.prepare_mesh_change(component);
             set_mesh(component, original);
             restore_materials(component,original_materials_,original_live_materials_);
             if(component_.Get()==component) material_debug=material_snapshot(component,original);
@@ -2044,8 +2046,11 @@ void Appearance::sync_menu_physics(UObject* component) {
     }
     if(body_geometry_applied_ && body_geometry_instance_.Get()==source) {
         if(menu_body_geometry_applied_!=body_geometry_applied_) {
-            if(instance->GetClassPrivate()!=source->GetClassPrivate())
-                throw std::runtime_error("Preview body geometry class differs from player");
+            // A verified performance adapter has a different class but retains
+            // the outfit's geometry model. Never transfer another outfit's model.
+            if(instance->GetClassPrivate()!=source->GetClassPrivate() &&
+               (!body_geometry_model_ || body_geometry_model(instance)!=body_geometry_model_))
+                throw std::runtime_error("Preview body geometry model differs from player");
             const auto inputs=body_geometry_inputs(instance);
             if(!menu_body_geometry_original_) menu_body_geometry_original_=inputs.capture();
             inputs.apply(*body_geometry_applied_);

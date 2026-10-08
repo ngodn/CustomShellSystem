@@ -73,7 +73,7 @@ class PerformancePlayer {
     RC::Unreal::FName character_;
     std::string reason_;
     float original_time_=0.f;
-    std::function<bool()> restore_layer_;
+    std::function<bool(RC::Unreal::UObject*)> restore_layer_;
     uint64_t restore_retry_after_=0;
     std::function<void(double,double)> sample_face_;
     std::function<void()> restore_face_;
@@ -99,6 +99,7 @@ public:
     Json status() const;
     void tick(RC::Unreal::UObject* pawn);
     void interrupt(const std::string& reason);
+    void prepare_mesh_change(RC::Unreal::UObject* component);
 };
 struct SharedAnimationResult {
     bool matched=false, hide_weapons=false;

@@ -2,7 +2,42 @@
 
 Updated 2026-10-08. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial is installed; live acceptance is pending. Earlier sections describing private candidates record their state before this deployment.
 
-## Current installed trial
+## Live trial correction: facial playback and component visibility
+
+The first namespace trial loaded Genessa's new facial mesh, but the player retained
+Eve's `ABP_Eve` performance override after changing outfits. Genessa's authored
+graph is `ABP_Wings2`; its facial adapter is `ABP_Genessa`. The retained Eve graph
+prevented the verified Genessa playback binding. The menu logged `Preview body
+geometry class differs from player`, which aborted synchronization before hidden
+material sections were updated.
+
+The runtime now detaches its own deferred performance override before a CSS mesh
+change. A game-driven mesh change also retains cleanup responsibility until the
+native action permits restoration, without copying the previous outfit's rig
+inputs. Preview section visibility is synchronized before physics. Different
+preview/player graph classes are accepted only when their parsed body geometry
+models agree, allowing the normal graph and its performance adapter to coexist.
+
+Windows compilation, all 23 host suites, and 14,364 geometry checks pass. The
+corrected core `css_core-face-visibility-d3c00bddd78e4ef0.dll` is installed and
+hash-verified. Outfit containers, profiles and saved settings were not replaced.
+Live acceptance remains pending. Check Genessa Iris Out facial motion, visibility
+toggles, then Eve/CW/Genessa changes while a facial idle is active. Also recheck
+attack/aim interruption, Genessa form changes and doubles.
+
+Evidence: `work/three-outfit-rig-physics/live-face-visibility1`. The reusable
+read-only `tools/diagnostics/check_live_animation_owner.py` compares the live
+graph with the mesh's authored graph and catalog adapters. Its first automated
+retry timed out because the game had closed; earlier reflected captures contain
+the mismatched graph and disabled facial playback. This is not a completed live
+regression pass.
+
+Rollback order: with the game closed, restore the `previous_selector` from
+`live-face-visibility1/validation.json` before invoking the original coordinated
+namespace transaction restore. That transaction intentionally rejects a later
+core selector rather than silently overwriting it.
+
+## Initial installed trial
 
 `namespace-deployment1/validation.json` records the independent post-install
 check. The selected core is `css_core-namespace-7d0e24cf60df400c.dll`, SHA256

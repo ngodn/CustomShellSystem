@@ -23,9 +23,11 @@ struct BodyGeometryModel {
         std::array<BodyVector,64> contact_centers{};
         std::array<double,64> contact_scales{};
         std::array<BodyVector,3> contact_axes{};
+        bool operator==(const Helper&) const = default;
     };
     std::array<std::string,6> morphs;
     std::array<Helper,7> helpers;
+    bool operator==(const BodyGeometryModel&) const = default;
     static BodyGeometryModel parse(const nlohmann::json&);
     BodyGeometry evaluate(const std::array<float,6>&) const;
 };
