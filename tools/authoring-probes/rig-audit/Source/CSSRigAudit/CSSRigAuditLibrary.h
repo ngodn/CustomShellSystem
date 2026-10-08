@@ -9,6 +9,11 @@ class UCSSRigAuditLibrary : public UBlueprintFunctionLibrary
     GENERATED_BODY()
 public:
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static FString SnapshotHandPostProcess(class USkeletalMesh* Mesh, class UAnimBlueprint* Blueprint,
+                                          const FString& SnapshotJson, const TArray<FName>& Curves,
+                                          bool bCompatibleInput);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString SnapshotAssetProperties(class UObject* Asset);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")

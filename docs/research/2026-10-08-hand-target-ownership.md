@@ -128,3 +128,38 @@ Before a targeted correction, check the same input through the full component
 graph and confirm the actual visible surface. Do not turn this local thumb
 crease case into a whole-hand or skeleton redesign. Cooked execution, runtime
 scheduling, wrist/weapon grip and motion continuity remain unverified.
+
+
+## Full W3 component replay
+
+`genessa-hand-component2` passes the three representative inputs (reference,
+running attack and shared idle) through compressed transient sequences and the
+actual migrated `ABP_Wings2` component graph on both W3 variants. Each case has
+seven frames covering disabled, enabled, disabled again, reenabled and animation
+instance reinitialization. All 42 samples are finite. The 16 corrective curves
+match active render morph weights exactly, become zero on disable and return to
+the same enabled values after reinitialization. Both variants produce identical
+component outputs. Four missing wing input bones use their actual mesh binds.
+The report does not substitute reference translations from another character.
+
+`genessa-component-hand-skin1` replays the component's enabled finger rotations
+and actual render morph weights. It reproduces the same two extra thumb crease
+triangle pairs only on the running-attack fixture. Reference and idle retain the
+four reference seam pairs. The selected reference-input negative control gives
+181 crossing pairs; the earlier 453-case screen used a different negative input
+and gave 1,102. These are controls, not comparable defect counts.
+
+The generic C++ component probe lives in CSS's `tools/authoring-probes/rig-audit`;
+the character recipe is the mod's `tools/probe_hand_component.py`. Build commands,
+UE logs and lifecycle validation are retained beside the reports. The first
+isolated attempt (`genessa-hand-component1`) failed while constructing the
+transient animation: setting frame metadata outside a controller bracket triggered
+compression on incomplete data. The corrected probe uses UE's scoped controller
+bracket; the second run exited 0. This was an editor test harness failure and did
+not touch the game or source assets. Component cleanup now also runs on error.
+
+This closes the current graph and morph-consumption question for these inputs.
+The remaining thumb case is small and synthetic; do not change accepted hand
+anatomy without a visible gameplay defect. Wrist/weapon grip, continuous motion,
+right-hand behavior and gameplay scheduling are outside this screen. No installed
+DLL, package or settings changed during this work.

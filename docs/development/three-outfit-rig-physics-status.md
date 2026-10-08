@@ -23,9 +23,12 @@ corrected core `css_core-face-visibility-d3c00bddd78e4ef0.dll` is installed and
 hash-verified. Outfit containers, profiles and saved settings were not replaced.
 The user confirmed Genessa Iris Out facial motion and Shown/Hidden controls are
 fixed after relaunch. This accepts those two reported defects on the tested
-appearance. Both Genessa body variants, CINE playback, Eve/CW/Genessa changes
-while a facial idle is active, attack/aim interruption, form changes and doubles
-still need their own candidate regression results.
+appearance. The user subsequently confirmed switching between Eve, Commander
+White and Unholy Genessa with Iris Out selected: faces and eyes stay correct,
+and attacking or aiming interrupts playback normally. This passes that live
+cross-character test. Exact outfit/body variants were not specified. Both
+Genessa body variants, CINE playback, form changes and doubles still need their
+own candidate regression results.
 
 Evidence: `work/three-outfit-rig-physics/live-face-visibility1`. The reusable
 read-only `tools/diagnostics/check_live_animation_owner.py` compares the live
@@ -64,8 +67,11 @@ See the hand study for source hashes, images, exact scope and cleanup evidence.
 The current migrated hand graph has now been executed directly in UE 5.6.1 on
 all 453 nonsingular inputs. Valid finite outputs preserve translations, scales
 and all non-finger rotations. Fresh-output skin replay reproduces the same one
-thumb case, ruling out stale native-output fixtures. Full component/gameplay
-reproduction and visible severity still need checking before changing the mesh.
+thumb case, ruling out stale native-output fixtures. A subsequent full W3 editor
+component replay passes 42 enable/disable/reinitialize samples across both body
+variants. Corrective curves reach the render morph weights and clear on disable.
+The skin replay reproduces the same small thumb crease case. Gameplay visibility
+and severity remain unverified; no hand repair is justified from this alone.
 
 `namespace-deployment1/validation.json` records the independent post-install
 check. The selected core is `css_core-namespace-7d0e24cf60df400c.dll`, SHA256

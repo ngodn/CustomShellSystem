@@ -96,3 +96,12 @@ The local faster-whisper transcriber initially hit a PyAV `metadata_errors` API 
 - What changes improve visible fit without unacceptable frame-time cost or gameplay regression?
 
 Answer these against matched evidence. Do not assume all outfits need new skeletons or every physics technique.
+
+
+The [hand study](2026-10-08-hand-target-ownership.md#full-w3-component-replay)
+now includes 42 full editor-component lifecycle samples on both Genessa bodies.
+Hand curves reach render morph weights and clear on disable. One small synthetic
+thumb crease overlap persists; it is not a demonstrated gameplay regression.
+The user accepted cross-character Iris Out faces/eyes and attack/aim interruption
+on the installed trial. Variant-specific, CINE and remaining gameplay checks stay
+open in the implementation status.
