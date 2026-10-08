@@ -27,7 +27,66 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Performance | Current package sizes recorded; matched gameplay captures pending |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: finish the migrated catalogs and remaining runtime consumers, including facial adapter revision bindings. Private migration assemblies now pass for all three outfits: Genessa's 107 packages with its new facial meshes and oral assets, Eve's 308 and Commander White's 171, each checked with the shared skeleton. Eve retains its compiled secondary graph and 22 original mesh buffers. Commander White retains both C4/E9 mesh buffers, original hair/body graphs, all 80 instances, 78 textures and two material parents. Authoring recipe updates, rig/physics work and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
+Next: complete legacy-package upgrade/dependency handling and remaining runtime consumers. The four migrated catalogs now pass the native loader and selection audit, including facial adapter revision bindings. Private migration assemblies pass for all three outfits: Genessa's 107 packages with its new facial meshes and oral assets, Eve's 308 and Commander White's 171, each checked with the shared skeleton. Eve retains its compiled secondary graph and 22 original mesh buffers. Commander White retains both C4/E9 mesh buffers, original hair/body graphs, all 80 instances, 78 textures and two material parents. Authoring recipe updates, rig/physics work and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
+
+## Combined catalogs and final container identities
+
+`catalog-namespace2` assembles the three outfit catalogs with the consolidated
+shared library. Its four metadata PAKs preserve the original outfit resources,
+controls, variant IDs and template data while updating active object paths.
+The shared catalog keeps all 63 animation IDs, adds the migrated custom-rig
+walk/jog/sprint alternatives, and retains legacy aliases alongside the migrated
+aliases. All three facial rigs keep their expression/curve data. Five playback
+adapters and nine facial adapters bind to the newly verified outfit revisions.
+The 735 package owners are unique, and every active CSS object reference resolves
+to an export in the candidate stages. PAK extraction matches staged metadata and
+resources byte for byte.
+
+An independent combined IoStore audit mounts only the four candidates and the
+base-game containers. All 735 packages, their public imported objects and 106
+catalog references resolve, with zero failures. Legacy outfit/locomotion/Astral
+containers are absent from this mount. See `combined-imports.json` and its
+recorded command/exit code. This proves the combined cooked dependency check,
+not live execution.
+
+The native `--audited-namespace-pack` audit passes 1,380 checks: all nine
+variants, 99 bundled choices, 540 CINE body-clip resolutions, nine facial
+bindings, saved-choice serialization, deduplicated menus, and rejection of
+incorrect adapter revisions. All 23 freshly linked host suites also pass.
+Commands, input hashes and limits are in `catalog-namespace2/validation.json`.
+This is offline catalog coverage, not proof of rendering, gameplay or performance.
+
+Before that assembly, Eve and Commander White's independent trials were found
+to share the same internal container ID, derived from their common temporary
+filename. `finalize_outfit_namespace_container.py` rebuilds them under their
+final distinct names. `eve-final-container1` preserves all 509 asset chunks and
+309 decoded packages; `commander-final-container1` preserves 242 chunks and
+172 decoded packages. Chunk content hashes, sizes and package-store dependencies
+match, and independent full shader/export readback matches each accepted trial.
+Their IDs are respectively `0daa14f502c7e63d` and `d4fda149b963d171`. Renaming the
+old files alone would not have repaired that collision.
+
+The superseded temporary `.ucas` files were removed only after those comparisons
+passed. Their stages, headers, source receipts and decoded evidence remain.
+Use the final-container directories for subsequent bindings and mounts.
+Another 391 byte-identical Commander White material-stage files now link to the
+complete accepted stage; previous paths and hashes still resolve, and the
+observed free-space increase was 986,550,272 bytes. Cleanup receipts are
+`cleanup-commander-duplicate-stage1.json`, `cleanup-eve-trial-container1.json`
+and `cleanup-commander-trial-container1.json`.
+
+`catalog-namespace1` failed because the PAK readback parent directory was absent.
+The corrected second trial passes. The first trial's generated metadata/PAK was
+removed; its logs and failure note remain.
+
+Outstanding migration checks: legacy outfits resolve their saved animation
+identities, but older facial/playback adapter dependencies still need a tested
+upgrade route. The old locomotion catalog cannot coexist unchanged with this
+catalog because its public IDs collide. A missing shared pack also removes
+actual shared assets, so the metadata fallback test alone does not establish
+playability without that dependency. Finish clean/upgrade handling, combined
+runtime loading and live acceptance before installation or release. Nothing
+from this goal is installed.
 
 ## Astral runtime namespace support
 

@@ -331,6 +331,88 @@ int main(int argc,char** argv) {
         fs::remove(file);
         expect(Catalog::load(root).animation_libraries.empty() && Catalog::load(root).outfits.size()==1,
                "Removing library invalidated existing outfit");
+        if(argc==4 && std::string_view(argv[1])=="--audited-namespace-pack") {
+            const auto packages=Catalog::load(root,argv[2],root/"namespace-audit-cache");
+            if(packages.diagnostics.at("rejected")!=0) std::cerr<<packages.diagnostics.dump(2)<<'\n';
+            expect(packages.animation_libraries.size()==1 && packages.outfit_revisions.size()==3 &&
+                   packages.diagnostics.at("rejected")==0,"Migrated packages did not load cleanly");
+            const auto& library=packages.animation_libraries.front();
+            expect(library.entries.size()==63 && library.adapters.size()==5 && library.faces.size()==3,
+                   "Migrated shared inventory changed");
+            const auto fixtures=read_performance_fixture(argv[3]);
+            expect(fixtures.size()==9,"Migrated nine-variant fixture is incomplete");
+            size_t choices=0, faces=0, cine_clips=0;
+            for(const auto& fixture:fixtures) {
+                const auto outfit=fixture.at("outfit").get<std::string>();
+                const auto variant=fixture.at("variant").get<std::string>();
+                const auto skeleton=fixture.at("skeleton").get<std::string>();
+                const auto expected=AnimationSet::parse(fixture.at("animations"));
+                const auto legacy=AnimationSet::parse(fixture.at("old_animations"));
+                const auto* appearance=packages.find(outfit,variant);
+                expect(appearance && appearance->mesh.starts_with("/Game/CSS/eins0fx/"),
+                       "Migrated variant missing or still using old mesh path");
+                const auto face=packages.facial_match(outfit,variant);
+                expect(face.rig && face.adapter && face.adapter->target_mesh.starts_with("/Game/CSS/eins0fx/"),
+                       "Migrated face does not match actual outfit revision");
+                ++faces;
+                const auto revision=packages.outfit_revisions.at(outfit);
+                expect(!resolve_facial_rig(library.faces,outfit,std::string(64,'0'),revision.bulk_bytes,
+                                          appearance->mesh).adapter,
+                       "Wrong outfit revision acquired a facial replacement");
+                expect(!resolve_facial_rig(library.faces,outfit,revision.toc_sha256,revision.bulk_bytes+1,
+                                          appearance->mesh).adapter,
+                       "Wrong outfit bulk size acquired a facial replacement");
+                for(const auto& [slot,options]:expected.slots) {
+                    const auto& bundled=packages.bundled_animation_options(outfit,variant,slot);
+                    const auto& merged=packages.animation_options(outfit,variant,slot);
+                    expect(bundled.size()==options.size(),"Migrated manifest lost bundled choices");
+                    expect(merged.size()==(slot==AnimationSlot::Idle?60:1),"Migrated menu has duplicate/missing entries");
+                    for(const auto& option:options) {
+                        ++choices;
+                        const auto actual=resolve_animation(bundled,slot,option.id);
+                        const auto declared=resolve_animation(options,slot,option.id);
+                        expect(actual.option && actual.asset==declared.asset && actual.hide_weapons==declared.hide_weapons,
+                               "Migrated choice changed its asset or weapon behavior");
+                        const auto resolved=resolve_library_animation(packages.animation_libraries,slot,option.id,bundled,skeleton);
+                        expect(resolved.entry && !resolved.candidates.empty() && !resolved.candidates.front().bundled,
+                               "Migrated saved choice did not resolve through shared library");
+                        const auto old=resolve_library_animation(packages.animation_libraries,slot,option.id,
+                            legacy.slots.at(slot),fixture.at("old_skeleton").get<std::string>());
+                        expect(old.entry==resolved.entry && !old.candidates.empty(),
+                               "Legacy and migrated choices resolved different identities");
+                        const auto selected=resolve_animation(merged,slot,resolved.entry->id);
+                        expect(selected.option && selected.option->id==option.id,
+                               "Shared alias changed the persisted outfit choice ID");
+                        AnimationChoices saved;
+                        saved.outfits[outfit][variant][slot]=selected.option->id;
+                        const auto restored=AnimationChoices::parse(saved.json());
+                        expect(restored.get(outfit,variant,slot)==option.id,"Saved choice changed on serialization");
+                        expect(resolve_animation(merge_library_animation_options({},slot,bundled),slot,
+                               restored.get(outfit,variant,slot)).asset==actual.asset,
+                               "Missing catalog lost bundled selection metadata");
+                    }
+                }
+                for(const auto& entry:library.entries) {
+                    if(entry.slot && *entry.slot!=AnimationSlot::Idle) continue;
+                    const auto cine=resolve_library_performance(packages.animation_libraries,entry.id,skeleton);
+                    expect(cine.entry==&entry && !cine.candidates.empty() &&
+                           cine.candidates.front().asset.starts_with("/Game/CSS/eins0fx/Shared/Locomotion/"),
+                           "CINE failed to resolve a migrated body clip");
+                    ++cine_clips;
+                }
+            }
+            for(const auto& adapter:library.adapters) {
+                const auto revision=packages.outfit_revisions.at(adapter.source_outfit);
+                expect(resolve_performance_adapter(packages.animation_libraries,adapter.source_outfit,revision,
+                       adapter.source_class,adapter.skeleton)==&adapter,"Migrated playback adapter did not resolve");
+                expect(resolve_performance_layer(packages.animation_libraries,adapter.source_outfit,revision,
+                       adapter.target_class,adapter.skeleton)==&adapter,"Migrated playback layer did not resolve");
+                auto wrong=revision;wrong.toc_sha256=std::string(64,'0');
+                expect(!resolve_performance_adapter(packages.animation_libraries,adapter.source_outfit,wrong,
+                       adapter.source_class,adapter.skeleton),"Wrong revision acquired playback adapter");
+            }
+            expect(choices==99 && faces==9 && cine_clips==540,"Migrated audit missed choices, faces or CINE clips");
+        }
         if(argc==4 && std::string_view(argv[1])=="--audited-legacy-alias-pack") {
             const auto packages=Catalog::load(root,argv[2],root/"alias-audit-cache");
             expect(packages.animation_libraries.size()==1 && packages.diagnostics.at("rejected")==0,
