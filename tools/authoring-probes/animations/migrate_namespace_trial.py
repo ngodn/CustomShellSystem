@@ -204,7 +204,7 @@ def main():
     expected = {e['new_package'] for e in plan['assets']}
     if os.environ.get('CSS_NAMESPACE_VERIFY') == '1':
         if any((content / (e['old_package'].removeprefix('/Game/') + '.uasset')).exists()
-               for e in plan['assets']):
+               for e in plan['assets'] if e['old_package'] != e['new_package']):
             raise ValueError('Remove staged legacy paths from Content before the reload check')
         report = json.loads(report_path.read_text())
         mismatches = []
@@ -241,7 +241,7 @@ def main():
     mapping = {entry['old_package']: entry['new_package'] for entry in plan['assets']}
     for entry in plan['assets']:
         old, new = entry['old_package'], entry['new_package']
-        if unreal.EditorAssetLibrary.does_asset_exist(new):
+        if old != new and unreal.EditorAssetLibrary.does_asset_exist(new):
             raise FileExistsError(new)
         asset = unreal.load_asset(old)
         if asset is None:
@@ -262,12 +262,13 @@ def main():
                                   before=initial_pose, after=updated_pose))
         before[old] = snapshot(asset)
         before_refs[old] = references(asset)
-        folder, name = new.rsplit('/', 1)
-        renames.append(unreal.AssetRenameData(asset, folder, name))
+        if old != new:
+            folder, name = new.rsplit('/', 1)
+            renames.append(unreal.AssetRenameData(asset, folder, name))
     (stage / 'before.json').write_text(json.dumps(before, indent=2) + '\n')
     (stage / 'before-references.json').write_text(json.dumps(before_refs, indent=2) + '\n')
     (stage / 'retarget-refresh.json').write_text(json.dumps(refreshed, indent=2) + '\n')
-    if not unreal.AssetToolsHelpers.get_asset_tools().rename_assets(renames):
+    if renames and not unreal.AssetToolsHelpers.get_asset_tools().rename_assets(renames):
         raise RuntimeError('Unreal asset rename failed; retain the staging log')
     changed, mismatches = [], []
     for entry in plan['assets']:

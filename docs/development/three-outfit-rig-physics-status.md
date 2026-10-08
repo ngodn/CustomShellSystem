@@ -27,7 +27,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Performance | Current package sizes recorded; matched gameplay captures pending |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: finish the remaining runtime/catalog consumers and final Genessa facial integration. Private migration assemblies now pass for all three outfits: Genessa's 101 packages, Eve's 308 and Commander White's 171, each checked with the shared skeleton. Eve retains its compiled secondary graph and 22 original mesh buffers. Commander White retains both C4/E9 mesh buffers, original hair/body graphs, all 80 instances, 78 textures and two material parents. Authoring recipe updates, rig/physics work and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
+Next: finish the migrated catalogs and remaining runtime consumers, including facial adapter revision bindings. Private migration assemblies now pass for all three outfits: Genessa's 107 packages with its new facial meshes and oral assets, Eve's 308 and Commander White's 171, each checked with the shared skeleton. Eve retains its compiled secondary graph and 22 original mesh buffers. Commander White retains both C4/E9 mesh buffers, original hair/body graphs, all 80 instances, 78 textures and two material parents. Authoring recipe updates, rig/physics work and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
 
 ## Astral runtime namespace support
 
@@ -625,6 +625,44 @@ No candidate has been installed. Remaining face checks include cooked material
 appearance, dynamic ornament/hood shading, CSS/CINE playback and interruption,
 both Genessa forms and doubles. Wider migration, physical deformation/contact
 work and the 59 missing native animation conversions remain active.
+
+### Facial meshes integrated into the migrated Genessa outfit
+
+`genessa-face-namespace-editor1` adds the two verified facial meshes and four
+oral material/texture assets to the isolated Genessa migration. Those six
+assets already have author-owned paths. The migration script now saves and
+checks such assets while renaming their dependencies, without renaming them
+onto themselves or treating their presence as a legacy redirector.
+
+All 108 selected assets pass before/after comparisons and a fresh editor reload
+with the old paths removed. Both facial meshes retain 137 morphs, complete
+source/render arrays and cloth custom data; their skeleton, Physics Asset,
+post-process graph and materials point into the migrated namespace. Every
+protected original source remains unchanged. The subsequent two-mesh Windows
+cook passes with read-only source Content.
+
+`genessa-face-namespace-pack2` combines the 101 migrated outfit packages with
+the two facial meshes and four preserved oral packages. All 107 outfit packages
+plus the shared skeleton pass comparison, with 326 imports resolved using only
+the candidate, new shared pack and base game. Both facial meshes match the
+earlier `face-cook3` candidate after path normalization, including every decoded
+render, weight, cloth-mapping and morph buffer. Existing outfit exports remain
+unchanged. The oral comparison includes compiled shader maps, not just instance
+properties.
+
+Pack1 incorrectly compared an old oral readback made without shader-map loading
+against one with shader-map loading. Its sole mismatch was the populated
+`LoadedMaterialResources` array. Pack2 reads both sides with the same mode and
+compares the complete data; it does not waive that field. The two containers are
+byte-identical. `assemble_genessa_face_namespace.py` records the inputs, commands,
+import checks and full comparison.
+
+The rejected trial's duplicate payloads, successful trial's duplicate readback
+payloads and completed editor/cook DDC were removed with hashes and retained-file
+locations in `cleanup-genessa-face-namespace1.json` (1,085,711,576 logical bytes).
+Inputs, editable candidates, accepted cooked assets, containers and reports
+remain. Catalog revision bindings and live facial acceptance are still pending;
+this package has not been installed.
 
 ## Verified animation consolidation and saved choices
 
