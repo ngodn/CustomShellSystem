@@ -42,8 +42,9 @@ core selector rather than silently overwriting it.
 The [cooked solver inventory](../research/2026-10-08-secondary-motion-ownership.md)
 now accounts for nine variants, 18 normal/facial mesh paths, ten graphs and eight
 Control Rig assets. Five adapter comparisons pass, including input identities and
-defaults; eight negative/control tests cover the checker. No overlapping named
-body/hair bone writers were found. Hand literal targets, graph order, actual
+defaults; fourteen negative/control tests cover the checker. All output-connected
+pose branches preserve bone-writer order. No overlapping named body/hair bone
+writers were found. Hand literal targets, live graph scheduling, actual
 contact and runtime cost remain unverified.
 
 `namespace-deployment1/validation.json` records the independent post-install

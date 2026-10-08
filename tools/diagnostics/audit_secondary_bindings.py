@@ -41,6 +41,49 @@ def binding_name(name):
     return re.sub(r'_[0-9A-Fa-f]{32}$', '', name) if name.startswith('__CustomProperty_') else name
 
 
+def pose_writer_orders(exports):
+    generated = next(e for e in exports if e['Type'] == 'AnimBlueprintGeneratedClass')
+    if generated.get('SuperStruct', {}).get('ObjectName') != "Class'AnimInstance'":
+        raise ValueError('Pose audit requires a direct AnimInstance subclass')
+    props = cdo(exports)
+    nodes = [f['Name'] for f in generated['ChildProperties'] if f.get('Type') == 'StructProperty'
+             and f.get('Struct', {}).get('ObjectName', '').startswith("Class'AnimNode_")]
+    roots = [n for n in nodes if n.startswith('AnimGraphNode_Root')]
+    if len(roots) != 1 or len(set(nodes)) != len(nodes) or any(n not in props for n in nodes):
+        raise ValueError('Ambiguous pose-node field order')
+
+    def links(value):
+        if isinstance(value, dict):
+            if 'LinkID' in value:
+                index = value['LinkID']
+                if type(index) is not int or index < -1 or index >= len(nodes):
+                    raise ValueError('Pose link index outside node array')
+                return [index] if index >= 0 else []
+            return [i for v in value.values() for i in links(v)]
+        if isinstance(value, list):
+            return [i for v in value for i in links(v)]
+        return []
+
+    visited = set()
+
+    def walk(name, ancestors):
+        if name in ancestors:
+            raise ValueError('Cycle in cooked pose links')
+        visited.add(name)
+        node = props[name]
+        writer = ('rig:' + package(node['ControlRigClass'])) if 'ControlRigClass' in node else (
+            'bone:' + node['BoneToModify']['BoneName'] if 'BoneToModify' in node else '')
+        inputs = links(node)
+        paths = [path for index in inputs for path in walk(nodes[index], ancestors | {name})] if inputs else [[]]
+        return [path + ([writer] if writer else []) for path in paths]
+
+    paths = walk(roots[0], set())
+    for name in nodes:
+        if ('ControlRigClass' in props[name] or 'BoneToModify' in props[name]) and name not in visited:
+            raise ValueError('Bone writer is disconnected from output: ' + name)
+    return [list(order) for order in sorted({tuple(path) for path in paths})]
+
+
 def graph(data, path):
     exports = data[path]
     props, declared = cdo(exports), fields(exports)
@@ -73,6 +116,7 @@ def graph(data, path):
                 if name.startswith('CSS') and not name.startswith('CSSPerformance')}
     defaults = {name: props[name] for name in controls if name in props}
     return {'rigs': rigs, 'bone_transforms': transforms, 'controls': controls, 'control_defaults': defaults,
+            'writer_orders': pose_writer_orders(exports),
             'reset_inputs': [name for name in controls if 'ResetEpoch' in name]}
 
 
@@ -82,6 +126,8 @@ def compare_adapter(source, target):
         failures.append('CSS control layout differs')
     if source['control_defaults'] != target['control_defaults']:
         failures.append('CSS control defaults differ')
+    if source['writer_orders'] != target['writer_orders']:
+        failures.append('Bone writer order or pose coverage differs')
     def signatures(value):
         return sorted((json.dumps({'rig': r['rig'], 'pose_flags': r['pose_flags'],
                      'bindings': {k: {'source': binding_name(v['source']),
@@ -179,7 +225,7 @@ def main():
     overlaps = named_bone_overlaps(graphs, rigs)
     report = {'passed': all(r['passed'] for r in results) and not overlaps, 'inputs': inputs,
               'adapters': results, 'graphs': graphs, 'rigs': rigs, 'named_bone_overlaps': overlaps,
-              'limits': 'Cooked field/rig/pose-transfer comparison only. Does not prove graph execution order, event updates, cloth contact, reset behavior or visible motion.'}
+              'limits': 'Cooked field/rig/pose-link comparison only. Writer paths do not prove live branch selection, event updates, cloth contact, reset behavior or visible motion.'}
     if args.outfits:
         faces = {package(a['source_mesh']): package(a['target_mesh'])
                  for face in library['faces'] for a in face['adapters']}

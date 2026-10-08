@@ -55,10 +55,11 @@ mistake the loaded Genessa facial mesh for proof that facial playback is active.
 
 The [secondary-motion ownership inventory](2026-10-08-secondary-motion-ownership.md)
 records all nine variants and 18 normal/facial meshes from the final cooked
-containers. `secondary-bindings4` passes five adapter comparisons across ten
+containers. `secondary-bindings5` passes five adapter comparisons across ten
 graphs/eight rigs, checking binding identities, types, defaults and transfer
-flags. Eight checker tests cover wrong-input and duplicate-writer cases. No
-named body/hair writer overlap was found; hand literal targets and graph order
+flags and serialized pose-link writer order. Fourteen checker tests cover
+wrong-input, duplicate-writer, disconnected-node and cycle cases. No named
+body/hair writer overlap was found; hand literal targets and live scheduling
 remain outside that proof. Keep collision consumers and simulation-vertex counts
 distinct from contact quality and performance acceptance.
 

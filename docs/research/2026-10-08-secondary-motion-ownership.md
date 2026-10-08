@@ -6,7 +6,7 @@ runtime correction still needs the user's in-game check.
 
 ## Inputs and repeatable check
 
-`work/three-outfit-rig-physics/secondary-bindings4/report.json` pins hashes for the
+`work/three-outfit-rig-physics/secondary-bindings5/report.json` pins hashes for the
 three final decoded outfit containers, shared catalog and nine-variant manifests.
 The report contains 18 normal/facial mesh records, ten animation graphs, five
 playback adapters and eight Control Rig assets.
@@ -22,7 +22,7 @@ python3 tools/diagnostics/audit_secondary_bindings.py \
   --output /tmp/css-secondary-bindings.json
 ```
 
-The output path must not already exist. Eight negative/control tests pass.
+The output path must not already exist. Fourteen negative/control tests pass.
 All five adapters retain their source graph's CSS control types/defaults, rig
 classes, input binding identities, pose-transfer flags and explicit bone
 transform targets/spaces. Generated node GUIDs may differ. Swapping two
@@ -46,9 +46,30 @@ All paths below are relative to `/Game/CSS/eins0fx/`.
 | Genessa, wings | `ABP_Wings2` and `ABP_Genessa` | Four `ug_wing_*` bones; additive bone-space rotations | All four transform targets and spaces retained | Gait-driven values, hinge motion, nearby cloth and transition timing |
 | Cloth | Per-mesh `ClothingAssetCommon` objects below | Independent simulation meshes and per-cloth Physics Assets | Cooked ownership and vertex counts below | Pin weights, morph/simulation correspondence, active colliders and visible contact |
 
+### Cooked pose-link order
+
+The direct `AnimInstance` subclasses store their node fields in the serialized
+`ChildProperties` order. The walker follows pose `LinkID` values from the output,
+rejecting cycles, invalid indices and disconnected writers. Local UE 5.6.1
+`AnimBlueprintGeneratedClass.cpp:500-516` builds `AnimNodeProperties` by iterating
+the node fields; `AnimNodeBase.cpp:185-201` resolves a pose link through that
+array. This is a graph-path check, not a runtime timing measurement.
+
+| Graph family | Input-to-output bone writer order |
+| --- | --- |
+| Eve main | Body, hair, hand correction |
+| Eve Bikini/Knitwear/Alice | Body, hair, hand correction, right foot, left foot |
+| Genessa | Body, hair, hand correction, lower-left wing, lower-right wing, upper-left wing, upper-right wing |
+| Commander White | Body, hair |
+
+Every output-connected branch in each of the five playback adapters retains its
+source's ordered bone writers. A playback branch that bypasses them or changes
+their order fails the check. This does not determine which branch is selected at
+runtime, whether the solver is enabled, or when its event graph updates inputs.
+
 No overlapping **named `BoneNames`** writers were found in any of the ten graphs.
 This is not proof that all writers are disjoint: hand-rig literal targets,
-parent propagation, graph execution order and cloth render transfer remain to
+parent propagation, live scheduling and cloth render transfer remain to
 be examined. The cooked reader exposes RigVM literal property descriptions and
 serialized size, but not the literal values needed to resolve every hand target.
 
@@ -88,8 +109,8 @@ testing a contact repair.
 
 1. Accept the installed runtime correction through facial idle, visibility and
    cross-outfit switches. Preserve native action interruption and doubles.
-2. Resolve hand-rig literal targets and pose graph order from the compiled graph
-   or a pinned source-to-cooked comparison.
+2. Resolve hand-rig literal targets from the compiled graph or a pinned
+   source-to-cooked comparison; record live branch/input-update behavior.
 3. Record simulation space, anchor/weight coverage and reset behavior for the
    region owners above. Capture matched enabled/disabled motion before proposing
    a geometry, weight or collision change.
