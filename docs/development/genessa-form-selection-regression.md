@@ -26,8 +26,30 @@ mirrored appearance addresses the same living selection used by reconciliation.
 Tests cover a stale NPC darkform slot, no darkform slot, edits to the mirrored
 selection and preservation of the separate selection.
 
-The first Stray ability failure is not yet diagnosed. The log records the first
-switch and the successful round trip, but does not capture the failed ability's
-activation/input state. Do not claim the selection repair fixes that failure.
+The user clarified that the failed Stray summon plays its animation but produces
+no doubles. The first Stray ability failure is not yet diagnosed. The log records
+the first switch and the successful round trip, but does not capture the failed
+ability's notify or spawn state. Do not claim the selection repair fixes that failure.
 The native form event is sent once and currently considered complete when the
 shell tag changes; ability and animation completion need further inspection.
+
+Selection repair `b1e1cbe` passed 153 animation checks, all 24 host test targets
+and the Windows core build. The staged DLL is
+`genessa-form-first-stray1/css_core.dll`, SHA-256
+`48690559fd0755162174aace640204f686f199aa1a86d523c9848670ec39646d`.
+It has not been installed or confirmed in game.
+
+The cooked `GA_AstralClones_Action` routes the `Activate` montage notify to
+`SpawnPrimaryClone`. The animation task uses
+`AbilityTask_PlayMontageAndWaitWithNotifies`. A visible montage alone therefore
+does not establish that the spawn call ran. The extracted bytecode is retained
+in `native-stray-ability.json`; inspect the game-specific path instead of assuming
+the standard engine task has identical behavior.
+
+`capture_summon.py` in the evidence directory reads the current ability spec,
+montage/animation instance, primary and secondary clone references and CSS
+Astral counters without invoking gameplay actions. It resolves ability instances
+again after form changes. Its initial three-second run completed against the
+recovered Stray state with no reflection errors. This is an observation tool,
+not proof of a reproduced failure or a passing regression check; polling can
+miss short-lived events.
