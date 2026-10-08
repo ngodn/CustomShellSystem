@@ -185,6 +185,15 @@ Maintain a compact status table for nine variants, repaired defects, validation 
 
 Keep source/runtime/shared-pack changes in separate contextual commits. Provide exact candidate paths, hashes, dependencies and rollback receipts. Install only completed candidates at the authorized testing point with the game state verified. Final release packaging/versioning is decided with the user; retain the established ZIP and BBCode colocation convention.
 
+The user has now specified the outfit release targets: **Eve v1.5.0**, **Unholy
+Genessa v0.3.0**, and **Commander White v0.1.0**. Deliver the coordinated
+`CSS_SharedAssets_P` and CSS runtime update alongside those outfits, in separate
+ZIPs with explicit compatible versions. The CSS runtime release target is now **v1.0.0**, as requested by the user
+for this standardization milestone. This is a release target, not a waiver of
+the remaining compatibility, performance and regression gates. The shared-pack
+version is separate and has not yet been confirmed. An installed trial is not a completed
+release: report source, installed-test and upload-ready states separately.
+
 ### Cleanup during work
 
 Clean up verified unused files, rejected candidates and redundant intermediates throughout the work, after each accepted or rejected trial and before large exports/cooks. Check available disk space before expensive generation so abandoned outputs do not accumulate until release.
