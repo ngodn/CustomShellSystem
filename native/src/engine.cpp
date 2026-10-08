@@ -428,6 +428,7 @@ void AssetLoadRoots::release() noexcept {
 static UObject* mesh_asset(UObject* component) {
     Call call(component, L"GetSkeletalMeshAsset", 1); call.run(); return call.get<UObject*>();
 }
+#include "morph_deformer.inl"
 static bool is_compatible_skeleton(UObject* before_mesh, UObject* target_mesh) {
     if (!before_mesh || !target_mesh) return false;
     auto* before_skel = read<UObject*>(before_mesh, L"Skeleton");
@@ -650,6 +651,7 @@ UObject* Appearance::player(void* engine) {
     return pawn;
 }
 void Appearance::restore_menu() {
+    menu_morph_deformer_.release();
     restore_facial_binding(facial_preview_);
     menu_overlay_controls_.release();
     restore_menu_physics();
@@ -686,6 +688,8 @@ void Appearance::sync_overlay_effects() {
 void Appearance::sync_menu() {
     auto* source=component_.Get();
     if(!source || source!=observed_component_.Get() || mesh_asset(source)!=applied_.Get()) { restore_menu(); return; }
+    world_morph_deformer_.sync(source,driven_morphs_);
+    items_.sync_deformers(driven_morphs_);
     overlay_controls_.sync();
     Call owner(source,L"GetOwner",1); owner.run();
     auto* player=owner.get<UObject*>();
@@ -1745,24 +1749,24 @@ std::vector<std::pair<std::string,WeakObject>> WornItems::components() const {
     for(const auto& worn:worn_) result.emplace_back(worn.id,worn.component);
     return result;
 }
-void WornItems::sync_morph(const std::string& morph, float weight) {
-    auto name=FName(wide(morph).c_str(),FNAME_Add);
+void WornItems::sync_morphs(const std::map<std::string, float>& driven_morphs) {
     for(auto& worn:worn_) {
         if(auto* comp=worn.component.Get()) {
             if(auto* mesh=mesh_asset(comp)) {
-                if(mesh_has_morph(mesh,morph)) {
+                for(const auto& [morph,weight]:driven_morphs) if(mesh_has_morph(mesh,morph)) {
                     Call set(comp,L"SetMorphTarget",3);
-                    set.set(L"MorphTargetName",name);
+                    set.set(L"MorphTargetName",FName(wide(morph).c_str(),FNAME_Add));
                     set.set(L"Value",weight);
                     set.set(L"bRemoveZeroWeight",false);
                     set.run();
                 }
+                worn.morph_deformer.sync(comp,driven_morphs);
             }
         }
     }
 }
-void WornItems::sync_morphs(const std::map<std::string, float>& driven_morphs) {
-    for(const auto& [morph,weight]:driven_morphs) sync_morph(morph,weight);
+void WornItems::sync_deformers(const std::map<std::string, float>& driven_morphs) {
+    for(auto& worn:worn_) worn.morph_deformer.sync(worn.component.Get(),driven_morphs);
 }
 std::set<int> WornItems::update(UObject* body,const std::string& identity,const std::vector<Item>& items) {
     std::set<int> hidden;
@@ -1803,7 +1807,7 @@ std::set<int> WornItems::update(UObject* body,const std::string& identity,const 
                 auto* component=add.get<UObject*>();
                 if(!component) throw std::runtime_error("Could not create the item component: "+entry->id);
                 // Recorded before anything else can throw, so a failure still cleans up.
-                worn_.push_back({entry->id,WeakObject(component)});
+                worn_.push_back({entry->id,WeakObject(component),{}});
                 Call asset(component,L"SetSkeletalMeshAsset",1); asset.set(L"NewMesh",mesh); asset.run();
                 // The body drives the pose, and this is set before the component is
                 // registered on purpose. Setting it afterwards with bForceUpdate
@@ -1877,6 +1881,8 @@ void Appearance::push_morphs(UObject* component) {
         set.set(L"MorphTargetName",FName(wide(morph).c_str(),FNAME_Add));
         set.set(L"Value",weight); set.set(L"bRemoveZeroWeight",false); set.run();
     }
+    if(component==menu_component_.Get()) menu_morph_deformer_.sync(component,driven_morphs_);
+    else if(component==component_.Get()) world_morph_deformer_.sync(component,driven_morphs_);
     items_.sync_morphs(driven_morphs_);
     menu_items_.sync_morphs(driven_morphs_);
     push_facial_morphs(component);
@@ -1915,6 +1921,7 @@ void Appearance::reconcile_sections() {
     }
 }
 void Appearance::clear_driven_morphs() {
+    world_morph_deformer_.release(); menu_morph_deformer_.release();
     for(auto* component:{component_.Get(),menu_component_.Get()})
         if(component) for(const auto& [morph,weight]:driven_morphs_) {
             Call set(component,L"SetMorphTarget",3);
@@ -2424,8 +2431,6 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
                 if(std::abs(readback.get<float>()-weight)>.0001f)
                     throw std::runtime_error("Shape weight read-back failed");
                 driven_morphs_[control.morph]=weight;
-                items_.sync_morph(control.morph,weight);
-                menu_items_.sync_morph(control.morph,weight);
                 for(const auto& formula:control.formulas) {
                     const double delta=double(weight*formula.multiplier);
                     auto& off=formula_offsets_[formula.target];
@@ -2580,6 +2585,9 @@ void Appearance::customize(const Outfit& outfit,const std::string& variant,const
             }
         }
         step("controls");
+        world_morph_deformer_.sync(component,driven_morphs_);
+        items_.sync_morphs(driven_morphs_);
+        menu_items_.sync_morphs(driven_morphs_);
         sync_body_geometry(component);
         step("geometry");
         if(dynamics_needs_reset) reset_dynamics(dynamics_instance_.Get());

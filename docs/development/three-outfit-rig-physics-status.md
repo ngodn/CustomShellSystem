@@ -64,6 +64,23 @@ core selector rather than silently overwriting it.
 
 ## Weighted-surface coverage
 
+### CSS binding for the cloth correction: built, not installed
+
+The runtime candidate binds body-shape weights to opted-in graph variables named
+`CSS_Morph_<morph name>` on the player, preview, worn items and Astral visuals.
+Weak instance tracking replays weights after deformer replacement; unchanged or
+unsupported variables are cached. The runtime leaves graph selection to the
+authored mesh and preserves component overrides. See the
+[binding contract](cloth-morph-deformer-binding.md).
+
+The C++23 Windows core builds without new warnings and all 24 registered host
+tests pass. Its SHA-256 is
+`54bee458fb7cb1508ee8422db59d2ad45aba0f2778d6a132fe0b29dc27a30467`.
+These checks do not establish in-game correction or performance. The isolated
+Study5 graph/BasisStudy3 mesh authoring path is being prepared with matching
+variable names and a mesh-authored default deformer. Earlier Study4 assets and
+the accepted installed build remain unchanged.
+
 ### October 8: reproduced Genessa rear-panel shape mismatch
 
 The user confirmed that the current Genessa rear panels cover correctly in the

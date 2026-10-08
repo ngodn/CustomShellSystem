@@ -125,6 +125,7 @@ struct AstralVisualGroup {
         if(astral_object(component,L"MID_Astral")!=astral_resolve(observed.native_mid) ||
            astral_object(component,L"MySkeletalMesh")!=astral_resolve(observed.mesh)) return Sync::failed;
         for(const auto& visual:visuals) if(!visual->pose_source_intact()) return Sync::rebound;
+        for(const auto& visual:visuals) visual->sync_morph_deformer();
         if(!materials.sync_opacity()) return Sync::failed;
         if(!visible && now>prepared_at) {
             if(!bindings.intact()) return Sync::failed;

@@ -13,6 +13,7 @@
 #include <deque>
 #include "data.hpp"
 #include "owned_morphs.hpp"
+#include "deformer_morph_weights.hpp"
 #include "replacements.hpp"
 #include "body_geometry.hpp"
 #include "inventory_motion.hpp"
@@ -41,6 +42,14 @@ public:
     WeakObject() = default;
     WeakObject(RC::Unreal::UObject* object);
     WeakObject& operator=(RC::Unreal::UObject* object);
+};
+class MorphDeformerBinding {
+    WeakObject component_, mesh_, instance_;
+    DeformerMorphWeights weights_;
+public:
+    void sync(RC::Unreal::UObject*,const std::map<std::string,float>&);
+    void release();
+    void forget();
 };
 // Hooks the keep-alive to the running game instance. Cheap; called with the player lookup.
 void keep_alive_attach(void* engine);
@@ -238,6 +247,8 @@ class AstralVisualMesh {
     WeakObject owner_, parent_, parent_mesh_, parent_instance_, component_, mesh_, pose_class_;
     WeakObject pose_source_, pose_source_mesh_;
     AssetLoadRoots retained_;
+    MorphDeformerBinding morph_deformer_;
+    std::map<std::string,float> morph_weights_;
     bool source_visible_=false;
     bool leader_pose_=false;
 public:
@@ -251,6 +262,7 @@ public:
     bool pose_source_intact() const;
     void show(bool enabled);
     void set_paused(bool paused,const AstralPhysicsSource& physics);
+    void sync_morph_deformer();
     bool release() noexcept;
     ~AstralVisualMesh() noexcept { release(); }
 };
@@ -586,7 +598,7 @@ public:
 // has always done, so a package published before items is a one-item package and never
 // reaches this at all.
 class WornItems {
-    struct Worn { std::string id; WeakObject component; };
+    struct Worn { std::string id; WeakObject component; MorphDeformerBinding morph_deformer; };
     WeakObject body_;
     std::vector<Worn> worn_;
     AssetLoadRoots retained_;   // the accessories' meshes and materials, alive while worn
@@ -601,8 +613,8 @@ public:
     int count() const { return int(worn_.size()); }
     std::vector<std::string> ids() const;
     std::vector<std::pair<std::string,WeakObject>> components() const;
-    void sync_morph(const std::string& morph, float weight);
     void sync_morphs(const std::map<std::string, float>& driven_morphs);
+    void sync_deformers(const std::map<std::string, float>& driven_morphs);
 };
 // Shared owner for the built-in feminine idle/walk and mod movement options.
 // The game's animation instance evaluates the selected locomotion BlendSpace.
@@ -757,6 +769,7 @@ class Appearance {
     // ClearMorphTargets is a bigger hammer than this deserves. The weights are kept
     // because the wardrobe preview is a second component that needs the same ones.
     std::map<std::string,float> driven_morphs_;
+    MorphDeformerBinding world_morph_deformer_, menu_morph_deformer_;
     struct FacialBinding {
         WeakObject component, mesh;
         OwnedMorphs weights;

@@ -221,6 +221,8 @@ void AstralVisualMesh::prepare(UObject* parent,const AstralComponentSource& sour
             get.set(L"MorphTargetName",FName(wide(name).c_str(),FNAME_Add));get.run();
             if(get.get<float>()!=weight) throw std::runtime_error("Astral visual morph read-back failed");
         }
+        morph_weights_=source.morphs;
+        sync_morph_deformer();
         if(!leader_pose_) astral_visual_physics(visual,source.physics);
         Call reset_cloth(visual,L"ForceClothNextUpdateTeleportAndReset",0);reset_cloth.run();
         Call collision_state(visual,L"GetCollisionEnabled",1);collision_state.run();
@@ -257,6 +259,7 @@ void AstralVisualMesh::set_paused(bool paused,const AstralPhysicsSource& physics
     auto* visual=component_.Get();
     astral_visual_visibility(visual,false);
     if(!paused) {
+        sync_morph_deformer();
         if(!leader_pose_) astral_visual_physics(visual,physics);
         Call reset(visual,L"ForceClothNextUpdateTeleportAndReset",0);reset.run();
     }
@@ -265,6 +268,9 @@ void AstralVisualMesh::set_paused(bool paused,const AstralPhysicsSource& physics
     Call tick(visual,L"SetComponentTickEnabled",1);tick.set(L"bEnabled",enabled);tick.run();
     Call state(visual,L"IsComponentTickEnabled",1);state.run();
     if(state.get<bool>()!=enabled) throw std::runtime_error("Astral visual pause read-back failed");
+}
+void AstralVisualMesh::sync_morph_deformer() {
+    morph_deformer_.sync(component_.Get(),morph_weights_);
 }
 bool AstralVisualMesh::release() noexcept {
     try {
@@ -280,5 +286,6 @@ bool AstralVisualMesh::release() noexcept {
     component_=WeakObject{};owner_=WeakObject{};parent_=WeakObject{};
     parent_mesh_=WeakObject{};parent_instance_=WeakObject{};mesh_=WeakObject{};pose_class_=WeakObject{};
     pose_source_=WeakObject{};pose_source_mesh_=WeakObject{};
+    morph_deformer_.forget();morph_weights_.clear();
     source_visible_=leader_pose_=false;retained_.release();return true;
 }
