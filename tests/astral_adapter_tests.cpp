@@ -1,4 +1,5 @@
 #include "astral_adapter.hpp"
+#include "astral_namespace.hpp"
 #include <algorithm>
 #include <iostream>
 #include <fstream>
@@ -12,6 +13,23 @@ using namespace css;
 
 void check(bool value,const char* message) { if(!value) throw std::runtime_error(message); }
 int main(int argc,char** argv) {
+    std::set<std::string_view> alias_roots;
+    for(const auto& [legacy,authored]:astral_root_aliases) {
+        check(alias_roots.insert(authored).second,"Ambiguous authored material root");
+        check(astral_material_root_matches(legacy,authored),"Migrated material root was not recognized");
+        check(std::count_if(astral_material_definitions.begin(),astral_material_definitions.end(),
+              [&](const auto& spec){return astral_material_root_matches(spec.root,authored);})==1,
+              "Migrated root must identify exactly one checked source graph");
+        check(!astral_material_root_matches(legacy,std::string(authored)+"_Other"),"Similar root was accepted");
+        auto another_author=std::string(authored);
+        another_author.replace(another_author.find("eins0fx"),7,"another_author");
+        check(!astral_material_root_matches(legacy,another_author),"Unverified author graph was accepted");
+    }
+    check(!is_astral_pose(std::string(authored_astral_pose)+"_Other"),"Unknown pose class was accepted");
+    check(astral_companion_namespace("/Game/CSS/SharedAssets/AstralOther/M.M",authored_astral_pose).empty(),
+          "Unrelated shared path crossed the namespace boundary");
+    check(astral_companion_namespace("/Game/CSS/SharedAssets/Astral/Materials/M.M","unknown").empty(),
+          "Unknown pose selected companion assets");
     std::set<std::string_view> roots;
     size_t checked=0;
     for(const auto& spec:astral_material_definitions) {
@@ -28,6 +46,16 @@ int main(int argc,char** argv) {
             state.switches["UseBaseColorMap"]=true;
         }
         check(astral_material_companion(spec,state)==spec.companion,"Supported source did not select its parent");
+        for(const auto companion:{spec.companion,spec.alternate}) {
+            check(astral_companion_namespace(companion,legacy_astral_pose)==companion,
+                  "Legacy pack companion changed");
+            const auto authored=astral_companion_namespace(companion,authored_astral_pose);
+            check(authored==std::string(authored_astral_root)+
+                  std::string(companion.substr(legacy_astral_root.size())),
+                  "Companion did not follow the selected pose pack");
+            check(authored.substr(authored.find_last_of('/')+1)==
+                  companion.substr(companion.find_last_of('/')+1),"Companion export name changed");
+        }
         state.two_sided=!state.two_sided;
         check(astral_material_companion(spec,state)==spec.alternate,"Instance culling override was lost");
         for(int change=0;change<5;++change) {
@@ -51,6 +79,9 @@ int main(int argc,char** argv) {
                 check(astral_material_companion(spec,state)==
                     "/Game/CSS/SharedAssets/Astral/Materials/"+name+"."+name,
                     "Masked Uber variant package and object names differ");
+                check(astral_companion_namespace(astral_material_companion(spec,state),authored_astral_pose)==
+                    std::string(authored_astral_root)+"Materials/"+name+"."+name,
+                    "Migrated masked Uber variant selected the wrong companion");
                 for(float threshold:{0.f,.1f,.3333f,.75f,1.f}) {
                     state.clip=threshold;
                     check(!astral_material_companion(spec,state).empty(),"Runtime Uber clip threshold was rejected");
@@ -87,7 +118,7 @@ int main(int argc,char** argv) {
             std::string root=material.at("chain").back().get<std::string>();
             root+="."+root.substr(root.find_last_of('/')+1);
             const auto spec=std::find_if(astral_material_definitions.begin(),astral_material_definitions.end(),
-                [&](const auto& value){return value.root==root;});
+                [&](const auto& value){return astral_material_root_matches(value.root,root);});
             check(spec!=astral_material_definitions.end(),"Readback root has no catalog entry");
             AstralMaterialState state;
             const auto& base=material.at("base");

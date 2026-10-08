@@ -114,11 +114,13 @@ void astral_inherit_material(AstralMaterialState& state,UObject* instance,Astral
 }
 }
 
-void AstralMaterialAdapters::prepare(UObject* owner,std::span<UObject* const> sources) {
+void AstralMaterialAdapters::prepare(UObject* owner,std::span<UObject* const> sources,
+                                    std::string_view pose_path) {
 #ifdef CSS_INVENTORY_DEV
     AstralTiming timing(AstralPhase::adapters);
 #endif
     if(!inputs_.empty()) throw std::runtime_error("Release prior Astral adapters first");
+    if(!is_astral_pose(pose_path)) throw std::runtime_error("Unknown Astral shared asset namespace");
     if(!owner || WeakObject(owner).Get()!=owner || sources.empty() || sources.size()>128)
         throw std::runtime_error("Invalid Astral adapter source set");
     AssetLoadRoots roots;
@@ -146,7 +148,7 @@ void AstralMaterialAdapters::prepare(UObject* owner,std::span<UObject* const> so
         if(!root->IsA(material_type)) throw std::runtime_error("Astral source has no material root");
         const auto path=narrow(root->GetPathName());
         const auto spec=std::find_if(astral_material_definitions.begin(),astral_material_definitions.end(),
-            [&](const auto& value){return value.root==path;});
+            [&](const auto& value){return astral_material_root_matches(value.root,path);});
         if(spec==astral_material_definitions.end()) throw std::runtime_error("No ghost adapter for "+path);
         const auto view=AstralStructView::object(root);
         if(view.guid()!=spec->state_id) throw std::runtime_error("Ghost adapter graph revision differs: "+path);
@@ -157,7 +159,8 @@ void AstralMaterialAdapters::prepare(UObject* owner,std::span<UObject* const> so
         for(auto it=chain.rbegin();it!=chain.rend();++it) astral_inherit_material(state,*it,spec->family);
         const auto reason=astral_material_rejection(*spec,state);
         if(!reason.empty()) throw std::runtime_error("Ghost adapter rejected "+path+": "+reason);
-        const auto companion=astral_material_companion(*spec,state);
+        const auto companion=astral_companion_namespace(astral_material_companion(*spec,state),pose_path);
+        if(companion.empty()) throw std::runtime_error("Invalid Astral companion namespace");
         AstralMaterialInput input{source,retained_load(companion),{},{},{}};
         input.textures.push_back({L"CSS_AstralNoise",retained_load(
             "/Game/Sparta/FX/Textures/Noises/BnW/T_noise_0017.T_noise_0017")});
@@ -167,7 +170,8 @@ void AstralMaterialAdapters::prepare(UObject* owner,std::span<UObject* const> so
             input.required_source_textures.push_back(L"BaseColorMap  non VT");
             if(state.blend==1) input.scalars.push_back({L"CSS_AstralClipValue",state.clip});
         } else if(spec->family==AstralMaterialFamily::authored &&
-                  (path=="/Game/CSS/EveHair/M_Hair1.M_Hair1" || path=="/Game/CSS/CommanderWhite/MaterialY/M_Hair.M_Hair")) {
+                  (spec->root=="/Game/CSS/EveHair/M_Hair1.M_Hair1" ||
+                   spec->root=="/Game/CSS/CommanderWhite/MaterialY/M_Hair.M_Hair")) {
             input.required_source_textures.push_back(L"BaseColorMap  non VT");
         } else if(spec->family==AstralMaterialFamily::refraction) {
             auto* collection=retained_load("/Game/Sparta/Lighting/Blueprints/Deprecated/MPC_LightScenario.MPC_LightScenario");

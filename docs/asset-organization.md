@@ -50,6 +50,15 @@ existing `Adapters/` and `Faces/` directories. This preserves current packs
 while new packages are authored. Namespace validation does not rename assets,
 create aliases or infer compatibility between old and new skeleton paths.
 
+Astral runtime selection now tries the author-owned shared pose first, then the
+legacy pose. Companion materials follow that selected pose's namespace, so a
+partial new pack cannot silently borrow missing materials from the old pack.
+Eight explicit outfit material-root aliases preserve the existing graph GUID,
+blend, culling and static-switch checks. These aliases do not enable arbitrary
+materials or authors. Host tests and the Windows build pass; migration and
+live-game acceptance are still pending. See `astral-runtime-namespace1` in the
+goal's work directory for the checks and candidate DLL hash.
+
 Migration must rebuild references, preserve saved catalog IDs, and verify each
 old-to-new mapping against cooked readback. Keep a tested route for old outfit
 packages. Moving a facial mesh between containers also changes its resource

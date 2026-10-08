@@ -29,6 +29,26 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 
 Next: complete Eve's rig/mesh assembly, then Commander White and the remaining runtime/catalog consumers. Genessa's 101-package private assembly and the shared skeleton pass independent cooked comparison. Eve's 273-package material group passes cooked comparison, including the hair shaders; all 2,322 texture mip payloads compare exactly through independent container readback. Final facial integration, authoring recipe updates and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
 
+## Astral runtime namespace support
+
+`astral-runtime-namespace1` records the C++23 runtime update for old and new
+Astral paths. It loads the author-owned pose when present, otherwise the legacy
+pose, and resolves all companion materials within that chosen layout. Missing
+both poses reports the shared-pack installation requirement. Missing companions
+do not trigger a mixed-pack fallback.
+
+Eight explicit material-root aliases match the namespace map. Source graph GUID,
+blend mode, culling, static-switch and required texture checks remain in place.
+Both hair aliases keep the existing albedo requirement. The pose is retained
+before collecting material pointers, so its blocking load cannot invalidate an
+already-collected raw pointer list. The development probe uses the same selection.
+
+The final Windows build exits zero and all 23 host suites pass, including
+namespace boundaries, unknown authors, all 13 material definitions and masked
+Uber alternatives. The 27 runtime shared object paths match the migration map.
+`validation.json` records the candidate hash. This DLL is not installed; live
+validation with old/new packs and Commander White's material readback remain.
+
 ## Eve material and texture migration
 
 `eve-material-namespace1` preserves the 68 cooked material instances.

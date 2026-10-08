@@ -6,13 +6,16 @@ Json EngineBridge::probe_astral_adapters(void* engine,Appearance& appearance) {
     {
         auto source=appearance.astral_source();
         if(!source) throw std::runtime_error("No settled Genessa appearance to inspect");
+        AssetLoadRoots pose_roots;
+        auto* pose=load_astral_pose();
+        astral_retain(pose_roots,pose);
         std::vector<UObject*> materials;
         for(const auto& part:source->components) for(size_t i=0;i<part.materials.size();++i) {
             materials.push_back(part.materials[i].Get());
             if(auto* overlay=part.overlays.at(i).Get()) materials.push_back(overlay);
         }
         AstralMaterialAdapters adapters;
-        adapters.prepare(source->pawn.Get(),materials);
+        adapters.prepare(source->pawn.Get(),materials,narrow(pose->GetPathName()));
         for(const auto& input:adapters.inputs()) {
             Json textures=Json::array(),scalars=Json::array();
             for(const auto& value:input.textures) textures.push_back({{"name",narrow(value.parameter)},

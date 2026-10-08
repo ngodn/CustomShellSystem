@@ -1,6 +1,7 @@
 #include <optional>
 #pragma once
 #include <string>
+#include <string_view>
 #include <functional>
 #include <algorithm>
 #include <array>
@@ -145,7 +146,8 @@ class AstralMaterialAdapters {
     std::vector<AstralMaterialInput> inputs_;
     AssetLoadRoots retained_;
 public:
-    void prepare(RC::Unreal::UObject* owner,std::span<RC::Unreal::UObject* const> sources);
+    void prepare(RC::Unreal::UObject* owner,std::span<RC::Unreal::UObject* const> sources,
+                 std::string_view pose_path);
     std::span<const AstralMaterialInput> inputs() const { return inputs_; }
     void release() noexcept { inputs_.clear(); retained_.release(); }
 };

@@ -6,6 +6,7 @@
 #include "recovery.hpp"
 #include "misc_attachment.hpp"
 #include "astral_adapter.hpp"
+#include "astral_namespace.hpp"
 #include <array>
 #include <cctype>
 #include <chrono>
@@ -302,7 +303,7 @@ WeakObject& WeakObject::operator=(UObject* object) {
 // Loaded assets by path, validated the same read-only way as find(): an asset that was garbage
 // collected fails its guard and is found or loaded again.
 static std::unordered_map<std::string, refl::OwnerGuard> s_asset_cache;
-static UObject* load(const std::string& path) {
+static UObject* load(const std::string& path,bool required=true) {
     if (auto it = s_asset_cache.find(path); it != s_asset_cache.end())
         if (auto* cached = it->second.get()) return cached;
     auto name = wide(path);
@@ -319,9 +320,17 @@ static UObject* load(const std::string& path) {
     Call loading(s_kismet, L"LoadAsset_Blocking", 2);
     loading.copy(L"Asset", convert, L"ReturnValue"); loading.run();
     auto* object = loading.get<UObject*>();
-    if (!object) throw std::runtime_error("Asset could not load: " + path);
+    if (!object) {
+        if(required) throw std::runtime_error("Asset could not load: " + path);
+        return nullptr;
+    }
     s_asset_cache[path].capture(object);
     return object;
+}
+static UObject* load_astral_pose() {
+    if(auto* pose=load(std::string(authored_astral_pose),false)) return pose;
+    if(auto* pose=load(std::string(legacy_astral_pose),false)) return pose;
+    throw std::runtime_error("CSS Astral shared assets are missing. Install CSS_SharedAssets_P or the matching legacy Astral pack.");
 }
 // UE 5.6 keeps an object alive through a root only when it is listed in the collector's
 // GRoots set, and only the engine's own AddToRoot (FUObjectItem::SetRootFlags) adds it there.

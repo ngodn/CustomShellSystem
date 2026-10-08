@@ -100,7 +100,7 @@ void AstralVisualMesh::prepare(UObject* parent,const AstralComponentSource& sour
     if(!parent || WeakObject(parent).Get()!=parent || !parent->IsA(component_type) || !mesh ||
        !mesh->IsA(static_cast<UClass*>(find(L"/Script/Engine.SkeletalMesh"))) ||
        !pose_class || WeakObject(pose_class).Get()!=pose_class ||
-       pose_class->GetPathName()!=L"/Game/CSS/SharedAssets/Astral/ABP_CopyPose.ABP_CopyPose_C" ||
+       !is_astral_pose(narrow(pose_class->GetPathName())) ||
        !pose_class->IsA(static_cast<UClass*>(find(L"/Script/Engine.AnimBlueprintGeneratedClass"))))
         throw std::runtime_error("Invalid Astral visual source or shared pose template");
     if(!is_compatible_skeleton(mesh_asset(parent),mesh))

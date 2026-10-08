@@ -190,6 +190,10 @@ struct AstralDoubles::Impl {
         source_attempted=true;
         if(astral_identity(source->pawn.Get())!=context.player)
             throw std::runtime_error("Astral source and spawner have different owners");
+        if(!pose.Get()) {
+            auto* value=load_astral_pose();
+            astral_retain(retained,value);pose=value;
+        }
         std::vector<UObject*> material_sources;
         for(const auto& part:source->components) {
             if(part.materials.size()!=part.overlays.size())
@@ -202,11 +206,7 @@ struct AstralDoubles::Impl {
                 else if(part.overlays[slot].ObjectIndex>=0) throw std::runtime_error("Astral source overlay expired");
             }
         }
-        adapters.prepare(source->pawn.Get(),material_sources);
-        if(!pose.Get()) {
-            auto* value=load("/Game/CSS/SharedAssets/Astral/ABP_CopyPose.ABP_CopyPose_C");
-            astral_retain(retained,value);pose=value;
-        }
+        adapters.prepare(source->pawn.Get(),material_sources,narrow(pose.Get()->GetPathName()));
     }
     void update(void* engine,Appearance& appearance,bool enabled,const DoublesOptions& options,uint64_t now) {
         if(!enabled || !astral_shell(appearance.shell) || (!options.faithful_css && !options.stray_css)) {
