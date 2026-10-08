@@ -4,6 +4,20 @@ Updated 2026-10-08. [Goal](three-outfit-rig-physics-goal.md) is active. The coor
 
 ## Live trial correction: facial playback and component visibility
 
+Release targets specified by the user: Eve v1.5.0, Unholy Genessa v0.3.0,
+Commander White v0.1.0, plus **CSS v1.0.0** and a separate consolidated
+shared-asset ZIP. The user chose the stable CSS milestone on October 8; this
+does not change the outstanding release gates. Inspection of the actual distribution folders finds none of these new
+outfit release versions packaged yet. The installed coordinated trial and
+accepted facial/action tests do not constitute upload-ready releases. The
+native library now has 59 newly authored candidates covering every previously
+unconverted entry. Full-batch fresh authored-key readback passes all 59 candidates; compressed
+pose comparison passes 58. Cinderella exceeds the 0.01 cm virtual-hand position
+bound at frame 7746 (0.0198305 cm). A separate 0.0001 codec trial still fails at
+0.0196853 cm; do not ship it or assume codec precision is the cause. The seven
+native idle carriers pass fresh reload and 1,092 interpolation queries. Cook,
+catalog integration, contact, performance, regression and packaging remain open.
+
 The first namespace trial loaded Genessa's new facial mesh, but the player retained
 Eve's `ABP_Eve` performance override after changing outfits. Genessa's authored
 graph is `ABP_Wings2`; its facial adapter is `ABP_Genessa`. The retained Eve graph

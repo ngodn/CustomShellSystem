@@ -1,6 +1,76 @@
 # Default human animation playback
 
-## Latest user correction: four native locomotion choices only
+## Current scope, October 8
+
+The [three-outfit rig goal](three-outfit-rig-physics-goal.md#follow-up-stage-locomotion-review-and-native-human-conversion)
+supersedes the earlier four-choice limit below. Convert the remaining 59 entries
+in the existing 63-entry library for the default game human skeleton. Preserve
+the four working gait choices, all custom-rig assets and public IDs. Missing
+native facial controls must be reported separately from body compatibility.
+Canonical new assets belong under `/Game/CSS/eins0fx/Shared/Locomotion/NativeHuman/`.
+
+The October 8 `catalog-namespace3` inventory resolves every remaining body source
+to its migrated editor asset in `migration-editor8`. The existing native
+reference and retargeting evidence below remain the starting point. New retarget,
+cook, visible-pose and gameplay results are required; asset availability alone
+is not conversion acceptance.
+
+## October 8 conversion batch
+
+`work/three-outfit-rig-physics/native-library1` now contains 59 new native
+sequence candidates, 20,059 source keys and about 412.18 seconds of motion.
+`pilot3` authored three clips and `batch1` authored the remaining 56; both
+commandlets exited successfully. All retain source key counts, sample rates
+and durations. Binding to the native skeleton and renaming into the author
+namespace preserve every authored key. Protected inputs retain their hashes.
+
+The isolated editor initially could not load `ChaosClothAsset` because the
+copied authoring module's relative library paths resolved from its new location.
+The recorded successful command supplies exact engine plugin library directories
+to this process only. No system library configuration or original binary changed.
+
+`verify1` independently reloads Seated Recline, Black Hole and Bring It On,
+compares saved authored hashes, then checks raw versus compressed local poses
+at every one of their 709 keys and 1,208 bones. All pass the existing bounds:
+position below 0.01 cm, quaternion distance below 0.001, scale below 0.00001.
+The largest observed position error is 0.0014463 cm; scale error is zero.
+These editor checks do not prove Windows cooking or visible/gameplay acceptance.
+
+The seven looping idles now have constant native carriers for CSS's existing
+idle path. `carriers4` and `carrier-readback1` pass creation/reload with all
+1,092 interpolation queries unchanged. Existing-output, missing-source,
+mismatched-skeleton, nonconstant-source and wrong-namespace inputs are rejected.
+The other 52 entries use the existing performance playback path. No new UI
+section or animation IDs are introduced.
+
+`verify2` reloads all 59 authored sequences and compares every key across 1,208
+bones through the C++ checker. The three pilot comparisons match the independent
+Python checker within double rounding, including worst frame/bone identities;
+see `compression-checker-parity.json`. All 59 saved authored snapshots match.
+58 compressed comparisons pass. Cinderella's 8,381-key candidate fails the
+position bound: 0.01983049 cm at frame 7746, `VB hand_r_relative_hand_l`.
+Its maximum quaternion distance is 0.000871955 and scale error is zero.
+
+`precision1` creates a separate C12 candidate and codec at 0.0001 error threshold,
+without changing the original C11 candidate or any authored key. Fresh
+`precision-verify1` still fails at the same virtual-hand frame (0.01968521 cm);
+the maximum quaternion error is unchanged. This does not establish compression
+quantization as the cause. Inspect long-clip evaluation time precision and raw
+versus compressed virtual-bone construction before another codec trial. Do not
+relax the acceptance bound or mark the whole batch passed. C12 remains rejected.
+
+The next packaging tool, `stage_native_library_catalog.py`, refuses to stage a
+catalog until the precision replacement passes. It is not executed successfully
+yet. Cook, catalog integration and visible/gameplay acceptance remain pending.
+
+The C++ checker and carrier helper compile with UE 5.6.1/C++20 in
+`native-compression-module1`. The first two Python carrier attempts exposed a
+read-only Skeleton setter; the successful helper clones the existing native
+constant carrier and changes only its sample sequence references. All work is
+private. Neither installed containers nor the installed CSS DLL changed.
+
+
+## Historical October 6 correction: four native locomotion choices only
 
 For appearances using the default game human skeleton, implement only
 **Eve Default Idle, Eve Walk, Eve Jog and Eve Sprint**, where technically

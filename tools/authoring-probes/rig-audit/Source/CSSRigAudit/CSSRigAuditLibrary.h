@@ -9,6 +9,14 @@ class UCSSRigAuditLibrary : public UBlueprintFunctionLibrary
     GENERATED_BODY()
 public:
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static class UBlendSpace* CloneConstantIdleCarrier(class UBlendSpace* Source,
+        class UAnimSequence* Animation, const FString& OutputPackage);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
+    static FString CompareCompressedPoses(class UAnimSequence* Source, class UAnimSequence* Compressed,
+                                         class USkeletalMesh* Mesh);
+
+    UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString SnapshotHandPostProcess(class USkeletalMesh* Mesh, class UAnimBlueprint* Blueprint,
                                           const FString& SnapshotJson, const TArray<FName>& Curves,
                                           bool bCompatibleInput);
