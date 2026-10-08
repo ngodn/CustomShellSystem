@@ -29,6 +29,22 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 
 Next: review remaining runtime consumers and prepare the coordinated candidate upgrade. Dependency and partial-upgrade handling now passes 28 native scenarios. The four migrated catalogs pass the native loader and selection audit, including facial adapter revision bindings. Private migration assemblies pass for all three outfits: Genessa's 107 packages with its new facial meshes and oral assets, Eve's 308 and Commander White's 171, each checked with the shared skeleton. Eve retains its compiled secondary graph and 22 original mesh buffers. Commander White retains both C4/E9 mesh buffers, original hair/body graphs, all 80 instances, 78 textures and two material parents. Authoring recipe updates, rig/physics work and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
 
+## Runtime texture guard after migration
+
+The runtime review found one remaining path-sensitive texture check in the
+doubles material setup. It rejected uncopied placeholder textures under the old
+shared root but did not recognize the migrated Astral root. Both layouts now
+reject those placeholders after material parameter copying. Character textures,
+other shared textures and similarly named directories remain accepted by this
+check. Material graph compatibility checks are unchanged.
+
+`astral-runtime-namespace2` records the passing Astral adapter regression test
+and Windows C++23 core build, with a hash-verified candidate DLL. This supersedes
+the core snapshot in `dependency-runtime2`; catalog and asset payloads are
+unchanged. Facial and body playback resolve their adapter paths from the checked
+catalog rather than hardcoded character directories. Live migration and
+rendering remain unverified. Nothing from this goal has been installed.
+
 ## Dependency and partial-upgrade handling
 
 `catalog-namespace3` adds the declared shared dependency to each migrated outfit.

@@ -101,7 +101,7 @@ void AstralMaterials::prepare(UObject* owner,UObject* native_mid,
             get.set(L"ParameterName",FName(name.c_str(),FNAME_Add));get.run();
             auto* texture=get.get<UObject*>();
             if(!texture || WeakObject(texture).Get()!=texture || !texture->IsA(texture_class) ||
-               texture->GetPathName().starts_with(L"/Game/CSS/SharedAssets/"))
+               astral_fallback_texture(narrow(texture->GetPathName())))
                 throw std::runtime_error("Astral source texture was not copied: "+narrow(name));
         }
         // Copy clears destination overrides. Native controls must be written afterward.

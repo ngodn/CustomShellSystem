@@ -35,6 +35,10 @@ inline bool is_astral_pose(std::string_view path) {
     return path==legacy_astral_pose || path==authored_astral_pose;
 }
 
+inline bool astral_fallback_texture(std::string_view path) {
+    return path.starts_with("/Game/CSS/SharedAssets/") || path.starts_with(authored_astral_root);
+}
+
 inline std::string astral_companion_namespace(std::string_view legacy,std::string_view pose) {
     if(!is_astral_pose(pose) || !legacy.starts_with(legacy_astral_root)) return {};
     if(pose==legacy_astral_pose) return std::string(legacy);

@@ -26,6 +26,16 @@ int main(int argc,char** argv) {
         check(!astral_material_root_matches(legacy,another_author),"Unverified author graph was accepted");
     }
     check(!is_astral_pose(std::string(authored_astral_pose)+"_Other"),"Unknown pose class was accepted");
+    for(const auto root:{legacy_astral_root,authored_astral_root})
+        check(astral_fallback_texture(std::string(root)+"Materials/T_NeutralColor.T_NeutralColor"),
+              "Uncopied Astral fallback texture was accepted as a character texture");
+    for(const auto path:{"/Game/CSS/eins0fx/EveSB/Hair/T_Color.T_Color",
+                         "/Game/CSS/eins0fx/CommanderWhite/Textures/T_BC.T_BC",
+                         "/Game/CSS/eins0fx/Shared/Textures/T_Color.T_Color",
+                         "/Game/CSS/eins0fx/Shared/AstralOther/T_Color.T_Color",
+                         "/Game/CSS/SharedAssetsOther/T_Color.T_Color",
+                         "/Game/Sparta/Characters/Textures/T_Color.T_Color"})
+        check(!astral_fallback_texture(path),"Character texture was incorrectly rejected as an Astral fallback");
     check(astral_companion_namespace("/Game/CSS/SharedAssets/AstralOther/M.M",authored_astral_pose).empty(),
           "Unrelated shared path crossed the namespace boundary");
     check(astral_companion_namespace("/Game/CSS/SharedAssets/Astral/Materials/M.M","unknown").empty(),
