@@ -26,9 +26,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('editor', 'cook', 'materials', 'shared', 'baseline', 'dotnet', 'mappings', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--asset-root', default='/Game/CSS/eins0fx/UnholyGenessa/')
+    parser.add_argument('--outfit-container', default='CSS_UnholyGenessa_eins0fx_P')
+    parser.add_argument('--preserved-rig', type=Path,
+                        help='Verified cooked blueprint relocation to preserve the released compiled graph')
+    parser.add_argument('--work-root', type=Path, default=ROOT / 'work/three-outfit-rig-physics',
+                        help='Private trial root, optionally on a disk with more free space')
     args = parser.parse_args()
     output = args.output.resolve()
-    if output.exists() or not output.is_relative_to(ROOT / 'work/three-outfit-rig-physics'):
+    work_root = args.work_root.resolve()
+    if output.exists() or output == work_root or not output.is_relative_to(work_root):
         raise ValueError('Use a new private rig workspace')
     protected = {}
 
@@ -57,6 +64,10 @@ def main():
     shared_packages = {asset_info((args.shared / 'stage' / p).read_bytes())['package']
                        for p in shared_check['payloads'] if p.endswith('.uasset')}
     expected = set(mapping.values()) - shared_packages
+    if (not args.asset_root.startswith('/Game/CSS/') or not args.asset_root.endswith('/') or
+            '..' in args.asset_root.split('/') or not expected or
+            any(not p.startswith(args.asset_root) for p in expected)):
+        raise ValueError('Expected one explicit authored outfit namespace')
     if len(expected) + len(set(mapping.values()) & shared_packages) != len(mapping):
         raise ValueError('Overlapping destination mapping')
     for row in plan['assets']:
@@ -79,6 +90,29 @@ def main():
 
     for relative, digest in material_check['payloads'].items():
         copy_payload(args.materials / 'stage' / relative, relative, digest)
+    preserved_packages = set()
+    if args.preserved_rig:
+        receipt = args.preserved_rig / 'verification.json'
+        preserved = read(receipt)
+        if not preserved['passed']:
+            raise ValueError('Preserved rig did not pass its independent comparison')
+        protect(receipt)
+        for path, digest in preserved['evidence'].items():
+            protect(Path(path), digest)
+        for relative, digest in preserved['payloads'].items():
+            relative_path = Path(relative)
+            if relative_path.is_absolute() or '..' in relative_path.parts:
+                raise ValueError('Invalid preserved payload path')
+            source = args.preserved_rig / 'stage' / relative_path
+            if relative_path.suffix == '.uasset':
+                package = asset_info(source.read_bytes())['package']
+                snapshot = next((r['snapshot'] for r in migration['assets'] if r['package'] == package), None)
+                if package not in expected or not snapshot or snapshot['class'] != 'AnimBlueprint':
+                    raise ValueError('Only selected animation blueprints may use preserved compiled data')
+                preserved_packages.add(package)
+            copy_payload(source, relative, digest)
+        if not preserved_packages or preserved_packages != set(preserved['packages']):
+            raise ValueError('Preserved blueprint inventory differs')
     cooked_packages = (args.cook / 'packages.txt').read_text().splitlines()
     if len(cooked_packages) != len(set(cooked_packages)) or not set(cooked_packages) <= set(mapping.values()):
         raise ValueError('Invalid cooked package list')
@@ -92,7 +126,7 @@ def main():
             if suffix == '.ubulk' and not file.exists():
                 continue
             protect(file)
-            if package not in shared_packages:
+            if package not in shared_packages and package not in preserved_packages:
                 copy_payload(file, Path('MortalShell2/Content') / relative.with_suffix(suffix))
     headers = {asset_info(p.read_bytes())['package'] for p in stage.rglob('*.uasset')}
     if headers != expected:
@@ -113,7 +147,7 @@ def main():
         (mount / file.name).symlink_to(file)
     baseline = read(args.baseline)
     for record in baseline['packages']:
-        if record['container'] not in {'CSS_UnholyGenessa_eins0fx_P', 'CSS_EveStellarBlade_eins0fx_P',
+        if record['container'] not in {args.outfit_container, 'CSS_EveStellarBlade_eins0fx_P',
                                        'CSS_LocomotionSharedAssets_P'}:
             continue
         for row in record['files'].values():
@@ -121,7 +155,7 @@ def main():
             protect(file, row['sha256'])
             (original_mount / file.name).symlink_to(file)
     converter.run(converter.retoc, 'to-legacy', mount, output / 'readback', '--version', 'UE5_6',
-                  '--no-parallel', '--no-shaders', '-f', '/CSS/eins0fx/UnholyGenessa/')
+                  '--no-parallel', '--no-shaders', '-f', args.asset_root.removeprefix('/Game'))
     payloads = {str(p.relative_to(stage)): sha(p) for p in stage.rglob('*') if p.is_file()}
     for relative, digest in payloads.items():
         if Path(relative).suffix != '.uasset' and sha(output / 'readback' / relative) != digest:

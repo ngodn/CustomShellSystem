@@ -41,7 +41,10 @@ The follow-up amendment explicitly adds implementation of facial-expression supp
 
 `eve-rig-editor2` passes migration and fresh reload of all 309 selected packages,
 with old staged paths absent and all 316 source inputs unchanged. Its 36 rig
-assets also pass the private Windows cook. Final assembly/readback remains.
+assets also pass the private Windows cook. `eve-rig-pack2` now passes all 309
+decoded packages and imports; its 22 meshes match original cooked buffers.
+The secondary graph uses preserved compiled data because recooking changed
+its exports. Do not replace that preservation step with an unchecked recook.
 
 Commander White's initial migration stopped before renaming because the full
 render JSON exceeded UE's 2 GB FString writer limit. All 184 inputs stayed

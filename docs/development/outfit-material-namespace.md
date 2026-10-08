@@ -1,5 +1,28 @@
 # Outfit material namespace migration
 
+## Compiled animation blueprint preservation
+
+`rewrite_material.rs` also supports explicit `animation_blueprints` requests.
+This mode accepts one animation generated class, its default object, and
+Function/ScriptStruct exports. It preserves name indices, object names and
+every export payload byte. Unsupported classes, resource tables, soft-path
+tables and inline renamed paths are rejected. Header serialization must roundtrip
+unchanged before migration and return exactly to the original through the inverse
+map. This is a bounded header rewrite, not a bytecode editor.
+
+Eve's `ABP_Secondary` requires this route: editor recompilation changes graph
+layout, generated property names and mutable data. `eve-secondary-namespace1`
+matches all seven released compiled exports after path normalization and retains
+identical bytecode. Its three Control Rig dependencies are supplied explicitly
+for readback. `eve-rig-pack2` then verifies it in the complete outfit assembly.
+
+`verify_outfit_rig_trial.py --preserved-rig` accepts a verified preservation
+receipt only for selected animation blueprints, pins its evidence and payloads,
+and still compares the final assembled packages against the released baseline.
+The optional `--work-root` places bulky private trials on another disk; it does
+not change installation paths. `header-writer-regression2` checks 68 instances,
+three textures and rejection of a material in blueprint mode.
+
 This is part of the [three-outfit goal](three-outfit-rig-physics-goal.md).
 The author namespace must preserve the released material behavior, including
 native game shader parents and every shader variant the outfit uses.

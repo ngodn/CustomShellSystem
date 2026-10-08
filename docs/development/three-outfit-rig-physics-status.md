@@ -139,14 +139,48 @@ snapshot: 39 render arrays containing 1,311,333 rows and 36 source arrays
 containing 209,281 rows match. The selected sections include cloth mappings;
 missing and duplicate slot requests still fail. Evidence is in
 `commander-rig-editor1/array-digest-probe/independent-comparison.json`.
-The migration retry explicitly selects the new snapshot format. Save/reload,
-cook and live acceptance are still pending.
+The migration retry explicitly selects the new snapshot format. Its save and
+fresh reload now pass for all 172 selected packages, with legacy paths absent
+and all 184 original inputs unchanged. `commander-rig-cook1` passes its
+12-package Windows rig cook. Independent mesh readback, material migration
+and live acceptance remain.
 
 Completed Eve reload/cook caches and the obsolete failed Eve editor cache
 were removed with receipts, preserving candidates, original inputs and logs.
 Module3's rebuildable Intermediate directory was also removed after its build
 and audit passed; source and binary hashes were checked unchanged. These
 cleanups remove reproducible work data, not outfit or release content.
+
+### Eve compiled secondary graph
+
+`eve-rig-pack1` resolves its imports and matches 308 of 309 decoded packages.
+All 22 mesh buffer comparisons also pass, including weights, cloth mappings
+and morphs. The remaining mismatch is `ABP_Secondary`: recompilation changes
+generated property identities, graph layout and the mutable-data export. This
+candidate is rejected rather than treating those differences as harmless.
+
+`eve-secondary-namespace1` preserves the released compiled blueprint. The
+header writer accepts this explicit animation-blueprint mode, preserves name
+indices and export payload bytes, rejects unsupported export classes and
+requires both unchanged and inverse header roundtrips. Independent container
+readback matches all seven original exports after path normalization. The
+three referenced Control Rigs are supplied as explicit dependencies. The first
+dependency-incomplete readback is retained separately and is not acceptance.
+
+Writer regression checks pass for 68 material instances and three textures,
+with export/bulk bytes unchanged. A material submitted as an animation blueprint
+is rejected. `eve-rig-pack2` combines the preserved blueprint with the verified
+materials and cooked rigs. Its final comparison passes all 309 packages
+(308 Eve plus the shared skeleton), with all imports resolved. All 44 mesh
+payload files from the independent 22-mesh comparison are unchanged in this
+corrected assembly; `mesh-evidence.json` records that linkage. This is private
+package acceptance, not a gameplay or clean-upgrade install check.
+
+Assembly payloads use `/mnt/eins0fxE/CSSAuthoringWork/three-outfit-rig-physics`
+because the system drive lacks space. Project work links preserve the usual
+receipt paths. Rejected pack1 stage/readback/container payloads were removed
+after retaining comparisons, hashes and source inputs. The first assembly's
+reports and mesh evidence remain; nothing has been installed.
 
 `eve-mesh-comparison1/original-decoded.json` records independently decoded
 geometry, skin weights, cloth mappings and morph buffers for all 22 skeletal

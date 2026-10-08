@@ -1,4 +1,4 @@
-//! Narrow material/texture-header relocation using the pinned Retoc serializer.
+//! Narrow cooked-header relocation using the pinned Retoc serializer.
 //! Rust 2024, Retoc d7b6350 plus the local audited conversion patches.
 use anyhow::{Context, Result, ensure};
 use retoc::legacy_asset::{EObjectDataResourceVersion, FLegacyPackageHeader, FPackageNameMap};
@@ -14,6 +14,7 @@ struct Job { input: PathBuf, output: PathBuf }
 struct Request {
     mapping: BTreeMap<String, String>, jobs: Vec<Job>, report: PathBuf,
     #[serde(default)] textures: bool,
+    #[serde(default)] animation_blueprints: bool,
 }
 
 fn read(bytes: &[u8], expected_class: &str) -> Result<FLegacyPackageHeader> {
@@ -38,14 +39,44 @@ fn read(bytes: &[u8], expected_class: &str) -> Result<FLegacyPackageHeader> {
                     resource.raw_size == resource.serial_size, "Invalid texture resource extent");
         }
     } else {
-        ensure!(header.data_resources.is_empty(), "Material resource tables unsupported");
+        ensure!(header.data_resources.is_empty(), "Non-texture resource tables unsupported");
     }
     ensure!(header.summary.soft_object_paths.count == 0, "Out-of-line soft paths unsupported");
-    ensure!(header.exports.len() == 1, "Expected a single export");
-    let export = &header.exports[0];
-    ensure!(export.class_index.is_import(), "Asset must import its class");
-    let class = &header.imports[export.class_index.to_import_index() as usize];
-    ensure!(header.name_map.get(class.object_name)? == expected_class, "Unexpected asset class");
+    if expected_class == "AnimBlueprintGeneratedClass" {
+        let mut generated_classes = Vec::new();
+        for (index, export) in header.exports.iter().enumerate() {
+            if export.class_index.is_import() {
+                let class = header.imports.get(export.class_index.to_import_index() as usize)
+                    .context("Invalid imported export class")?;
+                let name = header.name_map.get(class.object_name)?;
+                ensure!(matches!(&*name, "AnimBlueprintGeneratedClass" | "Function" | "ScriptStruct"),
+                        "Unsupported blueprint export class: {name}");
+                if name == "AnimBlueprintGeneratedClass" { generated_classes.push(index); }
+            }
+        }
+        ensure!(generated_classes.len() == 1, "Expected one animation generated class");
+        let generated = generated_classes[0];
+        let class_name = header.name_map.get(header.exports[generated].object_name)?;
+        let expected_default = format!("Default__{class_name}");
+        let mut defaults = 0;
+        for export in &header.exports {
+            if !export.class_index.is_import() {
+                ensure!(export.class_index.is_export() &&
+                        export.class_index.to_export_index() as usize == generated &&
+                        header.name_map.get(export.object_name)? == expected_default,
+                        "Unsupported blueprint local-class export");
+                defaults += 1;
+            }
+        }
+        ensure!(defaults == 1, "Expected one animation class default object");
+    } else {
+        ensure!(header.exports.len() == 1, "Expected a single export");
+        let export = &header.exports[0];
+        ensure!(export.class_index.is_import(), "Asset must import its class");
+        let class = header.imports.get(export.class_index.to_import_index() as usize)
+            .context("Invalid imported asset class")?;
+        ensure!(header.name_map.get(class.object_name)? == expected_class, "Unexpected asset class");
+    }
     // Retoc's writer accepts export offsets relative to the .uexp stream.
     let size = header.summary.versioning_info.total_header_size as i64;
     for export in &mut header.exports {
@@ -81,7 +112,10 @@ fn main() -> Result<()> {
     let args: Vec<_> = std::env::args_os().collect();
     ensure!(args.len() == 2, "Usage: rewrite_material request.json");
     let request: Request = serde_json::from_slice(&fs::read(&args[1])?)?;
-    let expected_class = if request.textures { "Texture2D" } else { "MaterialInstanceConstant" };
+    ensure!(!(request.textures && request.animation_blueprints), "Select only one asset class");
+    let expected_class = if request.textures { "Texture2D" }
+        else if request.animation_blueprints { "AnimBlueprintGeneratedClass" }
+        else { "MaterialInstanceConstant" };
     ensure!(!request.report.exists(), "Report already exists");
     let inverse: BTreeMap<_, _> = request.mapping.iter().map(|(a,b)| (b.clone(),a.clone())).collect();
     ensure!(inverse.len() == request.mapping.len(), "Relocation collision");
@@ -148,6 +182,7 @@ fn main() -> Result<()> {
         }
     }
     let report = if request.textures { json!({"passed":true,"textures":reports}) }
+                 else if request.animation_blueprints { json!({"passed":true,"animation_blueprints":reports}) }
                  else { json!({"passed":true,"materials":reports}) };
     fs::write(request.report, serde_json::to_vec_pretty(&report)?)?;
     Ok(())
