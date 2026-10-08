@@ -46,6 +46,28 @@ driver and writes separate basis captures/readbacks. The checker accepts
 and comparative exposure pixels. This study is glute-only, editor-only and
 does not implement runtime binding or packaged mesh cook dependencies.
 
+`CSS_PANEL_ALL_SHAPES=1` selects `_BasisStudy2`, `DG_ClothMorphStudy4` and its
+`MDC_ClothMorphStudy4` collection. Fifteen scalar attributes carry glute, hip,
+thigh, waist and body-tone offsets. The collection requests the graph's required
+half-edge buffers during mesh cooking. `CSS_PANEL_RUN=2` keeps render outputs
+separate from earlier attempts. `check_cloth_basis_shapes.py` checks 22 paired
+GPU cases, including cloth-disabled equivalence, without changing the game.
+
+`check_cooked_cloth_basis.py` reads AssetReadback's `--mesh-digests` output,
+the pinned mesh audit and raw section morph export. It checks all cooked exports
+after removing only the explicit added attributes/collection/half-edge data and
+the relocated empty Nanite bulk offset. Attribute values retained by the source
+render morph must match within 0.000001 cm; values omitted by its import threshold
+must remain below that recorded threshold. Mount the collection alongside the
+mesh so its reference resolves. The reader requires the documented
+[CUE4Parse vertex attribute patch](../../AssetReadback/patches/README.md).
+
+The private five-shape Windows cook succeeds with `-nothreading`. The normal
+threaded attempt crashed while building a vertex attribute buffer; a build race
+is suspected, not proven. This is an offline cooker setting, not a game option.
+Cooked buffer checks and shader compilation do not replace packaged runtime,
+animated contact, shading and performance validation.
+
 `StepClothDeformerStudy` drives an isolated preview component at 60 Hz with its
 post-process graph disabled. It accepts only current Genessa facial meshes in
 a preview world, disables automatic ticks and waits for each cloth step. It

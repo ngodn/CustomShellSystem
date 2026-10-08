@@ -191,6 +191,58 @@ attributes/half-edge buffers, then test the packaged game and doubles. Runtime
 weight binding and performance are not implemented or accepted by this study.
 The installed game build and user settings remain unchanged.
 
+### Five-shape correction and Windows cooked-data verification
+
+`DG_ClothMorphStudy4` extends the independent input to glutes, hips, thighs,
+waist and body tone. Both `_BasisStudy2` mesh copies contain 15 float vertex
+attributes and declare `MDC_ClothMorphStudy4` for the graph's build requirements.
+Source and fresh-reload checks in `basis-study3` preserve all 137 morphs,
+26 sections, bind data and full clothing assets. The private editor helper
+build15 succeeds. Original inputs remain unchanged.
+
+`result-shapes2-readback.json` contains 88 captures and 44 GPU readbacks.
+`gpu-shapes2-comparison.json` passes all 22 stock/trial pairs: neutral, five
+individual shapes, half/full combinations, and three cloth-disabled cases per
+variant. Maximum offset residual is 0.02251134 cm across separate cloth runs;
+non-cloth positions remain identical. This is reference-pose shape-input
+evidence, not moving collision acceptance. The first render attempt failed
+because a test-driver property setter reinitialized the preview component;
+the helper now sets the cloth flag directly after initialization.
+
+Windows `genessa-deformer-cook2` crashed in the skeletal vertex attribute build.
+Its stack and exact engine source suggest a concurrent build race, but that
+cause is not proven. `genessa-deformer-cook3` uses the same asset inputs with
+`-nothreading` and completes with exit 0, zero cook errors and unchanged input
+hashes. This setting affects the offline cooker only. Both graph kernels
+compile for SM5 and SM6.
+
+`genessa-deformer-pack2` packages the two original meshes, two candidate meshes,
+graph and collection. All six export payloads roundtrip unchanged. Independent
+readback verifies 15 attributes of 162,939 float values each and the required
+162,939 vertex/692,844 edge normal-reconstruction data per candidate. All source
+render-morph entries match their attribute values within 0.000001 cm; additional
+small source offsets remain below the mesh's recorded 0.015 cm morph threshold.
+After allowing only these additions, the collection reference and relocation
+of empty Nanite bulk metadata, all 152 exports per variant match the original.
+The missing-attribute negative control is rejected. Graph readback verifies
+five zero-default weights, 15 named inputs and both kernel sources. It does
+not decode or execute the compiled compute shader maps.
+
+The CUE4Parse attribute reader previously read only the stride and left the bulk
+payload unread. A pinned local patch now consumes and bounds-checks that data.
+Its alignment fixture fails before the patch and passes afterward; nine malformed
+or truncated inputs are rejected. See `tools/AssetReadback/patches/README.md`.
+
+No candidate is installed. Animated garment motion/contact, material normals,
+body-rig synchronization, game runtime weight binding, preview/world/doubles
+lifecycle and measured performance remain required before acceptance.
+
+`cleanup-cloth-cook3.json` records removal of both terminal cooks' disposable
+Wine prefixes and the superseded provisional readback. Successful cooked assets,
+source inputs, logs, crash evidence and final readback remain. The removed files
+total 2,370,243,733 logical bytes; observed free space increased by 399,605,760
+bytes because shared/reflinked storage is not the same as logical file size.
+
 All 18 normal/facial meshes now have per-section nonzero bone influence records.
 The 570-section check passes normalization, indices and source immutability;
 an independent W3 full-array comparison matches all 25 sections. All nine

@@ -2,8 +2,11 @@ import unreal,json,os,hashlib,time
 from pathlib import Path
 p=Path(os.environ['CSS_PANEL_STAGE'])
 readback=os.environ.get('CSS_PANEL_READBACK')=='1'
-basis=os.environ.get('CSS_PANEL_BASIS')=='1'
-suffix=('-basis' if basis else '')+('-readback' if readback else '')
+all_shapes=os.environ.get('CSS_PANEL_ALL_SHAPES')=='1'
+basis=all_shapes or os.environ.get('CSS_PANEL_BASIS')=='1'
+run=os.environ.get('CSS_PANEL_RUN','')
+assert not run or run.isdecimal()
+suffix=('-shapes'+run if all_shapes else '-basis' if basis else '')+('-readback' if readback else '')
 out=p/('captures'+suffix)
 out.mkdir(exist_ok=True)
 assert not any(out.iterdir()),f'Refusing to overwrite captures: {out}'
@@ -39,15 +42,27 @@ settings.set_editor_property('override_auto_exposure_apply_physical_camera_expos
 cap.set_editor_property('post_process_settings',settings)
 target=unreal.RenderingLibrary.create_render_target2d(world,512,512,unreal.TextureRenderTargetFormat.RTF_RGBA8,unreal.LinearColor(0,0,0,1))
 cap.set_editor_property('texture_target',target)
-trial=unreal.load_asset('/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphStudy'+('3' if basis else '1'));assert trial
+trial=unreal.load_asset('/Game/CSS/eins0fx/Shared/Deformers/DG_ClothMorphStudy'+('4' if all_shapes else '3' if basis else '1'));assert trial
 baseline=unreal.load_asset('/DeformerGraph/Deformers/DG_LinearBlendSkin_Morph_Cloth_RecomputeNormals');assert baseline
+shapes=['PBMGlutesSize','PBMHipSize','PBMThighsTone','PBMWaistWidth','FBMBodyTone']
+cases=[dict(name=str(int(x)),weights={'PBMGlutesSize':x},cloth=True) for x in [0.,1.]]
+if all_shapes:
+ cases=[dict(name='neutral',weights={},cloth=True)]
+ cases += [dict(name=n,weights={m:1.},cloth=True) for n,m in zip(['glute','hip','thigh','waist','tone'],shapes)]
+ cases += [dict(name='all-half',weights=dict.fromkeys(shapes,.5),cloth=True),
+           dict(name='all-max',weights=dict.fromkeys(shapes,1.),cloth=True),
+           dict(name='glute-disabled',weights={'PBMGlutesSize':1.},cloth=False),
+           dict(name='all-disabled',weights=dict.fromkeys(shapes,1.),cloth=False),
+           dict(name='neutral-disabled',weights={},cloth=False)]
+modes=[('stock',baseline),('trial',trial)] if all_shapes else [('legacy',None),('stock',baseline),('trial',trial)]
 rows=[]
 try:
  for variant in ['Eve','Genessa']:
-  mesh=unreal.load_asset('/Game/CSS/eins0fx/UnholyGenessa/Faces/SK_'+variant+'W3_Face'+('_BasisStudy1' if basis else ''));assert mesh
+  mesh=unreal.load_asset('/Game/CSS/eins0fx/UnholyGenessa/Faces/SK_'+variant+'W3_Face'+('_BasisStudy2' if all_shapes else '_BasisStudy1' if basis else ''));assert mesh
   slots=list(mesh.get_editor_property('materials'))
-  for size in [0.,1.]:
-   for mode,graph in [('legacy',None),('stock',baseline),('trial',trial)]:
+  for case in cases:
+   size=case['weights'].get('PBMGlutesSize',0.)
+   for mode,graph in modes:
     actor=unreal.UGMotionLibrary.spawn_preview_actor(unreal.SkeletalMeshActor)
     comp=actor.get_component_by_class(unreal.SkeletalMeshComponent)
     comp.set_skeletal_mesh_asset(mesh);comp.set_forced_lod(1)
@@ -58,32 +73,33 @@ try:
      comp.show_material_section(i,-1,name in ['UG_Skirt','UG_Skin2'],0)
     comp.set_editor_property('material_slots_overlay_material',[None]*len(slots))
     for frame in range(91):
-     comp.set_morph_target('PBMGlutesSize',size,False)
-     state=unreal.CSSRigAuditLibrary.step_cloth_deformer_study(comp,frame==0,frame==0)
-     assert abs(comp.get_morph_target('PBMGlutesSize')-size)<1e-6
+     for morph in shapes:comp.set_morph_target(morph,case['weights'].get(morph,0.),False)
+     state=unreal.CSSRigAuditLibrary.step_cloth_deformer_study(comp,frame==0,frame==0,not case['cloth'])
+     assert all(abs(comp.get_morph_target(m)-case['weights'].get(m,0.))<1e-6 for m in shapes)
      if frame==0:assert json.loads(unreal.UGMaterialLibrary.finish_materials([body,cloth]))['passed']
      if state.startswith('ERROR:'):raise RuntimeError(state)
     state=json.loads(state)
     assert state['simulation_cloths']>0 and state['particles']>0,state
+    assert state['cloth_disabled'] == (not case['cloth']),state
     if graph:assert graph.get_name()+'_Instance_' in state['deformer_instance'],state
     cap.show_only_actor_components(actor)
     geometry=None
     if readback and graph:
-     label=('Basis-' if basis else '')+f'{variant}-{size:g}-{mode}'
+     label=('Shapes'+run+'-' if all_shapes else 'Basis-' if basis else '')+f"{variant}-{case['name']}-{mode}"
      geometry=Path(unreal.Paths.project_saved_dir())/'DeformerReadback'/f'{label}.json'
      assert unreal.CSSRigAuditLibrary.request_cloth_deformer_readback(comp,label),label
      # The request is queued until the component sends fresh render data.
-     updated=unreal.CSSRigAuditLibrary.step_cloth_deformer_study(comp,False,False)
+     updated=unreal.CSSRigAuditLibrary.step_cloth_deformer_study(comp,False,False,not case['cloth'])
      if updated.startswith('ERROR:'):raise RuntimeError(updated)
     for view,position in [('back',(-40,-300,100)),('side',(300,0,100))]:
      loc=unreal.Vector(*position)
      camera.set_actor_location_and_rotation(loc,unreal.MathLibrary.find_look_at_rotation(loc,unreal.Vector(0,0,95)),False,True)
      for _ in range(8):
       unreal.UGMotionLibrary.refresh_preview_rendering();cap.capture_scene();unreal.UGMaterialLibrary.flush_rendering()
-     name=f'{variant}-{size:g}-{mode}-{view}.png'
+     name=f"{variant}-{case['name']}-{mode}-{view}.png"
      unreal.RenderingLibrary.export_render_target(world,target,str(out),name)
      assert (out/name).is_file()
-     rows.append(dict(variant=variant,glute=size,mode=mode,view=view,image=name,state=state))
+     rows.append(dict(variant=variant,case=case,glute=size,mode=mode,view=view,image=name,state=state))
     if geometry:
      deadline=time.monotonic()+30
      while not geometry.is_file() and time.monotonic()<deadline:

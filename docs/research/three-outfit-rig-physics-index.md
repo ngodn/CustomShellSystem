@@ -71,9 +71,17 @@ The independent-basis follow-up now has a positive GPU result.
 size-1 position change outside the skirt. It uses scalar vertex attributes
 and the engine's per-section cloth/morph permutations; it does not split the
 329 shared source vertices. Fresh reload checks preserve the existing rig,
-all morphs, render data and cloth. The private meshes/graph are not cooked for
-Windows or installed. Other morph controls, animated/full-physics behavior,
-mesh cook dependencies, runtime integration and performance remain open.
+all morphs, render data and cloth. The five-shape follow-up `DG_ClothMorphStudy4`
+passes 22 paired GPU cases, including cloth-disabled comparisons, and the
+single-threaded Windows cook `genessa-deformer-cook3`. Its 15 scalar attributes
+and normal-reconstruction half-edge buffers survive cooking and IoStore
+roundtrip. `genessa-deformer-pack2/mesh-verification.json` checks all 152 exports
+per mesh against the original, allowing only those intentional additions and
+the empty Nanite bulk offset. All 137 morphs and original cloth data match.
+The threaded cook2 crashed building a vertex attribute buffer; a cook-time race
+is suspected, not proven. Do not retry that path without new evidence.
+The private assets are not installed. Animated/full-physics behavior, shading,
+runtime integration and performance remain open.
 Do not repeat the rejected direct-morph-input trial or claim the entire
 rear-panel repair is complete from the reference-pose result.
 

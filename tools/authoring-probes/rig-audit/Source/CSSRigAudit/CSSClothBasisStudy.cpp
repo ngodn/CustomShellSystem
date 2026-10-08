@@ -1,4 +1,6 @@
+#include "CSSClothBasisStudy.h"
 #include "CSSRigAuditLibrary.h"
+#include "Animation/MeshDeformerCollection.h"
 #include "Animation/SkeletalMeshVertexAttribute.h"
 #include "Engine/SkeletalMesh.h"
 #include "IOptimusNodeAdderPinProvider.h"
@@ -16,7 +18,8 @@
 #include "UObject/Package.h"
 #include "UObject/UnrealType.h"
 
-USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Source, const FString& OutputPackage)
+USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Source, const FString& OutputPackage,
+    bool bAllShapes, UMeshDeformerCollection* DeformerCollection)
 {
     const auto Fail = [](const TCHAR* Reason) -> USkeletalMesh*
     {
@@ -26,7 +29,9 @@ USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Sour
     if (!IsRunningCommandlet() || !IsInGameThread() || !Source ||
         !Source->GetPathName().StartsWith(TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/")) ||
         !OutputPackage.StartsWith(TEXT("/Game/CSS/eins0fx/UnholyGenessa/Faces/")) ||
-        !OutputPackage.EndsWith(TEXT("_BasisStudy1")) ||
+        !OutputPackage.EndsWith(bAllShapes ? TEXT("_BasisStudy2") : TEXT("_BasisStudy1")) ||
+        (bAllShapes && (!DeformerCollection || !DeformerCollection->GetPathName().StartsWith(
+            TEXT("/Game/CSS/eins0fx/Shared/Deformers/MDC_ClothMorphStudy4.")))) ||
         !FPackageName::IsValidLongPackageName(OutputPackage) ||
         FindPackage(nullptr, *OutputPackage) || FPackageName::DoesPackageExist(OutputPackage))
         return Fail(TEXT("invalid commandlet source or private destination"));
@@ -75,32 +80,41 @@ USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Sour
             *SkirtSlot.ToString(), Skirt.Num(), Skirt.Intersect(Other).Num());
         return Fail(TEXT("missing skirt vertices"));
     }
-    for (int32 Axis = 0; Axis != 3; ++Axis)
+    const int32 ShapeCount = bAllShapes ? UE_ARRAY_COUNT(CSSClothBasisStudy::Shapes) : 1;
+    TArray<FName> AttributeNames;
+    for (int32 ShapeIndex = 0; ShapeIndex != ShapeCount; ++ShapeIndex)
     {
-        const FName Name(*FString::Printf(TEXT("CSS_ClothGlute%c"), TEXT('X') + Axis));
-        if (Description->VertexAttributes().HasAttribute(Name)) return Fail(TEXT("basis already exists"));
-        auto Values = Description->VertexAttributes().RegisterAttribute<float>(Name, 1, 0.f, EMeshAttributeFlags::Lerpable);
-        for (const auto Vertex : Skirt)
+        const auto& Shape = CSSClothBasisStudy::Shapes[ShapeIndex];
+        const auto ShapeMorph = Attributes.GetVertexMorphPositionDelta(Shape.Morph);
+        if (!ShapeMorph.IsValid()) return Fail(TEXT("missing shape morph"));
+        for (int32 Axis = 0; Axis != 3; ++Axis)
         {
-            if (Morph[Vertex].ContainsNaN()) return Fail(TEXT("nonfinite morph delta"));
-            Values[Vertex] = Morph[Vertex][Axis];
+            const FName Name(*FString::Printf(TEXT("%s%c"), Shape.Attribute, TEXT('X') + Axis));
+            if (Description->VertexAttributes().HasAttribute(Name)) return Fail(TEXT("basis already exists"));
+            auto Values = Description->VertexAttributes().RegisterAttribute<float>(Name, 1, 0.f, EMeshAttributeFlags::Lerpable);
+            for (const auto Vertex : Skirt)
+            {
+                if (ShapeMorph[Vertex].ContainsNaN()) return Fail(TEXT("nonfinite morph delta"));
+                Values[Vertex] = ShapeMorph[Vertex][Axis];
+            }
+            AttributeNames.Add(Name);
         }
     }
     Mesh->CommitMeshDescription(0);
     for (auto& Info : Mesh->GetLODInfo(0)->VertexAttributes)
-        if (Info.Name.ToString().StartsWith(TEXT("CSS_ClothGlute")))
+        if (AttributeNames.Contains(Info.Name))
         {
             Info.EnabledForRender.Default = true;
             Info.DataType = ESkeletalMeshVertexAttributeDataType::Float;
         }
+    if (DeformerCollection) Mesh->SetTargetMeshDeformers(DeformerCollection);
     Mesh->Build();
     USkinnedAsset* Assets[]{Mesh};
     FSkinnedAssetCompilingManager::Get().FinishCompilation(Assets);
     const auto* Render = Mesh->GetResourceForRendering();
     if (!Render || Render->LODRenderData.Num() != 1) return Fail(TEXT("missing built render data"));
-    for (int32 Axis = 0; Axis != 3; ++Axis)
+    for (const FName Name : AttributeNames)
     {
-        const FName Name(*FString::Printf(TEXT("CSS_ClothGlute%c"), TEXT('X') + Axis));
         if (!Render->LODRenderData[0].VertexAttributeBuffers.GetAttributeBuffer(Name))
             return Fail(TEXT("basis missing from built render buffers"));
     }
@@ -108,7 +122,7 @@ USkeletalMesh* UCSSRigAuditLibrary::CloneClothBasisMeshStudy(USkeletalMesh* Sour
     return Mesh;
 }
 
-UObject* UCSSRigAuditLibrary::CloneClothBasisGraphStudy(UObject* Source, const FString& OutputPackage)
+UObject* UCSSRigAuditLibrary::CloneClothBasisGraphStudy(UObject* Source, const FString& OutputPackage, bool bAllShapes)
 {
     auto* Copy = Cast<UOptimusDeformer>(CloneClothMorphStudy(Source, OutputPackage));
     if (!Copy) return nullptr;
@@ -146,31 +160,40 @@ UObject* UCSSRigAuditLibrary::CloneClothBasisGraphStudy(UObject* Source, const F
                     }
                 return false;
             };
-            for (int32 Axis = 0; Axis != 3; ++Axis)
+            const int32 ShapeCount = bAllShapes ? UE_ARRAY_COUNT(CSSClothBasisStudy::Shapes) : 1;
+            FString BasisCode;
+            for (int32 ShapeIndex = 0; ShapeIndex != ShapeCount; ++ShapeIndex)
             {
-                auto* Node = Graph->AddDataInterfaceNode(InterfaceClass, FVector2D(-900, Axis * 200));
-                if (!Node || Node->GetPins().IsEmpty() || !Graph->AddLink(ComponentOutput, Node->GetPins()[0]))
-                    return Fail(TEXT("cannot bind vertex attribute component"));
-                const FString AttributeName = FString::Printf(TEXT("CSS_ClothGlute%c"), TEXT('X') + Axis);
-                const auto* DataProperty = FindFProperty<FObjectPropertyBase>(Node->GetClass(), TEXT("DataInterfaceData"));
-                auto* Data = DataProperty ? DataProperty->GetObjectPropertyValue_InContainer(Node) : nullptr;
-                const auto* NameProperty = Data ? FindFProperty<FNameProperty>(Data->GetClass(), TEXT("AttributeName")) : nullptr;
-                if (!NameProperty) return Fail(TEXT("vertex attribute metadata unavailable"));
-                NameProperty->SetPropertyValue_InContainer(Data, *AttributeName);
-                if (NameProperty->GetPropertyValue_InContainer(Data) != FName(*AttributeName) ||
-                    !Connect(Node->FindPin(TEXT("Value")), *FString::Printf(TEXT("Basis%c"), TEXT('X') + Axis)))
-                    return Fail(TEXT("cannot bind vertex attribute value"));
+                const auto& Shape = CSSClothBasisStudy::Shapes[ShapeIndex];
+                const FString PinPrefix = bAllShapes ? FString::Printf(TEXT("Basis%d"), ShapeIndex) : TEXT("Basis");
+                for (int32 Axis = 0; Axis != 3; ++Axis)
+                {
+                    auto* Node = Graph->AddDataInterfaceNode(InterfaceClass, FVector2D(-900, (ShapeIndex * 4 + Axis) * 200));
+                    if (!Node || Node->GetPins().IsEmpty() || !Graph->AddLink(ComponentOutput, Node->GetPins()[0]))
+                        return Fail(TEXT("cannot bind vertex attribute component"));
+                    const FString AttributeName = FString::Printf(TEXT("%s%c"), Shape.Attribute, TEXT('X') + Axis);
+                    const auto* DataProperty = FindFProperty<FObjectPropertyBase>(Node->GetClass(), TEXT("DataInterfaceData"));
+                    auto* Data = DataProperty ? DataProperty->GetObjectPropertyValue_InContainer(Node) : nullptr;
+                    const auto* NameProperty = Data ? FindFProperty<FNameProperty>(Data->GetClass(), TEXT("AttributeName")) : nullptr;
+                    if (!NameProperty) return Fail(TEXT("vertex attribute metadata unavailable"));
+                    NameProperty->SetPropertyValue_InContainer(Data, *AttributeName);
+                    if (NameProperty->GetPropertyValue_InContainer(Data) != FName(*AttributeName) ||
+                        !Connect(Node->FindPin(TEXT("Value")), *FString::Printf(TEXT("%s%c"), *PinPrefix, TEXT('X') + Axis)))
+                        return Fail(TEXT("cannot bind vertex attribute value"));
+                }
+                const FName WeightName(*FString(Shape.Attribute).Append(TEXT("Weight")));
+                auto* Variable = Copy->AddVariable(FOptimusDataTypeRegistry::Get().FindType(*FDoubleProperty::StaticClass()), WeightName);
+                auto* ValueNode = Variable ? Graph->AddVariableGetNode(Variable, FVector2D(-900, (ShapeIndex * 4 + 3) * 200)) : nullptr;
+                if (!ValueNode || ValueNode->GetPins().Num() != 1 ||
+                    !Connect(ValueNode->GetPins()[0], *FString(PinPrefix).Append(TEXT("Weight"))))
+                    return Fail(TEXT("cannot bind instance weight"));
+                BasisCode += FString::Printf(TEXT("MorphDelta += Read%sWeight() * float3(Read%sX(Index), Read%sY(Index), Read%sZ(Index));\n"),
+                    *PinPrefix, *PinPrefix, *PinPrefix, *PinPrefix);
             }
-            auto* Variable = Copy->AddVariable(FOptimusDataTypeRegistry::Get().FindType(*FDoubleProperty::StaticClass()), TEXT("CSS_ClothGluteWeight"));
-            auto* ValueNode = Variable ? Graph->AddVariableGetNode(Variable, FVector2D(-900, 600)) : nullptr;
-            if (!ValueNode || ValueNode->GetPins().Num() != 1 || !Connect(ValueNode->GetPins()[0], TEXT("BasisWeight")))
-                return Fail(TEXT("cannot bind instance weight"));
             FString Text = Shader->GetShaderText();
-            if (Text.ReplaceInline(TEXT("float3 MorphDelta = ReadMorphDelta(Index);"),
-                TEXT("float3 MorphDelta = ReadMorphDelta(Index);\n"
-                     "#if ENABLE_DEFORMER_CLOTH && !ENABLE_DEFORMER_MORPHTARGET\n"
-                     "MorphDelta += ReadBasisWeight() * float3(ReadBasisX(Index), ReadBasisY(Index), ReadBasisZ(Index));\n"
-                     "#endif\n"), ESearchCase::CaseSensitive) != 1)
+            const FString Replacement = TEXT("float3 MorphDelta = ReadMorphDelta(Index);\n")
+                TEXT("#if ENABLE_DEFORMER_CLOTH && !ENABLE_DEFORMER_MORPHTARGET\n") + BasisCode + TEXT("#endif\n");
+            if (Text.ReplaceInline(TEXT("float3 MorphDelta = ReadMorphDelta(Index);"), *Replacement, ESearchCase::CaseSensitive) != 1)
                 return Fail(TEXT("position kernel guard failed"));
             Shader->SetShaderText(Text);
             ++Edited;

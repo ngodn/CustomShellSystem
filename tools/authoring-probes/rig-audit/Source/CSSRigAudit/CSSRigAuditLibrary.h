@@ -15,7 +15,8 @@ public:
     static class UObject* CloneClothMorphStudy(class UObject* Source, const FString& OutputPackage);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
-    static FString StepClothDeformerStudy(class USkeletalMeshComponent* Component, bool Initialize, bool ResetCloth);
+    static FString StepClothDeformerStudy(class USkeletalMeshComponent* Component, bool Initialize, bool ResetCloth,
+        bool DisableCloth = false);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static bool RequestClothDeformerReadback(class USkeletalMeshComponent* Component, const FString& Label);
@@ -24,10 +25,11 @@ public:
     static bool SetClothStudyDeformer(class USkeletalMeshComponent* Component, class UMeshDeformer* Deformer);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
-    static class USkeletalMesh* CloneClothBasisMeshStudy(class USkeletalMesh* Source, const FString& OutputPackage);
+    static class USkeletalMesh* CloneClothBasisMeshStudy(class USkeletalMesh* Source, const FString& OutputPackage,
+        bool bAllShapes = false, class UMeshDeformerCollection* DeformerCollection = nullptr);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
-    static class UObject* CloneClothBasisGraphStudy(class UObject* Source, const FString& OutputPackage);
+    static class UObject* CloneClothBasisGraphStudy(class UObject* Source, const FString& OutputPackage, bool bAllShapes = false);
 
     UFUNCTION(BlueprintCallable, Category="CSS|Authoring")
     static FString ExportRawPoseKeys(class UAnimSequence* Sequence, const FString& OutputFile,

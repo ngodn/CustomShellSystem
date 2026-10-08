@@ -1,4 +1,5 @@
 #include "CSSRigAuditLibrary.h"
+#include "CSSClothBasisStudy.h"
 #include "Animation/MeshDeformer.h"
 #include "Animation/MeshDeformerInstance.h"
 #include "AssetCompilingManager.h"
@@ -80,7 +81,7 @@ bool UCSSRigAuditLibrary::RequestClothDeformerReadback(USkeletalMeshComponent* C
 }
 
 FString UCSSRigAuditLibrary::StepClothDeformerStudy(USkeletalMeshComponent* Component,
-    bool Initialize, bool ResetCloth)
+    bool Initialize, bool ResetCloth, bool DisableCloth)
 {
     if (!IsRunningCommandlet() || !IsInGameThread() || !Component ||
         !Component->GetWorld() || !Component->GetWorld()->IsPreviewWorld() ||
@@ -108,6 +109,7 @@ FString UCSSRigAuditLibrary::StepClothDeformerStudy(USkeletalMeshComponent* Comp
     }
     if (Component->IsComponentTickEnabled() || Component->ClothTickFunction.IsTickFunctionEnabled() ||
         !Component->GetClothingSimulation()) return TEXT("ERROR: preview simulation not initialized");
+    Component->bDisableClothSimulation = DisableCloth;
 
     auto* World = Component->GetWorld();
     constexpr float Step = 1.f / 60.f;
@@ -121,6 +123,13 @@ FString UCSSRigAuditLibrary::StepClothDeformerStudy(USkeletalMeshComponent* Comp
     {
         if (!Deformer->SetFloatVariable(TEXT("CSS_ClothGluteWeight"), Component->GetMorphTarget(TEXT("PBMGlutesSize"))))
             return TEXT("ERROR: basis study weight unavailable");
+    }
+    if (auto* Deformer = Cast<UOptimusDeformerInstance>(Component->GetMeshDeformerInstance());
+        Deformer && Deformer->GetName().StartsWith(TEXT("DG_ClothMorphStudy4_Instance_")))
+    {
+        for (const auto& Shape : CSSClothBasisStudy::Shapes)
+            if (!Deformer->SetFloatVariable(*FString(Shape.Attribute).Append(TEXT("Weight")), Component->GetMorphTarget(Shape.Morph)))
+                return TEXT("ERROR: shape basis study weight unavailable");
     }
     Component->RefreshBoneTransforms();
     if (ResetCloth) Component->ForceClothNextUpdateTeleportAndReset();
