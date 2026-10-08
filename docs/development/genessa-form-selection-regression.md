@@ -42,7 +42,20 @@ at the final selector change. The selected core is
 `css_core-form-selection-48690559fd075516.dll`. Installed readback matches the
 staged hash. Protected settings/loader hashes and outfit package file metadata
 remain unchanged. `installed.json` and `preinstall/core.json` retain the receipt
-and previous selector. In-game confirmation is pending.
+and previous selector.
+
+After relaunch the user confirmed both requested checks work: the first
+Faithful-to-Stray summon produces doubles and Customize retains its controls.
+`user-acceptance.json`, `accepted-status.json`, `accepted-loader.json` and
+`accepted-CSS.log` record the tested build and appearance. The read-only capture
+observes the first logged Stray transition followed by an active Stray ability,
+a non-null primary clone and CSS preparing a custom Astral visual. The capture
+then exited normally and left no background polling process.
+
+This passes the reported test sequence on this build. The original failed
+summon's cause remains unproven; do not claim a notify or spawn repair was
+implemented. Retain that distinction if the failure recurs or other forms,
+outfits and lifecycle transitions behave differently.
 
 The cooked `GA_AstralClones_Action` routes the `Activate` montage notify to
 `SpawnPrimaryClone`. The animation task uses

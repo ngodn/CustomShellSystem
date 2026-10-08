@@ -10,12 +10,14 @@ facial consumers read the independent, stale Stray selection. Commit `b1e1cbe`
 uses the existing mirrored-selection resolver consistently. All 24 host suites,
 153 animation checks and the Windows build pass. The core
 `css_core-form-selection-48690559fd075516.dll` is installed and hash-verified;
-packages and saved settings were preserved. Live confirmation is pending.
+packages and saved settings were preserved. After relaunch, the user confirmed
+the first Faithful-to-Stray summon works and all Customize controls remain.
 
-The separate first Stray summon failure remains undiagnosed: the user sees the
-summon animation but no doubles, and a Faithful/Stray round trip restores it.
-A read-only ability/montage/clone capture is prepared. Do not claim that the
-selection fix also fixes summoning. See
+The separately reported first Stray summon failure did not recur in that test.
+Read-only capture confirms an active Stray ability, primary clone and CSS
+Astral visual after the first logged transition. Its original cause remains
+unproven; no speculative notify/spawn repair was added. The capture stopped
+normally. See
 [the investigation](genessa-form-selection-regression.md).
 
 ## Live trial correction: facial playback and component visibility
