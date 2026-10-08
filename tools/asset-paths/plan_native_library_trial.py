@@ -8,9 +8,9 @@ from install_namespace_trial import (
 )
 
 
-def plan():
+def plan(idle_carriers=False):
     work = ROOT / 'work/three-outfit-rig-physics'
-    candidate = work / 'shared-cloth-native1'
+    candidate = work / ('shared-cloth-native2' if idle_carriers else 'shared-cloth-native1')
     packages_receipt = work / 'genessa-cloth-assembly1/installed.json'
     core_receipt = work / 'genessa-form-first-stray1/installed.json'
     accepted = work / 'genessa-form-first-stray1/user-acceptance.json'
@@ -23,13 +23,15 @@ def plan():
     verified, host, imports = (read(p) for p in evidence_paths[3:])
     if not all(r.get('passed') is True for r in (verified, host, imports)):
         raise ValueError('Shared candidate verification did not pass')
-    if (verified['packages'], verified['native_entries'], verified['added_cloth_packages']) != (217, 63, 2):
+    if (verified['packages'], verified['native_entries'], verified['added_cloth_packages']) != (269 if idle_carriers else 217, 63, 2):
         raise ValueError('Unexpected shared animation/cloth inventory')
-    if len(imports['packages']) != 803 or imports['failures']:
+    if len(imports['packages']) != (855 if idle_carriers else 803) or imports['failures']:
         raise ValueError('Combined dependency verification is incomplete')
     expected = {'native-combined': '416 animation library checks passed',
                 'native-alone': '416 animation library checks passed',
                 'outfit-regression': '1380 animation library checks passed'}
+    if idle_carriers:
+        expected = {k: v.replace('416', '422').replace('1380', '1386') for k, v in expected.items()}
     if {r['name']: r['output'].strip() for r in host['cases'] if r['exit_code'] == 0} != expected:
         raise ValueError('Catalog checks are incomplete')
     for case in host['cases']:
@@ -45,6 +47,26 @@ def plan():
     ue4ss = runtime.parents[1] / 'UE4SS.dll'
     check({str(core): core_base['dll_sha256'], str(ue4ss): EXPECTED_UE4SS})
     baseline = package_base['package_files'] | package_base['retained_packages']
+    core_source, core_sha, new_selector = core, core_base['dll_sha256'], selector.copy()
+    if idle_carriers:
+        previous = work / 'shared-cloth-native1'
+        previous_receipt = read(previous/'installed.json')
+        prior_plan = read(previous/'install-plan2.json')
+        carrier_check = read(candidate/'carrier-verification.json')
+        if (not previous_receipt.get('installed') or not carrier_check['passed'] or
+                len(carrier_check['carriers']) != 52 or verified['added_idle_carriers'] != 52):
+            raise ValueError('Idle carrier trial or installed baseline is incomplete')
+        check(carrier_check['inputs'])
+        baseline['CSS_SharedAssets_P'] = {n: r['sha256'] for n, r in prior_plan['new']['CSS_SharedAssets_P'].items()}
+        correction = work/'native-idle-carrier-fix1'
+        diagnosis = read(correction/'diagnosis.json')
+        if diagnosis['host_suites_passed'] != 24:
+            raise ValueError('Runtime regression checks are incomplete')
+        core_source, core_sha = correction/'css_core.dll', diagnosis['candidate_core_sha256']
+        check({str(core_source): core_sha})
+        new_selector = dict(abi=selector['abi'], file='css_core-native-idles-'+core_sha[:16]+'.dll')
+        evidence_paths += [previous/'installed.json', previous/'install-plan2.json',
+                           candidate/'carrier-verification.json', correction/'diagnosis.json']
     if set(baseline) != set(NAMES):
         raise ValueError('Expected all four accepted packages')
     for name, hashes in baseline.items():
@@ -56,13 +78,14 @@ def plan():
              for s in SUFFIXES}
     result = dict(schema=2, game=str(GAME), old={name: baseline[name]}, new={name: files},
         retained={k: v for k, v in baseline.items() if k != name},
-        previous_selector=selector, new_selector=selector.copy(),
-        core_source=str(core), core_sha256=core_base['dll_sha256'],
+        previous_selector=selector, new_selector=new_selector,
+        core_source=str(core_source), core_sha256=core_sha,
         protected={str(p): sha(p) for p in (ue4ss, core, runtime / 'dlls/main.dll')},
         protected_trees={str(p): directory_hashes(p) for p in (
             runtime / 'state', runtime.parent / 'CSSX/state', runtime.parent / 'CSSX/extensions/eins0fx.cine')},
         evidence={str(p): sha(p) for p in evidence_paths},
-        stage_bytes=sum(row['bytes'] for row in files.values()))
+        stage_bytes=sum(row['bytes'] for row in files.values()) +
+                    (2 * core_source.stat().st_size if idle_carriers else 0))
     validate_package_sets(result)
     return result
 
@@ -72,6 +95,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--install', action='store_true')
     parser.add_argument('--transaction', type=Path)
+    parser.add_argument('--idle-carriers', action='store_true', help='Install the 52 missing native idle carriers and matching parser.')
     args = parser.parse_args()
     if args.output.exists():
         raise FileExistsError(args.output)
@@ -79,7 +103,7 @@ def main():
         if args.transaction is None:
             parser.error('--install requires --transaction')
         check_closed()
-    result = plan()
+    result = plan(args.idle_carriers)
     atomic(args.output, result)
     if args.install:
         install(result, args.transaction.resolve())

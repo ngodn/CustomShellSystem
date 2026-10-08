@@ -20,8 +20,13 @@ inputs = [unreal.Vector(direction, speed, 0)
           for direction in (-190, -180, -135, -90, -45, -1, 0, 1, 45, 90, 135, 180, 190)
           for speed in (0, .1, 1, 15, 75, 150, 225, 300, 450, 650, 900, 1000)]
 rows = []
+requested = json.loads(os.environ.get('CSS_NATIVE_CARRIER_IDS', 'null'))
+if requested is not None and (not isinstance(requested, list) or not requested or
+        len(requested) != len(set(requested)) or
+        not set(requested) <= {entry['id'] for entry in plan['entries']}):
+    raise ValueError('Invalid carrier selection')
 for entry in plan['entries']:
-    if entry['category'] != 'idle':
+    if (entry['id'] not in requested if requested is not None else entry['category'] != 'idle'):
         continue
     clip = unreal.load_asset(entry['destination'])
     if not clip or clip.get_editor_property('skeleton') != native:
@@ -48,6 +53,6 @@ for entry in plan['entries']:
     path = content / (output.removeprefix('/Game/') + '.uasset')
     rows.append(dict(id=entry['id'], package=output, sequence=entry['destination'],
                      sha256=hashlib.sha256(path.read_bytes()).hexdigest(), queries=query))
-if len(rows) != 7:
-    raise ValueError('Expected the seven existing looping idles')
+if len(rows) != (len(requested) if requested is not None else 7):
+    raise ValueError('Incomplete carrier selection')
 (work / 'result.json').write_text(json.dumps(dict(authored=True, carriers=rows), indent=2) + '\n')

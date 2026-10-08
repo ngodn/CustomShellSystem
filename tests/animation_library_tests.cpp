@@ -123,6 +123,19 @@ int main(int argc,char** argv) {
             auto performance=resolve_library_performance(native_catalog.animation_libraries,"css.eve.idle",human);
             expect(performance.candidates.size()==1 && performance.candidates[0].idle_blend_space.empty(),
                    "Explicit performance borrowed a locomotion carrier");
+            for(const char* playback:{"once","pose","loop"}) {
+                auto expanded=native;
+                auto& added=expanded["entries"][0];
+                added.erase("slot");added.erase("aliases");added["playback"]=playback;
+                const std::vector<AnimationLibrary> parsed{AnimationLibrary::parse(expanded)};
+                const auto idle=resolve_library_animation(parsed,AnimationSlot::Idle,"css.eve.idle",{},human);
+                expect(idle.entry && idle.candidates.size()==1 && idle.candidates[0].idle_blend_space==carrier,
+                       "A library clip in Idle Animation lost its native carrier");
+                const auto cine=resolve_library_performance(parsed,"css.eve.idle",human);
+                expect(cine.entry && cine.candidates.size()==1 && cine.candidates[0].idle_blend_space.empty() &&
+                       cine.entry->playback==parsed.front().entries.front().playback,
+                       "Idle carrier changed CINE playback or routing");
+            }
             State state;
             const std::string shell="CharacterId.Player.Shell.Genessa";
             expect(set_animation_choice(state,native_catalog,shell,"","",AnimationSlot::Idle,"css.eve.idle",human),
@@ -347,8 +360,8 @@ int main(int argc,char** argv) {
                        match.candidates.front().asset.starts_with("/Game/CSS/eins0fx/Shared/Locomotion/NativeHuman/"),
                        "Native selection did not resolve its single owned candidate");
                 const auto& carrier=match.candidates.front().idle_blend_space;
-                expect(!carrier.empty()==(entry.slot==AnimationSlot::Idle),
-                       "Native idle carrier missing or assigned to a non-looping choice");
+                expect(!carrier.empty()==(slot==AnimationSlot::Idle),
+                       "Idle Animation choice lacks a native carrier or a gait has one");
                 if(!carrier.empty()) ++carrier_count;
                 if(slot==AnimationSlot::Idle) {
                     ++idle_count;
@@ -377,7 +390,7 @@ int main(int argc,char** argv) {
                            "Legacy saved choice failed to resolve the native alternative");
                 }
             }
-            expect(idle_count==60 && carrier_count==8,"Native idle inventory changed");
+            expect(idle_count==60 && carrier_count==60,"Native idle inventory changed");
             const auto options=merge_library_animation_options(packages.animation_libraries,AnimationSlot::Idle,{});
             expect(options.size()==60,"Native idle menu omitted or duplicated choices");
         }

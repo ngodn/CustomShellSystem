@@ -29,6 +29,9 @@ def main():
         parser.add_argument('--'+name, type=Path, required=True)
     parser.add_argument('--cloth-trial', type=Path,
                         help='Include the verified cloth graph and updated Genessa adapter revisions.')
+    parser.add_argument('--additional-carriers', type=Path)
+    parser.add_argument('--carrier-readback', type=Path)
+    parser.add_argument('--carrier-cook', type=Path)
     args = parser.parse_args()
     output = args.output.resolve()
     if output.exists() or not output.is_relative_to(ROOT/'work'):
@@ -92,6 +95,57 @@ def main():
             for field in ('asset', 'idle_blend_space'):
                 if field in asset and asset[field].split('.')[0] not in packages:
                     raise ValueError('Native catalog reference missing from merged pack')
+    extra_carriers = 0
+    if any((args.additional_carriers, args.carrier_readback, args.carrier_cook)):
+        if not all((args.additional_carriers, args.carrier_readback, args.carrier_cook)):
+            raise ValueError('Additional carriers require authoring, readback and cook evidence')
+        authored = read(args.additional_carriers)
+        reloaded = read(args.carrier_readback)
+        cooked = read(args.carrier_cook/'exit.json')
+        if (not authored['authored'] or not reloaded['passed'] or
+                not reloaded['protected_unchanged'] or cooked['returncode'] != 0 or
+                not cooked['protected_unchanged']):
+            raise ValueError('Additional carrier verification failed')
+        for path in (args.additional_carriers, args.carrier_readback,
+                     args.carrier_cook/'exit.json', args.carrier_cook/'protected.json',
+                     args.carrier_cook/'packages.txt'):
+            protect(path)
+        for path, digest in read(args.carrier_cook/'protected.json').items():
+            protect(Path(path), digest)
+        rows = {row['id']: row for row in authored['carriers']}
+        required = {entry['id'] for entry in library['entries'] if 'slot' not in entry}
+        if (set(rows) != required or len(rows) != len(authored['carriers']) or
+                {row['id'] for row in reloaded['carriers']} != required or
+                any(not row['unchanged'] or row['queries'] != 156 for row in reloaded['carriers'])):
+            raise ValueError('Additional carriers do not cover all slotless Idle Animation choices')
+        cook_packages = (args.carrier_cook/'packages.txt').read_text().splitlines()
+        carrier_packages = {row['package'] for row in rows.values()}
+        if (len(cook_packages) != len(set(cook_packages)) or not carrier_packages <= set(cook_packages) or
+                not set(cook_packages)-carrier_packages <= packages):
+            raise ValueError('Additional carrier cook inventory differs')
+        for entry in library['entries']:
+            if entry['id'] not in rows:
+                continue
+            row = rows[entry['id']]
+            alternative, = [asset for asset in entry['assets'] if asset['skeleton'] == human]
+            if alternative['asset'].split('.')[0] != row['sequence'] or 'idle_blend_space' in alternative:
+                raise ValueError('Carrier sequence does not match its native alternative')
+            package = row['package']
+            if (package in packages or not package.startswith('/Game/CSS/eins0fx/Shared/Locomotion/NativeHuman/') or
+                    package.rsplit('/', 1)[0] != row['sequence'].rsplit('/', 1)[0]):
+                raise ValueError('Unexpected carrier owner or duplicate package')
+            for suffix in ('.uasset', '.uexp', '.ubulk'):
+                relative = Path(package.removeprefix('/Game/')+suffix)
+                source = args.carrier_cook/'cooked/CSSAuthoring/Content'/relative
+                if suffix == '.ubulk' and not source.exists():
+                    continue
+                if suffix == '.uasset' and asset_info(source.read_bytes())['package'] != package:
+                    raise ValueError('Cooked carrier identity changed')
+                key = str(Path('MortalShell2/Content')/relative)
+                payloads[key], sources[key] = protect(source), source
+            packages.add(package)
+            alternative['idle_blend_space'] = package+'.'+package.rsplit('/', 1)[1]
+            extra_carriers += 1
     candidate['catalog']['animation_library'] = library
     cloth_packages = 0
     if args.cloth_trial:
@@ -196,7 +250,8 @@ def main():
     (output/'shared-inline.json').write_bytes(encode(candidate))
     (output/'packages.txt').write_text('\n'.join(sorted(packages))+'\n')
     (output/'verification.json').write_text(json.dumps(dict(passed=True, installed=False,
-        packages=len(packages), native_entries=63, added_packages=66,
+        packages=len(packages), native_entries=63, added_packages=66+extra_carriers,
+        added_idle_carriers=extra_carriers,
         added_cloth_packages=cloth_packages, inputs=inputs,
         payloads=payloads, files={p.name:sha(p) for p in container.iterdir()},
         scope='Shared asset and catalog round trip. Original payloads and custom-rig/facial definitions preserved. Native gameplay and visual acceptance remain.'),indent=2)+'\n')

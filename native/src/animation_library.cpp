@@ -126,11 +126,13 @@ AnimationLibrary AnimationLibrary::parse(const Json& value) {
                 throw std::runtime_error("Shared assets need unique skeleton alternatives under /Game/CSS/<author>/Shared/Locomotion/ or the legacy locomotion root");
             if(item.contains("idle_blend_space")) {
                 alternative.idle_blend_space=asset(item,"idle_blend_space");
-                if(animation.slot!=AnimationSlot::Idle || animation.playback!=AnimationPlayback::Loop ||
+                // Slotless clips and poses are also offered by Idle Animation.
+                // Their scene playback mode stays independent of this carrier.
+                if(animation.slot.value_or(AnimationSlot::Idle)!=AnimationSlot::Idle ||
                    !shared_locomotion_asset(alternative.idle_blend_space) ||
                    alternative.idle_blend_space==alternative.asset ||
                    alternative.skeleton!="/Game/Sparta/Characters/Humans/_Shared/SKEL_Human_Skeleton.SKEL_Human_Skeleton")
-                    throw std::runtime_error("Idle carrier requires a looping native-human idle");
+                    throw std::runtime_error("Idle carrier requires a native-human Idle Animation choice");
             }
             animation.assets.push_back(std::move(alternative));
         }

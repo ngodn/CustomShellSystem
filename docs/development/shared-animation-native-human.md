@@ -1,5 +1,52 @@
 # Default human animation playback
 
+## October 9: missing native idle carriers found in gameplay
+
+The user reports `Unavailable` for the new choices. The installed log confirms
+that Cinderella, Iris Out and DumbDumb load their correct native sequences,
+then fail with `This appearance has no compatible idle layer or native carrier`
+on native Genessa and Proxima appearances. Gait BlendSpaces still resolve.
+Evidence is preserved in `native-idle-carrier-fix1`.
+
+The previous complete-pack test verified carriers only on the eight explicitly
+categorized idles. It missed the 52 slotless entries that the same Idle Animation
+menu also exposes. Native shells cannot consume those sequences through the
+custom outfits' CSS post-process idle layer. Native CINE playback uses a
+separate montage path, which does not supply automatic locomotion idle playback.
+
+The correction supplies a constant native idle carrier for every remaining
+sequence and pose, and allows those carriers in the catalog parser. Authored
+scene playback modes remain unchanged. CSS keeps its existing grounded idle,
+aim/montage interruption, weapon visibility and BlendSpace restoration path;
+no new UI section or automatic montage driver is added.
+
+The regression test first failed under the old parser. All 24 host suites and
+the Windows C++23 core build now pass. The complete-pack check now requires
+all 60 Idle Animation choices to have carriers and all three gait choices
+to remain without them. Fresh editor reload of the 52 added carriers passes
+8,112 interpolation queries, input rejection cases and protected-source hashes.
+The corrected `shared-cloth-native2` candidate contains 269 packages. Independent
+cooked-data checks pass for all 52 carriers, including their skeleton, clip,
+duration, sample points and playback rate. Six negative controls reject damaged
+inputs. Existing animation, facial and cloth payloads retain their hashes.
+Catalog checks pass 422 assertions for the combined fixture, 422 for the shared
+pack alone and 1,386 for the outfit regression fixture. All 855 packages in the
+combined dependency check resolve without failures. The installation preflight
+passes for the matching core `645effe0a1d0249d` and shared pack.
+
+Two carrier-only cook attempts failed during editor animation-compression
+cleanup and were rejected. The successful cook explicitly retained the 52
+referenced sequences and their codec. Only the new carrier payloads enter the
+candidate; existing verified sequence payloads remain unchanged.
+
+The game was closed and the correction is now installed. Independent verification
+passes for 72 installed and protected files, including all three outfit packages,
+the previous core, loader and saved settings. The selector points to
+`css_core-native-idles-645effe0a1d0249d.dll`. Receipt: `shared-cloth-native2/installed.json`;
+rollback: `MortalShell2/Content/css-native-idles-trial-20261009`.
+Native gameplay acceptance remains pending. This correction changes the CSS
+catalog parser and shared assets, not the outfit packages.
+
 ## October 9: combined shared trial installed
 
 `shared-cloth-native1` is installed with 217 packages, 63 native alternatives
@@ -63,8 +110,9 @@ The seven looping idles now have constant native carriers for CSS's existing
 idle path. `carriers4` and `carrier-readback1` pass creation/reload with all
 1,092 interpolation queries unchanged. Existing-output, missing-source,
 mismatched-skeleton, nonconstant-source and wrong-namespace inputs are rejected.
-The other 52 entries use the existing performance playback path. No new UI
-section or animation IDs are introduced.
+At that stage the other 52 entries only had the existing explicit scene
+playback path. The October 9 correction above adds their missing automatic idle
+carriers. No new UI section or animation IDs are introduced.
 
 `verify2` reloads all 59 authored sequences and compares every key across 1,208
 bones through the C++ checker. The three pilot comparisons match the independent
