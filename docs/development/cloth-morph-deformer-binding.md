@@ -2,7 +2,9 @@
 
 Status: runtime and coordinated outfit/shared trial installed October 9;
 authoring, reload, Windows cook and independent readback pass. Installed hashes
-are verified; live validation remains pending.
+are verified. The user accepts the world rear-panel fit on the current
+appearance. Menu clipping remains and is accepted for now; broader validation
+remains pending.
 
 An authored Optimus graph opts in by declaring zero-default Float variables
 named `CSS_Morph_<morph name>`. For example, `CSS_Morph_PBMGlutesSize` receives

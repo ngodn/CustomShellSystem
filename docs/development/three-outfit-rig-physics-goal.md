@@ -66,6 +66,7 @@ Commander White's current E9 facial replacement preserves 206 morphs and the opt
 - Preserve accepted proportions, silhouettes, materials, palette/glow behavior, sheer-fabric opacity and visibility, modular parts, hair appearance and existing body controls.
 - Do not silently rebind all meshes, replace whole skeletons, remap animation tracks, or overwrite saved settings to make one test look correct.
 - Treat **Natural chest, Bouncy glutes and Bouncy other regions** as the user's reference test setup. Retain adjustable settings; do not overwrite saved defaults without an explicit requirement.
+- October 9 cloth trial: the user accepts the corrected Genessa rear-panel fit in the game world and explicitly accepts the remaining player/CSS-menu clipping for now. Preserve the world correction, record the preview limitation, and continue the other checks. Do not count preview parity as passed or reopen that limitation as a release blocker without new evidence or user direction.
 - Do not impose an arbitrary attachment/bone limit such as 128. Follow verified engine constraints and actual asset counts, with explicit diagnostics for unsupported data.
 - Preserve gameplay collision responses and damage/parry behavior. Private block-all collision tests do not authorize shipping block-all responses.
 - No desktop focus changes, camera automation or gameplay input for diagnostics without task-specific authorization. Use existing logs/dumps first. Verify game process state before installation; do not claim core hot reload is safe.

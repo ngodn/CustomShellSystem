@@ -130,10 +130,17 @@ With the game closed, rollback is:
 /mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/css-cloth-morph-trial-20261009`.
 It restores the previous selector and two packages, without overwriting profiles.
 
-The user has been asked to compare Glute Size 1 in CSS and world while walking.
-Actual materials and continuous contact, world/preview/doubles, lifecycle recovery
-and measured cost remain pending. Offline checks do not establish gameplay
-acceptance or a finished release.
+On October 9 the user confirmed the world rear-panel fit works and supplied
+`screenshot-2026-10-09_00-39-27.png`. The menu screenshot at `00-39-12` still
+shows clipping at Glute Size 1. The user accepts that menu-only limitation for
+now because gameplay appearance is the priority. This is world-fit acceptance
+on the current appearance, not preview/world parity or a full movement pass.
+`genessa-cloth-assembly1/user-world-acceptance.json` records the statement,
+screenshot hashes, installed core identity and current mesh; the contemporaneous
+status snapshot is retained alongside it. Keep the working world correction.
+
+Both variants, continuous contact, doubles, lifecycle recovery and measured cost
+remain pending. Menu clipping is recorded as accepted for now, not fixed.
 
 ### October 8: reproduced Genessa rear-panel shape mismatch
 
