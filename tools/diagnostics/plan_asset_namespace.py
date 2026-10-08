@@ -132,11 +132,37 @@ def catalog_references(catalog, rows):
     return references
 
 
+def consolidate_verified_aliases(rows, receipt):
+    if receipt.get('passed') is not True:
+        raise ValueError('Animation alias audit did not pass')
+    for path, expected in {**receipt['dependencies'], **receipt['evidence']}.items():
+        with Path(path).open('rb') as stream:
+            if hashlib.file_digest(stream, 'sha256').hexdigest() != expected:
+                raise ValueError('Alias evidence changed: '+path)
+    by_source = {row['old_package']: row for row in rows}
+    aliases = {row['alias']: row for row in receipt['aliases']}
+    if len(aliases) != len(receipt['aliases']):
+        raise ValueError('Duplicate verified alias')
+    for old, entry in aliases.items():
+        if (not entry['identical'] or entry['kind'] not in ('AnimSequence', 'BlendSpace') or
+                old not in by_source or entry['source'] not in by_source or entry['source'] in aliases):
+            raise ValueError('Invalid alias identity: '+old)
+        canonical, row = by_source[entry['source']], by_source[old]
+        if canonical['target_container'] != SHARED:
+            raise ValueError('Reusable animation must have a shared owner')
+        row['new_package'] = canonical['new_package']
+        row['target_container'] = canonical['target_container']
+        row['deduplicated_to'] = entry['source']
+        row['alias_object'] = entry['object']
+    return rows
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--baseline', type=Path, required=True)
     parser.add_argument('--conflicts', type=Path, required=True)
     parser.add_argument('--catalog', type=Path, required=True)
+    parser.add_argument('--verified-aliases', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     output = args.output.resolve()
@@ -150,11 +176,16 @@ def main():
         inputs[name] = dict(path=str(path.resolve()), sha256=hashlib.sha256(raw).hexdigest())
         data[name] = json.loads(raw)
     rows = plan(data['baseline'], data['conflicts'])
+    if args.verified_aliases:
+        raw = args.verified_aliases.read_bytes()
+        inputs['verified_aliases'] = dict(path=str(args.verified_aliases.resolve()), sha256=hashlib.sha256(raw).hexdigest())
+        rows = consolidate_verified_aliases(rows, json.loads(raw))
     references = catalog_references(data['catalog'], rows)
-    counts = dict(sorted(Counter(r['target_container'] for r in rows).items()))
+    targets = {(r['new_package'], r['target_container']) for r in rows}
+    counts = dict(sorted(Counter(owner for _, owner in targets).items()))
     report = dict(schema=1, stage='planning_only', inputs=inputs, target_counts=counts,
                   source_export_count=sum(len(p['exports']) for p in data['baseline']['packages']),
-                  unique_package_count=len(rows), assets=rows,
+                  unique_package_count=len(rows), target_package_count=len(targets), assets=rows,
                   catalog_references=references,
                   preserved_entry_ids=[entry['id'] for entry in
                                        data['catalog']['catalog']['animation_library']['entries']],

@@ -21,7 +21,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Nine-variant provenance | Installed hashes and 16 editable mesh identities pinned; all 790 migration paths have source candidates or alias recipes. Final Blender-to-cook recipe comparisons remain |
 | Mesh/weights/contacts | Fresh checks of all 16 editor-built meshes pass weight sums, section/bone/morph indices and finite-data checks. Deformation/contact checks and cooked comparison remain |
 | Unholy facial support | Both W3 candidates cook with 137 morphs and unchanged cloth data. Native/Astral SM6 UV3 checks pass. Oral assets resolve without Eve mounted. Two adapters, 21 presets and six facial performances are integrated into a private shared catalog; 163 facial and 182 packaged-library checks pass. SM5/material review and game acceptance remain |
-| Shared organization | CSS parser accepts shared and outfit-owned adapter paths with 23 host suites passing. All 790 packages have author-owned destinations; 172 catalog references classified. An isolated 124-package batch passes reload/cook/readback, with 547 imports resolved. One hundred four match installed decoded fields after path normalization; twenty Eve clips have a checked reference-pose refresh. Remaining migration and runtime compatibility pending; not installed |
+| Shared organization | CSS parser accepts shared and outfit-owned adapter paths with 23 host suites passing. All 790 source packages map to 729 distinct author-owned targets after verifying 61 identical animation copies; 172 original catalog references classified. A private catalog adds 22 missing legacy aliases, with all 99 bundled choices across nine variants checked. An isolated 124-package batch passes reload/cook/readback, with 547 imports resolved. One hundred four match installed decoded fields after path normalization; twenty Eve clips have a checked reference-pose refresh. Remaining migration and runtime compatibility pending; not installed |
 | Locomotion | 63-entry installed catalog captured; four native declarations, 59 missing; conversion and motion-quality review pending |
 | Gameplay regressions | Current interruption baseline accepted by user; candidate regression tests pending |
 | Performance | Current package sizes recorded; matched gameplay captures pending |
@@ -279,3 +279,33 @@ No candidate has been installed. Remaining face checks include cooked material
 appearance, dynamic ornament/hood shading, CSS/CINE playback and interruption,
 both Genessa forms and doubles. Wider migration, physical deformation/contact
 work and the 59 missing native animation conversions remain active.
+
+## Verified animation consolidation and saved choices
+
+The [fourth namespace map](../../work/three-outfit-rig-physics/namespace-4/asset-and-catalog-map.json)
+retains all 790 source identities but consolidates 61 documented animation
+copies into their shared destinations: 308 Eve, 101 Genessa, 171 Commander
+White and 149 Shared packages, 729 total. No installed package was removed.
+
+[Independent readback](../../work/three-outfit-rig-physics/animation-alias-audit1/verified.json)
+verified 54 sequences and seven blend spaces against their 31 canonical source
+packages. Decoded fields, compressed bone/curve hashes and normalized blend
+references agree. `audit_animation_aliases.py` records the evidence;
+`plan_asset_namespace.py --verified-aliases` rejects changed input/dependency
+hashes before using it. New names do not imply new motion.
+
+The old library declared only Eve's 11 legacy aliases.
+[The private metadata trial](../../work/three-outfit-rig-physics/legacy-alias-catalog1)
+adds the corresponding 22 Commander White and Genessa aliases using pinned
+outfit manifests and the verified copy map. It preserves all 63 public entries
+and the three facial rigs. The host audit passes 742 checks, including all
+99 bundled choices across the nine variants: menu deduplication, legacy and
+canonical selection, saved-ID serialization, weapon visibility and fallback
+when the shared pack is absent. The separate facial catalog audit and all
+23 host suites also pass. Receipts are in `validation.json`.
+
+This trial changes alias metadata only. The existing shared walk/jog/sprint
+entries declare native-human alternatives; custom rigs still select their
+verified bundled blend spaces. Adding the migrated custom-rig shared alternatives
+and rebuilding consumers remains part of migration. This does not establish
+asset loading or live-game acceptance and is not installed.

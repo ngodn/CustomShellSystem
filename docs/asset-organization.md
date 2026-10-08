@@ -45,15 +45,16 @@ rename or assumed mount precedence. See the
 ## Initial migration map
 
 The audited installation has 820 export records representing 790 unique package
-paths. [The generated map](../work/three-outfit-rig-physics/namespace-3/asset-and-catalog-map.json)
-assigns each package to one author-owned destination and one container:
+paths. [The generated map](../work/three-outfit-rig-physics/namespace-4/asset-and-catalog-map.json)
+maps every source to an author-owned destination. After verifying 61 historical
+animation copies, these sources require 729 distinct target packages:
 
 | Destination container | Unique packages |
 | --- | ---: |
 | `CSS_EveStellarBlade_eins0fx_P` | 308 |
-| `CSS_UnholyGenessa_eins0fx_P` | 131 |
+| `CSS_UnholyGenessa_eins0fx_P` | 101 |
 | `CSS_CommanderWhite_eins0fx_P` | 171 |
-| `CSS_SharedAssets_P` | 180 |
+| `CSS_SharedAssets_P` | 149 |
 
 These counts describe the migration plan, not the final release. Dependency
 checks may identify unused assets to remove. Seven facial replacement meshes
@@ -69,7 +70,9 @@ equal basenames alone are not a reason to merge them.
 The map pins the source provider for each package. It selects the corrected Eve
 copies for the nineteen conflicting movement animations and refuses an unknown
 provider conflict. The catalog reference list identifies 161 paths to rebuild
-and eleven legacy aliases to retain. All 63 public animation entry IDs stay
+and eleven existing legacy aliases to retain. A private catalog candidate adds
+the 22 missing Commander White and Genessa aliases, retaining their exact old
+package and export names. All 63 public animation entry IDs stay
 unchanged. New source-container hashes and facial dependencies must be generated
 after cooking, not copied from the installed manifest.
 
@@ -80,7 +83,8 @@ python3 tools/diagnostics/plan_asset_namespace.py \
   --baseline work/three-outfit-rig-physics/baseline-1/baseline.json \
   --conflicts work/three-outfit-rig-physics/baseline-1/legacy-track-conflicts.json \
   --catalog work/three-outfit-rig-physics/baseline-1/installed-locomotion-manifest.json \
-  --output work/three-outfit-rig-physics/namespace-3/asset-and-catalog-map.json
+  --verified-aliases work/three-outfit-rig-physics/animation-alias-audit1/verified.json \
+  --output work/three-outfit-rig-physics/namespace-4/asset-and-catalog-map.json
 ```
 
 [Original map validation](../work/three-outfit-rig-physics/namespace-2/validation.json)
@@ -88,3 +92,11 @@ checked destination collisions, corrected provider selection and legacy aliases,
 plus rejection of unassigned facial owners, unknown paths and unverified provider
 conflicts. This plan does not rename editor assets, patch cooked packages or
 establish runtime compatibility. Those checks remain part of the active goal.
+
+The [alias audit](../work/three-outfit-rig-physics/animation-alias-audit1/verified.json)
+compares decoded fields and compressed bone/curve hashes, not just filenames.
+Its 54 animation sequences and seven blend spaces match their documented Eve
+originals after package-reference normalization. Source rows remain in the map
+with `deduplicated_to` and the preserved export object name. The planner refuses
+changed evidence or dependency hashes. Existing installed aliases remain intact
+until the complete migration passes compatibility checks.

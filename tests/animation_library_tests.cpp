@@ -303,6 +303,53 @@ int main(int argc,char** argv) {
         fs::remove(file);
         expect(Catalog::load(root).animation_libraries.empty() && Catalog::load(root).outfits.size()==1,
                "Removing library invalidated existing outfit");
+        if(argc==4 && std::string_view(argv[1])=="--audited-legacy-alias-pack") {
+            const auto packages=Catalog::load(root,argv[2],root/"alias-audit-cache");
+            expect(packages.animation_libraries.size()==1 && packages.diagnostics.at("rejected")==0,
+                   "Alias candidate did not load cleanly");
+            const auto fixtures=read_performance_fixture(argv[3]);
+            expect(fixtures.size()==9,"Current nine-variant fixture is incomplete");
+            size_t choices=0;
+            for(const auto& fixture:fixtures) {
+                const auto animations=AnimationSet::parse(fixture.at("animations"));
+                const auto skeleton=fixture.at("skeleton").get<std::string>();
+                for(const auto& [slot,bundled]:animations.slots) {
+                    const auto merged=merge_library_animation_options(packages.animation_libraries,slot,bundled);
+                    expect(merged.size()==(slot==AnimationSlot::Idle?60:1),"Legacy options duplicate the shared menu");
+                    for(const auto& option:bundled) {
+                        ++choices;
+                        const auto match=resolve_library_animation(packages.animation_libraries,slot,option.id,bundled,skeleton);
+                        if(!match.entry || match.candidates.empty())
+                            std::cerr<<fixture.at("outfit")<<'/'<<fixture.at("variant")<<' '
+                                     <<animation_slot_name(slot)<<' '<<option.id<<' '<<skeleton<<'\n';
+                        expect(match.entry && !match.candidates.empty(),"Legacy saved choice did not resolve");
+                        // This metadata-only trial retains native-only shared gaits.
+                        // Custom rigs must keep their bundled blend spaces for now.
+                        expect(match.candidates.front().bundled==(slot!=AnimationSlot::Idle),
+                               "Alias metadata changed the current rig's asset preference");
+                        const auto old=resolve_animation(bundled,slot,option.id);
+                        expect(std::any_of(match.candidates.begin(),match.candidates.end(),[&](const auto& candidate){
+                            return candidate.bundled && candidate.asset==old.asset;
+                        }),"Legacy asset fallback was lost");
+                        const auto canonical=resolve_library_animation(packages.animation_libraries,slot,match.entry->id,bundled,skeleton);
+                        expect(canonical.entry==match.entry && canonical.candidates.front().asset==match.candidates.front().asset,
+                               "Canonical and saved choices resolve different motion");
+                        const auto selected=resolve_animation(merged,slot,match.entry->id);
+                        expect(selected.option && selected.option->id==option.id && selected.hide_weapons==old.hide_weapons,
+                               "Canonical selection lost the bundled ID or weapon visibility");
+                        AnimationChoices saved;
+                        const auto outfit=fixture.at("outfit").get<std::string>();
+                        const auto variant=fixture.at("variant").get<std::string>();
+                        saved.outfits[outfit][variant][slot]=selected.option->id;
+                        const auto restored=AnimationChoices::parse(saved.json());
+                        const auto without_pack=merge_library_animation_options({},slot,bundled);
+                        expect(resolve_animation(without_pack,slot,restored.get(outfit,variant,slot)).asset==old.asset,
+                               "Removing shared pack lost a saved bundled choice");
+                    }
+                }
+            }
+            expect(choices==99,"Legacy animation audit missed an outfit choice");
+        }
         if(argc==3 && std::string_view(argv[1])=="--audited-genessa-face-pack") {
             const auto packages=Catalog::load(root,argv[2],root/"genessa-audit-cache");
             if(packages.animation_libraries.size()!=1) std::cerr<<packages.diagnostics.dump(2)<<'\n';
