@@ -1,6 +1,47 @@
 # Three-outfit implementation status
 
-Updated 2026-10-08. [Goal](three-outfit-rig-physics-goal.md) is active. Installed baseline, namespace parser support and the initial asset/reference migration map are recorded below.
+Updated 2026-10-08. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial is installed; live acceptance is pending. Earlier sections describing private candidates record their state before this deployment.
+
+## Current installed trial
+
+`namespace-deployment1/validation.json` records the independent post-install
+check. The selected core is `css_core-namespace-7d0e24cf60df400c.dll`, SHA256
+`7d0e24cf60df400c562f44fa3195a5e201df69790c6cf2a665118405c2893908`.
+The three matching outfit trios and consolidated `CSS_SharedAssets_P` match
+`catalog-namespace3`. The separate old Astral and Locomotion trios are no longer
+mounted. All six previous trios are retained outside `Content/Paks`, in
+`MortalShell2/Content/CSS-namespace-trial1/backup`.
+
+The game was closed throughout replacement and verification. Fifty-nine
+protected files, including saved settings, the old core, loader and CINE files,
+remain unchanged. The installer stages independent copies before moving any
+old package and records the plan before replacement. Fourteen fixture tests
+cover successful upgrade/restore, failures during each replacement phase,
+concurrent launch, duplicate packs, changed files and insufficient space.
+These tests do not prove game startup or rendering.
+
+The user has been asked to check startup, the saved appearance, Genessa facial
+playback/eyes and gameplay interruption. This is a migration and facial test
+build, not completion of the remaining rig/contact/physics work.
+
+Restore the complete previous set, with the game closed, using:
+
+```bash
+python3 tools/asset-paths/install_namespace_trial.py restore \
+  --transaction /mnt/eins0fxE/SteamLibrary/steamapps/common/Sparta/MortalShell2/Content/CSS-namespace-trial1
+```
+
+Restoration verifies both sets before moving files and preserves settings
+changed after installation. Do not restore one outfit or shared pack alone.
+If the game opens during replacement, restoration waits for an explicit retry
+after closure rather than moving potentially mounted files.
+
+Cleanup before installation recovered 1,779,421,184 observed bytes. Forty
+duplicate cooked/readback files now resolve to byte-identical retained stage
+files. The obsolete Commander White material-only container was removed after
+all its asset chunks matched the final full outfit. Original inputs, installed
+baseline, final stages, recipes and reports were retained. See
+`cleanup-coordinated-upgrade1.json`.
 
 ## Verified baseline
 
@@ -20,14 +61,14 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | --- | --- |
 | Nine-variant provenance | Installed hashes and 16 editable mesh identities pinned; all 790 migration paths have source candidates or alias recipes. Final Blender-to-cook recipe comparisons remain |
 | Mesh/weights/contacts | Fresh checks of all 16 editor-built meshes pass weight sums, section/bone/morph indices and finite-data checks. Deformation/contact checks and cooked comparison remain |
-| Unholy facial support | Both W3 candidates cook with 137 morphs and unchanged cloth data. Native/Astral SM6 UV3 checks pass. Oral assets resolve without Eve mounted. Two adapters, 21 presets and six facial performances are integrated into a private shared catalog; 163 facial and 182 packaged-library checks pass. SM5/material review and game acceptance remain |
-| Shared organization | CSS parser accepts shared and outfit-owned adapter paths with 23 host suites passing. All 790 source packages map to 729 distinct author-owned targets after verifying 61 identical animation copies; 172 original catalog references classified. A private catalog adds 22 missing legacy aliases, with all 99 bundled choices across nine variants checked. An isolated 154-asset batch passes editor reload. Its 149 shared assets are assembled in a private `CSS_SharedAssets_P`, with 517 imports resolved; the five outfit-owned adapters remain separate. One hundred four match installed decoded fields after path normalization; twenty Eve clips have a checked reference-pose refresh. Remaining migration and runtime compatibility pending; not installed |
+| Unholy facial support | Both W3 candidates with 137 morphs and unchanged cloth data are installed for testing. Two adapters, 21 presets and six facial performances are integrated. Oral assets resolve without Eve mounted. Live face/eye/material/interruption acceptance remains |
+| Shared organization | Four coordinated packages installed, with 735 unique author-owned asset packages and 106 catalog references checked independently. Public IDs and legacy aliases retained; 1,380 native catalog checks and 28 dependency scenarios pass. Previous six packages retained outside the mount tree. Live CSS/CINE discovery and playback acceptance remain |
 | Locomotion | 63-entry installed catalog captured; four native declarations, 59 missing; conversion and motion-quality review pending |
 | Gameplay regressions | Current interruption baseline accepted by user; candidate regression tests pending |
 | Performance | Current package sizes recorded; matched gameplay captures pending |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: review remaining runtime consumers and prepare the coordinated candidate upgrade. Dependency and partial-upgrade handling now passes 28 native scenarios. The four migrated catalogs pass the native loader and selection audit, including facial adapter revision bindings. Private migration assemblies pass for all three outfits: Genessa's 107 packages with its new facial meshes and oral assets, Eve's 308 and Commander White's 171, each checked with the shared skeleton. Eve retains its compiled secondary graph and 22 original mesh buffers. Commander White retains both C4/E9 mesh buffers, original hair/body graphs, all 80 instances, 78 textures and two material parents. Authoring recipe updates, rig/physics work and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
+Next: verify the installed trial in game while completing authoring recipe and solver ownership records. Dependency and partial-upgrade handling passes 28 native scenarios. The four migrated catalogs pass the native loader and selection audit, including facial adapter revision bindings. Assemblies pass for all three outfits: Genessa's 107 packages with its new facial meshes and oral assets, Eve's 308 and Commander White's 171, each checked with the shared skeleton. Eve retains its compiled secondary graph and 22 original mesh buffers. Commander White retains both C4/E9 mesh buffers, original hair/body graphs, all 80 instances, 78 textures and two material parents. Rig/physics work, remaining native conversions and gameplay validation remain. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs.
 
 ## Runtime texture guard after migration
 

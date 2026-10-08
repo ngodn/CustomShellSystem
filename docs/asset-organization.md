@@ -85,8 +85,10 @@ matching migrated versions, replace the old `CSS_SharedAssets_P` trio, and retir
 the separate `CSS_LocomotionSharedAssets_P` and `CSS_AstralSharedAssets_P` trios.
 Keep CSS runtime and shared-assets delivery separate. Back up the existing set
 before replacement, preserve user state/profile files, and restart the game.
-The candidate installer and live migration are not yet accepted; these are
-requirements, not instructions to install the current private trial manually.
+The private coordinated installer passes fourteen replacement/rollback tests.
+The matching candidate set is installed with verified rollback packages; live
+migration acceptance is pending. See the implementation status for the exact
+trial and restoration command. This does not authorize a partial manual upgrade.
 
 The new runtime retains support for the unchanged old outfit/library set.
 Native metadata tests preserve its seven existing Eve/Commander White facial
