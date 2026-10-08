@@ -23,6 +23,7 @@ def main():
     parser.add_argument('--native-reference-receipt', type=Path, required=True)
     parser.add_argument('--include-playback', action='store_true')
     parser.add_argument('--include-astral', action='store_true')
+    parser.add_argument('--packages', type=Path, help='Explicit package list instead of animation selection')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     stage = args.output.resolve()
@@ -30,6 +31,14 @@ def main():
         raise ValueError('Use a new private rig workspace')
     source = args.source_content.resolve(strict=True)
     inventory = json.loads(args.inventory.read_text())
+    requested = None
+    if args.packages:
+        values = json.loads(args.packages.read_text())
+        if not isinstance(values, list) or not values or any(not isinstance(p, str) for p in values):
+            raise ValueError('Expected a nonempty package list')
+        requested = set(values)
+        if len(requested) != len(values) or args.include_playback or args.include_astral:
+            raise ValueError('Explicit packages must be unique and cannot combine selection modes')
     assets = []
     for row in inventory['assets']:
         leaf = row['package'].rsplit('/', 1)[1]
@@ -39,8 +48,12 @@ def main():
         selected = selected or (args.include_playback and
             row['package'].startswith('/Game/CSS/Locomotion/') and leaf.startswith(('ABP_', 'ACS_')))
         selected = selected or (args.include_astral and row['package'].startswith('/Game/CSS/SharedAssets/Astral/'))
+        if requested is not None:
+            selected = row['package'] in requested
         if not selected:
             continue
+        if row['cooked_alias_recipe'] or not row['selected']:
+            raise ValueError('Package requires a cooked recipe: '+row['package'])
         entry = row['selected']['identity']
         path = Path(entry['path']).resolve(strict=True)
         if sha(path) != entry['sha256']:
@@ -49,6 +62,8 @@ def main():
                            source_file=str(path), source_sha256=entry['sha256']))
     if not assets or len({row['new_package'].casefold() for row in assets}) != len(assets):
         raise ValueError('No unique migration candidates')
+    if requested is not None and {row['old_package'] for row in assets} != requested:
+        raise ValueError('Explicit package is absent from pinned inventory')
     # Keep unrelated historical assets out of the registry. Rename loads
     # referring assets, so cloning the entire authoring tree is expensive.
     dependencies = json.loads(args.dependencies.read_text())
@@ -108,6 +123,9 @@ def main():
                      'Playback blueprints and codec settings remain separate migration steps. ')+
                     ('Includes Astral graphs, instances and neutral textures. ' if args.include_astral else '')+
                     'Historical aliases remain a separate migration step.')
+    if requested is not None:
+        plan['scope'] = 'Explicit pinned package migration; dependent packages remain separate unless listed.'
+        plan['package_selection'] = dict(path=str(args.packages.resolve()), sha256=sha(args.packages))
     (stage/'input.json').write_text(json.dumps(plan, indent=2)+'\n')
     (stage/'recipe.py').write_bytes(Path(__file__).read_bytes())
     print(json.dumps(dict(stage=str(stage), assets=len(assets), refresh=len(refresh))))

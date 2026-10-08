@@ -27,7 +27,33 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Performance | Current package sizes recorded; matched gameplay captures pending |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: extend the isolated migration to the remaining dependencies and consumers, finish editable-source provenance and prepare the Genessa facial candidate. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs. Preserve existing gameplay while these assets are prepared.
+Next: migrate Genessa's remaining rig and mesh dependencies, then the Eve and Commander White assets and runtime consumers. Genessa's 88 material/texture packages now pass independent cooked comparison. Finish editable-source provenance and prepare the Genessa facial candidate. Package destinations, the nineteen stale mappings and per-entry native coverage are recorded; do not repeat those investigations without changed inputs. Preserve existing gameplay while these assets are prepared.
+
+## Genessa material namespace migration
+
+The [material migration notes](outfit-material-namespace.md) document the native
+skin/eye proxies and renderer settings that must not be lost during organization.
+Thirty-three material instances use preserved cooked export bytes and reversible
+header relocation. Seven authored parent materials and 48 textures pass editor
+rename/save/reload and Windows cooking under the outfit's original renderer
+settings. The 88-package candidate matches all released decoded fields, including
+shader maps, after explicit path normalization. All 96 texture export/bulk files
+are byte-identical. Its import audit passes with only base-game and candidate
+containers mounted.
+
+Evidence: `genessa-material-namespace2`, `genessa-material-editor1`,
+`genessa-material-cook2` and `genessa-material-pack2` under the rig workspace.
+The first cook was rejected because its default project settings omitted the
+released unlimited-influence skin/cloth shader variants. The corrected cook
+pins the source RendererSettings and preserves them. A changed baseline-container
+hash also rejects before any staging output is created.
+
+This completes the offline material subset, not the full Genessa migration.
+Its 13 rig/mesh/adapter packages, facial candidate integration, final catalog
+and runtime consumers still need coherent assembly and verification. The old
+adapters already have isolated migration evidence, but their final references
+must follow the migrated outfit dependencies. No installed pack, DLL, setting
+or save changed.
 
 ## Namespace parser change
 

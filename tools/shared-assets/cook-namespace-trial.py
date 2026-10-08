@@ -1,5 +1,6 @@
-"""Cook a verified Astral namespace trial with the existing Windows UE 5.6.1 toolchain."""
+"""Cook verified namespaced assets with the existing Windows UE 5.6.1 toolchain."""
 import argparse
+import configparser
 import hashlib
 import json
 from pathlib import Path
@@ -18,6 +19,10 @@ def main():
     parser.add_argument('--engine', type=Path, required=True)
     parser.add_argument('--docker-wrapper', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--asset-root', default='/Game/CSS/eins0fx/Shared/Astral/')
+    parser.add_argument('--expected-assets', type=int, default=30)
+    parser.add_argument('--renderer-config', type=Path, help='Pinned original RendererSettings to preserve shader variants')
+    parser.add_argument('--ddc-seed', type=Path, help='Copy a previous private cook cache')
     args = parser.parse_args()
     editor, output = args.editor.resolve(strict=True), args.output.resolve()
     engine, wrapper = args.engine.resolve(strict=True), args.docker_wrapper.resolve(strict=True)
@@ -32,13 +37,28 @@ def main():
             json.loads((editor/'reload-exit.json').read_text())['returncode'] != 0):
         raise ValueError('Editor reload must pass first')
     migrated = json.loads((editor/'migration.json').read_text())['assets']
-    assets = [row for row in migrated if row['package'].startswith('/Game/CSS/eins0fx/Shared/Astral/')]
-    if len(assets) != 30:
-        raise ValueError('Expected the current 30-asset Astral migration')
+    if (not args.asset_root.startswith('/Game/CSS/') or not args.asset_root.endswith('/') or
+            '..' in args.asset_root.split('/') or args.expected_assets < 1):
+        raise ValueError('Expected an authored asset directory and positive asset count')
+    assets = [row for row in migrated if row['package'].startswith(args.asset_root)]
+    if len(assets) != args.expected_assets:
+        raise ValueError('Migrated asset count differs from the requested cook')
     inputs = json.loads((editor/'copied-inputs.json').read_text())
     for entry in inputs:
         if sha(Path(entry['path'])) != entry['sha256']:
             raise ValueError('Protected authoring input changed: '+entry['path'])
+    renderer, renderer_source = '', None
+    if args.renderer_config:
+        source = args.renderer_config.resolve(strict=True)
+        config = configparser.ConfigParser(interpolation=None)
+        config.optionxform = str
+        config.read(source)
+        section = '/Script/Engine.RendererSettings'
+        values = dict(config[section])
+        if not values or any('\n' in value for value in values.values()):
+            raise ValueError('Expected single-line renderer settings')
+        renderer = '['+section+']\n'+''.join(key+'='+value+'\n' for key, value in values.items())
+        renderer_source = dict(path=str(source), sha256=sha(source), settings=values)
     image = subprocess.check_output(['bash', str(wrapper), 'image', 'inspect', 'unholy-wine:11.7',
                                      '--format', '{{.Id}}'], text=True).strip()
     output.mkdir(parents=True)
@@ -48,7 +68,7 @@ def main():
     (project/'CSSShared.uproject').write_text(json.dumps(dict(FileVersion=3, EngineAssociation='5.6',
         Plugins=[dict(Name='AndroidFileServer', Enabled=False)]), indent=2)+'\n')
     (project/'Config/DefaultEngine.ini').write_text(
-        '[/Script/EngineSettings.GameMapsSettings]\nGameDefaultMap=\nServerDefaultMap=\nEditorStartupMap=\n'
+        renderer+'[/Script/EngineSettings.GameMapsSettings]\nGameDefaultMap=\nServerDefaultMap=\nEditorStartupMap=\n'
         '[/Script/WindowsTargetPlatform.WindowsTargetSettings]\nDefaultGraphicsRHI=DefaultGraphicsRHI_DX12\n'
         '!D3D12TargetedShaderFormats=ClearArray\n+D3D12TargetedShaderFormats=PCD3D_SM6\n'
         '!D3D11TargetedShaderFormats=ClearArray\n+D3D11TargetedShaderFormats=PCD3D_SM5\n')
@@ -56,6 +76,13 @@ def main():
         '[/Script/UnrealEd.ProjectPackagingSettings]\nbShareMaterialShaderCode=False\n'
         'bSharedMaterialNativeLibraries=False\nbUseIoStore=False\n')
     protected = {}
+    if renderer_source:
+        protected[renderer_source['path']] = renderer_source['sha256']
+    if args.ddc_seed:
+        seed = args.ddc_seed.resolve(strict=True)
+        if not seed.is_relative_to(Path('/home')) or not seed.is_dir():
+            raise ValueError('Expected an existing local private cache directory')
+        shutil.copytree(seed, out/'ddc')
     for row in assets:
         relative = Path('Content') / (row['package'].removeprefix('/Game/')+'.uasset')
         source, target = editor/relative, project/relative
@@ -73,6 +100,7 @@ def main():
         '--mount', f'type=bind,src={script},dst=/cook.sh,readonly', image, 'bash', '/cook.sh']
     (output/'command.json').write_text(json.dumps(command, indent=2)+'\n')
     (output/'sources.json').write_text(json.dumps(dict(files=protected, image=image, engine=version,
+        renderer=renderer_source, cache_seed=str(args.ddc_seed.resolve()) if args.ddc_seed else None,
         editor_receipts={name: sha(editor/name) for name in ['migration.json', 'reload.json', 'reload-exit.json']}), indent=2)+'\n')
     with (output/'console.log').open('w') as log:
         result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT)
@@ -81,7 +109,7 @@ def main():
     result.check_returncode()
     if not unchanged:
         raise ValueError('Protected migrated inputs changed')
-    print('Astral Windows cook passed; independent payload/shader checks remain')
+    print(f'Windows cook passed for {len(assets)} assets; independent payload/shader checks remain')
 
 
 if __name__ == '__main__':
