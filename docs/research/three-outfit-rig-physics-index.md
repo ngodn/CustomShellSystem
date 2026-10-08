@@ -46,6 +46,22 @@ The follow-up amendment explicitly adds implementation of facial-expression supp
 
 ## Tooling notes
 
+The first live namespace trial exposed a retained Eve playback override on
+Genessa. `live-face-visibility1` pins the reflected player graph, Genessa's
+authored graph and the preview error. Commit `96b56eb` detaches owned playback
+overrides before mesh changes and keeps preview visibility independent of physics
+sync. Its installed core is hash-verified; user acceptance remains pending. Do not
+mistake the loaded Genessa facial mesh for proof that facial playback is active.
+
+The [secondary-motion ownership inventory](2026-10-08-secondary-motion-ownership.md)
+records all nine variants and 18 normal/facial meshes from the final cooked
+containers. `secondary-bindings4` passes five adapter comparisons across ten
+graphs/eight rigs, checking binding identities, types, defaults and transfer
+flags. Eight checker tests cover wrong-input and duplicate-writer cases. No
+named body/hair writer overlap was found; hand literal targets and graph order
+remain outside that proof. Keep collision consumers and simulation-vertex counts
+distinct from contact quality and performance acceptance.
+
 `eve-rig-editor2` passes migration and fresh reload of all 309 selected packages,
 with old staged paths absent and all 316 source inputs unchanged. Its 36 rig
 assets also pass the private Windows cook. `eve-rig-pack2` now passes all 309

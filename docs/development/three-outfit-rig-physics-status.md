@@ -39,6 +39,13 @@ core selector rather than silently overwriting it.
 
 ## Initial installed trial
 
+The [cooked solver inventory](../research/2026-10-08-secondary-motion-ownership.md)
+now accounts for nine variants, 18 normal/facial mesh paths, ten graphs and eight
+Control Rig assets. Five adapter comparisons pass, including input identities and
+defaults; eight negative/control tests cover the checker. No overlapping named
+body/hair bone writers were found. Hand literal targets, graph order, actual
+contact and runtime cost remain unverified.
+
 `namespace-deployment1/validation.json` records the independent post-install
 check. The selected core is `css_core-namespace-7d0e24cf60df400c.dll`, SHA256
 `7d0e24cf60df400c562f44fa3195a5e201df69790c6cf2a665118405c2893908`.
