@@ -88,6 +88,26 @@ Next inspect the affected roots with original alpha/materials, then validate
 idle, head turns, attacks and continuous motion if the adjustment is retained.
 Preserve the current installed hair until those checks pass.
 
+The follow-up root check rejects the broad two-centimeter adjustment. Across
+723 gait samples, root positions remain anchored, but the outer-left first
+segment reaches 32.624 degrees instead of its baseline 6 degrees; outer-right
+reaches 11.274 degrees. Contact projection follows angular limiting and can
+override that fit when the proxy radius is too large. The source-material
+renders agree: isolated outer strands lift away from the original hairstyle.
+Do not cook either broad-radius trial. Their improved contact counts do not
+outweigh the visible regression.
+
+Commander White's `work/hair-head-material1/renders2/report.json` records the
+six successful original-hair-material renders, source/capture hashes and exact
+geometry equality after removing the UV-only addition. Root measurements are
+in the adjacent `root-angles.json`. Eyes, clothes, body materials and morphs are
+outside this diagnostic, and it does not claim Unreal shader parity. The first
+render attempt assigned grey material incorrectly and failed its report; it is
+rejected. The current tool preserves material names while Blender resolves the
+library objects. The next private comparison targets only named strand tips,
+with an explicit first-segment preservation check rather than further collider
+inflation.
+
 Cleanup removed 751,543,230 logical bytes of derived data from the completed
 synthetic capture, gait baseline and first head-clearance trial. Their sources,
 recipes and captures retain their hashes. Immediate free space was unchanged,

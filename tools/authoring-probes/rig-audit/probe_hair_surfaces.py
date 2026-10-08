@@ -65,6 +65,8 @@ for item in plan['cases']:
     for group in geometry['groups']:
         if group['cloth_asset'] != -1:
             raise ValueError('This skinning diagnostic cannot evaluate cloth')
+        if plan.get('include_uv', False):
+            group['uv0'] = [row[12:14] for row in group['vertices']]
         group['vertices'] = [row[:6] for row in group['vertices']]
         del group['cloth_mappings'], group['morphs']
     geometry['bones'] = bones
