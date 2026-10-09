@@ -119,6 +119,21 @@ families. Fresh reload retains one cloth asset and all 3,896 mapped render
 vertices. This closes the binding issue only. Sprint stretch, shape/contact,
 material cook and game acceptance remain open. No installed assets changed.
 
+`peony-cloth-solver-probe.patch` adds bounded, transient Peony substep and
+self-collision-thickness diagnostics, per-step cloth timings and batches of
+1..8 existing motion probes. Shared settings are restored on scope exit.
+The report states that timings exclude animation/rendering and are not game
+frame times. Its before/after hashes and replay check are in
+`peony-cloth3/authoring-patch.json`. The final C++20 editor build passed.
+
+`peony-collision-probe.patch` adds canonical Peony physics creation/inspection
+using the canonical shared Skeleton. Existing output packages are still refused.
+It is additive against the assembled collision commandlet, with before source,
+hashes and successful replay in `peony-cloth4/authoring-collision-*` and
+`collision-patch-replay.json`. The editor build and native creation pass.
+These patches are authoring-only. They do not change the installed core or
+approve any simulation result.
+
 `CSSEveClothCommandlet` is an isolated, unfinished experiment restricted to `/Game/CSS/EveTest/`. `-NoSave` runs binding and rebuild checks without saving the mesh. The primary-only diagnostic now passes after deferring PostEditChange until section metadata is stored. Manually sharing the cloth GUID across `-Attachments` does not survive the stock engine rebuild and is not production-ready. See `docs/development/eve-outfit-goal.md` and `work/eve26/cloth-bind3.log` before using or changing this code. Do not deploy its output as completed Holiday clothing.
 
 

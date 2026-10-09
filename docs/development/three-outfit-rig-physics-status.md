@@ -1,6 +1,6 @@
 # Three-outfit implementation status
 
-Updated 2026-10-09. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
+Updated 2026-10-10. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
 
 Latest installed core: `718f76c3b60a8315`, with the CW hair trial. The user
 reports the requested CW Iris Out/hair/eyes/interruption check looks fine.
@@ -2037,3 +2037,96 @@ customization, footwear/doubles placement and game behavior. Keep the full
 remaining Eve, Genessa, CW and release scope active. The user can play the
 installed build while these offline checks continue; request closure only
 when a complete replacement trial is ready.
+
+
+## Peony target weights and collision fit
+
+October 10 continuation: `peony-cloth3` reduces the simulation mesh to 1,060
+particles and 1,932 triangles using topology-checked short-edge collapse. The
+render mesh, section ownership and source garment remain unchanged. Its sprint
+capture still fails the gross-strain screen in 135 of 145 frames. This screen
+requires both more than twice an edge's rest length and over 1 cm extension;
+it is not a complete garment-quality test.
+
+`peony-cloth4` changes only simulation target weights below the anchor band,
+fading the free panels to the pelvis over 16 cm. All 22 exact fixed anchors,
+proxy geometry, maps, morph deltas and render input remain unchanged. The
+independent checks pass anchor coordinates within 0.000025 cm. Fresh native
+inspection retains all 5,330 panel/trim triangles and 3,896 mapped vertices.
+
+| Capture, 145 frames at 60 fps | Strain-failing frames | Maximum edge ratio | Mean cloth step, ms |
+| --- | ---: | ---: | ---: |
+| Pelvis targets, walk | 0 | 2.205 | 0.958 |
+| Pelvis targets, jog | 24 | 3.480 | 0.973 |
+| Pelvis targets, sprint | 13 | 3.363 | 0.937 |
+| Sprint, no backstop diagnostic | 14 | 2.728 | 0.878 |
+| Sprint, no body collision diagnostic | 1 | 2.333 | 0.814 |
+| Sprint, no self-collision diagnostic | 14 | 2.942 | 0.470 |
+| Sprint, two substeps | 16 | 4.965 | 1.788 |
+| Sprint, three substeps | 16 | 3.287 | 2.627 |
+
+Timings measure editor `TickClothing` plus its explicit completion wait, excluding
+animation and rendering. They are not game frame times or an FPS guarantee.
+Chaos repeats differ numerically; compare failure patterns, not bitwise particle
+positions. No diagnostic collision disable or extra substeps were saved.
+The higher-cost substep candidates are rejected as fixes.
+
+A mapped frame-53 sprint review still shows panel distortion and contact issues.
+The sphere-versus-distance-limit check finds no impossible individual-sphere
+constraint across this sprint. However, the six sampled stretched-edge endpoints
+are inside the posed body by 0.64 to 6.52 cm while close to the borrowed collision
+spheres. The sphere boundaries are themselves inside that body surface. Three
+ray directions agree at each witness. This is neutral upstream LBS evidence,
+not secondary-motion or morphed-body coverage. Reducing collider radii would
+worsen these demonstrated gaps.
+
+`fit_peony_leg_collision.py` now makes a Peony-specific trial: ten tapered leg
+capsules from current body cross-sections, plus eight retained hip/body spheres.
+The first two fitting recipes used biased cross-section centers and were not
+imported. Recipe 3 limits samples to the leg's weighted vertices and fits a
+cross-section circle before calculating radii. `peony-cloth5` stages that recipe
+with unchanged cloth4 proxy/maps/render data to isolate the collision change.
+Native creation and cloth rebuild both pass. Motion, saved primitive geometry,
+body clearance and travel limits still require verification before adoption.
+
+The subsequent checks **reject cloth5 and cloth6 for installation**. Fresh
+native readback verifies cloth5's seven bodies, eight spheres and ten tapered
+capsules, including endpoint positions and radii. Walk/jog/sprint fail the
+strain screen in 143/145, 145/145 and 90/145 frames. An endpoint-sphere
+lower-bound check demonstrates travel conflicts in every sprint frame,
+requiring up to 3.985 cm more travel for one particle.
+
+Cloth6 preserves proxy geometry/weights and every fixed anchor, changing only
+free-panel MaxDistance to a maximum of 30 cm with a 35 cm smooth falloff. This
+clears the individual-sphere feasibility failures, but walk/jog/sprint still
+fail in 136/145, 123/145 and 123/145 frames. Disabling backstops, self-collision
+or both fails to resolve it. The new collider contains 302 proxy points at
+rest, up to 1.453 cm inside its endpoint spheres including collision thickness;
+none are fixed anchors. This envelope and actual native collider motion need
+inspection before further parameter changes. Cloth6 fresh readback preserves
+the 5,330 panel/trim triangles and 3,896 mapping records.
+The mapped frame-38 back review visibly confirms the failed cloth6 deformation.
+`peony-cloth6/collision-travel-receipt.json` retains nine checked motion cases,
+their recipes and the exact final editor asset hashes for this rejected pair.
+
+`peony-cloth4/solver-study-receipt.json` freezes 13 verified motion cases, 16
+recipes and 113 evidence paths. The C++20 authoring builds pass, and both
+additive patches replay against retained before sources. The new collision
+patch permits only the private canonical Peony physics namespace in addition
+to the existing authoring paths. It does not change the CSS runtime.
+
+Cleanup converted 30 byte-identical private editor assets, 1,164,735,060 logical
+bytes, to independent copy-on-write files. Hashes are unchanged and future writes
+remain isolated. The filesystem free-space measurement did not increase, so no
+recovered-space claim is made. Original inputs, installed files, releases and
+rollback assets were untouched. Subsequent cloth5 staging also uses copy-on-write.
+After the stopped trials, deleting their private derived-data caches removed
+273,723,121 bytes. Available filesystem space increased by 268,193,792 bytes
+during that measurement. Exact paths and caveats are retained in
+`peony-cloth4/cache-cleanup.json`; the active cloth6 cache was retained.
+
+No new trial is installed. The user does not need to launch the game for this
+offline work. Next: verify the new collision capture and contact fit, then resolve
+cloth travel and morph integration before the final material/facial/cook/catalog
+assembly and live acceptance. Eve remains first; the remaining Genessa, CW,
+shared assets and coordinated-release requirements stay active.

@@ -17,6 +17,18 @@ self-collision contributes to the worst spikes, and removing body collision
 alone does not fix it. Do not repeat the rejected multi-section binding or
 present an anchor-coordinate pass as motion acceptance. No new trial is installed.
 
+The [target-weight and collision continuation](../development/three-outfit-rig-physics-status.md#peony-target-weights-and-collision-fit)
+reduces sprint strain failures from 135 to 13 of 145 frames by changing free-panel
+simulation targets to follow the pelvis. Walk passes the gross-strain screen;
+jog and sprint remain unaccepted. Extra substeps cost more without fixing the
+remaining pulls. Six sampled endpoints sit inside the posed body despite
+contact with the borrowed spheres. A Peony-specific leg-capsule candidate is
+authored and read back correctly, but its native gait comparison fails. Expanding
+free-panel travel clears individual-sphere feasibility conflicts without fixing
+the motion. Inspect the new envelope's initial cloth intersections and actual
+native collider transforms before further tuning. Do not shrink the old
+collider to conceal strain or treat passing anchors as contact acceptance.
+
 Latest evidence: all 63 native alternatives and 60 idle carriers are installed.
 The user accepts Black Hole and Iris Out playback/interruption on the tested
 original human appearance. The three existing hair rigs pass 27 editor

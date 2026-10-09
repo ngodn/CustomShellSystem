@@ -1,0 +1,35 @@
+--- a/CSSEveCollisionCommandlet.cpp
++++ b/CSSEveCollisionCommandlet.cpp
+@@ -26,7 +26,7 @@
+     {
+         FString Report;
+         if (!FParse::Value(*Params, TEXT("Output="), Output) ||
+-            (!Output.StartsWith(TEXT("/Game/CSS/EveTest/PA_")) && Output != TEXT("/Game/CSS/SeduXtress/PA_Body")) ||
++            (!Output.StartsWith(TEXT("/Game/CSS/EveTest/PA_")) && Output != TEXT("/Game/CSS/SeduXtress/PA_Body") && !Output.StartsWith(TEXT("/Game/CSS/eins0fx/EveSB/Peony/Physics/PA_"))) ||
+             !FParse::Value(*Params, TEXT("Report="), Report)) return Fail(TEXT("Inspect needs private Output asset and Report filename"));
+         UPhysicsAsset* Asset = LoadObject<UPhysicsAsset>(nullptr,*Output);
+         if (!Asset) return Fail(TEXT("Cannot load private collision asset"));
+@@ -43,9 +43,9 @@
+         return 0;
+     }
+     if (!FParse::Value(*Params, TEXT("Input="), Input) || !FParse::Value(*Params, TEXT("Output="), Output) ||
+-        !Output.StartsWith(TEXT("/Game/CSS/EveTest/PA_")) || !FPackageName::IsValidLongPackageName(Output) ||
++        (!Output.StartsWith(TEXT("/Game/CSS/EveTest/PA_")) && !Output.StartsWith(TEXT("/Game/CSS/eins0fx/EveSB/Peony/Physics/PA_"))) || !FPackageName::IsValidLongPackageName(Output) ||
+         FPackageName::DoesPackageExist(Output))
+-        return Fail(TEXT("Specify Input and an unused /Game/CSS/EveTest/PA_ package"));
++        return Fail(TEXT("Specify Input and an unused private EveTest or Peony physics package"));
+     TSharedPtr<FJsonObject> Root;
+     if (!FFileHelper::LoadFileToString(Text, *Input) || !FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text), Root) || !Root.IsValid())
+         return Fail(TEXT("Cannot read collision definition"));
+@@ -53,7 +53,10 @@
+     if (!Root->TryGetArrayField(TEXT("spheres"), Spheres) || Spheres->IsEmpty() || Spheres->Num() > 32 ||
+         !Root->TryGetArrayField(TEXT("connections"), Connections) || Connections->Num() > 16)
+         return Fail(TEXT("Expected 1..32 spheres and at most 16 connections"));
+-    USkeleton* Skeleton = LoadObject<USkeleton>(nullptr, TEXT("/Game/CSS/Shared/SKEL_Base.SKEL_Base"));
++    const bool Peony = Output.StartsWith(TEXT("/Game/CSS/eins0fx/EveSB/Peony/Physics/PA_"));
++    USkeleton* Skeleton = LoadObject<USkeleton>(nullptr, Peony
++        ? TEXT("/Game/CSS/eins0fx/Shared/Skeletons/SKEL_Base.SKEL_Base")
++        : TEXT("/Game/CSS/Shared/SKEL_Base.SKEL_Base"));
+     if (!Skeleton) return Fail(TEXT("Shared skeleton missing"));
+     struct FSphere { FName Bone; FVector Center; double Radius; };
+     TArray<FSphere> Parsed;
