@@ -242,6 +242,25 @@ garment, material, physics and release work remain open. See the
 [glove study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/authoring/new-outfits-fitting.md#glove-fingertip-alignment-clearance-and-matching-skinning).
 No installed files changed.
 
+Peony's next private candidate, `new-outfits-arms3`, preserves both elbow
+mechanisms as 13-component assemblies and fits the separate forearm bands.
+Independent per-piece rotations had split the mechanism, while translating
+the whole band buried its back surface. The revised fit moves each assembly
+together and expands only the two wrapping bands around the forearm axis.
+Recessed mounting shafts retain their intended embedded depth.
+
+The change is limited to 6,292 ornament-owned points, with a maximum neutral
+movement of 1.5701 cm and at most two skin influences. The 156-field edit-scope
+check and all 23 original-source preservation checks pass. Neutral, maximum
+body controls, walking frame 36 and right-arm sprint frame 12 views retain the
+mechanisms and bands. These are offline pose checks, not full movement,
+secondary-motion or game acceptance. Hip-bag interaction and remaining
+garment, material, palette/glow, physics and packaging work are still open.
+No installed files changed. See the [arm fitting evidence](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/authoring/new-outfits-fitting.md#arm-assemblies-and-forearm-bands).
+The two rejected/superseded arm blends and the archived obsolete fitter were
+removed after hash/reference/job checks, totaling 57,605,526 logical bytes.
+Their small recipes, receipts and visual rejection evidence remain.
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`
