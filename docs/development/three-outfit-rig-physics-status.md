@@ -103,6 +103,13 @@ See [Eve's source inventory](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_
 for counts, hashes, proposed component groups and remaining work. No installed
 files changed. CW's moving foot-control comparison remains pending.
 
+The next component audit accounts for every triangle in the three source
+geometry sets. Slipstream's shared jacket/skirt material separates into two
+disconnected surfaces (3,176 and 2,082 triangles), allowing independent garment
+ownership without cutting either surface. Trim ownership, fit and controls
+remain to be authored. The user subsequently confirmed CW belt physics and
+skirt smoothing are queued for later, with Eve taking priority.
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`
