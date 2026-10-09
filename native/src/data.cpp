@@ -2,6 +2,7 @@
 #include "data.hpp"
 #include "packages.hpp"
 #include "replacements.hpp"
+#include "ground_offset.hpp"
 #include <algorithm>
 #include <chrono>
 #include <fstream>
@@ -31,6 +32,20 @@ bool item_slot_from_name(const std::string& name,ItemSlot& out) {
     for(size_t i=0;i<std::size(ITEM_SLOT_NAMES);++i)
         if(name==ITEM_SLOT_NAMES[i]) { out=static_cast<ItemSlot>(i); return true; }
     return false;
+}
+double authored_ground_offset(const Outfit& outfit,const Variant& variant,const Customization& custom) {
+    if(!variant.ground_offset_toggle) return variant.ground_offset_cm;
+    const auto& rule=*variant.ground_offset_toggle;
+    const auto& options=variant.controls?*variant.controls:outfit.controls;
+    const auto* control=options.find(rule.control);
+    if(!control || control->kind!=ControlKind::Toggle || control->sections.empty())
+        throw std::runtime_error("Ground height requires an installed section toggle");
+    const auto values=control_values(options,custom);
+    const auto found=values.find(rule.control);
+    const auto& value=found==values.end()?control->value:found->second;
+    const auto height=value[0]>=.5f?rule.shown_cm:rule.hidden_cm;
+    if(!GroundOffset::valid(height)) throw std::runtime_error("Ground height outside range");
+    return height;
 }
 static std::map<int,std::string> parse_materials(const Json& j) {
     std::map<int,std::string> result;
@@ -260,7 +275,7 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
             }
             std::set<std::string> variants;
             for (const auto& v : item.at("variants")) {
-                Variant variant{v.at("id"), v.at("name"), v.value("mesh",std::string{}), {}, {}, {}, {}, 0, {}, {}};
+                Variant variant{v.at("id"), v.at("name"), v.value("mesh",std::string{}), {}, {}, {}, {}, 0, {}, {}, {}};
                 if(v.contains("ground_offset_cm")) {
                     if(!v.at("ground_offset_cm").is_number()) throw std::runtime_error("Invalid ground offset");
                     variant.ground_offset_cm=v.at("ground_offset_cm").get<double>();
@@ -270,6 +285,22 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
                 variant.fit_shell=v.value("fit_shell",std::string{});
                 if(!variant.fit_shell.empty() && !valid_id(variant.fit_shell)) throw std::runtime_error("Invalid fit shell tag");
                 if(has_customize(v)) variant.controls=ControlSet::parse(customize_block(v));
+                if(v.contains("ground_offset_toggle")) {
+                    const auto& rule=v.at("ground_offset_toggle");
+                    if(!rule.is_object() || rule.size()!=3 || !rule.contains("control") ||
+                       !rule.at("control").is_string() || !rule.contains("shown_cm") ||
+                       !rule.at("shown_cm").is_number() || !rule.contains("hidden_cm") ||
+                       !rule.at("hidden_cm").is_number())
+                        throw std::runtime_error("Invalid ground height toggle");
+                    GroundOffsetToggle parsed{rule.at("control").get<std::string>(),
+                        rule.at("shown_cm").get<double>(),rule.at("hidden_cm").get<double>()};
+                    const auto& options=variant.controls?*variant.controls:outfit.controls;
+                    const auto* control=options.find(parsed.control);
+                    if(!control || control->kind!=ControlKind::Toggle || control->sections.empty() ||
+                       !GroundOffset::valid(parsed.shown_cm) || !GroundOffset::valid(parsed.hidden_cm))
+                        throw std::runtime_error("Ground height needs a section toggle and heights from -10 to 10 cm");
+                    variant.ground_offset_toggle=std::move(parsed);
+                }
                 if(v.contains("animations")) variant.animations=AnimationSet::parse(v.at("animations"));
                 if (!valid_id(variant.id) || !variants.insert(variant.id).second ||
                     (!v.contains("items") && !valid_asset(variant.mesh)))

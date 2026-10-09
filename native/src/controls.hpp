@@ -182,7 +182,7 @@ struct Customization {
     std::string palette = "original";
     std::map<std::string,ControlValue> values;
     std::map<std::string,ColorTint> tints;   // keyed by group name: "outfit" or "body"
-    // The player's Ground height, in cm (-10..10). Unset: the variant's ground_offset_cm.
+    // The player's Ground height, in cm (-10..10). Unset: the variant's authored height.
     std::optional<double> ground_offset_cm;
     // Stable optional-library identity. Empty restores the outfit's original face.
     std::string expression;

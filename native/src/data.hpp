@@ -85,6 +85,10 @@ struct Item {
     // Body material sections this item covers, so a boot can stop a foot poking through.
     std::vector<int> hides_sections;
 };
+struct GroundOffsetToggle {
+    std::string control;
+    double shown_cm=0, hidden_cm=0;
+};
 struct Variant {
     std::string id, name, mesh;
     std::map<int,std::string> materials;
@@ -99,6 +103,7 @@ struct Variant {
     // takes that shell's socket adjustments instead of the worn shell's. Empty: the
     // outfit's fit_shell, then its first listed shell (fit_shell_for).
     std::string fit_shell;
+    std::optional<GroundOffsetToggle> ground_offset_toggle;
 };
 struct Outfit {
     std::string id, name, author, description, category;
@@ -116,6 +121,7 @@ struct Outfit {
         return controls;
     }
 };
+double authored_ground_offset(const Outfit&,const Variant&,const Customization&);
 // beta.7: the shell a look's stowed gear is fitted to. A package names it or gets its first
 // listed shell; the official shells and replacement mods carry their own. NPC and enemy looks
 // are not sized like any shell, so they keep the worn shell's placement.

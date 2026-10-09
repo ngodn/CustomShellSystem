@@ -655,7 +655,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
         auto placement=[&](int index,const Json& reset_all) {
             const auto& custom=selection->second.custom;
             const auto* worn_variant=catalog.find(worn->id,selection->second.variant);
-            const double authored=worn_variant?worn_variant->ground_offset_cm:0.;
+            const double authored=worn_variant?authored_ground_offset(*worn,*worn_variant,custom):0.;
             const double ground=custom.ground_offset_cm.value_or(authored);
             const Json base{{"action","ground_offset"}}, reset{{"action","reset_ground_offset"}};
             auto centimetres=[](double v) {
@@ -673,6 +673,8 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             slider("Height",float(ground),-10.f,10.f,.5f,centimetres(ground),true,base,true," cm",
                    step_action(base,-1),step_action(base,1));
             note("The outfit's own setting: "+centimetres(authored)+".");
+            if(worn_variant && worn_variant->ground_offset_toggle)
+                note("This outfit adjusts height with its removable footwear. A manual height overrides it; Reset restores automatic height.");
             direction_hint(true,"Adjust height");
             action_button("accept","Reset to the outfit's setting",reset,3,custom.ground_offset_cm.has_value());
             if(!reset_all.is_null()) action_button("tertiary","Reset all",reset_all,2);

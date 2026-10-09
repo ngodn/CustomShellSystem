@@ -1950,3 +1950,39 @@ the source candidate, exact coverage recipe, validation and previews. Re-export
 the garments from this candidate before the next assembly/cook; the existing
 footwear interchange and corrected character cook still contain the previous
 lining weights. Broad gait/contact checks and runtime height remain next.
+
+## Peony gait check and automatic footwear height
+
+October 10: the lining2 candidate now has a complete sampled upstream walk
+comparison: 145 frames at neutral and maximum body shapes, 290 cases total.
+For 2,299 lining vertices selected inside the resting boot shell, the previous
+weights produced up to 1.28594 cm positive nearest-surface distance. The repaired
+weights have no positive witnesses above the 0.05 cm diagnostic threshold;
+their maximum signed distance is -0.02144 cm. This is an open-surface fitting
+check, not a closed-volume collision, runtime IK or cloth-simulation test.
+`peony-footwear1/lining-gait.json` retains all samples and input hashes.
+
+CSS now supports an optional variant `ground_offset_toggle` rule. A named
+section toggle selects shown/hidden authored heights, with the same defaults,
+palette and explicit control values as visibility. Manual Ground Height stays
+an absolute override; Reset returns to automatic placement. Existing outfits
+without the rule retain fixed-height behavior. Invalid control references,
+types and out-of-range heights are rejected. No derived height is saved.
+
+The host build and Windows C++23 core build passed. All 24 host CTest suites
+passed, including the expanded data suite's 169 behavioral checks. The Windows
+build reported the existing unused `row` warning in `extension_data.cpp`.
+This is source/build validation only; no new files were installed.
+
+Astral source inspection found that the primary double deliberately uses the
+native combat mesh's component space for weapon alignment, discarding the
+player primary component's relative transform. Footwear placement on doubles
+therefore remains an explicit verification item; do not assume the new height
+rule reaches doubles or copy the player transform blindly. Preserve native
+weapon sockets when resolving any demonstrated mismatch.
+
+Next: garment physics and the final Peony assembly/cook using lining2 and the
+38-slot coverage recipe, then a verified install and game test. The user has
+closed the game and is available to test, but no restart is requested until a
+complete candidate is ready. Slipstream and the remaining coordinated-release
+work are still unfinished.

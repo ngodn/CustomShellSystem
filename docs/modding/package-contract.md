@@ -59,6 +59,32 @@ Players can override it per variant with Customize > Placement > Ground height
 (1.0.0-beta.5); the declared value is where that setting starts and what its
 reset returns to.
 
+For removable footwear, a variant can instead select its authored height from
+a section toggle (CSS 1.0.0):
+
+```json
+"ground_offset_toggle": {
+  "control": "boots_visible",
+  "shown_cm": 9.7697432,
+  "hidden_cm": 0
+}
+```
+
+The control must exist in the variant's effective customization recipe, have
+kind `toggle` and declare `sections`. Both heights must be finite numbers from
+-10 to 10 cm. This rule replaces the fixed authored `ground_offset_cm` while
+present; it is not an additive offset. Visibility follows the same default,
+palette and per-control override used by customization. Variant controls
+replace shared outfit controls as usual. Invalid rules reject the package.
+
+A player's explicit Ground Height setting still overrides the authored value.
+Reset clears that override and follows the current footwear selection again.
+No derived height is written into profiles, so saving hidden boots and loading
+that profile retains automatic placement. Older CSS builds ignore this rule;
+packages that require it must list CSS 1.0.0 as a dependency in their release
+instructions. Test boots shown/hidden, profiles, facial mesh switches and
+doubles before shipping the outfit.
+
 An optional `fit_shell` (on the outfit, or on a variant to override it) names
 the shell whose body the look is sized like, as a CharacterId tag such as
 `CharacterId.Player.Shell.Genessa`. Each shell's character data tunes where its

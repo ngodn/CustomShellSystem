@@ -467,7 +467,8 @@ struct Core {
                 for(const auto& outfit:catalog.outfits) if(outfit.id==selection.outfit) {
                     if(state.keep_default_attachments) appearance.set_attachment_offsets({},false);
                     else appearance.set_attachment_offsets(variant->attachments,true,fit_shell_for(outfit,*variant));
-                    appearance.set_ground_offset(selection.custom.ground_offset_cm.value_or(variant->ground_offset_cm));
+                    appearance.set_ground_offset(selection.custom.ground_offset_cm.value_or(
+                        authored_ground_offset(outfit,*variant,selection.custom)));
                     appearance.sync_items(outfit,selection.variant);
                     appearance.customize(outfit,selection.variant,selection.custom);
                 }
@@ -909,7 +910,7 @@ struct Core {
                 // Ground height: the player's placement for this variant, in half-centimetre
                 // steps. Landing back on the outfit's own value drops the override.
                 const auto* variant=catalog.find(selected->second.outfit,selected->second.variant);
-                const double authored=variant?variant->ground_offset_cm:0.;
+                const double authored=variant?authored_ground_offset(*outfit,*variant,custom):0.;
                 if(action=="reset_ground_offset") custom.ground_offset_cm.reset();
                 else {
                     double offset=command.contains("value")?command.at("value").get<double>()
@@ -1369,9 +1370,10 @@ struct Core {
                             // apply() may restore a retired pawn, including its attachment state.
                             if (state.keep_default_attachments) appearance.set_attachment_offsets({}, false);
                             else appearance.set_attachment_offsets(variant->attachments, true, fit_shell);
-                            appearance.set_ground_offset(requested.custom.ground_offset_cm.value_or(variant->ground_offset_cm));
-                            lap("ground");
                             for(const auto& outfit:catalog.outfits) if(outfit.id==requested.outfit) {
+                                appearance.set_ground_offset(requested.custom.ground_offset_cm.value_or(
+                                    authored_ground_offset(outfit,*variant,requested.custom)));
+                                lap("ground");
                                 // Items before controls: an accessory can hide body
                                 // sections, and a toggle may then show one of them again.
                                 appearance.sync_items(outfit,requested.variant);

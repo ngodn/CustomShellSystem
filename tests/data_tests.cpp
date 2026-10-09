@@ -217,6 +217,75 @@ int main() {
             }
         }
         auto material_catalog=catalog;
+        {
+            auto footwear=catalog;
+            const auto controls=Json::parse(R"({"schema":1,"controls":[
+                {"id":"boots","name":"Boots","kind":"toggle","default":[1,0,0,1],"sections":[20]}],
+                "palettes":[{"id":"bare","name":"Bare","values":{"boots":[0,0,0,1]}}]})");
+            footwear["outfits"][0]["customize"]=controls;
+            auto& variant=footwear["outfits"][0]["variants"][0];
+            variant["ground_offset_cm"]=-3;
+            variant["ground_offset_toggle"]={{"control","boots"},{"shown_cm",9.75},{"hidden_cm",0}};
+            atomic_json(catalog_file,footwear,false);
+            auto models=Catalog::load(catalog_dir);
+            const auto& outfit=models.outfits.front();
+            const auto& model=outfit.variants.front();
+            Customization look;
+            expect(authored_ground_offset(outfit,model,look)==9.75,"Shown footwear height missing");
+            look.values["boots"]={0,0,0,1};
+            expect(authored_ground_offset(outfit,model,look)==0,"Hidden boots retained heel height");
+            look=Customization::parse(look.json());
+            expect(authored_ground_offset(outfit,model,look)==0,"Saved hidden footwear lost placement");
+            look.values.clear(); look.palette="bare";
+            expect(authored_ground_offset(outfit,model,look)==0,"Palette visibility and height disagree");
+            look.values["boots"]={1,0,0,1};
+            expect(authored_ground_offset(outfit,model,look)==9.75,"Explicit toggle must override palette");
+            look.ground_offset_cm=-2;
+            const auto saved=Customization::parse(look.json());
+            expect(saved.ground_offset_cm.value_or(authored_ground_offset(outfit,model,saved))==-2,
+                   "Manual placement lost precedence");
+            look.ground_offset_cm.reset();
+            GroundOffset placement;
+            expect(placement.set(-96,authored_ground_offset(outfit,model,look))==-86.25,"Footwear lift not applied");
+            look.values["boots"]={0,0,0,1};
+            expect(placement.set(-86.25,authored_ground_offset(outfit,model,look))==-96,"Boot removal did not restore baseline");
+            look.values["boots"]={1,0,0,1};
+            expect(placement.set(-96,authored_ground_offset(outfit,model,look))==-86.25,"Repeated boot toggle accumulated height");
+            auto legacy=model; legacy.ground_offset_toggle.reset();
+            expect(authored_ground_offset(outfit,legacy,look)==-3,"Legacy fixed placement changed");
+            auto overridden=footwear;
+            overridden["outfits"][0]["variants"][0]["customize"]=controls;
+            overridden["outfits"][0]["variants"][0]["customize"]["controls"][0]["default"][0]=0;
+            atomic_json(catalog_file,overridden,false);
+            auto overrides=Catalog::load(catalog_dir);
+            expect(authored_ground_offset(overrides.outfits.front(),overrides.outfits.front().variants.front(),{})==0,
+                   "Variant footwear controls must replace shared defaults");
+            for(const auto& invalid:Json::array({nullptr,true,Json::array(),
+                    {{"control","missing"},{"shown_cm",9},{"hidden_cm",0}},
+                    {{"control","boots"},{"shown_cm",11},{"hidden_cm",0}},
+                    {{"control","boots"},{"shown_cm",9},{"hidden_cm",-11}},
+                    {{"control","boots"},{"shown_cm","9"},{"hidden_cm",0}},
+                    {{"control","boots"},{"shown_cm",9},{"hidden_cm",true}},
+                    {{"control",4},{"shown_cm",9},{"hidden_cm",0}},
+                    {{"control","boots"},{"shown_cm",9}},
+                    {{"control","boots"},{"shown_cm",9},{"hidden_cm",0},{"extra",1}}})) {
+                auto bad_footwear=footwear;
+                bad_footwear["outfits"][0]["variants"][0]["ground_offset_toggle"]=invalid;
+                atomic_json(catalog_file,bad_footwear,false);
+                rejects([&]{Catalog::load(catalog_dir);});
+            }
+            auto bad_control=footwear;
+            bad_control["outfits"][0]["customize"]["controls"][0].erase("sections");
+            bad_control["outfits"][0]["customize"]["controls"][0]["kind"]="scalar";
+            bad_control["outfits"][0]["customize"]["controls"][0]["bindings"]={{{"slot",0},{"parameter","Amount"}}};
+            atomic_json(catalog_file,bad_control,false);
+            rejects([&]{Catalog::load(catalog_dir);});
+            auto removed_control=overridden;
+            removed_control["outfits"][0]["variants"][0]["customize"]["controls"]=Json::array();
+            removed_control["outfits"][0]["variants"][0]["customize"]["palettes"]=Json::array();
+            atomic_json(catalog_file,removed_control,false);
+            rejects([&]{Catalog::load(catalog_dir);});
+        }
         material_catalog["outfits"][0]["variants"][0]["materials"]={{"0","/Game/CSS/Face.Face"},{"2","/Game/CSS/Hair.Hair"}};
         atomic_json(catalog_file,material_catalog,false);
         auto with_materials=Catalog::load(catalog_dir);
