@@ -144,6 +144,28 @@ rejected for a bad shaft transition and a measured ankle-pivot mismatch.
 Two superseded/rejected private blends were removed with receipts and renders
 retained (37,342,037 logical bytes). No runtime or installed outfit was changed.
 
+The next Peony study anchors the heel profile at the unchanged bind ankle and
+adds a separate body-derived lining (`new-outfits-boots-lined2.blend`). Side and
+rear views improve after fitting the lining inside the boot. The original body
+and 23 garment source parts remain preserved. Fresh reload verifies the lining's
+2,689 points, 5,328 triangles, three UV channels, declared covered-toe weight
+remap and six neutral body morphs. Posed fit and morph clearance remain pending.
+The boots extend 9.47 cm below the bare-foot reference, so reversible footwear
+height/visibility handling is required before a game trial. The existing fixed
+variant ground offset alone does not meet that requirement. No CSS runtime
+change or installation was made for this study.
+The rejected unbounded lining blend was removed with its hash/reason recorded;
+its receipt and renders remain (19,038,581 logical bytes).
+
+`work/three-outfit-rig-physics/blackpearl-footwear1` also resolves the older
+Black Pearl import's current-cook correspondence: 133,234 source points,
+193,589 triangles, 379 mesh bind bones and 22 positional morphs pass the existing
+checker, including bounded weight and morph quantization. The three audited
+Eve containers match the installed files. This covers position, UV0, topology,
+bind, weights and morphs, not Blender-source reproduction, other surface fields,
+shading, facial replacement or live contact. The separate shoe/lining geometry
+is therefore traceable, but is not an automatic fit for Peony's different boots.
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`
