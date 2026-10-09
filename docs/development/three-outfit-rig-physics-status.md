@@ -133,6 +133,17 @@ counts. Two rejected private blends were removed with hashes and reasons
 retained. See [Eve fitting studies](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/authoring/new-outfits-fitting.md)
 for candidates, recipes, verification and limitations. No installed files changed.
 
+The lower-body follow-up corrects an anatomical landmark mismatch: the target
+pelvis joint is 9.56 cm above the midpoint of its thigh roots, unlike the source
+rig. The fitting transform now uses that midpoint without changing either
+skeleton. Peony's waist/crotch placement, leg coverage and hip pouches improve
+in the reviewed `new-outfits-lower-fit3` study. Independent reload checks retain
+the source surfaces and unchanged body reference. The boots still need a proper
+heeled-foot/lining solution and pose checks; a profile-restoration trial was
+rejected for a bad shaft transition and a measured ankle-pivot mismatch.
+Two superseded/rejected private blends were removed with receipts and renders
+retained (37,342,037 logical bytes). No runtime or installed outfit was changed.
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`
