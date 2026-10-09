@@ -100,6 +100,9 @@ sideways, most clearly while walking. Treat this as a visible motion defect
 to investigate, not a confirmed skeleton fault. It is queued after the current
 CW package cleanup and does not reopen the accepted hair appearance.
 
+The user confirmed it happens with boots both shown and hidden. Include bare
+feet in the comparison; a boot-only repair cannot satisfy this report.
+
 Capture both feet through a complete walking cycle with the selected clip
 recorded. Compare the same motion on the baseline and current CW meshes,
 normal and facial replacements, and a native human reference where useful.
