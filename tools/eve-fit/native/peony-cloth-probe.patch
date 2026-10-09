@@ -1,0 +1,145 @@
+--- a/CSSEveClothCommandlet.cpp
++++ b/CSSEveClothCommandlet.cpp
+@@ -26,6 +26,12 @@
+ 
+ DEFINE_LOG_CATEGORY_STATIC(LogCSSEveCloth, Log, All);
+ 
++static bool IsPeonyClothMesh(const FString& Path)
++{
++    return Path == TEXT("/Game/CSS/eins0fx/EveSB/Peony/Meshes/SK_Peony") ||
++        Path == TEXT("/Game/CSS/eins0fx/EveSB/Peony/Meshes/SK_Peony_Face");
++}
++
+ #include "CSSEveEmbeddedMotion.inl"
+ #include "CSSEvePanelMapping.inl"
+ 
+@@ -48,7 +54,8 @@
+     if (FParse::Param(*Params,TEXT("Inspect")))
+     {
+         FString Report, Text;
+-        if (!FParse::Value(*Params,TEXT("Mesh="),MeshPath) || !MeshPath.StartsWith(TEXT("/Game/CSS/EveTest/")) ||
++        if (!FParse::Value(*Params,TEXT("Mesh="),MeshPath) ||
++            (!MeshPath.StartsWith(TEXT("/Game/CSS/EveTest/")) && !IsPeonyClothMesh(MeshPath)) ||
+             !FParse::Value(*Params,TEXT("Report="),Report)) return Fail(TEXT("Inspect needs private Mesh and Report"));
+         USkeletalMesh* Mesh = LoadObject<USkeletalMesh>(nullptr,*MeshPath);
+         if (!Mesh || !Mesh->GetImportedModel() || Mesh->GetImportedModel()->LODModels.Num()!=1)
+@@ -149,8 +156,9 @@
+     if (!FParse::Value(*Params, TEXT("Mesh="), MeshPath) ||
+         !FParse::Value(*Params, TEXT("Physics="), PhysicsPath) ||
+         !FParse::Value(*Params, TEXT("Prefix="), Prefix) ||
+-        !MeshPath.StartsWith(TEXT("/Game/CSS/EveTest/")) ||
+-        !PhysicsPath.StartsWith(TEXT("/Game/CSS/EveTest/PA_")) ||
++        (!MeshPath.StartsWith(TEXT("/Game/CSS/EveTest/")) && !IsPeonyClothMesh(MeshPath)) ||
++        (!PhysicsPath.StartsWith(TEXT("/Game/CSS/EveTest/PA_")) &&
++         !PhysicsPath.StartsWith(TEXT("/Game/CSS/eins0fx/EveSB/Peony/Physics/PA_"))) ||
+         Prefix.IsEmpty())
+         return Fail(TEXT("Specify private -Mesh/-Physics, -Prefix and one primary -Slots entry"));
+     // FParse::Value stops at commas, so slot names are joined with '+'.
+@@ -213,7 +221,10 @@
+     const auto OriginalPostProcess = Mesh->GetPostProcessAnimBlueprint();
+     if (!Physics || !MeshPhysics || !OriginalPostProcess)
+         return Fail(TEXT("Existing cloth collision and mesh secondary references are required"));
+-    USkeleton* Shared = LoadObject<USkeleton>(nullptr, TEXT("/Game/CSS/Shared/SKEL_Base.SKEL_Base"));
++    const TCHAR* SharedPath = IsPeonyClothMesh(MeshPath)
++        ? TEXT("/Game/CSS/eins0fx/Shared/Skeletons/SKEL_Base.SKEL_Base")
++        : TEXT("/Game/CSS/Shared/SKEL_Base.SKEL_Base");
++    USkeleton* Shared = LoadObject<USkeleton>(nullptr, SharedPath);
+     if (!Shared) return Fail(TEXT("Shared skeleton missing"));
+     const auto& Reference = Mesh->GetRefSkeleton();
+     const auto& SharedReference = Shared->GetReferenceSkeleton();
+--- a/CSSEveEmbeddedMotion.inl
++++ b/CSSEveEmbeddedMotion.inl
+@@ -14,28 +14,47 @@
+     FParse::Value(*Params,TEXT("Mesh="),MeshPath);
+     const bool Knit = MeshPath == TEXT("/Game/CSS/EveTest/SK_KCloth1") || MeshPath == TEXT("/Game/CSS/EveTest/SK_KCloth2") || MeshPath == TEXT("/Game/CSS/EveTest/SK_KCloth3") || MeshPath == TEXT("/Game/CSS/EveTest/SK_KCloth4");
+     const bool Alice = MeshPath == TEXT("/Game/CSS/EveTest/SK_ACloth1") || MeshPath == TEXT("/Game/CSS/EveTest/SK_ACloth2") || MeshPath == TEXT("/Game/CSS/EveTest/SK_ACloth3");
+-    const int32 ExpectedParticles = Alice ? 624 : Knit ? 1679 : 18;
+-    if (!Alice && !Knit && MeshPath!=TEXT("/Game/CSS/EveTest/SK_PTailRun") && MeshPath!=TEXT("/Game/CSS/EveTest/SK_PFit13"))
++    const bool Peony = IsPeonyClothMesh(MeshPath);
++    if (!Peony && !Alice && !Knit && MeshPath!=TEXT("/Game/CSS/EveTest/SK_PTailRun") && MeshPath!=TEXT("/Game/CSS/EveTest/SK_PFit13"))
+         return Fail(TEXT("Require a known private cloth candidate"));
+     const bool Secondary=FParse::Param(*Params,TEXT("Secondary"));
+     FParse::Value(*Params,TEXT("Clip="),Clip);
+     if (!FParse::Value(*Params,TEXT("Report="),Report) || IFileManager::Get().FileExists(*Report) ||
+         (Clip!=TEXT("Walk") && Clip!=TEXT("Jog") && Clip!=TEXT("Sprint"))) return Fail(TEXT("Require unused report and supported clip"));
+     auto* Mesh=LoadObject<USkeletalMesh>(nullptr,*MeshPath);
+-    auto* Animation=LoadObject<UAnimSequence>(nullptr,*(TEXT("/Game/CSS/Eve/Anim/AN_")+Clip));
++    FString AnimationPath=TEXT("/Game/CSS/Eve/Anim/AN_")+Clip;
++    if (Peony && (!FParse::Value(*Params,TEXT("Animation="),AnimationPath) ||
++        !AnimationPath.StartsWith(TEXT("/Game/CSS/eins0fx/Shared/Locomotion/"))))
++        return Fail(TEXT("Peony requires its staged canonical locomotion animation"));
++    auto* Animation=LoadObject<UAnimSequence>(nullptr,*AnimationPath);
+     if (!Mesh || !Animation || Mesh->GetSkeleton()!=Animation->GetSkeleton() || Mesh->GetMeshClothingAssets().Num()!=1)
+         return Fail(TEXT("Invalid private candidate or animation"));
+     const bool NoBodyCollision=FParse::Param(*Params,TEXT("NoBodyCollision"));
+     const bool NoBackstop=FParse::Param(*Params,TEXT("NoBackstop"));
+-    if ((NoBodyCollision || NoBackstop) && !Knit && !Alice) return Fail(TEXT("Isolation switches require a private Knitwear or Alice candidate"));
++    const bool NoSelfCollision=FParse::Param(*Params,TEXT("NoSelfCollision"));
++    if (NoSelfCollision && !Peony) return Fail(TEXT("Self-collision isolation requires private Peony"));
++    if ((NoBodyCollision || NoBackstop) && !Peony && !Knit && !Alice) return Fail(TEXT("Isolation switches require a private Knitwear, Alice or Peony candidate"));
+     auto* Cloth=Cast<UClothingAssetCommon>(Mesh->GetMeshClothingAssets()[0]);
+     if (!Cloth || Cloth->LodData.Num()!=1) return Fail(TEXT("Invalid cloth LOD"));
++    auto* ClothConfig=Cloth->GetClothConfig<UChaosClothConfig>();
++    if (!ClothConfig) return Fail(TEXT("Missing Chaos cloth config"));
++    const int32 ExpectedParticles = Peony ? Cloth->LodData[0].PhysicalMeshData.Vertices.Num() : Alice ? 624 : Knit ? 1679 : 18;
++    int32 FrameCount=65, FrameRate=60;
++    if (Peony)
++    {
++        FParse::Value(*Params,TEXT("Frames="),FrameCount);
++        FParse::Value(*Params,TEXT("FPS="),FrameRate);
++        if (FrameCount<2 || FrameCount>10000 || (FrameRate!=30 && FrameRate!=60 && FrameRate!=120) || ExpectedParticles<=0)
++            return Fail(TEXT("Peony requires 2..10000 frames at 30, 60 or 120 fps and a nonempty cloth mesh"));
++    }
+     auto* Radius=Cloth->LodData[0].PhysicalMeshData.FindWeightMap(EWeightMapTargetCommon::BackstopRadius);
+     if (NoBackstop && !Radius) return Fail(TEXT("Missing backstop radius map"));
+     const auto SavedPhysics=Cloth->PhysicsAsset;
++    const bool SavedSelfCollision=ClothConfig->bUseSelfCollisions;
+     const FPointWeightMap SavedRadius=Radius ? *Radius : FPointWeightMap();
+     ON_SCOPE_EXIT {
+         Cloth->PhysicsAsset=SavedPhysics;
++        ClothConfig->bUseSelfCollisions=SavedSelfCollision;
+         if (Radius) *Radius=SavedRadius;
+     };
+     FString CollisionOverride;
+@@ -48,6 +67,7 @@
+         Cloth->PhysicsAsset=Replacement;
+     }
+     if (NoBodyCollision) Cloth->PhysicsAsset=nullptr;
++    if (NoSelfCollision) ClothConfig->bUseSelfCollisions=false;
+     if (NoBackstop) for (int32 I=0; I<Radius->Num(); ++I) (*Radius)[I]=0.f;
+     float BackstopRadiusOverride=-1.f;
+     if (FParse::Value(*Params,TEXT("BackstopRadius="),BackstopRadiusOverride))
+@@ -79,14 +99,15 @@
+     };
+     const auto& Ref=Mesh->GetRefSkeleton();
+     TArray<TSharedPtr<FJsonValue>> Frames;
+-    for (int32 Frame=0; Frame<65; ++Frame)
++    const float DeltaTime=1.f/FrameRate;
++    for (int32 Frame=0; Frame<FrameCount; ++Frame)
+     {
+-        const double Time=Frame/60.;
++        const double Time=double(Frame)/FrameRate;
+         Component->SetPosition(float(FMath::Fmod(Time,double(Animation->GetPlayLength()))),false);
+-        Component->TickAnimation(Frame?1.f/60.f:0.f,true);
++        Component->TickAnimation(Frame?DeltaTime:0.f,true);
+         Component->RefreshBoneTransforms();
+         if (!Frame) Component->ForceClothNextUpdateTeleportAndReset();
+-        Component->TickClothing(1.f/60.f,Component->PrimaryComponentTick);
++        Component->TickClothing(DeltaTime,Component->PrimaryComponentTick);
+         Component->WaitForExistingParallelClothSimulation_GameThread();
+         const auto& Sim=Component->GetCurrentClothingData_AnyThread();
+         const auto* Data=Sim.Find(0);
+@@ -120,9 +141,13 @@
+     }
+     auto Root=MakeShared<FJsonObject>(); Root->SetArrayField(TEXT("frames"),Frames);
+     Root->SetStringField(TEXT("asset"),Mesh->GetPathName()); Root->SetStringField(TEXT("source_motion"),Report);
++    Root->SetStringField(TEXT("animation"),Animation->GetPathName());
++    Root->SetNumberField(TEXT("frame_rate"),FrameRate);
++    Root->SetNumberField(TEXT("particles"),ExpectedParticles);
+     Root->SetBoolField(TEXT("secondary_enabled"),Secondary);
+     Root->SetBoolField(TEXT("diagnostic_no_body_collision"),NoBodyCollision);
+     Root->SetBoolField(TEXT("diagnostic_no_backstop"),NoBackstop);
++    Root->SetBoolField(TEXT("diagnostic_no_self_collision"),NoSelfCollision);
+     Root->SetNumberField(TEXT("diagnostic_backstop_radius_override_cm"),BackstopRadiusOverride);
+     Root->SetStringField(TEXT("cloth_physics_during_run"),GetPathNameSafe(Cloth->PhysicsAsset));
+     Root->SetStringField(TEXT("scope"),TEXT("Private skeletal component cloth tick, single-node clip; see secondary_enabled; no game acceptance"));

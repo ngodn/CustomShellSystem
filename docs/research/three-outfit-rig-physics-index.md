@@ -10,6 +10,13 @@ recipe without changing geometry or deformation data. Automatic height,
 garment physics, customization integration and game acceptance remain. See
 [the current evidence and next step](../development/three-outfit-rig-physics-status.md#peony-corrected-cook-and-removable-footwear).
 
+The newer [Peony cloth study](../development/three-outfit-rig-physics-status.md#peony-cloth-binding-and-motion-study)
+includes the repaired lining weights and joins all panel trim to one cloth
+section. Saved binding and independent anchors pass. Sprint stretch fails;
+self-collision contributes to the worst spikes, and removing body collision
+alone does not fix it. Do not repeat the rejected multi-section binding or
+present an anchor-coordinate pass as motion acceptance. No new trial is installed.
+
 Latest evidence: all 63 native alternatives and 60 idle carriers are installed.
 The user accepts Black Hole and Iris Out playback/interruption on the tested
 original human appearance. The three existing hair rigs pass 27 editor

@@ -94,6 +94,31 @@ The current geometry is still a collision experiment with known body-coverage ga
 
 ## Experimental cloth binder
 
+### Canonical Peony probe (October 10)
+
+`peony-cloth-probe.patch` is an additive patch against the current assembled
+authoring module, not against these older standalone templates. Its exact
+before/after hashes are in Eve's `work/peony-cloth1/authoring-patch.json`, with
+before sources in `authoring-before`. Applying it to those sources reproduces
+the built sources byte for byte. Check those hashes before applying it elsewhere.
+Do not replace the working module with this directory wholesale.
+
+The patch permits the two canonical Peony mesh paths and private Peony cloth
+colliders, uses the canonical shared Skeleton, and retains the existing mesh
+PhysicsAsset and secondary graph. Embedded motion requires an explicit
+canonical shared-locomotion animation and accepts 30/60/120 fps, 2..10000 frames.
+The particle count comes from the saved cloth. `-NoSelfCollision` is a Peony-only,
+transient diagnostic, recorded in its report and restored on scope exit. It
+does not save the mesh or change game settings. Existing body/backstop isolation
+switches also accept Peony. Both C++20 UE 5.6.1 editor builds passed.
+
+The multi-section shared binding was rejected: rebuilding drops the additional
+bindings. The replacement `peony-cloth2` combines all 5,330 panel-owned fabric
+and trim triangles into one section, with UV2 selecting their original texture
+families. Fresh reload retains one cloth asset and all 3,896 mapped render
+vertices. This closes the binding issue only. Sprint stretch, shape/contact,
+material cook and game acceptance remain open. No installed assets changed.
+
 `CSSEveClothCommandlet` is an isolated, unfinished experiment restricted to `/Game/CSS/EveTest/`. `-NoSave` runs binding and rebuild checks without saving the mesh. The primary-only diagnostic now passes after deferring PostEditChange until section metadata is stored. Manually sharing the cloth GUID across `-Attachments` does not survive the stock engine rebuild and is not production-ready. See `docs/development/eve-outfit-goal.md` and `work/eve26/cloth-bind3.log` before using or changing this code. Do not deploy its output as completed Holiday clothing.
 
 

@@ -1986,3 +1986,54 @@ Next: garment physics and the final Peony assembly/cook using lining2 and the
 closed the game and is available to test, but no restart is requested until a
 complete candidate is ready. Slipstream and the remaining coordinated-release
 work are still unfinished.
+
+## Peony cloth binding and motion study
+
+October 10: the repaired lining2 garment export passes the independent Blender
+comparison. The full 38-slot assembly now includes exactly those 731 weight
+repairs, with the other source fields unchanged. The existing corrected cook
+still predates this assembly; nothing new was installed.
+
+`peony-cloth1` authors a two-panel simulation proxy with 1,144 particles,
+2,086 triangles and 24 exact fixed anchors. Native Chaos topology validation
+passes. The proxy retains six body morph delta sets as separate evidence, but
+they are not yet integrated into the simulation or a render deformer.
+
+Sharing a cloth asset across three material sections failed during Unreal's
+mesh rebuild. The commandlet rejected that candidate without saving it. A
+primary-panel-only diagnostic saved and reloaded correctly, allowing native
+walk/sprint captures without treating rigid trim as complete clothing.
+
+`peony-cloth2` resolves the section ownership problem by combining the 5,030
+fabric-section triangles and 300 hardware-section triangles into one cloth
+section. UV2 selects the original three texture families. UV0/UV1, points,
+weights, normals, colors, morphs and unrelated sections are preserved. Empty
+original material slots retain their identities. The new panel material has
+all five palette instances, shared flowing-glow inputs and unchanged source
+textures. Shader cooking and rendered material equivalence remain pending.
+
+Native binding and fresh-process inspection retain all 5,330 panel/trim
+triangles and 3,896 mapped render vertices in one cloth asset. The mesh keeps
+its canonical shared Skeleton, Eve body physics and secondary graph. The cloth
+uses a private copy of the Knitwear collider as a starting point, not an
+accepted Peony collision fit. The isolated C++20 UE 5.6.1 authoring module
+builds successfully; its additive source patch replays byte for byte against
+the retained pre-change files. The CSS runtime DLL was not changed here.
+
+Five 145-frame captures pass the independent fixed-anchor/pose-space check,
+with maximum anchor error below 0.000022 cm. **Motion quality does not pass:**
+the initial one-iteration walk reaches a 3.44 edge-length ratio; sprint reaches
+32.94. Disabling body collision and backstops still reaches 33.25. Four solver
+iterations reduce sprint's maximum to 17.78, while temporarily disabling
+self-collision reduces it further to 4.46. These results implicate
+self-collision in the worst spikes but do not establish it as the sole cause.
+The diagnostic flag is transient and never saves that disabled setting.
+The first mapped sprint preview also shows unacceptable panel distortion.
+
+`peony-cloth2/cloth-study-receipt.json` freezes the recipes and bounded findings.
+Next: resolve the proxy/solver stretch before broadening the motion matrix,
+then check body-shape contact, material cooking, the matching facial mesh,
+customization, footwear/doubles placement and game behavior. Keep the full
+remaining Eve, Genessa, CW and release scope active. The user can play the
+installed build while these offline checks continue; request closure only
+when a complete replacement trial is ready.
