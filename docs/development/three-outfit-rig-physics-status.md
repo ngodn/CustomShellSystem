@@ -1769,3 +1769,45 @@ trial remain. See `cleanup-astral-namespace-cooks.json` and
 `astral-namespace-cook1/rejected.json` for logical byte counts and observed free
 space. Reflink logical sizes are not claimed as physical space reclaimed.
 Nothing from this goal has been installed.
+
+## Peony flow material candidate
+
+Eve work now has authored and Windows-cooked materials for all five Peony
+palettes. The private source project and evidence live under
+`CSS_SeduXtress_eins0fx/work/peony-materials1`; the fitted UV candidate is
+`work/new-outfits-flow-uv1.blend` (SHA-256
+`7e945a30b66c97e3f41fae9720c9b3c97a1ef817196a4db08dbc43b8a2852b8e`).
+It adds flow UV1 to two sections while preserving all 156 checked prior
+mesh/morph/weight/rig fields. The 23-part source-library audit passes.
+
+The 46 authored packages comprise three masters, 25 palette instances,
+17 textures and the reusable `MF_TrimFlow` function. Peony assets remain
+under `/Game/CSS/eins0fx/EveSB/Peony`; only the pulse function belongs under
+`/Game/CSS/eins0fx/Shared/Materials`. `author_trim_flow.py` reproduces that
+function in a fresh editor project. Masks exclude the floral fabric;
+`GlowFill` blends edge detail to full trim, with optional emission initially
+off. Runtime controls and final package ownership are not yet integrated.
+
+Fresh-editor readback passes 398 checks. The Windows UE 5.6.1 cook exits
+successfully with protected inputs unchanged. The diagnostic IoStore pack
+roundtrips all 46 package payloads. Independent shader decoding confirms
+SM5/SM6 skin and cloth variants for the three masters. All package imports
+resolve, and 98 additional checks confirm cooked material/palette parameters.
+`cooked-readback1/verified.json`, `parameters.json`, `import-check.json` and
+the frozen `receipt.json` record these results. This is a private material
+subset, not an installable outfit or shared-assets release.
+
+Six offline previews compare the pulse at zero and one second from front,
+side and back. The inspected front/back images show travelling trim glow
+without lighting the floral fabric. They use an untextured fit body and
+Blender shader approximation, so Unreal appearance remains unverified.
+
+The rejected editor trial and disposable cook Wine prefix were cleaned up
+after exit and successful readback, removing 1,099,777,109 logical bytes.
+Originals, accepted assets, DDC, recipes and evidence remain. Logical bytes
+are not a claim of physical disk space reclaimed.
+
+Next: finish mesh export/material binding and validate UV retention, then
+modular controls, body coverage/heel height, garment physics and game tests.
+Slipstream, remaining outfit repairs and coordinated release requirements
+remain active. No installed game files changed in this material work.
