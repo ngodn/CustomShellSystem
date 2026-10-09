@@ -52,6 +52,16 @@ source comparisons, not the whole outfit's source-to-cook provenance. See
 [Eve's source note](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/authoring/skin-suit-source-provenance.md)
 and `work/three-outfit-rig-physics/skin-source-provenance1`.
 
+The subsequent `skin-cooked-provenance1` check covers the entire Skin Suit import
+payload against the current cooked normal mesh: 114,373 source points, 444,427
+render vertices, 153,507 triangles, 379 bones and 22 positional morphs. Position,
+UV0, material keys and triangle multiplicity/winding agree; weights and morphs
+are within the documented cooking bounds. Maximum influence difference is
+0.019563 from the eight-bit representation, not byte-exact preservation. The
+audited Eve trio matches the installed trio. Deliberate winding, weight and
+morph changes are rejected. Blender body/hair provenance, other render fields,
+the facial mesh and live fit remain separate. Nothing was installed.
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`
