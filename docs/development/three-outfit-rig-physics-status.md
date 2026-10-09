@@ -1845,3 +1845,48 @@ customization/palette/glow catalog integration, full cook and game checks remain
 Slipstream and the wider goal remain unfinished. The completed garment cook's
 disposable Wine prefix was cleaned up with its receipt; originals, accepted
 assets and rollback were retained. No installed files changed.
+
+## Peony character bindings, cook and corner-order repair
+
+October 10: `peony-character1` binds both meshes to 37 material slots, including
+accepted Eve body/eye/hair and boot-lining materials, the canonical shared
+Skeleton, Eve Physics Asset and post-process graph. Fresh reload retains all
+bindings, 379 raw bones and nine reconstructed virtual bones. The base/facial
+meshes retain 22/137 morphs. The staged dependencies and shared Skeleton remain
+unchanged.
+
+The Windows UE 5.6.1 cook succeeds with zero errors or warnings and unchanged
+source files. All 48 new Peony/function packages roundtrip; their imports resolve
+against the base game, verified Eve final container and shared namespace pack.
+Only Peony assets and the reusable trim function are candidates for packaging.
+Existing editor body/eye material stand-ins and the recompiled editor animation
+graph must not replace their accepted cooked counterparts.
+
+Cooked surface checks cover both complete characters: 204,069 triangles,
+37 slots, three UV channels, raw bind transforms and material/rig references.
+The facial addition preserves base skin, indices and surface buffers exactly.
+This does not establish cooked morph-delta, animation, cloth or gameplay results.
+Evidence is under Eve `work/peony-character1/cooked-character1` and
+`cooked-readback1`; `bindings-cook-receipt.json` freezes 57 artifacts and nine
+recipes. The earlier unbound mesh bytes remain in `unbound-meshes`.
+
+**Do not promote this first full-character cook.** It revealed excess render
+vertex splitting: 556,752 vertices. The common importer feeds arbitrary wedge
+ordering to a skeletal tangent path that indexes triangle corners. A separate
+ordering trial retains every corner's point, UVs, normal and color, plus all
+weights, morphs and bind data. Its editor import builds 153,828 vertices while
+retaining all 204,069 triangles, 37 sections and 22 body morphs. This is an
+editor comparison, not a measured FPS improvement or a completed shading fix.
+
+`assemble_peony_character.py` now emits triangle-ordered corners. The new
+`work/peony-character2` interchange agrees exactly with the diagnostic trial
+except for its canonical mesh/Skeleton package names. Next: import this
+candidate, reapply facial shapes and verified bindings, then check cooked
+normals/tangents, weights and morphs before continuing boot coverage/height,
+garment physics and catalog integration. Other Eve/Genessa/CW scope remains.
+
+Cleanup removed the completed cook's disposable Wine prefix and byte-identical
+rejected readback copies, totaling 1,340,605,187 logical bytes. Logs, accepted
+artifacts, source inputs and rollback remain. The initial readback referred to
+the retired Eve rig-trial UCAS; the accepted check uses the verified final
+container. No game files were installed or changed.

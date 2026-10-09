@@ -1,6 +1,14 @@
 # Three-outfit rig and physics research index
 
-Updated 2026-10-09. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
+Updated 2026-10-10. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
+
+Peony's full-character bindings and first Windows cook now pass dependency and
+surface checks. That cook exposed excess vertex splitting. A triangle-corner
+ordering trial reduces the editor build from 556,752 to 153,828 vertices with
+unchanged triangle/corner data, weights and body morph inputs. The corrected
+canonical interchange is `peony-character2`; it still needs facial integration,
+bindings, cook and deformation/shading validation. See
+[the new evidence and next step](../development/three-outfit-rig-physics-status.md#peony-character-bindings-cook-and-corner-order-repair).
 
 Latest evidence: all 63 native alternatives and 60 idle carriers are installed.
 The user accepts Black Hole and Iris Out playback/interruption on the tested
