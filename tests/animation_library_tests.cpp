@@ -201,13 +201,14 @@ int main(int argc,char** argv) {
         expect(resolve("css.eve.idle",bundled,base).candidates.size()==2,"Canonical choice lost old bundled fallback");
         expect(resolve("css.eve.idle",{},base).candidates.size()==1,"Shared-only installation needs an outfit alias");
         const std::string authored_base="/Game/CSS/eins0fx/Shared/Skeletons/SKEL_Base.SKEL_Base";
+        const std::string cw_hair="/Game/CSS/eins0fx/CommanderWhite/Skeletons/SKEL_Strands1.SKEL_Strands1";
         expect(resolve("css.eve.idle",{},authored_base).candidates.size()==1,
                "Legacy animation library rejected the migrated base skeleton");
         auto migrated_base_library=library;
         const std::string migrated_idle="/Game/CSS/eins0fx/Shared/Locomotion/Eve/AN_Idle.AN_Idle";
         migrated_base_library["entries"][0]["assets"][0]={{"asset",migrated_idle},{"skeleton",authored_base}};
         const std::vector<AnimationLibrary> migrated_base_libraries{AnimationLibrary::parse(migrated_base_library)};
-        for (const auto& target : {base, authored_base, wings, authored_wings}) {
+        for (const auto& target : {base, authored_base, wings, authored_wings, cw_hair}) {
             for (const auto* choice : {"eve", "css.eve.idle"}) {
                 const auto migrated_match=resolve_library_animation(migrated_base_libraries,
                     AnimationSlot::Idle,choice,bundled,target);
@@ -219,6 +220,17 @@ int main(int argc,char** argv) {
                        "Migrated library lost saved choice, shared preference or bundled fallback");
             }
         }
+        const auto cw_scene=resolve_library_performance(migrated_base_libraries,"css.eve.idle",cw_hair);
+        expect(cw_scene.candidates.size()==1 && cw_scene.candidates[0].asset==migrated_idle,
+               "CINE lost shared animation on the CW hair extension");
+        auto cw_specific=migrated_base_libraries;
+        const std::string cw_idle="/Game/CSS/eins0fx/CommanderWhite/Animations/AN_HairIdle.AN_HairIdle";
+        cw_specific[0].entries[0].assets.push_back({cw_idle,cw_hair});
+        const auto cw_match=resolve_library_animation(cw_specific,AnimationSlot::Idle,
+            "css.eve.idle",bundled,cw_hair);
+        expect(cw_match.candidates.size()==3 && cw_match.candidates[0].asset==cw_idle &&
+               cw_match.candidates[1].asset==migrated_idle && cw_match.candidates[2].bundled,
+               "CW exact-rig choice must precede base remap and bundled fallback");
         auto wing_libraries=migrated_base_libraries;
         const std::string legacy_wing_idle="/Game/CSS/UnholyGenessa/AN_Wings.AN_Wings";
         wing_libraries[0].entries[0].assets.push_back({legacy_wing_idle,wings});

@@ -31,6 +31,15 @@ normal/UV, Astral/CINE, gameplay and performance checks remain. See
 [the component and cooked evidence](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md#component-lifecycle-and-windows-cook)
 and CW source commits `9a92d08` and `0c99728`.
 
+The eight-asset final-path candidate now passes fresh reload without redirectors
+(`hair-strand-final3`). Its two normal/facial scene-playback graphs pass
+structural comparison and 2,892 paired component samples. Separate leg-pose
+checks demonstrate scene enable and release to the input gait across all twelve
+captures. This is editor execution, not runtime CINE acceptance. The final-path
+Windows cook is running. CSS's exact CW skeleton compatibility extension passes
+all 24 host suites and the Windows build; it remains staged, not installed.
+See the updated [CW status](../development/three-outfit-rig-physics-status.md#current-commander-white-hair-prototype).
+
 ## Entry points
 
 - [Goal and implementation status](../development/three-outfit-rig-physics-goal.md).

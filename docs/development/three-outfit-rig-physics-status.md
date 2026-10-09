@@ -93,6 +93,33 @@ remain pending. The shared skeleton and
 installed outfit remain unchanged. Recipes, limits and rejected harness evidence are in
 the [CW hair study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md#original-strand-binding-and-separate-joint-prototype).
 
+The final namespace candidate is now `work/hair-strand-final3` in the CW repo.
+All eight assets save and reload in a fresh editor with old redirectors removed:
+the six mesh/rig assets plus distinct normal/facial CINE playback graphs. The
+two scene graphs each pass an exact reflected comparison with 82 bijective
+duplication-GUID mappings and only the five planned hair/skeleton changes.
+Separate scene classes preserve the existing one-to-one playback restoration
+lookup; the runtime's ambiguity checks are not relaxed.
+
+`hair-strand-assets1/playback-component1` passes 2,892 editor component samples
+through scene enable/cancel, hair toggles, reset, reinitialization, teleport and
+selected morph changes. A separate comparison checks six native leg bones in
+all twelve captures: scene playback changes the pose during frames 30-199 and
+every inactive frame returns to the input gait within 1e-8. This does not test
+CINE's runtime input handling or synchronized facial curves. The final-path
+Windows cook is in progress; final cooked comparison and live tests remain.
+
+The CSS candidate accepts shared base animations on the exact audited CW hair
+skeleton, preserving exact-target preference and legacy fallback. Reverse and
+cross-extension animation remaps remain rejected. All 24 host suites and the
+Windows core build pass. Staged core SHA-256:
+`718f76c3b60a8315f8ba4fb9e9f9c11872d8575d6c64aada3c9774a105dec590`.
+Receipts are in `work/three-outfit-rig-physics/cw-hair-integration1`.
+Neither the core nor CW candidate is installed. The rejected `hair-strand-final1`
+copied Content/Binaries were removed after confirming the failed process was
+terminal; its recipe/logs remain. Logical deletion was 1,336,311,290 bytes,
+with zero measured free-space increase because of shared reflink blocks.
+
 ## Current form-switch regressions
 
 The Customize-only-Ground-Height defect came from inconsistent appearance

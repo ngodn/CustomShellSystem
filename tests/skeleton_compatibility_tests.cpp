@@ -13,6 +13,7 @@ int main() {
     const std::string wings = "/Game/CSS/UnholyGenessa/SKEL_Wings2.SKEL_Wings2";
     const std::string authored = "/Game/CSS/eins0fx/Shared/Skeletons/SKEL_Base.SKEL_Base";
     const std::string authored_wings = "/Game/CSS/eins0fx/UnholyGenessa/Skeletons/SKEL_Wings2.SKEL_Wings2";
+    const std::string cw = "/Game/CSS/eins0fx/CommanderWhite/Skeletons/SKEL_Strands1.SKEL_Strands1";
     auto check = [](bool value, const char* why) { if (!value) throw std::runtime_error(why); };
     check(compatible_standard_skeletons(human, base), "Audited human-to-base pair rejected");
     check(compatible_standard_skeletons(base, human), "Restoring human from base rejected");
@@ -90,6 +91,30 @@ int main() {
         check(!compatible_standard_skeletons(other, authored_wings), "Unaudited source accepted for migrated wings");
         check(!css::compatible_animation_skeletons(other, authored_wings), "Unaudited movement source accepted for migrated wings");
         check(!css::compatible_animation_skeletons(authored_wings, other), "Unaudited wing animation target accepted");
+    }
+    for (const auto& previous : {human, base, b2, standard, authored, wings, authored_wings}) {
+        check(compatible_standard_skeletons(previous, cw), "CW hair appearance rejected");
+        check(compatible_standard_skeletons(cw, previous), "Restoring from CW hair rejected");
+    }
+    check(!compatible_standard_skeletons(cw, cw), "Identical CW skeleton treated as remap");
+    check(css::compatible_animation_skeletons(cw, cw), "Same CW skeleton animation rejected");
+    for (const auto& source : {standard, authored}) {
+        check(css::compatible_animation_skeletons(source, cw), "Base animation rejected on CW hair");
+        check(!css::equivalent_animation_skeletons(source, cw), "CW extension incorrectly treated as alias");
+        check(!css::compatible_animation_skeletons(cw, source), "Reverse CW animation remap accepted");
+    }
+    for (const auto& source : {wings, authored_wings, human, base, b2}) {
+        check(!css::compatible_animation_skeletons(source, cw), "Unaudited animation remap into CW");
+        check(!css::compatible_animation_skeletons(cw, source), "Unaudited animation remap from CW");
+    }
+    for (const auto& other : std::vector<std::string>{"", cw + "_Invalid",
+             "/Game/CSS/another_author/CommanderWhite/Skeletons/SKEL_Strands1.SKEL_Strands1",
+             "/Game/CSS/eins0fx/CommanderWhite/Studies/HairStrand1/SKEL_Strands1.SKEL_Strands1",
+             "/Game/CSS/eins0fx/CommanderWhite/Skeletons/SKEL_Strands1.Other"}) {
+        check(!compatible_standard_skeletons(other, cw), "Unknown source accepted for CW");
+        check(!compatible_standard_skeletons(cw, other), "Unknown target accepted from CW");
+        check(!css::compatible_animation_skeletons(other, cw), "Unknown animation accepted for CW");
+        check(!css::compatible_animation_skeletons(cw, other), "CW animation accepted on unknown rig");
     }
     std::cout << "Skeleton allowlist and lookalike rejection passed\n";
 }
