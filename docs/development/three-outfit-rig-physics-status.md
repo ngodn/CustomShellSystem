@@ -187,6 +187,25 @@ for candidates and rejection evidence. Six rejected/superseded private blends
 were hash-checked and removed, retaining logs, receipts and renders
 (168,764,468 logical bytes).
 
+The next Peony candidate, `new-outfits-binding-chest8`, corrects localized corset
+clearance in the neutral fit and its chest-size morph. The sampled corset chest
+region now has no penetration deeper than 0.05 cm at neutral, half/full chest
+size and all six body controls at maximum. The maximum-size walking render
+removes the previous under-chest skin breakthrough. A 156-field before/after
+comparison confirms the endpoint edit changes only Upper's chest-size morph;
+the body, other morphs, neutral geometry, weights, UVs and rig remain unchanged
+within that check. Fresh source, fitting and binding reload checks pass.
+
+The apparent purple patch in the sprint image was indirect color bleed from
+the nearby leg fabric: evaluated face probes hit the corset, and a direct-light
+comparison removes the purple color without changing geometry. This resolves
+that particular visual hypothesis, not full sprint acceptance. Broad clearance
+counts also include original internal closing faces and must not be treated
+as proof of visible defects. See the [chest study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/authoring/new-outfits-fitting.md#local-chest-correction-and-sprint-lighting-diagnosis).
+Full motion/shape coverage, component ownership, lower garment/footwear fit,
+materials, palettes/glow, physics and game packaging remain open. This work is
+private authoring; no runtime or installed package changed.
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`
