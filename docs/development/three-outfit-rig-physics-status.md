@@ -166,6 +166,27 @@ bind, weights and morphs, not Blender-source reproduction, other surface fields,
 shading, facial replacement or live contact. The separate shoe/lining geometry
 is therefore traceable, but is not an automatic fit for Peony's different boots.
 
+Peony now has a private target-bound comparison (`new-outfits-binding-trim6`),
+using the measured 379-bone mesh reference without replacing the production
+shared Skeleton. Body-derived weights improve the tested walking pose over
+the source-ancestor mapping: the knee breakthrough is removed and chest
+breakthrough reduced. Upper/lower fabric trim now follows the corresponding
+garment weights and six body morphs. A component audit found shoe hardware in
+two other material sections; 18 ankle/foot components (1,178 points) now receive
+the same heel-profile transform as the main boot.
+
+Fresh reload checks pass for 23 preserved original surfaces, the unchanged
+body/lining and eight bound surfaces. Independently calculated skinning agrees
+with the trim6 walking render within 0.000432 cm. This is an offline pose check,
+not cooked/live acceptance. Maximum body shapes still clip at the chest, and
+the sprint study exposes remaining fit problems. Mixed Arm-section ownership,
+full gait cycles, final surface fields, footwear toggles/height, physics,
+materials/palettes/glow and packaging remain unfinished. No installed files
+changed. See the [binding study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/authoring/new-outfits-fitting.md#target-binding-and-first-posed-garment-comparisons)
+for candidates and rejection evidence. Six rejected/superseded private blends
+were hash-checked and removed, retaining logs, receipts and renders
+(168,764,468 logical bytes).
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`
