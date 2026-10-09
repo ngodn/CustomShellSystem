@@ -121,6 +121,18 @@ pass. These remain source-sized parts with placeholder materials; body fitting,
 target rig binding, morph transfer, trim ownership and gameplay are pending.
 Two zero-length Peony source normals are retained and flagged for repair.
 
+The next Eve authoring pass creates a joint-aligned study of all three source
+geometry sets against the accepted neutral body. Peony's jacket/corset now have
+a separate clearance candidate with trim displacement transfer. Fresh reload
+checks retain all 23 source parts and verify the unchanged body reference and
+evaluated shape keys. This is incomplete fitting, not a new game build: small
+upper intersections remain, and lower-body fit, final trim ownership, target
+weights/morphs, materials and physics still need work. Automatic interior
+relaxation was rejected after visible spikes despite lower collision sample
+counts. Two rejected private blends were removed with hashes and reasons
+retained. See [Eve fitting studies](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/authoring/new-outfits-fitting.md)
+for candidates, recipes, verification and limitations. No installed files changed.
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`

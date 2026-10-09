@@ -203,7 +203,12 @@ The quality target is responsive, stable gameplay with high performance, no newl
 
 ## Queued follow-up: two additional Eve outfits
 
-**Status: requested, not implemented.** Continue the current Genessa cloth/body-shape repair and existing rig work first. This addition does not change their priority or the nine-variant repair baseline.
+**Status: source preparation and fitting in progress, not release-ready.** The
+user's latest direction prioritizes Eve. Commander White's foot, belt and skirt
+follow-ups remain queued. Preserve the accepted Genessa world-cloth correction
+and its documented preview limitation. The two additions remain separate from
+the nine-variant repair baseline; the original repair and release scope stays
+active.
 
 Use the references in `CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/reference/new-eve-outfit`:
 
