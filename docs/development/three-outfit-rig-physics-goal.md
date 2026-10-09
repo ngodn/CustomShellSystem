@@ -93,6 +93,30 @@ Commander White's current E9 facial replacement preserves 206 morphs and the opt
 
 **Exit:** before/after deformation evidence and import/cook readback show the intended improvement, with no unexplained skeletal, morph or attachment changes.
 
+### Queued CW walking foot-alignment report
+
+On October 9 the user reported Commander White's feet look tilted inward or
+sideways, most clearly while walking. Treat this as a visible motion defect
+to investigate, not a confirmed skeleton fault. It is queued after the current
+CW package cleanup and does not reopen the accepted hair appearance.
+
+Capture both feet through a complete walking cycle with the selected clip
+recorded. Compare the same motion on the baseline and current CW meshes,
+normal and facial replacements, and a native human reference where useful.
+Inspect ankle/foot/toe reference axes and retarget transforms, foot and shoe
+weights, heel/ground offsets, animation curves, virtual bones and any active
+IK or post-process contribution. Compare idle, walk, jog and sprint to
+distinguish persistent alignment from a clip-specific pose. Change the layer
+that causes the defect; do not straighten every frame or alter the shared
+skeleton without evidence.
+
+**Acceptance:** the demonstrated walking tilt is corrected with side-by-side
+motion evidence; foot/heel contact and left/right alignment remain plausible
+through the gait cycle. Preserve shoe shape, facial playback, action
+interruption, other gaits, CINE and doubles. Record remaining contact limits
+and regression coverage. Outfit-specific fit belongs in CW; reusable playback
+or retargeting repairs belong in CSS/shared assets where proven necessary.
+
 ### Unholy Genessa facial-expression support
 
 Implement and validate facial-expression support for both Unholy Genessa variants through CSS and CINE. Inspect each active face mesh, facial bones/morphs, eye and mouth geometry, materials and existing playback bindings first. Add the missing character-specific controls or adapter in the Unholy Genessa mod; keep reusable expression assets in `CSS_SharedAssets_P` and general playback logic in CSS/CINE according to the ownership rules above.

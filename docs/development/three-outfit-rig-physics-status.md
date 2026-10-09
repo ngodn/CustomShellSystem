@@ -652,6 +652,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Gameplay regressions | User accepts cross-character Iris Out interruption, first form-switch summon and Customize recovery. Full outfit/lifecycle matrix remains |
 | Hair | Genessa unused-solver candidate is installed; matched cost remains. CW separate-strand trial is installed and the user reports it looks fine. Both normal/facial regular and scene graphs pass paired component lifecycle checks. Two source-visible left-bang head-turn intersections improve but remain. CINE/doubles, full lifecycle and measured gameplay cost remain; see [CW study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md) |
 | Performance | Current package sizes recorded; matched gameplay captures pending |
+| CW walking feet | User reports inward/sideways tilt on October 9, most visible walking. Queued after current CW package cleanup; cause and baseline/candidate comparison unverified. See the goal's foot-alignment follow-up |
 | Trebuchaxe report | Low priority, queued and unverified |
 
 Next: complete CW CINE/doubles and matched performance checks, retaining the
