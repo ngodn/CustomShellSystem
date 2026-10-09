@@ -1890,3 +1890,63 @@ rejected readback copies, totaling 1,340,605,187 logical bytes. Logs, accepted
 artifacts, source inputs and rollback remain. The initial readback referred to
 the retired Eve rig-trial UCAS; the accepted check uses the verified final
 container. No game files were installed or changed.
+
+## Peony corrected cook and removable footwear
+
+October 10: the ordered-corner `peony-character2` candidate now completes facial
+integration, all 37 material/rig bindings, fresh editor reload, Windows UE 5.6.1
+cook and 48-package dependency/IoStore readback. Both meshes retain 153,828
+render vertices and 204,069 triangles. Their base surface and skin streams are
+identical. The 22 body/hand and 115 added facial morphs pass independent cooked
+delta checks. Maximum retained component error is 0.00200642 cm; the largest
+omitted delta is 0.01500169 cm, within the configured build/compression tolerance.
+Cooked weights have no unexpected bone assignments; 13,666 tiny influences
+are dropped by 8-bit quantization, with maximum dropped weight 0.00389789 and
+maximum retained weight difference 0.01956210. This is not exact-weight equality.
+
+Coincident facial vertices cannot be matched by position/UV alone. The facial
+check now uses the editor's render-to-original-point map, validating every entry
+against the cooked material, position and UV before comparing the 137 morphs.
+The original body/hand curve metadata stays at 22 entries; CSS drives facial
+expressions with `SetMorphTarget` rather than those animation-curve flags.
+
+Source normals match after decoding UE 5.6.1's signed packed bytes correctly.
+The CUE4Parse audit floats initially used a legacy UNORM interpretation; the
+checker recovers the bytes and applies the engine's SNORM interpretation without
+altering the raw dump. **Shading is not fully accepted:** 335 unit-X tangent
+fallbacks remain at vertices whose incident UV0 triangles all have zero area.
+`orthogonal_frames_passed` is explicitly false. Rendered material/normal-map
+review and any necessary authoring repair remain before promotion.
+
+`work/peony-character2/cooked-character-receipt.json` freezes 315 artifacts and
+12 recipes. The completed cook's disposable Wine prefix is removed after its
+container was confirmed stopped, freeing 1,084,763,563 logical bytes. Sources,
+DDC, cooked outputs, installed assets and rollback are retained.
+
+`work/peony-footwear1` is the next private interchange. It uses the fitted
+lining's original face identities to isolate exactly 5,328 covered body
+triangles. One material alias is added, giving 38 slots. The boot toggle shows
+slots 26/28/33/36 and occludes skin slots 18/19/37; hiding boots restores all
+original bare-foot faces. Points, triangle corners, UVs, weights, normals,
+colors, bones and 22 body/hand morphs remain unchanged. The measured rest-pose
+lift is 9.7697432 cm relative to the accepted bare-foot floor, rather than the
+9.4746672 cm distance below the coordinate origin.
+
+This footwear recipe is not installed or cooked. CSS still needs reversible
+toggle-dependent height, and posed coverage, garment physics, catalog/palette/
+glow integration and game acceptance remain. Slipstream and the wider repair/
+release goal remain active. No game files changed.
+
+The next offline comparison exposes lining through the boot's outer ankle in
+retained walk frame 36, with both neutral and maximum body morphs. The bind
+pose with maximum morphs does not show that patch. The private
+`new-outfits-boot-lining2.blend` changes only 731 lining vertices' skin weights,
+following the nearby boot shell and fading to the original calf-seam weights.
+The scope check confirms unchanged geometry, morphs, UVs, topology, body and
+other garments; at most two influences remain per lining vertex. The matching
+walk-frame render no longer has the side patch. This is one posed comparison,
+not full-gait or collision acceptance. `peony-footwear1/receipt.json` freezes
+the source candidate, exact coverage recipe, validation and previews. Re-export
+the garments from this candidate before the next assembly/cook; the existing
+footwear interchange and corrected character cook still contain the previous
+lining weights. Broad gait/contact checks and runtime height remain next.

@@ -2,13 +2,13 @@
 
 Updated 2026-10-10. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
-Peony's full-character bindings and first Windows cook now pass dependency and
-surface checks. That cook exposed excess vertex splitting. A triangle-corner
-ordering trial reduces the editor build from 556,752 to 153,828 vertices with
-unchanged triangle/corner data, weights and body morph inputs. The corrected
-canonical interchange is `peony-character2`; it still needs facial integration,
-bindings, cook and deformation/shading validation. See
-[the new evidence and next step](../development/three-outfit-rig-physics-status.md#peony-character-bindings-cook-and-corner-order-repair).
+Peony's corrected `peony-character2` Windows cook retains 153,828 vertices and
+passes the full surface, binding, skin-weight and 137-morph checks. Source
+normals match; 335 zero-UV-area tangent fallbacks remain an explicit shading
+limitation. `peony-footwear1` adds an exact, reversible covered-foot section
+recipe without changing geometry or deformation data. Automatic height,
+garment physics, customization integration and game acceptance remain. See
+[the current evidence and next step](../development/three-outfit-rig-physics-status.md#peony-corrected-cook-and-removable-footwear).
 
 Latest evidence: all 63 native alternatives and 60 idle carriers are installed.
 The user accepts Black Hole and Iris Out playback/interruption on the tested
