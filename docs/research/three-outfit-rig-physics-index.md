@@ -36,7 +36,9 @@ The eight-asset final-path candidate now passes fresh reload without redirectors
 structural comparison and 2,892 paired component samples. Separate leg-pose
 checks demonstrate scene enable and release to the input gait across all twelve
 captures. This is editor execution, not runtime CINE acceptance. The final-path
-Windows cook is running. CSS's exact CW skeleton compatibility extension passes
+Windows cook, eight-package roundtrip and independent mesh/rig comparison pass.
+The optional surface digest proves cooked positions, normals and UVs unchanged
+independently of changed skin weights. CSS's exact CW skeleton compatibility extension passes
 all 24 host suites and the Windows build; it remains staged, not installed.
 See the updated [CW status](../development/three-outfit-rig-physics-status.md#current-commander-white-hair-prototype).
 

@@ -88,7 +88,7 @@ materials. Completed cook caches and Wine prefix were removed with a receipt.
 
 This is offline evidence, not an installed repair. Two left-bang
 head-turn samples still need visibility review. Cooked VM execution,
-normal/UV comparison, Astral/CINE integration, gameplay lifecycle and cost
+Astral/CINE runtime integration, gameplay lifecycle and cost
 remain pending. The shared skeleton and
 installed outfit remain unchanged. Recipes, limits and rejected harness evidence are in
 the [CW hair study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md#original-strand-binding-and-separate-joint-prototype).
@@ -107,7 +107,13 @@ selected morph changes. A separate comparison checks six native leg bones in
 all twelve captures: scene playback changes the pose during frames 30-199 and
 every inactive frame returns to the input gait within 1e-8. This does not test
 CINE's runtime input handling or synchronized facial curves. The final-path
-Windows cook is in progress; final cooked comparison and live tests remain.
+Windows cook and eight-package roundtrip now pass. Independent readback in
+`hair-strand-final-pack1/semantic-check.json` preserves each mesh's 70 material
+slots, 16/206 morphs, cloth data and original bind prefix. Separate surface
+digests also prove cooked positions, normals and UVs unchanged; only the
+previously audited 2,548 hair vertices change weights. Both scene graphs retain
+their playback defaults and extended hair bindings. This completes the final
+cooked-data comparison, not gameplay or cooked graph execution.
 
 The CSS candidate accepts shared base animations on the exact audited CW hair
 skeleton, preserving exact-target preference and legacy fallback. Reverse and

@@ -18,11 +18,12 @@ if (args is ["--check-vertex-attributes"]) {
     return;
 }
 
-if (args.Length is not (4 or 5) || (args.Length == 5 && args[4] is not ("--shader-maps" or "--animation-digests" or "--mesh-digests" or "--texture-digests")))
-    throw new ArgumentException("AssetReadback CONTAINERS MAPPINGS PACKAGE_LIST OUTPUT_JSON [--shader-maps|--animation-digests|--mesh-digests|--texture-digests]");
+if (args.Length is not (4 or 5) || (args.Length == 5 && args[4] is not ("--shader-maps" or "--animation-digests" or "--mesh-digests" or "--mesh-surface-digests" or "--texture-digests")))
+    throw new ArgumentException("AssetReadback CONTAINERS MAPPINGS PACKAGE_LIST OUTPUT_JSON [--shader-maps|--animation-digests|--mesh-digests|--mesh-surface-digests|--texture-digests]");
 var readShaderMaps = args.Length == 5 && args[4] == "--shader-maps";
 var readAnimationDigests = args.Length == 5 && args[4] == "--animation-digests";
-var readMeshDigests = args.Length == 5 && args[4] == "--mesh-digests";
+var readSurfaceDigests = args.Length == 5 && args[4] == "--mesh-surface-digests";
+var readMeshDigests = readSurfaceDigests || (args.Length == 5 && args[4] == "--mesh-digests");
 var readTextureDigests = args.Length == 5 && args[4] == "--texture-digests";
 if (File.Exists(args[3])) throw new IOException("Output already exists");
 var packages = File.ReadAllLines(args[2]).Where(p => !string.IsNullOrWhiteSpace(p)).ToArray();
@@ -70,7 +71,7 @@ foreach (var path in packages) {
             throw new InvalidDataException($"Expected a skeletal mesh: {path}");
         for (int i = 0; i < exports.Length; ++i)
             if (exports[i] is USkeletalMesh mesh)
-                decoded[i]["OfflineMeshDigest"] = MeshDigest(mesh);
+                decoded[i]["OfflineMeshDigest"] = MeshDigest(mesh, readSurfaceDigests);
     }
     if (readTextureDigests) {
         if (exports.Length != 1 || exports[0] is not UTexture2D texture)
@@ -105,7 +106,7 @@ static JObject TextureDigest(UTexture2D texture) {
     };
 }
 
-static JObject MeshDigest(USkeletalMesh mesh) {
+static JObject MeshDigest(USkeletalMesh mesh, bool surfaceDigests) {
     var lods = mesh.LODModels ?? throw new InvalidDataException("No render LODs");
     if (lods.Length == 0) throw new InvalidDataException("No render LODs");
     var rows = new JArray();
@@ -113,7 +114,7 @@ static JObject MeshDigest(USkeletalMesh mesh) {
         if (lod.NumVertices <= 0 || lod.VertexBufferGPUSkin.VertsFloat.Length != lod.NumVertices ||
             lod.Indices?.Buffer is not { Length: > 0 })
             throw new InvalidDataException("Expected complete float render vertices and topology");
-        rows.Add(JObject.FromObject(new {
+        var row = JObject.FromObject(new {
             vertices = lod.NumVertices,
             indices = lod.Indices.Buffer.Length,
             // The library's summary converters omit full vertex payloads.
@@ -137,7 +138,10 @@ static JObject MeshDigest(USkeletalMesh mesh) {
                 edges = lod.HalfEdgeBuffer.EdgeToTwinEdgeData.Length,
                 sha256 = Digest(lod.HalfEdgeBuffer)
             }
-        }));
+        });
+        if (surfaceDigests)
+            row["surface_sha256"] = Digest(lod.VertexBufferGPUSkin.VertsFloat.Select(v => new { v.Pos, v.Normal, v.UVs }));
+        rows.Add(row);
     }
     mesh.PopulateMorphTargetVerticesData();
     var morphs = new JObject();
