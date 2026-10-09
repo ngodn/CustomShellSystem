@@ -5,8 +5,9 @@ using CUE4Parse.UE4.Assets;
 using CUE4Parse.UE4.Versions;
 using Newtonsoft.Json;
 
-if (args.Length != 5)
-    throw new ArgumentException("AssetDependencyAudit CONTAINERS MAPPINGS PACKAGES REFERENCES OUTPUT");
+if (args.Length is not (5 or 6) || (args.Length == 6 && args[5] != "--package-name-paths"))
+    throw new ArgumentException("AssetDependencyAudit CONTAINERS MAPPINGS PACKAGES REFERENCES OUTPUT [--package-name-paths]");
+var includeNamePaths = args.Length == 6;
 if (File.Exists(args[4])) throw new IOException("Output already exists");
 var packages = File.ReadAllLines(args[2]).Where(p => !string.IsNullOrWhiteSpace(p)).ToArray();
 if (packages.Length == 0 || packages.Distinct(StringComparer.OrdinalIgnoreCase).Count() != packages.Length)
@@ -37,7 +38,18 @@ foreach (var path in packages) {
             if (dot >= 0 && package.GetExportIndex(reference[(dot + 1)..]) < 0)
                 failures.Add(new { package = path, error = "Missing catalog export", reference });
         }
-        rows.Add(new { package = path, exports = package.ExportMapLength, imports, dependencies });
+        var row = new Dictionary<string, object> {
+            ["package"] = path, ["exports"] = package.ExportMapLength,
+            ["imports"] = imports, ["dependencies"] = dependencies
+        };
+        if (includeNamePaths) {
+            // Soft asset paths store their package name separately from imports.
+            // Names may be unused, so callers must treat this as a conservative set.
+            row["package_name_paths"] = package.NameMap.Select(name => name.Name)
+                .OfType<string>().Where(name => name.StartsWith("/Game/", StringComparison.Ordinal))
+                .Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToArray();
+        }
+        rows.Add(row);
     } catch (Exception error) {
         failures.Add(new { package = path, error = error.Message });
     }
@@ -46,7 +58,9 @@ foreach (var reference in references)
     if (!packages.Contains(reference.Split('.')[0], StringComparer.OrdinalIgnoreCase))
         failures.Add(new { reference, error = "Catalog package absent from container" });
 var result = new { passed = failures.Count == 0, packages = rows, references, failures,
-    scope = "Cooked package presence, catalog export names and public import hashes. Not in-game execution." };
+    scope = includeNamePaths
+        ? "Cooked imports and conservative /Game/ name-map paths, including potentially unused names. Does not detect arbitrary dynamically constructed strings or establish gameplay acceptance."
+        : "Cooked package presence, catalog export names and public import hashes. Not in-game execution." };
 File.WriteAllText(args[4], JsonConvert.SerializeObject(result, Formatting.Indented) + "\n");
 Console.WriteLine($"Packages: {rows.Count}; references: {references.Length}; failures: {failures.Count}");
 return failures.Count == 0 ? 0 : 1;

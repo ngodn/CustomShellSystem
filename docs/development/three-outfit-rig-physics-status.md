@@ -157,6 +157,17 @@ checks and matched performance are still pending. Original
 CW mesh/graph payloads remain for this trial; retire unused ones only after a
 reverse-reference audit before release.
 
+The separate CW `hair-strand-pruned1` candidate now excludes eight superseded
+mesh/graph/rig assets. The reverse-reference audit covers imports and `/Game/`
+name-map paths across all 864 packages, active catalogs and 243 runtime source
+files; retained consumers do not reference those roots. The reduced candidate
+passes 856 package checks, 228 catalog references, 426 native checks and 1,396
+nine-variant checks. All 413 retained payload files roundtrip unchanged.
+Package size drops by 395,414,601 bytes; no installed file changed. The
+[CW study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md#superseded-asset-cleanup-candidate)
+records exact artifacts, limitations and intermediate cleanup. This finishes
+the current offline cleanup step; the user's walking-foot report is next.
+
 ## Current form-switch regressions
 
 The Customize-only-Ground-Height defect came from inconsistent appearance
@@ -652,11 +663,12 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Gameplay regressions | User accepts cross-character Iris Out interruption, first form-switch summon and Customize recovery. Full outfit/lifecycle matrix remains |
 | Hair | Genessa unused-solver candidate is installed; matched cost remains. CW separate-strand trial is installed and the user reports it looks fine. Both normal/facial regular and scene graphs pass paired component lifecycle checks. Two source-visible left-bang head-turn intersections improve but remain. CINE/doubles, full lifecycle and measured gameplay cost remain; see [CW study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md) |
 | Performance | Current package sizes recorded; matched gameplay captures pending |
-| CW walking feet | User reports inward/sideways tilt on October 9, most visible walking. Queued after current CW package cleanup; cause and baseline/candidate comparison unverified. See the goal's foot-alignment follow-up |
+| CW walking feet | User reports inward/sideways tilt on October 9, most visible walking. CW package cleanup candidate is validated; foot diagnosis is next. Existing historical foot/sole studies located, but the reported in-game cause is unverified. See the goal's foot-alignment follow-up |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: complete CW CINE/doubles and matched performance checks, retaining the
-Genessa unused-hair-solver acceptance gap. Native conversion authoring
+Next: investigate the reported CW walking-foot tilt, then complete CW
+CINE/doubles and matched performance checks, retaining the Genessa
+unused-hair-solver acceptance gap. Native conversion authoring
 is complete; remaining native work is validation, not conversion. Preserve the
 accepted world cloth correction and current core. Package destinations, the
 nineteen stale mappings and per-entry native coverage are recorded; do not
