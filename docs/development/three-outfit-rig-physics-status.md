@@ -2,6 +2,12 @@
 
 Updated 2026-10-09. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
 
+Latest installed core: `718f76c3b60a8315`, with the CW hair trial. The user
+reports the requested CW Iris Out/hair/eyes/interruption check looks fine.
+The runtime snapshot confirms `SK_Facial1`, available Iris Out/gait choices
+and no catalog, animation or recovery errors. Individual actions were not
+enumerated. CINE, doubles and matched performance remain separate checks.
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`
@@ -86,11 +92,11 @@ six new mesh/rig roots are packaged. Cooked dependency materials, including
 the optical material with shader warnings, are excluded in favor of installed
 materials. Completed cook caches and Wine prefix were removed with a receipt.
 
-This is offline evidence, not an installed repair. Two left-bang
-head-turn samples still need visibility review. Cooked VM execution,
-Astral/CINE runtime integration, gameplay lifecycle and cost
-remain pending. The shared skeleton and
-installed outfit remain unchanged. Recipes, limits and rejected harness evidence are in
+That stage established offline evidence; the later full trial is installed
+as recorded below. The two left-bang head-turn samples now have source-opacity
+comparisons: both improve over the original but retain small intersections.
+Astral/CINE runtime integration, full gameplay lifecycle and cost remain pending.
+The shared skeleton remains unchanged. Recipes, limits and rejected harness evidence are in
 the [CW hair study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md#original-strand-binding-and-separate-joint-prototype).
 
 The final namespace candidate is now `work/hair-strand-final3` in the CW repo.
@@ -142,9 +148,12 @@ hash-verified. Eve, Genessa, saved settings and CSSX/CINE files retain their
 hashes. All 24 host suites and 22 installer tests pass. CW's `installed.json`
 records the exact files. Rollback is at
 `MortalShell2/Content/css-cw-hair-trial-20261009`, outside Paks, using the existing
-namespace installer's `restore --transaction` action. The user has been asked
-to check CW Iris Out, hair/eyes and walk/attack/aim interruption. Live rendering,
-CINE/Astral runtime checks and matched performance are still pending. Original
+namespace installer's `restore --transaction` action. The user reports the
+requested CW Iris Out/hair/eyes/interruption test looks fine. The read-only
+snapshot in CW `work/hair-strand-assembly1/live-check1` confirms the new facial
+mesh and available animation choices without catalog/animation/recovery errors.
+This is visual acceptance, not an exhaustive action matrix. CINE/Astral runtime
+checks and matched performance are still pending. Original
 CW mesh/graph payloads remain for this trial; retire unused ones only after a
 reverse-reference audit before release.
 
@@ -638,15 +647,15 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Nine-variant provenance | Installed hashes and 16 editable mesh identities pinned; all 790 migration paths have source candidates or alias recipes. Final Blender-to-cook recipe comparisons remain |
 | Mesh/weights/contacts | All 18 current normal/facial meshes pass normalized-weight and influence-index checks. Genessa world rear-panel repair accepted on the tested appearance; menu clipping explicitly accepted for now. Continuous contact and both-variant coverage remain |
 | Unholy facial support | Two adapters, 21 presets and six facial performances integrated. User accepts Iris Out faces/eyes and attack/aim interruption while switching Eve, Genessa and Commander White. Exact variants unspecified; both Genessa variants and CINE still need explicit coverage |
-| Shared organization | Four coordinated packages installed. Updated combined audit resolves 855 packages; 422 native catalog and 1,386 outfit checks pass. Public IDs and legacy aliases retained; earlier 28 dependency scenarios pass. Clean/upgrade documentation and CINE live acceptance remain |
+| Shared organization | Four coordinated packages installed. CW integration audit resolves 864 packages; 426 native catalog and 1,396 outfit checks pass. Public IDs and legacy aliases retained; earlier 28 dependency scenarios pass. Clean/upgrade documentation and CINE live acceptance remain |
 | Locomotion | All 63 native alternatives installed, including carriers for 60 Idle Animation choices. Black Hole and Iris Out play and interrupt on the tested original human appearance. Remaining visible contact, continuous motion and CINE review pending |
 | Gameplay regressions | User accepts cross-character Iris Out interruption, first form-switch summon and Customize recovery. Full outfit/lifecycle matrix remains |
-| Hair | Three rigs pass 27 editor lifecycle cases (3,447 samples). Genessa unused-solver candidate is installed; gameplay and measured cost remain. Eve/CW add 2,892 direct-rig head-turn/gait samples and matching surface controls. CW's broad head-clearance trial is rejected after root-angle and source-material checks; a targeted tip-contact trial is in progress. No hair-contact change is installed; see [study](../research/2026-10-09-hair-surface-contact.md) |
+| Hair | Genessa unused-solver candidate is installed; matched cost remains. CW separate-strand trial is installed and the user reports it looks fine. Both normal/facial regular and scene graphs pass paired component lifecycle checks. Two source-visible left-bang head-turn intersections improve but remain. CINE/doubles, full lifecycle and measured gameplay cost remain; see [CW study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md) |
 | Performance | Current package sizes recorded; matched gameplay captures pending |
 | Trebuchaxe report | Low priority, queued and unverified |
 
-Next: validate the Genessa unused-hair-solver candidate in game, then continue
-continuous contact and matched performance checks. Native conversion authoring
+Next: complete CW CINE/doubles and matched performance checks, retaining the
+Genessa unused-hair-solver acceptance gap. Native conversion authoring
 is complete; remaining native work is validation, not conversion. Preserve the
 accepted world cloth correction and current core. Package destinations, the
 nineteen stale mappings and per-entry native coverage are recorded; do not

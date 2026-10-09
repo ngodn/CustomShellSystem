@@ -195,8 +195,13 @@ head-clearance trial improved two witnesses but introduced a short-strand
 flyaway intersection. The subsequent [separate-joint prototype](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md#original-strand-binding-and-separate-joint-prototype)
 uses the original short-strand pivots and weights. Its 1,446 head-turn/gait
 samples preserve the other six chains exactly and clear that regression.
-It remains private, with no production mesh or cooked change; the study
-records the remaining left-bang samples and required skeleton/cook checks. Do not repeat the raw nearest-normal screen
+The subsequent normal/facial CW-only skeleton, regular/scene graphs and core
+are installed in `hair-strand-assembly1`; the user reports the requested
+Iris Out/hair/eyes/interruption check looks fine. Two left-bang head-turn
+witnesses now have source-opacity comparisons: visible intersections decrease
+from 67 to 14 and 75 to 3 sampled points, but are not eliminated. The study
+records the exact limitations and remaining CINE/doubles/performance checks.
+Do not repeat the raw nearest-normal screen
 as proof of penetration or modify all colliders from its maxima.
 
 - Which exact final source recipes reproduce all installed meshes and active facial adapters?
