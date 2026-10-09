@@ -4,6 +4,8 @@ from pathlib import Path
 import bpy
 from mathutils import Vector
 w=Path(__file__).resolve().parents[2]/'work/eve26'
+sys.path.insert(0,str(w.parents[2]/'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work'))
+from export_variant_clean import preserve_corner_normals, export_corner_normals
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--candidate',type=Path,default=w/'skin-lining6/skin.mesh.json')
 parser.add_argument('--output',type=Path,default=w/'skin-foot-lining6.blend')
@@ -39,6 +41,7 @@ for poly,record in zip(mesh.polygons,records,strict=True):
         color.data[loop].color=[v/255 for v in data['colors'][corner]]
 normals=[(data['normals'][i][0],-data['normals'][i][1],data['normals'][i][2]) for f in records for i in f[:3]]
 mesh.normals_split_custom_set(normals)
+preserve_corner_normals(obj,normals)
 groups={}
 expected_weights={}
 for v,bone,weight in data['influences']:
@@ -83,8 +86,13 @@ assert color is not None and color.domain=='CORNER'
 for poly,record in zip(mesh.polygons,records,strict=True):
     for loop,corner in zip(poly.loop_indices,record[:3],strict=True):
         assert [round(max(0,min(1,v))*255) for v in color.data[loop].color]==data['colors'][corner]
+retained=export_corner_normals(obj,mesh)
+normal_error=max((entry.vector-Vector(expected)).length for entry,expected in zip(retained,normals,strict=True))
+assert normal_error<1e-6
 report=dict(source_sha256=audit['output_sha256'],saved_sha256=hashlib.sha256(output.read_bytes()).hexdigest(),
     vertices=len(positions),faces=len(faces),reload_position_error_cm=error*100,
     weights_uvs_shapes_verified=True,linear_color_bytes_verified=True,shape_names=list(expected_shapes),
-    scope='Separate lining source library; no rig object. Assembly, normals/material import and game verification remain required.')
+    retained_normal_error=normal_error,
+    scope='Separate lining source library with guarded float export normals; no rig object. '
+          'Blender preview uses its packed normals. Assembly, material import and game verification remain required.')
 output.with_suffix('.json').write_text(json.dumps(report,indent=2)+'\n');print(report)

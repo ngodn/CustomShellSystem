@@ -74,6 +74,18 @@ replacement. The installed import and package remain unchanged. Deliberate
 UV, normal, color and thumb-morph mutations are all detected in
 `skin-source-negative1`.
 
+The subsequent `skin-source-preserved3` repair closes the lining's export-normal
+failure. The source library retains float corner normals, guarded by hashes of
+its local geometry, corner order and normal values. Changed geometry, evaluated
+shape, missing/wrong attributes and altered normals fail explicitly rather than
+export stale data. All nine guard/fallback cases pass. The rebuilt lining now
+passes every field in the expanded source comparison; its maximum normal-vector
+error is `1.713e-7`. The ordinary Eve body path was rechecked and still passes.
+All six part sources now account for 114,373 points and 153,507 triangles in
+Eve's `authoring/skin-suit-source-manifest.json`. This closes the listed
+source-part correspondence, not the remaining whole-outfit rig, facial,
+shading-graph, cook and gameplay gates. No installed files changed.
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`

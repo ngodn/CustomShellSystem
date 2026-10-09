@@ -15,7 +15,7 @@ from mathutils import Vector
 ROOT = Path(__file__).resolve().parents[2]
 EXPORTER = ROOT.parent / 'CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/gemini-work'
 sys.path.insert(0, str(EXPORTER))
-from export_variant_clean import EXPORT_SHAPES, TO_UE, fitted_mesh
+from export_variant_clean import EXPORT_SHAPES, TO_UE, fitted_mesh, export_corner_normals
 
 
 def digest(path):
@@ -86,6 +86,7 @@ def main():
                           for face in data['faces'][face_start:face_start + part['faces']]]
     actual_triangles = []
     normal_matrix = matrix.to_3x3().inverted().transposed()
+    corner_normals = export_corner_normals(obj, mesh)
     color = mesh.color_attributes.active_color
     uv_error, normal_error, color_error = 0.0, 0.0, 0
     if not mesh.uv_layers:
@@ -107,7 +108,7 @@ def main():
                 uv = mesh.uv_layers[min(channel, len(mesh.uv_layers) - 1)].data[loop_index].uv
                 uv_error = max(uv_error, abs(uv.x - wedge[1 + channel * 2]),
                                abs(1 - uv.y - wedge[2 + channel * 2]))
-            normal = (normal_matrix @ mesh.corner_normals[loop_index].vector).normalized()
+            normal = (normal_matrix @ corner_normals[loop_index].vector).normalized()
             normal_error = max(normal_error, (normal - Vector(data['normals'][wedge_index])).length)
             color_index = loop_index if color and color.domain == 'CORNER' else mesh.loops[loop_index].vertex_index
             rgba = color.data[color_index].color if color else (1, 1, 1, 1)
