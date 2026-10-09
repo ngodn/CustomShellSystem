@@ -110,6 +110,17 @@ ownership without cutting either surface. Trim ownership, fit and controls
 remain to be authored. The user subsequently confirmed CW belt physics and
 skirt smoothing are queued for later, with Eve taking priority.
 
+Eve now has an editable source library with 23 parts across the three geometry
+sets. Fresh Blender reload accounts for all 249,020 triangles with their source
+UVs, named weights, raw normals/tangents and color bytes. Maximum position
+component error is `5.723e-6` cm. Slipstream's jacket/skirt split is preserved.
+The offline MeshExport helper gained an optional ordered-surface export after
+GLB face reordering was found; its ordinary skin-audit output is unchanged.
+Three source comparisons, the unchanged default mode and invalid-mode rejection
+pass. These remain source-sized parts with placeholder materials; body fitting,
+target rig binding, morph transfer, trim ownership and gameplay are pending.
+Two zero-length Peony source normals are retained and flagged for repair.
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`

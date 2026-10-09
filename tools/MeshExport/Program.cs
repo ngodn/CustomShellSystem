@@ -23,6 +23,11 @@ provider.ReadScriptData = true;
 provider.Initialize();
 provider.Mount();
 var mesh = provider.LoadPackageObject(args[2]);
+var skinSurface = Environment.GetEnvironmentVariable("CSS_SKIN_SURFACE") switch {
+    null or "" or "0" => false,
+    "1" when Environment.GetEnvironmentVariable("CSS_SKIN_AUDIT") == "1" => true,
+    _ => throw new ArgumentException("CSS_SKIN_SURFACE=1 requires CSS_SKIN_AUDIT=1")
+};
 var basePoseMesh = Environment.GetEnvironmentVariable("CSS_BASE_POSE_MESH") switch {
     null or "" or "0" => false,
     "1" when mesh is USkeletalMesh => true,
@@ -70,7 +75,7 @@ if (skinAudit) {
         "CSS_AUDIT_ONLY", "CSS_TEXTURES_ONLY", "CSS_MATERIALS" }
         .Any(key => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key))))
         throw new ArgumentException("Run skin audit separately from other export modes");
-    SkinAudit.Export(skin, args[2], args[3]);
+    SkinAudit.Export(skin, args[2], args[3], skinSurface);
     return;
 }
 if (Environment.GetEnvironmentVariable("CSS_TRACK_AUDIT") == "1") {

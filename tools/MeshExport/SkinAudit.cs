@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 
 internal static class SkinAudit
 {
-    public static void Export(USkeletalMesh mesh, string asset, string output)
+    public static void Export(USkeletalMesh mesh, string asset, string output, bool surface = false)
     {
         using var dto = new SkeletalMeshDto(mesh, EMeshQuality.Highest,
             ENaniteMeshFormat.NoNanite, exportMorphTarget: false);
@@ -82,7 +82,53 @@ internal static class SkinAudit
             }).ToArray()
         };
         File.WriteAllText(manifestPath, JsonConvert.SerializeObject(manifest, Formatting.Indented));
+        if (surface) ExportSurface(lod, output);
         Console.WriteLine($"Audited {lod.Vertices.Length} vertices, up to {maxInfluences} influences, {dto.Bones.Length} bones");
+    }
+
+    private static void ExportSurface(CUE4Parse_Conversion.Dto.MeshLodDto<CUE4Parse_Conversion.Dto.SkinnedMeshVertex> lod, string output)
+    {
+        var colors = lod.VertexColors ?? [];
+        if (lod.ExtraUvs.Any(uv => uv.Length != lod.Vertices.Length) ||
+            colors.Any(color => color.Colors.Length != lod.Vertices.Length))
+            throw new InvalidDataException("Surface channels do not cover every vertex");
+        var path = Path.Combine(output, "skin-surface.bin");
+        var manifest = Path.Combine(output, "skin-surface.json");
+        if (File.Exists(path) || File.Exists(manifest))
+            throw new IOException("Use a fresh surface output directory");
+        using (var writer = new BinaryWriter(File.Open(path, FileMode.CreateNew)))
+        {
+            void WriteFinite(float value)
+            {
+                if (!float.IsFinite(value)) throw new InvalidDataException("Non-finite surface value");
+                writer.Write(value);
+            }
+            for (var i = 0; i < lod.Vertices.Length; ++i)
+            {
+                var vertex = lod.Vertices[i];
+                foreach (var value in new[] { vertex.Normal.X, vertex.Normal.Y, vertex.Normal.Z, vertex.Normal.W,
+                    vertex.Tangent.X, vertex.Tangent.Y, vertex.Tangent.Z, vertex.Tangent.W,
+                    vertex.Uv.U, vertex.Uv.V }) WriteFinite(value);
+                foreach (var channel in lod.ExtraUvs)
+                {
+                    WriteFinite(channel[i].U); WriteFinite(channel[i].V);
+                }
+                foreach (var channel in colors)
+                {
+                    var color = channel.Colors[i];
+                    writer.Write(color.R); writer.Write(color.G); writer.Write(color.B); writer.Write(color.A);
+                }
+            }
+        }
+        File.WriteAllText(manifest, JsonConvert.SerializeObject(new {
+            schema = 1, vertices = lod.Vertices.Length,
+            stride = 32 + (1 + lod.ExtraUvs.Length) * 8 + colors.Length * 4,
+            uv_channels = 1 + lod.ExtraUvs.Length,
+            color_channels = colors.Select(c => c.Name).ToArray(),
+            layout = "Little endian per skin-audit vertex: float32 normal[4], tangent[4], UV[uv_channels][2], uint8 RGBA[color_channels].",
+            scope = "Decoded source surface fields in original vertex order. No tangent recomputation, UV flip, color conversion or axis conversion.",
+            file = new { name = Path.GetFileName(path), bytes = new FileInfo(path).Length, sha256 = Hash(path) }
+        }, Formatting.Indented));
     }
 
     private static string Hash(string path)
