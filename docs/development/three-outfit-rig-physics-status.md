@@ -261,6 +261,26 @@ The two rejected/superseded arm blends and the archived obsolete fitter were
 removed after hash/reference/job checks, totaling 57,605,526 logical bytes.
 Their small recipes, receipts and visual rejection evidence remain.
 
+`new-outfits-panel-hardware1` then corrects eight leg-panel ornaments that
+cross material sections. The earlier Lower_1 fit had attached its panel
+details to boot surfaces, leaving them visibly detached. The new source-panel
+correspondence carries fitted position, weights and morphs onto 284 ornament
+vertices while preserving the actual panels and unrelated parts. The 156-field
+scope check and 23 original-source checks pass. Repeated neutral and sprint
+frame 12 views remove those detached pieces. Full-motion contact, physics and
+gameplay remain unverified.
+
+Five Peony palettes are now defined with offline previews: Monochrome, Crimson
+Silk, Midnight, Jade and Obsidian Gold. The preview shader uses the original
+floral pattern, fabric masks and texture inputs; Monochrome follows the user's
+white/black reference. Fifteen front/side/back images were generated, and the
+five front views plus Monochrome's three views were inspected. These are
+Blender approximations, with roughness/coat refinement still needed. Emissive
+accents, flowing trim, CSS controls, saved profiles, Astral support and target
+UE materials/cook are not implemented for these additions. Slipstream and its
+five palettes also remain unfinished. See the [panel and palette evidence](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/authoring/new-outfits-fitting.md#cross-material-leg-panel-ornaments).
+No installed or released files changed.
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`
