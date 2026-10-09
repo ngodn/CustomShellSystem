@@ -86,6 +86,23 @@ Eve's `authoring/skin-suit-source-manifest.json`. This closes the listed
 source-part correspondence, not the remaining whole-outfit rig, facial,
 shading-graph, cook and gameplay gates. No installed files changed.
 
+## Queued Eve outfits: source inspection
+
+Both supplied outfit archives are extracted and pinned without changing the
+originals. Peony contains two mesh variants; Slipstream contains four. All six
+decode with identical geometry/weight readbacks in isolated and retail-assisted
+mounts. They represent three distinct geometry/weight sets. Source material
+chains and 87 explicitly referenced texture packages are exported; incomplete
+automatic GLB material conversion was rejected as a visual baseline.
+
+The reviewed section views identify the modularity work: several garments share
+material regions, and Slipstream Normal lacks lower-leg body surfaces under its
+boots. Removable components need deliberate separation and body restoration.
+No new outfit candidate, CSS controls or palette templates are complete yet.
+See [Eve's source inventory](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/authoring/new-outfits-source-inventory.md)
+for counts, hashes, proposed component groups and remaining work. No installed
+files changed. CW's moving foot-control comparison remains pending.
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`
