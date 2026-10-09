@@ -132,6 +132,16 @@ Handle clip loops/end, movement, attack, aiming, abilities, outfit changes and m
 
 ## Phase 3: collision and secondary motion
 
+October 9 follow-up: the user confirmed Commander White needs physics for her
+belt and smoother skirt physics because its current motion is jerky. The user
+explicitly queued this for later and asked to focus on Eve first. After the
+current Eve work, inspect CW's belt anchors, weighted chains and collision,
+then reproduce the skirt motion through walking, turns and start/stop
+transitions before choosing a repair. Verify continuous motion, recovery and
+cost rather than accepting a still pose. Preserve her accepted hair, outfit
+shape, modular controls and gameplay behavior. This remains separate from
+the queued CW walking foot-alignment report.
+
 Create a region-to-solver table per outfit. For each region record driven bones/vertices, solver, simulation space, anchors, collision source, tick order, reset behavior and UI controls. Avoid two systems independently driving the same chain.
 
 - **Body motion:** inspect current springs and regional controls, damping, limits and recovery. Keep motion responsive and stable through gait changes and sudden actions. Coordinate body deformation with fitted clothing and ornaments.
