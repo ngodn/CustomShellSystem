@@ -32,10 +32,11 @@ for channel in range(data['uv_channels']):
         for loop,corner in zip(poly.loop_indices,record[:3],strict=True):
             u,v=data['wedges'][corner][1+channel*2:3+channel*2]
             layer.data[loop].uv=(u,1-v)
-color=mesh.color_attributes.new(name='Color',type='BYTE_COLOR',domain='CORNER')
+# The exporter quantizes scene-linear .color values, not sRGB values.
+color=mesh.color_attributes.new(name='Color',type='FLOAT_COLOR',domain='CORNER')
 for poly,record in zip(mesh.polygons,records,strict=True):
     for loop,corner in zip(poly.loop_indices,record[:3],strict=True):
-        color.data[loop].color_srgb=[v/255 for v in data['colors'][corner]]
+        color.data[loop].color=[v/255 for v in data['colors'][corner]]
 normals=[(data['normals'][i][0],-data['normals'][i][1],data['normals'][i][2]) for f in records for i in f[:3]]
 mesh.normals_split_custom_set(normals)
 groups={}
@@ -77,8 +78,13 @@ for channel,layer in enumerate(mesh.uv_layers):
         for loop,corner in zip(poly.loop_indices,record[:3],strict=True):
             u,v=data['wedges'][corner][1+channel*2:3+channel*2]
             assert (layer.data[loop].uv-Vector((u,1-v))).length<1e-6
+color=mesh.color_attributes.active_color
+assert color is not None and color.domain=='CORNER'
+for poly,record in zip(mesh.polygons,records,strict=True):
+    for loop,corner in zip(poly.loop_indices,record[:3],strict=True):
+        assert [round(max(0,min(1,v))*255) for v in color.data[loop].color]==data['colors'][corner]
 report=dict(source_sha256=audit['output_sha256'],saved_sha256=hashlib.sha256(output.read_bytes()).hexdigest(),
     vertices=len(positions),faces=len(faces),reload_position_error_cm=error*100,
-    weights_uvs_shapes_verified=True,shape_names=list(expected_shapes),
+    weights_uvs_shapes_verified=True,linear_color_bytes_verified=True,shape_names=list(expected_shapes),
     scope='Separate lining source library; no rig object. Assembly, normals/material import and game verification remain required.')
 output.with_suffix('.json').write_text(json.dumps(report,indent=2)+'\n');print(report)

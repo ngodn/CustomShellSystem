@@ -1,4 +1,4 @@
-"""Compare a saved garment with its import payload. Run in Blender 5.2.2.
+"""Compare a saved mesh part with its import payload. Run in Blender 5.2.2.
 
 Loads a private in-memory object copy. Does not save the blend or change the
 import payload. This checks source provenance, not cooked or posed geometry.
@@ -68,7 +68,8 @@ def main():
             for key in obj.data.shape_keys.key_blocks:
                 if key.name in EXPORT_SHAPES:
                     key.value = 0
-    mesh, shapes, active = fitted_mesh(obj)
+    shape_names = tuple(dict.fromkeys((*EXPORT_SHAPES, *part.get('exported_shapes', ()))))
+    mesh, shapes, active = fitted_mesh(obj, extra_shapes=shape_names)
     mesh.calc_loop_triangles()
     matrix = TO_UE @ obj.matrix_world
     triangles = []
@@ -84,11 +85,35 @@ def main():
     expected_triangles = [[data['wedges'][i][0] for i in face[:3]]
                           for face in data['faces'][face_start:face_start + part['faces']]]
     actual_triangles = []
-    for triangle in triangles:
+    normal_matrix = matrix.to_3x3().inverted().transposed()
+    color = mesh.color_attributes.active_color
+    uv_error, normal_error, color_error = 0.0, 0.0, 0
+    if not mesh.uv_layers:
+        raise ValueError('Source part has no UV coordinates')
+    if len(data['normals']) != len(data['wedges']) or len(data['colors']) != len(data['wedges']):
+        raise ValueError('Import corner arrays have different lengths')
+    for triangle, face in zip(triangles, data['faces'][face_start:face_start + part['faces']], strict=True):
         ids = [compact[i] for i in triangle.vertices]
+        loops = list(triangle.loops)
         if matrix.to_3x3().determinant() > 0:
             ids.reverse()
+            loops.reverse()
         actual_triangles.append(ids)
+        for loop_index, wedge_index in zip(loops, face[:3], strict=True):
+            wedge = data['wedges'][wedge_index]
+            if len(wedge) != 1 + 2 * data['uv_channels']:
+                raise ValueError('Import wedge has the wrong UV channel count')
+            for channel in range(data['uv_channels']):
+                uv = mesh.uv_layers[min(channel, len(mesh.uv_layers) - 1)].data[loop_index].uv
+                uv_error = max(uv_error, abs(uv.x - wedge[1 + channel * 2]),
+                               abs(1 - uv.y - wedge[2 + channel * 2]))
+            normal = (normal_matrix @ mesh.corner_normals[loop_index].vector).normalized()
+            normal_error = max(normal_error, (normal - Vector(data['normals'][wedge_index])).length)
+            color_index = loop_index if color and color.domain == 'CORNER' else mesh.loops[loop_index].vertex_index
+            rgba = color.data[color_index].color if color else (1, 1, 1, 1)
+            quantized = [round(max(0, min(1, value)) * 255) for value in rgba]
+            color_error = max(color_error, max(abs(a - b) for a, b in
+                                               zip(quantized, data['colors'][wedge_index], strict=True)))
 
     exported_weights = {}
     for vertex, bone, weight in data['influences']:
@@ -108,7 +133,7 @@ def main():
     deltas = {m['name']: {row[0]: Vector(row[1:]) for row in m['deltas']}
               for m in data['morph_targets']}
     morph_errors = {}
-    for name in EXPORT_SHAPES:
+    for name in shape_names:
         source_delta = shapes.get(name)
         worst = 0.0
         for v in used:
@@ -121,17 +146,21 @@ def main():
     # Float32 coordinates pass through Blender metres and Unreal centimetres.
     passed = (position_error <= 0.0001 and weight_error <= 0.000001
               and max(morph_errors.values()) <= 0.0001
+              and uv_error <= 0.000001 and normal_error <= 0.000001 and color_error == 0
               and expected_triangles == actual_triangles and unchanged)
     report = dict(passed=passed, part=args.part, points=len(used), triangles=len(triangles),
                   position_error_cm=position_error, weight_error=weight_error,
                   morph_errors_cm=morph_errors, triangle_order_equal=expected_triangles == actual_triangles,
+                  uv_channels=data['uv_channels'], max_uv_component_error=uv_error,
+                  max_normal_vector_error=normal_error, max_color_byte_error=color_error,
                   active_fit_keys=active, protected_unchanged=unchanged, inputs=protected,
                   saved_runtime_morph_values=saved_values,
                   runtime_morphs_neutralized=args.neutral_runtime_morphs,
                   blender_version=bpy.app.version_string,
-                  scope='One saved garment part versus its import payload: positions, triangle order, '
-                        'named weights and six body morphs. No source skeleton, UV, normal, cooked '
-                        'buffer, simulation, visible fit or gameplay claim.')
+                  scope='One saved mesh part versus its import payload: positions, triangle order, '
+                        'named weights, body and declared corrective morphs, UV channels, corner normals '
+                        'and vertex colors. No source skeleton, material graph, cooked buffer, simulation, '
+                        'visible fit or gameplay claim.')
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report))

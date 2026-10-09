@@ -62,6 +62,18 @@ audited Eve trio matches the installed trio. Deliberate winding, weight and
 morph changes are rejected. Blender body/hair provenance, other render fields,
 the facial mesh and live fit remain separate. Nothing was installed.
 
+The expanded source check in `skin-source-complete1` now also compares all
+declared corrective morphs, three UV channels, corner normals and vertex colors.
+Five of the six parts pass, covering 111,988 points: body, suit, both hair meshes
+and the hair sword. The body includes all sixteen left-hand corrective morphs.
+The lining passes geometry, weights, UVs and shapes, but its rebuilt Blender
+source changes color values and loses five corner normals. The source-saving
+helper now preserves the linear color bytes; a new `skin-source-linear2.blend`
+verifies that repair. Its normals still fail, so it is not a complete source
+replacement. The installed import and package remain unchanged. Deliberate
+UV, normal, color and thumb-morph mutations are all detected in
+`skin-source-negative1`.
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`
@@ -717,7 +729,7 @@ Evidence: [baseline files](../../work/three-outfit-rig-physics/baseline-1), incl
 | Gameplay regressions | User accepts cross-character Iris Out interruption, first form-switch summon and Customize recovery. Full outfit/lifecycle matrix remains |
 | Hair | Genessa unused-solver candidate is installed; matched cost remains. CW separate-strand trial is installed and the user reports it looks fine. Both normal/facial regular and scene graphs pass paired component lifecycle checks. Two source-visible left-bang head-turn intersections improve but remain. CINE/doubles, full lifecycle and measured gameplay cost remain; see [CW study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/hair-head-clearance-study.md) |
 | Performance | Current package sizes recorded; matched gameplay captures pending |
-| CW walking feet | User confirms tilt with boots shown and hidden. Read-only game pose captured; walking reproduction still pending. Private AnimationRelative trial covers both meshes and three gaits, 18 timelines and 4,338 samples. Baselines restore exactly, but visible improvement/contact is unproven, so the trial is not adopted. Installed foot behavior is unchanged. See [foot investigation](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/walking-foot-report.md) |
+| CW walking feet | User confirms tilt with boots shown and hidden. Twelve moving gameplay poses captured in `walking-feet-live4`; four reconstructed bare-foot poses reviewed from front/side. The gameplay leg rotations differ from the standalone gait captures, so native blend/foot-correction values are the next comparison. The private AnimationRelative trial remains unadopted; no foot repair is installed. See [foot investigation](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_CommanderWhite_eins0fx_P/docs/walking-foot-report.md) |
 | Trebuchaxe report | Low priority, queued and unverified |
 
 Next: investigate the reported CW walking-foot tilt, then complete CW
