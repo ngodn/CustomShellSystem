@@ -1,0 +1,76 @@
+--- a/CSSEveEmbeddedMotion.inl
++++ b/CSSEveEmbeddedMotion.inl
+@@ -40,6 +40,10 @@
+     const bool NoBackstop=FParse::Param(*Params,TEXT("NoBackstop"));
+     const bool NoSelfCollision=FParse::Param(*Params,TEXT("NoSelfCollision"));
+     const bool CollisionTrace=FParse::Param(*Params,TEXT("CollisionTrace"));
++    const bool NoAnimDrive=FParse::Param(*Params,TEXT("NoAnimDrive"));
++    int32 WarmupFrames=0; FParse::Value(*Params,TEXT("WarmupFrames="),WarmupFrames);
++    if ((NoAnimDrive || WarmupFrames) && (!Peony || WarmupFrames<0 || WarmupFrames>300))
++        return Fail(TEXT("Drive/settling trial requires private Peony and 0..300 warmup frames"));
+     const bool EnableCCD=FParse::Param(*Params,TEXT("EnableCCD"));
+     if ((CollisionTrace || EnableCCD) && !Peony) return Fail(TEXT("Collision trace and CCD trial require private Peony"));
+     if (NoSelfCollision && !Peony) return Fail(TEXT("Self-collision isolation requires private Peony"));
+@@ -70,6 +74,8 @@
+     if (NoBackstop && !Radius) return Fail(TEXT("Missing backstop radius map"));
+     const auto SavedPhysics=Cloth->PhysicsAsset;
+     const bool SavedSelfCollision=ClothConfig->bUseSelfCollisions;
++    const auto SavedAnimDrive=ClothConfig->AnimDriveStiffness;
++    const auto SavedAnimDamping=ClothConfig->AnimDriveDamping;
+     const bool SavedCCD=ClothConfig->bUseCCD;
+     const int32 SavedSubsteps=SharedConfig->SubdivisionCount;
+     const float SavedSelfThickness=ClothConfig->SelfCollisionThickness;
+@@ -78,6 +84,8 @@
+         Cloth->PhysicsAsset=SavedPhysics;
+         ClothConfig->bUseSelfCollisions=SavedSelfCollision;
+         ClothConfig->bUseCCD=SavedCCD;
++        ClothConfig->AnimDriveStiffness=SavedAnimDrive;
++        ClothConfig->AnimDriveDamping=SavedAnimDamping;
+         SharedConfig->SubdivisionCount=SavedSubsteps;
+         ClothConfig->SelfCollisionThickness=SavedSelfThickness;
+         if (Radius) *Radius=SavedRadius;
+@@ -94,6 +102,11 @@
+     if (NoBodyCollision) Cloth->PhysicsAsset=nullptr;
+     if (NoSelfCollision) ClothConfig->bUseSelfCollisions=false;
+     if (EnableCCD) ClothConfig->bUseCCD=true;
++    if (NoAnimDrive)
++    {
++        ClothConfig->AnimDriveStiffness.Low=ClothConfig->AnimDriveStiffness.High=0.f;
++        ClothConfig->AnimDriveDamping.Low=ClothConfig->AnimDriveDamping.High=0.f;
++    }
+     SharedConfig->SubdivisionCount=Substeps;
+     ClothConfig->SelfCollisionThickness=SelfThickness;
+     if (NoBackstop) for (int32 I=0; I<Radius->Num(); ++I) (*Radius)[I]=0.f;
+@@ -130,17 +143,18 @@
+     const auto& Ref=Mesh->GetRefSkeleton();
+     TArray<TSharedPtr<FJsonValue>> Frames;
+     const float DeltaTime=1.f/FrameRate;
+-    for (int32 Frame=0; Frame<FrameCount; ++Frame)
+-    {
+-        const double Time=double(Frame)/FrameRate;
++    for (int32 Frame=-WarmupFrames; Frame<FrameCount; ++Frame)
++    {
++        const double Time=double(FMath::Max(Frame,0))/FrameRate;
+         Component->SetPosition(float(FMath::Fmod(Time,double(Animation->GetPlayLength()))),false);
+-        Component->TickAnimation(Frame?DeltaTime:0.f,true);
++        Component->TickAnimation(Frame==-WarmupFrames?0.f:DeltaTime,true);
+         Component->RefreshBoneTransforms();
+-        if (!Frame) Component->ForceClothNextUpdateTeleportAndReset();
++        if (Frame==-WarmupFrames) Component->ForceClothNextUpdateTeleportAndReset();
+         const double ClothStart=FPlatformTime::Seconds();
+         Component->TickClothing(DeltaTime,Component->PrimaryComponentTick);
+         Component->WaitForExistingParallelClothSimulation_GameThread();
+         const double ClothMilliseconds=(FPlatformTime::Seconds()-ClothStart)*1000.;
++        if (Frame<0) continue;
+         const auto& Sim=Component->GetCurrentClothingData_AnyThread();
+         const auto* Data=Sim.Find(0);
+         if (!Data || Data->Positions.Num()!=ExpectedParticles || Data->Normals.Num()!=ExpectedParticles) return Fail(TEXT("Missing embedded simulation particles"));
+@@ -291,6 +305,8 @@
+     Root->SetBoolField(TEXT("diagnostic_no_backstop"),NoBackstop);
+     Root->SetBoolField(TEXT("diagnostic_no_self_collision"),NoSelfCollision);
+     Root->SetBoolField(TEXT("ccd_enabled"),ClothConfig->bUseCCD);
++    Root->SetBoolField(TEXT("diagnostic_no_anim_drive"),NoAnimDrive);
++    Root->SetNumberField(TEXT("warmup_frames"),WarmupFrames);
+     Root->SetBoolField(TEXT("collision_trace"),CollisionTrace);
+     TArray<TSharedPtr<FJsonValue>> UsedBoneNames;
+     for (const auto& Name : Cloth->UsedBoneNames) UsedBoneNames.Add(MakeShared<FJsonValueString>(Name.ToString()));

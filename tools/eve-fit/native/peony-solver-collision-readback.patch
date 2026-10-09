@@ -1,0 +1,118 @@
+--- a/CSSEveEmbeddedMotion.inl
++++ b/CSSEveEmbeddedMotion.inl
+@@ -3,6 +3,11 @@
+ #include "ClothingSystemRuntimeTypes.h"
+ #include "CSSClothProbeComponent.h"
+ #include "ClothCollisionData.h"
++#include "ChaosCloth/ChaosClothingSimulation.h"
++#include "ChaosCloth/ChaosClothingSimulationFactory.h"
++#include "ChaosCloth/ChaosClothingSimulationSolver.h"
++#include "ChaosCloth/ChaosClothingSimulationCloth.h"
++#include "ChaosCloth/ChaosClothingSimulationCollider.h"
+ #include "PreviewScene.h"
+ #include "HAL/IConsoleManager.h"
+ #include "HAL/FileManager.h"
+@@ -116,6 +121,8 @@
+     Component->Stop();
+     if (Secondary && !Component->GetPostProcessInstance()) return Fail(TEXT("Secondary graph did not initialize"));
+     if (!Component->GetClothingSimulation()) return Fail(TEXT("Component has no cloth simulation"));
++    if (CollisionTrace && Component->ClothingSimulationFactory!=UChaosClothingSimulationFactory::StaticClass())
++        return Fail(TEXT("Collision trace requires the exact Chaos factory"));
+     auto Vec=[](const FVector& V) {
+         auto O=MakeShared<FJsonObject>();
+         O->SetNumberField(TEXT("X"),V.X); O->SetNumberField(TEXT("Y"),V.Y); O->SetNumberField(TEXT("Z"),V.Z); return O;
+@@ -180,6 +187,83 @@
+             CollisionRow->SetNumberField(TEXT("convexes"),Collisions.Convexes.Num());
+             CollisionRow->SetNumberField(TEXT("boxes"),Collisions.Boxes.Num());
+             Row->SetObjectField(TEXT("native_collisions"),CollisionRow);
++            // Read debug views only after the explicit cloth-worker wait above.
++            // The final Chaos factory checked above creates FClothingSimulation.
++            const auto* Solver=static_cast<Chaos::FClothingSimulation*>(Component->GetClothingSimulation())->GetSolver();
++            if (!Solver || Solver->GetCloths().Num()!=1) return Fail(TEXT("Expected one Chaos cloth"));
++            const auto* SolverCloth=Solver->GetCloths()[0];
++            if (!SolverCloth) return Fail(TEXT("Missing Chaos cloth"));
++            const int32 ParticleRange=SolverCloth->GetParticleRangeId(Solver);
++            if (ParticleRange==INDEX_NONE) return Fail(TEXT("Missing particle range"));
++            const auto ParticleXs=Solver->GetParticleXsView(ParticleRange);
++            if (ParticleXs.Num()!=ExpectedParticles) return Fail(TEXT("Wrong solver particle count"));
++            auto TransformJson=[&Vec](const auto& Transform) {
++                auto O=MakeShared<FJsonObject>();
++                O->SetObjectField(TEXT("translation"),Vec(FVector(Transform.GetTranslation())));
++                const auto Q=Transform.GetRotation();
++                auto R=Vec(FVector(Q.X,Q.Y,Q.Z)); R->SetNumberField(TEXT("W"),Q.W);
++                O->SetObjectField(TEXT("rotation"),R); return O;
++            };
++            TArray<TSharedPtr<FJsonValue>> GeometryRows,SolverPositions;
++            TArray<double> MinimumPhi; MinimumPhi.Init(TNumericLimits<double>::Max(),ExpectedParticles);
++            TArray<int32> ClosestGeometry; ClosestGeometry.Init(INDEX_NONE,ExpectedParticles);
++            for (const auto& X:ParticleXs) SolverPositions.Add(MakeShared<FJsonValueObject>(Vec(FVector(X))));
++            for (const auto* Collider:SolverCloth->GetColliders())
++            {
++                if (!Collider) return Fail(TEXT("Null solver collider"));
++                const auto Type=Chaos::FClothingSimulationCollider::ECollisionDataType::LODless;
++                const int32 Range=Collider->GetCollisionRangeId(Solver,SolverCloth,Type);
++                if (Range==INDEX_NONE) continue;
++                const auto Geometries=Solver->GetCollisionGeometryView(Range);
++                const auto Translations=Solver->GetCollisionParticleXsView(Range);
++                const auto Rotations=Solver->GetCollisionParticleRsView(Range);
++                const auto Bones=Solver->GetCollisionBoneIndicesView(Range);
++                const auto Bases=Solver->GetCollisionBaseTransformsView(Range);
++                const auto Targets=Solver->GetCollisionTransformsView(Range);
++                if (Geometries.Num()!=Translations.Num() || Geometries.Num()!=Rotations.Num() ||
++                    Geometries.Num()!=Bones.Num() || Geometries.Num()!=Bases.Num() || Geometries.Num()!=Targets.Num())
++                    return Fail(TEXT("Mismatched collision views"));
++                for (int32 I=0; I<Geometries.Num(); ++I)
++                {
++                    if (!Geometries[I]) return Fail(TEXT("Missing implicit geometry"));
++                    const int32 GeometryIndex=GeometryRows.Num();
++                    auto G=MakeShared<FJsonObject>();
++                    G->SetNumberField(TEXT("bone_index"),Bones[I]);
++                    G->SetStringField(TEXT("type"),Geometries[I]->GetTypeName().ToString());
++                    G->SetObjectField(TEXT("base"),TransformJson(Bases[I]));
++                    G->SetObjectField(TEXT("target"),TransformJson(Targets[I]));
++                    G->SetObjectField(TEXT("position"),Vec(FVector(Translations[I])));
++                    const auto Q=Rotations[I]; auto R=Vec(FVector(Q.X,Q.Y,Q.Z)); R->SetNumberField(TEXT("W"),Q.W);
++                    G->SetObjectField(TEXT("rotation"),R);
++                    GeometryRows.Add(MakeShared<FJsonValueObject>(G));
++                    for (int32 P=0; P<ExpectedParticles; ++P)
++                    {
++                        const auto Local=Rotations[I].UnrotateVector(ParticleXs[P]-Translations[I]);
++                        const double Phi=Geometries[I]->SignedDistance(Chaos::FVec3(Local));
++                        if (!FMath::IsFinite(Phi)) return Fail(TEXT("Nonfinite collider distance"));
++                        if (Phi<MinimumPhi[P]) { MinimumPhi[P]=Phi; ClosestGeometry[P]=GeometryIndex; }
++                    }
++                }
++            }
++            if (GeometryRows.IsEmpty()) return Fail(TEXT("No native collision geometry"));
++            TArray<TSharedPtr<FJsonValue>> PhiValues,Nearest;
++            for (int32 P=0; P<ExpectedParticles; ++P)
++            {
++                PhiValues.Add(MakeShared<FJsonValueNumber>(MinimumPhi[P]));
++                Nearest.Add(MakeShared<FJsonValueNumber>(ClosestGeometry[P]));
++            }
++            auto Native=MakeShared<FJsonObject>();
++            Native->SetArrayField(TEXT("geometries"),GeometryRows);
++            Native->SetArrayField(TEXT("particle_positions"),SolverPositions);
++            Native->SetArrayField(TEXT("minimum_phi"),PhiValues);
++            Native->SetArrayField(TEXT("nearest_geometry"),Nearest);
++            Native->SetObjectField(TEXT("local_space_location"),Vec(FVector(Solver->GetLocalSpaceLocation())));
++            Native->SetNumberField(TEXT("local_space_scale"),Solver->GetLocalSpaceScale());
++            const auto LocalQ=Solver->GetLocalSpaceRotation();
++            auto LocalR=Vec(FVector(LocalQ.X,LocalQ.Y,LocalQ.Z)); LocalR->SetNumberField(TEXT("W"),LocalQ.W);
++            Native->SetObjectField(TEXT("local_space_rotation"),LocalR);
++            Row->SetObjectField(TEXT("solver_collisions"),Native);
++
+         }
+ 
+         TArray<TSharedPtr<FJsonValue>> Names,Transforms;
+--- a/CSSAuthoring.Build.cs
++++ b/CSSAuthoring.Build.cs
+@@ -17,7 +17,7 @@
+             "AnimationCore", "MovieScene", "MovieSceneTracks", "IKRig", "AnimationBlueprintLibrary", "AnimGraph", "AnimGraphRuntime", "BlueprintGraph", "KismetCompiler",
+             "ControlRig", "ControlRigDeveloper", "RigVM", "RigVMDeveloper",
+             "ChaosClothAsset", "ChaosClothAssetEngine",
+-            "ClothingSystemEditor", "ClothingSystemEditorInterface", "ClothingSystemRuntimeCommon", "ChaosCloth", "Chaos"
++            "ClothingSystemEditor", "ClothingSystemEditorInterface", "ClothingSystemRuntimeInterface", "ClothingSystemRuntimeCommon", "ChaosCloth", "Chaos"
+         });
+         PrivateIncludePathModuleNames.Add("TextureCompressor");
+         PrivateDependencyModuleNames.Add("PhysicsUtilities");

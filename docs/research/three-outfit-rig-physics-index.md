@@ -25,8 +25,7 @@ remaining pulls. Six sampled endpoints sit inside the posed body despite
 contact with the borrowed spheres. A Peony-specific leg-capsule candidate is
 authored and read back correctly, but its native gait comparison fails. Expanding
 free-panel travel clears individual-sphere feasibility conflicts without fixing
-the motion. Inspect the new envelope's initial cloth intersections and actual
-native collider transforms before further tuning. Do not shrink the old
+the motion. The [native collision readback](../development/three-outfit-rig-physics-status.md#peony-native-collision-readback) now verifies actual collider placement against both gait captures. Wrong-bone/space attachment is ruled out for this trial; CCD, removing animation drive and initial settling all fail to repair the strain. Do not shrink the old
 collider to conceal strain or treat passing anchors as contact acceptance.
 
 Latest evidence: all 63 native alternatives and 60 idle carriers are installed.

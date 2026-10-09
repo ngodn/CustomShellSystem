@@ -2130,3 +2130,75 @@ offline work. Next: verify the new collision capture and contact fit, then resol
 cloth travel and morph integration before the final material/facial/cook/catalog
 assembly and live acceptance. Eve remains first; the remaining Genessa, CW,
 shared assets and coordinated-release requirements stay active.
+
+
+## Peony native collision readback
+
+October 10: `peony-collision-trace1..3` retain the exact cloth6 assets and
+compare seven new 145-frame captures at 60 fps. These are private diagnostics,
+not an installed candidate. All anchor verifications pass. Every motion still
+fails the gross-strain screen.
+
+| Capture | Strain-failing frames | Maximum edge ratio | Mean editor cloth step, ms |
+| --- | ---: | ---: | ---: |
+| Trace1 sprint baseline | 122 | 9.901 | 1.057 |
+| Trace1 sprint with CCD | 135 | 49.230 | 1.777 |
+| Solver readback walk | 125 | 8.334 | 1.044 |
+| Solver readback sprint | 123 | 9.903 | 1.102 |
+| Drive/settling sprint baseline | 123 | 9.901 | 1.176 |
+| Sprint without animation drive and its damping | 123 | 9.580 | 1.090 |
+| Sprint after 60 stationary settling steps | 124 | 9.908 | 0.953 |
+
+CCD makes this candidate's failure worse. Neither zero animation drive nor a
+one-second initial settle fixes it. Timings exclude animation, rendering and
+the readback calculations after the cloth step; they are not game FPS evidence.
+Do not save any of these diagnostic switches as a repair.
+
+The first trace reports 28 untransformed spheres and ten connections. Its
+`bone_index` values belong to collision extraction, not `Cloth->UsedBoneNames`.
+Do not map them through the cloth's skinning bone list. The actual solver
+readback instead exposes 18 implicit shapes: ten tapered capsules and eight
+spheres, with raw mesh bone indices. The independent Blender audit reconstructs
+all recorded component-space bones and checks each shape's base/target/current
+transform. Across walk and sprint, the worst target matrix discrepancy is
+0.00002665 and current discrepancy is 0.00006962; exposed particle positions
+agree with solver positions within 0.00000394 cm. This rules out the suspected
+wrong-bone/wrong-space attachment for this isolated trial.
+
+Native signed-distance queries still find cloth particles inside collider
+volumes in 117 walk frames and 88 sprint frames, with no fixed anchors inside.
+The minimum per-shape signed distance reaches -5.46 and -5.97 cm respectively.
+For overlapping shapes that minimum establishes membership, not exact distance
+to the union boundary. At sprint frame 38, the worst edge grows from 1.900 to
+18.819 cm while both endpoints sit outside the left-thigh capsule (positive
+signed distances 0.328 and 0.393 cm). The defect therefore includes cloth
+stretch around contact, not just particles missing collision entirely.
+
+The C++20 authoring helper waits for cloth workers before reading solver views,
+checks the exact final Chaos factory before its concrete-type cast, and refuses
+missing/mismatched geometry. A real transient skeletal-component subclass
+exposes the protected legacy collision readback. It adds no game runtime hooks,
+changes no engine source and saves no packages. The successful final build is
+`peony-cloth-drive-warmup1.log`; earlier API-access/link failures remain in the
+build logs. `ClothingSystemRuntimeInterface` is now an explicit authoring module
+dependency. All three additive source patches replay to exact built files.
+
+Source semantics are checked against the installed UE 5.6.1 headers and
+[Epic's collider API](https://dev.epicgames.com/documentation/unreal-engine/API/Plugins/ChaosCloth/FClothingSimulationCollider),
+which distinguishes untransformed source data from post-update debug views.
+`peony-collision-trace3/diagnostic-receipt.json` freezes 78 evidence/recipe hashes
+and references each trial's exact module and 113 unchanged input hashes.
+
+Next: compare a coarser, geometry-traceable simulation proxy and inspect its
+mapped surface/contact around the thigh. Preserve the fitted render mesh and
+anchors. This is a new hypothesis, not a demonstrated repair. Keep collision
+coverage, body morphs, materials, final cook/catalog and live acceptance open.
+The installed game remains unchanged; no user launch is needed yet.
+
+Cleanup after the stopped collision captures removed 114,193,179 bytes of
+private cloth6/trace1/trace2/trace3 derived-data caches. Available space increased
+109,301,760 bytes during the measurement. Each editor command had terminated;
+matching process checks and exclusive project locks passed before deletion.
+`peony-collision-trace3/cache-cleanup.json` records the paths and caveats. All
+78 frozen evidence/recipe hashes were reverified; assets and installed files
+were retained.

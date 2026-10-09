@@ -1,5 +1,31 @@
 # Eve cloth collision authoring
 
+
+## Peony solver collision diagnostics
+
+Apply `peony-native-collision-trace.patch`, then
+`peony-solver-collision-readback.patch`, then `peony-cloth-drive-settling.patch`
+to the assembled sources after the existing Peony cloth/solver/collision patches.
+These are additive patches, not replacements for the older template files.
+The second patch adds the direct `ClothingSystemRuntimeInterface` dependency.
+The patch chain is replayed in the Eve trial's
+`work/peony-collision-trace3/patch-replay` and matches the built source exactly.
+
+`-CollisionTrace` is restricted to the private Peony mesh. It records both
+untransformed extracted collision data and actual Chaos solver transforms,
+particle positions and minimum per-shape signed distances after the explicit
+worker wait. Extracted sphere bone indices are not cloth skinning-bone indices.
+Use the solver's raw mesh bone indices and `audit_peony_solver_collisions.py`.
+The latter verifies pose/particle ordering only, not garment fit. Signed-distance
+minima are not exact distance to an overlapping union boundary.
+
+`-EnableCCD`, `-NoAnimDrive`, and `-WarmupFrames=60` are transient diagnostics.
+The drive switch disables both animation-drive stiffness and damping, restoring
+them on exit. Warmup is bounded to 0..300 steps, holds clip time zero, and only
+resets cloth on its first step. Captured motion then starts at frame zero without
+another reset. These diagnostic modes save no assets. All three comparisons
+failed to repair cloth6 and must not be promoted as fixes.
+
 ## Cloth-section morph readback
 
 `CSSEveCloth -Inspect -Geometry -Morphs -Mesh=/Game/CSS/EveTest/SK_PFit14 -Report=<unused workspace JSON>` includes `cloth_section_morphs`: saved LOD0 position deltas indexed locally within each cloth section. Compare those indices with `render_geometry` mapping weights to establish whether the corrected attachment vertices remain skinned. Each section also reports `base_vertex`. This path reads assets without saving them. A successful dump is not proof of runtime morph playback.

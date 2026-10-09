@@ -1,0 +1,128 @@
+--- a/CSSEveEmbeddedMotion.inl
++++ b/CSSEveEmbeddedMotion.inl
+@@ -1,6 +1,8 @@
+ #include "Animation/AnimSequence.h"
+ #include "Components/SkeletalMeshComponent.h"
+ #include "ClothingSystemRuntimeTypes.h"
++#include "CSSClothProbeComponent.h"
++#include "ClothCollisionData.h"
+ #include "PreviewScene.h"
+ #include "HAL/IConsoleManager.h"
+ #include "HAL/FileManager.h"
+@@ -32,6 +34,9 @@
+     const bool NoBodyCollision=FParse::Param(*Params,TEXT("NoBodyCollision"));
+     const bool NoBackstop=FParse::Param(*Params,TEXT("NoBackstop"));
+     const bool NoSelfCollision=FParse::Param(*Params,TEXT("NoSelfCollision"));
++    const bool CollisionTrace=FParse::Param(*Params,TEXT("CollisionTrace"));
++    const bool EnableCCD=FParse::Param(*Params,TEXT("EnableCCD"));
++    if ((CollisionTrace || EnableCCD) && !Peony) return Fail(TEXT("Collision trace and CCD trial require private Peony"));
+     if (NoSelfCollision && !Peony) return Fail(TEXT("Self-collision isolation requires private Peony"));
+     if ((NoBodyCollision || NoBackstop) && !Peony && !Knit && !Alice) return Fail(TEXT("Isolation switches require a private Knitwear, Alice or Peony candidate"));
+     auto* Cloth=Cast<UClothingAssetCommon>(Mesh->GetMeshClothingAssets()[0]);
+@@ -60,12 +65,14 @@
+     if (NoBackstop && !Radius) return Fail(TEXT("Missing backstop radius map"));
+     const auto SavedPhysics=Cloth->PhysicsAsset;
+     const bool SavedSelfCollision=ClothConfig->bUseSelfCollisions;
++    const bool SavedCCD=ClothConfig->bUseCCD;
+     const int32 SavedSubsteps=SharedConfig->SubdivisionCount;
+     const float SavedSelfThickness=ClothConfig->SelfCollisionThickness;
+     const FPointWeightMap SavedRadius=Radius ? *Radius : FPointWeightMap();
+     ON_SCOPE_EXIT {
+         Cloth->PhysicsAsset=SavedPhysics;
+         ClothConfig->bUseSelfCollisions=SavedSelfCollision;
++        ClothConfig->bUseCCD=SavedCCD;
+         SharedConfig->SubdivisionCount=SavedSubsteps;
+         ClothConfig->SelfCollisionThickness=SavedSelfThickness;
+         if (Radius) *Radius=SavedRadius;
+@@ -81,6 +88,7 @@
+     }
+     if (NoBodyCollision) Cloth->PhysicsAsset=nullptr;
+     if (NoSelfCollision) ClothConfig->bUseSelfCollisions=false;
++    if (EnableCCD) ClothConfig->bUseCCD=true;
+     SharedConfig->SubdivisionCount=Substeps;
+     ClothConfig->SelfCollisionThickness=SelfThickness;
+     if (NoBackstop) for (int32 I=0; I<Radius->Num(); ++I) (*Radius)[I]=0.f;
+@@ -96,7 +104,7 @@
+     if (!Wait || Wait->GetInt()!=0) return Fail(TEXT("Probe requires explicit end-of-step cloth waits"));
+     FMemMark Memory(FMemStack::Get());
+     FPreviewScene Scene(FPreviewScene::ConstructionValues().SetCreateDefaultLighting(false).ShouldSimulatePhysics(true));
+-    auto* Component=NewObject<USkeletalMeshComponent>();
++    auto* Component=NewObject<UCSSClothProbeComponent>();
+     Component->SetSkeletalMesh(Mesh);
+     Component->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+     Component->SetDisablePostProcessBlueprint(!Secondary);
+@@ -142,6 +150,38 @@
+             Normals.Add(MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueNumber>(N.X),MakeShared<FJsonValueNumber>(N.Y),MakeShared<FJsonValueNumber>(N.Z)}));
+         }
+         Row->SetArrayField(TEXT("positions_cm"),Positions); Row->SetArrayField(TEXT("normals"),Normals);
++        if (CollisionTrace)
++        {
++            FClothCollisionData Collisions;
++            if (!Component->CaptureClothCollisions(Collisions)) return Fail(TEXT("Cloth collision detection is unavailable"));
++            TArray<TSharedPtr<FJsonValue>> Spheres,Connections;
++            for (const auto& Sphere : Collisions.Spheres)
++            {
++                if (Sphere.LocalPosition.ContainsNaN() || !FMath::IsFinite(Sphere.Radius))
++                    return Fail(TEXT("Invalid native collision sphere"));
++                auto SphereRow=MakeShared<FJsonObject>();
++                SphereRow->SetNumberField(TEXT("bone_index"),Sphere.BoneIndex);
++                SphereRow->SetNumberField(TEXT("radius_cm"),Sphere.Radius);
++                SphereRow->SetObjectField(TEXT("local_position_cm"),Vec(Sphere.LocalPosition));
++                Spheres.Add(MakeShared<FJsonValueObject>(SphereRow));
++            }
++            for (const auto& Connection : Collisions.SphereConnections)
++            {
++                if (!Collisions.Spheres.IsValidIndex(Connection.SphereIndices[0]) ||
++                    !Collisions.Spheres.IsValidIndex(Connection.SphereIndices[1]))
++                    return Fail(TEXT("Invalid native collision connection"));
++                Connections.Add(MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{
++                    MakeShared<FJsonValueNumber>(Connection.SphereIndices[0]),
++                    MakeShared<FJsonValueNumber>(Connection.SphereIndices[1])}));
++            }
++            auto CollisionRow=MakeShared<FJsonObject>();
++            CollisionRow->SetArrayField(TEXT("spheres"),Spheres);
++            CollisionRow->SetArrayField(TEXT("connections"),Connections);
++            CollisionRow->SetNumberField(TEXT("convexes"),Collisions.Convexes.Num());
++            CollisionRow->SetNumberField(TEXT("boxes"),Collisions.Boxes.Num());
++            Row->SetObjectField(TEXT("native_collisions"),CollisionRow);
++        }
++
+         TArray<TSharedPtr<FJsonValue>> Names,Transforms;
+         const auto Pose=Component->GetBoneSpaceTransformsView();
+         for (int32 I=0; I<Ref.GetRawBoneNum(); ++I)
+@@ -166,6 +206,11 @@
+     Root->SetBoolField(TEXT("diagnostic_no_body_collision"),NoBodyCollision);
+     Root->SetBoolField(TEXT("diagnostic_no_backstop"),NoBackstop);
+     Root->SetBoolField(TEXT("diagnostic_no_self_collision"),NoSelfCollision);
++    Root->SetBoolField(TEXT("ccd_enabled"),ClothConfig->bUseCCD);
++    Root->SetBoolField(TEXT("collision_trace"),CollisionTrace);
++    TArray<TSharedPtr<FJsonValue>> UsedBoneNames;
++    for (const auto& Name : Cloth->UsedBoneNames) UsedBoneNames.Add(MakeShared<FJsonValueString>(Name.ToString()));
++    Root->SetArrayField(TEXT("cloth_used_bone_names"),UsedBoneNames);
+     Root->SetNumberField(TEXT("substeps"),Substeps);
+     Root->SetNumberField(TEXT("self_collision_thickness_cm"),SelfThickness);
+     Root->SetStringField(TEXT("timing_scope"),TEXT("Editor TickClothing plus its explicit completion wait, excludes animation refresh and rendering; not game frame time"));
+--- /dev/null
++++ b/CSSClothProbeComponent.h
+@@ -0,0 +1,21 @@
++#pragma once
++
++#include "Components/SkeletalMeshComponent.h"
++#include "CSSClothProbeComponent.generated.h"
++
++UCLASS(Transient)
++class CSSAUTHORING_API UCSSClothProbeComponent : public USkeletalMeshComponent
++{
++    GENERATED_BODY()
++
++public:
++    bool CaptureClothCollisions(FClothCollisionData& OutCollisions)
++    {
++#if WITH_CLOTH_COLLISION_DETECTION
++        FindClothCollisions(OutCollisions);
++        return true;
++#else
++        return false;
++#endif
++    }
++};
