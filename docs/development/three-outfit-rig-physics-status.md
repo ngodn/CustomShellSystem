@@ -224,6 +224,24 @@ See the [wardrobe study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_Sedu
 No game files changed; final fit, export masks/height, materials, physics and
 game acceptance remain open.
 
+The next Peony candidate, `new-outfits-gloves5`, corrects the demonstrated
+glove fingertip/wrist fit and the palm mismatch in the retained movement poses.
+The original fitting pass lacked terminal finger segment directions; measured
+source/target tails differ by roughly 47 to 69.5 degrees. A glove-only terminal
+alignment followed by local clearance fixes the neutral coverage without
+hiding or changing Eve's body. A subsequent body-surface weight/morph transfer
+removes the observed palm breakthrough in walking frame 36 and right-hand
+sprint frame 12. The neutral maximum-body-control view also retains coverage.
+
+Fresh scope checks preserve unrelated garment geometry, the body, rig and
+wardrobe ownership. All 23 original source surfaces pass preservation. The
+gloves use at most seven influences; independent skinning agrees with the two
+posed renders within 0.000432 cm. These are limited offline comparisons, not
+complete movement or game acceptance. Arm ornament fit and the other pending
+garment, material, physics and release work remain open. See the
+[glove study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/authoring/new-outfits-fitting.md#glove-fingertip-alignment-clearance-and-matching-skinning).
+No installed files changed.
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`
