@@ -221,6 +221,18 @@ and hardware, sheer black stockings, and warm amber emissive accents. Compare
 the result in neutral preview and warm/cool world lighting. This is a palette
 reference; preserve the accepted Eve body and the requested garment design.
 
+October 9 Peony trim request: add optional flowing glow along the black edging
+and line details, using Unholy Genessa's garment emission as the reference.
+Preserve glossy black trim when emission is off. Author an explicit trim mask
+and stable garment coordinates so the pulse follows the lines without lighting
+the white patterned fabric, skin or stockings. Reuse the existing CSS glow
+color, strength and coverage controls; expose flow speed through the established
+customization system where supported. Keep Peony masks and material instances
+in the Eve mod, with any reusable material function in CSS_SharedAssets_P.
+Validate glow off/on, flow continuity across garment seams, removable parts,
+all five palettes, saved profiles and supported astral doubles in preview and
+gameplay. This is queued material work, not an implemented or installed feature.
+
 Keep outfit-specific meshes, materials, physics and palette definitions in the Eve mod under `/Game/CSS/eins0fx/EveSB/...`; put only genuinely reusable assets in `CSS_SharedAssets_P`. Make supporting CSS changes where needed while preserving existing controls and saved selections.
 
 **Acceptance:** both outfits are selectable, modular visibility and all ten palette templates work and persist, and fit/physics/gameplay checks are recorded. Track them separately from the nine existing repair variants. Release inclusion/version remains to be settled when this queued work is reached; do not silently change the coordinated release targets or report these outfits as completed.
