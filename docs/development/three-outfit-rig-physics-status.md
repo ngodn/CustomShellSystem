@@ -206,6 +206,24 @@ Full motion/shape coverage, component ownership, lower garment/footwear fit,
 materials, palettes/glow, physics and game packaging remain open. This work is
 private authoring; no runtime or installed package changed.
 
+`new-outfits-wardrobe1` now records face ownership for all 290 Peony source
+components (91,534 triangles), plus the separate boot lining. Ten garment
+groups separate the jacket/corset/choker, gloves/arm ornaments, hip accessories,
+underwear/leg panels/stockings and boots. Texture-backed isolated views confirm
+that the mixed Arm slot contains both glove hands and original skin surfaces,
+as well as hardware belonging to other garments. It can no longer be treated
+as one hidden skin section in the assembly review.
+
+Fresh checks preserve 156 bound geometry/morph/rig fields and all 23 original
+source surfaces. Neutral hide reviews retain the corset/choker without the
+jacket and restore bare hands/feet without glove/boot hardware. These are
+offline face-mask tests, not installed customization controls. The full view
+also reveals glove/body overlap and remaining hardware fit work. A coarse
+diagnostic hand mask exposes a wrist seam, so it is not a production solution.
+See the [wardrobe study](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/authoring/new-outfits-fitting.md#peony-wardrobe-ownership-and-mixed-arm-material).
+No game files changed; final fit, export masks/height, materials, physics and
+game acceptance remain open.
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`
