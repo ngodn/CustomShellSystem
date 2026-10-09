@@ -45,16 +45,18 @@ for v,bone,weight in data['influences']:
     if bone not in groups:groups[bone]=obj.vertex_groups.new(name=data['bones'][bone]['name'])
     groups[bone].add([v-begin],weight,'REPLACE')
     expected_weights.setdefault(v-begin,{})[data['bones'][bone]['name']]=weight
-obj.shape_key_add(name='Basis')
+obj.shape_key_add(name='Basis').value=0
 expected_shapes={}
 for target in data['morph_targets']:
     deltas={v-begin:converted([x,y,z]) for v,x,y,z in target['deltas'] if v>=begin}
     if not deltas:continue
     key=obj.shape_key_add(name=target['name'])
+    key.value=0
     for v,delta in deltas.items():key.data[v].co=Vector(positions[v])+Vector(delta)
     expected_shapes[target['name']]=deltas
 obj['CSS_export']=True;obj['CSS_source_mesh_sha256']=audit['output_sha256']
 obj['CSS_occludes_materials']='SkinCovered_1,SkinCovered_6'
+obj.show_only_shape_key=False
 bpy.ops.wm.save_as_mainfile(filepath=str(output),check_existing=False)
 bpy.ops.wm.open_mainfile(filepath=str(output))
 obj=bpy.data.objects[part['name']];mesh=obj.data
@@ -67,6 +69,7 @@ for v in mesh.vertices:
     assert max(abs(actual[k]-expected_weights[v.index][k]) for k in actual)<1e-6
 for name,deltas in expected_shapes.items():
     key=mesh.shape_keys.key_blocks[name]
+    assert key.value==0
     for v in range(len(positions)):
         assert (key.data[v].co-Vector(positions[v])-Vector(deltas.get(v,(0,0,0)))).length<1e-6
 for channel,layer in enumerate(mesh.uv_layers):

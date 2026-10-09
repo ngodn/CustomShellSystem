@@ -36,6 +36,22 @@ shared `0.1.0-dev` metadata. The final coordinated version stamps, release ZIPs
 and remaining gameplay/performance gates are pending. Do not label these private
 trials as the requested release versions.
 
+## Skin Suit editable-source comparison
+
+The suit's saved Blender source matches its current import payload across
+18,633 points, 33,352 triangles, named weights and six body morphs. The separate
+2,385-point ankle lining source exposed a saved `FBMBodyTone=1.0` value: its
+evaluated shape differed from the neutral import by 0.2998159 cm. Resetting that
+value in memory removes the discrepancy within float precision. The original
+source is preserved.
+
+The lining-generation helper now explicitly saves neutral shape values and
+checks them after reload. A fresh private lining library passes without an
+override. Source and game payloads are unchanged. This closes two garment-part
+source comparisons, not the whole outfit's source-to-cook provenance. See
+[Eve's source note](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/authoring/skin-suit-source-provenance.md)
+and `work/three-outfit-rig-physics/skin-source-provenance1`.
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`
