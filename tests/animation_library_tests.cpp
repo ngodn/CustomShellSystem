@@ -412,10 +412,28 @@ int main(int argc,char** argv) {
             expect(packages.animation_libraries.size()==1 && packages.outfit_revisions.size()==3 &&
                    packages.diagnostics.at("rejected")==0,"Migrated packages did not load cleanly");
             const auto& library=packages.animation_libraries.front();
-            expect(library.entries.size()==63 && library.adapters.size()==5 && library.faces.size()==3,
-                   "Migrated shared inventory changed");
             const auto fixtures=read_performance_fixture(argv[3]);
             expect(fixtures.size()==9,"Migrated nine-variant fixture is incomplete");
+            const std::string cw_hair="/Game/CSS/eins0fx/CommanderWhite/Skeletons/SKEL_Strands1.SKEL_Strands1";
+            const bool extended_cw=std::any_of(fixtures.begin(),fixtures.end(),[&](const auto& fixture) {
+                return fixture.at("outfit")=="eins0fx.commanderwhite" && fixture.at("skeleton")==cw_hair;
+            });
+            expect(library.entries.size()==63 && library.adapters.size()==(extended_cw?6:5) && library.faces.size()==3,
+                   "Migrated shared inventory changed");
+            if(extended_cw) {
+                size_t count=0;
+                for(const auto& adapter:library.adapters) if(adapter.source_outfit=="eins0fx.commanderwhite") {
+                    const auto prefix=std::string("/Game/CSS/eins0fx/CommanderWhite/");
+                    const bool normal=adapter.source_class==prefix+"Rig/ABP_NormalStrands1.ABP_NormalStrands1_C";
+                    const bool facial=adapter.source_class==prefix+"Rig/ABP_FacialStrands1.ABP_FacialStrands1_C";
+                    const auto target=normal?"ABP_PerformanceStrands1":"ABP_FacialPerformanceStrands1";
+                    expect((normal || facial) && adapter.skeleton==cw_hair &&
+                           adapter.target_class==prefix+"Animations/Adapters/"+target+"."+target+"_C",
+                           "CW scene restoration does not retain its normal/facial graph identity");
+                    ++count;
+                }
+                expect(count==2,"CW requires both normal and facial scene adapters");
+            }
             size_t choices=0, faces=0, cine_clips=0;
             for(const auto& fixture:fixtures) {
                 const auto outfit=fixture.at("outfit").get<std::string>();

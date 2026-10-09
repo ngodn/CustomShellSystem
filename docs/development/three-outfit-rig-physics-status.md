@@ -121,10 +121,32 @@ cross-extension animation remaps remain rejected. All 24 host suites and the
 Windows core build pass. Staged core SHA-256:
 `718f76c3b60a8315f8ba4fb9e9f9c11872d8575d6c64aada3c9774a105dec590`.
 Receipts are in `work/three-outfit-rig-physics/cw-hair-integration1`.
-Neither the core nor CW candidate is installed. The rejected `hair-strand-final1`
+The core and CW candidate are now installed, as recorded below. The rejected `hair-strand-final1`
 copied Content/Binaries were removed after confirming the failed process was
 terminal; its recipe/logs remain. Logical deletion was 1,336,311,290 bytes,
 with zero measured free-space increase because of shared reflink blocks.
+
+The complete trial is assembled in CW `work/hair-strand-assembly1`. All original
+CW export/bulk payloads roundtrip unchanged alongside the eight new roots.
+Shared cooked payloads and facial curve resources remain unchanged; its catalog
+pins the new CW revision and binds the new normal/facial meshes and separate
+scene graphs. `validation2` passes 864 package checks, 228 catalog references,
+426 native-library checks and 1,396 nine-variant checks, including both scene
+restoration paths. The first validator attempt incorrectly included 33 legacy
+alias identifiers as load requests; its failed receipt remains. Aliases are
+still tested through actual catalog resolution, not required as mounted files.
+
+Installed with the game closed on October 9 through the existing transactional
+installer. Six package files and core `718f76c3b60a8315` were independently
+hash-verified. Eve, Genessa, saved settings and CSSX/CINE files retain their
+hashes. All 24 host suites and 22 installer tests pass. CW's `installed.json`
+records the exact files. Rollback is at
+`MortalShell2/Content/css-cw-hair-trial-20261009`, outside Paks, using the existing
+namespace installer's `restore --transaction` action. The user has been asked
+to check CW Iris Out, hair/eyes and walk/attack/aim interruption. Live rendering,
+CINE/Astral runtime checks and matched performance are still pending. Original
+CW mesh/graph payloads remain for this trial; retire unused ones only after a
+reverse-reference audit before release.
 
 ## Current form-switch regressions
 

@@ -39,7 +39,11 @@ captures. This is editor execution, not runtime CINE acceptance. The final-path
 Windows cook, eight-package roundtrip and independent mesh/rig comparison pass.
 The optional surface digest proves cooked positions, normals and UVs unchanged
 independently of changed skin weights. CSS's exact CW skeleton compatibility extension passes
-all 24 host suites and the Windows build; it remains staged, not installed.
+all 24 host suites and the Windows build. The full CW/shared-metadata trial and
+matching core are now installed with saved state preserved. Combined checks
+cover 864 packages, 426 native-library checks and 1,396 nine-variant checks;
+all CW export/bulk payloads roundtrip against the baseline plus the patch.
+Live hair/eye/interruption and performance acceptance remain pending.
 See the updated [CW status](../development/three-outfit-rig-physics-status.md#current-commander-white-hair-prototype).
 
 ## Entry points
