@@ -1811,3 +1811,37 @@ Next: finish mesh export/material binding and validate UV retention, then
 modular controls, body coverage/heel height, garment physics and game tests.
 Slipstream, remaining outfit repairs and coordinated release requirements
 remain active. No installed game files changed in this material work.
+
+## Peony garment readback and full character candidate
+
+The fitted garments now export/import/cook under Eve's authoring root in
+`work/peony-garments1`. All ten garment owners cover 17 material sections and
+88,640 triangles. Independent checks compare the saved Blender source, exported
+interchange and cooked render data. Positions, triangle winding, three UV
+channels and all 379 bind bones agree. Flow coordinates survive cooking.
+Sixteen slots have Peony materials; the lining still awaits the accepted skin
+material. All 48 diagnostic packages roundtrip with resolving imports.
+
+Cooked skin/morph checks cover 58,082 render vertices. Six body morphs retain
+their curve metadata; errors remain within measured engine build/compression
+bounds. Default 8-bit weight quantization omits 11,381 very small influences,
+with maximum absolute weight difference 0.01578641 and no unexpected bone
+assignments. This is not an exact-weight or posed-fit claim. Deliberately wrong
+bone assignments and morph deltas are rejected. See Eve's
+[fitting notes](../../../CSS-Mod-Authoring/eins0fx-collections/CSS_SeduXtress_eins0fx/authoring/new-outfits-fitting.md)
+and the frozen garment receipt for detailed measurements.
+
+`work/peony-character1` assembles the accepted Eve body and three hair/accessory
+parts with Peony, excluding the old Skin Suit garments/lining. The full import
+has 151,018 points, 204,069 triangles, 37 slots and 22 body/hand morphs. The
+facial candidate adds all 115 accepted expressions. A fresh editor process
+reloads and checks its 137 morphs, 1,736,884 facial deltas and unchanged base
+geometry, weights, sections and original morphs. This is an editor candidate,
+not a complete cooked outfit or game acceptance.
+
+Material/eye/hair bindings, canonical shared Skeleton and post-process/physics
+bindings, boot/body coverage and reversible heel height, garment physics,
+customization/palette/glow catalog integration, full cook and game checks remain.
+Slipstream and the wider goal remain unfinished. The completed garment cook's
+disposable Wine prefix was cleaned up with its receipt; originals, accepted
+assets and rollback were retained. No installed files changed.

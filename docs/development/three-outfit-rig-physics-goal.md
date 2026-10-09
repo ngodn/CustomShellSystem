@@ -144,9 +144,9 @@ the queued CW walking foot-alignment report.
 
 October 9 naming follow-up: when returning to Commander White, remove any
 `dev` or `Development` qualifier from the user-facing mod name and release
-metadata. Check the displayed catalog/manifest name, package description and
-release text. Preserve stable selection IDs, asset paths and internal diagnostic
-labels unless a functional migration requires changing them. This is queued
+metadata. Check the displayed catalog/manifest name, package description,
+release filenames and release text. Preserve stable selection IDs, asset paths
+and internal diagnostic labels unless a functional migration requires changing them. This is queued
 with CW's package work; Eve remains first.
 
 Create a region-to-solver table per outfit. For each region record driven bones/vertices, solver, simulation space, anchors, collision source, tick order, reset behavior and UI controls. Avoid two systems independently driving the same chain.
