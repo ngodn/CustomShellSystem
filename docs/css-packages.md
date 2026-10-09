@@ -123,7 +123,11 @@ python3 tools/css_package.py install \
   --migrate-beaute
 ```
 
-`--migrate-beaute` requires both Beaute replacements. It backs up and retires the old merged `CSS_Beaute_P` containers and prototype catalog to prevent duplicate IDs. Omit this flag for ordinary package installation. Running-game installs are refused. Use `--replace` to back up and replace packages with matching stable IDs, including renamed packages. Native code updates continue to use `python3 tools/css.py reload`; mounting new containers requires a launch.
+`--migrate-beaute` requires both Beaute replacements. It backs up and retires the old merged `CSS_Beaute_P` containers and prototype catalog to prevent duplicate IDs. Omit this flag for ordinary package installation. Running-game installs are refused. Use `--replace` to back up and replace packages with matching stable IDs, including renamed packages. Close the game before updating the core DLL or mounted containers, then launch it normally. Core hot reload is not verified safe.
+
+For the coordinated author-namespace migration, follow the
+[v1.0.0 upgrade guide](upgrade-v1.0.0.md). It lists the outfit dependencies and
+the separate shared packs that the consolidated pack replaces.
 
 ## Actual model portraits
 

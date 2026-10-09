@@ -8,6 +8,34 @@ The runtime snapshot confirms `SK_Facial1`, available Iris Out/gait choices
 and no catalog, animation or recovery errors. Individual actions were not
 enumerated. CINE, doubles and matched performance remain separate checks.
 
+## Coordinated upgrade instructions and current dependency check
+
+The [draft upgrade guide](../upgrade-v1.0.0.md) now lists the runtime/outfit
+destinations, replacement of the old shared trio and retirement of the separate
+locomotion/Astral packs. It preserves state and profiles and requires a normal
+restart. The package-author guide and CLI install refusal no longer recommend
+core hot reload.
+
+`work/three-outfit-rig-physics/dependency-pruned-cw1` passes 28 dependency and
+upgrade scenarios using the current `hair-strand-pruned1/validation2` candidate
+set. The legacy inputs come from the original namespace transaction's backup,
+with hashes verified against its receipt, rather than the now-updated mounted
+paths. The dependency test binary was rebuilt from the current source.
+`candidate-receipt.json` pins all twelve candidate files, manifests and test
+tools; cooked-container hashes and sizes match their metadata.
+
+The complete candidate set resolves nine facial bindings. Missing, incompatible
+and duplicate libraries produce the expected install, update and duplicate-copy
+messages. The unchanged old set retains seven facial bindings, while mixing old
+outfits with the new library does not acquire bindings for another revision.
+This checks catalog behavior, not Unreal playback, installation or visual fit.
+No game files were changed for this check.
+
+The candidates still carry Eve `1.4.0`, Genessa `0.2.0`, CW `0.0.6-dev` and
+shared `0.1.0-dev` metadata. The final coordinated version stamps, release ZIPs
+and remaining gameplay/performance gates are pending. Do not label these private
+trials as the requested release versions.
+
 ## Current shared-assets trial
 
 The corrected `shared-cloth-native2` pack and matching core `645effe0a1d0249d`

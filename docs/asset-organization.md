@@ -74,6 +74,10 @@ rename or assumed mount precedence. See the
 
 ## Coordinated upgrade requirements
 
+The [v1.0.0 upgrade guide](upgrade-v1.0.0.md) gives the player-facing install
+locations, replacement steps and settings-preservation instructions. It remains
+a draft until the coordinated release artifacts pass their release checks.
+
 The private migrated outfits require package `css.locomotion` to provide
 `eins0fx.shared.author_namespace.v1`. The consolidated `CSS_SharedAssets_P`
 declares this contract while retaining the library's public ID. The old

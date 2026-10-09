@@ -72,7 +72,7 @@ def stage_core(mod: Path) -> str:
 
 def install(game: Path) -> None:
     if processes():
-        raise RuntimeError('The initial loader and asset install needs the game closed. Use reload for subsequent core updates.')
+        raise RuntimeError('Close the game before installing CSS, including core updates. Core hot reload is not verified safe.')
     ue4ss = game / 'Binaries/Win64/ue4ss'
     if sha(ue4ss / 'UE4SS.dll') != EXPECTED_UE4SS:
         raise RuntimeError('Installed UE4SS differs from the pinned native ABI')
