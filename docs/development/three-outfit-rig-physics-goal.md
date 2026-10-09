@@ -214,6 +214,13 @@ Add both outfits to the current Eve mod alongside its existing six outfits. Insp
 
 Each new outfit must have modular, individually removable garment components through CSS customization, allowing the outfit to be undressed, plus **five distinct template color palettes per outfit (ten total)**. Use the established customization and saved-profile behavior. Validate component combinations, palette application, body-shape fit, skin weights, collision, garment physics and animation/facial compatibility in both preview and gameplay. Apply the same performance and regression gates as the existing outfits.
 
+October 9 palette direction: include the user's supplied black-and-white
+Hydrangea/Peony reference among Peony's five templates. Use pearl-white fabric
+with the existing pattern visible in soft gray, glossy black edging, straps
+and hardware, sheer black stockings, and warm amber emissive accents. Compare
+the result in neutral preview and warm/cool world lighting. This is a palette
+reference; preserve the accepted Eve body and the requested garment design.
+
 Keep outfit-specific meshes, materials, physics and palette definitions in the Eve mod under `/Game/CSS/eins0fx/EveSB/...`; put only genuinely reusable assets in `CSS_SharedAssets_P`. Make supporting CSS changes where needed while preserving existing controls and saved selections.
 
 **Acceptance:** both outfits are selectable, modular visibility and all ten palette templates work and persist, and fit/physics/gameplay checks are recorded. Track them separately from the nine existing repair variants. Release inclusion/version remains to be settled when this queued work is reached; do not silently change the coordinated release targets or report these outfits as completed.
