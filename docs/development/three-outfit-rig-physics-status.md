@@ -10,7 +10,17 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Peony contact checks
 
-**Latest hip-accessory candidate:** rotating the mounting edge inward and
+**Body-slider follow-up:** `peony-hipfit11` adds the accessories' missing
+body-shape deltas and smooths them without changing the retained neutral fit or
+weights. Neutral, all six individual slider maxima and the all-max combination
+have no sampled accessory/body penetration. The raw transfer's reversed or
+pinched triangles are removed in these checks. The fit11 native rebuild under
+`peony-hipnative2` passes all 22 authored morphs, 115 facial expressions and
+cloth preservation checks. Altered expected deltas are rejected on both normal
+and facial meshes. Walking arm contact remains unresolved.
+Nothing new is installed. See the [hip-accessory findings](../research/2026-10-10-peony-hip-accessory-fit.md#native-preservation-and-body-slider-follow-up).
+
+**Retained neutral hip-accessory fit:** rotating the mounting edge inward and
 transferring only the accessories' weights from the underlying torso/legs removes
 the severe root-weight deformation in all 435 captured gait frames. Both measured
 mount gaps are 0.25 cm. Bind and sampled sprint body contact are clear, but walk

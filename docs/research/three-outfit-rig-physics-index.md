@@ -347,3 +347,12 @@ one-sided thigh trial preserves the original collider dimensions, yet produces
 large failures on other edges and is rejected. Continue from contact-side
 divergence and the first affected panel regions, not another global outward
 correction or weakened constraint setting.
+
+The [hip-accessory fit follow-up](2026-10-10-peony-hip-accessory-fit.md)
+distinguishes the user's circled material-29 accessories from the loose cloth
+panels. Closer mounts and repaired surface weights remove severe root-pinned
+stretching, but walking arm contact remains. Missing body-slider offsets now
+have a smoothed private candidate that passes the eight sampled bind-shape
+contact checks. Its native body/corrective morph readback, cloth preservation
+and all 115 facial expressions pass. Rejected placement and
+arm-pose probes are recorded so they are not repeated as shipping solutions.
