@@ -89,6 +89,7 @@ pin_scope = f'distances below {a.kinematic_threshold:g} cm' if a.kinematic_thres
 output.write_text(json.dumps({'scope':f'Saved panel coordinates/order check using {pin_scope} and the panel source weights. Edge ratios use the old source rest mesh. Not fitting, collision or game acceptance.',
     'source_result':str(a.input),'source_sha256':hashlib.sha256(a.input.read_bytes()).hexdigest(),
     'source_proxy':str(a.proxy),'proxy_sha256':hashlib.sha256(a.proxy.read_bytes()).hexdigest(),
+    'slot':a.slot,
     'mapping_sha256':hashlib.sha256(a.mapping.read_bytes()).hexdigest() if a.mapping else None,
     'passed':passed,'zero_distance':int((distance==0).sum()),'checked_fixed_particles':int(fixed.sum()),
     'kinematic_threshold_cm':a.kinematic_threshold,'cases':reports},indent=2)+'\n')

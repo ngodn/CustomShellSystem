@@ -2,6 +2,13 @@
 
 Updated 2026-10-10. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
+Latest Peony result: [independent panel collision](2026-10-10-peony-posed-contact.md#separate-left-and-right-collision-ownership)
+removes the previous extreme pulls but still fails left walk and both sprint
+screens. Right walk and both jog screens pass. Saved bindings and anchors
+are verified; trim ownership and complete outfit acceptance remain. This is
+a primary-fabric diagnostic with unchanged geometry, not the earlier rejected
+attempt to simulate trim sections independently. No new trial is installed.
+
 Peony's corrected `peony-character2` Windows cook retains 153,828 vertices and
 passes the full surface, binding, skin-weight and 137-morph checks. Source
 normals match; 335 zero-UV-area tangent fallbacks remain an explicit shading

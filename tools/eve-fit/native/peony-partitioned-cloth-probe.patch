@@ -1,0 +1,130 @@
+--- a/Source/CSSAuthoring/CSSEveClothCommandlet.cpp
++++ b/Source/CSSAuthoring/CSSEveClothCommandlet.cpp
+@@ -188,11 +188,19 @@
+     FParse::Value(*Params, TEXT("Slots="), SlotList);
+     TArray<FString> WantedSlots;
+     SlotList.ParseIntoArray(WantedSlots, TEXT("+"), true);
+-    if (WantedSlots.Num() != 1) return Fail(TEXT("One coherent simulation surface is required"));
++    const bool PartitionedPeony=FParse::Param(*Params,TEXT("PartitionedPeony"));
++    if (PartitionedPeony)
++    {
++        if (!IsPeonyClothMesh(MeshPath) || WantedSlots.Num()!=2 || WantedSlots[0]==WantedSlots[1])
++            return Fail(TEXT("Partitioned Peony requires two distinct panel slots"));
++    }
++    else if (WantedSlots.Num()!=1) return Fail(TEXT("One coherent simulation surface is required"));
+     FString AttachedText;
+     FParse::Value(*Params, TEXT("Attachments="), AttachedText);
+     TArray<FString> AttachedSlots;
+     AttachedText.ParseIntoArray(AttachedSlots,TEXT("+"),true);
++    if (PartitionedPeony && !AttachedSlots.IsEmpty())
++        return Fail(TEXT("Partitioned primary-panel trial cannot infer attachment ownership"));
+     if (AttachedSlots.Num() > 8 || AttachedSlots.Contains(WantedSlots[0]))
+         return Fail(TEXT("Invalid attached slots"));
+     // 2.0.2 (additive): optional -Config=<json> with per-slot Chaos settings, e.g.
+@@ -278,19 +286,31 @@
+     UClothingAssetFactory* Factory = NewObject<UClothingAssetFactory>();
+     for (int32 Section : Sections)
+     {
++        const FString SlotName = Mesh->GetMaterials()[Mesh->GetImportedModel()->LODModels[0].Sections[Section].MaterialIndex].MaterialSlotName.ToString();
++        UPhysicsAsset* SlotPhysics=Physics;
++        if (PartitionedPeony)
++        {
++            const TSharedPtr<FJsonObject>* SlotConfig;
++            FString SlotPhysicsPath;
++            if (!Config || !Config->TryGetObjectField(SlotName,SlotConfig) ||
++                !(*SlotConfig)->TryGetStringField(TEXT("PhysicsAsset"),SlotPhysicsPath) ||
++                !SlotPhysicsPath.StartsWith(TEXT("/Game/CSS/eins0fx/EveSB/Peony/Physics/PA_")))
++                return Fail(TEXT("Partitioned panel requires an explicit private physics asset"));
++            SlotPhysics=LoadObject<UPhysicsAsset>(nullptr,*SlotPhysicsPath);
++            if (!SlotPhysics) return Fail(TEXT("Partitioned panel physics asset missing"));
++        }
+         FSkeletalMeshClothBuildParams Build;
+         Build.AssetName = FString::Printf(TEXT("%s_Cloth_%d"), *Prefix, Section);
+         Build.LodIndex = 0;
+         Build.SourceSection = Section;
+         Build.bRemoveFromMesh = false;
+-        Build.PhysicsAsset = Physics;
++        Build.PhysicsAsset = SlotPhysics;
+         UClothingAssetCommon* Cloth = Cast<UClothingAssetCommon>(Factory->CreateFromSkeletalMesh(Mesh, Build));
+         if (!Cloth || Cloth->LodData.Num() != 1)
+             return Fail(TEXT("Native clothing factory failed"));
+         Mesh->AddClothingAsset(Cloth);
+         auto& LOD = Cloth->LodData[0];
+         auto& Data = LOD.PhysicalMeshData;
+-        const FString SlotName = Mesh->GetMaterials()[Mesh->GetImportedModel()->LODModels[0].Sections[Section].MaterialIndex].MaterialSlotName.ToString();
+         if (Proxies.IsValid())
+         {
+             const auto& Slots = Proxies->GetObjectField(TEXT("slots"));
+@@ -498,12 +518,12 @@
+     }
+     UClothingAssetCommon* SharedCloth = Mesh->GetMeshClothingAssets().Num()==1 ?
+         Cast<UClothingAssetCommon>(Mesh->GetMeshClothingAssets()[0]) : nullptr;
+-    if (!SharedCloth) return Fail(TEXT("Primary cloth missing"));
++    if (!SharedCloth && !PartitionedPeony) return Fail(TEXT("Primary cloth missing"));
+     TArray<int32> AttachedSections;
+     auto& Model = Mesh->GetImportedModel()->LODModels[0];
+-    auto& ClothLOD = SharedCloth->LodData[0];
+     for (const FString& Wanted : AttachedSlots)
+     {
++        auto& ClothLOD = SharedCloth->LodData[0];
+         int32 Found = INDEX_NONE;
+         for (int32 I = 0; I < Model.Sections.Num(); ++I)
+         {
+--- a/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
++++ b/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
+@@ -45,12 +45,18 @@
+         !AnimationPath.StartsWith(TEXT("/Game/CSS/eins0fx/Shared/Locomotion/"))))
+         return Fail(TEXT("Peony requires its staged canonical locomotion animation"));
+     auto* Animation=LoadObject<UAnimSequence>(nullptr,*AnimationPath);
+-    if (!Mesh || !Animation || Mesh->GetSkeleton()!=Animation->GetSkeleton() || Mesh->GetMeshClothingAssets().Num()!=1)
++    int32 ClothIndex=0;
++    FParse::Value(*Params,TEXT("ClothIndex="),ClothIndex);
++    if (!Mesh || !Animation || Mesh->GetSkeleton()!=Animation->GetSkeleton() ||
++        !Mesh->GetMeshClothingAssets().IsValidIndex(ClothIndex) ||
++        (!Peony && (ClothIndex!=0 || Mesh->GetMeshClothingAssets().Num()!=1)))
+         return Fail(TEXT("Invalid private candidate or animation"));
+     const bool NoBodyCollision=FParse::Param(*Params,TEXT("NoBodyCollision"));
+     const bool NoBackstop=FParse::Param(*Params,TEXT("NoBackstop"));
+     const bool NoSelfCollision=FParse::Param(*Params,TEXT("NoSelfCollision"));
+     const bool CollisionTrace=FParse::Param(*Params,TEXT("CollisionTrace"));
++    if (CollisionTrace && Mesh->GetMeshClothingAssets().Num()!=1)
++        return Fail(TEXT("Collision trace requires a single cloth range"));
+     const bool NoAnimDrive=FParse::Param(*Params,TEXT("NoAnimDrive"));
+     int32 WarmupFrames=0; FParse::Value(*Params,TEXT("WarmupFrames="),WarmupFrames);
+     if ((NoAnimDrive || WarmupFrames) && (!Peony || WarmupFrames<0 || WarmupFrames>300))
+@@ -67,7 +73,7 @@
+     if ((CollisionTrace || EnableCCD) && !Peony) return Fail(TEXT("Collision trace and CCD trial require private Peony"));
+     if (NoSelfCollision && !Peony) return Fail(TEXT("Self-collision isolation requires private Peony"));
+     if ((NoBodyCollision || NoBackstop) && !Peony && !Knit && !Alice) return Fail(TEXT("Isolation switches require a private Knitwear, Alice or Peony candidate"));
+-    auto* Cloth=Cast<UClothingAssetCommon>(Mesh->GetMeshClothingAssets()[0]);
++    auto* Cloth=Cast<UClothingAssetCommon>(Mesh->GetMeshClothingAssets()[ClothIndex]);
+     if (!Cloth || Cloth->LodData.Num()!=1) return Fail(TEXT("Invalid cloth LOD"));
+     auto* ClothConfig=Cloth->GetClothConfig<UChaosClothConfig>();
+     if (!ClothConfig) return Fail(TEXT("Missing Chaos cloth config"));
+@@ -275,7 +281,7 @@
+             if (!Step) Component->ForceClothNextUpdateTeleportAndReset();
+             Component->TickClothing(DeltaTime,Component->PrimaryComponentTick);
+             Component->WaitForExistingParallelClothSimulation_GameThread();
+-            const auto* Data=Component->GetCurrentClothingData_AnyThread().Find(0);
++            const auto* Data=Component->GetCurrentClothingData_AnyThread().Find(ClothIndex);
+             if (!Data || Data->Positions.Num()!=ExpectedParticles) return Fail(TEXT("Missing lead-in particles"));
+             TArray<TSharedPtr<FJsonValue>> Positions;
+             for (const auto& Position:Data->Positions)
+@@ -306,7 +312,7 @@
+         const double ClothMilliseconds=(FPlatformTime::Seconds()-ClothStart)*1000.;
+         if (Frame<0) continue;
+         const auto& Sim=Component->GetCurrentClothingData_AnyThread();
+-        const auto* Data=Sim.Find(0);
++        const auto* Data=Sim.Find(ClothIndex);
+         if (!Data || Data->Positions.Num()!=ExpectedParticles || Data->Normals.Num()!=ExpectedParticles) return Fail(TEXT("Missing embedded simulation particles"));
+         auto Row=MakeShared<FJsonObject>();
+         Row->SetNumberField(TEXT("frame"),Frame); Row->SetNumberField(TEXT("time"),Time);
+@@ -613,6 +619,8 @@
+     Root->SetStringField(TEXT("timing_scope"),TEXT("Editor TickClothing plus its explicit completion wait, excludes animation refresh and rendering; not game frame time"));
+     Root->SetNumberField(TEXT("diagnostic_backstop_radius_override_cm"),BackstopRadiusOverride);
+     Root->SetStringField(TEXT("cloth_physics_during_run"),GetPathNameSafe(Cloth->PhysicsAsset));
++    Root->SetNumberField(TEXT("cloth_asset_index"),ClothIndex);
++    Root->SetNumberField(TEXT("cloth_asset_count"),Mesh->GetMeshClothingAssets().Num());
+     Root->SetStringField(TEXT("scope"),TEXT("Private skeletal component cloth tick, single-node clip; see secondary_enabled; no game acceptance"));
+     FString Text;
+     if (!FJsonSerializer::Serialize(Root,TJsonWriterFactory<>::Create(&Text)) || !FFileHelper::SaveStringToFile(Text,*Report)) return Fail(TEXT("Could not save report"));

@@ -364,6 +364,98 @@ These diagnostic colors and hidden hair are not final-material validation.
 The retained render mapping has a 0.378 cm maximum rest reconstruction error;
 do not describe it as exact surface reconstruction.
 
+## Separate left and right collision ownership
+
+`peony-one-sided1/region-contact.json` identifies two disconnected proxy
+surfaces: 531 left particles and 529 right particles. In the failed global
+outward trial, walk frame 75 particles 18/19 have pelvis-skinned targets
+inside the opposite thigh's authored capsules. The independent shape query
+predicts about 1.94/2.02 cm ordinary correction versus 14.75/14.72 cm after
+reflection across that opposite thigh's direction plane. These are queries
+against authored shapes under captured poses, not intermediate solver traces.
+
+The follow-up `left-directed.json` retains every collider but directs only the
+left thigh. Fresh native readback verifies the geometry and direction flags.
+All 32 anchors pass in three 145-frame gait captures. Left-panel failures drop
+to 10 walk, 27 jog and 6 sprint frames, while the right panel fails 145, 145 and
+21 frames. This control is not a repair; it motivates separate collision
+ownership for the two disconnected surfaces.
+
+`peony-partition1` splits only the primary fabric material into `_L` and `_R`
+slots. It preserves source points, face corners, skin influences, bones and
+22 source morphs. Proxy recombination checks preserve every particle field
+and triangle. Both slots retain the same original fabric material. The private
+import initially refused occupied package paths; the two original private
+assets were then moved to `pre-import` with recorded hashes before importing.
+No source or installed package was overwritten.
+
+The built `peony-partitioned-cloth-probe.patch` assigns an explicit physics
+asset per primary panel and supports selecting the captured cloth asset by
+index. It refuses inferred trim attachment ownership and multi-asset collision
+tracing. Existing single-asset behavior remains the default. Patch replay
+matches both compiled source files exactly. Fresh saved readback confirms two
+cloth assets, 16 pins each, unchanged distance/backstop maps, self-collision,
+four iterations, and retained body physics/post-process references. The left
+physics asset matches its previously verified staged hash; fresh right-asset
+inspection also passes the geometry/direction verifier.
+
+Both cloth assets simulate in every capture. Only the selected asset's
+positions are exported. All captures below contain 145 frames at 60 Hz, with
+all 16 selected anchors passing within 0.000025 cm.
+
+| Panel and gait | Failing frames | Maximum edge ratio | Maximum extension (cm) |
+| --- | ---: | ---: | ---: |
+| Left walk | 13 | 3.269 | 3.385 |
+| Right walk | 0 | 4.380 | 2.400 |
+| Left jog | 0 | 5.084 | 1.677 |
+| Right jog | 0 | 5.131 | 1.634 |
+| Left sprint | 10 | 4.688 | 1.991 |
+| Right sprint | 30 | 10.697 | 3.244 |
+
+The screen requires an edge to exceed both twice its rest length and 1 cm
+extension. The ratio and extension maxima can belong to different edges;
+a zero failing-frame count is not final visual acceptance. Failures remain
+beyond startup: left walk includes frames 25..30 and 61..66, and right sprint
+includes frame 78 and late-cycle frames.
+
+A control restores ordinary `PA_LegsInside` collision on the selected panel
+only. Left sprint then fails 101 frames with 13.909 cm maximum extension;
+right sprint fails 23 frames with 5.134 cm maximum extension. The other panel
+retains its directed setup in each control, so these are selected-panel
+controls, not a fully ordinary two-panel outfit. The left result supports
+the directed-contact change. The right result has reduced severity but more
+failed frames, so neither the whole candidate nor its performance is accepted.
+Measured whole-component editor cloth-step means span approximately 3.3..4.5 ms
+in the directed captures; these are not per-panel costs or game FPS results.
+
+The left walk frame-0 and right sprint frame-78 mapped diagnostic views were
+inspected. Each view replaces only its selected fabric panel; other parts are
+skinned, including trim whose cloth ownership is still unimplemented. They
+are not complete-outfit render or material validation. The right frame-78
+rest mapping has a 0.378 cm maximum reconstruction error, and the left has
+0.376 cm; neither replay is exact render-thread evidence. The right frame-78
+failure is edge 85/519, growing from 0.335 to 3.579 cm; both endpoints have
+pelvis-only targets with an unchanged skinned edge length. The left walk
+frame-0 failure includes edge 401/403, growing from 1.849 to 5.235 cm, also
+with unchanged skinned length. Continue from these contact witnesses before
+changing weights or trying another broad parameter sweep.
+
+`comparison.json`, saved binding checks, source-to-partition checks, native
+readbacks and per-panel anchor/strain reports retain the results. The anchor
+verifier now records its selected slot, and the strain audit rejects a
+verification for another panel; the negative check passes. Primary fabric
+partitioning is useful evidence, not an installed repair. Trim integration,
+whole-outfit collision/morph checks, Windows cooking and gameplay acceptance
+remain required.
+
+`peony-one-sided1/followup-receipt.json` retains 182 files and
+`peony-partition1/study-receipt.json` retains 212. Once all native and Blender
+jobs terminated, exclusive editor locks and input/output hash checks preceded
+cleanup of only their private `tmp`, `ddc` and `user` caches. The cleanup
+receipts account for 75,723,886 logical bytes removed, with zero immediate
+filesystem free-space change. Original authoring,
+retained trial evidence and installed packages remain intact.
+
 ## Evidence retention and next work
 
 Evidence is frozen in cloth15's `followup-receipt.json` and cloth16/17's

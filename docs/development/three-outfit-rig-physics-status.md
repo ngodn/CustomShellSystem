@@ -2529,3 +2529,24 @@ for source identities, the corrected multi-bone parser and exact limits.
 Continue from the remaining contact/constraint witnesses, not another blind
 radius or solver-iteration sweep. No new outfit, shared pack or runtime trial
 has been installed from this work. No game test is needed yet.
+
+## Peony independent panel collision trial
+
+October 10: `peony-partition1` gives the disconnected left and right primary
+fabric panels separate collision assets. Original geometry, skinning, bones,
+22 source morphs and fabric materials are preserved. Fresh native readback
+checks two cloth assets, 16 pins each, retained body physics/post-process,
+distance maps and collision geometry. The built diagnostic helper and exact
+patch replay are retained.
+
+Three of six 145-frame gait screens pass: right walk and both jogs. Left walk
+fails 13 frames, left sprint 10 and right sprint 30. Maximum extensions are
+3.385, 1.991 and 3.244 cm respectively. This removes the previous extreme
+20..30 cm pulls but is not yet an acceptable full-outfit repair. All anchors
+pass. Selected-panel ordinary-collision sprint controls fail 101 left and
+23 right frames, so improved left motion does not establish a general pass.
+
+See the [per-panel comparison](../research/2026-10-10-peony-posed-contact.md#separate-left-and-right-collision-ownership)
+for measured limits and remaining contact witnesses. Trim ownership is not
+yet implemented for this diagnostic split. No new trial is installed; the
+game should stay closed until a complete candidate is ready for testing.
