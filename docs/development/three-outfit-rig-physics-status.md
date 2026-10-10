@@ -2462,3 +2462,19 @@ Cloth11's `attachment-study-receipt.json` freezes 48 evidence/recipe files and
 logical bytes, with zero immediate available-space change. The contact controls
 on cloth8 have a separate 22-file follow-up receipt. All installed files remain
 unchanged by these private trials.
+
+## Peony posed contact follow-up
+
+The [October 10 comparison](../research/2026-10-10-peony-posed-contact.md)
+rejects cloth12's inpainted targets and the larger-travel controls. The garment
+already uses final-body surface transfer; repeating nearest-surface transfer
+does not solve the loose-panel defect. Posed containment checks find collision
+axes leaving the body during sprint. Moving sphere centers alone still leaves
+part of a calf connection outside, so no collider candidate was imported.
+
+The gradual reference-pose start is now tested too. It still fails the strain
+screen in 103/145 sprint frames and 51/60 lead-in frames, while all 32 sprint
+anchors pass. Abrupt initialization is not the whole defect. Continue with
+connected collision fit during movement. Installed CSS and outfit packages are
+unchanged. The game can stay closed until a verified, complete trial is ready
+for installation.

@@ -1,0 +1,128 @@
+--- a/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
++++ b/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
+@@ -1,4 +1,7 @@
+ #include "Animation/AnimSequence.h"
++#include "Animation/AnimInstance.h"
++#include "Animation/AnimData/IAnimationDataController.h"
++#include "UObject/StrongObjectPtr.h"
+ #include "Components/SkeletalMeshComponent.h"
+ #include "ClothingSystemRuntimeTypes.h"
+ #include "CSSClothProbeComponent.h"
+@@ -46,6 +49,10 @@
+     int32 WarmupFrames=0; FParse::Value(*Params,TEXT("WarmupFrames="),WarmupFrames);
+     if ((NoAnimDrive || WarmupFrames) && (!Peony || WarmupFrames<0 || WarmupFrames>300))
+         return Fail(TEXT("Drive/settling trial requires private Peony and 0..300 warmup frames"));
++    int32 LeadInFrames=0;
++    if (FParse::Value(*Params,TEXT("LeadInFrames="),LeadInFrames) &&
++        (!Peony || Secondary || WarmupFrames || LeadInFrames<2 || LeadInFrames>300))
++        return Fail(TEXT("Reference-pose lead-in requires private Peony, 2..300 frames, no secondary graph or warmup"));
+     float TravelScale=1.f;
+     if (FParse::Value(*Params,TEXT("TravelScale="),TravelScale) &&
+         (!Peony || !FMath::IsFinite(TravelScale) || TravelScale<1.f || TravelScale>8.f))
+@@ -159,13 +166,97 @@
+     const auto& Ref=Mesh->GetRefSkeleton();
+     TArray<TSharedPtr<FJsonValue>> Frames;
+     const float DeltaTime=1.f/FrameRate;
++    TArray<TSharedPtr<FJsonValue>> LeadIn;
++    if (LeadInFrames)
++    {
++        Component->SetPosition(0.f,false);
++        Component->TickAnimation(0.f,true);
++        Component->RefreshBoneTransforms();
++        const TArray<FTransform> FirstPose=Component->GetBoneSpaceTransforms();
++        if (FirstPose.Num()!=Ref.GetNum()) return Fail(TEXT("Lead-in pose size mismatch"));
++        TStrongObjectPtr<UAnimSequence> Transition(NewObject<UAnimSequence>(GetTransientPackage()));
++        Transition->SetSkeleton(Mesh->GetSkeleton());
++        Transition->SetRetargetSourceAsset(Mesh);
++        Transition->UpdateRetargetSourceAssetData();
++        auto& Edit=Transition->GetController();
++        Edit.InitializeModel();
++        {
++            Edit.OpenBracket(FText::FromString(TEXT("Private cloth reference-pose lead-in")),false);
++            ON_SCOPE_EXIT { Edit.CloseBracket(false); };
++            Edit.SetFrameRate(FFrameRate(FrameRate,1),false);
++            Edit.SetNumberOfFrames(FFrameNumber(LeadInFrames),false);
++            for (int32 Bone=0; Bone<Ref.GetRawBoneNum(); ++Bone)
++            {
++                TArray<FVector3f> Positions,Scales;
++                TArray<FQuat4f> Rotations;
++                for (int32 Key=0; Key<=LeadInFrames; ++Key)
++                {
++                    FTransform Transform;
++                    Transform.Blend(Ref.GetRawRefBonePose()[Bone],FirstPose[Bone],float(Key)/LeadInFrames);
++                    Positions.Add(FVector3f(Transform.GetTranslation()));
++                    Rotations.Add(FQuat4f(Transform.GetRotation()));
++                    Scales.Add(FVector3f(Transform.GetScale3D()));
++                }
++                if (!Edit.AddBoneCurve(Ref.GetBoneName(Bone),false) ||
++                    !Edit.SetBoneTrackKeys(Ref.GetBoneName(Bone),Positions,Rotations,Scales,false))
++                    return Fail(TEXT("Could not author private lead-in keys"));
++            }
++            Edit.NotifyPopulated();
++        }
++        FAssetCompilingManager::Get().FinishAllCompilation();
++        Component->SetAnimation(Transition.Get());
++        Component->Stop();
++        auto* Instance=Component->GetAnimInstance();
++        if (!Instance) return Fail(TEXT("Missing lead-in animation instance"));
++        const bool SavedRaw=Instance->GetRequiredBones().ShouldUseRawData();
++        ON_SCOPE_EXIT { Instance->GetRequiredBones().SetUseRAWData(SavedRaw); };
++        Instance->GetRequiredBones().SetUseRAWData(true);
++        for (int32 Step=0; Step<LeadInFrames; ++Step)
++        {
++            Component->SetPosition(float(Step)/FrameRate,false);
++            Component->TickAnimation(Step?DeltaTime:0.f,true);
++            Component->RefreshBoneTransforms();
++            const auto CurrentPose=Component->GetBoneSpaceTransforms();
++            if (CurrentPose.Num()!=FirstPose.Num()) return Fail(TEXT("Lead-in evaluated pose size mismatch"));
++            for (int32 Bone=0; Bone<Ref.GetRawBoneNum(); ++Bone)
++            {
++                FTransform Expected;
++                Expected.Blend(Ref.GetRawRefBonePose()[Bone],FirstPose[Bone],float(Step)/LeadInFrames);
++                if (!CurrentPose[Bone].Equals(Expected,.001f))
++                {
++                    UE_LOG(LogCSSEveCloth,Error,TEXT("Lead-in step %d bone %s actual %s expected %s"),
++                        Step,*Ref.GetBoneName(Bone).ToString(),*CurrentPose[Bone].ToString(),*Expected.ToString());
++                    return Fail(TEXT("Lead-in did not evaluate to its authored pose"));
++                }
++            }
++            if (!Step) Component->ForceClothNextUpdateTeleportAndReset();
++            Component->TickClothing(DeltaTime,Component->PrimaryComponentTick);
++            Component->WaitForExistingParallelClothSimulation_GameThread();
++            const auto* Data=Component->GetCurrentClothingData_AnyThread().Find(0);
++            if (!Data || Data->Positions.Num()!=ExpectedParticles) return Fail(TEXT("Missing lead-in particles"));
++            TArray<TSharedPtr<FJsonValue>> Positions;
++            for (const auto& Position:Data->Positions)
++            {
++                const FVector P=Data->Transform.TransformPosition(FVector(Position));
++                if (P.ContainsNaN() || P.GetAbsMax()>10000) return Fail(TEXT("Invalid lead-in particle"));
++                Positions.Add(MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{
++                    MakeShared<FJsonValueNumber>(P.X),MakeShared<FJsonValueNumber>(P.Y),MakeShared<FJsonValueNumber>(P.Z)}));
++            }
++            auto Row=MakeShared<FJsonObject>();
++            Row->SetNumberField(TEXT("frame"),Step);
++            Row->SetArrayField(TEXT("positions_cm"),Positions);
++            LeadIn.Add(MakeShared<FJsonValueObject>(Row));
++        }
++        Component->SetAnimation(Animation);
++        Component->Stop();
++    }
+     for (int32 Frame=-WarmupFrames; Frame<FrameCount; ++Frame)
+     {
+         const double Time=double(FMath::Max(Frame,0))/FrameRate;
+         Component->SetPosition(float(FMath::Fmod(Time,double(Animation->GetPlayLength()))),false);
+         Component->TickAnimation(Frame==-WarmupFrames?0.f:DeltaTime,true);
+         Component->RefreshBoneTransforms();
+-        if (Frame==-WarmupFrames) Component->ForceClothNextUpdateTeleportAndReset();
++        if (Frame==-WarmupFrames && !LeadInFrames) Component->ForceClothNextUpdateTeleportAndReset();
+         const double ClothStart=FPlatformTime::Seconds();
+         Component->TickClothing(DeltaTime,Component->PrimaryComponentTick);
+         Component->WaitForExistingParallelClothSimulation_GameThread();
+@@ -398,6 +489,7 @@
+     Root->SetNumberField(TEXT("particles"),ExpectedParticles);
+     Root->SetBoolField(TEXT("secondary_enabled"),Secondary);
+     Root->SetNumberField(TEXT("diagnostic_max_distance_scale"),Component->GetClothMaxDistanceScale());
++    Root->SetArrayField(TEXT("diagnostic_lead_in"),LeadIn);
+     Root->SetBoolField(TEXT("diagnostic_no_body_collision"),NoBodyCollision);
+     Root->SetBoolField(TEXT("diagnostic_no_backstop"),NoBackstop);
+     Root->SetBoolField(TEXT("diagnostic_no_self_collision"),NoSelfCollision);

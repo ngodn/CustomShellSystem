@@ -1,0 +1,29 @@
+--- a/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
++++ b/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
+@@ -46,6 +46,10 @@
+     int32 WarmupFrames=0; FParse::Value(*Params,TEXT("WarmupFrames="),WarmupFrames);
+     if ((NoAnimDrive || WarmupFrames) && (!Peony || WarmupFrames<0 || WarmupFrames>300))
+         return Fail(TEXT("Drive/settling trial requires private Peony and 0..300 warmup frames"));
++    float TravelScale=1.f;
++    if (FParse::Value(*Params,TEXT("TravelScale="),TravelScale) &&
++        (!Peony || !FMath::IsFinite(TravelScale) || TravelScale<1.f || TravelScale>8.f))
++        return Fail(TEXT("Travel-scale diagnostic requires private Peony and scale 1..8"));
+     const bool EnableCCD=FParse::Param(*Params,TEXT("EnableCCD"));
+     if ((CollisionTrace || EnableCCD) && !Peony) return Fail(TEXT("Collision trace and CCD trial require private Peony"));
+     if (NoSelfCollision && !Peony) return Fail(TEXT("Self-collision isolation requires private Peony"));
+@@ -135,6 +139,7 @@
+     FPreviewScene Scene(FPreviewScene::ConstructionValues().SetCreateDefaultLighting(false).ShouldSimulatePhysics(true));
+     auto* Component=NewObject<UCSSClothProbeComponent>();
+     Component->SetSkeletalMesh(Mesh);
++    Component->SetClothMaxDistanceScale(TravelScale);
+     Component->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+     Component->SetDisablePostProcessBlueprint(!Secondary);
+     Component->VisibilityBasedAnimTickOption=EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+@@ -392,6 +397,7 @@
+     Root->SetNumberField(TEXT("frame_rate"),FrameRate);
+     Root->SetNumberField(TEXT("particles"),ExpectedParticles);
+     Root->SetBoolField(TEXT("secondary_enabled"),Secondary);
++    Root->SetNumberField(TEXT("diagnostic_max_distance_scale"),Component->GetClothMaxDistanceScale());
+     Root->SetBoolField(TEXT("diagnostic_no_body_collision"),NoBodyCollision);
+     Root->SetBoolField(TEXT("diagnostic_no_backstop"),NoBackstop);
+     Root->SetBoolField(TEXT("diagnostic_no_self_collision"),NoSelfCollision);

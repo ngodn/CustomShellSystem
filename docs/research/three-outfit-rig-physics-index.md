@@ -286,3 +286,11 @@ Two fixed vertices reproduce a large butt/thigh skinned-pose discontinuity.
 Selected posed-body queries separately show target penetration and collider
 overhang. The next work is garment-to-final-body weight transfer and posed
 collision coverage, not another solver iteration or attachment-line sweep.
+
+The [posed-contact follow-up](2026-10-10-peony-posed-contact.md) confirms that
+the garment already uses final-body surface transfer. A harmonic loose-region
+weight trial and larger cloth travel both fail native simulation. Sampled
+collision axes leave the body during sprint; no center/radius candidate is
+accepted. A gradual reference-pose start also fails, so the harness's abrupt
+initialization is not the whole defect. Connected collision fit during motion
+remains unresolved. No game installation is requested yet.
