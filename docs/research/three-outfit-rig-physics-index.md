@@ -2,6 +2,12 @@
 
 Updated 2026-10-11. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
+The [Peony combined trial](2026-10-11-peony-combined-trial.md) is installed with
+verified hashes and external rollback copies. It preserves all six existing
+Eve variants and current CW/Genessa adapters. Native catalog, payload and
+dependency checks pass. Gameplay fit, materials, cloth and regression results
+are pending; the known editor arm-contact defect is not accepted as fixed.
+
 Peony's [Astral runtime integration](2026-10-11-peony-astral-runtime.md) builds
 with four new material definitions and source-texture checks. All thirty
 palette instances pass portable selection; cooked SM5/SM6 uniform checks and

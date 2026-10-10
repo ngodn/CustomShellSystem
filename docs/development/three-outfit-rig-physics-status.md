@@ -2,13 +2,25 @@
 
 Updated 2026-10-11. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
 
-Latest installed core: `718f76c3b60a8315`, with the CW hair trial. The user
+Latest installed core: `6d751cbdab2cab4c`, with the private Peony outfit/shared
+trial. The six previous Eve variants and current CW/Genessa adapters are
+preserved. Installation hashes pass; Peony gameplay acceptance is pending.
+See the [combined-trial evidence](../research/2026-10-11-peony-combined-trial.md).
+
+Previous installed core: `718f76c3b60a8315`, with the CW hair trial. The user
 reports the requested CW Iris Out/hair/eyes/interruption check looks fine.
 The runtime snapshot confirms `SK_Facial1`, available Iris Out/gait choices
 and no catalog, animation or recovery errors. Individual actions were not
 enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Peony contact checks
+
+**Combined trial installed:** seven Eve variants, including Peony, now use the
+expanded shared pack and matching core. Both containers, 657 package dependency
+checks and the native ten-variant catalog audit pass. Backups are on theark.
+The user has been asked for the idle/walking fit and Iris Out/interruption
+comparison. The retained editor arm-contact defect is still open. Earlier
+entries below describe pre-installation evidence, not the current deployment.
 
 **Astral runtime integration:** the private core recognizes the four canonical
 Peony parents and their shared companions, with required source-texture checks.

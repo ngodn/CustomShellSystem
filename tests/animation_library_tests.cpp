@@ -406,14 +406,19 @@ int main(int argc,char** argv) {
             const auto options=merge_library_animation_options(packages.animation_libraries,AnimationSlot::Idle,{});
             expect(options.size()==60,"Native idle menu omitted or duplicated choices");
         }
-        if(argc==4 && std::string_view(argv[1])=="--audited-namespace-pack") {
+        if(argc==4 && (std::string_view(argv[1])=="--audited-namespace-pack" ||
+                       std::string_view(argv[1])=="--audited-peony-pack")) {
+            const bool peony=std::string_view(argv[1])=="--audited-peony-pack";
             const auto packages=Catalog::load(root,argv[2],root/"namespace-audit-cache");
             if(packages.diagnostics.at("rejected")!=0) std::cerr<<packages.diagnostics.dump(2)<<'\n';
             expect(packages.animation_libraries.size()==1 && packages.outfit_revisions.size()==3 &&
                    packages.diagnostics.at("rejected")==0,"Migrated packages did not load cleanly");
             const auto& library=packages.animation_libraries.front();
             const auto fixtures=read_performance_fixture(argv[3]);
-            expect(fixtures.size()==9,"Migrated nine-variant fixture is incomplete");
+            expect(fixtures.size()==(peony?10:9),"Migrated variant fixture is incomplete");
+            if(peony) expect(std::count_if(fixtures.begin(),fixtures.end(),[](const auto& fixture) {
+                return fixture.at("outfit")=="eins0fx.seduxtress" && fixture.at("variant")=="peony";
+            })==1,"Peony fixture is missing or duplicated");
             const std::string cw_hair="/Game/CSS/eins0fx/CommanderWhite/Skeletons/SKEL_Strands1.SKEL_Strands1";
             const bool extended_cw=std::any_of(fixtures.begin(),fixtures.end(),[&](const auto& fixture) {
                 return fixture.at("outfit")=="eins0fx.commanderwhite" && fixture.at("skeleton")==cw_hair;
@@ -504,7 +509,8 @@ int main(int argc,char** argv) {
                 expect(!resolve_performance_adapter(packages.animation_libraries,adapter.source_outfit,wrong,
                        adapter.source_class,adapter.skeleton),"Wrong revision acquired playback adapter");
             }
-            expect(choices==99 && faces==9 && cine_clips==540,"Migrated audit missed choices, faces or CINE clips");
+            expect(choices==(peony?110:99) && faces==(peony?10:9) && cine_clips==(peony?600:540),
+                   "Migrated audit missed choices, faces or CINE clips");
         }
         if(argc==4 && std::string_view(argv[1])=="--audited-legacy-alias-pack") {
             const auto packages=Catalog::load(root,argv[2],root/"alias-audit-cache");
