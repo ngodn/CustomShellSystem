@@ -2,10 +2,12 @@
 
 Updated 2026-10-11. [Goal](three-outfit-rig-physics-goal.md) is active. The coordinated namespace/facial trial and world cloth correction are installed. The user accepted the Genessa facial-playback, visibility and world rear-panel correction; the full regression matrix remains pending. Earlier sections describing private candidates record their state before this deployment.
 
-Latest installed core: `6d751cbdab2cab4c`, with the private Peony outfit/shared
-trial. The six previous Eve variants and current CW/Genessa adapters are
-preserved. Installation hashes pass; Peony gameplay acceptance is pending.
-See the [combined-trial evidence](../research/2026-10-11-peony-combined-trial.md).
+Latest installed trial: `peony-refit1`, replacing the rejected `peony-combined3`
+Eve/shared packages. The core remains `6d751cbdab2cab4c`. The six previous Eve
+variants and current CW/Genessa adapters are preserved. Installation hashes
+pass; player fit and gameplay acceptance are pending. Rollback is on theark
+at `CSS/peony-before-refit1`. See the latest
+[refit evidence](../research/2026-10-11-peony-refit.md#replacement-trial-installed).
 
 **October 11 user rejection:** the installed Peony trial is not accepted. The
 user reports an oversized jacket/corset, lower-front body clipping and ragged
@@ -46,9 +48,11 @@ This is now the latest interchange. `peony-refitnative2` imports it and passes
 cloth preservation, fresh facial reload and all 22 authored-morph checks on
 both meshes, including changed-delta rejection. The 38-control `peony-catalog6`
 also passes. Cloth-buffer authoring and fresh reload now pass in
-`peony-clothmorph3`. Its GPU comparison and canonical cook preparation are
-running separately; Windows cooking and gameplay remain unverified.
-No replacement has been installed. See the
+`peony-clothmorph3`. The refreshed GPU comparison also passes all 44 captures
+and 22 cases with two negative controls and maximum residual 0.0150 cm.
+Canonical preparation, Windows cooking and cooked readback now pass. The
+replacement was assembled, installed with the game closed and hash-verified.
+Player fit, moving cloth and gameplay checks remain pending. See the
 [refit evidence](../research/2026-10-11-peony-refit.md).
 
 Previous installed core: `718f76c3b60a8315`, with the CW hair trial. The user

@@ -315,10 +315,54 @@ variants, nine dye surfaces and five Peony palettes remain intact.
 The refreshed `peony-clothmorph3` passes authoring and fresh reload on both
 meshes: 15 enabled render attributes per mesh, two cloth sections and unchanged
 existing data, protected dependencies and shared graph. Its 165-file receipt
-freezes those checks. GPU and canonical preparation are now running separately
-in `peony-clothgpu3` and `peony-cookprep3`. The unrun
-`peony-windows5` recipe now requires these refreshed stages. It must not cook
-the superseded stocking geometry. The prior completed GPU cache is copied into
+freezes those checks. The refreshed `peony-clothgpu3` now passes all 44 captures
+and 22 comparisons, including both negative controls; its largest residual is
+0.0149969 cm and its receipt freezes 408 files. The copied shader cache avoided
+repeating the earlier cold-cache startup. Canonical preparation passes in `peony-cookprep3`, with the same dependency
+closure and only the normal/facial mesh package hashes changed.
+`peony-windows5` uses these refreshed stages, preserving the exact latest
+stocking geometry through its verified native source. The prior completed GPU cache is copied into
 the new private stage for reuse, separately from asset validation.
 
-None of these private candidates is installed or accepted as a completed fix.
+### Replacement trial installed
+
+The first cook preflight rejected a changed GPU log. All other evidence was
+unchanged. An exact prefix-hash check proves the original 190,210 log bytes were
+unchanged; UnrealTraceServer appended 774 bytes of startup/shutdown text after
+the commandlet exited. `stabilize_receipts.py` preserves the exact receipt-time
+log bytes as immutable snapshots, archives the previous receipts, and records
+the appended text. Canonical preparation logs are snapshotted too. No mesh,
+readback, capture or comparison evidence was replaced to bypass this check.
+
+The repeated `peony-windows5` preflight passes. Windows UE 5.6.1, changelist
+44394996, completes the cook in 74.57 seconds with all protected inputs unchanged.
+Cooked readback passes for both meshes and 12 normal/Astral shader materials,
+including SM5/SM6 skin and cloth shaders. Both missing-buffer negative controls
+are rejected; maximum cooked cloth-offset residual is 0.0149884 cm. The stocking
+repair does not increase render vertex count or the skin-weight limit: both
+prior and new meshes have 144,936 render vertices and at most eight influences.
+This is a mesh-cost observation, not a frame-time claim.
+
+`CustomShellSystem/work/three-outfit-rig-physics/peony-refit1` points to the
+assembled trial on E:. All 642 legacy assets round-trip, 657 package checks have
+zero dependency failures, and 1,535 native animation-library checks pass. The
+six prior Eve variants, existing CW/Genessa adapters and facial performance
+resources remain unchanged. No additional Peony adapter is appended.
+
+The game was verified closed. The new Eve/shared package trios were installed
+and checked against their staged hashes. The existing core remains
+`css_core-peony-6d751cbdab2cab4c.dll`. Rollback copies are under
+`/run/media/eins0fx/theark/CSS/peony-before-refit1`; `deployment.json` and
+`installation-check.json` record the actual installed/backup identities.
+The user has been asked to relaunch and check chest/hip fit, moving panels,
+customization and Iris Out interruption. Player acceptance, full gameplay
+regressions and performance remain pending. This installation does not complete
+the Peony repair or the larger three-outfit goal.
+
+
+Cleanup after the completed GPU runs removed 4,528 byte-identical derived-data
+files from the superseded GPU2 cache, retaining each verified copy in GPU3.
+This removed 134,191,539 logical bytes, with zero immediate available-space
+change observed. The process check found no active user of the old cache.
+`work/peony-gpu-cache-duplicates-20261011.json` retains the exact paths, hashes
+and measurement. Source assets, captures, packages and rollback were untouched.
