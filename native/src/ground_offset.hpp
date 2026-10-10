@@ -8,7 +8,10 @@ namespace css {
 class GroundOffset {
     std::optional<double> original_, applied_;
 public:
-    static bool valid(double offset) { return std::isfinite(offset) && std::abs(offset)<=10; }
+    // Tall footwear can need more than 10 cm. Keep catalog, profiles and UI on
+    // the same bounded range rather than silently clipping an authored heel.
+    static constexpr double max_magnitude_cm=20.;
+    static bool valid(double offset) { return std::isfinite(offset) && std::abs(offset)<=max_magnitude_cm; }
     // `authored` is the height the pawn's class gives its mesh, when known. A fresh
     // baseline anchors to it when the mesh sits there, or exactly one `offset` from it
     // (a previous core already applied this offset), so nothing ever stacks.

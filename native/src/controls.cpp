@@ -1,6 +1,7 @@
 #include "controls.hpp"
 #include "physics_presets.hpp"
 #include "data.hpp"
+#include "ground_offset.hpp"
 #include <cctype>
 #include <algorithm>
 #include <cmath>
@@ -687,7 +688,7 @@ Customization Customization::parse(const Json& j) {
     }
     if(j.contains("ground_offset_cm")) {
         const auto& offset=j.at("ground_offset_cm");
-        if(!offset.is_number() || !std::isfinite(offset.get<double>()) || std::abs(offset.get<double>())>10)
+        if(!offset.is_number() || !GroundOffset::valid(offset.get<double>()))
             throw std::runtime_error("Invalid saved ground height");
         result.ground_offset_cm=offset.get<double>();
     }

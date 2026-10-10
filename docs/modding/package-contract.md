@@ -49,7 +49,7 @@ Each variant declares a stable `id`, `name`, relocated mesh object path, optiona
 ## Validation and generated data
 
 An optional catalog-variant `ground_offset_cm` sets a fixed world-mesh height
-correction. It accepts a finite number from -10 to 10 centimeters and defaults
+correction. CSS 1.0.0 accepts a finite number from -20 to 20 centimeters and defaults
 to zero. Negative values lower the mesh. CSS preserves the original component
 height and restores it when leaving the appearance. It does not resize the
 body, move the gameplay capsule or alter preview framing. This requires the
@@ -58,6 +58,10 @@ the source catalog before packaging, then verify visual contact in game.
 Players can override it per variant with Customize > Placement > Ground height
 (1.0.0-beta.5); the declared value is where that setting starts and what its
 reset returns to.
+
+Earlier runtimes accept only -10 to 10 cm. Packages requiring a larger heel
+offset need CSS 1.0.0; do not clamp their authored height to fit an older runtime.
+This bounded range also applies to saved overrides and the Ground Height slider.
 
 For removable footwear, a variant can instead select its authored height from
 a section toggle (CSS 1.0.0):
@@ -72,7 +76,7 @@ a section toggle (CSS 1.0.0):
 
 The control must exist in the variant's effective customization recipe, have
 kind `toggle` and declare `sections`. Both heights must be finite numbers from
--10 to 10 cm. This rule replaces the fixed authored `ground_offset_cm` while
+-20 to 20 cm. This rule replaces the fixed authored `ground_offset_cm` while
 present; it is not an additive offset. Visibility follows the same default,
 palette and per-control override used by customization. Variant controls
 replace shared outfit controls as usual. Invalid rules reject the package.

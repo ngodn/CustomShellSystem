@@ -279,7 +279,7 @@ Catalog Catalog::load(const fs::path& directory,const fs::path& paks,const fs::p
                 if(v.contains("ground_offset_cm")) {
                     if(!v.at("ground_offset_cm").is_number()) throw std::runtime_error("Invalid ground offset");
                     variant.ground_offset_cm=v.at("ground_offset_cm").get<double>();
-                    if(!std::isfinite(variant.ground_offset_cm) || std::abs(variant.ground_offset_cm)>10)
+                    if(!GroundOffset::valid(variant.ground_offset_cm))
                         throw std::runtime_error("Ground offset outside range");
                 }
                 variant.fit_shell=v.value("fit_shell",std::string{});

@@ -670,7 +670,7 @@ void InventoryUI::build(const Catalog& catalog,const State& state,Appearance& ap
             detail("Ground height",worn->name,
                    "Raise or lower where this outfit stands, when its feet sink into the ground or float above it. "
                    "Only the model moves; you see the change in the world once the menu closes.");
-            slider("Height",float(ground),-10.f,10.f,.5f,centimetres(ground),true,base,true," cm",
+            slider("Height",float(ground),-float(GroundOffset::max_magnitude_cm),float(GroundOffset::max_magnitude_cm),.5f,centimetres(ground),true,base,true," cm",
                    step_action(base,-1),step_action(base,1));
             note("The outfit's own setting: "+centimetres(authored)+".");
             if(worn_variant && worn_variant->ground_offset_toggle)

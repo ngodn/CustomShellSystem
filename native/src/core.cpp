@@ -916,7 +916,7 @@ struct Core {
                     double offset=command.contains("value")?command.at("value").get<double>()
                         :custom.ground_offset_cm.value_or(authored)+command.at("delta").get<double>()*.5;
                     if(!std::isfinite(offset)) throw std::runtime_error("Invalid ground height");
-                    offset=std::clamp(std::round(offset*2)/2,-10.,10.);
+                    offset=std::clamp(std::round(offset*2)/2,-GroundOffset::max_magnitude_cm,GroundOffset::max_magnitude_cm);
                     if(std::abs(offset-authored)<1e-6) custom.ground_offset_cm.reset();
                     else custom.ground_offset_cm=offset;
                 }

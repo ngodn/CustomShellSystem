@@ -109,7 +109,12 @@ int main() {
             Customization look; look.ground_offset_cm=-2.5;
             expect(Customization::parse(look.json()).ground_offset_cm==-2.5,"Ground height not saved");
             expect(!Customization::parse(Customization{}.json()).ground_offset_cm,"Unset ground height saved");
-            rejects([&]{Customization::parse(Json::parse(R"({"palette":"original","values":{},"ground_offset_cm":12})"));});
+            for(double value:{-20.,11.81042492389679,20.}) {
+                auto tall=look; tall.ground_offset_cm=value;
+                expect(Customization::parse(tall.json()).ground_offset_cm==value,"Supported saved heel height changed");
+            }
+            rejects([&]{Customization::parse(Json::parse(R"({"palette":"original","values":{},"ground_offset_cm":20.01})"));});
+            rejects([&]{Customization::parse(Json::parse(R"({"palette":"original","values":{},"ground_offset_cm":-20.01})"));});
             ControlSet none;
             expect(compatible_values(none,look).ground_offset_cm==-2.5,"Ground height lost between variants");
             expect(!choose_palette(none,look,"original").ground_offset_cm,"Original kept the ground height");

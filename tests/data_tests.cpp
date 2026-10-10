@@ -35,8 +35,15 @@ int main() {
             expect(height.set(-90,-3)==-93,"New pawn retained old height");
             rejects([&]{height.set(-92,-3);});
             expect(!height.restore(-92),"Cleanup overwrote an external height change");
-            rejects([&]{height.set(-96,11);});
+            rejects([&]{height.set(-96,20.01);});
+            rejects([&]{height.set(-96,-20.01);});
             rejects([&]{height.set(-96,std::numeric_limits<double>::quiet_NaN());});
+            constexpr double tall_heel=11.81042492389679;
+            const auto elevated=height.set(-96,tall_heel,-96);
+            expect(std::abs(elevated-(-96+tall_heel))<1e-9,"Tall heel was clipped");
+            expect(height.set(elevated,tall_heel,-96)==elevated,"Tall heel accumulated height");
+            expect(height.set(elevated,0,-96)==-96,"Barefoot toggle kept tall heel offset");
+            expect(height.restore(-96)==-96,"Tall heel baseline was not restored");
             // A fresh core finds the mesh where the last one left it: anchored to the authored
             // height, the offset is recognised instead of stacked, and restore returns to it.
             // A shell item's own MISC rule survives a save; junk keys and extra items are dropped.
@@ -210,7 +217,12 @@ int main() {
             grounded["outfits"][0]["variants"][0]["ground_offset_cm"]=-3;
             atomic_json(catalog_file,grounded,false);
             expect(Catalog::load(catalog_dir).find("test","a")->ground_offset_cm==-3,"Ground offset was lost");
-            for(const Json& value:Json::array({-11,11,"-3",nullptr,true})) {
+            for(double value:{-20.,11.81042492389679,20.}) {
+                grounded["outfits"][0]["variants"][0]["ground_offset_cm"]=value;
+                atomic_json(catalog_file,grounded,false);
+                expect(Catalog::load(catalog_dir).find("test","a")->ground_offset_cm==value,"Supported authored height changed");
+            }
+            for(const Json& value:Json::array({-20.01,20.01,"-3",nullptr,true})) {
                 grounded["outfits"][0]["variants"][0]["ground_offset_cm"]=value;
                 atomic_json(catalog_file,grounded,false);
                 rejects([&]{Catalog::load(catalog_dir);});
@@ -260,10 +272,23 @@ int main() {
             auto overrides=Catalog::load(catalog_dir);
             expect(authored_ground_offset(overrides.outfits.front(),overrides.outfits.front().variants.front(),{})==0,
                    "Variant footwear controls must replace shared defaults");
+            for(double heel:{11.81042492389679,20.}) {
+                auto tall=footwear;
+                tall["outfits"][0]["variants"][0]["ground_offset_toggle"]["shown_cm"]=heel;
+                atomic_json(catalog_file,tall,false);
+                const auto parsed=Catalog::load(catalog_dir);
+                const auto& tall_outfit=parsed.outfits.front();
+                Customization tall_look;
+                expect(authored_ground_offset(tall_outfit,tall_outfit.variants.front(),tall_look)==heel,
+                       "Tall footwear toggle was clipped or rejected");
+                tall_look.values["boots"]={0,0,0,1};
+                expect(authored_ground_offset(tall_outfit,tall_outfit.variants.front(),tall_look)==0,
+                       "Tall footwear toggle did not restore barefoot height");
+            }
             for(const auto& invalid:Json::array({nullptr,true,Json::array(),
                     {{"control","missing"},{"shown_cm",9},{"hidden_cm",0}},
-                    {{"control","boots"},{"shown_cm",11},{"hidden_cm",0}},
-                    {{"control","boots"},{"shown_cm",9},{"hidden_cm",-11}},
+                    {{"control","boots"},{"shown_cm",20.01},{"hidden_cm",0}},
+                    {{"control","boots"},{"shown_cm",9},{"hidden_cm",-20.01}},
                     {{"control","boots"},{"shown_cm","9"},{"hidden_cm",0}},
                     {{"control","boots"},{"shown_cm",9},{"hidden_cm",true}},
                     {{"control",4},{"shown_cm",9},{"hidden_cm",0}},
