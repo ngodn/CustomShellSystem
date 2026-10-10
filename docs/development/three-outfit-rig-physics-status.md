@@ -2292,10 +2292,11 @@ balls approximation reported 467 overlaps and is retained only as superseded
 evidence. The exact-query audit compares full capsules, rather than only
 endpoint spheres, against the original cloth points and body triangles. It finds 445
 particles inside the collider envelope including 0.3 cm thickness. All 445
-are outside the body by unanimous three-direction ray parity, with nearest
-body distances 0.440..1.442 cm. The deepest capsule overlap is 1.153 cm before
-thickness. All conflicts belong to thigh/calf shapes. This provides a concrete
-reason to refit the leg envelope rather than change spring initialization.
+were classified outside by three-direction ray parity, with nearest body
+distances 0.440..1.442 cm. The later winding audit supersedes that classification
+method for overlapping regions; these body-containment claims need rechecking.
+The deepest capsule overlap is 1.153 cm before thickness. Capsule distances
+remain separate evidence; all those overlaps belong to thigh/calf shapes.
 
 `leg-collision-inside2.json` is a new private candidate derived from nearest
 body-surface distances at 65 samples along each capsule, with a 0.05 cm inset.
@@ -2441,8 +2442,10 @@ region to suppress cloth motion.
 nearest-surface distance. At frame 0, right-panel target 604 is 1.706 cm inside
 the body and 2.585 cm inside the left-thigh capsule. At frame 38, left-panel
 target 31 is 0.279 cm outside the body but 0.900 cm inside its thigh capsule.
-Thus both target penetration and posed collider overhang exist in the inspected
-samples. These local witnesses do not establish whole-garment contact quality.
+These are the original ray-parity classifications. The later winding audit
+shows parity can misclassify overlapping body regions; this body-containment
+interpretation requires rechecking. Capsule distance remains a separate valid
+measurement. These witnesses do not establish whole-garment contact quality.
 
 Next: audit the fitted garment's butt/thigh weight transfer against the final
 body surface in matched poses, then refit the colliders against posed coverage.
@@ -2468,13 +2471,40 @@ unchanged by these private trials.
 The [October 10 comparison](../research/2026-10-10-peony-posed-contact.md)
 rejects cloth12's inpainted targets and the larger-travel controls. The garment
 already uses final-body surface transfer; repeating nearest-surface transfer
-does not solve the loose-panel defect. Posed containment checks find collision
-axes leaving the body during sprint. Moving sphere centers alone still leaves
-part of a calf connection outside, so no collider candidate was imported.
+does not solve the loose-panel defect. The initial ray-parity diagnosis of
+axes leaving the body was incorrect: overlapping regions produce even crossing
+counts. Corrected winding checks reject zero original-axis samples across
+436 poses. Whole-body nearest bounds also included fingers and opposite legs.
+No moved or shrunken collider candidate was imported.
 
 The gradual reference-pose start is now tested too. It still fails the strain
 screen in 103/145 sprint frames and 51/60 lead-in frames, while all 32 sprint
-anchors pass. Abrupt initialization is not the whole defect. Continue with
-connected collision fit during movement. Installed CSS and outfit packages are
+anchors pass. Abrupt initialization is not the whole defect. Native contact
+isolation and the next radius trial are recorded below. Installed CSS and outfit packages are
 unchanged. The game can stay closed until a verified, complete trial is ready
 for installation.
+
+Earlier body-surface parity reports in this log are historical measurements,
+not reliable outside/inside proof where body regions overlap. The corrected
+October 10 winding audit supersedes that interpretation. Native capsule signed
+distance and measured cloth strain are separate measurements and remain valid.
+
+## Peony thigh-contact isolation
+
+The corrected containment diagnostic passes five analytic winding controls,
+including even ray parity inside two overlapping tetrahedra. Cloth13's matched
+native contact cases reproduce 103/145 failing sprint frames with full contact
+and legs only, versus 1/145 with hips only or no body contact. Cloth15 then
+isolates the bones: both thighs reproduce 107/145 failures, left thigh alone
+87/145, right thigh alone 18/145 and calves alone 8/145. All native pins remain
+correct. These are diagnostic exclusions, not proposed shipping settings.
+
+The regional leg-radius trial preserves centers, topology and hip spheres but
+still fails 9/145 walk, 66/145 jog and 53/145 sprint frames. Worst sprint edge
+ratio increases to 9.346, so the candidate is not accepted. Source mesh and
+cloth maps are unchanged; native collision readback passes. See the
+[contact study](../research/2026-10-10-peony-posed-contact.md#native-contact-isolation)
+for source identities, the corrected multi-bone parser and exact limits.
+Continue from the remaining contact/constraint witnesses, not another blind
+radius or solver-iteration sweep. No new outfit, shared pack or runtime trial
+has been installed from this work. No game test is needed yet.

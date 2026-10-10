@@ -283,14 +283,18 @@ panel simulation. All native anchors remain correctly reconstructed.
 The larger fitted region is now tested and rejected too: cloth11 fails every
 frame, including without body contact and with the secondary graph enabled.
 Two fixed vertices reproduce a large butt/thigh skinned-pose discontinuity.
-Selected posed-body queries separately show target penetration and collider
-overhang. The next work is garment-to-final-body weight transfer and posed
-collision coverage, not another solver iteration or attachment-line sweep.
+Selected posed-body parity queries originally suggested target penetration
+and collider overhang. Their containment interpretation needs rechecking under
+the corrected winding method below. Do not treat them as established cause.
 
 The [posed-contact follow-up](2026-10-10-peony-posed-contact.md) confirms that
 the garment already uses final-body surface transfer. A harmonic loose-region
-weight trial and larger cloth travel both fail native simulation. Sampled
-collision axes leave the body during sprint; no center/radius candidate is
-accepted. A gradual reference-pose start also fails, so the harness's abrupt
-initialization is not the whole defect. Connected collision fit during motion
-remains unresolved. No game installation is requested yet.
+weight trial and larger cloth travel both fail native simulation. The earlier
+outside-axis classification is withdrawn: overlapping body regions defeat the
+ray-parity test. Corrected winding checks reject zero original-axis samples in
+436 poses. No moved/shrunken collider is accepted. A gradual reference-pose
+start also fails, so initialization is not the whole defect. Native isolation
+now localizes most stretching to the thigh colliders, especially the left thigh.
+Calf contact has a smaller separate failure. The regional radius trial still
+fails all three gaits and is not accepted. Continue from the remaining measured
+contact/constraint conflicts; no game installation is requested yet.

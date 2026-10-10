@@ -1,0 +1,16 @@
+--- a/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
++++ b/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
+@@ -113,8 +113,11 @@
+     FString CollisionOverride;
+     if (FParse::Value(*Params,TEXT("CollisionOverride="),CollisionOverride))
+     {
+-        if (!Knit || NoBodyCollision || !CollisionOverride.StartsWith(TEXT("/Game/CSS/EveTest/PA_KCloth")))
+-            return Fail(TEXT("Collision override requires a private Knitwear collider and enabled body collision"));
++        const bool AllowedOverride =
++            (Knit && CollisionOverride.StartsWith(TEXT("/Game/CSS/EveTest/PA_KCloth"))) ||
++            (Peony && CollisionOverride.StartsWith(TEXT("/Game/CSS/eins0fx/EveSB/Peony/Physics/PA_")));
++        if (!AllowedOverride || NoBodyCollision)
++            return Fail(TEXT("Collision override requires a matching private collider and enabled body collision"));
+         auto* Replacement=LoadObject<UPhysicsAsset>(nullptr,*CollisionOverride);
+         if (!Replacement) return Fail(TEXT("Cannot load private collision override"));
+         Cloth->PhysicsAsset=Replacement;
