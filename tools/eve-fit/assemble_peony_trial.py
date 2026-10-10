@@ -55,6 +55,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('output', 'dotnet', 'mappings'):
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--repair', action='store_true',
+                        help='Replace the installed combined3 Peony with the verified refit')
     args = parser.parse_args()
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=False)
@@ -79,20 +81,36 @@ def main():
         write(out / (label + '-exit.json'), dict(returncode=result.returncode))
         result.check_returncode()
 
-    cook = EVE / 'work/peony-windows4'
+    cook = EVE / 'work' / ('peony-windows5' if args.repair else 'peony-windows4')
     cook_proof = read(cook / 'readback1/receipt.json')
     if not cook_proof['passed'] or not read(cook / 'readback1/validation.json')['passed']:
         raise ValueError('Peony cook checks are incomplete')
     protect(cook / 'readback1/receipt.json')
     protect(cook / 'readback1/validation.json')
+    for path, expected in read(cook / 'readback1/validation.json')['inputs'].items():
+        protect(Path(path), expected)
     for path, expected in cook_proof['files'].items():
         protect(Path(path), expected)
     groups = read(cook / 'plan.json')['groups']
-    catalog_dir = EVE / 'work/peony-catalog4'
+    catalog_dir = EVE / 'work' / ('peony-catalog6' if args.repair else 'peony-catalog4')
     catalog_proof = read(catalog_dir / 'assembly-receipt.json')
     protect(catalog_dir / 'assembly-receipt.json')
     for name, expected in catalog_proof['outputs'].items():
         protect(catalog_dir / name, expected)
+    installed_proof = None
+    if args.repair:
+        proof_path = WORK / 'peony-combined3/assembly.json'
+        protect(proof_path)
+        installed_proof = read(proof_path)
+        if not installed_proof['passed']:
+            raise ValueError('Installed Peony baseline is not verified')
+        checks_path = catalog_dir / 'native-checks.json'
+        protect(checks_path)
+        checks = read(checks_path)
+        if not checks['passed']:
+            raise ValueError('Repaired catalog checks are incomplete')
+        for path, expected in checks['files'].items():
+            protect(Path(path), expected)
 
     manifests, manifest_paths, payloads, owners = {}, {}, {}, {}
     original = GAME / 'Content/Paks/~mods'
@@ -117,7 +135,9 @@ def main():
         if not proof['passed']:
             raise ValueError('Unverified baseline: ' + name)
         for suffix in ('.utoc', '.ucas'):
-            protect(original / name / (name + suffix), proof['files'][name + suffix])
+            expected = (installed_proof['files'][name + '/' + name + suffix]
+                        if args.repair else proof['files'][name + suffix])
+            protect(original / name / (name + suffix), expected)
         stage = out / 'stage' / name
         staged = {}
         for relative, expected in proof['payloads'].items():
@@ -161,7 +181,12 @@ def main():
 
     eve, shared = (manifests[n] for n in NAMES)
     catalog = read(catalog_dir / 'eve.css.json')
-    if catalog['outfits'][0]['variants'][:-1] != eve['catalog']['outfits'][0]['variants']:
+    existing_variants = eve['catalog']['outfits'][0]['variants']
+    if args.repair:
+        if len(existing_variants) != 7 or existing_variants[-1]['id'] != 'peony':
+            raise ValueError('Installed Peony variant is missing or reordered')
+        existing_variants = existing_variants[:-1]
+    if catalog['outfits'][0]['variants'][:-1] != existing_variants:
         raise ValueError('Existing six outfits differ from the accepted catalog')
     eve['catalog'] = catalog
     for name in eve['resources']:
@@ -182,7 +207,14 @@ def main():
     peony = copy.deepcopy(face['adapters'][0])
     peony.update(source_mesh='/Game/CSS/eins0fx/EveSB/Peony/Meshes/SK_Peony.SK_Peony',
                  target_mesh='/Game/CSS/eins0fx/EveSB/Faces/Peony/SK_Facial1.SK_Facial1')
-    face['adapters'].append(peony)
+    existing_peony = [a for a in face['adapters'] if a['source_mesh'] == peony['source_mesh']]
+    if args.repair:
+        if len(existing_peony) != 1 or existing_peony[0] != peony:
+            raise ValueError('Installed Peony facial mapping differs')
+    else:
+        if existing_peony:
+            raise ValueError('Peony facial mapping already exists')
+        face['adapters'].append(peony)
     if library['entries'] != before['entries'] or library['faces'][1:] != before['faces'][1:]:
         raise ValueError('Unrelated animation/facial content changed')
     if [a for a in library['adapters'] if a['source_outfit'] != eve['id']] != [
@@ -239,7 +271,7 @@ def main():
         raise ValueError('Inputs changed during assembly')
     write(out / 'assembly.json', dict(passed=True, installed=False, inputs=protected, asset_owners=owners,
         payloads=payloads, files={str(p.relative_to(out / 'pack')): sha(p) for p in (out / 'pack').rglob('*') if p.is_file()},
-        pending=['Hip accessory gameplay-pose comparison and final fit', 'Live materials, cloth and facial validation',
+        pending=['Repaired garment fit through body sliders and gameplay poses', 'Live materials, cloth and facial validation',
                  'Full gameplay regression and performance checks']))
     print('Seven-outfit Eve/shared private trial assembled and verified; not installed')
 

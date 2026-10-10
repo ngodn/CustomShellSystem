@@ -28,8 +28,26 @@ facial variant retains 22 authored morphs and adds 115 expression shapes.
 Fresh facial and authored-morph readbacks pass on both meshes, including rejection
 of a deliberately altered expected delta. Cloth-basis authoring and fresh reload
 also pass in `peony-clothmorph2`, retaining existing data on both meshes and the
-shared graph. GPU validation, Windows cooking, full material review and gameplay
-checks remain. Upper contacts still need visual review.
+shared graph. The earlier mesh passes 44 GPU captures and 22 comparisons, with two negative
+controls and a maximum 0.0150 cm cloth-offset residual. Windows cooking, full
+material review and gameplay checks remain. These GPU results predate the
+stocking correction below.
+The repaired `peony-catalog5` passes 512 native visibility/height combinations
+and 2,560 palette/profile cases, preserving all 17 inherited body/physics
+controls and the six existing variants. The prior catalog still passes, and
+partial ornament-control removal is rejected. Package repair preparation is
+ready but has not run pending the GPU/cook results.
+Further visual review found skin crossing the stocking at the jagged thigh
+patch. `peony-stockingfit6` adds a local exterior-stocking correction, matched
+body morphs/weights and updated normals. Its geometry matches a checked
+nine-case reference-pose candidate, with no sampled penetration on the repaired
+exterior faces. The remaining mesh, skeleton, UVs and cloth data are preserved.
+This is now the latest interchange. `peony-refitnative2` imports it and passes
+cloth preservation, fresh facial reload and all 22 authored-morph checks on
+both meshes, including changed-delta rejection. The 38-control `peony-catalog6`
+also passes. Cloth-buffer authoring and fresh reload now pass in
+`peony-clothmorph3`. Its GPU comparison and canonical cook preparation are
+running separately; Windows cooking and gameplay remain unverified.
 No replacement has been installed. See the
 [refit evidence](../research/2026-10-11-peony-refit.md).
 

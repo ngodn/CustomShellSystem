@@ -8,7 +8,7 @@ import unreal
 
 
 stage = Path(os.environ['CSS_PEONY_CLOTH_STAGE']).resolve(strict=True)
-assert stage.name in {'peony-clothmorph1', 'peony-clothmorph2'}
+assert stage.name in {'peony-clothmorph1', 'peony-clothmorph2', 'peony-clothmorph3'}
 assert Path(unreal.Paths.project_dir()).resolve() == stage / 'editor'
 verify = os.environ.get('CSS_PEONY_CLOTH_VERIFY') == '1'
 reports = stage / ('reload' if verify else 'author')

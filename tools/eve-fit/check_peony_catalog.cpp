@@ -24,7 +24,10 @@ int main(int argc, char** argv) {
         require(variant && variant->controls && variant->ground_offset_toggle,
                 "Peony controls or footwear rule missing");
         const auto& controls = *variant->controls;
-        require(controls.controls.size() == 40 && controls.surfaces.size() == 9 && controls.palettes.size() == 5,
+        const bool ornaments = controls.find("toggle_arm_ornaments") != nullptr;
+        require(ornaments == (controls.find("toggle_hip_accessories") != nullptr),
+                "Only one removed ornament control is present");
+        require(controls.controls.size() == (ornaments ? 40u : 38u) && controls.surfaces.size() == 9 && controls.palettes.size() == 5,
                 "Merged controls, dye surfaces or palettes were lost");
         const auto* donor = catalog.find(outfit.id, "skin_suit");
         require(donor && donor->controls, "Skin Suit donor missing");
@@ -43,13 +46,17 @@ int main(int argc, char** argv) {
         require(inherited == 17, "Expected all six shapes, six colors and five physics controls");
         require(compatible_values(controls, body).values == body.values,
                 "Compatible body customization was not retained");
-        const std::map<std::string, std::set<int>> switches{
+        std::map<std::string, std::set<int>> switches{
             {"toggle_jacket", {20}}, {"toggle_corset", {21}}, {"toggle_choker", {22}},
             {"toggle_gloves", {23}}, {"toggle_arm_ornaments", {24, 31}},
             {"toggle_hip_accessories", {25, 29}}, {"toggle_underwear", {32}},
             {"toggle_leg_panels", {34, 38}}, {"toggle_stockings", {35}},
             {"toggle_boots", {26, 28, 33, 36}}, {"hair", {15, 16, 17}},
         };
+        if (!ornaments) {
+            switches.erase("toggle_arm_ornaments");
+            switches.erase("toggle_hip_accessories");
+        }
         unsigned cases = 0;
         for (unsigned mask = 0; mask < (1u << switches.size()); ++mask) {
             auto user = body;

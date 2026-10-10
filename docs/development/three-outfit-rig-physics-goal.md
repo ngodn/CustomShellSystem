@@ -235,6 +235,9 @@ finished body fit. Original inputs and the accepted Eve body remain unchanged.
 - Fit the oversized jacket and corset closely to the body. Follow all six CSS
   body-shape controls, intermediate values and combined settings, plus secondary
   body motion. Do not enlarge the body to fill oversized clothes.
+  The user reiterated that visible gaps around the breasts and buttocks are
+  unacceptable. Check those silhouettes explicitly with the matching body-slider
+  values; a clearance check alone does not establish a close fit.
 - The user authorizes a redesigned corset neckline: a fitted sweetheart curve
   with a lower center opening for visible cleavage. The follow-up explicitly
   requests more cleavage: deepen and widen the center opening while retaining

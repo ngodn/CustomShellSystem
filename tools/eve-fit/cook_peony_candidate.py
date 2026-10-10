@@ -28,7 +28,7 @@ def main():
                         help='Disable cooker workers for the observed vertex-attribute build crash')
     args = parser.parse_args()
     repaired = args.stage == 'peony-windows5'
-    meshes = EVE / 'work' / ('peony-cookprep2' if repaired else 'peony-cookprep1')
+    meshes = EVE / 'work' / ('peony-cookprep3' if repaired else 'peony-cookprep1')
     astral = EVE / 'work/peony-astral2'
     output = EVE / 'work' / args.stage
     if output.exists():
@@ -40,7 +40,7 @@ def main():
         for phase in phases:
             if read(stage / (phase + '-exit.json'))['exit_code'] != 0:
                 raise ValueError('Failed editor phase: ' + str(stage / phase))
-    gpu = EVE / 'work' / ('peony-clothgpu2' if repaired else 'peony-clothgpu1')
+    gpu = EVE / 'work' / ('peony-clothgpu3' if repaired else 'peony-clothgpu1')
     if not read(gpu / 'gpu-comparison.json')['passed'] or not read(astral / 'reloaded.json')['passed']:
         raise ValueError('GPU/reload verification missing')
     protected = {}

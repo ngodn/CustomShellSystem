@@ -25,7 +25,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dotnet', type=Path, required=True)
     parser.add_argument('--mappings', type=Path, required=True)
-    parser.add_argument('--stage', choices=('peony-windows3', 'peony-windows4'), required=True)
+    parser.add_argument('--stage', choices=('peony-windows3', 'peony-windows4', 'peony-windows5'), required=True)
     args = parser.parse_args()
     sys.path.insert(0, str(CSS / 'tools'))
     from css import GAME

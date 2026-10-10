@@ -178,8 +178,11 @@ No replacement is installed.
 
 `peony-clothgpu2` stages the repaired cloth-buffer meshes for the established
 44-capture comparison (11 body/cloth cases on each of the normal and facial
-meshes, stock and trial deformers on the same held simulation). The isolated
-job is compiling shaders; no GPU result is claimed yet.
+meshes, stock and trial deformers on the same held simulation). All 44 captures
+and 22 comparisons pass, including two negative controls. Maximum cloth-offset
+residual is 0.0150 cm. The completed 408-file validation receipt freezes this
+evidence. This stage predates the stocking repair and does not validate that
+newer mesh; its refreshed native/GPU build is still required.
 
 `peony-cookprep2` copies the checked meshes to their canonical Peony and facial
 asset paths. Copying and fresh reload preserve the inspected deformation data.
@@ -222,14 +225,100 @@ Verification: `peony-closefit3/control-check.json` records the original-recipe
 comparison, removed control IDs, preserved controls and partial-removal negative
 case. This verifies the builder only, not a rebuilt catalog or runtime package.
 
+The repaired merged catalog is now built in `peony-catalog5` from the stripped
+mesh and regenerated wardrobe fragment. Its 38 controls, nine dye surfaces,
+five palettes and 106 dye resources retain the six existing Eve variants
+unchanged. The native catalog check passes 512 visibility/boot-height
+combinations and 2,560 palette/profile cases, including all 17 inherited body
+and physics controls. The old 40-control catalog also still passes its 2,048
+visibility and 10,240 palette/profile cases. A deliberately partial removal of
+the ornament controls is rejected. `native-checks.json` records the results,
+catalog hashes, checker source and linked data library.
+
+The private assembly tool now has an explicit repair mode. It verifies the
+installed combined3 container identities, replaces Peony's definition, updates
+Eve's container revision and retains the existing Peony facial mapping rather
+than adding a duplicate. Readback and deformation checks select the repaired
+GPU reference for `peony-windows5`. These paths are prepared and syntax-checked;
+the repaired cook and combined package have not run yet.
+
 ## Remaining work
 
-Finish lower-front fitting, inspect the upper folds and verify intermediate and
-combined body shapes, animation weights and moving poses. Repair the separate
-world-space cloth-panel defect while retaining simulation. Rebuild normal and
-facial meshes, cloth bindings and morph buffers after the final geometry change;
-then cook, check dependencies/catalogs and perform gameplay comparison. Keep all
+The user's later reminder explicitly rejects visible gaps at the breasts and
+buttocks. Installed hashes still match `peony-combined3`, including its unchanged
+core; none of the refitting candidates below has been installed.
+
+The closefit6 upper was screened at all-half, all-max, breast-plus-waist and
+breast-plus-tone settings. Each case samples 55,181 exterior-fabric locations
+using the fitter's original donor regions and internal-cap exclusions. Two to
+four remaining contacts lie behind another garment surface on all four tested
+cardinal rays. The matching breast-plus-tone renders and maximum-body palette
+preview do not show skin breaking through at those witnesses. This is limited
+reference-pose evidence, not continuous-motion clearance or final fit approval.
+See `peony-closefit6/combined-contact-rays.json` and
+`peony-strip1/breasts-tone`.
+
+A separate visible jagged thigh patch was confirmed as skin in front of the
+stocking by 0.0192642 cm, at the recorded front-view pixel `(230, 810)`.
+The intersected material is `Peony_stockings_Stockings`, not the recovered
+underwear or simulated panels. Two earlier nearby pixel probes hit covered
+stocking surface, so they did not diagnose that hole.
+
+`peony-stockingfit6` is now the latest interchange candidate. It corrects only
+the exterior upper-stocking region, transfers its six body morphs and animation
+weights from the corrected neutral body's surface correspondence, and updates
+the affected corner normals. Original deep internal caps are excluded from the
+exterior screen. Initial direct corrections distorted triangles; a smooth field
+with projection onto the remaining clearance constraints avoided that result.
+The fourth attempt exposed a glute-endpoint mismatch in the old stocking morph,
+which the matched body-surface morph transfer addresses.
+
+Its `verification.json` records 2,541 vertices in the edited region and 15,836
+normal corners. Body/hair/other garment and cloth points, skeleton, topology,
+UVs, materials and unrelated morph/weight data remain unchanged. Positions and
+morphs exactly match the fifth candidate, whose independent nine-case screen
+has no penetration on the fixed exterior face set; its smallest measured gap
+is 0.0586017 cm at all-max. The remainder of the stocking screen still includes
+internal caps and is not reported as globally intersection-free. The corrected
+front render removes the witnessed jagged patch. A retained sprint-pose/cloth
+composite is available, but it is not an in-game or full-range motion test.
+
+The earlier native authoring and completed GPU job described above target
+`peony-strip1`, before this additional stocking correction. They must not be
+used as proof that stockingfit6 has been imported or cooked. Rebuild both normal
+and facial meshes from the latest interchange, retain the verified cloth data,
+and refresh the corresponding native/GPU/cooked evidence. Then verify the final
+catalog/package and perform gameplay comparison. Keep all
 previously working Eve variants, Genessa, Commander White, action interruption,
 facial playback, doubles and saved selections in the regression scope.
+
+### Latest stocking repair imported
+
+`peony-refitnative2` now imports the exact `peony-stockingfit6` export
+(`30393a258b744cca662e108ccb6bbb3790dbc0978afc15fc7a68ca7cc861e605`).
+Its rebuilt panel geometry, weights, mappings, morphs and simulation data match
+`peony-refitnative1`; only newly generated clothing GUIDs differ. Both GUIDs are
+valid and distinct. Normal/facial base data match, and fresh expression reload
+retains all 115 expressions alongside the 22 authored shapes.
+
+Fresh native readback verifies 97,992 built authored deltas on both meshes,
+with maximum retained error 0.000007704 cm. Both altered-delta negative controls
+are rejected. `source-receipt.json` ties the import to the exact fitting inputs;
+`native-verification.json` and the 169-file `study-receipt.json` freeze this
+result. Native success is not cooked or gameplay acceptance.
+
+`peony-catalog6` is generated against the latest mesh. Its catalog is identical
+to the checked 38-control catalog5, and its native checker passes the same 512
+visibility/height and 2,560 palette/profile cases. The accepted body, six prior
+variants, nine dye surfaces and five Peony palettes remain intact.
+
+The refreshed `peony-clothmorph3` passes authoring and fresh reload on both
+meshes: 15 enabled render attributes per mesh, two cloth sections and unchanged
+existing data, protected dependencies and shared graph. Its 165-file receipt
+freezes those checks. GPU and canonical preparation are now running separately
+in `peony-clothgpu3` and `peony-cookprep3`. The unrun
+`peony-windows5` recipe now requires these refreshed stages. It must not cook
+the superseded stocking geometry. The prior completed GPU cache is copied into
+the new private stage for reuse, separately from asset validation.
 
 None of these private candidates is installed or accepted as a completed fix.
