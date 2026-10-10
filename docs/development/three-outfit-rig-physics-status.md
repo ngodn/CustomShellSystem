@@ -15,7 +15,7 @@ comparison measured +0.566 ms median cost for the eight-iteration stability
 setting; this is not game frame time or an FPS guarantee. See the latest
 [refit evidence](../research/2026-10-11-peony-refit.md).
 
-**October 11 user rejection:** the installed Peony trial is not accepted. The
+**Earlier October 11 rejection, before refit2:** the previous Peony trial was not accepted. The
 user reports an oversized jacket/corset, lower-front body clipping and ragged
 world-space panels. Peony correction now takes priority over Slipstream binding.
 Remove both hip pockets and mechanical arm ornaments; retain gloves, collar,
@@ -96,6 +96,16 @@ and no catalog, animation or recovery errors. Individual actions were not
 enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Slipstream preparation
+
+The [binding and shape study](../research/2026-10-11-slipstream-binding.md)
+now covers nine garments, the measured 379-bone rig and all six body sliders.
+Neutral preservation, weights and independent posed-skinning checks pass.
+The chest-size transfer initially clipped; a continuous constrained correction
+now passes the isolated breast and combined-maximum local contact screens,
+preserving the body, fitted Basis, weights and other shapes. Walking sleeve,
+skirt and lower-bodysuit contact remains unresolved. This is private authoring
+work, not a cooked or accepted outfit. `slipstream-chestshape2` is the latest
+candidate; `work/slipstream-binding-study1/receipt.json` preserves its evidence.
 
 The [wardrobe study](../research/2026-10-11-slipstream-wardrobe-fit.md) assigns
 31,625 source clothing triangles to six removable groups, including their trim.
