@@ -21,6 +21,14 @@ increasing those bounds has no support from this check. See the
 for exact results and limits. These are private authoring experiments. No new
 trial is installed, and the user does not need to launch the game yet.
 
+The next native replay identifies edge 31/309 separating around one thigh
+collider: 1.900 cm at rest becomes 15.807 cm. Edge/area corrections pull it
+together but put the points back inside that collider. A directed thigh-contact
+candidate preserves collider size and full simulation, but produces new severe
+stretching elsewhere, including 30.574 cm extension during walking. It is
+rejected. This narrows the investigation to contact-side divergence and its
+initialization; it does not establish a complete repair or game acceptance.
+
 ## Coordinated upgrade instructions and current dependency check
 
 The [draft upgrade guide](../upgrade-v1.0.0.md) now lists the runtime/outfit

@@ -1,0 +1,55 @@
+--- a/Source/CSSAuthoring/CSSEveCollisionCommandlet.cpp
++++ b/Source/CSSAuthoring/CSSEveCollisionCommandlet.cpp
+@@ -82,6 +82,7 @@
+         Parsed.Add({FName(*Bone), Position, Radius});
+     }
+     TArray<TPair<int32,int32>> Pairs;
++    TArray<FVector> OneSidedNormals;
+     TSet<int32> Connected;
+     TSet<uint64> UniquePairs;
+     for (const auto& Value : *Connections)
+@@ -104,7 +105,21 @@
+             FVector::Distance(Parsed[A].Center, Parsed[B].Center) <= FMath::Abs(Parsed[A].Radius-Parsed[B].Radius))
+             return Fail(TEXT("Duplicate, cross-bone or degenerate capsule"));
+         UniquePairs.Add(Key);
++        FVector Normal=FVector::ZeroVector;
++        if ((*Row)->HasField(TEXT("one_sided_normal")))
++        {
++            const TArray<TSharedPtr<FJsonValue>>* Values;
++            if (!Peony || !(*Row)->TryGetArrayField(TEXT("one_sided_normal"),Values) || Values->Num()!=3)
++                return Fail(TEXT("One-sided collision requires private Peony and three normal coordinates"));
++            for (int32 Axis=0; Axis<3; ++Axis)
++                if (!(*Values)[Axis]->TryGetNumber(Normal[Axis]) || !FMath::IsFinite(Normal[Axis]))
++                    return Fail(TEXT("Invalid one-sided normal"));
++            const FVector CapsuleAxis=(Parsed[A].Center-Parsed[B].Center).GetSafeNormal();
++            Normal=(Normal-CapsuleAxis*FVector::DotProduct(Normal,CapsuleAxis)).GetSafeNormal();
++            if (Normal.IsNearlyZero()) return Fail(TEXT("One-sided normal is parallel to capsule axis"));
++        }
+         Pairs.Emplace(A,B);
++        OneSidedNormals.Add(Normal);
+         Connected.Add(A); Connected.Add(B);
+     }
+     UPhysicsAsset* Asset = NewObject<UPhysicsAsset>(CreatePackage(*Output), *FPackageName::GetShortName(Output), RF_Public | RF_Standalone);
+@@ -127,8 +142,9 @@
+         Sphere.Radius = Parsed[I].Radius;
+         Bodies[Parsed[I].Bone]->AggGeom.SphereElems.Add(Sphere);
+     }
+-    for (const auto& Pair : Pairs)
++    for (int32 PairIndex=0; PairIndex<Pairs.Num(); ++PairIndex)
+     {
++        const auto& Pair=Pairs[PairIndex];
+         const FSphere& A = Parsed[Pair.Key]; const FSphere& B = Parsed[Pair.Value];
+         FKTaperedCapsuleElem Capsule;
+         Capsule.Center = (A.Center+B.Center)*.5;
+@@ -136,6 +152,11 @@
+         Capsule.Rotation = FQuat::FindBetweenNormals(FVector::UpVector,(A.Center-B.Center).GetSafeNormal()).Rotator();
+         Capsule.Radius0 = A.Radius;
+         Capsule.Radius1 = B.Radius;
++        if (!OneSidedNormals[PairIndex].IsNearlyZero())
++        {
++            Capsule.bOneSidedCollision=true;
++            Capsule.Rotation=FRotationMatrix::MakeFromZX((A.Center-B.Center).GetSafeNormal(),OneSidedNormals[PairIndex]).Rotator();
++        }
+         Bodies[A.Bone]->AggGeom.TaperedCapsuleElems.Add(Capsule);
+     }
+     Asset->UpdateBodySetupIndexMap();

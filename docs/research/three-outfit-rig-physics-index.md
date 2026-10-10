@@ -307,3 +307,11 @@ frames; it does not prove all constraints jointly feasible. Earlier native
 triangle-collider studies already exposed coverage, temporal and cost limits
 on another dress. Inspect actual contact corrections before repeating collider
 or solver-setting sweeps. No candidate is accepted or installed.
+
+Native independent constraint replay now shows the original witness edge
+separating around the same thigh collider. Edge/area passes shorten it but
+return its points inside collision geometry. The subsequent cloth-only
+one-sided thigh trial preserves the original collider dimensions, yet produces
+large failures on other edges and is rejected. Continue from contact-side
+divergence and the first affected panel regions, not another global outward
+correction or weakened constraint setting.

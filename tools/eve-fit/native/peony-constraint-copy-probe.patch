@@ -1,0 +1,71 @@
+--- a/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
++++ b/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
+@@ -7,6 +7,11 @@
+ #include "CSSClothProbeComponent.h"
+ #include "ClothCollisionData.h"
+ #include "Chaos/PBDSpringConstraints.h"
++#include "Chaos/PBDAxialSpringConstraints.h"
++#include "Chaos/PBDSphericalConstraint.h"
++#include "Chaos/PBDAnimDriveConstraint.h"
++#include "Chaos/PBDLongRangeConstraints.h"
++#include "Chaos/PBDBendingConstraints.h"
+ #include "ChaosCloth/ChaosClothingSimulationConfig.h"
+ #include "ChaosCloth/ChaosClothingSimulation.h"
+ #include "ChaosCloth/ChaosClothingSimulationFactory.h"
+@@ -459,6 +464,56 @@
+                     CopyReport->SetObjectField(UseRest ? TEXT("rest") : TEXT("current"),O);
+                 }
+                 Row->SetObjectField(TEXT("independent_spring_copy"),CopyReport);
++                const auto& Constraints=Solver->GetClothConstraints(ParticleRange);
++                auto Passes=MakeShared<FJsonObject>();
++                auto Probe=[&](const TCHAR* Name,const auto& Constraint)
++                {
++                    if (!Constraint) return;
++                    Chaos::Softs::FSolverParticles Copy;
++                    Copy.AddParticles(ExpectedParticles);
++                    for (int32 I=0; I<ExpectedParticles; ++I)
++                    {
++                        Copy.SetX(I,ParticleXs[I]); Copy.SetP(I,ParticleXs[I]);
++                        Copy.InvM(I)=Mass[I]; Copy.PAndInvM(I).InvM=Mass[I];
++                    }
++                    // Independent final-state replay. Never apply to the live particle range.
++                    Constraint->Apply(Copy,DeltaTime);
++                    TArray<TSharedPtr<FJsonValue>> Positions,Phis;
++                    double MaximumDelta=0.;
++                    for (int32 I=0; I<ExpectedParticles; ++I)
++                    {
++                        MaximumDelta=FMath::Max(MaximumDelta,double((Copy.P(I)-ParticleXs[I]).Size()));
++                        Positions.Add(MakeShared<FJsonValueObject>(Vec(FVector(Copy.P(I)))));
++                        double Phi=TNumericLimits<double>::Max();
++                        for (const auto* Collider:SolverCloth->GetColliders())
++                        {
++                            const auto Type=Chaos::FClothingSimulationCollider::ECollisionDataType::LODless;
++                            const int32 Range=Collider->GetCollisionRangeId(Solver,SolverCloth,Type);
++                            if (Range==INDEX_NONE) continue;
++                            const auto Geometries=Solver->GetCollisionGeometryView(Range);
++                            const auto Xs=Solver->GetCollisionParticleXsView(Range);
++                            const auto Rs=Solver->GetCollisionParticleRsView(Range);
++                            for (int32 J=0; J<Geometries.Num(); ++J)
++                                Phi=FMath::Min(Phi,Geometries[J]->SignedDistance(Chaos::FVec3(Rs[J].UnrotateVector(Copy.P(I)-Xs[J]))));
++                        }
++                        Phis.Add(MakeShared<FJsonValueNumber>(Phi));
++                    }
++                    auto Pass=MakeShared<FJsonObject>();
++                    Pass->SetNumberField(TEXT("max_delta_cm"),MaximumDelta);
++                    Pass->SetArrayField(TEXT("positions"),Positions);
++                    Pass->SetArrayField(TEXT("minimum_phi"),Phis);
++                    Passes->SetObjectField(Name,Pass);
++                };
++                Probe(TEXT("edges"),Constraints.GetEdgeSpringConstraints());
++                Probe(TEXT("bending_springs"),Constraints.GetBendingSpringConstraints());
++                Probe(TEXT("bending_elements"),Constraints.GetBendingElementConstraints());
++                Probe(TEXT("area"),Constraints.GetAreaSpringConstraints());
++                Probe(TEXT("tethers"),Constraints.GetLongRangeConstraints());
++                Probe(TEXT("max_distance"),Constraints.GetMaximumDistanceConstraints());
++                Probe(TEXT("backstop"),Constraints.GetBackstopConstraints());
++                Probe(TEXT("anim_drive"),Constraints.GetAnimDriveConstraints());
++                Passes->SetStringField(TEXT("scope"),TEXT("Each const constraint independently replays on a copy of end-of-frame particles with X=P; not live iteration timing, velocity or ordering."));
++                Row->SetObjectField(TEXT("independent_constraint_passes"),Passes);
+             }
+             if (Frame==0)
+             {

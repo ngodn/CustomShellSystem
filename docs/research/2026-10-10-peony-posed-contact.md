@@ -302,7 +302,69 @@ does not cover them. A 16-substep diagnostic reduced penetration but remained
 visually unacceptable and expensive. Do not repeat those trials as an untested
 general solution or ship them based on editor support alone.
 
-## Next work
+## Constraint replay and contact-side divergence
+
+`peony-correction-trace1` replays the native const PBD constraints separately on
+independent copies of each captured end-of-frame particle array. It never
+applies those replays to live solver particles. X=P for these copies, so this
+is not internal iteration instrumentation or a velocity/damping reconstruction.
+The corrected helper builds, its frozen patch replays exactly, and the 39-frame
+capture passes all 32 anchor checks within 0.000020 cm.
+
+At sprint frame 38, edge 31/309 is 15.807 cm long, versus about 1.900 cm at rest.
+Both points' nearest shape is the same left-thigh capsule. Their radial contact
+normals separate from 16.84 degrees at frame 0 to 138.61 degrees at frame 38.
+The native edge pass pulls their separation down to 7.705 cm, but leaves them
+4.125 and 3.532 cm inside collision geometry. The area pass similarly reduces
+the separation to 10.335 cm while putting them inside by 3.116 and 1.353 cm.
+Tethers, maximum distance and backstop leave this edge's separation unchanged
+in this replay. Animation drive changes it by only about 0.018 cm.
+
+This establishes a concrete conflict at this witness: constraints pull two
+nearby material points together after they have separated around the same
+collider. It does not prove a complete cause for all stretched edges. Frozen
+`correction-summary.json`, `contact-normals.json` and the full native report
+retain the evidence. The initial non-batch CLI invocation failed argument
+validation without producing a motion capture; `corrections-batch.exit.json`
+records the successful invocation.
+
+## Directed thigh contact is tested and rejected
+
+Pinned UE 5.6.1 `PhysicsEngine/TaperedCapsuleElem.h` declares a cloth-only
+`bOneSidedCollision` property. `ChaosClothingSimulationCollider.cpp:663..665`
+passes the capsule's rotated +X direction to the cloth sphere connection, and
+`PerParticlePBDCollisionConstraint.cpp` reflects wrong-side contact corrections.
+This is exact local source evidence, not a claim about an installed game test.
+
+The private `peony-one-sided1` trial uses that property on six thigh capsules,
+directed outward from the body's center. All original centers, radii, endpoints,
+hip spheres and ordinary calf capsules remain unchanged. The native authoring
+commandlet accepts a validated optional `one_sided_normal` only for private
+Peony recipes. Fresh asset inspection verifies all eight standalone spheres,
+ten capsules, flags and contact directions. Deliberately reversed flags and
+rotations fail the expanded verifier.
+
+The full-cloth candidate fails all three gaits:
+
+| Clip | Failing frames / 145 | Maximum edge ratio | Maximum extension (cm) |
+| --- | ---: | ---: | ---: |
+| Walk | 80 | 59.167 | 30.574 |
+| Jog | 31 | 21.129 | 27.567 |
+| Sprint | 26 | 19.647 | 19.259 |
+
+All 32 anchors still pass within 0.000025 cm. Fewer failed sprint frames do not
+justify this candidate: severe corrections move to other edges. Walk frame 75
+stretches edge 18/19 from 0.617 to 31.192 cm. Reject global outward thigh
+correction for this cloth asset. No source garment, installed outfit or
+gameplay physics asset was replaced.
+
+The frame-75 mapped render was inspected from front and quarter views. The
+panels show distorted edges and a displaced fabric patch between the thighs.
+These diagnostic colors and hidden hair are not final-material validation.
+The retained render mapping has a 0.378 cm maximum rest reconstruction error;
+do not describe it as exact surface reconstruction.
+
+## Evidence retention and next work
 
 Evidence is frozen in cloth15's `followup-receipt.json` and cloth16/17's
 `study-receipt.json`. All staged inputs retain their recorded hashes. After
@@ -312,7 +374,18 @@ The cleanup receipts record 59,850,800 logical bytes removed across the three
 projects, with zero immediate filesystem free-space change. Source assets,
 reports, recipes, native modules and installed packages remain intact.
 
-Inspect the remaining thigh-contact conflict at the measured panel points,
+The correction and one-sided studies each retain their own `study-receipt.json`,
+frozen native patches and helper recipes. All 114 original staged files are
+unchanged in both projects. The rejected candidate's authored collision asset
+is retained for reproduction. Native build/run and Blender handles are terminal;
+only their private caches were cleared after acquiring exclusive editor locks.
+
+Inspect how the neighboring points first separate around the thigh, and which
+colliders act on the new directed-trial failures. Do not repeat the same global
+one-sided recipe as a fix. Distinguish initial target penetration, neighboring
+panel regions and contact with the other leg before changing the garment's
+attachment or collision partitioning. Inspect the remaining thigh-contact
+conflict at the measured panel points,
 including the skin target, pin transition, collision surface and actual rendered
 panel. Do not repeat radius shrinking as a substitute for visible coverage.
 The diagnostics identify a contact-sensitive region; they do not yet establish
