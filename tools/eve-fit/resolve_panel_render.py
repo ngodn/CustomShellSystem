@@ -21,6 +21,8 @@ a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
 assert not a.output.exists()
 verification = json.loads(a.verification.read_text())
 assert verification['passed']
+if a.slot and 'slot' in verification:
+    assert verification['slot'] == a.slot, 'Verification belongs to another cloth panel'
 assert verification['source_sha256'] == hashlib.sha256(a.motion.read_bytes()).hexdigest()
 assert verification['proxy_sha256'] == hashlib.sha256(a.proxy.read_bytes()).hexdigest()
 w = Path(__file__).resolve().parents[2]/'work/eve26'
@@ -66,6 +68,10 @@ material_slots = {
     'XM_Dress03':'MI_CH_P_EVE_Christmas_01_03.001',
 }
 for section, summary in zip(mapping['render_geometry']['sections'],mapping['sections'],strict=True):
+    if a.slot and 'slot' in summary and summary['slot'] != a.slot:
+        continue
+    if 'asset_index' in summary and 'cloth_asset_index' in motion:
+        assert summary['asset_index'] == motion['cloth_asset_index'], 'Cloth particle group differs'
     # The private import uses distinct material packages with identical short names.
     material = a.slot or material_slots[Path(summary['material']).parent.name]
     rest = np.asarray(section['positions']);count = len(rest)
@@ -99,6 +105,7 @@ for section, summary in zip(mapping['render_geometry']['sections'],mapping['sect
         'mapping_influences':n,'simulated_vertices':int((blend>0).sum()),
         'rest_mapping_max_cm':float(error.max()),'rest_mapping_p99_cm':float(np.percentile(error,99))})
     print({k:v for k,v in sections[-1].items() if k not in ('positions_cm','indices')},flush=True)
+assert sections and (not a.slot or len(sections) == 1), 'Expected exactly the selected cloth section'
 out = {'scope':'UE 5.6 GpuSkinVertexFactory.ush position mapping replay from actual saved mapping and component particles/normals. Component scale one. Offline only; not game/render-thread readback, morph integration or material validation.',
     'frame':a.frame,'source_motion':motion['source_motion'],'asset':motion['asset'],
     'mapping_sha256':hashlib.sha256(a.mapping.read_bytes()).hexdigest(),

@@ -1,0 +1,13 @@
+--- a/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
++++ b/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
+@@ -213,8 +213,8 @@
+     Component->Stop();
+     if (Secondary && !Component->GetPostProcessInstance()) return Fail(TEXT("Secondary graph did not initialize"));
+     if (!Component->GetClothingSimulation()) return Fail(TEXT("Component has no cloth simulation"));
+-    if (CollisionTrace && Component->ClothingSimulationFactory!=UChaosClothingSimulationFactory::StaticClass())
+-        return Fail(TEXT("Collision trace requires the exact Chaos factory"));
++    if (Component->ClothingSimulationFactory!=UChaosClothingSimulationFactory::StaticClass())
++        return Fail(TEXT("Solver readback requires the exact Chaos factory"));
+     auto Vec=[](const FVector& V) {
+         auto O=MakeShared<FJsonObject>();
+         O->SetNumberField(TEXT("X"),V.X); O->SetNumberField(TEXT("Y"),V.Y); O->SetNumberField(TEXT("Z"),V.Z); return O;

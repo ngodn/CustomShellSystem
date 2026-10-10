@@ -1,0 +1,20 @@
+--- a/Source/CSSAuthoring/CSSEveClothCommandlet.cpp
++++ b/Source/CSSAuthoring/CSSEveClothCommandlet.cpp
+@@ -491,13 +491,16 @@
+             Config->FrictionCoefficient = Setting(SlotName, TEXT("FrictionCoefficient"), .3, 0., 1.);
+             Config->GravityScale = Setting(SlotName, TEXT("GravityScale"), 1., 0., 3.);
+             Config->bUseSelfCollisions = Setting(SlotName, TEXT("SelfCollision"), SlotName == TEXT("Seductress_C") ? 0. : 1., 0., 1.) > .5;
+-            Config->SelfCollisionThickness = .35f;
++            Config->SelfCollisionThickness = IsPeonyClothMesh(MeshPath)
++                ? Setting(SlotName,TEXT("SelfCollisionThickness"),.35,.01,2.) : .35f;
+             Config->AnimDriveStiffness = { Drive, Drive };
+             Config->AnimDriveDamping = { DriveDamping, DriveDamping };
+         }
+         if (auto* SharedConfig=Cloth->GetClothConfig<UChaosClothSharedSimConfig>())
+         {
+             SharedConfig->IterationCount=int32(Setting(SlotName,TEXT("Iterations"),SharedConfig->IterationCount,1,16));
++            if (IsPeonyClothMesh(MeshPath))
++                SharedConfig->SubdivisionCount=int32(Setting(SlotName,TEXT("Substeps"),SharedConfig->SubdivisionCount,1,4));
+             SharedConfig->MaxIterationCount=FMath::Max(SharedConfig->MaxIterationCount,SharedConfig->IterationCount);
+         }
+         Cloth->ApplyParameterMasks(true, true);

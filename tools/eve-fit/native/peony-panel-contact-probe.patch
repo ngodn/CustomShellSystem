@@ -1,0 +1,145 @@
+--- a/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
++++ b/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
+@@ -55,6 +55,11 @@
+     const bool NoBackstop=FParse::Param(*Params,TEXT("NoBackstop"));
+     const bool NoSelfCollision=FParse::Param(*Params,TEXT("NoSelfCollision"));
+     const bool CollisionTrace=FParse::Param(*Params,TEXT("CollisionTrace"));
++    const bool ContactTrace=FParse::Param(*Params,TEXT("ContactTrace"));
++    int32 ContactFrame=INDEX_NONE;
++    if (ContactTrace && (!Peony || CollisionTrace ||
++        !FParse::Value(*Params,TEXT("ContactFrame="),ContactFrame)))
++        return Fail(TEXT("Contact trace requires private Peony and an explicit ContactFrame, without CollisionTrace"));
+     if (CollisionTrace && Mesh->GetMeshClothingAssets().Num()!=1)
+         return Fail(TEXT("Collision trace requires a single cloth range"));
+     const bool NoAnimDrive=FParse::Param(*Params,TEXT("NoAnimDrive"));
+@@ -99,6 +104,8 @@
+             return Fail(TEXT("Peony requires 2..10000 frames at 30, 60 or 120 fps and a nonempty cloth mesh"));
+     }
+     auto* Radius=Cloth->LodData[0].PhysicalMeshData.FindWeightMap(EWeightMapTargetCommon::BackstopRadius);
++    if (ContactTrace && (ContactFrame<0 || ContactFrame>=FrameCount))
++        return Fail(TEXT("ContactFrame is outside the capture"));
+     if (NoBackstop && !Radius) return Fail(TEXT("Missing backstop radius map"));
+     float Friction=ClothConfig->FrictionCoefficient;
+     if (FParse::Value(*Params,TEXT("Friction="),Friction) &&
+@@ -327,7 +334,7 @@
+             Normals.Add(MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueNumber>(N.X),MakeShared<FJsonValueNumber>(N.Y),MakeShared<FJsonValueNumber>(N.Z)}));
+         }
+         Row->SetArrayField(TEXT("positions_cm"),Positions); Row->SetArrayField(TEXT("normals"),Normals);
+-        if (CollisionTrace)
++        if (CollisionTrace || (ContactTrace && Frame==ContactFrame))
+         {
+             FClothCollisionData Collisions;
+             if (!Component->CaptureClothCollisions(Collisions)) return Fail(TEXT("Cloth collision detection is unavailable"));
+@@ -359,14 +366,24 @@
+             Row->SetObjectField(TEXT("native_collisions"),CollisionRow);
+             // Read debug views only after the explicit cloth-worker wait above.
+             // The final Chaos factory checked above creates FClothingSimulation.
+-            const auto* Solver=static_cast<Chaos::FClothingSimulation*>(Component->GetClothingSimulation())->GetSolver();
+-            if (!Solver || Solver->GetCloths().Num()!=1) return Fail(TEXT("Expected one Chaos cloth"));
+-            const auto* SolverCloth=Solver->GetCloths()[0];
++            auto* Simulation=static_cast<Chaos::FClothingSimulation*>(Component->GetClothingSimulation());
++            const auto* Solver=Simulation->GetSolver();
++            if (!Solver) return Fail(TEXT("Missing Chaos solver"));
++            const Chaos::FClothingSimulationCloth* SolverCloth=nullptr;
++            for (const auto* Candidate : Solver->GetCloths())
++                if (Candidate && Candidate->GetGroupId()==uint32(ClothIndex))
++                {
++                    if (SolverCloth) return Fail(TEXT("Duplicate Chaos cloth group"));
++                    SolverCloth=Candidate;
++                }
+             if (!SolverCloth) return Fail(TEXT("Missing Chaos cloth"));
++            if (SolverCloth->GetGroupId()!=uint32(ClothIndex)) return Fail(TEXT("Wrong Chaos cloth group"));
+             const int32 ParticleRange=SolverCloth->GetParticleRangeId(Solver);
+             if (ParticleRange==INDEX_NONE) return Fail(TEXT("Missing particle range"));
+             const auto ParticleXs=Solver->GetParticleXsView(ParticleRange);
+             if (ParticleXs.Num()!=ExpectedParticles) return Fail(TEXT("Wrong solver particle count"));
++            const auto AnimationXs=Solver->GetAnimationPositionsView(ParticleRange);
++            if (AnimationXs.Num()!=ExpectedParticles) return Fail(TEXT("Wrong animation target count"));
+             auto TransformJson=[&Vec](const auto& Transform) {
+                 auto O=MakeShared<FJsonObject>();
+                 O->SetObjectField(TEXT("translation"),Vec(FVector(Transform.GetTranslation())));
+@@ -406,12 +423,34 @@
+                     const auto Q=Rotations[I]; auto R=Vec(FVector(Q.X,Q.Y,Q.Z)); R->SetNumberField(TEXT("W"),Q.W);
+                     G->SetObjectField(TEXT("rotation"),R);
+                     GeometryRows.Add(MakeShared<FJsonValueObject>(G));
++                    TArray<TSharedPtr<FJsonValue>> ContactPhis,ContactNormals,TargetPhis,TargetNormals;
+                     for (int32 P=0; P<ExpectedParticles; ++P)
+                     {
+                         const auto Local=Rotations[I].UnrotateVector(ParticleXs[P]-Translations[I]);
+                         const double Phi=Geometries[I]->SignedDistance(Chaos::FVec3(Local));
+                         if (!FMath::IsFinite(Phi)) return Fail(TEXT("Nonfinite collider distance"));
+                         if (Phi<MinimumPhi[P]) { MinimumPhi[P]=Phi; ClosestGeometry[P]=GeometryIndex; }
++                        if (ContactTrace)
++                        {
++                            Chaos::FVec3 Normal,TargetNormal;
++                            const double ContactPhi=Geometries[I]->PhiWithNormal(Chaos::FVec3(Local),Normal);
++                            const auto TargetLocal=Rotations[I].UnrotateVector(AnimationXs[P]-Translations[I]);
++                            const double TargetPhi=Geometries[I]->PhiWithNormal(Chaos::FVec3(TargetLocal),TargetNormal);
++                            if (!FMath::IsFinite(ContactPhi) || !FMath::IsFinite(TargetPhi) ||
++                                FVector(Normal).ContainsNaN() || FVector(TargetNormal).ContainsNaN())
++                                return Fail(TEXT("Invalid native contact query"));
++                            ContactPhis.Add(MakeShared<FJsonValueNumber>(ContactPhi));
++                            TargetPhis.Add(MakeShared<FJsonValueNumber>(TargetPhi));
++                            ContactNormals.Add(MakeShared<FJsonValueObject>(Vec(FVector(Rotations[I].RotateVector(Chaos::Softs::FSolverVec3(Normal))))));
++                            TargetNormals.Add(MakeShared<FJsonValueObject>(Vec(FVector(Rotations[I].RotateVector(Chaos::Softs::FSolverVec3(TargetNormal))))));
++                        }
++                    }
++                    if (ContactTrace)
++                    {
++                        G->SetArrayField(TEXT("particle_phi"),ContactPhis);
++                        G->SetArrayField(TEXT("particle_normals"),ContactNormals);
++                        G->SetArrayField(TEXT("target_phi"),TargetPhis);
++                        G->SetArrayField(TEXT("target_normals"),TargetNormals);
+                     }
+                 }
+             }
+@@ -427,13 +466,22 @@
+             Native->SetArrayField(TEXT("particle_positions"),SolverPositions);
+             Native->SetArrayField(TEXT("minimum_phi"),PhiValues);
+             Native->SetArrayField(TEXT("nearest_geometry"),Nearest);
++            Native->SetNumberField(TEXT("group_id"),SolverCloth->GetGroupId());
++            Native->SetNumberField(TEXT("particle_range"),ParticleRange);
++            if (ContactTrace)
++            {
++                TArray<TSharedPtr<FJsonValue>> Targets;
++                for (const auto& X:AnimationXs) Targets.Add(MakeShared<FJsonValueObject>(Vec(FVector(X))));
++                Native->SetArrayField(TEXT("animation_positions"),Targets);
++                Native->SetStringField(TEXT("query_scope"),TEXT("Native final-state and animation-target queries for one cloth group; not intermediate solver ordering."));
++            }
+             Native->SetObjectField(TEXT("local_space_location"),Vec(FVector(Solver->GetLocalSpaceLocation())));
+             Native->SetNumberField(TEXT("local_space_scale"),Solver->GetLocalSpaceScale());
+             const auto LocalQ=Solver->GetLocalSpaceRotation();
+             auto LocalR=Vec(FVector(LocalQ.X,LocalQ.Y,LocalQ.Z)); LocalR->SetNumberField(TEXT("W"),LocalQ.W);
+             Native->SetObjectField(TEXT("local_space_rotation"),LocalR);
+             Row->SetObjectField(TEXT("solver_collisions"),Native);
+-            if (Frame==0 || Frame==38)
++            if (CollisionTrace && (Frame==0 || Frame==38))
+             {
+                 const auto& Springs=Solver->GetClothConstraints(ParticleRange).GetEdgeSpringConstraints();
+                 if (!Springs || ParticleRange!=0 || !Solver->IsLegacySolver())
+@@ -521,7 +569,7 @@
+                 Passes->SetStringField(TEXT("scope"),TEXT("Each const constraint independently replays on a copy of end-of-frame particles with X=P; not live iteration timing, velocity or ordering."));
+                 Row->SetObjectField(TEXT("independent_constraint_passes"),Passes);
+             }
+-            if (Frame==0)
++            if (CollisionTrace && Frame==0)
+             {
+                 const auto& Constraints=Solver->GetClothConstraints(ParticleRange);
+                 auto C=MakeShared<FJsonObject>();
+@@ -611,10 +659,16 @@
+     Root->SetBoolField(TEXT("diagnostic_no_anim_drive"),NoAnimDrive);
+     Root->SetNumberField(TEXT("warmup_frames"),WarmupFrames);
+     Root->SetBoolField(TEXT("collision_trace"),CollisionTrace);
++    Root->SetBoolField(TEXT("contact_trace"),ContactTrace);
++    Root->SetNumberField(TEXT("contact_frame"),ContactFrame);
+     TArray<TSharedPtr<FJsonValue>> UsedBoneNames;
+     for (const auto& Name : Cloth->UsedBoneNames) UsedBoneNames.Add(MakeShared<FJsonValueString>(Name.ToString()));
+     Root->SetArrayField(TEXT("cloth_used_bone_names"),UsedBoneNames);
+     Root->SetNumberField(TEXT("substeps"),Substeps);
++    const auto* FinalSolver=static_cast<Chaos::FClothingSimulation*>(Component->GetClothingSimulation())->GetSolver();
++    if (!FinalSolver) return Fail(TEXT("Missing final solver state"));
++    Root->SetNumberField(TEXT("actual_substeps"),FinalSolver->GetNumSubsteps());
++    Root->SetNumberField(TEXT("actual_iterations"),FinalSolver->GetNumIterations());
+     Root->SetNumberField(TEXT("self_collision_thickness_cm"),SelfThickness);
+     Root->SetStringField(TEXT("timing_scope"),TEXT("Editor TickClothing plus its explicit completion wait, excludes animation refresh and rendering; not game frame time"));
+     Root->SetNumberField(TEXT("diagnostic_backstop_radius_override_cm"),BackstopRadiusOverride);

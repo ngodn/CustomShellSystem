@@ -10,6 +10,29 @@ enumerated. CINE, doubles and matched performance remain separate checks.
 
 ## Latest Peony contact checks
 
+The saved `peony-panelcloth1` candidate now passes all six 145-frame walk,
+jog and sprint strain screens (left and right), with all 16 anchors per panel
+verified independently. It retains body collision, self-collision and cloth
+simulation. Both loose panels now have zero backstop radius, a 0.1 cm
+self-collision margin and two substeps. These are short editor checks, not
+whole-outfit, body-shape, Windows-cook or game acceptance. See the
+[saved candidate evidence](../research/2026-10-10-peony-panel-backstop.md).
+
+The subsequent mapped-body check finds calf/hip penetration up to 3.838 cm
+at the three sampled poses. The source simulation particles also enter the
+body while remaining outside their colliders, so mapping alone is not the
+cause. The candidate passes the strain screen but fails contact acceptance.
+
+The previous statement that panel trim ownership was unimplemented was wrong:
+all 5,330 fabric/trim triangles were already merged and survived the split.
+The binding audit instead found an older material assignment on both split
+slots. Both now use the retained combined UV2-selector material; fresh native
+inspection confirms that this material-only save leaves cloth geometry,
+bindings and morph data unchanged. No new trial is installed. Keep the game
+closed until a complete candidate is ready.
+
+Earlier experiments below describe rejected candidates, not the saved result above.
+
 Latest Peony follow-up: backstop/drive controls, reduced-friction controls and
 the combined harmonic-target/regional-collider trial all fail the native cloth
 strain screen. Their 32-anchor checks pass. Corrected body queries show that
@@ -2534,7 +2557,9 @@ has been installed from this work. No game test is needed yet.
 
 October 10: `peony-partition1` gives the disconnected left and right primary
 fabric panels separate collision assets. Original geometry, skinning, bones,
-22 source morphs and fabric materials are preserved. Fresh native readback
+22 source morphs are preserved. The later material audit found and corrected
+an older material assignment on the split slots; see the latest result above.
+Fresh native readback
 checks two cloth assets, 16 pins each, retained body physics/post-process,
 distance maps and collision geometry. The built diagnostic helper and exact
 patch replay are retained.
@@ -2547,6 +2572,7 @@ pass. Selected-panel ordinary-collision sprint controls fail 101 left and
 23 right frames, so improved left motion does not establish a general pass.
 
 See the [per-panel comparison](../research/2026-10-10-peony-posed-contact.md#separate-left-and-right-collision-ownership)
-for measured limits and remaining contact witnesses. Trim ownership is not
-yet implemented for this diagnostic split. No new trial is installed; the
+for measured limits and remaining contact witnesses. The split retains the
+previously merged panel trim, as verified by face corners and UV2 selectors.
+No new trial is installed; the
 game should stay closed until a complete candidate is ready for testing.

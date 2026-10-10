@@ -384,7 +384,9 @@ ownership for the two disconnected surfaces.
 `peony-partition1` splits only the primary fabric material into `_L` and `_R`
 slots. It preserves source points, face corners, skin influences, bones and
 22 source morphs. Proxy recombination checks preserve every particle field
-and triangle. Both slots retain the same original fabric material. The private
+and triangle. Both slots initially received the same older fabric material.
+The follow-up [material audit](2026-10-10-peony-panel-backstop.md) corrects them
+to the retained combined fabric/trim material. The private
 import initially refused occupied package paths; the two original private
 assets were then moved to `pre-import` with recorded hashes before importing.
 No source or installed package was overwritten.
@@ -430,7 +432,8 @@ in the directed captures; these are not per-panel costs or game FPS results.
 
 The left walk frame-0 and right sprint frame-78 mapped diagnostic views were
 inspected. Each view replaces only its selected fabric panel; other parts are
-skinned, including trim whose cloth ownership is still unimplemented. They
+skinned. Correction: the selected panel includes its previously merged trim;
+the earlier claim that trim ownership was still unimplemented was incorrect. They
 are not complete-outfit render or material validation. The right frame-78
 rest mapping has a 0.378 cm maximum reconstruction error, and the left has
 0.376 cm; neither replay is exact render-thread evidence. The right frame-78
