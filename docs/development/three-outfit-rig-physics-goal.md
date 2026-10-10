@@ -240,8 +240,10 @@ finished body fit. Original inputs and the accepted Eve body remain unchanged.
   requests more cleavage: deepen and widen the center opening while retaining
   fitted cups, and check the breast-size range. Preserve the outfit's
   fabric pattern and trim; avoid the boxy, detached cup silhouette.
-- Remove both hip pockets and exposed mechanical arm ornaments from the outfit
-  mesh and remove their obsolete customization controls. Preserve the hand
+- Remove both hip pockets and exposed robotic ornaments from the outfit mesh,
+  including the arm ornaments, and remove their obsolete customization controls.
+  Check remaining panel-mounted hardware too; keep fabric and its decorative
+  trim rather than treating all small components as robotic. Preserve the hand
   gloves and neck collar. The user explicitly confirmed keeping the heels and
   ponytail attachment as they are. Preserve the original source assets.
 - Fix body clipping through the lower front garment, including the thigh and

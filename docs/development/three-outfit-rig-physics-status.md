@@ -13,8 +13,14 @@ world-space panels. Peony correction now takes priority over Slipstream binding.
 Remove both hip pockets and mechanical arm ornaments; retain gloves, collar,
 heels and ponytail attachment. The user also authorizes a fitted sweetheart
 neckline. These requirements are recorded in the goal's immediate Peony section.
-Private refit work is under Eve's `work/peony-closefit1` through `4`; no replacement
-has been installed. See the [refit evidence](../research/2026-10-11-peony-refit.md).
+Private upper refit work is under Eve's `work/peony-closefit1` through `6`.
+The lower-front cause is isolated: an earlier radial fitting step stretched
+small fabric edges across the thigh. `peony-lower-recovery2` rebuilds from the
+preserved aligned garment; seven individual body-shape checks, source
+preservation and neutral/combined-slider/walking previews are recorded.
+Large-bust upper trim, full material/cloth review and gameplay checks remain.
+No replacement has been installed. See the
+[refit evidence](../research/2026-10-11-peony-refit.md).
 
 Previous installed core: `718f76c3b60a8315`, with the CW hair trial. The user
 reports the requested CW Iris Out/hair/eyes/interruption check looks fine.
