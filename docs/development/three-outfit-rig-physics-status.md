@@ -2202,3 +2202,53 @@ matching process checks and exclusive project locks passed before deletion.
 `peony-collision-trace3/cache-cleanup.json` records the paths and caveats. All
 78 frozen evidence/recipe hashes were reverified; assets and installed files
 were retained.
+
+
+## Peony simulation-density comparison
+
+October 10: `peony-cloth7` tests fewer simulation particles against the same
+cloth6 collider, solver settings and source render mesh. The first two
+reduction recipes exceeded the 0.3 cm sampled surface tolerance (0.669 and
+0.357 cm) and stopped before writing assets. The retained third recipe checks
+the full original vertex/face-center sample set before each collapse.
+
+The new proxy has 774 particles and 1,360 triangles, down from 1,060/1,932.
+All 22 original fixed anchors and 192 other boundary vertices remain. Each
+retained position, normal, skin influence, constraint-map value and six morph
+deltas is exactly the corresponding source value. The maximum sampled
+source-to-reduced distance is 0.299 cm. This is a sampled surface bound, not
+a proof over every point of each triangle. Source render geometry is unchanged.
+
+Native rebinding and fresh inspection pass: 774 particles, 3,896 mapping
+records, original gameplay physics and secondary graph retained. Three
+145-frame, 60 fps captures pass independent fixed-anchor reconstruction but
+fail the gross-strain screen:
+
+| Gait | Strain-failing frames | Maximum edge ratio | Mean editor cloth step, ms |
+| --- | ---: | ---: | ---: |
+| Walk | 112 | 8.630 | 0.717 |
+| Jog | 112 | 10.371 | 0.674 |
+| Sprint | 120 | 9.088 | 0.722 |
+
+This lowers the observed editor cloth cost, but does not repair contact or
+establish a game performance gain. The worst sprint pull is still at frame 38.
+Its worst edge grows from 2.576 to 18.035 cm. Native mapping replay and inspected
+back/side renders show the distorted panels and a new sharp projection on the
+left rear side. Rest mapping's worst reconstruction error increases from
+0.378 to 0.744 cm, while its 99th percentile remains about 0.204 cm. The coarser
+proxy is **rejected as a repair and is not installed**. Do not adopt the lower
+cost while ignoring that visible regression.
+
+`work/peony-cloth7/coarse-study-receipt.json` retains all three cases, 40 evidence
+and recipe hashes, and 108 final editor-asset hashes. The outfit's
+`tools/coarsen_peony_proxy.py` retains source indices and rejects topology flips,
+nonmanifold output, missing protected vertices and excessive sampled deviation.
+The two rejected recipes are frozen alongside it. Deleting the stopped trial's
+private DDC removed 54,840,134 bytes; observed available-space increase was
+53,104,640 bytes. The cleanup receipt records process and lock checks.
+
+Next: inspect the actual stretch constraints and contact displacement around
+the upper-thigh witnesses before changing the fitted/free panel boundary or
+collision envelope. Lower simulation density alone is now tested and rejected.
+The full outfit, shared-assets and CSS release goal remains active. No game
+launch or installation is needed for this offline investigation.

@@ -28,6 +28,12 @@ free-panel travel clears individual-sphere feasibility conflicts without fixing
 the motion. The [native collision readback](../development/three-outfit-rig-physics-status.md#peony-native-collision-readback) now verifies actual collider placement against both gait captures. Wrong-bone/space attachment is ruled out for this trial; CCD, removing animation drive and initial settling all fail to repair the strain. Do not shrink the old
 collider to conceal strain or treat passing anchors as contact acceptance.
 
+The [simulation-density comparison](../development/three-outfit-rig-physics-status.md#peony-simulation-density-comparison)
+reduces the private proxy from 1,060 to 774 particles while preserving anchors,
+boundaries and retained deformation data. All three gait captures still fail,
+and the mapped render gains a sharp projection. The lower editor cost does not
+justify adopting that visible regression. Keep cloth7 rejected.
+
 Latest evidence: all 63 native alternatives and 60 idle carriers are installed.
 The user accepts Black Hole and Iris Out playback/interruption on the tested
 original human appearance. The three existing hair rigs pass 27 editor
