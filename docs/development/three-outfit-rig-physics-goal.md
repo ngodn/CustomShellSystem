@@ -265,6 +265,26 @@ When this item is reached, reproduce with that loadout and visibility setting; c
 
 **Acceptance:** no unintended hovering axe through those transitions; the intended weapon and effects remain visible when appropriate, charged shots and aiming work normally, and other sidearms/visibility modes retain their behavior. Record reproduction evidence, the actual cause and regression results. Keep this item queued if not yet investigated; do not describe it as fixed merely because the main goal is ready.
 
+## Low-priority follow-up: additional NPC appearances
+
+**Status:** queued at the user's request on October 11. Eve remains the current priority. Investigate support for NPCs such as **Zhirelle and Merrick** under the existing **SHELL > Use NPC/Enemy** selector.
+
+Inspect the game assets and dumps to identify each NPC's meshes, skeleton, animation setup, materials and attached components. Determine why an appearance is missing or incompatible before choosing a repair. Retargeting is a possible solution, not an established requirement. Check whether the existing native-human path can support it first; use outfit-specific adapters where necessary rather than changing shared behavior blindly.
+
+Keep the gameplay shell, abilities and progression unchanged. Follow the existing selector and saved-profile design, expose only validated options, and give a clear fallback for unsupported appearances. Validate movement, combat, aiming, attachments, menu/world transitions, save/reload and appearance restoration after gates or form changes. Assess doubles compatibility separately; do not imply every NPC supports it.
+
+**Acceptance:** supported NPC appearances can be selected and restored reliably without breaking gameplay or existing appearance choices. Record tested characters and limitations. This is deferred work, not a release blocker or a claim of current support.
+
+## Low-priority follow-up: native shell shades for appearance overrides
+
+**Status:** queued investigation, not implemented. HydraVenom8's October 10 request was clarified by DoraGong4N as choosing a native shell's alternate shade while using that shell only as the CSS appearance. Examples supplied were Eredrim's Yellow King/Obsidian looks. Kenshinto described playing Thiel while displaying Eredrim with another color. These names and colors are report examples; verify the available Mortal Shell II assets and variants before promising specific choices.
+
+Inspect how the game selects native shades, including material/mesh substitutions, shell association and unlock state. Add supported shade selection through the existing SHELL appearance flow while retaining the actual gameplay shell and its abilities. Respect the game's ownership and unlock behavior; do not silently unlock shades or alter progression. Preserve existing profiles and original-appearance defaults when no shade is selected or an asset is unavailable.
+
+Validate selection, material coverage, saved profiles, save/reload, preview/world consistency, gates, death/revive and shell/form changes. Check interaction with supported CSS doubles and non-CSS replacements without claiming universal compatibility. Keep shade selection distinct from custom outfit palettes and avoid duplicate appearance entries where the existing UI can express the choice.
+
+**Acceptance:** a supported native shell appearance can use a verified alternate shade while another gameplay shell remains active. Its selection persists and restores correctly; missing or unsupported shades fall back cleanly. Record actual supported variants and regression results. Schedule after the primary work alongside the other low-priority follow-ups.
+
 ## Delivery, progress and completion
 
 Maintain a compact status table for nine variants, repaired defects, validation cases and remaining failures. Report actual counts, not invented percentages. Update the research index when a question is settled or a trial is rejected.
