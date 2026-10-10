@@ -16,6 +16,7 @@ p.add_argument('--proxy',type=Path,default=work/'skirt-proxies.json')
 p.add_argument('--mesh',type=Path,default=work/'holiday.mesh.json')
 p.add_argument('--slot',default='MI_CH_P_EVE_Christmas_01_01.001')
 p.add_argument('--mapping',type=Path,help='Use fresh saved MaxDistance map instead of the original 18 cm recipe')
+p.add_argument('--kinematic-threshold',type=float,default=0.,help='Check distances strictly below this value; 0 retains the original exact-zero check')
 a = p.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 output = a.output
 assert not output.exists()
@@ -41,7 +42,9 @@ if a.mapping:
     assert mapping['asset'] == result['asset']
     distance = np.asarray(mapping['weight_maps']['MaxDistance'])
     assert distance.shape == alpha.shape and np.isfinite(distance).all() and (distance>=0).all()
-fixed = distance == 0
+assert np.isfinite(a.kinematic_threshold) and 0 <= a.kinematic_threshold <= 1
+fixed = distance < a.kinematic_threshold if a.kinematic_threshold else distance == 0
+assert fixed.any(), 'No particles selected for anchor verification'
 faces = np.asarray(proxy['indices']).reshape((-1, 3))
 edges = sorted({tuple(sorted((int(t[i]), int(t[(i+1) % 3])))) for t in faces for i in range(3)})
 edges = np.asarray(edges)
@@ -82,10 +85,12 @@ for row in result['frames']:
         'fixed_p95_cm':float(np.percentile(error[fixed],95)), 'max_from_skin_cm':float(error.max()),
         'edge_ratio_max':float(ratios.max()), 'edge_ratio_p95':float(np.percentile(ratios,95))})
 passed = max(r['fixed_max_cm'] for r in reports) < .02
-output.write_text(json.dumps({'scope':'Saved panel coordinates/order check using exactly zero-distance particles and the panel source weights. Edge ratios use the old source rest mesh. Not fitting, collision or game acceptance.',
+pin_scope = f'distances below {a.kinematic_threshold:g} cm' if a.kinematic_threshold else 'exactly zero-distance particles'
+output.write_text(json.dumps({'scope':f'Saved panel coordinates/order check using {pin_scope} and the panel source weights. Edge ratios use the old source rest mesh. Not fitting, collision or game acceptance.',
     'source_result':str(a.input),'source_sha256':hashlib.sha256(a.input.read_bytes()).hexdigest(),
     'source_proxy':str(a.proxy),'proxy_sha256':hashlib.sha256(a.proxy.read_bytes()).hexdigest(),
     'mapping_sha256':hashlib.sha256(a.mapping.read_bytes()).hexdigest() if a.mapping else None,
-    'passed':passed,'zero_distance':int(fixed.sum()),'cases':reports},indent=2)+'\n')
+    'passed':passed,'zero_distance':int((distance==0).sum()),'checked_fixed_particles':int(fixed.sum()),
+    'kinematic_threshold_cm':a.kinematic_threshold,'cases':reports},indent=2)+'\n')
 print('Passed',passed,'worst fixed cm',max(r['fixed_max_cm'] for r in reports),'worst edge ratio',max(r['edge_ratio_max'] for r in reports))
 assert passed, 'Resolve particle mapping or pose-space mismatch before rendering'

@@ -2343,3 +2343,122 @@ its superseded ball-envelope approximation. Stopped constraint-trace DDC cleanup
 removed 59,335,365 logical bytes; immediate measured free-space change was zero
 on this filesystem. No retained sources, modules, assets or evidence were
 deleted.
+
+## Peony target weights and collision isolation
+
+October 10: `peony-cloth9` restores the original anatomical target weights on
+1,028 free particles. `peony-cloth10` instead blends those targets to the
+corresponding thigh. Both preserve all 32 native pins, geometry, morph data,
+travel maps and cloth8's corrected leg colliders. Fresh native inspection
+preserves the mesh, gameplay physics, secondary graph, skeleton, cloth maps,
+render geometry and section morphs. Cloth GUID changes are expected on rebuild.
+This inspection does not independently read back physical skin influences.
+
+All captures below contain 145 frames at 60 fps with four solver iterations.
+These are isolated editor timings, not game FPS measurements.
+
+| Target recipe | Gait | Strain-failing frames | Maximum edge ratio | Mean cloth step, ms |
+| --- | --- | ---: | ---: | ---: |
+| Anatomical | Walk | 53 | 6.679 | 1.018 |
+| Anatomical | Jog | 105 | 6.313 | 1.090 |
+| Anatomical | Sprint | 144 | 10.817 | 1.209 |
+| Thigh blend | Walk | 51 | 4.689 | 1.042 |
+| Thigh blend | Jog | 101 | 5.103 | 1.083 |
+| Thigh blend | Sprint | 143 | 16.943 | 1.102 |
+
+Both recipes are rejected as repairs. Cloth9's separate no-backstop,
+no-animation-drive and no-self-collision sprint controls fail in 141, 142 and
+140 frames. None resolves the deformation. CCD also fails with the corrected
+colliders: cloth8 fails in 120 frames (maximum ratio 42.550), and cloth10 in
+144 (18.875). Do not reuse CCD as an untested remedy for this combination.
+`target-study-receipt.json` in each target trial freezes evidence, recipes and
+109 final editor-asset hashes.
+
+The panel verifier now optionally checks the engine's strict MaxDistance < 0.1
+cm threshold. Its default remains the prior exact-zero check. The new reports
+separate the 22 explicit zero-distance vertices from all 32 native fixed
+particles. Cloth9's sprint, all three cloth10 gaits and both CCD controls pass
+all-32 checks with worst position error below 0.000025 cm. Earlier cloth9
+reports checked 22; do not retroactively call those all-32 checks.
+
+A matched collision isolation on cloth8 gives:
+
+| Sprint control | Strain-failing frames | Maximum edge ratio |
+| --- | ---: | ---: |
+| Original body contact | 109 | 8.318 |
+| No body collision | 1 | 2.344 |
+| No backstop | 107 | 8.048 |
+| No body collision or backstop | 0 | 1.826 |
+
+All three controls pass independent all-32 anchor checks. The no-contact result
+is diagnostic only, not an acceptable outfit. It identifies body contact as
+the main contributor under this setup. The first failing edge appears at
+frame 2; edge 31/309 grows from 1.900 to 15.807 cm at frame 38. The authored
+capsule/recorded-pose witness audit places both endpoints against the left
+thigh. At frame 2 their pelvis-skinned targets are 4.874 and 3.650 cm inside
+that capsule. These are end-of-step/target queries, not an intermediate solver
+trace or a posed body-surface containment proof.
+
+Next candidate `peony-cloth11` changes only the cloth9 travel map. It keeps the
+upper fitted hip portion attached above Z=92 cm, then smoothly allows the
+existing maximum 30 cm travel by Z=55 cm. The measured problem region is around
+Z=92..95 cm at rest. These are explicit trial boundaries, not accepted design
+constants. Lower panels retain cloth simulation and full body collision.
+Assess native binding, three gaits, mapped appearance and contact before
+accepting this fitted/free boundary. No game package has been installed and
+no user test is needed yet. All other requirements in the goal remain active.
+
+
+The cloth11 attachment candidate is also rejected. It creates 353 native fixed
+particles, leaving 707 simulated; 256 reach the full 30 cm travel allowance.
+Fresh native readback matches the authored travel map within 0.000002 cm and
+preserves the mesh/skeleton/gameplay-physics/secondary references, render
+positions/weights and section morphs. The render mapping changes with the
+fixed region. All 353 anchor reconstructions pass below 0.000038 cm.
+
+| Cloth11 case | Strain-failing frames / 145 | Maximum edge ratio |
+| --- | ---: | ---: |
+| Walk | 145 | 5.072 |
+| Jog | 145 | 7.786 |
+| Sprint | 145 | 10.255 |
+| Sprint without body contact | 145 | 10.255 |
+| Sprint with secondary graph | 145 | 10.022 |
+| Sprint with secondary graph, without body contact | 145 | 10.203 |
+
+Enabling the secondary graph initializes a real post-process instance and
+still fails this comparison. All captures complete normally. This does not
+prove equivalence to the user's runtime body-physics settings.
+
+The fitted boundary exposes a separate weight/pose problem: at sprint frame 88,
+fixed edge 597/598 grows from 3.657 to 13.867 cm even with body contact disabled.
+Its butt002 contribution changes from 0.179 to 0.520 between endpoints, while
+thigh_r changes from 0.660 to 0.288. Correct anchor reconstruction means this is
+the supplied skinned pose, not detached pins. Do not adopt the larger fixed
+region to suppress cloth motion.
+
+`contact-body-witness1.json` compares six selected vertices at sprint frames
+0, 2 and 38 against the fully skinned body, using three-axis ray parity and
+nearest-surface distance. At frame 0, right-panel target 604 is 1.706 cm inside
+the body and 2.585 cm inside the left-thigh capsule. At frame 38, left-panel
+target 31 is 0.279 cm outside the body but 0.900 cm inside its thigh capsule.
+Thus both target penetration and posed collider overhang exist in the inspected
+samples. These local witnesses do not establish whole-garment contact quality.
+
+Next: audit the fitted garment's butt/thigh weight transfer against the final
+body surface in matched poses, then refit the colliders against posed coverage.
+Keep the source design, loose-panel simulation and body collision requirements.
+Do not try another arbitrary attachment line or claim that removing collision
+fixes this outfit. The larger release and rig goal remains incomplete.
+
+`peony-verifier-compat1/comparison.json` confirms that the new verifier's default
+produces exactly the prior 145 frame records, verdict, explicit-zero count and
+input hashes on cloth9 Walk. The optional native-pin check does not change its
+default result. Private cloth9/10 cache cleanup removed 109,686,812 logical
+bytes after process/lock and receipt checks. Immediate available-space change
+was zero on this filesystem; no installed package or retained source was removed.
+
+Cloth11's `attachment-study-receipt.json` freezes 48 evidence/recipe files and
+109 editor assets. Its stopped private caches were also removed: 54,844,693
+logical bytes, with zero immediate available-space change. The contact controls
+on cloth8 have a separate 22-file follow-up receipt. All installed files remain
+unchanged by these private trials.

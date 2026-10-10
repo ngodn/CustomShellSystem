@@ -269,3 +269,20 @@ All nine normal/facial region pairs agree. Genessa's hair rig has no identified
 skin/cloth weight consumer; her fitted trim does use body helpers. See the
 [weighted-surface findings](2026-10-08-secondary-motion-ownership.md#actual-weighted-surfaces)
 before changing those owners or collision settings.
+
+
+Peony's [target-weight and contact comparison](../development/three-outfit-rig-physics-status.md#peony-target-weights-and-collision-isolation)
+rejects both restored anatomical and thigh-blended free targets with the
+corrected colliders. CCD, no-drive, no-backstop and no-self-collision do not
+repair that combination. A matched cloth8 no-body-contact control reduces
+sprint failures from 109 to 1 of 145 frames; removing backstop too clears the
+strain screen. This is diagnostic evidence, not permission to remove contact.
+The next trial keeps the fitted hip portion attached while preserving lower
+panel simulation. All native anchors remain correctly reconstructed.
+
+The larger fitted region is now tested and rejected too: cloth11 fails every
+frame, including without body contact and with the secondary graph enabled.
+Two fixed vertices reproduce a large butt/thigh skinned-pose discontinuity.
+Selected posed-body queries separately show target penetration and collider
+overhang. The next work is garment-to-final-body weight transfer and posed
+collision coverage, not another solver iteration or attachment-line sweep.
