@@ -1,0 +1,38 @@
+--- a/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
++++ b/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
+@@ -89,6 +89,11 @@
+     }
+     auto* Radius=Cloth->LodData[0].PhysicalMeshData.FindWeightMap(EWeightMapTargetCommon::BackstopRadius);
+     if (NoBackstop && !Radius) return Fail(TEXT("Missing backstop radius map"));
++    float Friction=ClothConfig->FrictionCoefficient;
++    if (FParse::Value(*Params,TEXT("Friction="),Friction) &&
++        (!Peony || !FMath::IsFinite(Friction) || Friction<0.f || Friction>1.f))
++        return Fail(TEXT("Friction diagnostic requires private Peony and coefficient 0..1"));
++    const float SavedFriction=ClothConfig->FrictionCoefficient;
+     TStrongObjectPtr<UPhysicsAsset> FilteredPhysics;
+     TArray<FString> CollisionBones;
+     const auto SavedPhysics=Cloth->PhysicsAsset;
+@@ -103,6 +108,7 @@
+     const FPointWeightMap SavedRadius=Radius ? *Radius : FPointWeightMap();
+     ON_SCOPE_EXIT {
+         Cloth->PhysicsAsset=SavedPhysics;
++        ClothConfig->FrictionCoefficient=SavedFriction;
+         ClothConfig->bUseSelfCollisions=SavedSelfCollision;
+         ClothConfig->bUseCCD=SavedCCD;
+         ClothConfig->AnimDriveStiffness=SavedAnimDrive;
+@@ -162,6 +168,7 @@
+     SharedConfig->IterationCount=Iterations;
+     SharedConfig->MaxIterationCount=FMath::Max(SharedConfig->MaxIterationCount,Iterations);
+     ClothConfig->SelfCollisionThickness=SelfThickness;
++    ClothConfig->FrictionCoefficient=Friction;
+     if (NoBackstop) for (int32 I=0; I<Radius->Num(); ++I) (*Radius)[I]=0.f;
+     float BackstopRadiusOverride=-1.f;
+     if (FParse::Value(*Params,TEXT("BackstopRadius="),BackstopRadiusOverride))
+@@ -524,6 +531,7 @@
+     TArray<TSharedPtr<FJsonValue>> CollisionBoneRows;
+     for (const FString& Bone : CollisionBones) CollisionBoneRows.Add(MakeShared<FJsonValueString>(Bone));
+     Root->SetArrayField(TEXT("diagnostic_collision_bones"),CollisionBoneRows);
++    Root->SetNumberField(TEXT("diagnostic_friction"),ClothConfig->FrictionCoefficient);
+     Root->SetBoolField(TEXT("diagnostic_no_body_collision"),NoBodyCollision);
+     Root->SetBoolField(TEXT("diagnostic_no_backstop"),NoBackstop);
+     Root->SetBoolField(TEXT("diagnostic_no_self_collision"),NoSelfCollision);

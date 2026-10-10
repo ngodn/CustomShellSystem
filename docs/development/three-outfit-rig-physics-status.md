@@ -8,6 +8,19 @@ The runtime snapshot confirms `SK_Facial1`, available Iris Out/gait choices
 and no catalog, animation or recovery errors. Individual actions were not
 enumerated. CINE, doubles and matched performance remain separate checks.
 
+## Latest Peony contact checks
+
+Latest Peony follow-up: backstop/drive controls, reduced-friction controls and
+the combined harmonic-target/regional-collider trial all fail the native cloth
+strain screen. Their 32-anchor checks pass. Corrected body queries show that
+the regional collider still leaves upper-panel contact points inside the body;
+smaller colliders are not an accepted fit. A new 145-frame reach screen finds
+no individual collider that makes the cloth movement bound impossible, so
+increasing those bounds has no support from this check. See the
+[contact study](../research/2026-10-10-peony-posed-contact.md#backstop-drive-friction-and-target-weight-controls)
+for exact results and limits. These are private authoring experiments. No new
+trial is installed, and the user does not need to launch the game yet.
+
 ## Coordinated upgrade instructions and current dependency check
 
 The [draft upgrade guide](../upgrade-v1.0.0.md) now lists the runtime/outfit

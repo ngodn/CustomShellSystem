@@ -298,3 +298,12 @@ now localizes most stretching to the thigh colliders, especially the left thigh.
 Calf contact has a smaller separate failure. The regional radius trial still
 fails all three gaits and is not accepted. Continue from the remaining measured
 contact/constraint conflicts; no game installation is requested yet.
+
+The follow-up rejects backstop/drive removal, lower friction and the combined
+harmonic-target/regional-collider trial. Corrected body witnesses show that the
+reduced collider can leave contact points inside the body. The new analytic
+reach screen finds no individual collider/movement-bound conflict in 145 sprint
+frames; it does not prove all constraints jointly feasible. Earlier native
+triangle-collider studies already exposed coverage, temporal and cost limits
+on another dress. Inspect actual contact corrections before repeating collider
+or solver-setting sweeps. No candidate is accepted or installed.
