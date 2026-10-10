@@ -13,6 +13,28 @@ The runtime snapshot confirms `SK_Facial1`, available Iris Out/gait choices
 and no catalog, animation or recovery errors. Individual actions were not
 enumerated. CINE, doubles and matched performance remain separate checks.
 
+## Latest Slipstream preparation
+
+The [wardrobe study](../research/2026-10-11-slipstream-wardrobe-fit.md) assigns
+31,625 source clothing triangles to six removable groups, including their trim.
+All 116 components are accounted for; source/body preservation and negative
+ownership controls pass. The first torso fitting method improves visible
+sleeve/skirt coverage but causes severe local compression and leaves clipping.
+The second fit is rejected for export. Its exact triangle witnesses are retained
+for a continuous surface-deformation repair. No Slipstream runtime package is
+installed, and this work does not complete either new outfit.
+
+### Reusable attachment follow-up found in the existing log
+
+The existing CSS log contains `Accessory recovery deferred: Too many character
+attachments` and `Idle facial playback unavailable; keeping body idle: Too many
+character attachments` (last occurrences at lines 4415 and 4417 when inspected
+October 11). `native/src/attachment_follower.inl` still rejects more than 128
+direct children in `attached_children`. This contradicts the goal's explicit
+no-arbitrary-128-cap rule and remains to be repaired with actual component
+validation and lifecycle checks. These are existing log entries, not evidence
+of a new Peony regression. Do not discard the finding or call it fixed.
+
 ## Latest Peony contact checks
 
 **Combined trial installed:** seven Eve variants, including Peony, now use the

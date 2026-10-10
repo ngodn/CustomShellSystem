@@ -2,6 +2,12 @@
 
 Updated 2026-10-11. The goal is active. See [implementation status](../development/three-outfit-rig-physics-status.md) for the current baseline and migration audit.
 
+Slipstream's [wardrobe and fit study](2026-10-11-slipstream-wardrobe-fit.md)
+maps six removable garment groups while preserving the source data. The first
+torso projection remains unsuitable for export because it compresses local
+geometry and leaves intersections. Its recorded triangle witnesses guide the
+next fitting change. Peony's installed trial remains pending gameplay review.
+
 The [Peony combined trial](2026-10-11-peony-combined-trial.md) is installed with
 verified hashes and external rollback copies. It preserves all six existing
 Eve variants and current CW/Genessa adapters. Native catalog, payload and
