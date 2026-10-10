@@ -8,7 +8,7 @@ import unreal
 
 
 stage = Path(os.environ['CSS_PEONY_COOK_PREP']).resolve(strict=True)
-assert stage.name == 'peony-cookprep1'
+assert stage.name in {'peony-cookprep1', 'peony-cookprep2'}
 assert Path(unreal.Paths.project_dir()).resolve() == stage / 'editor'
 verify = os.environ.get('CSS_PEONY_VERIFY') == '1'
 reports = stage / ('reload' if verify else 'author')

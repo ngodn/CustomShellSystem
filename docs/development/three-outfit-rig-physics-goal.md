@@ -292,6 +292,16 @@ Keep outfit-specific meshes, materials, physics and palette definitions in the E
 
 **Acceptance:** both outfits are selectable, modular visibility and all ten palette templates work and persist, and fit/physics/gameplay checks are recorded. Track them separately from the nine existing repair variants. Release inclusion/version remains to be settled when this queued work is reached; do not silently change the coordinated release targets or report these outfits as completed.
 
+## Deferred follow-up: Genessa Form after switching save games
+
+**Status:** queued from the user's October 11 report, not reproduced or diagnosed. Keep Peony as the current priority. The user reports that after using a different save game, if the last **MISC > Genessa Form** choice was **Stray**, switching to **Faithful** may no longer work. The exact sequence and cause are unconfirmed.
+
+Reproduce by selecting Stray on one save, returning to the menu and loading another save, then requesting Faithful. Compare switching saves within a session with a full restart, and compare previous Auto/Default and Faithful choices. Check whether the destination save's gameplay shell is actually Genessa and whether the character is in a state where the native transition is permitted. Observe the actual form, requested form, UI selection, transition completion and ability state separately.
+
+Inspect form-control state across save/world/player replacement, including stale actor references, pending requests, cached shell/form identity and whether a saved preference is mistaken for the newly loaded character's actual state. These are investigation targets, not established causes. Preserve each save's progression and native form rules; do not force an unsupported shell into a Genessa transition or edit save data to work around the symptom.
+
+**Acceptance:** after loading another save, supported Faithful/Stray requests work when the native transition is valid, the UI reflects the current character, and Auto/Default returns control to the game. Verify both directions, a fresh launch, existing single-save behavior, doubles, customization and animation interruption. Record any legitimate game restrictions and the actual cause before describing this as fixed.
+
 ## Low-priority follow-up: Trebuchaxe sidearm visibility
 
 **Status:** user-supplied report, not reproduced or diagnosed. Investigate and fix after the primary rig, facial and animation work; this does not change the current priority.

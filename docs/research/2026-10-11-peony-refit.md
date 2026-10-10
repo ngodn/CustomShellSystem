@@ -174,6 +174,33 @@ are unchanged. Its `validation-receipt.json` freezes the results and recipes.
 GPU validation, Windows cooking, material review and gameplay remain pending.
 No replacement is installed.
 
+## Rendering and cook preparation
+
+`peony-clothgpu2` stages the repaired cloth-buffer meshes for the established
+44-capture comparison (11 body/cloth cases on each of the normal and facial
+meshes, stock and trial deformers on the same held simulation). The isolated
+job is compiling shaders; no GPU result is claimed yet.
+
+`peony-cookprep2` copies the checked meshes to their canonical Peony and facial
+asset paths. Copying and fresh reload preserve the inspected deformation data.
+Dependency closure matches the retained candidate exactly, with only the two
+repaired mesh package hashes changed in the ownership plan. The Windows cook tool now
+has a separate `peony-windows5` candidate that requires these new preparation
+and GPU results. The retained earlier candidates keep their original inputs.
+No Windows cook has been started for the repaired mesh yet.
+
+The repaired Windows candidate seeds its private DDC from the last successful
+Peony Windows cook after checking the engine version and completion receipt.
+The cache is copied locally before starting the new cook; retained cache files
+are not modified. This keeps derived-data reuse separate from asset validation,
+consistent with [Epic's UE 5.6 DDC documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/using-derived-data-cache-in-unreal-engine?application_version=5.6).
+
+Four rejected/superseded fitting candidates, `peony-closefit1` through `4`,
+were archived under `/run/media/eins0fx/theark/CSS/authoring-rejected/peony-20261011`.
+Every file was hash-checked before removing its local copy. Original work paths
+remain as symlinks, preserving references. This freed 523,540,893 bytes on the
+system drive. `work/peony-refit-archive-20261011.json` records the copies and hashes.
+
 `assemble_peony_refit.py` applies only jacket/corset coordinates and their six
 morph endpoints to the retained `peony-hipfit11` interchange. The collar stays
 unchanged. It removes 11,430 faces belonging to both hip-accessory and arm-ornament
