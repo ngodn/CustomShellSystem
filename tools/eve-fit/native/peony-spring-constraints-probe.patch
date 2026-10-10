@@ -1,0 +1,153 @@
+--- a/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
++++ b/Source/CSSAuthoring/CSSEveEmbeddedMotion.inl
+@@ -3,6 +3,8 @@
+ #include "ClothingSystemRuntimeTypes.h"
+ #include "CSSClothProbeComponent.h"
+ #include "ClothCollisionData.h"
++#include "Chaos/PBDSpringConstraints.h"
++#include "ChaosCloth/ChaosClothingSimulationConfig.h"
+ #include "ChaosCloth/ChaosClothingSimulation.h"
+ #include "ChaosCloth/ChaosClothingSimulationFactory.h"
+ #include "ChaosCloth/ChaosClothingSimulationSolver.h"
+@@ -55,6 +57,9 @@
+     auto* SharedConfig=Cloth->GetClothConfig<UChaosClothSharedSimConfig>();
+     if (!SharedConfig) return Fail(TEXT("Missing shared cloth config"));
+     int32 Substeps=SharedConfig->SubdivisionCount;
++    int32 Iterations=SharedConfig->IterationCount;
++    if (FParse::Value(*Params,TEXT("Iterations="),Iterations) && (!Peony || Iterations<1 || Iterations>16))
++        return Fail(TEXT("Iteration diagnostic requires private Peony and 1..16 iterations"));
+     float SelfThickness=ClothConfig->SelfCollisionThickness;
+     if (FParse::Value(*Params,TEXT("Substeps="),Substeps) && (!Peony || Substeps<1 || Substeps>4))
+         return Fail(TEXT("Substep diagnostic requires private Peony and 1..4 steps"));
+@@ -78,6 +83,8 @@
+     const auto SavedAnimDamping=ClothConfig->AnimDriveDamping;
+     const bool SavedCCD=ClothConfig->bUseCCD;
+     const int32 SavedSubsteps=SharedConfig->SubdivisionCount;
++    const int32 SavedIterations=SharedConfig->IterationCount;
++    const int32 SavedMaxIterations=SharedConfig->MaxIterationCount;
+     const float SavedSelfThickness=ClothConfig->SelfCollisionThickness;
+     const FPointWeightMap SavedRadius=Radius ? *Radius : FPointWeightMap();
+     ON_SCOPE_EXIT {
+@@ -87,6 +94,8 @@
+         ClothConfig->AnimDriveStiffness=SavedAnimDrive;
+         ClothConfig->AnimDriveDamping=SavedAnimDamping;
+         SharedConfig->SubdivisionCount=SavedSubsteps;
++        SharedConfig->IterationCount=SavedIterations;
++        SharedConfig->MaxIterationCount=SavedMaxIterations;
+         ClothConfig->SelfCollisionThickness=SavedSelfThickness;
+         if (Radius) *Radius=SavedRadius;
+     };
+@@ -108,6 +117,8 @@
+         ClothConfig->AnimDriveDamping.Low=ClothConfig->AnimDriveDamping.High=0.f;
+     }
+     SharedConfig->SubdivisionCount=Substeps;
++    SharedConfig->IterationCount=Iterations;
++    SharedConfig->MaxIterationCount=FMath::Max(SharedConfig->MaxIterationCount,Iterations);
+     ClothConfig->SelfCollisionThickness=SelfThickness;
+     if (NoBackstop) for (int32 I=0; I<Radius->Num(); ++I) (*Radius)[I]=0.f;
+     float BackstopRadiusOverride=-1.f;
+@@ -277,6 +288,86 @@
+             auto LocalR=Vec(FVector(LocalQ.X,LocalQ.Y,LocalQ.Z)); LocalR->SetNumberField(TEXT("W"),LocalQ.W);
+             Native->SetObjectField(TEXT("local_space_rotation"),LocalR);
+             Row->SetObjectField(TEXT("solver_collisions"),Native);
++            if (Frame==0 || Frame==38)
++            {
++                const auto& Springs=Solver->GetClothConstraints(ParticleRange).GetEdgeSpringConstraints();
++                if (!Springs || ParticleRange!=0 || !Solver->IsLegacySolver())
++                    return Fail(TEXT("Spring copy probe requires first legacy PBD particle range"));
++                const auto Mass=Solver->GetParticleInvMassesView(ParticleRange);
++                if (Mass.Num()!=ExpectedParticles || Cloth->LodData[0].PhysicalMeshData.Vertices.Num()!=ExpectedParticles)
++                    return Fail(TEXT("Spring copy probe particle mismatch"));
++                for (const auto& E:Springs->GetConstraints())
++                    if (E[0]<0 || E[1]<0 || E[0]>=ExpectedParticles || E[1]>=ExpectedParticles)
++                        return Fail(TEXT("Spring copy probe constraint outside particle range"));
++                auto CopyReport=MakeShared<FJsonObject>();
++                for (const bool UseRest : {true,false})
++                {
++                    Chaos::Softs::FSolverParticles Copy;
++                    Copy.AddParticles(ExpectedParticles);
++                    for (int32 I=0; I<ExpectedParticles; ++I)
++                    {
++                        const auto Position=UseRest ? Chaos::Softs::FSolverVec3(Cloth->LodData[0].PhysicalMeshData.Vertices[I]) : ParticleXs[I];
++                        Copy.SetX(I,Position); Copy.SetP(I,Position);
++                        Copy.InvM(I)=Mass[I]; Copy.PAndInvM(I).InvM=Mass[I];
++                    }
++                    // Apply the const edge constraints to independent particles, never the live solver.
++                    Springs->Apply(Copy,DeltaTime);
++                    TArray<TSharedPtr<FJsonValue>> CopiedPositions;
++                    double MaximumDelta=0.;
++                    for (int32 I=0; I<ExpectedParticles; ++I)
++                    {
++                        MaximumDelta=FMath::Max(MaximumDelta,double((Copy.P(I)-Copy.GetX(I)).Size()));
++                        CopiedPositions.Add(MakeShared<FJsonValueObject>(Vec(FVector(Copy.P(I)))));
++                    }
++                    auto O=MakeShared<FJsonObject>();
++                    O->SetNumberField(TEXT("max_delta_cm"),MaximumDelta);
++                    O->SetArrayField(TEXT("positions_after_edge_pass"),CopiedPositions);
++                    CopyReport->SetObjectField(UseRest ? TEXT("rest") : TEXT("current"),O);
++                }
++                Row->SetObjectField(TEXT("independent_spring_copy"),CopyReport);
++            }
++            if (Frame==0)
++            {
++                const auto& Constraints=Solver->GetClothConstraints(ParticleRange);
++                auto C=MakeShared<FJsonObject>();
++                C->SetNumberField(TEXT("particle_range"),ParticleRange);
++                C->SetBoolField(TEXT("legacy_solver"),Solver->IsLegacySolver());
++                C->SetNumberField(TEXT("actual_iterations"),Solver->GetNumIterations());
++                C->SetNumberField(TEXT("actual_substeps"),Solver->GetNumSubsteps());
++                C->SetBoolField(TEXT("pbd_edges"),Constraints.GetEdgeSpringConstraints().IsValid());
++                C->SetBoolField(TEXT("xpbd_edges"),Constraints.GetXEdgeSpringConstraints().IsValid());
++                C->SetBoolField(TEXT("pbd_area"),Constraints.GetAreaSpringConstraints().IsValid());
++                C->SetBoolField(TEXT("xpbd_area"),Constraints.GetXAreaSpringConstraints().IsValid());
++                C->SetBoolField(TEXT("long_range"),Constraints.GetLongRangeConstraints().IsValid());
++                C->SetBoolField(TEXT("max_distance"),Constraints.GetMaximumDistanceConstraints().IsValid());
++                TArray<TSharedPtr<FJsonValue>> Edges,Masses,Properties;
++                if (const auto& Springs=Constraints.GetEdgeSpringConstraints())
++                    for (const auto& E:Springs->GetConstraints())
++                        Edges.Add(MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{
++                            MakeShared<FJsonValueNumber>(E[0]),MakeShared<FJsonValueNumber>(E[1])}));
++                for (const auto InvMass:Solver->GetParticleInvMassesView(ParticleRange))
++                    Masses.Add(MakeShared<FJsonValueNumber>(InvMass));
++                C->SetArrayField(TEXT("edge_pairs"),Edges);
++                C->SetArrayField(TEXT("inverse_masses"),Masses);
++                if (!SolverCloth->GetConfig()) return Fail(TEXT("Missing solver cloth config"));
++                const auto& PropertiesView=SolverCloth->GetConfig()->GetProperties(SolverCloth->GetLODIndex(Solver));
++                for (int32 I=0; I<PropertiesView.Num(); ++I)
++                {
++                    const FString Key=PropertiesView.GetKey(I);
++                    if (!Key.Contains(TEXT("Stiffness")) && !Key.Contains(TEXT("Damping")) &&
++                        !Key.Contains(TEXT("Friction")) && !Key.Contains(TEXT("Tether"))) continue;
++                    auto P=MakeShared<FJsonObject>();
++                    P->SetStringField(TEXT("key"),Key);
++                    P->SetBoolField(TEXT("enabled"),PropertiesView.IsEnabled(I));
++                    P->SetNumberField(TEXT("low"),PropertiesView.GetLowValue<float>(I));
++                    P->SetNumberField(TEXT("high"),PropertiesView.GetHighValue<float>(I));
++                    P->SetStringField(TEXT("map"),PropertiesView.GetStringValue(Key));
++                    Properties.Add(MakeShared<FJsonValueObject>(P));
++                }
++                C->SetArrayField(TEXT("properties"),Properties);
++                Row->SetObjectField(TEXT("solver_constraints"),C);
++            }
++
+ 
+         }
+ 
+@@ -305,6 +396,17 @@
+     Root->SetBoolField(TEXT("diagnostic_no_backstop"),NoBackstop);
+     Root->SetBoolField(TEXT("diagnostic_no_self_collision"),NoSelfCollision);
+     Root->SetBoolField(TEXT("ccd_enabled"),ClothConfig->bUseCCD);
++    auto Weighted=[](const FChaosClothWeightedValue& V) {
++        return TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueNumber>(V.Low),MakeShared<FJsonValueNumber>(V.High)};
++    };
++    auto SavedConfig=MakeShared<FJsonObject>();
++    SavedConfig->SetArrayField(TEXT("edge"),Weighted(ClothConfig->EdgeStiffnessWeighted));
++    SavedConfig->SetArrayField(TEXT("area"),Weighted(ClothConfig->AreaStiffnessWeighted));
++    SavedConfig->SetArrayField(TEXT("tether"),Weighted(ClothConfig->TetherStiffness));
++    SavedConfig->SetNumberField(TEXT("mass_mode"),int32(ClothConfig->MassMode));
++    SavedConfig->SetNumberField(TEXT("minimum_mass"),ClothConfig->MinPerParticleMass);
++    Root->SetObjectField(TEXT("cloth_material_config"),SavedConfig);
++
+     Root->SetBoolField(TEXT("diagnostic_no_anim_drive"),NoAnimDrive);
+     Root->SetNumberField(TEXT("warmup_frames"),WarmupFrames);
+     Root->SetBoolField(TEXT("collision_trace"),CollisionTrace);

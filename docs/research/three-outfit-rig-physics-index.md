@@ -34,6 +34,17 @@ boundaries and retained deformation data. All three gait captures still fail,
 and the mapped render gains a sharp projection. The lower editor cost does not
 justify adopting that visible regression. Keep cloth7 rejected.
 
+The [spring and collider rest-fit audit](../development/three-outfit-rig-physics-status.md#peony-spring-initialization-and-collider-rest-fit)
+verifies all movable edges, the native pin threshold and correct spring rest
+response. Raising actual iterations from 4 to 16 still fails sprint and costs
+more. Full capsule queries identify 445 resting cloth particles outside the
+body but inside the collision envelope. A body-surface-derived leg recipe
+clears those rest overlaps. Cloth8 improves walking but still fails all three
+gait strain screens, and mapped renders retain stretched/bunched panels. Keep
+it unaccepted. The next comparison restores anatomical free-particle target
+weights with this collider while preserving all native pins. Do not confuse
+the spring audit or rest-fit pass with an outfit fix.
+
 Latest evidence: all 63 native alternatives and 60 idle carriers are installed.
 The user accepts Black Hole and Iris Out playback/interruption on the tested
 original human appearance. The three existing hair rigs pass 27 editor

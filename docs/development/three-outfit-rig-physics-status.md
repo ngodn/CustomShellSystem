@@ -2252,3 +2252,94 @@ the upper-thigh witnesses before changing the fitted/free panel boundary or
 collision envelope. Lower simulation density alone is now tested and rejected.
 The full outfit, shared-assets and CSS release goal remains active. No game
 launch or installation is needed for this offline investigation.
+
+## Peony spring initialization and collider rest fit
+
+October 10: `peony-constraint-trace1..3` retain cloth6's exact 113 staged
+inputs. Native readback confirms PBD edge/area constraints, tethers and maximum
+distance constraints. Edge, area and tether stiffness are all 1.0. Every
+movable edge is present: 2,932 constraints, with only 66 fixed-to-fixed edges
+omitted. All 32 native fixed particles match Chaos's strict MaxDistance < 0.1 cm
+test. Ten have small nonzero authored distances; the other 22 are explicit
+zero-distance anchors. These are expected native semantics, not lost weights.
+
+The exact const spring constraints were applied to separate copies of the
+rest mesh and captured particles at frames 0 and 38. Rest displacement is
+below 0.000016 cm. At frame 38, one edge pass moves copied particles by up to
+6.266 cm and reduces witness edge 31/309 from 18.827 to 9.301 cm (rest 1.900).
+This rules out absent edges and a gross rest-length initialization error in
+this trial. It does not establish acceptable cloth motion. Live solver
+particles and installed assets were not modified by the copy probe.
+
+A native iteration comparison keeps the mesh, collision and maps unchanged.
+All three 145-frame, 60 fps sprint captures pass independent anchor checks:
+
+| Actual iterations | Strain-failing frames | Maximum edge ratio | Mean editor cloth step, ms |
+| --- | ---: | ---: | ---: |
+| 4 | 122 | 9.907 | 1.061 |
+| 8 | 107 | 7.702 | 1.309 |
+| 16 | 95 | 6.229 | 1.828 |
+
+Increasing iterations is rejected as a repair. Cost rises while visible-scale
+stretch remains. Timings describe isolated editor cloth steps, not game FPS.
+The probe restores both iteration settings on scope exit and saves no assets.
+The additive `peony-spring-constraints-probe.patch` replays exactly to the
+built source. `audit_peony_springs.py` records the independent checks.
+
+The corrected rest-fit audit follows UE 5.6.1 FTaperedCapsule::PhiWithNormal,
+interpolating radius at the clamped axial projection. An earlier minimum-over-
+balls approximation reported 467 overlaps and is retained only as superseded
+evidence. The exact-query audit compares full capsules, rather than only
+endpoint spheres, against the original cloth points and body triangles. It finds 445
+particles inside the collider envelope including 0.3 cm thickness. All 445
+are outside the body by unanimous three-direction ray parity, with nearest
+body distances 0.440..1.442 cm. The deepest capsule overlap is 1.153 cm before
+thickness. All conflicts belong to thigh/calf shapes. This provides a concrete
+reason to refit the leg envelope rather than change spring initialization.
+
+`leg-collision-inside2.json` is a new private candidate derived from nearest
+body-surface distances at 65 samples along each capsule, with a 0.05 cm inset.
+Centers, bones, connections and eight hip spheres remain unchanged. Every
+sampled center passes three-direction body containment. The recipe avoids
+using imported face-normal signs, which are reversed for these body triangles.
+The first sign-based attempt stopped without producing a recipe. A second,
+overly conservative equal-endpoint reduction was retained as rejected evidence;
+the final projection weights each endpoint by its contribution at that sample.
+
+The revised candidate has no rest-cloth envelope overlaps; its minimum
+analytic capsule gap is 0.644 cm before thickness. This is sampled rest fit
+only. Animated body coverage, mesh deformation and final visual acceptance
+remain unproven. `peony-cloth8` stages it for native rebinding and gait captures.
+No game trial is installed and no user launch is needed yet.
+
+Cloth8's native creation, saved collision comparison, rebinding and fresh
+inspection now pass. The gameplay physics/secondary graph and shared skeleton
+references remain unchanged; only the cloth collider changes. All three gait
+captures pass anchor reconstruction (worst 0.000025 cm) but still fail strain:
+
+| Gait | Strain-failing frames | Maximum edge ratio | Mean editor cloth step, ms |
+| --- | ---: | ---: | ---: |
+| Walk | 27 | 3.601 | 0.962 |
+| Jog | 95 | 5.328 | 0.995 |
+| Sprint | 109 | 8.318 | 1.059 |
+
+Frame 38 native mapping replay retains 3,896 mapping records and 0.378 cm
+maximum rest reconstruction error. Inspected side/back renders still show
+upper panel stretching and bunched lower ends. This collider change improves
+the rest fit and walking, but **cloth8 is not an accepted outfit repair**.
+Do not install it or claim body contact coverage from the rest check.
+
+Next controlled comparison: restore the original anatomical simulation-target
+weights on free particles while keeping cloth8's measured collider, geometry,
+travel maps and all 32 native fixed particles unchanged. Cloth3 and cloth8
+positions, normals and topology are exactly identical; 1,038 weight lists
+differ following the earlier pelvis-target experiment. That earlier comparison
+used different colliders, so it does not settle this combination. Retain full
+body/morph, contact, rendering and runtime acceptance requirements.
+
+The spring-study receipt freezes 58 first-pass evidence/recipe hashes. The
+final collider receipt records the corrected exact-query audit separately from
+its superseded ball-envelope approximation. Stopped constraint-trace DDC cleanup
+removed 59,335,365 logical bytes; immediate measured free-space change was zero
+on this filesystem. No retained sources, modules, assets or evidence were
+deleted.

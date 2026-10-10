@@ -26,6 +26,19 @@ resets cloth on its first step. Captured motion then starts at frame zero withou
 another reset. These diagnostic modes save no assets. All three comparisons
 failed to repair cloth6 and must not be promoted as fixes.
 
+`peony-spring-constraints-probe.patch` follows that chain. Under
+`-CollisionTrace`, it records actual spring pairs, inverse masses, enabled
+constraint types and stiffness properties. Frames 0 and 38 also apply the
+actual const edge constraints to independent rest/current particle copies.
+Both inverse-mass representations are initialized; the probe refuses a
+nonlegacy solver or any particle range other than the first. It never writes
+live particle arrays. `audit_peony_springs.py` checks edge coverage, the native
+0.1 cm kinematic threshold and rest response. A pass does not establish cloth
+fit. `-Iterations=1..16` is a private Peony diagnostic, restoring both iteration
+and maximum-iteration settings on exit. The 4/8/16 comparison still fails
+gross strain and is not a production setting change. The additive patch
+replays to the exact built source in `peony-constraint-trace3/patch-replay`.
+
 ## Cloth-section morph readback
 
 `CSSEveCloth -Inspect -Geometry -Morphs -Mesh=/Game/CSS/EveTest/SK_PFit14 -Report=<unused workspace JSON>` includes `cloth_section_morphs`: saved LOD0 position deltas indexed locally within each cloth section. Compare those indices with `render_geometry` mapping weights to establish whether the corrected attachment vertices remain skinned. Each section also reports `base_vertex`. This path reads assets without saving them. A successful dump is not proof of runtime morph playback.
