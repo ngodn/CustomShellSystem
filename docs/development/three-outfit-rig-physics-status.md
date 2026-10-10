@@ -107,6 +107,16 @@ skirt and lower-bodysuit contact remains unresolved. This is private authoring
 work, not a cooked or accepted outfit. `slipstream-chestshape2` is the latest
 candidate; `work/slipstream-binding-study1/receipt.json` preserves its evidence.
 
+The follow-up `slipstream-jacketbind1` improves overall sleeve contact in the
+145-frame walk, but 18 frames worsen slightly, so it remains a private trial.
+The garment-only export now passes independent interchange and fresh UE 5.6.1
+import/readback checks: 31,625 triangles, 13 sections, six garment groups and
+six body shapes. `slipstream-cloth-proxy2` prepares a connected 624-particle
+skirt surface with contoured waist anchors and a maximum sampled render gap of
+0.232 cm. Native Chaos adjacency checks pass; evidence is frozen in
+`work/slipstream-native-study1/receipt.json`. Native cloth simulation, collision, full-character assembly, materials
+and gameplay are not yet verified. See the same binding report for limitations.
+
 The [wardrobe study](../research/2026-10-11-slipstream-wardrobe-fit.md) assigns
 31,625 source clothing triangles to six removable groups, including their trim.
 All 116 components are accounted for; source/body preservation and negative

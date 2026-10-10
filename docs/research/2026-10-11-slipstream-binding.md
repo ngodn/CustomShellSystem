@@ -82,3 +82,80 @@ with its intended physics. Sweep body shapes and gait frames before export.
 Materials, five palettes, removable-part runtime behavior, facial/Astral
 integration, cooking and gameplay checks remain required. The whole outfit
 and coordinated release goal remain unfinished.
+
+## Walking contact diagnosis and native preparation
+
+`slipstream-skin-contact36.json` records vertex/triangle-center witnesses,
+body triangles and both skin-weight sets. The deeper jacket witnesses lie at
+the sleeve/yoke junction, where a restricted arm donor surface gave some points
+too much upper-arm weight. Lower skirt witnesses include the opposite thigh
+crossing the skinned skirt during the stride. They require a cloth test, not
+an assumption that rigid skinning can keep a loose skirt clear of both legs.
+
+`slipstream-body-contact36.json` also checks the corresponding body anchors
+against the other anatomical region. Some witnesses coincide with contact
+already present in the target body pose: 17 of 53 jacket witnesses, 131 of
+248 cross-region bodysuit witnesses and 12 of 34 skirt witnesses. This local
+oriented-distance evidence does not explain every defect or prove closed-volume
+self-intersection. Do not enlarge or modify the accepted body to make these
+counts zero.
+
+`slipstream-jacketbind1` transfers sleeve/yoke weights through the complete
+body surface, preserving garment geometry and the corrected shapes. It changes
+167 primary jacket points and transfers the jacket trim from that layer.
+The frame-36 jacket contact count drops from 128 to 86. A complete 145-frame
+walk comparison is mixed: total inward samples drop from 30,531 to 28,137 and
+the worst per-frame count from 603 to 579, but 18 frames gain up to six inward
+samples. The deepest witness remains about 1.985 cm. This is a private test
+candidate, not a verified regression-free repair. Further visual/contact and
+body-shape checks remain required.
+
+### Skirt simulation surface
+
+The raw skirt has branching waist geometry after seam welding, so directly
+using its render mesh as a cloth proxy is rejected. Proxy generation preserves
+all render geometry. It removes 331 inward-facing simulation triangles and 45
+small branch faces in the upper waist band, then reduces only the simulation
+surface. Exact removed branch coordinates/areas are recorded in the report.
+
+`slipstream-cloth-proxy2` contains 624 particles and 976 triangles, one connected
+surface with no edge shared by more than two faces. Its 102 pinned particles
+follow the sloping waist, with anchors in all twelve 30-degree sectors. The
+free simulation targets blend toward the pelvis, rather than pulling the hem
+between opposing thighs. All six body-shape delta arrays are retained.
+
+Independent readback checks 10,108 render-surface samples against this proxy:
+maximum distance 0.23146 cm, p95 0.08600 cm, none above 0.3 cm. The source mesh
+is unchanged. The initial proxy1 used a flat-height waist threshold and is
+superseded by proxy2's contoured anchors. Starting stiffness, motion limits,
+backstops and self-collision are provisional until native motion/contact tests.
+Topology and close mapping alone do not establish cloth stability.
+
+The existing native `CSSBindClothV3 -CheckTopology` command also passes and
+exits successfully. It constructs Chaos's triangle topology and exercises the
+five-ring adjacency used for self-collision exclusions for every particle.
+This still does not execute cloth simulation.
+
+### Garment import
+
+`slipstream-export1` exports all 31,625 garment triangles as 13 material sections
+covering six independently removable groups. The source has 25,436 points,
+379 measured bones and all six body shapes. Independent interchange comparison
+passes for positions, winding, UVs, weights, morph deltas and ownership.
+
+UE 5.6.1 imports and freshly reloads the private asset successfully. Native
+readback reports 31,625 triangles, 25,463 built vertices, 13 ordered sections,
+379 bones and six nonempty morph targets. `native-verified.json` records the
+asset and command hashes. This checks counts, ownership and shape presence;
+it is not a full native vertex/delta comparison or a Windows cook. Materials
+remain placeholders and the garment asset is not an installable character.
+
+Next native steps are cloth binding, collision/animation staging and the actual
+gait simulation. Complete-body/facial assembly, reversible boot coverage,
+materials, palettes and all release checks remain pending. No game package or
+runtime DLL changed during this work.
+
+`work/slipstream-native-study1/receipt.json` freezes 40 files covering the
+contact diagnosis, current scripts, export/readback, cloth proxy and native
+topology result. Native logs are copied into immutable snapshots after their
+processes exit, so later trace-server output cannot invalidate those snapshots.
